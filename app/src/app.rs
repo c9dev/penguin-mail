@@ -111,6 +111,9 @@ impl App {
         });
         app.load_accounts();
         app.start_scheduler();
+        if !app.core.demo {
+            crate::assistant::preload_keys();
+        }
         app
     }
 

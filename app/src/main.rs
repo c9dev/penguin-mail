@@ -1,6 +1,7 @@
 //! mailrs: a Gmail client for the GNOME desktop.
 
 mod app;
+mod assistant;
 mod autostart;
 mod compose;
 mod contacts;
@@ -44,6 +45,27 @@ fn main() -> glib::ExitCode {
         )
         .init();
     let args: Vec<String> = std::env::args().collect();
+    // Claude Code starts this binary as the assistant's MCP server. It only
+    // relays tool calls to the running window, so it needs no GTK.
+    if args.get(1).map(String::as_str) == Some("--mcp-bridge") {
+        let Some(socket) = args.get(2) else {
+            eprintln!("--mcp-bridge needs a socket path");
+            return glib::ExitCode::FAILURE;
+        };
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("a tokio runtime starts");
+        return match runtime.block_on(mailrs_ai::bridge::run_mcp_stdio(std::path::Path::new(
+            socket,
+        ))) {
+            Ok(()) => glib::ExitCode::SUCCESS,
+            Err(err) => {
+                eprintln!("mcp bridge: {err}");
+                glib::ExitCode::FAILURE
+            }
+        };
+    }
     if args.iter().any(|a| a == "--help" || a == "-h") {
         println!("{USAGE}");
         return glib::ExitCode::SUCCESS;

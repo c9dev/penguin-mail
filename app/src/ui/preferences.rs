@@ -22,7 +22,7 @@ pub fn present(
     accounts: &[Account],
     parent: &impl IsA<gtk::Widget>,
     signature_of: Option<&str>,
-) {
+) -> adw::PreferencesDialog {
     let settings = app.settings();
     let dialog = adw::PreferencesDialog::builder()
         .search_enabled(true)
@@ -35,6 +35,7 @@ pub fn present(
     }
     let pending = Rc::new(RefCell::new(app.core.sync_config().unwrap_or_default()));
     dialog.add(&sync_page(app, &pending));
+    dialog.add(&super::assistant_prefs::page(app, &dialog));
     let weak = Rc::downgrade(app);
     dialog.connect_closed(move |_| {
         let Some(app) = weak.upgrade() else { return };
@@ -43,6 +44,17 @@ pub fn present(
         }
     });
     dialog.present(Some(parent));
+    dialog
+}
+
+/// Shows Preferences on the page with this name, such as "assistant".
+pub fn present_page(
+    app: &Rc<App>,
+    accounts: &[Account],
+    parent: &impl IsA<gtk::Widget>,
+    page: &str,
+) {
+    present(app, accounts, parent, None).set_visible_page_name(page);
 }
 
 fn general_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {

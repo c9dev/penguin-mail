@@ -70,3 +70,16 @@
 .flag-swatch { padding: 6px; min-width: 20px; min-height: 20px; }
 .thread-row .vip.marker { color: #e5a50a; opacity: 1; }
 .sidebar-section { margin: 14px 6px 4px 4px; }
+
+/* The assistant pane. */
+.assistant-pane { background: var(--sidebar-bg-color); }
+.assistant-bubble { padding: 8px 12px; border-radius: 14px; }
+.assistant-question {
+  background: alpha(var(--accent-bg-color), 0.18);
+  margin-left: 36px;
+}
+.assistant-reply { padding-left: 2px; padding-right: 2px; }
+.assistant-activity { margin-left: 2px; }
+.assistant-note.error { color: var(--error-color); }
+.assistant-suggestion { padding: 6px 10px; border-radius: 10px; }
+.assistant-confirm label { font-weight: 600; }

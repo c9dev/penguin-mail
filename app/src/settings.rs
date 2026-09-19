@@ -37,6 +37,69 @@ pub struct Settings {
     pub account_colors: BTreeMap<String, usize>,
     /// A name shown instead of the address in the sidebar.
     pub account_names: BTreeMap<String, String>,
+    pub ai: AiSettings,
+}
+
+/// Where the assistant's model runs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum AiProvider {
+    Off,
+    /// A local or self-hosted server with OpenAI's API: LM Studio, Ollama,
+    /// Unsloth, llama.cpp, vLLM, or OpenAI itself.
+    Local,
+    Anthropic,
+    /// The user's Claude subscription, through Claude Code.
+    ClaudeCode,
+}
+
+impl Choice for AiProvider {
+    const ALL: &'static [Self] = &[
+        AiProvider::Off,
+        AiProvider::Local,
+        AiProvider::Anthropic,
+        AiProvider::ClaudeCode,
+    ];
+    fn label(self) -> &'static str {
+        match self {
+            AiProvider::Off => "Off",
+            AiProvider::Local => "Local or OpenAI-compatible server",
+            AiProvider::Anthropic => "Anthropic API key",
+            AiProvider::ClaudeCode => "Claude subscription (Claude Code)",
+        }
+    }
+}
+
+/// The assistant's model and how careful it is. API keys live in the
+/// keyring, not here.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct AiSettings {
+    pub provider: AiProvider,
+    /// The local server's API address, ending in `/v1`.
+    pub base_url: String,
+    pub local_model: String,
+    pub anthropic_model: String,
+    /// A Claude Code model alias such as `sonnet`; empty uses its default.
+    pub claude_model: String,
+    /// The `claude` command; empty finds it automatically.
+    pub claude_command: String,
+    /// Ask before the assistant sends mail or changes Gmail settings.
+    pub confirm_actions: bool,
+}
+
+impl Default for AiSettings {
+    fn default() -> Self {
+        AiSettings {
+            provider: AiProvider::Off,
+            base_url: "http://localhost:1234/v1".into(),
+            local_model: String::new(),
+            anthropic_model: "claude-opus-5".into(),
+            claude_model: String::new(),
+            claude_command: String::new(),
+            confirm_actions: true,
+        }
+    }
 }
 
 impl Default for Settings {
@@ -59,6 +122,7 @@ impl Default for Settings {
             account_order: Vec::new(),
             account_colors: BTreeMap::new(),
             account_names: BTreeMap::new(),
+            ai: AiSettings::default(),
         }
     }
 }

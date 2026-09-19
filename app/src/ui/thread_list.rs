@@ -29,6 +29,8 @@ pub struct ThreadList {
     pub page: adw::NavigationPage,
     pub sidebar_button: gtk::ToggleButton,
     pub search_button: gtk::ToggleButton,
+    /// Shows or hides the assistant pane.
+    pub assistant_button: gtk::ToggleButton,
     pub banner: adw::Banner,
     pub search_entry: gtk::SearchEntry,
     search_bar: gtk::SearchBar,
@@ -187,8 +189,13 @@ impl ThreadList {
             .bidirectional()
             .sync_create()
             .build();
+        let assistant_button = gtk::ToggleButton::builder()
+            .icon_name("mailrs-sparkle-symbolic")
+            .tooltip_text("Assistant (Ctrl+J)")
+            .build();
         let header = adw::HeaderBar::builder().title_widget(&title).build();
         header.pack_start(&sidebar_button);
+        header.pack_end(&assistant_button);
         header.pack_end(&compose_button);
         header.pack_end(&search_button);
 
@@ -208,6 +215,7 @@ impl ThreadList {
             page,
             sidebar_button,
             search_button,
+            assistant_button,
             banner,
             search_entry,
             search_bar,

@@ -21,11 +21,13 @@ use super::sidebar::Sidebar;
 use super::thread_list::{Picked, ThreadList};
 use super::{Folder, Mailbox, summarize_search, welcome};
 use crate::app::App;
+use crate::assistant::ToolRequest;
 use crate::compose::{self, Draft, OutgoingAttachment, ReplyKind};
 use crate::core::Core;
 use crate::settings::{Choice, MarkRead, RemoteImages, Settings, TextSize};
 
 mod arrange;
+mod assistant;
 mod detached;
 mod flags;
 mod organize;
@@ -63,6 +65,8 @@ pub struct MainWindow {
     /// How to reverse the last organizing action.
     undo: RefCell<Option<(Vec<Target>, TriageAction)>>,
     labels: RefCell<HashMap<AccountId, Vec<Label>>>,
+    assistant: Rc<super::assistant::AssistantPane>,
+    assistant_split: adw::OverlaySplitView,
 }
 
 /// One thing an action applies to: a thread, or one message of it.
@@ -112,6 +116,7 @@ fn done_message(action: &TriageAction, count: usize, threaded: bool) -> Option<S
 
 impl MainWindow {
     pub fn new(app: &Rc<App>) -> Rc<MainWindow> {
+        let (tool_requests, tool_calls) = async_channel::unbounded::<ToolRequest>();
         let window = Rc::new_cyclic(|weak: &Weak<MainWindow>| {
             let w = weak.clone();
             let d = weak.clone();
@@ -178,10 +183,35 @@ impl MainWindow {
                     win.authorize(None);
                 }
             });
+            let (s, w) = (Rc::downgrade(app), weak.clone());
+            let assistant = super::assistant::AssistantPane::new(
+                Rc::clone(&app.core),
+                tool_requests.clone(),
+                move || s.upgrade().map(|a| a.settings()).unwrap_or_default(),
+                move || {
+                    if let Some(win) = w.upgrade() {
+                        win.show_preferences_page("assistant");
+                    }
+                },
+            );
+            let assistant_split = adw::OverlaySplitView::builder()
+                .sidebar(&assistant.page)
+                .content(&split)
+                .sidebar_position(gtk::PackType::End)
+                .show_sidebar(false)
+                .min_sidebar_width(320.0)
+                .max_sidebar_width(460.0)
+                .sidebar_width_fraction(0.3)
+                .build();
+            assistant_split
+                .bind_property("show-sidebar", &list.assistant_button, "active")
+                .bidirectional()
+                .sync_create()
+                .build();
             let stack = gtk::Stack::builder()
                 .transition_type(gtk::StackTransitionType::Crossfade)
                 .build();
-            stack.add_named(&split, Some("mail"));
+            stack.add_named(&assistant_split, Some("mail"));
             stack.add_named(&setup, Some("setup"));
             stack.add_named(&first_page, Some("first-account"));
             let toasts = adw::ToastOverlay::new();
@@ -209,6 +239,8 @@ impl MainWindow {
             narrow.add_setter(&split, "collapsed", Some(&true.to_value()));
             narrow.add_setter(&split, "show-sidebar", Some(&false.to_value()));
             narrow.add_setter(&nav, "collapsed", Some(&true.to_value()));
+            narrow.add_setter(&assistant_split, "collapsed", Some(&true.to_value()));
+            medium.add_setter(&assistant_split, "collapsed", Some(&true.to_value()));
             let (on, off) = (Rc::clone(&conversation), Rc::clone(&conversation));
             narrow.connect_apply(move |_| on.set_compact(true));
             narrow.connect_unapply(move |_| off.set_compact(false));
@@ -238,6 +270,8 @@ impl MainWindow {
                 authorizing: Cell::new(false),
                 undo: RefCell::new(None),
                 labels: RefCell::new(HashMap::new()),
+                assistant,
+                assistant_split,
             }
         });
         if window.core.demo {
@@ -260,6 +294,15 @@ impl MainWindow {
         });
         window.install_actions();
         window.install_arrange_actions();
+        // The assistant's tool calls, one at a time, on this thread.
+        let weak = Rc::downgrade(&window);
+        glib::spawn_future_local(async move {
+            while let Ok(request) = tool_calls.recv().await {
+                let Some(win) = weak.upgrade() else { break };
+                let outcome = win.run_tool(&request.name, request.input).await;
+                let _ = request.reply.send(outcome).await;
+            }
+        });
         let labels_of = Rc::downgrade(&window);
         super::search_suggest::attach(&window.list.search_entry, app.contacts(), move || {
             let Some(win) = labels_of.upgrade() else {
@@ -1715,6 +1758,16 @@ impl MainWindow {
             Box::new(|win| win.conversation.label_button.popup()),
         );
         add("undo", Box::new(|win| win.undo()));
+        add(
+            "assistant",
+            Box::new(|win| {
+                let show = !win.assistant_split.shows_sidebar();
+                win.assistant_split.set_show_sidebar(show);
+                if show {
+                    win.assistant.focus();
+                }
+            }),
+        );
         add("remind-custom", Box::new(|win| win.remind_custom()));
         let remind_at = gio::SimpleAction::new("remind-at", Some(glib::VariantTy::INT64));
         let weak = Rc::downgrade(self);
@@ -1884,6 +1937,7 @@ impl MainWindow {
             ("<Control>p", "win.print"),
             ("<Control><Alt>u", "win.view-source"),
             ("<Control>o", "win.open-window"),
+            ("<Control>j", "win.assistant"),
             ("<Control>w", "window.close"),
         ] {
             shortcuts.add_shortcut(gtk::Shortcut::new(
@@ -2133,6 +2187,15 @@ impl MainWindow {
         });
     }
 
+    /// Opens Preferences on one page, such as "assistant".
+    fn show_preferences_page(self: &Rc<Self>, page: &str) {
+        let Some(app) = self.app.upgrade() else {
+            return;
+        };
+        let accounts = self.accounts.borrow().clone();
+        super::preferences::present_page(&app, &accounts, &self.window, page);
+    }
+
     fn show_vacation(self: &Rc<Self>, account: Account) {
         let (grant, saved) = (Rc::downgrade(self), Rc::downgrade(self));
         let email = account.email.clone();
@@ -2212,6 +2275,9 @@ impl MainWindow {
             self.refresh_accounts();
             let vip = sender_is_vip(&self.conversation, after);
             self.conversation.set_sender_vip(vip);
+        }
+        if before.ai != after.ai {
+            self.assistant.refresh();
         }
         if before.text_size != after.text_size {
             self.conversation.set_zoom(after.text_size.zoom());
