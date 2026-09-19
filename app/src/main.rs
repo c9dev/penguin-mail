@@ -1,4 +1,5 @@
 mod compose;
+mod demo;
 mod diff;
 mod format;
 mod render;
