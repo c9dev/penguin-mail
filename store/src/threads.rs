@@ -1,7 +1,9 @@
 //! Thread queries. `messages::refresh_thread` maintains the rows.
 
+use std::collections::HashMap;
+
 use mailrs_domain::system_label::{SPAM, STARRED, TRASH};
-use mailrs_domain::{AccountId, FlagColor, ThreadSummary};
+use mailrs_domain::{AccountId, Category, FlagColor, ThreadSummary};
 use rusqlite::types::Value;
 use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
 
@@ -341,4 +343,122 @@ pub fn unread_threads(conn: &Connection, filter: &ThreadFilter) -> Result<i64> {
     let mut sql = filter.query(Rows::Threads, "SELECT COUNT(*)");
     sql.push(" AND t.unread = 1");
     count(conn, &sql)
+}
+
+/// How many threads carry a label, and how many of those are unread.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Count {
+    pub threads: i64,
+    pub unread: i64,
+}
+
+/// Thread counts for every label of every account, from one grouped query.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct LabelCounts {
+    counts: HashMap<(AccountId, String), Count>,
+}
+
+impl LabelCounts {
+    /// `count_threads` and `unread_threads` for `ThreadFilter::account(account_id, label_id)`.
+    pub fn account(&self, account_id: AccountId, label_id: &str) -> Count {
+        self.counts
+            .get(&(account_id, label_id.to_string()))
+            .copied()
+            .unwrap_or_default()
+    }
+
+    /// `count_threads` and `unread_threads` for `ThreadFilter::unified(label_id)`.
+    pub fn unified(&self, label_id: &str) -> Count {
+        self.counts
+            .iter()
+            .filter(|((_, label), _)| label == label_id)
+            .fold(Count::default(), |sum, (_, c)| Count {
+                threads: sum.threads + c.threads,
+                unread: sum.unread + c.unread,
+            })
+    }
+}
+
+/// Every label's thread and unread counts, for the sidebar, in one query
+/// instead of two per mailbox.
+pub fn label_counts(conn: &Connection) -> Result<LabelCounts> {
+    let mut stmt = conn.prepare_cached(
+        "SELECT d.account_id, d.label_id, COUNT(*), SUM(t.unread) FROM thread_labels d \
+         CROSS JOIN threads t ON t.account_id = d.account_id AND t.id = d.thread_id \
+         GROUP BY d.label_id, d.account_id",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        Ok((
+            (row.get::<_, AccountId>(0)?, row.get::<_, String>(1)?),
+            Count {
+                threads: row.get(2)?,
+                unread: row.get(3)?,
+            },
+        ))
+    })?;
+    Ok(LabelCounts {
+        counts: rows.collect::<rusqlite::Result<_>>()?,
+    })
+}
+
+/// `unread_threads` for `filter` narrowed to each category, in one query.
+/// Each category's labels replace the filter's own, as `with_labels` does.
+pub fn category_unread_threads(
+    conn: &Connection,
+    filter: &ThreadFilter,
+) -> Result<HashMap<Category, i64>> {
+    category_unread(conn, filter, Rows::Threads)
+}
+
+/// `unread_messages` for `filter` narrowed to each category, in one query.
+/// Each category's labels replace the filter's own, as `with_labels` does.
+pub fn category_unread_messages(
+    conn: &Connection,
+    filter: &ThreadFilter,
+) -> Result<HashMap<Category, i64>> {
+    category_unread(conn, filter, Rows::Messages)
+}
+
+fn category_unread(
+    conn: &Connection,
+    filter: &ThreadFilter,
+    rows: Rows,
+) -> Result<HashMap<Category, i64>> {
+    let mut sql = Sql::default();
+    sql.push("SELECT ");
+    for (i, category) in Category::ALL.into_iter().enumerate() {
+        if i > 0 {
+            sql.push(", ");
+        }
+        let (any, none) = category.labels();
+        sql.push("COALESCE(SUM(1");
+        if !any.is_empty() {
+            sql.push(" AND ");
+            rows.has_any(&mut sql, any);
+        }
+        if !none.is_empty() {
+            sql.push(" AND NOT ");
+            rows.has_any(&mut sql, none);
+        }
+        sql.push("), 0)");
+    }
+    sql.push(" ");
+    let base = ThreadFilter {
+        any_labels: Vec::new(),
+        no_labels: Vec::new(),
+        ..filter.clone()
+    };
+    base.rows_matching(rows, &mut sql);
+    sql.push(match rows {
+        Rows::Threads => " AND t.unread = 1",
+        Rows::Messages => MESSAGE_UNREAD,
+    });
+    let counts =
+        conn.prepare_cached(&sql.text)?
+            .query_row(params_from_iter(&sql.params), |row| {
+                (0..Category::ALL.len())
+                    .map(|i| row.get::<_, i64>(i))
+                    .collect::<rusqlite::Result<Vec<i64>>>()
+            })?;
+    Ok(Category::ALL.into_iter().zip(counts).collect())
 }
