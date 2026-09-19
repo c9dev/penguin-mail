@@ -23,6 +23,36 @@ pub fn replace_labels(conn: &Connection, account_id: AccountId, labels: &[Label]
     Ok(())
 }
 
+/// Adds a label or updates its name.
+pub fn upsert_label(conn: &Connection, label: &Label) -> Result<()> {
+    conn.execute(
+        "INSERT INTO labels (account_id, id, name, kind) VALUES (?1, ?2, ?3, ?4) \
+         ON CONFLICT (account_id, id) DO UPDATE SET name = excluded.name, kind = excluded.kind",
+        params![label.account_id, label.id, label.name, label.kind.as_str()],
+    )?;
+    Ok(())
+}
+
+/// Removes a label and takes it off every message and thread. Returns the
+/// threads that carried it.
+pub fn delete_label(conn: &Connection, account_id: AccountId, id: &str) -> Result<Vec<String>> {
+    let threads: Vec<String> = conn
+        .prepare("SELECT thread_id FROM thread_labels WHERE account_id = ?1 AND label_id = ?2")?
+        .query_map(params![account_id, id], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    for table in ["message_labels", "thread_labels"] {
+        conn.execute(
+            &format!("DELETE FROM {table} WHERE account_id = ?1 AND label_id = ?2"),
+            params![account_id, id],
+        )?;
+    }
+    conn.execute(
+        "DELETE FROM labels WHERE account_id = ?1 AND id = ?2",
+        params![account_id, id],
+    )?;
+    Ok(threads)
+}
+
 /// System labels first, then user labels, each by name.
 pub fn list_labels(conn: &Connection, account_id: AccountId) -> Result<Vec<Label>> {
     let mut stmt = conn.prepare(

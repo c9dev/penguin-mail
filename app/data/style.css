@@ -44,3 +44,17 @@
 
 /* Welcome */
 .welcome-card { margin-top: 12px; }
+
+/* Dragging mail: a count badge, and the mailbox under the pointer lit up. */
+.drag-badge {
+  background: var(--accent-bg-color);
+  color: var(--accent-fg-color);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-weight: 700;
+  min-width: 12px;
+}
+.navigation-sidebar > row:drop(active) {
+  background: alpha(var(--accent-bg-color), 0.25);
+  box-shadow: inset 0 0 0 2px var(--accent-bg-color);
+}

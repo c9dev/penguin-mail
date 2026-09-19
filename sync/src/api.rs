@@ -91,6 +91,19 @@ pub trait GmailApi: Send + Sync + 'static {
         attachment_id: &str,
     ) -> impl Future<Output = Result<Vec<u8>, GmailError>> + Send;
 
+    fn create_label(
+        &self,
+        name: &str,
+    ) -> impl Future<Output = Result<RemoteLabel, GmailError>> + Send;
+
+    fn rename_label(
+        &self,
+        id: &str,
+        name: &str,
+    ) -> impl Future<Output = Result<RemoteLabel, GmailError>> + Send;
+
+    fn delete_label(&self, id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
+
     /// The signature of the default send-as identity, as plain text.
     fn signature(&self) -> impl Future<Output = Result<Option<String>, GmailError>> + Send;
 
@@ -257,5 +270,17 @@ impl GmailApi for AccountClient {
 
     async fn set_vacation(&self, vacation: &Vacation) -> Result<(), GmailError> {
         self.client.set_vacation(vacation).await
+    }
+
+    async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {
+        self.client.create_label(name).await
+    }
+
+    async fn rename_label(&self, id: &str, name: &str) -> Result<RemoteLabel, GmailError> {
+        self.client.rename_label(id, name).await
+    }
+
+    async fn delete_label(&self, id: &str) -> Result<(), GmailError> {
+        self.client.delete_label(id).await
     }
 }

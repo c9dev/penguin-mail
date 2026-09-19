@@ -448,4 +448,41 @@ impl GmailApi for FakeGmail {
         self.with(|s| s.vacation = vacation.clone());
         Ok(())
     }
+
+    async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {
+        self.check_failure()?;
+        Ok(self.with(|s| {
+            let label = RemoteLabel {
+                id: format!("Label_{}", s.labels.len() + 1),
+                name: name.to_string(),
+                kind: Some("user".into()),
+            };
+            s.labels.push(label.clone());
+            label
+        }))
+    }
+
+    async fn rename_label(&self, id: &str, name: &str) -> Result<RemoteLabel, GmailError> {
+        self.check_failure()?;
+        self.with(|s| {
+            let label = s
+                .labels
+                .iter_mut()
+                .find(|l| l.id == id)
+                .ok_or(GmailError::NotFound)?;
+            label.name = name.to_string();
+            Ok(label.clone())
+        })
+    }
+
+    async fn delete_label(&self, id: &str) -> Result<(), GmailError> {
+        self.check_failure()?;
+        self.with(|s| {
+            s.labels.retain(|l| l.id != id);
+            for message in s.messages.values_mut() {
+                message.label_ids.retain(|l| l != id);
+            }
+        });
+        Ok(())
+    }
 }

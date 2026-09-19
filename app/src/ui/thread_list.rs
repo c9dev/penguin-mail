@@ -4,9 +4,10 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
-use gtk::{gio, glib};
+use gtk::{gdk, gio, glib};
 use mailrs_domain::{AccountId, ThreadSummary};
 
+use super::sidebar::DRAG_MAIL;
 use super::thread_row::ThreadRow;
 use crate::diff::splice;
 
@@ -36,7 +37,9 @@ pub struct ThreadList {
     store: gio::ListStore,
     selection: gtk::MultiSelection,
     view: gtk::ListView,
-    rows: RefCell<Vec<ThreadSummary>>,
+    rows: Rc<RefCell<Vec<ThreadSummary>>>,
+    /// The rows of the drag in progress.
+    dragged: Rc<RefCell<Vec<ThreadSummary>>>,
     show_accounts: Rc<Cell<bool>>,
     muted: Cell<bool>,
 }
@@ -49,12 +52,54 @@ impl ThreadList {
         let store = gio::ListStore::new::<glib::BoxedAnyObject>();
         let selection = gtk::MultiSelection::new(Some(store.clone()));
         let show_accounts = Rc::new(Cell::new(true));
+        let rows: Rc<RefCell<Vec<ThreadSummary>>> = Rc::new(RefCell::new(Vec::new()));
+        let dragged: Rc<RefCell<Vec<ThreadSummary>>> = Rc::new(RefCell::new(Vec::new()));
         let factory = gtk::SignalListItemFactory::new();
-        factory.connect_setup(|_, item| {
+        let (all, drag_rows, picked) = (Rc::clone(&rows), Rc::clone(&dragged), selection.clone());
+        factory.connect_setup(move |_, item| {
             let item = item
                 .downcast_ref::<gtk::ListItem>()
                 .expect("list items are ListItems");
-            item.set_child(Some(&ThreadRow::default()));
+            let row = ThreadRow::default();
+            // Dragging a selected row takes the whole selection along.
+            let source = gtk::DragSource::new();
+            source.set_actions(gdk::DragAction::MOVE);
+            let counted = Rc::clone(&drag_rows);
+            let (list_item, all, taken_rows, picked) = (
+                item.clone(),
+                Rc::clone(&all),
+                Rc::clone(&drag_rows),
+                picked.clone(),
+            );
+            source.connect_prepare(move |_, _, _| {
+                let position = list_item.position();
+                let rows = all.borrow();
+                let taken: Vec<ThreadSummary> = if picked.is_selected(position) {
+                    (0..rows.len() as u32)
+                        .filter(|p| picked.is_selected(*p))
+                        .filter_map(|p| rows.get(p as usize).cloned())
+                        .collect()
+                } else {
+                    rows.get(position as usize).cloned().into_iter().collect()
+                };
+                if taken.is_empty() {
+                    return None;
+                }
+                *taken_rows.borrow_mut() = taken;
+                Some(gdk::ContentProvider::for_value(&DRAG_MAIL.to_value()))
+            });
+            source.connect_drag_begin(move |source, drag| {
+                let count = counted.borrow().len();
+                let label = gtk::Label::builder()
+                    .label(count.to_string())
+                    .css_classes(["drag-badge"])
+                    .build();
+                let icon = gtk::DragIcon::for_drag(drag);
+                icon.set_child(Some(&label));
+                source.set_icon(None::<&gdk::Paintable>, 0, 0);
+            });
+            row.add_controller(source);
+            item.set_child(Some(&row));
         });
         let shown = Rc::clone(&show_accounts);
         factory.connect_bind(move |_, item| {
@@ -163,7 +208,8 @@ impl ThreadList {
             store,
             selection,
             view,
-            rows: RefCell::new(Vec::new()),
+            rows,
+            dragged,
             show_accounts,
             muted: Cell::new(false),
         });
@@ -354,6 +400,11 @@ impl ThreadList {
             .map(|i| i.to_string())
             .unwrap_or_default();
         self.set_rows(rows, &title, &icon);
+    }
+
+    /// The rows of the last drag.
+    pub fn dragged(&self) -> Vec<ThreadSummary> {
+        self.dragged.borrow().clone()
     }
 
     pub fn open_search(&self) {

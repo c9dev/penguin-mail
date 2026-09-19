@@ -115,6 +115,15 @@ impl GmailApi for Api {
     async fn signature(&self) -> Result<Option<String>, GmailError> {
         delegate!(self, signature())
     }
+    async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {
+        delegate!(self, create_label(name))
+    }
+    async fn rename_label(&self, id: &str, name: &str) -> Result<RemoteLabel, GmailError> {
+        delegate!(self, rename_label(id, name))
+    }
+    async fn delete_label(&self, id: &str) -> Result<(), GmailError> {
+        delegate!(self, delete_label(id))
+    }
     async fn vacation(&self) -> Result<Vacation, GmailError> {
         delegate!(self, vacation())
     }

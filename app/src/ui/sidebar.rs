@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use adw::prelude::*;
-use gtk::{gio, pango};
+use gtk::{gdk, gio, glib, pango};
 use mailrs_domain::{Account, AccountId, AccountState, Label, LabelKind};
 
 use super::{Folder, Mailbox, UNIFIED, account_label_name, mailbox_icon, unified_name};
@@ -29,6 +29,7 @@ pub struct Sidebar {
     pub header: adw::HeaderBar,
     pub add_account: gtk::Button,
     list: gtk::ListBox,
+    scroller: gtk::ScrolledWindow,
     rows: RefCell<Vec<Row>>,
     headings: RefCell<Vec<Heading>>,
     /// Accounts whose sections the user expanded or collapsed.
@@ -36,10 +37,15 @@ pub struct Sidebar {
     /// Whether sections start open. Unset means open only with one account.
     pub start_expanded: Cell<Option<bool>>,
     muted: Cell<bool>,
+    /// Handles mail dropped on a mailbox; true when it was taken.
+    on_drop: Rc<dyn Fn(Mailbox) -> bool>,
 }
 
 impl Sidebar {
-    pub fn new(on_select: impl Fn(Mailbox) + 'static) -> Rc<Sidebar> {
+    pub fn new(
+        on_select: impl Fn(Mailbox) + 'static,
+        on_drop: impl Fn(Mailbox) -> bool + 'static,
+    ) -> Rc<Sidebar> {
         let list = gtk::ListBox::builder()
             .css_classes(["navigation-sidebar"])
             .selection_mode(gtk::SelectionMode::Single)
@@ -77,11 +83,13 @@ impl Sidebar {
             header,
             add_account,
             list,
+            scroller: scroller.clone(),
             rows: RefCell::new(Vec::new()),
             headings: RefCell::new(Vec::new()),
             expanded: RefCell::new(HashMap::new()),
             start_expanded: Cell::new(None),
             muted: Cell::new(false),
+            on_drop: Rc::new(on_drop),
         });
         let weak = Rc::downgrade(&sidebar);
         sidebar.list.connect_row_selected(move |_, row| {
@@ -157,6 +165,8 @@ impl Sidebar {
 
     /// Rebuilds every row. `selected` is kept selected when it still exists.
     pub fn rebuild(&self, accounts: &[(Account, Vec<Label>)], selected: &Mailbox) {
+        // Keep the scroll position; label changes rebuild every row.
+        let scrolled = self.scroller.vadjustment().value();
         self.muted.set(true);
         self.list.remove_all();
         self.rows.borrow_mut().clear();
@@ -215,17 +225,20 @@ impl Sidebar {
                     label_id: label.id.clone(),
                     name: label.name.replace('/', " › "),
                 };
-                self.add_mailbox(mailbox, leaf, "mailrs-tag-symbolic", depth);
+                let row = self.add_mailbox(mailbox, leaf, "mailrs-tag-symbolic", depth);
+                label_menu(&row, account.id, &label.id);
             }
         }
         self.select(selected);
         self.apply_expansion();
         self.muted.set(false);
+        let adjustment = self.scroller.vadjustment();
+        glib::idle_add_local_once(move || adjustment.set_value(scrolled));
     }
 
     /// Adds a mailbox row. `depth` indents it: 0 for the unified views, 1
     /// for an account's mailboxes, and one more per level of label nesting.
-    fn add_mailbox(&self, mailbox: Mailbox, name: &str, icon: &str, depth: u32) {
+    fn add_mailbox(&self, mailbox: Mailbox, name: &str, icon: &str, depth: u32) -> gtk::ListBoxRow {
         let content = gtk::Box::builder()
             .spacing(12)
             .margin_start(18 * depth as i32)
@@ -249,12 +262,21 @@ impl Sidebar {
             .child(&content)
             .visible(mailbox != Mailbox::Scheduled)
             .build();
+        if takes_mail(&mailbox) {
+            let target = gtk::DropTarget::new(glib::Type::STRING, gdk::DragAction::MOVE);
+            let (on_drop, dest) = (Rc::clone(&self.on_drop), mailbox.clone());
+            target.connect_drop(move |_, value, _, _| {
+                value.get::<String>().is_ok_and(|v| v == DRAG_MAIL) && on_drop(dest.clone())
+            });
+            row.add_controller(target);
+        }
         self.list.append(&row);
         self.rows.borrow_mut().push(Row {
-            row,
+            row: row.clone(),
             mailbox,
             count,
         });
+        row
     }
 
     /// Selects `mailbox` without reporting it as a user choice.
@@ -314,6 +336,55 @@ impl Sidebar {
         }
         self.apply_expansion();
     }
+}
+
+/// What a dragged set of list rows carries. The rows themselves stay with
+/// the thread list.
+pub const DRAG_MAIL: &str = "mailrs-mail";
+
+/// Mailboxes mail can be moved into.
+fn takes_mail(mailbox: &Mailbox) -> bool {
+    match mailbox {
+        Mailbox::Unified(label) => matches!(*label, "INBOX" | "STARRED"),
+        Mailbox::Label { label_id, .. } => !matches!(label_id.as_str(), "SENT" | "DRAFT"),
+        Mailbox::Folder { .. } => true,
+        Mailbox::Search { .. } | Mailbox::Scheduled => false,
+    }
+}
+
+/// Rename and Delete on a right click or long press of a label row.
+fn label_menu(row: &gtk::ListBoxRow, account_id: AccountId, label_id: &str) {
+    let menu = gio::Menu::new();
+    let target = (account_id, label_id.to_string()).to_variant();
+    for (text, action) in [
+        ("Rename…", "win.label-rename"),
+        ("Delete…", "win.label-delete"),
+    ] {
+        let item = gio::MenuItem::new(Some(text), None);
+        item.set_action_and_target_value(Some(action), Some(&target));
+        menu.append_item(&item);
+    }
+    let popover = gtk::PopoverMenu::from_model(Some(&menu));
+    popover.set_has_arrow(false);
+    popover.set_halign(gtk::Align::Start);
+    popover.set_parent(row);
+    let show = {
+        let popover = popover.clone();
+        move |x: f64, y: f64| {
+            popover.set_pointing_to(Some(&gdk::Rectangle::new(x as i32, y as i32, 1, 1)));
+            popover.popup();
+        }
+    };
+    let click = gtk::GestureClick::builder()
+        .button(gdk::BUTTON_SECONDARY)
+        .build();
+    let open = show.clone();
+    click.connect_pressed(move |_, _, x, y| open(x, y));
+    row.add_controller(click);
+    let press = gtk::GestureLongPress::new();
+    press.connect_pressed(move |_, x, y| show(x, y));
+    row.add_controller(press);
+    row.connect_destroy(move |_| popover.unparent());
 }
 
 fn heading(account: &Account) -> (gtk::ListBoxRow, gtk::Image, gtk::Label) {
@@ -383,6 +454,7 @@ fn heading(account: &Account) -> (gtk::ListBoxRow, gtk::Image, gtk::Label) {
     let settings = gio::Menu::new();
     settings.append_item(&item("Automatic Reply…", "win.account-vacation"));
     settings.append_item(&item("Signature…", "win.account-signature"));
+    settings.append_item(&item("New Label…", "win.account-new-label"));
     menu.append_section(None, &settings);
     let access = gio::Menu::new();
     access.append_item(&item("Sign In Again…", "win.account-reconnect"));

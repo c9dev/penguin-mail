@@ -4,6 +4,7 @@
 pub mod autocomplete;
 pub mod composer;
 pub mod conversation;
+pub mod moving;
 pub mod preferences;
 pub mod sidebar;
 pub mod thread_list;

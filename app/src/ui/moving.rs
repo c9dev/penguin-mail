@@ -1,0 +1,181 @@
+//! What dragging mail onto a mailbox does. Moves follow Apple Mail: the
+//! mail gains the mailbox it lands on and leaves the one it came from.
+
+use mailrs_sync::TriageAction;
+
+use super::{Folder, Mailbox};
+
+/// The label a move takes mail out of, when leaving `mailbox` means
+/// losing one: the inbox or a user label.
+fn source_label(mailbox: &Mailbox) -> Option<String> {
+    let label = match mailbox {
+        Mailbox::Unified(label) => *label,
+        Mailbox::Label { label_id, .. } => label_id.as_str(),
+        _ => return None,
+    };
+    (!matches!(label, "STARRED" | "SENT" | "DRAFT" | "IMPORTANT")).then(|| label.to_string())
+}
+
+/// The label a destination adds, if it is one.
+fn dest_label(mailbox: &Mailbox) -> Option<&str> {
+    match mailbox {
+        Mailbox::Unified(label) => Some(label),
+        Mailbox::Label { label_id, .. } => Some(label_id.as_str()),
+        _ => None,
+    }
+}
+
+/// The change that moves mail shown in `from` into `to`, or why it cannot.
+pub fn move_action(from: &Mailbox, to: &Mailbox) -> Result<TriageAction, &'static str> {
+    let already = "The mail is already there";
+    let from_folder = from.folder();
+    let relabel = |add: Vec<String>, remove: Vec<String>| TriageAction::Relabel { add, remove };
+    if dest_label(to) == Some("STARRED") {
+        return Ok(TriageAction::Star);
+    }
+    match (from_folder, to.folder()) {
+        (Some(Folder::Trash), Some(Folder::Trash)) | (Some(Folder::Junk), Some(Folder::Junk)) => {
+            return Err(already);
+        }
+        (_, Some(Folder::Trash)) => return Ok(TriageAction::Trash),
+        (Some(Folder::Trash), _) if dest_label(to) == Some("INBOX") => {
+            return Ok(TriageAction::Untrash);
+        }
+        (Some(Folder::Trash), _) => return Err("Move it from the Trash to the Inbox first"),
+        (Some(Folder::Junk), _) if dest_label(to) == Some("INBOX") => {
+            return Ok(TriageAction::NotJunk);
+        }
+        (Some(Folder::Junk), Some(Folder::AllMail)) => {
+            return Ok(relabel(vec![], vec!["SPAM".into()]));
+        }
+        (Some(Folder::Junk), _) => {
+            let label = dest_label(to).ok_or(already)?;
+            return Ok(relabel(vec![label.into()], vec!["SPAM".into()]));
+        }
+        _ => {}
+    }
+    let source = source_label(from);
+    match to.folder() {
+        Some(Folder::Junk) => {
+            return Ok(match source.filter(|s| s != "INBOX") {
+                Some(label) => relabel(vec!["SPAM".into()], vec!["INBOX".into(), label]),
+                None => TriageAction::Junk,
+            });
+        }
+        Some(Folder::AllMail) => {
+            return match source.as_deref() {
+                Some("INBOX") => Ok(TriageAction::Archive),
+                Some(label) => Ok(TriageAction::RemoveLabel(label.into())),
+                None => Err("The mail is already in All Mail"),
+            };
+        }
+        _ => {}
+    }
+    let dest = dest_label(to).ok_or("Mail cannot go there")?;
+    match source {
+        Some(label) if label == dest => Err(already),
+        Some(label) => Ok(relabel(vec![dest.into()], vec![label])),
+        None => Ok(TriageAction::AddLabel(dest.into())),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn label(id: &str) -> Mailbox {
+        Mailbox::Label {
+            account_id: 1,
+            label_id: id.into(),
+            name: id.into(),
+        }
+    }
+
+    fn folder(folder: Folder) -> Mailbox {
+        Mailbox::Folder {
+            account_id: None,
+            folder,
+        }
+    }
+
+    fn relabel(add: &[&str], remove: &[&str]) -> TriageAction {
+        TriageAction::Relabel {
+            add: add.iter().map(|l| l.to_string()).collect(),
+            remove: remove.iter().map(|l| l.to_string()).collect(),
+        }
+    }
+
+    #[test]
+    fn moving_from_the_inbox_to_a_label_files_it_there() {
+        let inbox = Mailbox::Unified("INBOX");
+        assert_eq!(
+            move_action(&inbox, &label("Travel")),
+            Ok(relabel(&["Travel"], &["INBOX"]))
+        );
+        assert_eq!(
+            move_action(&inbox, &folder(Folder::AllMail)),
+            Ok(TriageAction::Archive)
+        );
+        assert_eq!(
+            move_action(&inbox, &folder(Folder::Trash)),
+            Ok(TriageAction::Trash)
+        );
+        assert_eq!(
+            move_action(&inbox, &folder(Folder::Junk)),
+            Ok(TriageAction::Junk)
+        );
+        assert_eq!(
+            move_action(&inbox, &Mailbox::Unified("STARRED")),
+            Ok(TriageAction::Star)
+        );
+        assert!(move_action(&inbox, &label("INBOX")).is_err());
+    }
+
+    #[test]
+    fn labels_trade_places_and_searches_only_add() {
+        assert_eq!(
+            move_action(&label("Work"), &label("Travel")),
+            Ok(relabel(&["Travel"], &["Work"]))
+        );
+        assert_eq!(
+            move_action(&label("Work"), &folder(Folder::AllMail)),
+            Ok(TriageAction::RemoveLabel("Work".into()))
+        );
+        let search = Mailbox::Search {
+            query: "x".into(),
+            account_id: None,
+        };
+        assert_eq!(
+            move_action(&search, &label("Travel")),
+            Ok(TriageAction::AddLabel("Travel".into()))
+        );
+        assert_eq!(
+            move_action(&Mailbox::Unified("SENT"), &label("INBOX")),
+            Ok(TriageAction::AddLabel("INBOX".into()))
+        );
+    }
+
+    #[test]
+    fn junk_and_trash_hand_mail_back_properly() {
+        let trash = folder(Folder::Trash);
+        let junk = folder(Folder::Junk);
+        assert_eq!(
+            move_action(&trash, &Mailbox::Unified("INBOX")),
+            Ok(TriageAction::Untrash)
+        );
+        assert!(move_action(&trash, &label("Travel")).is_err());
+        assert!(move_action(&trash, &trash).is_err());
+        assert_eq!(
+            move_action(&junk, &label("INBOX")),
+            Ok(TriageAction::NotJunk)
+        );
+        assert_eq!(
+            move_action(&junk, &label("Travel")),
+            Ok(relabel(&["Travel"], &["SPAM"]))
+        );
+        assert_eq!(
+            move_action(&label("Work"), &junk),
+            Ok(relabel(&["SPAM"], &["INBOX", "Work"]))
+        );
+    }
+}

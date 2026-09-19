@@ -625,6 +625,30 @@ impl GmailApi for DemoApi {
         Ok(Some(DISPLAY_NAME.into()))
     }
 
+    async fn create_label(&self, name: &str) -> std::result::Result<RemoteLabel, GmailError> {
+        Ok(RemoteLabel {
+            id: format!("Label_demo_{}", mailrs_gmail::random_token(4)),
+            name: name.to_string(),
+            kind: Some("user".into()),
+        })
+    }
+
+    async fn rename_label(
+        &self,
+        id: &str,
+        name: &str,
+    ) -> std::result::Result<RemoteLabel, GmailError> {
+        Ok(RemoteLabel {
+            id: id.to_string(),
+            name: name.to_string(),
+            kind: Some("user".into()),
+        })
+    }
+
+    async fn delete_label(&self, _id: &str) -> std::result::Result<(), GmailError> {
+        Ok(())
+    }
+
     async fn signature(&self) -> std::result::Result<Option<String>, GmailError> {
         Ok(Some(format!("{DISPLAY_NAME}\nSent from mailrs")))
     }

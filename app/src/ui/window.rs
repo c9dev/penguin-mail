@@ -25,6 +25,7 @@ use crate::compose::{self, Draft, OutgoingAttachment, ReplyKind};
 use crate::core::Core;
 use crate::settings::{Choice, MarkRead, RemoteImages, Settings, TextSize};
 
+mod organize;
 mod scheduled;
 
 /// Largest inline image embedded into a page.
@@ -106,11 +107,15 @@ impl MainWindow {
     pub fn new(app: &Rc<App>) -> Rc<MainWindow> {
         let window = Rc::new_cyclic(|weak: &Weak<MainWindow>| {
             let w = weak.clone();
-            let sidebar = Sidebar::new(move |mailbox| {
-                if let Some(win) = w.upgrade() {
-                    win.show_mailbox(mailbox);
-                }
-            });
+            let d = weak.clone();
+            let sidebar = Sidebar::new(
+                move |mailbox| {
+                    if let Some(win) = w.upgrade() {
+                        win.show_mailbox(mailbox);
+                    }
+                },
+                move |mailbox| d.upgrade().is_some_and(|win| win.drop_on(mailbox)),
+            );
             let (w, s) = (weak.clone(), weak.clone());
             let list = ThreadList::new(
                 move |picked| {
@@ -1079,6 +1084,17 @@ impl MainWindow {
 
     /// Runs `action` on every target. With `record`, offers an undo.
     fn apply(self: &Rc<Self>, targets: Vec<Target>, action: TriageAction, record: bool) {
+        self.apply_with(targets, action, record, None);
+    }
+
+    /// `apply`, with `message` in place of the usual toast text.
+    fn apply_with(
+        self: &Rc<Self>,
+        targets: Vec<Target>,
+        action: TriageAction,
+        record: bool,
+        message: Option<String>,
+    ) {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let mut failure = None;
@@ -1115,7 +1131,9 @@ impl MainWindow {
             this.prune_folder(&targets);
             let count = targets.len();
             *this.undo.borrow_mut() = Some((targets, action.inverse()));
-            if let Some(done) = done_message(&action, count, this.settings().threading) {
+            if let Some(done) =
+                message.or_else(|| done_message(&action, count, this.settings().threading))
+            {
                 let toast = adw::Toast::builder()
                     .title(done)
                     .button_label("Undo")
@@ -1181,10 +1199,33 @@ impl MainWindow {
             })
             .unwrap_or_default();
         labels.sort_by_key(|l| l.name.to_lowercase());
+        let create = gtk::Button::builder()
+            .child(
+                &adw::ButtonContent::builder()
+                    .icon_name("list-add-symbolic")
+                    .label("New Label…")
+                    .build(),
+            )
+            .css_classes(["flat"])
+            .margin_top(4)
+            .build();
+        let (weak, pop) = (Rc::downgrade(self), popover.clone());
+        create.connect_clicked(move |_| {
+            pop.popdown();
+            if let Some(win) = weak.upgrade() {
+                win.new_label(
+                    account_id,
+                    Some(Box::new(|win, label_id| {
+                        win.triage(TriageAction::AddLabel(label_id))
+                    })),
+                );
+            }
+        });
         if labels.is_empty() {
-            popover.set_child(Some(&message(
-                "This account has no labels yet. Create them in Gmail.",
-            )));
+            let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
+            content.append(&message("This account has no labels yet."));
+            content.append(&create);
+            popover.set_child(Some(&content));
             return popover;
         }
         let applied: HashSet<String> = if targets.len() == 1 {
@@ -1245,7 +1286,11 @@ impl MainWindow {
             .max_content_height(360)
             .min_content_width(220)
             .build();
-        popover.set_child(Some(&scroller));
+        let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        content.append(&scroller);
+        content.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
+        content.append(&create);
+        popover.set_child(Some(&content));
         popover
     }
 
@@ -1621,6 +1666,36 @@ impl MainWindow {
             "account-reconnect",
             Box::new(|win, account| win.authorize(Some(account.email))),
         );
+        with_account(
+            "account-new-label",
+            Box::new(|win, account| win.new_label(account.id, None)),
+        );
+        for (name, run) in [
+            (
+                "label-rename",
+                (|win: &Rc<MainWindow>, account, label| win.rename_label(account, label))
+                    as fn(&Rc<MainWindow>, AccountId, String),
+            ),
+            ("label-delete", |win, account, label| {
+                win.delete_label(account, label)
+            }),
+        ] {
+            let action = gio::SimpleAction::new(
+                name,
+                Some(&glib::VariantType::new("(xs)").expect("valid type")),
+            );
+            let weak = Rc::downgrade(self);
+            action.connect_activate(move |_, parameter| {
+                let (Some(win), Some((account, label))) = (
+                    weak.upgrade(),
+                    parameter.and_then(|p| p.get::<(i64, String)>()),
+                ) else {
+                    return;
+                };
+                run(&win, account, label);
+            });
+            self.actions.add_action(&action);
+        }
         with_account(
             "account-vacation",
             Box::new(|win, account| win.show_vacation(account)),

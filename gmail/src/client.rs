@@ -268,6 +268,37 @@ impl GmailClient {
         }
     }
 
+    /// Creates a user label shown in Gmail's label list.
+    pub async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {
+        let body = json!({
+            "name": name,
+            "labelListVisibility": "labelShow",
+            "messageListVisibility": "show",
+        });
+        self.call(cost::LABELS, || {
+            self.http().post(self.url("labels")).json(&body)
+        })
+        .await
+    }
+
+    pub async fn rename_label(&self, id: &str, name: &str) -> Result<RemoteLabel, GmailError> {
+        let body = json!({"name": name});
+        self.call(cost::LABELS, || {
+            self.http()
+                .patch(self.url(&format!("labels/{id}")))
+                .json(&body)
+        })
+        .await
+    }
+
+    /// Deletes a label. Gmail removes it from every message; the mail stays.
+    pub async fn delete_label(&self, id: &str) -> Result<(), GmailError> {
+        self.call_empty(cost::LABELS, || {
+            self.http().delete(self.url(&format!("labels/{id}")))
+        })
+        .await
+    }
+
     /// Addresses the account can send from, including its display names.
     pub async fn send_as(&self) -> Result<Vec<SendAs>, GmailError> {
         let list: SendAsList = self
