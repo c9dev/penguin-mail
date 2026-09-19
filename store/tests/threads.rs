@@ -30,7 +30,10 @@ fn ids(rows: Vec<ThreadSummary>) -> Vec<String> {
 fn the_unified_inbox_merges_accounts_newest_first() {
     let (conn, _, _) = two_accounts();
     let inbox = ThreadFilter::unified("INBOX");
-    assert_eq!(ids(threads::list_threads(&conn, &inbox, 0, 10).unwrap()), ["tb1", "ta2", "ta1"]);
+    assert_eq!(
+        ids(threads::list_threads(&conn, &inbox, 0, 10).unwrap()),
+        ["tb1", "ta2", "ta1"]
+    );
     assert_eq!(threads::count_threads(&conn, &inbox).unwrap(), 3);
     assert_eq!(threads::unread_threads(&conn, &inbox).unwrap(), 2);
 }
@@ -38,9 +41,18 @@ fn the_unified_inbox_merges_accounts_newest_first() {
 #[test]
 fn account_views_only_show_their_account() {
     let (conn, a, b) = two_accounts();
-    assert_eq!(ids(threads::list_threads(&conn, &ThreadFilter::account(a, "INBOX"), 0, 10).unwrap()), ["ta2", "ta1"]);
-    assert_eq!(ids(threads::list_threads(&conn, &ThreadFilter::account(b, "SENT"), 0, 10).unwrap()), ["tb2"]);
-    assert_eq!(threads::unread_threads(&conn, &ThreadFilter::account(a, "INBOX")).unwrap(), 1);
+    assert_eq!(
+        ids(threads::list_threads(&conn, &ThreadFilter::account(a, "INBOX"), 0, 10).unwrap()),
+        ["ta2", "ta1"]
+    );
+    assert_eq!(
+        ids(threads::list_threads(&conn, &ThreadFilter::account(b, "SENT"), 0, 10).unwrap()),
+        ["tb2"]
+    );
+    assert_eq!(
+        threads::unread_threads(&conn, &ThreadFilter::account(a, "INBOX")).unwrap(),
+        1
+    );
 }
 
 #[test]
@@ -52,14 +64,30 @@ fn paging_walks_the_list_without_gaps() {
         seen.extend(ids(threads::list_threads(&conn, &inbox, offset, 1).unwrap()));
     }
     assert_eq!(seen, ["tb1", "ta2", "ta1"]);
-    assert!(threads::list_threads(&conn, &inbox, 3, 1).unwrap().is_empty());
+    assert!(
+        threads::list_threads(&conn, &inbox, 3, 1)
+            .unwrap()
+            .is_empty()
+    );
 }
 
 #[test]
 fn a_thread_carries_every_label_of_its_messages() {
     let conn = open_in_memory().unwrap();
     let id = accounts::insert_account(&conn, "me@example.com", 0).unwrap();
-    store(&conn, &[meta(id, "a", "t1", 100, &["INBOX"]), meta(id, "b", "t1", 200, &["SENT"])]);
-    assert_eq!(ids(threads::list_threads(&conn, &ThreadFilter::account(id, "INBOX"), 0, 10).unwrap()), ["t1"]);
-    assert_eq!(ids(threads::list_threads(&conn, &ThreadFilter::account(id, "SENT"), 0, 10).unwrap()), ["t1"]);
+    store(
+        &conn,
+        &[
+            meta(id, "a", "t1", 100, &["INBOX"]),
+            meta(id, "b", "t1", 200, &["SENT"]),
+        ],
+    );
+    assert_eq!(
+        ids(threads::list_threads(&conn, &ThreadFilter::account(id, "INBOX"), 0, 10).unwrap()),
+        ["t1"]
+    );
+    assert_eq!(
+        ids(threads::list_threads(&conn, &ThreadFilter::account(id, "SENT"), 0, 10).unwrap()),
+        ["t1"]
+    );
 }

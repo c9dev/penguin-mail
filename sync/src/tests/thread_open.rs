@@ -12,13 +12,19 @@ async fn opening_a_thread_pulls_messages_outside_the_window() {
     let h = harness().await;
     let now = now_millis();
     h.fake.seed(meta("recent", "t1", now, &["INBOX"]));
-    h.fake.seed_outside_window(meta("older", "t1", now - 60 * DAY, &[]));
+    h.fake
+        .seed_outside_window(meta("older", "t1", now - 60 * DAY, &[]));
     h.bootstrap_all().await;
     assert_eq!(h.thread("t1").await.unwrap().message_count, 1);
     h.sync.ensure_thread("t1").await.unwrap();
     assert_eq!(h.thread("t1").await.unwrap().message_count, 2);
     let ids: Vec<String> =
-        h.db.read(|c| messages::thread_messages(c, 1, "t1")).await.unwrap().into_iter().map(|m| m.id).collect();
+        h.db.read(|c| messages::thread_messages(c, 1, "t1"))
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|m| m.id)
+            .collect();
     assert_eq!(ids, ["older", "recent"]);
 }
 
@@ -37,7 +43,11 @@ async fn bodies_are_fetched_once_then_served_from_the_cache() {
     let h = harness().await;
     h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
     h.bootstrap_all().await;
-    let body = MessageBody { html: None, text: Some("hello".into()), attachments: vec![] };
+    let body = MessageBody {
+        html: None,
+        text: Some("hello".into()),
+        attachments: vec![],
+    };
     h.fake.with(|s| {
         s.bodies.insert("a".into(), body.clone());
     });

@@ -5,12 +5,18 @@ use mailrs_gmail::convert::{history_page, message_meta, unescape_snippet};
 use mailrs_gmail::model::{HistoryList, Message};
 
 fn addr(name: Option<&str>, email: &str) -> Address {
-    Address { name: name.map(str::to_string), email: email.into() }
+    Address {
+        name: name.map(str::to_string),
+        email: email.into(),
+    }
 }
 
 #[test]
 fn parses_a_bare_address() {
-    assert_eq!(parse_address_list("bob@example.com"), vec![addr(None, "bob@example.com")]);
+    assert_eq!(
+        parse_address_list("bob@example.com"),
+        vec![addr(None, "bob@example.com")]
+    );
 }
 
 #[test]
@@ -25,7 +31,10 @@ fn parses_a_named_address() {
 fn quoted_names_may_contain_commas() {
     assert_eq!(
         parse_address_list(r#""Lee, Ann" <ann@example.com>, bob@example.com"#),
-        vec![addr(Some("Lee, Ann"), "ann@example.com"), addr(None, "bob@example.com")]
+        vec![
+            addr(Some("Lee, Ann"), "ann@example.com"),
+            addr(None, "bob@example.com")
+        ]
     );
 }
 
@@ -105,10 +114,24 @@ fn history_flattens_in_order() {
     assert_eq!(
         page.changes,
         vec![
-            HistoryChange::MessageAdded { id: "a".into(), thread_id: "ta".into() },
-            HistoryChange::LabelsAdded { id: "a".into(), thread_id: "ta".into(), label_ids: vec!["STARRED".into()] },
-            HistoryChange::LabelsRemoved { id: "a".into(), thread_id: "ta".into(), label_ids: vec!["UNREAD".into()] },
-            HistoryChange::MessageDeleted { id: "b".into(), thread_id: "tb".into() },
+            HistoryChange::MessageAdded {
+                id: "a".into(),
+                thread_id: "ta".into()
+            },
+            HistoryChange::LabelsAdded {
+                id: "a".into(),
+                thread_id: "ta".into(),
+                label_ids: vec!["STARRED".into()]
+            },
+            HistoryChange::LabelsRemoved {
+                id: "a".into(),
+                thread_id: "ta".into(),
+                label_ids: vec!["UNREAD".into()]
+            },
+            HistoryChange::MessageDeleted {
+                id: "b".into(),
+                thread_id: "tb".into()
+            },
         ]
     );
     assert_eq!(page.changes[3].message_id(), "b");

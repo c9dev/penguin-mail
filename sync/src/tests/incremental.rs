@@ -13,11 +13,15 @@ async fn new_inbox_mail_is_stored_and_announced() {
     let now = now_millis();
     h.fake.seed(meta("old", "told", now - DAY, &["INBOX"]));
     h.bootstrap_all().await;
-    h.fake.deliver(meta("new", "tnew", now, &["INBOX", "UNREAD"]));
+    h.fake
+        .deliver(meta("new", "tnew", now, &["INBOX", "UNREAD"]));
     h.sync.incremental().await.unwrap();
     assert_eq!(h.threads("INBOX").await, ["tnew", "told"]);
     assert_eq!(h.cursor().await.history_id, Some(101));
-    assert!(h.drain().contains(&ChangeEvent::NewMail { account_id: 1, message_ids: vec!["new".into()] }));
+    assert!(h.drain().contains(&ChangeEvent::NewMail {
+        account_id: 1,
+        message_ids: vec!["new".into()]
+    }));
 }
 
 #[tokio::test]
@@ -27,7 +31,11 @@ async fn sent_mail_is_stored_without_an_announcement() {
     h.fake.deliver(meta("s", "ts", now_millis(), &["SENT"]));
     h.sync.incremental().await.unwrap();
     assert_eq!(h.threads("SENT").await, ["ts"]);
-    assert!(!h.drain().iter().any(|e| matches!(e, ChangeEvent::NewMail { .. })));
+    assert!(
+        !h.drain()
+            .iter()
+            .any(|e| matches!(e, ChangeEvent::NewMail { .. }))
+    );
 }
 
 #[tokio::test]
@@ -50,7 +58,8 @@ async fn label_changes_and_deletions_apply() {
 async fn old_mail_moved_into_the_inbox_is_fetched() {
     let h = harness().await;
     h.bootstrap_all().await;
-    h.fake.seed_outside_window(meta("old", "told", now_millis() - 90 * DAY, &[]));
+    h.fake
+        .seed_outside_window(meta("old", "told", now_millis() - 90 * DAY, &[]));
     h.fake.remote_relabel("old", &["INBOX"], &[]);
     h.sync.incremental().await.unwrap();
     assert_eq!(h.threads("INBOX").await, ["told"]);
@@ -62,7 +71,12 @@ async fn every_history_page_is_applied() {
     h.bootstrap_all().await;
     let now = now_millis();
     for i in 0..5 {
-        h.fake.deliver(meta(&format!("m{i}"), &format!("t{i}"), now - i, &["INBOX"]));
+        h.fake.deliver(meta(
+            &format!("m{i}"),
+            &format!("t{i}"),
+            now - i,
+            &["INBOX"],
+        ));
     }
     h.sync.incremental().await.unwrap();
     assert_eq!(h.threads("INBOX").await.len(), 5);

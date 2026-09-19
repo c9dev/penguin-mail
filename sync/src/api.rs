@@ -20,12 +20,21 @@ pub trait GmailApi: Send + Sync + 'static {
         page_token: Option<&str>,
     ) -> impl Future<Output = Result<MessagePage, GmailError>> + Send;
 
-    fn message_metadata(&self, id: &str) -> impl Future<Output = Result<MessageMeta, GmailError>> + Send;
+    fn message_metadata(
+        &self,
+        id: &str,
+    ) -> impl Future<Output = Result<MessageMeta, GmailError>> + Send;
 
     /// Every message in the thread, oldest first.
-    fn thread_metadata(&self, thread_id: &str) -> impl Future<Output = Result<Vec<MessageMeta>, GmailError>> + Send;
+    fn thread_metadata(
+        &self,
+        thread_id: &str,
+    ) -> impl Future<Output = Result<Vec<MessageMeta>, GmailError>> + Send;
 
-    fn message_body(&self, id: &str) -> impl Future<Output = Result<MessageBody, GmailError>> + Send;
+    fn message_body(
+        &self,
+        id: &str,
+    ) -> impl Future<Output = Result<MessageBody, GmailError>> + Send;
 
     fn history(
         &self,
@@ -58,31 +67,57 @@ impl GmailApi for AccountClient {
         self.client.labels().await
     }
 
-    async fn list_messages(&self, query: &str, page_token: Option<&str>) -> Result<MessagePage, GmailError> {
-        self.client.list_messages(query, page_token, LIST_PAGE_SIZE).await
+    async fn list_messages(
+        &self,
+        query: &str,
+        page_token: Option<&str>,
+    ) -> Result<MessagePage, GmailError> {
+        self.client
+            .list_messages(query, page_token, LIST_PAGE_SIZE)
+            .await
     }
 
     async fn message_metadata(&self, id: &str) -> Result<MessageMeta, GmailError> {
-        Ok(message_meta(&self.client.message_metadata(id).await?, self.account_id))
+        Ok(message_meta(
+            &self.client.message_metadata(id).await?,
+            self.account_id,
+        ))
     }
 
     async fn thread_metadata(&self, thread_id: &str) -> Result<Vec<MessageMeta>, GmailError> {
         let thread = self.client.thread_metadata(thread_id).await?;
-        let mut metas: Vec<MessageMeta> = thread.messages.iter().map(|m| message_meta(m, self.account_id)).collect();
+        let mut metas: Vec<MessageMeta> = thread
+            .messages
+            .iter()
+            .map(|m| message_meta(m, self.account_id))
+            .collect();
         metas.sort_by_key(|m| m.date);
         Ok(metas)
     }
 
     async fn message_body(&self, id: &str) -> Result<MessageBody, GmailError> {
         let message = self.client.message_full(id).await?;
-        Ok(message.payload.as_ref().map(extract_body).unwrap_or_default())
+        Ok(message
+            .payload
+            .as_ref()
+            .map(extract_body)
+            .unwrap_or_default())
     }
 
-    async fn history(&self, start_history_id: u64, page_token: Option<&str>) -> Result<HistoryPage, GmailError> {
+    async fn history(
+        &self,
+        start_history_id: u64,
+        page_token: Option<&str>,
+    ) -> Result<HistoryPage, GmailError> {
         self.client.history(start_history_id, page_token).await
     }
 
-    async fn modify_labels(&self, id: &str, add: &[String], remove: &[String]) -> Result<(), GmailError> {
+    async fn modify_labels(
+        &self,
+        id: &str,
+        add: &[String],
+        remove: &[String],
+    ) -> Result<(), GmailError> {
         self.client.modify(id, add, remove).await
     }
 

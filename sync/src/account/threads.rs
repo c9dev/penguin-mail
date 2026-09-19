@@ -42,7 +42,10 @@ impl<G: GmailApi> AccountSync<G> {
         let account_id = self.account_id;
         let now = now_millis();
         let key = message_id.to_string();
-        let cached = self.db.write(move |c| bodies::get_body(c, account_id, &key, now)).await?;
+        let cached = self
+            .db
+            .write(move |c| bodies::get_body(c, account_id, &key, now))
+            .await?;
         if let Some(body) = cached {
             return Ok(body);
         }

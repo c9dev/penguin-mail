@@ -11,7 +11,10 @@ async fn the_burst_is_free_and_then_the_rate_applies() {
     assert_eq!(start.elapsed(), Duration::ZERO);
     limiter.acquire(25).await;
     let waited = start.elapsed();
-    assert!(waited >= Duration::from_millis(250) && waited < Duration::from_millis(260), "{waited:?}");
+    assert!(
+        waited >= Duration::from_millis(250) && waited < Duration::from_millis(260),
+        "{waited:?}"
+    );
 }
 
 #[tokio::test(start_paused = true)]

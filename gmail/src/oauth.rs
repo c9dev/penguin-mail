@@ -48,7 +48,10 @@ impl Pkce {
     pub fn generate() -> Self {
         let verifier = random_token(32);
         let challenge = URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()));
-        Pkce { verifier, challenge }
+        Pkce {
+            verifier,
+            challenge,
+        }
     }
 }
 
@@ -102,7 +105,11 @@ impl OAuthClient {
     }
 
     /// Points the client at other endpoints. Tests use this.
-    pub fn with_endpoints(mut self, auth_url: impl Into<String>, token_url: impl Into<String>) -> Self {
+    pub fn with_endpoints(
+        mut self,
+        auth_url: impl Into<String>,
+        token_url: impl Into<String>,
+    ) -> Self {
         self.auth_url = auth_url.into();
         self.token_url = token_url.into();
         self
@@ -112,9 +119,15 @@ impl OAuthClient {
         &self.http
     }
 
-    pub fn authorize_url(&self, redirect_uri: &str, pkce: &Pkce, state: &str) -> Result<String, GmailError> {
-        let mut url = Url::parse(&self.auth_url)
-            .map_err(|e| GmailError::OAuth(format!("bad authorization URL {}: {e}", self.auth_url)))?;
+    pub fn authorize_url(
+        &self,
+        redirect_uri: &str,
+        pkce: &Pkce,
+        state: &str,
+    ) -> Result<String, GmailError> {
+        let mut url = Url::parse(&self.auth_url).map_err(|e| {
+            GmailError::OAuth(format!("bad authorization URL {}: {e}", self.auth_url))
+        })?;
         url.query_pairs_mut()
             .append_pair("client_id", &self.client_id)
             .append_pair("redirect_uri", redirect_uri)
@@ -128,7 +141,12 @@ impl OAuthClient {
         Ok(url.into())
     }
 
-    pub async fn exchange_code(&self, code: &str, redirect_uri: &str, pkce: &Pkce) -> Result<Tokens, GmailError> {
+    pub async fn exchange_code(
+        &self,
+        code: &str,
+        redirect_uri: &str,
+        pkce: &Pkce,
+    ) -> Result<Tokens, GmailError> {
         let response = self
             .post_token(&[
                 ("grant_type", "authorization_code"),
@@ -143,7 +161,10 @@ impl OAuthClient {
             .refresh_token
             .clone()
             .ok_or_else(|| GmailError::OAuth("Google returned no refresh token".into()))?;
-        Ok(Tokens { access: response.access(), refresh_token })
+        Ok(Tokens {
+            access: response.access(),
+            refresh_token,
+        })
     }
 
     pub async fn refresh(&self, refresh_token: &str) -> Result<AccessToken, GmailError> {
@@ -162,7 +183,10 @@ impl OAuthClient {
         let response = self.http.post(&self.token_url).form(form).send().await?;
         let status = response.status().as_u16();
         if response.status().is_success() {
-            return response.json().await.map_err(|e| GmailError::Decode(e.to_string()));
+            return response
+                .json()
+                .await
+                .map_err(|e| GmailError::Decode(e.to_string()));
         }
         let body = response.text().await.unwrap_or_default();
         Err(match status {
@@ -182,9 +206,14 @@ pub struct LoopbackListener {
 impl LoopbackListener {
     /// Listens on an ephemeral port.
     pub async fn bind() -> Result<Self, GmailError> {
-        let listener = TcpListener::bind(("127.0.0.1", 0)).await.map_err(io_error)?;
+        let listener = TcpListener::bind(("127.0.0.1", 0))
+            .await
+            .map_err(io_error)?;
         let port = listener.local_addr().map_err(io_error)?.port();
-        Ok(LoopbackListener { listener, redirect_uri: format!("http://127.0.0.1:{port}") })
+        Ok(LoopbackListener {
+            listener,
+            redirect_uri: format!("http://127.0.0.1:{port}"),
+        })
     }
 
     /// Answers requests until one carries the authorization code or an error.
@@ -196,10 +225,14 @@ impl LoopbackListener {
             let outcome = parse_redirect(&String::from_utf8_lossy(&buf[..n]), expected_state);
             let (status, message) = match &outcome {
                 Some(Ok(_)) => ("200 OK", "mailrs is authorized. You can close this tab."),
-                Some(Err(_)) => ("400 Bad Request", "Authorization failed. The terminal has the details."),
+                Some(Err(_)) => (
+                    "400 Bad Request",
+                    "Authorization failed. The terminal has the details.",
+                ),
                 None => ("404 Not Found", "Not found."),
             };
-            let body = format!("<!doctype html><meta charset=utf-8><title>mailrs</title><p>{message}</p>");
+            let body =
+                format!("<!doctype html><meta charset=utf-8><title>mailrs</title><p>{message}</p>");
             let response = format!(
                 "HTTP/1.1 {status}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
                 body.len()
@@ -227,7 +260,9 @@ pub fn parse_redirect(request: &str, expected_state: &str) -> Option<Result<Stri
     }
     let code = params.get("code")?;
     if params.get("state").map(String::as_str) != Some(expected_state) {
-        return Some(Err(GmailError::OAuth("the redirect's state did not match; try again".into())));
+        return Some(Err(GmailError::OAuth(
+            "the redirect's state did not match; try again".into(),
+        )));
     }
     Some(Ok(code.clone()))
 }

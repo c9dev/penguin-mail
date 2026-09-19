@@ -21,8 +21,14 @@ fn label_kind_round_trips_through_strings() {
 
 #[test]
 fn address_display_prefers_the_name() {
-    let named = Address { name: Some("Ann Lee".into()), email: "ann@example.com".into() };
-    let bare = Address { name: None, email: "bob@example.com".into() };
+    let named = Address {
+        name: Some("Ann Lee".into()),
+        email: "ann@example.com".into(),
+    };
+    let bare = Address {
+        name: None,
+        email: "bob@example.com".into(),
+    };
     assert_eq!(named.display(), "Ann Lee");
     assert_eq!(bare.display(), "bob@example.com");
 }

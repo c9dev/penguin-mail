@@ -33,7 +33,12 @@ pub struct AccountSync<G> {
 }
 
 impl<G: GmailApi> AccountSync<G> {
-    pub fn new(account_id: AccountId, api: Arc<G>, db: Db, events: async_channel::Sender<ChangeEvent>) -> Self {
+    pub fn new(
+        account_id: AccountId,
+        api: Arc<G>,
+        db: Db,
+        events: async_channel::Sender<ChangeEvent>,
+    ) -> Self {
         AccountSync {
             account_id,
             api,
@@ -63,7 +68,9 @@ impl<G: GmailApi> AccountSync<G> {
 
     pub async fn set_state(&self, state: AccountState) -> Result<(), SyncError> {
         let account_id = self.account_id;
-        self.db.write(move |c| accounts::set_state(c, account_id, state)).await?;
+        self.db
+            .write(move |c| accounts::set_state(c, account_id, state))
+            .await?;
         self.emit(ChangeEvent::AccountStateChanged { account_id, state });
         Ok(())
     }

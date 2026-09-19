@@ -20,7 +20,10 @@ impl QuotaLimiter {
         QuotaLimiter {
             rate: units_per_second,
             burst,
-            bucket: Mutex::new(Bucket { tokens: burst, updated: Instant::now() }),
+            bucket: Mutex::new(Bucket {
+                tokens: burst,
+                updated: Instant::now(),
+            }),
         }
     }
 
@@ -32,7 +35,11 @@ impl QuotaLimiter {
     /// Waits until `units` are available, then spends them.
     pub async fn acquire(&self, units: u32) {
         let units = f64::from(units);
-        assert!(units <= self.burst, "request of {units} units exceeds burst of {}", self.burst);
+        assert!(
+            units <= self.burst,
+            "request of {units} units exceeds burst of {}",
+            self.burst
+        );
         loop {
             let wait = {
                 let mut bucket = self.bucket.lock().await;

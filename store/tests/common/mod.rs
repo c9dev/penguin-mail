@@ -10,14 +10,26 @@ pub fn db() -> (Connection, AccountId) {
     (conn, id)
 }
 
-pub fn meta(account_id: AccountId, id: &str, thread: &str, date: i64, labels: &[&str]) -> MessageMeta {
+pub fn meta(
+    account_id: AccountId,
+    id: &str,
+    thread: &str,
+    date: i64,
+    labels: &[&str],
+) -> MessageMeta {
     MessageMeta {
         account_id,
         id: id.into(),
         thread_id: thread.into(),
         rfc822_msgid: Some(format!("<{id}@example.com>")),
-        from: Some(Address { name: Some(format!("Sender {id}")), email: format!("{id}@example.com") }),
-        to: vec![Address { name: None, email: "me@example.com".into() }],
+        from: Some(Address {
+            name: Some(format!("Sender {id}")),
+            email: format!("{id}@example.com"),
+        }),
+        to: vec![Address {
+            name: None,
+            email: "me@example.com".into(),
+        }],
         cc: vec![],
         subject: format!("Subject {id}"),
         date,

@@ -48,7 +48,11 @@ impl FromStr for TriageAction {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let label = |rest: &str| {
-            if rest.is_empty() { Err(format!("`{s}` needs a label id after the colon")) } else { Ok(rest.to_string()) }
+            if rest.is_empty() {
+                Err(format!("`{s}` needs a label id after the colon"))
+            } else {
+                Ok(rest.to_string())
+            }
         };
         match s {
             "archive" => Ok(TriageAction::Archive),

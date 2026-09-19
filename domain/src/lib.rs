@@ -186,11 +186,25 @@ pub struct MessageBody {
 /// What the sync engine reports to the UI. Views re-query the store in response.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ChangeEvent {
-    AccountStateChanged { account_id: AccountId, state: AccountState },
-    LabelsChanged { account_id: AccountId },
+    AccountStateChanged {
+        account_id: AccountId,
+        state: AccountState,
+    },
+    LabelsChanged {
+        account_id: AccountId,
+    },
     /// Threads whose summary changed or that disappeared. Re-query to find out which.
-    ThreadsChanged { account_id: AccountId, thread_ids: Vec<String> },
+    ThreadsChanged {
+        account_id: AccountId,
+        thread_ids: Vec<String>,
+    },
     /// Unread mail that arrived in INBOX since the last poll.
-    NewMail { account_id: AccountId, message_ids: Vec<String> },
-    WriteFailed { account_id: AccountId, message: String },
+    NewMail {
+        account_id: AccountId,
+        message_ids: Vec<String>,
+    },
+    WriteFailed {
+        account_id: AccountId,
+        message: String,
+    },
 }

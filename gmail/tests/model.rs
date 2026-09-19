@@ -48,7 +48,10 @@ fn history_list_parses_every_change_kind() {
     .unwrap();
     assert_eq!(h.history_id, 42);
     assert_eq!(h.history[0].messages_added[0].message.id, "a");
-    assert_eq!(h.history[1].labels_removed[0].label_ids, vec!["UNREAD".to_string()]);
+    assert_eq!(
+        h.history[1].labels_removed[0].label_ids,
+        vec!["UNREAD".to_string()]
+    );
 }
 
 #[test]
@@ -58,6 +61,7 @@ fn labels_and_threads_parse() {
     )
     .unwrap();
     assert_eq!(l.labels[1].kind.as_deref(), Some("user"));
-    let t: Thread = serde_json::from_str(r#"{"id":"t","messages":[{"id":"a","threadId":"t"}]}"#).unwrap();
+    let t: Thread =
+        serde_json::from_str(r#"{"id":"t","messages":[{"id":"a","threadId":"t"}]}"#).unwrap();
     assert_eq!(t.messages.len(), 1);
 }

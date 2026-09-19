@@ -14,7 +14,9 @@ use mailrs_domain::{Account, AccountId, ChangeEvent, EpochMillis};
 use mailrs_gmail::{GMAIL_API_BASE, KeyringTokenStore, OAuthClient, TokenStore, authorize};
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{Db, accounts, messages};
-use mailrs_sync::{AccountClient, AccountSync, SyncEngine, TriageAction, connect_account, now_millis};
+use mailrs_sync::{
+    AccountClient, AccountSync, SyncEngine, TriageAction, connect_account, now_millis,
+};
 
 use crate::config::{Config, config_path, data_dir};
 
@@ -22,7 +24,11 @@ use crate::config::{Config, config_path, data_dir};
 const CONSENT_TIMEOUT: Duration = Duration::from_secs(300);
 
 #[derive(Parser)]
-#[command(name = "mailrs-cli", version, about = "Sync Gmail accounts into the mailrs store and inspect it")]
+#[command(
+    name = "mailrs-cli",
+    version,
+    about = "Sync Gmail accounts into the mailrs store and inspect it"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -48,7 +54,11 @@ enum Command {
     /// Fetch a whole thread from Gmail and print it as text.
     Show { account: String, thread_id: String },
     /// Apply archive, read, unread, star, unstar, trash, label:ID, or unlabel:ID to a thread.
-    Triage { account: String, thread_id: String, action: TriageAction },
+    Triage {
+        account: String,
+        thread_id: String,
+        action: TriageAction,
+    },
 }
 
 #[derive(Subcommand)]
@@ -79,11 +89,19 @@ async fn main() -> Result<()> {
         Command::Account(AccountCommand::List) => list_accounts(&db).await,
         Command::Account(AccountCommand::Remove { email }) => remove_account(&db, &email).await,
         Command::Sync => run_sync(&db, &load_config()?).await,
-        Command::Threads { account, label, limit } => list_threads(&db, account.as_deref(), label, limit).await,
-        Command::Show { account, thread_id } => show_thread(&db, &load_config()?, &account, &thread_id).await,
-        Command::Triage { account, thread_id, action } => {
-            triage(&db, &load_config()?, &account, &thread_id, action).await
+        Command::Threads {
+            account,
+            label,
+            limit,
+        } => list_threads(&db, account.as_deref(), label, limit).await,
+        Command::Show { account, thread_id } => {
+            show_thread(&db, &load_config()?, &account, &thread_id).await
         }
+        Command::Triage {
+            account,
+            thread_id,
+            action,
+        } => triage(&db, &load_config()?, &account, &thread_id, action).await,
     }
 }
 
@@ -102,8 +120,14 @@ fn token_store() -> Arc<dyn TokenStore> {
 async fn add_account(db: &Db, config: &Config) -> Result<()> {
     let oauth = oauth(config);
     let flow = authorize(&oauth, GMAIL_API_BASE, |url| {
-        println!("Opening your browser for Google's consent screen. If it does not open, visit:\n\n{url}\n");
-        let _ = Process::new("xdg-open").arg(url).stdout(Stdio::null()).stderr(Stdio::null()).spawn();
+        println!(
+            "Opening your browser for Google's consent screen. If it does not open, visit:\n\n{url}\n"
+        );
+        let _ = Process::new("xdg-open")
+            .arg(url)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn();
     });
     let authorized = tokio::time::timeout(CONSENT_TIMEOUT, flow)
         .await
@@ -112,34 +136,47 @@ async fn add_account(db: &Db, config: &Config) -> Result<()> {
     let (email, refresh) = (authorized.email.clone(), authorized.refresh_token.clone());
     tokio::task::spawn_blocking(move || tokens.save(&email, &refresh)).await??;
     let email = authorized.email.clone();
-    let id = db.write(move |c| accounts::insert_account(c, &email, now_millis())).await?;
-    println!("Added {} as account {id}. Run `mailrs-cli sync` to download mail.", authorized.email);
+    let id = db
+        .write(move |c| accounts::insert_account(c, &email, now_millis()))
+        .await?;
+    println!(
+        "Added {} as account {id}. Run `mailrs-cli sync` to download mail.",
+        authorized.email
+    );
     Ok(())
 }
 
 async fn list_accounts(db: &Db) -> Result<()> {
-    let all = db.read(|c| accounts::list_accounts(c)).await?;
+    let all = db.read(accounts::list_accounts).await?;
     if all.is_empty() {
         println!("No accounts. Run `mailrs-cli account add`.");
         return Ok(());
     }
     for account in all {
-        println!("{:>3}  {:<40} {}", account.id, account.email, account.state.as_str());
+        println!(
+            "{:>3}  {:<40} {}",
+            account.id,
+            account.email,
+            account.state.as_str()
+        );
     }
     Ok(())
 }
 
 async fn remove_account(db: &Db, email: &str) -> Result<()> {
     let account = find_account(db, email).await?;
-    db.write(move |c| accounts::delete_account(c, account.id)).await?;
+    db.write(move |c| accounts::delete_account(c, account.id))
+        .await?;
     let (tokens, owned) = (token_store(), email.to_string());
     tokio::task::spawn_blocking(move || tokens.delete(&owned)).await??;
-    println!("Removed {email}. Revoke Google's side at https://myaccount.google.com/permissions if you want.");
+    println!(
+        "Removed {email}. Revoke Google's side at https://myaccount.google.com/permissions if you want."
+    );
     Ok(())
 }
 
 async fn run_sync(db: &Db, config: &Config) -> Result<()> {
-    let all = db.read(|c| accounts::list_accounts(c)).await?;
+    let all = db.read(accounts::list_accounts).await?;
     if all.is_empty() {
         bail!("no accounts; run `mailrs-cli account add` first");
     }
@@ -171,19 +208,41 @@ fn print_event(emails: &HashMap<AccountId, String>, event: &ChangeEvent) {
         ChangeEvent::AccountStateChanged { account_id, state } => {
             println!("{}: {}", who(emails, *account_id), state.as_str());
         }
-        ChangeEvent::LabelsChanged { account_id } => println!("{}: labels updated", who(emails, *account_id)),
-        ChangeEvent::ThreadsChanged { account_id, thread_ids } => {
-            println!("{}: {} thread(s) changed", who(emails, *account_id), thread_ids.len());
+        ChangeEvent::LabelsChanged { account_id } => {
+            println!("{}: labels updated", who(emails, *account_id))
         }
-        ChangeEvent::NewMail { account_id, message_ids } => {
-            println!("{}: {} new message(s)", who(emails, *account_id), message_ids.len());
+        ChangeEvent::ThreadsChanged {
+            account_id,
+            thread_ids,
+        } => {
+            println!(
+                "{}: {} thread(s) changed",
+                who(emails, *account_id),
+                thread_ids.len()
+            );
         }
-        ChangeEvent::WriteFailed { account_id, message } => println!("{}: {message}", who(emails, *account_id)),
+        ChangeEvent::NewMail {
+            account_id,
+            message_ids,
+        } => {
+            println!(
+                "{}: {} new message(s)",
+                who(emails, *account_id),
+                message_ids.len()
+            );
+        }
+        ChangeEvent::WriteFailed {
+            account_id,
+            message,
+        } => println!("{}: {message}", who(emails, *account_id)),
     }
 }
 
 fn who(emails: &HashMap<AccountId, String>, account_id: AccountId) -> &str {
-    emails.get(&account_id).map(String::as_str).unwrap_or("unknown account")
+    emails
+        .get(&account_id)
+        .map(String::as_str)
+        .unwrap_or("unknown account")
 }
 
 async fn list_threads(db: &Db, account: Option<&str>, label: String, limit: i64) -> Result<()> {
@@ -191,8 +250,13 @@ async fn list_threads(db: &Db, account: Option<&str>, label: String, limit: i64)
         Some(email) => Some(find_account(db, email).await?.id),
         None => None,
     };
-    let filter = ThreadFilter { account_id, label_id: label };
-    let rows = db.read(move |c| threads::list_threads(c, &filter, 0, limit)).await?;
+    let filter = ThreadFilter {
+        account_id,
+        label_id: label,
+    };
+    let rows = db
+        .read(move |c| threads::list_threads(c, &filter, 0, limit))
+        .await?;
     for t in rows {
         println!(
             "{} {:>2} {:<18} {:<22} {:<48} {}",
@@ -211,12 +275,21 @@ async fn show_thread(db: &Db, config: &Config, email: &str, thread_id: &str) -> 
     let sync = account_sync(db, config, email).await?;
     sync.ensure_thread(thread_id).await?;
     let (account_id, thread) = (sync.account_id(), thread_id.to_string());
-    let messages = db.read(move |c| messages::thread_messages(c, account_id, &thread)).await?;
+    let messages = db
+        .read(move |c| messages::thread_messages(c, account_id, &thread))
+        .await?;
     if messages.is_empty() {
         bail!("Gmail has no thread {thread_id} in {email}");
     }
     for message in messages {
-        println!("From:    {}", message.from.as_ref().map(|a| a.display()).unwrap_or("(unknown)"));
+        println!(
+            "From:    {}",
+            message
+                .from
+                .as_ref()
+                .map(|a| a.display())
+                .unwrap_or("(unknown)")
+        );
         println!("Date:    {}", format_date(message.date));
         println!("Subject: {}\n", message.subject);
         let body = sync.body(&message.id).await?;
@@ -226,7 +299,13 @@ async fn show_thread(db: &Db, config: &Config, email: &str, thread_id: &str) -> 
     Ok(())
 }
 
-async fn triage(db: &Db, config: &Config, email: &str, thread_id: &str, action: TriageAction) -> Result<()> {
+async fn triage(
+    db: &Db,
+    config: &Config,
+    email: &str,
+    thread_id: &str,
+    action: TriageAction,
+) -> Result<()> {
     let sync = account_sync(db, config, email).await?;
     sync.triage_thread(thread_id, &action).await?;
     println!("{}: done.", action.describe());
@@ -239,8 +318,10 @@ async fn account_sync(db: &Db, config: &Config, email: &str) -> Result<AccountSy
     let client = connect_account(oauth(config), token_store(), &account).await?;
     let (events, _) = async_channel::unbounded();
     let engine = config.engine_config();
-    Ok(AccountSync::new(account.id, Arc::new(client), db.clone(), events)
-        .with_limits(engine.window_days, engine.body_cache_bytes))
+    Ok(
+        AccountSync::new(account.id, Arc::new(client), db.clone(), events)
+            .with_limits(engine.window_days, engine.body_cache_bytes),
+    )
 }
 
 async fn find_account(db: &Db, email: &str) -> Result<Account> {
@@ -261,6 +342,10 @@ fn truncate(s: &str, width: usize) -> String {
 
 fn format_date(millis: EpochMillis) -> String {
     chrono::DateTime::from_timestamp_millis(millis)
-        .map(|d| d.with_timezone(&chrono::Local).format("%Y-%m-%d %H:%M").to_string())
+        .map(|d| {
+            d.with_timezone(&chrono::Local)
+                .format("%Y-%m-%d %H:%M")
+                .to_string()
+        })
         .unwrap_or_default()
 }

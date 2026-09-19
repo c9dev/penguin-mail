@@ -5,7 +5,9 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::Mutex;
 
 use mailrs_domain::{Address, EpochMillis, MessageBody, MessageMeta};
-use mailrs_gmail::{GmailError, HistoryChange, HistoryPage, MessagePage, MessageRef, Profile, RemoteLabel};
+use mailrs_gmail::{
+    GmailError, HistoryChange, HistoryPage, MessagePage, MessageRef, Profile, RemoteLabel,
+};
 
 use crate::api::GmailApi;
 
@@ -39,7 +41,10 @@ pub fn meta(id: &str, thread: &str, date: EpochMillis, labels: &[&str]) -> Messa
         id: id.into(),
         thread_id: thread.into(),
         rfc822_msgid: Some(format!("<{id}@example.com>")),
-        from: Some(Address { name: Some("Ann".into()), email: "ann@example.com".into() }),
+        from: Some(Address {
+            name: Some("Ann".into()),
+            email: "ann@example.com".into(),
+        }),
         to: vec![],
         cc: vec![],
         subject: format!("Subject {id}"),
@@ -53,7 +58,11 @@ pub fn meta(id: &str, thread: &str, date: EpochMillis, labels: &[&str]) -> Messa
 
 impl FakeGmail {
     pub fn new() -> Self {
-        let label = |id: &str, kind: &str| RemoteLabel { id: id.into(), name: id.into(), kind: Some(kind.into()) };
+        let label = |id: &str, kind: &str| RemoteLabel {
+            id: id.into(),
+            name: id.into(),
+            kind: Some(kind.into()),
+        };
         FakeGmail {
             state: Mutex::new(FakeState {
                 email: "me@example.com".into(),
@@ -100,7 +109,10 @@ impl FakeGmail {
     /// A message arriving now, recorded in history.
     pub fn deliver(&self, meta: MessageMeta) {
         self.with(|s| {
-            let change = HistoryChange::MessageAdded { id: meta.id.clone(), thread_id: meta.thread_id.clone() };
+            let change = HistoryChange::MessageAdded {
+                id: meta.id.clone(),
+                thread_id: meta.thread_id.clone(),
+            };
             s.listed.push(meta.id.clone());
             s.messages.insert(meta.id.clone(), meta);
             s.sort_listed();
@@ -112,7 +124,10 @@ impl FakeGmail {
         self.with(|s| {
             if let Some(meta) = s.messages.remove(id) {
                 s.listed.retain(|l| l != id);
-                s.record(HistoryChange::MessageDeleted { id: id.into(), thread_id: meta.thread_id });
+                s.record(HistoryChange::MessageDeleted {
+                    id: id.into(),
+                    thread_id: meta.thread_id,
+                });
             }
         });
     }
@@ -127,7 +142,9 @@ impl FakeGmail {
 
     pub fn remote_relabel(&self, id: &str, add: &[&str], remove: &[&str]) {
         self.with(|s| {
-            let Some(meta) = s.messages.get_mut(id) else { return };
+            let Some(meta) = s.messages.get_mut(id) else {
+                return;
+            };
             let thread_id = meta.thread_id.clone();
             for label in add {
                 if !meta.has_label(label) {
@@ -177,14 +194,18 @@ impl FakeState {
 
     fn sort_listed(&mut self) {
         let messages = &self.messages;
-        self.listed.sort_by_key(|id| std::cmp::Reverse(messages[id].date));
+        self.listed
+            .sort_by_key(|id| std::cmp::Reverse(messages[id].date));
     }
 }
 
 impl GmailApi for FakeGmail {
     async fn profile(&self) -> Result<Profile, GmailError> {
         self.check_failure()?;
-        Ok(self.with(|s| Profile { email_address: s.email.clone(), history_id: s.history_id }))
+        Ok(self.with(|s| Profile {
+            email_address: s.email.clone(),
+            history_id: s.history_id,
+        }))
     }
 
     async fn labels(&self) -> Result<Vec<RemoteLabel>, GmailError> {
@@ -192,21 +213,32 @@ impl GmailApi for FakeGmail {
         Ok(self.with(|s| s.labels.clone()))
     }
 
-    async fn list_messages(&self, _query: &str, page_token: Option<&str>) -> Result<MessagePage, GmailError> {
+    async fn list_messages(
+        &self,
+        _query: &str,
+        page_token: Option<&str>,
+    ) -> Result<MessagePage, GmailError> {
         self.check_failure()?;
         let start = match page_token {
             None => 0,
-            Some(token) => token
-                .parse::<usize>()
-                .map_err(|_| GmailError::Http { status: 400, body: "Invalid pageToken".into() })?,
+            Some(token) => token.parse::<usize>().map_err(|_| GmailError::Http {
+                status: 400,
+                body: "Invalid pageToken".into(),
+            })?,
         };
         Ok(self.with(|s| {
             let end = (start + s.page_size).min(s.listed.len());
             let messages = s.listed[start.min(end)..end]
                 .iter()
-                .map(|id| MessageRef { id: id.clone(), thread_id: s.messages[id].thread_id.clone() })
+                .map(|id| MessageRef {
+                    id: id.clone(),
+                    thread_id: s.messages[id].thread_id.clone(),
+                })
                 .collect();
-            MessagePage { messages, next_page_token: (end < s.listed.len()).then(|| end.to_string()) }
+            MessagePage {
+                messages,
+                next_page_token: (end < s.listed.len()).then(|| end.to_string()),
+            }
         }))
     }
 
@@ -218,8 +250,12 @@ impl GmailApi for FakeGmail {
     async fn thread_metadata(&self, thread_id: &str) -> Result<Vec<MessageMeta>, GmailError> {
         self.check_failure()?;
         self.with(|s| {
-            let mut metas: Vec<MessageMeta> =
-                s.messages.values().filter(|m| m.thread_id == thread_id).cloned().collect();
+            let mut metas: Vec<MessageMeta> = s
+                .messages
+                .values()
+                .filter(|m| m.thread_id == thread_id)
+                .cloned()
+                .collect();
             if metas.is_empty() {
                 return Err(GmailError::NotFound);
             }
@@ -236,15 +272,25 @@ impl GmailApi for FakeGmail {
         })
     }
 
-    async fn history(&self, start: u64, page_token: Option<&str>) -> Result<HistoryPage, GmailError> {
+    async fn history(
+        &self,
+        start: u64,
+        page_token: Option<&str>,
+    ) -> Result<HistoryPage, GmailError> {
         self.check_failure()?;
         self.with(|s| {
             if start < s.history_floor {
                 return Err(GmailError::NotFound);
             }
-            let pending: Vec<HistoryChange> =
-                s.history.iter().filter(|(h, _)| *h > start).map(|(_, c)| c.clone()).collect();
-            let offset = page_token.and_then(|t| t.parse::<usize>().ok()).unwrap_or(0);
+            let pending: Vec<HistoryChange> = s
+                .history
+                .iter()
+                .filter(|(h, _)| *h > start)
+                .map(|(_, c)| c.clone())
+                .collect();
+            let offset = page_token
+                .and_then(|t| t.parse::<usize>().ok())
+                .unwrap_or(0);
             let end = (offset + s.page_size).min(pending.len());
             Ok(HistoryPage {
                 changes: pending[offset.min(end)..end].to_vec(),
@@ -254,9 +300,20 @@ impl GmailApi for FakeGmail {
         })
     }
 
-    async fn modify_labels(&self, id: &str, add: &[String], remove: &[String]) -> Result<(), GmailError> {
+    async fn modify_labels(
+        &self,
+        id: &str,
+        add: &[String],
+        remove: &[String],
+    ) -> Result<(), GmailError> {
         self.check_failure()?;
-        self.with(|s| s.remote_writes.push(format!("modify {id} +{} -{}", add.join(","), remove.join(","))));
+        self.with(|s| {
+            s.remote_writes.push(format!(
+                "modify {id} +{} -{}",
+                add.join(","),
+                remove.join(",")
+            ))
+        });
         let add: Vec<&str> = add.iter().map(String::as_str).collect();
         let remove: Vec<&str> = remove.iter().map(String::as_str).collect();
         self.remote_relabel(id, &add, &remove);

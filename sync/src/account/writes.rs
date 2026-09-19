@@ -17,17 +17,22 @@ impl<G: GmailApi> AccountSync<G> {
     /// so the UI updates at once; Gmail follows. If Gmail refuses, the store
     /// goes back to its earlier labels and a `WriteFailed` event says so.
     /// The next history replay reconciles any messages Gmail did change.
-    pub async fn triage_thread(&self, thread_id: &str, action: &TriageAction) -> Result<(), SyncError> {
+    pub async fn triage_thread(
+        &self,
+        thread_id: &str,
+        action: &TriageAction,
+    ) -> Result<(), SyncError> {
         let account_id = self.account_id;
         let (add, remove) = action.label_delta();
         let snapshot: Vec<(String, Vec<String>)> = {
             let (thread, add, remove) = (thread_id.to_string(), add.clone(), remove.clone());
             self.db
                 .write(move |c| {
-                    let before: Vec<(String, Vec<String>)> = messages::thread_messages(c, account_id, &thread)?
-                        .into_iter()
-                        .map(|m| (m.id, m.label_ids))
-                        .collect();
+                    let before: Vec<(String, Vec<String>)> =
+                        messages::thread_messages(c, account_id, &thread)?
+                            .into_iter()
+                            .map(|m| (m.id, m.label_ids))
+                            .collect();
                     for (id, _) in &before {
                         messages::add_labels(c, account_id, id, &add)?;
                         messages::remove_labels(c, account_id, id, &remove)?;
@@ -80,7 +85,9 @@ impl<G: GmailApi> AccountSync<G> {
             match result {
                 Err(err) if err.is_transient() && attempt + 1 < WRITE_ATTEMPTS => {
                     let delay = match &err {
-                        GmailError::RateLimited { retry_after: Some(after) } => *after,
+                        GmailError::RateLimited {
+                            retry_after: Some(after),
+                        } => *after,
                         _ => backoff_delay(attempt, self.retry_max, rand::random_range(-1.0..=1.0)),
                     };
                     attempt += 1;

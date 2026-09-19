@@ -57,15 +57,21 @@ impl GmailClient {
 
     /// Seeds the access token cache so the first call skips a refresh.
     pub fn with_access_token(self, token: AccessToken) -> Self {
-        GmailClient { access: Mutex::new(Some(token)), ..self }
+        GmailClient {
+            access: Mutex::new(Some(token)),
+            ..self
+        }
     }
 
     pub async fn profile(&self) -> Result<Profile, GmailError> {
-        self.call(cost::PROFILE, || self.http().get(self.url("profile"))).await
+        self.call(cost::PROFILE, || self.http().get(self.url("profile")))
+            .await
     }
 
     pub async fn labels(&self) -> Result<Vec<RemoteLabel>, GmailError> {
-        let list: LabelList = self.call(cost::LABELS, || self.http().get(self.url("labels"))).await?;
+        let list: LabelList = self
+            .call(cost::LABELS, || self.http().get(self.url("labels")))
+            .await?;
         Ok(list.labels)
     }
 
@@ -89,21 +95,37 @@ impl GmailClient {
     }
 
     pub async fn message_metadata(&self, id: &str) -> Result<Message, GmailError> {
-        self.call(cost::GET, || self.http().get(self.url(&format!("messages/{id}"))).query(&metadata_query()))
-            .await
+        self.call(cost::GET, || {
+            self.http()
+                .get(self.url(&format!("messages/{id}")))
+                .query(&metadata_query())
+        })
+        .await
     }
 
     pub async fn message_full(&self, id: &str) -> Result<Message, GmailError> {
-        self.call(cost::GET, || self.http().get(self.url(&format!("messages/{id}"))).query(&[("format", "full")]))
-            .await
+        self.call(cost::GET, || {
+            self.http()
+                .get(self.url(&format!("messages/{id}")))
+                .query(&[("format", "full")])
+        })
+        .await
     }
 
     pub async fn thread_metadata(&self, id: &str) -> Result<Thread, GmailError> {
-        self.call(cost::THREAD, || self.http().get(self.url(&format!("threads/{id}"))).query(&metadata_query()))
-            .await
+        self.call(cost::THREAD, || {
+            self.http()
+                .get(self.url(&format!("threads/{id}")))
+                .query(&metadata_query())
+        })
+        .await
     }
 
-    pub async fn history(&self, start_history_id: u64, page_token: Option<&str>) -> Result<HistoryPage, GmailError> {
+    pub async fn history(
+        &self,
+        start_history_id: u64,
+        page_token: Option<&str>,
+    ) -> Result<HistoryPage, GmailError> {
         let list: HistoryList = self
             .call(cost::HISTORY, || {
                 let mut request = self
@@ -119,7 +141,12 @@ impl GmailClient {
         Ok(history_page(list))
     }
 
-    pub async fn modify(&self, id: &str, add: &[String], remove: &[String]) -> Result<(), GmailError> {
+    pub async fn modify(
+        &self,
+        id: &str,
+        add: &[String],
+        remove: &[String],
+    ) -> Result<(), GmailError> {
         let _: Message = self
             .call(cost::MODIFY, || {
                 self.http()
@@ -132,7 +159,11 @@ impl GmailClient {
 
     pub async fn trash(&self, id: &str) -> Result<(), GmailError> {
         let _: Message = self
-            .call(cost::TRASH, || self.http().post(self.url(&format!("messages/{id}/trash"))).json(&json!({})))
+            .call(cost::TRASH, || {
+                self.http()
+                    .post(self.url(&format!("messages/{id}/trash")))
+                    .json(&json!({}))
+            })
             .await?;
         Ok(())
     }
@@ -148,7 +179,10 @@ impl GmailClient {
     /// A cached access token with a minute to spare, or a freshly refreshed one.
     async fn bearer(&self) -> Result<String, GmailError> {
         let mut cached = self.access.lock().await;
-        if let Some(token) = cached.as_ref().filter(|t| t.valid_for(Duration::from_secs(60))) {
+        if let Some(token) = cached
+            .as_ref()
+            .filter(|t| t.valid_for(Duration::from_secs(60)))
+        {
             return Ok(token.token.clone());
         }
         let fresh = self.oauth.refresh(&self.refresh_token).await?;
@@ -158,7 +192,11 @@ impl GmailClient {
     }
 
     /// Sends the request `build` makes, refreshing the token once on a 401.
-    async fn call<T: DeserializeOwned>(&self, units: u32, build: impl Fn() -> RequestBuilder) -> Result<T, GmailError> {
+    async fn call<T: DeserializeOwned>(
+        &self,
+        units: u32,
+        build: impl Fn() -> RequestBuilder,
+    ) -> Result<T, GmailError> {
         self.limiter.acquire(units).await;
         let mut retried = false;
         loop {
@@ -171,7 +209,10 @@ impl GmailClient {
                 continue;
             }
             if status.is_success() {
-                return response.json::<T>().await.map_err(|e| GmailError::Decode(e.to_string()));
+                return response
+                    .json::<T>()
+                    .await
+                    .map_err(|e| GmailError::Decode(e.to_string()));
             }
             return Err(error_from_response(response).await);
         }
@@ -229,5 +270,8 @@ pub async fn authorize(
         .with_base_url(api_base)
         .with_access_token(tokens.access);
     let profile = client.profile().await?;
-    Ok(Authorized { email: profile.email_address, refresh_token: tokens.refresh_token })
+    Ok(Authorized {
+        email: profile.email_address,
+        refresh_token: tokens.refresh_token,
+    })
 }

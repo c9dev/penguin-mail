@@ -51,7 +51,15 @@ struct Running<G> {
 impl<G: GmailApi> SyncEngine<G> {
     pub fn new(db: Db, config: EngineConfig) -> (Self, async_channel::Receiver<ChangeEvent>) {
         let (events, receiver) = async_channel::unbounded();
-        (SyncEngine { db, config, events, running: Mutex::new(HashMap::new()) }, receiver)
+        (
+            SyncEngine {
+                db,
+                config,
+                events,
+                running: Mutex::new(HashMap::new()),
+            },
+            receiver,
+        )
     }
 
     /// Starts the account's loop, replacing one that is already running.
@@ -62,7 +70,11 @@ impl<G: GmailApi> SyncEngine<G> {
                 .with_limits(self.config.window_days, self.config.body_cache_bytes),
         );
         let poke = Arc::new(Notify::new());
-        let task = tokio::spawn(run_account(Arc::clone(&sync), Arc::clone(&poke), self.config.clone()));
+        let task = tokio::spawn(run_account(
+            Arc::clone(&sync),
+            Arc::clone(&poke),
+            self.config.clone(),
+        ));
         if let Some(previous) = self.lock().insert(account_id, Running { sync, poke, task }) {
             previous.task.abort();
         }
@@ -88,7 +100,9 @@ impl<G: GmailApi> SyncEngine<G> {
     }
 
     pub fn is_running(&self, account_id: AccountId) -> bool {
-        self.lock().get(&account_id).is_some_and(|r| !r.task.is_finished())
+        self.lock()
+            .get(&account_id)
+            .is_some_and(|r| !r.task.is_finished())
     }
 
     /// The account's sync handle, for opening threads, loading bodies, and triage.
@@ -118,21 +132,35 @@ impl<G: GmailApi> Drop for SyncEngine<G> {
 
 enum Failure {
     Reauth,
-    Retry { state: AccountState, retry_after: Option<Duration> },
+    Retry {
+        state: AccountState,
+        retry_after: Option<Duration>,
+    },
 }
 
 fn classify(err: &SyncError) -> Failure {
     match err {
         SyncError::Gmail(GmailError::NeedsReauth) => Failure::Reauth,
-        SyncError::Gmail(GmailError::Network(_)) => Failure::Retry { state: AccountState::Offline, retry_after: None },
-        SyncError::Gmail(GmailError::RateLimited { retry_after }) => {
-            Failure::Retry { state: AccountState::BackingOff, retry_after: *retry_after }
-        }
-        _ => Failure::Retry { state: AccountState::BackingOff, retry_after: None },
+        SyncError::Gmail(GmailError::Network(_)) => Failure::Retry {
+            state: AccountState::Offline,
+            retry_after: None,
+        },
+        SyncError::Gmail(GmailError::RateLimited { retry_after }) => Failure::Retry {
+            state: AccountState::BackingOff,
+            retry_after: *retry_after,
+        },
+        _ => Failure::Retry {
+            state: AccountState::BackingOff,
+            retry_after: None,
+        },
     }
 }
 
-async fn run_account<G: GmailApi>(sync: Arc<AccountSync<G>>, poke: Arc<Notify>, config: EngineConfig) {
+async fn run_account<G: GmailApi>(
+    sync: Arc<AccountSync<G>>,
+    poke: Arc<Notify>,
+    config: EngineConfig,
+) {
     let mut reported: Option<AccountState> = None;
     let mut failures: u32 = 0;
     let mut next_poll = Instant::now();
@@ -155,7 +183,10 @@ async fn run_account<G: GmailApi>(sync: Arc<AccountSync<G>>, poke: Arc<Notify>, 
             }
             Err(err) => match classify(&err) {
                 Failure::Reauth => {
-                    tracing::warn!(account = sync.account_id(), "Google rejected the refresh token; add the account again");
+                    tracing::warn!(
+                        account = sync.account_id(),
+                        "Google rejected the refresh token; add the account again"
+                    );
                     report(&sync, AccountState::NeedsReauth).await;
                     return;
                 }

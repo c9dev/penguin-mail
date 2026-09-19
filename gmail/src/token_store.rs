@@ -25,7 +25,9 @@ impl KeyringTokenStore {
     }
 
     pub fn with_service(service: impl Into<String>) -> Self {
-        KeyringTokenStore { service: service.into() }
+        KeyringTokenStore {
+            service: service.into(),
+        }
     }
 
     fn entry(&self, email: &str) -> Result<keyring::Entry, GmailError> {
@@ -49,7 +51,9 @@ impl TokenStore for KeyringTokenStore {
     }
 
     fn save(&self, email: &str, refresh_token: &str) -> Result<(), GmailError> {
-        self.entry(email)?.set_password(refresh_token).map_err(keyring_error)
+        self.entry(email)?
+            .set_password(refresh_token)
+            .map_err(keyring_error)
     }
 
     fn delete(&self, email: &str) -> Result<(), GmailError> {
@@ -72,16 +76,27 @@ pub struct MemoryTokenStore {
 
 impl TokenStore for MemoryTokenStore {
     fn load(&self, email: &str) -> Result<Option<String>, GmailError> {
-        Ok(self.tokens.lock().expect("token map poisoned").get(email).cloned())
+        Ok(self
+            .tokens
+            .lock()
+            .expect("token map poisoned")
+            .get(email)
+            .cloned())
     }
 
     fn save(&self, email: &str, refresh_token: &str) -> Result<(), GmailError> {
-        self.tokens.lock().expect("token map poisoned").insert(email.into(), refresh_token.into());
+        self.tokens
+            .lock()
+            .expect("token map poisoned")
+            .insert(email.into(), refresh_token.into());
         Ok(())
     }
 
     fn delete(&self, email: &str) -> Result<(), GmailError> {
-        self.tokens.lock().expect("token map poisoned").remove(email);
+        self.tokens
+            .lock()
+            .expect("token map poisoned")
+            .remove(email);
         Ok(())
     }
 }

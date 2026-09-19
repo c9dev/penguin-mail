@@ -33,16 +33,28 @@ impl Config {
     }
 
     pub fn load(path: &Path) -> Result<Config> {
-        let text = std::fs::read_to_string(path)
-            .with_context(|| format!("could not read {}; docs/setup.md explains how to create it", path.display()))?;
+        let text = std::fs::read_to_string(path).with_context(|| {
+            format!(
+                "could not read {}; docs/setup.md explains how to create it",
+                path.display()
+            )
+        })?;
         Self::parse(&text)
     }
 
     pub fn engine_config(&self) -> EngineConfig {
         let defaults = EngineConfig::default();
         EngineConfig {
-            poll_interval: self.sync.poll_seconds.map(Duration::from_secs).unwrap_or(defaults.poll_interval),
-            body_cache_bytes: self.sync.body_cache_mb.map(|mb| mb * 1024 * 1024).unwrap_or(defaults.body_cache_bytes),
+            poll_interval: self
+                .sync
+                .poll_seconds
+                .map(Duration::from_secs)
+                .unwrap_or(defaults.poll_interval),
+            body_cache_bytes: self
+                .sync
+                .body_cache_mb
+                .map(|mb| mb * 1024 * 1024)
+                .unwrap_or(defaults.body_cache_bytes),
             window_days: self.sync.window_days.unwrap_or(defaults.window_days),
             ..defaults
         }
@@ -54,7 +66,10 @@ pub fn config_path() -> Result<PathBuf> {
     if let Some(path) = std::env::var_os("MAILRS_CONFIG") {
         return Ok(PathBuf::from(path));
     }
-    Ok(dirs::config_dir().context("no config directory; set MAILRS_CONFIG")?.join("mailrs").join("config.toml"))
+    Ok(dirs::config_dir()
+        .context("no config directory; set MAILRS_CONFIG")?
+        .join("mailrs")
+        .join("config.toml"))
 }
 
 /// `$MAILRS_DATA_DIR`, else `~/.local/share/mailrs`.
@@ -62,7 +77,9 @@ pub fn data_dir() -> Result<PathBuf> {
     if let Some(path) = std::env::var_os("MAILRS_DATA_DIR") {
         return Ok(PathBuf::from(path));
     }
-    Ok(dirs::data_dir().context("no data directory; set MAILRS_DATA_DIR")?.join("mailrs"))
+    Ok(dirs::data_dir()
+        .context("no data directory; set MAILRS_DATA_DIR")?
+        .join("mailrs"))
 }
 
 #[cfg(test)]
@@ -73,7 +90,8 @@ mod tests {
 
     #[test]
     fn a_minimal_config_uses_the_engine_defaults() {
-        let config = Config::parse("[oauth]\nclient_id = \"id\"\nclient_secret = \"secret\"\n").unwrap();
+        let config =
+            Config::parse("[oauth]\nclient_id = \"id\"\nclient_secret = \"secret\"\n").unwrap();
         assert_eq!(config.oauth.client_id, "id");
         let engine = config.engine_config();
         assert_eq!(engine.poll_interval, Duration::from_secs(30));

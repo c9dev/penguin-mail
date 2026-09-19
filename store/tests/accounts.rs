@@ -38,9 +38,15 @@ fn state_changes_persist() {
     let conn = open_in_memory().unwrap();
     let id = accounts::insert_account(&conn, "me@example.com", 0).unwrap();
     accounts::set_state(&conn, id, AccountState::NeedsReauth).unwrap();
-    let account = accounts::account_by_email(&conn, "me@example.com").unwrap().unwrap();
+    let account = accounts::account_by_email(&conn, "me@example.com")
+        .unwrap()
+        .unwrap();
     assert_eq!(account.state, AccountState::NeedsReauth);
-    assert!(accounts::account_by_email(&conn, "nobody@example.com").unwrap().is_none());
+    assert!(
+        accounts::account_by_email(&conn, "nobody@example.com")
+            .unwrap()
+            .is_none()
+    );
 }
 
 #[test]
@@ -49,7 +55,12 @@ fn cursors_start_empty_and_track_progress() {
     let id = accounts::insert_account(&conn, "me@example.com", 0).unwrap();
     assert_eq!(
         accounts::sync_cursor(&conn, id).unwrap(),
-        SyncCursor { history_id: None, backfill_cursor: None, backfill_done: false, sync_gen: 1 }
+        SyncCursor {
+            history_id: None,
+            backfill_cursor: None,
+            backfill_done: false,
+            sync_gen: 1
+        }
     );
     accounts::set_history_id(&conn, id, 55).unwrap();
     accounts::set_backfill(&conn, id, Some("p2"), false).unwrap();
@@ -66,7 +77,12 @@ fn a_new_generation_resets_backfill() {
     assert_eq!(accounts::start_generation(&conn, id, 99).unwrap(), 2);
     assert_eq!(
         accounts::sync_cursor(&conn, id).unwrap(),
-        SyncCursor { history_id: Some(99), backfill_cursor: None, backfill_done: false, sync_gen: 2 }
+        SyncCursor {
+            history_id: Some(99),
+            backfill_cursor: None,
+            backfill_done: false,
+            sync_gen: 2
+        }
     );
 }
 

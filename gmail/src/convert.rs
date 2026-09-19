@@ -7,10 +7,24 @@ use crate::model::{HistoryList, Message, MessagePart};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HistoryChange {
-    MessageAdded { id: String, thread_id: String },
-    MessageDeleted { id: String, thread_id: String },
-    LabelsAdded { id: String, thread_id: String, label_ids: Vec<String> },
-    LabelsRemoved { id: String, thread_id: String, label_ids: Vec<String> },
+    MessageAdded {
+        id: String,
+        thread_id: String,
+    },
+    MessageDeleted {
+        id: String,
+        thread_id: String,
+    },
+    LabelsAdded {
+        id: String,
+        thread_id: String,
+        label_ids: Vec<String>,
+    },
+    LabelsRemoved {
+        id: String,
+        thread_id: String,
+        label_ids: Vec<String>,
+    },
 }
 
 impl HistoryChange {
@@ -37,10 +51,16 @@ pub fn history_page(list: HistoryList) -> HistoryPage {
     let mut changes = Vec::new();
     for record in list.history {
         for m in record.messages_added {
-            changes.push(HistoryChange::MessageAdded { id: m.message.id, thread_id: m.message.thread_id });
+            changes.push(HistoryChange::MessageAdded {
+                id: m.message.id,
+                thread_id: m.message.thread_id,
+            });
         }
         for m in record.messages_deleted {
-            changes.push(HistoryChange::MessageDeleted { id: m.message.id, thread_id: m.message.thread_id });
+            changes.push(HistoryChange::MessageDeleted {
+                id: m.message.id,
+                thread_id: m.message.thread_id,
+            });
         }
         for m in record.labels_added {
             changes.push(HistoryChange::LabelsAdded {
@@ -57,7 +77,11 @@ pub fn history_page(list: HistoryList) -> HistoryPage {
             });
         }
     }
-    HistoryPage { changes, next_page_token: list.next_page_token, history_id: list.history_id }
+    HistoryPage {
+        changes,
+        next_page_token: list.next_page_token,
+        history_id: list.history_id,
+    }
 }
 
 /// Converts a `format=metadata` or `format=full` message.
@@ -68,8 +92,12 @@ pub fn message_meta(msg: &Message, account_id: AccountId) -> MessageMeta {
         thread_id: msg.thread_id.clone(),
         rfc822_msgid: header(msg, "Message-ID").map(str::to_string),
         from: header(msg, "From").and_then(|v| parse_address_list(v).into_iter().next()),
-        to: header(msg, "To").map(parse_address_list).unwrap_or_default(),
-        cc: header(msg, "Cc").map(parse_address_list).unwrap_or_default(),
+        to: header(msg, "To")
+            .map(parse_address_list)
+            .unwrap_or_default(),
+        cc: header(msg, "Cc")
+            .map(parse_address_list)
+            .unwrap_or_default(),
         subject: header(msg, "Subject").unwrap_or_default().to_string(),
         date: msg.internal_date.unwrap_or(0),
         snippet: unescape_snippet(&msg.snippet),

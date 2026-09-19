@@ -9,7 +9,12 @@ use mailrs_store::{labels, messages, threads};
 #[test]
 fn labels_are_replaced_wholesale_and_listed_system_first() {
     let (conn, id) = db();
-    let label = |lid: &str, name: &str, kind: LabelKind| Label { account_id: id, id: lid.into(), name: name.into(), kind };
+    let label = |lid: &str, name: &str, kind: LabelKind| Label {
+        account_id: id,
+        id: lid.into(),
+        name: name.into(),
+        kind,
+    };
     labels::replace_labels(
         &conn,
         id,
@@ -20,7 +25,11 @@ fn labels_are_replaced_wholesale_and_listed_system_first() {
         ],
     )
     .unwrap();
-    let names: Vec<String> = labels::list_labels(&conn, id).unwrap().into_iter().map(|l| l.name).collect();
+    let names: Vec<String> = labels::list_labels(&conn, id)
+        .unwrap()
+        .into_iter()
+        .map(|l| l.name)
+        .collect();
     assert_eq!(names, ["INBOX", "Alpha", "Zeta"]);
     labels::replace_labels(&conn, id, &[label("INBOX", "INBOX", LabelKind::System)]).unwrap();
     assert_eq!(labels::list_labels(&conn, id).unwrap().len(), 1);
@@ -29,10 +38,19 @@ fn labels_are_replaced_wholesale_and_listed_system_first() {
 #[test]
 fn messages_round_trip_in_date_order() {
     let (conn, id) = db();
-    store(&conn, &[meta(id, "b", "t1", 200, &["INBOX"]), meta(id, "a", "t1", 100, &["INBOX", "UNREAD"])]);
+    store(
+        &conn,
+        &[
+            meta(id, "b", "t1", 200, &["INBOX"]),
+            meta(id, "a", "t1", 100, &["INBOX", "UNREAD"]),
+        ],
+    );
     assert_eq!(
         messages::thread_messages(&conn, id, "t1").unwrap(),
-        vec![meta(id, "a", "t1", 100, &["INBOX", "UNREAD"]), meta(id, "b", "t1", 200, &["INBOX"])]
+        vec![
+            meta(id, "a", "t1", 100, &["INBOX", "UNREAD"]),
+            meta(id, "b", "t1", 200, &["INBOX"])
+        ]
     );
 }
 
@@ -43,7 +61,10 @@ fn upsert_replaces_fields_and_labels() {
     let mut changed = meta(id, "a", "t1", 100, &["INBOX"]);
     changed.subject = "Edited".into();
     store(&conn, &[changed.clone()]);
-    assert_eq!(messages::thread_messages(&conn, id, "t1").unwrap(), vec![changed]);
+    assert_eq!(
+        messages::thread_messages(&conn, id, "t1").unwrap(),
+        vec![changed]
+    );
 }
 
 #[test]
@@ -70,12 +91,33 @@ fn thread_summary_aggregates_its_messages() {
 fn label_changes_report_the_thread_and_skip_unknown_messages() {
     let (conn, id) = db();
     store(&conn, &[meta(id, "a", "t1", 100, &["INBOX", "UNREAD"])]);
-    assert_eq!(messages::remove_labels(&conn, id, "a", &["UNREAD".into()]).unwrap().as_deref(), Some("t1"));
-    assert_eq!(messages::add_labels(&conn, id, "a", &["STARRED".into()]).unwrap().as_deref(), Some("t1"));
-    assert_eq!(messages::labels_of(&conn, id, "a").unwrap(), ["INBOX", "STARRED"]);
-    assert_eq!(messages::add_labels(&conn, id, "zzz", &["INBOX".into()]).unwrap(), None);
+    assert_eq!(
+        messages::remove_labels(&conn, id, "a", &["UNREAD".into()])
+            .unwrap()
+            .as_deref(),
+        Some("t1")
+    );
+    assert_eq!(
+        messages::add_labels(&conn, id, "a", &["STARRED".into()])
+            .unwrap()
+            .as_deref(),
+        Some("t1")
+    );
+    assert_eq!(
+        messages::labels_of(&conn, id, "a").unwrap(),
+        ["INBOX", "STARRED"]
+    );
+    assert_eq!(
+        messages::add_labels(&conn, id, "zzz", &["INBOX".into()]).unwrap(),
+        None
+    );
     messages::refresh_thread(&conn, id, "t1").unwrap();
-    assert!(!threads::get_thread(&conn, id, "t1").unwrap().unwrap().unread);
+    assert!(
+        !threads::get_thread(&conn, id, "t1")
+            .unwrap()
+            .unwrap()
+            .unread
+    );
 }
 
 #[test]
@@ -90,7 +132,10 @@ fn set_labels_replaces_the_whole_set() {
 fn deleting_the_last_message_removes_the_thread() {
     let (conn, id) = db();
     store(&conn, &[meta(id, "a", "t1", 100, &["INBOX"])]);
-    assert_eq!(messages::delete_message(&conn, id, "a").unwrap().as_deref(), Some("t1"));
+    assert_eq!(
+        messages::delete_message(&conn, id, "a").unwrap().as_deref(),
+        Some("t1")
+    );
     assert_eq!(messages::delete_message(&conn, id, "a").unwrap(), None);
     messages::refresh_thread(&conn, id, "t1").unwrap();
     assert!(threads::get_thread(&conn, id, "t1").unwrap().is_none());
@@ -99,9 +144,19 @@ fn deleting_the_last_message_removes_the_thread() {
 #[test]
 fn delete_thread_removes_messages_and_summary() {
     let (conn, id) = db();
-    store(&conn, &[meta(id, "a", "t1", 100, &["INBOX"]), meta(id, "b", "t1", 200, &["INBOX"])]);
+    store(
+        &conn,
+        &[
+            meta(id, "a", "t1", 100, &["INBOX"]),
+            meta(id, "b", "t1", 200, &["INBOX"]),
+        ],
+    );
     messages::delete_thread(&conn, id, "t1").unwrap();
-    assert!(messages::thread_messages(&conn, id, "t1").unwrap().is_empty());
+    assert!(
+        messages::thread_messages(&conn, id, "t1")
+            .unwrap()
+            .is_empty()
+    );
     assert!(threads::get_thread(&conn, id, "t1").unwrap().is_none());
 }
 

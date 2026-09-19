@@ -10,15 +10,20 @@ use wiremock::matchers::{body_string_contains, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 fn client_for(server: &MockServer) -> OAuthClient {
-    OAuthClient::new("cid", "secret")
-        .with_endpoints(format!("{}/auth", server.uri()), format!("{}/token", server.uri()))
+    OAuthClient::new("cid", "secret").with_endpoints(
+        format!("{}/auth", server.uri()),
+        format!("{}/token", server.uri()),
+    )
 }
 
 #[test]
 fn pkce_challenge_is_the_sha256_of_the_verifier() {
     let pkce = Pkce::generate();
     assert_eq!(pkce.verifier.len(), 43);
-    assert_eq!(pkce.challenge, URL_SAFE_NO_PAD.encode(Sha256::digest(pkce.verifier.as_bytes())));
+    assert_eq!(
+        pkce.challenge,
+        URL_SAFE_NO_PAD.encode(Sha256::digest(pkce.verifier.as_bytes()))
+    );
     assert_ne!(Pkce::generate().verifier, pkce.verifier);
 }
 
@@ -26,7 +31,12 @@ fn pkce_challenge_is_the_sha256_of_the_verifier() {
 fn authorize_url_carries_pkce_and_offline_access() {
     let client = OAuthClient::new("cid", "secret");
     let pkce = Pkce::generate();
-    let url = url::Url::parse(&client.authorize_url("http://127.0.0.1:5000", &pkce, "st").unwrap()).unwrap();
+    let url = url::Url::parse(
+        &client
+            .authorize_url("http://127.0.0.1:5000", &pkce, "st")
+            .unwrap(),
+    )
+    .unwrap();
     let q: HashMap<String, String> = url.query_pairs().into_owned().collect();
     assert_eq!(url.host_str(), Some("accounts.google.com"));
     assert_eq!(q["client_id"], "cid");
@@ -42,7 +52,12 @@ fn authorize_url_carries_pkce_and_offline_access() {
 
 #[test]
 fn redirect_parsing() {
-    assert_eq!(parse_redirect("GET /?code=abc&state=st HTTP/1.1\r\n", "st").unwrap().unwrap(), "abc");
+    assert_eq!(
+        parse_redirect("GET /?code=abc&state=st HTTP/1.1\r\n", "st")
+            .unwrap()
+            .unwrap(),
+        "abc"
+    );
     assert!(matches!(
         parse_redirect("GET /?code=abc&state=zz HTTP/1.1\r\n", "st"),
         Some(Err(GmailError::OAuth(_)))
@@ -58,7 +73,10 @@ fn redirect_parsing() {
 #[tokio::test]
 async fn loopback_listener_returns_the_code_after_ignoring_other_requests() {
     let listener = LoopbackListener::bind().await.unwrap();
-    let addr = listener.redirect_uri.trim_start_matches("http://").to_string();
+    let addr = listener
+        .redirect_uri
+        .trim_start_matches("http://")
+        .to_string();
     let browser = tokio::spawn(async move {
         let mut statuses = Vec::new();
         for target in ["/favicon.ico", "/?code=the-code&state=st"] {
@@ -98,7 +116,11 @@ async fn exchange_code_returns_both_tokens() {
         .unwrap();
     assert_eq!(tokens.access.token, "at");
     assert_eq!(tokens.refresh_token, "rt");
-    assert!(tokens.access.valid_for(std::time::Duration::from_secs(3000)));
+    assert!(
+        tokens
+            .access
+            .valid_for(std::time::Duration::from_secs(3000))
+    );
 }
 
 #[tokio::test]
@@ -106,10 +128,15 @@ async fn exchange_without_a_refresh_token_is_an_error() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path("/token"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"access_token": "at", "expires_in": 3599})))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(json!({"access_token": "at", "expires_in": 3599})),
+        )
         .mount(&server)
         .await;
-    let result = client_for(&server).exchange_code("c1", "http://127.0.0.1:1", &Pkce::generate()).await;
+    let result = client_for(&server)
+        .exchange_code("c1", "http://127.0.0.1:1", &Pkce::generate())
+        .await;
     assert!(matches!(result, Err(GmailError::OAuth(_))));
 }
 
@@ -120,11 +147,17 @@ async fn refresh_returns_a_new_access_token() {
         .and(path("/token"))
         .and(body_string_contains("grant_type=refresh_token"))
         .and(body_string_contains("refresh_token=rt"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"access_token": "at-2", "expires_in": 3599})))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(json!({"access_token": "at-2", "expires_in": 3599})),
+        )
         .expect(1)
         .mount(&server)
         .await;
-    assert_eq!(client_for(&server).refresh("rt").await.unwrap().token, "at-2");
+    assert_eq!(
+        client_for(&server).refresh("rt").await.unwrap().token,
+        "at-2"
+    );
 }
 
 #[tokio::test]
@@ -135,5 +168,8 @@ async fn invalid_grant_means_the_account_needs_reauthorizing() {
         .respond_with(ResponseTemplate::new(400).set_body_json(json!({"error": "invalid_grant"})))
         .mount(&server)
         .await;
-    assert!(matches!(client_for(&server).refresh("rt").await, Err(GmailError::NeedsReauth)));
+    assert!(matches!(
+        client_for(&server).refresh("rt").await,
+        Err(GmailError::NeedsReauth)
+    ));
 }

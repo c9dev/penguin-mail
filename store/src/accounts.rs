@@ -18,8 +18,15 @@ pub struct SyncCursor {
 
 /// Adds an account, or returns the existing id for that email.
 pub fn insert_account(conn: &Connection, email: &str, now: EpochMillis) -> Result<AccountId> {
-    conn.execute("INSERT OR IGNORE INTO accounts (email, added_at) VALUES (?1, ?2)", params![email, now])?;
-    Ok(conn.query_row("SELECT id FROM accounts WHERE email = ?1", params![email], |row| row.get(0))?)
+    conn.execute(
+        "INSERT OR IGNORE INTO accounts (email, added_at) VALUES (?1, ?2)",
+        params![email, now],
+    )?;
+    Ok(conn.query_row(
+        "SELECT id FROM accounts WHERE email = ?1",
+        params![email],
+        |row| row.get(0),
+    )?)
 }
 
 pub fn list_accounts(conn: &Connection) -> Result<Vec<Account>> {
@@ -34,11 +41,14 @@ pub fn list_accounts(conn: &Connection) -> Result<Vec<Account>> {
 
 pub fn account_by_email(conn: &Connection, email: &str) -> Result<Option<Account>> {
     let row: Option<(AccountId, String, String)> = conn
-        .query_row("SELECT id, email, state FROM accounts WHERE email = ?1", params![email], |row| {
-            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
-        })
+        .query_row(
+            "SELECT id, email, state FROM accounts WHERE email = ?1",
+            params![email],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
         .optional()?;
-    row.map(|(id, email, state)| to_account(id, email, state)).transpose()
+    row.map(|(id, email, state)| to_account(id, email, state))
+        .transpose()
 }
 
 /// Deletes the account and, through foreign keys, all of its mail.
@@ -48,7 +58,10 @@ pub fn delete_account(conn: &Connection, id: AccountId) -> Result<()> {
 }
 
 pub fn set_state(conn: &Connection, id: AccountId, state: AccountState) -> Result<()> {
-    conn.execute("UPDATE accounts SET state = ?2 WHERE id = ?1", params![id, state.as_str()])?;
+    conn.execute(
+        "UPDATE accounts SET state = ?2 WHERE id = ?1",
+        params![id, state.as_str()],
+    )?;
     Ok(())
 }
 
@@ -68,11 +81,19 @@ pub fn sync_cursor(conn: &Connection, id: AccountId) -> Result<SyncCursor> {
 }
 
 pub fn set_history_id(conn: &Connection, id: AccountId, history_id: u64) -> Result<()> {
-    conn.execute("UPDATE accounts SET history_id = ?2 WHERE id = ?1", params![id, history_id as i64])?;
+    conn.execute(
+        "UPDATE accounts SET history_id = ?2 WHERE id = ?1",
+        params![id, history_id as i64],
+    )?;
     Ok(())
 }
 
-pub fn set_backfill(conn: &Connection, id: AccountId, cursor: Option<&str>, done: bool) -> Result<()> {
+pub fn set_backfill(
+    conn: &Connection,
+    id: AccountId,
+    cursor: Option<&str>,
+    done: bool,
+) -> Result<()> {
     conn.execute(
         "UPDATE accounts SET backfill_cursor = ?2, backfill_done = ?3 WHERE id = ?1",
         params![id, cursor, done],
@@ -94,6 +115,9 @@ pub fn start_generation(conn: &Connection, id: AccountId, history_id: u64) -> Re
 fn to_account(id: AccountId, email: String, state: String) -> Result<Account> {
     let state = state
         .parse::<AccountState>()
-        .map_err(|_| StoreError::Corrupt { column: "accounts.state", value: state.clone() })?;
+        .map_err(|_| StoreError::Corrupt {
+            column: "accounts.state",
+            value: state.clone(),
+        })?;
     Ok(Account { id, email, state })
 }

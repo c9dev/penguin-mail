@@ -6,7 +6,10 @@ use mailrs_domain::Address;
 /// Parses a `From`, `To`, or `Cc` header. Entries without an address, such as
 /// group syntax, are dropped.
 pub fn parse_address_list(input: &str) -> Vec<Address> {
-    split_top_level(input).into_iter().filter_map(parse_one).collect()
+    split_top_level(input)
+        .into_iter()
+        .filter_map(parse_one)
+        .collect()
 }
 
 /// Splits on commas outside quotes and angle brackets.
@@ -50,13 +53,22 @@ fn parse_one(raw: &str) -> Option<Address> {
             return None;
         }
         let name = unquote(raw[..open].trim());
-        return Some(Address { name: (!name.is_empty()).then_some(name), email });
+        return Some(Address {
+            name: (!name.is_empty()).then_some(name),
+            email,
+        });
     }
-    raw.contains('@').then(|| Address { name: None, email: raw.to_string() })
+    raw.contains('@').then(|| Address {
+        name: None,
+        email: raw.to_string(),
+    })
 }
 
 fn unquote(s: &str) -> String {
-    let s = s.strip_prefix('"').and_then(|s| s.strip_suffix('"')).unwrap_or(s);
+    let s = s
+        .strip_prefix('"')
+        .and_then(|s| s.strip_suffix('"'))
+        .unwrap_or(s);
     let mut out = String::with_capacity(s.len());
     let mut chars = s.chars();
     while let Some(c) = chars.next() {

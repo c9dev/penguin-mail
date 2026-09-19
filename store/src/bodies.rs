@@ -13,7 +13,8 @@ pub fn put_body(
     body: &MessageBody,
     now: EpochMillis,
 ) -> Result<()> {
-    let size = body.html.as_ref().map_or(0, String::len) + body.text.as_ref().map_or(0, String::len);
+    let size =
+        body.html.as_ref().map_or(0, String::len) + body.text.as_ref().map_or(0, String::len);
     conn.execute(
         "INSERT INTO bodies (account_id, message_id, html, text, size, fetched_at, accessed_at) \
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6) \
@@ -81,7 +82,11 @@ pub fn get_body(
             })
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
-    Ok(Some(MessageBody { html, text, attachments }))
+    Ok(Some(MessageBody {
+        html,
+        text,
+        attachments,
+    }))
 }
 
 /// Deletes the least recently read bodies until the rest fit in `max_bytes`.

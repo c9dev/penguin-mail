@@ -15,7 +15,10 @@ impl<G: GmailApi> AccountSync<G> {
     /// Gmail no longer keeps history that old.
     pub async fn incremental(&self) -> Result<(), SyncError> {
         let account_id = self.account_id;
-        let cursor = self.db.read(move |c| accounts::sync_cursor(c, account_id)).await?;
+        let cursor = self
+            .db
+            .read(move |c| accounts::sync_cursor(c, account_id))
+            .await?;
         let Some(start) = cursor.history_id else {
             return self.bootstrap().await;
         };
@@ -27,7 +30,10 @@ impl<G: GmailApi> AccountSync<G> {
             let page = match self.api.history(start, page_token.as_deref()).await {
                 Ok(page) => page,
                 Err(GmailError::NotFound) => {
-                    tracing::info!(account = account_id, "history cursor expired; bootstrapping again");
+                    tracing::info!(
+                        account = account_id,
+                        "history cursor expired; bootstrapping again"
+                    );
                     return self.bootstrap().await;
                 }
                 Err(err) => return Err(err.into()),
@@ -92,14 +98,20 @@ impl<G: GmailApi> AccountSync<G> {
             .await?;
         self.emit_threads(touched);
         if !new_mail.is_empty() {
-            self.emit(ChangeEvent::NewMail { account_id, message_ids: new_mail });
+            self.emit(ChangeEvent::NewMail {
+                account_id,
+                message_ids: new_mail,
+            });
         }
         Ok(())
     }
 
     /// Metadata for messages the history adds, plus messages that moved into
     /// INBOX from outside the window.
-    async fn fetch_for_history(&self, changes: &[HistoryChange]) -> Result<HashMap<String, MessageMeta>, SyncError> {
+    async fn fetch_for_history(
+        &self,
+        changes: &[HistoryChange],
+    ) -> Result<HashMap<String, MessageMeta>, SyncError> {
         let account_id = self.account_id;
         let mut wanted: Vec<String> = changes
             .iter()
@@ -111,7 +123,9 @@ impl<G: GmailApi> AccountSync<G> {
         let into_inbox: Vec<String> = changes
             .iter()
             .filter_map(|change| match change {
-                HistoryChange::LabelsAdded { id, label_ids, .. } if label_ids.iter().any(|l| l == "INBOX") => {
+                HistoryChange::LabelsAdded { id, label_ids, .. }
+                    if label_ids.iter().any(|l| l == "INBOX") =>
+                {
                     Some(id.clone())
                 }
                 _ => None,
@@ -119,16 +133,27 @@ impl<G: GmailApi> AccountSync<G> {
             .collect();
         if !into_inbox.is_empty() {
             let candidates = into_inbox.clone();
-            let known = self.db.read(move |c| messages::existing_ids(c, account_id, &candidates)).await?;
+            let known = self
+                .db
+                .read(move |c| messages::existing_ids(c, account_id, &candidates))
+                .await?;
             wanted.extend(into_inbox.into_iter().filter(|id| !known.contains(id)));
         }
         wanted.sort();
         wanted.dedup();
-        Ok(self.fetch_metadata(&wanted).await?.into_iter().map(|m| (m.id.clone(), m)).collect())
+        Ok(self
+            .fetch_metadata(&wanted)
+            .await?
+            .into_iter()
+            .map(|m| (m.id.clone(), m))
+            .collect())
     }
 }
 
 /// Unread mail that someone else sent to INBOX.
 fn is_new_inbox_mail(meta: &MessageMeta) -> bool {
-    meta.has_label("INBOX") && meta.is_unread() && !meta.has_label("SENT") && !meta.has_label("DRAFT")
+    meta.has_label("INBOX")
+        && meta.is_unread()
+        && !meta.has_label("SENT")
+        && !meta.has_label("DRAFT")
 }

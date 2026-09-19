@@ -8,7 +8,11 @@ use crate::{SyncError, connect_account};
 #[tokio::test]
 async fn connecting_needs_a_stored_refresh_token() {
     let tokens: Arc<dyn TokenStore> = Arc::new(MemoryTokenStore::default());
-    let account = Account { id: 1, email: "me@example.com".into(), state: AccountState::Ok };
+    let account = Account {
+        id: 1,
+        email: "me@example.com".into(),
+        state: AccountState::Ok,
+    };
     let oauth = OAuthClient::new("cid", "secret");
     assert!(matches!(
         connect_account(oauth.clone(), Arc::clone(&tokens), &account).await,

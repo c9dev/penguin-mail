@@ -24,7 +24,10 @@ fn bodies_round_trip_with_attachments() {
     let (conn, id) = db();
     store(&conn, &[meta(id, "a", "t1", 100, &["INBOX"])]);
     bodies::put_body(&conn, id, "a", &body("hi"), 1).unwrap();
-    assert_eq!(bodies::get_body(&conn, id, "a", 2).unwrap(), Some(body("hi")));
+    assert_eq!(
+        bodies::get_body(&conn, id, "a", 2).unwrap(),
+        Some(body("hi"))
+    );
     assert_eq!(bodies::get_body(&conn, id, "missing", 2).unwrap(), None);
 }
 
@@ -33,7 +36,11 @@ fn eviction_keeps_the_most_recently_read_bodies() {
     let (conn, id) = db();
     store(
         &conn,
-        &[meta(id, "a", "t1", 100, &[]), meta(id, "b", "t2", 100, &[]), meta(id, "c", "t3", 100, &[])],
+        &[
+            meta(id, "a", "t1", 100, &[]),
+            meta(id, "b", "t2", 100, &[]),
+            meta(id, "c", "t3", 100, &[]),
+        ],
     );
     // Each body is 15 bytes: "<p>xxxx</p>" plus "xxxx".
     bodies::put_body(&conn, id, "a", &body("aaaa"), 1).unwrap();
@@ -53,7 +60,9 @@ fn deleting_a_message_deletes_its_body() {
     bodies::put_body(&conn, id, "a", &body("hi"), 1).unwrap();
     messages::delete_message(&conn, id, "a").unwrap();
     assert!(bodies::get_body(&conn, id, "a", 2).unwrap().is_none());
-    let attachments: i64 = conn.query_row("SELECT COUNT(*) FROM attachments", [], |r| r.get(0)).unwrap();
+    let attachments: i64 = conn
+        .query_row("SELECT COUNT(*) FROM attachments", [], |r| r.get(0))
+        .unwrap();
     assert_eq!(attachments, 0);
 }
 
@@ -62,7 +71,11 @@ fn putting_a_body_again_replaces_it() {
     let (conn, id) = db();
     store(&conn, &[meta(id, "a", "t1", 100, &["INBOX"])]);
     bodies::put_body(&conn, id, "a", &body("one"), 1).unwrap();
-    let plain = MessageBody { html: None, text: Some("two".into()), attachments: vec![] };
+    let plain = MessageBody {
+        html: None,
+        text: Some("two".into()),
+        attachments: vec![],
+    };
     bodies::put_body(&conn, id, "a", &plain, 2).unwrap();
     assert_eq!(bodies::get_body(&conn, id, "a", 3).unwrap(), Some(plain));
 }

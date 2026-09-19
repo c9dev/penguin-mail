@@ -42,15 +42,28 @@ impl<G: GmailApi> AccountSync<G> {
     /// Loads the next window page. Returns true while pages remain.
     pub async fn backfill_step(&self) -> Result<bool, SyncError> {
         let account_id = self.account_id;
-        let cursor = self.db.read(move |c| accounts::sync_cursor(c, account_id)).await?;
+        let cursor = self
+            .db
+            .read(move |c| accounts::sync_cursor(c, account_id))
+            .await?;
         if cursor.backfill_done || cursor.history_id.is_none() {
             return Ok(false);
         }
-        match self.load_window_page(cursor.backfill_cursor.clone(), cursor.sync_gen).await {
+        match self
+            .load_window_page(cursor.backfill_cursor.clone(), cursor.sync_gen)
+            .await
+        {
             Ok(next) => Ok(next.is_some()),
-            Err(SyncError::Gmail(GmailError::Http { status: 400, .. })) if cursor.backfill_cursor.is_some() => {
-                tracing::warn!(account = account_id, "Gmail rejected the saved page token; listing the window again");
-                self.db.write(move |c| accounts::set_backfill(c, account_id, None, false)).await?;
+            Err(SyncError::Gmail(GmailError::Http { status: 400, .. }))
+                if cursor.backfill_cursor.is_some() =>
+            {
+                tracing::warn!(
+                    account = account_id,
+                    "Gmail rejected the saved page token; listing the window again"
+                );
+                self.db
+                    .write(move |c| accounts::set_backfill(c, account_id, None, false))
+                    .await?;
                 Ok(true)
             }
             Err(err) => Err(err),
@@ -61,15 +74,25 @@ impl<G: GmailApi> AccountSync<G> {
     pub async fn prune(&self, now: EpochMillis) -> Result<(), SyncError> {
         let account_id = self.account_id;
         let cutoff = now - self.window_days * DAY_MILLIS;
-        let pruned = self.db.write(move |c| window::prune_window(c, account_id, cutoff)).await?;
+        let pruned = self
+            .db
+            .write(move |c| window::prune_window(c, account_id, cutoff))
+            .await?;
         self.emit_threads(pruned.into_iter().collect());
         Ok(())
     }
 
     /// Stores one page of the window listing and saves the next page token.
     /// After the last page, deletes messages from earlier generations.
-    async fn load_window_page(&self, page_token: Option<String>, generation: i64) -> Result<Option<String>, SyncError> {
-        let page = self.api.list_messages(&self.window_query(), page_token.as_deref()).await?;
+    async fn load_window_page(
+        &self,
+        page_token: Option<String>,
+        generation: i64,
+    ) -> Result<Option<String>, SyncError> {
+        let page = self
+            .api
+            .list_messages(&self.window_query(), page_token.as_deref())
+            .await?;
         let ids: Vec<String> = page.messages.into_iter().map(|m| m.id).collect();
         let metas = self.fetch_metadata(&ids).await?;
         let next = page.next_page_token;
@@ -106,7 +129,11 @@ fn domain_labels(account_id: AccountId, remote: &[RemoteLabel]) -> Vec<Label> {
             account_id,
             id: l.id.clone(),
             name: l.name.clone(),
-            kind: if l.kind.as_deref() == Some("system") { LabelKind::System } else { LabelKind::User },
+            kind: if l.kind.as_deref() == Some("system") {
+                LabelKind::System
+            } else {
+                LabelKind::User
+            },
         })
         .collect()
 }

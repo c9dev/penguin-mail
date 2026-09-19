@@ -24,8 +24,12 @@ fn walk(part: &MessagePart, body: &mut MessageBody) {
             mime_type: part.mime_type.clone(),
             size: part.body.size,
             attachment_id: part.body.attachment_id.clone(),
-            content_id: find_header(part, "Content-ID")
-                .map(|v| v.trim().trim_start_matches('<').trim_end_matches('>').to_string()),
+            content_id: find_header(part, "Content-ID").map(|v| {
+                v.trim()
+                    .trim_start_matches('<')
+                    .trim_end_matches('>')
+                    .to_string()
+            }),
         });
         return;
     }
@@ -42,8 +46,11 @@ fn walk(part: &MessagePart, body: &mut MessageBody) {
 fn decode_text(part: &MessagePart) -> Option<String> {
     let data = part.body.data.as_deref()?;
     let bytes = URL_SAFE_NO_PAD_INDIFFERENT.decode(data.trim()).ok()?;
-    let charset = find_header(part, "Content-Type").and_then(charset_param).unwrap_or("utf-8");
-    let encoding = encoding_rs::Encoding::for_label(charset.as_bytes()).unwrap_or(encoding_rs::UTF_8);
+    let charset = find_header(part, "Content-Type")
+        .and_then(charset_param)
+        .unwrap_or("utf-8");
+    let encoding =
+        encoding_rs::Encoding::for_label(charset.as_bytes()).unwrap_or(encoding_rs::UTF_8);
     let (text, _, _) = encoding.decode(&bytes);
     Some(text.into_owned())
 }
@@ -52,6 +59,8 @@ fn decode_text(part: &MessagePart) -> Option<String> {
 pub fn charset_param(content_type: &str) -> Option<&str> {
     content_type.split(';').skip(1).find_map(|param| {
         let (key, value) = param.split_once('=')?;
-        key.trim().eq_ignore_ascii_case("charset").then(|| value.trim().trim_matches('"'))
+        key.trim()
+            .eq_ignore_ascii_case("charset")
+            .then(|| value.trim().trim_matches('"'))
     })
 }

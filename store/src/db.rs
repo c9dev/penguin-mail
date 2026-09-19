@@ -40,7 +40,11 @@ impl Db {
             })
             .map_err(|_| StoreError::Closed)?;
         Ok(Db {
-            inner: Arc::new(Inner { path: path.to_path_buf(), writer: sender, readers: Mutex::new(Vec::new()) }),
+            inner: Arc::new(Inner {
+                path: path.to_path_buf(),
+                writer: sender,
+                readers: Mutex::new(Vec::new()),
+            }),
         })
     }
 
@@ -60,7 +64,10 @@ impl Db {
             })();
             let _ = done.send(outcome);
         });
-        self.inner.writer.send(job).map_err(|_| StoreError::Closed)?;
+        self.inner
+            .writer
+            .send(job)
+            .map_err(|_| StoreError::Closed)?;
         result.await.map_err(|_| StoreError::Closed)?
     }
 

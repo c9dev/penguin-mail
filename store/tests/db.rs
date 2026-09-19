@@ -8,8 +8,11 @@ fn open() -> (Db, tempfile::TempDir) {
 #[tokio::test]
 async fn writes_are_visible_to_reads() {
     let (db, _dir) = open();
-    let id = db.write(|c| accounts::insert_account(c, "me@example.com", 0)).await.unwrap();
-    let all = db.read(|c| accounts::list_accounts(c)).await.unwrap();
+    let id = db
+        .write(|c| accounts::insert_account(c, "me@example.com", 0))
+        .await
+        .unwrap();
+    let all = db.read(accounts::list_accounts).await.unwrap();
     assert_eq!(all.len(), 1);
     assert_eq!(all[0].id, id);
 }
@@ -24,13 +27,15 @@ async fn a_failed_write_rolls_back() {
         })
         .await;
     assert!(result.is_err());
-    assert!(db.read(|c| accounts::list_accounts(c)).await.unwrap().is_empty());
+    assert!(db.read(accounts::list_accounts).await.unwrap().is_empty());
 }
 
 #[tokio::test]
 async fn reads_are_read_only() {
     let (db, _dir) = open();
-    let result = db.read(|c| accounts::insert_account(c, "me@example.com", 0)).await;
+    let result = db
+        .read(|c| accounts::insert_account(c, "me@example.com", 0))
+        .await;
     assert!(matches!(result, Err(StoreError::Sqlite(_))));
 }
 
@@ -42,18 +47,22 @@ async fn reads_and_writes_interleave() {
         let db = db.clone();
         tasks.push(tokio::spawn(async move {
             if i % 2 == 0 {
-                db.write(move |c| accounts::insert_account(c, &format!("u{i}@example.com"), 0).map(|_| ()))
+                db.write(move |c| {
+                    accounts::insert_account(c, &format!("u{i}@example.com"), 0).map(|_| ())
+                })
+                .await
+                .unwrap();
+            } else {
+                db.read(|c| accounts::list_accounts(c).map(|all| all.len()))
                     .await
                     .unwrap();
-            } else {
-                db.read(|c| accounts::list_accounts(c).map(|all| all.len())).await.unwrap();
             }
         }));
     }
     for task in tasks {
         task.await.unwrap();
     }
-    assert_eq!(db.read(|c| accounts::list_accounts(c)).await.unwrap().len(), 10);
+    assert_eq!(db.read(accounts::list_accounts).await.unwrap().len(), 10);
 }
 
 #[tokio::test]
@@ -61,8 +70,10 @@ async fn data_survives_reopening() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("mail.db");
     let db = Db::open(&path).unwrap();
-    db.write(|c| accounts::insert_account(c, "me@example.com", 0)).await.unwrap();
+    db.write(|c| accounts::insert_account(c, "me@example.com", 0))
+        .await
+        .unwrap();
     drop(db);
     let db = Db::open(&path).unwrap();
-    assert_eq!(db.read(|c| accounts::list_accounts(c)).await.unwrap().len(), 1);
+    assert_eq!(db.read(accounts::list_accounts).await.unwrap().len(), 1);
 }

@@ -43,7 +43,12 @@ pub fn upsert_message(conn: &Connection, m: &MessageMeta, sync_gen: i64) -> Resu
 }
 
 /// Replaces a stored message's labels.
-pub fn set_labels(conn: &Connection, account_id: AccountId, message_id: &str, labels: &[String]) -> Result<()> {
+pub fn set_labels(
+    conn: &Connection,
+    account_id: AccountId,
+    message_id: &str,
+    labels: &[String],
+) -> Result<()> {
     conn.execute(
         "DELETE FROM message_labels WHERE account_id = ?1 AND message_id = ?2",
         params![account_id, message_id],
@@ -57,7 +62,11 @@ pub fn set_labels(conn: &Connection, account_id: AccountId, message_id: &str, la
     Ok(())
 }
 
-pub fn thread_id_of(conn: &Connection, account_id: AccountId, message_id: &str) -> Result<Option<String>> {
+pub fn thread_id_of(
+    conn: &Connection,
+    account_id: AccountId,
+    message_id: &str,
+) -> Result<Option<String>> {
     Ok(conn
         .query_row(
             "SELECT thread_id FROM messages WHERE account_id = ?1 AND id = ?2",
@@ -109,22 +118,39 @@ pub fn remove_labels(
 
 /// Deletes a message with its labels and body. Returns its thread, or `None`
 /// when the message was not stored.
-pub fn delete_message(conn: &Connection, account_id: AccountId, message_id: &str) -> Result<Option<String>> {
+pub fn delete_message(
+    conn: &Connection,
+    account_id: AccountId,
+    message_id: &str,
+) -> Result<Option<String>> {
     let thread_id = thread_id_of(conn, account_id, message_id)?;
     if thread_id.is_some() {
-        conn.execute("DELETE FROM messages WHERE account_id = ?1 AND id = ?2", params![account_id, message_id])?;
+        conn.execute(
+            "DELETE FROM messages WHERE account_id = ?1 AND id = ?2",
+            params![account_id, message_id],
+        )?;
     }
     Ok(thread_id)
 }
 
 pub fn delete_thread(conn: &Connection, account_id: AccountId, thread_id: &str) -> Result<()> {
-    conn.execute("DELETE FROM messages WHERE account_id = ?1 AND thread_id = ?2", params![account_id, thread_id])?;
-    conn.execute("DELETE FROM threads WHERE account_id = ?1 AND id = ?2", params![account_id, thread_id])?;
+    conn.execute(
+        "DELETE FROM messages WHERE account_id = ?1 AND thread_id = ?2",
+        params![account_id, thread_id],
+    )?;
+    conn.execute(
+        "DELETE FROM threads WHERE account_id = ?1 AND id = ?2",
+        params![account_id, thread_id],
+    )?;
     Ok(())
 }
 
 /// A stored message's labels, sorted.
-pub fn labels_of(conn: &Connection, account_id: AccountId, message_id: &str) -> Result<Vec<String>> {
+pub fn labels_of(
+    conn: &Connection,
+    account_id: AccountId,
+    message_id: &str,
+) -> Result<Vec<String>> {
     let mut stmt = conn.prepare_cached(
         "SELECT label_id FROM message_labels WHERE account_id = ?1 AND message_id = ?2 ORDER BY label_id",
     )?;
@@ -133,7 +159,11 @@ pub fn labels_of(conn: &Connection, account_id: AccountId, message_id: &str) -> 
 }
 
 /// The subset of `ids` that is stored.
-pub fn existing_ids(conn: &Connection, account_id: AccountId, ids: &[String]) -> Result<HashSet<String>> {
+pub fn existing_ids(
+    conn: &Connection,
+    account_id: AccountId,
+    ids: &[String],
+) -> Result<HashSet<String>> {
     let mut found = HashSet::new();
     for id in ids {
         if thread_id_of(conn, account_id, id)?.is_some() {
@@ -159,7 +189,11 @@ struct MessageRow {
 }
 
 /// A thread's stored messages, oldest first.
-pub fn thread_messages(conn: &Connection, account_id: AccountId, thread_id: &str) -> Result<Vec<MessageMeta>> {
+pub fn thread_messages(
+    conn: &Connection,
+    account_id: AccountId,
+    thread_id: &str,
+) -> Result<Vec<MessageMeta>> {
     let mut stmt = conn.prepare_cached(
         "SELECT id, thread_id, rfc822_msgid, from_name, from_addr, to_addrs, cc_addrs, subject, date, \
          snippet, size, has_attachments FROM messages WHERE account_id = ?1 AND thread_id = ?2 \
@@ -190,7 +224,10 @@ pub fn thread_messages(conn: &Connection, account_id: AccountId, thread_id: &str
                 account_id,
                 to: parse_addresses("messages.to_addrs", &r.to)?,
                 cc: parse_addresses("messages.cc_addrs", &r.cc)?,
-                from: r.from_addr.map(|email| Address { name: r.from_name, email }),
+                from: r.from_addr.map(|email| Address {
+                    name: r.from_name,
+                    email,
+                }),
                 id: r.id,
                 thread_id: r.thread_id,
                 rfc822_msgid: r.rfc822_msgid,
@@ -206,7 +243,10 @@ pub fn thread_messages(conn: &Connection, account_id: AccountId, thread_id: &str
 }
 
 fn parse_addresses(column: &'static str, json: &str) -> Result<Vec<Address>> {
-    serde_json::from_str(json).map_err(|_| StoreError::Corrupt { column, value: json.to_string() })
+    serde_json::from_str(json).map_err(|_| StoreError::Corrupt {
+        column,
+        value: json.to_string(),
+    })
 }
 
 /// Recomputes a thread's summary row and label set from its messages, and
@@ -218,7 +258,10 @@ pub fn refresh_thread(conn: &Connection, account_id: AccountId, thread_id: &str)
         |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
     )?;
     if count == 0 {
-        conn.execute("DELETE FROM threads WHERE account_id = ?1 AND id = ?2", params![account_id, thread_id])?;
+        conn.execute(
+            "DELETE FROM threads WHERE account_id = ?1 AND id = ?2",
+            params![account_id, thread_id],
+        )?;
         return Ok(());
     }
     let subject: String = conn.query_row(
