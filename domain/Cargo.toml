@@ -1,0 +1,8 @@
+[package]
+name = "mailrs-domain"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde.workspace = true
