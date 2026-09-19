@@ -1,6 +1,7 @@
 //! SQLite storage for mailrs. Query functions take a `&Connection`.
 
 pub mod accounts;
+pub mod bodies;
 mod error;
 pub mod labels;
 pub mod messages;
