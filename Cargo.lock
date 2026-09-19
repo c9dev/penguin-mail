@@ -1908,6 +1908,7 @@ dependencies = [
  "async-channel",
  "base64 0.23.1",
  "chrono",
+ "futures",
  "gtk4",
  "ksni",
  "libadwaita",

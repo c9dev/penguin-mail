@@ -10,7 +10,10 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result, anyhow, bail};
 use mailrs_domain::{Account, AccountId, ChangeEvent, MessageBody, MessageMeta};
-use mailrs_gmail::{GMAIL_API_BASE, GmailError, HistoryPage, KeyringTokenStore, MessagePage, OAuthClient, Profile, RemoteLabel, TokenStore, authorize};
+use mailrs_gmail::{
+    GMAIL_API_BASE, GmailError, HistoryPage, KeyringTokenStore, MessagePage, OAuthClient, Profile,
+    RemoteLabel, TokenStore, authorize,
+};
 use mailrs_store::{Db, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir};
 use mailrs_sync::{AccountClient, AccountSync, GmailApi, SyncEngine, connect_account, now_millis};
@@ -39,7 +42,11 @@ impl GmailApi for Api {
     async fn labels(&self) -> Result<Vec<RemoteLabel>, GmailError> {
         delegate!(self, labels())
     }
-    async fn list_messages(&self, query: &str, page_token: Option<&str>) -> Result<MessagePage, GmailError> {
+    async fn list_messages(
+        &self,
+        query: &str,
+        page_token: Option<&str>,
+    ) -> Result<MessagePage, GmailError> {
         delegate!(self, list_messages(query, page_token))
     }
     async fn message_metadata(&self, id: &str) -> Result<MessageMeta, GmailError> {
@@ -51,10 +58,19 @@ impl GmailApi for Api {
     async fn message_body(&self, id: &str) -> Result<MessageBody, GmailError> {
         delegate!(self, message_body(id))
     }
-    async fn history(&self, start: u64, page_token: Option<&str>) -> Result<HistoryPage, GmailError> {
+    async fn history(
+        &self,
+        start: u64,
+        page_token: Option<&str>,
+    ) -> Result<HistoryPage, GmailError> {
         delegate!(self, history(start, page_token))
     }
-    async fn modify_labels(&self, id: &str, add: &[String], remove: &[String]) -> Result<(), GmailError> {
+    async fn modify_labels(
+        &self,
+        id: &str,
+        add: &[String],
+        remove: &[String],
+    ) -> Result<(), GmailError> {
         delegate!(self, modify_labels(id, add, remove))
     }
     async fn trash(&self, id: &str) -> Result<(), GmailError> {
@@ -63,7 +79,12 @@ impl GmailApi for Api {
     async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, GmailError> {
         delegate!(self, send(raw, thread_id))
     }
-    async fn save_draft(&self, draft_id: Option<&str>, raw: &[u8], thread_id: Option<&str>) -> Result<String, GmailError> {
+    async fn save_draft(
+        &self,
+        draft_id: Option<&str>,
+        raw: &[u8],
+        thread_id: Option<&str>,
+    ) -> Result<String, GmailError> {
         delegate!(self, save_draft(draft_id, raw, thread_id))
     }
     async fn delete_draft(&self, draft_id: &str) -> Result<(), GmailError> {
@@ -75,7 +96,11 @@ impl GmailApi for Api {
     async fn display_name(&self) -> Result<Option<String>, GmailError> {
         delegate!(self, display_name())
     }
-    async fn attachment(&self, message_id: &str, attachment_id: &str) -> Result<Vec<u8>, GmailError> {
+    async fn attachment(
+        &self,
+        message_id: &str,
+        attachment_id: &str,
+    ) -> Result<Vec<u8>, GmailError> {
         delegate!(self, attachment(message_id, attachment_id))
     }
 }
@@ -103,8 +128,13 @@ impl Core {
             .enable_all()
             .build()
             .context("could not start the async runtime")?;
-        let dir = if demo { std::env::temp_dir().join(format!("mailrs-demo-{}", std::process::id())) } else { data_dir()? };
-        std::fs::create_dir_all(&dir).with_context(|| format!("could not create {}", dir.display()))?;
+        let dir = if demo {
+            std::env::temp_dir().join(format!("mailrs-demo-{}", std::process::id()))
+        } else {
+            data_dir()?
+        };
+        std::fs::create_dir_all(&dir)
+            .with_context(|| format!("could not create {}", dir.display()))?;
         let db_path: PathBuf = dir.join("mailrs.db");
         if demo {
             let _ = std::fs::remove_file(&db_path);
@@ -153,12 +183,19 @@ impl Core {
 
     fn oauth(&self) -> Result<OAuthClient> {
         let config = self.config.borrow();
-        let config = config.as_ref().ok_or_else(|| anyhow!("mailrs has no OAuth client configured yet"))?;
-        Ok(OAuthClient::new(&config.oauth.client_id, &config.oauth.client_secret))
+        let config = config
+            .as_ref()
+            .ok_or_else(|| anyhow!("mailrs has no OAuth client configured yet"))?;
+        Ok(OAuthClient::new(
+            &config.oauth.client_id,
+            &config.oauth.client_secret,
+        ))
     }
 
     fn start_engine(&self) {
-        let Some(config) = self.config.borrow().clone() else { return };
+        let Some(config) = self.config.borrow().clone() else {
+            return;
+        };
         let (engine, engine_events) = SyncEngine::new(self.db.clone(), config.engine_config());
         let engine = Arc::new(engine);
         *self.engine.borrow_mut() = Some(Arc::clone(&engine));
@@ -170,7 +207,12 @@ impl Core {
                 }
             }
         });
-        let (db, tokens, demo, oauth) = (self.db.clone(), Arc::clone(&self.tokens), self.demo, self.oauth().ok());
+        let (db, tokens, demo, oauth) = (
+            self.db.clone(),
+            Arc::clone(&self.tokens),
+            self.demo,
+            self.oauth().ok(),
+        );
         self.runtime.spawn(async move {
             let Ok(all) = db.read(accounts::list_accounts).await else { return };
             for account in all {
@@ -195,6 +237,16 @@ impl Core {
         }
     }
 
+    /// Runs a read query on the store's reader pool.
+    pub async fn read<T, F>(&self, query: F) -> Result<T>
+    where
+        F: FnOnce(&rusqlite::Connection) -> mailrs_store::Result<T> + Send + 'static,
+        T: Send + 'static,
+    {
+        let db = self.db.clone();
+        self.call(async move { db.read(query).await }).await
+    }
+
     /// Runs `future` on the tokio runtime without waiting.
     pub fn spawn<F>(&self, future: F)
     where
@@ -204,7 +256,10 @@ impl Core {
     }
 
     pub fn account(&self, account_id: AccountId) -> Option<Arc<Sync>> {
-        self.engine.borrow().as_ref().and_then(|e| e.account(account_id).ok())
+        self.engine
+            .borrow()
+            .as_ref()
+            .and_then(|e| e.account(account_id).ok())
     }
 
     pub fn poke(&self, account_id: AccountId) {
@@ -222,28 +277,43 @@ impl Core {
     /// Runs the browser consent flow, stores the refresh token, and starts
     /// syncing the account. `urls` receives the consent URL to open. When
     /// `expected` is set, the user must pick that account.
-    pub async fn authorize_account(&self, urls: async_channel::Sender<String>, expected: Option<String>) -> Result<Account> {
+    pub async fn authorize_account(
+        &self,
+        urls: async_channel::Sender<String>,
+        expected: Option<String>,
+    ) -> Result<Account> {
         if self.demo {
             bail!("Demo mode cannot add real accounts.");
         }
         let oauth = self.oauth()?;
-        let engine = self.engine.borrow().clone().ok_or_else(|| anyhow!("sync is not running"))?;
+        let engine = self
+            .engine
+            .borrow()
+            .clone()
+            .ok_or_else(|| anyhow!("sync is not running"))?;
         let (db, tokens) = (self.db.clone(), Arc::clone(&self.tokens));
         self.call(async move {
-            let authorized = authorize(&oauth, GMAIL_API_BASE, move |url| {
+            let flow = authorize(&oauth, GMAIL_API_BASE, move |url| {
                 let _ = urls.try_send(url.to_string());
-            })
-            .await?;
+            });
+            let authorized = tokio::time::timeout(std::time::Duration::from_secs(300), flow)
+                .await
+                .map_err(|_| anyhow!("Gave up waiting for the browser after five minutes."))??;
             if let Some(expected) = expected
                 && !expected.eq_ignore_ascii_case(&authorized.email)
             {
-                bail!("You signed in as {}. Choose {expected} to reconnect that account.", authorized.email);
+                bail!(
+                    "You signed in as {}. Choose {expected} to reconnect that account.",
+                    authorized.email
+                );
             }
             let (email, refresh) = (authorized.email.clone(), authorized.refresh_token.clone());
             let store = Arc::clone(&tokens);
             tokio::task::spawn_blocking(move || store.save(&email, &refresh)).await??;
             let email = authorized.email.clone();
-            let id = db.write(move |c| accounts::insert_account(c, &email, now_millis())).await?;
+            let id = db
+                .write(move |c| accounts::insert_account(c, &email, now_millis()))
+                .await?;
             let account = db
                 .read(move |c| accounts::list_accounts(c))
                 .await?
@@ -264,7 +334,8 @@ impl Core {
         }
         let (db, tokens, demo) = (self.db.clone(), Arc::clone(&self.tokens), self.demo);
         self.call(async move {
-            db.write(move |c| accounts::delete_account(c, account.id)).await?;
+            db.write(move |c| accounts::delete_account(c, account.id))
+                .await?;
             if !demo {
                 tokio::task::spawn_blocking(move || tokens.delete(&account.email)).await??;
             }
@@ -282,7 +353,10 @@ async fn connect(
     account: &Account,
 ) -> Result<Api> {
     if demo {
-        return Ok(Api::Demo(DemoApi { db: db.clone(), account_id: account.id }));
+        return Ok(Api::Demo(DemoApi {
+            db: db.clone(),
+            account_id: account.id,
+        }));
     }
     let oauth = oauth.ok_or_else(|| anyhow!("mailrs has no OAuth client configured yet"))?;
     Ok(Api::Gmail(connect_account(oauth, tokens, account).await?))

@@ -30,7 +30,21 @@ pub fn relative_date(ts: EpochMillis, now: DateTime<Local>) -> String {
     }
 }
 
-/// A long date for conversation headers.
+/// A date for message headers: "Today at 10:12", "Yesterday at 14:50",
+/// "Fri 18 Sep at 08:50", or "3 Sep 2024" for earlier years.
+pub fn header_date(ts: EpochMillis, now: DateTime<Local>) -> String {
+    let Some(when) = local(ts) else {
+        return String::new();
+    };
+    match (now.date_naive() - when.date_naive()).num_days() {
+        ..=0 => when.format("Today at %H:%M").to_string(),
+        1 => when.format("Yesterday at %H:%M").to_string(),
+        _ if when.year() == now.year() => when.format("%a %-d %b at %H:%M").to_string(),
+        _ => when.format("%-d %b %Y").to_string(),
+    }
+}
+
+/// A long date for reply attributions and forwarded headers.
 pub fn full_date(ts: EpochMillis) -> String {
     local(ts)
         .map(|when| when.format("%A, %-d %B %Y at %H:%M").to_string())
@@ -87,9 +101,10 @@ pub fn color_for(seed: &str) -> &'static str {
     PALETTE[(hash % PALETTE.len() as u64) as usize]
 }
 
-/// Each account's colour, assigned in the order accounts were added.
-pub fn account_color(account_id: AccountId) -> &'static str {
-    PALETTE[(account_id.max(1) - 1) as usize % PALETTE.len()]
+/// Each account's colour, as an index into [`PALETTE`], assigned in the
+/// order accounts were added. The stylesheet defines `account-0` to `account-8`.
+pub fn account_color_index(account_id: AccountId) -> usize {
+    (account_id.max(1) - 1) as usize % PALETTE.len()
 }
 
 #[cfg(test)]
@@ -114,6 +129,21 @@ mod tests {
         assert_eq!(relative_date(at(2026, 3, 3, 12, 0), now), "3 Mar");
         assert_eq!(relative_date(at(2024, 9, 3, 12, 0), now), "2024-09-03");
         assert_eq!(relative_date(at(2026, 9, 18, 8, 0), now), "08:00");
+    }
+
+    #[test]
+    fn header_dates_stay_short() {
+        let now = Local.with_ymd_and_hms(2026, 9, 19, 15, 0, 0).unwrap();
+        assert_eq!(header_date(at(2026, 9, 19, 10, 12), now), "Today at 10:12");
+        assert_eq!(
+            header_date(at(2026, 9, 18, 14, 50), now),
+            "Yesterday at 14:50"
+        );
+        assert_eq!(
+            header_date(at(2026, 9, 11, 8, 50), now),
+            "Fri 11 Sep at 08:50"
+        );
+        assert_eq!(header_date(at(2024, 9, 3, 8, 50), now), "3 Sep 2024");
     }
 
     #[test]
@@ -145,7 +175,7 @@ mod tests {
     #[test]
     fn colours_are_stable() {
         assert_eq!(color_for("ann@example.com"), color_for("ANN@example.com"));
-        assert_eq!(account_color(1), PALETTE[0]);
-        assert_eq!(account_color(10), PALETTE[0]);
+        assert_eq!(account_color_index(1), 0);
+        assert_eq!(account_color_index(10), 0);
     }
 }

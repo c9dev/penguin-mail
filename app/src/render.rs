@@ -7,7 +7,7 @@ use std::fmt::Write;
 
 use mailrs_domain::{Address, MessageBody, MessageMeta};
 
-use crate::format::{color_for, full_date, human_size, initials};
+use crate::format::{color_for, header_date, human_size, initials};
 use crate::sanitize::sanitize_html;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,11 +36,23 @@ pub struct Conversation<'a> {
     pub messages: Vec<MessageView<'a>>,
     /// The account's own addresses, shown as "me" in recipient lists.
     pub me: &'a [String],
+    /// Whether remote images and styles may load.
+    pub allow_remote: bool,
 }
 
 pub fn render(conversation: &Conversation, theme: &Theme) -> String {
     let mut html = String::with_capacity(16 * 1024);
     html.push_str("<!doctype html><html><head><meta charset=\"utf-8\">");
+    let remote = if conversation.allow_remote {
+        " https: http:"
+    } else {
+        ""
+    };
+    let _ = write!(
+        html,
+        "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'none'; \
+         style-src 'unsafe-inline'{remote}; img-src data:{remote}; font-src data:{remote}\">"
+    );
     let _ = write!(html, "<style>{}</style></head><body>", page_css(theme));
     let subject = if conversation.subject.trim().is_empty() {
         "(no subject)"
@@ -83,28 +95,18 @@ fn render_message(html: &mut String, view: &MessageView, me: &[String]) {
         initials = escape(&initials(&name)),
         name = escape(&name),
     );
-    if view.expanded && !address.is_empty() && address != name {
+    if !address.is_empty() && address != name {
         let _ = write!(html, "<span class=\"address\">{}</span>", escape(&address));
     }
     let _ = write!(
         html,
-        "</span><span class=\"date\">{}</span>",
-        escape(&full_date(meta.date))
+        "</span><span class=\"date\">{}</span><span class=\"line to\">to {}</span>\
+         <span class=\"line snippet\">{}</span></a>",
+        escape(&header_date(meta.date, chrono::Local::now())),
+        escape(&recipients(meta, me)),
+        escape(&meta.snippet)
     );
-    if view.expanded {
-        let _ = write!(
-            html,
-            "<span class=\"line\">to {}</span></a>",
-            escape(&recipients(meta, me))
-        );
-        render_body(html, view);
-    } else {
-        let _ = write!(
-            html,
-            "<span class=\"line\">{}</span></a>",
-            escape(&meta.snippet)
-        );
-    }
+    render_body(html, view);
     html.push_str("</article>");
 }
 
@@ -276,7 +278,8 @@ pub fn escape(s: &str) -> String {
 const HTML_BODY_CSS: &str = ":host{all:initial;display:block;contain:content}\
 .root{font:14px/1.5 -apple-system,\"Adwaita Sans\",Cantarell,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif;\
 color:#1d1d20;overflow-wrap:anywhere;overflow-x:auto}\
-img{max-width:100%;height:auto}a{color:#1c71d8}";
+img{max-width:100% !important;height:auto !important}\
+table{max-width:100% !important}td,th{overflow-wrap:anywhere}a{color:#1c71d8}";
 
 fn page_css(theme: &Theme) -> String {
     let (bg, fg, dim, card, line, hover) = if theme.dark {
@@ -316,9 +319,11 @@ background:var(--accent);margin-right:7px;vertical-align:1px}}\
 .address{{color:var(--dim);font-size:13px;margin-left:8px}}\
 .date{{color:var(--dim);font-size:13px;white-space:nowrap}}\
 .line{{grid-column:2 / span 2;color:var(--dim);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
+.collapsed .body,.collapsed .attachments,.collapsed .to,.collapsed .address,.expanded .snippet{{display:none}}\
+.collapsed{{cursor:pointer}}\
 .body{{margin:16px 0 4px 52px}}\
 .text{{white-space:pre-wrap;overflow-wrap:anywhere}}\
-.html{{background:#fff;border-radius:12px;padding:18px;border:1px solid var(--line);overflow:hidden}}\
+.html{{background:#fff;border-radius:12px;padding:14px;border:1px solid var(--line);overflow:hidden;margin-left:0}}\
 .status{{color:var(--dim);font-style:italic}}\
 blockquote.quote{{margin:6px 0;padding:0 0 0 12px;border-left:3px solid color-mix(in srgb,var(--accent) 45%,transparent);color:var(--dim)}}\
 .signature{{color:var(--dim)}}\
@@ -329,7 +334,9 @@ color:inherit;text-decoration:none;font-size:13px;max-width:320px}}\
 .attachment:hover{{background:color-mix(in srgb,var(--card) 100%,var(--fg) 6%)}}\
 .attachment .file{{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
 .attachment .size{{color:var(--dim);white-space:nowrap}}\
-.clip{{width:16px;height:16px;flex:none;background:var(--dim);-webkit-mask:url(\"{CLIP}\") center/contain no-repeat}}",
+.clip{{width:16px;height:16px;flex:none;background:var(--dim);-webkit-mask:url(\"{CLIP}\") center/contain no-repeat}}\
+@media (max-width:560px){{body{{padding:18px 14px 40px}}.body,.attachments{{margin-left:0}}.thread h1{{font-size:21px}}\
+.address{{display:none}}.message{{padding:12px 8px;margin:0 -8px}}}}",
         scheme = if theme.dark { "dark" } else { "light" },
         accent = theme.accent,
     )
@@ -390,6 +397,7 @@ mod tests {
                 subject,
                 messages: views,
                 me: &me,
+                allow_remote: false,
             },
             &theme(),
         )
@@ -445,9 +453,17 @@ mod tests {
                 },
             ],
         );
-        assert!(html.contains("snippet of m1"));
-        assert!(!html.contains("snippet of m2"));
-        assert_eq!(html.matches("the body").count(), 1);
+        assert!(html.contains("message collapsed\" id=\"m-m1\""));
+        assert!(
+            html.contains(".collapsed .body"),
+            "collapsed bodies are hidden by the stylesheet"
+        );
+        assert!(html.contains("snippet of m1") && html.contains("snippet of m2"));
+        assert_eq!(
+            html.matches("the body").count(),
+            2,
+            "every body is in the page, so toggling needs no reload"
+        );
         assert!(
             html.contains("href=\"mailrs:toggle/m1\"")
                 && html.contains("href=\"mailrs:toggle/m2\"")
@@ -574,6 +590,34 @@ mod tests {
             recipients(&m, &["me@example.com".into()]),
             "me, Bob Smith, and 4 others"
         );
+    }
+
+    #[test]
+    fn remote_content_is_refused_until_allowed() {
+        let me: [String; 0] = [];
+        let blocked = render(
+            &Conversation {
+                subject: "x",
+                messages: vec![],
+                me: &me,
+                allow_remote: false,
+            },
+            &theme(),
+        );
+        assert!(
+            blocked.contains("img-src data:;") && blocked.contains("script-src 'none'"),
+            "{blocked}"
+        );
+        let allowed = render(
+            &Conversation {
+                subject: "x",
+                messages: vec![],
+                me: &me,
+                allow_remote: true,
+            },
+            &theme(),
+        );
+        assert!(allowed.contains("img-src data: https: http:"));
     }
 
     #[test]
