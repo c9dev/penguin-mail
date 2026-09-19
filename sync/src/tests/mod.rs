@@ -1,6 +1,7 @@
 mod basics;
 mod bootstrap;
 mod incremental;
+mod thread_open;
 
 use std::sync::Arc;
 use std::time::Duration;

@@ -2,6 +2,7 @@
 //! fetches, and triage. Each file adds methods to `AccountSync`.
 
 mod history;
+mod threads;
 mod window;
 
 use std::collections::BTreeSet;
