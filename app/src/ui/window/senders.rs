@@ -7,15 +7,20 @@ use gtk::{gio, glib};
 use mailrs_domain::Filter;
 use mailrs_sync::TriageAction;
 
-use super::MainWindow;
+use super::{MainWindow, Target};
 use crate::compose::Draft;
+use crate::ui::conversation::ConversationView;
 use crate::ui::vacation::missing_scope;
 use crate::unsubscribe::{Unsubscribe, choose};
 
 impl MainWindow {
     /// Unsubscribes from the open thread's mailing list, after asking.
     pub(super) fn unsubscribe(self: &Rc<Self>) {
-        let found = self.conversation.with_open(|open| {
+        self.unsubscribe_from(Rc::clone(&self.conversation));
+    }
+
+    pub(super) fn unsubscribe_from(self: &Rc<Self>, view: Rc<ConversationView>) {
+        let found = view.with_open(|open| {
             let (meta, body) = open.list_unsubscribe()?;
             let header = body.list_unsubscribe.clone()?;
             let sender = meta
@@ -81,8 +86,8 @@ impl MainWindow {
             };
             match done {
                 Ok(()) => {
-                    this.conversation.with_open(|o| o.unsubscribed = true);
-                    this.conversation.render_buttons();
+                    view.with_open(|o| o.unsubscribed = true);
+                    view.render_buttons();
                     this.toast(&format!("Unsubscribed from {sender}"));
                 }
                 Err(err) => this.toast(&format!("Could not unsubscribe: {err}")),
@@ -93,7 +98,11 @@ impl MainWindow {
     /// Sends future mail from the open thread's sender to the Trash with a
     /// Gmail filter, and moves this thread there too.
     pub(super) fn block_sender(self: &Rc<Self>) {
-        let found = self.conversation.with_open(|open| {
+        self.block_sender_from(Rc::clone(&self.conversation));
+    }
+
+    pub(super) fn block_sender_from(self: &Rc<Self>, view: Rc<ConversationView>) {
+        let found = view.with_open(|open| {
             let me = open.me.clone();
             let sender = open
                 .messages
@@ -101,9 +110,14 @@ impl MainWindow {
                 .rev()
                 .filter_map(|m| m.from.clone())
                 .find(|a| !me.iter().any(|mine| mine.eq_ignore_ascii_case(&a.email)))?;
-            Some((open.account_id, sender))
+            let target = Target {
+                account_id: open.account_id,
+                thread_id: open.thread_id.clone(),
+                message_id: open.only_message.clone(),
+            };
+            Some((open.account_id, sender, target))
         });
-        let Some(Some((account_id, sender))) = found else {
+        let Some(Some((account_id, sender, target))) = found else {
             return self.toast("Open a message from the sender to block");
         };
         let email = sender.email.clone();
@@ -132,8 +146,15 @@ impl MainWindow {
                 .await
             {
                 Ok(_) => {
-                    this.triage(TriageAction::Trash);
-                    this.toast(&format!("Blocked {email}"));
+                    if view.with_open(|o| o.thread_id == target.thread_id) == Some(true) {
+                        view.clear();
+                    }
+                    this.apply_with(
+                        vec![target],
+                        TriageAction::Trash,
+                        true,
+                        Some(format!("Blocked {email}")),
+                    );
                 }
                 Err(err) if missing_scope(&err) => this.ask_for_settings_access(account_id),
                 Err(err) => this.toast(&format!("Could not block the sender: {err}")),

@@ -389,6 +389,25 @@ impl GmailClient {
         .await
     }
 
+    /// The message exactly as it arrived: RFC 822 bytes.
+    pub async fn raw_message(&self, id: &str) -> Result<Vec<u8>, GmailError> {
+        #[derive(serde::Deserialize)]
+        struct Raw {
+            #[serde(default)]
+            raw: String,
+        }
+        let message: Raw = self
+            .call(cost::GET, || {
+                self.http()
+                    .get(self.url(&format!("messages/{id}")))
+                    .query(&[("format", "raw")])
+            })
+            .await?;
+        URL_SAFE_NO_PAD_INDIFFERENT
+            .decode(message.raw.trim())
+            .map_err(|e| GmailError::Decode(e.to_string()))
+    }
+
     /// The decoded content of one attachment.
     pub async fn attachment(
         &self,

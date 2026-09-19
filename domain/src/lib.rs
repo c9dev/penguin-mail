@@ -147,7 +147,7 @@ impl MessageMeta {
 }
 
 /// One row of a thread list, aggregated from the thread's local messages.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ThreadSummary {
     pub account_id: AccountId,
     /// The thread id. A single-message row still names its thread.

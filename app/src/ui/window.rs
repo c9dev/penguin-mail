@@ -25,6 +25,7 @@ use crate::compose::{self, Draft, OutgoingAttachment, ReplyKind};
 use crate::core::Core;
 use crate::settings::{Choice, MarkRead, RemoteImages, Settings, TextSize};
 
+mod detached;
 mod organize;
 mod scheduled;
 mod senders;
@@ -246,6 +247,12 @@ impl MainWindow {
                     button.set_popover(Some(&win.label_popover()));
                 }
             });
+        let weak = Rc::downgrade(&window);
+        window.list.connect_open(move |row| {
+            if let Some(win) = weak.upgrade() {
+                win.open_in_window(row);
+            }
+        });
         window.install_actions();
         window.install_menu();
         window.install_keys();
@@ -611,6 +618,12 @@ impl MainWindow {
         if self.conversation.is_showing_row(&summary) {
             return;
         }
+        self.load_into(Rc::clone(&self.conversation), summary);
+    }
+
+    /// Shows the thread `summary` names in `view`: the stored copy first,
+    /// then the whole thread and its bodies.
+    pub(super) fn load_into(self: &Rc<Self>, view: Rc<ConversationView>, summary: ThreadSummary) {
         let (account_id, thread_id) = (summary.account_id, summary.id.clone());
         let only = summary.message_id.clone();
         let images_allowed = self.settings().remote_images == RemoteImages::Always;
@@ -655,13 +668,18 @@ impl MainWindow {
                 inline_images: HashMap::new(),
                 unsubscribed: false,
             };
-            this.conversation.show(thread, true);
-            this.complete_thread(account_id, thread_id).await;
+            view.show(thread, true);
+            this.complete_thread(view, account_id, thread_id).await;
         });
     }
 
     /// Fetches the whole thread and any missing bodies, then marks it read.
-    async fn complete_thread(self: &Rc<Self>, account_id: AccountId, thread_id: String) {
+    async fn complete_thread(
+        self: &Rc<Self>,
+        view: Rc<ConversationView>,
+        account_id: AccountId,
+        thread_id: String,
+    ) {
         let Some(sync) = self.core.account(account_id) else {
             return;
         };
@@ -673,7 +691,7 @@ impl MainWindow {
         {
             tracing::info!(error = %err, "showing the stored copy of the thread");
         }
-        if !self.conversation.is_showing(account_id, &thread_id) {
+        if !view.is_showing(account_id, &thread_id) {
             return;
         }
         let key = thread_id.clone();
@@ -715,7 +733,7 @@ impl MainWindow {
         });
         let loaded = futures::future::join_all(fetches).await;
         let images = self.inline_images(&sync, &loaded).await;
-        if !self.conversation.is_showing(account_id, &thread_id) {
+        if !view.is_showing(account_id, &thread_id) {
             return;
         }
         let unread = self
@@ -726,28 +744,31 @@ impl MainWindow {
                 open.unread()
             })
             .unwrap_or(false);
-        self.conversation.render(false);
+        view.render(false);
         if unread {
-            self.mark_read_later(account_id, thread_id);
+            self.mark_read_later(&view, account_id, thread_id);
         }
     }
 
     /// Marks the open thread or message read, when the setting says so.
-    fn mark_read_later(self: &Rc<Self>, account_id: AccountId, thread_id: String) {
+    fn mark_read_later(
+        self: &Rc<Self>,
+        view: &Rc<ConversationView>,
+        account_id: AccountId,
+        thread_id: String,
+    ) {
         let delay = match self.settings().mark_read {
             MarkRead::Immediately => 0,
             MarkRead::AfterDelay => 2,
             MarkRead::Manually => return,
         };
-        let only = self
-            .conversation
-            .with_open(|o| o.only_message.clone())
-            .flatten();
-        let weak = Rc::downgrade(self);
+        let only = view.with_open(|o| o.only_message.clone()).flatten();
+        let (weak, view) = (Rc::downgrade(self), Rc::downgrade(view));
         glib::timeout_add_seconds_local_once(delay, move || {
-            let Some(win) = weak.upgrade() else { return };
-            let still_open = win
-                .conversation
+            let (Some(win), Some(view)) = (weak.upgrade(), view.upgrade()) else {
+                return;
+            };
+            let still_open = view
                 .with_open(|o| {
                     o.account_id == account_id && o.thread_id == thread_id && o.only_message == only
                 })
@@ -852,7 +873,8 @@ impl MainWindow {
                 })
                 .unwrap_or(false);
             if changed {
-                this.complete_thread(account_id, thread_id).await;
+                this.complete_thread(Rc::clone(&this.conversation), account_id, thread_id)
+                    .await;
             } else {
                 this.conversation.render_buttons();
             }
@@ -1327,10 +1349,15 @@ impl MainWindow {
     }
 
     fn reply(self: &Rc<Self>, kind: ReplyKind) {
+        self.reply_from(&self.conversation, kind);
+    }
+
+    /// Replies to or forwards the newest message in `view`.
+    pub(super) fn reply_from(self: &Rc<Self>, view: &ConversationView, kind: ReplyKind) {
         let Some(app) = self.app.upgrade() else {
             return;
         };
-        let prepared = self.conversation.with_open(|open| {
+        let prepared = view.with_open(|open| {
             let target = open.reply_target()?.clone();
             let text = match open.bodies.get(&target.id) {
                 Some(Ok(body)) => compose::body_text(body),
@@ -1390,10 +1417,15 @@ impl MainWindow {
     }
 
     fn edit_draft(self: &Rc<Self>) {
+        self.edit_draft_from(&self.conversation);
+    }
+
+    /// Opens the draft in `view` in the composer.
+    pub(super) fn edit_draft_from(self: &Rc<Self>, view: &ConversationView) {
         let Some(app) = self.app.upgrade() else {
             return;
         };
-        let found = self.conversation.with_open(|open| {
+        let found = view.with_open(|open| {
             let draft = open
                 .messages
                 .iter()
@@ -1448,7 +1480,17 @@ impl MainWindow {
     }
 
     fn save_attachment(self: &Rc<Self>, message_id: String, index: usize) {
-        let found = self.conversation.with_open(|open| {
+        self.save_attachment_from(&self.conversation, message_id, index);
+    }
+
+    /// Downloads attachment `index` of `message_id` in `view`.
+    pub(super) fn save_attachment_from(
+        self: &Rc<Self>,
+        view: &ConversationView,
+        message_id: String,
+        index: usize,
+    ) {
+        let found = view.with_open(|open| {
             let body = open.bodies.get(&message_id)?.as_ref().ok()?;
             Some((open.account_id, body.attachments.get(index)?.clone()))
         });
@@ -1621,6 +1663,15 @@ impl MainWindow {
         );
         add("undo", Box::new(|win| win.undo()));
         add("unsubscribe", Box::new(|win| win.unsubscribe()));
+        add("print", Box::new(|win| win.conversation.print()));
+        add(
+            "view-source",
+            Box::new(|win| {
+                let view = Rc::clone(&win.conversation);
+                win.view_source(&view);
+            }),
+        );
+        add("open-window", Box::new(|win| win.open_current_in_window()));
         add("block-sender", Box::new(|win| win.block_sender()));
         add("select-all", Box::new(|win| win.list.select_all()));
         add("zoom-in", Box::new(|win| win.change_text_size(1)));
@@ -1739,6 +1790,9 @@ impl MainWindow {
             ("<Control>question", "win.shortcuts"),
             ("<Control>comma", "win.preferences"),
             ("<Control>q", "win.quit"),
+            ("<Control>p", "win.print"),
+            ("<Control><Alt>u", "win.view-source"),
+            ("<Control>o", "win.open-window"),
             ("<Control>w", "window.close"),
         ] {
             shortcuts.add_shortcut(gtk::Shortcut::new(
@@ -2017,6 +2071,9 @@ impl MainWindow {
                     ("Select all", "<Control>a"),
                     ("Clear the selection", "Escape"),
                     ("Bigger or smaller text", "<Control>plus <Control>minus"),
+                    ("Open in a new window", "<Control>o"),
+                    ("Print", "<Control>p"),
+                    ("View source", "<Control><Alt>u"),
                     ("Normal text size", "<Control>0"),
                 ],
             ),

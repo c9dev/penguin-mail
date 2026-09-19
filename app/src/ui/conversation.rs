@@ -123,6 +123,7 @@ pub struct ConversationView {
     open: RefCell<Option<OpenThread>>,
     scroll_to: RefCell<Option<String>>,
     compact: Cell<bool>,
+    detached: Cell<bool>,
 }
 
 impl ConversationView {
@@ -346,6 +347,7 @@ impl ConversationView {
             open: RefCell::new(None),
             scroll_to: RefCell::new(None),
             compact: Cell::new(false),
+            detached: Cell::new(false),
         });
 
         view.set_buttons_shown(false);
@@ -414,6 +416,21 @@ impl ConversationView {
             }
         });
         view
+    }
+
+    /// Opens the print dialog for the conversation on screen.
+    pub fn print(&self) {
+        if self.open.borrow().is_none() {
+            return;
+        }
+        let window = self.page.root().and_downcast::<gtk::Window>();
+        webkit::PrintOperation::new(&self.webview).run_dialog(window.as_ref());
+    }
+
+    /// For a conversation in its own window: labels stay in the main window.
+    pub fn set_detached(&self) {
+        self.label_button.set_visible(false);
+        self.detached.set(true);
     }
 
     /// Installs the compiled filter that blocks remote content.
@@ -632,7 +649,7 @@ impl ConversationView {
         for button in [&b.junk, &b.read, &b.star, &b.reply_all, &b.forward] {
             button.set_visible(full);
         }
-        self.label_button.set_visible(full);
+        self.label_button.set_visible(full && !self.detached.get());
         b.more.set_visible(shown);
         if !shown {
             b.edit.set_visible(false);

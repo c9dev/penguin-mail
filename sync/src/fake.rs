@@ -517,4 +517,12 @@ impl GmailApi for FakeGmail {
             }
         })
     }
+
+    async fn raw_message(&self, id: &str) -> Result<Vec<u8>, GmailError> {
+        self.check_failure()?;
+        self.with(|s| {
+            let meta = s.messages.get(id).ok_or(GmailError::NotFound)?;
+            Ok(format!("Subject: {}\r\n\r\n{}\r\n", meta.subject, meta.snippet).into_bytes())
+        })
+    }
 }

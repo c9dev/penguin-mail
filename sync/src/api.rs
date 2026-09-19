@@ -91,6 +91,9 @@ pub trait GmailApi: Send + Sync + 'static {
         attachment_id: &str,
     ) -> impl Future<Output = Result<Vec<u8>, GmailError>> + Send;
 
+    /// The message as it arrived, in RFC 822 form.
+    fn raw_message(&self, id: &str) -> impl Future<Output = Result<Vec<u8>, GmailError>> + Send;
+
     fn filters(&self) -> impl Future<Output = Result<Vec<Filter>, GmailError>> + Send;
 
     fn create_filter(
@@ -303,5 +306,9 @@ impl GmailApi for AccountClient {
 
     async fn delete_filter(&self, id: &str) -> Result<(), GmailError> {
         self.client.delete_filter(id).await
+    }
+
+    async fn raw_message(&self, id: &str) -> Result<Vec<u8>, GmailError> {
+        self.client.raw_message(id).await
     }
 }

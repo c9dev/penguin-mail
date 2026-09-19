@@ -440,3 +440,22 @@ async fn one_click_unsubscribe_posts_the_form() {
         .await
         .unwrap();
 }
+
+#[tokio::test]
+async fn the_raw_message_is_decoded() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("GET"))
+        .and(path(format!("{API}/messages/m1")))
+        .and(query_param("format", "raw"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(json!({"id": "m1", "raw": "U3ViamVjdDogSGkNCg0KYm9keQ"})),
+        )
+        .mount(&server)
+        .await;
+    assert_eq!(
+        client(&server).raw_message("m1").await.unwrap(),
+        b"Subject: Hi\r\n\r\nbody"
+    );
+}

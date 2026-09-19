@@ -653,6 +653,27 @@ impl GmailApi for DemoApi {
         Ok(Some(DISPLAY_NAME.into()))
     }
 
+    async fn raw_message(&self, id: &str) -> std::result::Result<Vec<u8>, GmailError> {
+        let meta = self.message(id).await.ok_or(GmailError::NotFound)?;
+        let (account_id, key) = (self.account_id, id.to_string());
+        let body = self
+            .db
+            .read(move |c| bodies::peek_body(c, account_id, &key))
+            .await
+            .ok()
+            .flatten()
+            .and_then(|b| b.text)
+            .unwrap_or_default();
+        let from = meta.from.map(|a| a.email).unwrap_or_default();
+        Ok(format!(
+            "From: {from}\r\nSubject: {}\r\nMessage-ID: {}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n{}\r\n",
+            meta.subject,
+            meta.rfc822_msgid.unwrap_or_default(),
+            body.replace('\n', "\r\n")
+        )
+        .into_bytes())
+    }
+
     async fn filters(&self) -> std::result::Result<Vec<mailrs_domain::Filter>, GmailError> {
         Ok(demo_filters()
             .lock()

@@ -115,6 +115,9 @@ impl GmailApi for Api {
     async fn signature(&self) -> Result<Option<String>, GmailError> {
         delegate!(self, signature())
     }
+    async fn raw_message(&self, id: &str) -> Result<Vec<u8>, GmailError> {
+        delegate!(self, raw_message(id))
+    }
     async fn filters(&self) -> Result<Vec<Filter>, GmailError> {
         delegate!(self, filters())
     }

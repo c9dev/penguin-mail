@@ -103,6 +103,11 @@ impl<G: GmailApi> AccountSync<G> {
         Ok(self.api.signature().await?)
     }
 
+    /// The message as it arrived, for View Source.
+    pub async fn raw_message(&self, id: &str) -> Result<Vec<u8>, SyncError> {
+        Ok(self.api.raw_message(id).await?)
+    }
+
     pub async fn filters(&self) -> Result<Vec<Filter>, SyncError> {
         Ok(self.api.filters().await?)
     }

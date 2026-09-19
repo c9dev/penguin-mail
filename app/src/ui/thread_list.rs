@@ -402,6 +402,17 @@ impl ThreadList {
         self.set_rows(rows, &title, &icon);
     }
 
+    /// Runs `open` with a row that was double-clicked or activated with Enter.
+    pub fn connect_open(&self, open: impl Fn(ThreadSummary) + 'static) {
+        let rows = Rc::clone(&self.rows);
+        self.view.connect_activate(move |_, position| {
+            let row = rows.borrow().get(position as usize).cloned();
+            if let Some(row) = row {
+                open(row);
+            }
+        });
+    }
+
     /// The rows of the last drag.
     pub fn dragged(&self) -> Vec<ThreadSummary> {
         self.dragged.borrow().clone()
