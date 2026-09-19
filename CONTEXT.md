@@ -41,3 +41,5 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 **Hidden address**: one plus address from Hide My Email, such as `dana+kite.fern482@gmail.com`, with the rules behind it. One rule gives its mail the Hide My Email label; a second trashes that mail while the address is off. `mailrs_sync::HiddenFilters` holds the two rule ids. _Avoid_: masked address, burner.
 
 **Settings permission**: the Gmail access an account grants once so Penguin Mail may read and change its account settings. Without it every `AccountSettings` call answers `Permitted::NeedsPermission`, and the caller offers Grant Access rather than showing an error. _Avoid_: scope, consent.
+
+**In-memory Gmail**: `mailrs_sync::fake::FakeGmail`, one account's mailbox held in memory behind the same `GmailApi` seam as the real client. It answers Gmail's search language, keeps a history log, and takes writes. Sync's tests and `penguin-mail --demo` both run on it, so there is one fake to keep honest rather than two; sync ships it under the `fake` feature so only the app and the tests carry it. _Avoid_: mock, stub, demo API.

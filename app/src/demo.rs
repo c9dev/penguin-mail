@@ -1,15 +1,28 @@
 //! Sample mail for `penguin-mail --demo`: three accounts and a few weeks of
-//! conversations, written straight into a throwaway store. Every address
-//! uses a reserved `.example` domain.
+//! conversations. Every address uses a reserved `.example` domain.
+//!
+//! Each account gets a `FakeGmail` holding this mail, and the same mail goes
+//! straight into a throwaway store so the demo opens on a full inbox instead
+//! of syncing one. From there the demo runs the same code as a real account.
+
+use std::collections::HashMap;
+use std::sync::Arc;
 
 use mailrs_domain::{
-    AccountState, Address, Attachment, EpochMillis, Label, LabelKind, MessageBody, MessageMeta,
-    system_label,
+    AccountId, AccountState, Address, Attachment, EpochMillis, Label, LabelKind, MessageBody,
+    MessageMeta, system_label,
 };
-use mailrs_gmail::{GmailError, HistoryPage, MessagePage, MessageRef, Profile, RemoteLabel};
+use mailrs_gmail::{LabelColor, RemoteLabel};
 use mailrs_store::{Result, accounts, bodies, labels, messages};
-use mailrs_sync::GmailApi;
+use mailrs_sync::fake::FakeGmail;
 use rusqlite::Connection;
+
+/// The history cursor the demo starts on, in both the store and the fake, so
+/// the first sync finds nothing to replay.
+const HISTORY_ID: u64 = 1;
+
+/// The id of the draft behind the sample draft message, as Gmail would hold it.
+const DRAFT_ID: &str = "demo-draft";
 
 pub const ACCOUNTS: [&str; 3] = [
     "dana.reyes@example.com",
@@ -378,54 +391,140 @@ fn samples() -> Vec<Sample> {
     ]
 }
 
-/// Fills an empty store with the demo accounts and mail.
-pub fn seed(conn: &Connection, now: EpochMillis) -> Result<()> {
+/// Gmail for demo mode: one in-memory mailbox per sample account. The demo
+/// keeps them for as long as the app runs, so rules, hidden addresses, and
+/// automatic replies made in the demo survive a sync restart.
+pub struct DemoGmail(HashMap<AccountId, Arc<FakeGmail>>);
+
+impl DemoGmail {
+    pub fn account(&self, account_id: AccountId) -> Option<Arc<FakeGmail>> {
+        self.0.get(&account_id).cloned()
+    }
+}
+
+/// Fills an empty store with the demo accounts and mail, and builds the
+/// Gmail behind them from the same samples.
+pub fn seed(conn: &Connection, now: EpochMillis) -> Result<DemoGmail> {
     let mut account_ids = Vec::new();
+    let mut gmail = HashMap::new();
     for email in ACCOUNTS {
         let id = accounts::insert_account(conn, email, now)?;
-        accounts::start_generation(conn, id, 1)?;
+        accounts::start_generation(conn, id, HISTORY_ID)?;
         accounts::set_backfill(conn, id, None, true)?;
         accounts::set_state(conn, id, AccountState::Ok)?;
-        let mut account_labels: Vec<Label> = [
-            system_label::INBOX,
-            system_label::SENT,
-            system_label::DRAFT,
-            system_label::STARRED,
-            system_label::UNREAD,
-            system_label::IMPORTANT,
-        ]
-        .into_iter()
-        .map(|l| Label {
-            account_id: id,
-            id: l.into(),
-            name: l.into(),
-            kind: LabelKind::System,
-            color: None,
-        })
-        .collect();
-        if email == ACCOUNTS[1] {
-            for (label, name, color) in [
-                ("Label_clients", "Clients", Some("#4a86e8")),
-                ("Label_clients_mf", "Clients/Maple & Finch", None),
-                ("Label_travel", "Travel", Some("#16a766")),
-            ] {
-                account_labels.push(Label {
-                    account_id: id,
-                    id: label.into(),
-                    name: name.into(),
-                    kind: LabelKind::User,
-                    color: color.map(str::to_string),
-                });
-            }
-        }
+        let account_labels = account_labels(id, email);
         labels::replace_labels(conn, id, &account_labels)?;
+        gmail.insert(id, Arc::new(gmail_for(email, &account_labels)));
         account_ids.push(id);
     }
     for sample in samples() {
         let account_id = account_ids[sample.account];
+        let fake = &gmail[&account_id];
+        let meta = sample.meta(account_id, now);
+        let body = sample.body();
+        messages::upsert_message(conn, &meta, 2)?;
+        messages::refresh_thread(conn, account_id, sample.thread)?;
+        bodies::put_body(conn, account_id, sample.id, &body, now)?;
+        fake.with(|state| {
+            for attachment in &body.attachments {
+                let id = attachment.attachment_id.clone().unwrap_or_default();
+                state
+                    .attachments
+                    .insert((meta.id.clone(), id.clone()), stand_in(&id));
+            }
+            if meta.has_label(system_label::DRAFT) {
+                state
+                    .drafts
+                    .insert(DRAFT_ID.into(), sample.text.as_bytes().to_vec());
+                state
+                    .draft_messages
+                    .insert(DRAFT_ID.into(), meta.id.clone());
+            }
+            state.bodies.insert(meta.id.clone(), body.clone());
+            state.messages.insert(meta.id.clone(), meta.clone());
+        });
+    }
+    Ok(DemoGmail(gmail))
+}
+
+/// The labels one demo account has. Only the work account has user labels.
+fn account_labels(account_id: AccountId, email: &str) -> Vec<Label> {
+    let mut all: Vec<Label> = [
+        system_label::INBOX,
+        system_label::SENT,
+        system_label::DRAFT,
+        system_label::STARRED,
+        system_label::UNREAD,
+        system_label::IMPORTANT,
+    ]
+    .into_iter()
+    .map(|l| Label {
+        account_id,
+        id: l.into(),
+        name: l.into(),
+        kind: LabelKind::System,
+        color: None,
+    })
+    .collect();
+    if email == ACCOUNTS[1] {
+        for (label, name, color) in [
+            ("Label_clients", "Clients", Some("#4a86e8")),
+            ("Label_clients_mf", "Clients/Maple & Finch", None),
+            ("Label_travel", "Travel", Some("#16a766")),
+        ] {
+            all.push(Label {
+                account_id,
+                id: label.into(),
+                name: name.into(),
+                kind: LabelKind::User,
+                color: color.map(str::to_string),
+            });
+        }
+    }
+    all
+}
+
+/// An empty in-memory Gmail for one demo account, with its identity, its
+/// labels, and a history cursor the store already holds.
+fn gmail_for(email: &str, account_labels: &[Label]) -> FakeGmail {
+    let fake = FakeGmail::new();
+    fake.with(|state| {
+        state.email = email.into();
+        state.display_name = Some(DISPLAY_NAME.into());
+        state.signature = Some(format!("{DISPLAY_NAME}\nSent from Penguin Mail"));
+        state.history_id = HISTORY_ID;
+        // The demo lists a mailbox in one page, as a Gmail search does.
+        state.page_size = 1000;
+        state.labels = account_labels
+            .iter()
+            .map(|l| RemoteLabel {
+                id: l.id.clone(),
+                name: l.name.clone(),
+                kind: Some(match l.kind {
+                    LabelKind::System => "system".into(),
+                    LabelKind::User => "user".to_string(),
+                }),
+                color: l.color.as_ref().map(|c| LabelColor {
+                    background_color: c.clone(),
+                    text_color: "#ffffff".into(),
+                }),
+            })
+            .collect();
+    });
+    fake
+}
+
+/// What the demo hands back for an attachment, since the samples name files
+/// that do not exist.
+fn stand_in(attachment_id: &str) -> Vec<u8> {
+    format!("This is {attachment_id}, a stand-in file from Penguin Mail demo mode.\n").into_bytes()
+}
+
+impl Sample {
+    fn meta(&self, account_id: AccountId, now: EpochMillis) -> MessageMeta {
         let me = Address {
             name: Some(DISPLAY_NAME.into()),
-            email: ACCOUNTS[sample.account].into(),
+            email: ACCOUNTS[self.account].into(),
         };
         let address = |(name, email): (&str, &str)| {
             if email.is_empty() {
@@ -437,17 +536,17 @@ pub fn seed(conn: &Connection, now: EpochMillis) -> Result<()> {
                 }
             }
         };
-        let meta = MessageMeta {
+        MessageMeta {
             account_id,
-            id: sample.id.into(),
-            thread_id: sample.thread.into(),
-            rfc822_msgid: Some(format!("<{}@demo.example>", sample.id)),
-            from: Some(address(sample.from)),
-            to: sample.to.iter().map(|&a| address(a)).collect(),
+            id: self.id.into(),
+            thread_id: self.thread.into(),
+            rfc822_msgid: Some(format!("<{}@demo.example>", self.id)),
+            from: Some(address(self.from)),
+            to: self.to.iter().map(|&a| address(a)).collect(),
             cc: vec![],
-            subject: sample.subject.into(),
-            date: now - sample.minutes_ago * 60_000,
-            snippet: sample
+            subject: self.subject.into(),
+            date: now - self.minutes_ago * 60_000,
+            snippet: self
                 .text
                 .split_whitespace()
                 .collect::<Vec<_>>()
@@ -455,16 +554,17 @@ pub fn seed(conn: &Connection, now: EpochMillis) -> Result<()> {
                 .chars()
                 .take(140)
                 .collect(),
-            size: sample.text.len() as i64,
-            has_attachments: !sample.attachments.is_empty(),
-            label_ids: sample.labels.iter().map(|l| l.to_string()).collect(),
-        };
-        messages::upsert_message(conn, &meta, 2)?;
-        messages::refresh_thread(conn, account_id, sample.thread)?;
-        let body = MessageBody {
-            text: Some(sample.text.into()),
-            html: sample.html.map(str::to_string),
-            attachments: sample
+            size: self.text.len() as i64,
+            has_attachments: !self.attachments.is_empty(),
+            label_ids: self.labels.iter().map(|l| l.to_string()).collect(),
+        }
+    }
+
+    fn body(&self) -> MessageBody {
+        MessageBody {
+            text: Some(self.text.into()),
+            html: self.html.map(str::to_string),
+            attachments: self
                 .attachments
                 .iter()
                 .enumerate()
@@ -473,405 +573,25 @@ pub fn seed(conn: &Connection, now: EpochMillis) -> Result<()> {
                     filename: filename.into(),
                     mime_type: mime_type.into(),
                     size,
-                    attachment_id: Some(format!("{}-att-{i}", sample.id)),
+                    attachment_id: Some(format!("{}-att-{i}", self.id)),
                     content_id: None,
                 })
                 .collect(),
-            list_unsubscribe: (sample.id == "news-1").then(|| {
+            list_unsubscribe: (self.id == "news-1").then(|| {
                 "<mailto:leave@trailnotes.example?subject=unsubscribe>, <https://trailnotes.example/u/dana>"
                     .to_string()
             }),
             one_click_unsubscribe: false,
-        };
-        bodies::put_body(conn, account_id, sample.id, &body, now)?;
-    }
-    Ok(())
-}
-
-/// Gmail for demo mode: reads come from the local store, writes succeed
-/// without going anywhere.
-/// Filters made in demo mode, per account. They last until the app quits.
-type DemoFilters = std::sync::Mutex<
-    std::collections::HashMap<mailrs_domain::AccountId, Vec<mailrs_domain::Filter>>,
->;
-
-fn demo_filters() -> &'static DemoFilters {
-    static FILTERS: std::sync::OnceLock<DemoFilters> = std::sync::OnceLock::new();
-    FILTERS.get_or_init(Default::default)
-}
-
-/// Automatic replies set in demo mode. They last until the app quits.
-fn demo_vacations() -> &'static std::sync::Mutex<
-    std::collections::HashMap<mailrs_domain::AccountId, mailrs_domain::Vacation>,
-> {
-    static VACATIONS: std::sync::OnceLock<
-        std::sync::Mutex<
-            std::collections::HashMap<mailrs_domain::AccountId, mailrs_domain::Vacation>,
-        >,
-    > = std::sync::OnceLock::new();
-    VACATIONS.get_or_init(Default::default)
-}
-
-pub struct DemoApi {
-    pub db: mailrs_store::Db,
-    pub account_id: mailrs_domain::AccountId,
-}
-
-impl DemoApi {
-    async fn message(&self, id: &str) -> Option<MessageMeta> {
-        let (account_id, id) = (self.account_id, id.to_string());
-        self.db
-            .read(move |c| {
-                let Some(thread) = messages::thread_id_of(c, account_id, &id)? else {
-                    return Ok(None);
-                };
-                Ok(messages::thread_messages(c, account_id, &thread)?
-                    .into_iter()
-                    .find(|m| m.id == id))
-            })
-            .await
-            .ok()
-            .flatten()
-    }
-}
-
-impl GmailApi for DemoApi {
-    async fn profile(&self) -> std::result::Result<Profile, GmailError> {
-        Ok(Profile {
-            email_address: ACCOUNTS[0].into(),
-            history_id: 1,
-        })
-    }
-
-    async fn labels(&self) -> std::result::Result<Vec<RemoteLabel>, GmailError> {
-        Ok(vec![])
-    }
-
-    /// Matches every word of the query against sender, subject, and snippet.
-    /// Gmail operators such as `from:` are read as plain words.
-    async fn list_messages(
-        &self,
-        query: &str,
-        _page_token: Option<&str>,
-    ) -> std::result::Result<MessagePage, GmailError> {
-        // `in:` and `-in:` pick labels; other words match the text.
-        let label = |name: &str| match name {
-            "spam" => system_label::SPAM.to_string(),
-            "trash" => system_label::TRASH.to_string(),
-            "inbox" => system_label::INBOX.to_string(),
-            "sent" => system_label::SENT.to_string(),
-            other => other.to_string(),
-        };
-        let mut required: Vec<String> = Vec::new();
-        let mut excluded: Vec<String> = Vec::new();
-        let mut words: Vec<String> = Vec::new();
-        for word in query.split_whitespace() {
-            if let Some(name) = word.strip_prefix("-in:") {
-                excluded.push(label(name));
-            } else if let Some(name) = word.strip_prefix("in:") {
-                required.push(label(name));
-            } else {
-                let w = word.rsplit(':').next().unwrap_or(word).to_lowercase();
-                if !w.is_empty() && !w.starts_with('{') {
-                    words.push(w);
-                }
-            }
         }
-        // Gmail leaves Spam and Trash out unless asked for.
-        for hidden in [system_label::SPAM, system_label::TRASH] {
-            if !required.iter().any(|l| l == hidden) {
-                excluded.push(hidden.to_string());
-            }
-        }
-        let account_id = self.account_id;
-        let found = self
-            .db
-            .read(move |c| {
-                let mut stmt = c.prepare(
-                    "SELECT m.id, m.thread_id, lower(m.subject || ' ' || m.snippet || ' ' || coalesce(m.from_name, '') || ' ' || coalesce(m.from_addr, '')), \
-                     coalesce((SELECT group_concat(l.label_id, ' ') FROM message_labels l \
-                               WHERE l.account_id = m.account_id AND l.message_id = m.id), '') \
-                     FROM messages m WHERE m.account_id = ?1 ORDER BY m.date DESC",
-                )?;
-                let rows = stmt
-                    .query_map([account_id], |r| {
-                        Ok((
-                            r.get::<_, String>(0)?,
-                            r.get::<_, String>(1)?,
-                            r.get::<_, String>(2)?,
-                            r.get::<_, String>(3)?,
-                        ))
-                    })?
-                    .collect::<rusqlite::Result<Vec<_>>>()?;
-                Ok(rows
-                    .into_iter()
-                    .filter(|(_, _, text, labels)| {
-                        let labels: Vec<&str> = labels.split(' ').collect();
-                        words.iter().all(|w| text.contains(w.as_str()))
-                            && required.iter().all(|l| labels.contains(&l.as_str()))
-                            && !excluded.iter().any(|l| labels.contains(&l.as_str()))
-                    })
-                    .map(|(id, thread_id, _, _)| MessageRef { id, thread_id })
-                    .collect::<Vec<_>>())
-            })
-            .await
-            .map_err(|e| GmailError::Http { status: 500, body: e.to_string() })?;
-        Ok(MessagePage {
-            messages: found,
-            next_page_token: None,
-        })
-    }
-
-    async fn message_metadata(&self, id: &str) -> std::result::Result<MessageMeta, GmailError> {
-        self.message(id).await.ok_or(GmailError::NotFound)
-    }
-
-    async fn thread_metadata(
-        &self,
-        thread_id: &str,
-    ) -> std::result::Result<Vec<MessageMeta>, GmailError> {
-        let (account_id, thread_id) = (self.account_id, thread_id.to_string());
-        let found = self
-            .db
-            .read(move |c| messages::thread_messages(c, account_id, &thread_id))
-            .await
-            .unwrap_or_default();
-        if found.is_empty() {
-            Err(GmailError::NotFound)
-        } else {
-            Ok(found)
-        }
-    }
-
-    async fn message_body(&self, id: &str) -> std::result::Result<MessageBody, GmailError> {
-        let (account_id, id) = (self.account_id, id.to_string());
-        self.db
-            .write(move |c| bodies::get_body(c, account_id, &id, 0))
-            .await
-            .ok()
-            .flatten()
-            .ok_or(GmailError::NotFound)
-    }
-
-    async fn history(
-        &self,
-        start: u64,
-        _page_token: Option<&str>,
-    ) -> std::result::Result<HistoryPage, GmailError> {
-        Ok(HistoryPage {
-            changes: vec![],
-            next_page_token: None,
-            history_id: start,
-        })
-    }
-
-    async fn modify_labels(
-        &self,
-        _id: &str,
-        _add: &[String],
-        _remove: &[String],
-    ) -> std::result::Result<(), GmailError> {
-        Ok(())
-    }
-
-    async fn trash(&self, _id: &str) -> std::result::Result<(), GmailError> {
-        Ok(())
-    }
-
-    async fn untrash(&self, _id: &str) -> std::result::Result<(), GmailError> {
-        Ok(())
-    }
-
-    async fn send(
-        &self,
-        _raw: &[u8],
-        _thread_id: Option<&str>,
-    ) -> std::result::Result<String, GmailError> {
-        Ok("demo-sent".into())
-    }
-
-    async fn save_draft(
-        &self,
-        draft_id: Option<&str>,
-        _raw: &[u8],
-        _thread_id: Option<&str>,
-    ) -> std::result::Result<mailrs_sync::SavedDraft, GmailError> {
-        let draft_id = draft_id.unwrap_or("demo-draft").to_string();
-        Ok(mailrs_sync::SavedDraft {
-            message_id: format!("{draft_id}-message"),
-            thread_id: format!("{draft_id}-thread"),
-            draft_id,
-        })
-    }
-
-    async fn send_draft(&self, draft_id: &str) -> std::result::Result<String, GmailError> {
-        Ok(format!("{draft_id}-sent"))
-    }
-
-    async fn delete_draft(&self, _draft_id: &str) -> std::result::Result<(), GmailError> {
-        Ok(())
-    }
-
-    async fn draft_for_message(
-        &self,
-        message_id: &str,
-    ) -> std::result::Result<Option<String>, GmailError> {
-        Ok(self
-            .message(message_id)
-            .await
-            .filter(|m| m.has_label(system_label::DRAFT))
-            .map(|_| "demo-draft".to_string()))
-    }
-
-    async fn display_name(&self) -> std::result::Result<Option<String>, GmailError> {
-        Ok(Some(DISPLAY_NAME.into()))
-    }
-
-    async fn raw_message(&self, id: &str) -> std::result::Result<Vec<u8>, GmailError> {
-        let meta = self.message(id).await.ok_or(GmailError::NotFound)?;
-        let (account_id, key) = (self.account_id, id.to_string());
-        let body = self
-            .db
-            .read(move |c| bodies::peek_body(c, account_id, &key))
-            .await
-            .ok()
-            .flatten()
-            .and_then(|b| b.text)
-            .unwrap_or_default();
-        let from = meta.from.map(|a| a.email).unwrap_or_default();
-        Ok(format!(
-            "From: {from}\r\nSubject: {}\r\nMessage-ID: {}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n{}\r\n",
-            meta.subject,
-            meta.rfc822_msgid.unwrap_or_default(),
-            body.replace('\n', "\r\n")
-        )
-        .into_bytes())
-    }
-
-    async fn filters(&self) -> std::result::Result<Vec<mailrs_domain::Filter>, GmailError> {
-        Ok(demo_filters()
-            .lock()
-            .expect("the demo lock is never poisoned")
-            .get(&self.account_id)
-            .cloned()
-            .unwrap_or_default())
-    }
-
-    async fn create_filter(
-        &self,
-        filter: &mailrs_domain::Filter,
-    ) -> std::result::Result<mailrs_domain::Filter, GmailError> {
-        let created = mailrs_domain::Filter {
-            id: Some(format!("demo-filter-{}", mailrs_gmail::random_token(4))),
-            ..filter.clone()
-        };
-        demo_filters()
-            .lock()
-            .expect("the demo lock is never poisoned")
-            .entry(self.account_id)
-            .or_default()
-            .push(created.clone());
-        Ok(created)
-    }
-
-    async fn delete_filter(&self, id: &str) -> std::result::Result<(), GmailError> {
-        if let Some(list) = demo_filters()
-            .lock()
-            .expect("the demo lock is never poisoned")
-            .get_mut(&self.account_id)
-        {
-            list.retain(|f| f.id.as_deref() != Some(id));
-        }
-        Ok(())
-    }
-
-    async fn create_label(&self, name: &str) -> std::result::Result<RemoteLabel, GmailError> {
-        Ok(RemoteLabel {
-            id: format!("Label_demo_{}", mailrs_gmail::random_token(4)),
-            name: name.to_string(),
-            kind: Some("user".into()),
-            color: None,
-        })
-    }
-
-    async fn rename_label(
-        &self,
-        id: &str,
-        name: &str,
-    ) -> std::result::Result<RemoteLabel, GmailError> {
-        Ok(RemoteLabel {
-            id: id.to_string(),
-            name: name.to_string(),
-            kind: Some("user".into()),
-            color: None,
-        })
-    }
-
-    async fn set_label_color(
-        &self,
-        id: &str,
-        color: &mailrs_gmail::LabelColor,
-    ) -> std::result::Result<RemoteLabel, GmailError> {
-        let (account_id, key) = (self.account_id, id.to_string());
-        let name = self
-            .db
-            .read(move |c| labels::list_labels(c, account_id))
-            .await
-            .ok()
-            .and_then(|all| all.into_iter().find(|l| l.id == key).map(|l| l.name))
-            .unwrap_or_default();
-        Ok(RemoteLabel {
-            id: id.to_string(),
-            name,
-            kind: Some("user".into()),
-            color: Some(color.clone()),
-        })
-    }
-
-    async fn delete_label(&self, _id: &str) -> std::result::Result<(), GmailError> {
-        Ok(())
-    }
-
-    async fn signature(&self) -> std::result::Result<Option<String>, GmailError> {
-        Ok(Some(format!("{DISPLAY_NAME}\nSent from Penguin Mail")))
-    }
-
-    async fn vacation(&self) -> std::result::Result<mailrs_domain::Vacation, GmailError> {
-        Ok(demo_vacations()
-            .lock()
-            .expect("the demo lock is never poisoned")
-            .get(&self.account_id)
-            .cloned()
-            .unwrap_or_default())
-    }
-
-    async fn set_vacation(
-        &self,
-        vacation: &mailrs_domain::Vacation,
-    ) -> std::result::Result<(), GmailError> {
-        demo_vacations()
-            .lock()
-            .expect("the demo lock is never poisoned")
-            .insert(self.account_id, vacation.clone());
-        Ok(())
-    }
-
-    async fn attachment(
-        &self,
-        _message_id: &str,
-        attachment_id: &str,
-    ) -> std::result::Result<Vec<u8>, GmailError> {
-        Ok(
-            format!("This is {attachment_id}, a stand-in file from Penguin Mail demo mode.\n")
-                .into_bytes(),
-        )
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use mailrs_domain::Folder;
     use mailrs_store::threads::{self, ThreadFilter};
     use mailrs_store::{bodies, open_in_memory};
+    use mailrs_sync::GmailApi;
 
     use super::*;
 
@@ -935,5 +655,67 @@ mod tests {
                 sample.id
             );
         }
+    }
+
+    /// Ids a search brings back from one account's demo Gmail.
+    async fn found(gmail: &DemoGmail, account: AccountId, query: &str) -> Vec<String> {
+        gmail
+            .account(account)
+            .expect("the account has a mailbox")
+            .list_messages(query, None)
+            .await
+            .expect("the search runs")
+            .messages
+            .into_iter()
+            .map(|m| m.id)
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn the_folders_come_from_the_demo_gmail() {
+        let conn = open_in_memory().unwrap();
+        let gmail = seed(&conn, 1_758_000_000_000).unwrap();
+        let account = accounts::account_by_email(&conn, ACCOUNTS[0])
+            .unwrap()
+            .unwrap()
+            .id;
+        assert_eq!(
+            found(&gmail, account, Folder::Junk.query()).await,
+            ["prize-1"]
+        );
+        assert_eq!(
+            found(&gmail, account, Folder::Trash.query()).await,
+            ["webinar-1"]
+        );
+        let all = found(&gmail, account, Folder::AllMail.query()).await;
+        assert!(!all.contains(&"prize-1".to_string()));
+        assert!(!all.contains(&"webinar-1".to_string()));
+        assert!(all.contains(&"hike-1".to_string()));
+        // What the search bar sends: plain words across sender and subject.
+        assert_eq!(found(&gmail, account, "sunrise").await, ["lake-1"]);
+    }
+
+    #[tokio::test]
+    async fn attachments_and_the_sample_draft_come_from_the_demo_gmail() {
+        let conn = open_in_memory().unwrap();
+        let gmail = seed(&conn, 1_758_000_000_000).unwrap();
+        let work = accounts::account_by_email(&conn, ACCOUNTS[1])
+            .unwrap()
+            .unwrap()
+            .id;
+        let api = gmail.account(work).expect("the account has a mailbox");
+        assert_eq!(
+            api.draft_for_message("draft-1").await.unwrap().as_deref(),
+            Some(DRAFT_ID)
+        );
+        let file = api
+            .attachment("roadmap-1", "roadmap-1-att-0")
+            .await
+            .unwrap();
+        assert!(String::from_utf8(file).unwrap().contains("stand-in file"));
+        assert_eq!(api.signature().await.unwrap().as_deref().map(str::len), {
+            let expect = format!("{DISPLAY_NAME}\nSent from Penguin Mail");
+            Some(expect.len())
+        });
     }
 }

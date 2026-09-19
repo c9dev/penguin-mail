@@ -13,7 +13,8 @@ path = "src/main.rs"
 mailrs-domain.workspace = true
 mailrs-gmail.workspace = true
 mailrs-store.workspace = true
-mailrs-sync.workspace = true
+# `--demo` runs on sync's in-memory Gmail, so the app asks for it.
+mailrs-sync = { workspace = true, features = ["fake"] }
 mailrs-ai.workspace = true
 adw.workspace = true
 ammonia.workspace = true
