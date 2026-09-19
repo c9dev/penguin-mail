@@ -4,14 +4,14 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
-use gtk::{gio, glib};
+use gtk::{gdk, gio, glib};
 use mailrs_domain::{AccountId, Address};
 use webkit::prelude::*;
 
 use super::autocomplete::{self, Contacts};
 use crate::compose::{
-    Draft, OutgoingAttachment, SendWhen, build_mime, format_recipients, markdown_to_html,
-    new_message_id, parse_recipients,
+    Draft, LinePrefix, OutgoingAttachment, SendWhen, build_mime, format_recipients,
+    markdown_to_html, new_message_id, parse_recipients, toggle_prefix,
 };
 use crate::core::Core;
 use crate::format::{future_date, human_size, send_later_presets};
@@ -164,8 +164,18 @@ impl Composer {
             .margin_top(4)
             .visible(false)
             .build();
+        let format_bar = gtk::Box::builder()
+            .spacing(2)
+            .margin_start(12)
+            .margin_end(12)
+            .margin_top(4)
+            .margin_bottom(4)
+            .css_classes(["format-bar"])
+            .build();
         let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
         content.append(&fields);
+        content.append(&format_bar);
+        content.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
         content.append(&stack);
         content.append(&chips);
         let toolbar = adw::ToolbarView::new();
@@ -205,6 +215,8 @@ impl Composer {
         composer.refresh_chips();
         composer.update_title();
         composer.wire(&attach, &preview_toggle);
+        composer.fill_format_bar(&format_bar);
+        composer.accept_images();
         composer.window.present();
         if composer.to.text().is_empty() {
             composer.to.grab_focus();
@@ -275,7 +287,7 @@ impl Composer {
                 let html = format!(
                     "<!doctype html><html><head><meta charset=\"utf-8\"><style>body{{margin:24px;{}}}</style></head><body>{}</body></html>",
                     if dark { "background:#1e1e1e;filter:invert(0.92) hue-rotate(180deg)" } else { "background:#fff" },
-                    markdown_to_html(&c.markdown())
+                    c.with_inline_images(markdown_to_html(&c.markdown()))
                 );
                 c.preview.load_html(&html, None);
                 c.stack.set_visible_child_name("preview");
@@ -581,30 +593,10 @@ impl Composer {
                 return;
             };
             for index in 0..files.n_items() {
-                let Some(file) = files.item(index).and_downcast::<gio::File>() else {
-                    continue;
-                };
-                match file.load_contents_future().await {
-                    Ok((bytes, _)) => {
-                        let filename = file
-                            .basename()
-                            .map(|p| p.to_string_lossy().into_owned())
-                            .unwrap_or_else(|| "attachment".into());
-                        let (mime, _) = gio::content_type_guess(Some(&filename), &bytes[..]);
-                        let mime_type = gio::content_type_get_mime_type(&mime)
-                            .map(|m| m.to_string())
-                            .unwrap_or_else(|| "application/octet-stream".into());
-                        this.attachments.borrow_mut().push(OutgoingAttachment {
-                            filename,
-                            mime_type,
-                            data: bytes.to_vec(),
-                        });
-                        this.dirty.set(true);
-                    }
-                    Err(err) => this.toast(&format!("Could not read the file: {err}")),
+                if let Some(file) = files.item(index).and_downcast::<gio::File>() {
+                    this.add_file(&file, false).await;
                 }
             }
-            this.refresh_chips();
         });
     }
 
@@ -617,7 +609,13 @@ impl Composer {
                 .spacing(6)
                 .css_classes(["attachment-chip"])
                 .build();
-            chip.append(&gtk::Image::from_icon_name("mail-attachment-symbolic"));
+            chip.append(&gtk::Image::from_icon_name(
+                if attachment.content_id.is_some() {
+                    "image-x-generic-symbolic"
+                } else {
+                    "mail-attachment-symbolic"
+                },
+            ));
             chip.append(
                 &gtk::Label::builder()
                     .label(format!(
@@ -635,7 +633,10 @@ impl Composer {
             let weak = Rc::downgrade(self);
             remove.connect_clicked(move |_| {
                 if let Some(c) = weak.upgrade() {
-                    c.attachments.borrow_mut().remove(index);
+                    let removed = c.attachments.borrow_mut().remove(index);
+                    if let Some(cid) = removed.content_id {
+                        c.remove_image_reference(&cid);
+                    }
                     c.dirty.set(true);
                     c.refresh_chips();
                 }
@@ -644,6 +645,259 @@ impl Composer {
             self.chips.append(&chip);
         }
     }
+}
+
+impl Composer {
+    fn fill_format_bar(self: &Rc<Self>, bar: &gtk::Box) {
+        let button = |icon: &str, tip: &str| {
+            let button = gtk::Button::builder()
+                .tooltip_text(tip)
+                .css_classes(["flat"])
+                .can_focus(false)
+                .build();
+            // Letters read better than the text-style icons at this size.
+            match icon.strip_prefix("text:") {
+                Some(markup) => button.set_child(Some(
+                    &gtk::Label::builder()
+                        .label(markup)
+                        .use_markup(true)
+                        .width_chars(2)
+                        .build(),
+                )),
+                None => button.set_icon_name(icon),
+            }
+            bar.append(&button);
+            button
+        };
+        let wraps: [(&str, &str, &'static str, &'static str); 4] = [
+            ("text:<b>B</b>", "Bold (Ctrl+B)", "**", "**"),
+            ("text:<i>I</i>", "Italic (Ctrl+I)", "*", "*"),
+            ("text:<s>S</s>", "Strikethrough", "~~", "~~"),
+            ("mailrs-link-symbolic", "Link (Ctrl+K)", "[", "]()"),
+        ];
+        for (icon, tip, before, after) in wraps {
+            let weak = Rc::downgrade(self);
+            button(icon, tip).connect_clicked(move |_| {
+                if let Some(c) = weak.upgrade() {
+                    wrap_selection(&c.body.buffer(), before, after);
+                    c.body.grab_focus();
+                }
+            });
+        }
+        bar.append(&gtk::Separator::new(gtk::Orientation::Vertical));
+        let prefixes = [
+            (
+                "view-list-bullet-symbolic",
+                "Bulleted List",
+                LinePrefix::Bullet,
+            ),
+            (
+                "view-list-ordered-symbolic",
+                "Numbered List",
+                LinePrefix::Numbered,
+            ),
+            ("format-indent-more-symbolic", "Quote", LinePrefix::Quote),
+        ];
+        for (icon, tip, prefix) in prefixes {
+            let weak = Rc::downgrade(self);
+            button(icon, tip).connect_clicked(move |_| {
+                if let Some(c) = weak.upgrade() {
+                    prefix_lines(&c.body.buffer(), prefix);
+                    c.body.grab_focus();
+                }
+            });
+        }
+        bar.append(&gtk::Separator::new(gtk::Orientation::Vertical));
+        let weak = Rc::downgrade(self);
+        button("image-x-generic-symbolic", "Insert Image").connect_clicked(move |_| {
+            if let Some(c) = weak.upgrade() {
+                c.pick_images();
+            }
+        });
+    }
+
+    fn pick_images(self: &Rc<Self>) {
+        let filter = gtk::FileFilter::new();
+        filter.set_name(Some("Images"));
+        filter.add_mime_type("image/*");
+        let filters = gio::ListStore::new::<gtk::FileFilter>();
+        filters.append(&filter);
+        let dialog = gtk::FileDialog::builder()
+            .title("Insert Image")
+            .modal(true)
+            .filters(&filters)
+            .build();
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            if let Ok(files) = dialog.open_multiple_future(Some(&this.window)).await {
+                for index in 0..files.n_items() {
+                    if let Some(file) = files.item(index).and_downcast::<gio::File>() {
+                        this.add_file(&file, true).await;
+                    }
+                }
+            }
+        });
+    }
+
+    /// Reads `file` in. Images go into the text when `inline` allows it;
+    /// everything else becomes an attachment.
+    async fn add_file(self: &Rc<Self>, file: &gio::File, inline: bool) {
+        match file.load_contents_future().await {
+            Ok((bytes, _)) => {
+                let filename = file
+                    .basename()
+                    .map(|p| p.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| "attachment".into());
+                let (guess, _) = gio::content_type_guess(Some(&filename), &bytes[..]);
+                let mime_type = gio::content_type_get_mime_type(&guess)
+                    .map(|m| m.to_string())
+                    .unwrap_or_else(|| "application/octet-stream".into());
+                if inline && mime_type.starts_with("image/") {
+                    self.add_inline_image(filename, mime_type, bytes.to_vec());
+                } else {
+                    self.attachments.borrow_mut().push(OutgoingAttachment {
+                        filename,
+                        mime_type,
+                        data: bytes.to_vec(),
+                        content_id: None,
+                    });
+                    self.dirty.set(true);
+                    self.refresh_chips();
+                }
+            }
+            Err(err) => self.toast(&format!("Could not read the file: {err}")),
+        }
+    }
+
+    /// Adds an image and puts `![name](cid:…)` at the cursor.
+    fn add_inline_image(self: &Rc<Self>, filename: String, mime_type: String, data: Vec<u8>) {
+        let cid = format!("{}@mailrs", mailrs_gmail::random_token(9));
+        let buffer = self.body.buffer();
+        let alt: String = filename
+            .chars()
+            .filter(|c| !matches!(c, '[' | ']'))
+            .collect();
+        buffer.insert_at_cursor(&format!("![{alt}](cid:{cid})"));
+        self.attachments.borrow_mut().push(OutgoingAttachment {
+            filename,
+            mime_type,
+            data,
+            content_id: Some(cid),
+        });
+        self.dirty.set(true);
+        self.refresh_chips();
+    }
+
+    /// Takes the image reference for `cid` out of the text.
+    fn remove_image_reference(&self, cid: &str) {
+        let text = self.markdown();
+        let needle = format!("](cid:{cid})");
+        let Some(end) = text.find(&needle) else {
+            return;
+        };
+        let Some(start) = text[..end].rfind("![") else {
+            return;
+        };
+        let buffer = self.body.buffer();
+        let offset = |byte: usize| text[..byte].chars().count() as i32;
+        let (mut from, mut to) = (
+            buffer.iter_at_offset(offset(start)),
+            buffer.iter_at_offset(offset(end + needle.len())),
+        );
+        buffer.delete(&mut from, &mut to);
+    }
+
+    /// `html` with inline images pointed at their data, for the preview.
+    fn with_inline_images(&self, mut html: String) -> String {
+        for attachment in self.attachments.borrow().iter() {
+            if let Some(cid) = &attachment.content_id {
+                let data = base64::Engine::encode(
+                    &base64::engine::general_purpose::STANDARD,
+                    &attachment.data,
+                );
+                html = html.replace(
+                    &format!("cid:{cid}"),
+                    &format!("data:{};base64,{data}", attachment.mime_type),
+                );
+            }
+        }
+        html
+    }
+
+    /// Pasted images go into the text; dropped files go in or attach.
+    fn accept_images(self: &Rc<Self>) {
+        let keys = gtk::EventControllerKey::new();
+        keys.set_propagation_phase(gtk::PropagationPhase::Capture);
+        let weak = Rc::downgrade(self);
+        keys.connect_key_pressed(move |_, key, _, modifiers| {
+            let Some(c) = weak.upgrade() else {
+                return glib::Propagation::Proceed;
+            };
+            let paste = modifiers.contains(gdk::ModifierType::CONTROL_MASK)
+                && matches!(key, gdk::Key::v | gdk::Key::V);
+            let clipboard = c.body.clipboard();
+            let formats = clipboard.formats();
+            if !paste
+                || !formats.contains_type(gdk::Texture::static_type())
+                || formats.contain_mime_type("text/plain")
+            {
+                return glib::Propagation::Proceed;
+            }
+            glib::spawn_future_local(async move {
+                match clipboard.read_texture_future().await {
+                    Ok(Some(texture)) => {
+                        let png = texture.save_to_png_bytes();
+                        c.add_inline_image(
+                            "pasted-image.png".into(),
+                            "image/png".into(),
+                            png.to_vec(),
+                        );
+                    }
+                    _ => c.toast("Could not paste the image"),
+                }
+            });
+            glib::Propagation::Stop
+        });
+        self.body.add_controller(keys);
+
+        let drop = gtk::DropTarget::new(gdk::FileList::static_type(), gdk::DragAction::COPY);
+        let weak = Rc::downgrade(self);
+        drop.connect_drop(move |_, value, _, _| {
+            let (Some(c), Ok(list)) = (weak.upgrade(), value.get::<gdk::FileList>()) else {
+                return false;
+            };
+            glib::spawn_future_local(async move {
+                for file in list.files() {
+                    c.add_file(&file, true).await;
+                }
+            });
+            true
+        });
+        self.window.add_controller(drop);
+    }
+}
+
+/// Adds or removes a list or quote prefix on every line the selection
+/// touches, then selects the changed lines.
+fn prefix_lines(buffer: &gtk::TextBuffer, prefix: LinePrefix) {
+    let (mut start, mut end) = buffer.selection_bounds().unwrap_or_else(|| {
+        let cursor = buffer.iter_at_mark(&buffer.get_insert());
+        (cursor, cursor)
+    });
+    start.set_line_offset(0);
+    if !end.ends_line() {
+        end.forward_to_line_end();
+    }
+    let text = buffer.text(&start, &end, false).to_string();
+    let changed = toggle_prefix(&text, prefix);
+    buffer.begin_user_action();
+    let offset = start.offset();
+    buffer.delete(&mut start, &mut end);
+    buffer.insert(&mut start, &changed);
+    let first = buffer.iter_at_offset(offset);
+    let last = buffer.iter_at_offset(offset + changed.chars().count() as i32);
+    buffer.select_range(&first, &last);
+    buffer.end_user_action();
 }
 
 /// Puts Markdown markers around the selection, or around the cursor when

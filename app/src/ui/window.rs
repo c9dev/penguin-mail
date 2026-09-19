@@ -1375,6 +1375,7 @@ impl MainWindow {
                     .await
                 {
                     Ok(data) => draft.attachments.push(OutgoingAttachment {
+                        content_id: None,
                         filename: attachment.filename,
                         mime_type: attachment.mime_type,
                         data,

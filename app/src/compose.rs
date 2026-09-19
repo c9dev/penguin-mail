@@ -16,6 +16,64 @@ pub struct OutgoingAttachment {
     pub filename: String,
     pub mime_type: String,
     pub data: Vec<u8>,
+    /// Set for images shown in the text, which refers to them as `cid:`.
+    pub content_id: Option<String>,
+}
+
+/// A Markdown prefix the toolbar adds to or removes from whole lines.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LinePrefix {
+    Bullet,
+    Numbered,
+    Quote,
+}
+
+impl LinePrefix {
+    /// The prefix on this line, if it has one of this kind.
+    fn strip(self, line: &str) -> Option<&str> {
+        match self {
+            LinePrefix::Bullet => line.strip_prefix("- ").or_else(|| line.strip_prefix("* ")),
+            LinePrefix::Quote => line.strip_prefix("> ").or_else(|| line.strip_prefix('>')),
+            LinePrefix::Numbered => {
+                let digits = line.chars().take_while(char::is_ascii_digit).count();
+                (digits > 0)
+                    .then(|| line[digits..].strip_prefix(". "))
+                    .flatten()
+            }
+        }
+    }
+}
+
+/// Adds `prefix` to every non-blank line of `text`, or removes it when all
+/// of them already have it. Numbered lists count from 1.
+pub fn toggle_prefix(text: &str, prefix: LinePrefix) -> String {
+    let lines: Vec<&str> = text.split('\n').collect();
+    let filled = || lines.iter().filter(|l| !l.trim().is_empty());
+    let all_have = filled().count() > 0 && filled().all(|l| prefix.strip(l).is_some());
+    let mut number = 0;
+    lines
+        .iter()
+        .map(|line| {
+            if line.trim().is_empty() {
+                return line.to_string();
+            }
+            if all_have {
+                return prefix.strip(line).unwrap_or(line).to_string();
+            }
+            let bare = [LinePrefix::Bullet, LinePrefix::Numbered]
+                .iter()
+                .find_map(|p| p.strip(line))
+                .filter(|_| prefix != LinePrefix::Quote)
+                .unwrap_or(line);
+            number += 1;
+            match prefix {
+                LinePrefix::Bullet => format!("- {bare}"),
+                LinePrefix::Numbered => format!("{number}. {bare}"),
+                LinePrefix::Quote => format!("> {bare}"),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -312,7 +370,8 @@ pub fn markdown_to_html(markdown: &str) -> String {
     let body = body
         .replace("<blockquote>", "<blockquote style=\"margin:0 0 0 0.8ex;border-left:2px solid #ccc;padding-left:1ex;color:#555\">")
         .replace("<pre>", "<pre style=\"background:#f6f6f8;padding:10px;border-radius:6px;overflow:auto\">")
-        .replace("<p>", "<p style=\"margin:0 0 1em\">");
+        .replace("<p>", "<p style=\"margin:0 0 1em\">")
+        .replace("<img ", "<img style=\"max-width:100%;height:auto\" ");
     format!(
         "<div style=\"font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5\">{body}</div>"
     )
@@ -394,11 +453,20 @@ pub fn build_mime(draft: &Draft, date_secs: i64, message_id: &str) -> Result<Vec
         );
     }
     for attachment in &draft.attachments {
-        builder = builder.attachment(
-            attachment.mime_type.clone(),
-            attachment.filename.clone(),
-            attachment.data.clone(),
-        );
+        builder = match &attachment.content_id {
+            // An image the text shows, unless the text no longer refers to it.
+            Some(cid) if draft.markdown.contains(&format!("cid:{cid}")) => builder.inline(
+                attachment.mime_type.clone(),
+                cid.clone(),
+                attachment.data.clone(),
+            ),
+            Some(_) => builder,
+            None => builder.attachment(
+                attachment.mime_type.clone(),
+                attachment.filename.clone(),
+                attachment.data.clone(),
+            ),
+        };
     }
     builder.write_to_vec().map_err(|e| e.to_string())
 }
@@ -584,6 +652,7 @@ mod tests {
             "<m2@mail.example.com>".into(),
         ];
         draft.attachments = vec![OutgoingAttachment {
+            content_id: None,
             filename: "menu.pdf".into(),
             mime_type: "application/pdf".into(),
             data: b"%PDF-1.7".to_vec(),
@@ -663,6 +732,52 @@ mod tests {
              <script>x()</script><p></p><p>&amp; four</p></body></html>",
         );
         assert_eq!(text, "Hello there\nLine two\nthree\n\n& four");
+    }
+
+    #[test]
+    fn list_and_quote_prefixes_toggle_on_whole_lines() {
+        assert_eq!(
+            toggle_prefix("milk\neggs", LinePrefix::Bullet),
+            "- milk\n- eggs"
+        );
+        assert_eq!(
+            toggle_prefix("- milk\n- eggs", LinePrefix::Bullet),
+            "milk\neggs"
+        );
+        assert_eq!(
+            toggle_prefix("- milk\n\n- eggs", LinePrefix::Numbered),
+            "1. milk\n\n2. eggs"
+        );
+        assert_eq!(toggle_prefix("1. a\n2. b", LinePrefix::Numbered), "a\nb");
+        assert_eq!(toggle_prefix("said", LinePrefix::Quote), "> said");
+        assert_eq!(toggle_prefix("> said", LinePrefix::Quote), "said");
+    }
+
+    #[test]
+    fn inline_images_go_in_as_related_parts() {
+        let mut draft = Draft::new(1, me());
+        draft.to = vec![addr(None, "ann@example.com")];
+        draft.markdown = "Look: ![map](cid:map1@mailrs)".into();
+        let image = |cid: &str| OutgoingAttachment {
+            filename: format!("{cid}.png"),
+            mime_type: "image/png".into(),
+            data: vec![137, 80, 78, 71],
+            content_id: Some(cid.into()),
+        };
+        draft.attachments = vec![image("map1@mailrs"), image("gone@mailrs")];
+        let raw = build_mime(&draft, 0, "id@example.com").unwrap();
+        let parsed = MessageParser::default().parse(&raw).unwrap();
+        let ids: Vec<&str> = parsed
+            .attachments()
+            .filter_map(|a| a.content_id())
+            .collect();
+        assert_eq!(ids, ["map1@mailrs"]);
+        assert!(
+            parsed
+                .body_html(0)
+                .unwrap()
+                .contains("src=\"cid:map1@mailrs\"")
+        );
     }
 
     #[test]
