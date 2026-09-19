@@ -1,0 +1,33 @@
+[package]
+name = "mailrs"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "A Gmail client for the GNOME desktop"
+
+[dependencies]
+mailrs-domain.workspace = true
+mailrs-gmail.workspace = true
+mailrs-store.workspace = true
+mailrs-sync.workspace = true
+adw.workspace = true
+ammonia.workspace = true
+anyhow.workspace = true
+async-channel.workspace = true
+base64.workspace = true
+chrono.workspace = true
+gtk.workspace = true
+ksni.workspace = true
+mail-builder.workspace = true
+notify-rust.workspace = true
+pulldown-cmark.workspace = true
+rand.workspace = true
+rusqlite.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+webkit.workspace = true
+
+[dev-dependencies]
+mail-parser.workspace = true
+tempfile.workspace = true
