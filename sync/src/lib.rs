@@ -3,6 +3,7 @@
 mod account;
 mod api;
 mod backoff;
+pub mod config;
 mod connect;
 mod engine;
 mod error;

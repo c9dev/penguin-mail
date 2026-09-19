@@ -1,8 +1,6 @@
 //! Command-line front end to the mailrs core: add Gmail accounts, sync them,
 //! and inspect the local store.
 
-mod config;
-
 use std::collections::HashMap;
 use std::process::{Command as Process, Stdio};
 use std::sync::Arc;
@@ -18,7 +16,7 @@ use mailrs_sync::{
     AccountClient, AccountSync, SyncEngine, TriageAction, connect_account, now_millis,
 };
 
-use crate::config::{Config, config_path, data_dir};
+use mailrs_sync::config::{Config, config_path, data_dir};
 
 /// How long `account add` waits for the browser.
 const CONSENT_TIMEOUT: Duration = Duration::from_secs(300);
@@ -106,7 +104,8 @@ async fn main() -> Result<()> {
 }
 
 fn load_config() -> Result<Config> {
-    Config::load(&config_path()?)
+    let path = config_path()?;
+    Config::load(&path).with_context(|| "docs/setup.md explains how to create the config file")
 }
 
 fn oauth(config: &Config) -> OAuthClient {
