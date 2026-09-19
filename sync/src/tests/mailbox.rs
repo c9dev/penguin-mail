@@ -339,10 +339,12 @@ async fn changed_threads_come_back_only_while_they_belong() {
         .await
         .unwrap()
         .expect("the store can answer for an inbox");
-    let mut got: Vec<&str> = fresh.iter().map(|r| r.id.as_str()).collect();
+    let mut got: Vec<&str> = fresh.rows.iter().map(|r| r.id.as_str()).collect();
     got.sort_unstable();
     assert_eq!(got, ["t1", "t2"]);
+    assert_eq!((fresh.unread, fresh.subtitle.as_str()), (1, "1 unread"));
 
+    // t1 was the one unread thread, so archiving it empties that count too.
     h.sync
         .triage_thread("t1", &crate::TriageAction::Archive)
         .await
@@ -352,8 +354,9 @@ async fn changed_threads_come_back_only_while_they_belong() {
         .await
         .unwrap()
         .expect("still answerable");
-    let ids: Vec<&str> = after.iter().map(|r| r.id.as_str()).collect();
+    let ids: Vec<&str> = after.rows.iter().map(|r| r.id.as_str()).collect();
     assert_eq!(ids, ["t2"], "the archived thread left the inbox");
+    assert_eq!((after.unread, after.subtitle.as_str()), (0, ""));
 }
 
 #[tokio::test]

@@ -24,7 +24,7 @@ pub use connect::connect_account;
 pub use engine::{EngineConfig, SyncEngine};
 pub use error::SyncError;
 pub use mailbox::{
-    Counts, Empty, Listing, Mailbox, Mailboxes, PAGE, Scope, View, summarize_search,
+    Changed, Counts, Empty, Listing, Mailbox, Mailboxes, PAGE, Scope, View, summarize_search,
 };
 pub use triage::TriageAction;
 

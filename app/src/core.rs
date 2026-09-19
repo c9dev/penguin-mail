@@ -20,9 +20,9 @@ use mailrs_gmail::{
 use mailrs_store::{Db, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::{
-    AccountClient, AccountSync, Accounts, Counts, Failure, GmailApi, History, Listing, MailAction,
-    MailActions, Mailbox, Mailboxes, Outcome, SavedDraft, Scope, SyncEngine, View, connect_account,
-    now_millis,
+    AccountClient, AccountSync, Accounts, Changed, Counts, Failure, GmailApi, History, Listing,
+    MailAction, MailActions, Mailbox, Mailboxes, Outcome, SavedDraft, Scope, SyncEngine, View,
+    connect_account, now_millis,
 };
 
 use crate::demo::{self, DemoApi};
@@ -479,7 +479,7 @@ impl Core {
         mailbox: Mailbox,
         changed: Vec<(AccountId, String)>,
         view: View,
-    ) -> Result<Option<Vec<mailrs_domain::ThreadSummary>>> {
+    ) -> Result<Option<Changed>> {
         let lists = Arc::clone(&self.lists);
         self.call(async move { lists.changed(&mailbox, &changed, &view).await })
             .await

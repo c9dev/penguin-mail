@@ -666,7 +666,12 @@ impl MainWindow {
                 return;
             }
             match fresh {
-                Some(fresh) => this.list.replace_threads(&changed, fresh),
+                Some(fresh) => {
+                    let title = this.mailbox.borrow().title();
+                    this.list.replace_threads(&changed, fresh.rows);
+                    this.follow_selection();
+                    this.list.set_title(&title, &fresh.subtitle);
+                }
                 None => this.reload_list(),
             }
         });

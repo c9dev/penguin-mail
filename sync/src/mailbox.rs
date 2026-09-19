@@ -302,6 +302,17 @@ pub struct Listing {
     pub notices: Vec<String>,
 }
 
+/// The rows a change event touched, ready to splice into a list.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Changed {
+    /// The named threads' rows, for the ones that still belong here.
+    pub rows: Vec<ThreadSummary>,
+    /// Unread rows in the whole mailbox.
+    pub unread: i64,
+    /// The header's subtitle, now that the count moved.
+    pub subtitle: String,
+}
+
 /// What the sidebar and the category switcher show.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Counts {
@@ -456,16 +467,17 @@ impl<A: Accounts> Mailboxes<A> {
             .await?)
     }
 
-    /// The rows for the threads a change event named, as they are now.
-    /// A thread that left the mailbox is simply missing from the answer, so
-    /// a caller drops every row of a named thread before splicing these in.
-    /// `None` when the mailbox has to be listed again from scratch.
+    /// The rows for the threads a change event named, as they are now, with
+    /// the mailbox's unread count so the header keeps up. A thread that left
+    /// the mailbox is simply missing from `rows`, so a caller drops every row
+    /// of a named thread before splicing these in. `None` when the mailbox
+    /// has to be listed again from scratch.
     pub async fn changed(
         &self,
         mailbox: &Mailbox,
         changed: &[(AccountId, String)],
         view: &View,
-    ) -> Result<Option<Vec<ThreadSummary>>, SyncError> {
+    ) -> Result<Option<Changed>, SyncError> {
         let Some(filter) = self.filter_of(mailbox, view) else {
             return Ok(None);
         };
@@ -499,7 +511,16 @@ impl<A: Accounts> Mailboxes<A> {
                             threads::list_messages(c, &narrowed, 0, limit * 100)?
                         });
                     }
-                    Ok(rows)
+                    let unread = if threading {
+                        threads::unread_threads(c, &filter)?
+                    } else {
+                        threads::unread_messages(c, &filter)?
+                    };
+                    Ok(Changed {
+                        rows,
+                        unread,
+                        subtitle: unread_subtitle(unread),
+                    })
                 })
                 .await?,
         ))
@@ -553,8 +574,8 @@ impl<A: Accounts> Mailboxes<A> {
         Ok(Listing {
             rows,
             unread,
-            subtitle: if from == 0 && unread > 0 {
-                format!("{unread} unread")
+            subtitle: if from == 0 {
+                unread_subtitle(unread)
             } else {
                 String::new()
             },
@@ -736,6 +757,15 @@ impl<A: Accounts> Mailboxes<A> {
             subtitle,
             ..base
         })
+    }
+}
+
+/// "3 unread", or nothing when everything has been read.
+fn unread_subtitle(unread: i64) -> String {
+    if unread > 0 {
+        format!("{unread} unread")
+    } else {
+        String::new()
     }
 }
 
