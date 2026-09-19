@@ -1,0 +1,19 @@
+[package]
+name = "mailrs-sync"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+mailrs-domain.workspace = true
+mailrs-gmail.workspace = true
+mailrs-store.workspace = true
+async-channel.workspace = true
+futures.workspace = true
+rand.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

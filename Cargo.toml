@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["domain", "gmail", "store"]
+members = ["domain", "gmail", "store", "sync"]
 
 [workspace.package]
 version = "0.1.0"

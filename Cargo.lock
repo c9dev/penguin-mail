@@ -1251,6 +1251,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "mailrs-sync"
+version = "0.1.0"
+dependencies = [
+ "async-channel",
+ "futures",
+ "mailrs-domain",
+ "mailrs-gmail",
+ "mailrs-store",
+ "rand",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "memchr"
 version = "2.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
