@@ -9,7 +9,7 @@ time, and keeps your mail on your own computer.
 ## What it does
 
 - **One inbox for every account**, plus each account's Inbox, Flagged, Sent,
-  Drafts, and labels. A coloured dot tells accounts apart.
+  Drafts, and labels. A colored dot tells accounts apart.
 - **Conversations in one view.** Older messages fold down to a line; quoted
   text and signatures are dimmed. HTML mail renders in its own sandbox with
   scripts off and remote images blocked until you ask for them.
@@ -31,9 +31,9 @@ time, and keeps your mail on your own computer.
 - **Select several at once** with Ctrl+click, Shift+click, or Ctrl+A, then
   archive, trash, junk, flag, mark, or label them together. Every one of
   these can be undone with Ctrl+Z or the Undo button on the toast.
-- **Flags in seven colours**, as in Apple Mail. The flag syncs through
-  Gmail's star; the colour stays on this computer. Flagged lists a mailbox
-  for each colour in use.
+- **Flags in seven colors**, as in Apple Mail. The flag syncs through
+  Gmail's star; the color stays on this computer. Flagged lists a mailbox
+  for each color in use.
 - **VIPs.** Add a sender to VIPs from the conversation's menu. Their mail
   gathers in a VIPs mailbox, their rows get a star, and notifications can
   be limited to them.
@@ -44,7 +44,7 @@ time, and keeps your mail on your own computer.
   unread, in an hour, tonight, tomorrow, Monday, or when you choose.
 - **Search suggestions** as you type: subject, people, and labels.
 - **Arrange the sidebar.** Move accounts up or down, rename them, and pick
-  their colour. Give labels a colour from Gmail's palette.
+  their color. Give labels a color from Gmail's palette.
 - **Labels.** Add or remove Gmail labels from the toolbar or with `l`.
   Nested labels show as a tree under their account. Create labels from the
   label menu or the account menu; right-click one to rename or delete it.
@@ -204,6 +204,6 @@ scripts/smoke.sh                                # by hand, against a real accoun
 
 ## The icon
 
-Three envelopes fanned out in the account colours: several inboxes, one app.
+Three envelopes fanned out in the account colors: several inboxes, one app.
 The other concepts considered are in
 [docs/icon-concepts.png](docs/icon-concepts.png).
