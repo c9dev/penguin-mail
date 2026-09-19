@@ -4,6 +4,7 @@
 mod history;
 mod threads;
 mod window;
+mod writes;
 
 use std::collections::BTreeSet;
 use std::sync::Arc;

@@ -2,6 +2,7 @@ mod basics;
 mod bootstrap;
 mod incremental;
 mod thread_open;
+mod triage;
 
 use std::sync::Arc;
 use std::time::Duration;

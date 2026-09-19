@@ -21,7 +21,7 @@ impl<G: GmailApi> AccountSync<G> {
         };
 
         let mut changes = Vec::new();
-        let mut latest = start;
+        let mut latest;
         let mut page_token: Option<String> = None;
         loop {
             let page = match self.api.history(start, page_token.as_deref()).await {
