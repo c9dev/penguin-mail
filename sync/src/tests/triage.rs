@@ -97,3 +97,59 @@ async fn one_message_can_be_triaged_alone() {
         "the thread still has an unread message"
     );
 }
+
+#[tokio::test]
+async fn trash_and_junk_can_be_undone() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    h.sync
+        .triage_thread("t1", &TriageAction::Trash)
+        .await
+        .unwrap();
+    h.sync
+        .triage_thread("t1", &TriageAction::Trash.inverse())
+        .await
+        .unwrap();
+    assert_eq!(h.labels_of("a").await, ["INBOX"]);
+    h.sync
+        .triage_thread("t1", &TriageAction::Junk)
+        .await
+        .unwrap();
+    assert_eq!(h.labels_of("a").await, ["SPAM"]);
+    h.sync
+        .triage_thread("t1", &TriageAction::Junk.inverse())
+        .await
+        .unwrap();
+    assert_eq!(h.labels_of("a").await, ["INBOX"]);
+    assert_eq!(
+        h.fake.with(|s| s.remote_writes.clone()),
+        [
+            "trash a",
+            "untrash a",
+            "modify a +SPAM -INBOX",
+            "modify a +INBOX -SPAM"
+        ]
+    );
+}
+
+#[test]
+fn every_action_has_an_inverse_that_restores_labels() {
+    let actions = [
+        TriageAction::Archive,
+        TriageAction::MarkRead,
+        TriageAction::Star,
+        TriageAction::AddLabel("L".into()),
+        TriageAction::Trash,
+        TriageAction::Junk,
+        TriageAction::Relabel {
+            add: vec!["A".into()],
+            remove: vec!["B".into()],
+        },
+    ];
+    for action in actions {
+        let (add, remove) = action.label_delta();
+        let (back_add, back_remove) = action.inverse().label_delta();
+        assert_eq!((add, remove), (back_remove, back_add), "{action:?}");
+    }
+}

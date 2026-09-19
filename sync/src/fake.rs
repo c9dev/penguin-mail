@@ -340,6 +340,13 @@ impl GmailApi for FakeGmail {
         Ok(())
     }
 
+    async fn untrash(&self, id: &str) -> Result<(), GmailError> {
+        self.check_failure()?;
+        self.with(|s| s.remote_writes.push(format!("untrash {id}")));
+        self.remote_relabel(id, &["INBOX"], &["TRASH"]);
+        Ok(())
+    }
+
     async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, GmailError> {
         self.check_failure()?;
         Ok(self.with(|s| {

@@ -10,6 +10,19 @@ use mailrs_domain::{AccountId, ThreadSummary};
 use super::thread_row::ThreadRow;
 use crate::diff::splice;
 
+/// What is selected in the list.
+pub enum Picked {
+    None,
+    One(ThreadSummary),
+    Many(Vec<ThreadSummary>),
+}
+
+type Key = (AccountId, String, Option<String>);
+
+fn key(row: &ThreadSummary) -> Key {
+    (row.account_id, row.id.clone(), row.message_id.clone())
+}
+
 pub struct ThreadList {
     pub page: adw::NavigationPage,
     pub sidebar_button: gtk::ToggleButton,
@@ -21,7 +34,7 @@ pub struct ThreadList {
     stack: gtk::Stack,
     empty: adw::StatusPage,
     store: gio::ListStore,
-    selection: gtk::SingleSelection,
+    selection: gtk::MultiSelection,
     view: gtk::ListView,
     rows: RefCell<Vec<ThreadSummary>>,
     show_accounts: Rc<Cell<bool>>,
@@ -30,15 +43,11 @@ pub struct ThreadList {
 
 impl ThreadList {
     pub fn new(
-        on_select: impl Fn(ThreadSummary) + 'static,
+        on_select: impl Fn(Picked) + 'static,
         on_search: impl Fn(String) + 'static,
     ) -> Rc<ThreadList> {
         let store = gio::ListStore::new::<glib::BoxedAnyObject>();
-        let selection = gtk::SingleSelection::builder()
-            .model(&store)
-            .autoselect(false)
-            .can_unselect(true)
-            .build();
+        let selection = gtk::MultiSelection::new(Some(store.clone()));
         let show_accounts = Rc::new(Cell::new(true));
         let factory = gtk::SignalListItemFactory::new();
         factory.connect_setup(|_, item| {
@@ -159,18 +168,10 @@ impl ThreadList {
             muted: Cell::new(false),
         });
         let weak = Rc::downgrade(&list);
-        list.selection.connect_selected_notify(move |selection| {
+        list.selection.connect_selection_changed(move |_, _, _| {
             let Some(list) = weak.upgrade() else { return };
-            if list.muted.get() {
-                return;
-            }
-            let chosen = list
-                .rows
-                .borrow()
-                .get(selection.selected() as usize)
-                .cloned();
-            if let Some(thread) = chosen {
-                on_select(thread);
+            if !list.muted.get() {
+                on_select(list.picked());
             }
         });
         list.search_entry.connect_activate(move |entry| {
@@ -200,28 +201,24 @@ impl ThreadList {
         self.stack.set_visible_child_name("loading");
     }
 
-    /// Updates the list with one splice, keeping the selected thread
-    /// selected when it is still present.
+    /// Updates the list with one splice, keeping the selected rows selected
+    /// when they are still present.
     pub fn set_rows(&self, rows: Vec<ThreadSummary>, empty_title: &str, empty_icon: &str) {
-        let selected = self.selected().map(|t| (t.account_id, t.id, t.message_id));
+        let keys: Vec<Key> = self.selected_rows().iter().map(key).collect();
         self.muted.set(true);
         let old = self.rows.replace(rows);
-        let new = self.rows.borrow();
-        if let Some(change) = splice(&old, &new) {
-            let added: Vec<glib::BoxedAnyObject> = new[change.added]
-                .iter()
-                .cloned()
-                .map(glib::BoxedAnyObject::new)
-                .collect();
-            self.store.splice(change.position, change.removed, &added);
+        {
+            let new = self.rows.borrow();
+            if let Some(change) = splice(&old, &new) {
+                let added: Vec<glib::BoxedAnyObject> = new[change.added]
+                    .iter()
+                    .cloned()
+                    .map(glib::BoxedAnyObject::new)
+                    .collect();
+                self.store.splice(change.position, change.removed, &added);
+            }
         }
-        let position = selected.and_then(|(account, id, message)| {
-            new.iter()
-                .position(|t| t.account_id == account && t.id == id && t.message_id == message)
-        });
-        self.selection
-            .set_selected(position.map_or(gtk::INVALID_LIST_POSITION, |p| p as u32));
-        drop(new);
+        self.reselect(&keys);
         self.muted.set(false);
         self.empty.set_title(empty_title);
         self.empty.set_icon_name(Some(empty_icon));
@@ -234,7 +231,7 @@ impl ThreadList {
     }
 
     fn replace_all(&self, rows: &[ThreadSummary]) {
-        let selected = self.selection.selected();
+        let keys: Vec<Key> = self.selected_rows().iter().map(key).collect();
         self.muted.set(true);
         let objects: Vec<glib::BoxedAnyObject> = rows
             .iter()
@@ -242,18 +239,51 @@ impl ThreadList {
             .map(glib::BoxedAnyObject::new)
             .collect();
         self.store.splice(0, self.store.n_items(), &objects);
-        self.selection.set_selected(selected);
+        self.reselect(&keys);
         self.muted.set(false);
     }
 
-    pub fn selected(&self) -> Option<ThreadSummary> {
-        self.rows
-            .borrow()
-            .get(self.selection.selected() as usize)
-            .cloned()
+    /// Selects exactly the rows whose keys are in `keys`.
+    fn reselect(&self, keys: &[Key]) {
+        self.selection.unselect_all();
+        let rows = self.rows.borrow();
+        for (position, row) in rows.iter().enumerate() {
+            if keys.contains(&key(row)) {
+                self.selection.select_item(position as u32, false);
+            }
+        }
     }
 
-    /// Selects a row: the thread's first row, or the given message's row.
+    fn positions(&self) -> Vec<usize> {
+        (0..self.store.n_items())
+            .filter(|i| self.selection.is_selected(*i))
+            .map(|i| i as usize)
+            .collect()
+    }
+
+    pub fn picked(&self) -> Picked {
+        let rows = self.rows.borrow();
+        let mut picked: Vec<ThreadSummary> = self
+            .positions()
+            .into_iter()
+            .filter_map(|p| rows.get(p).cloned())
+            .collect();
+        match picked.len() {
+            0 => Picked::None,
+            1 => Picked::One(picked.remove(0)),
+            _ => Picked::Many(picked),
+        }
+    }
+
+    pub fn selected_rows(&self) -> Vec<ThreadSummary> {
+        let rows = self.rows.borrow();
+        self.positions()
+            .into_iter()
+            .filter_map(|p| rows.get(p).cloned())
+            .collect()
+    }
+
+    /// Selects a row alone: the thread's first row, or the given message's row.
     pub fn select(&self, account_id: AccountId, thread_id: &str, message_id: Option<&str>) {
         let position = self.rows.borrow().iter().position(|t| {
             t.account_id == account_id
@@ -261,7 +291,7 @@ impl ThreadList {
                 && message_id.is_none_or(|m| t.message_id.as_deref() == Some(m))
         });
         if let Some(position) = position {
-            self.selection.set_selected(position as u32);
+            self.selection.select_item(position as u32, true);
             self.view
                 .scroll_to(position as u32, gtk::ListScrollFlags::FOCUS, None);
         }
@@ -269,34 +299,43 @@ impl ThreadList {
 
     pub fn unselect(&self) {
         self.muted.set(true);
-        self.selection.set_selected(gtk::INVALID_LIST_POSITION);
+        self.selection.unselect_all();
         self.muted.set(false);
     }
 
-    /// Moves the selection by `delta` rows and opens the thread there.
+    pub fn select_all(&self) {
+        self.selection.select_all();
+    }
+
+    /// Moves to the row `delta` away from the last selected one and opens it.
     pub fn step(&self, delta: i32) {
         let count = self.rows.borrow().len() as i64;
         if count == 0 {
             return;
         }
-        let current = self.selection.selected();
-        let next = if current == gtk::INVALID_LIST_POSITION {
-            0
-        } else {
-            (current as i64 + delta as i64).clamp(0, count - 1)
+        let next = match self.positions().last() {
+            None => 0,
+            Some(&current) => (current as i64 + delta as i64).clamp(0, count - 1),
         };
-        self.selection.set_selected(next as u32);
+        self.selection.select_item(next as u32, true);
         self.view
             .scroll_to(next as u32, gtk::ListScrollFlags::FOCUS, None);
     }
 
-    /// The thread that should open after the selected one leaves the list.
+    /// The row to open once the selected rows leave the list: the first
+    /// unselected row after them, else the last one before them.
     pub fn neighbour_of_selected(&self) -> Option<ThreadSummary> {
         let rows = self.rows.borrow();
-        let current = self.selection.selected() as usize;
-        rows.get(current + 1)
-            .or_else(|| current.checked_sub(1).and_then(|p| rows.get(p)))
-            .cloned()
+        let positions = self.positions();
+        let (Some(&first), Some(&last)) = (positions.first(), positions.last()) else {
+            return None;
+        };
+        rows.iter()
+            .enumerate()
+            .skip(last + 1)
+            .find(|(p, _)| !positions.contains(p))
+            .or_else(|| rows.iter().enumerate().take(first).next_back())
+            .map(|(_, row)| row.clone())
     }
 
     pub fn open_search(&self) {

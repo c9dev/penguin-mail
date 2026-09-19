@@ -500,6 +500,10 @@ impl GmailApi for DemoApi {
         Ok(())
     }
 
+    async fn untrash(&self, _id: &str) -> std::result::Result<(), GmailError> {
+        Ok(())
+    }
+
     async fn send(
         &self,
         _raw: &[u8],

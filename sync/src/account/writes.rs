@@ -102,6 +102,7 @@ impl<G: GmailApi> AccountSync<G> {
         loop {
             let result = match action {
                 TriageAction::Trash => self.api.trash(message_id).await,
+                TriageAction::Untrash => self.api.untrash(message_id).await,
                 _ => self.api.modify_labels(message_id, add, remove).await,
             };
             match result {

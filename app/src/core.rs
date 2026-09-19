@@ -77,6 +77,9 @@ impl GmailApi for Api {
     async fn trash(&self, id: &str) -> Result<(), GmailError> {
         delegate!(self, trash(id))
     }
+    async fn untrash(&self, id: &str) -> Result<(), GmailError> {
+        delegate!(self, untrash(id))
+    }
     async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, GmailError> {
         delegate!(self, send(raw, thread_id))
     }

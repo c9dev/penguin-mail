@@ -18,12 +18,12 @@ use mailrs_sync::TriageAction;
 
 use super::conversation::{Action, ConversationView, OpenThread};
 use super::sidebar::Sidebar;
-use super::thread_list::ThreadList;
+use super::thread_list::{Picked, ThreadList};
 use super::{Mailbox, summarize_search, welcome};
 use crate::app::App;
 use crate::compose::{self, Draft, OutgoingAttachment, ReplyKind};
 use crate::core::Core;
-use crate::settings::{MarkRead, RemoteImages, Settings};
+use crate::settings::{Choice, MarkRead, RemoteImages, Settings, TextSize};
 
 /// Largest inline image embedded into a page.
 const INLINE_IMAGE_LIMIT: usize = 5 * 1024 * 1024;
@@ -50,6 +50,50 @@ pub struct MainWindow {
     refresh_queued: Cell<bool>,
     list_generation: Cell<u64>,
     authorizing: Cell<bool>,
+    /// How to reverse the last organizing action.
+    undo: RefCell<Option<(Vec<Target>, TriageAction)>>,
+    labels: RefCell<HashMap<AccountId, Vec<Label>>>,
+}
+
+/// One thing an action applies to: a thread, or one message of it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Target {
+    account_id: AccountId,
+    thread_id: String,
+    message_id: Option<String>,
+}
+
+impl Target {
+    fn from_row(row: &ThreadSummary) -> Target {
+        Target {
+            account_id: row.account_id,
+            thread_id: row.id.clone(),
+            message_id: row.message_id.clone(),
+        }
+    }
+}
+
+/// The toast after an action, or `None` when the change speaks for itself.
+fn done_message(action: &TriageAction, count: usize, threaded: bool) -> Option<String> {
+    let noun = match (threaded, count) {
+        (true, 1) => "conversation",
+        (true, _) => "conversations",
+        (false, 1) => "message",
+        (false, _) => "messages",
+    };
+    let many = count > 1;
+    Some(match action {
+        TriageAction::Archive if many => format!("Archived {count} {noun}"),
+        TriageAction::Archive => "Archived".into(),
+        TriageAction::Trash if many => format!("Moved {count} {noun} to Trash"),
+        TriageAction::Trash => "Moved to Trash".into(),
+        TriageAction::Junk if many => format!("Marked {count} {noun} as junk"),
+        TriageAction::Junk => "Marked as junk".into(),
+        TriageAction::AddLabel(_) | TriageAction::RemoveLabel(_) | TriageAction::Relabel { .. } => {
+            "Labels changed".into()
+        }
+        _ => return None,
+    })
 }
 
 impl MainWindow {
@@ -63,9 +107,9 @@ impl MainWindow {
             });
             let (w, s) = (weak.clone(), weak.clone());
             let list = ThreadList::new(
-                move |thread| {
+                move |picked| {
                     if let Some(win) = w.upgrade() {
-                        win.open_thread(thread);
+                        win.picked(picked);
                     }
                 },
                 move |query| {
@@ -174,11 +218,22 @@ impl MainWindow {
                 refresh_queued: Cell::new(false),
                 list_generation: Cell::new(0),
                 authorizing: Cell::new(false),
+                undo: RefCell::new(None),
+                labels: RefCell::new(HashMap::new()),
             }
         });
         if window.core.demo {
             window.sidebar.start_expanded.set(Some(true));
         }
+        let weak = Rc::downgrade(&window);
+        window
+            .conversation
+            .label_button
+            .set_create_popup_func(move |button| {
+                if let Some(win) = weak.upgrade() {
+                    button.set_popover(Some(&win.label_popover()));
+                }
+            });
         window.install_actions();
         window.install_menu();
         window.install_keys();
@@ -288,6 +343,7 @@ impl MainWindow {
                 Err(err) => return this.toast(&format!("Could not read accounts: {err}")),
             };
             *this.accounts.borrow_mut() = data.iter().map(|(a, _)| a.clone()).collect();
+            *this.labels.borrow_mut() = data.iter().map(|(a, l)| (a.id, l.clone())).collect();
             let page = if !this.core.has_config() {
                 "setup"
             } else if data.is_empty() {
@@ -641,7 +697,12 @@ impl MainWindow {
                 })
                 .unwrap_or(false);
             if still_open {
-                win.run_triage(account_id, thread_id, only, TriageAction::MarkRead, false);
+                let target = Target {
+                    account_id,
+                    thread_id,
+                    message_id: only,
+                };
+                win.apply(vec![target], TriageAction::MarkRead, false);
             }
         });
     }
@@ -742,28 +803,73 @@ impl MainWindow {
         });
     }
 
-    // ---- Actions on the open thread --------------------------------------
+    // ---- Actions on the selection or the open conversation -----------------
+
+    fn picked(self: &Rc<Self>, picked: Picked) {
+        match picked {
+            Picked::One(row) => self.open_thread(row),
+            Picked::Many(rows) => {
+                let noun = if self.settings().threading {
+                    "Conversations"
+                } else {
+                    "Messages"
+                };
+                self.conversation.show_many(rows.len(), noun);
+            }
+            Picked::None => self.conversation.clear(),
+        }
+    }
+
+    /// What an action applies to: every selected row when several are
+    /// selected, otherwise the open conversation.
+    fn targets(&self) -> Vec<Target> {
+        let rows = self.list.selected_rows();
+        if rows.len() > 1 {
+            return rows.iter().map(Target::from_row).collect();
+        }
+        self.conversation
+            .with_open(|o| Target {
+                account_id: o.account_id,
+                thread_id: o.thread_id.clone(),
+                message_id: o.only_message.clone(),
+            })
+            .map(|t| vec![t])
+            .unwrap_or_else(|| rows.iter().map(Target::from_row).collect())
+    }
+
+    /// Whether any target is unread, and whether every target is starred.
+    fn target_marks(&self) -> (bool, bool) {
+        let rows = self.list.selected_rows();
+        if rows.len() > 1 {
+            return (
+                rows.iter().any(|r| r.unread),
+                rows.iter().all(|r| r.starred),
+            );
+        }
+        self.conversation
+            .with_open(|o| (o.unread(), o.starred()))
+            .or_else(|| rows.first().map(|r| (r.unread, r.starred)))
+            .unwrap_or((false, false))
+    }
 
     fn act(self: &Rc<Self>, action: Action) {
         match action {
             Action::Reply(kind) => self.reply(kind),
             Action::EditDraft => self.edit_draft(),
-            Action::Archive => self.triage_open(TriageAction::Archive),
-            Action::Trash => self.triage_open(TriageAction::Trash),
+            Action::Archive => self.triage(TriageAction::Archive),
+            Action::Trash => self.triage(TriageAction::Trash),
+            Action::Junk => self.triage(TriageAction::Junk),
             Action::ToggleStar => {
-                let starred = self
-                    .conversation
-                    .with_open(|o| o.starred())
-                    .unwrap_or(false);
-                self.triage_open(if starred {
+                let (_, starred) = self.target_marks();
+                self.triage(if starred {
                     TriageAction::Unstar
                 } else {
                     TriageAction::Star
                 });
             }
             Action::ToggleRead => {
-                let unread = self.conversation.with_open(|o| o.unread()).unwrap_or(false);
-                self.triage_open(if unread {
+                let (unread, _) = self.target_marks();
+                self.triage(if unread {
                     TriageAction::MarkRead
                 } else {
                     TriageAction::MarkUnread
@@ -802,17 +908,20 @@ impl MainWindow {
             .or_else(|| self.accounts.borrow().first().map(|a| a.id))
     }
 
-    fn triage_open(self: &Rc<Self>, action: TriageAction) {
-        let key = self
-            .conversation
-            .with_open(|o| (o.account_id, o.thread_id.clone(), o.only_message.clone()));
-        let Some((account_id, thread_id, only)) = key else {
+    /// Applies `action` to the targets and keeps an undo for it. Actions that
+    /// take mail out of the list move on to the next row, as Apple Mail does.
+    fn triage(self: &Rc<Self>, action: TriageAction) {
+        let targets = self.targets();
+        if targets.is_empty() {
             return;
-        };
-        let leaves = matches!(action, TriageAction::Archive | TriageAction::Trash);
-        if leaves {
+        }
+        if matches!(
+            action,
+            TriageAction::Archive | TriageAction::Trash | TriageAction::Junk
+        ) {
             let next = self.list.neighbour_of_selected();
             self.conversation.clear();
+            self.list.unselect();
             match next {
                 Some(next) => {
                     self.list
@@ -821,63 +930,205 @@ impl MainWindow {
                 None => self.nav.set_show_content(false),
             }
         }
-        self.run_triage(account_id, thread_id, only, action, true);
+        self.apply(targets, action, true);
     }
 
-    fn run_triage(
-        self: &Rc<Self>,
-        account_id: AccountId,
-        thread_id: String,
-        only: Option<String>,
-        action: TriageAction,
-        announce: bool,
-    ) {
-        let Some(sync) = self.core.account(account_id) else {
-            return;
-        };
+    /// Runs `action` on every target. With `record`, offers an undo.
+    fn apply(self: &Rc<Self>, targets: Vec<Target>, action: TriageAction, record: bool) {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let (s, t, a, m) = (
-                sync.clone(),
-                thread_id.clone(),
-                action.clone(),
-                only.clone(),
-            );
-            let result = this
-                .core
-                .call(async move {
-                    match m {
-                        Some(message_id) => s.triage_message(&t, &message_id, &a).await,
-                        None => s.triage_thread(&t, &a).await,
-                    }
-                })
-                .await;
-            match result {
-                Ok(()) if announce && action == TriageAction::Archive => {
-                    let toast = adw::Toast::builder()
-                        .title("Archived")
-                        .button_label("Undo")
-                        .timeout(5)
-                        .build();
-                    let weak = Rc::downgrade(&this);
-                    toast.connect_button_clicked(move |_| {
-                        if let Some(win) = weak.upgrade() {
-                            win.run_triage(
-                                account_id,
-                                thread_id.clone(),
-                                only.clone(),
-                                TriageAction::AddLabel("INBOX".into()),
-                                false,
-                            );
+            let mut failure = None;
+            for target in &targets {
+                let Some(sync) = this.core.account(target.account_id) else {
+                    continue;
+                };
+                let (thread, message, act) = (
+                    target.thread_id.clone(),
+                    target.message_id.clone(),
+                    action.clone(),
+                );
+                let result = this
+                    .core
+                    .call(async move {
+                        match message {
+                            Some(id) => sync.triage_message(&thread, &id, &act).await,
+                            None => sync.triage_thread(&thread, &act).await,
                         }
-                    });
-                    this.toasts.add_toast(toast);
+                    })
+                    .await;
+                if let Err(err) = result {
+                    failure = Some(err);
                 }
-                Ok(()) if announce && action == TriageAction::Trash => this.toast("Moved to Trash"),
-                Ok(()) => {}
-                Err(err) => this.toast(&format!("{} failed: {err}", action.describe())),
+            }
+            if let Some(err) = failure {
+                return this.toast(&format!("{} failed: {err}", action.describe()));
+            }
+            if !record {
+                return;
+            }
+            let count = targets.len();
+            *this.undo.borrow_mut() = Some((targets, action.inverse()));
+            if let Some(done) = done_message(&action, count, this.settings().threading) {
+                let toast = adw::Toast::builder()
+                    .title(done)
+                    .button_label("Undo")
+                    .timeout(5)
+                    .build();
+                let weak = Rc::downgrade(&this);
+                toast.connect_button_clicked(move |_| {
+                    if let Some(win) = weak.upgrade() {
+                        win.undo();
+                    }
+                });
+                this.toasts.add_toast(toast);
             }
         });
+    }
+
+    /// Reverses the last organizing action, once.
+    fn undo(self: &Rc<Self>) {
+        let last = self.undo.borrow_mut().take();
+        match last {
+            Some((targets, inverse)) => {
+                self.apply(targets, inverse, false);
+                self.toast("Undone");
+            }
+            None => self.toast("Nothing to undo"),
+        }
+    }
+
+    /// Labels of the targets' account, checked when the one open
+    /// conversation already has them.
+    fn label_popover(self: &Rc<Self>) -> gtk::Popover {
+        let popover = gtk::Popover::new();
+        let targets = self.targets();
+        let accounts: HashSet<AccountId> = targets.iter().map(|t| t.account_id).collect();
+        let message = |text: &str| {
+            gtk::Label::builder()
+                .label(text)
+                .wrap(true)
+                .max_width_chars(28)
+                .margin_top(12)
+                .margin_bottom(12)
+                .margin_start(12)
+                .margin_end(12)
+                .build()
+        };
+        let Some(&account_id) = accounts.iter().next().filter(|_| accounts.len() == 1) else {
+            popover.set_child(Some(&message(if targets.is_empty() {
+                "Open or select mail to label it."
+            } else {
+                "Select mail from one account to label it."
+            })));
+            return popover;
+        };
+        let mut labels: Vec<Label> = self
+            .labels
+            .borrow()
+            .get(&account_id)
+            .map(|all| {
+                all.iter()
+                    .filter(|l| l.kind == mailrs_domain::LabelKind::User)
+                    .cloned()
+                    .collect()
+            })
+            .unwrap_or_default();
+        labels.sort_by_key(|l| l.name.to_lowercase());
+        if labels.is_empty() {
+            popover.set_child(Some(&message(
+                "This account has no labels yet. Create them in Gmail.",
+            )));
+            return popover;
+        }
+        let applied: HashSet<String> = if targets.len() == 1 {
+            self.conversation
+                .with_open(|o| {
+                    o.messages
+                        .iter()
+                        .flat_map(|m| m.label_ids.clone())
+                        .collect()
+                })
+                .unwrap_or_default()
+        } else {
+            HashSet::new()
+        };
+        let list = gtk::ListBox::builder()
+            .css_classes(["navigation-sidebar"])
+            .selection_mode(gtk::SelectionMode::None)
+            .build();
+        for label in &labels {
+            let row = gtk::Box::builder().spacing(10).build();
+            let check = gtk::Image::from_icon_name("object-select-symbolic");
+            check.set_opacity(if applied.contains(&label.id) {
+                1.0
+            } else {
+                0.0
+            });
+            row.append(&check);
+            row.append(
+                &gtk::Label::builder()
+                    .label(label.name.replace('/', " › "))
+                    .xalign(0.0)
+                    .build(),
+            );
+            list.append(
+                &gtk::ListBoxRow::builder()
+                    .child(&row)
+                    .activatable(true)
+                    .build(),
+            );
+        }
+        let (weak, pop) = (Rc::downgrade(self), popover.clone());
+        list.connect_row_activated(move |_, row| {
+            let (Some(win), Some(label)) = (weak.upgrade(), labels.get(row.index() as usize))
+            else {
+                return;
+            };
+            pop.popdown();
+            win.triage(if applied.contains(&label.id) {
+                TriageAction::RemoveLabel(label.id.clone())
+            } else {
+                TriageAction::AddLabel(label.id.clone())
+            });
+        });
+        let scroller = gtk::ScrolledWindow::builder()
+            .child(&list)
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .propagate_natural_height(true)
+            .max_content_height(360)
+            .min_content_width(220)
+            .build();
+        popover.set_child(Some(&scroller));
+        popover
+    }
+
+    fn change_text_size(self: &Rc<Self>, step: i32) {
+        let Some(app) = self.app.upgrade() else {
+            return;
+        };
+        app.update_settings(|s| {
+            s.text_size = if step == 0 {
+                TextSize::Normal
+            } else {
+                let next =
+                    (s.text_size.index() as i32 + step).clamp(0, TextSize::ALL.len() as i32 - 1);
+                TextSize::from_index(next as u32)
+            };
+        });
+    }
+
+    /// Opens the mailbox at `position` in the sidebar, counting from 1.
+    fn go_to_mailbox(self: &Rc<Self>, position: usize) {
+        let Some(mailbox) = self
+            .sidebar
+            .mailboxes()
+            .get(position.saturating_sub(1))
+            .cloned()
+        else {
+            return;
+        };
+        self.sidebar.select(&mailbox);
+        self.show_mailbox(mailbox);
     }
 
     fn reply(self: &Rc<Self>, kind: ReplyKind) {
@@ -1155,14 +1406,28 @@ impl MainWindow {
         add("reply", Box::new(|win| win.reply(ReplyKind::Reply)));
         add("reply-all", Box::new(|win| win.reply(ReplyKind::ReplyAll)));
         add("forward", Box::new(|win| win.reply(ReplyKind::Forward)));
+        add("archive", Box::new(|win| win.triage(TriageAction::Archive)));
+        add("trash", Box::new(|win| win.triage(TriageAction::Trash)));
+        add("junk", Box::new(|win| win.triage(TriageAction::Junk)));
         add(
-            "archive",
-            Box::new(|win| win.triage_open(TriageAction::Archive)),
+            "label",
+            Box::new(|win| win.conversation.label_button.popup()),
         );
-        add(
-            "trash",
-            Box::new(|win| win.triage_open(TriageAction::Trash)),
-        );
+        add("undo", Box::new(|win| win.undo()));
+        add("select-all", Box::new(|win| win.list.select_all()));
+        add("zoom-in", Box::new(|win| win.change_text_size(1)));
+        add("zoom-out", Box::new(|win| win.change_text_size(-1)));
+        add("zoom-reset", Box::new(|win| win.change_text_size(0)));
+        let go = gio::SimpleAction::new("go-mailbox", Some(glib::VariantTy::INT32));
+        let weak = Rc::downgrade(self);
+        go.connect_activate(move |_, parameter| {
+            if let (Some(win), Some(position)) =
+                (weak.upgrade(), parameter.and_then(|p| p.get::<i32>()))
+            {
+                win.go_to_mailbox(position as usize);
+            }
+        });
+        self.actions.add_action(&go);
         add("toggle-star", Box::new(|win| win.act(Action::ToggleStar)));
         add("toggle-read", Box::new(|win| win.act(Action::ToggleRead)));
         add("about", Box::new(|win| win.show_about()));
@@ -1206,11 +1471,25 @@ impl MainWindow {
 
         let shortcuts = gtk::ShortcutController::new();
         shortcuts.set_scope(gtk::ShortcutScope::Global);
+        // Apple Mail's shortcuts, with Command as Control.
         for (trigger, action) in [
             ("<Control>n", "win.compose"),
             ("<Control>f", "win.search"),
+            ("<Control><Alt>f", "win.search"),
             ("F5", "win.check"),
-            ("<Control>r", "win.check"),
+            ("<Control><Shift>n", "win.check"),
+            ("<Control>r", "win.reply"),
+            ("<Control><Shift>r", "win.reply-all"),
+            ("<Control><Shift>f", "win.forward"),
+            ("<Control><Alt>a", "win.archive"),
+            ("<Control><Shift>u", "win.toggle-read"),
+            ("<Control><Shift>l", "win.toggle-star"),
+            ("<Control><Shift>j", "win.junk"),
+            ("<Control><Shift>m", "win.label"),
+            ("<Control>plus", "win.zoom-in"),
+            ("<Control>equal", "win.zoom-in"),
+            ("<Control>minus", "win.zoom-out"),
+            ("<Control>0", "win.zoom-reset"),
             ("<Control>question", "win.shortcuts"),
             ("<Control>comma", "win.preferences"),
             ("<Control>q", "win.quit"),
@@ -1220,6 +1499,14 @@ impl MainWindow {
                 gtk::ShortcutTrigger::parse_string(trigger),
                 Some(gtk::NamedAction::new(action)),
             ));
+        }
+        for position in 1..=9i32 {
+            let shortcut = gtk::Shortcut::new(
+                gtk::ShortcutTrigger::parse_string(&format!("<Control>{position}")),
+                Some(gtk::NamedAction::new("win.go-mailbox")),
+            );
+            shortcut.set_arguments(Some(&position.to_variant()));
+            shortcuts.add_shortcut(shortcut);
         }
         self.window.add_controller(shortcuts);
 
@@ -1264,20 +1551,49 @@ impl MainWindow {
             let Some(win) = weak.upgrade() else {
                 return glib::Propagation::Proceed;
             };
-            let blocked = gdk::ModifierType::CONTROL_MASK
-                | gdk::ModifierType::ALT_MASK
-                | gdk::ModifierType::SUPER_MASK;
-            if modifiers.intersects(blocked)
-                || win.typing()
-                || win.stack.visible_child_name().as_deref() != Some("mail")
-            {
+            if win.typing() || win.stack.visible_child_name().as_deref() != Some("mail") {
                 return glib::Propagation::Proceed;
+            }
+            let others = gdk::ModifierType::ALT_MASK | gdk::ModifierType::SUPER_MASK;
+            if modifiers.contains(gdk::ModifierType::CONTROL_MASK) {
+                if modifiers.intersects(others | gdk::ModifierType::SHIFT_MASK)
+                    || win.reading_text()
+                {
+                    return glib::Propagation::Proceed;
+                }
+                match key {
+                    gdk::Key::a => win.list.select_all(),
+                    gdk::Key::z => win.undo(),
+                    _ => return glib::Propagation::Proceed,
+                }
+                return glib::Propagation::Stop;
+            }
+            if modifiers.intersects(others) {
+                return glib::Propagation::Proceed;
+            }
+            match key {
+                gdk::Key::Delete | gdk::Key::BackSpace | gdk::Key::KP_Delete => {
+                    win.triage(TriageAction::Trash);
+                    return glib::Propagation::Stop;
+                }
+                gdk::Key::Escape => {
+                    if win.list.selected_rows().len() > 1 {
+                        win.list.unselect();
+                        win.conversation.clear();
+                    } else if win.list.search_open() {
+                        win.list.close_search();
+                    } else {
+                        return glib::Propagation::Proceed;
+                    }
+                    return glib::Propagation::Stop;
+                }
+                _ => {}
             }
             match key.to_unicode() {
                 Some('j') => win.list.step(1),
                 Some('k') => win.list.step(-1),
-                Some('e') => win.triage_open(TriageAction::Archive),
-                Some('#') => win.triage_open(TriageAction::Trash),
+                Some('e') => win.triage(TriageAction::Archive),
+                Some('#') => win.triage(TriageAction::Trash),
                 Some('s') => win.act(Action::ToggleStar),
                 Some('u') => win.act(Action::ToggleRead),
                 Some('r') => win.reply(ReplyKind::Reply),
@@ -1290,6 +1606,14 @@ impl MainWindow {
             glib::Propagation::Stop
         });
         self.window.add_controller(keys);
+    }
+
+    /// True when the focus is in the message itself, where Ctrl+A selects text.
+    fn reading_text(&self) -> bool {
+        GtkWindowExt::focus(&self.window).is_some_and(|focus| {
+            focus.is::<webkit::WebView>()
+                || focus.ancestor(webkit::WebView::static_type()).is_some()
+        })
     }
 
     fn typing(&self) -> bool {
@@ -1409,34 +1733,52 @@ impl MainWindow {
 
     fn show_shortcuts(&self) {
         let dialog = adw::ShortcutsDialog::new();
-        let groups: [(&str, &[(&str, &str)]); 3] = [
+        let groups: [(&str, &[(&str, &str)]); 4] = [
             (
                 "Reading",
                 &[
-                    ("Next conversation", "j"),
-                    ("Previous conversation", "k"),
-                    ("Search", "slash"),
-                    ("Check for mail", "F5"),
+                    ("Next or previous conversation", "j k"),
+                    ("Open mailbox 1 to 9", "<Control>1...<Control>9"),
+                    ("Search", "<Control>f slash"),
+                    ("Get new mail", "<Control><Shift>n F5"),
+                    ("Select all", "<Control>a"),
+                    ("Clear the selection", "Escape"),
+                    ("Bigger or smaller text", "<Control>plus <Control>minus"),
+                    ("Normal text size", "<Control>0"),
                 ],
             ),
             (
-                "Triage",
+                "Organizing",
                 &[
-                    ("Archive", "e"),
-                    ("Move to trash", "numbersign"),
-                    ("Star or unstar", "s"),
-                    ("Mark read or unread", "u"),
+                    ("Archive", "<Control><Alt>a e"),
+                    ("Move to trash", "Delete numbersign"),
+                    ("Junk", "<Control><Shift>j"),
+                    ("Star or unstar", "<Control><Shift>l s"),
+                    ("Mark read or unread", "<Control><Shift>u u"),
+                    ("Labels", "<Control><Shift>m"),
+                    ("Undo", "<Control>z"),
                 ],
             ),
             (
                 "Writing",
                 &[
-                    ("New message", "c"),
-                    ("Reply", "r"),
-                    ("Reply all", "a"),
-                    ("Forward", "f"),
-                    ("Send", "<Control>Return"),
+                    ("New message", "<Control>n c"),
+                    ("Reply", "<Control>r r"),
+                    ("Reply all", "<Control><Shift>r a"),
+                    ("Forward", "<Control><Shift>f f"),
+                    ("Send", "<Control><Shift>d <Control>Return"),
+                    ("Attach files", "<Control><Shift>a"),
+                    ("Bold, italic, link", "<Control>b <Control>i <Control>k"),
                     ("Save draft", "<Control>s"),
+                ],
+            ),
+            (
+                "General",
+                &[
+                    ("Preferences", "<Control>comma"),
+                    ("Keyboard shortcuts", "<Control>question"),
+                    ("Close window", "<Control>w"),
+                    ("Quit", "<Control>q"),
                 ],
             ),
         ];

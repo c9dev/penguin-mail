@@ -72,6 +72,7 @@ pub enum Action {
     EditDraft,
     Archive,
     Trash,
+    Junk,
     ToggleStar,
     ToggleRead,
     LoadImages,
@@ -82,6 +83,7 @@ pub enum Action {
 struct Buttons {
     archive: gtk::Button,
     trash: gtk::Button,
+    junk: gtk::Button,
     read: gtk::Button,
     star: gtk::Button,
     reply: gtk::Button,
@@ -93,6 +95,9 @@ struct Buttons {
 
 pub struct ConversationView {
     pub page: adw::NavigationPage,
+    /// Applies or removes labels; the window fills its popover.
+    pub label_button: gtk::MenuButton,
+    many: adw::StatusPage,
     stack: gtk::Stack,
     webview: webkit::WebView,
     content: webkit::UserContentManager,
@@ -146,6 +151,33 @@ impl ConversationView {
             .button_label("Load Images")
             .revealed(false)
             .build();
+        let bulk = gtk::Box::builder()
+            .spacing(10)
+            .halign(gtk::Align::Center)
+            .build();
+        for (label, action) in [
+            ("Archive", "win.archive"),
+            ("Mark as Read", "win.toggle-read"),
+            ("Star", "win.toggle-star"),
+            ("Junk", "win.junk"),
+            ("Move to Trash", "win.trash"),
+        ] {
+            let pill = gtk::Button::builder()
+                .label(label)
+                .action_name(action)
+                .css_classes(["pill"])
+                .build();
+            if action == "win.archive" {
+                pill.add_css_class("suggested-action");
+            }
+            bulk.append(&pill);
+        }
+        let many = adw::StatusPage::builder()
+            .icon_name("mailrs-inbox-symbolic")
+            .title("Several Conversations Selected")
+            .description("Actions and shortcuts apply to all of them. Esc clears the selection.")
+            .child(&bulk)
+            .build();
         let web_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
         web_box.append(&banner);
         web_box.append(&webview);
@@ -154,6 +186,7 @@ impl ConversationView {
             .build();
         stack.add_named(&empty, Some("empty"));
         stack.add_named(&web_box, Some("thread"));
+        stack.add_named(&many, Some("many"));
 
         let button = |icon: &str, tip: &str| {
             gtk::Button::builder()
@@ -162,13 +195,14 @@ impl ConversationView {
                 .build()
         };
         let buttons = Buttons {
-            archive: button("mailrs-archive-symbolic", "Archive (E)"),
-            trash: button("user-trash-symbolic", "Move to Trash (#)"),
-            read: button("mail-unread-symbolic", "Mark as Unread (U)"),
-            star: button("non-starred-symbolic", "Star (S)"),
-            reply: button("mail-reply-sender-symbolic", "Reply (R)"),
-            reply_all: button("mail-reply-all-symbolic", "Reply All (A)"),
-            forward: button("mail-forward-symbolic", "Forward (F)"),
+            archive: button("mailrs-archive-symbolic", "Archive (E or Ctrl+Alt+A)"),
+            trash: button("user-trash-symbolic", "Move to Trash (Delete)"),
+            junk: button("mail-mark-junk-symbolic", "Junk (Ctrl+Shift+J)"),
+            read: button("mail-unread-symbolic", "Mark as Unread (Ctrl+Shift+U)"),
+            star: button("non-starred-symbolic", "Star (Ctrl+Shift+L)"),
+            reply: button("mail-reply-sender-symbolic", "Reply (Ctrl+R)"),
+            reply_all: button("mail-reply-all-symbolic", "Reply All (Ctrl+Shift+R)"),
+            forward: button("mail-forward-symbolic", "Forward (Ctrl+Shift+F)"),
             edit: gtk::Button::builder()
                 .label("Edit Draft")
                 .css_classes(["suggested-action"])
@@ -186,19 +220,27 @@ impl ConversationView {
         let marks = gio::Menu::new();
         marks.append(Some("Star or Unstar"), Some("win.toggle-star"));
         marks.append(Some("Mark Read or Unread"), Some("win.toggle-read"));
+        marks.append(Some("Junk"), Some("win.junk"));
+        marks.append(Some("Labels…"), Some("win.label"));
         more.append_section(None, &marks);
         buttons.more.set_menu_model(Some(&more));
         let header = adw::HeaderBar::builder()
             .title_widget(&gtk::Label::new(None))
             .build();
+        let label_button = gtk::MenuButton::builder()
+            .icon_name("mailrs-tag-symbolic")
+            .tooltip_text("Labels (Ctrl+Shift+M)")
+            .build();
         for widget in [
             &buttons.archive,
             &buttons.trash,
+            &buttons.junk,
             &buttons.read,
             &buttons.star,
         ] {
             header.pack_start(widget);
         }
+        header.pack_start(&label_button);
         header.pack_end(&buttons.more);
         for widget in [
             &buttons.reply,
@@ -222,6 +264,7 @@ impl ConversationView {
             widget.connect_clicked(move |_| on_action(make()));
         };
         wire(&buttons.archive, || Action::Archive);
+        wire(&buttons.junk, || Action::Junk);
         wire(&buttons.trash, || Action::Trash);
         wire(&buttons.read, || Action::ToggleRead);
         wire(&buttons.star, || Action::ToggleStar);
@@ -236,6 +279,8 @@ impl ConversationView {
 
         let view = Rc::new(ConversationView {
             page,
+            label_button,
+            many,
             stack,
             webview,
             content,
@@ -319,6 +364,20 @@ impl ConversationView {
     pub fn set_filter(&self, filter: webkit::UserContentFilter) {
         self.content.add_filter(&filter);
         *self.filter.borrow_mut() = Some(filter);
+    }
+
+    /// Shows the bulk-action page for `count` selected rows.
+    pub fn show_many(&self, count: usize, noun: &str) {
+        *self.open.borrow_mut() = None;
+        self.many.set_title(&format!("{count} {noun} Selected"));
+        self.stack.set_visible_child_name("many");
+        self.banner.set_revealed(false);
+        self.set_buttons_shown(true);
+        let b = &self.buttons;
+        for button in [&b.reply, &b.reply_all, &b.forward, &b.edit] {
+            button.set_visible(false);
+        }
+        b.more.set_visible(false);
     }
 
     pub fn clear(&self) {
@@ -473,9 +532,10 @@ impl ConversationView {
         for button in [&b.archive, &b.trash, &b.reply] {
             button.set_visible(shown);
         }
-        for button in [&b.read, &b.star, &b.reply_all, &b.forward] {
+        for button in [&b.junk, &b.read, &b.star, &b.reply_all, &b.forward] {
             button.set_visible(full);
         }
+        self.label_button.set_visible(full);
         b.more.set_visible(shown && self.compact.get());
         if !shown {
             b.edit.set_visible(false);

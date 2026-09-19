@@ -11,6 +11,15 @@ pub enum TriageAction {
     AddLabel(String),
     RemoveLabel(String),
     Trash,
+    /// Takes a message back out of the trash.
+    Untrash,
+    /// Moves out of the inbox and into Spam.
+    Junk,
+    /// Any label change; the undo of most other actions.
+    Relabel {
+        add: Vec<String>,
+        remove: Vec<String>,
+    },
 }
 
 impl TriageAction {
@@ -26,6 +35,33 @@ impl TriageAction {
             TriageAction::AddLabel(label) => (vec![label.clone()], vec![]),
             TriageAction::RemoveLabel(label) => (vec![], vec![label.clone()]),
             TriageAction::Trash => (one("TRASH"), one("INBOX")),
+            TriageAction::Untrash => (one("INBOX"), one("TRASH")),
+            TriageAction::Junk => (one("SPAM"), one("INBOX")),
+            TriageAction::Relabel { add, remove } => (add.clone(), remove.clone()),
+        }
+    }
+
+    /// The action that undoes this one.
+    pub fn inverse(&self) -> TriageAction {
+        let relabel = |add: &[&str], remove: &[&str]| TriageAction::Relabel {
+            add: add.iter().map(|l| l.to_string()).collect(),
+            remove: remove.iter().map(|l| l.to_string()).collect(),
+        };
+        match self {
+            TriageAction::Archive => relabel(&["INBOX"], &[]),
+            TriageAction::MarkRead => TriageAction::MarkUnread,
+            TriageAction::MarkUnread => TriageAction::MarkRead,
+            TriageAction::Star => TriageAction::Unstar,
+            TriageAction::Unstar => TriageAction::Star,
+            TriageAction::AddLabel(label) => TriageAction::RemoveLabel(label.clone()),
+            TriageAction::RemoveLabel(label) => TriageAction::AddLabel(label.clone()),
+            TriageAction::Trash => TriageAction::Untrash,
+            TriageAction::Untrash => TriageAction::Trash,
+            TriageAction::Junk => relabel(&["INBOX"], &["SPAM"]),
+            TriageAction::Relabel { add, remove } => TriageAction::Relabel {
+                add: remove.clone(),
+                remove: add.clone(),
+            },
         }
     }
 
@@ -39,6 +75,9 @@ impl TriageAction {
             TriageAction::AddLabel(label) => format!("Add label {label}"),
             TriageAction::RemoveLabel(label) => format!("Remove label {label}"),
             TriageAction::Trash => "Move to trash".into(),
+            TriageAction::Untrash => "Move out of trash".into(),
+            TriageAction::Junk => "Mark as junk".into(),
+            TriageAction::Relabel { .. } => "Change labels".into(),
         }
     }
 }
@@ -61,6 +100,8 @@ impl FromStr for TriageAction {
             "star" => Ok(TriageAction::Star),
             "unstar" => Ok(TriageAction::Unstar),
             "trash" => Ok(TriageAction::Trash),
+            "untrash" => Ok(TriageAction::Untrash),
+            "junk" => Ok(TriageAction::Junk),
             _ => {
                 if let Some(rest) = s.strip_prefix("label:") {
                     label(rest).map(TriageAction::AddLabel)

@@ -122,7 +122,10 @@ impl Sidebar {
     }
 
     fn is_expanded(&self, account_id: AccountId) -> bool {
-        let default = self.start_expanded.get().unwrap_or(self.headings.borrow().len() <= 1);
+        let default = self
+            .start_expanded
+            .get()
+            .unwrap_or(self.headings.borrow().len() <= 1);
         self.expanded
             .borrow()
             .get(&account_id)
@@ -159,7 +162,12 @@ impl Sidebar {
         self.rows.borrow_mut().clear();
         self.headings.borrow_mut().clear();
         for label in UNIFIED {
-            self.add_mailbox(Mailbox::Unified(label), unified_name(label), mailbox_icon(label), 0);
+            self.add_mailbox(
+                Mailbox::Unified(label),
+                unified_name(label),
+                mailbox_icon(label),
+                0,
+            );
         }
         for (account, labels) in accounts {
             let (row, chevron, count) = heading(account);

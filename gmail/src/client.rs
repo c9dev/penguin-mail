@@ -180,6 +180,17 @@ impl GmailClient {
         Ok(())
     }
 
+    pub async fn untrash(&self, id: &str) -> Result<(), GmailError> {
+        let _: Message = self
+            .call(cost::TRASH, || {
+                self.http()
+                    .post(self.url(&format!("messages/{id}/untrash")))
+                    .json(&json!({}))
+            })
+            .await?;
+        Ok(())
+    }
+
     /// Sends a complete RFC 822 message. `thread_id` files a reply in its thread.
     pub async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<Message, GmailError> {
         let body = raw_message(raw, thread_id);

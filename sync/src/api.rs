@@ -51,6 +51,8 @@ pub trait GmailApi: Send + Sync + 'static {
 
     fn trash(&self, id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
 
+    fn untrash(&self, id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
+
     /// Sends raw RFC 822 bytes. Returns the new message id.
     fn send(
         &self,
@@ -155,6 +157,10 @@ impl GmailApi for AccountClient {
 
     async fn trash(&self, id: &str) -> Result<(), GmailError> {
         self.client.trash(id).await
+    }
+
+    async fn untrash(&self, id: &str) -> Result<(), GmailError> {
+        self.client.untrash(id).await
     }
 
     async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, GmailError> {
