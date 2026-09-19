@@ -1,4 +1,6 @@
 //! The middle pane: threads of the current mailbox, or search results.
+//! One page of rows loads at a time; scrolling near the end asks for more.
+//! Every row is held once, behind an `Rc`, and shared with the list model.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashSet;
@@ -21,6 +23,9 @@ pub enum Picked {
 
 type Key = (AccountId, String, Option<String>);
 
+/// A row shared between the list model and the rows this pane keeps.
+pub type Row = Rc<ThreadSummary>;
+
 fn key(row: &ThreadSummary) -> Key {
     (row.account_id, row.id.clone(), row.message_id.clone())
 }
@@ -40,7 +45,8 @@ pub struct ThreadList {
     store: gio::ListStore,
     selection: gtk::MultiSelection,
     view: gtk::ListView,
-    rows: Rc<RefCell<Vec<ThreadSummary>>>,
+    scroller: gtk::ScrolledWindow,
+    rows: Rc<RefCell<Vec<Row>>>,
     /// The rows of the drag in progress.
     dragged: Rc<RefCell<Vec<ThreadSummary>>>,
     show_accounts: Rc<Cell<bool>>,
@@ -57,7 +63,7 @@ impl ThreadList {
         let store = gio::ListStore::new::<glib::BoxedAnyObject>();
         let selection = gtk::MultiSelection::new(Some(store.clone()));
         let show_accounts = Rc::new(Cell::new(true));
-        let rows: Rc<RefCell<Vec<ThreadSummary>>> = Rc::new(RefCell::new(Vec::new()));
+        let rows: Rc<RefCell<Vec<Row>>> = Rc::new(RefCell::new(Vec::new()));
         let dragged: Rc<RefCell<Vec<ThreadSummary>>> = Rc::new(RefCell::new(Vec::new()));
         let factory = gtk::SignalListItemFactory::new();
         let (all, drag_rows, picked) = (Rc::clone(&rows), Rc::clone(&dragged), selection.clone());
@@ -79,13 +85,14 @@ impl ThreadList {
             source.connect_prepare(move |_, _, _| {
                 let position = list_item.position();
                 let rows = all.borrow();
+                let copy = |row: &Row| (**row).clone();
                 let taken: Vec<ThreadSummary> = if picked.is_selected(position) {
                     (0..rows.len() as u32)
                         .filter(|p| picked.is_selected(*p))
-                        .filter_map(|p| rows.get(p as usize).cloned())
+                        .filter_map(|p| rows.get(p as usize).map(copy))
                         .collect()
                 } else {
-                    rows.get(position as usize).cloned().into_iter().collect()
+                    rows.get(position as usize).map(copy).into_iter().collect()
                 };
                 if taken.is_empty() {
                     return None;
@@ -119,7 +126,7 @@ impl ThreadList {
             ) else {
                 return;
             };
-            let thread = object.borrow::<ThreadSummary>();
+            let thread = object.borrow::<Row>();
             let vip = starred_people
                 .borrow()
                 .contains(&thread.from_email.to_lowercase());
@@ -225,6 +232,7 @@ impl ThreadList {
             store,
             selection,
             view,
+            scroller,
             rows,
             dragged,
             show_accounts,
@@ -256,8 +264,7 @@ impl ThreadList {
     pub fn set_show_accounts(&self, show: bool) {
         if self.show_accounts.replace(show) != show {
             // Rebind every row so account dots appear or disappear.
-            let rows = self.rows.borrow().clone();
-            self.replace_all(&rows);
+            self.rebind();
         }
     }
 
@@ -271,9 +278,25 @@ impl ThreadList {
     pub fn set_vips(&self, vips: HashSet<String>) {
         if *self.vips.borrow() != vips {
             *self.vips.borrow_mut() = vips;
-            let rows = self.rows.borrow().clone();
-            self.replace_all(&rows);
+            self.rebind();
         }
+    }
+
+    /// How many rows are loaded. The mailbox may hold more.
+    pub fn loaded(&self) -> usize {
+        self.rows.borrow().len()
+    }
+
+    /// Runs `more` when the view scrolls within a screenful of the end.
+    pub fn connect_more(&self, more: impl Fn() + 'static) {
+        self.scroller
+            .vadjustment()
+            .connect_value_changed(move |adjustment| {
+                let seen = adjustment.value() + adjustment.page_size();
+                if adjustment.upper() - seen < adjustment.page_size() {
+                    more();
+                }
+            });
     }
 
     pub fn show_loading(&self) {
@@ -282,7 +305,7 @@ impl ThreadList {
 
     /// Updates the list with one splice, keeping the selected rows selected
     /// when they are still present.
-    pub fn set_rows(&self, rows: Vec<ThreadSummary>, empty_title: &str, empty_icon: &str) {
+    pub fn set_rows(&self, rows: Vec<Row>, empty_title: &str, empty_icon: &str) {
         let keys: Vec<Key> = self.selected_rows().iter().map(key).collect();
         self.muted.set(true);
         let old = self.rows.replace(rows);
@@ -291,8 +314,7 @@ impl ThreadList {
             if let Some(change) = splice(&old, &new) {
                 let added: Vec<glib::BoxedAnyObject> = new[change.added]
                     .iter()
-                    .cloned()
-                    .map(glib::BoxedAnyObject::new)
+                    .map(|row| glib::BoxedAnyObject::new(Rc::clone(row)))
                     .collect();
                 self.store.splice(change.position, change.removed, &added);
             }
@@ -309,13 +331,64 @@ impl ThreadList {
             });
     }
 
-    fn replace_all(&self, rows: &[ThreadSummary]) {
+    /// Adds a page of older rows at the end, leaving the selection alone.
+    pub fn append(&self, rows: Vec<Row>) {
+        if rows.is_empty() {
+            return;
+        }
+        self.muted.set(true);
+        let added: Vec<glib::BoxedAnyObject> = rows
+            .iter()
+            .map(|row| glib::BoxedAnyObject::new(Rc::clone(row)))
+            .collect();
+        let at = self.store.n_items();
+        self.rows.borrow_mut().extend(rows);
+        self.store.splice(at, 0, &added);
+        self.muted.set(false);
+        self.stack.set_visible_child_name("list");
+    }
+
+    /// Puts fresh rows in place of the ones belonging to `changed` threads.
+    /// Rows that came back keep the list in date order; the rest drop out.
+    pub fn replace_threads(&self, changed: &[(AccountId, String)], fresh: Vec<ThreadSummary>) {
+        let touched = |row: &ThreadSummary| {
+            changed
+                .iter()
+                .any(|(account_id, id)| *account_id == row.account_id && *id == row.id)
+        };
+        let mut rows: Vec<Row> = self
+            .rows
+            .borrow()
+            .iter()
+            .filter(|row| !touched(row))
+            .map(Rc::clone)
+            .collect();
+        // Past the last loaded row the list is incomplete, so a row that
+        // sorts below it waits for the next page instead of jumping in.
+        let floor = rows.last().map(Rc::clone);
+        for row in fresh {
+            let row = Rc::new(row);
+            if floor.as_ref().is_some_and(|last| order(&row) < order(last)) {
+                continue;
+            }
+            let at = rows.partition_point(|held| order(held) > order(&row));
+            rows.insert(at, row);
+        }
+        let title = self.empty.title().to_string();
+        let icon = self
+            .empty
+            .icon_name()
+            .map(|i| i.to_string())
+            .unwrap_or_default();
+        self.set_rows(rows, &title, &icon);
+    }
+
+    fn replace_all(&self, rows: &[Row]) {
         let keys: Vec<Key> = self.selected_rows().iter().map(key).collect();
         self.muted.set(true);
         let objects: Vec<glib::BoxedAnyObject> = rows
             .iter()
-            .cloned()
-            .map(glib::BoxedAnyObject::new)
+            .map(|row| glib::BoxedAnyObject::new(Rc::clone(row)))
             .collect();
         self.store.splice(0, self.store.n_items(), &objects);
         self.reselect(&keys);
@@ -345,7 +418,7 @@ impl ThreadList {
         let mut picked: Vec<ThreadSummary> = self
             .positions()
             .into_iter()
-            .filter_map(|p| rows.get(p).cloned())
+            .filter_map(|p| rows.get(p).map(|row| (**row).clone()))
             .collect();
         match picked.len() {
             0 => Picked::None,
@@ -358,7 +431,7 @@ impl ThreadList {
         let rows = self.rows.borrow();
         self.positions()
             .into_iter()
-            .filter_map(|p| rows.get(p).cloned())
+            .filter_map(|p| rows.get(p).map(|row| (**row).clone()))
             .collect()
     }
 
@@ -414,17 +487,17 @@ impl ThreadList {
             .skip(last + 1)
             .find(|(p, _)| !positions.contains(p))
             .or_else(|| rows.iter().enumerate().take(first).next_back())
-            .map(|(_, row)| row.clone())
+            .map(|(_, row)| (**row).clone())
     }
 
     /// Keeps only the rows `keep` accepts, leaving the rest selected as they were.
     pub fn retain(&self, keep: impl Fn(&ThreadSummary) -> bool) {
-        let rows: Vec<ThreadSummary> = self
+        let rows: Vec<Row> = self
             .rows
             .borrow()
             .iter()
             .filter(|r| keep(r))
-            .cloned()
+            .map(Rc::clone)
             .collect();
         let title = self.empty.title().to_string();
         let icon = self
@@ -439,7 +512,10 @@ impl ThreadList {
     pub fn connect_open(&self, open: impl Fn(ThreadSummary) + 'static) {
         let rows = Rc::clone(&self.rows);
         self.view.connect_activate(move |_, position| {
-            let row = rows.borrow().get(position as usize).cloned();
+            let row = rows
+                .borrow()
+                .get(position as usize)
+                .map(|row| (**row).clone());
             if let Some(row) = row {
                 open(row);
             }
@@ -463,4 +539,10 @@ impl ThreadList {
     pub fn search_open(&self) -> bool {
         self.search_bar.is_search_mode()
     }
+}
+
+/// Where a row sorts in the list: newest first, ties broken as the store
+/// breaks them.
+fn order(row: &ThreadSummary) -> (i64, i64, &str) {
+    (row.last_message_at, -row.account_id, row.id.as_str())
 }
