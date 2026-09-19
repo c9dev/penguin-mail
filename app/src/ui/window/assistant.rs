@@ -770,10 +770,24 @@ impl MainWindow {
         vacation.start = day("first_day")?;
         // Gmail stops at `end`; the last day counts, so end the next midnight.
         vacation.end = day("last_day")?.map(|t| t + 24 * 60 * 60 * 1000);
+        if vacation.enabled && vacation.subject.trim().is_empty() {
+            vacation.subject = "Out of office".into();
+        }
         let summary = if vacation.enabled {
+            let day = |t: Option<i64>| {
+                t.and_then(crate::format::local)
+                    .map(|d| d.format("%a %-d %b").to_string())
+            };
+            let dates = match (day(vacation.start), day(vacation.end.map(|t| t - 1))) {
+                (Some(first), Some(last)) => format!(" from {first} to {last}"),
+                (None, Some(last)) => format!(" until {last}"),
+                (Some(first), None) => format!(" from {first}"),
+                (None, None) => String::new(),
+            };
+            let preview: String = vacation.body.chars().take(160).collect();
             format!(
-                "Turn on the automatic reply for {} with the subject “{}”?",
-                account.email, vacation.subject
+                "Turn on the automatic reply for {}{dates}?\n\n“{}”\n{}",
+                account.email, vacation.subject, preview
             )
         } else {
             format!("Turn off the automatic reply for {}?", account.email)
