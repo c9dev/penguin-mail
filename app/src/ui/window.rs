@@ -19,7 +19,7 @@ use mailrs_sync::TriageAction;
 use super::conversation::{Action, ConversationView, OpenThread};
 use super::sidebar::Sidebar;
 use super::thread_list::{Picked, ThreadList};
-use super::{Mailbox, summarize_search, welcome};
+use super::{Folder, Mailbox, summarize_search, welcome};
 use crate::app::App;
 use crate::compose::{self, Draft, OutgoingAttachment, ReplyKind};
 use crate::core::Core;
@@ -89,6 +89,10 @@ fn done_message(action: &TriageAction, count: usize, threaded: bool) -> Option<S
         TriageAction::Trash => "Moved to Trash".into(),
         TriageAction::Junk if many => format!("Marked {count} {noun} as junk"),
         TriageAction::Junk => "Marked as junk".into(),
+        TriageAction::Untrash | TriageAction::NotJunk if many => {
+            format!("Moved {count} {noun} to the Inbox")
+        }
+        TriageAction::Untrash | TriageAction::NotJunk => "Moved to the Inbox".into(),
         TriageAction::AddLabel(_) | TriageAction::RemoveLabel(_) | TriageAction::Relabel { .. } => {
             "Labels changed".into()
         }
@@ -354,7 +358,11 @@ impl MainWindow {
             this.stack.set_visible_child_name(page);
             let mailbox = this.mailbox.borrow().clone();
             let still_exists = match &mailbox {
-                Mailbox::Label { account_id, .. } => data.iter().any(|(a, _)| a.id == *account_id),
+                Mailbox::Label { account_id, .. }
+                | Mailbox::Folder {
+                    account_id: Some(account_id),
+                    ..
+                } => data.iter().any(|(a, _)| a.id == *account_id),
                 _ => true,
             };
             if !still_exists {
@@ -434,7 +442,23 @@ impl MainWindow {
         if self.split.is_collapsed() {
             self.split.set_show_sidebar(false);
         }
-        self.reload_list();
+        self.conversation.set_folder(mailbox.folder());
+        match mailbox {
+            Mailbox::Folder { account_id, folder } => {
+                let (title, icon) = empty_state(&mailbox);
+                self.fetch_remote(folder.query().into(), account_id, 100, title, icon);
+            }
+            _ => self.reload_list(),
+        }
+    }
+
+    /// Fetches a folder that lives only in Gmail again.
+    fn reload_folder(self: &Rc<Self>) {
+        let mailbox = self.mailbox.borrow().clone();
+        if let Mailbox::Folder { account_id, folder } = mailbox {
+            let (title, icon) = empty_state(&mailbox);
+            self.fetch_remote(folder.query().into(), account_id, 100, title, icon);
+        }
     }
 
     fn reload_list(self: &Rc<Self>) {
@@ -493,12 +517,25 @@ impl MainWindow {
             query: query.clone(),
             account_id: scope,
         };
-        self.list_generation.set(self.list_generation.get() + 1);
-        let generation = self.list_generation.get();
         self.sidebar.clear_selection();
         self.list.set_title("Search", &query);
-        self.list.show_loading();
         self.conversation.clear();
+        self.conversation.set_folder(None);
+        self.fetch_remote(query, scope, 50, "No Results", "system-search-symbolic");
+    }
+
+    /// Lists what a Gmail search finds, in every account or in `scope`.
+    fn fetch_remote(
+        self: &Rc<Self>,
+        query: String,
+        scope: Option<AccountId>,
+        limit: usize,
+        empty_title: &'static str,
+        empty_icon: &'static str,
+    ) {
+        self.list_generation.set(self.list_generation.get() + 1);
+        let generation = self.list_generation.get();
+        self.list.show_loading();
         let targets: Vec<Account> = self
             .accounts
             .borrow()
@@ -515,7 +552,7 @@ impl MainWindow {
                 async move {
                     match sync {
                         Some(sync) => {
-                            core.call(async move { sync.search(&query, 50).await })
+                            core.call(async move { sync.search(&query, limit).await })
                                 .await
                         }
                         None => Ok(Vec::new()),
@@ -530,14 +567,13 @@ impl MainWindow {
             for (account, result) in targets.iter().zip(results) {
                 match result {
                     Ok(found) => hits.extend(found),
-                    Err(err) => this.toast(&format!("Search failed for {}: {err}", account.email)),
+                    Err(err) => {
+                        this.toast(&format!("Could not load mail for {}: {err}", account.email))
+                    }
                 }
             }
-            this.list.set_rows(
-                summarize_search(hits, threaded),
-                "No Results",
-                "system-search-symbolic",
-            );
+            this.list
+                .set_rows(summarize_search(hits, threaded), empty_title, empty_icon);
             this.follow_selection();
         });
     }
@@ -873,8 +909,11 @@ impl MainWindow {
             Action::Reply(kind) => self.reply(kind),
             Action::EditDraft => self.edit_draft(),
             Action::Archive => self.triage(TriageAction::Archive),
-            Action::Trash => self.triage(TriageAction::Trash),
-            Action::Junk => self.triage(TriageAction::Junk),
+            Action::Trash => self.trash(),
+            Action::Junk => self.triage(match self.mailbox.borrow().folder() {
+                Some(Folder::Junk) => TriageAction::NotJunk,
+                _ => TriageAction::Junk,
+            }),
             Action::ToggleStar => {
                 let (_, starred) = self.target_marks();
                 self.triage(if starred {
@@ -931,10 +970,7 @@ impl MainWindow {
         if targets.is_empty() {
             return;
         }
-        if matches!(
-            action,
-            TriageAction::Archive | TriageAction::Trash | TriageAction::Junk
-        ) {
+        if self.leaves_list(&action) {
             let next = self.list.neighbour_of_selected();
             self.conversation.clear();
             self.list.unselect();
@@ -947,6 +983,81 @@ impl MainWindow {
             }
         }
         self.apply(targets, action, true);
+    }
+
+    /// In the Trash, the trash button puts mail back in the inbox. Gmail
+    /// empties the Trash itself after 30 days.
+    /// The Delete key. Gmail's permission for mailrs covers moving mail to
+    /// the Trash, not erasing it, so inside the Trash it only explains that.
+    fn delete_key(self: &Rc<Self>) {
+        if self.mailbox.borrow().folder() == Some(Folder::Trash) {
+            self.toast("Gmail deletes mail in the Trash for good after 30 days");
+        } else {
+            self.triage(TriageAction::Trash);
+        }
+    }
+
+    fn trash(self: &Rc<Self>) {
+        if self.mailbox.borrow().folder() == Some(Folder::Trash) {
+            self.triage(TriageAction::Untrash);
+        } else {
+            self.triage(TriageAction::Trash);
+        }
+    }
+
+    /// Whether `action` takes the targets out of the list on screen.
+    fn leaves_list(&self, action: &TriageAction) -> bool {
+        let folder = self.mailbox.borrow().folder();
+        match action {
+            TriageAction::Archive => folder != Some(Folder::AllMail),
+            TriageAction::Trash => folder != Some(Folder::Trash),
+            TriageAction::Junk => folder != Some(Folder::Junk),
+            TriageAction::Untrash => folder == Some(Folder::Trash),
+            TriageAction::NotJunk => folder == Some(Folder::Junk),
+            _ => false,
+        }
+    }
+
+    /// Drops rows that no longer belong in the Gmail folder on screen. The
+    /// local store cannot list these folders, so rows go one by one.
+    fn prune_folder(self: &Rc<Self>, targets: &[Target]) {
+        let Some(folder) = self.mailbox.borrow().folder() else {
+            return;
+        };
+        let targets = targets.to_vec();
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let gone = this
+                .core
+                .read(move |c| {
+                    let mut gone = Vec::new();
+                    for target in targets {
+                        let held =
+                            messages::thread_messages(c, target.account_id, &target.thread_id)?
+                                .iter()
+                                .filter(|m| target.message_id.as_ref().is_none_or(|id| &m.id == id))
+                                .any(|m| folder.holds(&m.label_ids));
+                        if !held {
+                            gone.push(target);
+                        }
+                    }
+                    Ok(gone)
+                })
+                .await
+                .unwrap_or_default();
+            if gone.is_empty() {
+                return;
+            }
+            this.list
+                .retain(|row| !gone.contains(&Target::from_row(row)));
+            if this.conversation.with_open(|o| {
+                gone.iter()
+                    .any(|t| t.account_id == o.account_id && t.thread_id == o.thread_id)
+            }) == Some(true)
+            {
+                this.conversation.clear();
+            }
+        });
     }
 
     /// Runs `action` on every target. With `record`, offers an undo.
@@ -980,8 +1091,11 @@ impl MainWindow {
                 return this.toast(&format!("{} failed: {err}", action.describe()));
             }
             if !record {
+                // An undo can put rows back into a Gmail folder.
+                this.reload_folder();
                 return;
             }
+            this.prune_folder(&targets);
             let count = targets.len();
             *this.undo.borrow_mut() = Some((targets, action.inverse()));
             if let Some(done) = done_message(&action, count, this.settings().threading) {
@@ -1414,6 +1528,7 @@ impl MainWindow {
             "check",
             Box::new(|win| {
                 win.core.poke_all();
+                win.reload_folder();
                 win.toast("Checking for mail");
             }),
         );
@@ -1423,8 +1538,8 @@ impl MainWindow {
         add("reply-all", Box::new(|win| win.reply(ReplyKind::ReplyAll)));
         add("forward", Box::new(|win| win.reply(ReplyKind::Forward)));
         add("archive", Box::new(|win| win.triage(TriageAction::Archive)));
-        add("trash", Box::new(|win| win.triage(TriageAction::Trash)));
-        add("junk", Box::new(|win| win.triage(TriageAction::Junk)));
+        add("trash", Box::new(|win| win.trash()));
+        add("junk", Box::new(|win| win.act(Action::Junk)));
         add(
             "label",
             Box::new(|win| win.conversation.label_button.popup()),
@@ -1597,7 +1712,7 @@ impl MainWindow {
             }
             match key {
                 gdk::Key::Delete | gdk::Key::BackSpace | gdk::Key::KP_Delete => {
-                    win.triage(TriageAction::Trash);
+                    win.delete_key();
                     return glib::Propagation::Stop;
                 }
                 gdk::Key::Escape => {
@@ -1617,7 +1732,7 @@ impl MainWindow {
                 Some('j') => win.list.step(1),
                 Some('k') => win.list.step(-1),
                 Some('e') => win.triage(TriageAction::Archive),
-                Some('#') => win.triage(TriageAction::Trash),
+                Some('#') => win.delete_key(),
                 Some('s') => win.act(Action::ToggleStar),
                 Some('u') => win.act(Action::ToggleRead),
                 Some('r') => win.reply(ReplyKind::Reply),
@@ -1769,6 +1884,7 @@ impl MainWindow {
             let mailbox = self.mailbox.borrow().clone();
             match mailbox {
                 Mailbox::Search { query, .. } => self.search(query),
+                Mailbox::Folder { .. } => self.reload_folder(),
                 _ => self.reload_list(),
             }
         }
@@ -1913,6 +2029,13 @@ fn empty_state(mailbox: &Mailbox) -> (&'static str, &'static str) {
         Mailbox::Unified(label) => *label,
         Mailbox::Label { label_id, .. } => label_id.as_str(),
         Mailbox::Search { .. } => return ("No Results", "system-search-symbolic"),
+        Mailbox::Folder { folder, .. } => {
+            return match folder {
+                Folder::Junk => ("No Junk", folder.icon()),
+                Folder::Trash => ("Trash Is Empty", folder.icon()),
+                Folder::AllMail => ("No Mail", folder.icon()),
+            };
+        }
     };
     match label {
         "INBOX" => ("Inbox Zero", "mailrs-inbox-symbolic"),

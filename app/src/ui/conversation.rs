@@ -13,6 +13,7 @@ use gtk::{gdk, gio};
 use mailrs_domain::{AccountId, MessageBody, MessageMeta};
 use webkit::prelude::*;
 
+use super::Folder;
 use crate::compose::ReplyKind;
 use crate::render::{BodyState, Conversation, MessageView, Theme, render};
 
@@ -100,6 +101,8 @@ pub struct ConversationView {
     many: adw::StatusPage,
     many_read: gtk::Button,
     many_star: gtk::Button,
+    many_junk: gtk::Button,
+    many_trash: gtk::Button,
     stack: gtk::Stack,
     webview: webkit::WebView,
     content: webkit::UserContentManager,
@@ -158,7 +161,8 @@ impl ConversationView {
             .line_spacing(10)
             .align(0.5)
             .build();
-        let (mut many_read, mut many_star) = (None, None);
+        let (mut many_read, mut many_star, mut many_junk, mut many_trash) =
+            (None, None, None, None);
         for (label, action) in [
             ("Archive", "win.archive"),
             ("Mark as Read", "win.toggle-read"),
@@ -175,13 +179,17 @@ impl ConversationView {
                 "win.archive" => pill.add_css_class("suggested-action"),
                 "win.toggle-read" => many_read = Some(pill.clone()),
                 "win.toggle-star" => many_star = Some(pill.clone()),
+                "win.junk" => many_junk = Some(pill.clone()),
+                "win.trash" => many_trash = Some(pill.clone()),
                 _ => {}
             }
             bulk.append(&pill);
         }
-        let (many_read, many_star) = (
+        let (many_read, many_star, many_junk, many_trash) = (
             many_read.expect("the bulk actions include read"),
             many_star.expect("the bulk actions include star"),
+            many_junk.expect("the bulk actions include junk"),
+            many_trash.expect("the bulk actions include trash"),
         );
         let many = adw::StatusPage::builder()
             .icon_name("mailrs-inbox-symbolic")
@@ -294,6 +302,8 @@ impl ConversationView {
             many,
             many_read,
             many_star,
+            many_junk,
+            many_trash,
             stack,
             webview,
             content,
@@ -379,7 +389,31 @@ impl ConversationView {
         *self.filter.borrow_mut() = Some(filter);
     }
 
-    /// Shows the bulk-action page for `count` selected rows.
+    /// Adjusts the trash and junk buttons to the folder on screen: in the
+    /// Trash, trash puts mail back; in Junk, junk marks it as not junk.
+    pub fn set_folder(&self, folder: Option<Folder>) {
+        let (trash_icon, trash_tip) = match folder {
+            Some(Folder::Trash) => ("mailrs-inbox-symbolic", "Move to Inbox"),
+            _ => ("user-trash-symbolic", "Move to Trash (Delete)"),
+        };
+        self.buttons.trash.set_icon_name(trash_icon);
+        self.buttons.trash.set_tooltip_text(Some(trash_tip));
+        let (junk_icon, junk_tip) = match folder {
+            Some(Folder::Junk) => ("mail-mark-notjunk-symbolic", "Not Junk (Ctrl+Shift+J)"),
+            _ => ("mail-mark-junk-symbolic", "Junk (Ctrl+Shift+J)"),
+        };
+        self.buttons.junk.set_icon_name(junk_icon);
+        self.buttons.junk.set_tooltip_text(Some(junk_tip));
+        self.many_trash.set_label(match folder {
+            Some(Folder::Trash) => "Move to Inbox",
+            _ => "Move to Trash",
+        });
+        self.many_junk.set_label(match folder {
+            Some(Folder::Junk) => "Not Junk",
+            _ => "Junk",
+        });
+    }
+
     pub fn showing_many(&self) -> bool {
         self.stack.visible_child_name().as_deref() == Some("many")
     }

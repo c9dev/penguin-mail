@@ -29,6 +29,58 @@ pub enum Mailbox {
         query: String,
         account_id: Option<AccountId>,
     },
+    /// Mail Gmail keeps out of the regular listing, fetched on demand.
+    Folder {
+        account_id: Option<AccountId>,
+        folder: Folder,
+    },
+}
+
+/// Gmail's Spam, Trash, and All Mail, which the local window does not hold.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Folder {
+    Junk,
+    Trash,
+    AllMail,
+}
+
+impl Folder {
+    pub const ALL: [Folder; 3] = [Folder::Junk, Folder::Trash, Folder::AllMail];
+
+    /// The Gmail search that lists this folder.
+    pub fn query(self) -> &'static str {
+        match self {
+            Folder::Junk => "in:spam",
+            Folder::Trash => "in:trash",
+            Folder::AllMail => "-in:spam -in:trash",
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Folder::Junk => "Junk",
+            Folder::Trash => "Trash",
+            Folder::AllMail => "All Mail",
+        }
+    }
+
+    pub fn icon(self) -> &'static str {
+        match self {
+            Folder::Junk => "mail-mark-junk-symbolic",
+            Folder::Trash => "user-trash-symbolic",
+            Folder::AllMail => "mailrs-archive-symbolic",
+        }
+    }
+
+    /// Whether a message with `labels` still belongs in this folder.
+    pub fn holds(self, labels: &[String]) -> bool {
+        let has = |l: &str| labels.iter().any(|x| x == l);
+        match self {
+            Folder::Junk => has("SPAM"),
+            Folder::Trash => has("TRASH"),
+            Folder::AllMail => !has("SPAM") && !has("TRASH"),
+        }
+    }
 }
 
 impl Mailbox {
@@ -37,6 +89,7 @@ impl Mailbox {
             Mailbox::Unified(label) => unified_name(label).into(),
             Mailbox::Label { name, .. } => name.clone(),
             Mailbox::Search { .. } => "Search".into(),
+            Mailbox::Folder { folder, .. } => folder.name().into(),
         }
     }
 
@@ -48,7 +101,7 @@ impl Mailbox {
                 label_id,
                 ..
             } => Some(ThreadFilter::account(*account_id, label_id.clone())),
-            Mailbox::Search { .. } => None,
+            Mailbox::Search { .. } | Mailbox::Folder { .. } => None,
         }
     }
 
@@ -56,7 +109,14 @@ impl Mailbox {
         match self {
             Mailbox::Unified(_) => None,
             Mailbox::Label { account_id, .. } => Some(*account_id),
-            Mailbox::Search { account_id, .. } => *account_id,
+            Mailbox::Search { account_id, .. } | Mailbox::Folder { account_id, .. } => *account_id,
+        }
+    }
+
+    pub fn folder(&self) -> Option<Folder> {
+        match self {
+            Mailbox::Folder { folder, .. } => Some(*folder),
+            _ => None,
         }
     }
 

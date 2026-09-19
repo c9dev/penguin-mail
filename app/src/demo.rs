@@ -270,6 +270,32 @@ fn samples() -> Vec<Sample> {
             html: None,
             attachments: &[],
         },
+        Sample {
+            account: 0,
+            thread: "t-prize",
+            id: "prize-1",
+            from: ("Rewards Desk", "winner@prize-center.example"),
+            to: &[ME],
+            subject: "You have been selected!!!",
+            minutes_ago: 5 * HOUR,
+            labels: &["SPAM", "UNREAD"],
+            text: "Claim your gift card today. Offer ends at midnight.",
+            html: None,
+            attachments: &[],
+        },
+        Sample {
+            account: 0,
+            thread: "t-webinar",
+            id: "webinar-1",
+            from: ("Growth Weekly", "news@growth.example"),
+            to: &[ME],
+            subject: "Last chance: webinar seats",
+            minutes_ago: 2 * DAY,
+            labels: &["TRASH"],
+            text: "Seats for Thursday's webinar are almost gone.",
+            html: None,
+            attachments: &[],
+        },
     ]
 }
 
@@ -426,26 +452,64 @@ impl GmailApi for DemoApi {
         query: &str,
         _page_token: Option<&str>,
     ) -> std::result::Result<MessagePage, GmailError> {
-        let words: Vec<String> = query
-            .split_whitespace()
-            .map(|w| w.rsplit(':').next().unwrap_or(w).to_lowercase())
-            .filter(|w| !w.is_empty() && !w.starts_with('{'))
-            .collect();
+        // `in:` and `-in:` pick labels; other words match the text.
+        let label = |name: &str| match name {
+            "spam" => "SPAM".to_string(),
+            "trash" => "TRASH".to_string(),
+            "inbox" => "INBOX".to_string(),
+            "sent" => "SENT".to_string(),
+            other => other.to_string(),
+        };
+        let mut required: Vec<String> = Vec::new();
+        let mut excluded: Vec<String> = Vec::new();
+        let mut words: Vec<String> = Vec::new();
+        for word in query.split_whitespace() {
+            if let Some(name) = word.strip_prefix("-in:") {
+                excluded.push(label(name));
+            } else if let Some(name) = word.strip_prefix("in:") {
+                required.push(label(name));
+            } else {
+                let w = word.rsplit(':').next().unwrap_or(word).to_lowercase();
+                if !w.is_empty() && !w.starts_with('{') {
+                    words.push(w);
+                }
+            }
+        }
+        // Gmail leaves Spam and Trash out unless asked for.
+        for hidden in ["SPAM", "TRASH"] {
+            if !required.iter().any(|l| l == hidden) {
+                excluded.push(hidden.to_string());
+            }
+        }
         let account_id = self.account_id;
         let found = self
             .db
             .read(move |c| {
                 let mut stmt = c.prepare(
-                    "SELECT id, thread_id, lower(subject || ' ' || snippet || ' ' || coalesce(from_name, '') || ' ' || coalesce(from_addr, '')) \
-                     FROM messages WHERE account_id = ?1 ORDER BY date DESC",
+                    "SELECT m.id, m.thread_id, lower(m.subject || ' ' || m.snippet || ' ' || coalesce(m.from_name, '') || ' ' || coalesce(m.from_addr, '')), \
+                     coalesce((SELECT group_concat(l.label_id, ' ') FROM message_labels l \
+                               WHERE l.account_id = m.account_id AND l.message_id = m.id), '') \
+                     FROM messages m WHERE m.account_id = ?1 ORDER BY m.date DESC",
                 )?;
                 let rows = stmt
-                    .query_map([account_id], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?)))?
+                    .query_map([account_id], |r| {
+                        Ok((
+                            r.get::<_, String>(0)?,
+                            r.get::<_, String>(1)?,
+                            r.get::<_, String>(2)?,
+                            r.get::<_, String>(3)?,
+                        ))
+                    })?
                     .collect::<rusqlite::Result<Vec<_>>>()?;
                 Ok(rows
                     .into_iter()
-                    .filter(|(_, _, text)| words.iter().all(|w| text.contains(w.as_str())))
-                    .map(|(id, thread_id, _)| MessageRef { id, thread_id })
+                    .filter(|(_, _, text, labels)| {
+                        let labels: Vec<&str> = labels.split(' ').collect();
+                        words.iter().all(|w| text.contains(w.as_str()))
+                            && required.iter().all(|l| labels.contains(&l.as_str()))
+                            && !excluded.iter().any(|l| labels.contains(&l.as_str()))
+                    })
+                    .map(|(id, thread_id, _, _)| MessageRef { id, thread_id })
                     .collect::<Vec<_>>())
             })
             .await

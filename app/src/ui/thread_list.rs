@@ -338,6 +338,24 @@ impl ThreadList {
             .map(|(_, row)| row.clone())
     }
 
+    /// Keeps only the rows `keep` accepts, leaving the rest selected as they were.
+    pub fn retain(&self, keep: impl Fn(&ThreadSummary) -> bool) {
+        let rows: Vec<ThreadSummary> = self
+            .rows
+            .borrow()
+            .iter()
+            .filter(|r| keep(r))
+            .cloned()
+            .collect();
+        let title = self.empty.title().to_string();
+        let icon = self
+            .empty
+            .icon_name()
+            .map(|i| i.to_string())
+            .unwrap_or_default();
+        self.set_rows(rows, &title, &icon);
+    }
+
     pub fn open_search(&self) {
         self.search_bar.set_search_mode(true);
         self.search_entry.grab_focus();

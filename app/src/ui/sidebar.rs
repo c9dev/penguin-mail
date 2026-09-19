@@ -8,7 +8,7 @@ use adw::prelude::*;
 use gtk::{gio, pango};
 use mailrs_domain::{Account, AccountId, AccountState, Label, LabelKind};
 
-use super::{Mailbox, UNIFIED, account_label_name, mailbox_icon, unified_name};
+use super::{Folder, Mailbox, UNIFIED, account_label_name, mailbox_icon, unified_name};
 use crate::format::account_color_index;
 
 struct Row {
@@ -169,6 +169,13 @@ impl Sidebar {
                 0,
             );
         }
+        for folder in Folder::ALL {
+            let mailbox = Mailbox::Folder {
+                account_id: None,
+                folder,
+            };
+            self.add_mailbox(mailbox, folder.name(), folder.icon(), 0);
+        }
         for (account, labels) in accounts {
             let (row, chevron, count) = heading(account);
             self.list.append(&row);
@@ -185,6 +192,13 @@ impl Sidebar {
                     name: account_label_name(label).into(),
                 };
                 self.add_mailbox(mailbox, account_label_name(label), mailbox_icon(label), 1);
+            }
+            for folder in Folder::ALL {
+                let mailbox = Mailbox::Folder {
+                    account_id: Some(account.id),
+                    folder,
+                };
+                self.add_mailbox(mailbox, folder.name(), folder.icon(), 1);
             }
             let mut user: Vec<&Label> = labels
                 .iter()

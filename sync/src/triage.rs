@@ -15,6 +15,8 @@ pub enum TriageAction {
     Untrash,
     /// Moves out of the inbox and into Spam.
     Junk,
+    /// Moves out of Spam and back to the inbox.
+    NotJunk,
     /// Any label change; the undo of most other actions.
     Relabel {
         add: Vec<String>,
@@ -37,6 +39,7 @@ impl TriageAction {
             TriageAction::Trash => (one("TRASH"), one("INBOX")),
             TriageAction::Untrash => (one("INBOX"), one("TRASH")),
             TriageAction::Junk => (one("SPAM"), one("INBOX")),
+            TriageAction::NotJunk => (one("INBOX"), one("SPAM")),
             TriageAction::Relabel { add, remove } => (add.clone(), remove.clone()),
         }
     }
@@ -57,7 +60,8 @@ impl TriageAction {
             TriageAction::RemoveLabel(label) => TriageAction::AddLabel(label.clone()),
             TriageAction::Trash => TriageAction::Untrash,
             TriageAction::Untrash => TriageAction::Trash,
-            TriageAction::Junk => relabel(&["INBOX"], &["SPAM"]),
+            TriageAction::Junk => TriageAction::NotJunk,
+            TriageAction::NotJunk => TriageAction::Junk,
             TriageAction::Relabel { add, remove } => TriageAction::Relabel {
                 add: remove.clone(),
                 remove: add.clone(),
@@ -77,6 +81,7 @@ impl TriageAction {
             TriageAction::Trash => "Move to trash".into(),
             TriageAction::Untrash => "Move out of trash".into(),
             TriageAction::Junk => "Mark as junk".into(),
+            TriageAction::NotJunk => "Mark as not junk".into(),
             TriageAction::Relabel { .. } => "Change labels".into(),
         }
     }
@@ -102,6 +107,7 @@ impl FromStr for TriageAction {
             "trash" => Ok(TriageAction::Trash),
             "untrash" => Ok(TriageAction::Untrash),
             "junk" => Ok(TriageAction::Junk),
+            "notjunk" => Ok(TriageAction::NotJunk),
             _ => {
                 if let Some(rest) = s.strip_prefix("label:") {
                     label(rest).map(TriageAction::AddLabel)

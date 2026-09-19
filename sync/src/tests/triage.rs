@@ -142,6 +142,7 @@ fn every_action_has_an_inverse_that_restores_labels() {
         TriageAction::AddLabel("L".into()),
         TriageAction::Trash,
         TriageAction::Junk,
+        TriageAction::NotJunk,
         TriageAction::Relabel {
             add: vec!["A".into()],
             remove: vec!["B".into()],
