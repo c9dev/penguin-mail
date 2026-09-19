@@ -9,10 +9,10 @@ use gtk::{gio, glib};
 use mailrs_domain::ThreadSummary;
 use mailrs_sync::TriageAction;
 
-use super::categories::Category;
 use super::{MainWindow, Target};
 use crate::compose::ReplyKind;
 use crate::ui::conversation::{Action, ConversationView};
+use mailrs_domain::Category;
 
 /// A window action, given the main window and the conversation's view.
 type ViewAction = Box<dyn Fn(&Rc<MainWindow>, &Rc<ConversationView>)>;

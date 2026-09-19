@@ -1,5 +1,5 @@
-//! Inbox categories, after Apple Mail: Primary, Updates, Promotions, and
-//! Social, built on the category labels Gmail puts on inbox mail.
+//! The category switcher above an inbox and the Categorize Sender action.
+//! `mailrs_domain::Category` holds which Gmail labels each category means.
 
 use std::cell::Cell;
 use std::collections::HashMap;
@@ -7,7 +7,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::glib;
-use mailrs_domain::{AccountId, Filter, FilterAction, FilterCriteria};
+use mailrs_domain::{AccountId, Category, Filter, FilterAction, FilterCriteria, system_label};
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_sync::TriageAction;
 
@@ -16,93 +16,20 @@ use crate::ui::Mailbox;
 use crate::ui::conversation::ConversationView;
 use crate::ui::vacation::missing_scope;
 
-/// Every category label Gmail uses. Mail with none of them counts as Primary.
-const GMAIL_LABELS: [&str; 5] = [
-    "CATEGORY_PERSONAL",
-    "CATEGORY_UPDATES",
-    "CATEGORY_PROMOTIONS",
-    "CATEGORY_SOCIAL",
-    "CATEGORY_FORUMS",
-];
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(super) enum Category {
-    All,
-    Primary,
-    Updates,
-    Promotions,
-    Social,
+fn icon(category: Category) -> &'static str {
+    match category {
+        Category::All => "penguin-mail-inbox-symbolic",
+        Category::Primary => "avatar-default-symbolic",
+        Category::Updates => "preferences-system-notifications-symbolic",
+        Category::Promotions => "penguin-mail-tag-symbolic",
+        Category::Social => "system-users-symbolic",
+    }
 }
 
-impl Category {
-    const ALL: [Category; 5] = [
-        Category::All,
-        Category::Primary,
-        Category::Updates,
-        Category::Promotions,
-        Category::Social,
-    ];
-
-    fn key(self) -> &'static str {
-        match self {
-            Category::All => "all",
-            Category::Primary => "primary",
-            Category::Updates => "updates",
-            Category::Promotions => "promotions",
-            Category::Social => "social",
-        }
-    }
-
-    pub(super) fn from_key(key: &str) -> Option<Category> {
-        Category::ALL.into_iter().find(|c| c.key() == key)
-    }
-
-    pub(super) fn name(self) -> &'static str {
-        match self {
-            Category::All => "All",
-            Category::Primary => "Primary",
-            Category::Updates => "Updates",
-            Category::Promotions => "Promotions",
-            Category::Social => "Social",
-        }
-    }
-
-    fn icon(self) -> &'static str {
-        match self {
-            Category::All => "penguin-mail-inbox-symbolic",
-            Category::Primary => "avatar-default-symbolic",
-            Category::Updates => "preferences-system-notifications-symbolic",
-            Category::Promotions => "penguin-mail-tag-symbolic",
-            Category::Social => "system-users-symbolic",
-        }
-    }
-
-    /// Labels a thread needs one of, and labels it must not have. Gmail
-    /// files mailing lists under Forums; they show with Social here.
-    fn labels(self) -> (&'static [&'static str], &'static [&'static str]) {
-        match self {
-            Category::All => (&[], &[]),
-            Category::Primary => (&[], &GMAIL_LABELS[1..]),
-            Category::Updates => (&["CATEGORY_UPDATES"], &[]),
-            Category::Promotions => (&["CATEGORY_PROMOTIONS"], &[]),
-            Category::Social => (&["CATEGORY_SOCIAL", "CATEGORY_FORUMS"], &[]),
-        }
-    }
-
-    /// The label Gmail gives mail sorted into this category.
-    pub(super) fn gmail_label(self) -> &'static str {
-        match self {
-            Category::All | Category::Primary => "CATEGORY_PERSONAL",
-            Category::Updates => "CATEGORY_UPDATES",
-            Category::Promotions => "CATEGORY_PROMOTIONS",
-            Category::Social => "CATEGORY_SOCIAL",
-        }
-    }
-
-    fn narrow(self, filter: ThreadFilter) -> ThreadFilter {
-        let (any, none) = self.labels();
-        filter.with_labels(any, none)
-    }
+/// `filter` limited to the threads in `category`.
+fn narrow(category: Category, filter: ThreadFilter) -> ThreadFilter {
+    let (any, none) = category.labels();
+    filter.with_labels(any, none)
 }
 
 /// The switcher above an inbox's thread list. Only the chosen category
@@ -126,7 +53,7 @@ impl CategoryBar {
         let (mut names, mut counts) = (HashMap::new(), HashMap::new());
         for category in Category::ALL {
             let content = gtk::Box::builder().spacing(6).build();
-            content.append(&gtk::Image::from_icon_name(category.icon()));
+            content.append(&gtk::Image::from_icon_name(icon(category)));
             let name = gtk::Label::new(Some(category.name()));
             let count = gtk::Label::builder()
                 .css_classes(["category-count"])
@@ -238,7 +165,7 @@ impl MainWindow {
     /// `filter` narrowed to the chosen category, when `mailbox` has them.
     pub(super) fn in_category(&self, mailbox: &Mailbox, filter: ThreadFilter) -> ThreadFilter {
         if self.shows_categories(mailbox) {
-            self.categories.chosen.get().narrow(filter)
+            narrow(self.categories.chosen.get(), filter)
         } else {
             filter
         }
@@ -259,7 +186,7 @@ impl MainWindow {
                 .read(move |c| {
                     let mut unread = HashMap::new();
                     for category in Category::ALL {
-                        let filter = category.narrow(base.clone());
+                        let filter = narrow(category, base.clone());
                         let count = if threaded {
                             threads::unread_threads(c, &filter)?
                         } else {
@@ -340,7 +267,7 @@ impl MainWindow {
             let label = category.gmail_label();
             let relabel = TriageAction::Relabel {
                 add: vec![label.into()],
-                remove: GMAIL_LABELS
+                remove: system_label::CATEGORIES
                     .iter()
                     .filter(|l| **l != label)
                     .map(|l| l.to_string())
@@ -386,7 +313,7 @@ impl MainWindow {
                             .action
                             .add_label_ids
                             .iter()
-                            .all(|l| l.starts_with("CATEGORY_"));
+                            .all(|l| system_label::is_category(l));
                     if let (true, Some(id)) = (sorts_sender, old.id.as_deref()) {
                         s.delete_filter(id).await?;
                     }
@@ -411,29 +338,8 @@ impl MainWindow {
 
 fn is_inbox(mailbox: &Mailbox) -> bool {
     match mailbox {
-        Mailbox::Unified(label) => *label == "INBOX",
-        Mailbox::Label { label_id, .. } => label_id == "INBOX",
+        Mailbox::Unified(label) => *label == system_label::INBOX,
+        Mailbox::Label { label_id, .. } => label_id == system_label::INBOX,
         _ => false,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::Category;
-
-    #[test]
-    fn keys_round_trip() {
-        for category in Category::ALL {
-            assert_eq!(Category::from_key(category.key()), Some(category));
-        }
-        assert_eq!(Category::from_key("junk"), None);
-    }
-
-    #[test]
-    fn primary_excludes_every_other_category_but_not_personal() {
-        let (any, none) = Category::Primary.labels();
-        assert!(any.is_empty());
-        assert!(!none.contains(&"CATEGORY_PERSONAL"));
-        assert_eq!(none.len(), 4);
     }
 }

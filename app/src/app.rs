@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex};
 use adw::prelude::*;
 use gtk::{gio, glib};
 use ksni::TrayMethods;
-use mailrs_domain::{Account, AccountId, Address, ChangeEvent};
+use mailrs_domain::{Account, AccountId, Address, ChangeEvent, system_label};
 use mailrs_store::{messages, threads};
 
 use crate::compose::Draft;
@@ -621,7 +621,7 @@ impl App {
                     for account in accounts {
                         let unread = threads::unread_threads(
                             c,
-                            &threads::ThreadFilter::account(account.id, "INBOX"),
+                            &threads::ThreadFilter::account(account.id, system_label::INBOX),
                         )?;
                         counts.push((account.email, unread));
                     }

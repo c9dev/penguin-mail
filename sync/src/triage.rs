@@ -1,5 +1,7 @@
 use std::str::FromStr;
 
+use mailrs_domain::system_label;
+
 /// A label change the user asked for on a whole thread.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TriageAction {
@@ -29,17 +31,17 @@ impl TriageAction {
     pub fn label_delta(&self) -> (Vec<String>, Vec<String>) {
         let one = |label: &str| vec![label.to_string()];
         match self {
-            TriageAction::Archive => (vec![], one("INBOX")),
-            TriageAction::MarkRead => (vec![], one("UNREAD")),
-            TriageAction::MarkUnread => (one("UNREAD"), vec![]),
-            TriageAction::Star => (one("STARRED"), vec![]),
-            TriageAction::Unstar => (vec![], one("STARRED")),
+            TriageAction::Archive => (vec![], one(system_label::INBOX)),
+            TriageAction::MarkRead => (vec![], one(system_label::UNREAD)),
+            TriageAction::MarkUnread => (one(system_label::UNREAD), vec![]),
+            TriageAction::Star => (one(system_label::STARRED), vec![]),
+            TriageAction::Unstar => (vec![], one(system_label::STARRED)),
             TriageAction::AddLabel(label) => (vec![label.clone()], vec![]),
             TriageAction::RemoveLabel(label) => (vec![], vec![label.clone()]),
-            TriageAction::Trash => (one("TRASH"), one("INBOX")),
-            TriageAction::Untrash => (one("INBOX"), one("TRASH")),
-            TriageAction::Junk => (one("SPAM"), one("INBOX")),
-            TriageAction::NotJunk => (one("INBOX"), one("SPAM")),
+            TriageAction::Trash => (one(system_label::TRASH), one(system_label::INBOX)),
+            TriageAction::Untrash => (one(system_label::INBOX), one(system_label::TRASH)),
+            TriageAction::Junk => (one(system_label::SPAM), one(system_label::INBOX)),
+            TriageAction::NotJunk => (one(system_label::INBOX), one(system_label::SPAM)),
             TriageAction::Relabel { add, remove } => (add.clone(), remove.clone()),
         }
     }
@@ -51,7 +53,7 @@ impl TriageAction {
             remove: remove.iter().map(|l| l.to_string()).collect(),
         };
         match self {
-            TriageAction::Archive => relabel(&["INBOX"], &[]),
+            TriageAction::Archive => relabel(&[system_label::INBOX], &[]),
             TriageAction::MarkRead => TriageAction::MarkUnread,
             TriageAction::MarkUnread => TriageAction::MarkRead,
             TriageAction::Star => TriageAction::Unstar,

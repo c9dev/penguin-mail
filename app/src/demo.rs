@@ -4,6 +4,7 @@
 
 use mailrs_domain::{
     AccountState, Address, Attachment, EpochMillis, Label, LabelKind, MessageBody, MessageMeta,
+    system_label,
 };
 use mailrs_gmail::{GmailError, HistoryPage, MessagePage, MessageRef, Profile, RemoteLabel};
 use mailrs_store::{Result, accounts, bodies, labels, messages};
@@ -385,17 +386,23 @@ pub fn seed(conn: &Connection, now: EpochMillis) -> Result<()> {
         accounts::start_generation(conn, id, 1)?;
         accounts::set_backfill(conn, id, None, true)?;
         accounts::set_state(conn, id, AccountState::Ok)?;
-        let mut account_labels: Vec<Label> =
-            ["INBOX", "SENT", "DRAFT", "STARRED", "UNREAD", "IMPORTANT"]
-                .into_iter()
-                .map(|l| Label {
-                    account_id: id,
-                    id: l.into(),
-                    name: l.into(),
-                    kind: LabelKind::System,
-                    color: None,
-                })
-                .collect();
+        let mut account_labels: Vec<Label> = [
+            system_label::INBOX,
+            system_label::SENT,
+            system_label::DRAFT,
+            system_label::STARRED,
+            system_label::UNREAD,
+            system_label::IMPORTANT,
+        ]
+        .into_iter()
+        .map(|l| Label {
+            account_id: id,
+            id: l.into(),
+            name: l.into(),
+            kind: LabelKind::System,
+            color: None,
+        })
+        .collect();
         if email == ACCOUNTS[1] {
             for (label, name, color) in [
                 ("Label_clients", "Clients", Some("#4a86e8")),
@@ -549,10 +556,10 @@ impl GmailApi for DemoApi {
     ) -> std::result::Result<MessagePage, GmailError> {
         // `in:` and `-in:` pick labels; other words match the text.
         let label = |name: &str| match name {
-            "spam" => "SPAM".to_string(),
-            "trash" => "TRASH".to_string(),
-            "inbox" => "INBOX".to_string(),
-            "sent" => "SENT".to_string(),
+            "spam" => system_label::SPAM.to_string(),
+            "trash" => system_label::TRASH.to_string(),
+            "inbox" => system_label::INBOX.to_string(),
+            "sent" => system_label::SENT.to_string(),
             other => other.to_string(),
         };
         let mut required: Vec<String> = Vec::new();
@@ -571,7 +578,7 @@ impl GmailApi for DemoApi {
             }
         }
         // Gmail leaves Spam and Trash out unless asked for.
-        for hidden in ["SPAM", "TRASH"] {
+        for hidden in [system_label::SPAM, system_label::TRASH] {
             if !required.iter().any(|l| l == hidden) {
                 excluded.push(hidden.to_string());
             }
@@ -712,7 +719,7 @@ impl GmailApi for DemoApi {
         Ok(self
             .message(message_id)
             .await
-            .filter(|m| m.has_label("DRAFT"))
+            .filter(|m| m.has_label(system_label::DRAFT))
             .map(|_| "demo-draft".to_string()))
     }
 

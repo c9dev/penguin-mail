@@ -3,7 +3,7 @@
 //! address with a random tag such as `kite.fern482`. Gmail filters give the
 //! alias a label and, once deactivated, send its mail to the Trash.
 
-use mailrs_domain::{EpochMillis, Filter, FilterAction, FilterCriteria};
+use mailrs_domain::{EpochMillis, Filter, FilterAction, FilterCriteria, system_label};
 use serde::{Deserialize, Serialize};
 
 /// The user label that mail to any alias gets.
@@ -147,8 +147,8 @@ pub fn trash_filter(alias: &str) -> Filter {
             ..FilterCriteria::default()
         },
         action: FilterAction {
-            add_label_ids: vec!["TRASH".into()],
-            remove_label_ids: vec!["INBOX".into()],
+            add_label_ids: vec![system_label::TRASH.into()],
+            remove_label_ids: vec![system_label::INBOX.into()],
             forward: None,
         },
     }

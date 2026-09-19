@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gio, glib};
-use mailrs_domain::ThreadSummary;
+use mailrs_domain::{ThreadSummary, system_label};
 use mailrs_store::{follow_ups, threads};
 
 use super::{MainWindow, Target};
@@ -109,7 +109,7 @@ impl MainWindow {
             format!("{count} sent messages have had no reply")
         });
         banner.revealer.set_reveal_child(
-            mailbox == Mailbox::Unified("INBOX")
+            mailbox == Mailbox::Unified(system_label::INBOX)
                 && count > 0
                 && !banner.closed.get()
                 && self.settings().suggest_follow_ups,

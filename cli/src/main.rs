@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use anyhow::{Context, Result, bail};
 use clap::{Parser, Subcommand};
-use mailrs_domain::{Account, AccountId, ChangeEvent, EpochMillis};
+use mailrs_domain::{Account, AccountId, ChangeEvent, EpochMillis, system_label};
 use mailrs_gmail::{GMAIL_API_BASE, KeyringTokenStore, OAuthClient, TokenStore, authorize};
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{Db, accounts, messages};
@@ -44,7 +44,7 @@ enum Command {
         /// Only this account. Leave it out for the unified view.
         #[arg(long)]
         account: Option<String>,
-        #[arg(long, default_value = "INBOX")]
+        #[arg(long, default_value = system_label::INBOX)]
         label: String,
         #[arg(long, default_value_t = 25)]
         limit: i64,

@@ -3,7 +3,9 @@
 
 use mailrs_sync::TriageAction;
 
-use super::{Folder, Mailbox};
+use mailrs_domain::{Folder, system_label};
+
+use super::Mailbox;
 
 /// The label a move takes mail out of, when leaving `mailbox` means
 /// losing one: the inbox or a user label.
@@ -13,7 +15,11 @@ fn source_label(mailbox: &Mailbox) -> Option<String> {
         Mailbox::Label { label_id, .. } => label_id.as_str(),
         _ => return None,
     };
-    (!matches!(label, "STARRED" | "SENT" | "DRAFT" | "IMPORTANT")).then(|| label.to_string())
+    (!matches!(
+        label,
+        system_label::STARRED | system_label::SENT | system_label::DRAFT | system_label::IMPORTANT
+    ))
+    .then(|| label.to_string())
 }
 
 /// The label a destination adds, if it is one.
@@ -30,7 +36,7 @@ pub fn move_action(from: &Mailbox, to: &Mailbox) -> Result<TriageAction, &'stati
     let already = "The mail is already there";
     let from_folder = from.folder();
     let relabel = |add: Vec<String>, remove: Vec<String>| TriageAction::Relabel { add, remove };
-    if dest_label(to) == Some("STARRED") {
+    if dest_label(to) == Some(system_label::STARRED) {
         return Ok(TriageAction::Star);
     }
     match (from_folder, to.folder()) {
@@ -38,33 +44,36 @@ pub fn move_action(from: &Mailbox, to: &Mailbox) -> Result<TriageAction, &'stati
             return Err(already);
         }
         (_, Some(Folder::Trash)) => return Ok(TriageAction::Trash),
-        (Some(Folder::Trash), _) if dest_label(to) == Some("INBOX") => {
+        (Some(Folder::Trash), _) if dest_label(to) == Some(system_label::INBOX) => {
             return Ok(TriageAction::Untrash);
         }
         (Some(Folder::Trash), _) => return Err("Move it from the Trash to the Inbox first"),
-        (Some(Folder::Junk), _) if dest_label(to) == Some("INBOX") => {
+        (Some(Folder::Junk), _) if dest_label(to) == Some(system_label::INBOX) => {
             return Ok(TriageAction::NotJunk);
         }
         (Some(Folder::Junk), Some(Folder::AllMail)) => {
-            return Ok(relabel(vec![], vec!["SPAM".into()]));
+            return Ok(relabel(vec![], vec![system_label::SPAM.into()]));
         }
         (Some(Folder::Junk), _) => {
             let label = dest_label(to).ok_or(already)?;
-            return Ok(relabel(vec![label.into()], vec!["SPAM".into()]));
+            return Ok(relabel(vec![label.into()], vec![system_label::SPAM.into()]));
         }
         _ => {}
     }
     let source = source_label(from);
     match to.folder() {
         Some(Folder::Junk) => {
-            return Ok(match source.filter(|s| s != "INBOX") {
-                Some(label) => relabel(vec!["SPAM".into()], vec!["INBOX".into(), label]),
+            return Ok(match source.filter(|s| s != system_label::INBOX) {
+                Some(label) => relabel(
+                    vec![system_label::SPAM.into()],
+                    vec![system_label::INBOX.into(), label],
+                ),
                 None => TriageAction::Junk,
             });
         }
         Some(Folder::AllMail) => {
             return match source.as_deref() {
-                Some("INBOX") => Ok(TriageAction::Archive),
+                Some(system_label::INBOX) => Ok(TriageAction::Archive),
                 Some(label) => Ok(TriageAction::RemoveLabel(label.into())),
                 None => Err("The mail is already in All Mail"),
             };

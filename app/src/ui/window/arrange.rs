@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gio, glib};
-use mailrs_domain::{Account, AccountId, Label};
+use mailrs_domain::{Account, AccountId, Label, system_label};
 
 use super::MainWindow;
 use crate::settings::Settings;
@@ -144,7 +144,7 @@ impl MainWindow {
             if let Some(app) = this.app.upgrade() {
                 app.update_settings(|s| s.smart_mailboxes.retain(|m| m.id != id));
             }
-            let inbox = Mailbox::Unified("INBOX");
+            let inbox = Mailbox::Unified(system_label::INBOX);
             this.sidebar.select(&inbox);
             this.show_mailbox(inbox);
         });

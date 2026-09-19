@@ -7,7 +7,10 @@ use std::sync::Arc;
 
 use chrono::{Local, NaiveDate, NaiveDateTime, TimeZone};
 use mailrs_ai::ToolOutcome;
-use mailrs_domain::{Account, Filter, FlagColor, Label, LabelKind, ThreadSummary, Vacation};
+use mailrs_domain::{
+    Account, Category, Filter, FlagColor, Folder, Label, LabelKind, ThreadSummary, Vacation,
+    system_label,
+};
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{flags, messages, reminders};
 use mailrs_sync::TriageAction;
@@ -19,8 +22,8 @@ use crate::core::Sync;
 use crate::rules::{RuleForm, describe_action, describe_criteria};
 use crate::settings::{Choice, ColorScheme, MarkRead, RemoteImages, Settings, TextSize, UndoSend};
 use crate::smart::{Condition, SmartMailbox};
+use crate::ui::summarize_search;
 use crate::ui::vacation::missing_scope;
-use crate::ui::{Folder, summarize_search};
 
 type ToolResult = Result<Value, String>;
 
@@ -54,6 +57,14 @@ fn flag(input: &Value, key: &str) -> Option<bool> {
 
 fn required(input: &Value, key: &str) -> Result<String, String> {
     text(input, key).ok_or_else(|| format!("`{key}` is missing"))
+}
+
+/// The category a tool names. The tools offer no "all", since the whole
+/// inbox needs no category.
+fn named_category(key: &str) -> Result<Category, String> {
+    Category::from_key(key)
+        .filter(|c| *c != Category::All)
+        .ok_or_else(|| format!("Unknown category {key}."))
 }
 
 /// Every choice of a setting, in the shape the settings file uses.
@@ -311,22 +322,8 @@ impl MainWindow {
             self.remote_rows(&query, scope.as_ref(), limit).await?
         } else {
             let mut filters = self.list_filters(&mailbox, text(input, "label"), scope.as_ref())?;
-            if let Some(category) = text(input, "category") {
-                let (any, none): (&[&str], &[&str]) = match category.as_str() {
-                    "primary" => (
-                        &[],
-                        &[
-                            "CATEGORY_UPDATES",
-                            "CATEGORY_PROMOTIONS",
-                            "CATEGORY_SOCIAL",
-                            "CATEGORY_FORUMS",
-                        ],
-                    ),
-                    "updates" => (&["CATEGORY_UPDATES"], &[]),
-                    "promotions" => (&["CATEGORY_PROMOTIONS"], &[]),
-                    "social" => (&["CATEGORY_SOCIAL", "CATEGORY_FORUMS"], &[]),
-                    other => return Err(format!("Unknown category {other}.")),
-                };
+            if let Some(key) = text(input, "category") {
+                let (any, none) = named_category(&key)?.labels();
                 filters = filters
                     .into_iter()
                     .map(|f| f.with_labels(any, none))
@@ -370,10 +367,10 @@ impl MainWindow {
             None => ThreadFilter::unified(label),
         };
         Ok(match mailbox {
-            "inbox" => vec![at("INBOX")],
-            "flagged" => vec![at("STARRED")],
-            "sent" => vec![at("SENT")],
-            "drafts" => vec![at("DRAFT")],
+            "inbox" => vec![at(system_label::INBOX)],
+            "flagged" => vec![at(system_label::STARRED)],
+            "sent" => vec![at(system_label::SENT)],
+            "drafts" => vec![at(system_label::DRAFT)],
             "vips" => vec![at("").from_senders(self.settings().vips.keys().cloned().collect())],
             "label" => {
                 let name = label.ok_or("`label` is missing")?;
@@ -719,7 +716,10 @@ impl MainWindow {
                 .read(move |c| messages::thread_messages(c, account.id, &key))
                 .await
                 .map_err(|e| e.to_string())?;
-            let parent = found.iter().rev().find(|m| !m.has_label("DRAFT"));
+            let parent = found
+                .iter()
+                .rev()
+                .find(|m| !m.has_label(system_label::DRAFT));
             draft.thread_id = Some(thread_id);
             draft.in_reply_to = parent.and_then(|m| m.rfc822_msgid.clone());
             draft.references = found
@@ -1048,9 +1048,7 @@ impl MainWindow {
         let account = self.account_named(&required(input, "account")?)?;
         let email = required(input, "email")?;
         let key = required(input, "category")?;
-        let category = super::categories::Category::from_key(&key)
-            .filter(|c| *c != super::categories::Category::All)
-            .ok_or_else(|| format!("Unknown category {key}."))?;
+        let category = named_category(&key)?;
         let who = text(input, "name").unwrap_or_else(|| email.clone());
         self.approve(&format!(
             "Move mail from {who} to {} in {}, and add a Gmail rule for their future mail?",

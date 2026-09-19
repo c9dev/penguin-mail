@@ -4,6 +4,7 @@
 use std::rc::Rc;
 
 use gtk::glib;
+use mailrs_domain::system_label;
 use mailrs_store::scheduled::{self, Scheduled};
 use mailrs_sync::now_millis;
 
@@ -252,7 +253,7 @@ impl App {
             };
             let thread = item.thread_id.clone();
             let back = mailrs_sync::TriageAction::Relabel {
-                add: vec!["INBOX".into(), "UNREAD".into()],
+                add: vec![system_label::INBOX.into(), system_label::UNREAD.into()],
                 remove: vec![],
             };
             if let Err(err) = self

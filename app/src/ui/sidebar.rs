@@ -6,10 +6,12 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gdk, gio, glib, pango};
-use mailrs_domain::{Account, AccountId, AccountState, FlagColor, Label, LabelKind};
+use mailrs_domain::{
+    Account, AccountId, AccountState, FlagColor, Folder, Label, LabelKind, system_label,
+};
 
 use super::{
-    Folder, LABEL_COLORS, Mailbox, UNIFIED, account_label_name, mailbox_icon, unified_name,
+    FolderLook, LABEL_COLORS, Mailbox, UNIFIED, account_label_name, mailbox_icon, unified_name,
 };
 use crate::format::{PALETTE_NAMES, account_color_index};
 
@@ -196,7 +198,7 @@ impl Sidebar {
                 mailbox_icon(label),
                 0,
             );
-            if label == "INBOX" && !vips.is_empty() {
+            if label == system_label::INBOX && !vips.is_empty() {
                 let everyone = Mailbox::Vips {
                     emails: vips.iter().map(|(e, _)| e.clone()).collect(),
                     name: "VIPs".into(),
@@ -218,7 +220,7 @@ impl Sidebar {
                     context_menu(&row, &menu);
                 }
             }
-            if label == "STARRED" {
+            if label == system_label::STARRED {
                 // One row per flag colour in use, as Apple Mail shows them.
                 for color in FlagColor::ALL {
                     let row = self.add_mailbox(
@@ -399,12 +401,12 @@ impl Sidebar {
             }
             let is_drafts = matches!(
                 &row.mailbox,
-                Mailbox::Unified("DRAFT")
+                Mailbox::Unified(system_label::DRAFT)
                     | Mailbox::Scheduled
                     | Mailbox::Reminders
                     | Mailbox::FollowUp
                     | Mailbox::Flag(_)
-            ) || matches!(&row.mailbox, Mailbox::Label { label_id, .. } if label_id == "DRAFT");
+            ) || matches!(&row.mailbox, Mailbox::Label { label_id, .. } if label_id == system_label::DRAFT);
             let shown = count > 0 && (row.mailbox.counts_unread() || is_drafts);
             row.count.set_visible(shown);
             row.count.set_label(&count.to_string());
@@ -417,7 +419,7 @@ impl Sidebar {
         for heading in self.headings.borrow().iter() {
             let inbox = Mailbox::Label {
                 account_id: heading.account_id,
-                label_id: "INBOX".into(),
+                label_id: system_label::INBOX.into(),
                 name: "Inbox".into(),
             };
             heading
@@ -495,8 +497,10 @@ fn hidden_until_used(mailbox: &Mailbox) -> bool {
 /// Mailboxes mail can be moved into.
 fn takes_mail(mailbox: &Mailbox) -> bool {
     match mailbox {
-        Mailbox::Unified(label) => matches!(*label, "INBOX" | "STARRED"),
-        Mailbox::Label { label_id, .. } => !matches!(label_id.as_str(), "SENT" | "DRAFT"),
+        Mailbox::Unified(label) => matches!(*label, system_label::INBOX | system_label::STARRED),
+        Mailbox::Label { label_id, .. } => {
+            !matches!(label_id.as_str(), system_label::SENT | system_label::DRAFT)
+        }
         Mailbox::Folder { .. } => true,
         Mailbox::Flag(_) => true,
         Mailbox::Search { .. }

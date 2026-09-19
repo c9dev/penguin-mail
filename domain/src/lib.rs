@@ -5,6 +5,13 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
+mod category;
+mod folder;
+pub mod system_label;
+
+pub use category::Category;
+pub use folder::Folder;
+
 /// Local database id of an account. Gmail has no account id of its own.
 pub type AccountId = i64;
 
@@ -202,7 +209,7 @@ pub struct MessageMeta {
 
 impl MessageMeta {
     pub fn is_unread(&self) -> bool {
-        self.has_label("UNREAD")
+        self.has_label(system_label::UNREAD)
     }
 
     pub fn has_label(&self, label_id: &str) -> bool {
@@ -317,8 +324,8 @@ impl Filter {
                 ..FilterCriteria::default()
             },
             action: FilterAction {
-                add_label_ids: vec!["TRASH".into()],
-                remove_label_ids: vec!["INBOX".into()],
+                add_label_ids: vec![system_label::TRASH.into()],
+                remove_label_ids: vec![system_label::INBOX.into()],
                 forward: None,
             },
         }

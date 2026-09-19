@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::glib;
-use mailrs_domain::{AccountId, LabelKind};
+use mailrs_domain::{AccountId, LabelKind, system_label};
 use mailrs_sync::TriageAction;
 
 use super::{MainWindow, Target};
@@ -173,7 +173,7 @@ impl MainWindow {
             {
                 Ok(()) => {
                     if showing {
-                        let inbox = Mailbox::Unified("INBOX");
+                        let inbox = Mailbox::Unified(system_label::INBOX);
                         this.sidebar.select(&inbox);
                         this.show_mailbox(inbox);
                     }

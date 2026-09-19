@@ -10,10 +10,9 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gdk, gio};
-use mailrs_domain::{AccountId, FlagColor, MessageBody, MessageMeta};
+use mailrs_domain::{AccountId, FlagColor, Folder, MessageBody, MessageMeta, system_label};
 use webkit::prelude::*;
 
-use super::Folder;
 use crate::compose::ReplyKind;
 use crate::render::{BodyState, Conversation, MessageView, Theme, render};
 
@@ -40,11 +39,15 @@ pub struct OpenThread {
 
 impl OpenThread {
     pub fn is_draft(&self) -> bool {
-        self.messages.last().is_some_and(|m| m.has_label("DRAFT"))
+        self.messages
+            .last()
+            .is_some_and(|m| m.has_label(system_label::DRAFT))
     }
 
     pub fn starred(&self) -> bool {
-        self.messages.iter().any(|m| m.has_label("STARRED"))
+        self.messages
+            .iter()
+            .any(|m| m.has_label(system_label::STARRED))
     }
 
     pub fn unread(&self) -> bool {
@@ -53,7 +56,10 @@ impl OpenThread {
 
     /// The message a reply answers: the newest one that is not a draft.
     pub fn reply_target(&self) -> Option<&MessageMeta> {
-        self.messages.iter().rev().find(|m| !m.has_label("DRAFT"))
+        self.messages
+            .iter()
+            .rev()
+            .find(|m| !m.has_label(system_label::DRAFT))
     }
 
     /// The `List-Unsubscribe` header of the newest message, when it has one.

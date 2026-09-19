@@ -3,7 +3,7 @@
 use std::rc::Rc;
 
 use gtk::glib;
-use mailrs_domain::ThreadSummary;
+use mailrs_domain::{ThreadSummary, system_label};
 use mailrs_store::reminders::{self, Reminder};
 use mailrs_store::threads;
 use mailrs_sync::TriageAction;
@@ -131,7 +131,7 @@ impl MainWindow {
         self.apply_with(
             targets,
             TriageAction::Relabel {
-                add: vec!["INBOX".into()],
+                add: vec![system_label::INBOX.into()],
                 remove: vec![],
             },
             false,

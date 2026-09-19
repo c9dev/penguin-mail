@@ -20,7 +20,7 @@ pub mod welcome;
 pub mod when;
 pub mod window;
 
-use mailrs_domain::{AccountId, FlagColor, MessageMeta, ThreadSummary};
+use mailrs_domain::{AccountId, FlagColor, Folder, MessageMeta, ThreadSummary, system_label};
 use mailrs_store::threads::ThreadFilter;
 
 /// What the thread list shows.
@@ -56,27 +56,14 @@ pub enum Mailbox {
     },
 }
 
-/// Gmail's Spam, Trash, and All Mail, which the local window does not hold.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Folder {
-    Junk,
-    Trash,
-    AllMail,
+/// How the sidebar and window show a `Folder`.
+pub trait FolderLook {
+    fn name(self) -> &'static str;
+    fn icon(self) -> &'static str;
 }
 
-impl Folder {
-    pub const ALL: [Folder; 3] = [Folder::Junk, Folder::Trash, Folder::AllMail];
-
-    /// The Gmail search that lists this folder.
-    pub fn query(self) -> &'static str {
-        match self {
-            Folder::Junk => "in:spam",
-            Folder::Trash => "in:trash",
-            Folder::AllMail => "-in:spam -in:trash",
-        }
-    }
-
-    pub fn name(self) -> &'static str {
+impl FolderLook for Folder {
+    fn name(self) -> &'static str {
         match self {
             Folder::Junk => "Junk",
             Folder::Trash => "Trash",
@@ -84,21 +71,11 @@ impl Folder {
         }
     }
 
-    pub fn icon(self) -> &'static str {
+    fn icon(self) -> &'static str {
         match self {
             Folder::Junk => "mail-mark-junk-symbolic",
             Folder::Trash => "user-trash-symbolic",
             Folder::AllMail => "penguin-mail-archive-symbolic",
-        }
-    }
-
-    /// Whether a message with `labels` still belongs in this folder.
-    pub fn holds(self, labels: &[String]) -> bool {
-        let has = |l: &str| labels.iter().any(|x| x == l);
-        match self {
-            Folder::Junk => has("SPAM"),
-            Folder::Trash => has("TRASH"),
-            Folder::AllMail => !has("SPAM") && !has("TRASH"),
         }
     }
 }
@@ -162,8 +139,10 @@ impl Mailbox {
 
     /// Unread counts matter for inboxes; drafts show how many there are.
     pub fn counts_unread(&self) -> bool {
-        matches!(self, Mailbox::Unified("INBOX") | Mailbox::Vips { .. })
-            || matches!(self, Mailbox::Label { label_id, .. } if label_id == "INBOX")
+        matches!(
+            self,
+            Mailbox::Unified(system_label::INBOX) | Mailbox::Vips { .. }
+        ) || matches!(self, Mailbox::Label { label_id, .. } if label_id == system_label::INBOX)
     }
 }
 
@@ -180,34 +159,39 @@ pub const LABEL_COLORS: [(&str, &str, &str); 9] = [
     ("Gray", "#999999", "#ffffff"),
 ];
 
-pub const UNIFIED: [&str; 4] = ["INBOX", "STARRED", "SENT", "DRAFT"];
+pub const UNIFIED: [&str; 4] = [
+    system_label::INBOX,
+    system_label::STARRED,
+    system_label::SENT,
+    system_label::DRAFT,
+];
 
 pub fn unified_name(label: &str) -> &'static str {
     match label {
-        "INBOX" => "All Inboxes",
-        "STARRED" => "Flagged",
-        "SENT" => "Sent",
-        "DRAFT" => "Drafts",
+        system_label::INBOX => "All Inboxes",
+        system_label::STARRED => "Flagged",
+        system_label::SENT => "Sent",
+        system_label::DRAFT => "Drafts",
         _ => "Mail",
     }
 }
 
 pub fn account_label_name(label: &str) -> &'static str {
     match label {
-        "INBOX" => "Inbox",
-        "STARRED" => "Flagged",
-        "SENT" => "Sent",
-        "DRAFT" => "Drafts",
+        system_label::INBOX => "Inbox",
+        system_label::STARRED => "Flagged",
+        system_label::SENT => "Sent",
+        system_label::DRAFT => "Drafts",
         _ => "Mail",
     }
 }
 
 pub fn mailbox_icon(label: &str) -> &'static str {
     match label {
-        "INBOX" => "penguin-mail-inbox-symbolic",
-        "STARRED" => "penguin-mail-flag-symbolic",
-        "SENT" => "mail-send-symbolic",
-        "DRAFT" => "document-edit-symbolic",
+        system_label::INBOX => "penguin-mail-inbox-symbolic",
+        system_label::STARRED => "penguin-mail-flag-symbolic",
+        system_label::SENT => "mail-send-symbolic",
+        system_label::DRAFT => "document-edit-symbolic",
         _ => "penguin-mail-tag-symbolic",
     }
 }
@@ -233,7 +217,7 @@ pub fn summarize_search(mut hits: Vec<MessageMeta>, grouped: bool) -> Vec<Thread
                     .unwrap_or_default(),
                 message_count: 1,
                 unread: hit.is_unread(),
-                starred: hit.has_label("STARRED"),
+                starred: hit.has_label(system_label::STARRED),
                 has_attachments: hit.has_attachments,
                 flag_color: None,
                 from_email: hit
@@ -252,7 +236,7 @@ pub fn summarize_search(mut hits: Vec<MessageMeta>, grouped: bool) -> Vec<Thread
         {
             row.message_count += 1;
             row.unread |= hit.is_unread();
-            row.starred |= hit.has_label("STARRED");
+            row.starred |= hit.has_label(system_label::STARRED);
             row.has_attachments |= hit.has_attachments;
             if hit.date <= *oldest {
                 *oldest = hit.date;
@@ -274,7 +258,7 @@ pub fn summarize_search(mut hits: Vec<MessageMeta>, grouped: bool) -> Vec<Thread
                 .unwrap_or_default(),
             message_count: 1,
             unread: hit.is_unread(),
-            starred: hit.has_label("STARRED"),
+            starred: hit.has_label(system_label::STARRED),
             has_attachments: hit.has_attachments,
             flag_color: None,
             from_email: hit

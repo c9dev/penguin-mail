@@ -1,6 +1,6 @@
 //! Gmail filters in plain words, and building one from the rule form.
 
-use mailrs_domain::{Filter, FilterAction, FilterCriteria};
+use mailrs_domain::{Filter, FilterAction, FilterCriteria, system_label};
 
 /// What the rule form collects.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -37,22 +37,22 @@ impl RuleForm {
         let mut action = FilterAction::default();
         let mut add = |label: &str| action.add_label_ids.push(label.into());
         if self.star {
-            add("STARRED");
+            add(system_label::STARRED);
         }
         if let Some(label) = &self.label {
             add(label);
         }
         if self.trash {
-            add("TRASH");
+            add(system_label::TRASH);
         }
         if self.skip_inbox || self.trash {
-            action.remove_label_ids.push("INBOX".into());
+            action.remove_label_ids.push(system_label::INBOX.into());
         }
         if self.mark_read {
-            action.remove_label_ids.push("UNREAD".into());
+            action.remove_label_ids.push(system_label::UNREAD.into());
         }
         if self.never_spam {
-            action.remove_label_ids.push("SPAM".into());
+            action.remove_label_ids.push(system_label::SPAM.into());
         }
         if action == FilterAction::default() {
             return Err("Choose what the rule does");
@@ -106,33 +106,38 @@ pub fn describe_action(
     let adds = |id: &str| action.add_label_ids.iter().any(|l| l == id);
     let removes = |id: &str| action.remove_label_ids.iter().any(|l| l == id);
     let mut parts: Vec<String> = Vec::new();
-    if adds("TRASH") {
+    if adds(system_label::TRASH) {
         parts.push("Delete it".into());
-    } else if removes("INBOX") {
+    } else if removes(system_label::INBOX) {
         parts.push("Skip the Inbox".into());
     }
     for id in &action.add_label_ids {
         match id.as_str() {
-            "TRASH" | "STARRED" | "UNREAD" | "IMPORTANT" | "SPAM" | "INBOX" => {}
+            system_label::TRASH
+            | system_label::STARRED
+            | system_label::UNREAD
+            | system_label::IMPORTANT
+            | system_label::SPAM
+            | system_label::INBOX => {}
             other => parts.push(format!(
                 "Apply {}",
                 label_name(other).unwrap_or_else(|| other.to_string())
             )),
         }
     }
-    if adds("STARRED") {
+    if adds(system_label::STARRED) {
         parts.push("Star it".into());
     }
-    if removes("UNREAD") {
+    if removes(system_label::UNREAD) {
         parts.push("Mark as read".into());
     }
-    if adds("IMPORTANT") {
+    if adds(system_label::IMPORTANT) {
         parts.push("Mark as important".into());
     }
-    if removes("IMPORTANT") {
+    if removes(system_label::IMPORTANT) {
         parts.push("Never mark as important".into());
     }
-    if removes("SPAM") {
+    if removes(system_label::SPAM) {
         parts.push("Never send to Spam".into());
     }
     if let Some(to) = &action.forward {

@@ -1,5 +1,6 @@
 //! Thread queries. `messages::refresh_thread` maintains the rows.
 
+use mailrs_domain::system_label::{SPAM, STARRED, TRASH, UNREAD};
 use mailrs_domain::{AccountId, FlagColor, ThreadSummary};
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
@@ -80,8 +81,8 @@ impl ThreadFilter {
         if self.label_id.is_empty() {
             sql.push_str(&format!(
                 " AND ?1 = '' AND NOT {} AND NOT {}",
-                labelled("'TRASH'"),
-                labelled("'SPAM'")
+                labelled(&format!("'{TRASH}'")),
+                labelled(&format!("'{SPAM}'"))
             ));
         } else {
             sql.push_str(&format!(" AND {}", labelled("?1")));
@@ -108,7 +109,7 @@ impl ThreadFilter {
             };
             sql.push_str(&format!(
                 " AND EXISTS (SELECT 1 FROM messages x JOIN message_labels s \
-                 ON s.account_id = x.account_id AND s.message_id = x.id AND s.label_id = 'STARRED' \
+                 ON s.account_id = x.account_id AND s.message_id = x.id AND s.label_id = '{STARRED}' \
                  LEFT JOIN flags f ON f.account_id = x.account_id AND f.message_id = x.id \
                  WHERE {} AND (f.color = '{color}'{default}))",
                 scope(&format!("x.account_id = {account}"))
@@ -267,7 +268,7 @@ pub fn list_messages(
 pub fn unread_messages(conn: &Connection, filter: &ThreadFilter) -> Result<i64> {
     let sql = format!(
         "SELECT COUNT(*) {} AND EXISTS (SELECT 1 FROM message_labels u \
-         WHERE u.account_id = m.account_id AND u.message_id = m.id AND u.label_id = 'UNREAD')",
+         WHERE u.account_id = m.account_id AND u.message_id = m.id AND u.label_id = '{UNREAD}')",
         filter.messages()
     );
     Ok(

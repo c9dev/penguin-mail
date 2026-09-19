@@ -2,7 +2,7 @@
 
 use std::collections::{BTreeSet, HashMap};
 
-use mailrs_domain::{ChangeEvent, MessageMeta};
+use mailrs_domain::{ChangeEvent, MessageMeta, system_label};
 use mailrs_gmail::{GmailError, HistoryChange};
 use mailrs_store::{accounts, messages};
 
@@ -124,7 +124,7 @@ impl<G: GmailApi> AccountSync<G> {
             .iter()
             .filter_map(|change| match change {
                 HistoryChange::LabelsAdded { id, label_ids, .. }
-                    if label_ids.iter().any(|l| l == "INBOX") =>
+                    if label_ids.iter().any(|l| l == system_label::INBOX) =>
                 {
                     Some(id.clone())
                 }
@@ -152,8 +152,8 @@ impl<G: GmailApi> AccountSync<G> {
 
 /// Unread mail that someone else sent to INBOX.
 fn is_new_inbox_mail(meta: &MessageMeta) -> bool {
-    meta.has_label("INBOX")
+    meta.has_label(system_label::INBOX)
         && meta.is_unread()
-        && !meta.has_label("SENT")
-        && !meta.has_label("DRAFT")
+        && !meta.has_label(system_label::SENT)
+        && !meta.has_label(system_label::DRAFT)
 }

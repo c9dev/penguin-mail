@@ -5,7 +5,7 @@
 
 use std::collections::HashSet;
 
-use mailrs_domain::{AccountId, Address, MessageMeta};
+use mailrs_domain::{AccountId, Address, MessageMeta, system_label};
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::{Result, StoreError};
@@ -284,8 +284,8 @@ pub fn refresh_thread(conn: &Connection, account_id: AccountId, thread_id: &str)
             |row| row.get(0),
         )?)
     };
-    let unread = has_label("UNREAD")?;
-    let starred = has_label("STARRED")?;
+    let unread = has_label(system_label::UNREAD)?;
+    let starred = has_label(system_label::STARRED)?;
     conn.execute(
         "INSERT INTO threads (account_id, id, last_message_at, subject, snippet, from_display, message_count, \
          unread, starred, has_attachments) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10) \

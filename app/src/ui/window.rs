@@ -11,7 +11,8 @@ use adw::prelude::*;
 use base64::Engine;
 use gtk::{gdk, gio, glib};
 use mailrs_domain::{
-    Account, AccountId, AccountState, ChangeEvent, Label, MessageBody, MessageMeta, ThreadSummary,
+    Account, AccountId, AccountState, ChangeEvent, Folder, Label, MessageBody, MessageMeta,
+    ThreadSummary, system_label,
 };
 use mailrs_store::{accounts, labels, messages, threads};
 use mailrs_sync::TriageAction;
@@ -19,7 +20,7 @@ use mailrs_sync::TriageAction;
 use super::conversation::{Action, ConversationView, OpenThread};
 use super::sidebar::Sidebar;
 use super::thread_list::{Picked, ThreadList};
-use super::{Folder, Mailbox, summarize_search, welcome};
+use super::{FolderLook, Mailbox, summarize_search, welcome};
 use crate::app::App;
 use crate::assistant::ToolRequest;
 use crate::compose::{self, Draft, OutgoingAttachment, ReplyKind};
@@ -267,8 +268,8 @@ impl MainWindow {
                 list,
                 conversation,
                 first_account,
-                mailbox: RefCell::new(Mailbox::Unified("INBOX")),
-                before_search: RefCell::new(Mailbox::Unified("INBOX")),
+                mailbox: RefCell::new(Mailbox::Unified(system_label::INBOX)),
+                before_search: RefCell::new(Mailbox::Unified(system_label::INBOX)),
                 accounts: RefCell::new(Vec::new()),
                 refresh_queued: Cell::new(false),
                 list_generation: Cell::new(0),
@@ -456,7 +457,7 @@ impl MainWindow {
                 _ => true,
             };
             if !still_exists {
-                *this.mailbox.borrow_mut() = Mailbox::Unified("INBOX");
+                *this.mailbox.borrow_mut() = Mailbox::Unified(system_label::INBOX);
             }
             let settings = this.settings();
             let (data, extras) = this.arrange(data, &settings);
@@ -1561,7 +1562,7 @@ impl MainWindow {
                 .messages
                 .iter()
                 .rev()
-                .find(|m| m.has_label("DRAFT"))?
+                .find(|m| m.has_label(system_label::DRAFT))?
                 .clone();
             let body = match open.bodies.get(&draft.id) {
                 Some(Ok(body)) => compose::body_text(body),
@@ -2134,7 +2135,7 @@ impl MainWindow {
 
     /// Opens a thread from outside the window, such as a notification.
     pub fn reveal(self: &Rc<Self>, account_id: AccountId, thread_id: String) {
-        let inbox = Mailbox::Unified("INBOX");
+        let inbox = Mailbox::Unified(system_label::INBOX);
         if *self.mailbox.borrow() != inbox {
             self.sidebar.select(&inbox);
             self.show_mailbox(inbox);
@@ -2325,7 +2326,7 @@ impl MainWindow {
         }
         if before.suggest_follow_ups != after.suggest_follow_ups {
             if !after.suggest_follow_ups && *self.mailbox.borrow() == Mailbox::FollowUp {
-                let inbox = Mailbox::Unified("INBOX");
+                let inbox = Mailbox::Unified(system_label::INBOX);
                 self.sidebar.select(&inbox);
                 self.show_mailbox(inbox);
             }
@@ -2477,10 +2478,10 @@ fn empty_state(mailbox: &Mailbox) -> (&'static str, &'static str) {
         }
     };
     match label {
-        "INBOX" => ("Inbox Zero", "penguin-mail-inbox-symbolic"),
-        "STARRED" => ("No Starred Mail", "starred-symbolic"),
-        "SENT" => ("No Sent Mail", "mail-send-symbolic"),
-        "DRAFT" => ("No Drafts", "document-edit-symbolic"),
+        system_label::INBOX => ("Inbox Zero", "penguin-mail-inbox-symbolic"),
+        system_label::STARRED => ("No Starred Mail", "starred-symbolic"),
+        system_label::SENT => ("No Sent Mail", "mail-send-symbolic"),
+        system_label::DRAFT => ("No Drafts", "document-edit-symbolic"),
         _ => ("No Mail", "penguin-mail-tag-symbolic"),
     }
 }
