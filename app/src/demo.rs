@@ -248,3 +248,118 @@ mod tests {
         }
     }
 }
+
+/// Gmail for demo mode: reads come from the local store, writes succeed
+/// without going anywhere.
+pub struct DemoApi {
+    pub db: mailrs_store::Db,
+    pub account_id: mailrs_domain::AccountId,
+}
+
+impl DemoApi {
+    async fn message(&self, id: &str) -> Option<MessageMeta> {
+        let (account_id, id) = (self.account_id, id.to_string());
+        self.db
+            .read(move |c| {
+                let Some(thread) = messages::thread_id_of(c, account_id, &id)? else { return Ok(None) };
+                Ok(messages::thread_messages(c, account_id, &thread)?.into_iter().find(|m| m.id == id))
+            })
+            .await
+            .ok()
+            .flatten()
+    }
+}
+
+use mailrs_gmail::{GmailError, HistoryPage, MessagePage, MessageRef, Profile, RemoteLabel};
+use mailrs_sync::GmailApi;
+
+impl GmailApi for DemoApi {
+    async fn profile(&self) -> std::result::Result<Profile, GmailError> {
+        Ok(Profile { email_address: ACCOUNTS[0].into(), history_id: 1 })
+    }
+
+    async fn labels(&self) -> std::result::Result<Vec<RemoteLabel>, GmailError> {
+        Ok(vec![])
+    }
+
+    /// Matches every word of the query against sender, subject, and snippet.
+    /// Gmail operators such as `from:` are read as plain words.
+    async fn list_messages(&self, query: &str, _page_token: Option<&str>) -> std::result::Result<MessagePage, GmailError> {
+        let words: Vec<String> = query
+            .split_whitespace()
+            .map(|w| w.rsplit(':').next().unwrap_or(w).to_lowercase())
+            .filter(|w| !w.is_empty() && !w.starts_with('{'))
+            .collect();
+        let account_id = self.account_id;
+        let found = self
+            .db
+            .read(move |c| {
+                let mut stmt = c.prepare(
+                    "SELECT id, thread_id, lower(subject || ' ' || snippet || ' ' || coalesce(from_name, '') || ' ' || coalesce(from_addr, '')) \
+                     FROM messages WHERE account_id = ?1 ORDER BY date DESC",
+                )?;
+                let rows = stmt
+                    .query_map([account_id], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?)))?
+                    .collect::<rusqlite::Result<Vec<_>>>()?;
+                Ok(rows
+                    .into_iter()
+                    .filter(|(_, _, text)| words.iter().all(|w| text.contains(w.as_str())))
+                    .map(|(id, thread_id, _)| MessageRef { id, thread_id })
+                    .collect::<Vec<_>>())
+            })
+            .await
+            .map_err(|e| GmailError::Http { status: 500, body: e.to_string() })?;
+        Ok(MessagePage { messages: found, next_page_token: None })
+    }
+
+    async fn message_metadata(&self, id: &str) -> std::result::Result<MessageMeta, GmailError> {
+        self.message(id).await.ok_or(GmailError::NotFound)
+    }
+
+    async fn thread_metadata(&self, thread_id: &str) -> std::result::Result<Vec<MessageMeta>, GmailError> {
+        let (account_id, thread_id) = (self.account_id, thread_id.to_string());
+        let found = self.db.read(move |c| messages::thread_messages(c, account_id, &thread_id)).await.unwrap_or_default();
+        if found.is_empty() { Err(GmailError::NotFound) } else { Ok(found) }
+    }
+
+    async fn message_body(&self, id: &str) -> std::result::Result<MessageBody, GmailError> {
+        let (account_id, id) = (self.account_id, id.to_string());
+        self.db.write(move |c| bodies::get_body(c, account_id, &id, 0)).await.ok().flatten().ok_or(GmailError::NotFound)
+    }
+
+    async fn history(&self, start: u64, _page_token: Option<&str>) -> std::result::Result<HistoryPage, GmailError> {
+        Ok(HistoryPage { changes: vec![], next_page_token: None, history_id: start })
+    }
+
+    async fn modify_labels(&self, _id: &str, _add: &[String], _remove: &[String]) -> std::result::Result<(), GmailError> {
+        Ok(())
+    }
+
+    async fn trash(&self, _id: &str) -> std::result::Result<(), GmailError> {
+        Ok(())
+    }
+
+    async fn send(&self, _raw: &[u8], _thread_id: Option<&str>) -> std::result::Result<String, GmailError> {
+        Ok("demo-sent".into())
+    }
+
+    async fn save_draft(&self, draft_id: Option<&str>, _raw: &[u8], _thread_id: Option<&str>) -> std::result::Result<String, GmailError> {
+        Ok(draft_id.unwrap_or("demo-draft").to_string())
+    }
+
+    async fn delete_draft(&self, _draft_id: &str) -> std::result::Result<(), GmailError> {
+        Ok(())
+    }
+
+    async fn draft_for_message(&self, message_id: &str) -> std::result::Result<Option<String>, GmailError> {
+        Ok(self.message(message_id).await.filter(|m| m.has_label("DRAFT")).map(|_| "demo-draft".to_string()))
+    }
+
+    async fn display_name(&self) -> std::result::Result<Option<String>, GmailError> {
+        Ok(Some(DISPLAY_NAME.into()))
+    }
+
+    async fn attachment(&self, _message_id: &str, attachment_id: &str) -> std::result::Result<Vec<u8>, GmailError> {
+        Ok(format!("This is {attachment_id}, a stand-in file from mailrs demo mode.\n").into_bytes())
+    }
+}
