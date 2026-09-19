@@ -8,7 +8,7 @@ use gtk::{gio, glib};
 use mailrs_domain::{Account, AccountId, Label, system_label};
 
 use super::MainWindow;
-use crate::settings::Settings;
+use crate::settings::{Change, Settings};
 use crate::ui::Mailbox;
 use crate::ui::sidebar::Extras;
 
@@ -77,12 +77,7 @@ impl MainWindow {
                 return;
             };
             let shown = Mailbox::Smart(mailbox.clone());
-            app.update_settings(move |s| {
-                match s.smart_mailboxes.iter_mut().find(|m| m.id == mailbox.id) {
-                    Some(slot) => *slot = mailbox,
-                    None => s.smart_mailboxes.push(mailbox),
-                }
-            });
+            app.change_settings(Change::SaveSmartMailbox(Box::new(mailbox)));
             win.sidebar.select(&shown);
             win.show_mailbox(shown);
         });
@@ -111,7 +106,7 @@ impl MainWindow {
                 return;
             }
             if let Some(app) = this.app.upgrade() {
-                app.update_settings(|s| s.smart_mailboxes.retain(|m| m.id != id));
+                app.change_settings(Change::DeleteSmartMailbox(id));
             }
             let inbox = Mailbox::Unified(system_label::INBOX);
             this.sidebar.select(&inbox);
@@ -153,12 +148,9 @@ impl MainWindow {
             }
             let name = entry.text().trim().to_string();
             if let Some(app) = this.app.upgrade() {
-                app.update_settings(move |s| {
-                    if name.is_empty() {
-                        s.account_names.remove(&account.email);
-                    } else {
-                        s.account_names.insert(account.email.clone(), name);
-                    }
+                app.change_settings(Change::AccountName {
+                    email: account.email.clone(),
+                    name,
                 });
             }
         });
@@ -171,9 +163,12 @@ impl MainWindow {
             .iter()
             .map(|a| a.email.clone())
             .collect();
-        let refs: Vec<&str> = emails.iter().map(String::as_str).collect();
         if let Some(app) = self.app.upgrade() {
-            app.update_settings(|s| s.move_account(&refs, &account.email, step));
+            app.change_settings(Change::MoveAccount {
+                emails,
+                email: account.email.clone(),
+                step,
+            });
         }
     }
 
@@ -194,20 +189,22 @@ impl MainWindow {
         with_id("smart-edit", |win, id| win.edit_smart(Some(id)));
         with_id("vip-remove", |win, email| {
             if let Some(app) = win.app.upgrade() {
-                app.update_settings(|s| {
-                    s.vips.remove(&email.to_lowercase());
+                app.change_settings(Change::SetVip {
+                    email,
+                    name: String::new(),
+                    add: false,
                 });
             }
         });
         with_id("smart-delete", |win, id| win.delete_smart(id));
         with_id("smart-up", |win, id| {
             if let Some(app) = win.app.upgrade() {
-                app.update_settings(|s| s.move_smart(&id, -1));
+                app.change_settings(Change::MoveSmartMailbox { id, step: -1 });
             }
         });
         with_id("smart-down", |win, id| {
             if let Some(app) = win.app.upgrade() {
-                app.update_settings(|s| s.move_smart(&id, 1));
+                app.change_settings(Change::MoveSmartMailbox { id, step: 1 });
             }
         });
         let new = gio::SimpleAction::new("smart-new", None);
@@ -234,9 +231,9 @@ impl MainWindow {
             let (Some(account), Some(app)) = (win.account(id), win.app.upgrade()) else {
                 return;
             };
-            app.update_settings(|s| {
-                s.account_colors
-                    .insert(account.email.clone(), index.max(0) as usize);
+            app.change_settings(Change::AccountColor {
+                email: account.email.clone(),
+                index: index.max(0) as usize,
             });
         });
         self.actions.add_action(&color);

@@ -12,8 +12,7 @@ use mailrs_sync::config::SyncConfig;
 use crate::app::App;
 use crate::autostart;
 use crate::settings::{
-    CACHE_CHOICES, Choice, ColorScheme, MarkRead, POLL_CHOICES, RemoteImages, Settings, TextSize,
-    UndoSend, WINDOW_CHOICES, nearest,
+    CACHE_CHOICES, Change, Choice, POLL_CHOICES, Settings, WINDOW_CHOICES, nearest,
 };
 
 /// Shows Preferences. With `signature_of`, opens on that account's signature.
@@ -69,42 +68,42 @@ fn general_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         "Group Messages into Conversations",
         Some("Show a thread's replies together instead of one row per message"),
         settings.threading,
-        |s, v| s.threading = v,
+        Change::Threading,
     ));
     reading.add(&switch(
         app,
         "Group Inbox into Categories",
         Some("Sort the inbox into Primary, Updates, Promotions, and Social, as Gmail does"),
         settings.inbox_categories,
-        |s, v| s.inbox_categories = v,
+        Change::InboxCategories,
     ));
     reading.add(&switch(
         app,
         "Suggest Follow-Ups",
         Some("List mail you sent that has had no reply for three days"),
         settings.suggest_follow_ups,
-        |s, v| s.suggest_follow_ups = v,
+        Change::SuggestFollowUps,
     ));
     reading.add(&combo(
         app,
         "Mark as Read",
         None,
         settings.mark_read,
-        |s, v: MarkRead| s.mark_read = v,
+        Change::MarkRead,
     ));
     reading.add(&combo(
         app,
         "Remote Images",
         Some("Loading them can tell senders when you read their mail"),
         settings.remote_images,
-        |s, v: RemoteImages| s.remote_images = v,
+        Change::RemoteImages,
     ));
     reading.add(&combo(
         app,
         "Text Size",
         None,
         settings.text_size,
-        |s, v: TextSize| s.text_size = v,
+        Change::TextSize,
     ));
     page.add(&reading);
 
@@ -114,7 +113,7 @@ fn general_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         "Style",
         None,
         settings.color_scheme,
-        |s, v: ColorScheme| s.color_scheme = v,
+        Change::ColorScheme,
     ));
     page.add(&appearance);
 
@@ -126,14 +125,14 @@ fn general_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         "Notify About New Mail",
         None,
         settings.notifications,
-        |s, v| s.notifications = v,
+        Change::Notifications,
     );
     let previews = switch(
         app,
         "Show Sender and Subject",
         Some("Turn off to see only how much mail arrived"),
         settings.notification_previews,
-        |s, v| s.notification_previews = v,
+        Change::NotificationPreviews,
     );
     enabled
         .bind_property("active", &previews, "sensitive")
@@ -144,7 +143,7 @@ fn general_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         "Only for VIPs",
         Some("Stay quiet about mail from everyone else"),
         settings.notify_vips_only,
-        |s, v| s.notify_vips_only = v,
+        Change::NotifyVipsOnly,
     );
     enabled
         .bind_property("active", &vips_only, "sensitive")
@@ -200,7 +199,7 @@ fn writing_page(
         else {
             return;
         };
-        app.update_settings(move |s| s.default_account = Some(email));
+        app.change_settings(Change::DefaultAccount(Some(email)));
     });
     sending.add(&from);
     sending.add(&combo(
@@ -208,7 +207,7 @@ fn writing_page(
         "Undo Send",
         Some("How long you can take a message back after sending it"),
         settings.undo_send,
-        |s, v: UndoSend| s.undo_send = v,
+        Change::UndoSend,
     ));
     page.add(&sending);
 
@@ -291,7 +290,7 @@ fn writing_page(
                 .to_string();
             subtitle.set_subtitle(&preview(&text));
             let email = email.clone();
-            app.update_settings(move |s| s.set_signature(&email, &text));
+            app.change_settings(Change::Signature { email, text });
         });
         signatures.add(&row);
     }
@@ -367,7 +366,7 @@ fn switch(
     title: &str,
     subtitle: Option<&str>,
     active: bool,
-    set: impl Fn(&mut Settings, bool) + 'static,
+    change: impl Fn(bool) -> Change + 'static,
 ) -> adw::SwitchRow {
     let row = adw::SwitchRow::builder()
         .title(title)
@@ -376,12 +375,11 @@ fn switch(
     if let Some(subtitle) = subtitle {
         row.set_subtitle(subtitle);
     }
-    let (weak, set) = (Rc::downgrade(app), Rc::new(set));
+    let weak = Rc::downgrade(app);
     row.connect_active_notify(move |row| {
-        let (Some(app), value, set) = (weak.upgrade(), row.is_active(), Rc::clone(&set)) else {
-            return;
-        };
-        app.update_settings(move |s| set(s, value));
+        if let Some(app) = weak.upgrade() {
+            app.change_settings(change(row.is_active()));
+        }
     });
     row
 }
@@ -391,7 +389,7 @@ fn combo<T: Choice>(
     title: &str,
     subtitle: Option<&str>,
     current: T,
-    set: impl Fn(&mut Settings, T) + 'static,
+    change: impl Fn(T) -> Change + 'static,
 ) -> adw::ComboRow {
     let labels: Vec<&str> = T::ALL.iter().map(|c| c.label()).collect();
     let row = adw::ComboRow::builder()
@@ -402,16 +400,11 @@ fn combo<T: Choice>(
     if let Some(subtitle) = subtitle {
         row.set_subtitle(subtitle);
     }
-    let (weak, set) = (Rc::downgrade(app), Rc::new(set));
+    let weak = Rc::downgrade(app);
     row.connect_selected_notify(move |row| {
-        let (Some(app), value, set) = (
-            weak.upgrade(),
-            T::from_index(row.selected()),
-            Rc::clone(&set),
-        ) else {
-            return;
-        };
-        app.update_settings(move |s| set(s, value));
+        if let Some(app) = weak.upgrade() {
+            app.change_settings(change(T::from_index(row.selected())));
+        }
     });
     row
 }

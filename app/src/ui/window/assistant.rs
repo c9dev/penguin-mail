@@ -18,26 +18,13 @@ use super::{MainWindow, Target};
 use crate::compose::{self, Draft, SendWhen};
 use crate::core::Sync;
 use crate::rules::{RuleForm, describe_action, describe_criteria};
-use crate::settings::{Choice, ColorScheme, MarkRead, RemoteImages, Settings, TextSize, UndoSend};
+use crate::settings::{
+    Change, Choice, ColorScheme, MarkRead, RemoteImages, Setting, TextSize, UndoSend,
+};
 use crate::ui::vacation::missing_scope;
 use mailrs_domain::smart::{Condition, SmartMailbox};
 
 type ToolResult = Result<Value, String>;
-
-/// Settings the assistant may read and change. The assistant's own
-/// settings are left out on purpose.
-const SETTING_NAMES: [&str; 10] = [
-    "threading",
-    "mark_read",
-    "remote_images",
-    "text_size",
-    "color_scheme",
-    "notifications",
-    "notification_previews",
-    "notify_vips_only",
-    "undo_send",
-    "default_account",
-];
 
 fn text(input: &Value, key: &str) -> Option<String> {
     input
@@ -833,15 +820,10 @@ impl MainWindow {
     // ---- App settings ----------------------------------------------------
 
     fn tool_settings(&self) -> Value {
-        let settings = serde_json::to_value(self.settings()).unwrap_or_default();
-        let current: serde_json::Map<String, Value> = SETTING_NAMES
+        let settings = self.settings();
+        let current: serde_json::Map<String, Value> = Setting::ALL
             .iter()
-            .map(|name| {
-                (
-                    name.to_string(),
-                    settings.get(*name).cloned().unwrap_or(Value::Null),
-                )
-            })
+            .map(|s| (s.name().to_string(), s.value(&settings)))
             .collect();
         json!({
             "settings": current,
@@ -859,16 +841,14 @@ impl MainWindow {
 
     fn tool_change_setting(&self, input: &Value) -> ToolResult {
         let name = required(input, "name")?;
-        if !SETTING_NAMES.contains(&name.as_str()) {
-            return Err(format!("{name} is not a setting the assistant can change."));
-        }
+        let setting = Setting::named(&name)
+            .ok_or_else(|| format!("{name} is not a setting the assistant can change."))?;
         let value = input.get("value").cloned().unwrap_or(Value::Null);
-        let mut raw = serde_json::to_value(self.settings()).map_err(|e| e.to_string())?;
-        raw[&name] = value.clone();
-        let changed: Settings = serde_json::from_value(raw)
+        let change = setting
+            .change(&value)
             .map_err(|e| format!("{value} is not a valid value for {name}: {e}"))?;
         let app = self.app.upgrade().ok_or("The app is closing.")?;
-        app.update_settings(move |s| *s = changed);
+        app.change_settings(change);
         Ok(json!({"changed": name, "value": value}))
     }
 
@@ -880,23 +860,22 @@ impl MainWindow {
             .unwrap_or_default()
             .to_string();
         let app = self.app.upgrade().ok_or("The app is closing.")?;
-        let email = account.email.clone();
-        app.update_settings(move |s| s.set_signature(&email, &text));
+        app.change_settings(Change::Signature {
+            email: account.email.clone(),
+            text,
+        });
         Ok(json!({"signature_set_for": account.email}))
     }
 
     fn tool_vip(&self, input: &Value) -> ToolResult {
         let email = required(input, "email")?.to_lowercase();
         let add = flag(input, "add").unwrap_or(true);
-        let name = text(input, "name").unwrap_or_else(|| email.clone());
+        let name = text(input, "name").unwrap_or_default();
         let app = self.app.upgrade().ok_or("The app is closing.")?;
-        let key = email.clone();
-        app.update_settings(move |s| {
-            if add {
-                s.vips.insert(key, name);
-            } else {
-                s.vips.remove(&key);
-            }
+        app.change_settings(Change::SetVip {
+            email: email.clone(),
+            name,
+            add,
         });
         Ok(json!({"email": email, "vip": add}))
     }
@@ -921,7 +900,7 @@ impl MainWindow {
             .ok_or("Give at least one condition with a value.")?;
         let app = self.app.upgrade().ok_or("The app is closing.")?;
         let name = mailbox.name.clone();
-        app.update_settings(move |s| s.smart_mailboxes.push(mailbox));
+        app.change_settings(Change::SaveSmartMailbox(Box::new(mailbox)));
         Ok(json!({"created": name, "gmail_query": query}))
     }
 
