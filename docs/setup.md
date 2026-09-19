@@ -20,14 +20,14 @@ In Google Auth Platform:
    https://www.googleapis.com/auth/gmail.modify
    https://www.googleapis.com/auth/gmail.settings.basic
    ```
-   The first reads, sends, and organizes mail. The second lets mailrs turn
-   Gmail's automatic reply on and off.
+   The first reads, sends, and organizes mail. The second lets mailrs change
+   Gmail settings: the automatic reply, Rules, and Block Sender.
 4. Audience: click Publish app and confirm. Do not submit it for verification.
 
 **Set up before automatic replies existed?** Add the second scope under Data
 Access as above. Then in mailrs, open an account's ⋮ menu, choose
-**Automatic Reply…**, and click **Grant Access**. Google asks you to confirm
-once per account; mail keeps syncing throughout.
+**Automatic Reply…** or **Rules…**, and click **Grant Access**. Google asks
+you to confirm once per account; mail keeps syncing throughout.
 
 Step 4 is what keeps you signed in. Google expires refresh tokens after 7 days
 for apps left in Testing, which would sign every account out once a week. A

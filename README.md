@@ -16,13 +16,32 @@ time, and keeps your mail on your own computer.
 - **A Markdown composer.** Replies, reply-all, and forwards thread correctly
   in Gmail. Drafts save to Gmail, so they follow you to your phone.
 - **Gmail search**, with its full query syntax, across one account or all.
+- **Junk, Trash, and All Mail**, for every account together or one at a
+  time, read live from Gmail. Not Junk and Move to Inbox put mail back.
+- **Recipient suggestions** in To and Cc, from people you have written to
+  and heard from.
+- **Undo Send and Send Later.** Sent mail waits a few seconds with an Undo
+  button (Preferences sets how long). Send Later, on the arrow next to
+  Send, schedules a message; it waits in Send Later and goes out on time
+  while mailrs runs, even in the tray.
+- **Formatting without Markdown**: a bar for bold, italic, strikethrough,
+  links, lists, and quotes. Paste, drop, or insert images into the text.
 - **Tray and notifications.** An unread count in the tray and a notification
   for new mail, which opens the thread when clicked.
 - **Select several at once** with Ctrl+click, Shift+click, or Ctrl+A, then
   archive, trash, junk, star, mark, or label them together. Every one of
   these can be undone with Ctrl+Z or the Undo button on the toast.
 - **Labels.** Add or remove Gmail labels from the toolbar or with `l`.
-  Nested labels show as a tree under their account.
+  Nested labels show as a tree under their account. Create labels from the
+  label menu or the account menu; right-click one to rename or delete it.
+- **Drag and drop.** Drag mail onto any mailbox or label to move it there.
+- **Unsubscribe and Block Sender.** List mail shows an Unsubscribe banner
+  that uses the list's one-click link when it has one. Block Sender sends
+  the address's future mail to the Trash with a Gmail filter.
+- **Rules**: Gmail's filters, listed in plain words, with a form to add
+  one. Gmail runs them, so they work with the computer off.
+- **Print, View Source, and Open in New Window** from the ⋮ menu, Ctrl+P,
+  Ctrl+Alt+U, and a double-click or Ctrl+O.
 - **Automatic replies.** Turn Gmail's out-of-office reply on from an
   account's ⋮ menu, with a subject, message, and optional dates. Gmail sends
   it, so it works with the computer off.
@@ -45,6 +64,10 @@ time, and keeps your mail on your own computer.
 | Several selected | Automatic reply |
 |---|---|
 | ![Three conversations selected, with bulk actions](docs/screenshots/selection.png) | ![The automatic reply dialog](docs/screenshots/automatic-reply.png) |
+
+| Send Later | Rules |
+|---|---|
+| ![A message scheduled for Monday morning](docs/screenshots/send-later.png) | ![A Gmail filter in the Rules dialog](docs/screenshots/rules.png) |
 
 ![Preferences](docs/screenshots/preferences.png)
 
@@ -94,6 +117,8 @@ keys work too, whenever you are not typing.
 | `Ctrl+Z` | Undo | `Ctrl+F` or `/` | Search |
 | `Ctrl+A` | Select all | `Ctrl+1` to `Ctrl+9` | Open a mailbox |
 | `Ctrl+Shift+N` or `F5` | Check for mail | `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | Text size |
+| `Ctrl+O` or double-click | Open in a new window | `Ctrl+P` | Print |
+| `Ctrl+Alt+U` | View source | `Ctrl+?` | Every shortcut |
 
 `Ctrl+?` shows them all.
 
