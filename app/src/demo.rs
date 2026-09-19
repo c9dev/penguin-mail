@@ -137,7 +137,7 @@ fn samples() -> Vec<Sample> {
             to: &[ME],
             subject: "Your September statement is ready",
             minutes_ago: 5 * HOUR,
-            labels: &["INBOX"],
+            labels: &["INBOX", "CATEGORY_UPDATES"],
             text: "Your September statement is ready to view.",
             html: Some(
                 r#"<table width="100%" cellpadding="0" cellspacing="0" style="font-family:Helvetica,Arial,sans-serif;background:#f4f1ec"><tr><td align="center" style="padding:28px 12px"><table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:14px"><tr><td style="padding:26px 32px 8px;font-size:13px;letter-spacing:.12em;color:#2f6b4f;font-weight:bold">JUNIPER BANK</td></tr><tr><td style="padding:4px 32px 0;font-size:24px;font-weight:bold;color:#1d1d1f">Your September statement is ready</td></tr><tr><td style="padding:14px 32px;font-size:15px;line-height:1.55;color:#444">Hi Dana, your statement for the account ending 4821 is now available in online banking.</td></tr><tr><td style="padding:6px 32px 20px"><table width="100%" style="font-size:14px;color:#1d1d1f;border-top:1px solid #eee"><tr><td style="padding:10px 0">Opening balance</td><td align="right">$3,412.08</td></tr><tr><td style="padding:10px 0;border-top:1px solid #eee">Money in</td><td align="right" style="border-top:1px solid #eee;color:#2f6b4f">+$4,950.00</td></tr><tr><td style="padding:10px 0;border-top:1px solid #eee">Money out</td><td align="right" style="border-top:1px solid #eee">−$3,877.41</td></tr><tr><td style="padding:10px 0;border-top:1px solid #eee;font-weight:bold">Closing balance</td><td align="right" style="border-top:1px solid #eee;font-weight:bold">$4,484.67</td></tr></table></td></tr><tr><td style="padding:0 32px 30px"><a href="https://juniper.example/statements" style="display:inline-block;background:#2f6b4f;color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:bold;font-size:14px">View statement</a></td></tr></table><p style="font-size:12px;color:#8a8a8a;margin:18px 0 0">Juniper Bank will never ask for your password by email.</p></td></tr></table>"#,
@@ -181,7 +181,7 @@ fn samples() -> Vec<Sample> {
             to: &[ME],
             subject: "Your parcel is out for delivery",
             minutes_ago: 2 * DAY + 2 * HOUR,
-            labels: &["INBOX"],
+            labels: &["INBOX", "CATEGORY_UPDATES"],
             text: "Your parcel is out for delivery today between 10:00 and 14:00.",
             html: Some(
                 r#"<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#222"><div style="font-size:20px;font-weight:bold;color:#d9480f">Packet Post</div><h2 style="margin:18px 0 6px;font-size:22px">Arriving today</h2><p style="font-size:15px;color:#444;margin:0 0 18px">Your parcel from Linden Books is out for delivery between <b>10:00 and 14:00</b>.</p><div style="background:#fff4e6;border-radius:10px;padding:14px 16px;font-size:14px">Tracking number <b>PP 4417 2290 118</b></div><p style="font-size:12px;color:#888;margin-top:22px">You're receiving this because you placed an order with a Packet Post partner.</p></div>"#,
@@ -226,7 +226,7 @@ fn samples() -> Vec<Sample> {
             to: &[ME],
             subject: "Two books are due next week",
             minutes_ago: 6 * DAY + 2 * HOUR,
-            labels: &["INBOX"],
+            labels: &["INBOX", "CATEGORY_UPDATES"],
             text: "Hello Dana,\n\nThese items are due on 24 September:\n\n- Research Design in Practice\n- Visualizing Data, 2nd ed.\n\nRenew online at https://library.uni.example/account\n\nUniversity Library",
             html: None,
             attachments: &[],
@@ -252,7 +252,7 @@ fn samples() -> Vec<Sample> {
             to: &[ME],
             subject: "Your tickets for The Night Ferries",
             minutes_ago: 19 * DAY,
-            labels: &["INBOX"],
+            labels: &["INBOX", "CATEGORY_UPDATES"],
             text: "Doors open at 19:30. Show this email at the entrance.",
             html: None,
             attachments: &[("tickets.pdf", "application/pdf", 214_000)],
@@ -278,8 +278,47 @@ fn samples() -> Vec<Sample> {
             to: &[ME],
             subject: "Five autumn loops under 15 km",
             minutes_ago: 7 * HOUR,
-            labels: &["INBOX"],
+            labels: &["INBOX", "CATEGORY_PROMOTIONS"],
             text: "This week: five autumn loops under 15 km, a gear list for cold mornings, and where the larches turn first.",
+            html: None,
+            attachments: &[],
+        },
+        Sample {
+            account: 0,
+            thread: "t-sale",
+            id: "sale-1",
+            from: ("Linden Books", "offers@lindenbooks.example"),
+            to: &[ME],
+            subject: "20% off travel guides this weekend",
+            minutes_ago: DAY + 9 * HOUR,
+            labels: &["INBOX", "UNREAD", "CATEGORY_PROMOTIONS"],
+            text: "Planning a trip? Every travel guide is 20% off until Sunday night. Use code WANDER at checkout.",
+            html: None,
+            attachments: &[],
+        },
+        Sample {
+            account: 0,
+            thread: "t-pinecone",
+            id: "pinecone-1",
+            from: ("Pinecone", "notify@pinecone.example"),
+            to: &[ME],
+            subject: "Mara Okafor mentioned you in a comment",
+            minutes_ago: 9 * HOUR,
+            labels: &["INBOX", "UNREAD", "CATEGORY_SOCIAL"],
+            text: "Mara Okafor mentioned you: \"@dana this is the ridge we're doing on Saturday!\" Reply on Pinecone.",
+            html: None,
+            attachments: &[],
+        },
+        Sample {
+            account: 2,
+            thread: "t-seminar",
+            id: "seminar-1",
+            from: ("Grad Seminar List", "grad-seminar@uni.example"),
+            to: &[("", "grad-seminar@uni.example")],
+            subject: "[grad-seminar] Room change for Thursday",
+            minutes_ago: DAY + 2 * HOUR,
+            labels: &["INBOX", "CATEGORY_FORUMS"],
+            text: "Thursday's seminar moves to room B214. Same time, 4pm. Coffee provided.",
             html: None,
             attachments: &[],
         },
@@ -291,7 +330,7 @@ fn samples() -> Vec<Sample> {
             to: &[ME],
             subject: "You have been selected!!!",
             minutes_ago: 5 * HOUR,
-            labels: &["SPAM", "UNREAD"],
+            labels: &["SPAM", "UNREAD", "CATEGORY_PROMOTIONS"],
             text: "Claim your gift card today. Offer ends at midnight.",
             html: None,
             attachments: &[],
@@ -304,7 +343,7 @@ fn samples() -> Vec<Sample> {
             to: &[ME],
             subject: "Last chance: webinar seats",
             minutes_ago: 2 * DAY,
-            labels: &["TRASH"],
+            labels: &["TRASH", "CATEGORY_PROMOTIONS"],
             text: "Seats for Thursday's webinar are almost gone.",
             html: None,
             attachments: &[],
@@ -802,6 +841,23 @@ mod tests {
     use mailrs_store::{bodies, open_in_memory};
 
     use super::*;
+
+    #[test]
+    fn every_inbox_category_has_demo_mail() {
+        let conn = open_in_memory().unwrap();
+        seed(&conn, 1_758_000_000_000).unwrap();
+        for labels in [
+            &["CATEGORY_UPDATES"][..],
+            &["CATEGORY_PROMOTIONS"],
+            &["CATEGORY_SOCIAL", "CATEGORY_FORUMS"],
+        ] {
+            let filter = ThreadFilter::unified("INBOX").with_labels(labels, &[]);
+            assert!(
+                threads::count_threads(&conn, &filter).unwrap() >= 2,
+                "{labels:?}"
+            );
+        }
+    }
 
     #[test]
     fn the_demo_store_has_a_lively_unified_inbox() {

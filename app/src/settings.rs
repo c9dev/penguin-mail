@@ -37,6 +37,9 @@ pub struct Settings {
     pub account_colors: BTreeMap<String, usize>,
     /// A name shown instead of the address in the sidebar.
     pub account_names: BTreeMap<String, String>,
+    /// Split inboxes into Primary, Updates, Promotions, and Social, from
+    /// Gmail's category labels.
+    pub inbox_categories: bool,
 }
 
 impl Default for Settings {
@@ -59,6 +62,7 @@ impl Default for Settings {
             account_order: Vec::new(),
             account_colors: BTreeMap::new(),
             account_names: BTreeMap::new(),
+            inbox_categories: true,
         }
     }
 }

@@ -26,6 +26,7 @@ use crate::core::Core;
 use crate::settings::{Choice, MarkRead, RemoteImages, Settings, TextSize};
 
 mod arrange;
+mod categories;
 mod detached;
 mod flags;
 mod organize;
@@ -63,6 +64,7 @@ pub struct MainWindow {
     /// How to reverse the last organizing action.
     undo: RefCell<Option<(Vec<Target>, TriageAction)>>,
     labels: RefCell<HashMap<AccountId, Vec<Label>>>,
+    categories: categories::CategoryBar,
 }
 
 /// One thing an action applies to: a thread, or one message of it.
@@ -238,6 +240,7 @@ impl MainWindow {
                 authorizing: Cell::new(false),
                 undo: RefCell::new(None),
                 labels: RefCell::new(HashMap::new()),
+                categories: categories::CategoryBar::new(),
             }
         });
         if window.core.demo {
@@ -260,6 +263,7 @@ impl MainWindow {
         });
         window.install_actions();
         window.install_arrange_actions();
+        window.install_categories();
         let labels_of = Rc::downgrade(&window);
         super::search_suggest::attach(&window.list.search_entry, app.contacts(), move || {
             let Some(win) = labels_of.upgrade() else {
@@ -432,6 +436,7 @@ impl MainWindow {
             if let Some(app) = this.app.upgrade() {
                 app.remember_accounts(&this.accounts.borrow());
             }
+            this.follow_categories();
             this.refresh_counts();
             this.reload_list();
         });
@@ -471,6 +476,7 @@ impl MainWindow {
                 this.sidebar.set_counts(&counts);
             }
         });
+        self.refresh_category_counts();
     }
 
     // ---- Mailboxes and the thread list ---------------------------------
@@ -492,6 +498,7 @@ impl MainWindow {
             self.split.set_show_sidebar(false);
         }
         self.conversation.set_folder(mailbox.folder());
+        self.follow_categories();
         match mailbox {
             Mailbox::Folder { account_id, folder } => {
                 let (title, icon) = empty_state(&mailbox);
@@ -524,7 +531,7 @@ impl MainWindow {
                 _ => self.load_scheduled(generation),
             };
         }
-        let Some(filter) = mailbox.filter() else {
+        let Some(filter) = mailbox.filter().map(|f| self.in_category(&mailbox, f)) else {
             return;
         };
         let generation = self.list_generation.get() + 1;
@@ -579,6 +586,7 @@ impl MainWindow {
             account_id: scope,
         };
         self.sidebar.clear_selection();
+        self.follow_categories();
         self.list.set_title("Search", &query);
         self.conversation.clear();
         self.conversation.set_folder(None);
@@ -2212,6 +2220,10 @@ impl MainWindow {
             self.refresh_accounts();
             let vip = sender_is_vip(&self.conversation, after);
             self.conversation.set_sender_vip(vip);
+        }
+        if before.inbox_categories != after.inbox_categories {
+            self.follow_categories();
+            self.reload_list();
         }
         if before.text_size != after.text_size {
             self.conversation.set_zoom(after.text_size.zoom());

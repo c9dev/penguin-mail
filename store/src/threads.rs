@@ -17,6 +17,11 @@ pub struct ThreadFilter {
     pub flag: Option<FlagColor>,
     /// Only threads with a message from one of these addresses.
     pub senders: Vec<String>,
+    /// Only threads with at least one of these labels, such as Gmail's
+    /// `CATEGORY_SOCIAL` and `CATEGORY_FORUMS`. Empty means no condition.
+    pub any_labels: Vec<String>,
+    /// Only threads with none of these labels.
+    pub no_labels: Vec<String>,
 }
 
 impl ThreadFilter {
@@ -43,6 +48,13 @@ impl ThreadFilter {
 
     pub fn from_senders(mut self, senders: Vec<String>) -> Self {
         self.senders = senders;
+        self
+    }
+
+    /// Narrows the list to threads carrying one of `any` and none of `none`.
+    pub fn with_labels(mut self, any: &[&str], none: &[&str]) -> Self {
+        self.any_labels = any.iter().map(|l| l.to_string()).collect();
+        self.no_labels = none.iter().map(|l| l.to_string()).collect();
         self
     }
 
@@ -73,6 +85,18 @@ impl ThreadFilter {
             ));
         } else {
             sql.push_str(&format!(" AND {}", labelled("?1")));
+        }
+        let quoted = |label: &String| format!("'{}'", label.replace('\'', "''"));
+        if !self.any_labels.is_empty() {
+            let any: Vec<String> = self
+                .any_labels
+                .iter()
+                .map(|l| labelled(&quoted(l)))
+                .collect();
+            sql.push_str(&format!(" AND ({})", any.join(" OR ")));
+        }
+        for label in &self.no_labels {
+            sql.push_str(&format!(" AND NOT {}", labelled(&quoted(label))));
         }
         if let Some(flag) = self.flag {
             // The colour comes from a fixed list, so it is safe in the text.

@@ -284,6 +284,21 @@ impl ConversationView {
         sender.append(Some("Add Sender to VIPs"), Some("win.toggle-vip"));
         sender.append(Some("Unsubscribe…"), Some("win.unsubscribe"));
         sender.append(Some("Block Sender…"), Some("win.block-sender"));
+        let categories = gio::Menu::new();
+        for (name, key) in [
+            ("Primary", "primary"),
+            ("Updates", "updates"),
+            ("Promotions", "promotions"),
+            ("Social", "social"),
+        ] {
+            let item = gio::MenuItem::new(Some(name), None);
+            item.set_action_and_target_value(
+                Some("win.categorize-sender"),
+                Some(&key.to_variant()),
+            );
+            categories.append_item(&item);
+        }
+        sender.append_submenu(Some("Categorize Sender"), &categories);
         more.append_section(None, &sender);
         buttons.more.set_menu_model(Some(&more));
         let sender_menu = sender.clone();
