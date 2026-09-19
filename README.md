@@ -59,6 +59,25 @@ time, and keeps your mail on your own computer.
 - **Automatic replies.** Turn Gmail's out-of-office reply on from an
   account's ⋮ menu, with a subject, message, and optional dates. Gmail sends
   it, so it works with the computer off.
+- **An assistant** (Ctrl+J) in a pane on the right. Ask it to summarize,
+  sort, clean up, draft replies, or change settings such as an
+  out-of-office reply, and it does the work with the app's own tools. It
+  runs on a local model (LM Studio, Unsloth Studio, Ollama, or any
+  OpenAI-compatible server), an Anthropic API key, or your Claude
+  subscription through Claude Code, which Penguin Mail finds on its own.
+  It asks before it sends mail or changes Gmail settings.
+  [docs/assistant.md](docs/assistant.md) covers setup.
+- **Categories.** A bar above the inbox splits it into Primary, Updates,
+  Promotions, and Social, using Gmail's own categories. Categorize Sender,
+  in a conversation's ⋮ menu, moves a sender to another category for good.
+- **Follow Up.** Mail you sent that has had no answer for three days shows
+  in a Follow Up mailbox and a banner over the inbox, until someone
+  replies or you dismiss it.
+- **Hide My Email.** Make a plus address, such as
+  `you+kelp.ember795@gmail.com`, for each site you sign up to. Its mail
+  gets a label, and you can turn the address off to send its mail to the
+  Trash. Your real address stays visible inside it, so this stops lazy
+  spam, not a determined sender.
 - **Apple Mail's shortcuts**, with Ctrl in place of Command, plus Gmail's
   single keys.
 - **Preferences** (`Ctrl+,`): group messages into conversations or list each
@@ -82,6 +101,12 @@ time, and keeps your mail on your own computer.
 | Flags | VIPs |
 |---|---|
 | ![A conversation flagged blue](docs/screenshots/flags.png) | ![A VIP in the sidebar and the list](docs/screenshots/vips.png) |
+
+| Assistant | Categories |
+|---|---|
+| ![The assistant listing mail that waits on a reply](docs/screenshots/assistant.png) | ![The inbox narrowed to Promotions](docs/screenshots/categories.png) |
+
+![Hide My Email, with one address and its switch](docs/screenshots/hide-my-email.png)
 
 | Send Later | Rules |
 |---|---|
@@ -177,6 +202,9 @@ The actions are `show-window`, `hide-window`, `compose`, `check`, and `quit`.
   client ID and secret, and Penguin Mail writes it readable by you alone.
 - Mail is cached in `~/.local/share/penguin-mail`: the last 30 days, plus
   everything in your inbox. Opening an older thread fetches it on demand.
+- The assistant is off until you pick a model. A local model keeps mail on
+  your computer; the Anthropic API and Claude Code send what the assistant
+  reads to Anthropic. API keys live in the GNOME keyring.
 - Email is shown with JavaScript off, and with remote content blocked twice:
   by a WebKit content filter and by the page's own Content-Security-Policy.
   Loading images is a per-conversation choice.
@@ -188,6 +216,7 @@ domain/   shared types
 gmail/    Gmail REST client, OAuth, quota limiter
 store/    SQLite schema and queries
 sync/     one sync loop per account: bootstrap, history replay, backfill
+ai/       model providers, tool calls, the Claude Code bridge
 cli/      penguin-mail-cli
 app/      the GTK4 and libadwaita app
 ```
@@ -201,7 +230,7 @@ gap. The design and its trade-offs are written up in
 ## Development
 
 ```sh
-cargo test --workspace                          # about 150 tests, no network
+cargo test --workspace                          # about 250 tests, no network
 cargo clippy --workspace --all-targets -- -D warnings
 cargo run -p mailrs -- --demo                   # the UI with sample data
 scripts/smoke.sh                                # by hand, against a real account

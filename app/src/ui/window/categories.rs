@@ -57,7 +57,7 @@ impl Category {
         Category::ALL.into_iter().find(|c| c.key() == key)
     }
 
-    fn name(self) -> &'static str {
+    pub(super) fn name(self) -> &'static str {
         match self {
             Category::All => "All",
             Category::Primary => "Primary",

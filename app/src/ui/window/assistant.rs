@@ -90,7 +90,7 @@ impl MainWindow {
             "vip" => self.tool_vip(&input),
             "create_smart_mailbox" => self.tool_smart(&input),
             "open_conversation" => self.tool_open(&input),
-            "categorize_sender" => self.tool_categorize(&input),
+            "categorize_sender" => self.tool_categorize(&input).await,
             "dismiss_follow_up" => self.tool_dismiss_follow_up(&input).await,
             "list_hidden_addresses" => Ok(self.tool_hidden_list()),
             "create_hidden_address" => self.tool_hidden_create(&input).await,
@@ -1044,7 +1044,7 @@ impl MainWindow {
 }
 
 impl MainWindow {
-    fn tool_categorize(self: &Rc<Self>, input: &Value) -> ToolResult {
+    async fn tool_categorize(self: &Rc<Self>, input: &Value) -> ToolResult {
         let account = self.account_named(&required(input, "account")?)?;
         let email = required(input, "email")?;
         let key = required(input, "category")?;
@@ -1052,6 +1052,12 @@ impl MainWindow {
             .filter(|c| *c != super::categories::Category::All)
             .ok_or_else(|| format!("Unknown category {key}."))?;
         let who = text(input, "name").unwrap_or_else(|| email.clone());
+        self.approve(&format!(
+            "Move mail from {who} to {} in {}, and add a Gmail rule for their future mail?",
+            category.name(),
+            account.email
+        ))
+        .await?;
         self.categorize_sender(account.id, email.clone(), who, None, category);
         Ok(json!({"sender": email, "category": key}))
     }
