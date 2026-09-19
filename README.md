@@ -1,4 +1,4 @@
-# mailrs
+# Penguin Mail
 
 A Gmail client for the GNOME desktop, written in Rust. It keeps several Gmail
 accounts in sync from the system tray, shows them in one inbox or one at a
@@ -23,7 +23,7 @@ time, and keeps your mail on your own computer.
 - **Undo Send and Send Later.** Sent mail waits a few seconds with an Undo
   button (Preferences sets how long). Send Later, on the arrow next to
   Send, schedules a message; it waits in Send Later and goes out on time
-  while mailrs runs, even in the tray.
+  while Penguin Mail runs, even in the tray.
 - **Formatting without Markdown**: a bar for bold, italic, strikethrough,
   links, lists, and quotes. Paste, drop, or insert images into the text.
 - **Tray and notifications.** An unread count in the tray and a notification
@@ -67,7 +67,7 @@ time, and keeps your mail on your own computer.
   already set in Gmail, one click to import), notification
   previews, how often to check and how much mail to keep, and starting at
   login.
-- **Light.** In the tray, mailrs uses about 55 MB. A minute after you close
+- **Light.** In the tray, Penguin Mail uses about 55 MB. A minute after you close
   the window, it restarts itself in the background to give back the memory
   the window used.
 
@@ -101,7 +101,7 @@ run against local sample data.
 
 ## Install
 
-mailrs targets Ubuntu 26.04 (GTK 4.20 or newer, libadwaita 1.8, WebKitGTK
+Penguin Mail targets Ubuntu 26.04 (GTK 4.20 or newer, libadwaita 1.8, WebKitGTK
 6.0) and Rust 1.98.
 
 ```sh
@@ -109,11 +109,16 @@ sudo apt install libgtk-4-dev libadwaita-1-dev libwebkitgtk-6.0-dev libglib2.0-d
 scripts/install.sh
 ```
 
-The script installs `mailrs` and `mailrs-cli` into `~/.local/bin`, adds the
-app to your launcher, and starts it in the tray at login (`NO_AUTOSTART=1`
-skips that). `scripts/uninstall.sh` removes it again.
+The script installs `penguin-mail` and `penguin-mail-cli` into
+`~/.local/bin`, adds the app to your launcher, and starts it in the tray at
+login (`NO_AUTOSTART=1` skips that). `scripts/uninstall.sh` removes it again.
 
-Then open mailrs. The first screen asks for a Google OAuth client ID and
+Penguin Mail used to be called mailrs. The install script removes the old
+`mailrs` binaries and launcher and keeps your login item setting. On first
+start, the app moves `~/.config/mailrs`, `~/.local/share/mailrs`, and
+`~/.cache/mailrs` to `penguin-mail`, and your accounts stay signed in.
+
+Then open Penguin Mail. The first screen asks for a Google OAuth client ID and
 secret, which you create once in your own Google Cloud project;
 [docs/setup.md](docs/setup.md) walks through it in about ten minutes. After
 that, **Sign In with Google** adds each account.
@@ -144,33 +149,33 @@ keys work too, whenever you are not typing.
 ## From the command line
 
 ```sh
-mailrs --background             # start in the tray, no window
-mailrs --compose                # new message
-mailrs mailto:ann@example.com   # new message to Ann
+penguin-mail --background             # start in the tray, no window
+penguin-mail --compose                # new message
+penguin-mail mailto:ann@example.com   # new message to Ann
 ```
 
-To make mailrs open `mailto:` links:
-`xdg-mime default dev.mailrs.Mailrs.desktop x-scheme-handler/mailto`
+To make Penguin Mail open `mailto:` links:
+`xdg-mime default dev.penguinmail.PenguinMail.desktop x-scheme-handler/mailto`
 
 The running app also answers D-Bus actions, handy for custom shortcuts:
 
 ```sh
-gdbus call --session --dest dev.mailrs.Mailrs --object-path /dev/mailrs/Mailrs \
+gdbus call --session --dest dev.penguinmail.PenguinMail --object-path /dev/penguinmail/PenguinMail \
     --method org.gtk.Actions.Activate show-window [] {}
 ```
 
 The actions are `show-window`, `hide-window`, `compose`, `check`, and `quit`.
 
-`mailrs-cli` drives the same sync core without a window: `account add`,
+`penguin-mail-cli` drives the same sync core without a window: `account add`,
 `sync`, `threads`, `show`, and `triage`. It is handy for debugging.
 
 ## Privacy
 
-- mailrs talks only to Google's Gmail API, through an OAuth client that you
+- Penguin Mail talks only to Google's Gmail API, through an OAuth client that you
   own. Nobody else's server sees your mail.
 - Refresh tokens live in the GNOME keyring. The config file holds only the
-  client ID and secret, and mailrs writes it readable by you alone.
-- Mail is cached in `~/.local/share/mailrs`: the last 30 days, plus
+  client ID and secret, and Penguin Mail writes it readable by you alone.
+- Mail is cached in `~/.local/share/penguin-mail`: the last 30 days, plus
   everything in your inbox. Opening an older thread fetches it on demand.
 - Email is shown with JavaScript off, and with remote content blocked twice:
   by a WebKit content filter and by the page's own Content-Security-Policy.
@@ -183,7 +188,7 @@ domain/   shared types
 gmail/    Gmail REST client, OAuth, quota limiter
 store/    SQLite schema and queries
 sync/     one sync loop per account: bootstrap, history replay, backfill
-cli/      mailrs-cli
+cli/      penguin-mail-cli
 app/      the GTK4 and libadwaita app
 ```
 
@@ -204,6 +209,7 @@ scripts/smoke.sh                                # by hand, against a real accoun
 
 ## The icon
 
-Three envelopes fanned out in the account colors: several inboxes, one app.
-The other concepts considered are in
-[docs/icon-concepts.png](docs/icon-concepts.png).
+A penguin holding a letter, drawn to the GNOME app icon guidelines. The
+other two concepts are in [docs/branding/concepts/](docs/branding/concepts/),
+and [docs/icon-concepts.png](docs/icon-concepts.png) shows all three at
+128 to 16 pixels.
