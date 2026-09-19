@@ -5,6 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 description = "A Gmail client for the GNOME desktop"
 
+[[bin]]
+name = "penguin-mail"
+path = "src/main.rs"
+
 [dependencies]
 mailrs-domain.workspace = true
 mailrs-gmail.workspace = true

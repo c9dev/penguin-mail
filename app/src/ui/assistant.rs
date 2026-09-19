@@ -151,7 +151,7 @@ impl AssistantPane {
             .css_classes(["pill", "suggested-action"])
             .build();
         let setup = adw::StatusPage::builder()
-            .icon_name("mailrs-sparkle-symbolic")
+            .icon_name("penguin-mail-sparkle-symbolic")
             .title("Set Up the Assistant")
             .description("Use a local model from LM Studio, Ollama, or Unsloth, an Anthropic API key, or your Claude subscription.")
             .child(&setup_button)

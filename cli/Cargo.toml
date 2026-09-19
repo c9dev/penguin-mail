@@ -4,6 +4,10 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
+[[bin]]
+name = "penguin-mail-cli"
+path = "src/main.rs"
+
 [dependencies]
 mailrs-domain.workspace = true
 mailrs-gmail.workspace = true

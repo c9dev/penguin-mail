@@ -1,18 +1,18 @@
-# Setting up mailrs
+# Setting up Penguin Mail
 
-mailrs reads Gmail through your own Google Cloud project. You create the
+Penguin Mail reads Gmail through your own Google Cloud project. You create the
 project once, then add each Gmail account from the command line.
 
 ## 1. Create the Cloud project
 
-1. Open <https://console.cloud.google.com/> and create a project called `mailrs`.
+1. Open <https://console.cloud.google.com/> and create a project called `penguin-mail`.
 2. Enable the Gmail API: APIs & Services, Library, Gmail API, Enable.
 
 ## 2. Configure consent
 
 In Google Auth Platform:
 
-1. Branding: name the app `mailrs` and give your address as the support and developer contact. Leave the logo empty: Google shows it only after verification. [branding/google-cloud.md](branding/google-cloud.md) lists every field.
+1. Branding: name the app `Penguin Mail` and give your address as the support and developer contact. Leave the logo empty: Google shows it only after verification. [branding/google-cloud.md](branding/google-cloud.md) lists every field.
 2. Audience: choose External.
 3. Data Access: click **Add or remove scopes**, paste these two into
    **Manually add scopes**, click **Add to table**, then **Update** and **Save**:
@@ -20,12 +20,12 @@ In Google Auth Platform:
    https://www.googleapis.com/auth/gmail.modify
    https://www.googleapis.com/auth/gmail.settings.basic
    ```
-   The first reads, sends, and organizes mail. The second lets mailrs change
+   The first reads, sends, and organizes mail. The second lets Penguin Mail change
    Gmail settings: the automatic reply, Rules, and Block Sender.
 4. Audience: click Publish app and confirm. Do not submit it for verification.
 
 **Set up before automatic replies existed?** Add the second scope under Data
-Access as above. Then in mailrs, open an account's ⋮ menu, choose
+Access as above. Then in Penguin Mail, open an account's ⋮ menu, choose
 **Automatic Reply…** or **Rules…**, and click **Grant Access**. Google asks
 you to confirm once per account; mail keeps syncing throughout.
 
@@ -36,16 +36,16 @@ during consent.
 
 ## 3. Create the OAuth client
 
-The client is what identifies mailrs to Google. You create it once; every
+The client is what identifies Penguin Mail to Google. You create it once; every
 account you add later uses it.
 
 1. Open <https://console.cloud.google.com/auth/clients>. Check that the
-   project picker at the top of the page shows `mailrs`. If it shows another
-   project, click it and choose `mailrs`.
+   project picker at the top of the page shows `penguin-mail`. If it shows
+   another project, click it and choose `penguin-mail`.
 2. Click **Create client**. (If you arrive at **Credentials** instead, click
    **Create credentials**, then **OAuth client ID**.)
 3. Under **Application type**, choose **Desktop app**.
-4. Under **Name**, type `mailrs`. The name is only for you; Google does not
+4. Under **Name**, type `Penguin Mail`. The name is only for you; Google does not
    show it to anyone.
 5. Click **Create**.
 6. A window titled **OAuth client created** shows the **Client ID** and the
@@ -57,20 +57,21 @@ The client ID ends in `.apps.googleusercontent.com`. The secret usually
 starts with `GOCSPX-`. Keep both at hand for the next step.
 
 **Lost the secret?** Open the client from the Clients list, click **Add
-secret**, copy the new one, and put it in mailrs. You can then disable and
+secret**, copy the new one, and put it in Penguin Mail. You can then disable and
 delete the old secret on the same page. Deleting the client and creating a
 new one works too.
 
 **No Create client button?** Google asks for the consent screen first.
 Finish step 2, then come back.
 
-A desktop client needs no redirect URI. mailrs receives Google's answer on
+A desktop client needs no redirect URI. Penguin Mail receives Google's answer on
 `127.0.0.1` at a random port, which Google allows for every desktop client.
 
-## 4. Give mailrs the client
+## 4. Give Penguin Mail the client
 
-Open mailrs. The welcome screen asks for the client ID and secret; paste them
-and click Continue. mailrs saves them to `~/.config/mailrs/config.toml`,
+Open Penguin Mail. The welcome screen asks for the client ID and secret; paste them
+and click Continue. Penguin Mail saves them to
+`~/.config/penguin-mail/config.toml`,
 readable only by you.
 
 If you prefer the command line, write that file yourself:
@@ -89,16 +90,16 @@ body_cache_mb = 1024
 
 Google issues a desktop client secret to identify the app, and anyone who
 downloads a desktop app can read it. Your refresh tokens are what grant access
-to mail, and mailrs keeps those in the GNOME keyring, not in this file.
+to mail, and Penguin Mail keeps those in the GNOME keyring, not in this file.
 
 ## 5. Add accounts
 
 Click **Sign In with Google** in the app, or **Add Account** at the bottom of
-the sidebar for later accounts. From a terminal, `mailrs-cli account add`
+the sidebar for later accounts. From a terminal, `penguin-mail-cli account add`
 does the same.
 
 Your browser opens Google's consent screen. Pick the account. Google says
-"Google hasn't verified this app": click Advanced, then Go to mailrs
+"Google hasn't verified this app": click Advanced, then Go to Penguin Mail
 (unsafe), then Continue. The account appears in the sidebar and starts
 downloading. Repeat for each account.
 
@@ -116,7 +117,7 @@ cargo run --release -p mailrs-cli -- triage you@gmail.com <thread-id> archive
 
 Automated tests cannot check token lifetime. Write down the date you add your
 first account. Eight or more days later, check the sidebar, or run
-`mailrs-cli account list`: every account should show no warning icon and the
+`penguin-mail-cli account list`: every account should show no warning icon and the
 state `ok`. An account that reports `needs_reauth` without you revoking
 it means the project is probably still in Testing: check the publishing status
 under Audience, publish, and add the account again.
@@ -125,10 +126,13 @@ under Audience, publish, and add the account again.
 
 | What | Where | Override |
 |---|---|---|
-| Config | `~/.config/mailrs/config.toml` | `MAILRS_CONFIG` |
-| Mail cache | `~/.local/share/mailrs/mailrs.db` | `MAILRS_DATA_DIR` |
+| Config | `~/.config/penguin-mail/config.toml` | `MAILRS_CONFIG` |
+| Mail cache | `~/.local/share/penguin-mail/mailrs.db` | `MAILRS_DATA_DIR` |
 | Refresh tokens | GNOME keyring, service `mailrs`, one entry per address | |
 
-`mailrs-cli account remove you@gmail.com` deletes an account's local mail and
+The keyring service keeps the app's old name, mailrs, so accounts added
+before the rename stay signed in.
+
+`penguin-mail-cli account remove you@gmail.com` deletes an account's local mail and
 its keyring entry. To revoke access on Google's side as well, use
 <https://myaccount.google.com/permissions>.

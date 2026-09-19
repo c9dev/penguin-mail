@@ -38,12 +38,12 @@ impl MainWindow {
             return self.toast("This message has no unsubscribe link");
         };
         let Some(method) = method else {
-            return self.toast("This message's unsubscribe link is not one mailrs can use");
+            return self.toast("This message's unsubscribe link is not one Penguin Mail can use");
         };
         let body = match &method {
-            Unsubscribe::OneClick(_) => "mailrs asks the sender to take you off the list.",
+            Unsubscribe::OneClick(_) => "Penguin Mail asks the sender to take you off the list.",
             Unsubscribe::Email { .. } => {
-                "mailrs sends the list an unsubscribe request from your account."
+                "Penguin Mail sends the list an unsubscribe request from your account."
             }
             Unsubscribe::Page(_) => "The sender's unsubscribe page opens in your browser.",
         };
@@ -171,7 +171,7 @@ impl MainWindow {
         let dialog = adw::AlertDialog::new(
             Some("Allow Changes to Gmail Settings"),
             Some(&format!(
-                "mailrs needs permission to change Gmail settings for {}. Google asks you to confirm in your browser.",
+                "Penguin Mail needs permission to change Gmail settings for {}. Google asks you to confirm in your browser.",
                 account.email
             )),
         );

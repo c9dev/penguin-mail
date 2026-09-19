@@ -61,7 +61,7 @@ mod imp {
             let from = text_label("from");
             from.set_hexpand(true);
             let clip = marker("mail-attachment-symbolic");
-            let star = marker("mailrs-flag-symbolic");
+            let star = marker("penguin-mail-flag-symbolic");
             star.add_css_class("starred");
             let date = text_label("date");
             date.set_ellipsize(pango::EllipsizeMode::None);

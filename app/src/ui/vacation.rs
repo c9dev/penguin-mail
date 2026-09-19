@@ -12,7 +12,7 @@ use crate::core::Core;
 
 const DAY_MS: i64 = 24 * 60 * 60 * 1000;
 
-/// Shows the dialog for `account`. `grant` runs when Gmail says mailrs lacks
+/// Shows the dialog for `account`. `grant` runs when Gmail says Penguin Mail lacks
 /// the settings permission, to send the user through consent again. `saved`
 /// receives a confirmation to show once the reply is stored.
 pub fn present(
@@ -81,7 +81,7 @@ pub fn present(
                     .icon_name("mail-send-symbolic")
                     .title("Allow Automatic Replies")
                     .description(format!(
-                        "mailrs needs permission to change Gmail settings for {email}. \
+                        "Penguin Mail needs permission to change Gmail settings for {email}. \
                          Google will ask you to confirm in your browser."
                     ))
                     .build();

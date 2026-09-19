@@ -37,7 +37,7 @@ impl ksni::Tray for MailTray {
     }
 
     fn title(&self) -> String {
-        format!("mailrs: {}", self.summary())
+        format!("Penguin Mail: {}", self.summary())
     }
 
     fn icon_name(&self) -> String {
@@ -51,7 +51,7 @@ impl ksni::Tray for MailTray {
 
     fn tool_tip(&self) -> ksni::ToolTip {
         ksni::ToolTip {
-            title: format!("mailrs: {}", self.summary()),
+            title: format!("Penguin Mail: {}", self.summary()),
             description: self
                 .accounts
                 .iter()
@@ -97,7 +97,7 @@ impl ksni::Tray for MailTray {
             }
             .into()
         };
-        items.push(item("Open mailrs", || TrayCommand::Open));
+        items.push(item("Open Penguin Mail", || TrayCommand::Open));
         items.push(item("New Message", || TrayCommand::Compose));
         items.push(item("Check for Mail", || TrayCommand::Check));
         items.push(MenuItem::Separator);

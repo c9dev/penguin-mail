@@ -137,7 +137,7 @@ impl ThreadList {
             .child(&view)
             .build();
         let empty = adw::StatusPage::builder()
-            .icon_name("mailrs-inbox-symbolic")
+            .icon_name("penguin-mail-inbox-symbolic")
             .title("No Mail")
             .build();
         empty.add_css_class("compact");
@@ -190,7 +190,7 @@ impl ThreadList {
             .sync_create()
             .build();
         let assistant_button = gtk::ToggleButton::builder()
-            .icon_name("mailrs-sparkle-symbolic")
+            .icon_name("penguin-mail-sparkle-symbolic")
             .tooltip_text("Assistant (Ctrl+J)")
             .build();
         let header = adw::HeaderBar::builder().title_widget(&title).build();

@@ -1,4 +1,4 @@
-//! Command-line front end to the mailrs core: add Gmail accounts, sync them,
+//! Command-line front end to the Penguin Mail core: add Gmail accounts, sync them,
 //! and inspect the local store.
 
 use std::collections::HashMap;
@@ -16,16 +16,16 @@ use mailrs_sync::{
     AccountClient, AccountSync, SyncEngine, TriageAction, connect_account, now_millis,
 };
 
-use mailrs_sync::config::{Config, config_path, data_dir};
+use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 
 /// How long `account add` waits for the browser.
 const CONSENT_TIMEOUT: Duration = Duration::from_secs(300);
 
 #[derive(Parser)]
 #[command(
-    name = "mailrs-cli",
+    name = "penguin-mail-cli",
     version,
-    about = "Sync Gmail accounts into the mailrs store and inspect it"
+    about = "Sync Gmail accounts into the Penguin Mail store and inspect it"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -79,6 +79,7 @@ async fn main() -> Result<()> {
         )
         .init();
     let cli = Cli::parse();
+    migrate_old_dirs();
     let dir = data_dir()?;
     std::fs::create_dir_all(&dir).with_context(|| format!("could not create {}", dir.display()))?;
     let db = Db::open(&dir.join("mailrs.db"))?;
@@ -139,7 +140,7 @@ async fn add_account(db: &Db, config: &Config) -> Result<()> {
         .write(move |c| accounts::insert_account(c, &email, now_millis()))
         .await?;
     println!(
-        "Added {} as account {id}. Run `mailrs-cli sync` to download mail.",
+        "Added {} as account {id}. Run `penguin-mail-cli sync` to download mail.",
         authorized.email
     );
     Ok(())
@@ -148,7 +149,7 @@ async fn add_account(db: &Db, config: &Config) -> Result<()> {
 async fn list_accounts(db: &Db) -> Result<()> {
     let all = db.read(accounts::list_accounts).await?;
     if all.is_empty() {
-        println!("No accounts. Run `mailrs-cli account add`.");
+        println!("No accounts. Run `penguin-mail-cli account add`.");
         return Ok(());
     }
     for account in all {
@@ -177,7 +178,7 @@ async fn remove_account(db: &Db, email: &str) -> Result<()> {
 async fn run_sync(db: &Db, config: &Config) -> Result<()> {
     let all = db.read(accounts::list_accounts).await?;
     if all.is_empty() {
-        bail!("no accounts; run `mailrs-cli account add` first");
+        bail!("no accounts; run `penguin-mail-cli account add` first");
     }
     let (engine, events) = SyncEngine::<AccountClient>::new(db.clone(), config.engine_config());
     let tokens = token_store();
@@ -328,7 +329,7 @@ async fn find_account(db: &Db, email: &str) -> Result<Account> {
     let owned = email.to_string();
     db.read(move |c| accounts::account_by_email(c, &owned))
         .await?
-        .with_context(|| format!("no account {email}; `mailrs-cli account list` shows them"))
+        .with_context(|| format!("no account {email}; `penguin-mail-cli account list` shows them"))
 }
 
 fn truncate(s: &str, width: usize) -> String {

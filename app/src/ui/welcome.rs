@@ -63,9 +63,9 @@ pub fn setup_page(on_save: impl Fn(String, String) + 'static) -> gtk::Widget {
     column.append(&save);
     column.append(&help);
     let page = adw::StatusPage::builder()
-        .icon_name("dev.mailrs.Mailrs")
-        .title("Welcome to mailrs")
-        .description("mailrs reads Gmail through your own Google Cloud OAuth client, so nobody else can reach your mail. Paste the client's ID and secret to begin.")
+        .icon_name("dev.penguinmail.PenguinMail")
+        .title("Welcome to Penguin Mail")
+        .description("Penguin Mail reads Gmail through your own Google Cloud OAuth client, so nobody else can reach your mail. Paste the client's ID and secret to begin.")
         .child(&adw::Clamp::builder().maximum_size(440).child(&column).build())
         .vexpand(true)
         .build();
@@ -82,9 +82,9 @@ pub fn first_account_page(on_add: impl Fn() + 'static) -> (gtk::Widget, gtk::But
         .build();
     add.connect_clicked(move |_| on_add());
     let page = adw::StatusPage::builder()
-        .icon_name("dev.mailrs.Mailrs")
+        .icon_name("dev.penguinmail.PenguinMail")
         .title("Add Your First Account")
-        .description("Your browser opens Google's sign-in page. Google warns that it hasn't verified mailrs, because the app is yours alone: choose Advanced, then continue.")
+        .description("Your browser opens Google's sign-in page. Google warns that it hasn't verified Penguin Mail, because the app is yours alone: choose Advanced, then continue.")
         .child(&add)
         .vexpand(true)
         .build();

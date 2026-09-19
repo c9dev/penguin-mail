@@ -69,7 +69,10 @@ impl App {
         let (open_requests, opened) = async_channel::unbounded();
         // Demo mode must not change the real preferences.
         let settings_path = if core.demo && std::env::var_os("MAILRS_SETTINGS").is_none() {
-            std::env::temp_dir().join(format!("mailrs-demo-{}-settings.toml", std::process::id()))
+            std::env::temp_dir().join(format!(
+                "penguin-mail-demo-{}-settings.toml",
+                std::process::id()
+            ))
         } else {
             Settings::default_path()
         };
@@ -394,7 +397,7 @@ impl App {
     }
 
     /// Application actions, also reachable over D-Bus, for example:
-    /// `gdbus call --session --dest dev.mailrs.Mailrs --object-path /dev/mailrs/Mailrs
+    /// `gdbus call --session --dest dev.penguinmail.PenguinMail --object-path /dev/penguinmail/PenguinMail
     /// --method org.gtk.Actions.Activate hide-window [] {}`
     fn install_actions(self: &Rc<Self>) {
         let add = |name: &str, run: AppAction| {
@@ -451,7 +454,7 @@ impl App {
 
     fn compile_filter(self: &Rc<Self>) {
         let dir = glib::user_cache_dir()
-            .join("mailrs")
+            .join(mailrs_sync::config::DIR_NAME)
             .join("content-filters");
         let _ = std::fs::create_dir_all(&dir);
         let store = webkit::UserContentFilterStore::new(&dir.to_string_lossy());
@@ -550,7 +553,7 @@ impl App {
 
     /// Registers the tray icon whenever a tray host appears on the session
     /// bus. On Ubuntu that host is the AppIndicators extension, so enabling
-    /// it later shows the icon without restarting mailrs.
+    /// it later shows the icon without restarting Penguin Mail.
     fn watch_for_tray_host(self: &Rc<Self>) {
         let weak = Rc::downgrade(self);
         // The watch lasts for the life of the process; the id is not needed.

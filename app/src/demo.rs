@@ -1,4 +1,4 @@
-//! Sample mail for `mailrs --demo`: three accounts and a few weeks of
+//! Sample mail for `penguin-mail --demo`: three accounts and a few weeks of
 //! conversations, written straight into a throwaway store. Every address
 //! uses a reserved `.example` domain.
 
@@ -761,7 +761,7 @@ impl GmailApi for DemoApi {
     }
 
     async fn signature(&self) -> std::result::Result<Option<String>, GmailError> {
-        Ok(Some(format!("{DISPLAY_NAME}\nSent from mailrs")))
+        Ok(Some(format!("{DISPLAY_NAME}\nSent from Penguin Mail")))
     }
 
     async fn vacation(&self) -> std::result::Result<mailrs_domain::Vacation, GmailError> {
@@ -790,7 +790,7 @@ impl GmailApi for DemoApi {
         attachment_id: &str,
     ) -> std::result::Result<Vec<u8>, GmailError> {
         Ok(
-            format!("This is {attachment_id}, a stand-in file from mailrs demo mode.\n")
+            format!("This is {attachment_id}, a stand-in file from Penguin Mail demo mode.\n")
                 .into_bytes(),
         )
     }

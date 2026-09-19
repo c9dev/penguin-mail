@@ -224,7 +224,7 @@ impl Sidebar {
                     let row = self.add_mailbox(
                         Mailbox::Flag(color),
                         color.name(),
-                        "mailrs-flag-symbolic",
+                        "penguin-mail-flag-symbolic",
                         1,
                     );
                     if let Some(icon) = row.child().and_then(|c| c.first_child()) {
@@ -291,7 +291,7 @@ impl Sidebar {
                     label_id: label.id.clone(),
                     name: label.name.replace('/', " › "),
                 };
-                let row = self.add_mailbox(mailbox, leaf, "mailrs-tag-symbolic", depth);
+                let row = self.add_mailbox(mailbox, leaf, "penguin-mail-tag-symbolic", depth);
                 if let Some(color) = label.color.as_deref().and_then(css_hex)
                     && let Some(icon) = row.child().and_then(|c| c.first_child())
                 {

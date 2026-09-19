@@ -1,5 +1,5 @@
-//! `config.toml` and the directories mailrs uses. Both binaries read it; the
-//! app's welcome page also writes it.
+//! `config.toml` and the directories Penguin Mail uses. Both binaries read
+//! it; the app's welcome page also writes it.
 
 use std::io::Write;
 use std::os::unix::fs::OpenOptionsExt;
@@ -130,22 +130,57 @@ impl Config {
     }
 }
 
-/// `$MAILRS_CONFIG`, else `~/.config/mailrs/config.toml`.
+/// The directory name under the config, data, and cache directories.
+pub const DIR_NAME: &str = "penguin-mail";
+
+/// The name those directories had before the app was renamed.
+const OLD_DIR_NAME: &str = "mailrs";
+
+/// `$MAILRS_CONFIG`, else `~/.config/penguin-mail/config.toml`.
 pub fn config_path() -> Result<PathBuf, ConfigError> {
     if let Some(path) = std::env::var_os("MAILRS_CONFIG") {
         return Ok(PathBuf::from(path));
     }
     let dir = dirs::config_dir().ok_or(ConfigError::NoDirectory("config", "MAILRS_CONFIG"))?;
-    Ok(dir.join("mailrs").join("config.toml"))
+    Ok(dir.join(DIR_NAME).join("config.toml"))
 }
 
-/// `$MAILRS_DATA_DIR`, else `~/.local/share/mailrs`.
+/// `$MAILRS_DATA_DIR`, else `~/.local/share/penguin-mail`.
 pub fn data_dir() -> Result<PathBuf, ConfigError> {
     if let Some(path) = std::env::var_os("MAILRS_DATA_DIR") {
         return Ok(PathBuf::from(path));
     }
     let dir = dirs::data_dir().ok_or(ConfigError::NoDirectory("data", "MAILRS_DATA_DIR"))?;
-    Ok(dir.join("mailrs"))
+    Ok(dir.join(DIR_NAME))
+}
+
+/// Renames `~/.config/mailrs`, `~/.local/share/mailrs`, and `~/.cache/mailrs`
+/// to `penguin-mail`, so an upgrade keeps the config, settings, and mail
+/// store. Call it at startup, before reading any of them.
+pub fn migrate_old_dirs() {
+    let bases = [dirs::config_dir(), dirs::data_dir(), dirs::cache_dir()];
+    for base in bases.into_iter().flatten() {
+        let (old, new) = (base.join(OLD_DIR_NAME), base.join(DIR_NAME));
+        match move_old_dir(&old, &new) {
+            Ok(true) => tracing::info!("moved {} to {}", old.display(), new.display()),
+            Ok(false) => {}
+            Err(err) => tracing::warn!(
+                "could not move {} to {}: {err}",
+                old.display(),
+                new.display()
+            ),
+        }
+    }
+}
+
+/// Renames `old` to `new` when `old` exists and `new` does not. Returns
+/// whether it moved anything.
+fn move_old_dir(old: &Path, new: &Path) -> std::io::Result<bool> {
+    if new.exists() || !old.is_dir() {
+        return Ok(false);
+    }
+    std::fs::rename(old, new)?;
+    Ok(true)
 }
 
 #[cfg(test)]
@@ -153,7 +188,7 @@ mod tests {
     use std::os::unix::fs::PermissionsExt;
     use std::time::Duration;
 
-    use super::Config;
+    use super::{Config, move_old_dir};
 
     #[test]
     fn a_minimal_config_uses_the_engine_defaults() {
@@ -191,6 +226,34 @@ mod tests {
         assert_eq!(Config::load(&path).unwrap(), config);
         let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
         assert_eq!(mode, 0o600);
+    }
+
+    #[test]
+    fn the_old_directory_moves_once() {
+        let base = tempfile::tempdir().unwrap();
+        let (old, new) = (base.path().join("mailrs"), base.path().join("penguin-mail"));
+        std::fs::create_dir(&old).unwrap();
+        std::fs::write(old.join("mailrs.db"), "mail").unwrap();
+        assert!(move_old_dir(&old, &new).unwrap());
+        assert!(!old.exists());
+        assert_eq!(
+            std::fs::read_to_string(new.join("mailrs.db")).unwrap(),
+            "mail"
+        );
+
+        // A later start, or an old copy that recreated the directory, leaves
+        // both alone.
+        std::fs::create_dir(&old).unwrap();
+        assert!(!move_old_dir(&old, &new).unwrap());
+        assert!(old.exists() && new.join("mailrs.db").exists());
+    }
+
+    #[test]
+    fn nothing_moves_on_a_fresh_install() {
+        let base = tempfile::tempdir().unwrap();
+        let new = base.path().join("penguin-mail");
+        assert!(!move_old_dir(&base.path().join("mailrs"), &new).unwrap());
+        assert!(!new.exists());
     }
 
     #[test]

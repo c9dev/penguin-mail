@@ -228,15 +228,19 @@ impl LoopbackListener {
             let n = stream.read(&mut buf).await.map_err(io_error)?;
             let outcome = parse_redirect(&String::from_utf8_lossy(&buf[..n]), expected_state);
             let (status, message) = match &outcome {
-                Some(Ok(_)) => ("200 OK", "mailrs is authorized. You can close this tab."),
+                Some(Ok(_)) => (
+                    "200 OK",
+                    "Penguin Mail is authorized. You can close this tab.",
+                ),
                 Some(Err(_)) => (
                     "400 Bad Request",
                     "Authorization failed. The terminal has the details.",
                 ),
                 None => ("404 Not Found", "Not found."),
             };
-            let body =
-                format!("<!doctype html><meta charset=utf-8><title>mailrs</title><p>{message}</p>");
+            let body = format!(
+                "<!doctype html><meta charset=utf-8><title>Penguin Mail</title><p>{message}</p>"
+            );
             let response = format!(
                 "HTTP/1.1 {status}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
                 body.len()

@@ -211,7 +211,7 @@ impl Rules {
             .icon_name("mail-send-symbolic")
             .title("Allow Rules")
             .description(format!(
-                "mailrs needs permission to change Gmail settings for {}. Google asks you to confirm in your browser.",
+                "Penguin Mail needs permission to change Gmail settings for {}. Google asks you to confirm in your browser.",
                 self.account.email
             ))
             .build();

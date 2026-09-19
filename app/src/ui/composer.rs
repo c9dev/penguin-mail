@@ -455,7 +455,7 @@ impl Composer {
             if let Some(at) = super::when::pick_time(
                 &this.window,
                 "Send Later",
-                "mailrs sends it at this time while it runs, even in the tray.",
+                "Penguin Mail sends it at this time while it runs, even in the tray.",
                 "Schedule",
             )
             .await
@@ -628,7 +628,7 @@ impl Composer {
             ("text:<b>B</b>", "Bold (Ctrl+B)", "**", "**"),
             ("text:<i>I</i>", "Italic (Ctrl+I)", "*", "*"),
             ("text:<s>S</s>", "Strikethrough", "~~", "~~"),
-            ("mailrs-link-symbolic", "Link (Ctrl+K)", "[", "]()"),
+            ("penguin-mail-link-symbolic", "Link (Ctrl+K)", "[", "]()"),
         ];
         for (icon, tip, before, after) in wraps {
             let weak = Rc::downgrade(self);

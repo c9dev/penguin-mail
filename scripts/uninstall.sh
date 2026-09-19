@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
-# Removes what install.sh added. Your mail cache, config, and keyring entries stay.
+# Removes what install.sh added, and anything an older mailrs install left.
+# Your mail cache, config, and keyring entries stay.
 set -euo pipefail
 
 prefix="${PREFIX:-$HOME/.local}"
-rm -f "$prefix/bin/mailrs" "$prefix/bin/mailrs-cli" \
-    "$prefix/share/applications/dev.mailrs.Mailrs.desktop" \
-    "$prefix/share/icons/hicolor/scalable/apps/dev.mailrs.Mailrs.svg" \
-    "$prefix/share/icons/hicolor/symbolic/apps/dev.mailrs.Mailrs-symbolic.svg" \
-    "$HOME/.config/autostart/dev.mailrs.Mailrs.desktop"
+for id in dev.penguinmail.PenguinMail dev.mailrs.Mailrs; do
+    rm -f "$prefix/share/applications/$id.desktop" \
+        "$prefix/share/icons/hicolor/scalable/apps/$id.svg" \
+        "$prefix/share/icons/hicolor/symbolic/apps/$id-symbolic.svg" \
+        "$HOME/.config/autostart/$id.desktop"
+done
+rm -f "$prefix/bin/penguin-mail" "$prefix/bin/penguin-mail-cli" \
+    "$prefix/bin/mailrs" "$prefix/bin/mailrs-cli"
 update-desktop-database "$prefix/share/applications" >/dev/null 2>&1 || true
-echo "Removed mailrs. Delete ~/.local/share/mailrs and ~/.config/mailrs too if you want your data gone."
+echo "Removed Penguin Mail. Delete ~/.local/share/penguin-mail and ~/.config/penguin-mail too if you want your data gone."

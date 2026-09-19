@@ -1,4 +1,4 @@
-//! SQLite storage for mailrs. Query functions take a `&Connection`; `Db` runs
+//! SQLite storage for Penguin Mail. Query functions take a `&Connection`; `Db` runs
 //! them on the writer thread or on pooled readers.
 
 pub mod accounts;

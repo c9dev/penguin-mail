@@ -24,7 +24,7 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
     let page = adw::PreferencesPage::builder()
         .title("Assistant")
         .name("assistant")
-        .icon_name("mailrs-sparkle-symbolic")
+        .icon_name("penguin-mail-sparkle-symbolic")
         .build();
 
     let model = adw::PreferencesGroup::builder()
