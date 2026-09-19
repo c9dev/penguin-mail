@@ -3,6 +3,7 @@
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
+use std::os::unix::process::CommandExt;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
@@ -26,7 +27,7 @@ const BLOCK_REMOTE_RULES: &str = r#"[
 ]"#;
 
 pub struct App {
-    pub gtk: adw::Application,
+    pub gio: gio::Application,
     pub core: Rc<Core>,
     window: RefCell<Option<Rc<MainWindow>>>,
     filter: RefCell<Option<webkit::UserContentFilter>>,
@@ -35,14 +36,18 @@ pub struct App {
     tray: Arc<Mutex<Option<ksni::Handle<MailTray>>>>,
     open_requests: async_channel::Sender<(AccountId, String)>,
     skip_first_window: Cell<bool>,
+    filter_requested: Cell<bool>,
+    /// Main window plus open composers.
+    open_windows: Cell<usize>,
+    shed_generation: Cell<u64>,
     _hold: gio::ApplicationHoldGuard,
 }
 
 impl App {
-    pub fn new(gtk: &adw::Application, core: Rc<Core>, background: bool) -> Rc<App> {
+    pub fn new(gio_app: &gio::Application, core: Rc<Core>, background: bool) -> Rc<App> {
         let (open_requests, opened) = async_channel::unbounded();
         let app = Rc::new(App {
-            gtk: gtk.clone(),
+            gio: gio_app.clone(),
             core,
             window: RefCell::new(None),
             filter: RefCell::new(None),
@@ -51,10 +56,12 @@ impl App {
             tray: Arc::new(Mutex::new(None)),
             open_requests,
             skip_first_window: Cell::new(background),
-            _hold: gtk.hold(),
+            filter_requested: Cell::new(false),
+            open_windows: Cell::new(0),
+            shed_generation: Cell::new(0),
+            _hold: gio_app.hold(),
         });
         app.install_actions();
-        app.compile_filter();
         app.listen();
         app.listen_for_opens(opened);
         if !app.core.demo {
@@ -81,22 +88,80 @@ impl App {
     }
 
     pub fn show_window(self: &Rc<Self>) -> Rc<MainWindow> {
+        crate::ensure_gtk();
         if let Some(window) = self.window.borrow().as_ref() {
             window.present();
             return Rc::clone(window);
         }
+        // WebKit starts its graphics stack when first used, which costs
+        // tens of megabytes; waiting for the first window keeps a
+        // background-only process small.
+        if self.filter.borrow().is_none() && !self.filter_requested.replace(true) {
+            self.compile_filter();
+        }
         let window = MainWindow::new(self);
         *self.window.borrow_mut() = Some(Rc::clone(&window));
+        self.window_opened();
         window.present();
         window.run_demo_script();
         window
     }
 
-    pub fn forget_window(&self, window: &Rc<MainWindow>) {
-        let mut slot = self.window.borrow_mut();
-        if slot.as_ref().is_some_and(|w| Rc::ptr_eq(w, window)) {
-            *slot = None;
+    pub fn forget_window(self: &Rc<Self>, window: &Rc<MainWindow>) {
+        let forgotten = {
+            let mut slot = self.window.borrow_mut();
+            let same = slot.as_ref().is_some_and(|w| Rc::ptr_eq(w, window));
+            if same {
+                *slot = None;
+            }
+            same
+        };
+        if forgotten {
+            self.window_closed();
         }
+    }
+
+    fn window_opened(&self) {
+        self.open_windows.set(self.open_windows.get() + 1);
+        self.shed_generation.set(self.shed_generation.get() + 1);
+    }
+
+    /// Once no window has been open for a minute, restarts the process in
+    /// the background. GTK, the graphics drivers, and WebKit cannot be
+    /// unloaded, so this is how a closed window gives its memory back.
+    fn window_closed(self: &Rc<Self>) {
+        let open = self.open_windows.get().saturating_sub(1);
+        self.open_windows.set(open);
+        if open > 0 || self.core.demo {
+            return;
+        }
+        let generation = self.shed_generation.get() + 1;
+        self.shed_generation.set(generation);
+        let delay = std::env::var("MAILRS_SHED_AFTER")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(60);
+        self.shed_after(generation, delay);
+    }
+
+    fn shed_after(self: &Rc<Self>, generation: u64, seconds: u32) {
+        let weak = Rc::downgrade(self);
+        glib::timeout_add_seconds_local_once(seconds, move || {
+            let Some(app) = weak.upgrade() else { return };
+            if app.shed_generation.get() != generation || app.open_windows.get() > 0 {
+                return;
+            }
+            if app.core.busy() {
+                app.shed_after(generation, 10);
+                return;
+            }
+            let Ok(exe) = std::env::current_exe() else {
+                return;
+            };
+            tracing::info!("no window for a while; restarting in the background to return memory");
+            let err = std::process::Command::new(exe).arg("--background").exec();
+            tracing::warn!(error = %err, "could not restart in the background; staying as is");
+        });
     }
 
     fn window(&self) -> Option<Rc<MainWindow>> {
@@ -157,6 +222,7 @@ impl App {
     }
 
     pub fn compose(self: &Rc<Self>, draft: Draft) {
+        crate::ensure_gtk();
         let identities: Vec<Identity> = self
             .accounts
             .borrow()
@@ -171,7 +237,6 @@ impl App {
         }
         let this = Rc::downgrade(self);
         let composer = Composer::open(
-            &self.gtk,
             Rc::clone(&self.core),
             identities,
             draft,
@@ -184,27 +249,61 @@ impl App {
                 }
             },
         );
+        self.window_opened();
         let keep = Rc::clone(&composer);
+        let app = Rc::downgrade(self);
         composer_window(&composer).connect_destroy(move |_| {
             let _ = &keep;
+            if let Some(app) = app.upgrade() {
+                app.window_closed();
+            }
         });
     }
 
+    /// Application actions, also reachable over D-Bus, for example:
+    /// `gdbus call --session --dest dev.mailrs.Mailrs --object-path /dev/mailrs/Mailrs
+    /// --method org.gtk.Actions.Activate hide-window [] {}`
     fn install_actions(self: &Rc<Self>) {
-        let quit = gio::SimpleAction::new("quit", None);
-        let gtk_app = self.gtk.clone();
-        quit.connect_activate(move |_, _| gtk_app.quit());
-        self.gtk.add_action(&quit);
-        for (action, accels) in [
-            ("app.quit", &["<Control>q"][..]),
-            ("win.compose", &["<Control>n"][..]),
-            ("win.search", &["<Control>f"][..]),
-            ("win.check", &["F5", "<Control>r"][..]),
-            ("win.shortcuts", &["<Control>question"][..]),
-            ("window.close", &["<Control>w"][..]),
-        ] {
-            self.gtk.set_accels_for_action(action, accels);
-        }
+        let add = |name: &str, run: Box<dyn Fn(&Rc<App>)>| {
+            let action = gio::SimpleAction::new(name, None);
+            let weak = Rc::downgrade(self);
+            action.connect_activate(move |_, _| {
+                if let Some(app) = weak.upgrade() {
+                    run(&app);
+                }
+            });
+            self.gio.add_action(&action);
+        };
+        add(
+            "show-window",
+            Box::new(|app| {
+                app.show_window();
+            }),
+        );
+        add(
+            "hide-window",
+            Box::new(|app| {
+                if let Some(window) = app.window() {
+                    window.window.close();
+                }
+            }),
+        );
+        add(
+            "compose",
+            Box::new(|app| {
+                let first = app.accounts.borrow().first().map(|a| a.id);
+                if let Some(account_id) = first {
+                    app.compose(Draft::new(account_id, app.identity(account_id)));
+                }
+            }),
+        );
+        add("check", Box::new(|app| app.core.poke_all()));
+        add("quit", Box::new(|app| app.quit()));
+    }
+
+    /// Quits the whole process, tray included.
+    pub fn quit(&self) {
+        self.gio.quit();
     }
 
     fn compile_filter(self: &Rc<Self>) {
@@ -328,7 +427,7 @@ impl App {
                         }
                     }
                     TrayCommand::Check => this.core.poke_all(),
-                    TrayCommand::Quit => this.gtk.quit(),
+                    TrayCommand::Quit => this.quit(),
                 }
             }
         });

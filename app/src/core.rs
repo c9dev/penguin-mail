@@ -7,6 +7,7 @@ use std::future::Future;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use anyhow::{Context, Result, anyhow, bail};
 use mailrs_domain::{Account, AccountId, ChangeEvent, MessageBody, MessageMeta};
@@ -117,6 +118,23 @@ pub struct Core {
     tokens: Arc<dyn TokenStore>,
     events_tx: async_channel::Sender<ChangeEvent>,
     pub events: async_channel::Receiver<ChangeEvent>,
+    in_flight: Arc<AtomicUsize>,
+}
+
+/// Counts a user operation until its task finishes, even if nobody awaits it.
+struct InFlight(Arc<AtomicUsize>);
+
+impl InFlight {
+    fn new(counter: &Arc<AtomicUsize>) -> Self {
+        counter.fetch_add(1, Ordering::SeqCst);
+        InFlight(Arc::clone(counter))
+    }
+}
+
+impl Drop for InFlight {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::SeqCst);
+    }
 }
 
 impl Core {
@@ -162,6 +180,7 @@ impl Core {
             tokens: Arc::new(KeyringTokenStore::new()),
             events_tx,
             events,
+            in_flight: Arc::new(AtomicUsize::new(0)),
         });
         if core.has_config() {
             core.start_engine();
@@ -231,10 +250,20 @@ impl Core {
         T: Send + 'static,
         E: Into<anyhow::Error> + Send + 'static,
     {
-        match self.runtime.spawn(future).await {
+        let guard = InFlight::new(&self.in_flight);
+        let task = async move {
+            let _guard = guard;
+            future.await
+        };
+        match self.runtime.spawn(task).await {
             Ok(result) => result.map_err(Into::into),
             Err(err) => Err(anyhow!("background task failed: {err}")),
         }
+    }
+
+    /// User operations, such as a send or an archive, that have not finished.
+    pub fn busy(&self) -> bool {
+        self.in_flight.load(Ordering::SeqCst) > 0
     }
 
     /// Runs a read query on the store's reader pool.

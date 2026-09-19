@@ -48,7 +48,6 @@ impl Composer {
     /// Opens a composer for `draft`. `identities` lists every account; the
     /// draft's account is preselected.
     pub fn open(
-        app: &adw::Application,
         core: Rc<Core>,
         identities: Vec<Identity>,
         draft: Draft,
@@ -157,7 +156,6 @@ impl Composer {
         let toasts = adw::ToastOverlay::new();
         toasts.set_child(Some(&toolbar));
         let window = adw::Window::builder()
-            .application(app)
             .default_width(720)
             .default_height(640)
             .title("New Message")

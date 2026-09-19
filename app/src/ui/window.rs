@@ -28,7 +28,8 @@ use crate::core::Core;
 const INLINE_IMAGE_LIMIT: usize = 5 * 1024 * 1024;
 
 pub struct MainWindow {
-    pub window: adw::ApplicationWindow,
+    pub window: adw::Window,
+    actions: gio::SimpleActionGroup,
     app: Weak<App>,
     core: Rc<Core>,
     toasts: adw::ToastOverlay,
@@ -119,8 +120,7 @@ impl MainWindow {
             stack.add_named(&first_page, Some("first-account"));
             let toasts = adw::ToastOverlay::new();
             toasts.set_child(Some(&stack));
-            let window = adw::ApplicationWindow::builder()
-                .application(&app.gtk)
+            let window = adw::Window::builder()
                 .title(if app.core.demo {
                     "mailrs (demo)"
                 } else {
@@ -149,8 +149,11 @@ impl MainWindow {
             window.add_breakpoint(medium);
             window.add_breakpoint(narrow);
 
+            let actions = gio::SimpleActionGroup::new();
+            window.insert_action_group("win", Some(&actions));
             MainWindow {
                 window,
+                actions,
                 app: Rc::downgrade(app),
                 core: Rc::clone(&app.core),
                 toasts,
@@ -1048,7 +1051,7 @@ impl MainWindow {
                     run(&win);
                 }
             });
-            self.window.add_action(&action);
+            self.actions.add_action(&action);
         };
         add("compose", Box::new(|win| win.compose_new()));
         add("search", Box::new(|win| win.list.open_search()));
@@ -1075,6 +1078,14 @@ impl MainWindow {
         add("toggle-star", Box::new(|win| win.act(Action::ToggleStar)));
         add("toggle-read", Box::new(|win| win.act(Action::ToggleRead)));
         add("about", Box::new(|win| win.show_about()));
+        add(
+            "quit",
+            Box::new(|win| {
+                if let Some(app) = win.app.upgrade() {
+                    app.quit();
+                }
+            }),
+        );
 
         let with_account = |name: &str, run: Box<dyn Fn(&Rc<MainWindow>, Account)>| {
             let action = gio::SimpleAction::new(name, Some(glib::VariantTy::INT64));
@@ -1089,7 +1100,7 @@ impl MainWindow {
                     run(&win, account);
                 }
             });
-            self.window.add_action(&action);
+            self.actions.add_action(&action);
         };
         with_account(
             "account-check",
@@ -1103,6 +1114,24 @@ impl MainWindow {
             "account-remove",
             Box::new(|win, account| win.confirm_remove(account)),
         );
+
+        let shortcuts = gtk::ShortcutController::new();
+        shortcuts.set_scope(gtk::ShortcutScope::Global);
+        for (trigger, action) in [
+            ("<Control>n", "win.compose"),
+            ("<Control>f", "win.search"),
+            ("F5", "win.check"),
+            ("<Control>r", "win.check"),
+            ("<Control>question", "win.shortcuts"),
+            ("<Control>q", "win.quit"),
+            ("<Control>w", "window.close"),
+        ] {
+            shortcuts.add_shortcut(gtk::Shortcut::new(
+                gtk::ShortcutTrigger::parse_string(trigger),
+                Some(gtk::NamedAction::new(action)),
+            ));
+        }
+        self.window.add_controller(shortcuts);
 
         let weak = Rc::downgrade(self);
         self.window.connect_close_request(move |_| {
@@ -1124,7 +1153,7 @@ impl MainWindow {
         let second = gio::Menu::new();
         second.append(Some("Keyboard Shortcuts"), Some("win.shortcuts"));
         second.append(Some("About mailrs"), Some("win.about"));
-        second.append(Some("Quit"), Some("app.quit"));
+        second.append(Some("Quit"), Some("win.quit"));
         menu.append_section(None, &second);
         self.sidebar.header.pack_end(
             &gtk::MenuButton::builder()
@@ -1203,14 +1232,18 @@ impl MainWindow {
     }
 
     /// Screenshot hooks, honoured only in demo mode: `MAILRS_DEMO_OPEN`
-    /// opens a thread by id, `MAILRS_DEMO_SEARCH` runs a search, and
-    /// `MAILRS_DEMO_COMPOSE=reply` opens a reply to the open thread.
+    /// opens a thread by id, `MAILRS_DEMO_SEARCH` runs a search,
+    /// `MAILRS_DEMO_COMPOSE=reply` opens a reply to the open thread, and
+    /// `MAILRS_DEMO_ACTION` activates a window action such as `shortcuts`.
     pub fn run_demo_script(self: &Rc<Self>) {
         if !self.core.demo {
             return;
         }
         let this = Rc::clone(self);
         glib::timeout_add_local_once(std::time::Duration::from_millis(900), move || {
+            if let Ok(action) = std::env::var("MAILRS_DEMO_ACTION") {
+                let _ = WidgetExt::activate_action(&this.window, &format!("win.{action}"), None);
+            }
             if let Ok(query) = std::env::var("MAILRS_DEMO_SEARCH") {
                 this.list.open_search();
                 this.list.search_entry.set_text(&query);
