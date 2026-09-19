@@ -23,6 +23,7 @@ use super::{Mailbox, summarize_search, welcome};
 use crate::app::App;
 use crate::compose::{self, Draft, OutgoingAttachment, ReplyKind};
 use crate::core::Core;
+use crate::settings::{MarkRead, RemoteImages, Settings};
 
 /// Largest inline image embedded into a page.
 const INLINE_IMAGE_LIMIT: usize = 5 * 1024 * 1024;
@@ -207,6 +208,9 @@ impl MainWindow {
         if let Some(filter) = app.filter() {
             window.conversation.set_filter(filter);
         }
+        window
+            .conversation
+            .set_zoom(app.settings().text_size.zoom());
         window.refresh_accounts();
         window
     }
@@ -381,15 +385,23 @@ impl MainWindow {
         };
         let generation = self.list_generation.get() + 1;
         self.list_generation.set(generation);
+        let threaded = self.settings().threading;
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let loaded = this
                 .core
                 .read(move |c| {
-                    Ok((
-                        threads::list_threads(c, &filter, 0, 10_000)?,
-                        threads::unread_threads(c, &filter)?,
-                    ))
+                    Ok(if threaded {
+                        (
+                            threads::list_threads(c, &filter, 0, 10_000)?,
+                            threads::unread_threads(c, &filter)?,
+                        )
+                    } else {
+                        (
+                            threads::list_messages(c, &filter, 0, 10_000)?,
+                            threads::unread_messages(c, &filter)?,
+                        )
+                    })
                 })
                 .await;
             if this.list_generation.get() != generation {
@@ -434,6 +446,7 @@ impl MainWindow {
             .filter(|a| scope.is_none_or(|id| a.id == id))
             .cloned()
             .collect();
+        let threaded = self.settings().threading;
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let searches = targets.iter().map(|account| {
@@ -461,7 +474,7 @@ impl MainWindow {
                 }
             }
             this.list.set_rows(
-                summarize_search(hits),
+                summarize_search(hits, threaded),
                 "No Results",
                 "system-search-symbolic",
             );
@@ -481,13 +494,12 @@ impl MainWindow {
 
     fn open_thread(self: &Rc<Self>, summary: ThreadSummary) {
         self.nav.set_show_content(true);
-        if self
-            .conversation
-            .is_showing(summary.account_id, &summary.id)
-        {
+        if self.conversation.is_showing_row(&summary) {
             return;
         }
         let (account_id, thread_id) = (summary.account_id, summary.id.clone());
+        let only = summary.message_id.clone();
+        let images_allowed = self.settings().remote_images == RemoteImages::Always;
         let me = self.addresses_for(account_id);
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
@@ -505,7 +517,10 @@ impl MainWindow {
                     Ok((found, cached))
                 })
                 .await;
-            let (found, cached) = local.unwrap_or_default();
+            let (mut found, cached) = local.unwrap_or_default();
+            if let Some(id) = &only {
+                found.retain(|m| &m.id == id);
+            }
             let expanded = default_expanded(&found);
             let thread = OpenThread {
                 account_id,
@@ -520,7 +535,8 @@ impl MainWindow {
                     .map(|(id, body)| (id, Ok(body)))
                     .collect(),
                 expanded,
-                images_allowed: false,
+                images_allowed,
+                only_message: only,
                 me,
                 inline_images: HashMap::new(),
             };
@@ -554,6 +570,11 @@ impl MainWindow {
         let missing: Vec<String> = self
             .conversation
             .with_open(|open| {
+                let fresh: Vec<MessageMeta> = fresh
+                    .iter()
+                    .filter(|m| open.only_message.as_ref().is_none_or(|id| &m.id == id))
+                    .cloned()
+                    .collect();
                 for meta in &fresh {
                     if !open.messages.iter().any(|m| m.id == meta.id) && meta.is_unread() {
                         open.expanded.insert(meta.id.clone());
@@ -592,8 +613,34 @@ impl MainWindow {
             .unwrap_or(false);
         self.conversation.render(false);
         if unread {
-            self.run_triage(account_id, thread_id, TriageAction::MarkRead, false);
+            self.mark_read_later(account_id, thread_id);
         }
+    }
+
+    /// Marks the open thread or message read, when the setting says so.
+    fn mark_read_later(self: &Rc<Self>, account_id: AccountId, thread_id: String) {
+        let delay = match self.settings().mark_read {
+            MarkRead::Immediately => 0,
+            MarkRead::AfterDelay => 2,
+            MarkRead::Manually => return,
+        };
+        let only = self
+            .conversation
+            .with_open(|o| o.only_message.clone())
+            .flatten();
+        let weak = Rc::downgrade(self);
+        glib::timeout_add_seconds_local_once(delay, move || {
+            let Some(win) = weak.upgrade() else { return };
+            let still_open = win
+                .conversation
+                .with_open(|o| {
+                    o.account_id == account_id && o.thread_id == thread_id && o.only_message == only
+                })
+                .unwrap_or(false);
+            if still_open {
+                win.run_triage(account_id, thread_id, only, TriageAction::MarkRead, false);
+            }
+        });
     }
 
     /// Downloads `cid:` images that HTML bodies reference, as `data:` URIs.
@@ -660,6 +707,14 @@ impl MainWindow {
             if !this.conversation.is_showing(account_id, &thread_id) {
                 return;
             }
+            let only = this
+                .conversation
+                .with_open(|o| o.only_message.clone())
+                .flatten();
+            let fresh: Vec<MessageMeta> = fresh
+                .into_iter()
+                .filter(|m| only.as_ref().is_none_or(|id| &m.id == id))
+                .collect();
             if fresh.is_empty() {
                 this.conversation.clear();
                 return;
@@ -721,15 +776,25 @@ impl MainWindow {
                 if let (Some(account_id), Some(app)) = (account_id, self.app.upgrade()) {
                     let mut draft = Draft::new(account_id, app.identity(account_id));
                     draft.to = compose::parse_recipients(&address);
-                    app.compose(draft);
+                    app.compose(app.signed(draft));
                 }
             }
         }
     }
 
+    /// The account a new message comes from: the one set in Preferences,
+    /// else the account in view, else the first.
     fn default_account(&self) -> Option<AccountId> {
-        self.conversation
-            .with_open(|o| o.account_id)
+        let preferred = self.settings().default_account;
+        preferred
+            .and_then(|email| {
+                self.accounts
+                    .borrow()
+                    .iter()
+                    .find(|a| a.email.eq_ignore_ascii_case(&email))
+                    .map(|a| a.id)
+            })
+            .or_else(|| self.conversation.with_open(|o| o.account_id))
             .or_else(|| self.mailbox.borrow().account())
             .or_else(|| self.accounts.borrow().first().map(|a| a.id))
     }
@@ -737,8 +802,8 @@ impl MainWindow {
     fn triage_open(self: &Rc<Self>, action: TriageAction) {
         let key = self
             .conversation
-            .with_open(|o| (o.account_id, o.thread_id.clone()));
-        let Some((account_id, thread_id)) = key else {
+            .with_open(|o| (o.account_id, o.thread_id.clone(), o.only_message.clone()));
+        let Some((account_id, thread_id, only)) = key else {
             return;
         };
         let leaves = matches!(action, TriageAction::Archive | TriageAction::Trash);
@@ -746,17 +811,21 @@ impl MainWindow {
             let next = self.list.neighbour_of_selected();
             self.conversation.clear();
             match next {
-                Some(next) => self.list.select(next.account_id, &next.id),
+                Some(next) => {
+                    self.list
+                        .select(next.account_id, &next.id, next.message_id.as_deref())
+                }
                 None => self.nav.set_show_content(false),
             }
         }
-        self.run_triage(account_id, thread_id, action, true);
+        self.run_triage(account_id, thread_id, only, action, true);
     }
 
     fn run_triage(
         self: &Rc<Self>,
         account_id: AccountId,
         thread_id: String,
+        only: Option<String>,
         action: TriageAction,
         announce: bool,
     ) {
@@ -765,12 +834,22 @@ impl MainWindow {
         };
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let (s, t, a) = (sync.clone(), thread_id.clone(), action.clone());
-            match this
+            let (s, t, a, m) = (
+                sync.clone(),
+                thread_id.clone(),
+                action.clone(),
+                only.clone(),
+            );
+            let result = this
                 .core
-                .call(async move { s.triage_thread(&t, &a).await })
-                .await
-            {
+                .call(async move {
+                    match m {
+                        Some(message_id) => s.triage_message(&t, &message_id, &a).await,
+                        None => s.triage_thread(&t, &a).await,
+                    }
+                })
+                .await;
+            match result {
                 Ok(()) if announce && action == TriageAction::Archive => {
                     let toast = adw::Toast::builder()
                         .title("Archived")
@@ -783,6 +862,7 @@ impl MainWindow {
                             win.run_triage(
                                 account_id,
                                 thread_id.clone(),
+                                only.clone(),
                                 TriageAction::AddLabel("INBOX".into()),
                                 false,
                             );
@@ -823,7 +903,9 @@ impl MainWindow {
             return;
         };
         let me = app.identity(account_id);
-        let mut draft = compose::respond(kind, account_id, &me, &target, &text, &thread);
+        let mut draft = app.signed(compose::respond(
+            kind, account_id, &me, &target, &text, &thread,
+        ));
         if attachments.is_empty() {
             app.compose(draft);
             return;
@@ -1081,6 +1163,7 @@ impl MainWindow {
         add("toggle-star", Box::new(|win| win.act(Action::ToggleStar)));
         add("toggle-read", Box::new(|win| win.act(Action::ToggleRead)));
         add("about", Box::new(|win| win.show_about()));
+        add("preferences", Box::new(|win| win.show_preferences()));
         add(
             "quit",
             Box::new(|win| {
@@ -1126,6 +1209,7 @@ impl MainWindow {
             ("F5", "win.check"),
             ("<Control>r", "win.check"),
             ("<Control>question", "win.shortcuts"),
+            ("<Control>comma", "win.preferences"),
             ("<Control>q", "win.quit"),
             ("<Control>w", "window.close"),
         ] {
@@ -1154,6 +1238,7 @@ impl MainWindow {
         first.append(Some("Add Account…"), Some("win.add-account"));
         menu.append_section(None, &first);
         let second = gio::Menu::new();
+        second.append(Some("Preferences"), Some("win.preferences"));
         second.append(Some("Keyboard Shortcuts"), Some("win.shortcuts"));
         second.append(Some("About mailrs"), Some("win.about"));
         second.append(Some("Quit"), Some("win.quit"));
@@ -1217,7 +1302,7 @@ impl MainWindow {
         let (Some(app), Some(account_id)) = (self.app.upgrade(), self.default_account()) else {
             return self.toast("Add an account first");
         };
-        app.compose(Draft::new(account_id, app.identity(account_id)));
+        app.compose(app.signed(Draft::new(account_id, app.identity(account_id))));
     }
 
     /// Opens a thread from outside the window, such as a notification.
@@ -1229,7 +1314,7 @@ impl MainWindow {
         }
         let this = Rc::clone(self);
         glib::timeout_add_local_once(std::time::Duration::from_millis(250), move || {
-            this.list.select(account_id, &thread_id);
+            this.list.select(account_id, &thread_id, None);
         });
     }
 
@@ -1268,7 +1353,7 @@ impl MainWindow {
                         .await;
                     if let Ok(Some(account_id)) = found {
                         let _ = rows;
-                        finder.list.select(account_id, &thread_id);
+                        finder.list.select(account_id, &thread_id, None);
                         if std::env::var("MAILRS_DEMO_COMPOSE").as_deref() == Ok("reply") {
                             let replier = Rc::clone(&finder);
                             glib::timeout_add_local_once(
@@ -1282,6 +1367,37 @@ impl MainWindow {
                 });
             }
         });
+    }
+
+    fn settings(&self) -> Settings {
+        self.app
+            .upgrade()
+            .map(|app| app.settings())
+            .unwrap_or_default()
+    }
+
+    fn show_preferences(self: &Rc<Self>) {
+        let Some(app) = self.app.upgrade() else {
+            return;
+        };
+        let accounts = self.accounts.borrow().clone();
+        super::preferences::present(&app, &accounts, &self.window);
+    }
+
+    /// Applies a settings change to what is on screen.
+    pub fn settings_changed(self: &Rc<Self>, before: &Settings, after: &Settings) {
+        if before.threading != after.threading {
+            self.conversation.clear();
+            self.list.unselect();
+            let mailbox = self.mailbox.borrow().clone();
+            match mailbox {
+                Mailbox::Search { query, .. } => self.search(query),
+                _ => self.reload_list(),
+            }
+        }
+        if before.text_size != after.text_size {
+            self.conversation.set_zoom(after.text_size.zoom());
+        }
     }
 
     pub fn toast_sent(&self) {

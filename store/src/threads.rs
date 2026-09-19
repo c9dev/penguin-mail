@@ -40,6 +40,7 @@ fn to_summary(row: &Row<'_>) -> rusqlite::Result<ThreadSummary> {
     Ok(ThreadSummary {
         account_id: row.get(0)?,
         id: row.get(1)?,
+        message_id: None,
         last_message_at: row.get(2)?,
         subject: row.get(3)?,
         snippet: row.get(4)?,
@@ -82,6 +83,65 @@ pub fn list_threads(
 
 pub fn count_threads(conn: &Connection, filter: &ThreadFilter) -> Result<i64> {
     let sql = format!("SELECT COUNT(*) {FILTERED}");
+    Ok(
+        conn.query_row(&sql, params![filter.label_id, filter.account_id], |row| {
+            row.get(0)
+        })?,
+    )
+}
+
+/// Columns for one message shown as a list row.
+const MESSAGE_COLUMNS: &str = "m.account_id, m.thread_id, m.id, m.date, m.subject, m.snippet, \
+     COALESCE(m.from_name, m.from_addr, ''), m.has_attachments, \
+     EXISTS (SELECT 1 FROM message_labels u WHERE u.account_id = m.account_id AND u.message_id = m.id \
+             AND u.label_id = 'UNREAD'), \
+     EXISTS (SELECT 1 FROM message_labels s WHERE s.account_id = m.account_id AND s.message_id = m.id \
+             AND s.label_id = 'STARRED')";
+
+const MESSAGES_FILTERED: &str = "FROM messages m JOIN message_labels ml \
+     ON ml.account_id = m.account_id AND ml.message_id = m.id \
+     WHERE ml.label_id = ?1 AND (?2 IS NULL OR m.account_id = ?2)";
+
+fn to_message_row(row: &Row<'_>) -> rusqlite::Result<ThreadSummary> {
+    Ok(ThreadSummary {
+        account_id: row.get(0)?,
+        id: row.get(1)?,
+        message_id: Some(row.get(2)?),
+        last_message_at: row.get(3)?,
+        subject: row.get(4)?,
+        snippet: row.get(5)?,
+        from: row.get(6)?,
+        message_count: 1,
+        has_attachments: row.get(7)?,
+        unread: row.get(8)?,
+        starred: row.get(9)?,
+    })
+}
+
+/// Messages rather than threads, newest first, for when conversation
+/// grouping is off.
+pub fn list_messages(
+    conn: &Connection,
+    filter: &ThreadFilter,
+    offset: i64,
+    limit: i64,
+) -> Result<Vec<ThreadSummary>> {
+    let sql = format!(
+        "SELECT {MESSAGE_COLUMNS} {MESSAGES_FILTERED} ORDER BY m.date DESC, m.account_id, m.id LIMIT ?3 OFFSET ?4"
+    );
+    let mut stmt = conn.prepare_cached(&sql)?;
+    let rows = stmt.query_map(
+        params![filter.label_id, filter.account_id, limit, offset],
+        to_message_row,
+    )?;
+    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
+pub fn unread_messages(conn: &Connection, filter: &ThreadFilter) -> Result<i64> {
+    let sql = format!(
+        "SELECT COUNT(*) {MESSAGES_FILTERED} AND EXISTS (SELECT 1 FROM message_labels u \
+         WHERE u.account_id = m.account_id AND u.message_id = m.id AND u.label_id = 'UNREAD')"
+    );
     Ok(
         conn.query_row(&sql, params![filter.label_id, filter.account_id], |row| {
             row.get(0)

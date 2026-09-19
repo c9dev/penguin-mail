@@ -16,6 +16,7 @@ use mailrs_store::{messages, threads};
 use crate::compose::Draft;
 use crate::core::Core;
 use crate::notify;
+use crate::settings::{ColorScheme, Settings};
 use crate::tray::{MailTray, TrayCommand};
 use crate::ui::composer::{Composer, Identity};
 use crate::ui::window::MainWindow;
@@ -45,6 +46,8 @@ pub struct App {
     /// A message requested on the command line, opened on first activation.
     pending_compose: RefCell<Option<String>>,
     tray_started: Cell<bool>,
+    settings: RefCell<Settings>,
+    settings_path: std::path::PathBuf,
     _hold: gio::ApplicationHoldGuard,
 }
 
@@ -56,6 +59,12 @@ impl App {
         compose: Option<String>,
     ) -> Rc<App> {
         let (open_requests, opened) = async_channel::unbounded();
+        // Demo mode must not change the real preferences.
+        let settings_path = if core.demo && std::env::var_os("MAILRS_SETTINGS").is_none() {
+            std::env::temp_dir().join(format!("mailrs-demo-{}-settings.toml", std::process::id()))
+        } else {
+            Settings::default_path()
+        };
         let app = Rc::new(App {
             gio: gio_app.clone(),
             core,
@@ -71,6 +80,8 @@ impl App {
             shed_generation: Cell::new(0),
             pending_compose: RefCell::new(compose),
             tray_started: Cell::new(false),
+            settings: RefCell::new(Settings::load(&settings_path)),
+            settings_path,
             _hold: gio_app.hold(),
         });
         app.install_actions();
@@ -108,20 +119,75 @@ impl App {
         self.show_window();
     }
 
+    pub fn settings(&self) -> Settings {
+        self.settings.borrow().clone()
+    }
+
+    /// Changes preferences, saves them, and applies them to open windows.
+    pub fn update_settings(self: &Rc<Self>, change: impl FnOnce(&mut Settings)) {
+        let before = self.settings();
+        let mut after = before.clone();
+        change(&mut after);
+        if after == before {
+            return;
+        }
+        if let Err(err) = after.save(&self.settings_path) {
+            tracing::warn!(error = %err, "could not save preferences");
+        }
+        *self.settings.borrow_mut() = after.clone();
+        self.apply_style();
+        if let Some(window) = self.window() {
+            window.settings_changed(&before, &after);
+        }
+    }
+
+    /// Follows the light or dark choice. Needs GTK, so it waits for a window.
+    fn apply_style(&self) {
+        if !gtk::is_initialized_main_thread() {
+            return;
+        }
+        adw::StyleManager::default().set_color_scheme(match self.settings.borrow().color_scheme {
+            ColorScheme::System => adw::ColorScheme::Default,
+            ColorScheme::Light => adw::ColorScheme::ForceLight,
+            ColorScheme::Dark => adw::ColorScheme::ForceDark,
+        });
+    }
+
+    /// `draft` with its account's signature added.
+    pub fn signed(&self, mut draft: Draft) -> Draft {
+        let settings = self.settings.borrow();
+        draft.markdown =
+            crate::compose::with_signature(&draft.markdown, settings.signature(&draft.from.email));
+        draft
+    }
+
     /// Opens a composer, addressed to `to` unless it is empty.
     pub fn compose_to(self: &Rc<Self>, to: &str) {
-        let first = self.accounts.borrow().first().map(|a| a.id);
+        let preferred = self.settings.borrow().default_account.clone();
+        let first = {
+            let accounts = self.accounts.borrow();
+            preferred
+                .and_then(|email| {
+                    accounts
+                        .iter()
+                        .find(|a| a.email.eq_ignore_ascii_case(&email))
+                        .map(|a| a.id)
+                })
+                .or_else(|| accounts.first().map(|a| a.id))
+        };
         let Some(account_id) = first else {
             self.show_window();
             return;
         };
         let mut draft = Draft::new(account_id, self.identity(account_id));
         draft.to = crate::compose::parse_recipients(to);
+        let draft = self.signed(draft);
         self.compose(draft);
     }
 
     pub fn show_window(self: &Rc<Self>) -> Rc<MainWindow> {
         crate::ensure_gtk();
+        self.apply_style();
         if let Some(window) = self.window.borrow().as_ref() {
             window.present();
             return Rc::clone(window);
@@ -256,6 +322,7 @@ impl App {
 
     pub fn compose(self: &Rc<Self>, draft: Draft) {
         crate::ensure_gtk();
+        self.apply_style();
         let identities: Vec<Identity> = self
             .accounts
             .borrow()
@@ -407,9 +474,12 @@ impl App {
     }
 
     fn announce(self: &Rc<Self>, account_id: AccountId, message_ids: Vec<String>) {
-        if self.core.demo || self.window().is_some_and(|w| w.is_active()) {
+        let settings = self.settings();
+        if self.core.demo || !settings.notifications || self.window().is_some_and(|w| w.is_active())
+        {
             return;
         }
+        let previews = settings.notification_previews;
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let found = this
@@ -431,7 +501,7 @@ impl App {
             if let Ok(found) = found
                 && !found.is_empty()
             {
-                notify::announce(found, this.open_requests.clone());
+                notify::announce(found, previews, this.open_requests.clone());
             }
         });
     }

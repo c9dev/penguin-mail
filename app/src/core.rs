@@ -200,6 +200,35 @@ impl Core {
         Ok(())
     }
 
+    /// The sync section of `config.toml`.
+    pub fn sync_config(&self) -> Option<mailrs_sync::config::SyncConfig> {
+        self.config.borrow().as_ref().map(|c| c.sync.clone())
+    }
+
+    /// Saves new sync settings and restarts every account's loop with them.
+    /// Demo mode keeps them in memory only.
+    pub fn update_sync(&self, sync: mailrs_sync::config::SyncConfig) -> Result<()> {
+        let updated = {
+            let mut config = self.config.borrow_mut();
+            let Some(config) = config.as_mut() else {
+                return Ok(());
+            };
+            if config.sync == sync {
+                return Ok(());
+            }
+            config.sync = sync;
+            config.clone()
+        };
+        if !self.demo {
+            updated.save(&config_path()?)?;
+        }
+        if let Some(engine) = self.engine.borrow_mut().take() {
+            engine.shutdown();
+        }
+        self.start_engine();
+        Ok(())
+    }
+
     fn oauth(&self) -> Result<OAuthClient> {
         let config = self.config.borrow();
         let config = config

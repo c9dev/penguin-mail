@@ -19,6 +19,11 @@ time, and keeps your mail on your own computer.
 - **Tray and notifications.** An unread count in the tray and a notification
   for new mail, which opens the thread when clicked.
 - **Keyboard first.** `j`/`k` to move, `e` to archive, `r` to reply, and more.
+- **Preferences** (`Ctrl+,`): group messages into conversations or list each
+  one, when to mark as read, remote images, text size, light or dark, a
+  default sending account, a Markdown signature per account, notification
+  previews, how often to check and how much mail to keep, and starting at
+  login.
 - **Light.** In the tray, mailrs uses about 55 MB. A minute after you close
   the window, it restarts itself in the background to give back the memory
   the window used.
@@ -26,6 +31,8 @@ time, and keeps your mail on your own computer.
 | Dark | Writing | Narrow |
 |---|---|---|
 | ![Dark mode with an HTML email](docs/screenshots/dark.png) | ![Replying in the composer](docs/screenshots/composer.png) | ![The phone-width layout](docs/screenshots/phone.png) |
+
+![Preferences](docs/screenshots/preferences.png)
 
 ## Try it without an account
 
@@ -66,6 +73,7 @@ that, **Sign In with Google** adds each account.
 | `s` | Star or unstar | `c` | New message |
 | `u` | Mark read or unread | `/` | Search |
 | `F5` | Check for mail | `Ctrl+Enter` | Send |
+| `Ctrl+,` | Preferences | `Ctrl+N` | New message |
 
 `Ctrl+?` shows them all.
 
@@ -129,3 +137,9 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo run -p mailrs -- --demo                   # the UI with sample data
 scripts/smoke.sh                                # by hand, against a real account
 ```
+
+## The icon
+
+A sealed envelope: the wax seal's rim is a gear, a nod to Rust, and the seal
+itself stands for mail that stays private. The other concepts considered are
+in [docs/icon-concepts.png](docs/icon-concepts.png).

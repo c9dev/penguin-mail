@@ -3,6 +3,7 @@
 
 pub mod composer;
 pub mod conversation;
+pub mod preferences;
 pub mod sidebar;
 pub mod thread_list;
 pub mod thread_row;
@@ -96,9 +97,32 @@ pub fn mailbox_icon(label: &str) -> &'static str {
     }
 }
 
-/// Groups search hits, newest first, into one row per thread.
-pub fn summarize_search(mut hits: Vec<MessageMeta>) -> Vec<ThreadSummary> {
+/// Turns search hits into list rows, newest first: one per thread when
+/// `grouped`, one per message otherwise.
+pub fn summarize_search(mut hits: Vec<MessageMeta>, grouped: bool) -> Vec<ThreadSummary> {
     hits.sort_by_key(|m| std::cmp::Reverse(m.date));
+    if !grouped {
+        return hits
+            .into_iter()
+            .map(|hit| ThreadSummary {
+                account_id: hit.account_id,
+                id: hit.thread_id.clone(),
+                message_id: Some(hit.id.clone()),
+                last_message_at: hit.date,
+                subject: hit.subject.clone(),
+                snippet: hit.snippet.clone(),
+                from: hit
+                    .from
+                    .as_ref()
+                    .map(|a| a.display().to_string())
+                    .unwrap_or_default(),
+                message_count: 1,
+                unread: hit.is_unread(),
+                starred: hit.has_label("STARRED"),
+                has_attachments: hit.has_attachments,
+            })
+            .collect();
+    }
     let mut rows: Vec<(ThreadSummary, i64)> = Vec::new();
     for hit in hits {
         if let Some((row, oldest)) = rows
@@ -118,6 +142,7 @@ pub fn summarize_search(mut hits: Vec<MessageMeta>) -> Vec<ThreadSummary> {
         let summary = ThreadSummary {
             account_id: hit.account_id,
             id: hit.thread_id.clone(),
+            message_id: None,
             last_message_at: hit.date,
             subject: hit.subject.clone(),
             snippet: hit.snippet.clone(),
@@ -165,11 +190,14 @@ mod tests {
 
     #[test]
     fn hits_group_by_thread_newest_first() {
-        let rows = summarize_search(vec![
-            hit("a1", "ta", 100, "Plans", &[]),
-            hit("b1", "tb", 300, "Other", &["STARRED"]),
-            hit("a2", "ta", 200, "Re: Plans", &["UNREAD"]),
-        ]);
+        let rows = summarize_search(
+            vec![
+                hit("a1", "ta", 100, "Plans", &[]),
+                hit("b1", "tb", 300, "Other", &["STARRED"]),
+                hit("a2", "ta", 200, "Re: Plans", &["UNREAD"]),
+            ],
+            true,
+        );
         assert_eq!(rows.len(), 2);
         assert_eq!(rows[0].id, "tb");
         assert!(rows[0].starred);
@@ -184,5 +212,19 @@ mod tests {
         );
         assert!(plans.unread);
         assert_eq!(plans.last_message_at, 200);
+    }
+
+    #[test]
+    fn ungrouped_hits_stay_separate() {
+        let rows = summarize_search(
+            vec![
+                hit("a1", "ta", 100, "Plans", &[]),
+                hit("a2", "ta", 200, "Re: Plans", &[]),
+            ],
+            false,
+        );
+        let ids: Vec<Option<&str>> = rows.iter().map(|r| r.message_id.as_deref()).collect();
+        assert_eq!(ids, [Some("a2"), Some("a1")]);
+        assert_eq!(rows[0].subject, "Re: Plans");
     }
 }

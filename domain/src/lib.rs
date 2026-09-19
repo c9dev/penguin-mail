@@ -150,7 +150,11 @@ impl MessageMeta {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ThreadSummary {
     pub account_id: AccountId,
+    /// The thread id. A single-message row still names its thread.
     pub id: String,
+    /// Set when the row stands for one message rather than a whole thread,
+    /// as it does with conversation grouping turned off.
+    pub message_id: Option<String>,
     pub last_message_at: EpochMillis,
     /// Subject of the earliest local message, so replies don't show "Re:".
     pub subject: String,

@@ -7,7 +7,8 @@ use rusqlite::Connection;
 
 use crate::Result;
 
-const MIGRATIONS: &[&str] = &[r#"
+const MIGRATIONS: &[&str] = &[
+    r#"
 CREATE TABLE accounts (
     id              INTEGER PRIMARY KEY,
     email           TEXT NOT NULL UNIQUE,
@@ -104,7 +105,11 @@ CREATE TABLE attachments (
     PRIMARY KEY (account_id, message_id, part_id),
     FOREIGN KEY (account_id, message_id) REFERENCES messages(account_id, id) ON DELETE CASCADE
 );
-"#];
+"#,
+    r#"
+CREATE INDEX message_labels_by_label ON message_labels(label_id, account_id, message_id);
+"#,
+];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,
 /// and applies pending migrations.

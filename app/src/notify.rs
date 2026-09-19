@@ -6,7 +6,23 @@ use crate::APP_ID;
 
 /// Shows notifications for `messages`: one each for up to three, one
 /// summary beyond that. Clicking one sends its thread to `open`.
-pub fn announce(messages: Vec<MessageMeta>, open: async_channel::Sender<(AccountId, String)>) {
+/// With `previews` off, notifications say only how much mail arrived.
+pub fn announce(
+    messages: Vec<MessageMeta>,
+    previews: bool,
+    open: async_channel::Sender<(AccountId, String)>,
+) {
+    if !previews {
+        let summary = if messages.len() == 1 {
+            "New message".to_string()
+        } else {
+            format!("{} new messages", messages.len())
+        };
+        let target =
+            (messages.len() == 1).then(|| (messages[0].account_id, messages[0].thread_id.clone()));
+        show(summary, String::new(), target, open);
+        return;
+    }
     if messages.len() <= 3 {
         for message in messages {
             let sender = message

@@ -73,3 +73,27 @@ async fn trash_uses_the_trash_call() {
     assert_eq!(h.fake.with(|s| s.remote_writes.clone()), ["trash a"]);
     assert_eq!(h.labels_of("a").await, ["TRASH"]);
 }
+
+#[tokio::test]
+async fn one_message_can_be_triaged_alone() {
+    let h = harness().await;
+    let now = now_millis();
+    h.fake
+        .seed(meta("a", "t1", now - 1000, &["INBOX", "UNREAD"]));
+    h.fake.seed(meta("b", "t1", now, &["INBOX", "UNREAD"]));
+    h.bootstrap_all().await;
+    h.sync
+        .triage_message("t1", "b", &TriageAction::MarkRead)
+        .await
+        .unwrap();
+    assert_eq!(h.labels_of("a").await, ["INBOX", "UNREAD"]);
+    assert_eq!(h.labels_of("b").await, ["INBOX"]);
+    assert_eq!(
+        h.fake.with(|s| s.remote_writes.clone()),
+        ["modify b + -UNREAD"]
+    );
+    assert!(
+        h.thread("t1").await.unwrap().unread,
+        "the thread still has an unread message"
+    );
+}

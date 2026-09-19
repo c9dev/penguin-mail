@@ -22,15 +22,37 @@ impl<G: GmailApi> AccountSync<G> {
         thread_id: &str,
         action: &TriageAction,
     ) -> Result<(), SyncError> {
+        self.triage(thread_id, None, action).await
+    }
+
+    /// Applies `action` to one message of a thread, as the list does when
+    /// conversation grouping is off.
+    pub async fn triage_message(
+        &self,
+        thread_id: &str,
+        message_id: &str,
+        action: &TriageAction,
+    ) -> Result<(), SyncError> {
+        self.triage(thread_id, Some(message_id), action).await
+    }
+
+    async fn triage(
+        &self,
+        thread_id: &str,
+        only: Option<&str>,
+        action: &TriageAction,
+    ) -> Result<(), SyncError> {
         let account_id = self.account_id;
         let (add, remove) = action.label_delta();
         let snapshot: Vec<(String, Vec<String>)> = {
             let (thread, add, remove) = (thread_id.to_string(), add.clone(), remove.clone());
+            let only = only.map(str::to_string);
             self.db
                 .write(move |c| {
                     let before: Vec<(String, Vec<String>)> =
                         messages::thread_messages(c, account_id, &thread)?
                             .into_iter()
+                            .filter(|m| only.as_ref().is_none_or(|id| &m.id == id))
                             .map(|m| (m.id, m.label_ids))
                             .collect();
                     for (id, _) in &before {

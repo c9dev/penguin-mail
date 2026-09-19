@@ -26,6 +26,8 @@ pub struct OpenThread {
     pub bodies: HashMap<String, Result<MessageBody, String>>,
     pub expanded: HashSet<String>,
     pub images_allowed: bool,
+    /// Set when the view shows one message of the thread, not all of it.
+    pub only_message: Option<String>,
     pub me: Vec<String>,
     /// Inline images per message: `Content-ID` to `data:` URI.
     pub inline_images: HashMap<String, HashMap<String, String>>,
@@ -324,6 +326,19 @@ impl ConversationView {
         self.stack.set_visible_child_name("empty");
         self.set_buttons_shown(false);
         self.banner.set_revealed(false);
+    }
+
+    /// Whether `row` is what the view shows now.
+    pub fn is_showing_row(&self, row: &mailrs_domain::ThreadSummary) -> bool {
+        self.open.borrow().as_ref().is_some_and(|o| {
+            o.account_id == row.account_id
+                && o.thread_id == row.id
+                && o.only_message == row.message_id
+        })
+    }
+
+    pub fn set_zoom(&self, zoom: f64) {
+        self.webview.set_zoom_level(zoom);
     }
 
     pub fn is_showing(&self, account_id: AccountId, thread_id: &str) -> bool {

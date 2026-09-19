@@ -1,6 +1,7 @@
 //! mailrs: a Gmail client for the GNOME desktop.
 
 mod app;
+mod autostart;
 mod compose;
 mod core;
 mod demo;
@@ -9,6 +10,7 @@ mod format;
 mod notify;
 mod render;
 mod sanitize;
+mod settings;
 mod tray;
 mod ui;
 

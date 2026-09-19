@@ -203,7 +203,7 @@ impl ThreadList {
     /// Updates the list with one splice, keeping the selected thread
     /// selected when it is still present.
     pub fn set_rows(&self, rows: Vec<ThreadSummary>, empty_title: &str, empty_icon: &str) {
-        let selected = self.selected().map(|t| (t.account_id, t.id));
+        let selected = self.selected().map(|t| (t.account_id, t.id, t.message_id));
         self.muted.set(true);
         let old = self.rows.replace(rows);
         let new = self.rows.borrow();
@@ -215,9 +215,9 @@ impl ThreadList {
                 .collect();
             self.store.splice(change.position, change.removed, &added);
         }
-        let position = selected.and_then(|(account, id)| {
+        let position = selected.and_then(|(account, id, message)| {
             new.iter()
-                .position(|t| t.account_id == account && t.id == id)
+                .position(|t| t.account_id == account && t.id == id && t.message_id == message)
         });
         self.selection
             .set_selected(position.map_or(gtk::INVALID_LIST_POSITION, |p| p as u32));
@@ -253,12 +253,13 @@ impl ThreadList {
             .cloned()
     }
 
-    pub fn select(&self, account_id: AccountId, thread_id: &str) {
-        let position = self
-            .rows
-            .borrow()
-            .iter()
-            .position(|t| t.account_id == account_id && t.id == thread_id);
+    /// Selects a row: the thread's first row, or the given message's row.
+    pub fn select(&self, account_id: AccountId, thread_id: &str, message_id: Option<&str>) {
+        let position = self.rows.borrow().iter().position(|t| {
+            t.account_id == account_id
+                && t.id == thread_id
+                && message_id.is_none_or(|m| t.message_id.as_deref() == Some(m))
+        });
         if let Some(position) = position {
             self.selection.set_selected(position as u32);
             self.view

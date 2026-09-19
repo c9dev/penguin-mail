@@ -91,3 +91,35 @@ fn a_thread_carries_every_label_of_its_messages() {
         ["t1"]
     );
 }
+
+#[test]
+fn ungrouped_lists_show_each_message() {
+    let (conn, a, _) = two_accounts();
+    store(
+        &conn,
+        &[meta(a, "a3", "ta1", 250, &["INBOX", "UNREAD", "STARRED"])],
+    );
+    let inbox = ThreadFilter::account(a, "INBOX");
+    let rows = threads::list_messages(&conn, &inbox, 0, 10).unwrap();
+    let ids: Vec<(&str, Option<&str>)> = rows
+        .iter()
+        .map(|r| (r.id.as_str(), r.message_id.as_deref()))
+        .collect();
+    assert_eq!(
+        ids,
+        [
+            ("ta1", Some("a3")),
+            ("ta2", Some("a2")),
+            ("ta1", Some("a1"))
+        ]
+    );
+    assert!(rows[0].unread && rows[0].starred);
+    assert_eq!(rows[0].message_count, 1);
+    assert_eq!(threads::unread_messages(&conn, &inbox).unwrap(), 2);
+    assert!(
+        threads::list_threads(&conn, &inbox, 0, 10)
+            .unwrap()
+            .iter()
+            .all(|t| t.message_id.is_none())
+    );
+}

@@ -194,6 +194,16 @@ fn references(original: &MessageMeta, thread: &[MessageMeta]) -> Vec<String> {
     ids
 }
 
+/// Puts `signature` below where the user writes: first in a new message,
+/// and above the quote in a reply.
+pub fn with_signature(markdown: &str, signature: &str) -> String {
+    let signature = signature.trim_end();
+    if signature.trim().is_empty() {
+        return markdown.to_string();
+    }
+    format!("\n\n-- \n{signature}{markdown}")
+}
+
 /// A message body as plain text, for quoting and for reopening drafts.
 pub fn body_text(body: &MessageBody) -> String {
     match (&body.text, &body.html) {
@@ -641,6 +651,16 @@ mod tests {
              <script>x()</script><p></p><p>&amp; four</p></body></html>",
         );
         assert_eq!(text, "Hello there\nLine two\nthree\n\n& four");
+    }
+
+    #[test]
+    fn signatures_sit_above_the_quote() {
+        assert_eq!(with_signature("", "Dana\n"), "\n\n-- \nDana");
+        assert_eq!(
+            with_signature("\n\nOn Monday, Ann wrote:\n> hi", "Dana"),
+            "\n\n-- \nDana\n\nOn Monday, Ann wrote:\n> hi"
+        );
+        assert_eq!(with_signature("body", "  "), "body");
     }
 
     #[test]
