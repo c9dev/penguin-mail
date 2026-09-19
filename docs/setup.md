@@ -24,8 +24,36 @@ during consent.
 
 ## 3. Create the OAuth client
 
-Clients, Create client, application type Desktop app, name `mailrs`. Copy the
-client ID and client secret.
+The client is what identifies mailrs to Google. You create it once; every
+account you add later uses it.
+
+1. Open <https://console.cloud.google.com/auth/clients>. Check that the
+   project picker at the top of the page shows `mailrs`. If it shows another
+   project, click it and choose `mailrs`.
+2. Click **Create client**. (If you arrive at **Credentials** instead, click
+   **Create credentials**, then **OAuth client ID**.)
+3. Under **Application type**, choose **Desktop app**.
+4. Under **Name**, type `mailrs`. The name is only for you; Google does not
+   show it to anyone.
+5. Click **Create**.
+6. A window titled **OAuth client created** shows the **Client ID** and the
+   **Client secret**. Copy both now, or click **Download JSON** to save
+   them. **Google never shows the secret again** once this window closes.
+7. Click **OK**.
+
+The client ID ends in `.apps.googleusercontent.com`. The secret usually
+starts with `GOCSPX-`. Keep both at hand for the next step.
+
+**Lost the secret?** Open the client from the Clients list, click **Add
+secret**, copy the new one, and put it in mailrs. You can then disable and
+delete the old secret on the same page. Deleting the client and creating a
+new one works too.
+
+**No Create client button?** Google asks for the consent screen first.
+Finish step 2, then come back.
+
+A desktop client needs no redirect URI. mailrs receives Google's answer on
+`127.0.0.1` at a random port, which Google allows for every desktop client.
 
 ## 4. Give mailrs the client
 
