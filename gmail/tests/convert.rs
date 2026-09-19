@@ -1,6 +1,6 @@
 use mailrs_domain::Address;
 use mailrs_gmail::HistoryChange;
-use mailrs_gmail::address::parse_address_list;
+use mailrs_gmail::address::{parse_address_list, parse_address_list_keeping_invalid};
 use mailrs_gmail::convert::{history_page, message_meta, unescape_snippet};
 use mailrs_gmail::model::{HistoryList, Message};
 
@@ -135,4 +135,12 @@ fn history_flattens_in_order() {
         ]
     );
     assert_eq!(page.changes[3].message_id(), "b");
+}
+
+#[test]
+fn the_lenient_parser_keeps_mistakes() {
+    assert_eq!(
+        parse_address_list_keeping_invalid("ann@example.com, not an address, "),
+        vec![addr(None, "ann@example.com"), addr(None, "not an address")]
+    );
 }

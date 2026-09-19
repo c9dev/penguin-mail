@@ -1,3 +1,4 @@
+mod compose;
 mod diff;
 mod format;
 mod render;

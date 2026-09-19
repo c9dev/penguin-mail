@@ -42,7 +42,11 @@ pub fn render(conversation: &Conversation, theme: &Theme) -> String {
     let mut html = String::with_capacity(16 * 1024);
     html.push_str("<!doctype html><html><head><meta charset=\"utf-8\">");
     let _ = write!(html, "<style>{}</style></head><body>", page_css(theme));
-    let subject = if conversation.subject.trim().is_empty() { "(no subject)" } else { conversation.subject };
+    let subject = if conversation.subject.trim().is_empty() {
+        "(no subject)"
+    } else {
+        conversation.subject
+    };
     let count = conversation.messages.len();
     let _ = write!(
         html,
@@ -59,7 +63,11 @@ pub fn render(conversation: &Conversation, theme: &Theme) -> String {
 
 fn render_message(html: &mut String, view: &MessageView, me: &[String]) {
     let meta = view.meta;
-    let state = if view.expanded { "expanded" } else { "collapsed" };
+    let state = if view.expanded {
+        "expanded"
+    } else {
+        "collapsed"
+    };
     let unread = if meta.is_unread() { " unread" } else { "" };
     let (name, address) = match &meta.from {
         Some(from) => (from.display().to_string(), from.email.clone()),
@@ -78,12 +86,24 @@ fn render_message(html: &mut String, view: &MessageView, me: &[String]) {
     if view.expanded && !address.is_empty() && address != name {
         let _ = write!(html, "<span class=\"address\">{}</span>", escape(&address));
     }
-    let _ = write!(html, "</span><span class=\"date\">{}</span>", escape(&full_date(meta.date)));
+    let _ = write!(
+        html,
+        "</span><span class=\"date\">{}</span>",
+        escape(&full_date(meta.date))
+    );
     if view.expanded {
-        let _ = write!(html, "<span class=\"line\">to {}</span></a>", escape(&recipients(meta, me)));
+        let _ = write!(
+            html,
+            "<span class=\"line\">to {}</span></a>",
+            escape(&recipients(meta, me))
+        );
         render_body(html, view);
     } else {
-        let _ = write!(html, "<span class=\"line\">{}</span></a>", escape(&meta.snippet));
+        let _ = write!(
+            html,
+            "<span class=\"line\">{}</span></a>",
+            escape(&meta.snippet)
+        );
     }
     html.push_str("</article>");
 }
@@ -92,7 +112,11 @@ fn render_body(html: &mut String, view: &MessageView) {
     match &view.body {
         BodyState::Loading => html.push_str("<div class=\"body status\">Loading…</div>"),
         BodyState::Failed(reason) => {
-            let _ = write!(html, "<div class=\"body status\">This message could not be loaded: {}</div>", escape(reason));
+            let _ = write!(
+                html,
+                "<div class=\"body status\">This message could not be loaded: {}</div>",
+                escape(reason)
+            );
         }
         BodyState::Loaded(body) => {
             if let Some(source) = body.html.as_deref().filter(|h| !h.trim().is_empty()) {
@@ -103,7 +127,11 @@ fn render_body(html: &mut String, view: &MessageView) {
                     sanitize_html(source, view.inline_images)
                 );
             } else {
-                let _ = write!(html, "<div class=\"body text\">{}</div>", render_text(body.text.as_deref().unwrap_or("")));
+                let _ = write!(
+                    html,
+                    "<div class=\"body text\">{}</div>",
+                    render_text(body.text.as_deref().unwrap_or(""))
+                );
             }
             render_attachments(html, &view.meta.id, body);
         }
@@ -115,7 +143,11 @@ fn render_attachments(html: &mut String, message_id: &str, body: &MessageBody) {
         .attachments
         .iter()
         .enumerate()
-        .filter(|(_, a)| a.content_id.as_ref().is_none_or(|_| !a.mime_type.starts_with("image/")))
+        .filter(|(_, a)| {
+            a.content_id
+                .as_ref()
+                .is_none_or(|_| !a.mime_type.starts_with("image/"))
+        })
         .collect();
     if listed.is_empty() {
         return;
@@ -136,7 +168,12 @@ fn render_attachments(html: &mut String, message_id: &str, body: &MessageBody) {
 
 /// "me, Bob Smith, and 2 others".
 fn recipients(meta: &MessageMeta, me: &[String]) -> String {
-    let names: Vec<String> = meta.to.iter().chain(&meta.cc).map(|a| label(a, me)).collect();
+    let names: Vec<String> = meta
+        .to
+        .iter()
+        .chain(&meta.cc)
+        .map(|a| label(a, me))
+        .collect();
     match names.len() {
         0 => "undisclosed recipients".into(),
         1..=3 => names.join(", "),
@@ -145,7 +182,11 @@ fn recipients(meta: &MessageMeta, me: &[String]) -> String {
 }
 
 fn label(address: &Address, me: &[String]) -> String {
-    if me.iter().any(|m| m.eq_ignore_ascii_case(&address.email)) { "me".into() } else { address.display().to_string() }
+    if me.iter().any(|m| m.eq_ignore_ascii_case(&address.email)) {
+        "me".into()
+    } else {
+        address.display().to_string()
+    }
 }
 
 /// Plain text as HTML: quoted lines become nested blockquotes, a `-- `
@@ -162,7 +203,11 @@ pub fn render_text(text: &str) -> String {
         flush_quote(&mut out, &mut quote);
         if line == "-- " || line == "--" {
             let rest: Vec<&str> = lines.by_ref().collect();
-            let _ = write!(out, "<div class=\"signature\">-- \n{}</div>", render_text(&rest.join("\n")));
+            let _ = write!(
+                out,
+                "<div class=\"signature\">-- \n{}</div>",
+                render_text(&rest.join("\n"))
+            );
             break;
         }
         out.push_str(&linkify(line));
@@ -177,7 +222,11 @@ pub fn render_text(text: &str) -> String {
 
 fn flush_quote(out: &mut String, quote: &mut Vec<&str>) {
     if !quote.is_empty() {
-        let _ = write!(out, "<blockquote class=\"quote\">{}</blockquote>", render_text(&quote.join("\n")));
+        let _ = write!(
+            out,
+            "<blockquote class=\"quote\">{}</blockquote>",
+            render_text(&quote.join("\n"))
+        );
         quote.clear();
     }
 }
@@ -189,7 +238,9 @@ fn linkify(line: &str) -> String {
     while let Some(start) = find_url(rest) {
         out.push_str(&escape(&rest[..start]));
         let candidate = &rest[start..];
-        let end = candidate.find(|c: char| c.is_whitespace() || matches!(c, '<' | '>' | '"' | '\'')).unwrap_or(candidate.len());
+        let end = candidate
+            .find(|c: char| c.is_whitespace() || matches!(c, '<' | '>' | '"' | '\''))
+            .unwrap_or(candidate.len());
         let url = candidate[..end].trim_end_matches(['.', ',', ';', ':', '!', '?', ')', ']']);
         let _ = write!(out, "<a href=\"{0}\">{0}</a>", escape(url));
         rest = &candidate[url.len()..];
@@ -199,7 +250,10 @@ fn linkify(line: &str) -> String {
 }
 
 fn find_url(s: &str) -> Option<usize> {
-    [s.find("https://"), s.find("http://")].into_iter().flatten().min()
+    [s.find("https://"), s.find("http://")]
+        .into_iter()
+        .flatten()
+        .min()
 }
 
 pub fn escape(s: &str) -> String {
@@ -226,9 +280,23 @@ img{max-width:100%;height:auto}a{color:#1c71d8}";
 
 fn page_css(theme: &Theme) -> String {
     let (bg, fg, dim, card, line, hover) = if theme.dark {
-        ("#222226", "#ffffff", "rgba(255,255,255,0.58)", "rgba(255,255,255,0.08)", "rgba(255,255,255,0.09)", "rgba(255,255,255,0.04)")
+        (
+            "#222226",
+            "#ffffff",
+            "rgba(255,255,255,0.58)",
+            "rgba(255,255,255,0.08)",
+            "rgba(255,255,255,0.09)",
+            "rgba(255,255,255,0.04)",
+        )
     } else {
-        ("#ffffff", "rgba(0,0,6,0.84)", "rgba(0,0,6,0.52)", "rgba(0,0,6,0.05)", "rgba(0,0,6,0.08)", "rgba(0,0,6,0.03)")
+        (
+            "#ffffff",
+            "rgba(0,0,6,0.84)",
+            "rgba(0,0,6,0.52)",
+            "rgba(0,0,6,0.05)",
+            "rgba(0,0,6,0.08)",
+            "rgba(0,0,6,0.03)",
+        )
     };
     format!(
         ":root{{color-scheme:{scheme};--bg:{bg};--fg:{fg};--dim:{dim};--card:{card};--line:{line};--hover:{hover};--accent:{accent}}}\
@@ -284,10 +352,19 @@ mod tests {
             id: id.into(),
             thread_id: "t1".into(),
             rfc822_msgid: None,
-            from: Some(Address { name: Some(name.into()), email: "ann@example.com".into() }),
+            from: Some(Address {
+                name: Some(name.into()),
+                email: "ann@example.com".into(),
+            }),
             to: vec![
-                Address { name: None, email: "me@example.com".into() },
-                Address { name: Some("Bob Smith".into()), email: "bob@example.com".into() },
+                Address {
+                    name: None,
+                    email: "me@example.com".into(),
+                },
+                Address {
+                    name: Some("Bob Smith".into()),
+                    email: "bob@example.com".into(),
+                },
             ],
             cc: vec![],
             subject: "Hello".into(),
@@ -300,24 +377,45 @@ mod tests {
     }
 
     fn theme() -> Theme {
-        Theme { dark: false, accent: "#3584e4".into() }
+        Theme {
+            dark: false,
+            accent: "#3584e4".into(),
+        }
     }
 
     fn page(subject: &str, views: Vec<MessageView>) -> String {
         let me = ["me@example.com".to_string()];
-        render(&Conversation { subject, messages: views, me: &me }, &theme())
+        render(
+            &Conversation {
+                subject,
+                messages: views,
+                me: &me,
+            },
+            &theme(),
+        )
     }
 
     #[test]
     fn subjects_and_names_are_escaped() {
         let evil = meta("m1", "<img src=x onerror=alert(1)>", &[]);
-        let body = MessageBody { text: Some("hi".into()), ..Default::default() };
+        let body = MessageBody {
+            text: Some("hi".into()),
+            ..Default::default()
+        };
         let images = HashMap::new();
         let html = page(
             "<script>alert(1)</script>",
-            vec![MessageView { meta: &evil, body: BodyState::Loaded(&body), expanded: true, inline_images: &images }],
+            vec![MessageView {
+                meta: &evil,
+                body: BodyState::Loaded(&body),
+                expanded: true,
+                inline_images: &images,
+            }],
         );
-        assert!(!html.contains("<script>alert") && !html.contains("<img src=x"), "{html}");
+        assert!(
+            !html.contains("<script>alert") && !html.contains("<img src=x"),
+            "{html}"
+        );
         assert!(html.contains("&lt;script&gt;"));
     }
 
@@ -325,19 +423,35 @@ mod tests {
     fn collapsed_messages_show_a_snippet_and_expanded_ones_a_body() {
         let first = meta("m1", "Ann", &[]);
         let second = meta("m2", "Ann", &["UNREAD"]);
-        let body = MessageBody { text: Some("the body".into()), ..Default::default() };
+        let body = MessageBody {
+            text: Some("the body".into()),
+            ..Default::default()
+        };
         let images = HashMap::new();
         let html = page(
             "Hello",
             vec![
-                MessageView { meta: &first, body: BodyState::Loaded(&body), expanded: false, inline_images: &images },
-                MessageView { meta: &second, body: BodyState::Loaded(&body), expanded: true, inline_images: &images },
+                MessageView {
+                    meta: &first,
+                    body: BodyState::Loaded(&body),
+                    expanded: false,
+                    inline_images: &images,
+                },
+                MessageView {
+                    meta: &second,
+                    body: BodyState::Loaded(&body),
+                    expanded: true,
+                    inline_images: &images,
+                },
             ],
         );
         assert!(html.contains("snippet of m1"));
         assert!(!html.contains("snippet of m2"));
         assert_eq!(html.matches("the body").count(), 1);
-        assert!(html.contains("href=\"mailrs:toggle/m1\"") && html.contains("href=\"mailrs:toggle/m2\""));
+        assert!(
+            html.contains("href=\"mailrs:toggle/m1\"")
+                && html.contains("href=\"mailrs:toggle/m2\"")
+        );
         assert!(html.contains("message expanded unread"));
         assert!(html.contains("to me, Bob Smith"));
         assert!(html.contains("2 messages"));
@@ -346,11 +460,25 @@ mod tests {
     #[test]
     fn html_bodies_are_sanitized_inside_a_shadow_root() {
         let m = meta("m1", "Ann", &[]);
-        let body = MessageBody { html: Some("<p>Hi</p><script>bad()</script>".into()), ..Default::default() };
+        let body = MessageBody {
+            html: Some("<p>Hi</p><script>bad()</script>".into()),
+            ..Default::default()
+        };
         let images = HashMap::new();
-        let html = page("x", vec![MessageView { meta: &m, body: BodyState::Loaded(&body), expanded: true, inline_images: &images }]);
+        let html = page(
+            "x",
+            vec![MessageView {
+                meta: &m,
+                body: BodyState::Loaded(&body),
+                expanded: true,
+                inline_images: &images,
+            }],
+        );
         assert!(html.contains("<template shadowrootmode=\"open\">"));
-        assert!(html.contains("<p>Hi</p>") && !html.contains("bad()"), "{html}");
+        assert!(
+            html.contains("<p>Hi</p>") && !html.contains("bad()"),
+            "{html}"
+        );
     }
 
     #[test]
@@ -367,10 +495,21 @@ mod tests {
         let body = MessageBody {
             text: Some("see attached".into()),
             html: None,
-            attachments: vec![attachment("logo.png", "image/png", Some("logo")), attachment("report.pdf", "application/pdf", None)],
+            attachments: vec![
+                attachment("logo.png", "image/png", Some("logo")),
+                attachment("report.pdf", "application/pdf", None),
+            ],
         };
         let images = HashMap::new();
-        let html = page("x", vec![MessageView { meta: &m, body: BodyState::Loaded(&body), expanded: true, inline_images: &images }]);
+        let html = page(
+            "x",
+            vec![MessageView {
+                meta: &m,
+                body: BodyState::Loaded(&body),
+                expanded: true,
+                inline_images: &images,
+            }],
+        );
         assert!(html.contains("href=\"mailrs:attachment/m1/1\""));
         assert!(html.contains("report.pdf") && html.contains("2.0 KB"));
         assert!(!html.contains("logo.png"));
@@ -380,31 +519,69 @@ mod tests {
     fn loading_and_failure_states_render() {
         let m = meta("m1", "Ann", &[]);
         let images = HashMap::new();
-        let loading = page("x", vec![MessageView { meta: &m, body: BodyState::Loading, expanded: true, inline_images: &images }]);
+        let loading = page(
+            "x",
+            vec![MessageView {
+                meta: &m,
+                body: BodyState::Loading,
+                expanded: true,
+                inline_images: &images,
+            }],
+        );
         assert!(loading.contains("Loading…"));
-        let failed = page("x", vec![MessageView { meta: &m, body: BodyState::Failed("offline <now>"), expanded: true, inline_images: &images }]);
+        let failed = page(
+            "x",
+            vec![MessageView {
+                meta: &m,
+                body: BodyState::Failed("offline <now>"),
+                expanded: true,
+                inline_images: &images,
+            }],
+        );
         assert!(failed.contains("could not be loaded: offline &lt;now&gt;"));
     }
 
     #[test]
     fn plain_text_quotes_signatures_and_links() {
-        let html = render_text("Sure, see https://example.com/a?b=1&c=2.\n> On Monday you wrote:\n>> deeper\n> back\nThanks\n-- \nAnn <ann@example.com>");
-        assert!(html.contains("<a href=\"https://example.com/a?b=1&amp;c=2\">"), "{html}");
-        assert!(html.contains("2</a>."), "trailing dot stays outside the link: {html}");
+        let html = render_text(
+            "Sure, see https://example.com/a?b=1&c=2.\n> On Monday you wrote:\n>> deeper\n> back\nThanks\n-- \nAnn <ann@example.com>",
+        );
+        assert!(
+            html.contains("<a href=\"https://example.com/a?b=1&amp;c=2\">"),
+            "{html}"
+        );
+        assert!(
+            html.contains("2</a>."),
+            "trailing dot stays outside the link: {html}"
+        );
         assert!(html.contains("<blockquote class=\"quote\">On Monday you wrote:\n<blockquote class=\"quote\">deeper</blockquote>back</blockquote>"), "{html}");
-        assert!(html.contains("<div class=\"signature\">-- \nAnn &lt;ann@example.com&gt;</div>"), "{html}");
+        assert!(
+            html.contains("<div class=\"signature\">-- \nAnn &lt;ann@example.com&gt;</div>"),
+            "{html}"
+        );
     }
 
     #[test]
     fn many_recipients_are_summarised() {
         let mut m = meta("m1", "Ann", &[]);
-        m.cc = (0..4).map(|i| Address { name: Some(format!("P{i}")), email: format!("p{i}@x.com") }).collect();
-        assert_eq!(recipients(&m, &["me@example.com".into()]), "me, Bob Smith, and 4 others");
+        m.cc = (0..4)
+            .map(|i| Address {
+                name: Some(format!("P{i}")),
+                email: format!("p{i}@x.com"),
+            })
+            .collect();
+        assert_eq!(
+            recipients(&m, &["me@example.com".into()]),
+            "me, Bob Smith, and 4 others"
+        );
     }
 
     #[test]
     fn the_dark_theme_changes_the_page_colours() {
-        let dark = page_css(&Theme { dark: true, accent: "#fff".into() });
+        let dark = page_css(&Theme {
+            dark: true,
+            accent: "#fff".into(),
+        });
         assert!(dark.contains("color-scheme:dark") && dark.contains("#222226"));
     }
 }

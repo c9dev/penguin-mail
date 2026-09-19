@@ -14,8 +14,23 @@ use ammonia::{Builder, UrlRelative};
 const EXTRA_TAGS: [&str; 5] = ["style", "font", "center", "span", "div"];
 
 const LAYOUT_ATTRIBUTES: [&str; 17] = [
-    "style", "class", "align", "valign", "width", "height", "bgcolor", "color", "border", "dir", "face",
-    "size", "cellpadding", "cellspacing", "colspan", "rowspan", "nowrap",
+    "style",
+    "class",
+    "align",
+    "valign",
+    "width",
+    "height",
+    "bgcolor",
+    "color",
+    "border",
+    "dir",
+    "face",
+    "size",
+    "cellpadding",
+    "cellspacing",
+    "colspan",
+    "rowspan",
+    "nowrap",
 ];
 
 /// Sanitizes `html`. `inline_images` maps a `Content-ID` (without angle
@@ -32,7 +47,9 @@ pub fn sanitize_html(html: &str, inline_images: &HashMap<String, String>) -> Str
         .url_relative(UrlRelative::Deny)
         .link_rel(Some("noopener noreferrer"))
         .strip_comments(true)
-        .attribute_filter(move |element, attribute, value| filter_url(&images, element, attribute, value));
+        .attribute_filter(move |element, attribute, value| {
+            filter_url(&images, element, attribute, value)
+        });
     builder.clean(html).to_string()
 }
 
@@ -48,10 +65,13 @@ fn filter_url<'u>(
     let lower = value.trim_start().to_ascii_lowercase();
     if let Some(cid) = lower.strip_prefix("cid:") {
         let key = &value.trim_start()[value.trim_start().len() - cid.len()..];
-        return (element == "img").then(|| images.get(key).cloned().map(Cow::Owned)).flatten();
+        return (element == "img")
+            .then(|| images.get(key).cloned().map(Cow::Owned))
+            .flatten();
     }
     if lower.starts_with("data:") {
-        return (element == "img" && lower.starts_with("data:image/")).then_some(Cow::Borrowed(value));
+        return (element == "img" && lower.starts_with("data:image/"))
+            .then_some(Cow::Borrowed(value));
     }
     Some(Cow::Borrowed(value))
 }
@@ -68,15 +88,25 @@ mod tests {
 
     #[test]
     fn scripts_and_event_handlers_are_removed() {
-        let out = clean(r#"<script>alert(1)</script><p>hi</p><img src="https://x/a.png" onerror="alert(1)"><SCRIPT>x</SCRIPT>"#);
-        assert!(!out.contains("script") && !out.contains("alert") && !out.contains("onerror"), "{out}");
+        let out = clean(
+            r#"<script>alert(1)</script><p>hi</p><img src="https://x/a.png" onerror="alert(1)"><SCRIPT>x</SCRIPT>"#,
+        );
+        assert!(
+            !out.contains("script") && !out.contains("alert") && !out.contains("onerror"),
+            "{out}"
+        );
         assert!(out.contains("<p>hi</p>"));
     }
 
     #[test]
     fn javascript_and_relative_links_lose_their_target() {
-        let out = clean(r#"<a href="javascript:alert(1)">a</a><a HREF="JaVaScRiPt:x">b</a><a href="/local">c</a>"#);
-        assert!(!out.contains("javascript") && !out.contains("/local"), "{out}");
+        let out = clean(
+            r#"<a href="javascript:alert(1)">a</a><a HREF="JaVaScRiPt:x">b</a><a href="/local">c</a>"#,
+        );
+        assert!(
+            !out.contains("javascript") && !out.contains("/local"),
+            "{out}"
+        );
     }
 
     #[test]
@@ -85,7 +115,9 @@ mod tests {
             r#"<iframe src="https://evil"></iframe><object data="x"></object><embed src="y">
                <form action="https://evil"><input name="password"><button>go</button></form>"#,
         );
-        for banned in ["iframe", "object", "embed", "form", "input", "button", "evil"] {
+        for banned in [
+            "iframe", "object", "embed", "form", "input", "button", "evil",
+        ] {
             assert!(!out.contains(banned), "{banned} survived: {out}");
         }
     }
@@ -95,13 +127,24 @@ mod tests {
         let out = clean(
             r#"<meta http-equiv="refresh" content="0;url=https://evil"><base href="https://evil/"><link rel="stylesheet" href="https://evil/x.css">"#,
         );
-        assert!(!out.contains("meta") && !out.contains("base") && !out.contains("link") && !out.contains("evil"), "{out}");
+        assert!(
+            !out.contains("meta")
+                && !out.contains("base")
+                && !out.contains("link")
+                && !out.contains("evil"),
+            "{out}"
+        );
     }
 
     #[test]
     fn svg_and_math_payloads_are_removed() {
-        let out = clean(r#"<svg><script>alert(1)</script></svg><math><mtext><script>x</script></mtext></math>"#);
-        assert!(!out.contains("svg") && !out.contains("script") && !out.contains("math"), "{out}");
+        let out = clean(
+            r#"<svg><script>alert(1)</script></svg><math><mtext><script>x</script></mtext></math>"#,
+        );
+        assert!(
+            !out.contains("svg") && !out.contains("script") && !out.contains("math"),
+            "{out}"
+        );
     }
 
     #[test]
@@ -110,26 +153,42 @@ mod tests {
             r##"<style>p { color: red }</style><table width="600" bgcolor="#fff"><tr><td style="padding:8px" align="center"><font face="Arial">x</font></td></tr></table>"##,
         );
         assert!(out.contains("<style>p { color: red }</style>"), "{out}");
-        assert!(out.contains(r#"width="600""#) && out.contains(r#"style="padding:8px""#) && out.contains("<font"));
+        assert!(
+            out.contains(r#"width="600""#)
+                && out.contains(r#"style="padding:8px""#)
+                && out.contains("<font")
+        );
     }
 
     #[test]
     fn links_open_without_referrer() {
         let out = clean(r#"<a href="https://example.com/x">x</a>"#);
-        assert!(out.contains(r#"href="https://example.com/x""#) && out.contains(r#"rel="noopener noreferrer""#), "{out}");
+        assert!(
+            out.contains(r#"href="https://example.com/x""#)
+                && out.contains(r#"rel="noopener noreferrer""#),
+            "{out}"
+        );
     }
 
     #[test]
     fn inline_images_become_data_uris() {
-        let images = HashMap::from([("logo@x".to_string(), "data:image/png;base64,AAAA".to_string())]);
-        let out = sanitize_html(r#"<img src="cid:logo@x"><img src="cid:missing@x">"#, &images);
+        let images = HashMap::from([(
+            "logo@x".to_string(),
+            "data:image/png;base64,AAAA".to_string(),
+        )]);
+        let out = sanitize_html(
+            r#"<img src="cid:logo@x"><img src="cid:missing@x">"#,
+            &images,
+        );
         assert!(out.contains(r#"src="data:image/png;base64,AAAA""#), "{out}");
         assert!(!out.contains("missing"), "{out}");
     }
 
     #[test]
     fn data_uris_only_work_as_images() {
-        let out = clean(r#"<a href="data:text/html,<script>x</script>">a</a><img src="data:text/html,x"><img src="data:image/gif;base64,R0lG">"#);
+        let out = clean(
+            r#"<a href="data:text/html,<script>x</script>">a</a><img src="data:text/html,x"><img src="data:image/gif;base64,R0lG">"#,
+        );
         assert!(!out.contains("data:text"), "{out}");
         assert!(out.contains("data:image/gif;base64,r0lg"), "{out}");
     }

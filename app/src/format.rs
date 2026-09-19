@@ -5,7 +5,8 @@ use mailrs_domain::{AccountId, EpochMillis};
 
 /// Accent colours from the libadwaita palette.
 pub const PALETTE: [&str; 9] = [
-    "#3584e4", "#2190a4", "#3a944a", "#c88800", "#ed5b00", "#e62d42", "#d56199", "#9141ac", "#6f8396",
+    "#3584e4", "#2190a4", "#3a944a", "#c88800", "#ed5b00", "#e62d42", "#d56199", "#9141ac",
+    "#6f8396",
 ];
 
 pub fn local(ts: EpochMillis) -> Option<DateTime<Local>> {
@@ -31,7 +32,9 @@ pub fn relative_date(ts: EpochMillis, now: DateTime<Local>) -> String {
 
 /// A long date for conversation headers.
 pub fn full_date(ts: EpochMillis) -> String {
-    local(ts).map(|when| when.format("%A, %-d %B %Y at %H:%M").to_string()).unwrap_or_default()
+    local(ts)
+        .map(|when| when.format("%A, %-d %B %Y at %H:%M").to_string())
+        .unwrap_or_default()
 }
 
 pub fn human_size(bytes: i64) -> String {
@@ -45,7 +48,11 @@ pub fn human_size(bytes: i64) -> String {
         value /= 1024.0;
         unit += 1;
     }
-    if value < 10.0 { format!("{value:.1} {}", UNITS[unit]) } else { format!("{value:.0} {}", UNITS[unit]) }
+    if value < 10.0 {
+        format!("{value:.1} {}", UNITS[unit])
+    } else {
+        format!("{value:.0} {}", UNITS[unit])
+    }
 }
 
 /// One or two letters for an avatar: first and last word of a name, or the
@@ -56,7 +63,12 @@ pub fn initials(display: &str) -> String {
         .split(|c: char| c.is_whitespace() || matches!(c, '.' | '_' | '-' | '"' | '\''))
         .filter(|w| w.chars().next().is_some_and(char::is_alphanumeric))
         .collect();
-    let first_letter = |w: &str| w.chars().next().map(|c| c.to_uppercase().collect::<String>()).unwrap_or_default();
+    let first_letter = |w: &str| {
+        w.chars()
+            .next()
+            .map(|c| c.to_uppercase().collect::<String>())
+            .unwrap_or_default()
+    };
     match words.as_slice() {
         [] => "?".into(),
         [only] => first_letter(only),
@@ -66,7 +78,12 @@ pub fn initials(display: &str) -> String {
 
 /// A stable palette colour for a string, such as a sender address.
 pub fn color_for(seed: &str) -> &'static str {
-    let hash = seed.to_lowercase().bytes().fold(0xcbf29ce484222325u64, |h, b| (h ^ u64::from(b)).wrapping_mul(0x100000001b3));
+    let hash = seed
+        .to_lowercase()
+        .bytes()
+        .fold(0xcbf29ce484222325u64, |h, b| {
+            (h ^ u64::from(b)).wrapping_mul(0x100000001b3)
+        });
     PALETTE[(hash % PALETTE.len() as u64) as usize]
 }
 
@@ -82,7 +99,10 @@ mod tests {
     use super::*;
 
     fn at(y: i32, m: u32, d: u32, h: u32, min: u32) -> EpochMillis {
-        Local.with_ymd_and_hms(y, m, d, h, min, 0).unwrap().timestamp_millis()
+        Local
+            .with_ymd_and_hms(y, m, d, h, min, 0)
+            .unwrap()
+            .timestamp_millis()
     }
 
     #[test]
@@ -98,7 +118,10 @@ mod tests {
 
     #[test]
     fn full_dates_spell_everything_out() {
-        assert_eq!(full_date(at(2026, 9, 3, 14, 32)), "Thursday, 3 September 2026 at 14:32");
+        assert_eq!(
+            full_date(at(2026, 9, 3, 14, 32)),
+            "Thursday, 3 September 2026 at 14:32"
+        );
     }
 
     #[test]

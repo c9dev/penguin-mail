@@ -12,6 +12,23 @@ pub fn parse_address_list(input: &str) -> Vec<Address> {
         .collect()
 }
 
+/// Like [`parse_address_list`], but keeps entries that are not addresses as
+/// they were typed, so a form can point out the mistake instead of losing it.
+pub fn parse_address_list_keeping_invalid(input: &str) -> Vec<Address> {
+    split_top_level(input)
+        .into_iter()
+        .filter_map(|raw| {
+            let trimmed = raw.trim();
+            (!trimmed.is_empty()).then(|| {
+                parse_one(trimmed).unwrap_or_else(|| Address {
+                    name: None,
+                    email: trimmed.to_string(),
+                })
+            })
+        })
+        .collect()
+}
+
 /// Splits on commas outside quotes and angle brackets.
 fn split_top_level(input: &str) -> Vec<&str> {
     let mut parts = Vec::new();
