@@ -1,3 +1,4 @@
+mod actions;
 mod basics;
 mod bootstrap;
 mod connect;
@@ -20,7 +21,7 @@ use crate::fake::FakeGmail;
 
 pub(crate) struct Harness {
     pub fake: Arc<FakeGmail>,
-    pub sync: AccountSync<FakeGmail>,
+    pub sync: Arc<AccountSync<FakeGmail>>,
     pub db: Db,
     pub events: async_channel::Receiver<ChangeEvent>,
     pub account_id: AccountId,
@@ -37,8 +38,10 @@ pub(crate) async fn harness() -> Harness {
     assert_eq!(account_id, 1, "fake messages belong to account 1");
     let fake = Arc::new(FakeGmail::new());
     let (sender, events) = async_channel::unbounded();
-    let sync = AccountSync::new(account_id, Arc::clone(&fake), db.clone(), sender)
-        .with_retry_max(Duration::from_millis(10));
+    let sync = Arc::new(
+        AccountSync::new(account_id, Arc::clone(&fake), db.clone(), sender)
+            .with_retry_max(Duration::from_millis(10)),
+    );
     Harness {
         fake,
         sync,

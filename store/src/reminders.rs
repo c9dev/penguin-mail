@@ -1,7 +1,7 @@
 //! Remind Me: archived conversations waiting to come back to the inbox.
 
 use mailrs_domain::{AccountId, EpochMillis};
-use rusqlite::{Connection, Row, params};
+use rusqlite::{Connection, OptionalExtension, Row, params};
 
 use crate::Result;
 
@@ -38,6 +38,18 @@ pub fn set(conn: &Connection, reminder: &Reminder) -> Result<()> {
     Ok(())
 }
 
+/// The reminder for one thread, if it has one.
+pub fn get(conn: &Connection, account_id: AccountId, thread_id: &str) -> Result<Option<Reminder>> {
+    Ok(conn
+        .query_row(
+            "SELECT account_id, thread_id, subject, remind_at FROM reminders \
+             WHERE account_id = ?1 AND thread_id = ?2",
+            params![account_id, thread_id],
+            to_reminder,
+        )
+        .optional()?)
+}
+
 /// Everything waiting, soonest first.
 pub fn list(conn: &Connection) -> Result<Vec<Reminder>> {
     let mut stmt = conn.prepare(
@@ -62,4 +74,17 @@ pub fn remove(conn: &Connection, account_id: AccountId, thread_id: &str) -> Resu
         params![account_id, thread_id],
     )?;
     Ok(())
+}
+
+/// Gives a thread the reminder it had before, or none.
+pub fn restore(
+    conn: &Connection,
+    account_id: AccountId,
+    thread_id: &str,
+    earlier: Option<&Reminder>,
+) -> Result<()> {
+    match earlier {
+        Some(reminder) => set(conn, reminder),
+        None => remove(conn, account_id, thread_id),
+    }
 }

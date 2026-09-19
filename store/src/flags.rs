@@ -39,6 +39,31 @@ pub fn set_color(
     Ok(())
 }
 
+/// The colour of each message in a thread, or of its one message, with
+/// `None` for messages that have no colour.
+pub fn colors(
+    conn: &Connection,
+    account_id: AccountId,
+    thread_id: &str,
+    message_id: Option<&str>,
+) -> Result<Vec<(String, Option<FlagColor>)>> {
+    let rows: Vec<(String, Option<String>)> = conn
+        .prepare(
+            "SELECT m.id, f.color FROM messages m LEFT JOIN flags f \
+             ON f.account_id = m.account_id AND f.message_id = m.id \
+             WHERE m.account_id = ?1 AND m.thread_id = ?2 ORDER BY m.id",
+        )?
+        .query_map(params![account_id, thread_id], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(rows
+        .into_iter()
+        .filter(|(id, _)| message_id.is_none_or(|only| only == id))
+        .map(|(id, color)| (id, color.and_then(|c| c.parse().ok())))
+        .collect())
+}
+
 /// How many starred threads carry each colour, across every account.
 pub fn counts(conn: &Connection) -> Result<HashMap<FlagColor, i64>> {
     let mut stmt = conn.prepare(

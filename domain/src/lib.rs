@@ -8,9 +8,11 @@ use serde::{Deserialize, Serialize};
 mod category;
 mod folder;
 pub mod system_label;
+mod target;
 
 pub use category::Category;
 pub use folder::Folder;
+pub use target::Target;
 
 /// Local database id of an account. Gmail has no account id of its own.
 pub type AccountId = i64;

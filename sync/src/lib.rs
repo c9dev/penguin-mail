@@ -1,6 +1,7 @@
 //! Keeps the local store in step with Gmail, one loop per account.
 
 mod account;
+mod actions;
 mod api;
 mod backoff;
 pub mod config;
@@ -15,6 +16,7 @@ mod fake;
 mod tests;
 
 pub use account::{AccountSync, DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS, FETCH_CONCURRENCY};
+pub use actions::{Accounts, Failure, History, MailAction, MailActions, Outcome};
 pub use api::{AccountClient, GmailApi, LIST_PAGE_SIZE, SavedDraft};
 pub use backoff::backoff_delay;
 pub use connect::connect_account;
