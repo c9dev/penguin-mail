@@ -176,6 +176,9 @@ impl MainWindow {
                 authorizing: Cell::new(false),
             }
         });
+        if window.core.demo {
+            window.sidebar.start_expanded.set(Some(true));
+        }
         window.install_actions();
         window.install_menu();
         window.install_keys();

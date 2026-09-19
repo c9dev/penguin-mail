@@ -196,7 +196,7 @@ fn samples() -> Vec<Sample> {
             to: &[ME],
             subject: "Contract draft v3",
             minutes_ago: 3 * DAY + 4 * HOUR,
-            labels: &["INBOX", "STARRED", "Label_clients"],
+            labels: &["INBOX", "STARRED", "Label_clients", "Label_clients_mf"],
             text: "Hi Dana,\n\nAttached is v3 with the changes from legal. The only substantive edit is the payment schedule in section 4, now net 30 instead of net 45.\n\nIf you're happy, I'll send it to Maple & Finch for signature on Monday.\n\nInês",
             html: None,
             attachments: &[(
@@ -292,7 +292,11 @@ pub fn seed(conn: &Connection, now: EpochMillis) -> Result<()> {
                 })
                 .collect();
         if email == ACCOUNTS[1] {
-            for (label, name) in [("Label_clients", "Clients"), ("Label_travel", "Travel")] {
+            for (label, name) in [
+                ("Label_clients", "Clients"),
+                ("Label_clients_mf", "Clients/Maple & Finch"),
+                ("Label_travel", "Travel"),
+            ] {
                 account_labels.push(Label {
                     account_id: id,
                     id: label.into(),

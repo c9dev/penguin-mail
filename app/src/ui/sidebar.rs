@@ -33,6 +33,8 @@ pub struct Sidebar {
     headings: RefCell<Vec<Heading>>,
     /// Accounts whose sections the user expanded or collapsed.
     expanded: RefCell<HashMap<AccountId, bool>>,
+    /// Whether sections start open. Unset means open only with one account.
+    pub start_expanded: Cell<Option<bool>>,
     muted: Cell<bool>,
 }
 
@@ -78,6 +80,7 @@ impl Sidebar {
             rows: RefCell::new(Vec::new()),
             headings: RefCell::new(Vec::new()),
             expanded: RefCell::new(HashMap::new()),
+            start_expanded: Cell::new(None),
             muted: Cell::new(false),
         });
         let weak = Rc::downgrade(&sidebar);
@@ -119,7 +122,7 @@ impl Sidebar {
     }
 
     fn is_expanded(&self, account_id: AccountId) -> bool {
-        let default = self.headings.borrow().len() <= 1;
+        let default = self.start_expanded.get().unwrap_or(self.headings.borrow().len() <= 1);
         self.expanded
             .borrow()
             .get(&account_id)
@@ -156,11 +159,7 @@ impl Sidebar {
         self.rows.borrow_mut().clear();
         self.headings.borrow_mut().clear();
         for label in UNIFIED {
-            self.add_mailbox(
-                Mailbox::Unified(label),
-                unified_name(label),
-                mailbox_icon(label),
-            );
+            self.add_mailbox(Mailbox::Unified(label), unified_name(label), mailbox_icon(label), 0);
         }
         for (account, labels) in accounts {
             let (row, chevron, count) = heading(account);
@@ -177,7 +176,7 @@ impl Sidebar {
                     label_id: label.into(),
                     name: account_label_name(label).into(),
                 };
-                self.add_mailbox(mailbox, account_label_name(label), mailbox_icon(label));
+                self.add_mailbox(mailbox, account_label_name(label), mailbox_icon(label), 1);
             }
             let mut user: Vec<&Label> = labels
                 .iter()
@@ -185,12 +184,15 @@ impl Sidebar {
                 .collect();
             user.sort_by_key(|l| l.name.to_lowercase());
             for label in user {
+                // Gmail nests labels with slashes: "Work/Clients" sits under "Work".
+                let depth = 1 + label.name.matches('/').count() as u32;
+                let leaf = label.name.rsplit('/').next().unwrap_or(&label.name);
                 let mailbox = Mailbox::Label {
                     account_id: account.id,
                     label_id: label.id.clone(),
-                    name: label.name.clone(),
+                    name: label.name.replace('/', " › "),
                 };
-                self.add_mailbox(mailbox, &label.name, "mailrs-tag-symbolic");
+                self.add_mailbox(mailbox, leaf, "mailrs-tag-symbolic", depth);
             }
         }
         self.select(selected);
@@ -198,9 +200,12 @@ impl Sidebar {
         self.muted.set(false);
     }
 
-    fn add_mailbox(&self, mailbox: Mailbox, name: &str, icon: &str) {
+    /// Adds a mailbox row. `depth` indents it: 0 for the unified views, 1
+    /// for an account's mailboxes, and one more per level of label nesting.
+    fn add_mailbox(&self, mailbox: Mailbox, name: &str, icon: &str, depth: u32) {
         let content = gtk::Box::builder()
             .spacing(12)
+            .margin_start(18 * depth as i32)
             .css_classes(["mailbox-row"])
             .build();
         content.append(&gtk::Image::from_icon_name(icon));
