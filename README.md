@@ -8,7 +8,7 @@ time, and keeps your mail on your own computer.
 
 ## What it does
 
-- **One inbox for every account**, plus each account's Inbox, Starred, Sent,
+- **One inbox for every account**, plus each account's Inbox, Flagged, Sent,
   Drafts, and labels. A coloured dot tells accounts apart.
 - **Conversations in one view.** Older messages fold down to a line; quoted
   text and signatures are dimmed. HTML mail renders in its own sandbox with
@@ -29,8 +29,22 @@ time, and keeps your mail on your own computer.
 - **Tray and notifications.** An unread count in the tray and a notification
   for new mail, which opens the thread when clicked.
 - **Select several at once** with Ctrl+click, Shift+click, or Ctrl+A, then
-  archive, trash, junk, star, mark, or label them together. Every one of
+  archive, trash, junk, flag, mark, or label them together. Every one of
   these can be undone with Ctrl+Z or the Undo button on the toast.
+- **Flags in seven colours**, as in Apple Mail. The flag syncs through
+  Gmail's star; the colour stays on this computer. Flagged lists a mailbox
+  for each colour in use.
+- **VIPs.** Add a sender to VIPs from the conversation's menu. Their mail
+  gathers in a VIPs mailbox, their rows get a star, and notifications can
+  be limited to them.
+- **Smart Mailboxes**: saved conditions (sender, subject, words, label,
+  age, size, attachments, unread, flagged) for all accounts or one. They
+  search Gmail, so they reach past the mail kept on this computer.
+- **Remind Me** takes a conversation out of the inbox and brings it back,
+  unread, in an hour, tonight, tomorrow, Monday, or when you choose.
+- **Search suggestions** as you type: subject, people, and labels.
+- **Arrange the sidebar.** Move accounts up or down, rename them, and pick
+  their colour. Give labels a colour from Gmail's palette.
 - **Labels.** Add or remove Gmail labels from the toolbar or with `l`.
   Nested labels show as a tree under their account. Create labels from the
   label menu or the account menu; right-click one to rename or delete it.
@@ -64,6 +78,10 @@ time, and keeps your mail on your own computer.
 | Several selected | Automatic reply |
 |---|---|
 | ![Three conversations selected, with bulk actions](docs/screenshots/selection.png) | ![The automatic reply dialog](docs/screenshots/automatic-reply.png) |
+
+| Flags | VIPs |
+|---|---|
+| ![A conversation flagged blue](docs/screenshots/flags.png) | ![A VIP in the sidebar and the list](docs/screenshots/vips.png) |
 
 | Send Later | Rules |
 |---|---|
@@ -111,7 +129,8 @@ keys work too, whenever you are not typing.
 | `Ctrl+Alt+A` or `e` | Archive | `Ctrl+Shift+R` or `a` | Reply all |
 | `Delete` or `#` | Move to trash | `Ctrl+Shift+F` or `f` | Forward |
 | `Ctrl+Shift+J` | Junk | `Ctrl+N` or `c` | New message |
-| `Ctrl+Shift+L` or `s` | Star or unstar | `Ctrl+Shift+D` | Send |
+| `Ctrl+Shift+L` or `s` | Flag or unflag | `Ctrl+Shift+D` | Send |
+| `Ctrl+Alt+1` to `Ctrl+Alt+7` | Flag color | | |
 | `Ctrl+Shift+U` or `u` | Mark read or unread | `Ctrl+Shift+A` | Attach files |
 | `Ctrl+Alt+M` or `l` | Labels | `Ctrl+B` / `Ctrl+I` / `Ctrl+K` | Bold, italic, link |
 | `Ctrl+Z` | Undo | `Ctrl+F` or `/` | Search |
