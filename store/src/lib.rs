@@ -3,6 +3,7 @@
 
 pub mod accounts;
 pub mod bodies;
+pub mod contacts;
 mod db;
 mod error;
 pub mod labels;

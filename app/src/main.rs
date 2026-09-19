@@ -3,6 +3,7 @@
 mod app;
 mod autostart;
 mod compose;
+mod contacts;
 mod core;
 mod demo;
 mod diff;

@@ -153,3 +153,21 @@ fn every_action_has_an_inverse_that_restores_labels() {
         assert_eq!((add, remove), (back_remove, back_add), "{action:?}");
     }
 }
+
+#[tokio::test]
+async fn triage_fetches_a_thread_it_has_not_stored() {
+    let h = harness().await;
+    h.bootstrap_all().await;
+    h.fake.seed_outside_window(meta(
+        "old",
+        "t9",
+        now_millis() - 90 * 86_400_000,
+        &["TRASH"],
+    ));
+    h.sync
+        .triage_thread("t9", &TriageAction::Untrash)
+        .await
+        .unwrap();
+    assert_eq!(h.labels_of("old").await, ["INBOX"]);
+    assert_eq!(h.fake.with(|s| s.remote_writes.clone()), ["untrash old"]);
+}

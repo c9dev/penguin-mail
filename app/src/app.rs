@@ -18,6 +18,7 @@ use crate::core::Core;
 use crate::notify;
 use crate::settings::{ColorScheme, Settings};
 use crate::tray::{MailTray, TrayCommand};
+use crate::ui::autocomplete::Contacts;
 use crate::ui::composer::{Composer, Identity};
 use crate::ui::window::MainWindow;
 
@@ -48,6 +49,8 @@ pub struct App {
     tray_started: Cell<bool>,
     settings: RefCell<Settings>,
     settings_path: std::path::PathBuf,
+    /// Correspondents for recipient suggestions, reloaded per composer.
+    contacts: Contacts,
     _hold: gio::ApplicationHoldGuard,
 }
 
@@ -82,6 +85,7 @@ impl App {
             tray_started: Cell::new(false),
             settings: RefCell::new(Settings::load(&settings_path)),
             settings_path,
+            contacts: Rc::new(RefCell::new(Rc::new(Vec::new()))),
             _hold: gio_app.hold(),
         });
         app.install_actions();
@@ -335,10 +339,12 @@ impl App {
         if identities.is_empty() {
             return;
         }
+        self.reload_contacts();
         let this = Rc::downgrade(self);
         let composer = Composer::open(
             Rc::clone(&self.core),
             identities,
+            Rc::clone(&self.contacts),
             draft,
             move |account_id| {
                 if let Some(app) = this.upgrade() {
@@ -356,6 +362,18 @@ impl App {
             let _ = &keep;
             if let Some(app) = app.upgrade() {
                 app.window_closed();
+            }
+        });
+    }
+
+    /// Refreshes the suggestions composers offer. Open composers see the
+    /// new list once it loads.
+    fn reload_contacts(self: &Rc<Self>) {
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            match this.core.read(mailrs_store::contacts::list_contacts).await {
+                Ok(found) => *this.contacts.borrow_mut() = Rc::new(found),
+                Err(err) => tracing::warn!(error = %err, "could not load contacts"),
             }
         });
     }

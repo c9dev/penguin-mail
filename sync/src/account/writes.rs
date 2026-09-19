@@ -43,6 +43,16 @@ impl<G: GmailApi> AccountSync<G> {
         action: &TriageAction,
     ) -> Result<(), SyncError> {
         let account_id = self.account_id;
+        // Search results and the Trash or Spam lists show threads the store
+        // may not hold yet. Fetch those first so there is something to change.
+        let thread = thread_id.to_string();
+        let stored = self
+            .db
+            .read(move |c| messages::thread_messages(c, account_id, &thread))
+            .await?;
+        if stored.is_empty() {
+            self.ensure_thread(thread_id).await?;
+        }
         let (add, remove) = action.label_delta();
         let snapshot: Vec<(String, Vec<String>)> = {
             let (thread, add, remove) = (thread_id.to_string(), add.clone(), remove.clone());

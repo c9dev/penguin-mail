@@ -8,6 +8,7 @@ use gtk::{gio, glib};
 use mailrs_domain::{AccountId, Address};
 use webkit::prelude::*;
 
+use super::autocomplete::{self, Contacts};
 use crate::compose::{
     Draft, OutgoingAttachment, build_mime, format_recipients, markdown_to_html, new_message_id,
     parse_recipients,
@@ -52,6 +53,7 @@ impl Composer {
     pub fn open(
         core: Rc<Core>,
         identities: Vec<Identity>,
+        contacts: Contacts,
         draft: Draft,
         on_sent: impl Fn(AccountId) + 'static,
     ) -> Rc<Composer> {
@@ -95,6 +97,8 @@ impl Composer {
         let to = entry("Recipients", &format_recipients(&draft.to));
         let cc = entry("", &format_recipients(&draft.cc));
         let subject = entry("", &draft.subject);
+        autocomplete::attach(&to, Rc::clone(&contacts));
+        autocomplete::attach(&cc, contacts);
 
         let fields = gtk::Box::new(gtk::Orientation::Vertical, 0);
         fields.append(&field("From", &from));
@@ -540,7 +544,6 @@ impl Composer {
     }
 }
 
-/// Dims lines that start with `>`, so quoted text reads as quoted.
 /// Puts Markdown markers around the selection, or around the cursor when
 /// nothing is selected. A link leaves the cursor between its parentheses.
 /// Pressed again right before the closing marker, moves past it.
@@ -578,6 +581,7 @@ fn wrap_selection(buffer: &gtk::TextBuffer, before: &str, after: &str) {
     buffer.end_user_action();
 }
 
+/// Dims lines that start with `>`, so quoted text reads as quoted.
 fn style_quotes(buffer: &gtk::TextBuffer) {
     buffer.remove_tag_by_name("quote", &buffer.start_iter(), &buffer.end_iter());
     for line in 0..buffer.line_count() {
