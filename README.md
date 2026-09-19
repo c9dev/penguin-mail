@@ -140,6 +140,6 @@ scripts/smoke.sh                                # by hand, against a real accoun
 
 ## The icon
 
-A sealed envelope: the wax seal's rim is a gear, a nod to Rust, and the seal
-itself stands for mail that stays private. The other concepts considered are
-in [docs/icon-concepts.png](docs/icon-concepts.png).
+Three envelopes fanned out in the account colours: several inboxes, one app.
+The other concepts considered are in
+[docs/icon-concepts.png](docs/icon-concepts.png).

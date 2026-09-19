@@ -1,27 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
   <defs>
-    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e3e9f1"/>
+    <linearGradient id="front" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e4eaf3"/>
     </linearGradient>
-    <linearGradient id="flap" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#f6f8fb"/><stop offset="1" stop-color="#d9e0ea"/>
+    <linearGradient id="teal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#33a8bd"/><stop offset="1" stop-color="#1d8397"/>
     </linearGradient>
-    <radialGradient id="wax" cx="0.36" cy="0.3" r="0.82">
-      <stop offset="0" stop-color="#f3935d"/><stop offset="0.55" stop-color="#d4561f"/><stop offset="1" stop-color="#992f10"/>
-    </radialGradient>
-    <radialGradient id="press" cx="0.62" cy="0.68" r="0.78">
-      <stop offset="0" stop-color="#e36e36"/><stop offset="1" stop-color="#ae4119"/>
-    </radialGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4fb060"/><stop offset="1" stop-color="#338741"/>
+    </linearGradient>
   </defs>
-  <rect x="10" y="33" width="108" height="76" rx="11" fill="#9da9bd"/>
-  <rect x="10" y="26" width="108" height="76" rx="11" fill="url(#paper)" stroke="#b9c3d2" stroke-width="1.5"/>
-  <path d="M15 97 L55 66 M113 97 L73 66" stroke="#cfd7e3" stroke-width="2.5" stroke-linecap="round"/>
-  <path d="M12.5 33 Q12.5 27.5 19 27.5 L109 27.5 Q115.5 27.5 115.5 33 L68 68.5 Q64 71.5 60 68.5 Z" fill="url(#flap)" stroke="#c4ccd9" stroke-width="1.5" stroke-linejoin="round"/>
-  <ellipse cx="65" cy="96" rx="21" ry="4.5" fill="#1b2a44" opacity=".12"/>
-  <path d="M87.79 76.63 L87.18 79.71 L83.22 81.46 L82.01 83.90 L83.04 88.11 L80.97 90.47 L76.66 90.00 L74.40 91.51 L73.18 95.67 L70.21 96.68 L66.71 94.12 L64.00 94.30 L60.87 97.29 L57.79 96.68 L56.04 92.72 L53.60 91.51 L49.39 92.54 L47.03 90.47 L47.50 86.16 L45.99 83.90 L41.83 82.68 L40.82 79.71 L43.38 76.21 L43.20 73.50 L40.21 70.37 L40.82 67.29 L44.78 65.54 L45.99 63.10 L44.96 58.89 L47.03 56.53 L51.34 57.00 L53.60 55.49 L54.82 51.33 L57.79 50.32 L61.29 52.88 L64.00 52.70 L67.13 49.71 L70.21 50.32 L71.96 54.28 L74.40 55.49 L78.61 54.46 L80.97 56.53 L80.50 60.84 L82.01 63.10 L86.17 64.32 L87.18 67.29 L84.62 70.79 L84.80 73.50 Z" fill="#7a260c" opacity=".5"/>
-  <path d="M87.79 74.13 L87.18 77.21 L83.22 78.96 L82.01 81.40 L83.04 85.61 L80.97 87.97 L76.66 87.50 L74.40 89.01 L73.18 93.17 L70.21 94.18 L66.71 91.62 L64.00 91.80 L60.87 94.79 L57.79 94.18 L56.04 90.22 L53.60 89.01 L49.39 90.04 L47.03 87.97 L47.50 83.66 L45.99 81.40 L41.83 80.18 L40.82 77.21 L43.38 73.71 L43.20 71.00 L40.21 67.87 L40.82 64.79 L44.78 63.04 L45.99 60.60 L44.96 56.39 L47.03 54.03 L51.34 54.50 L53.60 52.99 L54.82 48.83 L57.79 47.82 L61.29 50.38 L64.00 50.20 L67.13 47.21 L70.21 47.82 L71.96 51.78 L74.40 52.99 L78.61 51.96 L80.97 54.03 L80.50 58.34 L82.01 60.60 L86.17 61.82 L87.18 64.79 L84.62 68.29 L84.80 71.00 Z" fill="url(#wax)"/>
-  <circle cx="64" cy="71" r="14.5" fill="url(#press)"/>
-  <circle cx="64" cy="71" r="14.5" fill="none" stroke="#a13813" stroke-width="1.8"/>
-  <path d="M56.5 75.5 L56.5 66.5 L60.3 71 L64 66.5 L67.7 71 L71.5 66.5 L71.5 75.5" fill="none" stroke="#fbbd97" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M51.5 60.5 A16 16 0 0 1 63.5 54.5" fill="none" stroke="#ffd6bf" stroke-width="2.4" stroke-linecap="round" opacity=".75"/>
+  <g transform="rotate(-14 64 80) translate(-4 -3)">
+    <rect x="17" y="30" width="94" height="64" rx="11" fill="#15697a"/>
+    <rect x="17" y="27" width="94" height="64" rx="11" fill="url(#teal)"/>
+    <path d="M22 34 L64 62 L106 34" fill="none" stroke="#8fd6e2" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <g transform="rotate(11 64 80) translate(4 -6)">
+    <rect x="17" y="30" width="94" height="64" rx="11" fill="#276b33"/>
+    <rect x="17" y="27" width="94" height="64" rx="11" fill="url(#green)"/>
+    <path d="M22 34 L64 62 L106 34" fill="none" stroke="#a2dcad" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <rect x="14" y="48" width="100" height="68" rx="12" fill="#1a3b6e" opacity=".20"/>
+  <rect x="14" y="45" width="100" height="68" rx="12" fill="#a7b3c6"/>
+  <rect x="14" y="40" width="100" height="68" rx="12" fill="url(#front)" stroke="#b7c2d3" stroke-width="1.5"/>
+  <path d="M20 47 L64 77 L108 47" fill="none" stroke="#3584e4" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
