@@ -27,9 +27,13 @@ during consent.
 Clients, Create client, application type Desktop app, name `mailrs`. Copy the
 client ID and client secret.
 
-## 4. Write the config
+## 4. Give mailrs the client
 
-Save this as `~/.config/mailrs/config.toml`:
+Open mailrs. The welcome screen asks for the client ID and secret; paste them
+and click Continue. mailrs saves them to `~/.config/mailrs/config.toml`,
+readable only by you.
+
+If you prefer the command line, write that file yourself:
 
 ```toml
 [oauth]
@@ -49,16 +53,16 @@ to mail, and mailrs keeps those in the GNOME keyring, not in this file.
 
 ## 5. Add accounts
 
-```sh
-cargo run --release -p mailrs-cli -- account add
-```
+Click **Sign In with Google** in the app, or **Add Account** at the bottom of
+the sidebar for later accounts. From a terminal, `mailrs-cli account add`
+does the same.
 
 Your browser opens Google's consent screen. Pick the account. Google says
 "Google hasn't verified this app": click Advanced, then Go to mailrs
-(unsafe), then Continue. The terminal prints the address it added. Repeat for
-each account.
+(unsafe), then Continue. The account appears in the sidebar and starts
+downloading. Repeat for each account.
 
-## 6. Sync and look around
+## 6. The command line
 
 ```sh
 cargo run --release -p mailrs-cli -- sync                 # Ctrl-C to stop
@@ -71,8 +75,9 @@ cargo run --release -p mailrs-cli -- triage you@gmail.com <thread-id> archive
 ## Milestone 0: confirm tokens last
 
 Automated tests cannot check token lifetime. Write down the date you add your
-first account. Eight or more days later, run `mailrs-cli sync`. Every account
-should reach `ok`. An account that reports `needs_reauth` without you revoking
+first account. Eight or more days later, check the sidebar, or run
+`mailrs-cli account list`: every account should show no warning icon and the
+state `ok`. An account that reports `needs_reauth` without you revoking
 it means the project is probably still in Testing: check the publishing status
 under Audience, publish, and add the account again.
 

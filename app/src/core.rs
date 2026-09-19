@@ -23,7 +23,7 @@ use crate::demo::{self, DemoApi};
 
 /// Gmail for real accounts, or the local stand-in for demo mode.
 pub enum Api {
-    Gmail(AccountClient),
+    Gmail(Box<AccountClient>),
     Demo(DemoApi),
 }
 
@@ -344,7 +344,7 @@ impl Core {
                 .write(move |c| accounts::insert_account(c, &email, now_millis()))
                 .await?;
             let account = db
-                .read(move |c| accounts::list_accounts(c))
+                .read(accounts::list_accounts)
                 .await?
                 .into_iter()
                 .find(|a| a.id == id)
@@ -388,5 +388,7 @@ async fn connect(
         }));
     }
     let oauth = oauth.ok_or_else(|| anyhow!("mailrs has no OAuth client configured yet"))?;
-    Ok(Api::Gmail(connect_account(oauth, tokens, account).await?))
+    Ok(Api::Gmail(Box::new(
+        connect_account(oauth, tokens, account).await?,
+    )))
 }

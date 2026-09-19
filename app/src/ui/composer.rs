@@ -22,6 +22,8 @@ pub struct Identity {
     pub address: Address,
 }
 
+type ComposerAction = Box<dyn Fn(&Rc<Composer>)>;
+
 pub struct Composer {
     core: Rc<Core>,
     window: adw::Window,
@@ -248,7 +250,7 @@ impl Composer {
         });
 
         let shortcuts = gtk::ShortcutController::new();
-        let add = |trigger: &str, run: Box<dyn Fn(&Rc<Composer>)>| {
+        let add = |trigger: &str, run: ComposerAction| {
             let weak = Rc::downgrade(self);
             shortcuts.add_shortcut(gtk::Shortcut::new(
                 gtk::ShortcutTrigger::parse_string(trigger),

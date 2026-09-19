@@ -27,6 +27,9 @@ use crate::core::Core;
 /// Largest inline image embedded into a page.
 const INLINE_IMAGE_LIMIT: usize = 5 * 1024 * 1024;
 
+type WindowAction = Box<dyn Fn(&Rc<MainWindow>)>;
+type AccountAction = Box<dyn Fn(&Rc<MainWindow>, Account)>;
+
 pub struct MainWindow {
     pub window: adw::Window,
     actions: gio::SimpleActionGroup,
@@ -1043,7 +1046,7 @@ impl MainWindow {
     // ---- Actions, menu, and keys -------------------------------------------
 
     fn install_actions(self: &Rc<Self>) {
-        let add = |name: &str, run: Box<dyn Fn(&Rc<MainWindow>)>| {
+        let add = |name: &str, run: WindowAction| {
             let action = gio::SimpleAction::new(name, None);
             let weak = Rc::downgrade(self);
             action.connect_activate(move |_, _| {
@@ -1087,7 +1090,7 @@ impl MainWindow {
             }),
         );
 
-        let with_account = |name: &str, run: Box<dyn Fn(&Rc<MainWindow>, Account)>| {
+        let with_account = |name: &str, run: AccountAction| {
             let action = gio::SimpleAction::new(name, Some(glib::VariantTy::INT64));
             let weak = Rc::downgrade(self);
             action.connect_activate(move |_, parameter| {
@@ -1182,7 +1185,7 @@ impl MainWindow {
             {
                 return glib::Propagation::Proceed;
             }
-            let handled = match key.to_unicode() {
+            match key.to_unicode() {
                 Some('j') => win.list.step(1),
                 Some('k') => win.list.step(-1),
                 Some('e') => win.triage_open(TriageAction::Archive),
@@ -1195,8 +1198,7 @@ impl MainWindow {
                 Some('c') => win.compose_new(),
                 Some('/') => win.list.open_search(),
                 _ => return glib::Propagation::Proceed,
-            };
-            let () = handled;
+            }
             glib::Propagation::Stop
         });
         self.window.add_controller(keys);

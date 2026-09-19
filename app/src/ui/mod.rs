@@ -98,7 +98,7 @@ pub fn mailbox_icon(label: &str) -> &'static str {
 
 /// Groups search hits, newest first, into one row per thread.
 pub fn summarize_search(mut hits: Vec<MessageMeta>) -> Vec<ThreadSummary> {
-    hits.sort_by(|a, b| b.date.cmp(&a.date));
+    hits.sort_by_key(|m| std::cmp::Reverse(m.date));
     let mut rows: Vec<(ThreadSummary, i64)> = Vec::new();
     for hit in hits {
         if let Some((row, oldest)) = rows

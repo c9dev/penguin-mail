@@ -5,7 +5,9 @@
 use mailrs_domain::{
     AccountState, Address, Attachment, EpochMillis, Label, LabelKind, MessageBody, MessageMeta,
 };
+use mailrs_gmail::{GmailError, HistoryPage, MessagePage, MessageRef, Profile, RemoteLabel};
 use mailrs_store::{Result, accounts, bodies, labels, messages};
+use mailrs_sync::GmailApi;
 use rusqlite::Connection;
 
 pub const ACCOUNTS: [&str; 3] = [
@@ -364,46 +366,6 @@ pub fn seed(conn: &Connection, now: EpochMillis) -> Result<()> {
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use mailrs_store::threads::{self, ThreadFilter};
-    use mailrs_store::{bodies, open_in_memory};
-
-    use super::*;
-
-    #[test]
-    fn the_demo_store_has_a_lively_unified_inbox() {
-        let conn = open_in_memory().unwrap();
-        seed(&conn, 1_758_000_000_000).unwrap();
-        let inbox = ThreadFilter::unified("INBOX");
-        let threads = threads::list_threads(&conn, &inbox, 0, 100).unwrap();
-        assert!(threads.len() >= 10, "{}", threads.len());
-        assert!(threads::unread_threads(&conn, &inbox).unwrap() >= 3);
-        assert_eq!(threads[0].id, "t-hike");
-        let accounts_seen: std::collections::HashSet<_> =
-            threads.iter().map(|t| t.account_id).collect();
-        assert_eq!(accounts_seen.len(), 3);
-        assert_eq!(
-            threads::list_threads(&conn, &ThreadFilter::unified("DRAFT"), 0, 10)
-                .unwrap()
-                .len(),
-            1
-        );
-        for sample in samples() {
-            let account = accounts::account_by_email(&conn, ACCOUNTS[sample.account])
-                .unwrap()
-                .unwrap();
-            assert!(
-                bodies::get_body(&conn, account.id, sample.id, 0)
-                    .unwrap()
-                    .is_some(),
-                "{}",
-                sample.id
-            );
-        }
-    }
-}
-
 /// Gmail for demo mode: reads come from the local store, writes succeed
 /// without going anywhere.
 pub struct DemoApi {
@@ -428,9 +390,6 @@ impl DemoApi {
             .flatten()
     }
 }
-
-use mailrs_gmail::{GmailError, HistoryPage, MessagePage, MessageRef, Profile, RemoteLabel};
-use mailrs_sync::GmailApi;
 
 impl GmailApi for DemoApi {
     async fn profile(&self) -> std::result::Result<Profile, GmailError> {
@@ -582,5 +541,45 @@ impl GmailApi for DemoApi {
             format!("This is {attachment_id}, a stand-in file from mailrs demo mode.\n")
                 .into_bytes(),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use mailrs_store::threads::{self, ThreadFilter};
+    use mailrs_store::{bodies, open_in_memory};
+
+    use super::*;
+
+    #[test]
+    fn the_demo_store_has_a_lively_unified_inbox() {
+        let conn = open_in_memory().unwrap();
+        seed(&conn, 1_758_000_000_000).unwrap();
+        let inbox = ThreadFilter::unified("INBOX");
+        let threads = threads::list_threads(&conn, &inbox, 0, 100).unwrap();
+        assert!(threads.len() >= 10, "{}", threads.len());
+        assert!(threads::unread_threads(&conn, &inbox).unwrap() >= 3);
+        assert_eq!(threads[0].id, "t-hike");
+        let accounts_seen: std::collections::HashSet<_> =
+            threads.iter().map(|t| t.account_id).collect();
+        assert_eq!(accounts_seen.len(), 3);
+        assert_eq!(
+            threads::list_threads(&conn, &ThreadFilter::unified("DRAFT"), 0, 10)
+                .unwrap()
+                .len(),
+            1
+        );
+        for sample in samples() {
+            let account = accounts::account_by_email(&conn, ACCOUNTS[sample.account])
+                .unwrap()
+                .unwrap();
+            assert!(
+                bodies::get_body(&conn, account.id, sample.id, 0)
+                    .unwrap()
+                    .is_some(),
+                "{}",
+                sample.id
+            );
+        }
     }
 }

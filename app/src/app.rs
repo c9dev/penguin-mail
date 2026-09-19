@@ -26,6 +26,8 @@ const BLOCK_REMOTE_RULES: &str = r#"[
   {"trigger": {"url-filter": "^ftp:"}, "action": {"type": "block"}}
 ]"#;
 
+type AppAction = Box<dyn Fn(&Rc<App>)>;
+
 pub struct App {
     pub gio: gio::Application,
     pub core: Rc<Core>,
@@ -40,11 +42,19 @@ pub struct App {
     /// Main window plus open composers.
     open_windows: Cell<usize>,
     shed_generation: Cell<u64>,
+    /// A message requested on the command line, opened on first activation.
+    pending_compose: RefCell<Option<String>>,
+    tray_started: Cell<bool>,
     _hold: gio::ApplicationHoldGuard,
 }
 
 impl App {
-    pub fn new(gio_app: &gio::Application, core: Rc<Core>, background: bool) -> Rc<App> {
+    pub fn new(
+        gio_app: &gio::Application,
+        core: Rc<Core>,
+        background: bool,
+        compose: Option<String>,
+    ) -> Rc<App> {
         let (open_requests, opened) = async_channel::unbounded();
         let app = Rc::new(App {
             gio: gio_app.clone(),
@@ -59,13 +69,15 @@ impl App {
             filter_requested: Cell::new(false),
             open_windows: Cell::new(0),
             shed_generation: Cell::new(0),
+            pending_compose: RefCell::new(compose),
+            tray_started: Cell::new(false),
             _hold: gio_app.hold(),
         });
         app.install_actions();
         app.listen();
         app.listen_for_opens(opened);
         if !app.core.demo {
-            app.start_tray();
+            app.watch_for_tray_host();
         }
         let weak = Rc::downgrade(&app);
         gio::NetworkMonitor::default().connect_network_available_notify(move |monitor| {
@@ -81,10 +93,31 @@ impl App {
 
     /// GApplication's activate: the first one is skipped with `--background`.
     pub fn activate(self: &Rc<Self>) {
+        if let Some(to) = self.pending_compose.borrow_mut().take() {
+            self.skip_first_window.set(false);
+            // Accounts load asynchronously; give them a moment first.
+            let this = Rc::clone(self);
+            glib::timeout_add_local_once(std::time::Duration::from_millis(600), move || {
+                this.compose_to(&to)
+            });
+            return;
+        }
         if self.skip_first_window.replace(false) {
             return;
         }
         self.show_window();
+    }
+
+    /// Opens a composer, addressed to `to` unless it is empty.
+    pub fn compose_to(self: &Rc<Self>, to: &str) {
+        let first = self.accounts.borrow().first().map(|a| a.id);
+        let Some(account_id) = first else {
+            self.show_window();
+            return;
+        };
+        let mut draft = Draft::new(account_id, self.identity(account_id));
+        draft.to = crate::compose::parse_recipients(to);
+        self.compose(draft);
     }
 
     pub fn show_window(self: &Rc<Self>) -> Rc<MainWindow> {
@@ -264,7 +297,7 @@ impl App {
     /// `gdbus call --session --dest dev.mailrs.Mailrs --object-path /dev/mailrs/Mailrs
     /// --method org.gtk.Actions.Activate hide-window [] {}`
     fn install_actions(self: &Rc<Self>) {
-        let add = |name: &str, run: Box<dyn Fn(&Rc<App>)>| {
+        let add = |name: &str, run: AppAction| {
             let action = gio::SimpleAction::new(name, None);
             let weak = Rc::downgrade(self);
             action.connect_activate(move |_, _| {
@@ -298,6 +331,16 @@ impl App {
             }),
         );
         add("check", Box::new(|app| app.core.poke_all()));
+        let compose_to = gio::SimpleAction::new("compose-to", Some(glib::VariantTy::STRING));
+        let weak = Rc::downgrade(self);
+        compose_to.connect_activate(move |_, parameter| {
+            if let (Some(app), Some(to)) =
+                (weak.upgrade(), parameter.and_then(|p| p.get::<String>()))
+            {
+                app.compose_to(&to);
+            }
+        });
+        self.gio.add_action(&compose_to);
         add("quit", Box::new(|app| app.quit()));
     }
 
@@ -393,6 +436,27 @@ impl App {
         });
     }
 
+    /// Registers the tray icon whenever a tray host appears on the session
+    /// bus. On Ubuntu that host is the AppIndicators extension, so enabling
+    /// it later shows the icon without restarting mailrs.
+    fn watch_for_tray_host(self: &Rc<Self>) {
+        let weak = Rc::downgrade(self);
+        // The watch lasts for the life of the process; the id is not needed.
+        let _ = gio::bus_watch_name(
+            gio::BusType::Session,
+            "org.kde.StatusNotifierWatcher",
+            gio::BusNameWatcherFlags::NONE,
+            move |_, _, _| {
+                if let Some(app) = weak.upgrade()
+                    && !app.tray_started.replace(true)
+                {
+                    app.start_tray();
+                }
+            },
+            |_, _| tracing::info!("the tray host went away; the icon returns when it does"),
+        );
+    }
+
     fn start_tray(self: &Rc<Self>) {
         let (commands, received) = async_channel::unbounded();
         let tray = MailTray {
@@ -404,7 +468,7 @@ impl App {
         self.core.spawn(async move {
             match tray.spawn().await {
                 Ok(handle) => *slot.lock().expect("tray slot poisoned") = Some(handle),
-                Err(err) => tracing::info!(error = %err, "no system tray available"),
+                Err(err) => tracing::warn!(error = %err, "could not add the tray icon"),
             }
         });
         let this = Rc::clone(self);
@@ -420,12 +484,7 @@ impl App {
                     TrayCommand::Open => {
                         this.show_window();
                     }
-                    TrayCommand::Compose => {
-                        let first = this.accounts.borrow().first().map(|a| a.id);
-                        if let Some(account_id) = first {
-                            this.compose(Draft::new(account_id, this.identity(account_id)));
-                        }
-                    }
+                    TrayCommand::Compose => this.compose_to(""),
                     TrayCommand::Check => this.core.poke_all(),
                     TrayCommand::Quit => this.quit(),
                 }

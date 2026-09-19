@@ -20,10 +20,12 @@ use gtk::{gdk, gio, glib};
 
 pub const APP_ID: &str = "dev.mailrs.Mailrs";
 
-const USAGE: &str = "Usage: mailrs [--background] [--demo]
+const USAGE: &str = "Usage: mailrs [--background] [--demo] [--compose [mailto:ADDRESS]]
 
   --background   start in the tray without opening a window
-  --demo         open sample mail in a throwaway store; nothing syncs";
+  --demo         open sample mail in a throwaway store; nothing syncs
+  --compose      open a new message, addressed to ADDRESS when given
+  mailto:...     the same as --compose mailto:...";
 
 fn main() -> glib::ExitCode {
     tracing_subscriber::fmt()
@@ -39,14 +41,17 @@ fn main() -> glib::ExitCode {
         println!("{USAGE}");
         return glib::ExitCode::SUCCESS;
     }
-    if let Some(unknown) = args
-        .iter()
-        .skip(1)
-        .find(|a| !matches!(a.as_str(), "--background" | "--demo"))
-    {
+    if let Some(unknown) = args.iter().skip(1).find(|a| {
+        !matches!(a.as_str(), "--background" | "--demo" | "--compose") && !a.starts_with("mailto:")
+    }) {
         eprintln!("mailrs: unknown option {unknown}\n\n{USAGE}");
         return glib::ExitCode::FAILURE;
     }
+    // `Some("")` opens a blank message; `Some(address)` addresses it.
+    let compose = args
+        .iter()
+        .find_map(|a| a.strip_prefix("mailto:").map(mailto_recipient))
+        .or_else(|| args.iter().any(|a| a == "--compose").then(String::new));
     let demo = args.iter().any(|a| a == "--demo");
     let background = args.iter().any(|a| a == "--background");
 
@@ -66,13 +71,24 @@ fn main() -> glib::ExitCode {
             APP_ID
         })
         .build();
+    // A second launch with --compose hands the request to the running copy.
+    if let Some(to) = &compose
+        && gio_app.register(gio::Cancellable::NONE).is_ok()
+        && gio_app.is_remote()
+    {
+        gio_app.activate_action("compose-to", Some(&to.to_variant()));
+        return glib::ExitCode::SUCCESS;
+    }
     let state: Rc<RefCell<Option<Rc<app::App>>>> = Rc::new(RefCell::new(None));
     let started = Rc::clone(&state);
     gio_app.connect_startup(move |gio_app| {
         gio::resources_register_include!("mailrs.gresource")
             .expect("the resources are built into the binary");
         match core::Core::open(demo) {
-            Ok(core) => *started.borrow_mut() = Some(app::App::new(gio_app, core, background)),
+            Ok(core) => {
+                *started.borrow_mut() =
+                    Some(app::App::new(gio_app, core, background, compose.clone()))
+            }
             Err(err) => show_fatal(gio_app, &format!("{err:#}")),
         }
     });
@@ -82,6 +98,27 @@ fn main() -> glib::ExitCode {
         }
     });
     gio_app.run_with_args(&args[..1])
+}
+
+/// The address part of a `mailto:` URI, percent-decoded.
+fn mailto_recipient(rest: &str) -> String {
+    let address = rest.split('?').next().unwrap_or(rest);
+    let bytes = address.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%'
+            && let Some(hex) = address.get(i + 1..i + 3)
+            && let Ok(byte) = u8::from_str_radix(hex, 16)
+        {
+            out.push(byte);
+            i += 3;
+            continue;
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
 }
 
 /// Starts GTK and libadwaita and loads the app's icons and stylesheet.
@@ -128,4 +165,22 @@ fn show_fatal(gio_app: &gio::Application, message: &str) {
         quit.quit();
     });
     window.present();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::mailto_recipient;
+
+    #[test]
+    fn mailto_uris_yield_their_address() {
+        assert_eq!(mailto_recipient("ann@example.com"), "ann@example.com");
+        assert_eq!(
+            mailto_recipient("ann%40example.com?subject=Hi"),
+            "ann@example.com"
+        );
+        assert_eq!(
+            mailto_recipient("Ann%20Lee%20%3Cann@example.com%3E"),
+            "Ann Lee <ann@example.com>"
+        );
+    }
 }
