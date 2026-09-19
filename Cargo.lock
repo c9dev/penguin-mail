@@ -1932,6 +1932,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "mailrs-ai"
+version = "0.1.0"
+dependencies = [
+ "async-channel",
+ "futures",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "wiremock",
+]
+
+[[package]]
 name = "mailrs-cli"
 version = "0.1.0"
 dependencies = [
