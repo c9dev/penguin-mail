@@ -37,6 +37,9 @@ impl Db {
                 for job in jobs {
                     job(&mut writer);
                 }
+                // Records table statistics for what this session queried, so
+                // the next run plans those queries from real row counts.
+                let _ = writer.execute_batch("PRAGMA optimize");
             })
             .map_err(|_| StoreError::Closed)?;
         Ok(Db {
