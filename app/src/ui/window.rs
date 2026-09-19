@@ -25,7 +25,7 @@ use crate::app::App;
 use crate::assistant::ToolRequest;
 use crate::compose::{self, Draft, OutgoingAttachment, ReplyKind};
 use crate::core::Core;
-use crate::settings::{Choice, MarkRead, RemoteImages, Settings, TextSize};
+use crate::settings::{Change, Effect, Effects, MarkRead, RemoteImages, Settings};
 
 mod arrange;
 mod assistant;
@@ -1418,15 +1418,7 @@ impl MainWindow {
         let Some(app) = self.app.upgrade() else {
             return;
         };
-        app.update_settings(|s| {
-            s.text_size = if step == 0 {
-                TextSize::Normal
-            } else {
-                let next =
-                    (s.text_size.index() as i32 + step).clamp(0, TextSize::ALL.len() as i32 - 1);
-                TextSize::from_index(next as u32)
-            };
-        });
+        app.change_settings(Change::StepTextSize(step));
     }
 
     /// Opens the mailbox at `position` in the sidebar, counting from 1.
@@ -2242,8 +2234,11 @@ impl MainWindow {
             return self.toast("Open a message from the person first");
         };
         let name = sender.name.clone().unwrap_or_default();
-        let mut added = false;
-        app.update_settings(|s| added = s.toggle_vip(&sender.email, &name));
+        app.change_settings(Change::ToggleVip {
+            email: sender.email.clone(),
+            name,
+        });
+        let added = app.settings().is_vip(&sender.email);
         self.toast(&if added {
             format!("Added {} to VIPs", sender.display())
         } else {
@@ -2251,62 +2246,67 @@ impl MainWindow {
         });
     }
 
-    /// Applies a settings change to what is on screen.
-    pub fn settings_changed(self: &Rc<Self>, before: &Settings, after: &Settings) {
-        if before.threading != after.threading {
-            self.conversation.clear();
-            self.list.unselect();
-            let mailbox = self.mailbox.borrow().clone();
-            match mailbox {
-                Mailbox::Search { query, .. } => self.search(query),
-                Mailbox::Folder { .. } => self.reload_folder(),
-                _ => self.reload_list(),
-            }
+    /// Brings what is on screen back in line after a settings change.
+    /// `Effects` comes in the order the window wants: the accounts first,
+    /// because the rows and the smart mailbox on screen read what it sets.
+    pub fn settings_changed(self: &Rc<Self>, effects: &Effects) {
+        for effect in effects.iter() {
+            self.apply_effect(effect);
         }
-        if before.smart_mailboxes != after.smart_mailboxes
-            || before.account_order != after.account_order
-            || before.account_colors != after.account_colors
-            || before.account_names != after.account_names
-        {
-            self.refresh_accounts();
-            if before.account_colors != after.account_colors {
-                // Rows carry account colours; refresh_accounts sets the new ones first.
+    }
+
+    fn apply_effect(self: &Rc<Self>, effect: Effect) {
+        let settings = self.settings();
+        match effect {
+            Effect::ListShape => {
+                self.conversation.clear();
+                self.list.unselect();
+                let mailbox = self.mailbox.borrow().clone();
+                match mailbox {
+                    Mailbox::Search { query, .. } => self.search(query),
+                    Mailbox::Folder { .. } => self.reload_folder(),
+                    _ => self.reload_list(),
+                }
+            }
+            Effect::Accounts => self.refresh_accounts(),
+            Effect::RowColors => {
+                // Rows carry account colours; Effect::Accounts sets the new
+                // ones first.
                 let list = Rc::clone(&self.list);
                 glib::timeout_add_local_once(std::time::Duration::from_millis(200), move || {
                     list.rebind();
                 });
             }
-            // The mailbox on screen carries its own conditions, so an edit
-            // has to put the saved ones back before listing it again.
-            if let Mailbox::Smart(shown) = self.mailbox.borrow().clone()
-                && let Some(saved) = after.smart_mailboxes.iter().find(|m| m.id == shown.id)
-            {
-                *self.mailbox.borrow_mut() = Mailbox::Smart(saved.clone());
+            Effect::SmartMailboxes => {
+                // The mailbox on screen carries its own conditions, so an edit
+                // has to put the saved ones back before listing it again.
+                if let Mailbox::Smart(shown) = self.mailbox.borrow().clone()
+                    && let Some(saved) = settings.smart_mailboxes.iter().find(|m| m.id == shown.id)
+                {
+                    *self.mailbox.borrow_mut() = Mailbox::Smart(saved.clone());
+                    self.reload_list();
+                }
+            }
+            Effect::Vips => {
+                let vip = sender_is_vip(&self.conversation, &settings);
+                self.conversation.set_sender_vip(vip);
+            }
+            Effect::FollowUps => {
+                if !settings.suggest_follow_ups && *self.mailbox.borrow() == Mailbox::FollowUp {
+                    let inbox = Mailbox::Unified(system_label::INBOX);
+                    self.sidebar.select(&inbox);
+                    self.show_mailbox(inbox);
+                }
+                self.refresh_counts();
+            }
+            Effect::Categories => {
+                self.follow_categories();
                 self.reload_list();
             }
-        }
-        if before.vips != after.vips {
-            self.refresh_accounts();
-            let vip = sender_is_vip(&self.conversation, after);
-            self.conversation.set_sender_vip(vip);
-        }
-        if before.ai != after.ai {
-            self.assistant.refresh();
-        }
-        if before.suggest_follow_ups != after.suggest_follow_ups {
-            if !after.suggest_follow_ups && *self.mailbox.borrow() == Mailbox::FollowUp {
-                let inbox = Mailbox::Unified(system_label::INBOX);
-                self.sidebar.select(&inbox);
-                self.show_mailbox(inbox);
-            }
-            self.refresh_counts();
-        }
-        if before.inbox_categories != after.inbox_categories {
-            self.follow_categories();
-            self.reload_list();
-        }
-        if before.text_size != after.text_size {
-            self.conversation.set_zoom(after.text_size.zoom());
+            Effect::Assistant => self.assistant.refresh(),
+            Effect::TextSize => self.conversation.set_zoom(settings.text_size.zoom()),
+            // The app follows the light or dark choice; no window to redraw.
+            Effect::Theme => {}
         }
     }
 

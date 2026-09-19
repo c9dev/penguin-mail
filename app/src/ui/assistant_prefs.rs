@@ -9,7 +9,7 @@ use mailrs_ai::ProviderConfig;
 
 use crate::app::App;
 use crate::assistant::{self, ANTHROPIC_KEY, LOCAL_KEY};
-use crate::settings::{AiProvider, Choice};
+use crate::settings::{AiChange, AiProvider, Change, Choice};
 
 /// Claude Code's model aliases, with what the menu shows.
 const CLAUDE_MODELS: [(&str, &str); 4] = [
@@ -128,14 +128,14 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
         let chosen = AiProvider::from_index(row.selected());
         show_rows(chosen);
         if let Some(app) = weak.upgrade() {
-            app.update_settings(|s| s.ai.provider = chosen);
+            app.change_settings(Change::Ai(AiChange::Provider(chosen)));
         }
     });
     let weak = Rc::downgrade(app);
     base_url.connect_apply(move |row| {
         let url = row.text().trim().trim_end_matches('/').to_string();
         if let Some(app) = weak.upgrade() {
-            app.update_settings(|s| s.ai.base_url = url);
+            app.change_settings(Change::Ai(AiChange::BaseUrl(url)));
         }
     });
     let toasts = dialog.clone();
@@ -161,14 +161,14 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
     local_model.connect_apply(move |row| {
         let model = row.text().trim().to_string();
         if let Some(app) = weak.upgrade() {
-            app.update_settings(|s| s.ai.local_model = model);
+            app.change_settings(Change::Ai(AiChange::LocalModel(model)));
         }
     });
     let weak = Rc::downgrade(app);
     anthropic_model.connect_apply(move |row| {
         let model = row.text().trim().to_string();
         if let Some(app) = weak.upgrade() {
-            app.update_settings(|s| s.ai.anthropic_model = model);
+            app.change_settings(Change::Ai(AiChange::AnthropicModel(model)));
         }
     });
     let weak = Rc::downgrade(app);
@@ -178,7 +178,7 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
             .map(|(a, _)| a.to_string())
             .unwrap_or_default();
         if let Some(app) = weak.upgrade() {
-            app.update_settings(|s| s.ai.claude_model = alias);
+            app.change_settings(Change::Ai(AiChange::ClaudeModel(alias)));
         }
     });
     let (weak, toasts) = (Rc::downgrade(app), dialog.clone());
@@ -215,7 +215,7 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
     confirm.connect_active_notify(move |row| {
         let on = row.is_active();
         if let Some(app) = weak.upgrade() {
-            app.update_settings(|s| s.ai.confirm_actions = on);
+            app.change_settings(Change::Ai(AiChange::ConfirmActions(on)));
         }
     });
     safety.add(&confirm);
@@ -379,10 +379,10 @@ fn detected_group(
                     ProviderConfig::OpenAiCompatible { base_url: url, .. } => {
                         base_url.set_text(&url);
                         local_model.set_text(&first);
-                        app.update_settings(|s| {
-                            s.ai.base_url = url;
-                            s.ai.local_model = first;
-                        });
+                        app.change_settings(Change::Ai(AiChange::LocalServer {
+                            base_url: url,
+                            model: first,
+                        }));
                         provider.set_selected(AiProvider::Local.index());
                     }
                     ProviderConfig::Anthropic { api_key, .. } => {
@@ -390,9 +390,9 @@ fn detected_group(
                         provider.set_selected(AiProvider::Anthropic.index());
                     }
                     ProviderConfig::ClaudeCode { command, .. } => {
-                        app.update_settings(|s| {
-                            s.ai.claude_command = command.display().to_string()
-                        });
+                        app.change_settings(Change::Ai(AiChange::ClaudeCommand(
+                            command.display().to_string(),
+                        )));
                         provider.set_selected(AiProvider::ClaudeCode.index());
                     }
                 }

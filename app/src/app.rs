@@ -16,7 +16,7 @@ use mailrs_store::{messages, threads};
 use crate::compose::Draft;
 use crate::core::Core;
 use crate::notify;
-use crate::settings::{ColorScheme, Settings};
+use crate::settings::{Change, ColorScheme, Effect, Effects, Settings};
 use crate::tray::{MailTray, TrayCommand};
 use crate::ui::autocomplete::Contacts;
 use crate::ui::composer::{Composer, Identity};
@@ -144,22 +144,49 @@ impl App {
         self.settings.borrow().clone()
     }
 
+    /// Makes a named change, saves it, and applies its effects on screen.
+    pub fn change_settings(self: &Rc<Self>, change: Change) -> Effects {
+        let before = self.settings();
+        let mut after = before.clone();
+        let effects = change.apply(&mut after);
+        self.commit_settings(&before, after, effects)
+    }
+
     /// Changes preferences, saves them, and applies them to open windows.
-    pub fn update_settings(self: &Rc<Self>, change: impl FnOnce(&mut Settings)) {
+    ///
+    /// Prefer [`App::change_settings`]. This takes the changes that have no
+    /// name yet, and works out their effects the same way.
+    pub fn update_settings(self: &Rc<Self>, change: impl FnOnce(&mut Settings)) -> Effects {
         let before = self.settings();
         let mut after = before.clone();
         change(&mut after);
-        if after == before {
-            return;
+        let effects = Effects::between(&before, &after);
+        self.commit_settings(&before, after, effects)
+    }
+
+    /// Saves the new preferences and hands their effects to the window.
+    fn commit_settings(
+        self: &Rc<Self>,
+        before: &Settings,
+        after: Settings,
+        effects: Effects,
+    ) -> Effects {
+        if after == *before {
+            return Effects::default();
         }
         if let Err(err) = after.save(&self.settings_path) {
             tracing::warn!(error = %err, "could not save preferences");
         }
-        *self.settings.borrow_mut() = after.clone();
-        self.apply_style();
-        if let Some(window) = self.window() {
-            window.settings_changed(&before, &after);
+        *self.settings.borrow_mut() = after;
+        if effects.has(Effect::Theme) {
+            self.apply_style();
         }
+        if !effects.is_empty()
+            && let Some(window) = self.window()
+        {
+            window.settings_changed(&effects);
+        }
+        effects
     }
 
     /// Follows the light or dark choice. Needs GTK, so it waits for a window.

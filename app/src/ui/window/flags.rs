@@ -8,6 +8,7 @@ use mailrs_store::threads;
 use mailrs_sync::{History, MailAction};
 
 use super::{MainWindow, Target};
+use crate::settings::Change;
 
 impl MainWindow {
     /// Flags the targets with `color`, or takes the flag off with `None`.
@@ -23,7 +24,7 @@ impl MainWindow {
             return;
         }
         if let (Some(color), Some(app)) = (color, self.app.upgrade()) {
-            app.update_settings(|s| s.flag_color = color);
+            app.change_settings(Change::FlagColor(color));
         }
         self.perform(targets, MailAction::Flag(color), History::Record, None);
     }
