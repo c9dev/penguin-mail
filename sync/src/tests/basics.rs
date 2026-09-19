@@ -61,21 +61,11 @@ fn triage_actions_parse_and_map_to_labels() {
 }
 
 #[tokio::test]
-async fn the_fake_pages_listings_and_history() {
+async fn the_fake_pages_history_and_hands_back_the_errors_it_is_given() {
     let fake = FakeGmail::new();
     for (i, id) in ["a", "b", "c"].into_iter().enumerate() {
         fake.deliver(meta(id, "t", 100 - i as i64, &["INBOX"]));
     }
-    let first = fake.list_messages("q", None).await.unwrap();
-    let ids: Vec<&str> = first.messages.iter().map(|m| m.id.as_str()).collect();
-    assert_eq!(ids, ["a", "b"]);
-    let second = fake
-        .list_messages("q", first.next_page_token.as_deref())
-        .await
-        .unwrap();
-    assert_eq!(second.messages.len(), 1);
-    assert!(second.next_page_token.is_none());
-
     let history = fake.history(100, None).await.unwrap();
     assert_eq!(
         history.changes[0],

@@ -134,6 +134,139 @@ pub trait GmailApi: Send + Sync + 'static {
     ) -> impl Future<Output = Result<(), GmailError>> + Send;
 }
 
+/// Gmail for one account: the real client, or the in-memory fake behind
+/// `--demo`. The trait's methods return `impl Future`, so no `dyn` object
+/// can hold both and a caller that picks at run time forwards by hand.
+#[cfg(any(test, feature = "fake"))]
+pub enum AnyGmail {
+    Real(Box<AccountClient>),
+    Fake(std::sync::Arc<crate::fake::FakeGmail>),
+}
+
+#[cfg(any(test, feature = "fake"))]
+macro_rules! forward {
+    ($self:ident, $method:ident($($arg:expr),*)) => {
+        match $self {
+            AnyGmail::Real(api) => api.$method($($arg),*).await,
+            AnyGmail::Fake(api) => api.$method($($arg),*).await,
+        }
+    };
+}
+
+#[cfg(any(test, feature = "fake"))]
+impl GmailApi for AnyGmail {
+    async fn profile(&self) -> Result<Profile, GmailError> {
+        forward!(self, profile())
+    }
+    async fn labels(&self) -> Result<Vec<RemoteLabel>, GmailError> {
+        forward!(self, labels())
+    }
+    async fn list_messages(
+        &self,
+        query: &str,
+        page_token: Option<&str>,
+    ) -> Result<MessagePage, GmailError> {
+        forward!(self, list_messages(query, page_token))
+    }
+    async fn message_metadata(&self, id: &str) -> Result<MessageMeta, GmailError> {
+        forward!(self, message_metadata(id))
+    }
+    async fn thread_metadata(&self, thread_id: &str) -> Result<Vec<MessageMeta>, GmailError> {
+        forward!(self, thread_metadata(thread_id))
+    }
+    async fn message_body(&self, id: &str) -> Result<MessageBody, GmailError> {
+        forward!(self, message_body(id))
+    }
+    async fn history(
+        &self,
+        start: u64,
+        page_token: Option<&str>,
+    ) -> Result<HistoryPage, GmailError> {
+        forward!(self, history(start, page_token))
+    }
+    async fn modify_labels(
+        &self,
+        id: &str,
+        add: &[String],
+        remove: &[String],
+    ) -> Result<(), GmailError> {
+        forward!(self, modify_labels(id, add, remove))
+    }
+    async fn trash(&self, id: &str) -> Result<(), GmailError> {
+        forward!(self, trash(id))
+    }
+    async fn untrash(&self, id: &str) -> Result<(), GmailError> {
+        forward!(self, untrash(id))
+    }
+    async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, GmailError> {
+        forward!(self, send(raw, thread_id))
+    }
+    async fn save_draft(
+        &self,
+        draft_id: Option<&str>,
+        raw: &[u8],
+        thread_id: Option<&str>,
+    ) -> Result<SavedDraft, GmailError> {
+        forward!(self, save_draft(draft_id, raw, thread_id))
+    }
+    async fn send_draft(&self, draft_id: &str) -> Result<String, GmailError> {
+        forward!(self, send_draft(draft_id))
+    }
+    async fn delete_draft(&self, draft_id: &str) -> Result<(), GmailError> {
+        forward!(self, delete_draft(draft_id))
+    }
+    async fn draft_for_message(&self, message_id: &str) -> Result<Option<String>, GmailError> {
+        forward!(self, draft_for_message(message_id))
+    }
+    async fn display_name(&self) -> Result<Option<String>, GmailError> {
+        forward!(self, display_name())
+    }
+    async fn attachment(
+        &self,
+        message_id: &str,
+        attachment_id: &str,
+    ) -> Result<Vec<u8>, GmailError> {
+        forward!(self, attachment(message_id, attachment_id))
+    }
+    async fn raw_message(&self, id: &str) -> Result<Vec<u8>, GmailError> {
+        forward!(self, raw_message(id))
+    }
+    async fn filters(&self) -> Result<Vec<Filter>, GmailError> {
+        forward!(self, filters())
+    }
+    async fn create_filter(&self, filter: &Filter) -> Result<Filter, GmailError> {
+        forward!(self, create_filter(filter))
+    }
+    async fn delete_filter(&self, id: &str) -> Result<(), GmailError> {
+        forward!(self, delete_filter(id))
+    }
+    async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {
+        forward!(self, create_label(name))
+    }
+    async fn rename_label(&self, id: &str, name: &str) -> Result<RemoteLabel, GmailError> {
+        forward!(self, rename_label(id, name))
+    }
+    async fn delete_label(&self, id: &str) -> Result<(), GmailError> {
+        forward!(self, delete_label(id))
+    }
+    async fn set_label_color(
+        &self,
+        id: &str,
+        color: &LabelColor,
+    ) -> Result<RemoteLabel, GmailError> {
+        forward!(self, set_label_color(id, color))
+    }
+    async fn signature(&self) -> Result<Option<String>, GmailError> {
+        forward!(self, signature())
+    }
+    async fn vacation(&self) -> Result<Vacation, GmailError> {
+        forward!(self, vacation())
+    }
+    async fn set_vacation(&self, vacation: &Vacation) -> Result<(), GmailError> {
+        forward!(self, set_vacation(vacation))
+    }
+}
+
 /// Where a saved draft lives in Gmail.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SavedDraft {

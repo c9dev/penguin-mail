@@ -1,5 +1,12 @@
-//! An in-memory Gmail for sync tests. Tests change its mailbox directly; the
-//! changes that Gmail would record in history are recorded here too.
+//! An in-memory Gmail. Sync's tests and `penguin-mail --demo` both run on
+//! it: seed its mailbox, hand it to an `AccountSync`, and every read and
+//! write the app makes goes through the same code the real client does.
+//!
+//! Callers change the mailbox directly through [`FakeGmail::with`]. The
+//! changes Gmail would record in history are recorded here too, so a sync
+//! replays them.
+
+mod query;
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::Mutex;
@@ -11,6 +18,7 @@ use mailrs_gmail::{
 };
 
 use crate::api::{GmailApi, SavedDraft};
+use query::Query;
 
 pub struct FakeGmail {
     state: Mutex<FakeState>,
@@ -23,8 +31,6 @@ pub struct FakeState {
     pub history_floor: u64,
     pub labels: Vec<RemoteLabel>,
     pub messages: HashMap<String, MessageMeta>,
-    /// Ids the window listing returns, newest first.
-    pub listed: Vec<String>,
     pub history: Vec<(u64, HistoryChange)>,
     pub bodies: HashMap<String, MessageBody>,
     /// Page size for both listings and history.
@@ -68,7 +74,14 @@ pub fn meta(id: &str, thread: &str, date: EpochMillis, labels: &[&str]) -> Messa
     }
 }
 
+impl Default for FakeGmail {
+    fn default() -> Self {
+        FakeGmail::new()
+    }
+}
+
 impl FakeGmail {
+    /// An empty mailbox for one account, with Gmail's own labels.
     pub fn new() -> Self {
         let label = |id: &str, kind: &str| RemoteLabel {
             id: id.into(),
@@ -88,7 +101,6 @@ impl FakeGmail {
                     label("Label_1", "user"),
                 ],
                 messages: HashMap::new(),
-                listed: Vec::new(),
                 history: Vec::new(),
                 bodies: HashMap::new(),
                 page_size: 2,
@@ -111,17 +123,9 @@ impl FakeGmail {
         f(&mut self.state.lock().expect("fake state poisoned"))
     }
 
-    /// A message that already exists and matches the window listing. No history.
+    /// A message that already exists. No history. Whether a listing returns
+    /// it follows from its date and labels, as it does in Gmail.
     pub fn seed(&self, meta: MessageMeta) {
-        self.with(|s| {
-            s.listed.push(meta.id.clone());
-            s.messages.insert(meta.id.clone(), meta);
-            s.sort_listed();
-        });
-    }
-
-    /// A message that exists but that the window listing does not return.
-    pub fn seed_outside_window(&self, meta: MessageMeta) {
         self.with(|s| {
             s.messages.insert(meta.id.clone(), meta);
         });
@@ -134,9 +138,7 @@ impl FakeGmail {
                 id: meta.id.clone(),
                 thread_id: meta.thread_id.clone(),
             };
-            s.listed.push(meta.id.clone());
             s.messages.insert(meta.id.clone(), meta);
-            s.sort_listed();
             s.record(change);
         });
     }
@@ -144,7 +146,6 @@ impl FakeGmail {
     pub fn remote_delete(&self, id: &str) {
         self.with(|s| {
             if let Some(meta) = s.messages.remove(id) {
-                s.listed.retain(|l| l != id);
                 s.record(HistoryChange::MessageDeleted {
                     id: id.into(),
                     thread_id: meta.thread_id,
@@ -157,7 +158,6 @@ impl FakeGmail {
     pub fn remote_delete_silently(&self, id: &str) {
         self.with(|s| {
             s.messages.remove(id);
-            s.listed.retain(|l| l != id);
         });
     }
 
@@ -213,10 +213,17 @@ impl FakeState {
         self.history.push((self.history_id, change));
     }
 
-    fn sort_listed(&mut self) {
-        let messages = &self.messages;
-        self.listed
-            .sort_by_key(|id| std::cmp::Reverse(messages[id].date));
+    /// The ids a search returns, newest first.
+    fn search(&self, query: &str) -> Vec<String> {
+        let query = Query::parse(query);
+        let now = crate::now_millis();
+        let mut hits: Vec<&MessageMeta> = self
+            .messages
+            .values()
+            .filter(|m| query.matches(m, &self.labels, now))
+            .collect();
+        hits.sort_by(|a, b| b.date.cmp(&a.date).then_with(|| a.id.cmp(&b.id)));
+        hits.into_iter().map(|m| m.id.clone()).collect()
     }
 }
 
@@ -236,7 +243,7 @@ impl GmailApi for FakeGmail {
 
     async fn list_messages(
         &self,
-        _query: &str,
+        query: &str,
         page_token: Option<&str>,
     ) -> Result<MessagePage, GmailError> {
         self.check_failure()?;
@@ -248,8 +255,9 @@ impl GmailApi for FakeGmail {
             })?,
         };
         Ok(self.with(|s| {
-            let end = (start + s.page_size).min(s.listed.len());
-            let messages = s.listed[start.min(end)..end]
+            let found = s.search(query);
+            let end = (start + s.page_size).min(found.len());
+            let messages = found[start.min(end)..end]
                 .iter()
                 .map(|id| MessageRef {
                     id: id.clone(),
@@ -258,7 +266,7 @@ impl GmailApi for FakeGmail {
                 .collect();
             MessagePage {
                 messages,
-                next_page_token: (end < s.listed.len()).then(|| end.to_string()),
+                next_page_token: (end < found.len()).then(|| end.to_string()),
             }
         }))
     }
@@ -521,11 +529,25 @@ impl GmailApi for FakeGmail {
         })
     }
 
+    /// The message as it arrived. Built from the stored metadata and body,
+    /// which is enough for View Source and for a reply to quote.
     async fn raw_message(&self, id: &str) -> Result<Vec<u8>, GmailError> {
         self.check_failure()?;
         self.with(|s| {
             let meta = s.messages.get(id).ok_or(GmailError::NotFound)?;
-            Ok(format!("Subject: {}\r\n\r\n{}\r\n", meta.subject, meta.snippet).into_bytes())
+            let text = s
+                .bodies
+                .get(id)
+                .and_then(|b| b.text.clone())
+                .unwrap_or_else(|| meta.snippet.clone());
+            let from = meta.from.as_ref().map(|a| a.email.as_str()).unwrap_or("");
+            Ok(format!(
+                "From: {from}\r\nSubject: {}\r\nMessage-ID: {}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n{}\r\n",
+                meta.subject,
+                meta.rfc822_msgid.clone().unwrap_or_default(),
+                text.replace('\n', "\r\n")
+            )
+            .into_bytes())
         })
     }
 

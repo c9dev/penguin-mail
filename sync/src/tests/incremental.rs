@@ -59,7 +59,7 @@ async fn old_mail_moved_into_the_inbox_is_fetched() {
     let h = harness().await;
     h.bootstrap_all().await;
     h.fake
-        .seed_outside_window(meta("old", "told", now_millis() - 90 * DAY, &[]));
+        .seed(meta("old", "told", now_millis() - 90 * DAY, &[]));
     h.fake.remote_relabel("old", &["INBOX"], &[]);
     h.sync.incremental().await.unwrap();
     assert_eq!(h.threads("INBOX").await, ["told"]);

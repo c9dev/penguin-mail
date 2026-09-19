@@ -12,8 +12,7 @@ async fn opening_a_thread_pulls_messages_outside_the_window() {
     let h = harness().await;
     let now = now_millis();
     h.fake.seed(meta("recent", "t1", now, &["INBOX"]));
-    h.fake
-        .seed_outside_window(meta("older", "t1", now - 60 * DAY, &[]));
+    h.fake.seed(meta("older", "t1", now - 60 * DAY, &[]));
     h.bootstrap_all().await;
     assert_eq!(h.thread("t1").await.unwrap().message_count, 1);
     h.sync.ensure_thread("t1").await.unwrap();
@@ -123,8 +122,7 @@ async fn opening_a_thread_right_after_history_asks_gmail_nothing() {
     // A history replay with nothing to report speaks for the whole mailbox.
     h.sync.incremental().await.unwrap();
     // Gmail gains a message that history has not announced yet.
-    h.fake
-        .seed_outside_window(meta("older", "t1", now - 60 * DAY, &[]));
+    h.fake.seed(meta("older", "t1", now - 60 * DAY, &[]));
     h.sync.ensure_thread("t1").await.unwrap();
     assert_eq!(
         h.thread("t1").await.unwrap().message_count,

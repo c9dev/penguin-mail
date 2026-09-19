@@ -78,7 +78,7 @@ async fn search_returns_newest_first_without_storing() {
     h.fake.seed(meta("old", "t1", now - 5000, &["INBOX"]));
     h.fake.seed(meta("new", "t2", now, &["INBOX"]));
     h.fake.seed(meta("mid", "t3", now - 1000, &[]));
-    let found = h.sync.search("anything", 2).await.unwrap();
+    let found = h.sync.search("snippet", 2).await.unwrap();
     let ids: Vec<&str> = found.iter().map(|m| m.id.as_str()).collect();
     assert_eq!(ids, ["new", "mid"]);
     assert!(h.threads("INBOX").await.is_empty());

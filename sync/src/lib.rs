@@ -12,13 +12,17 @@ pub mod mailbox;
 mod settings;
 mod triage;
 
-#[cfg(test)]
-mod fake;
+/// An in-memory Gmail. Sync's own tests always have it; anyone else asks
+/// for the `fake` feature, as `penguin-mail` does for `--demo`.
+#[cfg(any(test, feature = "fake"))]
+pub mod fake;
 #[cfg(test)]
 mod tests;
 
 pub use account::{AccountSync, DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS, FETCH_CONCURRENCY};
 pub use actions::{Accounts, Failure, History, MailAction, MailActions, Outcome};
+#[cfg(any(test, feature = "fake"))]
+pub use api::AnyGmail;
 pub use api::{AccountClient, GmailApi, LIST_PAGE_SIZE, SavedDraft};
 pub use backoff::backoff_delay;
 pub use connect::connect_account;

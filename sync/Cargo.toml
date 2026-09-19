@@ -4,6 +4,11 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
+[features]
+# Ships `fake::FakeGmail`, the in-memory Gmail, to other crates. Sync's own
+# tests always have it; `penguin-mail` turns it on for `--demo`.
+fake = []
+
 [dependencies]
 mailrs-domain.workspace = true
 mailrs-gmail.workspace = true

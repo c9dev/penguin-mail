@@ -11,150 +11,23 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use anyhow::{Context, Result, anyhow, bail};
-use mailrs_domain::{Account, AccountId, ChangeEvent, Filter, MessageBody, MessageMeta, Vacation};
-use mailrs_domain::{Folder, Target};
-use mailrs_gmail::{
-    GMAIL_API_BASE, GmailError, HistoryPage, KeyringTokenStore, MessagePage, OAuthClient, Profile,
-    RemoteLabel, TokenStore, authorize,
-};
+use mailrs_domain::{Account, AccountId, ChangeEvent, Folder, Target};
+use mailrs_gmail::{GMAIL_API_BASE, KeyringTokenStore, OAuthClient, TokenStore, authorize};
 use mailrs_store::{Db, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::{
-    AccountClient, AccountSettings, AccountSync, Accounts, Changed, Counts, Failure, GmailApi,
-    History, Listing, MailAction, MailActions, Mailbox, Mailboxes, Outcome, SavedDraft, Scope,
-    SyncEngine, View, connect_account, now_millis,
+    AccountSettings, AccountSync, Accounts, AnyGmail, Changed, Counts, Failure, History, Listing,
+    MailAction, MailActions, Mailbox, Mailboxes, Outcome, Scope, SyncEngine, View, connect_account,
+    now_millis,
 };
 
 use crate::assistant::run::{Background, Modules};
-use crate::demo::{self, DemoApi};
+use crate::demo::{self, DemoGmail};
 
-/// Gmail for real accounts, or the local stand-in for demo mode.
-pub enum Api {
-    Gmail(Box<AccountClient>),
-    Demo(DemoApi),
-}
-
-macro_rules! delegate {
-    ($self:ident, $method:ident($($arg:expr),*)) => {
-        match $self {
-            Api::Gmail(api) => api.$method($($arg),*).await,
-            Api::Demo(api) => api.$method($($arg),*).await,
-        }
-    };
-}
-
-impl GmailApi for Api {
-    async fn profile(&self) -> Result<Profile, GmailError> {
-        delegate!(self, profile())
-    }
-    async fn labels(&self) -> Result<Vec<RemoteLabel>, GmailError> {
-        delegate!(self, labels())
-    }
-    async fn list_messages(
-        &self,
-        query: &str,
-        page_token: Option<&str>,
-    ) -> Result<MessagePage, GmailError> {
-        delegate!(self, list_messages(query, page_token))
-    }
-    async fn message_metadata(&self, id: &str) -> Result<MessageMeta, GmailError> {
-        delegate!(self, message_metadata(id))
-    }
-    async fn thread_metadata(&self, thread_id: &str) -> Result<Vec<MessageMeta>, GmailError> {
-        delegate!(self, thread_metadata(thread_id))
-    }
-    async fn message_body(&self, id: &str) -> Result<MessageBody, GmailError> {
-        delegate!(self, message_body(id))
-    }
-    async fn history(
-        &self,
-        start: u64,
-        page_token: Option<&str>,
-    ) -> Result<HistoryPage, GmailError> {
-        delegate!(self, history(start, page_token))
-    }
-    async fn modify_labels(
-        &self,
-        id: &str,
-        add: &[String],
-        remove: &[String],
-    ) -> Result<(), GmailError> {
-        delegate!(self, modify_labels(id, add, remove))
-    }
-    async fn trash(&self, id: &str) -> Result<(), GmailError> {
-        delegate!(self, trash(id))
-    }
-    async fn untrash(&self, id: &str) -> Result<(), GmailError> {
-        delegate!(self, untrash(id))
-    }
-    async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, GmailError> {
-        delegate!(self, send(raw, thread_id))
-    }
-    async fn save_draft(
-        &self,
-        draft_id: Option<&str>,
-        raw: &[u8],
-        thread_id: Option<&str>,
-    ) -> Result<SavedDraft, GmailError> {
-        delegate!(self, save_draft(draft_id, raw, thread_id))
-    }
-    async fn send_draft(&self, draft_id: &str) -> Result<String, GmailError> {
-        delegate!(self, send_draft(draft_id))
-    }
-    async fn delete_draft(&self, draft_id: &str) -> Result<(), GmailError> {
-        delegate!(self, delete_draft(draft_id))
-    }
-    async fn draft_for_message(&self, message_id: &str) -> Result<Option<String>, GmailError> {
-        delegate!(self, draft_for_message(message_id))
-    }
-    async fn display_name(&self) -> Result<Option<String>, GmailError> {
-        delegate!(self, display_name())
-    }
-    async fn attachment(
-        &self,
-        message_id: &str,
-        attachment_id: &str,
-    ) -> Result<Vec<u8>, GmailError> {
-        delegate!(self, attachment(message_id, attachment_id))
-    }
-    async fn signature(&self) -> Result<Option<String>, GmailError> {
-        delegate!(self, signature())
-    }
-    async fn raw_message(&self, id: &str) -> Result<Vec<u8>, GmailError> {
-        delegate!(self, raw_message(id))
-    }
-    async fn filters(&self) -> Result<Vec<Filter>, GmailError> {
-        delegate!(self, filters())
-    }
-    async fn create_filter(&self, filter: &Filter) -> Result<Filter, GmailError> {
-        delegate!(self, create_filter(filter))
-    }
-    async fn delete_filter(&self, id: &str) -> Result<(), GmailError> {
-        delegate!(self, delete_filter(id))
-    }
-    async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {
-        delegate!(self, create_label(name))
-    }
-    async fn rename_label(&self, id: &str, name: &str) -> Result<RemoteLabel, GmailError> {
-        delegate!(self, rename_label(id, name))
-    }
-    async fn delete_label(&self, id: &str) -> Result<(), GmailError> {
-        delegate!(self, delete_label(id))
-    }
-    async fn set_label_color(
-        &self,
-        id: &str,
-        color: &mailrs_gmail::LabelColor,
-    ) -> Result<RemoteLabel, GmailError> {
-        delegate!(self, set_label_color(id, color))
-    }
-    async fn vacation(&self) -> Result<Vacation, GmailError> {
-        delegate!(self, vacation())
-    }
-    async fn set_vacation(&self, vacation: &Vacation) -> Result<(), GmailError> {
-        delegate!(self, set_vacation(vacation))
-    }
-}
+/// Gmail for real accounts, or the in-memory stand-in for demo mode.
+/// `mailrs_sync::AnyGmail` holds both, since `GmailApi`'s `impl Future`
+/// returns rule out one `dyn` object for the two.
+pub type Api = AnyGmail;
 
 pub type Engine = SyncEngine<Api>;
 pub type Sync = AccountSync<Api>;
@@ -196,6 +69,8 @@ pub struct Core {
     runtime: tokio::runtime::Runtime,
     pub db: Db,
     pub demo: bool,
+    /// The sample accounts' Gmail, in demo mode only.
+    demo_gmail: Option<Arc<DemoGmail>>,
     engine: Arc<RunningEngine>,
     actions: Arc<Actions>,
     lists: Arc<Lists>,
@@ -254,9 +129,12 @@ impl Core {
                 Err(err) => return Err(err.into()),
             }
         };
-        if demo {
-            runtime.block_on(db.write(|c| demo::seed(c, now_millis())))?;
-        }
+        let demo_gmail = if demo {
+            let seeded = runtime.block_on(db.write(|c| demo::seed(c, now_millis())))?;
+            Some(Arc::new(seeded))
+        } else {
+            None
+        };
         let (events_tx, events) = async_channel::unbounded();
         let engine = Arc::new(RunningEngine::default());
         let actions = Arc::new(MailActions::new(Arc::clone(&engine), db.clone()));
@@ -266,6 +144,7 @@ impl Core {
             runtime,
             db,
             demo,
+            demo_gmail,
             engine,
             actions,
             lists,
@@ -352,13 +231,13 @@ impl Core {
         let (db, tokens, demo, oauth) = (
             self.db.clone(),
             Arc::clone(&self.tokens),
-            self.demo,
+            self.demo_gmail.clone(),
             self.oauth().ok(),
         );
         self.runtime.spawn(async move {
             let Ok(all) = db.read(accounts::list_accounts).await else { return };
             for account in all {
-                match connect(&db, demo, oauth.clone(), Arc::clone(&tokens), &account).await {
+                match connect(demo.as_deref(), oauth.clone(), Arc::clone(&tokens), &account).await {
                     Ok(api) => engine.start_account(account.id, Arc::new(api)),
                     Err(err) => tracing::warn!(account = %account.email, error = %err, "could not start syncing"),
                 }
@@ -584,7 +463,7 @@ impl Core {
                 .into_iter()
                 .find(|a| a.id == id)
                 .ok_or_else(|| anyhow!("the new account disappeared"))?;
-            let api = connect(&db, false, Some(oauth), tokens, &account).await?;
+            let api = connect(None, Some(oauth), tokens, &account).await?;
             engine.start_account(account.id, Arc::new(api));
             Ok::<_, anyhow::Error>(account)
         })
@@ -622,21 +501,22 @@ impl Background for Core {
     }
 }
 
+/// Gmail for one account: the sample mailbox in demo mode, or the real
+/// client signed in with the account's refresh token.
 async fn connect(
-    db: &Db,
-    demo: bool,
+    demo: Option<&DemoGmail>,
     oauth: Option<OAuthClient>,
     tokens: Arc<dyn TokenStore>,
     account: &Account,
 ) -> Result<Api> {
-    if demo {
-        return Ok(Api::Demo(DemoApi {
-            db: db.clone(),
-            account_id: account.id,
-        }));
+    if let Some(demo) = demo {
+        let mailbox = demo
+            .account(account.id)
+            .ok_or_else(|| anyhow!("the demo has no mailbox for {}", account.email))?;
+        return Ok(Api::Fake(mailbox));
     }
     let oauth = oauth.ok_or_else(|| anyhow!("Penguin Mail has no OAuth client configured yet"))?;
-    Ok(Api::Gmail(Box::new(
+    Ok(Api::Real(Box::new(
         connect_account(oauth, tokens, account).await?,
     )))
 }

@@ -159,7 +159,7 @@ fn every_action_has_an_inverse_that_restores_labels() {
 async fn triage_fetches_a_thread_it_has_not_stored() {
     let h = harness().await;
     h.bootstrap_all().await;
-    h.fake.seed_outside_window(meta(
+    h.fake.seed(meta(
         "old",
         "t9",
         now_millis() - 90 * 86_400_000,

@@ -89,11 +89,18 @@ async fn a_rejected_page_token_restarts_the_listing() {
 async fn pruning_drops_old_threads_that_left_the_inbox() {
     let h = harness().await;
     let now = now_millis();
-    h.fake.seed(meta("old", "told", now - 40 * DAY, &[]));
+    // Old mail only reaches the store while it is in the inbox. Archiving
+    // it there leaves it for the next prune.
+    h.fake.seed(meta("old", "told", now - 40 * DAY, &["INBOX"]));
     h.fake
         .seed(meta("pinned", "tpinned", now - 40 * DAY, &["INBOX"]));
     h.fake.seed(meta("recent", "trecent", now - DAY, &[]));
     h.bootstrap_all().await;
+    h.sync
+        .triage_thread("told", &crate::TriageAction::Archive)
+        .await
+        .unwrap();
+    h.drain();
     h.sync.prune(now).await.unwrap();
     assert!(h.thread("told").await.is_none());
     assert!(h.thread("tpinned").await.is_some());
