@@ -12,6 +12,7 @@ mod notify;
 mod render;
 mod rules;
 mod sanitize;
+mod search;
 mod settings;
 mod smart;
 mod tray;

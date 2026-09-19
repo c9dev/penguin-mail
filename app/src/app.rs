@@ -372,6 +372,12 @@ impl App {
         Some(composer)
     }
 
+    /// Known correspondents, shared with composers and search.
+    pub fn contacts(self: &Rc<Self>) -> Contacts {
+        self.reload_contacts();
+        Rc::clone(&self.contacts)
+    }
+
     /// Refreshes the suggestions composers offer. Open composers see the
     /// new list once it loads.
     fn reload_contacts(self: &Rc<Self>) {

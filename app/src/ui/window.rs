@@ -260,6 +260,23 @@ impl MainWindow {
         });
         window.install_actions();
         window.install_arrange_actions();
+        let labels_of = Rc::downgrade(&window);
+        super::search_suggest::attach(&window.list.search_entry, app.contacts(), move || {
+            let Some(win) = labels_of.upgrade() else {
+                return Vec::new();
+            };
+            let mut names: Vec<String> = win
+                .labels
+                .borrow()
+                .values()
+                .flatten()
+                .filter(|l| l.kind == mailrs_domain::LabelKind::User)
+                .map(|l| l.name.clone())
+                .collect();
+            names.sort_by_key(|n| n.to_lowercase());
+            names.dedup();
+            names
+        });
         window.install_menu();
         window.install_keys();
         let weak = Rc::downgrade(&window);

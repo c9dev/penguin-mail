@@ -7,6 +7,7 @@ pub mod conversation;
 pub mod moving;
 pub mod preferences;
 pub mod rules;
+pub mod search_suggest;
 pub mod sidebar;
 pub mod smart_editor;
 pub mod thread_list;

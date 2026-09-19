@@ -207,7 +207,15 @@ impl Sidebar {
                         emails: vec![email.clone()],
                         name: name.clone(),
                     };
-                    self.add_mailbox(person, name, "avatar-default-symbolic", 1);
+                    let row = self.add_mailbox(person, name, "avatar-default-symbolic", 1);
+                    let menu = gio::Menu::new();
+                    let item = gio::MenuItem::new(Some("Remove from VIPs"), None);
+                    item.set_action_and_target_value(
+                        Some("win.vip-remove"),
+                        Some(&email.to_variant()),
+                    );
+                    menu.append_item(&item);
+                    context_menu(&row, &menu);
                 }
             }
             if label == "STARRED" {

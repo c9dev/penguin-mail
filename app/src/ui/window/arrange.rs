@@ -223,6 +223,13 @@ impl MainWindow {
             self.actions.add_action(&action);
         };
         with_id("smart-edit", |win, id| win.edit_smart(Some(id)));
+        with_id("vip-remove", |win, email| {
+            if let Some(app) = win.app.upgrade() {
+                app.update_settings(|s| {
+                    s.vips.remove(&email.to_lowercase());
+                });
+            }
+        });
         with_id("smart-delete", |win, id| win.delete_smart(id));
         with_id("smart-up", |win, id| {
             if let Some(app) = win.app.upgrade() {
