@@ -1,27 +1,35 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
   <defs>
-    <linearGradient id="front" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e4eaf3"/>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4b4760"/><stop offset="1" stop-color="#241f31"/>
     </linearGradient>
-    <linearGradient id="teal" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#33a8bd"/><stop offset="1" stop-color="#1d8397"/>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#edecea"/>
     </linearGradient>
-    <linearGradient id="green" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#4fb060"/><stop offset="1" stop-color="#338741"/>
+    <radialGradient id="sheen" cx="54" cy="16" r="40" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="face" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e8e6e3"/>
     </linearGradient>
+    <linearGradient id="beak" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffa348"/><stop offset="1" stop-color="#e66100"/>
+    </linearGradient>
+    <radialGradient id="shadow" cx="64" cy="114" r="54" gradientTransform="matrix(1 0 0 .14 0 98)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#000" stop-opacity=".3"/><stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </radialGradient>
   </defs>
-  <g transform="rotate(-14 64 80) translate(-4 -3)">
-    <rect x="17" y="30" width="94" height="64" rx="11" fill="#15697a"/>
-    <rect x="17" y="27" width="94" height="64" rx="11" fill="url(#teal)"/>
-    <path d="M22 34 L64 62 L106 34" fill="none" stroke="#8fd6e2" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
-  <g transform="rotate(11 64 80) translate(4 -6)">
-    <rect x="17" y="30" width="94" height="64" rx="11" fill="#276b33"/>
-    <rect x="17" y="27" width="94" height="64" rx="11" fill="url(#green)"/>
-    <path d="M22 34 L64 62 L106 34" fill="none" stroke="#a2dcad" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
-  <rect x="14" y="48" width="100" height="68" rx="12" fill="#1a3b6e" opacity=".20"/>
-  <rect x="14" y="45" width="100" height="68" rx="12" fill="#a7b3c6"/>
-  <rect x="14" y="40" width="100" height="68" rx="12" fill="url(#front)" stroke="#b7c2d3" stroke-width="1.5"/>
-  <path d="M20 47 L64 77 L108 47" fill="none" stroke="#3584e4" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <ellipse cx="64" cy="114" rx="56" ry="8" fill="url(#shadow)"/>
+  <path d="M64 6C38 6 22 26 22 54v40h84V54C106 26 90 6 64 6z" fill="url(#body)"/>
+  <path d="M64 6C38 6 22 26 22 54v40h84V54C106 26 90 6 64 6z" fill="url(#sheen)"/>
+  <path d="M64 28c-8-10-28-8-28 11 0 14 12 23 28 23s28-9 28-23c0-19-20-21-28-11z" fill="url(#face)"/>
+  <circle cx="52" cy="39" r="5.5" fill="#241f31"/>
+  <circle cx="76" cy="39" r="5.5" fill="#241f31"/>
+  <circle cx="53.8" cy="37.2" r="1.9" fill="#fff"/>
+  <circle cx="77.8" cy="37.2" r="1.9" fill="#fff"/>
+  <path d="M54 47c3-3 17-3 20 0 1.5 1.5-7 11-10 11s-11.5-9.5-10-11z" fill="url(#beak)"/>
+  <rect x="10" y="64" width="108" height="50" rx="10" fill="#c0bfbc"/>
+  <rect x="10" y="60" width="108" height="50" rx="10" fill="url(#paper)"/>
+  <path d="M18 67l46 22 46-22" fill="none" stroke="#3584e4" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M22 60c-6 0-10 4-8 9 1.5 4 9 3 13-1s1-8-5-8zM106 60c6 0 10 4 8 9-1.5 4-9 3-13-1s-1-8 5-8z" fill="#302b3f"/>
 </svg>
