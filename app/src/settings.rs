@@ -26,6 +26,10 @@ pub struct Settings {
     pub undo_send: UndoSend,
     /// The colour a new flag gets: the last one chosen.
     pub flag_color: mailrs_domain::FlagColor,
+    /// Very important people: lower-case address to display name.
+    pub vips: BTreeMap<String, String>,
+    /// Notify only about mail from VIPs.
+    pub notify_vips_only: bool,
 }
 
 impl Default for Settings {
@@ -42,6 +46,8 @@ impl Default for Settings {
             signatures: BTreeMap::new(),
             undo_send: UndoSend::Ten,
             flag_color: mailrs_domain::FlagColor::Red,
+            vips: BTreeMap::new(),
+            notify_vips_only: false,
         }
     }
 }
@@ -267,6 +273,25 @@ impl Settings {
             .map_or("", String::as_str)
     }
 
+    pub fn is_vip(&self, email: &str) -> bool {
+        self.vips.contains_key(&email.to_lowercase())
+    }
+
+    /// Adds or removes a VIP. Returns whether the address is a VIP now.
+    pub fn toggle_vip(&mut self, email: &str, name: &str) -> bool {
+        let key = email.trim().to_lowercase();
+        if self.vips.remove(&key).is_some() {
+            return false;
+        }
+        let name = if name.trim().is_empty() {
+            email.trim()
+        } else {
+            name.trim()
+        };
+        self.vips.insert(key, name.to_string());
+        true
+    }
+
     pub fn set_signature(&mut self, email: &str, signature: &str) {
         let key = email.to_lowercase();
         if signature.trim().is_empty() {
@@ -327,6 +352,16 @@ mod tests {
         assert_eq!(MarkRead::from_index(99), MarkRead::Immediately);
         assert_eq!(nearest(&POLL_CHOICES, 45), 0);
         assert_eq!(nearest(&WINDOW_CHOICES, 100), 2);
+    }
+
+    #[test]
+    fn vips_toggle_by_address_in_any_case() {
+        let mut settings = Settings::default();
+        assert!(settings.toggle_vip("Ann@Example.com", "Ann Lee"));
+        assert!(settings.is_vip("ann@example.com"));
+        assert_eq!(settings.vips["ann@example.com"], "Ann Lee");
+        assert!(!settings.toggle_vip("ANN@example.com", ""));
+        assert!(settings.vips.is_empty());
     }
 
     #[test]

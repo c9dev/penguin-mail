@@ -120,6 +120,8 @@ pub struct ConversationView {
     content: webkit::UserContentManager,
     banner: adw::Banner,
     list_banner: adw::Banner,
+    /// The menu section whose first item adds or removes the sender as a VIP.
+    sender_menu: gio::Menu,
     buttons: Buttons,
     filter: RefCell<Option<webkit::UserContentFilter>>,
     open: RefCell<Option<OpenThread>>,
@@ -275,10 +277,12 @@ impl ConversationView {
         views.append(Some("View Source"), Some("win.view-source"));
         more.append_section(None, &views);
         let sender = gio::Menu::new();
+        sender.append(Some("Add Sender to VIPs"), Some("win.toggle-vip"));
         sender.append(Some("Unsubscribe…"), Some("win.unsubscribe"));
         sender.append(Some("Block Sender…"), Some("win.block-sender"));
         more.append_section(None, &sender);
         buttons.more.set_menu_model(Some(&more));
+        let sender_menu = sender.clone();
         let header = adw::HeaderBar::builder()
             .title_widget(&gtk::Label::new(None))
             .build();
@@ -354,6 +358,7 @@ impl ConversationView {
             content,
             banner,
             list_banner,
+            sender_menu,
             buttons,
             filter: RefCell::new(None),
             open: RefCell::new(None),
@@ -428,6 +433,20 @@ impl ConversationView {
             }
         });
         view
+    }
+
+    /// Words the VIP menu item for whether the sender is one already.
+    pub fn set_sender_vip(&self, vip: bool) {
+        self.sender_menu.remove(0);
+        self.sender_menu.insert(
+            0,
+            Some(if vip {
+                "Remove Sender from VIPs"
+            } else {
+                "Add Sender to VIPs"
+            }),
+            Some("win.toggle-vip"),
+        );
     }
 
     /// Opens the print dialog for the conversation on screen.

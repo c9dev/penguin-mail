@@ -14,6 +14,7 @@ mod imp {
     #[derive(Default)]
     pub struct ThreadRow {
         pub account: OnceCell<gtk::Box>,
+        pub vip: OnceCell<gtk::Image>,
         pub from: OnceCell<gtk::Label>,
         pub clip: OnceCell<gtk::Image>,
         pub star: OnceCell<gtk::Image>,
@@ -54,6 +55,9 @@ mod imp {
                 .css_classes(["account-dot"])
                 .visible(false)
                 .build();
+            let vip = marker("starred-symbolic");
+            vip.add_css_class("vip");
+            vip.set_tooltip_text(Some("VIP"));
             let from = text_label("from");
             from.set_hexpand(true);
             let clip = marker("mail-attachment-symbolic");
@@ -63,6 +67,7 @@ mod imp {
             date.set_ellipsize(pango::EllipsizeMode::None);
             for widget in [
                 account.upcast_ref::<gtk::Widget>(),
+                vip.upcast_ref(),
                 from.upcast_ref(),
                 clip.upcast_ref(),
                 star.upcast_ref(),
@@ -94,6 +99,7 @@ mod imp {
             row.append(&content);
 
             let _ = self.account.set(account);
+            let _ = self.vip.set(vip);
             let _ = self.from.set(from);
             let _ = self.clip.set(clip);
             let _ = self.star.set(star);
@@ -139,8 +145,9 @@ impl Default for ThreadRow {
 }
 
 impl ThreadRow {
-    pub fn bind(&self, thread: &ThreadSummary, show_account: bool) {
+    pub fn bind(&self, thread: &ThreadSummary, show_account: bool, vip: bool) {
         let imp = self.imp();
+        imp.vip.get().expect("vip star exists").set_visible(vip);
         let get = |cell: &OnceCell<gtk::Label>| {
             cell.get()
                 .expect("row children exist after construction")

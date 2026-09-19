@@ -35,6 +35,8 @@ pub enum Mailbox {
     Scheduled,
     /// Flagged mail of one colour, across all accounts.
     Flag(FlagColor),
+    /// Mail from VIPs: all of them under "VIPs", or one person.
+    Vips { emails: Vec<String>, name: String },
     /// Mail Gmail keeps out of the regular listing, fetched on demand.
     Folder {
         account_id: Option<AccountId>,
@@ -98,6 +100,7 @@ impl Mailbox {
             Mailbox::Folder { folder, .. } => folder.name().into(),
             Mailbox::Scheduled => "Send Later".into(),
             Mailbox::Flag(color) => format!("{} Flag", color.name()),
+            Mailbox::Vips { name, .. } => name.clone(),
         }
     }
 
@@ -110,13 +113,18 @@ impl Mailbox {
                 ..
             } => Some(ThreadFilter::account(*account_id, label_id.clone())),
             Mailbox::Flag(color) => Some(ThreadFilter::unified("").with_flag(*color)),
+            Mailbox::Vips { emails, .. } => {
+                Some(ThreadFilter::unified("").from_senders(emails.clone()))
+            }
             Mailbox::Search { .. } | Mailbox::Folder { .. } | Mailbox::Scheduled => None,
         }
     }
 
     pub fn account(&self) -> Option<AccountId> {
         match self {
-            Mailbox::Unified(_) | Mailbox::Scheduled | Mailbox::Flag(_) => None,
+            Mailbox::Unified(_) | Mailbox::Scheduled | Mailbox::Flag(_) | Mailbox::Vips { .. } => {
+                None
+            }
             Mailbox::Label { account_id, .. } => Some(*account_id),
             Mailbox::Search { account_id, .. } | Mailbox::Folder { account_id, .. } => *account_id,
         }
@@ -131,7 +139,7 @@ impl Mailbox {
 
     /// Unread counts matter for inboxes; drafts show how many there are.
     pub fn counts_unread(&self) -> bool {
-        matches!(self, Mailbox::Unified("INBOX"))
+        matches!(self, Mailbox::Unified("INBOX") | Mailbox::Vips { .. })
             || matches!(self, Mailbox::Label { label_id, .. } if label_id == "INBOX")
     }
 }
@@ -192,6 +200,11 @@ pub fn summarize_search(mut hits: Vec<MessageMeta>, grouped: bool) -> Vec<Thread
                 starred: hit.has_label("STARRED"),
                 has_attachments: hit.has_attachments,
                 flag_color: None,
+                from_email: hit
+                    .from
+                    .as_ref()
+                    .map(|a| a.email.clone())
+                    .unwrap_or_default(),
             })
             .collect();
     }
@@ -228,6 +241,11 @@ pub fn summarize_search(mut hits: Vec<MessageMeta>, grouped: bool) -> Vec<Thread
             starred: hit.has_label("STARRED"),
             has_attachments: hit.has_attachments,
             flag_color: None,
+            from_email: hit
+                .from
+                .as_ref()
+                .map(|a| a.email.clone())
+                .unwrap_or_default(),
         };
         rows.push((summary, hit.date));
     }

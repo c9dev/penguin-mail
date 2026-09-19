@@ -386,8 +386,15 @@ impl MainWindow {
             if !still_exists {
                 *this.mailbox.borrow_mut() = Mailbox::Unified("INBOX");
             }
+            let settings = this.settings();
+            let vips: Vec<(String, String)> = settings
+                .vips
+                .iter()
+                .map(|(e, n)| (e.clone(), n.clone()))
+                .collect();
+            this.list.set_vips(settings.vips.keys().cloned().collect());
             if !matches!(mailbox, Mailbox::Search { .. }) {
-                this.sidebar.rebuild(&data, &this.mailbox.borrow());
+                this.sidebar.rebuild(&data, &vips, &this.mailbox.borrow());
             }
             this.list
                 .set_show_accounts(this.mailbox.borrow().account().is_none() && data.len() > 1);
@@ -673,6 +680,7 @@ impl MainWindow {
                 flag_color: summary.flag_color,
             };
             view.show(thread, true);
+            view.set_sender_vip(sender_is_vip(&view, &this.settings()));
             this.complete_thread(view, account_id, thread_id).await;
         });
     }
@@ -1686,6 +1694,7 @@ impl MainWindow {
         });
         self.actions.add_action(&flag_color);
         add("unsubscribe", Box::new(|win| win.unsubscribe()));
+        add("toggle-vip", Box::new(|win| win.toggle_vip()));
         add("print", Box::new(|win| win.conversation.print()));
         add(
             "view-source",
@@ -2088,6 +2097,32 @@ impl MainWindow {
         );
     }
 
+    /// Adds the open conversation's sender to the VIPs, or takes them off.
+    fn toggle_vip(self: &Rc<Self>) {
+        let me = self
+            .conversation
+            .with_open(|o| o.me.clone())
+            .unwrap_or_default();
+        let sender = self.conversation.with_open(|o| {
+            o.messages
+                .iter()
+                .rev()
+                .filter_map(|m| m.from.clone())
+                .find(|a| !me.iter().any(|mine| mine.eq_ignore_ascii_case(&a.email)))
+        });
+        let (Some(Some(sender)), Some(app)) = (sender, self.app.upgrade()) else {
+            return self.toast("Open a message from the person first");
+        };
+        let name = sender.name.clone().unwrap_or_default();
+        let mut added = false;
+        app.update_settings(|s| added = s.toggle_vip(&sender.email, &name));
+        self.toast(&if added {
+            format!("Added {} to VIPs", sender.display())
+        } else {
+            format!("Removed {} from VIPs", sender.display())
+        });
+    }
+
     /// Applies a settings change to what is on screen.
     pub fn settings_changed(self: &Rc<Self>, before: &Settings, after: &Settings) {
         if before.threading != after.threading {
@@ -2099,6 +2134,11 @@ impl MainWindow {
                 Mailbox::Folder { .. } => self.reload_folder(),
                 _ => self.reload_list(),
             }
+        }
+        if before.vips != after.vips {
+            self.refresh_accounts();
+            let vip = sender_is_vip(&self.conversation, after);
+            self.conversation.set_sender_vip(vip);
         }
         if before.text_size != after.text_size {
             self.conversation.set_zoom(after.text_size.zoom());
@@ -2209,6 +2249,19 @@ fn default_expanded(messages: &[MessageMeta]) -> HashSet<String> {
     expanded
 }
 
+/// Whether the newest sender in `view` who is not the user is a VIP.
+fn sender_is_vip(view: &ConversationView, settings: &Settings) -> bool {
+    view.with_open(|o| {
+        o.messages
+            .iter()
+            .rev()
+            .filter_map(|m| m.from.as_ref())
+            .find(|a| !o.me.iter().any(|mine| mine.eq_ignore_ascii_case(&a.email)))
+            .is_some_and(|a| settings.is_vip(&a.email))
+    })
+    .unwrap_or(false)
+}
+
 fn empty_state(mailbox: &Mailbox) -> (&'static str, &'static str) {
     let label = match mailbox {
         Mailbox::Unified(label) => *label,
@@ -2216,6 +2269,7 @@ fn empty_state(mailbox: &Mailbox) -> (&'static str, &'static str) {
         Mailbox::Search { .. } => return ("No Results", "system-search-symbolic"),
         Mailbox::Scheduled => return ("Nothing Scheduled", "alarm-symbolic"),
         Mailbox::Flag(_) => return ("No Flagged Mail", "mailrs-flag-symbolic"),
+        Mailbox::Vips { .. } => return ("No Mail from VIPs", "starred-symbolic"),
         Mailbox::Folder { folder, .. } => {
             return match folder {
                 Folder::Junk => ("No Junk", folder.icon()),

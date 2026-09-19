@@ -124,7 +124,10 @@ const COLUMNS: &str = "t.account_id, t.id, t.last_message_at, t.subject, t.snipp
                        (SELECT f.color FROM flags f JOIN messages fm \
                         ON fm.account_id = f.account_id AND fm.id = f.message_id \
                         WHERE fm.account_id = t.account_id AND fm.thread_id = t.id \
-                        ORDER BY fm.date DESC LIMIT 1)";
+                        ORDER BY fm.date DESC LIMIT 1), \
+                       (SELECT COALESCE(sm.from_addr, '') FROM messages sm \
+                        WHERE sm.account_id = t.account_id AND sm.thread_id = t.id \
+                        ORDER BY sm.date DESC LIMIT 1)";
 
 fn flag_color(row: &Row<'_>, index: usize) -> rusqlite::Result<Option<FlagColor>> {
     Ok(row
@@ -146,6 +149,7 @@ fn to_summary(row: &Row<'_>) -> rusqlite::Result<ThreadSummary> {
         starred: row.get(8)?,
         has_attachments: row.get(9)?,
         flag_color: flag_color(row, 10)?,
+        from_email: row.get::<_, Option<String>>(11)?.unwrap_or_default(),
     })
 }
 
@@ -195,7 +199,8 @@ const MESSAGE_COLUMNS: &str = "m.account_id, m.thread_id, m.id, m.date, m.subjec
              AND u.label_id = 'UNREAD'), \
      EXISTS (SELECT 1 FROM message_labels s WHERE s.account_id = m.account_id AND s.message_id = m.id \
              AND s.label_id = 'STARRED'), \
-     (SELECT f.color FROM flags f WHERE f.account_id = m.account_id AND f.message_id = m.id)";
+     (SELECT f.color FROM flags f WHERE f.account_id = m.account_id AND f.message_id = m.id), \
+     COALESCE(m.from_addr, '')";
 
 fn to_message_row(row: &Row<'_>) -> rusqlite::Result<ThreadSummary> {
     Ok(ThreadSummary {
@@ -211,6 +216,7 @@ fn to_message_row(row: &Row<'_>) -> rusqlite::Result<ThreadSummary> {
         unread: row.get(8)?,
         starred: row.get(9)?,
         flag_color: flag_color(row, 10)?,
+        from_email: row.get(11)?,
     })
 }
 

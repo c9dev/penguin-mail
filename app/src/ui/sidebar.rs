@@ -164,7 +164,13 @@ impl Sidebar {
     }
 
     /// Rebuilds every row. `selected` is kept selected when it still exists.
-    pub fn rebuild(&self, accounts: &[(Account, Vec<Label>)], selected: &Mailbox) {
+    /// Rebuilds every row. `vips` lists VIPs by address and name.
+    pub fn rebuild(
+        &self,
+        accounts: &[(Account, Vec<Label>)],
+        vips: &[(String, String)],
+        selected: &Mailbox,
+    ) {
         // Keep the scroll position; label changes rebuild every row.
         let scrolled = self.scroller.vadjustment().value();
         self.muted.set(true);
@@ -178,6 +184,20 @@ impl Sidebar {
                 mailbox_icon(label),
                 0,
             );
+            if label == "INBOX" && !vips.is_empty() {
+                let everyone = Mailbox::Vips {
+                    emails: vips.iter().map(|(e, _)| e.clone()).collect(),
+                    name: "VIPs".into(),
+                };
+                self.add_mailbox(everyone, "VIPs", "starred-symbolic", 0);
+                for (email, name) in vips {
+                    let person = Mailbox::Vips {
+                        emails: vec![email.clone()],
+                        name: name.clone(),
+                    };
+                    self.add_mailbox(person, name, "avatar-default-symbolic", 1);
+                }
+            }
             if label == "STARRED" {
                 // One row per flag colour in use, as Apple Mail shows them.
                 for color in FlagColor::ALL {
@@ -370,7 +390,7 @@ fn takes_mail(mailbox: &Mailbox) -> bool {
         Mailbox::Label { label_id, .. } => !matches!(label_id.as_str(), "SENT" | "DRAFT"),
         Mailbox::Folder { .. } => true,
         Mailbox::Flag(_) => true,
-        Mailbox::Search { .. } | Mailbox::Scheduled => false,
+        Mailbox::Search { .. } | Mailbox::Scheduled | Mailbox::Vips { .. } => false,
     }
 }
 

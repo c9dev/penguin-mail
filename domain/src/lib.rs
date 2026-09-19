@@ -230,6 +230,9 @@ pub struct ThreadSummary {
     /// The flag colour chosen here for a starred row, if one was.
     #[serde(default)]
     pub flag_color: Option<FlagColor>,
+    /// Address of the newest message's sender, for marking VIPs.
+    #[serde(default)]
+    pub from_email: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

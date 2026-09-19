@@ -113,7 +113,19 @@ fn general_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         .bind_property("active", &previews, "sensitive")
         .sync_create()
         .build();
+    let vips_only = switch(
+        app,
+        "Only for VIPs",
+        Some("Stay quiet about mail from everyone else"),
+        settings.notify_vips_only,
+        |s, v| s.notify_vips_only = v,
+    );
+    enabled
+        .bind_property("active", &vips_only, "sensitive")
+        .sync_create()
+        .build();
     notifications.add(&enabled);
+    notifications.add(&vips_only);
     notifications.add(&previews);
     page.add(&notifications);
     page

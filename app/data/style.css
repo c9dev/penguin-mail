@@ -68,3 +68,4 @@
 .flag-purple { color: #9141ac; }
 .flag-gray { color: #6f8396; }
 .flag-swatch { padding: 6px; min-width: 20px; min-height: 20px; }
+.thread-row .vip.marker { color: #e5a50a; opacity: 1; }

@@ -119,5 +119,6 @@ fn row(item: &Scheduled, now: chrono::DateTime<chrono::Local>) -> ThreadSummary 
         starred: false,
         has_attachments: false,
         flag_color: None,
+        from_email: String::new(),
     }
 }

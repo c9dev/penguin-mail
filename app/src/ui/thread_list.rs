@@ -1,6 +1,7 @@
 //! The middle pane: threads of the current mailbox, or search results.
 
 use std::cell::{Cell, RefCell};
+use std::collections::HashSet;
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -41,6 +42,8 @@ pub struct ThreadList {
     /// The rows of the drag in progress.
     dragged: Rc<RefCell<Vec<ThreadSummary>>>,
     show_accounts: Rc<Cell<bool>>,
+    /// Lower-case VIP addresses; their rows get a star.
+    vips: Rc<RefCell<HashSet<String>>>,
     muted: Cell<bool>,
 }
 
@@ -102,6 +105,8 @@ impl ThreadList {
             item.set_child(Some(&row));
         });
         let shown = Rc::clone(&show_accounts);
+        let vips: Rc<RefCell<HashSet<String>>> = Rc::new(RefCell::new(HashSet::new()));
+        let starred_people = Rc::clone(&vips);
         factory.connect_bind(move |_, item| {
             let item = item
                 .downcast_ref::<gtk::ListItem>()
@@ -112,7 +117,11 @@ impl ThreadList {
             ) else {
                 return;
             };
-            row.bind(&object.borrow::<ThreadSummary>(), shown.get());
+            let thread = object.borrow::<ThreadSummary>();
+            let vip = starred_people
+                .borrow()
+                .contains(&thread.from_email.to_lowercase());
+            row.bind(&thread, shown.get(), vip);
         });
         let view = gtk::ListView::builder()
             .model(&selection)
@@ -211,6 +220,7 @@ impl ThreadList {
             rows,
             dragged,
             show_accounts,
+            vips,
             muted: Cell::new(false),
         });
         let weak = Rc::downgrade(&list);
@@ -238,6 +248,15 @@ impl ThreadList {
     pub fn set_show_accounts(&self, show: bool) {
         if self.show_accounts.replace(show) != show {
             // Rebind every row so account dots appear or disappear.
+            let rows = self.rows.borrow().clone();
+            self.replace_all(&rows);
+        }
+    }
+
+    /// Marks rows from these addresses as VIP mail.
+    pub fn set_vips(&self, vips: HashSet<String>) {
+        if *self.vips.borrow() != vips {
+            *self.vips.borrow_mut() = vips;
             let rows = self.rows.borrow().clone();
             self.replace_all(&rows);
         }

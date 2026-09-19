@@ -522,6 +522,15 @@ impl App {
                     Ok(found)
                 })
                 .await;
+            let found = found.map(|found| {
+                found
+                    .into_iter()
+                    .filter(|m| {
+                        !settings.notify_vips_only
+                            || m.from.as_ref().is_some_and(|a| settings.is_vip(&a.email))
+                    })
+                    .collect::<Vec<_>>()
+            });
             if let Ok(found) = found
                 && !found.is_empty()
             {
