@@ -12,6 +12,9 @@ use serde::{Deserialize, Serialize};
 pub mod bridge;
 mod detect;
 mod providers;
+mod sse;
+#[cfg(test)]
+mod tests;
 
 pub use detect::{Detected, detect};
 
