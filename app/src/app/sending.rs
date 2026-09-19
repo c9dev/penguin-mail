@@ -227,11 +227,69 @@ impl App {
                     }
                 }
             }
+            if this.return_reminders().await {
+                changed = true;
+            }
             if changed {
                 this.scheduled_changed();
             }
             this.scheduler_running.set(false);
         });
+    }
+
+    /// Puts conversations whose reminder is due back in the inbox, unread,
+    /// and announces them. Returns whether any came back.
+    async fn return_reminders(self: &Rc<Self>) -> bool {
+        let due = self
+            .core
+            .read(|c| mailrs_store::reminders::due(c, now_millis()))
+            .await
+            .unwrap_or_default();
+        let mut returned = false;
+        for item in due {
+            let Some(sync) = self.core.account(item.account_id) else {
+                continue;
+            };
+            let thread = item.thread_id.clone();
+            let back = mailrs_sync::TriageAction::Relabel {
+                add: vec!["INBOX".into(), "UNREAD".into()],
+                remove: vec![],
+            };
+            if let Err(err) = self
+                .core
+                .call(async move { sync.triage_thread(&thread, &back).await })
+                .await
+            {
+                tracing::warn!(error = %err, "a reminder could not return its conversation; will retry");
+                continue;
+            }
+            let (account_id, thread) = (item.account_id, item.thread_id.clone());
+            let newest = self
+                .core
+                .write(move |c| {
+                    mailrs_store::reminders::remove(c, account_id, &thread)?;
+                    Ok(
+                        mailrs_store::messages::thread_messages(c, account_id, &thread)?
+                            .into_iter()
+                            .last(),
+                    )
+                })
+                .await
+                .ok()
+                .flatten();
+            returned = true;
+            let settings = self.settings();
+            if settings.notifications
+                && let Some(message) = newest
+            {
+                crate::notify::announce(
+                    vec![message],
+                    settings.notification_previews,
+                    self.open_requests.clone(),
+                );
+            }
+        }
+        returned
     }
 
     /// Tells the window the Send Later list changed.

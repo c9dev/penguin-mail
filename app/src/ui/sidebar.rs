@@ -225,7 +225,8 @@ impl Sidebar {
                 }
             }
         }
-        self.add_mailbox(Mailbox::Scheduled, "Send Later", "alarm-symbolic", 0);
+        self.add_mailbox(Mailbox::Scheduled, "Send Later", "mail-send-symbolic", 0);
+        self.add_mailbox(Mailbox::Reminders, "Remind Me", "alarm-symbolic", 0);
         for folder in Folder::ALL {
             let mailbox = Mailbox::Folder {
                 account_id: None,
@@ -384,7 +385,10 @@ impl Sidebar {
             }
             let is_drafts = matches!(
                 &row.mailbox,
-                Mailbox::Unified("DRAFT") | Mailbox::Scheduled | Mailbox::Flag(_)
+                Mailbox::Unified("DRAFT")
+                    | Mailbox::Scheduled
+                    | Mailbox::Reminders
+                    | Mailbox::Flag(_)
             ) || matches!(&row.mailbox, Mailbox::Label { label_id, .. } if label_id == "DRAFT");
             let shown = count > 0 && (row.mailbox.counts_unread() || is_drafts);
             row.count.set_visible(shown);
@@ -467,7 +471,10 @@ fn css_hex(color: &str) -> Option<String> {
 
 /// Rows that show only while they hold something.
 fn hidden_until_used(mailbox: &Mailbox) -> bool {
-    matches!(mailbox, Mailbox::Scheduled | Mailbox::Flag(_))
+    matches!(
+        mailbox,
+        Mailbox::Scheduled | Mailbox::Reminders | Mailbox::Flag(_)
+    )
 }
 
 /// Mailboxes mail can be moved into.
@@ -479,6 +486,7 @@ fn takes_mail(mailbox: &Mailbox) -> bool {
         Mailbox::Flag(_) => true,
         Mailbox::Search { .. }
         | Mailbox::Scheduled
+        | Mailbox::Reminders
         | Mailbox::Vips { .. }
         | Mailbox::Smart { .. } => false,
     }

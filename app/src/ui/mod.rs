@@ -13,6 +13,7 @@ pub mod thread_list;
 pub mod thread_row;
 pub mod vacation;
 pub mod welcome;
+pub mod when;
 pub mod window;
 
 use mailrs_domain::{AccountId, FlagColor, MessageMeta, ThreadSummary};
@@ -34,6 +35,8 @@ pub enum Mailbox {
     },
     /// Messages waiting to go out at a set time, across all accounts.
     Scheduled,
+    /// Conversations set aside with Remind Me, across all accounts.
+    Reminders,
     /// Flagged mail of one colour, across all accounts.
     Flag(FlagColor),
     /// Mail from VIPs: all of them under "VIPs", or one person.
@@ -102,6 +105,7 @@ impl Mailbox {
             Mailbox::Search { .. } => "Search".into(),
             Mailbox::Folder { folder, .. } => folder.name().into(),
             Mailbox::Scheduled => "Send Later".into(),
+            Mailbox::Reminders => "Remind Me".into(),
             Mailbox::Flag(color) => format!("{} Flag", color.name()),
             Mailbox::Vips { name, .. } | Mailbox::Smart { name, .. } => name.clone(),
         }
@@ -122,6 +126,7 @@ impl Mailbox {
             Mailbox::Search { .. }
             | Mailbox::Folder { .. }
             | Mailbox::Scheduled
+            | Mailbox::Reminders
             | Mailbox::Smart { .. } => None,
         }
     }
@@ -130,6 +135,7 @@ impl Mailbox {
         match self {
             Mailbox::Unified(_)
             | Mailbox::Scheduled
+            | Mailbox::Reminders
             | Mailbox::Flag(_)
             | Mailbox::Vips { .. }
             | Mailbox::Smart { .. } => None,

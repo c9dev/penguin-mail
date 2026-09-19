@@ -29,6 +29,7 @@ mod arrange;
 mod detached;
 mod flags;
 mod organize;
+mod reminders;
 mod scheduled;
 mod senders;
 
@@ -431,6 +432,10 @@ impl MainWindow {
                         Mailbox::Scheduled,
                         mailrs_store::scheduled::list(c)?.len() as i64,
                     );
+                    counts.insert(
+                        Mailbox::Reminders,
+                        mailrs_store::reminders::list(c)?.len() as i64,
+                    );
                     for mailbox in mailboxes {
                         let Some(filter) = mailbox.filter() else {
                             continue;
@@ -494,10 +499,13 @@ impl MainWindow {
 
     fn reload_list(self: &Rc<Self>) {
         let mailbox = self.mailbox.borrow().clone();
-        if mailbox == Mailbox::Scheduled {
+        if matches!(mailbox, Mailbox::Scheduled | Mailbox::Reminders) {
             let generation = self.list_generation.get() + 1;
             self.list_generation.set(generation);
-            return self.load_scheduled(generation);
+            return match mailbox {
+                Mailbox::Reminders => self.load_reminders(generation),
+                _ => self.load_scheduled(generation),
+            };
         }
         let Some(filter) = mailbox.filter() else {
             return;
@@ -1041,6 +1049,9 @@ impl MainWindow {
         if *self.mailbox.borrow() == Mailbox::Scheduled {
             return self.cancel_scheduled(self.targets());
         }
+        if *self.mailbox.borrow() == Mailbox::Reminders {
+            return self.cancel_reminders(self.targets());
+        }
         if self.mailbox.borrow().folder() == Some(Folder::Trash) {
             self.toast("Gmail deletes mail in the Trash for good after 30 days");
         } else {
@@ -1051,6 +1062,9 @@ impl MainWindow {
     fn trash(self: &Rc<Self>) {
         if *self.mailbox.borrow() == Mailbox::Scheduled {
             return self.cancel_scheduled(self.targets());
+        }
+        if *self.mailbox.borrow() == Mailbox::Reminders {
+            return self.cancel_reminders(self.targets());
         }
         if self.mailbox.borrow().folder() == Some(Folder::Trash) {
             self.triage(TriageAction::Untrash);
@@ -1684,6 +1698,16 @@ impl MainWindow {
             Box::new(|win| win.conversation.label_button.popup()),
         );
         add("undo", Box::new(|win| win.undo()));
+        add("remind-custom", Box::new(|win| win.remind_custom()));
+        let remind_at = gio::SimpleAction::new("remind-at", Some(glib::VariantTy::INT64));
+        let weak = Rc::downgrade(self);
+        remind_at.connect_activate(move |_, parameter| {
+            if let (Some(win), Some(at)) = (weak.upgrade(), parameter.and_then(|p| p.get::<i64>()))
+            {
+                win.remind(at);
+            }
+        });
+        self.actions.add_action(&remind_at);
         let flag_color = gio::SimpleAction::new("flag-color", Some(glib::VariantTy::STRING));
         let weak = Rc::downgrade(self);
         flag_color.connect_activate(move |_, parameter| {
@@ -2299,7 +2323,8 @@ fn empty_state(mailbox: &Mailbox) -> (&'static str, &'static str) {
         Mailbox::Unified(label) => *label,
         Mailbox::Label { label_id, .. } => label_id.as_str(),
         Mailbox::Search { .. } => return ("No Results", "system-search-symbolic"),
-        Mailbox::Scheduled => return ("Nothing Scheduled", "alarm-symbolic"),
+        Mailbox::Scheduled => return ("Nothing Scheduled", "mail-send-symbolic"),
+        Mailbox::Reminders => return ("No Reminders", "alarm-symbolic"),
         Mailbox::Flag(_) => return ("No Flagged Mail", "mailrs-flag-symbolic"),
         Mailbox::Vips { .. } => return ("No Mail from VIPs", "starred-symbolic"),
         Mailbox::Smart { .. } => return ("No Matching Mail", "folder-saved-search-symbolic"),

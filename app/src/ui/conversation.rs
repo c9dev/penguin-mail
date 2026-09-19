@@ -122,6 +122,8 @@ pub struct ConversationView {
     list_banner: adw::Banner,
     /// The menu section whose first item adds or removes the sender as a VIP.
     sender_menu: gio::Menu,
+    /// Remind Me times, recomputed whenever a conversation opens.
+    remind: gio::Menu,
     buttons: Buttons,
     filter: RefCell<Option<webkit::UserContentFilter>>,
     open: RefCell<Option<OpenThread>>,
@@ -270,6 +272,8 @@ impl ConversationView {
         marks.append(Some("Mark Read or Unread"), Some("win.toggle-read"));
         marks.append(Some("Junk"), Some("win.junk"));
         marks.append(Some("Labels…"), Some("win.label"));
+        let remind_menu = gio::Menu::new();
+        marks.append_submenu(Some("Remind Me"), &remind_menu);
         more.append_section(None, &marks);
         let views = gio::Menu::new();
         views.append(Some("Open in New Window"), Some("win.open-window"));
@@ -283,6 +287,7 @@ impl ConversationView {
         more.append_section(None, &sender);
         buttons.more.set_menu_model(Some(&more));
         let sender_menu = sender.clone();
+        let remind = remind_menu.clone();
         let header = adw::HeaderBar::builder()
             .title_widget(&gtk::Label::new(None))
             .build();
@@ -359,6 +364,7 @@ impl ConversationView {
             banner,
             list_banner,
             sender_menu,
+            remind,
             buttons,
             filter: RefCell::new(None),
             open: RefCell::new(None),
@@ -627,7 +633,23 @@ impl ConversationView {
         }
     }
 
+    /// Fills Remind Me with times that make sense now.
+    fn refresh_remind_menu(&self) {
+        self.remind.remove_all();
+        let presets = gio::Menu::new();
+        for (label, at) in crate::format::remind_presets(chrono::Local::now()) {
+            let item = gio::MenuItem::new(Some(&label), None);
+            item.set_action_and_target_value(Some("win.remind-at"), Some(&at.to_variant()));
+            presets.append_item(&item);
+        }
+        self.remind.append_section(None, &presets);
+        let custom = gio::Menu::new();
+        custom.append(Some("Choose a Time…"), Some("win.remind-custom"));
+        self.remind.append_section(None, &custom);
+    }
+
     fn update_buttons(&self, open: &OpenThread) {
+        self.refresh_remind_menu();
         self.set_buttons_shown(true);
         let draft = open.is_draft();
         let full = !self.compact.get();

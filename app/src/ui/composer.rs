@@ -450,62 +450,17 @@ impl Composer {
 
     /// Asks for a date and time, then schedules the message.
     fn choose_send_time(self: &Rc<Self>) {
-        let now = glib::DateTime::now_local().expect("the clock reads");
-        let start = now.add_hours(1).unwrap_or_else(|_| now.clone());
-        let calendar = gtk::Calendar::new();
-        calendar.set_date(&start);
-        let hour = gtk::SpinButton::with_range(0.0, 23.0, 1.0);
-        hour.set_value(start.hour() as f64);
-        let minute = gtk::SpinButton::with_range(0.0, 55.0, 5.0);
-        minute.set_value(0.0);
-        for spin in [&hour, &minute] {
-            spin.set_numeric(true);
-            spin.set_wrap(true);
-            spin.set_orientation(gtk::Orientation::Vertical);
-            spin.connect_output(|spin| {
-                spin.set_text(&format!("{:02}", spin.value() as i32));
-                glib::Propagation::Stop
-            });
-        }
-        let time = gtk::Box::builder()
-            .spacing(6)
-            .halign(gtk::Align::Center)
-            .build();
-        time.append(&hour);
-        time.append(&gtk::Label::new(Some(":")));
-        time.append(&minute);
-        let content = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
-            .spacing(12)
-            .build();
-        content.append(&calendar);
-        content.append(&time);
-        let dialog = adw::AlertDialog::builder()
-            .heading("Send Later")
-            .body("mailrs sends it at this time while it runs, even in the tray.")
-            .extra_child(&content)
-            .build();
-        dialog.add_responses(&[("cancel", "Cancel"), ("schedule", "Schedule")]);
-        dialog.set_response_appearance("schedule", adw::ResponseAppearance::Suggested);
-        dialog.set_default_response(Some("schedule"));
-        dialog.set_close_response("cancel");
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            if dialog.choose_future(Some(&this.window)).await != "schedule" {
-                return;
-            }
-            let day = calendar.date();
-            let at = glib::DateTime::from_local(
-                day.year(),
-                day.month(),
-                day.day_of_month(),
-                hour.value() as i32,
-                minute.value() as i32,
-                0.0,
-            );
-            match at {
-                Ok(at) => this.hand_over(SendWhen::At(at.to_unix() * 1000)),
-                Err(_) => this.toast("That time does not exist here"),
+            if let Some(at) = super::when::pick_time(
+                &this.window,
+                "Send Later",
+                "mailrs sends it at this time while it runs, even in the tray.",
+                "Schedule",
+            )
+            .await
+            {
+                this.hand_over(SendWhen::At(at));
             }
         });
     }

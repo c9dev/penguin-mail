@@ -9,6 +9,7 @@ mod error;
 pub mod flags;
 pub mod labels;
 pub mod messages;
+pub mod reminders;
 pub mod scheduled;
 mod schema;
 pub mod threads;

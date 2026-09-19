@@ -27,10 +27,13 @@ impl MainWindow {
         self.toast(text);
     }
 
-    /// Refreshes counts, and the list when it shows Send Later.
+    /// Refreshes counts, and the list when it shows Send Later or Remind Me.
     pub fn scheduled_changed(self: &Rc<Self>) {
         self.refresh_counts();
-        if *self.mailbox.borrow() == Mailbox::Scheduled {
+        if matches!(
+            *self.mailbox.borrow(),
+            Mailbox::Scheduled | Mailbox::Reminders
+        ) {
             self.reload_list();
         }
     }

@@ -69,6 +69,25 @@ pub fn future_date(ts: EpochMillis, now: DateTime<Local>) -> String {
 /// Apple Mail's Send Later presets: tonight at 21:00 while there is time,
 /// tomorrow at 08:00, and next Monday at 08:00 when that is not tomorrow.
 pub fn send_later_presets(now: DateTime<Local>) -> Vec<(String, EpochMillis)> {
+    later_presets(now)
+        .into_iter()
+        .map(|(label, at)| (format!("Send {label}"), at))
+        .collect()
+}
+
+/// Remind Me's presets: an hour from now, then the Send Later times.
+pub fn remind_presets(now: DateTime<Local>) -> Vec<(String, EpochMillis)> {
+    let mut presets = vec![(
+        "In 1 Hour".to_string(),
+        now.timestamp_millis() + 60 * 60 * 1000,
+    )];
+    presets.extend(later_presets(now));
+    presets
+}
+
+/// Tonight at 21:00 while there is time, tomorrow at 08:00, and next
+/// Monday at 08:00 when that is not tomorrow.
+fn later_presets(now: DateTime<Local>) -> Vec<(String, EpochMillis)> {
     let at = |date: chrono::NaiveDate, hour: u32| {
         date.and_hms_opt(hour, 0, 0)
             .and_then(|t| Local.from_local_datetime(&t).earliest())
@@ -79,18 +98,18 @@ pub fn send_later_presets(now: DateTime<Local>) -> Vec<(String, EpochMillis)> {
     if now.hour() < 20
         && let Some(ts) = at(today, 21)
     {
-        presets.push(("Send Tonight at 21:00".to_string(), ts));
+        presets.push(("Tonight at 21:00".to_string(), ts));
     }
     let tomorrow = today + chrono::Days::new(1);
     if let Some(ts) = at(tomorrow, 8) {
-        presets.push(("Send Tomorrow at 08:00".to_string(), ts));
+        presets.push(("Tomorrow at 08:00".to_string(), ts));
     }
     let to_monday = (7 - today.weekday().num_days_from_monday()) % 7;
     let monday = today + chrono::Days::new(if to_monday == 0 { 7 } else { to_monday as u64 });
     if monday != tomorrow
         && let Some(ts) = at(monday, 8)
     {
-        presets.push(("Send Monday at 08:00".to_string(), ts));
+        presets.push(("Monday at 08:00".to_string(), ts));
     }
     presets
 }
