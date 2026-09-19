@@ -1724,6 +1724,10 @@ impl MainWindow {
             Box::new(|win, account| win.authorize(Some(account.email))),
         );
         with_account(
+            "account-rules",
+            Box::new(|win, account| win.show_rules(account)),
+        );
+        with_account(
             "account-new-label",
             Box::new(|win, account| win.new_label(account.id, None)),
         );
@@ -2015,6 +2019,21 @@ impl MainWindow {
         };
         let accounts = self.accounts.borrow().clone();
         super::preferences::present(&app, &accounts, &self.window, signature_of.as_deref());
+    }
+
+    fn show_rules(self: &Rc<Self>, account: Account) {
+        let labels = self
+            .labels
+            .borrow()
+            .get(&account.id)
+            .cloned()
+            .unwrap_or_default();
+        let (grant, email) = (Rc::downgrade(self), account.email.clone());
+        super::rules::present(&self.core, &account, labels, &self.window, move || {
+            if let Some(win) = grant.upgrade() {
+                win.authorize(Some(email.clone()));
+            }
+        });
     }
 
     fn show_vacation(self: &Rc<Self>, account: Account) {

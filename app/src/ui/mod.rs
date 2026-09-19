@@ -6,6 +6,7 @@ pub mod composer;
 pub mod conversation;
 pub mod moving;
 pub mod preferences;
+pub mod rules;
 pub mod sidebar;
 pub mod thread_list;
 pub mod thread_row;

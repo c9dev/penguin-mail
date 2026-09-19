@@ -454,6 +454,7 @@ fn heading(account: &Account) -> (gtk::ListBoxRow, gtk::Image, gtk::Label) {
     let settings = gio::Menu::new();
     settings.append_item(&item("Automatic Reply…", "win.account-vacation"));
     settings.append_item(&item("Signature…", "win.account-signature"));
+    settings.append_item(&item("Rules…", "win.account-rules"));
     settings.append_item(&item("New Label…", "win.account-new-label"));
     menu.append_section(None, &settings);
     let access = gio::Menu::new();

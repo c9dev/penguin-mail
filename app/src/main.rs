@@ -10,6 +10,7 @@ mod diff;
 mod format;
 mod notify;
 mod render;
+mod rules;
 mod sanitize;
 mod settings;
 mod tray;
