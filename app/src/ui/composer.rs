@@ -64,11 +64,11 @@ impl Composer {
                     .build(),
             )
             .css_classes(["suggested-action"])
-            .tooltip_text("Send (Ctrl+Enter)")
+            .tooltip_text("Send (Ctrl+Shift+D)")
             .build();
         let attach = gtk::Button::builder()
             .icon_name("mail-attachment-symbolic")
-            .tooltip_text("Attach Files")
+            .tooltip_text("Attach Files (Ctrl+Shift+A)")
             .build();
         let preview_toggle = gtk::ToggleButton::builder()
             .icon_name("view-reveal-symbolic")
@@ -249,7 +249,9 @@ impl Composer {
             }
         });
 
+        // Capture phase: the text view binds Ctrl+Shift+A to "unselect all".
         let shortcuts = gtk::ShortcutController::new();
+        shortcuts.set_propagation_phase(gtk::PropagationPhase::Capture);
         let add = |trigger: &str, run: ComposerAction| {
             let weak = Rc::downgrade(self);
             shortcuts.add_shortcut(gtk::Shortcut::new(
@@ -263,9 +265,36 @@ impl Composer {
             ));
         };
         add("<Control>Return", Box::new(|c| c.send()));
+        add("<Control><Shift>d", Box::new(|c| c.send()));
+        add("<Control><Shift>a", Box::new(|c| c.pick_files()));
         add("<Control>s", Box::new(|c| c.save_draft(false)));
         add("Escape", Box::new(|c| c.window.close()));
         self.window.add_controller(shortcuts);
+
+        // Formatting keys run before the text view's own bindings.
+        let formatting = gtk::ShortcutController::new();
+        formatting.set_propagation_phase(gtk::PropagationPhase::Capture);
+        for (trigger, before, after) in [
+            ("<Control>b", "**", "**"),
+            ("<Control>i", "*", "*"),
+            ("<Control>k", "[", "]()"),
+        ] {
+            let weak = Rc::downgrade(self);
+            formatting.add_shortcut(gtk::Shortcut::new(
+                gtk::ShortcutTrigger::parse_string(trigger),
+                Some(gtk::CallbackAction::new(move |_, _| {
+                    let Some(c) = weak.upgrade() else {
+                        return glib::Propagation::Proceed;
+                    };
+                    if !c.body.has_focus() {
+                        return glib::Propagation::Proceed;
+                    }
+                    wrap_selection(&c.body.buffer(), before, after);
+                    glib::Propagation::Stop
+                })),
+            ));
+        }
+        self.body.add_controller(formatting);
 
         let weak = Rc::downgrade(self);
         self.window.connect_close_request(move |_| {
@@ -512,6 +541,43 @@ impl Composer {
 }
 
 /// Dims lines that start with `>`, so quoted text reads as quoted.
+/// Puts Markdown markers around the selection, or around the cursor when
+/// nothing is selected. A link leaves the cursor between its parentheses.
+/// Pressed again right before the closing marker, moves past it.
+fn wrap_selection(buffer: &gtk::TextBuffer, before: &str, after: &str) {
+    let (mut start, mut end) = buffer.selection_bounds().unwrap_or_else(|| {
+        let cursor = buffer.iter_at_mark(&buffer.get_insert());
+        (cursor, cursor)
+    });
+    let selected = start != end;
+    // Pressed again inside empty markers: step out, or into a link's URL.
+    if !selected {
+        let mut ahead = start;
+        ahead.forward_chars(after.chars().count() as i32);
+        if buffer.text(&start, &ahead, false) == after {
+            let step = if after == "]()" {
+                2
+            } else {
+                after.len() as i32
+            };
+            buffer.place_cursor(&buffer.iter_at_offset(start.offset() + step));
+            return;
+        }
+    }
+    let text = buffer.text(&start, &end, false).to_string();
+    buffer.begin_user_action();
+    buffer.delete(&mut start, &mut end);
+    let offset = start.offset();
+    buffer.insert(&mut start, &format!("{before}{text}{after}"));
+    let cursor = match (selected, after) {
+        (true, "]()") => offset + (before.len() + text.chars().count() + 2) as i32,
+        (true, _) => offset + (before.len() + text.chars().count() + after.len()) as i32,
+        (false, _) => offset + before.len() as i32,
+    };
+    buffer.place_cursor(&buffer.iter_at_offset(cursor));
+    buffer.end_user_action();
+}
+
 fn style_quotes(buffer: &gtk::TextBuffer) {
     buffer.remove_tag_by_name("quote", &buffer.start_iter(), &buffer.end_iter());
     for line in 0..buffer.line_count() {

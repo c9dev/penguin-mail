@@ -7,6 +7,7 @@ pub mod preferences;
 pub mod sidebar;
 pub mod thread_list;
 pub mod thread_row;
+pub mod vacation;
 pub mod welcome;
 pub mod window;
 

@@ -356,7 +356,13 @@ fn heading(account: &Account) -> (gtk::ListBoxRow, gtk::Image, gtk::Label) {
         item
     };
     menu.append_item(&item("Check for Mail", "win.account-check"));
-    menu.append_item(&item("Sign In Again…", "win.account-reconnect"));
+    let settings = gio::Menu::new();
+    settings.append_item(&item("Automatic Reply…", "win.account-vacation"));
+    settings.append_item(&item("Signature…", "win.account-signature"));
+    menu.append_section(None, &settings);
+    let access = gio::Menu::new();
+    access.append_item(&item("Sign In Again…", "win.account-reconnect"));
+    menu.append_section(None, &access);
     let danger = gio::Menu::new();
     danger.append_item(&item("Remove Account…", "win.account-remove"));
     menu.append_section(None, &danger);

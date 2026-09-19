@@ -93,3 +93,29 @@ async fn attachments_and_identity_come_from_gmail() {
     ));
     assert_eq!(h.sync.display_name().await.unwrap().as_deref(), Some("Me"));
 }
+
+#[tokio::test]
+async fn the_automatic_reply_and_signature_pass_through() {
+    let h = harness().await;
+    h.fake.with(|s| s.signature = Some("Me\nExample Co".into()));
+    assert_eq!(
+        h.sync.gmail_signature().await.unwrap().as_deref(),
+        Some("Me\nExample Co")
+    );
+    assert!(!h.sync.vacation().await.unwrap().enabled);
+    let away = mailrs_domain::Vacation {
+        enabled: true,
+        subject: "Away".into(),
+        body: "Back Monday".into(),
+        start: Some(1_700_000_000_000),
+        ..Default::default()
+    };
+    h.sync.set_vacation(away.clone()).await.unwrap();
+    assert_eq!(h.sync.vacation().await.unwrap(), away);
+    h.fake
+        .with(|s| s.failures.push_back(GmailError::MissingScope));
+    assert!(matches!(
+        h.sync.vacation().await,
+        Err(crate::SyncError::Gmail(GmailError::MissingScope))
+    ));
+}

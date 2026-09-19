@@ -5,6 +5,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use adw::prelude::*;
+use gtk::glib;
 use mailrs_domain::Account;
 use mailrs_sync::config::SyncConfig;
 
@@ -15,13 +16,23 @@ use crate::settings::{
     WINDOW_CHOICES, nearest,
 };
 
-pub fn present(app: &Rc<App>, accounts: &[Account], parent: &impl IsA<gtk::Widget>) {
+/// Shows Preferences. With `signature_of`, opens on that account's signature.
+pub fn present(
+    app: &Rc<App>,
+    accounts: &[Account],
+    parent: &impl IsA<gtk::Widget>,
+    signature_of: Option<&str>,
+) {
     let settings = app.settings();
     let dialog = adw::PreferencesDialog::builder()
         .search_enabled(true)
         .build();
     dialog.add(&general_page(app, &settings));
-    dialog.add(&writing_page(app, &settings, accounts));
+    let writing = writing_page(app, &settings, accounts, signature_of, &dialog);
+    dialog.add(&writing);
+    if signature_of.is_some() {
+        dialog.set_visible_page(&writing);
+    }
     let pending = Rc::new(RefCell::new(app.core.sync_config().unwrap_or_default()));
     dialog.add(&sync_page(app, &pending));
     let weak = Rc::downgrade(app);
@@ -108,7 +119,13 @@ fn general_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
     page
 }
 
-fn writing_page(app: &Rc<App>, settings: &Settings, accounts: &[Account]) -> adw::PreferencesPage {
+fn writing_page(
+    app: &Rc<App>,
+    settings: &Settings,
+    accounts: &[Account],
+    signature_of: Option<&str>,
+    dialog: &adw::PreferencesDialog,
+) -> adw::PreferencesPage {
     let page = adw::PreferencesPage::builder()
         .title("Writing")
         .icon_name("document-edit-symbolic")
@@ -159,6 +176,7 @@ fn writing_page(app: &Rc<App>, settings: &Settings, accounts: &[Account]) -> adw
         let row = adw::ExpanderRow::builder()
             .title(&account.email)
             .subtitle(preview(&text))
+            .expanded(signature_of.is_some_and(|e| e.eq_ignore_ascii_case(&account.email)))
             .build();
         let view = gtk::TextView::builder()
             .wrap_mode(gtk::WrapMode::WordChar)
@@ -177,6 +195,49 @@ fn writing_page(app: &Rc<App>, settings: &Settings, accounts: &[Account]) -> adw
             .hscrollbar_policy(gtk::PolicyType::Never)
             .build();
         row.add_row(&frame);
+        let import = gtk::Button::builder()
+            .label("Import from Gmail")
+            .halign(gtk::Align::End)
+            .margin_top(6)
+            .margin_bottom(6)
+            .margin_end(6)
+            .css_classes(["flat"])
+            .build();
+        row.add_row(&import);
+        let (weak, account_id, target, toasts) = (
+            Rc::downgrade(app),
+            account.id,
+            view.buffer(),
+            dialog.clone(),
+        );
+        import.connect_clicked(move |button| {
+            let Some(app) = weak.upgrade() else { return };
+            let Some(sync) = app.core.account(account_id) else {
+                toasts.add_toast(adw::Toast::new("This account is not syncing yet"));
+                return;
+            };
+            button.set_sensitive(false);
+            let (button, target, toasts) = (button.clone(), target.clone(), toasts.clone());
+            glib::spawn_future_local(async move {
+                match app
+                    .core
+                    .call(async move { sync.gmail_signature().await })
+                    .await
+                {
+                    Ok(Some(signature)) => {
+                        target.set_text(&signature);
+                        toasts.add_toast(adw::Toast::new("Imported the signature from Gmail"));
+                    }
+                    Ok(None) => {
+                        toasts.add_toast(adw::Toast::new("Gmail has no signature for this account"))
+                    }
+                    Err(err) => {
+                        toasts.add_toast(adw::Toast::new(&format!("Could not import: {err}")))
+                    }
+                }
+                button.set_sensitive(true);
+            });
+        });
         let (weak, email, subtitle) = (Rc::downgrade(app), account.email.clone(), row.clone());
         view.buffer().connect_changed(move |buffer| {
             let Some(app) = weak.upgrade() else { return };

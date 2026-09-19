@@ -4,7 +4,7 @@
 use std::collections::{HashMap, VecDeque};
 use std::sync::Mutex;
 
-use mailrs_domain::{Address, EpochMillis, MessageBody, MessageMeta};
+use mailrs_domain::{Address, EpochMillis, MessageBody, MessageMeta, Vacation};
 use mailrs_gmail::{
     GmailError, HistoryChange, HistoryPage, MessagePage, MessageRef, Profile, RemoteLabel,
 };
@@ -40,6 +40,8 @@ pub struct FakeState {
     pub draft_messages: HashMap<String, String>,
     pub attachments: HashMap<(String, String), Vec<u8>>,
     pub display_name: Option<String>,
+    pub signature: Option<String>,
+    pub vacation: Vacation,
 }
 
 /// A message for account 1.
@@ -95,6 +97,8 @@ impl FakeGmail {
                 draft_messages: HashMap::new(),
                 attachments: HashMap::new(),
                 display_name: Some("Me".into()),
+                signature: None,
+                vacation: Vacation::default(),
             }),
         }
     }
@@ -413,5 +417,21 @@ impl GmailApi for FakeGmail {
                 .cloned()
                 .ok_or(GmailError::NotFound)
         })
+    }
+
+    async fn signature(&self) -> Result<Option<String>, GmailError> {
+        self.check_failure()?;
+        Ok(self.with(|s| s.signature.clone()))
+    }
+
+    async fn vacation(&self) -> Result<Vacation, GmailError> {
+        self.check_failure()?;
+        Ok(self.with(|s| s.vacation.clone()))
+    }
+
+    async fn set_vacation(&self, vacation: &Vacation) -> Result<(), GmailError> {
+        self.check_failure()?;
+        self.with(|s| s.vacation = vacation.clone());
+        Ok(())
     }
 }

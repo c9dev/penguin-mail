@@ -7,6 +7,9 @@ pub enum GmailError {
     NeedsReauth,
     #[error("Gmail rate limit hit")]
     RateLimited { retry_after: Option<Duration> },
+    /// The account never granted a scope this call needs.
+    #[error("mailrs needs more access to this account; grant it and try again")]
+    MissingScope,
     #[error("not found")]
     NotFound,
     #[error("Gmail returned HTTP {status}: {body}")]

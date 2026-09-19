@@ -187,6 +187,21 @@ pub struct MessageBody {
     pub attachments: Vec<Attachment>,
 }
 
+/// Gmail's automatic reply ("vacation responder") for one account.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Vacation {
+    pub enabled: bool,
+    pub subject: String,
+    /// Plain text. Gmail gets an HTML copy with the same lines.
+    pub body: String,
+    /// Reply only to people in the account's contacts.
+    pub contacts_only: bool,
+    /// Reply only to people in the account's Workspace domain.
+    pub domain_only: bool,
+    pub start: Option<EpochMillis>,
+    pub end: Option<EpochMillis>,
+}
+
 /// What the sync engine reports to the UI. Views re-query the store in response.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ChangeEvent {

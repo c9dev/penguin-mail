@@ -1,9 +1,11 @@
 //! What the sync engine needs from Gmail. A trait, so tests can use a fake.
 
-use mailrs_domain::{AccountId, MessageBody, MessageMeta};
+use mailrs_domain::{AccountId, MessageBody, MessageMeta, Vacation};
 use mailrs_gmail::body::extract_body;
 use mailrs_gmail::convert::message_meta;
-use mailrs_gmail::{GmailClient, GmailError, HistoryPage, MessagePage, Profile, RemoteLabel};
+use mailrs_gmail::{
+    GmailClient, GmailError, HistoryPage, MessagePage, Profile, RemoteLabel, html_to_text,
+};
 
 /// Page size for window listings.
 pub const LIST_PAGE_SIZE: u32 = 100;
@@ -84,6 +86,16 @@ pub trait GmailApi: Send + Sync + 'static {
         message_id: &str,
         attachment_id: &str,
     ) -> impl Future<Output = Result<Vec<u8>, GmailError>> + Send;
+
+    /// The signature of the default send-as identity, as plain text.
+    fn signature(&self) -> impl Future<Output = Result<Option<String>, GmailError>> + Send;
+
+    fn vacation(&self) -> impl Future<Output = Result<Vacation, GmailError>> + Send;
+
+    fn set_vacation(
+        &self,
+        vacation: &Vacation,
+    ) -> impl Future<Output = Result<(), GmailError>> + Send;
 }
 
 /// The real Gmail client, bound to a local account id.
@@ -207,5 +219,22 @@ impl GmailApi for AccountClient {
         attachment_id: &str,
     ) -> Result<Vec<u8>, GmailError> {
         self.client.attachment(message_id, attachment_id).await
+    }
+
+    async fn signature(&self) -> Result<Option<String>, GmailError> {
+        let identities = self.client.send_as().await?;
+        Ok(identities
+            .into_iter()
+            .find(|s| s.is_default)
+            .map(|s| html_to_text(&s.signature))
+            .filter(|text| !text.is_empty()))
+    }
+
+    async fn vacation(&self) -> Result<Vacation, GmailError> {
+        self.client.vacation().await
+    }
+
+    async fn set_vacation(&self, vacation: &Vacation) -> Result<(), GmailError> {
+        self.client.set_vacation(vacation).await
     }
 }

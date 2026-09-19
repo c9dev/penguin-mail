@@ -14,7 +14,10 @@ use url::Url;
 
 use crate::GmailError;
 
+/// Read, send, and organize mail.
 pub const GMAIL_SCOPE: &str = "https://www.googleapis.com/auth/gmail.modify";
+/// Read and change the automatic reply and signatures.
+pub const SETTINGS_SCOPE: &str = "https://www.googleapis.com/auth/gmail.settings.basic";
 pub const GOOGLE_AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
 pub const GOOGLE_TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
 
@@ -132,7 +135,8 @@ impl OAuthClient {
             .append_pair("client_id", &self.client_id)
             .append_pair("redirect_uri", redirect_uri)
             .append_pair("response_type", "code")
-            .append_pair("scope", GMAIL_SCOPE)
+            .append_pair("scope", &format!("{GMAIL_SCOPE} {SETTINGS_SCOPE}"))
+            .append_pair("include_granted_scopes", "true")
             .append_pair("code_challenge", &pkce.challenge)
             .append_pair("code_challenge_method", "S256")
             .append_pair("state", state)

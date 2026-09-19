@@ -14,8 +14,20 @@ In Google Auth Platform:
 
 1. Branding: name the app `mailrs` and give your address as the support and developer contact. Leave the logo empty: Google shows it only after verification. [branding/google-cloud.md](branding/google-cloud.md) lists every field.
 2. Audience: choose External.
-3. Data Access: add the scope `https://www.googleapis.com/auth/gmail.modify`.
+3. Data Access: click **Add or remove scopes**, paste these two into
+   **Manually add scopes**, click **Add to table**, then **Update** and **Save**:
+   ```
+   https://www.googleapis.com/auth/gmail.modify
+   https://www.googleapis.com/auth/gmail.settings.basic
+   ```
+   The first reads, sends, and organizes mail. The second lets mailrs turn
+   Gmail's automatic reply on and off.
 4. Audience: click Publish app and confirm. Do not submit it for verification.
+
+**Set up before automatic replies existed?** Add the second scope under Data
+Access as above. Then in mailrs, open an account's ⋮ menu, choose
+**Automatic Reply…**, and click **Grant Access**. Google asks you to confirm
+once per account; mail keeps syncing throughout.
 
 Step 4 is what keeps you signed in. Google expires refresh tokens after 7 days
 for apps left in Testing, which would sign every account out once a week. A

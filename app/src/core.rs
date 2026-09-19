@@ -10,7 +10,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use anyhow::{Context, Result, anyhow, bail};
-use mailrs_domain::{Account, AccountId, ChangeEvent, MessageBody, MessageMeta};
+use mailrs_domain::{Account, AccountId, ChangeEvent, MessageBody, MessageMeta, Vacation};
 use mailrs_gmail::{
     GMAIL_API_BASE, GmailError, HistoryPage, KeyringTokenStore, MessagePage, OAuthClient, Profile,
     RemoteLabel, TokenStore, authorize,
@@ -106,6 +106,15 @@ impl GmailApi for Api {
         attachment_id: &str,
     ) -> Result<Vec<u8>, GmailError> {
         delegate!(self, attachment(message_id, attachment_id))
+    }
+    async fn signature(&self) -> Result<Option<String>, GmailError> {
+        delegate!(self, signature())
+    }
+    async fn vacation(&self) -> Result<Vacation, GmailError> {
+        delegate!(self, vacation())
+    }
+    async fn set_vacation(&self, vacation: &Vacation) -> Result<(), GmailError> {
+        delegate!(self, set_vacation(vacation))
     }
 }
 

@@ -18,10 +18,20 @@ time, and keeps your mail on your own computer.
 - **Gmail search**, with its full query syntax, across one account or all.
 - **Tray and notifications.** An unread count in the tray and a notification
   for new mail, which opens the thread when clicked.
-- **Keyboard first.** `j`/`k` to move, `e` to archive, `r` to reply, and more.
+- **Select several at once** with Ctrl+click, Shift+click, or Ctrl+A, then
+  archive, trash, junk, star, mark, or label them together. Every one of
+  these can be undone with Ctrl+Z or the Undo button on the toast.
+- **Labels.** Add or remove Gmail labels from the toolbar or with `l`.
+  Nested labels show as a tree under their account.
+- **Automatic replies.** Turn Gmail's out-of-office reply on from an
+  account's ⋮ menu, with a subject, message, and optional dates. Gmail sends
+  it, so it works with the computer off.
+- **Apple Mail's shortcuts**, with Ctrl in place of Command, plus Gmail's
+  single keys.
 - **Preferences** (`Ctrl+,`): group messages into conversations or list each
   one, when to mark as read, remote images, text size, light or dark, a
-  default sending account, a Markdown signature per account, notification
+  default sending account, a Markdown signature per account (or the one you
+  already set in Gmail, one click to import), notification
   previews, how often to check and how much mail to keep, and starting at
   login.
 - **Light.** In the tray, mailrs uses about 55 MB. A minute after you close
@@ -31,6 +41,10 @@ time, and keeps your mail on your own computer.
 | Dark | Writing | Narrow |
 |---|---|---|
 | ![Dark mode with an HTML email](docs/screenshots/dark.png) | ![Replying in the composer](docs/screenshots/composer.png) | ![The phone-width layout](docs/screenshots/phone.png) |
+
+| Several selected | Automatic reply |
+|---|---|
+| ![Three conversations selected, with bulk actions](docs/screenshots/selection.png) | ![The automatic reply dialog](docs/screenshots/automatic-reply.png) |
 
 ![Preferences](docs/screenshots/preferences.png)
 
@@ -65,15 +79,21 @@ that, **Sign In with Google** adds each account.
 
 ## Keyboard
 
+Apple Mail's shortcuts work with Ctrl in place of Command. Gmail's single
+keys work too, whenever you are not typing.
+
 | Key | Action | Key | Action |
 |---|---|---|---|
-| `j` / `k` | Next / previous conversation | `r` | Reply |
-| `e` | Archive | `a` | Reply all |
-| `#` | Move to trash | `f` | Forward |
-| `s` | Star or unstar | `c` | New message |
-| `u` | Mark read or unread | `/` | Search |
-| `F5` | Check for mail | `Ctrl+Enter` | Send |
-| `Ctrl+,` | Preferences | `Ctrl+N` | New message |
+| `j` / `k` | Next / previous conversation | `Ctrl+R` or `r` | Reply |
+| `Ctrl+Alt+A` or `e` | Archive | `Ctrl+Shift+R` or `a` | Reply all |
+| `Delete` or `#` | Move to trash | `Ctrl+Shift+F` or `f` | Forward |
+| `Ctrl+Shift+J` | Junk | `Ctrl+N` or `c` | New message |
+| `Ctrl+Shift+L` or `s` | Star or unstar | `Ctrl+Shift+D` | Send |
+| `Ctrl+Shift+U` or `u` | Mark read or unread | `Ctrl+Shift+A` | Attach files |
+| `Ctrl+Alt+M` or `l` | Labels | `Ctrl+B` / `Ctrl+I` / `Ctrl+K` | Bold, italic, link |
+| `Ctrl+Z` | Undo | `Ctrl+F` or `/` | Search |
+| `Ctrl+A` | Select all | `Ctrl+1` to `Ctrl+9` | Open a mailbox |
+| `Ctrl+Shift+N` or `F5` | Check for mail | `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | Text size |
 
 `Ctrl+?` shows them all.
 

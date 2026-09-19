@@ -372,6 +372,18 @@ pub fn seed(conn: &Connection, now: EpochMillis) -> Result<()> {
 
 /// Gmail for demo mode: reads come from the local store, writes succeed
 /// without going anywhere.
+/// Automatic replies set in demo mode. They last until the app quits.
+fn demo_vacations() -> &'static std::sync::Mutex<
+    std::collections::HashMap<mailrs_domain::AccountId, mailrs_domain::Vacation>,
+> {
+    static VACATIONS: std::sync::OnceLock<
+        std::sync::Mutex<
+            std::collections::HashMap<mailrs_domain::AccountId, mailrs_domain::Vacation>,
+        >,
+    > = std::sync::OnceLock::new();
+    VACATIONS.get_or_init(Default::default)
+}
+
 pub struct DemoApi {
     pub db: mailrs_store::Db,
     pub account_id: mailrs_domain::AccountId,
@@ -538,6 +550,30 @@ impl GmailApi for DemoApi {
 
     async fn display_name(&self) -> std::result::Result<Option<String>, GmailError> {
         Ok(Some(DISPLAY_NAME.into()))
+    }
+
+    async fn signature(&self) -> std::result::Result<Option<String>, GmailError> {
+        Ok(Some(format!("{DISPLAY_NAME}\nSent from mailrs")))
+    }
+
+    async fn vacation(&self) -> std::result::Result<mailrs_domain::Vacation, GmailError> {
+        Ok(demo_vacations()
+            .lock()
+            .expect("the demo lock is never poisoned")
+            .get(&self.account_id)
+            .cloned()
+            .unwrap_or_default())
+    }
+
+    async fn set_vacation(
+        &self,
+        vacation: &mailrs_domain::Vacation,
+    ) -> std::result::Result<(), GmailError> {
+        demo_vacations()
+            .lock()
+            .expect("the demo lock is never poisoned")
+            .insert(self.account_id, vacation.clone());
+        Ok(())
     }
 
     async fn attachment(

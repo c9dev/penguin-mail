@@ -98,6 +98,8 @@ pub struct ConversationView {
     /// Applies or removes labels; the window fills its popover.
     pub label_button: gtk::MenuButton,
     many: adw::StatusPage,
+    many_read: gtk::Button,
+    many_star: gtk::Button,
     stack: gtk::Stack,
     webview: webkit::WebView,
     content: webkit::UserContentManager,
@@ -151,10 +153,12 @@ impl ConversationView {
             .button_label("Load Images")
             .revealed(false)
             .build();
-        let bulk = gtk::Box::builder()
-            .spacing(10)
-            .halign(gtk::Align::Center)
+        let bulk = adw::WrapBox::builder()
+            .child_spacing(10)
+            .line_spacing(10)
+            .align(0.5)
             .build();
+        let (mut many_read, mut many_star) = (None, None);
         for (label, action) in [
             ("Archive", "win.archive"),
             ("Mark as Read", "win.toggle-read"),
@@ -167,11 +171,18 @@ impl ConversationView {
                 .action_name(action)
                 .css_classes(["pill"])
                 .build();
-            if action == "win.archive" {
-                pill.add_css_class("suggested-action");
+            match action {
+                "win.archive" => pill.add_css_class("suggested-action"),
+                "win.toggle-read" => many_read = Some(pill.clone()),
+                "win.toggle-star" => many_star = Some(pill.clone()),
+                _ => {}
             }
             bulk.append(&pill);
         }
+        let (many_read, many_star) = (
+            many_read.expect("the bulk actions include read"),
+            many_star.expect("the bulk actions include star"),
+        );
         let many = adw::StatusPage::builder()
             .icon_name("mailrs-inbox-symbolic")
             .title("Several Conversations Selected")
@@ -229,7 +240,7 @@ impl ConversationView {
             .build();
         let label_button = gtk::MenuButton::builder()
             .icon_name("mailrs-tag-symbolic")
-            .tooltip_text("Labels (Ctrl+Shift+M)")
+            .tooltip_text("Labels (L)")
             .build();
         for widget in [
             &buttons.archive,
@@ -281,6 +292,8 @@ impl ConversationView {
             page,
             label_button,
             many,
+            many_read,
+            many_star,
             stack,
             webview,
             content,
@@ -367,7 +380,20 @@ impl ConversationView {
     }
 
     /// Shows the bulk-action page for `count` selected rows.
-    pub fn show_many(&self, count: usize, noun: &str) {
+    pub fn showing_many(&self) -> bool {
+        self.stack.visible_child_name().as_deref() == Some("many")
+    }
+
+    /// The page for a multiple selection. `any_unread` and `all_starred`
+    /// decide what the read and star buttons do.
+    pub fn show_many(&self, count: usize, noun: &str, any_unread: bool, all_starred: bool) {
+        self.many_read.set_label(if any_unread {
+            "Mark as Read"
+        } else {
+            "Mark as Unread"
+        });
+        self.many_star
+            .set_label(if all_starred { "Unstar" } else { "Star" });
         *self.open.borrow_mut() = None;
         self.many.set_title(&format!("{count} {noun} Selected"));
         self.stack.set_visible_child_name("many");

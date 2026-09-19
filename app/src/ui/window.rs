@@ -470,6 +470,7 @@ impl MainWindow {
                 Ok((rows, unread)) => {
                     let (title, icon) = empty_state(&mailbox);
                     this.list.set_rows(rows, title, icon);
+                    this.follow_selection();
                     let subtitle = if unread > 0 {
                         format!("{unread} unread")
                     } else {
@@ -537,6 +538,7 @@ impl MainWindow {
                 "No Results",
                 "system-search-symbolic",
             );
+            this.follow_selection();
         });
     }
 
@@ -814,9 +816,23 @@ impl MainWindow {
                 } else {
                     "Messages"
                 };
-                self.conversation.show_many(rows.len(), noun);
+                self.conversation.show_many(
+                    rows.len(),
+                    noun,
+                    rows.iter().any(|r| r.unread),
+                    rows.iter().all(|r| r.starred),
+                );
             }
             Picked::None => self.conversation.clear(),
+        }
+    }
+
+    /// Updates the bulk page after the list changed under a multiple selection.
+    fn follow_selection(self: &Rc<Self>) {
+        match self.list.picked() {
+            Picked::Many(rows) => self.picked(Picked::Many(rows)),
+            picked if self.conversation.showing_many() => self.picked(picked),
+            _ => {}
         }
     }
 
@@ -1465,6 +1481,14 @@ impl MainWindow {
             Box::new(|win, account| win.authorize(Some(account.email))),
         );
         with_account(
+            "account-vacation",
+            Box::new(|win, account| win.show_vacation(account)),
+        );
+        with_account(
+            "account-signature",
+            Box::new(|win, account| win.show_preferences_for(Some(account.email))),
+        );
+        with_account(
             "account-remove",
             Box::new(|win, account| win.confirm_remove(account)),
         );
@@ -1485,7 +1509,7 @@ impl MainWindow {
             ("<Control><Shift>u", "win.toggle-read"),
             ("<Control><Shift>l", "win.toggle-star"),
             ("<Control><Shift>j", "win.junk"),
-            ("<Control><Shift>m", "win.label"),
+            ("<Control><Alt>m", "win.label"),
             ("<Control>plus", "win.zoom-in"),
             ("<Control>equal", "win.zoom-in"),
             ("<Control>minus", "win.zoom-out"),
@@ -1598,6 +1622,7 @@ impl MainWindow {
                 Some('u') => win.act(Action::ToggleRead),
                 Some('r') => win.reply(ReplyKind::Reply),
                 Some('a') => win.reply(ReplyKind::ReplyAll),
+                Some('l') => win.conversation.label_button.popup(),
                 Some('f') => win.reply(ReplyKind::Forward),
                 Some('c') => win.compose_new(),
                 Some('/') => win.list.open_search(),
@@ -1704,11 +1729,36 @@ impl MainWindow {
     }
 
     fn show_preferences(self: &Rc<Self>) {
+        self.show_preferences_for(None);
+    }
+
+    /// Opens Preferences, on the signature of `signature_of` when given.
+    fn show_preferences_for(self: &Rc<Self>, signature_of: Option<String>) {
         let Some(app) = self.app.upgrade() else {
             return;
         };
         let accounts = self.accounts.borrow().clone();
-        super::preferences::present(&app, &accounts, &self.window);
+        super::preferences::present(&app, &accounts, &self.window, signature_of.as_deref());
+    }
+
+    fn show_vacation(self: &Rc<Self>, account: Account) {
+        let (grant, saved) = (Rc::downgrade(self), Rc::downgrade(self));
+        let email = account.email.clone();
+        super::vacation::present(
+            &self.core,
+            &account,
+            &self.window,
+            move || {
+                if let Some(win) = grant.upgrade() {
+                    win.authorize(Some(email.clone()));
+                }
+            },
+            move |text| {
+                if let Some(win) = saved.upgrade() {
+                    win.toast(text);
+                }
+            },
+        );
     }
 
     /// Applies a settings change to what is on screen.
@@ -1755,7 +1805,7 @@ impl MainWindow {
                     ("Junk", "<Control><Shift>j"),
                     ("Star or unstar", "<Control><Shift>l s"),
                     ("Mark read or unread", "<Control><Shift>u u"),
-                    ("Labels", "<Control><Shift>m"),
+                    ("Labels", "<Control><Alt>m l"),
                     ("Undo", "<Control>z"),
                 ],
             ),

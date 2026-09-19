@@ -1,6 +1,6 @@
 //! Gmail REST wire types. Google sends int64 fields as JSON strings.
 
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Deserialize)]
 #[serde(untagged)]
@@ -177,6 +177,31 @@ pub struct SendAs {
     pub is_default: bool,
     #[serde(default)]
     pub is_primary: bool,
+    /// HTML, empty when the identity has none.
+    #[serde(default)]
+    pub signature: String,
+}
+
+/// `users.settings.vacation`. Times are epoch milliseconds sent as strings.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VacationSettings {
+    #[serde(default)]
+    pub enable_auto_reply: bool,
+    #[serde(default)]
+    pub response_subject: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub response_body_plain_text: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub response_body_html: Option<String>,
+    #[serde(default)]
+    pub restrict_to_contacts: bool,
+    #[serde(default)]
+    pub restrict_to_domain: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start_time: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub end_time: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

@@ -281,3 +281,92 @@ async fn authorize_runs_the_consent_flow() {
     assert_eq!(authorized.email, "me@example.com");
     assert_eq!(authorized.refresh_token, "rt-new");
 }
+
+#[tokio::test]
+async fn vacation_round_trips_through_gmail_settings() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("GET"))
+        .and(path(format!("{API}/settings/vacation")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "enableAutoReply": true,
+            "responseSubject": "Away",
+            "responseBodyHtml": "<div>Back on <b>Monday</b>.<br>Thanks &amp; bye</div>",
+            "restrictToContacts": true,
+            "startTime": "1700000000000"
+        })))
+        .mount(&server)
+        .await;
+    Mock::given(method("PUT"))
+        .and(path(format!("{API}/settings/vacation")))
+        .and(body_json(json!({
+            "enableAutoReply": false,
+            "responseSubject": "Away",
+            "responseBodyPlainText": "Back soon\n<ok>",
+            "responseBodyHtml": "Back soon<br>&lt;ok&gt;",
+            "restrictToContacts": false,
+            "restrictToDomain": false,
+            "endTime": "1800000000000"
+        })))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({})))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let client = client(&server);
+    let vacation = client.vacation().await.unwrap();
+    assert!(vacation.enabled && vacation.contacts_only);
+    assert_eq!(vacation.subject, "Away");
+    assert_eq!(vacation.body, "Back on Monday.\nThanks & bye");
+    assert_eq!(vacation.start, Some(1_700_000_000_000));
+    assert_eq!(vacation.end, None);
+
+    let update = mailrs_domain::Vacation {
+        enabled: false,
+        subject: "Away".into(),
+        body: "Back soon\n<ok>".into(),
+        contacts_only: false,
+        domain_only: false,
+        start: None,
+        end: Some(1_800_000_000_000),
+    };
+    client.set_vacation(&update).await.unwrap();
+}
+
+#[tokio::test]
+async fn a_missing_scope_is_reported_as_such() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("GET"))
+        .and(path(format!("{API}/settings/vacation")))
+        .respond_with(ResponseTemplate::new(403).set_body_json(json!({
+            "error": {"code": 403, "status": "PERMISSION_DENIED",
+                      "details": [{"reason": "ACCESS_TOKEN_SCOPE_INSUFFICIENT"}]}
+        })))
+        .mount(&server)
+        .await;
+    assert!(matches!(
+        client(&server).vacation().await,
+        Err(GmailError::MissingScope)
+    ));
+}
+
+#[tokio::test]
+async fn the_default_identity_signature_comes_from_send_as() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("GET"))
+        .and(path(format!("{API}/settings/sendAs")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"sendAs": [
+            {"sendAsEmail": "alias@example.com", "signature": "alias"},
+            {"sendAsEmail": "me@example.com", "isDefault": true,
+             "signature": "<div>Ann Lee<br>Maple &amp; Finch</div>"}
+        ]})))
+        .mount(&server)
+        .await;
+    let identities = client(&server).send_as().await.unwrap();
+    let default = identities.iter().find(|s| s.is_default).unwrap();
+    assert_eq!(
+        mailrs_gmail::html_to_text(&default.signature),
+        "Ann Lee\nMaple & Finch"
+    );
+}

@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use mailrs_gmail::{GMAIL_SCOPE, GmailError, LoopbackListener, OAuthClient, Pkce, parse_redirect};
+use mailrs_gmail::{
+    GMAIL_SCOPE, GmailError, LoopbackListener, OAuthClient, Pkce, SETTINGS_SCOPE, parse_redirect,
+};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -42,7 +44,8 @@ fn authorize_url_carries_pkce_and_offline_access() {
     assert_eq!(q["client_id"], "cid");
     assert_eq!(q["redirect_uri"], "http://127.0.0.1:5000");
     assert_eq!(q["response_type"], "code");
-    assert_eq!(q["scope"], GMAIL_SCOPE);
+    assert_eq!(q["scope"], format!("{GMAIL_SCOPE} {SETTINGS_SCOPE}"));
+    assert_eq!(q["include_granted_scopes"], "true");
     assert_eq!(q["code_challenge"], pkce.challenge);
     assert_eq!(q["code_challenge_method"], "S256");
     assert_eq!(q["state"], "st");

@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use base64::Engine;
 use base64::engine::general_purpose::{URL_SAFE_NO_PAD, URL_SAFE_NO_PAD_INDIFFERENT};
+use mailrs_domain::Vacation;
 use reqwest::header::RETRY_AFTER;
 use reqwest::{RequestBuilder, Response, StatusCode};
 use serde::de::DeserializeOwned;
@@ -11,9 +12,10 @@ use serde_json::json;
 use tokio::sync::Mutex;
 
 use crate::convert::{HistoryPage, history_page};
+use crate::convert::{html_to_text, text_to_html};
 use crate::model::{
     AttachmentBody, Draft, DraftList, HistoryList, LabelList, Message, MessagePage, Profile,
-    RemoteLabel, SendAs, SendAsList, Thread,
+    RemoteLabel, SendAs, SendAsList, Thread, VacationSettings,
 };
 use crate::oauth::{AccessToken, LoopbackListener, OAuthClient, Pkce, random_token};
 use crate::{GmailError, QuotaLimiter};
@@ -39,6 +41,7 @@ mod cost {
     pub const DRAFT_LIST: u32 = 5;
     pub const SEND_AS: u32 = 1;
     pub const ATTACHMENT: u32 = 5;
+    pub const SETTINGS: u32 = 1;
 }
 
 /// A Gmail client for one account.
@@ -266,6 +269,52 @@ impl GmailClient {
         Ok(list.send_as)
     }
 
+    /// The automatic reply. Needs the settings scope.
+    pub async fn vacation(&self) -> Result<Vacation, GmailError> {
+        let settings: VacationSettings = self
+            .call(cost::SETTINGS, || {
+                self.http().get(self.url("settings/vacation"))
+            })
+            .await?;
+        let body = match settings
+            .response_body_plain_text
+            .filter(|t| !t.trim().is_empty())
+        {
+            Some(text) => text,
+            None => html_to_text(settings.response_body_html.as_deref().unwrap_or_default()),
+        };
+        let time = |t: Option<String>| t.and_then(|t| t.parse().ok()).filter(|t: &i64| *t > 0);
+        Ok(Vacation {
+            enabled: settings.enable_auto_reply,
+            subject: settings.response_subject,
+            body,
+            contacts_only: settings.restrict_to_contacts,
+            domain_only: settings.restrict_to_domain,
+            start: time(settings.start_time),
+            end: time(settings.end_time),
+        })
+    }
+
+    /// Replaces the automatic reply. Needs the settings scope.
+    pub async fn set_vacation(&self, vacation: &Vacation) -> Result<(), GmailError> {
+        let settings = VacationSettings {
+            enable_auto_reply: vacation.enabled,
+            response_subject: vacation.subject.clone(),
+            response_body_plain_text: Some(vacation.body.clone()),
+            response_body_html: Some(text_to_html(&vacation.body)),
+            restrict_to_contacts: vacation.contacts_only,
+            restrict_to_domain: vacation.domain_only,
+            start_time: vacation.start.map(|t| t.to_string()),
+            end_time: vacation.end.map(|t| t.to_string()),
+        };
+        self.call_empty(cost::SETTINGS, || {
+            self.http()
+                .put(self.url("settings/vacation"))
+                .json(&settings)
+        })
+        .await
+    }
+
     /// The decoded content of one attachment.
     pub async fn attachment(
         &self,
@@ -384,6 +433,11 @@ async fn error_from_response(response: Response) -> GmailError {
         401 => GmailError::NeedsReauth,
         404 => GmailError::NotFound,
         429 => GmailError::RateLimited { retry_after },
+        403 if body.contains("ACCESS_TOKEN_SCOPE_INSUFFICIENT")
+            || body.contains("insufficientPermissions") =>
+        {
+            GmailError::MissingScope
+        }
         403 if body.contains("rateLimitExceeded") || body.contains("userRateLimitExceeded") => {
             GmailError::RateLimited { retry_after }
         }
