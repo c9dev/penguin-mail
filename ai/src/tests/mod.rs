@@ -1,6 +1,7 @@
 mod anthropic;
 mod bridge;
 mod claude_code;
+mod detect;
 mod openai;
 
 use std::sync::Mutex;
