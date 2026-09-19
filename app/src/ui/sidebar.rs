@@ -252,13 +252,10 @@ impl Sidebar {
         }
         if !extras.smart.is_empty() {
             self.list.append(&section_title("Smart Mailboxes"));
-            for (id, name) in &extras.smart {
-                let mailbox = Mailbox::Smart {
-                    id: id.clone(),
-                    name: name.clone(),
-                };
-                let row = self.add_mailbox(mailbox, name, "folder-saved-search-symbolic", 0);
-                smart_menu(&row, id);
+            for smart in &extras.smart {
+                let mailbox = Mailbox::Smart(smart.clone());
+                let row = self.add_mailbox(mailbox, &smart.name, "folder-saved-search-symbolic", 0);
+                smart_menu(&row, &smart.id);
             }
         }
         for (account, labels) in accounts {
@@ -439,8 +436,8 @@ pub const DRAG_MAIL: &str = "mailrs-mail";
 pub struct Extras {
     /// VIPs as address and name.
     pub vips: Vec<(String, String)>,
-    /// Smart mailboxes as id and name, in the user's order.
-    pub smart: Vec<(String, String)>,
+    /// Smart mailboxes in the user's order.
+    pub smart: Vec<mailrs_domain::SmartMailbox>,
     /// Names shown instead of account addresses.
     pub names: HashMap<AccountId, String>,
 }
@@ -508,7 +505,7 @@ fn takes_mail(mailbox: &Mailbox) -> bool {
         | Mailbox::Reminders
         | Mailbox::FollowUp
         | Mailbox::Vips { .. }
-        | Mailbox::Smart { .. } => false,
+        | Mailbox::Smart(_) => false,
     }
 }
 

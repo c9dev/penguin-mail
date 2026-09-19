@@ -6,13 +6,11 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gio, glib};
-use mailrs_domain::{ThreadSummary, system_label};
-use mailrs_store::{follow_ups, threads};
+use mailrs_domain::system_label;
+use mailrs_store::follow_ups;
 
 use super::{MainWindow, Target};
 use crate::ui::Mailbox;
-
-const DAY: i64 = 24 * 60 * 60 * 1000;
 
 /// "2 sent messages have had no reply" with Review and close buttons.
 /// Closing it hides it until the app quits.
@@ -133,61 +131,6 @@ impl MainWindow {
         self.follow_follow_ups();
     }
 
-    /// Lists conversations waiting on a reply, newest first.
-    pub(super) fn load_follow_ups(self: &Rc<Self>, generation: u64) {
-        let now = chrono::Utc::now().timestamp_millis();
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            let loaded = this
-                .core
-                .read(move |c| {
-                    let mut rows = Vec::new();
-                    for item in follow_ups::waiting(c, now)? {
-                        let stored = threads::get_thread(c, item.account_id, &item.thread_id)?;
-                        rows.push((item, stored));
-                    }
-                    Ok(rows)
-                })
-                .await;
-            if this.list_generation.get() != generation {
-                return;
-            }
-            let Ok(loaded) = loaded else {
-                return this.toast("Could not load follow-ups");
-            };
-            let rows: Vec<ThreadSummary> = loaded
-                .into_iter()
-                .map(|(item, stored)| {
-                    let mut row = stored.unwrap_or_else(|| ThreadSummary {
-                        account_id: item.account_id,
-                        id: item.thread_id.clone(),
-                        subject: item.subject.clone(),
-                        message_count: 1,
-                        ..ThreadSummary::default()
-                    });
-                    let names: Vec<&str> = item.to.iter().map(|a| a.display()).collect();
-                    row.from = if names.is_empty() {
-                        "No recipients".into()
-                    } else {
-                        format!("To {}", names.join(", "))
-                    };
-                    row.snippet = waited(now - item.sent_at);
-                    row.last_message_at = item.sent_at;
-                    row
-                })
-                .collect();
-            let subtitle = match rows.len() {
-                0 => String::new(),
-                1 => "1 conversation".into(),
-                n => format!("{n} conversations"),
-            };
-            this.list
-                .set_rows(rows, "No Follow-Ups", "mail-reply-sender-symbolic");
-            this.follow_selection();
-            this.list.set_title("Follow Up", &subtitle);
-        });
-    }
-
     /// Stops suggesting the targets. The mail itself stays where it is.
     pub(super) fn dismiss_follow_ups(self: &Rc<Self>, targets: Vec<Target>) {
         if targets.is_empty() {
@@ -268,24 +211,5 @@ impl MainWindow {
         if *self.mailbox.borrow() == Mailbox::FollowUp {
             self.reload_list();
         }
-    }
-}
-
-/// "Sent 5 days ago, no reply yet".
-fn waited(elapsed: i64) -> String {
-    match elapsed / DAY {
-        1 => "Sent yesterday, no reply yet".into(),
-        days => format!("Sent {days} days ago, no reply yet"),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{DAY, waited};
-
-    #[test]
-    fn the_wait_reads_in_whole_days() {
-        assert_eq!(waited(5 * DAY + 3), "Sent 5 days ago, no reply yet");
-        assert_eq!(waited(DAY), "Sent yesterday, no reply yet");
     }
 }

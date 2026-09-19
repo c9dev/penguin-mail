@@ -11,8 +11,7 @@ use mailrs_domain::{
     Account, Category, Filter, FlagColor, Folder, LabelKind, ThreadSummary, Vacation, system_label,
 };
 use mailrs_store::messages;
-use mailrs_store::threads::{self, ThreadFilter};
-use mailrs_sync::{History, MailAction, Outcome, TriageAction};
+use mailrs_sync::{History, MailAction, Mailbox, Outcome, TriageAction, View};
 use serde_json::{Value, json};
 
 use super::{MainWindow, Target};
@@ -20,9 +19,8 @@ use crate::compose::{self, Draft, SendWhen};
 use crate::core::Sync;
 use crate::rules::{RuleForm, describe_action, describe_criteria};
 use crate::settings::{Choice, ColorScheme, MarkRead, RemoteImages, Settings, TextSize, UndoSend};
-use crate::smart::{Condition, SmartMailbox};
-use crate::ui::summarize_search;
 use crate::ui::vacation::missing_scope;
+use mailrs_domain::smart::{Condition, SmartMailbox};
 
 type ToolResult = Result<Value, String>;
 
@@ -255,7 +253,7 @@ impl MainWindow {
     }
 
     async fn tool_list(self: &Rc<Self>, input: &Value) -> ToolResult {
-        let mailbox = required(input, "mailbox")?;
+        let name = required(input, "mailbox")?;
         let limit = input
             .get("limit")
             .and_then(Value::as_u64)
@@ -266,62 +264,30 @@ impl MainWindow {
             Some(email) => Some(self.account_named(&email)?),
             None => None,
         };
-        let folder = match mailbox.as_str() {
-            "junk" => Some(Folder::Junk),
-            "trash" => Some(Folder::Trash),
-            "all_mail" => Some(Folder::AllMail),
-            _ => None,
+        let category = match text(input, "category") {
+            Some(key) => Some(named_category(&key)?),
+            None => None,
         };
-        let mut rows: Vec<ThreadSummary> = if mailbox == "follow_up" {
-            let scope_id = scope.as_ref().map(|a| a.id);
-            let now = Local::now().timestamp_millis();
-            self.core
-                .read(move |c| {
-                    let mut rows = Vec::new();
-                    for item in mailrs_store::follow_ups::waiting(c, now)? {
-                        if scope_id.is_some_and(|id| id != item.account_id) {
-                            continue;
-                        }
-                        if let Some(row) = threads::get_thread(c, item.account_id, &item.thread_id)?
-                        {
-                            rows.push(row);
-                        }
-                    }
-                    Ok(rows)
-                })
-                .await
-                .map_err(|e| e.to_string())?
-        } else if let Some(folder) = folder {
-            let mut query = folder.query().to_string();
-            if unread_only {
-                query.push_str(" is:unread");
-            }
-            self.remote_rows(&query, scope.as_ref(), limit).await?
-        } else {
-            let mut filters = self.list_filters(&mailbox, text(input, "label"), scope.as_ref())?;
-            if let Some(key) = text(input, "category") {
-                let (any, none) = named_category(&key)?.labels();
-                filters = filters
-                    .into_iter()
-                    .map(|f| f.with_labels(any, none))
-                    .collect();
-            }
-            let fetch = limit * if unread_only { 4 } else { 1 };
-            let found = self
+        let mailboxes = self.named_mailboxes(&name, text(input, "label"), scope.as_ref())?;
+        // Unread mail is picked out of the rows, so ask for extra.
+        let view = View {
+            category,
+            limit: Some(limit * if unread_only { 4 } else { 1 }),
+            ..self.view()
+        };
+        let mut rows: Vec<ThreadSummary> = Vec::new();
+        for mailbox in mailboxes {
+            let listed = self
                 .core
-                .read(move |c| {
-                    let mut out = Vec::new();
-                    for filter in &filters {
-                        out.extend(threads::list_threads(c, filter, 0, fetch as i64)?);
-                    }
-                    Ok(out)
-                })
+                .list(mailbox, self.scope(), view.clone(), 0)
                 .await
                 .map_err(|e| e.to_string())?;
-            let mut found = found;
-            found.sort_by_key(|r| std::cmp::Reverse(r.last_message_at));
-            found
-        };
+            if let Some(problem) = listed.notices.first() {
+                return Err(problem.clone());
+            }
+            rows.extend(listed.rows);
+        }
+        rows.sort_by_key(|r| std::cmp::Reverse(r.last_message_at));
         if unread_only {
             rows.retain(|r| r.unread);
         }
@@ -332,38 +298,58 @@ impl MainWindow {
         }))
     }
 
-    /// Store filters for a mailbox name, one per account for labels.
-    fn list_filters(
+    /// The mailboxes a tool's name stands for. A label with no account
+    /// named becomes one mailbox per account that has it.
+    fn named_mailboxes(
         &self,
-        mailbox: &str,
+        name: &str,
         label: Option<String>,
         scope: Option<&Account>,
-    ) -> Result<Vec<ThreadFilter>, String> {
-        let at = |label: &str| match scope {
-            Some(account) => ThreadFilter::account(account.id, label),
-            None => ThreadFilter::unified(label),
+    ) -> Result<Vec<Mailbox>, String> {
+        let at = |label: &'static str| match scope {
+            Some(account) => Mailbox::Label {
+                account_id: account.id,
+                label_id: label.into(),
+                name: crate::ui::account_label_name(label).into(),
+            },
+            None => Mailbox::Unified(label),
         };
-        Ok(match mailbox {
+        let folder = |folder| Mailbox::Folder {
+            account_id: scope.map(|a| a.id),
+            folder,
+        };
+        Ok(match name {
             "inbox" => vec![at(system_label::INBOX)],
             "flagged" => vec![at(system_label::STARRED)],
             "sent" => vec![at(system_label::SENT)],
             "drafts" => vec![at(system_label::DRAFT)],
-            "vips" => vec![at("").from_senders(self.settings().vips.keys().cloned().collect())],
+            "follow_up" => vec![Mailbox::FollowUp],
+            "junk" => vec![folder(Folder::Junk)],
+            "trash" => vec![folder(Folder::Trash)],
+            "all_mail" => vec![folder(Folder::AllMail)],
+            "vips" => vec![Mailbox::Vips {
+                emails: self.settings().vips.keys().cloned().collect(),
+                name: "VIPs".into(),
+            }],
             "label" => {
-                let name = label.ok_or("`label` is missing")?;
+                let wanted = label.ok_or("`label` is missing")?;
                 let labels = self.labels.borrow();
-                let found: Vec<ThreadFilter> = labels
+                let found: Vec<Mailbox> = labels
                     .iter()
                     .filter(|(id, _)| scope.is_none_or(|a| a.id == **id))
                     .flat_map(|(id, all)| {
                         all.iter()
-                            .filter(|l| l.name.eq_ignore_ascii_case(&name))
-                            .map(|l| ThreadFilter::account(*id, l.id.clone()))
+                            .filter(|l| l.name.eq_ignore_ascii_case(&wanted))
+                            .map(|l| Mailbox::Label {
+                                account_id: *id,
+                                label_id: l.id.clone(),
+                                name: l.name.clone(),
+                            })
                             .collect::<Vec<_>>()
                     })
                     .collect();
                 if found.is_empty() {
-                    return Err(format!("There is no label called {name}."));
+                    return Err(format!("There is no label called {wanted}."));
                 }
                 found
             }
@@ -378,26 +364,24 @@ impl MainWindow {
         scope: Option<&Account>,
         limit: usize,
     ) -> Result<Vec<ThreadSummary>, String> {
-        let accounts: Vec<Account> = match scope {
-            Some(account) => vec![account.clone()],
-            None => self.accounts.borrow().clone(),
+        let mailbox = Mailbox::Search {
+            query: query.to_string(),
+            account_id: scope.map(|a| a.id),
         };
-        let mut hits = Vec::new();
-        for account in accounts {
-            let Some(sync) = self.core.account(account.id) else {
-                continue;
-            };
-            let query = query.to_string();
-            let found = self
-                .core
-                .call(async move { sync.search(&query, limit).await })
-                .await
-                .map_err(|e| format!("Search failed for {}: {e}", account.email))?;
-            hits.extend(found);
+        let view = View {
+            threading: true,
+            limit: Some(limit),
+            ..self.view()
+        };
+        let listed = self
+            .core
+            .list(mailbox, self.scope(), view, 0)
+            .await
+            .map_err(|e| e.to_string())?;
+        match listed.notices.first() {
+            Some(problem) => Err(problem.clone()),
+            None => Ok(listed.rows),
         }
-        let mut rows = summarize_search(hits, true);
-        rows.truncate(limit);
-        Ok(rows)
     }
 
     async fn tool_search(self: &Rc<Self>, input: &Value) -> ToolResult {

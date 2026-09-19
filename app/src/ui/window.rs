@@ -14,13 +14,13 @@ use mailrs_domain::{
     Account, AccountId, AccountState, ChangeEvent, Folder, Label, MessageBody, MessageMeta, Target,
     ThreadSummary, system_label,
 };
-use mailrs_store::{accounts, labels, messages, threads};
-use mailrs_sync::{History, MailAction, Outcome, TriageAction};
+use mailrs_store::{accounts, labels, messages};
+use mailrs_sync::{History, Listing, MailAction, Outcome, Scope, TriageAction, View};
 
 use super::conversation::{Action, ConversationView, OpenThread};
 use super::sidebar::Sidebar;
 use super::thread_list::{Picked, ThreadList};
-use super::{FolderLook, Mailbox, summarize_search, welcome};
+use super::{Mailbox, welcome};
 use crate::app::App;
 use crate::assistant::ToolRequest;
 use crate::compose::{self, Draft, OutgoingAttachment, ReplyKind};
@@ -62,7 +62,15 @@ pub struct MainWindow {
     before_search: RefCell<Mailbox>,
     accounts: RefCell<Vec<Account>>,
     refresh_queued: Cell<bool>,
+    /// A queued refresh that names no threads, so the list reloads whole.
+    refresh_all: Cell<bool>,
+    /// Threads a queued refresh names, to splice into the list in place.
+    refresh_threads: RefCell<Vec<(AccountId, String)>>,
     list_generation: Cell<u64>,
+    /// The mailbox holds rows past the ones loaded.
+    more_rows: Cell<bool>,
+    /// A page of older rows is on its way.
+    loading_more: Cell<bool>,
     authorizing: Cell<bool>,
     labels: RefCell<HashMap<AccountId, Vec<Label>>>,
     assistant: Rc<super::assistant::AssistantPane>,
@@ -258,7 +266,11 @@ impl MainWindow {
                 before_search: RefCell::new(Mailbox::Unified(system_label::INBOX)),
                 accounts: RefCell::new(Vec::new()),
                 refresh_queued: Cell::new(false),
+                refresh_all: Cell::new(false),
+                refresh_threads: RefCell::new(Vec::new()),
                 list_generation: Cell::new(0),
+                more_rows: Cell::new(false),
+                loading_more: Cell::new(false),
                 authorizing: Cell::new(false),
                 labels: RefCell::new(HashMap::new()),
                 assistant,
@@ -283,6 +295,12 @@ impl MainWindow {
         window.list.connect_open(move |row| {
             if let Some(win) = weak.upgrade() {
                 win.open_in_window(row);
+            }
+        });
+        let weak = Rc::downgrade(&window);
+        window.list.connect_more(move || {
+            if let Some(win) = weak.upgrade() {
+                win.load_more();
             }
         });
         window.install_actions();
@@ -381,26 +399,44 @@ impl MainWindow {
             ChangeEvent::AccountStateChanged { .. } | ChangeEvent::LabelsChanged { .. } => {
                 self.refresh_accounts()
             }
-            ChangeEvent::ThreadsChanged { .. } | ChangeEvent::NewMail { .. } => {
-                self.queue_refresh()
+            ChangeEvent::ThreadsChanged {
+                account_id,
+                thread_ids,
+            } => {
+                let changed = thread_ids.iter().map(|id| (*account_id, id.clone()));
+                self.refresh_threads.borrow_mut().extend(changed);
+                self.queue(thread_ids.is_empty());
             }
+            ChangeEvent::NewMail { .. } => self.queue_refresh(),
             ChangeEvent::WriteFailed { message, .. } => self.toast(message),
         }
     }
 
-    /// Coalesces bursts of change events into one refresh.
+    /// Refreshes the counts and loads the whole list again.
     fn queue_refresh(self: &Rc<Self>) {
+        self.queue(true);
+    }
+
+    /// Coalesces bursts of change events into one refresh. With `all` the
+    /// list reloads; otherwise the named threads are re-read on their own,
+    /// which keeps a change event off the 10,000-row query.
+    fn queue(self: &Rc<Self>, all: bool) {
+        self.refresh_all.set(self.refresh_all.get() || all);
         if self.refresh_queued.replace(true) {
             return;
         }
         let weak = Rc::downgrade(self);
         glib::timeout_add_local_once(std::time::Duration::from_millis(150), move || {
-            if let Some(win) = weak.upgrade() {
-                win.refresh_queued.set(false);
-                win.refresh_counts();
+            let Some(win) = weak.upgrade() else { return };
+            win.refresh_queued.set(false);
+            let changed = std::mem::take(&mut *win.refresh_threads.borrow_mut());
+            win.refresh_counts();
+            if win.refresh_all.replace(false) || changed.is_empty() {
                 win.reload_list();
-                win.refresh_open_thread();
+            } else {
+                win.splice_changed(changed);
             }
+            win.refresh_open_thread();
         });
     }
 
@@ -476,54 +512,48 @@ impl MainWindow {
         });
     }
 
+    /// What the sidebar and the category switcher show. Two grouped
+    /// queries replace the one-per-mailbox counting this used to do.
     fn refresh_counts(self: &Rc<Self>) {
         let mailboxes = self.sidebar.mailboxes();
-        let follow_ups = self.settings().suggest_follow_ups;
-        let now = chrono::Utc::now().timestamp_millis();
+        let shown = self.mailbox.borrow().clone();
+        let view = self.view();
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let counts = this
-                .core
-                .read(move |c| {
-                    let mut counts = HashMap::new();
-                    let waiting = if follow_ups {
-                        mailrs_store::follow_ups::waiting(c, now)?.len() as i64
-                    } else {
-                        0
-                    };
-                    counts.insert(Mailbox::FollowUp, waiting);
-                    counts.insert(
-                        Mailbox::Scheduled,
-                        mailrs_store::scheduled::list(c)?.len() as i64,
-                    );
-                    counts.insert(
-                        Mailbox::Reminders,
-                        mailrs_store::reminders::list(c)?.len() as i64,
-                    );
-                    for mailbox in mailboxes {
-                        let Some(filter) = mailbox.filter() else {
-                            continue;
-                        };
-                        let count = if mailbox.counts_unread() {
-                            threads::unread_threads(c, &filter)?
-                        } else {
-                            threads::count_threads(c, &filter)?
-                        };
-                        counts.insert(mailbox, count);
-                    }
-                    Ok(counts)
-                })
-                .await;
-            if let Ok(counts) = counts {
-                this.sidebar.set_counts(&counts);
-                let waiting = counts.get(&Mailbox::FollowUp).copied().unwrap_or(0);
-                this.set_follow_up_count(waiting as usize);
-            }
+            let Ok(counts) = this.core.counts(mailboxes, shown, view).await else {
+                return;
+            };
+            this.sidebar.set_counts(&counts.mailboxes);
+            let waiting = counts
+                .mailboxes
+                .get(&Mailbox::FollowUp)
+                .copied()
+                .unwrap_or(0);
+            this.set_follow_up_count(waiting as usize);
+            this.set_category_counts(&counts.categories);
         });
-        self.refresh_category_counts();
     }
 
     // ---- Mailboxes and the thread list ---------------------------------
+
+    /// The accounts a listing may read, in sidebar order.
+    fn scope(&self) -> Scope {
+        Scope::over(self.accounts.borrow().clone())
+    }
+
+    /// The settings that change what a mailbox lists.
+    fn view(&self) -> View {
+        let settings = self.settings();
+        View {
+            threading: settings.threading,
+            category: settings
+                .inbox_categories
+                .then(|| self.categories.chosen.get()),
+            follow_ups: settings.suggest_follow_ups,
+            now: chrono::Utc::now().timestamp_millis(),
+            limit: None,
+        }
+    }
 
     fn show_mailbox(self: &Rc<Self>, mailbox: Mailbox) {
         if !matches!(mailbox, Mailbox::Search { .. }) && self.list.search_open() {
@@ -544,82 +574,100 @@ impl MainWindow {
         self.conversation.set_folder(mailbox.folder());
         self.follow_categories();
         self.follow_follow_ups();
-        match mailbox {
-            Mailbox::Folder { account_id, folder } => {
-                let (title, icon) = empty_state(&mailbox);
-                self.fetch_remote(folder.query().into(), account_id, 100, title, icon);
-            }
-            Mailbox::Smart { id, .. } => self.show_smart(&id),
-            _ => self.reload_list(),
-        }
+        self.reload_list();
     }
 
-    /// Fetches a folder that lives only in Gmail again.
+    /// Fetches a folder or a smart mailbox that lives only in Gmail again.
     fn reload_folder(self: &Rc<Self>) {
-        let mailbox = self.mailbox.borrow().clone();
-        if let Mailbox::Smart { id, .. } = &mailbox {
-            return self.show_smart(id);
-        }
-        if let Mailbox::Folder { account_id, folder } = mailbox {
-            let (title, icon) = empty_state(&mailbox);
-            self.fetch_remote(folder.query().into(), account_id, 100, title, icon);
+        if matches!(
+            *self.mailbox.borrow(),
+            Mailbox::Folder { .. } | Mailbox::Smart(_)
+        ) {
+            self.reload_list();
         }
     }
 
+    /// Loads the first page of the mailbox on screen.
     fn reload_list(self: &Rc<Self>) {
         let mailbox = self.mailbox.borrow().clone();
-        if matches!(
-            mailbox,
-            Mailbox::Scheduled | Mailbox::Reminders | Mailbox::FollowUp
-        ) {
-            let generation = self.list_generation.get() + 1;
-            self.list_generation.set(generation);
-            return match mailbox {
-                Mailbox::Reminders => self.load_reminders(generation),
-                Mailbox::FollowUp => self.load_follow_ups(generation),
-                _ => self.load_scheduled(generation),
-            };
-        }
-        let Some(filter) = mailbox.filter().map(|f| self.in_category(&mailbox, f)) else {
-            return;
-        };
         let generation = self.list_generation.get() + 1;
         self.list_generation.set(generation);
-        let threaded = self.settings().threading;
+        self.loading_more.set(false);
+        if mailbox.is_remote() {
+            self.list.show_loading();
+        }
+        let (scope, view) = (self.scope(), self.view());
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let loaded = this
-                .core
-                .read(move |c| {
-                    Ok(if threaded {
-                        (
-                            threads::list_threads(c, &filter, 0, 10_000)?,
-                            threads::unread_threads(c, &filter)?,
-                        )
-                    } else {
-                        (
-                            threads::list_messages(c, &filter, 0, 10_000)?,
-                            threads::unread_messages(c, &filter)?,
-                        )
-                    })
-                })
-                .await;
+            let loaded = this.core.list(mailbox, scope, view, 0).await;
             if this.list_generation.get() != generation {
                 return;
             }
             match loaded {
-                Ok((rows, unread)) => {
-                    let (title, icon) = empty_state(&mailbox);
-                    this.list.set_rows(rows, title, icon);
-                    this.follow_selection();
-                    let subtitle = if unread > 0 {
-                        format!("{unread} unread")
-                    } else {
-                        String::new()
-                    };
-                    this.list.set_title(&mailbox.title(), &subtitle);
+                Ok(listing) => this.show_listing(listing),
+                Err(err) => this.toast(&format!("Could not load mail: {err}")),
+            }
+        });
+    }
+
+    /// Puts a freshly loaded page on screen.
+    fn show_listing(self: &Rc<Self>, listing: Listing) {
+        for notice in &listing.notices {
+            self.toast(notice);
+        }
+        self.more_rows.set(listing.more);
+        let rows = listing.rows.into_iter().map(Rc::new).collect();
+        self.list
+            .set_rows(rows, listing.empty.title, listing.empty.icon);
+        self.follow_selection();
+        self.list.set_title(&listing.title, &listing.subtitle);
+    }
+
+    /// Loads the next page once the user scrolls near the end.
+    fn load_more(self: &Rc<Self>) {
+        if !self.more_rows.get() || self.loading_more.replace(true) {
+            return;
+        }
+        let mailbox = self.mailbox.borrow().clone();
+        let generation = self.list_generation.get();
+        let (scope, view, from) = (self.scope(), self.view(), self.list.loaded());
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let loaded = this.core.list(mailbox, scope, view, from).await;
+            if this.list_generation.get() != generation {
+                return;
+            }
+            this.loading_more.set(false);
+            match loaded {
+                Ok(listing) => {
+                    this.more_rows.set(listing.more);
+                    this.list
+                        .append(listing.rows.into_iter().map(Rc::new).collect());
                 }
                 Err(err) => this.toast(&format!("Could not load mail: {err}")),
+            }
+        });
+    }
+
+    /// Re-reads the threads a change event named and puts them back in the
+    /// list in place, instead of listing the whole mailbox again.
+    fn splice_changed(self: &Rc<Self>, changed: Vec<(AccountId, String)>) {
+        let mailbox = self.mailbox.borrow().clone();
+        let generation = self.list_generation.get();
+        let view = self.view();
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let fresh = this
+                .core
+                .changed_rows(mailbox, changed.clone(), view)
+                .await
+                .unwrap_or(None);
+            if this.list_generation.get() != generation {
+                return;
+            }
+            match fresh {
+                Some(fresh) => this.list.replace_threads(&changed, fresh),
+                None => this.reload_list(),
             }
         });
     }
@@ -640,61 +688,7 @@ impl MainWindow {
         self.list.set_title("Search", &query);
         self.conversation.clear();
         self.conversation.set_folder(None);
-        self.fetch_remote(query, scope, 50, "No Results", "system-search-symbolic");
-    }
-
-    /// Lists what a Gmail search finds, in every account or in `scope`.
-    fn fetch_remote(
-        self: &Rc<Self>,
-        query: String,
-        scope: Option<AccountId>,
-        limit: usize,
-        empty_title: &'static str,
-        empty_icon: &'static str,
-    ) {
-        self.list_generation.set(self.list_generation.get() + 1);
-        let generation = self.list_generation.get();
-        self.list.show_loading();
-        let targets: Vec<Account> = self
-            .accounts
-            .borrow()
-            .iter()
-            .filter(|a| scope.is_none_or(|id| a.id == id))
-            .cloned()
-            .collect();
-        let threaded = self.settings().threading;
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            let searches = targets.iter().map(|account| {
-                let (core, query) = (Rc::clone(&this.core), query.clone());
-                let sync = core.account(account.id);
-                async move {
-                    match sync {
-                        Some(sync) => {
-                            core.call(async move { sync.search(&query, limit).await })
-                                .await
-                        }
-                        None => Ok(Vec::new()),
-                    }
-                }
-            });
-            let results = futures::future::join_all(searches).await;
-            if this.list_generation.get() != generation {
-                return;
-            }
-            let mut hits = Vec::new();
-            for (account, result) in targets.iter().zip(results) {
-                match result {
-                    Ok(found) => hits.extend(found),
-                    Err(err) => {
-                        this.toast(&format!("Could not load mail for {}: {err}", account.email))
-                    }
-                }
-            }
-            this.list
-                .set_rows(summarize_search(hits, threaded), empty_title, empty_icon);
-            this.follow_selection();
-        });
+        self.reload_list();
     }
 
     // ---- Opening threads -------------------------------------------------
@@ -2277,8 +2271,13 @@ impl MainWindow {
                     list.rebind();
                 });
             }
-            if let Mailbox::Smart { id, .. } = self.mailbox.borrow().clone() {
-                self.show_smart(&id);
+            // The mailbox on screen carries its own conditions, so an edit
+            // has to put the saved ones back before listing it again.
+            if let Mailbox::Smart(shown) = self.mailbox.borrow().clone()
+                && let Some(saved) = after.smart_mailboxes.iter().find(|m| m.id == shown.id)
+            {
+                *self.mailbox.borrow_mut() = Mailbox::Smart(saved.clone());
+                self.reload_list();
             }
         }
         if before.vips != after.vips {
@@ -2421,34 +2420,6 @@ fn sender_is_vip(view: &ConversationView, settings: &Settings) -> bool {
             .is_some_and(|a| settings.is_vip(&a.email))
     })
     .unwrap_or(false)
-}
-
-fn empty_state(mailbox: &Mailbox) -> (&'static str, &'static str) {
-    let label = match mailbox {
-        Mailbox::Unified(label) => *label,
-        Mailbox::Label { label_id, .. } => label_id.as_str(),
-        Mailbox::Search { .. } => return ("No Results", "system-search-symbolic"),
-        Mailbox::Scheduled => return ("Nothing Scheduled", "mail-send-symbolic"),
-        Mailbox::Reminders => return ("No Reminders", "alarm-symbolic"),
-        Mailbox::FollowUp => return ("No Follow-Ups", "mail-reply-sender-symbolic"),
-        Mailbox::Flag(_) => return ("No Flagged Mail", "penguin-mail-flag-symbolic"),
-        Mailbox::Vips { .. } => return ("No Mail from VIPs", "starred-symbolic"),
-        Mailbox::Smart { .. } => return ("No Matching Mail", "folder-saved-search-symbolic"),
-        Mailbox::Folder { folder, .. } => {
-            return match folder {
-                Folder::Junk => ("No Junk", folder.icon()),
-                Folder::Trash => ("Trash Is Empty", folder.icon()),
-                Folder::AllMail => ("No Mail", folder.icon()),
-            };
-        }
-    };
-    match label {
-        system_label::INBOX => ("Inbox Zero", "penguin-mail-inbox-symbolic"),
-        system_label::STARRED => ("No Starred Mail", "starred-symbolic"),
-        system_label::SENT => ("No Sent Mail", "mail-send-symbolic"),
-        system_label::DRAFT => ("No Drafts", "document-edit-symbolic"),
-        _ => ("No Mail", "penguin-mail-tag-symbolic"),
-    }
 }
 
 /// `dir/name`, or `dir/name (2).ext` and so on when that exists.

@@ -3,11 +3,9 @@
 use std::rc::Rc;
 
 use gtk::glib;
-use mailrs_domain::ThreadSummary;
-use mailrs_store::scheduled::{self, Scheduled};
+use mailrs_store::scheduled;
 
 use super::{MainWindow, Target};
-use crate::format::future_date;
 use crate::ui::Mailbox;
 
 impl MainWindow {
@@ -36,35 +34,6 @@ impl MainWindow {
         ) {
             self.reload_list();
         }
-    }
-
-    /// Lists scheduled messages, soonest first.
-    pub(super) fn load_scheduled(self: &Rc<Self>, generation: u64) {
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            let loaded = this.core.read(scheduled::list).await;
-            if this.list_generation.get() != generation {
-                return;
-            }
-            match loaded {
-                Ok(items) => {
-                    let now = chrono::Local::now();
-                    let rows: Vec<ThreadSummary> =
-                        items.iter().map(|item| row(item, now)).collect();
-                    let count = rows.len();
-                    this.list
-                        .set_rows(rows, "Nothing Scheduled", "alarm-symbolic");
-                    this.follow_selection();
-                    let subtitle = match count {
-                        0 => String::new(),
-                        1 => "1 message".into(),
-                        n => format!("{n} messages"),
-                    };
-                    this.list.set_title("Send Later", &subtitle);
-                }
-                Err(err) => this.toast(&format!("Could not load scheduled mail: {err}")),
-            }
-        });
     }
 
     /// Stops scheduled sends. The drafts stay in Gmail's Drafts.
@@ -101,27 +70,5 @@ impl MainWindow {
                 Err(err) => this.toast(&format!("Could not cancel: {err}")),
             }
         });
-    }
-}
-
-fn row(item: &Scheduled, now: chrono::DateTime<chrono::Local>) -> ThreadSummary {
-    ThreadSummary {
-        account_id: item.account_id,
-        id: item.thread_id.clone(),
-        message_id: Some(item.message_id.clone()),
-        last_message_at: item.send_at,
-        subject: item.subject.clone(),
-        snippet: format!("Sends {}", future_date(item.send_at, now)),
-        from: if item.recipients.is_empty() {
-            "No recipients".into()
-        } else {
-            format!("To {}", item.recipients)
-        },
-        message_count: 1,
-        unread: false,
-        starred: false,
-        has_attachments: false,
-        flag_color: None,
-        from_email: String::new(),
     }
 }

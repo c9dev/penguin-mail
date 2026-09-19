@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 
-use crate::smart::{Condition, Field, SmartMailbox};
+use mailrs_domain::smart::{Condition, Field, SmartMailbox};
 
 struct ConditionRow {
     row: adw::ActionRow,

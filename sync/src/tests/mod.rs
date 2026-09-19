@@ -5,10 +5,12 @@ mod connect;
 mod engine;
 mod incremental;
 mod labels;
+mod mailbox;
 mod outbox;
 mod thread_open;
 mod triage;
 
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -16,8 +18,19 @@ use mailrs_domain::{AccountId, ChangeEvent, ThreadSummary};
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{Db, accounts, messages};
 
-use crate::AccountSync;
 use crate::fake::FakeGmail;
+use crate::{AccountSync, Accounts};
+
+/// The accounts a test connects, by id.
+pub(crate) struct Connected(pub HashMap<AccountId, Arc<AccountSync<FakeGmail>>>);
+
+impl Accounts for Connected {
+    type Api = FakeGmail;
+
+    fn account(&self, account_id: AccountId) -> Option<Arc<AccountSync<FakeGmail>>> {
+        self.0.get(&account_id).cloned()
+    }
+}
 
 pub(crate) struct Harness {
     pub fake: Arc<FakeGmail>,

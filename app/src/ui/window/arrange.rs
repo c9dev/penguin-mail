@@ -46,11 +46,7 @@ impl MainWindow {
                 .iter()
                 .map(|(e, n)| (e.clone(), n.clone()))
                 .collect(),
-            smart: settings
-                .smart_mailboxes
-                .iter()
-                .map(|m| (m.id.clone(), m.name.clone()))
-                .collect(),
+            smart: settings.smart_mailboxes.clone(),
             names: settings
                 .account_names
                 .iter()
@@ -58,31 +54,6 @@ impl MainWindow {
                 .collect(),
         };
         (sorted, extras)
-    }
-
-    /// Loads a smart mailbox's search.
-    pub(super) fn show_smart(self: &Rc<Self>, id: &str) {
-        let settings = self.settings();
-        let Some(mailbox) = settings.smart_mailboxes.iter().find(|m| m.id == id) else {
-            return;
-        };
-        let Some(query) = mailbox.query() else {
-            return self.toast("This smart mailbox has no conditions");
-        };
-        let scope = mailbox.account.as_ref().and_then(|email| {
-            self.accounts
-                .borrow()
-                .iter()
-                .find(|a| a.email.eq_ignore_ascii_case(email))
-                .map(|a| a.id)
-        });
-        self.fetch_remote(
-            query,
-            scope,
-            100,
-            "No Matching Mail",
-            "folder-saved-search-symbolic",
-        );
     }
 
     pub(super) fn edit_smart(self: &Rc<Self>, id: Option<String>) {
@@ -105,15 +76,13 @@ impl MainWindow {
             else {
                 return;
             };
-            let id = mailbox.id.clone();
-            let name = mailbox.name.clone();
+            let shown = Mailbox::Smart(mailbox.clone());
             app.update_settings(move |s| {
                 match s.smart_mailboxes.iter_mut().find(|m| m.id == mailbox.id) {
                     Some(slot) => *slot = mailbox,
                     None => s.smart_mailboxes.push(mailbox),
                 }
             });
-            let shown = Mailbox::Smart { id, name };
             win.sidebar.select(&shown);
             win.show_mailbox(shown);
         });

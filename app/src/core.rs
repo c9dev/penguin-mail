@@ -20,8 +20,9 @@ use mailrs_gmail::{
 use mailrs_store::{Db, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::{
-    AccountClient, AccountSync, Accounts, Failure, GmailApi, History, MailAction, MailActions,
-    Outcome, SavedDraft, SyncEngine, connect_account, now_millis,
+    AccountClient, AccountSync, Accounts, Counts, Failure, GmailApi, History, Listing, MailAction,
+    MailActions, Mailbox, Mailboxes, Outcome, SavedDraft, Scope, SyncEngine, View, connect_account,
+    now_millis,
 };
 
 use crate::demo::{self, DemoApi};
@@ -157,6 +158,8 @@ impl GmailApi for Api {
 pub type Engine = SyncEngine<Api>;
 pub type Sync = AccountSync<Api>;
 pub type Actions = MailActions<RunningEngine>;
+/// Reads mailboxes for the window and the assistant alike.
+pub type Lists = Mailboxes<RunningEngine>;
 
 /// The engine that runs now. Changing the sync settings replaces it, so mail
 /// actions look accounts up here rather than keep one engine.
@@ -191,6 +194,7 @@ pub struct Core {
     pub demo: bool,
     engine: Arc<RunningEngine>,
     actions: Arc<Actions>,
+    lists: Arc<Lists>,
     config: RefCell<Option<Config>>,
     tokens: Arc<dyn TokenStore>,
     events_tx: async_channel::Sender<ChangeEvent>,
@@ -251,12 +255,14 @@ impl Core {
         let (events_tx, events) = async_channel::unbounded();
         let engine = Arc::new(RunningEngine::default());
         let actions = Arc::new(MailActions::new(Arc::clone(&engine), db.clone()));
+        let lists = Arc::new(Mailboxes::new(Arc::clone(&engine), db.clone()));
         let core = Rc::new(Core {
             runtime,
             db,
             demo,
             engine,
             actions,
+            lists,
             config: RefCell::new(config),
             tokens: Arc::new(KeyringTokenStore::new()),
             events_tx,
@@ -439,6 +445,44 @@ impl Core {
                 })
                 .collect(),
         })
+    }
+
+    /// One page of a mailbox. See `Mailboxes::list`.
+    pub async fn list(
+        &self,
+        mailbox: Mailbox,
+        scope: Scope,
+        view: View,
+        from: usize,
+    ) -> Result<Listing> {
+        let lists = Arc::clone(&self.lists);
+        self.call(async move { lists.list(&mailbox, &scope, &view, from).await })
+            .await
+    }
+
+    /// Counts for the sidebar and the category switcher.
+    pub async fn counts(
+        &self,
+        sidebar: Vec<Mailbox>,
+        shown: Mailbox,
+        view: View,
+    ) -> Result<Counts> {
+        let lists = Arc::clone(&self.lists);
+        self.call(async move { lists.counts(&sidebar, &shown, &view).await })
+            .await
+    }
+
+    /// Fresh rows for the threads a change event named, or `None` when the
+    /// list has to be loaded again.
+    pub async fn changed_rows(
+        &self,
+        mailbox: Mailbox,
+        changed: Vec<(AccountId, String)>,
+        view: View,
+    ) -> Result<Option<Vec<mailrs_domain::ThreadSummary>>> {
+        let lists = Arc::clone(&self.lists);
+        self.call(async move { lists.changed(&mailbox, &changed, &view).await })
+            .await
     }
 
     /// Reverses the last recorded mail action, from the window or the

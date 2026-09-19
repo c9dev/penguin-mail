@@ -3,8 +3,6 @@
 use std::rc::Rc;
 
 use gtk::glib;
-use mailrs_domain::ThreadSummary;
-use mailrs_store::{reminders, threads};
 use mailrs_sync::{History, MailAction};
 
 use super::{MainWindow, Target};
@@ -46,48 +44,6 @@ impl MainWindow {
             {
                 this.remind(at);
             }
-        });
-    }
-
-    /// Lists conversations waiting to come back, soonest first.
-    pub(super) fn load_reminders(self: &Rc<Self>, generation: u64) {
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            let loaded = this
-                .core
-                .read(|c| {
-                    let mut rows = Vec::new();
-                    for item in reminders::list(c)? {
-                        let stored = threads::get_thread(c, item.account_id, &item.thread_id)?;
-                        rows.push((item, stored));
-                    }
-                    Ok(rows)
-                })
-                .await;
-            if this.list_generation.get() != generation {
-                return;
-            }
-            let Ok(loaded) = loaded else {
-                return this.toast("Could not load reminders");
-            };
-            let now = chrono::Local::now();
-            let rows: Vec<ThreadSummary> = loaded
-                .into_iter()
-                .map(|(item, stored)| {
-                    let mut row = stored.unwrap_or_else(|| ThreadSummary {
-                        account_id: item.account_id,
-                        id: item.thread_id.clone(),
-                        subject: item.subject.clone(),
-                        message_count: 1,
-                        ..ThreadSummary::default()
-                    });
-                    row.snippet = format!("Returns {}", future_date(item.remind_at, now));
-                    row.last_message_at = item.remind_at;
-                    row
-                })
-                .collect();
-            this.list.set_rows(rows, "No Reminders", "alarm-symbolic");
-            this.follow_selection();
         });
     }
 

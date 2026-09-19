@@ -9,6 +9,7 @@ mailrs-domain.workspace = true
 mailrs-gmail.workspace = true
 mailrs-store.workspace = true
 async-channel.workspace = true
+chrono.workspace = true
 dirs.workspace = true
 futures.workspace = true
 rand.workspace = true

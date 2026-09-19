@@ -2009,6 +2009,7 @@ name = "mailrs-sync"
 version = "0.1.0"
 dependencies = [
  "async-channel",
+ "chrono",
  "dirs",
  "futures",
  "mailrs-domain",

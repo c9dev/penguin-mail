@@ -2,24 +2,13 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use mailrs_domain::{AccountId, FlagColor, Target};
+use mailrs_domain::{FlagColor, Target};
 use mailrs_gmail::GmailError;
 use mailrs_store::{accounts, flags, labels, reminders};
 
-use super::{Harness, harness};
+use super::{Connected, Harness, harness};
 use crate::fake::{FakeGmail, meta};
-use crate::{AccountSync, Accounts, History, MailAction, MailActions, TriageAction, now_millis};
-
-/// The accounts a test connects, by id.
-struct Connected(HashMap<AccountId, Arc<AccountSync<FakeGmail>>>);
-
-impl Accounts for Connected {
-    type Api = FakeGmail;
-
-    fn account(&self, account_id: AccountId) -> Option<Arc<AccountSync<FakeGmail>>> {
-        self.0.get(&account_id).cloned()
-    }
-}
+use crate::{AccountSync, History, MailAction, MailActions, TriageAction, now_millis};
 
 fn actions(h: &Harness) -> MailActions<Connected> {
     actions_over(h, [])

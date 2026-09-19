@@ -30,7 +30,7 @@ pub struct Settings {
     pub vips: BTreeMap<String, String>,
     /// Notify only about mail from VIPs.
     pub notify_vips_only: bool,
-    pub smart_mailboxes: Vec<crate::smart::SmartMailbox>,
+    pub smart_mailboxes: Vec<mailrs_domain::SmartMailbox>,
     /// Account addresses in sidebar order; accounts not listed follow.
     pub account_order: Vec<String>,
     /// A colour from the palette per account address.

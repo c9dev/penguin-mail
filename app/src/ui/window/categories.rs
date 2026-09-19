@@ -26,12 +26,6 @@ fn icon(category: Category) -> &'static str {
     }
 }
 
-/// `filter` limited to the threads in `category`.
-fn narrow(category: Category, filter: ThreadFilter) -> ThreadFilter {
-    let (any, none) = category.labels();
-    filter.with_labels(any, none)
-}
-
 /// The switcher above an inbox's thread list. Only the chosen category
 /// shows its name; the others show an icon and their unread count.
 pub(super) struct CategoryBar {
@@ -39,7 +33,7 @@ pub(super) struct CategoryBar {
     group: adw::ToggleGroup,
     names: HashMap<Category, gtk::Label>,
     counts: HashMap<Category, gtk::Label>,
-    chosen: Cell<Category>,
+    pub(super) chosen: Cell<Category>,
 }
 
 impl CategoryBar {
@@ -98,7 +92,7 @@ impl CategoryBar {
         }
     }
 
-    fn set_counts(&self, unread: &HashMap<Category, i64>) {
+    pub(super) fn set_counts(&self, unread: &HashMap<Category, i64>) {
         for (category, label) in &self.counts {
             let count = unread.get(category).copied().unwrap_or(0);
             label.set_label(&count.to_string());
@@ -150,7 +144,7 @@ impl MainWindow {
 
     /// Whether `mailbox` splits into categories on screen.
     fn shows_categories(&self, mailbox: &Mailbox) -> bool {
-        self.settings().inbox_categories && is_inbox(mailbox)
+        self.settings().inbox_categories && mailbox.takes_categories()
     }
 
     /// Shows the switcher when the list holds an inbox, and hides it elsewhere.
@@ -158,49 +152,13 @@ impl MainWindow {
         let shown = self.shows_categories(&self.mailbox.borrow());
         self.categories.bar.set_visible(shown);
         if shown {
-            self.refresh_category_counts();
+            self.refresh_counts();
         }
     }
 
-    /// `filter` narrowed to the chosen category, when `mailbox` has them.
-    pub(super) fn in_category(&self, mailbox: &Mailbox, filter: ThreadFilter) -> ThreadFilter {
-        if self.shows_categories(mailbox) {
-            narrow(self.categories.chosen.get(), filter)
-        } else {
-            filter
-        }
-    }
-
-    /// Counts unread mail in each category of the inbox on screen.
-    pub(super) fn refresh_category_counts(self: &Rc<Self>) {
-        let mailbox = self.mailbox.borrow().clone();
-        if !self.shows_categories(&mailbox) {
-            return;
-        }
-        let Some(base) = mailbox.filter() else { return };
-        let threaded = self.settings().threading;
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            let counted = this
-                .core
-                .read(move |c| {
-                    let mut unread = HashMap::new();
-                    for category in Category::ALL {
-                        let filter = narrow(category, base.clone());
-                        let count = if threaded {
-                            threads::unread_threads(c, &filter)?
-                        } else {
-                            threads::unread_messages(c, &filter)?
-                        };
-                        unread.insert(category, count);
-                    }
-                    Ok(unread)
-                })
-                .await;
-            if let Ok(unread) = counted {
-                this.categories.set_counts(&unread);
-            }
-        });
+    /// Shows how much unread mail each category holds.
+    pub(super) fn set_category_counts(&self, unread: &HashMap<Category, i64>) {
+        self.categories.set_counts(unread);
     }
 
     /// Moves every stored conversation from the open message's sender into
@@ -333,13 +291,5 @@ impl MainWindow {
                 Ok::<(), anyhow::Error>(())
             })
             .await
-    }
-}
-
-fn is_inbox(mailbox: &Mailbox) -> bool {
-    match mailbox {
-        Mailbox::Unified(label) => *label == system_label::INBOX,
-        Mailbox::Label { label_id, .. } => label_id == system_label::INBOX,
-        _ => false,
     }
 }
