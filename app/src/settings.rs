@@ -1,4 +1,4 @@
-//! App preferences, kept in `~/.config/mailrs/settings.toml`. Sync options
+//! App preferences, kept in `~/.config/penguin-mail/settings.toml`. Sync options
 //! stay in `config.toml`, which the command-line tool reads too.
 
 use std::collections::BTreeMap;

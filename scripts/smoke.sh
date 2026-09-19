@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Manual smoke test against a real Gmail account. Run it by hand, never in CI.
-# Needs ~/.config/mailrs/config.toml and at least one account; see docs/setup.md.
+# Needs ~/.config/penguin-mail/config.toml and at least one account; see docs/setup.md.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 cargo build --quiet -p mailrs-cli
-cli=target/debug/mailrs-cli
+cli=target/debug/penguin-mail-cli
 
 echo "== accounts"
 "$cli" account list

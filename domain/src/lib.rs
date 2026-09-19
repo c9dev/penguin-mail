@@ -1,4 +1,4 @@
-//! Types shared by every mailrs crate. Conversions only, no I/O.
+//! Types shared by every Penguin Mail crate. Conversions only, no I/O.
 
 use std::fmt;
 use std::str::FromStr;

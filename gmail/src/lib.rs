@@ -1,4 +1,4 @@
-//! Gmail REST client: OAuth, quota limiting, and conversion to mailrs domain types.
+//! Gmail REST client: OAuth, quota limiting, and conversion to Penguin Mail domain types.
 
 pub mod address;
 pub mod body;

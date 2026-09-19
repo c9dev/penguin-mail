@@ -83,7 +83,7 @@ impl Folder {
         match self {
             Folder::Junk => "mail-mark-junk-symbolic",
             Folder::Trash => "user-trash-symbolic",
-            Folder::AllMail => "mailrs-archive-symbolic",
+            Folder::AllMail => "penguin-mail-archive-symbolic",
         }
     }
 
@@ -196,11 +196,11 @@ pub fn account_label_name(label: &str) -> &'static str {
 
 pub fn mailbox_icon(label: &str) -> &'static str {
     match label {
-        "INBOX" => "mailrs-inbox-symbolic",
-        "STARRED" => "mailrs-flag-symbolic",
+        "INBOX" => "penguin-mail-inbox-symbolic",
+        "STARRED" => "penguin-mail-flag-symbolic",
         "SENT" => "mail-send-symbolic",
         "DRAFT" => "document-edit-symbolic",
-        _ => "mailrs-tag-symbolic",
+        _ => "penguin-mail-tag-symbolic",
     }
 }
 

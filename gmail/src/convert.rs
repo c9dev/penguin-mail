@@ -1,4 +1,4 @@
-//! Conversions from Gmail wire types to the types the rest of mailrs uses.
+//! Conversions from Gmail wire types to the types the rest of Penguin Mail uses.
 
 use mailrs_domain::{AccountId, MessageMeta};
 

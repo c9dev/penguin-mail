@@ -16,7 +16,7 @@ use mailrs_gmail::{
     RemoteLabel, TokenStore, authorize,
 };
 use mailrs_store::{Db, accounts};
-use mailrs_sync::config::{Config, config_path, data_dir};
+use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::{
     AccountClient, AccountSync, GmailApi, SavedDraft, SyncEngine, connect_account, now_millis,
 };
@@ -192,8 +192,9 @@ impl Core {
             .build()
             .context("could not start the async runtime")?;
         let dir = if demo {
-            std::env::temp_dir().join(format!("mailrs-demo-{}", std::process::id()))
+            std::env::temp_dir().join(format!("penguin-mail-demo-{}", std::process::id()))
         } else {
+            migrate_old_dirs();
             data_dir()?
         };
         std::fs::create_dir_all(&dir)
@@ -278,7 +279,7 @@ impl Core {
         let config = self.config.borrow();
         let config = config
             .as_ref()
-            .ok_or_else(|| anyhow!("mailrs has no OAuth client configured yet"))?;
+            .ok_or_else(|| anyhow!("Penguin Mail has no OAuth client configured yet"))?;
         Ok(OAuthClient::new(
             &config.oauth.client_id,
             &config.oauth.client_secret,
@@ -484,7 +485,7 @@ async fn connect(
             account_id: account.id,
         }));
     }
-    let oauth = oauth.ok_or_else(|| anyhow!("mailrs has no OAuth client configured yet"))?;
+    let oauth = oauth.ok_or_else(|| anyhow!("Penguin Mail has no OAuth client configured yet"))?;
     Ok(Api::Gmail(Box::new(
         connect_account(oauth, tokens, account).await?,
     )))

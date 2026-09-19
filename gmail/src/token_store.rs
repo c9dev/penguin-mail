@@ -18,6 +18,8 @@ pub struct KeyringTokenStore {
 }
 
 impl KeyringTokenStore {
+    /// The app's name before it became Penguin Mail. Keeping it keeps
+    /// existing accounts signed in.
     pub const SERVICE: &'static str = "mailrs";
 
     pub fn new() -> Self {

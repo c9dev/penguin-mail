@@ -1,8 +1,8 @@
-//! The login item that starts mailrs in the tray.
+//! The login item that starts Penguin Mail in the tray.
 
 use std::path::{Path, PathBuf};
 
-const FILE: &str = "dev.mailrs.Mailrs.desktop";
+const FILE: &str = "dev.penguinmail.PenguinMail.desktop";
 
 pub fn path() -> Option<PathBuf> {
     Some(dirs_config()?.join("autostart").join(FILE))
@@ -33,8 +33,8 @@ pub fn set_enabled(path: &Path, exe: &Path, enabled: bool) -> std::io::Result<()
     std::fs::write(
         path,
         format!(
-            "[Desktop Entry]\nType=Application\nName=mailrs\nComment=Keeps Gmail in sync from the system tray\n\
-             Exec={} --background\nIcon=dev.mailrs.Mailrs\nNoDisplay=true\nX-GNOME-Autostart-enabled=true\n",
+            "[Desktop Entry]\nType=Application\nName=Penguin Mail\nComment=Keeps Gmail in sync from the system tray\n\
+             Exec={} --background\nIcon=dev.penguinmail.PenguinMail\nNoDisplay=true\nX-GNOME-Autostart-enabled=true\n",
             exe.display()
         ),
     )
@@ -52,14 +52,14 @@ mod tests {
         let path = dir
             .path()
             .join("autostart")
-            .join("dev.mailrs.Mailrs.desktop");
+            .join("dev.penguinmail.PenguinMail.desktop");
         assert!(!is_enabled(&path));
-        set_enabled(&path, Path::new("/opt/mailrs/bin/mailrs"), true).unwrap();
+        set_enabled(&path, Path::new("/opt/penguin-mail/bin/penguin-mail"), true).unwrap();
         assert!(is_enabled(&path));
         assert!(
             std::fs::read_to_string(&path)
                 .unwrap()
-                .contains("Exec=/opt/mailrs/bin/mailrs --background")
+                .contains("Exec=/opt/penguin-mail/bin/penguin-mail --background")
         );
         set_enabled(&path, Path::new("/x"), false).unwrap();
         assert!(!is_enabled(&path));

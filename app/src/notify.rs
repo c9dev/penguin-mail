@@ -67,7 +67,7 @@ fn show(
     std::thread::spawn(move || {
         let mut notification = notify_rust::Notification::new();
         notification
-            .appname("mailrs")
+            .appname("Penguin Mail")
             .summary(&summary)
             .body(&escape(&body))
             .icon(APP_ID)

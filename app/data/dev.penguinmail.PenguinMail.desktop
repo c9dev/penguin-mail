@@ -1,18 +1,18 @@
 [Desktop Entry]
 Type=Application
-Name=mailrs
+Name=Penguin Mail
 GenericName=Mail
 Comment=Read and write Gmail from all your accounts
-Exec=mailrs %u
-Icon=dev.mailrs.Mailrs
+Exec=penguin-mail %u
+Icon=dev.penguinmail.PenguinMail
 Terminal=false
 Categories=Network;Email;GTK;GNOME;
 Keywords=mail;email;gmail;inbox;
 MimeType=x-scheme-handler/mailto;
 StartupNotify=true
-StartupWMClass=dev.mailrs.Mailrs
+StartupWMClass=dev.penguinmail.PenguinMail
 Actions=compose;
 
 [Desktop Action compose]
 Name=New Message
-Exec=mailrs --compose
+Exec=penguin-mail --compose

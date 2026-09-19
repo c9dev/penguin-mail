@@ -135,7 +135,7 @@ impl ThreadList {
             .child(&view)
             .build();
         let empty = adw::StatusPage::builder()
-            .icon_name("mailrs-inbox-symbolic")
+            .icon_name("penguin-mail-inbox-symbolic")
             .title("No Mail")
             .build();
         empty.add_css_class("compact");

@@ -168,7 +168,7 @@ impl App {
     }
 
     /// Checks for due messages every half minute. Anything that fell due
-    /// while mailrs was not running goes out on the first check.
+    /// while Penguin Mail was not running goes out on the first check.
     pub(super) fn start_scheduler(self: &Rc<Self>) {
         let weak = Rc::downgrade(self);
         glib::timeout_add_seconds_local(SCHEDULER_SECONDS, move || {

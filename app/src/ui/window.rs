@@ -188,9 +188,9 @@ impl MainWindow {
             toasts.set_child(Some(&stack));
             let window = adw::Window::builder()
                 .title(if app.core.demo {
-                    "mailrs (demo)"
+                    "Penguin Mail (Demo)"
                 } else {
-                    "mailrs"
+                    "Penguin Mail"
                 })
                 .default_width(1320)
                 .default_height(840)
@@ -1060,7 +1060,7 @@ impl MainWindow {
 
     /// In the Trash, the trash button puts mail back in the inbox. Gmail
     /// empties the Trash itself after 30 days.
-    /// The Delete key. Gmail's permission for mailrs covers moving mail to
+    /// The Delete key. Gmail's permission for Penguin Mail covers moving mail to
     /// the Trash, not erasing it, so inside the Trash it only explains that.
     fn delete_key(self: &Rc<Self>) {
         if *self.mailbox.borrow() == Mailbox::Scheduled {
@@ -1931,7 +1931,7 @@ impl MainWindow {
         let second = gio::Menu::new();
         second.append(Some("Preferences"), Some("win.preferences"));
         second.append(Some("Keyboard Shortcuts"), Some("win.shortcuts"));
-        second.append(Some("About mailrs"), Some("win.about"));
+        second.append(Some("About Penguin Mail"), Some("win.about"));
         second.append(Some("Quit"), Some("win.quit"));
         menu.append_section(None, &second);
         self.sidebar.header.pack_end(
@@ -2289,7 +2289,7 @@ impl MainWindow {
 
     fn show_about(&self) {
         let about = adw::AboutDialog::builder()
-            .application_name("mailrs")
+            .application_name("Penguin Mail")
             .application_icon(crate::APP_ID)
             .version(env!("CARGO_PKG_VERSION"))
             .developer_name("David Santos")
@@ -2342,7 +2342,7 @@ fn empty_state(mailbox: &Mailbox) -> (&'static str, &'static str) {
         Mailbox::Search { .. } => return ("No Results", "system-search-symbolic"),
         Mailbox::Scheduled => return ("Nothing Scheduled", "mail-send-symbolic"),
         Mailbox::Reminders => return ("No Reminders", "alarm-symbolic"),
-        Mailbox::Flag(_) => return ("No Flagged Mail", "mailrs-flag-symbolic"),
+        Mailbox::Flag(_) => return ("No Flagged Mail", "penguin-mail-flag-symbolic"),
         Mailbox::Vips { .. } => return ("No Mail from VIPs", "starred-symbolic"),
         Mailbox::Smart { .. } => return ("No Matching Mail", "folder-saved-search-symbolic"),
         Mailbox::Folder { folder, .. } => {
@@ -2354,11 +2354,11 @@ fn empty_state(mailbox: &Mailbox) -> (&'static str, &'static str) {
         }
     };
     match label {
-        "INBOX" => ("Inbox Zero", "mailrs-inbox-symbolic"),
+        "INBOX" => ("Inbox Zero", "penguin-mail-inbox-symbolic"),
         "STARRED" => ("No Starred Mail", "starred-symbolic"),
         "SENT" => ("No Sent Mail", "mail-send-symbolic"),
         "DRAFT" => ("No Drafts", "document-edit-symbolic"),
-        _ => ("No Mail", "mailrs-tag-symbolic"),
+        _ => ("No Mail", "penguin-mail-tag-symbolic"),
     }
 }
 

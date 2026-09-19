@@ -314,13 +314,13 @@ fn sync_page(app: &Rc<App>, pending: &Rc<RefCell<SyncConfig>>) -> adw::Preferenc
     let startup = adw::PreferencesGroup::builder().title("Startup").build();
     let login = adw::SwitchRow::builder()
         .title("Start in the Tray at Login")
-        .subtitle("mailrs keeps syncing with no window open")
+        .subtitle("Penguin Mail keeps syncing with no window open")
         .build();
     match autostart::path() {
         Some(path) if !app.core.demo => {
             login.set_active(autostart::is_enabled(&path));
             login.connect_active_notify(move |row| {
-                let exe = std::env::current_exe().unwrap_or_else(|_| "mailrs".into());
+                let exe = std::env::current_exe().unwrap_or_else(|_| "penguin-mail".into());
                 if let Err(err) = autostart::set_enabled(&path, &exe, row.is_active()) {
                     tracing::warn!(error = %err, "could not change the login item");
                 }

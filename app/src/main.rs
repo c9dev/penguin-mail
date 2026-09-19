@@ -1,4 +1,4 @@
-//! mailrs: a Gmail client for the GNOME desktop.
+//! Penguin Mail: a Gmail client for the GNOME desktop.
 
 mod app;
 mod autostart;
@@ -25,9 +25,9 @@ use std::rc::Rc;
 use adw::prelude::*;
 use gtk::{gdk, gio, glib};
 
-pub const APP_ID: &str = "dev.mailrs.Mailrs";
+pub const APP_ID: &str = "dev.penguinmail.PenguinMail";
 
-const USAGE: &str = "Usage: mailrs [--background] [--demo] [--compose [mailto:ADDRESS]]
+const USAGE: &str = "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]]
 
   --background   start in the tray without opening a window
   --demo         open sample mail in a throwaway store; nothing syncs
@@ -39,7 +39,7 @@ fn main() -> glib::ExitCode {
         .with_writer(std::io::stderr)
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                tracing_subscriber::EnvFilter::new("warn,mailrs=info,mailrs_sync=info")
+                tracing_subscriber::EnvFilter::new("warn,penguin_mail=info,mailrs_sync=info")
             }),
         )
         .init();
@@ -51,7 +51,7 @@ fn main() -> glib::ExitCode {
     if let Some(unknown) = args.iter().skip(1).find(|a| {
         !matches!(a.as_str(), "--background" | "--demo" | "--compose") && !a.starts_with("mailto:")
     }) {
-        eprintln!("mailrs: unknown option {unknown}\n\n{USAGE}");
+        eprintln!("penguin-mail: unknown option {unknown}\n\n{USAGE}");
         return glib::ExitCode::FAILURE;
     }
     // `Some("")` opens a blank message; `Some(address)` addresses it.
@@ -65,7 +65,7 @@ fn main() -> glib::ExitCode {
     // Wayland and X11 name the window after the program; matching the
     // desktop entry lets the dock show the right icon.
     glib::set_prgname(Some(if demo {
-        "dev.mailrs.Mailrs.Demo"
+        "dev.penguinmail.PenguinMail.Demo"
     } else {
         APP_ID
     }));
@@ -73,7 +73,7 @@ fn main() -> glib::ExitCode {
     // so a process running in the tray never loads the graphics stack.
     let gio_app = gio::Application::builder()
         .application_id(if demo {
-            "dev.mailrs.Mailrs.Demo"
+            "dev.penguinmail.PenguinMail.Demo"
         } else {
             APP_ID
         })
@@ -89,7 +89,7 @@ fn main() -> glib::ExitCode {
     let state: Rc<RefCell<Option<Rc<app::App>>>> = Rc::new(RefCell::new(None));
     let started = Rc::clone(&state);
     gio_app.connect_startup(move |gio_app| {
-        gio::resources_register_include!("mailrs.gresource")
+        gio::resources_register_include!("penguin-mail.gresource")
             .expect("the resources are built into the binary");
         match core::Core::open(demo) {
             Ok(core) => {
@@ -137,9 +137,10 @@ pub fn ensure_gtk() {
     gtk::init().expect("GTK starts on this display");
     adw::init().expect("libadwaita starts");
     if let Some(display) = gdk::Display::default() {
-        gtk::IconTheme::for_display(&display).add_resource_path("/dev/mailrs/Mailrs/icons");
+        gtk::IconTheme::for_display(&display)
+            .add_resource_path("/dev/penguinmail/PenguinMail/icons");
         let css = gtk::CssProvider::new();
-        css.load_from_resource("/dev/mailrs/Mailrs/style.css");
+        css.load_from_resource("/dev/penguinmail/PenguinMail/style.css");
         gtk::style_context_add_provider_for_display(
             &display,
             &css,
@@ -149,13 +150,13 @@ pub fn ensure_gtk() {
     gtk::Window::set_default_icon_name(APP_ID);
 }
 
-/// A window that explains why mailrs could not start.
+/// A window that explains why Penguin Mail could not start.
 fn show_fatal(gio_app: &gio::Application, message: &str) {
     ensure_gtk();
     let hold = gio_app.hold();
     let page = adw::StatusPage::builder()
         .icon_name("dialog-warning-symbolic")
-        .title("mailrs Could Not Start")
+        .title("Penguin Mail Could Not Start")
         .description(glib::markup_escape_text(message).as_str())
         .build();
     let toolbar = adw::ToolbarView::new();

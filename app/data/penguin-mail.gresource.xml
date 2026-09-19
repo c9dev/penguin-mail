@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/dev/penguinmail/PenguinMail">
+    <file>icons/scalable/actions/penguin-mail-inbox-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-archive-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-tag-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-link-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-flag-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-flag-outline-symbolic.svg</file>
+    <file>icons/scalable/apps/dev.penguinmail.PenguinMail.svg</file>
+    <file>icons/scalable/apps/dev.penguinmail.PenguinMail-symbolic.svg</file>
+    <file>style.css</file>
+  </gresource>
+</gresources>

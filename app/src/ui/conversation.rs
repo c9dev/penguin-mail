@@ -165,7 +165,7 @@ impl ConversationView {
         webview.set_hexpand(true);
 
         let empty = adw::StatusPage::builder()
-            .icon_name("dev.mailrs.Mailrs-symbolic")
+            .icon_name("dev.penguinmail.PenguinMail-symbolic")
             .title("No Conversation Selected")
             .build();
         empty.add_css_class("dim-label");
@@ -215,7 +215,7 @@ impl ConversationView {
             many_trash.expect("the bulk actions include trash"),
         );
         let many = adw::StatusPage::builder()
-            .icon_name("mailrs-inbox-symbolic")
+            .icon_name("penguin-mail-inbox-symbolic")
             .title("Several Conversations Selected")
             .description("Actions and shortcuts apply to all of them. Esc clears the selection.")
             .child(&bulk)
@@ -238,12 +238,12 @@ impl ConversationView {
                 .build()
         };
         let buttons = Buttons {
-            archive: button("mailrs-archive-symbolic", "Archive (E or Ctrl+Alt+A)"),
+            archive: button("penguin-mail-archive-symbolic", "Archive (E or Ctrl+Alt+A)"),
             trash: button("user-trash-symbolic", "Move to Trash (Delete)"),
             junk: button("mail-mark-junk-symbolic", "Junk (Ctrl+Shift+J)"),
             read: button("mail-unread-symbolic", "Mark as Unread (Ctrl+Shift+U)"),
             star: adw::SplitButton::builder()
-                .icon_name("mailrs-flag-outline-symbolic")
+                .icon_name("penguin-mail-flag-outline-symbolic")
                 .tooltip_text("Flag (Ctrl+Shift+L)")
                 .dropdown_tooltip("Flag Color")
                 .popover(&flag_colors())
@@ -292,7 +292,7 @@ impl ConversationView {
             .title_widget(&gtk::Label::new(None))
             .build();
         let label_button = gtk::MenuButton::builder()
-            .icon_name("mailrs-tag-symbolic")
+            .icon_name("penguin-mail-tag-symbolic")
             .tooltip_text("Labels (L)")
             .build();
         for widget in [
@@ -480,7 +480,7 @@ impl ConversationView {
     /// Trash, trash puts mail back; in Junk, junk marks it as not junk.
     pub fn set_folder(&self, folder: Option<Folder>) {
         let (trash_icon, trash_tip) = match folder {
-            Some(Folder::Trash) => ("mailrs-inbox-symbolic", "Move to Inbox"),
+            Some(Folder::Trash) => ("penguin-mail-inbox-symbolic", "Move to Inbox"),
             _ => ("user-trash-symbolic", "Move to Trash (Delete)"),
         };
         self.buttons.trash.set_icon_name(trash_icon);
@@ -663,9 +663,9 @@ impl ConversationView {
         let starred = open.starred();
         let star = &self.buttons.star;
         star.set_icon_name(if starred {
-            "mailrs-flag-symbolic"
+            "penguin-mail-flag-symbolic"
         } else {
-            "mailrs-flag-outline-symbolic"
+            "penguin-mail-flag-outline-symbolic"
         });
         for color in FlagColor::ALL {
             star.remove_css_class(&format!("flag-{}", color.as_str()));
@@ -768,7 +768,7 @@ fn flag_colors() -> gtk::Popover {
     let row = gtk::Box::builder().spacing(2).build();
     for color in FlagColor::ALL {
         let button = gtk::Button::builder()
-            .icon_name("mailrs-flag-symbolic")
+            .icon_name("penguin-mail-flag-symbolic")
             .tooltip_text(format!(
                 "{} (Ctrl+Alt+{})",
                 color.name(),
