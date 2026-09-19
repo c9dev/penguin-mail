@@ -90,3 +90,26 @@ async fn opening_an_unchanged_thread_announces_nothing() {
     h.sync.ensure_thread("t1").await.unwrap();
     assert!(h.drain().is_empty());
 }
+
+#[tokio::test]
+async fn reading_a_cached_body_records_the_read() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    h.fake.with(|s| {
+        s.bodies.insert("a".into(), MessageBody::default());
+    });
+    h.sync.body("a").await.unwrap();
+    let stored = h.accessed_at("a").await;
+    tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+    h.sync.body("a").await.unwrap();
+    let mut read_again = h.accessed_at("a").await;
+    for _ in 0..100 {
+        if read_again > stored {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        read_again = h.accessed_at("a").await;
+    }
+    assert!(read_again > stored, "{read_again} is not after {stored}");
+}

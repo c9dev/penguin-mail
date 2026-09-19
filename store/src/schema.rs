@@ -167,6 +167,12 @@ UPDATE threads SET
                   WHERE m.account_id = threads.account_id AND m.thread_id = threads.id
                   ORDER BY m.date DESC, m.id DESC LIMIT 1), '');
 "#,
+    // The wider index lets eviction total and rank the cache without
+    // reading a single body.
+    r#"
+DROP INDEX bodies_by_access;
+CREATE INDEX bodies_by_access ON bodies(accessed_at, account_id, message_id, size);
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,
