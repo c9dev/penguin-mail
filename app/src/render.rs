@@ -29,6 +29,10 @@ pub struct MessageView<'a> {
     pub expanded: bool,
     /// `Content-ID` to `data:` URI for this message's inline images.
     pub inline_images: &'a HashMap<String, String>,
+    /// The body's HTML, already cleaned. Cleaning a long message costs
+    /// milliseconds, so the view keeps the result and passes it back here.
+    /// `None` cleans the body now.
+    pub sanitized: Option<&'a str>,
 }
 
 pub struct Conversation<'a> {
@@ -126,7 +130,10 @@ fn render_body(html: &mut String, view: &MessageView) {
                     html,
                     "<div class=\"body html\"><template shadowrootmode=\"open\"><style>{HTML_BODY_CSS}</style>\
                      <div class=\"root\">{}</div></template></div>",
-                    sanitize_html(source, view.inline_images)
+                    match view.sanitized {
+                        Some(clean) => clean.to_string(),
+                        None => sanitize_html(source, view.inline_images),
+                    }
                 );
             } else {
                 let _ = write!(
@@ -418,6 +425,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 inline_images: &images,
+                sanitized: None,
             }],
         );
         assert!(
@@ -444,12 +452,16 @@ mod tests {
                     body: BodyState::Loaded(&body),
                     expanded: false,
                     inline_images: &images,
+                    sanitized: None,
+                    sanitized: None,
                 },
                 MessageView {
                     meta: &second,
                     body: BodyState::Loaded(&body),
                     expanded: true,
                     inline_images: &images,
+                    sanitized: None,
+                    sanitized: None,
                 },
             ],
         );
@@ -488,6 +500,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 inline_images: &images,
+                sanitized: None,
             }],
         );
         assert!(html.contains("<template shadowrootmode=\"open\">"));
@@ -525,6 +538,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 inline_images: &images,
+                sanitized: None,
             }],
         );
         assert!(html.contains("href=\"mailrs:attachment/m1/1\""));
@@ -543,6 +557,7 @@ mod tests {
                 body: BodyState::Loading,
                 expanded: true,
                 inline_images: &images,
+                sanitized: None,
             }],
         );
         assert!(loading.contains("Loading…"));
@@ -553,6 +568,7 @@ mod tests {
                 body: BodyState::Failed("offline <now>"),
                 expanded: true,
                 inline_images: &images,
+                sanitized: None,
             }],
         );
         assert!(failed.contains("could not be loaded: offline &lt;now&gt;"));

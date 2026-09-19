@@ -15,6 +15,7 @@ use webkit::prelude::*;
 
 use crate::compose::ReplyKind;
 use crate::render::{BodyState, Conversation, MessageView, Theme, render};
+use crate::sanitize::sanitize_html;
 
 /// Everything shown for one open thread.
 pub struct OpenThread {
@@ -125,6 +126,9 @@ pub struct ConversationView {
     webview: webkit::WebView,
     content: webkit::UserContentManager,
     banner: adw::Banner,
+    /// Cleaned HTML per message, with the body length and image count it
+    /// was cleaned from. A thread renders at least twice per open.
+    sanitized: RefCell<HashMap<String, ((usize, usize), String)>>,
     list_banner: adw::Banner,
     /// The menu section whose first item adds or removes the sender as a VIP.
     sender_menu: gio::Menu,
@@ -388,6 +392,7 @@ impl ConversationView {
             content,
             banner,
             list_banner,
+            sanitized: RefCell::new(HashMap::new()),
             sender_menu,
             remind,
             buttons,
@@ -623,6 +628,21 @@ impl ConversationView {
             accent: style.accent_color_rgba().to_str().to_string(),
         };
         let empty = HashMap::new();
+        let mut clean = self.sanitized.borrow_mut();
+        clean.retain(|id, _| open.bodies.contains_key(id));
+        for meta in &open.messages {
+            let Some(Ok(body)) = open.bodies.get(&meta.id) else {
+                continue;
+            };
+            let Some(html) = body.html.as_deref().filter(|h| !h.trim().is_empty()) else {
+                continue;
+            };
+            let images = open.inline_images.get(&meta.id).unwrap_or(&empty);
+            let mark = (html.len(), images.len());
+            if clean.get(&meta.id).is_none_or(|(seen, _)| *seen != mark) {
+                clean.insert(meta.id.clone(), (mark, sanitize_html(html, images)));
+            }
+        }
         let views: Vec<MessageView> = open
             .messages
             .iter()
@@ -635,6 +655,7 @@ impl ConversationView {
                 },
                 expanded: open.expanded.contains(&meta.id),
                 inline_images: open.inline_images.get(&meta.id).unwrap_or(&empty),
+                sanitized: clean.get(&meta.id).map(|(_, html)| html.as_str()),
             })
             .collect();
         let html = render(
