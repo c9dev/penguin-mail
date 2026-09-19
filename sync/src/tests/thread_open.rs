@@ -66,3 +66,27 @@ async fn bodies_of_unstored_messages_are_not_cached() {
     h.sync.body("x").await.unwrap();
     assert_eq!(h.fake.with(|s| s.body_fetches), 2);
 }
+
+#[tokio::test]
+async fn opening_an_unchanged_thread_announces_nothing() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    h.sync.ensure_thread("t1").await.unwrap();
+    h.drain();
+    h.sync.ensure_thread("t1").await.unwrap();
+    assert!(h.drain().is_empty());
+
+    h.fake.seed(meta("b", "t1", now_millis(), &["INBOX"]));
+    h.sync.ensure_thread("t1").await.unwrap();
+    assert_eq!(h.drain().len(), 1);
+    h.sync.ensure_thread("t1").await.unwrap();
+    assert!(h.drain().is_empty());
+
+    h.fake.remote_delete_silently("a");
+    h.fake.remote_delete_silently("b");
+    h.sync.ensure_thread("t1").await.unwrap();
+    assert_eq!(h.drain().len(), 1);
+    h.sync.ensure_thread("t1").await.unwrap();
+    assert!(h.drain().is_empty());
+}

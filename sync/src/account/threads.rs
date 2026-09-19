@@ -12,6 +12,8 @@ use crate::{GmailApi, SyncError, now_millis};
 impl<G: GmailApi> AccountSync<G> {
     /// Fetches every message of a thread, including ones older than the
     /// window. Deletes the thread locally when Gmail no longer has it.
+    /// Announces the thread only when its stored messages or labels changed,
+    /// since each announcement makes the UI reload its lists and counts.
     pub async fn ensure_thread(&self, thread_id: &str) -> Result<(), SyncError> {
         let account_id = self.account_id;
         let fetched = match self.api.thread_metadata(thread_id).await {
@@ -20,19 +22,29 @@ impl<G: GmailApi> AccountSync<G> {
             Err(err) => return Err(err.into()),
         };
         let thread = thread_id.to_string();
-        self.db
-            .write(move |c| match fetched {
-                Some(metas) => {
-                    let generation = accounts::sync_cursor(c, account_id)?.sync_gen;
-                    for meta in &metas {
-                        messages::upsert_message(c, meta, generation)?;
+        let changed = self
+            .db
+            .write(move |c| {
+                let before = messages::thread_messages(c, account_id, &thread)?;
+                match fetched {
+                    Some(metas) => {
+                        let generation = accounts::sync_cursor(c, account_id)?.sync_gen;
+                        for meta in &metas {
+                            messages::upsert_message(c, meta, generation)?;
+                        }
+                        messages::refresh_thread(c, account_id, &thread)?;
+                        Ok(messages::thread_messages(c, account_id, &thread)? != before)
                     }
-                    messages::refresh_thread(c, account_id, &thread)
+                    None => {
+                        messages::delete_thread(c, account_id, &thread)?;
+                        Ok(!before.is_empty())
+                    }
                 }
-                None => messages::delete_thread(c, account_id, &thread),
             })
             .await?;
-        self.emit_threads(BTreeSet::from([thread_id.to_string()]));
+        if changed {
+            self.emit_threads(BTreeSet::from([thread_id.to_string()]));
+        }
         Ok(())
     }
 
