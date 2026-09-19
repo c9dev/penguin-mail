@@ -12,7 +12,7 @@ project once, then add each Gmail account from the command line.
 
 In Google Auth Platform:
 
-1. Branding: name the app `mailrs` and give your address as the support and developer contact.
+1. Branding: name the app `mailrs` and give your address as the support and developer contact. Leave the logo empty: Google shows it only after verification. [branding/google-cloud.md](branding/google-cloud.md) lists every field.
 2. Audience: choose External.
 3. Data Access: add the scope `https://www.googleapis.com/auth/gmail.modify`.
 4. Audience: click Publish app and confirm. Do not submit it for verification.
