@@ -149,3 +149,44 @@ pub struct HistoryMessage {
     #[serde(default)]
     pub label_ids: Vec<String>,
 }
+
+/// A draft and the message that currently backs it. Gmail replaces the
+/// message on every update; the draft id stays the same.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct Draft {
+    pub id: String,
+    pub message: MessageRef,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DraftList {
+    #[serde(default)]
+    pub drafts: Vec<Draft>,
+    pub next_page_token: Option<String>,
+}
+
+/// An address the account can send from.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SendAs {
+    pub send_as_email: String,
+    #[serde(default)]
+    pub display_name: String,
+    #[serde(default)]
+    pub is_default: bool,
+    #[serde(default)]
+    pub is_primary: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SendAsList {
+    #[serde(default)]
+    pub send_as: Vec<SendAs>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct AttachmentBody {
+    pub data: Option<String>,
+}

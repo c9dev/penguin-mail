@@ -2,6 +2,8 @@
 
 use std::time::Duration;
 
+use base64::Engine;
+use base64::engine::general_purpose::{URL_SAFE_NO_PAD, URL_SAFE_NO_PAD_INDIFFERENT};
 use reqwest::header::RETRY_AFTER;
 use reqwest::{RequestBuilder, Response, StatusCode};
 use serde::de::DeserializeOwned;
@@ -9,7 +11,10 @@ use serde_json::json;
 use tokio::sync::Mutex;
 
 use crate::convert::{HistoryPage, history_page};
-use crate::model::{HistoryList, LabelList, Message, MessagePage, Profile, RemoteLabel, Thread};
+use crate::model::{
+    AttachmentBody, Draft, DraftList, HistoryList, LabelList, Message, MessagePage, Profile,
+    RemoteLabel, SendAs, SendAsList, Thread,
+};
 use crate::oauth::{AccessToken, LoopbackListener, OAuthClient, Pkce, random_token};
 use crate::{GmailError, QuotaLimiter};
 
@@ -27,6 +32,13 @@ mod cost {
     pub const HISTORY: u32 = 2;
     pub const MODIFY: u32 = 5;
     pub const TRASH: u32 = 5;
+    pub const SEND: u32 = 100;
+    pub const DRAFT_CREATE: u32 = 10;
+    pub const DRAFT_UPDATE: u32 = 15;
+    pub const DRAFT_DELETE: u32 = 10;
+    pub const DRAFT_LIST: u32 = 5;
+    pub const SEND_AS: u32 = 1;
+    pub const ATTACHMENT: u32 = 5;
 }
 
 /// A Gmail client for one account.
@@ -168,6 +180,100 @@ impl GmailClient {
         Ok(())
     }
 
+    /// Sends a complete RFC 822 message. `thread_id` files a reply in its thread.
+    pub async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<Message, GmailError> {
+        let body = raw_message(raw, thread_id);
+        self.call(cost::SEND, || {
+            self.http().post(self.url("messages/send")).json(&body)
+        })
+        .await
+    }
+
+    pub async fn create_draft(
+        &self,
+        raw: &[u8],
+        thread_id: Option<&str>,
+    ) -> Result<Draft, GmailError> {
+        let body = json!({"message": raw_message(raw, thread_id)});
+        self.call(cost::DRAFT_CREATE, || {
+            self.http().post(self.url("drafts")).json(&body)
+        })
+        .await
+    }
+
+    pub async fn update_draft(
+        &self,
+        id: &str,
+        raw: &[u8],
+        thread_id: Option<&str>,
+    ) -> Result<Draft, GmailError> {
+        let body = json!({"id": id, "message": raw_message(raw, thread_id)});
+        self.call(cost::DRAFT_UPDATE, || {
+            self.http()
+                .put(self.url(&format!("drafts/{id}")))
+                .json(&body)
+        })
+        .await
+    }
+
+    pub async fn delete_draft(&self, id: &str) -> Result<(), GmailError> {
+        self.call_empty(cost::DRAFT_DELETE, || {
+            self.http().delete(self.url(&format!("drafts/{id}")))
+        })
+        .await
+    }
+
+    /// Every draft in the account, following page tokens.
+    pub async fn list_drafts(&self) -> Result<Vec<Draft>, GmailError> {
+        let mut drafts = Vec::new();
+        let mut page_token: Option<String> = None;
+        loop {
+            let page: DraftList = self
+                .call(cost::DRAFT_LIST, || {
+                    let request = self.http().get(self.url("drafts"));
+                    match &page_token {
+                        Some(token) => request.query(&[("pageToken", token)]),
+                        None => request,
+                    }
+                })
+                .await?;
+            drafts.extend(page.drafts);
+            match page.next_page_token {
+                Some(token) => page_token = Some(token),
+                None => return Ok(drafts),
+            }
+        }
+    }
+
+    /// Addresses the account can send from, including its display names.
+    pub async fn send_as(&self) -> Result<Vec<SendAs>, GmailError> {
+        let list: SendAsList = self
+            .call(cost::SEND_AS, || {
+                self.http().get(self.url("settings/sendAs"))
+            })
+            .await?;
+        Ok(list.send_as)
+    }
+
+    /// The decoded content of one attachment.
+    pub async fn attachment(
+        &self,
+        message_id: &str,
+        attachment_id: &str,
+    ) -> Result<Vec<u8>, GmailError> {
+        let body: AttachmentBody = self
+            .call(cost::ATTACHMENT, || {
+                self.http().get(self.url(&format!(
+                    "messages/{message_id}/attachments/{attachment_id}"
+                )))
+            })
+            .await?;
+        let data = body.data.unwrap_or_default();
+        URL_SAFE_NO_PAD_INDIFFERENT
+            .decode(data.trim())
+            .map_err(|e| GmailError::Decode(e.to_string()))
+    }
+
     fn http(&self) -> &reqwest::Client {
         self.oauth.http()
     }
@@ -191,12 +297,35 @@ impl GmailClient {
         Ok(token)
     }
 
-    /// Sends the request `build` makes, refreshing the token once on a 401.
+    /// Sends the request `build` makes and decodes the JSON reply.
     async fn call<T: DeserializeOwned>(
         &self,
         units: u32,
         build: impl Fn() -> RequestBuilder,
     ) -> Result<T, GmailError> {
+        let response = self.send_request(units, build).await?;
+        response
+            .json::<T>()
+            .await
+            .map_err(|e| GmailError::Decode(e.to_string()))
+    }
+
+    /// Sends the request `build` makes and ignores the reply body.
+    async fn call_empty(
+        &self,
+        units: u32,
+        build: impl Fn() -> RequestBuilder,
+    ) -> Result<(), GmailError> {
+        self.send_request(units, build).await.map(|_| ())
+    }
+
+    /// Sends the request `build` makes, refreshing the token once on a 401.
+    /// Returns the response when the status is a success.
+    async fn send_request(
+        &self,
+        units: u32,
+        build: impl Fn() -> RequestBuilder,
+    ) -> Result<Response, GmailError> {
         self.limiter.acquire(units).await;
         let mut retried = false;
         loop {
@@ -209,14 +338,20 @@ impl GmailClient {
                 continue;
             }
             if status.is_success() {
-                return response
-                    .json::<T>()
-                    .await
-                    .map_err(|e| GmailError::Decode(e.to_string()));
+                return Ok(response);
             }
             return Err(error_from_response(response).await);
         }
     }
+}
+
+/// The `message` object Gmail expects for sends and drafts.
+fn raw_message(raw: &[u8], thread_id: Option<&str>) -> serde_json::Value {
+    let mut message = json!({"raw": URL_SAFE_NO_PAD.encode(raw)});
+    if let Some(thread_id) = thread_id {
+        message["threadId"] = json!(thread_id);
+    }
+    message
 }
 
 fn metadata_query() -> Vec<(&'static str, &'static str)> {
