@@ -51,8 +51,10 @@ pub struct App {
     tray_started: Cell<bool>,
     settings: RefCell<Settings>,
     settings_path: std::path::PathBuf,
-    /// Correspondents for recipient suggestions, reloaded per composer.
+    /// Correspondents for recipient suggestions. Loading them reads every
+    /// message, so the list reloads only after new mail arrives.
     contacts: Contacts,
+    pub(crate) contacts_stale: Cell<bool>,
     /// Messages waiting out the Undo Send delay.
     pending_sends: Cell<usize>,
     scheduler_running: Cell<bool>,
@@ -94,6 +96,7 @@ impl App {
             settings: RefCell::new(Settings::load(&settings_path)),
             settings_path,
             contacts: Rc::new(RefCell::new(Rc::new(Vec::new()))),
+            contacts_stale: Cell::new(true),
             pending_sends: Cell::new(0),
             scheduler_running: Cell::new(false),
             _hold: gio_app.hold(),
@@ -387,6 +390,9 @@ impl App {
     /// Refreshes the suggestions composers offer. Open composers see the
     /// new list once it loads.
     fn reload_contacts(self: &Rc<Self>) {
+        if !self.contacts_stale.replace(false) {
+            return;
+        }
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             match this.core.read(mailrs_store::contacts::list_contacts).await {
@@ -491,7 +497,10 @@ impl App {
                     ChangeEvent::NewMail {
                         account_id,
                         message_ids,
-                    } => this.announce(*account_id, message_ids.clone()),
+                    } => {
+                        this.contacts_stale.set(true);
+                        this.announce(*account_id, message_ids.clone());
+                    }
                     ChangeEvent::ThreadsChanged { .. }
                     | ChangeEvent::AccountStateChanged { .. } => this.update_tray(),
                     _ => {}

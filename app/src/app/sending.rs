@@ -87,6 +87,7 @@ impl App {
                             .spawn_write(move |c| scheduled::remove(c, account_id, &draft_id));
                         this.scheduled_changed();
                     }
+                    this.contacts_stale.set(true);
                     this.core.poke(draft.account_id);
                     if announce && let Some(window) = this.window() {
                         window.toast_sent();

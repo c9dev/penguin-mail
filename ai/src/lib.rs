@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod bridge;
 mod detect;
+mod history;
 mod providers;
 mod sse;
 #[cfg(test)]

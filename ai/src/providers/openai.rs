@@ -70,6 +70,7 @@ impl OpenAiChat {
         host: Arc<dyn ToolHost>,
         events: &async_channel::Sender<AgentEvent>,
     ) -> Result<String, AiError> {
+        crate::history::trim(&mut self.history, crate::history::BUDGET);
         let saved = self.history.len();
         self.history.push(json!({"role": "user", "content": text}));
         let result = self.run(&host, events).await;
