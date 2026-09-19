@@ -41,6 +41,8 @@ pub enum Mailbox {
     Scheduled,
     /// Conversations set aside with Remind Me, across all accounts.
     Reminders,
+    /// Sent mail nobody has answered for a few days, across all accounts.
+    FollowUp,
     /// Flagged mail of one colour, across all accounts.
     Flag(FlagColor),
     /// Mail from VIPs: all of them under "VIPs", or one person.
@@ -110,6 +112,7 @@ impl Mailbox {
             Mailbox::Folder { folder, .. } => folder.name().into(),
             Mailbox::Scheduled => "Send Later".into(),
             Mailbox::Reminders => "Remind Me".into(),
+            Mailbox::FollowUp => "Follow Up".into(),
             Mailbox::Flag(color) => format!("{} Flag", color.name()),
             Mailbox::Vips { name, .. } | Mailbox::Smart { name, .. } => name.clone(),
         }
@@ -131,6 +134,7 @@ impl Mailbox {
             | Mailbox::Folder { .. }
             | Mailbox::Scheduled
             | Mailbox::Reminders
+            | Mailbox::FollowUp
             | Mailbox::Smart { .. } => None,
         }
     }
@@ -140,6 +144,7 @@ impl Mailbox {
             Mailbox::Unified(_)
             | Mailbox::Scheduled
             | Mailbox::Reminders
+            | Mailbox::FollowUp
             | Mailbox::Flag(_)
             | Mailbox::Vips { .. }
             | Mailbox::Smart { .. } => None,

@@ -274,6 +274,10 @@ impl ConversationView {
         marks.append(Some("Labels…"), Some("win.label"));
         let remind_menu = gio::Menu::new();
         marks.append_submenu(Some("Remind Me"), &remind_menu);
+        // Shown only in the Follow Up mailbox, where the action is enabled.
+        let dismiss = gio::MenuItem::new(Some("Dismiss Follow-Up"), Some("win.dismiss-follow-up"));
+        dismiss.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
+        marks.append_item(&dismiss);
         more.append_section(None, &marks);
         let views = gio::Menu::new();
         views.append(Some("Open in New Window"), Some("win.open-window"));
@@ -284,6 +288,21 @@ impl ConversationView {
         sender.append(Some("Add Sender to VIPs"), Some("win.toggle-vip"));
         sender.append(Some("Unsubscribe…"), Some("win.unsubscribe"));
         sender.append(Some("Block Sender…"), Some("win.block-sender"));
+        let categories = gio::Menu::new();
+        for (name, key) in [
+            ("Primary", "primary"),
+            ("Updates", "updates"),
+            ("Promotions", "promotions"),
+            ("Social", "social"),
+        ] {
+            let item = gio::MenuItem::new(Some(name), None);
+            item.set_action_and_target_value(
+                Some("win.categorize-sender"),
+                Some(&key.to_variant()),
+            );
+            categories.append_item(&item);
+        }
+        sender.append_submenu(Some("Categorize Sender"), &categories);
         more.append_section(None, &sender);
         buttons.more.set_menu_model(Some(&more));
         let sender_menu = sender.clone();
@@ -499,6 +518,12 @@ impl ConversationView {
             Some(Folder::Junk) => "Not Junk",
             _ => "Junk",
         });
+    }
+
+    /// Says what the trash button does in a mailbox where it does not
+    /// move mail to the Trash.
+    pub fn set_trash_tooltip(&self, tip: &str) {
+        self.buttons.trash.set_tooltip_text(Some(tip));
     }
 
     pub fn showing_many(&self) -> bool {

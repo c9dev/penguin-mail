@@ -9,6 +9,7 @@ use gtk::{gio, glib};
 use mailrs_domain::ThreadSummary;
 use mailrs_sync::TriageAction;
 
+use super::categories::Category;
 use super::{MainWindow, Target};
 use crate::compose::ReplyKind;
 use crate::ui::conversation::{Action, ConversationView};
@@ -164,6 +165,19 @@ impl MainWindow {
             "block-sender",
             Box::new(|win, view| win.block_sender_from(Rc::clone(view))),
         );
+        let categorize = gio::SimpleAction::new("categorize-sender", Some(glib::VariantTy::STRING));
+        let (win, target) = (Rc::downgrade(self), Rc::downgrade(view));
+        categorize.connect_activate(move |_, parameter| {
+            let category = parameter
+                .and_then(|p| p.get::<String>())
+                .and_then(|k| Category::from_key(&k));
+            if let (Some(win), Some(view), Some(category)) =
+                (win.upgrade(), target.upgrade(), category)
+            {
+                win.categorize_sender_from(view, category);
+            }
+        });
+        group.add_action(&categorize);
         window.insert_action_group("win", Some(&group));
 
         let shortcuts = gtk::ShortcutController::new();

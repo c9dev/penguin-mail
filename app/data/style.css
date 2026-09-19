@@ -83,3 +83,14 @@
 .assistant-note.error { color: var(--error-color); }
 .assistant-suggestion { padding: 6px 10px; border-radius: 10px; }
 .assistant-confirm label { font-weight: 600; }
+
+/* Inbox categories: the switcher's unread counts. */
+.category-bar .category-count { font-size: 0.8em; font-weight: 700; font-feature-settings: "tnum"; opacity: 0.7; }
+.category-bar > button { padding-left: 9px; padding-right: 9px; }
+
+/* Follow Up: the banner above All Inboxes. */
+.follow-up-banner {
+  padding: 6px 6px 6px 14px;
+  background: alpha(var(--accent-bg-color), 0.16);
+}
+.follow-up-banner > image { color: var(--accent-color); }

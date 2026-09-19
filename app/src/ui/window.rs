@@ -28,8 +28,10 @@ use crate::settings::{Choice, MarkRead, RemoteImages, Settings, TextSize};
 
 mod arrange;
 mod assistant;
+mod categories;
 mod detached;
 mod flags;
+mod followup;
 mod hide_my_email;
 mod organize;
 mod reminders;
@@ -68,6 +70,8 @@ pub struct MainWindow {
     labels: RefCell<HashMap<AccountId, Vec<Label>>>,
     assistant: Rc<super::assistant::AssistantPane>,
     assistant_split: adw::OverlaySplitView,
+    categories: categories::CategoryBar,
+    follow_up: followup::FollowUpBanner,
 }
 
 /// One thing an action applies to: a thread, or one message of it.
@@ -273,6 +277,8 @@ impl MainWindow {
                 labels: RefCell::new(HashMap::new()),
                 assistant,
                 assistant_split,
+                categories: categories::CategoryBar::new(),
+                follow_up: followup::FollowUpBanner::new(),
             }
         });
         if window.core.demo {
@@ -304,6 +310,8 @@ impl MainWindow {
                 let _ = request.reply.send(outcome).await;
             }
         });
+        window.install_follow_ups();
+        window.install_categories();
         let labels_of = Rc::downgrade(&window);
         super::search_suggest::attach(&window.list.search_entry, app.contacts(), move || {
             let Some(win) = labels_of.upgrade() else {
@@ -476,6 +484,7 @@ impl MainWindow {
             if let Some(app) = this.app.upgrade() {
                 app.remember_accounts(&this.accounts.borrow());
             }
+            this.follow_categories();
             this.refresh_counts();
             this.reload_list();
         });
@@ -483,12 +492,20 @@ impl MainWindow {
 
     fn refresh_counts(self: &Rc<Self>) {
         let mailboxes = self.sidebar.mailboxes();
+        let follow_ups = self.settings().suggest_follow_ups;
+        let now = chrono::Utc::now().timestamp_millis();
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let counts = this
                 .core
                 .read(move |c| {
                     let mut counts = HashMap::new();
+                    let waiting = if follow_ups {
+                        mailrs_store::follow_ups::waiting(c, now)?.len() as i64
+                    } else {
+                        0
+                    };
+                    counts.insert(Mailbox::FollowUp, waiting);
                     counts.insert(
                         Mailbox::Scheduled,
                         mailrs_store::scheduled::list(c)?.len() as i64,
@@ -513,8 +530,11 @@ impl MainWindow {
                 .await;
             if let Ok(counts) = counts {
                 this.sidebar.set_counts(&counts);
+                let waiting = counts.get(&Mailbox::FollowUp).copied().unwrap_or(0);
+                this.set_follow_up_count(waiting as usize);
             }
         });
+        self.refresh_category_counts();
     }
 
     // ---- Mailboxes and the thread list ---------------------------------
@@ -536,6 +556,8 @@ impl MainWindow {
             self.split.set_show_sidebar(false);
         }
         self.conversation.set_folder(mailbox.folder());
+        self.follow_categories();
+        self.follow_follow_ups();
         match mailbox {
             Mailbox::Folder { account_id, folder } => {
                 let (title, icon) = empty_state(&mailbox);
@@ -560,15 +582,19 @@ impl MainWindow {
 
     fn reload_list(self: &Rc<Self>) {
         let mailbox = self.mailbox.borrow().clone();
-        if matches!(mailbox, Mailbox::Scheduled | Mailbox::Reminders) {
+        if matches!(
+            mailbox,
+            Mailbox::Scheduled | Mailbox::Reminders | Mailbox::FollowUp
+        ) {
             let generation = self.list_generation.get() + 1;
             self.list_generation.set(generation);
             return match mailbox {
                 Mailbox::Reminders => self.load_reminders(generation),
+                Mailbox::FollowUp => self.load_follow_ups(generation),
                 _ => self.load_scheduled(generation),
             };
         }
-        let Some(filter) = mailbox.filter() else {
+        let Some(filter) = mailbox.filter().map(|f| self.in_category(&mailbox, f)) else {
             return;
         };
         let generation = self.list_generation.get() + 1;
@@ -623,6 +649,8 @@ impl MainWindow {
             account_id: scope,
         };
         self.sidebar.clear_selection();
+        self.follow_categories();
+        self.follow_follow_ups();
         self.list.set_title("Search", &query);
         self.conversation.clear();
         self.conversation.set_folder(None);
@@ -1113,6 +1141,9 @@ impl MainWindow {
         if *self.mailbox.borrow() == Mailbox::Reminders {
             return self.cancel_reminders(self.targets());
         }
+        if *self.mailbox.borrow() == Mailbox::FollowUp {
+            return self.dismiss_follow_ups(self.targets());
+        }
         if self.mailbox.borrow().folder() == Some(Folder::Trash) {
             self.toast("Gmail deletes mail in the Trash for good after 30 days");
         } else {
@@ -1126,6 +1157,9 @@ impl MainWindow {
         }
         if *self.mailbox.borrow() == Mailbox::Reminders {
             return self.cancel_reminders(self.targets());
+        }
+        if *self.mailbox.borrow() == Mailbox::FollowUp {
+            return self.dismiss_follow_ups(self.targets());
         }
         if self.mailbox.borrow().folder() == Some(Folder::Trash) {
             self.triage(TriageAction::Untrash);
@@ -2289,6 +2323,18 @@ impl MainWindow {
         if before.ai != after.ai {
             self.assistant.refresh();
         }
+        if before.suggest_follow_ups != after.suggest_follow_ups {
+            if !after.suggest_follow_ups && *self.mailbox.borrow() == Mailbox::FollowUp {
+                let inbox = Mailbox::Unified("INBOX");
+                self.sidebar.select(&inbox);
+                self.show_mailbox(inbox);
+            }
+            self.refresh_counts();
+        }
+        if before.inbox_categories != after.inbox_categories {
+            self.follow_categories();
+            self.reload_list();
+        }
         if before.text_size != after.text_size {
             self.conversation.set_zoom(after.text_size.zoom());
         }
@@ -2418,6 +2464,7 @@ fn empty_state(mailbox: &Mailbox) -> (&'static str, &'static str) {
         Mailbox::Search { .. } => return ("No Results", "system-search-symbolic"),
         Mailbox::Scheduled => return ("Nothing Scheduled", "mail-send-symbolic"),
         Mailbox::Reminders => return ("No Reminders", "alarm-symbolic"),
+        Mailbox::FollowUp => return ("No Follow-Ups", "mail-reply-sender-symbolic"),
         Mailbox::Flag(_) => return ("No Flagged Mail", "penguin-mail-flag-symbolic"),
         Mailbox::Vips { .. } => return ("No Mail from VIPs", "starred-symbolic"),
         Mailbox::Smart { .. } => return ("No Matching Mail", "folder-saved-search-symbolic"),

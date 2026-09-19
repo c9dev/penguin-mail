@@ -40,6 +40,11 @@ pub struct Settings {
     pub ai: AiSettings,
     /// Plus addresses made with Hide My Email, oldest first.
     pub hidden_addresses: Vec<crate::hide_my_email::HiddenAddress>,
+    /// Split inboxes into Primary, Updates, Promotions, and Social, from
+    /// Gmail's category labels.
+    pub inbox_categories: bool,
+    /// Show Follow Up for sent mail nobody has answered.
+    pub suggest_follow_ups: bool,
 }
 
 /// Where the assistant's model runs.
@@ -126,6 +131,8 @@ impl Default for Settings {
             account_names: BTreeMap::new(),
             ai: AiSettings::default(),
             hidden_addresses: Vec::new(),
+            inbox_categories: true,
+            suggest_follow_ups: true,
         }
     }
 }

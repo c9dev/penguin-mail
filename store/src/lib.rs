@@ -7,6 +7,7 @@ pub mod contacts;
 mod db;
 mod error;
 pub mod flags;
+pub mod follow_ups;
 pub mod labels;
 pub mod messages;
 pub mod reminders;

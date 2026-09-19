@@ -71,6 +71,20 @@ fn general_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         settings.threading,
         |s, v| s.threading = v,
     ));
+    reading.add(&switch(
+        app,
+        "Group Inbox into Categories",
+        Some("Sort the inbox into Primary, Updates, Promotions, and Social, as Gmail does"),
+        settings.inbox_categories,
+        |s, v| s.inbox_categories = v,
+    ));
+    reading.add(&switch(
+        app,
+        "Suggest Follow-Ups",
+        Some("List mail you sent that has had no reply for three days"),
+        settings.suggest_follow_ups,
+        |s, v| s.suggest_follow_ups = v,
+    ));
     reading.add(&combo(
         app,
         "Mark as Read",
