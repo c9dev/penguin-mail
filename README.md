@@ -212,14 +212,22 @@ The actions are `show-window`, `hide-window`, `compose`, `check`, and `quit`.
 ## How it is built
 
 ```
-domain/   shared types
+domain/   shared types, Gmail's label names, categories
 gmail/    Gmail REST client, OAuth, quota limiter
 store/    SQLite schema and queries
 sync/     one sync loop per account: bootstrap, history replay, backfill
+          mail actions, mailbox listing, and each account's Gmail settings
 ai/       model providers, tool calls, the Claude Code bridge
 cli/      penguin-mail-cli
 app/      the GTK4 and libadwaita app
 ```
+
+Windows and dialogs stay thin. Archiving, flagging, listing a mailbox, and
+changing an automatic reply each live in one module in `sync`, which the
+window and the assistant both call, so the two cannot drift apart. Those
+modules take an account lookup and the store, so their tests run against an
+in-memory database and a fake Gmail with no window on screen. The terms the
+code uses are defined in [CONTEXT.md](CONTEXT.md).
 
 Sync follows Gmail's history API, polling every 30 seconds per account, so a
 change made on your phone shows up here within half a minute. When history
@@ -230,7 +238,7 @@ gap. The design and its trade-offs are written up in
 ## Development
 
 ```sh
-cargo test --workspace                          # about 250 tests, no network
+cargo test --workspace                          # about 310 tests, no network
 cargo clippy --workspace --all-targets -- -D warnings
 cargo run -p mailrs -- --demo                   # the UI with sample data
 scripts/smoke.sh                                # by hand, against a real account
