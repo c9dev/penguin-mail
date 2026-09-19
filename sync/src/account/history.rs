@@ -46,6 +46,7 @@ impl<G: GmailApi> AccountSync<G> {
             }
         }
         if changes.is_empty() && latest == start {
+            self.mark_caught_up();
             return Ok(());
         }
 
@@ -96,6 +97,7 @@ impl<G: GmailApi> AccountSync<G> {
                 Ok((touched, new_mail))
             })
             .await?;
+        self.mark_caught_up();
         self.emit_threads(touched);
         if !new_mail.is_empty() {
             self.emit(ChangeEvent::NewMail {

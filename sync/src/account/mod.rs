@@ -10,7 +10,7 @@ mod writes;
 
 use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use futures::StreamExt;
 use mailrs_domain::{AccountId, AccountState, ChangeEvent, EpochMillis, MessageMeta};
@@ -34,7 +34,15 @@ pub struct AccountSync<G> {
     retry_max: Duration,
     /// Cached bodies read since the last write of their access times.
     touched: Arc<Mutex<Vec<(String, EpochMillis)>>>,
+    /// When the last history replay left the store up to date. Opening a
+    /// thread within [`FRESH_FOR`] of it trusts the store and asks Gmail
+    /// nothing.
+    caught_up: Arc<Mutex<Option<Instant>>>,
 }
+
+/// How long a finished history replay speaks for the whole mailbox. The
+/// engine replays every 30 seconds, so this still covers one missed tick.
+pub const FRESH_FOR: Duration = Duration::from_secs(75);
 
 impl<G: GmailApi> AccountSync<G> {
     pub fn new(
@@ -52,6 +60,7 @@ impl<G: GmailApi> AccountSync<G> {
             body_cache_bytes: DEFAULT_BODY_CACHE_BYTES,
             retry_max: Duration::from_secs(8),
             touched: Arc::default(),
+            caught_up: Arc::default(),
         }
     }
 
@@ -65,6 +74,11 @@ impl<G: GmailApi> AccountSync<G> {
     pub fn with_retry_max(mut self, retry_max: Duration) -> Self {
         self.retry_max = retry_max;
         self
+    }
+
+    /// Records that history replay left the store up to date.
+    pub(crate) fn mark_caught_up(&self) {
+        *self.caught_up.lock().expect("caught up") = Some(Instant::now());
     }
 
     pub fn account_id(&self) -> AccountId {

@@ -15,8 +15,32 @@ impl<G: GmailApi> AccountSync<G> {
     /// window. Deletes the thread locally when Gmail no longer has it.
     /// Announces the thread only when its stored messages or labels changed,
     /// since each announcement makes the UI reload its lists and counts.
+    /// Whether the store already holds this thread and history has spoken
+    /// for the mailbox since. Gmail sends every change through history, so
+    /// a recent replay means the stored copy matches, and opening the
+    /// thread needs no round trip.
+    async fn stored_and_current(&self, thread_id: &str) -> Result<bool, SyncError> {
+        let fresh = self
+            .caught_up
+            .lock()
+            .expect("caught up")
+            .is_some_and(|at| at.elapsed() < super::FRESH_FOR);
+        if !fresh {
+            return Ok(false);
+        }
+        let (account_id, thread) = (self.account_id, thread_id.to_string());
+        let stored = self
+            .db
+            .read(move |c| messages::thread_messages(c, account_id, &thread))
+            .await?;
+        Ok(!stored.is_empty())
+    }
+
     pub async fn ensure_thread(&self, thread_id: &str) -> Result<(), SyncError> {
         let account_id = self.account_id;
+        if self.stored_and_current(thread_id).await? {
+            return Ok(());
+        }
         let fetched = match self.api.thread_metadata(thread_id).await {
             Ok(metas) => Some(metas),
             Err(GmailError::NotFound) => None,

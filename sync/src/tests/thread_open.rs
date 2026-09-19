@@ -113,3 +113,22 @@ async fn reading_a_cached_body_records_the_read() {
     }
     assert!(read_again > stored, "{read_again} is not after {stored}");
 }
+
+#[tokio::test]
+async fn opening_a_thread_right_after_history_asks_gmail_nothing() {
+    let h = harness().await;
+    let now = now_millis();
+    h.fake.seed(meta("recent", "t1", now, &["INBOX"]));
+    h.bootstrap_all().await;
+    // A history replay with nothing to report speaks for the whole mailbox.
+    h.sync.incremental().await.unwrap();
+    // Gmail gains a message that history has not announced yet.
+    h.fake
+        .seed_outside_window(meta("older", "t1", now - 60 * DAY, &[]));
+    h.sync.ensure_thread("t1").await.unwrap();
+    assert_eq!(
+        h.thread("t1").await.unwrap().message_count,
+        1,
+        "the open should trust the store and fetch nothing"
+    );
+}
