@@ -6,6 +6,7 @@ use mailrs_domain::{AccountId, FlagColor};
 use rusqlite::{Connection, params};
 
 use crate::Result;
+use crate::messages::NEWEST_FLAG_COLOR;
 
 /// Colours the messages of a thread, or one of its messages. `None` takes
 /// the colour off.
@@ -36,21 +37,27 @@ pub fn set_color(
             )?,
         };
     }
+    conn.execute(
+        &format!(
+            "UPDATE threads SET flag_color = ({NEWEST_FLAG_COLOR}) WHERE account_id = ?1 AND id = ?2"
+        ),
+        params![account_id, thread_id],
+    )?;
     Ok(())
 }
 
-/// How many starred threads carry each colour, across every account.
+/// How many starred threads carry each colour, across every account. A
+/// thread counts once, under the colour of its newest coloured message.
 pub fn counts(conn: &Connection) -> Result<HashMap<FlagColor, i64>> {
-    let mut stmt = conn.prepare(
-        "SELECT COALESCE((SELECT f.color FROM flags f JOIN messages m \
-                ON m.account_id = f.account_id AND m.id = f.message_id \
-                WHERE m.account_id = t.account_id AND m.thread_id = t.id \
-                ORDER BY m.date DESC LIMIT 1), 'red'), COUNT(*) \
-         FROM threads t WHERE t.starred = 1 GROUP BY 1",
+    let mut stmt = conn.prepare_cached(
+        "SELECT COALESCE(flag_color, 'red'), COUNT(*) FROM threads WHERE starred = 1 GROUP BY 1",
     )?;
-    let rows = stmt.query_map([], |row| {
-        Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
-    })?;
+    collect(stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?)
+}
+
+fn collect(
+    rows: impl Iterator<Item = rusqlite::Result<(String, i64)>>,
+) -> Result<HashMap<FlagColor, i64>> {
     let mut counts = HashMap::new();
     for row in rows {
         let (color, count) = row?;

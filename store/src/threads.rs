@@ -145,14 +145,8 @@ impl ThreadFilter {
 }
 
 const COLUMNS: &str = "t.account_id, t.id, t.last_message_at, t.subject, t.snippet, t.from_display, \
-                       t.message_count, t.unread, t.starred, t.has_attachments, \
-                       (SELECT f.color FROM flags f JOIN messages fm \
-                        ON fm.account_id = f.account_id AND fm.id = f.message_id \
-                        WHERE fm.account_id = t.account_id AND fm.thread_id = t.id \
-                        ORDER BY fm.date DESC LIMIT 1), \
-                       (SELECT COALESCE(sm.from_addr, '') FROM messages sm \
-                        WHERE sm.account_id = t.account_id AND sm.thread_id = t.id \
-                        ORDER BY sm.date DESC LIMIT 1)";
+                       t.message_count, t.unread, t.starred, t.has_attachments, t.flag_color, \
+                       t.from_email";
 
 fn flag_color(row: &Row<'_>, index: usize) -> rusqlite::Result<Option<FlagColor>> {
     Ok(row
@@ -174,7 +168,7 @@ fn to_summary(row: &Row<'_>) -> rusqlite::Result<ThreadSummary> {
         starred: row.get(8)?,
         has_attachments: row.get(9)?,
         flag_color: flag_color(row, 10)?,
-        from_email: row.get::<_, Option<String>>(11)?.unwrap_or_default(),
+        from_email: row.get(11)?,
     })
 }
 

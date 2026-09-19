@@ -49,3 +49,31 @@ pub fn store(conn: &Connection, metas: &[MessageMeta]) {
         messages::refresh_thread(conn, m.account_id, &m.thread_id).unwrap();
     }
 }
+
+/// Two accounts with inbox mail in several categories, a sent thread, one
+/// thread in Trash, and two starred threads, one of them in Spam.
+pub fn mixed_mail() -> (Connection, AccountId, AccountId) {
+    let conn = mailrs_store::open_in_memory().unwrap();
+    let a = accounts::insert_account(&conn, "a@example.com", 0).unwrap();
+    let b = accounts::insert_account(&conn, "b@example.com", 0).unwrap();
+    store(
+        &conn,
+        &[
+            meta(a, "a1", "ta1", 100, &["INBOX", "CATEGORY_PERSONAL"]),
+            meta(
+                a,
+                "a2",
+                "ta2",
+                200,
+                &["INBOX", "UNREAD", "CATEGORY_UPDATES"],
+            ),
+            meta(a, "a3", "ta3", 300, &["INBOX", "UNREAD", "CATEGORY_SOCIAL"]),
+            meta(a, "a4", "ta4", 400, &["SENT"]),
+            meta(a, "a5", "ta5", 500, &["INBOX", "UNREAD", "TRASH"]),
+            meta(b, "b1", "tb1", 600, &["INBOX", "UNREAD", "CATEGORY_FORUMS"]),
+            meta(b, "b2", "tb2", 700, &["INBOX", "STARRED"]),
+            meta(b, "b3", "tb3", 800, &["INBOX", "STARRED", "SPAM"]),
+        ],
+    );
+    (conn, a, b)
+}
