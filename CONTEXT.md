@@ -31,3 +31,13 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 **Settings change**: one named change to the preferences, such as the text size, an account's signature, or a VIP. `mailrs::settings::Change`. Preferences, the keyboard shortcuts, and the assistant all make the same change the same way, so the same input lands the same way whichever one asks. _Avoid_: patch, setting update.
 
 **Effect**: the part of the window a settings change leaves stale: the list's shape, the sidebar's accounts, row colours, a smart mailbox's conditions, the VIP marks, Follow Up, the inbox categories, the assistant, the text size, or light and dark. `mailrs::settings::Effect`. Applying a change reports its effects, the window redoes one part per effect, and a change with no effects saves the file and stops. _Avoid_: signal, notification.
+
+**Account settings**: what Gmail keeps for one account and Penguin Mail changes: the automatic reply, the rules, blocked senders, and hidden addresses. `mailrs_sync::AccountSettings` makes each change for the dialogs and the assistant alike. Preferences, which live in the app's own settings file, are something else. _Avoid_: preferences, options, Gmail config.
+
+**Automatic reply**: what Gmail sends back while the account owner is away, with the days it runs between. `mailrs_sync::AutomaticReply` names the first and last day; Gmail stores an end it stops before, and only `AccountSettings` converts between the two. _Avoid_: vacation, out of office, auto-responder.
+
+**Rule**: one Gmail filter: which mail it matches, and what Gmail does to it as it arrives. `mailrs_domain::Filter` holds one. The Rules dialog, Block Sender, Categorize Sender, and Hide My Email all make rules. _Avoid_: filter (in wording the user reads).
+
+**Hidden address**: one plus address from Hide My Email, such as `dana+kite.fern482@gmail.com`, with the rules behind it. One rule gives its mail the Hide My Email label; a second trashes that mail while the address is off. `mailrs_sync::HiddenFilters` holds the two rule ids. _Avoid_: masked address, burner.
+
+**Settings permission**: the Gmail access an account grants once so Penguin Mail may read and change its account settings. Without it every `AccountSettings` call answers `Permitted::NeedsPermission`, and the caller offers Grant Access rather than showing an error. _Avoid_: scope, consent.

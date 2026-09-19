@@ -9,12 +9,11 @@ use adw::prelude::*;
 use gtk::glib;
 use mailrs_domain::{AccountId, Category, Filter, FilterAction, FilterCriteria, system_label};
 use mailrs_store::threads::{self, ThreadFilter};
-use mailrs_sync::{History, MailAction, TriageAction};
+use mailrs_sync::{History, MailAction, Permitted, SyncError, TriageAction};
 
 use super::{MainWindow, Target};
 use crate::ui::Mailbox;
 use crate::ui::conversation::ConversationView;
-use crate::ui::vacation::missing_scope;
 
 fn icon(category: Category) -> &'static str {
     match category {
@@ -235,8 +234,10 @@ impl MainWindow {
             this.perform(targets, MailAction::Triage(relabel), History::Skip, None);
             let name = category.name();
             match this.sort_future_mail(account_id, &email, label).await {
-                Ok(()) => this.toast(&format!("Mail from {who} now goes to {name}")),
-                Err(err) if missing_scope(&err) => {
+                Ok(Permitted::Done(())) => {
+                    this.toast(&format!("Mail from {who} now goes to {name}"))
+                }
+                Ok(Permitted::NeedsPermission) => {
                     this.toast(&format!("Moved mail from {who} to {name}"));
                     this.ask_for_settings_access(account_id);
                 }
@@ -253,14 +254,17 @@ impl MainWindow {
         account_id: AccountId,
         email: &str,
         label: &'static str,
-    ) -> anyhow::Result<()> {
-        let Some(sync) = self.core.account(account_id) else {
+    ) -> anyhow::Result<Permitted<()>> {
+        if self.core.account(account_id).is_none() {
             anyhow::bail!("that account is not connected");
-        };
-        let (s, from) = (sync.clone(), email.to_string());
+        }
+        let (settings, from) = (self.core.gmail_settings(), email.to_string());
         self.core
             .call(async move {
-                for old in s.filters().await? {
+                let Permitted::Done(rules) = settings.rules(account_id).await? else {
+                    return Ok(Permitted::NeedsPermission);
+                };
+                for old in rules {
                     let sorts_sender = old
                         .criteria
                         .from
@@ -272,8 +276,10 @@ impl MainWindow {
                             .add_label_ids
                             .iter()
                             .all(|l| system_label::is_category(l));
-                    if let (true, Some(id)) = (sorts_sender, old.id.as_deref()) {
-                        s.delete_filter(id).await?;
+                    if let (true, Some(id)) = (sorts_sender, old.id.as_deref())
+                        && settings.delete_rule(account_id, id).await? == Permitted::NeedsPermission
+                    {
+                        return Ok(Permitted::NeedsPermission);
                     }
                 }
                 let rule = Filter {
@@ -287,8 +293,10 @@ impl MainWindow {
                         ..FilterAction::default()
                     },
                 };
-                s.create_filter(rule).await?;
-                Ok::<(), anyhow::Error>(())
+                Ok::<_, SyncError>(match settings.add_rule(account_id, rule).await? {
+                    Permitted::Done(_) => Permitted::Done(()),
+                    Permitted::NeedsPermission => Permitted::NeedsPermission,
+                })
             })
             .await
     }

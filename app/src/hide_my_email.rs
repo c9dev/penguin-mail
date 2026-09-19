@@ -1,13 +1,10 @@
 //! Hide My Email on Gmail's plus addresses. Gmail delivers
 //! `name+anything@domain` to `name@domain`, so each alias is the account
-//! address with a random tag such as `kite.fern482`. Gmail filters give the
-//! alias a label and, once deactivated, send its mail to the Trash.
+//! address with a random tag such as `kite.fern482`. The Gmail filters
+//! behind an alias live in `mailrs_sync::AccountSettings`.
 
-use mailrs_domain::{EpochMillis, Filter, FilterAction, FilterCriteria, system_label};
+use mailrs_domain::EpochMillis;
 use serde::{Deserialize, Serialize};
-
-/// The user label that mail to any alias gets.
-pub const LABEL: &str = "Hide My Email";
 
 /// Short words for tags. Two of them and three digits give ten million
 /// tags, so a site that knows one alias cannot guess the next.
@@ -123,37 +120,6 @@ pub fn is_alias(address: &str) -> bool {
     known(first) && known(second) && digits.bytes().all(|b| b.is_ascii_digit())
 }
 
-/// The filter that gives mail to `alias` the label `label_id`.
-pub fn label_filter(alias: &str, label_id: &str) -> Filter {
-    Filter {
-        id: None,
-        criteria: FilterCriteria {
-            to: Some(alias.to_string()),
-            ..FilterCriteria::default()
-        },
-        action: FilterAction {
-            add_label_ids: vec![label_id.to_string()],
-            ..FilterAction::default()
-        },
-    }
-}
-
-/// The filter that sends mail to `alias` to the Trash, skipping the Inbox.
-pub fn trash_filter(alias: &str) -> Filter {
-    Filter {
-        id: None,
-        criteria: FilterCriteria {
-            to: Some(alias.to_string()),
-            ..FilterCriteria::default()
-        },
-        action: FilterAction {
-            add_label_ids: vec![system_label::TRASH.into()],
-            remove_label_ids: vec![system_label::INBOX.into()],
-            forward: None,
-        },
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -221,16 +187,5 @@ mod tests {
         ] {
             assert!(!is_alias(other), "{other}");
         }
-    }
-
-    #[test]
-    fn filters_match_mail_to_the_alias() {
-        let label = label_filter("d+a.b123@x.com", "Label_7");
-        assert_eq!(label.criteria.to.as_deref(), Some("d+a.b123@x.com"));
-        assert_eq!(label.action.add_label_ids, ["Label_7"]);
-        assert!(label.action.remove_label_ids.is_empty());
-        let trash = trash_filter("d+a.b123@x.com");
-        assert_eq!(trash.action.add_label_ids, ["TRASH"]);
-        assert_eq!(trash.action.remove_label_ids, ["INBOX"]);
     }
 }

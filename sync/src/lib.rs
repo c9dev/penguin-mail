@@ -9,6 +9,7 @@ mod connect;
 mod engine;
 mod error;
 pub mod mailbox;
+mod settings;
 mod triage;
 
 #[cfg(test)]
@@ -25,6 +26,9 @@ pub use engine::{EngineConfig, SyncEngine};
 pub use error::SyncError;
 pub use mailbox::{
     Changed, Counts, Empty, Listing, Mailbox, Mailboxes, PAGE, Scope, View, summarize_search,
+};
+pub use settings::{
+    AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, HiddenFilters, Permitted,
 };
 pub use triage::TriageAction;
 

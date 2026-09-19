@@ -7,8 +7,8 @@ use std::rc::Rc;
 use adw::prelude::*;
 use gtk::glib;
 use mailrs_domain::{Account, Filter, Label, LabelKind};
+use mailrs_sync::Permitted;
 
-use super::vacation::missing_scope;
 use crate::core::Core;
 use crate::rules::{RuleForm, describe_action, describe_criteria};
 
@@ -122,15 +122,20 @@ impl Rules {
     }
 
     fn reload(self: &Rc<Self>) {
-        let Some(sync) = self.core.account(self.account.id) else {
+        if self.core.account(self.account.id).is_none() {
             return self.problem("This account is not syncing yet.");
-        };
+        }
         self.stack.set_visible_child_name("loading");
-        let this = Rc::clone(self);
+        let (this, settings, account_id) =
+            (Rc::clone(self), self.core.gmail_settings(), self.account.id);
         glib::spawn_future_local(async move {
-            match this.core.call(async move { sync.filters().await }).await {
-                Ok(filters) => this.show_list(filters),
-                Err(err) if missing_scope(&err) => this.ask_for_access(),
+            let loaded = this
+                .core
+                .call(async move { settings.rules(account_id).await })
+                .await;
+            match loaded {
+                Ok(Permitted::Done(filters)) => this.show_list(filters),
+                Ok(Permitted::NeedsPermission) => this.ask_for_access(),
                 Err(err) => this.problem(&err.to_string()),
             }
         });
@@ -178,20 +183,19 @@ impl Rules {
     }
 
     fn delete(self: &Rc<Self>, id: String) {
-        let Some(sync) = self.core.account(self.account.id) else {
-            return;
-        };
-        let this = Rc::clone(self);
+        let (this, settings, account_id) =
+            (Rc::clone(self), self.core.gmail_settings(), self.account.id);
         glib::spawn_future_local(async move {
-            match this
+            let deleted = this
                 .core
-                .call(async move { sync.delete_filter(&id).await })
-                .await
-            {
-                Ok(()) => {
+                .call(async move { settings.delete_rule(account_id, &id).await })
+                .await;
+            match deleted {
+                Ok(Permitted::Done(())) => {
                     this.toast("Rule deleted");
                     this.reload();
                 }
+                Ok(Permitted::NeedsPermission) => this.ask_for_access(),
                 Err(err) => this.toast(&format!("Could not delete the rule: {err}")),
             }
         });
@@ -325,21 +329,23 @@ impl Rules {
                 Ok(filter) => filter,
                 Err(reason) => return rules.toast(reason),
             };
-            let Some(sync) = rules.core.account(rules.account.id) else {
-                return;
-            };
+            let (settings, account_id) = (rules.core.gmail_settings(), rules.account.id);
             button.set_sensitive(false);
             let button = button.clone();
             glib::spawn_future_local(async move {
-                match rules
+                let added = rules
                     .core
-                    .call(async move { sync.create_filter(filter).await })
-                    .await
-                {
-                    Ok(_) => {
+                    .call(async move { settings.add_rule(account_id, filter).await })
+                    .await;
+                match added {
+                    Ok(Permitted::Done(_)) => {
                         rules.nav.pop();
                         rules.toast("Rule added");
                         rules.reload();
+                    }
+                    Ok(Permitted::NeedsPermission) => {
+                        button.set_sensitive(true);
+                        rules.ask_for_access();
                     }
                     Err(err) => {
                         button.set_sensitive(true);

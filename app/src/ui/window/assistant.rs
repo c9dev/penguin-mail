@@ -7,21 +7,20 @@ use std::sync::Arc;
 
 use chrono::{Local, NaiveDate, NaiveDateTime, TimeZone};
 use mailrs_ai::ToolOutcome;
-use mailrs_domain::{
-    Account, Category, Filter, FlagColor, Folder, LabelKind, ThreadSummary, Vacation, system_label,
-};
+use mailrs_domain::{Account, Category, FlagColor, Folder, LabelKind, ThreadSummary, system_label};
 use mailrs_store::messages;
-use mailrs_sync::{History, MailAction, Mailbox, Outcome, TriageAction, View};
+use mailrs_sync::{
+    AutomaticReply, History, MailAction, Mailbox, Outcome, Permitted, TriageAction, View,
+};
 use serde_json::{Value, json};
 
 use super::{MainWindow, Target};
 use crate::compose::{self, Draft, SendWhen};
-use crate::core::Sync;
+use crate::core::{GmailSettings, Sync};
 use crate::rules::{RuleForm, describe_action, describe_criteria};
 use crate::settings::{
     Change, Choice, ColorScheme, MarkRead, RemoteImages, Setting, TextSize, UndoSend,
 };
-use crate::ui::vacation::missing_scope;
 use mailrs_domain::smart::{Condition, SmartMailbox};
 
 type ToolResult = Result<Value, String>;
@@ -118,6 +117,15 @@ impl MainWindow {
         Ok((account, sync))
     }
 
+    /// The account a tool names and its Gmail settings.
+    fn settings_for(&self, email: &str) -> Result<(Account, Arc<GmailSettings>), String> {
+        let account = self.account_named(email)?;
+        if self.core.account(account.id).is_none() {
+            return Err(format!("{} is not connected.", account.email));
+        }
+        Ok((account, self.core.gmail_settings()))
+    }
+
     fn email_of(&self, account_id: i64) -> String {
         self.accounts
             .borrow()
@@ -174,17 +182,13 @@ impl MainWindow {
         }
     }
 
-    /// Explains a Gmail error, offering to fix a missing permission.
-    fn gmail_error(self: &Rc<Self>, account: &Account, err: anyhow::Error) -> String {
-        if missing_scope(&err) {
-            self.ask_for_settings_access(account.id);
-            format!(
-                "Penguin Mail needs permission to change Gmail settings for {}. The user was asked to grant it; try again once they have.",
-                account.email
-            )
-        } else {
-            err.to_string()
-        }
+    /// Asks the user for the Gmail settings permission, and says so.
+    fn needs_permission(self: &Rc<Self>, account: &Account) -> String {
+        self.ask_for_settings_access(account.id);
+        format!(
+            "Penguin Mail needs permission to change Gmail settings for {}. The user was asked to grant it; try again once they have.",
+            account.email
+        )
     }
 
     // ---- Reading ---------------------------------------------------------
@@ -508,14 +512,17 @@ impl MainWindow {
     }
 
     async fn tool_create_label(self: &Rc<Self>, input: &Value) -> ToolResult {
-        let (account, sync) = self.sync_for(&required(input, "account")?)?;
-        let name = required(input, "name")?;
-        let label = self
+        let (account, settings) = self.settings_for(&required(input, "account")?)?;
+        let (name, account_id) = (required(input, "name")?, account.id);
+        let made = self
             .core
-            .call(async move { sync.create_label(&name).await })
+            .call(async move { settings.create_label(account_id, &name).await })
             .await
             .map_err(|e| e.to_string())?;
-        Ok(json!({"account": account.email, "created": label.name}))
+        match made {
+            Permitted::Done(label) => Ok(json!({"account": account.email, "created": label.name})),
+            Permitted::NeedsPermission => Err(self.needs_permission(&account)),
+        }
     }
 
     async fn tool_remind(self: &Rc<Self>, input: &Value) -> ToolResult {
@@ -638,37 +645,52 @@ impl MainWindow {
     // ---- Gmail settings --------------------------------------------------
 
     async fn tool_block(self: &Rc<Self>, input: &Value) -> ToolResult {
-        let (account, sync) = self.sync_for(&required(input, "account")?)?;
+        let (account, settings) = self.settings_for(&required(input, "account")?)?;
         let email = required(input, "email")?;
         self.approve(&format!(
             "Block {email}? Their future mail goes straight to the Trash."
         ))
         .await?;
-        let rule = Filter::block(&email);
-        match self
-            .core
-            .call(async move { sync.create_filter(rule).await })
-            .await
-        {
-            Ok(_) => Ok(json!({"blocked": email})),
-            Err(err) => Err(self.gmail_error(&account, err)),
+        let blocked = {
+            let (email, account_id) = (email.clone(), account.id);
+            self.core
+                .call(async move { settings.block_sender(account_id, &email).await })
+                .await
+        };
+        match blocked {
+            Ok(Permitted::Done(_)) => Ok(json!({"blocked": email})),
+            Ok(Permitted::NeedsPermission) => Err(self.needs_permission(&account)),
+            Err(err) => Err(err.to_string()),
         }
     }
 
     async fn tool_get_vacation(self: &Rc<Self>, input: &Value) -> ToolResult {
-        let (account, sync) = self.sync_for(&required(input, "account")?)?;
-        match self.core.call(async move { sync.vacation().await }).await {
-            Ok(v) => Ok(vacation_json(&v)),
-            Err(err) => Err(self.gmail_error(&account, err)),
+        let (account, settings) = self.settings_for(&required(input, "account")?)?;
+        let account_id = account.id;
+        let loaded = self
+            .core
+            .call(async move { settings.automatic_reply(account_id).await })
+            .await;
+        match loaded {
+            Ok(Permitted::Done(reply)) => Ok(reply_json(&reply)),
+            Ok(Permitted::NeedsPermission) => Err(self.needs_permission(&account)),
+            Err(err) => Err(err.to_string()),
         }
     }
 
     async fn tool_set_vacation(self: &Rc<Self>, input: &Value) -> ToolResult {
-        let (account, sync) = self.sync_for(&required(input, "account")?)?;
-        let s = sync.clone();
-        let mut vacation = match self.core.call(async move { s.vacation().await }).await {
-            Ok(v) => v,
-            Err(err) => return Err(self.gmail_error(&account, err)),
+        let (account, settings) = self.settings_for(&required(input, "account")?)?;
+        let account_id = account.id;
+        let loaded = {
+            let settings = Arc::clone(&settings);
+            self.core
+                .call(async move { settings.automatic_reply(account_id).await })
+                .await
+        };
+        let mut reply = match loaded {
+            Ok(Permitted::Done(reply)) => reply,
+            Ok(Permitted::NeedsPermission) => return Err(self.needs_permission(&account)),
+            Err(err) => return Err(err.to_string()),
         };
         let day = |key: &str| -> Result<Option<i64>, String> {
             match text(input, key) {
@@ -683,63 +705,68 @@ impl MainWindow {
                 }
             }
         };
-        vacation.enabled = flag(input, "enabled").unwrap_or(true);
+        reply.enabled = flag(input, "enabled").unwrap_or(true);
         if let Some(subject) = text(input, "subject") {
-            vacation.subject = subject;
+            reply.subject = subject;
         }
         if let Some(message) = input.get("message").and_then(Value::as_str) {
-            vacation.body = message.to_string();
+            reply.body = message.to_string();
         }
         if let Some(contacts) = flag(input, "contacts_only") {
-            vacation.contacts_only = contacts;
+            reply.contacts_only = contacts;
         }
-        vacation.start = day("first_day")?;
-        // Gmail stops at `end`; the last day counts, so end the next midnight.
-        vacation.end = day("last_day")?.map(|t| t + 24 * 60 * 60 * 1000);
-        if vacation.enabled && vacation.subject.trim().is_empty() {
-            vacation.subject = "Out of office".into();
+        reply.first_day = day("first_day")?;
+        reply.last_day = day("last_day")?;
+        if reply.enabled && reply.subject.trim().is_empty() {
+            reply.subject = "Out of office".into();
         }
-        let summary = if vacation.enabled {
+        let summary = if reply.enabled {
             let day = |t: Option<i64>| {
                 t.and_then(crate::format::local)
                     .map(|d| d.format("%a %-d %b").to_string())
             };
-            let dates = match (day(vacation.start), day(vacation.end.map(|t| t - 1))) {
+            let dates = match (day(reply.first_day), day(reply.last_day)) {
                 (Some(first), Some(last)) => format!(" from {first} to {last}"),
                 (None, Some(last)) => format!(" until {last}"),
                 (Some(first), None) => format!(" from {first}"),
                 (None, None) => String::new(),
             };
-            let preview: String = vacation.body.chars().take(160).collect();
+            let preview: String = reply.body.chars().take(160).collect();
             format!(
                 "Turn on the automatic reply for {}{dates}?\n\n“{}”\n{}",
-                account.email, vacation.subject, preview
+                account.email, reply.subject, preview
             )
         } else {
             format!("Turn off the automatic reply for {}?", account.email)
         };
         self.approve(&summary).await?;
-        let saved = vacation.clone();
-        match self
+        let saved = reply.clone();
+        let stored = self
             .core
-            .call(async move { sync.set_vacation(saved).await })
-            .await
-        {
-            Ok(()) => Ok(vacation_json(&vacation)),
-            Err(err) => Err(self.gmail_error(&account, err)),
+            .call(async move { settings.set_automatic_reply(account_id, &saved).await })
+            .await;
+        match stored {
+            Ok(Permitted::Done(())) => Ok(reply_json(&reply)),
+            Ok(Permitted::NeedsPermission) => Err(self.needs_permission(&account)),
+            Err(err) => Err(err.to_string()),
         }
     }
 
     async fn tool_list_rules(self: &Rc<Self>, input: &Value) -> ToolResult {
-        let (account, sync) = self.sync_for(&required(input, "account")?)?;
+        let (account, settings) = self.settings_for(&required(input, "account")?)?;
         let labels = self
             .labels
             .borrow()
             .get(&account.id)
             .cloned()
             .unwrap_or_default();
-        match self.core.call(async move { sync.filters().await }).await {
-            Ok(filters) => Ok(json!({
+        let account_id = account.id;
+        let listed = self
+            .core
+            .call(async move { settings.rules(account_id).await })
+            .await;
+        match listed {
+            Ok(Permitted::Done(filters)) => Ok(json!({
                 "rules": filters.iter().map(|f| json!({
                     "id": f.id,
                     "when": describe_criteria(&f.criteria),
@@ -748,12 +775,13 @@ impl MainWindow {
                     }),
                 })).collect::<Vec<_>>(),
             })),
-            Err(err) => Err(self.gmail_error(&account, err)),
+            Ok(Permitted::NeedsPermission) => Err(self.needs_permission(&account)),
+            Err(err) => Err(err.to_string()),
         }
     }
 
     async fn tool_create_rule(self: &Rc<Self>, input: &Value) -> ToolResult {
-        let (account, sync) = self.sync_for(&required(input, "account")?)?;
+        let (account, settings) = self.settings_for(&required(input, "account")?)?;
         let label = match text(input, "label") {
             Some(name) => Some(
                 self.core
@@ -792,28 +820,32 @@ impl MainWindow {
             describe_action(&filter.action, name).to_lowercase()
         );
         self.approve(&summary).await?;
-        match self
+        let account_id = account.id;
+        let added = self
             .core
-            .call(async move { sync.create_filter(filter).await })
-            .await
-        {
-            Ok(created) => Ok(json!({"created": created.id})),
-            Err(err) => Err(self.gmail_error(&account, err)),
+            .call(async move { settings.add_rule(account_id, filter).await })
+            .await;
+        match added {
+            Ok(Permitted::Done(created)) => Ok(json!({"created": created.id})),
+            Ok(Permitted::NeedsPermission) => Err(self.needs_permission(&account)),
+            Err(err) => Err(err.to_string()),
         }
     }
 
     async fn tool_delete_rule(self: &Rc<Self>, input: &Value) -> ToolResult {
-        let (account, sync) = self.sync_for(&required(input, "account")?)?;
+        let (account, settings) = self.settings_for(&required(input, "account")?)?;
         let id = required(input, "id")?;
         self.approve(&format!("Delete a Gmail rule from {}?", account.email))
             .await?;
-        match self
+        let account_id = account.id;
+        let deleted = self
             .core
-            .call(async move { sync.delete_filter(&id).await })
-            .await
-        {
-            Ok(()) => Ok(json!({"deleted": true})),
-            Err(err) => Err(self.gmail_error(&account, err)),
+            .call(async move { settings.delete_rule(account_id, &id).await })
+            .await;
+        match deleted {
+            Ok(Permitted::Done(())) => Ok(json!({"deleted": true})),
+            Ok(Permitted::NeedsPermission) => Err(self.needs_permission(&account)),
+            Err(err) => Err(err.to_string()),
         }
     }
 
@@ -963,11 +995,12 @@ impl MainWindow {
         let account = self.account_named(&required(input, "account")?)?;
         let note = text(input, "note").unwrap_or_default();
         match self.create_hidden_address(account.id, &note).await {
-            Ok(hidden) => {
+            Ok(Permitted::Done(hidden)) => {
                 gtk::prelude::WidgetExt::clipboard(&self.window).set_text(&hidden.address);
                 Ok(json!({"address": hidden.address, "copied": true}))
             }
-            Err(err) => Err(self.gmail_error(&account, err)),
+            Ok(Permitted::NeedsPermission) => Err(self.needs_permission(&account)),
+            Err(err) => Err(err.to_string()),
         }
     }
 
@@ -981,25 +1014,25 @@ impl MainWindow {
             .ok_or_else(|| format!("{address} is not a Hide My Email address."))?;
         let account = self.account_named(&hidden.account)?;
         match self.set_hidden_address_active(&address, active).await {
-            Ok(()) => Ok(json!({"address": address, "active": active})),
-            Err(err) => Err(self.gmail_error(&account, err)),
+            Ok(Permitted::Done(())) => Ok(json!({"address": address, "active": active})),
+            Ok(Permitted::NeedsPermission) => Err(self.needs_permission(&account)),
+            Err(err) => Err(err.to_string()),
         }
     }
 }
 
-fn vacation_json(v: &Vacation) -> Value {
+fn reply_json(reply: &AutomaticReply) -> Value {
     let day = |t: Option<i64>| {
         t.and_then(crate::format::local)
             .map(|d| d.format("%Y-%m-%d").to_string())
     };
     json!({
-        "enabled": v.enabled,
-        "subject": v.subject,
-        "message": v.body,
-        "contacts_only": v.contacts_only,
-        "first_day": day(v.start),
-        // Gmail's end is the midnight after the last day.
-        "last_day": day(v.end.map(|t| t - 1)),
+        "enabled": reply.enabled,
+        "subject": reply.subject,
+        "message": reply.body,
+        "contacts_only": reply.contacts_only,
+        "first_day": day(reply.first_day),
+        "last_day": day(reply.last_day),
     })
 }
 

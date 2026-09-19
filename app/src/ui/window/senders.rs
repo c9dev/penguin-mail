@@ -4,13 +4,11 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gio, glib};
-use mailrs_domain::Filter;
-use mailrs_sync::{History, MailAction, TriageAction};
+use mailrs_sync::{History, MailAction, Permitted, TriageAction};
 
 use super::{MainWindow, Target};
 use crate::compose::Draft;
 use crate::ui::conversation::ConversationView;
-use crate::ui::vacation::missing_scope;
 use crate::unsubscribe::{Unsubscribe, choose};
 
 impl MainWindow {
@@ -136,16 +134,18 @@ impl MainWindow {
             if dialog.choose_future(Some(&this.window)).await != "block" {
                 return;
             }
-            let Some(sync) = this.core.account(account_id) else {
+            if this.core.account(account_id).is_none() {
                 return this.toast("That account is not connected");
+            }
+            let settings = this.core.gmail_settings();
+            let blocking = {
+                let email = email.clone();
+                this.core
+                    .call(async move { settings.block_sender(account_id, &email).await })
+                    .await
             };
-            let rule = Filter::block(&email);
-            match this
-                .core
-                .call(async move { sync.create_filter(rule).await })
-                .await
-            {
-                Ok(_) => {
+            match blocking {
+                Ok(Permitted::Done(_)) => {
                     if view.with_open(|o| o.thread_id == target.thread_id) == Some(true) {
                         view.clear();
                     }
@@ -156,7 +156,7 @@ impl MainWindow {
                         Some(format!("Blocked {email}")),
                     );
                 }
-                Err(err) if missing_scope(&err) => this.ask_for_settings_access(account_id),
+                Ok(Permitted::NeedsPermission) => this.ask_for_settings_access(account_id),
                 Err(err) => this.toast(&format!("Could not block the sender: {err}")),
             }
         });
