@@ -144,6 +144,37 @@ impl Default for ThreadRow {
     }
 }
 
+/// The CSS class of each flag colour, so binding a row builds no strings.
+const FLAG_CLASSES: [&str; 7] = [
+    "flag-red",
+    "flag-orange",
+    "flag-yellow",
+    "flag-green",
+    "flag-blue",
+    "flag-purple",
+    "flag-gray",
+];
+
+/// The CSS class of each account colour, one per entry of [`PALETTE`].
+const ACCOUNT_CLASSES: [&str; 9] = [
+    "account-0",
+    "account-1",
+    "account-2",
+    "account-3",
+    "account-4",
+    "account-5",
+    "account-6",
+    "account-7",
+    "account-8",
+];
+
+const _: () = assert!(ACCOUNT_CLASSES.len() == PALETTE.len());
+const _: () = assert!(FLAG_CLASSES.len() == FlagColor::ALL.len());
+
+fn flag_class(color: FlagColor) -> &'static str {
+    FLAG_CLASSES[FlagColor::ALL.iter().position(|c| *c == color).unwrap_or(0)]
+}
+
 impl ThreadRow {
     pub fn bind(&self, thread: &ThreadSummary, show_account: bool, vip: bool) {
         let imp = self.imp();
@@ -182,26 +213,27 @@ impl ThreadRow {
         get(&imp.snippet).set_label(&thread.snippet);
         let flag = imp.star.get().expect("flag exists");
         flag.set_visible(thread.starred);
-        for color in FlagColor::ALL {
-            flag.remove_css_class(&format!("flag-{}", color.as_str()));
+        let wanted = flag_class(thread.flag_color.unwrap_or(FlagColor::Red));
+        if !flag.has_css_class(wanted) {
+            for class in FLAG_CLASSES {
+                flag.remove_css_class(class);
+            }
+            flag.add_css_class(wanted);
         }
-        flag.add_css_class(&format!(
-            "flag-{}",
-            thread.flag_color.unwrap_or(FlagColor::Red).as_str()
-        ));
         imp.clip
             .get()
             .expect("clip exists")
             .set_visible(thread.has_attachments);
         let account = imp.account.get().expect("account dot exists");
         account.set_visible(show_account);
-        for index in 0..PALETTE.len() {
-            account.remove_css_class(&format!("account-{index}"));
+        let wanted =
+            ACCOUNT_CLASSES[account_color_index(thread.account_id) % ACCOUNT_CLASSES.len()];
+        if !account.has_css_class(wanted) {
+            for class in ACCOUNT_CLASSES {
+                account.remove_css_class(class);
+            }
+            account.add_css_class(wanted);
         }
-        account.add_css_class(&format!(
-            "account-{}",
-            account_color_index(thread.account_id)
-        ));
         self.update_property(&[gtk::accessible::Property::Label(&format!(
             "{}{}, {}, {}",
             if thread.unread { "Unread, " } else { "" },
