@@ -4,7 +4,8 @@ use mailrs_domain::{AccountId, Filter, MessageBody, MessageMeta, Vacation};
 use mailrs_gmail::body::extract_body;
 use mailrs_gmail::convert::message_meta;
 use mailrs_gmail::{
-    GmailClient, GmailError, HistoryPage, MessagePage, Profile, RemoteLabel, html_to_text,
+    GmailClient, GmailError, HistoryPage, LabelColor, MessagePage, Profile, RemoteLabel,
+    html_to_text,
 };
 
 /// Page size for window listings.
@@ -115,6 +116,12 @@ pub trait GmailApi: Send + Sync + 'static {
     ) -> impl Future<Output = Result<RemoteLabel, GmailError>> + Send;
 
     fn delete_label(&self, id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
+
+    fn set_label_color(
+        &self,
+        id: &str,
+        color: &LabelColor,
+    ) -> impl Future<Output = Result<RemoteLabel, GmailError>> + Send;
 
     /// The signature of the default send-as identity, as plain text.
     fn signature(&self) -> impl Future<Output = Result<Option<String>, GmailError>> + Send;
@@ -310,5 +317,13 @@ impl GmailApi for AccountClient {
 
     async fn raw_message(&self, id: &str) -> Result<Vec<u8>, GmailError> {
         self.client.raw_message(id).await
+    }
+
+    async fn set_label_color(
+        &self,
+        id: &str,
+        color: &LabelColor,
+    ) -> Result<RemoteLabel, GmailError> {
+        self.client.set_label_color(id, color).await
     }
 }

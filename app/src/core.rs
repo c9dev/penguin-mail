@@ -136,6 +136,13 @@ impl GmailApi for Api {
     async fn delete_label(&self, id: &str) -> Result<(), GmailError> {
         delegate!(self, delete_label(id))
     }
+    async fn set_label_color(
+        &self,
+        id: &str,
+        color: &mailrs_gmail::LabelColor,
+    ) -> Result<RemoteLabel, GmailError> {
+        delegate!(self, set_label_color(id, color))
+    }
     async fn vacation(&self) -> Result<Vacation, GmailError> {
         delegate!(self, vacation())
     }

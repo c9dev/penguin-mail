@@ -6,7 +6,8 @@ use std::sync::Mutex;
 
 use mailrs_domain::{Address, EpochMillis, Filter, MessageBody, MessageMeta, Vacation};
 use mailrs_gmail::{
-    GmailError, HistoryChange, HistoryPage, MessagePage, MessageRef, Profile, RemoteLabel,
+    GmailError, HistoryChange, HistoryPage, LabelColor, MessagePage, MessageRef, Profile,
+    RemoteLabel,
 };
 
 use crate::api::{GmailApi, SavedDraft};
@@ -73,6 +74,7 @@ impl FakeGmail {
             id: id.into(),
             name: id.into(),
             kind: Some(kind.into()),
+            color: None,
         };
         FakeGmail {
             state: Mutex::new(FakeState {
@@ -458,6 +460,7 @@ impl GmailApi for FakeGmail {
                 id: format!("Label_{}", s.labels.len() + 1),
                 name: name.to_string(),
                 kind: Some("user".into()),
+                color: None,
             };
             s.labels.push(label.clone());
             label
@@ -523,6 +526,23 @@ impl GmailApi for FakeGmail {
         self.with(|s| {
             let meta = s.messages.get(id).ok_or(GmailError::NotFound)?;
             Ok(format!("Subject: {}\r\n\r\n{}\r\n", meta.subject, meta.snippet).into_bytes())
+        })
+    }
+
+    async fn set_label_color(
+        &self,
+        id: &str,
+        color: &LabelColor,
+    ) -> Result<RemoteLabel, GmailError> {
+        self.check_failure()?;
+        self.with(|s| {
+            let label = s
+                .labels
+                .iter_mut()
+                .find(|l| l.id == id)
+                .ok_or(GmailError::NotFound)?;
+            label.color = Some(color.clone());
+            Ok(label.clone())
         })
     }
 }

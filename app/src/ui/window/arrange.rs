@@ -264,5 +264,20 @@ impl MainWindow {
             });
         });
         self.actions.add_action(&color);
+
+        let label_color = gio::SimpleAction::new(
+            "label-color",
+            Some(&glib::VariantType::new("(xsi)").expect("valid type")),
+        );
+        let weak = Rc::downgrade(self);
+        label_color.connect_activate(move |_, parameter| {
+            if let (Some(win), Some((account, label, index))) = (
+                weak.upgrade(),
+                parameter.and_then(|p| p.get::<(i64, String, i32)>()),
+            ) {
+                win.color_label(account, label, index.max(0) as usize);
+            }
+        });
+        self.actions.add_action(&label_color);
     }
 }

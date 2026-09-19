@@ -8,7 +8,9 @@ use adw::prelude::*;
 use gtk::{gdk, gio, glib, pango};
 use mailrs_domain::{Account, AccountId, AccountState, FlagColor, Label, LabelKind};
 
-use super::{Folder, Mailbox, UNIFIED, account_label_name, mailbox_icon, unified_name};
+use super::{
+    Folder, LABEL_COLORS, Mailbox, UNIFIED, account_label_name, mailbox_icon, unified_name,
+};
 use crate::format::{PALETTE_NAMES, account_color_index};
 
 struct Row {
@@ -30,6 +32,8 @@ pub struct Sidebar {
     pub add_account: gtk::Button,
     list: gtk::ListBox,
     scroller: gtk::ScrolledWindow,
+    /// Colours for label icons, rewritten on each rebuild.
+    label_css: gtk::CssProvider,
     rows: RefCell<Vec<Row>>,
     headings: RefCell<Vec<Heading>>,
     /// Accounts whose sections the user expanded or collapsed.
@@ -84,6 +88,17 @@ impl Sidebar {
             add_account,
             list,
             scroller: scroller.clone(),
+            label_css: {
+                let css = gtk::CssProvider::new();
+                if let Some(display) = gdk::Display::default() {
+                    gtk::style_context_add_provider_for_display(
+                        &display,
+                        &css,
+                        gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+                    );
+                }
+                css
+            },
             rows: RefCell::new(Vec::new()),
             headings: RefCell::new(Vec::new()),
             expanded: RefCell::new(HashMap::new()),
@@ -167,6 +182,7 @@ impl Sidebar {
     /// Rebuilds every row. `vips` lists VIPs by address and name.
     pub fn rebuild(&self, accounts: &[(Account, Vec<Label>)], extras: &Extras, selected: &Mailbox) {
         let vips = &extras.vips;
+        let mut label_rules = String::new();
         // Keep the scroll position; label changes rebuild every row.
         let scrolled = self.scroller.vadjustment().value();
         self.muted.set(true);
@@ -267,14 +283,26 @@ impl Sidebar {
                     name: label.name.replace('/', " › "),
                 };
                 let row = self.add_mailbox(mailbox, leaf, "mailrs-tag-symbolic", depth);
+                if let Some(color) = label.color.as_deref().and_then(css_hex)
+                    && let Some(icon) = row.child().and_then(|c| c.first_child())
+                {
+                    let class = format!("label-color-{color}");
+                    label_rules.push_str(&format!(".{class} {{ color: #{color}; }}\n"));
+                    icon.add_css_class(&class);
+                }
                 label_menu(&row, account.id, &label.id);
             }
         }
+        self.label_css.load_from_string(&label_rules);
         self.select(selected);
         self.apply_expansion();
         self.muted.set(false);
+        // The new rows get their height, and selecting a row scrolls to it,
+        // a moment later; put the view back once that has happened.
         let adjustment = self.scroller.vadjustment();
-        glib::idle_add_local_once(move || adjustment.set_value(scrolled));
+        glib::timeout_add_local_once(std::time::Duration::from_millis(120), move || {
+            adjustment.set_value(scrolled);
+        });
     }
 
     /// Adds a mailbox row. `depth` indents it: 0 for the unified views, 1
@@ -431,6 +459,12 @@ fn smart_menu(row: &gtk::ListBoxRow, id: &str) {
     context_menu(row, &menu);
 }
 
+/// `#rrggbb` as six lower-case hex digits, safe inside a CSS class name.
+fn css_hex(color: &str) -> Option<String> {
+    let hex = color.trim().trim_start_matches('#').to_lowercase();
+    (hex.len() == 6 && hex.chars().all(|c| c.is_ascii_hexdigit())).then_some(hex)
+}
+
 /// Rows that show only while they hold something.
 fn hidden_until_used(mailbox: &Mailbox) -> bool {
     matches!(mailbox, Mailbox::Scheduled | Mailbox::Flag(_))
@@ -454,14 +488,23 @@ fn takes_mail(mailbox: &Mailbox) -> bool {
 fn label_menu(row: &gtk::ListBoxRow, account_id: AccountId, label_id: &str) {
     let menu = gio::Menu::new();
     let target = (account_id, label_id.to_string()).to_variant();
-    for (text, action) in [
-        ("Rename…", "win.label-rename"),
-        ("Delete…", "win.label-delete"),
-    ] {
+    let item = |text: &str, action: &str| {
         let item = gio::MenuItem::new(Some(text), None);
         item.set_action_and_target_value(Some(action), Some(&target));
-        menu.append_item(&item);
+        item
+    };
+    menu.append_item(&item("Rename…", "win.label-rename"));
+    let colors = gio::Menu::new();
+    for (index, (name, _, _)) in LABEL_COLORS.iter().enumerate() {
+        let entry = gio::MenuItem::new(Some(name), None);
+        entry.set_action_and_target_value(
+            Some("win.label-color"),
+            Some(&(account_id, label_id.to_string(), index as i32).to_variant()),
+        );
+        colors.append_item(&entry);
     }
+    menu.append_submenu(Some("Color"), &colors);
+    menu.append_item(&item("Delete…", "win.label-delete"));
     context_menu(row, &menu);
 }
 

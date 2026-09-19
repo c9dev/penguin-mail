@@ -14,8 +14,8 @@ use tokio::sync::Mutex;
 use crate::convert::{HistoryPage, history_page};
 use crate::convert::{html_to_text, text_to_html};
 use crate::model::{
-    AttachmentBody, Draft, DraftList, HistoryList, LabelList, Message, MessagePage, Profile,
-    RemoteLabel, SendAs, SendAsList, Thread, VacationSettings,
+    AttachmentBody, Draft, DraftList, HistoryList, LabelColor, LabelList, Message, MessagePage,
+    Profile, RemoteLabel, SendAs, SendAsList, Thread, VacationSettings,
 };
 use crate::oauth::{AccessToken, LoopbackListener, OAuthClient, Pkce, random_token};
 use crate::{GmailError, QuotaLimiter};
@@ -317,6 +317,20 @@ impl GmailClient {
 
     pub async fn rename_label(&self, id: &str, name: &str) -> Result<RemoteLabel, GmailError> {
         let body = json!({"name": name});
+        self.call(cost::LABELS, || {
+            self.http()
+                .patch(self.url(&format!("labels/{id}")))
+                .json(&body)
+        })
+        .await
+    }
+
+    pub async fn set_label_color(
+        &self,
+        id: &str,
+        color: &LabelColor,
+    ) -> Result<RemoteLabel, GmailError> {
+        let body = json!({"color": color});
         self.call(cost::LABELS, || {
             self.http()
                 .patch(self.url(&format!("labels/{id}")))

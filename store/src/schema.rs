@@ -142,6 +142,9 @@ CREATE TABLE reminders (
     PRIMARY KEY (account_id, thread_id)
 );
 "#,
+    r#"
+ALTER TABLE labels ADD COLUMN color TEXT;
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,

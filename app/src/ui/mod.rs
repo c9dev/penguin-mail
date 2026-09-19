@@ -152,6 +152,19 @@ impl Mailbox {
     }
 }
 
+/// Label colours from Gmail's palette: name, background, and text.
+pub const LABEL_COLORS: [(&str, &str, &str); 9] = [
+    ("Red", "#fb4c2f", "#ffffff"),
+    ("Orange", "#ffad47", "#ffffff"),
+    ("Yellow", "#fad165", "#000000"),
+    ("Green", "#16a766", "#ffffff"),
+    ("Teal", "#2da2bb", "#ffffff"),
+    ("Blue", "#4a86e8", "#ffffff"),
+    ("Purple", "#a479e2", "#ffffff"),
+    ("Pink", "#f691b3", "#ffffff"),
+    ("Gray", "#999999", "#ffffff"),
+];
+
 pub const UNIFIED: [&str; 4] = ["INBOX", "STARRED", "SENT", "DRAFT"];
 
 pub fn unified_name(label: &str) -> &'static str {

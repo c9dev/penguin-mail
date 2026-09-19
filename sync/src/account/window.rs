@@ -134,6 +134,7 @@ fn domain_labels(account_id: AccountId, remote: &[RemoteLabel]) -> Vec<Label> {
             } else {
                 LabelKind::User
             },
+            color: l.color.as_ref().map(|c| c.background_color.clone()),
         })
         .collect()
 }

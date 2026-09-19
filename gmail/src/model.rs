@@ -45,6 +45,16 @@ pub struct RemoteLabel {
     /// "system" or "user".
     #[serde(rename = "type", default)]
     pub kind: Option<String>,
+    #[serde(default)]
+    pub color: Option<LabelColor>,
+}
+
+/// A label's colours. Gmail accepts only colours from its own palette.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LabelColor {
+    pub background_color: String,
+    pub text_color: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]

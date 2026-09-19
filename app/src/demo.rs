@@ -328,19 +328,21 @@ pub fn seed(conn: &Connection, now: EpochMillis) -> Result<()> {
                     id: l.into(),
                     name: l.into(),
                     kind: LabelKind::System,
+                    color: None,
                 })
                 .collect();
         if email == ACCOUNTS[1] {
-            for (label, name) in [
-                ("Label_clients", "Clients"),
-                ("Label_clients_mf", "Clients/Maple & Finch"),
-                ("Label_travel", "Travel"),
+            for (label, name, color) in [
+                ("Label_clients", "Clients", Some("#4a86e8")),
+                ("Label_clients_mf", "Clients/Maple & Finch", None),
+                ("Label_travel", "Travel", Some("#16a766")),
             ] {
                 account_labels.push(Label {
                     account_id: id,
                     id: label.into(),
                     name: name.into(),
                     kind: LabelKind::User,
+                    color: color.map(str::to_string),
                 });
             }
         }
@@ -716,6 +718,7 @@ impl GmailApi for DemoApi {
             id: format!("Label_demo_{}", mailrs_gmail::random_token(4)),
             name: name.to_string(),
             kind: Some("user".into()),
+            color: None,
         })
     }
 
@@ -728,6 +731,28 @@ impl GmailApi for DemoApi {
             id: id.to_string(),
             name: name.to_string(),
             kind: Some("user".into()),
+            color: None,
+        })
+    }
+
+    async fn set_label_color(
+        &self,
+        id: &str,
+        color: &mailrs_gmail::LabelColor,
+    ) -> std::result::Result<RemoteLabel, GmailError> {
+        let (account_id, key) = (self.account_id, id.to_string());
+        let name = self
+            .db
+            .read(move |c| labels::list_labels(c, account_id))
+            .await
+            .ok()
+            .and_then(|all| all.into_iter().find(|l| l.id == key).map(|l| l.name))
+            .unwrap_or_default();
+        Ok(RemoteLabel {
+            id: id.to_string(),
+            name,
+            kind: Some("user".into()),
+            color: Some(color.clone()),
         })
     }
 

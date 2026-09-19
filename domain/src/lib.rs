@@ -164,6 +164,9 @@ pub struct Label {
     pub id: String,
     pub name: String,
     pub kind: LabelKind,
+    /// Gmail's background colour for the label, as `#rrggbb`.
+    #[serde(default)]
+    pub color: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

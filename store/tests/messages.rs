@@ -14,6 +14,7 @@ fn labels_are_replaced_wholesale_and_listed_system_first() {
         id: lid.into(),
         name: name.into(),
         kind,
+        color: None,
     };
     labels::replace_labels(
         &conn,

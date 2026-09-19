@@ -184,6 +184,35 @@ impl MainWindow {
         });
     }
 
+    /// Gives a label colour `index` of Gmail's palette.
+    pub(super) fn color_label(
+        self: &Rc<Self>,
+        account_id: AccountId,
+        label_id: String,
+        index: usize,
+    ) {
+        let Some((_, background, text)) = crate::ui::LABEL_COLORS.get(index) else {
+            return;
+        };
+        let Some(sync) = self.core.account(account_id) else {
+            return self.toast("That account is not connected");
+        };
+        let color = mailrs_gmail::LabelColor {
+            background_color: background.to_string(),
+            text_color: text.to_string(),
+        };
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            if let Err(err) = this
+                .core
+                .call(async move { sync.set_label_color(&label_id, color).await })
+                .await
+            {
+                this.toast(&format!("Could not change the colour: {err}"));
+            }
+        });
+    }
+
     fn label_name(&self, account_id: AccountId, label_id: &str) -> Option<String> {
         self.labels
             .borrow()

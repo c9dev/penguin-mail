@@ -3,7 +3,7 @@
 use std::collections::BTreeSet;
 
 use mailrs_domain::{ChangeEvent, Label, LabelKind};
-use mailrs_gmail::RemoteLabel;
+use mailrs_gmail::{LabelColor, RemoteLabel};
 use mailrs_store::labels;
 
 use super::AccountSync;
@@ -55,6 +55,19 @@ impl<G: GmailApi> AccountSync<G> {
         Ok(())
     }
 
+    /// Gives a label one of Gmail's colours.
+    pub async fn set_label_color(&self, id: &str, color: LabelColor) -> Result<(), SyncError> {
+        let remote = self.api.set_label_color(id, &color).await?;
+        let label = self.user_label(&remote);
+        self.db
+            .write(move |c| labels::upsert_label(c, &label))
+            .await?;
+        self.emit(ChangeEvent::LabelsChanged {
+            account_id: self.account_id,
+        });
+        Ok(())
+    }
+
     /// Deletes a label. Its mail stays, without the label.
     pub async fn delete_label(&self, id: &str) -> Result<(), SyncError> {
         self.api.delete_label(id).await?;
@@ -74,6 +87,7 @@ impl<G: GmailApi> AccountSync<G> {
             id: remote.id.clone(),
             name: remote.name.clone(),
             kind: LabelKind::User,
+            color: remote.color.as_ref().map(|c| c.background_color.clone()),
         }
     }
 }

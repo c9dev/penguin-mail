@@ -14,7 +14,7 @@ pub use client::{Authorized, GMAIL_API_BASE, GmailClient, authorize, one_click_u
 pub use convert::{HistoryChange, HistoryPage, html_to_text};
 pub use error::GmailError;
 pub use limiter::QuotaLimiter;
-pub use model::{Draft, MessagePage, MessageRef, Profile, RemoteLabel, SendAs};
+pub use model::{Draft, LabelColor, MessagePage, MessageRef, Profile, RemoteLabel, SendAs};
 pub use oauth::{
     AccessToken, GMAIL_SCOPE, LoopbackListener, OAuthClient, Pkce, SETTINGS_SCOPE, Tokens,
     parse_redirect, random_token,

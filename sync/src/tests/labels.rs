@@ -33,3 +33,21 @@ async fn labels_are_created_renamed_with_children_and_deleted() {
     assert!(!h.labels_of("m1").await.contains(&clients.id));
     assert!(h.fake.with(|s| s.labels.iter().all(|l| l.id != clients.id)));
 }
+
+#[tokio::test]
+async fn a_label_colour_is_kept() {
+    let h = harness().await;
+    h.bootstrap_all().await;
+    let label = h.sync.create_label("Travel").await.unwrap();
+    let color = mailrs_gmail::LabelColor {
+        background_color: "#16a766".into(),
+        text_color: "#ffffff".into(),
+    };
+    h.sync.set_label_color(&label.id, color).await.unwrap();
+    let stored =
+        h.db.read(|c| mailrs_store::labels::list_labels(c, 1))
+            .await
+            .unwrap();
+    let travel = stored.iter().find(|l| l.id == label.id).unwrap();
+    assert_eq!(travel.color.as_deref(), Some("#16a766"));
+}
