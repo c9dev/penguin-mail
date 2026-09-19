@@ -26,6 +26,8 @@ pub struct ThreadFilter {
     pub any_labels: Vec<String>,
     /// Only threads with none of these labels.
     pub no_labels: Vec<String>,
+    /// Only these threads, by id. Empty means every thread.
+    pub thread_ids: Vec<String>,
 }
 
 /// SQL text with anonymous `?` placeholders, and their values in order.
@@ -95,6 +97,14 @@ impl Rows {
         .push("))");
     }
 
+    /// The column that holds the row's thread id.
+    fn thread_key(self) -> &'static str {
+        match self {
+            Rows::Threads => "t.id",
+            Rows::Messages => "m.thread_id",
+        }
+    }
+
     /// The condition that a message `x` belongs to the row.
     fn scope(self) -> &'static str {
         match self {
@@ -138,6 +148,13 @@ impl ThreadFilter {
         self
     }
 
+    /// Narrows the list to these threads, so a caller can re-read the rows
+    /// a change event named instead of listing the mailbox again.
+    pub fn with_threads(mut self, thread_ids: Vec<String>) -> Self {
+        self.thread_ids = thread_ids;
+        self
+    }
+
     /// Appends the `FROM … WHERE …` part of a query over `rows`.
     ///
     /// A label view starts from the label index and joins the rows it names,
@@ -169,6 +186,11 @@ impl ThreadFilter {
             if let Some(account) = self.account_id {
                 sql.push(" AND d.account_id = ").bind(account);
             }
+        }
+        if !self.thread_ids.is_empty() {
+            sql.push(&format!(" AND {} IN (", rows.thread_key()))
+                .bind_list(&self.thread_ids)
+                .push(")");
         }
         if !self.any_labels.is_empty() {
             sql.push(" AND ");
