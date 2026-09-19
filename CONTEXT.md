@@ -41,3 +41,9 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 **Hidden address**: one plus address from Hide My Email, such as `dana+kite.fern482@gmail.com`, with the rules behind it. One rule gives its mail the Hide My Email label; a second trashes that mail while the address is off. `mailrs_sync::HiddenFilters` holds the two rule ids. _Avoid_: masked address, burner.
 
 **Settings permission**: the Gmail access an account grants once so Penguin Mail may read and change its account settings. Without it every `AccountSettings` call answers `Permitted::NeedsPermission`, and the caller offers Grant Access rather than showing an error. _Avoid_: scope, consent.
+
+**Tool call**: one thing the assistant asks the app to do, by name and with JSON: list a mailbox, organize mail, change a setting. `mailrs::assistant::tools` declares what the model may call and `mailrs::assistant::run` runs it against the modules. The tools change mail through the same `MailActions` and `AccountSettings` the window uses, so the assistant cannot do anything the user could not. _Avoid_: function call, command, action.
+
+**Desk**: the port the tools read the window through: the preferences, the accounts and their labels, the view, and what is on screen, meaning the mailbox, the open conversation, and the selected rows. `mailrs::assistant::run::Desk`. Every method gives back plain data, so a test fills one in without a widget. _Avoid_: context, state, session.
+
+**Effect port**: the port the tools change the window through: approve, open, compose, send, copy, ask for the settings permission, and the rest. `mailrs::assistant::run::Effects`. The window is one adapter behind it and the tests are another, so the whole tool loop runs with no GTK. Not to be confused with a settings `Effect`, which names a part of the window a preference left stale. _Avoid_: side effect, callback, handler.

@@ -25,6 +25,7 @@ use mailrs_sync::{
     SyncEngine, View, connect_account, now_millis,
 };
 
+use crate::assistant::run::{Background, Modules};
 use crate::demo::{self, DemoApi};
 
 /// Gmail for real accounts, or the local stand-in for demo mode.
@@ -439,6 +440,17 @@ impl Core {
         Arc::clone(&self.gmail_settings)
     }
 
+    /// The modules the assistant's tools work through.
+    pub fn modules(&self) -> Modules<RunningEngine> {
+        Modules {
+            mail: Arc::clone(&self.actions),
+            lists: Arc::clone(&self.lists),
+            gmail: Arc::clone(&self.gmail_settings),
+            accounts: Arc::clone(&self.engine),
+            db: self.db.clone(),
+        }
+    }
+
     /// Runs a mail action on the tokio runtime. See `MailActions::run`.
     pub async fn act(&self, targets: Vec<Target>, action: MailAction, history: History) -> Outcome {
         let (actions, given) = (Arc::clone(&self.actions), targets.clone());
@@ -505,18 +517,6 @@ impl Core {
             .await
             .ok()
             .flatten()
-    }
-
-    /// The id of the label called `name`, created first with `create`.
-    pub async fn label_id(
-        &self,
-        account_id: AccountId,
-        name: &str,
-        create: bool,
-    ) -> Result<String> {
-        let (actions, name) = (Arc::clone(&self.actions), name.to_string());
-        self.call(async move { actions.label_id(account_id, &name, create).await })
-            .await
     }
 
     /// The targets that `folder` no longer holds.
@@ -606,6 +606,19 @@ impl Core {
             Ok::<_, anyhow::Error>(())
         })
         .await
+    }
+}
+
+/// The assistant's tools run on the GTK thread and hand their store and
+/// Gmail calls here, so they reach the same runtime and the same busy count
+/// as the window's own calls.
+impl Background for Core {
+    fn start(&self, task: std::pin::Pin<Box<dyn Future<Output = ()> + Send>>) {
+        let guard = InFlight::new(&self.in_flight);
+        self.runtime.spawn(async move {
+            let _guard = guard;
+            task.await;
+        });
     }
 }
 
