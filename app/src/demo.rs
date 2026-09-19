@@ -272,6 +272,19 @@ fn samples() -> Vec<Sample> {
         },
         Sample {
             account: 0,
+            thread: "t-news",
+            id: "news-1",
+            from: ("Trail Notes", "hello@trailnotes.example"),
+            to: &[ME],
+            subject: "Five autumn loops under 15 km",
+            minutes_ago: 7 * HOUR,
+            labels: &["INBOX"],
+            text: "This week: five autumn loops under 15 km, a gear list for cold mornings, and where the larches turn first.",
+            html: None,
+            attachments: &[],
+        },
+        Sample {
+            account: 0,
             thread: "t-prize",
             id: "prize-1",
             from: ("Rewards Desk", "winner@prize-center.example"),
@@ -390,6 +403,11 @@ pub fn seed(conn: &Connection, now: EpochMillis) -> Result<()> {
                     content_id: None,
                 })
                 .collect(),
+            list_unsubscribe: (sample.id == "news-1").then(|| {
+                "<mailto:leave@trailnotes.example?subject=unsubscribe>, <https://trailnotes.example/u/dana>"
+                    .to_string()
+            }),
+            one_click_unsubscribe: false,
         };
         bodies::put_body(conn, account_id, sample.id, &body, now)?;
     }
@@ -398,6 +416,16 @@ pub fn seed(conn: &Connection, now: EpochMillis) -> Result<()> {
 
 /// Gmail for demo mode: reads come from the local store, writes succeed
 /// without going anywhere.
+/// Filters made in demo mode, per account. They last until the app quits.
+type DemoFilters = std::sync::Mutex<
+    std::collections::HashMap<mailrs_domain::AccountId, Vec<mailrs_domain::Filter>>,
+>;
+
+fn demo_filters() -> &'static DemoFilters {
+    static FILTERS: std::sync::OnceLock<DemoFilters> = std::sync::OnceLock::new();
+    FILTERS.get_or_init(Default::default)
+}
+
 /// Automatic replies set in demo mode. They last until the app quits.
 fn demo_vacations() -> &'static std::sync::Mutex<
     std::collections::HashMap<mailrs_domain::AccountId, mailrs_domain::Vacation>,
@@ -623,6 +651,43 @@ impl GmailApi for DemoApi {
 
     async fn display_name(&self) -> std::result::Result<Option<String>, GmailError> {
         Ok(Some(DISPLAY_NAME.into()))
+    }
+
+    async fn filters(&self) -> std::result::Result<Vec<mailrs_domain::Filter>, GmailError> {
+        Ok(demo_filters()
+            .lock()
+            .expect("the demo lock is never poisoned")
+            .get(&self.account_id)
+            .cloned()
+            .unwrap_or_default())
+    }
+
+    async fn create_filter(
+        &self,
+        filter: &mailrs_domain::Filter,
+    ) -> std::result::Result<mailrs_domain::Filter, GmailError> {
+        let created = mailrs_domain::Filter {
+            id: Some(format!("demo-filter-{}", mailrs_gmail::random_token(4))),
+            ..filter.clone()
+        };
+        demo_filters()
+            .lock()
+            .expect("the demo lock is never poisoned")
+            .entry(self.account_id)
+            .or_default()
+            .push(created.clone());
+        Ok(created)
+    }
+
+    async fn delete_filter(&self, id: &str) -> std::result::Result<(), GmailError> {
+        if let Some(list) = demo_filters()
+            .lock()
+            .expect("the demo lock is never poisoned")
+            .get_mut(&self.account_id)
+        {
+            list.retain(|f| f.id.as_deref() != Some(id));
+        }
+        Ok(())
     }
 
     async fn create_label(&self, name: &str) -> std::result::Result<RemoteLabel, GmailError> {

@@ -27,6 +27,7 @@ use crate::settings::{Choice, MarkRead, RemoteImages, Settings, TextSize};
 
 mod organize;
 mod scheduled;
+mod senders;
 
 /// Largest inline image embedded into a page.
 const INLINE_IMAGE_LIMIT: usize = 5 * 1024 * 1024;
@@ -652,6 +653,7 @@ impl MainWindow {
                 only_message: only,
                 me,
                 inline_images: HashMap::new(),
+                unsubscribed: false,
             };
             this.conversation.show(thread, true);
             this.complete_thread(account_id, thread_id).await;
@@ -946,6 +948,7 @@ impl MainWindow {
                     TriageAction::MarkUnread
                 });
             }
+            Action::Unsubscribe => self.unsubscribe(),
             Action::LoadImages => {
                 self.conversation.with_open(|o| o.images_allowed = true);
                 self.conversation.render(false);
@@ -1616,6 +1619,8 @@ impl MainWindow {
             Box::new(|win| win.conversation.label_button.popup()),
         );
         add("undo", Box::new(|win| win.undo()));
+        add("unsubscribe", Box::new(|win| win.unsubscribe()));
+        add("block-sender", Box::new(|win| win.block_sender()));
         add("select-all", Box::new(|win| win.list.select_all()));
         add("zoom-in", Box::new(|win| win.change_text_size(1)));
         add("zoom-out", Box::new(|win| win.change_text_size(-1)));
@@ -2076,40 +2081,9 @@ fn read_cached_body(
     account_id: AccountId,
     message_id: &str,
 ) -> mailrs_store::Result<Option<MessageBody>> {
-    // Readers are read-only, so this peeks at the cache without touching
-    // its access time; the body fetch that follows records the access.
-    let mut stmt = c.prepare_cached(
-        "SELECT html, text FROM bodies WHERE account_id = ?1 AND message_id = ?2",
-    )?;
-    let row: Option<(Option<String>, Option<String>)> = rusqlite::OptionalExtension::optional(
-        stmt.query_row(rusqlite::params![account_id, message_id], |r| {
-            Ok((r.get(0)?, r.get(1)?))
-        }),
-    )?;
-    let Some((html, text)) = row else {
-        return Ok(None);
-    };
-    let mut stmt = c.prepare_cached(
-        "SELECT part_id, filename, mime_type, size, attachment_id, content_id FROM attachments \
-         WHERE account_id = ?1 AND message_id = ?2 ORDER BY part_id",
-    )?;
-    let attachments = stmt
-        .query_map(rusqlite::params![account_id, message_id], |r| {
-            Ok(mailrs_domain::Attachment {
-                part_id: r.get(0)?,
-                filename: r.get(1)?,
-                mime_type: r.get(2)?,
-                size: r.get(3)?,
-                attachment_id: r.get(4)?,
-                content_id: r.get(5)?,
-            })
-        })?
-        .collect::<rusqlite::Result<Vec<_>>>()?;
-    Ok(Some(MessageBody {
-        html,
-        text,
-        attachments,
-    }))
+    // Readers cannot write, so this leaves the access time alone; the body
+    // fetch that follows records the access.
+    mailrs_store::bodies::peek_body(c, account_id, message_id)
 }
 
 /// Unread messages and the newest message start expanded.

@@ -680,7 +680,7 @@ mod tests {
         let body = MessageBody {
             text: Some("# Title\r\nBody".into()),
             html: Some("<h1>Title</h1>".into()),
-            attachments: vec![],
+            ..Default::default()
         };
         assert_eq!(body_text(&body), "# Title\nBody");
     }

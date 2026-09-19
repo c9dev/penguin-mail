@@ -11,7 +11,12 @@ use crate::model::MessagePart;
 /// Takes the first `text/html` and first `text/plain` part found in document
 /// order. Any part with a filename counts as an attachment.
 pub fn extract_body(payload: &MessagePart) -> MessageBody {
-    let mut body = MessageBody::default();
+    let mut body = MessageBody {
+        list_unsubscribe: find_header(payload, "List-Unsubscribe").map(|v| v.trim().to_string()),
+        one_click_unsubscribe: find_header(payload, "List-Unsubscribe-Post")
+            .is_some_and(|v| v.contains("One-Click")),
+        ..MessageBody::default()
+    };
     walk(payload, &mut body);
     body
 }

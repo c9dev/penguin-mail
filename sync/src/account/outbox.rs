@@ -1,7 +1,7 @@
 //! Sending, drafts, search, attachments, and identity: calls the UI makes on
 //! demand rather than as part of the sync loop.
 
-use mailrs_domain::{MessageMeta, Vacation};
+use mailrs_domain::{Filter, MessageMeta, Vacation};
 use mailrs_gmail::GmailError;
 
 use super::AccountSync;
@@ -101,6 +101,21 @@ impl<G: GmailApi> AccountSync<G> {
     /// The signature set in Gmail for the default identity, as plain text.
     pub async fn gmail_signature(&self) -> Result<Option<String>, SyncError> {
         Ok(self.api.signature().await?)
+    }
+
+    pub async fn filters(&self) -> Result<Vec<Filter>, SyncError> {
+        Ok(self.api.filters().await?)
+    }
+
+    pub async fn create_filter(&self, filter: Filter) -> Result<Filter, SyncError> {
+        Ok(self.api.create_filter(&filter).await?)
+    }
+
+    pub async fn delete_filter(&self, id: &str) -> Result<(), SyncError> {
+        match self.api.delete_filter(id).await {
+            Ok(()) | Err(GmailError::NotFound) => Ok(()),
+            Err(err) => Err(err.into()),
+        }
     }
 
     pub async fn vacation(&self) -> Result<Vacation, SyncError> {

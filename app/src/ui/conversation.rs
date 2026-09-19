@@ -32,6 +32,8 @@ pub struct OpenThread {
     pub me: Vec<String>,
     /// Inline images per message: `Content-ID` to `data:` URI.
     pub inline_images: HashMap<String, HashMap<String, String>>,
+    /// Set once the user unsubscribed from this thread's list.
+    pub unsubscribed: bool,
 }
 
 impl OpenThread {
@@ -50,6 +52,13 @@ impl OpenThread {
     /// The message a reply answers: the newest one that is not a draft.
     pub fn reply_target(&self) -> Option<&MessageMeta> {
         self.messages.iter().rev().find(|m| !m.has_label("DRAFT"))
+    }
+
+    /// The `List-Unsubscribe` header of the newest message, when it has one.
+    pub fn list_unsubscribe(&self) -> Option<(&MessageMeta, &MessageBody)> {
+        let target = self.reply_target()?;
+        let body = self.bodies.get(&target.id)?.as_ref().ok()?;
+        body.list_unsubscribe.is_some().then_some((target, body))
     }
 
     fn has_remote_images(&self) -> bool {
@@ -77,6 +86,7 @@ pub enum Action {
     ToggleStar,
     ToggleRead,
     LoadImages,
+    Unsubscribe,
     SaveAttachment { message_id: String, index: usize },
     Mailto(String),
 }
@@ -107,6 +117,7 @@ pub struct ConversationView {
     webview: webkit::WebView,
     content: webkit::UserContentManager,
     banner: adw::Banner,
+    list_banner: adw::Banner,
     buttons: Buttons,
     filter: RefCell<Option<webkit::UserContentFilter>>,
     open: RefCell<Option<OpenThread>>,
@@ -156,6 +167,11 @@ impl ConversationView {
             .button_label("Load Images")
             .revealed(false)
             .build();
+        let list_banner = adw::Banner::builder()
+            .title("This message is from a mailing list")
+            .button_label("Unsubscribe")
+            .revealed(false)
+            .build();
         let bulk = adw::WrapBox::builder()
             .child_spacing(10)
             .line_spacing(10)
@@ -198,6 +214,7 @@ impl ConversationView {
             .child(&bulk)
             .build();
         let web_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        web_box.append(&list_banner);
         web_box.append(&banner);
         web_box.append(&webview);
         let stack = gtk::Stack::builder()
@@ -234,14 +251,25 @@ impl ConversationView {
                 .build(),
         };
         let more = gio::Menu::new();
-        more.append(Some("Reply All"), Some("win.reply-all"));
-        more.append(Some("Forward"), Some("win.forward"));
+        let replies = gio::Menu::new();
+        replies.append(Some("Reply All"), Some("win.reply-all"));
+        replies.append(Some("Forward"), Some("win.forward"));
+        more.append_section(None, &replies);
         let marks = gio::Menu::new();
         marks.append(Some("Star or Unstar"), Some("win.toggle-star"));
         marks.append(Some("Mark Read or Unread"), Some("win.toggle-read"));
         marks.append(Some("Junk"), Some("win.junk"));
         marks.append(Some("Labels…"), Some("win.label"));
         more.append_section(None, &marks);
+        let views = gio::Menu::new();
+        views.append(Some("Open in New Window"), Some("win.open-window"));
+        views.append(Some("Print…"), Some("win.print"));
+        views.append(Some("View Source"), Some("win.view-source"));
+        more.append_section(None, &views);
+        let sender = gio::Menu::new();
+        sender.append(Some("Unsubscribe…"), Some("win.unsubscribe"));
+        sender.append(Some("Block Sender…"), Some("win.block-sender"));
+        more.append_section(None, &sender);
         buttons.more.set_menu_model(Some(&more));
         let header = adw::HeaderBar::builder()
             .title_widget(&gtk::Label::new(None))
@@ -295,6 +323,10 @@ impl ConversationView {
             let on_action = Rc::clone(&on_action);
             banner.connect_button_clicked(move |_| on_action(Action::LoadImages));
         }
+        {
+            let on_action = Rc::clone(&on_action);
+            list_banner.connect_button_clicked(move |_| on_action(Action::Unsubscribe));
+        }
 
         let view = Rc::new(ConversationView {
             page,
@@ -308,6 +340,7 @@ impl ConversationView {
             webview,
             content,
             banner,
+            list_banner,
             buttons,
             filter: RefCell::new(None),
             open: RefCell::new(None),
@@ -432,6 +465,7 @@ impl ConversationView {
         self.many.set_title(&format!("{count} {noun} Selected"));
         self.stack.set_visible_child_name("many");
         self.banner.set_revealed(false);
+        self.list_banner.set_revealed(false);
         self.set_buttons_shown(true);
         let b = &self.buttons;
         for button in [&b.reply, &b.reply_all, &b.forward, &b.edit] {
@@ -445,6 +479,7 @@ impl ConversationView {
         self.stack.set_visible_child_name("empty");
         self.set_buttons_shown(false);
         self.banner.set_revealed(false);
+        self.list_banner.set_revealed(false);
     }
 
     /// Whether `row` is what the view shows now.
@@ -551,7 +586,9 @@ impl ConversationView {
         self.buttons.reply.set_visible(!draft);
         self.buttons.reply_all.set_visible(!draft && full);
         self.buttons.forward.set_visible(!draft && full);
-        self.buttons.more.set_visible(!draft && !full);
+        self.buttons.more.set_visible(!draft);
+        self.list_banner
+            .set_revealed(!open.unsubscribed && open.list_unsubscribe().is_some());
         self.buttons.edit.set_visible(draft);
         let starred = open.starred();
         self.buttons.star.set_icon_name(if starred {
@@ -596,7 +633,7 @@ impl ConversationView {
             button.set_visible(full);
         }
         self.label_button.set_visible(full);
-        b.more.set_visible(shown && self.compact.get());
+        b.more.set_visible(shown);
         if !shown {
             b.edit.set_visible(false);
         }

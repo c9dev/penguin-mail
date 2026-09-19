@@ -14,6 +14,7 @@ mod sanitize;
 mod settings;
 mod tray;
 mod ui;
+mod unsubscribe;
 
 use std::cell::RefCell;
 use std::rc::Rc;

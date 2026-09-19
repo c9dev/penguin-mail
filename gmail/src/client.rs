@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use base64::Engine;
 use base64::engine::general_purpose::{URL_SAFE_NO_PAD, URL_SAFE_NO_PAD_INDIFFERENT};
-use mailrs_domain::Vacation;
+use mailrs_domain::{Filter, Vacation};
 use reqwest::header::RETRY_AFTER;
 use reqwest::{RequestBuilder, Response, StatusCode};
 use serde::de::DeserializeOwned;
@@ -268,6 +268,40 @@ impl GmailClient {
         }
     }
 
+    /// Every filter in the account. Needs the settings scope.
+    pub async fn filters(&self) -> Result<Vec<Filter>, GmailError> {
+        #[derive(serde::Deserialize)]
+        struct FilterList {
+            #[serde(default)]
+            filter: Vec<Filter>,
+        }
+        let list: FilterList = self
+            .call(cost::SETTINGS, || {
+                self.http().get(self.url("settings/filters"))
+            })
+            .await?;
+        Ok(list.filter)
+    }
+
+    pub async fn create_filter(&self, filter: &Filter) -> Result<Filter, GmailError> {
+        let body = Filter {
+            id: None,
+            ..filter.clone()
+        };
+        self.call(cost::SETTINGS, || {
+            self.http().post(self.url("settings/filters")).json(&body)
+        })
+        .await
+    }
+
+    pub async fn delete_filter(&self, id: &str) -> Result<(), GmailError> {
+        self.call_empty(cost::SETTINGS, || {
+            self.http()
+                .delete(self.url(&format!("settings/filters/{id}")))
+        })
+        .await
+    }
+
     /// Creates a user label shown in Gmail's label list.
     pub async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {
         let body = json!({
@@ -482,6 +516,29 @@ async fn error_from_response(response: Response) -> GmailError {
             GmailError::RateLimited { retry_after }
         }
         _ => GmailError::Http { status, body },
+    }
+}
+
+/// Leaves a mailing list the RFC 8058 way: one POST to the list's https
+/// unsubscribe link. It is not a Gmail call, so it carries no token.
+pub async fn one_click_unsubscribe(url: &str) -> Result<(), GmailError> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(20))
+        .build()
+        .map_err(|e| GmailError::Network(e.to_string()))?;
+    let response = client
+        .post(url)
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .body("List-Unsubscribe=One-Click")
+        .send()
+        .await?;
+    if response.status().is_success() {
+        Ok(())
+    } else {
+        Err(GmailError::Http {
+            status: response.status().as_u16(),
+            body: String::new(),
+        })
     }
 }
 

@@ -10,7 +10,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use anyhow::{Context, Result, anyhow, bail};
-use mailrs_domain::{Account, AccountId, ChangeEvent, MessageBody, MessageMeta, Vacation};
+use mailrs_domain::{Account, AccountId, ChangeEvent, Filter, MessageBody, MessageMeta, Vacation};
 use mailrs_gmail::{
     GMAIL_API_BASE, GmailError, HistoryPage, KeyringTokenStore, MessagePage, OAuthClient, Profile,
     RemoteLabel, TokenStore, authorize,
@@ -114,6 +114,15 @@ impl GmailApi for Api {
     }
     async fn signature(&self) -> Result<Option<String>, GmailError> {
         delegate!(self, signature())
+    }
+    async fn filters(&self) -> Result<Vec<Filter>, GmailError> {
+        delegate!(self, filters())
+    }
+    async fn create_filter(&self, filter: &Filter) -> Result<Filter, GmailError> {
+        delegate!(self, create_filter(filter))
+    }
+    async fn delete_filter(&self, id: &str) -> Result<(), GmailError> {
+        delegate!(self, delete_filter(id))
     }
     async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {
         delegate!(self, create_label(name))

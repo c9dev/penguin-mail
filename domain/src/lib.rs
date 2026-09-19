@@ -185,6 +185,74 @@ pub struct MessageBody {
     pub html: Option<String>,
     pub text: Option<String>,
     pub attachments: Vec<Attachment>,
+    /// The `List-Unsubscribe` header: `<mailto:…>` and `<https:…>` links.
+    #[serde(default)]
+    pub list_unsubscribe: Option<String>,
+    /// `List-Unsubscribe-Post: List-Unsubscribe=One-Click` was present, so
+    /// a single POST to the https link unsubscribes (RFC 8058).
+    #[serde(default)]
+    pub one_click_unsubscribe: bool,
+}
+
+/// A Gmail filter: mail matching `criteria` gets `action`. Field names
+/// follow Gmail's JSON so the type goes over the wire as is.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Filter {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(default)]
+    pub criteria: FilterCriteria,
+    #[serde(default)]
+    pub action: FilterAction,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FilterCriteria {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub to: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subject: Option<String>,
+    /// Words the mail must contain, in Gmail search syntax.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub query: Option<String>,
+    /// Words the mail must not contain.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub negated_query: Option<String>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub has_attachment: bool,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FilterAction {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub add_label_ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub remove_label_ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub forward: Option<String>,
+}
+
+impl Filter {
+    /// A filter that sends mail from `email` straight to the Trash.
+    pub fn block(email: &str) -> Filter {
+        Filter {
+            id: None,
+            criteria: FilterCriteria {
+                from: Some(email.to_string()),
+                ..FilterCriteria::default()
+            },
+            action: FilterAction {
+                add_label_ids: vec!["TRASH".into()],
+                remove_label_ids: vec!["INBOX".into()],
+                forward: None,
+            },
+        }
+    }
 }
 
 /// Gmail's automatic reply ("vacation responder") for one account.

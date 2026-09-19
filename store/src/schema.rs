@@ -122,6 +122,10 @@ CREATE TABLE scheduled (
 );
 CREATE INDEX scheduled_by_time ON scheduled(send_at);
 "#,
+    r#"
+ALTER TABLE bodies ADD COLUMN list_unsubscribe TEXT;
+ALTER TABLE bodies ADD COLUMN one_click_unsubscribe INTEGER NOT NULL DEFAULT 0;
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,

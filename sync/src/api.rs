@@ -1,6 +1,6 @@
 //! What the sync engine needs from Gmail. A trait, so tests can use a fake.
 
-use mailrs_domain::{AccountId, MessageBody, MessageMeta, Vacation};
+use mailrs_domain::{AccountId, Filter, MessageBody, MessageMeta, Vacation};
 use mailrs_gmail::body::extract_body;
 use mailrs_gmail::convert::message_meta;
 use mailrs_gmail::{
@@ -90,6 +90,15 @@ pub trait GmailApi: Send + Sync + 'static {
         message_id: &str,
         attachment_id: &str,
     ) -> impl Future<Output = Result<Vec<u8>, GmailError>> + Send;
+
+    fn filters(&self) -> impl Future<Output = Result<Vec<Filter>, GmailError>> + Send;
+
+    fn create_filter(
+        &self,
+        filter: &Filter,
+    ) -> impl Future<Output = Result<Filter, GmailError>> + Send;
+
+    fn delete_filter(&self, id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
 
     fn create_label(
         &self,
@@ -282,5 +291,17 @@ impl GmailApi for AccountClient {
 
     async fn delete_label(&self, id: &str) -> Result<(), GmailError> {
         self.client.delete_label(id).await
+    }
+
+    async fn filters(&self) -> Result<Vec<Filter>, GmailError> {
+        self.client.filters().await
+    }
+
+    async fn create_filter(&self, filter: &Filter) -> Result<Filter, GmailError> {
+        self.client.create_filter(filter).await
+    }
+
+    async fn delete_filter(&self, id: &str) -> Result<(), GmailError> {
+        self.client.delete_filter(id).await
     }
 }

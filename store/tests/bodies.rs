@@ -16,6 +16,8 @@ fn body(text: &str) -> MessageBody {
             attachment_id: Some("att".into()),
             content_id: None,
         }],
+        list_unsubscribe: Some("<https://news.example/u>".into()),
+        one_click_unsubscribe: true,
     }
 }
 
@@ -74,7 +76,7 @@ fn putting_a_body_again_replaces_it() {
     let plain = MessageBody {
         html: None,
         text: Some("two".into()),
-        attachments: vec![],
+        ..Default::default()
     };
     bodies::put_body(&conn, id, "a", &plain, 2).unwrap();
     assert_eq!(bodies::get_body(&conn, id, "a", 3).unwrap(), Some(plain));

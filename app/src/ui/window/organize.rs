@@ -57,11 +57,7 @@ impl MainWindow {
 
     /// Asks for a name and creates a label in `account_id`. With `then`,
     /// runs it on the new label's id, as the label menu does to apply it.
-    pub(super) fn new_label(
-        self: &Rc<Self>,
-        account_id: AccountId,
-        then: Option<AfterCreate>,
-    ) {
+    pub(super) fn new_label(self: &Rc<Self>, account_id: AccountId, then: Option<AfterCreate>) {
         let entry = gtk::Entry::builder()
             .placeholder_text("Name, or Parent/Name to nest it")
             .activates_default(true)

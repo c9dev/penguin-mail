@@ -46,7 +46,7 @@ async fn bodies_are_fetched_once_then_served_from_the_cache() {
     let body = MessageBody {
         html: None,
         text: Some("hello".into()),
-        attachments: vec![],
+        ..Default::default()
     };
     h.fake.with(|s| {
         s.bodies.insert("a".into(), body.clone());

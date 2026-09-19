@@ -16,11 +16,23 @@ pub fn put_body(
     let size =
         body.html.as_ref().map_or(0, String::len) + body.text.as_ref().map_or(0, String::len);
     conn.execute(
-        "INSERT INTO bodies (account_id, message_id, html, text, size, fetched_at, accessed_at) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6) \
+        "INSERT INTO bodies (account_id, message_id, html, text, size, fetched_at, accessed_at, \
+         list_unsubscribe, one_click_unsubscribe) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6, ?7, ?8) \
          ON CONFLICT (account_id, message_id) DO UPDATE SET html = excluded.html, text = excluded.text, \
-         size = excluded.size, fetched_at = excluded.fetched_at, accessed_at = excluded.accessed_at",
-        params![account_id, message_id, body.html, body.text, size as i64, now],
+         size = excluded.size, fetched_at = excluded.fetched_at, accessed_at = excluded.accessed_at, \
+         list_unsubscribe = excluded.list_unsubscribe, \
+         one_click_unsubscribe = excluded.one_click_unsubscribe",
+        params![
+            account_id,
+            message_id,
+            body.html,
+            body.text,
+            size as i64,
+            now,
+            body.list_unsubscribe,
+            body.one_click_unsubscribe
+        ],
     )?;
     conn.execute(
         "DELETE FROM attachments WHERE account_id = ?1 AND message_id = ?2",
@@ -52,20 +64,35 @@ pub fn get_body(
     message_id: &str,
     now: EpochMillis,
 ) -> Result<Option<MessageBody>> {
-    let row: Option<(Option<String>, Option<String>)> = conn
+    let body = peek_body(conn, account_id, message_id)?;
+    if body.is_some() {
+        conn.execute(
+            "UPDATE bodies SET accessed_at = ?3 WHERE account_id = ?1 AND message_id = ?2",
+            params![account_id, message_id, now],
+        )?;
+    }
+    Ok(body)
+}
+
+/// Returns a cached body without recording a read, for readers that
+/// cannot write.
+pub fn peek_body(
+    conn: &Connection,
+    account_id: AccountId,
+    message_id: &str,
+) -> Result<Option<MessageBody>> {
+    type BodyRow = (Option<String>, Option<String>, Option<String>, bool);
+    let row: Option<BodyRow> = conn
         .query_row(
-            "SELECT html, text FROM bodies WHERE account_id = ?1 AND message_id = ?2",
+            "SELECT html, text, list_unsubscribe, one_click_unsubscribe FROM bodies \
+             WHERE account_id = ?1 AND message_id = ?2",
             params![account_id, message_id],
-            |row| Ok((row.get(0)?, row.get(1)?)),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
         )
         .optional()?;
-    let Some((html, text)) = row else {
+    let Some((html, text, list_unsubscribe, one_click_unsubscribe)) = row else {
         return Ok(None);
     };
-    conn.execute(
-        "UPDATE bodies SET accessed_at = ?3 WHERE account_id = ?1 AND message_id = ?2",
-        params![account_id, message_id, now],
-    )?;
     let mut stmt = conn.prepare_cached(
         "SELECT part_id, filename, mime_type, size, attachment_id, content_id FROM attachments \
          WHERE account_id = ?1 AND message_id = ?2 ORDER BY part_id",
@@ -86,6 +113,8 @@ pub fn get_body(
         html,
         text,
         attachments,
+        list_unsubscribe,
+        one_click_unsubscribe,
     }))
 }
 

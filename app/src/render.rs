@@ -515,6 +515,7 @@ mod tests {
                 attachment("logo.png", "image/png", Some("logo")),
                 attachment("report.pdf", "application/pdf", None),
             ],
+            ..Default::default()
         };
         let images = HashMap::new();
         let html = page(

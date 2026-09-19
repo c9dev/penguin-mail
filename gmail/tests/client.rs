@@ -384,3 +384,59 @@ async fn a_draft_is_sent_by_id() {
         .await;
     assert_eq!(client(&server).send_draft("d1").await.unwrap().id, "m9");
 }
+
+#[tokio::test]
+async fn filters_are_listed_created_and_deleted() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("GET"))
+        .and(path(format!("{API}/settings/filters")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"filter": [
+            {"id": "f1", "criteria": {"from": "a@x.com"}, "action": {"addLabelIds": ["TRASH"]}}
+        ]})))
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path(format!("{API}/settings/filters")))
+        .and(body_json(json!({
+            "criteria": {"from": "spam@x.com"},
+            "action": {"addLabelIds": ["TRASH"], "removeLabelIds": ["INBOX"]}
+        })))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "id": "f2", "criteria": {"from": "spam@x.com"},
+            "action": {"addLabelIds": ["TRASH"], "removeLabelIds": ["INBOX"]}
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("DELETE"))
+        .and(path(format!("{API}/settings/filters/f1")))
+        .respond_with(ResponseTemplate::new(204))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let client = client(&server);
+    let listed = client.filters().await.unwrap();
+    assert_eq!(listed[0].criteria.from.as_deref(), Some("a@x.com"));
+    let created = client
+        .create_filter(&mailrs_domain::Filter::block("spam@x.com"))
+        .await
+        .unwrap();
+    assert_eq!(created.id.as_deref(), Some("f2"));
+    client.delete_filter("f1").await.unwrap();
+}
+
+#[tokio::test]
+async fn one_click_unsubscribe_posts_the_form() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/u/1"))
+        .and(body_string_contains("List-Unsubscribe=One-Click"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&server)
+        .await;
+    mailrs_gmail::one_click_unsubscribe(&format!("{}/u/1", server.uri()))
+        .await
+        .unwrap();
+}

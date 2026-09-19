@@ -4,7 +4,7 @@
 use std::collections::{HashMap, VecDeque};
 use std::sync::Mutex;
 
-use mailrs_domain::{Address, EpochMillis, MessageBody, MessageMeta, Vacation};
+use mailrs_domain::{Address, EpochMillis, Filter, MessageBody, MessageMeta, Vacation};
 use mailrs_gmail::{
     GmailError, HistoryChange, HistoryPage, MessagePage, MessageRef, Profile, RemoteLabel,
 };
@@ -42,6 +42,7 @@ pub struct FakeState {
     pub display_name: Option<String>,
     pub signature: Option<String>,
     pub vacation: Vacation,
+    pub filters: Vec<Filter>,
 }
 
 /// A message for account 1.
@@ -99,6 +100,7 @@ impl FakeGmail {
                 display_name: Some("Me".into()),
                 signature: None,
                 vacation: Vacation::default(),
+                filters: Vec::new(),
             }),
         }
     }
@@ -484,5 +486,35 @@ impl GmailApi for FakeGmail {
             }
         });
         Ok(())
+    }
+
+    async fn filters(&self) -> Result<Vec<Filter>, GmailError> {
+        self.check_failure()?;
+        Ok(self.with(|s| s.filters.clone()))
+    }
+
+    async fn create_filter(&self, filter: &Filter) -> Result<Filter, GmailError> {
+        self.check_failure()?;
+        Ok(self.with(|s| {
+            let created = Filter {
+                id: Some(format!("filter{}", s.filters.len() + 1)),
+                ..filter.clone()
+            };
+            s.filters.push(created.clone());
+            created
+        }))
+    }
+
+    async fn delete_filter(&self, id: &str) -> Result<(), GmailError> {
+        self.check_failure()?;
+        self.with(|s| {
+            let before = s.filters.len();
+            s.filters.retain(|f| f.id.as_deref() != Some(id));
+            if s.filters.len() == before {
+                Err(GmailError::NotFound)
+            } else {
+                Ok(())
+            }
+        })
     }
 }

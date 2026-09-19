@@ -138,3 +138,19 @@ async fn a_scheduled_draft_sends_once() {
     assert!(h.fake.with(|s| s.drafts.is_empty()));
     assert_eq!(h.sync.send_draft(&saved.draft_id).await.unwrap(), None);
 }
+
+#[tokio::test]
+async fn filters_pass_through_and_a_gone_filter_deletes_quietly() {
+    let h = harness().await;
+    let created = h
+        .sync
+        .create_filter(mailrs_domain::Filter::block("pest@example.com"))
+        .await
+        .unwrap();
+    let listed = h.sync.filters().await.unwrap();
+    assert_eq!(listed, vec![created.clone()]);
+    let id = created.id.unwrap();
+    h.sync.delete_filter(&id).await.unwrap();
+    h.sync.delete_filter(&id).await.unwrap();
+    assert!(h.sync.filters().await.unwrap().is_empty());
+}

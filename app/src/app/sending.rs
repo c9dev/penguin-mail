@@ -39,17 +39,24 @@ impl App {
                             app.pending_sends
                                 .set(app.pending_sends.get().saturating_sub(1));
                             if !cancelled.get() {
-                                app.send_now(draft);
+                                app.send_now(draft, true);
                             }
                         });
                     }
-                    _ => self.send_now(draft),
+                    _ => self.send_now(draft, true),
                 }
             }
         }
     }
 
-    fn send_now(self: &Rc<Self>, draft: Draft) {
+    /// Sends without the Undo delay, for messages the user never wrote,
+    /// such as an unsubscribe request.
+    pub fn send_immediately(self: &Rc<Self>, draft: Draft) {
+        self.send_now(draft, false);
+    }
+
+    /// Sends at once. With `announce`, says so in the window.
+    fn send_now(self: &Rc<Self>, draft: Draft, announce: bool) {
         let raw = match build_mime(
             &draft,
             now_millis() / 1000,
@@ -80,7 +87,7 @@ impl App {
                         this.scheduled_changed();
                     }
                     this.core.poke(draft.account_id);
-                    if let Some(window) = this.window() {
+                    if announce && let Some(window) = this.window() {
                         window.toast_sent();
                     }
                 }
