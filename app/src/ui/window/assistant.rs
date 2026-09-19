@@ -90,6 +90,11 @@ impl MainWindow {
             "vip" => self.tool_vip(&input),
             "create_smart_mailbox" => self.tool_smart(&input),
             "open_conversation" => self.tool_open(&input),
+            "categorize_sender" => self.tool_categorize(&input),
+            "dismiss_follow_up" => self.tool_dismiss_follow_up(&input).await,
+            "list_hidden_addresses" => Ok(self.tool_hidden_list()),
+            "create_hidden_address" => self.tool_hidden_create(&input).await,
+            "set_hidden_address" => self.tool_hidden_set(&input).await,
             other => Err(format!("There is no tool called {other}.")),
         };
         match result {
@@ -279,14 +284,54 @@ impl MainWindow {
             "all_mail" => Some(Folder::AllMail),
             _ => None,
         };
-        let mut rows: Vec<ThreadSummary> = if let Some(folder) = folder {
+        let mut rows: Vec<ThreadSummary> = if mailbox == "follow_up" {
+            let scope_id = scope.as_ref().map(|a| a.id);
+            let now = Local::now().timestamp_millis();
+            self.core
+                .read(move |c| {
+                    let mut rows = Vec::new();
+                    for item in mailrs_store::follow_ups::waiting(c, now)? {
+                        if scope_id.is_some_and(|id| id != item.account_id) {
+                            continue;
+                        }
+                        if let Some(row) = threads::get_thread(c, item.account_id, &item.thread_id)?
+                        {
+                            rows.push(row);
+                        }
+                    }
+                    Ok(rows)
+                })
+                .await
+                .map_err(|e| e.to_string())?
+        } else if let Some(folder) = folder {
             let mut query = folder.query().to_string();
             if unread_only {
                 query.push_str(" is:unread");
             }
             self.remote_rows(&query, scope.as_ref(), limit).await?
         } else {
-            let filters = self.list_filters(&mailbox, text(input, "label"), scope.as_ref())?;
+            let mut filters = self.list_filters(&mailbox, text(input, "label"), scope.as_ref())?;
+            if let Some(category) = text(input, "category") {
+                let (any, none): (&[&str], &[&str]) = match category.as_str() {
+                    "primary" => (
+                        &[],
+                        &[
+                            "CATEGORY_UPDATES",
+                            "CATEGORY_PROMOTIONS",
+                            "CATEGORY_SOCIAL",
+                            "CATEGORY_FORUMS",
+                        ],
+                    ),
+                    "updates" => (&["CATEGORY_UPDATES"], &[]),
+                    "promotions" => (&["CATEGORY_PROMOTIONS"], &[]),
+                    "social" => (&["CATEGORY_SOCIAL", "CATEGORY_FORUMS"], &[]),
+                    other => return Err(format!("Unknown category {other}.")),
+                };
+                filters = filters
+                    .into_iter()
+                    .map(|f| f.with_labels(any, none))
+                    .collect();
+            }
             let fetch = limit * if unread_only { 4 } else { 1 };
             let found = self
                 .core
@@ -995,6 +1040,72 @@ impl MainWindow {
             ..ThreadSummary::default()
         });
         Ok(json!({"opened": true}))
+    }
+}
+
+impl MainWindow {
+    fn tool_categorize(self: &Rc<Self>, input: &Value) -> ToolResult {
+        let account = self.account_named(&required(input, "account")?)?;
+        let email = required(input, "email")?;
+        let key = required(input, "category")?;
+        let category = super::categories::Category::from_key(&key)
+            .filter(|c| *c != super::categories::Category::All)
+            .ok_or_else(|| format!("Unknown category {key}."))?;
+        let who = text(input, "name").unwrap_or_else(|| email.clone());
+        self.categorize_sender(account.id, email.clone(), who, None, category);
+        Ok(json!({"sender": email, "category": key}))
+    }
+
+    async fn tool_dismiss_follow_up(self: &Rc<Self>, input: &Value) -> ToolResult {
+        let account = self.account_named(&required(input, "account")?)?;
+        let thread_id = required(input, "thread_id")?;
+        let now = Local::now().timestamp_millis();
+        let key = thread_id.clone();
+        self.core
+            .write(move |c| mailrs_store::follow_ups::dismiss(c, account.id, &key, now))
+            .await
+            .map_err(|e| e.to_string())?;
+        self.refresh_counts();
+        self.reload_list();
+        Ok(json!({"dismissed": thread_id}))
+    }
+
+    fn tool_hidden_list(&self) -> Value {
+        json!({
+            "addresses": self.hidden_addresses().iter().map(|h| json!({
+                "address": h.address,
+                "account": h.account,
+                "note": h.note,
+                "active": h.active,
+            })).collect::<Vec<_>>(),
+        })
+    }
+
+    async fn tool_hidden_create(self: &Rc<Self>, input: &Value) -> ToolResult {
+        let account = self.account_named(&required(input, "account")?)?;
+        let note = text(input, "note").unwrap_or_default();
+        match self.create_hidden_address(account.id, &note).await {
+            Ok(hidden) => {
+                gtk::prelude::WidgetExt::clipboard(&self.window).set_text(&hidden.address);
+                Ok(json!({"address": hidden.address, "copied": true}))
+            }
+            Err(err) => Err(self.gmail_error(&account, err)),
+        }
+    }
+
+    async fn tool_hidden_set(self: &Rc<Self>, input: &Value) -> ToolResult {
+        let address = required(input, "address")?;
+        let active = flag(input, "active").ok_or("`active` is missing")?;
+        let hidden = self
+            .hidden_addresses()
+            .into_iter()
+            .find(|h| h.address.eq_ignore_ascii_case(&address))
+            .ok_or_else(|| format!("{address} is not a Hide My Email address."))?;
+        let account = self.account_named(&hidden.account)?;
+        match self.set_hidden_address_active(&address, active).await {
+            Ok(()) => Ok(json!({"address": address, "active": active})),
+            Err(err) => Err(self.gmail_error(&account, err)),
+        }
     }
 }
 

@@ -70,7 +70,8 @@ pub fn specs() -> Vec<ToolSpec> {
             "list_mail",
             "Lists conversations in a mailbox, newest first. Inbox, flagged, sent, drafts, VIPs, and labels read the mail kept on this computer (the last few weeks plus everything in the inbox); junk, trash, and all_mail ask Gmail.",
             json!({
-                "mailbox": {"type": "string", "enum": ["inbox", "flagged", "sent", "drafts", "vips", "junk", "trash", "all_mail", "label"]},
+                "mailbox": {"type": "string", "enum": ["inbox", "flagged", "sent", "drafts", "vips", "follow_up", "junk", "trash", "all_mail", "label"], "description": "follow_up lists sent mail that has waited 3 to 30 days for a reply."},
+                "category": {"type": "string", "enum": ["primary", "updates", "promotions", "social"], "description": "Narrow the inbox to one of Gmail's categories."},
                 "label": {"type": "string", "description": "The label's name, when mailbox is \"label\"."},
                 "account": account("Limit to one account. All accounts when left out."),
                 "unread_only": {"type": "boolean"},
@@ -257,6 +258,44 @@ pub fn specs() -> Vec<ToolSpec> {
                 }
             }),
             &["name", "conditions"],
+        ),
+        tool(
+            "categorize_sender",
+            "Moves a sender's mail into an inbox category and sorts their future mail there with a Gmail filter.",
+            json!({
+                "account": account("The account."),
+                "email": {"type": "string"},
+                "name": {"type": "string", "description": "The sender's name, for the confirmation."},
+                "category": {"type": "string", "enum": ["primary", "updates", "promotions", "social"]}
+            }),
+            &["account", "email", "category"],
+        ),
+        tool(
+            "dismiss_follow_up",
+            "Stops suggesting a follow-up for a sent conversation.",
+            json!({"account": account("The account."), "thread_id": {"type": "string"}}),
+            &["account", "thread_id"],
+        ),
+        tool(
+            "list_hidden_addresses",
+            "Lists Hide My Email addresses: plus addresses that deliver to an account and can be turned off.",
+            json!({}),
+            &[],
+        ),
+        tool(
+            "create_hidden_address",
+            "Makes a new Hide My Email address for an account, labels its mail, and copies it for the user.",
+            json!({
+                "account": account("The account it delivers to."),
+                "note": {"type": "string", "description": "Where the user will give it out."}
+            }),
+            &["account", "note"],
+        ),
+        tool(
+            "set_hidden_address",
+            "Turns a Hide My Email address off (its mail goes to the Trash) or back on.",
+            json!({"address": {"type": "string"}, "active": {"type": "boolean"}}),
+            &["address", "active"],
         ),
         tool(
             "open_conversation",

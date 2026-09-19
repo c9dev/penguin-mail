@@ -47,6 +47,11 @@ fn activity(name: &str) -> &'static str {
         "vip" => "Updating VIPs",
         "create_smart_mailbox" => "Creating a smart mailbox",
         "open_conversation" => "Opening a conversation",
+        "categorize_sender" => "Sorting a sender",
+        "dismiss_follow_up" => "Dismissing a follow-up",
+        "list_hidden_addresses" => "Reading hidden addresses",
+        "create_hidden_address" => "Making a hidden address",
+        "set_hidden_address" => "Changing a hidden address",
         _ => "Working",
     }
 }

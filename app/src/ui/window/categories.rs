@@ -90,7 +90,7 @@ impl Category {
     }
 
     /// The label Gmail gives mail sorted into this category.
-    fn gmail_label(self) -> &'static str {
+    pub(super) fn gmail_label(self) -> &'static str {
         match self {
             Category::All | Category::Primary => "CATEGORY_PERSONAL",
             Category::Updates => "CATEGORY_UPDATES",
@@ -297,6 +297,19 @@ impl MainWindow {
         let Some(Some((account_id, email, who, open_thread))) = found else {
             return self.toast("Open a message from the sender first");
         };
+        self.categorize_sender(account_id, email, who, Some(open_thread), category);
+    }
+
+    /// Moves `email`'s stored conversations in the account into `category`,
+    /// plus `also` when given, and sorts their future mail there.
+    pub(super) fn categorize_sender(
+        self: &Rc<Self>,
+        account_id: AccountId,
+        email: String,
+        who: String,
+        also: Option<String>,
+        category: Category,
+    ) {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let key = email.clone();
@@ -311,8 +324,10 @@ impl MainWindow {
                 })
                 .await
                 .unwrap_or_default();
-            if !ids.contains(&open_thread) {
-                ids.push(open_thread);
+            if let Some(thread) = also
+                && !ids.contains(&thread)
+            {
+                ids.push(thread);
             }
             let targets: Vec<Target> = ids
                 .into_iter()
