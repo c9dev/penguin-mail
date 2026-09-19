@@ -30,6 +30,7 @@ mod arrange;
 mod assistant;
 mod detached;
 mod flags;
+mod hide_my_email;
 mod organize;
 mod reminders;
 mod scheduled;
@@ -1738,6 +1739,10 @@ impl MainWindow {
         add("compose", Box::new(|win| win.compose_new()));
         add("search", Box::new(|win| win.list.open_search()));
         add(
+            "hide-my-email",
+            Box::new(|win| win.show_hide_my_email(None)),
+        );
+        add(
             "check",
             Box::new(|win| {
                 win.core.poke_all();
@@ -1854,6 +1859,10 @@ impl MainWindow {
         with_account(
             "account-rules",
             Box::new(|win, account| win.show_rules(account)),
+        );
+        with_account(
+            "account-hide-my-email",
+            Box::new(|win, account| win.show_hide_my_email(Some(account.id))),
         );
         with_account(
             "account-rename",
@@ -1981,6 +1990,7 @@ impl MainWindow {
         first.append(Some("Check for Mail"), Some("win.check"));
         first.append(Some("Add Account…"), Some("win.add-account"));
         first.append(Some("New Smart Mailbox…"), Some("win.smart-new"));
+        first.append(Some("Hide My Email…"), Some("win.hide-my-email"));
         menu.append_section(None, &first);
         let second = gio::Menu::new();
         second.append(Some("Preferences"), Some("win.preferences"));

@@ -617,6 +617,7 @@ fn heading(account: &Account, name: Option<&String>) -> (gtk::ListBoxRow, gtk::I
     settings.append_item(&item("Automatic Reply…", "win.account-vacation"));
     settings.append_item(&item("Signature…", "win.account-signature"));
     settings.append_item(&item("Rules…", "win.account-rules"));
+    settings.append_item(&item("Hide My Email…", "win.account-hide-my-email"));
     settings.append_item(&item("New Label…", "win.account-new-label"));
     menu.append_section(None, &settings);
     let look = gio::Menu::new();

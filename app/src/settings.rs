@@ -38,6 +38,8 @@ pub struct Settings {
     /// A name shown instead of the address in the sidebar.
     pub account_names: BTreeMap<String, String>,
     pub ai: AiSettings,
+    /// Plus addresses made with Hide My Email, oldest first.
+    pub hidden_addresses: Vec<crate::hide_my_email::HiddenAddress>,
 }
 
 /// Where the assistant's model runs.
@@ -123,6 +125,7 @@ impl Default for Settings {
             account_colors: BTreeMap::new(),
             account_names: BTreeMap::new(),
             ai: AiSettings::default(),
+            hidden_addresses: Vec::new(),
         }
     }
 }
@@ -490,6 +493,45 @@ mod tests {
         assert_eq!(settings.vips["ann@example.com"], "Ann Lee");
         assert!(!settings.toggle_vip("ANN@example.com", ""));
         assert!(settings.vips.is_empty());
+    }
+
+    #[test]
+    fn hidden_addresses_round_trip() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.toml");
+        let settings = Settings {
+            hidden_addresses: vec![crate::hide_my_email::HiddenAddress {
+                account: "dana@gmail.com".into(),
+                address: "dana+kite.fern482@gmail.com".into(),
+                note: "Bike shop".into(),
+                created: 1_758_000_000_000,
+                active: false,
+                label_filter: Some("f1".into()),
+                trash_filter: Some("f2".into()),
+            }],
+            ..Settings::default()
+        };
+        settings.save(&path).unwrap();
+        assert_eq!(Settings::load(&path), settings);
+    }
+
+    #[test]
+    fn hidden_addresses_fill_in_missing_fields() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.toml");
+        std::fs::write(
+            &path,
+            "[[hidden_addresses]]\naccount = \"a@x.com\"\naddress = \"a+b.c123@x.com\"\ncreated = 5\n",
+        )
+        .unwrap();
+        let loaded = Settings::load(&path);
+        let [hidden] = loaded.hidden_addresses.as_slice() else {
+            panic!("one address");
+        };
+        assert!(hidden.active);
+        assert_eq!(hidden.note, "");
+        assert_eq!(hidden.label_filter, None);
+        assert!(Settings::default().hidden_addresses.is_empty());
     }
 
     #[test]
