@@ -1,6 +1,6 @@
 mod common;
 
-use common::{meta, store};
+use common::{meta, mixed_mail, store};
 use mailrs_domain::{AccountId, ThreadSummary};
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{accounts, open_in_memory};
@@ -21,6 +21,13 @@ fn two_accounts() -> (Connection, AccountId, AccountId) {
     );
     (conn, a, b)
 }
+
+const OTHERS: [&str; 4] = [
+    "CATEGORY_SOCIAL",
+    "CATEGORY_UPDATES",
+    "CATEGORY_PROMOTIONS",
+    "CATEGORY_FORUMS",
+];
 
 fn ids(rows: Vec<ThreadSummary>) -> Vec<String> {
     rows.into_iter().map(|t| t.id).collect()
@@ -122,4 +129,38 @@ fn ungrouped_lists_show_each_message() {
             .iter()
             .all(|t| t.message_id.is_none())
     );
+}
+
+#[test]
+fn a_label_view_of_one_account_leaves_the_others_out() {
+    let (conn, a, b) = mixed_mail();
+    let ids = |filter: &ThreadFilter| -> Vec<String> {
+        threads::list_threads(&conn, filter, 0, 10)
+            .unwrap()
+            .into_iter()
+            .map(|t| t.id)
+            .collect()
+    };
+    assert_eq!(
+        ids(&ThreadFilter::account(b, "INBOX")),
+        ["tb3", "tb2", "tb1"]
+    );
+    assert_eq!(
+        ids(&ThreadFilter::unified("INBOX")),
+        ["tb3", "tb2", "tb1", "ta5", "ta3", "ta2", "ta1"]
+    );
+    // Any mail leaves out Trash and Spam, in both account and unified views.
+    assert_eq!(
+        ids(&ThreadFilter::unified("")),
+        ["tb2", "tb1", "ta4", "ta3", "ta2", "ta1"]
+    );
+    assert_eq!(
+        ids(&ThreadFilter::account(a, "")),
+        ["ta4", "ta3", "ta2", "ta1"]
+    );
+    // A category narrows a label view without losing the account.
+    let social = ThreadFilter::account(b, "INBOX").with_labels(&["CATEGORY_FORUMS"], &[]);
+    assert_eq!(ids(&social), ["tb1"]);
+    let primary = ThreadFilter::unified("INBOX").with_labels(&[], &OTHERS);
+    assert_eq!(ids(&primary), ["tb3", "tb2", "ta5", "ta1"]);
 }
