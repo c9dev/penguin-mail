@@ -4,6 +4,7 @@
 pub mod autocomplete;
 pub mod composer;
 pub mod conversation;
+pub mod hide_my_email;
 pub mod moving;
 pub mod preferences;
 pub mod rules;

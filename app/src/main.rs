@@ -8,6 +8,7 @@ mod core;
 mod demo;
 mod diff;
 mod format;
+mod hide_my_email;
 mod notify;
 mod render;
 mod rules;
