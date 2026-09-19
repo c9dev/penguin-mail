@@ -32,6 +32,14 @@ pub struct FakeState {
     pub failures: VecDeque<GmailError>,
     pub body_fetches: usize,
     pub remote_writes: Vec<String>,
+    /// Raw messages sent, with their thread ids.
+    pub sent: Vec<(Vec<u8>, Option<String>)>,
+    /// Draft id to raw content.
+    pub drafts: HashMap<String, Vec<u8>>,
+    /// Message id backing each draft.
+    pub draft_messages: HashMap<String, String>,
+    pub attachments: HashMap<(String, String), Vec<u8>>,
+    pub display_name: Option<String>,
 }
 
 /// A message for account 1.
@@ -82,6 +90,11 @@ impl FakeGmail {
                 failures: VecDeque::new(),
                 body_fetches: 0,
                 remote_writes: Vec::new(),
+                sent: Vec::new(),
+                drafts: HashMap::new(),
+                draft_messages: HashMap::new(),
+                attachments: HashMap::new(),
+                display_name: Some("Me".into()),
             }),
         }
     }
@@ -325,5 +338,73 @@ impl GmailApi for FakeGmail {
         self.with(|s| s.remote_writes.push(format!("trash {id}")));
         self.remote_relabel(id, &["TRASH"], &["INBOX"]);
         Ok(())
+    }
+
+    async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, GmailError> {
+        self.check_failure()?;
+        Ok(self.with(|s| {
+            s.sent.push((raw.to_vec(), thread_id.map(str::to_string)));
+            format!("sent{}", s.sent.len())
+        }))
+    }
+
+    async fn save_draft(
+        &self,
+        draft_id: Option<&str>,
+        raw: &[u8],
+        _thread_id: Option<&str>,
+    ) -> Result<String, GmailError> {
+        self.check_failure()?;
+        self.with(|s| {
+            let id = match draft_id {
+                Some(id) if !s.drafts.contains_key(id) => return Err(GmailError::NotFound),
+                Some(id) => id.to_string(),
+                None => format!("draft{}", s.drafts.len() + 1),
+            };
+            s.drafts.insert(id.clone(), raw.to_vec());
+            s.draft_messages
+                .insert(id.clone(), format!("{id}-m{}", raw.len()));
+            Ok(id)
+        })
+    }
+
+    async fn delete_draft(&self, draft_id: &str) -> Result<(), GmailError> {
+        self.check_failure()?;
+        self.with(|s| {
+            s.draft_messages.remove(draft_id);
+            s.drafts
+                .remove(draft_id)
+                .map(|_| ())
+                .ok_or(GmailError::NotFound)
+        })
+    }
+
+    async fn draft_for_message(&self, message_id: &str) -> Result<Option<String>, GmailError> {
+        self.check_failure()?;
+        Ok(self.with(|s| {
+            s.draft_messages
+                .iter()
+                .find(|(_, m)| *m == message_id)
+                .map(|(d, _)| d.clone())
+        }))
+    }
+
+    async fn display_name(&self) -> Result<Option<String>, GmailError> {
+        self.check_failure()?;
+        Ok(self.with(|s| s.display_name.clone()))
+    }
+
+    async fn attachment(
+        &self,
+        message_id: &str,
+        attachment_id: &str,
+    ) -> Result<Vec<u8>, GmailError> {
+        self.check_failure()?;
+        self.with(|s| {
+            s.attachments
+                .get(&(message_id.to_string(), attachment_id.to_string()))
+                .cloned()
+                .ok_or(GmailError::NotFound)
+        })
     }
 }

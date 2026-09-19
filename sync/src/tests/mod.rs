@@ -3,6 +3,7 @@ mod bootstrap;
 mod connect;
 mod engine;
 mod incremental;
+mod outbox;
 mod thread_open;
 mod triage;
 

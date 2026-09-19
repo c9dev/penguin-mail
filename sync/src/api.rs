@@ -50,6 +50,38 @@ pub trait GmailApi: Send + Sync + 'static {
     ) -> impl Future<Output = Result<(), GmailError>> + Send;
 
     fn trash(&self, id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
+
+    /// Sends raw RFC 822 bytes. Returns the new message id.
+    fn send(
+        &self,
+        raw: &[u8],
+        thread_id: Option<&str>,
+    ) -> impl Future<Output = Result<String, GmailError>> + Send;
+
+    /// Creates a draft, or replaces draft `draft_id`. Returns the draft id.
+    fn save_draft(
+        &self,
+        draft_id: Option<&str>,
+        raw: &[u8],
+        thread_id: Option<&str>,
+    ) -> impl Future<Output = Result<String, GmailError>> + Send;
+
+    fn delete_draft(&self, draft_id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
+
+    /// The draft whose current message is `message_id`, if any.
+    fn draft_for_message(
+        &self,
+        message_id: &str,
+    ) -> impl Future<Output = Result<Option<String>, GmailError>> + Send;
+
+    /// The display name of the account's default send-as identity.
+    fn display_name(&self) -> impl Future<Output = Result<Option<String>, GmailError>> + Send;
+
+    fn attachment(
+        &self,
+        message_id: &str,
+        attachment_id: &str,
+    ) -> impl Future<Output = Result<Vec<u8>, GmailError>> + Send;
 }
 
 /// The real Gmail client, bound to a local account id.
@@ -123,5 +155,51 @@ impl GmailApi for AccountClient {
 
     async fn trash(&self, id: &str) -> Result<(), GmailError> {
         self.client.trash(id).await
+    }
+
+    async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, GmailError> {
+        Ok(self.client.send(raw, thread_id).await?.id)
+    }
+
+    async fn save_draft(
+        &self,
+        draft_id: Option<&str>,
+        raw: &[u8],
+        thread_id: Option<&str>,
+    ) -> Result<String, GmailError> {
+        let draft = match draft_id {
+            Some(id) => self.client.update_draft(id, raw, thread_id).await?,
+            None => self.client.create_draft(raw, thread_id).await?,
+        };
+        Ok(draft.id)
+    }
+
+    async fn delete_draft(&self, draft_id: &str) -> Result<(), GmailError> {
+        self.client.delete_draft(draft_id).await
+    }
+
+    async fn draft_for_message(&self, message_id: &str) -> Result<Option<String>, GmailError> {
+        let drafts = self.client.list_drafts().await?;
+        Ok(drafts
+            .into_iter()
+            .find(|d| d.message.id == message_id)
+            .map(|d| d.id))
+    }
+
+    async fn display_name(&self) -> Result<Option<String>, GmailError> {
+        let identities = self.client.send_as().await?;
+        Ok(identities
+            .into_iter()
+            .find(|s| s.is_default)
+            .map(|s| s.display_name)
+            .filter(|name| !name.trim().is_empty()))
+    }
+
+    async fn attachment(
+        &self,
+        message_id: &str,
+        attachment_id: &str,
+    ) -> Result<Vec<u8>, GmailError> {
+        self.client.attachment(message_id, attachment_id).await
     }
 }
