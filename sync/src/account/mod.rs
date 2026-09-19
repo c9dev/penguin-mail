@@ -1,6 +1,7 @@
 //! Sync for one account: window loading, history replay, thread and body
 //! fetches, and triage. Each file adds methods to `AccountSync`.
 
+mod history;
 mod window;
 
 use std::collections::BTreeSet;
