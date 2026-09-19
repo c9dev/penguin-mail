@@ -64,7 +64,7 @@ impl MainWindow {
         // The view lives as long as its window.
         let keep = Rc::clone(&view);
         window.connect_destroy(move |_| {
-            let _ = &keep;
+            keep.stop_rendering();
         });
         window.present();
         self.load_into(view, summary);

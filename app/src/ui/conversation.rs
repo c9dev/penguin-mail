@@ -161,7 +161,7 @@ impl ConversationView {
         settings.set_allow_file_access_from_file_urls(false);
         settings.set_enable_smooth_scrolling(true);
         settings.set_auto_load_images(true);
-        let session = webkit::NetworkSession::new_ephemeral();
+        let session = network_session();
         let webview = webkit::WebView::builder()
             .network_session(&session)
             .user_content_manager(&content)
@@ -559,6 +559,14 @@ impl ConversationView {
         b.more.set_visible(false);
     }
 
+    /// Stops the WebKit process that draws mail. It holds about 80 MB, and
+    /// a closed window has no use for it. WebKit starts a new one when this
+    /// view loads its next message.
+    pub fn stop_rendering(&self) {
+        self.clear();
+        self.webview.terminate_web_process();
+    }
+
     pub fn clear(&self) {
         *self.open.borrow_mut() = None;
         self.stack.set_visible_child_name("empty");
@@ -852,4 +860,14 @@ fn script_safe(id: &str) -> String {
     id.chars()
         .filter(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_'))
         .collect()
+}
+
+/// One network session for every conversation view. Each session runs its
+/// own WebKit network process, and a detached window needs no second one.
+/// Ephemeral keeps cookies and caches in memory, so nothing lands on disk.
+fn network_session() -> webkit::NetworkSession {
+    thread_local! {
+        static SESSION: webkit::NetworkSession = webkit::NetworkSession::new_ephemeral();
+    }
+    SESSION.with(|s| s.clone())
 }

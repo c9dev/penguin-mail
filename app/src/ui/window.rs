@@ -1977,6 +1977,7 @@ impl MainWindow {
             if let (Some(win), Some(app)) =
                 (weak.upgrade(), weak.upgrade().and_then(|w| w.app.upgrade()))
             {
+                win.conversation.stop_rendering();
                 app.forget_window(&win);
             }
             glib::Propagation::Proceed
