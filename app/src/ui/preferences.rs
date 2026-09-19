@@ -66,6 +66,13 @@ fn general_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         settings.inbox_categories,
         |s, v| s.inbox_categories = v,
     ));
+    reading.add(&switch(
+        app,
+        "Suggest Follow-Ups",
+        Some("List mail you sent that has had no reply for three days"),
+        settings.suggest_follow_ups,
+        |s, v| s.suggest_follow_ups = v,
+    ));
     reading.add(&combo(
         app,
         "Mark as Read",

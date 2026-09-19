@@ -271,6 +271,32 @@ fn samples() -> Vec<Sample> {
             attachments: &[],
         },
         Sample {
+            account: 1,
+            thread: "t-invoice",
+            id: "invoice-1",
+            from: (DISPLAY_NAME, "dana@fernwood.example"),
+            to: &[("Owen Mercer", "accounts@mapleandfinch.example")],
+            subject: "Invoice 2291 for August",
+            minutes_ago: 5 * DAY + 3 * HOUR,
+            labels: &["SENT"],
+            text: "Hi Owen,\n\nAttached is invoice 2291 for the August work, due on the 30th. Could you confirm it reached the right person?\n\nThanks,\nDana",
+            html: None,
+            attachments: &[("invoice-2291.pdf", "application/pdf", 96_000)],
+        },
+        Sample {
+            account: 0,
+            thread: "t-lease",
+            id: "lease-1",
+            from: (DISPLAY_NAME, "dana.reyes@example.com"),
+            to: &[("Harbor Lane Lettings", "office@harborlane.example")],
+            subject: "Question about the lease renewal",
+            minutes_ago: 8 * DAY + 5 * HOUR,
+            labels: &["SENT"],
+            text: "Hello,\n\nMy lease ends on 31 October. Can I renew for another twelve months at the current rent? Happy to sign whenever the paperwork is ready.\n\nBest,\nDana Reyes",
+            html: None,
+            attachments: &[],
+        },
+        Sample {
             account: 0,
             thread: "t-news",
             id: "news-1",
@@ -841,6 +867,19 @@ mod tests {
     use mailrs_store::{bodies, open_in_memory};
 
     use super::*;
+
+    #[test]
+    fn two_sent_messages_wait_for_a_reply() {
+        let conn = open_in_memory().unwrap();
+        let now = 1_758_000_000_000;
+        seed(&conn, now).unwrap();
+        let waiting: Vec<String> = mailrs_store::follow_ups::waiting(&conn, now)
+            .unwrap()
+            .into_iter()
+            .map(|f| f.thread_id)
+            .collect();
+        assert_eq!(waiting, ["t-invoice", "t-lease"]);
+    }
 
     #[test]
     fn every_inbox_category_has_demo_mail() {

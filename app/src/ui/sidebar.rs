@@ -235,6 +235,12 @@ impl Sidebar {
         }
         self.add_mailbox(Mailbox::Scheduled, "Send Later", "mail-send-symbolic", 0);
         self.add_mailbox(Mailbox::Reminders, "Remind Me", "alarm-symbolic", 0);
+        self.add_mailbox(
+            Mailbox::FollowUp,
+            "Follow Up",
+            "mail-reply-sender-symbolic",
+            0,
+        );
         for folder in Folder::ALL {
             let mailbox = Mailbox::Folder {
                 account_id: None,
@@ -396,6 +402,7 @@ impl Sidebar {
                 Mailbox::Unified("DRAFT")
                     | Mailbox::Scheduled
                     | Mailbox::Reminders
+                    | Mailbox::FollowUp
                     | Mailbox::Flag(_)
             ) || matches!(&row.mailbox, Mailbox::Label { label_id, .. } if label_id == "DRAFT");
             let shown = count > 0 && (row.mailbox.counts_unread() || is_drafts);
@@ -481,7 +488,7 @@ fn css_hex(color: &str) -> Option<String> {
 fn hidden_until_used(mailbox: &Mailbox) -> bool {
     matches!(
         mailbox,
-        Mailbox::Scheduled | Mailbox::Reminders | Mailbox::Flag(_)
+        Mailbox::Scheduled | Mailbox::Reminders | Mailbox::FollowUp | Mailbox::Flag(_)
     )
 }
 
@@ -495,6 +502,7 @@ fn takes_mail(mailbox: &Mailbox) -> bool {
         Mailbox::Search { .. }
         | Mailbox::Scheduled
         | Mailbox::Reminders
+        | Mailbox::FollowUp
         | Mailbox::Vips { .. }
         | Mailbox::Smart { .. } => false,
     }

@@ -40,6 +40,8 @@ pub struct Settings {
     /// Split inboxes into Primary, Updates, Promotions, and Social, from
     /// Gmail's category labels.
     pub inbox_categories: bool,
+    /// Show Follow Up for sent mail nobody has answered.
+    pub suggest_follow_ups: bool,
 }
 
 impl Default for Settings {
@@ -63,6 +65,7 @@ impl Default for Settings {
             account_colors: BTreeMap::new(),
             account_names: BTreeMap::new(),
             inbox_categories: true,
+            suggest_follow_ups: true,
         }
     }
 }

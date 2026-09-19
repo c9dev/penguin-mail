@@ -145,6 +145,14 @@ CREATE TABLE reminders (
     r#"
 ALTER TABLE labels ADD COLUMN color TEXT;
 "#,
+    r#"
+CREATE TABLE follow_up_dismissals (
+    account_id   INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    thread_id    TEXT NOT NULL,
+    dismissed_at INTEGER NOT NULL,
+    PRIMARY KEY (account_id, thread_id)
+);
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,
