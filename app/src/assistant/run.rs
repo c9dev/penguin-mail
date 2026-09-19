@@ -33,6 +33,11 @@ use crate::settings::{
     Change, Choice, ColorScheme, MarkRead, RemoteImages, Setting, Settings, TextSize, UndoSend,
 };
 
+#[cfg(test)]
+mod fake;
+#[cfg(test)]
+mod tests;
+
 type ToolResult = Result<Value, String>;
 
 /// An account a tool named, with the loop that syncs it.
