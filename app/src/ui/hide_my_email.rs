@@ -7,8 +7,8 @@ use std::rc::Rc;
 use adw::prelude::*;
 use gtk::glib;
 use mailrs_domain::{Account, AccountId};
+use mailrs_sync::Permitted;
 
-use super::vacation::missing_scope;
 use super::window::MainWindow;
 use crate::hide_my_email::HiddenAddress;
 
@@ -116,13 +116,9 @@ impl Dialog {
         self.toasts.add_toast(adw::Toast::new(text));
     }
 
-    /// Handles a failed Gmail call: the permission page, or a toast.
-    fn failed(self: &Rc<Self>, err: &anyhow::Error, account: &str, what: &str) {
-        if missing_scope(err) {
-            self.ask_for_access(account);
-        } else {
-            self.toast(&format!("Could not {what}: {err}"));
-        }
+    /// Handles a failed Gmail call with a toast naming what it was doing.
+    fn failed(&self, err: &anyhow::Error, what: &str) {
+        self.toast(&format!("Could not {what}: {err}"));
     }
 
     fn reload(self: &Rc<Self>) {
@@ -197,9 +193,14 @@ impl Dialog {
             let (address, account) = (address.clone(), account.clone());
             glib::spawn_future_local(async move {
                 match this.win.set_hidden_address_active(&address, active).await {
-                    Ok(()) if active => this.toast("Mail to this address reaches you again"),
-                    Ok(()) => this.toast("Mail to this address now goes to the Trash"),
-                    Err(err) => this.failed(&err, &account, "change the address"),
+                    Ok(Permitted::Done(())) if active => {
+                        this.toast("Mail to this address reaches you again")
+                    }
+                    Ok(Permitted::Done(())) => {
+                        this.toast("Mail to this address now goes to the Trash")
+                    }
+                    Ok(Permitted::NeedsPermission) => this.ask_for_access(&account),
+                    Err(err) => this.failed(&err, "change the address"),
                 }
                 this.reload();
             });
@@ -236,8 +237,9 @@ impl Dialog {
                 return;
             }
             match this.win.delete_hidden_address(&address).await {
-                Ok(()) => this.toast("Address deleted"),
-                Err(err) => this.failed(&err, &account, "delete the address"),
+                Ok(Permitted::Done(())) => this.toast("Address deleted"),
+                Ok(Permitted::NeedsPermission) => this.ask_for_access(&account),
+                Err(err) => this.failed(&err, "delete the address"),
             }
             this.reload();
         });
@@ -331,13 +333,17 @@ impl Dialog {
             let button = button.clone();
             glib::spawn_future_local(async move {
                 match this.win.create_hidden_address(chosen.id, &text).await {
-                    Ok(hidden) => {
+                    Ok(Permitted::Done(hidden)) => {
                         this.reload();
                         this.show_created(&hidden);
                     }
+                    Ok(Permitted::NeedsPermission) => {
+                        button.set_sensitive(true);
+                        this.ask_for_access(&chosen.email);
+                    }
                     Err(err) => {
                         button.set_sensitive(true);
-                        this.failed(&err, &chosen.email, "create the address");
+                        this.failed(&err, "create the address");
                     }
                 }
             });

@@ -28,6 +28,28 @@ impl<G: GmailApi> Accounts for SyncEngine<G> {
     }
 }
 
+/// The id of the label called `name` in `account_id`, ignoring case. With
+/// `create`, makes the label when the account has none by that name.
+pub(crate) async fn label_id<A: Accounts>(
+    accounts: &A,
+    db: &Db,
+    account_id: AccountId,
+    name: &str,
+    create: bool,
+) -> Result<String, SyncError> {
+    let known = db.read(move |c| labels::list_labels(c, account_id)).await?;
+    if let Some(label) = known.iter().find(|l| l.name.eq_ignore_ascii_case(name)) {
+        return Ok(label.id.clone());
+    }
+    if !create {
+        return Err(SyncError::NoLabel(name.to_string()));
+    }
+    let sync = accounts
+        .account(account_id)
+        .ok_or(SyncError::UnknownAccount(account_id))?;
+    Ok(sync.create_label(name).await?.id)
+}
+
 /// A change to mail. Each one runs on every target on its own, so one
 /// failure leaves the other targets changed.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -167,18 +189,7 @@ impl<A: Accounts> MailActions<A> {
         name: &str,
         create: bool,
     ) -> Result<String, SyncError> {
-        let known = self
-            .db
-            .read(move |c| labels::list_labels(c, account_id))
-            .await?;
-        if let Some(label) = known.iter().find(|l| l.name.eq_ignore_ascii_case(name)) {
-            return Ok(label.id.clone());
-        }
-        if !create {
-            return Err(SyncError::NoLabel(name.to_string()));
-        }
-        let sync = self.sync(account_id)?;
-        Ok(sync.create_label(name).await?.id)
+        label_id(self.accounts.as_ref(), &self.db, account_id, name, create).await
     }
 
     /// The targets that `folder` no longer holds, judged by the labels in

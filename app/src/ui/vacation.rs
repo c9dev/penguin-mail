@@ -1,16 +1,16 @@
-//! The automatic reply dialog: Gmail's vacation responder for one account.
+//! The automatic reply dialog: what Gmail answers new mail with for one
+//! account, and the days it runs between. `mailrs_sync::AccountSettings`
+//! reads and stores it.
 
 use std::rc::Rc;
+use std::sync::Arc;
 
 use adw::prelude::*;
 use gtk::glib;
-use mailrs_domain::{Account, Vacation};
-use mailrs_gmail::GmailError;
-use mailrs_sync::SyncError;
+use mailrs_domain::Account;
+use mailrs_sync::{AutomaticReply, Permitted};
 
 use crate::core::Core;
-
-const DAY_MS: i64 = 24 * 60 * 60 * 1000;
 
 /// Shows the dialog for `account`. `grant` runs when Gmail says Penguin Mail lacks
 /// the settings permission, to send the user through consent again. `saved`
@@ -63,20 +63,22 @@ pub fn present(
     });
     dialog.present(Some(parent));
 
-    let Some(sync) = core.account(account.id) else {
+    if core.account(account.id).is_none() {
         stack.add_named(&problem("This account is not syncing yet."), Some("error"));
         stack.set_visible_child_name("error");
         return;
-    };
-    let (core, email) = (Rc::clone(core), account.email.clone());
+    }
+    let (core, email, account_id) = (Rc::clone(core), account.email.clone(), account.id);
+    let settings = core.gmail_settings();
     glib::spawn_future_local(async move {
         let loaded = {
-            let sync = sync.clone();
-            core.call(async move { sync.vacation().await }).await
+            let settings = Arc::clone(&settings);
+            core.call(async move { settings.automatic_reply(account_id).await })
+                .await
         };
-        let vacation = match loaded {
-            Ok(vacation) => vacation,
-            Err(err) if missing_scope(&err) => {
+        let reply = match loaded {
+            Ok(Permitted::Done(reply)) => reply,
+            Ok(Permitted::NeedsPermission) => {
                 let page = adw::StatusPage::builder()
                     .icon_name("mail-send-symbolic")
                     .title("Allow Automatic Replies")
@@ -106,35 +108,41 @@ pub fn present(
                 return;
             }
         };
-        let form = Form::new(&vacation);
+        let form = Form::new(&reply);
         stack.add_named(&form.page, Some("form"));
         stack.set_visible_child_name("form");
         save.set_sensitive(true);
         let saved = Rc::new(saved);
         save.connect_clicked(move |button| {
             let saved = Rc::clone(&saved);
-            let wanted = form.vacation(&vacation);
+            let wanted = form.reply(&reply);
             button.set_sensitive(false);
-            let (core, sync, dialog, toasts, button) = (
+            let (core, settings, dialog, toasts, button) = (
                 Rc::clone(&core),
-                sync.clone(),
+                Arc::clone(&settings),
                 dialog.clone(),
                 toasts.clone(),
                 button.clone(),
             );
             glib::spawn_future_local(async move {
                 let enabled = wanted.enabled;
-                match core
-                    .call(async move { sync.set_vacation(wanted).await })
-                    .await
-                {
-                    Ok(()) => {
+                let stored = core
+                    .call(async move { settings.set_automatic_reply(account_id, &wanted).await })
+                    .await;
+                match stored {
+                    Ok(Permitted::Done(())) => {
                         dialog.close();
                         saved(if enabled {
                             "Automatic reply is on"
                         } else {
                             "Automatic reply is off"
                         });
+                    }
+                    Ok(Permitted::NeedsPermission) => {
+                        button.set_sensitive(true);
+                        toasts.add_toast(adw::Toast::new(
+                            "Penguin Mail needs permission to change Gmail settings",
+                        ));
                     }
                     Err(err) => {
                         button.set_sensitive(true);
@@ -154,19 +162,6 @@ fn problem(message: &str) -> adw::StatusPage {
         .build()
 }
 
-/// True when Gmail refused because the account never granted the settings scope.
-pub fn missing_scope(err: &anyhow::Error) -> bool {
-    err.chain().any(|cause| {
-        matches!(
-            cause.downcast_ref::<GmailError>(),
-            Some(GmailError::MissingScope)
-        ) || matches!(
-            cause.downcast_ref::<SyncError>(),
-            Some(SyncError::Gmail(GmailError::MissingScope))
-        )
-    })
-}
-
 struct Form {
     page: adw::PreferencesPage,
     enabled: adw::SwitchRow,
@@ -179,28 +174,27 @@ struct Form {
 }
 
 impl Form {
-    fn new(vacation: &Vacation) -> Rc<Form> {
+    fn new(reply: &AutomaticReply) -> Rc<Form> {
         let page = adw::PreferencesPage::new();
 
         let enabled = adw::SwitchRow::builder()
             .title("Send Automatic Replies")
             .subtitle("Gmail answers new mail while you are away, even when this computer is off")
-            .active(vacation.enabled)
+            .active(reply.enabled)
             .build();
         let top = adw::PreferencesGroup::new();
         top.add(&enabled);
         page.add(&top);
 
         let today = glib::DateTime::now_local().expect("the clock reads");
-        let first_day = vacation.start.map_or_else(|| today.clone(), local_day);
-        // Gmail stops at `end`; the last day shown is the one before it.
-        let last_day = vacation.end.map_or_else(
+        let first_day = reply.first_day.map_or_else(|| today.clone(), local_day);
+        let last_day = reply.last_day.map_or_else(
             || today.add_days(6).expect("a week from now exists"),
-            |end| local_day(end - 1),
+            local_day,
         );
         let dated = adw::SwitchRow::builder()
             .title("Only Between These Dates")
-            .active(vacation.start.is_some() || vacation.end.is_some())
+            .active(reply.first_day.is_some() || reply.last_day.is_some())
             .build();
         let first = DateButton::new("First Day", &first_day);
         let last = DateButton::new("Last Day", &last_day);
@@ -217,7 +211,7 @@ impl Form {
         page.add(&dates);
 
         let subject = adw::EntryRow::builder().title("Subject").build();
-        subject.set_text(&vacation.subject);
+        subject.set_text(&reply.subject);
         let body = gtk::TextView::builder()
             .wrap_mode(gtk::WrapMode::WordChar)
             .top_margin(12)
@@ -226,7 +220,7 @@ impl Form {
             .right_margin(12)
             .accepts_tab(false)
             .build();
-        body.buffer().set_text(&vacation.body);
+        body.buffer().set_text(&reply.body);
         let frame = gtk::ScrolledWindow::builder()
             .child(&body)
             .min_content_height(160)
@@ -241,7 +235,7 @@ impl Form {
 
         let contacts_only = adw::SwitchRow::builder()
             .title("Only Reply to My Contacts")
-            .active(vacation.contacts_only)
+            .active(reply.contacts_only)
             .build();
         let who = adw::PreferencesGroup::new();
         who.add(&contacts_only);
@@ -270,12 +264,12 @@ impl Form {
     }
 
     /// `base` with the form's values. Keeps settings the form does not show.
-    fn vacation(&self, base: &Vacation) -> Vacation {
+    fn reply(&self, base: &AutomaticReply) -> AutomaticReply {
         let buffer = self.body.buffer();
         let dated = self.dated.is_active();
         let first = midnight(&self.first.date());
         let last = midnight(&self.last.date()).max(first);
-        Vacation {
+        AutomaticReply {
             enabled: self.enabled.is_active(),
             subject: self.subject.text().trim().to_string(),
             body: buffer
@@ -283,8 +277,8 @@ impl Form {
                 .trim_end()
                 .to_string(),
             contacts_only: self.contacts_only.is_active(),
-            start: dated.then_some(first),
-            end: dated.then_some(last + DAY_MS),
+            first_day: dated.then_some(first),
+            last_day: dated.then_some(last),
             ..base.clone()
         }
     }
