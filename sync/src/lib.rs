@@ -3,6 +3,7 @@
 mod account;
 mod api;
 mod backoff;
+mod engine;
 mod error;
 mod triage;
 
@@ -14,6 +15,7 @@ mod tests;
 pub use account::{AccountSync, DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS, FETCH_CONCURRENCY};
 pub use api::{AccountClient, GmailApi, LIST_PAGE_SIZE};
 pub use backoff::backoff_delay;
+pub use engine::{EngineConfig, SyncEngine};
 pub use error::SyncError;
 pub use triage::TriageAction;
 

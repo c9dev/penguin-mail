@@ -1,5 +1,6 @@
 mod basics;
 mod bootstrap;
+mod engine;
 mod incremental;
 mod thread_open;
 mod triage;
