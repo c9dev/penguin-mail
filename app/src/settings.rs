@@ -24,6 +24,8 @@ pub struct Settings {
     pub signatures: BTreeMap<String, String>,
     /// How long Undo stays available after Send.
     pub undo_send: UndoSend,
+    /// The colour a new flag gets: the last one chosen.
+    pub flag_color: mailrs_domain::FlagColor,
 }
 
 impl Default for Settings {
@@ -39,6 +41,7 @@ impl Default for Settings {
             default_account: None,
             signatures: BTreeMap::new(),
             undo_send: UndoSend::Ten,
+            flag_color: mailrs_domain::FlagColor::Red,
         }
     }
 }

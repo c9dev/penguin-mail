@@ -97,6 +97,67 @@ impl FromStr for LabelKind {
     }
 }
 
+/// Apple Mail's flag colours. Gmail keeps only whether mail is starred, so
+/// the colour lives on this computer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum FlagColor {
+    Red,
+    Orange,
+    Yellow,
+    Green,
+    Blue,
+    Purple,
+    Gray,
+}
+
+impl FlagColor {
+    pub const ALL: [FlagColor; 7] = [
+        FlagColor::Red,
+        FlagColor::Orange,
+        FlagColor::Yellow,
+        FlagColor::Green,
+        FlagColor::Blue,
+        FlagColor::Purple,
+        FlagColor::Gray,
+    ];
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            FlagColor::Red => "red",
+            FlagColor::Orange => "orange",
+            FlagColor::Yellow => "yellow",
+            FlagColor::Green => "green",
+            FlagColor::Blue => "blue",
+            FlagColor::Purple => "purple",
+            FlagColor::Gray => "gray",
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            FlagColor::Red => "Red",
+            FlagColor::Orange => "Orange",
+            FlagColor::Yellow => "Yellow",
+            FlagColor::Green => "Green",
+            FlagColor::Blue => "Blue",
+            FlagColor::Purple => "Purple",
+            FlagColor::Gray => "Gray",
+        }
+    }
+}
+
+impl FromStr for FlagColor {
+    type Err = UnknownVariant;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        FlagColor::ALL
+            .into_iter()
+            .find(|c| c.as_str() == s)
+            .ok_or_else(|| UnknownVariant(s.to_string()))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Label {
     pub account_id: AccountId,
@@ -166,6 +227,9 @@ pub struct ThreadSummary {
     pub unread: bool,
     pub starred: bool,
     pub has_attachments: bool,
+    /// The flag colour chosen here for a starred row, if one was.
+    #[serde(default)]
+    pub flag_color: Option<FlagColor>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

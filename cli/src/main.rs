@@ -252,6 +252,7 @@ async fn list_threads(db: &Db, account: Option<&str>, label: String, limit: i64)
     let filter = ThreadFilter {
         account_id,
         label_id: label,
+        ..ThreadFilter::default()
     };
     let rows = db
         .read(move |c| threads::list_threads(c, &filter, 0, limit))

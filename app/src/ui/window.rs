@@ -26,6 +26,7 @@ use crate::core::Core;
 use crate::settings::{Choice, MarkRead, RemoteImages, Settings, TextSize};
 
 mod detached;
+mod flags;
 mod organize;
 mod scheduled;
 mod senders;
@@ -34,6 +35,8 @@ mod senders;
 const INLINE_IMAGE_LIMIT: usize = 5 * 1024 * 1024;
 
 type WindowAction = Box<dyn Fn(&Rc<MainWindow>)>;
+/// Work to do once a triage action has reached Gmail.
+type AfterApply = Box<dyn FnOnce(&Rc<MainWindow>, &[Target])>;
 type AccountAction = Box<dyn Fn(&Rc<MainWindow>, Account)>;
 
 pub struct MainWindow {
@@ -667,6 +670,7 @@ impl MainWindow {
                 me,
                 inline_images: HashMap::new(),
                 unsubscribed: false,
+                flag_color: summary.flag_color,
             };
             view.show(thread, true);
             this.complete_thread(view, account_id, thread_id).await;
@@ -954,14 +958,7 @@ impl MainWindow {
                 Some(Folder::Junk) => TriageAction::NotJunk,
                 _ => TriageAction::Junk,
             }),
-            Action::ToggleStar => {
-                let (_, starred) = self.target_marks();
-                self.triage(if starred {
-                    TriageAction::Unstar
-                } else {
-                    TriageAction::Star
-                });
-            }
+            Action::ToggleStar => self.toggle_flag(),
             Action::ToggleRead => {
                 let (unread, _) = self.target_marks();
                 self.triage(if unread {
@@ -1120,6 +1117,18 @@ impl MainWindow {
         record: bool,
         message: Option<String>,
     ) {
+        self.apply_then(targets, action, record, message, None);
+    }
+
+    /// `apply_with`, running `after` once Gmail has the change.
+    fn apply_then(
+        self: &Rc<Self>,
+        targets: Vec<Target>,
+        action: TriageAction,
+        record: bool,
+        message: Option<String>,
+        after: Option<AfterApply>,
+    ) {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let mut failure = None;
@@ -1147,6 +1156,9 @@ impl MainWindow {
             }
             if let Some(err) = failure {
                 return this.toast(&format!("{} failed: {err}", action.describe()));
+            }
+            if let Some(after) = after {
+                after(&this, &targets);
             }
             if !record {
                 // An undo can put rows back into a Gmail folder.
@@ -1662,6 +1674,17 @@ impl MainWindow {
             Box::new(|win| win.conversation.label_button.popup()),
         );
         add("undo", Box::new(|win| win.undo()));
+        let flag_color = gio::SimpleAction::new("flag-color", Some(glib::VariantTy::STRING));
+        let weak = Rc::downgrade(self);
+        flag_color.connect_activate(move |_, parameter| {
+            let (Some(win), Some(name)) =
+                (weak.upgrade(), parameter.and_then(|p| p.get::<String>()))
+            else {
+                return;
+            };
+            win.flag(name.parse().ok());
+        });
+        self.actions.add_action(&flag_color);
         add("unsubscribe", Box::new(|win| win.unsubscribe()));
         add("print", Box::new(|win| win.conversation.print()));
         add(
@@ -1803,6 +1826,15 @@ impl MainWindow {
                 gtk::ShortcutTrigger::parse_string(trigger),
                 Some(gtk::NamedAction::new(action)),
             ));
+        }
+        // Apple Mail's Option-Command-1 to 7 pick a flag colour.
+        for (index, color) in mailrs_domain::FlagColor::ALL.iter().enumerate() {
+            let shortcut = gtk::Shortcut::new(
+                gtk::ShortcutTrigger::parse_string(&format!("<Control><Alt>{}", index + 1)),
+                Some(gtk::NamedAction::new("win.flag-color")),
+            );
+            shortcut.set_arguments(Some(&color.as_str().to_variant()));
+            shortcuts.add_shortcut(shortcut);
         }
         for position in 1..=9i32 {
             let shortcut = gtk::Shortcut::new(
@@ -2102,7 +2134,8 @@ impl MainWindow {
                     ("Archive", "<Control><Alt>a e"),
                     ("Move to trash", "Delete numbersign"),
                     ("Junk", "<Control><Shift>j"),
-                    ("Star or unstar", "<Control><Shift>l s"),
+                    ("Flag or unflag", "<Control><Shift>l s"),
+                    ("Flag colours", "<Control><Alt>1...<Control><Alt>7"),
                     ("Mark read or unread", "<Control><Shift>u u"),
                     ("Labels", "<Control><Alt>m l"),
                     ("Undo", "<Control>z"),
@@ -2182,6 +2215,7 @@ fn empty_state(mailbox: &Mailbox) -> (&'static str, &'static str) {
         Mailbox::Label { label_id, .. } => label_id.as_str(),
         Mailbox::Search { .. } => return ("No Results", "system-search-symbolic"),
         Mailbox::Scheduled => return ("Nothing Scheduled", "alarm-symbolic"),
+        Mailbox::Flag(_) => return ("No Flagged Mail", "mailrs-flag-symbolic"),
         Mailbox::Folder { folder, .. } => {
             return match folder {
                 Folder::Junk => ("No Junk", folder.icon()),

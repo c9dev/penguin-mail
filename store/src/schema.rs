@@ -126,6 +126,22 @@ CREATE INDEX scheduled_by_time ON scheduled(send_at);
 ALTER TABLE bodies ADD COLUMN list_unsubscribe TEXT;
 ALTER TABLE bodies ADD COLUMN one_click_unsubscribe INTEGER NOT NULL DEFAULT 0;
 "#,
+    r#"
+CREATE TABLE flags (
+    account_id INTEGER NOT NULL,
+    message_id TEXT NOT NULL,
+    color      TEXT NOT NULL,
+    PRIMARY KEY (account_id, message_id),
+    FOREIGN KEY (account_id, message_id) REFERENCES messages(account_id, id) ON DELETE CASCADE
+);
+CREATE TABLE reminders (
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    thread_id  TEXT NOT NULL,
+    subject    TEXT NOT NULL,
+    remind_at  INTEGER NOT NULL,
+    PRIMARY KEY (account_id, thread_id)
+);
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,

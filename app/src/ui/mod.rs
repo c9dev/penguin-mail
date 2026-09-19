@@ -14,7 +14,7 @@ pub mod vacation;
 pub mod welcome;
 pub mod window;
 
-use mailrs_domain::{AccountId, MessageMeta, ThreadSummary};
+use mailrs_domain::{AccountId, FlagColor, MessageMeta, ThreadSummary};
 use mailrs_store::threads::ThreadFilter;
 
 /// What the thread list shows.
@@ -33,6 +33,8 @@ pub enum Mailbox {
     },
     /// Messages waiting to go out at a set time, across all accounts.
     Scheduled,
+    /// Flagged mail of one colour, across all accounts.
+    Flag(FlagColor),
     /// Mail Gmail keeps out of the regular listing, fetched on demand.
     Folder {
         account_id: Option<AccountId>,
@@ -95,6 +97,7 @@ impl Mailbox {
             Mailbox::Search { .. } => "Search".into(),
             Mailbox::Folder { folder, .. } => folder.name().into(),
             Mailbox::Scheduled => "Send Later".into(),
+            Mailbox::Flag(color) => format!("{} Flag", color.name()),
         }
     }
 
@@ -106,13 +109,14 @@ impl Mailbox {
                 label_id,
                 ..
             } => Some(ThreadFilter::account(*account_id, label_id.clone())),
+            Mailbox::Flag(color) => Some(ThreadFilter::unified("").with_flag(*color)),
             Mailbox::Search { .. } | Mailbox::Folder { .. } | Mailbox::Scheduled => None,
         }
     }
 
     pub fn account(&self) -> Option<AccountId> {
         match self {
-            Mailbox::Unified(_) | Mailbox::Scheduled => None,
+            Mailbox::Unified(_) | Mailbox::Scheduled | Mailbox::Flag(_) => None,
             Mailbox::Label { account_id, .. } => Some(*account_id),
             Mailbox::Search { account_id, .. } | Mailbox::Folder { account_id, .. } => *account_id,
         }
@@ -137,7 +141,7 @@ pub const UNIFIED: [&str; 4] = ["INBOX", "STARRED", "SENT", "DRAFT"];
 pub fn unified_name(label: &str) -> &'static str {
     match label {
         "INBOX" => "All Inboxes",
-        "STARRED" => "Starred",
+        "STARRED" => "Flagged",
         "SENT" => "Sent",
         "DRAFT" => "Drafts",
         _ => "Mail",
@@ -147,7 +151,7 @@ pub fn unified_name(label: &str) -> &'static str {
 pub fn account_label_name(label: &str) -> &'static str {
     match label {
         "INBOX" => "Inbox",
-        "STARRED" => "Starred",
+        "STARRED" => "Flagged",
         "SENT" => "Sent",
         "DRAFT" => "Drafts",
         _ => "Mail",
@@ -157,7 +161,7 @@ pub fn account_label_name(label: &str) -> &'static str {
 pub fn mailbox_icon(label: &str) -> &'static str {
     match label {
         "INBOX" => "mailrs-inbox-symbolic",
-        "STARRED" => "starred-symbolic",
+        "STARRED" => "mailrs-flag-symbolic",
         "SENT" => "mail-send-symbolic",
         "DRAFT" => "document-edit-symbolic",
         _ => "mailrs-tag-symbolic",
@@ -187,6 +191,7 @@ pub fn summarize_search(mut hits: Vec<MessageMeta>, grouped: bool) -> Vec<Thread
                 unread: hit.is_unread(),
                 starred: hit.has_label("STARRED"),
                 has_attachments: hit.has_attachments,
+                flag_color: None,
             })
             .collect();
     }
@@ -222,6 +227,7 @@ pub fn summarize_search(mut hits: Vec<MessageMeta>, grouped: bool) -> Vec<Thread
             unread: hit.is_unread(),
             starred: hit.has_label("STARRED"),
             has_attachments: hit.has_attachments,
+            flag_color: None,
         };
         rows.push((summary, hit.date));
     }

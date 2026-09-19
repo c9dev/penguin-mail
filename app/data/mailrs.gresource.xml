@@ -5,6 +5,8 @@
     <file>icons/scalable/actions/mailrs-archive-symbolic.svg</file>
     <file>icons/scalable/actions/mailrs-tag-symbolic.svg</file>
     <file>icons/scalable/actions/mailrs-link-symbolic.svg</file>
+    <file>icons/scalable/actions/mailrs-flag-symbolic.svg</file>
+    <file>icons/scalable/actions/mailrs-flag-outline-symbolic.svg</file>
     <file>icons/scalable/apps/dev.mailrs.Mailrs.svg</file>
     <file>icons/scalable/apps/dev.mailrs.Mailrs-symbolic.svg</file>
     <file>style.css</file>

@@ -118,5 +118,6 @@ fn row(item: &Scheduled, now: chrono::DateTime<chrono::Local>) -> ThreadSummary 
         unread: false,
         starred: false,
         has_attachments: false,
+        flag_color: None,
     }
 }

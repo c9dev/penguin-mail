@@ -27,6 +27,10 @@ impl MainWindow {
             self.toast("Drop mail on its own account's mailboxes");
             return false;
         }
+        if let Mailbox::Flag(color) = mailbox {
+            self.flag_targets(rows.iter().map(Target::from_row).collect(), Some(color));
+            return true;
+        }
         let from = self.mailbox.borrow().clone();
         let action = match move_action(&from, &mailbox) {
             Ok(action) => action,

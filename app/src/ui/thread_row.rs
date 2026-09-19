@@ -4,7 +4,7 @@ use chrono::Local;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{glib, pango};
-use mailrs_domain::ThreadSummary;
+use mailrs_domain::{FlagColor, ThreadSummary};
 
 use crate::format::{PALETTE, account_color_index, relative_date};
 
@@ -57,7 +57,7 @@ mod imp {
             let from = text_label("from");
             from.set_hexpand(true);
             let clip = marker("mail-attachment-symbolic");
-            let star = marker("starred-symbolic");
+            let star = marker("mailrs-flag-symbolic");
             star.add_css_class("starred");
             let date = text_label("date");
             date.set_ellipsize(pango::EllipsizeMode::None);
@@ -173,10 +173,15 @@ impl ThreadRow {
         count.set_visible(thread.message_count > 1);
         count.set_label(&thread.message_count.to_string());
         get(&imp.snippet).set_label(&thread.snippet);
-        imp.star
-            .get()
-            .expect("star exists")
-            .set_visible(thread.starred);
+        let flag = imp.star.get().expect("flag exists");
+        flag.set_visible(thread.starred);
+        for color in FlagColor::ALL {
+            flag.remove_css_class(&format!("flag-{}", color.as_str()));
+        }
+        flag.add_css_class(&format!(
+            "flag-{}",
+            thread.flag_color.unwrap_or(FlagColor::Red).as_str()
+        ));
         imp.clip
             .get()
             .expect("clip exists")

@@ -6,6 +6,7 @@ pub mod bodies;
 pub mod contacts;
 mod db;
 mod error;
+pub mod flags;
 pub mod labels;
 pub mod messages;
 pub mod scheduled;

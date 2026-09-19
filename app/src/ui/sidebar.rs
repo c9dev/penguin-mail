@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gdk, gio, glib, pango};
-use mailrs_domain::{Account, AccountId, AccountState, Label, LabelKind};
+use mailrs_domain::{Account, AccountId, AccountState, FlagColor, Label, LabelKind};
 
 use super::{Folder, Mailbox, UNIFIED, account_label_name, mailbox_icon, unified_name};
 use crate::format::account_color_index;
@@ -178,6 +178,20 @@ impl Sidebar {
                 mailbox_icon(label),
                 0,
             );
+            if label == "STARRED" {
+                // One row per flag colour in use, as Apple Mail shows them.
+                for color in FlagColor::ALL {
+                    let row = self.add_mailbox(
+                        Mailbox::Flag(color),
+                        color.name(),
+                        "mailrs-flag-symbolic",
+                        1,
+                    );
+                    if let Some(icon) = row.child().and_then(|c| c.first_child()) {
+                        icon.add_css_class(&format!("flag-{}", color.as_str()));
+                    }
+                }
+            }
         }
         self.add_mailbox(Mailbox::Scheduled, "Send Later", "alarm-symbolic", 0);
         for folder in Folder::ALL {
@@ -260,7 +274,7 @@ impl Sidebar {
         content.append(&count);
         let row = gtk::ListBoxRow::builder()
             .child(&content)
-            .visible(mailbox != Mailbox::Scheduled)
+            .visible(!hidden_until_used(&mailbox))
             .build();
         if takes_mail(&mailbox) {
             let target = gtk::DropTarget::new(glib::Type::STRING, gdk::DragAction::MOVE);
@@ -308,13 +322,15 @@ impl Sidebar {
         let selected = self.list.selected_row();
         for row in self.rows.borrow().iter() {
             let count = counts.get(&row.mailbox).copied().unwrap_or(0);
-            if row.mailbox == Mailbox::Scheduled {
-                // Send Later appears only while something waits in it.
+            if hidden_until_used(&row.mailbox) {
+                // Send Later and each flag colour appear only while in use.
                 row.row
                     .set_visible(count > 0 || selected.as_ref() == Some(&row.row));
             }
-            let is_drafts = matches!(&row.mailbox, Mailbox::Unified("DRAFT") | Mailbox::Scheduled)
-                || matches!(&row.mailbox, Mailbox::Label { label_id, .. } if label_id == "DRAFT");
+            let is_drafts = matches!(
+                &row.mailbox,
+                Mailbox::Unified("DRAFT") | Mailbox::Scheduled | Mailbox::Flag(_)
+            ) || matches!(&row.mailbox, Mailbox::Label { label_id, .. } if label_id == "DRAFT");
             let shown = count > 0 && (row.mailbox.counts_unread() || is_drafts);
             row.count.set_visible(shown);
             row.count.set_label(&count.to_string());
@@ -342,12 +358,18 @@ impl Sidebar {
 /// the thread list.
 pub const DRAG_MAIL: &str = "mailrs-mail";
 
+/// Rows that show only while they hold something.
+fn hidden_until_used(mailbox: &Mailbox) -> bool {
+    matches!(mailbox, Mailbox::Scheduled | Mailbox::Flag(_))
+}
+
 /// Mailboxes mail can be moved into.
 fn takes_mail(mailbox: &Mailbox) -> bool {
     match mailbox {
         Mailbox::Unified(label) => matches!(*label, "INBOX" | "STARRED"),
         Mailbox::Label { label_id, .. } => !matches!(label_id.as_str(), "SENT" | "DRAFT"),
         Mailbox::Folder { .. } => true,
+        Mailbox::Flag(_) => true,
         Mailbox::Search { .. } | Mailbox::Scheduled => false,
     }
 }

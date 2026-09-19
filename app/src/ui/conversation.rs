@@ -10,7 +10,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gdk, gio};
-use mailrs_domain::{AccountId, MessageBody, MessageMeta};
+use mailrs_domain::{AccountId, FlagColor, MessageBody, MessageMeta};
 use webkit::prelude::*;
 
 use super::Folder;
@@ -34,6 +34,8 @@ pub struct OpenThread {
     pub inline_images: HashMap<String, HashMap<String, String>>,
     /// Set once the user unsubscribed from this thread's list.
     pub unsubscribed: bool,
+    /// The flag colour chosen here, when the thread is flagged.
+    pub flag_color: Option<FlagColor>,
 }
 
 impl OpenThread {
@@ -96,7 +98,7 @@ struct Buttons {
     trash: gtk::Button,
     junk: gtk::Button,
     read: gtk::Button,
-    star: gtk::Button,
+    star: adw::SplitButton,
     reply: gtk::Button,
     reply_all: gtk::Button,
     forward: gtk::Button,
@@ -183,7 +185,7 @@ impl ConversationView {
         for (label, action) in [
             ("Archive", "win.archive"),
             ("Mark as Read", "win.toggle-read"),
-            ("Star", "win.toggle-star"),
+            ("Flag", "win.toggle-star"),
             ("Junk", "win.junk"),
             ("Move to Trash", "win.trash"),
         ] {
@@ -236,7 +238,12 @@ impl ConversationView {
             trash: button("user-trash-symbolic", "Move to Trash (Delete)"),
             junk: button("mail-mark-junk-symbolic", "Junk (Ctrl+Shift+J)"),
             read: button("mail-unread-symbolic", "Mark as Unread (Ctrl+Shift+U)"),
-            star: button("non-starred-symbolic", "Star (Ctrl+Shift+L)"),
+            star: adw::SplitButton::builder()
+                .icon_name("mailrs-flag-outline-symbolic")
+                .tooltip_text("Flag (Ctrl+Shift+L)")
+                .dropdown_tooltip("Flag Colour")
+                .popover(&flag_colors())
+                .build(),
             reply: button("mail-reply-sender-symbolic", "Reply (Ctrl+R)"),
             reply_all: button("mail-reply-all-symbolic", "Reply All (Ctrl+Shift+R)"),
             forward: button("mail-forward-symbolic", "Forward (Ctrl+Shift+F)"),
@@ -257,7 +264,7 @@ impl ConversationView {
         replies.append(Some("Forward"), Some("win.forward"));
         more.append_section(None, &replies);
         let marks = gio::Menu::new();
-        marks.append(Some("Star or Unstar"), Some("win.toggle-star"));
+        marks.append(Some("Flag or Unflag"), Some("win.toggle-star"));
         marks.append(Some("Mark Read or Unread"), Some("win.toggle-read"));
         marks.append(Some("Junk"), Some("win.junk"));
         marks.append(Some("Labels…"), Some("win.label"));
@@ -280,11 +287,11 @@ impl ConversationView {
             .tooltip_text("Labels (L)")
             .build();
         for widget in [
-            &buttons.archive,
-            &buttons.trash,
-            &buttons.junk,
-            &buttons.read,
-            &buttons.star,
+            buttons.archive.upcast_ref::<gtk::Widget>(),
+            buttons.trash.upcast_ref(),
+            buttons.junk.upcast_ref(),
+            buttons.read.upcast_ref(),
+            buttons.star.upcast_ref(),
         ] {
             header.pack_start(widget);
         }
@@ -315,7 +322,12 @@ impl ConversationView {
         wire(&buttons.junk, || Action::Junk);
         wire(&buttons.trash, || Action::Trash);
         wire(&buttons.read, || Action::ToggleRead);
-        wire(&buttons.star, || Action::ToggleStar);
+        {
+            let on_action = Rc::clone(&on_action);
+            buttons
+                .star
+                .connect_clicked(move |_| on_action(Action::ToggleStar));
+        }
         wire(&buttons.reply, || Action::Reply(ReplyKind::Reply));
         wire(&buttons.reply_all, || Action::Reply(ReplyKind::ReplyAll));
         wire(&buttons.forward, || Action::Reply(ReplyKind::Forward));
@@ -477,7 +489,7 @@ impl ConversationView {
             "Mark as Unread"
         });
         self.many_star
-            .set_label(if all_starred { "Unstar" } else { "Star" });
+            .set_label(if all_starred { "Unflag" } else { "Flag" });
         *self.open.borrow_mut() = None;
         self.many.set_title(&format!("{count} {noun} Selected"));
         self.stack.set_visible_child_name("many");
@@ -608,14 +620,26 @@ impl ConversationView {
             .set_revealed(!open.unsubscribed && open.list_unsubscribe().is_some());
         self.buttons.edit.set_visible(draft);
         let starred = open.starred();
-        self.buttons.star.set_icon_name(if starred {
-            "starred-symbolic"
+        let star = &self.buttons.star;
+        star.set_icon_name(if starred {
+            "mailrs-flag-symbolic"
         } else {
-            "non-starred-symbolic"
+            "mailrs-flag-outline-symbolic"
         });
-        self.buttons
-            .star
-            .set_tooltip_text(Some(if starred { "Unstar (S)" } else { "Star (S)" }));
+        for color in FlagColor::ALL {
+            star.remove_css_class(&format!("flag-{}", color.as_str()));
+        }
+        if starred {
+            star.add_css_class(&format!(
+                "flag-{}",
+                open.flag_color.unwrap_or(FlagColor::Red).as_str()
+            ));
+        }
+        star.set_tooltip_text(Some(if starred {
+            "Unflag (Ctrl+Shift+L)"
+        } else {
+            "Flag (Ctrl+Shift+L)"
+        }));
         let unread = open.unread();
         self.buttons.read.set_icon_name(if unread {
             "mail-read-symbolic"
@@ -646,9 +670,10 @@ impl ConversationView {
         for button in [&b.archive, &b.trash, &b.reply] {
             button.set_visible(shown);
         }
-        for button in [&b.junk, &b.read, &b.star, &b.reply_all, &b.forward] {
+        for button in [&b.junk, &b.read, &b.reply_all, &b.forward] {
             button.set_visible(full);
         }
+        b.star.set_visible(full);
         self.label_button.set_visible(full && !self.detached.get());
         b.more.set_visible(shown);
         if !shown {
@@ -695,6 +720,55 @@ impl ConversationView {
             );
         }
     }
+}
+
+/// The flag button's menu: seven colours in a row, then Clear Flag.
+fn flag_colors() -> gtk::Popover {
+    let row = gtk::Box::builder().spacing(2).build();
+    for color in FlagColor::ALL {
+        let button = gtk::Button::builder()
+            .icon_name("mailrs-flag-symbolic")
+            .tooltip_text(format!(
+                "{} (Ctrl+Alt+{})",
+                color.name(),
+                color_index(color) + 1
+            ))
+            .action_name("win.flag-color")
+            .action_target(&color.as_str().to_variant())
+            .css_classes(["flat", "flag-swatch", &format!("flag-{}", color.as_str())])
+            .build();
+        row.append(&button);
+    }
+    let clear = gtk::Button::builder()
+        .label("Clear Flag")
+        .action_name("win.flag-color")
+        .action_target(&"none".to_variant())
+        .css_classes(["flat"])
+        .build();
+    let content = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(4)
+        .build();
+    content.append(&row);
+    content.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
+    content.append(&clear);
+    let popover = gtk::Popover::builder().child(&content).build();
+    // Picking a colour closes the menu.
+    let pop = popover.clone();
+    let mut child = row.first_child();
+    while let Some(widget) = child {
+        child = widget.next_sibling();
+        if let Some(button) = widget.downcast_ref::<gtk::Button>() {
+            let pop = pop.clone();
+            button.connect_clicked(move |_| pop.popdown());
+        }
+    }
+    clear.connect_clicked(move |_| pop.popdown());
+    popover
+}
+
+fn color_index(color: FlagColor) -> usize {
+    FlagColor::ALL.iter().position(|c| *c == color).unwrap_or(0)
 }
 
 fn run_script(webview: &webkit::WebView, script: &str) {

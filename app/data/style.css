@@ -18,7 +18,7 @@
   background: alpha(currentColor, 0.1); opacity: 0.8;
 }
 .thread-row .marker { opacity: 0.55; }
-.thread-row .starred.marker { color: #e5a50a; opacity: 1; }
+.thread-row .starred.marker { opacity: 1; }
 
 /* Sidebar */
 .mailbox-row .count { opacity: 0.55; font-size: 0.88em; font-feature-settings: "tnum"; }
@@ -58,3 +58,13 @@
   background: alpha(var(--accent-bg-color), 0.25);
   box-shadow: inset 0 0 0 2px var(--accent-bg-color);
 }
+
+/* Flag colours, after Apple Mail. Symbolic icons take the text colour. */
+.flag-red { color: #e62d42; }
+.flag-orange { color: #ed5b00; }
+.flag-yellow { color: #e5a50a; }
+.flag-green { color: #3a944a; }
+.flag-blue { color: #3584e4; }
+.flag-purple { color: #9141ac; }
+.flag-gray { color: #6f8396; }
+.flag-swatch { padding: 6px; min-width: 20px; min-height: 20px; }
