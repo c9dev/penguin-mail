@@ -4,8 +4,8 @@ use std::rc::Rc;
 
 use gtk::glib;
 use mailrs_domain::FlagColor;
-use mailrs_store::flags;
-use mailrs_sync::TriageAction;
+use mailrs_store::threads;
+use mailrs_sync::{History, MailAction};
 
 use super::{MainWindow, Target};
 
@@ -16,6 +16,8 @@ impl MainWindow {
         self.flag_targets(targets, color);
     }
 
+    /// Flags `targets`. A colour picked here becomes the one the flag
+    /// button uses next.
     pub(super) fn flag_targets(self: &Rc<Self>, targets: Vec<Target>, color: Option<FlagColor>) {
         if targets.is_empty() {
             return;
@@ -23,45 +25,34 @@ impl MainWindow {
         if let (Some(color), Some(app)) = (color, self.app.upgrade()) {
             app.update_settings(|s| s.flag_color = color);
         }
-        let action = match color {
-            Some(_) => TriageAction::Star,
-            None => TriageAction::Unstar,
+        self.perform(targets, MailAction::Flag(color), History::Record, None);
+    }
+
+    /// Re-reads the open conversation's flag colour. The store's change
+    /// events do not carry it, so an undo needs this.
+    pub(super) fn refresh_flag_color(self: &Rc<Self>) {
+        let Some((account_id, thread_id)) = self
+            .conversation
+            .with_open(|o| (o.account_id, o.thread_id.clone()))
+        else {
+            return;
         };
-        let message = color.map(|c| format!("Flagged {}", c.name().to_lowercase()));
-        self.apply_then(
-            targets,
-            action,
-            true,
-            message,
-            Some(Box::new(move |win: &Rc<MainWindow>, targets: &[Target]| {
-                let targets = targets.to_vec();
-                let open_flagged = win.conversation.with_open(|o| {
-                    targets
-                        .iter()
-                        .any(|t| t.account_id == o.account_id && t.thread_id == o.thread_id)
-                });
-                if open_flagged == Some(true) {
-                    win.conversation.with_open(|o| o.flag_color = color);
-                    win.conversation.render_buttons();
-                }
-                win.core.spawn_write(move |c| {
-                    for target in &targets {
-                        flags::set_color(
-                            c,
-                            target.account_id,
-                            &target.thread_id,
-                            target.message_id.as_deref(),
-                            color,
-                        )?;
-                    }
-                    Ok(())
-                });
-                let win = Rc::clone(win);
-                glib::timeout_add_local_once(std::time::Duration::from_millis(100), move || {
-                    win.queue_refresh();
-                });
-            })),
-        );
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let key = thread_id.clone();
+            let Ok(summary) = this
+                .core
+                .read(move |c| threads::get_thread(c, account_id, &key))
+                .await
+            else {
+                return;
+            };
+            if this.conversation.is_showing(account_id, &thread_id) {
+                this.conversation
+                    .with_open(|o| o.flag_color = summary.and_then(|s| s.flag_color));
+                this.conversation.render_buttons();
+            }
+        });
     }
 
     /// The flag button and Ctrl+Shift+L: flag in the last colour used, or

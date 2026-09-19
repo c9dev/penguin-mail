@@ -11,11 +11,11 @@ use adw::prelude::*;
 use base64::Engine;
 use gtk::{gdk, gio, glib};
 use mailrs_domain::{
-    Account, AccountId, AccountState, ChangeEvent, Folder, Label, MessageBody, MessageMeta,
+    Account, AccountId, AccountState, ChangeEvent, Folder, Label, MessageBody, MessageMeta, Target,
     ThreadSummary, system_label,
 };
 use mailrs_store::{accounts, labels, messages, threads};
-use mailrs_sync::TriageAction;
+use mailrs_sync::{History, MailAction, Outcome, TriageAction};
 
 use super::conversation::{Action, ConversationView, OpenThread};
 use super::sidebar::Sidebar;
@@ -43,8 +43,6 @@ mod senders;
 const INLINE_IMAGE_LIMIT: usize = 5 * 1024 * 1024;
 
 type WindowAction = Box<dyn Fn(&Rc<MainWindow>)>;
-/// Work to do once a triage action has reached Gmail.
-type AfterApply = Box<dyn FnOnce(&Rc<MainWindow>, &[Target])>;
 type AccountAction = Box<dyn Fn(&Rc<MainWindow>, Account)>;
 
 pub struct MainWindow {
@@ -66,8 +64,6 @@ pub struct MainWindow {
     refresh_queued: Cell<bool>,
     list_generation: Cell<u64>,
     authorizing: Cell<bool>,
-    /// How to reverse the last organizing action.
-    undo: RefCell<Option<(Vec<Target>, TriageAction)>>,
     labels: RefCell<HashMap<AccountId, Vec<Label>>>,
     assistant: Rc<super::assistant::AssistantPane>,
     assistant_split: adw::OverlaySplitView,
@@ -75,26 +71,16 @@ pub struct MainWindow {
     follow_up: followup::FollowUpBanner,
 }
 
-/// One thing an action applies to: a thread, or one message of it.
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct Target {
-    account_id: AccountId,
-    thread_id: String,
-    message_id: Option<String>,
-}
-
-impl Target {
-    fn from_row(row: &ThreadSummary) -> Target {
-        Target {
-            account_id: row.account_id,
-            thread_id: row.id.clone(),
-            message_id: row.message_id.clone(),
-        }
-    }
-}
-
 /// The toast after an action, or `None` when the change speaks for itself.
-fn done_message(action: &TriageAction, count: usize, threaded: bool) -> Option<String> {
+fn done_message(action: &MailAction, count: usize, threaded: bool) -> Option<String> {
+    let action = match action {
+        MailAction::Triage(action) => action,
+        MailAction::Flag(color) => {
+            return color.map(|c| format!("Flagged {}", c.name().to_lowercase()));
+        }
+        MailAction::Label { .. } => return Some("Labels changed".into()),
+        MailAction::Remind { .. } | MailAction::CancelReminder => return None,
+    };
     let noun = match (threaded, count) {
         (true, 1) => "conversation",
         (true, _) => "conversations",
@@ -274,7 +260,6 @@ impl MainWindow {
                 refresh_queued: Cell::new(false),
                 list_generation: Cell::new(0),
                 authorizing: Cell::new(false),
-                undo: RefCell::new(None),
                 labels: RefCell::new(HashMap::new()),
                 assistant,
                 assistant_split,
@@ -891,7 +876,12 @@ impl MainWindow {
                     thread_id,
                     message_id: only,
                 };
-                win.apply(vec![target], TriageAction::MarkRead, false);
+                win.perform(
+                    vec![target],
+                    MailAction::Triage(TriageAction::MarkRead),
+                    History::Skip,
+                    None,
+                );
             }
         });
     }
@@ -1128,7 +1118,7 @@ impl MainWindow {
                 None => self.nav.set_show_content(false),
             }
         }
-        self.apply(targets, action, true);
+        self.perform(targets, MailAction::Triage(action), History::Record, None);
     }
 
     /// In the Trash, the trash button puts mail back in the inbox. Gmail
@@ -1191,24 +1181,7 @@ impl MainWindow {
         let targets = targets.to_vec();
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let gone = this
-                .core
-                .read(move |c| {
-                    let mut gone = Vec::new();
-                    for target in targets {
-                        let held =
-                            messages::thread_messages(c, target.account_id, &target.thread_id)?
-                                .iter()
-                                .filter(|m| target.message_id.as_ref().is_none_or(|id| &m.id == id))
-                                .any(|m| folder.holds(&m.label_ids));
-                        if !held {
-                            gone.push(target);
-                        }
-                    }
-                    Ok(gone)
-                })
-                .await
-                .unwrap_or_default();
+            let gone = this.core.gone_from(folder, targets).await;
             if gone.is_empty() {
                 return;
             }
@@ -1224,70 +1197,32 @@ impl MainWindow {
         });
     }
 
-    /// Runs `action` on every target. With `record`, offers an undo.
-    fn apply(self: &Rc<Self>, targets: Vec<Target>, action: TriageAction, record: bool) {
-        self.apply_with(targets, action, record, None);
-    }
-
-    /// `apply`, with `message` in place of the usual toast text.
-    fn apply_with(
+    /// Runs `action` on the targets. With `History::Record`, the toast says
+    /// what changed, `message` in place of the usual text, and offers Undo.
+    fn perform(
         self: &Rc<Self>,
         targets: Vec<Target>,
-        action: TriageAction,
-        record: bool,
+        action: MailAction,
+        history: History,
         message: Option<String>,
     ) {
-        self.apply_then(targets, action, record, message, None);
-    }
-
-    /// `apply_with`, running `after` once Gmail has the change.
-    fn apply_then(
-        self: &Rc<Self>,
-        targets: Vec<Target>,
-        action: TriageAction,
-        record: bool,
-        message: Option<String>,
-        after: Option<AfterApply>,
-    ) {
+        if targets.is_empty() {
+            return;
+        }
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let mut failure = None;
-            for target in &targets {
-                let Some(sync) = this.core.account(target.account_id) else {
-                    continue;
-                };
-                let (thread, message, act) = (
-                    target.thread_id.clone(),
-                    target.message_id.clone(),
-                    action.clone(),
-                );
-                let result = this
-                    .core
-                    .call(async move {
-                        match message {
-                            Some(id) => sync.triage_message(&thread, &id, &act).await,
-                            None => sync.triage_thread(&thread, &act).await,
-                        }
-                    })
-                    .await;
-                if let Err(err) = result {
-                    failure = Some(err);
-                }
+            let outcome = this.core.act(targets, action.clone(), history).await;
+            this.show_changes(&action, &outcome);
+            if let Some(error) = outcome.first_error() {
+                return this.toast(error);
             }
-            if let Some(err) = failure {
-                return this.toast(&format!("{} failed: {err}", action.describe()));
-            }
-            if let Some(after) = after {
-                after(&this, &targets);
-            }
-            if !record {
-                // An undo can put rows back into a Gmail folder.
+            if history == History::Skip {
+                // Putting mail back can add rows to a Gmail folder.
                 this.reload_folder();
                 return;
             }
-            this.prune_folder(&targets);
-            let count = targets.len();
-            *this.undo.borrow_mut() = Some((targets, action.inverse()));
+            this.prune_folder(&outcome.done);
+            let count = outcome.done.len();
             if let Some(done) =
                 message.or_else(|| done_message(&action, count, this.settings().threading))
             {
@@ -1307,16 +1242,45 @@ impl MainWindow {
         });
     }
 
-    /// Reverses the last organizing action, once.
-    fn undo(self: &Rc<Self>) {
-        let last = self.undo.borrow_mut().take();
-        match last {
-            Some((targets, inverse)) => {
-                self.apply(targets, inverse, false);
-                self.toast("Undone");
-            }
-            None => self.toast("Nothing to undo"),
+    /// Updates what the store's change events do not cover: flag colours
+    /// and the Remind Me list.
+    fn show_changes(self: &Rc<Self>, action: &MailAction, outcome: &Outcome) {
+        if outcome.done.is_empty() {
+            return;
         }
+        match action {
+            MailAction::Flag(color) => {
+                let open_flagged = self.conversation.with_open(|o| {
+                    outcome
+                        .done
+                        .iter()
+                        .any(|t| t.account_id == o.account_id && t.thread_id == o.thread_id)
+                });
+                if open_flagged == Some(true) {
+                    self.conversation.with_open(|o| o.flag_color = *color);
+                    self.conversation.render_buttons();
+                }
+                self.queue_refresh();
+            }
+            MailAction::Remind { .. } | MailAction::CancelReminder => self.reminders_changed(),
+            MailAction::Triage(_) | MailAction::Label { .. } => {}
+        }
+    }
+
+    /// Reverses the last organizing action, once, whether the window or the
+    /// assistant took it.
+    fn undo(self: &Rc<Self>) {
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let Some(outcome) = this.core.undo().await else {
+                return this.toast("Nothing to undo");
+            };
+            this.reload_folder();
+            this.queue_refresh();
+            this.refresh_flag_color();
+            this.reminders_changed();
+            this.toast(outcome.first_error().unwrap_or("Undone"));
+        });
     }
 
     /// Labels of the targets' account, checked when the one open

@@ -25,7 +25,8 @@ fn targets() -> Value {
             "type": "object",
             "properties": {
                 "account": {"type": "string", "description": "The account's email address."},
-                "thread_id": {"type": "string"}
+                "thread_id": {"type": "string"},
+                "message_id": {"type": "string", "description": "Set when the row has one, to act on that message alone."}
             },
             "required": ["account", "thread_id"],
             "additionalProperties": false

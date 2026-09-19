@@ -5,7 +5,7 @@ use std::rc::Rc;
 use adw::prelude::*;
 use gtk::glib;
 use mailrs_domain::{AccountId, LabelKind, system_label};
-use mailrs_sync::TriageAction;
+use mailrs_sync::{History, MailAction, TriageAction};
 
 use super::{MainWindow, Target};
 use crate::ui::Mailbox;
@@ -55,7 +55,12 @@ impl MainWindow {
             | TriageAction::Relabel { .. } => Some(format!("Moved to {}", mailbox.title())),
             _ => None,
         };
-        self.apply_with(targets, action, true, message);
+        self.perform(
+            targets,
+            MailAction::Triage(action),
+            History::Record,
+            message,
+        );
         true
     }
 

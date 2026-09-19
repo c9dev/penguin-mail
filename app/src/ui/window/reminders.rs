@@ -3,10 +3,9 @@
 use std::rc::Rc;
 
 use gtk::glib;
-use mailrs_domain::{ThreadSummary, system_label};
-use mailrs_store::reminders::{self, Reminder};
-use mailrs_store::threads;
-use mailrs_sync::TriageAction;
+use mailrs_domain::ThreadSummary;
+use mailrs_store::{reminders, threads};
+use mailrs_sync::{History, MailAction};
 
 use super::{MainWindow, Target};
 use crate::format::future_date;
@@ -18,28 +17,6 @@ impl MainWindow {
         if targets.is_empty() {
             return;
         }
-        let rows = self.list.selected_rows();
-        let open_subject = self.conversation.with_open(|o| o.subject.clone());
-        let items: Vec<Reminder> = targets
-            .iter()
-            .map(|t| Reminder {
-                account_id: t.account_id,
-                thread_id: t.thread_id.clone(),
-                subject: rows
-                    .iter()
-                    .find(|r| r.account_id == t.account_id && r.id == t.thread_id)
-                    .map(|r| r.subject.clone())
-                    .or_else(|| open_subject.clone())
-                    .unwrap_or_default(),
-                remind_at: at,
-            })
-            .collect();
-        self.core.spawn_write(move |c| {
-            for item in &items {
-                reminders::set(c, item)?;
-            }
-            Ok(())
-        });
         let when = future_date(at, chrono::Local::now());
         let next = self.list.neighbour_of_selected();
         self.conversation.clear();
@@ -48,13 +25,12 @@ impl MainWindow {
             self.list
                 .select(next.account_id, &next.id, next.message_id.as_deref());
         }
-        self.apply_with(
+        self.perform(
             targets,
-            TriageAction::Archive,
-            true,
+            MailAction::Remind { at },
+            History::Record,
             Some(format!("Will remind you {when}")),
         );
-        self.reminders_changed();
     }
 
     pub(super) fn remind_custom(self: &Rc<Self>) {
@@ -120,28 +96,9 @@ impl MainWindow {
         if targets.is_empty() {
             return;
         }
-        let gone = targets.clone();
-        self.core.spawn_write(move |c| {
-            for target in &gone {
-                reminders::remove(c, target.account_id, &target.thread_id)?;
-            }
-            Ok(())
-        });
         self.conversation.clear();
-        self.apply_with(
-            targets,
-            TriageAction::Relabel {
-                add: vec![system_label::INBOX.into()],
-                remove: vec![],
-            },
-            false,
-            None,
-        );
+        self.perform(targets, MailAction::CancelReminder, History::Skip, None);
         self.toast("Back in the Inbox");
-        let this = Rc::clone(self);
-        glib::timeout_add_local_once(std::time::Duration::from_millis(150), move || {
-            this.reminders_changed();
-        });
     }
 
     /// Refreshes counts, and the list when it shows Remind Me.

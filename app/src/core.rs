@@ -7,10 +7,12 @@ use std::future::Future;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use anyhow::{Context, Result, anyhow, bail};
 use mailrs_domain::{Account, AccountId, ChangeEvent, Filter, MessageBody, MessageMeta, Vacation};
+use mailrs_domain::{Folder, Target};
 use mailrs_gmail::{
     GMAIL_API_BASE, GmailError, HistoryPage, KeyringTokenStore, MessagePage, OAuthClient, Profile,
     RemoteLabel, TokenStore, authorize,
@@ -18,7 +20,8 @@ use mailrs_gmail::{
 use mailrs_store::{Db, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::{
-    AccountClient, AccountSync, GmailApi, SavedDraft, SyncEngine, connect_account, now_millis,
+    AccountClient, AccountSync, Accounts, Failure, GmailApi, History, MailAction, MailActions,
+    Outcome, SavedDraft, SyncEngine, connect_account, now_millis,
 };
 
 use crate::demo::{self, DemoApi};
@@ -153,12 +156,41 @@ impl GmailApi for Api {
 
 pub type Engine = SyncEngine<Api>;
 pub type Sync = AccountSync<Api>;
+pub type Actions = MailActions<RunningEngine>;
+
+/// The engine that runs now. Changing the sync settings replaces it, so mail
+/// actions look accounts up here rather than keep one engine.
+#[derive(Default)]
+pub struct RunningEngine(Mutex<Option<Arc<Engine>>>);
+
+impl RunningEngine {
+    fn current(&self) -> Option<Arc<Engine>> {
+        self.lock().clone()
+    }
+
+    fn replace(&self, engine: Option<Arc<Engine>>) -> Option<Arc<Engine>> {
+        std::mem::replace(&mut *self.lock(), engine)
+    }
+
+    fn lock(&self) -> std::sync::MutexGuard<'_, Option<Arc<Engine>>> {
+        self.0.lock().expect("engine lock poisoned")
+    }
+}
+
+impl Accounts for RunningEngine {
+    type Api = Api;
+
+    fn account(&self, account_id: AccountId) -> Option<Arc<Sync>> {
+        self.current()?.account(account_id).ok()
+    }
+}
 
 pub struct Core {
     runtime: tokio::runtime::Runtime,
     pub db: Db,
     pub demo: bool,
-    engine: RefCell<Option<Arc<Engine>>>,
+    engine: Arc<RunningEngine>,
+    actions: Arc<Actions>,
     config: RefCell<Option<Config>>,
     tokens: Arc<dyn TokenStore>,
     events_tx: async_channel::Sender<ChangeEvent>,
@@ -217,11 +249,14 @@ impl Core {
             runtime.block_on(db.write(|c| demo::seed(c, now_millis())))?;
         }
         let (events_tx, events) = async_channel::unbounded();
+        let engine = Arc::new(RunningEngine::default());
+        let actions = Arc::new(MailActions::new(Arc::clone(&engine), db.clone()));
         let core = Rc::new(Core {
             runtime,
             db,
             demo,
-            engine: RefCell::new(None),
+            engine,
+            actions,
             config: RefCell::new(config),
             tokens: Arc::new(KeyringTokenStore::new()),
             events_tx,
@@ -268,7 +303,7 @@ impl Core {
         if !self.demo {
             updated.save(&config_path()?)?;
         }
-        if let Some(engine) = self.engine.borrow_mut().take() {
+        if let Some(engine) = self.engine.replace(None) {
             engine.shutdown();
         }
         self.start_engine();
@@ -292,7 +327,7 @@ impl Core {
         };
         let (engine, engine_events) = SyncEngine::new(self.db.clone(), config.engine_config());
         let engine = Arc::new(engine);
-        *self.engine.borrow_mut() = Some(Arc::clone(&engine));
+        self.engine.replace(Some(Arc::clone(&engine)));
         let forward = self.events_tx.clone();
         self.runtime.spawn(async move {
             while let Ok(event) = engine_events.recv().await {
@@ -383,20 +418,67 @@ impl Core {
     }
 
     pub fn account(&self, account_id: AccountId) -> Option<Arc<Sync>> {
-        self.engine
-            .borrow()
-            .as_ref()
-            .and_then(|e| e.account(account_id).ok())
+        self.engine.account(account_id)
+    }
+
+    /// Runs a mail action on the tokio runtime. See `MailActions::run`.
+    pub async fn act(&self, targets: Vec<Target>, action: MailAction, history: History) -> Outcome {
+        let (actions, given) = (Arc::clone(&self.actions), targets.clone());
+        let outcome = self
+            .call(async move {
+                Ok::<_, std::convert::Infallible>(actions.run(&given, action, history).await)
+            })
+            .await;
+        outcome.unwrap_or_else(|err| Outcome {
+            done: vec![],
+            failed: targets
+                .into_iter()
+                .map(|target| Failure {
+                    target,
+                    error: err.to_string(),
+                })
+                .collect(),
+        })
+    }
+
+    /// Reverses the last recorded mail action, from the window or the
+    /// assistant. `None` when there is nothing to undo.
+    pub async fn undo(&self) -> Option<Outcome> {
+        let actions = Arc::clone(&self.actions);
+        self.call(async move { Ok::<_, std::convert::Infallible>(actions.undo().await) })
+            .await
+            .ok()
+            .flatten()
+    }
+
+    /// The id of the label called `name`, created first with `create`.
+    pub async fn label_id(
+        &self,
+        account_id: AccountId,
+        name: &str,
+        create: bool,
+    ) -> Result<String> {
+        let (actions, name) = (Arc::clone(&self.actions), name.to_string());
+        self.call(async move { actions.label_id(account_id, &name, create).await })
+            .await
+    }
+
+    /// The targets that `folder` no longer holds.
+    pub async fn gone_from(&self, folder: Folder, targets: Vec<Target>) -> Vec<Target> {
+        let actions = Arc::clone(&self.actions);
+        self.call(async move { actions.gone_from(folder, &targets).await })
+            .await
+            .unwrap_or_default()
     }
 
     pub fn poke(&self, account_id: AccountId) {
-        if let Some(engine) = self.engine.borrow().as_ref() {
+        if let Some(engine) = self.engine.current() {
             engine.poke(account_id);
         }
     }
 
     pub fn poke_all(&self) {
-        if let Some(engine) = self.engine.borrow().as_ref() {
+        if let Some(engine) = self.engine.current() {
             engine.poke_all();
         }
     }
@@ -415,8 +497,7 @@ impl Core {
         let oauth = self.oauth()?;
         let engine = self
             .engine
-            .borrow()
-            .clone()
+            .current()
             .ok_or_else(|| anyhow!("sync is not running"))?;
         let (db, tokens) = (self.db.clone(), Arc::clone(&self.tokens));
         self.call(async move {
@@ -456,7 +537,7 @@ impl Core {
 
     /// Stops syncing an account and deletes its local mail and refresh token.
     pub async fn remove_account(&self, account: Account) -> Result<()> {
-        if let Some(engine) = self.engine.borrow().as_ref() {
+        if let Some(engine) = self.engine.current() {
             engine.stop_account(account.id);
         }
         let (db, tokens, demo) = (self.db.clone(), Arc::clone(&self.tokens), self.demo);

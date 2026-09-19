@@ -7,7 +7,7 @@ use std::rc::{Rc, Weak};
 use adw::prelude::*;
 use gtk::{gio, glib};
 use mailrs_domain::ThreadSummary;
-use mailrs_sync::TriageAction;
+use mailrs_sync::{History, MailAction, TriageAction};
 
 use super::{MainWindow, Target};
 use crate::compose::ReplyKind;
@@ -81,7 +81,12 @@ impl MainWindow {
             }) else {
                 return;
             };
-            self.apply(vec![target], action, true);
+            self.perform(
+                vec![target],
+                MailAction::Triage(action),
+                History::Record,
+                None,
+            );
             if closes && let Some(window) = view.page.root().and_downcast::<gtk::Window>() {
                 window.close();
             }

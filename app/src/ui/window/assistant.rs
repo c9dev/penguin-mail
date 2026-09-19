@@ -8,12 +8,11 @@ use std::sync::Arc;
 use chrono::{Local, NaiveDate, NaiveDateTime, TimeZone};
 use mailrs_ai::ToolOutcome;
 use mailrs_domain::{
-    Account, Category, Filter, FlagColor, Folder, Label, LabelKind, ThreadSummary, Vacation,
-    system_label,
+    Account, Category, Filter, FlagColor, Folder, LabelKind, ThreadSummary, Vacation, system_label,
 };
+use mailrs_store::messages;
 use mailrs_store::threads::{self, ThreadFilter};
-use mailrs_store::{flags, messages, reminders};
-use mailrs_sync::TriageAction;
+use mailrs_sync::{History, MailAction, Outcome, TriageAction};
 use serde_json::{Value, json};
 
 use super::{MainWindow, Target};
@@ -154,7 +153,7 @@ impl MainWindow {
                 Ok(Target {
                     account_id: self.account_named(&required(item, "account")?)?.id,
                     thread_id: required(item, "thread_id")?,
-                    message_id: None,
+                    message_id: text(item, "message_id"),
                 })
             })
             .collect()
@@ -167,6 +166,7 @@ impl MainWindow {
         json!({
             "account": self.email_of(row.account_id),
             "thread_id": row.id,
+            "message_id": row.message_id,
             "from": row.from,
             "from_email": row.from_email,
             "subject": row.subject,
@@ -202,30 +202,6 @@ impl MainWindow {
         }
     }
 
-    /// Applies `action` to `targets` now and keeps it for Ctrl+Z.
-    async fn triage_now(
-        self: &Rc<Self>,
-        targets: &[Target],
-        action: TriageAction,
-    ) -> Result<usize, String> {
-        let mut done = 0;
-        for target in targets {
-            let Some(sync) = self.core.account(target.account_id) else {
-                continue;
-            };
-            let (thread, act) = (target.thread_id.clone(), action.clone());
-            self.core
-                .call(async move { sync.triage_thread(&thread, &act).await })
-                .await
-                .map_err(|e| format!("{} failed: {e}", action.describe()))?;
-            done += 1;
-        }
-        *self.undo.borrow_mut() = Some((targets.to_vec(), action.inverse()));
-        self.prune_folder(targets);
-        self.queue_refresh();
-        Ok(done)
-    }
-
     // ---- Reading ---------------------------------------------------------
 
     fn tool_context(&self) -> ToolResult {
@@ -257,6 +233,7 @@ impl MainWindow {
             json!({
                 "account": self.email_of(o.account_id),
                 "thread_id": o.thread_id,
+                "message_id": o.only_message,
                 "subject": o.subject,
             })
         });
@@ -500,78 +477,43 @@ impl MainWindow {
         let targets = self.parse_targets(input)?;
         let action = required(input, "action")?;
         let color: Option<FlagColor> = text(input, "color").and_then(|c| c.parse().ok());
-        let triage = match action.as_str() {
-            "archive" => TriageAction::Archive,
-            "trash" => TriageAction::Trash,
-            "junk" => TriageAction::Junk,
-            "not_junk" => TriageAction::NotJunk,
-            "move_to_inbox" => TriageAction::Untrash,
-            "mark_read" => TriageAction::MarkRead,
-            "mark_unread" => TriageAction::MarkUnread,
-            "flag" => TriageAction::Star,
-            "unflag" => TriageAction::Unstar,
+        let triage = |action| MailAction::Triage(action);
+        let action = match action.as_str() {
+            "archive" => triage(TriageAction::Archive),
+            "trash" => triage(TriageAction::Trash),
+            "junk" => triage(TriageAction::Junk),
+            "not_junk" => triage(TriageAction::NotJunk),
+            "move_to_inbox" => triage(TriageAction::Untrash),
+            "mark_read" => triage(TriageAction::MarkRead),
+            "mark_unread" => triage(TriageAction::MarkUnread),
+            "flag" => MailAction::Flag(Some(color.unwrap_or(self.settings().flag_color))),
+            "unflag" => MailAction::Flag(None),
             other => return Err(format!("Unknown action {other}.")),
         };
-        if matches!(triage, TriageAction::Trash) && targets.len() > 25 {
+        if action == triage(TriageAction::Trash) && targets.len() > 25 {
             self.approve(&format!(
                 "Move {} conversations to the Trash?",
                 targets.len()
             ))
             .await?;
         }
-        let done = self.triage_now(&targets, triage.clone()).await?;
-        if matches!(triage, TriageAction::Star | TriageAction::Unstar) {
-            let color =
-                matches!(triage, TriageAction::Star).then(|| color.unwrap_or(FlagColor::Red));
-            let targets = targets.clone();
-            self.core
-                .write(move |c| {
-                    for t in &targets {
-                        flags::set_color(c, t.account_id, &t.thread_id, None, color)?;
-                    }
-                    Ok(())
-                })
-                .await
-                .map_err(|e| e.to_string())?;
-            self.queue_refresh();
-        }
-        Ok(json!({"done": done, "undo": "The user can press Ctrl+Z to undo this."}))
+        report(&self.act_for_assistant(targets, action).await)
     }
 
-    /// Label ids for names in one account, creating missing ones when asked.
-    async fn label_ids(
+    /// Runs a mail action that Ctrl+Z can undo, then updates the window.
+    async fn act_for_assistant(
         self: &Rc<Self>,
-        account_id: i64,
-        names: &[String],
-        create: bool,
-    ) -> Result<Vec<String>, String> {
-        let known: Vec<Label> = self
-            .labels
-            .borrow()
-            .get(&account_id)
-            .cloned()
-            .unwrap_or_default();
-        let mut ids = Vec::new();
-        for name in names {
-            if let Some(label) = known.iter().find(|l| l.name.eq_ignore_ascii_case(name)) {
-                ids.push(label.id.clone());
-            } else if create {
-                let sync = self
-                    .core
-                    .account(account_id)
-                    .ok_or("That account is not connected.")?;
-                let wanted = name.clone();
-                let label = self
-                    .core
-                    .call(async move { sync.create_label(&wanted).await })
-                    .await
-                    .map_err(|e| format!("Could not create the label {name}: {e}"))?;
-                ids.push(label.id);
-            } else {
-                return Err(format!("There is no label called {name}."));
-            }
-        }
-        Ok(ids)
+        targets: Vec<Target>,
+        action: MailAction,
+    ) -> Outcome {
+        let outcome = self
+            .core
+            .act(targets, action.clone(), History::Record)
+            .await;
+        self.show_changes(&action, &outcome);
+        self.prune_folder(&outcome.done);
+        self.queue_refresh();
+        outcome
     }
 
     async fn tool_label(self: &Rc<Self>, input: &Value) -> ToolResult {
@@ -587,24 +529,11 @@ impl MainWindow {
                 })
                 .unwrap_or_default()
         };
-        let (add, remove) = (names("add"), names("remove"));
-        let mut accounts: Vec<i64> = targets.iter().map(|t| t.account_id).collect();
-        accounts.sort();
-        accounts.dedup();
-        let mut changed = 0;
-        for account_id in accounts {
-            let action = TriageAction::Relabel {
-                add: self.label_ids(account_id, &add, true).await?,
-                remove: self.label_ids(account_id, &remove, false).await?,
-            };
-            let mine: Vec<Target> = targets
-                .iter()
-                .filter(|t| t.account_id == account_id)
-                .cloned()
-                .collect();
-            changed += self.triage_now(&mine, action).await?;
-        }
-        Ok(json!({"done": changed}))
+        let action = MailAction::Label {
+            add: names("add"),
+            remove: names("remove"),
+        };
+        report(&self.act_for_assistant(targets, action).await)
     }
 
     async fn tool_create_label(self: &Rc<Self>, input: &Value) -> ToolResult {
@@ -632,32 +561,13 @@ impl MainWindow {
         if when <= Local::now().timestamp_millis() {
             return Err("That time is in the past.".into());
         }
-        let items = targets.clone();
-        self.core
-            .write(move |c| {
-                for t in &items {
-                    let subject = threads::get_thread(c, t.account_id, &t.thread_id)?
-                        .map(|r| r.subject)
-                        .unwrap_or_default();
-                    reminders::set(
-                        c,
-                        &reminders::Reminder {
-                            account_id: t.account_id,
-                            thread_id: t.thread_id.clone(),
-                            subject,
-                            remind_at: when,
-                        },
-                    )?;
-                }
-                Ok(())
-            })
-            .await
-            .map_err(|e| e.to_string())?;
-        self.triage_now(&targets, TriageAction::Archive).await?;
-        self.reminders_changed();
-        Ok(
-            json!({"done": targets.len(), "returns": crate::format::future_date(when, Local::now())}),
-        )
+        let mut result = report(
+            &self
+                .act_for_assistant(targets, MailAction::Remind { at: when })
+                .await,
+        )?;
+        result["returns"] = json!(crate::format::future_date(when, Local::now()));
+        Ok(result)
     }
 
     // ---- Writing ---------------------------------------------------------
@@ -874,11 +784,12 @@ impl MainWindow {
     async fn tool_create_rule(self: &Rc<Self>, input: &Value) -> ToolResult {
         let (account, sync) = self.sync_for(&required(input, "account")?)?;
         let label = match text(input, "label") {
-            Some(name) => self
-                .label_ids(account.id, &[name], true)
-                .await?
-                .into_iter()
-                .next(),
+            Some(name) => Some(
+                self.core
+                    .label_id(account.id, &name, true)
+                    .await
+                    .map_err(|e| format!("Could not create the label {name}: {e}"))?,
+            ),
             None => None,
         };
         let form = RuleForm {
@@ -1127,4 +1038,30 @@ fn vacation_json(v: &Vacation) -> Value {
         // Gmail's end is the midnight after the last day.
         "last_day": day(v.end.map(|t| t - 1)),
     })
+}
+
+/// What the model hears about a mail action: how many targets changed, and
+/// which failed and why. An error when nothing changed.
+fn report(outcome: &Outcome) -> ToolResult {
+    if let (true, Some(error)) = (outcome.done.is_empty(), outcome.first_error()) {
+        return Err(error.to_string());
+    }
+    let mut result = json!({
+        "done": outcome.done.len(),
+        "undo": "The user can press Ctrl+Z to undo this.",
+    });
+    if !outcome.failed.is_empty() {
+        result["failed"] = outcome
+            .failed
+            .iter()
+            .map(|f| {
+                json!({
+                    "thread_id": f.target.thread_id,
+                    "message_id": f.target.message_id,
+                    "error": f.error,
+                })
+            })
+            .collect();
+    }
+    Ok(result)
 }

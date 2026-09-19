@@ -5,7 +5,7 @@ use std::rc::Rc;
 use adw::prelude::*;
 use gtk::{gio, glib};
 use mailrs_domain::Filter;
-use mailrs_sync::TriageAction;
+use mailrs_sync::{History, MailAction, TriageAction};
 
 use super::{MainWindow, Target};
 use crate::compose::Draft;
@@ -149,10 +149,10 @@ impl MainWindow {
                     if view.with_open(|o| o.thread_id == target.thread_id) == Some(true) {
                         view.clear();
                     }
-                    this.apply_with(
+                    this.perform(
                         vec![target],
-                        TriageAction::Trash,
-                        true,
+                        MailAction::Triage(TriageAction::Trash),
+                        History::Record,
                         Some(format!("Blocked {email}")),
                     );
                 }

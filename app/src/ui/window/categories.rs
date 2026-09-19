@@ -9,7 +9,7 @@ use adw::prelude::*;
 use gtk::glib;
 use mailrs_domain::{AccountId, Category, Filter, FilterAction, FilterCriteria, system_label};
 use mailrs_store::threads::{self, ThreadFilter};
-use mailrs_sync::TriageAction;
+use mailrs_sync::{History, MailAction, TriageAction};
 
 use super::{MainWindow, Target};
 use crate::ui::Mailbox;
@@ -274,7 +274,7 @@ impl MainWindow {
                     .collect(),
             };
             // No undo: putting back the old labels would need each thread's own.
-            this.apply_with(targets, relabel, false, None);
+            this.perform(targets, MailAction::Triage(relabel), History::Skip, None);
             let name = category.name();
             match this.sort_future_mail(account_id, &email, label).await {
                 Ok(()) => this.toast(&format!("Mail from {who} now goes to {name}")),
