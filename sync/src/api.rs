@@ -62,13 +62,17 @@ pub trait GmailApi: Send + Sync + 'static {
         thread_id: Option<&str>,
     ) -> impl Future<Output = Result<String, GmailError>> + Send;
 
-    /// Creates a draft, or replaces draft `draft_id`. Returns the draft id.
+    /// Creates a draft, or replaces draft `draft_id`.
     fn save_draft(
         &self,
         draft_id: Option<&str>,
         raw: &[u8],
         thread_id: Option<&str>,
-    ) -> impl Future<Output = Result<String, GmailError>> + Send;
+    ) -> impl Future<Output = Result<SavedDraft, GmailError>> + Send;
+
+    /// Sends a draft as Gmail holds it. Returns the sent message's id.
+    fn send_draft(&self, draft_id: &str)
+    -> impl Future<Output = Result<String, GmailError>> + Send;
 
     fn delete_draft(&self, draft_id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
 
@@ -96,6 +100,15 @@ pub trait GmailApi: Send + Sync + 'static {
         &self,
         vacation: &Vacation,
     ) -> impl Future<Output = Result<(), GmailError>> + Send;
+}
+
+/// Where a saved draft lives in Gmail.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SavedDraft {
+    pub draft_id: String,
+    /// The draft's current message. Each save replaces it.
+    pub message_id: String,
+    pub thread_id: String,
 }
 
 /// The real Gmail client, bound to a local account id.
@@ -184,12 +197,20 @@ impl GmailApi for AccountClient {
         draft_id: Option<&str>,
         raw: &[u8],
         thread_id: Option<&str>,
-    ) -> Result<String, GmailError> {
+    ) -> Result<SavedDraft, GmailError> {
         let draft = match draft_id {
             Some(id) => self.client.update_draft(id, raw, thread_id).await?,
             None => self.client.create_draft(raw, thread_id).await?,
         };
-        Ok(draft.id)
+        Ok(SavedDraft {
+            draft_id: draft.id,
+            message_id: draft.message.id,
+            thread_id: draft.message.thread_id,
+        })
+    }
+
+    async fn send_draft(&self, draft_id: &str) -> Result<String, GmailError> {
+        Ok(self.client.send_draft(draft_id).await?.id)
     }
 
     async fn delete_draft(&self, draft_id: &str) -> Result<(), GmailError> {

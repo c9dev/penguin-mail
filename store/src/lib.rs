@@ -8,6 +8,7 @@ mod db;
 mod error;
 pub mod labels;
 pub mod messages;
+pub mod scheduled;
 mod schema;
 pub mod threads;
 pub mod window;

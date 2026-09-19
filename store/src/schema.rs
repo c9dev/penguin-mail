@@ -109,6 +109,19 @@ CREATE TABLE attachments (
     r#"
 CREATE INDEX message_labels_by_label ON message_labels(label_id, account_id, message_id);
 "#,
+    r#"
+CREATE TABLE scheduled (
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    draft_id   TEXT NOT NULL,
+    message_id TEXT NOT NULL,
+    thread_id  TEXT NOT NULL,
+    subject    TEXT NOT NULL,
+    recipients TEXT NOT NULL,
+    send_at    INTEGER NOT NULL,
+    PRIMARY KEY (account_id, draft_id)
+);
+CREATE INDEX scheduled_by_time ON scheduled(send_at);
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,

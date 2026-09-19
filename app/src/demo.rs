@@ -593,8 +593,17 @@ impl GmailApi for DemoApi {
         draft_id: Option<&str>,
         _raw: &[u8],
         _thread_id: Option<&str>,
-    ) -> std::result::Result<String, GmailError> {
-        Ok(draft_id.unwrap_or("demo-draft").to_string())
+    ) -> std::result::Result<mailrs_sync::SavedDraft, GmailError> {
+        let draft_id = draft_id.unwrap_or("demo-draft").to_string();
+        Ok(mailrs_sync::SavedDraft {
+            message_id: format!("{draft_id}-message"),
+            thread_id: format!("{draft_id}-thread"),
+            draft_id,
+        })
+    }
+
+    async fn send_draft(&self, draft_id: &str) -> std::result::Result<String, GmailError> {
+        Ok(format!("{draft_id}-sent"))
     }
 
     async fn delete_draft(&self, _draft_id: &str) -> std::result::Result<(), GmailError> {

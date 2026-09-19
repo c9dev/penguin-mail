@@ -1,6 +1,6 @@
 //! Text for the UI: dates, sizes, initials, and colours.
 
-use chrono::{DateTime, Datelike, Local, TimeZone};
+use chrono::{DateTime, Datelike, Local, TimeZone, Timelike};
 use mailrs_domain::{AccountId, EpochMillis};
 
 /// Accent colours from the libadwaita palette.
@@ -49,6 +49,50 @@ pub fn full_date(ts: EpochMillis) -> String {
     local(ts)
         .map(|when| when.format("%A, %-d %B %Y at %H:%M").to_string())
         .unwrap_or_default()
+}
+
+/// When a scheduled message goes out: "today at 21:00", "tomorrow at
+/// 08:00", "Monday at 08:00" within the week, then "Tue 3 Nov at 08:00".
+pub fn future_date(ts: EpochMillis, now: DateTime<Local>) -> String {
+    let Some(when) = local(ts) else {
+        return String::new();
+    };
+    match (when.date_naive() - now.date_naive()).num_days() {
+        ..=0 => when.format("today at %H:%M").to_string(),
+        1 => when.format("tomorrow at %H:%M").to_string(),
+        2..=6 => when.format("%A at %H:%M").to_string(),
+        _ if when.year() == now.year() => when.format("%a %-d %b at %H:%M").to_string(),
+        _ => when.format("%-d %b %Y at %H:%M").to_string(),
+    }
+}
+
+/// Apple Mail's Send Later presets: tonight at 21:00 while there is time,
+/// tomorrow at 08:00, and next Monday at 08:00 when that is not tomorrow.
+pub fn send_later_presets(now: DateTime<Local>) -> Vec<(String, EpochMillis)> {
+    let at = |date: chrono::NaiveDate, hour: u32| {
+        date.and_hms_opt(hour, 0, 0)
+            .and_then(|t| Local.from_local_datetime(&t).earliest())
+            .map(|t| t.timestamp_millis())
+    };
+    let today = now.date_naive();
+    let mut presets = Vec::new();
+    if now.hour() < 20
+        && let Some(ts) = at(today, 21)
+    {
+        presets.push(("Send Tonight at 21:00".to_string(), ts));
+    }
+    let tomorrow = today + chrono::Days::new(1);
+    if let Some(ts) = at(tomorrow, 8) {
+        presets.push(("Send Tomorrow at 08:00".to_string(), ts));
+    }
+    let to_monday = (7 - today.weekday().num_days_from_monday()) % 7;
+    let monday = today + chrono::Days::new(if to_monday == 0 { 7 } else { to_monday as u64 });
+    if monday != tomorrow
+        && let Some(ts) = at(monday, 8)
+    {
+        presets.push(("Send Monday at 08:00".to_string(), ts));
+    }
+    presets
 }
 
 pub fn human_size(bytes: i64) -> String {

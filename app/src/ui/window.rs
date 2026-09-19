@@ -25,6 +25,8 @@ use crate::compose::{self, Draft, OutgoingAttachment, ReplyKind};
 use crate::core::Core;
 use crate::settings::{Choice, MarkRead, RemoteImages, Settings, TextSize};
 
+mod scheduled;
+
 /// Largest inline image embedded into a page.
 const INLINE_IMAGE_LIMIT: usize = 5 * 1024 * 1024;
 
@@ -404,6 +406,10 @@ impl MainWindow {
                 .core
                 .read(move |c| {
                     let mut counts = HashMap::new();
+                    counts.insert(
+                        Mailbox::Scheduled,
+                        mailrs_store::scheduled::list(c)?.len() as i64,
+                    );
                     for mailbox in mailboxes {
                         let Some(filter) = mailbox.filter() else {
                             continue;
@@ -463,6 +469,11 @@ impl MainWindow {
 
     fn reload_list(self: &Rc<Self>) {
         let mailbox = self.mailbox.borrow().clone();
+        if mailbox == Mailbox::Scheduled {
+            let generation = self.list_generation.get() + 1;
+            self.list_generation.set(generation);
+            return self.load_scheduled(generation);
+        }
         let Some(filter) = mailbox.filter() else {
             return;
         };
@@ -990,6 +1001,9 @@ impl MainWindow {
     /// The Delete key. Gmail's permission for mailrs covers moving mail to
     /// the Trash, not erasing it, so inside the Trash it only explains that.
     fn delete_key(self: &Rc<Self>) {
+        if *self.mailbox.borrow() == Mailbox::Scheduled {
+            return self.cancel_scheduled(self.targets());
+        }
         if self.mailbox.borrow().folder() == Some(Folder::Trash) {
             self.toast("Gmail deletes mail in the Trash for good after 30 days");
         } else {
@@ -998,6 +1012,9 @@ impl MainWindow {
     }
 
     fn trash(self: &Rc<Self>) {
+        if *self.mailbox.borrow() == Mailbox::Scheduled {
+            return self.cancel_scheduled(self.targets());
+        }
         if self.mailbox.borrow().folder() == Some(Folder::Trash) {
             self.triage(TriageAction::Untrash);
         } else {
@@ -1367,6 +1384,15 @@ impl MainWindow {
             draft.subject = message.subject.clone();
             draft.markdown = markdown;
             draft.thread_id = in_thread.then_some(thread_id);
+            if let Some(id) = draft_id.clone() {
+                draft.send_at = this
+                    .core
+                    .read(move |c| mailrs_store::scheduled::find(c, account_id, &id))
+                    .await
+                    .ok()
+                    .flatten()
+                    .map(|s| s.send_at);
+            }
             draft.draft_id = draft_id;
             app.compose(draft);
         });
@@ -2029,6 +2055,7 @@ fn empty_state(mailbox: &Mailbox) -> (&'static str, &'static str) {
         Mailbox::Unified(label) => *label,
         Mailbox::Label { label_id, .. } => label_id.as_str(),
         Mailbox::Search { .. } => return ("No Results", "system-search-symbolic"),
+        Mailbox::Scheduled => return ("Nothing Scheduled", "alarm-symbolic"),
         Mailbox::Folder { folder, .. } => {
             return match folder {
                 Folder::Junk => ("No Junk", folder.icon()),

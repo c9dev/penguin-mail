@@ -230,6 +230,15 @@ impl GmailClient {
         .await
     }
 
+    /// Sends an existing draft as it stands in Gmail.
+    pub async fn send_draft(&self, id: &str) -> Result<Message, GmailError> {
+        let body = json!({"id": id});
+        self.call(cost::SEND, || {
+            self.http().post(self.url("drafts/send")).json(&body)
+        })
+        .await
+    }
+
     pub async fn delete_draft(&self, id: &str) -> Result<(), GmailError> {
         self.call_empty(cost::DRAFT_DELETE, || {
             self.http().delete(self.url(&format!("drafts/{id}")))

@@ -4,7 +4,7 @@
 
 use mail_builder::MessageBuilder;
 use mail_builder::headers::address::Address as MimeAddress;
-use mailrs_domain::{AccountId, Address, MessageBody, MessageMeta};
+use mailrs_domain::{AccountId, Address, EpochMillis, MessageBody, MessageMeta};
 use mailrs_gmail::address::parse_address_list_keeping_invalid;
 use mailrs_gmail::convert::unescape_snippet;
 use pulldown_cmark::{Event, Options, Parser, html};
@@ -33,6 +33,17 @@ pub struct Draft {
     pub attachments: Vec<OutgoingAttachment>,
     /// The Gmail draft this composer saves into.
     pub draft_id: Option<String>,
+    /// When a scheduled draft is due to go out.
+    pub send_at: Option<EpochMillis>,
+}
+
+/// When the composer hands a message over for sending.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SendWhen {
+    /// After the undo delay.
+    Now,
+    /// At this time, from a Gmail draft.
+    At(EpochMillis),
 }
 
 impl Draft {
@@ -49,6 +60,7 @@ impl Draft {
             thread_id: None,
             attachments: vec![],
             draft_id: None,
+            send_at: None,
         }
     }
 

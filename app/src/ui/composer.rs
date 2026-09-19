@@ -10,11 +10,11 @@ use webkit::prelude::*;
 
 use super::autocomplete::{self, Contacts};
 use crate::compose::{
-    Draft, OutgoingAttachment, build_mime, format_recipients, markdown_to_html, new_message_id,
-    parse_recipients,
+    Draft, OutgoingAttachment, SendWhen, build_mime, format_recipients, markdown_to_html,
+    new_message_id, parse_recipients,
 };
 use crate::core::Core;
-use crate::format::human_size;
+use crate::format::{future_date, human_size, send_later_presets};
 
 /// An address the user can send from.
 #[derive(Debug, Clone)]
@@ -38,33 +38,45 @@ pub struct Composer {
     stack: gtk::Stack,
     preview: webkit::WebView,
     chips: gtk::FlowBox,
-    send: gtk::Button,
+    send: adw::SplitButton,
     identities: Vec<Identity>,
     base: RefCell<Draft>,
     attachments: RefCell<Vec<OutgoingAttachment>>,
     dirty: Cell<bool>,
     closing: Cell<bool>,
-    on_sent: Box<dyn Fn(AccountId)>,
+    on_send: Box<dyn Fn(Draft, SendWhen)>,
 }
 
 impl Composer {
     /// Opens a composer for `draft`. `identities` lists every account; the
-    /// draft's account is preselected.
+    /// draft's account is preselected. `on_send` receives the finished
+    /// message; the composer closes itself.
     pub fn open(
         core: Rc<Core>,
         identities: Vec<Identity>,
         contacts: Contacts,
         draft: Draft,
-        on_sent: impl Fn(AccountId) + 'static,
+        on_send: impl Fn(Draft, SendWhen) + 'static,
     ) -> Rc<Composer> {
         let title = adw::WindowTitle::new("New Message", "");
-        let send = gtk::Button::builder()
+        let later = gio::Menu::new();
+        for (label, at) in send_later_presets(chrono::Local::now()) {
+            let item = gio::MenuItem::new(Some(&label), None);
+            item.set_action_and_target_value(Some("composer.send-at"), Some(&at.to_variant()));
+            later.append_item(&item);
+        }
+        let custom = gio::Menu::new();
+        custom.append(Some("Choose a Time…"), Some("composer.send-later"));
+        later.append_section(None, &custom);
+        let send = adw::SplitButton::builder()
             .child(
                 &adw::ButtonContent::builder()
                     .icon_name("mail-send-symbolic")
                     .label("Send")
                     .build(),
             )
+            .menu_model(&later)
+            .dropdown_tooltip("Send Later")
             .css_classes(["suggested-action"])
             .tooltip_text("Send (Ctrl+Shift+D)")
             .build();
@@ -188,7 +200,7 @@ impl Composer {
             attachments: RefCell::new(attachments),
             dirty: Cell::new(false),
             closing: Cell::new(false),
-            on_sent: Box::new(on_sent),
+            on_send: Box::new(on_send),
         });
         composer.refresh_chips();
         composer.update_title();
@@ -230,6 +242,25 @@ impl Composer {
                 c.send();
             }
         });
+        let actions = gio::SimpleActionGroup::new();
+        let send_at = gio::SimpleAction::new("send-at", Some(glib::VariantTy::INT64));
+        let weak = Rc::downgrade(self);
+        send_at.connect_activate(move |_, at| {
+            if let (Some(c), Some(at)) = (weak.upgrade(), at.and_then(|v| v.get::<i64>())) {
+                c.hand_over(SendWhen::At(at));
+            }
+        });
+        actions.add_action(&send_at);
+        let choose = gio::SimpleAction::new("send-later", None);
+        let weak = Rc::downgrade(self);
+        choose.connect_activate(move |_, _| {
+            if let Some(c) = weak.upgrade() {
+                c.choose_send_time();
+            }
+        });
+        actions.add_action(&choose);
+        self.window.insert_action_group("composer", Some(&actions));
+
         let weak = Rc::downgrade(self);
         attach.connect_clicked(move |_| {
             if let Some(c) = weak.upgrade() {
@@ -340,6 +371,13 @@ impl Composer {
         };
         self.title.set_title(&title);
         self.window.set_title(Some(&title));
+        let subtitle = self.base.borrow().send_at.map(|at| {
+            format!(
+                "Scheduled to send {}",
+                future_date(at, chrono::Local::now())
+            )
+        });
+        self.title.set_subtitle(subtitle.as_deref().unwrap_or(""));
     }
 
     /// The draft as the fields describe it now.
@@ -362,42 +400,100 @@ impl Composer {
         Some(draft)
     }
 
-    fn toast(&self, text: &str) {
+    /// Treats the message as unsaved, so closing asks before discarding it.
+    pub fn mark_unsaved(&self) {
+        self.dirty.set(true);
+    }
+
+    pub fn toast(&self, text: &str) {
         self.toasts
             .add_toast(adw::Toast::builder().title(text).timeout(4).build());
     }
 
     fn send(self: &Rc<Self>) {
+        self.hand_over(SendWhen::Now);
+    }
+
+    /// Passes the finished message on for sending and closes.
+    fn hand_over(self: &Rc<Self>, when: SendWhen) {
         let Some(draft) = self.collect() else { return };
         if let Some(problem) = draft.problem() {
             self.toast(&problem);
             return;
         }
-        let raw = match build_mime(&draft, now_secs(), &new_message_id(&draft.from.email)) {
-            Ok(raw) => raw,
-            Err(err) => return self.toast(&format!("Could not build the message: {err}")),
-        };
-        let Some(account) = self.core.account(draft.account_id) else {
-            return self.toast("That account is not connected. Check its status in the sidebar.");
-        };
-        self.set_busy(true);
+        if let SendWhen::At(at) = when
+            && at <= mailrs_sync::now_millis()
+        {
+            self.toast("Choose a time in the future");
+            return;
+        }
+        if let Err(err) = build_mime(&draft, now_secs(), &new_message_id(&draft.from.email)) {
+            self.toast(&format!("Could not build the message: {err}"));
+            return;
+        }
+        self.closing.set(true);
+        self.window.close();
+        (self.on_send)(draft, when);
+    }
+
+    /// Asks for a date and time, then schedules the message.
+    fn choose_send_time(self: &Rc<Self>) {
+        let now = glib::DateTime::now_local().expect("the clock reads");
+        let start = now.add_hours(1).unwrap_or_else(|_| now.clone());
+        let calendar = gtk::Calendar::new();
+        calendar.set_date(&start);
+        let hour = gtk::SpinButton::with_range(0.0, 23.0, 1.0);
+        hour.set_value(start.hour() as f64);
+        let minute = gtk::SpinButton::with_range(0.0, 55.0, 5.0);
+        minute.set_value(0.0);
+        for spin in [&hour, &minute] {
+            spin.set_numeric(true);
+            spin.set_wrap(true);
+            spin.set_orientation(gtk::Orientation::Vertical);
+            spin.connect_output(|spin| {
+                spin.set_text(&format!("{:02}", spin.value() as i32));
+                glib::Propagation::Stop
+            });
+        }
+        let time = gtk::Box::builder()
+            .spacing(6)
+            .halign(gtk::Align::Center)
+            .build();
+        time.append(&hour);
+        time.append(&gtk::Label::new(Some(":")));
+        time.append(&minute);
+        let content = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(12)
+            .build();
+        content.append(&calendar);
+        content.append(&time);
+        let dialog = adw::AlertDialog::builder()
+            .heading("Send Later")
+            .body("mailrs sends it at this time while it runs, even in the tray.")
+            .extra_child(&content)
+            .build();
+        dialog.add_responses(&[("cancel", "Cancel"), ("schedule", "Schedule")]);
+        dialog.set_response_appearance("schedule", adw::ResponseAppearance::Suggested);
+        dialog.set_default_response(Some("schedule"));
+        dialog.set_close_response("cancel");
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let (thread, draft_id) = (draft.thread_id.clone(), draft.draft_id.clone());
-            match this
-                .core
-                .call(async move { account.send(raw, thread, draft_id).await })
-                .await
-            {
-                Ok(_) => {
-                    this.closing.set(true);
-                    this.window.close();
-                    (this.on_sent)(draft.account_id);
-                }
-                Err(err) => {
-                    this.set_busy(false);
-                    this.toast(&format!("Not sent: {err}"));
-                }
+            if dialog.choose_future(Some(&this.window)).await != "schedule" {
+                return;
+            }
+            let day = calendar.date();
+            let at = glib::DateTime::from_local(
+                day.year(),
+                day.month(),
+                day.day_of_month(),
+                hour.value() as i32,
+                minute.value() as i32,
+                0.0,
+            );
+            match at {
+                Ok(at) => this.hand_over(SendWhen::At(at.to_unix() * 1000)),
+                Err(_) => this.toast("That time does not exist here"),
             }
         });
     }
@@ -420,8 +516,19 @@ impl Composer {
                 .call(async move { account.save_draft(raw, thread, draft_id).await })
                 .await
             {
-                Ok(id) => {
-                    this.base.borrow_mut().draft_id = Some(id);
+                Ok(saved) => {
+                    let (account_id, draft_id) = (draft.account_id, saved.draft_id.clone());
+                    this.base.borrow_mut().draft_id = Some(saved.draft_id.clone());
+                    // A scheduled draft keeps its time; point it at the new message.
+                    this.core.spawn_write(move |c| {
+                        mailrs_store::scheduled::set_message(
+                            c,
+                            account_id,
+                            &draft_id,
+                            &saved.message_id,
+                            &saved.thread_id,
+                        )
+                    });
                     this.dirty.set(false);
                     if then_close {
                         this.closing.set(true);
@@ -461,11 +568,6 @@ impl Composer {
                 _ => {}
             }
         });
-    }
-
-    fn set_busy(&self, busy: bool) {
-        self.send.set_sensitive(!busy);
-        self.window.set_sensitive(!busy);
     }
 
     fn pick_files(self: &Rc<Self>) {

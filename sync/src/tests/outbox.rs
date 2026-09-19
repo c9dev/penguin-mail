@@ -11,12 +11,14 @@ async fn sending_a_saved_draft_deletes_the_draft() {
         .sync
         .save_draft(b"draft one".to_vec(), None, None)
         .await
-        .unwrap();
+        .unwrap()
+        .draft_id;
     let same = h
         .sync
         .save_draft(b"draft two".to_vec(), None, Some(draft.clone()))
         .await
-        .unwrap();
+        .unwrap()
+        .draft_id;
     assert_eq!(draft, same);
     assert_eq!(h.fake.with(|s| s.drafts[&draft].clone()), b"draft two");
 
@@ -48,7 +50,8 @@ async fn saving_over_a_vanished_draft_creates_a_new_one() {
         .sync
         .save_draft(b"text".to_vec(), None, Some("gone".into()))
         .await
-        .unwrap();
+        .unwrap()
+        .draft_id;
     assert_ne!(id, "gone");
     assert!(h.fake.with(|s| s.drafts.contains_key(&id)));
 }
@@ -61,7 +64,9 @@ async fn drafts_are_found_by_their_current_message() {
         .save_draft(b"abc".to_vec(), None, None)
         .await
         .unwrap();
-    let message = h.fake.with(|s| s.draft_messages[&id].clone());
+    let message = h.fake.with(|s| s.draft_messages[&id.draft_id].clone());
+    assert_eq!(message, id.message_id);
+    let id = id.draft_id;
     assert_eq!(h.sync.draft_id_for(&message).await.unwrap(), Some(id));
     assert_eq!(h.sync.draft_id_for("other").await.unwrap(), None);
 }
@@ -118,4 +123,18 @@ async fn the_automatic_reply_and_signature_pass_through() {
         h.sync.vacation().await,
         Err(crate::SyncError::Gmail(GmailError::MissingScope))
     ));
+}
+
+#[tokio::test]
+async fn a_scheduled_draft_sends_once() {
+    let h = harness().await;
+    let saved = h
+        .sync
+        .save_draft(b"later".to_vec(), None, None)
+        .await
+        .unwrap();
+    assert!(h.sync.send_draft(&saved.draft_id).await.unwrap().is_some());
+    assert_eq!(h.fake.with(|s| s.sent.clone()), [(b"later".to_vec(), None)]);
+    assert!(h.fake.with(|s| s.drafts.is_empty()));
+    assert_eq!(h.sync.send_draft(&saved.draft_id).await.unwrap(), None);
 }

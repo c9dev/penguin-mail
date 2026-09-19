@@ -9,7 +9,7 @@ use mailrs_gmail::{
     GmailError, HistoryChange, HistoryPage, MessagePage, MessageRef, Profile, RemoteLabel,
 };
 
-use crate::api::GmailApi;
+use crate::api::{GmailApi, SavedDraft};
 
 pub struct FakeGmail {
     state: Mutex<FakeState>,
@@ -364,7 +364,7 @@ impl GmailApi for FakeGmail {
         draft_id: Option<&str>,
         raw: &[u8],
         _thread_id: Option<&str>,
-    ) -> Result<String, GmailError> {
+    ) -> Result<SavedDraft, GmailError> {
         self.check_failure()?;
         self.with(|s| {
             let id = match draft_id {
@@ -372,10 +372,24 @@ impl GmailApi for FakeGmail {
                 Some(id) => id.to_string(),
                 None => format!("draft{}", s.drafts.len() + 1),
             };
+            let message_id = format!("{id}-m{}", raw.len());
             s.drafts.insert(id.clone(), raw.to_vec());
-            s.draft_messages
-                .insert(id.clone(), format!("{id}-m{}", raw.len()));
-            Ok(id)
+            s.draft_messages.insert(id.clone(), message_id.clone());
+            Ok(SavedDraft {
+                thread_id: format!("{id}-t"),
+                draft_id: id,
+                message_id,
+            })
+        })
+    }
+
+    async fn send_draft(&self, draft_id: &str) -> Result<String, GmailError> {
+        self.check_failure()?;
+        self.with(|s| {
+            let raw = s.drafts.remove(draft_id).ok_or(GmailError::NotFound)?;
+            s.draft_messages.remove(draft_id);
+            s.sent.push((raw, None));
+            Ok(format!("sent{}", s.sent.len()))
         })
     }
 

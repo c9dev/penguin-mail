@@ -29,6 +29,8 @@ pub enum Mailbox {
         query: String,
         account_id: Option<AccountId>,
     },
+    /// Messages waiting to go out at a set time, across all accounts.
+    Scheduled,
     /// Mail Gmail keeps out of the regular listing, fetched on demand.
     Folder {
         account_id: Option<AccountId>,
@@ -90,6 +92,7 @@ impl Mailbox {
             Mailbox::Label { name, .. } => name.clone(),
             Mailbox::Search { .. } => "Search".into(),
             Mailbox::Folder { folder, .. } => folder.name().into(),
+            Mailbox::Scheduled => "Send Later".into(),
         }
     }
 
@@ -101,13 +104,13 @@ impl Mailbox {
                 label_id,
                 ..
             } => Some(ThreadFilter::account(*account_id, label_id.clone())),
-            Mailbox::Search { .. } | Mailbox::Folder { .. } => None,
+            Mailbox::Search { .. } | Mailbox::Folder { .. } | Mailbox::Scheduled => None,
         }
     }
 
     pub fn account(&self) -> Option<AccountId> {
         match self {
-            Mailbox::Unified(_) => None,
+            Mailbox::Unified(_) | Mailbox::Scheduled => None,
             Mailbox::Label { account_id, .. } => Some(*account_id),
             Mailbox::Search { account_id, .. } | Mailbox::Folder { account_id, .. } => *account_id,
         }

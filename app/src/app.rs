@@ -28,6 +28,8 @@ const BLOCK_REMOTE_RULES: &str = r#"[
   {"trigger": {"url-filter": "^ftp:"}, "action": {"type": "block"}}
 ]"#;
 
+mod sending;
+
 type AppAction = Box<dyn Fn(&Rc<App>)>;
 
 pub struct App {
@@ -51,6 +53,9 @@ pub struct App {
     settings_path: std::path::PathBuf,
     /// Correspondents for recipient suggestions, reloaded per composer.
     contacts: Contacts,
+    /// Messages waiting out the Undo Send delay.
+    pending_sends: Cell<usize>,
+    scheduler_running: Cell<bool>,
     _hold: gio::ApplicationHoldGuard,
 }
 
@@ -86,6 +91,8 @@ impl App {
             settings: RefCell::new(Settings::load(&settings_path)),
             settings_path,
             contacts: Rc::new(RefCell::new(Rc::new(Vec::new()))),
+            pending_sends: Cell::new(0),
+            scheduler_running: Cell::new(false),
             _hold: gio_app.hold(),
         });
         app.install_actions();
@@ -103,6 +110,7 @@ impl App {
             }
         });
         app.load_accounts();
+        app.start_scheduler();
         app
     }
 
@@ -254,7 +262,7 @@ impl App {
             if app.shed_generation.get() != generation || app.open_windows.get() > 0 {
                 return;
             }
-            if app.core.busy() {
+            if app.core.busy() || app.pending_sends.get() > 0 {
                 app.shed_after(generation, 10);
                 return;
             }
@@ -324,7 +332,7 @@ impl App {
         });
     }
 
-    pub fn compose(self: &Rc<Self>, draft: Draft) {
+    pub fn compose(self: &Rc<Self>, draft: Draft) -> Option<Rc<Composer>> {
         crate::ensure_gtk();
         self.apply_style();
         let identities: Vec<Identity> = self
@@ -337,7 +345,7 @@ impl App {
             })
             .collect();
         if identities.is_empty() {
-            return;
+            return None;
         }
         self.reload_contacts();
         let this = Rc::downgrade(self);
@@ -346,12 +354,9 @@ impl App {
             identities,
             Rc::clone(&self.contacts),
             draft,
-            move |account_id| {
+            move |draft, when| {
                 if let Some(app) = this.upgrade() {
-                    app.core.poke(account_id);
-                    if let Some(window) = app.window() {
-                        window.toast_sent();
-                    }
+                    app.send(draft, when);
                 }
             },
         );
@@ -364,6 +369,7 @@ impl App {
                 app.window_closed();
             }
         });
+        Some(composer)
     }
 
     /// Refreshes the suggestions composers offer. Open composers see the

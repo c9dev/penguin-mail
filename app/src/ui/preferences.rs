@@ -13,7 +13,7 @@ use crate::app::App;
 use crate::autostart;
 use crate::settings::{
     CACHE_CHOICES, Choice, ColorScheme, MarkRead, POLL_CHOICES, RemoteImages, Settings, TextSize,
-    WINDOW_CHOICES, nearest,
+    UndoSend, WINDOW_CHOICES, nearest,
 };
 
 /// Shows Preferences. With `signature_of`, opens on that account's signature.
@@ -165,6 +165,13 @@ fn writing_page(
         app.update_settings(move |s| s.default_account = Some(email));
     });
     sending.add(&from);
+    sending.add(&combo(
+        app,
+        "Undo Send",
+        Some("How long you can take a message back after sending it"),
+        settings.undo_send,
+        |s, v: UndoSend| s.undo_send = v,
+    ));
     page.add(&sending);
 
     let signatures = adw::PreferencesGroup::builder()

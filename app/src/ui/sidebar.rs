@@ -169,6 +169,7 @@ impl Sidebar {
                 0,
             );
         }
+        self.add_mailbox(Mailbox::Scheduled, "Send Later", "alarm-symbolic", 0);
         for folder in Folder::ALL {
             let mailbox = Mailbox::Folder {
                 account_id: None,
@@ -244,7 +245,10 @@ impl Sidebar {
             .visible(false)
             .build();
         content.append(&count);
-        let row = gtk::ListBoxRow::builder().child(&content).build();
+        let row = gtk::ListBoxRow::builder()
+            .child(&content)
+            .visible(mailbox != Mailbox::Scheduled)
+            .build();
         self.list.append(&row);
         self.rows.borrow_mut().push(Row {
             row,
@@ -277,11 +281,17 @@ impl Sidebar {
             .collect()
     }
 
-    /// Unread counts for inboxes, totals for drafts.
+    /// Unread counts for inboxes, totals for drafts and Send Later.
     pub fn set_counts(&self, counts: &HashMap<Mailbox, i64>) {
+        let selected = self.list.selected_row();
         for row in self.rows.borrow().iter() {
             let count = counts.get(&row.mailbox).copied().unwrap_or(0);
-            let is_drafts = matches!(&row.mailbox, Mailbox::Unified("DRAFT"))
+            if row.mailbox == Mailbox::Scheduled {
+                // Send Later appears only while something waits in it.
+                row.row
+                    .set_visible(count > 0 || selected.as_ref() == Some(&row.row));
+            }
+            let is_drafts = matches!(&row.mailbox, Mailbox::Unified("DRAFT") | Mailbox::Scheduled)
                 || matches!(&row.mailbox, Mailbox::Label { label_id, .. } if label_id == "DRAFT");
             let shown = count > 0 && (row.mailbox.counts_unread() || is_drafts);
             row.count.set_visible(shown);

@@ -370,3 +370,17 @@ async fn the_default_identity_signature_comes_from_send_as() {
         "Ann Lee\nMaple & Finch"
     );
 }
+
+#[tokio::test]
+async fn a_draft_is_sent_by_id() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("POST"))
+        .and(path(format!("{API}/drafts/send")))
+        .and(body_json(json!({"id": "d1"})))
+        .respond_with(ResponseTemplate::new(200).set_body_json(message_json("m9")))
+        .expect(1)
+        .mount(&server)
+        .await;
+    assert_eq!(client(&server).send_draft("d1").await.unwrap().id, "m9");
+}

@@ -15,7 +15,7 @@ mod fake;
 mod tests;
 
 pub use account::{AccountSync, DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS, FETCH_CONCURRENCY};
-pub use api::{AccountClient, GmailApi, LIST_PAGE_SIZE};
+pub use api::{AccountClient, GmailApi, LIST_PAGE_SIZE, SavedDraft};
 pub use backoff::backoff_delay;
 pub use connect::connect_account;
 pub use engine::{EngineConfig, SyncEngine};

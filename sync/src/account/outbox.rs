@@ -5,7 +5,7 @@ use mailrs_domain::{MessageMeta, Vacation};
 use mailrs_gmail::GmailError;
 
 use super::AccountSync;
-use crate::{GmailApi, SyncError};
+use crate::{GmailApi, SavedDraft, SyncError};
 
 impl<G: GmailApi> AccountSync<G> {
     /// Sends raw RFC 822 bytes, then deletes `draft_id` if the message came
@@ -28,13 +28,13 @@ impl<G: GmailApi> AccountSync<G> {
     }
 
     /// Saves a draft in Gmail, replacing `draft_id` when given. If that
-    /// draft was deleted elsewhere, creates a new one. Returns the draft id.
+    /// draft was deleted elsewhere, creates a new one.
     pub async fn save_draft(
         &self,
         raw: Vec<u8>,
         thread_id: Option<String>,
         draft_id: Option<String>,
-    ) -> Result<String, SyncError> {
+    ) -> Result<SavedDraft, SyncError> {
         let thread_id = thread_id.as_deref();
         match self
             .api
@@ -45,6 +45,16 @@ impl<G: GmailApi> AccountSync<G> {
                 Ok(self.api.save_draft(None, &raw, thread_id).await?)
             }
             other => Ok(other?),
+        }
+    }
+
+    /// Sends a draft as Gmail holds it, as a scheduled send does. Returns
+    /// `None` when the draft is gone, sent or deleted elsewhere.
+    pub async fn send_draft(&self, draft_id: &str) -> Result<Option<String>, SyncError> {
+        match self.api.send_draft(draft_id).await {
+            Ok(id) => Ok(Some(id)),
+            Err(GmailError::NotFound) => Ok(None),
+            Err(err) => Err(err.into()),
         }
     }
 

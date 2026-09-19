@@ -17,7 +17,9 @@ use mailrs_gmail::{
 };
 use mailrs_store::{Db, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir};
-use mailrs_sync::{AccountClient, AccountSync, GmailApi, SyncEngine, connect_account, now_millis};
+use mailrs_sync::{
+    AccountClient, AccountSync, GmailApi, SavedDraft, SyncEngine, connect_account, now_millis,
+};
 
 use crate::demo::{self, DemoApi};
 
@@ -88,8 +90,11 @@ impl GmailApi for Api {
         draft_id: Option<&str>,
         raw: &[u8],
         thread_id: Option<&str>,
-    ) -> Result<String, GmailError> {
+    ) -> Result<SavedDraft, GmailError> {
         delegate!(self, save_draft(draft_id, raw, thread_id))
+    }
+    async fn send_draft(&self, draft_id: &str) -> Result<String, GmailError> {
+        delegate!(self, send_draft(draft_id))
     }
     async fn delete_draft(&self, draft_id: &str) -> Result<(), GmailError> {
         delegate!(self, delete_draft(draft_id))
@@ -315,6 +320,29 @@ impl Core {
     {
         let db = self.db.clone();
         self.call(async move { db.read(query).await }).await
+    }
+
+    /// Runs a change on the store's writer thread.
+    pub async fn write<T, F>(&self, change: F) -> Result<T>
+    where
+        F: FnOnce(&rusqlite::Connection) -> mailrs_store::Result<T> + Send + 'static,
+        T: Send + 'static,
+    {
+        let db = self.db.clone();
+        self.call(async move { db.write(change).await }).await
+    }
+
+    /// Runs a change on the writer thread without waiting; failures are logged.
+    pub fn spawn_write<F>(&self, change: F)
+    where
+        F: FnOnce(&rusqlite::Connection) -> mailrs_store::Result<()> + Send + 'static,
+    {
+        let db = self.db.clone();
+        self.spawn(async move {
+            if let Err(err) = db.write(change).await {
+                tracing::warn!(error = %err, "could not update the store");
+            }
+        });
     }
 
     /// Runs `future` on the tokio runtime without waiting.

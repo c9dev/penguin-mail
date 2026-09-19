@@ -22,6 +22,8 @@ pub struct Settings {
     pub default_account: Option<String>,
     /// Markdown signature per account address.
     pub signatures: BTreeMap<String, String>,
+    /// How long Undo stays available after Send.
+    pub undo_send: UndoSend,
 }
 
 impl Default for Settings {
@@ -36,6 +38,7 @@ impl Default for Settings {
             notification_previews: true,
             default_account: None,
             signatures: BTreeMap::new(),
+            undo_send: UndoSend::Ten,
         }
     }
 }
@@ -130,6 +133,47 @@ impl Choice for TextSize {
             TextSize::Normal => "Default",
             TextSize::Large => "Large",
             TextSize::Larger => "Larger",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum UndoSend {
+    Off,
+    Five,
+    Ten,
+    Twenty,
+    Thirty,
+}
+
+impl UndoSend {
+    pub fn seconds(self) -> u32 {
+        match self {
+            UndoSend::Off => 0,
+            UndoSend::Five => 5,
+            UndoSend::Ten => 10,
+            UndoSend::Twenty => 20,
+            UndoSend::Thirty => 30,
+        }
+    }
+}
+
+impl Choice for UndoSend {
+    const ALL: &'static [Self] = &[
+        UndoSend::Off,
+        UndoSend::Five,
+        UndoSend::Ten,
+        UndoSend::Twenty,
+        UndoSend::Thirty,
+    ];
+    fn label(self) -> &'static str {
+        match self {
+            UndoSend::Off => "Off",
+            UndoSend::Five => "5 seconds",
+            UndoSend::Ten => "10 seconds",
+            UndoSend::Twenty => "20 seconds",
+            UndoSend::Thirty => "30 seconds",
         }
     }
 }
