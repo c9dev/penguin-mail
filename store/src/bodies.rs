@@ -118,31 +118,45 @@ pub fn peek_body(
     }))
 }
 
-/// Deletes the least recently read bodies until the rest fit in `max_bytes`.
-/// Returns how many it deleted.
-pub fn evict_bodies(conn: &Connection, max_bytes: i64) -> Result<usize> {
-    let rows: Vec<(AccountId, String, i64)> = {
-        let mut stmt = conn.prepare(
-            "SELECT account_id, message_id, size FROM bodies ORDER BY accessed_at DESC, account_id, message_id",
-        )?;
-        stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
-            .collect::<rusqlite::Result<_>>()?
-    };
-    let mut total = 0;
-    let mut evicted = 0;
-    for (account_id, message_id, size) in rows {
-        total += size;
-        if total > max_bytes {
-            conn.execute(
-                "DELETE FROM bodies WHERE account_id = ?1 AND message_id = ?2",
-                params![account_id, message_id],
-            )?;
-            conn.execute(
-                "DELETE FROM attachments WHERE account_id = ?1 AND message_id = ?2",
-                params![account_id, message_id],
-            )?;
-            evicted += 1;
-        }
+/// Records reads of cached bodies: `(message id, when)` pairs. Bodies that
+/// are gone or were read later are left alone.
+pub fn touch_bodies(
+    conn: &Connection,
+    account_id: AccountId,
+    reads: &[(String, EpochMillis)],
+) -> Result<()> {
+    let mut update = conn.prepare_cached(
+        "UPDATE bodies SET accessed_at = ?3 \
+         WHERE account_id = ?1 AND message_id = ?2 AND accessed_at < ?3",
+    )?;
+    for (message_id, at) in reads {
+        update.execute(params![account_id, message_id, at])?;
     }
-    Ok(evicted)
+    Ok(())
+}
+
+/// Bodies that do not fit in `?1` bytes once the most recently read ones
+/// are kept. `bodies_by_access` covers every column this reads.
+const OVER_CAP: &str = "SELECT account_id, message_id FROM (SELECT account_id, message_id, \
+     SUM(size) OVER (ORDER BY accessed_at DESC, account_id, message_id ROWS UNBOUNDED PRECEDING) \
+     AS kept FROM bodies) WHERE kept > ?1";
+
+/// Deletes the least recently read bodies until the rest fit in `max_bytes`.
+/// Returns how many it deleted. Does nothing past a sum over the index while
+/// the cache fits.
+pub fn evict_bodies(conn: &Connection, max_bytes: i64) -> Result<usize> {
+    let total: i64 = conn
+        .prepare_cached("SELECT TOTAL(size) FROM bodies")?
+        .query_row([], |row| row.get::<_, f64>(0))? as i64;
+    if total <= max_bytes {
+        return Ok(0);
+    }
+    conn.execute(
+        &format!("DELETE FROM attachments WHERE (account_id, message_id) IN ({OVER_CAP})"),
+        [max_bytes],
+    )?;
+    Ok(conn.execute(
+        &format!("DELETE FROM bodies WHERE (account_id, message_id) IN ({OVER_CAP})"),
+        [max_bytes],
+    )?)
 }

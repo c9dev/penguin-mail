@@ -97,6 +97,21 @@ impl Harness {
             .unwrap()
     }
 
+    /// When a cached body was last read.
+    pub async fn accessed_at(&self, message_id: &str) -> i64 {
+        let (account_id, message_id) = (self.account_id, message_id.to_string());
+        self.db
+            .read(move |c| {
+                Ok(c.query_row(
+                    "SELECT accessed_at FROM bodies WHERE account_id = ?1 AND message_id = ?2",
+                    (account_id, message_id),
+                    |row| row.get(0),
+                )?)
+            })
+            .await
+            .unwrap()
+    }
+
     /// Bootstraps with one page big enough for the whole fake mailbox, then
     /// drops the events that produced.
     pub async fn bootstrap_all(&self) {

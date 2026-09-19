@@ -1,8 +1,11 @@
 //! Thread queries. `messages::refresh_thread` maintains the rows.
 
-use mailrs_domain::system_label::{SPAM, STARRED, TRASH, UNREAD};
-use mailrs_domain::{AccountId, FlagColor, ThreadSummary};
-use rusqlite::{Connection, OptionalExtension, Row, params};
+use std::collections::HashMap;
+
+use mailrs_domain::system_label::{SPAM, STARRED, TRASH};
+use mailrs_domain::{AccountId, Category, FlagColor, ThreadSummary};
+use rusqlite::types::Value;
+use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
 
 use crate::Result;
 
@@ -23,6 +26,82 @@ pub struct ThreadFilter {
     pub any_labels: Vec<String>,
     /// Only threads with none of these labels.
     pub no_labels: Vec<String>,
+}
+
+/// SQL text with anonymous `?` placeholders, and their values in order.
+#[derive(Default)]
+struct Sql {
+    text: String,
+    params: Vec<Value>,
+}
+
+impl Sql {
+    fn push(&mut self, text: &str) -> &mut Self {
+        self.text.push_str(text);
+        self
+    }
+
+    fn bind(&mut self, value: impl Into<Value>) -> &mut Self {
+        self.text.push('?');
+        self.params.push(value.into());
+        self
+    }
+
+    /// `?, ?, …` for each of `values`.
+    fn bind_list<S: AsRef<str>>(&mut self, values: &[S]) -> &mut Self {
+        for (i, value) in values.iter().enumerate() {
+            if i > 0 {
+                self.text.push_str(", ");
+            }
+            self.bind(value.as_ref().to_string());
+        }
+        self
+    }
+}
+
+/// What a query lists: thread rows, or single messages.
+#[derive(Clone, Copy)]
+enum Rows {
+    Threads,
+    Messages,
+}
+
+impl Rows {
+    /// The row table's alias.
+    fn alias(self) -> &'static str {
+        match self {
+            Rows::Threads => "t",
+            Rows::Messages => "m",
+        }
+    }
+
+    /// The label table and its column that holds the row's id.
+    fn labels(self) -> (&'static str, &'static str) {
+        match self {
+            Rows::Threads => ("thread_labels", "thread_id"),
+            Rows::Messages => ("message_labels", "message_id"),
+        }
+    }
+
+    /// Appends `EXISTS (…)`: the row carries one of `labels`.
+    fn has_any<S: AsRef<str>>(self, sql: &mut Sql, labels: &[S]) {
+        let (table, key) = self.labels();
+        let row = self.alias();
+        sql.push(&format!(
+            "EXISTS (SELECT 1 FROM {table} l WHERE l.account_id = {row}.account_id \
+             AND l.{key} = {row}.id AND l.label_id IN ("
+        ))
+        .bind_list(labels)
+        .push("))");
+    }
+
+    /// The condition that a message `x` belongs to the row.
+    fn scope(self) -> &'static str {
+        match self {
+            Rows::Threads => "x.account_id = t.account_id AND x.thread_id = t.id",
+            Rows::Messages => "x.account_id = m.account_id AND x.id = m.id",
+        }
+    }
 }
 
 impl ThreadFilter {
@@ -59,100 +138,97 @@ impl ThreadFilter {
         self
     }
 
-    /// The `FROM … WHERE …` part of a query over messages aliased `alias`,
-    /// grouped by `thread` (the thread id column in scope). `?1` is the
-    /// label and `?2` the account.
-    fn clause(&self, from: &str, account: &str, thread: &str, message: Option<&str>) -> String {
-        let scope = |inner: &str| match message {
-            Some(message) => format!("{inner} AND x.id = {message}"),
-            None => format!("{inner} AND x.thread_id = {thread}"),
-        };
-        let mut sql = format!("{from} WHERE (?2 IS NULL OR {account} = ?2)");
-        let labelled = |label: &str| match message {
-            Some(message) => format!(
-                "EXISTS (SELECT 1 FROM message_labels l WHERE l.account_id = {account} \
-                     AND l.message_id = {message} AND l.label_id = {label})"
-            ),
-            None => format!(
-                "EXISTS (SELECT 1 FROM thread_labels l WHERE l.account_id = {account} \
-                     AND l.thread_id = {thread} AND l.label_id = {label})"
-            ),
+    /// Appends the `FROM … WHERE …` part of a query over `rows`.
+    ///
+    /// A label view starts from the label index and joins the rows it names,
+    /// so it reads only that label's rows. `CROSS JOIN` fixes that order,
+    /// since SQLite would otherwise walk every row newest first and probe
+    /// the label for each. Only "any mail" walks every row.
+    fn rows_matching(&self, rows: Rows, sql: &mut Sql) {
+        let row = rows.alias();
+        let (labels, key) = rows.labels();
+        let table = match rows {
+            Rows::Threads => "threads",
+            Rows::Messages => "messages",
         };
         if self.label_id.is_empty() {
-            sql.push_str(&format!(
-                " AND ?1 = '' AND NOT {} AND NOT {}",
-                labelled(&format!("'{TRASH}'")),
-                labelled(&format!("'{SPAM}'"))
-            ));
+            sql.push(&format!("FROM {table} {row} WHERE "));
+            if let Some(account) = self.account_id {
+                sql.push(&format!("{row}.account_id = "))
+                    .bind(account)
+                    .push(" AND ");
+            }
+            sql.push("NOT ");
+            rows.has_any(sql, &[TRASH, SPAM]);
         } else {
-            sql.push_str(&format!(" AND {}", labelled("?1")));
+            sql.push(&format!(
+                "FROM {labels} d CROSS JOIN {table} {row} \
+                 ON {row}.account_id = d.account_id AND {row}.id = d.{key} WHERE d.label_id = "
+            ))
+            .bind(self.label_id.clone());
+            if let Some(account) = self.account_id {
+                sql.push(" AND d.account_id = ").bind(account);
+            }
         }
-        let quoted = |label: &String| format!("'{}'", label.replace('\'', "''"));
         if !self.any_labels.is_empty() {
-            let any: Vec<String> = self
-                .any_labels
-                .iter()
-                .map(|l| labelled(&quoted(l)))
-                .collect();
-            sql.push_str(&format!(" AND ({})", any.join(" OR ")));
+            sql.push(" AND ");
+            rows.has_any(sql, &self.any_labels);
         }
-        for label in &self.no_labels {
-            sql.push_str(&format!(" AND NOT {}", labelled(&quoted(label))));
+        if !self.no_labels.is_empty() {
+            sql.push(" AND NOT ");
+            rows.has_any(sql, &self.no_labels);
         }
         if let Some(flag) = self.flag {
-            // The colour comes from a fixed list, so it is safe in the text.
-            let color = flag.as_str();
-            let default = if flag == FlagColor::Red {
-                " OR f.color IS NULL"
-            } else {
-                ""
-            };
-            sql.push_str(&format!(
+            if let Rows::Threads = rows {
+                // Only a thread with a starred message can match, and
+                // `threads.starred` says which do without a lookup.
+                sql.push(" AND t.starred = 1");
+            }
+            sql.push(&format!(
                 " AND EXISTS (SELECT 1 FROM messages x JOIN message_labels s \
                  ON s.account_id = x.account_id AND s.message_id = x.id AND s.label_id = '{STARRED}' \
                  LEFT JOIN flags f ON f.account_id = x.account_id AND f.message_id = x.id \
-                 WHERE {} AND (f.color = '{color}'{default}))",
-                scope(&format!("x.account_id = {account}"))
-            ));
+                 WHERE {} AND (f.color = ",
+                rows.scope()
+            ))
+            .bind(flag.as_str().to_string());
+            if flag == FlagColor::Red {
+                sql.push(" OR f.color IS NULL");
+            }
+            sql.push("))");
         }
         if !self.senders.is_empty() {
-            let list = self
-                .senders
-                .iter()
-                .map(|s| format!("'{}'", s.to_lowercase().replace('\'', "''")))
-                .collect::<Vec<_>>()
-                .join(", ");
-            sql.push_str(&format!(
-                " AND EXISTS (SELECT 1 FROM messages x WHERE {} AND lower(x.from_addr) IN ({list}))",
-                scope(&format!("x.account_id = {account}"))
-            ));
+            let senders: Vec<String> = self.senders.iter().map(|s| s.to_lowercase()).collect();
+            sql.push(&format!(
+                " AND EXISTS (SELECT 1 FROM messages x WHERE {} AND lower(x.from_addr) IN (",
+                rows.scope()
+            ))
+            .bind_list(&senders)
+            .push("))");
         }
+    }
+
+    fn query(&self, rows: Rows, select: &str) -> Sql {
+        let mut sql = Sql::default();
+        sql.push(select).push(" ");
+        self.rows_matching(rows, &mut sql);
         sql
-    }
-
-    fn threads(&self) -> String {
-        self.clause("FROM threads t", "t.account_id", "t.id", None)
-    }
-
-    fn messages(&self) -> String {
-        self.clause(
-            "FROM messages m",
-            "m.account_id",
-            "m.thread_id",
-            Some("m.id"),
-        )
     }
 }
 
+/// Appends the condition that a message row `m` is unread.
+const MESSAGE_UNREAD: &str = " AND EXISTS (SELECT 1 FROM message_labels u \
+     WHERE u.account_id = m.account_id AND u.message_id = m.id AND u.label_id = 'UNREAD')";
+
+fn count(conn: &Connection, sql: &Sql) -> Result<i64> {
+    Ok(conn
+        .prepare_cached(&sql.text)?
+        .query_row(params_from_iter(&sql.params), |row| row.get(0))?)
+}
+
 const COLUMNS: &str = "t.account_id, t.id, t.last_message_at, t.subject, t.snippet, t.from_display, \
-                       t.message_count, t.unread, t.starred, t.has_attachments, \
-                       (SELECT f.color FROM flags f JOIN messages fm \
-                        ON fm.account_id = f.account_id AND fm.id = f.message_id \
-                        WHERE fm.account_id = t.account_id AND fm.thread_id = t.id \
-                        ORDER BY fm.date DESC LIMIT 1), \
-                       (SELECT COALESCE(sm.from_addr, '') FROM messages sm \
-                        WHERE sm.account_id = t.account_id AND sm.thread_id = t.id \
-                        ORDER BY sm.date DESC LIMIT 1)";
+                       t.message_count, t.unread, t.starred, t.has_attachments, t.flag_color, \
+                       t.from_email";
 
 fn flag_color(row: &Row<'_>, index: usize) -> rusqlite::Result<Option<FlagColor>> {
     Ok(row
@@ -174,7 +250,7 @@ fn to_summary(row: &Row<'_>) -> rusqlite::Result<ThreadSummary> {
         starred: row.get(8)?,
         has_attachments: row.get(9)?,
         flag_color: flag_color(row, 10)?,
-        from_email: row.get::<_, Option<String>>(11)?.unwrap_or_default(),
+        from_email: row.get(11)?,
     })
 }
 
@@ -185,7 +261,8 @@ pub fn get_thread(
 ) -> Result<Option<ThreadSummary>> {
     let sql = format!("SELECT {COLUMNS} FROM threads t WHERE t.account_id = ?1 AND t.id = ?2");
     Ok(conn
-        .query_row(&sql, params![account_id, thread_id], to_summary)
+        .prepare_cached(&sql)?
+        .query_row(params![account_id, thread_id], to_summary)
         .optional()?)
 }
 
@@ -196,25 +273,18 @@ pub fn list_threads(
     offset: i64,
     limit: i64,
 ) -> Result<Vec<ThreadSummary>> {
-    let sql = format!(
-        "SELECT {COLUMNS} {} ORDER BY t.last_message_at DESC, t.account_id, t.id LIMIT ?3 OFFSET ?4",
-        filter.threads()
-    );
-    let mut stmt = conn.prepare_cached(&sql)?;
-    let rows = stmt.query_map(
-        params![filter.label_id, filter.account_id, limit, offset],
-        to_summary,
-    )?;
+    let mut sql = filter.query(Rows::Threads, &format!("SELECT {COLUMNS}"));
+    sql.push(" ORDER BY t.last_message_at DESC, t.account_id, t.id LIMIT ")
+        .bind(limit)
+        .push(" OFFSET ")
+        .bind(offset);
+    let mut stmt = conn.prepare_cached(&sql.text)?;
+    let rows = stmt.query_map(params_from_iter(&sql.params), to_summary)?;
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
 }
 
 pub fn count_threads(conn: &Connection, filter: &ThreadFilter) -> Result<i64> {
-    let sql = format!("SELECT COUNT(*) {}", filter.threads());
-    Ok(
-        conn.query_row(&sql, params![filter.label_id, filter.account_id], |row| {
-            row.get(0)
-        })?,
-    )
+    count(conn, &filter.query(Rows::Threads, "SELECT COUNT(*)"))
 }
 
 /// Columns for one message shown as a list row.
@@ -253,36 +323,142 @@ pub fn list_messages(
     offset: i64,
     limit: i64,
 ) -> Result<Vec<ThreadSummary>> {
-    let sql = format!(
-        "SELECT {MESSAGE_COLUMNS} {} ORDER BY m.date DESC, m.account_id, m.id LIMIT ?3 OFFSET ?4",
-        filter.messages()
-    );
-    let mut stmt = conn.prepare_cached(&sql)?;
-    let rows = stmt.query_map(
-        params![filter.label_id, filter.account_id, limit, offset],
-        to_message_row,
-    )?;
+    let mut sql = filter.query(Rows::Messages, &format!("SELECT {MESSAGE_COLUMNS}"));
+    sql.push(" ORDER BY m.date DESC, m.account_id, m.id LIMIT ")
+        .bind(limit)
+        .push(" OFFSET ")
+        .bind(offset);
+    let mut stmt = conn.prepare_cached(&sql.text)?;
+    let rows = stmt.query_map(params_from_iter(&sql.params), to_message_row)?;
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
 }
 
 pub fn unread_messages(conn: &Connection, filter: &ThreadFilter) -> Result<i64> {
-    let sql = format!(
-        "SELECT COUNT(*) {} AND EXISTS (SELECT 1 FROM message_labels u \
-         WHERE u.account_id = m.account_id AND u.message_id = m.id AND u.label_id = '{UNREAD}')",
-        filter.messages()
-    );
-    Ok(
-        conn.query_row(&sql, params![filter.label_id, filter.account_id], |row| {
-            row.get(0)
-        })?,
-    )
+    let mut sql = filter.query(Rows::Messages, "SELECT COUNT(*)");
+    sql.push(MESSAGE_UNREAD);
+    count(conn, &sql)
 }
 
 pub fn unread_threads(conn: &Connection, filter: &ThreadFilter) -> Result<i64> {
-    let sql = format!("SELECT COUNT(*) {} AND t.unread = 1", filter.threads());
-    Ok(
-        conn.query_row(&sql, params![filter.label_id, filter.account_id], |row| {
-            row.get(0)
-        })?,
-    )
+    let mut sql = filter.query(Rows::Threads, "SELECT COUNT(*)");
+    sql.push(" AND t.unread = 1");
+    count(conn, &sql)
+}
+
+/// How many threads carry a label, and how many of those are unread.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Count {
+    pub threads: i64,
+    pub unread: i64,
+}
+
+/// Thread counts for every label of every account, from one grouped query.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct LabelCounts {
+    counts: HashMap<(AccountId, String), Count>,
+}
+
+impl LabelCounts {
+    /// `count_threads` and `unread_threads` for `ThreadFilter::account(account_id, label_id)`.
+    pub fn account(&self, account_id: AccountId, label_id: &str) -> Count {
+        self.counts
+            .get(&(account_id, label_id.to_string()))
+            .copied()
+            .unwrap_or_default()
+    }
+
+    /// `count_threads` and `unread_threads` for `ThreadFilter::unified(label_id)`.
+    pub fn unified(&self, label_id: &str) -> Count {
+        self.counts
+            .iter()
+            .filter(|((_, label), _)| label == label_id)
+            .fold(Count::default(), |sum, (_, c)| Count {
+                threads: sum.threads + c.threads,
+                unread: sum.unread + c.unread,
+            })
+    }
+}
+
+/// Every label's thread and unread counts, for the sidebar, in one query
+/// instead of two per mailbox.
+pub fn label_counts(conn: &Connection) -> Result<LabelCounts> {
+    let mut stmt = conn.prepare_cached(
+        "SELECT d.account_id, d.label_id, COUNT(*), SUM(t.unread) FROM thread_labels d \
+         CROSS JOIN threads t ON t.account_id = d.account_id AND t.id = d.thread_id \
+         GROUP BY d.label_id, d.account_id",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        Ok((
+            (row.get::<_, AccountId>(0)?, row.get::<_, String>(1)?),
+            Count {
+                threads: row.get(2)?,
+                unread: row.get(3)?,
+            },
+        ))
+    })?;
+    Ok(LabelCounts {
+        counts: rows.collect::<rusqlite::Result<_>>()?,
+    })
+}
+
+/// `unread_threads` for `filter` narrowed to each category, in one query.
+/// Each category's labels replace the filter's own, as `with_labels` does.
+pub fn category_unread_threads(
+    conn: &Connection,
+    filter: &ThreadFilter,
+) -> Result<HashMap<Category, i64>> {
+    category_unread(conn, filter, Rows::Threads)
+}
+
+/// `unread_messages` for `filter` narrowed to each category, in one query.
+/// Each category's labels replace the filter's own, as `with_labels` does.
+pub fn category_unread_messages(
+    conn: &Connection,
+    filter: &ThreadFilter,
+) -> Result<HashMap<Category, i64>> {
+    category_unread(conn, filter, Rows::Messages)
+}
+
+fn category_unread(
+    conn: &Connection,
+    filter: &ThreadFilter,
+    rows: Rows,
+) -> Result<HashMap<Category, i64>> {
+    let mut sql = Sql::default();
+    sql.push("SELECT ");
+    for (i, category) in Category::ALL.into_iter().enumerate() {
+        if i > 0 {
+            sql.push(", ");
+        }
+        let (any, none) = category.labels();
+        sql.push("COALESCE(SUM(1");
+        if !any.is_empty() {
+            sql.push(" AND ");
+            rows.has_any(&mut sql, any);
+        }
+        if !none.is_empty() {
+            sql.push(" AND NOT ");
+            rows.has_any(&mut sql, none);
+        }
+        sql.push("), 0)");
+    }
+    sql.push(" ");
+    let base = ThreadFilter {
+        any_labels: Vec::new(),
+        no_labels: Vec::new(),
+        ..filter.clone()
+    };
+    base.rows_matching(rows, &mut sql);
+    sql.push(match rows {
+        Rows::Threads => " AND t.unread = 1",
+        Rows::Messages => MESSAGE_UNREAD,
+    });
+    let counts =
+        conn.prepare_cached(&sql.text)?
+            .query_row(params_from_iter(&sql.params), |row| {
+                (0..Category::ALL.len())
+                    .map(|i| row.get::<_, i64>(i))
+                    .collect::<rusqlite::Result<Vec<i64>>>()
+            })?;
+    Ok(Category::ALL.into_iter().zip(counts).collect())
 }

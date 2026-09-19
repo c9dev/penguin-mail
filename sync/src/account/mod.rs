@@ -9,11 +9,11 @@ mod window;
 mod writes;
 
 use std::collections::BTreeSet;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use futures::StreamExt;
-use mailrs_domain::{AccountId, AccountState, ChangeEvent, MessageMeta};
+use mailrs_domain::{AccountId, AccountState, ChangeEvent, EpochMillis, MessageMeta};
 use mailrs_gmail::GmailError;
 use mailrs_store::{Db, accounts};
 
@@ -32,6 +32,8 @@ pub struct AccountSync<G> {
     window_days: i64,
     body_cache_bytes: i64,
     retry_max: Duration,
+    /// Cached bodies read since the last write of their access times.
+    touched: Arc<Mutex<Vec<(String, EpochMillis)>>>,
 }
 
 impl<G: GmailApi> AccountSync<G> {
@@ -49,6 +51,7 @@ impl<G: GmailApi> AccountSync<G> {
             window_days: DEFAULT_WINDOW_DAYS,
             body_cache_bytes: DEFAULT_BODY_CACHE_BYTES,
             retry_max: Duration::from_secs(8),
+            touched: Arc::default(),
         }
     }
 

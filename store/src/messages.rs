@@ -249,14 +249,27 @@ fn parse_addresses(column: &'static str, json: &str) -> Result<Vec<Address>> {
     })
 }
 
+/// The colour of a thread's newest coloured message. `?1` is the account and
+/// `?2` the thread.
+pub(crate) const NEWEST_FLAG_COLOR: &str = "SELECT f.color FROM messages m \
+     CROSS JOIN flags f ON f.account_id = m.account_id AND f.message_id = m.id \
+     WHERE m.account_id = ?1 AND m.thread_id = ?2 ORDER BY m.date DESC, m.id DESC LIMIT 1";
+
 /// Recomputes a thread's summary row and label set from its messages, and
 /// deletes the thread when no messages remain.
+///
+/// Each query starts from the thread's few messages. The `CROSS JOIN`s keep
+/// SQLite from starting at a label instead, which walked every message in
+/// the account carrying it.
 pub fn refresh_thread(conn: &Connection, account_id: AccountId, thread_id: &str) -> Result<()> {
-    let (count, last, has_attachments): (i64, Option<i64>, Option<bool>) = conn.query_row(
-        "SELECT COUNT(*), MAX(date), MAX(has_attachments) FROM messages WHERE account_id = ?1 AND thread_id = ?2",
-        params![account_id, thread_id],
-        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-    )?;
+    let (count, last, has_attachments): (i64, Option<i64>, Option<bool>) = conn
+        .prepare_cached(
+            "SELECT COUNT(*), MAX(date), MAX(has_attachments) FROM messages \
+             WHERE account_id = ?1 AND thread_id = ?2",
+        )?
+        .query_row(params![account_id, thread_id], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+        })?;
     if count == 0 {
         conn.execute(
             "DELETE FROM threads WHERE account_id = ?1 AND id = ?2",
@@ -264,58 +277,72 @@ pub fn refresh_thread(conn: &Connection, account_id: AccountId, thread_id: &str)
         )?;
         return Ok(());
     }
-    let subject: String = conn.query_row(
-        "SELECT subject FROM messages WHERE account_id = ?1 AND thread_id = ?2 ORDER BY date ASC, id LIMIT 1",
-        params![account_id, thread_id],
-        |row| row.get(0),
-    )?;
-    let (snippet, from): (String, String) = conn.query_row(
-        "SELECT snippet, COALESCE(from_name, from_addr, '') FROM messages \
-         WHERE account_id = ?1 AND thread_id = ?2 ORDER BY date DESC, id DESC LIMIT 1",
-        params![account_id, thread_id],
-        |row| Ok((row.get(0)?, row.get(1)?)),
-    )?;
-    let has_label = |label: &str| -> Result<bool> {
-        Ok(conn.query_row(
-            "SELECT EXISTS (SELECT 1 FROM message_labels ml JOIN messages m \
-             ON m.account_id = ml.account_id AND m.id = ml.message_id \
-             WHERE m.account_id = ?1 AND m.thread_id = ?2 AND ml.label_id = ?3)",
-            params![account_id, thread_id, label],
-            |row| row.get(0),
-        )?)
-    };
-    let unread = has_label(system_label::UNREAD)?;
-    let starred = has_label(system_label::STARRED)?;
-    conn.execute(
+    let subject: String = conn
+        .prepare_cached(
+            "SELECT subject FROM messages WHERE account_id = ?1 AND thread_id = ?2 \
+             ORDER BY date ASC, id LIMIT 1",
+        )?
+        .query_row(params![account_id, thread_id], |row| row.get(0))?;
+    let (snippet, from, from_email): (String, String, String) = conn
+        .prepare_cached(
+            "SELECT snippet, COALESCE(from_name, from_addr, ''), COALESCE(from_addr, '') \
+             FROM messages WHERE account_id = ?1 AND thread_id = ?2 \
+             ORDER BY date DESC, id DESC LIMIT 1",
+        )?
+        .query_row(params![account_id, thread_id], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+        })?;
+    let (unread, starred): (Option<bool>, Option<bool>) = conn
+        .prepare_cached(
+            "SELECT MAX(ml.label_id = ?3), MAX(ml.label_id = ?4) FROM messages m \
+             CROSS JOIN message_labels ml ON ml.account_id = m.account_id AND ml.message_id = m.id \
+             WHERE m.account_id = ?1 AND m.thread_id = ?2 AND ml.label_id IN (?3, ?4)",
+        )?
+        .query_row(
+            params![
+                account_id,
+                thread_id,
+                system_label::UNREAD,
+                system_label::STARRED
+            ],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )?;
+    let flag_color: Option<String> = conn
+        .prepare_cached(NEWEST_FLAG_COLOR)?
+        .query_row(params![account_id, thread_id], |row| row.get(0))
+        .optional()?;
+    conn.prepare_cached(
         "INSERT INTO threads (account_id, id, last_message_at, subject, snippet, from_display, message_count, \
-         unread, starred, has_attachments) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10) \
+         unread, starred, has_attachments, flag_color, from_email) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12) \
          ON CONFLICT (account_id, id) DO UPDATE SET last_message_at = excluded.last_message_at, \
          subject = excluded.subject, snippet = excluded.snippet, from_display = excluded.from_display, \
          message_count = excluded.message_count, unread = excluded.unread, starred = excluded.starred, \
-         has_attachments = excluded.has_attachments",
-        params![
-            account_id,
-            thread_id,
-            last.unwrap_or(0),
-            subject,
-            snippet,
-            from,
-            count,
-            unread,
-            starred,
-            has_attachments.unwrap_or(false),
-        ],
-    )?;
-    conn.execute(
-        "DELETE FROM thread_labels WHERE account_id = ?1 AND thread_id = ?2",
-        params![account_id, thread_id],
-    )?;
-    conn.execute(
+         has_attachments = excluded.has_attachments, flag_color = excluded.flag_color, \
+         from_email = excluded.from_email",
+    )?
+    .execute(params![
+        account_id,
+        thread_id,
+        last.unwrap_or(0),
+        subject,
+        snippet,
+        from,
+        count,
+        unread.unwrap_or(false),
+        starred.unwrap_or(false),
+        has_attachments.unwrap_or(false),
+        flag_color,
+        from_email,
+    ])?;
+    conn.prepare_cached("DELETE FROM thread_labels WHERE account_id = ?1 AND thread_id = ?2")?
+        .execute(params![account_id, thread_id])?;
+    conn.prepare_cached(
         "INSERT INTO thread_labels (account_id, thread_id, label_id) \
-         SELECT DISTINCT ?1, ?2, ml.label_id FROM message_labels ml JOIN messages m \
-         ON m.account_id = ml.account_id AND m.id = ml.message_id \
+         SELECT DISTINCT ?1, ?2, ml.label_id FROM messages m \
+         CROSS JOIN message_labels ml ON ml.account_id = m.account_id AND ml.message_id = m.id \
          WHERE m.account_id = ?1 AND m.thread_id = ?2",
-        params![account_id, thread_id],
-    )?;
+    )?
+    .execute(params![account_id, thread_id])?;
     Ok(())
 }

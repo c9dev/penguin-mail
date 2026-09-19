@@ -81,3 +81,42 @@ fn putting_a_body_again_replaces_it() {
     bodies::put_body(&conn, id, "a", &plain, 2).unwrap();
     assert_eq!(bodies::get_body(&conn, id, "a", 3).unwrap(), Some(plain));
 }
+
+#[test]
+fn a_cache_under_the_cap_keeps_every_body() {
+    let (conn, id) = db();
+    store(
+        &conn,
+        &[meta(id, "a", "t1", 100, &[]), meta(id, "b", "t2", 100, &[])],
+    );
+    bodies::put_body(&conn, id, "a", &body("aaaa"), 1).unwrap();
+    bodies::put_body(&conn, id, "b", &body("bbbb"), 2).unwrap();
+    assert_eq!(bodies::evict_bodies(&conn, 30).unwrap(), 0);
+    assert_eq!(bodies::evict_bodies(&conn, 29).unwrap(), 1);
+    assert!(bodies::peek_body(&conn, id, "a").unwrap().is_none());
+    let attachments: i64 = conn
+        .query_row("SELECT COUNT(*) FROM attachments", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(attachments, 1, "the evicted body took its attachments");
+}
+
+#[test]
+fn recorded_reads_only_move_access_times_forward() {
+    let (conn, id) = db();
+    store(
+        &conn,
+        &[meta(id, "a", "t1", 100, &[]), meta(id, "b", "t2", 100, &[])],
+    );
+    bodies::put_body(&conn, id, "a", &body("aaaa"), 1).unwrap();
+    bodies::put_body(&conn, id, "b", &body("bbbb"), 2).unwrap();
+    bodies::touch_bodies(
+        &conn,
+        id,
+        &[("a".into(), 9), ("b".into(), 1), ("gone".into(), 9)],
+    )
+    .unwrap();
+    // "a" was read last, so the older "b" goes first.
+    assert_eq!(bodies::evict_bodies(&conn, 15).unwrap(), 1);
+    assert!(bodies::peek_body(&conn, id, "a").unwrap().is_some());
+    assert!(bodies::peek_body(&conn, id, "b").unwrap().is_none());
+}

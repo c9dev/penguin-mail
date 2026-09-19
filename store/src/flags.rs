@@ -2,10 +2,12 @@
 
 use std::collections::HashMap;
 
+use mailrs_domain::system_label::{SPAM, STARRED, TRASH};
 use mailrs_domain::{AccountId, FlagColor};
 use rusqlite::{Connection, params};
 
 use crate::Result;
+use crate::messages::NEWEST_FLAG_COLOR;
 
 /// Colours the messages of a thread, or one of its messages. `None` takes
 /// the colour off.
@@ -36,6 +38,12 @@ pub fn set_color(
             )?,
         };
     }
+    conn.execute(
+        &format!(
+            "UPDATE threads SET flag_color = ({NEWEST_FLAG_COLOR}) WHERE account_id = ?1 AND id = ?2"
+        ),
+        params![account_id, thread_id],
+    )?;
     Ok(())
 }
 
@@ -64,18 +72,36 @@ pub fn colors(
         .collect())
 }
 
-/// How many starred threads carry each colour, across every account.
+/// How many starred threads carry each colour, across every account. A
+/// thread counts once, under the colour of its newest coloured message.
 pub fn counts(conn: &Connection) -> Result<HashMap<FlagColor, i64>> {
-    let mut stmt = conn.prepare(
-        "SELECT COALESCE((SELECT f.color FROM flags f JOIN messages m \
-                ON m.account_id = f.account_id AND m.id = f.message_id \
-                WHERE m.account_id = t.account_id AND m.thread_id = t.id \
-                ORDER BY m.date DESC LIMIT 1), 'red'), COUNT(*) \
-         FROM threads t WHERE t.starred = 1 GROUP BY 1",
+    let mut stmt = conn.prepare_cached(
+        "SELECT COALESCE(flag_color, 'red'), COUNT(*) FROM threads WHERE starred = 1 GROUP BY 1",
     )?;
-    let rows = stmt.query_map([], |row| {
-        Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
-    })?;
+    collect(stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?)
+}
+
+/// `threads::count_threads` for each Flag mailbox,
+/// `ThreadFilter::unified("").with_flag(color)`, in one query. A thread
+/// counts under every colour one of its starred messages has, so these can
+/// add up to more than `counts`.
+pub fn mailbox_counts(conn: &Connection) -> Result<HashMap<FlagColor, i64>> {
+    let mut stmt = conn.prepare_cached(&format!(
+        "SELECT color, COUNT(*) FROM (SELECT DISTINCT x.account_id, x.thread_id, \
+             COALESCE(f.color, 'red') AS color FROM message_labels s \
+         CROSS JOIN messages x ON x.account_id = s.account_id AND x.id = s.message_id \
+         LEFT JOIN flags f ON f.account_id = x.account_id AND f.message_id = x.id \
+         WHERE s.label_id = '{STARRED}' AND NOT EXISTS (SELECT 1 FROM thread_labels l \
+             WHERE l.account_id = x.account_id AND l.thread_id = x.thread_id \
+             AND l.label_id IN ('{TRASH}', '{SPAM}'))) \
+         GROUP BY color"
+    ))?;
+    collect(stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?)
+}
+
+fn collect(
+    rows: impl Iterator<Item = rusqlite::Result<(String, i64)>>,
+) -> Result<HashMap<FlagColor, i64>> {
     let mut counts = HashMap::new();
     for row in rows {
         let (color, count) = row?;

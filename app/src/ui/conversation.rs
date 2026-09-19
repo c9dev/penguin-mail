@@ -113,6 +113,13 @@ struct Buttons {
     more: gtk::MenuButton,
 }
 
+/// A message body after cleaning, with the body length and image count it
+/// came from. Either one changing means the body needs cleaning again.
+struct CleanBody {
+    mark: (usize, usize),
+    html: String,
+}
+
 pub struct ConversationView {
     pub page: adw::NavigationPage,
     /// Applies or removes labels; the window fills its popover.
@@ -126,9 +133,8 @@ pub struct ConversationView {
     webview: webkit::WebView,
     content: webkit::UserContentManager,
     banner: adw::Banner,
-    /// Cleaned HTML per message, with the body length and image count it
-    /// was cleaned from. A thread renders at least twice per open.
-    sanitized: RefCell<HashMap<String, ((usize, usize), String)>>,
+    /// Cleaned HTML per message. A thread renders at least twice per open.
+    sanitized: RefCell<HashMap<String, CleanBody>>,
     list_banner: adw::Banner,
     /// The menu section whose first item adds or removes the sender as a VIP.
     sender_menu: gio::Menu,
@@ -639,8 +645,12 @@ impl ConversationView {
             };
             let images = open.inline_images.get(&meta.id).unwrap_or(&empty);
             let mark = (html.len(), images.len());
-            if clean.get(&meta.id).is_none_or(|(seen, _)| *seen != mark) {
-                clean.insert(meta.id.clone(), (mark, sanitize_html(html, images)));
+            if clean.get(&meta.id).is_none_or(|seen| seen.mark != mark) {
+                let body = CleanBody {
+                    mark,
+                    html: sanitize_html(html, images),
+                };
+                clean.insert(meta.id.clone(), body);
             }
         }
         let views: Vec<MessageView> = open
@@ -655,7 +665,7 @@ impl ConversationView {
                 },
                 expanded: open.expanded.contains(&meta.id),
                 inline_images: open.inline_images.get(&meta.id).unwrap_or(&empty),
-                sanitized: clean.get(&meta.id).map(|(_, html)| html.as_str()),
+                sanitized: clean.get(&meta.id).map(|body| body.html.as_str()),
             })
             .collect();
         let html = render(

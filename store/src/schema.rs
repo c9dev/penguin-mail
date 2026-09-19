@@ -153,6 +153,26 @@ CREATE TABLE follow_up_dismissals (
     PRIMARY KEY (account_id, thread_id)
 );
 "#,
+    // List rows used to look these two up per thread, with a sort each.
+    // `messages::refresh_thread` keeps them now.
+    r#"
+ALTER TABLE threads ADD COLUMN flag_color TEXT;
+ALTER TABLE threads ADD COLUMN from_email TEXT NOT NULL DEFAULT '';
+UPDATE threads SET
+    flag_color = (SELECT f.color FROM messages m
+                  JOIN flags f ON f.account_id = m.account_id AND f.message_id = m.id
+                  WHERE m.account_id = threads.account_id AND m.thread_id = threads.id
+                  ORDER BY m.date DESC, m.id DESC LIMIT 1),
+    from_email = COALESCE((SELECT m.from_addr FROM messages m
+                  WHERE m.account_id = threads.account_id AND m.thread_id = threads.id
+                  ORDER BY m.date DESC, m.id DESC LIMIT 1), '');
+"#,
+    // The wider index lets eviction total and rank the cache without
+    // reading a single body.
+    r#"
+DROP INDEX bodies_by_access;
+CREATE INDEX bodies_by_access ON bodies(accessed_at, account_id, message_id, size);
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,
