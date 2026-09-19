@@ -30,6 +30,13 @@ pub struct Settings {
     pub vips: BTreeMap<String, String>,
     /// Notify only about mail from VIPs.
     pub notify_vips_only: bool,
+    pub smart_mailboxes: Vec<crate::smart::SmartMailbox>,
+    /// Account addresses in sidebar order; accounts not listed follow.
+    pub account_order: Vec<String>,
+    /// A colour from the palette per account address.
+    pub account_colors: BTreeMap<String, usize>,
+    /// A name shown instead of the address in the sidebar.
+    pub account_names: BTreeMap<String, String>,
 }
 
 impl Default for Settings {
@@ -48,6 +55,10 @@ impl Default for Settings {
             flag_color: mailrs_domain::FlagColor::Red,
             vips: BTreeMap::new(),
             notify_vips_only: false,
+            smart_mailboxes: Vec::new(),
+            account_order: Vec::new(),
+            account_colors: BTreeMap::new(),
+            account_names: BTreeMap::new(),
         }
     }
 }
@@ -273,6 +284,44 @@ impl Settings {
             .map_or("", String::as_str)
     }
 
+    /// `emails` in the order the user chose; unlisted ones keep theirs, last.
+    pub fn ordered<'a>(&self, emails: &[&'a str]) -> Vec<&'a str> {
+        let rank = |email: &str| {
+            self.account_order
+                .iter()
+                .position(|e| e.eq_ignore_ascii_case(email))
+                .unwrap_or(usize::MAX)
+        };
+        let mut sorted = emails.to_vec();
+        sorted.sort_by_key(|e| rank(e));
+        sorted
+    }
+
+    /// Moves `email` one place up (`-1`) or down (`1`) among `emails`.
+    pub fn move_account(&mut self, emails: &[&str], email: &str, step: isize) {
+        let mut order: Vec<String> = self.ordered(emails).iter().map(|e| e.to_string()).collect();
+        let Some(at) = order.iter().position(|e| e.eq_ignore_ascii_case(email)) else {
+            return;
+        };
+        let to = at as isize + step;
+        if to < 0 || to as usize >= order.len() {
+            return;
+        }
+        order.swap(at, to as usize);
+        self.account_order = order;
+    }
+
+    /// Moves smart mailbox `id` one place up or down.
+    pub fn move_smart(&mut self, id: &str, step: isize) {
+        let Some(at) = self.smart_mailboxes.iter().position(|m| m.id == id) else {
+            return;
+        };
+        let to = at as isize + step;
+        if to >= 0 && (to as usize) < self.smart_mailboxes.len() {
+            self.smart_mailboxes.swap(at, to as usize);
+        }
+    }
+
     pub fn is_vip(&self, email: &str) -> bool {
         self.vips.contains_key(&email.to_lowercase())
     }
@@ -352,6 +401,21 @@ mod tests {
         assert_eq!(MarkRead::from_index(99), MarkRead::Immediately);
         assert_eq!(nearest(&POLL_CHOICES, 45), 0);
         assert_eq!(nearest(&WINDOW_CHOICES, 100), 2);
+    }
+
+    #[test]
+    fn accounts_move_within_the_chosen_order() {
+        let mut settings = Settings::default();
+        let emails = ["a@x.com", "b@x.com", "c@x.com"];
+        settings.move_account(&emails, "c@x.com", -1);
+        assert_eq!(settings.ordered(&emails), ["a@x.com", "c@x.com", "b@x.com"]);
+        settings.move_account(&emails, "a@x.com", -1);
+        assert_eq!(settings.ordered(&emails), ["a@x.com", "c@x.com", "b@x.com"]);
+        // An account added later goes last.
+        assert_eq!(
+            settings.ordered(&["d@x.com", "b@x.com", "a@x.com", "c@x.com"]),
+            ["a@x.com", "c@x.com", "b@x.com", "d@x.com"]
+        );
     }
 
     #[test]

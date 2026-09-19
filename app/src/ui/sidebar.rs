@@ -9,7 +9,7 @@ use gtk::{gdk, gio, glib, pango};
 use mailrs_domain::{Account, AccountId, AccountState, FlagColor, Label, LabelKind};
 
 use super::{Folder, Mailbox, UNIFIED, account_label_name, mailbox_icon, unified_name};
-use crate::format::account_color_index;
+use crate::format::{PALETTE_NAMES, account_color_index};
 
 struct Row {
     row: gtk::ListBoxRow,
@@ -165,12 +165,8 @@ impl Sidebar {
 
     /// Rebuilds every row. `selected` is kept selected when it still exists.
     /// Rebuilds every row. `vips` lists VIPs by address and name.
-    pub fn rebuild(
-        &self,
-        accounts: &[(Account, Vec<Label>)],
-        vips: &[(String, String)],
-        selected: &Mailbox,
-    ) {
+    pub fn rebuild(&self, accounts: &[(Account, Vec<Label>)], extras: &Extras, selected: &Mailbox) {
+        let vips = &extras.vips;
         // Keep the scroll position; label changes rebuild every row.
         let scrolled = self.scroller.vadjustment().value();
         self.muted.set(true);
@@ -221,8 +217,19 @@ impl Sidebar {
             };
             self.add_mailbox(mailbox, folder.name(), folder.icon(), 0);
         }
+        if !extras.smart.is_empty() {
+            self.list.append(&section_title("Smart Mailboxes"));
+            for (id, name) in &extras.smart {
+                let mailbox = Mailbox::Smart {
+                    id: id.clone(),
+                    name: name.clone(),
+                };
+                let row = self.add_mailbox(mailbox, name, "folder-saved-search-symbolic", 0);
+                smart_menu(&row, id);
+            }
+        }
         for (account, labels) in accounts {
-            let (row, chevron, count) = heading(account);
+            let (row, chevron, count) = heading(account, extras.names.get(&account.id));
             self.list.append(&row);
             self.headings.borrow_mut().push(Heading {
                 row,
@@ -378,6 +385,52 @@ impl Sidebar {
 /// the thread list.
 pub const DRAG_MAIL: &str = "mailrs-mail";
 
+/// What the sidebar shows besides accounts and their labels.
+#[derive(Debug, Clone, Default)]
+pub struct Extras {
+    /// VIPs as address and name.
+    pub vips: Vec<(String, String)>,
+    /// Smart mailboxes as id and name, in the user's order.
+    pub smart: Vec<(String, String)>,
+    /// Names shown instead of account addresses.
+    pub names: HashMap<AccountId, String>,
+}
+
+/// A small heading between sections. It cannot be selected.
+fn section_title(text: &str) -> gtk::ListBoxRow {
+    gtk::ListBoxRow::builder()
+        .child(
+            &gtk::Label::builder()
+                .label(text)
+                .xalign(0.0)
+                .css_classes(["sidebar-section", "dim-label", "caption-heading"])
+                .build(),
+        )
+        .selectable(false)
+        .activatable(false)
+        .build()
+}
+
+/// Edit, move, and delete on a right click or long press of a smart mailbox.
+fn smart_menu(row: &gtk::ListBoxRow, id: &str) {
+    let menu = gio::Menu::new();
+    let target = id.to_variant();
+    let item = |text: &str, action: &str| {
+        let item = gio::MenuItem::new(Some(text), None);
+        item.set_action_and_target_value(Some(action), Some(&target));
+        item
+    };
+    menu.append_item(&item("Edit…", "win.smart-edit"));
+    let order = gio::Menu::new();
+    order.append_item(&item("Move Up", "win.smart-up"));
+    order.append_item(&item("Move Down", "win.smart-down"));
+    menu.append_section(None, &order);
+    let danger = gio::Menu::new();
+    danger.append_item(&item("Delete…", "win.smart-delete"));
+    menu.append_section(None, &danger);
+    context_menu(row, &menu);
+}
+
 /// Rows that show only while they hold something.
 fn hidden_until_used(mailbox: &Mailbox) -> bool {
     matches!(mailbox, Mailbox::Scheduled | Mailbox::Flag(_))
@@ -390,7 +443,10 @@ fn takes_mail(mailbox: &Mailbox) -> bool {
         Mailbox::Label { label_id, .. } => !matches!(label_id.as_str(), "SENT" | "DRAFT"),
         Mailbox::Folder { .. } => true,
         Mailbox::Flag(_) => true,
-        Mailbox::Search { .. } | Mailbox::Scheduled | Mailbox::Vips { .. } => false,
+        Mailbox::Search { .. }
+        | Mailbox::Scheduled
+        | Mailbox::Vips { .. }
+        | Mailbox::Smart { .. } => false,
     }
 }
 
@@ -406,7 +462,12 @@ fn label_menu(row: &gtk::ListBoxRow, account_id: AccountId, label_id: &str) {
         item.set_action_and_target_value(Some(action), Some(&target));
         menu.append_item(&item);
     }
-    let popover = gtk::PopoverMenu::from_model(Some(&menu));
+    context_menu(row, &menu);
+}
+
+/// Opens `menu` at the pointer on a right click or long press of `row`.
+fn context_menu(row: &gtk::ListBoxRow, menu: &gio::Menu) {
+    let popover = gtk::PopoverMenu::from_model(Some(menu));
     popover.set_has_arrow(false);
     popover.set_halign(gtk::Align::Start);
     popover.set_parent(row);
@@ -429,7 +490,7 @@ fn label_menu(row: &gtk::ListBoxRow, account_id: AccountId, label_id: &str) {
     row.connect_destroy(move |_| popover.unparent());
 }
 
-fn heading(account: &Account) -> (gtk::ListBoxRow, gtk::Image, gtk::Label) {
+fn heading(account: &Account, name: Option<&String>) -> (gtk::ListBoxRow, gtk::Image, gtk::Label) {
     let content = gtk::Box::builder()
         .spacing(8)
         .css_classes(["sidebar-heading"])
@@ -449,7 +510,7 @@ fn heading(account: &Account) -> (gtk::ListBoxRow, gtk::Image, gtk::Label) {
     content.append(&dot);
     content.append(
         &gtk::Label::builder()
-            .label(&account.email)
+            .label(name.map_or(account.email.as_str(), String::as_str))
             .xalign(0.0)
             .hexpand(true)
             .ellipsize(pango::EllipsizeMode::Middle)
@@ -499,6 +560,21 @@ fn heading(account: &Account) -> (gtk::ListBoxRow, gtk::Image, gtk::Label) {
     settings.append_item(&item("Rules…", "win.account-rules"));
     settings.append_item(&item("New Label…", "win.account-new-label"));
     menu.append_section(None, &settings);
+    let look = gio::Menu::new();
+    look.append_item(&item("Rename…", "win.account-rename"));
+    let colors = gio::Menu::new();
+    for (index, color) in PALETTE_NAMES.iter().enumerate() {
+        let entry = gio::MenuItem::new(Some(color), None);
+        entry.set_action_and_target_value(
+            Some("win.account-color"),
+            Some(&(account.id, index as i32).to_variant()),
+        );
+        colors.append_item(&entry);
+    }
+    look.append_submenu(Some("Color"), &colors);
+    look.append_item(&item("Move Up", "win.account-up"));
+    look.append_item(&item("Move Down", "win.account-down"));
+    menu.append_section(None, &look);
     let access = gio::Menu::new();
     access.append_item(&item("Sign In Again…", "win.account-reconnect"));
     menu.append_section(None, &access);

@@ -253,6 +253,12 @@ impl ThreadList {
         }
     }
 
+    /// Draws every row again, for example after account colours change.
+    pub fn rebind(&self) {
+        let rows = self.rows.borrow().clone();
+        self.replace_all(&rows);
+    }
+
     /// Marks rows from these addresses as VIP mail.
     pub fn set_vips(&self, vips: HashSet<String>) {
         if *self.vips.borrow() != vips {

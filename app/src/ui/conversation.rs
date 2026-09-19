@@ -243,7 +243,7 @@ impl ConversationView {
             star: adw::SplitButton::builder()
                 .icon_name("mailrs-flag-outline-symbolic")
                 .tooltip_text("Flag (Ctrl+Shift+L)")
-                .dropdown_tooltip("Flag Colour")
+                .dropdown_tooltip("Flag Color")
                 .popover(&flag_colors())
                 .build(),
             reply: button("mail-reply-sender-symbolic", "Reply (Ctrl+R)"),

@@ -145,10 +145,30 @@ pub fn color_for(seed: &str) -> &'static str {
     PALETTE[(hash % PALETTE.len() as u64) as usize]
 }
 
-/// Each account's colour, as an index into [`PALETTE`], assigned in the
-/// order accounts were added. The stylesheet defines `account-0` to `account-8`.
+/// Names for the [`PALETTE`] colours, for menus.
+pub const PALETTE_NAMES: [&str; 9] = [
+    "Blue", "Teal", "Green", "Yellow", "Orange", "Red", "Pink", "Purple", "Slate",
+];
+
+thread_local! {
+    /// Colours chosen in the account menu, by account.
+    static ACCOUNT_COLORS: std::cell::RefCell<std::collections::HashMap<AccountId, usize>> =
+        Default::default();
+}
+
+/// Replaces the chosen account colours.
+pub fn set_account_colors(colors: std::collections::HashMap<AccountId, usize>) {
+    ACCOUNT_COLORS.with(|c| *c.borrow_mut() = colors);
+}
+
+/// Each account's colour, as an index into [`PALETTE`]: the one chosen, or
+/// one assigned in the order accounts were added. The stylesheet defines
+/// `account-0` to `account-8`.
 pub fn account_color_index(account_id: AccountId) -> usize {
-    (account_id.max(1) - 1) as usize % PALETTE.len()
+    ACCOUNT_COLORS
+        .with(|c| c.borrow().get(&account_id).copied())
+        .filter(|i| *i < PALETTE.len())
+        .unwrap_or((account_id.max(1) - 1) as usize % PALETTE.len())
 }
 
 #[cfg(test)]

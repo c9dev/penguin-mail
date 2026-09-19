@@ -13,6 +13,7 @@ mod render;
 mod rules;
 mod sanitize;
 mod settings;
+mod smart;
 mod tray;
 mod ui;
 mod unsubscribe;

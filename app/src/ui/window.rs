@@ -25,6 +25,7 @@ use crate::compose::{self, Draft, OutgoingAttachment, ReplyKind};
 use crate::core::Core;
 use crate::settings::{Choice, MarkRead, RemoteImages, Settings, TextSize};
 
+mod arrange;
 mod detached;
 mod flags;
 mod organize;
@@ -257,6 +258,7 @@ impl MainWindow {
             }
         });
         window.install_actions();
+        window.install_arrange_actions();
         window.install_menu();
         window.install_keys();
         let weak = Rc::downgrade(&window);
@@ -387,14 +389,10 @@ impl MainWindow {
                 *this.mailbox.borrow_mut() = Mailbox::Unified("INBOX");
             }
             let settings = this.settings();
-            let vips: Vec<(String, String)> = settings
-                .vips
-                .iter()
-                .map(|(e, n)| (e.clone(), n.clone()))
-                .collect();
+            let (data, extras) = this.arrange(data, &settings);
             this.list.set_vips(settings.vips.keys().cloned().collect());
             if !matches!(mailbox, Mailbox::Search { .. }) {
-                this.sidebar.rebuild(&data, &vips, &this.mailbox.borrow());
+                this.sidebar.rebuild(&data, &extras, &this.mailbox.borrow());
             }
             this.list
                 .set_show_accounts(this.mailbox.borrow().account().is_none() && data.len() > 1);
@@ -477,6 +475,7 @@ impl MainWindow {
                 let (title, icon) = empty_state(&mailbox);
                 self.fetch_remote(folder.query().into(), account_id, 100, title, icon);
             }
+            Mailbox::Smart { id, .. } => self.show_smart(&id),
             _ => self.reload_list(),
         }
     }
@@ -484,6 +483,9 @@ impl MainWindow {
     /// Fetches a folder that lives only in Gmail again.
     fn reload_folder(self: &Rc<Self>) {
         let mailbox = self.mailbox.borrow().clone();
+        if let Mailbox::Smart { id, .. } = &mailbox {
+            return self.show_smart(id);
+        }
         if let Mailbox::Folder { account_id, folder } = mailbox {
             let (title, icon) = empty_state(&mailbox);
             self.fetch_remote(folder.query().into(), account_id, 100, title, icon);
@@ -1760,6 +1762,18 @@ impl MainWindow {
             Box::new(|win, account| win.show_rules(account)),
         );
         with_account(
+            "account-rename",
+            Box::new(|win, account| win.rename_account(account)),
+        );
+        with_account(
+            "account-up",
+            Box::new(|win, account| win.move_account(account, -1)),
+        );
+        with_account(
+            "account-down",
+            Box::new(|win, account| win.move_account(account, 1)),
+        );
+        with_account(
             "account-new-label",
             Box::new(|win, account| win.new_label(account.id, None)),
         );
@@ -1871,6 +1885,7 @@ impl MainWindow {
         let first = gio::Menu::new();
         first.append(Some("Check for Mail"), Some("win.check"));
         first.append(Some("Add Account…"), Some("win.add-account"));
+        first.append(Some("New Smart Mailbox…"), Some("win.smart-new"));
         menu.append_section(None, &first);
         let second = gio::Menu::new();
         second.append(Some("Preferences"), Some("win.preferences"));
@@ -2135,6 +2150,23 @@ impl MainWindow {
                 _ => self.reload_list(),
             }
         }
+        if before.smart_mailboxes != after.smart_mailboxes
+            || before.account_order != after.account_order
+            || before.account_colors != after.account_colors
+            || before.account_names != after.account_names
+        {
+            self.refresh_accounts();
+            if before.account_colors != after.account_colors {
+                // Rows carry account colours; refresh_accounts sets the new ones first.
+                let list = Rc::clone(&self.list);
+                glib::timeout_add_local_once(std::time::Duration::from_millis(200), move || {
+                    list.rebind();
+                });
+            }
+            if let Mailbox::Smart { id, .. } = self.mailbox.borrow().clone() {
+                self.show_smart(&id);
+            }
+        }
         if before.vips != after.vips {
             self.refresh_accounts();
             let vip = sender_is_vip(&self.conversation, after);
@@ -2175,7 +2207,7 @@ impl MainWindow {
                     ("Move to trash", "Delete numbersign"),
                     ("Junk", "<Control><Shift>j"),
                     ("Flag or unflag", "<Control><Shift>l s"),
-                    ("Flag colours", "<Control><Alt>1...<Control><Alt>7"),
+                    ("Flag colors", "<Control><Alt>1...<Control><Alt>7"),
                     ("Mark read or unread", "<Control><Shift>u u"),
                     ("Labels", "<Control><Alt>m l"),
                     ("Undo", "<Control>z"),
@@ -2270,6 +2302,7 @@ fn empty_state(mailbox: &Mailbox) -> (&'static str, &'static str) {
         Mailbox::Scheduled => return ("Nothing Scheduled", "alarm-symbolic"),
         Mailbox::Flag(_) => return ("No Flagged Mail", "mailrs-flag-symbolic"),
         Mailbox::Vips { .. } => return ("No Mail from VIPs", "starred-symbolic"),
+        Mailbox::Smart { .. } => return ("No Matching Mail", "folder-saved-search-symbolic"),
         Mailbox::Folder { folder, .. } => {
             return match folder {
                 Folder::Junk => ("No Junk", folder.icon()),

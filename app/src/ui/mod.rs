@@ -8,6 +8,7 @@ pub mod moving;
 pub mod preferences;
 pub mod rules;
 pub mod sidebar;
+pub mod smart_editor;
 pub mod thread_list;
 pub mod thread_row;
 pub mod vacation;
@@ -37,6 +38,8 @@ pub enum Mailbox {
     Flag(FlagColor),
     /// Mail from VIPs: all of them under "VIPs", or one person.
     Vips { emails: Vec<String>, name: String },
+    /// A saved search from Preferences' smart mailboxes, by id.
+    Smart { id: String, name: String },
     /// Mail Gmail keeps out of the regular listing, fetched on demand.
     Folder {
         account_id: Option<AccountId>,
@@ -100,7 +103,7 @@ impl Mailbox {
             Mailbox::Folder { folder, .. } => folder.name().into(),
             Mailbox::Scheduled => "Send Later".into(),
             Mailbox::Flag(color) => format!("{} Flag", color.name()),
-            Mailbox::Vips { name, .. } => name.clone(),
+            Mailbox::Vips { name, .. } | Mailbox::Smart { name, .. } => name.clone(),
         }
     }
 
@@ -116,15 +119,20 @@ impl Mailbox {
             Mailbox::Vips { emails, .. } => {
                 Some(ThreadFilter::unified("").from_senders(emails.clone()))
             }
-            Mailbox::Search { .. } | Mailbox::Folder { .. } | Mailbox::Scheduled => None,
+            Mailbox::Search { .. }
+            | Mailbox::Folder { .. }
+            | Mailbox::Scheduled
+            | Mailbox::Smart { .. } => None,
         }
     }
 
     pub fn account(&self) -> Option<AccountId> {
         match self {
-            Mailbox::Unified(_) | Mailbox::Scheduled | Mailbox::Flag(_) | Mailbox::Vips { .. } => {
-                None
-            }
+            Mailbox::Unified(_)
+            | Mailbox::Scheduled
+            | Mailbox::Flag(_)
+            | Mailbox::Vips { .. }
+            | Mailbox::Smart { .. } => None,
             Mailbox::Label { account_id, .. } => Some(*account_id),
             Mailbox::Search { account_id, .. } | Mailbox::Folder { account_id, .. } => *account_id,
         }
