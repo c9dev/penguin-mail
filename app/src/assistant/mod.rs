@@ -4,6 +4,7 @@
 mod host;
 mod markup;
 mod prompt;
+pub mod run;
 pub mod tools;
 
 use std::collections::HashMap;
