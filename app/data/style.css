@@ -67,6 +67,16 @@
   min-height: 1.9em;
 }
 .composer-field > .composer-from > button > box > label { padding-left: 0; }
+/* Taking the frame off took the focus ring with it. The colour on the
+   label is the only other sign of where the cursor is, and a colour is no
+   sign at all to someone who cannot tell it apart, so the field holding
+   the cursor draws a ring of its own. */
+.composer-field entry:focus-within,
+.composer-field text:focus-within,
+.composer-field > .composer-from > button:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
+}
 /* A chip's pill and a plain field start at the same edge, so the column
    holds whether a row holds recipients or text. */
 .composer-field flowboxchild { padding: 0; min-height: 0; }

@@ -1575,13 +1575,17 @@ impl Composer {
             Some("composer.edit-markdown"),
         );
         menu.append_section(None, &switch);
+        // The rest of the bar stays off the focus chain, since every
+        // button on it has a shortcut of its own. This one takes the
+        // focus, because the headings and the block styles behind it have
+        // none and the menu is the only way to reach them.
         let more = gtk::MenuButton::builder()
             .icon_name("view-more-symbolic")
             .tooltip_text(gettext("More Formatting"))
             .menu_model(&menu)
             .css_classes(["flat"])
-            .can_focus(false)
             .build();
+        name(&more, &gettext("More Formatting"));
         extras.append(&more);
         self.follow_cursor();
     }

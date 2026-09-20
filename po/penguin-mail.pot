@@ -1517,8 +1517,8 @@ msgstr ""
 msgid "Discard"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1321 app/src/ui/composer/mod.rs:1737
-#: app/src/ui/composer/mod.rs:2202 app/src/ui/hide_my_email.rs:275
+#: app/src/ui/composer/mod.rs:1321 app/src/ui/composer/mod.rs:1741
+#: app/src/ui/composer/mod.rs:2206 app/src/ui/hide_my_email.rs:275
 #: app/src/ui/smart_editor.rs:150 app/src/ui/templates.rs:153
 #: app/src/ui/templates.rs:245 app/src/ui/vacation.rs:43 app/src/ui/when.rs:52
 #: app/src/ui/window.rs:1626 app/src/ui/window.rs:2388
@@ -1582,7 +1582,7 @@ msgstr ""
 msgid "Quote (Ctrl+Shift+9)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1541 app/src/ui/composer/mod.rs:1956
+#: app/src/ui/composer/mod.rs:1541 app/src/ui/composer/mod.rs:1960
 msgid "Insert Image"
 msgstr ""
 
@@ -1618,74 +1618,74 @@ msgstr ""
 msgid "Edit as Markdown"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1580
+#: app/src/ui/composer/mod.rs:1584 app/src/ui/composer/mod.rs:1588
 msgid "More Formatting"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1720
+#: app/src/ui/composer/mod.rs:1724
 msgid "Add a Link"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1726
+#: app/src/ui/composer/mod.rs:1730
 msgid "Text"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1738
+#: app/src/ui/composer/mod.rs:1742
 msgid "Add Link"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1808
+#: app/src/ui/composer/mod.rs:1812
 msgid "Markdown formatted"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1826
+#: app/src/ui/composer/mod.rs:1830
 msgid "Editing as Markdown"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1951
+#: app/src/ui/composer/mod.rs:1955
 msgid "Images"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2000
+#: app/src/ui/composer/mod.rs:2004
 msgid "Could not read the file: {reason}"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2088
+#: app/src/ui/composer/mod.rs:2092
 msgid "Could not paste the image"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2133
+#: app/src/ui/composer/mod.rs:2137
 msgid "No Templates Yet"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2191
+#: app/src/ui/composer/mod.rs:2195
 msgid "Save as Template"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2193
+#: app/src/ui/composer/mod.rs:2197
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2197 app/src/ui/smart_editor.rs:37
+#: app/src/ui/composer/mod.rs:2201 app/src/ui/smart_editor.rs:37
 #: app/src/ui/templates.rs:196
 msgid "Name"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2202 app/src/ui/smart_editor.rs:144
+#: app/src/ui/composer/mod.rs:2206 app/src/ui/smart_editor.rs:144
 #: app/src/ui/templates.rs:239 app/src/ui/vacation.rs:39
 #: app/src/ui/window/arrange.rs:149
 msgid "Save"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2216 app/src/ui/templates.rs:286
+#: app/src/ui/composer/mod.rs:2220 app/src/ui/templates.rs:286
 msgid "Give the template a name"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2224
+#: app/src/ui/composer/mod.rs:2228
 msgid "Template saved"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2228
+#: app/src/ui/composer/mod.rs:2232
 msgid "Template not saved: {reason}"
 msgstr ""
 
