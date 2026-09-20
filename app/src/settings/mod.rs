@@ -78,6 +78,10 @@ pub struct Settings {
     pub sign_by_default: bool,
     /// Turn Encrypt on as soon as gpg holds a key for every recipient.
     pub encrypt_when_possible: bool,
+    /// Accounts already offered to GNOME Online Accounts, lower case.
+    /// The offer is worth making once: whoever says no to it means no,
+    /// and whoever says yes has GNOME asking them the rest.
+    pub offered_to_gnome: Vec<String>,
     /// Read each account's Google contacts, for names, photos, and
     /// recipient suggestions. Off until the owner turns it on, because it
     /// is the one thing here that asks Google for more access.
@@ -181,6 +185,7 @@ impl Default for Settings {
             sign_by_default: false,
             encrypt_when_possible: false,
             contacts: false,
+            offered_to_gnome: Vec::new(),
         }
     }
 }

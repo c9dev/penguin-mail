@@ -17,6 +17,7 @@ async-channel.workspace = true
 chrono.workspace = true
 dirs.workspace = true
 futures.workspace = true
+mail-builder.workspace = true
 rand.workspace = true
 serde.workspace = true
 thiserror.workspace = true
@@ -25,6 +26,7 @@ toml.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
+base64.workspace = true
 tempfile.workspace = true
 # `start_paused` lets a test watch a retry wait out Gmail's Retry-After
 # without waiting itself.

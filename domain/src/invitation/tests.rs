@@ -455,3 +455,236 @@ fn an_answer_survives_a_round_trip_through_its_stored_form() {
     }
     assert!("later".parse::<Answer>().is_err());
 }
+
+/// An invitation to one occurrence of a weekly event, as Google sends one
+/// when the organizer moves a single stand-up.
+fn one_occurrence() -> String {
+    ics(&[
+        "BEGIN:VCALENDAR",
+        "METHOD:REQUEST",
+        "BEGIN:VEVENT",
+        "UID:standup@google.com",
+        "SEQUENCE:3",
+        "RECURRENCE-ID;TZID=Europe/Lisbon:20260612T093000",
+        "DTSTART;TZID=Europe/Lisbon:20260612T100000",
+        "DTEND;TZID=Europe/Lisbon:20260612T103000",
+        "SUMMARY:Stand-up",
+        "ORGANIZER;CN=Priya Raman:mailto:priya@fernwood.example",
+        "ATTENDEE;PARTSTAT=NEEDS-ACTION;CN=Dana Reyes:mailto:dana.reyes@example.com",
+        "ATTENDEE;PARTSTAT=ACCEPTED;CN=Jonas Weber:mailto:jonas@fernwood.example",
+        "END:VEVENT",
+        "END:VCALENDAR",
+    ])
+}
+
+fn me() -> Address {
+    Address {
+        name: Some("Dana Reyes".into()),
+        email: "dana.reyes@example.com".into(),
+    }
+}
+
+/// The properties of a written object, unfolded the way a reader unfolds
+/// them: a continuation line opens with a space and joins the one before.
+fn properties(object: &str) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for line in object.split("\r\n").filter(|line| !line.is_empty()) {
+        match line.strip_prefix(' ') {
+            Some(rest) => out
+                .last_mut()
+                .expect("a fold follows a property")
+                .push_str(rest),
+            None => out.push(line.to_string()),
+        }
+    }
+    out
+}
+
+#[test]
+fn a_reply_carries_what_an_organizer_matches_it_against() {
+    let invitation = read(&google_invite()).unwrap();
+    let object = reply(
+        &invitation,
+        &me(),
+        Answer::Yes,
+        Scope::Series,
+        1_780_000_000_000,
+    );
+    let lines = properties(&object);
+
+    assert!(lines.contains(&"METHOD:REPLY".to_string()));
+    assert!(lines.contains(&"UID:6k2v9d1qkq8p3nlo7a5fbe9gsk@google.com".to_string()));
+    assert!(lines.contains(&format!("SEQUENCE:{}", invitation.sequence)));
+    assert!(lines.contains(&"ORGANIZER;CN=Priya Raman:mailto:priya@fernwood.example".to_string()));
+    assert!(lines.iter().any(|line| line.starts_with("DTSTAMP:")));
+    assert_eq!(lines.first().map(String::as_str), Some("BEGIN:VCALENDAR"));
+    assert_eq!(lines.last().map(String::as_str), Some("END:VCALENDAR"));
+}
+
+#[test]
+fn a_reply_names_the_one_person_answering() {
+    let invitation = read(&google_invite()).unwrap();
+    for answer in Answer::ALL {
+        let object = reply(&invitation, &me(), answer, Scope::Series, 1_780_000_000_000);
+        let attendees: Vec<String> = properties(&object)
+            .into_iter()
+            .filter(|line| line.starts_with("ATTENDEE"))
+            .collect();
+        assert_eq!(
+            attendees,
+            vec![format!(
+                "ATTENDEE;PARTSTAT={};CN=Dana Reyes:mailto:dana.reyes@example.com",
+                answer.partstat()
+            )]
+        );
+    }
+}
+
+#[test]
+fn a_reply_ends_every_line_with_crlf_and_folds_at_75_octets() {
+    let long = Address {
+        name: Some("Dana Reyes of the Fernwood Planning and Scheduling Office".into()),
+        email: "dana.reyes.planning.scheduling@example.com".into(),
+    };
+    let invitation = read(&google_invite()).unwrap();
+    let object = reply(
+        &invitation,
+        &long,
+        Answer::Maybe,
+        Scope::Series,
+        1_780_000_000_000,
+    );
+
+    assert!(object.ends_with("END:VCALENDAR\r\n"));
+    assert!(!object.contains("\n\r"));
+    for line in object.split("\r\n") {
+        assert!(line.len() <= 75, "{line:?} runs past 75 octets");
+        assert!(!line.contains('\n'), "a lone newline in {line:?}");
+    }
+    assert!(
+        object.contains("\r\n "),
+        "the long attendee should have been folded"
+    );
+    // Folding loses nothing: unfolding gives the address back whole.
+    assert!(
+        properties(&object)
+            .iter()
+            .any(|line| line.ends_with("mailto:dana.reyes.planning.scheduling@example.com"))
+    );
+}
+
+#[test]
+fn a_reply_to_one_occurrence_says_which_one() {
+    let invitation = read(&one_occurrence()).unwrap();
+    let occurrence = invitation.occurrence.as_ref().expect("one occurrence");
+    assert_eq!(occurrence.written, ";TZID=Europe/Lisbon:20260612T093000");
+
+    let one = reply(
+        &invitation,
+        &me(),
+        Answer::No,
+        Scope::Occurrence,
+        1_780_000_000_000,
+    );
+    assert!(
+        properties(&one).contains(&"RECURRENCE-ID;TZID=Europe/Lisbon:20260612T093000".to_string())
+    );
+
+    // The series is the same event with no occurrence named.
+    let series = reply(
+        &invitation,
+        &me(),
+        Answer::No,
+        Scope::Series,
+        1_780_000_000_000,
+    );
+    assert!(!series.contains("RECURRENCE-ID"));
+    assert!(properties(&series).contains(&"UID:standup@google.com".to_string()));
+}
+
+#[test]
+fn a_reply_answers_in_utc_whichever_zone_the_invitation_named() {
+    let invitation = read(&outlook_invite()).unwrap();
+    let lines = properties(&reply(
+        &invitation,
+        &me(),
+        Answer::Yes,
+        Scope::Series,
+        1_780_000_000_000,
+    ));
+    assert!(lines.contains(&"DTSTART:20260305T090000Z".to_string()));
+    assert!(lines.contains(&"DTEND:20260305T103000Z".to_string()));
+    assert!(lines.contains(&"SUMMARY:Budget review\\, Q1".to_string()));
+}
+
+#[test]
+fn an_all_day_reply_keeps_the_days_the_event_covers() {
+    let invitation = read(&ics(&[
+        "BEGIN:VCALENDAR",
+        "METHOD:REQUEST",
+        "BEGIN:VEVENT",
+        "UID:offsite-1",
+        "DTSTART;VALUE=DATE:20260612",
+        "DTEND;VALUE=DATE:20260614",
+        "SUMMARY:Offsite",
+        "END:VEVENT",
+        "END:VCALENDAR",
+    ]))
+    .unwrap();
+    let lines = properties(&reply(
+        &invitation,
+        &me(),
+        Answer::Yes,
+        Scope::Series,
+        1_780_000_000_000,
+    ));
+    assert!(lines.contains(&"DTSTART;VALUE=DATE:20260612".to_string()));
+    assert!(lines.contains(&"DTEND;VALUE=DATE:20260614".to_string()));
+}
+
+#[test]
+fn a_counter_proposes_another_time_for_the_same_event() {
+    let invitation = read(&google_invite()).unwrap();
+    let proposed = When::At {
+        starts_at: 1_781_000_000_000,
+        ends_at: Some(1_781_003_600_000),
+    };
+    let lines = properties(&counter(
+        &invitation,
+        &me(),
+        &proposed,
+        Scope::Series,
+        1_780_000_000_000,
+    ));
+    assert!(lines.contains(&"METHOD:COUNTER".to_string()));
+    assert!(lines.contains(&"UID:6k2v9d1qkq8p3nlo7a5fbe9gsk@google.com".to_string()));
+    assert!(lines.contains(&"DTSTART:20260609T101320Z".to_string()));
+    assert!(lines.contains(&"DTEND:20260609T111320Z".to_string()));
+    // A proposal says nothing about coming, so the answer stays open.
+    assert!(
+        lines
+            .iter()
+            .any(|line| line.starts_with("ATTENDEE;PARTSTAT=TENTATIVE"))
+    );
+}
+
+#[test]
+fn a_name_that_would_end_a_parameter_is_quoted() {
+    let invitation = read(&outlook_invite()).unwrap();
+    let lines = properties(&reply(
+        &invitation,
+        &Address {
+            name: Some("Reyes, Dana".into()),
+            email: "dana.reyes@example.com".into(),
+        },
+        Answer::Yes,
+        Scope::Series,
+        1_780_000_000_000,
+    ));
+    assert!(lines.contains(
+        &"ATTENDEE;PARTSTAT=ACCEPTED;CN=\"Reyes, Dana\":mailto:dana.reyes@example.com".to_string()
+    ));
+    assert!(
+        lines.contains(&"ORGANIZER;CN=\"Weber, Jonas\":mailto:jonas@fernwood.example".to_string())
+    );
+}

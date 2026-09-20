@@ -366,8 +366,17 @@ impl GmailApi for Gmail {
         _ical_uid: &str,
         _me: &str,
         _answer: mailrs_domain::invitation::Answer,
+        _occurrence: Option<mailrs_domain::EpochMillis>,
     ) -> Result<Answered, GmailError> {
         Ok(Answered::NotOnCalendar)
+    }
+
+    async fn busy_between(
+        &self,
+        _from: mailrs_domain::EpochMillis,
+        _to: mailrs_domain::EpochMillis,
+    ) -> Result<Vec<mailrs_gmail::Busy>, GmailError> {
+        Ok(Vec::new())
     }
 }
 

@@ -9,18 +9,35 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
-use chrono::Local;
-use mailrs_domain::invitation::{Answer, Invitation, Method};
+use chrono::{DateTime, Days, Local, TimeDelta};
+use mailrs_domain::invitation::{Answer, Invitation, Method, Scope, When};
+use mailrs_domain::{Address, EpochMillis};
 use mailrs_sync::Change;
 
 use crate::format::{event_moved_from, event_tile, event_when};
 
 /// What the card asks the window to do.
 pub enum Action {
-    /// Send this answer to Google Calendar.
-    Answer(Answer),
+    /// Send this answer to the organizer, for the one occurrence the
+    /// invitation names or for the whole series.
+    Answer(Answer, Scope),
+    /// Ask the organizer for another time.
+    Propose(Proposal),
     /// Hand the `.ics` to the desktop, which files it in GNOME Calendar.
     AddToCalendar,
+    /// Answer the offer to add this account to GNOME Online Accounts.
+    /// Either way the offer is over.
+    OnlineAccounts { open: bool },
+}
+
+/// Which time to propose to the organizer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Proposal {
+    /// One of the times the card offered, worked out from the one the
+    /// organizer asked for.
+    At(EpochMillis),
+    /// Whatever the user picks from a calendar.
+    Pick,
 }
 
 /// One invitation as the card shows it.
@@ -34,6 +51,23 @@ pub struct Showing {
     /// The addresses of the account the message arrived in, so the card can
     /// find the user among the guests and call them "You".
     pub me: Vec<String>,
+}
+
+impl Showing {
+    /// The address an answer goes out as: the one the invitation reached,
+    /// under the name the organizer put on the guest list, so a reply
+    /// matches the guest it answers for. An invitation that lists none of
+    /// the account's addresses answers as the account itself.
+    pub fn answering_as(&self) -> Option<Address> {
+        let guest = self.invitation.me(&self.me);
+        Some(Address {
+            name: guest.and_then(|guest| guest.who.name.clone()),
+            email: match guest {
+                Some(guest) => guest.who.email.clone(),
+                None => self.me.first()?.clone(),
+            },
+        })
+    }
 }
 
 /// One line of the guest list.
@@ -50,6 +84,8 @@ pub struct EventCard {
     title: gtk::Label,
     when: gtk::Label,
     repeats: gtk::Label,
+    /// What else the user has on while the event runs.
+    clash: gtk::Label,
     location: gtk::Label,
     organizer: gtk::Label,
     guests: gtk::Expander,
@@ -57,6 +93,26 @@ pub struct EventCard {
     answers: gtk::Box,
     buttons: Vec<(Answer, gtk::ToggleButton)>,
     add: gtk::Button,
+    /// The button that opens the other times to ask the organizer for,
+    /// and the list inside it, which is rebuilt for each invitation. It
+    /// appears only for an invitation with a time to move.
+    propose: gtk::MenuButton,
+    proposals: gtk::Box,
+    /// What the card's buttons ask the window for. The propose list is
+    /// built as each invitation goes up, so the card keeps it.
+    act: Rc<dyn Fn(Action)>,
+    /// The row that asks whether an answer covers this occurrence or the
+    /// series. It appears for an invitation to one occurrence of a
+    /// repeating event and stays hidden for every other.
+    reach: gtk::Box,
+    /// Which of the two the answer buttons will send. It opens on this
+    /// occurrence, which is what the organizer asked about.
+    scope: Cell<Scope>,
+    /// Where the last answer went, under the buttons that sent it.
+    went: gtk::Label,
+    /// The line offering this account to GNOME Online Accounts, which the
+    /// window puts up once an account and never again.
+    gnome: gtk::Box,
     /// What the card shows now. The window reads it back to answer the
     /// invitation, so the card is the one place that holds it.
     showing: RefCell<Option<Showing>>,
@@ -94,6 +150,7 @@ impl EventCard {
         let title = label(&["title-3"]);
         let when = label(&["invitation-when"]);
         let repeats = label(&["dim-label", "caption"]);
+        let clash = label(&["invitation-clash", "caption"]);
         let location = label(&["dim-label"]);
         let organizer = label(&["dim-label", "caption"]);
         let details = gtk::Box::builder()
@@ -101,7 +158,7 @@ impl EventCard {
             .spacing(2)
             .hexpand(true)
             .build();
-        for widget in [&title, &when, &repeats, &location] {
+        for widget in [&title, &when, &repeats, &clash, &location] {
             details.append(widget);
         }
 
@@ -131,14 +188,48 @@ impl EventCard {
             answers.append(&button);
             buttons.push((answer, button));
         }
+        let reach = gtk::Box::builder()
+            .spacing(0)
+            .visible(false)
+            .css_classes(["linked"])
+            .build();
+        let this_one = gtk::ToggleButton::builder()
+            .label("This Event")
+            .active(true)
+            .css_classes(["flat"])
+            .build();
+        let every = gtk::ToggleButton::builder()
+            .label("All Events")
+            .group(&this_one)
+            .css_classes(["flat"])
+            .build();
+        reach.append(&this_one);
+        reach.append(&every);
+
+        let proposals = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(2)
+            .build();
+        let propose = gtk::MenuButton::builder()
+            .label("Propose New Time")
+            .css_classes(["flat"])
+            .popover(
+                &gtk::Popover::builder()
+                    .child(&proposals)
+                    .has_arrow(true)
+                    .build(),
+            )
+            .build();
         let add = gtk::Button::builder()
             .label("Add to Calendar")
             .css_classes(["flat"])
             .build();
         let actions = gtk::Box::builder().spacing(8).margin_top(6).build();
         actions.append(&answers);
+        actions.append(&reach);
         let spacer = gtk::Box::builder().hexpand(true).build();
         actions.append(&spacer);
+        actions.append(&propose);
         actions.append(&add);
 
         let news = gtk::Label::builder()
@@ -147,6 +238,38 @@ impl EventCard {
             .visible(false)
             .css_classes(["invitation-news"])
             .build();
+        let went = gtk::Label::builder()
+            .xalign(0.0)
+            .wrap(true)
+            .visible(false)
+            .css_classes(["dim-label", "caption"])
+            .build();
+
+        // GNOME Calendar shows nothing about an account GNOME has never
+        // been told about, and adding it there is a job for Settings.
+        let gnome = gtk::Box::builder()
+            .spacing(8)
+            .margin_top(4)
+            .visible(false)
+            .build();
+        let told = gtk::Label::builder()
+            .xalign(0.0)
+            .wrap(true)
+            .hexpand(true)
+            .css_classes(["dim-label", "caption"])
+            .label("Add this account to GNOME Online Accounts and Calendar shows these events too.")
+            .build();
+        let open_settings = gtk::Button::builder()
+            .label("Open Settings")
+            .css_classes(["flat"])
+            .build();
+        let not_now = gtk::Button::builder()
+            .label("Not Now")
+            .css_classes(["flat"])
+            .build();
+        gnome.append(&told);
+        gnome.append(&not_now);
+        gnome.append(&open_settings);
 
         let inside = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
@@ -158,6 +281,8 @@ impl EventCard {
         inside.append(&organizer);
         inside.append(&guests);
         inside.append(&actions);
+        inside.append(&went);
+        inside.append(&gnome);
 
         let widget = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
@@ -174,6 +299,7 @@ impl EventCard {
             title,
             when,
             repeats,
+            clash,
             location,
             organizer,
             guests,
@@ -181,9 +307,25 @@ impl EventCard {
             answers,
             buttons,
             add,
+            propose,
+            proposals,
+            act: Rc::clone(&on_action),
+            gnome,
+            reach,
+            scope: Cell::new(Scope::Occurrence),
+            went,
             showing: RefCell::new(None),
             filling: Cell::new(false),
         });
+
+        for (scope, button) in [(Scope::Occurrence, &this_one), (Scope::Series, &every)] {
+            let weak = Rc::downgrade(&card);
+            button.connect_toggled(move |button| {
+                if let (true, Some(card)) = (button.is_active(), weak.upgrade()) {
+                    card.scope.set(scope);
+                }
+            });
+        }
 
         for (answer, button) in &card.buttons {
             let (answer, act, weak) = (*answer, Rc::clone(&on_action), Rc::downgrade(&card));
@@ -194,7 +336,7 @@ impl EventCard {
                 }
                 if button.is_active() {
                     card.mark(Some(answer));
-                    act(Action::Answer(answer));
+                    act(Action::Answer(answer, card.scope.get()));
                 } else {
                     // Pressing the answer already given keeps it: taking an
                     // answer back is not something Google Calendar does.
@@ -202,6 +344,16 @@ impl EventCard {
                 }
             });
         }
+        for (open, button) in [(true, &open_settings), (false, &not_now)] {
+            let (act, weak) = (Rc::clone(&on_action), Rc::downgrade(&card));
+            button.connect_clicked(move |_| {
+                if let Some(card) = weak.upgrade() {
+                    card.gnome.set_visible(false);
+                }
+                act(Action::OnlineAccounts { open });
+            });
+        }
+
         card.add
             .connect_clicked(move |_| on_action(Action::AddToCalendar));
         card
@@ -221,6 +373,38 @@ impl EventCard {
     /// Reads what the card shows. `None` means no invitation is on screen.
     pub fn with_showing<R>(&self, f: impl FnOnce(&Showing) -> R) -> Option<R> {
         self.showing.borrow().as_ref().map(f)
+    }
+
+    /// Which of the two the chooser is on, for an invitation that shows
+    /// one. A proposal reaches as far as an answer would.
+    pub fn scope(&self) -> Scope {
+        self.scope.get()
+    }
+
+    /// Says what else the user has on while this event runs. The answer
+    /// arrives after the card is already up, and the user may have moved
+    /// on to another message by then, so it names the invitation it
+    /// belongs to and a late answer to an old question is dropped.
+    pub fn set_busy(&self, uid: &str, busy: &[String]) {
+        let mine = self
+            .showing
+            .borrow()
+            .as_ref()
+            .is_some_and(|showing| showing.invitation.uid == uid);
+        if mine {
+            set_line(&self.clash, clash(busy));
+        }
+    }
+
+    /// Puts up the offer to add this account to GNOME Online Accounts.
+    pub fn offer_gnome(&self) {
+        self.gnome.set_visible(true);
+    }
+
+    /// Says under the buttons where the answer went, or takes the line
+    /// away while one is on its way.
+    pub fn set_went(&self, went: Option<String>) {
+        set_line(&self.went, went);
     }
 
     /// Puts the card back where an answer left it: on the one that went
@@ -260,9 +444,12 @@ impl EventCard {
             }
         }
         set_line(&self.repeats, event.repeats.clone());
+        self.clash.set_visible(false);
         set_line(&self.location, event.location.clone());
         set_line(&self.organizer, organizer_line(event));
         self.fill_guests(showing);
+        self.went.set_visible(false);
+        self.gnome.set_visible(false);
         set_line(&self.news, news(showing, now));
         self.news
             .set_css_classes(&["invitation-news", news_tone(showing)]);
@@ -271,6 +458,11 @@ impl EventCard {
         // question, so neither gets answer buttons.
         let answerable = event.method == Method::Request && !event.cancelled();
         self.answers.set_visible(answerable);
+        // Only an invitation to one occurrence of a series leaves the
+        // question open; an answer to anything else covers the lot.
+        self.reach
+            .set_visible(answerable && event.occurrence.is_some());
+        self.fill_proposals(showing, answerable);
         self.mark(showing.answer);
         self.widget.set_visible(true);
     }
@@ -287,6 +479,42 @@ impl EventCard {
             }
         }
         self.filling.set(false);
+    }
+
+    /// Fills the propose list with times near the one the organizer asked
+    /// for, and a way to pick any other. An all-day event and one with no
+    /// time at all have nothing to move, so they get no button.
+    fn fill_proposals(&self, showing: &Showing, answerable: bool) {
+        while let Some(child) = self.proposals.first_child() {
+            self.proposals.remove(&child);
+        }
+        let starts_at = match showing.invitation.when {
+            Some(When::At { starts_at, .. }) if answerable => starts_at,
+            _ => {
+                self.propose.set_visible(false);
+                return;
+            }
+        };
+        let mut offered: Vec<(String, Proposal)> = nearby(starts_at)
+            .into_iter()
+            .map(|(label, at)| (label, Proposal::At(at)))
+            .collect();
+        offered.push(("Pick a Time…".to_string(), Proposal::Pick));
+        for (label, proposal) in offered {
+            let button = gtk::Button::builder()
+                .label(&label)
+                .css_classes(["flat"])
+                .build();
+            let (act, popover) = (Rc::clone(&self.act), self.propose.popover());
+            button.connect_clicked(move |_| {
+                if let Some(popover) = &popover {
+                    popover.popdown();
+                }
+                act(Action::Propose(proposal));
+            });
+            self.proposals.append(&button);
+        }
+        self.propose.set_visible(true);
     }
 
     fn fill_guests(&self, showing: &Showing) {
@@ -320,6 +548,37 @@ impl EventCard {
             self.guest_list.append(&row);
         }
     }
+}
+
+/// The times the propose list offers, each the same meeting moved whole.
+/// A day and a week go through the local calendar rather than through
+/// arithmetic on the instant, so the hour stays put across a clock change.
+fn nearby(starts_at: EpochMillis) -> Vec<(String, EpochMillis)> {
+    let Some(start) = DateTime::from_timestamp_millis(starts_at).map(|at| at.with_timezone(&Local))
+    else {
+        return Vec::new();
+    };
+    [
+        ("Half an Hour Later", Some(start + TimeDelta::minutes(30))),
+        ("An Hour Later", Some(start + TimeDelta::hours(1))),
+        ("Same Time Tomorrow", start.checked_add_days(Days::new(1))),
+        ("Same Time Next Week", start.checked_add_days(Days::new(7))),
+    ]
+    .into_iter()
+    .filter_map(|(label, at)| Some((label.to_string(), at?.timestamp_millis())))
+    .collect()
+}
+
+/// "You have Design crit then", for an event the user already has while
+/// this one runs. Two clashes name both; more than two name the first and
+/// count the rest, since the point is that the hour is taken.
+fn clash(busy: &[String]) -> Option<String> {
+    Some(match busy {
+        [] => return None,
+        [one] => format!("You have {one} then"),
+        [one, two] => format!("You have {one} and {two} then"),
+        [one, rest @ ..] => format!("You have {one} and {} more then", rest.len()),
+    })
 }
 
 /// "Invitation from Priya Raman", or nothing when the organizer is missing.
