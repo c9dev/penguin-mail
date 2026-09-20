@@ -18,6 +18,14 @@ time, and keeps your mail on your own computer.
   want them, and attachments list their sizes. Replies, reply-all, and
   forwards thread correctly in Gmail, and drafts save to Gmail with their
   formatting, so they follow you to your phone and come back whole.
+- **OpenPGP through your own gpg.** A signed message names its signer above
+  the text and says how far the trust database vouches for that key; one
+  that changed on the way says so and stays on screen. An encrypted message
+  opens and carries a mark saying it arrived that way. The composer has Sign
+  and Encrypt, and offers Encrypt once gpg holds a key for every recipient,
+  naming the ones it does not. Penguin Mail holds no key and asks for no
+  passphrase: gpg, its agent and its pinentry do. With no gpg installed,
+  none of this appears.
 - **Gmail search**, with its full query syntax, across one account or all.
 - **Junk, Trash, and All Mail**, for every account together or one at a
   time, read live from Gmail. Not Junk and Move to Inbox put mail back.
@@ -228,6 +236,8 @@ gmail/    Gmail REST client, OAuth, quota limiter
 store/    SQLite schema and queries
 sync/     one sync loop per account: bootstrap, history replay, backfill
           mail actions, mailbox listing, and each account's Gmail settings
+pgp/      OpenPGP mail through the person's own gpg: signatures and
+          encryption, RFC 3156 parts, inline armor
 ai/       model providers, tool calls, the Claude Code bridge
 cli/      penguin-mail-cli
 app/      the GTK4 and libadwaita app
