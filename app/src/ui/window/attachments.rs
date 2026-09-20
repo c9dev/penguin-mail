@@ -38,6 +38,13 @@ impl MainWindow {
         let Some((account_id, attachment)) = self.attachment_at(view, &message_id, index) else {
             return;
         };
+        // A file out of an encrypted message is already here. Gmail holds
+        // the ciphertext, so there is nothing to fetch and nothing to wait
+        // for.
+        if let Some(data) = opened_file(view, &message_id, index) {
+            self.show_attachment(&attachment, data);
+            return;
+        }
         let (Some(sync), Some(attachment_id)) = (
             self.core.account(account_id),
             attachment.attachment_id.clone(),
@@ -69,17 +76,26 @@ impl MainWindow {
         message_id: String,
     ) {
         let found = view.with_open(|open| {
+            let held = open
+                .opened_files
+                .get(&message_id)
+                .cloned()
+                .unwrap_or_default();
             let body = open.bodies.get(&message_id)?.as_ref().ok()?;
-            let files: Vec<Attachment> = body
+            // A file that came out of an encrypted message has no
+            // attachment id and does not need one; its bytes are in `held`
+            // at the same index.
+            let files: Vec<(usize, Attachment)> = body
                 .attachments
                 .iter()
-                .filter(|a| a.attachment_id.is_some())
-                .filter(|a| !crate::render::shown_in_body(a, body))
-                .cloned()
+                .enumerate()
+                .filter(|(index, a)| a.attachment_id.is_some() || held.len() > *index)
+                .filter(|(_, a)| !crate::render::shown_in_body(a, body))
+                .map(|(index, a)| (index, a.clone()))
                 .collect();
-            Some((open.account_id, files))
+            Some((open.account_id, files, held))
         });
-        let Some(Some((account_id, files))) = found else {
+        let Some(Some((account_id, files, held))) = found else {
             return;
         };
         if files.is_empty() {
@@ -107,7 +123,18 @@ impl MainWindow {
             ));
             let mut saved = 0usize;
             let mut failed: Vec<String> = Vec::new();
-            for attachment in files {
+            // The index is the one the message's own attachment list
+            // gives, which is what `held` is keyed by. Filtering the rows
+            // above would otherwise have shifted it.
+            for (index, attachment) in files {
+                if let Some(data) = held.get(index).cloned() {
+                    let path = super::unique_path(&folder, &attachment.filename);
+                    match std::fs::write(&path, data) {
+                        Ok(()) => saved += 1,
+                        Err(_) => failed.push(attachment.filename),
+                    }
+                    continue;
+                }
                 let Some(attachment_id) = attachment.attachment_id.clone() else {
                     continue;
                 };
@@ -149,6 +176,41 @@ impl MainWindow {
                 ));
             }
         });
+    }
+
+    /// Saves a file the open thread already holds, and says whether it
+    /// did, so the caller knows to stop rather than ask Gmail.
+    pub(super) fn save_opened_file_from(
+        self: &Rc<Self>,
+        view: &ConversationView,
+        message_id: &str,
+        index: usize,
+        attachment: &Attachment,
+    ) -> bool {
+        match opened_file(view, message_id, index) {
+            Some(data) => {
+                self.save_opened_file(attachment, &data);
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// Writes a file that came out of an encrypted message to Downloads.
+    fn save_opened_file(self: &Rc<Self>, attachment: &Attachment, data: &[u8]) {
+        let downloads =
+            glib::user_special_dir(glib::UserDirectory::Downloads).unwrap_or_else(glib::home_dir);
+        let path = super::unique_path(&downloads, &attachment.filename);
+        match std::fs::write(&path, data) {
+            Ok(()) => {
+                let name = path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| attachment.filename.clone());
+                self.toast(&format!("Saved {name} to Downloads"));
+            }
+            Err(err) => self.toast(&format!("Could not save {}: {err}", attachment.filename)),
+        }
     }
 
     /// The attachment a row stands for, with the account it belongs to.
@@ -359,6 +421,13 @@ impl MainWindow {
         }
         out
     }
+}
+
+/// The bytes of one file that came out of an encrypted message, when the
+/// open thread holds them.
+fn opened_file(view: &ConversationView, message_id: &str, index: usize) -> Option<Vec<u8>> {
+    view.with_open(|open| open.opened_files.get(message_id)?.get(index).cloned())
+        .flatten()
 }
 
 /// How many thumbnails to hold before starting over.

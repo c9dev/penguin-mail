@@ -40,6 +40,11 @@ pub struct OpenThread {
     /// Pictures for the attachment rows: Gmail's attachment id to a small
     /// `data:` URI. Shared across the thread, since an id is unique.
     pub thumbnails: HashMap<String, String>,
+    /// Files that came out of an encrypted message, by message id, in the
+    /// order that message's attachment list gives them. Gmail holds the
+    /// ciphertext, so these bytes are the only copy and they live no
+    /// longer than this window.
+    pub opened_files: HashMap<String, Vec<Vec<u8>>>,
     /// Contact photos by lower-case sender address, as `data:` URIs. A
     /// sender with none keeps the initials avatar.
     pub photos: HashMap<String, String>,

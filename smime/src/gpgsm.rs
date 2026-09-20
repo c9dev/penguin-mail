@@ -52,8 +52,32 @@ impl Smime {
         self
     }
 
+    /// Runs gpgsm with `input` on its stdin, with no way for it to ask the
+    /// person anything. Use this for every call that only reads.
+    ///
+    /// Verifying a signature whose root nobody here vouches for makes
+    /// gpgsm ask gpg-agent to mark that root trusted, and gpg-agent puts
+    /// that question on the screen as a pinentry window. Opening a message
+    /// must never do that, and most mail signed by a company arrives from
+    /// a root the reader has never seen, so it would happen constantly.
+    /// `--pinentry-mode error` turns the request into an error gpgsm
+    /// swallows, and the verdict comes back the same: not trusted, which
+    /// is the honest answer and the one the card should show.
+    pub(crate) fn read_only(
+        &self,
+        input: &[u8],
+        args: impl FnOnce(&mut Command),
+    ) -> Result<Run, SmimeError> {
+        self.run(input, |command| {
+            command.args(["--pinentry-mode", "error"]);
+            args(command);
+        })
+    }
+
     /// Runs gpgsm with `input` on its stdin. `args` adds what the one call
-    /// needs; the flags every call wants are already set.
+    /// needs; the flags every call wants are already set. A call that
+    /// needs the person's passphrase uses this; everything else uses
+    /// `read_only`, which cannot put a window on their screen.
     pub(crate) fn run(
         &self,
         input: &[u8],

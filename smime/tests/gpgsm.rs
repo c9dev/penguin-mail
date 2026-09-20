@@ -47,6 +47,15 @@ impl Home {
         let dir = tempfile::tempdir().expect("a temp directory");
         // gpgsm refuses a home anyone else can read.
         permit_owner_only(dir.path());
+        // gpg-agent asks the person things through a pinentry window, and
+        // a test must never put one on somebody's screen. A pinentry that
+        // cannot run is a pinentry that cannot interrupt: the agent gets
+        // an error instead, which is the answer these tests want anyway.
+        std::fs::write(
+            dir.path().join("gpg-agent.conf"),
+            "pinentry-program /bin/false\n",
+        )
+        .expect("write");
         let dates = match window {
             Some((from, until)) => format!("Not-Before: {from}\nNot-After: {until}\n"),
             None => "Not-After: 2038-01-01\n".to_string(),
@@ -615,4 +624,74 @@ fn require_crypto() {
              so these tests would have proved nothing"
         );
     }
+}
+
+#[test]
+fn reading_a_message_never_asks_the_person_anything() {
+    // The bug this pins: verifying a signature whose root nobody here
+    // vouches for made gpgsm ask gpg-agent to mark that root trusted, and
+    // gpg-agent put that question on the screen. Most mail signed by a
+    // company arrives from a root the reader has never seen, so opening
+    // the inbox meant a window per message, and whether somebody clicked
+    // decided the verdict.
+    let Some(stranger) = Home::new("Grace Hopper", "hopper@example.test") else {
+        return;
+    };
+    let Some(mine) = Home::new("Ada Lovelace", "ada@example.test") else {
+        return;
+    };
+    // A pinentry that writes down every time it is asked to run, so the
+    // test can tell an attempt from a window nobody saw.
+    let asked = mine.dir.path().join("pinentry-calls");
+    let spy = mine.dir.path().join("spy-pinentry");
+    std::fs::write(
+        &spy,
+        format!(
+            "#!/bin/sh\necho asked >> {}\nexit 1\n",
+            asked.to_string_lossy()
+        ),
+    )
+    .expect("write");
+    permit_run(&spy);
+    std::fs::write(
+        mine.dir.path().join("gpg-agent.conf"),
+        format!("pinentry-program {}\n", spy.to_string_lossy()),
+    )
+    .expect("write");
+    restart_agent(&mine);
+
+    let part = b"Content-Type: text/plain\r\n\r\nFrom someone else.\r\n";
+    let signature = detached(&stranger, part);
+    mine.import(&stranger.certificate());
+
+    let found = mine.smime.verify(part, &signature).expect("a verdict");
+
+    assert_eq!(found.verdict, Verdict::Good);
+    assert_eq!(
+        found.chain,
+        Chain::Untrusted,
+        "nobody vouched for that root"
+    );
+    assert!(
+        !asked.exists(),
+        "reading a message tried to open a pinentry window"
+    );
+}
+
+#[cfg(unix)]
+fn permit_run(path: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o700)).expect("chmod");
+}
+
+#[cfg(not(unix))]
+fn permit_run(_path: &Path) {}
+
+/// Picks up a gpg-agent.conf written after the agent already started.
+fn restart_agent(home: &Home) {
+    let _ = Command::new("gpgconf")
+        .arg("--homedir")
+        .arg(home.dir.path())
+        .args(["--kill", "gpg-agent"])
+        .status();
 }
