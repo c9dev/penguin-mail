@@ -1871,12 +1871,13 @@ impl MainWindow {
         }
     }
 
-    /// Reverses the last organizing action, once, whether the window or the
-    /// assistant took it.
+    /// Reverses the organizing action on top of the undo stack, whether
+    /// the window or the assistant took it. The one before it is left for
+    /// the next press.
     fn undo(self: &Rc<Self>) {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let Some(outcome) = this.core.undo().await else {
+            let Some(undone) = this.core.undo().await else {
                 return this.toast(&gettext("Nothing to undo"));
             };
             // Undo can put rows back into a Gmail folder, which only a
@@ -1891,9 +1892,12 @@ impl MainWindow {
             }
             this.refresh_flag_color();
             this.reminders_changed();
-            match outcome.first_error() {
+            match undone.outcome.first_error() {
                 Some(error) => this.toast(error),
-                None => this.toast(&gettext("Undone")),
+                None => this.toast(&fill(
+                    &gettext("{action} undone"),
+                    &[("action", &undone.action.describe())],
+                )),
             }
         });
     }
