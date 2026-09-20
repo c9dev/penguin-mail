@@ -1,13 +1,16 @@
 //! Inbox categories, after Apple Mail: Primary, Updates, Promotions, and
 //! Social, built on the category labels Gmail puts on inbox mail.
 
+use serde::{Deserialize, Serialize};
+
 use crate::system_label::{
     CATEGORY_FORUMS, CATEGORY_PERSONAL, CATEGORY_PROMOTIONS, CATEGORY_SOCIAL, CATEGORY_UPDATES,
 };
 
 /// One slice of the inbox. `All` shows the whole inbox. Mail with no
 /// category label other than Personal counts as `Primary`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum Category {
     All,
     Primary,

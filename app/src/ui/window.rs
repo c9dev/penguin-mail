@@ -372,7 +372,7 @@ impl MainWindow {
                 labels: RefCell::new(HashMap::new()),
                 assistant,
                 assistant_split,
-                categories: categories::CategoryBar::new(),
+                categories: categories::CategoryBar::new(app.settings().default_category),
                 follow_up: followup::FollowUpBanner::new(),
                 inline_cache: RefCell::new(HashMap::new()),
                 thumbnail_cache: RefCell::new(HashMap::new()),
