@@ -29,6 +29,11 @@ pub enum Opening {
 pub struct Read {
     pub mark: Mark,
     pub body: Option<MessageBody>,
+    /// The bytes of the files inside, in the order `body.attachments`
+    /// lists them. They exist nowhere else: Gmail holds the ciphertext, so
+    /// an attachment out of a decrypted message has no attachment id to
+    /// fetch and these bytes are the only copy.
+    pub files: Vec<Vec<u8>>,
 }
 
 /// What the card says about a message, and how loudly.
@@ -86,10 +91,11 @@ pub fn read(pgp: &Pgp, opening: Opening, raw: &[u8], body: &MessageBody) -> Read
             };
             match pgp.decrypt(ciphertext) {
                 Ok(opened) => {
-                    let inside = opened_body(&opened.part);
+                    let (inside, files) = opened_body(&opened.part);
                     Read {
                         mark: encrypted(opened.signature.as_ref(), inside.attachments.len()),
                         body: Some(inside),
+                        files,
                     }
                 }
                 Err(err) => mark_only(refused(&err)),
@@ -109,6 +115,9 @@ pub fn read(pgp: &Pgp, opening: Opening, raw: &[u8], body: &MessageBody) -> Read
                         text: Some(decode_charset(&opened.text, None)),
                         ..body.clone()
                     }),
+                    // Inline armor wraps text, and the attachments beside
+                    // it are Gmail's own, with ids that still work.
+                    files: Vec::new(),
                 },
                 Err(err) => mark_only(refused(&err)),
             }
@@ -300,12 +309,15 @@ fn unreadable() -> Mark {
 
 /// The files inside an encrypted message, which stay inside it: they never
 /// reach Gmail, so nothing in the window can fetch one.
+/// What the card says about the files inside. They came out of the
+/// encryption and live in this window alone, so saving one writes the copy
+/// that exists rather than fetching anything.
 pub(crate) fn files_line(files: usize) -> Option<String> {
     match files {
         0 => None,
-        1 => Some("It carries a file this window cannot open yet.".into()),
+        1 => Some("It carries a file, kept in this window only.".into()),
         many => Some(format!(
-            "It carries {many} files this window cannot open yet."
+            "It carries {many} files, kept in this window only."
         )),
     }
 }
@@ -334,36 +346,58 @@ fn signer(signature: &Signature) -> String {
 }
 
 /// The message inside the encryption, read as the mail it is.
-pub(crate) fn opened_body(part: &[u8]) -> MessageBody {
+/// What was inside the encryption: the message to draw, and the bytes of
+/// each file it carries, in the same order.
+pub(crate) fn opened_body(part: &[u8]) -> (MessageBody, Vec<Vec<u8>>) {
     let Some(parsed) = MessageParser::default().parse(part) else {
-        return MessageBody {
-            text: Some(String::from_utf8_lossy(part).into_owned()),
-            ..MessageBody::default()
-        };
+        return (
+            MessageBody {
+                text: Some(String::from_utf8_lossy(part).into_owned()),
+                ..MessageBody::default()
+            },
+            Vec::new(),
+        );
     };
-    MessageBody {
-        html: parsed.body_html(0).map(|html| html.into_owned()),
-        text: parsed.body_text(0).map(|text| text.into_owned()),
-        attachments: parsed
-            .attachments()
-            .map(|attachment| mailrs_domain::Attachment {
-                part_id: String::new(),
-                filename: attachment
-                    .attachment_name()
-                    .unwrap_or("attachment")
-                    .to_string(),
-                mime_type: String::new(),
-                size: attachment.len() as i64,
-                attachment_id: None,
-                content_id: None,
+    let mut attachments = Vec::new();
+    let mut files = Vec::new();
+    for (index, found) in parsed.attachments().enumerate() {
+        let mime_type = found
+            .content_type()
+            .map(|content| match content.subtype() {
+                Some(subtype) => format!("{}/{subtype}", content.ctype()),
+                None => content.ctype().to_string(),
             })
-            .collect(),
-        ..MessageBody::default()
+            .unwrap_or_else(|| "application/octet-stream".to_string())
+            .to_ascii_lowercase();
+        attachments.push(mailrs_domain::Attachment {
+            // No part id and no attachment id: Gmail never saw this part,
+            // so the window reads it out of `Read::files` by this index.
+            part_id: index.to_string(),
+            filename: found.attachment_name().unwrap_or("attachment").to_string(),
+            mime_type,
+            size: found.len() as i64,
+            attachment_id: None,
+            content_id: found.content_id().map(str::to_string),
+        });
+        files.push(found.contents().to_vec());
     }
+    (
+        MessageBody {
+            html: parsed.body_html(0).map(|html| html.into_owned()),
+            text: parsed.body_text(0).map(|text| text.into_owned()),
+            attachments,
+            ..MessageBody::default()
+        },
+        files,
+    )
 }
 
 pub(crate) fn mark_only(mark: Mark) -> Read {
-    Read { mark, body: None }
+    Read {
+        mark,
+        body: None,
+        files: Vec::new(),
+    }
 }
 
 /// "ann@example.com", "ann@example.com or bo@example.com", and with more
@@ -663,7 +697,7 @@ mod tests {
         assert!(
             one.detail
                 .as_deref()
-                .is_some_and(|detail| detail.ends_with("a file this window cannot open yet.")),
+                .is_some_and(|detail| detail.ends_with("a file, kept in this window only.")),
             "{one:?}"
         );
         let three = encrypted(None, 3);
@@ -674,6 +708,35 @@ mod tests {
                 .is_some_and(|detail| detail.contains("3 files")),
             "{three:?}"
         );
+        assert_eq!(
+            encrypted(None, 0).detail.as_deref().map(str::to_string),
+            Some("Nobody signed it, so it says nothing about who sent it.".to_string())
+        );
+    }
+
+    #[test]
+    fn a_file_inside_the_encryption_comes_out_with_its_bytes_and_its_type() {
+        let part = b"Content-Type: multipart/mixed; boundary=\"b\"\r\n\r\n\
+            --b\r\nContent-Type: text/plain\r\n\r\nHere it is.\r\n\
+            --b\r\nContent-Type: image/png; name=\"cat.png\"\r\n\
+            Content-Disposition: attachment; filename=\"cat.png\"\r\n\
+            Content-Transfer-Encoding: base64\r\n\r\niVBORwECAwQ=\r\n--b--\r\n";
+        let (body, files) = opened_body(part);
+        assert_eq!(body.attachments.len(), 1);
+        let found = &body.attachments[0];
+        assert_eq!(found.filename, "cat.png");
+        assert_eq!(
+            found.mime_type, "image/png",
+            "the row needs it for a picture"
+        );
+        assert!(
+            found.attachment_id.is_none(),
+            "Gmail never saw this part, so there is nothing to fetch"
+        );
+        // The bytes line up with the attachment list, which is how the
+        // window finds them when somebody asks to save or open one.
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0], vec![0x89, 0x50, 0x4e, 0x47, 1, 2, 3, 4]);
     }
 
     #[test]

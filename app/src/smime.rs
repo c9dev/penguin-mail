@@ -85,10 +85,14 @@ pub fn read(smime: &Smime, opening: Opening, raw: &[u8]) -> Read {
                 return pgp::mark_only(unreadable());
             };
             match smime.open_signed(blob) {
-                Ok(opened) => Read {
-                    mark: signed(&opened.signature),
-                    body: Some(pgp::opened_body(&opened.part)),
-                },
+                Ok(opened) => {
+                    let (inside, files) = pgp::opened_body(&opened.part);
+                    Read {
+                        mark: signed(&opened.signature),
+                        body: Some(inside),
+                        files,
+                    }
+                }
                 Err(err) => pgp::mark_only(refused(&err)),
             }
         }
@@ -236,10 +240,11 @@ fn opened(smime: &Smime, part: &[u8]) -> Read {
         Some((part, Err(_))) => (part, None),
         None => (part.to_vec(), None),
     };
-    let body = pgp::opened_body(&part);
+    let (body, files) = pgp::opened_body(&part);
     Read {
         mark: enveloped(signature.as_ref(), body.attachments.len()),
         body: Some(body),
+        files,
     }
 }
 

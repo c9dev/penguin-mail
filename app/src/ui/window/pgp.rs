@@ -106,6 +106,9 @@ impl MainWindow {
             // it goes no further than this window: the store keeps the
             // message as Gmail holds it, ciphertext and all.
             if let Some(body) = read.body {
+                if !read.files.is_empty() {
+                    open.opened_files.insert(message_id.clone(), read.files);
+                }
                 open.bodies.insert(message_id, Ok(body));
             }
         });
