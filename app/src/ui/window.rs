@@ -899,6 +899,7 @@ impl MainWindow {
                 me,
                 inline_images: HashMap::new(),
                 thumbnails: HashMap::new(),
+                opened_files: HashMap::new(),
                 photos,
                 unsubscribed: false,
                 pgp: None,
@@ -2098,6 +2099,11 @@ impl MainWindow {
         let Some(Some((account_id, attachment))) = found else {
             return;
         };
+        // A file out of an encrypted message never reached Gmail, so its
+        // bytes are here or nowhere.
+        if self.save_opened_file_from(view, &message_id, index, &attachment) {
+            return;
+        }
         let (Some(sync), Some(attachment_id)) = (
             self.core.account(account_id),
             attachment.attachment_id.clone(),
