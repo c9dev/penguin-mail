@@ -170,6 +170,7 @@ impl MainWindow {
             .as_ref()
             .map(|who| who.display().to_string());
         let before = view.with_invitation(|showing| showing.answer).flatten();
+        let uid = invitation.uid.clone();
         let invitations = self.core.invitations();
         let (this, view) = (Rc::clone(self), Rc::clone(view));
         glib::spawn_future_local(async move {
@@ -185,15 +186,16 @@ impl MainWindow {
                 Ok(sent) => {
                     match sent.told {
                         Told::Nobody => {
-                            view.card.set_answer(before);
+                            view.card.set_answer(&uid, before);
                             this.toast(&gettext(
                                 "This invitation names no organizer, so there is nobody \
                                  to reply to",
                             ));
                         }
                         told => {
-                            view.card.set_answer(Some(answer));
-                            view.card.set_went(Some(went(told, organizer.as_deref())));
+                            view.card.set_answer(&uid, Some(answer));
+                            view.card
+                                .set_went(&uid, Some(went(told, organizer.as_deref())));
                             this.toast(&replied(answer, told));
                         }
                     }
@@ -202,7 +204,7 @@ impl MainWindow {
                     }
                 }
                 Err(err) => {
-                    view.card.set_answer(before);
+                    view.card.set_answer(&uid, before);
                     this.toast(&fill(
                         &gettext("Could not send your reply: {reason}"),
                         &[("reason", &err.to_string())],
@@ -223,6 +225,7 @@ impl MainWindow {
             return;
         };
         let scope = view.card.scope();
+        let uid = invitation.uid.clone();
         let organizer = invitation
             .organizer
             .as_ref()
@@ -265,13 +268,16 @@ impl MainWindow {
                     "This invitation names no organizer, so there is nobody to ask",
                 )),
                 Ok(_) => {
-                    view.card.set_went(Some(match &organizer {
-                        Some(organizer) => fill(
-                            &gettext("Proposed a new time to {organizer}"),
-                            &[("organizer", organizer)],
-                        ),
-                        None => gettext("Proposed a new time"),
-                    }));
+                    view.card.set_went(
+                        &uid,
+                        Some(match &organizer {
+                            Some(organizer) => fill(
+                                &gettext("Proposed a new time to {organizer}"),
+                                &[("organizer", organizer)],
+                            ),
+                            None => gettext("Proposed a new time"),
+                        }),
+                    );
                     this.toast(&gettext("New time proposed. The organizer decides."));
                 }
                 Err(err) => this.toast(&fill(
