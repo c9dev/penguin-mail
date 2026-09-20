@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 
 use mailrs_domain::ChangeEvent;
 use mailrs_gmail::GmailError;
-use mailrs_store::messages;
+use mailrs_store::{messages, reminders, threads};
 
 use super::AccountSync;
 use crate::{GmailApi, SyncError, TriageAction, backoff_delay};
@@ -34,6 +34,64 @@ impl<G: GmailApi> AccountSync<G> {
         action: &TriageAction,
     ) -> Result<(), SyncError> {
         self.triage(thread_id, Some(message_id), action).await
+    }
+
+    /// Erases a thread, or one message of it, from Gmail and then from the
+    /// store. Gmail goes first because nothing can undo this: when it
+    /// refuses, such as when the account has not granted the delete
+    /// permission, the store keeps every row it had.
+    pub async fn erase(&self, thread_id: &str, only: Option<&str>) -> Result<(), SyncError> {
+        let account_id = self.account_id;
+        let ids = self.message_ids(thread_id, only).await?;
+        if ids.is_empty() {
+            // The Trash list comes from a Gmail search, so the store may
+            // not hold the thread yet.
+            self.ensure_thread(thread_id).await?;
+        }
+        let ids = match ids.is_empty() {
+            true => self.message_ids(thread_id, only).await?,
+            false => ids,
+        };
+        if ids.is_empty() {
+            return Err(SyncError::Gmail(GmailError::NotFound));
+        }
+        self.api.delete_messages(&ids).await?;
+        let thread = thread_id.to_string();
+        self.db
+            .write(move |c| {
+                for id in &ids {
+                    messages::delete_message(c, account_id, id)?;
+                }
+                messages::refresh_thread(c, account_id, &thread)?;
+                // Nothing is left to remind anybody about.
+                if threads::get_thread(c, account_id, &thread)?.is_none() {
+                    reminders::remove(c, account_id, &thread)?;
+                }
+                Ok(())
+            })
+            .await?;
+        self.emit_threads(BTreeSet::from([thread_id.to_string()]));
+        Ok(())
+    }
+
+    /// The ids of the messages a target names, in the store.
+    async fn message_ids(
+        &self,
+        thread_id: &str,
+        only: Option<&str>,
+    ) -> Result<Vec<String>, SyncError> {
+        let (account_id, thread) = (self.account_id, thread_id.to_string());
+        let only = only.map(str::to_string);
+        Ok(self
+            .db
+            .read(move |c| {
+                Ok(messages::thread_messages(c, account_id, &thread)?
+                    .into_iter()
+                    .filter(|m| only.as_ref().is_none_or(|id| &m.id == id))
+                    .map(|m| m.id)
+                    .collect())
+            })
+            .await?)
     }
 
     async fn triage(

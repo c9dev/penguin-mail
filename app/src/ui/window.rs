@@ -14,8 +14,9 @@ use mailrs_domain::{
     Account, AccountId, AccountState, ChangeEvent, Folder, Label, MessageBody, MessageMeta, Target,
     ThreadSummary, system_label,
 };
+use mailrs_gmail::DELETE_SCOPE;
 use mailrs_store::{accounts, labels, messages};
-use mailrs_sync::{History, Listing, MailAction, Outcome, Scope, TriageAction, View};
+use mailrs_sync::{History, Listing, MailAction, Outcome, Permitted, Scope, TriageAction, View};
 
 use super::conversation::{Action, ConversationView, OpenThread};
 use super::sidebar::Sidebar;
@@ -79,6 +80,42 @@ pub struct MainWindow {
     follow_up: followup::FollowUpBanner,
 }
 
+/// What one row holds, for a line the user reads.
+fn row_noun(count: usize, threaded: bool) -> &'static str {
+    match (threaded, count) {
+        (true, 1) => "conversation",
+        (true, _) => "conversations",
+        (false, 1) => "message",
+        (false, _) => "messages",
+    }
+}
+
+/// The heading on the Delete Forever dialog, which names how much goes.
+fn delete_forever_heading(count: usize, threaded: bool) -> String {
+    let noun = row_noun(count, threaded);
+    match count {
+        1 => format!("Delete This {} Forever?", capitalized(noun)),
+        _ => format!("Delete {count} {} Forever?", capitalized(noun)),
+    }
+}
+
+/// The toast after erasing.
+fn deleted_forever_message(count: usize, threaded: bool) -> String {
+    match count {
+        1 => "Deleted forever".into(),
+        _ => format!("Deleted {count} {} forever", row_noun(count, threaded)),
+    }
+}
+
+/// `word` with its first letter in upper case, for a dialog heading.
+fn capitalized(word: &str) -> String {
+    let mut letters = word.chars();
+    match letters.next() {
+        Some(first) => first.to_uppercase().chain(letters).collect(),
+        None => String::new(),
+    }
+}
+
 /// The toast after an action, or `None` when the change speaks for itself.
 fn done_message(action: &MailAction, count: usize, threaded: bool) -> Option<String> {
     let action = match action {
@@ -89,12 +126,7 @@ fn done_message(action: &MailAction, count: usize, threaded: bool) -> Option<Str
         MailAction::Label { .. } => return Some("Labels changed".into()),
         MailAction::Remind { .. } | MailAction::CancelReminder => return None,
     };
-    let noun = match (threaded, count) {
-        (true, 1) => "conversation",
-        (true, _) => "conversations",
-        (false, 1) => "message",
-        (false, _) => "messages",
-    };
+    let noun = row_noun(count, threaded);
     let many = count > 1;
     Some(match action {
         TriageAction::Archive if many => format!("Archived {count} {noun}"),
@@ -1120,27 +1152,14 @@ impl MainWindow {
         self.perform(targets, MailAction::Triage(action), History::Record, None);
     }
 
-    /// In the Trash, the trash button puts mail back in the inbox. Gmail
-    /// empties the Trash itself after 30 days.
-    /// The Delete key. Gmail's permission for Penguin Mail covers moving mail to
-    /// the Trash, not erasing it, so inside the Trash it only explains that.
+    /// The Delete key. Outside the Trash it moves mail there. Inside it
+    /// offers Delete Forever, which erases the mail from Gmail.
     fn delete_key(self: &Rc<Self>) {
-        if *self.mailbox.borrow() == Mailbox::Scheduled {
-            return self.cancel_scheduled(self.targets());
-        }
-        if *self.mailbox.borrow() == Mailbox::Reminders {
-            return self.cancel_reminders(self.targets());
-        }
-        if *self.mailbox.borrow() == Mailbox::FollowUp {
-            return self.dismiss_follow_ups(self.targets());
-        }
-        if self.mailbox.borrow().folder() == Some(Folder::Trash) {
-            self.toast("Gmail deletes mail in the Trash for good after 30 days");
-        } else {
-            self.triage(TriageAction::Trash);
-        }
+        self.trash()
     }
 
+    /// The toolbar's trash button, and the Delete key with it. Mailboxes
+    /// that hold something other than mail cancel it instead.
     fn trash(self: &Rc<Self>) {
         if *self.mailbox.borrow() == Mailbox::Scheduled {
             return self.cancel_scheduled(self.targets());
@@ -1152,10 +1171,97 @@ impl MainWindow {
             return self.dismiss_follow_ups(self.targets());
         }
         if self.mailbox.borrow().folder() == Some(Folder::Trash) {
-            self.triage(TriageAction::Untrash);
+            self.confirm_delete_forever();
         } else {
             self.triage(TriageAction::Trash);
         }
+    }
+
+    /// Asks before erasing, because Gmail cannot bring the mail back and no
+    /// Undo follows.
+    fn confirm_delete_forever(self: &Rc<Self>) {
+        let targets = self.targets();
+        if targets.is_empty() {
+            return;
+        }
+        let threaded = self.settings().threading;
+        let dialog = adw::AlertDialog::new(
+            Some(&delete_forever_heading(targets.len(), threaded)),
+            Some(match targets.len() {
+                1 => "Gmail deletes it from every device and cannot bring it back.",
+                _ => "Gmail deletes them from every device and cannot bring them back.",
+            }),
+        );
+        dialog.add_responses(&[("cancel", "Cancel"), ("delete", "Delete Forever")]);
+        dialog.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
+        dialog.set_close_response("cancel");
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            if dialog.choose_future(Some(&this.window)).await == "delete" {
+                this.delete_forever(targets);
+            }
+        });
+    }
+
+    /// Erases the targets. Nothing reverses this, so the toast offers no
+    /// Undo, and a missing permission leaves every row where it is.
+    fn delete_forever(self: &Rc<Self>, targets: Vec<Target>) {
+        let account_id = targets[0].account_id;
+        let next = self.list.neighbour_of_selected();
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let erased = this.core.erase(targets).await;
+            let outcome = match erased {
+                Ok(Permitted::Done(outcome)) => outcome,
+                Ok(Permitted::NeedsPermission) => return this.ask_for_delete_access(account_id),
+                Err(err) => return this.toast(&format!("Could not delete the mail: {err}")),
+            };
+            if !outcome.done.is_empty() {
+                this.conversation.clear();
+                this.list.unselect();
+                this.list
+                    .retain(|row| !outcome.done.contains(&Target::from_row(row)));
+                match next {
+                    Some(next) => {
+                        this.list
+                            .select(next.account_id, &next.id, next.message_id.as_deref())
+                    }
+                    None => this.nav.set_show_content(false),
+                }
+                this.queue_refresh();
+            }
+            if let Some(error) = outcome.first_error() {
+                return this.toast(error);
+            }
+            this.toast(&deleted_forever_message(
+                outcome.done.len(),
+                this.settings().threading,
+            ));
+        });
+    }
+
+    /// Explains that erasing mail needs one more Gmail permission, and
+    /// offers to ask Google for it.
+    fn ask_for_delete_access(self: &Rc<Self>, account_id: AccountId) {
+        let Some(account) = self.account(account_id) else {
+            return;
+        };
+        let dialog = adw::AlertDialog::new(
+            Some("Allow Penguin Mail to Delete Mail"),
+            Some(&format!(
+                "Deleting mail for good needs one more permission for {}. Google asks you to confirm in your browser.",
+                account.email
+            )),
+        );
+        dialog.add_responses(&[("cancel", "Not Now"), ("grant", "Grant Access")]);
+        dialog.set_response_appearance("grant", adw::ResponseAppearance::Suggested);
+        dialog.set_close_response("cancel");
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            if dialog.choose_future(Some(&this.window)).await == "grant" {
+                this.authorize_with(Some(account.email), &[DELETE_SCOPE]);
+            }
+        });
     }
 
     /// Whether `action` takes the targets out of the list on screen.
@@ -1648,6 +1754,12 @@ impl MainWindow {
     }
 
     fn authorize(self: &Rc<Self>, expected: Option<String>) {
+        self.authorize_with(expected, &[]);
+    }
+
+    /// Runs the consent flow, asking Google for `extra` permissions on top
+    /// of the ones sign-in always requests.
+    fn authorize_with(self: &Rc<Self>, expected: Option<String>, extra: &'static [&'static str]) {
         if self.authorizing.replace(true) {
             return;
         }
@@ -1664,7 +1776,7 @@ impl MainWindow {
         self.toast("Continue in your browser");
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            match this.core.authorize_account(urls, expected).await {
+            match this.core.authorize_account(urls, expected, extra).await {
                 Ok(account) => {
                     this.toast(&format!("Added {}. Downloading mail…", account.email));
                     this.refresh_accounts();

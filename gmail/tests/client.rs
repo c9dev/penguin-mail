@@ -262,7 +262,7 @@ async fn authorize_runs_the_consent_flow() {
         .await;
 
     let api = format!("{}{API}", server.uri());
-    let authorized = authorize(&oauth(&server), &api, |consent_url| {
+    let authorized = authorize(&oauth(&server), &api, &[], |consent_url| {
         let url = url::Url::parse(consent_url).unwrap();
         let q: HashMap<String, String> = url.query_pairs().into_owned().collect();
         let redirect = q["redirect_uri"].trim_start_matches("http://").to_string();

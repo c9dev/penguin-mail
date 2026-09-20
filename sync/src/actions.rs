@@ -7,10 +7,11 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
 use mailrs_domain::{AccountId, EpochMillis, FlagColor, Folder, Target, system_label};
+use mailrs_gmail::GmailError;
 use mailrs_store::reminders::{self, Reminder};
 use mailrs_store::{Db, flags, labels, messages, threads};
 
-use crate::{AccountSync, GmailApi, SyncEngine, SyncError, TriageAction};
+use crate::{AccountSync, GmailApi, Permitted, SyncEngine, SyncError, TriageAction};
 
 /// Finds the sync handle of a connected account.
 pub trait Accounts: Send + Sync + 'static {
@@ -110,6 +111,17 @@ struct Undo {
     reminders: Vec<(Target, Option<Reminder>)>,
 }
 
+impl Undo {
+    /// Whether reversing this would touch `target`'s thread. Flag colours
+    /// name a message without its thread, and restoring one on a message
+    /// the store has dropped does nothing, so they do not count.
+    fn names(&self, target: &Target) -> bool {
+        let same =
+            |t: &Target| t.account_id == target.account_id && t.thread_id == target.thread_id;
+        self.relabel.iter().any(|(t, _)| same(t)) || self.reminders.iter().any(|(t, _)| same(t))
+    }
+}
+
 pub struct MailActions<A: Accounts> {
     accounts: Arc<A>,
     db: Db,
@@ -144,6 +156,43 @@ impl<A: Accounts> MailActions<A> {
             *self.lock() = Some(undo);
         }
         outcome
+    }
+
+    /// Erases the targets from Gmail and from the store. Gmail cannot bring
+    /// erased mail back, so no undo records this and the caller asks the
+    /// user first. `Permitted::NeedsPermission` means the account has not
+    /// granted the delete permission and nothing changed.
+    pub async fn erase(&self, targets: &[Target]) -> Result<Permitted<Outcome>, SyncError> {
+        let mut outcome = Outcome::default();
+        for target in targets {
+            let erased = self
+                .sync(target.account_id)?
+                .erase(&target.thread_id, target.message_id.as_deref())
+                .await;
+            match erased {
+                Ok(()) => outcome.done.push(target.clone()),
+                // Gmail refuses before it erases anything, so a refusal on
+                // the first target leaves every target as it was.
+                Err(SyncError::Gmail(GmailError::MissingScope)) if outcome.done.is_empty() => {
+                    return Ok(Permitted::NeedsPermission);
+                }
+                Err(err) => outcome.failed.push(Failure {
+                    target: target.clone(),
+                    error: format!("Delete Forever failed: {err}"),
+                }),
+            }
+        }
+        // Undo cannot bring erased mail back, so an action recorded over one
+        // of these threads stops being the one Ctrl+Z reverses.
+        let mut last = self.lock();
+        if last
+            .as_ref()
+            .is_some_and(|undo| outcome.done.iter().any(|target| undo.names(target)))
+        {
+            *last = None;
+        }
+        drop(last);
+        Ok(Permitted::Done(outcome))
     }
 
     /// Reverses the last recorded action, once. `None` when there is none.

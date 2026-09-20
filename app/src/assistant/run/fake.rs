@@ -205,6 +205,11 @@ impl GmailApi for Gmail {
         Ok(())
     }
 
+    /// The assistant has no way to erase mail, so a call here is a bug.
+    async fn delete_messages(&self, ids: &[String]) -> Result<(), GmailError> {
+        panic!("the assistant asked Gmail to erase {ids:?}");
+    }
+
     async fn send(&self, _raw: &[u8], _thread_id: Option<&str>) -> Result<String, GmailError> {
         Ok(self.mint("sent"))
     }

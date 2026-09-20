@@ -56,6 +56,14 @@ pub trait GmailApi: Send + Sync + 'static {
 
     fn untrash(&self, id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
 
+    /// Erases messages for good. Gmail cannot bring them back, and it
+    /// answers `GmailError::MissingScope` until the account grants the
+    /// delete permission.
+    fn delete_messages(
+        &self,
+        ids: &[String],
+    ) -> impl Future<Output = Result<(), GmailError>> + Send;
+
     /// Sends raw RFC 822 bytes. Returns the new message id.
     fn send(
         &self,
@@ -197,6 +205,9 @@ impl GmailApi for AnyGmail {
     }
     async fn untrash(&self, id: &str) -> Result<(), GmailError> {
         forward!(self, untrash(id))
+    }
+    async fn delete_messages(&self, ids: &[String]) -> Result<(), GmailError> {
+        forward!(self, delete_messages(ids))
     }
     async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, GmailError> {
         forward!(self, send(raw, thread_id))
@@ -351,6 +362,10 @@ impl GmailApi for AccountClient {
 
     async fn untrash(&self, id: &str) -> Result<(), GmailError> {
         self.client.untrash(id).await
+    }
+
+    async fn delete_messages(&self, ids: &[String]) -> Result<(), GmailError> {
+        self.client.batch_delete(ids).await
     }
 
     async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, GmailError> {

@@ -16,7 +16,7 @@ pub use error::GmailError;
 pub use limiter::QuotaLimiter;
 pub use model::{Draft, LabelColor, MessagePage, MessageRef, Profile, RemoteLabel, SendAs};
 pub use oauth::{
-    AccessToken, GMAIL_SCOPE, LoopbackListener, OAuthClient, Pkce, SETTINGS_SCOPE, Tokens,
-    parse_redirect, random_token,
+    AccessToken, DELETE_SCOPE, GMAIL_SCOPE, LoopbackListener, OAuthClient, Pkce, SETTINGS_SCOPE,
+    Tokens, parse_redirect, random_token,
 };
 pub use token_store::{KeyringTokenStore, MemoryTokenStore, TokenStore};

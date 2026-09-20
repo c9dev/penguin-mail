@@ -17,8 +17,8 @@ use mailrs_store::{Db, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::{
     AccountSettings, AccountSync, Accounts, AnyGmail, Changed, Counts, Failure, History, Listing,
-    MailAction, MailActions, Mailbox, Mailboxes, Outcome, Scope, SyncEngine, View, connect_account,
-    now_millis,
+    MailAction, MailActions, Mailbox, Mailboxes, Outcome, Permitted, Scope, SyncEngine, View,
+    connect_account, now_millis,
 };
 
 use crate::assistant::run::{Background, Modules};
@@ -350,6 +350,13 @@ impl Core {
         })
     }
 
+    /// Erases the targets for good. See `MailActions::erase`.
+    pub async fn erase(&self, targets: Vec<Target>) -> Result<Permitted<Outcome>> {
+        let actions = Arc::clone(&self.actions);
+        self.call(async move { actions.erase(&targets).await })
+            .await
+    }
+
     /// One page of a mailbox. See `Mailboxes::list`.
     pub async fn list(
         &self,
@@ -420,11 +427,14 @@ impl Core {
 
     /// Runs the browser consent flow, stores the refresh token, and starts
     /// syncing the account. `urls` receives the consent URL to open. When
-    /// `expected` is set, the user must pick that account.
+    /// `expected` is set, the user must pick that account. `extra` names
+    /// permissions to ask for beyond the ones sign-in always requests, such
+    /// as `DELETE_SCOPE`; an account that already granted them keeps them.
     pub async fn authorize_account(
         &self,
         urls: async_channel::Sender<String>,
         expected: Option<String>,
+        extra: &[&'static str],
     ) -> Result<Account> {
         if self.demo {
             bail!("Demo mode cannot add real accounts.");
@@ -435,8 +445,9 @@ impl Core {
             .current()
             .ok_or_else(|| anyhow!("sync is not running"))?;
         let (db, tokens) = (self.db.clone(), Arc::clone(&self.tokens));
+        let extra = extra.to_vec();
         self.call(async move {
-            let flow = authorize(&oauth, GMAIL_API_BASE, move |url| {
+            let flow = authorize(&oauth, GMAIL_API_BASE, &extra, move |url: &str| {
                 let _ = urls.try_send(url.to_string());
             });
             let authorized = tokio::time::timeout(std::time::Duration::from_secs(300), flow)

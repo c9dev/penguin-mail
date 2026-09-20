@@ -363,6 +363,15 @@ impl GmailApi for FakeGmail {
         Ok(())
     }
 
+    async fn delete_messages(&self, ids: &[String]) -> Result<(), GmailError> {
+        self.check_failure()?;
+        self.with(|s| s.remote_writes.push(format!("delete {}", ids.join(","))));
+        for id in ids {
+            self.remote_delete(id);
+        }
+        Ok(())
+    }
+
     async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, GmailError> {
         self.check_failure()?;
         Ok(self.with(|s| {

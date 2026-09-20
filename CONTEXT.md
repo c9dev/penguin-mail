@@ -42,6 +42,8 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Settings permission**: the Gmail access an account grants once so Penguin Mail may read and change its account settings. Without it every `AccountSettings` call answers `Permitted::NeedsPermission`, and the caller offers Grant Access rather than showing an error. _Avoid_: scope, consent.
 
+**Delete permission**: the Gmail access an account grants so Penguin Mail may erase mail. Sign-in never asks for it; the window asks the first time somebody chooses Delete Forever in the Trash, and until then `MailActions::erase` answers `Permitted::NeedsPermission` and changes nothing. The assistant has no tool that erases mail. _Avoid_: scope, full access.
+
 **Tool call**: one thing the assistant asks the app to do, by name and with JSON: list a mailbox, organize mail, change a setting. `mailrs::assistant::tools` declares what the model may call and `mailrs::assistant::run` runs it against the modules. The tools change mail through the same `MailActions` and `AccountSettings` the window uses, so the assistant cannot do anything the user could not. _Avoid_: function call, command, action.
 
 **Desk**: the port the tools read the window through: the preferences, the accounts and their labels, the view, and what is on screen, meaning the mailbox, the open conversation, and the selected rows. `mailrs::assistant::run::Desk`. Every method gives back plain data, so a test fills one in without a widget. _Avoid_: context, state, session.

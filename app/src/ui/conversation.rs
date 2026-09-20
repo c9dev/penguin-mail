@@ -513,10 +513,10 @@ impl ConversationView {
     }
 
     /// Adjusts the trash and junk buttons to the folder on screen: in the
-    /// Trash, trash puts mail back; in Junk, junk marks it as not junk.
+    /// Trash, trash erases the mail; in Junk, junk marks it as not junk.
     pub fn set_folder(&self, folder: Option<Folder>) {
         let (trash_icon, trash_tip) = match folder {
-            Some(Folder::Trash) => ("penguin-mail-inbox-symbolic", "Move to Inbox"),
+            Some(Folder::Trash) => ("edit-delete-symbolic", "Delete Forever (Delete)"),
             _ => ("user-trash-symbolic", "Move to Trash (Delete)"),
         };
         self.buttons.trash.set_icon_name(trash_icon);
@@ -528,7 +528,7 @@ impl ConversationView {
         self.buttons.junk.set_icon_name(junk_icon);
         self.buttons.junk.set_tooltip_text(Some(junk_tip));
         self.many_trash.set_label(match folder {
-            Some(Folder::Trash) => "Move to Inbox",
+            Some(Folder::Trash) => "Delete Forever",
             _ => "Move to Trash",
         });
         self.many_junk.set_label(match folder {

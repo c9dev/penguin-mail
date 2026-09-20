@@ -34,6 +34,7 @@ mod cost {
     pub const HISTORY: u32 = 2;
     pub const MODIFY: u32 = 5;
     pub const TRASH: u32 = 5;
+    pub const DELETE: u32 = 10;
     pub const SEND: u32 = 100;
     pub const DRAFT_CREATE: u32 = 10;
     pub const DRAFT_UPDATE: u32 = 15;
@@ -192,6 +193,24 @@ impl GmailClient {
             })
             .await?;
         Ok(())
+    }
+
+    /// Erases messages. Gmail cannot bring them back, and it refuses the
+    /// call with a 403 until the account grants [`DELETE_SCOPE`], which
+    /// arrives here as [`GmailError::MissingScope`]. Gmail takes up to a
+    /// thousand ids per call.
+    ///
+    /// [`DELETE_SCOPE`]: crate::DELETE_SCOPE
+    pub async fn batch_delete(&self, ids: &[String]) -> Result<(), GmailError> {
+        if ids.is_empty() {
+            return Ok(());
+        }
+        self.call_empty(cost::DELETE, || {
+            self.http()
+                .post(self.url("messages/batchDelete"))
+                .json(&json!({"ids": ids}))
+        })
+        .await
     }
 
     /// Sends a complete RFC 822 message. `thread_id` files a reply in its thread.
@@ -583,17 +602,19 @@ pub struct Authorized {
 }
 
 /// Runs the consent flow for one account. `open_browser` receives Google's
-/// consent URL; the flow finishes when the browser redirects back.
+/// consent URL; the flow finishes when the browser redirects back. `extra`
+/// names permissions to ask for on top of the ones sign-in always requests.
 pub async fn authorize(
     oauth: &OAuthClient,
     api_base: &str,
+    extra: &[&str],
     open_browser: impl FnOnce(&str),
 ) -> Result<Authorized, GmailError> {
     let listener = LoopbackListener::bind().await?;
     let redirect_uri = listener.redirect_uri.clone();
     let pkce = Pkce::generate();
     let state = random_token(16);
-    open_browser(&oauth.authorize_url(&redirect_uri, &pkce, &state)?);
+    open_browser(&oauth.authorize_url(&redirect_uri, &pkce, &state, extra)?);
     let code = listener.wait_for_code(&state).await?;
     let tokens = oauth.exchange_code(&code, &redirect_uri, &pkce).await?;
     let client = GmailClient::new(oauth.clone(), tokens.refresh_token.clone())

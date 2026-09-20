@@ -18,6 +18,11 @@ use crate::GmailError;
 pub const GMAIL_SCOPE: &str = "https://www.googleapis.com/auth/gmail.modify";
 /// Read and change the automatic reply and signatures.
 pub const SETTINGS_SCOPE: &str = "https://www.googleapis.com/auth/gmail.settings.basic";
+/// Erase mail so that Gmail cannot bring it back. It covers the whole
+/// mailbox, which is far more than the app needs for anything else, so
+/// sign-in leaves it out and the window asks for it the first time somebody
+/// deletes mail from the Trash.
+pub const DELETE_SCOPE: &str = "https://mail.google.com/";
 pub const GOOGLE_AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
 pub const GOOGLE_TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
 
@@ -122,20 +127,31 @@ impl OAuthClient {
         &self.http
     }
 
+    /// Google's consent URL. `extra` asks for permissions beyond the ones
+    /// every account grants at sign-in, such as [`DELETE_SCOPE`]. Google
+    /// keeps the ones the account granted earlier, so an extra permission
+    /// costs one more trip to the browser and nothing else.
     pub fn authorize_url(
         &self,
         redirect_uri: &str,
         pkce: &Pkce,
         state: &str,
+        extra: &[&str],
     ) -> Result<String, GmailError> {
         let mut url = Url::parse(&self.auth_url).map_err(|e| {
             GmailError::OAuth(format!("bad authorization URL {}: {e}", self.auth_url))
         })?;
+        let mut scopes = vec![GMAIL_SCOPE, SETTINGS_SCOPE];
+        for scope in extra {
+            if !scopes.contains(scope) {
+                scopes.push(scope);
+            }
+        }
         url.query_pairs_mut()
             .append_pair("client_id", &self.client_id)
             .append_pair("redirect_uri", redirect_uri)
             .append_pair("response_type", "code")
-            .append_pair("scope", &format!("{GMAIL_SCOPE} {SETTINGS_SCOPE}"))
+            .append_pair("scope", &scopes.join(" "))
             .append_pair("include_granted_scopes", "true")
             .append_pair("code_challenge", &pkce.challenge)
             .append_pair("code_challenge_method", "S256")

@@ -119,7 +119,7 @@ fn token_store() -> Arc<dyn TokenStore> {
 
 async fn add_account(db: &Db, config: &Config) -> Result<()> {
     let oauth = oauth(config);
-    let flow = authorize(&oauth, GMAIL_API_BASE, |url| {
+    let flow = authorize(&oauth, GMAIL_API_BASE, &[], |url| {
         println!(
             "Opening your browser for Google's consent screen. If it does not open, visit:\n\n{url}\n"
         );
