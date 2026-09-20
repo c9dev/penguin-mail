@@ -277,6 +277,12 @@ impl Sidebar {
                 smart_menu(&row, &smart.id);
             }
         }
+        if !accounts.is_empty() {
+            // The rows above list every account at once. This says what
+            // the ones below are, rather than leaving a reader to work it
+            // out from the addresses.
+            self.list.append(&section_title(&gettext("Accounts")));
+        }
         for (account, labels) in accounts {
             let (row, chevron, count) = heading(account, extras.names.get(&account.id));
             self.list.append(&row);
