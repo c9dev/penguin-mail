@@ -269,6 +269,12 @@ runs out, the account re-lists its mail and removes anything deleted in the
 gap. The design and its trade-offs are written up in
 [docs/superpowers/specs/](docs/superpowers/specs/2026-09-17-gmail-client-design.md).
 
+## What is left
+
+[docs/remaining-work.md](docs/remaining-work.md) lists what is known to be
+missing or half done, with where each one lives and what closing it would
+take.
+
 ## Development
 
 ```sh
