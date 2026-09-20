@@ -5,4 +5,8 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+tempfile.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

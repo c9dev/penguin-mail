@@ -6,6 +6,9 @@ pub enum PgpError {
     NoGpg,
     #[error("could not run {program}: {reason}")]
     CannotRun { program: String, reason: String },
+    /// Handing gpg a detached signature means putting it in a file first.
+    #[error("could not write a temporary file: {0}")]
+    Temp(String),
     /// The message was encrypted to keys this computer holds no secret half of.
     #[error("this message is encrypted to a key this computer does not hold")]
     NotForYou,
