@@ -282,16 +282,18 @@ pub struct MessageBody {
     /// one. `mailrs_domain::invitation::read` turns it into an event.
     #[serde(default)]
     pub calendar: Option<String>,
-    /// The OpenPGP wrapper the message arrived in, when it arrived in one.
-    /// The parts themselves are not here: a signature covers the bytes as
-    /// they were sent, and these ones have been through Gmail's decoding,
-    /// so whoever checks a signature fetches the raw message instead.
+    /// The wrapper the message arrived in, when it arrived in one, and
+    /// which standard wrote it. The parts themselves are not here: a
+    /// signature covers the bytes as they were sent, and these ones have
+    /// been through Gmail's decoding, so whoever checks a signature fetches
+    /// the raw message instead.
     #[serde(default)]
     pub protection: Option<Protection>,
 }
 
-/// What RFC 3156 wraps a message in: a signature beside the message, or
-/// the message inside ciphertext.
+/// What a message arrived wrapped in: a signature beside the message, or
+/// the message inside ciphertext, under OpenPGP or under S/MIME. The two
+/// standards are read by different engines, so the wrapper names which.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Protection {
@@ -299,17 +301,42 @@ pub enum Protection {
     Signed,
     /// `multipart/encrypted` with `protocol="application/pgp-encrypted"`.
     Encrypted,
+    /// `multipart/signed` with `protocol="application/pkcs7-signature"`.
+    SmimeSigned,
+    /// `application/pkcs7-mime` with `smime-type=signed-data`: the message
+    /// inside the signature rather than beside it, which is what Outlook
+    /// sends unless somebody told it not to.
+    SmimeOpaque,
+    /// `application/pkcs7-mime` with `smime-type=enveloped-data`.
+    SmimeEnveloped,
 }
 
 impl Protection {
-    pub const ALL: [Protection; 2] = [Protection::Signed, Protection::Encrypted];
+    pub const ALL: [Protection; 5] = [
+        Protection::Signed,
+        Protection::Encrypted,
+        Protection::SmimeSigned,
+        Protection::SmimeOpaque,
+        Protection::SmimeEnveloped,
+    ];
 
     /// The stored form.
     pub fn as_str(self) -> &'static str {
         match self {
             Protection::Signed => "signed",
             Protection::Encrypted => "encrypted",
+            Protection::SmimeSigned => "smime-signed",
+            Protection::SmimeOpaque => "smime-opaque",
+            Protection::SmimeEnveloped => "smime-enveloped",
         }
+    }
+
+    /// Whether S/MIME wrote this wrapper, which says which engine opens it.
+    pub fn is_smime(self) -> bool {
+        matches!(
+            self,
+            Protection::SmimeSigned | Protection::SmimeOpaque | Protection::SmimeEnveloped
+        )
     }
 }
 

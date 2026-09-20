@@ -213,7 +213,7 @@ fn an_encrypted_message_says_which_wrapper_it_arrived_in() {
 }
 
 #[test]
-fn a_signature_that_is_not_openpgp_is_left_alone() {
+fn a_signature_that_is_smime_says_so_rather_than_openpgp() {
     let payload = part(json!({
         "mimeType": "multipart/signed",
         "headers": [{"name": "Content-Type", "value":
@@ -223,6 +223,68 @@ fn a_signature_that_is_not_openpgp_is_left_alone() {
             {"partId": "1", "mimeType": "application/pkcs7-signature", "filename": "smime.p7s",
              "body": {"attachmentId": "att-1", "size": 480}}
         ]
+    }));
+    assert_eq!(
+        extract_body(&payload).protection,
+        Some(Protection::SmimeSigned)
+    );
+}
+
+#[test]
+fn a_message_inside_its_own_signature_says_which_shape_it_is() {
+    let payload = part(json!({
+        "mimeType": "application/pkcs7-mime",
+        "headers": [{"name": "Content-Type", "value":
+            "application/pkcs7-mime; smime-type=signed-data; name=\"smime.p7m\""}],
+        "filename": "smime.p7m",
+        "body": {"attachmentId": "att-1", "size": 4800}
+    }));
+    assert_eq!(
+        extract_body(&payload).protection,
+        Some(Protection::SmimeOpaque)
+    );
+}
+
+#[test]
+fn an_enveloped_message_says_which_wrapper_it_arrived_in() {
+    let payload = part(json!({
+        "mimeType": "application/pkcs7-mime",
+        "headers": [{"name": "Content-Type", "value":
+            "application/pkcs7-mime; smime-type=enveloped-data; name=\"smime.p7m\""}],
+        "filename": "smime.p7m",
+        "body": {"attachmentId": "att-1", "size": 4800}
+    }));
+    assert_eq!(
+        extract_body(&payload).protection,
+        Some(Protection::SmimeEnveloped)
+    );
+}
+
+#[test]
+fn the_older_names_for_the_smime_parts_count_too() {
+    let payload = part(json!({
+        "mimeType": "application/x-pkcs7-mime",
+        "headers": [{"name": "Content-Type", "value":
+            "application/x-pkcs7-mime; smime-type=enveloped-data"}],
+        "filename": "smime.p7m",
+        "body": {"attachmentId": "att-1", "size": 4800}
+    }));
+    assert_eq!(
+        extract_body(&payload).protection,
+        Some(Protection::SmimeEnveloped)
+    );
+}
+
+#[test]
+fn a_pkcs7_part_that_says_nothing_about_its_kind_is_left_alone() {
+    // Certificates travel this way too, and a blob that names neither a
+    // signature nor an envelope is nothing to open.
+    let payload = part(json!({
+        "mimeType": "application/pkcs7-mime",
+        "headers": [{"name": "Content-Type", "value":
+            "application/pkcs7-mime; smime-type=certs-only"}],
+        "filename": "smime.p7c",
+        "body": {"attachmentId": "att-1", "size": 480}
     }));
     assert_eq!(extract_body(&payload).protection, None);
 }
@@ -239,6 +301,20 @@ fn a_sender_who_left_the_protocol_out_is_judged_by_its_parts() {
         ]
     }));
     assert_eq!(extract_body(&payload).protection, Some(Protection::Signed));
+
+    let smime = part(json!({
+        "mimeType": "multipart/signed",
+        "headers": [{"name": "Content-Type", "value": "multipart/signed; boundary=b"}],
+        "parts": [
+            {"partId": "0", "mimeType": "text/plain", "body": {"data": b64(b"Meet at six.")}},
+            {"partId": "1", "mimeType": "application/pkcs7-signature", "filename": "smime.p7s",
+             "body": {"attachmentId": "att-1", "size": 480}}
+        ]
+    }));
+    assert_eq!(
+        extract_body(&smime).protection,
+        Some(Protection::SmimeSigned)
+    );
 }
 
 #[test]

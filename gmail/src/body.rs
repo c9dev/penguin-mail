@@ -140,27 +140,76 @@ fn is_calendar(part: &MessagePart) -> bool {
         || part.filename.to_ascii_lowercase().ends_with(".ics")
 }
 
-/// Which OpenPGP wrapper the message arrived in, read off the top-level
-/// part alone. A signed part further down belongs to a message somebody
-/// forwarded, and whatever it was signed over is not this message.
+/// Which wrapper the message arrived in and which standard wrote it, read
+/// off the top-level part alone. A signed part further down belongs to a
+/// message somebody forwarded, and whatever it was signed over is not this
+/// message.
 fn protection(payload: &MessagePart) -> Option<Protection> {
     let mime = payload.mime_type.to_ascii_lowercase();
-    let (wrapper, protocol) = match mime.split(';').next().unwrap_or_default().trim() {
-        "multipart/signed" => (Protection::Signed, "application/pgp-signature"),
-        "multipart/encrypted" => (Protection::Encrypted, "application/pgp-encrypted"),
-        _ => return None,
-    };
-    // S/MIME uses the same two media types, so the protocol parameter is
-    // what tells the two apart. A sender who left it out is judged by the
-    // part that carries the OpenPGP instead.
-    match find_header(payload, "Content-Type").and_then(|value| param(value, "protocol")) {
-        Some(declared) => declared.eq_ignore_ascii_case(protocol).then_some(wrapper),
+    let content_type = find_header(payload, "Content-Type");
+    match mime.split(';').next().unwrap_or_default().trim() {
+        "multipart/signed" => signed(payload, content_type),
+        "multipart/encrypted" => {
+            wrapped(payload, content_type, Protection::Encrypted, PGP_ENCRYPTED)
+        }
+        // The blob shapes of S/MIME, where the message is inside the CMS
+        // rather than beside it. The `x-` names are the ones mail clients
+        // sent before the media types were registered, and some still do.
+        "application/pkcs7-mime" | "application/x-pkcs7-mime" => {
+            match content_type.and_then(|value| param(value, "smime-type"))? {
+                kind if kind.eq_ignore_ascii_case("signed-data") => Some(Protection::SmimeOpaque),
+                kind if kind.eq_ignore_ascii_case("enveloped-data") => {
+                    Some(Protection::SmimeEnveloped)
+                }
+                // Certificates travel this way too, and nothing here opens
+                // one.
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
+const PGP_SIGNATURE: &str = "application/pgp-signature";
+const PGP_ENCRYPTED: &str = "application/pgp-encrypted";
+const PKCS7_SIGNATURE: &str = "application/pkcs7-signature";
+
+/// Which standard signed a `multipart/signed`. The two use the same media
+/// type, so the protocol parameter is what tells them apart.
+fn signed(payload: &MessagePart, content_type: Option<&str>) -> Option<Protection> {
+    wrapped(payload, content_type, Protection::Signed, PGP_SIGNATURE).or_else(|| {
+        wrapped(
+            payload,
+            content_type,
+            Protection::SmimeSigned,
+            PKCS7_SIGNATURE,
+        )
+    })
+}
+
+/// `wrapper` when the part declares `protocol`, or when a sender who left
+/// the parameter out carries a part of that type instead.
+fn wrapped(
+    payload: &MessagePart,
+    content_type: Option<&str>,
+    wrapper: Protection,
+    protocol: &str,
+) -> Option<Protection> {
+    match content_type.and_then(|value| param(value, "protocol")) {
+        Some(declared) => names(declared, protocol).then_some(wrapper),
         None => payload
             .parts
             .iter()
-            .any(|part| part.mime_type.eq_ignore_ascii_case(protocol))
+            .any(|part| names(&part.mime_type, protocol))
             .then_some(wrapper),
     }
+}
+
+/// Whether a media type is the one wanted, under the registered name or
+/// under the `x-` one that came before it.
+fn names(declared: &str, wanted: &str) -> bool {
+    let plain = |name: &str| name.trim().to_ascii_lowercase().replace("/x-", "/");
+    plain(declared) == plain(wanted)
 }
 
 fn decode_text(part: &MessagePart) -> Option<String> {
