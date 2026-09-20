@@ -25,8 +25,8 @@ pub fn today(now: DateTime<Local>) -> String {
     now.format("%-d %B %Y").to_string()
 }
 
-/// Fills every placeholder in `text`. One nothing stands for stays as it
-/// was written, because a body may hold braces of its own.
+/// Fills every placeholder in `text`. A name that stands for nothing stays
+/// as it was written, because a body may hold braces of its own.
 pub fn expand(text: &str, filling: &Filling) -> String {
     let mut out = String::new();
     let mut rest = text;
@@ -103,12 +103,12 @@ mod tests {
     #[test]
     fn every_placeholder_becomes_what_it_stands_for() {
         let filled = expand(
-            "Hi {{first_name}}, about {{subject}} — {{name}} <{{email}}>, {{date}}.",
+            "Hi {{first_name}}, about {{subject}}. {{name}} <{{email}}>, {{date}}.",
             &filling(Some("Ann Silva"), "ann@example.com"),
         );
         assert_eq!(
             filled,
-            "Hi Ann, about Lunch plans — Ann Silva <ann@example.com>, 9 June 2025."
+            "Hi Ann, about Lunch plans. Ann Silva <ann@example.com>, 9 June 2025."
         );
     }
 
