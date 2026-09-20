@@ -63,6 +63,10 @@ time, and keeps your mail on your own computer.
   one. Gmail runs them, so they work with the computer off.
 - **Print, View Source, and Open in New Window** from the ⋮ menu, Ctrl+P,
   Ctrl+Alt+U, and a double-click or Ctrl+O.
+- **Export.** Save a conversation as an mbox file from the ⋮ menu, or
+  right-click rows in the list to write a whole selection to one file.
+  View Source saves a single message as `.eml`. `penguin-mail-cli export`
+  writes either from a terminal.
 - **Automatic replies.** Turn Gmail's out-of-office reply on from an
   account's ⋮ menu, with a subject, message, and optional dates. Gmail sends
   it, so it works with the computer off.

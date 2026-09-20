@@ -75,6 +75,7 @@ impl ThreadList {
                 .downcast_ref::<gtk::ListItem>()
                 .expect("list items are ListItems");
             let row = ThreadRow::default();
+            context_menu(&row, item, &picked);
             // Dragging a selected row takes the whole selection along.
             let source = gtk::DragSource::new();
             source.set_actions(gdk::DragAction::MOVE);
@@ -579,6 +580,40 @@ impl ThreadList {
     pub fn search_open(&self) -> bool {
         self.search_bar.is_search_mode()
     }
+}
+
+/// Puts a menu under the pointer on a right click or long press of `row`.
+/// A click outside the selection takes the row it landed on first, so the
+/// menu acts on what the pointer is over rather than on whatever was
+/// selected before.
+fn context_menu(row: &ThreadRow, item: &gtk::ListItem, selection: &gtk::MultiSelection) {
+    let menu = gio::Menu::new();
+    menu.append(Some("Export…"), Some("win.export"));
+    let popover = gtk::PopoverMenu::from_model(Some(&menu));
+    popover.set_has_arrow(false);
+    popover.set_halign(gtk::Align::Start);
+    popover.set_parent(row);
+    let show = {
+        let (popover, item, selection) = (popover.clone(), item.clone(), selection.clone());
+        move |x: f64, y: f64| {
+            let position = item.position();
+            if position != gtk::INVALID_LIST_POSITION && !selection.is_selected(position) {
+                selection.select_item(position, true);
+            }
+            popover.set_pointing_to(Some(&gdk::Rectangle::new(x as i32, y as i32, 1, 1)));
+            popover.popup();
+        }
+    };
+    let click = gtk::GestureClick::builder()
+        .button(gdk::BUTTON_SECONDARY)
+        .build();
+    let open = show.clone();
+    click.connect_pressed(move |_, _, x, y| open(x, y));
+    row.add_controller(click);
+    let press = gtk::GestureLongPress::new();
+    press.connect_pressed(move |_, x, y| show(x, y));
+    row.add_controller(press);
+    row.connect_destroy(move |_| popover.unparent());
 }
 
 /// Where a row sorts in the list: newest first, ties broken as the store
