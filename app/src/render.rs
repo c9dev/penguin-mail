@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::fmt::Write;
 
-use mailrs_domain::{Address, MessageBody, MessageMeta};
+use mailrs_domain::{Address, MessageBody, MessageMeta, Provenance};
 
 use crate::format::{color_for, full_date, header_date, human_size, initials};
 use crate::sanitize::sanitize_html;
@@ -190,16 +190,18 @@ fn render_body(html: &mut String, view: &MessageView) {
 /// JavaScript: the page carries none, and a link that opened a panel
 /// would cost a round trip through the app and a redraw.
 fn render_details(html: &mut String, meta: &MessageMeta, me: &[String], view: &MessageView) {
+    let to = escape(&recipients(meta, me));
+    // Who it is from, who it went to, when, and about what: all of that
+    // comes off the metadata every message already has, so the panel opens
+    // on any message. The three lines below it need headers that arrive
+    // with the body, and a message read before this app learned to keep
+    // them has none; those lines are left out rather than the whole panel.
     let provenance = match &view.body {
         BodyState::Loaded(body) => Some(&body.provenance),
         _ => None,
     };
-    let to = escape(&recipients(meta, me));
-    let Some(provenance) = provenance.filter(|p| !p.is_empty()) else {
-        // Nothing to open, so nothing pretends to be openable.
-        let _ = write!(html, "<span class=\"line to\">to {to}</span>");
-        return;
-    };
+    let empty = Provenance::default();
+    let provenance = provenance.unwrap_or(&empty);
     let _ = write!(
         html,
         "<details class=\"line to\"><summary>to {to}</summary><table class=\"details\">"
@@ -888,7 +890,7 @@ mod tests {
     }
 
     #[test]
-    fn a_message_that_says_nothing_about_itself_has_nothing_to_open() {
+    fn the_panel_opens_on_a_message_whose_origins_are_unknown() {
         let m = meta("m1", "Ann", &[]);
         let body = MessageBody {
             text: Some("Hello".into()),
@@ -907,8 +909,13 @@ mod tests {
                 sanitized: None,
             }],
         );
-        assert!(!html.contains("<details"), "no arrow that opens nothing");
-        assert!(html.contains("<span class=\"line to\">to "));
+        // From, to, date and subject come off the metadata, so they are
+        // there whatever the headers did or did not say.
+        assert!(html.contains("<details class=\"line to\">"));
+        assert!(html.contains("<th>subject</th>"));
+        assert!(!html.contains("mailed-by"), "nothing invented");
+        assert!(!html.contains("signed-by"));
+        assert!(!html.contains("encryption"));
     }
 
     #[test]

@@ -2973,7 +2973,13 @@ fn read_cached_body(
 ) -> mailrs_store::Result<Option<MessageBody>> {
     // Readers cannot write, so this leaves the access time alone; the body
     // fetch that follows records the access.
-    mailrs_store::bodies::peek_body(c, account_id, message_id)
+    let body = mailrs_store::bodies::peek_body(c, account_id, message_id)?;
+    // A body cached before this app read provenance has none, and nothing
+    // would ever put it there: the cache would answer for that message
+    // forever. Treating it as a miss costs one fetch, once, and fills the
+    // gap for good. A message with a body that truly says nothing about
+    // its origins is rare, and pays that fetch once as well.
+    Ok(body.filter(|body| !body.provenance.is_empty()))
 }
 
 /// Unread messages and the newest message start expanded.
