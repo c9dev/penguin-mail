@@ -63,10 +63,18 @@ pub fn bind(chosen: &str) {
         // glibc ignores LANGUAGE while the message locale is the bare C
         // one, so a desktop that sets no locale at all needs telling.
         if !chosen.is_empty() && messages_locale_is_bare() {
-            gettextrs::setlocale(
+            let named = gettextrs::setlocale(
                 gettextrs::LocaleCategory::LcMessages,
                 format!("{chosen}.UTF-8"),
             );
+            // A translation ships as a catalogue; the matching locale is a
+            // separate thing the system may never have generated. pt_PT
+            // is missing from plenty of installs. Any locale but the bare
+            // C one is enough for LANGUAGE to be read, and C.UTF-8 is
+            // there when nothing else is.
+            if named.is_none() {
+                gettextrs::setlocale(gettextrs::LocaleCategory::LcMessages, "C.UTF-8");
+            }
         }
     }
     if gettextrs::bindtextdomain(DOMAIN, locale_dir()).is_err() {
