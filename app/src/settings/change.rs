@@ -28,6 +28,11 @@ pub enum Change {
     Notifications(bool),
     NotificationPreviews(bool),
     NotifyVipsOnly(bool),
+    /// Puts one button on new-mail notifications, or takes it off.
+    NotificationButton {
+        button: crate::notify::Button,
+        show: bool,
+    },
     UndoSend(UndoSend),
     /// The address new messages come from; `None` means the first account.
     DefaultAccount(Option<String>),
@@ -146,6 +151,9 @@ impl Change {
             Change::Notifications(on) => settings.notifications = on,
             Change::NotificationPreviews(on) => settings.notification_previews = on,
             Change::NotifyVipsOnly(on) => settings.notify_vips_only = on,
+            Change::NotificationButton { button, show } => {
+                settings.show_notification_button(button, show)
+            }
             Change::UndoSend(delay) => settings.undo_send = delay,
             Change::DefaultAccount(email) => settings.default_account = email,
             Change::InboxCategories(on) => settings.inbox_categories = on,
@@ -421,6 +429,7 @@ impl Effects {
             flag_color,
             vips,
             notify_vips_only,
+            notification_buttons,
             smart_mailboxes,
             account_order,
             account_colors,
@@ -449,6 +458,7 @@ impl Effects {
             undo_send,
             flag_color,
             notify_vips_only,
+            notification_buttons,
             hidden_addresses,
             // The composer reads these when it opens, so a refreshed alias
             // list or a newly kept word changes nothing already on screen.
@@ -779,6 +789,9 @@ mod tests {
                 "hidden_addresses",
                 "inbox_categories",
                 "last_sender",
+                // Which buttons a notification carries is a list, and a
+                // setting the assistant changes by name holds one value.
+                "notification_buttons",
                 "send_as",
                 "signatures",
                 "smart_mailboxes",

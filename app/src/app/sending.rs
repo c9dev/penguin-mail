@@ -287,7 +287,8 @@ impl App {
                 crate::notify::announce(
                     vec![message],
                     settings.notification_previews,
-                    self.open_requests.clone(),
+                    settings.notification_buttons.clone(),
+                    self.chosen.clone(),
                 );
             }
         }

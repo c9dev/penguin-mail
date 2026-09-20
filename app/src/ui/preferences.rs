@@ -167,9 +167,27 @@ fn general_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         .bind_property("active", &vips_only, "sensitive")
         .sync_create()
         .build();
+    let actions = adw::ExpanderRow::builder()
+        .title("Buttons")
+        .subtitle("What a notification offers besides opening the conversation")
+        .build();
+    for button in crate::notify::Button::ALL {
+        actions.add_row(&switch(
+            app,
+            button.label(),
+            None,
+            settings.notification_buttons.contains(&button),
+            move |show| Change::NotificationButton { button, show },
+        ));
+    }
+    enabled
+        .bind_property("active", &actions, "sensitive")
+        .sync_create()
+        .build();
     notifications.add(&enabled);
     notifications.add(&vips_only);
     notifications.add(&previews);
+    notifications.add(&actions);
     page.add(&notifications);
     page
 }
