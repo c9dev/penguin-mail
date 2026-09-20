@@ -217,6 +217,18 @@ impl ThreadList {
             .icon_name("penguin-mail-sparkle-symbolic")
             .tooltip_text(gettext("Assistant (Ctrl+J)"))
             .build();
+        // The tooltips already say what these do; the spoken name takes
+        // the words and leaves the keys to a property of their own.
+        super::name(&search_entry, &gettext("Search mail"));
+        super::name(&sidebar_button, &gettext("Show Mailboxes"));
+        for button in [
+            compose_button.upcast_ref::<gtk::Widget>(),
+            search_button.upcast_ref(),
+            assistant_button.upcast_ref(),
+        ] {
+            let tip = button.tooltip_text().unwrap_or_default();
+            super::name_with_shortcut(button, &tip);
+        }
         let header = adw::HeaderBar::builder().title_widget(&title).build();
         header.pack_start(&sidebar_button);
         header.pack_end(&assistant_button);

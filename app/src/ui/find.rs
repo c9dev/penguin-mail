@@ -12,6 +12,8 @@ use adw::prelude::*;
 use mailrs_domain::translate::{fill_plural, gettext};
 use webkit::prelude::*;
 
+use crate::ui::name;
+
 /// How many matches WebKit may highlight and count. Nothing is capped.
 const MATCH_LIMIT: u32 = u32::MAX;
 
@@ -138,6 +140,13 @@ impl FindBar {
         };
         let previous = arrow("go-up-symbolic", gettext("Previous Match"));
         let next = arrow("go-down-symbolic", gettext("Next Match"));
+        name(&entry, &gettext("Find in the conversation"));
+        name(&previous, &gettext("Previous Match"));
+        name(&next, &gettext("Next Match"));
+        // Nothing else moves between matches, so the arrows say which
+        // keys do it as well.
+        previous.update_property(&[gtk::accessible::Property::KeyShortcuts("Shift+Ctrl+G")]);
+        next.update_property(&[gtk::accessible::Property::KeyShortcuts("Ctrl+G")]);
         let arrows = gtk::Box::builder().css_classes(["linked"]).build();
         arrows.append(&previous);
         arrows.append(&next);
@@ -305,7 +314,13 @@ impl FindBar {
 
     fn update(&self) {
         let place = self.place.borrow();
-        self.count.set_label(&place.label());
+        let said = place.label();
+        self.count.set_label(&said);
+        // The count sits beside the entry as a label of its own, where a
+        // reader stepping through matches never passes it. Hanging it off
+        // the entry puts it where the focus already is.
+        self.entry
+            .update_property(&[gtk::accessible::Property::Description(&said)]);
         for arrow in [&self.previous, &self.next] {
             arrow.set_sensitive(place.matches > 0);
         }

@@ -234,6 +234,7 @@ impl Form {
             .accepts_tab(false)
             .build();
         body.buffer().set_text(&reply.body);
+        crate::ui::name(&body, &gettext("Message"));
         let frame = gtk::ScrolledWindow::builder()
             .child(&body)
             .min_content_height(160)
@@ -321,6 +322,9 @@ impl DateButton {
                 popover.popdown();
             }
         });
+        // The button shows the day; the row beside it says which day it
+        // is, and a reader on the button alone would not hear that.
+        button.update_property(&[gtk::accessible::Property::Description(title)]);
         let row = adw::ActionRow::builder().title(title).build();
         row.add_suffix(&button);
         row.set_activatable_widget(Some(&button));

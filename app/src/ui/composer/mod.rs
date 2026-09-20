@@ -21,6 +21,7 @@ use webkit::prelude::*;
 
 use self::recipients::Recipients;
 use super::autocomplete::Contacts;
+use super::{labelled_by, name, name_with_shortcut};
 use crate::attachcheck::{self, Promise};
 use crate::compose::{
     Draft, LinePrefix, OutgoingAttachment, SendWhen, build_mime, format_recipients, is_address,
@@ -225,6 +226,18 @@ impl Composer {
             .tooltip_text(gettext("Add a recipient this computer can encrypt to."))
             .sensitive(false)
             .build();
+        // The tooltips say what these do, with the keys in a bracket at
+        // the end; the spoken name is the words and the keys go in a
+        // property of their own.
+        for button in [
+            send.upcast_ref::<gtk::Widget>(),
+            attach.upcast_ref(),
+            preview_toggle.upcast_ref(),
+            template_button.upcast_ref(),
+        ] {
+            let tip = button.tooltip_text().unwrap_or_default();
+            name_with_shortcut(button, &tip);
+        }
         let protection = gtk::Box::builder()
             .css_classes(["linked"])
             .visible(has_engine)
@@ -266,7 +279,6 @@ impl Composer {
             .css_classes(["flat", "cc-toggle"])
             // Stays on the first line when the chips wrap below it.
             .valign(gtk::Align::Start)
-            .can_focus(false)
             .active(!draft.cc.is_empty() || !draft.bcc.is_empty())
             .build();
         let fields = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -307,6 +319,7 @@ impl Composer {
             .css_classes(["composer-body"])
             .vexpand(true)
             .build();
+        name(&body, &gettext("Message"));
         richbuffer::install(&body.buffer());
         let settings = webkit::Settings::new();
         settings.set_enable_javascript(false);
@@ -885,6 +898,7 @@ impl Composer {
             .tooltip_text(gettext("Do Not Forward the Original"))
             .css_classes(["flat", "circular"])
             .build();
+        name(&drop, &gettext("Do Not Forward the Original"));
         let weak = Rc::downgrade(self);
         drop.connect_clicked(move |_| {
             if let Some(c) = weak.upgrade() {
@@ -1405,6 +1419,10 @@ impl Composer {
                 .css_classes(["flat", "circular"])
                 .tooltip_text(gettext("Remove"))
                 .build();
+            name(
+                &remove,
+                &fill(&gettext("Remove {file}"), &[("file", &attachment.filename)]),
+            );
             let weak = Rc::downgrade(self);
             remove.connect_clicked(move |_| {
                 if let Some(c) = weak.upgrade() {
@@ -1450,10 +1468,13 @@ impl Composer {
         ] {
             let button = gtk::ToggleButton::builder()
                 .child(&label(markup))
-                .tooltip_text(tip)
+                .tooltip_text(&tip)
                 .css_classes(["flat"])
                 .can_focus(false)
                 .build();
+            // The letter on the button is markup, which reads out as the
+            // bare letter; the name says what the letter stands for.
+            name_with_shortcut(&button, &tip);
             let weak = Rc::downgrade(self);
             button.connect_clicked(move |_| {
                 if let Some(c) = weak.upgrade() {
@@ -1468,10 +1489,11 @@ impl Composer {
         let button = |bar: &gtk::Box, icon: &str, tip: String| {
             let button = gtk::Button::builder()
                 .icon_name(icon)
-                .tooltip_text(tip)
+                .tooltip_text(&tip)
                 .css_classes(["flat"])
                 .can_focus(false)
                 .build();
+            name_with_shortcut(&button, &tip);
             bar.append(&button);
             button
         };
@@ -1550,13 +1572,17 @@ impl Composer {
             Some("composer.edit-markdown"),
         );
         menu.append_section(None, &switch);
+        // The rest of the bar stays off the focus chain, since every
+        // button on it has a shortcut of its own. This one takes the
+        // focus, because the headings and the block styles behind it have
+        // none and the menu is the only way to reach them.
         let more = gtk::MenuButton::builder()
             .icon_name("view-more-symbolic")
             .tooltip_text(gettext("More Formatting"))
             .menu_model(&menu)
             .css_classes(["flat"])
-            .can_focus(false)
             .build();
+        name(&more, &gettext("More Formatting"));
         extras.append(&more);
         self.follow_cursor();
     }
@@ -2390,6 +2416,7 @@ fn field(label: &str, widget: &impl IsA<gtk::Widget>, column: &gtk::SizeGroup) -
         .css_classes(["dim-label", "composer-label"])
         .build();
     column.add_widget(&label);
+    labelled_by(widget, &label);
     row.append(&label);
     row.append(widget);
     row

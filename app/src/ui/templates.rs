@@ -72,19 +72,26 @@ fn row(
     rows: &Rows,
     template: Template,
 ) -> adw::ActionRow {
+    let name = template.name.clone();
     let row = adw::ActionRow::builder()
         .title(&template.name)
         .subtitle(summary(&template))
         .build();
-    let button = |icon: &str, tip: &str| {
-        gtk::Button::builder()
+    let button = |icon: &str, tip: String, spoken: String| {
+        let button = gtk::Button::builder()
             .icon_name(icon)
             .tooltip_text(tip)
             .valign(gtk::Align::Center)
             .css_classes(["flat"])
-            .build()
+            .build();
+        crate::ui::name(&button, &spoken);
+        button
     };
-    let open = button("document-edit-symbolic", "Edit Template");
+    let open = button(
+        "document-edit-symbolic",
+        gettext("Edit Template"),
+        fill(&gettext("Edit {template}"), &[("template", &name)]),
+    );
     let (weak, saved, list, shown) = (
         Rc::downgrade(app),
         template.clone(),
@@ -96,7 +103,11 @@ fn row(
             edit(&app, button, Some(saved.clone()), &list, &shown);
         }
     });
-    let delete = button("user-trash-symbolic", "Delete Template");
+    let delete = button(
+        "user-trash-symbolic",
+        gettext("Delete Template"),
+        fill(&gettext("Delete {template}"), &[("template", &name)]),
+    );
     let (weak, saved, list, shown) = (Rc::downgrade(app), template, group.clone(), Rc::clone(rows));
     delete.connect_clicked(move |button| {
         if let Some(app) = weak.upgrade() {
@@ -204,6 +215,7 @@ fn edit(
         .accepts_tab(false)
         .build();
     view.buffer().set_text(&template.markdown);
+    crate::ui::name(&view, &gettext("Body"));
     let body = adw::PreferencesGroup::builder()
         .title(gettext("Body"))
         .build();

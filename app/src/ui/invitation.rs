@@ -15,6 +15,7 @@ use mailrs_domain::{Address, EpochMillis};
 use mailrs_sync::Change;
 
 use crate::format::{event_moved_from, event_tile, event_when};
+use crate::ui::name;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 /// What the card asks the window to do.
@@ -182,7 +183,9 @@ impl EventCard {
             .spacing(0)
             .margin_top(4)
             .css_classes(["linked"])
+            .accessible_role(gtk::AccessibleRole::Group)
             .build();
+        name(&answers, &gettext("Answer"));
         let mut buttons = Vec::new();
         for answer in Answer::ALL {
             let button = gtk::ToggleButton::builder().label(answer.label()).build();
@@ -193,7 +196,9 @@ impl EventCard {
             .spacing(0)
             .visible(false)
             .css_classes(["linked"])
+            .accessible_role(gtk::AccessibleRole::Group)
             .build();
+        name(&reach, &gettext("What the answer covers"));
         let this_one = gtk::ToggleButton::builder()
             .label(gettext("This Event"))
             .active(true)
@@ -279,7 +284,9 @@ impl EventCard {
             .orientation(gtk::Orientation::Vertical)
             .spacing(6)
             .css_classes(["card", "invitation-card"])
+            .accessible_role(gtk::AccessibleRole::Group)
             .build();
+        name(&inside, &gettext("Invitation"));
         inside.append(&news);
         inside.append(&head);
         inside.append(&organizer);

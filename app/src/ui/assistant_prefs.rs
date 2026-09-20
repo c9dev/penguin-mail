@@ -330,6 +330,7 @@ fn model_row(app: &Rc<App>, current: &str, picker: Picker, typed: Typed) -> adw:
         .valign(gtk::Align::Center)
         .css_classes(["flat"])
         .build();
+    crate::ui::name(&pick, &gettext("Models You Can Use"));
     let (weak, entry) = (Rc::downgrade(app), row.clone());
     pick.set_create_popup_func(move |button| {
         let Some(app) = weak.upgrade() else { return };
@@ -606,6 +607,10 @@ fn detected_group(
                 .label(gettext("Use"))
                 .valign(gtk::Align::Center)
                 .build();
+            crate::ui::name(
+                &use_it,
+                &fill(&gettext("Use {provider}"), &[("provider", &item.label)]),
+            );
             let (app, provider, base_url, local_model) = (
                 Rc::clone(&app),
                 provider.clone(),

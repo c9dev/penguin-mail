@@ -59,6 +59,7 @@ pub fn present(
         .icon_name("list-add-symbolic")
         .tooltip_text(gettext("Create Address"))
         .build();
+    crate::ui::name(&add, &gettext("Create Address"));
     let header = adw::HeaderBar::new();
     header.pack_start(&add);
     let toolbar = adw::ToolbarView::new();
@@ -173,15 +174,21 @@ impl Dialog {
         if !hidden.active {
             row.add_css_class("dim-label");
         }
-        let button = |icon: &str, tip: String| {
-            gtk::Button::builder()
+        let button = |icon: &str, tip: String, spoken: String| {
+            let button = gtk::Button::builder()
                 .icon_name(icon)
                 .tooltip_text(tip)
                 .valign(gtk::Align::Center)
                 .css_classes(["flat"])
-                .build()
+                .build();
+            crate::ui::name(&button, &spoken);
+            button
         };
-        let copy_button = button("edit-copy-symbolic", gettext("Copy Address"));
+        let copy_button = button(
+            "edit-copy-symbolic",
+            gettext("Copy Address"),
+            fill(&gettext("Copy {address}"), &[("address", &hidden.address)]),
+        );
         let address = hidden.address.clone();
         let weak = Rc::downgrade(self);
         copy_button.connect_clicked(move |b| {
@@ -197,6 +204,13 @@ impl Dialog {
             .valign(gtk::Align::Center)
             .tooltip_text(gettext("Receive Mail"))
             .build();
+        crate::ui::name(
+            &switch,
+            &fill(
+                &gettext("Receive mail at {address}"),
+                &[("address", &hidden.address)],
+            ),
+        );
         let (address, account) = (hidden.address.clone(), hidden.account.clone());
         let weak = Rc::downgrade(self);
         switch.connect_state_set(move |switch, active| {
@@ -224,7 +238,14 @@ impl Dialog {
         });
         row.add_suffix(&switch);
 
-        let delete = button("user-trash-symbolic", gettext("Delete Address"));
+        let delete = button(
+            "user-trash-symbolic",
+            gettext("Delete Address"),
+            fill(
+                &gettext("Delete {address}"),
+                &[("address", &hidden.address)],
+            ),
+        );
         let (address, account) = (hidden.address.clone(), hidden.account.clone());
         let weak = Rc::downgrade(self);
         delete.connect_clicked(move |_| {

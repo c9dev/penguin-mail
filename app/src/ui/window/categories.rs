@@ -84,6 +84,9 @@ impl CategoryBar {
             group.add(
                 adw::Toggle::builder()
                     .name(category.key())
+                    // The child is an icon, a badge and a name that slides
+                    // shut; the label is what the toggle says out loud.
+                    .label(category.name())
                     .tooltip(category.name())
                     .child(&content)
                     .build(),
@@ -145,7 +148,7 @@ impl CategoryBar {
             // The name is hidden unless the category is chosen, so the tooltip
             // carries both it and the count.
             if let Some(toggle) = self.group.toggle_by_name(category.key()) {
-                toggle.set_tooltip(&match count {
+                let said = match count {
                     0 => category.name(),
                     count => fill_plural(
                         "{name}, {count} unread",
@@ -153,7 +156,9 @@ impl CategoryBar {
                         count.max(0) as usize,
                         &[("name", &category.name()), ("count", &count.to_string())],
                     ),
-                });
+                };
+                toggle.set_tooltip(&said);
+                toggle.set_label(Some(&said));
             }
         }
     }

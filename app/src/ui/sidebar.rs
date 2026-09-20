@@ -6,26 +6,31 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gdk, gio, glib, pango};
-use mailrs_domain::translate::{fill, gettext};
+use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{
     Account, AccountId, AccountState, FlagColor, Folder, Label, LabelKind, system_label,
 };
 
 use super::{
-    FolderLook, LABEL_COLORS, Mailbox, UNIFIED, account_label_name, label_color_name, mailbox_icon,
-    unified_name,
+    FolderLook, LABEL_COLORS, Mailbox, UNIFIED, account_label_name, describe, label_color_name,
+    mailbox_icon, unified_name,
 };
 use crate::format::{PALETTE, account_color_index, palette_name};
 
 struct Row {
     row: gtk::ListBoxRow,
     mailbox: Mailbox,
+    /// The mailbox's name, kept so the spoken name can be built again
+    /// whenever the count beside it changes.
+    name: String,
     count: gtk::Label,
 }
 
 struct Heading {
     row: gtk::ListBoxRow,
     account_id: AccountId,
+    /// What the heading calls the account: its name, or its address.
+    name: String,
     chevron: gtk::Image,
     count: gtk::Label,
 }
@@ -284,11 +289,13 @@ impl Sidebar {
             self.list.append(&section_title(&gettext("Accounts")));
         }
         for (account, labels) in accounts {
-            let (row, chevron, count) = heading(account, extras.names.get(&account.id));
+            let shown = extras.names.get(&account.id);
+            let (row, chevron, count) = heading(account, shown);
             self.list.append(&row);
             self.headings.borrow_mut().push(Heading {
                 row,
                 account_id: account.id,
+                name: shown.unwrap_or(&account.email).clone(),
                 chevron,
                 count,
             });
@@ -378,10 +385,12 @@ impl Sidebar {
             });
             row.add_controller(target);
         }
+        super::name(&row, name);
         self.list.append(&row);
         self.rows.borrow_mut().push(Row {
             row: row.clone(),
             mailbox,
+            name: name.to_string(),
             count,
         });
         row
@@ -434,6 +443,14 @@ impl Sidebar {
             let shown = count > 0 && (row.mailbox.counts_unread() || is_drafts);
             row.count.set_visible(shown);
             row.count.set_label(&count.to_string());
+            super::name(
+                &row.row,
+                &mailbox_row_name(
+                    &row.name,
+                    if shown { count } else { 0 },
+                    row.mailbox.counts_unread(),
+                ),
+            );
             if row.mailbox.counts_unread() {
                 row.count.add_css_class("unread");
             } else {
@@ -446,9 +463,13 @@ impl Sidebar {
                 label_id: system_label::INBOX.into(),
                 name: gettext("Inbox"),
             };
-            heading
-                .count
-                .set_label(&counts.get(&inbox).copied().unwrap_or(0).to_string());
+            let unread = counts.get(&inbox).copied().unwrap_or(0);
+            heading.count.set_label(&unread.to_string());
+            describe(
+                &heading.row,
+                &heading_row_name(&heading.name, unread),
+                &gettext("Show or hide this account's mailboxes"),
+            );
         }
         self.apply_expansion();
     }
@@ -457,6 +478,46 @@ impl Sidebar {
 /// What a dragged set of list rows carries. The rows themselves stay with
 /// the thread list.
 pub const DRAG_MAIL: &str = "mailrs-mail";
+
+/// What a mailbox row says out loud. The badge at its end is a bare
+/// number on screen, so the name takes it in and says what it counts. A
+/// row whose badge is hidden says only its name.
+fn mailbox_row_name(mailbox: &str, count: i64, unread: bool) -> String {
+    if count <= 0 {
+        return mailbox.to_string();
+    }
+    let number = count.to_string();
+    let values = [("mailbox", mailbox), ("count", number.as_str())];
+    match unread {
+        true => fill_plural(
+            "{mailbox}, {count} unread message",
+            "{mailbox}, {count} unread messages",
+            count as usize,
+            &values,
+        ),
+        false => fill_plural(
+            "{mailbox}, {count} message",
+            "{mailbox}, {count} messages",
+            count as usize,
+            &values,
+        ),
+    }
+}
+
+/// What an account heading says out loud: the account, and the unread
+/// mail behind it while the section is closed.
+fn heading_row_name(account: &str, unread: i64) -> String {
+    if unread <= 0 {
+        return account.to_string();
+    }
+    let number = unread.to_string();
+    fill_plural(
+        "{account}, {count} unread message",
+        "{account}, {count} unread messages",
+        unread as usize,
+        &[("account", account), ("count", number.as_str())],
+    )
+}
 
 /// What the sidebar shows besides accounts and their labels.
 #[derive(Debug, Clone, Default)]
@@ -471,7 +532,7 @@ pub struct Extras {
 
 /// A small heading between sections. It cannot be selected.
 fn section_title(text: &str) -> gtk::ListBoxRow {
-    gtk::ListBoxRow::builder()
+    let row = gtk::ListBoxRow::builder()
         .child(
             &gtk::Label::builder()
                 .label(text)
@@ -481,7 +542,13 @@ fn section_title(text: &str) -> gtk::ListBoxRow {
         )
         .selectable(false)
         .activatable(false)
-        .build()
+        .build();
+    // The list puts the label inside a row of its own, and the row is
+    // what a screen reader reaches, so the words have to be on it too or
+    // the section announces as nothing.
+    row.set_accessible_role(gtk::AccessibleRole::RowHeader);
+    crate::ui::name(&row, text);
+    row
 }
 
 /// Edit, move, and delete on a right click or long press of a smart mailbox.
@@ -641,8 +708,9 @@ fn heading(account: &Account, name: Option<&String>) -> (gtk::ListBoxRow, gtk::I
     if let Some((icon, tip)) = status {
         let image = gtk::Image::builder()
             .icon_name(icon)
-            .tooltip_text(tip)
+            .tooltip_text(&tip)
             .build();
+        super::name(&image, &tip);
         if account.state == AccountState::NeedsReauth {
             image.add_css_class("warning");
         } else {
@@ -688,25 +756,57 @@ fn heading(account: &Account, name: Option<&String>) -> (gtk::ListBoxRow, gtk::I
     let danger = gio::Menu::new();
     danger.append_item(&item(&gettext("Remove Account…"), "win.account-remove"));
     menu.append_section(None, &danger);
-    content.append(
-        &gtk::MenuButton::builder()
-            .icon_name("view-more-symbolic")
-            .menu_model(&menu)
-            .css_classes(["flat", "circular"])
-            .valign(gtk::Align::Center)
-            .tooltip_text(gettext("Account options"))
-            .build(),
+    let options = gtk::MenuButton::builder()
+        .icon_name("view-more-symbolic")
+        .menu_model(&menu)
+        .css_classes(["flat", "circular"])
+        .valign(gtk::Align::Center)
+        .tooltip_text(gettext("Account options"))
+        .build();
+    super::name(
+        &options,
+        &fill(
+            &gettext("Options for {account}"),
+            &[("account", name.unwrap_or(&account.email))],
+        ),
     );
+    content.append(&options);
     let row = gtk::ListBoxRow::builder()
         .child(&content)
         .css_classes(["account-heading"])
         .selectable(false)
         .activatable(true)
         .build();
-    let described = fill(
-        &gettext("{account}, show or hide mailboxes"),
-        &[("account", &account.email)],
+    describe(
+        &row,
+        &heading_row_name(name.unwrap_or(&account.email), 0),
+        &gettext("Show or hide this account's mailboxes"),
     );
-    row.update_property(&[gtk::accessible::Property::Label(&described)]);
     (row, chevron, count)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{heading_row_name, mailbox_row_name};
+
+    #[test]
+    fn a_mailbox_row_reads_its_badge_as_part_of_the_row() {
+        assert_eq!(
+            mailbox_row_name("Inbox", 12, true),
+            "Inbox, 12 unread messages"
+        );
+        assert_eq!(
+            mailbox_row_name("Inbox", 1, true),
+            "Inbox, 1 unread message"
+        );
+        assert_eq!(mailbox_row_name("Drafts", 3, false), "Drafts, 3 messages");
+        assert_eq!(mailbox_row_name("Drafts", 0, false), "Drafts");
+    }
+
+    #[test]
+    fn an_account_heading_reads_the_mail_behind_a_closed_section() {
+        assert_eq!(heading_row_name("ann@example.com", 0), "ann@example.com");
+        assert_eq!(heading_row_name("Work", 1), "Work, 1 unread message");
+        assert_eq!(heading_row_name("Work", 4), "Work, 4 unread messages");
+    }
 }
