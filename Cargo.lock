@@ -2034,6 +2034,8 @@ dependencies = [
 name = "mailrs-pgp"
 version = "0.1.0"
 dependencies = [
+ "mail-builder",
+ "rand",
  "tempfile",
  "thiserror",
 ]

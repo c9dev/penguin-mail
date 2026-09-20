@@ -5,6 +5,8 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+mail-builder.workspace = true
+rand.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true
 

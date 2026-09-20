@@ -2,6 +2,7 @@
 
 mod error;
 mod gpg;
+pub mod mime;
 mod read;
 pub mod status;
 
