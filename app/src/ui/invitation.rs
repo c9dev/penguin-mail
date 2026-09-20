@@ -392,17 +392,19 @@ impl EventCard {
         self.scope.get()
     }
 
-    /// Says what else the user has on while this event runs. The answer
-    /// arrives after the card is already up, and the user may have moved
-    /// on to another message by then, so it names the invitation it
-    /// belongs to and a late answer to an old question is dropped.
+    /// Whether the card still shows the invitation `uid` names. Every
+    /// setter an answer comes back to asks this first: the answer arrives
+    /// after the card is already up, and the user may have opened another
+    /// message by then.
+    fn shows(&self, uid: &str) -> bool {
+        let held = self.showing.borrow();
+        let on_screen = held.as_ref().map(|showing| showing.invitation.uid.as_str());
+        still_showing(on_screen, uid)
+    }
+
+    /// Says what else the user has on while this event runs.
     pub fn set_busy(&self, uid: &str, busy: &[String]) {
-        let mine = self
-            .showing
-            .borrow()
-            .as_ref()
-            .is_some_and(|showing| showing.invitation.uid == uid);
-        if mine {
+        if self.shows(uid) {
             set_line(&self.clash, clash(busy));
         }
     }
@@ -414,13 +416,18 @@ impl EventCard {
 
     /// Says under the buttons where the answer went, or takes the line
     /// away while one is on its way.
-    pub fn set_went(&self, went: Option<String>) {
-        set_line(&self.went, went);
+    pub fn set_went(&self, uid: &str, went: Option<String>) {
+        if self.shows(uid) {
+            set_line(&self.went, went);
+        }
     }
 
     /// Puts the card back where an answer left it: on the one that went
     /// through, or on the one it showed before an answer that did not.
-    pub fn set_answer(&self, answer: Option<Answer>) {
+    pub fn set_answer(&self, uid: &str, answer: Option<Answer>) {
+        if !self.shows(uid) {
+            return;
+        }
         let updated = {
             let mut held = self.showing.borrow_mut();
             let Some(showing) = held.as_mut() else {
@@ -559,6 +566,15 @@ impl EventCard {
             self.guest_list.append(&row);
         }
     }
+}
+
+/// Whether an answer that names `uid` belongs to the invitation on
+/// screen, `on_screen` being the UID the card holds and `None` meaning no
+/// invitation is up. An answer to one invitation must never land on
+/// another, and an invitation the organizer gave no UID answers for
+/// nothing, since there is no telling it from the next one.
+fn still_showing(on_screen: Option<&str>, uid: &str) -> bool {
+    !uid.trim().is_empty() && on_screen == Some(uid)
 }
 
 /// The times the propose list offers, each the same meeting moved whole.
@@ -741,5 +757,178 @@ fn set_line(label: &gtk::Label, text: Option<String>) {
             label.set_visible(true);
         }
         _ => label.set_visible(false),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// One event, written as a mail client writes it. `extra` holds the
+    /// attendees and whatever else a test needs in the `VEVENT`.
+    fn ics(method: &str, extra: &[&str]) -> String {
+        let mut lines = vec![
+            "BEGIN:VCALENDAR".to_string(),
+            format!("METHOD:{method}"),
+            "BEGIN:VEVENT".to_string(),
+            "UID:design@example.com".to_string(),
+            "SUMMARY:Design review".to_string(),
+            "DTSTART:20240610T090000Z".to_string(),
+            "ORGANIZER;CN=Priya Raman:mailto:priya@example.com".to_string(),
+        ];
+        lines.extend(extra.iter().map(|line| line.to_string()));
+        lines.push("END:VEVENT".to_string());
+        lines.push("END:VCALENDAR".to_string());
+        lines.push(String::new());
+        lines.join("\r\n")
+    }
+
+    fn showing(method: &str, extra: &[&str]) -> Showing {
+        Showing {
+            invitation: mailrs_domain::invitation::read(&ics(method, extra))
+                .expect("the part holds an event"),
+            change: None,
+            answer: None,
+            me: vec!["me@example.com".to_string()],
+        }
+    }
+
+    #[test]
+    fn an_answer_lands_only_on_the_invitation_it_answers() {
+        assert!(still_showing(
+            Some("design@example.com"),
+            "design@example.com"
+        ));
+        assert!(!still_showing(
+            Some("budget@example.com"),
+            "design@example.com"
+        ));
+        assert!(!still_showing(None, "design@example.com"));
+    }
+
+    #[test]
+    fn an_invitation_with_no_uid_answers_for_nothing() {
+        assert!(!still_showing(Some(""), ""));
+        assert!(!still_showing(Some("   "), "   "));
+        assert!(!still_showing(Some("design@example.com"), ""));
+    }
+
+    #[test]
+    fn a_taken_hour_names_what_takes_it() {
+        assert_eq!(clash(&[]), None);
+        assert_eq!(
+            clash(&["Design crit".to_string()]).as_deref(),
+            Some("You have Design crit then")
+        );
+        assert_eq!(
+            clash(&["Design crit".to_string(), "Standup".to_string()]).as_deref(),
+            Some("You have Design crit and Standup then")
+        );
+        assert_eq!(
+            clash(&[
+                "Design crit".to_string(),
+                "Standup".to_string(),
+                "One to one".to_string(),
+            ])
+            .as_deref(),
+            Some("You have Design crit and 2 more then")
+        );
+    }
+
+    #[test]
+    fn the_organizer_line_follows_who_is_speaking() {
+        assert_eq!(
+            organizer_line(&showing("REQUEST", &[]).invitation).as_deref(),
+            Some("Invitation from Priya Raman")
+        );
+        assert_eq!(
+            organizer_line(&showing("REPLY", &[]).invitation).as_deref(),
+            Some("Reply to the invitation from Priya Raman")
+        );
+        let mut anonymous = showing("REQUEST", &[]).invitation;
+        anonymous.organizer = None;
+        assert_eq!(organizer_line(&anonymous), None);
+    }
+
+    #[test]
+    fn the_guest_list_calls_the_user_you_and_carries_their_answer() {
+        let mut showing = showing(
+            "REQUEST",
+            &[
+                "ATTENDEE;PARTSTAT=ACCEPTED;CN=Ann Lee:mailto:ann@example.com",
+                "ATTENDEE;PARTSTAT=NEEDS-ACTION;CN=Me:mailto:me@example.com",
+            ],
+        );
+        showing.answer = Some(Answer::Yes);
+        let guests = attending(&showing);
+        assert_eq!(guests[0].name, "Ann Lee");
+        assert_eq!(guests[0].answer, Some(Answer::Yes));
+        assert_eq!(guests[1].name, "You");
+        assert_eq!(guests[1].answer, Some(Answer::Yes));
+    }
+
+    #[test]
+    fn the_guest_summary_counts_each_answer() {
+        let showing = showing(
+            "REQUEST",
+            &[
+                "ATTENDEE;PARTSTAT=ACCEPTED;CN=Ann Lee:mailto:ann@example.com",
+                "ATTENDEE;PARTSTAT=ACCEPTED;CN=Bo Chen:mailto:bo@example.com",
+                "ATTENDEE;PARTSTAT=TENTATIVE;CN=Cal Diaz:mailto:cal@example.com",
+                "ATTENDEE;PARTSTAT=NEEDS-ACTION;CN=Me:mailto:me@example.com",
+            ],
+        );
+        assert_eq!(
+            guest_summary(&attending(&showing)),
+            "4 guests · 2 yes, 1 maybe, 1 awaiting"
+        );
+    }
+
+    #[test]
+    fn the_news_line_says_what_the_message_did_to_the_event() {
+        let now = Local::now();
+        let mut showing = showing("REQUEST", &[]);
+        assert_eq!(news(&showing, now), None);
+        showing.change = Some(Change::Updated);
+        assert_eq!(
+            news(&showing, now).as_deref(),
+            Some("The organizer changed this meeting")
+        );
+        assert_eq!(news_tone(&showing), "changed");
+        showing.change = Some(Change::Moved {
+            was: 1_717_924_800_000,
+            all_day: false,
+        });
+        assert!(
+            news(&showing, now).is_some_and(|line| line.starts_with("This meeting moved from "))
+        );
+        showing.change = Some(Change::Cancelled);
+        assert_eq!(
+            news(&showing, now).as_deref(),
+            Some("The organizer canceled this meeting")
+        );
+        assert_eq!(news_tone(&showing), "cancelled");
+    }
+
+    #[test]
+    fn a_cancellation_reads_as_one_without_a_change_behind_it() {
+        let showing = showing("CANCEL", &[]);
+        assert_eq!(
+            news(&showing, Local::now()).as_deref(),
+            Some("This meeting is canceled")
+        );
+        assert_eq!(news_tone(&showing), "cancelled");
+    }
+
+    #[test]
+    fn the_times_offered_move_the_meeting_whole() {
+        let starts_at = 1_717_924_800_000;
+        let offered = nearby(starts_at);
+        assert_eq!(offered.len(), 4);
+        assert_eq!(offered[0].1, starts_at + 30 * 60 * 1_000);
+        assert_eq!(offered[1].1, starts_at + 60 * 60 * 1_000);
+        assert!(offered[2].1 > offered[1].1);
+        assert!(offered[3].1 > offered[2].1);
+        assert!(nearby(EpochMillis::MAX).is_empty());
     }
 }

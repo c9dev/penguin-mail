@@ -7,6 +7,7 @@
 
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -194,10 +195,11 @@ struct Buttons {
     more: gtk::MenuButton,
 }
 
-/// A message body after cleaning, with the body length and image count it
-/// came from. Either one changing means the body needs cleaning again.
+/// A message body after cleaning, with a mark of the HTML and the inline
+/// images it was made from. A different mark means the body needs
+/// cleaning again.
 struct CleanBody {
-    mark: (usize, usize),
+    mark: u64,
     html: String,
 }
 
@@ -945,7 +947,7 @@ impl ConversationView {
                 continue;
             };
             let images = open.inline_images.get(&meta.id).unwrap_or(&empty);
-            let mark = (html.len(), images.len());
+            let mark = body_mark(html, images);
             if clean.get(&meta.id).is_none_or(|seen| seen.mark != mark) {
                 let body = CleanBody {
                     mark,
@@ -1273,6 +1275,28 @@ fn run_script(webview: &webkit::WebView, script: &str) {
     webview.evaluate_javascript(script, None, None, gio::Cancellable::NONE, |_| {});
 }
 
+/// One number standing for the HTML and the inline images a cleaned body
+/// was made from, so the cleaned copy is thrown away as soon as either
+/// changes. It reads the whole body rather than its length, because two
+/// bodies of the same length are still two bodies: opening an encrypted
+/// message puts a different body under the same message id, and the
+/// reader would otherwise go on looking at the cleaned ciphertext.
+fn body_mark(html: &str, images: &HashMap<String, String>) -> u64 {
+    let mut whole = DefaultHasher::new();
+    html.hash(&mut whole);
+    // A HashMap hands its entries back in whatever order it likes, so each
+    // one is hashed on its own and the results mixed with xor, which
+    // answers the same whichever order they come in.
+    let mixed = images.iter().fold(0, |mixed, (cid, uri)| {
+        let mut each = DefaultHasher::new();
+        cid.hash(&mut each);
+        uri.hash(&mut each);
+        mixed ^ each.finish()
+    });
+    mixed.hash(&mut whole);
+    whole.finish()
+}
+
 /// Keeps only characters that are safe inside a quoted script string.
 fn script_safe(id: &str) -> String {
     id.chars()
@@ -1288,4 +1312,76 @@ fn network_session() -> webkit::NetworkSession {
         static SESSION: webkit::NetworkSession = webkit::NetworkSession::new_ephemeral();
     }
     SESSION.with(|s| s.clone())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::body_mark;
+    use std::collections::HashMap;
+
+    fn images(entries: &[(&str, &str)]) -> HashMap<String, String> {
+        entries
+            .iter()
+            .map(|(cid, uri)| (cid.to_string(), uri.to_string()))
+            .collect()
+    }
+
+    #[test]
+    fn a_body_that_did_not_change_keeps_its_cleaned_copy() {
+        let pictures = images(&[("cid1", "data:image/png;base64,AAAA")]);
+        assert_eq!(
+            body_mark("<p>Hello</p>", &pictures),
+            body_mark("<p>Hello</p>", &pictures)
+        );
+    }
+
+    #[test]
+    fn two_bodies_of_the_same_length_are_two_bodies() {
+        let pictures = images(&[("cid1", "data:image/png;base64,AAAA")]);
+        assert_ne!(
+            body_mark("<p>Hello</p>", &pictures),
+            body_mark("<p>Howdy</p>", &pictures)
+        );
+    }
+
+    #[test]
+    fn an_image_that_changed_is_a_new_body() {
+        assert_ne!(
+            body_mark(
+                "<p>Hello</p>",
+                &images(&[("cid1", "data:image/png;base64,AAAA")])
+            ),
+            body_mark(
+                "<p>Hello</p>",
+                &images(&[("cid1", "data:image/png;base64,BBBB")])
+            )
+        );
+        assert_ne!(
+            body_mark(
+                "<p>Hello</p>",
+                &images(&[("cid1", "data:image/png;base64,AAAA")])
+            ),
+            body_mark(
+                "<p>Hello</p>",
+                &images(&[("cid2", "data:image/png;base64,AAAA")])
+            )
+        );
+        assert_ne!(
+            body_mark("<p>Hello</p>", &images(&[])),
+            body_mark(
+                "<p>Hello</p>",
+                &images(&[("cid1", "data:image/png;base64,AAAA")])
+            )
+        );
+    }
+
+    #[test]
+    fn the_order_the_images_arrived_in_says_nothing() {
+        let one = images(&[("cid1", "first"), ("cid2", "second")]);
+        let other = images(&[("cid2", "second"), ("cid1", "first")]);
+        assert_eq!(
+            body_mark("<p>Hello</p>", &one),
+            body_mark("<p>Hello</p>", &other)
+        );
+    }
 }
