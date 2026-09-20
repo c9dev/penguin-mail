@@ -135,6 +135,10 @@ impl App {
                 && let Some(app) = weak.upgrade()
             {
                 app.core.poke_all();
+                // Whatever is waiting in the outbox has a widening
+                // interval to sit out; the network coming back is better
+                // news than any of it.
+                app.wake_outbox();
             }
         });
         app.load_accounts();

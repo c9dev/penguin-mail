@@ -19,8 +19,8 @@ use mailrs_store::{Db, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::{
     AccountSettings, AccountSync, Accounts, AnyGmail, Changed, ContactBook, Counts, Failure,
-    History, Invitations, Listing, MailAction, MailActions, Mailbox, Mailboxes, Outcome, Permitted,
-    Scope, SyncEngine, View, connect_account, now_millis,
+    History, Invitations, Listing, MailAction, MailActions, Mailbox, Mailboxes, Outbox, Outcome,
+    Permitted, Scope, SyncEngine, View, connect_account, now_millis,
 };
 
 use crate::assistant::run::{Background, Modules};
@@ -45,6 +45,9 @@ pub type Contacts = ContactBook<RunningEngine>;
 /// Reads the invitations in mail and answers them. See
 /// `mailrs_sync::Invitations`.
 pub type Events = Invitations<RunningEngine>;
+/// Holds the messages waiting to go out and sends them when it can. See
+/// `mailrs_sync::Outbox`.
+pub type Waiting = Outbox<RunningEngine>;
 
 /// The engine that runs now. Changing the sync settings replaces it, so mail
 /// actions look accounts up here rather than keep one engine.
@@ -85,6 +88,7 @@ pub struct Core {
     gmail_settings: Arc<GmailSettings>,
     contacts: Arc<Contacts>,
     invitations: Arc<Events>,
+    outbox: Arc<Waiting>,
     config: RefCell<Option<Config>>,
     /// The person's own gpg, found once at startup. With none, every
     /// OpenPGP control stays out of the window rather than failing later.
@@ -163,6 +167,7 @@ impl Core {
         }
         let contacts = Arc::new(ContactBook::new(Arc::clone(&engine), db.clone(), photo_dir));
         let invitations = Arc::new(Invitations::new(Arc::clone(&engine), db.clone()));
+        let outbox = Arc::new(Outbox::new(Arc::clone(&engine), db.clone()));
         let core = Rc::new(Core {
             runtime,
             db,
@@ -174,6 +179,7 @@ impl Core {
             gmail_settings,
             contacts,
             invitations,
+            outbox,
             config: RefCell::new(config),
             pgp: Pgp::find().ok(),
             smime: Smime::find().ok(),
@@ -405,6 +411,12 @@ impl Core {
     /// sends back.
     pub fn invitations(&self) -> Arc<Events> {
         Arc::clone(&self.invitations)
+    }
+
+    /// The messages waiting to go out: Send Later, and whatever could not
+    /// be sent when it was written. See `mailrs_sync::Outbox`.
+    pub fn outbox(&self) -> Arc<Waiting> {
+        Arc::clone(&self.outbox)
     }
 
     /// The modules the assistant's tools work through.

@@ -871,8 +871,24 @@ impl Sample {
                 _ => None,
             },
             protection: None,
+            // The demo's mail is well behaved, apart from the newsletter,
+            // which reaches this computer in the clear so the details
+            // panel has something to warn about.
+            provenance: mailrs_domain::Provenance {
+                mailed_by: Some(sender_domain(self.from.1)),
+                signed_by: Some(sender_domain(self.from.1)),
+                encrypted: Some(self.id != "news-1"),
+            },
         }
     }
+}
+
+/// The domain a demo sender writes from.
+fn sender_domain(address: &str) -> String {
+    address
+        .rsplit_once('@')
+        .map(|(_, domain)| domain.to_string())
+        .unwrap_or_default()
 }
 
 /// The sample invitation, written around `now` so the meeting is always a

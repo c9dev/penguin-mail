@@ -85,6 +85,13 @@ fn general_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         settings.inbox_categories,
         Change::InboxCategories,
     ));
+    reading.add(&combo(
+        app,
+        &gettext("Open the Inbox On"),
+        Some(&gettext("Which category the window starts on")),
+        settings.default_category,
+        Change::DefaultCategory,
+    ));
     reading.add(&switch(
         app,
         &gettext("Suggest Follow-Ups"),

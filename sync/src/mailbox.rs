@@ -2,7 +2,7 @@
 //! says. The window and the assistant both read mail through this module, so
 //! only one place knows which mailboxes come from the local store and which
 //! from a Gmail search, that categories narrow an inbox, and how Follow Up,
-//! Remind Me, and Send Later build their rows.
+//! Remind Me, Send Later, and the Outbox build their rows.
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -15,7 +15,7 @@ use mailrs_domain::{
     ThreadSummary, system_label,
 };
 use mailrs_store::threads::ThreadFilter;
-use mailrs_store::{Db, flags, follow_ups, reminders, scheduled, threads};
+use mailrs_store::{Db, flags, follow_ups, outbox, reminders, threads};
 
 use crate::{Accounts, SyncError};
 
@@ -55,6 +55,9 @@ pub enum Mailbox {
     },
     /// Messages waiting to go out at a set time, across all accounts.
     Scheduled,
+    /// Messages that could not go out and are waiting here to be tried
+    /// again, across all accounts.
+    Outbox,
     /// Conversations set aside with Remind Me, across all accounts.
     Reminders,
     /// Sent mail nobody has answered for a few days, across all accounts.
@@ -80,6 +83,7 @@ impl Mailbox {
             Mailbox::Search { .. } => gettext("Search"),
             Mailbox::Folder { folder, .. } => folder_name(*folder),
             Mailbox::Scheduled => gettext("Send Later"),
+            Mailbox::Outbox => gettext("Outbox"),
             Mailbox::Reminders => gettext("Remind Me"),
             Mailbox::FollowUp => gettext("Follow Up"),
             Mailbox::Flag(color) => fill(&gettext("{color} Flag"), &[("color", &color.name())]),
@@ -93,6 +97,7 @@ impl Mailbox {
         match self {
             Mailbox::Unified(_)
             | Mailbox::Scheduled
+            | Mailbox::Outbox
             | Mailbox::Reminders
             | Mailbox::FollowUp
             | Mailbox::Flag(_)
@@ -147,6 +152,9 @@ impl Mailbox {
             Mailbox::Scheduled => {
                 return empty(gettext("Nothing Scheduled"), "mail-send-symbolic");
             }
+            Mailbox::Outbox => {
+                return empty(gettext("Outbox Is Empty"), "mail-outbox-symbolic");
+            }
             Mailbox::Reminders => return empty(gettext("No Reminders"), "alarm-symbolic"),
             Mailbox::FollowUp => {
                 return empty(gettext("No Follow-Ups"), "mail-reply-sender-symbolic");
@@ -194,6 +202,7 @@ impl Mailbox {
             Mailbox::Search { .. }
             | Mailbox::Folder { .. }
             | Mailbox::Scheduled
+            | Mailbox::Outbox
             | Mailbox::Reminders
             | Mailbox::FollowUp
             | Mailbox::Smart(_) => None,
@@ -463,6 +472,7 @@ impl<A: Accounts> Mailboxes<A> {
                 self.remote(&query, only, scope, view, base, from).await
             }
             Mailbox::Scheduled => self.scheduled(view, base, from).await,
+            Mailbox::Outbox => self.outbox(view, base, from).await,
             Mailbox::Reminders => self.reminders(view, base, from).await,
             Mailbox::FollowUp => self.follow_ups(view, base, from).await,
             _ => self.stored(mailbox, view, base, from).await,
@@ -496,11 +506,13 @@ impl<A: Accounts> Mailboxes<A> {
                 } else {
                     0
                 };
-                let scheduled = scheduled::list(c)?.len() as i64;
+                let scheduled = outbox::scheduled(c)?.len() as i64;
+                let stuck = outbox::stuck(c)?.len() as i64;
                 let reminders = reminders::list(c)?.len() as i64;
                 let mut mailboxes = HashMap::new();
                 mailboxes.insert(Mailbox::FollowUp, waiting);
                 mailboxes.insert(Mailbox::Scheduled, scheduled);
+                mailboxes.insert(Mailbox::Outbox, stuck);
                 mailboxes.insert(Mailbox::Reminders, reminders);
                 for mailbox in sidebar {
                     let count = match &mailbox {
@@ -799,44 +811,60 @@ impl<A: Accounts> Mailboxes<A> {
         if from > 0 {
             return Ok(base);
         }
-        let items = self.db.read(scheduled::list).await?;
+        let items = self.db.read(outbox::scheduled).await?;
         let now = view.local_now();
         let rows: Vec<ThreadSummary> = items
             .iter()
             .map(|item| ThreadSummary {
                 account_id: item.account_id,
-                id: item.thread_id.clone(),
-                message_id: Some(item.message_id.clone()),
+                id: item
+                    .thread_id
+                    .clone()
+                    .unwrap_or_else(|| outbox_row(item.id)),
+                message_id: item.message_id.clone(),
                 last_message_at: item.send_at,
                 subject: item.subject.clone(),
                 snippet: fill(
                     &gettext("Sends {when}"),
                     &[("when", &future_date(item.send_at, now))],
                 ),
-                from: if item.recipients.is_empty() {
-                    gettext("No recipients")
-                } else {
-                    fill(
-                        &gettext("To {recipients}"),
-                        &[("recipients", &item.recipients)],
-                    )
-                },
+                from: recipients_of(item),
                 message_count: 1,
                 ..ThreadSummary::default()
             })
             .collect();
-        let subtitle = match rows.len() {
-            0 => String::new(),
-            count => fill_plural(
-                "{count} message",
-                "{count} messages",
-                count,
-                &[("count", &count.to_string())],
-            ),
-        };
         Ok(Listing {
+            subtitle: counted(rows.len()),
             rows,
-            subtitle,
+            ..base
+        })
+    }
+
+    /// The Outbox: what could not go out, why, and when the next try is.
+    /// A row is named after its own place in the table rather than after a
+    /// Gmail thread, because a message that never reached Gmail has none.
+    async fn outbox(&self, view: &View, base: Listing, from: usize) -> Result<Listing, SyncError> {
+        if from > 0 {
+            return Ok(base);
+        }
+        let items = self.db.read(outbox::stuck).await?;
+        let now = view.local_now();
+        let rows: Vec<ThreadSummary> = items
+            .iter()
+            .map(|item| ThreadSummary {
+                account_id: item.account_id,
+                id: outbox_row(item.id),
+                last_message_at: item.send_at,
+                subject: item.subject.clone(),
+                snippet: why_waiting(item, now),
+                from: recipients_of(item),
+                message_count: 1,
+                ..ThreadSummary::default()
+            })
+            .collect();
+        Ok(Listing {
+            subtitle: counted(rows.len()),
+            rows,
             ..base
         })
     }
@@ -968,6 +996,66 @@ fn waited(elapsed: EpochMillis) -> String {
             "Sent {days} days ago, no reply yet",
             days.max(0) as usize,
             &[("days", &days.to_string())],
+        ),
+    }
+}
+
+/// What an Outbox row is named, since a message that never reached Gmail
+/// has no thread to be named after. The window reads its place in the
+/// table back out with [`outbox_id`].
+pub fn outbox_row(id: i64) -> String {
+    format!("outbox:{id}")
+}
+
+/// The message an Outbox row stands for, or `None` for an ordinary row.
+pub fn outbox_id(row_id: &str) -> Option<i64> {
+    row_id.strip_prefix("outbox:")?.parse().ok()
+}
+
+/// Who a waiting message goes to, as its row shows it.
+fn recipients_of(message: &outbox::Queued) -> String {
+    if message.recipients.is_empty() {
+        return gettext("No recipients");
+    }
+    fill(
+        &gettext("To {recipients}"),
+        &[("recipients", &message.recipients)],
+    )
+}
+
+/// What an Outbox row says under the subject: why the message has not gone,
+/// and when the next try is.
+fn why_waiting(message: &outbox::Queued, now: DateTime<Local>) -> String {
+    let unsent = gettext("Not sent");
+    let problem = message
+        .problem
+        .as_deref()
+        .unwrap_or(&unsent)
+        .trim_end_matches(['.', ' ']);
+    match crate::backoff::retry_delay(message.attempts) {
+        Some(_) => fill(
+            &gettext("{problem}. Trying again {when}"),
+            &[
+                ("problem", problem),
+                ("when", &future_date(message.send_at, now)),
+            ],
+        ),
+        None => fill(
+            &gettext("{problem}. Penguin Mail stopped trying"),
+            &[("problem", problem)],
+        ),
+    }
+}
+
+/// How many messages a waiting list holds, for its header.
+fn counted(rows: usize) -> String {
+    match rows {
+        0 => String::new(),
+        count => fill_plural(
+            "{count} message",
+            "{count} messages",
+            count,
+            &[("count", &count.to_string())],
         ),
     }
 }

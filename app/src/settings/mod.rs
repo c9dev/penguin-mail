@@ -4,6 +4,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
+use mailrs_domain::Category;
 use mailrs_domain::translate::{fill_plural, gettext};
 use serde::{Deserialize, Serialize};
 
@@ -55,6 +56,10 @@ pub struct Settings {
     /// Split inboxes into Primary, Updates, Promotions, and Social, from
     /// Gmail's category labels.
     pub inbox_categories: bool,
+    /// The category the window opens on. All shows the whole inbox, which
+    /// is what a mail client does when nobody has asked it to hide
+    /// anything.
+    pub default_category: Category,
     /// Show Follow Up for sent mail nobody has answered.
     pub suggest_follow_ups: bool,
     /// Dictionary languages per account address, such as `["en_US",
@@ -78,6 +83,10 @@ pub struct Settings {
     pub sign_by_default: bool,
     /// Turn Encrypt on as soon as gpg holds a key for every recipient.
     pub encrypt_when_possible: bool,
+    /// Accounts already offered to GNOME Online Accounts, lower case.
+    /// The offer is worth making once: whoever says no to it means no,
+    /// and whoever says yes has GNOME asking them the rest.
+    pub offered_to_gnome: Vec<String>,
     /// Read each account's Google contacts, for names, photos, and
     /// recipient suggestions. Off until the owner turns it on, because it
     /// is the one thing here that asks Google for more access.
@@ -171,6 +180,7 @@ impl Default for Settings {
             ai: AiSettings::default(),
             hidden_addresses: Vec::new(),
             inbox_categories: true,
+            default_category: Category::All,
             suggest_follow_ups: true,
             spell_languages: BTreeMap::new(),
             spell_words: Vec::new(),
@@ -181,6 +191,7 @@ impl Default for Settings {
             sign_by_default: false,
             encrypt_when_possible: false,
             contacts: false,
+            offered_to_gnome: Vec::new(),
         }
     }
 }
@@ -202,6 +213,15 @@ impl Choice for ComposeFormat {
             ComposeFormat::Rich => gettext("Rich text"),
             ComposeFormat::Markdown => gettext("Markdown"),
         }
+    }
+}
+
+/// The inbox category a fresh window opens on. The name is the one the
+/// category bar shows, so it reads the same in both places.
+impl Choice for Category {
+    const ALL: &'static [Self] = &Category::ALL;
+    fn label(self) -> String {
+        self.name()
     }
 }
 
@@ -575,6 +595,34 @@ impl Settings {
 
 #[cfg(test)]
 mod tests {
+    // The category bar itself cannot be tested here: the harness gives
+    // every test its own thread, GTK refuses a second init from a
+    // different one, and `richbuffer` already spends this binary's one
+    // GTK test. So what is tested is the setting the bar is built from.
+    #[test]
+    fn the_inbox_opens_on_everything_until_somebody_says_otherwise() {
+        assert_eq!(Settings::default().default_category, Category::All);
+    }
+
+    #[test]
+    fn choosing_a_category_survives_the_settings_file() {
+        for category in Category::ALL {
+            let mut settings = Settings::default();
+            Change::DefaultCategory(category).apply(&mut settings);
+            let written = serde_json::to_string(&settings).expect("settings serialise");
+            let read: Settings = serde_json::from_str(&written).expect("and come back");
+            assert_eq!(read.default_category, category, "{category:?}");
+        }
+    }
+
+    #[test]
+    fn the_categories_redraw_when_the_one_they_open_on_changes() {
+        let before = Settings::default();
+        let mut after = before.clone();
+        after.default_category = Category::Promotions;
+        assert!(Effects::between(&before, &after).has(Effect::Categories));
+    }
+
     use super::*;
 
     #[test]

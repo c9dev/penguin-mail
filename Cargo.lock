@@ -2111,9 +2111,11 @@ name = "mailrs-sync"
 version = "0.1.0"
 dependencies = [
  "async-channel",
+ "base64 0.23.1",
  "chrono",
  "dirs",
  "futures",
+ "mail-builder",
  "mailrs-domain",
  "mailrs-gmail",
  "mailrs-store",

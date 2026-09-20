@@ -270,6 +270,32 @@ pub struct Attachment {
     pub content_id: Option<String>,
 }
 
+/// What a message's headers say about where it came from, beyond the From
+/// line the sender wrote. `mailrs_gmail::provenance` reads it; the details
+/// panel under a message shows it.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Provenance {
+    /// The domain that handed the message over, from the envelope sender
+    /// or from SPF.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mailed_by: Option<String>,
+    /// The domain whose DKIM key signed it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signed_by: Option<String>,
+    /// Whether the last hop to the mail server used TLS. None when the
+    /// message says nothing either way.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub encrypted: Option<bool>,
+}
+
+impl Provenance {
+    /// Whether it says anything at all. A message that answers none of
+    /// the three gets no details panel.
+    pub fn is_empty(&self) -> bool {
+        self.mailed_by.is_none() && self.signed_by.is_none() && self.encrypted.is_none()
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MessageBody {
     pub html: Option<String>,
@@ -286,6 +312,9 @@ pub struct MessageBody {
     /// one. `mailrs_domain::invitation::read` turns it into an event.
     #[serde(default)]
     pub calendar: Option<String>,
+    /// Who really sent it, read off the headers.
+    #[serde(default)]
+    pub provenance: Provenance,
     /// The wrapper the message arrived in, when it arrived in one, and
     /// which standard wrote it. The parts themselves are not here: a
     /// signature covers the bytes as they were sent, and these ones have

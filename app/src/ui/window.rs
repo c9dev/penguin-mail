@@ -17,7 +17,9 @@ use mailrs_domain::{
 };
 use mailrs_gmail::{CONTACTS_SCOPE, DELETE_SCOPE};
 use mailrs_store::{accounts, labels, messages};
-use mailrs_sync::{History, Listing, MailAction, Outcome, Permitted, Scope, TriageAction, View};
+use mailrs_sync::{
+    History, Listing, MailAction, Outcome, Permitted, Scope, TriageAction, View, outbox_id,
+};
 
 use super::contact_card;
 use super::conversation::{Action, ConversationView, OpenThread};
@@ -42,6 +44,7 @@ mod hide_my_email;
 mod images;
 mod invitation;
 mod organize;
+mod outbox;
 mod pgp;
 mod reminders;
 mod scheduled;
@@ -477,7 +480,7 @@ impl MainWindow {
                 labels: RefCell::new(HashMap::new()),
                 assistant,
                 assistant_split,
-                categories: categories::CategoryBar::new(),
+                categories: categories::CategoryBar::new(app.settings().default_category),
                 follow_up: followup::FollowUpBanner::new(),
                 inline_cache: RefCell::new(HashMap::new()),
                 thumbnail_cache: RefCell::new(HashMap::new()),
@@ -795,6 +798,7 @@ impl MainWindow {
             self.split.set_show_sidebar(false);
         }
         self.conversation.set_folder(mailbox.folder());
+        self.follow_outbox();
         self.follow_categories();
         self.follow_follow_ups();
         self.reload_list();
@@ -1308,6 +1312,10 @@ impl MainWindow {
 
     fn picked(self: &Rc<Self>, picked: Picked) {
         match picked {
+            // A message that never reached Gmail has no thread to open,
+            // and asking Gmail for one would be a call thrown away. Its
+            // row menu is what acts on it.
+            Picked::One(row) if outbox_id(&row.id).is_some() => self.conversation.clear(),
             Picked::One(row) => self.open_thread(row),
             Picked::Many(rows) => {
                 self.conversation.show_many(
@@ -1572,6 +1580,9 @@ impl MainWindow {
     fn trash(self: &Rc<Self>) {
         if *self.mailbox.borrow() == Mailbox::Scheduled {
             return self.cancel_scheduled(self.targets());
+        }
+        if *self.mailbox.borrow() == Mailbox::Outbox {
+            return self.drop_queued();
         }
         if *self.mailbox.borrow() == Mailbox::Reminders {
             return self.cancel_reminders(self.targets());
@@ -2187,7 +2198,7 @@ impl MainWindow {
             if let Some(id) = draft_id.clone() {
                 draft.send_at = this
                     .core
-                    .read(move |c| mailrs_store::scheduled::find(c, account_id, &id))
+                    .read(move |c| mailrs_store::outbox::find_draft(c, account_id, &id))
                     .await
                     .ok()
                     .flatten()
@@ -2393,6 +2404,7 @@ impl MainWindow {
             });
             self.actions.add_action(&action);
         };
+        self.install_outbox_actions();
         add("compose", Box::new(|win| win.compose_new()));
         add("search", Box::new(|win| win.list.open_search()));
         add(
@@ -3140,7 +3152,13 @@ fn read_cached_body(
 ) -> mailrs_store::Result<Option<MessageBody>> {
     // Readers cannot write, so this leaves the access time alone; the body
     // fetch that follows records the access.
-    mailrs_store::bodies::peek_body(c, account_id, message_id)
+    let body = mailrs_store::bodies::peek_body(c, account_id, message_id)?;
+    // A body cached before this app read provenance has none, and nothing
+    // would ever put it there: the cache would answer for that message
+    // forever. Treating it as a miss costs one fetch, once, and fills the
+    // gap for good. A message with a body that truly says nothing about
+    // its origins is rare, and pays that fetch once as well.
+    Ok(body.filter(|body| !body.provenance.is_empty()))
 }
 
 /// Unread messages and the newest message start expanded.

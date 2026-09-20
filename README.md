@@ -41,6 +41,14 @@ time, and keeps your mail on your own computer.
   button (Preferences sets how long). Send Later, on the arrow next to
   Send, schedules a message; it waits in Send Later and goes out on time
   while Penguin Mail runs, even in the tray.
+- **An Outbox.** A message that cannot go out waits on this computer with
+  the bytes it will be sent from, through a quit and a restart, and
+  Penguin Mail tries again on a widening interval and as soon as the
+  network comes back. The Outbox appears in the sidebar while it holds
+  anything; a row says why the message has not gone and when the next try
+  is, and you can edit it, send it now, or delete it. What another try
+  would not fix comes back to you instead: a refused recipient, a message
+  over Gmail's size limit, a sign-in that has run out.
 - **Markdown when you want it.** Format Markdown turns Markdown in the body
   into formatted text; Edit as Markdown goes back. Preferences sets which
   one new messages start in. Paste, drop, or insert images into the text.

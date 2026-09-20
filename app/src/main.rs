@@ -10,6 +10,7 @@ mod core;
 mod demo;
 mod diff;
 mod format;
+mod goa;
 mod hide_my_email;
 mod images;
 mod language;

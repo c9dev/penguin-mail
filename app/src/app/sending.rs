@@ -1,12 +1,18 @@
-//! Sending mail: the Undo Send delay, Send Later, and the loop that sends
-//! scheduled drafts when they come due.
+//! Sending mail: the Undo Send delay, Send Later, the outbox a message
+//! waits in when it cannot go out, and the loop that empties it.
+//!
+//! Everything a message needs to go out later lives in the store, so
+//! closing the laptop mid-send loses nothing: the bytes as they were
+//! built, and the draft the composer would reopen. `mailrs_sync::Outbox`
+//! owns the sending and decides what is worth another try; this module
+//! builds the message, hands it over, and says what happened.
 
 use std::rc::Rc;
 
 use gtk::glib;
 use mailrs_domain::system_label;
-use mailrs_store::scheduled::{self, Scheduled};
-use mailrs_sync::now_millis;
+use mailrs_store::outbox::Queued;
+use mailrs_sync::{Posted, now_millis};
 
 use super::App;
 use crate::compose::{
@@ -45,6 +51,9 @@ impl App {
                             }
                         });
                         let app = Rc::clone(self);
+                        // Nothing reaches the outbox until the delay runs
+                        // out, so a message being undone is still only a
+                        // message in hand.
                         glib::timeout_add_seconds_local_once(delay, move || {
                             app.pending_sends
                                 .set(app.pending_sends.get().saturating_sub(1));
@@ -130,36 +139,45 @@ impl App {
         build_protected(draft, date, &message_id, entity).map_err(|err| built(&err))
     }
 
-    /// Sends at once. With `announce`, says so in the window.
+    /// Sends at once, or puts the message in the outbox when it cannot go.
+    /// With `announce`, says so in the window.
     fn send_now(self: &Rc<Self>, draft: Draft, announce: bool) {
-        let Some(sync) = self.core.account(draft.account_id) else {
+        if self.core.account(draft.account_id).is_none() {
             return self.reopen(draft, &not_connected());
-        };
+        }
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let raw = match this.raw_for(&draft).await {
                 Ok(raw) => raw,
                 Err(problem) => return this.reopen(draft, &problem),
             };
-            let (thread, draft_id) = (draft.thread_id.clone(), draft.draft_id.clone());
-            match this
+            let outbox = this.core.outbox();
+            let message = queued(&draft, raw, now_millis());
+            let posted = this
                 .core
-                .call(async move { sync.send(raw, thread, draft_id).await })
-                .await
-            {
-                Ok(_) => {
-                    if let Some(draft_id) = draft.draft_id.clone() {
-                        let account_id = draft.account_id;
-                        this.core
-                            .spawn_write(move |c| scheduled::remove(c, account_id, &draft_id));
-                        this.scheduled_changed();
-                    }
+                .call(async move { outbox.post(message).await })
+                .await;
+            match posted {
+                Ok(Posted::Sent(_)) => {
                     this.contacts_stale.set(true);
                     this.core.poke(draft.account_id);
+                    this.scheduled_changed();
                     if announce && let Some(window) = this.window() {
                         window.toast_sent();
                     }
                 }
+                Ok(Posted::Waiting(_)) => {
+                    this.scheduled_changed();
+                    if let Some(window) = this.window() {
+                        window.toast_text(&gettext(
+                            "Waiting in the Outbox. It goes out as soon as it can.",
+                        ));
+                    }
+                }
+                Ok(Posted::Refused(problem)) => this.reopen(
+                    draft,
+                    &fill(&gettext("Not sent: {reason}"), &[("reason", &problem)]),
+                ),
                 Err(err) => this.reopen(
                     draft,
                     &fill(
@@ -173,9 +191,9 @@ impl App {
 
     /// Saves `draft` to Gmail and records when to send it.
     fn schedule(self: &Rc<Self>, draft: Draft, at: i64) {
-        let Some(sync) = self.core.account(draft.account_id) else {
+        if self.core.account(draft.account_id).is_none() {
             return self.reopen(draft, &not_connected());
-        };
+        }
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             // A scheduled message is signed now rather than at its hour,
@@ -184,45 +202,18 @@ impl App {
                 Ok(raw) => raw,
                 Err(problem) => return this.reopen(draft, &problem),
             };
-            let (thread, draft_id) = (draft.thread_id.clone(), draft.draft_id.clone());
-            let saved = match this
+            let outbox = this.core.outbox();
+            let message = queued(&draft, raw, at);
+            let posted = this
                 .core
-                .call(async move { sync.save_draft(raw, thread, draft_id).await })
-                .await
-            {
-                Ok(saved) => saved,
-                Err(err) => {
-                    return this.reopen(
-                        draft,
-                        &fill(
-                            &gettext("Not scheduled: {reason}"),
-                            &[("reason", &err.to_string())],
-                        ),
-                    );
-                }
-            };
-            let recipients = draft
-                .to
-                .iter()
-                .chain(&draft.cc)
-                .map(|a| a.display().to_string())
-                .collect::<Vec<_>>()
-                .join(", ");
-            let item = Scheduled {
-                account_id: draft.account_id,
-                draft_id: saved.draft_id,
-                message_id: saved.message_id,
-                thread_id: saved.thread_id,
-                subject: draft.subject.clone(),
-                recipients,
-                send_at: at,
-            };
-            match this
-                .core
-                .write(move |c| scheduled::schedule(c, &item))
-                .await
-            {
-                Ok(()) => {
+                .call(async move { outbox.schedule(message).await })
+                .await;
+            match posted {
+                Ok(Posted::Refused(problem)) => this.reopen(
+                    draft,
+                    &fill(&gettext("Not scheduled: {reason}"), &[("reason", &problem)]),
+                ),
+                Ok(_) => {
                     this.core.poke(draft.account_id);
                     this.scheduled_changed();
                     if let Some(window) = this.window() {
@@ -264,54 +255,45 @@ impl App {
         });
     }
 
-    fn send_due(self: &Rc<Self>) {
+    /// Empties the outbox as far as Gmail will let it, and brings back the
+    /// conversations whose reminder is due.
+    pub(super) fn send_due(self: &Rc<Self>) {
         if self.scheduler_running.replace(true) {
             return;
         }
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let due = this
+            let outbox = this.core.outbox();
+            let drained = this
                 .core
-                .read(|c| scheduled::due(c, now_millis()))
-                .await
-                .unwrap_or_default();
-            let mut changed = false;
-            for item in due {
-                // The account may still be connecting; the next pass retries.
-                let Some(sync) = this.core.account(item.account_id) else {
-                    continue;
-                };
-                let draft_id = item.draft_id.clone();
-                let sent = this
-                    .core
-                    .call(async move { sync.send_draft(&draft_id).await })
-                    .await;
-                match sent {
-                    Ok(outcome) => {
-                        let (account_id, draft_id) = (item.account_id, item.draft_id.clone());
-                        let _ = this
-                            .core
-                            .write(move |c| scheduled::remove(c, account_id, &draft_id))
-                            .await;
-                        changed = true;
-                        this.core.poke(item.account_id);
-                        if outcome.is_some()
-                            && let Some(window) = this.window()
-                        {
-                            window.toast_text(&match item.subject.is_empty() {
-                                true => gettext("Sent your message"),
-                                false => fill(
-                                    &gettext("Sent “{subject}”"),
-                                    &[("subject", &item.subject)],
-                                ),
-                            });
+                .call(async move { outbox.send_due(now_millis()).await })
+                .await;
+            let mut changed = match drained {
+                Ok(drained) => {
+                    for message in &drained.sent {
+                        this.core.poke(message.account_id);
+                    }
+                    if let Some(window) = this.window() {
+                        for message in &drained.sent {
+                            window.toast_text(&fill(
+                                &gettext("Sent {message}"),
+                                &[("message", &named(&message.subject))],
+                            ));
+                        }
+                        for message in &drained.stuck {
+                            window.toast_text(&fill(
+                                &gettext("Still in the Outbox: {message}"),
+                                &[("message", &named(&message.subject))],
+                            ));
                         }
                     }
-                    Err(err) => {
-                        tracing::warn!(error = %err, draft = %item.draft_id, "scheduled send failed; will retry")
-                    }
+                    drained.changed
                 }
-            }
+                Err(err) => {
+                    tracing::warn!(error = %err, "the outbox could not be emptied; will retry");
+                    false
+                }
+            };
             if this.return_reminders().await {
                 changed = true;
             }
@@ -319,6 +301,19 @@ impl App {
                 this.scheduled_changed();
             }
             this.scheduler_running.set(false);
+        });
+    }
+
+    /// Tries the outbox again without waiting out the rest of an interval,
+    /// which is what the network coming back calls for.
+    pub(super) fn wake_outbox(self: &Rc<Self>) {
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let outbox = this.core.outbox();
+            if let Err(err) = this.core.call(async move { outbox.try_now().await }).await {
+                return tracing::warn!(error = %err, "could not bring the outbox forward");
+            }
+            this.send_due();
         });
     }
 
@@ -378,10 +373,41 @@ impl App {
         returned
     }
 
-    /// Tells the window the Send Later list changed.
+    /// Tells the window the Send Later and Outbox lists changed.
     pub fn scheduled_changed(&self) {
         if let Some(window) = self.window() {
             window.scheduled_changed();
         }
     }
+}
+
+/// A message for the outbox: the bytes that go out, and the draft the
+/// composer reopens if the person wants to change it before it does.
+fn queued(draft: &Draft, raw: Vec<u8>, send_at: i64) -> Queued {
+    let recipients = draft
+        .to
+        .iter()
+        .chain(&draft.cc)
+        .map(|a| a.display().to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
+    Queued {
+        account_id: draft.account_id,
+        draft_id: draft.draft_id.clone(),
+        thread_id: draft.thread_id.clone(),
+        subject: draft.subject.clone(),
+        recipients,
+        send_at,
+        raw: Some(raw),
+        composer: serde_json::to_string(draft).unwrap_or_default(),
+        ..Queued::default()
+    }
+}
+
+/// A message by its subject, or by name when it has none.
+fn named(subject: &str) -> String {
+    if subject.is_empty() {
+        return gettext("your message");
+    }
+    fill(&gettext("“{subject}”"), &[("subject", subject)])
 }

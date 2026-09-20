@@ -3,7 +3,8 @@
 use std::rc::Rc;
 
 use gtk::glib;
-use mailrs_store::scheduled;
+use mailrs_store::outbox;
+use mailrs_sync::outbox_id;
 
 use super::{MainWindow, Target};
 use crate::ui::Mailbox;
@@ -26,12 +27,13 @@ impl MainWindow {
         self.toast(text);
     }
 
-    /// Refreshes counts, and the list when it shows Send Later or Remind Me.
+    /// Refreshes counts, and the list when it shows one of the mailboxes
+    /// that read what is waiting.
     pub fn scheduled_changed(self: &Rc<Self>) {
         self.refresh_counts();
         if matches!(
             *self.mailbox.borrow(),
-            Mailbox::Scheduled | Mailbox::Reminders
+            Mailbox::Scheduled | Mailbox::Outbox | Mailbox::Reminders
         ) {
             self.reload_list();
         }
@@ -45,14 +47,18 @@ impl MainWindow {
             let removed = this
                 .core
                 .write(move |c| {
-                    for item in scheduled::list(c)? {
+                    for item in outbox::scheduled(c)? {
+                        // A row names its Gmail thread, or, for a message
+                        // Gmail has never seen, its own place in the table.
                         let hit = targets.iter().any(|t| {
                             t.account_id == item.account_id
-                                && (t.message_id.as_deref() == Some(item.message_id.as_str())
-                                    || t.thread_id == item.thread_id)
+                                && (outbox_id(&t.thread_id) == Some(item.id)
+                                    || item.thread_id.as_deref() == Some(t.thread_id.as_str())
+                                    || (item.message_id.is_some()
+                                        && t.message_id == item.message_id))
                         });
                         if hit {
-                            scheduled::remove(c, item.account_id, &item.draft_id)?;
+                            outbox::remove(c, item.id)?;
                         }
                     }
                     Ok(())

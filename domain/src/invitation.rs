@@ -11,6 +11,7 @@
 //! cut off halfway, gives back `None`.
 
 mod recurrence;
+mod reply;
 mod zone;
 
 #[cfg(test)]
@@ -27,6 +28,7 @@ use icalendar::{
 use crate::translate::gettext;
 use crate::{Address, EpochMillis, UnknownVariant};
 
+pub use reply::{Scope, counter, reply};
 use zone::Zones;
 
 /// What the sender wants done with the event.
@@ -75,6 +77,16 @@ impl Answer {
             Answer::Yes => gettext("Going"),
             Answer::No => gettext("Not going"),
             Answer::Maybe => gettext("Maybe"),
+        }
+    }
+
+    /// The iCalendar `PARTSTAT` for this answer, which is what an emailed
+    /// reply carries.
+    pub fn partstat(self) -> &'static str {
+        match self {
+            Answer::Yes => "ACCEPTED",
+            Answer::No => "DECLINED",
+            Answer::Maybe => "TENTATIVE",
         }
     }
 
@@ -152,6 +164,21 @@ impl When {
     }
 }
 
+/// The one occurrence of a repeating event an invitation is about. An
+/// organizer who moves next Tuesday's stand-up sends that occurrence
+/// alone, under the series' UID and with a `RECURRENCE-ID` naming which
+/// day it means.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Occurrence {
+    /// The `RECURRENCE-ID` as the organizer wrote it, from the semicolon
+    /// or colon on. An answer copies it back unchanged, because the zone
+    /// it names is part of which occurrence it is.
+    pub written: String,
+    /// The instant it names, read out of its zone the way `DTSTART` is.
+    /// `None` when the zone is one this app could not work out.
+    pub at: Option<EpochMillis>,
+}
+
 /// What one `text/calendar` part says about one event.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Invitation {
@@ -170,6 +197,9 @@ pub struct Invitation {
     pub guests: Vec<Guest>,
     /// How the event repeats, in words: "Every Monday until 30 June".
     pub repeats: Option<String>,
+    /// Which occurrence of a repeating event this message is about, when
+    /// it is about one rather than the series.
+    pub occurrence: Option<Occurrence>,
 }
 
 impl Invitation {
@@ -239,7 +269,32 @@ pub fn read(ics: &str) -> Option<Invitation> {
         repeats: event
             .value("RRULE")
             .and_then(|rule| recurrence::in_words(rule, start_year(&when))),
+        occurrence: event
+            .properties
+            .get("RECURRENCE-ID")
+            .map(|property| occurrence_of(property, &zones)),
     })
+}
+
+/// The occurrence a `RECURRENCE-ID` names, kept both as the organizer
+/// wrote it and as an instant.
+fn occurrence_of(property: &Property, zones: &Zones) -> Occurrence {
+    let mut written = String::new();
+    for parameter in property.params().values() {
+        written.push_str(&format!(
+            ";{}={}",
+            parameter.key().to_ascii_uppercase(),
+            reply::parameter(parameter.value())
+        ));
+    }
+    written.push(':');
+    written.push_str(property.value().trim());
+    let at = match DatePerhapsTime::from_property(property) {
+        Some(DatePerhapsTime::DateTime(at)) => zones.instant(&at),
+        Some(DatePerhapsTime::Date(day)) => zone::local_midnight(day),
+        None => None,
+    };
+    Occurrence { written, at }
 }
 
 /// The year the event starts in, so a repeat that ends in it needs no year.

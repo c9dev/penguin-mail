@@ -10,9 +10,10 @@ pub mod limiter;
 pub mod model;
 mod oauth;
 pub mod people;
+pub mod provenance;
 mod token_store;
 
-pub use calendar::{Answered, CALENDAR_API_BASE, CALENDAR_SCOPE};
+pub use calendar::{Answered, Busy, CALENDAR_API_BASE, CALENDAR_SCOPE};
 pub use client::{
     Authorized, BATCH_LIMIT, GMAIL_API_BASE, GmailClient, authorize, cost, one_click_unsubscribe,
 };

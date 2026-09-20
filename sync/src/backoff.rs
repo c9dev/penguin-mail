@@ -18,6 +18,33 @@ pub fn with_jitter(delay: Duration, jitter: f64) -> Duration {
     delay.mul_f64(1.0 + 0.2 * jitter.clamp(-1.0, 1.0))
 }
 
+/// The first wait the outbox puts between tries.
+const FIRST_RETRY: Duration = Duration::from_secs(30);
+
+/// The longest it waits. Past this the message is going nowhere for a
+/// reason a faster loop would not find.
+const LONGEST_RETRY: Duration = Duration::from_secs(30 * 60);
+
+/// Tries after which the outbox stops on its own, which at the intervals
+/// below is about a day of them. A message set to this count is one the
+/// outbox has given up on, since [`retry_delay`] answers `None` from here.
+pub const MOST_TRIES: u32 = 50;
+
+/// How long the outbox waits before try number `attempts`, counting the
+/// tries already behind it: half a minute, doubling to half an hour.
+/// `None` once it has tried for about a day, which leaves the message in
+/// front of the person rather than going round for ever.
+pub fn retry_delay(attempts: u32) -> Option<Duration> {
+    if attempts >= MOST_TRIES {
+        return None;
+    }
+    Some(
+        FIRST_RETRY
+            .saturating_mul(1u32 << attempts.saturating_sub(1).min(10))
+            .min(LONGEST_RETRY),
+    )
+}
+
 /// Where in the poll cycle an account's tick falls. Six accounts started
 /// together would otherwise ask Gmail for their history on the same second,
 /// every 30 seconds; this spreads them over the cycle and keeps each one on
@@ -55,6 +82,26 @@ mod tests {
     fn an_account_keeps_its_offset() {
         let interval = Duration::from_secs(30);
         assert_eq!(poll_offset(4, interval), poll_offset(4, interval));
+    }
+
+    #[test]
+    fn the_outbox_waits_longer_after_every_try_and_then_stops() {
+        let secs = |attempts| retry_delay(attempts).map(|d| d.as_secs());
+        assert_eq!(secs(1), Some(30));
+        assert_eq!(secs(2), Some(60));
+        assert_eq!(secs(3), Some(120));
+        assert_eq!(secs(7), Some(30 * 60), "it stops widening at half an hour");
+        assert_eq!(secs(40), Some(30 * 60));
+        assert_eq!(secs(MOST_TRIES), None, "a day of tries is enough");
+    }
+
+    #[test]
+    fn a_day_of_tries_is_roughly_what_the_intervals_add_up_to() {
+        let total: Duration = (1..MOST_TRIES).filter_map(retry_delay).sum();
+        assert!(
+            total > Duration::from_secs(20 * 60 * 60) && total < Duration::from_secs(26 * 60 * 60),
+            "{total:?} is about a day"
+        );
     }
 
     #[test]

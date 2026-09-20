@@ -8,9 +8,9 @@ use mailrs_domain::smart::{Condition, Field};
 use mailrs_domain::{
     Account, AccountState, Category, FlagColor, Folder, SmartMailbox, ThreadSummary, system_label,
 };
+use mailrs_store::outbox::{self, Queued};
 use mailrs_store::reminders::Reminder;
-use mailrs_store::scheduled::Scheduled;
-use mailrs_store::{flags, reminders, scheduled};
+use mailrs_store::{flags, reminders};
 
 use super::{Connected, Harness, harness};
 use crate::fake::meta;
@@ -230,18 +230,20 @@ async fn send_later_lists_scheduled_drafts() {
     let account_id = h.account_id;
     let at = now_millis() + DAY;
     h.db.write(move |c| {
-        scheduled::schedule(
+        outbox::put(
             c,
-            &Scheduled {
+            &Queued {
                 account_id,
-                draft_id: "r1".into(),
-                message_id: "m1".into(),
-                thread_id: "t9".into(),
+                draft_id: Some("r1".into()),
+                message_id: Some("m1".into()),
+                thread_id: Some("t9".into()),
                 subject: "Later".into(),
                 recipients: "ann@example.com".into(),
                 send_at: at,
+                ..Queued::default()
             },
         )
+        .map(|_| ())
     })
     .await
     .unwrap();
@@ -253,6 +255,81 @@ async fn send_later_lists_scheduled_drafts() {
     assert_eq!(
         (listing.title.as_str(), listing.subtitle.as_str()),
         ("Send Later", "1 message")
+    );
+    assert!(
+        list(&h, &Mailbox::Outbox, &view()).await.rows.is_empty(),
+        "a message waiting for its hour is not stuck"
+    );
+}
+
+#[tokio::test]
+async fn the_outbox_lists_what_is_stuck_and_says_why_and_when() {
+    let h = harness().await;
+    let account_id = h.account_id;
+    let at = now_millis() + 60_000;
+    let id =
+        h.db.write(move |c| {
+            outbox::put(
+                c,
+                &Queued {
+                    account_id,
+                    subject: "Report".into(),
+                    recipients: "ann@example.com".into(),
+                    send_at: at,
+                    raw: Some(b"bytes".to_vec()),
+                    attempts: 2,
+                    problem: Some("network error: offline".into()),
+                    ..Queued::default()
+                },
+            )
+        })
+        .await
+        .unwrap();
+
+    let listing = list(&h, &Mailbox::Outbox, &view()).await;
+    assert_eq!(ids(&listing), [crate::outbox_row(id)]);
+    assert_eq!(crate::outbox_id(&listing.rows[0].id), Some(id));
+    assert_eq!(listing.rows[0].from, "To ann@example.com");
+    assert!(
+        listing.rows[0]
+            .snippet
+            .starts_with("network error: offline. Trying again "),
+        "the row says why and when: {}",
+        listing.rows[0].snippet
+    );
+    assert_eq!(
+        (listing.title.as_str(), listing.subtitle.as_str()),
+        ("Outbox", "1 message")
+    );
+}
+
+#[tokio::test]
+async fn a_message_the_outbox_gave_up_on_says_so_instead_of_naming_a_time() {
+    let h = harness().await;
+    let account_id = h.account_id;
+    h.db.write(move |c| {
+        outbox::put(
+            c,
+            &Queued {
+                account_id,
+                subject: "Too big".into(),
+                recipients: "ann@example.com".into(),
+                send_at: now_millis(),
+                raw: Some(b"bytes".to_vec()),
+                attempts: crate::MOST_TRIES,
+                problem: Some("Gmail returned HTTP 413".into()),
+                ..Queued::default()
+            },
+        )
+        .map(|_| ())
+    })
+    .await
+    .unwrap();
+
+    let listing = list(&h, &Mailbox::Outbox, &view()).await;
+    assert_eq!(
+        listing.rows[0].snippet,
+        "Gmail returned HTTP 413. Penguin Mail stopped trying"
     );
 }
 

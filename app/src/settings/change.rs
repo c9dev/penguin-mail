@@ -6,7 +6,7 @@
 //! parts of the window that now show something stale. Nothing here touches
 //! GTK, so the rules live under unit tests.
 
-use mailrs_domain::{FlagColor, SmartMailbox};
+use mailrs_domain::{Category, FlagColor, SmartMailbox};
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
@@ -39,6 +39,7 @@ pub enum Change {
     /// The address new messages come from; `None` means the first account.
     DefaultAccount(Option<String>),
     InboxCategories(bool),
+    DefaultCategory(Category),
     SuggestFollowUps(bool),
     /// What a new message starts as.
     ComposeFormat(ComposeFormat),
@@ -110,6 +111,9 @@ pub enum Change {
     },
     /// Keeps a word Add to Dictionary accepted.
     KeepWord(String),
+    /// Records that an account has been offered to GNOME Online Accounts,
+    /// whichever way the person answered.
+    OfferedToGnome(String),
     Ai(AiChange),
 }
 
@@ -166,6 +170,7 @@ impl Change {
             Change::UndoSend(delay) => settings.undo_send = delay,
             Change::DefaultAccount(email) => settings.default_account = email,
             Change::InboxCategories(on) => settings.inbox_categories = on,
+            Change::DefaultCategory(category) => settings.default_category = category,
             Change::SuggestFollowUps(on) => settings.suggest_follow_ups = on,
             Change::ComposeFormat(format) => settings.compose_format = format,
             Change::CheckAttachments(on) => settings.check_attachments = on,
@@ -232,6 +237,12 @@ impl Change {
                     settings.spell_languages.remove(&key);
                 } else {
                     settings.spell_languages.insert(key, languages);
+                }
+            }
+            Change::OfferedToGnome(email) => {
+                let email = email.to_lowercase();
+                if !settings.offered_to_gnome.contains(&email) {
+                    settings.offered_to_gnome.push(email);
                 }
             }
             Change::KeepWord(word) => {
@@ -455,6 +466,7 @@ impl Effects {
             ai,
             hidden_addresses,
             inbox_categories,
+            default_category,
             suggest_follow_ups,
             spell_languages,
             spell_words,
@@ -465,6 +477,7 @@ impl Effects {
             sign_by_default,
             encrypt_when_possible,
             contacts,
+            offered_to_gnome,
         } = after;
         // These leave the window as it is. The flag colour, the delay before
         // Send commits, and the rest are read when they are needed, so
@@ -491,6 +504,9 @@ impl Effects {
             check_attachments,
             sign_by_default,
             encrypt_when_possible,
+            // The event card reads this as it goes up, and it changes
+            // nothing that is already on screen.
+            offered_to_gnome,
         );
         let smart_changed = *smart_mailboxes != before.smart_mailboxes;
         let colors_changed = *account_colors != before.account_colors;
@@ -511,7 +527,12 @@ impl Effects {
                 Effect::SmartMailboxes => smart_changed,
                 Effect::Vips => vips_changed,
                 Effect::FollowUps => *suggest_follow_ups != before.suggest_follow_ups,
-                Effect::Categories => *inbox_categories != before.inbox_categories,
+                // The bar itself, and which of its tabs the window opens
+                // on: both are the category strip redrawing.
+                Effect::Categories => {
+                    *inbox_categories != before.inbox_categories
+                        || *default_category != before.default_category
+                }
                 Effect::Assistant => *ai != before.ai,
                 Effect::TextSize => *text_size != before.text_size,
                 Effect::Contacts => *contacts != before.contacts,
@@ -815,6 +836,10 @@ mod tests {
                 // Reading contacts asks Google for access of its own, so
                 // it stays a choice the person makes in Preferences.
                 "contacts",
+                // How the inbox is arranged, and which slice of it opens
+                // first, is the person's own view of their mail. It sits
+                // beside inbox_categories for the same reason.
+                "default_category",
                 // Whether mail goes out signed or encrypted is the
                 // person's to decide, not something the assistant flips.
                 "encrypt_when_possible",
@@ -829,6 +854,9 @@ mod tests {
                 // Which buttons a notification carries is a list, and a
                 // setting the assistant changes by name holds one value.
                 "notification_buttons",
+                // Whether an account has been offered to GNOME is the
+                // card's own memory of asking, not a preference.
+                "offered_to_gnome",
                 "send_as",
                 "sign_by_default",
                 "signatures",

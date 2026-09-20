@@ -92,10 +92,29 @@ pub fn opening_identity(
         .or_else(|| identities.iter().position(|i| i.account_id == account_id))
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// An attachment's bytes as base64 while a draft waits in the outbox.
+/// JSON has no bytes of its own, and a list of numbers runs to four times
+/// the size.
+mod attachment_bytes {
+    use base64::Engine;
+    use base64::engine::general_purpose::STANDARD;
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    pub fn serialize<S: Serializer>(data: &[u8], out: S) -> Result<S::Ok, S::Error> {
+        out.serialize_str(&STANDARD.encode(data))
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(input: D) -> Result<Vec<u8>, D::Error> {
+        let text = String::deserialize(input)?;
+        STANDARD.decode(text).map_err(serde::de::Error::custom)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OutgoingAttachment {
     pub filename: String,
     pub mime_type: String,
+    #[serde(with = "attachment_bytes")]
     pub data: Vec<u8>,
     /// Set for images shown in the text, which refers to them as `cid:`.
     pub content_id: Option<String>,
@@ -164,7 +183,7 @@ pub fn toggle_prefix(text: &str, prefix: LinePrefix) -> String {
 /// links come apart, and every line runs into the next. So the original
 /// travels beside the writer's own words rather than through them, and
 /// `build_mime` puts it back whole under the header block.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Forwarded {
     pub from: String,
     pub date: String,
@@ -329,7 +348,7 @@ fn plain_as_markdown(text: &str) -> String {
     out
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Draft {
     pub account_id: AccountId,
     pub from: Address,

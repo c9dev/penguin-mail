@@ -17,6 +17,7 @@ pub fn extract_body(payload: &MessagePart) -> MessageBody {
         one_click_unsubscribe: find_header(payload, "List-Unsubscribe-Post")
             .is_some_and(|v| v.contains("One-Click")),
         protection: protection(payload),
+        provenance: crate::provenance::provenance(payload),
         ..MessageBody::default()
     };
     walk(payload, &mut body);

@@ -209,6 +209,8 @@
   color: var(--error-color);
   background: alpha(var(--error-bg-color), 0.16);
 }
+/* Something else is already in the hour this invitation asks for. */
+.invitation-clash { color: var(--warning-color); font-weight: 600; }
 
 /* What gpg made of a message, above it and above the event card. */
 .pgp-area {
