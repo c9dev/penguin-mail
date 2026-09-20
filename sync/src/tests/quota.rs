@@ -259,6 +259,7 @@ async fn opening_junk_pays_for_the_rows_it_shows() {
         .unwrap();
 
     assert_eq!(listing.rows.len(), 25);
+    assert!(listing.more, "the other 75 wait until the reader scrolls");
     let usage = total(&all);
     report("open Junk, 100 messages, 1 account", &usage);
     // One listing call for the ids, then metadata for the rows on screen.
@@ -311,7 +312,12 @@ async fn scrolling_junk_pays_only_for_the_next_rows() {
 
     let more = lists.list(&folder, &scope, &view, 25).await.unwrap();
 
-    assert_eq!(more.rows.len(), 50, "the rows read so far");
+    assert_eq!(
+        more.rows.len(),
+        25,
+        "only the rows the list has yet to show"
+    );
+    assert!(more.more, "50 of the 100 messages are still unread");
     let usage = total(&all);
     report("scroll Junk to the next 25 rows", &usage);
     assert_eq!(usage.calls_to("users.messages.list"), 0, "the ids are kept");
