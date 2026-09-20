@@ -129,19 +129,26 @@ impl CategoryBar {
     pub(super) fn set_counts(&self, unread: &HashMap<Category, i64>) {
         for (category, label) in &self.counts {
             let count = unread.get(category).copied().unwrap_or(0);
-            if count > 0 {
-                // A long number would spill over the icon, so stop at 99.
-                label.set_label(&if count > 99 {
-                    "99+".to_string()
-                } else {
-                    count.to_string()
-                });
-            }
-            // Nothing unread fades the count out and leaves its place empty.
+            // A long number would spill over the icon, so stop the badge at 99.
+            label.set_label(&match count {
+                0 => String::new(),
+                1..=99 => count.to_string(),
+                _ => "99+".to_string(),
+            });
+            // Nothing unread fades the badge out and leaves its place empty.
             if count > 0 {
                 label.remove_css_class("no-mail");
             } else {
                 label.add_css_class("no-mail");
+            }
+            // The name is hidden unless the category is chosen, so the tooltip
+            // carries both it and the count.
+            if let Some(toggle) = self.group.toggle_by_name(category.key()) {
+                toggle.set_tooltip(&match count {
+                    0 => category.name().to_string(),
+                    1 => format!("{}, 1 unread", category.name()),
+                    _ => format!("{}, {count} unread", category.name()),
+                });
             }
         }
     }
