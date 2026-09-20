@@ -3,7 +3,7 @@ mod common;
 use common::{meta, mixed_mail, store};
 use mailrs_domain::{AccountId, ThreadSummary};
 use mailrs_store::threads::{self, ThreadFilter};
-use mailrs_store::{accounts, open_in_memory};
+use mailrs_store::{accounts, messages, open_in_memory};
 use rusqlite::Connection;
 
 fn two_accounts() -> (Connection, AccountId, AccountId) {
@@ -141,13 +141,11 @@ fn a_label_view_of_one_account_leaves_the_others_out() {
             .map(|t| t.id)
             .collect()
     };
-    assert_eq!(
-        ids(&ThreadFilter::account(b, "INBOX")),
-        ["tb3", "tb2", "tb1"]
-    );
+    // tb3 is in Spam and ta5 is in the Trash, so a label view drops them.
+    assert_eq!(ids(&ThreadFilter::account(b, "INBOX")), ["tb2", "tb1"]);
     assert_eq!(
         ids(&ThreadFilter::unified("INBOX")),
-        ["tb3", "tb2", "tb1", "ta5", "ta3", "ta2", "ta1"]
+        ["tb2", "tb1", "ta3", "ta2", "ta1"]
     );
     // Any mail leaves out Trash and Spam, in both account and unified views.
     assert_eq!(
@@ -162,5 +160,98 @@ fn a_label_view_of_one_account_leaves_the_others_out() {
     let social = ThreadFilter::account(b, "INBOX").with_labels(&["CATEGORY_FORUMS"], &[]);
     assert_eq!(ids(&social), ["tb1"]);
     let primary = ThreadFilter::unified("INBOX").with_labels(&[], &OTHERS);
-    assert_eq!(ids(&primary), ["tb3", "tb2", "ta5", "ta1"]);
+    assert_eq!(ids(&primary), ["tb2", "ta1"]);
+}
+
+#[test]
+fn trashing_sent_mail_takes_it_out_of_the_sent_list_and_its_count() {
+    let (conn, a) = common::db();
+    store(
+        &conn,
+        &[
+            meta(a, "s1", "ts1", 100, &["SENT"]),
+            meta(a, "s2", "ts2", 200, &["SENT"]),
+        ],
+    );
+    let sent = ThreadFilter::account(a, "SENT");
+    assert_eq!(
+        ids(threads::list_threads(&conn, &sent, 0, 10).unwrap()),
+        ["ts2", "ts1"]
+    );
+    assert_eq!(threads::count_threads(&conn, &sent).unwrap(), 2);
+
+    // The Delete key moves the newer one to the Trash, as Gmail does.
+    messages::add_labels(&conn, a, "s2", &["TRASH".to_string()]).unwrap();
+    messages::refresh_thread(&conn, a, "ts2").unwrap();
+
+    assert_eq!(
+        ids(threads::list_threads(&conn, &sent, 0, 10).unwrap()),
+        ["ts1"]
+    );
+    assert_eq!(threads::count_threads(&conn, &sent).unwrap(), 1);
+    assert_eq!(
+        threads::label_counts(&conn)
+            .unwrap()
+            .account(a, "SENT")
+            .threads,
+        1,
+        "the sidebar count agrees with the list"
+    );
+    // The Trash list is a Gmail search, but the label itself still holds it.
+    let trash = ThreadFilter::account(a, "TRASH");
+    assert_eq!(
+        ids(threads::list_threads(&conn, &trash, 0, 10).unwrap()),
+        ["ts2"]
+    );
+    assert_eq!(
+        threads::label_counts(&conn)
+            .unwrap()
+            .account(a, "TRASH")
+            .threads,
+        1
+    );
+}
+
+#[test]
+fn spam_leaves_a_label_list_and_a_flagged_list() {
+    let (conn, a) = common::db();
+    store(
+        &conn,
+        &[
+            meta(a, "j1", "tj1", 100, &["Label_1", "STARRED", "UNREAD"]),
+            meta(
+                a,
+                "j2",
+                "tj2",
+                200,
+                &["Label_1", "STARRED", "UNREAD", "SPAM"],
+            ),
+        ],
+    );
+    for label in ["Label_1", "STARRED"] {
+        let filter = ThreadFilter::account(a, label);
+        assert_eq!(
+            ids(threads::list_threads(&conn, &filter, 0, 10).unwrap()),
+            ["tj1"],
+            "{label}"
+        );
+        assert_eq!(
+            threads::unread_threads(&conn, &filter).unwrap(),
+            1,
+            "{label}"
+        );
+        assert_eq!(
+            threads::label_counts(&conn).unwrap().account(a, label),
+            threads::Count {
+                threads: 1,
+                unread: 1
+            },
+            "{label}"
+        );
+    }
+    let spam = ThreadFilter::account(a, "SPAM");
+    assert_eq!(
+        ids(threads::list_threads(&conn, &spam, 0, 10).unwrap()),
+        ["tj2"]
+    );
 }
