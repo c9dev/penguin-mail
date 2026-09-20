@@ -103,6 +103,9 @@ pub const ENGLISH: Language = Language {
     ],
 };
 
+/// The only Portuguese the app is translated into is the European one, so
+/// that is what the model is asked for. Asked for Portuguese alone it
+/// writes Brazilian as often as not.
 pub const PORTUGUESE: Language = Language {
     code: "pt",
     english: "European Portuguese",

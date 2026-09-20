@@ -1028,19 +1028,19 @@ msgstr "chinês"
 msgid "English"
 msgstr "inglês"
 
-#: app/src/translation.rs:730
+#: app/src/translation.rs:733
 msgid "The message goes to {host}, for {model} to read."
 msgstr "A mensagem vai para {host}, para ser lida por {model}."
 
-#: app/src/translation.rs:734
+#: app/src/translation.rs:737
 msgid "The message goes to {model} on this computer and no further."
 msgstr "A mensagem vai para {model} neste computador e não sai daqui."
 
-#: app/src/translation.rs:739
+#: app/src/translation.rs:742
 msgid "The message goes to Anthropic, for {model} to read."
 msgstr "A mensagem vai para a Anthropic, para ser lida por {model}."
 
-#: app/src/translation.rs:743
+#: app/src/translation.rs:746
 msgid ""
 "The message goes to Anthropic, for Claude to read through your subscription."
 msgstr ""

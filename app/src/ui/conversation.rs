@@ -943,16 +943,16 @@ impl ConversationView {
             .messages
             .iter()
             .map(|meta| {
-                // A message showing its translation draws that body and
-                // the HTML cleaned when it arrived; the one that came in
-                // the post stays where it was, for the way back.
-                let said = open
+                // A message showing its translation draws the translated
+                // body and the translated HTML. What arrived stays where
+                // it was, for the way back.
+                let showing = open
                     .translations
                     .get(&meta.id)
                     .filter(|translation| translation.shown);
                 MessageView {
                     meta,
-                    body: match (said, open.bodies.get(&meta.id)) {
+                    body: match (showing, open.bodies.get(&meta.id)) {
                         (Some(translation), _) => BodyState::Loaded(&translation.body),
                         (None, None) => BodyState::Loading,
                         (None, Some(Ok(body))) => BodyState::Loaded(body),
@@ -961,7 +961,7 @@ impl ConversationView {
                     expanded: open.expanded.contains(&meta.id),
                     inline_images: open.inline_images.get(&meta.id).unwrap_or(&empty),
                     thumbnails: &open.thumbnails,
-                    sanitized: match said {
+                    sanitized: match showing {
                         Some(translation) => translation.clean.as_deref(),
                         None => clean.get(&meta.id).map(|body| body.html.as_str()),
                     },
