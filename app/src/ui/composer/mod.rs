@@ -651,15 +651,18 @@ impl Composer {
     }
 
     /// Greys out Send while the message cannot go anywhere, and says why.
+    /// It asks the recipients only, so every keystroke stays cheap.
     fn check_send(&self) {
-        let problem = self
-            .collect()
-            .and_then(|draft| draft.problem())
-            .or_else(|| {
-                self.identity()
-                    .is_none()
-                    .then(|| "No account to send from.".to_string())
-            });
+        let problem = match self.identity() {
+            None => Some("No account to send from.".to_string()),
+            Some(identity) => {
+                let mut draft = Draft::new(identity.account_id, identity.address.clone());
+                draft.to = self.to.addresses();
+                draft.cc = self.cc.addresses();
+                draft.bcc = self.bcc.addresses();
+                draft.problem()
+            }
+        };
         self.send.set_sensitive(problem.is_none());
         self.send
             .set_tooltip_text(Some(problem.as_deref().unwrap_or("Send (Ctrl+Enter)")));
