@@ -414,3 +414,79 @@ async fn a_missing_calendar_permission_still_reaches_the_organizer() {
         .unwrap_err();
     assert!(err.to_string().contains("offline"), "{err}");
 }
+
+/// An invitation at a fixed hour, for the questions about what else the
+/// user has on then.
+fn at_ten() -> String {
+    [
+        "BEGIN:VCALENDAR",
+        "METHOD:REQUEST",
+        "BEGIN:VEVENT",
+        &format!("UID:{UID}"),
+        "SUMMARY:Design review",
+        "DTSTART:20260310T100000Z",
+        "DTEND:20260310T110000Z",
+        "ORGANIZER;CN=Priya:mailto:priya@example.com",
+        "END:VEVENT",
+        "END:VCALENDAR",
+        "",
+    ]
+    .join("\r\n")
+}
+
+/// 10:30 to 11:30 on the day `at_ten` runs, in milliseconds.
+const CLASH: (i64, i64) = (1_773_138_600_000, 1_773_142_200_000);
+
+#[tokio::test]
+async fn an_invitation_over_something_else_says_what() {
+    let h = harness().await;
+    let invitations = invitations(&h);
+    h.fake
+        .with(|s| s.busy.push((CLASH.0, CLASH.1, "Design crit".into())));
+    let invitation = read(&at_ten());
+
+    assert_eq!(
+        invitations.busy(h.account_id, &invitation).await.unwrap(),
+        vec!["Design crit".to_string()]
+    );
+
+    // The window opens the same message again and again; Google hears
+    // about it once.
+    invitations.busy(h.account_id, &invitation).await.unwrap();
+    invitations.busy(h.account_id, &invitation).await.unwrap();
+    assert_eq!(h.fake.with(|s| s.usage.calls_to("calendar.events.list")), 1);
+}
+
+#[tokio::test]
+async fn an_hour_with_nothing_in_it_says_nothing() {
+    let h = harness().await;
+    let invitations = invitations(&h);
+    h.fake.with(|s| {
+        s.busy.push((
+            CLASH.0 + 86_400_000,
+            CLASH.1 + 86_400_000,
+            "Design crit".into(),
+        ))
+    });
+    assert!(
+        invitations
+            .busy(h.account_id, &read(&at_ten()))
+            .await
+            .unwrap()
+            .is_empty()
+    );
+}
+
+#[tokio::test]
+async fn a_calendar_nobody_may_read_says_nothing_about_clashes() {
+    let h = harness().await;
+    let invitations = invitations(&h);
+    h.fake.fail_next(GmailError::MissingScope);
+    assert!(
+        invitations
+            .busy(h.account_id, &read(&at_ten()))
+            .await
+            .unwrap()
+            .is_empty()
+    );
+}

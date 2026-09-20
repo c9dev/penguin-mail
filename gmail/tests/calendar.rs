@@ -1,5 +1,6 @@
-//! Answering an invitation against a stand-in Calendar API. No network:
-//! `wiremock` answers both calls and checks what went out.
+//! Answering an invitation, and asking what else the user has on, against
+//! a stand-in Calendar API. No network: `wiremock` answers the calls and
+//! checks what went out.
 
 use mailrs_domain::invitation::Answer;
 use mailrs_gmail::{Answered, GmailClient, GmailError, OAuthClient};
@@ -144,4 +145,44 @@ async fn a_missing_calendar_permission_is_reported_as_such() {
             .await,
         Err(GmailError::MissingScope)
     ));
+}
+
+#[tokio::test]
+async fn only_what_takes_the_hour_counts_as_busy() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("GET"))
+        .and(path(format!("{CALENDAR}/calendars/primary/events")))
+        .and(query_param("timeMin", "2026-03-10T09:00:00+00:00"))
+        .and(query_param("singleEvents", "true"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"items": [
+            {"iCalUID": "crit@google.com", "summary": "Design crit",
+             "start": {"dateTime": "2026-03-10T09:30:00Z"}},
+            {"iCalUID": "off@google.com", "summary": "Called off",
+             "status": "cancelled", "start": {"dateTime": "2026-03-10T09:30:00Z"}},
+            {"iCalUID": "away@google.com", "summary": "Jonas away",
+             "start": {"date": "2026-03-10"}},
+            {"iCalUID": "focus@google.com", "summary": "Focus time",
+             "transparency": "transparent", "start": {"dateTime": "2026-03-10T09:00:00Z"}},
+            {"iCalUID": "skip@google.com", "summary": "Declined already",
+             "start": {"dateTime": "2026-03-10T09:15:00Z"},
+             "attendees": [{"email": "me@example.com", "self": true,
+                            "responseStatus": "declined"}]},
+            {"iCalUID": "untitled@google.com",
+             "start": {"dateTime": "2026-03-10T09:45:00Z"}}
+        ]})))
+        .mount(&server)
+        .await;
+
+    let busy = client(&server)
+        .busy_between("2026-03-10T09:00:00+00:00", "2026-03-10T10:00:00+00:00")
+        .await
+        .unwrap();
+    assert_eq!(
+        busy.iter()
+            .map(|held| held.summary.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Design crit", "an untitled event"]
+    );
+    assert_eq!(busy[0].uid, "crit@google.com");
 }

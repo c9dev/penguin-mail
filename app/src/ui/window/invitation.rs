@@ -14,7 +14,7 @@ use std::rc::Rc;
 use adw::prelude::*;
 use gtk::{gio, glib};
 use mailrs_domain::AccountId;
-use mailrs_domain::invitation::{Answer, Scope};
+use mailrs_domain::invitation::{Answer, Invitation, Method, Scope};
 use mailrs_gmail::CALENDAR_SCOPE;
 use mailrs_sync::{Told, now_millis};
 
@@ -66,7 +66,35 @@ impl MainWindow {
                 None
             }
         };
-        view.show_invitation(showing);
+        view.show_invitation(showing.clone());
+        if let Some(showing) = showing.filter(waiting_on_an_answer) {
+            self.show_clashes(view, account_id, showing.invitation);
+        }
+    }
+
+    /// Asks the calendar what else the user has on while the event runs,
+    /// and puts it on the card. Only for an invitation still waiting on an
+    /// answer: a meeting the user has already answered is one they have
+    /// thought about.
+    fn show_clashes(
+        self: &Rc<Self>,
+        view: &Rc<ConversationView>,
+        account_id: AccountId,
+        invitation: Invitation,
+    ) {
+        let invitations = self.core.invitations();
+        let (this, view) = (Rc::clone(self), Rc::clone(view));
+        glib::spawn_future_local(async move {
+            let uid = invitation.uid.clone();
+            let busy = this
+                .core
+                .call(async move { invitations.busy(account_id, &invitation).await })
+                .await;
+            match busy {
+                Ok(busy) => view.card.set_busy(&uid, &busy),
+                Err(err) => tracing::info!(error = %err, "could not read the calendar"),
+            }
+        });
     }
 
     /// The event card's buttons, for the main window and a conversation in
@@ -201,6 +229,15 @@ impl MainWindow {
             },
         );
     }
+}
+
+/// Whether the card is asking the user a question they have not answered.
+/// A cancellation, somebody else's reply and a meeting already answered
+/// are none of them worth reading the calendar for.
+fn waiting_on_an_answer(showing: &Showing) -> bool {
+    showing.answer.is_none()
+        && showing.invitation.method == Method::Request
+        && !showing.invitation.cancelled()
 }
 
 /// The toast an answer leaves: the answer the user gave, and that the

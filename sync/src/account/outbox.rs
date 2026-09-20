@@ -1,7 +1,7 @@
 //! Sending, drafts, search, attachments, and identity: calls the UI makes on
 //! demand rather than as part of the sync loop.
 
-use mailrs_domain::{Filter, MessageMeta, Vacation};
+use mailrs_domain::{EpochMillis, Filter, MessageMeta, Vacation};
 use mailrs_gmail::{GmailError, SendAs, html_to_text};
 use mailrs_store::messages;
 
@@ -241,5 +241,14 @@ impl<G: GmailApi> AccountSync<G> {
         answer: mailrs_domain::invitation::Answer,
     ) -> Result<mailrs_gmail::Answered, SyncError> {
         Ok(self.api.answer_invitation(ical_uid, me, answer).await?)
+    }
+
+    /// What the account's calendar already holds between `from` and `to`.
+    pub async fn busy_between(
+        &self,
+        from: EpochMillis,
+        to: EpochMillis,
+    ) -> Result<Vec<mailrs_gmail::Busy>, SyncError> {
+        Ok(self.api.busy_between(from, to).await?)
     }
 }

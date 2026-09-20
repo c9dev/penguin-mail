@@ -17,9 +17,9 @@ use mailrs_domain::{
     Address, EpochMillis, Filter, MessageBody, MessageMeta, Vacation, system_label,
 };
 use mailrs_gmail::{
-    AccountQuota, Answered, BATCH_LIMIT, ConnectionsPage, GmailError, HistoryChange, HistoryPage,
-    LabelColor, MessagePage, MessageRef, Person, Priority, Profile, QuotaLimiter, RemoteLabel,
-    SendAs, cost, limiter,
+    AccountQuota, Answered, BATCH_LIMIT, Busy, ConnectionsPage, GmailError, HistoryChange,
+    HistoryPage, LabelColor, MessagePage, MessageRef, Person, Priority, Profile, QuotaLimiter,
+    RemoteLabel, SendAs, cost, limiter,
 };
 
 use crate::api::{GmailApi, SavedDraft};
@@ -78,6 +78,9 @@ pub struct FakeState {
     /// the answer this account gave each one. A UID that is not here is on
     /// nobody's calendar and cannot be answered.
     pub calendar: HashMap<String, Option<Answer>>,
+    /// What the account already has on, as a start, an end and a title.
+    /// An invitation for a time one of these covers clashes with it.
+    pub busy: Vec<(EpochMillis, EpochMillis, String)>,
 }
 
 /// Calls made and quota units spent, priced from Gmail's usage-limits
@@ -173,6 +176,7 @@ impl FakeGmail {
                 contacts: Vec::new(),
                 photos: HashMap::new(),
                 calendar: HashMap::new(),
+                busy: Vec::new(),
             }),
         }
     }
@@ -665,6 +669,24 @@ impl GmailApi for FakeGmail {
                 Answered::Done
             }
             None => Answered::NotOnCalendar,
+        }))
+    }
+
+    async fn busy_between(
+        &self,
+        from: EpochMillis,
+        to: EpochMillis,
+    ) -> Result<Vec<Busy>, GmailError> {
+        self.call("calendar.events.list", 0).await?;
+        Ok(self.with(|s| {
+            s.busy
+                .iter()
+                .filter(|(starts, ends, _)| *starts < to && *ends > from)
+                .map(|(_, _, summary)| Busy {
+                    uid: format!("busy-{summary}"),
+                    summary: summary.clone(),
+                })
+                .collect()
         }))
     }
 

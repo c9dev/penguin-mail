@@ -68,6 +68,8 @@ pub struct EventCard {
     title: gtk::Label,
     when: gtk::Label,
     repeats: gtk::Label,
+    /// What else the user has on while the event runs.
+    clash: gtk::Label,
     location: gtk::Label,
     organizer: gtk::Label,
     guests: gtk::Expander,
@@ -114,6 +116,7 @@ impl EventCard {
         let title = label(&["title-3"]);
         let when = label(&["invitation-when"]);
         let repeats = label(&["dim-label", "caption"]);
+        let clash = label(&["invitation-clash", "caption"]);
         let location = label(&["dim-label"]);
         let organizer = label(&["dim-label", "caption"]);
         let details = gtk::Box::builder()
@@ -121,7 +124,7 @@ impl EventCard {
             .spacing(2)
             .hexpand(true)
             .build();
-        for widget in [&title, &when, &repeats, &location] {
+        for widget in [&title, &when, &repeats, &clash, &location] {
             details.append(widget);
         }
 
@@ -201,6 +204,7 @@ impl EventCard {
             title,
             when,
             repeats,
+            clash,
             location,
             organizer,
             guests,
@@ -251,6 +255,21 @@ impl EventCard {
         self.showing.borrow().as_ref().map(f)
     }
 
+    /// Says what else the user has on while this event runs. The answer
+    /// arrives after the card is already up, and the user may have moved
+    /// on to another message by then, so it names the invitation it
+    /// belongs to and a late answer to an old question is dropped.
+    pub fn set_busy(&self, uid: &str, busy: &[String]) {
+        let mine = self
+            .showing
+            .borrow()
+            .as_ref()
+            .is_some_and(|showing| showing.invitation.uid == uid);
+        if mine {
+            set_line(&self.clash, clash(busy));
+        }
+    }
+
     /// Says under the buttons where the answer went, or takes the line
     /// away while one is on its way.
     pub fn set_went(&self, went: Option<String>) {
@@ -294,6 +313,7 @@ impl EventCard {
             }
         }
         set_line(&self.repeats, event.repeats.clone());
+        self.clash.set_visible(false);
         set_line(&self.location, event.location.clone());
         set_line(&self.organizer, organizer_line(event));
         self.fill_guests(showing);
@@ -355,6 +375,18 @@ impl EventCard {
             self.guest_list.append(&row);
         }
     }
+}
+
+/// "You have Design crit then", for an event the user already has while
+/// this one runs. Two clashes name both; more than two name the first and
+/// count the rest, since the point is that the hour is taken.
+fn clash(busy: &[String]) -> Option<String> {
+    Some(match busy {
+        [] => return None,
+        [one] => format!("You have {one} then"),
+        [one, two] => format!("You have {one} and {two} then"),
+        [one, rest @ ..] => format!("You have {one} and {} more then", rest.len()),
+    })
 }
 
 /// "Invitation from Priya Raman", or nothing when the organizer is missing.

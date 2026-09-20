@@ -1,12 +1,12 @@
 //! What the sync engine needs from Gmail. A trait, so tests can use a fake.
 
 use mailrs_domain::invitation::Answer;
-use mailrs_domain::{AccountId, Filter, MessageBody, MessageMeta, Vacation};
+use mailrs_domain::{AccountId, EpochMillis, Filter, MessageBody, MessageMeta, Vacation};
 use mailrs_gmail::body::extract_body;
 use mailrs_gmail::convert::message_meta;
 use mailrs_gmail::{
-    AccountQuota, Answered, ConnectionsPage, GmailClient, GmailError, HistoryPage, LabelColor,
-    MessagePage, Profile, RemoteLabel, SendAs, html_to_text,
+    AccountQuota, Answered, Busy, ConnectionsPage, GmailClient, GmailError, HistoryPage,
+    LabelColor, MessagePage, Profile, RemoteLabel, SendAs, html_to_text,
 };
 
 /// Page size for window listings.
@@ -188,6 +188,15 @@ pub trait GmailApi: Send + Sync + 'static {
         me: &str,
         answer: Answer,
     ) -> impl Future<Output = Result<Answered, GmailError>> + Send;
+
+    /// What the account's calendar already holds between `from` and `to`.
+    /// Answers `GmailError::MissingScope` until the account grants the
+    /// calendar permission, the same as answering does.
+    fn busy_between(
+        &self,
+        from: EpochMillis,
+        to: EpochMillis,
+    ) -> impl Future<Output = Result<Vec<Busy>, GmailError>> + Send;
 }
 
 /// Gmail for one account: the real client, or the in-memory fake behind
@@ -361,6 +370,20 @@ impl GmailApi for AnyGmail {
     ) -> Result<Answered, GmailError> {
         forward!(self, answer_invitation(ical_uid, me, answer))
     }
+
+    async fn busy_between(
+        &self,
+        from: EpochMillis,
+        to: EpochMillis,
+    ) -> Result<Vec<Busy>, GmailError> {
+        forward!(self, busy_between(from, to))
+    }
+}
+
+/// An instant as the Calendar API writes one. `None` for a time no
+/// calendar could mean.
+fn rfc3339(at: EpochMillis) -> Option<String> {
+    chrono::DateTime::from_timestamp_millis(at).map(|at| at.to_rfc3339())
 }
 
 /// Where a saved draft lives in Gmail.
@@ -548,6 +571,20 @@ impl GmailApi for AccountClient {
         answer: Answer,
     ) -> Result<Answered, GmailError> {
         self.client.answer_invitation(ical_uid, me, answer).await
+    }
+
+    /// The Calendar API takes its window as RFC 3339, so the instants turn
+    /// into timestamps here rather than in the client, which keeps a clock
+    /// out of the Gmail crate.
+    async fn busy_between(
+        &self,
+        from: EpochMillis,
+        to: EpochMillis,
+    ) -> Result<Vec<Busy>, GmailError> {
+        let (Some(from), Some(to)) = (rfc3339(from), rfc3339(to)) else {
+            return Ok(Vec::new());
+        };
+        self.client.busy_between(&from, &to).await
     }
 
     async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {

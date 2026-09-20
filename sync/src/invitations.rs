@@ -18,11 +18,11 @@
 
 mod mail;
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use mailrs_domain::invitation::{self, Answer, Invitation, Scope, When};
 use mailrs_domain::{AccountId, Address, EpochMillis};
-use mailrs_gmail::{Answered, GmailError};
+use mailrs_gmail::{Answered, GmailError, limiter};
 use mailrs_store::{Db, invitations as store};
 
 use crate::{AccountSync, Accounts, SyncError};
@@ -87,14 +87,82 @@ pub struct Sent {
     pub needs_permission: bool,
 }
 
+/// How long an event with no end of its own is taken to run for, when
+/// asking what else it clashes with. An organizer who leaves `DTEND` out
+/// means a meeting, not a day.
+const ASSUMED_LENGTH: EpochMillis = 60 * 60 * 1_000;
+
+/// The last invitation this asked Google what clashes with, and what it
+/// said. The window reads a message twice on the way in and again each
+/// time the body lands, so without this the same question goes out three
+/// times for one opening.
+struct Asked {
+    account_id: AccountId,
+    uid: String,
+    busy: Vec<String>,
+}
+
 pub struct Invitations<A: Accounts> {
     accounts: Arc<A>,
     db: Db,
+    asked: Mutex<Option<Asked>>,
 }
 
 impl<A: Accounts> Invitations<A> {
     pub fn new(accounts: Arc<A>, db: Db) -> Self {
-        Invitations { accounts, db }
+        Invitations {
+            accounts,
+            db,
+            asked: Mutex::new(None),
+        }
+    }
+
+    /// What else the user has on while this event runs, by title. One call
+    /// to Google, the answer kept for as long as the message stays open,
+    /// and nothing at all without the calendar permission: a clash is
+    /// worth saying, not worth a permission prompt of its own.
+    ///
+    /// The call goes out at background priority. It answers a question
+    /// nobody asked, so it waits behind whatever the user is doing.
+    pub async fn busy(
+        &self,
+        account_id: AccountId,
+        invitation: &Invitation,
+    ) -> Result<Vec<String>, SyncError> {
+        let Some(When::At { starts_at, ends_at }) = invitation.when else {
+            return Ok(Vec::new());
+        };
+        if let Some(held) = self.remembered(account_id, &invitation.uid) {
+            return Ok(held);
+        }
+        let sync = self.sync(account_id)?;
+        let ends_at = ends_at.unwrap_or(starts_at + ASSUMED_LENGTH);
+        let busy = match limiter::background(sync.busy_between(starts_at, ends_at)).await {
+            Ok(busy) => busy,
+            // Without the permission there is nothing to say, and the user
+            // is answering an invitation rather than asking about their
+            // calendar. The empty answer is remembered like any other.
+            Err(SyncError::Gmail(GmailError::MissingScope)) => Vec::new(),
+            Err(err) => return Err(err),
+        };
+        let busy: Vec<String> = busy
+            .into_iter()
+            .filter(|held| !held.uid.eq_ignore_ascii_case(&invitation.uid))
+            .map(|held| held.summary)
+            .collect();
+        *self.asked.lock().expect("invitations poisoned") = Some(Asked {
+            account_id,
+            uid: invitation.uid.clone(),
+            busy: busy.clone(),
+        });
+        Ok(busy)
+    }
+
+    /// What the last look said, when it was about this same invitation.
+    fn remembered(&self, account_id: AccountId, uid: &str) -> Option<Vec<String>> {
+        let asked = self.asked.lock().expect("invitations poisoned");
+        let asked = asked.as_ref()?;
+        (asked.account_id == account_id && asked.uid == uid).then(|| asked.busy.clone())
     }
 
     /// Reads the `text/calendar` part of a message, records the version of

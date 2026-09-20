@@ -369,6 +369,14 @@ impl GmailApi for Gmail {
     ) -> Result<Answered, GmailError> {
         Ok(Answered::NotOnCalendar)
     }
+
+    async fn busy_between(
+        &self,
+        _from: mailrs_domain::EpochMillis,
+        _to: mailrs_domain::EpochMillis,
+    ) -> Result<Vec<mailrs_gmail::Busy>, GmailError> {
+        Ok(Vec::new())
+    }
 }
 
 /// The accounts a test connects, by id.
