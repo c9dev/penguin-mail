@@ -19,6 +19,7 @@ mod imp {
         pub vip: OnceCell<gtk::Image>,
         pub from: OnceCell<gtk::Label>,
         pub clip: OnceCell<gtk::Image>,
+        pub mute: OnceCell<gtk::Image>,
         pub star: OnceCell<gtk::Image>,
         pub date: OnceCell<gtk::Label>,
         pub subject: OnceCell<gtk::Label>,
@@ -69,6 +70,8 @@ mod imp {
             let from = text_label("from");
             from.set_hexpand(true);
             let clip = marker("mail-attachment-symbolic");
+            let mute = marker("audio-volume-muted-symbolic");
+            mute.set_tooltip_text(Some("Muted"));
             let star = marker("penguin-mail-flag-symbolic");
             star.add_css_class("starred");
             let date = text_label("date");
@@ -78,6 +81,7 @@ mod imp {
                 vip.upcast_ref(),
                 from.upcast_ref(),
                 clip.upcast_ref(),
+                mute.upcast_ref(),
                 star.upcast_ref(),
                 date.upcast_ref(),
             ] {
@@ -112,6 +116,7 @@ mod imp {
             let _ = self.vip.set(vip);
             let _ = self.from.set(from);
             let _ = self.clip.set(clip);
+            let _ = self.mute.set(mute);
             let _ = self.star.set(star);
             let _ = self.date.set(date);
             let _ = self.subject.set(subject);
@@ -265,6 +270,10 @@ impl ThreadRow {
             .get()
             .expect("clip exists")
             .set_visible(thread.has_attachments);
+        imp.mute
+            .get()
+            .expect("mute mark exists")
+            .set_visible(thread.muted);
         let account = imp.account.get().expect("account dot exists");
         account.set_visible(show_account);
         let wanted =

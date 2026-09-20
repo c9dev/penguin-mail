@@ -56,11 +56,12 @@ pub const LABEL_COLORS: [(&str, &str, &str); 9] = [
     ("Gray", "#999999", "#ffffff"),
 ];
 
-pub const UNIFIED: [&str; 4] = [
+pub const UNIFIED: [&str; 5] = [
     system_label::INBOX,
     system_label::STARRED,
     system_label::SENT,
     system_label::DRAFT,
+    system_label::MUTE,
 ];
 
 pub fn account_label_name(label: &str) -> &'static str {
@@ -69,6 +70,7 @@ pub fn account_label_name(label: &str) -> &'static str {
         system_label::STARRED => "Flagged",
         system_label::SENT => "Sent",
         system_label::DRAFT => "Drafts",
+        system_label::MUTE => "Muted",
         _ => "Mail",
     }
 }
@@ -79,6 +81,7 @@ pub fn mailbox_icon(label: &str) -> &'static str {
         system_label::STARRED => "penguin-mail-flag-symbolic",
         system_label::SENT => "mail-send-symbolic",
         system_label::DRAFT => "document-edit-symbolic",
+        system_label::MUTE => "audio-volume-muted-symbolic",
         _ => "penguin-mail-tag-symbolic",
     }
 }
