@@ -198,7 +198,7 @@ impl EventCard {
             .css_classes(["linked"])
             .accessible_role(gtk::AccessibleRole::Group)
             .build();
-        name(&reach, &gettext("Answer for"));
+        name(&reach, &gettext("What the answer covers"));
         let this_one = gtk::ToggleButton::builder()
             .label(gettext("This Event"))
             .active(true)

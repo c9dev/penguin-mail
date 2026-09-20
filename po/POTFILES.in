@@ -29,6 +29,7 @@ app/src/ui/hide_my_email.rs
 app/src/ui/invitation.rs
 app/src/ui/mod.rs
 app/src/ui/moving.rs
+app/src/ui/pgp.rs
 app/src/ui/preferences.rs
 app/src/ui/rules.rs
 app/src/ui/sidebar.rs
