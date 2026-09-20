@@ -369,7 +369,7 @@ fn an_opaque_signature_gives_back_the_message_inside_it() {
     let opened = home.smime.open_signed(&blob).expect("the part inside");
 
     assert_eq!(opened.part, part);
-    let signature = opened.signature.expect("a signature");
+    let signature = opened.signature;
     assert!(signature.is_good());
     assert_eq!(signature.email.as_deref(), Some("ada@example.test"));
 }
@@ -595,7 +595,7 @@ fn the_addresses_this_computer_can_sign_as_are_the_ones_with_a_secret_key() {
     home.import(&stranger.certificate());
     let asked = [home.address.clone(), stranger.address.clone()];
 
-    let mine = home.smime.own_certificates(&asked).expect("an answer");
+    let mine = home.smime.signing_certificates(&asked).expect("an answer");
 
     assert!(mine[0].certificate.is_some(), "{mine:?}");
     assert!(mine[1].certificate.is_none(), "{mine:?}");

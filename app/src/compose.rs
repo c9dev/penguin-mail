@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::format::full_date;
 use crate::richtext::{self, RichBody};
+use crate::smime::Standard;
 
 /// One address an account may send mail as, as Gmail last reported it: the
 /// account's own address, or an alias Gmail has verified. Gmail keeps a
@@ -357,6 +358,10 @@ pub struct Draft {
     /// Encrypt it to every recipient. With `sign`, the signature goes
     /// inside the encryption, which is the only place it means anything.
     pub encrypt: bool,
+    /// Which standard signs or encrypts it. The composer chooses, since it
+    /// is the one that asked both engines what they hold; a draft that is
+    /// neither signed nor encrypted never uses this.
+    pub standard: Standard,
 }
 
 /// When the composer hands a message over for sending.
@@ -388,6 +393,7 @@ impl Draft {
             send_at: None,
             sign: false,
             encrypt: false,
+            standard: Standard::default(),
         }
     }
 

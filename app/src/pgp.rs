@@ -57,6 +57,9 @@ pub fn opening(body: &MessageBody) -> Option<Opening> {
     match body.protection {
         Some(Protection::Signed) => Some(Opening::Verify),
         Some(Protection::Encrypted) => Some(Opening::Decrypt),
+        // S/MIME is the other engine's work, and `smime::engine` is where
+        // a message goes to find out which of the two it needs.
+        Some(_) => None,
         None => inline::armor(body.text.as_deref()?).map(|_| Opening::Inline),
     }
 }
@@ -120,18 +123,11 @@ pub fn version(pgp: &Pgp) -> Option<String> {
     version_of(&String::from_utf8_lossy(&run.stdout))
 }
 
-/// Why this draft cannot be encrypted, for the Encrypt button to say.
-/// `None` means every recipient has a key. `blind` says the draft carries
-/// a Bcc, which encryption cannot keep blind: OpenPGP names every key a
-/// message was encrypted to, so the other recipients would read it there.
-pub fn cannot_encrypt(held: &[Recipient], blind: bool) -> Option<String> {
-    if blind {
-        return Some(
-            "An encrypted message names every key it went to, so a blind copy would not stay \
-             blind."
-                .into(),
-        );
-    }
+/// Why this draft cannot be encrypted under OpenPGP, for the Encrypt
+/// button to say. `None` means every recipient has a key. What a blind
+/// copy does to encryption is the same under either standard, so
+/// `smime::encrypting` answers that before either of these runs.
+pub fn cannot_encrypt(held: &[Recipient]) -> Option<String> {
     if held.is_empty() {
         return Some("Add a recipient whose key gpg holds.".into());
     }
@@ -172,7 +168,7 @@ pub fn own_keys(held: &[Recipient]) -> String {
 /// The CRLF before a boundary belongs to the boundary, so it comes off
 /// here, and a message whose lines end some other way never signed
 /// anything a reader could check.
-fn wrapper_parts(raw: &[u8]) -> Option<(&[u8], &[u8])> {
+pub(crate) fn wrapper_parts(raw: &[u8]) -> Option<(&[u8], &[u8])> {
     let blank = find(raw, b"\r\n\r\n")?;
     let boundary = param(&unfolded(&raw[..blank], "content-type")?, "boundary")?;
     let open = format!("--{boundary}\r\n").into_bytes();
@@ -304,7 +300,7 @@ fn unreadable() -> Mark {
 
 /// The files inside an encrypted message, which stay inside it: they never
 /// reach Gmail, so nothing in the window can fetch one.
-fn files_line(files: usize) -> Option<String> {
+pub(crate) fn files_line(files: usize) -> Option<String> {
     match files {
         0 => None,
         1 => Some("It carries a file this window cannot open yet.".into()),
@@ -338,7 +334,7 @@ fn signer(signature: &Signature) -> String {
 }
 
 /// The message inside the encryption, read as the mail it is.
-fn opened_body(part: &[u8]) -> MessageBody {
+pub(crate) fn opened_body(part: &[u8]) -> MessageBody {
     let Some(parsed) = MessageParser::default().parse(part) else {
         return MessageBody {
             text: Some(String::from_utf8_lossy(part).into_owned()),
@@ -366,17 +362,17 @@ fn opened_body(part: &[u8]) -> MessageBody {
     }
 }
 
-fn mark_only(mark: Mark) -> Read {
+pub(crate) fn mark_only(mark: Mark) -> Read {
     Read { mark, body: None }
 }
 
 /// "ann@example.com", "ann@example.com or bo@example.com", and with more
 /// than two, commas until the last.
-fn listed(names: &[&str]) -> String {
+pub(crate) fn listed(names: &[&str]) -> String {
     joined(names, "or")
 }
 
-fn joined(names: &[&str], last_word: &str) -> String {
+pub(crate) fn joined(names: &[&str], last_word: &str) -> String {
     match names {
         [] => String::new(),
         [one] => (*one).to_string(),
@@ -385,7 +381,7 @@ fn joined(names: &[&str], last_word: &str) -> String {
 }
 
 /// The version out of `gpg --version`, which leads with `gpg (GnuPG) 2.4.8`.
-fn version_of(output: &str) -> Option<String> {
+pub(crate) fn version_of(output: &str) -> Option<String> {
     let line = output.lines().next()?.trim();
     let version = line.rsplit(' ').next()?;
     version
@@ -397,7 +393,7 @@ fn version_of(output: &str) -> Option<String> {
 
 /// The value of one header, the lines it folds onto joined back on. Header
 /// values are only read here, so bytes that are not UTF-8 lose nothing.
-fn unfolded(headers: &[u8], name: &str) -> Option<String> {
+pub(crate) fn unfolded(headers: &[u8], name: &str) -> Option<String> {
     let text = String::from_utf8_lossy(headers)
         .replace("\r\n ", " ")
         .replace("\r\n\t", " ");
@@ -410,7 +406,7 @@ fn unfolded(headers: &[u8], name: &str) -> Option<String> {
 }
 
 /// One parameter of a header value, without its quotes.
-fn param(value: &str, name: &str) -> Option<String> {
+pub(crate) fn param(value: &str, name: &str) -> Option<String> {
     value.split(';').skip(1).find_map(|parameter| {
         let (key, value) = parameter.split_once('=')?;
         key.trim()
@@ -419,7 +415,7 @@ fn param(value: &str, name: &str) -> Option<String> {
     })
 }
 
-fn find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+pub(crate) fn find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
     haystack
         .windows(needle.len())
         .position(|window| window == needle)
@@ -692,47 +688,27 @@ mod tests {
     #[test]
     fn encryption_waits_until_every_recipient_has_a_key() {
         assert_eq!(
-            cannot_encrypt(&[], false).as_deref(),
+            cannot_encrypt(&[]).as_deref(),
             Some("Add a recipient whose key gpg holds.")
         );
+        assert_eq!(cannot_encrypt(&[recipient("ada@example.test", true)]), None);
         assert_eq!(
-            cannot_encrypt(&[recipient("ada@example.test", true)], false),
-            None
-        );
-        assert_eq!(
-            cannot_encrypt(
-                &[
-                    recipient("ada@example.test", true),
-                    recipient("bo@example.test", false),
-                ],
-                false
-            )
+            cannot_encrypt(&[
+                recipient("ada@example.test", true),
+                recipient("bo@example.test", false),
+            ])
             .as_deref(),
             Some("gpg holds no key for bo@example.test.")
         );
     }
 
     #[test]
-    fn a_blind_copy_and_encryption_do_not_go_together() {
-        let problem = cannot_encrypt(&[recipient("ada@example.test", true)], true);
-        assert!(
-            problem
-                .as_deref()
-                .is_some_and(|problem| problem.contains("blind")),
-            "{problem:?}"
-        );
-    }
-
-    #[test]
     fn every_recipient_without_a_key_is_named() {
-        let missing = cannot_encrypt(
-            &[
-                recipient("ann@example.test", false),
-                recipient("bo@example.test", false),
-                recipient("cy@example.test", false),
-            ],
-            false,
-        );
+        let missing = cannot_encrypt(&[
+            recipient("ann@example.test", false),
+            recipient("bo@example.test", false),
+            recipient("cy@example.test", false),
+        ]);
         assert_eq!(
             missing.as_deref(),
             Some("gpg holds no key for ann@example.test, bo@example.test or cy@example.test.")

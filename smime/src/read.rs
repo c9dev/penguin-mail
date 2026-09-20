@@ -17,9 +17,8 @@ pub struct Opened {
     /// part in its own right, so the caller parses it as it would any
     /// other.
     pub part: Vec<u8>,
-    /// The signature the blob carried, for a part that was signed rather
-    /// than enveloped.
-    pub signature: Option<Signature>,
+    /// What gpgsm made of the signature the blob carried.
+    pub signature: Signature,
 }
 
 impl Smime {
@@ -69,7 +68,7 @@ impl Smime {
         };
         Ok(Opened {
             part: run.out,
-            signature: Some(self.named(found)),
+            signature: self.named(found),
         })
     }
 

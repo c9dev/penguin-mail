@@ -14,6 +14,7 @@ use anyhow::{Context, Result, anyhow, bail};
 use mailrs_domain::{Account, AccountId, ChangeEvent, Folder, Target};
 use mailrs_gmail::{GMAIL_API_BASE, KeyringTokenStore, OAuthClient, TokenStore, authorize};
 use mailrs_pgp::{Pgp, PgpError};
+use mailrs_smime::{Smime, SmimeError};
 use mailrs_store::{Db, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::{
@@ -87,6 +88,9 @@ pub struct Core {
     /// The person's own gpg, found once at startup. With none, every
     /// OpenPGP control stays out of the window rather than failing later.
     pgp: Option<Pgp>,
+    /// Their gpgsm, found the same way, for the S/MIME half of the same
+    /// controls.
+    smime: Option<Smime>,
     tokens: Arc<dyn TokenStore>,
     events_tx: async_channel::Sender<ChangeEvent>,
     pub events: async_channel::Receiver<ChangeEvent>,
@@ -171,6 +175,7 @@ impl Core {
             invitations,
             config: RefCell::new(config),
             pgp: Pgp::find().ok(),
+            smime: Smime::find().ok(),
             tokens: Arc::new(KeyringTokenStore::new()),
             events_tx,
             events,
@@ -305,6 +310,30 @@ impl Core {
             .ok_or_else(|| anyhow!("this computer has no gpg"))?;
         self.call(async move {
             let answered = tokio::task::spawn_blocking(move || run(&pgp)).await?;
+            Ok::<_, anyhow::Error>(answered?)
+        })
+        .await
+    }
+
+    /// Whether this computer has a gpgsm to run. Without one the window
+    /// offers nothing about S/MIME.
+    pub fn has_gpgsm(&self) -> bool {
+        self.smime.is_some()
+    }
+
+    /// Runs one call against the person's gpgsm, on a blocking thread for
+    /// the reason [`Core::gpg`] gives.
+    pub async fn gpgsm<T, F>(&self, run: F) -> Result<T>
+    where
+        F: FnOnce(&Smime) -> std::result::Result<T, SmimeError> + Send + 'static,
+        T: Send + 'static,
+    {
+        let smime = self
+            .smime
+            .clone()
+            .ok_or_else(|| anyhow!("this computer has no gpgsm"))?;
+        self.call(async move {
+            let answered = tokio::task::spawn_blocking(move || run(&smime)).await?;
             Ok::<_, anyhow::Error>(answered?)
         })
         .await

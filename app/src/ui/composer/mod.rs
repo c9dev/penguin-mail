@@ -16,7 +16,6 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gdk, gio, glib};
-use mailrs_pgp::Recipient;
 use mailrs_store::templates::Template;
 use webkit::prelude::*;
 
@@ -29,9 +28,9 @@ use crate::compose::{
 };
 use crate::core::Core;
 use crate::format::{future_date, human_size, send_later_presets};
-use crate::pgp::cannot_encrypt;
 use crate::richtext::{Block, BlockKind, RichBody, Style};
 use crate::settings::ComposeFormat;
+use crate::smime::{self, Held, Standard};
 use crate::templates::{self, Filling};
 
 pub use crate::compose::Identity;
@@ -88,13 +87,20 @@ pub struct Composer {
     /// The strip naming the message this draft forwards.
     forwarded: gtk::Box,
     send: adw::SplitButton,
-    /// Sign and Encrypt, which this computer's gpg answers for. Both stay
-    /// out of the window when there is no gpg to run.
+    /// Sign and Encrypt, which this computer's gpg and gpgsm answer for.
+    /// Both stay out of the window when there is neither to run. One pair
+    /// covers the two standards, since which of them carries a message is
+    /// not the writer's problem.
     sign: gtk::ToggleButton,
     encrypt: gtk::ToggleButton,
-    /// The addresses the key check last asked gpg about, so a writer
-    /// typing an address does not start a gpg for every letter.
+    /// The addresses the key check last asked about, so a writer typing an
+    /// address does not start an engine for every letter.
     asked_keys: RefCell<Vec<String>>,
+    /// Which standard would encrypt this message, and which would sign it.
+    /// The recipients decide the first and the sender the second, and a
+    /// message that is both signed and encrypted goes out under the first.
+    encrypting_with: Cell<Standard>,
+    signing_with: Cell<Standard>,
     /// Bumped whenever the recipients change; a check that finds it moved
     /// on stands down.
     key_check: Cell<u64>,
@@ -158,7 +164,9 @@ impl Composer {
             sign_by_default,
             encrypt_when_possible,
         } = writing;
-        let has_gpg = core.has_gpg();
+        // One pair of toggles for both standards, offered as soon as
+        // either engine is on this computer.
+        let has_engine = core.has_gpg() || core.has_gpgsm();
         let title = adw::WindowTitle::new("New Message", "");
         let later = gio::Menu::new();
         for (label, at) in send_later_presets(chrono::Local::now()) {
@@ -203,16 +211,16 @@ impl Composer {
         let sign = gtk::ToggleButton::builder()
             .label("Sign")
             .tooltip_text("Sign this message with your own key")
-            .active(has_gpg && sign_by_default)
+            .active(has_engine && sign_by_default)
             .build();
         let encrypt = gtk::ToggleButton::builder()
             .label("Encrypt")
-            .tooltip_text("Add a recipient whose key gpg holds.")
+            .tooltip_text("Add a recipient this computer can encrypt to.")
             .sensitive(false)
             .build();
         let protection = gtk::Box::builder()
             .css_classes(["linked"])
-            .visible(has_gpg)
+            .visible(has_engine)
             .build();
         protection.append(&sign);
         protection.append(&encrypt);
@@ -378,10 +386,12 @@ impl Composer {
             sign,
             encrypt,
             asked_keys: RefCell::new(Vec::new()),
+            encrypting_with: Cell::new(Standard::default()),
+            signing_with: Cell::new(Standard::default()),
             key_check: Cell::new(0),
             filling_keys: Cell::new(false),
             encrypt_chosen: Cell::new(false),
-            encrypt_when_possible: has_gpg && encrypt_when_possible,
+            encrypt_when_possible: has_engine && encrypt_when_possible,
             toggles: RefCell::new(Vec::new()),
             identities,
             showing: Cell::new(selected),
@@ -412,6 +422,7 @@ impl Composer {
         composer.accept_images();
         composer.check_send();
         composer.check_keys();
+        composer.check_own();
         composer.load_templates();
         // Preferences may add a template while this window is open, so the
         // list is read again each time the menu is asked for.
@@ -883,6 +894,8 @@ impl Composer {
     /// send-as address and a message signed by the wrong one looks careless.
     fn identity_changed(self: &Rc<Self>, to: usize) {
         let was = self.showing.replace(to);
+        // The new address may be one the other standard holds.
+        self.check_own();
         let (Some(old), Some(new)) = (self.identities.get(was), self.identities.get(to)) else {
             return;
         };
@@ -954,7 +967,7 @@ impl Composer {
     /// it has already asked about, so the keyring is read once per change
     /// rather than once per letter.
     fn check_keys(self: &Rc<Self>) {
-        if !self.core.has_gpg() {
+        if !self.core.has_gpg() && !self.core.has_gpgsm() {
             return;
         }
         let generation = self.key_check.get().wrapping_add(1);
@@ -976,38 +989,89 @@ impl Composer {
         *self.asked_keys.borrow_mut() = addresses.clone();
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let wanted = addresses.clone();
-            let held = this.core.gpg(move |pgp| pgp.keys_for(&wanted)).await;
-            // The recipients moved on while gpg was answering.
+            let held = this.held(&addresses).await;
+            // The recipients moved on while the engines were answering.
             if *this.asked_keys.borrow() != addresses {
                 return;
             }
-            match held {
-                Ok(held) => this.show_keys(&held),
-                Err(err) => {
-                    tracing::info!(error = %err, "could not ask gpg about the recipients")
-                }
-            }
+            this.show_keys(&held);
         });
     }
 
-    /// Offers encryption when gpg can do it, and says what is in the way
-    /// when it cannot.
-    fn show_keys(&self, held: &[Recipient]) {
-        let problem = cannot_encrypt(held, !self.bcc.is_empty());
-        self.encrypt.set_sensitive(problem.is_none());
-        self.encrypt.set_tooltip_text(Some(
-            problem
-                .as_deref()
-                .unwrap_or("Encrypt this message to the recipients' keys"),
-        ));
+    /// What each engine holds for `addresses`. An engine this computer
+    /// does not have is asked nothing, and one that would not answer is
+    /// left out the same way, since a question nobody answered is not a
+    /// missing key.
+    async fn held(&self, addresses: &[String]) -> Held {
+        let mut held = Held::default();
+        if self.core.has_gpg() {
+            let wanted = addresses.to_vec();
+            match self.core.gpg(move |pgp| pgp.keys_for(&wanted)).await {
+                Ok(keys) => held.pgp = Some(keys),
+                Err(err) => tracing::info!(error = %err, "could not ask gpg about the addresses"),
+            }
+        }
+        if self.core.has_gpgsm() {
+            let wanted = addresses.to_vec();
+            match self
+                .core
+                .gpgsm(move |smime| smime.certificates_for(&wanted))
+                .await
+            {
+                Ok(certificates) => held.smime = Some(certificates),
+                Err(err) => {
+                    tracing::info!(error = %err, "could not ask gpgsm about the addresses")
+                }
+            }
+        }
+        held
+    }
+
+    /// Offers encryption when one of the standards can do it, and says
+    /// what is in the way when neither can.
+    fn show_keys(&self, held: &Held) {
+        let choice = smime::encrypting(held, !self.bcc.is_empty());
+        if let Ok(standard) = choice {
+            self.encrypting_with.set(standard);
+        }
+        self.encrypt.set_sensitive(choice.is_ok());
+        self.encrypt.set_tooltip_text(Some(match &choice {
+            Ok(standard) => smime::encrypting_with(*standard),
+            Err(problem) => problem.as_str(),
+        }));
         self.filling_keys.set(true);
-        if problem.is_some() {
+        if choice.is_err() {
             self.encrypt.set_active(false);
         } else if self.encrypt_when_possible && !self.encrypt_chosen.get() {
             self.encrypt.set_active(true);
         }
         self.filling_keys.set(false);
+    }
+
+    /// Asks both engines what they hold for the address this message goes
+    /// out from, which decides the standard a message that is only signed
+    /// travels under.
+    fn check_own(self: &Rc<Self>) {
+        let Some(identity) = self.identity() else {
+            return;
+        };
+        let from = vec![identity.address.email.to_lowercase()];
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let mut held = this.held(&from).await;
+            // Signing needs a secret key. Only gpgsm is asked for one
+            // outright: gpg lists a key of the person's own whichever half
+            // the question was about.
+            if this.core.has_gpgsm() {
+                let wanted = from.clone();
+                held.smime = this
+                    .core
+                    .gpgsm(move |smime| smime.signing_certificates(&wanted))
+                    .await
+                    .ok();
+            }
+            this.signing_with.set(smime::signing(&held));
+        });
     }
 
     /// Every address the message would go to, lower case and each once.
@@ -1048,6 +1112,12 @@ impl Composer {
         draft.attachments = self.attachments.borrow().clone();
         draft.sign = self.sign.is_active();
         draft.encrypt = self.encrypt.is_active() && self.encrypt.is_sensitive();
+        // A signature on an encrypted message goes inside the encryption,
+        // so the recipients' standard carries both.
+        draft.standard = match draft.encrypt {
+            true => self.encrypting_with.get(),
+            false => self.signing_with.get(),
+        };
         Some(draft)
     }
 

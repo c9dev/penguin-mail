@@ -107,19 +107,21 @@ pub fn signature<S: AsRef<str>>(status: &[S]) -> Option<Signature> {
             _ => continue,
         };
         // `GOODSIG <fingerprint> <subject>`, and the same shape for the
-        // verdicts beside it. The line that names no certificate carries
-        // neither.
+        // verdicts beside it. The line that names no certificate is an
+        // error report rather than one of these, so the fingerprint is
+        // what says whether there is anything here to read.
         let (fingerprint, subject) = match rest.split_once(' ') {
-            Some((fingerprint, subject)) => (Some(fingerprint), Some(subject.trim().to_string())),
-            None => (None, None),
+            Some((fingerprint, subject)) if hexadecimal(fingerprint) => (
+                Some(fingerprint.to_string()),
+                Some(subject.trim().to_string()),
+            ),
+            _ => (None, None),
         };
         found = Some(Signature {
             verdict,
             subject,
             email: None,
-            fingerprint: fingerprint
-                .filter(|fingerprint| fingerprint.chars().all(|c| c.is_ascii_hexdigit()))
-                .map(str::to_string),
+            fingerprint,
             chain: Chain::Unknown,
         });
     }
@@ -130,6 +132,10 @@ pub fn signature<S: AsRef<str>>(status: &[S]) -> Option<Signature> {
 /// the same keywords gpg uses for its web of trust, but only a full or
 /// ultimate answer means the chain validated; the rest are the ways it
 /// failed to.
+fn hexadecimal(word: &str) -> bool {
+    !word.is_empty() && word.chars().all(|c| c.is_ascii_hexdigit())
+}
+
 fn chain(keyword: &str) -> Chain {
     match keyword {
         "TRUST_FULLY" | "TRUST_ULTIMATE" => Chain::Trusted,

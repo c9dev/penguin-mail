@@ -13,6 +13,7 @@ use crate::compose::{
     Draft, SendWhen, build_body_part, build_mime, build_protected, new_message_id,
 };
 use crate::format::future_date;
+use crate::smime::Standard;
 
 /// How often the scheduler looks for messages that are due.
 const SCHEDULER_SECONDS: u32 = 30;
@@ -59,9 +60,10 @@ impl App {
     }
 
     /// The bytes to send: the message as it was written, or what the
-    /// OpenPGP engine made of it when the writer asked to sign or encrypt.
-    /// gpg may put a pinentry in front of them and wait, so this runs off
-    /// the GTK thread and holds nothing up but this message.
+    /// engine the draft names made of it when the writer asked to sign or
+    /// encrypt. Either engine may put a pinentry in front of them and
+    /// wait, so this runs off the GTK thread and holds nothing up but this
+    /// message.
     async fn raw_for(&self, draft: &Draft) -> Result<Vec<u8>, String> {
         let message_id = new_message_id(&draft.from.email);
         let date = now_millis() / 1000;
@@ -79,25 +81,40 @@ impl App {
             .map(|address| address.email.clone())
             .collect();
         let (sign, encrypt) = (draft.sign, draft.encrypt);
-        let entity = self
-            .core
-            .gpg(move |pgp| {
-                if encrypt {
-                    // A signature goes inside the encryption, which is the
-                    // only place one on encrypted mail means anything.
-                    pgp.encrypt(&part, &to, sign.then_some(from.as_str()))
-                } else {
-                    pgp.sign(&part, &from)
-                }
-            })
-            .await
-            .map_err(|err| {
-                if encrypt {
-                    format!("Not encrypted, so not sent: {err}")
-                } else {
-                    format!("Not signed, so not sent: {err}")
-                }
-            })?;
+        let entity = match draft.standard {
+            Standard::Pgp => {
+                self.core
+                    .gpg(move |pgp| {
+                        if encrypt {
+                            // A signature goes inside the encryption, which
+                            // is the only place one on encrypted mail means
+                            // anything.
+                            pgp.encrypt(&part, &to, sign.then_some(from.as_str()))
+                        } else {
+                            pgp.sign(&part, &from)
+                        }
+                    })
+                    .await
+            }
+            Standard::Smime => {
+                self.core
+                    .gpgsm(move |smime| {
+                        if encrypt {
+                            smime.encrypt(&part, &to, sign.then_some(from.as_str()))
+                        } else {
+                            smime.sign(&part, &from)
+                        }
+                    })
+                    .await
+            }
+        };
+        let entity = entity.map_err(|err| {
+            if encrypt {
+                format!("Not encrypted, so not sent: {err}")
+            } else {
+                format!("Not signed, so not sent: {err}")
+            }
+        })?;
         build_protected(draft, date, &message_id, entity).map_err(|err| built(&err))
     }
 

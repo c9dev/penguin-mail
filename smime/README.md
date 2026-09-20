@@ -90,7 +90,7 @@ let can_encrypt = held.iter().all(|recipient| recipient.certificate.is_some());
 This reads the local keybox only, so it is quick enough to ask again each
 time a recipient changes. Offer encryption when every recipient has a
 certificate, and name the ones that do not when they ask why it is off.
-`own_certificates` answers the other half: which of the addresses this
+`signing_certificates` answers the other half: which of the addresses this
 person sends from gpgsm holds a secret key for, which is what signing
 needs.
 

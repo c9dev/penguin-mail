@@ -20,6 +20,7 @@ mod rules;
 mod sanitize;
 mod search;
 mod settings;
+mod smime;
 mod templates;
 mod tray;
 mod ui;

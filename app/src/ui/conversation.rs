@@ -16,9 +16,10 @@ use webkit::prelude::*;
 use super::invitation::{self, EventCard, Showing};
 use super::pgp::PgpCard;
 use crate::compose::ReplyKind;
-use crate::pgp::{self, Mark, Opening};
+use crate::pgp::Mark;
 use crate::render::{BodyState, Conversation, MessageView, Theme, render};
 use crate::sanitize::sanitize_html;
+use crate::smime::{self, Engine};
 
 /// Everything shown for one open thread.
 pub struct OpenThread {
@@ -43,14 +44,14 @@ pub struct OpenThread {
     pub photos: HashMap<String, String>,
     /// Set once the user unsubscribed from this thread's list.
     pub unsubscribed: bool,
-    /// What gpg made of the protected message in this thread, once it has
-    /// run. It stays here so redrawing the thread never asks gpg again,
+    /// What the engine made of the protected message in this thread, once
+    /// it has run. It stays here so redrawing the thread never asks again,
     /// and so the card survives the body being replaced by the one that
     /// was inside the encryption.
     pub pgp: Option<Mark>,
-    /// Set as soon as gpg is asked about this thread. gpg may hold a
-    /// pinentry in front of the person for as long as they take, and
-    /// asking twice would put up two of them.
+    /// Set as soon as an engine is asked about this thread. Either one may
+    /// hold a pinentry in front of the person for as long as they take,
+    /// and asking twice would put up two of them.
     pub pgp_asked: bool,
     /// The flag colour chosen here, when the thread is flagged.
     pub flag_color: Option<FlagColor>,
@@ -96,13 +97,13 @@ impl OpenThread {
         })
     }
 
-    /// The newest message that arrived under OpenPGP, with the call the
-    /// engine needs for it. A thread holds one such message far more often
-    /// than two, and the newest is the one being read.
-    pub fn protected(&self) -> Option<(&MessageMeta, Opening)> {
+    /// The newest message that arrived signed or encrypted, with the
+    /// engine call it needs. A thread holds one such message far more
+    /// often than two, and the newest is the one being read.
+    pub fn protected(&self) -> Option<(&MessageMeta, Engine)> {
         self.messages.iter().rev().find_map(|meta| {
             let body = self.bodies.get(&meta.id)?.as_ref().ok()?;
-            Some((meta, pgp::opening(body)?))
+            Some((meta, smime::engine(body)?))
         })
     }
 

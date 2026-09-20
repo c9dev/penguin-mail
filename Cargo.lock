@@ -1952,6 +1952,7 @@ dependencies = [
  "mailrs-domain",
  "mailrs-gmail",
  "mailrs-pgp",
+ "mailrs-smime",
  "mailrs-store",
  "mailrs-sync",
  "notify-rust",

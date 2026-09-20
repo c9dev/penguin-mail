@@ -1,17 +1,19 @@
-//! Running the OpenPGP engine over the message on screen.
+//! Running the engine the message on screen needs, OpenPGP or S/MIME.
 //!
 //! The bytes come from Gmail's `format=raw`, because a signature covers the
 //! message as it was sent and the parts the API hands back have been
-//! decoded since. gpg then runs on a thread of its own, since it may put a
-//! pinentry in front of the person and wait as long as they take to type.
+//! decoded since. The engine then runs on a thread of its own, since it may
+//! put a pinentry in front of the person and wait as long as they take to
+//! type.
 
 use std::rc::Rc;
 
 use gtk::glib;
 
 use super::MainWindow;
-use crate::pgp;
+use crate::smime::Engine;
 use crate::ui::conversation::ConversationView;
+use crate::{pgp, smime};
 
 impl MainWindow {
     /// Starts the engine on the message `view` shows, without holding up
@@ -23,11 +25,11 @@ impl MainWindow {
         glib::spawn_future_local(async move { this.refresh_pgp(&view).await });
     }
 
-    /// Checks or opens the protected message in `view` and puts what gpg
-    /// said above it. A thread that has been through this keeps the answer,
-    /// so redrawing never asks again.
+    /// Checks or opens the protected message in `view` and puts what the
+    /// engine said above it. A thread that has been through this keeps the
+    /// answer, so redrawing never asks again.
     async fn refresh_pgp(self: &Rc<Self>, view: &Rc<ConversationView>) {
-        if !self.core.has_gpg() {
+        if !self.core.has_gpg() && !self.core.has_gpgsm() {
             return;
         }
         let found = view.with_open(|open| {
@@ -38,6 +40,13 @@ impl MainWindow {
                 let (meta, opening) = open.protected()?;
                 (meta.id.clone(), opening)
             };
+            // The message names its standard, and the engine that reads it
+            // may be the one this computer lacks.
+            match opening {
+                Engine::Pgp(_) if !self.core.has_gpg() => return None,
+                Engine::Smime(_) if !self.core.has_gpgsm() => return None,
+                _ => {}
+            }
             let body = open.bodies.get(&message_id)?.as_ref().ok()?.clone();
             open.pgp_asked = true;
             Some((
@@ -62,21 +71,29 @@ impl MainWindow {
         {
             Ok(raw) => raw,
             Err(err) => {
-                tracing::info!(error = %err, "could not fetch the message to check its OpenPGP");
+                tracing::info!(error = %err, "could not fetch the message to check how it was signed");
                 return;
             }
         };
         if !view.is_showing(account_id, &thread_id) {
             return;
         }
-        let read = self
-            .core
-            .gpg(move |pgp| Ok(pgp::read(pgp, opening, &raw, &body)))
-            .await;
+        let read = match opening {
+            Engine::Pgp(opening) => {
+                self.core
+                    .gpg(move |pgp| Ok(pgp::read(pgp, opening, &raw, &body)))
+                    .await
+            }
+            Engine::Smime(opening) => {
+                self.core
+                    .gpgsm(move |smime| Ok(smime::read(smime, opening, &raw)))
+                    .await
+            }
+        };
         let read = match read {
             Ok(read) => read,
             Err(err) => {
-                tracing::info!(error = %err, "gpg could not be asked about this message");
+                tracing::info!(error = %err, "the engine could not be asked about this message");
                 return;
             }
         };

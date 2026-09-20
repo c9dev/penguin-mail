@@ -349,38 +349,48 @@ fn writing_page(
     page.add(&signatures);
     page.add(&super::templates::group(app));
     page.add(&spelling_group(app, settings, accounts));
-    if let Some(openpgp) = openpgp_group(app, settings, accounts) {
-        page.add(&openpgp);
+    if let Some(protection) = protection_group(app, settings, accounts) {
+        page.add(&protection);
     }
     page
 }
 
-/// What this computer's gpg is, which of the writer's addresses it holds a
-/// key for, and what to do about OpenPGP without being asked every time.
+/// What this computer signs and encrypts with, which of the writer's
+/// addresses it holds something for, and what to do about it without being
+/// asked every time.
 ///
-/// With no gpg on the computer there is no group: a switch that could do
-/// nothing is worse than no switch, and installing GnuPG is the only thing
-/// that would change the answer.
-fn openpgp_group(
+/// One group covers both standards, because the writer chooses to sign or
+/// to encrypt rather than choosing between OpenPGP and S/MIME. With
+/// neither gpg nor gpgsm on the computer there is no group at all: a switch
+/// that could do nothing is worse than no switch, and installing GnuPG is
+/// the only thing that would change the answer.
+fn protection_group(
     app: &Rc<App>,
     settings: &Settings,
     accounts: &[Account],
 ) -> Option<adw::PreferencesGroup> {
-    if !app.core.has_gpg() {
+    if !app.core.has_gpg() && !app.core.has_gpgsm() {
         return None;
     }
     let group = adw::PreferencesGroup::builder()
-        .title("OpenPGP")
+        .title("Signing and Encryption")
         .description(
-            "Penguin Mail signs and encrypts through gpg, which holds your keys and asks for \
+            "Penguin Mail signs and encrypts through GnuPG, which holds your keys and asks for \
              your passphrase itself.",
         )
         .build();
     let keys = adw::ActionRow::builder()
-        .title("Your Keys")
+        .title("Your OpenPGP Keys")
         .subtitle("Asking gpg…")
+        .visible(app.core.has_gpg())
+        .build();
+    let certificates = adw::ActionRow::builder()
+        .title("Your S/MIME Certificates")
+        .subtitle("Asking gpgsm…")
+        .visible(app.core.has_gpgsm())
         .build();
     group.add(&keys);
+    group.add(&certificates);
     group.add(&switch(
         app,
         "Sign My Messages by Default",
@@ -391,32 +401,66 @@ fn openpgp_group(
     group.add(&switch(
         app,
         "Encrypt When I Can",
-        Some("Turn Encrypt on as soon as gpg holds a key for every recipient"),
+        Some("Turn Encrypt on as soon as every recipient has a key or a certificate"),
         settings.encrypt_when_possible,
         Change::EncryptWhenPossible,
     ));
-    // Both answers mean running gpg, so the group goes up saying so and
-    // fills itself in.
+    // Every answer here means running a program, so the group goes up
+    // saying so and fills itself in.
     let mut addresses: Vec<String> = accounts.iter().map(|a| a.email.clone()).collect();
     for alias in settings.send_as.values().flatten() {
         addresses.push(alias.email.clone());
     }
     addresses.sort();
     addresses.dedup();
-    let (app, row, filling) = (Rc::clone(app), keys, group.clone());
+    let (app, filling) = (Rc::clone(app), group.clone());
     glib::spawn_future_local(async move {
-        if let Ok(Some(version)) = app.core.gpg(|pgp| Ok(crate::pgp::version(pgp))).await {
-            filling.set_description(Some(&format!(
-                "Penguin Mail signs and encrypts through gpg {version}, which holds your keys \
-                 and asks for your passphrase itself."
-            )));
+        let mut programs = Vec::new();
+        if app.core.has_gpg() {
+            let version = app.core.gpg(|pgp| Ok(crate::pgp::version(pgp))).await;
+            programs.push(named("gpg", version.ok().flatten()));
+            let wanted = addresses.clone();
+            match app.core.gpg(move |pgp| pgp.keys_for(&wanted)).await {
+                Ok(held) => keys.set_subtitle(&crate::pgp::own_keys(&held)),
+                Err(err) => keys.set_subtitle(&format!("gpg could not be asked: {err}")),
+            }
         }
-        match app.core.gpg(move |pgp| pgp.keys_for(&addresses)).await {
-            Ok(held) => row.set_subtitle(&crate::pgp::own_keys(&held)),
-            Err(err) => row.set_subtitle(&format!("gpg could not be asked: {err}")),
+        if app.core.has_gpgsm() {
+            let version = app
+                .core
+                .gpgsm(|smime| Ok(crate::smime::version(smime)))
+                .await;
+            programs.push(named("gpgsm", version.ok().flatten()));
+            let wanted = addresses.clone();
+            match app
+                .core
+                .gpgsm(move |smime| smime.signing_certificates(&wanted))
+                .await
+            {
+                Ok(held) => certificates.set_subtitle(&crate::smime::own_certificates(&held)),
+                Err(err) => certificates.set_subtitle(&format!("gpgsm could not be asked: {err}")),
+            }
         }
+        filling.set_description(Some(&format!(
+            "Penguin Mail signs and encrypts through {}, which holds your keys and asks for \
+             your passphrase itself.",
+            crate::pgp::joined(
+                &programs.iter().map(String::as_str).collect::<Vec<_>>(),
+                "and"
+            )
+        )));
     });
     Some(group)
+}
+
+/// One program with the version it reported, for the line naming what the
+/// signing runs through. A program that would not say leaves the number
+/// out rather than guessing at one.
+fn named(program: &str, version: Option<String>) -> String {
+    match version {
+        Some(version) => format!("{program} {version}"),
+        None => program.to_string(),
+    }
 }
 
 /// Which dictionaries are installed, and which one each account writes in.

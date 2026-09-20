@@ -43,7 +43,7 @@ impl Smime {
 
     /// Which of `addresses` this computer can sign as: the ones gpgsm holds
     /// a secret key for.
-    pub fn own_certificates(&self, addresses: &[String]) -> Result<Vec<Recipient>, SmimeError> {
+    pub fn signing_certificates(&self, addresses: &[String]) -> Result<Vec<Recipient>, SmimeError> {
         self.held(addresses, true, 's')
     }
 
