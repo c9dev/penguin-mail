@@ -53,7 +53,14 @@ pub struct Conversation<'a> {
 
 pub fn render(conversation: &Conversation, theme: &Theme) -> String {
     let mut html = String::with_capacity(16 * 1024);
-    html.push_str("<!doctype html><html><head><meta charset=\"utf-8\">");
+    html.push_str("<!doctype html><html");
+    // Without this a screen reader reads the page in whatever voice it
+    // started in, which turns Portuguese into nonsense.
+    let language = page_language();
+    if !language.is_empty() {
+        let _ = write!(html, " lang=\"{}\"", escape(&language));
+    }
+    html.push_str("><head><meta charset=\"utf-8\">");
     let remote = if conversation.allow_remote {
         " https: http:"
     } else {
@@ -120,27 +127,37 @@ fn render_message(
         toggle = escape(&gettext("Show or hide this message")),
     );
     let contact = escape(&gettext("Contact"));
+    // The face carries no meaning a reader needs, and the initials behind
+    // it are two letters of the name said beside them, so the link says
+    // whose card it opens and the picture itself says nothing.
+    let opens = escape(&fill(
+        &gettext("Contact card for {person}"),
+        &[("person", &name)],
+    ));
     match photo {
         Some(uri) => {
             let _ = write!(
                 html,
-                "<a class=\"avatar\" href=\"{card}\" title=\"{contact}\">\
-                 <img src=\"{uri}\" alt=\"\"></a>"
+                "<a class=\"avatar\" href=\"{card}\" title=\"{contact}\" \
+                 aria-label=\"{opens}\"><img src=\"{uri}\" alt=\"\"></a>"
             );
         }
         None => {
             let _ = write!(
                 html,
                 "<a class=\"avatar\" href=\"{card}\" title=\"{contact}\" \
-                 style=\"background:{color}\">{initials}</a>",
+                 aria-label=\"{opens}\" style=\"background:{color}\">{initials}</a>",
                 color = color_for(if address.is_empty() { &name } else { &address }),
                 initials = escape(&initials(&name)),
             );
         }
     }
+    // The thread's subject is the page's only h1; each message's sender
+    // is its heading under it, so a reader can jump message to message.
     let _ = write!(
         html,
-        "<span class=\"who\"><a class=\"name\" href=\"{card}\">{name}</a>",
+        "<span class=\"who\" role=\"heading\" aria-level=\"2\">\
+         <a class=\"name\" href=\"{card}\">{name}</a>",
         name = escape(&name),
     );
     if !address.is_empty() && address != name {
@@ -297,7 +314,18 @@ fn render_attachments(
         return;
     }
     let id = escape(message_id);
-    html.push_str("<div class=\"attachments\">");
+    let count = listed.len();
+    let heading = fill_plural(
+        "{count} attachment",
+        "{count} attachments",
+        count,
+        &[("count", &count.to_string())],
+    );
+    let _ = write!(
+        html,
+        "<div class=\"attachments\" role=\"list\" aria-label=\"{}\">",
+        escape(&heading),
+    );
     for (index, attachment) in &listed {
         let thumbnail = attachment
             .attachment_id
@@ -307,21 +335,35 @@ fn render_attachments(
             Some(uri) => format!("<img class=\"thumb\" src=\"{uri}\" alt=\"\">"),
             None => "<span class=\"clip\"></span>".to_string(),
         };
+        // The download link is an empty square with a background image,
+        // so its name has to be given; the open link's own words are the
+        // file name and its size, which is not what pressing it does.
         let _ = write!(
             html,
-            "<span class=\"attachment\"><a class=\"open\" href=\"mailrs:preview/{id}/{index}\" \
-             title=\"{look}\">{face}<span class=\"file\">{}</span>\
+            "<span class=\"attachment\" role=\"listitem\">\
+             <a class=\"open\" href=\"mailrs:preview/{id}/{index}\" \
+             title=\"{look}\" aria-label=\"{opens}\">{face}<span class=\"file\">{}</span>\
              <span class=\"size\">{}</span></a>\
              <a class=\"get\" href=\"mailrs:attachment/{id}/{index}\" \
-             title=\"{save}\"></a></span>",
+             title=\"{save}\" aria-label=\"{gets}\"></a></span>",
             escape(&attachment.filename),
             human_size(attachment.size),
             look = escape(&gettext("Quick Look")),
             save = escape(&gettext("Save to Downloads")),
+            opens = escape(&fill(
+                &gettext("Open {file}, {size}"),
+                &[
+                    ("file", &attachment.filename),
+                    ("size", &human_size(attachment.size)),
+                ],
+            )),
+            gets = escape(&fill(
+                &gettext("Save {file} to Downloads"),
+                &[("file", &attachment.filename)],
+            )),
         );
     }
-    if listed.len() > 1 {
-        let count = listed.len();
+    if count > 1 {
         let all = fill_plural(
             "Save All ({count})",
             "Save All ({count})",
@@ -330,13 +372,45 @@ fn render_attachments(
         );
         let _ = write!(
             html,
-            "<a class=\"attachment all\" href=\"mailrs:attachments/{id}\" \
-             title=\"{title}\"><span class=\"file\">{}</span></a>",
+            "<a class=\"attachment all\" role=\"listitem\" \
+             href=\"mailrs:attachments/{id}\" \
+             title=\"{title}\" aria-label=\"{title}\"><span class=\"file\">{}</span></a>",
             escape(&all),
             title = escape(&gettext("Save every attachment to a folder")),
         );
     }
     html.push_str("</div>");
+}
+
+/// The language tag to put on the page, written the way a screen reader
+/// wants it: `pt-PT` rather than `pt_PT.UTF-8`. Empty when the desktop
+/// names no language, and then the page claims none rather than English.
+fn page_language() -> String {
+    language_tag(
+        ["LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"]
+            .into_iter()
+            .filter_map(|name| std::env::var(name).ok()),
+    )
+}
+
+/// The tag the first usable locale in `asked` gives. `LANGUAGE` holds a
+/// list, best first; the others hold one locale, with an encoding and a
+/// variant that no tag wants. `C` and `POSIX` name no language at all.
+fn language_tag(asked: impl IntoIterator<Item = String>) -> String {
+    for value in asked {
+        let tag = value
+            .split(':')
+            .next()
+            .unwrap_or_default()
+            .split(['.', '@'])
+            .next()
+            .unwrap_or_default();
+        if tag.is_empty() || tag == "C" || tag == "POSIX" {
+            continue;
+        }
+        return tag.replace('_', "-");
+    }
+    String::new()
 }
 
 /// Whether the message already shows this attachment where the reader is
@@ -864,6 +938,45 @@ mod tests {
         assert!(html.contains("href=\"mailrs:attachment/m1/1\""));
         assert!(html.contains("href=\"mailrs:attachments/m1\""));
         assert!(html.contains("Save All (2)"));
+        // Each row is a list item, and both of its links say which file
+        // they act on rather than "Quick Look" twice over.
+        assert!(html.contains("role=\"list\" aria-label=\"2 attachments\""));
+        assert!(html.contains("aria-label=\"Open cat.png, 2.0 KB\""), "{html}");
+        assert!(html.contains("aria-label=\"Save report.pdf to Downloads\""), "{html}");
+    }
+
+    #[test]
+    fn the_page_names_the_language_it_is_written_in() {
+        let asked = |list: &[&str]| language_tag(list.iter().map(|s| s.to_string()));
+        assert_eq!(asked(&["pt_PT:pt", "pt_PT.UTF-8"]), "pt-PT");
+        assert_eq!(asked(&["", "C", "de_DE.UTF-8"]), "de-DE");
+        assert_eq!(asked(&["ca_ES@valencia"]), "ca-ES");
+        assert_eq!(asked(&["", "POSIX"]), "");
+        assert_eq!(asked(&[]), "");
+    }
+
+    #[test]
+    fn a_sender_is_the_heading_under_the_subject() {
+        let m = meta("m1", "Ann", &[]);
+        let images = HashMap::new();
+        let thumbs = HashMap::new();
+        let html = page(
+            "Rent",
+            vec![MessageView {
+                meta: &m,
+                body: BodyState::Loading,
+                expanded: true,
+                inline_images: &images,
+                thumbnails: &thumbs,
+                sanitized: None,
+            }],
+        );
+        assert!(html.contains("<h1>Rent</h1>"), "{html}");
+        assert!(
+            html.contains("<span class=\"who\" role=\"heading\" aria-level=\"2\">"),
+            "{html}"
+        );
+        assert!(html.contains("aria-label=\"Contact card for Ann\""), "{html}");
     }
 
     #[test]

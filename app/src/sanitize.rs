@@ -54,7 +54,42 @@ pub fn sanitize_html(html: &str, inline_images: &HashMap<String, String>) -> Str
         .attribute_filter(move |element, attribute, value| {
             filter_url(&images, element, attribute, value)
         });
-    drop_dark_rules(&builder.clean(html).to_string())
+    name_images(&drop_dark_rules(&builder.clean(html).to_string()))
+}
+
+/// Gives every picture without a description an empty one.
+///
+/// A browser with nothing else to go on reads an image's source out, and
+/// an inline picture's source is a kilobyte of base64. A sender who wrote
+/// no description said nothing about the picture, so the page says
+/// nothing rather than spelling the source out.
+fn name_images(html: &str) -> String {
+    let mut out = String::with_capacity(html.len());
+    let mut rest = html;
+    while let Some(start) = rest.find("<img") {
+        let Some(close) = rest[start..].find('>').map(|i| start + i) else {
+            break;
+        };
+        let tag = &rest[start..close];
+        out.push_str(&rest[..close]);
+        if !has_alt(tag) {
+            out.push_str(" alt=\"\"");
+        }
+        rest = &rest[close..];
+    }
+    out.push_str(rest);
+    out
+}
+
+/// Whether an `<img>` tag carries an `alt` attribute of its own, rather
+/// than an attribute whose name merely ends in those letters.
+fn has_alt(tag: &str) -> bool {
+    let lower = tag.to_ascii_lowercase();
+    lower.match_indices("alt").any(|(at, _)| {
+        let before = lower[..at].chars().next_back();
+        before.is_some_and(char::is_whitespace)
+            && lower[at + 3..].trim_start().starts_with('=')
+    })
 }
 
 /// Removes `@media` blocks that only apply in dark mode, and the
@@ -407,5 +442,17 @@ mod tests {
     #[test]
     fn comments_are_stripped() {
         assert!(!clean("<!-- tracking --><p>x</p>").contains("tracking"));
+    }
+
+    #[test]
+    fn a_picture_with_nothing_to_say_says_nothing() {
+        // An image nobody described gets an empty description, so a
+        // screen reader passes over it instead of reading the source.
+        let out = clean(r#"<img src="data:image/gif;base64,R0lG">"#);
+        assert!(out.contains("alt=\"\""), "{out}");
+        // One the sender described keeps what they wrote, once.
+        let out = clean(r#"<img src="https://x/a.png" alt="Our logo">"#);
+        assert!(out.contains("alt=\"our logo\""), "{out}");
+        assert_eq!(out.matches("alt=").count(), 1, "{out}");
     }
 }
