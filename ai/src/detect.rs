@@ -6,7 +6,7 @@ use std::time::Duration;
 use serde_json::Value;
 
 use crate::ProviderConfig;
-use crate::providers::claude_models;
+use crate::providers::claude_aliases;
 
 /// How long a local server gets to answer before we call the port empty.
 const PROBE_TIMEOUT: Duration = Duration::from_millis(400);
@@ -59,7 +59,7 @@ pub async fn detect() -> Vec<Detected> {
                 command,
                 model: None,
             },
-            models: claude_models(),
+            models: claude_aliases(),
         });
     }
     if let Some(api_key) = std::env::var("ANTHROPIC_API_KEY")

@@ -154,3 +154,67 @@ async fn reports_a_crash_with_its_stderr() {
         .unwrap_err();
     assert!(err.to_string().contains("not logged in"), "{err}");
 }
+
+/// Trimmed from the catalog the installed CLI wrote to
+/// `~/.claude/cache/model-catalog/…-cc.json`, keeping the fields the picker
+/// reads.
+fn recorded_catalog() -> Value {
+    json!({
+        "version": 2,
+        "catalog": {
+            "surface": "cc",
+            "config": {
+                "id": "cc",
+                "models": [
+                    {"id": "claude-opus-5", "name": "Opus 5", "short_name": "Opus",
+                     "description": "For complex tasks", "section": "main"},
+                    {"id": "claude-fable-5-1", "name": "Fable 5.1", "short_name": "Fable",
+                     "description": "For your toughest challenges", "section": "main",
+                     "min_claude_code_version": "2.1.251"},
+                    {"id": "claude-sonnet-5", "name": "Sonnet 5", "short_name": "Sonnet",
+                     "description": "Most efficient for everyday tasks", "section": "main"},
+                    {"id": "claude-haiku-4-5-20251001", "name": "Haiku 4.5",
+                     "short_name": "Haiku", "description": "Fastest for quick answers",
+                     "section": "main"}
+                ]
+            }
+        }
+    })
+}
+
+#[test]
+fn reads_the_aliases_and_versions_from_the_cached_catalog() {
+    let models = crate::providers::catalog_models(&recorded_catalog(), Some("2.1.278"));
+    let listed: Vec<(&str, &str, bool)> = models
+        .iter()
+        .map(|m| (m.id.as_str(), m.name.as_str(), m.alias))
+        .collect();
+    assert_eq!(
+        listed,
+        vec![
+            ("opus", "Opus, newest version (now Opus 5)", true),
+            ("fable", "Fable, newest version (now Fable 5.1)", true),
+            ("sonnet", "Sonnet, newest version (now Sonnet 5)", true),
+            ("haiku", "Haiku, newest version (now Haiku 4.5)", true),
+            ("claude-opus-5", "Opus 5", false),
+            ("claude-fable-5-1", "Fable 5.1", false),
+            ("claude-sonnet-5", "Sonnet 5", false),
+            ("claude-haiku-4-5-20251001", "Haiku 4.5", false),
+        ]
+    );
+}
+
+#[test]
+fn leaves_out_a_model_the_installed_cli_is_too_old_for() {
+    let models = crate::providers::catalog_models(&recorded_catalog(), Some("2.1.100"));
+    assert!(!models.iter().any(|m| m.id.contains("fable")), "{models:?}");
+    assert!(models.iter().any(|m| m.id == "claude-opus-5"), "{models:?}");
+    // Without a version to compare against, every model stays.
+    let all = crate::providers::catalog_models(&recorded_catalog(), None);
+    assert_eq!(all.len(), 8);
+}
+
+#[test]
+fn a_catalog_with_no_models_lists_nothing() {
+    assert!(crate::providers::catalog_models(&json!({}), Some("2.1.278")).is_empty());
+}

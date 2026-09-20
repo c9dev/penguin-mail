@@ -5,17 +5,20 @@ use std::sync::Arc;
 
 use serde_json::{Value, json};
 
-use super::openai::model_ids;
 use super::{
     MAX_ROUNDS, emit, error_text, finish_tool, http_client, network, outcome_text, run_tool,
     too_many_rounds,
 };
 use crate::sse::SseReader;
-use crate::{AgentEvent, AiError, ToolHost, ToolOutcome, ToolSpec};
+use crate::{AgentEvent, AiError, Model, ModelList, ToolHost, ToolOutcome, ToolSpec};
 
 pub(crate) const ANTHROPIC_BASE: &str = "https://api.anthropic.com";
 const API_VERSION: &str = "2023-06-01";
 const MAX_TOKENS: u32 = 64_000;
+/// Models asked for per page of `/v1/models`, the most the API allows.
+const MODEL_PAGE: u32 = 1000;
+/// Pages read before the list stops, so a runaway cursor cannot loop.
+const MAX_MODEL_PAGES: usize = 20;
 
 /// The API base, or `PENGUIN_MAIL_ANTHROPIC_BASE` when set.
 pub(crate) fn default_base() -> String {
@@ -329,17 +332,58 @@ fn append(block: &mut Value, field: &str, text: &str) {
     }
 }
 
-pub(crate) async fn list_models(base_url: &str, api_key: &str) -> Result<Vec<String>, AiError> {
-    let response = http_client()
-        .get(format!("{base_url}/v1/models?limit=1000"))
-        .header("x-api-key", api_key)
-        .header("anthropic-version", API_VERSION)
-        .send()
-        .await
-        .map_err(network)?;
-    if !response.status().is_success() {
-        return Err(status_error(response).await);
+/// Every model the key may use, newest first, following the pages Anthropic
+/// hands back through `has_more` and `last_id`.
+pub(crate) async fn list_models(base_url: &str, api_key: &str) -> Result<ModelList, AiError> {
+    if api_key.trim().is_empty() {
+        return Err(AiError::Api(
+            "Add an Anthropic API key to see the models it can use.".to_string(),
+        ));
     }
-    let body: Value = response.json().await.map_err(network)?;
-    Ok(model_ids(&body))
+    let client = http_client();
+    let mut models = Vec::new();
+    let mut after: Option<String> = None;
+    for _ in 0..MAX_MODEL_PAGES {
+        let mut url = format!("{base_url}/v1/models?limit={MODEL_PAGE}");
+        if let Some(id) = &after {
+            url.push_str(&format!("&after_id={id}"));
+        }
+        let response = client
+            .get(url)
+            .header("x-api-key", api_key)
+            .header("anthropic-version", API_VERSION)
+            .send()
+            .await
+            .map_err(network)?;
+        if !response.status().is_success() {
+            return Err(status_error(response).await);
+        }
+        let body: Value = response.json().await.map_err(network)?;
+        models.extend(parse_models(&body));
+        if !body["has_more"].as_bool().unwrap_or(false) {
+            break;
+        }
+        match body["last_id"].as_str() {
+            Some(id) => after = Some(id.to_string()),
+            None => break,
+        }
+    }
+    Ok(ModelList::new(models))
+}
+
+/// One page of `/v1/models`. Anthropic sends a `display_name` such as
+/// "Claude Opus 5" beside the dated id, and the picker shows both.
+pub(crate) fn parse_models(body: &Value) -> Vec<Model> {
+    body["data"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|m| {
+            let id = m["id"].as_str()?;
+            Some(Model::named(
+                id,
+                m["display_name"].as_str().unwrap_or_default(),
+            ))
+        })
+        .collect()
 }

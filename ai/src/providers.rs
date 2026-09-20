@@ -9,12 +9,14 @@ use std::time::Duration;
 
 use serde_json::Value;
 
-use crate::{AgentEvent, AiError, ProviderConfig, ToolHost, ToolOutcome};
+use crate::{AgentEvent, AiError, ModelList, ProviderConfig, ToolHost, ToolOutcome};
 
 pub(crate) use anthropic::AnthropicChat;
 #[cfg(test)]
 pub(crate) use anthropic::list_models as anthropic_models;
-pub(crate) use claude_code::{ClaudeCodeChat, claude_models};
+#[cfg(test)]
+pub(crate) use claude_code::catalog_models;
+pub(crate) use claude_code::{ClaudeCodeChat, claude_aliases};
 pub(crate) use openai::{OpenAiChat, model_ids};
 
 /// Model requests per user message before the loop gives up.
@@ -63,7 +65,7 @@ impl State {
     }
 }
 
-pub(crate) async fn list_models(config: &ProviderConfig) -> Result<Vec<String>, AiError> {
+pub(crate) async fn list_models(config: &ProviderConfig) -> Result<ModelList, AiError> {
     match config {
         ProviderConfig::OpenAiCompatible {
             base_url, api_key, ..
@@ -71,14 +73,14 @@ pub(crate) async fn list_models(config: &ProviderConfig) -> Result<Vec<String>, 
         ProviderConfig::Anthropic { api_key, .. } => {
             anthropic::list_models(&anthropic::default_base(), api_key).await
         }
-        ProviderConfig::ClaudeCode { .. } => Ok(claude_models()),
+        ProviderConfig::ClaudeCode { command, .. } => claude_code::list_models(command).await,
     }
 }
 
 pub(crate) async fn test(config: &ProviderConfig) -> Result<String, AiError> {
     match config {
         ProviderConfig::OpenAiCompatible { .. } | ProviderConfig::Anthropic { .. } => {
-            let models = list_models(config).await?;
+            let models = list_models(config).await?.models;
             Ok(match models.len() {
                 1 => "Connected, 1 model available".to_string(),
                 n => format!("Connected, {n} models available"),

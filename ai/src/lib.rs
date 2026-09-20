@@ -117,8 +117,68 @@ impl Conversation {
     }
 }
 
+/// One model a provider offers.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Model {
+    /// What goes into the settings and into every request.
+    pub id: String,
+    /// The provider's name for it, such as "Claude Opus 5". Empty when the
+    /// provider gives an id and nothing else.
+    pub name: String,
+    /// True when the id is an alias that follows the newest version, rather
+    /// than one pinned version.
+    pub alias: bool,
+}
+
+impl Model {
+    /// A model known only by its id.
+    pub fn new(id: impl Into<String>) -> Model {
+        Model {
+            id: id.into(),
+            name: String::new(),
+            alias: false,
+        }
+    }
+
+    /// The id with its name, for a log line or a test.
+    pub fn named(id: impl Into<String>, name: impl Into<String>) -> Model {
+        Model {
+            id: id.into(),
+            name: name.into(),
+            alias: false,
+        }
+    }
+}
+
+/// What a provider offers, for the settings picker.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ModelList {
+    pub models: Vec<Model>,
+    /// One plain sentence about what the list is missing, when it misses
+    /// something the user should know about.
+    pub note: Option<String>,
+}
+
+impl ModelList {
+    pub fn new(models: Vec<Model>) -> ModelList {
+        ModelList { models, note: None }
+    }
+
+    pub fn with_note(models: Vec<Model>, note: impl Into<String>) -> ModelList {
+        ModelList {
+            models,
+            note: Some(note.into()),
+        }
+    }
+
+    /// The ids alone, in order.
+    pub fn ids(&self) -> Vec<String> {
+        self.models.iter().map(|m| m.id.clone()).collect()
+    }
+}
+
 /// Models the provider offers, for the settings picker.
-pub async fn list_models(config: &ProviderConfig) -> Result<Vec<String>, AiError> {
+pub async fn list_models(config: &ProviderConfig) -> Result<ModelList, AiError> {
     providers::list_models(config).await
 }
 

@@ -17,13 +17,158 @@ use tokio::process::Command;
 
 use super::{emit, preview, truncate};
 use crate::bridge::{self, SERVER_NAME};
-use crate::{AgentEvent, AiError, ToolHost};
+use crate::{AgentEvent, AiError, Model, ModelList, ToolHost};
 
-/// Model aliases Claude Code accepts for `--model`.
-const MODELS: [&str; 4] = ["opus", "sonnet", "haiku", "fable"];
+/// Aliases Claude Code takes for `--model`. Each one follows the newest
+/// version of that model. `claude --help` names fable, opus and sonnet;
+/// haiku is the fourth short name in the CLI's own model catalog.
+const ALIASES: [&str; 4] = ["opus", "sonnet", "haiku", "fable"];
 
-pub(crate) fn claude_models() -> Vec<String> {
-    MODELS.iter().map(|m| m.to_string()).collect()
+/// Where Claude Code caches the model catalog it fetches, under its config
+/// directory.
+const CATALOG_DIR: &str = "cache/model-catalog";
+
+/// The aliases alone, for the row that lists what is on this computer.
+pub(crate) fn claude_aliases() -> Vec<String> {
+    ALIASES.iter().map(|m| m.to_string()).collect()
+}
+
+fn alias_models() -> Vec<Model> {
+    ALIASES
+        .iter()
+        .map(|alias| Model {
+            id: alias.to_string(),
+            name: format!("{}, newest version", title_case(alias)),
+            alias: true,
+        })
+        .collect()
+}
+
+/// What the installed CLI can run: the aliases first, then every version in
+/// the model catalog the CLI keeps. Without that catalog the aliases are all
+/// we know, and the note says so.
+pub(crate) async fn list_models(command: &Path) -> Result<ModelList, AiError> {
+    let version = cli_version(command).await;
+    let Some((path, body)) = read_catalog() else {
+        return Ok(ModelList::with_note(
+            alias_models(),
+            "Claude Code has not saved its model catalog yet, so only the aliases are listed. \
+             Run claude once in a terminal to fill it in.",
+        ));
+    };
+    let models = catalog_models(&body, version.as_deref());
+    if models.is_empty() {
+        return Ok(ModelList::with_note(
+            alias_models(),
+            format!(
+                "Claude Code's model catalog at {} lists no models, so only the aliases are listed.",
+                path.display()
+            ),
+        ));
+    }
+    Ok(ModelList::new(models))
+}
+
+/// The models in one catalog file, as the picker shows them: an alias per
+/// model, saying which version it points at now, then the versions to pin.
+pub(crate) fn catalog_models(body: &Value, cli_version: Option<&str>) -> Vec<Model> {
+    let mut aliases: Vec<Model> = Vec::new();
+    let mut versions: Vec<Model> = Vec::new();
+    for entry in body["catalog"]["config"]["models"]
+        .as_array()
+        .into_iter()
+        .flatten()
+    {
+        let Some(id) = entry["id"].as_str() else {
+            continue;
+        };
+        if !runs_here(entry, cli_version) {
+            continue;
+        }
+        let name = entry["name"].as_str().unwrap_or(id);
+        let short = entry["short_name"].as_str().unwrap_or_default();
+        let alias = short.to_lowercase();
+        if ALIASES.contains(&alias.as_str()) && !aliases.iter().any(|m| m.id == alias) {
+            aliases.push(Model {
+                id: alias,
+                name: format!("{short}, newest version (now {name})"),
+                alias: true,
+            });
+        }
+        versions.push(Model::named(id, name));
+    }
+    aliases.into_iter().chain(versions).collect()
+}
+
+/// False when the catalog marks a model as needing a newer CLI than the one
+/// installed. An unreadable version keeps the model, since guessing wrong
+/// would hide a model that works.
+fn runs_here(entry: &Value, cli_version: Option<&str>) -> bool {
+    let (Some(needs), Some(have)) = (entry["min_claude_code_version"].as_str(), cli_version) else {
+        return true;
+    };
+    parts(have) >= parts(needs)
+}
+
+/// A dotted version as numbers, so 2.1.278 sorts above 2.1.9.
+fn parts(version: &str) -> Vec<u64> {
+    version
+        .split('.')
+        .map(|part| {
+            part.chars()
+                .take_while(char::is_ascii_digit)
+                .collect::<String>()
+                .parse()
+                .unwrap_or(0)
+        })
+        .collect()
+}
+
+/// The newest catalog file Claude Code has written, with its contents.
+fn read_catalog() -> Option<(PathBuf, Value)> {
+    let dir = config_dir()?.join(CATALOG_DIR);
+    let mut files: Vec<PathBuf> = std::fs::read_dir(dir)
+        .ok()?
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.extension().is_some_and(|e| e == "json"))
+        .collect();
+    // Claude Code names its own catalog with a "-cc" suffix; other surfaces
+    // describe models this CLI does not run.
+    let is_cc = |path: &PathBuf| {
+        path.file_stem()
+            .and_then(|s| s.to_str())
+            .is_some_and(|s| s.ends_with("-cc"))
+    };
+    if files.iter().any(is_cc) {
+        files.retain(is_cc);
+    }
+    files.sort_by_key(modified);
+    let path = files.pop()?;
+    let body = serde_json::from_str(&std::fs::read_to_string(&path).ok()?).ok()?;
+    Some((path, body))
+}
+
+fn modified(path: &PathBuf) -> std::time::SystemTime {
+    std::fs::metadata(path)
+        .and_then(|m| m.modified())
+        .unwrap_or(std::time::UNIX_EPOCH)
+}
+
+/// Claude Code's config directory: `CLAUDE_CONFIG_DIR`, or `~/.claude`.
+fn config_dir() -> Option<PathBuf> {
+    match std::env::var_os("CLAUDE_CONFIG_DIR").filter(|dir| !dir.is_empty()) {
+        Some(dir) => Some(PathBuf::from(dir)),
+        None => std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".claude")),
+    }
+}
+
+fn title_case(word: &str) -> String {
+    let mut chars = word.chars();
+    match chars.next() {
+        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+        None => String::new(),
+    }
 }
 
 /// The directory Claude Code runs in. It stays the same across turns, since
@@ -339,8 +484,9 @@ fn final_result(message: &Value) -> Result<String, String> {
     Err(format!("Claude Code failed: {subtype}"))
 }
 
-/// Checks that the CLI runs and that the user has signed in once.
-pub(crate) async fn test(command: &Path) -> Result<String, AiError> {
+/// The installed CLI's version, such as `2.1.278`, or an error saying why it
+/// did not answer. The CLI prints "2.1.278 (Claude Code)".
+async fn version_output(command: &Path) -> Result<String, AiError> {
     let run = Command::new(command)
         .arg("--version")
         .stdin(Stdio::null())
@@ -357,6 +503,29 @@ pub(crate) async fn test(command: &Path) -> Result<String, AiError> {
             String::from_utf8_lossy(&output.stderr).trim()
         )));
     }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(stdout
+        .split_whitespace()
+        .next()
+        .unwrap_or_default()
+        .to_string())
+}
+
+/// The installed CLI's version, or none when it does not say.
+async fn cli_version(command: &Path) -> Option<String> {
+    match version_output(command).await {
+        Ok(version) if !version.is_empty() => Some(version),
+        Ok(_) => None,
+        Err(err) => {
+            tracing::debug!(error = %err, "could not read Claude Code's version");
+            None
+        }
+    }
+}
+
+/// Checks that the CLI runs and that the user has signed in once.
+pub(crate) async fn test(command: &Path) -> Result<String, AiError> {
+    let version = version_output(command).await?;
     let signed_in = std::env::var_os("HOME")
         .map(|home| Path::new(&home).join(".claude").is_dir())
         .unwrap_or(false);
@@ -366,8 +535,5 @@ pub(crate) async fn test(command: &Path) -> Result<String, AiError> {
                 .to_string(),
         ));
     }
-    // The CLI prints "2.1.278 (Claude Code)".
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let version = stdout.split_whitespace().next().unwrap_or_default();
     Ok(format!("Claude Code {version}"))
 }

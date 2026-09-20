@@ -233,11 +233,18 @@ async fn other_client_errors_do_not_retry_and_leave_history_clean() {
 #[tokio::test]
 async fn lists_models_from_the_models_endpoint() {
     let server = MockServer::start().await;
+    // Recorded from LM Studio's /v1/models, whose ids carry the version and
+    // the quantization.
     Mock::given(method("GET"))
         .and(path("/v1/models"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "object": "list",
-            "data": [{"id": "qwen3-8b"}, {"id": "gemma-3"}],
+            "data": [
+                {"id": "qwen3-8b", "object": "model", "owned_by": "organization_owner"},
+                {"id": "unsloth/gemma-3-27b-it-GGUF:Q4_K_M", "object": "model"},
+                {"id": "Gemma-3-12b", "object": "model"},
+                {"id": "qwen3-8b", "object": "model"}
+            ],
         })))
         .mount(&server)
         .await;
@@ -246,12 +253,17 @@ async fn lists_models_from_the_models_endpoint() {
         api_key: None,
         model: String::new(),
     };
+    // Sorted, with the repeat dropped and every id whole.
     assert_eq!(
-        list_models(&config).await.unwrap(),
-        vec!["qwen3-8b", "gemma-3"]
+        list_models(&config).await.unwrap().ids(),
+        vec![
+            "Gemma-3-12b",
+            "qwen3-8b",
+            "unsloth/gemma-3-27b-it-GGUF:Q4_K_M",
+        ]
     );
     assert_eq!(
         crate::test(&config).await.unwrap(),
-        "Connected, 2 models available"
+        "Connected, 3 models available"
     );
 }
