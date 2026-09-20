@@ -166,6 +166,7 @@ impl MainWindow {
                 Box::new(move |win, view| win.act_in_window(view, make())),
             );
         }
+        add("find", Box::new(|_, view| view.open_find()));
         add("print", Box::new(|_, view| view.print()));
         add("view-source", Box::new(|win, view| win.view_source(view)));
         add(
@@ -209,6 +210,7 @@ impl MainWindow {
             ("<Control><Shift>j", "win.junk"),
             ("<Control><Shift>l", "win.toggle-star"),
             ("<Control><Shift>u", "win.toggle-read"),
+            ("<Control>f", "win.find"),
             ("<Control>p", "win.print"),
             ("<Control><Alt>u", "win.view-source"),
             ("<Control>w", "window.close"),

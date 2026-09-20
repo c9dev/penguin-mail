@@ -2407,6 +2407,7 @@ impl MainWindow {
         self.install_outbox_actions();
         add("compose", Box::new(|win| win.compose_new()));
         add("search", Box::new(|win| win.list.open_search()));
+        add("find", Box::new(|win| win.find()));
         add(
             "hide-my-email",
             Box::new(|win| win.show_hide_my_email(None)),
@@ -2602,7 +2603,7 @@ impl MainWindow {
         // Apple Mail's shortcuts, with Command as Control.
         for (trigger, action) in [
             ("<Control>n", "win.compose"),
-            ("<Control>f", "win.search"),
+            ("<Control>f", "win.find"),
             ("<Control><Alt>f", "win.search"),
             ("F5", "win.check"),
             ("<Control><Shift>n", "win.check"),
@@ -2752,6 +2753,16 @@ impl MainWindow {
             glib::Propagation::Stop
         });
         self.window.add_controller(keys);
+    }
+
+    /// Ctrl+F: find inside the message when the reader is in it, and
+    /// search the mailbox everywhere else. The two share the key and
+    /// never the focus.
+    fn find(self: &Rc<Self>) {
+        match self.conversation.has_focus() {
+            true => self.conversation.open_find(),
+            false => self.list.open_search(),
+        }
     }
 
     /// True when the focus is in the message itself, where Ctrl+A selects text.
@@ -3066,7 +3077,8 @@ impl MainWindow {
                 vec![
                     (gettext("Next or previous conversation"), "j k"),
                     (gettext("Open mailbox 1 to 9"), "<Control>1...<Control>9"),
-                    (gettext("Search"), "<Control>f slash"),
+                    (gettext("Search"), "slash <Control><Alt>f"),
+                    (gettext("Find in the conversation"), "<Control>f"),
                     (gettext("Get new mail"), "<Control><Shift>n F5"),
                     (gettext("Select all"), "<Control>a"),
                     (gettext("Clear the selection"), "Escape"),

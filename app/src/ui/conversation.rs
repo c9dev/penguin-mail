@@ -3,19 +3,21 @@
 //! Page JavaScript is off (`enable-javascript-markup` is false), so email
 //! cannot run scripts. The app still runs two tiny scripts of its own
 //! through the WebKit API: collapsing a message and scrolling to one.
+//! Finding text is WebKit's own, through [`FindBar`].
 
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use adw::prelude::*;
-use gtk::{gdk, gio};
+use gtk::{gdk, gio, glib};
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{
     AccountId, Category, FlagColor, Folder, MessageBody, MessageMeta, system_label,
 };
 use webkit::prelude::*;
 
+use super::find::FindBar;
 use super::invitation::{self, EventCard, Showing};
 use super::pgp::PgpCard;
 use crate::compose::ReplyKind;
@@ -209,6 +211,12 @@ pub struct ConversationView {
     /// The card above that, shown when gpg has something to say about the
     /// message.
     seal: Rc<PgpCard>,
+    /// Ctrl+F over the message. WebKit finds the text; the bar says where
+    /// in the matches the reader is.
+    find: Rc<FindBar>,
+    /// The messages the find bar opened, kept so they close again when it
+    /// goes away.
+    find_closed: RefCell<Vec<String>>,
     /// Cleaned HTML per message. A thread renders at least twice per open.
     sanitized: RefCell<HashMap<String, CleanBody>>,
     list_banner: adw::Banner,
@@ -460,8 +468,10 @@ impl ConversationView {
         ] {
             header.pack_end(widget);
         }
+        let find = FindBar::new(&webview);
         let toolbar = adw::ToolbarView::new();
         toolbar.add_top_bar(&header);
+        toolbar.add_top_bar(&find.widget);
         toolbar.set_content(Some(&stack));
         let page = adw::NavigationPage::builder()
             .title(gettext("Conversation"))
@@ -511,6 +521,8 @@ impl ConversationView {
             banner,
             card,
             seal,
+            find,
+            find_closed: RefCell::new(Vec::new()),
             list_banner,
             sanitized: RefCell::new(HashMap::new()),
             sender_menu,
@@ -567,6 +579,7 @@ impl ConversationView {
                     ),
                 );
             }
+            view.find.refresh();
         });
         view.webview.connect_context_menu(|_, menu, _| {
             use webkit::ContextMenuAction as Item;
@@ -589,6 +602,33 @@ impl ConversationView {
                 view.render(false);
             }
         });
+        let weak = Rc::downgrade(&view);
+        view.find.on_running(move |running| {
+            let Some(view) = weak.upgrade() else { return };
+            match running {
+                true => *view.find_closed.borrow_mut() = view.open_every_message(),
+                false => {
+                    let closed = view.find_closed.take();
+                    view.close_messages(&closed);
+                }
+            }
+        });
+        // Escape takes the bar down wherever the focus is in the
+        // conversation, and before the window makes Escape its own.
+        let keys = gtk::EventControllerKey::new();
+        keys.set_propagation_phase(gtk::PropagationPhase::Capture);
+        let weak = Rc::downgrade(&view);
+        keys.connect_key_pressed(move |_, key, _, _| {
+            let Some(view) = weak.upgrade() else {
+                return glib::Propagation::Proceed;
+            };
+            if key != gdk::Key::Escape || !view.find.is_open() {
+                return glib::Propagation::Proceed;
+            }
+            view.find.close();
+            glib::Propagation::Stop
+        });
+        view.page.add_controller(keys);
         view
     }
 
@@ -705,6 +745,7 @@ impl ConversationView {
         } else {
             gettext("Mute")
         });
+        self.find.close();
         *self.open.borrow_mut() = None;
         let values = [("count", count.to_string())];
         let values: Vec<(&str, &str)> = values.iter().map(|(k, v)| (*k, v.as_str())).collect();
@@ -743,7 +784,27 @@ impl ConversationView {
         self.webview.terminate_web_process();
     }
 
+    /// Puts the find bar over the message and the cursor in it. Nothing
+    /// happens when no message is on screen.
+    pub fn open_find(&self) {
+        if self.stack.visible_child_name().as_deref() == Some("thread") {
+            self.find.open();
+        }
+    }
+
+    /// Whether the focus is in this conversation: the message itself, or
+    /// the find bar over it. Ctrl+F asks, so that the mailbox search
+    /// keeps the key everywhere else.
+    pub fn has_focus(&self) -> bool {
+        let Some(window) = self.page.root().and_downcast::<gtk::Window>() else {
+            return false;
+        };
+        GtkWindowExt::focus(&window)
+            .is_some_and(|focus| focus.is_ancestor(self.page.upcast_ref::<gtk::Widget>()))
+    }
+
     pub fn clear(&self) {
+        self.find.close();
         *self.open.borrow_mut() = None;
         self.stack.set_visible_child_name("empty");
         self.set_buttons_shown(false);
@@ -793,6 +854,9 @@ impl ConversationView {
 
     /// Shows a thread. `scroll` jumps to the first expanded message.
     pub fn show(&self, thread: OpenThread, scroll: bool) {
+        // Before the thread changes, so the old search stops colouring
+        // the new message and the old messages close again.
+        self.find.close();
         *self.open.borrow_mut() = Some(thread);
         self.stack.set_visible_child_name("thread");
         self.render(scroll);
@@ -1024,15 +1088,60 @@ impl ConversationView {
             }
             open.expanded.contains(id)
         });
-        if expanded.is_some() {
-            let id = script_safe(id);
-            run_script(
-                &self.webview,
-                &format!(
-                    "(function(){{var m=document.getElementById('m-{id}');if(m){{m.classList.toggle('expanded');m.classList.toggle('collapsed');}}}})()"
-                ),
-            );
+        if let Some(expanded) = expanded {
+            self.show_message(id, expanded);
         }
+    }
+
+    /// Opens every message of the thread and answers the ones that were
+    /// closed, so the find bar can close them again. The stylesheet hides
+    /// a closed message's body, and WebKit finds nothing in it.
+    fn open_every_message(&self) -> Vec<String> {
+        let closed = self
+            .with_open(|open| {
+                let closed: Vec<String> = open
+                    .messages
+                    .iter()
+                    .map(|m| m.id.clone())
+                    .filter(|id| !open.expanded.contains(id))
+                    .collect();
+                open.expanded.extend(closed.iter().cloned());
+                closed
+            })
+            .unwrap_or_default();
+        for id in &closed {
+            self.show_message(id, true);
+        }
+        closed
+    }
+
+    /// Closes the messages the find bar opened.
+    fn close_messages(&self, ids: &[String]) {
+        self.with_open(|open| {
+            for id in ids {
+                open.expanded.remove(id);
+            }
+        });
+        for id in ids {
+            self.show_message(id, false);
+        }
+    }
+
+    /// Opens or closes one message in the page itself. Redrawing would do
+    /// it too, and would throw away the find highlight and the place the
+    /// reader had scrolled to.
+    fn show_message(&self, id: &str, expanded: bool) {
+        let id = script_safe(id);
+        let (add, remove) = match expanded {
+            true => ("expanded", "collapsed"),
+            false => ("collapsed", "expanded"),
+        };
+        run_script(
+            &self.webview,
+            &format!(
+                "(function(){{var m=document.getElementById('m-{id}');if(m){{m.classList.add('{add}');m.classList.remove('{remove}');}}}})()"
+            ),
+        );
     }
 }
 
