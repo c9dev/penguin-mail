@@ -11,15 +11,16 @@ use std::rc::Rc;
 use adw::prelude::*;
 use chrono::Local;
 use mailrs_domain::Address;
-use mailrs_domain::invitation::{Answer, Invitation, Method};
+use mailrs_domain::invitation::{Answer, Invitation, Method, Scope};
 use mailrs_sync::Change;
 
 use crate::format::{event_moved_from, event_tile, event_when};
 
 /// What the card asks the window to do.
 pub enum Action {
-    /// Send this answer to the organizer.
-    Answer(Answer),
+    /// Send this answer to the organizer, for the one occurrence the
+    /// invitation names or for the whole series.
+    Answer(Answer, Scope),
     /// Hand the `.ics` to the desktop, which files it in GNOME Calendar.
     AddToCalendar,
 }
@@ -77,6 +78,13 @@ pub struct EventCard {
     answers: gtk::Box,
     buttons: Vec<(Answer, gtk::ToggleButton)>,
     add: gtk::Button,
+    /// The row that asks whether an answer covers this occurrence or the
+    /// series. It appears for an invitation to one occurrence of a
+    /// repeating event and stays hidden for every other.
+    reach: gtk::Box,
+    /// Which of the two the answer buttons will send. It opens on this
+    /// occurrence, which is what the organizer asked about.
+    scope: Cell<Scope>,
     /// Where the last answer went, under the buttons that sent it.
     went: gtk::Label,
     /// What the card shows now. The window reads it back to answer the
@@ -154,12 +162,31 @@ impl EventCard {
             answers.append(&button);
             buttons.push((answer, button));
         }
+        let reach = gtk::Box::builder()
+            .spacing(0)
+            .visible(false)
+            .css_classes(["linked"])
+            .build();
+        let this_one = gtk::ToggleButton::builder()
+            .label("This Event")
+            .active(true)
+            .css_classes(["flat"])
+            .build();
+        let every = gtk::ToggleButton::builder()
+            .label("All Events")
+            .group(&this_one)
+            .css_classes(["flat"])
+            .build();
+        reach.append(&this_one);
+        reach.append(&every);
+
         let add = gtk::Button::builder()
             .label("Add to Calendar")
             .css_classes(["flat"])
             .build();
         let actions = gtk::Box::builder().spacing(8).margin_top(6).build();
         actions.append(&answers);
+        actions.append(&reach);
         let spacer = gtk::Box::builder().hexpand(true).build();
         actions.append(&spacer);
         actions.append(&add);
@@ -212,10 +239,21 @@ impl EventCard {
             answers,
             buttons,
             add,
+            reach,
+            scope: Cell::new(Scope::Occurrence),
             went,
             showing: RefCell::new(None),
             filling: Cell::new(false),
         });
+
+        for (scope, button) in [(Scope::Occurrence, &this_one), (Scope::Series, &every)] {
+            let weak = Rc::downgrade(&card);
+            button.connect_toggled(move |button| {
+                if let (true, Some(card)) = (button.is_active(), weak.upgrade()) {
+                    card.scope.set(scope);
+                }
+            });
+        }
 
         for (answer, button) in &card.buttons {
             let (answer, act, weak) = (*answer, Rc::clone(&on_action), Rc::downgrade(&card));
@@ -226,7 +264,7 @@ impl EventCard {
                 }
                 if button.is_active() {
                     card.mark(Some(answer));
-                    act(Action::Answer(answer));
+                    act(Action::Answer(answer, card.scope.get()));
                 } else {
                     // Pressing the answer already given keeps it: taking an
                     // answer back is not something Google Calendar does.
@@ -326,6 +364,10 @@ impl EventCard {
         // question, so neither gets answer buttons.
         let answerable = event.method == Method::Request && !event.cancelled();
         self.answers.set_visible(answerable);
+        // Only an invitation to one occurrence of a series leaves the
+        // question open; an answer to anything else covers the lot.
+        self.reach
+            .set_visible(answerable && event.occurrence.is_some());
         self.mark(showing.answer);
         self.widget.set_visible(true);
     }

@@ -101,13 +101,18 @@ impl MainWindow {
     /// its own window alike.
     pub(super) fn invitation_action(self: &Rc<Self>, view: &Rc<ConversationView>, action: Action) {
         match action {
-            Action::Answer(answer) => self.answer_invitation(view, answer),
+            Action::Answer(answer, scope) => self.answer_invitation(view, answer, scope),
             Action::AddToCalendar => self.add_to_calendar(view),
         }
     }
 
     /// Sends the answer and says where it went.
-    fn answer_invitation(self: &Rc<Self>, view: &Rc<ConversationView>, answer: Answer) {
+    fn answer_invitation(
+        self: &Rc<Self>,
+        view: &Rc<ConversationView>,
+        answer: Answer,
+        scope: Scope,
+    ) {
         let account_id = view.with_open(|open| open.account_id);
         let found =
             view.with_invitation(|showing| (showing.invitation.clone(), showing.answering_as()));
@@ -129,14 +134,7 @@ impl MainWindow {
                 .core
                 .call(async move {
                     invitations
-                        .answer(
-                            account_id,
-                            &invitation,
-                            &me,
-                            answer,
-                            Scope::Series,
-                            now_millis(),
-                        )
+                        .answer(account_id, &invitation, &me, answer, scope, now_millis())
                         .await
                 })
                 .await;

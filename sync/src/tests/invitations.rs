@@ -490,3 +490,80 @@ async fn a_calendar_nobody_may_read_says_nothing_about_clashes() {
             .is_empty()
     );
 }
+
+/// One occurrence of a weekly event, as an organizer sends when they move
+/// or re-ask about a single Tuesday.
+fn one_of_a_series() -> String {
+    [
+        "BEGIN:VCALENDAR",
+        "METHOD:REQUEST",
+        "BEGIN:VEVENT",
+        &format!("UID:{UID}"),
+        "SEQUENCE:2",
+        "RECURRENCE-ID:20260310T090000Z",
+        "SUMMARY:Stand-up",
+        "DTSTART:20260310T090000Z",
+        "DTEND:20260310T093000Z",
+        "ORGANIZER;CN=Priya:mailto:priya@example.com",
+        "END:VEVENT",
+        "END:VCALENDAR",
+        "",
+    ]
+    .join("\r\n")
+}
+
+/// 10 March 2026 at 09:00 UTC, the occurrence `one_of_a_series` names.
+const OCCURRENCE: i64 = 1_773_133_200_000;
+
+#[tokio::test]
+async fn google_hears_which_occurrence_an_answer_is_for() {
+    let h = harness().await;
+    let invitations = invitations(&h);
+    h.fake.with(|s| s.calendar.insert(UID.into(), None));
+    let invitation = read(&one_of_a_series());
+
+    for (scope, named) in [(Scope::Occurrence, Some(OCCURRENCE)), (Scope::Series, None)] {
+        invitations
+            .answer(h.account_id, &invitation, &me(), Answer::Yes, scope, 1_000)
+            .await
+            .unwrap();
+        assert_eq!(
+            h.fake.with(|s| s.answered_occurrences.last().copied()),
+            Some(named)
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_mailed_reply_names_the_occurrence_it_answers() {
+    let h = harness().await;
+    let invitations = invitations(&h);
+    let invitation = read(&one_of_a_series());
+
+    invitations
+        .answer(
+            h.account_id,
+            &invitation,
+            &me(),
+            Answer::No,
+            Scope::Occurrence,
+            1_000,
+        )
+        .await
+        .unwrap();
+    assert!(sent_message(&h).contains("RECURRENCE-ID:20260310T090000Z\r\n"));
+
+    h.fake.with(|s| s.sent.clear());
+    invitations
+        .answer(
+            h.account_id,
+            &invitation,
+            &me(),
+            Answer::No,
+            Scope::Series,
+            2_000,
+        )
+        .await
+        .unwrap();
+    assert!(!sent_message(&h).contains("RECURRENCE-ID"));
+}
