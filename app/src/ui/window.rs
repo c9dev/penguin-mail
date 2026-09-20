@@ -132,6 +132,10 @@ pub struct MainWindow {
     /// Senders whose remote images may load. Read from the store once and
     /// kept here, since every thread that opens asks about it.
     image_senders: RefCell<Vec<mailrs_store::image_senders::ImageSender>>,
+    /// The conversations in windows of their own, so a flag colour or an
+    /// undo reaches them too. An entry that no longer upgrades is a window
+    /// somebody closed.
+    detached: RefCell<Vec<Weak<ConversationView>>>,
 }
 
 /// The heading on the Delete Forever dialog, which names how much goes.
@@ -496,6 +500,7 @@ impl MainWindow {
                 inline_cache: RefCell::new(HashMap::new()),
                 thumbnail_cache: RefCell::new(HashMap::new()),
                 image_senders: RefCell::new(Vec::new()),
+                detached: RefCell::new(Vec::new()),
             }
         });
         if window.core.demo {
@@ -813,7 +818,7 @@ impl MainWindow {
         if self.split.is_collapsed() {
             self.split.set_show_sidebar(false);
         }
-        self.conversation.set_folder(mailbox.folder());
+        self.set_folder(mailbox.folder());
         self.follow_outbox();
         self.follow_categories();
         self.follow_follow_ups();
@@ -955,7 +960,7 @@ impl MainWindow {
         self.follow_follow_ups();
         self.list.set_title(&gettext("Search"), &query);
         self.conversation.clear();
-        self.conversation.set_folder(None);
+        self.set_folder(None);
         self.reload_list();
     }
 
@@ -1895,15 +1900,17 @@ impl MainWindow {
         }
         match action {
             MailAction::Flag(color) => {
-                let open_flagged = self.conversation.with_open(|o| {
-                    outcome
-                        .done
-                        .iter()
-                        .any(|t| t.account_id == o.account_id && t.thread_id == o.thread_id)
-                });
-                if open_flagged == Some(true) {
-                    self.conversation.with_open(|o| o.flag_color = *color);
-                    self.conversation.render_buttons();
+                for view in self.views() {
+                    let flagged = view.with_open(|o| {
+                        outcome
+                            .done
+                            .iter()
+                            .any(|t| t.account_id == o.account_id && t.thread_id == o.thread_id)
+                    });
+                    if flagged == Some(true) {
+                        view.with_open(|o| o.flag_color = *color);
+                        view.render_buttons();
+                    }
                 }
                 self.queue_refresh();
             }

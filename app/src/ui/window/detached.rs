@@ -6,7 +6,7 @@ use std::rc::{Rc, Weak};
 
 use adw::prelude::*;
 use gtk::{gio, glib};
-use mailrs_domain::ThreadSummary;
+use mailrs_domain::{Folder, ThreadSummary};
 use mailrs_sync::{History, MailAction, TriageAction};
 
 use super::{MainWindow, Target};
@@ -47,6 +47,8 @@ impl MainWindow {
         });
         *holder.borrow_mut() = Rc::downgrade(&view);
         view.set_detached();
+        self.detached.borrow_mut().push(Rc::downgrade(&view));
+        view.set_folder(self.mailbox.borrow().folder());
         if let Some(filter) = self.app.upgrade().and_then(|app| app.filter()) {
             view.set_filter(filter);
         }
@@ -69,6 +71,30 @@ impl MainWindow {
         });
         window.present();
         self.load_into(view, summary);
+    }
+
+    /// Every conversation on screen: the main window's, and one for each
+    /// window of its own. Windows that have closed drop out here.
+    pub(super) fn views(&self) -> Vec<Rc<ConversationView>> {
+        let mut views = vec![Rc::clone(&self.conversation)];
+        self.detached
+            .borrow_mut()
+            .retain(|held| match held.upgrade() {
+                Some(view) => {
+                    views.push(view);
+                    true
+                }
+                None => false,
+            });
+        views
+    }
+
+    /// Tells every conversation on screen which folder its mail is in, so
+    /// the trash and junk buttons say what they do.
+    pub(super) fn set_folder(self: &Rc<Self>, folder: Option<Folder>) {
+        for view in self.views() {
+            view.set_folder(folder);
+        }
     }
 
     /// What a separate window's buttons do: the same as the main window,
