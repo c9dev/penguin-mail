@@ -14,7 +14,7 @@ use tokio::sync::Mutex;
 use crate::GmailError;
 use crate::convert::{HistoryPage, history_page};
 use crate::convert::{html_to_text, text_to_html};
-use crate::limiter::AccountQuota;
+use crate::limiter::{self, AccountQuota};
 use crate::model::{
     AttachmentBody, Draft, DraftList, HistoryList, LabelColor, LabelList, Message, MessagePage,
     Profile, RemoteLabel, SendAs, SendAsList, Thread, VacationSettings,
@@ -515,6 +515,12 @@ impl GmailClient {
             .map_err(|e| GmailError::Decode(e.to_string()))
     }
 
+    /// The bucket this client spends from, so a caller can see whether the
+    /// user is waiting on it.
+    pub fn quota(&self) -> &AccountQuota {
+        &self.quota
+    }
+
     fn http(&self) -> &reqwest::Client {
         self.oauth.http()
     }
@@ -567,7 +573,7 @@ impl GmailClient {
         units: u32,
         build: impl Fn() -> RequestBuilder,
     ) -> Result<Response, GmailError> {
-        self.quota.acquire(units).await;
+        self.quota.acquire(units, limiter::priority()).await;
         let mut retried = false;
         loop {
             let token = self.bearer().await?;

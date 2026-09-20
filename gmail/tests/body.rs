@@ -38,6 +38,34 @@ fn decodes_non_utf8_charsets() {
 }
 
 #[test]
+fn utf8_text_survives_a_mislabelled_charset() {
+    for label in ["ISO-8859-1", "us-ascii", "windows-1252"] {
+        let payload = part(json!({
+            "mimeType": "text/plain",
+            "headers": [
+                {"name": "Content-Type", "value": format!("text/plain; charset=\"{label}\"")}
+            ],
+            "body": {"data": b64("Direção de Recuperação de Crédito".as_bytes())}
+        }));
+        assert_eq!(
+            extract_body(&payload).text.as_deref(),
+            Some("Direção de Recuperação de Crédito"),
+            "a part labelled {label}"
+        );
+    }
+}
+
+#[test]
+fn a_latin_1_part_labelled_utf8_still_reads() {
+    let payload = part(json!({
+        "mimeType": "text/plain",
+        "headers": [{"name": "Content-Type", "value": "text/plain; charset=utf-8"}],
+        "body": {"data": b64(&[0x63, 0x61, 0x66, 0xE9])}
+    }));
+    assert_eq!(extract_body(&payload).text.as_deref(), Some("café"));
+}
+
+#[test]
 fn records_attachments_and_inline_content_ids() {
     let payload = part(json!({
         "mimeType": "multipart/mixed",

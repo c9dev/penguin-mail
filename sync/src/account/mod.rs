@@ -32,6 +32,7 @@ pub struct AccountSync<G> {
     window_days: i64,
     body_cache_bytes: i64,
     retry_max: Duration,
+    wait_ceiling: Duration,
     /// Cached bodies read since the last write of their access times.
     touched: Arc<Mutex<Vec<(String, EpochMillis)>>>,
     /// When the last history replay left the store up to date. Opening a
@@ -59,6 +60,7 @@ impl<G: GmailApi> AccountSync<G> {
             window_days: DEFAULT_WINDOW_DAYS,
             body_cache_bytes: DEFAULT_BODY_CACHE_BYTES,
             retry_max: Duration::from_secs(8),
+            wait_ceiling: crate::WAIT_CEILING,
             touched: Arc::default(),
             caught_up: Arc::default(),
         }
@@ -76,6 +78,13 @@ impl<G: GmailApi> AccountSync<G> {
         self
     }
 
+    /// Caps how long one mail action waits on a busy Gmail in total before
+    /// it stops and reports what did not go through.
+    pub fn with_wait_ceiling(mut self, ceiling: Duration) -> Self {
+        self.wait_ceiling = ceiling;
+        self
+    }
+
     /// Records that history replay left the store up to date.
     pub(crate) fn mark_caught_up(&self) {
         *self.caught_up.lock().expect("caught up") = Some(Instant::now());
@@ -83,6 +92,20 @@ impl<G: GmailApi> AccountSync<G> {
 
     pub fn account_id(&self) -> AccountId {
         self.account_id
+    }
+
+    /// Whether a user action is waiting on this account's Gmail budget.
+    /// The engine reads it between backfill pages and gives way.
+    pub(crate) fn foreground_waiting(&self) -> bool {
+        self.api
+            .quota()
+            .is_some_and(|quota| quota.foreground_waiting())
+    }
+
+    /// Counts the caller as a user action waiting on Gmail until the guard
+    /// drops, so backfill stands aside for the whole wait.
+    pub(crate) fn waiting(&self) -> Option<mailrs_gmail::Waiting<'_>> {
+        self.api.quota().map(|quota| quota.waiting())
     }
 
     pub async fn set_state(&self, state: AccountState) -> Result<(), SyncError> {

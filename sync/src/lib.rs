@@ -19,6 +19,12 @@ pub mod fake;
 #[cfg(test)]
 mod tests;
 
+/// How long one mail action waits on a Gmail that keeps saying it is busy
+/// before it stops and reports what did not go through. Gmail's own
+/// `Retry-After` runs to a second or two, so a minute covers a long run of
+/// them; past that the user deserves to hear rather than keep waiting.
+pub const WAIT_CEILING: std::time::Duration = std::time::Duration::from_secs(60);
+
 pub use account::{AccountSync, DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS, FETCH_CONCURRENCY};
 pub use actions::{Accounts, Failure, History, MailAction, MailActions, Outcome};
 #[cfg(any(test, feature = "fake"))]

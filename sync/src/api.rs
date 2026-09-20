@@ -4,8 +4,8 @@ use mailrs_domain::{AccountId, Filter, MessageBody, MessageMeta, Vacation};
 use mailrs_gmail::body::extract_body;
 use mailrs_gmail::convert::message_meta;
 use mailrs_gmail::{
-    GmailClient, GmailError, HistoryPage, LabelColor, MessagePage, Profile, RemoteLabel,
-    html_to_text,
+    AccountQuota, GmailClient, GmailError, HistoryPage, LabelColor, MessagePage, Profile,
+    RemoteLabel, html_to_text,
 };
 
 /// Page size for window listings.
@@ -13,6 +13,14 @@ pub const LIST_PAGE_SIZE: u32 = 100;
 
 /// Gmail operations for one account.
 pub trait GmailApi: Send + Sync + 'static {
+    /// The budget this account's calls come out of, where there is one.
+    /// The sync loops read it to see whether the user is waiting on Gmail,
+    /// and a mail action waiting out a 429 marks itself on it. A fake
+    /// nobody paces answers `None`, and then nothing waits for anything.
+    fn quota(&self) -> Option<&AccountQuota> {
+        None
+    }
+
     fn profile(&self) -> impl Future<Output = Result<Profile, GmailError>> + Send;
 
     fn labels(&self) -> impl Future<Output = Result<Vec<RemoteLabel>, GmailError>> + Send;
@@ -174,6 +182,12 @@ macro_rules! forward {
 
 #[cfg(any(test, feature = "fake"))]
 impl GmailApi for AnyGmail {
+    fn quota(&self) -> Option<&AccountQuota> {
+        match self {
+            AnyGmail::Real(api) => api.quota(),
+            AnyGmail::Fake(api) => api.quota(),
+        }
+    }
     async fn profile(&self) -> Result<Profile, GmailError> {
         forward!(self, profile())
     }
@@ -313,6 +327,10 @@ pub struct AccountClient {
 }
 
 impl GmailApi for AccountClient {
+    fn quota(&self) -> Option<&AccountQuota> {
+        Some(self.client.quota())
+    }
+
     async fn profile(&self) -> Result<Profile, GmailError> {
         self.client.profile().await
     }

@@ -117,6 +117,65 @@ async fn a_failing_account_does_not_stop_the_others() {
     assert!(h.threads("INBOX").await.is_empty());
 }
 
+/// One account holding out does not swallow the rest of the selection,
+/// and the account that gave up says how much of it did not land.
+#[tokio::test]
+async fn an_account_that_waits_out_its_ceiling_reports_what_it_left() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    let busy_id =
+        h.db.write(|c| accounts::insert_account(c, "you@example.com", 0))
+            .await
+            .unwrap();
+    let busy_fake = Arc::new(FakeGmail::new());
+    busy_fake.seed(mailrs_domain::MessageMeta {
+        account_id: busy_id,
+        ..meta("x", "t2", now_millis(), &["INBOX"])
+    });
+    busy_fake.with(|s| s.page_size = 1000);
+    let (sender, events) = async_channel::unbounded();
+    let busy = Arc::new(
+        AccountSync::new(busy_id, Arc::clone(&busy_fake), h.db.clone(), sender)
+            .with_retry_max(Duration::from_millis(10))
+            .with_wait_ceiling(Duration::from_millis(60)),
+    );
+    busy.bootstrap().await.unwrap();
+    // Gmail says it is busy for longer than the action may wait.
+    for _ in 0..10 {
+        busy_fake.fail_next(GmailError::RateLimited {
+            retry_after: Some(Duration::from_millis(50)),
+        });
+    }
+    let (held_up, fine) = (
+        Target::thread(busy_id, "t2"),
+        Target::thread(h.account_id, "t1"),
+    );
+
+    let outcome = actions_over(&h, [busy])
+        .run(
+            &[held_up.clone(), fine.clone()],
+            MailAction::Triage(TriageAction::Trash),
+            History::Record,
+        )
+        .await;
+
+    assert_eq!(outcome.done, [fine], "the other account still went through");
+    let failed: Vec<Target> = outcome.failed.iter().map(|f| f.target.clone()).collect();
+    assert_eq!(failed, [held_up]);
+    let told: Vec<String> = std::iter::from_fn(|| events.try_recv().ok())
+        .filter_map(|e| match e {
+            mailrs_domain::ChangeEvent::WriteFailed { message, .. } => Some(message),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        told,
+        ["Gmail stayed busy for a moment, so move to trash did not go through for 1 conversation."]
+    );
+    assert!(h.threads("INBOX").await.is_empty(), "t1 went to the trash");
+}
+
 #[tokio::test]
 async fn undoing_a_new_colour_restores_the_earlier_one() {
     let h = harness().await;

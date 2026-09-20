@@ -375,4 +375,11 @@ pub enum ChangeEvent {
         account_id: AccountId,
         message: String,
     },
+    /// Gmail asked a mail action to slow down and the action is waiting it
+    /// out. Says so once per action, so the window can show that the work
+    /// is still going instead of looking stuck.
+    WaitingOnGmail {
+        account_id: AccountId,
+        message: String,
+    },
 }
