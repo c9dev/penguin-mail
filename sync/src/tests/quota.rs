@@ -93,7 +93,7 @@ fn everything(all: &[Mailbox], threads: usize) -> Vec<Target> {
     let mut targets = Vec::new();
     for thread in 0..threads {
         for (account, mailbox) in all.iter().enumerate() {
-            targets.push(Target::thread(mailbox.id, &format!("a{account}t{thread}")));
+            targets.push(Target::thread(mailbox.id, format!("a{account}t{thread}")));
         }
     }
     targets

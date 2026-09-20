@@ -239,6 +239,38 @@ async fn modify_and_trash_post_to_gmail() {
 }
 
 #[tokio::test]
+async fn a_batch_changes_every_message_in_one_post() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("POST"))
+        .and(path(format!("{API}/messages/batchModify")))
+        .and(body_json(json!({
+            "ids": ["m1", "m2", "m3"],
+            "addLabelIds": ["TRASH"],
+            "removeLabelIds": ["INBOX"],
+        })))
+        .respond_with(ResponseTemplate::new(204))
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path(format!("{API}/messages/batchDelete")))
+        .and(body_json(json!({"ids": ["m1", "m2"]})))
+        .respond_with(ResponseTemplate::new(204))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let client = client(&server);
+    let ids = ["m1".to_string(), "m2".to_string(), "m3".to_string()];
+
+    client
+        .batch_modify(&ids, &["TRASH".into()], &["INBOX".into()])
+        .await
+        .unwrap();
+    client.batch_delete(&ids[..2]).await.unwrap();
+}
+
+#[tokio::test]
 async fn authorize_runs_the_consent_flow() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))

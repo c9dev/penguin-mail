@@ -1,16 +1,23 @@
 //! Triage: label changes applied to the store at once and to Gmail after.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
+use std::time::Duration;
 
-use mailrs_domain::ChangeEvent;
-use mailrs_gmail::GmailError;
+use futures::StreamExt;
+use mailrs_domain::{ChangeEvent, Target};
+use mailrs_gmail::{BATCH_LIMIT, GmailError};
 use mailrs_store::messages;
 
-use super::AccountSync;
-use crate::{GmailApi, SyncError, TriageAction, backoff_delay};
+use super::{AccountSync, FETCH_CONCURRENCY};
+use crate::{GmailApi, SyncError, TriageAction, backoff_delay, with_jitter};
 
-/// Attempts per message before a triage write gives up.
+/// Attempts per write before a triage gives up.
 const WRITE_ATTEMPTS: u32 = 3;
+
+/// Messages from which one `batchModify` beats a call each. Gmail charges
+/// 50 units for the batch and 5 for every single `modify`, so ten is where
+/// the batch starts paying.
+const BATCH_FROM: usize = 10;
 
 impl<G: GmailApi> AccountSync<G> {
     /// Applies `action` to every message of a thread. The store changes first
@@ -22,7 +29,8 @@ impl<G: GmailApi> AccountSync<G> {
         thread_id: &str,
         action: &TriageAction,
     ) -> Result<(), SyncError> {
-        self.triage(thread_id, None, action).await
+        self.triage_all(&[Target::thread(self.account_id, thread_id)], action)
+            .await
     }
 
     /// Applies `action` to one message of a thread, as the list does when
@@ -33,101 +41,271 @@ impl<G: GmailApi> AccountSync<G> {
         message_id: &str,
         action: &TriageAction,
     ) -> Result<(), SyncError> {
-        self.triage(thread_id, Some(message_id), action).await
+        let target = Target {
+            message_id: Some(message_id.to_string()),
+            ..Target::thread(self.account_id, thread_id)
+        };
+        self.triage_all(&[target], action).await
     }
 
-    async fn triage(
+    /// Applies `action` to every target at once: one store transaction and,
+    /// from [`BATCH_FROM`] messages up, one `batchModify` per thousand
+    /// instead of a call each. Trashing 200 conversations costs 50 quota
+    /// units this way against 2000 one at a time.
+    ///
+    /// The whole set succeeds or fails together, since Gmail answers the
+    /// batch once. On a refusal the store goes back to its earlier labels,
+    /// a `WriteFailed` event says so, and the caller reports the failure
+    /// against each target it handed in.
+    pub async fn triage_all(
         &self,
-        thread_id: &str,
-        only: Option<&str>,
+        targets: &[Target],
         action: &TriageAction,
     ) -> Result<(), SyncError> {
+        if targets.is_empty() {
+            return Ok(());
+        }
         let account_id = self.account_id;
+        let wanted = messages_wanted(targets);
+        let threads: BTreeSet<String> = wanted.keys().cloned().collect();
+
         // Search results and the Trash or Spam lists show threads the store
         // may not hold yet. Fetch those first so there is something to change.
-        let thread = thread_id.to_string();
-        let stored = self
-            .db
-            .read(move |c| messages::thread_messages(c, account_id, &thread))
-            .await?;
-        if stored.is_empty() {
-            self.ensure_thread(thread_id).await?;
-        }
+        self.ensure_threads(&threads).await?;
+
         let (add, remove) = action.label_delta();
         let snapshot: Vec<(String, Vec<String>)> = {
-            let (thread, add, remove) = (thread_id.to_string(), add.clone(), remove.clone());
-            let only = only.map(str::to_string);
+            let (wanted, add, remove) = (wanted.clone(), add.clone(), remove.clone());
             self.db
                 .write(move |c| {
-                    let before: Vec<(String, Vec<String>)> =
-                        messages::thread_messages(c, account_id, &thread)?
-                            .into_iter()
-                            .filter(|m| only.as_ref().is_none_or(|id| &m.id == id))
-                            .map(|m| (m.id, m.label_ids))
-                            .collect();
+                    let mut before: Vec<(String, Vec<String>)> = Vec::new();
+                    for (thread, only) in &wanted {
+                        for message in messages::thread_messages(c, account_id, thread)? {
+                            if only.as_ref().is_none_or(|ids| ids.contains(&message.id)) {
+                                before.push((message.id, message.label_ids));
+                            }
+                        }
+                    }
                     for (id, _) in &before {
                         messages::add_labels(c, account_id, id, &add)?;
                         messages::remove_labels(c, account_id, id, &remove)?;
                     }
-                    messages::refresh_thread(c, account_id, &thread)?;
+                    for thread in wanted.keys() {
+                        messages::refresh_thread(c, account_id, thread)?;
+                    }
                     Ok(before)
                 })
                 .await?
         };
-        self.emit_threads(BTreeSet::from([thread_id.to_string()]));
+        self.emit_threads(threads.clone());
 
         let ids: Vec<String> = snapshot.iter().map(|(id, _)| id.clone()).collect();
-        for id in &ids {
-            if let Err(err) = self.remote_write(id, action, &add, &remove).await {
-                let thread = thread_id.to_string();
-                self.db
-                    .write(move |c| {
-                        for (id, labels) in &snapshot {
-                            if messages::thread_id_of(c, account_id, id)?.is_some() {
-                                messages::set_labels(c, account_id, id, labels)?;
-                            }
+        if let Err(err) = self.write_labels(&ids, action, &add, &remove).await {
+            let rolled_back = threads.clone();
+            self.db
+                .write(move |c| {
+                    for (id, labels) in &snapshot {
+                        if messages::thread_id_of(c, account_id, id)?.is_some() {
+                            messages::set_labels(c, account_id, id, labels)?;
                         }
-                        messages::refresh_thread(c, account_id, &thread)
-                    })
-                    .await?;
-                self.emit_threads(BTreeSet::from([thread_id.to_string()]));
-                self.emit(ChangeEvent::WriteFailed {
-                    account_id,
-                    message: format!("{} failed: {err}", action.describe()),
-                });
-                return Err(err.into());
+                    }
+                    for thread in &rolled_back {
+                        messages::refresh_thread(c, account_id, thread)?;
+                    }
+                    Ok(())
+                })
+                .await?;
+            self.emit_threads(threads);
+            self.emit(ChangeEvent::WriteFailed {
+                account_id,
+                message: write_failure(action, &err),
+            });
+            return Err(err.into());
+        }
+        Ok(())
+    }
+
+    /// Fetches the threads the store does not hold yet, several at a time.
+    async fn ensure_threads(&self, threads: &BTreeSet<String>) -> Result<(), SyncError> {
+        let account_id = self.account_id;
+        let candidates: Vec<String> = threads.iter().cloned().collect();
+        let missing: Vec<String> = self
+            .db
+            .read(move |c| {
+                let mut missing = Vec::new();
+                for thread in candidates {
+                    if messages::thread_messages(c, account_id, &thread)?.is_empty() {
+                        missing.push(thread);
+                    }
+                }
+                Ok(missing)
+            })
+            .await?;
+        let fetched: Vec<Result<(), SyncError>> = futures::stream::iter(missing)
+            .map(|thread| async move { self.ensure_thread(&thread).await })
+            .buffer_unordered(FETCH_CONCURRENCY)
+            .collect()
+            .await;
+        fetched.into_iter().collect()
+    }
+
+    /// Sends the label change to Gmail: one batch per thousand messages, or
+    /// a call each when there are too few for a batch to pay. A batch Gmail
+    /// rejects outright falls back to single calls, so one id it dislikes
+    /// does not sink the whole selection. The retries belong to the action,
+    /// not to each message, so a rate-limited archive of twenty threads
+    /// tries three times over rather than sixty.
+    async fn write_labels(
+        &self,
+        ids: &[String],
+        action: &TriageAction,
+        add: &[String],
+        remove: &[String],
+    ) -> Result<(), GmailError> {
+        let mut budget = Budget::new(self.retry_max);
+        if ids.len() < BATCH_FROM {
+            for id in ids {
+                self.write_one(&mut budget, id, action, add, remove).await?;
+            }
+            return Ok(());
+        }
+        for chunk in ids.chunks(BATCH_LIMIT) {
+            match self.write_batch(&mut budget, chunk, add, remove).await {
+                Ok(()) => {}
+                Err(err) if refuses_batch(&err) => {
+                    tracing::warn!(
+                        account = self.account_id,
+                        error = %err,
+                        "Gmail refused the batch; changing each message on its own"
+                    );
+                    for id in chunk {
+                        self.write_one(&mut budget, id, action, add, remove).await?;
+                    }
+                }
+                Err(err) => return Err(err),
             }
         }
         Ok(())
     }
 
-    async fn remote_write(
+    async fn write_batch(
         &self,
+        budget: &mut Budget,
+        ids: &[String],
+        add: &[String],
+        remove: &[String],
+    ) -> Result<(), GmailError> {
+        loop {
+            match self.api.batch_modify(ids, add, remove).await {
+                Err(err) => match budget.wait(&err) {
+                    Some(delay) => tokio::time::sleep(delay).await,
+                    None => return Err(err),
+                },
+                done => return done,
+            }
+        }
+    }
+
+    async fn write_one(
+        &self,
+        budget: &mut Budget,
         message_id: &str,
         action: &TriageAction,
         add: &[String],
         remove: &[String],
     ) -> Result<(), GmailError> {
-        let mut attempt = 0;
         loop {
-            let result = match action {
+            let done = match action {
                 TriageAction::Trash => self.api.trash(message_id).await,
                 TriageAction::Untrash => self.api.untrash(message_id).await,
                 _ => self.api.modify_labels(message_id, add, remove).await,
             };
-            match result {
-                Err(err) if err.is_transient() && attempt + 1 < WRITE_ATTEMPTS => {
-                    let delay = match &err {
-                        GmailError::RateLimited {
-                            retry_after: Some(after),
-                        } => *after,
-                        _ => backoff_delay(attempt, self.retry_max, rand::random_range(-1.0..=1.0)),
-                    };
-                    attempt += 1;
-                    tokio::time::sleep(delay).await;
-                }
-                other => return other,
+            match done {
+                Err(err) => match budget.wait(&err) {
+                    Some(delay) => tokio::time::sleep(delay).await,
+                    None => return Err(err),
+                },
+                done => return done,
             }
         }
+    }
+}
+
+/// The retries one mail action may spend, however many messages it touches
+/// and however many calls it takes.
+struct Budget {
+    left: u32,
+    max: Duration,
+}
+
+impl Budget {
+    fn new(max: Duration) -> Self {
+        Budget {
+            left: WRITE_ATTEMPTS - 1,
+            max,
+        }
+    }
+
+    /// How long to wait before trying again, or `None` when `err` is not
+    /// worth retrying or the action has used up its attempts.
+    fn wait(&mut self, err: &GmailError) -> Option<Duration> {
+        if !err.is_transient() || self.left == 0 {
+            return None;
+        }
+        let spent = WRITE_ATTEMPTS - 1 - self.left;
+        self.left -= 1;
+        Some(retry_delay(err, spent, self.max))
+    }
+}
+
+/// Which messages of each thread the targets name. `None` means the whole
+/// thread, which wins over any single message named alongside it.
+fn messages_wanted(targets: &[Target]) -> BTreeMap<String, Option<BTreeSet<String>>> {
+    let mut wanted: BTreeMap<String, Option<BTreeSet<String>>> = BTreeMap::new();
+    for target in targets {
+        let named = wanted
+            .entry(target.thread_id.clone())
+            .or_insert_with(|| Some(BTreeSet::new()));
+        match (&target.message_id, named) {
+            (None, whole) => *whole = None,
+            (Some(id), Some(ids)) => {
+                ids.insert(id.clone());
+            }
+            (Some(_), None) => {}
+        }
+    }
+    wanted
+}
+
+/// How long to wait before retry number `attempt`. Gmail's own `Retry-After`
+/// wins where it sent one. Either way the wait moves by up to a fifth, so
+/// six accounts told to come back in two seconds do not all come back on
+/// the same tick and get limited again.
+fn retry_delay(err: &GmailError, attempt: u32, max: Duration) -> Duration {
+    match err {
+        GmailError::RateLimited {
+            retry_after: Some(after),
+        } => with_jitter(*after, rand::random_range(-1.0..=1.0)),
+        _ => backoff_delay(attempt, max, rand::random_range(-1.0..=1.0)),
+    }
+}
+
+/// Whether Gmail turned the batch down for the batch's own sake, which a
+/// call per message may still get through.
+fn refuses_batch(err: &GmailError) -> bool {
+    matches!(
+        err,
+        GmailError::NotFound | GmailError::Http { status: 400, .. }
+    )
+}
+
+/// What the toast says when a write did not land.
+fn write_failure(action: &TriageAction, err: &GmailError) -> String {
+    match err {
+        GmailError::RateLimited { .. } => format!(
+            "Gmail is busy, so {} did not go through. Try again in a moment.",
+            action.describe().to_lowercase()
+        ),
+        _ => format!("{} failed: {err}", action.describe()),
     }
 }

@@ -24,7 +24,7 @@ pub use actions::{Accounts, Failure, History, MailAction, MailActions, Outcome};
 #[cfg(any(test, feature = "fake"))]
 pub use api::AnyGmail;
 pub use api::{AccountClient, GmailApi, LIST_PAGE_SIZE, SavedDraft};
-pub use backoff::backoff_delay;
+pub use backoff::{backoff_delay, poll_offset, with_jitter};
 pub use connect::connect_account;
 pub use engine::{EngineConfig, SyncEngine};
 pub use error::SyncError;

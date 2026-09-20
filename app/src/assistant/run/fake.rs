@@ -195,6 +195,18 @@ impl GmailApi for Gmail {
         Ok(())
     }
 
+    async fn batch_modify(
+        &self,
+        ids: &[String],
+        add: &[String],
+        remove: &[String],
+    ) -> Result<(), GmailError> {
+        for id in ids {
+            self.modify_labels(id, add, remove).await?;
+        }
+        Ok(())
+    }
+
     async fn trash(&self, id: &str) -> Result<(), GmailError> {
         self.with(|i| i.writes.push(format!("trash {id}")));
         Ok(())

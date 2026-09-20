@@ -26,3 +26,6 @@ tracing.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+# `start_paused` lets a test watch a retry wait out Gmail's Retry-After
+# without waiting itself.
+tokio = { workspace = true, features = ["test-util"] }
