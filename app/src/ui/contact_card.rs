@@ -138,7 +138,9 @@ pub fn present(parent: &impl IsA<gtk::Widget>, person: Person, chose: impl Fn(Ch
                 .css_classes(["caption"])
                 .build(),
         );
-        gtk::Button::builder().child(&inner).build()
+        let button = gtk::Button::builder().child(&inner).build();
+        crate::ui::name(&button, label);
+        button
     };
 
     let write = button(&gettext("New Message"), "mail-message-new-symbolic");

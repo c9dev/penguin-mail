@@ -107,6 +107,9 @@ pub fn present(
                 .valign(gtk::Align::Center)
                 .css_classes(["flat"])
                 .build();
+            crate::ui::name(&field, &gettext("Condition"));
+            crate::ui::name(&value, &gettext("Matches"));
+            crate::ui::name(&remove, &gettext("Remove Condition"));
             let row = adw::ActionRow::new();
             row.add_prefix(&field);
             row.add_suffix(&value);

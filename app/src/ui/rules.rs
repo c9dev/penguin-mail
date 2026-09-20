@@ -60,6 +60,7 @@ pub fn present(
         .icon_name("list-add-symbolic")
         .tooltip_text(gettext("New Rule"))
         .build();
+    crate::ui::name(&add, &gettext("New Rule"));
     let header = adw::HeaderBar::new();
     header.pack_start(&add);
     let toolbar = adw::ToolbarView::new();
@@ -175,6 +176,13 @@ impl Rules {
                 .valign(gtk::Align::Center)
                 .css_classes(["flat"])
                 .build();
+            crate::ui::name(
+                &delete,
+                &fill(
+                    &gettext("Delete the rule for {mail}"),
+                    &[("mail", &describe_criteria(&filter.criteria))],
+                ),
+            );
             let (weak, id) = (Rc::downgrade(self), filter.id.clone());
             delete.connect_clicked(move |_| {
                 if let (Some(rules), Some(id)) = (weak.upgrade(), id.clone()) {

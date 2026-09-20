@@ -98,6 +98,7 @@ impl AssistantPane {
             .icon_name("list-add-symbolic")
             .tooltip_text(gettext("New Chat"))
             .build();
+        crate::ui::name(&new_chat, &gettext("New Chat"));
         let header = adw::HeaderBar::builder()
             .title_widget(&title)
             .show_start_title_buttons(false)
@@ -145,6 +146,8 @@ impl AssistantPane {
             .tooltip_text(gettext("Send"))
             .css_classes(["circular", "suggested-action"])
             .build();
+        crate::ui::name(&entry, &gettext("Ask Penguin Mail"));
+        crate::ui::name(&send, &gettext("Send"));
         let input = gtk::Box::builder()
             .spacing(6)
             .margin_top(6)
@@ -368,10 +371,12 @@ impl AssistantPane {
         } else {
             "go-up-symbolic"
         });
-        self.send.set_tooltip_text(Some(&match running {
+        let said = match running {
             true => gettext("Stop"),
             false => gettext("Send"),
-        }));
+        };
+        self.send.set_tooltip_text(Some(&said));
+        crate::ui::name(&self.send, &said);
         if !running {
             self.entry.grab_focus();
         }
@@ -554,8 +559,16 @@ fn settle(row: &gtk::Box, ok: bool, problem: Option<&str>) {
         "dialog-warning-symbolic"
     });
     mark.add_css_class("dim-label");
+    crate::ui::name(
+        &mark,
+        &match ok {
+            true => gettext("Done"),
+            false => gettext("Failed"),
+        },
+    );
     row.prepend(&mark);
     if let Some(problem) = problem.filter(|p| !p.is_empty()) {
         row.set_tooltip_text(Some(problem));
+        row.update_property(&[gtk::accessible::Property::Description(problem)]);
     }
 }

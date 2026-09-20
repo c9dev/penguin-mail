@@ -319,6 +319,13 @@ fn writing_page(
             .accepts_tab(false)
             .build();
         view.buffer().set_text(&text);
+        super::name(
+            &view,
+            &fill(
+                &gettext("Signature for {account}"),
+                &[("account", &account.email)],
+            ),
+        );
         let frame = gtk::ScrolledWindow::builder()
             .child(&view)
             .min_content_height(96)
@@ -708,6 +715,13 @@ fn allowed_image_senders(app: &Rc<App>) -> adw::ExpanderRow {
                 .valign(gtk::Align::Center)
                 .css_classes(["flat"])
                 .build();
+            super::name(
+                &remove,
+                &fill(
+                    &gettext("Stop loading images from {sender}"),
+                    &[("sender", &entry.sender)],
+                ),
+            );
             let (app, sender, listed, removed) = (
                 Rc::clone(&app),
                 entry.sender.clone(),
