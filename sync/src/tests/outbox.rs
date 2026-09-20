@@ -1,12 +1,32 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use mailrs_domain::system_label;
 use mailrs_gmail::GmailError;
 use mailrs_store::outbox::{self, Queued};
+use mailrs_store::{drafts, messages};
 
-use super::{Connected, harness};
+use super::{Connected, Harness, harness};
 use crate::fake::meta;
 use crate::{Outbox, Posted, now_millis};
+
+/// Puts a draft's message in the store, as history replay does once the
+/// draft reaches this computer. Nothing here reads thread rows, so the
+/// thread is left unrefreshed.
+async fn store_draft_message(h: &Harness, message_id: &str) {
+    let message = meta(message_id, "t1", 1, &[system_label::DRAFT]);
+    h.db.write(move |c| messages::upsert_message(c, &message, 1))
+        .await
+        .unwrap();
+}
+
+/// What the store holds for `message_id`, whatever its labels say.
+async fn stored_pair(h: &Harness, message_id: &str) -> Option<String> {
+    let (account_id, message_id) = (h.account_id, message_id.to_string());
+    h.db.read(move |c| drafts::draft_of(c, account_id, &message_id))
+        .await
+        .unwrap()
+}
 
 #[tokio::test]
 async fn sending_a_saved_draft_deletes_the_draft() {
@@ -73,6 +93,160 @@ async fn drafts_are_found_by_their_current_message() {
     let id = id.draft_id;
     assert_eq!(h.sync.draft_id_for(&message).await.unwrap(), Some(id));
     assert_eq!(h.sync.draft_id_for("other").await.unwrap(), None);
+}
+
+/// Opening a draft used to page `drafts.list` over the whole account each
+/// time, which an account with 200 drafts pays 2 calls and 10 units for.
+/// Now the first open pays that and every later one pays nothing.
+#[tokio::test]
+async fn opening_a_draft_pages_gmail_once_for_the_whole_account() {
+    let h = harness().await;
+    // Gmail hands back 100 drafts a page.
+    h.fake.with(|s| s.page_size = 100);
+    for n in 0..200 {
+        let (draft_id, message_id) = (format!("d{n}"), format!("m{n}"));
+        h.fake.with(|s| {
+            s.drafts.insert(draft_id.clone(), b"body".to_vec());
+            s.draft_messages.insert(draft_id, message_id);
+        });
+        store_draft_message(&h, &format!("m{n}")).await;
+    }
+    h.fake.reset_usage();
+
+    assert_eq!(
+        h.sync.draft_id_for("m7").await.unwrap().as_deref(),
+        Some("d7")
+    );
+    let paged = h.fake.usage();
+    assert_eq!(paged.calls_to("users.drafts.list"), 2);
+    assert_eq!(paged.units, 10);
+
+    h.fake.reset_usage();
+    for n in 0..200 {
+        let found = h.sync.draft_id_for(&format!("m{n}")).await.unwrap();
+        assert_eq!(found, Some(format!("d{n}")));
+    }
+    assert_eq!(h.fake.usage().calls, 0);
+}
+
+#[tokio::test]
+async fn a_draft_this_app_saved_reopens_without_a_listing() {
+    let h = harness().await;
+    let saved = h
+        .sync
+        .save_draft(b"hello".to_vec(), None, None)
+        .await
+        .unwrap();
+    store_draft_message(&h, &saved.message_id).await;
+    h.fake.reset_usage();
+
+    assert_eq!(
+        h.sync.draft_id_for(&saved.message_id).await.unwrap(),
+        Some(saved.draft_id)
+    );
+    assert_eq!(h.fake.usage().calls, 0);
+}
+
+#[tokio::test]
+async fn a_draft_sent_elsewhere_stops_answering_for_its_message() {
+    let h = harness().await;
+    let saved = h
+        .sync
+        .save_draft(b"hello".to_vec(), None, None)
+        .await
+        .unwrap();
+    store_draft_message(&h, &saved.message_id).await;
+    // Gmail sent it from another client: the draft is gone and history
+    // replay took the DRAFT label off the message it left behind.
+    h.fake.with(|s| {
+        s.drafts.remove(&saved.draft_id);
+        s.draft_messages.remove(&saved.draft_id);
+    });
+    let (account_id, message_id) = (h.account_id, saved.message_id.clone());
+    h.db.write(move |c| {
+        messages::remove_labels(
+            c,
+            account_id,
+            &message_id,
+            &[system_label::DRAFT.to_string()],
+        )
+        .map(|_| ())
+    })
+    .await
+    .unwrap();
+
+    assert_eq!(h.sync.draft_id_for(&saved.message_id).await.unwrap(), None);
+}
+
+#[tokio::test]
+async fn a_draft_edited_elsewhere_answers_for_its_new_message_alone() {
+    let h = harness().await;
+    let saved = h
+        .sync
+        .save_draft(b"first".to_vec(), None, None)
+        .await
+        .unwrap();
+    store_draft_message(&h, &saved.message_id).await;
+    // An edit in another client leaves the draft where it was and gives it
+    // a new message; history replay drops the one it no longer holds.
+    let moved = format!("{}-again", saved.message_id);
+    h.fake.with(|s| {
+        s.draft_messages
+            .insert(saved.draft_id.clone(), moved.clone())
+    });
+    store_draft_message(&h, &moved).await;
+    let (account_id, gone) = (h.account_id, saved.message_id.clone());
+    h.db.write(move |c| messages::delete_message(c, account_id, &gone).map(|_| ()))
+        .await
+        .unwrap();
+
+    assert_eq!(h.sync.draft_id_for(&saved.message_id).await.unwrap(), None);
+    h.fake.reset_usage();
+    assert_eq!(
+        h.sync.draft_id_for(&moved).await.unwrap(),
+        Some(saved.draft_id)
+    );
+    assert_eq!(h.fake.usage().calls, 0);
+}
+
+#[tokio::test]
+async fn a_draft_that_leaves_gmail_takes_its_pair_with_it() {
+    let h = harness().await;
+    for send in [true, false] {
+        let saved = h
+            .sync
+            .save_draft(b"bye".to_vec(), None, None)
+            .await
+            .unwrap();
+        store_draft_message(&h, &saved.message_id).await;
+        assert_eq!(
+            stored_pair(&h, &saved.message_id).await,
+            Some(saved.draft_id.clone())
+        );
+        match send {
+            true => {
+                h.sync.send_draft(&saved.draft_id).await.unwrap();
+            }
+            false => h.sync.delete_draft(&saved.draft_id).await.unwrap(),
+        }
+        assert_eq!(stored_pair(&h, &saved.message_id).await, None);
+    }
+}
+
+#[tokio::test]
+async fn sending_from_a_draft_takes_its_pair_with_it() {
+    let h = harness().await;
+    let saved = h
+        .sync
+        .save_draft(b"draft".to_vec(), None, None)
+        .await
+        .unwrap();
+    store_draft_message(&h, &saved.message_id).await;
+    h.sync
+        .send(b"final".to_vec(), None, Some(saved.draft_id))
+        .await
+        .unwrap();
+    assert_eq!(stored_pair(&h, &saved.message_id).await, None);
 }
 
 #[tokio::test]
