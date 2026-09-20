@@ -7,20 +7,31 @@
 
 use std::rc::Rc;
 
+use gtk::glib;
+
 use super::MainWindow;
 use crate::pgp;
 use crate::ui::conversation::ConversationView;
 
 impl MainWindow {
+    /// Starts the engine on the message `view` shows, without holding up
+    /// whatever the caller does next. gpg can sit on a pinentry for as long
+    /// as the person takes to type, and the rest of opening a thread has no
+    /// reason to wait for that.
+    pub(super) fn start_pgp(self: &Rc<Self>, view: &Rc<ConversationView>) {
+        let (this, view) = (Rc::clone(self), Rc::clone(view));
+        glib::spawn_future_local(async move { this.refresh_pgp(&view).await });
+    }
+
     /// Checks or opens the protected message in `view` and puts what gpg
     /// said above it. A thread that has been through this keeps the answer,
     /// so redrawing never asks again.
-    pub(super) async fn refresh_pgp(self: &Rc<Self>, view: &Rc<ConversationView>) {
+    async fn refresh_pgp(self: &Rc<Self>, view: &Rc<ConversationView>) {
         if !self.core.has_gpg() {
             return;
         }
         let found = view.with_open(|open| {
-            if open.pgp.is_some() {
+            if open.pgp_asked {
                 return None;
             }
             let (message_id, opening) = {
@@ -28,6 +39,7 @@ impl MainWindow {
                 (meta.id.clone(), opening)
             };
             let body = open.bodies.get(&message_id)?.as_ref().ok()?.clone();
+            open.pgp_asked = true;
             Some((
                 open.account_id,
                 open.thread_id.clone(),

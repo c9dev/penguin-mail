@@ -900,12 +900,13 @@ impl MainWindow {
                 photos,
                 unsubscribed: false,
                 pgp: None,
+                pgp_asked: false,
                 flag_color: summary.flag_color,
             };
             view.show(thread, true);
             view.set_sender_vip(sender_is_vip(&view, &this.settings()));
             this.refresh_invitation(&view).await;
-            this.refresh_pgp(&view).await;
+            this.start_pgp(&view);
             this.complete_thread(view, account_id, thread_id).await;
         });
     }
@@ -991,7 +992,7 @@ impl MainWindow {
             .unwrap_or(false);
         view.render(false);
         self.refresh_invitation(&view).await;
-        self.refresh_pgp(&view).await;
+        self.start_pgp(&view);
         if unread {
             self.mark_read_later(&view, account_id, thread_id.clone());
         }

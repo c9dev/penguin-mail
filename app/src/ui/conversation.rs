@@ -48,6 +48,10 @@ pub struct OpenThread {
     /// and so the card survives the body being replaced by the one that
     /// was inside the encryption.
     pub pgp: Option<Mark>,
+    /// Set as soon as gpg is asked about this thread. gpg may hold a
+    /// pinentry in front of the person for as long as they take, and
+    /// asking twice would put up two of them.
+    pub pgp_asked: bool,
     /// The flag colour chosen here, when the thread is flagged.
     pub flag_color: Option<FlagColor>,
 }
