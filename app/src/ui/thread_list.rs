@@ -217,6 +217,13 @@ impl ThreadList {
             .icon_name("penguin-mail-sparkle-symbolic")
             .tooltip_text(gettext("Assistant (Ctrl+J)"))
             .build();
+        // The tooltips carry the shortcut for the eye; the spoken names
+        // leave it out, since a reader hears the whole toolbar in turn.
+        super::name(&search_entry, &gettext("Search mail"));
+        super::name(&sidebar_button, &gettext("Show Mailboxes"));
+        super::name(&compose_button, &gettext("New Message"));
+        super::name(&search_button, &gettext("Search"));
+        super::name(&assistant_button, &gettext("Assistant"));
         let header = adw::HeaderBar::builder().title_widget(&title).build();
         header.pack_start(&sidebar_button);
         header.pack_end(&assistant_button);

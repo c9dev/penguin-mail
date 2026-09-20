@@ -25,11 +25,37 @@ pub mod welcome;
 pub mod when;
 pub mod window;
 
+use gtk::prelude::*;
 use mailrs_domain::translate::gettext;
 use mailrs_domain::{Folder, system_label};
 pub use mailrs_sync::Mailbox;
 pub use mailrs_sync::mailbox::unified_name;
 use mailrs_sync::mailbox::{folder_icon, folder_name};
+
+/// Gives `widget` the name a screen reader says for it.
+///
+/// A button carrying only an icon has no name of its own, and GTK never
+/// reads a tooltip out, so every such control is named here. The name says
+/// what the control does in as few words as carry it, and it is a
+/// translated string like any other word a person reads.
+pub fn name(widget: &impl IsA<gtk::Accessible>, spoken: &str) {
+    widget.update_property(&[gtk::accessible::Property::Label(spoken)]);
+}
+
+/// Names `widget` and adds the line read after the name, for a control
+/// whose name alone leaves out what pressing it would do.
+pub fn describe(widget: &impl IsA<gtk::Accessible>, spoken: &str, detail: &str) {
+    widget.update_property(&[
+        gtk::accessible::Property::Label(spoken),
+        gtk::accessible::Property::Description(detail),
+    ]);
+}
+
+/// Points `widget` at the label standing beside it, so a field reads out
+/// under that word rather than under nothing.
+pub fn labelled_by(widget: &impl IsA<gtk::Accessible>, label: &impl IsA<gtk::Accessible>) {
+    widget.update_relation(&[gtk::accessible::Relation::LabelledBy(&[label.as_ref()])]);
+}
 
 /// How the sidebar and window show a `Folder`.
 pub trait FolderLook {

@@ -178,6 +178,16 @@ fn deleted_forever_message(count: usize, threaded: bool) -> String {
     }
 }
 
+/// What a row of the label popover says. The tick beside the name is the
+/// only sign that a label is already on the mail, so the name carries it.
+fn label_row_name(label: &str, applied: bool) -> String {
+    let shown = label.replace('/', " › ");
+    match applied {
+        true => fill(&gettext("{label}, on this mail"), &[("label", &shown)]),
+        false => shown,
+    }
+}
+
 /// Whether `mailbox` is the Muted list, unified or for one account.
 fn lists_muted(mailbox: &Mailbox) -> bool {
     match mailbox {
@@ -1999,12 +2009,17 @@ impl MainWindow {
                     .xalign(0.0)
                     .build(),
             );
-            list.append(
-                &gtk::ListBoxRow::builder()
-                    .child(&row)
-                    .activatable(true)
-                    .build(),
+            let row = gtk::ListBoxRow::builder()
+                .child(&row)
+                .activatable(true)
+                .build();
+            // The tick beside the name is drawn at zero opacity when the
+            // label is off, which says nothing out loud.
+            crate::ui::name(
+                &row,
+                &label_row_name(&label.name, applied.contains(&label.id)),
             );
+            list.append(&row);
         }
         let (weak, pop) = (Rc::downgrade(self), popover.clone());
         list.connect_row_activated(move |_, row| {
@@ -2682,14 +2697,14 @@ impl MainWindow {
         second.append(Some(&gettext("About Penguin Mail")), Some("win.about"));
         second.append(Some(&gettext("Quit")), Some("win.quit"));
         menu.append_section(None, &second);
-        self.sidebar.header.pack_end(
-            &gtk::MenuButton::builder()
-                .icon_name("open-menu-symbolic")
-                .menu_model(&menu)
-                .primary(true)
-                .tooltip_text(gettext("Main Menu"))
-                .build(),
-        );
+        let button = gtk::MenuButton::builder()
+            .icon_name("open-menu-symbolic")
+            .menu_model(&menu)
+            .primary(true)
+            .tooltip_text(gettext("Main Menu"))
+            .build();
+        crate::ui::name(&button, &gettext("Main Menu"));
+        self.sidebar.header.pack_end(&button);
     }
 
     fn install_keys(self: &Rc<Self>) {
@@ -3251,5 +3266,15 @@ mod tests {
         assert_eq!(toast(true, 3).as_deref(), Some("Muted 3 conversations"));
         assert_eq!(toast(false, 1).as_deref(), Some("Unmuted"));
         assert_eq!(toast(false, 2).as_deref(), Some("Unmuted 2 conversations"));
+    }
+
+    #[test]
+    fn a_label_row_says_whether_the_mail_already_carries_it() {
+        assert_eq!(label_row_name("Receipts", false), "Receipts");
+        assert_eq!(
+            label_row_name("Receipts", true),
+            "Receipts, on this mail"
+        );
+        assert_eq!(label_row_name("Work/Tax", false), "Work › Tax");
     }
 }
