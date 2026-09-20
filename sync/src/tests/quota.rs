@@ -6,15 +6,18 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use mailrs_domain::{AccountId, MessageMeta, Target};
+use mailrs_domain::{Account, AccountId, AccountState, Folder, MessageMeta, Target};
 use mailrs_store::{Db, accounts};
 
 use super::{Connected, harness};
 use crate::fake::{FakeGmail, Usage, meta};
-use crate::{AccountSync, History, MailAction, MailActions, TriageAction, now_millis};
+use crate::{
+    AccountSync, History, MailAction, MailActions, Mailbox, Mailboxes, Scope, TriageAction, View,
+    now_millis,
+};
 
 /// One connected account: its Gmail, its sync loop, and its id.
-struct Mailbox {
+struct Synced {
     id: AccountId,
     fake: Arc<FakeGmail>,
     sync: Arc<AccountSync<FakeGmail>>,
@@ -22,7 +25,7 @@ struct Mailbox {
 
 /// `count` accounts, each holding `threads` conversations of `messages`
 /// messages in the inbox, already synced.
-async fn mailboxes(db: &Db, count: usize, threads: usize, messages: usize) -> Vec<Mailbox> {
+async fn synced(db: &Db, count: usize, threads: usize, messages: usize) -> Vec<Synced> {
     let now = now_millis();
     let mut all = Vec::new();
     for account in 0..count {
@@ -47,13 +50,13 @@ async fn mailboxes(db: &Db, count: usize, threads: usize, messages: usize) -> Ve
             AccountSync::new(id, Arc::clone(&fake), db.clone(), sender)
                 .with_retry_max(Duration::from_millis(10)),
         );
-        all.push(Mailbox { id, fake, sync });
+        all.push(Synced { id, fake, sync });
     }
     all
 }
 
 /// Runs every account's first sync to the end and returns what it cost.
-async fn first_sync(all: &[Mailbox]) -> Usage {
+async fn first_sync(all: &[Synced]) -> Usage {
     for mailbox in all {
         mailbox.sync.bootstrap().await.unwrap();
         while mailbox.sync.backfill_step().await.unwrap() {}
@@ -61,7 +64,7 @@ async fn first_sync(all: &[Mailbox]) -> Usage {
     total(all)
 }
 
-fn total(all: &[Mailbox]) -> Usage {
+fn total(all: &[Synced]) -> Usage {
     let mut sum = Usage::default();
     for mailbox in all {
         let usage = mailbox.fake.usage();
@@ -74,13 +77,13 @@ fn total(all: &[Mailbox]) -> Usage {
     sum
 }
 
-fn reset(all: &[Mailbox]) {
+fn reset(all: &[Synced]) {
     for mailbox in all {
         mailbox.fake.reset_usage();
     }
 }
 
-fn actions(all: &[Mailbox], db: &Db) -> MailActions<Connected> {
+fn actions(all: &[Synced], db: &Db) -> MailActions<Connected> {
     let connected = all
         .iter()
         .map(|m| (m.id, Arc::clone(&m.sync)))
@@ -89,7 +92,7 @@ fn actions(all: &[Mailbox], db: &Db) -> MailActions<Connected> {
 }
 
 /// Every conversation in every account, in the order the list shows them.
-fn everything(all: &[Mailbox], threads: usize) -> Vec<Target> {
+fn everything(all: &[Synced], threads: usize) -> Vec<Target> {
     let mut targets = Vec::new();
     for thread in 0..threads {
         for (account, mailbox) in all.iter().enumerate() {
@@ -116,7 +119,7 @@ fn report(what: &str, usage: &Usage) {
 #[tokio::test]
 async fn trashing_two_hundred_conversations_takes_one_call() {
     let h = harness().await;
-    let all = mailboxes(&h.db, 1, 200, 2).await;
+    let all = synced(&h.db, 1, 200, 2).await;
     first_sync(&all).await;
     reset(&all);
 
@@ -141,7 +144,7 @@ async fn trashing_two_hundred_conversations_takes_one_call() {
 #[tokio::test]
 async fn six_accounts_spend_one_batch_each() {
     let h = harness().await;
-    let all = mailboxes(&h.db, 6, 34, 2).await;
+    let all = synced(&h.db, 6, 34, 2).await;
     first_sync(&all).await;
     reset(&all);
 
@@ -165,7 +168,7 @@ async fn six_accounts_spend_one_batch_each() {
 #[tokio::test]
 async fn undoing_a_bulk_action_takes_one_call_per_account() {
     let h = harness().await;
-    let all = mailboxes(&h.db, 6, 34, 2).await;
+    let all = synced(&h.db, 6, 34, 2).await;
     first_sync(&all).await;
     let targets = everything(&all, 34);
     let actions = actions(&all, &h.db);
@@ -189,7 +192,7 @@ async fn undoing_a_bulk_action_takes_one_call_per_account() {
 #[tokio::test]
 async fn an_idle_minute_costs_two_history_calls_per_account() {
     let h = harness().await;
-    let all = mailboxes(&h.db, 6, 5, 1).await;
+    let all = synced(&h.db, 6, 5, 1).await;
     first_sync(&all).await;
     reset(&all);
 
@@ -206,10 +209,136 @@ async fn an_idle_minute_costs_two_history_calls_per_account() {
     assert_eq!(usage.units, 24);
 }
 
+/// Junk mail sits outside the synced window, so the store holds none of
+/// it and every row costs a metadata call.
+async fn junk(all: &[Synced], messages: usize) {
+    let now = now_millis();
+    for (account, mailbox) in all.iter().enumerate() {
+        for message in 0..messages {
+            let ids = format!("a{account}junk{message}");
+            mailbox.fake.seed(MessageMeta {
+                account_id: mailbox.id,
+                ..meta(&ids, &format!("a{account}junkt{message}"), now, &["SPAM"])
+            });
+        }
+    }
+}
+
+fn lists_over(all: &[Synced], db: &Db) -> Mailboxes<Connected> {
+    let connected = all
+        .iter()
+        .map(|m| (m.id, Arc::clone(&m.sync)))
+        .collect::<std::collections::HashMap<_, _>>();
+    Mailboxes::new(Arc::new(Connected(connected)), db.clone())
+}
+
+fn scope(all: &[Synced]) -> Scope {
+    Scope::over(all.iter().map(|m| Account {
+        id: m.id,
+        email: format!("user{}@example.com", m.id),
+        state: AccountState::Ok,
+    }))
+}
+
+#[tokio::test]
+async fn opening_junk_pays_for_the_rows_it_shows() {
+    let h = harness().await;
+    let all = synced(&h.db, 1, 1, 1).await;
+    junk(&all, 100).await;
+    first_sync(&all).await;
+    reset(&all);
+    let lists = lists_over(&all, &h.db);
+    let folder = Mailbox::Folder {
+        account_id: Some(all[0].id),
+        folder: Folder::Junk,
+    };
+
+    let listing = lists
+        .list(&folder, &scope(&all), &View::default(), 0)
+        .await
+        .unwrap();
+
+    assert_eq!(listing.rows.len(), 25);
+    let usage = total(&all);
+    report("open Junk, 100 messages, 1 account", &usage);
+    // One listing call for the ids, then metadata for the rows on screen.
+    assert_eq!(usage.calls_to("users.messages.list"), 1);
+    assert_eq!(usage.calls_to("users.messages.get"), 25);
+    assert_eq!(usage.units, 5 + 25 * 5);
+}
+
+#[tokio::test]
+async fn opening_junk_again_asks_gmail_nothing() {
+    let h = harness().await;
+    let all = synced(&h.db, 6, 1, 1).await;
+    junk(&all, 100).await;
+    first_sync(&all).await;
+    reset(&all);
+    let lists = lists_over(&all, &h.db);
+    let folder = Mailbox::Folder {
+        account_id: None,
+        folder: Folder::Junk,
+    };
+    let (scope, view) = (scope(&all), View::default());
+    lists.list(&folder, &scope, &view, 0).await.unwrap();
+    let first = total(&all);
+    report("open Junk, 100 messages, 6 accounts", &first);
+    assert_eq!(first.units, 6 * (5 + 25 * 5));
+    reset(&all);
+
+    // The reload every change event used to trigger.
+    lists.list(&folder, &scope, &view, 0).await.unwrap();
+
+    let again = total(&all);
+    report("open Junk again within the minute", &again);
+    assert_eq!(again.calls, 0);
+}
+
+#[tokio::test]
+async fn scrolling_junk_pays_only_for_the_next_rows() {
+    let h = harness().await;
+    let all = synced(&h.db, 1, 1, 1).await;
+    junk(&all, 100).await;
+    first_sync(&all).await;
+    let lists = lists_over(&all, &h.db);
+    let folder = Mailbox::Folder {
+        account_id: Some(all[0].id),
+        folder: Folder::Junk,
+    };
+    let (scope, view) = (scope(&all), View::default());
+    lists.list(&folder, &scope, &view, 0).await.unwrap();
+    reset(&all);
+
+    let more = lists.list(&folder, &scope, &view, 25).await.unwrap();
+
+    assert_eq!(more.rows.len(), 50, "the rows read so far");
+    let usage = total(&all);
+    report("scroll Junk to the next 25 rows", &usage);
+    assert_eq!(usage.calls_to("users.messages.list"), 0, "the ids are kept");
+    assert_eq!(usage.calls_to("users.messages.get"), 25);
+}
+
+#[tokio::test]
+async fn a_search_reuses_the_metadata_the_store_holds() {
+    let h = harness().await;
+    let all = synced(&h.db, 1, 40, 1).await;
+    first_sync(&all).await;
+    reset(&all);
+
+    // Every hit is inbox mail the first sync already stored.
+    let found = all[0].sync.search("in:inbox", 25).await.unwrap();
+
+    assert_eq!(found.len(), 25);
+    let usage = total(&all);
+    report("search 25 stored messages", &usage);
+    assert_eq!(usage.calls_to("users.messages.get"), 0);
+    assert_eq!(usage.units, 5);
+}
+
 #[tokio::test]
 async fn a_first_sync_costs_five_units_a_message() {
     let h = harness().await;
-    let all = mailboxes(&h.db, 6, 50, 2).await;
+    let all = synced(&h.db, 6, 50, 2).await;
 
     let usage = first_sync(&all).await;
 

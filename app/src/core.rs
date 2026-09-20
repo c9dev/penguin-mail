@@ -412,10 +412,20 @@ impl Core {
         }
     }
 
+    /// Checks every account now instead of at its next tick. The kept
+    /// Gmail search goes too, since asking for new mail means the folder
+    /// on screen should be listed again rather than answered from memory.
     pub fn poke_all(&self) {
+        self.forget_remote();
         if let Some(engine) = self.engine.current() {
             engine.poke_all();
         }
+    }
+
+    /// Drops the Gmail search the last folder or search listing kept, so
+    /// the next listing asks Gmail again.
+    pub fn forget_remote(&self) {
+        self.lists.forget_remote();
     }
 
     /// Runs the browser consent flow, stores the refresh token, and starts
