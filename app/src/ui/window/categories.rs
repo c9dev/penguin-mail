@@ -25,12 +25,24 @@ fn icon(category: Category) -> &'static str {
     }
 }
 
+/// How long the name and the unread count take to slide open, in milliseconds.
+const SLIDE_MS: u32 = 200;
+
+/// Wraps `child` in a revealer that opens it left to right.
+fn slider(child: &impl IsA<gtk::Widget>) -> gtk::Revealer {
+    gtk::Revealer::builder()
+        .transition_type(gtk::RevealerTransitionType::SlideLeft)
+        .transition_duration(SLIDE_MS)
+        .child(child)
+        .build()
+}
+
 /// The switcher above an inbox's thread list. Only the chosen category
 /// shows its name; the others show an icon and their unread count.
 pub(super) struct CategoryBar {
     bar: gtk::Box,
     group: adw::ToggleGroup,
-    names: HashMap<Category, gtk::Label>,
+    names: HashMap<Category, gtk::Revealer>,
     counts: HashMap<Category, gtk::Label>,
     pub(super) chosen: Cell<Category>,
 }
@@ -40,20 +52,33 @@ impl CategoryBar {
         let group = adw::ToggleGroup::builder()
             .homogeneous(false)
             .halign(gtk::Align::Center)
-            .hexpand(true)
-            .css_classes(["category-bar"])
+            .css_classes(["category-bar", "round"])
             .build();
         let (mut names, mut counts) = (HashMap::new(), HashMap::new());
         for category in Category::ALL {
-            let content = gtk::Box::builder().spacing(6).build();
-            content.append(&gtk::Image::from_icon_name(icon(category)));
-            let name = gtk::Label::new(Some(category.name()));
+            // No spacing: the name carries its own margin, so a closed name
+            // leaves no gap behind.
+            let content = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+            let image = gtk::Image::from_icon_name(icon(category));
+            image.set_pixel_size(16);
+            // The icon's box leaves room for the count in its top right corner,
+            // so a count arriving or growing never moves the icons.
+            image.set_size_request(24, 20);
             let count = gtk::Label::builder()
-                .css_classes(["category-count"])
-                .visible(false)
+                .css_classes(["category-count", "no-mail"])
+                .halign(gtk::Align::End)
+                .valign(gtk::Align::Start)
                 .build();
+            let badge = gtk::Overlay::builder().child(&image).build();
+            badge.add_overlay(&count);
+            let name = slider(
+                &gtk::Label::builder()
+                    .label(category.name())
+                    .css_classes(["category-name"])
+                    .build(),
+            );
+            content.append(&badge);
             content.append(&name);
-            content.append(&count);
             group.add(
                 adw::Toggle::builder()
                     .name(category.key())
@@ -67,11 +92,21 @@ impl CategoryBar {
         let bar = gtk::Box::builder()
             .margin_top(6)
             .margin_bottom(6)
-            .margin_start(12)
-            .margin_end(12)
+            .margin_start(8)
+            .margin_end(8)
             .visible(false)
             .build();
-        bar.append(&group);
+        // A window too narrow for all five scrolls the switcher sideways rather
+        // than cutting a category off.
+        bar.append(
+            &gtk::ScrolledWindow::builder()
+                .child(&group)
+                .hscrollbar_policy(gtk::PolicyType::Automatic)
+                .vscrollbar_policy(gtk::PolicyType::Never)
+                .propagate_natural_width(true)
+                .hexpand(true)
+                .build(),
+        );
         let chosen = Category::Primary;
         group.set_active_name(Some(chosen.key()));
         let this = CategoryBar {
@@ -87,15 +122,34 @@ impl CategoryBar {
 
     fn show_names(&self) {
         for (category, name) in &self.names {
-            name.set_visible(*category == self.chosen.get());
+            name.set_reveal_child(*category == self.chosen.get());
         }
     }
 
     pub(super) fn set_counts(&self, unread: &HashMap<Category, i64>) {
         for (category, label) in &self.counts {
             let count = unread.get(category).copied().unwrap_or(0);
-            label.set_label(&count.to_string());
-            label.set_visible(count > 0);
+            // A long number would spill over the icon, so stop the badge at 99.
+            label.set_label(&match count {
+                ..=0 => String::new(),
+                1..=99 => count.to_string(),
+                _ => "99+".to_string(),
+            });
+            // Nothing unread fades the badge out and leaves its place empty.
+            if count > 0 {
+                label.remove_css_class("no-mail");
+            } else {
+                label.add_css_class("no-mail");
+            }
+            // The name is hidden unless the category is chosen, so the tooltip
+            // carries both it and the count.
+            if let Some(toggle) = self.group.toggle_by_name(category.key()) {
+                toggle.set_tooltip(&match count {
+                    0 => category.name().to_string(),
+                    1 => format!("{}, 1 unread", category.name()),
+                    _ => format!("{}, {count} unread", category.name()),
+                });
+            }
         }
     }
 }
