@@ -53,6 +53,13 @@ const BODY_FETCHES: usize = 10;
 /// download the same pictures again.
 const INLINE_IMAGE_CACHE: usize = 64;
 
+/// How long a reply from a notification waits for the thread and its body
+/// to arrive before it quotes the snippet instead.
+const REVEAL_WAIT: std::time::Duration = std::time::Duration::from_secs(5);
+
+/// How often that wait looks at the conversation.
+const REVEAL_STEP: std::time::Duration = std::time::Duration::from_millis(100);
+
 /// Whether a refresh should list the mailbox again. Listing a folder or a
 /// search means a Gmail search for every account on screen, so the window
 /// asks for one only when the rows themselves can have changed.
@@ -60,6 +67,15 @@ const INLINE_IMAGE_CACHE: usize = 64;
 enum Reload {
     Yes,
     No,
+}
+
+/// What to do with a thread opened from outside the window.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Reveal {
+    /// Show it.
+    Read,
+    /// Show it and answer its newest message.
+    Reply,
 }
 
 type WindowAction = Box<dyn Fn(&Rc<MainWindow>)>;
@@ -2426,17 +2442,47 @@ impl MainWindow {
         app.compose(app.signed(Draft::new(account_id, app.identity(account_id))));
     }
 
-    /// Opens a thread from outside the window, such as a notification.
-    pub fn reveal(self: &Rc<Self>, account_id: AccountId, thread_id: String) {
+    /// Opens a thread from outside the window, such as a notification, and
+    /// answers it when `then` asks for that.
+    pub fn reveal(self: &Rc<Self>, account_id: AccountId, thread_id: String, then: Reveal) {
         let inbox = Mailbox::Unified(system_label::INBOX);
         if *self.mailbox.borrow() != inbox {
             self.sidebar.select(&inbox);
             self.show_mailbox(inbox);
         }
         let this = Rc::clone(self);
-        glib::timeout_add_local_once(std::time::Duration::from_millis(250), move || {
+        glib::spawn_future_local(async move {
+            // The list is still loading its rows; selecting one before they
+            // land finds nothing.
+            glib::timeout_future(std::time::Duration::from_millis(250)).await;
             this.list.select(account_id, &thread_id, None);
+            if then == Reveal::Reply {
+                this.reply_when_open(account_id, &thread_id).await;
+            }
         });
+    }
+
+    /// Answers a thread once the conversation has it, with its body rather
+    /// than its snippet where the wait is long enough for Gmail to answer.
+    async fn reply_when_open(self: &Rc<Self>, account_id: AccountId, thread_id: &str) {
+        let deadline = std::time::Instant::now() + REVEAL_WAIT;
+        loop {
+            let quotable = self
+                .conversation
+                .with_open(|open| {
+                    open.account_id == account_id
+                        && open.thread_id == thread_id
+                        && open
+                            .reply_target()
+                            .is_some_and(|m| open.bodies.contains_key(&m.id))
+                })
+                .unwrap_or(false);
+            if quotable || std::time::Instant::now() >= deadline {
+                break;
+            }
+            glib::timeout_future(REVEAL_STEP).await;
+        }
+        self.reply(ReplyKind::Reply);
     }
 
     /// Screenshot hooks, honoured only in demo mode: `MAILRS_DEMO_OPEN`
