@@ -471,7 +471,7 @@ impl ConversationView {
         let find = FindBar::new(&webview);
         let toolbar = adw::ToolbarView::new();
         toolbar.add_top_bar(&header);
-        toolbar.add_top_bar(&find.bar);
+        toolbar.add_top_bar(&find.widget);
         toolbar.set_content(Some(&stack));
         let page = adw::NavigationPage::builder()
             .title(gettext("Conversation"))

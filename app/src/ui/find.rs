@@ -110,7 +110,7 @@ fn options(query: &str) -> webkit::FindOptions {
 
 /// The entry, the count, and the two arrows, over one WebView.
 pub struct FindBar {
-    pub bar: gtk::SearchBar,
+    pub widget: gtk::SearchBar,
     entry: gtk::SearchEntry,
     count: gtk::Label,
     previous: gtk::Button,
@@ -148,22 +148,17 @@ impl FindBar {
         row.append(&entry);
         row.append(&count);
         row.append(&arrows);
-        let bar = gtk::SearchBar::builder()
-            .child(
-                &adw::Clamp::builder()
-                    .maximum_size(520)
-                    .child(&row)
-                    .build(),
-            )
+        let widget = gtk::SearchBar::builder()
+            .child(&adw::Clamp::builder().maximum_size(520).child(&row).build())
             .show_close_button(false)
             .build();
-        bar.connect_entry(&entry);
+        widget.connect_entry(&entry);
 
         let find = webview
             .find_controller()
             .expect("a WebView has a find controller");
         let this = Rc::new(FindBar {
-            bar,
+            widget,
             entry,
             count,
             previous,
@@ -179,9 +174,9 @@ impl FindBar {
                 bar.search();
             }
         });
-        for (widget, forward) in [(&this.previous, false), (&this.next, true)] {
+        for (button, forward) in [(&this.previous, false), (&this.next, true)] {
             let weak = Rc::downgrade(&this);
-            widget.connect_clicked(move |_| {
+            button.connect_clicked(move |_| {
                 if let Some(bar) = weak.upgrade() {
                     bar.step(forward);
                 }
@@ -244,14 +239,14 @@ impl FindBar {
     }
 
     pub fn is_open(&self) -> bool {
-        self.bar.is_search_mode()
+        self.widget.is_search_mode()
     }
 
     /// Puts the bar up and takes the focus into it. A query left from
     /// last time stays, selected, so typing replaces it.
     pub fn open(&self) {
         let opening = !self.is_open();
-        self.bar.set_search_mode(true);
+        self.widget.set_search_mode(true);
         if opening {
             self.tell_running(true);
         }
@@ -267,7 +262,7 @@ impl FindBar {
         if !self.is_open() {
             return;
         }
-        self.bar.set_search_mode(false);
+        self.widget.set_search_mode(false);
         self.find.search_finish();
         self.place.borrow_mut().start("");
         self.update();
