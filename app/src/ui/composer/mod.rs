@@ -1,26 +1,46 @@
 //! The composer window: Markdown in, `multipart/alternative` out.
 
+pub mod spell;
+
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gdk, gio, glib};
-use mailrs_domain::{AccountId, Address};
 use webkit::prelude::*;
 
 use super::autocomplete::{self, Contacts};
 use crate::compose::{
     Draft, LinePrefix, OutgoingAttachment, SendWhen, build_mime, format_recipients,
-    markdown_to_html, new_message_id, parse_recipients, toggle_prefix,
+    markdown_to_html, new_message_id, opening_identity, parse_recipients, restyle_signature,
+    toggle_prefix,
 };
 use crate::core::Core;
 use crate::format::{future_date, human_size, send_later_presets};
 
-/// An address the user can send from.
-#[derive(Debug, Clone)]
-pub struct Identity {
-    pub account_id: AccountId,
-    pub address: Address,
+pub use crate::compose::Identity;
+
+/// What the composer needs from the app to fill its From row and check its
+/// spelling: the addresses the accounts send as, the one each account last
+/// used, and somewhere to report a word the writer keeps.
+pub struct Writing {
+    pub identities: Vec<Identity>,
+    /// Account address to the send-as address it last sent from.
+    pub last_used: Vec<(String, String)>,
+    /// The dictionaries every composer shares. Reading one takes long
+    /// enough to stutter a window, so this settles after the composer opens.
+    pub dictionaries: futures::future::LocalBoxFuture<'static, Rc<spell::Dictionaries>>,
+    /// Called with the address a message goes out from, and with every word
+    /// Add to Dictionary keeps, so Preferences remembers both.
+    pub remember: Rc<dyn Fn(Remembered)>,
+}
+
+/// Something the composer learned that outlives it.
+pub enum Remembered {
+    /// This account sent from this address.
+    SentFrom { account: String, email: String },
+    /// Add to Dictionary was used on this word.
+    Word(String),
 }
 
 type ComposerAction = Box<dyn Fn(&Rc<Composer>)>;
@@ -40,6 +60,11 @@ pub struct Composer {
     chips: gtk::FlowBox,
     send: adw::SplitButton,
     identities: Vec<Identity>,
+    /// Which identity the From row is on, so a change knows what to undo.
+    showing: Cell<usize>,
+    /// The spell checker marking up the body, when one could start.
+    spell: RefCell<Option<Rc<spell::SpellCheck>>>,
+    remember: Rc<dyn Fn(Remembered)>,
     base: RefCell<Draft>,
     attachments: RefCell<Vec<OutgoingAttachment>>,
     dirty: Cell<bool>,
@@ -48,16 +73,22 @@ pub struct Composer {
 }
 
 impl Composer {
-    /// Opens a composer for `draft`. `identities` lists every account; the
-    /// draft's account is preselected. `on_send` receives the finished
-    /// message; the composer closes itself.
+    /// Opens a composer for `draft`. `writing` carries every address the
+    /// accounts send as; the From row starts on the one the draft names.
+    /// `on_send` receives the finished message; the composer closes itself.
     pub fn open(
         core: Rc<Core>,
-        identities: Vec<Identity>,
+        writing: Writing,
         contacts: Contacts,
         draft: Draft,
         on_send: impl Fn(Draft, SendWhen) + 'static,
     ) -> Rc<Composer> {
+        let Writing {
+            identities,
+            last_used,
+            dictionaries,
+            remember,
+        } = writing;
         let title = adw::WindowTitle::new("New Message", "");
         let later = gio::Menu::new();
         for (label, at) in send_later_presets(chrono::Local::now()) {
@@ -93,34 +124,37 @@ impl Composer {
         header.pack_end(&preview_toggle);
         header.pack_end(&attach);
 
-        let labels: Vec<String> = identities
+        let from = from_dropdown(&identities);
+        let last = last_used
             .iter()
-            .map(|i| format_recipients(std::slice::from_ref(&i.address)))
-            .collect();
-        let label_refs: Vec<&str> = labels.iter().map(String::as_str).collect();
-        let from = gtk::DropDown::from_strings(&label_refs);
-        from.set_hexpand(true);
-        from.add_css_class("flat");
-        let selected = identities
-            .iter()
-            .position(|i| i.account_id == draft.account_id)
-            .unwrap_or(0);
+            .find(|(account, _)| {
+                identities
+                    .iter()
+                    .any(|i| i.account_id == draft.account_id && i.account_email == *account)
+            })
+            .map(|(_, email)| email.as_str());
+        let selected =
+            opening_identity(&identities, draft.account_id, &draft.from, last).unwrap_or(0);
         from.set_selected(selected as u32);
         let to = entry("Recipients", &format_recipients(&draft.to));
         let cc = entry("", &format_recipients(&draft.cc));
-        let subject = entry("", &draft.subject);
+        let subject = entry("Subject", &draft.subject);
         autocomplete::attach(&to, Rc::clone(&contacts));
         autocomplete::attach(&cc, contacts);
 
+        // One size group holds the label column to a single width, so the
+        // fields all start at the same place however long the labels are.
+        let column = gtk::SizeGroup::new(gtk::SizeGroupMode::Horizontal);
         let fields = gtk::Box::new(gtk::Orientation::Vertical, 0);
-        fields.append(&field("From", &from));
-        fields.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
-        fields.append(&field("To", &to));
-        fields.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
-        fields.append(&field("Cc", &cc));
-        fields.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
-        fields.append(&field("Subject", &subject));
-        fields.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
+        for (label, widget) in [
+            ("From", from.clone().upcast::<gtk::Widget>()),
+            ("To", to.clone().upcast()),
+            ("Cc", cc.clone().upcast()),
+            ("Subject", subject.clone().upcast()),
+        ] {
+            fields.append(&field(label, &widget, &column));
+            fields.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
+        }
 
         let body = gtk::TextView::builder()
             .wrap_mode(gtk::WrapMode::WordChar)
@@ -206,6 +240,9 @@ impl Composer {
             chips,
             send,
             identities,
+            showing: Cell::new(selected),
+            spell: RefCell::new(None),
+            remember,
             base: RefCell::new(draft),
             attachments: RefCell::new(attachments),
             dirty: Cell::new(false),
@@ -215,6 +252,8 @@ impl Composer {
         composer.refresh_chips();
         composer.update_title();
         composer.wire(&attach, &preview_toggle);
+        let this = Rc::clone(&composer);
+        glib::spawn_future_local(async move { this.check_spelling(dictionaries.await) });
         composer.fill_format_bar(&format_bar);
         composer.accept_images();
         composer.window.present();
@@ -246,6 +285,12 @@ impl Composer {
         self.body.buffer().connect_changed(move |buffer| {
             style_quotes(buffer);
             mark();
+        });
+        let weak = Rc::downgrade(self);
+        self.from.connect_selected_notify(move |row| {
+            if let Some(c) = weak.upgrade() {
+                c.identity_changed(row.selected() as usize);
+            }
         });
 
         let weak = Rc::downgrade(self);
@@ -374,6 +419,40 @@ impl Composer {
         self.identities.get(self.from.selected() as usize)
     }
 
+    /// Follows the From row with the signature, since Gmail keeps one per
+    /// send-as address and a message signed by the wrong one looks careless.
+    fn identity_changed(&self, to: usize) {
+        let was = self.showing.replace(to);
+        let (Some(old), Some(new)) = (self.identities.get(was), self.identities.get(to)) else {
+            return;
+        };
+        if old.signature == new.signature {
+            return;
+        }
+        let buffer = self.body.buffer();
+        let cursor = buffer.cursor_position();
+        let markdown = self.markdown();
+        let swapped = restyle_signature(&markdown, &old.signature, &new.signature);
+        if swapped == markdown {
+            return;
+        }
+        let moved = swapped.chars().count() as i32 - markdown.chars().count() as i32;
+        buffer.set_text(&swapped);
+        style_quotes(&buffer);
+        buffer.place_cursor(&buffer.iter_at_offset((cursor + moved).max(0)));
+    }
+
+    /// Underlines misspellings as the writer types, when a dictionary is
+    /// installed. With none, the composer is a plain text view and says
+    /// nothing about it.
+    fn check_spelling(self: &Rc<Self>, dictionaries: Rc<spell::Dictionaries>) {
+        let remember = Rc::clone(&self.remember);
+        *self.spell.borrow_mut() =
+            spell::SpellCheck::attach(&self.body, dictionaries, move |word| {
+                remember(Remembered::Word(word.to_string()));
+            });
+    }
+
     fn update_title(&self) {
         let subject = self.subject.text();
         let title = if subject.trim().is_empty() {
@@ -442,6 +521,12 @@ impl Composer {
         if let Err(err) = build_mime(&draft, now_secs(), &new_message_id(&draft.from.email)) {
             self.toast(&format!("Could not build the message: {err}"));
             return;
+        }
+        if let Some(identity) = self.identity() {
+            (self.remember)(Remembered::SentFrom {
+                account: identity.account_email.clone(),
+                email: identity.address.email.clone(),
+            });
         }
         self.closing.set(true);
         self.window.close();
@@ -918,24 +1003,87 @@ fn entry(placeholder: &str, text: &str) -> gtk::Entry {
         .placeholder_text(placeholder)
         .text(text)
         .hexpand(true)
+        .valign(gtk::Align::Center)
         .has_frame(false)
         .build()
 }
 
-fn field(label: &str, widget: &impl IsA<gtk::Widget>) -> gtk::Box {
+/// One header row: its label in the shared column, its field beside it.
+fn field(label: &str, widget: &impl IsA<gtk::Widget>, column: &gtk::SizeGroup) -> gtk::Box {
     let row = gtk::Box::builder()
-        .spacing(8)
+        .spacing(0)
         .css_classes(["composer-field"])
         .build();
-    row.append(
-        &gtk::Label::builder()
-            .label(label)
-            .xalign(0.0)
-            .css_classes(["dim-label"])
-            .build(),
-    );
+    let label = gtk::Label::builder()
+        .label(label)
+        // Right-aligned against the fields, which is how GNOME's own dialogs
+        // line a label column up with what it names.
+        .xalign(1.0)
+        .valign(gtk::Align::Center)
+        .css_classes(["dim-label", "composer-label"])
+        .build();
+    column.add_widget(&label);
+    row.append(&label);
     row.append(widget);
     row
+}
+
+/// The From row: every address the accounts send as, in one list with a
+/// heading per account, so two accounts with aliases stay readable.
+fn from_dropdown(identities: &[Identity]) -> gtk::DropDown {
+    let sections = gio::ListStore::new::<gtk::StringList>();
+    let mut account = String::new();
+    for identity in identities {
+        if identity.account_email != account || sections.n_items() == 0 {
+            account = identity.account_email.clone();
+            sections.append(&gtk::StringList::new(&[]));
+        }
+        if let Some(section) = sections
+            .item(sections.n_items() - 1)
+            .and_downcast::<gtk::StringList>()
+        {
+            section.append(&format_recipients(std::slice::from_ref(&identity.address)));
+        }
+    }
+    let model = gtk::FlattenListModel::new(Some(sections));
+    let from = gtk::DropDown::builder()
+        .model(&model)
+        .hexpand(true)
+        .valign(gtk::Align::Center)
+        .css_classes(["flat", "composer-from"])
+        .build();
+    // One account needs no heading. Several do, and the heading names the
+    // account that owns the addresses under it.
+    let owners: Vec<String> = identities.iter().map(|i| i.account_email.clone()).collect();
+    if owners.windows(2).any(|pair| pair[0] != pair[1]) {
+        let headers = gtk::SignalListItemFactory::new();
+        headers.connect_setup(|_, item| {
+            let Some(header) = item.downcast_ref::<gtk::ListHeader>() else {
+                return;
+            };
+            header.set_child(Some(
+                &gtk::Label::builder()
+                    .xalign(0.0)
+                    .css_classes(["dim-label", "composer-from-heading"])
+                    .build(),
+            ));
+        });
+        headers.connect_bind(move |_, item| {
+            let Some(header) = item.downcast_ref::<gtk::ListHeader>() else {
+                return;
+            };
+            if let Some(label) = header.child().and_downcast::<gtk::Label>() {
+                // A section starts at the first address of one account.
+                label.set_label(
+                    owners
+                        .get(header.start() as usize)
+                        .map_or("", String::as_str),
+                );
+            }
+        });
+        from.set_header_factory(Some(&headers));
+    }
+    from
 }
 
 fn now_secs() -> i64 {

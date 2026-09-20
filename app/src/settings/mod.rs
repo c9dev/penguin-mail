@@ -49,6 +49,19 @@ pub struct Settings {
     pub inbox_categories: bool,
     /// Show Follow Up for sent mail nobody has answered.
     pub suggest_follow_ups: bool,
+    /// Dictionary languages per account address, such as `["en_US",
+    /// "pt_PT"]`. Empty follows the desktop's locale.
+    pub spell_languages: BTreeMap<String, Vec<String>>,
+    /// Words Add to Dictionary kept, lower case.
+    pub spell_words: Vec<String>,
+    /// The send-as address each account last sent from, so the composer
+    /// opens where the writer left it.
+    pub last_sender: BTreeMap<String, String>,
+    /// Every address each account may send as, as Gmail last reported them,
+    /// keyed by the account's own address. Kept here so the composer opens
+    /// without waiting on the network; the app refreshes it in the
+    /// background.
+    pub send_as: BTreeMap<String, Vec<crate::compose::SendAsAddress>>,
 }
 
 /// Where the assistant's model runs.
@@ -137,6 +150,10 @@ impl Default for Settings {
             hidden_addresses: Vec::new(),
             inbox_categories: true,
             suggest_follow_ups: true,
+            spell_languages: BTreeMap::new(),
+            spell_words: Vec::new(),
+            last_sender: BTreeMap::new(),
+            send_as: BTreeMap::new(),
         }
     }
 }
@@ -419,6 +436,43 @@ impl Settings {
         true
     }
 
+    /// What goes below a message sent from `email`. A signature written here
+    /// wins; failing that, the one Gmail keeps for that send-as address.
+    pub fn signature_for(&self, account: &str, email: &str) -> &str {
+        let written = self.signature(email);
+        if !written.is_empty() {
+            return written;
+        }
+        self.send_as
+            .get(&account.to_lowercase())
+            .into_iter()
+            .flatten()
+            .find(|a| a.email.eq_ignore_ascii_case(email))
+            .map_or("", |a| a.signature.as_str())
+    }
+
+    /// Every address `account` may send from, its own address first when
+    /// Gmail reported nothing. Gmail's default comes before the rest.
+    pub fn senders(&self, account: &str) -> Vec<crate::compose::SendAsAddress> {
+        let stored = self.send_as.get(&account.to_lowercase());
+        let mut addresses: Vec<crate::compose::SendAsAddress> = stored.cloned().unwrap_or_default();
+        if !addresses
+            .iter()
+            .any(|a| a.email.eq_ignore_ascii_case(account))
+        {
+            addresses.insert(
+                0,
+                crate::compose::SendAsAddress {
+                    email: account.to_string(),
+                    default: addresses.is_empty(),
+                    ..Default::default()
+                },
+            );
+        }
+        addresses.sort_by_key(|a| !a.default);
+        addresses
+    }
+
     pub fn set_signature(&mut self, email: &str, signature: &str) {
         let key = email.to_lowercase();
         if signature.trim().is_empty() {
@@ -543,6 +597,66 @@ mod tests {
         assert_eq!(hidden.note, "");
         assert_eq!(hidden.label_filter, None);
         assert!(Settings::default().hidden_addresses.is_empty());
+    }
+
+    #[test]
+    fn a_stored_alias_survives_a_save_and_load() {
+        let dir = tempfile::tempdir().expect("a temp dir");
+        let path = dir.path().join("settings.toml");
+        let mut settings = Settings::default();
+        settings.send_as.insert(
+            "dana@example.com".into(),
+            vec![
+                crate::compose::SendAsAddress {
+                    email: "dana@example.com".into(),
+                    name: Some("Dana".into()),
+                    signature: "Dana".into(),
+                    default: true,
+                },
+                crate::compose::SendAsAddress {
+                    email: "sales@example.com".into(),
+                    name: Some("Sales".into()),
+                    signature: "The Sales Desk".into(),
+                    default: false,
+                },
+            ],
+        );
+        settings
+            .last_sender
+            .insert("dana@example.com".into(), "sales@example.com".into());
+        settings.save(&path).expect("settings save");
+        assert_eq!(Settings::load(&path), settings);
+    }
+
+    #[test]
+    fn an_account_always_offers_its_own_address_with_gmails_first() {
+        let settings = Settings::default();
+        let senders = settings.senders("dana@example.com");
+        assert_eq!(senders.len(), 1);
+        assert_eq!(senders[0].email, "dana@example.com");
+        assert!(senders[0].default);
+    }
+
+    #[test]
+    fn a_written_signature_beats_the_one_gmail_keeps() {
+        let mut settings = Settings::default();
+        settings.send_as.insert(
+            "dana@example.com".into(),
+            vec![crate::compose::SendAsAddress {
+                email: "sales@example.com".into(),
+                signature: "The Sales Desk".into(),
+                ..Default::default()
+            }],
+        );
+        assert_eq!(
+            settings.signature_for("dana@example.com", "SALES@example.com"),
+            "The Sales Desk"
+        );
+        settings.set_signature("sales@example.com", "Dana, Sales");
+        assert_eq!(
+            settings.signature_for("dana@example.com", "sales@example.com"),
+            "Dana, Sales"
+        );
     }
 
     #[test]

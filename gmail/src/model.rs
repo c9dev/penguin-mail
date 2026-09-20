@@ -190,6 +190,22 @@ pub struct SendAs {
     /// HTML, empty when the identity has none.
     #[serde(default)]
     pub signature: String,
+    /// `accepted` once the owner of the address confirmed it. Gmail leaves
+    /// it unset for the account's own address, which needs no confirming.
+    #[serde(default)]
+    pub verification_status: Option<String>,
+}
+
+impl SendAs {
+    /// Whether Gmail will actually send from this address. An alias waiting
+    /// on its owner to confirm it would be refused.
+    pub fn is_verified(&self) -> bool {
+        self.is_primary
+            || match self.verification_status.as_deref() {
+                Some(status) => status.eq_ignore_ascii_case("accepted"),
+                None => true,
+            }
+    }
 }
 
 /// `users.settings.vacation`. Times are epoch milliseconds sent as strings.

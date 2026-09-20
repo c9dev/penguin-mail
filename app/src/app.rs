@@ -14,12 +14,13 @@ use mailrs_domain::{Account, AccountId, Address, ChangeEvent, system_label};
 use mailrs_store::{messages, threads};
 
 use crate::compose::Draft;
+use crate::compose::Identity;
 use crate::core::Core;
 use crate::notify;
 use crate::settings::{Change, ColorScheme, Effect, Effects, Settings};
 use crate::tray::{MailTray, TrayCommand};
 use crate::ui::autocomplete::Contacts;
-use crate::ui::composer::{Composer, Identity};
+use crate::ui::composer::{Composer, Remembered, Writing, spell};
 use crate::ui::window::MainWindow;
 
 const BLOCK_REMOTE_RULES: &str = r#"[
@@ -57,6 +58,11 @@ pub struct App {
     pub(crate) contacts_stale: Cell<bool>,
     /// Messages waiting out the Undo Send delay.
     pending_sends: Cell<usize>,
+    /// Hunspell dictionaries already read, by the languages they cover.
+    /// Every composer shares them, because reading one is slow.
+    dictionaries: RefCell<HashMap<Vec<String>, Rc<spell::Dictionaries>>>,
+    /// Which languages a dictionary is installed for, read once.
+    installed_dictionaries: RefCell<Option<Vec<String>>>,
     scheduler_running: Cell<bool>,
     _hold: gio::ApplicationHoldGuard,
 }
@@ -98,6 +104,8 @@ impl App {
             contacts: Rc::new(RefCell::new(Rc::new(Vec::new()))),
             contacts_stale: Cell::new(true),
             pending_sends: Cell::new(0),
+            dictionaries: RefCell::new(HashMap::new()),
+            installed_dictionaries: RefCell::new(None),
             scheduler_running: Cell::new(false),
             _hold: gio_app.hold(),
         });
@@ -201,11 +209,16 @@ impl App {
         });
     }
 
-    /// `draft` with its account's signature added.
+    /// `draft` with the signature of the address it comes from. Gmail keeps
+    /// one per send-as address, so a reply from an alias is signed as that
+    /// alias.
     pub fn signed(&self, mut draft: Draft) -> Draft {
+        let account = self.account_email(draft.account_id);
         let settings = self.settings.borrow();
-        draft.markdown =
-            crate::compose::with_signature(&draft.markdown, settings.signature(&draft.from.email));
+        draft.markdown = crate::compose::with_signature(
+            &draft.markdown,
+            settings.signature_for(&account, &draft.from.email),
+        );
         draft
     }
 
@@ -319,18 +332,152 @@ impl App {
         self.filter.borrow().clone()
     }
 
-    /// The address and display name mail from this account is sent as.
-    pub fn identity(&self, account_id: AccountId) -> Address {
-        let email = self
-            .accounts
+    /// The account's own Gmail address.
+    pub fn account_email(&self, account_id: AccountId) -> String {
+        self.accounts
             .borrow()
             .iter()
             .find(|a| a.id == account_id)
             .map(|a| a.email.clone())
-            .unwrap_or_default();
+            .unwrap_or_default()
+    }
+
+    /// The address and display name mail from this account is sent as.
+    pub fn identity(&self, account_id: AccountId) -> Address {
         Address {
             name: self.names.borrow().get(&account_id).cloned(),
-            email,
+            email: self.account_email(account_id),
+        }
+    }
+
+    /// Every address every account may send from, accounts in sidebar order
+    /// and each account's own address first.
+    pub fn identities(&self) -> Vec<Identity> {
+        let settings = self.settings.borrow();
+        let accounts = self.accounts.borrow();
+        let emails: Vec<&str> = accounts.iter().map(|a| a.email.as_str()).collect();
+        let mut identities = Vec::new();
+        for email in settings.ordered(&emails) {
+            let Some(account) = accounts.iter().find(|a| a.email == email) else {
+                continue;
+            };
+            for sender in settings.senders(email) {
+                let name = sender.name.clone().or_else(|| {
+                    // Gmail gives no name for an alias it has none for; the
+                    // account's own name is the right stand-in.
+                    sender
+                        .email
+                        .eq_ignore_ascii_case(email)
+                        .then(|| self.names.borrow().get(&account.id).cloned())
+                        .flatten()
+                });
+                identities.push(Identity {
+                    account_id: account.id,
+                    account_email: email.to_string(),
+                    signature: settings.signature_for(email, &sender.email).to_string(),
+                    address: Address {
+                        name,
+                        email: sender.email.clone(),
+                    },
+                    default: sender.default,
+                });
+            }
+        }
+        identities
+    }
+
+    /// The addresses one account sends as, for picking a reply's sender.
+    pub fn my_addresses(&self, account_id: AccountId) -> Vec<Address> {
+        self.identities()
+            .into_iter()
+            .filter(|i| i.account_id == account_id)
+            .map(|i| i.address)
+            .collect()
+    }
+
+    /// The dictionaries a composer for `account_id` should check against.
+    ///
+    /// Reading a Hunspell dictionary takes long enough to stutter a window,
+    /// so this hands back a future: the composer opens straight away and the
+    /// squiggles appear a moment later. Every composer that asks for the same
+    /// languages gets the same dictionaries back.
+    fn dictionaries(
+        self: &Rc<Self>,
+        account_id: AccountId,
+    ) -> futures::future::LocalBoxFuture<'static, Rc<spell::Dictionaries>> {
+        let account = self.account_email(account_id);
+        let (languages, words) = {
+            let settings = self.settings.borrow();
+            let wanted = settings
+                .spell_languages
+                .get(&account.to_lowercase())
+                .cloned()
+                .unwrap_or_default();
+            let installed = self.installed_dictionaries();
+            (
+                spell::languages_to_load(&wanted, &spell::locale_language(), &installed),
+                settings.spell_words.clone(),
+            )
+        };
+        if let Some(loaded) = self.dictionaries.borrow().get(&languages) {
+            let loaded = Rc::clone(loaded);
+            for word in &words {
+                loaded.remember(word);
+            }
+            return Box::pin(async move { loaded });
+        }
+        let this = Rc::clone(self);
+        Box::pin(async move {
+            let key = languages.clone();
+            let loaded = gio::spawn_blocking(move || spell::Dictionaries::load(&languages, &words))
+                .await
+                .map(Rc::new)
+                .unwrap_or_else(|_| Rc::new(spell::Dictionaries::load(&[], &[])));
+            this.dictionaries
+                .borrow_mut()
+                .insert(key, Rc::clone(&loaded));
+            loaded
+        })
+    }
+
+    /// Every language a dictionary is installed for. The list only changes
+    /// when a package is installed, so it is read once.
+    pub fn installed_dictionaries(&self) -> Vec<String> {
+        let mut cache = self.installed_dictionaries.borrow_mut();
+        cache.get_or_insert_with(spell::installed_languages).clone()
+    }
+
+    /// Asks Gmail which addresses each account may send as and keeps the
+    /// answer. Composers open on what was stored last time, so this never
+    /// holds a window up.
+    fn refresh_send_as(self: &Rc<Self>) {
+        for account in self.accounts.borrow().iter() {
+            let Some(sync) = self.core.account(account.id) else {
+                continue;
+            };
+            let (this, email) = (Rc::clone(self), account.email.clone());
+            glib::spawn_future_local(async move {
+                let Ok(addresses) = this.core.call(async move { sync.send_as().await }).await
+                else {
+                    return;
+                };
+                let addresses: Vec<crate::compose::SendAsAddress> = addresses
+                    .into_iter()
+                    .map(|a| crate::compose::SendAsAddress {
+                        email: a.email,
+                        name: a.name,
+                        signature: a.signature,
+                        default: a.default,
+                    })
+                    .collect();
+                if addresses.is_empty() {
+                    return;
+                }
+                this.change_settings(Change::SendAsAddresses {
+                    account: email,
+                    addresses,
+                });
+            });
         }
     }
 
@@ -354,6 +501,7 @@ impl App {
                 }
             });
         }
+        self.refresh_send_as();
         self.update_tray();
     }
 
@@ -371,23 +519,38 @@ impl App {
     pub fn compose(self: &Rc<Self>, draft: Draft) -> Option<Rc<Composer>> {
         crate::ensure_gtk();
         self.apply_style();
-        let identities: Vec<Identity> = self
-            .accounts
-            .borrow()
-            .iter()
-            .map(|a| Identity {
-                account_id: a.id,
-                address: self.identity(a.id),
-            })
-            .collect();
+        let identities = self.identities();
         if identities.is_empty() {
             return None;
         }
         self.reload_contacts();
+        let writing = Writing {
+            identities,
+            last_used: self
+                .settings
+                .borrow()
+                .last_sender
+                .iter()
+                .map(|(account, email)| (account.clone(), email.clone()))
+                .collect(),
+            dictionaries: self.dictionaries(draft.account_id),
+            remember: {
+                let app = Rc::downgrade(self);
+                Rc::new(move |learned| {
+                    let Some(app) = app.upgrade() else { return };
+                    app.change_settings(match learned {
+                        Remembered::SentFrom { account, email } => {
+                            Change::LastSender { account, email }
+                        }
+                        Remembered::Word(word) => Change::KeepWord(word),
+                    });
+                })
+            },
+        };
         let this = Rc::downgrade(self);
         let composer = Composer::open(
             Rc::clone(&self.core),
-            identities,
+            writing,
             Rc::clone(&self.contacts),
             draft,
             move |draft, when| {

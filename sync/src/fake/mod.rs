@@ -14,7 +14,7 @@ use std::sync::Mutex;
 use mailrs_domain::{Address, EpochMillis, Filter, MessageBody, MessageMeta, Vacation};
 use mailrs_gmail::{
     GmailError, HistoryChange, HistoryPage, LabelColor, MessagePage, MessageRef, Profile,
-    RemoteLabel,
+    RemoteLabel, SendAs,
 };
 
 use crate::api::{GmailApi, SavedDraft};
@@ -48,6 +48,8 @@ pub struct FakeState {
     pub attachments: HashMap<(String, String), Vec<u8>>,
     pub display_name: Option<String>,
     pub signature: Option<String>,
+    /// Extra verified send-as addresses, beyond the account's own.
+    pub send_as: Vec<SendAs>,
     pub vacation: Vacation,
     pub filters: Vec<Filter>,
 }
@@ -113,6 +115,7 @@ impl FakeGmail {
                 attachments: HashMap::new(),
                 display_name: Some("Me".into()),
                 signature: None,
+                send_as: Vec::new(),
                 vacation: Vacation::default(),
                 filters: Vec::new(),
             }),
@@ -423,6 +426,22 @@ impl GmailApi for FakeGmail {
                 .iter()
                 .find(|(_, m)| *m == message_id)
                 .map(|(d, _)| d.clone())
+        }))
+    }
+
+    async fn send_as(&self) -> Result<Vec<SendAs>, GmailError> {
+        self.check_failure()?;
+        Ok(self.with(|s| {
+            let mut all = vec![SendAs {
+                send_as_email: s.email.clone(),
+                display_name: s.display_name.clone().unwrap_or_default(),
+                is_default: true,
+                is_primary: true,
+                signature: s.signature.clone().unwrap_or_default(),
+                verification_status: None,
+            }];
+            all.extend(s.send_as.iter().cloned());
+            all
         }))
     }
 

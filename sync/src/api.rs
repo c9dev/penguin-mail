@@ -4,7 +4,7 @@ use mailrs_domain::{AccountId, Filter, MessageBody, MessageMeta, Vacation};
 use mailrs_gmail::body::extract_body;
 use mailrs_gmail::convert::message_meta;
 use mailrs_gmail::{
-    GmailClient, GmailError, HistoryPage, LabelColor, MessagePage, Profile, RemoteLabel,
+    GmailClient, GmailError, HistoryPage, LabelColor, MessagePage, Profile, RemoteLabel, SendAs,
     html_to_text,
 };
 
@@ -85,6 +85,9 @@ pub trait GmailApi: Send + Sync + 'static {
 
     /// The display name of the account's default send-as identity.
     fn display_name(&self) -> impl Future<Output = Result<Option<String>, GmailError>> + Send;
+
+    /// Every address the account may send from, as Gmail lists them.
+    fn send_as(&self) -> impl Future<Output = Result<Vec<SendAs>, GmailError>> + Send;
 
     fn attachment(
         &self,
@@ -218,6 +221,10 @@ impl GmailApi for AnyGmail {
     async fn draft_for_message(&self, message_id: &str) -> Result<Option<String>, GmailError> {
         forward!(self, draft_for_message(message_id))
     }
+    async fn send_as(&self) -> Result<Vec<SendAs>, GmailError> {
+        forward!(self, send_as())
+    }
+
     async fn display_name(&self) -> Result<Option<String>, GmailError> {
         forward!(self, display_name())
     }
@@ -388,6 +395,10 @@ impl GmailApi for AccountClient {
             .into_iter()
             .find(|d| d.message.id == message_id)
             .map(|d| d.id))
+    }
+
+    async fn send_as(&self) -> Result<Vec<SendAs>, GmailError> {
+        self.client.send_as().await
     }
 
     async fn display_name(&self) -> Result<Option<String>, GmailError> {

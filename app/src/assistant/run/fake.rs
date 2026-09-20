@@ -234,6 +234,10 @@ impl GmailApi for Gmail {
         Ok(None)
     }
 
+    async fn send_as(&self) -> Result<Vec<mailrs_gmail::SendAs>, GmailError> {
+        Ok(Vec::new())
+    }
+
     async fn display_name(&self) -> Result<Option<String>, GmailError> {
         Ok(Some("Dana".into()))
     }

@@ -8,8 +8,78 @@ use mailrs_domain::{AccountId, Address, EpochMillis, MessageBody, MessageMeta};
 use mailrs_gmail::address::parse_address_list_keeping_invalid;
 use mailrs_gmail::convert::unescape_snippet;
 use pulldown_cmark::{Event, Options, Parser, html};
+use serde::{Deserialize, Serialize};
 
 use crate::format::full_date;
+
+/// One address an account may send mail as, as Gmail last reported it: the
+/// account's own address, or an alias Gmail has verified. Gmail keeps a
+/// display name and a signature per address.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct SendAsAddress {
+    pub email: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Gmail's signature for this address as plain text, empty when it has none.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub signature: String,
+    /// The address Gmail sends from when the writer picks none.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub default: bool,
+}
+
+/// An address the From row offers: an account's own address, or one of its
+/// send-as addresses. The display name and the signature come with it, so
+/// picking a row in the composer picks all three.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Identity {
+    pub account_id: AccountId,
+    /// The account this address belongs to, which groups the From row.
+    pub account_email: String,
+    pub address: Address,
+    /// What goes below the message, as Markdown. Empty when there is none.
+    pub signature: String,
+    /// Gmail's own choice for the account, used when nothing else points
+    /// at an address.
+    pub default: bool,
+}
+
+/// The address a reply to `original` comes from: whichever of `mine` the
+/// message was written to. Someone who wrote to `sales@` expects the answer
+/// to come back from `sales@`. `None` when the message reached none of the
+/// account's addresses, as happens through a mailing list.
+pub fn reply_from<'a>(mine: &'a [Address], original: &MessageMeta) -> Option<&'a Address> {
+    original
+        .to
+        .iter()
+        .chain(&original.cc)
+        .find_map(|wrote_to| mine.iter().find(|a| same_address(a, wrote_to)))
+}
+
+/// Which row the From dropdown starts on. The draft's own address wins,
+/// since a reply already carries the address it was written to; then the
+/// address this account last sent from; then Gmail's default.
+pub fn opening_identity(
+    identities: &[Identity],
+    account_id: AccountId,
+    from: &Address,
+    last_used: Option<&str>,
+) -> Option<usize> {
+    let find = |email: &str| {
+        identities
+            .iter()
+            .position(|i| i.account_id == account_id && i.address.email.eq_ignore_ascii_case(email))
+    };
+    find(&from.email)
+        .or_else(|| last_used.and_then(find))
+        .or_else(|| {
+            identities
+                .iter()
+                .position(|i| i.account_id == account_id && i.default)
+        })
+        .or_else(|| identities.iter().position(|i| i.account_id == account_id))
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OutgoingAttachment {
@@ -152,17 +222,26 @@ pub enum ReplyKind {
     Forward,
 }
 
-/// A draft that answers or forwards `original`. `thread` is the whole
-/// conversation, oldest first; `original_text` is the original's body as
-/// plain text.
+/// A draft that answers or forwards `original`. `mine` lists every address
+/// the account sends as, preferred first: the reply comes from whichever one
+/// the original was written to, and none of them lands in To or Cc.
+/// `thread` is the whole conversation, oldest first; `original_text` is the
+/// original's body as plain text.
 pub fn respond(
     kind: ReplyKind,
     account_id: AccountId,
-    me: &Address,
+    mine: &[Address],
     original: &MessageMeta,
     original_text: &str,
     thread: &[MessageMeta],
 ) -> Draft {
+    let blank = Address {
+        name: None,
+        email: String::new(),
+    };
+    let me = reply_from(mine, original)
+        .or_else(|| mine.first())
+        .unwrap_or(&blank);
     let mut draft = Draft::new(account_id, me.clone());
     let sender = original.from.clone().unwrap_or_else(|| Address {
         name: None,
@@ -170,7 +249,7 @@ pub fn respond(
     });
     match kind {
         ReplyKind::Reply | ReplyKind::ReplyAll => {
-            let from_me = same_address(&sender, me);
+            let from_me = mine.iter().any(|a| same_address(&sender, a));
             let mut to: Vec<Address> = if from_me {
                 original.to.clone()
             } else {
@@ -181,8 +260,9 @@ pub fn respond(
                 to.extend(original.to.iter().cloned());
                 cc.extend(original.cc.iter().cloned());
             }
-            draft.to = dedupe(to, &[me]);
-            let taken: Vec<&Address> = draft.to.iter().chain([me]).collect();
+            let ours: Vec<&Address> = mine.iter().collect();
+            draft.to = dedupe(to, &ours);
+            let taken: Vec<&Address> = draft.to.iter().chain(ours.iter().copied()).collect();
             draft.cc = dedupe(cc, &taken);
             draft.subject = prefixed("Re: ", &original.subject, &["re:"]);
             draft.markdown = format!(
@@ -272,6 +352,33 @@ pub fn with_signature(markdown: &str, signature: &str) -> String {
         return markdown.to_string();
     }
     format!("\n\n-- \n{signature}{markdown}")
+}
+
+/// The block [`with_signature`] adds, so it can be found again.
+fn signature_block(signature: &str) -> String {
+    format!("\n\n-- \n{}", signature.trim_end())
+}
+
+/// Swaps the signature when the writer picks another send-as address.
+/// Gmail keeps one signature per address, so the message has to follow.
+///
+/// Only a block [`with_signature`] left untouched is replaced. Once someone
+/// has edited it, the text stays as they typed it, because losing a rewritten
+/// sign-off to a dropdown would be worse than showing the wrong one.
+pub fn restyle_signature(markdown: &str, old: &str, new: &str) -> String {
+    if old.trim().is_empty() {
+        return with_signature(markdown, new);
+    }
+    // The block has to end where it was left: at the end of the text, or at
+    // the blank line before the body. Anything else means someone typed into
+    // it, and their words come first.
+    let Some(rest) = markdown
+        .strip_prefix(&signature_block(old))
+        .filter(|rest| rest.is_empty() || rest.starts_with('\n'))
+    else {
+        return markdown.to_string();
+    };
+    with_signature(rest, new)
 }
 
 /// A message body as plain text, for quoting and for reopening drafts.
@@ -524,7 +631,7 @@ mod tests {
         let draft = respond(
             ReplyKind::Reply,
             1,
-            &me(),
+            &[me()],
             &second,
             "Noon works.\n\nSee you",
             &thread,
@@ -553,7 +660,7 @@ mod tests {
         let draft = respond(
             ReplyKind::Reply,
             1,
-            &me(),
+            &[me()],
             &sent,
             "hi",
             std::slice::from_ref(&sent),
@@ -578,7 +685,7 @@ mod tests {
         let draft = respond(
             ReplyKind::ReplyAll,
             1,
-            &me(),
+            &[me()],
             &original,
             "x",
             std::slice::from_ref(&original),
@@ -593,17 +700,150 @@ mod tests {
         assert_eq!(draft.cc, vec![addr(Some("Cy"), "cy@example.com")]);
     }
 
+    fn sales() -> Address {
+        addr(Some("Sales"), "sales@example.com")
+    }
+
+    fn identity(account: AccountId, email: &str, signature: &str, default: bool) -> Identity {
+        Identity {
+            account_id: account,
+            account_email: format!("own{account}@example.com"),
+            address: addr(None, email),
+            signature: signature.to_string(),
+            default,
+        }
+    }
+
+    #[test]
+    fn a_reply_comes_from_the_address_it_was_written_to() {
+        let original = message(
+            "m1",
+            addr(Some("Ann"), "ann@example.com"),
+            vec![sales()],
+            vec![],
+        );
+        let draft = respond(
+            ReplyKind::Reply,
+            1,
+            &[me(), sales()],
+            &original,
+            "x",
+            std::slice::from_ref(&original),
+        );
+        assert_eq!(draft.from, sales());
+        // Neither of the account's own addresses belongs in the answer.
+        assert_eq!(draft.to, vec![addr(Some("Ann"), "ann@example.com")]);
+    }
+
+    #[test]
+    fn a_reply_to_a_list_falls_back_to_the_first_address() {
+        let original = message(
+            "m1",
+            addr(Some("Ann"), "ann@example.com"),
+            vec![addr(None, "list@example.com")],
+            vec![],
+        );
+        let draft = respond(
+            ReplyKind::Reply,
+            1,
+            &[me(), sales()],
+            &original,
+            "x",
+            std::slice::from_ref(&original),
+        );
+        assert_eq!(draft.from, me());
+    }
+
+    #[test]
+    fn an_alias_in_cc_still_picks_the_sender() {
+        let original = message(
+            "m1",
+            addr(Some("Ann"), "ann@example.com"),
+            vec![addr(None, "team@example.com")],
+            vec![addr(None, "SALES@example.com")],
+        );
+        assert_eq!(
+            reply_from(&[me(), sales()], &original),
+            Some(&sales()),
+            "an alias copied in is still the address to answer from"
+        );
+    }
+
+    #[test]
+    fn the_composer_opens_on_the_address_the_draft_names() {
+        let identities = [
+            identity(1, "dana@example.com", "", true),
+            identity(1, "sales@example.com", "", false),
+        ];
+        let from = addr(None, "SALES@example.com");
+        assert_eq!(opening_identity(&identities, 1, &from, None), Some(1));
+    }
+
+    #[test]
+    fn a_new_message_opens_on_the_address_the_account_last_used() {
+        let identities = [
+            identity(1, "dana@example.com", "", true),
+            identity(1, "sales@example.com", "", false),
+        ];
+        let blank = addr(None, "");
+        assert_eq!(
+            opening_identity(&identities, 1, &blank, Some("sales@example.com")),
+            Some(1)
+        );
+        // With nothing remembered, Gmail's own default wins.
+        assert_eq!(opening_identity(&identities, 1, &blank, None), Some(0));
+    }
+
+    #[test]
+    fn the_from_row_only_offers_the_drafts_own_account() {
+        let identities = [
+            identity(1, "dana@example.com", "", false),
+            identity(2, "other@example.com", "", true),
+            identity(2, "alias@example.com", "", false),
+        ];
+        let blank = addr(None, "");
+        assert_eq!(opening_identity(&identities, 2, &blank, None), Some(1));
+        assert_eq!(opening_identity(&identities, 9, &blank, None), None);
+    }
+
+    #[test]
+    fn the_signature_follows_the_address() {
+        let signed = with_signature("\n\nOn Monday, Ann wrote:\n> hi", "Dana");
+        let swapped = restyle_signature(&signed, "Dana", "Dana, Sales");
+        assert_eq!(
+            swapped,
+            "\n\n-- \nDana, Sales\n\nOn Monday, Ann wrote:\n> hi"
+        );
+        // And back again, so switching twice leaves no trail.
+        assert_eq!(restyle_signature(&swapped, "Dana, Sales", "Dana"), signed);
+    }
+
+    #[test]
+    fn an_address_with_no_signature_gains_and_loses_one() {
+        // The signature goes above the quote, where the writer types.
+        assert_eq!(restyle_signature("", "", "Dana"), "\n\n-- \nDana");
+        assert_eq!(restyle_signature("\n\n-- \nDana", "Dana", ""), "");
+    }
+
+    #[test]
+    fn a_signature_someone_edited_is_left_alone() {
+        // Losing a rewritten sign-off to a dropdown would be worse than
+        // showing the wrong one, so an edited block stays put.
+        let edited = "\n\n-- \nDana (on leave)\n\nOn Monday, Ann wrote:\n> hi";
+        assert_eq!(restyle_signature(edited, "Dana", "Sales"), edited);
+    }
+
     #[test]
     fn prefixes_are_not_doubled() {
         let mut original = message("m1", addr(None, "a@example.com"), vec![], vec![]);
         original.subject = "RE: Budget".into();
         assert_eq!(
-            respond(ReplyKind::Reply, 1, &me(), &original, "", &[]).subject,
+            respond(ReplyKind::Reply, 1, &[me()], &original, "", &[]).subject,
             "RE: Budget"
         );
         original.subject = "Fw: Budget".into();
         assert_eq!(
-            respond(ReplyKind::Forward, 1, &me(), &original, "", &[]).subject,
+            respond(ReplyKind::Forward, 1, &[me()], &original, "", &[]).subject,
             "Fw: Budget"
         );
     }
@@ -619,7 +859,7 @@ mod tests {
         let draft = respond(
             ReplyKind::Forward,
             1,
-            &me(),
+            &[me()],
             &original,
             "Menu attached.",
             &[],

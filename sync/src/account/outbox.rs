@@ -2,10 +2,23 @@
 //! demand rather than as part of the sync loop.
 
 use mailrs_domain::{Filter, MessageMeta, Vacation};
-use mailrs_gmail::GmailError;
+use mailrs_gmail::{GmailError, SendAs, html_to_text};
 
 use super::AccountSync;
 use crate::{GmailApi, SavedDraft, SyncError};
+
+/// One address an account may send mail as: its own, or an alias whose owner
+/// has confirmed it. Gmail keeps a display name and a signature per address,
+/// so all three travel together.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SendAsAddress {
+    pub email: String,
+    pub name: Option<String>,
+    /// The signature Gmail holds for this address, as plain text.
+    pub signature: String,
+    /// The address Gmail sends from when the writer picks none.
+    pub default: bool,
+}
 
 impl<G: GmailApi> AccountSync<G> {
     /// Sends raw RFC 822 bytes, then deletes `draft_id` if the message came
@@ -96,6 +109,26 @@ impl<G: GmailApi> AccountSync<G> {
     /// The name Gmail puts on this account's outgoing mail, if one is set.
     pub async fn display_name(&self) -> Result<Option<String>, SyncError> {
         Ok(self.api.display_name().await?)
+    }
+
+    /// Every address this account may send mail from, its own included,
+    /// with the display name and signature Gmail keeps for each. Aliases
+    /// still waiting on their owner to confirm them are left out, because
+    /// Gmail would refuse to send from one.
+    pub async fn send_as(&self) -> Result<Vec<SendAsAddress>, SyncError> {
+        Ok(self
+            .api
+            .send_as()
+            .await?
+            .into_iter()
+            .filter(SendAs::is_verified)
+            .map(|identity| SendAsAddress {
+                name: Some(identity.display_name).filter(|n| !n.trim().is_empty()),
+                email: identity.send_as_email,
+                signature: html_to_text(&identity.signature),
+                default: identity.is_default,
+            })
+            .collect())
     }
 
     /// The signature set in Gmail for the default identity, as plain text.

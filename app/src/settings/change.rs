@@ -74,6 +74,24 @@ pub enum Change {
         email: String,
         index: usize,
     },
+    /// Every address an account may send as, as Gmail just reported them.
+    SendAsAddresses {
+        account: String,
+        addresses: Vec<crate::compose::SendAsAddress>,
+    },
+    /// The send-as address an account just sent from.
+    LastSender {
+        account: String,
+        email: String,
+    },
+    /// The dictionaries to check an account's mail against. Empty follows
+    /// the desktop's locale.
+    SpellLanguages {
+        account: String,
+        languages: Vec<String>,
+    },
+    /// Keeps a word Add to Dictionary accepted.
+    KeepWord(String),
     Ai(AiChange),
 }
 
@@ -174,6 +192,27 @@ impl Change {
             }
             Change::AccountColor { email, index } => {
                 settings.account_colors.insert(email, index);
+            }
+            Change::SendAsAddresses { account, addresses } => {
+                settings.send_as.insert(account.to_lowercase(), addresses);
+            }
+            Change::LastSender { account, email } => {
+                settings.last_sender.insert(account.to_lowercase(), email);
+            }
+            Change::SpellLanguages { account, languages } => {
+                let key = account.to_lowercase();
+                if languages.is_empty() {
+                    settings.spell_languages.remove(&key);
+                } else {
+                    settings.spell_languages.insert(key, languages);
+                }
+            }
+            Change::KeepWord(word) => {
+                let word = word.trim().to_lowercase();
+                if !word.is_empty() && !settings.spell_words.contains(&word) {
+                    settings.spell_words.push(word);
+                    settings.spell_words.sort();
+                }
             }
             Change::Ai(change) => change.apply_to(&mut settings.ai),
         }
@@ -374,6 +413,10 @@ impl Effects {
             hidden_addresses,
             inbox_categories,
             suggest_follow_ups,
+            spell_languages,
+            spell_words,
+            last_sender,
+            send_as,
         } = after;
         // These leave the window as it is. The flag colour, the delay before
         // Send commits, and the rest are read when they are needed, so
@@ -389,6 +432,12 @@ impl Effects {
             flag_color,
             notify_vips_only,
             hidden_addresses,
+            // The composer reads these when it opens, so a refreshed alias
+            // list or a newly kept word changes nothing already on screen.
+            spell_languages,
+            spell_words,
+            last_sender,
+            send_as,
         );
         let smart_changed = *smart_mailboxes != before.smart_mailboxes;
         let colors_changed = *account_colors != before.account_colors;
@@ -704,8 +753,12 @@ mod tests {
                 "flag_color",
                 "hidden_addresses",
                 "inbox_categories",
+                "last_sender",
+                "send_as",
                 "signatures",
                 "smart_mailboxes",
+                "spell_languages",
+                "spell_words",
                 "suggest_follow_ups",
                 "vips",
             ]

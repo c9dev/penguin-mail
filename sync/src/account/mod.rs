@@ -4,6 +4,7 @@
 mod history;
 mod labels;
 mod outbox;
+pub use outbox::SendAsAddress;
 mod threads;
 mod window;
 mod writes;

@@ -19,7 +19,9 @@ pub mod fake;
 #[cfg(test)]
 mod tests;
 
-pub use account::{AccountSync, DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS, FETCH_CONCURRENCY};
+pub use account::{
+    AccountSync, DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS, FETCH_CONCURRENCY, SendAsAddress,
+};
 pub use actions::{Accounts, Failure, History, MailAction, MailActions, Outcome};
 #[cfg(any(test, feature = "fake"))]
 pub use api::AnyGmail;

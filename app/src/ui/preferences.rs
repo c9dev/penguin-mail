@@ -295,7 +295,85 @@ fn writing_page(
         signatures.add(&row);
     }
     page.add(&signatures);
+    page.add(&spelling_group(app, settings, accounts));
     page
+}
+
+/// Which dictionaries are installed, and which one each account writes in.
+///
+/// With none installed the group says so rather than leaving the composer
+/// quietly unchecked, because a missing dictionary is a package away and the
+/// writer is the only one who can install it.
+fn spelling_group(
+    app: &Rc<App>,
+    settings: &Settings,
+    accounts: &[Account],
+) -> adw::PreferencesGroup {
+    let installed = app.installed_dictionaries();
+    let group = adw::PreferencesGroup::builder()
+        .title("Spelling")
+        .description(if installed.is_empty() {
+            "No dictionaries are installed, so Penguin Mail is not checking \
+             spelling. Install a Hunspell dictionary, such as hunspell-en-us \
+             or hunspell-pt-pt, and reopen the composer."
+                .to_string()
+        } else {
+            format!("Dictionaries found: {}.", installed.join(", "))
+        })
+        .build();
+    if installed.is_empty() {
+        return group;
+    }
+    // Following the desktop's language is the first choice, then one
+    // dictionary per row, then both English and Portuguese together for
+    // anyone who writes in two languages.
+    let mut choices: Vec<(String, Vec<String>)> = vec![(
+        format!(
+            "Follow the System Language ({})",
+            crate::ui::composer::spell::locale_language()
+        ),
+        Vec::new(),
+    )];
+    choices.extend(
+        installed
+            .iter()
+            .map(|language| (language.clone(), vec![language.clone()])),
+    );
+    if installed.len() > 1 {
+        choices.push((installed.join(" and "), installed.clone()));
+    }
+    for account in accounts {
+        let current = settings
+            .spell_languages
+            .get(&account.email.to_lowercase())
+            .cloned()
+            .unwrap_or_default();
+        let labels: Vec<&str> = choices.iter().map(|(label, _)| label.as_str()).collect();
+        let selected = choices
+            .iter()
+            .position(|(_, languages)| *languages == current)
+            .unwrap_or(0);
+        let row = adw::ComboRow::builder()
+            .title("Check Spelling In")
+            .subtitle(&account.email)
+            .model(&gtk::StringList::new(&labels))
+            .selected(selected as u32)
+            .build();
+        let (weak, email, choices) = (Rc::downgrade(app), account.email.clone(), choices.clone());
+        row.connect_selected_notify(move |row| {
+            let (Some(app), Some((_, languages))) =
+                (weak.upgrade(), choices.get(row.selected() as usize))
+            else {
+                return;
+            };
+            app.change_settings(Change::SpellLanguages {
+                account: email.clone(),
+                languages: languages.clone(),
+            });
+        });
+        group.add(&row);
+    }
+    group
 }
 
 fn sync_page(app: &Rc<App>, pending: &Rc<RefCell<SyncConfig>>) -> adw::PreferencesPage {

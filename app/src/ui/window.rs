@@ -1465,9 +1465,11 @@ impl MainWindow {
         let Some(Some((account_id, target, text, thread, attachments))) = prepared else {
             return;
         };
-        let me = app.identity(account_id);
+        // Every address the account sends as, so the reply comes from the
+        // one the message was written to.
+        let mine = app.my_addresses(account_id);
         let mut draft = app.signed(compose::respond(
-            kind, account_id, &me, &target, &text, &thread,
+            kind, account_id, &mine, &target, &text, &thread,
         ));
         if attachments.is_empty() {
             app.compose(draft);
