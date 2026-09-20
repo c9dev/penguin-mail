@@ -1,7 +1,7 @@
 //! The StatusNotifierItem shown by Ubuntu's AppIndicator extension.
 
 use crate::APP_ID;
-use mailrs_domain::translate::{fill, gettext};
+use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 pub enum TrayCommand {
     Toggle,
@@ -9,6 +9,34 @@ pub enum TrayCommand {
     Compose,
     Check,
     Quit,
+}
+
+/// What the tray says it is holding. A screen reader reads the title, so
+/// the count is a sentence rather than a number beside a word.
+fn summary(unread: i64) -> String {
+    match unread {
+        ..=0 => gettext("No unread mail"),
+        n => fill_plural(
+            "{count} unread message",
+            "{count} unread messages",
+            n as usize,
+            &[("count", &n.to_string())],
+        ),
+    }
+}
+
+/// One account's line in the tray menu. The count sat two spaces after
+/// the address, which reads out as a bare number.
+fn account_line(email: &str, unread: i64) -> String {
+    match unread {
+        ..=0 => email.to_string(),
+        n => fill_plural(
+            "{account}, {count} unread message",
+            "{account}, {count} unread messages",
+            n as usize,
+            &[("account", email), ("count", &n.to_string())],
+        ),
+    }
 }
 
 pub struct MailTray {
@@ -24,11 +52,7 @@ impl MailTray {
     }
 
     fn summary(&self) -> String {
-        match self.unread {
-            0 => gettext("No unread mail"),
-            1 => "1 unread message".into(),
-            n => format!("{n} unread messages"),
-        }
+        summary(self.unread)
     }
 }
 
@@ -82,11 +106,7 @@ impl ksni::Tray for MailTray {
             .iter()
             .map(|(email, n)| {
                 StandardItem {
-                    label: if *n > 0 {
-                        format!("{email}   {n}")
-                    } else {
-                        email.clone()
-                    },
+                    label: account_line(email, *n),
                     enabled: false,
                     ..Default::default()
                 }
@@ -110,5 +130,30 @@ impl ksni::Tray for MailTray {
         items.push(MenuItem::Separator);
         items.push(item(&gettext("Quit"), || TrayCommand::Quit));
         items
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{account_line, summary};
+
+    #[test]
+    fn the_tray_counts_unread_mail_in_a_sentence() {
+        assert_eq!(summary(0), "No unread mail");
+        assert_eq!(summary(1), "1 unread message");
+        assert_eq!(summary(7), "7 unread messages");
+    }
+
+    #[test]
+    fn an_account_line_says_what_its_number_counts() {
+        assert_eq!(account_line("ann@example.com", 0), "ann@example.com");
+        assert_eq!(
+            account_line("ann@example.com", 1),
+            "ann@example.com, 1 unread message"
+        );
+        assert_eq!(
+            account_line("ann@example.com", 3),
+            "ann@example.com, 3 unread messages"
+        );
     }
 }
