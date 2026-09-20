@@ -10,6 +10,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gdk, gio};
+use mailrs_domain::translate::fill_plural;
 use mailrs_domain::{AccountId, FlagColor, Folder, MessageBody, MessageMeta, system_label};
 use webkit::prelude::*;
 
@@ -651,7 +652,7 @@ impl ConversationView {
     pub fn show_many(
         &self,
         count: usize,
-        noun: &str,
+        threaded: bool,
         any_unread: bool,
         all_starred: bool,
         all_muted: bool,
@@ -666,7 +667,22 @@ impl ConversationView {
         self.many_mute
             .set_label(if all_muted { "Unmute" } else { "Mute" });
         *self.open.borrow_mut() = None;
-        self.many.set_title(&format!("{count} {noun} Selected"));
+        let values = [("count", count.to_string())];
+        let values: Vec<(&str, &str)> = values.iter().map(|(k, v)| (*k, v.as_str())).collect();
+        self.many.set_title(&match threaded {
+            true => fill_plural(
+                "{count} Conversation Selected",
+                "{count} Conversations Selected",
+                count,
+                &values,
+            ),
+            false => fill_plural(
+                "{count} Message Selected",
+                "{count} Messages Selected",
+                count,
+                &values,
+            ),
+        });
         self.stack.set_visible_child_name("many");
         self.banner.set_revealed(false);
         self.list_banner.set_revealed(false);

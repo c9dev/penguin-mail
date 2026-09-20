@@ -1,30 +1,39 @@
 //! First-run pages: OAuth client setup, then the first account.
 
 use adw::prelude::*;
+use mailrs_domain::translate::gettext;
 
-const HOW_TO: &str = "1. At console.cloud.google.com, create a project and enable the Gmail API.\n\n\
-2. Under Google Auth Platform, choose External, add the scope gmail.modify, and click Publish app. \
-Leaving it in Testing signs you out every 7 days.\n\n\
-3. Create an OAuth client of type Desktop app and paste its ID and secret here.\n\n\
-The full walkthrough is in docs/setup.md.";
+/// The steps for making a Google OAuth client, for the Help dialog. The
+/// console's own names stay as Google writes them, since that is what the
+/// reader has to find on screen.
+fn how_to() -> String {
+    gettext(
+        "1. At console.cloud.google.com, create a project and enable the Gmail API.\n\n\
+         2. Under Google Auth Platform, choose External, add the scope gmail.modify, \
+         and click Publish app. Leaving it in Testing signs you out every 7 days.\n\n\
+         3. Create an OAuth client of type Desktop app and paste its ID and secret \
+         here.\n\n\
+         The full walkthrough is in docs/setup.md.",
+    )
+}
 
 /// Asks for the OAuth client ID and secret.
 pub fn setup_page(on_save: impl Fn(String, String) + 'static) -> gtk::Widget {
-    let id = adw::EntryRow::builder().title("Client ID").build();
+    let id = adw::EntryRow::builder().title(gettext("Client ID")).build();
     let secret = adw::PasswordEntryRow::builder()
-        .title("Client Secret")
+        .title(gettext("Client Secret"))
         .build();
     let group = adw::PreferencesGroup::new();
     group.add(&id);
     group.add(&secret);
     let save = gtk::Button::builder()
-        .label("Continue")
+        .label(gettext("Continue"))
         .css_classes(["pill", "suggested-action"])
         .halign(gtk::Align::Center)
         .sensitive(false)
         .build();
     let help = gtk::Button::builder()
-        .label("How do I get these?")
+        .label(gettext("How do I get these?"))
         .css_classes(["flat"])
         .halign(gtk::Align::Center)
         .build();
@@ -50,8 +59,9 @@ pub fn setup_page(on_save: impl Fn(String, String) + 'static) -> gtk::Widget {
         });
     }
     help.connect_clicked(|button| {
-        let dialog = adw::AlertDialog::new(Some("Create Your OAuth Client"), Some(HOW_TO));
-        dialog.add_response("ok", "Got It");
+        let dialog =
+            adw::AlertDialog::new(Some(&gettext("Create Your OAuth Client")), Some(&how_to()));
+        dialog.add_response("ok", &gettext("Got It"));
         dialog.present(Some(button));
     });
     let column = gtk::Box::builder()
@@ -64,9 +74,17 @@ pub fn setup_page(on_save: impl Fn(String, String) + 'static) -> gtk::Widget {
     column.append(&help);
     let page = adw::StatusPage::builder()
         .icon_name("dev.penguinmail.PenguinMail")
-        .title("Welcome to Penguin Mail")
-        .description("Penguin Mail reads Gmail through your own Google Cloud OAuth client, so nobody else can reach your mail. Paste the client's ID and secret to begin.")
-        .child(&adw::Clamp::builder().maximum_size(440).child(&column).build())
+        .title(gettext("Welcome to Penguin Mail"))
+        .description(gettext(
+            "Penguin Mail reads Gmail through your own Google Cloud OAuth client, so \
+             nobody else can reach your mail. Paste the client's ID and secret to begin.",
+        ))
+        .child(
+            &adw::Clamp::builder()
+                .maximum_size(440)
+                .child(&column)
+                .build(),
+        )
         .vexpand(true)
         .build();
     wrap(&page)
@@ -76,15 +94,19 @@ pub fn setup_page(on_save: impl Fn(String, String) + 'static) -> gtk::Widget {
 /// the window disables while the browser flow runs.
 pub fn first_account_page(on_add: impl Fn() + 'static) -> (gtk::Widget, gtk::Button) {
     let add = gtk::Button::builder()
-        .label("Sign In with Google")
+        .label(gettext("Sign In with Google"))
         .css_classes(["pill", "suggested-action"])
         .halign(gtk::Align::Center)
         .build();
     add.connect_clicked(move |_| on_add());
     let page = adw::StatusPage::builder()
         .icon_name("dev.penguinmail.PenguinMail")
-        .title("Add Your First Account")
-        .description("Your browser opens Google's sign-in page. Google warns that it hasn't verified Penguin Mail, because the app is yours alone: choose Advanced, then continue.")
+        .title(gettext("Add Your First Account"))
+        .description(gettext(
+            "Your browser opens Google's sign-in page. Google warns that it hasn't \
+             verified Penguin Mail, because the app is yours alone: choose Advanced, \
+             then continue.",
+        ))
         .child(&add)
         .vexpand(true)
         .build();

@@ -14,6 +14,7 @@ use mailrs_sync::{History, MailAction, Permitted, SyncError, TriageAction};
 use super::{MainWindow, Target};
 use crate::ui::Mailbox;
 use crate::ui::conversation::ConversationView;
+use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 fn icon(category: Category) -> &'static str {
     match category {
@@ -145,9 +146,13 @@ impl CategoryBar {
             // carries both it and the count.
             if let Some(toggle) = self.group.toggle_by_name(category.key()) {
                 toggle.set_tooltip(&match count {
-                    0 => category.name().to_string(),
-                    1 => format!("{}, 1 unread", category.name()),
-                    _ => format!("{}, {count} unread", category.name()),
+                    0 => category.name(),
+                    count => fill_plural(
+                        "{name}, {count} unread",
+                        "{name}, {count} unread",
+                        count.max(0) as usize,
+                        &[("name", &category.name()), ("count", &count.to_string())],
+                    ),
                 });
             }
         }
@@ -233,7 +238,7 @@ impl MainWindow {
             Some((open.account_id, sender.email, who, open.thread_id.clone()))
         });
         let Some(Some((account_id, email, who, open_thread))) = found else {
-            return self.toast("Open a message from the sender first");
+            return self.toast(&gettext("Open a message from the sender first"));
         };
         self.categorize_sender(account_id, email, who, Some(open_thread), category);
     }
@@ -287,16 +292,25 @@ impl MainWindow {
             // No undo: putting back the old labels would need each thread's own.
             this.perform(targets, MailAction::Triage(relabel), History::Skip, None);
             let name = category.name();
+            let values = [("sender", who.as_str()), ("category", name.as_str())];
             match this.sort_future_mail(account_id, &email, label).await {
-                Ok(Permitted::Done(())) => {
-                    this.toast(&format!("Mail from {who} now goes to {name}"))
-                }
+                Ok(Permitted::Done(())) => this.toast(&fill(
+                    &gettext("Mail from {sender} now goes to {category}"),
+                    &values,
+                )),
                 Ok(Permitted::NeedsPermission) => {
-                    this.toast(&format!("Moved mail from {who} to {name}"));
+                    this.toast(&fill(
+                        &gettext("Moved mail from {sender} to {category}"),
+                        &values,
+                    ));
                     this.ask_for_settings_access(account_id);
                 }
-                Err(err) => this.toast(&format!(
-                    "Moved mail from {who} to {name}, but could not sort new mail: {err}"
+                Err(err) => this.toast(&fill(
+                    &gettext(
+                        "Moved mail from {sender} to {category}, but could not sort new \
+                         mail: {reason}",
+                    ),
+                    &[values[0], values[1], ("reason", &err.to_string())],
                 )),
             }
         });

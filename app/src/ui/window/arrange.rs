@@ -11,6 +11,7 @@ use super::MainWindow;
 use crate::settings::{Change, Settings};
 use crate::ui::Mailbox;
 use crate::ui::sidebar::Extras;
+use mailrs_domain::translate::{fill, gettext};
 
 impl MainWindow {
     /// Sorts accounts into the chosen order and gathers what the sidebar
@@ -94,10 +95,15 @@ impl MainWindow {
             return;
         };
         let dialog = adw::AlertDialog::new(
-            Some(&format!("Delete “{name}”?")),
-            Some("Only the smart mailbox goes. The mail it shows stays where it is."),
+            Some(&fill(&gettext("Delete “{name}”?"), &[("name", &name)])),
+            Some(&gettext(
+                "Only the smart mailbox goes. The mail it shows stays where it is.",
+            )),
         );
-        dialog.add_responses(&[("cancel", "Cancel"), ("delete", "Delete")]);
+        dialog.add_responses(&[
+            ("cancel", &gettext("Cancel")),
+            ("delete", &gettext("Delete")),
+        ]);
         dialog.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
         dialog.set_close_response("cancel");
         let this = Rc::clone(self);
@@ -133,11 +139,14 @@ impl MainWindow {
             });
         });
         let dialog = adw::AlertDialog::builder()
-            .heading("Name This Account")
-            .body("The sidebar shows the name instead of the address. Leave it empty for the address.")
+            .heading(gettext("Name This Account"))
+            .body(gettext(
+                "The sidebar shows the name instead of the address. Leave it empty for \
+                 the address.",
+            ))
             .extra_child(&entry)
             .build();
-        dialog.add_responses(&[("cancel", "Cancel"), ("save", "Save")]);
+        dialog.add_responses(&[("cancel", &gettext("Cancel")), ("save", &gettext("Save"))]);
         dialog.set_response_appearance("save", adw::ResponseAppearance::Suggested);
         dialog.set_default_response(Some("save"));
         dialog.set_close_response("cancel");

@@ -3,6 +3,7 @@
 use adw::prelude::*;
 use gtk::glib;
 use mailrs_domain::EpochMillis;
+use mailrs_domain::translate::gettext;
 
 /// Shows a calendar and a time, an hour from now to start. Returns the
 /// chosen moment, or `None` when cancelled or when the local clock skips
@@ -48,7 +49,7 @@ pub async fn pick_time(
         .body(body)
         .extra_child(&content)
         .build();
-    dialog.add_responses(&[("cancel", "Cancel"), ("pick", confirm)]);
+    dialog.add_responses(&[("cancel", &gettext("Cancel")), ("pick", confirm)]);
     dialog.set_response_appearance("pick", adw::ResponseAppearance::Suggested);
     dialog.set_default_response(Some("pick"));
     dialog.set_close_response("cancel");

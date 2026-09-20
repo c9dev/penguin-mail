@@ -13,6 +13,7 @@ use mailrs_sync::export;
 use super::MainWindow;
 use crate::core::Sync;
 use crate::ui::conversation::ConversationView;
+use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 /// What one entry of the file is built from: the account the mail lives
 /// in, its thread, and the single message to take when a row names one.
@@ -34,7 +35,15 @@ impl MainWindow {
             .unwrap_or(0);
         let name = match rows.len() {
             1 => export::file_name(&rows[0].subject, rows[0].last_message_at, "mbox"),
-            count => export::file_name(&format!("{count} conversations"), newest, "mbox"),
+            count => {
+                let many = fill_plural(
+                    "{count} conversation",
+                    "{count} conversations",
+                    count,
+                    &[("count", &count.to_string())],
+                );
+                export::file_name(&many, newest, "mbox")
+            }
         };
         let wanted = rows
             .iter()
@@ -58,7 +67,7 @@ impl MainWindow {
             )
         });
         let Some((wanted, name)) = open else {
-            return self.toast("Open a conversation first");
+            return self.toast(&gettext("Open a conversation first"));
         };
         self.save_mbox(vec![wanted], name);
     }
@@ -71,12 +80,12 @@ impl MainWindow {
         let mut jobs: Vec<(Arc<Sync>, String, Option<String>)> = Vec::new();
         for (account_id, thread_id, message_id) in wanted {
             let Some(sync) = self.core.account(account_id) else {
-                return self.toast("That account is not connected");
+                return self.toast(&gettext("That account is not connected"));
             };
             jobs.push((sync, thread_id, message_id));
         }
         let dialog = gtk::FileDialog::builder()
-            .title("Export Mail")
+            .title(gettext("Export Mail"))
             .initial_name(&name)
             .build();
         let this = Rc::clone(self);
@@ -85,7 +94,7 @@ impl MainWindow {
                 return;
             };
             let Some(path) = file.path() else { return };
-            this.toast("Exporting…");
+            this.toast(&gettext("Exporting…"));
             let written = this
                 .core
                 .call(async move {
@@ -98,8 +107,11 @@ impl MainWindow {
                 })
                 .await;
             match written {
-                Ok(()) => this.toast(&format!("Saved {name}")),
-                Err(err) => this.toast(&format!("Could not export the mail: {err}")),
+                Ok(()) => this.toast(&fill(&gettext("Saved {file}"), &[("file", &name)])),
+                Err(err) => this.toast(&fill(
+                    &gettext("Could not export the mail: {reason}"),
+                    &[("reason", &err.to_string())],
+                )),
             }
         });
     }

@@ -10,6 +10,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gdk, pango};
+use mailrs_domain::translate::gettext;
 
 /// Who the card is about.
 pub struct Person {
@@ -39,7 +40,7 @@ pub enum Choice {
 pub fn present(parent: &impl IsA<gtk::Widget>, person: Person, chose: impl Fn(Choice) + 'static) {
     let chose = Rc::new(chose);
     let dialog = adw::Dialog::builder()
-        .title("Contact")
+        .title(gettext("Contact"))
         .content_width(380)
         .build();
 
@@ -90,9 +91,9 @@ pub fn present(parent: &impl IsA<gtk::Widget>, person: Person, chose: impl Fn(Ch
         let row = adw::ActionRow::builder()
             .title(address)
             .subtitle(if address == &person.email {
-                "Email"
+                gettext("Email")
             } else {
-                "Other email"
+                gettext("Other email")
             })
             .activatable(true)
             .build();
@@ -112,7 +113,7 @@ pub fn present(parent: &impl IsA<gtk::Widget>, person: Person, chose: impl Fn(Ch
     if let Some(phone) = person.phone.as_deref() {
         let row = adw::ActionRow::builder()
             .title(phone)
-            .subtitle("Phone")
+            .subtitle(gettext("Phone"))
             .build();
         row.add_prefix(&gtk::Image::from_icon_name("call-start-symbolic"));
         details.add(&row);
@@ -140,7 +141,7 @@ pub fn present(parent: &impl IsA<gtk::Widget>, person: Person, chose: impl Fn(Ch
         gtk::Button::builder().child(&inner).build()
     };
 
-    let write = button("New Message", "mail-message-new-symbolic");
+    let write = button(&gettext("New Message"), "mail-message-new-symbolic");
     let (chosen, address, closing) = (Rc::clone(&chose), person.email.clone(), dialog.clone());
     write.connect_clicked(move |_| {
         closing.close();
@@ -149,10 +150,10 @@ pub fn present(parent: &impl IsA<gtk::Widget>, person: Person, chose: impl Fn(Ch
     actions.append(&write);
 
     let vip = button(
-        if person.vip {
-            "Remove from VIPs"
+        &if person.vip {
+            gettext("Remove from VIPs")
         } else {
-            "Add to VIPs"
+            gettext("Add to VIPs")
         },
         "starred-symbolic",
     );
@@ -163,7 +164,7 @@ pub fn present(parent: &impl IsA<gtk::Widget>, person: Person, chose: impl Fn(Ch
     });
     actions.append(&vip);
 
-    let mail = button("All Their Mail", "system-search-symbolic");
+    let mail = button(&gettext("All Their Mail"), "system-search-symbolic");
     let (chosen, closing) = (Rc::clone(&chose), dialog.clone());
     mail.connect_clicked(move |_| {
         closing.close();

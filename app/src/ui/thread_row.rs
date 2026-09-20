@@ -8,6 +8,7 @@ use gtk::{glib, pango};
 use mailrs_domain::{FlagColor, ThreadSummary};
 
 use crate::format::{PALETTE, account_color_index, relative_date};
+use mailrs_domain::translate::{fill, gettext};
 
 mod imp {
     use super::*;
@@ -66,12 +67,12 @@ mod imp {
                 .build();
             let vip = marker("starred-symbolic");
             vip.add_css_class("vip");
-            vip.set_tooltip_text(Some("VIP"));
+            vip.set_tooltip_text(Some(&gettext("VIP")));
             let from = text_label("from");
             from.set_hexpand(true);
             let clip = marker("mail-attachment-symbolic");
             let mute = marker("audio-volume-muted-symbolic");
-            mute.set_tooltip_text(Some("Muted"));
+            mute.set_tooltip_text(Some(&gettext("Muted")));
             let star = marker("penguin-mail-flag-symbolic");
             star.add_css_class("starred");
             let date = text_label("date");
@@ -236,10 +237,10 @@ impl ThreadRow {
             self.remove_css_class("unread");
         }
         let from = get(&imp.from);
-        from.set_label(if thread.from.is_empty() {
-            "Unknown sender"
+        from.set_label(&if thread.from.is_empty() {
+            gettext("Unknown sender")
         } else {
-            &thread.from
+            thread.from.clone()
         });
         let date = get(&imp.date);
         date.set_label(&relative_date(thread.last_message_at, Local::now()));
@@ -248,10 +249,10 @@ impl ThreadRow {
         } else {
             date.remove_css_class("unread");
         }
-        get(&imp.subject).set_label(if thread.subject.trim().is_empty() {
-            "(no subject)"
+        get(&imp.subject).set_label(&if thread.subject.trim().is_empty() {
+            gettext("(no subject)")
         } else {
-            &thread.subject
+            thread.subject.clone()
         });
         let count = get(&imp.count);
         count.set_visible(thread.message_count > 1);
@@ -284,12 +285,18 @@ impl ThreadRow {
             }
             account.add_css_class(wanted);
         }
-        self.update_property(&[gtk::accessible::Property::Label(&format!(
-            "{}{}, {}, {}",
-            if thread.unread { "Unread, " } else { "" },
-            thread.from,
-            thread.subject,
-            thread.snippet
-        ))]);
+        let pattern = match thread.unread {
+            true => gettext("Unread, {sender}, {subject}, {snippet}"),
+            false => gettext("{sender}, {subject}, {snippet}"),
+        };
+        let described = fill(
+            &pattern,
+            &[
+                ("sender", &thread.from),
+                ("subject", &thread.subject),
+                ("snippet", &thread.snippet),
+            ],
+        );
+        self.update_property(&[gtk::accessible::Property::Label(&described)]);
     }
 }

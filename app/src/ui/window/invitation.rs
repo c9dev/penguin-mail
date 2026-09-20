@@ -14,6 +14,7 @@ use mailrs_sync::{Permitted, now_millis};
 use super::MainWindow;
 use crate::ui::conversation::ConversationView;
 use crate::ui::invitation::{Action, Showing};
+use mailrs_domain::translate::{fill, gettext};
 
 impl MainWindow {
     /// Reads the invitation in the message `view` shows and puts it on the
@@ -72,7 +73,9 @@ impl MainWindow {
             return;
         };
         if uid.trim().is_empty() {
-            return self.toast("This invitation names no event, so there is nothing to answer");
+            return self.toast(&gettext(
+                "This invitation names no event, so there is nothing to answer",
+            ));
         }
         let Some(me) = self.addresses_for(account_id).into_iter().next() else {
             return;
@@ -88,17 +91,17 @@ impl MainWindow {
             match sent {
                 Ok(Permitted::Done(Answered::Done)) => {
                     view.card.set_answer(Some(answer));
-                    this.toast(match answer {
-                        Answer::Yes => "Replied Yes. The organizer has been told.",
-                        Answer::No => "Replied No. The organizer has been told.",
-                        Answer::Maybe => "Replied Maybe. The organizer has been told.",
+                    this.toast(&match answer {
+                        Answer::Yes => gettext("Replied Yes. The organizer has been told."),
+                        Answer::No => gettext("Replied No. The organizer has been told."),
+                        Answer::Maybe => gettext("Replied Maybe. The organizer has been told."),
                     });
                 }
                 Ok(Permitted::Done(Answered::NotOnCalendar)) => {
                     view.card.set_answer(before);
-                    this.toast(
+                    this.toast(&gettext(
                         "This meeting is not on your calendar, so there was nothing to answer",
-                    );
+                    ));
                 }
                 Ok(Permitted::NeedsPermission) => {
                     view.card.set_answer(before);
@@ -106,7 +109,10 @@ impl MainWindow {
                 }
                 Err(err) => {
                     view.card.set_answer(before);
-                    this.toast(&format!("Could not send your reply: {err}"));
+                    this.toast(&fill(
+                        &gettext("Could not send your reply: {reason}"),
+                        &[("reason", &err.to_string())],
+                    ));
                 }
             }
         });
@@ -120,13 +126,20 @@ impl MainWindow {
             return;
         };
         let dialog = adw::AlertDialog::new(
-            Some("Allow Penguin Mail to Use Your Calendar"),
-            Some(&format!(
-                "Replying to an invitation needs permission to change events on the calendar for {}. Google asks you to confirm in your browser. Without it, the Yes, No and Maybe links in the message still work.",
-                account.email
+            Some(&gettext("Allow Penguin Mail to Use Your Calendar")),
+            Some(&fill(
+                &gettext(
+                    "Replying to an invitation needs permission to change events on the \
+                     calendar for {account}. Google asks you to confirm in your browser. \
+                     Without it, the Yes, No and Maybe links in the message still work.",
+                ),
+                &[("account", &account.email)],
             )),
         );
-        dialog.add_responses(&[("cancel", "Not Now"), ("grant", "Grant Access")]);
+        dialog.add_responses(&[
+            ("cancel", &gettext("Not Now")),
+            ("grant", &gettext("Grant Access")),
+        ]);
         dialog.set_response_appearance("grant", adw::ResponseAppearance::Suggested);
         dialog.set_close_response("cancel");
         let this = Rc::clone(self);
@@ -155,7 +168,10 @@ impl MainWindow {
             .join("invitations");
         let path = dir.join(&name);
         if let Err(err) = std::fs::create_dir_all(&dir).and_then(|()| std::fs::write(&path, &ics)) {
-            return self.toast(&format!("Could not save the invitation: {err}"));
+            return self.toast(&fill(
+                &gettext("Could not save the invitation: {reason}"),
+                &[("reason", &err.to_string())],
+            ));
         }
         let file = gio::File::for_path(&path);
         let this = Rc::clone(self);
@@ -164,7 +180,10 @@ impl MainWindow {
             gio::Cancellable::NONE,
             move |result| {
                 if let Err(err) = result {
-                    this.toast(&format!("No app on this desktop opens invitations: {err}"));
+                    this.toast(&fill(
+                        &gettext("No app on this desktop opens invitations: {reason}"),
+                        &[("reason", &err.to_string())],
+                    ));
                 }
             },
         );

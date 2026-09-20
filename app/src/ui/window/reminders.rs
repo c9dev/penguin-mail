@@ -7,6 +7,7 @@ use mailrs_sync::{History, MailAction};
 
 use super::{MainWindow, Target};
 use crate::format::future_date;
+use mailrs_domain::translate::{fill, gettext};
 
 impl MainWindow {
     /// Archives the targets and brings them back to the inbox at `at`.
@@ -27,7 +28,7 @@ impl MainWindow {
             targets,
             MailAction::Remind { at },
             History::Record,
-            Some(format!("Will remind you {when}")),
+            Some(fill(&gettext("Will remind you {when}"), &[("when", &when)])),
         );
     }
 
@@ -36,9 +37,12 @@ impl MainWindow {
         glib::spawn_future_local(async move {
             if let Some(at) = crate::ui::when::pick_time(
                 &this.window,
-                "Remind Me",
-                "The conversation leaves the inbox now and comes back at this time, marked unread.",
-                "Remind Me",
+                &gettext("Remind Me"),
+                &gettext(
+                    "The conversation leaves the inbox now and comes back at this time, \
+                     marked unread.",
+                ),
+                &gettext("Remind Me"),
             )
             .await
             {
@@ -54,7 +58,7 @@ impl MainWindow {
         }
         self.conversation.clear();
         self.perform(targets, MailAction::CancelReminder, History::Skip, None);
-        self.toast("Back in the Inbox");
+        self.toast(&gettext("Back in the Inbox"));
     }
 
     /// Refreshes counts, and the list when it shows Remind Me.
