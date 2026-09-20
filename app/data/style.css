@@ -84,9 +84,24 @@
 .assistant-suggestion { padding: 6px 10px; border-radius: 10px; }
 .assistant-confirm label { font-weight: 600; }
 
-/* Inbox categories: the switcher's unread counts. */
-.category-bar .category-count { font-size: 0.8em; font-weight: 700; font-feature-settings: "tnum"; opacity: 0.7; }
-.category-bar > button { padding-left: 9px; padding-right: 9px; }
+/* Inbox categories: the switcher above an inbox's thread list. */
+.category-bar > toggle { min-width: 34px; min-height: 30px; padding-left: 5px; padding-right: 5px; }
+/* The switcher reads as one strip, so drop the dividers between the icons. */
+.category-bar > separator { background: none; }
+.category-bar .category-name { margin-left: 5px; margin-right: 2px; }
+/* The unread count rides the icon's top right corner. */
+.category-bar .category-count {
+  min-width: 9px;
+  padding: 0 2px;
+  border-radius: 99px;
+  font-size: 0.6em;
+  font-weight: 700;
+  font-feature-settings: "tnum";
+  color: var(--accent-fg-color);
+  background: var(--accent-bg-color);
+  transition: opacity 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.category-bar .category-count.no-mail { opacity: 0; }
 
 /* Follow Up: the banner above All Inboxes. */
 .follow-up-banner {
