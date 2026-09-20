@@ -74,6 +74,7 @@ impl App {
         compose: Option<String>,
     ) -> Rc<App> {
         let (open_requests, opened) = async_channel::unbounded();
+        let core_demo = core.demo;
         // Demo mode must not change the real preferences.
         let settings_path = if core.demo && std::env::var_os("MAILRS_SETTINGS").is_none() {
             std::env::temp_dir().join(format!(
@@ -98,7 +99,12 @@ impl App {
             shed_generation: Cell::new(0),
             pending_compose: RefCell::new(compose),
             tray_started: Cell::new(false),
-            settings: RefCell::new(Settings::load(&settings_path)),
+            settings: RefCell::new(Settings {
+                // The demo's contacts are already in its throwaway store,
+                // so the switch shows what the mail on screen is using.
+                contacts: core_demo,
+                ..Settings::load(&settings_path)
+            }),
             settings_path,
             contacts: Rc::new(RefCell::new(Rc::new(Vec::new()))),
             contacts_stale: Cell::new(true),

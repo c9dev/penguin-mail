@@ -143,11 +143,12 @@ impl Core {
         let actions = Arc::new(MailActions::new(Arc::clone(&engine), db.clone()));
         let lists = Arc::new(Mailboxes::new(Arc::clone(&engine), db.clone()));
         let gmail_settings = Arc::new(AccountSettings::new(Arc::clone(&engine), db.clone()));
-        let contacts = Arc::new(ContactBook::new(
-            Arc::clone(&engine),
-            db.clone(),
-            contact_photo_dir(demo, &dir),
-        ));
+        let photo_dir = contact_photo_dir(demo, &dir);
+        if demo {
+            let photos = photo_dir.clone();
+            runtime.block_on(db.write(move |c| demo::seed_contacts(c, &photos)))?;
+        }
+        let contacts = Arc::new(ContactBook::new(Arc::clone(&engine), db.clone(), photo_dir));
         let core = Rc::new(Core {
             runtime,
             db,

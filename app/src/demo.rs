@@ -13,7 +13,7 @@ use mailrs_domain::{
     MessageMeta, system_label,
 };
 use mailrs_gmail::{LabelColor, RemoteLabel};
-use mailrs_store::{Result, accounts, bodies, labels, messages};
+use mailrs_store::{Result, accounts, address_book, bodies, labels, messages};
 use mailrs_sync::fake::FakeGmail;
 use rusqlite::Connection;
 
@@ -447,6 +447,135 @@ pub fn seed(conn: &Connection, now: EpochMillis) -> Result<DemoGmail> {
     Ok(DemoGmail(gmail))
 }
 
+/// The contacts the demo accounts have written down, with a photo each
+/// where a real address book would have one. Demo photos are drawn here
+/// rather than shipped, so nothing in the repository is a picture of a
+/// person who does not exist.
+struct SampleContact {
+    /// Whose address book holds them: an index into [`ACCOUNTS`].
+    account: usize,
+    resource: &'static str,
+    name: &'static str,
+    email: &'static str,
+    organization: &'static str,
+    phone: Option<&'static str>,
+    /// The colour their drawn portrait uses. `None` leaves them with
+    /// initials, as a contact with no photo has.
+    photo: Option<(u8, u8, u8)>,
+}
+
+const CONTACTS: [SampleContact; 4] = [
+    SampleContact {
+        account: 0,
+        resource: "people/c1",
+        name: "Mara Okafor",
+        email: "mara.okafor@example.org",
+        organization: "Ridgeline Trails",
+        phone: Some("+1 555 0100"),
+        photo: Some((0x2d, 0x6a, 0x4f)),
+    },
+    SampleContact {
+        account: 1,
+        resource: "people/c2",
+        name: "Priya Raman",
+        email: "priya@fernwood.example",
+        organization: "Fernwood",
+        phone: Some("+1 555 0142"),
+        photo: Some((0x7b, 0x2c, 0x6b)),
+    },
+    SampleContact {
+        account: 1,
+        resource: "people/c3",
+        name: "Jonas Weber",
+        email: "jonas@fernwood.example",
+        organization: "Fernwood",
+        phone: None,
+        photo: None,
+    },
+    SampleContact {
+        account: 2,
+        resource: "people/c4",
+        name: "Sam Iyer",
+        email: "s.iyer@uni.example",
+        organization: "Department of Geology",
+        phone: None,
+        photo: Some((0x1b, 0x4d, 0x7a)),
+    },
+];
+
+/// Writes the demo address books, with a photo on disk for the contacts
+/// that have one. A photo that cannot be written leaves that contact with
+/// initials, which is what a real one with no photo shows.
+pub fn seed_contacts(conn: &Connection, photo_dir: &std::path::Path) -> Result<()> {
+    let ids = accounts::list_accounts(conn)?;
+    let _ = std::fs::create_dir_all(photo_dir);
+    for contact in CONTACTS {
+        let Some(account_id) = ids.get(contact.account).map(|a| a.id) else {
+            continue;
+        };
+        let photo_file = contact.photo.and_then(|color| {
+            let file = format!("{account_id}-{}.png", contact.resource.replace('/', "-"));
+            match std::fs::write(photo_dir.join(&file), portrait(color)) {
+                Ok(()) => Some(file),
+                Err(err) => {
+                    tracing::warn!(error = %err, "could not write a demo contact photo");
+                    None
+                }
+            }
+        });
+        address_book::save(
+            conn,
+            &[address_book::Contact {
+                account_id,
+                resource: contact.resource.into(),
+                name: Some(contact.name.into()),
+                emails: vec![contact.email.into()],
+                organization: Some(contact.organization.into()),
+                phone: contact.phone.map(str::to_string),
+                photo_url: contact
+                    .photo
+                    .map(|_| format!("https://photos.example/{}", contact.resource)),
+                photo_file,
+            }],
+        )?;
+    }
+    Ok(())
+}
+
+/// A stand-in portrait: a head and shoulders in one colour on a lighter
+/// wash of it, as a PNG.
+fn portrait(color: (u8, u8, u8)) -> Vec<u8> {
+    const SIZE: usize = 128;
+    let (r, g, b) = color;
+    let wash = |c: u8| (u16::from(c) / 3 + 175).min(255) as u8;
+    let mut pixels = vec![0u8; SIZE * SIZE * 3];
+    for y in 0..SIZE {
+        for x in 0..SIZE {
+            let (dx, dy) = (x as f32 - 64.0, y as f32 - 48.0);
+            let head = (dx / 27.0).powi(2) + (dy / 31.0).powi(2) <= 1.0;
+            let shoulders = (dx / 58.0).powi(2) + ((y as f32 - 150.0) / 62.0).powi(2) <= 1.0;
+            let ink = head || shoulders;
+            let at = (y * SIZE + x) * 3;
+            pixels[at] = if ink { r } else { wash(r) };
+            pixels[at + 1] = if ink { g } else { wash(g) };
+            pixels[at + 2] = if ink { b } else { wash(b) };
+        }
+    }
+    let pixbuf = gtk::gdk_pixbuf::Pixbuf::from_mut_slice(
+        pixels,
+        gtk::gdk_pixbuf::Colorspace::Rgb,
+        false,
+        8,
+        SIZE as i32,
+        SIZE as i32,
+        (SIZE * 3) as i32,
+    );
+    pixbuf
+        .save_to_bufferv("png", &[])
+        .map(|bytes| bytes.to_vec())
+        .unwrap_or_default()
+}
+
 /// The labels one demo account has. Only the work account has user labels.
 fn account_labels(account_id: AccountId, email: &str) -> Vec<Label> {
     let mut all: Vec<Label> = [
@@ -594,6 +723,31 @@ mod tests {
     use mailrs_sync::GmailApi;
 
     use super::*;
+
+    #[test]
+    fn the_demo_contacts_have_photos_and_rank_first() {
+        let conn = open_in_memory().unwrap();
+        seed(&conn, 1_700_000_000_000).unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        seed_contacts(&conn, dir.path()).unwrap();
+
+        let mara = mailrs_store::address_book::find(&conn, "mara.okafor@example.org")
+            .unwrap()
+            .expect("Mara is in the demo address book");
+        assert_eq!(mara.organization.as_deref(), Some("Ridgeline Trails"));
+        let photo = dir.path().join(mara.photo_file.expect("Mara has a photo"));
+        // A PNG, so the avatar can read it.
+        assert_eq!(&std::fs::read(&photo).unwrap()[1..4], b"PNG");
+
+        let suggestions = mailrs_store::contacts::suggestions(&conn).unwrap();
+        let known: Vec<&str> = suggestions
+            .iter()
+            .take_while(|s| s.known)
+            .map(|s| s.email.as_str())
+            .collect();
+        assert_eq!(known.len(), 4, "every demo contact comes before the rest");
+        assert!(known.contains(&"jonas@fernwood.example"));
+    }
 
     #[test]
     fn two_sent_messages_wait_for_a_reply() {
