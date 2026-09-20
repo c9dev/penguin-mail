@@ -148,7 +148,8 @@ async fn undo_leaves_mail_that_moved_since_where_it_is() {
         .map(|f| f.target.clone())
         .collect();
     assert_eq!(failed, [target]);
-    assert!(undone.outcome.first_error().unwrap().contains("moved since"));
+    let said = undone.outcome.first_error().unwrap();
+    assert!(said.contains("has moved since"), "{said}");
     assert_eq!(h.labels_of("a").await, ["TRASH"]);
     assert!(h.threads("INBOX").await.is_empty());
 }

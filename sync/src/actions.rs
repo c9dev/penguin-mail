@@ -384,14 +384,14 @@ impl<A: Accounts> MailActions<A> {
         let mut outcome = Outcome::default();
         let mut targets = Vec::new();
         let mut inverses = Vec::new();
-        let mut moved = Vec::new();
-        for (reversal, elsewhere) in undo.relabel.iter().zip(self.moved(&undo.relabel).await) {
-            if elsewhere {
+        let mut left_alone = Vec::new();
+        for (reversal, moved) in undo.relabel.iter().zip(self.moved(&undo.relabel).await) {
+            if moved {
                 outcome.failed.push(Failure {
                     target: reversal.target.clone(),
-                    error: gettext("This mail moved since, so Undo left it alone."),
+                    error: gettext("This mail has moved since, so Undo left it where it is."),
                 });
-                moved.push(reversal.target.clone());
+                left_alone.push(reversal.target.clone());
                 continue;
             }
             targets.push(reversal.target.clone());
@@ -410,11 +410,14 @@ impl<A: Accounts> MailActions<A> {
                 }),
             }
         }
+        // A flag colour is a mark on this computer rather than a place, so
+        // it goes back even on mail that moved. A reminder would put the
+        // thread back in the inbox, so it follows the label change.
         let colors = undo.colors;
         let earlier: Vec<(Target, Option<Reminder>)> = undo
             .reminders
             .into_iter()
-            .filter(|(target, _)| !moved.contains(target))
+            .filter(|(target, _)| !left_alone.contains(target))
             .collect();
         let restored = self
             .db
