@@ -16,9 +16,9 @@ use mailrs_gmail::{GMAIL_API_BASE, KeyringTokenStore, OAuthClient, TokenStore, a
 use mailrs_store::{Db, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::{
-    AccountSettings, AccountSync, Accounts, AnyGmail, Changed, Counts, Failure, History, Listing,
-    MailAction, MailActions, Mailbox, Mailboxes, Outcome, Permitted, Scope, SyncEngine, View,
-    connect_account, now_millis,
+    AccountSettings, AccountSync, Accounts, AnyGmail, Changed, ContactBook, Counts, Failure,
+    History, Listing, MailAction, MailActions, Mailbox, Mailboxes, Outcome, Permitted, Scope,
+    SyncEngine, View, connect_account, now_millis,
 };
 
 use crate::assistant::run::{Background, Modules};
@@ -37,6 +37,8 @@ pub type Lists = Mailboxes<RunningEngine>;
 /// Changes an account's Gmail settings for the dialogs and the assistant
 /// alike. See `mailrs_sync::AccountSettings`.
 pub type GmailSettings = AccountSettings<RunningEngine>;
+/// Reads the accounts' Google contacts. See `mailrs_sync::ContactBook`.
+pub type Contacts = ContactBook<RunningEngine>;
 
 /// The engine that runs now. Changing the sync settings replaces it, so mail
 /// actions look accounts up here rather than keep one engine.
@@ -75,6 +77,7 @@ pub struct Core {
     actions: Arc<Actions>,
     lists: Arc<Lists>,
     gmail_settings: Arc<GmailSettings>,
+    contacts: Arc<Contacts>,
     config: RefCell<Option<Config>>,
     tokens: Arc<dyn TokenStore>,
     events_tx: async_channel::Sender<ChangeEvent>,
@@ -140,6 +143,11 @@ impl Core {
         let actions = Arc::new(MailActions::new(Arc::clone(&engine), db.clone()));
         let lists = Arc::new(Mailboxes::new(Arc::clone(&engine), db.clone()));
         let gmail_settings = Arc::new(AccountSettings::new(Arc::clone(&engine), db.clone()));
+        let contacts = Arc::new(ContactBook::new(
+            Arc::clone(&engine),
+            db.clone(),
+            contact_photo_dir(demo, &dir),
+        ));
         let core = Rc::new(Core {
             runtime,
             db,
@@ -149,6 +157,7 @@ impl Core {
             actions,
             lists,
             gmail_settings,
+            contacts,
             config: RefCell::new(config),
             tokens: Arc::new(KeyringTokenStore::new()),
             events_tx,
@@ -317,6 +326,11 @@ impl Core {
     /// blocked senders, and hidden addresses.
     pub fn gmail_settings(&self) -> Arc<GmailSettings> {
         Arc::clone(&self.gmail_settings)
+    }
+
+    /// The accounts' Google contacts: names, photos, and the rest.
+    pub fn contacts(&self) -> Arc<Contacts> {
+        Arc::clone(&self.contacts)
     }
 
     /// The modules the assistant's tools work through.
@@ -520,6 +534,18 @@ impl Background for Core {
             task.await;
         });
     }
+}
+
+/// Where contact photos are kept: the cache directory, since Google
+/// serves them again whenever they are wanted. Demo photos sit beside the
+/// demo's throwaway store.
+fn contact_photo_dir(demo: bool, data_dir: &std::path::Path) -> PathBuf {
+    if demo {
+        return data_dir.join("contact-photos");
+    }
+    gtk::glib::user_cache_dir()
+        .join(mailrs_sync::config::DIR_NAME)
+        .join("contact-photos")
 }
 
 /// Gmail for one account: the sample mailbox in demo mode, or the real

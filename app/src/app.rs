@@ -4,6 +4,7 @@
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::os::unix::process::CommandExt;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
@@ -51,10 +52,14 @@ pub struct App {
     tray_started: Cell<bool>,
     settings: RefCell<Settings>,
     settings_path: std::path::PathBuf,
-    /// Correspondents for recipient suggestions. Loading them reads every
-    /// message, so the list reloads only after new mail arrives.
+    /// People for recipient suggestions: the accounts' contacts, then the
+    /// addresses mail turned up. Loading them reads every message, so the
+    /// list reloads only after new mail arrives.
     contacts: Contacts,
     pub(crate) contacts_stale: Cell<bool>,
+    /// Contact photos on disk, by lower-case address. Rows and the open
+    /// conversation read it; it is filled whenever the suggestions load.
+    photos: RefCell<HashMap<String, PathBuf>>,
     /// Messages waiting out the Undo Send delay.
     pending_sends: Cell<usize>,
     scheduler_running: Cell<bool>,
@@ -97,6 +102,7 @@ impl App {
             settings_path,
             contacts: Rc::new(RefCell::new(Rc::new(Vec::new()))),
             contacts_stale: Cell::new(true),
+            photos: RefCell::new(HashMap::new()),
             pending_sends: Cell::new(0),
             scheduler_running: Cell::new(false),
             _hold: gio_app.hold(),
@@ -117,6 +123,7 @@ impl App {
         });
         app.load_accounts();
         app.start_scheduler();
+        app.watch_contacts();
         if !app.core.demo {
             crate::assistant::preload_keys();
         }
@@ -364,6 +371,7 @@ impl App {
                 // Give the engine a moment to connect before asking for display names.
                 glib::timeout_future(std::time::Duration::from_millis(500)).await;
                 this.remember_accounts(&accounts);
+                this.refresh_contacts(false);
             }
         });
     }
@@ -424,10 +432,151 @@ impl App {
         }
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            match this.core.read(mailrs_store::contacts::suggestions).await {
-                Ok(found) => *this.contacts.borrow_mut() = Rc::new(found),
-                Err(err) => tracing::warn!(error = %err, "could not load contacts"),
+            let found = match this.core.read(mailrs_store::contacts::suggestions).await {
+                Ok(found) => found,
+                Err(err) => return tracing::warn!(error = %err, "could not load contacts"),
+            };
+            let dir = this.core.contacts().photo_dir().to_path_buf();
+            *this.photos.borrow_mut() = found
+                .iter()
+                .filter_map(|person| {
+                    let file = dir.join(person.photo_file.as_ref()?);
+                    file.exists().then(|| (person.email.to_lowercase(), file))
+                })
+                .collect();
+            *this.contacts.borrow_mut() = Rc::new(found);
+            if let Some(window) = this.window() {
+                window.contacts_loaded();
             }
+        });
+    }
+
+    /// Every contact photo on disk, by lower-case address.
+    pub fn photos(&self) -> HashMap<String, PathBuf> {
+        self.photos.borrow().clone()
+    }
+
+    /// The photo of `email`, when a contact has one on this computer.
+    pub fn photo(&self, email: &str) -> Option<PathBuf> {
+        self.photos
+            .borrow()
+            .get(&email.trim().to_lowercase())
+            .cloned()
+    }
+
+    /// The contact photos of `addresses`, as `data:` URIs by lower-case
+    /// address. The conversation page loads nothing from disk or the
+    /// network, so a photo travels inline or not at all.
+    pub fn sender_photos(
+        &self,
+        addresses: impl Iterator<Item = String>,
+    ) -> HashMap<String, String> {
+        use base64::Engine;
+        let mut found = HashMap::new();
+        for address in addresses {
+            let key = address.trim().to_lowercase();
+            if key.is_empty() || found.contains_key(&key) {
+                continue;
+            }
+            let Some(path) = self.photo(&key) else {
+                continue;
+            };
+            let Ok(bytes) = std::fs::read(&path) else {
+                continue;
+            };
+            let data = base64::engine::general_purpose::STANDARD.encode(&bytes);
+            found.insert(key, format!("data:image/jpeg;base64,{data}"));
+        }
+        found
+    }
+
+    /// Turns contacts on or off. Turning them on reads each account's
+    /// address book, which is when Google asks for the permission; turning
+    /// them off deletes every contact and photo from this computer.
+    pub fn set_contacts(self: &Rc<Self>, on: bool) {
+        self.change_settings(Change::Contacts(on));
+        if on {
+            self.refresh_contacts(true);
+            return;
+        }
+        let accounts: Vec<AccountId> = self.accounts.borrow().iter().map(|a| a.id).collect();
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let book = this.core.contacts();
+            for account_id in accounts {
+                let book = Arc::clone(&book);
+                if let Err(err) = this
+                    .core
+                    .call(async move { book.forget(account_id).await })
+                    .await
+                {
+                    tracing::warn!(error = %err, "could not delete the stored contacts");
+                }
+            }
+            this.photos.borrow_mut().clear();
+            this.contacts_stale.set(true);
+            this.reload_contacts();
+        });
+    }
+
+    /// Reads the accounts' Google contacts when the preference is on.
+    /// An address book read within the last few hours costs nothing, so
+    /// this is safe to call on a timer. With `ask`, a missing permission
+    /// puts the Grant Access dialog on screen instead of a log line.
+    pub fn refresh_contacts(self: &Rc<Self>, ask: bool) {
+        if !self.settings.borrow().contacts {
+            return;
+        }
+        let accounts: Vec<AccountId> = self.accounts.borrow().iter().map(|a| a.id).collect();
+        if accounts.is_empty() {
+            return;
+        }
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let book = this.core.contacts();
+            let now = mailrs_sync::now_millis();
+            let read = {
+                let accounts = accounts.clone();
+                this.core
+                    .call(async move { book.refresh_stale(&accounts, now).await })
+                    .await
+            };
+            match read {
+                Ok(mailrs_sync::Permitted::Done(refreshed)) => {
+                    if refreshed.contacts == 0 && refreshed.photos == 0 {
+                        return;
+                    }
+                    tracing::info!(
+                        contacts = refreshed.contacts,
+                        photos = refreshed.photos,
+                        "read the address book"
+                    );
+                    this.contacts_stale.set(true);
+                    this.reload_contacts();
+                }
+                Ok(mailrs_sync::Permitted::NeedsPermission) => {
+                    if let (true, Some(window), Some(first)) =
+                        (ask, this.window(), accounts.first().copied())
+                    {
+                        window.ask_for_contacts_access(first);
+                    }
+                }
+                Err(err) => tracing::warn!(error = %err, "could not read the address book"),
+            }
+        });
+    }
+
+    /// Reads the address books at startup and every hour after that.
+    /// `ContactBook` leaves the ones it read recently alone, so a tick
+    /// with nothing to do costs one store read per account.
+    fn watch_contacts(self: &Rc<Self>) {
+        let weak = Rc::downgrade(self);
+        glib::timeout_add_seconds_local(60 * 60, move || match weak.upgrade() {
+            Some(app) => {
+                app.refresh_contacts(false);
+                glib::ControlFlow::Continue
+            }
+            None => glib::ControlFlow::Break,
         });
     }
 

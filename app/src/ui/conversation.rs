@@ -32,6 +32,9 @@ pub struct OpenThread {
     pub me: Vec<String>,
     /// Inline images per message: `Content-ID` to `data:` URI.
     pub inline_images: HashMap<String, HashMap<String, String>>,
+    /// Contact photos by lower-case sender address, as `data:` URIs. A
+    /// sender with none keeps the initials avatar.
+    pub photos: HashMap<String, String>,
     /// Set once the user unsubscribed from this thread's list.
     pub unsubscribed: bool,
     /// The flag colour chosen here, when the thread is flagged.
@@ -96,8 +99,13 @@ pub enum Action {
     ToggleRead,
     LoadImages,
     Unsubscribe,
-    SaveAttachment { message_id: String, index: usize },
+    SaveAttachment {
+        message_id: String,
+        index: usize,
+    },
     Mailto(String),
+    /// The card for one sender, asked for by clicking their name.
+    ShowContact(String),
 }
 
 struct Buttons {
@@ -673,6 +681,7 @@ impl ConversationView {
                 subject: &open.subject,
                 messages: views,
                 me: &open.me,
+                photos: &open.photos,
                 allow_remote: open.images_allowed,
             },
             &theme,
@@ -804,6 +813,8 @@ impl ConversationView {
                     index,
                 });
             }
+        } else if let Some(address) = uri.strip_prefix("mailrs:contact/") {
+            actions(Action::ShowContact(address.to_string()));
         } else if let Some(address) = uri.strip_prefix("mailto:") {
             actions(Action::Mailto(
                 address.split('?').next().unwrap_or(address).to_string(),

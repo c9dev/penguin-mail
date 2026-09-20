@@ -40,6 +40,9 @@ pub struct Conversation<'a> {
     pub messages: Vec<MessageView<'a>>,
     /// The account's own addresses, shown as "me" in recipient lists.
     pub me: &'a [String],
+    /// Contact photos by lower-case sender address, as `data:` URIs. The
+    /// page loads nothing from disk, so a photo travels inline.
+    pub photos: &'a HashMap<String, String>,
     /// Whether remote images and styles may load.
     pub allow_remote: bool,
 }
@@ -71,13 +74,18 @@ pub fn render(conversation: &Conversation, theme: &Theme) -> String {
         if count == 1 { "" } else { "s" }
     );
     for view in &conversation.messages {
-        render_message(&mut html, view, conversation.me);
+        render_message(&mut html, view, conversation.me, conversation.photos);
     }
     html.push_str("</body></html>");
     html
 }
 
-fn render_message(html: &mut String, view: &MessageView, me: &[String]) {
+fn render_message(
+    html: &mut String,
+    view: &MessageView,
+    me: &[String],
+    photos: &HashMap<String, String>,
+) {
     let meta = view.meta;
     let state = if view.expanded {
         "expanded"
@@ -89,14 +97,36 @@ fn render_message(html: &mut String, view: &MessageView, me: &[String]) {
         Some(from) => (from.display().to_string(), from.email.clone()),
         None => ("Unknown sender".to_string(), String::new()),
     };
+    let photo = photos.get(address.trim().to_lowercase().as_str());
+    // The whole header toggles the message, so the toggle is a layer
+    // under it. The face and the name sit above that layer and open the
+    // sender's card instead.
+    let card = format!("mailrs:contact/{}", escape(&address));
     let _ = write!(
         html,
-        "<article class=\"message {state}{unread}\" id=\"m-{id}\"><a class=\"header\" href=\"mailrs:toggle/{id}\">\
-         <span class=\"avatar\" style=\"background:{color}\">{initials}</span>\
-         <span class=\"who\"><span class=\"name\">{name}</span>",
+        "<article class=\"message {state}{unread}\" id=\"m-{id}\"><div class=\"header\">\
+         <a class=\"toggle\" href=\"mailrs:toggle/{id}\" aria-label=\"Show or hide this message\"></a>",
         id = escape(&meta.id),
-        color = color_for(if address.is_empty() { &name } else { &address }),
-        initials = escape(&initials(&name)),
+    );
+    match photo {
+        Some(uri) => {
+            let _ = write!(
+                html,
+                "<a class=\"avatar\" href=\"{card}\" title=\"Contact\"><img src=\"{uri}\" alt=\"\"></a>"
+            );
+        }
+        None => {
+            let _ = write!(
+                html,
+                "<a class=\"avatar\" href=\"{card}\" title=\"Contact\" style=\"background:{color}\">{initials}</a>",
+                color = color_for(if address.is_empty() { &name } else { &address }),
+                initials = escape(&initials(&name)),
+            );
+        }
+    }
+    let _ = write!(
+        html,
+        "<span class=\"who\"><a class=\"name\" href=\"{card}\">{name}</a>",
         name = escape(&name),
     );
     if !address.is_empty() && address != name {
@@ -105,7 +135,7 @@ fn render_message(html: &mut String, view: &MessageView, me: &[String]) {
     let _ = write!(
         html,
         "</span><span class=\"date\">{}</span><span class=\"line to\">to {}</span>\
-         <span class=\"line snippet\">{}</span></a>",
+         <span class=\"line snippet\">{}</span></div>",
         escape(&header_date(meta.date, chrono::Local::now())),
         escape(&recipients(meta, me)),
         escape(&meta.snippet)
@@ -317,17 +347,21 @@ font:15px/1.5 \"Adwaita Sans\",Cantarell,system-ui,sans-serif;-webkit-font-smoot
 .thread p{{margin:4px 0 18px;color:var(--dim);font-size:13px}}\
 .message{{border-top:1px solid var(--line);padding:14px 10px;margin:0 -10px;border-radius:12px}}\
 .message.collapsed:hover{{background:var(--hover)}}\
-.header{{display:grid;grid-template-columns:40px minmax(0,1fr) auto;column-gap:12px;align-items:center;color:inherit;text-decoration:none}}\
-.avatar{{grid-row:span 2;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;\
-color:#fff;font-weight:700;font-size:15px;letter-spacing:0.02em}}\
-.who{{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
-.name{{font-weight:700}}.unread .name::before{{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;\
+.header{{position:relative;display:grid;grid-template-columns:40px minmax(0,1fr) auto;column-gap:12px;align-items:center;color:inherit}}\
+.toggle{{position:absolute;inset:0}}\
+.avatar{{position:relative;grid-row:span 2;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;\
+justify-content:center;overflow:hidden;color:#fff;font-weight:700;font-size:15px;letter-spacing:0.02em;text-decoration:none}}\
+.avatar img{{width:100%;height:100%;object-fit:cover}}\
+.who{{position:relative;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
+.name{{font-weight:700;color:inherit;text-decoration:none}}\
+.name:hover{{text-decoration:underline}}\
+.unread .name::before{{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;\
 background:var(--accent);margin-right:7px;vertical-align:1px}}\
 .address{{color:var(--dim);font-size:13px;margin-left:8px}}\
 .date{{color:var(--dim);font-size:13px;white-space:nowrap}}\
 .line{{grid-column:2 / span 2;color:var(--dim);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
 .collapsed .body,.collapsed .attachments,.collapsed .to,.collapsed .address,.expanded .snippet{{display:none}}\
-.collapsed{{cursor:pointer}}\
+.collapsed .toggle{{cursor:pointer}}\
 .body{{margin:16px 0 4px 52px}}\
 .text{{white-space:pre-wrap;overflow-wrap:anywhere}}\
 .html{{background:#fff;border-radius:12px;padding:14px;border:1px solid var(--line);overflow:hidden;margin-left:0}}\
@@ -398,12 +432,21 @@ mod tests {
     }
 
     fn page(subject: &str, views: Vec<MessageView>) -> String {
+        page_with(subject, views, &HashMap::new())
+    }
+
+    fn page_with(
+        subject: &str,
+        views: Vec<MessageView>,
+        photos: &HashMap<String, String>,
+    ) -> String {
         let me = ["me@example.com".to_string()];
         render(
             &Conversation {
                 subject,
                 messages: views,
                 me: &me,
+                photos,
                 allow_remote: false,
             },
             &theme(),
@@ -433,6 +476,40 @@ mod tests {
             "{html}"
         );
         assert!(html.contains("&lt;script&gt;"));
+    }
+
+    #[test]
+    fn a_contact_photo_replaces_the_initials() {
+        let from_ann = meta("m1", "Ann Lee", &[]);
+        let body = MessageBody::default();
+        let images = HashMap::new();
+        let view = || MessageView {
+            meta: &from_ann,
+            body: BodyState::Loaded(&body),
+            expanded: false,
+            inline_images: &images,
+            sanitized: None,
+        };
+        let initials = page("Hi", vec![view()]);
+        assert!(initials.contains(">AL</a>"), "{initials}");
+
+        let photos = HashMap::from([(
+            "ann@example.com".to_string(),
+            "data:image/jpeg;base64,AAAA".to_string(),
+        )]);
+        let with_photo = page_with("Hi", vec![view()], &photos);
+        assert!(
+            with_photo.contains("<img src=\"data:image/jpeg;base64,AAAA\" alt=\"\">"),
+            "{with_photo}"
+        );
+        assert!(!with_photo.contains(">AL</a>"));
+        // Either way the face opens the sender's card.
+        for html in [initials, with_photo] {
+            assert!(
+                html.contains("href=\"mailrs:contact/ann@example.com\""),
+                "{html}"
+            );
+        }
     }
 
     #[test]
@@ -610,11 +687,13 @@ mod tests {
     #[test]
     fn remote_content_is_refused_until_allowed() {
         let me: [String; 0] = [];
+        let photos = HashMap::new();
         let blocked = render(
             &Conversation {
                 subject: "x",
                 messages: vec![],
                 me: &me,
+                photos: &photos,
                 allow_remote: false,
             },
             &theme(),
@@ -628,6 +707,7 @@ mod tests {
                 subject: "x",
                 messages: vec![],
                 me: &me,
+                photos: &photos,
                 allow_remote: true,
             },
             &theme(),

@@ -35,6 +35,8 @@ pub enum Change {
     SuggestFollowUps(bool),
     /// What a new message starts as.
     ComposeFormat(ComposeFormat),
+    /// Read the accounts' Google contacts, or stop and forget them.
+    Contacts(bool),
     /// The colour the flag button reaches for next.
     FlagColor(FlagColor),
     /// An account's signature. Blank text removes it.
@@ -131,6 +133,7 @@ impl Change {
             Change::InboxCategories(on) => settings.inbox_categories = on,
             Change::SuggestFollowUps(on) => settings.suggest_follow_ups = on,
             Change::ComposeFormat(format) => settings.compose_format = format,
+            Change::Contacts(on) => settings.contacts = on,
             Change::FlagColor(color) => settings.flag_color = color,
             Change::Signature { email, text } => settings.set_signature(&email, &text),
             Change::ToggleVip { email, name } => {
@@ -317,6 +320,9 @@ pub enum Effect {
     Assistant,
     /// How large the conversation's text is.
     TextSize,
+    /// Whether contacts supply names and photos, which rows and the open
+    /// conversation show.
+    Contacts,
     /// Light or dark.
     Theme,
 }
@@ -324,7 +330,7 @@ pub enum Effect {
 impl Effect {
     /// In the order the window applies them: accounts first, because the
     /// rows and the smart mailbox on screen read what it sets.
-    pub const ALL: [Effect; 10] = [
+    pub const ALL: [Effect; 11] = [
         Effect::ListShape,
         Effect::Accounts,
         Effect::RowColors,
@@ -334,6 +340,7 @@ impl Effect {
         Effect::Categories,
         Effect::Assistant,
         Effect::TextSize,
+        Effect::Contacts,
         Effect::Theme,
     ];
 }
@@ -384,6 +391,7 @@ impl Effects {
             inbox_categories,
             suggest_follow_ups,
             compose_format,
+            contacts,
         } = after;
         // These leave the window as it is. The flag colour, the delay before
         // Send commits, and the rest are read when they are needed, so
@@ -423,6 +431,7 @@ impl Effects {
                 Effect::Categories => *inbox_categories != before.inbox_categories,
                 Effect::Assistant => *ai != before.ai,
                 Effect::TextSize => *text_size != before.text_size,
+                Effect::Contacts => *contacts != before.contacts,
                 Effect::Theme => *color_scheme != before.color_scheme,
             })
             .collect();
@@ -642,6 +651,7 @@ mod tests {
         after.inbox_categories = !before.inbox_categories;
         after.ai.local_model = "qwen".into();
         after.text_size = TextSize::Small;
+        after.contacts = !before.contacts;
         after.color_scheme = ColorScheme::Dark;
         let effects = Effects::between(&before, &after);
         assert_eq!(effects.iter().collect::<Vec<_>>(), Effect::ALL);
@@ -669,6 +679,7 @@ mod tests {
             Change::InboxCategories(false),
             Change::Ai(AiChange::ConfirmActions(false)),
             Change::StepTextSize(1),
+            Change::Contacts(true),
             Change::ColorScheme(ColorScheme::Light),
         ];
         let mut seen: Vec<Effect> = Vec::new();
@@ -712,6 +723,9 @@ mod tests {
                 "account_names",
                 "account_order",
                 "ai",
+                // Reading contacts asks Google for access of its own, so
+                // it stays a choice the person makes in Preferences.
+                "contacts",
                 "flag_color",
                 "hidden_addresses",
                 "inbox_categories",

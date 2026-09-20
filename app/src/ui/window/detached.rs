@@ -128,6 +128,7 @@ impl MainWindow {
             }
             Action::Unsubscribe => self.unsubscribe_from(Rc::clone(view)),
             Action::Mailto(address) => self.act(Action::Mailto(address)),
+            Action::ShowContact(address) => self.act(Action::ShowContact(address)),
         }
     }
 

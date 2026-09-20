@@ -14,10 +14,11 @@ use mailrs_domain::{
     Account, AccountId, AccountState, ChangeEvent, Folder, Label, MessageBody, MessageMeta, Target,
     ThreadSummary, system_label,
 };
-use mailrs_gmail::DELETE_SCOPE;
+use mailrs_gmail::{CONTACTS_SCOPE, DELETE_SCOPE};
 use mailrs_store::{accounts, labels, messages};
 use mailrs_sync::{History, Listing, MailAction, Outcome, Permitted, Scope, TriageAction, View};
 
+use super::contact_card;
 use super::conversation::{Action, ConversationView, OpenThread};
 use super::sidebar::Sidebar;
 use super::thread_list::{Picked, ThreadList};
@@ -819,6 +820,14 @@ impl MainWindow {
                 found.retain(|m| &m.id == id);
             }
             let expanded = default_expanded(&found);
+            let photos = this.app.upgrade().map_or_else(HashMap::new, |app| {
+                app.sender_photos(
+                    found
+                        .iter()
+                        .filter_map(|m| m.from.as_ref())
+                        .map(|a| a.email.clone()),
+                )
+            });
             let thread = OpenThread {
                 account_id,
                 thread_id: thread_id.clone(),
@@ -836,6 +845,7 @@ impl MainWindow {
                 only_message: only,
                 me,
                 inline_images: HashMap::new(),
+                photos,
                 unsubscribed: false,
                 flag_color: summary.flag_color,
             };
@@ -1171,7 +1181,87 @@ impl MainWindow {
                     app.compose(app.signed(draft));
                 }
             }
+            Action::ShowContact(address) => self.show_contact(address),
         }
+    }
+
+    /// Opens the card for one sender: what the address book knows, or the
+    /// message header alone when the address book has never heard of them.
+    fn show_contact(self: &Rc<Self>, address: String) {
+        if address.trim().is_empty() {
+            return;
+        }
+        let name = self
+            .conversation
+            .with_open(|open| {
+                open.messages
+                    .iter()
+                    .filter_map(|m| m.from.clone())
+                    .find(|a| a.email.eq_ignore_ascii_case(&address))
+                    .map(|a| a.display().to_string())
+            })
+            .flatten();
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let book = this.core.contacts();
+            let looked_up = {
+                let (book, address) = (book, address.clone());
+                this.core
+                    .call(async move { book.card(&address).await })
+                    .await
+            };
+            let card = looked_up.unwrap_or_else(|err| {
+                tracing::warn!(error = %err, "could not read the contact");
+                None
+            });
+            let Some(app) = this.app.upgrade() else {
+                return;
+            };
+            let vip = app.settings().is_vip(&address);
+            let person = match card {
+                Some(card) => contact_card::Person {
+                    name: card.contact.display().to_string(),
+                    email: card.contact.email().unwrap_or(address.as_str()).to_string(),
+                    addresses: card.contact.emails.clone(),
+                    organization: card.contact.organization.clone(),
+                    phone: card.contact.phone.clone(),
+                    photo: card.photo,
+                    vip,
+                },
+                None => contact_card::Person {
+                    name: name.unwrap_or_else(|| address.clone()),
+                    email: address.clone(),
+                    addresses: vec![address.clone()],
+                    organization: None,
+                    phone: None,
+                    photo: app.photo(&address),
+                    vip,
+                },
+            };
+            let display = person.name.clone();
+            let window = Rc::clone(&this);
+            contact_card::present(&this.window, person, move |choice| match choice {
+                contact_card::Choice::Write(to) => window.act(Action::Mailto(to)),
+                contact_card::Choice::ToggleVip => {
+                    let Some(app) = window.app.upgrade() else {
+                        return;
+                    };
+                    app.change_settings(Change::ToggleVip {
+                        email: address.clone(),
+                        name: display.clone(),
+                    });
+                    let added = app.settings().is_vip(&address);
+                    window.toast(&if added {
+                        format!("Added {display} to VIPs")
+                    } else {
+                        format!("Removed {display} from VIPs")
+                    });
+                }
+                contact_card::Choice::AllMail => {
+                    window.search(format!("from:{address}"));
+                }
+            });
+        });
     }
 
     /// The account a new message comes from: the one set in Preferences,
@@ -1299,6 +1389,59 @@ impl MainWindow {
                 this.settings().threading,
             ));
         });
+    }
+
+    /// Reloads the photos the open conversation shows and draws it again.
+    fn reopen_for_photos(self: &Rc<Self>) {
+        let Some(app) = self.app.upgrade() else {
+            return;
+        };
+        let senders = self.conversation.with_open(|open| {
+            open.messages
+                .iter()
+                .filter_map(|m| m.from.as_ref())
+                .map(|a| a.email.clone())
+                .collect::<Vec<_>>()
+        });
+        let Some(senders) = senders else { return };
+        let photos = app.sender_photos(senders.into_iter());
+        self.conversation.with_open(|open| open.photos = photos);
+        self.conversation.render(false);
+    }
+
+    /// Explains that reading contacts needs one more Google permission,
+    /// and offers to ask for it. Preferences reaches this through the app
+    /// the first time somebody turns contacts on.
+    pub fn ask_for_contacts_access(self: &Rc<Self>, account_id: AccountId) {
+        let Some(account) = self.account(account_id) else {
+            return;
+        };
+        let dialog = adw::AlertDialog::new(
+            Some("Allow Penguin Mail to Read Your Contacts"),
+            Some(&format!(
+                "Reading the contacts of {} needs one more permission. Google asks you to confirm in your browser. Names and photos stay on this computer.",
+                account.email
+            )),
+        );
+        dialog.add_responses(&[("cancel", "Not Now"), ("grant", "Grant Access")]);
+        dialog.set_response_appearance("grant", adw::ResponseAppearance::Suggested);
+        dialog.set_close_response("cancel");
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            if dialog.choose_future(Some(&this.window)).await == "grant" {
+                this.authorize_with(Some(account.email), &[CONTACTS_SCOPE]);
+            }
+        });
+    }
+
+    /// Hands the list the contact photos that are now on disk, so rows
+    /// show faces instead of initials.
+    pub fn contacts_loaded(self: &Rc<Self>) {
+        let Some(app) = self.app.upgrade() else {
+            return;
+        };
+        self.list.set_photos(&app.photos());
+        self.reopen_for_photos();
     }
 
     /// Explains that erasing mail needs one more Gmail permission, and
@@ -2490,6 +2633,12 @@ impl MainWindow {
             }
             Effect::Assistant => self.assistant.refresh(),
             Effect::TextSize => self.conversation.set_zoom(settings.text_size.zoom()),
+            Effect::Contacts => {
+                if let Some(app) = self.app.upgrade() {
+                    self.list.set_photos(&app.photos());
+                }
+                self.reopen_for_photos();
+            }
             // The app follows the light or dark choice; no window to redraw.
             Effect::Theme => {}
         }

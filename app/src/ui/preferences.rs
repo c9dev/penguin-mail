@@ -107,6 +107,24 @@ fn general_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
     ));
     page.add(&reading);
 
+    let contacts = adw::PreferencesGroup::builder()
+        .title("Contacts")
+        .description(
+            "Penguin Mail can read the contacts of each Google account: names, email \
+             addresses, photos, organizations, and phone numbers. It uses them to suggest \
+             recipients, to show faces beside mail, and to fill the card behind a sender's \
+             name. What it reads stays on this computer, and turning this off deletes it.",
+        )
+        .build();
+    contacts.add(&switch_with(
+        app,
+        "Use Google Contacts",
+        Some("Google asks your permission the first time"),
+        settings.contacts,
+        |app, on| app.set_contacts(on),
+    ));
+    page.add(&contacts);
+
     let appearance = adw::PreferencesGroup::builder().title("Appearance").build();
     appearance.add(&combo(
         app,
@@ -375,6 +393,19 @@ fn switch(
     active: bool,
     change: impl Fn(bool) -> Change + 'static,
 ) -> adw::SwitchRow {
+    switch_with(app, title, subtitle, active, move |app, on| {
+        app.change_settings(change(on));
+    })
+}
+
+/// A switch whose change the app has to do more about than save it.
+fn switch_with(
+    app: &Rc<App>,
+    title: &str,
+    subtitle: Option<&str>,
+    active: bool,
+    flip: impl Fn(&Rc<App>, bool) + 'static,
+) -> adw::SwitchRow {
     let row = adw::SwitchRow::builder()
         .title(title)
         .active(active)
@@ -385,7 +416,7 @@ fn switch(
     let weak = Rc::downgrade(app);
     row.connect_active_notify(move |row| {
         if let Some(app) = weak.upgrade() {
-            app.change_settings(change(row.is_active()));
+            flip(&app, row.is_active());
         }
     });
     row

@@ -1,7 +1,8 @@
 use std::cell::OnceCell;
 
+use adw::prelude::*;
 use chrono::Local;
-use gtk::prelude::*;
+use gtk::gdk;
 use gtk::subclass::prelude::*;
 use gtk::{glib, pango};
 use mailrs_domain::{FlagColor, ThreadSummary};
@@ -13,6 +14,7 @@ mod imp {
 
     #[derive(Default)]
     pub struct ThreadRow {
+        pub avatar: OnceCell<adw::Avatar>,
         pub account: OnceCell<gtk::Box>,
         pub vip: OnceCell<gtk::Image>,
         pub from: OnceCell<gtk::Label>,
@@ -42,6 +44,12 @@ mod imp {
             let dot = gtk::Box::builder()
                 .valign(gtk::Align::Start)
                 .css_classes(["unread-dot"])
+                .build();
+            let avatar = adw::Avatar::builder()
+                .size(34)
+                .show_initials(true)
+                .valign(gtk::Align::Start)
+                .visible(false)
                 .build();
             let content = gtk::Box::builder()
                 .orientation(gtk::Orientation::Vertical)
@@ -96,8 +104,10 @@ mod imp {
             content.append(&middle);
             content.append(&snippet);
             row.append(&dot);
+            row.append(&avatar);
             row.append(&content);
 
+            let _ = self.avatar.set(avatar);
             let _ = self.account.set(account);
             let _ = self.vip.set(vip);
             let _ = self.from.set(from);
@@ -171,13 +181,44 @@ const ACCOUNT_CLASSES: [&str; 9] = [
 const _: () = assert!(ACCOUNT_CLASSES.len() == PALETTE.len());
 const _: () = assert!(FLAG_CLASSES.len() == FlagColor::ALL.len());
 
+/// The name an avatar draws its initials and its colour from.
+fn display_name(thread: &ThreadSummary) -> String {
+    if thread.from.trim().is_empty() {
+        thread.from_email.clone()
+    } else {
+        thread.from.clone()
+    }
+}
+
 fn flag_class(color: FlagColor) -> &'static str {
     FLAG_CLASSES[FlagColor::ALL.iter().position(|c| *c == color).unwrap_or(0)]
 }
 
+/// What a row shows where a face goes: nothing while contacts are off,
+/// the contact's photo, or their initials.
+pub enum Avatar<'a> {
+    Hidden,
+    Photo(&'a gdk::Texture),
+    Initials,
+}
+
 impl ThreadRow {
-    pub fn bind(&self, thread: &ThreadSummary, show_account: bool, vip: bool) {
+    pub fn bind(&self, thread: &ThreadSummary, show_account: bool, vip: bool, avatar: Avatar) {
         let imp = self.imp();
+        let face = imp.avatar.get().expect("avatar exists");
+        match avatar {
+            Avatar::Hidden => face.set_visible(false),
+            Avatar::Photo(photo) => {
+                face.set_visible(true);
+                face.set_text(Some(&display_name(thread)));
+                face.set_custom_image(Some(photo));
+            }
+            Avatar::Initials => {
+                face.set_visible(true);
+                face.set_text(Some(&display_name(thread)));
+                face.set_custom_image(gdk::Paintable::NONE);
+            }
+        }
         imp.vip.get().expect("vip star exists").set_visible(vip);
         let get = |cell: &OnceCell<gtk::Label>| {
             cell.get()

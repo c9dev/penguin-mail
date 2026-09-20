@@ -5,6 +5,7 @@ pub mod assistant;
 pub mod assistant_prefs;
 pub mod autocomplete;
 pub mod composer;
+pub mod contact_card;
 pub mod conversation;
 pub mod hide_my_email;
 pub mod moving;

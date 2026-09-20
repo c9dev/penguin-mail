@@ -51,6 +51,10 @@ pub struct Settings {
     pub suggest_follow_ups: bool,
     /// What a new message starts as: styled text, or Markdown source.
     pub compose_format: ComposeFormat,
+    /// Read each account's Google contacts, for names, photos, and
+    /// recipient suggestions. Off until the owner turns it on, because it
+    /// is the one thing here that asks Google for more access.
+    pub contacts: bool,
 }
 
 /// Where the assistant's model runs.
@@ -140,6 +144,7 @@ impl Default for Settings {
             inbox_categories: true,
             suggest_follow_ups: true,
             compose_format: ComposeFormat::Rich,
+            contacts: false,
         }
     }
 }
