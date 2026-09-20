@@ -1,21 +1,24 @@
-//! S/MIME in the app: which call a message needs, what comes back when
-//! gpgsm has run, and which standard a draft goes out under.
+//! S/MIME in the app: which call a message needs, and what comes back when
+//! gpgsm has run.
 //!
-//! It is `pgp`'s twin and borrows its vocabulary: a [`Mark`] from here
-//! fills the same card, in the same three tones, so a reader never has to
-//! know which standard a message arrived under. Choosing between the two
-//! engines also happens here, since this is the module that knows both.
-//! Every call below blocks, so the window hands them to `Core::gpgsm`
-//! rather than running them itself.
+//! It is `pgp`'s peer over `protection`, and borrows the same vocabulary: a
+//! [`Mark`] from here fills the same card, in the same three tones, so a
+//! reader never has to know which standard a message arrived under. Every
+//! call below blocks, so the window hands them to `Core::gpgsm` rather than
+//! running them itself.
 
 use std::process::Command;
 
-use mailrs_domain::{MessageBody, Protection};
 use mailrs_smime::{Chain, Recipient, Signature, Smime, SmimeError, Verdict};
-use serde::{Deserialize, Serialize};
 
-use crate::pgp::{self, Mark, Read, Tone};
+use crate::protection::{self, Mark, Read, Tone};
 use mailrs_domain::translate::{fill, gettext};
+
+/// What a good signature whose chain reaches no root this computer trusts
+/// is worth. The chain is the only thing that says who signed under
+/// S/MIME, so without one there is nobody to name. `pgp` answers the same
+/// question with `Tone::Good`, because there the key is the name.
+const UNVOUCHED: Tone = Tone::Unchecked;
 
 /// Which call of the engine one message needs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -29,43 +32,6 @@ pub enum Opening {
     Decrypt,
 }
 
-/// Which engine a message needs, and which of its calls.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Engine {
-    Pgp(pgp::Opening),
-    Smime(Opening),
-}
-
-/// Which standard a message goes out under.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Standard {
-    #[default]
-    Pgp,
-    Smime,
-}
-
-/// What each engine holds for a set of addresses. An engine this computer
-/// does not have answers nothing at all, which is not the same as holding
-/// nothing.
-#[derive(Debug, Clone, Default)]
-pub struct Held {
-    pub pgp: Option<Vec<mailrs_pgp::Recipient>>,
-    pub smime: Option<Vec<Recipient>>,
-}
-
-/// Which call `body` needs before it is drawn, from whichever engine. The
-/// wrapper the message arrived in names its standard, and a body with no
-/// wrapper is left to OpenPGP, which is the only one of the two that also
-/// lives in the text.
-pub fn engine(body: &MessageBody) -> Option<Engine> {
-    match body.protection {
-        Some(Protection::SmimeSigned) => Some(Engine::Smime(Opening::Verify)),
-        Some(Protection::SmimeOpaque) => Some(Engine::Smime(Opening::Opaque)),
-        Some(Protection::SmimeEnveloped) => Some(Engine::Smime(Opening::Decrypt)),
-        _ => pgp::opening(body).map(Engine::Pgp),
-    }
-}
-
 /// Runs the call `opening` asks for and says what the window should show.
 ///
 /// `raw` is the message as it arrived, from `format=raw`, which is the one
@@ -74,37 +40,37 @@ pub fn engine(body: &MessageBody) -> Option<Engine> {
 pub fn read(smime: &Smime, opening: Opening, raw: &[u8]) -> Read {
     match opening {
         Opening::Verify => {
-            let Some((part, signature)) = pgp::wrapper_parts(raw) else {
-                return pgp::mark_only(unreadable());
+            let Some((part, signature)) = protection::wrapper_parts(raw) else {
+                return protection::mark_only(unreadable());
             };
             match smime.verify(part, signature) {
-                Ok(found) => pgp::mark_only(signed(&found)),
-                Err(err) => pgp::mark_only(refused(&err)),
+                Ok(found) => protection::mark_only(signed(&found)),
+                Err(err) => protection::mark_only(refused(&err)),
             }
         }
         Opening::Opaque => {
             let Some(blob) = blob(raw) else {
-                return pgp::mark_only(unreadable());
+                return protection::mark_only(unreadable());
             };
             match smime.open_signed(blob) {
                 Ok(opened) => {
-                    let (inside, files) = pgp::opened_body(&opened.part);
+                    let (inside, files) = protection::opened_body(&opened.part);
                     Read {
                         mark: signed(&opened.signature),
                         body: Some(inside),
                         files,
                     }
                 }
-                Err(err) => pgp::mark_only(refused(&err)),
+                Err(err) => protection::mark_only(refused(&err)),
             }
         }
         Opening::Decrypt => {
             let Some(blob) = blob(raw) else {
-                return pgp::mark_only(unreadable());
+                return protection::mark_only(unreadable());
             };
             match smime.decrypt(blob) {
                 Ok(part) => opened(smime, &part),
-                Err(err) => pgp::mark_only(refused(&err)),
+                Err(err) => protection::mark_only(refused(&err)),
             }
         }
     }
@@ -117,55 +83,7 @@ pub fn version(smime: &Smime) -> Option<String> {
         .arg("--version")
         .output()
         .ok()?;
-    pgp::version_of(&String::from_utf8_lossy(&run.stdout))
-}
-
-/// Which standard would encrypt this draft, or what stands in the way.
-///
-/// OpenPGP wins when both could carry it, so that nothing about a message
-/// the app already knew how to send changes the day gpgsm turns up.
-/// `blind` says the draft carries a Bcc, which no encryption can keep
-/// blind: both standards name everyone a message went to inside it.
-pub fn encrypting(held: &Held, blind: bool) -> Result<Standard, String> {
-    if blind {
-        return Err(
-            "An encrypted message names everyone it went to, so a blind copy would not stay \
-             blind."
-                .into(),
-        );
-    }
-    let pgp = held.pgp.as_deref().map(pgp::cannot_encrypt);
-    let smime = held.smime.as_deref().map(cannot_encrypt);
-    match (pgp, smime) {
-        (Some(None), _) => Ok(Standard::Pgp),
-        (_, Some(None)) => Ok(Standard::Smime),
-        (Some(Some(pgp)), Some(Some(smime))) => Err(neither(
-            held.pgp.as_deref().unwrap_or_default(),
-            held.smime.as_deref().unwrap_or_default(),
-            &pgp,
-            &smime,
-        )),
-        (Some(Some(problem)), None) | (None, Some(Some(problem))) => Err(problem),
-        (None, None) => Err("This computer has nothing to encrypt with.".into()),
-    }
-}
-
-/// Which standard signs a message from this address. The sender's own
-/// holdings decide it, and OpenPGP wins a tie for the reason
-/// [`encrypting`] gives.
-pub fn signing(held: &Held) -> Standard {
-    let key = held
-        .pgp
-        .as_deref()
-        .is_some_and(|held| held.iter().any(|recipient| recipient.key.is_some()));
-    let certificate = held
-        .smime
-        .as_deref()
-        .is_some_and(|held| held.iter().any(|it| it.certificate.is_some()));
-    match (key, certificate) {
-        (false, true) => Standard::Smime,
-        _ => Standard::Pgp,
-    }
+    protection::version_of(&String::from_utf8_lossy(&run.stdout))
 }
 
 /// Why this draft cannot be encrypted under S/MIME, for the Encrypt button
@@ -182,18 +100,9 @@ pub fn cannot_encrypt(held: &[Recipient]) -> Option<String> {
     (!missing.is_empty()).then(|| {
         fill(
             &gettext("gpgsm holds no certificate for {addresses}."),
-            &[("addresses", &pgp::listed(&missing))],
+            &[("addresses", &protection::listed(&missing))],
         )
     })
-}
-
-/// What the Encrypt button says once it works, which names the standard
-/// the message would go out under rather than making the writer guess.
-pub fn encrypting_with(standard: Standard) -> String {
-    match standard {
-        Standard::Pgp => gettext("Encrypt this message to the recipients' keys"),
-        Standard::Smime => gettext("Encrypt this message to the recipients' certificates"),
-    }
 }
 
 /// What Preferences says about the addresses this person sends from:
@@ -211,13 +120,13 @@ pub fn own_certificates(held: &[Recipient]) -> String {
         ([], _) => gettext("gpgsm holds no certificate for any of the addresses you send from."),
         (mine, []) => fill(
             &gettext("gpgsm holds a certificate for {addresses}."),
-            &[("addresses", &pgp::joined(mine))],
+            &[("addresses", &protection::joined(mine))],
         ),
         (mine, missing) => fill(
             &gettext("gpgsm holds a certificate for {addresses}, and none for {without}."),
             &[
-                ("addresses", &pgp::joined(mine)),
-                ("without", &pgp::joined(missing)),
+                ("addresses", &protection::joined(mine)),
+                ("without", &protection::joined(missing)),
             ],
         ),
     }
@@ -232,7 +141,7 @@ pub fn own_certificates(held: &[Recipient]) -> String {
 /// since anyone can wrap somebody else's ciphertext in one of their own.
 fn opened(smime: &Smime, part: &[u8]) -> Read {
     let inside = match inner(part) {
-        Some(Opening::Verify) => pgp::wrapper_parts(part)
+        Some(Opening::Verify) => protection::wrapper_parts(part)
             .map(|(signed, signature)| (signed.to_vec(), smime.verify(signed, signature))),
         Some(Opening::Opaque) => blob(part).map(|blob| match smime.open_signed(blob) {
             Ok(found) => (found.part, Ok(found.signature)),
@@ -248,7 +157,7 @@ fn opened(smime: &Smime, part: &[u8]) -> Read {
         Some((part, Err(_))) => (part, None),
         None => (part.to_vec(), None),
     };
-    let (body, files) = pgp::opened_body(&part);
+    let (body, files) = protection::opened_body(&part);
     Read {
         mark: enveloped(signature.as_ref(), body.attachments.len()),
         body: Some(body),
@@ -258,13 +167,13 @@ fn opened(smime: &Smime, part: &[u8]) -> Read {
 
 /// Which call the entity inside an envelope needs, when it is signed.
 fn inner(part: &[u8]) -> Option<Opening> {
-    let blank = pgp::find(part, b"\r\n\r\n")?;
-    let content_type = pgp::unfolded(&part[..blank], "content-type")?;
+    let blank = protection::find(part, b"\r\n\r\n")?;
+    let content_type = protection::unfolded(&part[..blank], "content-type")?;
     let media = content_type.split(';').next()?.trim().to_ascii_lowercase();
     match media.as_str() {
         "multipart/signed" => Some(Opening::Verify),
         "application/pkcs7-mime" | "application/x-pkcs7-mime" => {
-            pgp::param(&content_type, "smime-type")
+            protection::param(&content_type, "smime-type")
                 .filter(|kind| kind.eq_ignore_ascii_case("signed-data"))
                 .map(|_| Opening::Opaque)
         }
@@ -276,7 +185,7 @@ fn inner(part: &[u8]) -> Option<Opening> {
 /// that ends its headers. An S/MIME blob is a part of its own rather than
 /// one of several, so there is nothing to pick out beside it.
 fn blob(raw: &[u8]) -> Option<&[u8]> {
-    Some(&raw[pgp::find(raw, b"\r\n\r\n")? + 4..])
+    Some(&raw[protection::find(raw, b"\r\n\r\n")? + 4..])
 }
 
 /// What the card says about a signature. The verdict and the chain answer
@@ -291,7 +200,7 @@ fn signed(signature: &Signature) -> Mark {
             detail: Some(vouching(signature.chain)),
             tone: match signature.chain {
                 Chain::Trusted => Tone::Good,
-                _ => Tone::Unchecked,
+                _ => UNVOUCHED,
             },
         },
         Verdict::Bad => Mark {
@@ -351,43 +260,13 @@ fn signed(signature: &Signature) -> Mark {
 /// What the card says about a message that arrived enveloped, with the
 /// signature that travelled inside it when it carried one.
 fn enveloped(signature: Option<&Signature>, files: usize) -> Mark {
-    let mut mark = match signature {
-        Some(signature) if signature.verdict == Verdict::Good => Mark {
-            title: fill(
-                &gettext("Encrypted, and signed by {signer}"),
-                &[("signer", &signer(signature))],
-            ),
-            detail: Some(vouching(signature.chain)),
-            tone: match signature.chain {
-                Chain::Trusted => Tone::Good,
-                _ => Tone::Unchecked,
-            },
-        },
-        Some(signature) => {
-            let found = signed(signature);
-            Mark {
-                title: fill(&gettext("Encrypted. {what}"), &[("what", &found.title)]),
-                ..found
-            }
-        }
-        None => Mark {
-            title: gettext("This message arrived encrypted"),
-            detail: Some(gettext(
-                "Nobody signed it, so it says nothing about who sent it.",
-            )),
-            tone: Tone::Unchecked,
-        },
-    };
-    if let Some(line) = pgp::files_line(files) {
-        mark.detail = Some(match mark.detail {
-            Some(detail) => fill(
-                &gettext("{detail} {files}"),
-                &[("detail", &detail), ("files", &line)],
-            ),
-            None => line,
-        });
-    }
-    mark
+    protection::encrypted(
+        signature.map(|signature| protection::Inside {
+            good_signer: (signature.verdict == Verdict::Good).then(|| signer(signature)),
+            mark: signed(signature),
+        }),
+        files,
+    )
 }
 
 /// What the card says when gpgsm would not open a message.
@@ -455,41 +334,6 @@ fn name(subject: &str) -> &str {
         .find_map(|piece| piece.trim().strip_prefix("CN="))
         .unwrap_or(subject)
         .trim()
-}
-
-/// What to say when neither standard reaches every recipient. Somebody
-/// nothing here can reach is the likelier answer, so that is the one the
-/// button gives; a draft that each standard covers half of gets its own
-/// sentence, because adding a key would not fix it.
-fn neither(
-    keys: &[mailrs_pgp::Recipient],
-    certificates: &[Recipient],
-    pgp: &str,
-    smime: &str,
-) -> String {
-    let unreachable: Vec<&str> = keys
-        .iter()
-        .filter(|recipient| recipient.key.is_none())
-        .filter(|recipient| {
-            certificates
-                .iter()
-                .any(|other| other.address == recipient.address && other.certificate.is_none())
-        })
-        .map(|recipient| recipient.address.as_str())
-        .collect();
-    if !unreachable.is_empty() {
-        return fill(
-            &gettext("gpg holds no key and gpgsm no certificate for {addresses}."),
-            &[("addresses", &pgp::listed(&unreachable))],
-        );
-    }
-    if keys.is_empty() || certificates.is_empty() {
-        return pgp.to_string();
-    }
-    fill(
-        &gettext("A message goes out under one standard or the other. {pgp} {smime}"),
-        &[("pgp", pgp), ("smime", smime)],
-    )
 }
 
 #[cfg(test)]
@@ -661,49 +505,6 @@ mod tests {
         }
     }
 
-    fn key(address: &str, held: bool) -> mailrs_pgp::Recipient {
-        mailrs_pgp::Recipient {
-            address: address.to_string(),
-            key: held.then(|| mailrs_pgp::Key {
-                fingerprint: "F".repeat(40),
-                user_id: format!("<{address}>"),
-                trust: mailrs_pgp::Trust::Unknown,
-            }),
-        }
-    }
-
-    fn arrived(protection: Protection) -> MessageBody {
-        MessageBody {
-            protection: Some(protection),
-            ..MessageBody::default()
-        }
-    }
-
-    #[test]
-    fn the_wrapper_decides_which_engine_a_message_needs() {
-        assert_eq!(
-            engine(&arrived(Protection::SmimeSigned)),
-            Some(Engine::Smime(Opening::Verify))
-        );
-        assert_eq!(
-            engine(&arrived(Protection::SmimeOpaque)),
-            Some(Engine::Smime(Opening::Opaque))
-        );
-        assert_eq!(
-            engine(&arrived(Protection::SmimeEnveloped)),
-            Some(Engine::Smime(Opening::Decrypt))
-        );
-        assert_eq!(
-            engine(&arrived(Protection::Signed)),
-            Some(Engine::Pgp(pgp::Opening::Verify))
-        );
-        assert_eq!(
-            engine(&arrived(Protection::Encrypted)),
-            Some(Engine::Pgp(pgp::Opening::Decrypt))
-        );
-        assert_eq!(engine(&MessageBody::default()), None);
-    }
-
     #[test]
     fn a_good_signature_names_the_signer_and_how_far_the_chain_reached() {
         let mark = signed(&signature(Verdict::Good, Chain::Trusted));
@@ -790,109 +591,6 @@ mod tests {
             "This message is encrypted to a certificate you do not hold"
         );
         assert_eq!(mark.tone, Tone::Unchecked);
-    }
-
-    #[test]
-    fn openpgp_carries_the_message_when_both_standards_could() {
-        let held = Held {
-            pgp: Some(vec![key("ada@example.test", true)]),
-            smime: Some(vec![certificate("ada@example.test", true)]),
-        };
-        assert_eq!(encrypting(&held, false), Ok(Standard::Pgp));
-    }
-
-    #[test]
-    fn smime_carries_it_when_it_is_the_one_that_reaches_everybody() {
-        let held = Held {
-            pgp: Some(vec![key("ada@example.test", false)]),
-            smime: Some(vec![certificate("ada@example.test", true)]),
-        };
-        assert_eq!(encrypting(&held, false), Ok(Standard::Smime));
-    }
-
-    #[test]
-    fn a_recipient_neither_standard_reaches_is_named_once() {
-        let held = Held {
-            pgp: Some(vec![
-                key("ada@example.test", true),
-                key("bo@example.test", false),
-            ]),
-            smime: Some(vec![
-                certificate("ada@example.test", false),
-                certificate("bo@example.test", false),
-            ]),
-        };
-        assert_eq!(
-            encrypting(&held, false),
-            Err("gpg holds no key and gpgsm no certificate for bo@example.test.".into())
-        );
-    }
-
-    #[test]
-    fn a_draft_each_standard_covers_half_of_says_what_that_means() {
-        let held = Held {
-            pgp: Some(vec![
-                key("ada@example.test", true),
-                key("bo@example.test", false),
-            ]),
-            smime: Some(vec![
-                certificate("ada@example.test", false),
-                certificate("bo@example.test", true),
-            ]),
-        };
-        let problem = encrypting(&held, false).expect_err("neither reaches both");
-        assert!(
-            problem.starts_with("A message goes out under one standard or the other."),
-            "{problem}"
-        );
-        assert!(problem.contains("bo@example.test"), "{problem}");
-    }
-
-    #[test]
-    fn the_only_engine_on_this_computer_is_the_one_that_answers() {
-        let smime_alone = Held {
-            pgp: None,
-            smime: Some(vec![certificate("bo@example.test", false)]),
-        };
-        assert_eq!(
-            encrypting(&smime_alone, false),
-            Err("gpgsm holds no certificate for bo@example.test.".into())
-        );
-        let pgp_alone = Held {
-            pgp: Some(vec![key("bo@example.test", false)]),
-            smime: None,
-        };
-        assert_eq!(
-            encrypting(&pgp_alone, false),
-            Err("gpg holds no key for bo@example.test.".into())
-        );
-    }
-
-    #[test]
-    fn a_blind_copy_and_encryption_do_not_go_together_under_either_standard() {
-        let held = Held {
-            pgp: Some(vec![key("ada@example.test", true)]),
-            smime: Some(vec![certificate("ada@example.test", true)]),
-        };
-        let problem = encrypting(&held, true).expect_err("a blind copy stops it");
-        assert!(problem.contains("blind"), "{problem}");
-    }
-
-    #[test]
-    fn the_sender_decides_which_standard_signs() {
-        let both = Held {
-            pgp: Some(vec![key("ada@example.test", true)]),
-            smime: Some(vec![certificate("ada@example.test", true)]),
-        };
-        assert_eq!(signing(&both), Standard::Pgp);
-
-        let certificate_only = Held {
-            pgp: Some(vec![key("ada@example.test", false)]),
-            smime: Some(vec![certificate("ada@example.test", true)]),
-        };
-        assert_eq!(signing(&certificate_only), Standard::Smime);
-
-        assert_eq!(signing(&Held::default()), Standard::Pgp);
     }
 
     #[test]

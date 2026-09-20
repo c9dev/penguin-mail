@@ -19,8 +19,8 @@ use pulldown_cmark::{Event, Options, Parser, html};
 use serde::{Deserialize, Serialize};
 
 use crate::format::full_date;
+use crate::protection::Standard;
 use crate::richtext::{self, RichBody};
-use crate::smime::Standard;
 use mailrs_domain::translate::{fill, gettext};
 
 /// One address an account may send mail as, as Gmail last reported it: the

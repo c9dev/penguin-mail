@@ -11,7 +11,7 @@ use std::rc::Rc;
 use gtk::glib;
 
 use super::MainWindow;
-use crate::smime::Engine;
+use crate::protection::Engine;
 use crate::ui::conversation::ConversationView;
 use crate::{pgp, smime};
 

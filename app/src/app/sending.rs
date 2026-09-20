@@ -19,7 +19,7 @@ use crate::compose::{
     Draft, SendWhen, build_body_part, build_mime, build_protected, new_message_id,
 };
 use crate::format::future_date;
-use crate::smime::Standard;
+use crate::protection::Standard;
 use mailrs_domain::translate::{fill, gettext};
 
 /// How often the scheduler looks for messages that are due.
