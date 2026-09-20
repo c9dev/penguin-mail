@@ -230,8 +230,9 @@ fn opened(smime: &Smime, part: &[u8]) -> Read {
     };
     let (part, signature) = match inside {
         Some((part, Ok(signature))) => (part, Some(signature)),
-        // The envelope opened, so the message is there to read whatever
-        // became of the signature inside it.
+        // The envelope opened and the signature inside it did not. What
+        // came out is still the closest thing to the message there is, so
+        // it goes up with the card saying only that it arrived encrypted.
         Some((part, Err(_))) => (part, None),
         None => (part.to_vec(), None),
     };
