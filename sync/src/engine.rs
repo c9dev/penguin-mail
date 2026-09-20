@@ -24,6 +24,13 @@ pub struct EngineConfig {
     pub max_backoff: Duration,
     pub window_days: i64,
     pub body_cache_bytes: i64,
+    /// Gap between backfill pages. A page of 100 messages costs 505 quota
+    /// units, about two and a half seconds of an account's budget, so
+    /// pages back to back leave the user nothing. The gap lets the bucket
+    /// refill before anybody presses Delete.
+    pub backfill_pause: Duration,
+    /// The gap while the user is already waiting on Gmail.
+    pub backfill_busy_pause: Duration,
 }
 
 impl Default for EngineConfig {
@@ -33,6 +40,8 @@ impl Default for EngineConfig {
             max_backoff: Duration::from_secs(300),
             window_days: DEFAULT_WINDOW_DAYS,
             body_cache_bytes: DEFAULT_BODY_CACHE_BYTES,
+            backfill_pause: Duration::from_millis(500),
+            backfill_busy_pause: Duration::from_secs(5),
         }
     }
 }
@@ -172,13 +181,16 @@ async fn run_account<G: GmailApi>(
     // cycle from its second poll on.
     let mut stagger = poll_offset(sync.account_id(), config.poll_interval);
     loop {
-        match tick(
+        // Everything this loop asks Gmail for is background work, so it
+        // waits behind whatever the user is doing and leaves the account
+        // budget the user's next action needs.
+        match mailrs_gmail::limiter::background(tick(
             &sync,
             &mut next_poll,
             &mut next_prune,
             &mut stagger,
             &config,
-        )
+        ))
         .await
         {
             Ok(more_backfill) => {
@@ -188,6 +200,18 @@ async fn run_account<G: GmailApi>(
                     report(&sync, AccountState::Ok).await;
                 }
                 if more_backfill {
+                    // Backfill has the whole mailbox to load and no hurry.
+                    // A gap between pages keeps the account's budget from
+                    // running at nothing, and a longer one gets out of the
+                    // way of a user action that is already waiting.
+                    let pause = match sync.foreground_waiting() {
+                        true => config.backfill_busy_pause,
+                        false => config.backfill_pause,
+                    };
+                    tokio::select! {
+                        _ = tokio::time::sleep(pause) => {}
+                        _ = poke.notified() => {}
+                    }
                     continue;
                 }
                 tokio::select! {

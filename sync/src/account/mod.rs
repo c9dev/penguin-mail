@@ -85,6 +85,20 @@ impl<G: GmailApi> AccountSync<G> {
         self.account_id
     }
 
+    /// Whether a user action is waiting on this account's Gmail budget.
+    /// The engine reads it between backfill pages and gives way.
+    pub(crate) fn foreground_waiting(&self) -> bool {
+        self.api
+            .quota()
+            .is_some_and(|quota| quota.foreground_waiting())
+    }
+
+    /// Counts the caller as a user action waiting on Gmail until the guard
+    /// drops, so backfill stands aside for the whole wait.
+    pub(crate) fn waiting(&self) -> Option<mailrs_gmail::Waiting<'_>> {
+        self.api.quota().map(|quota| quota.waiting())
+    }
+
     pub async fn set_state(&self, state: AccountState) -> Result<(), SyncError> {
         let account_id = self.account_id;
         self.db

@@ -10,11 +10,12 @@ mod query;
 
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::sync::Mutex;
+use std::time::Duration;
 
 use mailrs_domain::{Address, EpochMillis, Filter, MessageBody, MessageMeta, Vacation};
 use mailrs_gmail::{
-    BATCH_LIMIT, GmailError, HistoryChange, HistoryPage, LabelColor, MessagePage, MessageRef,
-    Profile, RemoteLabel, cost,
+    AccountQuota, BATCH_LIMIT, GmailError, HistoryChange, HistoryPage, LabelColor, MessagePage,
+    MessageRef, Priority, Profile, QuotaLimiter, RemoteLabel, cost, limiter,
 };
 
 use crate::api::{GmailApi, SavedDraft};
@@ -22,6 +23,12 @@ use query::Query;
 
 pub struct FakeGmail {
     state: Mutex<FakeState>,
+    /// The budget the app paces itself against, as the real client does.
+    /// Without one the fake answers as fast as it is asked.
+    quota: Option<std::sync::Arc<AccountQuota>>,
+    /// Gmail's own per-user rate. With one, a call that arrives on an empty
+    /// bucket comes back rate limited, the way Gmail answers 429.
+    limit: Option<QuotaLimiter>,
 }
 
 pub struct FakeState {
@@ -61,6 +68,11 @@ pub struct FakeState {
 pub struct Usage {
     pub calls: u32,
     pub units: u32,
+    /// Calls Gmail turned down for quota, with a 429.
+    pub refused: u32,
+    /// How long the user's own calls waited for budget. Backfill waiting
+    /// costs nobody anything; this is the wait a person sits through.
+    pub foreground_wait: Duration,
     /// Calls per Gmail method, such as `messages.batchModify`.
     pub by_method: BTreeMap<&'static str, u32>,
 }
@@ -109,6 +121,8 @@ impl FakeGmail {
             color: None,
         };
         FakeGmail {
+            quota: None,
+            limit: None,
             state: Mutex::new(FakeState {
                 email: "me@example.com".into(),
                 history_id: 100,
@@ -218,18 +232,50 @@ impl FakeGmail {
         });
     }
 
+    /// Paces calls through `quota`, the way the real client does, and
+    /// answers 429 once Gmail's own budget for the account is spent. A test
+    /// that wants to watch the app share one account's budget asks for
+    /// this; the rest leave it off and the fake answers at once.
+    pub fn under_quota(mut self, quota: std::sync::Arc<AccountQuota>) -> Self {
+        self.quota = Some(quota);
+        self.limit = Some(QuotaLimiter::gmail_server());
+        self
+    }
+
     pub fn fail_next(&self, err: GmailError) {
         self.with(|s| s.failures.push_back(err));
     }
 
-    /// Charges one call to the meter and hands back the failure a test
-    /// queued for it, if any. Every API method starts here, so the usage
-    /// counts what the real client would have spent.
-    fn call(&self, method: &'static str, units: u32) -> Result<(), GmailError> {
+    /// Waits for budget, charges one call to the meter, and hands back the
+    /// failure a test queued for it, if any. Every API method starts here,
+    /// so the usage counts what the real client would have spent.
+    async fn call(&self, method: &'static str, units: u32) -> Result<(), GmailError> {
+        let mut waited = Duration::ZERO;
+        if let Some(quota) = &self.quota {
+            let priority = limiter::priority();
+            let started = tokio::time::Instant::now();
+            quota.acquire(units, priority).await;
+            if priority == Priority::Foreground {
+                waited = started.elapsed();
+            }
+        }
+        let refused = self
+            .limit
+            .as_ref()
+            .is_some_and(|limit| !limit.try_acquire(units));
         self.with(|s| {
             s.usage.calls += 1;
             s.usage.units += units;
+            s.usage.foreground_wait += waited;
             *s.usage.by_method.entry(method).or_default() += 1;
+            if refused {
+                s.usage.refused += 1;
+                // Gmail hands out a Retry-After of a second on a per-user
+                // rate limit, and charges for the call all the same.
+                return Err(GmailError::RateLimited {
+                    retry_after: Some(std::time::Duration::from_secs(1)),
+                });
+            }
             s.failures.pop_front().map_or(Ok(()), Err)
         })
     }
@@ -266,8 +312,12 @@ impl FakeState {
 }
 
 impl GmailApi for FakeGmail {
+    fn quota(&self) -> Option<&AccountQuota> {
+        self.quota.as_deref()
+    }
+
     async fn profile(&self) -> Result<Profile, GmailError> {
-        self.call("users.getProfile", cost::PROFILE)?;
+        self.call("users.getProfile", cost::PROFILE).await?;
         Ok(self.with(|s| Profile {
             email_address: s.email.clone(),
             history_id: s.history_id,
@@ -275,7 +325,7 @@ impl GmailApi for FakeGmail {
     }
 
     async fn labels(&self) -> Result<Vec<RemoteLabel>, GmailError> {
-        self.call("users.labels.list", cost::LABELS)?;
+        self.call("users.labels.list", cost::LABELS).await?;
         Ok(self.with(|s| s.labels.clone()))
     }
 
@@ -284,7 +334,7 @@ impl GmailApi for FakeGmail {
         query: &str,
         page_token: Option<&str>,
     ) -> Result<MessagePage, GmailError> {
-        self.call("users.messages.list", cost::LIST)?;
+        self.call("users.messages.list", cost::LIST).await?;
         let start = match page_token {
             None => 0,
             Some(token) => token.parse::<usize>().map_err(|_| GmailError::Http {
@@ -310,12 +360,12 @@ impl GmailApi for FakeGmail {
     }
 
     async fn message_metadata(&self, id: &str) -> Result<MessageMeta, GmailError> {
-        self.call("users.messages.get", cost::GET)?;
+        self.call("users.messages.get", cost::GET).await?;
         self.with(|s| s.messages.get(id).cloned().ok_or(GmailError::NotFound))
     }
 
     async fn thread_metadata(&self, thread_id: &str) -> Result<Vec<MessageMeta>, GmailError> {
-        self.call("users.threads.get", cost::THREAD)?;
+        self.call("users.threads.get", cost::THREAD).await?;
         self.with(|s| {
             let mut metas: Vec<MessageMeta> = s
                 .messages
@@ -332,7 +382,7 @@ impl GmailApi for FakeGmail {
     }
 
     async fn message_body(&self, id: &str) -> Result<MessageBody, GmailError> {
-        self.call("users.messages.get", cost::GET)?;
+        self.call("users.messages.get", cost::GET).await?;
         self.with(|s| {
             s.body_fetches += 1;
             s.bodies.get(id).cloned().ok_or(GmailError::NotFound)
@@ -344,7 +394,7 @@ impl GmailApi for FakeGmail {
         start: u64,
         page_token: Option<&str>,
     ) -> Result<HistoryPage, GmailError> {
-        self.call("users.history.list", cost::HISTORY)?;
+        self.call("users.history.list", cost::HISTORY).await?;
         self.with(|s| {
             if start < s.history_floor {
                 return Err(GmailError::NotFound);
@@ -373,7 +423,7 @@ impl GmailApi for FakeGmail {
         add: &[String],
         remove: &[String],
     ) -> Result<(), GmailError> {
-        self.call("users.messages.modify", cost::MODIFY)?;
+        self.call("users.messages.modify", cost::MODIFY).await?;
         self.with(|s| {
             s.remote_writes.push(format!(
                 "modify {id} +{} -{}",
@@ -398,7 +448,8 @@ impl GmailApi for FakeGmail {
             "batch of {} exceeds Gmail's limit of {BATCH_LIMIT}",
             ids.len()
         );
-        self.call("users.messages.batchModify", cost::BATCH_MODIFY)?;
+        self.call("users.messages.batchModify", cost::BATCH_MODIFY)
+            .await?;
         self.with(|s| {
             s.remote_writes.push(format!(
                 "batchModify {} +{} -{}",
@@ -416,21 +467,22 @@ impl GmailApi for FakeGmail {
     }
 
     async fn trash(&self, id: &str) -> Result<(), GmailError> {
-        self.call("users.messages.trash", cost::TRASH)?;
+        self.call("users.messages.trash", cost::TRASH).await?;
         self.with(|s| s.remote_writes.push(format!("trash {id}")));
         self.remote_relabel(id, &["TRASH"], &["INBOX"]);
         Ok(())
     }
 
     async fn untrash(&self, id: &str) -> Result<(), GmailError> {
-        self.call("users.messages.untrash", cost::TRASH)?;
+        self.call("users.messages.untrash", cost::TRASH).await?;
         self.with(|s| s.remote_writes.push(format!("untrash {id}")));
         self.remote_relabel(id, &["INBOX"], &["TRASH"]);
         Ok(())
     }
 
     async fn delete_messages(&self, ids: &[String]) -> Result<(), GmailError> {
-        self.call("users.messages.batchDelete", cost::BATCH_DELETE)?;
+        self.call("users.messages.batchDelete", cost::BATCH_DELETE)
+            .await?;
         self.with(|s| s.remote_writes.push(format!("delete {}", ids.join(","))));
         for id in ids {
             self.remote_delete(id);
@@ -439,7 +491,7 @@ impl GmailApi for FakeGmail {
     }
 
     async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, GmailError> {
-        self.call("users.messages.send", cost::SEND)?;
+        self.call("users.messages.send", cost::SEND).await?;
         Ok(self.with(|s| {
             s.sent.push((raw.to_vec(), thread_id.map(str::to_string)));
             format!("sent{}", s.sent.len())
@@ -453,8 +505,8 @@ impl GmailApi for FakeGmail {
         _thread_id: Option<&str>,
     ) -> Result<SavedDraft, GmailError> {
         match draft_id {
-            Some(_) => self.call("users.drafts.update", cost::DRAFT_UPDATE)?,
-            None => self.call("users.drafts.create", cost::DRAFT_CREATE)?,
+            Some(_) => self.call("users.drafts.update", cost::DRAFT_UPDATE).await?,
+            None => self.call("users.drafts.create", cost::DRAFT_CREATE).await?,
         }
         self.with(|s| {
             let id = match draft_id {
@@ -474,7 +526,7 @@ impl GmailApi for FakeGmail {
     }
 
     async fn send_draft(&self, draft_id: &str) -> Result<String, GmailError> {
-        self.call("users.drafts.send", cost::SEND)?;
+        self.call("users.drafts.send", cost::SEND).await?;
         self.with(|s| {
             let raw = s.drafts.remove(draft_id).ok_or(GmailError::NotFound)?;
             s.draft_messages.remove(draft_id);
@@ -484,7 +536,7 @@ impl GmailApi for FakeGmail {
     }
 
     async fn delete_draft(&self, draft_id: &str) -> Result<(), GmailError> {
-        self.call("users.drafts.delete", cost::DRAFT_DELETE)?;
+        self.call("users.drafts.delete", cost::DRAFT_DELETE).await?;
         self.with(|s| {
             s.draft_messages.remove(draft_id);
             s.drafts
@@ -495,7 +547,7 @@ impl GmailApi for FakeGmail {
     }
 
     async fn draft_for_message(&self, message_id: &str) -> Result<Option<String>, GmailError> {
-        self.call("users.drafts.list", cost::DRAFT_LIST)?;
+        self.call("users.drafts.list", cost::DRAFT_LIST).await?;
         Ok(self.with(|s| {
             s.draft_messages
                 .iter()
@@ -505,7 +557,8 @@ impl GmailApi for FakeGmail {
     }
 
     async fn display_name(&self) -> Result<Option<String>, GmailError> {
-        self.call("users.settings.sendAs.list", cost::SEND_AS)?;
+        self.call("users.settings.sendAs.list", cost::SEND_AS)
+            .await?;
         Ok(self.with(|s| s.display_name.clone()))
     }
 
@@ -514,7 +567,8 @@ impl GmailApi for FakeGmail {
         message_id: &str,
         attachment_id: &str,
     ) -> Result<Vec<u8>, GmailError> {
-        self.call("users.messages.attachments.get", cost::ATTACHMENT)?;
+        self.call("users.messages.attachments.get", cost::ATTACHMENT)
+            .await?;
         self.with(|s| {
             s.attachments
                 .get(&(message_id.to_string(), attachment_id.to_string()))
@@ -524,23 +578,26 @@ impl GmailApi for FakeGmail {
     }
 
     async fn signature(&self) -> Result<Option<String>, GmailError> {
-        self.call("users.settings.sendAs.list", cost::SEND_AS)?;
+        self.call("users.settings.sendAs.list", cost::SEND_AS)
+            .await?;
         Ok(self.with(|s| s.signature.clone()))
     }
 
     async fn vacation(&self) -> Result<Vacation, GmailError> {
-        self.call("users.settings.getVacation", cost::SETTINGS)?;
+        self.call("users.settings.getVacation", cost::SETTINGS)
+            .await?;
         Ok(self.with(|s| s.vacation.clone()))
     }
 
     async fn set_vacation(&self, vacation: &Vacation) -> Result<(), GmailError> {
-        self.call("users.settings.updateVacation", cost::SETTINGS)?;
+        self.call("users.settings.updateVacation", cost::SETTINGS)
+            .await?;
         self.with(|s| s.vacation = vacation.clone());
         Ok(())
     }
 
     async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {
-        self.call("users.labels.create", cost::LABELS)?;
+        self.call("users.labels.create", cost::LABELS).await?;
         Ok(self.with(|s| {
             let label = RemoteLabel {
                 id: format!("Label_{}", s.labels.len() + 1),
@@ -554,7 +611,7 @@ impl GmailApi for FakeGmail {
     }
 
     async fn rename_label(&self, id: &str, name: &str) -> Result<RemoteLabel, GmailError> {
-        self.call("users.labels.patch", cost::LABELS)?;
+        self.call("users.labels.patch", cost::LABELS).await?;
         self.with(|s| {
             let label = s
                 .labels
@@ -567,7 +624,7 @@ impl GmailApi for FakeGmail {
     }
 
     async fn delete_label(&self, id: &str) -> Result<(), GmailError> {
-        self.call("users.labels.delete", cost::LABELS)?;
+        self.call("users.labels.delete", cost::LABELS).await?;
         self.with(|s| {
             s.labels.retain(|l| l.id != id);
             for message in s.messages.values_mut() {
@@ -578,12 +635,14 @@ impl GmailApi for FakeGmail {
     }
 
     async fn filters(&self) -> Result<Vec<Filter>, GmailError> {
-        self.call("users.settings.filters.list", cost::SETTINGS)?;
+        self.call("users.settings.filters.list", cost::SETTINGS)
+            .await?;
         Ok(self.with(|s| s.filters.clone()))
     }
 
     async fn create_filter(&self, filter: &Filter) -> Result<Filter, GmailError> {
-        self.call("users.settings.filters.create", cost::SETTINGS)?;
+        self.call("users.settings.filters.create", cost::SETTINGS)
+            .await?;
         Ok(self.with(|s| {
             let created = Filter {
                 id: Some(format!("filter{}", s.filters.len() + 1)),
@@ -595,7 +654,8 @@ impl GmailApi for FakeGmail {
     }
 
     async fn delete_filter(&self, id: &str) -> Result<(), GmailError> {
-        self.call("users.settings.filters.delete", cost::SETTINGS)?;
+        self.call("users.settings.filters.delete", cost::SETTINGS)
+            .await?;
         self.with(|s| {
             let before = s.filters.len();
             s.filters.retain(|f| f.id.as_deref() != Some(id));
@@ -610,7 +670,7 @@ impl GmailApi for FakeGmail {
     /// The message as it arrived. Built from the stored metadata and body,
     /// which is enough for View Source and for a reply to quote.
     async fn raw_message(&self, id: &str) -> Result<Vec<u8>, GmailError> {
-        self.call("users.messages.get", cost::GET)?;
+        self.call("users.messages.get", cost::GET).await?;
         self.with(|s| {
             let meta = s.messages.get(id).ok_or(GmailError::NotFound)?;
             let text = s
@@ -634,7 +694,7 @@ impl GmailApi for FakeGmail {
         id: &str,
         color: &LabelColor,
     ) -> Result<RemoteLabel, GmailError> {
-        self.call("users.labels.patch", cost::LABELS)?;
+        self.call("users.labels.patch", cost::LABELS).await?;
         self.with(|s| {
             let label = s
                 .labels

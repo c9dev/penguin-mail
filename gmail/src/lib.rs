@@ -5,7 +5,7 @@ pub mod body;
 mod client;
 pub mod convert;
 mod error;
-mod limiter;
+pub mod limiter;
 pub mod model;
 mod oauth;
 mod token_store;
@@ -15,7 +15,7 @@ pub use client::{
 };
 pub use convert::{HistoryChange, HistoryPage, html_to_text};
 pub use error::GmailError;
-pub use limiter::{AccountQuota, QuotaLimiter, QuotaPool};
+pub use limiter::{AccountQuota, Priority, QuotaLimiter, QuotaPool, Waiting};
 pub use model::{Draft, LabelColor, MessagePage, MessageRef, Profile, RemoteLabel, SendAs};
 pub use oauth::{
     AccessToken, DELETE_SCOPE, GMAIL_SCOPE, LoopbackListener, OAuthClient, Pkce, SETTINGS_SCOPE,
