@@ -20,6 +20,7 @@ use webkit::prelude::*;
 use super::find::FindBar;
 use super::invitation::{self, EventCard, Showing};
 use super::pgp::PgpCard;
+use super::{name, name_with_shortcut};
 use crate::compose::ReplyKind;
 use crate::pgp::Mark;
 use crate::render::{BodyState, Conversation, MessageView, Theme, render};
@@ -346,10 +347,12 @@ impl ConversationView {
         stack.add_named(&many, Some("many"));
 
         let button = |icon: &str, tip: String| {
-            gtk::Button::builder()
+            let button = gtk::Button::builder()
                 .icon_name(icon)
-                .tooltip_text(tip)
-                .build()
+                .tooltip_text(&tip)
+                .build();
+            name_with_shortcut(&button, &tip);
+            button
         };
         let buttons = Buttons {
             archive: button(
@@ -362,12 +365,16 @@ impl ConversationView {
                 "mail-unread-symbolic",
                 gettext("Mark as Unread (Ctrl+Shift+U)"),
             ),
-            star: adw::SplitButton::builder()
-                .icon_name("penguin-mail-flag-outline-symbolic")
-                .tooltip_text(gettext("Flag (Ctrl+Shift+L)"))
-                .dropdown_tooltip(gettext("Flag Color"))
-                .popover(&flag_colors())
-                .build(),
+            star: {
+                let star = adw::SplitButton::builder()
+                    .icon_name("penguin-mail-flag-outline-symbolic")
+                    .tooltip_text(gettext("Flag (Ctrl+Shift+L)"))
+                    .dropdown_tooltip(gettext("Flag Color"))
+                    .popover(&flag_colors())
+                    .build();
+                name_with_shortcut(&star, &gettext("Flag (Ctrl+Shift+L)"));
+                star
+            },
             reply: button("mail-reply-sender-symbolic", gettext("Reply (Ctrl+R)")),
             reply_all: button(
                 "mail-reply-all-symbolic",
@@ -379,11 +386,15 @@ impl ConversationView {
                 .css_classes(["suggested-action"])
                 .visible(false)
                 .build(),
-            more: gtk::MenuButton::builder()
-                .icon_name("view-more-symbolic")
-                .tooltip_text(gettext("More Actions"))
-                .visible(false)
-                .build(),
+            more: {
+                let more = gtk::MenuButton::builder()
+                    .icon_name("view-more-symbolic")
+                    .tooltip_text(gettext("More Actions"))
+                    .visible(false)
+                    .build();
+                name(&more, &gettext("More Actions"));
+                more
+            },
         };
         let more = gio::Menu::new();
         let replies = gio::Menu::new();
@@ -449,6 +460,7 @@ impl ConversationView {
             .icon_name("penguin-mail-tag-symbolic")
             .tooltip_text(gettext("Labels (L)"))
             .build();
+        name_with_shortcut(&label_button, &gettext("Labels (L)"));
         for widget in [
             buttons.archive.upcast_ref::<gtk::Widget>(),
             buttons.trash.upcast_ref(),
@@ -691,6 +703,7 @@ impl ConversationView {
         };
         self.buttons.trash.set_icon_name(trash_icon);
         self.buttons.trash.set_tooltip_text(Some(&trash_tip));
+        name_with_shortcut(&self.buttons.trash, &trash_tip);
         let (junk_icon, junk_tip) = match folder {
             Some(Folder::Junk) => (
                 "mail-mark-notjunk-symbolic",
@@ -700,6 +713,7 @@ impl ConversationView {
         };
         self.buttons.junk.set_icon_name(junk_icon);
         self.buttons.junk.set_tooltip_text(Some(&junk_tip));
+        name_with_shortcut(&self.buttons.junk, &junk_tip);
         self.many_trash.set_label(&match folder {
             Some(Folder::Trash) => gettext("Delete Forever"),
             _ => gettext("Move to Trash"),
@@ -714,6 +728,7 @@ impl ConversationView {
     /// move mail to the Trash.
     pub fn set_trash_tooltip(&self, tip: &str) {
         self.buttons.trash.set_tooltip_text(Some(tip));
+        name_with_shortcut(&self.buttons.trash, tip);
     }
 
     pub fn showing_many(&self) -> bool {
@@ -997,11 +1012,12 @@ impl ConversationView {
                 open.flag_color.unwrap_or(FlagColor::Red).as_str()
             ));
         }
-        star.set_tooltip_text(Some(&if starred {
-            gettext("Unflag (Ctrl+Shift+L)")
-        } else {
-            gettext("Flag (Ctrl+Shift+L)")
-        }));
+        let said = match starred {
+            true => gettext("Unflag (Ctrl+Shift+L)"),
+            false => gettext("Flag (Ctrl+Shift+L)"),
+        };
+        star.set_tooltip_text(Some(&said));
+        name_with_shortcut(star, &said);
         self.set_muted(open.muted());
         let unread = open.unread();
         self.buttons.read.set_icon_name(if unread {
@@ -1009,11 +1025,12 @@ impl ConversationView {
         } else {
             "mail-unread-symbolic"
         });
-        self.buttons.read.set_tooltip_text(Some(&if unread {
-            gettext("Mark as Read (U)")
-        } else {
-            gettext("Mark as Unread (U)")
-        }));
+        let said = match unread {
+            true => gettext("Mark as Read (U)"),
+            false => gettext("Mark as Unread (U)"),
+        };
+        self.buttons.read.set_tooltip_text(Some(&said));
+        name_with_shortcut(&self.buttons.read, &said);
     }
 
     /// On phone widths, secondary actions move into the "more" menu.
@@ -1149,19 +1166,21 @@ impl ConversationView {
 fn flag_colors() -> gtk::Popover {
     let row = gtk::Box::builder().spacing(2).build();
     for color in FlagColor::ALL {
+        let tip = fill(
+            &gettext("{color} (Ctrl+Alt+{number})"),
+            &[
+                ("color", &color.name()),
+                ("number", &(color_index(color) + 1).to_string()),
+            ],
+        );
         let button = gtk::Button::builder()
             .icon_name("penguin-mail-flag-symbolic")
-            .tooltip_text(fill(
-                &gettext("{color} (Ctrl+Alt+{number})"),
-                &[
-                    ("color", &color.name()),
-                    ("number", &(color_index(color) + 1).to_string()),
-                ],
-            ))
+            .tooltip_text(&tip)
             .action_name("win.flag-color")
             .action_target(&color.as_str().to_variant())
             .css_classes(["flat", "flag-swatch", &format!("flag-{}", color.as_str())])
             .build();
+        name_with_shortcut(&button, &tip);
         row.append(&button);
     }
     let clear = gtk::Button::builder()

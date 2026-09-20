@@ -21,7 +21,7 @@ use webkit::prelude::*;
 
 use self::recipients::Recipients;
 use super::autocomplete::Contacts;
-use super::{labelled_by, name};
+use super::{labelled_by, name, name_with_shortcut};
 use crate::attachcheck::{self, Promise};
 use crate::compose::{
     Draft, LinePrefix, OutgoingAttachment, SendWhen, build_mime, format_recipients, is_address,
@@ -226,9 +226,18 @@ impl Composer {
             .tooltip_text(gettext("Add a recipient this computer can encrypt to."))
             .sensitive(false)
             .build();
-        name(&attach, &gettext("Attach Files"));
-        name(&preview_toggle, &gettext("Preview"));
-        name(&template_button, &gettext("Templates"));
+        // The tooltips say what these do, with the keys in a bracket at
+        // the end; the spoken name is the words and the keys go in a
+        // property of their own.
+        for button in [
+            send.upcast_ref::<gtk::Widget>(),
+            attach.upcast_ref(),
+            preview_toggle.upcast_ref(),
+            template_button.upcast_ref(),
+        ] {
+            let tip = button.tooltip_text().unwrap_or_default();
+            name_with_shortcut(button, &tip);
+        }
         let protection = gtk::Box::builder()
             .css_classes(["linked"])
             .visible(has_engine)
@@ -1468,7 +1477,7 @@ impl Composer {
                 .build();
             // The letter on the button is markup, which reads out as the
             // bare letter; the name says what the letter stands for.
-            name(&button, &tip);
+            name_with_shortcut(&button, &tip);
             let weak = Rc::downgrade(self);
             button.connect_clicked(move |_| {
                 if let Some(c) = weak.upgrade() {
@@ -1487,7 +1496,7 @@ impl Composer {
                 .css_classes(["flat"])
                 .can_focus(false)
                 .build();
-            name(&button, &tip);
+            name_with_shortcut(&button, &tip);
             bar.append(&button);
             button
         };

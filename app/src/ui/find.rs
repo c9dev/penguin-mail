@@ -143,6 +143,10 @@ impl FindBar {
         name(&entry, &gettext("Find in the conversation"));
         name(&previous, &gettext("Previous Match"));
         name(&next, &gettext("Next Match"));
+        // Nothing else moves between matches, so the arrows say which
+        // keys do it as well.
+        previous.update_property(&[gtk::accessible::Property::KeyShortcuts("Shift+Ctrl+G")]);
+        next.update_property(&[gtk::accessible::Property::KeyShortcuts("Ctrl+G")]);
         let arrows = gtk::Box::builder().css_classes(["linked"]).build();
         arrows.append(&previous);
         arrows.append(&next);
