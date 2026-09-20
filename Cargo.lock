@@ -2031,6 +2031,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "mailrs-pgp"
+version = "0.1.0"
+dependencies = [
+ "mail-builder",
+ "rand",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "mailrs-store"
 version = "0.1.0"
 dependencies = [
