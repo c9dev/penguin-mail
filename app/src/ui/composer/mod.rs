@@ -1249,7 +1249,7 @@ impl Composer {
                     this.base.borrow_mut().draft_id = Some(saved.draft_id.clone());
                     // A scheduled draft keeps its time; point it at the new message.
                     this.core.spawn_write(move |c| {
-                        mailrs_store::scheduled::set_message(
+                        mailrs_store::outbox::set_message(
                             c,
                             account_id,
                             &draft_id,

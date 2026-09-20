@@ -10,9 +10,10 @@
 
 use mailrs_gmail::convert::unescape_snippet;
 use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
+use serde::{Deserialize, Serialize};
 
 /// What a line is: a paragraph unless the writer made it something else.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum BlockKind {
     #[default]
     Paragraph,
@@ -26,7 +27,8 @@ pub enum BlockKind {
 }
 
 /// The character styles a run of text can carry at once.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Style {
     pub bold: bool,
     pub italic: bool,
@@ -35,7 +37,8 @@ pub struct Style {
 }
 
 /// A run of text that shares one style, one link, or one image.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Span {
     pub text: String,
     pub style: Style,
@@ -64,7 +67,8 @@ impl Span {
 }
 
 /// One line of the body.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Block {
     pub kind: BlockKind,
     pub spans: Vec<Span>,
@@ -88,7 +92,8 @@ impl Block {
 }
 
 /// The composer's formatted text: its lines, in order.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct RichBody {
     pub blocks: Vec<Block>,
 }

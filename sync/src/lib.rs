@@ -12,6 +12,7 @@ mod error;
 pub mod export;
 pub mod invitations;
 pub mod mailbox;
+pub mod outbox;
 mod settings;
 mod triage;
 
@@ -35,15 +36,17 @@ pub use actions::{Accounts, Failure, History, MailAction, MailActions, Outcome};
 #[cfg(any(test, feature = "fake"))]
 pub use api::AnyGmail;
 pub use api::{AccountClient, GmailApi, LIST_PAGE_SIZE, SavedDraft};
-pub use backoff::{backoff_delay, poll_offset, with_jitter};
+pub use backoff::{MOST_TRIES, backoff_delay, poll_offset, retry_delay, with_jitter};
 pub use connect::connect_account;
 pub use contacts::{Card, ContactBook, Refreshed};
 pub use engine::{EngineConfig, SyncEngine};
 pub use error::SyncError;
 pub use invitations::{Change, Invitations, Opened, Sent, Told};
 pub use mailbox::{
-    Changed, Counts, Empty, Listing, Mailbox, Mailboxes, PAGE, Scope, View, summarize_search,
+    Changed, Counts, Empty, Listing, Mailbox, Mailboxes, PAGE, Scope, View, outbox_id, outbox_row,
+    summarize_search,
 };
+pub use outbox::{Drained, Outbox, Posted};
 pub use settings::{
     AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, HiddenFilters, Permitted,
 };

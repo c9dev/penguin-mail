@@ -1,8 +1,12 @@
-use mailrs_gmail::GmailError;
+use std::collections::HashMap;
+use std::sync::Arc;
 
-use super::harness;
+use mailrs_gmail::GmailError;
+use mailrs_store::outbox::{self, Queued};
+
+use super::{Connected, harness};
 use crate::fake::meta;
-use crate::now_millis;
+use crate::{Outbox, Posted, now_millis};
 
 #[tokio::test]
 async fn sending_a_saved_draft_deletes_the_draft() {
@@ -153,4 +157,306 @@ async fn filters_pass_through_and_a_gone_filter_deletes_quietly() {
     h.sync.delete_filter(&id).await.unwrap();
     h.sync.delete_filter(&id).await.unwrap();
     assert!(h.sync.filters().await.unwrap().is_empty());
+}
+
+// ---- The outbox: what waits here, and what goes to the person ------------
+
+fn queue(h: &super::Harness) -> Outbox<Connected> {
+    let connected = HashMap::from([(h.account_id, Arc::clone(&h.sync))]);
+    Outbox::new(Arc::new(Connected(connected)), h.db.clone())
+}
+
+fn message(account_id: mailrs_domain::AccountId, subject: &str) -> Queued {
+    Queued {
+        account_id,
+        subject: subject.into(),
+        recipients: "ann@example.com".into(),
+        send_at: now_millis(),
+        raw: Some(format!("Subject: {subject}\r\n\r\nhello").into_bytes()),
+        composer: "{}".into(),
+        ..Queued::default()
+    }
+}
+
+fn http(status: u16) -> GmailError {
+    GmailError::Http {
+        status,
+        body: "no".into(),
+    }
+}
+
+#[tokio::test]
+async fn a_message_that_cannot_go_out_now_waits_with_its_bytes() {
+    let h = harness().await;
+    h.fake.fail_next(GmailError::Network("offline".into()));
+    let posted = queue(&h)
+        .post(message(h.account_id, "Report"))
+        .await
+        .unwrap();
+    let Posted::Waiting(id) = posted else {
+        panic!("expected it to wait, got {posted:?}");
+    };
+
+    let waiting =
+        h.db.read(move |c| outbox::find(c, id))
+            .await
+            .unwrap()
+            .unwrap();
+    assert_eq!(waiting.attempts, 1);
+    assert!(waiting.problem.is_some(), "the row says what went wrong");
+    assert_eq!(
+        waiting.raw.as_deref(),
+        Some(&b"Subject: Report\r\n\r\nhello"[..]),
+        "the bytes are here, not in Gmail"
+    );
+    assert!(
+        waiting.send_at > now_millis(),
+        "the next try is a wait away"
+    );
+    assert!(h.fake.with(|s| s.sent.is_empty()));
+}
+
+#[tokio::test]
+async fn a_refused_message_goes_back_to_the_person_and_not_into_the_outbox() {
+    let h = harness().await;
+    h.fake.fail_next(http(400));
+    let posted = queue(&h)
+        .post(message(h.account_id, "Bad address"))
+        .await
+        .unwrap();
+    assert!(
+        matches!(posted, Posted::Refused(_)),
+        "a refused recipient is the person's to fix, got {posted:?}"
+    );
+    assert!(h.db.read(outbox::list).await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn the_outbox_sends_what_is_due_and_clears_the_draft_behind_it() {
+    let h = harness().await;
+    let draft = h
+        .sync
+        .save_draft(b"early".to_vec(), None, None)
+        .await
+        .unwrap()
+        .draft_id;
+    let mut waiting = message(h.account_id, "Report");
+    waiting.draft_id = Some(draft);
+    waiting.problem = Some("Network error".into());
+    waiting.attempts = 1;
+    h.db.write(move |c| outbox::put(c, &waiting).map(|_| ()))
+        .await
+        .unwrap();
+
+    let drained = queue(&h).send_due(now_millis()).await.unwrap();
+    assert_eq!(drained.sent.len(), 1);
+    assert!(drained.stuck.is_empty());
+    assert!(drained.changed);
+    assert_eq!(h.fake.with(|s| s.sent.len()), 1, "it landed at Gmail");
+    assert!(h.fake.with(|s| s.drafts.is_empty()), "the draft is gone");
+    assert!(h.db.read(outbox::list).await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn every_failed_try_widens_the_wait_before_the_next_one() {
+    let h = harness().await;
+    h.fake.fail_next(GmailError::Network("offline".into()));
+    let Posted::Waiting(id) = queue(&h)
+        .post(message(h.account_id, "Report"))
+        .await
+        .unwrap()
+    else {
+        panic!("expected it to wait");
+    };
+
+    let mut waits = Vec::new();
+    for _ in 0..3 {
+        h.fake.fail_next(GmailError::Network("offline".into()));
+        h.db.write(move |c| outbox::try_now(c, now_millis()))
+            .await
+            .unwrap();
+        queue(&h).send_due(now_millis()).await.unwrap();
+        let row =
+            h.db.read(move |c| outbox::find(c, id))
+                .await
+                .unwrap()
+                .unwrap();
+        waits.push(row.send_at - now_millis());
+    }
+    assert!(
+        waits.windows(2).all(|w| w[1] > w[0]),
+        "each wait is longer than the last: {waits:?}"
+    );
+}
+
+#[tokio::test]
+async fn a_message_nothing_would_fix_stops_coming_round() {
+    let h = harness().await;
+    let mut waiting = message(h.account_id, "Too big");
+    waiting.problem = Some("Network error".into());
+    waiting.attempts = 1;
+    h.db.write(move |c| outbox::put(c, &waiting).map(|_| ()))
+        .await
+        .unwrap();
+
+    h.fake.fail_next(http(413));
+    let drained = queue(&h).send_due(now_millis()).await.unwrap();
+    assert_eq!(drained.stuck.len(), 1, "the person hears about it");
+    let stuck = h.db.read(outbox::stuck).await.unwrap();
+    assert_eq!(stuck.len(), 1);
+    assert!(stuck[0].problem.as_deref().unwrap().contains("413"));
+
+    let again = queue(&h).send_due(now_millis()).await.unwrap();
+    assert!(!again.changed, "the outbox leaves it alone now");
+    assert!(h.fake.with(|s| s.sent.is_empty()));
+}
+
+#[tokio::test]
+async fn sending_a_stuck_message_by_hand_ignores_the_wait_it_was_serving() {
+    let h = harness().await;
+    let mut waiting = message(h.account_id, "Report");
+    waiting.problem = Some("Network error".into());
+    waiting.attempts = 4;
+    waiting.send_at = now_millis() + 60 * 60 * 1000;
+    let id = h.db.write(move |c| outbox::put(c, &waiting)).await.unwrap();
+
+    let drained = queue(&h).send_due(now_millis()).await.unwrap();
+    assert!(drained.sent.is_empty(), "its wait has not run out");
+    let posted = queue(&h).send_one(id).await.unwrap();
+    assert!(matches!(posted, Posted::Sent(_)), "got {posted:?}");
+    assert!(h.db.read(outbox::list).await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn send_later_with_no_way_to_gmail_keeps_its_hour_and_its_bytes() {
+    let h = harness().await;
+    let at = now_millis() + 24 * 60 * 60 * 1000;
+    let mut later = message(h.account_id, "Monday");
+    later.send_at = at;
+    h.fake.fail_next(GmailError::Network("offline".into()));
+
+    let posted = queue(&h).schedule(later).await.unwrap();
+    assert!(matches!(posted, Posted::Waiting(_)), "got {posted:?}");
+    let scheduled = h.db.read(outbox::scheduled).await.unwrap();
+    assert_eq!(
+        scheduled.len(),
+        1,
+        "it is a Send Later message, not a stuck one"
+    );
+    assert_eq!(scheduled[0].send_at, at, "the hour the writer chose stands");
+    assert!(
+        scheduled[0].draft_id.is_none(),
+        "Gmail holds no draft for it"
+    );
+    assert!(scheduled[0].raw.is_some(), "so the bytes stay here");
+    assert!(h.db.read(outbox::stuck).await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn a_scheduled_send_that_fails_moves_into_the_outbox() {
+    let h = harness().await;
+    let draft = h
+        .sync
+        .save_draft(b"monday".to_vec(), None, None)
+        .await
+        .unwrap()
+        .draft_id;
+    let account_id = h.account_id;
+    h.db.write(move |c| {
+        outbox::put(
+            c,
+            &Queued {
+                account_id,
+                draft_id: Some(draft),
+                subject: "Monday".into(),
+                recipients: "ann@example.com".into(),
+                send_at: now_millis(),
+                ..Queued::default()
+            },
+        )
+        .map(|_| ())
+    })
+    .await
+    .unwrap();
+    assert_eq!(h.db.read(outbox::scheduled).await.unwrap().len(), 1);
+
+    h.fake.fail_next(http(503));
+    queue(&h).send_due(now_millis()).await.unwrap();
+    assert!(h.db.read(outbox::scheduled).await.unwrap().is_empty());
+    assert_eq!(h.db.read(outbox::stuck).await.unwrap().len(), 1);
+}
+
+#[tokio::test]
+async fn an_account_that_is_not_connected_yet_costs_a_message_nothing() {
+    let h = harness().await;
+    let mut waiting = message(h.account_id, "Report");
+    waiting.problem = Some("Network error".into());
+    waiting.attempts = 3;
+    let id = h.db.write(move |c| outbox::put(c, &waiting)).await.unwrap();
+    let nobody = Outbox::new(Arc::new(Connected(HashMap::new())), h.db.clone());
+
+    let drained = nobody.send_due(now_millis()).await.unwrap();
+    assert!(!drained.changed, "nothing happened to it");
+    let row =
+        h.db.read(move |c| outbox::find(c, id))
+            .await
+            .unwrap()
+            .unwrap();
+    assert_eq!(row.attempts, 3, "the try was never made, so it is not one");
+    assert_eq!(row.problem.as_deref(), Some("Network error"));
+}
+
+#[tokio::test]
+async fn a_message_queued_before_a_restart_goes_out_after_one() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let fake = Arc::new(crate::fake::FakeGmail::new());
+    let (sender, _events) = async_channel::unbounded();
+    let outbox_over = |db: &mailrs_store::Db| {
+        let sync = Arc::new(crate::AccountSync::new(
+            1,
+            Arc::clone(&fake),
+            db.clone(),
+            sender.clone(),
+        ));
+        Outbox::new(Arc::new(Connected(HashMap::from([(1, sync)]))), db.clone())
+    };
+
+    let db = mailrs_store::Db::open(&path).unwrap();
+    db.write(|c| mailrs_store::accounts::insert_account(c, "me@example.com", 0))
+        .await
+        .unwrap();
+    fake.fail_next(GmailError::Network("offline".into()));
+    let posted = outbox_over(&db).post(message(1, "Report")).await.unwrap();
+    assert!(matches!(posted, Posted::Waiting(_)), "got {posted:?}");
+    drop(db);
+
+    // A new run of the app, over the same file the last one left behind.
+    let db = mailrs_store::Db::open(&path).unwrap();
+    let later = now_millis() + 24 * 60 * 60 * 1000;
+    let drained = outbox_over(&db).send_due(later).await.unwrap();
+    assert_eq!(drained.sent.len(), 1, "the message was still here");
+    assert_eq!(
+        fake.with(|s| s.sent.clone()),
+        [(b"Subject: Report\r\n\r\nhello".to_vec(), None)],
+        "and went out byte for byte as it was written"
+    );
+    assert!(db.read(outbox::list).await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn the_network_coming_back_brings_every_stuck_message_forward() {
+    let h = harness().await;
+    let mut waiting = message(h.account_id, "Report");
+    waiting.problem = Some("Network error".into());
+    waiting.attempts = 6;
+    waiting.send_at = now_millis() + 30 * 60 * 1000;
+    h.db.write(move |c| outbox::put(c, &waiting).map(|_| ()))
+        .await
+        .unwrap();
+
+    let outbox = queue(&h);
+    assert!(outbox.send_due(now_millis()).await.unwrap().sent.is_empty());
+    outbox.try_now().await.unwrap();
+    assert_eq!(outbox.send_due(now_millis()).await.unwrap().sent.len(), 1);
 }

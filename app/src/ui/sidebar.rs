@@ -235,6 +235,7 @@ impl Sidebar {
                 }
             }
         }
+        self.add_mailbox(Mailbox::Outbox, "Outbox", "mail-outbox-symbolic", 0);
         self.add_mailbox(Mailbox::Scheduled, "Send Later", "mail-send-symbolic", 0);
         self.add_mailbox(Mailbox::Reminders, "Remind Me", "alarm-symbolic", 0);
         self.add_mailbox(
@@ -392,7 +393,8 @@ impl Sidebar {
         for row in self.rows.borrow().iter() {
             let count = counts.get(&row.mailbox).copied().unwrap_or(0);
             if hidden_until_used(&row.mailbox) {
-                // Send Later and each flag colour appear only while in use.
+                // The Outbox, Send Later and each flag colour appear
+                // only while in use.
                 row.row
                     .set_visible(count > 0 || selected.as_ref() == Some(&row.row));
             }
@@ -400,6 +402,7 @@ impl Sidebar {
                 &row.mailbox,
                 Mailbox::Unified(system_label::DRAFT)
                     | Mailbox::Scheduled
+                    | Mailbox::Outbox
                     | Mailbox::Reminders
                     | Mailbox::FollowUp
                     | Mailbox::Flag(_)
@@ -487,7 +490,11 @@ fn css_hex(color: &str) -> Option<String> {
 fn hidden_until_used(mailbox: &Mailbox) -> bool {
     matches!(
         mailbox,
-        Mailbox::Scheduled | Mailbox::Reminders | Mailbox::FollowUp | Mailbox::Flag(_)
+        Mailbox::Outbox
+            | Mailbox::Scheduled
+            | Mailbox::Reminders
+            | Mailbox::FollowUp
+            | Mailbox::Flag(_)
     )
 }
 
@@ -502,6 +509,7 @@ fn takes_mail(mailbox: &Mailbox) -> bool {
         Mailbox::Flag(_) => true,
         Mailbox::Search { .. }
         | Mailbox::Scheduled
+        | Mailbox::Outbox
         | Mailbox::Reminders
         | Mailbox::FollowUp
         | Mailbox::Vips { .. }
