@@ -110,7 +110,7 @@ pub enum History {
 /// enough for Gmail's own filters, another device, or the person
 /// themselves to move the mail again. Recording past the depth drops the
 /// oldest, so a long session cannot grow the stack.
-const DEPTH: usize = 20;
+pub(crate) const DEPTH: usize = 20;
 
 /// What an action or an undo did.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

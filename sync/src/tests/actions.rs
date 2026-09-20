@@ -8,6 +8,7 @@ use mailrs_store::{accounts, flags, labels, reminders};
 
 use super::{Connected, Harness, harness};
 use crate::fake::{FakeGmail, meta};
+use crate::actions::DEPTH;
 use crate::{
     AccountSync, History, MailAction, MailActions, Outcome, Permitted, TriageAction, now_millis,
 };
@@ -51,9 +52,176 @@ async fn archive_then_undo_puts_the_thread_back() {
     assert!(h.threads("INBOX").await.is_empty());
 
     let undone = actions.undo().await.expect("an undo");
-    assert_eq!(undone.done, [target]);
+    assert_eq!(undone.outcome.done, [target]);
     assert_eq!(h.threads("INBOX").await, ["t1"]);
     assert!(actions.undo().await.is_none(), "undo works once");
+}
+
+/// Archiving three conversations and changing your mind three times gives
+/// all three back, the last one first.
+#[tokio::test]
+async fn three_actions_are_undone_newest_first() {
+    let h = harness().await;
+    let now = now_millis();
+    for (index, thread) in ["t1", "t2", "t3"].into_iter().enumerate() {
+        let id = format!("m{index}");
+        h.fake
+            .seed(meta(&id, thread, now + index as i64, &["INBOX"]));
+    }
+    h.bootstrap_all().await;
+    let actions = actions(&h);
+
+    for thread in ["t1", "t2", "t3"] {
+        let target = Target::thread(h.account_id, thread);
+        actions.run(&[target], ARCHIVE, History::Record).await;
+    }
+    assert!(h.threads("INBOX").await.is_empty());
+
+    for thread in ["t3", "t2", "t1"] {
+        let undone = actions.undo().await.expect("an undo");
+        assert_eq!(
+            undone.outcome.done,
+            [Target::thread(h.account_id, thread)],
+            "the newest archive left goes back first"
+        );
+    }
+    assert_eq!(h.threads("INBOX").await, ["t3", "t2", "t1"]);
+    assert!(actions.undo().await.is_none(), "and the stack is empty");
+}
+
+/// The stack is bounded, so a long triage session cannot grow it without
+/// end. Past the depth the oldest action drops out and stays done.
+#[tokio::test]
+async fn the_oldest_action_falls_off_a_full_stack() {
+    let h = harness().await;
+    let now = now_millis();
+    let threads: Vec<String> = (0..DEPTH + 1).map(|i| format!("t{i}")).collect();
+    for (index, thread) in threads.iter().enumerate() {
+        let id = format!("m{index}");
+        h.fake.seed(meta(&id, thread, now + index as i64, &["INBOX"]));
+    }
+    h.bootstrap_all().await;
+    let actions = actions(&h);
+
+    for thread in &threads {
+        let target = Target::thread(h.account_id, thread);
+        actions.run(&[target], ARCHIVE, History::Record).await;
+    }
+    for _ in 0..DEPTH {
+        actions.undo().await.expect("an undo");
+    }
+
+    assert!(actions.undo().await.is_none(), "the stack holds no more");
+    assert_eq!(
+        h.threads("INBOX").await.len(),
+        DEPTH,
+        "the oldest archive stands"
+    );
+    assert!(h.labels_of("m0").await.is_empty());
+}
+
+/// Undoing an archive for a conversation that has been trashed since
+/// would pull it back into the inbox, so Undo leaves it where it is and
+/// says so.
+#[tokio::test]
+async fn undo_leaves_mail_that_moved_since_where_it_is() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    let actions = actions(&h);
+    let target = Target::thread(h.account_id, "t1");
+
+    actions
+        .run(std::slice::from_ref(&target), ARCHIVE, History::Record)
+        .await;
+    let trash = MailAction::Triage(TriageAction::Trash);
+    actions
+        .run(std::slice::from_ref(&target), trash, History::Skip)
+        .await;
+
+    let undone = actions.undo().await.expect("an undo");
+    assert!(undone.outcome.done.is_empty(), "nothing went back");
+    let failed: Vec<Target> = undone
+        .outcome
+        .failed
+        .iter()
+        .map(|f| f.target.clone())
+        .collect();
+    assert_eq!(failed, [target]);
+    assert!(undone.outcome.first_error().unwrap().contains("moved since"));
+    assert_eq!(h.labels_of("a").await, ["TRASH"]);
+    assert!(h.threads("INBOX").await.is_empty());
+}
+
+/// An action recorded with `History::Skip` never reaches the stack, so
+/// Undo still reverses the one before it.
+#[tokio::test]
+async fn a_skipped_action_stays_off_the_stack() {
+    let h = harness().await;
+    let now = now_millis();
+    h.fake.seed(meta("a", "t1", now, &["INBOX"]));
+    h.fake.seed(meta("b", "t2", now + 1, &["INBOX"]));
+    h.bootstrap_all().await;
+    let actions = actions(&h);
+
+    let recorded = Target::thread(h.account_id, "t1");
+    actions.run(&[recorded], ARCHIVE, History::Record).await;
+    let skipped = Target::thread(h.account_id, "t2");
+    actions.run(&[skipped], ARCHIVE, History::Skip).await;
+
+    let undone = actions.undo().await.expect("an undo");
+    assert_eq!(undone.outcome.done, [Target::thread(h.account_id, "t1")]);
+    assert_eq!(h.threads("INBOX").await, ["t1"], "t2 stays archived");
+    assert!(actions.undo().await.is_none());
+}
+
+/// Undo with nothing recorded changes nothing and says nothing.
+#[tokio::test]
+async fn undo_with_an_empty_stack_does_nothing() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+
+    assert!(actions(&h).undo().await.is_none());
+    assert_eq!(h.threads("INBOX").await, ["t1"]);
+}
+
+/// Signing an account out leaves nothing to reverse its actions through,
+/// so its entries go and the other accounts' stay.
+#[tokio::test]
+async fn a_signed_out_account_takes_its_undos_with_it() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    let other_id =
+        h.db.write(|c| accounts::insert_account(c, "you@example.com", 0))
+            .await
+            .unwrap();
+    let other_fake = Arc::new(FakeGmail::new());
+    other_fake.seed(mailrs_domain::MessageMeta {
+        account_id: other_id,
+        ..meta("x", "t2", now_millis(), &["INBOX"])
+    });
+    other_fake.with(|s| s.page_size = 1000);
+    let (sender, _events) = async_channel::unbounded();
+    let other = Arc::new(
+        AccountSync::new(other_id, Arc::clone(&other_fake), h.db.clone(), sender)
+            .with_retry_max(Duration::from_millis(10)),
+    );
+    other.bootstrap().await.unwrap();
+    let actions = actions_over(&h, [other]);
+
+    let mine = Target::thread(h.account_id, "t1");
+    actions
+        .run(std::slice::from_ref(&mine), ARCHIVE, History::Record)
+        .await;
+    let theirs = Target::thread(other_id, "t2");
+    actions.run(&[theirs], ARCHIVE, History::Record).await;
+    actions.forget_account(other_id);
+
+    let undone = actions.undo().await.expect("an undo");
+    assert_eq!(undone.outcome.done, [mine], "my own archive still goes back");
+    assert!(actions.undo().await.is_none(), "the other account's is gone");
 }
 
 #[tokio::test]
@@ -268,7 +436,7 @@ async fn muting_labels_the_thread_and_takes_it_out_of_the_inbox() {
     assert_eq!(h.threads("MUTE").await, ["t1"]);
 
     let undone = actions.undo().await.expect("an undo");
-    assert_eq!(undone.done, [target]);
+    assert_eq!(undone.outcome.done, [target]);
     assert_eq!(h.labels_of("a").await, ["INBOX"]);
 }
 

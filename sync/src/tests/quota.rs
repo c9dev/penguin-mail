@@ -183,7 +183,7 @@ async fn undoing_a_bulk_action_takes_one_call_per_account() {
 
     let undone = actions.undo().await.expect("an undo");
 
-    assert_eq!(undone.done.len(), 204);
+    assert_eq!(undone.outcome.done.len(), 204);
     let usage = total(&all);
     report("undo 204 conversations, 6 accounts", &usage);
     assert_eq!(usage.calls, 6);
