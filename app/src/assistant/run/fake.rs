@@ -15,7 +15,7 @@ use mailrs_domain::{
     LabelKind, MessageBody, MessageMeta, ThreadSummary, Vacation,
 };
 use mailrs_gmail::{
-    GmailError, HistoryPage, LabelColor, MessagePage, MessageRef, Profile, RemoteLabel,
+    Answered, GmailError, HistoryPage, LabelColor, MessagePage, MessageRef, Profile, RemoteLabel,
 };
 use mailrs_store::{Db, accounts, labels, messages};
 use mailrs_sync::{
@@ -352,6 +352,18 @@ impl GmailApi for Gmail {
 
     async fn contact_photo(&self, _url: &str) -> Result<Vec<u8>, GmailError> {
         Err(GmailError::NotFound)
+    }
+
+    /// The assistant answers no invitations, so nothing here keeps a
+    /// calendar. The `Answer` below is the invitation's, not the one the
+    /// tool loop hands back.
+    async fn answer_invitation(
+        &self,
+        _ical_uid: &str,
+        _me: &str,
+        _answer: mailrs_domain::invitation::Answer,
+    ) -> Result<Answered, GmailError> {
+        Ok(Answered::NotOnCalendar)
     }
 }
 

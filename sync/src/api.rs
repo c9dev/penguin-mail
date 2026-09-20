@@ -1,11 +1,12 @@
 //! What the sync engine needs from Gmail. A trait, so tests can use a fake.
 
+use mailrs_domain::invitation::Answer;
 use mailrs_domain::{AccountId, Filter, MessageBody, MessageMeta, Vacation};
 use mailrs_gmail::body::extract_body;
 use mailrs_gmail::convert::message_meta;
 use mailrs_gmail::{
-    AccountQuota, ConnectionsPage, GmailClient, GmailError, HistoryPage, LabelColor, MessagePage,
-    Profile, RemoteLabel, html_to_text,
+    AccountQuota, Answered, ConnectionsPage, GmailClient, GmailError, HistoryPage, LabelColor,
+    MessagePage, Profile, RemoteLabel, html_to_text,
 };
 
 /// Page size for window listings.
@@ -173,6 +174,17 @@ pub trait GmailApi: Send + Sync + 'static {
 
     /// The bytes of one contact photo, at the size its URL asks for.
     fn contact_photo(&self, url: &str) -> impl Future<Output = Result<Vec<u8>, GmailError>> + Send;
+    /// Answers the event `ical_uid` names as `me`, through Google
+    /// Calendar, and lets Google tell the organizer. Answers
+    /// `GmailError::MissingScope` until the account grants the calendar
+    /// permission, so a caller offers to ask for it rather than showing an
+    /// error.
+    fn answer_invitation(
+        &self,
+        ical_uid: &str,
+        me: &str,
+        answer: Answer,
+    ) -> impl Future<Output = Result<Answered, GmailError>> + Send;
 }
 
 /// Gmail for one account: the real client, or the in-memory fake behind
@@ -332,6 +344,15 @@ impl GmailApi for AnyGmail {
     }
     async fn contact_photo(&self, url: &str) -> Result<Vec<u8>, GmailError> {
         forward!(self, contact_photo(url))
+    }
+
+    async fn answer_invitation(
+        &self,
+        ical_uid: &str,
+        me: &str,
+        answer: Answer,
+    ) -> Result<Answered, GmailError> {
+        forward!(self, answer_invitation(ical_uid, me, answer))
     }
 }
 
@@ -507,6 +528,15 @@ impl GmailApi for AccountClient {
 
     async fn set_vacation(&self, vacation: &Vacation) -> Result<(), GmailError> {
         self.client.set_vacation(vacation).await
+    }
+
+    async fn answer_invitation(
+        &self,
+        ical_uid: &str,
+        me: &str,
+        answer: Answer,
+    ) -> Result<Answered, GmailError> {
+        self.client.answer_invitation(ical_uid, me, answer).await
     }
 
     async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {

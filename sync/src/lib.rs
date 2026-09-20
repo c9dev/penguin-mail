@@ -9,6 +9,7 @@ mod connect;
 pub mod contacts;
 mod engine;
 mod error;
+pub mod invitations;
 pub mod mailbox;
 mod settings;
 mod triage;
@@ -36,6 +37,7 @@ pub use connect::connect_account;
 pub use contacts::{Card, ContactBook, Refreshed};
 pub use engine::{EngineConfig, SyncEngine};
 pub use error::SyncError;
+pub use invitations::{Change, Invitations, Opened};
 pub use mailbox::{
     Changed, Counts, Empty, Listing, Mailbox, Mailboxes, PAGE, Scope, View, summarize_search,
 };

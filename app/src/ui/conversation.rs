@@ -13,6 +13,7 @@ use gtk::{gdk, gio};
 use mailrs_domain::{AccountId, FlagColor, Folder, MessageBody, MessageMeta, system_label};
 use webkit::prelude::*;
 
+use super::invitation::{self, EventCard, Showing};
 use crate::compose::ReplyKind;
 use crate::render::{BodyState, Conversation, MessageView, Theme, render};
 use crate::sanitize::sanitize_html;
@@ -66,6 +67,15 @@ impl OpenThread {
             .find(|m| !m.has_label(system_label::DRAFT))
     }
 
+    /// The newest message that carries an invitation, with the
+    /// `text/calendar` part it arrived in.
+    pub fn invitation(&self) -> Option<(&MessageMeta, &str)> {
+        self.messages.iter().rev().find_map(|meta| {
+            let body = self.bodies.get(&meta.id)?.as_ref().ok()?;
+            Some((meta, body.calendar.as_deref()?))
+        })
+    }
+
     /// The `List-Unsubscribe` header of the newest message, when it has one.
     pub fn list_unsubscribe(&self) -> Option<(&MessageMeta, &MessageBody)> {
         let target = self.reply_target()?;
@@ -90,6 +100,9 @@ impl OpenThread {
 }
 
 pub enum Action {
+    /// The event card asked for something: an answer, or a hand-off to the
+    /// desktop calendar.
+    Invitation(invitation::Action),
     Reply(ReplyKind),
     EditDraft,
     Archive,
@@ -141,6 +154,9 @@ pub struct ConversationView {
     webview: webkit::WebView,
     content: webkit::UserContentManager,
     banner: adw::Banner,
+    /// The event card above the message, shown when the open message
+    /// carries an invitation.
+    pub card: Rc<EventCard>,
     /// Cleaned HTML per message. A thread renders at least twice per open.
     sanitized: RefCell<HashMap<String, CleanBody>>,
     list_banner: adw::Banner,
@@ -244,9 +260,14 @@ impl ConversationView {
             .description("Actions and shortcuts apply to all of them. Esc clears the selection.")
             .child(&bulk)
             .build();
+        let card = {
+            let on_action = Rc::clone(&on_action);
+            EventCard::new(move |action| on_action(Action::Invitation(action)))
+        };
         let web_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
         web_box.append(&list_banner);
         web_box.append(&banner);
+        web_box.append(&card.widget);
         web_box.append(&webview);
         let stack = gtk::Stack::builder()
             .transition_type(gtk::StackTransitionType::Crossfade)
@@ -405,6 +426,7 @@ impl ConversationView {
             webview,
             content,
             banner,
+            card,
             list_banner,
             sanitized: RefCell::new(HashMap::new()),
             sender_menu,
@@ -570,6 +592,7 @@ impl ConversationView {
         self.stack.set_visible_child_name("many");
         self.banner.set_revealed(false);
         self.list_banner.set_revealed(false);
+        self.show_invitation(None);
         self.set_buttons_shown(true);
         let b = &self.buttons;
         for button in [&b.reply, &b.reply_all, &b.forward, &b.edit] {
@@ -592,6 +615,21 @@ impl ConversationView {
         self.set_buttons_shown(false);
         self.banner.set_revealed(false);
         self.list_banner.set_revealed(false);
+        self.show_invitation(None);
+    }
+
+    /// Puts an invitation above the message, or takes the card away when
+    /// the message carries none.
+    pub fn show_invitation(&self, showing: Option<Showing>) {
+        match showing {
+            Some(showing) => self.card.show(showing),
+            None => self.card.hide(),
+        }
+    }
+
+    /// Reads what the card shows. `None` means no invitation is on screen.
+    pub fn with_invitation<R>(&self, f: impl FnOnce(&Showing) -> R) -> Option<R> {
+        self.card.with_showing(f)
     }
 
     /// Whether `row` is what the view shows now.

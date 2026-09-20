@@ -71,3 +71,12 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 **Contacts permission**: the Google access an account grants once so Penguin Mail may read its contacts. Sign-in leaves it out, and the window asks for it the first time somebody turns contacts on, so an account that never does is never asked. Without it every `ContactBook` call answers `Permitted::NeedsPermission`, as the settings calls do. _Avoid_: scope, consent.
 
 **Contact card**: what the sender's face or name in a conversation opens: their photo, name, addresses, and organization, with the three things the app already does about a person. `mailrs::ui::contact_card`. A sender in no address book still gets one, built from the message header. _Avoid_: profile, popover, details.
+**Invitation**: what one `text/calendar` part of a message says about one event: its title, when it runs, where, who is coming and what each of them said, the organizer, how it repeats, and the UID and sequence that tell one version of an event from the next. `mailrs_domain::invitation::Invitation`. _Avoid_: meeting request, calendar event, ICS.
+
+**Answer**: Yes, No or Maybe. It is what a guest said about an invitation and what the user sends back through Google Calendar, so one type covers both. `mailrs_domain::invitation::Answer`. _Avoid_: RSVP, response, PARTSTAT.
+
+**Invitation change**: what a message does to an event the user already has: it moves it, changes something else about it, or cancels it. `mailrs_sync::invitations::Change`. Only a version with a higher sequence changes anything, and the store keeps what each version changed, so reopening the message says the same thing twice rather than falling silent. Not to be confused with a settings `Change`, which is one named change to the preferences. _Avoid_: update, diff, revision.
+
+**Event card**: the card above the message body that shows an invitation, with Yes, No and Maybe in it. `mailrs::ui::invitation::EventCard`. The message itself goes on being drawn below, so Google's own links keep working for anyone who declines the calendar permission. _Avoid_: banner, widget, preview.
+
+**Calendar permission**: the Google Calendar access an account grants once so Penguin Mail may answer invitations for it. Without it every `Invitations::answer` call answers `Permitted::NeedsPermission`, and the window offers Grant Access rather than showing an error. Sign-in never asks for it. _Avoid_: scope, consent.

@@ -171,4 +171,14 @@ impl<G: GmailApi> AccountSync<G> {
     pub async fn contact_photo(&self, url: &str) -> Result<Vec<u8>, SyncError> {
         Ok(self.api.contact_photo(url).await?)
     }
+
+    /// Answers an invitation through Google Calendar as `me`.
+    pub async fn answer_invitation(
+        &self,
+        ical_uid: &str,
+        me: &str,
+        answer: mailrs_domain::invitation::Answer,
+    ) -> Result<mailrs_gmail::Answered, SyncError> {
+        Ok(self.api.answer_invitation(ical_uid, me, answer).await?)
+    }
 }

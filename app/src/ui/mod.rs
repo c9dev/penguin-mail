@@ -8,6 +8,7 @@ pub mod composer;
 pub mod contact_card;
 pub mod conversation;
 pub mod hide_my_email;
+pub mod invitation;
 pub mod moving;
 pub mod preferences;
 pub mod rules;

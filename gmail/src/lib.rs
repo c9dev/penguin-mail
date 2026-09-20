@@ -2,6 +2,7 @@
 
 pub mod address;
 pub mod body;
+pub mod calendar;
 mod client;
 pub mod convert;
 mod error;
@@ -11,6 +12,7 @@ mod oauth;
 pub mod people;
 mod token_store;
 
+pub use calendar::{Answered, CALENDAR_API_BASE, CALENDAR_SCOPE};
 pub use client::{
     Authorized, BATCH_LIMIT, GMAIL_API_BASE, GmailClient, authorize, cost, one_click_unsubscribe,
 };

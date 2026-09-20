@@ -5,6 +5,7 @@ mod connect;
 mod contacts;
 mod engine;
 mod incremental;
+mod invitations;
 mod labels;
 mod mailbox;
 mod outbox;

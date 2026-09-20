@@ -1,6 +1,7 @@
 //! Text for the UI: dates, sizes, initials, and colours.
 
-use chrono::{DateTime, Datelike, Local, TimeZone, Timelike};
+use chrono::{DateTime, Datelike, Local, NaiveDate, TimeZone, Timelike};
+use mailrs_domain::invitation::When;
 use mailrs_domain::{AccountId, EpochMillis};
 
 /// Accent colours from the libadwaita palette.
@@ -114,6 +115,104 @@ fn later_presets(now: DateTime<Local>) -> Vec<(String, EpochMillis)> {
     presets
 }
 
+/// When an event runs, in the reader's own time zone: "Tuesday, 9 June ·
+/// 15:00 to 16:00". A meeting in the next few days is named by its
+/// weekday, since that is how people talk about one.
+pub fn event_when(when: &When, now: DateTime<Local>) -> String {
+    match when {
+        When::Days { first, last } if first == last => {
+            format!("{} · All day", event_day(*first, now))
+        }
+        When::Days { first, last } => format!(
+            "{} to {} · All day",
+            span_start(*first, *last),
+            span_end(*last, now)
+        ),
+        When::At { starts_at, ends_at } => {
+            let Some(start) = local(*starts_at) else {
+                return String::new();
+            };
+            let day = event_day(start.date_naive(), now);
+            match ends_at.and_then(local) {
+                None => format!("{day} · {}", start.format("%H:%M")),
+                // A meeting that runs past midnight names the day it ends on.
+                Some(end) if end.date_naive() != start.date_naive() => format!(
+                    "{day} · {} to {}",
+                    start.format("%H:%M"),
+                    end.format("%-d %b %H:%M")
+                ),
+                Some(end) => format!(
+                    "{day} · {} to {}",
+                    start.format("%H:%M"),
+                    end.format("%H:%M")
+                ),
+            }
+        }
+    }
+}
+
+/// The start of a run of days, with the month left off while both ends
+/// share it: "14" in "14 to 16 July", "30 June" in "30 June to 2 July".
+fn span_start(first: NaiveDate, last: NaiveDate) -> String {
+    if first.month() == last.month() && first.year() == last.year() {
+        first.format("%-d").to_string()
+    } else {
+        first.format("%-d %B").to_string()
+    }
+}
+
+/// The end of a run of days: "16 July", with the year when the reader is
+/// in another one.
+fn span_end(last: NaiveDate, now: DateTime<Local>) -> String {
+    if last.year() == now.year() {
+        last.format("%-d %B").to_string()
+    } else {
+        last.format("%-d %B %Y").to_string()
+    }
+}
+
+/// The day an event falls on: "Today", "Tomorrow", a weekday within the
+/// week, then the date.
+fn event_day(day: NaiveDate, now: DateTime<Local>) -> String {
+    match (day - now.date_naive()).num_days() {
+        0 => "Today".into(),
+        1 => "Tomorrow".into(),
+        -1 => "Yesterday".into(),
+        2..=6 => day.format("%A").to_string(),
+        _ if day.year() == now.year() => day.format("%A, %-d %B").to_string(),
+        _ => day.format("%A, %-d %B %Y").to_string(),
+    }
+}
+
+/// The start an event had before it moved, for the line that says so:
+/// "Tuesday 10:00", or "Tuesday, 14 July" for an all-day one.
+pub fn event_moved_from(was: EpochMillis, all_day: bool, now: DateTime<Local>) -> String {
+    let Some(start) = local(was) else {
+        return String::new();
+    };
+    let day = event_day(start.date_naive(), now);
+    if all_day {
+        day
+    } else {
+        format!("{day} {}", start.format("%H:%M"))
+    }
+}
+
+/// The month and day for the card's date tile: ("JUN", "9").
+pub fn event_tile(when: &When) -> (String, String) {
+    let day = match when {
+        When::Days { first, .. } => *first,
+        When::At { starts_at, .. } => match local(*starts_at) {
+            Some(start) => start.date_naive(),
+            None => return (String::new(), String::new()),
+        },
+    };
+    (
+        day.format("%b").to_string().to_uppercase(),
+        day.format("%-d").to_string(),
+    )
+}
+
 pub fn human_size(bytes: i64) -> String {
     const UNITS: [&str; 3] = ["KB", "MB", "GB"];
     if bytes < 1024 {
@@ -203,6 +302,11 @@ mod tests {
             .timestamp_millis()
     }
 
+    /// The same as `at`, under a name the event tests read better with.
+    fn at_local(y: i32, m: u32, d: u32, h: u32, min: u32) -> EpochMillis {
+        at(y, m, d, h, min)
+    }
+
     #[test]
     fn dates_get_shorter_the_closer_they_are() {
         let now = Local.with_ymd_and_hms(2026, 9, 17, 15, 0, 0).unwrap();
@@ -235,6 +339,118 @@ mod tests {
             full_date(at(2026, 9, 3, 14, 32)),
             "Thursday, 3 September 2026 at 14:32"
         );
+    }
+
+    #[test]
+    fn an_event_reads_as_a_day_and_a_time() {
+        let now = Local.with_ymd_and_hms(2026, 9, 19, 15, 0, 0).unwrap();
+        let at = |start: EpochMillis, end: Option<EpochMillis>| {
+            event_when(
+                &When::At {
+                    starts_at: start,
+                    ends_at: end,
+                },
+                now,
+            )
+        };
+        assert_eq!(
+            at(
+                at_local(2026, 9, 19, 16, 0),
+                Some(at_local(2026, 9, 19, 17, 0))
+            ),
+            "Today · 16:00 to 17:00"
+        );
+        assert_eq!(
+            at(
+                at_local(2026, 9, 20, 9, 30),
+                Some(at_local(2026, 9, 20, 10, 15))
+            ),
+            "Tomorrow · 09:30 to 10:15"
+        );
+        assert_eq!(
+            at(
+                at_local(2026, 9, 22, 14, 0),
+                Some(at_local(2026, 9, 22, 14, 45))
+            ),
+            "Tuesday · 14:00 to 14:45"
+        );
+        assert_eq!(
+            at(at_local(2026, 11, 3, 14, 0), None),
+            "Tuesday, 3 November · 14:00"
+        );
+        assert_eq!(
+            at(
+                at_local(2027, 1, 4, 9, 0),
+                Some(at_local(2027, 1, 4, 10, 0))
+            ),
+            "Monday, 4 January 2027 · 09:00 to 10:00"
+        );
+        // A meeting that runs past midnight names the day it ends on.
+        assert_eq!(
+            at(
+                at_local(2026, 11, 3, 23, 0),
+                Some(at_local(2026, 11, 4, 1, 0))
+            ),
+            "Tuesday, 3 November · 23:00 to 4 Nov 01:00"
+        );
+    }
+
+    #[test]
+    fn an_all_day_event_says_so() {
+        let now = Local.with_ymd_and_hms(2026, 9, 19, 15, 0, 0).unwrap();
+        let day = |y, m, d| NaiveDate::from_ymd_opt(y, m, d).unwrap();
+        assert_eq!(
+            event_when(
+                &When::Days {
+                    first: day(2026, 7, 14),
+                    last: day(2026, 7, 14)
+                },
+                now
+            ),
+            "Tuesday, 14 July · All day"
+        );
+        assert_eq!(
+            event_when(
+                &When::Days {
+                    first: day(2026, 7, 14),
+                    last: day(2026, 7, 16)
+                },
+                now
+            ),
+            "14 to 16 July · All day"
+        );
+        assert_eq!(
+            event_when(
+                &When::Days {
+                    first: day(2026, 6, 30),
+                    last: day(2026, 7, 2)
+                },
+                now
+            ),
+            "30 June to 2 July · All day"
+        );
+    }
+
+    #[test]
+    fn a_moved_meeting_names_where_it_was() {
+        let now = Local.with_ymd_and_hms(2026, 9, 19, 15, 0, 0).unwrap();
+        assert_eq!(
+            event_moved_from(at_local(2026, 9, 22, 10, 0), false, now),
+            "Tuesday 10:00"
+        );
+        assert_eq!(
+            event_moved_from(at_local(2026, 9, 22, 0, 0), true, now),
+            "Tuesday"
+        );
+    }
+
+    #[test]
+    fn the_date_tile_holds_a_month_and_a_day() {
+        let (month, day) = event_tile(&When::At {
+            starts_at: at_local(2026, 6, 9, 15, 0),
+            ends_at: None,
+        });
+        assert_eq!((month.as_str(), day.as_str()), ("JUN", "9"));
     }
 
     #[test]

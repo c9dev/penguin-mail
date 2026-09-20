@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use mailrs_gmail::{
-    DELETE_SCOPE, GMAIL_SCOPE, GmailError, LoopbackListener, OAuthClient, Pkce, SETTINGS_SCOPE,
-    parse_redirect,
+    CALENDAR_SCOPE, DELETE_SCOPE, GMAIL_SCOPE, GmailError, LoopbackListener, OAuthClient, Pkce,
+    SETTINGS_SCOPE, parse_redirect,
 };
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -74,6 +74,14 @@ fn only_an_asked_for_extra_scope_joins_the_consent_url() {
     assert_eq!(
         scope(&[DELETE_SCOPE]),
         format!("{GMAIL_SCOPE} {SETTINGS_SCOPE} {DELETE_SCOPE}")
+    );
+    assert!(
+        !scope(&[]).contains(CALENDAR_SCOPE),
+        "answering an invitation is asked for when somebody answers one"
+    );
+    assert_eq!(
+        scope(&[CALENDAR_SCOPE]),
+        format!("{GMAIL_SCOPE} {SETTINGS_SCOPE} {CALENDAR_SCOPE}")
     );
     // Asking twice for a scope sign-in already covers changes nothing.
     assert_eq!(scope(&[SETTINGS_SCOPE]), scope(&[]));

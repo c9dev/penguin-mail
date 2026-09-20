@@ -66,6 +66,9 @@ pub struct GmailClient {
     base_url: String,
     /// The People API, which lives at a host of its own.
     people_url: String,
+    /// Answering an invitation goes to the Calendar API, which is another
+    /// server behind the same access token. See `crate::calendar`.
+    pub(crate) calendar_base_url: String,
     access: Mutex<Option<AccessToken>>,
     quota: std::sync::Arc<AccountQuota>,
 }
@@ -81,6 +84,7 @@ impl GmailClient {
             refresh_token,
             base_url: GMAIL_API_BASE.to_string(),
             people_url: people::PEOPLE_API_BASE.to_string(),
+            calendar_base_url: crate::calendar::CALENDAR_API_BASE.to_string(),
             access: Mutex::new(None),
             quota,
         }
@@ -581,8 +585,24 @@ impl GmailClient {
         &self.quota
     }
 
-    fn http(&self) -> &reqwest::Client {
+    pub(crate) fn http(&self) -> &reqwest::Client {
         self.oauth.http()
+    }
+
+    /// Sends a request to a full URL and decodes the JSON reply. Calls
+    /// outside Gmail go through here, so they ask the account's Gmail
+    /// budget for nothing: the Calendar API counts against a budget of its
+    /// own, and charging this one would slow mail down for no reason.
+    pub(crate) async fn call_at<T: DeserializeOwned>(
+        &self,
+        url: &str,
+        build: impl Fn(&str) -> RequestBuilder,
+    ) -> Result<T, GmailError> {
+        let response = self.send_request(0, || build(url)).await?;
+        response
+            .json::<T>()
+            .await
+            .map_err(|e| GmailError::Decode(e.to_string()))
     }
 
     fn url(&self, path: &str) -> String {
