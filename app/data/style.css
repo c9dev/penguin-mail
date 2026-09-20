@@ -23,7 +23,11 @@
 /* Sidebar */
 .mailbox-row .count { opacity: 0.55; font-size: 0.88em; font-feature-settings: "tnum"; }
 .mailbox-row .count.unread { opacity: 1; font-weight: 700; color: var(--accent-color); }
-.sidebar-heading { padding: 18px 6px 6px 4px; }
+/* The gap above an account belongs to the row, not to the box inside it:
+   padding sits under the hover highlight and made an account row twice
+   the height of a mailbox row when the pointer was over it. */
+row.account-heading { margin-top: 12px; }
+.sidebar-heading { padding: 0 6px 0 4px; }
 .sidebar-heading label.heading { font-size: 0.8em; opacity: 0.6; }
 .sidebar-heading .email { font-size: 0.86em; font-weight: 700; }
 .sidebar-heading button { min-height: 22px; min-width: 22px; padding: 2px; }

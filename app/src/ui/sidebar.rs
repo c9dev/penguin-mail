@@ -693,6 +693,7 @@ fn heading(account: &Account, name: Option<&String>) -> (gtk::ListBoxRow, gtk::I
     );
     let row = gtk::ListBoxRow::builder()
         .child(&content)
+        .css_classes(["account-heading"])
         .selectable(false)
         .activatable(true)
         .build();
