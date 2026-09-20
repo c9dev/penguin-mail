@@ -1,23 +1,19 @@
 //! Preferences → Assistant: which model the assistant uses, and whether it
 //! asks before acting.
 
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::glib;
-use mailrs_ai::ProviderConfig;
+use mailrs_ai::{Model, ModelList, ProviderConfig};
 
 use crate::app::App;
 use crate::assistant::{self, ANTHROPIC_KEY, LOCAL_KEY};
 use crate::settings::{AiChange, AiProvider, Change, Choice};
 
-/// Claude Code's model aliases, with what the menu shows.
-const CLAUDE_MODELS: [(&str, &str); 4] = [
-    ("", "Default"),
-    ("opus", "Opus"),
-    ("sonnet", "Sonnet"),
-    ("haiku", "Haiku"),
-];
+/// Models a picker shows before it grows a search box.
+const SEARCH_FROM: usize = 8;
 
 pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesPage {
     let ai = app.settings().ai;
@@ -49,17 +45,29 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
         .title("API Key (Optional)")
         .show_apply_button(true)
         .build();
-    let local_model = model_row(app, dialog, "Model", &ai.local_model, |s| {
-        s.ai.provider = AiProvider::Local;
-    });
+    let local_model = model_row(
+        app,
+        &ai.local_model,
+        Picker {
+            provider: AiProvider::Local,
+            default_label: None,
+            change: AiChange::LocalModel,
+        },
+    );
     // Anthropic.
     let anthropic_key = adw::PasswordEntryRow::builder()
         .title("Anthropic API Key")
         .show_apply_button(true)
         .build();
-    let anthropic_model = model_row(app, dialog, "Model", &ai.anthropic_model, |s| {
-        s.ai.provider = AiProvider::Anthropic;
-    });
+    let anthropic_model = model_row(
+        app,
+        &ai.anthropic_model,
+        Picker {
+            provider: AiProvider::Anthropic,
+            default_label: None,
+            change: AiChange::AnthropicModel,
+        },
+    );
     // Claude Code.
     let found = assistant::find_claude();
     let claude = adw::ActionRow::builder()
@@ -69,17 +77,15 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
             None => "Not found. Install Claude Code and sign in by running claude once.".into(),
         })
         .build();
-    let claude_names: Vec<&str> = CLAUDE_MODELS.iter().map(|(_, n)| *n).collect();
-    let claude_model = adw::ComboRow::builder()
-        .title("Model")
-        .model(&gtk::StringList::new(&claude_names))
-        .selected(
-            CLAUDE_MODELS
-                .iter()
-                .position(|(alias, _)| *alias == ai.claude_model)
-                .unwrap_or(0) as u32,
-        )
-        .build();
+    let claude_model = model_row(
+        app,
+        &ai.claude_model,
+        Picker {
+            provider: AiProvider::ClaudeCode,
+            default_label: Some("Claude Code's own default"),
+            change: AiChange::ClaudeModel,
+        },
+    );
     for row in [
         base_url.upcast_ref::<gtk::Widget>(),
         local_key.upcast_ref(),
@@ -157,30 +163,6 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
     if assistant::load_key(ANTHROPIC_KEY).is_some() {
         anthropic_key.set_title("Anthropic API Key (Saved)");
     }
-    let weak = Rc::downgrade(app);
-    local_model.connect_apply(move |row| {
-        let model = row.text().trim().to_string();
-        if let Some(app) = weak.upgrade() {
-            app.change_settings(Change::Ai(AiChange::LocalModel(model)));
-        }
-    });
-    let weak = Rc::downgrade(app);
-    anthropic_model.connect_apply(move |row| {
-        let model = row.text().trim().to_string();
-        if let Some(app) = weak.upgrade() {
-            app.change_settings(Change::Ai(AiChange::AnthropicModel(model)));
-        }
-    });
-    let weak = Rc::downgrade(app);
-    claude_model.connect_selected_notify(move |row| {
-        let alias = CLAUDE_MODELS
-            .get(row.selected() as usize)
-            .map(|(a, _)| a.to_string())
-            .unwrap_or_default();
-        if let Some(app) = weak.upgrade() {
-            app.change_settings(Change::Ai(AiChange::ClaudeModel(alias)));
-        }
-    });
     let (weak, toasts) = (Rc::downgrade(app), dialog.clone());
     test.connect_clicked(move |button| {
         let Some(app) = weak.upgrade() else { return };
@@ -223,100 +205,238 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
     page
 }
 
-/// A model name row with a menu of the models the server offers.
-fn model_row(
-    app: &Rc<App>,
-    dialog: &adw::PreferencesDialog,
-    title: &str,
-    current: &str,
-    choose_provider: fn(&mut crate::settings::Settings),
-) -> adw::EntryRow {
+/// What one provider's model picker lists and what it saves.
+#[derive(Clone, Copy)]
+struct Picker {
+    provider: AiProvider,
+    /// The first entry, which empties the field. Claude Code picks its own
+    /// model then; the other providers need a name.
+    default_label: Option<&'static str>,
+    change: fn(String) -> AiChange,
+}
+
+/// The Model row every provider gets: a field you can type into, and a
+/// picker listing what the provider can run.
+fn model_row(app: &Rc<App>, current: &str, picker: Picker) -> adw::EntryRow {
     let row = adw::EntryRow::builder()
-        .title(title)
+        .title("Model")
         .text(current)
         .show_apply_button(true)
         .build();
+    let weak = Rc::downgrade(app);
+    row.connect_apply(move |row| {
+        let model = row.text().trim().to_string();
+        if let Some(app) = weak.upgrade() {
+            app.change_settings(Change::Ai((picker.change)(model)));
+        }
+    });
     let pick = gtk::MenuButton::builder()
         .icon_name("pan-down-symbolic")
-        .tooltip_text("Models on the Server")
+        .tooltip_text("Models You Can Use")
         .valign(gtk::Align::Center)
         .css_classes(["flat"])
         .build();
-    let (weak, entry, toasts) = (Rc::downgrade(app), row.clone(), dialog.clone());
+    let (weak, entry) = (Rc::downgrade(app), row.clone());
     pick.set_create_popup_func(move |button| {
-        let list = gtk::ListBox::builder()
-            .css_classes(["navigation-sidebar"])
-            .selection_mode(gtk::SelectionMode::None)
-            .build();
-        let waiting = gtk::Label::builder()
-            .label("Asking the server…")
-            .margin_top(10)
-            .margin_bottom(10)
-            .margin_start(10)
-            .margin_end(10)
-            .build();
-        list.append(&waiting);
-        let popover = gtk::Popover::builder()
-            .child(
-                &gtk::ScrolledWindow::builder()
-                    .child(&list)
-                    .propagate_natural_height(true)
-                    .max_content_height(320)
-                    .min_content_width(260)
-                    .hscrollbar_policy(gtk::PolicyType::Never)
-                    .build(),
-            )
-            .build();
-        button.set_popover(Some(&popover));
         let Some(app) = weak.upgrade() else { return };
-        let mut settings = app.settings();
-        choose_provider(&mut settings);
-        // The model is what the menu picks; any name will do for listing.
-        if settings.ai.local_model.is_empty() {
-            settings.ai.local_model = "list".into();
-        }
-        let config: Result<ProviderConfig, String> = assistant::provider_config(&settings.ai);
-        let (entry, toasts, popover, list) =
-            (entry.clone(), toasts.clone(), popover.clone(), list.clone());
-        glib::spawn_future_local(async move {
-            let config = match config {
-                Ok(config) => config,
-                Err(problem) => {
-                    waiting.set_label(&problem);
-                    return;
-                }
-            };
-            let models = app
-                .core
-                .call(async move { mailrs_ai::list_models(&config).await })
-                .await;
-            list.remove(&waiting);
-            match models {
-                Ok(models) if !models.is_empty() => {
-                    for name in models {
-                        let item = gtk::Button::builder()
-                            .label(&name)
-                            .css_classes(["flat"])
-                            .build();
-                        let (entry, popover) = (entry.clone(), popover.clone());
-                        item.connect_clicked(move |_| {
-                            entry.set_text(&name);
-                            entry.emit_by_name::<()>("apply", &[]);
-                            popover.popdown();
-                        });
-                        list.append(&item);
-                    }
-                }
-                Ok(_) => list.append(&gtk::Label::new(Some("The server lists no models."))),
-                Err(err) => {
-                    popover.popdown();
-                    toasts.add_toast(adw::Toast::new(&format!("Could not list models: {err}")));
-                }
-            }
-        });
+        let popover = gtk::Popover::builder().build();
+        button.set_popover(Some(&popover));
+        fill_popover(&app, &popover, &entry, picker);
     });
     row.add_suffix(&pick);
     row
+}
+
+/// Asks the provider what it offers and shows the answer in the popover.
+fn fill_popover(app: &Rc<App>, popover: &gtk::Popover, entry: &adw::EntryRow, picker: Picker) {
+    let search = gtk::SearchEntry::builder()
+        .placeholder_text("Search models")
+        .visible(false)
+        .build();
+    // Hidden until it has rows, so a failed list leaves no empty frame.
+    let list = gtk::ListBox::builder()
+        .css_classes(["boxed-list"])
+        .selection_mode(gtk::SelectionMode::None)
+        .visible(false)
+        .build();
+    let note = gtk::Label::builder()
+        .wrap(true)
+        .xalign(0.0)
+        .max_width_chars(36)
+        .css_classes(["dim-label", "caption"])
+        .visible(false)
+        .build();
+    let waiting = gtk::Label::builder()
+        .label("Asking for the model list…")
+        .css_classes(["dim-label"])
+        .margin_top(8)
+        .margin_bottom(8)
+        .build();
+    let box_ = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(8)
+        .margin_top(8)
+        .margin_bottom(8)
+        .margin_start(8)
+        .margin_end(8)
+        .build();
+    let scroller = gtk::ScrolledWindow::builder()
+        .child(&list)
+        .propagate_natural_height(true)
+        .max_content_height(360)
+        .min_content_width(300)
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .visible(false)
+        .build();
+    box_.append(&search);
+    box_.append(&waiting);
+    box_.append(&scroller);
+    box_.append(&note);
+    popover.set_child(Some(&box_));
+
+    let query: Rc<RefCell<String>> = Rc::default();
+    list.set_filter_func({
+        let query = Rc::clone(&query);
+        move |row| matches_query(row, &query.borrow())
+    });
+    search.connect_search_changed({
+        let (query, list) = (Rc::clone(&query), list.clone());
+        move |search| {
+            *query.borrow_mut() = search.text().to_lowercase();
+            list.invalidate_filter();
+        }
+    });
+
+    let config = listing_config(app, picker.provider);
+    let (app, entry, popover) = (Rc::clone(app), entry.clone(), popover.clone());
+    glib::spawn_future_local(async move {
+        let config = match config {
+            Ok(config) => config,
+            Err(problem) => {
+                waiting.set_visible(false);
+                note.set_label(&problem);
+                note.set_visible(true);
+                return;
+            }
+        };
+        let found = app
+            .core
+            .call(async move { mailrs_ai::list_models(&config).await })
+            .await;
+        waiting.set_visible(false);
+        let listed = match found {
+            Ok(listed) => listed,
+            Err(err) => {
+                note.set_label(&sentence(&err));
+                note.set_visible(true);
+                return;
+            }
+        };
+        show_models(&listed, &list, &search, &note, &entry, &popover, picker);
+        scroller.set_visible(list.first_child().is_some());
+    });
+}
+
+/// Fills the popover's list with the models, marking the one in use.
+fn show_models(
+    listed: &ModelList,
+    list: &gtk::ListBox,
+    search: &gtk::SearchEntry,
+    note: &gtk::Label,
+    entry: &adw::EntryRow,
+    popover: &gtk::Popover,
+    picker: Picker,
+) {
+    let chosen = entry.text().trim().to_string();
+    let mut models: Vec<Model> = Vec::new();
+    if let Some(label) = picker.default_label {
+        models.push(Model::named(String::new(), label));
+    }
+    models.extend(listed.models.iter().cloned());
+    for model in &models {
+        let row = model_item(model, model.id == chosen);
+        let (entry, popover, id) = (entry.clone(), popover.clone(), model.id.clone());
+        row.connect_activated(move |_| {
+            entry.set_text(&id);
+            entry.emit_by_name::<()>("apply", &[]);
+            popover.popdown();
+        });
+        list.append(&row);
+    }
+    list.set_visible(!models.is_empty());
+    search.set_visible(models.len() > SEARCH_FROM);
+    let mut notes: Vec<String> = Vec::new();
+    if listed.models.is_empty() {
+        notes.push("This provider lists no models. Type a name in the field instead.".into());
+    }
+    if let Some(from_provider) = &listed.note {
+        notes.push(from_provider.clone());
+    }
+    if !notes.is_empty() {
+        note.set_label(&notes.join(" "));
+        note.set_visible(true);
+    }
+}
+
+/// One model in the picker: its name, its id underneath, and a tick when the
+/// field already holds it.
+fn model_item(model: &Model, chosen: bool) -> adw::ActionRow {
+    let title = if model.name.is_empty() {
+        &model.id
+    } else {
+        &model.name
+    };
+    let row = adw::ActionRow::builder()
+        .title(glib::markup_escape_text(title))
+        .activatable(true)
+        .build();
+    if !model.id.is_empty() && model.id != *title {
+        row.set_subtitle(&glib::markup_escape_text(&model.id));
+    }
+    if model.alias {
+        row.add_suffix(
+            &gtk::Label::builder()
+                .label("alias")
+                .css_classes(["dim-label", "caption"])
+                .build(),
+        );
+    }
+    if chosen {
+        row.add_suffix(&gtk::Image::from_icon_name("object-select-symbolic"));
+    }
+    row
+}
+
+/// True when every word of the search text is in the row's name or id.
+fn matches_query(row: &gtk::ListBoxRow, query: &str) -> bool {
+    let Some(row) = row.downcast_ref::<adw::ActionRow>() else {
+        return true;
+    };
+    let text = format!("{} {}", row.title(), row.subtitle().unwrap_or_default()).to_lowercase();
+    query.split_whitespace().all(|word| text.contains(word))
+}
+
+/// The provider to ask for a model list: the saved settings, with the
+/// provider the picker belongs to. Listing needs no model name, so a
+/// placeholder stands in for an empty one.
+fn listing_config(app: &App, provider: AiProvider) -> Result<ProviderConfig, String> {
+    let mut ai = app.settings().ai;
+    ai.provider = provider;
+    if ai.local_model.trim().is_empty() {
+        ai.local_model = "list".into();
+    }
+    assistant::provider_config(&ai)
+}
+
+/// An error as a sentence, since the errors start in lower case.
+fn sentence(err: &anyhow::Error) -> String {
+    let text = err.to_string();
+    let mut chars = text.chars();
+    let start: String = match chars.next() {
+        Some(first) => first.to_uppercase().collect(),
+        None => return text,
+    };
+    format!("{start}{}.", chars.as_str().trim_end_matches('.'))
 }
 
 /// Servers and Claude Code found on this computer, each with a Use button.

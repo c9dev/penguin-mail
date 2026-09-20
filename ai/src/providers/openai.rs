@@ -11,7 +11,7 @@ use super::{
     parse_tool_input, run_tool, too_many_rounds,
 };
 use crate::sse::SseReader;
-use crate::{AgentEvent, AiError, ToolHost, ToolOutcome, ToolSpec};
+use crate::{AgentEvent, AiError, Model, ModelList, ToolHost, ToolOutcome, ToolSpec};
 
 /// Added to the system prompt when the server refuses tool definitions.
 const NO_TOOLS_NOTE: &str = "This model runs without tools, so you cannot read, \
@@ -277,7 +277,7 @@ async fn read_stream(
 pub(crate) async fn list_models(
     base_url: &str,
     api_key: Option<&str>,
-) -> Result<Vec<String>, AiError> {
+) -> Result<ModelList, AiError> {
     let mut request = http_client().get(format!("{base_url}/models"));
     if let Some(key) = api_key.filter(|k| !k.is_empty()) {
         request = request.bearer_auth(key);
@@ -288,7 +288,17 @@ pub(crate) async fn list_models(
         return Err(AiError::Api(format!("HTTP {status}: {message}")));
     }
     let body: Value = response.json().await.map_err(network)?;
-    Ok(model_ids(&body))
+    Ok(ModelList::new(parse_models(&body)))
+}
+
+/// The models in an OpenAI-style `/models` answer, by id, sorted and with
+/// repeats dropped. The id carries the version and any quantization suffix,
+/// so it is kept whole.
+pub(crate) fn parse_models(body: &Value) -> Vec<Model> {
+    let mut ids = model_ids(body);
+    ids.sort_by_key(|id| id.to_lowercase());
+    ids.dedup();
+    ids.into_iter().map(Model::new).collect()
 }
 
 /// The `data[].id` list both OpenAI and Anthropic return from `/models`.
