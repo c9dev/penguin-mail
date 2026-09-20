@@ -11,7 +11,7 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use anyhow::{Context, Result, anyhow, bail};
-use mailrs_domain::{Account, AccountId, ChangeEvent, Folder, Target};
+use mailrs_domain::{Account, AccountId, ChangeEvent, Target};
 use mailrs_gmail::{GMAIL_API_BASE, KeyringTokenStore, OAuthClient, TokenStore, authorize};
 use mailrs_pgp::{Pgp, PgpError};
 use mailrs_smime::{Smime, SmimeError};
@@ -19,8 +19,8 @@ use mailrs_store::{Db, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::{
     AccountSettings, AccountSync, Accounts, AnyGmail, ContactBook, Failure, History, Invitations,
-    MailAction, MailActions, Mailboxes, Outbox, Outcome, Permitted, SyncEngine, Undone,
-    connect_account, now_millis,
+    MailAction, MailActions, Mailboxes, Outbox, Outcome, SyncEngine, Undone, connect_account,
+    now_millis,
 };
 
 use crate::assistant::run::{Background, Modules};
@@ -396,6 +396,12 @@ impl Core {
         self.engine.account(account_id)
     }
 
+    /// Mail actions and the undo stack behind them. See
+    /// `mailrs_sync::MailActions`.
+    pub fn actions(&self) -> Arc<Actions> {
+        Arc::clone(&self.actions)
+    }
+
     /// One page of a mailbox, the sidebar counts, and fresh rows for the
     /// threads a change event named. See `mailrs_sync::Mailboxes`.
     pub fn lists(&self) -> Arc<Lists> {
@@ -456,13 +462,6 @@ impl Core {
         })
     }
 
-    /// Erases the targets for good. See `MailActions::erase`.
-    pub async fn erase(&self, targets: Vec<Target>) -> Result<Permitted<Outcome>> {
-        let actions = Arc::clone(&self.actions);
-        self.call(async move { actions.erase(&targets).await })
-            .await
-    }
-
     /// Reverses the action on top of the undo stack, from the window or
     /// the assistant. `None` when the stack is empty.
     pub async fn undo(&self) -> Option<Undone> {
@@ -471,14 +470,6 @@ impl Core {
             .await
             .ok()
             .flatten()
-    }
-
-    /// The targets that `folder` no longer holds.
-    pub async fn gone_from(&self, folder: Folder, targets: Vec<Target>) -> Vec<Target> {
-        let actions = Arc::clone(&self.actions);
-        self.call(async move { actions.gone_from(folder, &targets).await })
-            .await
-            .unwrap_or_default()
     }
 
     pub fn poke(&self, account_id: AccountId) {

@@ -1665,7 +1665,11 @@ impl MainWindow {
         let next = self.list.neighbour_of_selected();
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let erased = this.core.erase(targets).await;
+            let actions = this.core.actions();
+            let erased = this
+                .core
+                .call(async move { actions.erase(&targets).await })
+                .await;
             let outcome = match erased {
                 Ok(Permitted::Done(outcome)) => outcome,
                 Ok(Permitted::NeedsPermission) => return this.ask_for_delete_access(account_id),
@@ -1815,7 +1819,12 @@ impl MainWindow {
         let targets = targets.to_vec();
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let gone = this.core.gone_from(folder, targets).await;
+            let actions = this.core.actions();
+            let gone = this
+                .core
+                .call(async move { actions.gone_from(folder, &targets).await })
+                .await
+                .unwrap_or_default();
             if gone.is_empty() {
                 return;
             }
