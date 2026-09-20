@@ -187,4 +187,18 @@ mod tests {
             Ok(relabel(&["SPAM"], &["INBOX", "Work"]))
         );
     }
+
+    #[test]
+    fn dragging_onto_muted_mutes_and_dragging_off_it_unmutes() {
+        let inbox = Mailbox::Unified(system_label::INBOX);
+        let muted = Mailbox::Unified(system_label::MUTE);
+        assert_eq!(
+            move_action(&inbox, &muted),
+            Ok(relabel(&["MUTE"], &["INBOX"]))
+        );
+        assert_eq!(
+            move_action(&muted, &inbox),
+            Ok(relabel(&["INBOX"], &["MUTE"]))
+        );
+    }
 }
