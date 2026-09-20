@@ -291,7 +291,4 @@ A penguin holding a letter, on the rounded square the Gruvbox Plus icon
 pack puts every app on: the pack's own superellipse and bevel, a taupe
 gradient behind a cream bird and envelope, and an orange beak. Drawn at
 256 like the rest of that pack, so it sits among them rather than beside
-them. The
-other two concepts are in [docs/branding/concepts/](docs/branding/concepts/),
-and [docs/icon-concepts.png](docs/icon-concepts.png) shows all three at
-128 to 16 pixels.
+them.

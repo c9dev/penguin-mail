@@ -1,7 +1,7 @@
 # What to enter in Google Cloud
 
 Values for each field of the Google Auth Platform pages, in the order
-[docs/setup.md](../setup.md) visits them. Anything marked optional can stay
+[docs/setup.md](setup.md) visits them. Anything marked optional can stay
 empty for personal use.
 
 ## Branding
@@ -10,7 +10,7 @@ empty for personal use.
 |---|---|
 | App name | `Penguin Mail` |
 | User support email | your Gmail address |
-| App logo | Optional. Leave it empty for personal use (see below). If you want it: `penguin-mail-google-120.png`, or `penguin-mail-google-120-white.png` on a white background |
+| App logo | Optional. Leave it empty for personal use (see below). If you want one, export the app icon at 120 by 120 from `app/data/icons/scalable/apps/` |
 | Application home page | Optional |
 | Application privacy policy link | Optional. Needed only for verification; host [privacy-policy.md](privacy-policy.md) somewhere public and link it |
 | Application terms of service link | Optional |

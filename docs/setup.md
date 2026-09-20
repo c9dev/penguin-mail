@@ -12,7 +12,7 @@ project once, then add each Gmail account from the command line.
 
 In Google Auth Platform:
 
-1. Branding: name the app `Penguin Mail` and give your address as the support and developer contact. Leave the logo empty: Google shows it only after verification. [branding/google-cloud.md](branding/google-cloud.md) lists every field.
+1. Branding: name the app `Penguin Mail` and give your address as the support and developer contact. Leave the logo empty: Google shows it only after verification. [google-cloud.md](google-cloud.md) lists every field.
 2. Audience: choose External.
 3. Data Access: click **Add or remove scopes**, paste these two into
    **Manually add scopes**, click **Add to table**, then **Update** and **Save**:
