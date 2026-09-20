@@ -3,6 +3,7 @@
 
 use mailrs_domain::{Filter, MessageMeta, Vacation};
 use mailrs_gmail::GmailError;
+use mailrs_store::messages;
 
 use super::AccountSync;
 use crate::{GmailApi, SavedDraft, SyncError};
@@ -73,14 +74,40 @@ impl<G: GmailApi> AccountSync<G> {
     /// Runs a Gmail search and returns up to `limit` messages, newest first.
     /// Results are not stored; opening one stores its thread.
     pub async fn search(&self, query: &str, limit: usize) -> Result<Vec<MessageMeta>, SyncError> {
+        let ids = self.search_ids(query, limit).await?;
+        self.metadata_of(&ids).await
+    }
+
+    /// The ids a Gmail search returns, newest first, at most `limit` of
+    /// them. One call of 5 quota units, whatever the count, so a caller
+    /// takes the ids first and pays for metadata only as it shows rows.
+    pub async fn search_ids(&self, query: &str, limit: usize) -> Result<Vec<String>, SyncError> {
         let page = self.api.list_messages(query, None).await?;
-        let ids: Vec<String> = page
+        Ok(page
             .messages
             .into_iter()
             .take(limit)
             .map(|m| m.id)
+            .collect())
+    }
+
+    /// Metadata for `ids`, newest first. The store answers for the messages
+    /// it already holds, which costs nothing, and Gmail for the rest at 5
+    /// units each. Messages Gmail no longer has are left out.
+    pub async fn metadata_of(&self, ids: &[String]) -> Result<Vec<MessageMeta>, SyncError> {
+        let account_id = self.account_id;
+        let wanted = ids.to_vec();
+        let mut metas = self
+            .db
+            .read(move |c| messages::by_ids(c, account_id, &wanted))
+            .await?;
+        let held: std::collections::HashSet<&str> = metas.iter().map(|m| m.id.as_str()).collect();
+        let missing: Vec<String> = ids
+            .iter()
+            .filter(|id| !held.contains(id.as_str()))
+            .cloned()
             .collect();
-        let mut metas = self.fetch_metadata(&ids).await?;
+        metas.extend(self.fetch_metadata(&missing).await?);
         metas.sort_by(|a, b| b.date.cmp(&a.date).then_with(|| a.id.cmp(&b.id)));
         Ok(metas)
     }

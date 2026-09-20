@@ -7,6 +7,7 @@ mod incremental;
 mod labels;
 mod mailbox;
 mod outbox;
+mod quota;
 mod search;
 mod settings;
 mod thread_open;

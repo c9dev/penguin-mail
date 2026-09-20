@@ -19,6 +19,6 @@ pub async fn connect_account(
     let refresh_token = stored.ok_or(GmailError::NeedsReauth)?;
     Ok(AccountClient {
         account_id: account.id,
-        client: GmailClient::new(oauth, refresh_token),
+        client: GmailClient::for_account(oauth, refresh_token, &account.email),
     })
 }

@@ -43,6 +43,23 @@ mod senders;
 /// Largest inline image embedded into a page.
 const INLINE_IMAGE_LIMIT: usize = 5 * 1024 * 1024;
 
+/// Bodies fetched at once when a thread opens. Each one is a 5-unit Gmail
+/// call and an account may spend 250 units a second.
+const BODY_FETCHES: usize = 10;
+
+/// Inline images kept in memory, so reopening a conversation does not
+/// download the same pictures again.
+const INLINE_IMAGE_CACHE: usize = 64;
+
+/// Whether a refresh should list the mailbox again. Listing a folder or a
+/// search means a Gmail search for every account on screen, so the window
+/// asks for one only when the rows themselves can have changed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Reload {
+    Yes,
+    No,
+}
+
 type WindowAction = Box<dyn Fn(&Rc<MainWindow>)>;
 type AccountAction = Box<dyn Fn(&Rc<MainWindow>, Account)>;
 
@@ -78,6 +95,10 @@ pub struct MainWindow {
     assistant_split: adw::OverlaySplitView,
     categories: categories::CategoryBar,
     follow_up: followup::FollowUpBanner,
+    /// Inline images already downloaded, by account, message and
+    /// attachment id. Gmail charges 5 units for each one and a
+    /// conversation is often reopened.
+    inline_cache: RefCell<HashMap<(AccountId, String, String), String>>,
 }
 
 /// What one row holds, for a line the user reads.
@@ -309,6 +330,7 @@ impl MainWindow {
                 assistant_split,
                 categories: categories::CategoryBar::new(),
                 follow_up: followup::FollowUpBanner::new(),
+                inline_cache: RefCell::new(HashMap::new()),
             }
         });
         if window.core.demo {
@@ -399,7 +421,7 @@ impl MainWindow {
         window
             .conversation
             .set_zoom(app.settings().text_size.zoom());
-        window.refresh_accounts();
+        window.refresh_accounts(Reload::Yes);
         window
     }
 
@@ -428,9 +450,11 @@ impl MainWindow {
 
     pub fn handle(self: &Rc<Self>, event: &ChangeEvent) {
         match event {
-            ChangeEvent::AccountStateChanged { .. } | ChangeEvent::LabelsChanged { .. } => {
-                self.refresh_accounts()
-            }
+            // An account going offline and back changes the banner and the
+            // sidebar, not the rows. Listing again would cost a Gmail
+            // search for every folder and search on screen.
+            ChangeEvent::AccountStateChanged { .. } => self.refresh_accounts(Reload::No),
+            ChangeEvent::LabelsChanged { .. } => self.refresh_accounts(Reload::Yes),
             ChangeEvent::ThreadsChanged {
                 account_id,
                 thread_ids,
@@ -472,7 +496,10 @@ impl MainWindow {
         });
     }
 
-    fn refresh_accounts(self: &Rc<Self>) {
+    /// Re-reads the accounts and their labels, and with [`Reload::Yes`]
+    /// lists the mailbox again. A remote mailbox lists through Gmail, so
+    /// only a change that can alter its rows is worth that.
+    fn refresh_accounts(self: &Rc<Self>, reload: Reload) {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let loaded = this
@@ -540,7 +567,9 @@ impl MainWindow {
             }
             this.follow_categories();
             this.refresh_counts();
-            this.reload_list();
+            if reload == Reload::Yes {
+                this.reload_list();
+            }
         });
     }
 
@@ -704,6 +733,17 @@ impl MainWindow {
                     this.follow_selection();
                     this.list.set_title(&title, &fresh.subtitle);
                 }
+                // A folder or a search lists through Gmail, and nothing
+                // that changed elsewhere changes its rows. Drop the rows
+                // that left the folder and leave the rest alone, rather
+                // than paying for the whole search again.
+                None if this.mailbox.borrow().is_remote() => {
+                    let targets = changed
+                        .iter()
+                        .map(|(account_id, thread_id)| Target::thread(*account_id, thread_id))
+                        .collect::<Vec<_>>();
+                    this.prune_folder(&targets);
+                }
                 None => this.reload_list(),
             }
         });
@@ -859,8 +899,16 @@ impl MainWindow {
                 (id, result.map_err(|e| e.to_string()))
             }
         });
-        let loaded = futures::future::join_all(fetches).await;
-        let images = self.inline_images(&sync, &loaded).await;
+        // A long thread would otherwise fire one Gmail call per message at
+        // once, and 30 of them at 5 units each is most of a second's budget.
+        let loaded: Vec<(String, Result<MessageBody, String>)> = {
+            use futures::StreamExt;
+            futures::stream::iter(fetches)
+                .buffered(BODY_FETCHES)
+                .collect()
+                .await
+        };
+        let images = self.inline_images(account_id, &sync, &loaded).await;
         if !view.is_showing(account_id, &thread_id) {
             return;
         }
@@ -920,6 +968,7 @@ impl MainWindow {
     /// Downloads `cid:` images that HTML bodies reference, as `data:` URIs.
     async fn inline_images(
         &self,
+        account_id: AccountId,
         sync: &std::sync::Arc<crate::core::Sync>,
         loaded: &[(String, Result<MessageBody, String>)],
     ) -> HashMap<String, HashMap<String, String>> {
@@ -941,6 +990,11 @@ impl MainWindow {
                 {
                     continue;
                 }
+                let key = (account_id, message_id.clone(), attachment_id.clone());
+                if let Some(held) = self.inline_cache.borrow().get(&key) {
+                    images.insert(cid.clone(), held.clone());
+                    continue;
+                }
                 let (s, m, a) = (sync.clone(), message_id.clone(), attachment_id.clone());
                 if let Ok(bytes) = self
                     .core
@@ -948,10 +1002,13 @@ impl MainWindow {
                     .await
                 {
                     let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
-                    images.insert(
-                        cid.clone(),
-                        format!("data:{};base64,{encoded}", attachment.mime_type),
-                    );
+                    let url = format!("data:{};base64,{encoded}", attachment.mime_type);
+                    let mut cache = self.inline_cache.borrow_mut();
+                    if cache.len() >= INLINE_IMAGE_CACHE {
+                        cache.clear();
+                    }
+                    cache.insert(key, url.clone());
+                    images.insert(cid.clone(), url);
                 }
             }
             out.insert(message_id.clone(), images);
@@ -1322,7 +1379,9 @@ impl MainWindow {
                 return this.toast(error);
             }
             if history == History::Skip {
-                // Putting mail back can add rows to a Gmail folder.
+                // Putting mail back can add rows to a Gmail folder, and
+                // only a fresh search shows them.
+                this.core.forget_remote();
                 this.reload_folder();
                 return;
             }
@@ -1380,8 +1439,16 @@ impl MainWindow {
             let Some(outcome) = this.core.undo().await else {
                 return this.toast("Nothing to undo");
             };
-            this.reload_folder();
-            this.queue_refresh();
+            // Undo can put rows back into a Gmail folder, which only a
+            // fresh search shows. The store's own change events cover
+            // every other mailbox, so one reload is enough either way.
+            if this.mailbox.borrow().is_remote() {
+                this.core.forget_remote();
+                this.reload_folder();
+                this.refresh_counts();
+            } else {
+                this.queue_refresh();
+            }
             this.refresh_flag_color();
             this.reminders_changed();
             this.toast(outcome.first_error().unwrap_or("Undone"));
@@ -1748,7 +1815,7 @@ impl MainWindow {
             .core
             .save_config(mailrs_sync::config::Config::new(client_id, client_secret))
         {
-            Ok(()) => self.refresh_accounts(),
+            Ok(()) => self.refresh_accounts(Reload::Yes),
             Err(err) => self.toast(&format!("Could not save the settings: {err}")),
         }
     }
@@ -1779,7 +1846,7 @@ impl MainWindow {
             match this.core.authorize_account(urls, expected, extra).await {
                 Ok(account) => {
                     this.toast(&format!("Added {}. Downloading mail…", account.email));
-                    this.refresh_accounts();
+                    this.refresh_accounts(Reload::Yes);
                 }
                 Err(err) => this.toast(&err.to_string()),
             }
@@ -1821,7 +1888,7 @@ impl MainWindow {
                 Ok(()) => this.toast(&format!("Removed {email}")),
                 Err(err) => this.toast(&format!("Could not remove {email}: {err}")),
             }
-            this.refresh_accounts();
+            this.refresh_accounts(Reload::Yes);
         });
     }
 
@@ -2380,7 +2447,7 @@ impl MainWindow {
                     _ => self.reload_list(),
                 }
             }
-            Effect::Accounts => self.refresh_accounts(),
+            Effect::Accounts => self.refresh_accounts(Reload::Yes),
             Effect::RowColors => {
                 // Rows carry account colours; Effect::Accounts sets the new
                 // ones first.

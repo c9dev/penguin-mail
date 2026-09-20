@@ -11,21 +11,27 @@ use serde::de::DeserializeOwned;
 use serde_json::json;
 use tokio::sync::Mutex;
 
+use crate::GmailError;
 use crate::convert::{HistoryPage, history_page};
 use crate::convert::{html_to_text, text_to_html};
+use crate::limiter::AccountQuota;
 use crate::model::{
     AttachmentBody, Draft, DraftList, HistoryList, LabelColor, LabelList, Message, MessagePage,
     Profile, RemoteLabel, SendAs, SendAsList, Thread, VacationSettings,
 };
 use crate::oauth::{AccessToken, LoopbackListener, OAuthClient, Pkce, random_token};
-use crate::{GmailError, QuotaLimiter};
 
 pub const GMAIL_API_BASE: &str = "https://gmail.googleapis.com/gmail/v1/users/me";
 
 const METADATA_HEADERS: [&str; 5] = ["From", "To", "Cc", "Subject", "Message-ID"];
 
-/// Quota units per call, from Gmail's usage-limits table.
-mod cost {
+/// Message ids Gmail takes in one `batchModify` or `batchDelete` call.
+pub const BATCH_LIMIT: usize = 1000;
+
+/// Quota units per call, from Gmail's usage-limits table. The in-memory
+/// Gmail prices its calls from the same table, so a test can add up what an
+/// operation would spend against the real API.
+pub mod cost {
     pub const PROFILE: u32 = 1;
     pub const LABELS: u32 = 1;
     pub const LIST: u32 = 5;
@@ -35,6 +41,9 @@ mod cost {
     pub const MODIFY: u32 = 5;
     pub const TRASH: u32 = 5;
     pub const DELETE: u32 = 10;
+    /// One call for up to [`super::BATCH_LIMIT`] messages.
+    pub const BATCH_MODIFY: u32 = 50;
+    pub const BATCH_DELETE: u32 = 50;
     pub const SEND: u32 = 100;
     pub const DRAFT_CREATE: u32 = 10;
     pub const DRAFT_UPDATE: u32 = 15;
@@ -51,17 +60,32 @@ pub struct GmailClient {
     refresh_token: String,
     base_url: String,
     access: Mutex<Option<AccessToken>>,
-    limiter: QuotaLimiter,
+    quota: std::sync::Arc<AccountQuota>,
 }
 
 impl GmailClient {
+    /// A client with a quota of its own. The consent flow uses this; an
+    /// account the app syncs wants [`GmailClient::for_account`], so two
+    /// clients for one address cannot each spend that address's budget.
     pub fn new(oauth: OAuthClient, refresh_token: String) -> Self {
+        let quota = std::sync::Arc::new(AccountQuota::standalone());
         GmailClient {
             oauth,
             refresh_token,
             base_url: GMAIL_API_BASE.to_string(),
             access: Mutex::new(None),
-            limiter: QuotaLimiter::gmail(),
+            quota,
+        }
+    }
+
+    /// A client that spends `email`'s share of the OAuth client's quota.
+    /// Every client built this way for one address waits on one bucket, and
+    /// all of them wait on the project's bucket as well.
+    pub fn for_account(oauth: OAuthClient, refresh_token: String, email: &str) -> Self {
+        let quota = oauth.account_quota(email);
+        GmailClient {
+            quota,
+            ..GmailClient::new(oauth, refresh_token)
         }
     }
 
@@ -173,6 +197,55 @@ impl GmailClient {
         Ok(())
     }
 
+    /// One label change over up to [`BATCH_LIMIT`] messages. Gmail charges
+    /// 50 units for the call however many ids it carries, against 5 units
+    /// for each `modify`, so it is worth it from the eleventh message on.
+    pub async fn batch_modify(
+        &self,
+        ids: &[String],
+        add: &[String],
+        remove: &[String],
+    ) -> Result<(), GmailError> {
+        assert!(
+            ids.len() <= BATCH_LIMIT,
+            "batch of {} exceeds Gmail's limit of {BATCH_LIMIT}",
+            ids.len()
+        );
+        self.call_empty(cost::BATCH_MODIFY, || {
+            self.http()
+                .post(self.url("messages/batchModify"))
+                .json(&json!({
+                    "ids": ids,
+                    "addLabelIds": add,
+                    "removeLabelIds": remove,
+                }))
+        })
+        .await
+    }
+
+    /// Erases up to [`BATCH_LIMIT`] messages. Gmail does not put them in the
+    /// Trash and nothing brings them back. Gmail refuses the call with a 403
+    /// until the account grants [`DELETE_SCOPE`], which arrives here as
+    /// [`GmailError::MissingScope`].
+    ///
+    /// [`DELETE_SCOPE`]: crate::DELETE_SCOPE
+    pub async fn batch_delete(&self, ids: &[String]) -> Result<(), GmailError> {
+        if ids.is_empty() {
+            return Ok(());
+        }
+        assert!(
+            ids.len() <= BATCH_LIMIT,
+            "batch of {} exceeds Gmail's limit of {BATCH_LIMIT}",
+            ids.len()
+        );
+        self.call_empty(cost::BATCH_DELETE, || {
+            self.http()
+                .post(self.url("messages/batchDelete"))
+                .json(&json!({"ids": ids}))
+        })
+        .await
+    }
+
     pub async fn trash(&self, id: &str) -> Result<(), GmailError> {
         let _: Message = self
             .call(cost::TRASH, || {
@@ -193,24 +266,6 @@ impl GmailClient {
             })
             .await?;
         Ok(())
-    }
-
-    /// Erases messages. Gmail cannot bring them back, and it refuses the
-    /// call with a 403 until the account grants [`DELETE_SCOPE`], which
-    /// arrives here as [`GmailError::MissingScope`]. Gmail takes up to a
-    /// thousand ids per call.
-    ///
-    /// [`DELETE_SCOPE`]: crate::DELETE_SCOPE
-    pub async fn batch_delete(&self, ids: &[String]) -> Result<(), GmailError> {
-        if ids.is_empty() {
-            return Ok(());
-        }
-        self.call_empty(cost::DELETE, || {
-            self.http()
-                .post(self.url("messages/batchDelete"))
-                .json(&json!({"ids": ids}))
-        })
-        .await
     }
 
     /// Sends a complete RFC 822 message. `thread_id` files a reply in its thread.
@@ -512,7 +567,7 @@ impl GmailClient {
         units: u32,
         build: impl Fn() -> RequestBuilder,
     ) -> Result<Response, GmailError> {
-        self.limiter.acquire(units).await;
+        self.quota.acquire(units).await;
         let mut retried = false;
         loop {
             let token = self.bearer().await?;
