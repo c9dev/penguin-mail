@@ -13,6 +13,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use anyhow::{Context, Result, anyhow, bail};
 use mailrs_domain::{Account, AccountId, ChangeEvent, Folder, Target};
 use mailrs_gmail::{GMAIL_API_BASE, KeyringTokenStore, OAuthClient, TokenStore, authorize};
+use mailrs_pgp::{Pgp, PgpError};
 use mailrs_store::{Db, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::{
@@ -83,6 +84,9 @@ pub struct Core {
     contacts: Arc<Contacts>,
     invitations: Arc<Events>,
     config: RefCell<Option<Config>>,
+    /// The person's own gpg, found once at startup. With none, every
+    /// OpenPGP control stays out of the window rather than failing later.
+    pgp: Option<Pgp>,
     tokens: Arc<dyn TokenStore>,
     events_tx: async_channel::Sender<ChangeEvent>,
     pub events: async_channel::Receiver<ChangeEvent>,
@@ -166,6 +170,7 @@ impl Core {
             contacts,
             invitations,
             config: RefCell::new(config),
+            pgp: Pgp::find().ok(),
             tokens: Arc::new(KeyringTokenStore::new()),
             events_tx,
             events,
@@ -277,6 +282,32 @@ impl Core {
             Ok(result) => result.map_err(Into::into),
             Err(err) => Err(anyhow!("background task failed: {err}")),
         }
+    }
+
+    /// Whether this computer has a gpg to run. Without one the window
+    /// offers nothing about OpenPGP.
+    pub fn has_gpg(&self) -> bool {
+        self.pgp.is_some()
+    }
+
+    /// Runs one call against the person's gpg and waits for it from the
+    /// GTK loop. gpg puts a pinentry in front of them and waits as long as
+    /// they take to type, so the call goes to a blocking thread rather
+    /// than onto a runtime worker with the mail on it.
+    pub async fn gpg<T, F>(&self, run: F) -> Result<T>
+    where
+        F: FnOnce(&Pgp) -> std::result::Result<T, PgpError> + Send + 'static,
+        T: Send + 'static,
+    {
+        let pgp = self
+            .pgp
+            .clone()
+            .ok_or_else(|| anyhow!("this computer has no gpg"))?;
+        self.call(async move {
+            let answered = tokio::task::spawn_blocking(move || run(&pgp)).await?;
+            Ok::<_, anyhow::Error>(answered?)
+        })
+        .await
     }
 
     /// User operations, such as a send or an archive, that have not finished.

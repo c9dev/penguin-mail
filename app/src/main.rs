@@ -13,6 +13,7 @@ mod format;
 mod hide_my_email;
 mod images;
 mod notify;
+mod pgp;
 mod render;
 mod richtext;
 mod rules;

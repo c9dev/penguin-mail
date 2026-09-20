@@ -16,6 +16,7 @@ mailrs-store.workspace = true
 # `--demo` runs on sync's in-memory Gmail, so the app asks for it.
 mailrs-sync = { workspace = true, features = ["fake"] }
 mailrs-ai.workspace = true
+mailrs-pgp.workspace = true
 adw.workspace = true
 ammonia.workspace = true
 anyhow.workspace = true
@@ -26,6 +27,8 @@ futures.workspace = true
 gtk.workspace = true
 ksni.workspace = true
 mail-builder.workspace = true
+# The message inside an encrypted one arrives as MIME, not through Gmail.
+mail-parser.workspace = true
 notify-rust.workspace = true
 pulldown-cmark.workspace = true
 rand.workspace = true
