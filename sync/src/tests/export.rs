@@ -116,3 +116,74 @@ fn a_subject_of_nothing_still_names_a_file() {
         "mail 2026-01-05.eml"
     );
 }
+
+/// A whole conversation, and one message of it, as the app exports them.
+mod conversations {
+    use mailrs_gmail::cost;
+
+    use super::super::harness;
+    use crate::fake::meta;
+
+    const DAY: i64 = 24 * 60 * 60 * 1000;
+
+    #[tokio::test]
+    async fn a_conversation_exports_every_message_oldest_first() {
+        let h = harness().await;
+        h.fake.seed(meta("second", "t1", 2 * DAY, &["INBOX"]));
+        h.fake.seed(meta("first", "t1", DAY, &["INBOX"]));
+        let mbox = String::from_utf8(h.sync.export_mbox("t1", None).await.unwrap()).unwrap();
+        let separators = mbox.lines().filter(|l| l.starts_with("From ")).count();
+        assert_eq!(separators, 2, "{mbox}");
+        let older = mbox.find("Subject first").expect("the older message");
+        let newer = mbox.find("Subject second").expect("the newer message");
+        assert!(older < newer, "{mbox}");
+    }
+
+    #[tokio::test]
+    async fn one_message_of_a_conversation_exports_alone() {
+        let h = harness().await;
+        h.fake.seed(meta("second", "t1", 2 * DAY, &["INBOX"]));
+        h.fake.seed(meta("first", "t1", DAY, &["INBOX"]));
+        let mbox =
+            String::from_utf8(h.sync.export_mbox("t1", Some("second")).await.unwrap()).unwrap();
+        assert!(
+            mbox.contains("Subject second") && !mbox.contains("Subject first"),
+            "{mbox}"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_body_that_reads_from_survives_the_round_trip() {
+        let h = harness().await;
+        h.fake.seed(meta("one", "t1", DAY, &["INBOX"]));
+        h.fake.with(|s| {
+            s.raws.insert(
+                "one".into(),
+                b"From: ann@example.com\r\nDate: Mon, 5 Jan 2026 09:07:03 +0000\r\n\r\nFrom Russia.\r\n".to_vec(),
+            );
+        });
+        let mbox = String::from_utf8(h.sync.export_mbox("t1", None).await.unwrap()).unwrap();
+        assert!(mbox.contains("\r\n\r\n>From Russia.\r\n"), "{mbox:?}");
+    }
+
+    #[tokio::test]
+    async fn exporting_one_message_costs_a_thread_read_and_a_get() {
+        let h = harness().await;
+        h.fake.seed(meta("one", "t1", DAY, &["INBOX"]));
+        h.sync.export_mbox("t1", None).await.unwrap();
+        assert_eq!(h.fake.with(|s| s.usage.units), cost::THREAD + cost::GET);
+    }
+
+    /// Without a `Date` header every entry would sit at the epoch, which
+    /// sorts an imported archive wrong.
+    #[tokio::test]
+    async fn the_fake_dates_the_mail_it_hands_back() {
+        let h = harness().await;
+        h.fake.seed(meta("one", "t1", DAY, &["INBOX"]));
+        let mbox = String::from_utf8(h.sync.export_mbox("t1", None).await.unwrap()).unwrap();
+        assert!(
+            mbox.starts_with("From ann@example.com Fri Jan  2 "),
+            "{mbox}"
+        );
+    }
+}

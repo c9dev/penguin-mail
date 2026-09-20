@@ -57,6 +57,10 @@ pub struct FakeState {
     /// Message id backing each draft.
     pub draft_messages: HashMap<String, String>,
     pub attachments: HashMap<(String, String), Vec<u8>>,
+    /// RFC 822 bytes to hand back for a message instead of the ones the
+    /// fake builds from its metadata. An export test seeds one to put a
+    /// line the mbox writer must quote inside a real message.
+    pub raws: HashMap<String, Vec<u8>>,
     pub display_name: Option<String>,
     pub signature: Option<String>,
     /// Extra verified send-as addresses, beyond the account's own.
@@ -158,6 +162,7 @@ impl FakeGmail {
                 drafts: HashMap::new(),
                 draft_messages: HashMap::new(),
                 attachments: HashMap::new(),
+                raws: HashMap::new(),
                 display_name: Some("Me".into()),
                 signature: None,
                 send_as: Vec::new(),
@@ -719,20 +724,27 @@ impl GmailApi for FakeGmail {
         })
     }
 
-    /// The message as it arrived. Built from the stored metadata and body,
-    /// which is enough for View Source and for a reply to quote.
+    /// The message as it arrived: the bytes a caller seeded in `raws`, or
+    /// ones built from the stored metadata and body, which is enough for
+    /// View Source, for a reply to quote, and for an export.
     async fn raw_message(&self, id: &str) -> Result<Vec<u8>, GmailError> {
         self.call("users.messages.get", cost::GET).await?;
         self.with(|s| {
             let meta = s.messages.get(id).ok_or(GmailError::NotFound)?;
+            if let Some(raw) = s.raws.get(id) {
+                return Ok(raw.clone());
+            }
             let text = s
                 .bodies
                 .get(id)
                 .and_then(|b| b.text.clone())
                 .unwrap_or_else(|| meta.snippet.clone());
             let from = meta.from.as_ref().map(|a| a.email.as_str()).unwrap_or("");
+            let date = chrono::DateTime::from_timestamp_millis(meta.date)
+                .unwrap_or_default()
+                .to_rfc2822();
             Ok(format!(
-                "From: {from}\r\nSubject: {}\r\nMessage-ID: {}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n{}\r\n",
+                "From: {from}\r\nDate: {date}\r\nSubject: {}\r\nMessage-ID: {}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n{}\r\n",
                 meta.subject,
                 meta.rfc822_msgid.clone().unwrap_or_default(),
                 text.replace('\n', "\r\n")
