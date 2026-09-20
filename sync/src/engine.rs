@@ -210,7 +210,9 @@ async fn run_account<G: GmailApi>(
                     };
                     tokio::select! {
                         _ = tokio::time::sleep(pause) => {}
-                        _ = poke.notified() => {}
+                        // Somebody asked for a refresh, which still wants
+                        // history before the next page.
+                        _ = poke.notified() => next_poll = Instant::now(),
                     }
                     continue;
                 }
