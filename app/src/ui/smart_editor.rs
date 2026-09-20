@@ -77,7 +77,8 @@ pub fn present(
     let add_row = {
         let (conditions, rows) = (conditions.clone(), Rc::clone(&rows));
         Rc::new(move |condition: &Condition| {
-            let labels: Vec<&str> = Field::ALL.iter().map(|f| f.label()).collect();
+            let labels: Vec<String> = Field::ALL.iter().map(|f| f.label()).collect();
+            let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
             let field = gtk::DropDown::from_strings(&labels);
             field.set_valign(gtk::Align::Center);
             field.set_selected(

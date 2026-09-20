@@ -4,6 +4,7 @@
 use crate::system_label::{
     CATEGORY_FORUMS, CATEGORY_PERSONAL, CATEGORY_PROMOTIONS, CATEGORY_SOCIAL, CATEGORY_UPDATES,
 };
+use crate::translate::gettext;
 
 /// One slice of the inbox. `All` shows the whole inbox. Mail with no
 /// category label other than Personal counts as `Primary`.
@@ -48,13 +49,14 @@ impl Category {
         Category::ALL.into_iter().find(|c| c.key() == key)
     }
 
-    pub fn name(self) -> &'static str {
+    /// The name the category bar shows.
+    pub fn name(self) -> String {
         match self {
-            Category::All => "All",
-            Category::Primary => "Primary",
-            Category::Updates => "Updates",
-            Category::Promotions => "Promotions",
-            Category::Social => "Social",
+            Category::All => gettext("All"),
+            Category::Primary => gettext("Primary"),
+            Category::Updates => gettext("Updates"),
+            Category::Promotions => gettext("Promotions"),
+            Category::Social => gettext("Social"),
         }
     }
 

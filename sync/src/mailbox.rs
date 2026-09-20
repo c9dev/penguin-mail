@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use chrono::{DateTime, Local, TimeZone};
+use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{
     Account, AccountId, Category, EpochMillis, FlagColor, Folder, MessageMeta, SmartMailbox,
     ThreadSummary, system_label,
@@ -74,14 +75,14 @@ pub enum Mailbox {
 impl Mailbox {
     pub fn title(&self) -> String {
         match self {
-            Mailbox::Unified(label) => unified_name(label).into(),
+            Mailbox::Unified(label) => unified_name(label),
             Mailbox::Label { name, .. } => name.clone(),
-            Mailbox::Search { .. } => "Search".into(),
-            Mailbox::Folder { folder, .. } => folder_name(*folder).into(),
-            Mailbox::Scheduled => "Send Later".into(),
-            Mailbox::Reminders => "Remind Me".into(),
-            Mailbox::FollowUp => "Follow Up".into(),
-            Mailbox::Flag(color) => format!("{} Flag", color.name()),
+            Mailbox::Search { .. } => gettext("Search"),
+            Mailbox::Folder { folder, .. } => folder_name(*folder),
+            Mailbox::Scheduled => gettext("Send Later"),
+            Mailbox::Reminders => gettext("Remind Me"),
+            Mailbox::FollowUp => gettext("Follow Up"),
+            Mailbox::Flag(color) => fill(&gettext("{color} Flag"), &[("color", &color.name())]),
             Mailbox::Vips { name, .. } => name.clone(),
             Mailbox::Smart(smart) => smart.name.clone(),
         }
@@ -136,33 +137,43 @@ impl Mailbox {
 
     /// What an empty list says: a title and an icon.
     pub fn empty(&self) -> Empty {
-        let empty = |title, icon| Empty { title, icon };
+        let empty = |title: String, icon| Empty { title, icon };
         let label = match self {
             Mailbox::Unified(label) => *label,
             Mailbox::Label { label_id, .. } => label_id.as_str(),
-            Mailbox::Search { .. } => return empty("No Results", "system-search-symbolic"),
-            Mailbox::Scheduled => return empty("Nothing Scheduled", "mail-send-symbolic"),
-            Mailbox::Reminders => return empty("No Reminders", "alarm-symbolic"),
-            Mailbox::FollowUp => return empty("No Follow-Ups", "mail-reply-sender-symbolic"),
-            Mailbox::Flag(_) => return empty("No Flagged Mail", "penguin-mail-flag-symbolic"),
-            Mailbox::Vips { .. } => return empty("No Mail from VIPs", "starred-symbolic"),
-            Mailbox::Smart(_) => return empty("No Matching Mail", "folder-saved-search-symbolic"),
+            Mailbox::Search { .. } => {
+                return empty(gettext("No Results"), "system-search-symbolic");
+            }
+            Mailbox::Scheduled => {
+                return empty(gettext("Nothing Scheduled"), "mail-send-symbolic");
+            }
+            Mailbox::Reminders => return empty(gettext("No Reminders"), "alarm-symbolic"),
+            Mailbox::FollowUp => {
+                return empty(gettext("No Follow-Ups"), "mail-reply-sender-symbolic");
+            }
+            Mailbox::Flag(_) => {
+                return empty(gettext("No Flagged Mail"), "penguin-mail-flag-symbolic");
+            }
+            Mailbox::Vips { .. } => return empty(gettext("No Mail from VIPs"), "starred-symbolic"),
+            Mailbox::Smart(_) => {
+                return empty(gettext("No Matching Mail"), "folder-saved-search-symbolic");
+            }
             Mailbox::Folder { folder, .. } => {
                 let icon = folder_icon(*folder);
                 return match folder {
-                    Folder::Junk => empty("No Junk", icon),
-                    Folder::Trash => empty("Trash Is Empty", icon),
-                    Folder::AllMail => empty("No Mail", icon),
+                    Folder::Junk => empty(gettext("No Junk"), icon),
+                    Folder::Trash => empty(gettext("Trash Is Empty"), icon),
+                    Folder::AllMail => empty(gettext("No Mail"), icon),
                 };
             }
         };
         match label {
-            system_label::INBOX => empty("Inbox Zero", "penguin-mail-inbox-symbolic"),
-            system_label::STARRED => empty("No Starred Mail", "starred-symbolic"),
-            system_label::SENT => empty("No Sent Mail", "mail-send-symbolic"),
-            system_label::DRAFT => empty("No Drafts", "document-edit-symbolic"),
-            system_label::MUTE => empty("No Muted Mail", "audio-volume-muted-symbolic"),
-            _ => empty("No Mail", "penguin-mail-tag-symbolic"),
+            system_label::INBOX => empty(gettext("Inbox Zero"), "penguin-mail-inbox-symbolic"),
+            system_label::STARRED => empty(gettext("No Starred Mail"), "starred-symbolic"),
+            system_label::SENT => empty(gettext("No Sent Mail"), "mail-send-symbolic"),
+            system_label::DRAFT => empty(gettext("No Drafts"), "document-edit-symbolic"),
+            system_label::MUTE => empty(gettext("No Muted Mail"), "audio-volume-muted-symbolic"),
+            _ => empty(gettext("No Mail"), "penguin-mail-tag-symbolic"),
         }
     }
 
@@ -191,22 +202,22 @@ impl Mailbox {
 }
 
 /// Names the sidebar and the list header use for a unified mailbox.
-pub fn unified_name(label: &str) -> &'static str {
+pub fn unified_name(label: &str) -> String {
     match label {
-        system_label::INBOX => "All Inboxes",
-        system_label::STARRED => "Flagged",
-        system_label::SENT => "Sent",
-        system_label::DRAFT => "Drafts",
-        system_label::MUTE => "Muted",
-        _ => "Mail",
+        system_label::INBOX => gettext("All Inboxes"),
+        system_label::STARRED => gettext("Flagged"),
+        system_label::SENT => gettext("Sent"),
+        system_label::DRAFT => gettext("Drafts"),
+        system_label::MUTE => gettext("Muted"),
+        _ => gettext("Mail"),
     }
 }
 
-pub fn folder_name(folder: Folder) -> &'static str {
+pub fn folder_name(folder: Folder) -> String {
     match folder {
-        Folder::Junk => "Junk",
-        Folder::Trash => "Trash",
-        Folder::AllMail => "All Mail",
+        Folder::Junk => gettext("Junk"),
+        Folder::Trash => gettext("Trash"),
+        Folder::AllMail => gettext("All Mail"),
     }
 }
 
@@ -219,16 +230,16 @@ pub fn folder_icon(folder: Folder) -> &'static str {
 }
 
 /// What an empty list shows.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Empty {
-    pub title: &'static str,
+    pub title: String,
     pub icon: &'static str,
 }
 
 impl Default for Empty {
     fn default() -> Self {
         Empty {
-            title: "No Mail",
+            title: gettext("No Mail"),
             icon: "penguin-mail-inbox-symbolic",
         }
     }
@@ -444,7 +455,7 @@ impl<A: Accounts> Mailboxes<A> {
             Mailbox::Smart(smart) => {
                 let Some(query) = smart.query() else {
                     return Ok(Listing {
-                        notices: vec!["This smart mailbox has no conditions".into()],
+                        notices: vec![gettext("This smart mailbox has no conditions")],
                         ..base
                     });
                 };
@@ -756,9 +767,10 @@ impl<A: Accounts> Mailboxes<A> {
             match result {
                 Ok(page) => listing.pages.push(page),
                 Err(err) => {
-                    listing
-                        .notices
-                        .push(format!("Could not load mail for {}: {err}", account.email));
+                    listing.notices.push(fill(
+                        &gettext("Could not load mail for {account}: {reason}"),
+                        &[("account", &account.email), ("reason", &err.to_string())],
+                    ));
                     listing.pages.push(RemotePage::default());
                 }
             }
@@ -797,11 +809,17 @@ impl<A: Accounts> Mailboxes<A> {
                 message_id: Some(item.message_id.clone()),
                 last_message_at: item.send_at,
                 subject: item.subject.clone(),
-                snippet: format!("Sends {}", future_date(item.send_at, now)),
+                snippet: fill(
+                    &gettext("Sends {when}"),
+                    &[("when", &future_date(item.send_at, now))],
+                ),
                 from: if item.recipients.is_empty() {
-                    "No recipients".into()
+                    gettext("No recipients")
                 } else {
-                    format!("To {}", item.recipients)
+                    fill(
+                        &gettext("To {recipients}"),
+                        &[("recipients", &item.recipients)],
+                    )
                 },
                 message_count: 1,
                 ..ThreadSummary::default()
@@ -809,8 +827,12 @@ impl<A: Accounts> Mailboxes<A> {
             .collect();
         let subtitle = match rows.len() {
             0 => String::new(),
-            1 => "1 message".into(),
-            n => format!("{n} messages"),
+            count => fill_plural(
+                "{count} message",
+                "{count} messages",
+                count,
+                &[("count", &count.to_string())],
+            ),
         };
         Ok(Listing {
             rows,
@@ -850,7 +872,10 @@ impl<A: Accounts> Mailboxes<A> {
                     message_count: 1,
                     ..ThreadSummary::default()
                 });
-                row.snippet = format!("Returns {}", future_date(item.remind_at, now));
+                row.snippet = fill(
+                    &gettext("Returns {when}"),
+                    &[("when", &future_date(item.remind_at, now))],
+                );
                 row.last_message_at = item.remind_at;
                 row
             })
@@ -891,9 +916,12 @@ impl<A: Accounts> Mailboxes<A> {
                 });
                 let names: Vec<&str> = item.to.iter().map(|a| a.display()).collect();
                 row.from = if names.is_empty() {
-                    "No recipients".into()
+                    gettext("No recipients")
                 } else {
-                    format!("To {}", names.join(", "))
+                    fill(
+                        &gettext("To {recipients}"),
+                        &[("recipients", &names.join(", "))],
+                    )
                 };
                 row.snippet = waited(now - item.sent_at);
                 row.last_message_at = item.sent_at;
@@ -902,8 +930,12 @@ impl<A: Accounts> Mailboxes<A> {
             .collect();
         let subtitle = match rows.len() {
             0 => String::new(),
-            1 => "1 conversation".into(),
-            n => format!("{n} conversations"),
+            count => fill_plural(
+                "{count} conversation",
+                "{count} conversations",
+                count,
+                &[("count", &count.to_string())],
+            ),
         };
         Ok(Listing {
             rows,
@@ -915,18 +947,28 @@ impl<A: Accounts> Mailboxes<A> {
 
 /// "3 unread", or nothing when everything has been read.
 fn unread_subtitle(unread: i64) -> String {
-    if unread > 0 {
-        format!("{unread} unread")
-    } else {
-        String::new()
+    if unread <= 0 {
+        return String::new();
     }
+    let count = unread.max(0) as usize;
+    fill_plural(
+        "{count} unread",
+        "{count} unread",
+        count,
+        &[("count", &count.to_string())],
+    )
 }
 
 /// "Sent 5 days ago, no reply yet".
 fn waited(elapsed: EpochMillis) -> String {
     match elapsed / DAY {
-        1 => "Sent yesterday, no reply yet".into(),
-        days => format!("Sent {days} days ago, no reply yet"),
+        1 => gettext("Sent yesterday, no reply yet"),
+        days => fill_plural(
+            "Sent {days} day ago, no reply yet",
+            "Sent {days} days ago, no reply yet",
+            days.max(0) as usize,
+            &[("days", &days.to_string())],
+        ),
     }
 }
 
@@ -938,13 +980,17 @@ pub fn future_date(ts: EpochMillis, now: DateTime<Local>) -> String {
     let Some(when) = Local.timestamp_millis_opt(ts).single() else {
         return String::new();
     };
-    match (when.date_naive() - now.date_naive()).num_days() {
-        ..=0 => when.format("today at %H:%M").to_string(),
-        1 => when.format("tomorrow at %H:%M").to_string(),
-        2..=6 => when.format("%A at %H:%M").to_string(),
-        _ if when.year() == now.year() => when.format("%a %-d %b at %H:%M").to_string(),
-        _ => when.format("%-d %b %Y at %H:%M").to_string(),
-    }
+    // The patterns are translated whole, so a language that puts the
+    // time first can. `%A`, `%a` and `%b` come out of chrono in English
+    // whatever the locale says, which is a gap worth closing one day.
+    let pattern = match (when.date_naive() - now.date_naive()).num_days() {
+        ..=0 => gettext("today at %H:%M"),
+        1 => gettext("tomorrow at %H:%M"),
+        2..=6 => gettext("%A at %H:%M"),
+        _ if when.year() == now.year() => gettext("%a %-d %b at %H:%M"),
+        _ => gettext("%-d %b %Y at %H:%M"),
+    };
+    when.format(&pattern).to_string()
 }
 
 /// Turns search hits into list rows, newest first: one per thread when

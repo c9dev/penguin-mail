@@ -92,7 +92,10 @@ pub fn choices() -> Vec<Language> {
         name: "English".into(),
     }];
     for (code, name) in TRANSLATED {
-        let catalogue = dir.join(code).join("LC_MESSAGES").join(format!("{DOMAIN}.mo"));
+        let catalogue = dir
+            .join(code)
+            .join("LC_MESSAGES")
+            .join(format!("{DOMAIN}.mo"));
         if catalogue.is_file() {
             languages.push(Language {
                 code: (*code).into(),

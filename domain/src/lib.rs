@@ -5,6 +5,8 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
+use crate::translate::gettext;
+
 mod category;
 mod folder;
 pub mod invitation;
@@ -148,15 +150,16 @@ impl FlagColor {
         }
     }
 
-    pub fn name(self) -> &'static str {
+    /// The colour's name, as a menu or a sidebar row shows it.
+    pub fn name(self) -> String {
         match self {
-            FlagColor::Red => "Red",
-            FlagColor::Orange => "Orange",
-            FlagColor::Yellow => "Yellow",
-            FlagColor::Green => "Green",
-            FlagColor::Blue => "Blue",
-            FlagColor::Purple => "Purple",
-            FlagColor::Gray => "Gray",
+            FlagColor::Red => gettext("Red"),
+            FlagColor::Orange => gettext("Orange"),
+            FlagColor::Yellow => gettext("Yellow"),
+            FlagColor::Green => gettext("Green"),
+            FlagColor::Blue => gettext("Blue"),
+            FlagColor::Purple => gettext("Purple"),
+            FlagColor::Gray => gettext("Gray"),
         }
     }
 }

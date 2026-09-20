@@ -2,6 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::translate::gettext;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct SmartMailbox {
     /// Stable identity, so renaming keeps the sidebar selection.
@@ -60,18 +62,19 @@ impl Field {
         Field::Flagged,
     ];
 
-    pub fn label(self) -> &'static str {
+    /// What the condition's own row calls it.
+    pub fn label(self) -> String {
         match self {
-            Field::From => "From contains",
-            Field::To => "To contains",
-            Field::Subject => "Subject contains",
-            Field::Words => "Message contains",
-            Field::Label => "Has label",
-            Field::NewerThanDays => "Received in the last (days)",
-            Field::LargerThanMb => "Larger than (MB)",
-            Field::HasAttachment => "Has an attachment",
-            Field::Unread => "Is unread",
-            Field::Flagged => "Is flagged",
+            Field::From => gettext("From contains"),
+            Field::To => gettext("To contains"),
+            Field::Subject => gettext("Subject contains"),
+            Field::Words => gettext("Message contains"),
+            Field::Label => gettext("Has label"),
+            Field::NewerThanDays => gettext("Received in the last (days)"),
+            Field::LargerThanMb => gettext("Larger than (MB)"),
+            Field::HasAttachment => gettext("Has an attachment"),
+            Field::Unread => gettext("Is unread"),
+            Field::Flagged => gettext("Is flagged"),
         }
     }
 

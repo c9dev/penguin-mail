@@ -304,7 +304,10 @@ async fn a_gmail_folder_and_a_search_come_from_gmail_not_the_store() {
     )
     .await;
     assert!(ids(&junk).contains(&"t5".to_string()));
-    assert_eq!((junk.title.as_str(), junk.empty.title), ("Junk", "No Junk"));
+    assert_eq!(
+        (junk.title.as_str(), junk.empty.title.as_str()),
+        ("Junk", "No Junk")
+    );
 
     let search = list(
         &h,

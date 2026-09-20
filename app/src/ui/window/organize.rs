@@ -196,7 +196,7 @@ impl MainWindow {
         label_id: String,
         index: usize,
     ) {
-        let Some((_, background, text)) = crate::ui::LABEL_COLORS.get(index) else {
+        let Some((background, text)) = crate::ui::LABEL_COLORS.get(index) else {
             return;
         };
         let Some(sync) = self.core.account(account_id) else {

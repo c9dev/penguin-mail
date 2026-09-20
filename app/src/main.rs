@@ -92,9 +92,10 @@ fn main() -> glib::ExitCode {
     if let Some(unknown) = args.iter().skip(1).find(|a| {
         !matches!(a.as_str(), "--background" | "--demo" | "--compose") && !a.starts_with("mailto:")
     }) {
-        let line = fill(&gettext("penguin-mail: unknown option {option}"), &[
-            ("option", unknown),
-        ]);
+        let line = fill(
+            &gettext("penguin-mail: unknown option {option}"),
+            &[("option", unknown)],
+        );
         eprintln!("{line}\n\n{}", usage());
         return glib::ExitCode::FAILURE;
     }

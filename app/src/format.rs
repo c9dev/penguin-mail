@@ -2,6 +2,7 @@
 
 use chrono::{DateTime, Datelike, Local, NaiveDate, TimeZone, Timelike};
 use mailrs_domain::invitation::When;
+use mailrs_domain::translate::gettext;
 use mailrs_domain::{AccountId, EpochMillis};
 
 /// Accent colours from the libadwaita palette.
@@ -263,10 +264,20 @@ pub fn color_for(seed: &str) -> &'static str {
     PALETTE[(hash % PALETTE.len() as u64) as usize]
 }
 
-/// Names for the [`PALETTE`] colours, for menus.
-pub const PALETTE_NAMES: [&str; 9] = [
-    "Blue", "Teal", "Green", "Yellow", "Orange", "Red", "Pink", "Purple", "Slate",
-];
+/// What the account colour menu calls the [`PALETTE`] colour at `index`.
+pub fn palette_name(index: usize) -> String {
+    match index {
+        0 => gettext("Blue"),
+        1 => gettext("Teal"),
+        2 => gettext("Green"),
+        3 => gettext("Yellow"),
+        4 => gettext("Orange"),
+        5 => gettext("Red"),
+        6 => gettext("Pink"),
+        7 => gettext("Purple"),
+        _ => gettext("Slate"),
+    }
+}
 
 thread_local! {
     /// Colours chosen in the account menu, by account.

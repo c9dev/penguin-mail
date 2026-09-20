@@ -6,6 +6,7 @@
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
+use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{AccountId, EpochMillis, FlagColor, Folder, Target, system_label};
 use mailrs_gmail::GmailError;
 use mailrs_store::reminders::{self, Reminder};
@@ -238,7 +239,10 @@ impl<A: Accounts> MailActions<A> {
                 Err(err) => Err(err),
             };
             if let Err(err) = done {
-                let message = format!("{} failed: {err}", triage.describe());
+                let message = fill(
+                    &gettext("{action} failed: {reason}"),
+                    &[("action", &triage.describe()), ("reason", &err.to_string())],
+                );
                 for index in members {
                     results[index] = Err(message.clone());
                 }
@@ -259,7 +263,12 @@ impl<A: Accounts> MailActions<A> {
         undo: &mut Undo,
     ) -> Result<(), String> {
         let triage = step?;
-        let failed = |err: &SyncError| format!("{} failed: {err}", triage.describe());
+        let failed = |err: &SyncError| {
+            fill(
+                &gettext("{action} failed: {reason}"),
+                &[("action", &triage.describe()), ("reason", &err.to_string())],
+            )
+        };
         let recolor = *recolor.as_ref().map_err(failed)?;
         triaged.clone()?;
         if !recolor {

@@ -485,7 +485,7 @@ impl<A: Accounts> Tools<A> {
             Some(account) => Mailbox::Label {
                 account_id: account.id,
                 label_id: label.into(),
-                name: crate::ui::account_label_name(label).into(),
+                name: crate::ui::account_label_name(label),
             },
             None => Mailbox::Unified(label),
         };

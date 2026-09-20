@@ -730,7 +730,7 @@ impl MainWindow {
         self.more_rows.set(listing.more);
         let rows = listing.rows.into_iter().map(Rc::new).collect();
         self.list
-            .set_rows(rows, listing.empty.title, listing.empty.icon);
+            .set_rows(rows, &listing.empty.title, listing.empty.icon);
         self.follow_selection();
         self.list.set_title(&listing.title, &listing.subtitle);
     }
