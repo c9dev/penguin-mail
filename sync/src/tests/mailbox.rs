@@ -98,6 +98,25 @@ async fn a_label_lists_only_its_own_mail() {
 }
 
 #[tokio::test]
+async fn the_muted_mailbox_lists_muted_threads_and_the_inbox_leaves_them_out() {
+    let h = seeded().await;
+    h.sync
+        .triage_thread("t2", &crate::TriageAction::Mute)
+        .await
+        .unwrap();
+
+    let listing = list(&h, &Mailbox::Unified(system_label::MUTE), &view()).await;
+    assert_eq!(ids(&listing), ["t2"]);
+    assert_eq!(listing.title, "Muted");
+    assert_eq!(listing.empty.title, "No Muted Mail");
+    assert!(listing.rows.iter().all(|r| r.muted));
+
+    let inbox = list(&h, &Mailbox::Unified(system_label::INBOX), &view()).await;
+    assert_eq!(ids(&inbox), ["t3", "t1"]);
+    assert!(inbox.rows.iter().all(|r| !r.muted));
+}
+
+#[tokio::test]
 async fn a_category_narrows_the_inbox_but_not_a_label() {
     let h = seeded().await;
     let promotions = View {

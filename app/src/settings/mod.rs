@@ -34,6 +34,9 @@ pub struct Settings {
     pub vips: BTreeMap<String, String>,
     /// Notify only about mail from VIPs.
     pub notify_vips_only: bool,
+    /// The buttons a new-mail notification carries, in the order it shows
+    /// them. Empty leaves a notification with nothing but its body to click.
+    pub notification_buttons: Vec<crate::notify::Button>,
     pub smart_mailboxes: Vec<mailrs_domain::SmartMailbox>,
     /// Account addresses in sidebar order; accounts not listed follow.
     pub account_order: Vec<String>,
@@ -64,6 +67,8 @@ pub struct Settings {
     pub send_as: BTreeMap<String, Vec<crate::compose::SendAsAddress>>,
     /// What a new message starts as: styled text, or Markdown source.
     pub compose_format: ComposeFormat,
+    /// Ask before sending a message that promises a file and carries none.
+    pub check_attachments: bool,
     /// Read each account's Google contacts, for names, photos, and
     /// recipient suggestions. Off until the owner turns it on, because it
     /// is the one thing here that asks Google for more access.
@@ -148,6 +153,7 @@ impl Default for Settings {
             flag_color: mailrs_domain::FlagColor::Red,
             vips: BTreeMap::new(),
             notify_vips_only: false,
+            notification_buttons: crate::notify::Button::ALL.to_vec(),
             smart_mailboxes: Vec::new(),
             account_order: Vec::new(),
             account_colors: BTreeMap::new(),
@@ -161,6 +167,7 @@ impl Default for Settings {
             last_sender: BTreeMap::new(),
             send_as: BTreeMap::new(),
             compose_format: ComposeFormat::Rich,
+            check_attachments: true,
             contacts: false,
         }
     }
@@ -464,6 +471,21 @@ impl Settings {
         true
     }
 
+    /// Puts `button` on new-mail notifications, or takes it off. The
+    /// buttons stay in `Button::ALL` order however they were turned on.
+    pub fn show_notification_button(&mut self, button: crate::notify::Button, show: bool) {
+        self.notification_buttons = crate::notify::Button::ALL
+            .into_iter()
+            .filter(|b| {
+                if *b == button {
+                    show
+                } else {
+                    self.notification_buttons.contains(b)
+                }
+            })
+            .collect();
+    }
+
     /// What goes below a message sent from `email`. A signature written here
     /// wins; failing that, the one Gmail keeps for that send-as address.
     pub fn signature_for(&self, account: &str, email: &str) -> &str {
@@ -561,6 +583,28 @@ mod tests {
         assert_eq!(MarkRead::from_index(99), MarkRead::Immediately);
         assert_eq!(nearest(&POLL_CHOICES, 45), 0);
         assert_eq!(nearest(&WINDOW_CHOICES, 100), 2);
+    }
+
+    #[test]
+    fn notification_buttons_keep_their_order_however_they_come_on() {
+        use crate::notify::Button;
+        let mut settings = Settings::default();
+        for button in Button::ALL {
+            settings.show_notification_button(button, false);
+        }
+        assert!(settings.notification_buttons.is_empty());
+        settings.show_notification_button(Button::Reply, true);
+        settings.show_notification_button(Button::Archive, true);
+        assert_eq!(
+            settings.notification_buttons,
+            [Button::Archive, Button::Reply]
+        );
+        settings.show_notification_button(Button::Archive, true);
+        assert_eq!(
+            settings.notification_buttons.len(),
+            2,
+            "turning one on twice lists it once"
+        );
     }
 
     #[test]

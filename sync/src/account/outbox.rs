@@ -163,9 +163,37 @@ impl<G: GmailApi> AccountSync<G> {
         Ok(self.api.signature().await?)
     }
 
-    /// The message as it arrived, for View Source.
+    /// The message as it arrived, for View Source and for saving one
+    /// message as an `.eml` file.
     pub async fn raw_message(&self, id: &str) -> Result<Vec<u8>, SyncError> {
         Ok(self.api.raw_message(id).await?)
+    }
+
+    /// A conversation as an mbox file, oldest message first, or the one
+    /// message `message_id` names when the list shows messages rather than
+    /// conversations. Each message costs a `messages.get`, so a long
+    /// conversation is a handful of calls; the caller runs this off the
+    /// user's thread.
+    pub async fn export_mbox(
+        &self,
+        thread_id: &str,
+        message_id: Option<&str>,
+    ) -> Result<Vec<u8>, SyncError> {
+        let ids: Vec<String> = match message_id {
+            Some(id) => vec![id.to_string()],
+            None => self
+                .api
+                .thread_metadata(thread_id)
+                .await?
+                .into_iter()
+                .map(|meta| meta.id)
+                .collect(),
+        };
+        let mut mbox = Vec::new();
+        for id in ids {
+            crate::export::append(&mut mbox, &self.api.raw_message(&id).await?);
+        }
+        Ok(mbox)
     }
 
     pub async fn filters(&self) -> Result<Vec<Filter>, SyncError> {

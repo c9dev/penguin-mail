@@ -408,6 +408,53 @@ pub fn write(
     buffer.place_cursor(&buffer.start_iter());
 }
 
+/// Puts `body` in at the cursor, styled, and leaves the cursor after it.
+///
+/// The line the cursor sits on keeps the kind it had, since the body is
+/// arriving in the middle of someone's writing; every further line takes
+/// its own. A picture is left out, because a body inserted this way brings
+/// no attachments with it.
+pub fn insert(buffer: &gtk::TextBuffer, body: &RichBody) {
+    let mut at = buffer.iter_at_mark(&buffer.get_insert());
+    let here = kind_at(buffer, at.line());
+    let mut lines: Vec<(i32, BlockKind)> = Vec::new();
+    for (index, block) in body.blocks.iter().enumerate() {
+        if index > 0 {
+            buffer.insert(&mut at, "\n");
+        }
+        let kind = if index == 0 { here } else { block.kind };
+        lines.push((at.line(), kind));
+        for span in &block.spans {
+            if span.image.is_some() {
+                continue;
+            }
+            let mut names: Vec<&str> = vec![block_tag(kind)];
+            for name in STYLES {
+                if has(span.style, name) {
+                    names.push(name);
+                }
+            }
+            let link = span
+                .link
+                .as_ref()
+                .and_then(|url| link_tag(buffer, url).name())
+                .map(|name| name.to_string());
+            if let Some(name) = &link {
+                names.push(name);
+            }
+            buffer.insert_with_tags_by_name(&mut at, &span.text, &names);
+        }
+    }
+    // The mark holds the end while the markers go in and move it along.
+    let end = buffer.create_mark(None, &at, false);
+    for (line, kind) in lines.into_iter().skip(1) {
+        set_kind(buffer, line, kind);
+    }
+    renumber(buffer);
+    buffer.place_cursor(&buffer.iter_at_mark(&end));
+    buffer.delete_mark(&end);
+}
+
 /// Puts the picture in `data` at `at`, held by an anchor the reader maps
 /// back to `cid`.
 pub fn insert_image(
@@ -460,6 +507,7 @@ mod tests {
         list_markers_stay_out_of_the_text();
         a_line_changes_kind_and_the_numbers_follow();
         typing_after_styled_words_carries_the_style_on();
+        an_inserted_body_lands_at_the_cursor();
     }
 
     fn buffer() -> (gtk::TextView, gtk::TextBuffer, Anchors) {
@@ -519,6 +567,24 @@ mod tests {
             "> one\n1. two\n2. three"
         );
         assert_eq!(kind_at(&buffer, 0), BlockKind::Quote);
+    }
+
+    fn an_inserted_body_lands_at_the_cursor() {
+        let (view, buffer, mut anchors) = buffer();
+        write(
+            &view,
+            &RichBody::from_markdown("Hi there."),
+            &[],
+            &mut anchors,
+        );
+        buffer.place_cursor(&buffer.iter_at_offset(3));
+        insert(&buffer, &RichBody::from_markdown("Ann\n\n- one\n- two"));
+        let plain = read(&buffer, &anchors).to_plain();
+        assert_eq!(plain, "Hi Ann\n\n- one\n- twothere.", "{plain}");
+        assert_eq!(kind_at(&buffer, 2), BlockKind::Bullet);
+        // The cursor follows the text in, ready for the next word.
+        let cursor = buffer.iter_at_mark(&buffer.get_insert());
+        assert_eq!(kind_at(&buffer, cursor.line()), BlockKind::Bullet);
     }
 
     fn typing_after_styled_words_carries_the_style_on() {

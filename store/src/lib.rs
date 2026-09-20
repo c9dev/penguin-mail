@@ -15,6 +15,7 @@ pub mod messages;
 pub mod reminders;
 pub mod scheduled;
 mod schema;
+pub mod templates;
 pub mod threads;
 pub mod window;
 

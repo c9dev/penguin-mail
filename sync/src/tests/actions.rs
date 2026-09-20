@@ -248,6 +248,71 @@ async fn remind_stores_the_subject_archives_and_undo_cancels_it() {
 }
 
 #[tokio::test]
+async fn muting_labels_the_thread_and_takes_it_out_of_the_inbox() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    let actions = actions(&h);
+    let target = Target::thread(h.account_id, "t1");
+
+    let outcome = actions
+        .run(
+            std::slice::from_ref(&target),
+            MailAction::Mute { muted: true },
+            History::Record,
+        )
+        .await;
+    assert_eq!(outcome.done, std::slice::from_ref(&target));
+    assert_eq!(h.labels_of("a").await, ["MUTE"]);
+    assert!(h.threads("INBOX").await.is_empty());
+    assert_eq!(h.threads("MUTE").await, ["t1"]);
+
+    let undone = actions.undo().await.expect("an undo");
+    assert_eq!(undone.done, [target]);
+    assert_eq!(h.labels_of("a").await, ["INBOX"]);
+}
+
+#[tokio::test]
+async fn unmuting_drops_the_label_and_brings_the_thread_back() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["MUTE"]));
+    h.bootstrap_all().await;
+    let target = Target::thread(h.account_id, "t1");
+
+    let outcome = actions(&h)
+        .run(
+            &[target],
+            MailAction::Mute { muted: false },
+            History::Record,
+        )
+        .await;
+    assert!(outcome.failed.is_empty(), "{:?}", outcome.failed);
+    assert_eq!(h.labels_of("a").await, ["INBOX"]);
+    assert_eq!(h.threads("INBOX").await, ["t1"]);
+}
+
+/// Gmail's own filters archive a reply to a muted thread, so the app never
+/// sees it in the inbox. The fake does the same.
+#[tokio::test]
+async fn a_reply_to_a_muted_thread_arrives_archived() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    let target = Target::thread(h.account_id, "t1");
+    actions(&h)
+        .run(&[target], MailAction::Mute { muted: true }, History::Record)
+        .await;
+
+    h.fake
+        .deliver(meta("b", "t1", now_millis() + 1, &["INBOX", "UNREAD"]));
+    h.sync.incremental().await.unwrap();
+
+    assert_eq!(h.labels_of("b").await, ["MUTE", "UNREAD"]);
+    assert!(h.threads("INBOX").await.is_empty());
+    assert_eq!(h.threads("MUTE").await, ["t1"]);
+}
+
+#[tokio::test]
 async fn labelling_by_name_creates_a_missing_label() {
     let h = harness().await;
     h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));

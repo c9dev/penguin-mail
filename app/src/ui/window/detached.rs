@@ -126,6 +126,12 @@ impl MainWindow {
             Action::SaveAttachment { message_id, index } => {
                 self.save_attachment_from(view, message_id, index)
             }
+            Action::PreviewAttachment { message_id, index } => {
+                self.preview_attachment_from(view, message_id, index)
+            }
+            Action::SaveAllAttachments { message_id } => {
+                self.save_all_attachments_from(view, message_id)
+            }
             Action::Unsubscribe => self.unsubscribe_from(Rc::clone(view)),
             Action::Invitation(action) => self.invitation_action(view, action),
             Action::Mailto(address) => self.act(Action::Mailto(address)),
@@ -164,6 +170,10 @@ impl MainWindow {
         }
         add("print", Box::new(|_, view| view.print()));
         add("view-source", Box::new(|win, view| win.view_source(view)));
+        add(
+            "export",
+            Box::new(|win, view| win.export_conversation(view)),
+        );
         add(
             "unsubscribe",
             Box::new(|win, view| win.unsubscribe_from(Rc::clone(view))),

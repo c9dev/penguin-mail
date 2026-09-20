@@ -161,6 +161,7 @@ impl Mailbox {
             system_label::STARRED => empty("No Starred Mail", "starred-symbolic"),
             system_label::SENT => empty("No Sent Mail", "mail-send-symbolic"),
             system_label::DRAFT => empty("No Drafts", "document-edit-symbolic"),
+            system_label::MUTE => empty("No Muted Mail", "audio-volume-muted-symbolic"),
             _ => empty("No Mail", "penguin-mail-tag-symbolic"),
         }
     }
@@ -196,6 +197,7 @@ pub fn unified_name(label: &str) -> &'static str {
         system_label::STARRED => "Flagged",
         system_label::SENT => "Sent",
         system_label::DRAFT => "Drafts",
+        system_label::MUTE => "Muted",
         _ => "Mail",
     }
 }
@@ -962,6 +964,7 @@ pub fn summarize_search(mut hits: Vec<MessageMeta>, grouped: bool) -> Vec<Thread
             row.unread |= hit.is_unread();
             row.starred |= hit.has_label(system_label::STARRED);
             row.has_attachments |= hit.has_attachments;
+            row.muted |= hit.has_label(system_label::MUTE);
             if hit.date <= *oldest {
                 *oldest = hit.date;
                 row.subject = hit.subject.clone();
@@ -993,6 +996,7 @@ fn row_of(hit: &MessageMeta, alone: bool) -> ThreadSummary {
         unread: hit.is_unread(),
         starred: hit.has_label(system_label::STARRED),
         has_attachments: hit.has_attachments,
+        muted: hit.has_label(system_label::MUTE),
         flag_color: None,
         from_email: hit
             .from

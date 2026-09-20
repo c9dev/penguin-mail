@@ -31,8 +31,10 @@ use crate::settings::{Change, Effect, Effects, MarkRead, RemoteImages, Settings}
 
 mod arrange;
 mod assistant;
+mod attachments;
 mod categories;
 mod detached;
+mod export;
 mod flags;
 mod followup;
 mod hide_my_email;
@@ -53,6 +55,13 @@ const BODY_FETCHES: usize = 10;
 /// download the same pictures again.
 const INLINE_IMAGE_CACHE: usize = 64;
 
+/// How long a reply from a notification waits for the thread and its body
+/// to arrive before it quotes the snippet instead.
+const REVEAL_WAIT: std::time::Duration = std::time::Duration::from_secs(5);
+
+/// How often that wait looks at the conversation.
+const REVEAL_STEP: std::time::Duration = std::time::Duration::from_millis(100);
+
 /// Whether a refresh should list the mailbox again. Listing a folder or a
 /// search means a Gmail search for every account on screen, so the window
 /// asks for one only when the rows themselves can have changed.
@@ -60,6 +69,15 @@ const INLINE_IMAGE_CACHE: usize = 64;
 enum Reload {
     Yes,
     No,
+}
+
+/// What to do with a thread opened from outside the window.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Reveal {
+    /// Show it.
+    Read,
+    /// Show it and answer its newest message.
+    Reply,
 }
 
 type WindowAction = Box<dyn Fn(&Rc<MainWindow>)>;
@@ -101,6 +119,9 @@ pub struct MainWindow {
     /// attachment id. Gmail charges 5 units for each one and a
     /// conversation is often reopened.
     inline_cache: RefCell<HashMap<(AccountId, String, String), String>>,
+    /// Pictures for the attachment rows, held the same way and for the
+    /// same reason.
+    thumbnail_cache: RefCell<HashMap<(AccountId, String, String), String>>,
 }
 
 /// What one row holds, for a line the user reads.
@@ -139,6 +160,15 @@ fn capitalized(word: &str) -> String {
     }
 }
 
+/// Whether `mailbox` is the Muted list, unified or for one account.
+fn lists_muted(mailbox: &Mailbox) -> bool {
+    match mailbox {
+        Mailbox::Unified(label) => *label == system_label::MUTE,
+        Mailbox::Label { label_id, .. } => label_id == system_label::MUTE,
+        _ => false,
+    }
+}
+
 /// The toast after an action, or `None` when the change speaks for itself.
 fn done_message(action: &MailAction, count: usize, threaded: bool) -> Option<String> {
     let action = match action {
@@ -147,6 +177,13 @@ fn done_message(action: &MailAction, count: usize, threaded: bool) -> Option<Str
             return color.map(|c| format!("Flagged {}", c.name().to_lowercase()));
         }
         MailAction::Label { .. } => return Some("Labels changed".into()),
+        MailAction::Mute { muted } => {
+            let verb = if *muted { "Muted" } else { "Unmuted" };
+            return Some(match count > 1 {
+                true => format!("{verb} {count} {}", row_noun(count, threaded)),
+                false => verb.into(),
+            });
+        }
         MailAction::Remind { .. } | MailAction::CancelReminder => return None,
     };
     let noun = row_noun(count, threaded);
@@ -333,6 +370,7 @@ impl MainWindow {
                 categories: categories::CategoryBar::new(),
                 follow_up: followup::FollowUpBanner::new(),
                 inline_cache: RefCell::new(HashMap::new()),
+                thumbnail_cache: RefCell::new(HashMap::new()),
             }
         });
         if window.core.demo {
@@ -846,6 +884,7 @@ impl MainWindow {
                 only_message: only,
                 me,
                 inline_images: HashMap::new(),
+                thumbnails: HashMap::new(),
                 photos,
                 unsubscribed: false,
                 flag_color: summary.flag_color,
@@ -931,7 +970,7 @@ impl MainWindow {
         let unread = self
             .conversation
             .with_open(|open| {
-                open.bodies.extend(loaded);
+                open.bodies.extend(loaded.clone());
                 open.inline_images.extend(images);
                 open.unread()
             })
@@ -939,8 +978,57 @@ impl MainWindow {
         view.render(false);
         self.refresh_invitation(&view).await;
         if unread {
-            self.mark_read_later(&view, account_id, thread_id);
+            self.mark_read_later(&view, account_id, thread_id.clone());
         }
+        self.fill_in_thumbnails(&view, account_id, &sync, thread_id);
+    }
+
+    /// Fetches the pictures for the attachment rows after the message is
+    /// already on screen, and redraws when they arrive. Reading the mail
+    /// never waits on them, and they come out of the background share of
+    /// the account's quota, behind whatever the user asks for next.
+    fn fill_in_thumbnails(
+        self: &Rc<Self>,
+        view: &Rc<ConversationView>,
+        account_id: AccountId,
+        sync: &std::sync::Arc<crate::core::Sync>,
+        thread_id: String,
+    ) {
+        // Every body the thread shows, not only the ones just fetched: a
+        // message read before is already in the store, and its pictures
+        // are just as worth showing.
+        let loaded: Vec<(String, Result<MessageBody, String>)> = view
+            .with_open(|open| {
+                open.bodies
+                    .iter()
+                    .filter(|(_, body)| {
+                        body.as_ref().is_ok_and(|body| {
+                            body.attachments.iter().any(|a| {
+                                a.attachment_id.is_some()
+                                    && a.mime_type.starts_with("image/")
+                                    && !open.thumbnails.contains_key(
+                                        a.attachment_id.as_deref().unwrap_or_default(),
+                                    )
+                                    && !crate::render::shown_in_body(a, body)
+                            })
+                        })
+                    })
+                    .map(|(id, body)| (id.clone(), body.clone()))
+                    .collect()
+            })
+            .unwrap_or_default();
+        if loaded.is_empty() {
+            return;
+        }
+        let (this, view, sync) = (Rc::clone(self), Rc::clone(view), sync.clone());
+        glib::spawn_future_local(async move {
+            let found = this.thumbnails(account_id, &sync, &loaded).await;
+            if found.is_empty() || !view.is_showing(account_id, &thread_id) {
+                return;
+            }
+            view.with_open(|open| open.thumbnails.extend(found));
+            view.render(false);
+        });
     }
 
     /// Marks the open thread or message read, when the setting says so.
@@ -1104,6 +1192,7 @@ impl MainWindow {
                     noun,
                     rows.iter().any(|r| r.unread),
                     rows.iter().all(|r| r.starred),
+                    rows.iter().all(|r| r.muted),
                 );
             }
             Picked::None => self.conversation.clear(),
@@ -1151,6 +1240,18 @@ impl MainWindow {
             .unwrap_or((false, false))
     }
 
+    /// Whether every target is muted. False when nothing is selected.
+    fn targets_muted(&self) -> bool {
+        let rows = self.list.selected_rows();
+        if rows.len() > 1 {
+            return rows.iter().all(|r| r.muted);
+        }
+        self.conversation
+            .with_open(|o| o.muted())
+            .or_else(|| rows.first().map(|r| r.muted))
+            .unwrap_or(false)
+    }
+
     fn act(self: &Rc<Self>, action: Action) {
         match action {
             Action::Invitation(action) => {
@@ -1180,6 +1281,14 @@ impl MainWindow {
                 self.conversation.render(false);
             }
             Action::SaveAttachment { message_id, index } => self.save_attachment(message_id, index),
+            Action::PreviewAttachment { message_id, index } => {
+                let view = Rc::clone(&self.conversation);
+                self.preview_attachment_from(&view, message_id, index)
+            }
+            Action::SaveAllAttachments { message_id } => {
+                let view = Rc::clone(&self.conversation);
+                self.save_all_attachments_from(&view, message_id)
+            }
             Action::Mailto(address) => {
                 let account_id = self.default_account();
                 if let (Some(account_id), Some(app)) = (account_id, self.app.upgrade()) {
@@ -1295,19 +1404,42 @@ impl MainWindow {
         if targets.is_empty() {
             return;
         }
-        if self.leaves_list(&action) {
-            let next = self.list.neighbour_of_selected();
-            self.conversation.clear();
-            self.list.unselect();
-            match next {
-                Some(next) => {
-                    self.list
-                        .select(next.account_id, &next.id, next.message_id.as_deref())
-                }
-                None => self.nav.set_show_content(false),
-            }
-        }
+        self.follow_out(&action);
         self.perform(targets, MailAction::Triage(action), History::Record, None);
+    }
+
+    /// Mutes the targets, or unmutes them when they are muted already.
+    /// Gmail archives the replies to a muted thread with its own filters,
+    /// so muting here is the label and one archive.
+    fn toggle_mute(self: &Rc<Self>) {
+        let targets = self.targets();
+        if targets.is_empty() {
+            return;
+        }
+        let muted = !self.targets_muted();
+        self.follow_out(&if muted {
+            TriageAction::Mute
+        } else {
+            TriageAction::Unmute
+        });
+        self.perform(targets, MailAction::Mute { muted }, History::Record, None);
+    }
+
+    /// Moves on to the next row when `action` takes the targets out of the
+    /// list on screen, as Apple Mail does.
+    fn follow_out(self: &Rc<Self>, action: &TriageAction) {
+        if !self.leaves_list(action) {
+            return;
+        }
+        let next = self.list.neighbour_of_selected();
+        self.conversation.clear();
+        self.list.unselect();
+        match next {
+            Some(next) => self
+                .list
+                .select(next.account_id, &next.id, next.message_id.as_deref()),
+            None => self.nav.set_show_content(false),
+        }
     }
 
     /// The Delete key. Outside the Trash it moves mail there. Inside it
@@ -1477,13 +1609,16 @@ impl MainWindow {
 
     /// Whether `action` takes the targets out of the list on screen.
     fn leaves_list(&self, action: &TriageAction) -> bool {
-        let folder = self.mailbox.borrow().folder();
+        let mailbox = self.mailbox.borrow();
+        let folder = mailbox.folder();
         match action {
             TriageAction::Archive => folder != Some(Folder::AllMail),
             TriageAction::Trash => folder != Some(Folder::Trash),
             TriageAction::Junk => folder != Some(Folder::Junk),
             TriageAction::Untrash => folder == Some(Folder::Trash),
             TriageAction::NotJunk => folder == Some(Folder::Junk),
+            TriageAction::Mute => folder != Some(Folder::AllMail) && !lists_muted(&mailbox),
+            TriageAction::Unmute => lists_muted(&mailbox),
             _ => false,
         }
     }
@@ -1581,7 +1716,7 @@ impl MainWindow {
                 self.queue_refresh();
             }
             MailAction::Remind { .. } | MailAction::CancelReminder => self.reminders_changed(),
-            MailAction::Triage(_) | MailAction::Label { .. } => {}
+            MailAction::Triage(_) | MailAction::Label { .. } | MailAction::Mute { .. } => {}
         }
     }
 
@@ -1777,6 +1912,12 @@ impl MainWindow {
                 Some(Ok(body)) => compose::body_text(body),
                 _ => target.snippet.clone(),
             };
+            // A forward keeps the original's HTML and its inline images,
+            // so what goes out is the message that arrived.
+            let html = match open.bodies.get(&target.id) {
+                Some(Ok(body)) if kind == ReplyKind::Forward => body.html.clone(),
+                _ => None,
+            };
             let attachments = match open.bodies.get(&target.id) {
                 Some(Ok(body)) if kind == ReplyKind::Forward => body.attachments.clone(),
                 _ => Vec::new(),
@@ -1785,18 +1926,26 @@ impl MainWindow {
                 open.account_id,
                 target,
                 text,
+                html,
                 open.messages.clone(),
                 attachments,
             ))
         });
-        let Some(Some((account_id, target, text, thread, attachments))) = prepared else {
+        let Some(Some((account_id, target, text, html, thread, attachments))) = prepared else {
             return;
         };
+        let forwarded_html = html.clone();
         // Every address the account sends as, so the reply comes from the
         // one the message was written to.
         let mine = app.my_addresses(account_id);
         let mut draft = app.signed(compose::respond(
-            kind, account_id, &mine, &target, &text, &thread,
+            kind,
+            account_id,
+            &mine,
+            &target,
+            &text,
+            html.as_deref(),
+            &thread,
         ));
         if attachments.is_empty() {
             app.compose(draft);
@@ -1818,7 +1967,15 @@ impl MainWindow {
                     .await
                 {
                     Ok(data) => draft.attachments.push(OutgoingAttachment {
-                        content_id: None,
+                        // An image the forwarded HTML shows keeps its id,
+                        // so the `cid:` in that HTML still finds it. One
+                        // the HTML never names travels as a file, which is
+                        // how it arrived.
+                        content_id: attachment.content_id.filter(|cid| {
+                            forwarded_html
+                                .as_deref()
+                                .is_some_and(|html| compose::refers_to_cid(html, cid))
+                        }),
                         filename: attachment.filename,
                         mime_type: attachment.mime_type,
                         data,
@@ -2085,6 +2242,7 @@ impl MainWindow {
         add("archive", Box::new(|win| win.triage(TriageAction::Archive)));
         add("trash", Box::new(|win| win.trash()));
         add("junk", Box::new(|win| win.act(Action::Junk)));
+        add("mute", Box::new(|win| win.toggle_mute()));
         add(
             "label",
             Box::new(|win| win.conversation.label_button.popup()),
@@ -2131,6 +2289,7 @@ impl MainWindow {
                 win.view_source(&view);
             }),
         );
+        add("export", Box::new(|win| win.export()));
         add("open-window", Box::new(|win| win.open_current_in_window()));
         add("block-sender", Box::new(|win| win.block_sender()));
         add("select-all", Box::new(|win| win.list.select_all()));
@@ -2388,6 +2547,7 @@ impl MainWindow {
                 Some('e') => win.triage(TriageAction::Archive),
                 Some('#') => win.delete_key(),
                 Some('s') => win.act(Action::ToggleStar),
+                Some('M') => win.toggle_mute(),
                 Some('u') => win.act(Action::ToggleRead),
                 Some('r') => win.reply(ReplyKind::Reply),
                 Some('a') => win.reply(ReplyKind::ReplyAll),
@@ -2426,17 +2586,47 @@ impl MainWindow {
         app.compose(app.signed(Draft::new(account_id, app.identity(account_id))));
     }
 
-    /// Opens a thread from outside the window, such as a notification.
-    pub fn reveal(self: &Rc<Self>, account_id: AccountId, thread_id: String) {
+    /// Opens a thread from outside the window, such as a notification, and
+    /// answers it when `then` asks for that.
+    pub fn reveal(self: &Rc<Self>, account_id: AccountId, thread_id: String, then: Reveal) {
         let inbox = Mailbox::Unified(system_label::INBOX);
         if *self.mailbox.borrow() != inbox {
             self.sidebar.select(&inbox);
             self.show_mailbox(inbox);
         }
         let this = Rc::clone(self);
-        glib::timeout_add_local_once(std::time::Duration::from_millis(250), move || {
+        glib::spawn_future_local(async move {
+            // The list is still loading its rows; selecting one before they
+            // land finds nothing.
+            glib::timeout_future(std::time::Duration::from_millis(250)).await;
             this.list.select(account_id, &thread_id, None);
+            if then == Reveal::Reply {
+                this.reply_when_open(account_id, &thread_id).await;
+            }
         });
+    }
+
+    /// Answers a thread once the conversation has it, with its body rather
+    /// than its snippet where the wait is long enough for Gmail to answer.
+    async fn reply_when_open(self: &Rc<Self>, account_id: AccountId, thread_id: &str) {
+        let deadline = std::time::Instant::now() + REVEAL_WAIT;
+        loop {
+            let quotable = self
+                .conversation
+                .with_open(|open| {
+                    open.account_id == account_id
+                        && open.thread_id == thread_id
+                        && open
+                            .reply_target()
+                            .is_some_and(|m| open.bodies.contains_key(&m.id))
+                })
+                .unwrap_or(false);
+            if quotable || std::time::Instant::now() >= deadline {
+                break;
+            }
+            glib::timeout_future(REVEAL_STEP).await;
+        }
+        self.reply(ReplyKind::Reply);
     }
 
     /// Screenshot hooks, honoured only in demo mode: `MAILRS_DEMO_OPEN`
@@ -2685,6 +2875,7 @@ impl MainWindow {
                     ("Flag or unflag", "<Control><Shift>l s"),
                     ("Flag colors", "<Control><Alt>1...<Control><Alt>7"),
                     ("Mark read or unread", "<Control><Shift>u u"),
+                    ("Mute or unmute", "<Shift>m"),
                     ("Labels", "<Control><Alt>m l"),
                     ("Undo", "<Control>z"),
                 ],
@@ -2793,4 +2984,30 @@ fn unique_path(dir: &std::path::Path, name: &str) -> PathBuf {
         .map(|n| dir.join(format!("{stem} ({n}){ext}")))
         .find(|p| !p.exists())
         .expect("some name is free")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_muted_list_is_the_one_named_by_the_mute_label() {
+        assert!(lists_muted(&Mailbox::Unified(system_label::MUTE)));
+        assert!(lists_muted(&Mailbox::Label {
+            account_id: 1,
+            label_id: system_label::MUTE.into(),
+            name: "Muted".into(),
+        }));
+        assert!(!lists_muted(&Mailbox::Unified(system_label::INBOX)));
+        assert!(!lists_muted(&Mailbox::Reminders));
+    }
+
+    #[test]
+    fn a_mute_toast_counts_the_conversations_it_covers() {
+        let toast = |muted, count| done_message(&MailAction::Mute { muted }, count, true);
+        assert_eq!(toast(true, 1).as_deref(), Some("Muted"));
+        assert_eq!(toast(true, 3).as_deref(), Some("Muted 3 conversations"));
+        assert_eq!(toast(false, 1).as_deref(), Some("Unmuted"));
+        assert_eq!(toast(false, 2).as_deref(), Some("Unmuted 2 conversations"));
+    }
 }

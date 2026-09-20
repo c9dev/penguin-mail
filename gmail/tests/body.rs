@@ -112,3 +112,67 @@ fn charset_parameter_parsing() {
     );
     assert_eq!(charset_param("text/plain"), None);
 }
+
+#[test]
+fn a_nameless_inline_image_is_still_an_attachment() {
+    // Apple Mail, Outlook and mail_builder all send an image the HTML
+    // shows with a Content-ID and no filename. Passing over it leaves the
+    // reader with a cid: it cannot resolve and no row to fall back on.
+    let payload = part(json!({
+        "mimeType": "multipart/related",
+        "parts": [
+            {"partId": "0", "mimeType": "text/html",
+             "body": {"data": b64(b"<img src=\"cid:img1@mailrs\">")}},
+            {"partId": "1", "mimeType": "image/png", "filename": "",
+             "headers": [
+                 {"name": "Content-ID", "value": "<img1@mailrs>"},
+                 {"name": "Content-Disposition", "value": "inline"}
+             ],
+             "body": {"attachmentId": "att-1", "size": 4096}}
+        ]
+    }));
+    let body = extract_body(&payload);
+    assert_eq!(body.attachments.len(), 1);
+    let image = &body.attachments[0];
+    assert_eq!(image.content_id.as_deref(), Some("img1@mailrs"));
+    assert_eq!(image.attachment_id.as_deref(), Some("att-1"));
+    assert_eq!(image.filename, "image-img1.png");
+}
+
+#[test]
+fn a_nameless_file_takes_a_name_from_its_type() {
+    let payload = part(json!({
+        "mimeType": "multipart/mixed",
+        "parts": [
+            {"partId": "0", "mimeType": "text/plain", "body": {"data": b64(b"See attached")}},
+            {"partId": "1", "mimeType": "application/pdf", "filename": "",
+             "headers": [{"name": "Content-Disposition", "value": "attachment"}],
+             "body": {"attachmentId": "att-1", "size": 120}},
+            {"partId": "2", "mimeType": "image/jpeg", "filename": "",
+             "body": {"attachmentId": "att-2", "size": 240}}
+        ]
+    }));
+    let body = extract_body(&payload);
+    let names: Vec<&str> = body
+        .attachments
+        .iter()
+        .map(|a| a.filename.as_str())
+        .collect();
+    assert_eq!(names, ["attachment.pdf", "image.jpg"]);
+}
+
+#[test]
+fn the_two_readable_parts_never_count_as_attachments() {
+    // Gmail hands back an attachmentId for a large text part. That is the
+    // message, not a file.
+    let payload = part(json!({
+        "mimeType": "multipart/alternative",
+        "parts": [
+            {"partId": "0", "mimeType": "text/plain",
+             "body": {"attachmentId": "att-1", "size": 900000}},
+            {"partId": "1", "mimeType": "text/html",
+             "body": {"data": b64(b"<p>Hello</p>")}}
+        ]
+    }));
+    assert!(extract_body(&payload).attachments.is_empty());
+}

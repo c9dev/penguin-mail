@@ -29,6 +29,9 @@ pub struct MessageView<'a> {
     pub expanded: bool,
     /// `Content-ID` to `data:` URI for this message's inline images.
     pub inline_images: &'a HashMap<String, String>,
+    /// Gmail's attachment id to a small `data:` URI, for the picture on an
+    /// attachment row. A row without one falls back to the paperclip.
+    pub thumbnails: &'a HashMap<String, String>,
     /// The body's HTML, already cleaned. Cleaning a long message costs
     /// milliseconds, so the view keeps the result and passes it back here.
     /// `None` cleans the body now.
@@ -172,37 +175,74 @@ fn render_body(html: &mut String, view: &MessageView) {
                     render_text(body.text.as_deref().unwrap_or(""))
                 );
             }
-            render_attachments(html, &view.meta.id, body);
+            render_attachments(html, &view.meta.id, body, view.thumbnails);
         }
     }
 }
 
-fn render_attachments(html: &mut String, message_id: &str, body: &MessageBody) {
+fn render_attachments(
+    html: &mut String,
+    message_id: &str,
+    body: &MessageBody,
+    thumbnails: &HashMap<String, String>,
+) {
     let listed: Vec<(usize, &mailrs_domain::Attachment)> = body
         .attachments
         .iter()
         .enumerate()
-        .filter(|(_, a)| {
-            a.content_id
-                .as_ref()
-                .is_none_or(|_| !a.mime_type.starts_with("image/"))
-        })
+        .filter(|(_, a)| !shown_in_body(a, body))
         .collect();
     if listed.is_empty() {
         return;
     }
+    let id = escape(message_id);
     html.push_str("<div class=\"attachments\">");
-    for (index, attachment) in listed {
+    for (index, attachment) in &listed {
+        let thumbnail = attachment
+            .attachment_id
+            .as_deref()
+            .and_then(|key| thumbnails.get(key));
+        let face = match thumbnail {
+            Some(uri) => format!("<img class=\"thumb\" src=\"{uri}\" alt=\"\">"),
+            None => "<span class=\"clip\"></span>".to_string(),
+        };
         let _ = write!(
             html,
-            "<a class=\"attachment\" href=\"mailrs:attachment/{}/{index}\" title=\"Save to Downloads\">\
-             <span class=\"clip\"></span><span class=\"file\">{}</span><span class=\"size\">{}</span></a>",
-            escape(message_id),
+            "<span class=\"attachment\"><a class=\"open\" href=\"mailrs:preview/{id}/{index}\" \
+             title=\"Quick Look\">{face}<span class=\"file\">{}</span>\
+             <span class=\"size\">{}</span></a>\
+             <a class=\"get\" href=\"mailrs:attachment/{id}/{index}\" title=\"Save to Downloads\"></a></span>",
             escape(&attachment.filename),
             human_size(attachment.size)
         );
     }
+    if listed.len() > 1 {
+        let _ = write!(
+            html,
+            "<a class=\"attachment all\" href=\"mailrs:attachments/{id}\" \
+             title=\"Save every attachment to a folder\"><span class=\"file\">Save All ({})</span></a>",
+            listed.len()
+        );
+    }
     html.push_str("</div>");
+}
+
+/// Whether the message already shows this attachment where the reader is
+/// looking, so a row for it would be a second copy. Only an image the HTML
+/// points at by `cid:` counts. A `Content-ID` on its own does not: Apple
+/// Mail and Outlook put one on files they mean you to save, and treating
+/// that as shown is what made an attached photo vanish from the message it
+/// arrived in.
+pub fn shown_in_body(attachment: &mailrs_domain::Attachment, body: &MessageBody) -> bool {
+    let Some(cid) = attachment.content_id.as_deref() else {
+        return false;
+    };
+    if !attachment.mime_type.starts_with("image/") {
+        return false;
+    }
+    body.html
+        .as_deref()
+        .is_some_and(|html| crate::compose::refers_to_cid(html, cid))
 }
 
 /// "me, Bob Smith, and 2 others".
@@ -370,11 +410,18 @@ blockquote.quote{{margin:6px 0;padding:0 0 0 12px;border-left:3px solid color-mi
 .signature{{color:var(--dim)}}\
 a{{color:var(--accent)}}\
 .attachments{{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0 52px}}\
-.attachment{{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:var(--card);\
-color:inherit;text-decoration:none;font-size:13px;max-width:320px}}\
+.attachment{{display:inline-flex;align-items:center;border-radius:10px;background:var(--card);\
+color:inherit;text-decoration:none;font-size:13px;max-width:340px;overflow:hidden}}\
 .attachment:hover{{background:color-mix(in srgb,var(--card) 100%,var(--fg) 6%)}}\
+.attachment .open{{display:inline-flex;align-items:center;gap:8px;padding:8px 4px 8px 12px;\
+color:inherit;text-decoration:none;min-width:0}}\
+.attachment.all{{padding:8px 12px}}\
 .attachment .file{{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
 .attachment .size{{color:var(--dim);white-space:nowrap}}\
+.attachment .get{{width:28px;align-self:stretch;flex:none;background:var(--dim);\
+-webkit-mask:url(\"{DOWN}\") center/16px no-repeat;opacity:.6}}\
+.attachment .get:hover{{opacity:1;background:var(--accent)}}\
+.thumb{{width:32px;height:32px;flex:none;border-radius:5px;object-fit:cover;background:var(--card)}}\
 .clip{{width:16px;height:16px;flex:none;background:var(--dim);-webkit-mask:url(\"{CLIP}\") center/contain no-repeat}}\
 @media (max-width:560px){{body{{padding:18px 14px 40px}}.body,.attachments{{margin-left:0}}.thread h1{{font-size:21px}}\
 .address{{display:none}}.message{{padding:12px 8px;margin:0 -8px}}}}",
@@ -385,6 +432,9 @@ color:inherit;text-decoration:none;font-size:13px;max-width:320px}}\
 
 const CLIP: &str = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'>\
 <path fill='black' d='M10.5 2A3.5 3.5 0 0 0 7 5.5v5a1.5 1.5 0 0 0 3 0V6h-1v4.5a.5.5 0 0 1-1 0v-5a2.5 2.5 0 0 1 5 0v6a3.5 3.5 0 0 1-7 0V5H5v6.5a4.5 4.5 0 0 0 9 0v-6A3.5 3.5 0 0 0 10.5 2z'/></svg>";
+
+const DOWN: &str = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'>\
+<path fill='black' d='M7.5 1.5h1v8.3l3-3 .7.7-4.2 4.2-4.2-4.2.7-.7 3 3V1.5zM3 13h10v1H3z'/></svg>";
 
 #[cfg(test)]
 mod tests {
@@ -461,6 +511,7 @@ mod tests {
             ..Default::default()
         };
         let images = HashMap::new();
+        let no_thumbs = HashMap::new();
         let html = page(
             "<script>alert(1)</script>",
             vec![MessageView {
@@ -468,6 +519,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 inline_images: &images,
+                thumbnails: &no_thumbs,
                 sanitized: None,
             }],
         );
@@ -483,11 +535,13 @@ mod tests {
         let from_ann = meta("m1", "Ann Lee", &[]);
         let body = MessageBody::default();
         let images = HashMap::new();
+        let no_thumbs = HashMap::new();
         let view = || MessageView {
             meta: &from_ann,
             body: BodyState::Loaded(&body),
             expanded: false,
             inline_images: &images,
+            thumbnails: &no_thumbs,
             sanitized: None,
         };
         let initials = page("Hi", vec![view()]);
@@ -521,6 +575,7 @@ mod tests {
             ..Default::default()
         };
         let images = HashMap::new();
+        let no_thumbs = HashMap::new();
         let html = page(
             "Hello",
             vec![
@@ -529,6 +584,7 @@ mod tests {
                     body: BodyState::Loaded(&body),
                     expanded: false,
                     inline_images: &images,
+                    thumbnails: &no_thumbs,
                     sanitized: None,
                 },
                 MessageView {
@@ -536,6 +592,7 @@ mod tests {
                     body: BodyState::Loaded(&body),
                     expanded: true,
                     inline_images: &images,
+                    thumbnails: &no_thumbs,
                     sanitized: None,
                 },
             ],
@@ -568,6 +625,7 @@ mod tests {
             ..Default::default()
         };
         let images = HashMap::new();
+        let no_thumbs = HashMap::new();
         let html = page(
             "x",
             vec![MessageView {
@@ -575,6 +633,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 inline_images: &images,
+                thumbnails: &no_thumbs,
                 sanitized: None,
             }],
         );
@@ -586,7 +645,7 @@ mod tests {
     }
 
     #[test]
-    fn attachments_link_to_downloads_but_inline_images_do_not() {
+    fn an_image_the_body_shows_gets_no_row_and_everything_else_does() {
         let m = meta("m1", "Ann", &[]);
         let attachment = |name: &str, mime: &str, cid: Option<&str>| Attachment {
             part_id: name.into(),
@@ -598,14 +657,19 @@ mod tests {
         };
         let body = MessageBody {
             text: Some("see attached".into()),
-            html: None,
+            html: Some("<p>Hi</p><img src=\"cid:logo\">".into()),
             attachments: vec![
                 attachment("logo.png", "image/png", Some("logo")),
                 attachment("report.pdf", "application/pdf", None),
+                // Apple Mail and Outlook put a Content-ID on a photo they
+                // mean you to save. The body never names it, so it is a file.
+                attachment("holiday.jpg", "image/jpeg", Some("logo2")),
+                attachment("invite.ics", "text/calendar", Some("cal")),
             ],
             ..Default::default()
         };
         let images = HashMap::new();
+        let no_thumbs = HashMap::new();
         let html = page(
             "x",
             vec![MessageView {
@@ -613,18 +677,130 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 inline_images: &images,
+                thumbnails: &no_thumbs,
                 sanitized: None,
             }],
         );
         assert!(html.contains("href=\"mailrs:attachment/m1/1\""));
         assert!(html.contains("report.pdf") && html.contains("2.0 KB"));
-        assert!(!html.contains("logo.png"));
+        assert!(html.contains("holiday.jpg"), "the body never shows it");
+        assert!(html.contains("invite.ics"), "a file is a file, cid or not");
+        assert!(!html.contains("logo.png"), "the body already shows it");
+    }
+
+    #[test]
+    fn a_picture_shows_on_its_row_and_several_files_offer_save_all() {
+        let m = meta("m1", "Ann", &[]);
+        let attachment = |name: &str, mime: &str, id: &str| Attachment {
+            part_id: name.into(),
+            filename: name.into(),
+            mime_type: mime.into(),
+            size: 2048,
+            attachment_id: Some(id.into()),
+            content_id: None,
+        };
+        let body = MessageBody {
+            text: Some("two files".into()),
+            attachments: vec![
+                attachment("cat.png", "image/png", "att-1"),
+                attachment("report.pdf", "application/pdf", "att-2"),
+            ],
+            ..Default::default()
+        };
+        let images = HashMap::new();
+        let mut no_thumbs = HashMap::new();
+        no_thumbs.insert(
+            "att-1".to_string(),
+            "data:image/png;base64,AAAA".to_string(),
+        );
+        let html = page(
+            "x",
+            vec![MessageView {
+                meta: &m,
+                body: BodyState::Loaded(&body),
+                expanded: true,
+                inline_images: &images,
+                thumbnails: &no_thumbs,
+                sanitized: None,
+            }],
+        );
+        assert!(html.contains("<img class=\"thumb\" src=\"data:image/png;base64,AAAA\""));
+        // The file with no picture keeps the paperclip.
+        assert!(html.contains("<span class=\"clip\"></span><span class=\"file\">report.pdf"));
+        assert!(html.contains("href=\"mailrs:preview/m1/0\""));
+        assert!(html.contains("href=\"mailrs:attachment/m1/1\""));
+        assert!(html.contains("href=\"mailrs:attachments/m1\""));
+        assert!(html.contains("Save All (2)"));
+    }
+
+    #[test]
+    fn one_attachment_offers_no_save_all() {
+        let m = meta("m1", "Ann", &[]);
+        let body = MessageBody {
+            text: Some("one file".into()),
+            attachments: vec![Attachment {
+                part_id: "2".into(),
+                filename: "report.pdf".into(),
+                mime_type: "application/pdf".into(),
+                size: 2048,
+                attachment_id: Some("att-1".into()),
+                content_id: None,
+            }],
+            ..Default::default()
+        };
+        let images = HashMap::new();
+        let no_thumbs = HashMap::new();
+        let html = page(
+            "x",
+            vec![MessageView {
+                meta: &m,
+                body: BodyState::Loaded(&body),
+                expanded: true,
+                inline_images: &images,
+                thumbnails: &no_thumbs,
+                sanitized: None,
+            }],
+        );
+        assert!(!html.contains("Save All"));
+    }
+
+    #[test]
+    fn a_photo_with_a_content_id_and_no_html_still_gets_a_row() {
+        let m = meta("m1", "Ann", &[]);
+        let body = MessageBody {
+            text: Some("Here is the photo.".into()),
+            html: None,
+            attachments: vec![Attachment {
+                part_id: "2".into(),
+                filename: "cat.png".into(),
+                mime_type: "image/png".into(),
+                size: 4096,
+                attachment_id: Some("att-1".into()),
+                content_id: Some("img1@mailrs".into()),
+            }],
+            ..Default::default()
+        };
+        let images = HashMap::new();
+        let no_thumbs = HashMap::new();
+        let html = page(
+            "x",
+            vec![MessageView {
+                meta: &m,
+                body: BodyState::Loaded(&body),
+                expanded: true,
+                inline_images: &images,
+                thumbnails: &no_thumbs,
+                sanitized: None,
+            }],
+        );
+        assert!(html.contains("cat.png"));
     }
 
     #[test]
     fn loading_and_failure_states_render() {
         let m = meta("m1", "Ann", &[]);
         let images = HashMap::new();
+        let no_thumbs = HashMap::new();
         let loading = page(
             "x",
             vec![MessageView {
@@ -632,6 +808,7 @@ mod tests {
                 body: BodyState::Loading,
                 expanded: true,
                 inline_images: &images,
+                thumbnails: &no_thumbs,
                 sanitized: None,
             }],
         );
@@ -643,6 +820,7 @@ mod tests {
                 body: BodyState::Failed("offline <now>"),
                 expanded: true,
                 inline_images: &images,
+                thumbnails: &no_thumbs,
                 sanitized: None,
             }],
         );

@@ -16,10 +16,12 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gdk, gio, glib};
+use mailrs_store::templates::Template;
 use webkit::prelude::*;
 
 use self::recipients::Recipients;
 use super::autocomplete::Contacts;
+use crate::attachcheck::{self, Promise};
 use crate::compose::{
     Draft, LinePrefix, OutgoingAttachment, SendWhen, build_mime, format_recipients,
     markdown_to_html, new_message_id, opening_identity, restyle_signature, toggle_prefix,
@@ -28,6 +30,7 @@ use crate::core::Core;
 use crate::format::{future_date, human_size, send_later_presets};
 use crate::richtext::{Block, BlockKind, RichBody, Style};
 use crate::settings::ComposeFormat;
+use crate::templates::{self, Filling};
 
 pub use crate::compose::Identity;
 
@@ -44,6 +47,8 @@ pub struct Writing {
     /// Called with the address a message goes out from, and with every word
     /// Add to Dictionary keeps, so Preferences remembers both.
     pub remember: Rc<dyn Fn(Remembered)>,
+    /// Ask before a message that promises a file goes without one.
+    pub check_attachments: bool,
 }
 
 /// Something the composer learned that outlives it.
@@ -74,6 +79,8 @@ pub struct Composer {
     preview: webkit::WebView,
     /// The attachment rows and the box that holds them.
     files: gtk::Box,
+    /// The strip naming the message this draft forwards.
+    forwarded: gtk::Box,
     send: adw::SplitButton,
     /// The formatting bar's toggles, each with the tag it stands for.
     toggles: RefCell<Vec<(gtk::ToggleButton, &'static str)>>,
@@ -82,6 +89,9 @@ pub struct Composer {
     showing: Cell<usize>,
     /// The spell checker marking up the body, when one could start.
     spell: RefCell<Option<Rc<spell::SpellCheck>>>,
+    /// The saved templates, and the menu section that lists them.
+    templates: RefCell<Vec<Template>>,
+    template_items: gio::Menu,
     remember: Rc<dyn Fn(Remembered)>,
     base: RefCell<Draft>,
     attachments: RefCell<Vec<OutgoingAttachment>>,
@@ -93,6 +103,11 @@ pub struct Composer {
     inserted: RefCell<Vec<(i32, i32)>>,
     /// True while the composer edits the buffer itself.
     busy: Cell<bool>,
+    /// Whether a message that promises a file is worth asking about.
+    check_attachments: bool,
+    /// Set once Send Anyway answered the missing attachment dialog, so the
+    /// same message is not asked about twice.
+    asked: Cell<bool>,
     dirty: Cell<bool>,
     closing: Cell<bool>,
     on_send: Box<dyn Fn(Draft, SendWhen)>,
@@ -116,6 +131,7 @@ impl Composer {
             last_used,
             dictionaries,
             remember,
+            check_attachments,
         } = writing;
         let title = adw::WindowTitle::new("New Message", "");
         let later = gio::Menu::new();
@@ -147,10 +163,22 @@ impl Composer {
             .icon_name("view-reveal-symbolic")
             .tooltip_text("Preview")
             .build();
+        let template_items = gio::Menu::new();
+        let template_menu = gio::Menu::new();
+        template_menu.append_section(None, &template_items);
+        let saving = gio::Menu::new();
+        saving.append(Some("Save as Template…"), Some("composer.save-template"));
+        template_menu.append_section(None, &saving);
+        let template_button = gtk::MenuButton::builder()
+            .icon_name("insert-text-symbolic")
+            .tooltip_text("Templates")
+            .menu_model(&template_menu)
+            .build();
         let header = adw::HeaderBar::builder().title_widget(&title).build();
         header.pack_end(&send);
         header.pack_end(&preview_toggle);
         header.pack_end(&attach);
+        header.pack_end(&template_button);
 
         let from = from_dropdown(&identities);
         let last = last_used
@@ -245,6 +273,14 @@ impl Composer {
             .margin_top(6)
             .visible(false)
             .build();
+        let forwarded = gtk::Box::builder()
+            .spacing(8)
+            .margin_start(12)
+            .margin_end(12)
+            .margin_top(8)
+            .css_classes(["attachment-row"])
+            .visible(false)
+            .build();
         let format_bar = gtk::Box::builder()
             .spacing(2)
             .margin_start(10)
@@ -258,6 +294,7 @@ impl Composer {
         content.append(&format_bar);
         content.append(&line());
         content.append(&stack);
+        content.append(&forwarded);
         content.append(&files);
         let toolbar = adw::ToolbarView::new();
         toolbar.add_top_bar(&header);
@@ -293,11 +330,14 @@ impl Composer {
             stack,
             preview,
             files,
+            forwarded,
             send,
             toggles: RefCell::new(Vec::new()),
             identities,
             showing: Cell::new(selected),
             spell: RefCell::new(None),
+            templates: RefCell::new(Vec::new()),
+            template_items,
             remember,
             base: RefCell::new(draft),
             attachments: RefCell::new(attachments),
@@ -306,18 +346,30 @@ impl Composer {
             typing: RefCell::new(None),
             inserted: RefCell::new(Vec::new()),
             busy: Cell::new(false),
+            check_attachments,
+            asked: Cell::new(false),
             dirty: Cell::new(false),
             closing: Cell::new(false),
             on_send: Box::new(on_send),
         });
         composer.fill_body();
         composer.refresh_files();
+        composer.refresh_forwarded();
         composer.update_title();
         composer.show_more(composer.more_button.is_active());
         composer.wire(&attach, &preview_toggle);
         composer.fill_format_bar(&format_bar);
         composer.accept_images();
         composer.check_send();
+        composer.load_templates();
+        // Preferences may add a template while this window is open, so the
+        // list is read again each time the menu is asked for.
+        let weak = Rc::downgrade(&composer);
+        template_button.set_create_popup_func(move |_| {
+            if let Some(c) = weak.upgrade() {
+                c.load_templates();
+            }
+        });
         let this = Rc::clone(&composer);
         glib::spawn_future_local(async move { this.check_spelling(dictionaries.await) });
         composer.window.present();
@@ -487,6 +539,14 @@ impl Composer {
             });
         });
         actions.add_action(&block);
+        let template = gio::SimpleAction::new("template", Some(glib::VariantTy::INT64));
+        let weak = Rc::downgrade(self);
+        template.connect_activate(move |_, id| {
+            if let (Some(c), Some(id)) = (weak.upgrade(), id.and_then(|v| v.get::<i64>())) {
+                c.insert_template(id);
+            }
+        });
+        actions.add_action(&template);
         for (name, run) in [
             (
                 "format-markdown",
@@ -494,6 +554,7 @@ impl Composer {
             ),
             ("edit-markdown", Box::new(|c| c.edit_as_markdown())),
             ("clear-format", Box::new(|c| c.clear_format())),
+            ("save-template", Box::new(|c| c.save_as_template())),
         ] {
             let action = gio::SimpleAction::new(name, None);
             let weak = Rc::downgrade(self);
@@ -670,10 +731,14 @@ impl Composer {
     }
 
     fn html(&self) -> String {
-        match self.format.get() {
+        let mut html = match self.format.get() {
             ComposeFormat::Rich => self.rich().to_html(),
             ComposeFormat::Markdown => markdown_to_html(&self.source()),
+        };
+        if let Some(forwarded) = &self.base.borrow().forwarded {
+            html.push_str(&forwarded.to_html());
         }
+        html
     }
 
     fn is_blank(&self) -> bool {
@@ -685,6 +750,58 @@ impl Composer {
             && self.subject.text().trim().is_empty()
             && empty
             && self.attachments.borrow().is_empty()
+            && self.base.borrow().forwarded.is_none()
+    }
+
+    /// The strip under the body naming the message this draft forwards,
+    /// with a way to drop it. It is hidden when nothing is forwarded.
+    fn refresh_forwarded(self: &Rc<Self>) {
+        while let Some(child) = self.forwarded.first_child() {
+            self.forwarded.remove(&child);
+        }
+        let label = {
+            let base = self.base.borrow();
+            base.forwarded.as_ref().map(|f| {
+                let who = if f.from.is_empty() {
+                    "a message"
+                } else {
+                    &f.from
+                };
+                match f.subject.trim() {
+                    "" => format!("Forwarding {who}"),
+                    subject => format!("Forwarding “{subject}” from {who}"),
+                }
+            })
+        };
+        let Some(text) = label else {
+            self.forwarded.set_visible(false);
+            return;
+        };
+        self.forwarded.set_visible(true);
+        self.forwarded
+            .append(&gtk::Image::from_icon_name("mail-forward-symbolic"));
+        self.forwarded.append(
+            &gtk::Label::builder()
+                .label(&text)
+                .ellipsize(gtk::pango::EllipsizeMode::End)
+                .hexpand(true)
+                .xalign(0.0)
+                .build(),
+        );
+        let drop = gtk::Button::builder()
+            .icon_name("window-close-symbolic")
+            .tooltip_text("Do Not Forward the Original")
+            .css_classes(["flat", "circular"])
+            .build();
+        let weak = Rc::downgrade(self);
+        drop.connect_clicked(move |_| {
+            if let Some(c) = weak.upgrade() {
+                c.base.borrow_mut().forwarded = None;
+                c.dirty.set(true);
+                c.refresh_forwarded();
+            }
+        });
+        self.forwarded.append(&drop);
     }
 
     fn identity(&self) -> Option<&Identity> {
@@ -817,6 +934,10 @@ impl Composer {
             self.toast(&format!("Could not build the message: {err}"));
             return;
         }
+        if let Some(promise) = self.unkept_promise(&draft) {
+            self.ask_about_attachment(&promise, when);
+            return;
+        }
         if let Some(identity) = self.identity() {
             (self.remember)(Remembered::SentFrom {
                 account: identity.account_email.clone(),
@@ -826,6 +947,48 @@ impl Composer {
         self.closing.set(true);
         self.window.close();
         (self.on_send)(draft, when);
+    }
+
+    /// The file this message promises and does not carry. An image pasted
+    /// into the text keeps a promise of something to look at, since it
+    /// arrives with the message either way, but not a promise of a file:
+    /// only an attachment comes out of the reader's mail as one.
+    fn unkept_promise(&self, draft: &Draft) -> Option<Promise> {
+        if !self.check_attachments || self.asked.get() {
+            return None;
+        }
+        let promise = attachcheck::promised(&draft.subject, &draft.markdown)?;
+        let files = draft.attachments.iter().any(|a| a.content_id.is_none());
+        let images = draft.attachments.iter().any(|a| a.content_id.is_some());
+        let kept = files || (images && !promise.names_a_file);
+        (!kept).then_some(promise)
+    }
+
+    /// Asks before a message that promises a file goes without one. Send
+    /// Anyway sends it as it stands, Add Attachment opens the file picker
+    /// and leaves the message open, and closing the dialog does neither.
+    fn ask_about_attachment(self: &Rc<Self>, promise: &Promise, when: SendWhen) {
+        let dialog = adw::AlertDialog::new(
+            Some("Attachment Missing?"),
+            Some(&format!(
+                "The message says “{}” and carries no file.",
+                promise.sentence
+            )),
+        );
+        dialog.add_responses(&[("attach", "Add Attachment"), ("send", "Send Anyway")]);
+        dialog.set_response_appearance("send", adw::ResponseAppearance::Suggested);
+        dialog.set_default_response(Some("attach"));
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            match dialog.choose_future(Some(&this.window)).await.as_str() {
+                "send" => {
+                    this.asked.set(true);
+                    this.hand_over(when);
+                }
+                "attach" => this.pick_files(),
+                _ => {}
+            }
+        });
     }
 
     /// Asks for a date and time, then schedules the message.
@@ -1642,6 +1805,125 @@ impl Composer {
             true
         });
         self.window.add_controller(drop);
+    }
+
+    /// Reads the saved templates in and lists them in the header menu.
+    /// Preferences may have changed them while this window was open, so
+    /// this runs again after every save.
+    fn load_templates(self: &Rc<Self>) {
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            match this.core.read(mailrs_store::templates::list).await {
+                Ok(saved) => {
+                    *this.templates.borrow_mut() = saved;
+                    this.fill_template_menu();
+                }
+                Err(err) => tracing::warn!(error = %err, "could not read the templates"),
+            }
+        });
+    }
+
+    fn fill_template_menu(&self) {
+        self.template_items.remove_all();
+        let templates = self.templates.borrow();
+        if templates.is_empty() {
+            // Nothing answers this action, which is what greys the item out.
+            self.template_items
+                .append(Some("No Templates Yet"), Some("composer.none"));
+            return;
+        }
+        for template in templates.iter() {
+            let item = gio::MenuItem::new(Some(&template.name), None);
+            item.set_action_and_target_value(
+                Some("composer.template"),
+                Some(&template.id.to_variant()),
+            );
+            self.template_items.append_item(&item);
+        }
+    }
+
+    /// What a template's placeholders stand for in this message.
+    fn filling(&self) -> Filling {
+        Filling {
+            recipient: self.to.addresses().first().cloned(),
+            subject: self.subject.text().trim().to_string(),
+            date: templates::today(chrono::Local::now()),
+        }
+    }
+
+    /// Puts a template in at the cursor, its placeholders filled. One with
+    /// a subject gives it to a message that has none of its own.
+    fn insert_template(self: &Rc<Self>, id: i64) {
+        let found = self.templates.borrow().iter().find(|t| t.id == id).cloned();
+        let Some(template) = found else { return };
+        let mut filling = self.filling();
+        if filling.subject.is_empty() && !template.subject.trim().is_empty() {
+            self.subject
+                .set_text(&templates::expand(&template.subject, &filling));
+            filling.subject = self.subject.text().trim().to_string();
+        }
+        let body = templates::fill(&RichBody::from_markdown(&template.markdown), &filling);
+        let buffer = self.body.buffer();
+        self.busy.set(true);
+        buffer.begin_user_action();
+        match self.format.get() {
+            ComposeFormat::Rich => richbuffer::insert(&buffer, &body),
+            ComposeFormat::Markdown => buffer.insert_at_cursor(&body.to_markdown()),
+        }
+        buffer.end_user_action();
+        self.busy.set(false);
+        self.dirty.set(true);
+        self.body.grab_focus();
+    }
+
+    /// Keeps what is written as a template, under a name the writer gives
+    /// it. The body is saved as written, so its placeholders fill in again
+    /// the next time it goes into a message.
+    fn save_as_template(self: &Rc<Self>) {
+        let written = Template {
+            id: 0,
+            name: String::new(),
+            subject: self.subject.text().trim().to_string(),
+            markdown: self.markdown(),
+        };
+        let dialog = adw::AlertDialog::new(
+            Some("Save as Template"),
+            Some("Placeholders such as {{first_name}} fill in each time you use it."),
+        );
+        let name = gtk::Entry::builder()
+            .placeholder_text("Name")
+            .text(&written.subject)
+            .activates_default(true)
+            .build();
+        dialog.set_extra_child(Some(&name));
+        dialog.add_responses(&[("cancel", "Cancel"), ("save", "Save")]);
+        dialog.set_response_appearance("save", adw::ResponseAppearance::Suggested);
+        dialog.set_default_response(Some("save"));
+        dialog.set_close_response("cancel");
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            if dialog.choose_future(Some(&this.window)).await.as_str() != "save" {
+                return;
+            }
+            let template = Template {
+                name: name.text().trim().to_string(),
+                ..written
+            };
+            if template.name.is_empty() {
+                return this.toast("Give the template a name");
+            }
+            match this
+                .core
+                .write(move |c| mailrs_store::templates::add(c, &template))
+                .await
+            {
+                Ok(_) => {
+                    this.toast("Template saved");
+                    this.load_templates();
+                }
+                Err(err) => this.toast(&format!("Template not saved: {err}")),
+            }
+        });
     }
 }
 

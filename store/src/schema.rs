@@ -223,6 +223,16 @@ CREATE TABLE invitations (
     PRIMARY KEY (account_id, uid)
 );
 "#,
+    // Canned replies. They follow the person rather than an account, so
+    // this table has no account_id to cascade from.
+    r#"
+CREATE TABLE templates (
+    id       INTEGER PRIMARY KEY,
+    name     TEXT NOT NULL,
+    subject  TEXT NOT NULL DEFAULT '',
+    markdown TEXT NOT NULL DEFAULT ''
+);
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,

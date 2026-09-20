@@ -238,6 +238,7 @@ fn term(text: &str) -> Option<(bool, Term)> {
             "unread" => Term::Unread,
             "read" => return Some((true, Term::Unread)),
             "starred" | "flagged" => Term::Starred,
+            "muted" => Term::Label(system_label::MUTE.into()),
             _ => return None,
         },
         "has" if lower == "attachment" => Term::Attachment,

@@ -2,6 +2,7 @@
 
 mod app;
 mod assistant;
+mod attachcheck;
 mod autostart;
 mod compose;
 mod contacts;
@@ -17,6 +18,7 @@ mod rules;
 mod sanitize;
 mod search;
 mod settings;
+mod templates;
 mod tray;
 mod ui;
 mod unsubscribe;

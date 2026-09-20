@@ -13,6 +13,7 @@ use gtk::{gio, glib};
 use ksni::TrayMethods;
 use mailrs_domain::{Account, AccountId, Address, ChangeEvent, system_label};
 use mailrs_store::{messages, threads};
+use mailrs_sync::History;
 
 use crate::compose::Draft;
 use crate::compose::Identity;
@@ -22,7 +23,7 @@ use crate::settings::{Change, ColorScheme, Effect, Effects, Settings};
 use crate::tray::{MailTray, TrayCommand};
 use crate::ui::autocomplete::Contacts;
 use crate::ui::composer::{Composer, Remembered, Writing, spell};
-use crate::ui::window::MainWindow;
+use crate::ui::window::{MainWindow, Reveal};
 
 const BLOCK_REMOTE_RULES: &str = r#"[
   {"trigger": {"url-filter": "^https?:"}, "action": {"type": "block"}},
@@ -42,7 +43,8 @@ pub struct App {
     accounts: RefCell<Vec<Account>>,
     names: RefCell<HashMap<AccountId, String>>,
     tray: Arc<Mutex<Option<ksni::Handle<MailTray>>>>,
-    open_requests: async_channel::Sender<(AccountId, String)>,
+    /// What somebody picked on a new-mail notification.
+    chosen: async_channel::Sender<notify::Request>,
     skip_first_window: Cell<bool>,
     filter_requested: Cell<bool>,
     /// Main window plus open composers.
@@ -79,7 +81,7 @@ impl App {
         background: bool,
         compose: Option<String>,
     ) -> Rc<App> {
-        let (open_requests, opened) = async_channel::unbounded();
+        let (chosen, picked) = async_channel::unbounded();
         let core_demo = core.demo;
         // Demo mode must not change the real preferences.
         let settings_path = if core.demo && std::env::var_os("MAILRS_SETTINGS").is_none() {
@@ -98,7 +100,7 @@ impl App {
             accounts: RefCell::new(Vec::new()),
             names: RefCell::new(HashMap::new()),
             tray: Arc::new(Mutex::new(None)),
-            open_requests,
+            chosen,
             skip_first_window: Cell::new(background),
             filter_requested: Cell::new(false),
             open_windows: Cell::new(0),
@@ -123,7 +125,7 @@ impl App {
         });
         app.install_actions();
         app.listen();
-        app.listen_for_opens(opened);
+        app.listen_for_notifications(picked);
         if !app.core.demo {
             app.watch_for_tray_host();
         }
@@ -560,6 +562,7 @@ impl App {
                     });
                 })
             },
+            check_attachments: self.settings.borrow().check_attachments,
         };
         let this = Rc::downgrade(self);
         let format = self.settings.borrow().compose_format;
@@ -856,13 +859,60 @@ impl App {
         });
     }
 
-    fn listen_for_opens(self: &Rc<Self>, opened: async_channel::Receiver<(AccountId, String)>) {
+    fn listen_for_notifications(self: &Rc<Self>, picked: async_channel::Receiver<notify::Request>) {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            while let Ok((account_id, thread_id)) = opened.recv().await {
-                this.show_window().reveal(account_id, thread_id);
+            while let Ok(request) = picked.recv().await {
+                this.carry_out(request).await;
             }
         });
+    }
+
+    /// Does what somebody picked on a notification. The mail may have been
+    /// read, archived or trashed since it arrived, so the store decides
+    /// whether the button still has work to do; one that does not is
+    /// dropped rather than put through.
+    async fn carry_out(self: &Rc<Self>, request: notify::Request) {
+        let notify::Request { target, choice } = request;
+        let (account_id, thread_id) = (target.account_id, target.thread_id.clone());
+        let button = match choice {
+            notify::Choice::Open => {
+                self.show_window()
+                    .reveal(account_id, thread_id, Reveal::Read);
+                return;
+            }
+            notify::Choice::Button(button) => button,
+        };
+        let Some(message_id) = target.message_id.clone() else {
+            return;
+        };
+        let labels = self
+            .core
+            .read(move |c| {
+                if messages::thread_id_of(c, account_id, &message_id)?.is_none() {
+                    return Ok(None);
+                }
+                Ok(Some(messages::labels_of(c, account_id, &message_id)?))
+            })
+            .await;
+        // Mail the store no longer holds leaves nothing to act on.
+        let Ok(Some(labels)) = labels else { return };
+        if !notify::still_applies(button, &labels) {
+            return;
+        }
+        let Some(action) = button.action() else {
+            self.show_window()
+                .reveal(account_id, thread_id, Reveal::Reply);
+            return;
+        };
+        let outcome = self.core.act(vec![target], action, History::Record).await;
+        if let Some(error) = outcome.first_error() {
+            tracing::warn!(
+                error,
+                button = button.label(),
+                "a notification's button failed"
+            );
+        }
     }
 
     fn announce(self: &Rc<Self>, account_id: AccountId, message_ids: Vec<String>) {
@@ -872,6 +922,7 @@ impl App {
             return;
         }
         let previews = settings.notification_previews;
+        let buttons = settings.notification_buttons.clone();
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let found = this
@@ -902,7 +953,7 @@ impl App {
             if let Ok(found) = found
                 && !found.is_empty()
             {
-                notify::announce(found, previews, this.open_requests.clone());
+                notify::announce(found, previews, buttons, this.chosen.clone());
             }
         });
     }
