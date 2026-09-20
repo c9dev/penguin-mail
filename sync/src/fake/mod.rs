@@ -14,8 +14,8 @@ use std::time::Duration;
 
 use mailrs_domain::{Address, EpochMillis, Filter, MessageBody, MessageMeta, Vacation};
 use mailrs_gmail::{
-    AccountQuota, BATCH_LIMIT, GmailError, HistoryChange, HistoryPage, LabelColor, MessagePage,
-    MessageRef, Priority, Profile, QuotaLimiter, RemoteLabel, cost, limiter,
+    AccountQuota, BATCH_LIMIT, ConnectionsPage, GmailError, HistoryChange, HistoryPage, LabelColor,
+    MessagePage, MessageRef, Person, Priority, Profile, QuotaLimiter, RemoteLabel, cost, limiter,
 };
 
 use crate::api::{GmailApi, SavedDraft};
@@ -59,6 +59,11 @@ pub struct FakeState {
     pub signature: Option<String>,
     pub vacation: Vacation,
     pub filters: Vec<Filter>,
+    /// The account's contacts, in the order the People API would list
+    /// them. A fake with none answers an empty address book.
+    pub contacts: Vec<Person>,
+    /// Photo bytes by URL. A URL nobody seeded answers `NotFound`.
+    pub photos: HashMap<String, Vec<u8>>,
 }
 
 /// Calls made and quota units spent, priced from Gmail's usage-limits
@@ -149,6 +154,8 @@ impl FakeGmail {
                 signature: None,
                 vacation: Vacation::default(),
                 filters: Vec::new(),
+                contacts: Vec::new(),
+                photos: HashMap::new(),
             }),
         }
     }
@@ -704,5 +711,46 @@ impl GmailApi for FakeGmail {
             label.color = Some(color.clone());
             Ok(label.clone())
         })
+    }
+
+    /// Contacts a page at a time, with the page token counting from zero.
+    /// A sync token means nothing changed, so the reply is empty and
+    /// carries the same token back.
+    async fn connections(
+        &self,
+        page_token: Option<&str>,
+        sync_token: Option<&str>,
+    ) -> Result<ConnectionsPage, GmailError> {
+        self.call("people.connections.list", cost::CONNECTIONS)
+            .await?;
+        if let Some(token) = sync_token {
+            return Ok(ConnectionsPage {
+                next_sync_token: Some(token.to_string()),
+                ..ConnectionsPage::default()
+            });
+        }
+        let from: usize = page_token.and_then(|t| t.parse().ok()).unwrap_or(0);
+        self.with(|s| {
+            let page: Vec<Person> = s
+                .contacts
+                .iter()
+                .skip(from)
+                .take(s.page_size)
+                .cloned()
+                .collect();
+            let next = from + page.len();
+            let more = next < s.contacts.len();
+            Ok(ConnectionsPage {
+                people: page,
+                deleted: Vec::new(),
+                next_page_token: more.then(|| next.to_string()),
+                next_sync_token: (!more).then(|| format!("sync-{}", s.contacts.len())),
+            })
+        })
+    }
+
+    async fn contact_photo(&self, url: &str) -> Result<Vec<u8>, GmailError> {
+        self.with(|s| s.photos.get(url).cloned())
+            .ok_or(GmailError::NotFound)
     }
 }

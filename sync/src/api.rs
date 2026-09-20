@@ -4,8 +4,8 @@ use mailrs_domain::{AccountId, Filter, MessageBody, MessageMeta, Vacation};
 use mailrs_gmail::body::extract_body;
 use mailrs_gmail::convert::message_meta;
 use mailrs_gmail::{
-    AccountQuota, GmailClient, GmailError, HistoryPage, LabelColor, MessagePage, Profile,
-    RemoteLabel, html_to_text,
+    AccountQuota, ConnectionsPage, GmailClient, GmailError, HistoryPage, LabelColor, MessagePage,
+    Profile, RemoteLabel, html_to_text,
 };
 
 /// Page size for window listings.
@@ -159,6 +159,20 @@ pub trait GmailApi: Send + Sync + 'static {
         &self,
         vacation: &Vacation,
     ) -> impl Future<Output = Result<(), GmailError>> + Send;
+
+    /// One page of the account's Google contacts. `sync_token` from the
+    /// last refresh asks for changes alone. Google answers
+    /// `GmailError::MissingScope` until the account grants the contacts
+    /// permission, and `GmailError::ExpiredSyncToken` once a token is too
+    /// old to answer from.
+    fn connections(
+        &self,
+        page_token: Option<&str>,
+        sync_token: Option<&str>,
+    ) -> impl Future<Output = Result<ConnectionsPage, GmailError>> + Send;
+
+    /// The bytes of one contact photo, at the size its URL asks for.
+    fn contact_photo(&self, url: &str) -> impl Future<Output = Result<Vec<u8>, GmailError>> + Send;
 }
 
 /// Gmail for one account: the real client, or the in-memory fake behind
@@ -308,6 +322,16 @@ impl GmailApi for AnyGmail {
     }
     async fn set_vacation(&self, vacation: &Vacation) -> Result<(), GmailError> {
         forward!(self, set_vacation(vacation))
+    }
+    async fn connections(
+        &self,
+        page_token: Option<&str>,
+        sync_token: Option<&str>,
+    ) -> Result<ConnectionsPage, GmailError> {
+        forward!(self, connections(page_token, sync_token))
+    }
+    async fn contact_photo(&self, url: &str) -> Result<Vec<u8>, GmailError> {
+        forward!(self, contact_photo(url))
     }
 }
 
@@ -519,5 +543,17 @@ impl GmailApi for AccountClient {
         color: &LabelColor,
     ) -> Result<RemoteLabel, GmailError> {
         self.client.set_label_color(id, color).await
+    }
+
+    async fn connections(
+        &self,
+        page_token: Option<&str>,
+        sync_token: Option<&str>,
+    ) -> Result<ConnectionsPage, GmailError> {
+        self.client.connections(page_token, sync_token).await
+    }
+
+    async fn contact_photo(&self, url: &str) -> Result<Vec<u8>, GmailError> {
+        self.client.contact_photo(url).await
     }
 }

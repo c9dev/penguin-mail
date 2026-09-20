@@ -6,6 +6,7 @@ mod api;
 mod backoff;
 pub mod config;
 mod connect;
+pub mod contacts;
 mod engine;
 mod error;
 pub mod mailbox;
@@ -32,6 +33,7 @@ pub use api::AnyGmail;
 pub use api::{AccountClient, GmailApi, LIST_PAGE_SIZE, SavedDraft};
 pub use backoff::{backoff_delay, poll_offset, with_jitter};
 pub use connect::connect_account;
+pub use contacts::{Card, ContactBook, Refreshed};
 pub use engine::{EngineConfig, SyncEngine};
 pub use error::SyncError;
 pub use mailbox::{

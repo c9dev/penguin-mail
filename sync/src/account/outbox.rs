@@ -157,4 +157,18 @@ impl<G: GmailApi> AccountSync<G> {
     pub async fn set_vacation(&self, vacation: Vacation) -> Result<(), SyncError> {
         Ok(self.api.set_vacation(&vacation).await?)
     }
+
+    /// One page of the account's Google contacts. See `ContactBook`.
+    pub async fn connections(
+        &self,
+        page_token: Option<&str>,
+        sync_token: Option<&str>,
+    ) -> Result<mailrs_gmail::ConnectionsPage, SyncError> {
+        Ok(self.api.connections(page_token, sync_token).await?)
+    }
+
+    /// The bytes of one contact photo.
+    pub async fn contact_photo(&self, url: &str) -> Result<Vec<u8>, SyncError> {
+        Ok(self.api.contact_photo(url).await?)
+    }
 }

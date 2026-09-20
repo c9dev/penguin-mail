@@ -2,6 +2,7 @@ mod actions;
 mod basics;
 mod bootstrap;
 mod connect;
+mod contacts;
 mod engine;
 mod incremental;
 mod labels;

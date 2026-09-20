@@ -340,6 +340,19 @@ impl GmailApi for Gmail {
         self.with(|i| i.vacation = vacation.clone());
         Ok(())
     }
+
+    /// The assistant has no contacts tool, so this account has none.
+    async fn connections(
+        &self,
+        _page_token: Option<&str>,
+        _sync_token: Option<&str>,
+    ) -> Result<mailrs_gmail::ConnectionsPage, GmailError> {
+        Ok(mailrs_gmail::ConnectionsPage::default())
+    }
+
+    async fn contact_photo(&self, _url: &str) -> Result<Vec<u8>, GmailError> {
+        Err(GmailError::NotFound)
+    }
 }
 
 /// The accounts a test connects, by id.
