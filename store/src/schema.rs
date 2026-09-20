@@ -283,6 +283,20 @@ CREATE UNIQUE INDEX outbox_by_draft ON outbox(account_id, draft_id) WHERE draft_
     r#"
 ALTER TABLE bodies ADD COLUMN provenance TEXT;
 "#,
+    // Gmail's two names for one draft, so that opening a draft stops
+    // paging `drafts.list` over the whole account to find its id. A
+    // message belongs to one draft and a draft to one message, and the
+    // unique index is what makes a draft edited elsewhere move its pair to
+    // the new message rather than keep both.
+    r#"
+CREATE TABLE drafts (
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    message_id TEXT NOT NULL,
+    draft_id   TEXT NOT NULL,
+    PRIMARY KEY (account_id, message_id)
+);
+CREATE UNIQUE INDEX drafts_by_draft ON drafts(account_id, draft_id);
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,

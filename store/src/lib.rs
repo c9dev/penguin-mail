@@ -6,6 +6,7 @@ pub mod address_book;
 pub mod bodies;
 pub mod contacts;
 mod db;
+pub mod drafts;
 mod error;
 pub mod flags;
 pub mod follow_ups;
