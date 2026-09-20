@@ -249,6 +249,12 @@ CREATE TABLE image_senders (
     r#"
 ALTER TABLE bodies ADD COLUMN protection TEXT;
 "#,
+    // What the headers say about where a message came from, for the
+    // details panel. One column, since the three answers are read and
+    // shown together and never queried on their own.
+    r#"
+ALTER TABLE bodies ADD COLUMN provenance TEXT;
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,

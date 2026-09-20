@@ -10,6 +10,7 @@ pub mod limiter;
 pub mod model;
 mod oauth;
 pub mod people;
+pub mod provenance;
 mod token_store;
 
 pub use calendar::{Answered, CALENDAR_API_BASE, CALENDAR_SCOPE};

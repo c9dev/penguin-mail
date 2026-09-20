@@ -1,7 +1,7 @@
 mod common;
 
 use common::{db, meta, store};
-use mailrs_domain::{Attachment, MessageBody, Protection};
+use mailrs_domain::{Attachment, MessageBody, Protection, Provenance};
 use mailrs_store::{bodies, messages};
 
 fn body(text: &str) -> MessageBody {
@@ -20,6 +20,11 @@ fn body(text: &str) -> MessageBody {
         one_click_unsubscribe: true,
         calendar: Some("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n".into()),
         protection: Some(Protection::Signed),
+        provenance: Provenance {
+            mailed_by: Some("bounce.example.net".into()),
+            signed_by: Some("example.net".into()),
+            encrypted: Some(true),
+        },
     }
 }
 

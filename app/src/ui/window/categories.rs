@@ -355,30 +355,3 @@ impl MainWindow {
             .await
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn the_bar_opens_on_the_category_preferences_names() {
-        if gtk::init().is_err() {
-            eprintln!("skipping: no display, so the widgets cannot be built");
-            return;
-        }
-        for category in Category::ALL {
-            let bar = CategoryBar::new(category);
-            assert_eq!(bar.chosen.get(), category);
-            assert_eq!(
-                bar.group.active_name().as_deref(),
-                Some(category.key()),
-                "the strip shows what it opened on"
-            );
-            // Only the chosen category spells its name out; the rest are
-            // an icon until you pick them.
-            for (shown, name) in &bar.names {
-                assert_eq!(name.reveals_child(), *shown == category, "{shown:?}");
-            }
-        }
-    }
-}

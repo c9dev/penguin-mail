@@ -7,7 +7,7 @@ use std::fmt::Write;
 
 use mailrs_domain::{Address, MessageBody, MessageMeta};
 
-use crate::format::{color_for, header_date, human_size, initials};
+use crate::format::{color_for, full_date, header_date, human_size, initials};
 use crate::sanitize::sanitize_html;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -137,10 +137,13 @@ fn render_message(
     }
     let _ = write!(
         html,
-        "</span><span class=\"date\">{}</span><span class=\"line to\">to {}</span>\
-         <span class=\"line snippet\">{}</span></div>",
+        "</span><span class=\"date\">{}</span>",
         escape(&header_date(meta.date, chrono::Local::now())),
-        escape(&recipients(meta, me)),
+    );
+    render_details(html, meta, me, view);
+    let _ = write!(
+        html,
+        "<span class=\"line snippet\">{}</span></div>",
         escape(&meta.snippet)
     );
     render_body(html, view);
@@ -178,6 +181,79 @@ fn render_body(html: &mut String, view: &MessageView) {
             render_attachments(html, &view.meta.id, body, view.thumbnails);
         }
     }
+}
+
+/// The recipients line, and under it everything the headers say about
+/// where the message came from.
+///
+/// It is a `<details>` element, so the arrow opens and closes it with no
+/// JavaScript: the page carries none, and a link that opened a panel
+/// would cost a round trip through the app and a redraw.
+fn render_details(html: &mut String, meta: &MessageMeta, me: &[String], view: &MessageView) {
+    let provenance = match &view.body {
+        BodyState::Loaded(body) => Some(&body.provenance),
+        _ => None,
+    };
+    let to = escape(&recipients(meta, me));
+    let Some(provenance) = provenance.filter(|p| !p.is_empty()) else {
+        // Nothing to open, so nothing pretends to be openable.
+        let _ = write!(html, "<span class=\"line to\">to {to}</span>");
+        return;
+    };
+    let _ = write!(
+        html,
+        "<details class=\"line to\"><summary>to {to}</summary><table class=\"details\">"
+    );
+    let mut row = |name: &str, value: String| {
+        let _ = write!(html, "<tr><th>{name}</th><td>{value}</td></tr>");
+    };
+    row(
+        "from",
+        match meta.from.as_ref() {
+            Some(from) if from.name.is_some() => format!(
+                "<b>{}</b> &lt;{}&gt;",
+                escape(from.display()),
+                escape(&from.email)
+            ),
+            Some(from) => escape(&from.email),
+            None => String::new(),
+        },
+    );
+    row("to", escape(&addresses(&meta.to)));
+    if !meta.cc.is_empty() {
+        row("cc", escape(&addresses(&meta.cc)));
+    }
+    row("date", escape(&full_date(meta.date)));
+    row("subject", escape(&meta.subject));
+    if let Some(mailed_by) = &provenance.mailed_by {
+        row("mailed-by", escape(mailed_by));
+    }
+    if let Some(signed_by) = &provenance.signed_by {
+        row("signed-by", escape(signed_by));
+    }
+    if let Some(encrypted) = provenance.encrypted {
+        row(
+            "security",
+            match encrypted {
+                true => "Standard encryption (TLS)".to_string(),
+                // Worth saying plainly. Mail that crossed the internet in
+                // the clear could be read on the way.
+                false => "<span class=\"warn\">Not encrypted in transit</span>".to_string(),
+            },
+        );
+    }
+    html.push_str("</table></details>");
+}
+
+/// "Ann Lee <ann@example.com>, bo@example.com", for the details table.
+fn addresses(list: &[Address]) -> String {
+    list.iter()
+        .map(|address| match &address.name {
+            Some(name) => format!("{name} <{}>", address.email),
+            None => address.email.clone(),
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 fn render_attachments(
@@ -400,6 +476,19 @@ background:var(--accent);margin-right:7px;vertical-align:1px}}\
 .address{{color:var(--dim);font-size:13px;margin-left:8px}}\
 .date{{color:var(--dim);font-size:13px;white-space:nowrap}}\
 .line{{grid-column:2 / span 2;color:var(--dim);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
+details.to{{overflow:visible;white-space:normal}}\
+details.to>summary{{list-style:none;cursor:default;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\
+width:fit-content;max-width:100%;padding-right:16px;position:relative}}\
+details.to>summary::-webkit-details-marker{{display:none}}\
+details.to>summary::after{{content:\"\";position:absolute;right:2px;top:.45em;width:0;height:0;\
+border:4px solid transparent;border-top-color:var(--dim)}}\
+details.to[open]>summary::after{{top:.2em;border-top-color:transparent;border-bottom-color:var(--dim)}}\
+details.to>summary:hover{{color:var(--fg)}}\
+table.details{{margin:8px 0 2px;border-collapse:collapse;font-size:13px;line-height:1.45}}\
+table.details th{{text-align:right;font-weight:normal;color:var(--dim);padding:1px 10px 1px 0;\
+vertical-align:top;white-space:nowrap}}\
+table.details td{{text-align:left;color:var(--fg);padding:1px 0;word-break:break-word}}\
+table.details .warn{{color:#c0392b}}\
 .collapsed .body,.collapsed .attachments,.collapsed .to,.collapsed .address,.expanded .snippet{{display:none}}\
 .collapsed .toggle{{cursor:pointer}}\
 .body{{margin:16px 0 4px 52px}}\
@@ -762,6 +851,91 @@ mod tests {
             }],
         );
         assert!(!html.contains("Save All"));
+    }
+
+    #[test]
+    fn the_details_panel_says_who_really_sent_it() {
+        let m = meta("m1", "Ann", &["bo@example.com"]);
+        let body = MessageBody {
+            text: Some("Hello".into()),
+            provenance: mailrs_domain::Provenance {
+                mailed_by: Some("bounce.example.net".into()),
+                signed_by: Some("example.net".into()),
+                encrypted: Some(true),
+            },
+            ..Default::default()
+        };
+        let images = HashMap::new();
+        let no_thumbs = HashMap::new();
+        let html = page(
+            "x",
+            vec![MessageView {
+                meta: &m,
+                body: BodyState::Loaded(&body),
+                expanded: true,
+                inline_images: &images,
+                thumbnails: &no_thumbs,
+                sanitized: None,
+            }],
+        );
+        assert!(html.contains("<details class=\"line to\">"), "it opens");
+        assert!(html.contains("<th>mailed-by</th><td>bounce.example.net</td>"));
+        assert!(html.contains("<th>signed-by</th><td>example.net</td>"));
+        assert!(html.contains("Standard encryption (TLS)"));
+        assert!(html.contains("<th>subject</th>"));
+        // The page carries no JavaScript, so the panel must open on its own.
+        assert!(!html.contains("mailrs:details"));
+    }
+
+    #[test]
+    fn a_message_that_says_nothing_about_itself_has_nothing_to_open() {
+        let m = meta("m1", "Ann", &[]);
+        let body = MessageBody {
+            text: Some("Hello".into()),
+            ..Default::default()
+        };
+        let images = HashMap::new();
+        let no_thumbs = HashMap::new();
+        let html = page(
+            "x",
+            vec![MessageView {
+                meta: &m,
+                body: BodyState::Loaded(&body),
+                expanded: true,
+                inline_images: &images,
+                thumbnails: &no_thumbs,
+                sanitized: None,
+            }],
+        );
+        assert!(!html.contains("<details"), "no arrow that opens nothing");
+        assert!(html.contains("<span class=\"line to\">to "));
+    }
+
+    #[test]
+    fn mail_that_crossed_the_internet_in_the_clear_says_so() {
+        let m = meta("m1", "Ann", &[]);
+        let body = MessageBody {
+            text: Some("Hello".into()),
+            provenance: mailrs_domain::Provenance {
+                encrypted: Some(false),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let images = HashMap::new();
+        let no_thumbs = HashMap::new();
+        let html = page(
+            "x",
+            vec![MessageView {
+                meta: &m,
+                body: BodyState::Loaded(&body),
+                expanded: true,
+                inline_images: &images,
+                thumbnails: &no_thumbs,
+                sanitized: None,
+            }],
+        );
+        assert!(html.contains("Not encrypted in transit"));
     }
 
     #[test]

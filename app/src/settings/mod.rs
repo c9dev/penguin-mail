@@ -555,6 +555,34 @@ impl Settings {
 
 #[cfg(test)]
 mod tests {
+    // The category bar itself cannot be tested here: the harness gives
+    // every test its own thread, GTK refuses a second init from a
+    // different one, and `richbuffer` already spends this binary's one
+    // GTK test. So what is tested is the setting the bar is built from.
+    #[test]
+    fn the_inbox_opens_on_everything_until_somebody_says_otherwise() {
+        assert_eq!(Settings::default().default_category, Category::All);
+    }
+
+    #[test]
+    fn choosing_a_category_survives_the_settings_file() {
+        for category in Category::ALL {
+            let mut settings = Settings::default();
+            Change::DefaultCategory(category).apply(&mut settings);
+            let written = serde_json::to_string(&settings).expect("settings serialise");
+            let read: Settings = serde_json::from_str(&written).expect("and come back");
+            assert_eq!(read.default_category, category, "{category:?}");
+        }
+    }
+
+    #[test]
+    fn the_categories_redraw_when_the_one_they_open_on_changes() {
+        let before = Settings::default();
+        let mut after = before.clone();
+        after.default_category = Category::Promotions;
+        assert!(Effects::between(&before, &after).has(Effect::Categories));
+    }
+
     use super::*;
 
     #[test]
