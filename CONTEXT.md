@@ -59,3 +59,15 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 **Background work**: a Gmail call nobody is waiting on: backfill, history polling, pruning. The sync engine runs its whole tick as background work, which leaves 100 of the account's 250 unit burst for the user and stands aside while a foreground call waits. `mailrs_gmail::Priority::Background`. _Avoid_: sync work, low priority.
 
 **Quota bucket**: the tokens one account may spend at Gmail, refilled at 200 units a second up to a 250 unit burst, under Gmail's own 250 a second. `mailrs_gmail::AccountQuota`, one per address in the OAuth client's `QuotaPool`, plus a project bucket every account waits on. Every call spends from it before it goes out, so batching and pacing show up here rather than in a 429. _Avoid_: rate limiter, throttle.
+
+**Address book**: the contacts one Google account holds, stored on this computer: each person's name, addresses, photo, organization, and phone number. `mailrs_store::address_book` keeps one per account, and `mailrs_sync::ContactBook` reads it from the People API, walking the pages and keeping the sync token so later refreshes cost one call. It stays empty until the owner turns contacts on in Preferences, and turning them off deletes it. _Avoid_: Google Contacts, contacts (which also names the suggestion list).
+
+**Contact**: one person in an address book, with every address Google holds for them, the primary one first. `mailrs_store::address_book::Contact`. _Avoid_: person, entry, card.
+
+**Correspondent**: someone Penguin Mail found by reading stored mail rather than an address book. `mailrs_store::contacts::Correspondent` scores them by how often they come up, weighing someone written to above someone who only wrote. _Avoid_: contact, sender.
+
+**Recipient suggestion**: one row of what the composer offers while an address is typed, and what search offers for a name. `mailrs_store::contacts::Suggestion` merges the address books with the correspondents: a contact comes first whatever the mail says, and mail orders the contacts among themselves. _Avoid_: completion, autocomplete entry.
+
+**Contacts permission**: the Google access an account grants once so Penguin Mail may read its contacts. Sign-in leaves it out, and the window asks for it the first time somebody turns contacts on, so an account that never does is never asked. Without it every `ContactBook` call answers `Permitted::NeedsPermission`, as the settings calls do. _Avoid_: scope, consent.
+
+**Contact card**: what the sender's face or name in a conversation opens: their photo, name, addresses, and organization, with the three things the app already does about a person. `mailrs::ui::contact_card`. A sender in no address book still gets one, built from the message header. _Avoid_: profile, popover, details.
