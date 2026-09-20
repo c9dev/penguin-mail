@@ -20,7 +20,7 @@ use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::{
     AccountSettings, AccountSync, Accounts, AnyGmail, Changed, ContactBook, Counts, Failure,
     History, Invitations, Listing, MailAction, MailActions, Mailbox, Mailboxes, Outbox, Outcome,
-    Permitted, Scope, SyncEngine, View, connect_account, now_millis,
+    Permitted, Scope, SyncEngine, Undone, View, connect_account, now_millis,
 };
 
 use crate::assistant::run::{Background, Modules};
@@ -495,9 +495,9 @@ impl Core {
             .await
     }
 
-    /// Reverses the last recorded mail action, from the window or the
-    /// assistant. `None` when there is nothing to undo.
-    pub async fn undo(&self) -> Option<Outcome> {
+    /// Reverses the action on top of the undo stack, from the window or
+    /// the assistant. `None` when the stack is empty.
+    pub async fn undo(&self) -> Option<Undone> {
         let actions = Arc::clone(&self.actions);
         self.call(async move { Ok::<_, std::convert::Infallible>(actions.undo().await) })
             .await
@@ -603,6 +603,9 @@ impl Core {
         if let Some(engine) = self.engine.current() {
             engine.stop_account(account.id);
         }
+        // Nothing is left to reverse the account's actions through, and
+        // its mail goes with it.
+        self.actions.forget_account(account.id);
         let (db, tokens, demo) = (self.db.clone(), Arc::clone(&self.tokens), self.demo);
         self.call(async move {
             db.write(move |c| accounts::delete_account(c, account.id))

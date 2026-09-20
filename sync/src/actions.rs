@@ -1,9 +1,9 @@
 //! Mail actions: the changes a person or the assistant makes to mail, such as
 //! archiving, flagging in a colour, or setting a reminder. The window and the
 //! assistant both call this module, so the two cannot drift apart. It keeps
-//! the one-level undo and reports what happened instead of showing anything.
+//! the undo stack and reports what happened instead of showing anything.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 use std::sync::{Arc, Mutex};
 
 use mailrs_domain::translate::{fill, gettext};
@@ -75,13 +75,42 @@ pub enum MailAction {
     },
 }
 
+impl MailAction {
+    /// The action in words, for a toast the person reads.
+    pub fn describe(&self) -> String {
+        match self {
+            MailAction::Triage(triage) => triage.describe(),
+            MailAction::Flag(Some(_)) => gettext("Flag"),
+            MailAction::Flag(None) => gettext("Unflag"),
+            MailAction::Remind { .. } => gettext("Remind Me"),
+            MailAction::CancelReminder => gettext("Cancel Reminder"),
+            MailAction::Mute { muted: true } => TriageAction::Mute.describe(),
+            MailAction::Mute { muted: false } => TriageAction::Unmute.describe(),
+            MailAction::Label { .. } => TriageAction::Relabel {
+                add: vec![],
+                remove: vec![],
+            }
+            .describe(),
+        }
+    }
+}
+
 /// Whether Undo should reverse this action.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum History {
+    /// Puts the action on the undo stack, above the ones before it.
     Record,
-    /// Leaves the last recorded action as the one Undo reverses.
+    /// Leaves the stack as it was, so Undo still reverses the action
+    /// before this one.
     Skip,
 }
+
+/// How many actions the undo stack holds. One pass down a screenful of
+/// the list is about this many, and an action further back has had long
+/// enough for Gmail's own filters, another device, or the person
+/// themselves to move the mail again. Recording past the depth drops the
+/// oldest, so a long session cannot grow the stack.
+const DEPTH: usize = 20;
 
 /// What an action or an undo did.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -104,32 +133,65 @@ impl Outcome {
     }
 }
 
-/// How to reverse the last recorded action.
-#[derive(Default)]
+/// How to reverse one recorded action.
 struct Undo {
+    /// What ran, so an undo can say what it took back.
+    action: MailAction,
     /// Each changed target with the label change that reverses it.
-    relabel: Vec<(Target, TriageAction)>,
+    relabel: Vec<Reversal>,
     /// Flag colours per message before the action: account, message, colour.
     colors: Vec<(AccountId, String, Option<FlagColor>)>,
     /// Reminders per thread before the action.
     reminders: Vec<(Target, Option<Reminder>)>,
 }
 
+/// One target the action changed, and how to take that change back.
+struct Reversal {
+    target: Target,
+    inverse: TriageAction,
+    /// The folder the action left the target in, which `record` reads
+    /// once the action has run. A target somewhere else by the time Undo
+    /// comes round is one the world moved under, and Undo leaves it
+    /// where it is. `None` when the store held no message of it to place,
+    /// and Undo then reverses it as it always did.
+    folder: Option<Folder>,
+}
+
 impl Undo {
-    /// Whether reversing this would touch `target`'s thread. Flag colours
-    /// name a message without its thread, and restoring one on a message
-    /// the store has dropped does nothing, so they do not count.
-    fn names(&self, target: &Target) -> bool {
-        let same =
-            |t: &Target| t.account_id == target.account_id && t.thread_id == target.thread_id;
-        self.relabel.iter().any(|(t, _)| same(t)) || self.reminders.iter().any(|(t, _)| same(t))
+    /// Drops whatever would reverse a change to `target`'s thread. Flag
+    /// colours name a message without its thread, and restoring one on a
+    /// message the store has dropped does nothing, so they stay.
+    fn forget(&mut self, target: &Target) {
+        self.relabel.retain(|r| !same_thread(&r.target, target));
+        self.reminders.retain(|(t, _)| !same_thread(t, target));
     }
+
+    /// Drops whatever would reverse a change in `account_id`.
+    fn forget_account(&mut self, account_id: AccountId) {
+        self.relabel.retain(|r| r.target.account_id != account_id);
+        self.reminders.retain(|(t, _)| t.account_id != account_id);
+        self.colors.retain(|(id, _, _)| *id != account_id);
+    }
+
+    /// Whether anything is left to reverse.
+    fn is_empty(&self) -> bool {
+        self.relabel.is_empty() && self.reminders.is_empty() && self.colors.is_empty()
+    }
+}
+
+/// What an undo took back: the action it reversed, and what reversing it
+/// did to each target.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Undone {
+    pub action: MailAction,
+    pub outcome: Outcome,
 }
 
 pub struct MailActions<A: Accounts> {
     accounts: Arc<A>,
     db: Db,
-    last: Mutex<Option<Undo>>,
+    /// The recorded actions, oldest first. Undo takes from the end.
+    stack: Mutex<VecDeque<Undo>>,
 }
 
 impl<A: Accounts> MailActions<A> {
@@ -137,7 +199,7 @@ impl<A: Accounts> MailActions<A> {
         MailActions {
             accounts,
             db,
-            last: Mutex::new(None),
+            stack: Mutex::new(VecDeque::new()),
         }
     }
 
@@ -145,7 +207,12 @@ impl<A: Accounts> MailActions<A> {
     /// `History::Record` and at least one change, Undo reverses it next.
     pub async fn run(&self, targets: &[Target], action: MailAction, history: History) -> Outcome {
         let mut outcome = Outcome::default();
-        let mut undo = Undo::default();
+        let mut undo = Undo {
+            action: action.clone(),
+            relabel: Vec::new(),
+            colors: Vec::new(),
+            reminders: Vec::new(),
+        };
         let resolved = self.resolve(targets, &action).await;
         // A new colour on a flagged thread keeps its star on undo. Read
         // that before the star lands, not after.
@@ -180,7 +247,7 @@ impl<A: Accounts> MailActions<A> {
             }
         }
         if history == History::Record && !outcome.done.is_empty() {
-            *self.lock() = Some(undo);
+            self.record(undo).await;
         }
         outcome
     }
@@ -212,16 +279,16 @@ impl<A: Accounts> MailActions<A> {
                 }),
             }
         }
-        // Undo cannot bring erased mail back, so an action recorded over one
-        // of these threads stops being the one Ctrl+Z reverses.
-        let mut last = self.lock();
-        if last
-            .as_ref()
-            .is_some_and(|undo| outcome.done.iter().any(|target| undo.names(target)))
-        {
-            *last = None;
+        // Undo cannot bring erased mail back, so the stack lets go of the
+        // erased threads, and of any entry left with nothing to reverse.
+        let mut stack = self.lock();
+        for target in &outcome.done {
+            for undo in stack.iter_mut() {
+                undo.forget(target);
+            }
         }
-        drop(last);
+        stack.retain(|undo| !undo.is_empty());
+        drop(stack);
         Ok(Permitted::Done(outcome))
     }
 
@@ -275,7 +342,11 @@ impl<A: Accounts> MailActions<A> {
         let recolor = *recolor.as_ref().map_err(failed)?;
         triaged.clone()?;
         if !recolor {
-            undo.relabel.push((target.clone(), triage.inverse()));
+            undo.relabel.push(Reversal {
+                target: target.clone(),
+                inverse: triage.inverse(),
+                folder: None,
+            });
         }
         match action {
             MailAction::Remind { at } => {
@@ -303,15 +374,29 @@ impl<A: Accounts> MailActions<A> {
         Ok(())
     }
 
-    /// Reverses the last recorded action, once. `None` when there is none.
-    pub async fn undo(&self) -> Option<Outcome> {
-        let undo = self.lock().take()?;
+    /// Reverses the action on top of the stack and takes it off, leaving
+    /// the one before it for the next undo. `None` when the stack is
+    /// empty. A target that has left the folder the action put it in is
+    /// left there, with a word about it among the failures, so undoing an
+    /// archive cannot pull a conversation back out of the trash.
+    pub async fn undo(&self) -> Option<Undone> {
+        let undo = self.lock().pop_back()?;
         let mut outcome = Outcome::default();
-        let (targets, inverses): (Vec<Target>, Vec<Result<TriageAction, String>>) = undo
-            .relabel
-            .iter()
-            .map(|(target, inverse)| (target.clone(), Ok(inverse.clone())))
-            .unzip();
+        let mut targets = Vec::new();
+        let mut inverses = Vec::new();
+        let mut moved = Vec::new();
+        for (reversal, elsewhere) in undo.relabel.iter().zip(self.moved(&undo.relabel).await) {
+            if elsewhere {
+                outcome.failed.push(Failure {
+                    target: reversal.target.clone(),
+                    error: gettext("This mail moved since, so Undo left it alone."),
+                });
+                moved.push(reversal.target.clone());
+                continue;
+            }
+            targets.push(reversal.target.clone());
+            inverses.push(Ok(reversal.inverse.clone()));
+        }
         // Reversing a bulk action goes back in as few calls as it went out.
         for (target, done) in targets
             .iter()
@@ -325,7 +410,12 @@ impl<A: Accounts> MailActions<A> {
                 }),
             }
         }
-        let (colors, earlier) = (undo.colors, undo.reminders);
+        let colors = undo.colors;
+        let earlier: Vec<(Target, Option<Reminder>)> = undo
+            .reminders
+            .into_iter()
+            .filter(|(target, _)| !moved.contains(target))
+            .collect();
         let restored = self
             .db
             .write(move |c| {
@@ -344,7 +434,96 @@ impl<A: Accounts> MailActions<A> {
         if let Err(err) = restored {
             tracing::warn!(error = %err, "could not restore flag colours or reminders");
         }
-        Some(outcome)
+        Some(Undone {
+            action: undo.action,
+            outcome,
+        })
+    }
+
+    /// Drops everything the stack holds about `account_id`, and the
+    /// entries left with nothing. An account that has gone has no sync
+    /// handle to reverse anything through, and one signed in again comes
+    /// back with whatever Gmail made of the mail meanwhile.
+    pub fn forget_account(&self, account_id: AccountId) {
+        let mut stack = self.lock();
+        for undo in stack.iter_mut() {
+            undo.forget_account(account_id);
+        }
+        stack.retain(|undo| !undo.is_empty());
+    }
+
+    /// Puts `undo` on the stack, noting where the action left each target
+    /// so a later undo can tell whether the world moved under it. The
+    /// oldest entry goes when the stack is full.
+    async fn record(&self, mut undo: Undo) {
+        let targets: Vec<Target> = undo.relabel.iter().map(|r| r.target.clone()).collect();
+        let folders = self.folders_of(&targets).await.unwrap_or_else(|err| {
+            tracing::warn!(error = %err, "could not read where the action left the mail");
+            vec![None; targets.len()]
+        });
+        for (reversal, folder) in undo.relabel.iter_mut().zip(folders) {
+            reversal.folder = folder;
+        }
+        let mut stack = self.lock();
+        while stack.len() >= DEPTH {
+            stack.pop_front();
+        }
+        stack.push_back(undo);
+    }
+
+    /// Whether each reversal's target has left the folder the action put
+    /// it in, as the store sees it. A target the store could not place
+    /// when it was recorded counts as still there.
+    async fn moved(&self, relabel: &[Reversal]) -> Vec<bool> {
+        let mut moved = vec![false; relabel.len()];
+        for folder in Folder::ALL {
+            let members: Vec<usize> = relabel
+                .iter()
+                .enumerate()
+                .filter(|(_, r)| r.folder == Some(folder))
+                .map(|(index, _)| index)
+                .collect();
+            if members.is_empty() {
+                continue;
+            }
+            let targets: Vec<Target> = members.iter().map(|i| relabel[*i].target.clone()).collect();
+            match self.gone_from(folder, &targets).await {
+                Ok(gone) => {
+                    for (index, target) in members.iter().zip(&targets) {
+                        moved[*index] = gone.contains(target);
+                    }
+                }
+                Err(err) => {
+                    tracing::warn!(error = %err, "could not check where the mail stands now");
+                }
+            }
+        }
+        moved
+    }
+
+    /// The folder each target stands in, as the store sees it. `None` for
+    /// a target the store holds no message of.
+    async fn folders_of(&self, targets: &[Target]) -> Result<Vec<Option<Folder>>, SyncError> {
+        let targets = targets.to_vec();
+        Ok(self
+            .db
+            .read(move |c| {
+                let mut folders = Vec::with_capacity(targets.len());
+                for target in &targets {
+                    let held = messages::thread_messages(c, target.account_id, &target.thread_id)?;
+                    let mine: Vec<_> = held
+                        .iter()
+                        .filter(|m| target.message_id.as_ref().is_none_or(|id| &m.id == id))
+                        .collect();
+                    folders.push(
+                        Folder::ALL
+                            .into_iter()
+                            .find(|f| mine.iter().any(|m| f.holds(&m.label_ids))),
+                    );
+                }
+                Ok(folders)
+            })
+            .await?)
     }
 
     /// The id of the label called `name` in the account, ignoring case.
@@ -526,9 +705,15 @@ impl<A: Accounts> MailActions<A> {
             .ok_or(SyncError::UnknownAccount(account_id))
     }
 
-    fn lock(&self) -> std::sync::MutexGuard<'_, Option<Undo>> {
-        self.last.lock().expect("undo lock poisoned")
+    fn lock(&self) -> std::sync::MutexGuard<'_, VecDeque<Undo>> {
+        self.stack.lock().expect("undo lock poisoned")
     }
+}
+
+/// Whether two targets name the same thread, whichever messages of it
+/// they point at.
+fn same_thread(one: &Target, other: &Target) -> bool {
+    one.account_id == other.account_id && one.thread_id == other.thread_id
 }
 
 /// The targets that want the same label change in the same account, as
