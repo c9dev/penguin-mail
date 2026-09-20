@@ -9,7 +9,9 @@ use mailrs_store::scheduled::{self, Scheduled};
 use mailrs_sync::now_millis;
 
 use super::App;
-use crate::compose::{Draft, SendWhen, build_mime, new_message_id};
+use crate::compose::{
+    Draft, SendWhen, build_body_part, build_mime, build_protected, new_message_id,
+};
 use crate::format::future_date;
 
 /// How often the scheduler looks for messages that are due.
@@ -56,16 +58,51 @@ impl App {
         self.send_now(draft, false);
     }
 
+    /// The bytes to send: the message as it was written, or what the
+    /// OpenPGP engine made of it when the writer asked to sign or encrypt.
+    /// gpg may put a pinentry in front of them and wait, so this runs off
+    /// the GTK thread and holds nothing up but this message.
+    async fn raw_for(&self, draft: &Draft) -> Result<Vec<u8>, String> {
+        let message_id = new_message_id(&draft.from.email);
+        let date = now_millis() / 1000;
+        let built = |what: &str| format!("Could not build the message: {what}");
+        if !draft.sign && !draft.encrypt {
+            return build_mime(draft, date, &message_id).map_err(|err| built(&err));
+        }
+        let part = build_body_part(draft).map_err(|err| built(&err))?;
+        let from = draft.from.email.clone();
+        let to: Vec<String> = draft
+            .to
+            .iter()
+            .chain(&draft.cc)
+            .chain(&draft.bcc)
+            .map(|address| address.email.clone())
+            .collect();
+        let (sign, encrypt) = (draft.sign, draft.encrypt);
+        let entity = self
+            .core
+            .gpg(move |pgp| {
+                if encrypt {
+                    // A signature goes inside the encryption, which is the
+                    // only place one on encrypted mail means anything.
+                    pgp.encrypt(&part, &to, sign.then_some(from.as_str()))
+                } else {
+                    pgp.sign(&part, &from)
+                }
+            })
+            .await
+            .map_err(|err| {
+                if encrypt {
+                    format!("Not encrypted, so not sent: {err}")
+                } else {
+                    format!("Not signed, so not sent: {err}")
+                }
+            })?;
+        build_protected(draft, date, &message_id, entity).map_err(|err| built(&err))
+    }
+
     /// Sends at once. With `announce`, says so in the window.
     fn send_now(self: &Rc<Self>, draft: Draft, announce: bool) {
-        let raw = match build_mime(
-            &draft,
-            now_millis() / 1000,
-            &new_message_id(&draft.from.email),
-        ) {
-            Ok(raw) => raw,
-            Err(err) => return self.reopen(draft, &format!("Could not build the message: {err}")),
-        };
         let Some(sync) = self.core.account(draft.account_id) else {
             return self.reopen(
                 draft,
@@ -74,6 +111,10 @@ impl App {
         };
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
+            let raw = match this.raw_for(&draft).await {
+                Ok(raw) => raw,
+                Err(problem) => return this.reopen(draft, &problem),
+            };
             let (thread, draft_id) = (draft.thread_id.clone(), draft.draft_id.clone());
             match this
                 .core
@@ -100,14 +141,6 @@ impl App {
 
     /// Saves `draft` to Gmail and records when to send it.
     fn schedule(self: &Rc<Self>, draft: Draft, at: i64) {
-        let raw = match build_mime(
-            &draft,
-            now_millis() / 1000,
-            &new_message_id(&draft.from.email),
-        ) {
-            Ok(raw) => raw,
-            Err(err) => return self.reopen(draft, &format!("Could not build the message: {err}")),
-        };
         let Some(sync) = self.core.account(draft.account_id) else {
             return self.reopen(
                 draft,
@@ -116,6 +149,12 @@ impl App {
         };
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
+            // A scheduled message is signed now rather than at its hour,
+            // since the person is here to answer the pinentry now.
+            let raw = match this.raw_for(&draft).await {
+                Ok(raw) => raw,
+                Err(problem) => return this.reopen(draft, &problem),
+            };
             let (thread, draft_id) = (draft.thread_id.clone(), draft.draft_id.clone());
             let saved = match this
                 .core

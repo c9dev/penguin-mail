@@ -49,6 +49,10 @@ pub struct Writing {
     pub remember: Rc<dyn Fn(Remembered)>,
     /// Ask before a message that promises a file goes without one.
     pub check_attachments: bool,
+    /// Start with Sign on.
+    pub sign_by_default: bool,
+    /// Turn Encrypt on as soon as gpg holds a key for every recipient.
+    pub encrypt_when_possible: bool,
 }
 
 /// Something the composer learned that outlives it.
@@ -82,6 +86,23 @@ pub struct Composer {
     /// The strip naming the message this draft forwards.
     forwarded: gtk::Box,
     send: adw::SplitButton,
+    /// Sign and Encrypt, which this computer's gpg answers for. Both stay
+    /// out of the window when there is no gpg to run.
+    sign: gtk::ToggleButton,
+    encrypt: gtk::ToggleButton,
+    /// The addresses the key check last asked gpg about, so a writer
+    /// typing an address does not start a gpg for every letter.
+    asked_keys: RefCell<Vec<String>>,
+    /// Bumped whenever the recipients change; a check that finds it moved
+    /// on stands down.
+    key_check: Cell<u64>,
+    /// Set while the composer works the Sign and Encrypt toggles itself,
+    /// so doing so does not read as the writer choosing.
+    filling_keys: Cell<bool>,
+    /// Set once the writer worked Encrypt themselves, after which
+    /// "Encrypt when I can" leaves it alone.
+    encrypt_chosen: Cell<bool>,
+    encrypt_when_possible: bool,
     /// The formatting bar's toggles, each with the tag it stands for.
     toggles: RefCell<Vec<(gtk::ToggleButton, &'static str)>>,
     identities: Vec<Identity>,
@@ -132,7 +153,10 @@ impl Composer {
             dictionaries,
             remember,
             check_attachments,
+            sign_by_default,
+            encrypt_when_possible,
         } = writing;
+        let has_gpg = core.has_gpg();
         let title = adw::WindowTitle::new("New Message", "");
         let later = gio::Menu::new();
         for (label, at) in send_later_presets(chrono::Local::now()) {
@@ -174,11 +198,28 @@ impl Composer {
             .tooltip_text("Templates")
             .menu_model(&template_menu)
             .build();
+        let sign = gtk::ToggleButton::builder()
+            .label("Sign")
+            .tooltip_text("Sign this message with your own key")
+            .active(has_gpg && sign_by_default)
+            .build();
+        let encrypt = gtk::ToggleButton::builder()
+            .label("Encrypt")
+            .tooltip_text("Add a recipient whose key gpg holds.")
+            .sensitive(false)
+            .build();
+        let protection = gtk::Box::builder()
+            .css_classes(["linked"])
+            .visible(has_gpg)
+            .build();
+        protection.append(&sign);
+        protection.append(&encrypt);
         let header = adw::HeaderBar::builder().title_widget(&title).build();
         header.pack_end(&send);
         header.pack_end(&preview_toggle);
         header.pack_end(&attach);
         header.pack_end(&template_button);
+        header.pack_end(&protection);
 
         let from = from_dropdown(&identities);
         let last = last_used
@@ -332,6 +373,13 @@ impl Composer {
             files,
             forwarded,
             send,
+            sign,
+            encrypt,
+            asked_keys: RefCell::new(Vec::new()),
+            key_check: Cell::new(0),
+            filling_keys: Cell::new(false),
+            encrypt_chosen: Cell::new(false),
+            encrypt_when_possible: has_gpg && encrypt_when_possible,
             toggles: RefCell::new(Vec::new()),
             identities,
             showing: Cell::new(selected),
@@ -361,6 +409,7 @@ impl Composer {
         composer.fill_format_bar(&format_bar);
         composer.accept_images();
         composer.check_send();
+        composer.check_keys();
         composer.load_templates();
         // Preferences may add a template while this window is open, so the
         // list is read again each time the menu is asked for.
@@ -437,7 +486,13 @@ impl Composer {
         let mark = mark_dirty.clone();
         self.subject.connect_changed(move |_| mark());
         for field in [&self.to, &self.cc, &self.bcc] {
-            field.on_change(mark_dirty.clone());
+            let (mark, weak) = (mark_dirty.clone(), Rc::downgrade(self));
+            field.on_change(move || {
+                mark();
+                if let Some(c) = weak.upgrade() {
+                    c.check_keys();
+                }
+            });
         }
         // Tab walks the fields in reading order, skipping Cc and Bcc while
         // they are hidden.
@@ -503,6 +558,20 @@ impl Composer {
             if let Some(c) = weak.upgrade() {
                 c.show_more(toggle.is_active());
             }
+        });
+        let weak = Rc::downgrade(self);
+        self.sign.connect_toggled(move |_| {
+            if let Some(c) = weak.upgrade() {
+                c.dirty.set(true);
+            }
+        });
+        let weak = Rc::downgrade(self);
+        self.encrypt.connect_toggled(move |_| {
+            let Some(c) = weak.upgrade() else { return };
+            if !c.filling_keys.get() {
+                c.encrypt_chosen.set(true);
+            }
+            c.dirty.set(true);
         });
 
         let actions = gio::SimpleActionGroup::new();
@@ -878,6 +947,81 @@ impl Composer {
             .set_tooltip_text(Some(problem.as_deref().unwrap_or("Send (Ctrl+Enter)")));
     }
 
+    /// Asks gpg which recipients it can encrypt to and lets the Encrypt
+    /// toggle follow. It waits for the typing to settle and skips a list
+    /// it has already asked about, so the keyring is read once per change
+    /// rather than once per letter.
+    fn check_keys(self: &Rc<Self>) {
+        if !self.core.has_gpg() {
+            return;
+        }
+        let generation = self.key_check.get().wrapping_add(1);
+        self.key_check.set(generation);
+        let weak = Rc::downgrade(self);
+        glib::timeout_add_local_once(std::time::Duration::from_millis(400), move || {
+            let Some(c) = weak.upgrade() else { return };
+            if c.key_check.get() == generation {
+                c.ask_about_keys();
+            }
+        });
+    }
+
+    fn ask_about_keys(self: &Rc<Self>) {
+        let addresses = self.recipient_addresses();
+        if *self.asked_keys.borrow() == addresses {
+            return;
+        }
+        *self.asked_keys.borrow_mut() = addresses.clone();
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let wanted = addresses.clone();
+            let held = this.core.gpg(move |pgp| pgp.keys_for(&wanted)).await;
+            // The recipients moved on while gpg was answering.
+            if *this.asked_keys.borrow() != addresses {
+                return;
+            }
+            match held {
+                Ok(held) => this.show_keys(&held),
+                Err(err) => {
+                    tracing::info!(error = %err, "could not ask gpg about the recipients")
+                }
+            }
+        });
+    }
+
+    /// Offers encryption when gpg can do it, and says what is in the way
+    /// when it cannot.
+    fn show_keys(&self, held: &[mailrs_pgp::Recipient]) {
+        let problem = crate::pgp::cannot_encrypt(held, !self.bcc.is_empty());
+        self.encrypt.set_sensitive(problem.is_none());
+        self.encrypt.set_tooltip_text(Some(
+            problem
+                .as_deref()
+                .unwrap_or("Encrypt this message to the recipients' keys"),
+        ));
+        self.filling_keys.set(true);
+        if problem.is_some() {
+            self.encrypt.set_active(false);
+        } else if self.encrypt_when_possible && !self.encrypt_chosen.get() {
+            self.encrypt.set_active(true);
+        }
+        self.filling_keys.set(false);
+    }
+
+    /// Every address the message would go to, lower case and each once.
+    /// A half-typed address is left out until it is one.
+    fn recipient_addresses(&self) -> Vec<String> {
+        let mut found: Vec<String> = [&self.to, &self.cc, &self.bcc]
+            .into_iter()
+            .flat_map(|field| field.addresses())
+            .map(|address| address.email.trim().to_lowercase())
+            .filter(|email| crate::compose::is_address(email))
+            .collect();
+        found.sort();
+        found.dedup();
+        found
+    }
+
     /// The draft as the fields describe it now.
     fn collect(&self) -> Option<Draft> {
         let identity = self.identity()?.clone();
@@ -900,6 +1044,8 @@ impl Composer {
             ComposeFormat::Markdown => None,
         };
         draft.attachments = self.attachments.borrow().clone();
+        draft.sign = self.sign.is_active();
+        draft.encrypt = self.encrypt.is_active() && self.encrypt.is_sensitive();
         Some(draft)
     }
 

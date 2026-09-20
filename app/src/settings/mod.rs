@@ -69,6 +69,10 @@ pub struct Settings {
     pub compose_format: ComposeFormat,
     /// Ask before sending a message that promises a file and carries none.
     pub check_attachments: bool,
+    /// Open the composer with Sign on. It does nothing without a gpg.
+    pub sign_by_default: bool,
+    /// Turn Encrypt on as soon as gpg holds a key for every recipient.
+    pub encrypt_when_possible: bool,
     /// Read each account's Google contacts, for names, photos, and
     /// recipient suggestions. Off until the owner turns it on, because it
     /// is the one thing here that asks Google for more access.
@@ -168,6 +172,8 @@ impl Default for Settings {
             send_as: BTreeMap::new(),
             compose_format: ComposeFormat::Rich,
             check_attachments: true,
+            sign_by_default: false,
+            encrypt_when_possible: false,
             contacts: false,
         }
     }

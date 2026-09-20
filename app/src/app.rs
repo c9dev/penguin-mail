@@ -563,6 +563,8 @@ impl App {
                 })
             },
             check_attachments: self.settings.borrow().check_attachments,
+            sign_by_default: self.settings.borrow().sign_by_default,
+            encrypt_when_possible: self.settings.borrow().encrypt_when_possible,
         };
         let this = Rc::downgrade(self);
         let format = self.settings.borrow().compose_format;

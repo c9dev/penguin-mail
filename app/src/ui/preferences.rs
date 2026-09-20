@@ -349,7 +349,74 @@ fn writing_page(
     page.add(&signatures);
     page.add(&super::templates::group(app));
     page.add(&spelling_group(app, settings, accounts));
+    if let Some(openpgp) = openpgp_group(app, settings, accounts) {
+        page.add(&openpgp);
+    }
     page
+}
+
+/// What this computer's gpg is, which of the writer's addresses it holds a
+/// key for, and what to do about OpenPGP without being asked every time.
+///
+/// With no gpg on the computer there is no group: a switch that could do
+/// nothing is worse than no switch, and installing GnuPG is the only thing
+/// that would change the answer.
+fn openpgp_group(
+    app: &Rc<App>,
+    settings: &Settings,
+    accounts: &[Account],
+) -> Option<adw::PreferencesGroup> {
+    if !app.core.has_gpg() {
+        return None;
+    }
+    let group = adw::PreferencesGroup::builder()
+        .title("OpenPGP")
+        .description(
+            "Penguin Mail signs and encrypts through gpg, which holds your keys and asks for \
+             your passphrase itself.",
+        )
+        .build();
+    let keys = adw::ActionRow::builder()
+        .title("Your Keys")
+        .subtitle("Asking gpg…")
+        .build();
+    group.add(&keys);
+    group.add(&switch(
+        app,
+        "Sign My Messages by Default",
+        Some("New messages open with Sign turned on"),
+        settings.sign_by_default,
+        Change::SignByDefault,
+    ));
+    group.add(&switch(
+        app,
+        "Encrypt When I Can",
+        Some("Turn Encrypt on as soon as gpg holds a key for every recipient"),
+        settings.encrypt_when_possible,
+        Change::EncryptWhenPossible,
+    ));
+    // Both answers mean running gpg, so the group goes up saying so and
+    // fills itself in.
+    let mut addresses: Vec<String> = accounts.iter().map(|a| a.email.clone()).collect();
+    for alias in settings.send_as.values().flatten() {
+        addresses.push(alias.email.clone());
+    }
+    addresses.sort();
+    addresses.dedup();
+    let (app, row, filling) = (Rc::clone(app), keys, group.clone());
+    glib::spawn_future_local(async move {
+        if let Ok(Some(version)) = app.core.gpg(|pgp| Ok(crate::pgp::version(pgp))).await {
+            filling.set_description(Some(&format!(
+                "Penguin Mail signs and encrypts through gpg {version}, which holds your keys \
+                 and asks for your passphrase itself."
+            )));
+        }
+        match app.core.gpg(move |pgp| pgp.keys_for(&addresses)).await {
+            Ok(held) => row.set_subtitle(&crate::pgp::own_keys(&held)),
+            Err(err) => row.set_subtitle(&format!("gpg could not be asked: {err}")),
+        }
+    });
+    Some(group)
 }
 
 /// Which dictionaries are installed, and which one each account writes in.

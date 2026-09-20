@@ -42,6 +42,10 @@ pub enum Change {
     ComposeFormat(ComposeFormat),
     /// Ask before a message that promises a file goes without one.
     CheckAttachments(bool),
+    /// Open the composer with Sign on.
+    SignByDefault(bool),
+    /// Turn Encrypt on whenever gpg holds a key for every recipient.
+    EncryptWhenPossible(bool),
     /// Read the accounts' Google contacts, or stop and forget them.
     Contacts(bool),
     /// The colour the flag button reaches for next.
@@ -162,6 +166,8 @@ impl Change {
             Change::SuggestFollowUps(on) => settings.suggest_follow_ups = on,
             Change::ComposeFormat(format) => settings.compose_format = format,
             Change::CheckAttachments(on) => settings.check_attachments = on,
+            Change::SignByDefault(on) => settings.sign_by_default = on,
+            Change::EncryptWhenPossible(on) => settings.encrypt_when_possible = on,
             Change::Contacts(on) => settings.contacts = on,
             Change::FlagColor(color) => settings.flag_color = color,
             Change::Signature { email, text } => settings.set_signature(&email, &text),
@@ -447,6 +453,8 @@ impl Effects {
             send_as,
             compose_format,
             check_attachments,
+            sign_by_default,
+            encrypt_when_possible,
             contacts,
         } = after;
         // These leave the window as it is. The flag colour, the delay before
@@ -472,6 +480,8 @@ impl Effects {
             send_as,
             compose_format,
             check_attachments,
+            sign_by_default,
+            encrypt_when_possible,
         );
         let smart_changed = *smart_mailboxes != before.smart_mailboxes;
         let colors_changed = *account_colors != before.account_colors;
@@ -793,6 +803,9 @@ mod tests {
                 // Reading contacts asks Google for access of its own, so
                 // it stays a choice the person makes in Preferences.
                 "contacts",
+                // Whether mail goes out signed or encrypted is the
+                // person's to decide, not something the assistant flips.
+                "encrypt_when_possible",
                 "flag_color",
                 "hidden_addresses",
                 "inbox_categories",
@@ -801,6 +814,7 @@ mod tests {
                 // setting the assistant changes by name holds one value.
                 "notification_buttons",
                 "send_as",
+                "sign_by_default",
                 "signatures",
                 "smart_mailboxes",
                 "spell_languages",

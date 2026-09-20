@@ -352,6 +352,11 @@ pub struct Draft {
     pub draft_id: Option<String>,
     /// When a scheduled draft is due to go out.
     pub send_at: Option<EpochMillis>,
+    /// Sign the message with the sender's key on the way out.
+    pub sign: bool,
+    /// Encrypt it to every recipient. With `sign`, the signature goes
+    /// inside the encryption, which is the only place it means anything.
+    pub encrypt: bool,
 }
 
 /// When the composer hands a message over for sending.
@@ -381,6 +386,8 @@ impl Draft {
             forwarded: None,
             draft_id: None,
             send_at: None,
+            sign: false,
+            encrypt: false,
         }
     }
 
@@ -848,6 +855,49 @@ fn bare_id(id: &str) -> String {
 
 /// The RFC 822 bytes for `draft`.
 pub fn build_mime(draft: &Draft, date_secs: i64, message_id: &str) -> Result<Vec<u8>, String> {
+    let (text, html) = written(draft);
+    envelope(draft, date_secs, message_id)
+        .body(body_tree(draft, text, html))
+        .write_to_vec()
+        .map_err(|e| e.to_string())
+}
+
+/// The body of `draft` as one MIME entity: the headers that describe the
+/// body, a blank line, and the body. This is what the OpenPGP engine signs
+/// or encrypts, which is why it carries no `From`, `To` or `Subject`.
+pub fn build_body_part(draft: &Draft) -> Result<Vec<u8>, String> {
+    let (text, html) = written(draft);
+    let mut out = Vec::new();
+    MessageBuilder::new()
+        .body(body_tree(draft, text, html))
+        .write_body(&mut out)
+        .map_err(|e| e.to_string())?;
+    Ok(out)
+}
+
+/// The message `draft` describes, with `entity` as its body.
+///
+/// `entity` is what `Pgp::sign` or `Pgp::encrypt` handed back: a
+/// `Content-Type` header, a blank line, and the parts under it. The header
+/// goes on the message and the rest goes in as the body, byte for byte.
+/// Rewrapping a line or re-encoding a part here would leave the signature
+/// covering bytes that no longer exist, and the reader seeing a warning
+/// instead of a message.
+pub fn build_protected(
+    draft: &Draft,
+    date_secs: i64,
+    message_id: &str,
+    entity: Vec<u8>,
+) -> Result<Vec<u8>, String> {
+    envelope(draft, date_secs, message_id)
+        .body(MimePart::raw(entity))
+        .write_to_vec()
+        .map_err(|e| e.to_string())
+}
+
+/// The two ways of reading what the writer wrote, with whatever the draft
+/// forwards after them.
+fn written(draft: &Draft) -> (String, String) {
     let (mut text, mut html) = match &draft.rich {
         Some(rich) => (rich.to_plain(), rich.to_html()),
         None => (draft.markdown.clone(), markdown_to_html(&draft.markdown)),
@@ -856,12 +906,17 @@ pub fn build_mime(draft: &Draft, date_secs: i64, message_id: &str) -> Result<Vec
         text.push_str(&forwarded.to_plain());
         html.push_str(&forwarded.to_html());
     }
+    (text, html)
+}
+
+/// Everything about the message but its body: who it is from and to, what
+/// it answers, and when it was written.
+fn envelope<'a>(draft: &'a Draft, date_secs: i64, message_id: &str) -> MessageBuilder<'a> {
     let mut builder = MessageBuilder::new()
         .from(mime_address(&draft.from))
         .subject(draft.subject.trim().to_string())
         .date(date_secs)
-        .message_id(bare_id(message_id))
-        .body(body_tree(draft, text, html));
+        .message_id(bare_id(message_id));
     if !draft.to.is_empty() {
         builder = builder.to(draft.to.iter().map(mime_address).collect::<Vec<_>>());
     }
@@ -883,7 +938,7 @@ pub fn build_mime(draft: &Draft, date_secs: i64, message_id: &str) -> Result<Vec
                 .collect::<Vec<_>>(),
         );
     }
-    builder.write_to_vec().map_err(|e| e.to_string())
+    builder
 }
 
 /// The body of the message, nested the way a reader expects to find it.
@@ -1802,5 +1857,49 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(body_text(&body), "# Title\nBody");
+    }
+
+    #[test]
+    fn the_part_handed_to_gpg_is_the_body_and_nothing_about_the_sender() {
+        let mut draft = Draft::new(1, me());
+        draft.to = vec![addr(None, "ann@example.com")];
+        draft.subject = "Lunch".into();
+        draft.markdown = "Meet at six.".into();
+
+        let part = String::from_utf8(build_body_part(&draft).unwrap()).unwrap();
+
+        assert!(
+            part.starts_with("Content-Type: multipart/alternative"),
+            "{part}"
+        );
+        assert!(part.contains("Meet at six."), "{part}");
+        for header in ["From:", "To:", "Subject:", "Date:"] {
+            assert!(!part.contains(header), "{header} is in {part}");
+        }
+    }
+
+    #[test]
+    fn a_protected_message_carries_the_entity_byte_for_byte() {
+        let mut draft = Draft::new(1, me());
+        draft.to = vec![addr(None, "ann@example.com")];
+        draft.subject = "Lunch".into();
+        // What the engine hands back: one header, a blank line, the parts.
+        let entity = "Content-Type: multipart/signed; micalg=pgp-sha256; \
+                      protocol=\"application/pgp-signature\";\r\n \
+                      boundary=\"=-=-pgp01\"\r\n\r\n\
+                      --=-=-pgp01\r\nContent-Type: text/plain\r\n\r\nMeet at six.\r\n\
+                      --=-=-pgp01\r\nContent-Type: application/pgp-signature\r\n\r\n\
+                      -----BEGIN PGP SIGNATURE-----\r\n-----END PGP SIGNATURE-----\r\n\
+                      --=-=-pgp01--\r\n";
+
+        let raw =
+            build_protected(&draft, 1_757_000_000, "<id@example.com>", entity.into()).unwrap();
+        let raw = String::from_utf8(raw).unwrap();
+
+        assert!(raw.contains("Subject: Lunch\r\n"), "{raw}");
+        assert!(raw.contains("To: <ann@example.com>\r\n"), "{raw}");
+        assert!(raw.ends_with(entity), "{raw}");
+        // The one Content-Type on the message is the engine's own.
+        assert_eq!(raw.matches("Content-Type: multipart/signed").count(), 1);
     }
 }

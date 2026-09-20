@@ -121,8 +121,17 @@ pub fn version(pgp: &Pgp) -> Option<String> {
 }
 
 /// Why this draft cannot be encrypted, for the Encrypt button to say.
-/// `None` means every recipient has a key.
-pub fn cannot_encrypt(held: &[Recipient]) -> Option<String> {
+/// `None` means every recipient has a key. `blind` says the draft carries
+/// a Bcc, which encryption cannot keep blind: OpenPGP names every key a
+/// message was encrypted to, so the other recipients would read it there.
+pub fn cannot_encrypt(held: &[Recipient], blind: bool) -> Option<String> {
+    if blind {
+        return Some(
+            "An encrypted message names every key it went to, so a blind copy would not stay \
+             blind."
+                .into(),
+        );
+    }
     if held.is_empty() {
         return Some("Add a recipient whose key gpg holds.".into());
     }
@@ -132,6 +141,27 @@ pub fn cannot_encrypt(held: &[Recipient]) -> Option<String> {
         .map(|recipient| recipient.address.as_str())
         .collect();
     (!missing.is_empty()).then(|| format!("gpg holds no key for {}.", listed(&missing)))
+}
+
+/// What Preferences says about the addresses this person sends from:
+/// which of them gpg holds a key for, and which it holds nothing for.
+pub fn own_keys(held: &[Recipient]) -> String {
+    let addresses = |wanted: bool| -> Vec<&str> {
+        held.iter()
+            .filter(|recipient| recipient.key.is_some() == wanted)
+            .map(|recipient| recipient.address.as_str())
+            .collect()
+    };
+    let (mine, missing) = (addresses(true), addresses(false));
+    match (mine.as_slice(), missing.as_slice()) {
+        ([], _) => "gpg holds no key for any of the addresses you send from.".into(),
+        (mine, []) => format!("gpg holds a key for {}.", joined(mine, "and")),
+        (mine, missing) => format!(
+            "gpg holds a key for {}, and none for {}.",
+            joined(mine, "and"),
+            joined(missing, "and")
+        ),
+    }
 }
 
 /// The two parts of the entity `raw` holds: the first whole, headers and
@@ -343,10 +373,14 @@ fn mark_only(mark: Mark) -> Read {
 /// "ann@example.com", "ann@example.com or bo@example.com", and with more
 /// than two, commas until the last.
 fn listed(names: &[&str]) -> String {
+    joined(names, "or")
+}
+
+fn joined(names: &[&str], last_word: &str) -> String {
     match names {
         [] => String::new(),
         [one] => (*one).to_string(),
-        [rest @ .., last] => format!("{} or {last}", rest.join(", ")),
+        [rest @ .., last] => format!("{} {last_word} {last}", rest.join(", ")),
     }
 }
 
@@ -658,30 +692,72 @@ mod tests {
     #[test]
     fn encryption_waits_until_every_recipient_has_a_key() {
         assert_eq!(
-            cannot_encrypt(&[]).as_deref(),
+            cannot_encrypt(&[], false).as_deref(),
             Some("Add a recipient whose key gpg holds.")
         );
-        assert_eq!(cannot_encrypt(&[recipient("ada@example.test", true)]), None);
         assert_eq!(
-            cannot_encrypt(&[
-                recipient("ada@example.test", true),
-                recipient("bo@example.test", false),
-            ])
+            cannot_encrypt(&[recipient("ada@example.test", true)], false),
+            None
+        );
+        assert_eq!(
+            cannot_encrypt(
+                &[
+                    recipient("ada@example.test", true),
+                    recipient("bo@example.test", false),
+                ],
+                false
+            )
             .as_deref(),
             Some("gpg holds no key for bo@example.test.")
         );
     }
 
     #[test]
+    fn a_blind_copy_and_encryption_do_not_go_together() {
+        let problem = cannot_encrypt(&[recipient("ada@example.test", true)], true);
+        assert!(
+            problem
+                .as_deref()
+                .is_some_and(|problem| problem.contains("blind")),
+            "{problem:?}"
+        );
+    }
+
+    #[test]
     fn every_recipient_without_a_key_is_named() {
-        let missing = cannot_encrypt(&[
-            recipient("ann@example.test", false),
-            recipient("bo@example.test", false),
-            recipient("cy@example.test", false),
-        ]);
+        let missing = cannot_encrypt(
+            &[
+                recipient("ann@example.test", false),
+                recipient("bo@example.test", false),
+                recipient("cy@example.test", false),
+            ],
+            false,
+        );
         assert_eq!(
             missing.as_deref(),
             Some("gpg holds no key for ann@example.test, bo@example.test or cy@example.test.")
+        );
+    }
+
+    #[test]
+    fn preferences_say_which_of_your_own_addresses_gpg_has_a_key_for() {
+        assert_eq!(
+            own_keys(&[recipient("ada@example.test", false)]),
+            "gpg holds no key for any of the addresses you send from."
+        );
+        assert_eq!(
+            own_keys(&[
+                recipient("ada@example.test", true),
+                recipient("work@example.test", true),
+            ]),
+            "gpg holds a key for ada@example.test and work@example.test."
+        );
+        assert_eq!(
+            own_keys(&[
+                recipient("ada@example.test", true),
+                recipient("work@example.test", false),
+            ]),
+            "gpg holds a key for ada@example.test, and none for work@example.test."
         );
     }
 
