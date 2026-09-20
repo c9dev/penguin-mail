@@ -1,4 +1,9 @@
-//! OpenPGP mail through the person's own GnuPG.
+//! OpenPGP mail through the person's own GnuPG: checking a signature,
+//! opening an encrypted part, and building the bodies RFC 3156 describes.
+//!
+//! Every call runs the `gpg` binary, so the keys, the agent, the pinentry
+//! and the trust database belong to the person rather than to this crate.
+//! `README.md` says in which order a mail client calls all this.
 
 mod error;
 mod gpg;
