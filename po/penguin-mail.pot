@@ -998,19 +998,19 @@ msgstr ""
 msgid "English"
 msgstr ""
 
-#: app/src/translation.rs:737
+#: app/src/translation.rs:730
 msgid "The message goes to {host}, for {model} to read."
 msgstr ""
 
-#: app/src/translation.rs:741
+#: app/src/translation.rs:734
 msgid "The message goes to {model} on this computer and no further."
 msgstr ""
 
-#: app/src/translation.rs:746
+#: app/src/translation.rs:739
 msgid "The message goes to Anthropic, for {model} to read."
 msgstr ""
 
-#: app/src/translation.rs:750
+#: app/src/translation.rs:743
 msgid ""
 "The message goes to Anthropic, for Claude to read through your subscription."
 msgstr ""
@@ -4097,8 +4097,12 @@ msgstr ""
 msgid "Allow Changes to Gmail Settings"
 msgstr ""
 
-#: app/src/ui/window/translation.rs:114
+#: app/src/ui/window/translation.rs:120
 msgid "The model could not translate this: {reason}"
+msgstr ""
+
+#: app/src/ui/window/translation.rs:129
+msgid "The model sent nothing back to put in the message."
 msgstr ""
 
 #: domain/src/category.rs:58

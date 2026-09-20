@@ -1028,22 +1028,24 @@ msgstr "chinês"
 msgid "English"
 msgstr "inglês"
 
-#: app/src/translation.rs:737
+#: app/src/translation.rs:730
 msgid "The message goes to {host}, for {model} to read."
 msgstr "A mensagem vai para {host}, para ser lida por {model}."
 
-#: app/src/translation.rs:741
+#: app/src/translation.rs:734
 msgid "The message goes to {model} on this computer and no further."
 msgstr "A mensagem vai para {model} neste computador e não sai daqui."
 
-#: app/src/translation.rs:746
+#: app/src/translation.rs:739
 msgid "The message goes to Anthropic, for {model} to read."
 msgstr "A mensagem vai para a Anthropic, para ser lida por {model}."
 
-#: app/src/translation.rs:750
+#: app/src/translation.rs:743
 msgid ""
 "The message goes to Anthropic, for Claude to read through your subscription."
-msgstr "A mensagem vai para a Anthropic, para ser lida pelo Claude através da sua subscrição."
+msgstr ""
+"A mensagem vai para a Anthropic, para ser lida pelo Claude através da sua "
+"subscrição."
 
 #: app/src/tray.rs:28
 msgid "No unread mail"
@@ -4241,9 +4243,13 @@ msgstr "Não foi possível bloquear o remetente: {reason}"
 msgid "Allow Changes to Gmail Settings"
 msgstr "Permitir alterações às definições do Gmail"
 
-#: app/src/ui/window/translation.rs:114
+#: app/src/ui/window/translation.rs:120
 msgid "The model could not translate this: {reason}"
 msgstr "O modelo não conseguiu traduzir isto: {reason}"
+
+#: app/src/ui/window/translation.rs:129
+msgid "The model sent nothing back to put in the message."
+msgstr "O modelo não devolveu nada para pôr na mensagem."
 
 #: domain/src/category.rs:58
 msgid "All"

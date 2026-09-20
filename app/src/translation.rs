@@ -96,10 +96,10 @@ pub const ENGLISH: Language = Language {
     english: "English",
     script: Script::Latin,
     words: &[
-        "a", "an", "and", "are", "as", "at", "be", "been", "but", "by", "can", "do", "for",
-        "from", "has", "have", "here", "i", "if", "in", "is", "it", "me", "not", "of", "on",
-        "or", "our", "please", "should", "thanks", "that", "the", "their", "there", "they",
-        "this", "to", "was", "we", "were", "what", "will", "with", "would", "you", "your",
+        "a", "an", "and", "are", "as", "at", "be", "been", "but", "by", "can", "do", "for", "from",
+        "has", "have", "here", "i", "if", "in", "is", "it", "me", "not", "of", "on", "or", "our",
+        "please", "should", "thanks", "that", "the", "their", "there", "they", "this", "to", "was",
+        "we", "were", "what", "will", "with", "would", "you", "your",
     ],
 };
 
@@ -122,8 +122,8 @@ pub const SPANISH: Language = Language {
     words: &[
         "al", "como", "con", "cuando", "de", "del", "el", "ella", "ellos", "en", "es", "esta",
         "este", "gracias", "hay", "la", "las", "los", "más", "muy", "no", "nos", "o", "para",
-        "pero", "por", "puede", "que", "se", "si", "sin", "son", "su", "sus", "también",
-        "tiene", "un", "una", "usted", "y", "ya",
+        "pero", "por", "puede", "que", "se", "si", "sin", "son", "su", "sus", "también", "tiene",
+        "un", "una", "usted", "y", "ya",
     ],
 };
 
@@ -144,10 +144,10 @@ pub const GERMAN: Language = Language {
     english: "German",
     script: Script::Latin,
     words: &[
-        "aber", "als", "auch", "auf", "bei", "bitte", "danke", "das", "dem", "den", "der",
-        "die", "ein", "eine", "einen", "für", "haben", "ich", "ihre", "ist", "mit", "nach",
-        "nicht", "oder", "sehr", "sich", "sie", "sind", "über", "und", "uns", "von", "werden",
-        "wir", "wird", "zu",
+        "aber", "als", "auch", "auf", "bei", "bitte", "danke", "das", "dem", "den", "der", "die",
+        "ein", "eine", "einen", "für", "haben", "ich", "ihre", "ist", "mit", "nach", "nicht",
+        "oder", "sehr", "sich", "sie", "sind", "über", "und", "uns", "von", "werden", "wir",
+        "wird", "zu",
     ],
 };
 
@@ -157,8 +157,8 @@ pub const ITALIAN: Language = Language {
     script: Script::Latin,
     words: &[
         "alla", "anche", "che", "ci", "come", "con", "da", "del", "della", "di", "e", "gli",
-        "grazie", "i", "il", "in", "la", "le", "lo", "ma", "non", "per", "più", "questa",
-        "questo", "si", "sono", "su", "tutti", "un", "una", "è",
+        "grazie", "i", "il", "in", "la", "le", "lo", "ma", "non", "per", "più", "questa", "questo",
+        "si", "sono", "su", "tutti", "un", "una", "è",
     ],
 };
 
@@ -168,22 +168,14 @@ pub const DUTCH: Language = Language {
     script: Script::Latin,
     words: &[
         "aan", "als", "bij", "dank", "dat", "de", "die", "een", "en", "er", "het", "hij", "ik",
-        "is", "je", "maar", "met", "naar", "niet", "of", "ons", "ook", "op", "over", "te",
-        "uw", "van", "voor", "we", "wij", "wordt", "worden", "zeer", "zijn",
+        "is", "je", "maar", "met", "naar", "niet", "of", "ons", "ook", "op", "over", "te", "uw",
+        "van", "voor", "we", "wij", "wordt", "worden", "zeer", "zijn",
     ],
 };
 
 /// The languages whose words the app counts. A language outside this list
 /// is named by its script or not at all.
-const KNOWN: [Language; 7] = [
-    ENGLISH,
-    PORTUGUESE,
-    SPANISH,
-    FRENCH,
-    GERMAN,
-    ITALIAN,
-    DUTCH,
-];
+const KNOWN: [Language; 7] = [ENGLISH, PORTUGUESE, SPANISH, FRENCH, GERMAN, ITALIAN, DUTCH];
 
 /// Languages a script names on its own. Cyrillic and Arabic are not among
 /// them, because either one covers languages the app would get wrong.
@@ -593,8 +585,9 @@ fn push_text(parts: &mut Vec<Part>, text: &str, quoted: bool, skipping: bool) {
     }
 }
 
-/// The five entities the cleaner writes, plus the space it writes for a
-/// non-breaking one. Anything else it leaves alone, and so does this.
+/// The five entities the cleaner writes, plus the one for a non-breaking
+/// space, which comes back as the character itself and draws the same.
+/// Anything else the cleaner leaves alone, and so does this.
 fn unescape(text: &str) -> String {
     if !text.contains('&') {
         return text.to_string();
@@ -746,9 +739,9 @@ pub fn destination(ai: &AiSettings) -> Result<(ProviderConfig, String), String> 
             &gettext("The message goes to Anthropic, for {model} to read."),
             &[("model", model)],
         ),
-        ProviderConfig::ClaudeCode { .. } => gettext(
-            "The message goes to Anthropic, for Claude to read through your subscription.",
-        ),
+        ProviderConfig::ClaudeCode { .. } => {
+            gettext("The message goes to Anthropic, for Claude to read through your subscription.")
+        }
     };
     Ok((config, said))
 }
@@ -804,6 +797,8 @@ impl ToolHost for NoTools {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
     use crate::settings::AiProvider;
 
@@ -1041,10 +1036,37 @@ mod tests {
 
     #[test]
     fn an_answer_that_wanders_keeps_what_it_got_right() {
-        let reply = "Sure, here you go:\n```\n[[2]] Até já\ne mais\n[[9]] nowhere\n[[2]] again\n```";
+        let reply =
+            "Sure, here you go:\n```\n[[2]] Até já\ne mais\n[[9]] nowhere\n[[2]] again\n```";
         assert_eq!(
             read_reply(reply, 3),
             [None, Some("Até já e mais".to_string()), None]
+        );
+    }
+
+    #[test]
+    fn a_body_comes_back_as_it_was_when_nothing_is_translated() {
+        let html = "<div style=\"color:#333\"><p>Olá&nbsp;Ana</p><ul><li>Um</li>\
+                    <li>Dois</li></ul><a href=\"https://exemplo.pt\">Ver a conta</a></div>";
+        let prose = Prose::read(Body::Html(html));
+        // A non-breaking space comes back as the character rather than
+        // as the entity, which draws the same.
+        assert_eq!(prose.rebuild(&[]), html.replace("&nbsp;", "\u{a0}"));
+    }
+
+    #[test]
+    fn what_the_model_answers_is_cleaned_before_it_is_drawn() {
+        let prose = Prose::read(Body::Html("<p>Bom dia</p><p>Até já</p>"));
+        let pieces = prose.pieces();
+        assert!(prompt(ENGLISH, &pieces).contains("[[2]] Até já\n"));
+        let said = read_reply(
+            "[[1]] Good morning\n[[2]] See you <b>soon</b>",
+            pieces.len(),
+        );
+        let clean = crate::sanitize::sanitize_html(&prose.rebuild(&said), &HashMap::new());
+        assert_eq!(
+            clean,
+            "<p>Good morning</p><p>See you &lt;b&gt;soon&lt;/b&gt;</p>"
         );
     }
 

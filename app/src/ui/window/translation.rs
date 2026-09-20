@@ -92,9 +92,15 @@ impl MainWindow {
             _ => None,
         };
         let pieces = prose.pieces();
+        if pieces.is_empty() {
+            return;
+        }
         let fits = translation::fits(&pieces);
         let cut = fits < pieces.len();
-        let asked: Vec<String> = pieces[..fits].iter().map(|piece| piece.to_string()).collect();
+        let asked: Vec<String> = pieces[..fits]
+            .iter()
+            .map(|piece| piece.to_string())
+            .collect();
         view.translate.working();
         let (this, view) = (Rc::clone(self), Rc::clone(view));
         glib::spawn_future_local(async move {
@@ -119,6 +125,12 @@ impl MainWindow {
                     return;
                 }
             };
+            if said.iter().all(Option::is_none) {
+                let problem = gettext("The model sent nothing back to put in the message.");
+                view.translate.problem(&problem);
+                this.toast(&problem);
+                return;
+            }
             let kept = view
                 .with_open(|open| {
                     let Some(Ok(arrived)) = open.bodies.get(&message_id) else {
@@ -133,7 +145,10 @@ impl MainWindow {
                     let mut body = arrived.clone();
                     // Model output is cleaned like any other mail HTML
                     // before it reaches the WebView.
-                    let clean = match arrived.html.as_deref().is_some_and(|h| !h.trim().is_empty())
+                    let clean = match arrived
+                        .html
+                        .as_deref()
+                        .is_some_and(|h| !h.trim().is_empty())
                     {
                         true => Some(sanitize_html(&rebuilt, &images)),
                         false => {
