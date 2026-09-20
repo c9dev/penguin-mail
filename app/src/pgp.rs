@@ -813,6 +813,66 @@ mod tests {
         );
     }
 
+    /// A draft addressed to the test key's own address, as the composer
+    /// would hand it over.
+    fn draft_to(home: &Home) -> crate::compose::Draft {
+        let me = mailrs_domain::Address {
+            name: Some("Ada Lovelace".into()),
+            email: home.address.clone(),
+        };
+        let mut draft = crate::compose::Draft::new(1, me.clone());
+        draft.to = vec![me];
+        draft.subject = "Six".into();
+        draft.markdown = "Meet at six.".into();
+        draft
+    }
+
+    #[test]
+    fn a_draft_signed_on_its_way_out_verifies_on_its_way_in() {
+        let Some(home) = Home::new() else { return };
+        let draft = draft_to(&home);
+        let part = crate::compose::build_body_part(&draft).expect("a body part");
+        let entity = home.pgp.sign(&part, &home.address).expect("a signed body");
+        let raw =
+            crate::compose::build_protected(&draft, 1_757_000_000, "<id@example.test>", entity)
+                .expect("a message");
+
+        let read = read(&home.pgp, Opening::Verify, &raw, &MessageBody::default());
+
+        assert_eq!(read.mark.title, "Signed by Ada Lovelace <ada@example.test>");
+        assert_eq!(read.mark.tone, Tone::Good, "{:?}", read.mark);
+    }
+
+    #[test]
+    fn a_draft_encrypted_on_its_way_out_opens_on_its_way_in() {
+        let Some(home) = Home::new() else { return };
+        let draft = draft_to(&home);
+        let part = crate::compose::build_body_part(&draft).expect("a body part");
+        let entity = home
+            .pgp
+            .encrypt(
+                &part,
+                std::slice::from_ref(&home.address),
+                Some(&home.address),
+            )
+            .expect("an encrypted body");
+        let raw =
+            crate::compose::build_protected(&draft, 1_757_000_000, "<id@example.test>", entity)
+                .expect("a message");
+
+        let read = read(&home.pgp, Opening::Decrypt, &raw, &MessageBody::default());
+
+        assert_eq!(read.mark.tone, Tone::Good, "{:?}", read.mark);
+        let inside = read.body.expect("the message that was inside");
+        assert!(
+            inside
+                .text
+                .as_deref()
+                .is_some_and(|text| text.contains("Meet at six.")),
+            "{inside:?}"
+        );
+    }
+
     #[test]
     fn armor_in_the_text_opens_with_its_signature() {
         let Some(home) = Home::new() else { return };
