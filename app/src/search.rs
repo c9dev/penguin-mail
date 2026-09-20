@@ -3,6 +3,7 @@
 use mailrs_store::contacts::Suggestion as Person;
 
 use crate::contacts::suggest;
+use mailrs_domain::translate::{fill, gettext};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Suggestion {
@@ -24,22 +25,24 @@ pub fn suggestions(text: &str, contacts: &[Person], labels: &[String]) -> Vec<Su
         return Vec::new();
     }
     let with = |term: String| format!("{head}{term}");
+    // The query beside each label is Gmail's search language and stays
+    // as Gmail spells it.
     let mut out = vec![Suggestion {
-        label: format!("Subject contains “{word}”"),
+        label: fill(&gettext("Subject contains “{words}”"), &[("words", word)]),
         query: with(format!("subject:{word}")),
     }];
     let people = suggest(contacts, word, &[], 4);
     for person in &people {
         let name = person.name.as_deref().unwrap_or(&person.email);
         out.push(Suggestion {
-            label: format!("From {name}"),
+            label: fill(&gettext("From {person}"), &[("person", name)]),
             query: with(format!("from:{}", person.email)),
         });
     }
     if let Some(first) = people.first() {
         let name = first.name.as_deref().unwrap_or(&first.email);
         out.push(Suggestion {
-            label: format!("To {name}"),
+            label: fill(&gettext("To {person}"), &[("person", name)]),
             query: with(format!("to:{}", first.email)),
         });
     }
@@ -61,7 +64,10 @@ pub fn suggestions(text: &str, contacts: &[Person], labels: &[String]) -> Vec<Su
             })
             .collect();
         out.push(Suggestion {
-            label: format!("In {}", label.replace('/', " › ")),
+            label: fill(
+                &gettext("In {label}"),
+                &[("label", &label.replace('/', " › "))],
+            ),
             query: with(format!("label:{slug}")),
         });
     }

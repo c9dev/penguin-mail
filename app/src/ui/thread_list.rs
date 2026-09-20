@@ -13,6 +13,7 @@ use mailrs_domain::{AccountId, ThreadSummary};
 use super::sidebar::DRAG_MAIL;
 use super::thread_row::{Avatar, ThreadRow};
 use crate::diff::splice;
+use mailrs_domain::translate::gettext;
 
 /// What is selected in the list.
 pub enum Picked {
@@ -160,7 +161,7 @@ impl ThreadList {
             .build();
         let empty = adw::StatusPage::builder()
             .icon_name("penguin-mail-inbox-symbolic")
-            .title("No Mail")
+            .title(gettext("No Mail"))
             .build();
         empty.add_css_class("compact");
         let spinner = adw::Spinner::builder()
@@ -177,7 +178,8 @@ impl ThreadList {
         stack.add_named(&spinner, Some("loading"));
 
         let search_entry = gtk::SearchEntry::builder()
-            .placeholder_text("Search mail, e.g. from:ann has:attachment")
+            // The two search terms are Gmail's own and stay in English.
+            .placeholder_text(gettext("Search mail, e.g. from:ann has:attachment"))
             .hexpand(true)
             .build();
         let search_bar = gtk::SearchBar::builder()
@@ -191,20 +193,20 @@ impl ThreadList {
             .build();
         search_bar.connect_entry(&search_entry);
 
-        let title = adw::WindowTitle::new("All Inboxes", "");
+        let title = adw::WindowTitle::new(&gettext("All Inboxes"), "");
         let sidebar_button = gtk::ToggleButton::builder()
             .icon_name("sidebar-show-symbolic")
-            .tooltip_text("Show Mailboxes")
+            .tooltip_text(gettext("Show Mailboxes"))
             .visible(false)
             .build();
         let compose_button = gtk::Button::builder()
             .icon_name("mail-message-new-symbolic")
-            .tooltip_text("New Message (C)")
+            .tooltip_text(gettext("New Message (C)"))
             .action_name("win.compose")
             .build();
         let search_button = gtk::ToggleButton::builder()
             .icon_name("system-search-symbolic")
-            .tooltip_text("Search (/)")
+            .tooltip_text(gettext("Search (/)"))
             .build();
         search_button
             .bind_property("active", &search_bar, "search-mode-enabled")
@@ -213,7 +215,7 @@ impl ThreadList {
             .build();
         let assistant_button = gtk::ToggleButton::builder()
             .icon_name("penguin-mail-sparkle-symbolic")
-            .tooltip_text("Assistant (Ctrl+J)")
+            .tooltip_text(gettext("Assistant (Ctrl+J)"))
             .build();
         let header = adw::HeaderBar::builder().title_widget(&title).build();
         header.pack_start(&sidebar_button);
@@ -228,7 +230,7 @@ impl ThreadList {
         toolbar.add_top_bar(&banner);
         toolbar.set_content(Some(&stack));
         let page = adw::NavigationPage::builder()
-            .title("Mail")
+            .title(gettext("Mail"))
             .tag("list")
             .child(&toolbar)
             .build();
@@ -592,16 +594,16 @@ fn context_menu(row: &ThreadRow, item: &gtk::ListItem, selection: &gtk::MultiSel
     // action is off out of the menu rather than greying it.
     let waiting = gio::Menu::new();
     for (text, action) in [
-        ("Edit…", "win.outbox-edit"),
-        ("Send Now", "win.outbox-send"),
-        ("Delete", "win.outbox-delete"),
+        (gettext("Edit…"), "win.outbox-edit"),
+        (gettext("Send Now"), "win.outbox-send"),
+        (gettext("Delete"), "win.outbox-delete"),
     ] {
-        let item = gio::MenuItem::new(Some(text), Some(action));
+        let item = gio::MenuItem::new(Some(&text), Some(action));
         item.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
         waiting.append_item(&item);
     }
     menu.append_section(None, &waiting);
-    menu.append(Some("Export…"), Some("win.export"));
+    menu.append(Some(&gettext("Export…")), Some("win.export"));
     let popover = gtk::PopoverMenu::from_model(Some(&menu));
     popover.set_has_arrow(false);
     popover.set_halign(gtk::Align::Start);

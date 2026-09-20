@@ -6,14 +6,16 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gdk, gio, glib, pango};
+use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{
     Account, AccountId, AccountState, FlagColor, Folder, Label, LabelKind, system_label,
 };
 
 use super::{
-    FolderLook, LABEL_COLORS, Mailbox, UNIFIED, account_label_name, mailbox_icon, unified_name,
+    FolderLook, LABEL_COLORS, Mailbox, UNIFIED, account_label_name, label_color_name, mailbox_icon,
+    unified_name,
 };
-use crate::format::{PALETTE_NAMES, account_color_index};
+use crate::format::{PALETTE, account_color_index, palette_name};
 
 struct Row {
     row: gtk::ListBoxRow,
@@ -63,13 +65,13 @@ impl Sidebar {
             .build();
         let header = adw::HeaderBar::builder()
             .show_end_title_buttons(false)
-            .title_widget(&adw::WindowTitle::new("Mailboxes", ""))
+            .title_widget(&adw::WindowTitle::new(&gettext("Mailboxes"), ""))
             .build();
         let add_account = gtk::Button::builder()
             .child(
                 &adw::ButtonContent::builder()
                     .icon_name("list-add-symbolic")
-                    .label("Add Account")
+                    .label(gettext("Add Account"))
                     .build(),
             )
             .css_classes(["flat"])
@@ -194,16 +196,16 @@ impl Sidebar {
         for label in UNIFIED {
             self.add_mailbox(
                 Mailbox::Unified(label),
-                unified_name(label),
+                &unified_name(label),
                 mailbox_icon(label),
                 0,
             );
             if label == system_label::INBOX && !vips.is_empty() {
                 let everyone = Mailbox::Vips {
                     emails: vips.iter().map(|(e, _)| e.clone()).collect(),
-                    name: "VIPs".into(),
+                    name: gettext("VIPs"),
                 };
-                self.add_mailbox(everyone, "VIPs", "starred-symbolic", 0);
+                self.add_mailbox(everyone, &gettext("VIPs"), "starred-symbolic", 0);
                 for (email, name) in vips {
                     let person = Mailbox::Vips {
                         emails: vec![email.clone()],
@@ -211,7 +213,7 @@ impl Sidebar {
                     };
                     let row = self.add_mailbox(person, name, "avatar-default-symbolic", 1);
                     let menu = gio::Menu::new();
-                    let item = gio::MenuItem::new(Some("Remove from VIPs"), None);
+                    let item = gio::MenuItem::new(Some(&gettext("Remove from VIPs")), None);
                     item.set_action_and_target_value(
                         Some("win.vip-remove"),
                         Some(&email.to_variant()),
@@ -225,7 +227,7 @@ impl Sidebar {
                 for color in FlagColor::ALL {
                     let row = self.add_mailbox(
                         Mailbox::Flag(color),
-                        color.name(),
+                        &color.name(),
                         "penguin-mail-flag-symbolic",
                         1,
                     );
@@ -235,12 +237,27 @@ impl Sidebar {
                 }
             }
         }
-        self.add_mailbox(Mailbox::Outbox, "Outbox", "mail-outbox-symbolic", 0);
-        self.add_mailbox(Mailbox::Scheduled, "Send Later", "mail-send-symbolic", 0);
-        self.add_mailbox(Mailbox::Reminders, "Remind Me", "alarm-symbolic", 0);
+        self.add_mailbox(
+            Mailbox::Outbox,
+            &gettext("Outbox"),
+            "mail-outbox-symbolic",
+            0,
+        );
+        self.add_mailbox(
+            Mailbox::Scheduled,
+            &gettext("Send Later"),
+            "mail-send-symbolic",
+            0,
+        );
+        self.add_mailbox(
+            Mailbox::Reminders,
+            &gettext("Remind Me"),
+            "alarm-symbolic",
+            0,
+        );
         self.add_mailbox(
             Mailbox::FollowUp,
-            "Follow Up",
+            &gettext("Follow Up"),
             "mail-reply-sender-symbolic",
             0,
         );
@@ -249,10 +266,11 @@ impl Sidebar {
                 account_id: None,
                 folder,
             };
-            self.add_mailbox(mailbox, folder.name(), folder.icon(), 0);
+            self.add_mailbox(mailbox, &folder.name(), folder.icon(), 0);
         }
         if !extras.smart.is_empty() {
-            self.list.append(&section_title("Smart Mailboxes"));
+            self.list
+                .append(&section_title(&gettext("Smart Mailboxes")));
             for smart in &extras.smart {
                 let mailbox = Mailbox::Smart(smart.clone());
                 let row = self.add_mailbox(mailbox, &smart.name, "folder-saved-search-symbolic", 0);
@@ -272,16 +290,16 @@ impl Sidebar {
                 let mailbox = Mailbox::Label {
                     account_id: account.id,
                     label_id: label.into(),
-                    name: account_label_name(label).into(),
+                    name: account_label_name(label),
                 };
-                self.add_mailbox(mailbox, account_label_name(label), mailbox_icon(label), 1);
+                self.add_mailbox(mailbox, &account_label_name(label), mailbox_icon(label), 1);
             }
             for folder in Folder::ALL {
                 let mailbox = Mailbox::Folder {
                     account_id: Some(account.id),
                     folder,
                 };
-                self.add_mailbox(mailbox, folder.name(), folder.icon(), 1);
+                self.add_mailbox(mailbox, &folder.name(), folder.icon(), 1);
             }
             let mut user: Vec<&Label> = labels
                 .iter()
@@ -420,7 +438,7 @@ impl Sidebar {
             let inbox = Mailbox::Label {
                 account_id: heading.account_id,
                 label_id: system_label::INBOX.into(),
-                name: "Inbox".into(),
+                name: gettext("Inbox"),
             };
             heading
                 .count
@@ -469,13 +487,13 @@ fn smart_menu(row: &gtk::ListBoxRow, id: &str) {
         item.set_action_and_target_value(Some(action), Some(&target));
         item
     };
-    menu.append_item(&item("Edit…", "win.smart-edit"));
+    menu.append_item(&item(&gettext("Edit…"), "win.smart-edit"));
     let order = gio::Menu::new();
-    order.append_item(&item("Move Up", "win.smart-up"));
-    order.append_item(&item("Move Down", "win.smart-down"));
+    order.append_item(&item(&gettext("Move Up"), "win.smart-up"));
+    order.append_item(&item(&gettext("Move Down"), "win.smart-down"));
     menu.append_section(None, &order);
     let danger = gio::Menu::new();
-    danger.append_item(&item("Delete…", "win.smart-delete"));
+    danger.append_item(&item(&gettext("Delete…"), "win.smart-delete"));
     menu.append_section(None, &danger);
     context_menu(row, &menu);
 }
@@ -526,18 +544,18 @@ fn label_menu(row: &gtk::ListBoxRow, account_id: AccountId, label_id: &str) {
         item.set_action_and_target_value(Some(action), Some(&target));
         item
     };
-    menu.append_item(&item("Rename…", "win.label-rename"));
+    menu.append_item(&item(&gettext("Rename…"), "win.label-rename"));
     let colors = gio::Menu::new();
-    for (index, (name, _, _)) in LABEL_COLORS.iter().enumerate() {
-        let entry = gio::MenuItem::new(Some(name), None);
+    for index in 0..LABEL_COLORS.len() {
+        let entry = gio::MenuItem::new(Some(&label_color_name(index)), None);
         entry.set_action_and_target_value(
             Some("win.label-color"),
             Some(&(account_id, label_id.to_string(), index as i32).to_variant()),
         );
         colors.append_item(&entry);
     }
-    menu.append_submenu(Some("Color"), &colors);
-    menu.append_item(&item("Delete…", "win.label-delete"));
+    menu.append_submenu(Some(&gettext("Color")), &colors);
+    menu.append_item(&item(&gettext("Delete…"), "win.label-delete"));
     context_menu(row, &menu);
 }
 
@@ -595,15 +613,18 @@ fn heading(account: &Account, name: Option<&String>) -> (gtk::ListBoxRow, gtk::I
             .build(),
     );
     let status = match account.state {
-        AccountState::NeedsReauth => {
-            Some(("dialog-warning-symbolic", "Sign in again to keep syncing"))
-        }
-        AccountState::Offline => Some(("network-offline-symbolic", "Offline")),
+        AccountState::NeedsReauth => Some((
+            "dialog-warning-symbolic",
+            gettext("Sign in again to keep syncing"),
+        )),
+        AccountState::Offline => Some(("network-offline-symbolic", gettext("Offline"))),
         AccountState::BackingOff => Some((
             "network-offline-symbolic",
-            "Gmail is not responding; retrying",
+            gettext("Gmail is not responding; retrying"),
         )),
-        AccountState::Bootstrapping => Some(("mail-send-receive-symbolic", "Downloading mail")),
+        AccountState::Bootstrapping => {
+            Some(("mail-send-receive-symbolic", gettext("Downloading mail")))
+        }
         AccountState::Ok => None,
     };
     let count = gtk::Label::builder()
@@ -629,34 +650,37 @@ fn heading(account: &Account, name: Option<&String>) -> (gtk::ListBoxRow, gtk::I
         item.set_action_and_target_value(Some(action), Some(&account.id.to_variant()));
         item
     };
-    menu.append_item(&item("Check for Mail", "win.account-check"));
+    menu.append_item(&item(&gettext("Check for Mail"), "win.account-check"));
     let settings = gio::Menu::new();
-    settings.append_item(&item("Automatic Reply…", "win.account-vacation"));
-    settings.append_item(&item("Signature…", "win.account-signature"));
-    settings.append_item(&item("Rules…", "win.account-rules"));
-    settings.append_item(&item("Hide My Email…", "win.account-hide-my-email"));
-    settings.append_item(&item("New Label…", "win.account-new-label"));
+    settings.append_item(&item(&gettext("Automatic Reply…"), "win.account-vacation"));
+    settings.append_item(&item(&gettext("Signature…"), "win.account-signature"));
+    settings.append_item(&item(&gettext("Rules…"), "win.account-rules"));
+    settings.append_item(&item(
+        &gettext("Hide My Email…"),
+        "win.account-hide-my-email",
+    ));
+    settings.append_item(&item(&gettext("New Label…"), "win.account-new-label"));
     menu.append_section(None, &settings);
     let look = gio::Menu::new();
-    look.append_item(&item("Rename…", "win.account-rename"));
+    look.append_item(&item(&gettext("Rename…"), "win.account-rename"));
     let colors = gio::Menu::new();
-    for (index, color) in PALETTE_NAMES.iter().enumerate() {
-        let entry = gio::MenuItem::new(Some(color), None);
+    for index in 0..PALETTE.len() {
+        let entry = gio::MenuItem::new(Some(&palette_name(index)), None);
         entry.set_action_and_target_value(
             Some("win.account-color"),
             Some(&(account.id, index as i32).to_variant()),
         );
         colors.append_item(&entry);
     }
-    look.append_submenu(Some("Color"), &colors);
-    look.append_item(&item("Move Up", "win.account-up"));
-    look.append_item(&item("Move Down", "win.account-down"));
+    look.append_submenu(Some(&gettext("Color")), &colors);
+    look.append_item(&item(&gettext("Move Up"), "win.account-up"));
+    look.append_item(&item(&gettext("Move Down"), "win.account-down"));
     menu.append_section(None, &look);
     let access = gio::Menu::new();
-    access.append_item(&item("Sign In Again…", "win.account-reconnect"));
+    access.append_item(&item(&gettext("Sign In Again…"), "win.account-reconnect"));
     menu.append_section(None, &access);
     let danger = gio::Menu::new();
-    danger.append_item(&item("Remove Account…", "win.account-remove"));
+    danger.append_item(&item(&gettext("Remove Account…"), "win.account-remove"));
     menu.append_section(None, &danger);
     content.append(
         &gtk::MenuButton::builder()
@@ -664,7 +688,7 @@ fn heading(account: &Account, name: Option<&String>) -> (gtk::ListBoxRow, gtk::I
             .menu_model(&menu)
             .css_classes(["flat", "circular"])
             .valign(gtk::Align::Center)
-            .tooltip_text("Account options")
+            .tooltip_text(gettext("Account options"))
             .build(),
     );
     let row = gtk::ListBoxRow::builder()
@@ -672,9 +696,10 @@ fn heading(account: &Account, name: Option<&String>) -> (gtk::ListBoxRow, gtk::I
         .selectable(false)
         .activatable(true)
         .build();
-    row.update_property(&[gtk::accessible::Property::Label(&format!(
-        "{}, show or hide mailboxes",
-        account.email
-    ))]);
+    let described = fill(
+        &gettext("{account}, show or hide mailboxes"),
+        &[("account", &account.email)],
+    );
+    row.update_property(&[gtk::accessible::Property::Label(&described)]);
     (row, chevron, count)
 }

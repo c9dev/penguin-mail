@@ -11,9 +11,11 @@ use mailrs_sync::config::SyncConfig;
 
 use crate::app::App;
 use crate::autostart;
+use crate::language;
 use crate::settings::{
-    CACHE_CHOICES, Change, Choice, POLL_CHOICES, Settings, WINDOW_CHOICES, nearest,
+    Change, Choice, Settings, cache_choices, nearest, poll_choices, window_choices,
 };
+use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 /// Shows Preferences. With `signature_of`, opens on that account's signature.
 pub fn present(
@@ -58,57 +60,67 @@ pub fn present_page(
 
 fn general_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
     let page = adw::PreferencesPage::builder()
-        .title("General")
+        .title(gettext("General"))
         .icon_name("emblem-system-symbolic")
         .build();
 
-    let reading = adw::PreferencesGroup::builder().title("Reading").build();
+    let reading = adw::PreferencesGroup::builder()
+        .title(gettext("Reading"))
+        .build();
     reading.add(&switch(
         app,
-        "Group Messages into Conversations",
-        Some("Show a thread's replies together instead of one row per message"),
+        &gettext("Group Messages into Conversations"),
+        Some(&gettext(
+            "Show a thread's replies together instead of one row per message",
+        )),
         settings.threading,
         Change::Threading,
     ));
     reading.add(&switch(
         app,
-        "Group Inbox into Categories",
-        Some("Sort the inbox into Primary, Updates, Promotions, and Social, as Gmail does"),
+        &gettext("Group Inbox into Categories"),
+        Some(&gettext(
+            "Sort the inbox into Primary, Updates, Promotions, and Social, as Gmail does",
+        )),
         settings.inbox_categories,
         Change::InboxCategories,
     ));
     reading.add(&combo(
         app,
-        "Open the Inbox On",
-        Some("Which category the window starts on"),
+        &gettext("Open the Inbox On"),
+        Some(&gettext("Which category the window starts on")),
         settings.default_category,
         Change::DefaultCategory,
     ));
     reading.add(&switch(
         app,
-        "Suggest Follow-Ups",
-        Some("List mail you sent that has had no reply for three days"),
+        &gettext("Suggest Follow-Ups"),
+        Some(&gettext(
+            "List mail you sent that has had no reply for three days",
+        )),
         settings.suggest_follow_ups,
         Change::SuggestFollowUps,
     ));
     reading.add(&combo(
         app,
-        "Mark as Read",
+        &gettext("Mark as Read"),
         None,
         settings.mark_read,
         Change::MarkRead,
     ));
     reading.add(&combo(
         app,
-        "Remote Images",
-        Some("Loading them can tell senders when you read their mail"),
+        &gettext("Remote Images"),
+        Some(&gettext(
+            "Loading them can tell senders when you read their mail",
+        )),
         settings.remote_images,
         Change::RemoteImages,
     ));
     reading.add(&allowed_image_senders(app));
     reading.add(&combo(
         app,
-        "Text Size",
+        &gettext("Text Size"),
         None,
         settings.text_size,
         Change::TextSize,
@@ -116,47 +128,50 @@ fn general_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
     page.add(&reading);
 
     let contacts = adw::PreferencesGroup::builder()
-        .title("Contacts")
-        .description(
+        .title(gettext("Contacts"))
+        .description(gettext(
             "Penguin Mail can read the contacts of each Google account: names, email \
              addresses, photos, organizations, and phone numbers. It uses them to suggest \
              recipients, to show faces beside mail, and to fill the card behind a sender's \
              name. What it reads stays on this computer, and turning this off deletes it.",
-        )
+        ))
         .build();
     contacts.add(&switch_with(
         app,
-        "Use Google Contacts",
-        Some("Google asks your permission the first time"),
+        &gettext("Use Google Contacts"),
+        Some(&gettext("Google asks your permission the first time")),
         settings.contacts,
         |app, on| app.set_contacts(on),
     ));
     page.add(&contacts);
 
-    let appearance = adw::PreferencesGroup::builder().title("Appearance").build();
+    let appearance = adw::PreferencesGroup::builder()
+        .title(gettext("Appearance"))
+        .build();
     appearance.add(&combo(
         app,
-        "Style",
+        &gettext("Style"),
         None,
         settings.color_scheme,
         Change::ColorScheme,
     ));
+    appearance.add(&language_row(app, settings));
     page.add(&appearance);
 
     let notifications = adw::PreferencesGroup::builder()
-        .title("Notifications")
+        .title(gettext("Notifications"))
         .build();
     let enabled = switch(
         app,
-        "Notify About New Mail",
+        &gettext("Notify About New Mail"),
         None,
         settings.notifications,
         Change::Notifications,
     );
     let previews = switch(
         app,
-        "Show Sender and Subject",
-        Some("Turn off to see only how much mail arrived"),
+        &gettext("Show Sender and Subject"),
+        Some(&gettext("Turn off to see only how much mail arrived")),
         settings.notification_previews,
         Change::NotificationPreviews,
     );
@@ -166,8 +181,8 @@ fn general_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         .build();
     let vips_only = switch(
         app,
-        "Only for VIPs",
-        Some("Stay quiet about mail from everyone else"),
+        &gettext("Only for VIPs"),
+        Some(&gettext("Stay quiet about mail from everyone else")),
         settings.notify_vips_only,
         Change::NotifyVipsOnly,
     );
@@ -176,13 +191,15 @@ fn general_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         .sync_create()
         .build();
     let actions = adw::ExpanderRow::builder()
-        .title("Buttons")
-        .subtitle("What a notification offers besides opening the conversation")
+        .title(gettext("Buttons"))
+        .subtitle(gettext(
+            "What a notification offers besides opening the conversation",
+        ))
         .build();
     for button in crate::notify::Button::ALL {
         actions.add_row(&switch(
             app,
-            button.label(),
+            &button.label(),
             None,
             settings.notification_buttons.contains(&button),
             move |show| Change::NotificationButton { button, show },
@@ -208,13 +225,15 @@ fn writing_page(
     dialog: &adw::PreferencesDialog,
 ) -> adw::PreferencesPage {
     let page = adw::PreferencesPage::builder()
-        .title("Writing")
+        .title(gettext("Writing"))
         .icon_name("document-edit-symbolic")
         .build();
     if accounts.is_empty() {
         let empty = adw::PreferencesGroup::builder()
-            .title("No Accounts Yet")
-            .description("Add an account to choose a sender and write signatures.")
+            .title(gettext("No Accounts Yet"))
+            .description(gettext(
+                "Add an account to choose a sender and write signatures.",
+            ))
             .build();
         page.add(&empty);
         page.add(&super::templates::group(app));
@@ -222,7 +241,7 @@ fn writing_page(
     }
 
     let sending = adw::PreferencesGroup::builder()
-        .title("New Messages")
+        .title(gettext("New Messages"))
         .build();
     let emails: Vec<String> = accounts.iter().map(|a| a.email.clone()).collect();
     let labels: Vec<&str> = emails.iter().map(String::as_str).collect();
@@ -232,8 +251,10 @@ fn writing_page(
         .and_then(|d| emails.iter().position(|e| e.eq_ignore_ascii_case(d)))
         .unwrap_or(0);
     let from = adw::ComboRow::builder()
-        .title("Send New Messages From")
-        .subtitle("Replies always come from the account that received the message")
+        .title(gettext("Send New Messages From"))
+        .subtitle(gettext(
+            "Replies always come from the account that received the message",
+        ))
         .model(&gtk::StringList::new(&labels))
         .selected(current as u32)
         .build();
@@ -249,30 +270,38 @@ fn writing_page(
     sending.add(&from);
     sending.add(&combo(
         app,
-        "New Messages Start As",
-        Some("Rich text styles the words themselves; Markdown shows its marks"),
+        &gettext("New Messages Start As"),
+        Some(&gettext(
+            "Rich text styles the words themselves; Markdown shows its marks",
+        )),
         settings.compose_format,
         Change::ComposeFormat,
     ));
     sending.add(&combo(
         app,
-        "Undo Send",
-        Some("How long you can take a message back after sending it"),
+        &gettext("Undo Send"),
+        Some(&gettext(
+            "How long you can take a message back after sending it",
+        )),
         settings.undo_send,
         Change::UndoSend,
     ));
     sending.add(&switch(
         app,
-        "Check for Missing Attachments",
-        Some("Ask before sending a message that promises a file and carries none"),
+        &gettext("Check for Missing Attachments"),
+        Some(&gettext(
+            "Ask before sending a message that promises a file and carries none",
+        )),
         settings.check_attachments,
         Change::CheckAttachments,
     ));
     page.add(&sending);
 
     let signatures = adw::PreferencesGroup::builder()
-        .title("Signatures")
-        .description("Added below new messages and above quoted text in replies. Markdown works.")
+        .title(gettext("Signatures"))
+        .description(gettext(
+            "Added below new messages and above quoted text in replies. Markdown works.",
+        ))
         .build();
     for account in accounts {
         let text = settings.signature(&account.email).to_string();
@@ -299,7 +328,7 @@ fn writing_page(
             .build();
         row.add_row(&frame);
         let import = gtk::Button::builder()
-            .label("Import from Gmail")
+            .label(gettext("Import from Gmail"))
             .halign(gtk::Align::End)
             .margin_top(6)
             .margin_bottom(6)
@@ -316,7 +345,7 @@ fn writing_page(
         import.connect_clicked(move |button| {
             let Some(app) = weak.upgrade() else { return };
             let Some(sync) = app.core.account(account_id) else {
-                toasts.add_toast(adw::Toast::new("This account is not syncing yet"));
+                toasts.add_toast(adw::Toast::new(&gettext("This account is not syncing yet")));
                 return;
             };
             button.set_sensitive(false);
@@ -329,13 +358,19 @@ fn writing_page(
                 {
                     Ok(Some(signature)) => {
                         target.set_text(&signature);
-                        toasts.add_toast(adw::Toast::new("Imported the signature from Gmail"));
+                        toasts.add_toast(adw::Toast::new(&gettext(
+                            "Imported the signature from Gmail",
+                        )));
                     }
-                    Ok(None) => {
-                        toasts.add_toast(adw::Toast::new("Gmail has no signature for this account"))
-                    }
+                    Ok(None) => toasts.add_toast(adw::Toast::new(&gettext(
+                        "Gmail has no signature for this account",
+                    ))),
                     Err(err) => {
-                        toasts.add_toast(adw::Toast::new(&format!("Could not import: {err}")))
+                        let said = fill(
+                            &gettext("Could not import: {reason}"),
+                            &[("reason", &err.to_string())],
+                        );
+                        toasts.add_toast(adw::Toast::new(&said));
                     }
                 }
                 button.set_sensitive(true);
@@ -380,35 +415,37 @@ fn protection_group(
         return None;
     }
     let group = adw::PreferencesGroup::builder()
-        .title("Signing and Encryption")
-        .description(
-            "Penguin Mail signs and encrypts through GnuPG, which holds your keys and asks for \
-             your passphrase itself.",
-        )
+        .title(gettext("Signing and Encryption"))
+        .description(gettext(
+            "Penguin Mail signs and encrypts through GnuPG, which holds your keys and \
+             asks for your passphrase itself.",
+        ))
         .build();
     let keys = adw::ActionRow::builder()
-        .title("Your OpenPGP Keys")
-        .subtitle("Asking gpg…")
+        .title(gettext("Your OpenPGP Keys"))
+        .subtitle(gettext("Asking gpg…"))
         .visible(app.core.has_gpg())
         .build();
     let certificates = adw::ActionRow::builder()
-        .title("Your S/MIME Certificates")
-        .subtitle("Asking gpgsm…")
+        .title(gettext("Your S/MIME Certificates"))
+        .subtitle(gettext("Asking gpgsm…"))
         .visible(app.core.has_gpgsm())
         .build();
     group.add(&keys);
     group.add(&certificates);
     group.add(&switch(
         app,
-        "Sign My Messages by Default",
-        Some("New messages open with Sign turned on"),
+        &gettext("Sign My Messages by Default"),
+        Some(&gettext("New messages open with Sign turned on")),
         settings.sign_by_default,
         Change::SignByDefault,
     ));
     group.add(&switch(
         app,
-        "Encrypt When I Can",
-        Some("Turn Encrypt on as soon as every recipient has a key or a certificate"),
+        &gettext("Encrypt When I Can"),
+        Some(&gettext(
+            "Turn Encrypt on as soon as every recipient has a key or a certificate",
+        )),
         settings.encrypt_when_possible,
         Change::EncryptWhenPossible,
     ));
@@ -429,7 +466,10 @@ fn protection_group(
             let wanted = addresses.clone();
             match app.core.gpg(move |pgp| pgp.keys_for(&wanted)).await {
                 Ok(held) => keys.set_subtitle(&crate::pgp::own_keys(&held)),
-                Err(err) => keys.set_subtitle(&format!("gpg could not be asked: {err}")),
+                Err(err) => keys.set_subtitle(&fill(
+                    &gettext("gpg could not be asked: {reason}"),
+                    &[("reason", &err.to_string())],
+                )),
             }
         }
         if app.core.has_gpgsm() {
@@ -445,16 +485,19 @@ fn protection_group(
                 .await
             {
                 Ok(held) => certificates.set_subtitle(&crate::smime::own_certificates(&held)),
-                Err(err) => certificates.set_subtitle(&format!("gpgsm could not be asked: {err}")),
+                Err(err) => certificates.set_subtitle(&fill(
+                    &gettext("gpgsm could not be asked: {reason}"),
+                    &[("reason", &err.to_string())],
+                )),
             }
         }
-        filling.set_description(Some(&format!(
-            "Penguin Mail signs and encrypts through {}, which holds your keys and asks for \
-             your passphrase itself.",
-            crate::pgp::joined(
-                &programs.iter().map(String::as_str).collect::<Vec<_>>(),
-                "and"
-            )
+        let named = crate::pgp::joined(&programs.iter().map(String::as_str).collect::<Vec<_>>());
+        filling.set_description(Some(&fill(
+            &gettext(
+                "Penguin Mail signs and encrypts through {programs}, which holds your \
+                 keys and asks for your passphrase itself.",
+            ),
+            &[("programs", &named)],
         )));
     });
     Some(group)
@@ -482,14 +525,18 @@ fn spelling_group(
 ) -> adw::PreferencesGroup {
     let installed = app.installed_dictionaries();
     let group = adw::PreferencesGroup::builder()
-        .title("Spelling")
+        .title(gettext("Spelling"))
         .description(if installed.is_empty() {
-            "No dictionaries are installed, so Penguin Mail is not checking \
-             spelling. Install a Hunspell dictionary, such as hunspell-en-us \
-             or hunspell-pt-pt, and reopen the composer."
-                .to_string()
+            gettext(
+                "No dictionaries are installed, so Penguin Mail is not checking \
+                 spelling. Install a Hunspell dictionary, such as hunspell-en-us \
+                 or hunspell-pt-pt, and reopen the composer.",
+            )
         } else {
-            format!("Dictionaries found: {}.", installed.join(", "))
+            fill(
+                &gettext("Dictionaries found: {languages}."),
+                &[("languages", &installed.join(", "))],
+            )
         })
         .build();
     if installed.is_empty() {
@@ -499,9 +546,9 @@ fn spelling_group(
     // dictionary per row, then both English and Portuguese together for
     // anyone who writes in two languages.
     let mut choices: Vec<(String, Vec<String>)> = vec![(
-        format!(
-            "Follow the System Language ({})",
-            crate::ui::composer::spell::locale_language()
+        fill(
+            &gettext("Follow the System Language ({language})"),
+            &[("language", &crate::ui::composer::spell::locale_language())],
         ),
         Vec::new(),
     )];
@@ -511,7 +558,8 @@ fn spelling_group(
             .map(|language| (language.clone(), vec![language.clone()])),
     );
     if installed.len() > 1 {
-        choices.push((installed.join(" and "), installed.clone()));
+        let both = crate::pgp::joined(&installed.iter().map(String::as_str).collect::<Vec<_>>());
+        choices.push((both, installed.clone()));
     }
     for account in accounts {
         let current = settings
@@ -525,7 +573,7 @@ fn spelling_group(
             .position(|(_, languages)| *languages == current)
             .unwrap_or(0);
         let row = adw::ComboRow::builder()
-            .title("Check Spelling In")
+            .title(gettext("Check Spelling In"))
             .subtitle(&account.email)
             .model(&gtk::StringList::new(&labels))
             .selected(selected as u32)
@@ -549,46 +597,59 @@ fn spelling_group(
 
 fn sync_page(app: &Rc<App>, pending: &Rc<RefCell<SyncConfig>>) -> adw::PreferencesPage {
     let page = adw::PreferencesPage::builder()
-        .title("Sync")
+        .title(gettext("Sync"))
         .icon_name("mail-send-receive-symbolic")
         .build();
     let current = pending.borrow().clone();
 
-    let checking = adw::PreferencesGroup::builder().title("Checking").build();
+    let checking = adw::PreferencesGroup::builder()
+        .title(gettext("Checking"))
+        .build();
     let poll = current.poll_seconds.map_or(30, |s| s as i64);
+    let polls = poll_choices();
     checking.add(&sync_combo(
-        &POLL_CHOICES,
-        "Check for New Mail",
+        &polls,
+        &gettext("Check for New Mail"),
         None,
-        nearest(&POLL_CHOICES, poll),
+        nearest(&polls, poll),
         pending,
         |c, v| c.poll_seconds = Some(v as u64),
     ));
     page.add(&checking);
 
-    let storage = adw::PreferencesGroup::builder().title("Storage").build();
+    let storage = adw::PreferencesGroup::builder()
+        .title(gettext("Storage"))
+        .build();
+    let windows = window_choices();
     storage.add(&sync_combo(
-        &WINDOW_CHOICES,
-        "Keep Mail on This Computer For",
-        Some("Everything in your inbox stays too, and older mail remains searchable"),
-        nearest(&WINDOW_CHOICES, current.window_days.unwrap_or(30)),
+        &windows,
+        &gettext("Keep Mail on This Computer For"),
+        Some(&gettext(
+            "Everything in your inbox stays too, and older mail remains searchable",
+        )),
+        nearest(&windows, current.window_days.unwrap_or(30)),
         pending,
         |c, v| c.window_days = Some(v),
     ));
+    let caches = cache_choices();
     storage.add(&sync_combo(
-        &CACHE_CHOICES,
-        "Message Cache",
-        Some("Bodies of mail you have read, kept for opening offline"),
-        nearest(&CACHE_CHOICES, current.body_cache_mb.unwrap_or(1024)),
+        &caches,
+        &gettext("Message Cache"),
+        Some(&gettext(
+            "Bodies of mail you have read, kept for opening offline",
+        )),
+        nearest(&caches, current.body_cache_mb.unwrap_or(1024)),
         pending,
         |c, v| c.body_cache_mb = Some(v),
     ));
     page.add(&storage);
 
-    let startup = adw::PreferencesGroup::builder().title("Startup").build();
+    let startup = adw::PreferencesGroup::builder()
+        .title(gettext("Startup"))
+        .build();
     let login = adw::SwitchRow::builder()
-        .title("Start in the Tray at Login")
-        .subtitle("Penguin Mail keeps syncing with no window open")
+        .title(gettext("Start in the Tray at Login"))
+        .subtitle(gettext("Penguin Mail keeps syncing with no window open"))
         .build();
     match autostart::path() {
         Some(path) if !app.core.demo => {
@@ -602,7 +663,7 @@ fn sync_page(app: &Rc<App>, pending: &Rc<RefCell<SyncConfig>>) -> adw::Preferenc
         }
         _ => {
             login.set_sensitive(false);
-            login.set_subtitle("Not available in demo mode");
+            login.set_subtitle(&gettext("Not available in demo mode"));
         }
     }
     startup.add(&login);
@@ -615,8 +676,8 @@ fn sync_page(app: &Rc<App>, pending: &Rc<RefCell<SyncConfig>>) -> adw::Preferenc
 /// never waits on it.
 fn allowed_image_senders(app: &Rc<App>) -> adw::ExpanderRow {
     let row = adw::ExpanderRow::builder()
-        .title("Senders Who May Load Images")
-        .subtitle("Nobody yet")
+        .title(gettext("Senders Who May Load Images"))
+        .subtitle(gettext("Nobody yet"))
         .build();
     let (app, shown) = (Rc::clone(app), row.clone());
     glib::spawn_future_local(async move {
@@ -624,22 +685,26 @@ fn allowed_image_senders(app: &Rc<App>) -> adw::ExpanderRow {
             return;
         };
         shown.set_subtitle(&match list.len() {
-            0 => "Nobody yet".to_string(),
-            1 => "One sender".to_string(),
-            many => format!("{many} senders"),
+            0 => gettext("Nobody yet"),
+            count => fill_plural(
+                "{count} sender",
+                "{count} senders",
+                count,
+                &[("count", &count.to_string())],
+            ),
         });
         for entry in list {
             let item = adw::ActionRow::builder()
                 .title(glib::markup_escape_text(&entry.sender))
                 .subtitle(if entry.whole_domain {
-                    "Anyone at this domain"
+                    gettext("Anyone at this domain")
                 } else {
-                    "This address"
+                    gettext("This address")
                 })
                 .build();
             let remove = gtk::Button::builder()
                 .icon_name("user-trash-symbolic")
-                .tooltip_text("Stop Loading Images from This Sender")
+                .tooltip_text(gettext("Stop Loading Images from This Sender"))
                 .valign(gtk::Align::Center)
                 .css_classes(["flat"])
                 .build();
@@ -711,6 +776,30 @@ fn switch_with(
     row
 }
 
+/// The language the interface speaks. Follow System comes first and is
+/// what a fresh copy does; the rows under it are the translations this
+/// computer has, so one that is not installed is never offered.
+fn language_row(app: &Rc<App>, settings: &Settings) -> adw::ComboRow {
+    let languages = Rc::new(language::choices());
+    let mut labels = vec![gettext("Follow System")];
+    labels.extend(languages.iter().map(|language| language.name.clone()));
+    let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
+    let row = adw::ComboRow::builder()
+        .title(gettext("Language"))
+        .subtitle(gettext("Penguin Mail shows a new language after a restart"))
+        .model(&gtk::StringList::new(&labels))
+        .selected(language::row_of(&languages, &settings.language))
+        .build();
+    let weak = Rc::downgrade(app);
+    row.connect_selected_notify(move |row| {
+        if let Some(app) = weak.upgrade() {
+            let code = language::code_at(&languages, row.selected());
+            app.change_settings(Change::Language(code));
+        }
+    });
+    row
+}
+
 fn combo<T: Choice>(
     app: &Rc<App>,
     title: &str,
@@ -718,7 +807,8 @@ fn combo<T: Choice>(
     current: T,
     change: impl Fn(T) -> Change + 'static,
 ) -> adw::ComboRow {
-    let labels: Vec<&str> = T::ALL.iter().map(|c| c.label()).collect();
+    let labels: Vec<String> = T::ALL.iter().map(|c| c.label()).collect();
+    let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
     let row = adw::ComboRow::builder()
         .title(title)
         .model(&gtk::StringList::new(&labels))
@@ -737,14 +827,14 @@ fn combo<T: Choice>(
 }
 
 fn sync_combo<T: Copy + 'static>(
-    choices: &'static [(T, &'static str)],
+    choices: &[(T, String)],
     title: &str,
     subtitle: Option<&str>,
     selected: u32,
     pending: &Rc<RefCell<SyncConfig>>,
     set: impl Fn(&mut SyncConfig, T) + 'static,
 ) -> adw::ComboRow {
-    let labels: Vec<&str> = choices.iter().map(|(_, label)| *label).collect();
+    let labels: Vec<&str> = choices.iter().map(|(_, label)| label.as_str()).collect();
     let row = adw::ComboRow::builder()
         .title(title)
         .model(&gtk::StringList::new(&labels))
@@ -754,8 +844,9 @@ fn sync_combo<T: Copy + 'static>(
         row.set_subtitle(subtitle);
     }
     let pending = Rc::clone(pending);
+    let values: Vec<T> = choices.iter().map(|(value, _)| *value).collect();
     row.connect_selected_notify(move |row| {
-        if let Some((value, _)) = choices.get(row.selected() as usize) {
+        if let Some(value) = values.get(row.selected() as usize) {
             set(&mut pending.borrow_mut(), *value);
         }
     });
@@ -767,5 +858,5 @@ fn preview(signature: &str) -> String {
     signature
         .lines()
         .find(|l| !l.trim().is_empty())
-        .map_or_else(|| "No signature".to_string(), |l| l.trim().to_string())
+        .map_or_else(|| gettext("No signature"), |l| l.trim().to_string())
 }

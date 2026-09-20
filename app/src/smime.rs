@@ -15,6 +15,7 @@ use mailrs_smime::{Chain, Recipient, Signature, Smime, SmimeError, Verdict};
 use serde::{Deserialize, Serialize};
 
 use crate::pgp::{self, Mark, Read, Tone};
+use mailrs_domain::translate::{fill, gettext};
 
 /// Which call of the engine one message needs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -171,23 +172,27 @@ pub fn signing(held: &Held) -> Standard {
 /// to say. `None` means every recipient has a certificate.
 pub fn cannot_encrypt(held: &[Recipient]) -> Option<String> {
     if held.is_empty() {
-        return Some("Add a recipient whose certificate gpgsm holds.".into());
+        return Some(gettext("Add a recipient whose certificate gpgsm holds."));
     }
     let missing: Vec<&str> = held
         .iter()
         .filter(|recipient| recipient.certificate.is_none())
         .map(|recipient| recipient.address.as_str())
         .collect();
-    (!missing.is_empty())
-        .then(|| format!("gpgsm holds no certificate for {}.", pgp::listed(&missing)))
+    (!missing.is_empty()).then(|| {
+        fill(
+            &gettext("gpgsm holds no certificate for {addresses}."),
+            &[("addresses", &pgp::listed(&missing))],
+        )
+    })
 }
 
 /// What the Encrypt button says once it works, which names the standard
 /// the message would go out under rather than making the writer guess.
-pub fn encrypting_with(standard: Standard) -> &'static str {
+pub fn encrypting_with(standard: Standard) -> String {
     match standard {
-        Standard::Pgp => "Encrypt this message to the recipients' keys",
-        Standard::Smime => "Encrypt this message to the recipients' certificates",
+        Standard::Pgp => gettext("Encrypt this message to the recipients' keys"),
+        Standard::Smime => gettext("Encrypt this message to the recipients' certificates"),
     }
 }
 
@@ -203,15 +208,17 @@ pub fn own_certificates(held: &[Recipient]) -> String {
     };
     let (mine, missing) = (addresses(true), addresses(false));
     match (mine.as_slice(), missing.as_slice()) {
-        ([], _) => "gpgsm holds no certificate for any of the addresses you send from.".into(),
-        (mine, []) => format!(
-            "gpgsm holds a certificate for {}.",
-            pgp::joined(mine, "and")
+        ([], _) => gettext("gpgsm holds no certificate for any of the addresses you send from."),
+        (mine, []) => fill(
+            &gettext("gpgsm holds a certificate for {addresses}."),
+            &[("addresses", &pgp::joined(mine))],
         ),
-        (mine, missing) => format!(
-            "gpgsm holds a certificate for {}, and none for {}.",
-            pgp::joined(mine, "and"),
-            pgp::joined(missing, "and")
+        (mine, missing) => fill(
+            &gettext("gpgsm holds a certificate for {addresses}, and none for {without}."),
+            &[
+                ("addresses", &pgp::joined(mine)),
+                ("without", &pgp::joined(missing)),
+            ],
         ),
     }
 }
@@ -277,53 +284,64 @@ fn blob(raw: &[u8]) -> Option<&[u8]> {
 /// the other.
 fn signed(signature: &Signature) -> Mark {
     let who = signer(signature);
+    let signer_values = [("signer", who.as_str())];
     match signature.verdict {
         Verdict::Good => Mark {
-            title: format!("Signed by {who}"),
-            detail: Some(vouching(signature.chain).into()),
+            title: fill(&gettext("Signed by {signer}"), &signer_values),
+            detail: Some(vouching(signature.chain)),
             tone: match signature.chain {
                 Chain::Trusted => Tone::Good,
                 _ => Tone::Unchecked,
             },
         },
         Verdict::Bad => Mark {
-            title: "This message changed after it was signed".into(),
-            detail: Some(format!(
-                "The signature of {who} does not match what arrived."
+            title: gettext("This message changed after it was signed"),
+            detail: Some(fill(
+                &gettext("The signature of {signer} does not match what arrived."),
+                &signer_values,
             )),
             tone: Tone::Bad,
         },
         Verdict::ExpiredCertificate => Mark {
-            title: format!("Signed by {who}, whose certificate has run out"),
-            detail: Some(
-                "The text is as it was written, and the certificate behind it has expired.".into(),
+            title: fill(
+                &gettext("Signed by {signer}, whose certificate has run out"),
+                &signer_values,
             ),
+            detail: Some(gettext(
+                "The text is as it was written, and the certificate behind it has expired.",
+            )),
             tone: Tone::Unchecked,
         },
         Verdict::RevokedCertificate => Mark {
-            title: format!("Signed by {who}, whose certificate was taken back"),
-            detail: Some(
-                "Whoever issued it revoked it, so it says nothing about who wrote this.".into(),
+            title: fill(
+                &gettext("Signed by {signer}, whose certificate was taken back"),
+                &signer_values,
             ),
+            detail: Some(gettext(
+                "Whoever issued it revoked it, so it says nothing about who wrote this.",
+            )),
             tone: Tone::Bad,
         },
         Verdict::Expired => Mark {
-            title: format!("Signed by {who}, and the signature has run out"),
-            detail: Some(
-                "It carried a date to stop being good on, and that date has passed.".into(),
+            title: fill(
+                &gettext("Signed by {signer}, and the signature has run out"),
+                &signer_values,
             ),
+            detail: Some(gettext(
+                "It carried a date to stop being good on, and that date has passed.",
+            )),
             tone: Tone::Unchecked,
         },
         Verdict::NoCertificate => Mark {
-            title: "Signed by a certificate this computer does not hold".into(),
-            detail: Some(
-                "The message carried none either, so there is nothing here to check it against."
-                    .into(),
-            ),
+            title: gettext("Signed by a certificate this computer does not hold"),
+            detail: Some(gettext(
+                "The message carried none either, so there is nothing here to check it \
+                 against.",
+            )),
             tone: Tone::Unchecked,
         },
         Verdict::Unchecked => Mark {
-            title: "gpgsm could not check this signature".into(),
+            title: gettext("gpgsm could not check this signature"),
             detail: None,
             tone: Tone::Unchecked,
         },
@@ -335,8 +353,11 @@ fn signed(signature: &Signature) -> Mark {
 fn enveloped(signature: Option<&Signature>, files: usize) -> Mark {
     let mut mark = match signature {
         Some(signature) if signature.verdict == Verdict::Good => Mark {
-            title: format!("Encrypted, and signed by {}", signer(signature)),
-            detail: Some(vouching(signature.chain).into()),
+            title: fill(
+                &gettext("Encrypted, and signed by {signer}"),
+                &[("signer", &signer(signature))],
+            ),
+            detail: Some(vouching(signature.chain)),
             tone: match signature.chain {
                 Chain::Trusted => Tone::Good,
                 _ => Tone::Unchecked,
@@ -345,19 +366,24 @@ fn enveloped(signature: Option<&Signature>, files: usize) -> Mark {
         Some(signature) => {
             let found = signed(signature);
             Mark {
-                title: format!("Encrypted. {}", found.title),
+                title: fill(&gettext("Encrypted. {what}"), &[("what", &found.title)]),
                 ..found
             }
         }
         None => Mark {
-            title: "This message arrived encrypted".into(),
-            detail: Some("Nobody signed it, so it says nothing about who sent it.".into()),
+            title: gettext("This message arrived encrypted"),
+            detail: Some(gettext(
+                "Nobody signed it, so it says nothing about who sent it.",
+            )),
             tone: Tone::Unchecked,
         },
     };
     if let Some(line) = pgp::files_line(files) {
         mark.detail = Some(match mark.detail {
-            Some(detail) => format!("{detail} {line}"),
+            Some(detail) => fill(
+                &gettext("{detail} {files}"),
+                &[("detail", &detail), ("files", &line)],
+            ),
             None => line,
         });
     }
@@ -368,13 +394,15 @@ fn enveloped(signature: Option<&Signature>, files: usize) -> Mark {
 fn refused(err: &SmimeError) -> Mark {
     match err {
         SmimeError::NotForYou => Mark {
-            title: "This message is encrypted to a certificate you do not hold".into(),
-            detail: Some("Whoever sent it used a certificate gpgsm has no secret key for.".into()),
+            title: gettext("This message is encrypted to a certificate you do not hold"),
+            detail: Some(gettext(
+                "Whoever sent it used a certificate gpgsm has no secret key for.",
+            )),
             tone: Tone::Unchecked,
         },
         SmimeError::NotSmime => unreadable(),
         other => Mark {
-            title: "gpgsm could not open this message".into(),
+            title: gettext("gpgsm could not open this message"),
             detail: Some(other.to_string()),
             tone: Tone::Unchecked,
         },
@@ -385,8 +413,10 @@ fn refused(err: &SmimeError) -> Mark {
 /// keeps them.
 fn unreadable() -> Mark {
     Mark {
-        title: "This message says it is S/MIME and is not".into(),
-        detail: Some("Its parts are not where a signed or encrypted message keeps them.".into()),
+        title: gettext("This message says it is S/MIME and is not"),
+        detail: Some(gettext(
+            "Its parts are not where a signed or encrypted message keeps them.",
+        )),
         tone: Tone::Unchecked,
     }
 }
@@ -395,11 +425,13 @@ fn unreadable() -> Mark {
 /// certificate whose chain reaches no root this computer trusts still
 /// signs; the two are separate answers and running them together tells
 /// people the wrong thing.
-fn vouching(chain: Chain) -> &'static str {
+fn vouching(chain: Chain) -> String {
     match chain {
-        Chain::Trusted => "Its certificate leads back to an authority you trust.",
-        Chain::Untrusted => "Its certificate leads back to nobody you trust, so it names no one.",
-        Chain::Unknown => "Nothing here says who that certificate belongs to.",
+        Chain::Trusted => gettext("Its certificate leads back to an authority you trust."),
+        Chain::Untrusted => {
+            gettext("Its certificate leads back to nobody you trust, so it names no one.")
+        }
+        Chain::Unknown => gettext("Nothing here says who that certificate belongs to."),
     }
 }
 
@@ -410,7 +442,7 @@ fn signer(signature: &Signature) -> String {
         (Some(email), Some(subject)) => format!("{} <{email}>", name(subject)),
         (Some(email), None) => email.clone(),
         (None, Some(subject)) => name(subject).to_string(),
-        (None, None) => "a certificate gpgsm would not name".into(),
+        (None, None) => gettext("a certificate gpgsm would not name"),
     }
 }
 
@@ -446,15 +478,18 @@ fn neither(
         .map(|recipient| recipient.address.as_str())
         .collect();
     if !unreachable.is_empty() {
-        return format!(
-            "gpg holds no key and gpgsm no certificate for {}.",
-            pgp::listed(&unreachable)
+        return fill(
+            &gettext("gpg holds no key and gpgsm no certificate for {addresses}."),
+            &[("addresses", &pgp::listed(&unreachable))],
         );
     }
     if keys.is_empty() || certificates.is_empty() {
         return pgp.to_string();
     }
-    format!("A message goes out under one standard or the other. {pgp} {smime}")
+    fill(
+        &gettext("A message goes out under one standard or the other. {pgp} {smime}"),
+        &[("pgp", pgp), ("smime", smime)],
+    )
 }
 
 #[cfg(test)]

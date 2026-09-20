@@ -4,6 +4,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::time::Duration;
 
 use futures::StreamExt;
+use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{ChangeEvent, Target};
 use mailrs_gmail::{BATCH_LIMIT, GmailError};
 use mailrs_store::{messages, reminders, threads};
@@ -412,9 +413,9 @@ fn refuses_batch(err: &GmailError) -> bool {
 
 /// What the window says while an action sits out a rate limit.
 fn still_waiting(writing: &Writing<'_>) -> String {
-    format!(
-        "Gmail is busy. Still working on {}.",
-        conversations(writing.conversations)
+    fill(
+        &gettext("Gmail is busy. Still working on {conversations}."),
+        &[("conversations", &conversations(writing.conversations))],
     )
 }
 
@@ -424,32 +425,54 @@ fn still_waiting(writing: &Writing<'_>) -> String {
 fn write_failure(writing: &Writing<'_>, err: &GmailError, waited: Duration) -> String {
     let what = writing.action.describe().to_lowercase();
     let many = conversations(writing.conversations);
+    let values = [("action", what.as_str()), ("conversations", many.as_str())];
     match err {
-        GmailError::RateLimited { .. } if waited.is_zero() => {
-            format!(
-                "Gmail is busy, so {what} did not go through for {many}. Try again in a moment."
+        GmailError::RateLimited { .. } if waited.is_zero() => fill(
+            &gettext(
+                "Gmail is busy, so {action} did not go through for {conversations}. \
+                 Try again in a moment.",
+            ),
+            &values,
+        ),
+        GmailError::RateLimited { .. } => {
+            let waited = roughly(waited);
+            fill(
+                &gettext(
+                    "Gmail stayed busy for {waited}, so {action} did not go through \
+                     for {conversations}.",
+                ),
+                &[("waited", waited.as_str()), values[0], values[1]],
             )
         }
-        GmailError::RateLimited { .. } => format!(
-            "Gmail stayed busy for {}, so {what} did not go through for {many}.",
-            roughly(waited)
+        _ => fill(
+            &gettext("{action} failed: {reason}"),
+            &[
+                ("action", &writing.action.describe()),
+                ("reason", &err.to_string()),
+            ],
         ),
-        _ => format!("{} failed: {err}", writing.action.describe()),
     }
 }
 
 fn conversations(count: usize) -> String {
-    match count {
-        1 => "1 conversation".to_string(),
-        many => format!("{many} conversations"),
-    }
+    fill_plural(
+        "{count} conversation",
+        "{count} conversations",
+        count,
+        &[("count", &count.to_string())],
+    )
 }
 
 /// A wait in words, for a message a person reads.
 fn roughly(waited: Duration) -> String {
     match waited.as_secs() {
-        0..2 => "a moment".to_string(),
-        seconds @ 2..45 => format!("{seconds} seconds"),
-        _ => "a minute".to_string(),
+        0..2 => gettext("a moment"),
+        seconds @ 2..45 => fill_plural(
+            "{count} second",
+            "{count} seconds",
+            seconds as usize,
+            &[("count", &seconds.to_string())],
+        ),
+        _ => gettext("a minute"),
     }
 }

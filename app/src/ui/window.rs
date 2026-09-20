@@ -10,6 +10,7 @@ use std::rc::{Rc, Weak};
 use adw::prelude::*;
 use base64::Engine;
 use gtk::{gdk, gio, glib};
+use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{
     Account, AccountId, AccountState, ChangeEvent, Folder, Label, MessageBody, MessageMeta, Target,
     ThreadSummary, system_label,
@@ -132,39 +133,48 @@ pub struct MainWindow {
     image_senders: RefCell<Vec<mailrs_store::image_senders::ImageSender>>,
 }
 
-/// What one row holds, for a line the user reads.
-fn row_noun(count: usize, threaded: bool) -> &'static str {
-    match (threaded, count) {
-        (true, 1) => "conversation",
-        (true, _) => "conversations",
-        (false, 1) => "message",
-        (false, _) => "messages",
-    }
-}
-
 /// The heading on the Delete Forever dialog, which names how much goes.
+/// Every count writes its own sentence: a language decides for itself
+/// where the number goes and which form the noun takes beside it.
 fn delete_forever_heading(count: usize, threaded: bool) -> String {
-    let noun = row_noun(count, threaded);
-    match count {
-        1 => format!("Delete This {} Forever?", capitalized(noun)),
-        _ => format!("Delete {count} {} Forever?", capitalized(noun)),
+    let number = count.to_string();
+    let values = [("count", number.as_str())];
+    match (threaded, count) {
+        (true, 1) => gettext("Delete This Conversation Forever?"),
+        (true, _) => fill_plural(
+            "Delete {count} Conversation Forever?",
+            "Delete {count} Conversations Forever?",
+            count,
+            &values,
+        ),
+        (false, 1) => gettext("Delete This Message Forever?"),
+        (false, _) => fill_plural(
+            "Delete {count} Message Forever?",
+            "Delete {count} Messages Forever?",
+            count,
+            &values,
+        ),
     }
 }
 
 /// The toast after erasing.
 fn deleted_forever_message(count: usize, threaded: bool) -> String {
-    match count {
-        1 => "Deleted forever".into(),
-        _ => format!("Deleted {count} {} forever", row_noun(count, threaded)),
-    }
-}
-
-/// `word` with its first letter in upper case, for a dialog heading.
-fn capitalized(word: &str) -> String {
-    let mut letters = word.chars();
-    match letters.next() {
-        Some(first) => first.to_uppercase().chain(letters).collect(),
-        None => String::new(),
+    let number = count.to_string();
+    let values = [("count", number.as_str())];
+    match (threaded, count) {
+        (_, 1) => gettext("Deleted forever"),
+        (true, _) => fill_plural(
+            "Deleted {count} conversation forever",
+            "Deleted {count} conversations forever",
+            count,
+            &values,
+        ),
+        (false, _) => fill_plural(
+            "Deleted {count} message forever",
+            "Deleted {count} messages forever",
+            count,
+            &values,
+        ),
     }
 }
 
@@ -177,39 +187,134 @@ fn lists_muted(mailbox: &Mailbox) -> bool {
     }
 }
 
+/// The toast after adding or removing a VIP.
+fn vip_message(added: bool, who: &str) -> String {
+    match added {
+        true => fill(&gettext("Added {person} to VIPs"), &[("person", who)]),
+        false => fill(&gettext("Removed {person} from VIPs"), &[("person", who)]),
+    }
+}
+
+/// What a mailbox that would not load says.
+fn load_failed(err: &impl std::fmt::Display) -> String {
+    fill(
+        &gettext("Could not load mail: {reason}"),
+        &[("reason", &err.to_string())],
+    )
+}
+
+/// The colour a flag toast names.
+fn flagged_message(color: mailrs_domain::FlagColor) -> String {
+    use mailrs_domain::FlagColor;
+    match color {
+        FlagColor::Red => gettext("Flagged red"),
+        FlagColor::Orange => gettext("Flagged orange"),
+        FlagColor::Yellow => gettext("Flagged yellow"),
+        FlagColor::Green => gettext("Flagged green"),
+        FlagColor::Blue => gettext("Flagged blue"),
+        FlagColor::Purple => gettext("Flagged purple"),
+        FlagColor::Gray => gettext("Flagged gray"),
+    }
+}
+
 /// The toast after an action, or `None` when the change speaks for itself.
 fn done_message(action: &MailAction, count: usize, threaded: bool) -> Option<String> {
+    let number = count.to_string();
+    let values = [("count", number.as_str())];
     let action = match action {
         MailAction::Triage(action) => action,
-        MailAction::Flag(color) => {
-            return color.map(|c| format!("Flagged {}", c.name().to_lowercase()));
-        }
-        MailAction::Label { .. } => return Some("Labels changed".into()),
+        MailAction::Flag(color) => return color.map(flagged_message),
+        MailAction::Label { .. } => return Some(gettext("Labels changed")),
         MailAction::Mute { muted } => {
-            let verb = if *muted { "Muted" } else { "Unmuted" };
-            return Some(match count > 1 {
-                true => format!("{verb} {count} {}", row_noun(count, threaded)),
-                false => verb.into(),
+            return Some(match (*muted, count > 1, threaded) {
+                (true, false, _) => gettext("Muted"),
+                (false, false, _) => gettext("Unmuted"),
+                (true, true, true) => fill_plural(
+                    "Muted {count} conversation",
+                    "Muted {count} conversations",
+                    count,
+                    &values,
+                ),
+                (true, true, false) => fill_plural(
+                    "Muted {count} message",
+                    "Muted {count} messages",
+                    count,
+                    &values,
+                ),
+                (false, true, true) => fill_plural(
+                    "Unmuted {count} conversation",
+                    "Unmuted {count} conversations",
+                    count,
+                    &values,
+                ),
+                (false, true, false) => fill_plural(
+                    "Unmuted {count} message",
+                    "Unmuted {count} messages",
+                    count,
+                    &values,
+                ),
             });
         }
         MailAction::Remind { .. } | MailAction::CancelReminder => return None,
     };
-    let noun = row_noun(count, threaded);
     let many = count > 1;
-    Some(match action {
-        TriageAction::Archive if many => format!("Archived {count} {noun}"),
-        TriageAction::Archive => "Archived".into(),
-        TriageAction::Trash if many => format!("Moved {count} {noun} to Trash"),
-        TriageAction::Trash => "Moved to Trash".into(),
-        TriageAction::Junk if many => format!("Marked {count} {noun} as junk"),
-        TriageAction::Junk => "Marked as junk".into(),
-        TriageAction::Untrash | TriageAction::NotJunk if many => {
-            format!("Moved {count} {noun} to the Inbox")
-        }
-        TriageAction::Untrash | TriageAction::NotJunk => "Moved to the Inbox".into(),
-        TriageAction::AddLabel(_) | TriageAction::RemoveLabel(_) | TriageAction::Relabel { .. } => {
-            "Labels changed".into()
-        }
+    Some(match (action, many, threaded) {
+        (TriageAction::Archive, false, _) => gettext("Archived"),
+        (TriageAction::Archive, true, true) => fill_plural(
+            "Archived {count} conversation",
+            "Archived {count} conversations",
+            count,
+            &values,
+        ),
+        (TriageAction::Archive, true, false) => fill_plural(
+            "Archived {count} message",
+            "Archived {count} messages",
+            count,
+            &values,
+        ),
+        (TriageAction::Trash, false, _) => gettext("Moved to Trash"),
+        (TriageAction::Trash, true, true) => fill_plural(
+            "Moved {count} conversation to Trash",
+            "Moved {count} conversations to Trash",
+            count,
+            &values,
+        ),
+        (TriageAction::Trash, true, false) => fill_plural(
+            "Moved {count} message to Trash",
+            "Moved {count} messages to Trash",
+            count,
+            &values,
+        ),
+        (TriageAction::Junk, false, _) => gettext("Marked as junk"),
+        (TriageAction::Junk, true, true) => fill_plural(
+            "Marked {count} conversation as junk",
+            "Marked {count} conversations as junk",
+            count,
+            &values,
+        ),
+        (TriageAction::Junk, true, false) => fill_plural(
+            "Marked {count} message as junk",
+            "Marked {count} messages as junk",
+            count,
+            &values,
+        ),
+        (TriageAction::Untrash | TriageAction::NotJunk, false, _) => gettext("Moved to the Inbox"),
+        (TriageAction::Untrash | TriageAction::NotJunk, true, true) => fill_plural(
+            "Moved {count} conversation to the Inbox",
+            "Moved {count} conversations to the Inbox",
+            count,
+            &values,
+        ),
+        (TriageAction::Untrash | TriageAction::NotJunk, true, false) => fill_plural(
+            "Moved {count} message to the Inbox",
+            "Moved {count} messages to the Inbox",
+            count,
+            &values,
+        ),
+        (
+            TriageAction::AddLabel(_) | TriageAction::RemoveLabel(_) | TriageAction::Relabel { .. },
+            ..,
+        ) => gettext("Labels changed"),
         _ => return None,
     })
 }
@@ -318,9 +423,9 @@ impl MainWindow {
             toasts.set_child(Some(&stack));
             let window = adw::Window::builder()
                 .title(if app.core.demo {
-                    "Penguin Mail (Demo)"
+                    gettext("Penguin Mail (Demo)")
                 } else {
-                    "Penguin Mail"
+                    gettext("Penguin Mail")
                 })
                 .default_width(1320)
                 .default_height(840)
@@ -569,7 +674,12 @@ impl MainWindow {
                 .await;
             let data = match loaded {
                 Ok(data) => data,
-                Err(err) => return this.toast(&format!("Could not read accounts: {err}")),
+                Err(err) => {
+                    return this.toast(&fill(
+                        &gettext("Could not read accounts: {reason}"),
+                        &[("reason", &err.to_string())],
+                    ));
+                }
             };
             *this.accounts.borrow_mut() = data.iter().map(|(a, _)| a.clone()).collect();
             *this.labels.borrow_mut() = data.iter().map(|(a, l)| (a.id, l.clone())).collect();
@@ -608,10 +718,11 @@ impl MainWindow {
                 .collect();
             match reauth.first() {
                 Some(email) => {
-                    this.list
-                        .banner
-                        .set_title(&format!("Sign in again to keep {email} syncing"));
-                    this.list.banner.set_button_label(Some("Sign In"));
+                    this.list.banner.set_title(&fill(
+                        &gettext("Sign in again to keep {account} syncing"),
+                        &[("account", email)],
+                    ));
+                    this.list.banner.set_button_label(Some(&gettext("Sign In")));
                     this.list.banner.set_revealed(true);
                 }
                 None => this.list.banner.set_revealed(false),
@@ -721,7 +832,7 @@ impl MainWindow {
             }
             match loaded {
                 Ok(listing) => this.show_listing(listing),
-                Err(err) => this.toast(&format!("Could not load mail: {err}")),
+                Err(err) => this.toast(&load_failed(&err)),
             }
         });
     }
@@ -734,7 +845,7 @@ impl MainWindow {
         self.more_rows.set(listing.more);
         let rows = listing.rows.into_iter().map(Rc::new).collect();
         self.list
-            .set_rows(rows, listing.empty.title, listing.empty.icon);
+            .set_rows(rows, &listing.empty.title, listing.empty.icon);
         self.follow_selection();
         self.list.set_title(&listing.title, &listing.subtitle);
     }
@@ -760,7 +871,7 @@ impl MainWindow {
                     this.list
                         .append(listing.rows.into_iter().map(Rc::new).collect());
                 }
-                Err(err) => this.toast(&format!("Could not load mail: {err}")),
+                Err(err) => this.toast(&load_failed(&err)),
             }
         });
     }
@@ -817,7 +928,7 @@ impl MainWindow {
         self.sidebar.clear_selection();
         self.follow_categories();
         self.follow_follow_ups();
-        self.list.set_title("Search", &query);
+        self.list.set_title(&gettext("Search"), &query);
         self.conversation.clear();
         self.conversation.set_folder(None);
         self.reload_list();
@@ -1207,14 +1318,9 @@ impl MainWindow {
             Picked::One(row) if outbox_id(&row.id).is_some() => self.conversation.clear(),
             Picked::One(row) => self.open_thread(row),
             Picked::Many(rows) => {
-                let noun = if self.settings().threading {
-                    "Conversations"
-                } else {
-                    "Messages"
-                };
                 self.conversation.show_many(
                     rows.len(),
-                    noun,
+                    self.settings().threading,
                     rows.iter().any(|r| r.unread),
                     rows.iter().all(|r| r.starred),
                     rows.iter().all(|r| r.muted),
@@ -1392,11 +1498,7 @@ impl MainWindow {
                         name: display.clone(),
                     });
                     let added = app.settings().is_vip(&address);
-                    window.toast(&if added {
-                        format!("Added {display} to VIPs")
-                    } else {
-                        format!("Removed {display} from VIPs")
-                    });
+                    window.toast(&vip_message(added, &display));
                 }
                 contact_card::Choice::AllMail => {
                     window.search(format!("from:{address}"));
@@ -1505,12 +1607,15 @@ impl MainWindow {
         let threaded = self.settings().threading;
         let dialog = adw::AlertDialog::new(
             Some(&delete_forever_heading(targets.len(), threaded)),
-            Some(match targets.len() {
-                1 => "Gmail deletes it from every device and cannot bring it back.",
-                _ => "Gmail deletes them from every device and cannot bring them back.",
+            Some(&match targets.len() {
+                1 => gettext("Gmail deletes it from every device and cannot bring it back."),
+                _ => gettext("Gmail deletes them from every device and cannot bring them back."),
             }),
         );
-        dialog.add_responses(&[("cancel", "Cancel"), ("delete", "Delete Forever")]);
+        dialog.add_responses(&[
+            ("cancel", &gettext("Cancel")),
+            ("delete", &gettext("Delete Forever")),
+        ]);
         dialog.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
         dialog.set_close_response("cancel");
         let this = Rc::clone(self);
@@ -1532,7 +1637,12 @@ impl MainWindow {
             let outcome = match erased {
                 Ok(Permitted::Done(outcome)) => outcome,
                 Ok(Permitted::NeedsPermission) => return this.ask_for_delete_access(account_id),
-                Err(err) => return this.toast(&format!("Could not delete the mail: {err}")),
+                Err(err) => {
+                    return this.toast(&fill(
+                        &gettext("Could not delete the mail: {reason}"),
+                        &[("reason", &err.to_string())],
+                    ));
+                }
             };
             if !outcome.done.is_empty() {
                 this.conversation.clear();
@@ -1584,13 +1694,20 @@ impl MainWindow {
             return;
         };
         let dialog = adw::AlertDialog::new(
-            Some("Allow Penguin Mail to Read Your Contacts"),
-            Some(&format!(
-                "Reading the contacts of {} needs one more permission. Google asks you to confirm in your browser. Names and photos stay on this computer.",
-                account.email
+            Some(&gettext("Allow Penguin Mail to Read Your Contacts")),
+            Some(&fill(
+                &gettext(
+                    "Reading the contacts of {account} needs one more permission. Google \
+                     asks you to confirm in your browser. Names and photos stay on this \
+                     computer.",
+                ),
+                &[("account", &account.email)],
             )),
         );
-        dialog.add_responses(&[("cancel", "Not Now"), ("grant", "Grant Access")]);
+        dialog.add_responses(&[
+            ("cancel", &gettext("Not Now")),
+            ("grant", &gettext("Grant Access")),
+        ]);
         dialog.set_response_appearance("grant", adw::ResponseAppearance::Suggested);
         dialog.set_close_response("cancel");
         let this = Rc::clone(self);
@@ -1618,13 +1735,19 @@ impl MainWindow {
             return;
         };
         let dialog = adw::AlertDialog::new(
-            Some("Allow Penguin Mail to Delete Mail"),
-            Some(&format!(
-                "Deleting mail for good needs one more permission for {}. Google asks you to confirm in your browser.",
-                account.email
+            Some(&gettext("Allow Penguin Mail to Delete Mail")),
+            Some(&fill(
+                &gettext(
+                    "Deleting mail for good needs one more permission for {account}. \
+                     Google asks you to confirm in your browser.",
+                ),
+                &[("account", &account.email)],
             )),
         );
-        dialog.add_responses(&[("cancel", "Not Now"), ("grant", "Grant Access")]);
+        dialog.add_responses(&[
+            ("cancel", &gettext("Not Now")),
+            ("grant", &gettext("Grant Access")),
+        ]);
         dialog.set_response_appearance("grant", adw::ResponseAppearance::Suggested);
         dialog.set_close_response("cancel");
         let this = Rc::clone(self);
@@ -1709,7 +1832,7 @@ impl MainWindow {
             {
                 let toast = adw::Toast::builder()
                     .title(done)
-                    .button_label("Undo")
+                    .button_label(gettext("Undo"))
                     .timeout(5)
                     .build();
                 let weak = Rc::downgrade(&this);
@@ -1754,7 +1877,7 @@ impl MainWindow {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let Some(outcome) = this.core.undo().await else {
-                return this.toast("Nothing to undo");
+                return this.toast(&gettext("Nothing to undo"));
             };
             // Undo can put rows back into a Gmail folder, which only a
             // fresh search shows. The store's own change events cover
@@ -1768,7 +1891,10 @@ impl MainWindow {
             }
             this.refresh_flag_color();
             this.reminders_changed();
-            this.toast(outcome.first_error().unwrap_or("Undone"));
+            match outcome.first_error() {
+                Some(error) => this.toast(error),
+                None => this.toast(&gettext("Undone")),
+            }
         });
     }
 
@@ -1790,10 +1916,10 @@ impl MainWindow {
                 .build()
         };
         let Some(&account_id) = accounts.iter().next().filter(|_| accounts.len() == 1) else {
-            popover.set_child(Some(&message(if targets.is_empty() {
-                "Open or select mail to label it."
+            popover.set_child(Some(&message(&if targets.is_empty() {
+                gettext("Open or select mail to label it.")
             } else {
-                "Select mail from one account to label it."
+                gettext("Select mail from one account to label it.")
             })));
             return popover;
         };
@@ -1813,7 +1939,7 @@ impl MainWindow {
             .child(
                 &adw::ButtonContent::builder()
                     .icon_name("list-add-symbolic")
-                    .label("New Label…")
+                    .label(gettext("New Label…"))
                     .build(),
             )
             .css_classes(["flat"])
@@ -1833,7 +1959,7 @@ impl MainWindow {
         });
         if labels.is_empty() {
             let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
-            content.append(&message("This account has no labels yet."));
+            content.append(&message(&gettext("This account has no labels yet.")));
             content.append(&create);
             popover.set_child(Some(&content));
             return popover;
@@ -2008,9 +2134,10 @@ impl MainWindow {
                         mime_type: attachment.mime_type,
                         data,
                     }),
-                    Err(err) => {
-                        this.toast(&format!("Could not include {}: {err}", attachment.filename))
-                    }
+                    Err(err) => this.toast(&fill(
+                        &gettext("Could not include {file}: {reason}"),
+                        &[("file", &attachment.filename), ("reason", &err.to_string())],
+                    )),
                 }
             }
             app.compose(draft);
@@ -2115,7 +2242,10 @@ impl MainWindow {
             glib::user_special_dir(glib::UserDirectory::Downloads).unwrap_or_else(glib::home_dir);
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            this.toast(&format!("Downloading {}…", attachment.filename));
+            this.toast(&fill(
+                &gettext("Downloading {file}…"),
+                &[("file", &attachment.filename)],
+            ));
             let filename = attachment.filename.clone();
             let saved = this
                 .core
@@ -2133,11 +2263,11 @@ impl MainWindow {
                         .file_name()
                         .map(|n| n.to_string_lossy().into_owned())
                         .unwrap_or_default();
+                    let saved_to_downloads =
+                        fill(&gettext("Saved {file} to Downloads"), &[("file", &name)]);
                     let toast = adw::Toast::builder()
-                        .title(glib::markup_escape_text(&format!(
-                            "Saved {name} to Downloads"
-                        )))
-                        .button_label("Open")
+                        .title(glib::markup_escape_text(&saved_to_downloads))
+                        .button_label(gettext("Open"))
                         .timeout(6)
                         .build();
                     let window = this.window.clone();
@@ -2151,7 +2281,10 @@ impl MainWindow {
                     });
                     this.toasts.add_toast(toast);
                 }
-                Err(err) => this.toast(&format!("Could not save {}: {err}", attachment.filename)),
+                Err(err) => this.toast(&fill(
+                    &gettext("Could not save {file}: {reason}"),
+                    &[("file", &attachment.filename), ("reason", &err.to_string())],
+                )),
             }
         });
     }
@@ -2164,7 +2297,10 @@ impl MainWindow {
             .save_config(mailrs_sync::config::Config::new(client_id, client_secret))
         {
             Ok(()) => self.refresh_accounts(Reload::Yes),
-            Err(err) => self.toast(&format!("Could not save the settings: {err}")),
+            Err(err) => self.toast(&fill(
+                &gettext("Could not save the settings: {reason}"),
+                &[("reason", &err.to_string())],
+            )),
         }
     }
 
@@ -2186,21 +2322,26 @@ impl MainWindow {
             }
         });
         self.first_account.set_sensitive(false);
-        self.first_account.set_label("Waiting for Your Browser…");
+        self.first_account
+            .set_label(&gettext("Waiting for Your Browser…"));
         self.sidebar.add_account.set_sensitive(false);
-        self.toast("Continue in your browser");
+        self.toast(&gettext("Continue in your browser"));
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             match this.core.authorize_account(urls, expected, extra).await {
                 Ok(account) => {
-                    this.toast(&format!("Added {}. Downloading mail…", account.email));
+                    this.toast(&fill(
+                        &gettext("Added {account}. Downloading mail…"),
+                        &[("account", &account.email)],
+                    ));
                     this.refresh_accounts(Reload::Yes);
                 }
                 Err(err) => this.toast(&err.to_string()),
             }
             this.authorizing.set(false);
             this.first_account.set_sensitive(true);
-            this.first_account.set_label("Sign In with Google");
+            this.first_account
+                .set_label(&gettext("Sign In with Google"));
             this.sidebar.add_account.set_sensitive(true);
         });
     }
@@ -2215,12 +2356,19 @@ impl MainWindow {
 
     fn confirm_remove(self: &Rc<Self>, account: Account) {
         let dialog = adw::AlertDialog::new(
-            Some(&format!("Remove {}?", account.email)),
-            Some(
-                "Its downloaded mail and saved sign-in are deleted from this computer. Nothing changes in Gmail.",
-            ),
+            Some(&fill(
+                &gettext("Remove {account}?"),
+                &[("account", &account.email)],
+            )),
+            Some(&gettext(
+                "Its downloaded mail and saved sign-in are deleted from this computer. \
+                 Nothing changes in Gmail.",
+            )),
         );
-        dialog.add_responses(&[("cancel", "Cancel"), ("remove", "Remove")]);
+        dialog.add_responses(&[
+            ("cancel", &gettext("Cancel")),
+            ("remove", &gettext("Remove")),
+        ]);
         dialog.set_response_appearance("remove", adw::ResponseAppearance::Destructive);
         dialog.set_close_response("cancel");
         let this = Rc::clone(self);
@@ -2233,8 +2381,11 @@ impl MainWindow {
             }
             let email = account.email.clone();
             match this.core.remove_account(account).await {
-                Ok(()) => this.toast(&format!("Removed {email}")),
-                Err(err) => this.toast(&format!("Could not remove {email}: {err}")),
+                Ok(()) => this.toast(&fill(&gettext("Removed {account}"), &[("account", &email)])),
+                Err(err) => this.toast(&fill(
+                    &gettext("Could not remove {account}: {reason}"),
+                    &[("account", &email), ("reason", &err.to_string())],
+                )),
             }
             this.refresh_accounts(Reload::Yes);
         });
@@ -2265,7 +2416,7 @@ impl MainWindow {
             Box::new(|win| {
                 win.core.poke_all();
                 win.reload_folder();
-                win.toast("Checking for mail");
+                win.toast(&gettext("Checking for mail"));
             }),
         );
         add("add-account", Box::new(|win| win.authorize(None)));
@@ -2515,23 +2666,23 @@ impl MainWindow {
     fn install_menu(&self) {
         let menu = gio::Menu::new();
         let first = gio::Menu::new();
-        first.append(Some("Check for Mail"), Some("win.check"));
-        first.append(Some("Add Account…"), Some("win.add-account"));
-        first.append(Some("New Smart Mailbox…"), Some("win.smart-new"));
-        first.append(Some("Hide My Email…"), Some("win.hide-my-email"));
+        first.append(Some(&gettext("Check for Mail")), Some("win.check"));
+        first.append(Some(&gettext("Add Account…")), Some("win.add-account"));
+        first.append(Some(&gettext("New Smart Mailbox…")), Some("win.smart-new"));
+        first.append(Some(&gettext("Hide My Email…")), Some("win.hide-my-email"));
         menu.append_section(None, &first);
         let second = gio::Menu::new();
-        second.append(Some("Preferences"), Some("win.preferences"));
-        second.append(Some("Keyboard Shortcuts"), Some("win.shortcuts"));
-        second.append(Some("About Penguin Mail"), Some("win.about"));
-        second.append(Some("Quit"), Some("win.quit"));
+        second.append(Some(&gettext("Preferences")), Some("win.preferences"));
+        second.append(Some(&gettext("Keyboard Shortcuts")), Some("win.shortcuts"));
+        second.append(Some(&gettext("About Penguin Mail")), Some("win.about"));
+        second.append(Some(&gettext("Quit")), Some("win.quit"));
         menu.append_section(None, &second);
         self.sidebar.header.pack_end(
             &gtk::MenuButton::builder()
                 .icon_name("open-menu-symbolic")
                 .menu_model(&menu)
                 .primary(true)
-                .tooltip_text("Main Menu")
+                .tooltip_text(gettext("Main Menu"))
                 .build(),
         );
     }
@@ -2622,7 +2773,7 @@ impl MainWindow {
 
     fn compose_new(self: &Rc<Self>) {
         let (Some(app), Some(account_id)) = (self.app.upgrade(), self.default_account()) else {
-            return self.toast("Add an account first");
+            return self.toast(&gettext("Add an account first"));
         };
         app.compose(app.signed(Draft::new(account_id, app.identity(account_id))));
     }
@@ -2799,7 +2950,7 @@ impl MainWindow {
                 .find(|a| !me.iter().any(|mine| mine.eq_ignore_ascii_case(&a.email)))
         });
         let (Some(Some(sender)), Some(app)) = (sender, self.app.upgrade()) else {
-            return self.toast("Open a message from the person first");
+            return self.toast(&gettext("Open a message from the person first"));
         };
         let name = sender.name.clone().unwrap_or_default();
         app.change_settings(Change::ToggleVip {
@@ -2807,11 +2958,7 @@ impl MainWindow {
             name,
         });
         let added = app.settings().is_vip(&sender.email);
-        self.toast(&if added {
-            format!("Added {} to VIPs", sender.display())
-        } else {
-            format!("Removed {} from VIPs", sender.display())
-        });
+        self.toast(&vip_message(added, sender.display()));
     }
 
     /// Brings what is on screen back in line after a settings change.
@@ -2881,73 +3028,102 @@ impl MainWindow {
             }
             // The app follows the light or dark choice; no window to redraw.
             Effect::Theme => {}
+            Effect::Language => self.offer_restart(),
         }
     }
 
     pub fn toast_sent(&self) {
-        self.toast("Message sent");
+        self.toast(&gettext("Message sent"));
+    }
+
+    /// Says that the new language waits for a restart, and offers one.
+    /// Nothing on screen changes until then, so the toast stays up and is
+    /// plain about it.
+    fn offer_restart(self: &Rc<Self>) {
+        let toast = adw::Toast::builder()
+            .title(gettext(
+                "Penguin Mail shows the new language after a restart",
+            ))
+            .button_label(gettext("Restart"))
+            .timeout(0)
+            .build();
+        let weak = Rc::downgrade(self);
+        toast.connect_button_clicked(move |_| {
+            if let Some(app) = weak.upgrade().and_then(|window| window.app.upgrade()) {
+                app.restart();
+            }
+        });
+        self.toasts.add_toast(toast);
     }
 
     fn show_shortcuts(&self) {
         let dialog = adw::ShortcutsDialog::new();
-        let groups: [(&str, &[(&str, &str)]); 4] = [
+        // Only the left column is words; the accelerators are key names
+        // GTK parses and must stay as they are.
+        let groups: [(String, Vec<(String, &str)>); 4] = [
             (
-                "Reading",
-                &[
-                    ("Next or previous conversation", "j k"),
-                    ("Open mailbox 1 to 9", "<Control>1...<Control>9"),
-                    ("Search", "<Control>f slash"),
-                    ("Get new mail", "<Control><Shift>n F5"),
-                    ("Select all", "<Control>a"),
-                    ("Clear the selection", "Escape"),
-                    ("Bigger or smaller text", "<Control>plus <Control>minus"),
-                    ("Open in a new window", "<Control>o"),
-                    ("Print", "<Control>p"),
-                    ("View source", "<Control><Alt>u"),
-                    ("Normal text size", "<Control>0"),
+                gettext("Reading"),
+                vec![
+                    (gettext("Next or previous conversation"), "j k"),
+                    (gettext("Open mailbox 1 to 9"), "<Control>1...<Control>9"),
+                    (gettext("Search"), "<Control>f slash"),
+                    (gettext("Get new mail"), "<Control><Shift>n F5"),
+                    (gettext("Select all"), "<Control>a"),
+                    (gettext("Clear the selection"), "Escape"),
+                    (
+                        gettext("Bigger or smaller text"),
+                        "<Control>plus <Control>minus",
+                    ),
+                    (gettext("Open in a new window"), "<Control>o"),
+                    (gettext("Print"), "<Control>p"),
+                    (gettext("View source"), "<Control><Alt>u"),
+                    (gettext("Normal text size"), "<Control>0"),
                 ],
             ),
             (
-                "Organizing",
-                &[
-                    ("Archive", "<Control><Alt>a e"),
-                    ("Move to trash", "Delete numbersign"),
-                    ("Junk", "<Control><Shift>j"),
-                    ("Flag or unflag", "<Control><Shift>l s"),
-                    ("Flag colors", "<Control><Alt>1...<Control><Alt>7"),
-                    ("Mark read or unread", "<Control><Shift>u u"),
-                    ("Mute or unmute", "<Shift>m"),
-                    ("Labels", "<Control><Alt>m l"),
-                    ("Undo", "<Control>z"),
+                gettext("Organizing"),
+                vec![
+                    (gettext("Archive"), "<Control><Alt>a e"),
+                    (gettext("Move to trash"), "Delete numbersign"),
+                    (gettext("Junk"), "<Control><Shift>j"),
+                    (gettext("Flag or unflag"), "<Control><Shift>l s"),
+                    (gettext("Flag colors"), "<Control><Alt>1...<Control><Alt>7"),
+                    (gettext("Mark read or unread"), "<Control><Shift>u u"),
+                    (gettext("Mute or unmute"), "<Shift>m"),
+                    (gettext("Labels"), "<Control><Alt>m l"),
+                    (gettext("Undo"), "<Control>z"),
                 ],
             ),
             (
-                "Writing",
-                &[
-                    ("New message", "<Control>n c"),
-                    ("Reply", "<Control>r r"),
-                    ("Reply all", "<Control><Shift>r a"),
-                    ("Forward", "<Control><Shift>f f"),
-                    ("Send", "<Control><Shift>d <Control>Return"),
-                    ("Attach files", "<Control><Shift>a"),
-                    ("Bold, italic, link", "<Control>b <Control>i <Control>k"),
-                    ("Save draft", "<Control>s"),
+                gettext("Writing"),
+                vec![
+                    (gettext("New message"), "<Control>n c"),
+                    (gettext("Reply"), "<Control>r r"),
+                    (gettext("Reply all"), "<Control><Shift>r a"),
+                    (gettext("Forward"), "<Control><Shift>f f"),
+                    (gettext("Send"), "<Control><Shift>d <Control>Return"),
+                    (gettext("Attach files"), "<Control><Shift>a"),
+                    (
+                        gettext("Bold, italic, link"),
+                        "<Control>b <Control>i <Control>k",
+                    ),
+                    (gettext("Save draft"), "<Control>s"),
                 ],
             ),
             (
-                "General",
-                &[
-                    ("Preferences", "<Control>comma"),
-                    ("Keyboard shortcuts", "<Control>question"),
-                    ("Close window", "<Control>w"),
-                    ("Quit", "<Control>q"),
+                gettext("General"),
+                vec![
+                    (gettext("Preferences"), "<Control>comma"),
+                    (gettext("Keyboard shortcuts"), "<Control>question"),
+                    (gettext("Close window"), "<Control>w"),
+                    (gettext("Quit"), "<Control>q"),
                 ],
             ),
         ];
         for (title, items) in groups {
-            let section = adw::ShortcutsSection::new(Some(title));
+            let section = adw::ShortcutsSection::new(Some(&title));
             for (label, accel) in items {
-                section.add(adw::ShortcutsItem::new(label, accel));
+                section.add(adw::ShortcutsItem::new(&label, accel));
             }
             dialog.add(section);
         }
@@ -2956,11 +3132,14 @@ impl MainWindow {
 
     fn show_about(&self) {
         let about = adw::AboutDialog::builder()
-            .application_name("Penguin Mail")
+            .application_name(gettext("Penguin Mail"))
             .application_icon(crate::APP_ID)
             .version(env!("CARGO_PKG_VERSION"))
             .developer_name("David Santos")
-            .comments("A fast, private Gmail client for the GNOME desktop. Mail stays on your computer and your own Google Cloud project.")
+            .comments(gettext(
+                "A fast, private Gmail client for the GNOME desktop. Mail stays on your \
+                 computer and your own Google Cloud project.",
+            ))
             .build();
         about.present(Some(&self.window));
     }

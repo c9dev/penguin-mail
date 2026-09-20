@@ -10,6 +10,7 @@ use super::{MainWindow, Target};
 use crate::compose::Draft;
 use crate::ui::conversation::ConversationView;
 use crate::unsubscribe::{Unsubscribe, choose};
+use mailrs_domain::translate::{fill, gettext};
 
 impl MainWindow {
     /// Unsubscribes from the open thread's mailing list, after asking.
@@ -25,7 +26,7 @@ impl MainWindow {
                 .from
                 .as_ref()
                 .map(|a| a.display().to_string())
-                .unwrap_or_else(|| "this list".into());
+                .unwrap_or_else(|| gettext("this list"));
             Some((
                 open.account_id,
                 sender,
@@ -33,21 +34,33 @@ impl MainWindow {
             ))
         });
         let Some(Some((account_id, sender, method))) = found else {
-            return self.toast("This message has no unsubscribe link");
+            return self.toast(&gettext("This message has no unsubscribe link"));
         };
         let Some(method) = method else {
-            return self.toast("This message's unsubscribe link is not one Penguin Mail can use");
+            return self.toast(&gettext(
+                "This message's unsubscribe link is not one Penguin Mail can use",
+            ));
         };
         let body = match &method {
-            Unsubscribe::OneClick(_) => "Penguin Mail asks the sender to take you off the list.",
-            Unsubscribe::Email { .. } => {
-                "Penguin Mail sends the list an unsubscribe request from your account."
+            Unsubscribe::OneClick(_) => {
+                gettext("Penguin Mail asks the sender to take you off the list.")
             }
-            Unsubscribe::Page(_) => "The sender's unsubscribe page opens in your browser.",
+            Unsubscribe::Email { .. } => {
+                gettext("Penguin Mail sends the list an unsubscribe request from your account.")
+            }
+            Unsubscribe::Page(_) => gettext("The sender's unsubscribe page opens in your browser."),
         };
-        let dialog =
-            adw::AlertDialog::new(Some(&format!("Unsubscribe from {sender}?")), Some(body));
-        dialog.add_responses(&[("cancel", "Cancel"), ("unsubscribe", "Unsubscribe")]);
+        let dialog = adw::AlertDialog::new(
+            Some(&fill(
+                &gettext("Unsubscribe from {sender}?"),
+                &[("sender", &sender)],
+            )),
+            Some(&body),
+        );
+        dialog.add_responses(&[
+            ("cancel", &gettext("Cancel")),
+            ("unsubscribe", &gettext("Unsubscribe")),
+        ]);
         dialog.set_response_appearance("unsubscribe", adw::ResponseAppearance::Suggested);
         dialog.set_default_response(Some("unsubscribe"));
         dialog.set_close_response("cancel");
@@ -86,9 +99,15 @@ impl MainWindow {
                 Ok(()) => {
                     view.with_open(|o| o.unsubscribed = true);
                     view.render_buttons();
-                    this.toast(&format!("Unsubscribed from {sender}"));
+                    this.toast(&fill(
+                        &gettext("Unsubscribed from {sender}"),
+                        &[("sender", &sender)],
+                    ));
                 }
-                Err(err) => this.toast(&format!("Could not unsubscribe: {err}")),
+                Err(err) => this.toast(&fill(
+                    &gettext("Could not unsubscribe: {reason}"),
+                    &[("reason", &err.to_string())],
+                )),
             }
         });
     }
@@ -116,17 +135,23 @@ impl MainWindow {
             Some((open.account_id, sender, target))
         });
         let Some(Some((account_id, sender, target))) = found else {
-            return self.toast("Open a message from the sender to block");
+            return self.toast(&gettext("Open a message from the sender to block"));
         };
         let email = sender.email.clone();
         let dialog = adw::AlertDialog::new(
-            Some(&format!("Block {}?", sender.display())),
-            Some(&format!(
-                "New mail from {email} goes straight to the Trash. This conversation moves there now. \
-                 Remove the rule under Rules to unblock."
+            Some(&fill(
+                &gettext("Block {sender}?"),
+                &[("sender", sender.display())],
+            )),
+            Some(&fill(
+                &gettext(
+                    "New mail from {email} goes straight to the Trash. This conversation \
+                     moves there now. Remove the rule under Rules to unblock.",
+                ),
+                &[("email", &email)],
             )),
         );
-        dialog.add_responses(&[("cancel", "Cancel"), ("block", "Block")]);
+        dialog.add_responses(&[("cancel", &gettext("Cancel")), ("block", &gettext("Block"))]);
         dialog.set_response_appearance("block", adw::ResponseAppearance::Destructive);
         dialog.set_close_response("cancel");
         let this = Rc::clone(self);
@@ -135,7 +160,7 @@ impl MainWindow {
                 return;
             }
             if this.core.account(account_id).is_none() {
-                return this.toast("That account is not connected");
+                return this.toast(&gettext("That account is not connected"));
             }
             let settings = this.core.gmail_settings();
             let blocking = {
@@ -153,11 +178,14 @@ impl MainWindow {
                         vec![target],
                         MailAction::Triage(TriageAction::Trash),
                         History::Record,
-                        Some(format!("Blocked {email}")),
+                        Some(fill(&gettext("Blocked {sender}"), &[("sender", &email)])),
                     );
                 }
                 Ok(Permitted::NeedsPermission) => this.ask_for_settings_access(account_id),
-                Err(err) => this.toast(&format!("Could not block the sender: {err}")),
+                Err(err) => this.toast(&fill(
+                    &gettext("Could not block the sender: {reason}"),
+                    &[("reason", &err.to_string())],
+                )),
             }
         });
     }
@@ -169,13 +197,19 @@ impl MainWindow {
             return;
         };
         let dialog = adw::AlertDialog::new(
-            Some("Allow Changes to Gmail Settings"),
-            Some(&format!(
-                "Penguin Mail needs permission to change Gmail settings for {}. Google asks you to confirm in your browser.",
-                account.email
+            Some(&gettext("Allow Changes to Gmail Settings")),
+            Some(&fill(
+                &gettext(
+                    "Penguin Mail needs permission to change Gmail settings for {account}. \
+                     Google asks you to confirm in your browser.",
+                ),
+                &[("account", &account.email)],
             )),
         );
-        dialog.add_responses(&[("cancel", "Not Now"), ("grant", "Grant Access")]);
+        dialog.add_responses(&[
+            ("cancel", &gettext("Not Now")),
+            ("grant", &gettext("Grant Access")),
+        ]);
         dialog.set_response_appearance("grant", adw::ResponseAppearance::Suggested);
         dialog.set_close_response("cancel");
         let this = Rc::clone(self);

@@ -13,6 +13,7 @@ use super::{MainWindow, Target};
 use crate::compose::ReplyKind;
 use crate::ui::conversation::{Action, ConversationView};
 use mailrs_domain::Category;
+use mailrs_domain::translate::{fill, gettext};
 
 /// A window action, given the main window and the conversation's view.
 type ViewAction = Box<dyn Fn(&Rc<MainWindow>, &Rc<ConversationView>)>;
@@ -31,7 +32,7 @@ impl MainWindow {
         });
         match summary {
             Some(summary) => self.open_in_window(summary),
-            None => self.toast("Open a conversation first"),
+            None => self.toast(&gettext("Open a conversation first")),
         }
     }
 
@@ -52,9 +53,9 @@ impl MainWindow {
         view.set_zoom(self.settings().text_size.zoom());
         let window = adw::Window::builder()
             .title(if summary.subject.is_empty() {
-                "Conversation"
+                gettext("Conversation")
             } else {
-                &summary.subject
+                summary.subject.clone()
             })
             .default_width(820)
             .default_height(760)
@@ -234,7 +235,7 @@ impl MainWindow {
             return;
         };
         let Some(sync) = self.core.account(account_id) else {
-            return self.toast("That account is not connected");
+            return self.toast(&gettext("That account is not connected"));
         };
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
@@ -244,7 +245,10 @@ impl MainWindow {
                 .await
             {
                 Ok(raw) => show_source(&this.window, &subject, raw),
-                Err(err) => this.toast(&format!("Could not load the source: {err}")),
+                Err(err) => this.toast(&fill(
+                    &gettext("Could not load the source: {reason}"),
+                    &[("reason", &err.to_string())],
+                )),
             }
         });
     }
@@ -263,11 +267,11 @@ fn show_source(parent: &adw::Window, subject: &str, raw: Vec<u8>) {
         .build();
     view.buffer().set_text(&text);
     let save = gtk::Button::builder()
-        .label("Save As…")
-        .tooltip_text("Save as an .eml file")
+        .label(gettext("Save As…"))
+        .tooltip_text(gettext("Save as an .eml file"))
         .build();
     let header = adw::HeaderBar::builder()
-        .title_widget(&adw::WindowTitle::new("Message Source", subject))
+        .title_widget(&adw::WindowTitle::new(&gettext("Message Source"), subject))
         .build();
     header.pack_start(&save);
     let toolbar = adw::ToolbarView::new();
@@ -279,7 +283,7 @@ fn show_source(parent: &adw::Window, subject: &str, raw: Vec<u8>) {
             .build(),
     ));
     let window = adw::Window::builder()
-        .title("Message Source")
+        .title(gettext("Message Source"))
         .default_width(760)
         .default_height(640)
         .transient_for(parent)
@@ -301,7 +305,7 @@ fn show_source(parent: &adw::Window, subject: &str, raw: Vec<u8>) {
     let owner = window.clone();
     save.connect_clicked(move |_| {
         let dialog = gtk::FileDialog::builder()
-            .title("Save Message")
+            .title(gettext("Save Message"))
             .initial_name(&file_name)
             .build();
         let (owner, raw) = (owner.clone(), raw.clone());

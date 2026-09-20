@@ -20,9 +20,15 @@ use crate::compose::{
 };
 use crate::format::future_date;
 use crate::smime::Standard;
+use mailrs_domain::translate::{fill, gettext};
 
 /// How often the scheduler looks for messages that are due.
 const SCHEDULER_SECONDS: u32 = 30;
+
+/// What a send says when the account it names is not syncing.
+fn not_connected() -> String {
+    gettext("That account is not connected. Check its status in the sidebar.")
+}
 
 impl App {
     /// Sends what a composer handed over: now, after the Undo delay, or at
@@ -76,7 +82,12 @@ impl App {
     async fn raw_for(&self, draft: &Draft) -> Result<Vec<u8>, String> {
         let message_id = new_message_id(&draft.from.email);
         let date = now_millis() / 1000;
-        let built = |what: &str| format!("Could not build the message: {what}");
+        let built = |what: &str| {
+            fill(
+                &gettext("Could not build the message: {reason}"),
+                &[("reason", what)],
+            )
+        };
         if !draft.sign && !draft.encrypt {
             return build_mime(draft, date, &message_id).map_err(|err| built(&err));
         }
@@ -118,10 +129,11 @@ impl App {
             }
         };
         let entity = entity.map_err(|err| {
-            if encrypt {
-                format!("Not encrypted, so not sent: {err}")
-            } else {
-                format!("Not signed, so not sent: {err}")
+            let values = [("reason", err.to_string())];
+            let values = [("reason", values[0].1.as_str())];
+            match encrypt {
+                true => fill(&gettext("Not encrypted, so not sent: {reason}"), &values),
+                false => fill(&gettext("Not signed, so not sent: {reason}"), &values),
             }
         })?;
         build_protected(draft, date, &message_id, entity).map_err(|err| built(&err))
@@ -131,10 +143,7 @@ impl App {
     /// With `announce`, says so in the window.
     fn send_now(self: &Rc<Self>, draft: Draft, announce: bool) {
         if self.core.account(draft.account_id).is_none() {
-            return self.reopen(
-                draft,
-                "That account is not connected. Check its status in the sidebar.",
-            );
+            return self.reopen(draft, &not_connected());
         }
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
@@ -160,11 +169,22 @@ impl App {
                 Ok(Posted::Waiting(_)) => {
                     this.scheduled_changed();
                     if let Some(window) = this.window() {
-                        window.toast_text("Waiting in the Outbox. It goes out as soon as it can.");
+                        window.toast_text(&gettext(
+                            "Waiting in the Outbox. It goes out as soon as it can.",
+                        ));
                     }
                 }
-                Ok(Posted::Refused(problem)) => this.reopen(draft, &format!("Not sent: {problem}")),
-                Err(err) => this.reopen(draft, &format!("Not sent: {err}")),
+                Ok(Posted::Refused(problem)) => this.reopen(
+                    draft,
+                    &fill(&gettext("Not sent: {reason}"), &[("reason", &problem)]),
+                ),
+                Err(err) => this.reopen(
+                    draft,
+                    &fill(
+                        &gettext("Not sent: {reason}"),
+                        &[("reason", &err.to_string())],
+                    ),
+                ),
             }
         });
     }
@@ -172,10 +192,7 @@ impl App {
     /// Saves `draft` to Gmail and records when to send it.
     fn schedule(self: &Rc<Self>, draft: Draft, at: i64) {
         if self.core.account(draft.account_id).is_none() {
-            return self.reopen(
-                draft,
-                "That account is not connected. Check its status in the sidebar.",
-            );
+            return self.reopen(draft, &not_connected());
         }
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
@@ -192,20 +209,27 @@ impl App {
                 .call(async move { outbox.schedule(message).await })
                 .await;
             match posted {
-                Ok(Posted::Refused(problem)) => {
-                    this.reopen(draft, &format!("Not scheduled: {problem}"))
-                }
+                Ok(Posted::Refused(problem)) => this.reopen(
+                    draft,
+                    &fill(&gettext("Not scheduled: {reason}"), &[("reason", &problem)]),
+                ),
                 Ok(_) => {
                     this.core.poke(draft.account_id);
                     this.scheduled_changed();
                     if let Some(window) = this.window() {
-                        window.toast_text(&format!(
-                            "Will send {}",
-                            future_date(at, chrono::Local::now())
+                        window.toast_text(&fill(
+                            &gettext("Will send {when}"),
+                            &[("when", &future_date(at, chrono::Local::now()))],
                         ));
                     }
                 }
-                Err(err) => this.reopen(draft, &format!("Not scheduled: {err}")),
+                Err(err) => this.reopen(
+                    draft,
+                    &fill(
+                        &gettext("Not scheduled: {reason}"),
+                        &[("reason", &err.to_string())],
+                    ),
+                ),
             }
         });
     }
@@ -251,12 +275,15 @@ impl App {
                     }
                     if let Some(window) = this.window() {
                         for message in &drained.sent {
-                            window.toast_text(&format!("Sent {}", named(&message.subject)));
+                            window.toast_text(&fill(
+                                &gettext("Sent {message}"),
+                                &[("message", &named(&message.subject))],
+                            ));
                         }
                         for message in &drained.stuck {
-                            window.toast_text(&format!(
-                                "Still in the Outbox: {}",
-                                named(&message.subject)
+                            window.toast_text(&fill(
+                                &gettext("Still in the Outbox: {message}"),
+                                &[("message", &named(&message.subject))],
                             ));
                         }
                     }
@@ -380,7 +407,7 @@ fn queued(draft: &Draft, raw: Vec<u8>, send_at: i64) -> Queued {
 /// A message by its subject, or by name when it has none.
 fn named(subject: &str) -> String {
     if subject.is_empty() {
-        return "your message".into();
+        return gettext("your message");
     }
-    format!("“{subject}”")
+    fill(&gettext("“{subject}”"), &[("subject", subject)])
 }

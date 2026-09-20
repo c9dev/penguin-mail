@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use mailrs_ai::ToolOutcome;
+use mailrs_domain::translate::gettext;
 use mailrs_domain::{Account, AccountId, Category, Label, ThreadSummary};
 use mailrs_sync::{MailAction, Outcome, Permitted, View};
 use serde_json::Value;
@@ -73,6 +74,11 @@ impl Desk for Ports {
     }
 }
 
+/// What a tool call says when the window has already gone.
+fn closing() -> String {
+    gettext("The app is closing.")
+}
+
 impl Effects for Ports {
     fn confirm(&self, question: String) -> Answer<'_, bool> {
         Box::pin(async move { self.0.assistant.confirm(&question).await })
@@ -83,24 +89,24 @@ impl Effects for Ports {
     }
 
     fn change_settings(&self, change: Change) -> Result<(), String> {
-        let app = self.0.app.upgrade().ok_or("The app is closing.")?;
+        let app = self.0.app.upgrade().ok_or_else(closing)?;
         app.change_settings(change);
         Ok(())
     }
 
     fn new_draft(&self, account_id: AccountId) -> Result<Draft, String> {
-        let app = self.0.app.upgrade().ok_or("The app is closing.")?;
+        let app = self.0.app.upgrade().ok_or_else(closing)?;
         Ok(Draft::new(account_id, app.identity(account_id)))
     }
 
     fn compose(&self, draft: Draft) -> Result<(), String> {
-        let app = self.0.app.upgrade().ok_or("The app is closing.")?;
+        let app = self.0.app.upgrade().ok_or_else(closing)?;
         app.compose(app.signed(draft));
         Ok(())
     }
 
     fn send(&self, draft: Draft) -> Result<(), String> {
-        let app = self.0.app.upgrade().ok_or("The app is closing.")?;
+        let app = self.0.app.upgrade().ok_or_else(closing)?;
         app.send(app.signed(draft), SendWhen::Now);
         Ok(())
     }

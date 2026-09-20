@@ -25,6 +25,7 @@ use icalendar::{
     Calendar, CalendarComponent, CalendarDateTime, Component, DatePerhapsTime, Property,
 };
 
+use crate::translate::gettext;
 use crate::{Address, EpochMillis, UnknownVariant};
 
 pub use reply::{Scope, counter, reply};
@@ -62,20 +63,20 @@ impl Answer {
     }
 
     /// The button label.
-    pub fn label(self) -> &'static str {
+    pub fn label(self) -> String {
         match self {
-            Answer::Yes => "Yes",
-            Answer::No => "No",
-            Answer::Maybe => "Maybe",
+            Answer::Yes => gettext("Yes"),
+            Answer::No => gettext("No"),
+            Answer::Maybe => gettext("Maybe"),
         }
     }
 
     /// How the card names an answer somebody already gave.
-    pub fn said(self) -> &'static str {
+    pub fn said(self) -> String {
         match self {
-            Answer::Yes => "Going",
-            Answer::No => "Not going",
-            Answer::Maybe => "Maybe",
+            Answer::Yes => gettext("Going"),
+            Answer::No => gettext("Not going"),
+            Answer::Maybe => gettext("Maybe"),
         }
     }
 

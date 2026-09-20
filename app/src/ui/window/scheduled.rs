@@ -8,13 +8,14 @@ use mailrs_sync::outbox_id;
 
 use super::{MainWindow, Target};
 use crate::ui::Mailbox;
+use mailrs_domain::translate::{fill, gettext};
 
 impl MainWindow {
     /// Shows "Sending…" with an Undo button for `seconds`.
     pub fn offer_undo_send(&self, seconds: u32, on_undo: impl Fn() + 'static) {
         let toast = adw::Toast::builder()
-            .title("Sending…")
-            .button_label("Undo")
+            .title(gettext("Sending…"))
+            .button_label(gettext("Undo"))
             .timeout(seconds)
             .priority(adw::ToastPriority::High)
             .build();
@@ -67,13 +68,16 @@ impl MainWindow {
                 Ok(()) => {
                     this.conversation.clear();
                     this.scheduled_changed();
-                    this.toast(if count == 1 {
-                        "Won't be sent. The message is in Drafts."
+                    this.toast(&if count == 1 {
+                        gettext("Won't be sent. The message is in Drafts.")
                     } else {
-                        "Won't be sent. The messages are in Drafts."
+                        gettext("Won't be sent. The messages are in Drafts.")
                     });
                 }
-                Err(err) => this.toast(&format!("Could not cancel: {err}")),
+                Err(err) => this.toast(&fill(
+                    &gettext("Could not cancel: {reason}"),
+                    &[("reason", &err.to_string())],
+                )),
             }
         });
     }

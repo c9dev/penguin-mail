@@ -12,6 +12,7 @@ use mailrs_sync::{Mailbox, Posted, outbox_id};
 
 use super::MainWindow;
 use crate::compose::Draft;
+use mailrs_domain::translate::{fill, gettext};
 
 /// What one of the Outbox's actions runs.
 struct OutboxAction(fn(&Rc<MainWindow>));
@@ -73,10 +74,18 @@ impl MainWindow {
                     .call(async move { outbox.send_one(id).await })
                     .await;
                 match posted {
-                    Ok(Posted::Sent(_)) => this.toast("Message sent"),
-                    Ok(Posted::Waiting(_)) => this.toast("Still not sent. It stays in the Outbox."),
-                    Ok(Posted::Refused(problem)) => this.toast(&format!("Not sent: {problem}")),
-                    Err(err) => this.toast(&format!("Not sent: {err}")),
+                    Ok(Posted::Sent(_)) => this.toast(&gettext("Message sent")),
+                    Ok(Posted::Waiting(_)) => {
+                        this.toast(&gettext("Still not sent. It stays in the Outbox."))
+                    }
+                    Ok(Posted::Refused(problem)) => this.toast(&fill(
+                        &gettext("Not sent: {reason}"),
+                        &[("reason", &problem)],
+                    )),
+                    Err(err) => this.toast(&fill(
+                        &gettext("Not sent: {reason}"),
+                        &[("reason", &err.to_string())],
+                    )),
                 }
             }
             this.conversation.clear();
@@ -95,10 +104,12 @@ impl MainWindow {
             let outbox = this.core.outbox();
             let found = this.core.call(async move { outbox.find(id).await }).await;
             let Ok(Some(message)) = found else {
-                return this.toast("That message is no longer waiting.");
+                return this.toast(&gettext("That message is no longer waiting."));
             };
             let Ok(draft) = serde_json::from_str::<Draft>(&message.composer) else {
-                return this.toast("Penguin Mail cannot reopen this message. Send it as it is.");
+                return this.toast(&gettext(
+                    "Penguin Mail cannot reopen this message. Send it as it is.",
+                ));
             };
             let outbox = this.core.outbox();
             if let Err(err) = this
@@ -106,7 +117,10 @@ impl MainWindow {
                 .call(async move { outbox.drop_one(id).await })
                 .await
             {
-                return this.toast(&format!("Could not open it: {err}"));
+                return this.toast(&fill(
+                    &gettext("Could not open it: {reason}"),
+                    &[("reason", &err.to_string())],
+                ));
             }
             this.conversation.clear();
             this.scheduled_changed();
@@ -134,15 +148,18 @@ impl MainWindow {
                     .call(async move { outbox.drop_one(id).await })
                     .await
                 {
-                    return this.toast(&format!("Could not delete: {err}"));
+                    return this.toast(&fill(
+                        &gettext("Could not delete: {reason}"),
+                        &[("reason", &err.to_string())],
+                    ));
                 }
             }
             this.conversation.clear();
             this.scheduled_changed();
-            this.toast(if count == 1 {
-                "Deleted. It will not be sent."
+            this.toast(&if count == 1 {
+                gettext("Deleted. It will not be sent.")
             } else {
-                "Deleted. They will not be sent."
+                gettext("Deleted. They will not be sent.")
             });
         });
     }

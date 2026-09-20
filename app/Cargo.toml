@@ -25,6 +25,9 @@ async-channel.workspace = true
 base64.workspace = true
 chrono.workspace = true
 futures.workspace = true
+# Startup binds the text domain; the words themselves go through
+# `mailrs_domain::translate`.
+gettext-rs.workspace = true
 gtk.workspace = true
 ksni.workspace = true
 mail-builder.workspace = true

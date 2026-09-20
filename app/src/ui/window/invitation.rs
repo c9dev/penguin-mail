@@ -23,6 +23,7 @@ use crate::goa;
 use crate::settings::Change;
 use crate::ui::conversation::ConversationView;
 use crate::ui::invitation::{Action, Proposal, Showing};
+use mailrs_domain::translate::{fill, gettext};
 
 thread_local! {
     /// The accounts this run has already offered the calendar permission.
@@ -103,7 +104,10 @@ impl MainWindow {
             app.change_settings(Change::OfferedToGnome(account.email));
         }
         if open && let Err(err) = goa::open_online_accounts() {
-            self.toast(&format!("Could not open Settings: {err}"));
+            self.toast(&fill(
+                &gettext("Could not open Settings: {reason}"),
+                &[("reason", &err.to_string())],
+            ));
         }
     }
 
@@ -157,7 +161,9 @@ impl MainWindow {
             return;
         };
         if invitation.uid.trim().is_empty() {
-            return self.toast("This invitation names no event, so there is nothing to answer");
+            return self.toast(&gettext(
+                "This invitation names no event, so there is nothing to answer",
+            ));
         }
         let organizer = invitation
             .organizer
@@ -180,9 +186,10 @@ impl MainWindow {
                     match sent.told {
                         Told::Nobody => {
                             view.card.set_answer(before);
-                            this.toast(
-                                "This invitation names no organizer, so there is nobody to reply to",
-                            );
+                            this.toast(&gettext(
+                                "This invitation names no organizer, so there is nobody \
+                                 to reply to",
+                            ));
                         }
                         told => {
                             view.card.set_answer(Some(answer));
@@ -196,7 +203,10 @@ impl MainWindow {
                 }
                 Err(err) => {
                     view.card.set_answer(before);
-                    this.toast(&format!("Could not send your reply: {err}"));
+                    this.toast(&fill(
+                        &gettext("Could not send your reply: {reason}"),
+                        &[("reason", &err.to_string())],
+                    ));
                 }
             }
         });
@@ -223,14 +233,18 @@ impl MainWindow {
             let starts_at = match proposal {
                 Proposal::At(at) => Some(at),
                 Proposal::Pick => {
+                    let hears = match organizer.as_deref() {
+                        Some(organizer) => organizer.to_string(),
+                        None => gettext("Nobody"),
+                    };
                     crate::ui::when::pick_time(
                         &this.window,
-                        "Propose a New Time",
-                        &format!(
-                            "The organizer decides. {} hears what you suggest.",
-                            organizer.as_deref().unwrap_or("Nobody")
+                        &gettext("Propose a New Time"),
+                        &fill(
+                            &gettext("The organizer decides. {organizer} hears what you suggest."),
+                            &[("organizer", &hears)],
                         ),
-                        "Propose",
+                        &gettext("Propose"),
                     )
                     .await
                 }
@@ -247,17 +261,23 @@ impl MainWindow {
                 })
                 .await;
             match sent {
-                Ok(Told::Nobody) => {
-                    this.toast("This invitation names no organizer, so there is nobody to ask")
-                }
+                Ok(Told::Nobody) => this.toast(&gettext(
+                    "This invitation names no organizer, so there is nobody to ask",
+                )),
                 Ok(_) => {
                     view.card.set_went(Some(match &organizer {
-                        Some(organizer) => format!("Proposed a new time to {organizer}"),
-                        None => "Proposed a new time".to_string(),
+                        Some(organizer) => fill(
+                            &gettext("Proposed a new time to {organizer}"),
+                            &[("organizer", organizer)],
+                        ),
+                        None => gettext("Proposed a new time"),
                     }));
-                    this.toast("New time proposed. The organizer decides.");
+                    this.toast(&gettext("New time proposed. The organizer decides."));
                 }
-                Err(err) => this.toast(&format!("Could not send your proposal: {err}")),
+                Err(err) => this.toast(&fill(
+                    &gettext("Could not send your proposal: {reason}"),
+                    &[("reason", &err.to_string())],
+                )),
             }
         });
     }
@@ -275,13 +295,20 @@ impl MainWindow {
             return;
         };
         let dialog = adw::AlertDialog::new(
-            Some("Allow Penguin Mail to Use Your Calendar"),
-            Some(&format!(
-                "Your reply went to the organizer as mail. With permission to change events on the calendar for {}, the meeting is marked on your own calendar too. Google asks you to confirm in your browser.",
-                account.email
+            Some(&gettext("Allow Penguin Mail to Use Your Calendar")),
+            Some(&fill(
+                &gettext(
+                    "Your reply went to the organizer as mail. With permission to change \
+                     events on the calendar for {account}, the meeting is marked on your \
+                     own calendar too. Google asks you to confirm in your browser.",
+                ),
+                &[("account", &account.email)],
             )),
         );
-        dialog.add_responses(&[("cancel", "Not Now"), ("grant", "Grant Access")]);
+        dialog.add_responses(&[
+            ("cancel", &gettext("Not Now")),
+            ("grant", &gettext("Grant Access")),
+        ]);
         dialog.set_response_appearance("grant", adw::ResponseAppearance::Suggested);
         dialog.set_close_response("cancel");
         let this = Rc::clone(self);
@@ -310,7 +337,10 @@ impl MainWindow {
             .join("invitations");
         let path = dir.join(&name);
         if let Err(err) = std::fs::create_dir_all(&dir).and_then(|()| std::fs::write(&path, &ics)) {
-            return self.toast(&format!("Could not save the invitation: {err}"));
+            return self.toast(&fill(
+                &gettext("Could not save the invitation: {reason}"),
+                &[("reason", &err.to_string())],
+            ));
         }
         let file = gio::File::for_path(&path);
         let this = Rc::clone(self);
@@ -319,7 +349,10 @@ impl MainWindow {
             gio::Cancellable::NONE,
             move |result| {
                 if let Err(err) = result {
-                    this.toast(&format!("No app on this desktop opens invitations: {err}"));
+                    this.toast(&fill(
+                        &gettext("No app on this desktop opens invitations: {reason}"),
+                        &[("reason", &err.to_string())],
+                    ));
                 }
             },
         );
@@ -357,14 +390,15 @@ fn waiting_on_an_answer(showing: &Showing) -> bool {
 /// organizer now knows it.
 fn replied(answer: Answer, told: Told) -> String {
     let said = match answer {
-        Answer::Yes => "Replied Yes",
-        Answer::No => "Replied No",
-        Answer::Maybe => "Replied Maybe",
+        Answer::Yes => gettext("Replied Yes"),
+        Answer::No => gettext("Replied No"),
+        Answer::Maybe => gettext("Replied Maybe"),
     };
-    match told {
-        Told::Calendar => format!("{said}. The organizer has been told."),
-        _ => format!("{said}. Your reply is on its way to the organizer."),
-    }
+    let pattern = match told {
+        Told::Calendar => gettext("{answer}. The organizer has been told."),
+        _ => gettext("{answer}. Your reply is on its way to the organizer."),
+    };
+    fill(&pattern, &[("answer", &said)])
 }
 
 /// The line under the buttons: where the answer went. Google files the
@@ -372,9 +406,12 @@ fn replied(answer: Answer, told: Told) -> String {
 /// user in different places and the card says which.
 fn went(told: Told, organizer: Option<&str>) -> String {
     match (told, organizer) {
-        (Told::Calendar, _) => "Answered on your calendar".to_string(),
-        (_, Some(organizer)) => format!("Replied by email to {organizer}"),
-        (_, None) => "Replied by email".to_string(),
+        (Told::Calendar, _) => gettext("Answered on your calendar"),
+        (_, Some(organizer)) => fill(
+            &gettext("Replied by email to {organizer}"),
+            &[("organizer", organizer)],
+        ),
+        (_, None) => gettext("Replied by email"),
     }
 }
 

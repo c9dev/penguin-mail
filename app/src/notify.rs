@@ -12,6 +12,7 @@ use mailrs_sync::{MailAction, TriageAction};
 use serde::{Deserialize, Serialize};
 
 use crate::APP_ID;
+use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 /// A button a new-mail notification can carry. Clicking the body opens the
 /// conversation, so that is not one of these.
@@ -43,12 +44,12 @@ impl Button {
         }
     }
 
-    pub fn label(self) -> &'static str {
+    pub fn label(self) -> String {
         match self {
-            Button::Archive => "Archive",
-            Button::MarkRead => "Mark as Read",
-            Button::Delete => "Delete",
-            Button::Reply => "Reply",
+            Button::Archive => gettext("Archive"),
+            Button::MarkRead => gettext("Mark as Read"),
+            Button::Delete => gettext("Delete"),
+            Button::Reply => gettext("Reply"),
         }
     }
 
@@ -106,11 +107,13 @@ pub fn announce(
     chosen: async_channel::Sender<Request>,
 ) {
     if !previews {
-        let summary = if messages.len() == 1 {
-            "New message".to_string()
-        } else {
-            format!("{} new messages", messages.len())
-        };
+        let count = messages.len();
+        let summary = fill_plural(
+            "{count} new message",
+            "{count} new messages",
+            count,
+            &[("count", &count.to_string())],
+        );
         let target = (messages.len() == 1).then(|| target_of(&messages[0]));
         show(summary, String::new(), target, buttons, chosen);
         return;
@@ -121,9 +124,9 @@ pub fn announce(
                 .from
                 .as_ref()
                 .map(|a| a.display().to_string())
-                .unwrap_or_else(|| "New message".into());
+                .unwrap_or_else(|| gettext("New message"));
             let subject = if message.subject.trim().is_empty() {
-                "(no subject)".to_string()
+                gettext("(no subject)")
             } else {
                 message.subject.clone()
             };
@@ -142,9 +145,18 @@ pub fn announce(
             .filter_map(|m| m.from.as_ref().map(|a| a.display().to_string()))
             .take(3)
             .collect();
+        let count = messages.len();
         show(
-            format!("{} new messages", messages.len()),
-            format!("From {}", senders.join(", ")),
+            fill_plural(
+                "{count} new message",
+                "{count} new messages",
+                count,
+                &[("count", &count.to_string())],
+            ),
+            fill(
+                &gettext("From {senders}"),
+                &[("senders", &senders.join(", "))],
+            ),
             None,
             buttons,
             chosen,
@@ -180,9 +192,9 @@ fn show(
             .hint(notify_rust::Hint::Category("email.arrived".into()))
             .hint(notify_rust::Hint::DesktopEntry(APP_ID.into()));
         if target.is_some() {
-            notification.action("default", "Open");
+            notification.action("default", &gettext("Open"));
             for button in &buttons {
-                notification.action(button.key(), button.label());
+                notification.action(button.key(), &button.label());
             }
         }
         match notification.show() {

@@ -11,6 +11,7 @@ use mailrs_ai::{Model, ModelList, ProviderConfig};
 use crate::app::App;
 use crate::assistant::{self, ANTHROPIC_KEY, LOCAL_KEY};
 use crate::settings::{AiChange, AiProvider, AiSettings, Change, Choice};
+use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 /// Models a picker shows before it grows a search box.
 const SEARCH_FROM: usize = 8;
@@ -18,18 +19,22 @@ const SEARCH_FROM: usize = 8;
 pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesPage {
     let ai = app.settings().ai;
     let page = adw::PreferencesPage::builder()
-        .title("Assistant")
+        .title(gettext("Assistant"))
         .name("assistant")
         .icon_name("penguin-mail-sparkle-symbolic")
         .build();
 
     let model = adw::PreferencesGroup::builder()
-        .title("Model")
-        .description("Local models keep your mail on this computer. With Anthropic or a Claude subscription, the mail the assistant reads goes to Anthropic.")
+        .title(gettext("Model"))
+        .description(gettext(
+            "Local models keep your mail on this computer. With Anthropic or a Claude \
+             subscription, the mail the assistant reads goes to Anthropic.",
+        ))
         .build();
-    let labels: Vec<&str> = AiProvider::ALL.iter().map(|p| p.label()).collect();
+    let labels: Vec<String> = AiProvider::ALL.iter().map(|p| p.label()).collect();
+    let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
     let provider = adw::ComboRow::builder()
-        .title("Provider")
+        .title(gettext("Provider"))
         .model(&gtk::StringList::new(&labels))
         .selected(ai.provider.index())
         .build();
@@ -37,17 +42,17 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
 
     // A local or OpenAI-compatible server.
     let base_url = adw::EntryRow::builder()
-        .title("Server Address")
+        .title(gettext("Server Address"))
         .text(&ai.base_url)
         .show_apply_button(true)
         .build();
     let local_key = adw::PasswordEntryRow::builder()
-        .title("API Key (Optional)")
+        .title(gettext("API Key (Optional)"))
         .show_apply_button(true)
         .build();
     // Anthropic.
     let anthropic_key = adw::PasswordEntryRow::builder()
-        .title("Anthropic API Key")
+        .title(gettext("Anthropic API Key"))
         .show_apply_button(true)
         .build();
     // Every picker and the Test button read the fields through this, so
@@ -67,6 +72,7 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
         },
         typed.clone(),
     );
+
     let anthropic_model = model_row(
         app,
         &ai.anthropic_model,
@@ -80,10 +86,13 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
     // Claude Code.
     let found = assistant::find_claude();
     let claude = adw::ActionRow::builder()
-        .title("Claude Code")
+        .title(gettext("Claude Code"))
         .subtitle(match &found {
-            Some(path) => format!("Uses your Claude subscription through {}", path.display()),
-            None => "Not found. Install Claude Code and sign in by running claude once.".into(),
+            Some(path) => fill(
+                &gettext("Uses your Claude subscription through {path}"),
+                &[("path", &path.display().to_string())],
+            ),
+            None => gettext("Not found. Install Claude Code and sign in by running claude once."),
         })
         .build();
     let claude_model = model_row(
@@ -91,7 +100,7 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
         &ai.claude_model,
         Picker {
             provider: AiProvider::ClaudeCode,
-            default_label: Some("Claude Code's own default"),
+            default_label: Some(gettext("Claude Code's own default")),
             change: AiChange::ClaudeModel,
         },
         typed.clone(),
@@ -108,11 +117,11 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
         model.add(row);
     }
     let test = gtk::Button::builder()
-        .label("Test")
+        .label(gettext("Test"))
         .valign(gtk::Align::Center)
         .build();
     let test_row = adw::ActionRow::builder()
-        .title("Test the Connection")
+        .title(gettext("Test the Connection"))
         .build();
     test_row.add_suffix(&test);
     model.add(&test_row);
@@ -160,10 +169,10 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
         row.connect_apply(move |row| {
             let key = row.text();
             assistant::save_key(name, &key);
-            toasts.add_toast(adw::Toast::new(if key.trim().is_empty() {
-                "Removed the key"
+            toasts.add_toast(adw::Toast::new(&if key.trim().is_empty() {
+                gettext("Removed the key")
             } else {
-                "Saved in the keyring"
+                gettext("Saved in the keyring")
             }));
             row.set_text("");
         });
@@ -171,7 +180,7 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
     save(LOCAL_KEY, &local_key);
     save(ANTHROPIC_KEY, &anthropic_key);
     if assistant::load_key(ANTHROPIC_KEY).is_some() {
-        anthropic_key.set_title("Anthropic API Key (Saved)");
+        anthropic_key.set_title(&gettext("Anthropic API Key (Saved)"));
     }
     let (weak, toasts) = (Rc::downgrade(app), dialog.clone());
     let testing = typed.clone();
@@ -195,17 +204,25 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
             button.set_sensitive(true);
             toasts.add_toast(adw::Toast::new(&match result {
                 Ok(answer) => answer,
-                Err(err) => format!("No answer: {err}"),
+                Err(err) => fill(
+                    &gettext("No answer: {reason}"),
+                    &[("reason", &err.to_string())],
+                ),
             }));
         });
     });
 
     page.add(&detected_group(app, &provider, &base_url, &local_model));
 
-    let safety = adw::PreferencesGroup::builder().title("Safety").build();
+    let safety = adw::PreferencesGroup::builder()
+        .title(gettext("Safety"))
+        .build();
     let confirm = adw::SwitchRow::builder()
-        .title("Ask Before Acting")
-        .subtitle("Approve each message the assistant sends and each change to Gmail settings, such as automatic replies and rules")
+        .title(gettext("Ask Before Acting"))
+        .subtitle(gettext(
+            "Approve each message the assistant sends and each change to Gmail \
+             settings, such as automatic replies and rules",
+        ))
         .active(ai.confirm_actions)
         .build();
     let weak = Rc::downgrade(app);
@@ -283,12 +300,12 @@ impl Typed {
 }
 
 /// What one provider's model picker lists and what it saves.
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct Picker {
     provider: AiProvider,
     /// The first entry, which empties the field. Claude Code picks its own
     /// model then; the other providers need a name.
-    default_label: Option<&'static str>,
+    default_label: Option<String>,
     change: fn(String) -> AiChange,
 }
 
@@ -296,7 +313,7 @@ struct Picker {
 /// picker listing what the provider can run.
 fn model_row(app: &Rc<App>, current: &str, picker: Picker, typed: Typed) -> adw::EntryRow {
     let row = adw::EntryRow::builder()
-        .title("Model")
+        .title(gettext("Model"))
         .text(current)
         .show_apply_button(true)
         .build();
@@ -309,7 +326,7 @@ fn model_row(app: &Rc<App>, current: &str, picker: Picker, typed: Typed) -> adw:
     });
     let pick = gtk::MenuButton::builder()
         .icon_name("pan-down-symbolic")
-        .tooltip_text("Models You Can Use")
+        .tooltip_text(gettext("Models You Can Use"))
         .valign(gtk::Align::Center)
         .css_classes(["flat"])
         .build();
@@ -318,7 +335,7 @@ fn model_row(app: &Rc<App>, current: &str, picker: Picker, typed: Typed) -> adw:
         let Some(app) = weak.upgrade() else { return };
         let popover = gtk::Popover::builder().build();
         button.set_popover(Some(&popover));
-        fill_popover(&app, &popover, &entry, picker, &typed);
+        fill_popover(&app, &popover, &entry, picker.clone(), &typed);
     });
     row.add_suffix(&pick);
     row
@@ -333,7 +350,7 @@ fn fill_popover(
     typed: &Typed,
 ) {
     let search = gtk::SearchEntry::builder()
-        .placeholder_text("Search models")
+        .placeholder_text(gettext("Search models"))
         .visible(false)
         .build();
     // Hidden until it has rows, so a failed list leaves no empty frame.
@@ -350,7 +367,7 @@ fn fill_popover(
         .visible(false)
         .build();
     let waiting = gtk::Label::builder()
-        .label("Asking for the model list…")
+        .label(gettext("Asking for the model list…"))
         .css_classes(["dim-label"])
         .margin_top(8)
         .margin_bottom(8)
@@ -422,7 +439,15 @@ fn fill_popover(
                 return;
             }
         };
-        show_models(&listed, &list, &search, &note, &entry, &popover, picker);
+        show_models(
+            &listed,
+            &list,
+            &search,
+            &note,
+            &entry,
+            &popover,
+            picker.clone(),
+        );
         scroller.set_visible(list.first_child().is_some());
     });
 }
@@ -457,7 +482,9 @@ fn show_models(
     search.set_visible(models.len() > SEARCH_FROM);
     let mut notes: Vec<String> = Vec::new();
     if listed.models.is_empty() {
-        notes.push("This provider lists no models. Type a name in the field instead.".into());
+        notes.push(gettext(
+            "This provider lists no models. Type a name in the field instead.",
+        ));
     }
     if let Some(from_provider) = &listed.note {
         notes.push(from_provider.clone());
@@ -491,7 +518,7 @@ fn model_item(model: &Model, chosen: bool) -> adw::ActionRow {
     if model.alias {
         row.add_suffix(
             &gtk::Label::builder()
-                .label("alias")
+                .label(gettext("alias"))
                 .css_classes(["dim-label", "caption"])
                 .build(),
         );
@@ -530,10 +557,12 @@ fn detected_group(
     local_model: &adw::EntryRow,
 ) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::builder()
-        .title("Found on This Computer")
+        .title(gettext("Found on This Computer"))
         .build();
     let looking = adw::ActionRow::builder()
-        .title("Looking for LM Studio, Ollama, Unsloth, and Claude Code…")
+        .title(gettext(
+            "Looking for LM Studio, Ollama, Unsloth, and Claude Code…",
+        ))
         .build();
     group.add(&looking);
     let (app, group_ref) = (Rc::clone(app), group.clone());
@@ -549,8 +578,11 @@ fn detected_group(
         if found.is_empty() {
             group_ref.add(
                 &adw::ActionRow::builder()
-                    .title("Nothing found")
-                    .subtitle("Start LM Studio's server or Ollama, or install Claude Code, then open Preferences again.")
+                    .title(gettext("Nothing found"))
+                    .subtitle(gettext(
+                        "Start LM Studio's server or Ollama, or install Claude Code, \
+                         then open Preferences again.",
+                    ))
                     .build(),
             );
             return;
@@ -559,14 +591,19 @@ fn detected_group(
             let subtitle = match item.models.len() {
                 0 => String::new(),
                 1 => item.models[0].clone(),
-                n => format!("{} and {} more", item.models[0], n - 1),
+                n => fill_plural(
+                    "{model} and {count} more",
+                    "{model} and {count} more",
+                    n - 1,
+                    &[("model", &item.models[0]), ("count", &(n - 1).to_string())],
+                ),
             };
             let row = adw::ActionRow::builder()
                 .title(&item.label)
                 .subtitle(&subtitle)
                 .build();
             let use_it = gtk::Button::builder()
-                .label("Use")
+                .label(gettext("Use"))
                 .valign(gtk::Align::Center)
                 .build();
             let (app, provider, base_url, local_model) = (

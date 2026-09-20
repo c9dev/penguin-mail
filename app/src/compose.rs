@@ -21,6 +21,7 @@ use serde::{Deserialize, Serialize};
 use crate::format::full_date;
 use crate::richtext::{self, RichBody};
 use crate::smime::Standard;
+use mailrs_domain::translate::{fill, gettext};
 
 /// One address an account may send mail as, as Gmail last reported it: the
 /// account's own address, or an alias Gmail has verified. Gmail keeps a
@@ -419,14 +420,19 @@ impl Draft {
     /// Why this draft cannot be sent yet, if anything stops it.
     pub fn problem(&self) -> Option<String> {
         if self.to.is_empty() && self.cc.is_empty() && self.bcc.is_empty() {
-            return Some("Add at least one recipient.".into());
+            return Some(gettext("Add at least one recipient."));
         }
         self.to
             .iter()
             .chain(&self.cc)
             .chain(&self.bcc)
             .find(|a| !is_address(&a.email))
-            .map(|a| format!("“{}” is not an email address.", a.email))
+            .map(|a| {
+                fill(
+                    &gettext("“{address}” is not an email address."),
+                    &[("address", &a.email)],
+                )
+            })
     }
 
     /// Takes the body of a message this composer reopens: the Markdown
@@ -554,9 +560,14 @@ pub fn respond(
             draft.cc = dedupe(cc, &taken);
             draft.subject = prefixed("Re: ", &original.subject, &["re:"]);
             draft.markdown = format!(
-                "\n\nOn {}, {} wrote:\n{}",
-                full_date(original.date),
-                sender.display(),
+                "\n\n{}\n{}",
+                fill(
+                    &attribution(),
+                    &[
+                        ("date", &full_date(original.date)),
+                        ("sender", sender.display()),
+                    ]
+                ),
                 quote(original_text)
             );
             draft.in_reply_to = original.rfc822_msgid.clone();
@@ -651,9 +662,33 @@ fn signature_block(signature: &str) -> String {
     format!("\n\n-- \n{}", signature.trim_end())
 }
 
+/// The line that introduces a quoted original, in the writer's language.
+/// Both values are named, so a translator may put the date and the sender
+/// wherever the sentence wants them.
+fn attribution() -> String {
+    gettext("On {date}, {sender} wrote:")
+}
+
+/// The words the attribution ends with, which is how one is recognized
+/// again: "wrote:" in English, "escreveu:" in Portuguese. A language that
+/// ends the line on a value leaves nothing to match, and the colon every
+/// such line carries stands in.
+fn attribution_tail() -> String {
+    let pattern = attribution();
+    let tail = match pattern.rfind('}') {
+        Some(at) => pattern[at + 1..].trim().to_string(),
+        None => pattern,
+    };
+    match tail.is_empty() {
+        true => ":".to_string(),
+        false => tail,
+    }
+}
+
 /// Where the quoted original starts, counting the "On Monday, Ann wrote:"
 /// line that introduces it. `None` when nothing is quoted.
 fn quote_starts_at(markdown: &str) -> Option<usize> {
+    let tail = attribution_tail();
     let mut at = 0;
     let mut attribution = None;
     for line in markdown.split_inclusive('\n') {
@@ -663,7 +698,7 @@ fn quote_starts_at(markdown: &str) -> Option<usize> {
         // A blank line between the attribution and the quote belongs to the
         // quote, so it does not clear what was found.
         if !line.trim().is_empty() {
-            attribution = line.trim_end().ends_with("wrote:").then_some(at);
+            attribution = line.trim_end().ends_with(&tail).then_some(at);
         }
         at += line.len();
     }

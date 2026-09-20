@@ -11,6 +11,7 @@ use mailrs_store::follow_ups;
 
 use super::{MainWindow, Target};
 use crate::ui::Mailbox;
+use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 /// "2 sent messages have had no reply" with Review and close buttons.
 /// Closing it hides it until the app quits.
@@ -31,12 +32,12 @@ impl FollowUpBanner {
             .wrap(true)
             .build();
         let review = gtk::Button::builder()
-            .label("Review")
+            .label(gettext("Review"))
             .valign(gtk::Align::Center)
             .build();
         let close = gtk::Button::builder()
             .icon_name("window-close-symbolic")
-            .tooltip_text("Hide Until Next Launch")
+            .tooltip_text(gettext("Hide Until Next Launch"))
             .valign(gtk::Align::Center)
             .css_classes(["flat", "circular"])
             .build();
@@ -101,11 +102,12 @@ impl MainWindow {
         let mailbox = self.mailbox.borrow().clone();
         let banner = &self.follow_up;
         let count = banner.waiting.get();
-        banner.title.set_label(&if count == 1 {
-            "1 sent message has had no reply".to_string()
-        } else {
-            format!("{count} sent messages have had no reply")
-        });
+        banner.title.set_label(&fill_plural(
+            "{count} sent message has had no reply",
+            "{count} sent messages have had no reply",
+            count,
+            &[("count", &count.to_string())],
+        ));
         banner.revealer.set_reveal_child(
             mailbox == Mailbox::Unified(system_label::INBOX)
                 && count > 0
@@ -121,7 +123,7 @@ impl MainWindow {
         }
         if mailbox == Mailbox::FollowUp {
             self.conversation
-                .set_trash_tooltip("Dismiss Follow-Up (Delete)");
+                .set_trash_tooltip(&gettext("Dismiss Follow-Up (Delete)"));
         }
     }
 
@@ -164,16 +166,20 @@ impl MainWindow {
                 })
                 .await;
             if let Err(err) = saved {
-                return this.toast(&format!("Could not dismiss: {err}"));
+                return this.toast(&fill(
+                    &gettext("Could not dismiss: {reason}"),
+                    &[("reason", &err.to_string())],
+                ));
             }
             this.follow_ups_changed();
             let toast = adw::Toast::builder()
-                .title(if count == 1 {
-                    "Dismissed follow-up".to_string()
-                } else {
-                    format!("Dismissed {count} follow-ups")
-                })
-                .button_label("Undo")
+                .title(fill_plural(
+                    "Dismissed {count} follow-up",
+                    "Dismissed {count} follow-ups",
+                    count,
+                    &[("count", &count.to_string())],
+                ))
+                .button_label(gettext("Undo"))
                 .timeout(5)
                 .build();
             let weak = Rc::downgrade(&this);
@@ -200,7 +206,10 @@ impl MainWindow {
                 .await;
             match restored {
                 Ok(()) => this.follow_ups_changed(),
-                Err(err) => this.toast(&format!("Could not undo: {err}")),
+                Err(err) => this.toast(&fill(
+                    &gettext("Could not undo: {reason}"),
+                    &[("reason", &err.to_string())],
+                )),
             }
         });
     }

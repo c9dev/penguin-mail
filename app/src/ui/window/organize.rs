@@ -10,6 +10,7 @@ use mailrs_sync::{History, MailAction, TriageAction};
 use super::{MainWindow, Target};
 use crate::ui::Mailbox;
 use crate::ui::moving::move_action;
+use mailrs_domain::translate::{fill, gettext};
 
 /// What to do with a label once it exists, given its id.
 pub(super) type AfterCreate = Box<dyn Fn(&Rc<MainWindow>, String)>;
@@ -24,7 +25,7 @@ impl MainWindow {
         if let Mailbox::Label { account_id, .. } = &mailbox
             && rows.iter().any(|r| r.account_id != *account_id)
         {
-            self.toast("Drop mail on its own account's mailboxes");
+            self.toast(&gettext("Drop mail on its own account's mailboxes"));
             return false;
         }
         if let Mailbox::Flag(color) = mailbox {
@@ -35,7 +36,7 @@ impl MainWindow {
         let action = match move_action(&from, &mailbox) {
             Ok(action) => action,
             Err(reason) => {
-                self.toast(reason);
+                self.toast(&reason);
                 return false;
             }
         };
@@ -52,7 +53,10 @@ impl MainWindow {
         let message = match action {
             TriageAction::AddLabel(_)
             | TriageAction::RemoveLabel(_)
-            | TriageAction::Relabel { .. } => Some(format!("Moved to {}", mailbox.title())),
+            | TriageAction::Relabel { .. } => Some(fill(
+                &gettext("Moved to {mailbox}"),
+                &[("mailbox", &mailbox.title())],
+            )),
             _ => None,
         };
         self.perform(
@@ -68,15 +72,18 @@ impl MainWindow {
     /// runs it on the new label's id, as the label menu does to apply it.
     pub(super) fn new_label(self: &Rc<Self>, account_id: AccountId, then: Option<AfterCreate>) {
         let entry = gtk::Entry::builder()
-            .placeholder_text("Name, or Parent/Name to nest it")
+            .placeholder_text(gettext("Name, or Parent/Name to nest it"))
             .activates_default(true)
             .build();
         focus_when_shown(&entry);
         let dialog = adw::AlertDialog::builder()
-            .heading("New Label")
+            .heading(gettext("New Label"))
             .extra_child(&entry)
             .build();
-        dialog.add_responses(&[("cancel", "Cancel"), ("create", "Create")]);
+        dialog.add_responses(&[
+            ("cancel", &gettext("Cancel")),
+            ("create", &gettext("Create")),
+        ]);
         dialog.set_response_appearance("create", adw::ResponseAppearance::Suggested);
         dialog.set_default_response(Some("create"));
         dialog.set_close_response("cancel");
@@ -90,7 +97,7 @@ impl MainWindow {
                 return;
             }
             let Some(sync) = this.core.account(account_id) else {
-                return this.toast("That account is not connected");
+                return this.toast(&gettext("That account is not connected"));
             };
             let wanted = name.clone();
             match this
@@ -100,9 +107,12 @@ impl MainWindow {
             {
                 Ok(label) => match then {
                     Some(then) => then(&this, label.id),
-                    None => this.toast(&format!("Created “{name}”")),
+                    None => this.toast(&fill(&gettext("Created “{name}”"), &[("name", &name)])),
                 },
-                Err(err) => this.toast(&format!("Could not create the label: {err}")),
+                Err(err) => this.toast(&fill(
+                    &gettext("Could not create the label: {reason}"),
+                    &[("reason", &err.to_string())],
+                )),
             }
         });
     }
@@ -117,11 +127,14 @@ impl MainWindow {
             .build();
         focus_when_shown(&entry);
         let dialog = adw::AlertDialog::builder()
-            .heading("Rename Label")
-            .body("Labels nested under it move along.")
+            .heading(gettext("Rename Label"))
+            .body(gettext("Labels nested under it move along."))
             .extra_child(&entry)
             .build();
-        dialog.add_responses(&[("cancel", "Cancel"), ("rename", "Rename")]);
+        dialog.add_responses(&[
+            ("cancel", &gettext("Cancel")),
+            ("rename", &gettext("Rename")),
+        ]);
         dialog.set_response_appearance("rename", adw::ResponseAppearance::Suggested);
         dialog.set_default_response(Some("rename"));
         dialog.set_close_response("cancel");
@@ -135,7 +148,7 @@ impl MainWindow {
                 return;
             }
             let Some(sync) = this.core.account(account_id) else {
-                return this.toast("That account is not connected");
+                return this.toast(&gettext("That account is not connected"));
             };
             let wanted = name.clone();
             if let Err(err) = this
@@ -143,7 +156,10 @@ impl MainWindow {
                 .call(async move { sync.rename_label(&label_id, &wanted).await })
                 .await
             {
-                this.toast(&format!("Could not rename the label: {err}"));
+                this.toast(&fill(
+                    &gettext("Could not rename the label: {reason}"),
+                    &[("reason", &err.to_string())],
+                ));
             }
         });
     }
@@ -153,10 +169,15 @@ impl MainWindow {
             return;
         };
         let dialog = adw::AlertDialog::new(
-            Some(&format!("Delete “{name}”?")),
-            Some("Its mail stays in Gmail, without the label. Nested labels stay too."),
+            Some(&fill(&gettext("Delete “{name}”?"), &[("name", &name)])),
+            Some(&gettext(
+                "Its mail stays in Gmail, without the label. Nested labels stay too.",
+            )),
         );
-        dialog.add_responses(&[("cancel", "Cancel"), ("delete", "Delete")]);
+        dialog.add_responses(&[
+            ("cancel", &gettext("Cancel")),
+            ("delete", &gettext("Delete")),
+        ]);
         dialog.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
         dialog.set_close_response("cancel");
         let this = Rc::clone(self);
@@ -165,7 +186,7 @@ impl MainWindow {
                 return;
             }
             let Some(sync) = this.core.account(account_id) else {
-                return this.toast("That account is not connected");
+                return this.toast(&gettext("That account is not connected"));
             };
             let showing = matches!(
                 &*this.mailbox.borrow(),
@@ -182,9 +203,12 @@ impl MainWindow {
                         this.sidebar.select(&inbox);
                         this.show_mailbox(inbox);
                     }
-                    this.toast(&format!("Deleted “{name}”"));
+                    this.toast(&fill(&gettext("Deleted “{name}”"), &[("name", &name)]));
                 }
-                Err(err) => this.toast(&format!("Could not delete the label: {err}")),
+                Err(err) => this.toast(&fill(
+                    &gettext("Could not delete the label: {reason}"),
+                    &[("reason", &err.to_string())],
+                )),
             }
         });
     }
@@ -196,11 +220,11 @@ impl MainWindow {
         label_id: String,
         index: usize,
     ) {
-        let Some((_, background, text)) = crate::ui::LABEL_COLORS.get(index) else {
+        let Some((background, text)) = crate::ui::LABEL_COLORS.get(index) else {
             return;
         };
         let Some(sync) = self.core.account(account_id) else {
-            return self.toast("That account is not connected");
+            return self.toast(&gettext("That account is not connected"));
         };
         let color = mailrs_gmail::LabelColor {
             background_color: background.to_string(),
@@ -213,7 +237,10 @@ impl MainWindow {
                 .call(async move { sync.set_label_color(&label_id, color).await })
                 .await
             {
-                this.toast(&format!("Could not change the colour: {err}"));
+                this.toast(&fill(
+                    &gettext("Could not change the colour: {reason}"),
+                    &[("reason", &err.to_string())],
+                ));
             }
         });
     }

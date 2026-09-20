@@ -11,6 +11,7 @@ prefix="${PREFIX:-$HOME/.local}"
 apps="$prefix/share/applications"
 icons="$prefix/share/icons/hicolor"
 autostart="$HOME/.config/autostart"
+locale="$prefix/share/locale"
 id=dev.penguinmail.PenguinMail
 old_id=dev.mailrs.Mailrs
 
@@ -21,7 +22,25 @@ install -Dm755 target/release/penguin-mail-cli "$prefix/bin/penguin-mail-cli"
 install -Dm644 "app/data/icons/scalable/apps/$id.svg" "$icons/scalable/apps/$id.svg"
 install -Dm644 "app/data/icons/scalable/apps/$id-symbolic.svg" "$icons/symbolic/apps/$id-symbolic.svg"
 mkdir -p "$apps"
-sed "s|^Exec=penguin-mail|Exec=$prefix/bin/penguin-mail|" "app/data/$id.desktop" > "$apps/$id.desktop"
+entry=$(mktemp)
+trap 'rm -f "$entry"' EXIT
+sed "s|^Exec=penguin-mail|Exec=$prefix/bin/penguin-mail|" "app/data/$id.desktop" > "$entry"
+
+# The translations need msgfmt from gettext. Without it the app still runs,
+# in English, so say so and carry on.
+if command -v msgfmt >/dev/null; then
+    for po in po/*.po; do
+        lang=$(basename "$po" .po)
+        install -Dm644 /dev/null "$locale/$lang/LC_MESSAGES/penguin-mail.mo"
+        msgfmt -o "$locale/$lang/LC_MESSAGES/penguin-mail.mo" "$po"
+    done
+    msgfmt --desktop --template="$entry" -d po -o "$apps/$id.desktop"
+    chmod 644 "$apps/$id.desktop"
+else
+    echo "msgfmt is missing, so Penguin Mail will speak English only."
+    echo "Install gettext and run this again for the other languages."
+    install -Dm644 "$entry" "$apps/$id.desktop"
+fi
 
 rm -f "$prefix/bin/mailrs" "$prefix/bin/mailrs-cli" \
     "$apps/$old_id.desktop" \

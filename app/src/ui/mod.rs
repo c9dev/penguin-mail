@@ -24,6 +24,7 @@ pub mod welcome;
 pub mod when;
 pub mod window;
 
+use mailrs_domain::translate::gettext;
 use mailrs_domain::{Folder, system_label};
 pub use mailrs_sync::Mailbox;
 pub use mailrs_sync::mailbox::unified_name;
@@ -31,12 +32,12 @@ use mailrs_sync::mailbox::{folder_icon, folder_name};
 
 /// How the sidebar and window show a `Folder`.
 pub trait FolderLook {
-    fn name(self) -> &'static str;
+    fn name(self) -> String;
     fn icon(self) -> &'static str;
 }
 
 impl FolderLook for Folder {
-    fn name(self) -> &'static str {
+    fn name(self) -> String {
         folder_name(self)
     }
 
@@ -45,18 +46,34 @@ impl FolderLook for Folder {
     }
 }
 
-/// Label colours from Gmail's palette: name, background, and text.
-pub const LABEL_COLORS: [(&str, &str, &str); 9] = [
-    ("Red", "#fb4c2f", "#ffffff"),
-    ("Orange", "#ffad47", "#ffffff"),
-    ("Yellow", "#fad165", "#000000"),
-    ("Green", "#16a766", "#ffffff"),
-    ("Teal", "#2da2bb", "#ffffff"),
-    ("Blue", "#4a86e8", "#ffffff"),
-    ("Purple", "#a479e2", "#ffffff"),
-    ("Pink", "#f691b3", "#ffffff"),
-    ("Gray", "#999999", "#ffffff"),
+/// Label colours from Gmail's palette: background and text.
+/// [`label_color_name`] names them in the reader's language.
+pub const LABEL_COLORS: [(&str, &str); 9] = [
+    ("#fb4c2f", "#ffffff"),
+    ("#ffad47", "#ffffff"),
+    ("#fad165", "#000000"),
+    ("#16a766", "#ffffff"),
+    ("#2da2bb", "#ffffff"),
+    ("#4a86e8", "#ffffff"),
+    ("#a479e2", "#ffffff"),
+    ("#f691b3", "#ffffff"),
+    ("#999999", "#ffffff"),
 ];
+
+/// What the label colour menu calls the colour at `index`.
+pub fn label_color_name(index: usize) -> String {
+    match index {
+        0 => gettext("Red"),
+        1 => gettext("Orange"),
+        2 => gettext("Yellow"),
+        3 => gettext("Green"),
+        4 => gettext("Teal"),
+        5 => gettext("Blue"),
+        6 => gettext("Purple"),
+        7 => gettext("Pink"),
+        _ => gettext("Gray"),
+    }
+}
 
 pub const UNIFIED: [&str; 5] = [
     system_label::INBOX,
@@ -66,14 +83,14 @@ pub const UNIFIED: [&str; 5] = [
     system_label::MUTE,
 ];
 
-pub fn account_label_name(label: &str) -> &'static str {
+pub fn account_label_name(label: &str) -> String {
     match label {
-        system_label::INBOX => "Inbox",
-        system_label::STARRED => "Flagged",
-        system_label::SENT => "Sent",
-        system_label::DRAFT => "Drafts",
-        system_label::MUTE => "Muted",
-        _ => "Mail",
+        system_label::INBOX => gettext("Inbox"),
+        system_label::STARRED => gettext("Flagged"),
+        system_label::SENT => gettext("Sent"),
+        system_label::DRAFT => gettext("Drafts"),
+        system_label::MUTE => gettext("Muted"),
+        _ => gettext("Mail"),
     }
 }
 

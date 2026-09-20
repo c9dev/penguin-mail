@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use mailrs_domain::system_label;
+use mailrs_domain::translate::{fill, gettext};
 
 /// A label change the user asked for on a whole thread. Ordered, so a bulk
 /// action can group the targets that want the same change.
@@ -81,22 +82,27 @@ impl TriageAction {
         }
     }
 
+    /// The action in words, for a toast the person reads.
     pub fn describe(&self) -> String {
         match self {
-            TriageAction::Archive => "Archive".into(),
-            TriageAction::MarkRead => "Mark read".into(),
-            TriageAction::MarkUnread => "Mark unread".into(),
-            TriageAction::Star => "Star".into(),
-            TriageAction::Unstar => "Unstar".into(),
-            TriageAction::AddLabel(label) => format!("Add label {label}"),
-            TriageAction::RemoveLabel(label) => format!("Remove label {label}"),
-            TriageAction::Trash => "Move to trash".into(),
-            TriageAction::Untrash => "Move out of trash".into(),
-            TriageAction::Junk => "Mark as junk".into(),
-            TriageAction::NotJunk => "Mark as not junk".into(),
-            TriageAction::Mute => "Mute".into(),
-            TriageAction::Unmute => "Unmute".into(),
-            TriageAction::Relabel { .. } => "Change labels".into(),
+            TriageAction::Archive => gettext("Archive"),
+            TriageAction::MarkRead => gettext("Mark read"),
+            TriageAction::MarkUnread => gettext("Mark unread"),
+            TriageAction::Star => gettext("Star"),
+            TriageAction::Unstar => gettext("Unstar"),
+            TriageAction::AddLabel(label) => {
+                fill(&gettext("Add label {label}"), &[("label", label)])
+            }
+            TriageAction::RemoveLabel(label) => {
+                fill(&gettext("Remove label {label}"), &[("label", label)])
+            }
+            TriageAction::Trash => gettext("Move to trash"),
+            TriageAction::Untrash => gettext("Move out of trash"),
+            TriageAction::Junk => gettext("Mark as junk"),
+            TriageAction::NotJunk => gettext("Mark as not junk"),
+            TriageAction::Mute => gettext("Mute"),
+            TriageAction::Unmute => gettext("Unmute"),
+            TriageAction::Relabel { .. } => gettext("Change labels"),
         }
     }
 }

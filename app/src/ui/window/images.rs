@@ -16,6 +16,7 @@ use super::MainWindow;
 use crate::images;
 use crate::settings::RemoteImages;
 use crate::ui::conversation::ConversationView;
+use mailrs_domain::translate::{fill, gettext};
 
 impl MainWindow {
     /// Whether a message from these senders may load remote images. Every
@@ -64,11 +65,13 @@ impl MainWindow {
         if images::allowed(&self.image_senders.borrow(), Some(&from)) {
             return;
         }
+        let ask = fill(
+            &gettext("Always load images from {sender}?"),
+            &[("sender", &from)],
+        );
         let toast = adw::Toast::builder()
-            .title(glib::markup_escape_text(&format!(
-                "Always load images from {from}?"
-            )))
-            .button_label("Always")
+            .title(glib::markup_escape_text(&ask))
+            .button_label(gettext("Always"))
             .timeout(8)
             .build();
         let (this, view) = (Rc::clone(self), Rc::clone(view));
@@ -93,18 +96,26 @@ impl MainWindow {
             return;
         };
         let Some(from) = from.filter(|a| !a.trim().is_empty()) else {
-            self.toast("This message has no sender to remember.");
+            self.toast(&gettext("This message has no sender to remember."));
             return;
         };
         let dialog = adw::AlertDialog::builder()
-            .heading("Always Load Images?")
-            .body("Loading a remote image tells the sender when you opened their mail.")
+            .heading(gettext("Always Load Images?"))
+            .body(gettext(
+                "Loading a remote image tells the sender when you opened their mail.",
+            ))
             .build();
-        dialog.add_response("cancel", "Cancel");
-        dialog.add_response("address", &format!("From {from}"));
+        dialog.add_response("cancel", &gettext("Cancel"));
+        dialog.add_response(
+            "address",
+            &fill(&gettext("From {sender}"), &[("sender", &from)]),
+        );
         let domain = images::domain_of(&from).map(str::to_string);
         if let Some(domain) = &domain {
-            dialog.add_response("domain", &format!("From Anyone at {domain}"));
+            dialog.add_response(
+                "domain",
+                &fill(&gettext("From Anyone at {domain}"), &[("domain", domain)]),
+            );
         }
         dialog.set_default_response(Some("address"));
         dialog.set_close_response("cancel");
@@ -145,14 +156,22 @@ impl MainWindow {
                 *self.image_senders.borrow_mut() = list;
                 view.with_open(|open| open.images_allowed = true);
                 view.render(false);
-                let what = if whole_domain {
-                    format!("anyone at {sender}")
+                self.toast(&if whole_domain {
+                    fill(
+                        &gettext("Images from anyone at {domain} will load from now on"),
+                        &[("domain", &sender)],
+                    )
                 } else {
-                    sender
-                };
-                self.toast(&format!("Images from {what} will load from now on"));
+                    fill(
+                        &gettext("Images from {sender} will load from now on"),
+                        &[("sender", &sender)],
+                    )
+                });
             }
-            Err(err) => self.toast(&format!("Could not remember that sender: {err}")),
+            Err(err) => self.toast(&fill(
+                &gettext("Could not remember that sender: {reason}"),
+                &[("reason", &err.to_string())],
+            )),
         }
     }
 }

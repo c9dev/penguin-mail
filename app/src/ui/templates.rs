@@ -11,6 +11,7 @@ use gtk::glib;
 use mailrs_store::templates::Template;
 
 use crate::app::App;
+use mailrs_domain::translate::{fill, gettext};
 
 /// The rows on show, so a change can take them off again.
 type Rows = Rc<RefCell<Vec<adw::ActionRow>>>;
@@ -18,18 +19,18 @@ type Rows = Rc<RefCell<Vec<adw::ActionRow>>>;
 /// One row per saved template, with a way to add, edit, and delete them.
 pub fn group(app: &Rc<App>) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::builder()
-        .title("Templates")
-        .description(
+        .title(gettext("Templates"))
+        .description(gettext(
             "Saved bodies the composer's Templates menu drops into a message. \
              Markdown works, and {{first_name}}, {{name}}, {{email}}, {{subject}} \
              and {{date}} fill in when you use one.",
-        )
+        ))
         .build();
     let add = gtk::Button::builder()
         .child(
             &adw::ButtonContent::builder()
                 .icon_name("list-add-symbolic")
-                .label("Add Template")
+                .label(gettext("Add Template"))
                 .build(),
         )
         .css_classes(["flat"])
@@ -119,7 +120,7 @@ fn summary(template: &Template) -> String {
         .markdown
         .lines()
         .find(|line| !line.trim().is_empty())
-        .map_or_else(|| "Empty".to_string(), |line| line.trim().to_string())
+        .map_or_else(|| gettext("Empty"), |line| line.trim().to_string())
 }
 
 /// Asks before deleting, since nothing here brings a template back.
@@ -131,10 +132,16 @@ fn confirm_delete(
     rows: &Rows,
 ) {
     let dialog = adw::AlertDialog::new(
-        Some(&format!("Delete {}?", template.name)),
-        Some("This computer keeps the only copy."),
+        Some(&fill(
+            &gettext("Delete {name}?"),
+            &[("name", &template.name)],
+        )),
+        Some(&gettext("This computer keeps the only copy.")),
     );
-    dialog.add_responses(&[("cancel", "Cancel"), ("delete", "Delete")]);
+    dialog.add_responses(&[
+        ("cancel", &gettext("Cancel")),
+        ("delete", &gettext("Delete")),
+    ]);
     dialog.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
     dialog.set_close_response("cancel");
     let (this, parent, group, rows) = (
@@ -175,14 +182,15 @@ fn edit(
         subject: String::new(),
         markdown: String::new(),
     });
-    let name = adw::EntryRow::builder().title("Name").build();
+    let name = adw::EntryRow::builder().title(gettext("Name")).build();
     name.set_text(&template.name);
-    let subject = adw::EntryRow::builder().title("Subject").build();
+    let subject = adw::EntryRow::builder().title(gettext("Subject")).build();
     subject.set_text(&template.subject);
     let about = adw::PreferencesGroup::builder()
-        .description(
-            "The subject is optional. A template with one gives it to a message that has none.",
-        )
+        .description(gettext(
+            "The subject is optional. A template with one gives it to a message that \
+             has none.",
+        ))
         .build();
     about.add(&name);
     about.add(&subject);
@@ -196,7 +204,9 @@ fn edit(
         .accepts_tab(false)
         .build();
     view.buffer().set_text(&template.markdown);
-    let body = adw::PreferencesGroup::builder().title("Body").build();
+    let body = adw::PreferencesGroup::builder()
+        .title(gettext("Body"))
+        .build();
     body.add(
         &gtk::ScrolledWindow::builder()
             .child(&view)
@@ -213,10 +223,14 @@ fn edit(
     let toasts = adw::ToastOverlay::new();
     toasts.set_child(Some(&page));
     let save = gtk::Button::builder()
-        .label(if editing { "Save" } else { "Create" })
+        .label(if editing {
+            gettext("Save")
+        } else {
+            gettext("Create")
+        })
         .css_classes(["suggested-action"])
         .build();
-    let cancel = gtk::Button::with_label("Cancel");
+    let cancel = gtk::Button::with_label(&gettext("Cancel"));
     let header = adw::HeaderBar::builder()
         .show_start_title_buttons(false)
         .show_end_title_buttons(false)
@@ -228,9 +242,9 @@ fn edit(
     toolbar.set_content(Some(&toasts));
     let dialog = adw::Dialog::builder()
         .title(if editing {
-            "Edit Template"
+            gettext("Edit Template")
         } else {
-            "New Template"
+            gettext("New Template")
         })
         .content_width(560)
         .content_height(520)
@@ -257,7 +271,7 @@ fn edit(
                 .to_string(),
         };
         if written.name.is_empty() {
-            toasts.add_toast(adw::Toast::new("Give the template a name"));
+            toasts.add_toast(adw::Toast::new(&gettext("Give the template a name")));
             return;
         }
         closer.close();

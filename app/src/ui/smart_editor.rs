@@ -6,6 +6,7 @@ use std::rc::Rc;
 use adw::prelude::*;
 
 use mailrs_domain::smart::{Condition, Field, SmartMailbox};
+use mailrs_domain::translate::gettext;
 
 struct ConditionRow {
     row: adw::ActionRow,
@@ -33,13 +34,13 @@ pub fn present(
         }],
     });
 
-    let name = adw::EntryRow::builder().title("Name").build();
+    let name = adw::EntryRow::builder().title(gettext("Name")).build();
     name.set_text(&mailbox.name);
-    let mut scopes = vec!["All Accounts".to_string()];
+    let mut scopes = vec![gettext("All Accounts")];
     scopes.extend(accounts.iter().cloned());
     let scope_refs: Vec<&str> = scopes.iter().map(String::as_str).collect();
     let scope = adw::ComboRow::builder()
-        .title("Accounts")
+        .title(gettext("Accounts"))
         .model(&gtk::StringList::new(&scope_refs))
         .selected(
             mailbox
@@ -50,10 +51,10 @@ pub fn present(
         )
         .build();
     let matching = adw::ComboRow::builder()
-        .title("Match")
+        .title(gettext("Match"))
         .model(&gtk::StringList::new(&[
-            "All of the conditions",
-            "Any of the conditions",
+            &gettext("All of the conditions"),
+            &gettext("Any of the conditions"),
         ]))
         .selected(if mailbox.match_all { 0 } else { 1 })
         .build();
@@ -62,12 +63,14 @@ pub fn present(
     about.add(&scope);
     about.add(&matching);
 
-    let conditions = adw::PreferencesGroup::builder().title("Conditions").build();
+    let conditions = adw::PreferencesGroup::builder()
+        .title(gettext("Conditions"))
+        .build();
     let add = gtk::Button::builder()
         .child(
             &adw::ButtonContent::builder()
                 .icon_name("list-add-symbolic")
-                .label("Add Condition")
+                .label(gettext("Add Condition"))
                 .build(),
         )
         .css_classes(["flat"])
@@ -77,7 +80,8 @@ pub fn present(
     let add_row = {
         let (conditions, rows) = (conditions.clone(), Rc::clone(&rows));
         Rc::new(move |condition: &Condition| {
-            let labels: Vec<&str> = Field::ALL.iter().map(|f| f.label()).collect();
+            let labels: Vec<String> = Field::ALL.iter().map(|f| f.label()).collect();
+            let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
             let field = gtk::DropDown::from_strings(&labels);
             field.set_valign(gtk::Align::Center);
             field.set_selected(
@@ -99,7 +103,7 @@ pub fn present(
             });
             let remove = gtk::Button::builder()
                 .icon_name("list-remove-symbolic")
-                .tooltip_text("Remove Condition")
+                .tooltip_text(gettext("Remove Condition"))
                 .valign(gtk::Align::Center)
                 .css_classes(["flat"])
                 .build();
@@ -133,10 +137,14 @@ pub fn present(
     let toasts = adw::ToastOverlay::new();
     toasts.set_child(Some(&page));
     let save = gtk::Button::builder()
-        .label(if editing { "Save" } else { "Create" })
+        .label(if editing {
+            gettext("Save")
+        } else {
+            gettext("Create")
+        })
         .css_classes(["suggested-action"])
         .build();
-    let cancel = gtk::Button::with_label("Cancel");
+    let cancel = gtk::Button::with_label(&gettext("Cancel"));
     let header = adw::HeaderBar::builder()
         .show_start_title_buttons(false)
         .show_end_title_buttons(false)
@@ -148,9 +156,9 @@ pub fn present(
     toolbar.set_content(Some(&toasts));
     let dialog = adw::Dialog::builder()
         .title(if editing {
-            "Edit Smart Mailbox"
+            gettext("Edit Smart Mailbox")
         } else {
-            "New Smart Mailbox"
+            gettext("New Smart Mailbox")
         })
         .content_width(620)
         .content_height(560)
@@ -179,11 +187,11 @@ pub fn present(
                 .collect(),
         };
         if result.name.is_empty() {
-            toasts.add_toast(adw::Toast::new("Give the mailbox a name"));
+            toasts.add_toast(adw::Toast::new(&gettext("Give the mailbox a name")));
             return;
         }
         if result.query().is_none() {
-            toasts.add_toast(adw::Toast::new("Add a condition with a value"));
+            toasts.add_toast(adw::Toast::new(&gettext("Add a condition with a value")));
             return;
         }
         closer.close();

@@ -3,6 +3,7 @@
 
 use mailrs_sync::TriageAction;
 
+use mailrs_domain::translate::gettext;
 use mailrs_domain::{Folder, system_label};
 
 use super::Mailbox;
@@ -32,8 +33,8 @@ fn dest_label(mailbox: &Mailbox) -> Option<&str> {
 }
 
 /// The change that moves mail shown in `from` into `to`, or why it cannot.
-pub fn move_action(from: &Mailbox, to: &Mailbox) -> Result<TriageAction, &'static str> {
-    let already = "The mail is already there";
+pub fn move_action(from: &Mailbox, to: &Mailbox) -> Result<TriageAction, String> {
+    let already = || gettext("The mail is already there");
     let from_folder = from.folder();
     let relabel = |add: Vec<String>, remove: Vec<String>| TriageAction::Relabel { add, remove };
     if dest_label(to) == Some(system_label::STARRED) {
@@ -41,13 +42,15 @@ pub fn move_action(from: &Mailbox, to: &Mailbox) -> Result<TriageAction, &'stati
     }
     match (from_folder, to.folder()) {
         (Some(Folder::Trash), Some(Folder::Trash)) | (Some(Folder::Junk), Some(Folder::Junk)) => {
-            return Err(already);
+            return Err(already());
         }
         (_, Some(Folder::Trash)) => return Ok(TriageAction::Trash),
         (Some(Folder::Trash), _) if dest_label(to) == Some(system_label::INBOX) => {
             return Ok(TriageAction::Untrash);
         }
-        (Some(Folder::Trash), _) => return Err("Move it from the Trash to the Inbox first"),
+        (Some(Folder::Trash), _) => {
+            return Err(gettext("Move it from the Trash to the Inbox first"));
+        }
         (Some(Folder::Junk), _) if dest_label(to) == Some(system_label::INBOX) => {
             return Ok(TriageAction::NotJunk);
         }
@@ -55,7 +58,7 @@ pub fn move_action(from: &Mailbox, to: &Mailbox) -> Result<TriageAction, &'stati
             return Ok(relabel(vec![], vec![system_label::SPAM.into()]));
         }
         (Some(Folder::Junk), _) => {
-            let label = dest_label(to).ok_or(already)?;
+            let label = dest_label(to).ok_or_else(already)?;
             return Ok(relabel(vec![label.into()], vec![system_label::SPAM.into()]));
         }
         _ => {}
@@ -75,14 +78,14 @@ pub fn move_action(from: &Mailbox, to: &Mailbox) -> Result<TriageAction, &'stati
             return match source.as_deref() {
                 Some(system_label::INBOX) => Ok(TriageAction::Archive),
                 Some(label) => Ok(TriageAction::RemoveLabel(label.into())),
-                None => Err("The mail is already in All Mail"),
+                None => Err(gettext("The mail is already in All Mail")),
             };
         }
         _ => {}
     }
-    let dest = dest_label(to).ok_or("Mail cannot go there")?;
+    let dest = dest_label(to).ok_or_else(|| gettext("Mail cannot go there"))?;
     match source {
-        Some(label) if label == dest => Err(already),
+        Some(label) if label == dest => Err(already()),
         Some(label) => Ok(relabel(vec![dest.into()], vec![label])),
         None => Ok(TriageAction::AddLabel(dest.into())),
     }

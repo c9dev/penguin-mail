@@ -19,6 +19,7 @@ pub use markup::to_pango;
 pub use prompt::SYSTEM_PROMPT;
 
 use crate::settings::{AiProvider, AiSettings};
+use mailrs_domain::translate::gettext;
 
 /// The keyring service that holds the assistant's API keys.
 const KEY_SERVICE: &str = "mailrs-ai";
@@ -92,10 +93,14 @@ pub fn save_key(name: &str, key: &str) {
 /// The provider the settings describe, with keys from the keyring.
 pub fn provider_config(ai: &AiSettings) -> Result<ProviderConfig, String> {
     match ai.provider {
-        AiProvider::Off => Err("The assistant is off. Choose a model in Preferences.".into()),
+        AiProvider::Off => Err(gettext(
+            "The assistant is off. Choose a model in Preferences.",
+        )),
         AiProvider::Local => {
             if ai.local_model.trim().is_empty() {
-                return Err("Choose a model for the local server in Preferences.".into());
+                return Err(gettext(
+                    "Choose a model for the local server in Preferences.",
+                ));
             }
             Ok(ProviderConfig::OpenAiCompatible {
                 base_url: ai.base_url.trim().to_string(),
@@ -106,7 +111,7 @@ pub fn provider_config(ai: &AiSettings) -> Result<ProviderConfig, String> {
         AiProvider::Anthropic => {
             let api_key = load_key(ANTHROPIC_KEY)
                 .or_else(|| std::env::var("ANTHROPIC_API_KEY").ok())
-                .ok_or("Add an Anthropic API key in Preferences.")?;
+                .ok_or_else(|| gettext("Add an Anthropic API key in Preferences."))?;
             Ok(ProviderConfig::Anthropic {
                 api_key,
                 model: ai.anthropic_model.trim().to_string(),
@@ -114,9 +119,12 @@ pub fn provider_config(ai: &AiSettings) -> Result<ProviderConfig, String> {
         }
         AiProvider::ClaudeCode => {
             let command = if ai.claude_command.trim().is_empty() {
-                find_claude().ok_or(
-                    "Claude Code is not installed. Install it and sign in, then try again.",
-                )?
+                find_claude().ok_or_else(|| {
+                    gettext(
+                        "Claude Code is not installed. Install it and sign in, then try \
+                         again.",
+                    )
+                })?
             } else {
                 PathBuf::from(ai.claude_command.trim())
             };

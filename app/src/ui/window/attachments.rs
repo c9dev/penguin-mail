@@ -16,6 +16,7 @@ use mailrs_domain::{AccountId, Attachment};
 
 use super::MainWindow;
 use crate::ui::conversation::ConversationView;
+use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 /// How large a picture may be before the row shows a paperclip instead.
 /// Past this the thumbnail costs more to fetch than it earns.
@@ -59,7 +60,10 @@ impl MainWindow {
                 .await;
             match fetched {
                 Ok(data) => this.show_attachment(&attachment, data),
-                Err(err) => this.toast(&format!("Could not open {name}: {err}")),
+                Err(err) => this.toast(&fill(
+                    &gettext("Could not open {file}: {reason}"),
+                    &[("file", &name), ("reason", &err.to_string())],
+                )),
             }
         });
     }
@@ -101,7 +105,7 @@ impl MainWindow {
             return;
         };
         let dialog = gtk::FileDialog::builder()
-            .title("Save Attachments")
+            .title(gettext("Save Attachments"))
             .modal(true)
             .build();
         let this = Rc::clone(self);
@@ -110,7 +114,13 @@ impl MainWindow {
                 return;
             };
             let Some(folder) = folder.path() else { return };
-            this.toast(&format!("Saving {} attachments…", files.len()));
+            let count = files.len();
+            this.toast(&fill_plural(
+                "Saving {count} attachment…",
+                "Saving {count} attachments…",
+                count,
+                &[("count", &count.to_string())],
+            ));
             let mut saved = 0usize;
             let mut failed: Vec<String> = Vec::new();
             // The index is the one the message's own attachment list
@@ -149,11 +159,20 @@ impl MainWindow {
                 .map(|n| n.to_string_lossy().into_owned())
                 .unwrap_or_else(|| folder.to_string_lossy().into_owned());
             if failed.is_empty() {
-                this.toast(&format!("Saved {saved} attachments to {where_to}"));
+                this.toast(&fill_plural(
+                    "Saved {count} attachment to {folder}",
+                    "Saved {count} attachments to {folder}",
+                    saved,
+                    &[("count", &saved.to_string()), ("folder", &where_to)],
+                ));
             } else {
-                this.toast(&format!(
-                    "Saved {saved} to {where_to}. Could not save {}",
-                    failed.join(", ")
+                this.toast(&fill(
+                    &gettext("Saved {count} to {folder}. Could not save {files}"),
+                    &[
+                        ("count", &saved.to_string()),
+                        ("folder", &where_to),
+                        ("files", &failed.join(", ")),
+                    ],
                 ));
             }
         });
@@ -188,9 +207,15 @@ impl MainWindow {
                     .file_name()
                     .map(|n| n.to_string_lossy().into_owned())
                     .unwrap_or_else(|| attachment.filename.clone());
-                self.toast(&format!("Saved {name} to Downloads"));
+                self.toast(&fill(
+                    &gettext("Saved {file} to Downloads"),
+                    &[("file", &name)],
+                ));
             }
-            Err(err) => self.toast(&format!("Could not save {}: {err}", attachment.filename)),
+            Err(err) => self.toast(&fill(
+                &gettext("Could not save {file}: {reason}"),
+                &[("file", &attachment.filename), ("reason", &err.to_string())],
+            )),
         }
     }
 
@@ -222,7 +247,10 @@ impl MainWindow {
     /// desktop.
     fn show_attachment(self: &Rc<Self>, attachment: &Attachment, data: Vec<u8>) {
         let Some(path) = self.scratch_copy(attachment, &data) else {
-            self.toast(&format!("Could not open {}", attachment.filename));
+            self.toast(&fill(
+                &gettext("Could not open {file}"),
+                &[("file", &attachment.filename)],
+            ));
             return;
         };
         let file = gio::File::for_path(&path);
@@ -269,11 +297,11 @@ impl MainWindow {
         let header = adw::HeaderBar::new();
         let save = gtk::Button::builder()
             .icon_name("document-save-symbolic")
-            .tooltip_text("Save to Downloads")
+            .tooltip_text(gettext("Save to Downloads"))
             .build();
         let open = gtk::Button::builder()
             .icon_name("document-open-symbolic")
-            .tooltip_text("Open in Another Program")
+            .tooltip_text(gettext("Open in Another Program"))
             .build();
         header.pack_end(&open);
         header.pack_end(&save);
@@ -336,9 +364,15 @@ impl MainWindow {
                     .file_name()
                     .map(|n| n.to_string_lossy().into_owned())
                     .unwrap_or(name);
-                self.toast(&format!("Saved {shown} to Downloads"));
+                self.toast(&fill(
+                    &gettext("Saved {file} to Downloads"),
+                    &[("file", &shown)],
+                ));
             }
-            Err(err) => self.toast(&format!("Could not save {name}: {err}")),
+            Err(err) => self.toast(&fill(
+                &gettext("Could not save {file}: {reason}"),
+                &[("file", &name), ("reason", &err.to_string())],
+            )),
         }
     }
 

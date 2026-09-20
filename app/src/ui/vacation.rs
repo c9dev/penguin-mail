@@ -11,6 +11,7 @@ use mailrs_domain::Account;
 use mailrs_sync::{AutomaticReply, Permitted};
 
 use crate::core::Core;
+use mailrs_domain::translate::{fill, gettext};
 
 /// Shows the dialog for `account`. `grant` runs when Gmail says Penguin Mail lacks
 /// the settings permission, to send the user through consent again. `saved`
@@ -35,11 +36,11 @@ pub fn present(
         Some("loading"),
     );
     let save = gtk::Button::builder()
-        .label("Save")
+        .label(gettext("Save"))
         .css_classes(["suggested-action"])
         .sensitive(false)
         .build();
-    let cancel = gtk::Button::with_label("Cancel");
+    let cancel = gtk::Button::with_label(&gettext("Cancel"));
     let header = adw::HeaderBar::builder()
         .show_start_title_buttons(false)
         .show_end_title_buttons(false)
@@ -52,7 +53,7 @@ pub fn present(
     toolbar.add_top_bar(&header);
     toolbar.set_content(Some(&toasts));
     let dialog = adw::Dialog::builder()
-        .title("Automatic Reply")
+        .title(gettext("Automatic Reply"))
         .content_width(480)
         .content_height(640)
         .child(&toolbar)
@@ -64,7 +65,8 @@ pub fn present(
     dialog.present(Some(parent));
 
     if core.account(account.id).is_none() {
-        stack.add_named(&problem("This account is not syncing yet."), Some("error"));
+        let said = gettext("This account is not syncing yet.");
+        stack.add_named(&problem(&said), Some("error"));
         stack.set_visible_child_name("error");
         return;
     }
@@ -81,14 +83,17 @@ pub fn present(
             Ok(Permitted::NeedsPermission) => {
                 let page = adw::StatusPage::builder()
                     .icon_name("mail-send-symbolic")
-                    .title("Allow Automatic Replies")
-                    .description(format!(
-                        "Penguin Mail needs permission to change Gmail settings for {email}. \
-                         Google will ask you to confirm in your browser."
+                    .title(gettext("Allow Automatic Replies"))
+                    .description(fill(
+                        &gettext(
+                            "Penguin Mail needs permission to change Gmail settings for \
+                             {account}. Google will ask you to confirm in your browser.",
+                        ),
+                        &[("account", &email)],
                     ))
                     .build();
                 let button = gtk::Button::builder()
-                    .label("Grant Access")
+                    .label(gettext("Grant Access"))
                     .halign(gtk::Align::Center)
                     .css_classes(["pill", "suggested-action"])
                     .build();
@@ -132,21 +137,25 @@ pub fn present(
                 match stored {
                     Ok(Permitted::Done(())) => {
                         dialog.close();
-                        saved(if enabled {
-                            "Automatic reply is on"
+                        saved(&if enabled {
+                            gettext("Automatic reply is on")
                         } else {
-                            "Automatic reply is off"
+                            gettext("Automatic reply is off")
                         });
                     }
                     Ok(Permitted::NeedsPermission) => {
                         button.set_sensitive(true);
-                        toasts.add_toast(adw::Toast::new(
+                        toasts.add_toast(adw::Toast::new(&gettext(
                             "Penguin Mail needs permission to change Gmail settings",
-                        ));
+                        )));
                     }
                     Err(err) => {
                         button.set_sensitive(true);
-                        toasts.add_toast(adw::Toast::new(&format!("Could not save: {err}")));
+                        let said = fill(
+                            &gettext("Could not save: {reason}"),
+                            &[("reason", &err.to_string())],
+                        );
+                        toasts.add_toast(adw::Toast::new(&said));
                     }
                 }
             });
@@ -157,7 +166,7 @@ pub fn present(
 fn problem(message: &str) -> adw::StatusPage {
     adw::StatusPage::builder()
         .icon_name("dialog-warning-symbolic")
-        .title("Could Not Load the Automatic Reply")
+        .title(gettext("Could Not Load the Automatic Reply"))
         .description(glib::markup_escape_text(message).as_str())
         .build()
 }
@@ -178,8 +187,10 @@ impl Form {
         let page = adw::PreferencesPage::new();
 
         let enabled = adw::SwitchRow::builder()
-            .title("Send Automatic Replies")
-            .subtitle("Gmail answers new mail while you are away, even when this computer is off")
+            .title(gettext("Send Automatic Replies"))
+            .subtitle(gettext(
+                "Gmail answers new mail while you are away, even when this computer is off",
+            ))
             .active(reply.enabled)
             .build();
         let top = adw::PreferencesGroup::new();
@@ -193,24 +204,26 @@ impl Form {
             local_day,
         );
         let dated = adw::SwitchRow::builder()
-            .title("Only Between These Dates")
+            .title(gettext("Only Between These Dates"))
             .active(reply.first_day.is_some() || reply.last_day.is_some())
             .build();
-        let first = DateButton::new("First Day", &first_day);
-        let last = DateButton::new("Last Day", &last_day);
+        let first = DateButton::new(&gettext("First Day"), &first_day);
+        let last = DateButton::new(&gettext("Last Day"), &last_day);
         for row in [&first.row, &last.row] {
             dated
                 .bind_property("active", row, "sensitive")
                 .sync_create()
                 .build();
         }
-        let dates = adw::PreferencesGroup::builder().title("Dates").build();
+        let dates = adw::PreferencesGroup::builder()
+            .title(gettext("Dates"))
+            .build();
         dates.add(&dated);
         dates.add(&first.row);
         dates.add(&last.row);
         page.add(&dates);
 
-        let subject = adw::EntryRow::builder().title("Subject").build();
+        let subject = adw::EntryRow::builder().title(gettext("Subject")).build();
         subject.set_text(&reply.subject);
         let body = gtk::TextView::builder()
             .wrap_mode(gtk::WrapMode::WordChar)
@@ -228,13 +241,15 @@ impl Form {
             .css_classes(["card"])
             .margin_top(12)
             .build();
-        let message = adw::PreferencesGroup::builder().title("Message").build();
+        let message = adw::PreferencesGroup::builder()
+            .title(gettext("Message"))
+            .build();
         message.add(&subject);
         message.add(&frame);
         page.add(&message);
 
         let contacts_only = adw::SwitchRow::builder()
-            .title("Only Reply to My Contacts")
+            .title(gettext("Only Reply to My Contacts"))
             .active(reply.contacts_only)
             .build();
         let who = adw::PreferencesGroup::new();

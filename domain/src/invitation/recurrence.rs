@@ -4,38 +4,79 @@
 //! Nobody reads that, so the card shows "Every Monday until 30 June"
 //! instead. Rules this does not recognize give back `None` and the card
 //! shows no repeat line, which beats showing the rule.
+//!
+//! Each piece of the line is a whole phrase with named values in it, so a
+//! translator moves the day and the count where the language wants them.
 
 use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, TimeZone};
 
-/// The rule in English, or `None` when it names no frequency this
+use crate::translate::{fill, fill_plural, gettext};
+
+/// The rule in words, or `None` when it names no frequency this
 /// understands. `start_year` is the year the event starts in: an end date
 /// in that same year needs no year of its own.
 pub(crate) fn in_words(rule: &str, start_year: Option<i32>) -> Option<String> {
     let parts = parts(rule);
     let every = interval(&parts);
+    let count = [("count", every.to_string())];
+    let count = [("count", count[0].1.as_str())];
     let mut words = match part(&parts, "FREQ")?.to_ascii_uppercase().as_str() {
-        "DAILY" => plural(every, "day"),
-        "WEEKLY" => match weekdays(&parts) {
-            Some(days) if every == 1 => format!("Every {days}"),
-            Some(days) => format!("{} on {days}", plural(every, "week")),
-            None => plural(every, "week"),
-        },
-        "MONTHLY" => match monthly_day(&parts) {
-            Some(day) => format!("{} on {day}", plural(every, "month")),
-            None => plural(every, "month"),
-        },
-        "YEARLY" => plural(every, "year"),
-        "HOURLY" => plural(every, "hour"),
-        "MINUTELY" => plural(every, "minute"),
+        "DAILY" => fill_plural("Every day", "Every {count} days", every as usize, &count),
+        "WEEKLY" => {
+            let weekly = fill_plural("Every week", "Every {count} weeks", every as usize, &count);
+            match weekdays(&parts) {
+                Some(days) if every == 1 => fill(&gettext("Every {days}"), &[("days", &days)]),
+                Some(days) => fill(
+                    &gettext("{every} on {days}"),
+                    &[("every", &weekly), ("days", &days)],
+                ),
+                None => weekly,
+            }
+        }
+        "MONTHLY" => {
+            let monthly = fill_plural(
+                "Every month",
+                "Every {count} months",
+                every as usize,
+                &count,
+            );
+            match monthly_day(&parts) {
+                Some(day) => fill(
+                    &gettext("{every} on {day}"),
+                    &[("every", &monthly), ("day", &day)],
+                ),
+                None => monthly,
+            }
+        }
+        "YEARLY" => fill_plural("Every year", "Every {count} years", every as usize, &count),
+        "HOURLY" => fill_plural("Every hour", "Every {count} hours", every as usize, &count),
+        "MINUTELY" => fill_plural(
+            "Every minute",
+            "Every {count} minutes",
+            every as usize,
+            &count,
+        ),
         _ => return None,
     };
     if let Some(last) = part(&parts, "UNTIL").and_then(day_of) {
-        words.push_str(&format!(" until {}", spell_day(last, start_year)));
-    } else if let Some(count) = part(&parts, "COUNT").and_then(|c| c.parse::<u32>().ok()) {
-        words.push_str(&match count {
-            1 => ", once".to_string(),
-            count => format!(", {count} times"),
-        });
+        words = fill(
+            &gettext("{every} until {day}"),
+            &[("every", &words), ("day", &spell_day(last, start_year))],
+        );
+    } else if let Some(times) = part(&parts, "COUNT").and_then(|c| c.parse::<u32>().ok()) {
+        let repeats = match times {
+            1 => gettext("once"),
+            times => fill_plural(
+                "{count} time",
+                "{count} times",
+                times as usize,
+                &[("count", &times.to_string())],
+            ),
+        };
+        words = fill(
+            &gettext("{every}, {repeats}"),
+            &[("every", &words), ("repeats", &repeats)],
+        );
     }
     Some(words)
 }
@@ -97,40 +138,35 @@ fn interval(parts: &[(String, String)]) -> u32 {
         .unwrap_or(1)
 }
 
-/// "Every day" for one, "Every 3 days" for more.
-fn plural(every: u32, unit: &str) -> String {
-    match every {
-        1 => format!("Every {unit}"),
-        n => format!("Every {n} {unit}s"),
-    }
-}
-
 /// The weekdays a `BYDAY` lists, as "Monday" or "Monday, Wednesday and
 /// Friday". A `BYDAY` that counts weeks, such as `2TU`, is not a weekly
 /// pattern and gives `None`.
 fn weekdays(parts: &[(String, String)]) -> Option<String> {
     let listed = part(parts, "BYDAY")?;
-    let names: Option<Vec<&str>> = listed
+    let names: Option<Vec<String>> = listed
         .split(',')
         .map(|day| weekday_name(day.trim()))
         .collect();
     let names = names?;
     match names.as_slice() {
         [] => None,
-        [one] => Some((*one).to_string()),
-        [rest @ .., last] => Some(format!("{} and {last}", rest.join(", "))),
+        [one] => Some(one.clone()),
+        [rest @ .., last] => Some(fill(
+            &gettext("{days} and {last}"),
+            &[("days", &rest.join(", ")), ("last", last)],
+        )),
     }
 }
 
-fn weekday_name(code: &str) -> Option<&'static str> {
+fn weekday_name(code: &str) -> Option<String> {
     match code.to_ascii_uppercase().as_str() {
-        "MO" => Some("Monday"),
-        "TU" => Some("Tuesday"),
-        "WE" => Some("Wednesday"),
-        "TH" => Some("Thursday"),
-        "FR" => Some("Friday"),
-        "SA" => Some("Saturday"),
-        "SU" => Some("Sunday"),
+        "MO" => Some(gettext("Monday")),
+        "TU" => Some(gettext("Tuesday")),
+        "WE" => Some(gettext("Wednesday")),
+        "TH" => Some(gettext("Thursday")),
+        "FR" => Some(gettext("Friday")),
+        "SA" => Some(gettext("Saturday")),
+        "SU" => Some(gettext("Sunday")),
         _ => None,
     }
 }
@@ -140,8 +176,8 @@ fn weekday_name(code: &str) -> Option<&'static str> {
 fn monthly_day(parts: &[(String, String)]) -> Option<String> {
     if let Some(day) = part(parts, "BYMONTHDAY").and_then(|d| d.trim().parse::<i32>().ok()) {
         return Some(match day {
-            -1 => "the last day".to_string(),
-            day if day > 0 => format!("the {}", ordinal(day as u32)),
+            -1 => gettext("the last day"),
+            day if day > 0 => ordinal(day as u32),
             _ => return None,
         });
     }
@@ -149,31 +185,40 @@ fn monthly_day(parts: &[(String, String)]) -> Option<String> {
     let (count, code) = listed.trim().split_at(listed.trim().len().checked_sub(2)?);
     let name = weekday_name(code)?;
     Some(match count.parse::<i32>().ok()? {
-        -1 => format!("the last {name}"),
-        n if n > 0 => format!("the {} {name}", nth(n as u32)),
+        -1 => fill(&gettext("the last {weekday}"), &[("weekday", &name)]),
+        n if n > 0 => fill(
+            &gettext("the {nth} {weekday}"),
+            &[("nth", &nth(n as u32)), ("weekday", &name)],
+        ),
         _ => return None,
     })
 }
 
-fn nth(n: u32) -> &'static str {
+fn nth(n: u32) -> String {
     match n {
-        1 => "first",
-        2 => "second",
-        3 => "third",
-        4 => "fourth",
-        _ => "fifth",
+        1 => gettext("first"),
+        2 => gettext("second"),
+        3 => gettext("third"),
+        4 => gettext("fourth"),
+        _ => gettext("fifth"),
     }
 }
 
+/// Which day of the month a rule picks, as the card words it: "the 15th"
+/// in English. The number is named rather than glued on, because the
+/// English suffix is English grammar and another language wants none of
+/// it; each suffix carries its own sentence for a translator to replace
+/// with one.
 fn ordinal(n: u32) -> String {
-    let suffix = match (n % 10, n % 100) {
-        (_, 11..=13) => "th",
-        (1, _) => "st",
-        (2, _) => "nd",
-        (3, _) => "rd",
-        _ => "th",
-    };
-    format!("{n}{suffix}")
+    let day = [("day", n.to_string())];
+    let day = [("day", day[0].1.as_str())];
+    match (n % 10, n % 100) {
+        (_, 11..=13) => fill(&gettext("the {day}th"), &day),
+        (1, _) => fill(&gettext("the {day}st"), &day),
+        (2, _) => fill(&gettext("the {day}nd"), &day),
+        (3, _) => fill(&gettext("the {day}rd"), &day),
+        _ => fill(&gettext("the {day}th"), &day),
+    }
 }
 
 /// The local day an `UNTIL` value falls on. Organizers write it in UTC,
@@ -199,11 +244,14 @@ fn day_of(until: &str) -> Option<NaiveDate> {
         .map(|naive| naive.date())
 }
 
-/// "30 June", with the year when the event does not start in it.
+/// "30 June", with the year when the event does not start in it. The
+/// month's name comes out of chrono in English whatever the locale says,
+/// which is a gap worth closing the day this reaches for a locale-aware
+/// formatter.
 fn spell_day(day: NaiveDate, start_year: Option<i32>) -> String {
     if start_year == Some(day.year()) {
-        day.format("%-d %B").to_string()
+        day.format(&gettext("%-d %B")).to_string()
     } else {
-        day.format("%-d %B %Y").to_string()
+        day.format(&gettext("%-d %B %Y")).to_string()
     }
 }
