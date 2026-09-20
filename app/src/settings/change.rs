@@ -6,7 +6,7 @@
 //! parts of the window that now show something stale. Nothing here touches
 //! GTK, so the rules live under unit tests.
 
-use mailrs_domain::{FlagColor, SmartMailbox};
+use mailrs_domain::{Category, FlagColor, SmartMailbox};
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
@@ -37,6 +37,7 @@ pub enum Change {
     /// The address new messages come from; `None` means the first account.
     DefaultAccount(Option<String>),
     InboxCategories(bool),
+    DefaultCategory(Category),
     SuggestFollowUps(bool),
     /// What a new message starts as.
     ComposeFormat(ComposeFormat),
@@ -163,6 +164,7 @@ impl Change {
             Change::UndoSend(delay) => settings.undo_send = delay,
             Change::DefaultAccount(email) => settings.default_account = email,
             Change::InboxCategories(on) => settings.inbox_categories = on,
+            Change::DefaultCategory(category) => settings.default_category = category,
             Change::SuggestFollowUps(on) => settings.suggest_follow_ups = on,
             Change::ComposeFormat(format) => settings.compose_format = format,
             Change::CheckAttachments(on) => settings.check_attachments = on,
@@ -446,6 +448,7 @@ impl Effects {
             ai,
             hidden_addresses,
             inbox_categories,
+            default_category,
             suggest_follow_ups,
             spell_languages,
             spell_words,
@@ -502,7 +505,12 @@ impl Effects {
                 Effect::SmartMailboxes => smart_changed,
                 Effect::Vips => vips_changed,
                 Effect::FollowUps => *suggest_follow_ups != before.suggest_follow_ups,
-                Effect::Categories => *inbox_categories != before.inbox_categories,
+                // The bar itself, and which of its tabs the window opens
+                // on: both are the category strip redrawing.
+                Effect::Categories => {
+                    *inbox_categories != before.inbox_categories
+                        || *default_category != before.default_category
+                }
                 Effect::Assistant => *ai != before.ai,
                 Effect::TextSize => *text_size != before.text_size,
                 Effect::Contacts => *contacts != before.contacts,
@@ -803,6 +811,10 @@ mod tests {
                 // Reading contacts asks Google for access of its own, so
                 // it stays a choice the person makes in Preferences.
                 "contacts",
+                // How the inbox is arranged, and which slice of it opens
+                // first, is the person's own view of their mail. It sits
+                // beside inbox_categories for the same reason.
+                "default_category",
                 // Whether mail goes out signed or encrypted is the
                 // person's to decide, not something the assistant flips.
                 "encrypt_when_possible",

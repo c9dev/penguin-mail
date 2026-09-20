@@ -48,7 +48,8 @@ pub(super) struct CategoryBar {
 }
 
 impl CategoryBar {
-    pub(super) fn new() -> CategoryBar {
+    /// `chosen` is the category the window opens on, from Preferences.
+    pub(super) fn new(chosen: Category) -> CategoryBar {
         let group = adw::ToggleGroup::builder()
             .homogeneous(false)
             .halign(gtk::Align::Center)
@@ -107,7 +108,6 @@ impl CategoryBar {
                 .hexpand(true)
                 .build(),
         );
-        let chosen = Category::Primary;
         group.set_active_name(Some(chosen.key()));
         let this = CategoryBar {
             bar,
@@ -353,5 +353,32 @@ impl MainWindow {
                 })
             })
             .await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_bar_opens_on_the_category_preferences_names() {
+        if gtk::init().is_err() {
+            eprintln!("skipping: no display, so the widgets cannot be built");
+            return;
+        }
+        for category in Category::ALL {
+            let bar = CategoryBar::new(category);
+            assert_eq!(bar.chosen.get(), category);
+            assert_eq!(
+                bar.group.active_name().as_deref(),
+                Some(category.key()),
+                "the strip shows what it opened on"
+            );
+            // Only the chosen category spells its name out; the rest are
+            // an icon until you pick them.
+            for (shown, name) in &bar.names {
+                assert_eq!(name.reveals_child(), *shown == category, "{shown:?}");
+            }
+        }
     }
 }

@@ -4,6 +4,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
+use mailrs_domain::Category;
 use serde::{Deserialize, Serialize};
 
 mod change;
@@ -50,6 +51,10 @@ pub struct Settings {
     /// Split inboxes into Primary, Updates, Promotions, and Social, from
     /// Gmail's category labels.
     pub inbox_categories: bool,
+    /// The category the window opens on. All shows the whole inbox, which
+    /// is what a mail client does when nobody has asked it to hide
+    /// anything.
+    pub default_category: Category,
     /// Show Follow Up for sent mail nobody has answered.
     pub suggest_follow_ups: bool,
     /// Dictionary languages per account address, such as `["en_US",
@@ -165,6 +170,7 @@ impl Default for Settings {
             ai: AiSettings::default(),
             hidden_addresses: Vec::new(),
             inbox_categories: true,
+            default_category: Category::All,
             suggest_follow_ups: true,
             spell_languages: BTreeMap::new(),
             spell_words: Vec::new(),
@@ -200,6 +206,13 @@ impl Choice for ComposeFormat {
 }
 
 /// A preference with a fixed set of choices, shown as a combo row.
+impl Choice for Category {
+    const ALL: &'static [Self] = &Category::ALL;
+    fn label(self) -> &'static str {
+        self.name()
+    }
+}
+
 pub trait Choice: Sized + Copy + PartialEq + 'static {
     const ALL: &'static [Self];
     fn label(self) -> &'static str;
