@@ -2,6 +2,7 @@
 
 mod app;
 mod assistant;
+mod attachcheck;
 mod autostart;
 mod compose;
 mod contacts;

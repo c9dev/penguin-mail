@@ -67,6 +67,8 @@ pub struct Settings {
     pub send_as: BTreeMap<String, Vec<crate::compose::SendAsAddress>>,
     /// What a new message starts as: styled text, or Markdown source.
     pub compose_format: ComposeFormat,
+    /// Ask before sending a message that promises a file and carries none.
+    pub check_attachments: bool,
     /// Read each account's Google contacts, for names, photos, and
     /// recipient suggestions. Off until the owner turns it on, because it
     /// is the one thing here that asks Google for more access.
@@ -165,6 +167,7 @@ impl Default for Settings {
             last_sender: BTreeMap::new(),
             send_as: BTreeMap::new(),
             compose_format: ComposeFormat::Rich,
+            check_attachments: true,
             contacts: false,
         }
     }
