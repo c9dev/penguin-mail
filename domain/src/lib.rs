@@ -11,6 +11,7 @@ pub mod invitation;
 pub mod smart;
 pub mod system_label;
 mod target;
+pub mod translate;
 
 pub use category::Category;
 pub use folder::Folder;

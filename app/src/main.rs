@@ -12,6 +12,7 @@ mod diff;
 mod format;
 mod hide_my_email;
 mod images;
+mod language;
 mod notify;
 mod pgp;
 mod render;
@@ -31,15 +32,20 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gdk, gio, glib};
+use mailrs_domain::translate::{fill, gettext};
 
 pub const APP_ID: &str = "dev.penguinmail.PenguinMail";
 
-const USAGE: &str = "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]]
+fn usage() -> String {
+    gettext(
+        "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]]
 
   --background   start in the tray without opening a window
   --demo         open sample mail in a throwaway store; nothing syncs
   --compose      open a new message, addressed to ADDRESS when given
-  mailto:...     the same as --compose mailto:...";
+  mailto:...     the same as --compose mailto:...",
+    )
+}
 
 fn main() -> glib::ExitCode {
     tracing_subscriber::fmt()
@@ -50,6 +56,7 @@ fn main() -> glib::ExitCode {
             }),
         )
         .init();
+    language::bind();
     let args: Vec<String> = std::env::args().collect();
     // Claude Code starts this binary as the assistant's MCP server. It only
     // relays tool calls to the running window, so it needs no GTK.
@@ -73,13 +80,16 @@ fn main() -> glib::ExitCode {
         };
     }
     if args.iter().any(|a| a == "--help" || a == "-h") {
-        println!("{USAGE}");
+        println!("{}", usage());
         return glib::ExitCode::SUCCESS;
     }
     if let Some(unknown) = args.iter().skip(1).find(|a| {
         !matches!(a.as_str(), "--background" | "--demo" | "--compose") && !a.starts_with("mailto:")
     }) {
-        eprintln!("penguin-mail: unknown option {unknown}\n\n{USAGE}");
+        let line = fill(&gettext("penguin-mail: unknown option {option}"), &[
+            ("option", unknown),
+        ]);
+        eprintln!("{line}\n\n{}", usage());
         return glib::ExitCode::FAILURE;
     }
     // `Some("")` opens a blank message; `Some(address)` addresses it.
@@ -184,7 +194,7 @@ fn show_fatal(gio_app: &gio::Application, message: &str) {
     let hold = gio_app.hold();
     let page = adw::StatusPage::builder()
         .icon_name("dialog-warning-symbolic")
-        .title("Penguin Mail Could Not Start")
+        .title(gettext("Penguin Mail Could Not Start"))
         .description(glib::markup_escape_text(message).as_str())
         .build();
     let toolbar = adw::ToolbarView::new();

@@ -1,0 +1,5 @@
+# Every file holding words a person reads. scripts/update-po.sh rebuilds
+# the template from the crate roots and warns when this list has drifted
+# from what it found.
+app/data/dev.penguinmail.PenguinMail.desktop
+app/src/main.rs
