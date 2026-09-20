@@ -43,10 +43,24 @@ const BACKGROUND_RESERVE: f64 = 0.4;
 /// that backfill picks up where it left off once the user's call has gone.
 const BACKGROUND_RECHECK: Duration = Duration::from_millis(100);
 
+/// What a refusal does to the rate: Gmail's limit is a moving average, and
+/// an account that answers 429 is telling us this pace is too fast for it
+/// right now, whatever the table says.
+const SLOW_DOWN: f64 = 0.5;
+
+/// The slowest an account goes, in units a second. Four metadata fetches a
+/// second still finishes a mailbox, just later.
+const MIN_RATE: f64 = 20.0;
+
+/// How much of the rate comes back each second once calls succeed again.
+/// From the floor to a full 200 takes about two minutes.
+const RECOVERY: f64 = 1.5;
+
 /// Token bucket over Gmail quota units. Gmail allows 250 units per user per second.
 #[derive(Debug)]
 pub struct QuotaLimiter {
-    rate: f64,
+    /// The pace this account may keep when nothing refuses it.
+    full_rate: f64,
     burst: f64,
     /// What a background call leaves behind for foreground work.
     reserve: f64,
@@ -59,13 +73,18 @@ pub struct QuotaLimiter {
 struct Bucket {
     tokens: f64,
     updated: Instant,
+    /// The pace now, which a refusal halves and success rebuilds.
+    rate: f64,
 }
 
 impl Bucket {
-    fn refill(&mut self, rate: f64, burst: f64) {
+    /// Adds the units the time since the last look has earned, and gives
+    /// back some of the rate a refusal took away.
+    fn refill(&mut self, full_rate: f64, burst: f64) {
         let now = Instant::now();
-        let refill = now.duration_since(self.updated).as_secs_f64() * rate;
-        self.tokens = (self.tokens + refill).min(burst);
+        let elapsed = now.duration_since(self.updated).as_secs_f64();
+        self.tokens = (self.tokens + elapsed * self.rate).min(burst);
+        self.rate = (self.rate + elapsed * RECOVERY).min(full_rate);
         self.updated = now;
     }
 }
@@ -73,15 +92,36 @@ impl Bucket {
 impl QuotaLimiter {
     pub fn new(units_per_second: f64, burst: f64) -> Self {
         QuotaLimiter {
-            rate: units_per_second,
+            full_rate: units_per_second,
             burst,
             reserve: burst * BACKGROUND_RESERVE,
             bucket: std::sync::Mutex::new(Bucket {
                 tokens: burst,
                 updated: Instant::now(),
+                rate: units_per_second,
             }),
             waiting: AtomicUsize::new(0),
         }
+    }
+
+    /// Answers a refusal from Gmail: halves the pace, down to [`MIN_RATE`],
+    /// and spends what the bucket holds, so the next call waits. The pace
+    /// climbs back as calls succeed. Gmail's published limit is a moving
+    /// average, so an account under sustained load can refuse a pace the
+    /// table allows; this finds the pace that account accepts today.
+    pub fn slow_down(&self) {
+        let mut bucket = self.bucket.lock().expect("quota bucket poisoned");
+        bucket.refill(self.full_rate, self.burst);
+        bucket.rate = (bucket.rate * SLOW_DOWN).max(MIN_RATE);
+        bucket.tokens = 0.0;
+    }
+
+    /// The pace this account keeps now, in units a second. For tests and
+    /// for anything that reports what the app is doing.
+    pub fn rate(&self) -> f64 {
+        let mut bucket = self.bucket.lock().expect("quota bucket poisoned");
+        bucket.refill(self.full_rate, self.burst);
+        bucket.rate
     }
 
     /// 200 units per second with a 250 unit burst, under Gmail's per-user limit.
@@ -126,7 +166,7 @@ impl QuotaLimiter {
         loop {
             let wait = {
                 let mut bucket = self.bucket.lock().expect("quota bucket poisoned");
-                bucket.refill(self.rate, self.burst);
+                bucket.refill(self.full_rate, self.burst);
                 let stand_aside = priority == Priority::Background && self.foreground_waiting();
                 if !stand_aside && bucket.tokens >= units + floor {
                     bucket.tokens -= units;
@@ -135,7 +175,7 @@ impl QuotaLimiter {
                 let short = ((units + floor) - bucket.tokens).max(0.0);
                 match stand_aside {
                     true => BACKGROUND_RECHECK,
-                    false => Duration::from_secs_f64(short / self.rate),
+                    false => Duration::from_secs_f64(short / bucket.rate),
                 }
             };
             tokio::time::sleep(wait).await;
@@ -148,7 +188,7 @@ impl QuotaLimiter {
     pub fn try_acquire(&self, units: u32) -> bool {
         let units = f64::from(units);
         let mut bucket = self.bucket.lock().expect("quota bucket poisoned");
-        bucket.refill(self.rate, self.burst);
+        bucket.refill(self.full_rate, self.burst);
         if bucket.tokens >= units {
             bucket.tokens -= units;
             return true;
@@ -243,6 +283,17 @@ impl AccountQuota {
     /// history polling read it and slow down while it is true.
     pub fn foreground_waiting(&self) -> bool {
         self.account.foreground_waiting()
+    }
+
+    /// Answers a refusal from Gmail by slowing this account down. The
+    /// project keeps its pace, since the refusal named one account.
+    pub fn slow_down(&self) {
+        self.account.slow_down();
+    }
+
+    /// The pace this account keeps now, in units a second.
+    pub fn rate(&self) -> f64 {
+        self.account.rate()
     }
 
     /// Counts the caller as foreground work waiting on this account until

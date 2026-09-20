@@ -587,7 +587,17 @@ impl GmailClient {
             if status.is_success() {
                 return Ok(response);
             }
-            return Err(error_from_response(response).await);
+            let error = error_from_response(response).await;
+            if matches!(error, GmailError::RateLimited { .. }) {
+                // Gmail's limit is a moving average, so this account will
+                // not take the pace we are keeping. Drop it and climb back.
+                self.quota.slow_down();
+                tracing::debug!(
+                    rate = self.quota.rate(),
+                    "Gmail refused; slowing this account"
+                );
+            }
+            return Err(error);
         }
     }
 }

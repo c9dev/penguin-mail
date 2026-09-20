@@ -142,3 +142,50 @@ async fn backfill_leaves_the_user_a_batch_worth_of_budget() {
     );
     backfill.abort();
 }
+
+#[tokio::test(start_paused = true)]
+async fn a_refusal_halves_the_pace_and_a_quiet_minute_rebuilds_it() {
+    let limiter = QuotaLimiter::gmail();
+    assert_eq!(limiter.rate(), 200.0);
+
+    limiter.slow_down();
+    assert_eq!(limiter.rate(), 100.0, "one refusal should halve the pace");
+
+    limiter.slow_down();
+    assert_eq!(limiter.rate(), 50.0);
+
+    // Two minutes of calls Gmail accepts bring the pace back.
+    tokio::time::sleep(Duration::from_secs(120)).await;
+    assert_eq!(limiter.rate(), 200.0, "the pace should climb back");
+}
+
+#[tokio::test(start_paused = true)]
+async fn refusals_stop_at_a_floor_that_still_makes_progress() {
+    let limiter = QuotaLimiter::gmail();
+    for _ in 0..20 {
+        limiter.slow_down();
+    }
+    assert_eq!(
+        limiter.rate(),
+        20.0,
+        "the pace should not fall past the floor"
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_slowed_account_paces_its_calls_to_the_lower_rate() {
+    let limiter = QuotaLimiter::gmail();
+    limiter.slow_down();
+    limiter.slow_down();
+    limiter.slow_down();
+    // 25 units a second, so ten metadata fetches take about two seconds.
+    let start = tokio::time::Instant::now();
+    for _ in 0..10 {
+        limiter.acquire(5, Priority::Foreground).await;
+    }
+    let spent = start.elapsed();
+    assert!(
+        spent >= Duration::from_millis(1500),
+        "ten calls at 25 units a second should take about two seconds, took {spent:?}"
+    );
+}
