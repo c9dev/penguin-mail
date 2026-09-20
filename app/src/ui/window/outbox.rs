@@ -1,8 +1,8 @@
 //! The Outbox mailbox: what a person does with a message that has not
 //! gone out. Edit reopens the composer on the draft the outbox kept, Send
-//! Now skips the rest of its wait, and the trash button drops it. The two
-//! named actions are off everywhere else, which keeps them out of the row
-//! menu of ordinary mail.
+//! Now skips the rest of its wait, and Delete drops it, as the Delete key
+//! does. The three actions are off everywhere else, which keeps them out
+//! of the row menu of ordinary mail.
 
 use std::rc::Rc;
 
@@ -13,18 +13,23 @@ use mailrs_sync::{Mailbox, Posted, outbox_id};
 use super::MainWindow;
 use crate::compose::Draft;
 
+/// What one of the Outbox's actions runs.
+struct OutboxAction(fn(&Rc<MainWindow>));
+
 impl MainWindow {
     pub(super) fn install_outbox_actions(self: &Rc<Self>) {
-        for (name, send) in [("outbox-send", true), ("outbox-edit", false)] {
+        let each = [
+            ("outbox-send", OutboxAction(MainWindow::send_queued)),
+            ("outbox-edit", OutboxAction(MainWindow::edit_queued)),
+            ("outbox-delete", OutboxAction(MainWindow::drop_queued)),
+        ];
+        for (name, OutboxAction(run)) in each {
             let action = gio::SimpleAction::new(name, None);
             action.set_enabled(false);
             let weak = Rc::downgrade(self);
             action.connect_activate(move |_, _| {
-                let Some(win) = weak.upgrade() else { return };
-                if send {
-                    win.send_queued();
-                } else {
-                    win.edit_queued();
+                if let Some(win) = weak.upgrade() {
+                    run(&win);
                 }
             });
             self.actions.add_action(&action);
@@ -34,7 +39,7 @@ impl MainWindow {
     /// Turns the Outbox's own actions on while it is the mailbox on screen.
     pub(super) fn follow_outbox(self: &Rc<Self>) {
         let showing = *self.mailbox.borrow() == Mailbox::Outbox;
-        for name in ["outbox-send", "outbox-edit"] {
+        for name in ["outbox-send", "outbox-edit", "outbox-delete"] {
             if let Some(action) = self.actions.lookup_action(name) {
                 action
                     .downcast_ref::<gio::SimpleAction>()

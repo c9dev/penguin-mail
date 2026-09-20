@@ -101,6 +101,56 @@ fn the_network_coming_back_brings_stuck_messages_forward_and_leaves_the_rest() {
     );
 }
 
+/// The store as it stood before the outbox: enough of it for the
+/// migration to have something to carry over.
+fn version_fourteen(path: &std::path::Path) {
+    let conn = rusqlite::Connection::open(path).unwrap();
+    conn.execute_batch(
+        "CREATE TABLE accounts (
+            id              INTEGER PRIMARY KEY,
+            email           TEXT NOT NULL UNIQUE,
+            state           TEXT NOT NULL DEFAULT 'bootstrapping',
+            history_id      INTEGER,
+            backfill_cursor TEXT,
+            backfill_done   INTEGER NOT NULL DEFAULT 0,
+            sync_gen        INTEGER NOT NULL DEFAULT 1,
+            added_at        INTEGER NOT NULL
+        );
+        CREATE TABLE scheduled (
+            account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            draft_id   TEXT NOT NULL,
+            message_id TEXT NOT NULL,
+            thread_id  TEXT NOT NULL,
+            subject    TEXT NOT NULL,
+            recipients TEXT NOT NULL,
+            send_at    INTEGER NOT NULL,
+            PRIMARY KEY (account_id, draft_id)
+        );
+        INSERT INTO accounts (id, email, added_at) VALUES (1, 'me@example.com', 0);
+        INSERT INTO scheduled VALUES (1, 'r1', 'm1', 't1', 'Monday', 'Ann', 5000);
+        PRAGMA user_version = 14;",
+    )
+    .unwrap();
+}
+
+#[test]
+fn a_scheduled_send_from_the_old_store_carries_over_to_the_outbox() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    version_fourteen(&path);
+
+    let conn = open_connection(&path).unwrap();
+    let waiting = outbox::scheduled(&conn).unwrap();
+    assert_eq!(waiting.len(), 1, "the message survived the migration");
+    assert_eq!(waiting[0].draft_id.as_deref(), Some("r1"));
+    assert_eq!(waiting[0].message_id.as_deref(), Some("m1"));
+    assert_eq!(waiting[0].thread_id.as_deref(), Some("t1"));
+    assert_eq!(waiting[0].subject, "Monday");
+    assert_eq!(waiting[0].send_at, 5000);
+    assert!(waiting[0].id > 0, "and it was given a row id of its own");
+    assert!(waiting[0].raw.is_none(), "its bytes are still Gmail's");
+}
+
 #[test]
 fn a_queued_message_is_still_there_after_a_restart() {
     let dir = tempfile::tempdir().unwrap();

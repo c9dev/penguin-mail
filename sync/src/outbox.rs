@@ -3,7 +3,8 @@
 //! the bytes built for it, so closing the laptop mid-send loses nothing.
 //! Send Later waits here too, with the hour it chose and, once Gmail has
 //! taken it, a draft holding its bytes. The window and the assistant send
-//! through this module, so only it decides what is worth another try.
+//! through this module, so the rule about what waits here and what goes
+//! back to the person is written once.
 //!
 //! Nothing waits on a timer of its own. The caller comes round every so
 //! often and calls [`Outbox::send_due`]; a message that failed carries the
