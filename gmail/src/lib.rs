@@ -10,10 +10,12 @@ pub mod model;
 mod oauth;
 mod token_store;
 
-pub use client::{Authorized, GMAIL_API_BASE, GmailClient, authorize, one_click_unsubscribe};
+pub use client::{
+    Authorized, BATCH_LIMIT, GMAIL_API_BASE, GmailClient, authorize, cost, one_click_unsubscribe,
+};
 pub use convert::{HistoryChange, HistoryPage, html_to_text};
 pub use error::GmailError;
-pub use limiter::QuotaLimiter;
+pub use limiter::{AccountQuota, QuotaLimiter, QuotaPool};
 pub use model::{Draft, LabelColor, MessagePage, MessageRef, Profile, RemoteLabel, SendAs};
 pub use oauth::{
     AccessToken, GMAIL_SCOPE, LoopbackListener, OAuthClient, Pkce, SETTINGS_SCOPE, Tokens,

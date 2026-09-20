@@ -52,6 +52,17 @@ pub trait GmailApi: Send + Sync + 'static {
         remove: &[String],
     ) -> impl Future<Output = Result<(), GmailError>> + Send;
 
+    /// One label change over many messages in a single call. Gmail charges
+    /// 50 units for it whatever the count, against 5 for each
+    /// `modify_labels`, so bulk work goes through here. At most
+    /// [`mailrs_gmail::BATCH_LIMIT`] ids; the caller splits longer lists.
+    fn batch_modify(
+        &self,
+        ids: &[String],
+        add: &[String],
+        remove: &[String],
+    ) -> impl Future<Output = Result<(), GmailError>> + Send;
+
     fn trash(&self, id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
 
     fn untrash(&self, id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
@@ -191,6 +202,14 @@ impl GmailApi for AnyGmail {
         remove: &[String],
     ) -> Result<(), GmailError> {
         forward!(self, modify_labels(id, add, remove))
+    }
+    async fn batch_modify(
+        &self,
+        ids: &[String],
+        add: &[String],
+        remove: &[String],
+    ) -> Result<(), GmailError> {
+        forward!(self, batch_modify(ids, add, remove))
     }
     async fn trash(&self, id: &str) -> Result<(), GmailError> {
         forward!(self, trash(id))
@@ -343,6 +362,15 @@ impl GmailApi for AccountClient {
         remove: &[String],
     ) -> Result<(), GmailError> {
         self.client.modify(id, add, remove).await
+    }
+
+    async fn batch_modify(
+        &self,
+        ids: &[String],
+        add: &[String],
+        remove: &[String],
+    ) -> Result<(), GmailError> {
+        self.client.batch_modify(ids, add, remove).await
     }
 
     async fn trash(&self, id: &str) -> Result<(), GmailError> {

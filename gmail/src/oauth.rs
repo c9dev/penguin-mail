@@ -72,6 +72,9 @@ pub struct OAuthClient {
     client_secret: String,
     auth_url: String,
     token_url: String,
+    /// Google counts quota against the OAuth client, so every account
+    /// signed in through this one draws on the same pool. Clones share it.
+    quota: std::sync::Arc<crate::limiter::QuotaPool>,
 }
 
 #[derive(Deserialize)]
@@ -104,7 +107,13 @@ impl OAuthClient {
             client_secret: client_secret.into(),
             auth_url: GOOGLE_AUTH_URL.into(),
             token_url: GOOGLE_TOKEN_URL.into(),
+            quota: std::sync::Arc::new(crate::limiter::QuotaPool::new()),
         }
+    }
+
+    /// `email`'s bucket in this OAuth client's quota pool.
+    pub fn account_quota(&self, email: &str) -> std::sync::Arc<crate::limiter::AccountQuota> {
+        self.quota.account(email)
     }
 
     /// Points the client at other endpoints. Tests use this.
