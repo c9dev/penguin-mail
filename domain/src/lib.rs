@@ -7,12 +7,14 @@ use serde::{Deserialize, Serialize};
 
 mod category;
 mod folder;
+pub mod invitation;
 pub mod smart;
 pub mod system_label;
 mod target;
 
 pub use category::Category;
 pub use folder::Folder;
+pub use invitation::Invitation;
 pub use smart::SmartMailbox;
 pub use target::Target;
 
