@@ -26,6 +26,9 @@ pub enum Action {
     Propose(Proposal),
     /// Hand the `.ics` to the desktop, which files it in GNOME Calendar.
     AddToCalendar,
+    /// Answer the offer to add this account to GNOME Online Accounts.
+    /// Either way the offer is over.
+    OnlineAccounts { open: bool },
 }
 
 /// Which time to propose to the organizer.
@@ -108,6 +111,9 @@ pub struct EventCard {
     scope: Cell<Scope>,
     /// Where the last answer went, under the buttons that sent it.
     went: gtk::Label,
+    /// The line offering this account to GNOME Online Accounts, which the
+    /// window puts up once an account and never again.
+    gnome: gtk::Box,
     /// What the card shows now. The window reads it back to answer the
     /// invitation, so the card is the one place that holds it.
     showing: RefCell<Option<Showing>>,
@@ -240,6 +246,32 @@ impl EventCard {
             .css_classes(["dim-label", "caption"])
             .build();
 
+        // GNOME Calendar shows nothing about an account GNOME has never
+        // been told about, and adding it there is a job for Settings.
+        let gnome = gtk::Box::builder()
+            .spacing(8)
+            .margin_top(4)
+            .visible(false)
+            .build();
+        let told = gtk::Label::builder()
+            .xalign(0.0)
+            .wrap(true)
+            .hexpand(true)
+            .css_classes(["dim-label", "caption"])
+            .label("Add this account to GNOME Online Accounts and Calendar shows these events too.")
+            .build();
+        let open_settings = gtk::Button::builder()
+            .label("Open Settings")
+            .css_classes(["flat"])
+            .build();
+        let not_now = gtk::Button::builder()
+            .label("Not Now")
+            .css_classes(["flat"])
+            .build();
+        gnome.append(&told);
+        gnome.append(&not_now);
+        gnome.append(&open_settings);
+
         let inside = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .spacing(6)
@@ -251,6 +283,7 @@ impl EventCard {
         inside.append(&guests);
         inside.append(&actions);
         inside.append(&went);
+        inside.append(&gnome);
 
         let widget = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
@@ -278,6 +311,7 @@ impl EventCard {
             propose,
             proposals,
             act: Rc::clone(&on_action),
+            gnome,
             reach,
             scope: Cell::new(Scope::Occurrence),
             went,
@@ -311,6 +345,16 @@ impl EventCard {
                 }
             });
         }
+        for (open, button) in [(true, &open_settings), (false, &not_now)] {
+            let (act, weak) = (Rc::clone(&on_action), Rc::downgrade(&card));
+            button.connect_clicked(move |_| {
+                if let Some(card) = weak.upgrade() {
+                    card.gnome.set_visible(false);
+                }
+                act(Action::OnlineAccounts { open });
+            });
+        }
+
         card.add
             .connect_clicked(move |_| on_action(Action::AddToCalendar));
         card
@@ -351,6 +395,11 @@ impl EventCard {
         if mine {
             set_line(&self.clash, clash(busy));
         }
+    }
+
+    /// Puts up the offer to add this account to GNOME Online Accounts.
+    pub fn offer_gnome(&self) {
+        self.gnome.set_visible(true);
     }
 
     /// Says under the buttons where the answer went, or takes the line
@@ -401,6 +450,7 @@ impl EventCard {
         set_line(&self.organizer, organizer_line(event));
         self.fill_guests(showing);
         self.went.set_visible(false);
+        self.gnome.set_visible(false);
         set_line(&self.news, news(showing, now));
         self.news
             .set_css_classes(&["invitation-news", news_tone(showing)]);

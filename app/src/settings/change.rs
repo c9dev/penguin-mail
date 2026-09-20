@@ -108,6 +108,9 @@ pub enum Change {
     },
     /// Keeps a word Add to Dictionary accepted.
     KeepWord(String),
+    /// Records that an account has been offered to GNOME Online Accounts,
+    /// whichever way the person answered.
+    OfferedToGnome(String),
     Ai(AiChange),
 }
 
@@ -229,6 +232,12 @@ impl Change {
                     settings.spell_languages.remove(&key);
                 } else {
                     settings.spell_languages.insert(key, languages);
+                }
+            }
+            Change::OfferedToGnome(email) => {
+                let email = email.to_lowercase();
+                if !settings.offered_to_gnome.contains(&email) {
+                    settings.offered_to_gnome.push(email);
                 }
             }
             Change::KeepWord(word) => {
@@ -456,6 +465,7 @@ impl Effects {
             sign_by_default,
             encrypt_when_possible,
             contacts,
+            offered_to_gnome,
         } = after;
         // These leave the window as it is. The flag colour, the delay before
         // Send commits, and the rest are read when they are needed, so
@@ -482,6 +492,9 @@ impl Effects {
             check_attachments,
             sign_by_default,
             encrypt_when_possible,
+            // The event card reads this as it goes up, and it changes
+            // nothing that is already on screen.
+            offered_to_gnome,
         );
         let smart_changed = *smart_mailboxes != before.smart_mailboxes;
         let colors_changed = *account_colors != before.account_colors;
@@ -813,6 +826,9 @@ mod tests {
                 // Which buttons a notification carries is a list, and a
                 // setting the assistant changes by name holds one value.
                 "notification_buttons",
+                // Whether an account has been offered to GNOME is the
+                // card's own memory of asking, not a preference.
+                "offered_to_gnome",
                 "send_as",
                 "sign_by_default",
                 "signatures",

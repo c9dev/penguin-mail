@@ -19,6 +19,8 @@ use mailrs_gmail::CALENDAR_SCOPE;
 use mailrs_sync::{Told, now_millis};
 
 use super::MainWindow;
+use crate::goa;
+use crate::settings::Change;
 use crate::ui::conversation::ConversationView;
 use crate::ui::invitation::{Action, Proposal, Showing};
 
@@ -68,7 +70,40 @@ impl MainWindow {
         };
         view.show_invitation(showing.clone());
         if let Some(showing) = showing.filter(waiting_on_an_answer) {
+            self.offer_gnome(view, account_id);
             self.show_clashes(view, account_id, showing.invitation);
+        }
+    }
+
+    /// Offers to put this account in GNOME Online Accounts, where GNOME
+    /// Calendar and the shell clock can see its meetings. The offer goes
+    /// up once an account: the answer is remembered whichever way it
+    /// goes, and an account GNOME already has is never asked about.
+    fn offer_gnome(self: &Rc<Self>, view: &Rc<ConversationView>, account_id: AccountId) {
+        let Some(account) = self.account(account_id) else {
+            return;
+        };
+        let asked = self
+            .settings()
+            .offered_to_gnome
+            .iter()
+            .any(|email| email.eq_ignore_ascii_case(&account.email));
+        if !asked && goa::worth_offering(&account.email) {
+            view.card.offer_gnome();
+        }
+    }
+
+    /// Records the answer to that offer, and opens Online Accounts when
+    /// the answer was yes.
+    fn answer_gnome_offer(self: &Rc<Self>, view: &Rc<ConversationView>, open: bool) {
+        let Some(account_id) = view.with_open(|open| open.account_id) else {
+            return;
+        };
+        if let (Some(app), Some(account)) = (self.app.upgrade(), self.account(account_id)) {
+            app.change_settings(Change::OfferedToGnome(account.email));
+        }
+        if open && let Err(err) = goa::open_online_accounts() {
+            self.toast(&format!("Could not open Settings: {err}"));
         }
     }
 
@@ -104,6 +139,7 @@ impl MainWindow {
             Action::Answer(answer, scope) => self.answer_invitation(view, answer, scope),
             Action::Propose(proposal) => self.propose_time(view, proposal),
             Action::AddToCalendar => self.add_to_calendar(view),
+            Action::OnlineAccounts { open } => self.answer_gnome_offer(view, open),
         }
     }
 
