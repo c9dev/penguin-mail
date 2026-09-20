@@ -338,6 +338,14 @@ impl Composer {
         composer.accept_images();
         composer.check_send();
         composer.load_templates();
+        // Preferences may add a template while this window is open, so the
+        // list is read again each time the menu is asked for.
+        let weak = Rc::downgrade(&composer);
+        template_button.set_create_popup_func(move |_| {
+            if let Some(c) = weak.upgrade() {
+                c.load_templates();
+            }
+        });
         let this = Rc::clone(&composer);
         glib::spawn_future_local(async move { this.check_spelling(dictionaries.await) });
         composer.window.present();

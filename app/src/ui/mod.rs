@@ -15,6 +15,7 @@ pub mod rules;
 pub mod search_suggest;
 pub mod sidebar;
 pub mod smart_editor;
+pub mod templates;
 pub mod thread_list;
 pub mod thread_row;
 pub mod vacation;

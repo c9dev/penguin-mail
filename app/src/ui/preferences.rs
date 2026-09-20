@@ -191,6 +191,7 @@ fn writing_page(
             .description("Add an account to choose a sender and write signatures.")
             .build();
         page.add(&empty);
+        page.add(&super::templates::group(app));
         return page;
     }
 
@@ -320,6 +321,7 @@ fn writing_page(
         signatures.add(&row);
     }
     page.add(&signatures);
+    page.add(&super::templates::group(app));
     page.add(&spelling_group(app, settings, accounts));
     page
 }

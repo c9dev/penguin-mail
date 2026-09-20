@@ -571,12 +571,14 @@ mod tests {
 
     fn an_inserted_body_lands_at_the_cursor() {
         let (view, buffer, mut anchors) = buffer();
-        write(&view, &RichBody::from_markdown("Hi there."), &[], &mut anchors);
-        buffer.place_cursor(&buffer.iter_at_offset(3));
-        insert(
-            &buffer,
-            &RichBody::from_markdown("Ann\n\n- one\n- two"),
+        write(
+            &view,
+            &RichBody::from_markdown("Hi there."),
+            &[],
+            &mut anchors,
         );
+        buffer.place_cursor(&buffer.iter_at_offset(3));
+        insert(&buffer, &RichBody::from_markdown("Ann\n\n- one\n- two"));
         let plain = read(&buffer, &anchors).to_plain();
         assert_eq!(plain, "Hi Ann\n\n- one\n- twothere.", "{plain}");
         assert_eq!(kind_at(&buffer, 2), BlockKind::Bullet);
