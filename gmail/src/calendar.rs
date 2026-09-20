@@ -62,11 +62,19 @@ impl GmailClient {
     /// Answers the event `ical_uid` names as `me`, and lets Google tell the
     /// organizer. Two calls: one to find the event Google made from the
     /// invitation, one to change this account's answer on it.
+    ///
+    /// `occurrence` is the start of the one occurrence to answer, as an
+    /// RFC 3339 timestamp, for an invitation to a single occurrence of a
+    /// repeating event. Without it the answer covers the series, which is
+    /// what a single event and "all events" both want. Naming an
+    /// occurrence costs a third call, since Google numbers the occurrences
+    /// of a series itself and the id it gives one is not the UID.
     pub async fn answer_invitation(
         &self,
         ical_uid: &str,
         me: &str,
         answer: Answer,
+        occurrence: Option<&str>,
     ) -> Result<Answered, GmailError> {
         let list: EventList = self
             .call_at(
@@ -83,7 +91,7 @@ impl GmailClient {
         let Some(event) = list.items.into_iter().next() else {
             return Ok(Answered::NotOnCalendar);
         };
-        let Some(id) = event.get("id").and_then(Value::as_str) else {
+        let Some(id) = self.event_to_answer(&event, occurrence).await? else {
             return Ok(Answered::NotOnCalendar);
         };
         let guests = answered(&event, me, answer);
@@ -97,6 +105,53 @@ impl GmailClient {
             })
             .await?;
         Ok(Answered::Done)
+    }
+
+    /// Which event the answer goes on: the series, or the one occurrence
+    /// `occurrence` names. Google keeps a repeating event as one event
+    /// with a rule, and hands out an id for an occurrence only when asked
+    /// for the instances, so an answer to one occurrence looks that id up
+    /// first. An answer to the series goes on the series even when the
+    /// search turned up an occurrence of it.
+    async fn event_to_answer(
+        &self,
+        event: &Value,
+        occurrence: Option<&str>,
+    ) -> Result<Option<String>, GmailError> {
+        let text = |key: &str| event.get(key).and_then(Value::as_str);
+        let Some(occurrence) = occurrence else {
+            return Ok(text("recurringEventId")
+                .or_else(|| text("id"))
+                .map(str::to_string));
+        };
+        let Some(id) = text("id") else {
+            return Ok(None);
+        };
+        if text("recurringEventId").is_some() {
+            return Ok(Some(id.to_string()));
+        }
+        if event.get("recurrence").is_none() {
+            return Ok(Some(id.to_string()));
+        }
+        let instances: EventList = self
+            .call_at(
+                &format!(
+                    "{}/calendars/primary/events/{id}/instances",
+                    self.calendar_base_url
+                ),
+                |url| {
+                    self.http()
+                        .get(url)
+                        .query(&[("originalStart", occurrence), ("maxResults", "1")])
+                },
+            )
+            .await?;
+        Ok(instances
+            .items
+            .first()
+            .and_then(|instance| instance.get("id"))
+            .and_then(Value::as_str)
+            .map(str::to_string))
     }
 
     /// What the account's primary calendar holds between `from` and `to`,

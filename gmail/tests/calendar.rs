@@ -77,7 +77,7 @@ async fn an_answer_keeps_every_other_guest_as_google_has_them() {
         .await;
 
     let answered = client(&server)
-        .answer_invitation(UID, "me@example.com", Answer::No)
+        .answer_invitation(UID, "me@example.com", Answer::No, None)
         .await
         .unwrap();
     assert_eq!(answered, Answered::Done);
@@ -104,7 +104,7 @@ async fn a_guest_google_left_off_the_list_is_added() {
         .await;
 
     client(&server)
-        .answer_invitation(UID, "me@example.com", Answer::Maybe)
+        .answer_invitation(UID, "me@example.com", Answer::Maybe, None)
         .await
         .unwrap();
     assert_eq!(
@@ -120,7 +120,7 @@ async fn an_event_that_is_on_no_calendar_is_not_answered() {
     mount_search(&server, json!({"items": []})).await;
     assert_eq!(
         client(&server)
-            .answer_invitation(UID, "me@example.com", Answer::Yes)
+            .answer_invitation(UID, "me@example.com", Answer::Yes, None)
             .await
             .unwrap(),
         Answered::NotOnCalendar
@@ -141,7 +141,7 @@ async fn a_missing_calendar_permission_is_reported_as_such() {
         .await;
     assert!(matches!(
         client(&server)
-            .answer_invitation(UID, "me@example.com", Answer::Yes)
+            .answer_invitation(UID, "me@example.com", Answer::Yes, None)
             .await,
         Err(GmailError::MissingScope)
     ));

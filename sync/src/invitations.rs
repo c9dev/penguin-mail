@@ -239,17 +239,27 @@ impl<A: Accounts> Invitations<A> {
             told: Told::Nobody,
             needs_permission: false,
         };
-        match sync
-            .answer_invitation(&invitation.uid, &me.email, answer)
-            .await
-        {
-            Ok(Answered::Done) => sent.told = Told::Calendar,
-            Ok(Answered::NotOnCalendar) => {}
-            // The answer still has to reach the organizer, so it goes by
-            // mail and the caller offers to ask for the permission, which
-            // is what keeps the user's own calendar in step from here on.
-            Err(SyncError::Gmail(GmailError::MissingScope)) => sent.needs_permission = true,
-            Err(err) => return Err(err),
+        // Google needs an instant to find one occurrence of a series by.
+        // An occurrence whose zone this app could not work out leaves it
+        // nothing to go on, and only the emailed reply, which copies the
+        // organizer's own `RECURRENCE-ID` back, can name that one.
+        let google = match (scope, &invitation.occurrence) {
+            (Scope::Occurrence, Some(occurrence)) => occurrence.at.map(Some),
+            _ => Some(None),
+        };
+        if let Some(occurrence) = google {
+            match sync
+                .answer_invitation(&invitation.uid, &me.email, answer, occurrence)
+                .await
+            {
+                Ok(Answered::Done) => sent.told = Told::Calendar,
+                Ok(Answered::NotOnCalendar) => {}
+                // The answer still has to reach the organizer, so it goes
+                // by mail and the caller offers to ask for the permission,
+                // which keeps the user's own calendar in step from here on.
+                Err(SyncError::Gmail(GmailError::MissingScope)) => sent.needs_permission = true,
+                Err(err) => return Err(err),
+            }
         }
         if sent.told == Told::Nobody {
             sent.told = self

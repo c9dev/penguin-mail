@@ -366,6 +366,7 @@ impl GmailApi for Gmail {
         _ical_uid: &str,
         _me: &str,
         _answer: mailrs_domain::invitation::Answer,
+        _occurrence: Option<mailrs_domain::EpochMillis>,
     ) -> Result<Answered, GmailError> {
         Ok(Answered::NotOnCalendar)
     }

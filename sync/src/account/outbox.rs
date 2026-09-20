@@ -234,13 +234,19 @@ impl<G: GmailApi> AccountSync<G> {
     }
 
     /// Answers an invitation through Google Calendar as `me`.
+    /// `occurrence` names one occurrence of a repeating event; `None`
+    /// answers the series.
     pub async fn answer_invitation(
         &self,
         ical_uid: &str,
         me: &str,
         answer: mailrs_domain::invitation::Answer,
+        occurrence: Option<EpochMillis>,
     ) -> Result<mailrs_gmail::Answered, SyncError> {
-        Ok(self.api.answer_invitation(ical_uid, me, answer).await?)
+        Ok(self
+            .api
+            .answer_invitation(ical_uid, me, answer, occurrence)
+            .await?)
     }
 
     /// What the account's calendar already holds between `from` and `to`.

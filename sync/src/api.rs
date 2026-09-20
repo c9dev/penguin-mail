@@ -182,11 +182,15 @@ pub trait GmailApi: Send + Sync + 'static {
     /// `GmailError::MissingScope` until the account grants the calendar
     /// permission, so a caller offers to ask for it rather than showing an
     /// error.
+    /// `occurrence` is the start of the one occurrence to answer, for an
+    /// invitation to a single occurrence of a repeating event; `None`
+    /// answers the series.
     fn answer_invitation(
         &self,
         ical_uid: &str,
         me: &str,
         answer: Answer,
+        occurrence: Option<EpochMillis>,
     ) -> impl Future<Output = Result<Answered, GmailError>> + Send;
 
     /// What the account's calendar already holds between `from` and `to`.
@@ -367,8 +371,9 @@ impl GmailApi for AnyGmail {
         ical_uid: &str,
         me: &str,
         answer: Answer,
+        occurrence: Option<EpochMillis>,
     ) -> Result<Answered, GmailError> {
-        forward!(self, answer_invitation(ical_uid, me, answer))
+        forward!(self, answer_invitation(ical_uid, me, answer, occurrence))
     }
 
     async fn busy_between(
@@ -569,8 +574,12 @@ impl GmailApi for AccountClient {
         ical_uid: &str,
         me: &str,
         answer: Answer,
+        occurrence: Option<EpochMillis>,
     ) -> Result<Answered, GmailError> {
-        self.client.answer_invitation(ical_uid, me, answer).await
+        let occurrence = occurrence.and_then(rfc3339);
+        self.client
+            .answer_invitation(ical_uid, me, answer, occurrence.as_deref())
+            .await
     }
 
     /// The Calendar API takes its window as RFC 3339, so the instants turn
