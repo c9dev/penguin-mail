@@ -127,6 +127,7 @@ impl MainWindow {
                 self.save_attachment_from(view, message_id, index)
             }
             Action::Unsubscribe => self.unsubscribe_from(Rc::clone(view)),
+            Action::Invitation(action) => self.invitation_action(view, action),
             Action::Mailto(address) => self.act(Action::Mailto(address)),
         }
     }

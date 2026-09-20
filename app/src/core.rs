@@ -16,9 +16,9 @@ use mailrs_gmail::{GMAIL_API_BASE, KeyringTokenStore, OAuthClient, TokenStore, a
 use mailrs_store::{Db, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::{
-    AccountSettings, AccountSync, Accounts, AnyGmail, Changed, Counts, Failure, History, Listing,
-    MailAction, MailActions, Mailbox, Mailboxes, Outcome, Permitted, Scope, SyncEngine, View,
-    connect_account, now_millis,
+    AccountSettings, AccountSync, Accounts, AnyGmail, Changed, Counts, Failure, History,
+    Invitations, Listing, MailAction, MailActions, Mailbox, Mailboxes, Outcome, Permitted, Scope,
+    SyncEngine, View, connect_account, now_millis,
 };
 
 use crate::assistant::run::{Background, Modules};
@@ -37,6 +37,9 @@ pub type Lists = Mailboxes<RunningEngine>;
 /// Changes an account's Gmail settings for the dialogs and the assistant
 /// alike. See `mailrs_sync::AccountSettings`.
 pub type GmailSettings = AccountSettings<RunningEngine>;
+/// Reads the invitations in mail and answers them. See
+/// `mailrs_sync::Invitations`.
+pub type Events = Invitations<RunningEngine>;
 
 /// The engine that runs now. Changing the sync settings replaces it, so mail
 /// actions look accounts up here rather than keep one engine.
@@ -75,6 +78,7 @@ pub struct Core {
     actions: Arc<Actions>,
     lists: Arc<Lists>,
     gmail_settings: Arc<GmailSettings>,
+    invitations: Arc<Events>,
     config: RefCell<Option<Config>>,
     tokens: Arc<dyn TokenStore>,
     events_tx: async_channel::Sender<ChangeEvent>,
@@ -140,6 +144,7 @@ impl Core {
         let actions = Arc::new(MailActions::new(Arc::clone(&engine), db.clone()));
         let lists = Arc::new(Mailboxes::new(Arc::clone(&engine), db.clone()));
         let gmail_settings = Arc::new(AccountSettings::new(Arc::clone(&engine), db.clone()));
+        let invitations = Arc::new(Invitations::new(Arc::clone(&engine), db.clone()));
         let core = Rc::new(Core {
             runtime,
             db,
@@ -149,6 +154,7 @@ impl Core {
             actions,
             lists,
             gmail_settings,
+            invitations,
             config: RefCell::new(config),
             tokens: Arc::new(KeyringTokenStore::new()),
             events_tx,
@@ -317,6 +323,12 @@ impl Core {
     /// blocked senders, and hidden addresses.
     pub fn gmail_settings(&self) -> Arc<GmailSettings> {
         Arc::clone(&self.gmail_settings)
+    }
+
+    /// The invitations in mail: what one says, and the answer the user
+    /// sends back.
+    pub fn invitations(&self) -> Arc<Events> {
+        Arc::clone(&self.invitations)
     }
 
     /// The modules the assistant's tools work through.

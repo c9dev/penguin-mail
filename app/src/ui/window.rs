@@ -35,6 +35,7 @@ mod detached;
 mod flags;
 mod followup;
 mod hide_my_email;
+mod invitation;
 mod organize;
 mod reminders;
 mod scheduled;
@@ -841,6 +842,7 @@ impl MainWindow {
             };
             view.show(thread, true);
             view.set_sender_vip(sender_is_vip(&view, &this.settings()));
+            this.refresh_invitation(&view).await;
             this.complete_thread(view, account_id, thread_id).await;
         });
     }
@@ -925,6 +927,7 @@ impl MainWindow {
             })
             .unwrap_or(false);
         view.render(false);
+        self.refresh_invitation(&view).await;
         if unread {
             self.mark_read_later(&view, account_id, thread_id);
         }
@@ -1140,6 +1143,10 @@ impl MainWindow {
 
     fn act(self: &Rc<Self>, action: Action) {
         match action {
+            Action::Invitation(action) => {
+                let view = Rc::clone(&self.conversation);
+                self.invitation_action(&view, action)
+            }
             Action::Reply(kind) => self.reply(kind),
             Action::EditDraft => self.edit_draft(),
             Action::Archive => self.triage(TriageAction::Archive),
