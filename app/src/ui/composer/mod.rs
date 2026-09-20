@@ -178,22 +178,27 @@ impl Composer {
             .label("Cc/Bcc")
             .tooltip_text("Show Cc and Bcc")
             .css_classes(["flat", "cc-toggle"])
+            // Stays on the first line when the chips wrap below it.
+            .valign(gtk::Align::Start)
             .can_focus(false)
             .active(!draft.cc.is_empty() || !draft.bcc.is_empty())
             .build();
         let fields = gtk::Box::new(gtk::Orientation::Vertical, 0);
-        let from_row = field("From", &from);
+        // One size group holds the label column to a single width, so every
+        // field starts at the same edge whichever labels are on show.
+        let column = gtk::SizeGroup::new(gtk::SizeGroupMode::Horizontal);
+        let from_row = field("From", &from, &column);
         if identities.len() > 1 {
             fields.append(&from_row);
             fields.append(&line());
         }
-        let to_row = field("To", &to.field);
+        let to_row = field("To", &to.field, &column);
         to_row.append(&more_button);
         fields.append(&to_row);
         fields.append(&line());
-        let cc_row = field("Cc", &cc.field);
+        let cc_row = field("Cc", &cc.field, &column);
         let cc_line = line();
-        let bcc_row = field("Bcc", &bcc.field);
+        let bcc_row = field("Bcc", &bcc.field, &column);
         let bcc_line = line();
         for widget in [
             cc_row.clone().upcast::<gtk::Widget>(),
@@ -203,7 +208,7 @@ impl Composer {
         ] {
             fields.append(&widget);
         }
-        fields.append(&field("Subject", &subject));
+        fields.append(&field("Subject", &subject, &column));
         fields.append(&line());
 
         let body = gtk::TextView::builder()
@@ -1804,19 +1809,25 @@ fn line() -> gtk::Separator {
     gtk::Separator::new(gtk::Orientation::Horizontal)
 }
 
-fn field(label: &str, widget: &impl IsA<gtk::Widget>) -> gtk::Box {
+/// One header row: its label in the shared column, its field beside it.
+///
+/// `column` holds every label to one width, so the fields all start at the
+/// same edge however long the labels are. The label sits at the top of the
+/// row rather than its middle, because a Cc row whose chips wrap grows
+/// downwards and the label belongs on the first line either way.
+fn field(label: &str, widget: &impl IsA<gtk::Widget>, column: &gtk::SizeGroup) -> gtk::Box {
     let row = gtk::Box::builder()
-        .spacing(8)
+        .spacing(0)
         .css_classes(["composer-field"])
         .build();
-    row.append(
-        &gtk::Label::builder()
-            .label(label)
-            .xalign(1.0)
-            .valign(gtk::Align::Start)
-            .css_classes(["dim-label"])
-            .build(),
-    );
+    let label = gtk::Label::builder()
+        .label(label)
+        .xalign(1.0)
+        .valign(gtk::Align::Start)
+        .css_classes(["dim-label", "composer-label"])
+        .build();
+    column.add_widget(&label);
+    row.append(&label);
     row.append(widget);
     row
 }

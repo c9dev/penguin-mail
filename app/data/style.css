@@ -34,12 +34,48 @@
 .account-3 { background: #c88800; } .account-4 { background: #ed5b00; } .account-5 { background: #e62d42; }
 .account-6 { background: #d56199; } .account-7 { background: #9141ac; } .account-8 { background: #6f8396; }
 
-/* Composer */
-.composer-field { padding: 5px 12px 5px 12px; }
-.composer-field label.dim-label { min-width: 56px; margin-top: 7px; }
-.composer-field entry, .composer-field text { background: none; box-shadow: none; }
+/* Composer.
+   The header rows read as one stack: a label column of fixed width, and
+   every field starting at the same edge with the same background and the
+   same height while it holds one line. A Cc row whose chips wrap grows on
+   its own, which is why the rows are not held to a shared height. Sizes are
+   in em, so the columns still line up at a larger font. */
+.composer-field { padding: 4px 12px; }
+.composer-field > .composer-label {
+  min-width: 4.2em;
+  padding-right: 0.85em;
+  /* Enough to drop the label onto the first line of its field. */
+  margin-top: 0.42em;
+  font-size: 0.94em;
+}
+/* GTK gives entries and dropdown buttons padding of their own, which would
+   start each field at a different edge. Take it off and the column lines up. */
+.composer-field entry,
+.composer-field text,
+.composer-field > .composer-from > button {
+  background: none;
+  box-shadow: none;
+  border: none;
+  outline: none;
+  min-height: 1.9em;
+  padding-left: 0;
+  padding-right: 0;
+}
+.composer-field > .composer-from > button {
+  padding-top: 0;
+  padding-bottom: 0;
+  min-height: 1.9em;
+}
+.composer-field > .composer-from > button > box > label { padding-left: 0; }
+/* A chip's pill and a plain field start at the same edge, so the column
+   holds whether a row holds recipients or text. */
+.composer-field flowboxchild { padding: 0; min-height: 0; }
+.composer-field .recipient-entry { padding-left: 0; }
+/* The row shows focus by tinting its label, since the flat fields cannot. */
+.composer-field:focus-within > .composer-label { color: var(--accent-color); }
+.composer-from-heading { padding: 6px 10px 2px; font-size: 0.82em; font-weight: 700; }
 .composer-body { font-size: 1.04em; line-height: 1.5; }
-.cc-toggle { font-size: 0.85em; opacity: 0.7; padding: 2px 8px; min-height: 24px; }
+.cc-toggle { font-size: 0.85em; opacity: 0.7; padding: 2px 8px; min-height: 24px; margin-top: 0.1em; }
 
 /* Recipients, as chips with the address under the pointer. */
 .recipient-chip {

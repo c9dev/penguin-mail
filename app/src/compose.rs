@@ -412,10 +412,43 @@ fn quote_starts_at(markdown: &str) -> Option<usize> {
         if line.trim_start().starts_with('>') {
             return Some(attribution.unwrap_or(at));
         }
-        attribution = line.trim_end().ends_with("wrote:").then_some(at);
+        // A blank line between the attribution and the quote belongs to the
+        // quote, so it does not clear what was found.
+        if !line.trim().is_empty() {
+            attribution = line.trim_end().ends_with("wrote:").then_some(at);
+        }
         at += line.len();
     }
     None
+}
+
+/// Where the signature block starts in `head`, when the text below the
+/// separator is still `signature`.
+///
+/// The separator goes out as `-- `, the way every mail client writes it,
+/// but a trip through the rich body and back trims the trailing space, so
+/// both spellings count, and the lines below are compared without their
+/// trailing whitespace.
+fn signature_starts_at(head: &str, signature: &str) -> Option<usize> {
+    let bare = |text: &str| {
+        text.lines()
+            .map(str::trim_end)
+            .collect::<Vec<_>>()
+            .join("\n")
+            .trim()
+            .to_string()
+    };
+    let mut at = 0;
+    let mut separator = None;
+    for line in head.split_inclusive('\n') {
+        if line.trim_end() == "--" {
+            separator = Some(at);
+        }
+        at += line.len();
+    }
+    let start = separator?;
+    let below = start + head[start..].find('\n')? + 1;
+    (bare(&head[below..]) == bare(signature)).then_some(start)
 }
 
 /// Swaps the signature when the writer picks another send-as address.
@@ -426,31 +459,24 @@ fn quote_starts_at(markdown: &str) -> Option<usize> {
 /// losing a rewritten one to a dropdown would be worse than showing the
 /// wrong one.
 pub fn restyle_signature(markdown: &str, old: &str, new: &str) -> String {
-    if old.trim().is_empty() {
-        if new.trim().is_empty() {
-            return markdown.to_string();
-        }
-        // Nothing to replace, so the new signature goes where a signature
-        // belongs: below what the writer has typed, above any quote.
-        let at = quote_starts_at(markdown).unwrap_or(markdown.len());
-        let (head, tail) = markdown.split_at(at);
-        let typed = head.trim_end_matches('\n');
-        let gap = if tail.is_empty() { "" } else { "\n\n" };
-        return format!("{typed}{}{gap}{tail}", signature_block(new));
-    }
-    let block = signature_block(old);
-    // The block has to end where it was left: at the end of the text, or at
-    // the blank line before the quote. Anything else means someone typed
-    // into it, and their words come first.
-    let found = markdown.find(&block).filter(|at| {
-        let after = &markdown[at + block.len()..];
-        after.is_empty() || after.starts_with('\n')
-    });
-    let Some(at) = found else {
+    let quote = quote_starts_at(markdown).unwrap_or(markdown.len());
+    // Where the writer's own words end: above the old signature while it is
+    // still where it was left, else right above the quote.
+    let ends = match old.trim().is_empty() {
+        true => Some(quote),
+        false => signature_starts_at(&markdown[..quote], old),
+    };
+    let Some(ends) = ends else {
         return markdown.to_string();
     };
-    let (before, after) = (&markdown[..at], &markdown[at + block.len()..]);
-    format!("{before}{}", with_signature(after, new))
+    let typed = markdown[..ends].trim_end_matches('\n');
+    let tail = &markdown[quote..];
+    let gap = if tail.is_empty() { "" } else { "\n\n" };
+    let block = match new.trim().is_empty() {
+        true => String::new(),
+        false => signature_block(new),
+    };
+    format!("{typed}{block}{gap}{tail}")
 }
 
 /// A message body as plain text, for quoting and for reopening drafts.
@@ -914,6 +940,21 @@ mod tests {
             restyle_signature("Hi Ann\n\nOn Monday, Ann wrote:\n> hi", "", "Dana"),
             "Hi Ann\n\n-- \nDana\n\nOn Monday, Ann wrote:\n> hi"
         );
+    }
+
+    #[test]
+    fn the_signature_survives_the_trip_through_the_rich_body() {
+        // In rich text the composer reads the body back as Markdown before
+        // swapping, so the block has to come out of that round trip intact,
+        // trailing space and all.
+        let signed = with_signature("\n\nOn Monday, Ann wrote:\n> hi", "Dana");
+        let round_tripped = crate::richtext::RichBody::from_markdown(&signed).to_markdown();
+        let swapped = restyle_signature(&round_tripped, "Dana", "Dana, Sales");
+        assert!(
+            swapped.contains("\n\n-- \nDana, Sales"),
+            "{swapped:?} came from {round_tripped:?}"
+        );
+        assert!(swapped.contains("> hi"));
     }
 
     #[test]
