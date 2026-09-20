@@ -9,7 +9,7 @@ use adw::prelude::*;
 use gtk::{gdk, glib};
 use mailrs_domain::Address;
 
-use crate::compose::{format_recipients, is_address, parse_recipients};
+use crate::compose::{is_address, parse_recipients};
 use crate::ui::autocomplete::{self, Contacts};
 use mailrs_domain::translate::gettext;
 
@@ -114,16 +114,16 @@ impl Recipients {
         self.announce();
     }
 
-    /// Puts the last chip back into the entry, for a quick correction.
-    fn take_back(self: &Rc<Self>) {
-        let Some(last) = self.addresses.borrow_mut().pop() else {
-            return;
-        };
-        self.entry
-            .set_text(&format_recipients(std::slice::from_ref(&last)));
-        self.entry.set_position(-1);
-        self.rebuild();
-        self.announce();
+    /// Deletes the last chip. Backspace in an empty entry means the same
+    /// here as it does anywhere else: take the thing before the cursor
+    /// away. Putting the address back into the entry instead left the
+    /// chip gone and its text still in the field, where whatever was
+    /// typed next ran into it.
+    fn remove_last(self: &Rc<Self>) {
+        let last = self.addresses.borrow().len().checked_sub(1);
+        if let Some(index) = last {
+            self.remove(index);
+        }
     }
 
     fn remove(self: &Rc<Self>, index: usize) {
@@ -222,6 +222,10 @@ impl Recipients {
         });
 
         let keys = gtk::EventControllerKey::new();
+        // Ahead of the entry's own text handling, which swallows
+        // Backspace before a bubbling controller ever sees it. Every key
+        // this does not claim is passed straight on.
+        keys.set_propagation_phase(gtk::PropagationPhase::Capture);
         let weak = Rc::downgrade(self);
         keys.connect_key_pressed(move |_, key, _, _| {
             let Some(field) = weak.upgrade() else {
@@ -233,7 +237,7 @@ impl Recipients {
                     glib::Propagation::Stop
                 }
                 gdk::Key::BackSpace if field.entry.text().is_empty() => {
-                    field.take_back();
+                    field.remove_last();
                     glib::Propagation::Stop
                 }
                 gdk::Key::Tab | gdk::Key::ISO_Left_Tab => {
@@ -264,5 +268,20 @@ impl Recipients {
             }
         });
         self.entry.add_controller(focus);
+
+        // The flow box takes the press before the entry inside it ever
+        // sees one, so clicking the row left the focus wherever it was:
+        // click the body, click To, and the typing still went to the
+        // body. Every click on the row puts the cursor in the entry,
+        // which is also what clicking the empty space beside the chips
+        // should do.
+        let click = gtk::GestureClick::new();
+        let weak = Rc::downgrade(self);
+        click.connect_pressed(move |_, _, _, _| {
+            if let Some(field) = weak.upgrade() {
+                field.entry.grab_focus();
+            }
+        });
+        self.field.add_controller(click);
     }
 }

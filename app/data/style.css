@@ -54,8 +54,18 @@
 }
 /* GTK gives entries and dropdown buttons padding of their own, which would
    start each field at a different edge. Take it off and the column lines up. */
+/* The states as well as the resting look: Adwaita draws a rounded box
+   behind an entry under the pointer and another when it has the focus,
+   and one appearing around a recipient field that is meant to read as
+   flat is the whole reason the row looked wrong. */
 .composer-field entry,
+.composer-field entry:hover,
+.composer-field entry:focus,
+.composer-field entry:focus-within,
 .composer-field text,
+.composer-field text:hover,
+.composer-field text:focus,
+.composer-field flowboxchild:hover,
 .composer-field > .composer-from > button {
   background: none;
   box-shadow: none;
