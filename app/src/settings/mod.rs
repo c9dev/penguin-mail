@@ -19,6 +19,10 @@ pub struct Settings {
     pub remote_images: RemoteImages,
     pub text_size: TextSize,
     pub color_scheme: ColorScheme,
+    /// The locale the interface speaks, such as `pt_PT`. Empty follows the
+    /// desktop. Read once at startup, since GTK reads its own locale then
+    /// and never again.
+    pub language: String,
     pub notifications: bool,
     /// Show sender and subject in notifications, not just a count.
     pub notification_previews: bool,
@@ -149,6 +153,7 @@ impl Default for Settings {
             remote_images: RemoteImages::Ask,
             text_size: TextSize::Normal,
             color_scheme: ColorScheme::System,
+            language: String::new(),
             notifications: true,
             notification_previews: true,
             default_account: None,

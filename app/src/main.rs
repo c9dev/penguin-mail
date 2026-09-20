@@ -34,6 +34,8 @@ use adw::prelude::*;
 use gtk::{gdk, gio, glib};
 use mailrs_domain::translate::{fill, gettext};
 
+use settings::Settings;
+
 pub const APP_ID: &str = "dev.penguinmail.PenguinMail";
 
 fn usage() -> String {
@@ -56,7 +58,11 @@ fn main() -> glib::ExitCode {
             }),
         )
         .init();
-    language::bind();
+    // The language is the one preference read before the window exists,
+    // because every word after this point has to come out in it. A demo
+    // keeps its own throwaway preferences, but not this one: it is the
+    // person's own copy of the app they are looking at.
+    language::bind(&Settings::load(&Settings::default_path()).language);
     let args: Vec<String> = std::env::args().collect();
     // Claude Code starts this binary as the assistant's MCP server. It only
     // relays tool calls to the running window, so it needs no GTK.

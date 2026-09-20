@@ -25,6 +25,8 @@ pub enum Change {
     /// Moves one step up or down the text sizes; `0` goes back to the default.
     StepTextSize(i32),
     ColorScheme(ColorScheme),
+    /// The locale the interface speaks; empty follows the desktop.
+    Language(String),
     Notifications(bool),
     NotificationPreviews(bool),
     NotifyVipsOnly(bool),
@@ -154,6 +156,7 @@ impl Change {
                 };
             }
             Change::ColorScheme(scheme) => settings.color_scheme = scheme,
+            Change::Language(code) => settings.language = code,
             Change::Notifications(on) => settings.notifications = on,
             Change::NotificationPreviews(on) => settings.notification_previews = on,
             Change::NotifyVipsOnly(on) => settings.notify_vips_only = on,
@@ -381,12 +384,16 @@ pub enum Effect {
     Contacts,
     /// Light or dark.
     Theme,
+    /// The interface's language, which only a restart can change: GTK and
+    /// gettext both read the locale as the process starts. The window says
+    /// so and offers a restart rather than translating half of itself.
+    Language,
 }
 
 impl Effect {
     /// In the order the window applies them: accounts first, because the
     /// rows and the smart mailbox on screen read what it sets.
-    pub const ALL: [Effect; 11] = [
+    pub const ALL: [Effect; 12] = [
         Effect::ListShape,
         Effect::Accounts,
         Effect::RowColors,
@@ -398,6 +405,7 @@ impl Effect {
         Effect::TextSize,
         Effect::Contacts,
         Effect::Theme,
+        Effect::Language,
     ];
 }
 
@@ -430,6 +438,7 @@ impl Effects {
             remote_images,
             text_size,
             color_scheme,
+            language,
             notifications,
             notification_previews,
             default_account,
@@ -507,6 +516,7 @@ impl Effects {
                 Effect::TextSize => *text_size != before.text_size,
                 Effect::Contacts => *contacts != before.contacts,
                 Effect::Theme => *color_scheme != before.color_scheme,
+                Effect::Language => *language != before.language,
             })
             .collect();
         Effects(effects)
@@ -727,6 +737,7 @@ mod tests {
         after.text_size = TextSize::Small;
         after.contacts = !before.contacts;
         after.color_scheme = ColorScheme::Dark;
+        after.language = "pt_PT".into();
         let effects = Effects::between(&before, &after);
         assert_eq!(effects.iter().collect::<Vec<_>>(), Effect::ALL);
     }
@@ -755,6 +766,7 @@ mod tests {
             Change::StepTextSize(1),
             Change::Contacts(true),
             Change::ColorScheme(ColorScheme::Light),
+            Change::Language("pt_PT".into()),
         ];
         let mut seen: Vec<Effect> = Vec::new();
         for change in changes {
@@ -809,6 +821,10 @@ mod tests {
                 "flag_color",
                 "hidden_addresses",
                 "inbox_categories",
+                // A new language only arrives with a restart, and the
+                // assistant can neither restart the app nor ask for one,
+                // so it would change a preference with nothing to show.
+                "language",
                 "last_sender",
                 // Which buttons a notification carries is a list, and a
                 // setting the assistant changes by name holds one value.

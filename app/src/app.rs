@@ -810,6 +810,20 @@ impl App {
         self.gio.quit();
     }
 
+    /// Starts Penguin Mail again the way it was started, and quits this
+    /// copy. The Language preference needs it: GTK and gettext both read
+    /// the locale as the process starts.
+    pub fn restart(&self) {
+        let Ok(exe) = std::env::current_exe() else {
+            return;
+        };
+        let args: Vec<String> = std::env::args().skip(1).collect();
+        match std::process::Command::new(exe).args(args).spawn() {
+            Ok(_) => self.quit(),
+            Err(err) => tracing::warn!(error = %err, "could not start the new copy"),
+        }
+    }
+
     fn compile_filter(self: &Rc<Self>) {
         let dir = glib::user_cache_dir()
             .join(mailrs_sync::config::DIR_NAME)

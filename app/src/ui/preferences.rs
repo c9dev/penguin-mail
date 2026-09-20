@@ -11,6 +11,7 @@ use mailrs_sync::config::SyncConfig;
 
 use crate::app::App;
 use crate::autostart;
+use crate::language;
 use crate::settings::{
     CACHE_CHOICES, Change, Choice, POLL_CHOICES, Settings, WINDOW_CHOICES, nearest,
 };
@@ -134,6 +135,7 @@ fn general_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         settings.color_scheme,
         Change::ColorScheme,
     ));
+    appearance.add(&language_row(app, settings));
     page.add(&appearance);
 
     let notifications = adw::PreferencesGroup::builder()
@@ -699,6 +701,30 @@ fn switch_with(
     row.connect_active_notify(move |row| {
         if let Some(app) = weak.upgrade() {
             flip(&app, row.is_active());
+        }
+    });
+    row
+}
+
+/// The language the interface speaks. Follow System comes first and is
+/// what a fresh copy does; the rows under it are the translations this
+/// computer has, so one that is not installed is never offered.
+fn language_row(app: &Rc<App>, settings: &Settings) -> adw::ComboRow {
+    let languages = Rc::new(language::choices());
+    let mut labels = vec!["Follow System".to_string()];
+    labels.extend(languages.iter().map(|language| language.name.clone()));
+    let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
+    let row = adw::ComboRow::builder()
+        .title("Language")
+        .subtitle("Penguin Mail shows a new language after a restart")
+        .model(&gtk::StringList::new(&labels))
+        .selected(language::row_of(&languages, &settings.language))
+        .build();
+    let weak = Rc::downgrade(app);
+    row.connect_selected_notify(move |row| {
+        if let Some(app) = weak.upgrade() {
+            let code = language::code_at(&languages, row.selected());
+            app.change_settings(Change::Language(code));
         }
     });
     row

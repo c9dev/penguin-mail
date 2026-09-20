@@ -2863,11 +2863,30 @@ impl MainWindow {
             }
             // The app follows the light or dark choice; no window to redraw.
             Effect::Theme => {}
+            Effect::Language => self.offer_restart(),
         }
     }
 
     pub fn toast_sent(&self) {
         self.toast("Message sent");
+    }
+
+    /// Says that the new language waits for a restart, and offers one.
+    /// Nothing on screen changes until then, so the toast stays up and is
+    /// plain about it.
+    fn offer_restart(self: &Rc<Self>) {
+        let toast = adw::Toast::builder()
+            .title("Penguin Mail shows the new language after a restart")
+            .button_label("Restart")
+            .timeout(0)
+            .build();
+        let weak = Rc::downgrade(self);
+        toast.connect_button_clicked(move |_| {
+            if let Some(app) = weak.upgrade().and_then(|window| window.app.upgrade()) {
+                app.restart();
+            }
+        });
+        self.toasts.add_toast(toast);
     }
 
     fn show_shortcuts(&self) {
