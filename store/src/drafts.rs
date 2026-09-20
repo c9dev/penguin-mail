@@ -8,9 +8,9 @@
 //! elsewhere gives it a new message and leaves the old id naming text
 //! nobody holds; sending or deleting one leaves it naming nothing at all.
 //! So [`draft_of`] answers only while the store still shows that message
-//! carrying the DRAFT label, which history replay is what keeps true: it
-//! takes the label off a draft that was sent and the message off one that
-//! was deleted.
+//! carrying the DRAFT label. History replay is what keeps that answer
+//! honest: it takes the label off a draft that was sent and the message
+//! off one that was deleted.
 
 use mailrs_domain::AccountId;
 use mailrs_domain::system_label::DRAFT;
