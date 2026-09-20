@@ -8,6 +8,7 @@
 //! beside it, and the Markdown a writer can switch to all come from one
 //! place and are covered by unit tests.
 
+use mailrs_gmail::convert::unescape_snippet;
 use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 
 /// What a line is: a paragraph unless the writer made it something else.
@@ -260,6 +261,56 @@ impl RichBody {
         let options = Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TABLES;
         for event in Parser::new_ext(markdown, options) {
             builder.take(event);
+        }
+        builder.finish()
+    }
+
+    /// Reads email HTML back into blocks, which is how a draft saved in
+    /// Gmail comes back as the writer left it.
+    ///
+    /// It knows the shape [`RichBody::to_html`] writes. Mail written
+    /// anywhere else, such as Gmail's own composer, keeps its words and
+    /// whatever styling it spells the same way, and markup this does not
+    /// know becomes plain text rather than disappearing.
+    pub fn from_html(html: &str) -> RichBody {
+        let mut builder = HtmlBuilder::default();
+        // ASCII lowercasing keeps byte offsets, so indexes into `lower`
+        // fit `html`.
+        let lower = html.to_ascii_lowercase();
+        let mut i = 0;
+        while i < html.len() {
+            let Some(offset) = html[i..].find('<') else {
+                builder.text(&html[i..]);
+                break;
+            };
+            builder.text(&html[i..i + offset]);
+            let start = i + offset;
+            let Some(length) = html[start..].find('>') else {
+                // A `<` with nothing closing it is text, not a tag.
+                builder.text(&html[start..]);
+                break;
+            };
+            let end = start + length + 1;
+            let inside = &lower[start + 1..end - 1];
+            let closing = inside.starts_with('/');
+            let name: String = inside
+                .trim_start_matches('/')
+                .chars()
+                .take_while(|c| c.is_ascii_alphanumeric())
+                .collect();
+            if name.is_empty() {
+                // A comment, or a `<` the writer meant as a `<`. Reading
+                // on from the next character finds the tags after it.
+                if inside.starts_with('!') {
+                    i = end;
+                } else {
+                    builder.text("<");
+                    i = start + 1;
+                }
+                continue;
+            }
+            builder.tag(&name, closing, &html[start + 1..end - 1]);
+            i = end;
         }
         builder.finish()
     }
@@ -548,6 +599,319 @@ impl Builder {
     }
 }
 
+/// What a tag opens, for the tags that hold lines of their own.
+fn container(name: &str) -> Option<BlockKind> {
+    Some(match name {
+        "ul" => BlockKind::Bullet,
+        "ol" => BlockKind::Numbered,
+        "blockquote" => BlockKind::Quote,
+        "pre" => BlockKind::Code,
+        _ => return None,
+    })
+}
+
+/// Tags that end the line they sit on.
+fn breaks_line(name: &str) -> bool {
+    matches!(
+        name,
+        "p" | "div" | "li" | "tr" | "td" | "table" | "section" | "article" | "hr" | "dt" | "dd"
+    ) || heading_level(name).is_some()
+        || container(name).is_some()
+}
+
+fn heading_level(name: &str) -> Option<u8> {
+    match name {
+        "h1" => Some(1),
+        "h2" => Some(2),
+        "h3" | "h4" | "h5" | "h6" => Some(3),
+        _ => None,
+    }
+}
+
+/// The value `wanted` has in a tag's text, quoted or bare.
+fn attribute(tag: &str, wanted: &str) -> Option<String> {
+    let lower = tag.to_ascii_lowercase();
+    let mut from = 0;
+    while let Some(offset) = lower[from..].find(wanted) {
+        let at = from + offset;
+        from = at + wanted.len();
+        // Inside a longer name, such as `data-src`, it is a different word.
+        if lower[..at]
+            .chars()
+            .last()
+            .is_some_and(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        {
+            continue;
+        }
+        let Some(rest) = tag[from..].trim_start().strip_prefix('=') else {
+            continue;
+        };
+        let rest = rest.trim_start();
+        let value = match rest.chars().next() {
+            Some(quote @ ('"' | '\'')) => {
+                let rest = &rest[1..];
+                &rest[..rest.find(quote).unwrap_or(rest.len())]
+            }
+            _ => &rest[..rest.find(char::is_whitespace).unwrap_or(rest.len())],
+        };
+        return Some(unescape_snippet(value));
+    }
+    None
+}
+
+/// One more level deep, or one less.
+fn step(depth: usize, back: bool) -> usize {
+    match back {
+        true => depth.saturating_sub(1),
+        false => depth + 1,
+    }
+}
+
+/// Builds blocks from HTML tags and the text between them.
+#[derive(Default)]
+struct HtmlBuilder {
+    body: RichBody,
+    spans: Vec<Span>,
+    /// How deep we are inside each style, since tags nest.
+    bold: usize,
+    italic: usize,
+    strike: usize,
+    code: usize,
+    links: Vec<String>,
+    /// The lists, quotes and code blocks we are inside, innermost last.
+    open: Vec<BlockKind>,
+    heading: Option<u8>,
+    /// Inside `<pre>`, where the spaces and the line breaks are the text.
+    pre: usize,
+    /// A tag whose content the reader never sees, such as `<style>`.
+    hidden: Option<String>,
+}
+
+impl HtmlBuilder {
+    fn kind(&self) -> BlockKind {
+        if let Some(level) = self.heading {
+            return BlockKind::Heading(level);
+        }
+        self.open.last().copied().unwrap_or(BlockKind::Paragraph)
+    }
+
+    fn style(&self) -> Style {
+        Style {
+            bold: self.bold > 0,
+            italic: self.italic > 0,
+            strike: self.strike > 0,
+            code: self.code > 0 && self.pre == 0,
+        }
+    }
+
+    fn ends_with_space(&self) -> bool {
+        self.spans
+            .last()
+            .is_some_and(|span| span.text.ends_with(' '))
+    }
+
+    fn push(&mut self, text: &str) {
+        let span = Span {
+            text: text.to_string(),
+            style: self.style(),
+            link: self.links.last().cloned(),
+            image: None,
+        };
+        match self.spans.last_mut() {
+            Some(last)
+                if last.style == span.style && last.link == span.link && last.image.is_none() =>
+            {
+                last.text.push_str(text)
+            }
+            _ => self.spans.push(span),
+        }
+    }
+
+    /// Ends the line being built. Inside `<pre>` a blank line is a line.
+    fn line(&mut self) {
+        if self.spans.is_empty() && self.pre == 0 {
+            return;
+        }
+        let kind = self.kind();
+        let spans = std::mem::take(&mut self.spans);
+        self.body.blocks.push(Block { kind, spans });
+    }
+
+    /// A blank line between blocks, unless one is already there.
+    fn gap(&mut self) {
+        if !self.open.is_empty() || self.body.blocks.is_empty() {
+            return;
+        }
+        if self
+            .body
+            .blocks
+            .last()
+            .is_some_and(|b| b.kind == BlockKind::Paragraph && b.spans.is_empty())
+        {
+            return;
+        }
+        self.body.blocks.push(Block::default());
+    }
+
+    fn text(&mut self, raw: &str) {
+        if self.hidden.is_some() || raw.is_empty() {
+            return;
+        }
+        let decoded = unescape_snippet(raw);
+        if self.pre > 0 {
+            let mut lines = decoded.split('\n').peekable();
+            while let Some(line) = lines.next() {
+                if !line.is_empty() {
+                    self.push(line);
+                }
+                if lines.peek().is_some() {
+                    self.line();
+                }
+            }
+            return;
+        }
+        // Outside `<pre>`, any run of spaces and line breaks is one space.
+        let mut collapsed = String::with_capacity(decoded.len());
+        let mut space = false;
+        for character in decoded.chars() {
+            if character.is_whitespace() {
+                space = true;
+                continue;
+            }
+            if space && !collapsed.is_empty() {
+                collapsed.push(' ');
+            }
+            space = false;
+            collapsed.push(character);
+        }
+        let leading = decoded.starts_with(char::is_whitespace);
+        let room = !self.spans.is_empty() && !self.ends_with_space();
+        if collapsed.is_empty() {
+            // Space between two tags belongs to the words around it.
+            if room {
+                self.push(" ");
+            }
+            return;
+        }
+        if leading && room {
+            self.push(" ");
+        }
+        self.push(&collapsed);
+        if space {
+            self.push(" ");
+        }
+    }
+
+    fn tag(&mut self, name: &str, closing: bool, tag: &str) {
+        if let Some(hidden) = self.hidden.clone() {
+            if closing && hidden == name {
+                self.hidden = None;
+            }
+            return;
+        }
+        match name {
+            "style" | "script" | "head" | "title" | "noscript" if !closing => {
+                self.hidden = Some(name.to_string());
+                return;
+            }
+            "br" => {
+                self.line();
+                return;
+            }
+            "img" if !closing => {
+                if let Some(source) = attribute(tag, "src") {
+                    let alt = attribute(tag, "alt").unwrap_or_default();
+                    self.spans.push(Span::image(alt, source));
+                }
+                return;
+            }
+            "b" | "strong" => self.bold = step(self.bold, closing),
+            "i" | "em" => self.italic = step(self.italic, closing),
+            "s" | "del" | "strike" => self.strike = step(self.strike, closing),
+            "code" | "tt" | "kbd" | "samp" => self.code = step(self.code, closing),
+            "a" => match closing {
+                true => {
+                    self.links.pop();
+                }
+                false => {
+                    if let Some(href) = attribute(tag, "href") {
+                        self.links.push(href);
+                    }
+                }
+            },
+            _ => {}
+        }
+        if !breaks_line(name) {
+            return;
+        }
+        self.line();
+        if let Some(level) = heading_level(name) {
+            match closing {
+                true => {
+                    self.heading = None;
+                    self.gap();
+                }
+                false => self.heading = Some(level),
+            }
+            return;
+        }
+        if let Some(kind) = container(name) {
+            match closing {
+                true => {
+                    if let Some(at) = self.open.iter().rposition(|open| *open == kind) {
+                        self.open.remove(at);
+                    }
+                    if kind == BlockKind::Code {
+                        self.pre = step(self.pre, true);
+                    }
+                    self.gap();
+                }
+                false => {
+                    self.open.push(kind);
+                    if kind == BlockKind::Code {
+                        self.pre += 1;
+                    }
+                }
+            }
+            return;
+        }
+        // A paragraph leaves a blank line behind it; a div or a table row
+        // does not, because mail clients write one of those per line.
+        if name == "p" && closing {
+            self.gap();
+        }
+    }
+
+    fn finish(mut self) -> RichBody {
+        self.pre = 0;
+        self.line();
+        while self
+            .body
+            .blocks
+            .last()
+            .is_some_and(|b| b.kind == BlockKind::Paragraph && b.spans.is_empty())
+        {
+            self.body.blocks.pop();
+        }
+        for block in &mut self.body.blocks {
+            if block.kind == BlockKind::Code {
+                continue;
+            }
+            // Spaces that only came from the markup read as ragged text.
+            if let Some(first) = block.spans.first_mut() {
+                first.text = first.text.trim_start().to_string();
+            }
+            if let Some(last) = block.spans.last_mut() {
+                last.text = last.text.trim_end().to_string();
+            }
+            block
+                .spans
+                .retain(|span| !span.text.is_empty() || span.image.is_some());
+        }
+        self.body
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -715,6 +1079,120 @@ mod tests {
         assert_eq!(doc.to_plain(), "Look: [map]");
         assert_eq!(doc.to_markdown(), "Look: ![map](cid:map1@mailrs)");
         assert_eq!(RichBody::from_markdown(&doc.to_markdown()), doc);
+    }
+
+    fn written_body() -> RichBody {
+        body(vec![
+            Block::new(BlockKind::Heading(2), vec![Span::plain("Order")]),
+            Block::default(),
+            Block::new(
+                BlockKind::Paragraph,
+                vec![
+                    Span::plain("Hi "),
+                    bold("Ann"),
+                    Span::plain(", see "),
+                    linked("the menu", "https://e.com/menu"),
+                    Span::plain("."),
+                ],
+            ),
+            Block::new(BlockKind::Paragraph, vec![Span::plain("Friday works.")]),
+            Block::default(),
+            Block::new(BlockKind::Bullet, vec![Span::plain("soup")]),
+            Block::new(BlockKind::Bullet, vec![Span::plain("salad")]),
+            Block::default(),
+            Block::new(BlockKind::Numbered, vec![Span::plain("first")]),
+            Block::new(BlockKind::Numbered, vec![Span::plain("second")]),
+            Block::default(),
+            Block::new(BlockKind::Quote, vec![Span::plain("she said")]),
+            Block::new(BlockKind::Quote, vec![Span::plain("and then some")]),
+            Block::default(),
+            Block::new(BlockKind::Code, vec![Span::plain("cargo test")]),
+            Block::new(BlockKind::Code, vec![Span::plain("cargo fmt")]),
+            Block::default(),
+            Block::new(
+                BlockKind::Paragraph,
+                vec![Span::plain("Bye. "), Span::image("map", "cid:map1@mailrs")],
+            ),
+        ])
+    }
+
+    #[test]
+    fn a_body_comes_back_from_its_own_html() {
+        let wanted = written_body();
+        let read_back = RichBody::from_html(&wanted.to_html());
+        assert_eq!(read_back, wanted, "{}", read_back.to_markdown());
+        assert_eq!(read_back.to_html(), wanted.to_html());
+    }
+
+    #[test]
+    fn styled_words_survive_the_html() {
+        let body = RichBody::from_html(
+            "<div><p>Hi <strong>Ann</strong>, <em>Friday</em> <del>or Monday</del> \
+             works. See <a href=\"https://e.com?a=1&amp;b=2\">the menu</a>.</p></div>",
+        );
+        assert_eq!(
+            body.to_plain(),
+            "Hi Ann, Friday or Monday works. See the menu <https://e.com?a=1&b=2>."
+        );
+        assert_eq!(body.blocks[0].spans[1], bold("Ann"));
+        assert!(body.blocks[0].spans[3].style.italic);
+        assert!(body.blocks[0].spans[5].style.strike);
+    }
+
+    #[test]
+    fn html_from_another_client_opens_sensibly() {
+        // What Gmail's own composer writes, more or less.
+        let body = RichBody::from_html(
+            "<div dir=\"ltr\"><div>Hi&nbsp;Ann,</div><div><br></div>\
+             <div>Bringing <b>soup</b> and <i>salad</i>.</div>\
+             <div><span style=\"color:#111\">See you Friday.</span></div>\
+             <ul><li>one</li><li>two</li></ul></div>",
+        );
+        assert_eq!(
+            body.to_plain(),
+            "Hi Ann,\nBringing soup and salad.\nSee you Friday.\n- one\n- two"
+        );
+        assert!(body.blocks[1].spans[1].style.bold);
+    }
+
+    #[test]
+    fn markup_it_does_not_know_still_reads_as_text() {
+        let body = RichBody::from_html(
+            "<html><head><style>p{color:red}</style></head><body>\
+             <table><tr><td>Left</td><td>Right</td></tr></table>\
+             <marquee>Moving on</marquee><p>a &lt; b &amp; c</p>\
+             <script>alert('x')</script></body></html>",
+        );
+        let plain = body.to_plain();
+        assert!(plain.contains("Left"), "{plain}");
+        assert!(plain.contains("Moving on"), "{plain}");
+        assert!(plain.contains("a < b & c"), "{plain}");
+        assert!(!plain.contains("color:red"), "{plain}");
+        assert!(!plain.contains("alert"), "{plain}");
+    }
+
+    #[test]
+    fn broken_html_neither_panics_nor_loses_the_words() {
+        for html in [
+            "",
+            "<",
+            "<p>unclosed",
+            "no tags at all",
+            "<p>a < b</p>",
+            "<b><i>deep</b></i>",
+            "<a href>bare</a>",
+            "<img>",
+            "<pre>code without an end",
+            "</p></div></ul>",
+            "<p>&amp;&#x1F600; &notreal;</p>",
+        ] {
+            let body = RichBody::from_html(html);
+            let _ = body.to_html();
+            let _ = body.to_markdown();
+        }
+        assert_eq!(RichBody::from_html("<p>unclosed").to_plain(), "unclosed");
+        assert_eq!(RichBody::from_html("<p>a < b</p>").to_plain(), "a < b");
+        assert!(RichBody::from_html("").is_empty());
     }
 
     #[test]

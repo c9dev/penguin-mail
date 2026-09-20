@@ -149,6 +149,20 @@ impl Draft {
             .map(|a| format!("“{}” is not an email address.", a.email))
     }
 
+    /// Takes the body of a message this composer reopens: the Markdown
+    /// source from the text part, and the styled blocks from the HTML
+    /// part, so a draft written in rich text comes back as it was
+    /// written, wherever it was written.
+    pub fn take_body(&mut self, body: &MessageBody) {
+        self.markdown = body_text(body);
+        self.rich = body
+            .html
+            .as_deref()
+            .filter(|html| !html.trim().is_empty())
+            .map(RichBody::from_html)
+            .filter(|rich| !rich.is_empty());
+    }
+
     /// Whether the body still refers to the inline image `cid`.
     fn shows_image(&self, cid: &str) -> bool {
         let needle = format!("cid:{cid}");
@@ -903,6 +917,88 @@ mod tests {
             "\n\n-- \nDana\n\nOn Monday, Ann wrote:\n> hi"
         );
         assert_eq!(with_signature("body", "  "), "body");
+    }
+
+    #[test]
+    fn a_rich_draft_comes_back_from_the_message_it_was_saved_as() {
+        use crate::richtext::{Block, BlockKind, Span, Style};
+
+        let bold = |text: &str| Span {
+            style: Style {
+                bold: true,
+                ..Style::default()
+            },
+            ..Span::plain(text)
+        };
+        let mut draft = Draft::new(1, me());
+        draft.to = vec![addr(None, "ann@example.com")];
+        draft.subject = "Lunch".into();
+        draft.rich = Some(RichBody {
+            blocks: vec![
+                Block::new(
+                    BlockKind::Paragraph,
+                    vec![
+                        Span::plain("Hi "),
+                        bold("Ann"),
+                        Span::plain(", the menu is "),
+                        Span {
+                            link: Some("https://e.com/menu".into()),
+                            ..Span::plain("here")
+                        },
+                    ],
+                ),
+                Block::default(),
+                Block::new(BlockKind::Bullet, vec![Span::plain("soup")]),
+                Block::new(BlockKind::Bullet, vec![Span::plain("salad")]),
+            ],
+        });
+        draft.markdown = draft.rich.as_ref().unwrap().to_markdown();
+
+        // Save it the way the composer does, then reopen it from Gmail.
+        let raw = build_mime(&draft, 0, "id@example.com").unwrap();
+        let parsed = MessageParser::default().parse(&raw).unwrap();
+        let body = MessageBody {
+            text: parsed.body_text(0).map(|t| t.to_string()),
+            html: parsed.body_html(0).map(|h| h.to_string()),
+            ..Default::default()
+        };
+        let mut reopened = Draft::new(1, me());
+        reopened.take_body(&body);
+        assert_eq!(reopened.rich, draft.rich, "{:#?}", reopened.rich);
+        // What goes out the second time is what went out the first.
+        let again = build_mime(&reopened, 0, "id@example.com").unwrap();
+        let parsed_again = MessageParser::default().parse(&again).unwrap();
+        assert_eq!(parsed_again.body_html(0), parsed.body_html(0));
+    }
+
+    #[test]
+    fn a_draft_written_in_another_client_reopens_with_its_words() {
+        let body = MessageBody {
+            text: Some("Hi Ann,\r\nBringing soup.".into()),
+            html: Some(
+                "<div dir=\"ltr\"><div>Hi Ann,</div><div>Bringing <b>soup</b>.</div></div>".into(),
+            ),
+            ..Default::default()
+        };
+        let mut draft = Draft::new(1, me());
+        draft.take_body(&body);
+        assert_eq!(draft.markdown, "Hi Ann,\nBringing soup.");
+        let rich = draft.rich.expect("the HTML part opens as rich text");
+        assert_eq!(rich.to_plain(), "Hi Ann,\nBringing soup.");
+        assert!(rich.blocks[1].spans[1].style.bold);
+    }
+
+    #[test]
+    fn a_draft_with_no_html_reopens_as_markdown() {
+        let body = MessageBody {
+            text: Some("# Title\r\nBody".into()),
+            html: None,
+            ..Default::default()
+        };
+        let mut draft = Draft::new(1, me());
+        draft.take_body(&body);
+        assert_eq!(draft.markdown, "# Title\nBody");
+        assert!(draft.rich.is_none());
     }
 
     #[test]

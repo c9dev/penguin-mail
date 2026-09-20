@@ -1693,8 +1693,8 @@ impl MainWindow {
                 .find(|m| m.has_label(system_label::DRAFT))?
                 .clone();
             let body = match open.bodies.get(&draft.id) {
-                Some(Ok(body)) => compose::body_text(body),
-                _ => String::new(),
+                Some(Ok(body)) => Some(body.clone()),
+                _ => None,
             };
             Some((
                 open.account_id,
@@ -1704,7 +1704,7 @@ impl MainWindow {
                 body,
             ))
         });
-        let Some(Some((account_id, thread_id, in_thread, message, markdown))) = found else {
+        let Some(Some((account_id, thread_id, in_thread, message, body))) = found else {
             return;
         };
         let Some(sync) = self.core.account(account_id) else {
@@ -1723,7 +1723,9 @@ impl MainWindow {
             draft.to = message.to.clone();
             draft.cc = message.cc.clone();
             draft.subject = message.subject.clone();
-            draft.markdown = markdown;
+            if let Some(body) = &body {
+                draft.take_body(body);
+            }
             draft.thread_id = in_thread.then_some(thread_id);
             if let Some(id) = draft_id.clone() {
                 draft.send_at = this

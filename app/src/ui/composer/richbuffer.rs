@@ -362,11 +362,22 @@ pub fn write(
                 let found = attachments
                     .iter()
                     .find(|a| a.content_id.as_deref() == Some(cid));
-                if let Some(attachment) = found {
-                    let start = at.offset();
-                    insert_image(view, &mut at, cid, &attachment.data, anchors);
-                    let (from, to) = (buffer.iter_at_offset(start), buffer.end_iter());
-                    buffer.apply_tag_by_name(tag, &from, &to);
+                match found {
+                    Some(attachment) => {
+                        let start = at.offset();
+                        insert_image(view, &mut at, cid, &attachment.data, anchors);
+                        let (from, to) = (buffer.iter_at_offset(start), buffer.end_iter());
+                        buffer.apply_tag_by_name(tag, &from, &to);
+                    }
+                    // A draft reopened without its pictures says where one
+                    // was, rather than losing the line it sat on.
+                    None => {
+                        let name = match span.text.trim() {
+                            "" => "image".to_string(),
+                            alt => alt.to_string(),
+                        };
+                        buffer.insert_with_tags_by_name(&mut at, &format!("[{name}]"), &[tag]);
+                    }
                 }
                 continue;
             }

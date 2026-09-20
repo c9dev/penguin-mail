@@ -301,13 +301,22 @@ impl Composer {
         self.busy.set(true);
         match self.format.get() {
             ComposeFormat::Rich => {
-                let mut body = RichBody::from_markdown(&markdown);
-                // A reply and a forward start with blank lines to write on,
-                // which Markdown drops and the writer wants back.
-                let room = markdown.chars().take_while(|c| *c == '\n').count().min(2);
-                for _ in 0..room {
-                    body.blocks.insert(0, Block::default());
-                }
+                // A reopened draft brings its styling with it; everything
+                // else arrives as Markdown.
+                let body = match self.base.borrow().rich.clone() {
+                    Some(rich) => rich,
+                    None => {
+                        let mut body = RichBody::from_markdown(&markdown);
+                        // A reply and a forward start with blank lines to
+                        // write on, which Markdown drops and the writer
+                        // wants back.
+                        let room = markdown.chars().take_while(|c| *c == '\n').count().min(2);
+                        for _ in 0..room {
+                            body.blocks.insert(0, Block::default());
+                        }
+                        body
+                    }
+                };
                 richbuffer::write(
                     &self.body,
                     &body,
