@@ -32,6 +32,15 @@ impl Home {
         let dir = tempfile::tempdir().expect("a temp directory");
         // gpg refuses a home anyone else can read.
         permit_owner_only(dir.path());
+        // gpg-agent asks the person things through a pinentry window, and
+        // a test must never put one on somebody's screen. A pinentry that
+        // cannot run is a pinentry that cannot interrupt: the agent gets
+        // an error instead, which is the answer these tests want anyway.
+        std::fs::write(
+            dir.path().join("gpg-agent.conf"),
+            "pinentry-program /bin/false\n",
+        )
+        .expect("write");
         // `future-default` is an ed25519 key with a cv25519 subkey to encrypt
         // to. Asking for `ed25519` by name gives a key that can only sign.
         let made = Command::new(pgp.program())

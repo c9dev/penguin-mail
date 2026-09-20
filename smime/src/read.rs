@@ -40,7 +40,7 @@ impl Smime {
         let mut file = tempfile::NamedTempFile::new().map_err(temp)?;
         file.write_all(signature).map_err(temp)?;
         file.flush().map_err(temp)?;
-        let run = self.run(signed_part, |command| {
+        let run = self.read_only(signed_part, |command| {
             command
                 .arg("--assume-base64")
                 .arg("--verify")
@@ -60,7 +60,7 @@ impl Smime {
     /// back is the entity that was inside, with what gpgsm made of the
     /// signature over it.
     pub fn open_signed(&self, blob: &[u8]) -> Result<Opened, SmimeError> {
-        let run = self.run(blob, |command| {
+        let run = self.read_only(blob, |command| {
             command.args(["--assume-base64", "--output", "-", "--verify"]);
         })?;
         let Some(found) = status::signature(&run.status) else {
@@ -81,6 +81,10 @@ impl Smime {
     /// enveloped gives back a signed entity here, and checking that
     /// signature is a second call over what is inside it.
     pub fn decrypt(&self, enveloped: &[u8]) -> Result<Vec<u8>, SmimeError> {
+        // The one read that may ask the person something, because opening
+        // the envelope needs their own secret key and gpg-agent asks for
+        // the passphrase that unlocks it. That window they expect; the one
+        // about trusting a stranger's root they do not.
         let run = self.run(enveloped, |command| {
             command.args(["--assume-base64", "--output", "-", "--decrypt"]);
         })?;

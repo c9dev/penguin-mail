@@ -482,6 +482,15 @@ mod tests {
             };
             let dir = tempfile::tempdir().expect("a temp directory");
             permit_owner_only(dir.path());
+            // gpg-agent asks the person things through a pinentry window,
+            // and a test must never put one on somebody's screen. A
+            // pinentry that cannot run is a pinentry that cannot
+            // interrupt: the agent gets an error instead.
+            std::fs::write(
+                dir.path().join("gpg-agent.conf"),
+                "pinentry-program /bin/false\n",
+            )
+            .expect("write");
             let address = "ada@example.test";
             let params = dir.path().join("params");
             std::fs::write(
