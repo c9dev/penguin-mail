@@ -10,7 +10,7 @@ use mailrs_ai::{Model, ModelList, ProviderConfig};
 
 use crate::app::App;
 use crate::assistant::{self, ANTHROPIC_KEY, LOCAL_KEY};
-use crate::settings::{AiChange, AiProvider, Change, Choice};
+use crate::settings::{AiChange, AiProvider, AiSettings, Change, Choice};
 
 /// Models a picker shows before it grows a search box.
 const SEARCH_FROM: usize = 8;
@@ -45,6 +45,18 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
         .title("API Key (Optional)")
         .show_apply_button(true)
         .build();
+    // Anthropic.
+    let anthropic_key = adw::PasswordEntryRow::builder()
+        .title("Anthropic API Key")
+        .show_apply_button(true)
+        .build();
+    // Every picker and the Test button read the fields through this, so
+    // they ask what the dialog shows rather than what was last saved.
+    let typed = Typed {
+        base_url: base_url.clone(),
+        local_key: local_key.clone(),
+        anthropic_key: anthropic_key.clone(),
+    };
     let local_model = model_row(
         app,
         &ai.local_model,
@@ -53,12 +65,8 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
             default_label: None,
             change: AiChange::LocalModel,
         },
+        typed.clone(),
     );
-    // Anthropic.
-    let anthropic_key = adw::PasswordEntryRow::builder()
-        .title("Anthropic API Key")
-        .show_apply_button(true)
-        .build();
     let anthropic_model = model_row(
         app,
         &ai.anthropic_model,
@@ -67,6 +75,7 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
             default_label: None,
             change: AiChange::AnthropicModel,
         },
+        typed.clone(),
     );
     // Claude Code.
     let found = assistant::find_claude();
@@ -85,6 +94,7 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
             default_label: Some("Claude Code's own default"),
             change: AiChange::ClaudeModel,
         },
+        typed.clone(),
     );
     for row in [
         base_url.upcast_ref::<gtk::Widget>(),
@@ -164,9 +174,14 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
         anthropic_key.set_title("Anthropic API Key (Saved)");
     }
     let (weak, toasts) = (Rc::downgrade(app), dialog.clone());
+    let testing = typed.clone();
     test.connect_clicked(move |button| {
         let Some(app) = weak.upgrade() else { return };
-        let config = match assistant::provider_config(&app.settings().ai) {
+        // Test what the dialog shows. Testing the saved address while the
+        // person looks at a different one is how a working server gets
+        // reported as broken.
+        let provider = app.settings().ai.provider;
+        let config = match testing.config(&app, provider) {
             Ok(config) => config,
             Err(problem) => return toasts.add_toast(adw::Toast::new(&problem)),
         };
@@ -205,6 +220,68 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
     page
 }
 
+/// The fields the dialog shows, so the model list and the Test button ask
+/// the server the person is looking at rather than the one last saved.
+///
+/// A Server Address is only saved when the apply button is pressed. Type a
+/// new one, open the model list, and it used to ask the old address and
+/// report that nothing was there, which is a confusing way to be told to
+/// press a button.
+#[derive(Clone)]
+struct Typed {
+    base_url: adw::EntryRow,
+    local_key: adw::PasswordEntryRow,
+    anthropic_key: adw::PasswordEntryRow,
+}
+
+impl Typed {
+    /// The provider's settings with whatever is on screen written over
+    /// them, ready to talk to.
+    fn config(&self, app: &App, provider: AiProvider) -> Result<ProviderConfig, String> {
+        self.built(app.settings().ai, provider)
+    }
+
+    /// The same, with a model name standing in, for asking a server what
+    /// it offers before a model has been chosen.
+    fn listing(&self, app: &App, provider: AiProvider) -> Result<ProviderConfig, String> {
+        let mut ai = app.settings().ai;
+        if ai.local_model.trim().is_empty() {
+            ai.local_model = "list".into();
+        }
+        self.built(ai, provider)
+    }
+
+    fn built(&self, mut ai: AiSettings, provider: AiProvider) -> Result<ProviderConfig, String> {
+        ai.provider = provider;
+        let address = self.base_url.text().trim().to_string();
+        if !address.is_empty() {
+            ai.base_url = address;
+        }
+        // A key typed and not applied is still in its field: one that
+        // reached the keyring clears it.
+        let typed_key = match provider {
+            AiProvider::Local => self.local_key.text().trim().to_string(),
+            AiProvider::Anthropic => self.anthropic_key.text().trim().to_string(),
+            _ => String::new(),
+        };
+        if provider == AiProvider::Anthropic && !typed_key.is_empty() {
+            // `provider_config` refuses for want of a saved key before it
+            // could be told about this one, so this answers in its place.
+            return Ok(ProviderConfig::Anthropic {
+                api_key: typed_key,
+                model: ai.anthropic_model.trim().to_string(),
+            });
+        }
+        let mut config = assistant::provider_config(&ai)?;
+        if let ProviderConfig::OpenAiCompatible { api_key, .. } = &mut config
+            && !typed_key.is_empty()
+        {
+            *api_key = Some(typed_key);
+        }
+        Ok(config)
+    }
+}
+
 /// What one provider's model picker lists and what it saves.
 #[derive(Clone, Copy)]
 struct Picker {
@@ -217,7 +294,7 @@ struct Picker {
 
 /// The Model row every provider gets: a field you can type into, and a
 /// picker listing what the provider can run.
-fn model_row(app: &Rc<App>, current: &str, picker: Picker) -> adw::EntryRow {
+fn model_row(app: &Rc<App>, current: &str, picker: Picker, typed: Typed) -> adw::EntryRow {
     let row = adw::EntryRow::builder()
         .title("Model")
         .text(current)
@@ -241,14 +318,20 @@ fn model_row(app: &Rc<App>, current: &str, picker: Picker) -> adw::EntryRow {
         let Some(app) = weak.upgrade() else { return };
         let popover = gtk::Popover::builder().build();
         button.set_popover(Some(&popover));
-        fill_popover(&app, &popover, &entry, picker);
+        fill_popover(&app, &popover, &entry, picker, &typed);
     });
     row.add_suffix(&pick);
     row
 }
 
 /// Asks the provider what it offers and shows the answer in the popover.
-fn fill_popover(app: &Rc<App>, popover: &gtk::Popover, entry: &adw::EntryRow, picker: Picker) {
+fn fill_popover(
+    app: &Rc<App>,
+    popover: &gtk::Popover,
+    entry: &adw::EntryRow,
+    picker: Picker,
+    typed: &Typed,
+) {
     let search = gtk::SearchEntry::builder()
         .placeholder_text("Search models")
         .visible(false)
@@ -262,7 +345,7 @@ fn fill_popover(app: &Rc<App>, popover: &gtk::Popover, entry: &adw::EntryRow, pi
     let note = gtk::Label::builder()
         .wrap(true)
         .xalign(0.0)
-        .max_width_chars(36)
+        .max_width_chars(52)
         .css_classes(["dim-label", "caption"])
         .visible(false)
         .build();
@@ -274,6 +357,11 @@ fn fill_popover(app: &Rc<App>, popover: &gtk::Popover, entry: &adw::EntryRow, pi
         .build();
     let box_ = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
+        // The popover sizes itself to this box while the list is still
+        // hidden, so the width has to be asked for here. Without it the
+        // popover settles around the waiting label and every model name
+        // wraps onto two lines for the rest of its life.
+        .width_request(440)
         .spacing(8)
         .margin_top(8)
         .margin_bottom(8)
@@ -283,8 +371,10 @@ fn fill_popover(app: &Rc<App>, popover: &gtk::Popover, entry: &adw::EntryRow, pi
     let scroller = gtk::ScrolledWindow::builder()
         .child(&list)
         .propagate_natural_height(true)
-        .max_content_height(360)
-        .min_content_width(300)
+        .max_content_height(420)
+        // Wide enough for a dated model id on one line, so the common
+        // case does not wrap at all.
+        .min_content_width(460)
         .hscrollbar_policy(gtk::PolicyType::Never)
         .visible(false)
         .build();
@@ -307,7 +397,7 @@ fn fill_popover(app: &Rc<App>, popover: &gtk::Popover, entry: &adw::EntryRow, pi
         }
     });
 
-    let config = listing_config(app, picker.provider);
+    let config = typed.listing(app, picker.provider);
     let (app, entry, popover) = (Rc::clone(app), entry.clone(), popover.clone());
     glib::spawn_future_local(async move {
         let config = match config {
@@ -389,6 +479,11 @@ fn model_item(model: &Model, chosen: bool) -> adw::ActionRow {
     let row = adw::ActionRow::builder()
         .title(glib::markup_escape_text(title))
         .activatable(true)
+        // A model id runs long, and the default single line cuts the end
+        // off, which is the half that tells two versions of one model
+        // apart. Zero lines lets both wrap instead.
+        .title_lines(0)
+        .subtitle_lines(0)
         .build();
     if !model.id.is_empty() && model.id != *title {
         row.set_subtitle(&glib::markup_escape_text(&model.id));
@@ -414,18 +509,6 @@ fn matches_query(row: &gtk::ListBoxRow, query: &str) -> bool {
     };
     let text = format!("{} {}", row.title(), row.subtitle().unwrap_or_default()).to_lowercase();
     query.split_whitespace().all(|word| text.contains(word))
-}
-
-/// The provider to ask for a model list: the saved settings, with the
-/// provider the picker belongs to. Listing needs no model name, so a
-/// placeholder stands in for an empty one.
-fn listing_config(app: &App, provider: AiProvider) -> Result<ProviderConfig, String> {
-    let mut ai = app.settings().ai;
-    ai.provider = provider;
-    if ai.local_model.trim().is_empty() {
-        ai.local_model = "list".into();
-    }
-    assistant::provider_config(&ai)
 }
 
 /// An error as a sentence, since the errors start in lower case.
