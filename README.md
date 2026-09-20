@@ -287,7 +287,10 @@ rather than a green run that tested nothing.
 
 ## The icon
 
-A penguin holding a letter, drawn to the GNOME app icon guidelines. The
+A penguin holding a letter, drawn to the GNOME app icon guidelines and
+coloured from the Gruvbox palette: warm taupe plumage over a cream
+envelope, an orange beak, a teal fold. The navy and white it wore before
+had almost no edge against a dark panel. The
 other two concepts are in [docs/branding/concepts/](docs/branding/concepts/),
 and [docs/icon-concepts.png](docs/icon-concepts.png) shows all three at
 128 to 16 pixels.
