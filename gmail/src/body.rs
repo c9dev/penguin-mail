@@ -22,6 +22,13 @@ pub fn extract_body(payload: &MessagePart) -> MessageBody {
 }
 
 fn walk(part: &MessagePart, body: &mut MessageBody) {
+    // An invitation arrives as a `text/calendar` part beside the text and
+    // the HTML, and again as an `.ics` file. The part beside the text
+    // carries its content inline, so it is the one worth reading; the file
+    // still shows up in the attachment list below.
+    if body.calendar.is_none() && is_calendar(part) {
+        body.calendar = decode_text(part).filter(|ics| ics.contains("BEGIN:VCALENDAR"));
+    }
     if !part.filename.is_empty() {
         body.attachments.push(Attachment {
             part_id: part.part_id.clone(),
@@ -46,6 +53,19 @@ fn walk(part: &MessagePart, body: &mut MessageBody) {
     for child in &part.parts {
         walk(child, body);
     }
+}
+
+/// Whether a part holds iCalendar text. Gmail labels the inline part
+/// `text/calendar`; Outlook sends the file as `application/ics` and
+/// sometimes as `application/octet-stream` with an `.ics` name.
+fn is_calendar(part: &MessagePart) -> bool {
+    part.mime_type.eq_ignore_ascii_case("text/calendar")
+        || part.mime_type.eq_ignore_ascii_case("application/ics")
+        || part
+            .mime_type
+            .to_ascii_lowercase()
+            .starts_with("text/calendar;")
+        || part.filename.to_ascii_lowercase().ends_with(".ics")
 }
 
 fn decode_text(part: &MessagePart) -> Option<String> {

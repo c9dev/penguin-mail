@@ -275,6 +275,10 @@ pub struct MessageBody {
     /// a single POST to the https link unsubscribes (RFC 8058).
     #[serde(default)]
     pub one_click_unsubscribe: bool,
+    /// The `text/calendar` part as it arrived, when the message carries
+    /// one. `mailrs_domain::invitation::read` turns it into an event.
+    #[serde(default)]
+    pub calendar: Option<String>,
 }
 
 /// A Gmail filter: mail matching `criteria` gets `action`. Field names

@@ -173,6 +173,24 @@ UPDATE threads SET
 DROP INDEX bodies_by_access;
 CREATE INDEX bodies_by_access ON bodies(accessed_at, account_id, message_id, size);
 "#,
+    // The invitation a message carries, and the answer the user gave it.
+    r#"
+ALTER TABLE bodies ADD COLUMN calendar TEXT;
+
+CREATE TABLE invitations (
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    uid        TEXT NOT NULL,
+    sequence   INTEGER NOT NULL,
+    starts_at  INTEGER,
+    all_day    INTEGER NOT NULL DEFAULT 0,
+    summary    TEXT NOT NULL DEFAULT '',
+    cancelled  INTEGER NOT NULL DEFAULT 0,
+    answer     TEXT,
+    message_id TEXT NOT NULL,
+    seen_at    INTEGER NOT NULL,
+    PRIMARY KEY (account_id, uid)
+);
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,

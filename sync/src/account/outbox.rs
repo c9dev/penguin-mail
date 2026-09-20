@@ -157,4 +157,14 @@ impl<G: GmailApi> AccountSync<G> {
     pub async fn set_vacation(&self, vacation: Vacation) -> Result<(), SyncError> {
         Ok(self.api.set_vacation(&vacation).await?)
     }
+
+    /// Answers an invitation through Google Calendar as `me`.
+    pub async fn answer_invitation(
+        &self,
+        ical_uid: &str,
+        me: &str,
+        answer: mailrs_domain::invitation::Answer,
+    ) -> Result<mailrs_gmail::Answered, SyncError> {
+        Ok(self.api.answer_invitation(ical_uid, me, answer).await?)
+    }
 }

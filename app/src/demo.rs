@@ -24,6 +24,9 @@ const HISTORY_ID: u64 = 1;
 /// The id of the draft behind the sample draft message, as Gmail would hold it.
 const DRAFT_ID: &str = "demo-draft";
 
+/// The event behind the sample invitation, as Google would write it.
+const INVITE_UID: &str = "7f3k2q9demo1invite@google.com";
+
 pub const ACCOUNTS: [&str; 3] = [
     "dana.reyes@example.com",
     "dana@fernwood.example",
@@ -363,6 +366,19 @@ fn samples() -> Vec<Sample> {
             attachments: &[],
         },
         Sample {
+            account: 1,
+            thread: "t-design-review",
+            id: "invite-1",
+            from: ("Priya Raman", "priya@fernwood.example"),
+            to: &[ME, ("Jonas Weber", "jonas@fernwood.example")],
+            subject: "Invitation: Offline editor design review",
+            minutes_ago: 4 * HOUR,
+            labels: &["INBOX", "UNREAD"],
+            text: "Walking through the offline editor design before we commit to a date. Agenda in the deck; bring questions about conflict resolution.\n\nPriya",
+            html: None,
+            attachments: &[("invite.ics", "text/calendar", 1_284)],
+        },
+        Sample {
             account: 0,
             thread: "t-prize",
             id: "prize-1",
@@ -421,7 +437,7 @@ pub fn seed(conn: &Connection, now: EpochMillis) -> Result<DemoGmail> {
         let account_id = account_ids[sample.account];
         let fake = &gmail[&account_id];
         let meta = sample.meta(account_id, now);
-        let body = sample.body();
+        let body = sample.body(now);
         messages::upsert_message(conn, &meta, 2)?;
         messages::refresh_thread(conn, account_id, sample.thread)?;
         bodies::put_body(conn, account_id, sample.id, &body, now)?;
@@ -439,6 +455,11 @@ pub fn seed(conn: &Connection, now: EpochMillis) -> Result<DemoGmail> {
                 state
                     .draft_messages
                     .insert(DRAFT_ID.into(), meta.id.clone());
+            }
+            if sample.id == "invite-1" {
+                // Google puts an invitation on the guest's calendar as it
+                // arrives, so the demo has an event to answer.
+                state.calendar.insert(INVITE_UID.into(), None);
             }
             state.bodies.insert(meta.id.clone(), body.clone());
             state.messages.insert(meta.id.clone(), meta.clone());
@@ -560,7 +581,7 @@ impl Sample {
         }
     }
 
-    fn body(&self) -> MessageBody {
+    fn body(&self, now: EpochMillis) -> MessageBody {
         MessageBody {
             text: Some(self.text.into()),
             html: self.html.map(str::to_string),
@@ -582,8 +603,63 @@ impl Sample {
                     .to_string()
             }),
             one_click_unsubscribe: false,
+            calendar: (self.id == "invite-1").then(|| invitation_ics(now)),
         }
     }
+}
+
+/// The sample invitation, written around `now` so the meeting is always a
+/// few days out and the card shows a real date.
+fn invitation_ics(now: EpochMillis) -> String {
+    let stamp = |at: chrono::DateTime<chrono::Utc>| at.format("%Y%m%dT%H%M%SZ").to_string();
+    let sent = chrono::DateTime::from_timestamp_millis(now).unwrap_or_default();
+    let start = next_tuesday(sent.with_timezone(&chrono::Local));
+    let end = start + chrono::Duration::minutes(45);
+    let until = start + chrono::Duration::weeks(8);
+    [
+        "BEGIN:VCALENDAR".to_string(),
+        "PRODID:-//Google Inc//Google Calendar 70.9054//EN".to_string(),
+        "VERSION:2.0".to_string(),
+        "METHOD:REQUEST".to_string(),
+        "BEGIN:VEVENT".to_string(),
+        format!("UID:{INVITE_UID}"),
+        "SEQUENCE:0".to_string(),
+        "STATUS:CONFIRMED".to_string(),
+        "SUMMARY:Offline editor design review".to_string(),
+        "LOCATION:Meeting Room 2\\, Fernwood HQ".to_string(),
+        "DESCRIPTION:Agenda in the deck. Bring questions about conflict resolution.".to_string(),
+        format!("DTSTAMP:{}", stamp(sent)),
+        format!("DTSTART:{}", stamp(start.with_timezone(&chrono::Utc))),
+        format!("DTEND:{}", stamp(end.with_timezone(&chrono::Utc))),
+        format!(
+            "RRULE:FREQ=WEEKLY;BYDAY=TU;UNTIL={}",
+            stamp(until.with_timezone(&chrono::Utc))
+        ),
+        "ORGANIZER;CN=Priya Raman:mailto:priya@fernwood.example".to_string(),
+        format!(
+            "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE;CN=Dana Reyes:mailto:{}",
+            ACCOUNTS[1]
+        ),
+        "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;CN=Priya Raman:mailto:priya@fernwood.example".to_string(),
+        "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=TENTATIVE;CN=Jonas Weber:mailto:jonas@fernwood.example".to_string(),
+        "ATTENDEE;ROLE=OPT-PARTICIPANT;PARTSTAT=DECLINED;CN=Mara Okafor:mailto:mara.okafor@example.org".to_string(),
+        "END:VEVENT".to_string(),
+        "END:VCALENDAR".to_string(),
+        String::new(),
+    ]
+    .join("\r\n")
+}
+
+/// The next Tuesday after `from`, at 14:00 local.
+fn next_tuesday(from: chrono::DateTime<chrono::Local>) -> chrono::DateTime<chrono::Local> {
+    use chrono::{Datelike, TimeZone};
+    let days = (chrono::Weekday::Tue.num_days_from_monday() + 7
+        - from.weekday().num_days_from_monday())
+        % 7;
+    let day = from.date_naive() + chrono::Days::new(if days == 0 { 7 } else { u64::from(days) });
+    day.and_hms_opt(14, 0, 0)
+        .and_then(|at| chrono::Local.from_local_datetime(&at).earliest())
+        .unwrap_or(from)
 }
 
 #[cfg(test)]

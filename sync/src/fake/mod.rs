@@ -12,10 +12,11 @@ use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::sync::Mutex;
 use std::time::Duration;
 
+use mailrs_domain::invitation::Answer;
 use mailrs_domain::{Address, EpochMillis, Filter, MessageBody, MessageMeta, Vacation};
 use mailrs_gmail::{
-    AccountQuota, BATCH_LIMIT, GmailError, HistoryChange, HistoryPage, LabelColor, MessagePage,
-    MessageRef, Priority, Profile, QuotaLimiter, RemoteLabel, cost, limiter,
+    AccountQuota, Answered, BATCH_LIMIT, GmailError, HistoryChange, HistoryPage, LabelColor,
+    MessagePage, MessageRef, Priority, Profile, QuotaLimiter, RemoteLabel, cost, limiter,
 };
 
 use crate::api::{GmailApi, SavedDraft};
@@ -59,6 +60,10 @@ pub struct FakeState {
     pub signature: Option<String>,
     pub vacation: Vacation,
     pub filters: Vec<Filter>,
+    /// The events on this account's calendar, by their iCalendar UID, with
+    /// the answer this account gave each one. A UID that is not here is on
+    /// nobody's calendar and cannot be answered.
+    pub calendar: HashMap<String, Option<Answer>>,
 }
 
 /// Calls made and quota units spent, priced from Gmail's usage-limits
@@ -149,6 +154,7 @@ impl FakeGmail {
                 signature: None,
                 vacation: Vacation::default(),
                 filters: Vec::new(),
+                calendar: HashMap::new(),
             }),
         }
     }
@@ -594,6 +600,24 @@ impl GmailApi for FakeGmail {
             .await?;
         self.with(|s| s.vacation = vacation.clone());
         Ok(())
+    }
+
+    async fn answer_invitation(
+        &self,
+        ical_uid: &str,
+        _me: &str,
+        answer: Answer,
+    ) -> Result<Answered, GmailError> {
+        // The Calendar API spends none of the Gmail budget, so this call
+        // is priced at nothing and only the failure queue applies.
+        self.call("calendar.events.patch", 0).await?;
+        Ok(self.with(|s| match s.calendar.get_mut(ical_uid) {
+            Some(held) => {
+                *held = Some(answer);
+                Answered::Done
+            }
+            None => Answered::NotOnCalendar,
+        }))
     }
 
     async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {
