@@ -10,8 +10,10 @@
 use std::rc::Rc;
 
 use adw::prelude::*;
+use mailrs_domain::translate::gettext;
 
 use crate::pgp::{Mark, Tone};
+use crate::ui::name;
 
 pub struct PgpCard {
     pub widget: gtk::Box,
@@ -47,6 +49,7 @@ impl PgpCard {
         let inside = gtk::Box::builder()
             .spacing(12)
             .css_classes(["card", "pgp-card"])
+            .accessible_role(gtk::AccessibleRole::Group)
             .build();
         inside.append(&icon);
         inside.append(&lines);
@@ -78,6 +81,9 @@ impl PgpCard {
             None => self.detail.set_visible(false),
         }
         self.icon.set_icon_name(Some(icon(mark.tone)));
+        // The colour and the icon are what tell a good signature from a
+        // failed one, and neither says anything out loud.
+        name(&self.icon, &tone_name(mark.tone));
         self.inside
             .set_css_classes(&["card", "pgp-card", tone(mark.tone)]);
         self.widget.set_visible(true);
@@ -95,6 +101,15 @@ fn tone(tone: Tone) -> &'static str {
         Tone::Good => "good",
         Tone::Bad => "bad",
         Tone::Unchecked => "unchecked",
+    }
+}
+
+/// What the icon on the card stands for, in words.
+fn tone_name(tone: Tone) -> String {
+    match tone {
+        Tone::Good => gettext("Checked"),
+        Tone::Bad => gettext("Warning"),
+        Tone::Unchecked => gettext("Not checked"),
     }
 }
 

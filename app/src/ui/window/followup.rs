@@ -41,9 +41,11 @@ impl FollowUpBanner {
             .valign(gtk::Align::Center)
             .css_classes(["flat", "circular"])
             .build();
+        crate::ui::name(&close, &gettext("Hide Until Next Launch"));
         let content = gtk::Box::builder()
             .spacing(10)
             .css_classes(["follow-up-banner"])
+            .accessible_role(gtk::AccessibleRole::Group)
             .build();
         content.append(&gtk::Image::from_icon_name("mail-reply-sender-symbolic"));
         content.append(&title);

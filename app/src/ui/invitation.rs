@@ -15,6 +15,7 @@ use mailrs_domain::{Address, EpochMillis};
 use mailrs_sync::Change;
 
 use crate::format::{event_moved_from, event_tile, event_when};
+use crate::ui::name;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 /// What the card asks the window to do.
@@ -140,10 +141,14 @@ impl EventCard {
         let day = gtk::Label::builder()
             .css_classes(["invitation-day"])
             .build();
+        // The tile repeats the date the line beside it already gives in
+        // full, so it is left out of the accessible tree rather than read
+        // twice as "Sep" and "24".
         let tile = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .valign(gtk::Align::Start)
             .css_classes(["invitation-tile"])
+            .accessible_role(gtk::AccessibleRole::Presentation)
             .build();
         tile.append(&month);
         tile.append(&day);
@@ -182,7 +187,9 @@ impl EventCard {
             .spacing(0)
             .margin_top(4)
             .css_classes(["linked"])
+            .accessible_role(gtk::AccessibleRole::Group)
             .build();
+        name(&answers, &gettext("Answer"));
         let mut buttons = Vec::new();
         for answer in Answer::ALL {
             let button = gtk::ToggleButton::builder().label(answer.label()).build();
@@ -193,7 +200,9 @@ impl EventCard {
             .spacing(0)
             .visible(false)
             .css_classes(["linked"])
+            .accessible_role(gtk::AccessibleRole::Group)
             .build();
+        name(&reach, &gettext("Answer for"));
         let this_one = gtk::ToggleButton::builder()
             .label(gettext("This Event"))
             .active(true)
@@ -279,7 +288,9 @@ impl EventCard {
             .orientation(gtk::Orientation::Vertical)
             .spacing(6)
             .css_classes(["card", "invitation-card"])
+            .accessible_role(gtk::AccessibleRole::Group)
             .build();
+        name(&inside, &gettext("Invitation"));
         inside.append(&news);
         inside.append(&head);
         inside.append(&organizer);

@@ -303,6 +303,12 @@ impl MainWindow {
             .icon_name("document-open-symbolic")
             .tooltip_text(gettext("Open in Another Program"))
             .build();
+        crate::ui::name(&save, &gettext("Save to Downloads"));
+        crate::ui::name(&open, &gettext("Open in Another Program"));
+        crate::ui::name(
+            &picture,
+            &fill(&gettext("{file}, preview"), &[("file", &attachment.filename)]),
+        );
         header.pack_end(&open);
         header.pack_end(&save);
         header.set_title_widget(Some(&adw::WindowTitle::new(

@@ -268,6 +268,7 @@ fn show_source(parent: &adw::Window, subject: &str, raw: Vec<u8>) {
         .right_margin(14)
         .build();
     view.buffer().set_text(&text);
+    crate::ui::name(&view, &gettext("Message Source"));
     let save = gtk::Button::builder()
         .label(gettext("Save As…"))
         .tooltip_text(gettext("Save as an .eml file"))
