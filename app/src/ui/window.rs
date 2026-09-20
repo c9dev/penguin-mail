@@ -1777,6 +1777,12 @@ impl MainWindow {
                 Some(Ok(body)) => compose::body_text(body),
                 _ => target.snippet.clone(),
             };
+            // A forward keeps the original's HTML and its inline images,
+            // so what goes out is the message that arrived.
+            let html = match open.bodies.get(&target.id) {
+                Some(Ok(body)) if kind == ReplyKind::Forward => body.html.clone(),
+                _ => None,
+            };
             let attachments = match open.bodies.get(&target.id) {
                 Some(Ok(body)) if kind == ReplyKind::Forward => body.attachments.clone(),
                 _ => Vec::new(),
@@ -1785,18 +1791,26 @@ impl MainWindow {
                 open.account_id,
                 target,
                 text,
+                html,
                 open.messages.clone(),
                 attachments,
             ))
         });
-        let Some(Some((account_id, target, text, thread, attachments))) = prepared else {
+        let Some(Some((account_id, target, text, html, thread, attachments))) = prepared else {
             return;
         };
+        let forwarded_html = html.clone();
         // Every address the account sends as, so the reply comes from the
         // one the message was written to.
         let mine = app.my_addresses(account_id);
         let mut draft = app.signed(compose::respond(
-            kind, account_id, &mine, &target, &text, &thread,
+            kind,
+            account_id,
+            &mine,
+            &target,
+            &text,
+            html.as_deref(),
+            &thread,
         ));
         if attachments.is_empty() {
             app.compose(draft);
@@ -1818,7 +1832,15 @@ impl MainWindow {
                     .await
                 {
                     Ok(data) => draft.attachments.push(OutgoingAttachment {
-                        content_id: None,
+                        // An image the forwarded HTML shows keeps its id,
+                        // so the `cid:` in that HTML still finds it. One
+                        // the HTML never names travels as a file, which is
+                        // how it arrived.
+                        content_id: attachment.content_id.filter(|cid| {
+                            forwarded_html
+                                .as_deref()
+                                .is_some_and(|html| compose::refers_to_cid(html, cid))
+                        }),
                         filename: attachment.filename,
                         mime_type: attachment.mime_type,
                         data,

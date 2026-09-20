@@ -74,6 +74,8 @@ pub struct Composer {
     preview: webkit::WebView,
     /// The attachment rows and the box that holds them.
     files: gtk::Box,
+    /// The strip naming the message this draft forwards.
+    forwarded: gtk::Box,
     send: adw::SplitButton,
     /// The formatting bar's toggles, each with the tag it stands for.
     toggles: RefCell<Vec<(gtk::ToggleButton, &'static str)>>,
@@ -245,6 +247,14 @@ impl Composer {
             .margin_top(6)
             .visible(false)
             .build();
+        let forwarded = gtk::Box::builder()
+            .spacing(8)
+            .margin_start(12)
+            .margin_end(12)
+            .margin_top(8)
+            .css_classes(["attachment-row"])
+            .visible(false)
+            .build();
         let format_bar = gtk::Box::builder()
             .spacing(2)
             .margin_start(10)
@@ -258,6 +268,7 @@ impl Composer {
         content.append(&format_bar);
         content.append(&line());
         content.append(&stack);
+        content.append(&forwarded);
         content.append(&files);
         let toolbar = adw::ToolbarView::new();
         toolbar.add_top_bar(&header);
@@ -293,6 +304,7 @@ impl Composer {
             stack,
             preview,
             files,
+            forwarded,
             send,
             toggles: RefCell::new(Vec::new()),
             identities,
@@ -312,6 +324,7 @@ impl Composer {
         });
         composer.fill_body();
         composer.refresh_files();
+        composer.refresh_forwarded();
         composer.update_title();
         composer.show_more(composer.more_button.is_active());
         composer.wire(&attach, &preview_toggle);
@@ -670,10 +683,14 @@ impl Composer {
     }
 
     fn html(&self) -> String {
-        match self.format.get() {
+        let mut html = match self.format.get() {
             ComposeFormat::Rich => self.rich().to_html(),
             ComposeFormat::Markdown => markdown_to_html(&self.source()),
+        };
+        if let Some(forwarded) = &self.base.borrow().forwarded {
+            html.push_str(&forwarded.to_html());
         }
+        html
     }
 
     fn is_blank(&self) -> bool {
@@ -685,6 +702,58 @@ impl Composer {
             && self.subject.text().trim().is_empty()
             && empty
             && self.attachments.borrow().is_empty()
+            && self.base.borrow().forwarded.is_none()
+    }
+
+    /// The strip under the body naming the message this draft forwards,
+    /// with a way to drop it. It is hidden when nothing is forwarded.
+    fn refresh_forwarded(self: &Rc<Self>) {
+        while let Some(child) = self.forwarded.first_child() {
+            self.forwarded.remove(&child);
+        }
+        let label = {
+            let base = self.base.borrow();
+            base.forwarded.as_ref().map(|f| {
+                let who = if f.from.is_empty() {
+                    "a message"
+                } else {
+                    &f.from
+                };
+                match f.subject.trim() {
+                    "" => format!("Forwarding {who}"),
+                    subject => format!("Forwarding “{subject}” from {who}"),
+                }
+            })
+        };
+        let Some(text) = label else {
+            self.forwarded.set_visible(false);
+            return;
+        };
+        self.forwarded.set_visible(true);
+        self.forwarded
+            .append(&gtk::Image::from_icon_name("mail-forward-symbolic"));
+        self.forwarded.append(
+            &gtk::Label::builder()
+                .label(&text)
+                .ellipsize(gtk::pango::EllipsizeMode::End)
+                .hexpand(true)
+                .xalign(0.0)
+                .build(),
+        );
+        let drop = gtk::Button::builder()
+            .icon_name("window-close-symbolic")
+            .tooltip_text("Do Not Forward the Original")
+            .css_classes(["flat", "circular"])
+            .build();
+        let weak = Rc::downgrade(self);
+        drop.connect_clicked(move |_| {
+            if let Some(c) = weak.upgrade() {
+                c.base.borrow_mut().forwarded = None;
+                c.dirty.set(true);
+                c.refresh_forwarded();
+            }
+        });
+        self.forwarded.append(&drop);
     }
 
     fn identity(&self) -> Option<&Identity> {

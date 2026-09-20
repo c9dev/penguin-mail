@@ -9,7 +9,8 @@ use crate::convert::find_header;
 use crate::model::MessagePart;
 
 /// Takes the first `text/html` and first `text/plain` part found in document
-/// order. Any part with a filename counts as an attachment.
+/// order. Any part the reader has to fetch separately counts as an
+/// attachment.
 pub fn extract_body(payload: &MessagePart) -> MessageBody {
     let mut body = MessageBody {
         list_unsubscribe: find_header(payload, "List-Unsubscribe").map(|v| v.trim().to_string()),
@@ -29,19 +30,20 @@ fn walk(part: &MessagePart, body: &mut MessageBody) {
     if body.calendar.is_none() && is_calendar(part) {
         body.calendar = decode_text(part).filter(|ics| ics.contains("BEGIN:VCALENDAR"));
     }
-    if !part.filename.is_empty() {
+    if is_attachment(part) {
+        let content_id = find_header(part, "Content-ID").map(|v| {
+            v.trim()
+                .trim_start_matches('<')
+                .trim_end_matches('>')
+                .to_string()
+        });
         body.attachments.push(Attachment {
             part_id: part.part_id.clone(),
-            filename: part.filename.clone(),
+            filename: attachment_name(part, content_id.as_deref()),
             mime_type: part.mime_type.clone(),
             size: part.body.size,
             attachment_id: part.body.attachment_id.clone(),
-            content_id: find_header(part, "Content-ID").map(|v| {
-                v.trim()
-                    .trim_start_matches('<')
-                    .trim_end_matches('>')
-                    .to_string()
-            }),
+            content_id,
         });
         return;
     }
@@ -52,6 +54,75 @@ fn walk(part: &MessagePart, body: &mut MessageBody) {
     }
     for child in &part.parts {
         walk(child, body);
+    }
+}
+
+/// Whether the reader has to fetch this part on its own. A filename says
+/// so outright. So does a `Content-ID`, which an image the HTML shows
+/// carries and a filename often does not: `mail_builder` wrote one that
+/// way until we made it name its parts, and Apple Mail and Outlook still
+/// do. A part Gmail hands back with an `attachmentId` and no text is one
+/// more, which is how a nameless PDF still reaches the attachment list.
+fn is_attachment(part: &MessagePart) -> bool {
+    if part
+        .mime_type
+        .to_ascii_lowercase()
+        .starts_with("multipart/")
+    {
+        return false;
+    }
+    if !part.filename.is_empty() || find_header(part, "Content-ID").is_some() {
+        return true;
+    }
+    let disposition = find_header(part, "Content-Disposition")
+        .unwrap_or("")
+        .trim_start()
+        .to_ascii_lowercase();
+    if disposition.starts_with("attachment") {
+        return true;
+    }
+    part.body.attachment_id.is_some() && !is_text(part)
+}
+
+/// Whether a part is one of the two ways of reading the message itself.
+fn is_text(part: &MessagePart) -> bool {
+    let mime = part.mime_type.to_ascii_lowercase();
+    mime.starts_with("text/plain") || mime.starts_with("text/html")
+}
+
+/// What to call a part that arrived without a name. The extension follows
+/// the media type, so a saved file opens in the right program and the
+/// attachment row reads as something rather than as a blank.
+fn attachment_name(part: &MessagePart, content_id: Option<&str>) -> String {
+    if !part.filename.is_empty() {
+        return part.filename.clone();
+    }
+    let mime = part.mime_type.to_ascii_lowercase();
+    let mime = mime.split([';', ' ']).next().unwrap_or("").trim();
+    let (kind, subtype) = mime.split_once('/').unwrap_or(("application", "dat"));
+    let extension = match subtype {
+        "jpeg" => "jpg",
+        "svg+xml" => "svg",
+        "plain" => "txt",
+        "msword" => "doc",
+        other => other.split('+').next().unwrap_or("dat"),
+    };
+    let stem = match kind {
+        "image" | "audio" | "video" | "text" => kind,
+        _ => "attachment",
+    };
+    // A Content-ID is unique within the message, so two nameless images
+    // do not both come out as "image.png".
+    match content_id
+        .map(|id| id.split('@').next().unwrap_or(id))
+        .filter(|id| {
+            !id.is_empty()
+                && id
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+        }) {
+        Some(id) => format!("{stem}-{id}.{extension}"),
+        None => format!("{stem}.{extension}"),
     }
 }
 

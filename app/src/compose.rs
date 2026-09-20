@@ -10,6 +10,8 @@
 
 use mail_builder::MessageBuilder;
 use mail_builder::headers::address::Address as MimeAddress;
+use mail_builder::headers::content_type::ContentType;
+use mail_builder::mime::MimePart;
 use mailrs_domain::{AccountId, Address, EpochMillis, MessageBody, MessageMeta};
 use mailrs_gmail::address::parse_address_list_keeping_invalid;
 use mailrs_gmail::convert::unescape_snippet;
@@ -153,6 +155,178 @@ pub fn toggle_prefix(text: &str, prefix: LinePrefix) -> String {
         .join("\n")
 }
 
+/// The message a forward carries, kept as it arrived.
+///
+/// A forwarded newsletter read as plain text and written back out as
+/// Markdown is no longer the message anyone sent: its tables collapse, its
+/// links come apart, and every line runs into the next. So the original
+/// travels beside the writer's own words rather than through them, and
+/// `build_mime` puts it back whole under the header block.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Forwarded {
+    pub from: String,
+    pub date: String,
+    pub subject: String,
+    pub to: String,
+    pub cc: String,
+    /// The original's HTML as it arrived, or None when it had only text.
+    pub html: Option<String>,
+    /// The original as plain text, for the `text/plain` part.
+    pub text: String,
+    /// Set when `html` and `text` already carry the header block, because
+    /// they came back out of a draft this composer saved.
+    pub whole: bool,
+}
+
+/// The marker around a forwarded message in a saved draft, so reopening
+/// one lifts the original back out instead of reading it as prose.
+const FORWARD_MARK: &str = "mailrs-forwarded";
+
+impl Forwarded {
+    /// The header block above the original, as the writer reads it.
+    fn header_lines(&self) -> Vec<(&'static str, &str)> {
+        let mut lines = vec![
+            ("From", self.from.as_str()),
+            ("Date", self.date.as_str()),
+            ("Subject", self.subject.as_str()),
+            ("To", self.to.as_str()),
+        ];
+        if !self.cc.is_empty() {
+            lines.push(("Cc", self.cc.as_str()));
+        }
+        lines
+    }
+
+    /// The whole forwarded part as plain text.
+    pub fn to_plain(&self) -> String {
+        if self.whole {
+            return self.text.clone();
+        }
+        let mut out = String::from("\n\n---------- Forwarded message ----------\n");
+        for (name, value) in self.header_lines() {
+            out.push_str(&format!("{name}: {value}\n"));
+        }
+        out.push('\n');
+        out.push_str(self.text.trim_end());
+        out
+    }
+
+    /// The whole forwarded part as HTML, with the original untouched
+    /// inside it.
+    pub fn to_html(&self) -> String {
+        if self.whole {
+            return self.html.clone().unwrap_or_default();
+        }
+        let mut out = format!(
+            "<div class=\"{FORWARD_MARK}\"><br><div style=\"border-top:1px solid #d4d4d4;padding-top:12px\">\
+             <div style=\"color:#5f6368;font-size:13px;margin-bottom:12px\">---------- Forwarded message ----------<br>"
+        );
+        for (name, value) in self.header_lines() {
+            out.push_str(&format!(
+                "<b>{}:</b> {}<br>",
+                richtext::escape(name),
+                richtext::escape(value)
+            ));
+        }
+        out.push_str("</div>");
+        match self.html.as_deref().filter(|h| !h.trim().is_empty()) {
+            Some(html) => out.push_str(html),
+            None => out.push_str(&markdown_to_html(&plain_as_markdown(&self.text))),
+        }
+        out.push_str("</div></div>");
+        out
+    }
+}
+
+/// Splits a saved draft's HTML at the forwarded message, if it holds one.
+/// Returns what the writer wrote and the forwarded block as it stands.
+fn split_forwarded_html(html: &str) -> (String, Option<String>) {
+    let mark = format!("class=\"{FORWARD_MARK}\"");
+    let Some(at) = html.find(&mark) else {
+        return (html.to_string(), None);
+    };
+    // Back up to the `<div` the attribute belongs to.
+    let Some(open) = html[..at].rfind('<') else {
+        return (html.to_string(), None);
+    };
+    (html[..open].to_string(), Some(html[open..].to_string()))
+}
+
+/// The same for the text part, which marks the forward with the line
+/// every mail client writes there.
+fn split_forwarded_text(text: &str) -> (String, Option<String>) {
+    const MARK: &str = "---------- Forwarded message ----------";
+    match text.find(MARK) {
+        Some(at) => (
+            text[..at].trim_end().to_string(),
+            Some(text[at..].to_string()),
+        ),
+        None => (text.to_string(), None),
+    }
+}
+
+/// One field out of a forwarded message's header block: the lines between
+/// the marker and the first blank line.
+fn header_of(text: &str, name: &str) -> String {
+    let prefix = format!("{name}: ");
+    text.lines()
+        .skip(1)
+        .take_while(|line| !line.trim().is_empty())
+        .find_map(|line| line.strip_prefix(prefix.as_str()))
+        .unwrap_or("")
+        .trim()
+        .to_string()
+}
+
+/// Whether `html` points at the inline image `cid`. The whole id has to
+/// match, because `cid:logo` and `cid:logo2` name two different images.
+pub fn refers_to_cid(html: &str, cid: &str) -> bool {
+    let needle = format!("cid:{cid}");
+    html.match_indices(&needle).any(|(at, _)| {
+        html[at + needle.len()..]
+            .chars()
+            .next()
+            .is_none_or(|c| !c.is_ascii_alphanumeric() && !matches!(c, '-' | '_' | '.' | '@' | '+'))
+    })
+}
+
+/// Plain text ready to render as Markdown: every character that Markdown
+/// reads as syntax is escaped, so a line of dashes stays a line of dashes
+/// and `*` keeps its asterisks.
+fn plain_as_markdown(text: &str) -> String {
+    let mut out = String::with_capacity(text.len() + text.len() / 8);
+    for line in text.replace("\r\n", "\n").lines() {
+        for ch in line.chars() {
+            if matches!(
+                ch,
+                '\\' | '`'
+                    | '*'
+                    | '_'
+                    | '{'
+                    | '}'
+                    | '['
+                    | ']'
+                    | '('
+                    | ')'
+                    | '#'
+                    | '+'
+                    | '-'
+                    | '.'
+                    | '!'
+                    | '>'
+                    | '|'
+                    | '~'
+                    | '='
+            ) {
+                out.push('\\');
+            }
+            out.push(ch);
+        }
+        out.push('\n');
+    }
+    out
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Draft {
     pub account_id: AccountId,
@@ -172,6 +346,8 @@ pub struct Draft {
     pub references: Vec<String>,
     pub thread_id: Option<String>,
     pub attachments: Vec<OutgoingAttachment>,
+    /// The message this draft forwards, when it forwards one.
+    pub forwarded: Option<Box<Forwarded>>,
     /// The Gmail draft this composer saves into.
     pub draft_id: Option<String>,
     /// When a scheduled draft is due to go out.
@@ -202,6 +378,7 @@ impl Draft {
             references: vec![],
             thread_id: None,
             attachments: vec![],
+            forwarded: None,
             draft_id: None,
             send_at: None,
         }
@@ -224,27 +401,60 @@ impl Draft {
     /// source from the text part, and the styled blocks from the HTML
     /// part, so a draft written in rich text comes back as it was
     /// written, wherever it was written.
+    ///
+    /// A forwarded message comes back whole. Reading it as prose and
+    /// writing it out again is what breaks a forwarded newsletter, and a
+    /// saved draft is a round trip like any other.
     pub fn take_body(&mut self, body: &MessageBody) {
-        self.markdown = body_text(body);
-        self.rich = body
-            .html
-            .as_deref()
+        let (text, forwarded_text) = split_forwarded_text(&body_text(body));
+        let (html, forwarded_html) = match body.html.as_deref() {
+            Some(html) => {
+                let (mine, theirs) = split_forwarded_html(html);
+                (Some(mine), theirs)
+            }
+            None => (None, None),
+        };
+        self.markdown = text;
+        self.rich = html
             .filter(|html| !html.trim().is_empty())
-            .map(RichBody::from_html)
+            .map(|html| RichBody::from_html(html.as_str()))
             .filter(|rich| !rich.is_empty());
+        self.forwarded = match (forwarded_html, forwarded_text) {
+            (None, None) => None,
+            (html, text) => {
+                let text = text.unwrap_or_default();
+                Some(Box::new(Forwarded {
+                    from: header_of(&text, "From"),
+                    date: header_of(&text, "Date"),
+                    subject: header_of(&text, "Subject"),
+                    to: header_of(&text, "To"),
+                    cc: header_of(&text, "Cc"),
+                    html,
+                    text,
+                    whole: true,
+                }))
+            }
+        };
     }
 
-    /// Whether the body still refers to the inline image `cid`.
+    /// Whether the message still shows the inline image `cid`, in what the
+    /// writer wrote or in the message being forwarded.
     fn shows_image(&self, cid: &str) -> bool {
         let needle = format!("cid:{cid}");
-        match &self.rich {
+        let written = match &self.rich {
             Some(rich) => rich
                 .blocks
                 .iter()
                 .flat_map(|b| &b.spans)
                 .any(|s| s.image.as_deref() == Some(needle.as_str())),
             None => self.markdown.contains(&needle),
-        }
+        };
+        written
+            || self
+                .forwarded
+                .as_ref()
+                .and_then(|f| f.html.as_deref())
+                .is_some_and(|html| refers_to_cid(html, cid))
     }
 }
 
@@ -269,14 +479,16 @@ pub enum ReplyKind {
 /// A draft that answers or forwards `original`. `mine` lists every address
 /// the account sends as, preferred first: the reply comes from whichever one
 /// the original was written to, and none of them lands in To or Cc.
-/// `thread` is the whole conversation, oldest first; `original_text` is the
-/// original's body as plain text.
+/// `thread` is the whole conversation, oldest first. `original_text` and
+/// `original_html` are the original's body; a forward carries the HTML
+/// through unchanged, so what goes out is the message that arrived.
 pub fn respond(
     kind: ReplyKind,
     account_id: AccountId,
     mine: &[Address],
     original: &MessageMeta,
     original_text: &str,
+    original_html: Option<&str>,
     thread: &[MessageMeta],
 ) -> Draft {
     let blank = Address {
@@ -321,14 +533,18 @@ pub fn respond(
         }
         ReplyKind::Forward => {
             draft.subject = prefixed("Fwd: ", &original.subject, &["fwd:", "fw:"]);
-            draft.markdown = format!(
-                "\n\n---------- Forwarded message ----------\nFrom: {}\nDate: {}\nSubject: {}\nTo: {}\n\n{}",
-                format_recipients(std::slice::from_ref(&sender)),
-                full_date(original.date),
-                original.subject,
-                format_recipients(&original.to),
-                original_text.trim_end()
-            );
+            draft.forwarded = Some(Box::new(Forwarded {
+                from: format_recipients(std::slice::from_ref(&sender)),
+                date: full_date(original.date),
+                subject: original.subject.clone(),
+                to: format_recipients(&original.to),
+                cc: format_recipients(&original.cc),
+                html: original_html
+                    .filter(|h| !h.trim().is_empty())
+                    .map(str::to_string),
+                text: original_text.trim_end().to_string(),
+                whole: false,
+            }));
         }
     }
     draft
@@ -630,20 +846,22 @@ fn bare_id(id: &str) -> String {
         .to_string()
 }
 
-/// The RFC 822 bytes for `draft`: `multipart/alternative` with the Markdown
-/// source as text and its rendering as HTML, plus any attachments.
+/// The RFC 822 bytes for `draft`.
 pub fn build_mime(draft: &Draft, date_secs: i64, message_id: &str) -> Result<Vec<u8>, String> {
-    let (text, html) = match &draft.rich {
+    let (mut text, mut html) = match &draft.rich {
         Some(rich) => (rich.to_plain(), rich.to_html()),
         None => (draft.markdown.clone(), markdown_to_html(&draft.markdown)),
     };
+    if let Some(forwarded) = &draft.forwarded {
+        text.push_str(&forwarded.to_plain());
+        html.push_str(&forwarded.to_html());
+    }
     let mut builder = MessageBuilder::new()
         .from(mime_address(&draft.from))
         .subject(draft.subject.trim().to_string())
         .date(date_secs)
         .message_id(bare_id(message_id))
-        .text_body(text)
-        .html_body(html);
+        .body(body_tree(draft, text, html));
     if !draft.to.is_empty() {
         builder = builder.to(draft.to.iter().map(mime_address).collect::<Vec<_>>());
     }
@@ -665,23 +883,83 @@ pub fn build_mime(draft: &Draft, date_secs: i64, message_id: &str) -> Result<Vec
                 .collect::<Vec<_>>(),
         );
     }
-    for attachment in &draft.attachments {
-        builder = match &attachment.content_id {
-            // An image the text shows, unless the text no longer refers to it.
-            Some(cid) if draft.shows_image(cid) => builder.inline(
-                attachment.mime_type.clone(),
-                cid.clone(),
-                attachment.data.clone(),
-            ),
-            Some(_) => builder,
-            None => builder.attachment(
-                attachment.mime_type.clone(),
-                attachment.filename.clone(),
-                attachment.data.clone(),
-            ),
-        };
-    }
     builder.write_to_vec().map_err(|e| e.to_string())
+}
+
+/// The body of the message, nested the way a reader expects to find it.
+///
+/// `multipart/alternative` holds the two ways of reading what the writer
+/// wrote. A `multipart/related` around it holds the images the HTML shows
+/// as `cid:`, which is where RFC 2387 says to look for them: an image left
+/// beside the text in `multipart/mixed` resolves in Gmail's web client and
+/// nowhere near everywhere else. A `multipart/mixed` around that holds the
+/// files the writer attached. Each wrapper appears only when it has
+/// something to hold.
+fn body_tree<'a>(draft: &'a Draft, text: String, html: String) -> MimePart<'a> {
+    let mut body = MimePart::new(
+        "multipart/alternative",
+        vec![
+            MimePart::new("text/plain", text),
+            MimePart::new("text/html", html),
+        ],
+    );
+    let shown: Vec<&OutgoingAttachment> = draft
+        .attachments
+        .iter()
+        .filter(|a| {
+            a.content_id
+                .as_deref()
+                .is_some_and(|cid| draft.shows_image(cid))
+        })
+        .collect();
+    if !shown.is_empty() {
+        let mut parts = Vec::with_capacity(shown.len() + 1);
+        parts.push(body);
+        parts.extend(shown.into_iter().map(inline_part));
+        body = MimePart::new(
+            ContentType::new("multipart/related").attribute("type", "text/html"),
+            parts,
+        );
+    }
+    let files: Vec<&OutgoingAttachment> = draft
+        .attachments
+        .iter()
+        .filter(|a| a.content_id.is_none())
+        .collect();
+    if !files.is_empty() {
+        let mut parts = Vec::with_capacity(files.len() + 1);
+        parts.push(body);
+        parts.extend(files.into_iter().map(file_part));
+        body = MimePart::new("multipart/mixed", parts);
+    }
+    body
+}
+
+/// An image the HTML shows. It keeps its filename beside its `Content-ID`,
+/// because a reader that lists parts by filename, Gmail's API among them,
+/// passes over a part that has none, and then has no handle to fetch the
+/// image the `cid:` asks for.
+fn inline_part(attachment: &OutgoingAttachment) -> MimePart<'_> {
+    let name = attachment.filename.clone();
+    MimePart::new(
+        ContentType::new(attachment.mime_type.clone()).attribute("name", name.clone()),
+        attachment.data.clone(),
+    )
+    .header(
+        "Content-Disposition",
+        ContentType::new("inline").attribute("filename", name),
+    )
+    .cid(attachment.content_id.clone().unwrap_or_default())
+}
+
+/// A file the writer attached.
+fn file_part(attachment: &OutgoingAttachment) -> MimePart<'_> {
+    MimePart::new(
+        ContentType::new(attachment.mime_type.clone())
+            .attribute("name", attachment.filename.clone()),
+        attachment.data.clone(),
+    )
+    .attachment(attachment.filename.clone())
 }
 
 #[cfg(test)]
@@ -740,6 +1018,7 @@ mod tests {
             &[me()],
             &second,
             "Noon works.\n\nSee you",
+            None,
             &thread,
         );
         assert_eq!(draft.to, vec![addr(Some("Ann"), "ann@example.com")]);
@@ -769,6 +1048,7 @@ mod tests {
             &[me()],
             &sent,
             "hi",
+            None,
             std::slice::from_ref(&sent),
         );
         assert_eq!(draft.to, vec![addr(None, "bob@example.com")]);
@@ -794,6 +1074,7 @@ mod tests {
             &[me()],
             &original,
             "x",
+            None,
             std::slice::from_ref(&original),
         );
         assert_eq!(
@@ -834,6 +1115,7 @@ mod tests {
             &[me(), sales()],
             &original,
             "x",
+            None,
             std::slice::from_ref(&original),
         );
         assert_eq!(draft.from, sales());
@@ -855,6 +1137,7 @@ mod tests {
             &[me(), sales()],
             &original,
             "x",
+            None,
             std::slice::from_ref(&original),
         );
         assert_eq!(draft.from, me());
@@ -970,12 +1253,12 @@ mod tests {
         let mut original = message("m1", addr(None, "a@example.com"), vec![], vec![]);
         original.subject = "RE: Budget".into();
         assert_eq!(
-            respond(ReplyKind::Reply, 1, &[me()], &original, "", &[]).subject,
+            respond(ReplyKind::Reply, 1, &[me()], &original, "", None, &[]).subject,
             "RE: Budget"
         );
         original.subject = "Fw: Budget".into();
         assert_eq!(
-            respond(ReplyKind::Forward, 1, &[me()], &original, "", &[]).subject,
+            respond(ReplyKind::Forward, 1, &[me()], &original, "", None, &[]).subject,
             "Fw: Budget"
         );
     }
@@ -994,13 +1277,130 @@ mod tests {
             &[me()],
             &original,
             "Menu attached.",
+            None,
             &[],
         );
         assert!(draft.to.is_empty());
         assert_eq!(draft.subject, "Fwd: Lunch plans");
-        assert!(draft.markdown.contains("From: Ann <ann@example.com>\n"));
-        assert!(draft.markdown.ends_with("Menu attached."));
+        // The writer starts on an empty page; the original travels beside it.
+        assert!(draft.markdown.trim().is_empty());
+        let forwarded = draft.forwarded.as_ref().unwrap();
+        assert_eq!(forwarded.from, "Ann <ann@example.com>");
+        assert_eq!(forwarded.text, "Menu attached.");
+        assert!(
+            forwarded
+                .to_plain()
+                .contains("From: Ann <ann@example.com>\n")
+        );
+        assert!(forwarded.to_plain().ends_with("Menu attached."));
         assert!(draft.in_reply_to.is_none() && draft.thread_id.is_none());
+    }
+
+    #[test]
+    fn a_forwarded_html_message_goes_out_as_it_arrived() {
+        let original = message(
+            "m1",
+            addr(Some("Ann"), "ann@example.com"),
+            vec![me()],
+            vec![],
+        );
+        // A newsletter: a table, a heading, an asterisk, a line of dashes.
+        // Read as Markdown and written back out, none of it survives.
+        let html = "<table><tr><td><h1>Sale *now* on</h1></td></tr></table>\
+                    <p>Terms apply</p>";
+        let text = "Sale *now* on\n-------------\n# Terms apply";
+        let mut draft = respond(
+            ReplyKind::Forward,
+            1,
+            &[me()],
+            &original,
+            text,
+            Some(html),
+            &[],
+        );
+        draft.to = vec![addr(None, "bob@example.com")];
+        let raw = build_mime(&draft, 0, "id@example.com").unwrap();
+        let parsed = MessageParser::default().parse(&raw).unwrap();
+        let sent = parsed.body_html(0).unwrap();
+        assert!(sent.contains("<table>"), "the table is still a table");
+        assert!(sent.contains("<h1>Sale *now* on</h1>"), "and the heading");
+        assert!(sent.contains("---------- Forwarded message ----------"));
+        assert!(sent.contains("<b>From:</b> Ann &lt;ann@example.com&gt;"));
+        let plain = parsed.body_text(0).unwrap();
+        assert!(plain.contains("Sale *now* on"));
+    }
+
+    #[test]
+    fn a_forwarded_text_message_keeps_its_line_breaks_and_punctuation() {
+        let original = message(
+            "m1",
+            addr(Some("Ann"), "ann@example.com"),
+            vec![me()],
+            vec![],
+        );
+        let text = "Line one\nLine two\n-------------\n# Not a heading\n* Not a bullet";
+        let mut draft = respond(ReplyKind::Forward, 1, &[me()], &original, text, None, &[]);
+        draft.to = vec![addr(None, "bob@example.com")];
+        let raw = build_mime(&draft, 0, "id@example.com").unwrap();
+        let sent = MessageParser::default()
+            .parse(&raw)
+            .unwrap()
+            .body_html(0)
+            .unwrap()
+            .to_string();
+        assert!(sent.contains("# Not a heading"), "{sent}");
+        assert!(sent.contains("* Not a bullet"), "{sent}");
+        assert!(!sent.contains("<h1>"), "a hash in mail is a hash");
+        assert!(!sent.contains("<li>"), "an asterisk in mail is an asterisk");
+    }
+
+    #[test]
+    fn a_saved_forward_reopens_with_the_original_still_whole() {
+        let original = message(
+            "m1",
+            addr(Some("Ann"), "ann@example.com"),
+            vec![me()],
+            vec![],
+        );
+        let html = "<table><tr><td>Sale</td></tr></table>";
+        let mut draft = respond(
+            ReplyKind::Forward,
+            1,
+            &[me()],
+            &original,
+            "Sale",
+            Some(html),
+            &[],
+        );
+        draft.to = vec![addr(None, "bob@example.com")];
+        draft.markdown = "Thought you would want this.".into();
+        let raw = build_mime(&draft, 0, "id@example.com").unwrap();
+        let parsed = MessageParser::default().parse(&raw).unwrap();
+        let saved = MessageBody {
+            html: Some(parsed.body_html(0).unwrap().to_string()),
+            text: Some(parsed.body_text(0).unwrap().to_string()),
+            ..Default::default()
+        };
+        let mut reopened = Draft::new(1, me());
+        reopened.take_body(&saved);
+        assert!(reopened.markdown.contains("Thought you would want this."));
+        assert!(!reopened.markdown.contains("Forwarded message"));
+        let forwarded = reopened.forwarded.as_ref().expect("the forward came back");
+        assert_eq!(forwarded.from, "Ann <ann@example.com>");
+        assert_eq!(forwarded.subject, "Lunch plans");
+        assert!(forwarded.to_html().contains("<table>"));
+
+        // And sending the reopened draft writes the same message again.
+        reopened.to = vec![addr(None, "bob@example.com")];
+        let again = build_mime(&reopened, 0, "id2@example.com").unwrap();
+        let sent = MessageParser::default()
+            .parse(&again)
+            .unwrap()
+            .body_html(0)
+            .unwrap()
+            .to_string();
+        assert!(sent.contains("<table>"));
+        assert_eq!(sent.matches("Forwarded message").count(), 1);
     }
 
     #[test]
@@ -1228,6 +1628,78 @@ mod tests {
                 .unwrap()
                 .contains("src=\"cid:map1@mailrs\"")
         );
+        let mime = String::from_utf8(raw).unwrap();
+        assert!(
+            mime.contains("multipart/related"),
+            "a cid: image resolves inside multipart/related, not beside the text"
+        );
+        assert!(
+            !mime.contains("multipart/mixed"),
+            "nothing was attached, so nothing needs the mixed wrapper"
+        );
+    }
+
+    #[test]
+    fn an_inline_image_carries_a_filename_as_well_as_its_id() {
+        let mut draft = Draft::new(1, me());
+        draft.to = vec![addr(None, "ann@example.com")];
+        draft.markdown = "Look: ![map](cid:map1@mailrs)".into();
+        draft.attachments = vec![OutgoingAttachment {
+            filename: "map.png".into(),
+            mime_type: "image/png".into(),
+            data: vec![137, 80, 78, 71],
+            content_id: Some("map1@mailrs".into()),
+        }];
+        let raw = build_mime(&draft, 0, "id@example.com").unwrap();
+        let mime = String::from_utf8(raw.clone()).unwrap();
+        assert!(mime.contains("Content-Disposition: inline; filename=\"map.png\""));
+        assert!(mime.contains("Content-Type: image/png; name=\"map.png\""));
+        // Gmail's API lists a part by its filename, so a nameless part
+        // never reaches the reader that has to fetch it.
+        let parsed = MessageParser::default().parse(&raw).unwrap();
+        assert_eq!(
+            parsed
+                .attachments()
+                .next()
+                .unwrap()
+                .attachment_name()
+                .unwrap(),
+            "map.png"
+        );
+    }
+
+    #[test]
+    fn an_attached_file_and_a_shown_image_nest_one_inside_the_other() {
+        let mut draft = Draft::new(1, me());
+        draft.to = vec![addr(None, "ann@example.com")];
+        draft.markdown = "Look: ![map](cid:map1@mailrs)".into();
+        draft.attachments = vec![
+            OutgoingAttachment {
+                filename: "map.png".into(),
+                mime_type: "image/png".into(),
+                data: vec![137, 80, 78, 71],
+                content_id: Some("map1@mailrs".into()),
+            },
+            OutgoingAttachment {
+                filename: "notes.pdf".into(),
+                mime_type: "application/pdf".into(),
+                data: b"%PDF-1.4".to_vec(),
+                content_id: None,
+            },
+        ];
+        let raw = build_mime(&draft, 0, "id@example.com").unwrap();
+        let mime = String::from_utf8(raw.clone()).unwrap();
+        let mixed = mime.find("multipart/mixed").expect("a file was attached");
+        let related = mime.find("multipart/related").expect("an image is shown");
+        let alternative = mime
+            .find("multipart/alternative")
+            .expect("the body reads two ways");
+        assert!(
+            mixed < related && related < alternative,
+            "mixed holds related holds alternative"
+        );
+        let parsed = MessageParser::default().parse(&raw).unwrap();
+        assert_eq!(parsed.attachment_count(), 2);
     }
 
     #[test]

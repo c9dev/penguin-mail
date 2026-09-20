@@ -182,11 +182,7 @@ fn render_attachments(html: &mut String, message_id: &str, body: &MessageBody) {
         .attachments
         .iter()
         .enumerate()
-        .filter(|(_, a)| {
-            a.content_id
-                .as_ref()
-                .is_none_or(|_| !a.mime_type.starts_with("image/"))
-        })
+        .filter(|(_, a)| !shown_in_body(a, body))
         .collect();
     if listed.is_empty() {
         return;
@@ -203,6 +199,24 @@ fn render_attachments(html: &mut String, message_id: &str, body: &MessageBody) {
         );
     }
     html.push_str("</div>");
+}
+
+/// Whether the message already shows this attachment where the reader is
+/// looking, so a row for it would be a second copy. Only an image the HTML
+/// points at by `cid:` counts. A `Content-ID` on its own does not: Apple
+/// Mail and Outlook put one on files they mean you to save, and treating
+/// that as shown is what made an attached photo vanish from the message it
+/// arrived in.
+fn shown_in_body(attachment: &mailrs_domain::Attachment, body: &MessageBody) -> bool {
+    let Some(cid) = attachment.content_id.as_deref() else {
+        return false;
+    };
+    if !attachment.mime_type.starts_with("image/") {
+        return false;
+    }
+    body.html
+        .as_deref()
+        .is_some_and(|html| crate::compose::refers_to_cid(html, cid))
 }
 
 /// "me, Bob Smith, and 2 others".
@@ -586,7 +600,7 @@ mod tests {
     }
 
     #[test]
-    fn attachments_link_to_downloads_but_inline_images_do_not() {
+    fn an_image_the_body_shows_gets_no_row_and_everything_else_does() {
         let m = meta("m1", "Ann", &[]);
         let attachment = |name: &str, mime: &str, cid: Option<&str>| Attachment {
             part_id: name.into(),
@@ -598,10 +612,14 @@ mod tests {
         };
         let body = MessageBody {
             text: Some("see attached".into()),
-            html: None,
+            html: Some("<p>Hi</p><img src=\"cid:logo\">".into()),
             attachments: vec![
                 attachment("logo.png", "image/png", Some("logo")),
                 attachment("report.pdf", "application/pdf", None),
+                // Apple Mail and Outlook put a Content-ID on a photo they
+                // mean you to save. The body never names it, so it is a file.
+                attachment("holiday.jpg", "image/jpeg", Some("logo2")),
+                attachment("invite.ics", "text/calendar", Some("cal")),
             ],
             ..Default::default()
         };
@@ -618,7 +636,39 @@ mod tests {
         );
         assert!(html.contains("href=\"mailrs:attachment/m1/1\""));
         assert!(html.contains("report.pdf") && html.contains("2.0 KB"));
-        assert!(!html.contains("logo.png"));
+        assert!(html.contains("holiday.jpg"), "the body never shows it");
+        assert!(html.contains("invite.ics"), "a file is a file, cid or not");
+        assert!(!html.contains("logo.png"), "the body already shows it");
+    }
+
+    #[test]
+    fn a_photo_with_a_content_id_and_no_html_still_gets_a_row() {
+        let m = meta("m1", "Ann", &[]);
+        let body = MessageBody {
+            text: Some("Here is the photo.".into()),
+            html: None,
+            attachments: vec![Attachment {
+                part_id: "2".into(),
+                filename: "cat.png".into(),
+                mime_type: "image/png".into(),
+                size: 4096,
+                attachment_id: Some("att-1".into()),
+                content_id: Some("img1@mailrs".into()),
+            }],
+            ..Default::default()
+        };
+        let images = HashMap::new();
+        let html = page(
+            "x",
+            vec![MessageView {
+                meta: &m,
+                body: BodyState::Loaded(&body),
+                expanded: true,
+                inline_images: &images,
+                sanitized: None,
+            }],
+        );
+        assert!(html.contains("cat.png"));
     }
 
     #[test]
