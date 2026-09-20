@@ -264,11 +264,18 @@ gap. The design and its trade-offs are written up in
 ## Development
 
 ```sh
-cargo test --workspace                          # about 400 tests, no network
+cargo test --workspace                          # about 700 tests, no network
 cargo clippy --workspace --all-targets -- -D warnings
 cargo run -p mailrs -- --demo                   # the UI with sample data
 scripts/smoke.sh                                # by hand, against a real account
 ```
+
+The OpenPGP and S/MIME tests sign and encrypt through the GnuPG on this
+computer, in a keyring they build under a temporary directory and throw
+away. Without `gpg` or `gpgsm` on PATH they skip, so the suite still runs
+on a computer that has neither. A build machine should set
+`PENGUIN_MAIL_REQUIRE_CRYPTO=1`, which turns that skip into a failure
+rather than a green run that tested nothing.
 
 ## The icon
 

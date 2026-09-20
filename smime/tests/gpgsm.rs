@@ -40,6 +40,7 @@ impl Home {
             Ok(smime) => smime,
             Err(_) => {
                 eprintln!("skipping: no gpgsm on PATH, so the round trips cannot run");
+                require_crypto();
                 return None;
             }
         };
@@ -599,4 +600,19 @@ fn the_addresses_this_computer_can_sign_as_are_the_ones_with_a_secret_key() {
 
     assert!(mine[0].certificate.is_some(), "{mine:?}");
     assert!(mine[1].certificate.is_none(), "{mine:?}");
+}
+
+/// Stops a run that was meant to exercise the real thing from passing on a
+/// computer that cannot. The round trips skip when GnuPG is missing, so a
+/// developer without it can still run the suite; that same skip would let
+/// a build machine report a green S/MIME and OpenPGP suite having tested
+/// nothing. Setting `PENGUIN_MAIL_REQUIRE_CRYPTO` turns the skip into a
+/// failure, which is what a build machine should do.
+fn require_crypto() {
+    if std::env::var_os("PENGUIN_MAIL_REQUIRE_CRYPTO").is_some() {
+        panic!(
+            "PENGUIN_MAIL_REQUIRE_CRYPTO is set and GnuPG is not on PATH, \
+             so these tests would have proved nothing"
+        );
+    }
 }
