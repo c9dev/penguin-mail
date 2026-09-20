@@ -16,7 +16,9 @@ use mailrs_domain::{
 };
 use mailrs_gmail::{CONTACTS_SCOPE, DELETE_SCOPE};
 use mailrs_store::{accounts, labels, messages};
-use mailrs_sync::{History, Listing, MailAction, Outcome, Permitted, Scope, TriageAction, View};
+use mailrs_sync::{
+    History, Listing, MailAction, Outcome, Permitted, Scope, TriageAction, View, outbox_id,
+};
 
 use super::contact_card;
 use super::conversation::{Action, ConversationView, OpenThread};
@@ -1199,11 +1201,10 @@ impl MainWindow {
 
     fn picked(self: &Rc<Self>, picked: Picked) {
         match picked {
-            // A waiting message has no Gmail thread to open; its row
-            // menu is what acts on it.
-            Picked::One(_) if *self.mailbox.borrow() == Mailbox::Outbox => {
-                self.conversation.clear()
-            }
+            // A message that never reached Gmail has no thread to open,
+            // and asking Gmail for one would be a call thrown away. Its
+            // row menu is what acts on it.
+            Picked::One(row) if outbox_id(&row.id).is_some() => self.conversation.clear(),
             Picked::One(row) => self.open_thread(row),
             Picked::Many(rows) => {
                 let noun = if self.settings().threading {

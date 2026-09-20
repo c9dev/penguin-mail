@@ -387,6 +387,26 @@ async fn a_scheduled_send_that_fails_moves_into_the_outbox() {
 }
 
 #[tokio::test]
+async fn an_account_that_is_not_connected_yet_costs_a_message_nothing() {
+    let h = harness().await;
+    let mut waiting = message(h.account_id, "Report");
+    waiting.problem = Some("Network error".into());
+    waiting.attempts = 3;
+    let id = h.db.write(move |c| outbox::put(c, &waiting)).await.unwrap();
+    let nobody = Outbox::new(Arc::new(Connected(HashMap::new())), h.db.clone());
+
+    let drained = nobody.send_due(now_millis()).await.unwrap();
+    assert!(!drained.changed, "nothing happened to it");
+    let row =
+        h.db.read(move |c| outbox::find(c, id))
+            .await
+            .unwrap()
+            .unwrap();
+    assert_eq!(row.attempts, 3, "the try was never made, so it is not one");
+    assert_eq!(row.problem.as_deref(), Some("Network error"));
+}
+
+#[tokio::test]
 async fn a_message_queued_before_a_restart_goes_out_after_one() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("mail.db");

@@ -68,7 +68,7 @@ impl MainWindow {
                     .call(async move { outbox.send_one(id).await })
                     .await;
                 match posted {
-                    Ok(Posted::Sent(_)) => this.toast("Sent"),
+                    Ok(Posted::Sent(_)) => this.toast("Message sent"),
                     Ok(Posted::Waiting(_)) => this.toast("Still not sent. It stays in the Outbox."),
                     Ok(Posted::Refused(problem)) => this.toast(&format!("Not sent: {problem}")),
                     Err(err) => this.toast(&format!("Not sent: {err}")),

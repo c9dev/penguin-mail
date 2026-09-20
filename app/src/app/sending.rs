@@ -356,7 +356,7 @@ impl App {
 
 /// A message for the outbox: the bytes that go out, and the draft the
 /// composer reopens if the person wants to change it before it does.
-pub fn queued(draft: &Draft, raw: Vec<u8>, send_at: i64) -> Queued {
+fn queued(draft: &Draft, raw: Vec<u8>, send_at: i64) -> Queued {
     let recipients = draft
         .to
         .iter()

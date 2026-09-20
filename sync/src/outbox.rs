@@ -67,6 +67,9 @@ impl<A: Accounts> Outbox<A> {
                 self.forget(&message).await?;
                 Ok(Posted::Sent(sent))
             }
+            // An account that is not connected has told us nothing about
+            // the message, so a message already waiting waits on as it is.
+            Err(SyncError::UnknownAccount(_)) if message.id > 0 => Ok(Posted::Waiting(message.id)),
             Err(err) if err.worth_retrying() => {
                 message.attempts += 1;
                 Ok(Posted::Waiting(self.keep(message, &err).await?.id))
@@ -117,6 +120,14 @@ impl<A: Accounts> Outbox<A> {
                 continue;
             }
             match self.attempt(&message).await {
+                // The account may still be connecting, or may have gone
+                // for good. Either way the message has not been tried, so
+                // nothing is counted against it and the next pass asks
+                // again.
+                Err(SyncError::UnknownAccount(account_id)) => {
+                    tracing::debug!(account = account_id, "not connected yet; the outbox waits");
+                    continue;
+                }
                 Ok(_) => {
                     self.forget(&message).await?;
                     drained.sent.push(message);

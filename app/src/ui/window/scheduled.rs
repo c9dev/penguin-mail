@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 use gtk::glib;
 use mailrs_store::outbox;
+use mailrs_sync::outbox_id;
 
 use super::{MainWindow, Target};
 use crate::ui::Mailbox;
@@ -46,10 +47,14 @@ impl MainWindow {
                 .core
                 .write(move |c| {
                     for item in outbox::scheduled(c)? {
+                        // A row names its Gmail thread, or, for a message
+                        // Gmail has never seen, its own place in the table.
                         let hit = targets.iter().any(|t| {
                             t.account_id == item.account_id
-                                && (t.message_id == item.message_id
-                                    || Some(&t.thread_id) == item.thread_id.as_ref())
+                                && (outbox_id(&t.thread_id) == Some(item.id)
+                                    || item.thread_id.as_deref() == Some(t.thread_id.as_str())
+                                    || (item.message_id.is_some()
+                                        && t.message_id == item.message_id))
                         });
                         if hit {
                             outbox::remove(c, item.id)?;
