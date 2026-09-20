@@ -28,7 +28,7 @@ fn icon(category: Category) -> &'static str {
 /// How long the name and the unread count take to slide open, in milliseconds.
 const SLIDE_MS: u32 = 200;
 
-/// Wraps `child` in a revealer that slides it open from the left.
+/// Wraps `child` in a revealer that opens it left to right.
 fn slider(child: &impl IsA<gtk::Widget>) -> gtk::Revealer {
     gtk::Revealer::builder()
         .transition_type(gtk::RevealerTransitionType::SlideLeft)
@@ -131,7 +131,7 @@ impl CategoryBar {
             let count = unread.get(category).copied().unwrap_or(0);
             // A long number would spill over the icon, so stop the badge at 99.
             label.set_label(&match count {
-                0 => String::new(),
+                ..=0 => String::new(),
                 1..=99 => count.to_string(),
                 _ => "99+".to_string(),
             });
