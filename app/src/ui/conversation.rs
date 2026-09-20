@@ -10,8 +10,10 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gdk, gio};
-use mailrs_domain::translate::fill_plural;
-use mailrs_domain::{AccountId, FlagColor, Folder, MessageBody, MessageMeta, system_label};
+use mailrs_domain::translate::{fill, fill_plural, gettext};
+use mailrs_domain::{
+    AccountId, Category, FlagColor, Folder, MessageBody, MessageMeta, system_label,
+};
 use webkit::prelude::*;
 
 use super::invitation::{self, EventCard, Showing};
@@ -258,17 +260,17 @@ impl ConversationView {
 
         let empty = adw::StatusPage::builder()
             .icon_name("dev.penguinmail.PenguinMail-symbolic")
-            .title("No Conversation Selected")
+            .title(gettext("No Conversation Selected"))
             .build();
         empty.add_css_class("dim-label");
         let banner = adw::Banner::builder()
-            .title("Remote images are hidden to protect your privacy")
-            .button_label("Load Images")
+            .title(gettext("Remote images are hidden to protect your privacy"))
+            .button_label(gettext("Load Images"))
             .revealed(false)
             .build();
         let list_banner = adw::Banner::builder()
-            .title("This message is from a mailing list")
-            .button_label("Unsubscribe")
+            .title(gettext("This message is from a mailing list"))
+            .button_label(gettext("Unsubscribe"))
             .revealed(false)
             .build();
         let bulk = adw::WrapBox::builder()
@@ -279,12 +281,12 @@ impl ConversationView {
         let (mut many_read, mut many_star, mut many_mute, mut many_junk, mut many_trash) =
             (None, None, None, None, None);
         for (label, action) in [
-            ("Archive", "win.archive"),
-            ("Mark as Read", "win.toggle-read"),
-            ("Flag", "win.toggle-star"),
-            ("Mute", "win.mute"),
-            ("Junk", "win.junk"),
-            ("Move to Trash", "win.trash"),
+            (gettext("Archive"), "win.archive"),
+            (gettext("Mark as Read"), "win.toggle-read"),
+            (gettext("Flag"), "win.toggle-star"),
+            (gettext("Mute"), "win.mute"),
+            (gettext("Junk"), "win.junk"),
+            (gettext("Move to Trash"), "win.trash"),
         ] {
             let pill = gtk::Button::builder()
                 .label(label)
@@ -311,8 +313,10 @@ impl ConversationView {
         );
         let many = adw::StatusPage::builder()
             .icon_name("penguin-mail-inbox-symbolic")
-            .title("Several Conversations Selected")
-            .description("Actions and shortcuts apply to all of them. Esc clears the selection.")
+            .title(gettext("Several Conversations Selected"))
+            .description(gettext(
+                "Actions and shortcuts apply to all of them. Esc clears the selection.",
+            ))
             .child(&bulk)
             .build();
         let card = {
@@ -333,81 +337,98 @@ impl ConversationView {
         stack.add_named(&web_box, Some("thread"));
         stack.add_named(&many, Some("many"));
 
-        let button = |icon: &str, tip: &str| {
+        let button = |icon: &str, tip: String| {
             gtk::Button::builder()
                 .icon_name(icon)
                 .tooltip_text(tip)
                 .build()
         };
         let buttons = Buttons {
-            archive: button("penguin-mail-archive-symbolic", "Archive (E or Ctrl+Alt+A)"),
-            trash: button("user-trash-symbolic", "Move to Trash (Delete)"),
-            junk: button("mail-mark-junk-symbolic", "Junk (Ctrl+Shift+J)"),
-            read: button("mail-unread-symbolic", "Mark as Unread (Ctrl+Shift+U)"),
+            archive: button(
+                "penguin-mail-archive-symbolic",
+                gettext("Archive (E or Ctrl+Alt+A)"),
+            ),
+            trash: button("user-trash-symbolic", gettext("Move to Trash (Delete)")),
+            junk: button("mail-mark-junk-symbolic", gettext("Junk (Ctrl+Shift+J)")),
+            read: button(
+                "mail-unread-symbolic",
+                gettext("Mark as Unread (Ctrl+Shift+U)"),
+            ),
             star: adw::SplitButton::builder()
                 .icon_name("penguin-mail-flag-outline-symbolic")
-                .tooltip_text("Flag (Ctrl+Shift+L)")
-                .dropdown_tooltip("Flag Color")
+                .tooltip_text(gettext("Flag (Ctrl+Shift+L)"))
+                .dropdown_tooltip(gettext("Flag Color"))
                 .popover(&flag_colors())
                 .build(),
-            reply: button("mail-reply-sender-symbolic", "Reply (Ctrl+R)"),
-            reply_all: button("mail-reply-all-symbolic", "Reply All (Ctrl+Shift+R)"),
-            forward: button("mail-forward-symbolic", "Forward (Ctrl+Shift+F)"),
+            reply: button("mail-reply-sender-symbolic", gettext("Reply (Ctrl+R)")),
+            reply_all: button(
+                "mail-reply-all-symbolic",
+                gettext("Reply All (Ctrl+Shift+R)"),
+            ),
+            forward: button("mail-forward-symbolic", gettext("Forward (Ctrl+Shift+F)")),
             edit: gtk::Button::builder()
-                .label("Edit Draft")
+                .label(gettext("Edit Draft"))
                 .css_classes(["suggested-action"])
                 .visible(false)
                 .build(),
             more: gtk::MenuButton::builder()
                 .icon_name("view-more-symbolic")
-                .tooltip_text("More Actions")
+                .tooltip_text(gettext("More Actions"))
                 .visible(false)
                 .build(),
         };
         let more = gio::Menu::new();
         let replies = gio::Menu::new();
-        replies.append(Some("Reply All"), Some("win.reply-all"));
-        replies.append(Some("Forward"), Some("win.forward"));
+        replies.append(Some(&gettext("Reply All")), Some("win.reply-all"));
+        replies.append(Some(&gettext("Forward")), Some("win.forward"));
         more.append_section(None, &replies);
         let marks = gio::Menu::new();
-        marks.append(Some("Flag or Unflag"), Some("win.toggle-star"));
-        marks.append(Some("Mark Read or Unread"), Some("win.toggle-read"));
-        marks.append(Some("Mute"), Some("win.mute"));
-        marks.append(Some("Junk"), Some("win.junk"));
-        marks.append(Some("Labels…"), Some("win.label"));
+        marks.append(Some(&gettext("Flag or Unflag")), Some("win.toggle-star"));
+        marks.append(
+            Some(&gettext("Mark Read or Unread")),
+            Some("win.toggle-read"),
+        );
+        marks.append(Some(&gettext("Mute")), Some("win.mute"));
+        marks.append(Some(&gettext("Junk")), Some("win.junk"));
+        marks.append(Some(&gettext("Labels…")), Some("win.label"));
         let remind_menu = gio::Menu::new();
-        marks.append_submenu(Some("Remind Me"), &remind_menu);
+        marks.append_submenu(Some(&gettext("Remind Me")), &remind_menu);
         // Shown only in the Follow Up mailbox, where the action is enabled.
-        let dismiss = gio::MenuItem::new(Some("Dismiss Follow-Up"), Some("win.dismiss-follow-up"));
+        let dismiss = gio::MenuItem::new(
+            Some(&gettext("Dismiss Follow-Up")),
+            Some("win.dismiss-follow-up"),
+        );
         dismiss.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
         marks.append_item(&dismiss);
         more.append_section(None, &marks);
         let views = gio::Menu::new();
-        views.append(Some("Open in New Window"), Some("win.open-window"));
-        views.append(Some("Print…"), Some("win.print"));
-        views.append(Some("View Source"), Some("win.view-source"));
-        views.append(Some("Export…"), Some("win.export"));
+        views.append(
+            Some(&gettext("Open in New Window")),
+            Some("win.open-window"),
+        );
+        views.append(Some(&gettext("Print…")), Some("win.print"));
+        views.append(Some(&gettext("View Source")), Some("win.view-source"));
+        views.append(Some(&gettext("Export…")), Some("win.export"));
         more.append_section(None, &views);
         let sender = gio::Menu::new();
-        sender.append(Some("Add Sender to VIPs"), Some("win.toggle-vip"));
-        sender.append(Some("Unsubscribe…"), Some("win.unsubscribe"));
-        sender.append(Some("Always Load Images…"), Some("win.always-load-images"));
-        sender.append(Some("Block Sender…"), Some("win.block-sender"));
+        sender.append(Some(&gettext("Add Sender to VIPs")), Some("win.toggle-vip"));
+        sender.append(Some(&gettext("Unsubscribe…")), Some("win.unsubscribe"));
+        sender.append(
+            Some(&gettext("Always Load Images…")),
+            Some("win.always-load-images"),
+        );
+        sender.append(Some(&gettext("Block Sender…")), Some("win.block-sender"));
         let categories = gio::Menu::new();
-        for (name, key) in [
-            ("Primary", "primary"),
-            ("Updates", "updates"),
-            ("Promotions", "promotions"),
-            ("Social", "social"),
-        ] {
-            let item = gio::MenuItem::new(Some(name), None);
+        // The key is Gmail's own name for the category and stays as it is.
+        for category in Category::ALL.iter().filter(|c| **c != Category::All) {
+            let item = gio::MenuItem::new(Some(&category.name()), None);
             item.set_action_and_target_value(
                 Some("win.categorize-sender"),
-                Some(&key.to_variant()),
+                Some(&category.key().to_variant()),
             );
             categories.append_item(&item);
         }
-        sender.append_submenu(Some("Categorize Sender"), &categories);
+        sender.append_submenu(Some(&gettext("Categorize Sender")), &categories);
         more.append_section(None, &sender);
         buttons.more.set_menu_model(Some(&more));
         let sender_menu = sender.clone();
@@ -418,7 +439,7 @@ impl ConversationView {
             .build();
         let label_button = gtk::MenuButton::builder()
             .icon_name("penguin-mail-tag-symbolic")
-            .tooltip_text("Labels (L)")
+            .tooltip_text(gettext("Labels (L)"))
             .build();
         for widget in [
             buttons.archive.upcast_ref::<gtk::Widget>(),
@@ -443,7 +464,7 @@ impl ConversationView {
         toolbar.add_top_bar(&header);
         toolbar.set_content(Some(&stack));
         let page = adw::NavigationPage::builder()
-            .title("Conversation")
+            .title(gettext("Conversation"))
             .tag("thread")
             .child(&toolbar)
             .build();
@@ -576,10 +597,10 @@ impl ConversationView {
         self.sender_menu.remove(0);
         self.sender_menu.insert(
             0,
-            Some(if vip {
-                "Remove Sender from VIPs"
+            Some(&if vip {
+                gettext("Remove Sender from VIPs")
             } else {
-                "Add Sender to VIPs"
+                gettext("Add Sender to VIPs")
             }),
             Some("win.toggle-vip"),
         );
@@ -591,7 +612,11 @@ impl ConversationView {
         self.mark_menu.remove(2);
         self.mark_menu.insert(
             2,
-            Some(if muted { "Unmute" } else { "Mute" }),
+            Some(&if muted {
+                gettext("Unmute")
+            } else {
+                gettext("Mute")
+            }),
             Some("win.mute"),
         );
     }
@@ -621,24 +646,27 @@ impl ConversationView {
     /// Trash, trash erases the mail; in Junk, junk marks it as not junk.
     pub fn set_folder(&self, folder: Option<Folder>) {
         let (trash_icon, trash_tip) = match folder {
-            Some(Folder::Trash) => ("edit-delete-symbolic", "Delete Forever (Delete)"),
-            _ => ("user-trash-symbolic", "Move to Trash (Delete)"),
+            Some(Folder::Trash) => ("edit-delete-symbolic", gettext("Delete Forever (Delete)")),
+            _ => ("user-trash-symbolic", gettext("Move to Trash (Delete)")),
         };
         self.buttons.trash.set_icon_name(trash_icon);
-        self.buttons.trash.set_tooltip_text(Some(trash_tip));
+        self.buttons.trash.set_tooltip_text(Some(&trash_tip));
         let (junk_icon, junk_tip) = match folder {
-            Some(Folder::Junk) => ("mail-mark-notjunk-symbolic", "Not Junk (Ctrl+Shift+J)"),
-            _ => ("mail-mark-junk-symbolic", "Junk (Ctrl+Shift+J)"),
+            Some(Folder::Junk) => (
+                "mail-mark-notjunk-symbolic",
+                gettext("Not Junk (Ctrl+Shift+J)"),
+            ),
+            _ => ("mail-mark-junk-symbolic", gettext("Junk (Ctrl+Shift+J)")),
         };
         self.buttons.junk.set_icon_name(junk_icon);
-        self.buttons.junk.set_tooltip_text(Some(junk_tip));
-        self.many_trash.set_label(match folder {
-            Some(Folder::Trash) => "Delete Forever",
-            _ => "Move to Trash",
+        self.buttons.junk.set_tooltip_text(Some(&junk_tip));
+        self.many_trash.set_label(&match folder {
+            Some(Folder::Trash) => gettext("Delete Forever"),
+            _ => gettext("Move to Trash"),
         });
-        self.many_junk.set_label(match folder {
-            Some(Folder::Junk) => "Not Junk",
-            _ => "Junk",
+        self.many_junk.set_label(&match folder {
+            Some(Folder::Junk) => gettext("Not Junk"),
+            _ => gettext("Junk"),
         });
     }
 
@@ -662,15 +690,21 @@ impl ConversationView {
         all_starred: bool,
         all_muted: bool,
     ) {
-        self.many_read.set_label(if any_unread {
-            "Mark as Read"
+        self.many_read.set_label(&if any_unread {
+            gettext("Mark as Read")
         } else {
-            "Mark as Unread"
+            gettext("Mark as Unread")
         });
-        self.many_star
-            .set_label(if all_starred { "Unflag" } else { "Flag" });
-        self.many_mute
-            .set_label(if all_muted { "Unmute" } else { "Mute" });
+        self.many_star.set_label(&if all_starred {
+            gettext("Unflag")
+        } else {
+            gettext("Flag")
+        });
+        self.many_mute.set_label(&if all_muted {
+            gettext("Unmute")
+        } else {
+            gettext("Mute")
+        });
         *self.open.borrow_mut() = None;
         let values = [("count", count.to_string())];
         let values: Vec<(&str, &str)> = values.iter().map(|(k, v)| (*k, v.as_str())).collect();
@@ -867,7 +901,7 @@ impl ConversationView {
         }
         self.remind.append_section(None, &presets);
         let custom = gio::Menu::new();
-        custom.append(Some("Choose a Time…"), Some("win.remind-custom"));
+        custom.append(Some(&gettext("Choose a Time…")), Some("win.remind-custom"));
         self.remind.append_section(None, &custom);
     }
 
@@ -899,10 +933,10 @@ impl ConversationView {
                 open.flag_color.unwrap_or(FlagColor::Red).as_str()
             ));
         }
-        star.set_tooltip_text(Some(if starred {
-            "Unflag (Ctrl+Shift+L)"
+        star.set_tooltip_text(Some(&if starred {
+            gettext("Unflag (Ctrl+Shift+L)")
         } else {
-            "Flag (Ctrl+Shift+L)"
+            gettext("Flag (Ctrl+Shift+L)")
         }));
         self.set_muted(open.muted());
         let unread = open.unread();
@@ -911,10 +945,10 @@ impl ConversationView {
         } else {
             "mail-unread-symbolic"
         });
-        self.buttons.read.set_tooltip_text(Some(if unread {
-            "Mark as Read (U)"
+        self.buttons.read.set_tooltip_text(Some(&if unread {
+            gettext("Mark as Read (U)")
         } else {
-            "Mark as Unread (U)"
+            gettext("Mark as Unread (U)")
         }));
     }
 
@@ -1008,10 +1042,12 @@ fn flag_colors() -> gtk::Popover {
     for color in FlagColor::ALL {
         let button = gtk::Button::builder()
             .icon_name("penguin-mail-flag-symbolic")
-            .tooltip_text(format!(
-                "{} (Ctrl+Alt+{})",
-                color.name(),
-                color_index(color) + 1
+            .tooltip_text(fill(
+                &gettext("{color} (Ctrl+Alt+{number})"),
+                &[
+                    ("color", &color.name()),
+                    ("number", &(color_index(color) + 1).to_string()),
+                ],
             ))
             .action_name("win.flag-color")
             .action_target(&color.as_str().to_variant())
@@ -1020,7 +1056,7 @@ fn flag_colors() -> gtk::Popover {
         row.append(&button);
     }
     let clear = gtk::Button::builder()
-        .label("Clear Flag")
+        .label(gettext("Clear Flag"))
         .action_name("win.flag-color")
         .action_target(&"none".to_variant())
         .css_classes(["flat"])

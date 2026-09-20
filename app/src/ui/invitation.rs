@@ -14,6 +14,7 @@ use mailrs_domain::invitation::{Answer, Invitation, Method};
 use mailrs_sync::Change;
 
 use crate::format::{event_moved_from, event_tile, event_when};
+use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 /// What the card asks the window to do.
 pub enum Action {
@@ -132,7 +133,7 @@ impl EventCard {
             buttons.push((answer, button));
         }
         let add = gtk::Button::builder()
-            .label("Add to Calendar")
+            .label(gettext("Add to Calendar"))
             .css_classes(["flat"])
             .build();
         let actions = gtk::Box::builder().spacing(8).margin_top(6).build();
@@ -240,10 +241,10 @@ impl EventCard {
     fn draw(&self, showing: &Showing) {
         let now = Local::now();
         let event = &showing.invitation;
-        self.title.set_text(if event.summary.is_empty() {
-            "Untitled event"
+        self.title.set_text(&if event.summary.is_empty() {
+            gettext("Untitled event")
         } else {
-            &event.summary
+            event.summary.clone()
         });
         match &event.when {
             Some(when) => {
@@ -312,7 +313,7 @@ impl EventCard {
                 .css_classes(["dim-label", "caption"])
                 .label(match guest.answer {
                     Some(answer) => answer.said(),
-                    None => "No reply yet",
+                    None => gettext("No reply yet"),
                 })
                 .build();
             row.append(&name);
@@ -325,9 +326,13 @@ impl EventCard {
 /// "Invitation from Priya Raman", or nothing when the organizer is missing.
 fn organizer_line(event: &Invitation) -> Option<String> {
     let who = event.organizer.as_ref()?;
+    let values = [("organizer", who.display())];
     Some(match event.method {
-        Method::Reply => format!("Reply to the invitation from {}", who.display()),
-        _ => format!("Invitation from {}", who.display()),
+        Method::Reply => fill(
+            &gettext("Reply to the invitation from {organizer}"),
+            &values,
+        ),
+        _ => fill(&gettext("Invitation from {organizer}"), &values),
     })
 }
 
@@ -347,7 +352,7 @@ fn attending(showing: &Showing) -> Vec<Attending> {
             let mine = me.as_deref() == Some(guest.who.email.as_str());
             Attending {
                 name: if mine {
-                    "You".to_string()
+                    gettext("You")
                 } else {
                     guest.who.display().to_string()
                 },
@@ -364,36 +369,69 @@ fn attending(showing: &Showing) -> Vec<Attending> {
 /// "4 guests · 2 yes, 1 maybe, 1 awaiting".
 fn guest_summary(guests: &[Attending]) -> String {
     let count = |wanted: Option<Answer>| guests.iter().filter(|g| g.answer == wanted).count();
-    let mut parts = Vec::new();
-    for (answer, word) in [
-        (Answer::Yes, "yes"),
-        (Answer::No, "no"),
-        (Answer::Maybe, "maybe"),
-    ] {
-        let n = count(Some(answer));
-        if n > 0 {
-            parts.push(format!("{n} {word}"));
-        }
-    }
+    let (yes, no, maybe) = (
+        count(Some(Answer::Yes)),
+        count(Some(Answer::No)),
+        count(Some(Answer::Maybe)),
+    );
     let waiting = count(None);
-    if waiting > 0 {
-        parts.push(format!("{waiting} awaiting"));
+    let mut parts = Vec::new();
+    if yes > 0 {
+        parts.push(fill_plural(
+            "{count} yes",
+            "{count} yes",
+            yes,
+            &[("count", &yes.to_string())],
+        ));
     }
-    let noun = if guests.len() == 1 { "guest" } else { "guests" };
-    format!("{} {noun} · {}", guests.len(), parts.join(", "))
+    if no > 0 {
+        parts.push(fill_plural(
+            "{count} no",
+            "{count} no",
+            no,
+            &[("count", &no.to_string())],
+        ));
+    }
+    if maybe > 0 {
+        parts.push(fill_plural(
+            "{count} maybe",
+            "{count} maybe",
+            maybe,
+            &[("count", &maybe.to_string())],
+        ));
+    }
+    if waiting > 0 {
+        parts.push(fill_plural(
+            "{count} awaiting",
+            "{count} awaiting",
+            waiting,
+            &[("count", &waiting.to_string())],
+        ));
+    }
+    let all = guests.len();
+    let counted = fill_plural(
+        "{count} guest",
+        "{count} guests",
+        all,
+        &[("count", &all.to_string())],
+    );
+    fill(
+        &gettext("{guests} · {answers}"),
+        &[("guests", &counted), ("answers", &parts.join(", "))],
+    )
 }
 
 /// The line above the card: what this message does to an event the user
 /// already has, or that the organizer called it off.
 fn news(showing: &Showing, now: chrono::DateTime<Local>) -> Option<String> {
     match showing.change {
-        Some(Change::Moved { was, all_day }) => Some(format!(
-            "This meeting moved from {}",
-            event_moved_from(was, all_day, now)
+        Some(Change::Moved { was, all_day }) => Some(fill(
+            &gettext("This meeting moved from {when}"),
+            &[("when", &event_moved_from(was, all_day, now))],
         )),
-        Some(Change::Updated) => Some("The organizer changed this meeting".into()),
-        Some(Change::Cancelled) => Some("The organizer canceled this meeting".into()),
-        None if showing.invitation.cancelled() => Some("This meeting is canceled".into()),
+        Some(Change::Updated) => Some(gettext("The organizer changed this meeting")),
+        Some(Change::Cancelled) => Some(gettext("The organizer canceled this meeting")),
+        None if showing.invitation.cancelled() => Some(gettext("This meeting is canceled")),
         None if showing.invitation.method == Method::Reply => None,
         None => None,
     }

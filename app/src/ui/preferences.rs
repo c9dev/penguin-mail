@@ -15,6 +15,7 @@ use crate::language;
 use crate::settings::{
     CACHE_CHOICES, Change, Choice, POLL_CHOICES, Settings, WINDOW_CHOICES, nearest,
 };
+use mailrs_domain::translate::{fill, gettext};
 
 /// Shows Preferences. With `signature_of`, opens on that account's signature.
 pub fn present(
@@ -443,13 +444,13 @@ fn protection_group(
                 Err(err) => certificates.set_subtitle(&format!("gpgsm could not be asked: {err}")),
             }
         }
-        filling.set_description(Some(&format!(
-            "Penguin Mail signs and encrypts through {}, which holds your keys and asks for \
-             your passphrase itself.",
-            crate::pgp::joined(
-                &programs.iter().map(String::as_str).collect::<Vec<_>>(),
-                "and"
-            )
+        let named = crate::pgp::joined(&programs.iter().map(String::as_str).collect::<Vec<_>>());
+        filling.set_description(Some(&fill(
+            &gettext(
+                "Penguin Mail signs and encrypts through {programs}, which holds your \
+                 keys and asks for your passphrase itself.",
+            ),
+            &[("programs", &named)],
         )));
     });
     Some(group)

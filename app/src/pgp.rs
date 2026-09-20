@@ -9,6 +9,7 @@
 use std::process::Command;
 
 use mail_parser::{MessageParser, MimeHeaders};
+use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{MessageBody, Protection};
 use mailrs_gmail::body::decode_charset;
 use mailrs_pgp::{Pgp, PgpError, Recipient, Signature, Trust, Verdict, inline};
@@ -138,14 +139,19 @@ pub fn version(pgp: &Pgp) -> Option<String> {
 /// `smime::encrypting` answers that before either of these runs.
 pub fn cannot_encrypt(held: &[Recipient]) -> Option<String> {
     if held.is_empty() {
-        return Some("Add a recipient whose key gpg holds.".into());
+        return Some(gettext("Add a recipient whose key gpg holds."));
     }
     let missing: Vec<&str> = held
         .iter()
         .filter(|recipient| recipient.key.is_none())
         .map(|recipient| recipient.address.as_str())
         .collect();
-    (!missing.is_empty()).then(|| format!("gpg holds no key for {}.", listed(&missing)))
+    (!missing.is_empty()).then(|| {
+        fill(
+            &gettext("gpg holds no key for {addresses}."),
+            &[("addresses", &listed(&missing))],
+        )
+    })
 }
 
 /// What Preferences says about the addresses this person sends from:
@@ -159,12 +165,14 @@ pub fn own_keys(held: &[Recipient]) -> String {
     };
     let (mine, missing) = (addresses(true), addresses(false));
     match (mine.as_slice(), missing.as_slice()) {
-        ([], _) => "gpg holds no key for any of the addresses you send from.".into(),
-        (mine, []) => format!("gpg holds a key for {}.", joined(mine, "and")),
-        (mine, missing) => format!(
-            "gpg holds a key for {}, and none for {}.",
-            joined(mine, "and"),
-            joined(missing, "and")
+        ([], _) => gettext("gpg holds no key for any of the addresses you send from."),
+        (mine, []) => fill(
+            &gettext("gpg holds a key for {addresses}."),
+            &[("addresses", &joined(mine))],
+        ),
+        (mine, missing) => fill(
+            &gettext("gpg holds a key for {addresses}, and none for {without}."),
+            &[("addresses", &joined(mine)), ("without", &joined(missing))],
         ),
     }
 }
@@ -195,49 +203,70 @@ pub(crate) fn wrapper_parts(raw: &[u8]) -> Option<(&[u8], &[u8])> {
 /// title carries the one and the line under it the other.
 fn signed(signature: &Signature) -> Mark {
     let who = signer(signature);
+    let signer_values = [("signer", who.as_str())];
     match signature.verdict {
         Verdict::Good => Mark {
-            title: format!("Signed by {who}"),
-            detail: Some(vouching(signature.trust).into()),
+            title: fill(&gettext("Signed by {signer}"), &signer_values),
+            detail: Some(vouching(signature.trust)),
             tone: match signature.trust {
                 Trust::Never => Tone::Bad,
                 _ => Tone::Good,
             },
         },
         Verdict::Bad => Mark {
-            title: "This message changed after it was signed".into(),
-            detail: Some(format!(
-                "The signature of {who} does not match what arrived."
+            title: gettext("This message changed after it was signed"),
+            detail: Some(fill(
+                &gettext("The signature of {signer} does not match what arrived."),
+                &signer_values,
             )),
             tone: Tone::Bad,
         },
         Verdict::ExpiredKey => Mark {
-            title: format!("Signed by {who}, whose key has expired"),
-            detail: Some("The text is as it was written, and the key behind it ran out.".into()),
+            title: fill(
+                &gettext("Signed by {signer}, whose key has expired"),
+                &signer_values,
+            ),
+            detail: Some(gettext(
+                "The text is as it was written, and the key behind it ran out.",
+            )),
             tone: Tone::Unchecked,
         },
         Verdict::RevokedKey => Mark {
-            title: format!("Signed by {who}, who took this key back"),
-            detail: Some("The owner revoked it, so it says nothing about who wrote this.".into()),
+            title: fill(
+                &gettext("Signed by {signer}, who took this key back"),
+                &signer_values,
+            ),
+            detail: Some(gettext(
+                "The owner revoked it, so it says nothing about who wrote this.",
+            )),
             tone: Tone::Bad,
         },
         Verdict::Expired => Mark {
-            title: format!("Signed by {who}, and the signature has run out"),
-            detail: Some(
-                "It carried a date to stop being good on, and that date has passed.".into(),
+            title: fill(
+                &gettext("Signed by {signer}, and the signature has run out"),
+                &signer_values,
             ),
+            detail: Some(gettext(
+                "It carried a date to stop being good on, and that date has passed.",
+            )),
             tone: Tone::Unchecked,
         },
         Verdict::NoKey => Mark {
-            title: "Signed by a key this computer does not hold".into(),
-            detail: Some(format!(
-                "Nothing here can check it. Ask gpg for key {}.",
-                signature.key_id.as_deref().unwrap_or("it names")
+            title: gettext("Signed by a key this computer does not hold"),
+            detail: Some(fill(
+                &gettext("Nothing here can check it. Ask gpg for key {key}."),
+                &[(
+                    "key",
+                    &signature
+                        .key_id
+                        .clone()
+                        .unwrap_or_else(|| gettext("it names")),
+                )],
             )),
             tone: Tone::Unchecked,
         },
         Verdict::Unchecked => Mark {
-            title: "gpg could not check this signature".into(),
+            title: gettext("gpg could not check this signature"),
             detail: None,
             tone: Tone::Unchecked,
         },
@@ -251,8 +280,11 @@ fn signed(signature: &Signature) -> Mark {
 fn encrypted(signature: Option<&Signature>, files: usize) -> Mark {
     let mut mark = match signature {
         Some(signature) if signature.verdict == Verdict::Good => Mark {
-            title: format!("Encrypted, and signed by {}", signer(signature)),
-            detail: Some(vouching(signature.trust).into()),
+            title: fill(
+                &gettext("Encrypted, and signed by {signer}"),
+                &[("signer", &signer(signature))],
+            ),
+            detail: Some(vouching(signature.trust)),
             tone: match signature.trust {
                 Trust::Never => Tone::Bad,
                 _ => Tone::Good,
@@ -261,19 +293,24 @@ fn encrypted(signature: Option<&Signature>, files: usize) -> Mark {
         Some(signature) => {
             let found = signed(signature);
             Mark {
-                title: format!("Encrypted. {}", found.title),
+                title: fill(&gettext("Encrypted. {what}"), &[("what", &found.title)]),
                 ..found
             }
         }
         None => Mark {
-            title: "This message arrived encrypted".into(),
-            detail: Some("Nobody signed it, so it says nothing about who sent it.".into()),
+            title: gettext("This message arrived encrypted"),
+            detail: Some(gettext(
+                "Nobody signed it, so it says nothing about who sent it.",
+            )),
             tone: Tone::Unchecked,
         },
     };
     if let Some(line) = files_line(files) {
         mark.detail = Some(match mark.detail {
-            Some(detail) => format!("{detail} {line}"),
+            Some(detail) => fill(
+                &gettext("{detail} {files}"),
+                &[("detail", &detail), ("files", &line)],
+            ),
             None => line,
         });
     }
@@ -284,13 +321,15 @@ fn encrypted(signature: Option<&Signature>, files: usize) -> Mark {
 fn refused(err: &PgpError) -> Mark {
     match err {
         PgpError::NotForYou => Mark {
-            title: "This message is encrypted to a key you do not hold".into(),
-            detail: Some("Whoever sent it used a key gpg has no secret half of.".into()),
+            title: gettext("This message is encrypted to a key you do not hold"),
+            detail: Some(gettext(
+                "Whoever sent it used a key gpg has no secret half of.",
+            )),
             tone: Tone::Unchecked,
         },
         PgpError::NotPgp => unreadable(),
         other => Mark {
-            title: "gpg could not open this message".into(),
+            title: gettext("gpg could not open this message"),
             detail: Some(other.to_string()),
             tone: Tone::Unchecked,
         },
@@ -301,8 +340,10 @@ fn refused(err: &PgpError) -> Mark {
 /// says they are.
 fn unreadable() -> Mark {
     Mark {
-        title: "This message says it is OpenPGP and is not".into(),
-        detail: Some("Its parts are not where a signed or encrypted message keeps them.".into()),
+        title: gettext("This message says it is OpenPGP and is not"),
+        detail: Some(gettext(
+            "Its parts are not where a signed or encrypted message keeps them.",
+        )),
         tone: Tone::Unchecked,
     }
 }
@@ -315,9 +356,12 @@ fn unreadable() -> Mark {
 pub(crate) fn files_line(files: usize) -> Option<String> {
     match files {
         0 => None,
-        1 => Some("It carries a file, kept in this window only.".into()),
-        many => Some(format!(
-            "It carries {many} files, kept in this window only."
+        1 => Some(gettext("It carries a file, kept in this window only.")),
+        count => Some(fill_plural(
+            "It carries {count} file, kept in this window only.",
+            "It carries {count} files, kept in this window only.",
+            count,
+            &[("count", &count.to_string())],
         )),
     }
 }
@@ -325,13 +369,13 @@ pub(crate) fn files_line(files: usize) -> Option<String> {
 /// How far the trust database vouches for the key's owner, said plainly.
 /// A key nobody has vouched for still signs; the two are separate answers
 /// and running them together tells people the wrong thing.
-fn vouching(trust: Trust) -> &'static str {
+fn vouching(trust: Trust) -> String {
     match trust {
-        Trust::Ultimate => "This is one of your own keys.",
-        Trust::Full => "You have vouched for this key.",
-        Trust::Marginal => "People you trust have vouched for this key.",
-        Trust::Unknown => "Nobody has vouched for this key, so it names no one.",
-        Trust::Never => "You marked this key as one not to trust.",
+        Trust::Ultimate => gettext("This is one of your own keys."),
+        Trust::Full => gettext("You have vouched for this key."),
+        Trust::Marginal => gettext("People you trust have vouched for this key."),
+        Trust::Unknown => gettext("Nobody has vouched for this key, so it names no one."),
+        Trust::Never => gettext("You marked this key as one not to trust."),
     }
 }
 
@@ -340,8 +384,8 @@ fn vouching(trust: Trust) -> &'static str {
 fn signer(signature: &Signature) -> String {
     match (&signature.signer, &signature.key_id) {
         (Some(signer), _) => signer.clone(),
-        (None, Some(key_id)) => format!("key {key_id}"),
-        (None, None) => "a key gpg would not name".into(),
+        (None, Some(key_id)) => fill(&gettext("key {key}"), &[("key", key_id)]),
+        (None, None) => gettext("a key gpg would not name"),
     }
 }
 
@@ -403,14 +447,25 @@ pub(crate) fn mark_only(mark: Mark) -> Read {
 /// "ann@example.com", "ann@example.com or bo@example.com", and with more
 /// than two, commas until the last.
 pub(crate) fn listed(names: &[&str]) -> String {
-    joined(names, "or")
-}
-
-pub(crate) fn joined(names: &[&str], last_word: &str) -> String {
     match names {
         [] => String::new(),
         [one] => (*one).to_string(),
-        [rest @ .., last] => format!("{} {last_word} {last}", rest.join(", ")),
+        [rest @ .., last] => fill(
+            &gettext("{names} or {last}"),
+            &[("names", &rest.join(", ")), ("last", last)],
+        ),
+    }
+}
+
+/// The same list, for a sentence that wants "and" between the last two.
+pub(crate) fn joined(names: &[&str]) -> String {
+    match names {
+        [] => String::new(),
+        [one] => (*one).to_string(),
+        [rest @ .., last] => fill(
+            &gettext("{names} and {last}"),
+            &[("names", &rest.join(", ")), ("last", last)],
+        ),
     }
 }
 

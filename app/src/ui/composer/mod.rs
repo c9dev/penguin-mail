@@ -1035,9 +1035,9 @@ impl Composer {
             self.encrypting_with.set(standard);
         }
         self.encrypt.set_sensitive(choice.is_ok());
-        self.encrypt.set_tooltip_text(Some(match &choice {
+        self.encrypt.set_tooltip_text(Some(&match &choice {
             Ok(standard) => smime::encrypting_with(*standard),
-            Err(problem) => problem.as_str(),
+            Err(problem) => problem.clone(),
         }));
         self.filling_keys.set(true);
         if choice.is_err() {

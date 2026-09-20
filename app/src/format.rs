@@ -1,8 +1,13 @@
 //! Text for the UI: dates, sizes, initials, and colours.
+//!
+//! A date pattern is translated whole, so a language that puts the time
+//! before the day can. The names chrono writes into `%A`, `%a`, `%b` and
+//! `%B` stay English whatever the locale says, which is a gap worth
+//! closing the day this reaches for a locale-aware formatter.
 
 use chrono::{DateTime, Datelike, Local, NaiveDate, TimeZone, Timelike};
 use mailrs_domain::invitation::When;
-use mailrs_domain::translate::gettext;
+use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{AccountId, EpochMillis};
 
 /// Accent colours from the libadwaita palette.
@@ -23,13 +28,14 @@ pub fn relative_date(ts: EpochMillis, now: DateTime<Local>) -> String {
         return String::new();
     };
     let days = (now.date_naive() - when.date_naive()).num_days();
-    match days {
-        ..=0 => when.format("%H:%M").to_string(),
-        1 => "Yesterday".into(),
-        2..=6 => when.format("%A").to_string(),
-        _ if when.year() == now.year() => when.format("%-d %b").to_string(),
-        _ => when.format("%Y-%m-%d").to_string(),
-    }
+    let pattern = match days {
+        ..=0 => gettext("%H:%M"),
+        1 => return gettext("Yesterday"),
+        2..=6 => gettext("%A"),
+        _ if when.year() == now.year() => gettext("%-d %b"),
+        _ => gettext("%Y-%m-%d"),
+    };
+    when.format(&pattern).to_string()
 }
 
 /// A date for message headers: "Today at 10:12", "Yesterday at 14:50",
@@ -38,18 +44,19 @@ pub fn header_date(ts: EpochMillis, now: DateTime<Local>) -> String {
     let Some(when) = local(ts) else {
         return String::new();
     };
-    match (now.date_naive() - when.date_naive()).num_days() {
-        ..=0 => when.format("Today at %H:%M").to_string(),
-        1 => when.format("Yesterday at %H:%M").to_string(),
-        _ if when.year() == now.year() => when.format("%a %-d %b at %H:%M").to_string(),
-        _ => when.format("%-d %b %Y").to_string(),
-    }
+    let pattern = match (now.date_naive() - when.date_naive()).num_days() {
+        ..=0 => gettext("Today at %H:%M"),
+        1 => gettext("Yesterday at %H:%M"),
+        _ if when.year() == now.year() => gettext("%a %-d %b at %H:%M"),
+        _ => gettext("%-d %b %Y"),
+    };
+    when.format(&pattern).to_string()
 }
 
 /// A long date for reply attributions and forwarded headers.
 pub fn full_date(ts: EpochMillis) -> String {
     local(ts)
-        .map(|when| when.format("%A, %-d %B %Y at %H:%M").to_string())
+        .map(|when| when.format(&gettext("%A, %-d %B %Y at %H:%M")).to_string())
         .unwrap_or_default()
 }
 
@@ -59,13 +66,14 @@ pub fn future_date(ts: EpochMillis, now: DateTime<Local>) -> String {
     let Some(when) = local(ts) else {
         return String::new();
     };
-    match (when.date_naive() - now.date_naive()).num_days() {
-        ..=0 => when.format("today at %H:%M").to_string(),
-        1 => when.format("tomorrow at %H:%M").to_string(),
-        2..=6 => when.format("%A at %H:%M").to_string(),
-        _ if when.year() == now.year() => when.format("%a %-d %b at %H:%M").to_string(),
-        _ => when.format("%-d %b %Y at %H:%M").to_string(),
-    }
+    let pattern = match (when.date_naive() - now.date_naive()).num_days() {
+        ..=0 => gettext("today at %H:%M"),
+        1 => gettext("tomorrow at %H:%M"),
+        2..=6 => gettext("%A at %H:%M"),
+        _ if when.year() == now.year() => gettext("%a %-d %b at %H:%M"),
+        _ => gettext("%-d %b %Y at %H:%M"),
+    };
+    when.format(&pattern).to_string()
 }
 
 /// Apple Mail's Send Later presets: tonight at 21:00 while there is time,
@@ -73,14 +81,14 @@ pub fn future_date(ts: EpochMillis, now: DateTime<Local>) -> String {
 pub fn send_later_presets(now: DateTime<Local>) -> Vec<(String, EpochMillis)> {
     later_presets(now)
         .into_iter()
-        .map(|(label, at)| (format!("Send {label}"), at))
+        .map(|(label, at)| (fill(&gettext("Send {when}"), &[("when", &label)]), at))
         .collect()
 }
 
 /// Remind Me's presets: an hour from now, then the Send Later times.
 pub fn remind_presets(now: DateTime<Local>) -> Vec<(String, EpochMillis)> {
     let mut presets = vec![(
-        "In 1 Hour".to_string(),
+        gettext("In 1 Hour"),
         now.timestamp_millis() + 60 * 60 * 1000,
     )];
     presets.extend(later_presets(now));
@@ -100,18 +108,18 @@ fn later_presets(now: DateTime<Local>) -> Vec<(String, EpochMillis)> {
     if now.hour() < 20
         && let Some(ts) = at(today, 21)
     {
-        presets.push(("Tonight at 21:00".to_string(), ts));
+        presets.push((gettext("Tonight at 21:00"), ts));
     }
     let tomorrow = today + chrono::Days::new(1);
     if let Some(ts) = at(tomorrow, 8) {
-        presets.push(("Tomorrow at 08:00".to_string(), ts));
+        presets.push((gettext("Tomorrow at 08:00"), ts));
     }
     let to_monday = (7 - today.weekday().num_days_from_monday()) % 7;
     let monday = today + chrono::Days::new(if to_monday == 0 { 7 } else { to_monday as u64 });
     if monday != tomorrow
         && let Some(ts) = at(monday, 8)
     {
-        presets.push(("Monday at 08:00".to_string(), ts));
+        presets.push((gettext("Monday at 08:00"), ts));
     }
     presets
 }
@@ -121,31 +129,44 @@ fn later_presets(now: DateTime<Local>) -> Vec<(String, EpochMillis)> {
 /// weekday, since that is how people talk about one.
 pub fn event_when(when: &When, now: DateTime<Local>) -> String {
     match when {
-        When::Days { first, last } if first == last => {
-            format!("{} · All day", event_day(*first, now))
-        }
-        When::Days { first, last } => format!(
-            "{} to {} · All day",
-            span_start(*first, *last),
-            span_end(*last, now)
+        When::Days { first, last } if first == last => fill(
+            &gettext("{day} · All day"),
+            &[("day", &event_day(*first, now))],
+        ),
+        When::Days { first, last } => fill(
+            &gettext("{first} to {last} · All day"),
+            &[
+                ("first", &span_start(*first, *last)),
+                ("last", &span_end(*last, now)),
+            ],
         ),
         When::At { starts_at, ends_at } => {
             let Some(start) = local(*starts_at) else {
                 return String::new();
             };
             let day = event_day(start.date_naive(), now);
+            let from = start.format("%H:%M").to_string();
             match ends_at.and_then(local) {
-                None => format!("{day} · {}", start.format("%H:%M")),
-                // A meeting that runs past midnight names the day it ends on.
-                Some(end) if end.date_naive() != start.date_naive() => format!(
-                    "{day} · {} to {}",
-                    start.format("%H:%M"),
-                    end.format("%-d %b %H:%M")
+                None => fill(
+                    &gettext("{day} · {start}"),
+                    &[("day", &day), ("start", &from)],
                 ),
-                Some(end) => format!(
-                    "{day} · {} to {}",
-                    start.format("%H:%M"),
-                    end.format("%H:%M")
+                // A meeting that runs past midnight names the day it ends on.
+                Some(end) if end.date_naive() != start.date_naive() => fill(
+                    &gettext("{day} · {start} to {end}"),
+                    &[
+                        ("day", &day),
+                        ("start", &from),
+                        ("end", &end.format(&gettext("%-d %b %H:%M")).to_string()),
+                    ],
+                ),
+                Some(end) => fill(
+                    &gettext("{day} · {start} to {end}"),
+                    &[
+                        ("day", &day),
+                        ("start", &from),
+                        ("end", &end.format("%H:%M").to_string()),
+                    ],
                 ),
             }
         }
@@ -158,7 +179,7 @@ fn span_start(first: NaiveDate, last: NaiveDate) -> String {
     if first.month() == last.month() && first.year() == last.year() {
         first.format("%-d").to_string()
     } else {
-        first.format("%-d %B").to_string()
+        first.format(&gettext("%-d %B")).to_string()
     }
 }
 
@@ -166,23 +187,24 @@ fn span_start(first: NaiveDate, last: NaiveDate) -> String {
 /// in another one.
 fn span_end(last: NaiveDate, now: DateTime<Local>) -> String {
     if last.year() == now.year() {
-        last.format("%-d %B").to_string()
+        last.format(&gettext("%-d %B")).to_string()
     } else {
-        last.format("%-d %B %Y").to_string()
+        last.format(&gettext("%-d %B %Y")).to_string()
     }
 }
 
 /// The day an event falls on: "Today", "Tomorrow", a weekday within the
 /// week, then the date.
 fn event_day(day: NaiveDate, now: DateTime<Local>) -> String {
-    match (day - now.date_naive()).num_days() {
-        0 => "Today".into(),
-        1 => "Tomorrow".into(),
-        -1 => "Yesterday".into(),
-        2..=6 => day.format("%A").to_string(),
-        _ if day.year() == now.year() => day.format("%A, %-d %B").to_string(),
-        _ => day.format("%A, %-d %B %Y").to_string(),
-    }
+    let pattern = match (day - now.date_naive()).num_days() {
+        0 => return gettext("Today"),
+        1 => return gettext("Tomorrow"),
+        -1 => return gettext("Yesterday"),
+        2..=6 => gettext("%A"),
+        _ if day.year() == now.year() => gettext("%A, %-d %B"),
+        _ => gettext("%A, %-d %B %Y"),
+    };
+    day.format(&pattern).to_string()
 }
 
 /// The start an event had before it moved, for the line that says so:
@@ -195,7 +217,10 @@ pub fn event_moved_from(was: EpochMillis, all_day: bool, now: DateTime<Local>) -
     if all_day {
         day
     } else {
-        format!("{day} {}", start.format("%H:%M"))
+        fill(
+            &gettext("{day} {time}"),
+            &[("day", &day), ("time", &start.format("%H:%M").to_string())],
+        )
     }
 }
 

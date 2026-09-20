@@ -9,6 +9,7 @@ use mailrs_domain::{Address, MessageBody, MessageMeta};
 
 use crate::format::{color_for, header_date, human_size, initials};
 use crate::sanitize::sanitize_html;
+use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Theme {
@@ -65,16 +66,22 @@ pub fn render(conversation: &Conversation, theme: &Theme) -> String {
     );
     let _ = write!(html, "<style>{}</style></head><body>", page_css(theme));
     let subject = if conversation.subject.trim().is_empty() {
-        "(no subject)"
+        gettext("(no subject)")
     } else {
-        conversation.subject
+        conversation.subject.to_string()
     };
     let count = conversation.messages.len();
+    let many = fill_plural(
+        "{count} message",
+        "{count} messages",
+        count,
+        &[("count", &count.to_string())],
+    );
     let _ = write!(
         html,
-        "<header class=\"thread\"><h1>{}</h1><p>{count} message{}</p></header>",
-        escape(subject),
-        if count == 1 { "" } else { "s" }
+        "<header class=\"thread\"><h1>{}</h1><p>{}</p></header>",
+        escape(&subject),
+        escape(&many),
     );
     for view in &conversation.messages {
         render_message(&mut html, view, conversation.me, conversation.photos);
@@ -98,7 +105,7 @@ fn render_message(
     let unread = if meta.is_unread() { " unread" } else { "" };
     let (name, address) = match &meta.from {
         Some(from) => (from.display().to_string(), from.email.clone()),
-        None => ("Unknown sender".to_string(), String::new()),
+        None => (gettext("Unknown sender"), String::new()),
     };
     let photo = photos.get(address.trim().to_lowercase().as_str());
     // The whole header toggles the message, so the toggle is a layer
@@ -108,20 +115,24 @@ fn render_message(
     let _ = write!(
         html,
         "<article class=\"message {state}{unread}\" id=\"m-{id}\"><div class=\"header\">\
-         <a class=\"toggle\" href=\"mailrs:toggle/{id}\" aria-label=\"Show or hide this message\"></a>",
+         <a class=\"toggle\" href=\"mailrs:toggle/{id}\" aria-label=\"{toggle}\"></a>",
         id = escape(&meta.id),
+        toggle = escape(&gettext("Show or hide this message")),
     );
+    let contact = escape(&gettext("Contact"));
     match photo {
         Some(uri) => {
             let _ = write!(
                 html,
-                "<a class=\"avatar\" href=\"{card}\" title=\"Contact\"><img src=\"{uri}\" alt=\"\"></a>"
+                "<a class=\"avatar\" href=\"{card}\" title=\"{contact}\">\
+                 <img src=\"{uri}\" alt=\"\"></a>"
             );
         }
         None => {
             let _ = write!(
                 html,
-                "<a class=\"avatar\" href=\"{card}\" title=\"Contact\" style=\"background:{color}\">{initials}</a>",
+                "<a class=\"avatar\" href=\"{card}\" title=\"{contact}\" \
+                 style=\"background:{color}\">{initials}</a>",
                 color = color_for(if address.is_empty() { &name } else { &address }),
                 initials = escape(&initials(&name)),
             );
@@ -135,12 +146,16 @@ fn render_message(
     if !address.is_empty() && address != name {
         let _ = write!(html, "<span class=\"address\">{}</span>", escape(&address));
     }
+    let to = fill(
+        &gettext("to {recipients}"),
+        &[("recipients", &recipients(meta, me))],
+    );
     let _ = write!(
         html,
-        "</span><span class=\"date\">{}</span><span class=\"line to\">to {}</span>\
+        "</span><span class=\"date\">{}</span><span class=\"line to\">{}</span>\
          <span class=\"line snippet\">{}</span></div>",
         escape(&header_date(meta.date, chrono::Local::now())),
-        escape(&recipients(meta, me)),
+        escape(&to),
         escape(&meta.snippet)
     );
     render_body(html, view);
@@ -149,13 +164,19 @@ fn render_message(
 
 fn render_body(html: &mut String, view: &MessageView) {
     match &view.body {
-        BodyState::Loading => html.push_str("<div class=\"body status\">Loading…</div>"),
-        BodyState::Failed(reason) => {
+        BodyState::Loading => {
             let _ = write!(
                 html,
-                "<div class=\"body status\">This message could not be loaded: {}</div>",
-                escape(reason)
+                "<div class=\"body status\">{}</div>",
+                escape(&gettext("Loading…"))
             );
+        }
+        BodyState::Failed(reason) => {
+            let said = fill(
+                &gettext("This message could not be loaded: {reason}"),
+                &[("reason", reason)],
+            );
+            let _ = write!(html, "<div class=\"body status\">{}</div>", escape(&said));
         }
         BodyState::Loaded(body) => {
             if let Some(source) = body.html.as_deref().filter(|h| !h.trim().is_empty()) {
@@ -209,19 +230,30 @@ fn render_attachments(
         let _ = write!(
             html,
             "<span class=\"attachment\"><a class=\"open\" href=\"mailrs:preview/{id}/{index}\" \
-             title=\"Quick Look\">{face}<span class=\"file\">{}</span>\
+             title=\"{look}\">{face}<span class=\"file\">{}</span>\
              <span class=\"size\">{}</span></a>\
-             <a class=\"get\" href=\"mailrs:attachment/{id}/{index}\" title=\"Save to Downloads\"></a></span>",
+             <a class=\"get\" href=\"mailrs:attachment/{id}/{index}\" \
+             title=\"{save}\"></a></span>",
             escape(&attachment.filename),
-            human_size(attachment.size)
+            human_size(attachment.size),
+            look = escape(&gettext("Quick Look")),
+            save = escape(&gettext("Save to Downloads")),
         );
     }
     if listed.len() > 1 {
+        let count = listed.len();
+        let all = fill_plural(
+            "Save All ({count})",
+            "Save All ({count})",
+            count,
+            &[("count", &count.to_string())],
+        );
         let _ = write!(
             html,
             "<a class=\"attachment all\" href=\"mailrs:attachments/{id}\" \
-             title=\"Save every attachment to a folder\"><span class=\"file\">Save All ({})</span></a>",
-            listed.len()
+             title=\"{title}\"><span class=\"file\">{}</span></a>",
+            escape(&all),
+            title = escape(&gettext("Save every attachment to a folder")),
         );
     }
     html.push_str("</div>");
@@ -254,15 +286,23 @@ fn recipients(meta: &MessageMeta, me: &[String]) -> String {
         .map(|a| label(a, me))
         .collect();
     match names.len() {
-        0 => "undisclosed recipients".into(),
+        0 => gettext("undisclosed recipients"),
         1..=3 => names.join(", "),
-        n => format!("{}, and {} others", names[..2].join(", "), n - 2),
+        n => fill_plural(
+            "{named}, and {count} other",
+            "{named}, and {count} others",
+            n - 2,
+            &[
+                ("named", &names[..2].join(", ")),
+                ("count", &(n - 2).to_string()),
+            ],
+        ),
     }
 }
 
 fn label(address: &Address, me: &[String]) -> String {
     if me.iter().any(|m| m.eq_ignore_ascii_case(&address.email)) {
-        "me".into()
+        gettext("me")
     } else {
         address.display().to_string()
     }
