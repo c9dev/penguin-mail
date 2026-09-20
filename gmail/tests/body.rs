@@ -1,5 +1,6 @@
 use base64::Engine;
 use base64::engine::general_purpose::{URL_SAFE, URL_SAFE_NO_PAD};
+use mailrs_domain::Protection;
 use mailrs_gmail::body::{charset_param, extract_body};
 use mailrs_gmail::model::MessagePart;
 use serde_json::json;
@@ -175,4 +176,86 @@ fn the_two_readable_parts_never_count_as_attachments() {
         ]
     }));
     assert!(extract_body(&payload).attachments.is_empty());
+}
+
+#[test]
+fn a_signed_message_says_which_wrapper_it_arrived_in() {
+    let payload = part(json!({
+        "mimeType": "multipart/signed",
+        "headers": [{"name": "Content-Type", "value":
+            "multipart/signed; micalg=pgp-sha256; protocol=\"application/pgp-signature\"; boundary=b"}],
+        "parts": [
+            {"partId": "0", "mimeType": "text/plain", "body": {"data": b64(b"Meet at six.")}},
+            {"partId": "1", "mimeType": "application/pgp-signature", "filename": "signature.asc",
+             "body": {"attachmentId": "att-1", "size": 480}}
+        ]
+    }));
+    assert_eq!(extract_body(&payload).protection, Some(Protection::Signed));
+}
+
+#[test]
+fn an_encrypted_message_says_which_wrapper_it_arrived_in() {
+    let payload = part(json!({
+        "mimeType": "multipart/encrypted",
+        "headers": [{"name": "Content-Type", "value":
+            "multipart/encrypted; protocol=\"application/pgp-encrypted\"; boundary=b"}],
+        "parts": [
+            {"partId": "0", "mimeType": "application/pgp-encrypted",
+             "body": {"data": b64(b"Version: 1")}},
+            {"partId": "1", "mimeType": "application/octet-stream", "filename": "encrypted.asc",
+             "body": {"attachmentId": "att-1", "size": 900}}
+        ]
+    }));
+    assert_eq!(
+        extract_body(&payload).protection,
+        Some(Protection::Encrypted)
+    );
+}
+
+#[test]
+fn a_signature_that_is_not_openpgp_is_left_alone() {
+    let payload = part(json!({
+        "mimeType": "multipart/signed",
+        "headers": [{"name": "Content-Type", "value":
+            "multipart/signed; protocol=\"application/pkcs7-signature\"; boundary=b"}],
+        "parts": [
+            {"partId": "0", "mimeType": "text/plain", "body": {"data": b64(b"Meet at six.")}},
+            {"partId": "1", "mimeType": "application/pkcs7-signature", "filename": "smime.p7s",
+             "body": {"attachmentId": "att-1", "size": 480}}
+        ]
+    }));
+    assert_eq!(extract_body(&payload).protection, None);
+}
+
+#[test]
+fn a_sender_who_left_the_protocol_out_is_judged_by_its_parts() {
+    let payload = part(json!({
+        "mimeType": "multipart/signed",
+        "headers": [{"name": "Content-Type", "value": "multipart/signed; boundary=b"}],
+        "parts": [
+            {"partId": "0", "mimeType": "text/plain", "body": {"data": b64(b"Meet at six.")}},
+            {"partId": "1", "mimeType": "application/pgp-signature", "filename": "signature.asc",
+             "body": {"attachmentId": "att-1", "size": 480}}
+        ]
+    }));
+    assert_eq!(extract_body(&payload).protection, Some(Protection::Signed));
+}
+
+#[test]
+fn a_signed_message_somebody_forwarded_is_not_this_message() {
+    let payload = part(json!({
+        "mimeType": "multipart/mixed",
+        "parts": [
+            {"partId": "0", "mimeType": "text/plain", "body": {"data": b64(b"Look at this")}},
+            {"partId": "1", "mimeType": "multipart/signed",
+             "headers": [{"name": "Content-Type", "value":
+                "multipart/signed; protocol=\"application/pgp-signature\"; boundary=c"}],
+             "parts": [
+                {"partId": "1.0", "mimeType": "text/plain", "body": {"data": b64(b"Meet at six.")}},
+                {"partId": "1.1", "mimeType": "application/pgp-signature",
+                 "filename": "signature.asc", "body": {"attachmentId": "att-1", "size": 480}}
+             ]}
+        ]
+    }));
+    assert_eq!(extract_body(&payload).protection, None);
 }

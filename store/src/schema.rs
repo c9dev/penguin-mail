@@ -244,6 +244,11 @@ CREATE TABLE image_senders (
     allowed_at   INTEGER NOT NULL
 );
 "#,
+    // The OpenPGP wrapper a message arrived in, so a body read back from
+    // here says as much about the message as the one Gmail just handed over.
+    r#"
+ALTER TABLE bodies ADD COLUMN protection TEXT;
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,

@@ -1,6 +1,6 @@
 //! Message bodies, cached separately from metadata and evicted least recently read first.
 
-use mailrs_domain::{AccountId, Attachment, EpochMillis, MessageBody};
+use mailrs_domain::{AccountId, Attachment, EpochMillis, MessageBody, Protection};
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::Result;
@@ -17,12 +17,13 @@ pub fn put_body(
         body.html.as_ref().map_or(0, String::len) + body.text.as_ref().map_or(0, String::len);
     conn.execute(
         "INSERT INTO bodies (account_id, message_id, html, text, size, fetched_at, accessed_at, \
-         list_unsubscribe, one_click_unsubscribe, calendar) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6, ?7, ?8, ?9) \
+         list_unsubscribe, one_click_unsubscribe, calendar, protection) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6, ?7, ?8, ?9, ?10) \
          ON CONFLICT (account_id, message_id) DO UPDATE SET html = excluded.html, text = excluded.text, \
          size = excluded.size, fetched_at = excluded.fetched_at, accessed_at = excluded.accessed_at, \
          list_unsubscribe = excluded.list_unsubscribe, \
-         one_click_unsubscribe = excluded.one_click_unsubscribe, calendar = excluded.calendar",
+         one_click_unsubscribe = excluded.one_click_unsubscribe, calendar = excluded.calendar, \
+         protection = excluded.protection",
         params![
             account_id,
             message_id,
@@ -32,7 +33,8 @@ pub fn put_body(
             now,
             body.list_unsubscribe,
             body.one_click_unsubscribe,
-            body.calendar
+            body.calendar,
+            body.protection.map(Protection::as_str)
         ],
     )?;
     conn.execute(
@@ -88,11 +90,12 @@ pub fn peek_body(
         Option<String>,
         bool,
         Option<String>,
+        Option<String>,
     );
     let row: Option<BodyRow> = conn
         .query_row(
-            "SELECT html, text, list_unsubscribe, one_click_unsubscribe, calendar FROM bodies \
-             WHERE account_id = ?1 AND message_id = ?2",
+            "SELECT html, text, list_unsubscribe, one_click_unsubscribe, calendar, protection \
+             FROM bodies WHERE account_id = ?1 AND message_id = ?2",
             params![account_id, message_id],
             |row| {
                 Ok((
@@ -101,11 +104,13 @@ pub fn peek_body(
                     row.get(2)?,
                     row.get(3)?,
                     row.get(4)?,
+                    row.get(5)?,
                 ))
             },
         )
         .optional()?;
-    let Some((html, text, list_unsubscribe, one_click_unsubscribe, calendar)) = row else {
+    let Some((html, text, list_unsubscribe, one_click_unsubscribe, calendar, protection)) = row
+    else {
         return Ok(None);
     };
     let mut stmt = conn.prepare_cached(
@@ -131,6 +136,7 @@ pub fn peek_body(
         list_unsubscribe,
         one_click_unsubscribe,
         calendar,
+        protection: protection.and_then(|stored| stored.parse().ok()),
     }))
 }
 

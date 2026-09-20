@@ -3,7 +3,7 @@
 
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD_INDIFFERENT;
-use mailrs_domain::{Attachment, MessageBody};
+use mailrs_domain::{Attachment, MessageBody, Protection};
 
 use crate::convert::find_header;
 use crate::model::MessagePart;
@@ -16,6 +16,7 @@ pub fn extract_body(payload: &MessagePart) -> MessageBody {
         list_unsubscribe: find_header(payload, "List-Unsubscribe").map(|v| v.trim().to_string()),
         one_click_unsubscribe: find_header(payload, "List-Unsubscribe-Post")
             .is_some_and(|v| v.contains("One-Click")),
+        protection: protection(payload),
         ..MessageBody::default()
     };
     walk(payload, &mut body);
@@ -139,6 +140,29 @@ fn is_calendar(part: &MessagePart) -> bool {
         || part.filename.to_ascii_lowercase().ends_with(".ics")
 }
 
+/// Which OpenPGP wrapper the message arrived in, read off the top-level
+/// part alone. A signed part further down belongs to a message somebody
+/// forwarded, and whatever it was signed over is not this message.
+fn protection(payload: &MessagePart) -> Option<Protection> {
+    let mime = payload.mime_type.to_ascii_lowercase();
+    let (wrapper, protocol) = match mime.split(';').next().unwrap_or_default().trim() {
+        "multipart/signed" => (Protection::Signed, "application/pgp-signature"),
+        "multipart/encrypted" => (Protection::Encrypted, "application/pgp-encrypted"),
+        _ => return None,
+    };
+    // S/MIME uses the same two media types, so the protocol parameter is
+    // what tells the two apart. A sender who left it out is judged by the
+    // part that carries the OpenPGP instead.
+    match find_header(payload, "Content-Type").and_then(|value| param(value, "protocol")) {
+        Some(declared) => declared.eq_ignore_ascii_case(protocol).then_some(wrapper),
+        None => payload
+            .parts
+            .iter()
+            .any(|part| part.mime_type.eq_ignore_ascii_case(protocol))
+            .then_some(wrapper),
+    }
+}
+
 fn decode_text(part: &MessagePart) -> Option<String> {
     let data = part.body.data.as_deref()?;
     let bytes = URL_SAFE_NO_PAD_INDIFFERENT.decode(data.trim()).ok()?;
@@ -171,10 +195,15 @@ pub fn decode_charset(bytes: &[u8], charset: Option<&str>) -> String {
 
 /// The `charset` parameter of a `Content-Type` value, without quotes.
 pub fn charset_param(content_type: &str) -> Option<&str> {
-    content_type.split(';').skip(1).find_map(|param| {
-        let (key, value) = param.split_once('=')?;
+    param(content_type, "charset")
+}
+
+/// One parameter of a header value, without its quotes.
+fn param<'a>(value: &'a str, name: &str) -> Option<&'a str> {
+    value.split(';').skip(1).find_map(|parameter| {
+        let (key, value) = parameter.split_once('=')?;
         key.trim()
-            .eq_ignore_ascii_case("charset")
+            .eq_ignore_ascii_case(name)
             .then(|| value.trim().trim_matches('"'))
     })
 }

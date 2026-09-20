@@ -282,6 +282,46 @@ pub struct MessageBody {
     /// one. `mailrs_domain::invitation::read` turns it into an event.
     #[serde(default)]
     pub calendar: Option<String>,
+    /// The OpenPGP wrapper the message arrived in, when it arrived in one.
+    /// The parts themselves are not here: a signature covers the bytes as
+    /// they were sent, and these ones have been through Gmail's decoding,
+    /// so whoever checks a signature fetches the raw message instead.
+    #[serde(default)]
+    pub protection: Option<Protection>,
+}
+
+/// What RFC 3156 wraps a message in: a signature beside the message, or
+/// the message inside ciphertext.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Protection {
+    /// `multipart/signed` with `protocol="application/pgp-signature"`.
+    Signed,
+    /// `multipart/encrypted` with `protocol="application/pgp-encrypted"`.
+    Encrypted,
+}
+
+impl Protection {
+    pub const ALL: [Protection; 2] = [Protection::Signed, Protection::Encrypted];
+
+    /// The stored form.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Protection::Signed => "signed",
+            Protection::Encrypted => "encrypted",
+        }
+    }
+}
+
+impl FromStr for Protection {
+    type Err = UnknownVariant;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Protection::ALL
+            .into_iter()
+            .find(|protection| protection.as_str() == s)
+            .ok_or_else(|| UnknownVariant(s.to_string()))
+    }
 }
 
 /// A Gmail filter: mail matching `criteria` gets `action`. Field names

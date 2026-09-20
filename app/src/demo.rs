@@ -870,6 +870,7 @@ impl Sample {
                 "planning-1" => Some(moved_ics(now)),
                 _ => None,
             },
+            protection: None,
         }
     }
 }

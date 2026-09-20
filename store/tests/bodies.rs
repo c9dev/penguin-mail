@@ -1,7 +1,7 @@
 mod common;
 
 use common::{db, meta, store};
-use mailrs_domain::{Attachment, MessageBody};
+use mailrs_domain::{Attachment, MessageBody, Protection};
 use mailrs_store::{bodies, messages};
 
 fn body(text: &str) -> MessageBody {
@@ -19,6 +19,7 @@ fn body(text: &str) -> MessageBody {
         list_unsubscribe: Some("<https://news.example/u>".into()),
         one_click_unsubscribe: true,
         calendar: Some("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n".into()),
+        protection: Some(Protection::Signed),
     }
 }
 
