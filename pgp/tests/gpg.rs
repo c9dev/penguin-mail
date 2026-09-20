@@ -7,6 +7,7 @@
 use std::path::Path;
 use std::process::{Command, Stdio};
 
+use mailrs_pgp::inline::{Armor, armor};
 use mailrs_pgp::{Pgp, Verdict};
 
 /// A GnuPG home under a temp directory, with one key in it.
@@ -150,6 +151,28 @@ fn strip_trailing_whitespace(part: &[u8]) -> Vec<u8> {
         .collect::<Vec<_>>()
         .join("\r\n")
         .into_bytes()
+}
+
+/// `text` with a signature written under it, the way an older mail client
+/// puts one in the body. gpg makes it, not the code under test.
+fn clearsigned(home: &Home, text: &str) -> String {
+    let file = home.dir.path().join("clear");
+    std::fs::write(&file, text).expect("write");
+    let out = Command::new(home.pgp.program())
+        .args(["--batch", "--no-tty", "--homedir"])
+        .arg(home.dir.path())
+        .args([
+            "--output",
+            "-",
+            "--clearsign",
+            "--local-user",
+            &home.address,
+        ])
+        .arg(&file)
+        .output()
+        .expect("gpg runs");
+    assert!(out.status.success(), "gpg could not clearsign");
+    String::from_utf8(out.stdout).expect("utf-8")
 }
 
 /// Ciphertext for `home`'s own key, made by gpg itself.
@@ -456,4 +479,68 @@ fn every_address_gets_an_answer_in_the_order_it_was_asked_about() {
     assert_eq!(key.trust, mailrs_pgp::Trust::Ultimate);
     assert_eq!(key.fingerprint.len(), 40);
     assert!(held[2].key.is_none());
+}
+
+#[test]
+fn a_clearsigned_body_opens_with_its_signature() {
+    let Some(home) = Home::new("Ada Lovelace", "ada@example.test") else {
+        return;
+    };
+    let body = clearsigned(&home, "Meet at six.\n");
+
+    assert_eq!(armor(&body), Some(Armor::Clearsigned));
+    let opened = home.pgp.open_inline(&body).expect("the text inside");
+
+    assert_eq!(String::from_utf8_lossy(&opened.text), "Meet at six.\n");
+    assert!(opened.signature.expect("a signature").is_good());
+}
+
+#[test]
+fn a_clearsigned_body_changed_on_the_way_still_shows_its_text() {
+    let Some(home) = Home::new("Ada Lovelace", "ada@example.test") else {
+        return;
+    };
+    let body = clearsigned(&home, "Meet at six.\n").replace("six", "nine");
+
+    let opened = home.pgp.open_inline(&body).expect("the text inside");
+
+    assert_eq!(String::from_utf8_lossy(&opened.text), "Meet at nine.\n");
+    let signature = opened.signature.expect("a signature");
+    assert!(!signature.is_good(), "{signature:?}");
+    assert_eq!(signature.verdict, Verdict::Bad);
+}
+
+#[test]
+fn an_encrypted_body_opens_even_with_a_mail_client_writing_around_it() {
+    let Some(home) = Home::new("Ada Lovelace", "ada@example.test") else {
+        return;
+    };
+    let ciphertext = String::from_utf8(sealed(&home, b"The key is under the mat.\n", true))
+        .expect("armor is ascii");
+    let body = format!("Sent from my telephone\n{ciphertext}Excuse the brevity.\n");
+
+    assert_eq!(armor(&body), Some(Armor::Message));
+    let opened = home.pgp.open_inline(&body).expect("the text inside");
+
+    assert_eq!(
+        String::from_utf8_lossy(&opened.text),
+        "The key is under the mat.\n"
+    );
+    assert!(opened.signature.expect("a signature").is_good());
+}
+
+#[test]
+fn a_body_with_no_armor_in_it_is_not_opened() {
+    let Some(home) = Home::new("Ada Lovelace", "ada@example.test") else {
+        return;
+    };
+    let err = home
+        .pgp
+        .open_inline("Meet at six.\n")
+        .expect_err("nothing to open");
+
+    assert!(
+        matches!(err, mailrs_pgp::PgpError::NotPgp),
+        "expected NotPgp, got {err}"
+    );
 }
