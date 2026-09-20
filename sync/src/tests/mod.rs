@@ -42,6 +42,8 @@ pub(crate) struct Harness {
     pub db: Db,
     pub events: async_channel::Receiver<ChangeEvent>,
     pub account_id: AccountId,
+    /// The other end of `events`, for a second sync over the same account.
+    sender: async_channel::Sender<ChangeEvent>,
     _dir: tempfile::TempDir,
 }
 
@@ -56,7 +58,7 @@ pub(crate) async fn harness() -> Harness {
     let fake = Arc::new(FakeGmail::new());
     let (sender, events) = async_channel::unbounded();
     let sync = Arc::new(
-        AccountSync::new(account_id, Arc::clone(&fake), db.clone(), sender)
+        AccountSync::new(account_id, Arc::clone(&fake), db.clone(), sender.clone())
             .with_retry_max(Duration::from_millis(10)),
     );
     Harness {
@@ -65,11 +67,25 @@ pub(crate) async fn harness() -> Harness {
         db,
         events,
         account_id,
+        sender,
         _dir: dir,
     }
 }
 
 impl Harness {
+    /// Another sync over the same account and the same Gmail, which gives
+    /// up on a busy Gmail after `ceiling` rather than after a minute.
+    pub fn sync_with(&self, ceiling: Duration) -> AccountSync<FakeGmail> {
+        AccountSync::new(
+            self.account_id,
+            Arc::clone(&self.fake),
+            self.db.clone(),
+            self.sender.clone(),
+        )
+        .with_retry_max(Duration::from_millis(10))
+        .with_wait_ceiling(ceiling)
+    }
+
     pub fn drain(&self) -> Vec<ChangeEvent> {
         let mut events = Vec::new();
         while let Ok(event) = self.events.try_recv() {

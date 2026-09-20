@@ -465,6 +465,10 @@ impl MainWindow {
             }
             ChangeEvent::NewMail { .. } => self.queue_refresh(),
             ChangeEvent::WriteFailed { message, .. } => self.toast(message),
+            // Gmail can hold a bulk change up for the best part of a
+            // minute. Say so, or the window looks stuck and the reader
+            // presses Delete again.
+            ChangeEvent::WaitingOnGmail { message, .. } => self.toast(message),
         }
     }
 

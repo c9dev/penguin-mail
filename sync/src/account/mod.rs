@@ -32,6 +32,7 @@ pub struct AccountSync<G> {
     window_days: i64,
     body_cache_bytes: i64,
     retry_max: Duration,
+    wait_ceiling: Duration,
     /// Cached bodies read since the last write of their access times.
     touched: Arc<Mutex<Vec<(String, EpochMillis)>>>,
     /// When the last history replay left the store up to date. Opening a
@@ -59,6 +60,7 @@ impl<G: GmailApi> AccountSync<G> {
             window_days: DEFAULT_WINDOW_DAYS,
             body_cache_bytes: DEFAULT_BODY_CACHE_BYTES,
             retry_max: Duration::from_secs(8),
+            wait_ceiling: crate::WAIT_CEILING,
             touched: Arc::default(),
             caught_up: Arc::default(),
         }
@@ -73,6 +75,13 @@ impl<G: GmailApi> AccountSync<G> {
     /// Caps the wait between retries of a triage write.
     pub fn with_retry_max(mut self, retry_max: Duration) -> Self {
         self.retry_max = retry_max;
+        self
+    }
+
+    /// Caps how long one mail action waits on a busy Gmail in total before
+    /// it stops and reports what did not go through.
+    pub fn with_wait_ceiling(mut self, ceiling: Duration) -> Self {
+        self.wait_ceiling = ceiling;
         self
     }
 

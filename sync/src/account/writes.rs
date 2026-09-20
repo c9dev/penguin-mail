@@ -158,7 +158,15 @@ impl<G: GmailApi> AccountSync<G> {
         self.emit_threads(threads.clone());
 
         let ids: Vec<String> = snapshot.iter().map(|(id, _)| id.clone()).collect();
-        if let Err(err) = self.write_labels(&ids, action, &add, &remove).await {
+        let writing = Writing {
+            action,
+            conversations: threads.len(),
+        };
+        let mut budget = Budget::new(self.retry_max, self.wait_ceiling);
+        if let Err(err) = self
+            .write_labels(&mut budget, &ids, &writing, &add, &remove)
+            .await
+        {
             let rolled_back = threads.clone();
             self.db
                 .write(move |c| {
@@ -176,7 +184,7 @@ impl<G: GmailApi> AccountSync<G> {
             self.emit_threads(threads);
             self.emit(ChangeEvent::WriteFailed {
                 account_id,
-                message: write_failure(action, &err),
+                message: write_failure(&writing, &err, budget.waited),
             });
             return Err(err.into());
         }
@@ -210,25 +218,25 @@ impl<G: GmailApi> AccountSync<G> {
     /// Sends the label change to Gmail: one batch per thousand messages, or
     /// a call each when there are too few for a batch to pay. A batch Gmail
     /// rejects outright falls back to single calls, so one id it dislikes
-    /// does not sink the whole selection. The retries belong to the action,
+    /// does not sink the whole selection. The waiting belongs to the action,
     /// not to each message, so a rate-limited archive of twenty threads
-    /// tries three times over rather than sixty.
+    /// waits its minute over rather than twenty minutes.
     async fn write_labels(
         &self,
+        budget: &mut Budget,
         ids: &[String],
-        action: &TriageAction,
+        writing: &Writing<'_>,
         add: &[String],
         remove: &[String],
     ) -> Result<(), GmailError> {
-        let mut budget = Budget::new(self.retry_max);
         if ids.len() < BATCH_FROM {
             for id in ids {
-                self.write_one(&mut budget, id, action, add, remove).await?;
+                self.write_one(budget, id, writing, add, remove).await?;
             }
             return Ok(());
         }
         for chunk in ids.chunks(BATCH_LIMIT) {
-            match self.write_batch(&mut budget, chunk, add, remove).await {
+            match self.write_batch(budget, chunk, writing, add, remove).await {
                 Ok(()) => {}
                 Err(err) if refuses_batch(&err) => {
                     tracing::warn!(
@@ -237,7 +245,7 @@ impl<G: GmailApi> AccountSync<G> {
                         "Gmail refused the batch; changing each message on its own"
                     );
                     for id in chunk {
-                        self.write_one(&mut budget, id, action, add, remove).await?;
+                        self.write_one(budget, id, writing, add, remove).await?;
                     }
                 }
                 Err(err) => return Err(err),
@@ -250,13 +258,14 @@ impl<G: GmailApi> AccountSync<G> {
         &self,
         budget: &mut Budget,
         ids: &[String],
+        writing: &Writing<'_>,
         add: &[String],
         remove: &[String],
     ) -> Result<(), GmailError> {
         loop {
             match self.api.batch_modify(ids, add, remove).await {
                 Err(err) => match budget.wait(&err) {
-                    Some(delay) => tokio::time::sleep(delay).await,
+                    Some(delay) => self.hold_on(budget, delay, writing).await,
                     None => return Err(err),
                 },
                 done => return done,
@@ -268,51 +277,95 @@ impl<G: GmailApi> AccountSync<G> {
         &self,
         budget: &mut Budget,
         message_id: &str,
-        action: &TriageAction,
+        writing: &Writing<'_>,
         add: &[String],
         remove: &[String],
     ) -> Result<(), GmailError> {
         loop {
-            let done = match action {
+            let done = match writing.action {
                 TriageAction::Trash => self.api.trash(message_id).await,
                 TriageAction::Untrash => self.api.untrash(message_id).await,
                 _ => self.api.modify_labels(message_id, add, remove).await,
             };
             match done {
                 Err(err) => match budget.wait(&err) {
-                    Some(delay) => tokio::time::sleep(delay).await,
+                    Some(delay) => self.hold_on(budget, delay, writing).await,
                     None => return Err(err),
                 },
                 done => return done,
             }
         }
     }
+
+    /// Sits out `delay` before trying Gmail again. The first wait of an
+    /// action says so, so the window shows the work is still going rather
+    /// than nothing at all, and the whole wait counts as the user waiting
+    /// on Gmail, so backfill stands aside for it.
+    async fn hold_on(&self, budget: &Budget, delay: Duration, writing: &Writing<'_>) {
+        if budget.waits == 1 {
+            self.emit(ChangeEvent::WaitingOnGmail {
+                account_id: self.account_id,
+                message: still_waiting(writing),
+            });
+        }
+        let _waiting = self.waiting();
+        tokio::time::sleep(delay).await;
+    }
 }
 
-/// The retries one mail action may spend, however many messages it touches
-/// and however many calls it takes.
+/// One triage, as the messages about it need to name it.
+struct Writing<'a> {
+    action: &'a TriageAction,
+    conversations: usize,
+}
+
+/// The waiting one mail action may do, however many messages it touches
+/// and however many calls it takes. A rate limit is worth sitting out, so
+/// it spends the clock rather than a count of tries; anything else
+/// transient still gets [`WRITE_ATTEMPTS`] goes and no more.
 struct Budget {
-    left: u32,
+    /// Retries left for a transient failure that is not a rate limit.
+    retries: u32,
+    /// Waits taken so far, which sets the backoff curve.
+    waits: u32,
+    /// Time spent waiting on Gmail.
+    waited: Duration,
     max: Duration,
+    ceiling: Duration,
 }
 
 impl Budget {
-    fn new(max: Duration) -> Self {
+    fn new(max: Duration, ceiling: Duration) -> Self {
         Budget {
-            left: WRITE_ATTEMPTS - 1,
+            retries: WRITE_ATTEMPTS - 1,
+            waits: 0,
+            waited: Duration::ZERO,
             max,
+            ceiling,
         }
     }
 
     /// How long to wait before trying again, or `None` when `err` is not
-    /// worth retrying or the action has used up its attempts.
+    /// worth retrying, the action has used up its attempts, or waiting
+    /// again would take it past the ceiling.
     fn wait(&mut self, err: &GmailError) -> Option<Duration> {
-        if !err.is_transient() || self.left == 0 {
+        if !err.is_transient() {
             return None;
         }
-        let spent = WRITE_ATTEMPTS - 1 - self.left;
-        self.left -= 1;
-        Some(retry_delay(err, spent, self.max))
+        let limited = matches!(err, GmailError::RateLimited { .. });
+        if !limited && self.retries == 0 {
+            return None;
+        }
+        let delay = retry_delay(err, self.waits, self.max);
+        if self.waited + delay > self.ceiling {
+            return None;
+        }
+        self.waited += delay;
+        self.waits += 1;
+        if !limited {
+            self.retries -= 1;
+        }
+        Some(delay)
     }
 }
 
@@ -357,13 +410,46 @@ fn refuses_batch(err: &GmailError) -> bool {
     )
 }
 
-/// What the toast says when a write did not land.
-fn write_failure(action: &TriageAction, err: &GmailError) -> String {
+/// What the window says while an action sits out a rate limit.
+fn still_waiting(writing: &Writing<'_>) -> String {
+    format!(
+        "Gmail is busy. Still working on {}.",
+        conversations(writing.conversations)
+    )
+}
+
+/// What the toast says when a write did not land. A rate limit that
+/// outlasted the waiting names how long the action held on and how much
+/// of it did not go through, so nobody has to guess what to redo.
+fn write_failure(writing: &Writing<'_>, err: &GmailError, waited: Duration) -> String {
+    let what = writing.action.describe().to_lowercase();
+    let many = conversations(writing.conversations);
     match err {
+        GmailError::RateLimited { .. } if waited.is_zero() => {
+            format!(
+                "Gmail is busy, so {what} did not go through for {many}. Try again in a moment."
+            )
+        }
         GmailError::RateLimited { .. } => format!(
-            "Gmail is busy, so {} did not go through. Try again in a moment.",
-            action.describe().to_lowercase()
+            "Gmail stayed busy for {}, so {what} did not go through for {many}.",
+            roughly(waited)
         ),
-        _ => format!("{} failed: {err}", action.describe()),
+        _ => format!("{} failed: {err}", writing.action.describe()),
+    }
+}
+
+fn conversations(count: usize) -> String {
+    match count {
+        1 => "1 conversation".to_string(),
+        many => format!("{many} conversations"),
+    }
+}
+
+/// A wait in words, for a message a person reads.
+fn roughly(waited: Duration) -> String {
+    match waited.as_secs() {
+        0..2 => "a moment".to_string(),
+        seconds @ 2..45 => format!("{seconds} seconds"),
+        _ => "a minute".to_string(),
     }
 }

@@ -234,6 +234,10 @@ fn print_event(emails: &HashMap<AccountId, String>, event: &ChangeEvent) {
         ChangeEvent::WriteFailed {
             account_id,
             message,
+        }
+        | ChangeEvent::WaitingOnGmail {
+            account_id,
+            message,
         } => println!("{}: {message}", who(emails, *account_id)),
     }
 }
