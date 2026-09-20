@@ -73,7 +73,7 @@ impl Smime {
     }
 
     fn listing(&self, wanted: &str, secret: bool) -> Result<String, SmimeError> {
-        let run = self.run(&[], |command| {
+        let run = self.read_only(&[], |command| {
             command.args([
                 "--with-colons",
                 if secret {
