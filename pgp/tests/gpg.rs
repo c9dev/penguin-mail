@@ -433,3 +433,27 @@ fn encrypting_to_somebody_with_no_key_names_them() {
         "expected NoKeyFor, got {err}"
     );
 }
+
+#[test]
+fn every_address_gets_an_answer_in_the_order_it_was_asked_about() {
+    let Some(home) = Home::new("Ada Lovelace", "ada@example.test") else {
+        return;
+    };
+    let asked = [
+        "stranger@example.test".to_string(),
+        home.address.clone(),
+        "nobody@example.test".to_string(),
+    ];
+
+    let held = home.pgp.keys_for(&asked).expect("an answer for each");
+
+    assert_eq!(held.len(), 3);
+    assert_eq!(held[0].address, "stranger@example.test");
+    assert!(held[0].key.is_none());
+    assert_eq!(held[1].address, home.address);
+    let key = held[1].key.as_ref().expect("my own key");
+    assert_eq!(key.user_id, "Ada Lovelace <ada@example.test>");
+    assert_eq!(key.trust, mailrs_pgp::Trust::Ultimate);
+    assert_eq!(key.fingerprint.len(), 40);
+    assert!(held[2].key.is_none());
+}
