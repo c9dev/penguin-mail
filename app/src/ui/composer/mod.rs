@@ -32,6 +32,7 @@ use crate::richtext::{Block, BlockKind, RichBody, Style};
 use crate::settings::ComposeFormat;
 use crate::smime::{self, Held, Standard};
 use crate::templates::{self, Filling};
+use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 pub use crate::compose::Identity;
 
@@ -167,7 +168,7 @@ impl Composer {
         // One pair of toggles for both standards, offered as soon as
         // either engine is on this computer.
         let has_engine = core.has_gpg() || core.has_gpgsm();
-        let title = adw::WindowTitle::new("New Message", "");
+        let title = adw::WindowTitle::new(&gettext("New Message"), "");
         let later = gio::Menu::new();
         for (label, at) in send_later_presets(chrono::Local::now()) {
             let item = gio::MenuItem::new(Some(&label), None);
@@ -175,47 +176,53 @@ impl Composer {
             later.append_item(&item);
         }
         let custom = gio::Menu::new();
-        custom.append(Some("Choose a Time…"), Some("composer.send-later"));
+        custom.append(
+            Some(&gettext("Choose a Time…")),
+            Some("composer.send-later"),
+        );
         later.append_section(None, &custom);
         let send = adw::SplitButton::builder()
             .child(
                 &adw::ButtonContent::builder()
                     .icon_name("mail-send-symbolic")
-                    .label("Send")
+                    .label(gettext("Send"))
                     .build(),
             )
             .menu_model(&later)
-            .dropdown_tooltip("Send Later")
+            .dropdown_tooltip(gettext("Send Later"))
             .css_classes(["suggested-action"])
-            .tooltip_text("Send (Ctrl+Enter)")
+            .tooltip_text(gettext("Send (Ctrl+Enter)"))
             .build();
         let attach = gtk::Button::builder()
             .icon_name("mail-attachment-symbolic")
-            .tooltip_text("Attach Files (Ctrl+Shift+A)")
+            .tooltip_text(gettext("Attach Files (Ctrl+Shift+A)"))
             .build();
         let preview_toggle = gtk::ToggleButton::builder()
             .icon_name("view-reveal-symbolic")
-            .tooltip_text("Preview")
+            .tooltip_text(gettext("Preview"))
             .build();
         let template_items = gio::Menu::new();
         let template_menu = gio::Menu::new();
         template_menu.append_section(None, &template_items);
         let saving = gio::Menu::new();
-        saving.append(Some("Save as Template…"), Some("composer.save-template"));
+        saving.append(
+            Some(&gettext("Save as Template…")),
+            Some("composer.save-template"),
+        );
         template_menu.append_section(None, &saving);
         let template_button = gtk::MenuButton::builder()
             .icon_name("insert-text-symbolic")
-            .tooltip_text("Templates")
+            .tooltip_text(gettext("Templates"))
             .menu_model(&template_menu)
             .build();
         let sign = gtk::ToggleButton::builder()
-            .label("Sign")
-            .tooltip_text("Sign this message with your own key")
+            .label(gettext("Sign"))
+            .tooltip_text(gettext("Sign this message with your own key"))
             .active(has_engine && sign_by_default)
             .build();
         let encrypt = gtk::ToggleButton::builder()
-            .label("Encrypt")
-            .tooltip_text("Add a recipient this computer can encrypt to.")
+            .label(gettext("Encrypt"))
+            .tooltip_text(gettext("Add a recipient this computer can encrypt to."))
             .sensitive(false)
             .build();
         let protection = gtk::Box::builder()
@@ -243,19 +250,19 @@ impl Composer {
         let selected =
             opening_identity(&identities, draft.account_id, &draft.from, last).unwrap_or(0);
         from.set_selected(selected as u32);
-        let to = Recipients::new("Recipients", &draft.to, Rc::clone(&contacts));
-        let cc = Recipients::new("Carbon copy", &draft.cc, Rc::clone(&contacts));
-        let bcc = Recipients::new("Blind carbon copy", &draft.bcc, contacts);
+        let to = Recipients::new(&gettext("Recipients"), &draft.to, Rc::clone(&contacts));
+        let cc = Recipients::new(&gettext("Carbon copy"), &draft.cc, Rc::clone(&contacts));
+        let bcc = Recipients::new(&gettext("Blind carbon copy"), &draft.bcc, contacts);
         let subject = gtk::Entry::builder()
-            .placeholder_text("Subject")
+            .placeholder_text(gettext("Subject"))
             .text(&draft.subject)
             .hexpand(true)
             .has_frame(false)
             .build();
 
         let more_button = gtk::ToggleButton::builder()
-            .label("Cc/Bcc")
-            .tooltip_text("Show Cc and Bcc")
+            .label(gettext("Cc/Bcc"))
+            .tooltip_text(gettext("Show Cc and Bcc"))
             .css_classes(["flat", "cc-toggle"])
             // Stays on the first line when the chips wrap below it.
             .valign(gtk::Align::Start)
@@ -266,18 +273,18 @@ impl Composer {
         // One size group holds the label column to a single width, so every
         // field starts at the same edge whichever labels are on show.
         let column = gtk::SizeGroup::new(gtk::SizeGroupMode::Horizontal);
-        let from_row = field("From", &from, &column);
+        let from_row = field(&gettext("From"), &from, &column);
         if identities.len() > 1 {
             fields.append(&from_row);
             fields.append(&line());
         }
-        let to_row = field("To", &to.field, &column);
+        let to_row = field(&gettext("To"), &to.field, &column);
         to_row.append(&more_button);
         fields.append(&to_row);
         fields.append(&line());
-        let cc_row = field("Cc", &cc.field, &column);
+        let cc_row = field(&gettext("Cc"), &cc.field, &column);
         let cc_line = line();
-        let bcc_row = field("Bcc", &bcc.field, &column);
+        let bcc_row = field(&gettext("Bcc"), &bcc.field, &column);
         let bcc_line = line();
         for widget in [
             cc_row.clone().upcast::<gtk::Widget>(),
@@ -287,7 +294,7 @@ impl Composer {
         ] {
             fields.append(&widget);
         }
-        fields.append(&field("Subject", &subject, &column));
+        fields.append(&field(&gettext("Subject"), &subject, &column));
         fields.append(&line());
 
         let body = gtk::TextView::builder()
@@ -355,7 +362,7 @@ impl Composer {
         let window = adw::Window::builder()
             .default_width(760)
             .default_height(660)
-            .title("New Message")
+            .title(gettext("New Message"))
             .content(&toasts)
             .build();
 
@@ -782,10 +789,10 @@ impl Composer {
         for widget in &self.more {
             widget.set_visible(show);
         }
-        self.more_button.set_tooltip_text(Some(if show {
-            "Hide Cc and Bcc"
+        self.more_button.set_tooltip_text(Some(&if show {
+            gettext("Hide Cc and Bcc")
         } else {
-            "Show Cc and Bcc"
+            gettext("Show Cc and Bcc")
         }));
         if show && self.cc.is_empty() {
             self.cc.entry.grab_focus();
@@ -845,13 +852,16 @@ impl Composer {
             let base = self.base.borrow();
             base.forwarded.as_ref().map(|f| {
                 let who = if f.from.is_empty() {
-                    "a message"
+                    gettext("a message")
                 } else {
-                    &f.from
+                    f.from.clone()
                 };
                 match f.subject.trim() {
-                    "" => format!("Forwarding {who}"),
-                    subject => format!("Forwarding “{subject}” from {who}"),
+                    "" => fill(&gettext("Forwarding {sender}"), &[("sender", &who)]),
+                    subject => fill(
+                        &gettext("Forwarding “{subject}” from {sender}"),
+                        &[("subject", subject), ("sender", &who)],
+                    ),
                 }
             })
         };
@@ -872,7 +882,7 @@ impl Composer {
         );
         let drop = gtk::Button::builder()
             .icon_name("window-close-symbolic")
-            .tooltip_text("Do Not Forward the Original")
+            .tooltip_text(gettext("Do Not Forward the Original"))
             .css_classes(["flat", "circular"])
             .build();
         let weak = Rc::downgrade(self);
@@ -929,16 +939,16 @@ impl Composer {
     fn update_title(&self) {
         let subject = self.subject.text();
         let title = if subject.trim().is_empty() {
-            "New Message".to_string()
+            gettext("New Message")
         } else {
             subject.to_string()
         };
         self.title.set_title(&title);
         self.window.set_title(Some(&title));
         let subtitle = self.base.borrow().send_at.map(|at| {
-            format!(
-                "Scheduled to send {}",
-                future_date(at, chrono::Local::now())
+            fill(
+                &gettext("Scheduled to send {when}"),
+                &[("when", &future_date(at, chrono::Local::now()))],
             )
         });
         self.title.set_subtitle(subtitle.as_deref().unwrap_or(""));
@@ -948,7 +958,7 @@ impl Composer {
     /// It asks the recipients only, so every keystroke stays cheap.
     fn check_send(&self) {
         let problem = match self.identity() {
-            None => Some("No account to send from.".to_string()),
+            None => Some(gettext("No account to send from.")),
             Some(identity) => {
                 let mut draft = Draft::new(identity.account_id, identity.address.clone());
                 draft.to = self.to.addresses();
@@ -958,8 +968,8 @@ impl Composer {
             }
         };
         self.send.set_sensitive(problem.is_none());
-        self.send
-            .set_tooltip_text(Some(problem.as_deref().unwrap_or("Send (Ctrl+Enter)")));
+        let tip = problem.unwrap_or_else(|| gettext("Send (Ctrl+Enter)"));
+        self.send.set_tooltip_text(Some(&tip));
     }
 
     /// Asks gpg which recipients it can encrypt to and lets the Encrypt
@@ -1145,11 +1155,14 @@ impl Composer {
         if let SendWhen::At(at) = when
             && at <= mailrs_sync::now_millis()
         {
-            self.toast("Choose a time in the future");
+            self.toast(&gettext("Choose a time in the future"));
             return;
         }
         if let Err(err) = build_mime(&draft, now_secs(), &new_message_id(&draft.from.email)) {
-            self.toast(&format!("Could not build the message: {err}"));
+            self.toast(&fill(
+                &gettext("Could not build the message: {reason}"),
+                &[("reason", &err.to_string())],
+            ));
             return;
         }
         if let Some(promise) = self.unkept_promise(&draft) {
@@ -1187,13 +1200,16 @@ impl Composer {
     /// and leaves the message open, and closing the dialog does neither.
     fn ask_about_attachment(self: &Rc<Self>, promise: &Promise, when: SendWhen) {
         let dialog = adw::AlertDialog::new(
-            Some("Attachment Missing?"),
-            Some(&format!(
-                "The message says “{}” and carries no file.",
-                promise.sentence
+            Some(&gettext("Attachment Missing?")),
+            Some(&fill(
+                &gettext("The message says “{sentence}” and carries no file."),
+                &[("sentence", &promise.sentence)],
             )),
         );
-        dialog.add_responses(&[("attach", "Add Attachment"), ("send", "Send Anyway")]);
+        dialog.add_responses(&[
+            ("attach", &gettext("Add Attachment")),
+            ("send", &gettext("Send Anyway")),
+        ]);
         dialog.set_response_appearance("send", adw::ResponseAppearance::Suggested);
         dialog.set_default_response(Some("attach"));
         let this = Rc::clone(self);
@@ -1215,9 +1231,9 @@ impl Composer {
         glib::spawn_future_local(async move {
             if let Some(at) = super::when::pick_time(
                 &this.window,
-                "Send Later",
-                "Penguin Mail sends it at this time while it runs, even in the tray.",
-                "Schedule",
+                &gettext("Send Later"),
+                &gettext("Penguin Mail sends it at this time while it runs, even in the tray."),
+                &gettext("Schedule"),
             )
             .await
             {
@@ -1230,11 +1246,16 @@ impl Composer {
     fn save_draft(self: &Rc<Self>, then_close: bool) {
         let Some(draft) = self.collect() else { return };
         let Some(account) = self.core.account(draft.account_id) else {
-            return self.toast("That account is not connected.");
+            return self.toast(&gettext("That account is not connected."));
         };
         let raw = match build_mime(&draft, now_secs(), &new_message_id(&draft.from.email)) {
             Ok(raw) => raw,
-            Err(err) => return self.toast(&format!("Could not save: {err}")),
+            Err(err) => {
+                return self.toast(&fill(
+                    &gettext("Could not save: {reason}"),
+                    &[("reason", &err.to_string())],
+                ));
+            }
         };
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
@@ -1262,24 +1283,29 @@ impl Composer {
                         this.closing.set(true);
                         this.window.close();
                     } else {
-                        this.toast("Draft saved");
+                        this.toast(&gettext("Draft saved"));
                     }
                     this.core.poke(draft.account_id);
                 }
-                Err(err) => this.toast(&format!("Draft not saved: {err}")),
+                Err(err) => this.toast(&fill(
+                    &gettext("Draft not saved: {reason}"),
+                    &[("reason", &err.to_string())],
+                )),
             }
         });
     }
 
     fn confirm_close(self: &Rc<Self>) {
         let dialog = adw::AlertDialog::new(
-            Some("Save as Draft?"),
-            Some("The draft is kept in Gmail, so you can finish it later on any device."),
+            Some(&gettext("Save as Draft?")),
+            Some(&gettext(
+                "The draft is kept in Gmail, so you can finish it later on any device.",
+            )),
         );
         dialog.add_responses(&[
-            ("discard", "Discard"),
-            ("cancel", "Cancel"),
-            ("save", "Save Draft"),
+            ("discard", &gettext("Discard")),
+            ("cancel", &gettext("Cancel")),
+            ("save", &gettext("Save Draft")),
         ]);
         dialog.set_response_appearance("discard", adw::ResponseAppearance::Destructive);
         dialog.set_response_appearance("save", adw::ResponseAppearance::Suggested);
@@ -1300,7 +1326,7 @@ impl Composer {
 
     fn pick_files(self: &Rc<Self>) {
         let dialog = gtk::FileDialog::builder()
-            .title("Attach Files")
+            .title(gettext("Attach Files"))
             .modal(true)
             .build();
         let this = Rc::clone(self);
@@ -1335,14 +1361,20 @@ impl Composer {
         let count = listed.len();
         self.files.append(
             &gtk::Label::builder()
-                .label(format!(
-                    "{count} {}  ·  {}",
-                    if count == 1 {
-                        "attachment"
-                    } else {
-                        "attachments"
-                    },
-                    human_size(total)
+                .label(fill(
+                    &gettext("{files}  ·  {size}"),
+                    &[
+                        (
+                            "files",
+                            &fill_plural(
+                                "{count} attachment",
+                                "{count} attachments",
+                                count,
+                                &[("count", &count.to_string())],
+                            ),
+                        ),
+                        ("size", &human_size(total)),
+                    ],
                 ))
                 .xalign(0.0)
                 .css_classes(["dim-label", "caption"])
@@ -1371,7 +1403,7 @@ impl Composer {
             let remove = gtk::Button::builder()
                 .icon_name("window-close-symbolic")
                 .css_classes(["flat", "circular"])
-                .tooltip_text("Remove")
+                .tooltip_text(gettext("Remove"))
                 .build();
             let weak = Rc::downgrade(self);
             remove.connect_clicked(move |_| {
@@ -1407,10 +1439,14 @@ impl Composer {
         // Letters read better than the text-style icons at this size.
         let styles = group();
         for (markup, tip, tag) in [
-            ("<b>B</b>", "Bold (Ctrl+B)", "bold"),
-            ("<i>I</i>", "Italic (Ctrl+I)", "italic"),
-            ("<s>S</s>", "Strikethrough (Ctrl+Shift+X)", "strike"),
-            ("<tt>&lt;/&gt;</tt>", "Code (Ctrl+E)", "code"),
+            ("<b>B</b>", gettext("Bold (Ctrl+B)"), "bold"),
+            ("<i>I</i>", gettext("Italic (Ctrl+I)"), "italic"),
+            (
+                "<s>S</s>",
+                gettext("Strikethrough (Ctrl+Shift+X)"),
+                "strike",
+            ),
+            ("<tt>&lt;/&gt;</tt>", gettext("Code (Ctrl+E)"), "code"),
         ] {
             let button = gtk::ToggleButton::builder()
                 .child(&label(markup))
@@ -1429,7 +1465,7 @@ impl Composer {
         }
 
         let blocks = group();
-        let button = |bar: &gtk::Box, icon: &str, tip: &str| {
+        let button = |bar: &gtk::Box, icon: &str, tip: String| {
             let button = gtk::Button::builder()
                 .icon_name(icon)
                 .tooltip_text(tip)
@@ -1440,7 +1476,12 @@ impl Composer {
             button
         };
         let weak = Rc::downgrade(self);
-        button(&blocks, "penguin-mail-link-symbolic", "Link (Ctrl+K)").connect_clicked(move |_| {
+        button(
+            &blocks,
+            "penguin-mail-link-symbolic",
+            gettext("Link (Ctrl+K)"),
+        )
+        .connect_clicked(move |_| {
             if let Some(c) = weak.upgrade() {
                 c.link();
             }
@@ -1448,17 +1489,17 @@ impl Composer {
         for (icon, tip, kind) in [
             (
                 "view-list-bullet-symbolic",
-                "Bulleted List (Ctrl+Shift+8)",
+                gettext("Bulleted List (Ctrl+Shift+8)"),
                 BlockKind::Bullet,
             ),
             (
                 "view-list-ordered-symbolic",
-                "Numbered List (Ctrl+Shift+7)",
+                gettext("Numbered List (Ctrl+Shift+7)"),
                 BlockKind::Numbered,
             ),
             (
                 "format-indent-more-symbolic",
-                "Quote (Ctrl+Shift+9)",
+                gettext("Quote (Ctrl+Shift+9)"),
                 BlockKind::Quote,
             ),
         ] {
@@ -1472,35 +1513,46 @@ impl Composer {
 
         let extras = group();
         let weak = Rc::downgrade(self);
-        button(&extras, "image-x-generic-symbolic", "Insert Image").connect_clicked(move |_| {
-            if let Some(c) = weak.upgrade() {
-                c.pick_images();
-            }
-        });
+        button(&extras, "image-x-generic-symbolic", gettext("Insert Image")).connect_clicked(
+            move |_| {
+                if let Some(c) = weak.upgrade() {
+                    c.pick_images();
+                }
+            },
+        );
         let menu = gio::Menu::new();
         let paragraph = gio::Menu::new();
         for (label, kind) in [
-            ("Paragraph", "paragraph"),
-            ("Heading 1", "heading1"),
-            ("Heading 2", "heading2"),
-            ("Heading 3", "heading3"),
-            ("Code Block", "code"),
+            (gettext("Paragraph"), "paragraph"),
+            (gettext("Heading 1"), "heading1"),
+            (gettext("Heading 2"), "heading2"),
+            (gettext("Heading 3"), "heading3"),
+            (gettext("Code Block"), "code"),
         ] {
-            let item = gio::MenuItem::new(Some(label), None);
+            let item = gio::MenuItem::new(Some(&label), None);
             item.set_action_and_target_value(Some("composer.block"), Some(&kind.to_variant()));
             paragraph.append_item(&item);
         }
         menu.append_section(None, &paragraph);
         let rest = gio::Menu::new();
-        rest.append(Some("Format Markdown"), Some("composer.format-markdown"));
-        rest.append(Some("Clear Formatting"), Some("composer.clear-format"));
+        rest.append(
+            Some(&gettext("Format Markdown")),
+            Some("composer.format-markdown"),
+        );
+        rest.append(
+            Some(&gettext("Clear Formatting")),
+            Some("composer.clear-format"),
+        );
         menu.append_section(None, &rest);
         let switch = gio::Menu::new();
-        switch.append(Some("Edit as Markdown"), Some("composer.edit-markdown"));
+        switch.append(
+            Some(&gettext("Edit as Markdown")),
+            Some("composer.edit-markdown"),
+        );
         menu.append_section(None, &switch);
         let more = gtk::MenuButton::builder()
             .icon_name("view-more-symbolic")
-            .tooltip_text("More Formatting")
+            .tooltip_text(gettext("More Formatting"))
             .menu_model(&menu)
             .css_classes(["flat"])
             .can_focus(false)
@@ -1640,13 +1692,13 @@ impl Composer {
             buffer.create_mark(None, &start, true),
             buffer.create_mark(None, &end, false),
         );
-        let dialog = adw::AlertDialog::new(Some("Add a Link"), None);
+        let dialog = adw::AlertDialog::new(Some(&gettext("Add a Link")), None);
         let fields = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .spacing(8)
             .build();
         let text = gtk::Entry::builder()
-            .placeholder_text("Text")
+            .placeholder_text(gettext("Text"))
             .text(&selected)
             .build();
         let url = gtk::Entry::builder()
@@ -1656,7 +1708,10 @@ impl Composer {
         fields.append(&text);
         fields.append(&url);
         dialog.set_extra_child(Some(&fields));
-        dialog.add_responses(&[("cancel", "Cancel"), ("add", "Add Link")]);
+        dialog.add_responses(&[
+            ("cancel", &gettext("Cancel")),
+            ("add", &gettext("Add Link")),
+        ]);
         dialog.set_response_appearance("add", adw::ResponseAppearance::Suggested);
         dialog.set_default_response(Some("add"));
         dialog.set_close_response("cancel");
@@ -1725,7 +1780,7 @@ impl Composer {
         self.busy.set(false);
         self.dirty.set(true);
         self.refresh_toggles();
-        self.toast("Markdown formatted");
+        self.toast(&gettext("Markdown formatted"));
     }
 
     /// Switches between the two ways of writing, keeping the body.
@@ -1743,7 +1798,7 @@ impl Composer {
         self.busy.set(false);
         self.dirty.set(true);
         self.refresh_toggles();
-        self.toast("Editing as Markdown");
+        self.toast(&gettext("Editing as Markdown"));
     }
 
     /// Takes every style off the selection, or off the whole body.
@@ -1868,12 +1923,12 @@ impl Composer {
 
     fn pick_images(self: &Rc<Self>) {
         let filter = gtk::FileFilter::new();
-        filter.set_name(Some("Images"));
+        filter.set_name(Some(&gettext("Images")));
         filter.add_mime_type("image/*");
         let filters = gio::ListStore::new::<gtk::FileFilter>();
         filters.append(&filter);
         let dialog = gtk::FileDialog::builder()
-            .title("Insert Image")
+            .title(gettext("Insert Image"))
             .modal(true)
             .filters(&filters)
             .build();
@@ -1916,7 +1971,10 @@ impl Composer {
                     self.check_send();
                 }
             }
-            Err(err) => self.toast(&format!("Could not read the file: {err}")),
+            Err(err) => self.toast(&fill(
+                &gettext("Could not read the file: {reason}"),
+                &[("reason", &err.to_string())],
+            )),
         }
     }
 
@@ -2002,7 +2060,7 @@ impl Composer {
                             png.to_vec(),
                         );
                     }
-                    _ => c.toast("Could not paste the image"),
+                    _ => c.toast(&gettext("Could not paste the image")),
                 }
             });
             glib::Propagation::Stop
@@ -2047,7 +2105,7 @@ impl Composer {
         if templates.is_empty() {
             // Nothing answers this action, which is what greys the item out.
             self.template_items
-                .append(Some("No Templates Yet"), Some("composer.none"));
+                .append(Some(&gettext("No Templates Yet")), Some("composer.none"));
             return;
         }
         for template in templates.iter() {
@@ -2105,16 +2163,18 @@ impl Composer {
             markdown: self.markdown(),
         };
         let dialog = adw::AlertDialog::new(
-            Some("Save as Template"),
-            Some("Placeholders such as {{first_name}} fill in each time you use it."),
+            Some(&gettext("Save as Template")),
+            Some(&gettext(
+                "Placeholders such as {{first_name}} fill in each time you use it.",
+            )),
         );
         let name = gtk::Entry::builder()
-            .placeholder_text("Name")
+            .placeholder_text(gettext("Name"))
             .text(&written.subject)
             .activates_default(true)
             .build();
         dialog.set_extra_child(Some(&name));
-        dialog.add_responses(&[("cancel", "Cancel"), ("save", "Save")]);
+        dialog.add_responses(&[("cancel", &gettext("Cancel")), ("save", &gettext("Save"))]);
         dialog.set_response_appearance("save", adw::ResponseAppearance::Suggested);
         dialog.set_default_response(Some("save"));
         dialog.set_close_response("cancel");
@@ -2128,7 +2188,7 @@ impl Composer {
                 ..written
             };
             if template.name.is_empty() {
-                return this.toast("Give the template a name");
+                return this.toast(&gettext("Give the template a name"));
             }
             match this
                 .core
@@ -2136,10 +2196,13 @@ impl Composer {
                 .await
             {
                 Ok(_) => {
-                    this.toast("Template saved");
+                    this.toast(&gettext("Template saved"));
                     this.load_templates();
                 }
-                Err(err) => this.toast(&format!("Template not saved: {err}")),
+                Err(err) => this.toast(&fill(
+                    &gettext("Template not saved: {reason}"),
+                    &[("reason", &err.to_string())],
+                )),
             }
         });
     }

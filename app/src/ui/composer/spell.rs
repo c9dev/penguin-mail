@@ -28,6 +28,7 @@ use gtk::{gio, glib, pango};
 
 use super::richbuffer;
 use crate::richtext::BlockKind;
+use mailrs_domain::translate::gettext;
 
 /// The tag that draws the squiggle.
 const TAG: &str = "misspelled";
@@ -502,7 +503,7 @@ impl SpellCheck {
         let suggestions = self.dictionaries.suggest(&word);
         let corrections = gio::Menu::new();
         if suggestions.is_empty() {
-            let item = gio::MenuItem::new(Some("No Suggestions"), None);
+            let item = gio::MenuItem::new(Some(&gettext("No Suggestions")), None);
             // Nothing to activate: the row is there to answer the question.
             item.set_action_and_target_value(Some("spell.none"), None);
             corrections.append_item(&item);
@@ -514,8 +515,8 @@ impl SpellCheck {
         }
         menu.append_section(None, &corrections);
         let keep = gio::Menu::new();
-        keep.append(Some("Add to Dictionary"), Some("spell.learn"));
-        keep.append(Some("Ignore"), Some("spell.ignore"));
+        keep.append(Some(&gettext("Add to Dictionary")), Some("spell.learn"));
+        keep.append(Some(&gettext("Ignore")), Some("spell.ignore"));
         menu.append_section(None, &keep);
         self.view.set_extra_menu(Some(&menu));
     }

@@ -11,6 +11,7 @@ use mailrs_domain::Address;
 
 use crate::compose::{format_recipients, is_address, parse_recipients};
 use crate::ui::autocomplete::{self, Contacts};
+use mailrs_domain::translate::gettext;
 
 pub struct Recipients {
     /// The chips and the entry, wrapping onto as many lines as they need.
@@ -180,7 +181,7 @@ impl Recipients {
             let remove = gtk::Button::builder()
                 .icon_name("window-close-symbolic")
                 .css_classes(["flat", "circular"])
-                .tooltip_text("Remove")
+                .tooltip_text(gettext("Remove"))
                 .can_focus(false)
                 .build();
             let weak = Rc::downgrade(self);
