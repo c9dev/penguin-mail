@@ -4224,11 +4224,15 @@ msgstr ""
 msgid "Cancel Reminder"
 msgstr ""
 
-#: sync/src/actions.rs:276
+#: sync/src/actions.rs:89
+msgid "Change labels"
+msgstr ""
+
+#: sync/src/actions.rs:273
 msgid "Delete Forever failed: {reason}"
 msgstr ""
 
-#: sync/src/actions.rs:392
+#: sync/src/actions.rs:389
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr ""
 
@@ -4390,8 +4394,4 @@ msgstr ""
 
 #: sync/src/triage.rs:102
 msgid "Mark as not junk"
-msgstr ""
-
-#: sync/src/triage.rs:105
-msgid "Change labels"
 msgstr ""

@@ -4372,15 +4372,18 @@ msgstr "um minuto"
 msgid "Cancel Reminder"
 msgstr "Cancelar lembrete"
 
-#: sync/src/actions.rs:276
+#: sync/src/actions.rs:89
+msgid "Change labels"
+msgstr "Alterar etiquetas"
+
+#: sync/src/actions.rs:273
 msgid "Delete Forever failed: {reason}"
 msgstr "Eliminar definitivamente falhou: {reason}"
 
-#: sync/src/actions.rs:392
+#: sync/src/actions.rs:389
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr ""
-"Esta mensagem mudou de sítio entretanto, por isso Anular deixou-a onde "
-"está."
+"Esta mensagem mudou de sítio entretanto, por isso Anular deixou-a onde está."
 
 #: sync/src/mailbox.rs:89
 msgid "{color} Flag"
@@ -4541,10 +4544,6 @@ msgstr "Marcar como spam"
 #: sync/src/triage.rs:102
 msgid "Mark as not junk"
 msgstr "Marcar como não sendo spam"
-
-#: sync/src/triage.rs:105
-msgid "Change labels"
-msgstr "Alterar etiquetas"
 
 #~ msgid "Undone"
 #~ msgstr "Anulado"

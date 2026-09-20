@@ -86,11 +86,7 @@ impl MailAction {
             MailAction::CancelReminder => gettext("Cancel Reminder"),
             MailAction::Mute { muted: true } => TriageAction::Mute.describe(),
             MailAction::Mute { muted: false } => TriageAction::Unmute.describe(),
-            MailAction::Label { .. } => TriageAction::Relabel {
-                add: vec![],
-                remove: vec![],
-            }
-            .describe(),
+            MailAction::Label { .. } => gettext("Change labels"),
         }
     }
 }
@@ -204,7 +200,8 @@ impl<A: Accounts> MailActions<A> {
     }
 
     /// Runs `action` on each target, carrying on past failures. With
-    /// `History::Record` and at least one change, Undo reverses it next.
+    /// `History::Record` and at least one change, it goes on top of the
+    /// undo stack, and the next undo is the one that reverses it.
     pub async fn run(&self, targets: &[Target], action: MailAction, history: History) -> Outcome {
         let mut outcome = Outcome::default();
         let mut undo = Undo {
