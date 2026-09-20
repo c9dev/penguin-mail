@@ -68,6 +68,23 @@ pub enum Remembered {
 
 type ComposerAction = Box<dyn Fn(&Rc<Composer>)>;
 
+/// What the answer to "can this message be encrypted?" depends on.
+///
+/// The check is memoised, so everything `show_keys` reads has to be in
+/// here. Leaving the blind copy out is what let an address move from To
+/// to Bcc without the question being asked again: the sorted, deduped
+/// address list is the same either way, so the memo matched, the guard
+/// never ran, and the message went out naming a key the recipients were
+/// not meant to see.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct Asked {
+    /// Every recipient, sorted and deduped, so the same set typed in a
+    /// different order asks once.
+    addresses: Vec<String>,
+    /// Whether the draft carries a blind copy.
+    blind: bool,
+}
+
 pub struct Composer {
     core: Rc<Core>,
     window: adw::Window,
@@ -97,7 +114,7 @@ pub struct Composer {
     encrypt: gtk::ToggleButton,
     /// The addresses the key check last asked about, so a writer typing an
     /// address does not start an engine for every letter.
-    asked_keys: RefCell<Vec<String>>,
+    asked_keys: RefCell<Asked>,
     /// Which standard would encrypt this message, and which would sign it.
     /// The recipients decide the first and the sender the second, and a
     /// message that is both signed and encrypted goes out under the first.
@@ -405,7 +422,7 @@ impl Composer {
             send,
             sign,
             encrypt,
-            asked_keys: RefCell::new(Vec::new()),
+            asked_keys: RefCell::new(Asked::default()),
             encrypting_with: Cell::new(Standard::default()),
             signing_with: Cell::new(Standard::default()),
             key_check: Cell::new(0),
@@ -1006,20 +1023,28 @@ impl Composer {
     }
 
     fn ask_about_keys(self: &Rc<Self>) {
-        let addresses = self.recipient_addresses();
-        if *self.asked_keys.borrow() == addresses {
+        let asked = self.asked();
+        if *self.asked_keys.borrow() == asked {
             return;
         }
-        *self.asked_keys.borrow_mut() = addresses.clone();
+        *self.asked_keys.borrow_mut() = asked.clone();
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let held = this.held(&addresses).await;
+            let held = this.held(&asked.addresses).await;
             // The recipients moved on while the engines were answering.
-            if *this.asked_keys.borrow() != addresses {
+            if *this.asked_keys.borrow() != asked {
                 return;
             }
-            this.show_keys(&held);
+            this.show_keys(&held, asked.blind);
         });
+    }
+
+    /// What the answer about keys depends on, as the fields read now.
+    fn asked(&self) -> Asked {
+        Asked {
+            addresses: self.recipient_addresses(),
+            blind: !self.bcc.is_empty(),
+        }
     }
 
     /// What each engine holds for `addresses`. An engine this computer
@@ -1053,8 +1078,8 @@ impl Composer {
 
     /// Offers encryption when one of the standards can do it, and says
     /// what is in the way when neither can.
-    fn show_keys(&self, held: &Held) {
-        let choice = smime::encrypting(held, !self.bcc.is_empty());
+    fn show_keys(&self, held: &Held, blind: bool) {
+        let choice = smime::encrypting(held, blind);
         if let Ok(standard) = choice {
             self.encrypting_with.set(standard);
         }
@@ -2424,4 +2449,38 @@ fn field(label: &str, widget: &impl IsA<gtk::Widget>, column: &gtk::SizeGroup) -
 
 fn now_secs() -> i64 {
     mailrs_sync::now_millis() / 1000
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The defect this pins: an address moved from To to Bcc leaves the
+    /// sorted, deduped address list identical, so a memo built from the
+    /// addresses alone matched and the encryption guard never re-ran.
+    #[test]
+    fn moving_a_recipient_into_the_blind_copy_asks_again() {
+        let to_only = Asked {
+            addresses: vec!["ann@example.com".into()],
+            blind: false,
+        };
+        let now_blind = Asked {
+            addresses: vec!["ann@example.com".into()],
+            blind: true,
+        };
+        assert_eq!(
+            to_only.addresses, now_blind.addresses,
+            "the list is the same"
+        );
+        assert_ne!(to_only, now_blind, "and the question still has to be asked");
+    }
+
+    #[test]
+    fn the_same_recipients_in_another_order_ask_once() {
+        let first = Asked {
+            addresses: vec!["ann@example.com".into(), "bo@example.com".into()],
+            blind: false,
+        };
+        assert_eq!(first, first.clone());
+    }
 }
