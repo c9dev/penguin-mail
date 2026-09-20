@@ -140,12 +140,8 @@
   padding: 12px 16px 4px 16px;
   background: var(--view-bg-color);
 }
-.invitation-card {
-  padding: 14px 16px;
-  border-radius: 12px;
-  border: 1px solid var(--borders);
-  background: var(--card-bg-color);
-}
+ /* Adwaita's card style draws the surface; this adds the room inside. */
+.invitation-card { padding: 14px 16px; border-radius: 12px; }
 .invitation-tile {
   min-width: 52px;
   padding: 6px 4px 8px 4px;

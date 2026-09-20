@@ -151,7 +151,7 @@ impl EventCard {
         let inside = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .spacing(6)
-            .css_classes(["invitation-card"])
+            .css_classes(["card", "invitation-card"])
             .build();
         inside.append(&news);
         inside.append(&head);
