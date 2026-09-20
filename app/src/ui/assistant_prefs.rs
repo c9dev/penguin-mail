@@ -253,9 +253,11 @@ fn fill_popover(app: &Rc<App>, popover: &gtk::Popover, entry: &adw::EntryRow, pi
         .placeholder_text("Search models")
         .visible(false)
         .build();
+    // Hidden until it has rows, so a failed list leaves no empty frame.
     let list = gtk::ListBox::builder()
         .css_classes(["boxed-list"])
         .selection_mode(gtk::SelectionMode::None)
+        .visible(false)
         .build();
     let note = gtk::Label::builder()
         .wrap(true)
@@ -278,17 +280,17 @@ fn fill_popover(app: &Rc<App>, popover: &gtk::Popover, entry: &adw::EntryRow, pi
         .margin_start(8)
         .margin_end(8)
         .build();
+    let scroller = gtk::ScrolledWindow::builder()
+        .child(&list)
+        .propagate_natural_height(true)
+        .max_content_height(360)
+        .min_content_width(300)
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .visible(false)
+        .build();
     box_.append(&search);
     box_.append(&waiting);
-    box_.append(
-        &gtk::ScrolledWindow::builder()
-            .child(&list)
-            .propagate_natural_height(true)
-            .max_content_height(360)
-            .min_content_width(300)
-            .hscrollbar_policy(gtk::PolicyType::Never)
-            .build(),
-    );
+    box_.append(&scroller);
     box_.append(&note);
     popover.set_child(Some(&box_));
 
@@ -325,12 +327,13 @@ fn fill_popover(app: &Rc<App>, popover: &gtk::Popover, entry: &adw::EntryRow, pi
         let listed = match found {
             Ok(listed) => listed,
             Err(err) => {
-                note.set_label(&format!("Could not list the models. {}", sentence(&err)));
+                note.set_label(&sentence(&err));
                 note.set_visible(true);
                 return;
             }
         };
         show_models(&listed, &list, &search, &note, &entry, &popover, picker);
+        scroller.set_visible(list.first_child().is_some());
     });
 }
 
@@ -360,6 +363,7 @@ fn show_models(
         });
         list.append(&row);
     }
+    list.set_visible(!models.is_empty());
     search.set_visible(models.len() > SEARCH_FROM);
     let mut notes: Vec<String> = Vec::new();
     if listed.models.is_empty() {
