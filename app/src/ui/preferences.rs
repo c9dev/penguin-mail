@@ -204,6 +204,13 @@ fn writing_page(
     sending.add(&from);
     sending.add(&combo(
         app,
+        "New Messages Start As",
+        Some("Rich text styles the words themselves; Markdown shows its marks"),
+        settings.compose_format,
+        Change::ComposeFormat,
+    ));
+    sending.add(&combo(
+        app,
         "Undo Send",
         Some("How long you can take a message back after sending it"),
         settings.undo_send,

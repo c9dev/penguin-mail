@@ -385,11 +385,13 @@ impl App {
         }
         self.reload_contacts();
         let this = Rc::downgrade(self);
+        let format = self.settings.borrow().compose_format;
         let composer = Composer::open(
             Rc::clone(&self.core),
             identities,
             Rc::clone(&self.contacts),
             draft,
+            format,
             move |draft, when| {
                 if let Some(app) = this.upgrade() {
                     app.send(draft, when);
