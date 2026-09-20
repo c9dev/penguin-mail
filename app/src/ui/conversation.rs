@@ -328,6 +328,7 @@ impl ConversationView {
         views.append(Some("Open in New Window"), Some("win.open-window"));
         views.append(Some("Print…"), Some("win.print"));
         views.append(Some("View Source"), Some("win.view-source"));
+        views.append(Some("Export…"), Some("win.export"));
         more.append_section(None, &views);
         let sender = gio::Menu::new();
         sender.append(Some("Add Sender to VIPs"), Some("win.toggle-vip"));

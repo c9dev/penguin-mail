@@ -33,6 +33,7 @@ mod arrange;
 mod assistant;
 mod categories;
 mod detached;
+mod export;
 mod flags;
 mod followup;
 mod hide_my_email;
@@ -2169,6 +2170,7 @@ impl MainWindow {
                 win.view_source(&view);
             }),
         );
+        add("export", Box::new(|win| win.export()));
         add("open-window", Box::new(|win| win.open_current_in_window()));
         add("block-sender", Box::new(|win| win.block_sender()));
         add("select-all", Box::new(|win| win.list.select_all()));

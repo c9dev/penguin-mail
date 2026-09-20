@@ -165,6 +165,10 @@ impl MainWindow {
         add("print", Box::new(|_, view| view.print()));
         add("view-source", Box::new(|win, view| win.view_source(view)));
         add(
+            "export",
+            Box::new(|win, view| win.export_conversation(view)),
+        );
+        add(
             "unsubscribe",
             Box::new(|win, view| win.unsubscribe_from(Rc::clone(view))),
         );

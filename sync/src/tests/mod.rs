@@ -4,6 +4,7 @@ mod bootstrap;
 mod connect;
 mod contacts;
 mod engine;
+mod export;
 mod incremental;
 mod invitations;
 mod labels;

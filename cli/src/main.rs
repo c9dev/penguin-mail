@@ -2,6 +2,7 @@
 //! and inspect the local store.
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::process::{Command as Process, Stdio};
 use std::sync::Arc;
 use std::time::Duration;
@@ -13,7 +14,7 @@ use mailrs_gmail::{GMAIL_API_BASE, KeyringTokenStore, OAuthClient, TokenStore, a
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{Db, accounts, messages};
 use mailrs_sync::{
-    AccountClient, AccountSync, SyncEngine, TriageAction, connect_account, now_millis,
+    AccountClient, AccountSync, SyncEngine, TriageAction, connect_account, export, now_millis,
 };
 
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
@@ -51,6 +52,17 @@ enum Command {
     },
     /// Fetch a whole thread from Gmail and print it as text.
     Show { account: String, thread_id: String },
+    /// Save a thread as an mbox file, or one of its messages as an .eml.
+    Export {
+        account: String,
+        thread_id: String,
+        /// Save this message alone, as the bytes Gmail holds.
+        #[arg(long)]
+        message: Option<String>,
+        /// Write here rather than to a name built from the subject and the date.
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
     /// Report why a message may look blank, in counts alone. It prints no
     /// mail, so its output is safe to share.
     Diagnose { account: String, thread_id: String },
@@ -98,6 +110,22 @@ async fn main() -> Result<()> {
         } => list_threads(&db, account.as_deref(), label, limit).await,
         Command::Show { account, thread_id } => {
             show_thread(&db, &load_config()?, &account, &thread_id).await
+        }
+        Command::Export {
+            account,
+            thread_id,
+            message,
+            out,
+        } => {
+            export_mail(
+                &db,
+                &load_config()?,
+                &account,
+                &thread_id,
+                message.as_deref(),
+                out,
+            )
+            .await
         }
         Command::Diagnose { account, thread_id } => {
             diagnose(&db, &load_config()?, &account, &thread_id).await
@@ -307,6 +335,46 @@ async fn show_thread(db: &Db, config: &Config, email: &str, thread_id: &str) -> 
         println!("{}", body.text.or(body.html).unwrap_or_default().trim_end());
         println!("{}", "-".repeat(72));
     }
+    Ok(())
+}
+
+/// Writes mail to a file other mail programs read: the whole thread as an
+/// mbox, or one message as the RFC 822 bytes it arrived in. Without `--out`
+/// the name comes from the subject and the date, in the working directory.
+async fn export_mail(
+    db: &Db,
+    config: &Config,
+    email: &str,
+    thread_id: &str,
+    message_id: Option<&str>,
+    out: Option<PathBuf>,
+) -> Result<()> {
+    let sync = account_sync(db, config, email).await?;
+    let extension = if message_id.is_some() { "eml" } else { "mbox" };
+    let path = match out {
+        Some(path) => path,
+        None => {
+            sync.ensure_thread(thread_id).await?;
+            let (account_id, thread) = (sync.account_id(), thread_id.to_string());
+            let stored = db
+                .read(move |c| messages::thread_messages(c, account_id, &thread))
+                .await?;
+            let named = match message_id {
+                Some(id) => stored.iter().find(|m| m.id == id),
+                None => stored.last(),
+            };
+            let Some(named) = named else {
+                bail!("Gmail has no thread {thread_id} in {email}");
+            };
+            PathBuf::from(export::file_name(&named.subject, named.date, extension))
+        }
+    };
+    let mail = match message_id {
+        Some(id) => sync.raw_message(id).await?,
+        None => sync.export_mbox(thread_id, None).await?,
+    };
+    std::fs::write(&path, &mail).with_context(|| format!("could not write {}", path.display()))?;
+    println!("Wrote {} bytes to {}", mail.len(), path.display());
     Ok(())
 }
 
