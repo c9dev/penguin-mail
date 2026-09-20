@@ -212,6 +212,15 @@
 /* Something else is already in the hour this invitation asks for. */
 .invitation-clash { color: var(--warning-color); font-weight: 600; }
 
+/* The message is in another language: which one, where its words would go
+   to be translated, and the button that sends them. */
+.translation-area {
+  padding: 12px 16px 0 16px;
+  background: var(--view-bg-color);
+}
+.translation-card { padding: 10px 14px; border-radius: 12px; }
+.translation-card > image { color: var(--accent-color); }
+
 /* What gpg made of a message, above it and above the event card. */
 .pgp-area {
   padding: 12px 16px 0 16px;

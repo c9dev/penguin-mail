@@ -134,6 +134,7 @@ impl MainWindow {
             Action::Invitation(action) => self.invitation_action(view, action),
             Action::Mailto(address) => self.act(Action::Mailto(address)),
             Action::ShowContact(address) => self.act(Action::ShowContact(address)),
+            Action::Translate => self.translate_message(view),
         }
     }
 

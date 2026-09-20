@@ -49,6 +49,7 @@ mod pgp;
 mod reminders;
 mod scheduled;
 mod senders;
+mod translation;
 
 /// Largest inline image embedded into a page.
 const INLINE_IMAGE_LIMIT: usize = 5 * 1024 * 1024;
@@ -1018,11 +1019,13 @@ impl MainWindow {
                 pgp: None,
                 pgp_asked: false,
                 flag_color: summary.flag_color,
+                translations: HashMap::new(),
             };
             view.show(thread, true);
             view.set_sender_vip(sender_is_vip(&view, &this.settings()));
             this.refresh_invitation(&view).await;
             this.start_pgp(&view);
+            this.refresh_translation(&view);
             this.complete_thread(view, account_id, thread_id).await;
         });
     }
@@ -1109,6 +1112,7 @@ impl MainWindow {
         view.render(false);
         self.refresh_invitation(&view).await;
         self.start_pgp(&view);
+        self.refresh_translation(&view);
         if unread {
             self.mark_read_later(&view, account_id, thread_id.clone());
         }
@@ -1429,6 +1433,10 @@ impl MainWindow {
                 }
             }
             Action::ShowContact(address) => self.show_contact(address),
+            Action::Translate => {
+                let view = Rc::clone(&self.conversation);
+                self.translate_message(&view);
+            }
         }
     }
 

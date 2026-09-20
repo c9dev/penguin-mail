@@ -24,6 +24,7 @@ mod search;
 mod settings;
 mod smime;
 mod templates;
+mod translation;
 mod tray;
 mod ui;
 mod unsubscribe;
