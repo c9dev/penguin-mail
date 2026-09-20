@@ -21,6 +21,7 @@ use webkit::prelude::*;
 
 use self::recipients::Recipients;
 use super::autocomplete::Contacts;
+use crate::attachcheck::{self, Promise};
 use crate::compose::{
     Draft, LinePrefix, OutgoingAttachment, SendWhen, build_mime, format_recipients,
     markdown_to_html, new_message_id, opening_identity, restyle_signature, toggle_prefix,
@@ -100,6 +101,9 @@ pub struct Composer {
     inserted: RefCell<Vec<(i32, i32)>>,
     /// True while the composer edits the buffer itself.
     busy: Cell<bool>,
+    /// Set once Send Anyway answered the missing attachment dialog, so the
+    /// same message is not asked about twice.
+    asked: Cell<bool>,
     dirty: Cell<bool>,
     closing: Cell<bool>,
     on_send: Box<dyn Fn(Draft, SendWhen)>,
@@ -337,6 +341,7 @@ impl Composer {
             typing: RefCell::new(None),
             inserted: RefCell::new(Vec::new()),
             busy: Cell::new(false),
+            asked: Cell::new(false),
             dirty: Cell::new(false),
             closing: Cell::new(false),
             on_send: Box::new(on_send),
@@ -923,6 +928,10 @@ impl Composer {
             self.toast(&format!("Could not build the message: {err}"));
             return;
         }
+        if let Some(promise) = self.unkept_promise(&draft) {
+            self.ask_about_attachment(&promise, when);
+            return;
+        }
         if let Some(identity) = self.identity() {
             (self.remember)(Remembered::SentFrom {
                 account: identity.account_email.clone(),
@@ -932,6 +941,48 @@ impl Composer {
         self.closing.set(true);
         self.window.close();
         (self.on_send)(draft, when);
+    }
+
+    /// The file this message promises and does not carry. An image pasted
+    /// into the text keeps a promise of something to look at, since it
+    /// arrives with the message either way, but not a promise of a file:
+    /// only an attachment comes out of the reader's mail as one.
+    fn unkept_promise(&self, draft: &Draft) -> Option<Promise> {
+        if self.asked.get() {
+            return None;
+        }
+        let promise = attachcheck::promised(&draft.subject, &draft.markdown)?;
+        let files = draft.attachments.iter().any(|a| a.content_id.is_none());
+        let images = draft.attachments.iter().any(|a| a.content_id.is_some());
+        let kept = files || (images && !promise.names_a_file);
+        (!kept).then_some(promise)
+    }
+
+    /// Asks before a message that promises a file goes without one. Send
+    /// Anyway sends it as it stands, Add Attachment opens the file picker
+    /// and leaves the message open, and closing the dialog does neither.
+    fn ask_about_attachment(self: &Rc<Self>, promise: &Promise, when: SendWhen) {
+        let dialog = adw::AlertDialog::new(
+            Some("Attachment Missing?"),
+            Some(&format!(
+                "The message says “{}” and carries no file.",
+                promise.sentence
+            )),
+        );
+        dialog.add_responses(&[("attach", "Add Attachment"), ("send", "Send Anyway")]);
+        dialog.set_response_appearance("send", adw::ResponseAppearance::Suggested);
+        dialog.set_default_response(Some("attach"));
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            match dialog.choose_future(Some(&this.window)).await.as_str() {
+                "send" => {
+                    this.asked.set(true);
+                    this.hand_over(when);
+                }
+                "attach" => this.pick_files(),
+                _ => {}
+            }
+        });
     }
 
     /// Asks for a date and time, then schedules the message.
