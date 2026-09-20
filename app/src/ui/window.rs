@@ -757,7 +757,12 @@ impl MainWindow {
         let view = self.view();
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let Ok(counts) = this.core.counts(mailboxes, shown, view).await else {
+            let lists = this.core.lists();
+            let counted = this
+                .core
+                .call(async move { lists.counts(&mailboxes, &shown, &view).await })
+                .await;
+            let Ok(counts) = counted else {
                 return;
             };
             this.sidebar.set_counts(&counts.mailboxes);
@@ -837,7 +842,11 @@ impl MainWindow {
         let (scope, view) = (self.scope(), self.view());
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let loaded = this.core.list(mailbox, scope, view, 0).await;
+            let lists = this.core.lists();
+            let loaded = this
+                .core
+                .call(async move { lists.list(&mailbox, &scope, &view, 0).await })
+                .await;
             if this.list_generation.get() != generation {
                 return;
             }
@@ -871,7 +880,11 @@ impl MainWindow {
         let (scope, view, from) = (self.scope(), self.view(), self.list.loaded());
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let loaded = this.core.list(mailbox, scope, view, from).await;
+            let lists = this.core.lists();
+            let loaded = this
+                .core
+                .call(async move { lists.list(&mailbox, &scope, &view, from).await })
+                .await;
             if this.list_generation.get() != generation {
                 return;
             }
@@ -895,9 +908,10 @@ impl MainWindow {
         let view = self.view();
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
+            let (lists, named) = (this.core.lists(), changed.clone());
             let fresh = this
                 .core
-                .changed_rows(mailbox, changed.clone(), view)
+                .call(async move { lists.changed(&mailbox, &named, &view).await })
                 .await
                 .unwrap_or(None);
             if this.list_generation.get() != generation {
@@ -1651,7 +1665,11 @@ impl MainWindow {
         let next = self.list.neighbour_of_selected();
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let erased = this.core.erase(targets).await;
+            let actions = this.core.actions();
+            let erased = this
+                .core
+                .call(async move { actions.erase(&targets).await })
+                .await;
             let outcome = match erased {
                 Ok(Permitted::Done(outcome)) => outcome,
                 Ok(Permitted::NeedsPermission) => return this.ask_for_delete_access(account_id),
@@ -1801,7 +1819,12 @@ impl MainWindow {
         let targets = targets.to_vec();
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let gone = this.core.gone_from(folder, targets).await;
+            let actions = this.core.actions();
+            let gone = this
+                .core
+                .call(async move { actions.gone_from(folder, &targets).await })
+                .await
+                .unwrap_or_default();
             if gone.is_empty() {
                 return;
             }
