@@ -138,7 +138,24 @@ cargo build --quiet -p mailrs
 # home and runtime directory keep the settings of the copy you use out of
 # it, and a memory backend keeps this run's out of yours.
 sandbox=$(mktemp -d)
-trap 'rm -f "$walk"; rm -rf "$sandbox"' EXIT
+trap 'rm -f "$walk"; take_down; rm -rf "$sandbox"' EXIT
+
+# The registry forks and leaves the pid it was started under behind, so
+# killing that pid kills nothing and an orphan lives on against a display
+# that has gone. Everything this run started inherited the sandbox path
+# and nothing else on the machine carries it, which is what says who to
+# take down without reaching the daemons of the desktop you are sitting
+# at.
+take_down() {
+    for proc in /proc/[0-9]*; do
+        pid=${proc#/proc/}
+        [ "$pid" = "$$" ] && continue
+        if tr '\0' '\n' <"$proc/environ" 2>/dev/null |
+            grep -qxF "XDG_RUNTIME_DIR=$sandbox/run"; then
+            kill "$pid" 2>/dev/null
+        fi
+    done
+}
 export HOME="$sandbox/home"
 export XDG_RUNTIME_DIR="$sandbox/run"
 mkdir -p "$HOME" "$XDG_RUNTIME_DIR"
@@ -157,6 +174,7 @@ window=\$!
 python3 $walk
 status=\$?
 kill \$window 2>/dev/null
+wait \$window 2>/dev/null
 exit \$status
 "
 xvfb-run -a --server-args="-screen 0 1400x900x24" \
