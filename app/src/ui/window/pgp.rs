@@ -62,7 +62,7 @@ impl MainWindow {
         {
             Ok(raw) => raw,
             Err(err) => {
-                tracing::info!(error = %err, "could not fetch the message OpenPGP protected");
+                tracing::info!(error = %err, "could not fetch the message to check its OpenPGP");
                 return;
             }
         };
@@ -89,7 +89,7 @@ impl MainWindow {
             // it goes no further than this window: the store keeps the
             // message as Gmail holds it, ciphertext and all.
             if let Some(body) = read.body {
-                open.bodies.insert(message_id.clone(), Ok(body));
+                open.bodies.insert(message_id, Ok(body));
             }
         });
         view.render(false);

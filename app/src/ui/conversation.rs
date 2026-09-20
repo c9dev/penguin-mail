@@ -16,7 +16,7 @@ use webkit::prelude::*;
 use super::invitation::{self, EventCard, Showing};
 use super::pgp::PgpCard;
 use crate::compose::ReplyKind;
-use crate::pgp::Mark;
+use crate::pgp::{self, Mark, Opening};
 use crate::render::{BodyState, Conversation, MessageView, Theme, render};
 use crate::sanitize::sanitize_html;
 
@@ -99,10 +99,10 @@ impl OpenThread {
     /// The newest message that arrived under OpenPGP, with the call the
     /// engine needs for it. A thread holds one such message far more often
     /// than two, and the newest is the one being read.
-    pub fn protected(&self) -> Option<(&MessageMeta, crate::pgp::Opening)> {
+    pub fn protected(&self) -> Option<(&MessageMeta, Opening)> {
         self.messages.iter().rev().find_map(|meta| {
             let body = self.bodies.get(&meta.id)?.as_ref().ok()?;
-            Some((meta, crate::pgp::opening(body)?))
+            Some((meta, pgp::opening(body)?))
         })
     }
 

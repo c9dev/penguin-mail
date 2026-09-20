@@ -16,6 +16,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gdk, gio, glib};
+use mailrs_pgp::Recipient;
 use mailrs_store::templates::Template;
 use webkit::prelude::*;
 
@@ -23,11 +24,12 @@ use self::recipients::Recipients;
 use super::autocomplete::Contacts;
 use crate::attachcheck::{self, Promise};
 use crate::compose::{
-    Draft, LinePrefix, OutgoingAttachment, SendWhen, build_mime, format_recipients,
+    Draft, LinePrefix, OutgoingAttachment, SendWhen, build_mime, format_recipients, is_address,
     markdown_to_html, new_message_id, opening_identity, restyle_signature, toggle_prefix,
 };
 use crate::core::Core;
 use crate::format::{future_date, human_size, send_later_presets};
+use crate::pgp::cannot_encrypt;
 use crate::richtext::{Block, BlockKind, RichBody, Style};
 use crate::settings::ComposeFormat;
 use crate::templates::{self, Filling};
@@ -991,8 +993,8 @@ impl Composer {
 
     /// Offers encryption when gpg can do it, and says what is in the way
     /// when it cannot.
-    fn show_keys(&self, held: &[mailrs_pgp::Recipient]) {
-        let problem = crate::pgp::cannot_encrypt(held, !self.bcc.is_empty());
+    fn show_keys(&self, held: &[Recipient]) {
+        let problem = cannot_encrypt(held, !self.bcc.is_empty());
         self.encrypt.set_sensitive(problem.is_none());
         self.encrypt.set_tooltip_text(Some(
             problem
@@ -1015,7 +1017,7 @@ impl Composer {
             .into_iter()
             .flat_map(|field| field.addresses())
             .map(|address| address.email.trim().to_lowercase())
-            .filter(|email| crate::compose::is_address(email))
+            .filter(|email| is_address(email))
             .collect();
         found.sort();
         found.dedup();
