@@ -177,10 +177,7 @@ fn monthly_day(parts: &[(String, String)]) -> Option<String> {
     if let Some(day) = part(parts, "BYMONTHDAY").and_then(|d| d.trim().parse::<i32>().ok()) {
         return Some(match day {
             -1 => gettext("the last day"),
-            day if day > 0 => fill(
-                &gettext("the {ordinal}"),
-                &[("ordinal", &ordinal(day as u32))],
-            ),
+            day if day > 0 => ordinal(day as u32),
             _ => return None,
         });
     }
@@ -207,15 +204,21 @@ fn nth(n: u32) -> String {
     }
 }
 
+/// Which day of the month a rule picks, as the card words it: "the 15th"
+/// in English. The number is named rather than glued on, because the
+/// English suffix is English grammar and another language wants none of
+/// it; each suffix carries its own sentence for a translator to replace
+/// with one.
 fn ordinal(n: u32) -> String {
-    let suffix = match (n % 10, n % 100) {
-        (_, 11..=13) => "th",
-        (1, _) => "st",
-        (2, _) => "nd",
-        (3, _) => "rd",
-        _ => "th",
-    };
-    format!("{n}{suffix}")
+    let day = [("day", n.to_string())];
+    let day = [("day", day[0].1.as_str())];
+    match (n % 10, n % 100) {
+        (_, 11..=13) => fill(&gettext("the {day}th"), &day),
+        (1, _) => fill(&gettext("the {day}st"), &day),
+        (2, _) => fill(&gettext("the {day}nd"), &day),
+        (3, _) => fill(&gettext("the {day}rd"), &day),
+        _ => fill(&gettext("the {day}th"), &day),
+    }
 }
 
 /// The local day an `UNTIL` value falls on. Organizers write it in UTC,

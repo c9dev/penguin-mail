@@ -23,7 +23,9 @@ source. Each `<locale>.po` beside it is one language.
 3. Translate. `msgstr ""` means untranslated, and the app then shows the
    English behind it, so a half-finished file is safe to commit.
 
-4. Build and install it:
+4. Build and install it. `scripts/update-po.sh` writes `LINGUAS`, which is
+   how `msgfmt --desktop` finds your language for the launcher's own name
+   and description:
 
    ```
    scripts/update-po.sh     # compiles into target/locale, for a build-tree run
@@ -60,3 +62,14 @@ drifted apart.
 Some strings are deliberately not translated: Gmail's label ids, its
 search syntax such as `has:attachment`, MIME types, header names, CSS, and
 anything else that goes to Gmail rather than to a reader.
+
+Two more stay in English on purpose. The `---------- Forwarded message
+----------` line is the marker every mail client writes, and Penguin Mail
+looks for it again when it reopens a saved draft. The `From:`, `Date:`,
+`Subject:`, `To:` and `Cc:` names in a forwarded block are read back the
+same way.
+
+A date pattern made only of `%` codes, such as `%-d %b`, is in the
+template so a language can reorder it. The weekday and month names inside
+one come out of chrono in English whatever the locale says; closing that
+needs a locale-aware formatter, which is work of its own.

@@ -79,6 +79,15 @@ if [ -n "$missing" ]; then
     echo "$missing" | sed 's/^/  /' >&2
 fi
 
+# LINGUAS names the languages that exist. msgfmt reads it to put the
+# translated Name and Comment into the desktop entry.
+printf '# The languages po/ holds, one per line. update-po.sh writes this.\n' \
+    > po/LINGUAS
+for po in po/*.po; do
+    [ -e "$po" ] || continue
+    basename "$po" .po >> po/LINGUAS
+done
+
 mkdir -p target/locale
 for po in po/*.po; do
     [ -e "$po" ] || continue
