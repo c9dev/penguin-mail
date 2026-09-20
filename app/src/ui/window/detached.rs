@@ -126,6 +126,12 @@ impl MainWindow {
             Action::SaveAttachment { message_id, index } => {
                 self.save_attachment_from(view, message_id, index)
             }
+            Action::PreviewAttachment { message_id, index } => {
+                self.preview_attachment_from(view, message_id, index)
+            }
+            Action::SaveAllAttachments { message_id } => {
+                self.save_all_attachments_from(view, message_id)
+            }
             Action::Unsubscribe => self.unsubscribe_from(Rc::clone(view)),
             Action::Invitation(action) => self.invitation_action(view, action),
             Action::Mailto(address) => self.act(Action::Mailto(address)),

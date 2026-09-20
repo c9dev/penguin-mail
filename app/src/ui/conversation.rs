@@ -33,6 +33,9 @@ pub struct OpenThread {
     pub me: Vec<String>,
     /// Inline images per message: `Content-ID` to `data:` URI.
     pub inline_images: HashMap<String, HashMap<String, String>>,
+    /// Pictures for the attachment rows: Gmail's attachment id to a small
+    /// `data:` URI. Shared across the thread, since an id is unique.
+    pub thumbnails: HashMap<String, String>,
     /// Contact photos by lower-case sender address, as `data:` URIs. A
     /// sender with none keeps the initials avatar.
     pub photos: HashMap<String, String>,
@@ -121,6 +124,15 @@ pub enum Action {
     SaveAttachment {
         message_id: String,
         index: usize,
+    },
+    /// Show one attachment without leaving the window.
+    PreviewAttachment {
+        message_id: String,
+        index: usize,
+    },
+    /// Write every attachment of one message into a folder.
+    SaveAllAttachments {
+        message_id: String,
     },
     Mailto(String),
     /// The card for one sender, asked for by clicking their name.
@@ -748,6 +760,7 @@ impl ConversationView {
                 },
                 expanded: open.expanded.contains(&meta.id),
                 inline_images: open.inline_images.get(&meta.id).unwrap_or(&empty),
+                thumbnails: &open.thumbnails,
                 sanitized: clean.get(&meta.id).map(|body| body.html.as_str()),
             })
             .collect();
@@ -889,6 +902,19 @@ impl ConversationView {
                     index,
                 });
             }
+        } else if let Some(rest) = uri.strip_prefix("mailrs:preview/") {
+            if let Some((message_id, index)) = rest.rsplit_once('/')
+                && let Ok(index) = index.parse()
+            {
+                actions(Action::PreviewAttachment {
+                    message_id: message_id.to_string(),
+                    index,
+                });
+            }
+        } else if let Some(message_id) = uri.strip_prefix("mailrs:attachments/") {
+            actions(Action::SaveAllAttachments {
+                message_id: message_id.to_string(),
+            });
         } else if let Some(address) = uri.strip_prefix("mailrs:contact/") {
             actions(Action::ShowContact(address.to_string()));
         } else if let Some(address) = uri.strip_prefix("mailto:") {

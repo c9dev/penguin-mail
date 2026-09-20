@@ -487,9 +487,10 @@ pub fn seed(conn: &Connection, now: EpochMillis) -> Result<DemoGmail> {
         fake.with(|state| {
             for attachment in &body.attachments {
                 let id = attachment.attachment_id.clone().unwrap_or_default();
-                state
-                    .attachments
-                    .insert((meta.id.clone(), id.clone()), stand_in(&id));
+                state.attachments.insert(
+                    (meta.id.clone(), id.clone()),
+                    stand_in(&id, &attachment.mime_type),
+                );
             }
             if meta.has_label(system_label::DRAFT) {
                 state
@@ -759,8 +760,47 @@ fn gmail_for(email: &str, account_labels: &[Label]) -> FakeGmail {
 
 /// What the demo hands back for an attachment, since the samples name files
 /// that do not exist.
-fn stand_in(attachment_id: &str) -> Vec<u8> {
+fn stand_in(attachment_id: &str, mime_type: &str) -> Vec<u8> {
+    if mime_type.starts_with("image/")
+        && let Some(png) = stand_in_picture(attachment_id)
+    {
+        return png;
+    }
     format!("This is {attachment_id}, a stand-in file from Penguin Mail demo mode.\n").into_bytes()
+}
+
+/// A picture for a demo photo, so the attachment row has something to show
+/// and Quick Look has something to open. Two bands of colour chosen from
+/// the attachment id, which keeps the same file the same colour.
+fn stand_in_picture(attachment_id: &str) -> Option<Vec<u8>> {
+    const WIDTH: i32 = 640;
+    const HEIGHT: i32 = 420;
+    let seed = attachment_id.bytes().fold(0u32, |hash, byte| {
+        hash.wrapping_mul(31).wrapping_add(byte as u32)
+    });
+    let top = [
+        (0x3b, 0x6e, 0xa5),
+        (0xc2, 0x6b, 0x4a),
+        (0x4a, 0x8f, 0x5e),
+        (0x6d, 0x53, 0x9b),
+    ][seed as usize % 4];
+    let bottom = (
+        (top.0 as u32 * 2 / 5) as u8,
+        (top.1 as u32 * 2 / 5) as u8,
+        (top.2 as u32 * 2 / 5) as u8,
+    );
+    let pixbuf =
+        gtk::gdk_pixbuf::Pixbuf::new(gtk::gdk_pixbuf::Colorspace::Rgb, false, 8, WIDTH, HEIGHT)?;
+    let horizon = HEIGHT * 2 / 3;
+    pixbuf.new_subpixbuf(0, 0, WIDTH, horizon).fill(rgba(top));
+    pixbuf
+        .new_subpixbuf(0, horizon, WIDTH, HEIGHT - horizon)
+        .fill(rgba((bottom.0, bottom.1, bottom.2)));
+    pixbuf.save_to_bufferv("png", &[]).ok()
+}
+
+fn rgba((r, g, b): (u8, u8, u8)) -> u32 {
+    u32::from_be_bytes([r, g, b, 0xff])
 }
 
 impl Sample {

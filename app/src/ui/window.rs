@@ -31,6 +31,7 @@ use crate::settings::{Change, Effect, Effects, MarkRead, RemoteImages, Settings}
 
 mod arrange;
 mod assistant;
+mod attachments;
 mod categories;
 mod detached;
 mod export;
@@ -118,6 +119,9 @@ pub struct MainWindow {
     /// attachment id. Gmail charges 5 units for each one and a
     /// conversation is often reopened.
     inline_cache: RefCell<HashMap<(AccountId, String, String), String>>,
+    /// Pictures for the attachment rows, held the same way and for the
+    /// same reason.
+    thumbnail_cache: RefCell<HashMap<(AccountId, String, String), String>>,
 }
 
 /// What one row holds, for a line the user reads.
@@ -366,6 +370,7 @@ impl MainWindow {
                 categories: categories::CategoryBar::new(),
                 follow_up: followup::FollowUpBanner::new(),
                 inline_cache: RefCell::new(HashMap::new()),
+                thumbnail_cache: RefCell::new(HashMap::new()),
             }
         });
         if window.core.demo {
@@ -879,6 +884,7 @@ impl MainWindow {
                 only_message: only,
                 me,
                 inline_images: HashMap::new(),
+                thumbnails: HashMap::new(),
                 photos,
                 unsubscribed: false,
                 flag_color: summary.flag_color,
@@ -964,7 +970,7 @@ impl MainWindow {
         let unread = self
             .conversation
             .with_open(|open| {
-                open.bodies.extend(loaded);
+                open.bodies.extend(loaded.clone());
                 open.inline_images.extend(images);
                 open.unread()
             })
@@ -972,8 +978,57 @@ impl MainWindow {
         view.render(false);
         self.refresh_invitation(&view).await;
         if unread {
-            self.mark_read_later(&view, account_id, thread_id);
+            self.mark_read_later(&view, account_id, thread_id.clone());
         }
+        self.fill_in_thumbnails(&view, account_id, &sync, thread_id);
+    }
+
+    /// Fetches the pictures for the attachment rows after the message is
+    /// already on screen, and redraws when they arrive. Reading the mail
+    /// never waits on them, and they come out of the background share of
+    /// the account's quota, behind whatever the user asks for next.
+    fn fill_in_thumbnails(
+        self: &Rc<Self>,
+        view: &Rc<ConversationView>,
+        account_id: AccountId,
+        sync: &std::sync::Arc<crate::core::Sync>,
+        thread_id: String,
+    ) {
+        // Every body the thread shows, not only the ones just fetched: a
+        // message read before is already in the store, and its pictures
+        // are just as worth showing.
+        let loaded: Vec<(String, Result<MessageBody, String>)> = view
+            .with_open(|open| {
+                open.bodies
+                    .iter()
+                    .filter(|(_, body)| {
+                        body.as_ref().is_ok_and(|body| {
+                            body.attachments.iter().any(|a| {
+                                a.attachment_id.is_some()
+                                    && a.mime_type.starts_with("image/")
+                                    && !open.thumbnails.contains_key(
+                                        a.attachment_id.as_deref().unwrap_or_default(),
+                                    )
+                                    && !crate::render::shown_in_body(a, body)
+                            })
+                        })
+                    })
+                    .map(|(id, body)| (id.clone(), body.clone()))
+                    .collect()
+            })
+            .unwrap_or_default();
+        if loaded.is_empty() {
+            return;
+        }
+        let (this, view, sync) = (Rc::clone(self), Rc::clone(view), sync.clone());
+        glib::spawn_future_local(async move {
+            let found = this.thumbnails(account_id, &sync, &loaded).await;
+            if found.is_empty() || !view.is_showing(account_id, &thread_id) {
+                return;
+            }
+            view.with_open(|open| open.thumbnails.extend(found));
+            view.render(false);
+        });
     }
 
     /// Marks the open thread or message read, when the setting says so.
@@ -1226,6 +1281,14 @@ impl MainWindow {
                 self.conversation.render(false);
             }
             Action::SaveAttachment { message_id, index } => self.save_attachment(message_id, index),
+            Action::PreviewAttachment { message_id, index } => {
+                let view = Rc::clone(&self.conversation);
+                self.preview_attachment_from(&view, message_id, index)
+            }
+            Action::SaveAllAttachments { message_id } => {
+                let view = Rc::clone(&self.conversation);
+                self.save_all_attachments_from(&view, message_id)
+            }
             Action::Mailto(address) => {
                 let account_id = self.default_account();
                 if let (Some(account_id), Some(app)) = (account_id, self.app.upgrade()) {
