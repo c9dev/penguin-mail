@@ -14,7 +14,9 @@ use mailrs_domain::{AccountId, FlagColor, Folder, MessageBody, MessageMeta, syst
 use webkit::prelude::*;
 
 use super::invitation::{self, EventCard, Showing};
+use super::pgp::PgpCard;
 use crate::compose::ReplyKind;
+use crate::pgp::Mark;
 use crate::render::{BodyState, Conversation, MessageView, Theme, render};
 use crate::sanitize::sanitize_html;
 
@@ -41,6 +43,11 @@ pub struct OpenThread {
     pub photos: HashMap<String, String>,
     /// Set once the user unsubscribed from this thread's list.
     pub unsubscribed: bool,
+    /// What gpg made of the protected message in this thread, once it has
+    /// run. It stays here so redrawing the thread never asks gpg again,
+    /// and so the card survives the body being replaced by the one that
+    /// was inside the encryption.
+    pub pgp: Option<Mark>,
     /// The flag colour chosen here, when the thread is flagged.
     pub flag_color: Option<FlagColor>,
 }
@@ -82,6 +89,16 @@ impl OpenThread {
         self.messages.iter().rev().find_map(|meta| {
             let body = self.bodies.get(&meta.id)?.as_ref().ok()?;
             Some((meta, body.calendar.as_deref()?))
+        })
+    }
+
+    /// The newest message that arrived under OpenPGP, with the call the
+    /// engine needs for it. A thread holds one such message far more often
+    /// than two, and the newest is the one being read.
+    pub fn protected(&self) -> Option<(&MessageMeta, crate::pgp::Opening)> {
+        self.messages.iter().rev().find_map(|meta| {
+            let body = self.bodies.get(&meta.id)?.as_ref().ok()?;
+            Some((meta, crate::pgp::opening(body)?))
         })
     }
 
@@ -176,6 +193,9 @@ pub struct ConversationView {
     /// The event card above the message, shown when the open message
     /// carries an invitation.
     pub card: Rc<EventCard>,
+    /// The card above that, shown when gpg has something to say about the
+    /// message.
+    seal: Rc<PgpCard>,
     /// Cleaned HTML per message. A thread renders at least twice per open.
     sanitized: RefCell<HashMap<String, CleanBody>>,
     list_banner: adw::Banner,
@@ -288,9 +308,11 @@ impl ConversationView {
             let on_action = Rc::clone(&on_action);
             EventCard::new(move |action| on_action(Action::Invitation(action)))
         };
+        let seal = PgpCard::new();
         let web_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
         web_box.append(&list_banner);
         web_box.append(&banner);
+        web_box.append(&seal.widget);
         web_box.append(&card.widget);
         web_box.append(&webview);
         let stack = gtk::Stack::builder()
@@ -456,6 +478,7 @@ impl ConversationView {
             content,
             banner,
             card,
+            seal,
             list_banner,
             sanitized: RefCell::new(HashMap::new()),
             sender_menu,
@@ -643,6 +666,7 @@ impl ConversationView {
         self.banner.set_revealed(false);
         self.list_banner.set_revealed(false);
         self.show_invitation(None);
+        self.seal.hide();
         self.set_buttons_shown(true);
         let b = &self.buttons;
         for button in [&b.reply, &b.reply_all, &b.forward, &b.edit] {
@@ -666,6 +690,7 @@ impl ConversationView {
         self.banner.set_revealed(false);
         self.list_banner.set_revealed(false);
         self.show_invitation(None);
+        self.seal.hide();
     }
 
     /// Puts an invitation above the message, or takes the card away when
@@ -789,6 +814,10 @@ impl ConversationView {
                 .map(|m| script_safe(&m.id));
         }
         self.webview.load_html(&html, None);
+        match &open.pgp {
+            Some(mark) => self.seal.show(mark),
+            None => self.seal.hide(),
+        }
         self.banner
             .set_revealed(!open.images_allowed && open.has_remote_images());
         self.update_buttons(open);

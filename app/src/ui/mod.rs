@@ -10,6 +10,7 @@ pub mod conversation;
 pub mod hide_my_email;
 pub mod invitation;
 pub mod moving;
+pub mod pgp;
 pub mod preferences;
 pub mod rules;
 pub mod search_suggest;

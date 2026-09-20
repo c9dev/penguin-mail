@@ -393,9 +393,89 @@ fn find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
 
 #[cfg(test)]
 mod tests {
+    use std::process::Stdio;
+
     use mailrs_pgp::Key;
 
     use super::*;
+
+    /// A GnuPG home under a temp directory, with one key in it. It touches
+    /// no keyring of whoever runs the tests, and the round trips below say
+    /// so and stop when this computer has no gpg.
+    struct Home {
+        dir: tempfile::TempDir,
+        pgp: Pgp,
+        address: String,
+    }
+
+    impl Home {
+        fn new() -> Option<Home> {
+            let Ok(pgp) = Pgp::find() else {
+                eprintln!("skipping: no gpg on PATH, so the round trips cannot run");
+                return None;
+            };
+            let dir = tempfile::tempdir().expect("a temp directory");
+            permit_owner_only(dir.path());
+            let address = "ada@example.test";
+            let made = Command::new(pgp.program())
+                .args(["--batch", "--no-tty", "--homedir"])
+                .arg(dir.path())
+                .args([
+                    "--passphrase",
+                    "",
+                    "--quick-generate-key",
+                    &format!("Ada Lovelace <{address}>"),
+                    "future-default",
+                    "default",
+                    "0",
+                ])
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status()
+                .expect("gpg runs");
+            assert!(made.success(), "gpg could not generate a test key");
+            Some(Home {
+                pgp: pgp.with_home(dir.path()),
+                dir,
+                address: address.to_string(),
+            })
+        }
+
+        /// The message a send would put on the wire: the headers of the
+        /// message, then the entity the engine handed back, byte for byte.
+        fn message(&self, entity: &[u8]) -> Vec<u8> {
+            let mut raw = format!(
+                "From: Ada Lovelace <{0}>\r\nTo: Ada Lovelace <{0}>\r\n\
+                 Subject: Six\r\nMIME-Version: 1.0\r\n",
+                self.address
+            )
+            .into_bytes();
+            raw.extend_from_slice(entity);
+            raw
+        }
+    }
+
+    impl Drop for Home {
+        fn drop(&mut self) {
+            // The agent gpg started holds sockets under the temp directory.
+            let _ = Command::new("gpgconf")
+                .arg("--homedir")
+                .arg(self.dir.path())
+                .args(["--kill", "gpg-agent"])
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status();
+        }
+    }
+
+    #[cfg(unix)]
+    fn permit_owner_only(path: &std::path::Path) {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o700)).expect("chmod");
+    }
+
+    #[cfg(not(unix))]
+    fn permit_owner_only(_path: &std::path::Path) {}
 
     fn body(text: &str) -> MessageBody {
         MessageBody {
@@ -613,5 +693,78 @@ mod tests {
         );
         assert_eq!(version_of("").as_deref(), None);
         assert_eq!(version_of("gpg: no such option").as_deref(), None);
+    }
+
+    #[test]
+    fn a_message_signed_by_the_engine_reads_back_as_signed_here() {
+        let Some(home) = Home::new() else { return };
+        let part = b"Content-Type: text/plain; charset=utf-8\r\n\r\nMeet at six.\r\n";
+        let entity = home.pgp.sign(part, &home.address).expect("a signed body");
+        let raw = home.message(&entity);
+
+        let read = read(&home.pgp, Opening::Verify, &raw, &MessageBody::default());
+
+        assert_eq!(read.mark.title, "Signed by Ada Lovelace <ada@example.test>");
+        assert_eq!(read.mark.tone, Tone::Good);
+        assert!(read.body.is_none());
+    }
+
+    #[test]
+    fn a_message_the_engine_encrypted_comes_back_readable() {
+        let Some(home) = Home::new() else { return };
+        let part = b"Content-Type: text/plain; charset=utf-8\r\n\r\nThe key is under the mat.\r\n";
+        let entity = home
+            .pgp
+            .encrypt(
+                part,
+                std::slice::from_ref(&home.address),
+                Some(&home.address),
+            )
+            .expect("an encrypted body");
+        let raw = home.message(&entity);
+
+        let read = read(&home.pgp, Opening::Decrypt, &raw, &MessageBody::default());
+
+        assert_eq!(
+            read.mark.title,
+            "Encrypted, and signed by Ada Lovelace <ada@example.test>"
+        );
+        assert_eq!(read.mark.tone, Tone::Good);
+        let inside = read.body.expect("the message that was inside");
+        assert_eq!(
+            inside.text.as_deref(),
+            Some("The key is under the mat.\r\n")
+        );
+    }
+
+    #[test]
+    fn armor_in_the_text_opens_with_its_signature() {
+        let Some(home) = Home::new() else { return };
+        // What a mail client that writes inline PGP sends: the armor in the
+        // body, with its own words around it.
+        let armor = String::from_utf8(
+            home.pgp
+                .encrypt(
+                    b"Meet at six.\r\n",
+                    std::slice::from_ref(&home.address),
+                    Some(&home.address),
+                )
+                .expect("an encrypted body"),
+        )
+        .expect("armor is ascii");
+        let block = armor
+            .split_once("-----BEGIN PGP MESSAGE-----")
+            .map(|(_, rest)| format!("-----BEGIN PGP MESSAGE-----{rest}"))
+            .expect("armor in the entity");
+        let arrived = body(&format!("Sent from my telephone\n{block}"));
+        assert_eq!(opening(&arrived), Some(Opening::Inline));
+
+        // Inline PGP is read out of the text, so nothing here needs the raw
+        // message.
+        let read = read(&home.pgp, Opening::Inline, &[], &arrived);
+
+        assert_eq!(read.mark.tone, Tone::Good);
+        let inside = read.body.expect("the text that was inside");
+        assert_eq!(inside.text.as_deref(), Some("Meet at six.\r\n"));
     }
 }

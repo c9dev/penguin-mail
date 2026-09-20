@@ -41,6 +41,7 @@ mod hide_my_email;
 mod images;
 mod invitation;
 mod organize;
+mod pgp;
 mod reminders;
 mod scheduled;
 mod senders;
@@ -898,11 +899,13 @@ impl MainWindow {
                 thumbnails: HashMap::new(),
                 photos,
                 unsubscribed: false,
+                pgp: None,
                 flag_color: summary.flag_color,
             };
             view.show(thread, true);
             view.set_sender_vip(sender_is_vip(&view, &this.settings()));
             this.refresh_invitation(&view).await;
+            this.refresh_pgp(&view).await;
             this.complete_thread(view, account_id, thread_id).await;
         });
     }
@@ -988,6 +991,7 @@ impl MainWindow {
             .unwrap_or(false);
         view.render(false);
         self.refresh_invitation(&view).await;
+        self.refresh_pgp(&view).await;
         if unread {
             self.mark_read_later(&view, account_id, thread_id.clone());
         }

@@ -107,4 +107,8 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Recipient key**: what gpg holds for one address a message is going to: a key it would encrypt to, or nothing. `mailrs_pgp::Recipient`. The composer offers encryption when every recipient has one and names the ones that do not; how far each key is trusted belongs in a warning, not in that decision. _Avoid_: public key, certificate, contact key.
 
+**Mark**: what the OpenPGP card says about a message: a line naming what happened, a line saying how much it is worth, and which of the three tones the card takes. `mailrs::pgp::Mark`. Good, bad and unchecked stay three answers rather than two, because a signature from a key this computer lacks is not a bad signature. _Avoid_: status, badge, verdict (which is the engine's word for one half of this).
+
+**OpenPGP card**: the card above the message body that shows a mark. `mailrs::ui::pgp::PgpCard`. It sits above the event card, has no buttons, and stays put once gpg has answered, so a message that was opened out of its ciphertext goes on saying it arrived encrypted. _Avoid_: banner, badge, security indicator.
+
 **Protection**: the RFC 3156 wrapper a message arrived in, `multipart/signed` or `multipart/encrypted`. `mailrs_domain::Protection`, which `mailrs_gmail::body::extract_body` reads off the top-level part and only there, since a signed part further down belongs to a message somebody forwarded. The parts themselves stay out of the body: a signature covers the bytes as they were sent, so whoever checks one fetches the raw message. Inline PGP carries no wrapper and is found in the text instead. _Avoid_: encryption status, security level.
