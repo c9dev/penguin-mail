@@ -396,6 +396,32 @@ fn samples() -> Vec<Sample> {
             attachments: &[("invite.ics", "text/calendar", 892)],
         },
         Sample {
+            account: 2,
+            thread: "t-lab-move",
+            id: "lab-move-1",
+            from: ("Facilities", "facilities@uni.example"),
+            to: &[("Physics All", "physics-all@uni.example")],
+            subject: "[physics-all] Moving the microscopes, week of the 14th",
+            minutes_ago: 3 * DAY,
+            labels: &["MUTE"],
+            text: "The two scopes in B110 move to B214 that week. Nobody needs to do anything.",
+            html: None,
+            attachments: &[],
+        },
+        Sample {
+            account: 2,
+            thread: "t-lab-move",
+            id: "lab-move-2",
+            from: ("Tomas Lind", "t.lind@uni.example"),
+            to: &[("Physics All", "physics-all@uni.example")],
+            subject: "Re: [physics-all] Moving the microscopes, week of the 14th",
+            minutes_ago: 2 * DAY,
+            labels: &["MUTE"],
+            text: "Does that include the one nobody has booked since March?",
+            html: None,
+            attachments: &[],
+        },
+        Sample {
             account: 0,
             thread: "t-prize",
             id: "prize-1",
@@ -1009,6 +1035,20 @@ mod tests {
             .expect("the older version is remembered");
         assert_eq!(held.sequence, 0);
         assert_eq!(held.starts_at, Some(planning_was(now).timestamp_millis()));
+    }
+
+    #[test]
+    fn the_muted_mailbox_has_a_thread_the_inbox_never_sees() {
+        let conn = open_in_memory().unwrap();
+        seed(&conn, 1_758_000_000_000).unwrap();
+        let muted = threads::list_threads(&conn, &ThreadFilter::unified(system_label::MUTE), 0, 10)
+            .unwrap();
+        assert_eq!(muted.len(), 1);
+        assert_eq!(muted[0].id, "t-lab-move");
+        assert!(muted[0].muted);
+        assert_eq!(muted[0].message_count, 2);
+        let inbox = threads::list_threads(&conn, &ThreadFilter::unified("INBOX"), 0, 100).unwrap();
+        assert!(inbox.iter().all(|t| t.id != "t-lab-move"));
     }
 
     #[test]

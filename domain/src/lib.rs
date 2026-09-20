@@ -243,6 +243,9 @@ pub struct ThreadSummary {
     pub unread: bool,
     pub starred: bool,
     pub has_attachments: bool,
+    /// The thread carries Gmail's mute label, so replies skip the inbox.
+    #[serde(default)]
+    pub muted: bool,
     /// The flag colour chosen here for a starred row, if one was.
     #[serde(default)]
     pub flag_color: Option<FlagColor>,

@@ -269,7 +269,9 @@ fn count(conn: &Connection, sql: &Sql) -> Result<i64> {
 
 const COLUMNS: &str = "t.account_id, t.id, t.last_message_at, t.subject, t.snippet, t.from_display, \
                        t.message_count, t.unread, t.starred, t.has_attachments, t.flag_color, \
-                       t.from_email";
+                       t.from_email, \
+                       EXISTS (SELECT 1 FROM thread_labels z WHERE z.account_id = t.account_id \
+                               AND z.thread_id = t.id AND z.label_id = 'MUTE')";
 
 fn flag_color(row: &Row<'_>, index: usize) -> rusqlite::Result<Option<FlagColor>> {
     Ok(row
@@ -292,6 +294,7 @@ fn to_summary(row: &Row<'_>) -> rusqlite::Result<ThreadSummary> {
         has_attachments: row.get(9)?,
         flag_color: flag_color(row, 10)?,
         from_email: row.get(11)?,
+        muted: row.get(12)?,
     })
 }
 
@@ -336,7 +339,9 @@ const MESSAGE_COLUMNS: &str = "m.account_id, m.thread_id, m.id, m.date, m.subjec
      EXISTS (SELECT 1 FROM message_labels s WHERE s.account_id = m.account_id AND s.message_id = m.id \
              AND s.label_id = 'STARRED'), \
      (SELECT f.color FROM flags f WHERE f.account_id = m.account_id AND f.message_id = m.id), \
-     COALESCE(m.from_addr, '')";
+     COALESCE(m.from_addr, ''), \
+     EXISTS (SELECT 1 FROM message_labels z WHERE z.account_id = m.account_id AND z.message_id = m.id \
+             AND z.label_id = 'MUTE')";
 
 fn to_message_row(row: &Row<'_>) -> rusqlite::Result<ThreadSummary> {
     Ok(ThreadSummary {
@@ -353,6 +358,7 @@ fn to_message_row(row: &Row<'_>) -> rusqlite::Result<ThreadSummary> {
         starred: row.get(9)?,
         flag_color: flag_color(row, 10)?,
         from_email: row.get(11)?,
+        muted: row.get(12)?,
     })
 }
 

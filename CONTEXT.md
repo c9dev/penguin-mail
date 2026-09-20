@@ -18,6 +18,8 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Mail action**: a change a person or the assistant makes to targets, such as archive, flag in a colour, remind at a time, or label by name. `mailrs_sync::MailActions` runs each one for the window and the assistant alike, carries on past a failed target, and reports each failure in its `Outcome`. _Avoid_: command, operation.
 
+**Muted**: a thread carrying Gmail's `MUTE` label. Gmail's own filters archive whatever arrives on such a thread, so a reply lands outside the inbox without the app doing anything; muting is therefore the label plus one archive, and unmuting drops the label and puts the thread back. `mailrs_sync::TriageAction::Mute`, behind `MailAction::Mute`. The Muted mailbox lists these threads and a row marks them. _Avoid_: ignore, silence, snooze.
+
 **Undo**: the one recorded mail action that Ctrl+Z or a toast's Undo button reverses. It puts back labels, earlier flag colours, and earlier reminders, and it works once. The window and the assistant share it. _Avoid_: history, revert.
 
 **Mailbox**: one choice in the sidebar, and what the thread list then shows: a label in one account or across all, a folder, a search, a smart mailbox, a flag colour, VIP mail, Follow Up, Remind Me, or Send Later. `mailrs_sync::Mailbox`. _Avoid_: view, source, box.

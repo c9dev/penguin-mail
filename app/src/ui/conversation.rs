@@ -59,6 +59,12 @@ impl OpenThread {
         self.messages.iter().any(|m| m.is_unread())
     }
 
+    pub fn muted(&self) -> bool {
+        self.messages
+            .iter()
+            .any(|m| m.has_label(system_label::MUTE))
+    }
+
     /// The message a reply answers: the newest one that is not a draft.
     pub fn reply_target(&self) -> Option<&MessageMeta> {
         self.messages
@@ -148,6 +154,7 @@ pub struct ConversationView {
     many: adw::StatusPage,
     many_read: gtk::Button,
     many_star: gtk::Button,
+    many_mute: gtk::Button,
     many_junk: gtk::Button,
     many_trash: gtk::Button,
     stack: gtk::Stack,
@@ -162,6 +169,8 @@ pub struct ConversationView {
     list_banner: adw::Banner,
     /// The menu section whose first item adds or removes the sender as a VIP.
     sender_menu: gio::Menu,
+    /// The menu section holding Mute, whose wording follows the thread.
+    mark_menu: gio::Menu,
     /// Remind Me times, recomputed whenever a conversation opens.
     remind: gio::Menu,
     buttons: Buttons,
@@ -224,12 +233,13 @@ impl ConversationView {
             .line_spacing(10)
             .align(0.5)
             .build();
-        let (mut many_read, mut many_star, mut many_junk, mut many_trash) =
-            (None, None, None, None);
+        let (mut many_read, mut many_star, mut many_mute, mut many_junk, mut many_trash) =
+            (None, None, None, None, None);
         for (label, action) in [
             ("Archive", "win.archive"),
             ("Mark as Read", "win.toggle-read"),
             ("Flag", "win.toggle-star"),
+            ("Mute", "win.mute"),
             ("Junk", "win.junk"),
             ("Move to Trash", "win.trash"),
         ] {
@@ -242,15 +252,17 @@ impl ConversationView {
                 "win.archive" => pill.add_css_class("suggested-action"),
                 "win.toggle-read" => many_read = Some(pill.clone()),
                 "win.toggle-star" => many_star = Some(pill.clone()),
+                "win.mute" => many_mute = Some(pill.clone()),
                 "win.junk" => many_junk = Some(pill.clone()),
                 "win.trash" => many_trash = Some(pill.clone()),
                 _ => {}
             }
             bulk.append(&pill);
         }
-        let (many_read, many_star, many_junk, many_trash) = (
+        let (many_read, many_star, many_mute, many_junk, many_trash) = (
             many_read.expect("the bulk actions include read"),
             many_star.expect("the bulk actions include star"),
+            many_mute.expect("the bulk actions include mute"),
             many_junk.expect("the bulk actions include junk"),
             many_trash.expect("the bulk actions include trash"),
         );
@@ -315,6 +327,7 @@ impl ConversationView {
         let marks = gio::Menu::new();
         marks.append(Some("Flag or Unflag"), Some("win.toggle-star"));
         marks.append(Some("Mark Read or Unread"), Some("win.toggle-read"));
+        marks.append(Some("Mute"), Some("win.mute"));
         marks.append(Some("Junk"), Some("win.junk"));
         marks.append(Some("Labels…"), Some("win.label"));
         let remind_menu = gio::Menu::new();
@@ -352,6 +365,7 @@ impl ConversationView {
         more.append_section(None, &sender);
         buttons.more.set_menu_model(Some(&more));
         let sender_menu = sender.clone();
+        let mark_menu = marks.clone();
         let remind = remind_menu.clone();
         let header = adw::HeaderBar::builder()
             .title_widget(&gtk::Label::new(None))
@@ -421,6 +435,7 @@ impl ConversationView {
             many,
             many_read,
             many_star,
+            many_mute,
             many_junk,
             many_trash,
             stack,
@@ -431,6 +446,7 @@ impl ConversationView {
             list_banner,
             sanitized: RefCell::new(HashMap::new()),
             sender_menu,
+            mark_menu,
             remind,
             buttons,
             filter: RefCell::new(None),
@@ -522,6 +538,17 @@ impl ConversationView {
         );
     }
 
+    /// Words the Mute menu item for whether the thread is muted already.
+    /// It sits third in the section, after the two mark items.
+    pub fn set_muted(&self, muted: bool) {
+        self.mark_menu.remove(2);
+        self.mark_menu.insert(
+            2,
+            Some(if muted { "Unmute" } else { "Mute" }),
+            Some("win.mute"),
+        );
+    }
+
     /// Opens the print dialog for the conversation on screen.
     pub fn print(&self) {
         if self.open.borrow().is_none() {
@@ -578,9 +605,16 @@ impl ConversationView {
         self.stack.visible_child_name().as_deref() == Some("many")
     }
 
-    /// The page for a multiple selection. `any_unread` and `all_starred`
-    /// decide what the read and star buttons do.
-    pub fn show_many(&self, count: usize, noun: &str, any_unread: bool, all_starred: bool) {
+    /// The page for a multiple selection. `any_unread`, `all_starred`, and
+    /// `all_muted` decide what the read, star, and mute buttons do.
+    pub fn show_many(
+        &self,
+        count: usize,
+        noun: &str,
+        any_unread: bool,
+        all_starred: bool,
+        all_muted: bool,
+    ) {
         self.many_read.set_label(if any_unread {
             "Mark as Read"
         } else {
@@ -588,6 +622,8 @@ impl ConversationView {
         });
         self.many_star
             .set_label(if all_starred { "Unflag" } else { "Flag" });
+        self.many_mute
+            .set_label(if all_muted { "Unmute" } else { "Mute" });
         *self.open.borrow_mut() = None;
         self.many.set_title(&format!("{count} {noun} Selected"));
         self.stack.set_visible_child_name("many");
@@ -799,6 +835,7 @@ impl ConversationView {
         } else {
             "Flag (Ctrl+Shift+L)"
         }));
+        self.set_muted(open.muted());
         let unread = open.unread();
         self.buttons.read.set_icon_name(if unread {
             "mail-read-symbolic"

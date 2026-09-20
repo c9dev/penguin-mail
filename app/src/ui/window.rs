@@ -156,6 +156,15 @@ fn capitalized(word: &str) -> String {
     }
 }
 
+/// Whether `mailbox` is the Muted list, unified or for one account.
+fn lists_muted(mailbox: &Mailbox) -> bool {
+    match mailbox {
+        Mailbox::Unified(label) => *label == system_label::MUTE,
+        Mailbox::Label { label_id, .. } => label_id == system_label::MUTE,
+        _ => false,
+    }
+}
+
 /// The toast after an action, or `None` when the change speaks for itself.
 fn done_message(action: &MailAction, count: usize, threaded: bool) -> Option<String> {
     let action = match action {
@@ -164,6 +173,13 @@ fn done_message(action: &MailAction, count: usize, threaded: bool) -> Option<Str
             return color.map(|c| format!("Flagged {}", c.name().to_lowercase()));
         }
         MailAction::Label { .. } => return Some("Labels changed".into()),
+        MailAction::Mute { muted } => {
+            let verb = if *muted { "Muted" } else { "Unmuted" };
+            return Some(match count > 1 {
+                true => format!("{verb} {count} {}", row_noun(count, threaded)),
+                false => verb.into(),
+            });
+        }
         MailAction::Remind { .. } | MailAction::CancelReminder => return None,
     };
     let noun = row_noun(count, threaded);
@@ -1121,6 +1137,7 @@ impl MainWindow {
                     noun,
                     rows.iter().any(|r| r.unread),
                     rows.iter().all(|r| r.starred),
+                    rows.iter().all(|r| r.muted),
                 );
             }
             Picked::None => self.conversation.clear(),
@@ -1166,6 +1183,18 @@ impl MainWindow {
             .with_open(|o| (o.unread(), o.starred()))
             .or_else(|| rows.first().map(|r| (r.unread, r.starred)))
             .unwrap_or((false, false))
+    }
+
+    /// Whether every target is muted. False when nothing is selected.
+    fn targets_muted(&self) -> bool {
+        let rows = self.list.selected_rows();
+        if rows.len() > 1 {
+            return rows.iter().all(|r| r.muted);
+        }
+        self.conversation
+            .with_open(|o| o.muted())
+            .or_else(|| rows.first().map(|r| r.muted))
+            .unwrap_or(false)
     }
 
     fn act(self: &Rc<Self>, action: Action) {
@@ -1312,19 +1341,42 @@ impl MainWindow {
         if targets.is_empty() {
             return;
         }
-        if self.leaves_list(&action) {
-            let next = self.list.neighbour_of_selected();
-            self.conversation.clear();
-            self.list.unselect();
-            match next {
-                Some(next) => {
-                    self.list
-                        .select(next.account_id, &next.id, next.message_id.as_deref())
-                }
-                None => self.nav.set_show_content(false),
-            }
-        }
+        self.follow_out(&action);
         self.perform(targets, MailAction::Triage(action), History::Record, None);
+    }
+
+    /// Mutes the targets, or unmutes them when they are muted already.
+    /// Gmail archives the replies to a muted thread with its own filters,
+    /// so muting here is the label and one archive.
+    fn toggle_mute(self: &Rc<Self>) {
+        let targets = self.targets();
+        if targets.is_empty() {
+            return;
+        }
+        let muted = !self.targets_muted();
+        self.follow_out(&if muted {
+            TriageAction::Mute
+        } else {
+            TriageAction::Unmute
+        });
+        self.perform(targets, MailAction::Mute { muted }, History::Record, None);
+    }
+
+    /// Moves on to the next row when `action` takes the targets out of the
+    /// list on screen, as Apple Mail does.
+    fn follow_out(self: &Rc<Self>, action: &TriageAction) {
+        if !self.leaves_list(action) {
+            return;
+        }
+        let next = self.list.neighbour_of_selected();
+        self.conversation.clear();
+        self.list.unselect();
+        match next {
+            Some(next) => self
+                .list
+                .select(next.account_id, &next.id, next.message_id.as_deref()),
+            None => self.nav.set_show_content(false),
+        }
     }
 
     /// The Delete key. Outside the Trash it moves mail there. Inside it
@@ -1494,13 +1546,16 @@ impl MainWindow {
 
     /// Whether `action` takes the targets out of the list on screen.
     fn leaves_list(&self, action: &TriageAction) -> bool {
-        let folder = self.mailbox.borrow().folder();
+        let mailbox = self.mailbox.borrow();
+        let folder = mailbox.folder();
         match action {
             TriageAction::Archive => folder != Some(Folder::AllMail),
             TriageAction::Trash => folder != Some(Folder::Trash),
             TriageAction::Junk => folder != Some(Folder::Junk),
             TriageAction::Untrash => folder == Some(Folder::Trash),
             TriageAction::NotJunk => folder == Some(Folder::Junk),
+            TriageAction::Mute => folder != Some(Folder::AllMail) && !lists_muted(&mailbox),
+            TriageAction::Unmute => lists_muted(&mailbox),
             _ => false,
         }
     }
@@ -1598,7 +1653,7 @@ impl MainWindow {
                 self.queue_refresh();
             }
             MailAction::Remind { .. } | MailAction::CancelReminder => self.reminders_changed(),
-            MailAction::Triage(_) | MailAction::Label { .. } => {}
+            MailAction::Triage(_) | MailAction::Label { .. } | MailAction::Mute { .. } => {}
         }
     }
 
@@ -2124,6 +2179,7 @@ impl MainWindow {
         add("archive", Box::new(|win| win.triage(TriageAction::Archive)));
         add("trash", Box::new(|win| win.trash()));
         add("junk", Box::new(|win| win.act(Action::Junk)));
+        add("mute", Box::new(|win| win.toggle_mute()));
         add(
             "label",
             Box::new(|win| win.conversation.label_button.popup()),
@@ -2428,6 +2484,7 @@ impl MainWindow {
                 Some('e') => win.triage(TriageAction::Archive),
                 Some('#') => win.delete_key(),
                 Some('s') => win.act(Action::ToggleStar),
+                Some('M') => win.toggle_mute(),
                 Some('u') => win.act(Action::ToggleRead),
                 Some('r') => win.reply(ReplyKind::Reply),
                 Some('a') => win.reply(ReplyKind::ReplyAll),
@@ -2755,6 +2812,7 @@ impl MainWindow {
                     ("Flag or unflag", "<Control><Shift>l s"),
                     ("Flag colors", "<Control><Alt>1...<Control><Alt>7"),
                     ("Mark read or unread", "<Control><Shift>u u"),
+                    ("Mute or unmute", "<Shift>m"),
                     ("Labels", "<Control><Alt>m l"),
                     ("Undo", "<Control>z"),
                 ],
@@ -2863,4 +2921,30 @@ fn unique_path(dir: &std::path::Path, name: &str) -> PathBuf {
         .map(|n| dir.join(format!("{stem} ({n}){ext}")))
         .find(|p| !p.exists())
         .expect("some name is free")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_muted_list_is_the_one_named_by_the_mute_label() {
+        assert!(lists_muted(&Mailbox::Unified(system_label::MUTE)));
+        assert!(lists_muted(&Mailbox::Label {
+            account_id: 1,
+            label_id: system_label::MUTE.into(),
+            name: "Muted".into(),
+        }));
+        assert!(!lists_muted(&Mailbox::Unified(system_label::INBOX)));
+        assert!(!lists_muted(&Mailbox::Reminders));
+    }
+
+    #[test]
+    fn a_mute_toast_counts_the_conversations_it_covers() {
+        let toast = |muted, count| done_message(&MailAction::Mute { muted }, count, true);
+        assert_eq!(toast(true, 1).as_deref(), Some("Muted"));
+        assert_eq!(toast(true, 3).as_deref(), Some("Muted 3 conversations"));
+        assert_eq!(toast(false, 1).as_deref(), Some("Unmuted"));
+        assert_eq!(toast(false, 2).as_deref(), Some("Unmuted 2 conversations"));
+    }
 }

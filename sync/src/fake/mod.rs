@@ -13,7 +13,9 @@ use std::sync::Mutex;
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
-use mailrs_domain::{Address, EpochMillis, Filter, MessageBody, MessageMeta, Vacation};
+use mailrs_domain::{
+    Address, EpochMillis, Filter, MessageBody, MessageMeta, Vacation, system_label,
+};
 use mailrs_gmail::{
     AccountQuota, Answered, BATCH_LIMIT, ConnectionsPage, GmailError, HistoryChange, HistoryPage,
     LabelColor, MessagePage, MessageRef, Person, Priority, Profile, QuotaLimiter, RemoteLabel,
@@ -187,9 +189,15 @@ impl FakeGmail {
         });
     }
 
-    /// A message arriving now, recorded in history.
-    pub fn deliver(&self, meta: MessageMeta) {
+    /// A message arriving now, recorded in history. Gmail's own filters
+    /// archive whatever lands on a muted thread and carry the mute label
+    /// over to it, so a message delivered into one arrives that way here.
+    pub fn deliver(&self, mut meta: MessageMeta) {
         self.with(|s| {
+            if s.thread_is_muted(&meta.thread_id) {
+                meta.label_ids.retain(|l| l != system_label::INBOX);
+                meta.label_ids.push(system_label::MUTE.into());
+            }
             let change = HistoryChange::MessageAdded {
                 id: meta.id.clone(),
                 thread_id: meta.thread_id.clone(),
@@ -317,6 +325,13 @@ impl FakeState {
     fn record(&mut self, change: HistoryChange) {
         self.history_id += 1;
         self.history.push((self.history_id, change));
+    }
+
+    /// Whether any message of the thread carries Gmail's mute label.
+    fn thread_is_muted(&self, thread_id: &str) -> bool {
+        self.messages
+            .values()
+            .any(|m| m.thread_id == thread_id && m.has_label(system_label::MUTE))
     }
 
     /// The ids a search returns, newest first.
