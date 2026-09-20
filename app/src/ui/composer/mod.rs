@@ -26,7 +26,7 @@ use crate::compose::{
 };
 use crate::core::Core;
 use crate::format::{future_date, human_size, send_later_presets};
-use crate::richtext::{BlockKind, RichBody, Style};
+use crate::richtext::{Block, BlockKind, RichBody, Style};
 use crate::settings::ComposeFormat;
 
 /// An address the user can send from.
@@ -301,7 +301,13 @@ impl Composer {
         self.busy.set(true);
         match self.format.get() {
             ComposeFormat::Rich => {
-                let body = RichBody::from_markdown(&markdown);
+                let mut body = RichBody::from_markdown(&markdown);
+                // A reply and a forward start with blank lines to write on,
+                // which Markdown drops and the writer wants back.
+                let room = markdown.chars().take_while(|c| *c == '\n').count().min(2);
+                for _ in 0..room {
+                    body.blocks.insert(0, Block::default());
+                }
                 richbuffer::write(
                     &self.body,
                     &body,

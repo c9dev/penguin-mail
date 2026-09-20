@@ -18,6 +18,7 @@ pub struct Recipients {
     pub entry: gtk::Entry,
     /// The entry's slot in the field, which outlives every rebuild.
     holder: gtk::FlowBoxChild,
+    placeholder: String,
     addresses: RefCell<Vec<Address>>,
     changed: RefCell<Option<Box<dyn Fn()>>>,
     /// Where Tab and Shift+Tab go from here. The field holds the focus
@@ -54,6 +55,7 @@ impl Recipients {
             field,
             entry,
             holder,
+            placeholder: placeholder.to_string(),
             addresses: RefCell::new(addresses.to_vec()),
             changed: RefCell::new(None),
             next: RefCell::new(None),
@@ -134,6 +136,14 @@ impl Recipients {
     }
 
     fn rebuild(self: &Rc<Self>) {
+        // The placeholder only has to say what the row is for while it is
+        // empty; chips say it afterwards.
+        self.entry.set_placeholder_text(
+            self.addresses
+                .borrow()
+                .is_empty()
+                .then_some(self.placeholder.as_str()),
+        );
         let typing = self
             .entry
             .state_flags()

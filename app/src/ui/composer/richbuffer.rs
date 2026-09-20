@@ -152,8 +152,9 @@ pub fn style_at(iter: &gtk::TextIter) -> (Style, Option<String>) {
     (style, link)
 }
 
-/// What text typed at `iter` should look like: the character before it,
-/// which is how every editor carries a style forward.
+/// What text typed at `iter` should look like: the style of the character
+/// before it, which is how a word carries its styling on as you type, or
+/// of the character after it at the start of a line.
 pub fn style_before(iter: &gtk::TextIter) -> (Style, Option<String>) {
     let mut probe = *iter;
     if !probe.starts_line() {
@@ -435,19 +436,26 @@ pub fn has(style: Style, name: &str) -> bool {
 mod tests {
     use super::*;
 
-    /// A buffer to write into, or `None` where no display can be opened,
-    /// which is how these run on a machine without a screen.
-    fn buffer() -> Option<gtk::TextBuffer> {
+    /// Everything the buffer does sits in one test on purpose: GTK belongs
+    /// to the thread that starts it, and the test harness hands each test
+    /// its own.
+    #[test]
+    fn the_buffer_holds_a_rich_body_and_gives_it_back() {
+        // No display means no GTK, which is how most machines run the suite.
         if gtk::init().is_err() {
-            return None;
+            return;
         }
-        let buffer = gtk::TextBuffer::new(None);
-        install(&buffer);
-        Some(buffer)
+        a_body_reads_back_the_same();
+        list_markers_stay_out_of_the_text();
+        a_line_changes_kind_and_the_numbers_follow();
+        typing_after_styled_words_carries_the_style_on();
     }
 
-    fn view(buffer: &gtk::TextBuffer) -> gtk::TextView {
-        gtk::TextView::with_buffer(buffer)
+    fn buffer() -> (gtk::TextView, gtk::TextBuffer, Anchors) {
+        let buffer = gtk::TextBuffer::new(None);
+        install(&buffer);
+        let view = gtk::TextView::with_buffer(&buffer);
+        (view, buffer, Anchors::new())
     }
 
     fn body() -> RichBody {
@@ -456,32 +464,31 @@ mod tests {
         )
     }
 
-    #[test]
-    fn a_body_written_into_the_buffer_reads_back_the_same() {
-        let Some(buffer) = buffer() else { return };
-        let mut anchors = Anchors::new();
+    fn a_body_reads_back_the_same() {
+        let (view, buffer, mut anchors) = buffer();
         let wanted = body();
-        write(&view(&buffer), &wanted, &[], &mut anchors);
+        write(&view, &wanted, &[], &mut anchors);
         let read_back = read(&buffer, &anchors);
         assert_eq!(read_back, wanted, "{}", read_back.to_markdown());
         assert_eq!(read_back.to_html(), wanted.to_html());
+        assert!(
+            read_back.to_html().contains("<strong>Ann</strong>"),
+            "{}",
+            read_back.to_html()
+        );
     }
 
-    #[test]
     fn list_markers_stay_out_of_the_text() {
-        let Some(buffer) = buffer() else { return };
-        let mut anchors = Anchors::new();
-        write(&view(&buffer), &body(), &[], &mut anchors);
+        let (view, buffer, mut anchors) = buffer();
+        write(&view, &body(), &[], &mut anchors);
         let plain = read(&buffer, &anchors).to_plain();
         assert!(!plain.contains('\u{2022}'), "{plain}");
         assert!(plain.contains("- soup"), "{plain}");
         assert!(plain.contains("2. second"), "{plain}");
     }
 
-    #[test]
     fn a_line_changes_kind_and_the_numbers_follow() {
-        let Some(buffer) = buffer() else { return };
-        let mut anchors = Anchors::new();
+        let (view, buffer, mut anchors) = buffer();
         let mut body = RichBody::default();
         for text in ["one", "two", "three"] {
             body.blocks.push(Block::new(
@@ -489,7 +496,7 @@ mod tests {
                 vec![crate::richtext::Span::plain(text)],
             ));
         }
-        write(&view(&buffer), &body, &[], &mut anchors);
+        write(&view, &body, &[], &mut anchors);
         assert_eq!(
             read(&buffer, &anchors).to_plain(),
             "1. one\n2. two\n3. three"
@@ -503,18 +510,22 @@ mod tests {
         assert_eq!(kind_at(&buffer, 0), BlockKind::Quote);
     }
 
-    #[test]
     fn typing_after_styled_words_carries_the_style_on() {
-        let Some(buffer) = buffer() else { return };
-        let mut anchors = Anchors::new();
+        let (view, buffer, mut anchors) = buffer();
         write(
-            &view(&buffer),
-            &RichBody::from_markdown("**bold**"),
+            &view,
+            &RichBody::from_markdown("plain **bold**"),
             &[],
             &mut anchors,
         );
         let (style, link) = style_before(&buffer.end_iter());
         assert!(style.bold && link.is_none());
+        // Inside the plain words, and at the start of the line, where the
+        // line's own style stands in for the one before.
+        assert_eq!(
+            style_before(&buffer.iter_at_offset(3)),
+            (Style::default(), None)
+        );
         assert_eq!(style_before(&buffer.start_iter()), (Style::default(), None));
     }
 }
