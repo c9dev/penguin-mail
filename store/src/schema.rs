@@ -249,6 +249,34 @@ CREATE TABLE image_senders (
     r#"
 ALTER TABLE bodies ADD COLUMN protection TEXT;
 "#,
+    // Send Later grows into the outbox. A message that could not go out is
+    // waiting for the same reason a scheduled one is, so it lands in the
+    // same table, with the bytes it will be sent from and the count of
+    // tries behind it. Gmail holds a scheduled message as a draft, so its
+    // draft id stays; a message that never reached Gmail has none, and the
+    // row's own id names it instead.
+    r#"
+CREATE TABLE outbox (
+    id         INTEGER PRIMARY KEY,
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    draft_id   TEXT,
+    message_id TEXT,
+    thread_id  TEXT,
+    subject    TEXT NOT NULL,
+    recipients TEXT NOT NULL,
+    send_at    INTEGER NOT NULL,
+    raw        BLOB,
+    composer   TEXT NOT NULL DEFAULT '',
+    attempts   INTEGER NOT NULL DEFAULT 0,
+    problem    TEXT
+);
+INSERT INTO outbox (account_id, draft_id, message_id, thread_id, subject, recipients, send_at)
+    SELECT account_id, draft_id, message_id, thread_id, subject, recipients, send_at
+    FROM scheduled;
+DROP TABLE scheduled;
+CREATE INDEX outbox_by_time ON outbox(send_at);
+CREATE UNIQUE INDEX outbox_by_draft ON outbox(account_id, draft_id) WHERE draft_id IS NOT NULL;
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,
