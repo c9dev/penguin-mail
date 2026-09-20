@@ -53,6 +53,7 @@ pub struct Composer {
     from: gtk::DropDown,
     to: gtk::Entry,
     cc: gtk::Entry,
+    bcc: gtk::Entry,
     subject: gtk::Entry,
     body: gtk::TextView,
     stack: gtk::Stack,
@@ -137,24 +138,57 @@ impl Composer {
             opening_identity(&identities, draft.account_id, &draft.from, last).unwrap_or(0);
         from.set_selected(selected as u32);
         let to = entry("Recipients", &format_recipients(&draft.to));
-        let cc = entry("", &format_recipients(&draft.cc));
-        let subject = entry("Subject", &draft.subject);
+        let cc = entry("Carbon copy", &format_recipients(&draft.cc));
+        let bcc = entry("Hidden from the others", &format_recipients(&draft.bcc));
+        let subject = entry("What it is about", &draft.subject);
         autocomplete::attach(&to, Rc::clone(&contacts));
-        autocomplete::attach(&cc, contacts);
+        autocomplete::attach(&cc, Rc::clone(&contacts));
+        autocomplete::attach(&bcc, contacts);
 
-        // One size group holds the label column to a single width, so the
-        // fields all start at the same place however long the labels are.
+        // One size group holds the label column to a single width, so every
+        // field starts at the same place however long the labels are.
         let column = gtk::SizeGroup::new(gtk::SizeGroupMode::Horizontal);
+        // And one more holds the rows to a single height, so the labels sit
+        // on the line of the text they name.
+        let line = gtk::SizeGroup::new(gtk::SizeGroupMode::Vertical);
+        let more = gtk::ToggleButton::builder()
+            .label("Cc")
+            .tooltip_text("Copy and Blind Copy")
+            .valign(gtk::Align::Center)
+            .css_classes(["flat", "composer-more"])
+            .active(!draft.cc.is_empty() || !draft.bcc.is_empty())
+            .build();
         let fields = gtk::Box::new(gtk::Orientation::Vertical, 0);
-        for (label, widget) in [
-            ("From", from.clone().upcast::<gtk::Widget>()),
-            ("To", to.clone().upcast()),
-            ("Cc", cc.clone().upcast()),
-            ("Subject", subject.clone().upcast()),
+        let mut copies = Vec::new();
+        for (label, widget, extra) in [
+            ("From", from.clone().upcast::<gtk::Widget>(), None),
+            ("To", to.clone().upcast(), Some(more.clone())),
+            ("Cc", cc.clone().upcast(), None),
+            ("Bcc", bcc.clone().upcast(), None),
+            ("Subject", subject.clone().upcast(), None),
         ] {
-            fields.append(&field(label, &widget, &column));
-            fields.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
+            let row = field(label, &widget, &column, &line);
+            if let Some(extra) = extra {
+                row.append(&extra);
+            }
+            let separator = gtk::Separator::new(gtk::Orientation::Horizontal);
+            fields.append(&row);
+            fields.append(&separator);
+            if matches!(label, "Cc" | "Bcc") {
+                copies.push((row, separator));
+            }
         }
+        // Most mail needs neither, so they stay out of the way until asked.
+        for (row, separator) in &copies {
+            row.set_visible(more.is_active());
+            separator.set_visible(more.is_active());
+        }
+        more.connect_toggled(move |toggle| {
+            for (row, separator) in &copies {
+                row.set_visible(toggle.is_active());
+                separator.set_visible(toggle.is_active());
+            }
+        });
 
         let body = gtk::TextView::builder()
             .wrap_mode(gtk::WrapMode::WordChar)
@@ -233,6 +267,7 @@ impl Composer {
             from,
             to,
             cc,
+            bcc,
             subject,
             body,
             stack,
@@ -277,7 +312,7 @@ impl Composer {
                 c.update_title();
             }
         };
-        for entry in [&self.to, &self.cc, &self.subject] {
+        for entry in [&self.to, &self.cc, &self.bcc, &self.subject] {
             let mark = mark_dirty.clone();
             entry.connect_changed(move |_| mark());
         }
@@ -485,6 +520,7 @@ impl Composer {
         draft.from = identity.address;
         draft.to = parse_recipients(&self.to.text());
         draft.cc = parse_recipients(&self.cc.text());
+        draft.bcc = parse_recipients(&self.bcc.text());
         draft.subject = self.subject.text().trim().to_string();
         draft.markdown = self.markdown();
         draft.attachments = self.attachments.borrow().clone();
@@ -1009,7 +1045,14 @@ fn entry(placeholder: &str, text: &str) -> gtk::Entry {
 }
 
 /// One header row: its label in the shared column, its field beside it.
-fn field(label: &str, widget: &impl IsA<gtk::Widget>, column: &gtk::SizeGroup) -> gtk::Box {
+/// `column` holds every label to one width and `line` holds every row to
+/// one height, so the stack reads as a single column of fields.
+fn field(
+    label: &str,
+    widget: &impl IsA<gtk::Widget>,
+    column: &gtk::SizeGroup,
+    line: &gtk::SizeGroup,
+) -> gtk::Box {
     let row = gtk::Box::builder()
         .spacing(0)
         .css_classes(["composer-field"])
@@ -1023,6 +1066,7 @@ fn field(label: &str, widget: &impl IsA<gtk::Widget>, column: &gtk::SizeGroup) -
         .css_classes(["dim-label", "composer-label"])
         .build();
     column.add_widget(&label);
+    line.add_widget(&row);
     row.append(&label);
     row.append(widget);
     row

@@ -440,7 +440,8 @@ impl SpellCheck {
         }
     }
 
-    /// The misspelled word under `offset`, with its bounds.
+    /// The misspelled word at `offset`, with its bounds. A click just after
+    /// the last letter counts, the way it does when you double-click a word.
     fn word_at(&self, offset: i32) -> Option<(i32, i32, String)> {
         let buffer = self.view.buffer();
         let text = buffer
@@ -449,8 +450,7 @@ impl SpellCheck {
         words_to_check(&text)
             .into_iter()
             .find(|(range, word)| {
-                range.contains(&(offset as usize))
-                    && range.end != offset as usize
+                (range.start..=range.end).contains(&(offset as usize))
                     && !self.dictionaries.accepts(word)
             })
             .map(|(range, word)| (range.start as i32, range.end as i32, word.to_string()))

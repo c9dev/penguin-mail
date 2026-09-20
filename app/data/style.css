@@ -34,10 +34,36 @@
 .account-3 { background: #c88800; } .account-4 { background: #ed5b00; } .account-5 { background: #e62d42; }
 .account-6 { background: #d56199; } .account-7 { background: #9141ac; } .account-8 { background: #6f8396; }
 
-/* Composer */
-.composer-field { padding: 4px 12px; }
-.composer-field label.dim-label { min-width: 64px; }
-.composer-field entry, .composer-field text { background: none; box-shadow: none; }
+/* Composer.
+   The header rows are one stack: a label column of fixed width on the left,
+   and every field starting at the same edge with the same height and no
+   background of its own. Padding is in em, so the columns hold together at
+   the Larger text size too. */
+.composer-field { padding: 2px 12px; }
+.composer-field > .composer-label {
+  min-width: 4.2em;
+  padding-right: 0.85em;
+  font-size: 0.94em;
+}
+/* GTK gives entries and dropdown buttons their own padding, which would put
+   each field at a different left edge. Take it off and the column lines up. */
+.composer-field entry,
+.composer-field text,
+.composer-field > .composer-from > button {
+  background: none;
+  box-shadow: none;
+  border: none;
+  outline: none;
+  min-height: 2.2em;
+  padding-left: 0;
+  padding-right: 0;
+}
+.composer-field > .composer-from > button { padding-top: 0; padding-bottom: 0; }
+.composer-field > .composer-from > button > box > label { padding-left: 0; }
+/* The row itself shows the focus, since the flat fields no longer can. */
+.composer-field:focus-within > .composer-label { color: var(--accent-color); }
+.composer-more { min-height: 1.7em; padding: 0 0.6em; font-size: 0.88em; }
+.composer-from-heading { padding: 6px 10px 2px; font-size: 0.82em; font-weight: 700; }
 .composer-body { font-size: 1.04em; line-height: 1.5; }
 .attachment-chip { padding: 4px 4px 4px 10px; border-radius: 999px; background: alpha(currentColor, 0.08); }
 .attachment-chip button { min-height: 22px; min-width: 22px; padding: 0; }

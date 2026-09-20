@@ -12,7 +12,7 @@ use mailrs_domain::{
     AccountId, AccountState, Address, Attachment, EpochMillis, Label, LabelKind, MessageBody,
     MessageMeta, system_label,
 };
-use mailrs_gmail::{LabelColor, RemoteLabel};
+use mailrs_gmail::{LabelColor, RemoteLabel, SendAs};
 use mailrs_store::{Result, accounts, bodies, labels, messages};
 use mailrs_sync::fake::FakeGmail;
 use rusqlite::Connection;
@@ -492,6 +492,29 @@ fn gmail_for(email: &str, account_labels: &[Label]) -> FakeGmail {
         state.email = email.into();
         state.display_name = Some(DISPLAY_NAME.into());
         state.signature = Some(format!("{DISPLAY_NAME}\nSent from Penguin Mail"));
+        // The work account sends as two addresses, as a Gmail account with
+        // verified aliases does, so the demo shows the From row doing its job.
+        if email == ACCOUNTS[1] {
+            state.send_as = vec![
+                SendAs {
+                    send_as_email: "hello@fernwood.example".into(),
+                    display_name: "Fernwood Studio".into(),
+                    is_default: false,
+                    is_primary: false,
+                    signature: "<p>Fernwood Studio<br>hello@fernwood.example</p>".into(),
+                    verification_status: Some("accepted".into()),
+                },
+                // Still waiting on its owner to confirm it, so it is left out.
+                SendAs {
+                    send_as_email: "press@fernwood.example".into(),
+                    display_name: "Fernwood Press".into(),
+                    is_default: false,
+                    is_primary: false,
+                    signature: String::new(),
+                    verification_status: Some("pending".into()),
+                },
+            ];
+        }
         state.history_id = HISTORY_ID;
         // The demo lists a mailbox in one page, as a Gmail search does.
         state.page_size = 1000;

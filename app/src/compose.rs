@@ -152,6 +152,8 @@ pub struct Draft {
     pub from: Address,
     pub to: Vec<Address>,
     pub cc: Vec<Address>,
+    /// Recipients the others cannot see.
+    pub bcc: Vec<Address>,
     pub subject: String,
     pub markdown: String,
     /// `Message-ID` of the message this replies to, with angle brackets.
@@ -181,6 +183,7 @@ impl Draft {
             from,
             to: vec![],
             cc: vec![],
+            bcc: vec![],
             subject: String::new(),
             markdown: String::new(),
             in_reply_to: None,
@@ -194,12 +197,13 @@ impl Draft {
 
     /// Why this draft cannot be sent yet, if anything stops it.
     pub fn problem(&self) -> Option<String> {
-        if self.to.is_empty() && self.cc.is_empty() {
+        if self.to.is_empty() && self.cc.is_empty() && self.bcc.is_empty() {
             return Some("Add at least one recipient.".into());
         }
         self.to
             .iter()
             .chain(&self.cc)
+            .chain(&self.bcc)
             .find(|a| !looks_like_address(&a.email))
             .map(|a| format!("“{}” is not an email address.", a.email))
     }
@@ -359,26 +363,54 @@ fn signature_block(signature: &str) -> String {
     format!("\n\n-- \n{}", signature.trim_end())
 }
 
+/// Where the quoted original starts, counting the "On Monday, Ann wrote:"
+/// line that introduces it. `None` when nothing is quoted.
+fn quote_starts_at(markdown: &str) -> Option<usize> {
+    let mut at = 0;
+    let mut attribution = None;
+    for line in markdown.split_inclusive('\n') {
+        if line.trim_start().starts_with('>') {
+            return Some(attribution.unwrap_or(at));
+        }
+        attribution = line.trim_end().ends_with("wrote:").then_some(at);
+        at += line.len();
+    }
+    None
+}
+
 /// Swaps the signature when the writer picks another send-as address.
 /// Gmail keeps one signature per address, so the message has to follow.
 ///
-/// Only a block [`with_signature`] left untouched is replaced. Once someone
-/// has edited it, the text stays as they typed it, because losing a rewritten
-/// sign-off to a dropdown would be worse than showing the wrong one.
+/// Only a block [`with_signature`] left untouched is swapped. Once someone
+/// has edited their sign-off, the text stays as they typed it, because
+/// losing a rewritten one to a dropdown would be worse than showing the
+/// wrong one.
 pub fn restyle_signature(markdown: &str, old: &str, new: &str) -> String {
     if old.trim().is_empty() {
-        return with_signature(markdown, new);
+        if new.trim().is_empty() {
+            return markdown.to_string();
+        }
+        // Nothing to replace, so the new signature goes where a signature
+        // belongs: below what the writer has typed, above any quote.
+        let at = quote_starts_at(markdown).unwrap_or(markdown.len());
+        let (head, tail) = markdown.split_at(at);
+        let typed = head.trim_end_matches('\n');
+        let gap = if tail.is_empty() { "" } else { "\n\n" };
+        return format!("{typed}{}{gap}{tail}", signature_block(new));
     }
+    let block = signature_block(old);
     // The block has to end where it was left: at the end of the text, or at
-    // the blank line before the body. Anything else means someone typed into
-    // it, and their words come first.
-    let Some(rest) = markdown
-        .strip_prefix(&signature_block(old))
-        .filter(|rest| rest.is_empty() || rest.starts_with('\n'))
-    else {
+    // the blank line before the quote. Anything else means someone typed
+    // into it, and their words come first.
+    let found = markdown.find(&block).filter(|at| {
+        let after = &markdown[at + block.len()..];
+        after.is_empty() || after.starts_with('\n')
+    });
+    let Some(at) = found else {
         return markdown.to_string();
     };
-    with_signature(rest, new)
+    let (before, after) = (&markdown[..at], &markdown[at + block.len()..]);
+    format!("{before}{}", with_signature(after, new))
 }
 
 /// A message body as plain text, for quoting and for reopening drafts.
@@ -546,6 +578,9 @@ pub fn build_mime(draft: &Draft, date_secs: i64, message_id: &str) -> Result<Vec
     }
     if !draft.cc.is_empty() {
         builder = builder.cc(draft.cc.iter().map(mime_address).collect::<Vec<_>>());
+    }
+    if !draft.bcc.is_empty() {
+        builder = builder.bcc(draft.bcc.iter().map(mime_address).collect::<Vec<_>>());
     }
     if let Some(parent) = &draft.in_reply_to {
         builder = builder.in_reply_to(bare_id(parent));
@@ -808,6 +843,13 @@ mod tests {
 
     #[test]
     fn the_signature_follows_the_address() {
+        // What the writer typed sits above the block, as it does once they
+        // start answering.
+        let typed = "Thanks Ann.\n\n-- \nDana\n\nOn Monday, Ann wrote:\n> hi";
+        assert_eq!(
+            restyle_signature(typed, "Dana", "Dana, Sales"),
+            "Thanks Ann.\n\n-- \nDana, Sales\n\nOn Monday, Ann wrote:\n> hi"
+        );
         let signed = with_signature("\n\nOn Monday, Ann wrote:\n> hi", "Dana");
         let swapped = restyle_signature(&signed, "Dana", "Dana, Sales");
         assert_eq!(
@@ -820,9 +862,13 @@ mod tests {
 
     #[test]
     fn an_address_with_no_signature_gains_and_loses_one() {
-        // The signature goes above the quote, where the writer types.
+        // The signature goes below what was typed and above any quote.
         assert_eq!(restyle_signature("", "", "Dana"), "\n\n-- \nDana");
         assert_eq!(restyle_signature("\n\n-- \nDana", "Dana", ""), "");
+        assert_eq!(
+            restyle_signature("Hi Ann\n\nOn Monday, Ann wrote:\n> hi", "", "Dana"),
+            "Hi Ann\n\n-- \nDana\n\nOn Monday, Ann wrote:\n> hi"
+        );
     }
 
     #[test]
