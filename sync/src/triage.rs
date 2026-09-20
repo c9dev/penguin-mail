@@ -20,6 +20,11 @@ pub enum TriageAction {
     Junk,
     /// Moves out of Spam and back to the inbox.
     NotJunk,
+    /// Mutes the thread: Gmail's mute label goes on and the inbox label
+    /// comes off, so this reply and the ones after it stay archived.
+    Mute,
+    /// Takes the mute label off and puts the thread back in the inbox.
+    Unmute,
     /// Any label change; the undo of most other actions.
     Relabel {
         add: Vec<String>,
@@ -43,6 +48,8 @@ impl TriageAction {
             TriageAction::Untrash => (one(system_label::INBOX), one(system_label::TRASH)),
             TriageAction::Junk => (one(system_label::SPAM), one(system_label::INBOX)),
             TriageAction::NotJunk => (one(system_label::INBOX), one(system_label::SPAM)),
+            TriageAction::Mute => (one(system_label::MUTE), one(system_label::INBOX)),
+            TriageAction::Unmute => (one(system_label::INBOX), one(system_label::MUTE)),
             TriageAction::Relabel { add, remove } => (add.clone(), remove.clone()),
         }
     }
@@ -65,6 +72,8 @@ impl TriageAction {
             TriageAction::Untrash => TriageAction::Trash,
             TriageAction::Junk => TriageAction::NotJunk,
             TriageAction::NotJunk => TriageAction::Junk,
+            TriageAction::Mute => TriageAction::Unmute,
+            TriageAction::Unmute => TriageAction::Mute,
             TriageAction::Relabel { add, remove } => TriageAction::Relabel {
                 add: remove.clone(),
                 remove: add.clone(),
@@ -85,6 +94,8 @@ impl TriageAction {
             TriageAction::Untrash => "Move out of trash".into(),
             TriageAction::Junk => "Mark as junk".into(),
             TriageAction::NotJunk => "Mark as not junk".into(),
+            TriageAction::Mute => "Mute".into(),
+            TriageAction::Unmute => "Unmute".into(),
             TriageAction::Relabel { .. } => "Change labels".into(),
         }
     }
@@ -111,6 +122,8 @@ impl FromStr for TriageAction {
             "untrash" => Ok(TriageAction::Untrash),
             "junk" => Ok(TriageAction::Junk),
             "notjunk" => Ok(TriageAction::NotJunk),
+            "mute" => Ok(TriageAction::Mute),
+            "unmute" => Ok(TriageAction::Unmute),
             _ => {
                 if let Some(rest) = s.strip_prefix("label:") {
                     label(rest).map(TriageAction::AddLabel)
@@ -118,7 +131,7 @@ impl FromStr for TriageAction {
                     label(rest).map(TriageAction::RemoveLabel)
                 } else {
                     Err(format!(
-                        "unknown action `{s}`; use archive, read, unread, star, unstar, trash, label:ID, or unlabel:ID"
+                        "unknown action `{s}`; use archive, read, unread, star, unstar, trash, mute, unmute, label:ID, or unlabel:ID"
                     ))
                 }
             }

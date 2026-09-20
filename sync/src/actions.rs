@@ -63,6 +63,9 @@ pub enum MailAction {
     Remind { at: EpochMillis },
     /// Drops the targets' reminders and puts them back in the inbox now.
     CancelReminder,
+    /// Mutes the targets, so Gmail archives the replies that follow, or
+    /// with `false` unmutes them and puts them back in the inbox.
+    Mute { muted: bool },
     /// Adds and removes labels by name. Adding a name the account lacks
     /// creates that label; removing one it lacks fails.
     Label {
@@ -283,7 +286,7 @@ impl<A: Accounts> MailActions<A> {
                 undo.colors
                     .extend(before.into_iter().map(|(id, c)| (account_id, id, c)));
             }
-            MailAction::Triage(_) | MailAction::Label { .. } => {}
+            MailAction::Triage(_) | MailAction::Label { .. } | MailAction::Mute { .. } => {}
         }
         Ok(())
     }
@@ -381,6 +384,10 @@ impl<A: Accounts> MailActions<A> {
             MailAction::Flag(Some(_)) => return vec![Ok(TriageAction::Star); targets.len()],
             MailAction::Flag(None) => return vec![Ok(TriageAction::Unstar); targets.len()],
             MailAction::Remind { .. } => return vec![Ok(TriageAction::Archive); targets.len()],
+            MailAction::Mute { muted: true } => return vec![Ok(TriageAction::Mute); targets.len()],
+            MailAction::Mute { muted: false } => {
+                return vec![Ok(TriageAction::Unmute); targets.len()];
+            }
             MailAction::CancelReminder => {
                 let inbox = TriageAction::Relabel {
                     add: vec![system_label::INBOX.into()],

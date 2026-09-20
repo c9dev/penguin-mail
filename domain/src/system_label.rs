@@ -10,6 +10,9 @@ pub const UNREAD: &str = "UNREAD";
 pub const TRASH: &str = "TRASH";
 pub const SPAM: &str = "SPAM";
 pub const IMPORTANT: &str = "IMPORTANT";
+/// Marks a thread muted. Gmail's own filters archive whatever arrives on a
+/// thread that carries it, so the reply never reaches the inbox.
+pub const MUTE: &str = "MUTE";
 
 pub const CATEGORY_PERSONAL: &str = "CATEGORY_PERSONAL";
 pub const CATEGORY_UPDATES: &str = "CATEGORY_UPDATES";

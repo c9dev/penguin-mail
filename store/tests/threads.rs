@@ -255,3 +255,30 @@ fn spam_leaves_a_label_list_and_a_flagged_list() {
         ["tj2"]
     );
 }
+
+#[test]
+fn a_muted_thread_says_so_in_its_row() {
+    let (conn, a) = common::db();
+    store(
+        &conn,
+        &[
+            meta(a, "m1", "t1", 100, &["MUTE"]),
+            meta(a, "m2", "t2", 200, &["INBOX"]),
+        ],
+    );
+    let muted =
+        |rows: Vec<ThreadSummary>| -> Vec<bool> { rows.into_iter().map(|t| t.muted).collect() };
+    let all = ThreadFilter::unified("");
+    assert_eq!(
+        muted(threads::list_threads(&conn, &all, 0, 10).unwrap()),
+        [false, true]
+    );
+    assert_eq!(
+        muted(threads::list_messages(&conn, &all, 0, 10).unwrap()),
+        [false, true]
+    );
+    assert_eq!(
+        ids(threads::list_threads(&conn, &ThreadFilter::unified("MUTE"), 0, 10).unwrap()),
+        ["t1"]
+    );
+}
