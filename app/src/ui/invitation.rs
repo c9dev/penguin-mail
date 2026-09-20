@@ -9,9 +9,10 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
-use chrono::Local;
+use chrono::{DateTime, Days, Local, TimeDelta};
 use mailrs_domain::Address;
-use mailrs_domain::invitation::{Answer, Invitation, Method, Scope};
+use mailrs_domain::EpochMillis;
+use mailrs_domain::invitation::{Answer, Invitation, Method, Scope, When};
 use mailrs_sync::Change;
 
 use crate::format::{event_moved_from, event_tile, event_when};
@@ -21,8 +22,20 @@ pub enum Action {
     /// Send this answer to the organizer, for the one occurrence the
     /// invitation names or for the whole series.
     Answer(Answer, Scope),
+    /// Ask the organizer for another time.
+    Propose(Proposal),
     /// Hand the `.ics` to the desktop, which files it in GNOME Calendar.
     AddToCalendar,
+}
+
+/// Which time to propose to the organizer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Proposal {
+    /// One of the times the card offered, worked out from the one the
+    /// organizer asked for.
+    At(EpochMillis),
+    /// Whatever the user picks from a calendar.
+    Pick,
 }
 
 /// One invitation as the card shows it.
@@ -78,6 +91,14 @@ pub struct EventCard {
     answers: gtk::Box,
     buttons: Vec<(Answer, gtk::ToggleButton)>,
     add: gtk::Button,
+    /// The button that opens the other times to ask the organizer for,
+    /// and the list inside it, which is rebuilt for each invitation. It
+    /// appears only for an invitation with a time to move.
+    propose: gtk::MenuButton,
+    proposals: gtk::Box,
+    /// What the card's buttons ask the window for. The propose list is
+    /// built as each invitation goes up, so the card keeps it.
+    act: Rc<dyn Fn(Action)>,
     /// The row that asks whether an answer covers this occurrence or the
     /// series. It appears for an invitation to one occurrence of a
     /// repeating event and stays hidden for every other.
@@ -180,6 +201,20 @@ impl EventCard {
         reach.append(&this_one);
         reach.append(&every);
 
+        let proposals = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(2)
+            .build();
+        let propose = gtk::MenuButton::builder()
+            .label("Propose New Time")
+            .css_classes(["flat"])
+            .popover(
+                &gtk::Popover::builder()
+                    .child(&proposals)
+                    .has_arrow(true)
+                    .build(),
+            )
+            .build();
         let add = gtk::Button::builder()
             .label("Add to Calendar")
             .css_classes(["flat"])
@@ -189,6 +224,7 @@ impl EventCard {
         actions.append(&reach);
         let spacer = gtk::Box::builder().hexpand(true).build();
         actions.append(&spacer);
+        actions.append(&propose);
         actions.append(&add);
 
         let news = gtk::Label::builder()
@@ -239,6 +275,9 @@ impl EventCard {
             answers,
             buttons,
             add,
+            propose,
+            proposals,
+            act: Rc::clone(&on_action),
             reach,
             scope: Cell::new(Scope::Occurrence),
             went,
@@ -291,6 +330,12 @@ impl EventCard {
     /// Reads what the card shows. `None` means no invitation is on screen.
     pub fn with_showing<R>(&self, f: impl FnOnce(&Showing) -> R) -> Option<R> {
         self.showing.borrow().as_ref().map(f)
+    }
+
+    /// Which of the two the chooser is on, for an invitation that shows
+    /// one. A proposal reaches as far as an answer would.
+    pub fn scope(&self) -> Scope {
+        self.scope.get()
     }
 
     /// Says what else the user has on while this event runs. The answer
@@ -368,6 +413,7 @@ impl EventCard {
         // question open; an answer to anything else covers the lot.
         self.reach
             .set_visible(answerable && event.occurrence.is_some());
+        self.fill_proposals(showing, answerable);
         self.mark(showing.answer);
         self.widget.set_visible(true);
     }
@@ -384,6 +430,42 @@ impl EventCard {
             }
         }
         self.filling.set(false);
+    }
+
+    /// Fills the propose list with times near the one the organizer asked
+    /// for, and a way to pick any other. An all-day event and one with no
+    /// time at all have nothing to move, so they get no button.
+    fn fill_proposals(&self, showing: &Showing, answerable: bool) {
+        while let Some(child) = self.proposals.first_child() {
+            self.proposals.remove(&child);
+        }
+        let starts_at = match showing.invitation.when {
+            Some(When::At { starts_at, .. }) if answerable => starts_at,
+            _ => {
+                self.propose.set_visible(false);
+                return;
+            }
+        };
+        let mut offered: Vec<(String, Proposal)> = nearby(starts_at)
+            .into_iter()
+            .map(|(label, at)| (label, Proposal::At(at)))
+            .collect();
+        offered.push(("Pick a Time…".to_string(), Proposal::Pick));
+        for (label, proposal) in offered {
+            let button = gtk::Button::builder()
+                .label(&label)
+                .css_classes(["flat"])
+                .build();
+            let (act, popover) = (Rc::clone(&self.act), self.propose.popover());
+            button.connect_clicked(move |_| {
+                if let Some(popover) = &popover {
+                    popover.popdown();
+                }
+                act(Action::Propose(proposal));
+            });
+            self.proposals.append(&button);
+        }
+        self.propose.set_visible(true);
     }
 
     fn fill_guests(&self, showing: &Showing) {
@@ -417,6 +499,25 @@ impl EventCard {
             self.guest_list.append(&row);
         }
     }
+}
+
+/// The times the propose list offers, each the same meeting moved whole.
+/// A day and a week go through the local calendar rather than through
+/// arithmetic on the instant, so the hour stays put across a clock change.
+fn nearby(starts_at: EpochMillis) -> Vec<(String, EpochMillis)> {
+    let Some(start) = DateTime::from_timestamp_millis(starts_at).map(|at| at.with_timezone(&Local))
+    else {
+        return Vec::new();
+    };
+    [
+        ("Half an Hour Later", Some(start + TimeDelta::minutes(30))),
+        ("An Hour Later", Some(start + TimeDelta::hours(1))),
+        ("Same Time Tomorrow", start.checked_add_days(Days::new(1))),
+        ("Same Time Next Week", start.checked_add_days(Days::new(7))),
+    ]
+    .into_iter()
+    .filter_map(|(label, at)| Some((label.to_string(), at?.timestamp_millis())))
+    .collect()
 }
 
 /// "You have Design crit then", for an event the user already has while

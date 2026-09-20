@@ -13,14 +13,14 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gio, glib};
-use mailrs_domain::AccountId;
-use mailrs_domain::invitation::{Answer, Invitation, Method, Scope};
+use mailrs_domain::invitation::{Answer, Invitation, Method, Scope, When};
+use mailrs_domain::{AccountId, EpochMillis};
 use mailrs_gmail::CALENDAR_SCOPE;
 use mailrs_sync::{Told, now_millis};
 
 use super::MainWindow;
 use crate::ui::conversation::ConversationView;
-use crate::ui::invitation::{Action, Showing};
+use crate::ui::invitation::{Action, Proposal, Showing};
 
 thread_local! {
     /// The accounts this run has already offered the calendar permission.
@@ -102,6 +102,7 @@ impl MainWindow {
     pub(super) fn invitation_action(self: &Rc<Self>, view: &Rc<ConversationView>, action: Action) {
         match action {
             Action::Answer(answer, scope) => self.answer_invitation(view, answer, scope),
+            Action::Propose(proposal) => self.propose_time(view, proposal),
             Action::AddToCalendar => self.add_to_calendar(view),
         }
     }
@@ -161,6 +162,66 @@ impl MainWindow {
                     view.card.set_answer(before);
                     this.toast(&format!("Could not send your reply: {err}"));
                 }
+            }
+        });
+    }
+
+    /// Asks the organizer for another time. The proposal is a question,
+    /// not an answer, so it leaves the answer buttons where they were:
+    /// nothing is settled until the organizer says so.
+    fn propose_time(self: &Rc<Self>, view: &Rc<ConversationView>, proposal: Proposal) {
+        let account_id = view.with_open(|open| open.account_id);
+        let found =
+            view.with_invitation(|showing| (showing.invitation.clone(), showing.answering_as()));
+        let (Some(account_id), Some((invitation, Some(me)))) = (account_id, found) else {
+            return;
+        };
+        let scope = view.card.scope();
+        let organizer = invitation
+            .organizer
+            .as_ref()
+            .map(|who| who.display().to_string());
+        let invitations = self.core.invitations();
+        let (this, view) = (Rc::clone(self), Rc::clone(view));
+        glib::spawn_future_local(async move {
+            let starts_at = match proposal {
+                Proposal::At(at) => Some(at),
+                Proposal::Pick => {
+                    crate::ui::when::pick_time(
+                        &this.window,
+                        "Propose a New Time",
+                        &format!(
+                            "The organizer decides. {} hears what you suggest.",
+                            organizer.as_deref().unwrap_or("Nobody")
+                        ),
+                        "Propose",
+                    )
+                    .await
+                }
+            };
+            let Some(when) = starts_at.and_then(|at| moved(&invitation, at)) else {
+                return;
+            };
+            let sent = this
+                .core
+                .call(async move {
+                    invitations
+                        .propose(account_id, &invitation, &me, &when, scope, now_millis())
+                        .await
+                })
+                .await;
+            match sent {
+                Ok(Told::Nobody) => {
+                    this.toast("This invitation names no organizer, so there is nobody to ask")
+                }
+                Ok(_) => {
+                    view.card.set_went(Some(match &organizer {
+                        Some(organizer) => format!("Proposed a new time to {organizer}"),
+                        None => "Proposed a new time".to_string(),
+                    }));
+                    this.toast("New time proposed. The organizer decides.");
+                }
+                Err(err) => this.toast(&format!("Could not send your proposal: {err}")),
             }
         });
     }
@@ -227,6 +288,24 @@ impl MainWindow {
             },
         );
     }
+}
+
+/// The event moved to `starts_at`, keeping the length the organizer gave
+/// it. An event with no end of its own is proposed as an hour, which is
+/// what the calendar on the other side will draw.
+fn moved(invitation: &Invitation, starts_at: EpochMillis) -> Option<When> {
+    let Some(When::At {
+        starts_at: was,
+        ends_at,
+    }) = invitation.when
+    else {
+        return None;
+    };
+    let length = ends_at.map_or(60 * 60 * 1_000, |ends_at| ends_at - was);
+    Some(When::At {
+        starts_at,
+        ends_at: Some(starts_at + length),
+    })
 }
 
 /// Whether the card is asking the user a question they have not answered.

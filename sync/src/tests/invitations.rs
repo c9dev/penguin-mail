@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use base64::Engine;
 use mailrs_domain::Address;
-use mailrs_domain::invitation::{Answer, Invitation, Scope};
+use mailrs_domain::invitation::{Answer, Invitation, Scope, When};
 use mailrs_gmail::GmailError;
 
 use super::{Connected, Harness, harness};
@@ -566,4 +566,44 @@ async fn a_mailed_reply_names_the_occurrence_it_answers() {
         .await
         .unwrap();
     assert!(!sent_message(&h).contains("RECURRENCE-ID"));
+}
+
+#[tokio::test]
+async fn a_proposal_asks_the_organizer_for_another_time() {
+    let h = harness().await;
+    let invitations = invitations(&h);
+    // The same meeting, four hours later.
+    let when = When::At {
+        starts_at: 1_773_151_200_000,
+        ends_at: Some(1_773_154_800_000),
+    };
+
+    let told = invitations
+        .propose(
+            h.account_id,
+            &read(&at_ten()),
+            &me(),
+            &when,
+            Scope::Series,
+            1_000,
+        )
+        .await
+        .unwrap();
+    assert_eq!(told, Told::Organizer);
+
+    let message = sent_message(&h);
+    assert!(
+        message.contains("Subject: New Time Proposed: Design review"),
+        "{message}"
+    );
+    assert!(message.contains("method=\"COUNTER\""), "{message}");
+    assert!(message.contains("METHOD:COUNTER\r\n"), "{message}");
+    assert!(
+        message.contains("DTSTART:20260310T140000Z\r\n"),
+        "{message}"
+    );
+    assert!(message.contains("DTEND:20260310T150000Z\r\n"), "{message}");
+    assert!(message.contains(&format!("UID:{UID}\r\n")), "{message}");
+    // A proposal settles nothing, so no calendar hears about it.
+    assert!(h.fake.with(|s| s.answered_occurrences.is_empty()));
 }

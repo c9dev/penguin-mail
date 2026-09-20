@@ -275,6 +275,37 @@ impl<A: Accounts> Invitations<A> {
         Ok(sent)
     }
 
+    /// Proposes another time for the event and mails the organizer the
+    /// proposal. iTIP calls this a counter proposal: it asks rather than
+    /// decides, so nothing changes on anybody's calendar until the
+    /// organizer answers, and Google Calendar has no part in it.
+    pub async fn propose(
+        &self,
+        account_id: AccountId,
+        invitation: &Invitation,
+        me: &Address,
+        when: &When,
+        scope: Scope,
+        now: EpochMillis,
+    ) -> Result<Told, SyncError> {
+        let sync = self.sync(account_id)?;
+        let Some(organizer) = organizer_of(invitation) else {
+            return Ok(Told::Nobody);
+        };
+        let raw = mail::itip(
+            me,
+            &organizer,
+            &mail::counter_subject(&invitation.summary),
+            &mail::counter_prose(me, &invitation.summary, when),
+            "COUNTER",
+            &invitation::counter(invitation, me, when, scope, now),
+            now,
+        )
+        .map_err(SyncError::Mime)?;
+        sync.send(raw, None, None).await?;
+        Ok(Told::Organizer)
+    }
+
     /// Mails the organizer the reply. An invitation that names no
     /// organizer has nobody to send it to, and says so.
     async fn mail_reply(
@@ -286,11 +317,7 @@ impl<A: Accounts> Invitations<A> {
         scope: Scope,
         now: EpochMillis,
     ) -> Result<Told, SyncError> {
-        let Some(organizer) = invitation
-            .organizer
-            .clone()
-            .filter(|who| !who.email.trim().is_empty())
-        else {
+        let Some(organizer) = organizer_of(invitation) else {
             return Ok(Told::Nobody);
         };
         let raw = mail::itip(
@@ -312,6 +339,15 @@ impl<A: Accounts> Invitations<A> {
             .account(account_id)
             .ok_or(SyncError::UnknownAccount(account_id))
     }
+}
+
+/// The organizer to write to, if the invitation names one worth writing
+/// to.
+fn organizer_of(invitation: &Invitation) -> Option<Address> {
+    invitation
+        .organizer
+        .clone()
+        .filter(|who| !who.email.trim().is_empty())
 }
 
 /// The row to store for an invitation that just arrived.

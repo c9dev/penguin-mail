@@ -11,11 +11,12 @@
 //! quoted-printable would leave a mail server free to rewrite them, and an
 //! object whose lines end in a bare newline is one Exchange turns down.
 
+use chrono::{DateTime, Local};
 use mail_builder::MessageBuilder;
 use mail_builder::headers::address::Address as MimeAddress;
 use mail_builder::headers::content_type::ContentType;
 use mail_builder::mime::MimePart;
-use mailrs_domain::invitation::Answer;
+use mailrs_domain::invitation::{Answer, When};
 use mailrs_domain::{Address, EpochMillis};
 
 /// The RFC 822 bytes of one iTIP message: `object` to `to`, from `me`.
@@ -74,6 +75,59 @@ pub(super) fn reply_prose(me: &Address, answer: Answer, summary: &str) -> String
         me.display(),
         titled(summary)
     )
+}
+
+/// "New Time Proposed: Q4 roadmap review".
+pub(super) fn counter_subject(summary: &str) -> String {
+    format!("New Time Proposed: {}", titled(summary))
+}
+
+/// What the organizer reads when their mail client shows no calendar
+/// part. The time carries the offset it is named in, since the organizer
+/// may be reading it three zones away.
+pub(super) fn counter_prose(me: &Address, summary: &str, when: &When) -> String {
+    format!(
+        "{} proposed a new time for {}: {}.",
+        me.display(),
+        titled(summary),
+        spoken(when)
+    )
+}
+
+/// A time in words, for the prose beside the calendar part.
+fn spoken(when: &When) -> String {
+    match when {
+        When::At { starts_at, ends_at } => {
+            let Some(start) = local(*starts_at) else {
+                return "a time this computer could not read".to_string();
+            };
+            match ends_at.and_then(local) {
+                Some(end) => format!(
+                    "{} to {} ({})",
+                    start.format("%A %-d %B %Y, %H:%M"),
+                    end.format("%H:%M"),
+                    start.format("UTC%:z")
+                ),
+                None => format!(
+                    "{} ({})",
+                    start.format("%A %-d %B %Y, %H:%M"),
+                    start.format("UTC%:z")
+                ),
+            }
+        }
+        When::Days { first, last } if first == last => {
+            format!("{}, all day", first.format("%A %-d %B %Y"))
+        }
+        When::Days { first, last } => format!(
+            "{} to {}, all day",
+            first.format("%-d %B"),
+            last.format("%-d %B %Y")
+        ),
+    }
+}
+
+fn local(at: EpochMillis) -> Option<DateTime<Local>> {
+    DateTime::from_timestamp_millis(at).map(|at| at.with_timezone(&Local))
 }
 
 /// The title as a sentence names it, for an event the organizer left
