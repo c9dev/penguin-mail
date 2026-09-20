@@ -25,6 +25,7 @@ use mailrs_sync::{
 
 use crate::assistant::run::{Background, Modules};
 use crate::demo::{self, DemoGmail};
+use mailrs_domain::translate::{fill, gettext};
 
 /// Gmail for real accounts, or the in-memory stand-in for demo mode.
 /// `mailrs_sync::AnyGmail` holds both, since `GmailApi`'s `impl Future`
@@ -534,7 +535,7 @@ impl Core {
         extra: &[&'static str],
     ) -> Result<Account> {
         if self.demo {
-            bail!("Demo mode cannot add real accounts.");
+            bail!(gettext("Demo mode cannot add real accounts."));
         }
         let oauth = self.oauth()?;
         let engine = self
@@ -549,14 +550,21 @@ impl Core {
             });
             let authorized = tokio::time::timeout(std::time::Duration::from_secs(300), flow)
                 .await
-                .map_err(|_| anyhow!("Gave up waiting for the browser after five minutes."))??;
+                .map_err(|_| {
+                    anyhow!(gettext(
+                        "Gave up waiting for the browser after five minutes."
+                    ))
+                })??;
             if let Some(expected) = expected
                 && !expected.eq_ignore_ascii_case(&authorized.email)
             {
-                bail!(
-                    "You signed in as {}. Choose {expected} to reconnect that account.",
-                    authorized.email
-                );
+                bail!(fill(
+                    &gettext(
+                        "You signed in as {account}. Choose {wanted} to reconnect that \
+                         account.",
+                    ),
+                    &[("account", &authorized.email), ("wanted", &expected)],
+                ));
             }
             let (email, refresh) = (authorized.email.clone(), authorized.refresh_token.clone());
             let store = Arc::clone(&tokens);

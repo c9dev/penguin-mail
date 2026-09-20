@@ -1,7 +1,7 @@
 //! The StatusNotifierItem shown by Ubuntu's AppIndicator extension.
 
 use crate::APP_ID;
-use mailrs_domain::translate::gettext;
+use mailrs_domain::translate::{fill, gettext};
 
 pub enum TrayCommand {
     Toggle,
@@ -38,7 +38,10 @@ impl ksni::Tray for MailTray {
     }
 
     fn title(&self) -> String {
-        format!("Penguin Mail: {}", self.summary())
+        fill(
+            &gettext("Penguin Mail: {summary}"),
+            &[("summary", &self.summary())],
+        )
     }
 
     fn icon_name(&self) -> String {
@@ -52,7 +55,10 @@ impl ksni::Tray for MailTray {
 
     fn tool_tip(&self) -> ksni::ToolTip {
         ksni::ToolTip {
-            title: format!("Penguin Mail: {}", self.summary()),
+            title: fill(
+                &gettext("Penguin Mail: {summary}"),
+                &[("summary", &self.summary())],
+            ),
             description: self
                 .accounts
                 .iter()

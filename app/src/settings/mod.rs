@@ -4,7 +4,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use mailrs_domain::translate::gettext;
+use mailrs_domain::translate::{fill_plural, gettext};
 use serde::{Deserialize, Serialize};
 
 mod change;
@@ -359,13 +359,30 @@ impl Choice for ColorScheme {
     }
 }
 
-/// How often each account checks Gmail, in seconds.
+/// How often each account checks Gmail, in seconds. These say "every so
+/// often" the way an event's repeat rule does, and share its words.
 pub fn poll_choices() -> Vec<(i64, String)> {
+    let seconds = |count: usize| {
+        fill_plural(
+            "Every second",
+            "Every {count} seconds",
+            count,
+            &[("count", &count.to_string())],
+        )
+    };
+    let minutes = |count: usize| {
+        fill_plural(
+            "Every minute",
+            "Every {count} minutes",
+            count,
+            &[("count", &count.to_string())],
+        )
+    };
     vec![
-        (30, gettext("Every 30 seconds")),
-        (60, gettext("Every minute")),
-        (300, gettext("Every 5 minutes")),
-        (900, gettext("Every 15 minutes")),
+        (30, seconds(30)),
+        (60, minutes(1)),
+        (300, minutes(5)),
+        (900, minutes(15)),
     ]
 }
 

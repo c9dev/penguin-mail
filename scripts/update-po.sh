@@ -25,14 +25,20 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
 # xtr walks a crate from its root module, so one call covers every file
-# under it. The desktop entry is not Rust and goes through xgettext.
+# under it. Naming a keyword drops the ones it looks for by default, so
+# `gettext` and `ngettext` are named again beside `fill_plural`, which
+# takes the two forms `ngettext` would. The desktop entry is not Rust and
+# goes through xgettext.
 for crate in app/src/main.rs domain/src/lib.rs sync/src/lib.rs; do
-    xtr --omit-header -o "$work/$(echo "$crate" | tr / -).pot" "$crate"
+    xtr -kgettext -kngettext:1,2 -kfill_plural:1,2 \
+        -o "$work/$(echo "$crate" | tr / -).pot" "$crate"
 done
-xgettext --omit-header --from-code=UTF-8 -L Desktop \
+xgettext --from-code=UTF-8 -L Desktop \
     -o "$work/desktop.pot" app/data/dev.penguinmail.PenguinMail.desktop
 
-msgcat --use-first --sort-by-file -o "$work/merged.pot" "$work"/*.pot
+msgcat --use-first --sort-by-file -o "$work/joined.pot" "$work"/*.pot
+# msgcat needs a header on its inputs; ours replaces it, so drop theirs.
+sed '1,/^$/d' "$work/joined.pot" > "$work/merged.pot"
 # The header msgcat leaves behind names no package, so write our own.
 cat > "$work/header.pot" <<HEADER
 # Penguin Mail, a Gmail client for the GNOME desktop.
@@ -64,9 +70,9 @@ mv "$work/penguin-mail.pot" "$pot"
 
 # POTFILES.in is the list a translator reads to know where the words come
 # from. Nothing builds from it, so say when it has drifted.
-listed=$(grep -v '^#' po/POTFILES.in | grep -v '^$' | sort)
+listed=$(grep -v '^#' po/POTFILES.in | grep -v '^$' | LC_ALL=C sort)
 found=$(sed -n 's/^#: //p' "$pot" | tr ' ' '\n' | sed 's/:[0-9]*$//' |
-    grep -v '^$' | sort -u)
+    grep -v '^$' | LC_ALL=C sort -u)
 missing=$(comm -13 <(echo "$listed") <(echo "$found") || true)
 if [ -n "$missing" ]; then
     echo "po/POTFILES.in is missing:" >&2

@@ -32,6 +32,7 @@ use crate::rules::{RuleForm, describe_action, describe_criteria};
 use crate::settings::{
     Change, Choice, ColorScheme, MarkRead, RemoteImages, Setting, Settings, TextSize, UndoSend,
 };
+use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 #[cfg(test)]
 mod fake;
@@ -626,9 +627,12 @@ impl<A: Accounts> Tools<A> {
             other => return Err(format!("Unknown action {other}.")),
         };
         if action == triage(TriageAction::Trash) && targets.len() > 25 {
-            self.approve(&format!(
-                "Move {} conversations to the Trash?",
-                targets.len()
+            let count = targets.len();
+            self.approve(&fill_plural(
+                "Move {count} conversation to the Trash?",
+                "Move {count} conversations to the Trash?",
+                count,
+                &[("count", &count.to_string())],
             ))
             .await?;
         }
@@ -789,8 +793,11 @@ impl<A: Accounts> Tools<A> {
             return Err(problem);
         }
         let to = compose::format_recipients(&draft.to);
-        self.approve(&format!("Send “{}” to {to}?", draft.subject))
-            .await?;
+        self.approve(&fill(
+            &gettext("Send “{subject}” to {recipients}?"),
+            &[("subject", &draft.subject), ("recipients", &to)],
+        ))
+        .await?;
         let delay = self.desk.settings().undo_send.seconds();
         self.effects.send(draft)?;
         Ok(json!({"sent": true, "undo_seconds": delay}))
@@ -801,8 +808,9 @@ impl<A: Accounts> Tools<A> {
     async fn block(&self, input: &Value) -> ToolResult {
         let (account, settings) = self.settings_for(&required(input, "account")?)?;
         let email = required(input, "email")?;
-        self.approve(&format!(
-            "Block {email}? Their future mail goes straight to the Trash."
+        self.approve(&fill(
+            &gettext("Block {address}? Their future mail goes straight to the Trash."),
+            &[("address", &email)],
         ))
         .await?;
         let blocked = {
@@ -877,18 +885,31 @@ impl<A: Accounts> Tools<A> {
                     .map(|d| d.format("%a %-d %b").to_string())
             };
             let dates = match (day(reply.first_day), day(reply.last_day)) {
-                (Some(first), Some(last)) => format!(" from {first} to {last}"),
-                (None, Some(last)) => format!(" until {last}"),
-                (Some(first), None) => format!(" from {first}"),
+                (Some(first), Some(last)) => fill(
+                    &gettext(" from {first} to {last}"),
+                    &[("first", &first), ("last", &last)],
+                ),
+                (None, Some(last)) => fill(&gettext(" until {last}"), &[("last", &last)]),
+                (Some(first), None) => fill(&gettext(" from {first}"), &[("first", &first)]),
                 (None, None) => String::new(),
             };
             let preview: String = reply.body.chars().take(160).collect();
-            format!(
-                "Turn on the automatic reply for {}{dates}?\n\n“{}”\n{}",
-                account.email, reply.subject, preview
+            fill(
+                &gettext(
+                    "Turn on the automatic reply for {account}{dates}?\n\n“{subject}”\n{body}",
+                ),
+                &[
+                    ("account", &account.email),
+                    ("dates", &dates),
+                    ("subject", &reply.subject),
+                    ("body", &preview),
+                ],
             )
         } else {
-            format!("Turn off the automatic reply for {}?", account.email)
+            fill(
+                &gettext("Turn off the automatic reply for {account}?"),
+                &[("account", &account.email)],
+            )
         };
         self.approve(&summary).await?;
         let saved = reply.clone();
@@ -963,11 +984,16 @@ impl<A: Accounts> Tools<A> {
         let filter = form.filter().map_err(str::to_string)?;
         let labels = self.labels_of(account.id);
         let name = |id: &str| labels.iter().find(|l| l.id == id).map(|l| l.name.clone());
-        let summary = format!(
-            "Create a Gmail rule for {}: {} → {}?",
-            account.email,
-            describe_criteria(&filter.criteria),
-            describe_action(&filter.action, name).to_lowercase()
+        let summary = fill(
+            &gettext("Create a Gmail rule for {account}: {when} → {then}?"),
+            &[
+                ("account", &account.email),
+                ("when", &describe_criteria(&filter.criteria)),
+                (
+                    "then",
+                    &describe_action(&filter.action, name).to_lowercase(),
+                ),
+            ],
         );
         self.approve(&summary).await?;
         let account_id = account.id;
@@ -984,8 +1010,11 @@ impl<A: Accounts> Tools<A> {
     async fn delete_rule(&self, input: &Value) -> ToolResult {
         let (account, settings) = self.settings_for(&required(input, "account")?)?;
         let id = required(input, "id")?;
-        self.approve(&format!("Delete a Gmail rule from {}?", account.email))
-            .await?;
+        self.approve(&fill(
+            &gettext("Delete a Gmail rule from {account}?"),
+            &[("account", &account.email)],
+        ))
+        .await?;
         let account_id = account.id;
         let deleted = self
             .call(async move { settings.delete_rule(account_id, &id).await })
@@ -1101,10 +1130,16 @@ impl<A: Accounts> Tools<A> {
         let key = required(input, "category")?;
         let category = named_category(&key)?;
         let who = text(input, "name").unwrap_or_else(|| email.clone());
-        self.approve(&format!(
-            "Move mail from {who} to {} in {}, and add a Gmail rule for their future mail?",
-            category.name(),
-            account.email
+        self.approve(&fill(
+            &gettext(
+                "Move mail from {sender} to {category} in {account}, and add a Gmail \
+                 rule for their future mail?",
+            ),
+            &[
+                ("sender", &who),
+                ("category", &category.name()),
+                ("account", &account.email),
+            ],
         ))
         .await?;
         self.effects

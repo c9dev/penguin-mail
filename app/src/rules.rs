@@ -1,5 +1,6 @@
 //! Gmail filters in plain words, and building one from the rule form.
 
+use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{Filter, FilterAction, FilterCriteria, system_label};
 
 /// What the rule form collects.
@@ -69,25 +70,31 @@ impl RuleForm {
 pub fn describe_criteria(criteria: &FilterCriteria) -> String {
     let mut parts = Vec::new();
     if let Some(from) = &criteria.from {
-        parts.push(format!("From {from}"));
+        parts.push(fill(&gettext("From {address}"), &[("address", from)]));
     }
     if let Some(to) = &criteria.to {
-        parts.push(format!("To {to}"));
+        parts.push(fill(&gettext("To {address}"), &[("address", to)]));
     }
     if let Some(subject) = &criteria.subject {
-        parts.push(format!("Subject has “{subject}”"));
+        parts.push(fill(
+            &gettext("Subject has “{words}”"),
+            &[("words", subject)],
+        ));
     }
     if let Some(query) = &criteria.query {
-        parts.push(format!("Has “{query}”"));
+        parts.push(fill(&gettext("Has “{words}”"), &[("words", query)]));
     }
     if let Some(query) = &criteria.negated_query {
-        parts.push(format!("Doesn't have “{query}”"));
+        parts.push(fill(
+            &gettext("Doesn't have “{words}”"),
+            &[("words", query)],
+        ));
     }
     if criteria.has_attachment {
-        parts.push("Has an attachment".into());
+        parts.push(gettext("Has an attachment"));
     }
     if parts.is_empty() {
-        return "All mail".into();
+        return gettext("All mail");
     }
     let mut text = parts.join(", ");
     // Only the first part starts with a capital.
@@ -107,9 +114,9 @@ pub fn describe_action(
     let removes = |id: &str| action.remove_label_ids.iter().any(|l| l == id);
     let mut parts: Vec<String> = Vec::new();
     if adds(system_label::TRASH) {
-        parts.push("Delete it".into());
+        parts.push(gettext("Delete it"));
     } else if removes(system_label::INBOX) {
-        parts.push("Skip the Inbox".into());
+        parts.push(gettext("Skip the Inbox"));
     }
     for id in &action.add_label_ids {
         match id.as_str() {
@@ -119,32 +126,35 @@ pub fn describe_action(
             | system_label::IMPORTANT
             | system_label::SPAM
             | system_label::INBOX => {}
-            other => parts.push(format!(
-                "Apply {}",
-                label_name(other).unwrap_or_else(|| other.to_string())
+            other => parts.push(fill(
+                &gettext("Apply {label}"),
+                &[(
+                    "label",
+                    &label_name(other).unwrap_or_else(|| other.to_string()),
+                )],
             )),
         }
     }
     if adds(system_label::STARRED) {
-        parts.push("Star it".into());
+        parts.push(gettext("Star it"));
     }
     if removes(system_label::UNREAD) {
-        parts.push("Mark as read".into());
+        parts.push(gettext("Mark as read"));
     }
     if adds(system_label::IMPORTANT) {
-        parts.push("Mark as important".into());
+        parts.push(gettext("Mark as important"));
     }
     if removes(system_label::IMPORTANT) {
-        parts.push("Never mark as important".into());
+        parts.push(gettext("Never mark as important"));
     }
     if removes(system_label::SPAM) {
-        parts.push("Never send to Spam".into());
+        parts.push(gettext("Never send to Spam"));
     }
     if let Some(to) = &action.forward {
-        parts.push(format!("Forward to {to}"));
+        parts.push(fill(&gettext("Forward to {address}"), &[("address", to)]));
     }
     if parts.is_empty() {
-        return "Nothing".into();
+        return gettext("Nothing");
     }
     let first = parts.remove(0);
     std::iter::once(first)

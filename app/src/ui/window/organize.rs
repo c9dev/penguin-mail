@@ -97,7 +97,7 @@ impl MainWindow {
                 return;
             }
             let Some(sync) = this.core.account(account_id) else {
-                return this.toast("That account is not connected");
+                return this.toast(&gettext("That account is not connected"));
             };
             let wanted = name.clone();
             match this
@@ -148,7 +148,7 @@ impl MainWindow {
                 return;
             }
             let Some(sync) = this.core.account(account_id) else {
-                return this.toast("That account is not connected");
+                return this.toast(&gettext("That account is not connected"));
             };
             let wanted = name.clone();
             if let Err(err) = this
@@ -186,7 +186,7 @@ impl MainWindow {
                 return;
             }
             let Some(sync) = this.core.account(account_id) else {
-                return this.toast("That account is not connected");
+                return this.toast(&gettext("That account is not connected"));
             };
             let showing = matches!(
                 &*this.mailbox.borrow(),
@@ -224,7 +224,7 @@ impl MainWindow {
             return;
         };
         let Some(sync) = self.core.account(account_id) else {
-            return self.toast("That account is not connected");
+            return self.toast(&gettext("That account is not connected"));
         };
         let color = mailrs_gmail::LabelColor {
             background_color: background.to_string(),
