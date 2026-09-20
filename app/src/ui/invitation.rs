@@ -10,6 +10,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use chrono::Local;
+use mailrs_domain::Address;
 use mailrs_domain::invitation::{Answer, Invitation, Method};
 use mailrs_sync::Change;
 
@@ -17,7 +18,7 @@ use crate::format::{event_moved_from, event_tile, event_when};
 
 /// What the card asks the window to do.
 pub enum Action {
-    /// Send this answer to Google Calendar.
+    /// Send this answer to the organizer.
     Answer(Answer),
     /// Hand the `.ics` to the desktop, which files it in GNOME Calendar.
     AddToCalendar,
@@ -34,6 +35,23 @@ pub struct Showing {
     /// The addresses of the account the message arrived in, so the card can
     /// find the user among the guests and call them "You".
     pub me: Vec<String>,
+}
+
+impl Showing {
+    /// The address an answer goes out as: the one the invitation reached,
+    /// under the name the organizer put on the guest list, so a reply
+    /// matches the guest it answers for. An invitation that lists none of
+    /// the account's addresses answers as the account itself.
+    pub fn answering_as(&self) -> Option<Address> {
+        let guest = self.invitation.me(&self.me);
+        Some(Address {
+            name: guest.and_then(|guest| guest.who.name.clone()),
+            email: match guest {
+                Some(guest) => guest.who.email.clone(),
+                None => self.me.first()?.clone(),
+            },
+        })
+    }
 }
 
 /// One line of the guest list.
@@ -57,6 +75,8 @@ pub struct EventCard {
     answers: gtk::Box,
     buttons: Vec<(Answer, gtk::ToggleButton)>,
     add: gtk::Button,
+    /// Where the last answer went, under the buttons that sent it.
+    went: gtk::Label,
     /// What the card shows now. The window reads it back to answer the
     /// invitation, so the card is the one place that holds it.
     showing: RefCell<Option<Showing>>,
@@ -147,6 +167,12 @@ impl EventCard {
             .visible(false)
             .css_classes(["invitation-news"])
             .build();
+        let went = gtk::Label::builder()
+            .xalign(0.0)
+            .wrap(true)
+            .visible(false)
+            .css_classes(["dim-label", "caption"])
+            .build();
 
         let inside = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
@@ -158,6 +184,7 @@ impl EventCard {
         inside.append(&organizer);
         inside.append(&guests);
         inside.append(&actions);
+        inside.append(&went);
 
         let widget = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
@@ -181,6 +208,7 @@ impl EventCard {
             answers,
             buttons,
             add,
+            went,
             showing: RefCell::new(None),
             filling: Cell::new(false),
         });
@@ -223,6 +251,12 @@ impl EventCard {
         self.showing.borrow().as_ref().map(f)
     }
 
+    /// Says under the buttons where the answer went, or takes the line
+    /// away while one is on its way.
+    pub fn set_went(&self, went: Option<String>) {
+        set_line(&self.went, went);
+    }
+
     /// Puts the card back where an answer left it: on the one that went
     /// through, or on the one it showed before an answer that did not.
     pub fn set_answer(&self, answer: Option<Answer>) {
@@ -263,6 +297,7 @@ impl EventCard {
         set_line(&self.location, event.location.clone());
         set_line(&self.organizer, organizer_line(event));
         self.fill_guests(showing);
+        self.went.set_visible(false);
         set_line(&self.news, news(showing, now));
         self.news
             .set_css_classes(&["invitation-news", news_tone(showing)]);

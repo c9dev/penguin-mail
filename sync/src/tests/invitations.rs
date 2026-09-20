@@ -4,14 +4,48 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use mailrs_domain::invitation::Answer;
-use mailrs_gmail::{Answered, GmailError};
+use base64::Engine;
+use mailrs_domain::Address;
+use mailrs_domain::invitation::{Answer, Invitation, Scope};
+use mailrs_gmail::GmailError;
 
 use super::{Connected, Harness, harness};
-use crate::invitations::{Change, Invitations};
-use crate::settings::Permitted;
+use crate::invitations::{Change, Invitations, Told};
 
 const UID: &str = "demo-event@google.com";
+
+fn me() -> Address {
+    Address {
+        name: Some("Me".into()),
+        email: "me@example.com".into(),
+    }
+}
+
+fn read(ics: &str) -> Invitation {
+    mailrs_domain::invitation::read(ics).expect("the part holds an event")
+}
+
+/// The one message the fake was asked to send, as text, with the base64
+/// parts decoded so a test can read the calendar object in it.
+fn sent_message(h: &Harness) -> String {
+    let raw = h.fake.with(|s| {
+        assert_eq!(s.sent.len(), 1, "one message went out");
+        s.sent[0].0.clone()
+    });
+    let text = String::from_utf8(raw).expect("the message is text");
+    let mut out = String::new();
+    for block in text.split("\r\n\r\n") {
+        out.push_str(block);
+        out.push_str("\r\n\r\n");
+        let packed: String = block.split("\r\n").collect();
+        if let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(&packed)
+            && let Ok(decoded) = String::from_utf8(bytes)
+        {
+            out.push_str(&decoded);
+        }
+    }
+    out
+}
 
 fn invitations(h: &Harness) -> Invitations<Connected> {
     let connected = HashMap::from([(h.account_id, Arc::clone(&h.sync))]);
@@ -182,6 +216,7 @@ async fn a_cancellation_of_a_known_event_says_so() {
 async fn an_answer_reaches_the_calendar_and_comes_back_on_reopening() {
     let h = harness().await;
     let invitations = invitations(&h);
+    let invitation = read(&invite(0, "20260310T090000Z"));
     h.fake.with(|s| s.calendar.insert(UID.into(), None));
     invitations
         .open(h.account_id, "m1", &invite(0, "20260310T090000Z"), 1_000)
@@ -189,14 +224,26 @@ async fn an_answer_reaches_the_calendar_and_comes_back_on_reopening() {
         .unwrap();
 
     let sent = invitations
-        .answer(h.account_id, UID, "me@example.com", Answer::Maybe)
+        .answer(
+            h.account_id,
+            &invitation,
+            &me(),
+            Answer::Maybe,
+            Scope::Series,
+            1_000,
+        )
         .await
         .unwrap();
-    assert_eq!(sent, Permitted::Done(Answered::Done));
+    assert_eq!(sent.told, Told::Calendar);
+    assert!(!sent.needs_permission);
     assert_eq!(
         h.fake.with(|s| s.calendar[UID]),
         Some(Answer::Maybe),
         "Google Calendar holds the answer"
+    );
+    assert!(
+        h.fake.with(|s| s.sent.is_empty()),
+        "Google tells the organizer, so no mail goes out"
     );
 
     let reopened = invitations
@@ -217,7 +264,14 @@ async fn a_newer_version_asks_again() {
         .await
         .unwrap();
     invitations
-        .answer(h.account_id, UID, "me@example.com", Answer::Yes)
+        .answer(
+            h.account_id,
+            &read(&invite(0, "20260310T090000Z")),
+            &me(),
+            Answer::Yes,
+            Scope::Series,
+            1_000,
+        )
         .await
         .unwrap();
 
@@ -230,20 +284,91 @@ async fn a_newer_version_asks_again() {
 }
 
 #[tokio::test]
-async fn an_event_google_never_put_on_the_calendar_is_not_answered() {
+async fn an_event_on_no_calendar_is_answered_by_mail_to_the_organizer() {
     let h = harness().await;
     let invitations = invitations(&h);
+    let invitation = read(&invite(0, "20260310T090000Z"));
     invitations
         .open(h.account_id, "m1", &invite(0, "20260310T090000Z"), 1_000)
         .await
         .unwrap();
-    assert_eq!(
-        invitations
-            .answer(h.account_id, UID, "me@example.com", Answer::Yes)
-            .await
-            .unwrap(),
-        Permitted::Done(Answered::NotOnCalendar)
+
+    let sent = invitations
+        .answer(
+            h.account_id,
+            &invitation,
+            &me(),
+            Answer::Yes,
+            Scope::Series,
+            1_000,
+        )
+        .await
+        .unwrap();
+    assert_eq!(sent.told, Told::Organizer);
+
+    let message = sent_message(&h);
+    assert!(
+        message.contains("To: \"Priya\" <priya@example.com>"),
+        "{message}"
     );
+    assert!(
+        message.contains("Subject: Accepted: Design review"),
+        "{message}"
+    );
+    // RFC 6047 wants the method on the part as well as in the object.
+    assert!(message.contains("method=\"REPLY\""), "{message}");
+    assert!(message.contains("METHOD:REPLY\r\n"), "{message}");
+    assert!(message.contains(&format!("UID:{UID}\r\n")), "{message}");
+    assert!(
+        message.contains("ATTENDEE;PARTSTAT=ACCEPTED;CN=Me:mailto:me@example.com\r\n"),
+        "{message}"
+    );
+
+    let reopened = invitations
+        .open(h.account_id, "m1", &invite(0, "20260310T090000Z"), 2_000)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(reopened.answer, Some(Answer::Yes), "the answer stands");
+}
+
+#[tokio::test]
+async fn an_invitation_with_no_organizer_has_nobody_to_answer() {
+    let h = harness().await;
+    let invitations = invitations(&h);
+    let invitation = read(
+        &[
+            "BEGIN:VCALENDAR",
+            "METHOD:REQUEST",
+            "BEGIN:VEVENT",
+            &format!("UID:{UID}"),
+            "SUMMARY:Design review",
+            "DTSTART:20260310T090000Z",
+            "END:VEVENT",
+            "END:VCALENDAR",
+            "",
+        ]
+        .join("\r\n"),
+    );
+    invitations
+        .open(h.account_id, "m1", &invite(0, "20260310T090000Z"), 1_000)
+        .await
+        .unwrap();
+
+    let sent = invitations
+        .answer(
+            h.account_id,
+            &invitation,
+            &me(),
+            Answer::Yes,
+            Scope::Series,
+            1_000,
+        )
+        .await
+        .unwrap();
+    assert_eq!(sent.told, Told::Nobody);
+    assert!(h.fake.with(|s| s.sent.is_empty()));
+
     let reopened = invitations
         .open(h.account_id, "m1", &invite(0, "20260310T090000Z"), 2_000)
         .await
@@ -253,22 +378,38 @@ async fn an_event_google_never_put_on_the_calendar_is_not_answered() {
 }
 
 #[tokio::test]
-async fn a_missing_calendar_permission_is_its_own_answer() {
+async fn a_missing_calendar_permission_still_reaches_the_organizer() {
     let h = harness().await;
     let invitations = invitations(&h);
+    let invitation = read(&invite(0, "20260310T090000Z"));
     h.fake.with(|s| s.calendar.insert(UID.into(), None));
     h.fake.fail_next(GmailError::MissingScope);
-    assert_eq!(
-        invitations
-            .answer(h.account_id, UID, "me@example.com", Answer::Yes)
-            .await
-            .unwrap(),
-        Permitted::NeedsPermission
-    );
+
+    let sent = invitations
+        .answer(
+            h.account_id,
+            &invitation,
+            &me(),
+            Answer::No,
+            Scope::Series,
+            1_000,
+        )
+        .await
+        .unwrap();
+    assert_eq!(sent.told, Told::Organizer);
+    assert!(sent.needs_permission, "the window offers to ask for it");
+    assert!(sent_message(&h).contains("PARTSTAT=DECLINED"));
 
     h.fake.fail_next(GmailError::Network("offline".into()));
     let err = invitations
-        .answer(h.account_id, UID, "me@example.com", Answer::Yes)
+        .answer(
+            h.account_id,
+            &invitation,
+            &me(),
+            Answer::Yes,
+            Scope::Series,
+            2_000,
+        )
         .await
         .unwrap_err();
     assert!(err.to_string().contains("offline"), "{err}");

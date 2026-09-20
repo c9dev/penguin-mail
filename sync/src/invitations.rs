@@ -6,15 +6,25 @@
 //! answer the user gave stale, and that Google Calendar takes the answer
 //! while Gmail does not. The card in the window and its tests both go
 //! through here, so neither works out any of that for itself.
+//!
+//! An answer has two roads to the organizer. Google Calendar is the better
+//! one when it is open, since one call tells the organizer and marks the
+//! user's own calendar; it is open only for an event Google already holds,
+//! which leaves out every invitation from Exchange, every one forwarded by
+//! hand, and every one that arrived at an address the calendar does not
+//! belong to. The other road is the one RFC 5546 lays out: mail the
+//! organizer a `METHOD:REPLY` object. That one needs nobody's permission,
+//! so it is what the answer falls back to.
+
+mod mail;
 
 use std::sync::Arc;
 
-use mailrs_domain::invitation::{self, Answer, Invitation, When};
-use mailrs_domain::{AccountId, EpochMillis};
+use mailrs_domain::invitation::{self, Answer, Invitation, Scope, When};
+use mailrs_domain::{AccountId, Address, EpochMillis};
 use mailrs_gmail::{Answered, GmailError};
 use mailrs_store::{Db, invitations as store};
 
-use crate::settings::Permitted;
 use crate::{AccountSync, Accounts, SyncError};
 
 /// What a message does to an event the user already has. `None` alongside
@@ -52,6 +62,29 @@ pub struct Opened {
     pub change: Option<Change>,
     /// The answer the user gave this version of the event, if they have.
     pub answer: Option<Answer>,
+}
+
+/// Where the user's answer went.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Told {
+    /// Google Calendar recorded it, which tells the organizer and marks
+    /// the event on the user's own calendar.
+    Calendar,
+    /// Mailed to the organizer as an iTIP reply.
+    Organizer,
+    /// Nowhere: the event is on no calendar of the user's and the
+    /// invitation names no organizer to write to.
+    Nobody,
+}
+
+/// What answering an invitation did.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Sent {
+    pub told: Told,
+    /// Google turned the calendar call down for want of the permission.
+    /// The answer went out all the same; the caller offers to ask for the
+    /// permission so that the user's own calendar keeps up from here on.
+    pub needs_permission: bool,
 }
 
 pub struct Invitations<A: Accounts> {
@@ -119,32 +152,81 @@ impl<A: Accounts> Invitations<A> {
         }))
     }
 
-    /// Sends the user's answer to Google Calendar and remembers it, so
-    /// reopening the message shows it. `Permitted::NeedsPermission` means
-    /// the account has not granted the calendar permission yet, and the
-    /// caller offers to ask for it.
+    /// Sends the user's answer to the organizer and remembers it, so
+    /// reopening the message shows it. Google Calendar takes the answer
+    /// where it can, since one call tells the organizer and marks the
+    /// user's own calendar; where it cannot, the answer goes to the
+    /// organizer as mail. The answer says which of the two happened.
     pub async fn answer(
         &self,
         account_id: AccountId,
-        uid: &str,
-        me: &str,
+        invitation: &Invitation,
+        me: &Address,
         answer: Answer,
-    ) -> Result<Permitted<Answered>, SyncError> {
+        scope: Scope,
+        now: EpochMillis,
+    ) -> Result<Sent, SyncError> {
         let sync = self.sync(account_id)?;
-        let sent = match sync.answer_invitation(uid, me, answer).await {
-            Ok(sent) => sent,
-            Err(SyncError::Gmail(GmailError::MissingScope)) => {
-                return Ok(Permitted::NeedsPermission);
-            }
-            Err(err) => return Err(err),
+        let mut sent = Sent {
+            told: Told::Nobody,
+            needs_permission: false,
         };
-        if sent == Answered::Done {
-            let uid = uid.to_string();
+        match sync
+            .answer_invitation(&invitation.uid, &me.email, answer)
+            .await
+        {
+            Ok(Answered::Done) => sent.told = Told::Calendar,
+            Ok(Answered::NotOnCalendar) => {}
+            // The answer still has to reach the organizer, so it goes by
+            // mail and the caller offers to ask for the permission, which
+            // is what keeps the user's own calendar in step from here on.
+            Err(SyncError::Gmail(GmailError::MissingScope)) => sent.needs_permission = true,
+            Err(err) => return Err(err),
+        }
+        if sent.told == Told::Nobody {
+            sent.told = self
+                .mail_reply(&sync, invitation, me, answer, scope, now)
+                .await?;
+        }
+        if sent.told != Told::Nobody {
+            let uid = invitation.uid.clone();
             self.db
                 .write(move |c| store::answer(c, account_id, &uid, answer))
                 .await?;
         }
-        Ok(Permitted::Done(sent))
+        Ok(sent)
+    }
+
+    /// Mails the organizer the reply. An invitation that names no
+    /// organizer has nobody to send it to, and says so.
+    async fn mail_reply(
+        &self,
+        sync: &AccountSync<A::Api>,
+        invitation: &Invitation,
+        me: &Address,
+        answer: Answer,
+        scope: Scope,
+        now: EpochMillis,
+    ) -> Result<Told, SyncError> {
+        let Some(organizer) = invitation
+            .organizer
+            .clone()
+            .filter(|who| !who.email.trim().is_empty())
+        else {
+            return Ok(Told::Nobody);
+        };
+        let raw = mail::itip(
+            me,
+            &organizer,
+            &mail::reply_subject(answer, &invitation.summary),
+            &mail::reply_prose(me, answer, &invitation.summary),
+            "REPLY",
+            &invitation::reply(invitation, me, answer, scope, now),
+            now,
+        )
+        .map_err(SyncError::Mime)?;
+        sync.send(raw, None, None).await?;
+        Ok(Told::Organizer)
     }
 
     fn sync(&self, account_id: AccountId) -> Result<Arc<AccountSync<A::Api>>, SyncError> {

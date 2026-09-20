@@ -1,19 +1,33 @@
-//! What the event card's buttons do: send an answer to Google Calendar,
-//! ask for the calendar permission when Google wants it first, and hand
-//! the `.ics` to the desktop so GNOME Calendar files the event.
+//! What the event card's buttons do: send an answer to the organizer,
+//! offer the calendar permission that keeps the user's own calendar in
+//! step, and hand the `.ics` to the desktop so GNOME Calendar files the
+//! event.
+//!
+//! The answer leaves by one of two roads, and `mailrs_sync` picks it. The
+//! card says which one it took, since a reply Google filed shows up on the
+//! user's calendar and a reply that went out as mail does not.
 
+use std::cell::RefCell;
+use std::collections::HashSet;
 use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gio, glib};
 use mailrs_domain::AccountId;
-use mailrs_domain::invitation::Answer;
-use mailrs_gmail::{Answered, CALENDAR_SCOPE};
-use mailrs_sync::{Permitted, now_millis};
+use mailrs_domain::invitation::{Answer, Scope};
+use mailrs_gmail::CALENDAR_SCOPE;
+use mailrs_sync::{Told, now_millis};
 
 use super::MainWindow;
 use crate::ui::conversation::ConversationView;
 use crate::ui::invitation::{Action, Showing};
+
+thread_local! {
+    /// The accounts this run has already offered the calendar permission.
+    /// An answer reaches the organizer by mail without it, so the offer
+    /// comes once and then stays out of the way.
+    static ASKED_FOR_CALENDAR: RefCell<HashSet<AccountId>> = RefCell::new(HashSet::new());
+}
 
 impl MainWindow {
     /// Reads the invitation in the message `view` shows and puts it on the
@@ -64,45 +78,58 @@ impl MainWindow {
         }
     }
 
-    /// Sends the answer to Google Calendar and says how it went.
+    /// Sends the answer and says where it went.
     fn answer_invitation(self: &Rc<Self>, view: &Rc<ConversationView>, answer: Answer) {
         let account_id = view.with_open(|open| open.account_id);
-        let uid = view.with_invitation(|showing| showing.invitation.uid.clone());
-        let (Some(account_id), Some(uid)) = (account_id, uid) else {
+        let found =
+            view.with_invitation(|showing| (showing.invitation.clone(), showing.answering_as()));
+        let (Some(account_id), Some((invitation, Some(me)))) = (account_id, found) else {
             return;
         };
-        if uid.trim().is_empty() {
+        if invitation.uid.trim().is_empty() {
             return self.toast("This invitation names no event, so there is nothing to answer");
         }
-        let Some(me) = self.addresses_for(account_id).into_iter().next() else {
-            return;
-        };
+        let organizer = invitation
+            .organizer
+            .as_ref()
+            .map(|who| who.display().to_string());
         let before = view.with_invitation(|showing| showing.answer).flatten();
         let invitations = self.core.invitations();
         let (this, view) = (Rc::clone(self), Rc::clone(view));
         glib::spawn_future_local(async move {
             let sent = this
                 .core
-                .call(async move { invitations.answer(account_id, &uid, &me, answer).await })
+                .call(async move {
+                    invitations
+                        .answer(
+                            account_id,
+                            &invitation,
+                            &me,
+                            answer,
+                            Scope::Series,
+                            now_millis(),
+                        )
+                        .await
+                })
                 .await;
             match sent {
-                Ok(Permitted::Done(Answered::Done)) => {
-                    view.card.set_answer(Some(answer));
-                    this.toast(match answer {
-                        Answer::Yes => "Replied Yes. The organizer has been told.",
-                        Answer::No => "Replied No. The organizer has been told.",
-                        Answer::Maybe => "Replied Maybe. The organizer has been told.",
-                    });
-                }
-                Ok(Permitted::Done(Answered::NotOnCalendar)) => {
-                    view.card.set_answer(before);
-                    this.toast(
-                        "This meeting is not on your calendar, so there was nothing to answer",
-                    );
-                }
-                Ok(Permitted::NeedsPermission) => {
-                    view.card.set_answer(before);
-                    this.ask_for_calendar_access(account_id);
+                Ok(sent) => {
+                    match sent.told {
+                        Told::Nobody => {
+                            view.card.set_answer(before);
+                            this.toast(
+                                "This invitation names no organizer, so there is nobody to reply to",
+                            );
+                        }
+                        told => {
+                            view.card.set_answer(Some(answer));
+                            view.card.set_went(Some(went(told, organizer.as_deref())));
+                            this.toast(&replied(answer, told));
+                        }
+                    }
+                    if sent.needs_permission {
+                        this.offer_calendar_access(account_id);
+                    }
                 }
                 Err(err) => {
                     view.card.set_answer(before);
@@ -112,17 +139,22 @@ impl MainWindow {
         });
     }
 
-    /// Explains that answering an invitation needs one more permission, and
-    /// offers to ask Google for it. Saying no leaves Google's own Yes, No
-    /// and Maybe links in the message, which go on working.
-    fn ask_for_calendar_access(self: &Rc<Self>, account_id: AccountId) {
+    /// Explains what the calendar permission adds, and offers to ask
+    /// Google for it. The answer has already reached the organizer either
+    /// way; the permission is what puts the event on the user's own
+    /// calendar. The offer comes once a run, so saying no ends it.
+    fn offer_calendar_access(self: &Rc<Self>, account_id: AccountId) {
+        let first = ASKED_FOR_CALENDAR.with(|asked| asked.borrow_mut().insert(account_id));
+        if !first {
+            return;
+        }
         let Some(account) = self.account(account_id) else {
             return;
         };
         let dialog = adw::AlertDialog::new(
             Some("Allow Penguin Mail to Use Your Calendar"),
             Some(&format!(
-                "Replying to an invitation needs permission to change events on the calendar for {}. Google asks you to confirm in your browser. Without it, the Yes, No and Maybe links in the message still work.",
+                "Your reply went to the organizer as mail. With permission to change events on the calendar for {}, the meeting is marked on your own calendar too. Google asks you to confirm in your browser.",
                 account.email
             )),
         );
@@ -168,6 +200,31 @@ impl MainWindow {
                 }
             },
         );
+    }
+}
+
+/// The toast an answer leaves: the answer the user gave, and that the
+/// organizer now knows it.
+fn replied(answer: Answer, told: Told) -> String {
+    let said = match answer {
+        Answer::Yes => "Replied Yes",
+        Answer::No => "Replied No",
+        Answer::Maybe => "Replied Maybe",
+    };
+    match told {
+        Told::Calendar => format!("{said}. The organizer has been told."),
+        _ => format!("{said}. Your reply is on its way to the organizer."),
+    }
+}
+
+/// The line under the buttons: where the answer went. Google files the
+/// answer on the user's own calendar as well, so the two roads leave the
+/// user in different places and the card says which.
+fn went(told: Told, organizer: Option<&str>) -> String {
+    match (told, organizer) {
+        (Told::Calendar, _) => "Answered on your calendar".to_string(),
+        (_, Some(organizer)) => format!("Replied by email to {organizer}"),
+        (_, None) => "Replied by email".to_string(),
     }
 }
 

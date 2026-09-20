@@ -12,4 +12,6 @@ pub enum SyncError {
     UnknownAccount(AccountId),
     #[error("there is no label called {0}")]
     NoLabel(String),
+    #[error("could not write the message: {0}")]
+    Mime(String),
 }
