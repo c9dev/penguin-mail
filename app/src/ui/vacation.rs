@@ -65,7 +65,8 @@ pub fn present(
     dialog.present(Some(parent));
 
     if core.account(account.id).is_none() {
-        stack.add_named(&problem("This account is not syncing yet."), Some("error"));
+        let said = gettext("This account is not syncing yet.");
+        stack.add_named(&problem(&said), Some("error"));
         stack.set_visible_child_name("error");
         return;
     }

@@ -230,14 +230,18 @@ impl MainWindow {
             let starts_at = match proposal {
                 Proposal::At(at) => Some(at),
                 Proposal::Pick => {
+                    let hears = match organizer.as_deref() {
+                        Some(organizer) => organizer.to_string(),
+                        None => gettext("Nobody"),
+                    };
                     crate::ui::when::pick_time(
                         &this.window,
-                        "Propose a New Time",
-                        &format!(
-                            "The organizer decides. {} hears what you suggest.",
-                            organizer.as_deref().unwrap_or("Nobody")
+                        &gettext("Propose a New Time"),
+                        &fill(
+                            &gettext("The organizer decides. {organizer} hears what you suggest."),
+                            &[("organizer", &hears)],
                         ),
-                        "Propose",
+                        &gettext("Propose"),
                     )
                     .await
                 }
@@ -254,17 +258,23 @@ impl MainWindow {
                 })
                 .await;
             match sent {
-                Ok(Told::Nobody) => {
-                    this.toast("This invitation names no organizer, so there is nobody to ask")
-                }
+                Ok(Told::Nobody) => this.toast(&gettext(
+                    "This invitation names no organizer, so there is nobody to ask",
+                )),
                 Ok(_) => {
                     view.card.set_went(Some(match &organizer {
-                        Some(organizer) => format!("Proposed a new time to {organizer}"),
-                        None => "Proposed a new time".to_string(),
+                        Some(organizer) => fill(
+                            &gettext("Proposed a new time to {organizer}"),
+                            &[("organizer", organizer)],
+                        ),
+                        None => gettext("Proposed a new time"),
                     }));
-                    this.toast("New time proposed. The organizer decides.");
+                    this.toast(&gettext("New time proposed. The organizer decides."));
                 }
-                Err(err) => this.toast(&format!("Could not send your proposal: {err}")),
+                Err(err) => this.toast(&fill(
+                    &gettext("Could not send your proposal: {reason}"),
+                    &[("reason", &err.to_string())],
+                )),
             }
         });
     }

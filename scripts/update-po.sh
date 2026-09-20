@@ -4,13 +4,17 @@
 # of the app shows them.
 #   scripts/update-po.sh              rebuild the template and the .po files
 #   scripts/update-po.sh --check      say whether the template is stale
-# Needs xtr, which reads Rust properly where xgettext does not:
+# Needs xtr, which reads Rust where xgettext only guesses:
 #   cargo install xtr
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 pot=po/penguin-mail.pot
 version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+
+# `gettext` and `ngettext` are what the C library offers; `fill_plural`
+# takes the two forms `ngettext` would and is named beside them.
+keywords=(-kgettext -kngettext:1,2 -kfill_plural:1,2)
 
 if ! command -v xtr >/dev/null; then
     echo "update-po.sh needs xtr: cargo install xtr" >&2
@@ -24,22 +28,24 @@ fi
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-# xtr walks a crate from its root module, so one call covers every file
-# under it. Naming a keyword drops the ones it looks for by default, so
-# `gettext` and `ngettext` are named again beside `fill_plural`, which
-# takes the two forms `ngettext` would. The desktop entry is not Rust and
-# goes through xgettext.
-for crate in app/src/main.rs domain/src/lib.rs sync/src/lib.rs; do
-    xtr -kgettext -kngettext:1,2 -kfill_plural:1,2 \
-        -o "$work/$(echo "$crate" | tr / -).pot" "$crate"
-done
-xgettext --from-code=UTF-8 -L Desktop \
-    -o "$work/desktop.pot" app/data/dev.penguinmail.PenguinMail.desktop
+listed=$(grep -v '^#' po/POTFILES.in | grep -v '^$' | grep '\.rs$' | LC_ALL=C sort)
 
-msgcat --use-first --sort-by-file -o "$work/joined.pot" "$work"/*.pot
+# One xtr per file, rather than one per crate. xtr walks a crate from its
+# root, but two modules that share a name, such as `ui::invitation` and
+# `ui::window::invitation`, leave it reading only one of them. Naming each
+# file makes every one of them a root, and msgcat throws the repeats away.
+number=0
+while read -r file; do
+    number=$((number + 1))
+    xtr "${keywords[@]}" -o "$(printf '%s/1-%03d.pot' "$work" "$number")" "$file"
+done <<< "$listed"
+# The desktop entry is not Rust at all.
+xgettext --from-code=UTF-8 -L Desktop \
+    -o "$work/2-desktop.pot" app/data/dev.penguinmail.PenguinMail.desktop
+
+msgcat --use-first --sort-by-file -o "$work/joined.pot" "$work"/[12]-*.pot
 # msgcat needs a header on its inputs; ours replaces it, so drop theirs.
 sed '1,/^$/d' "$work/joined.pot" > "$work/merged.pot"
-# The header msgcat leaves behind names no package, so write our own.
 cat > "$work/header.pot" <<HEADER
 # Penguin Mail, a Gmail client for the GNOME desktop.
 # This file is distributed under the same licence as Penguin Mail.
@@ -57,8 +63,7 @@ HEADER
 cat "$work/header.pot" "$work/merged.pot" > "$work/penguin-mail.pot"
 
 if [ "${1:-}" = --check ]; then
-    if diff -q <(grep -v '^"POT-Creation-Date' "$pot") \
-        <(grep -v '^"POT-Creation-Date' "$work/penguin-mail.pot") >/dev/null; then
+    if diff -q "$pot" "$work/penguin-mail.pot" >/dev/null; then
         echo "$pot is up to date."
         exit 0
     fi
@@ -68,15 +73,14 @@ fi
 
 mv "$work/penguin-mail.pot" "$pot"
 
-# POTFILES.in is the list a translator reads to know where the words come
-# from. Nothing builds from it, so say when it has drifted.
-listed=$(grep -v '^#' po/POTFILES.in | grep -v '^$' | LC_ALL=C sort)
-found=$(sed -n 's/^#: //p' "$pot" | tr ' ' '\n' | sed 's/:[0-9]*$//' |
-    grep -v '^$' | LC_ALL=C sort -u)
-missing=$(comm -13 <(echo "$listed") <(echo "$found") || true)
-if [ -n "$missing" ]; then
-    echo "po/POTFILES.in is missing:" >&2
-    echo "$missing" | sed 's/^/  /' >&2
+# POTFILES.in is what the extraction reads, so a file left out of it is a
+# file whose words nobody can translate. Say so loudly.
+grep -rlE '(gettext|fill_plural)\(' --include='*.rs' app/src domain/src sync/src |
+    LC_ALL=C sort > "$work/rust.txt"
+forgotten=$(comm -13 <(echo "$listed") "$work/rust.txt")
+if [ -n "$forgotten" ]; then
+    echo "po/POTFILES.in is missing, and their words go untranslated:" >&2
+    echo "$forgotten" | sed 's/^/  /' >&2
 fi
 
 # LINGUAS names the languages that exist. msgfmt reads it to put the

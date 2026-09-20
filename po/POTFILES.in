@@ -40,12 +40,14 @@ app/src/ui/welcome.rs
 app/src/ui/when.rs
 app/src/ui/window.rs
 app/src/ui/window/arrange.rs
+app/src/ui/window/assistant.rs
 app/src/ui/window/attachments.rs
 app/src/ui/window/categories.rs
 app/src/ui/window/detached.rs
 app/src/ui/window/export.rs
 app/src/ui/window/followup.rs
 app/src/ui/window/images.rs
+app/src/ui/window/invitation.rs
 app/src/ui/window/organize.rs
 app/src/ui/window/outbox.rs
 app/src/ui/window/reminders.rs
@@ -54,7 +56,9 @@ app/src/ui/window/senders.rs
 domain/src/category.rs
 domain/src/invitation.rs
 domain/src/invitation/recurrence.rs
+domain/src/lib.rs
 domain/src/smart.rs
+domain/src/translate.rs
 sync/src/account/writes.rs
 sync/src/actions.rs
 sync/src/mailbox.rs

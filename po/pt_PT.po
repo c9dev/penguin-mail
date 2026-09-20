@@ -27,7 +27,7 @@ msgstr "correio;email;e-mail;gmail;caixa de entrada;"
 msgid "That account is not connected. Check its status in the sidebar."
 msgstr "Essa conta não está ligada. Veja o estado dela na barra lateral."
 
-#: app/src/app/sending.rs:87 app/src/ui/composer/mod.rs:1163
+#: app/src/app/sending.rs:87
 msgid "Could not build the message: {reason}"
 msgstr "Não foi possível montar a mensagem: {reason}"
 
@@ -44,7 +44,6 @@ msgid "Waiting in the Outbox. It goes out as soon as it can."
 msgstr "À espera na caixa de saída. Sai assim que for possível."
 
 #: app/src/app/sending.rs:179 app/src/app/sending.rs:184
-#: app/src/ui/window/outbox.rs:82 app/src/ui/window/outbox.rs:86
 msgid "Not sent: {reason}"
 msgstr "Não enviada: {reason}"
 
@@ -205,7 +204,7 @@ msgstr "Ontem às %H:%M"
 msgid "%a %-d %b at %H:%M"
 msgstr "%a %-d %b às %H:%M"
 
-#: app/src/format.rs:51 app/src/ui/hide_my_email.rs:117
+#: app/src/format.rs:51
 msgid "%-d %b %Y"
 msgstr ""
 
@@ -297,35 +296,35 @@ msgstr ""
 msgid "{day} {time}"
 msgstr "{day} {time}"
 
-#: app/src/format.rs:295 app/src/ui/mod.rs:71
+#: app/src/format.rs:295
 msgid "Blue"
 msgstr "Azul"
 
-#: app/src/format.rs:296 app/src/ui/mod.rs:70
+#: app/src/format.rs:296
 msgid "Teal"
 msgstr "Turquesa"
 
-#: app/src/format.rs:297 app/src/ui/mod.rs:69
+#: app/src/format.rs:297
 msgid "Green"
 msgstr "Verde"
 
-#: app/src/format.rs:298 app/src/ui/mod.rs:68
+#: app/src/format.rs:298
 msgid "Yellow"
 msgstr "Amarelo"
 
-#: app/src/format.rs:299 app/src/ui/mod.rs:67
+#: app/src/format.rs:299
 msgid "Orange"
 msgstr "Laranja"
 
-#: app/src/format.rs:300 app/src/ui/mod.rs:66
+#: app/src/format.rs:300
 msgid "Red"
 msgstr "Vermelho"
 
-#: app/src/format.rs:301 app/src/ui/mod.rs:73
+#: app/src/format.rs:301
 msgid "Pink"
 msgstr "Rosa"
 
-#: app/src/format.rs:302 app/src/ui/mod.rs:72
+#: app/src/format.rs:302
 msgid "Purple"
 msgstr "Roxo"
 
@@ -1396,7 +1395,7 @@ msgstr "Cópia oculta"
 
 #: app/src/ui/composer/mod.rs:257 app/src/ui/composer/mod.rs:297
 #: app/src/ui/rules.rs:265 app/src/ui/templates.rs:187
-#: app/src/ui/vacation.rs:225
+#: app/src/ui/vacation.rs:226
 msgid "Subject"
 msgstr "Assunto"
 
@@ -1486,7 +1485,7 @@ msgstr "Agendar"
 msgid "That account is not connected."
 msgstr "Essa conta não está ligada."
 
-#: app/src/ui/composer/mod.rs:1255 app/src/ui/vacation.rs:154
+#: app/src/ui/composer/mod.rs:1255 app/src/ui/vacation.rs:155
 msgid "Could not save: {reason}"
 msgstr "Não foi possível guardar: {reason}"
 
@@ -2048,7 +2047,7 @@ msgstr ""
 "{account}. A Google pede-lhe confirmação no navegador."
 
 #: app/src/ui/hide_my_email.rs:284 app/src/ui/rules.rs:235
-#: app/src/ui/vacation.rs:95 app/src/ui/window.rs:1709
+#: app/src/ui/vacation.rs:96 app/src/ui/window.rs:1709
 #: app/src/ui/window.rs:1749 app/src/ui/window/senders.rs:211
 msgid "Grant Access"
 msgstr "Conceder acesso"
@@ -2685,7 +2684,7 @@ msgstr "Nova regra"
 msgid "Rules for {account}"
 msgstr "Regras de {account}"
 
-#: app/src/ui/rules.rs:132
+#: app/src/ui/rules.rs:132 app/src/ui/vacation.rs:68
 msgid "This account is not syncing yet."
 msgstr "Esta conta ainda não está a sincronizar."
 
@@ -3008,11 +3007,11 @@ msgstr "{sender}, {subject}, {snippet}"
 msgid "Automatic Reply"
 msgstr "Resposta automática"
 
-#: app/src/ui/vacation.rs:85
+#: app/src/ui/vacation.rs:86
 msgid "Allow Automatic Replies"
 msgstr "Permitir respostas automáticas"
 
-#: app/src/ui/vacation.rs:88
+#: app/src/ui/vacation.rs:89
 msgid ""
 "Penguin Mail needs permission to change Gmail settings for {account}. Google "
 "will ask you to confirm in your browser."
@@ -3020,55 +3019,55 @@ msgstr ""
 "O Penguin Mail precisa de permissão para alterar as definições do Gmail de "
 "{account}. A Google vai pedir-lhe confirmação no navegador."
 
-#: app/src/ui/vacation.rs:140
+#: app/src/ui/vacation.rs:141
 msgid "Automatic reply is on"
 msgstr "A resposta automática está ligada"
 
-#: app/src/ui/vacation.rs:142
+#: app/src/ui/vacation.rs:143
 msgid "Automatic reply is off"
 msgstr "A resposta automática está desligada"
 
-#: app/src/ui/vacation.rs:148
+#: app/src/ui/vacation.rs:149
 msgid "Penguin Mail needs permission to change Gmail settings"
 msgstr ""
 "O Penguin Mail precisa de permissão para alterar as definições do Gmail"
 
-#: app/src/ui/vacation.rs:168
+#: app/src/ui/vacation.rs:169
 msgid "Could Not Load the Automatic Reply"
 msgstr "Não foi possível carregar a resposta automática"
 
-#: app/src/ui/vacation.rs:189
+#: app/src/ui/vacation.rs:190
 msgid "Send Automatic Replies"
 msgstr "Enviar respostas automáticas"
 
-#: app/src/ui/vacation.rs:191
+#: app/src/ui/vacation.rs:192
 msgid ""
 "Gmail answers new mail while you are away, even when this computer is off"
 msgstr ""
 "O Gmail responde ao correio novo enquanto estiver ausente, mesmo com este "
 "computador desligado"
 
-#: app/src/ui/vacation.rs:206
+#: app/src/ui/vacation.rs:207
 msgid "Only Between These Dates"
 msgstr "Apenas entre estas datas"
 
-#: app/src/ui/vacation.rs:209
+#: app/src/ui/vacation.rs:210
 msgid "First Day"
 msgstr "Primeiro dia"
 
-#: app/src/ui/vacation.rs:210
+#: app/src/ui/vacation.rs:211
 msgid "Last Day"
 msgstr "Último dia"
 
-#: app/src/ui/vacation.rs:218
+#: app/src/ui/vacation.rs:219
 msgid "Dates"
 msgstr "Datas"
 
-#: app/src/ui/vacation.rs:244
+#: app/src/ui/vacation.rs:245
 msgid "Message"
 msgstr "Mensagem"
 
-#: app/src/ui/vacation.rs:251
+#: app/src/ui/vacation.rs:252
 msgid "Only Reply to My Contacts"
 msgstr "Responder apenas aos meus contactos"
 
@@ -3627,6 +3626,10 @@ msgstr ""
 "A barra lateral mostra o nome em vez do endereço. Deixe vazio para ficar o "
 "endereço."
 
+#: app/src/ui/window/assistant.rs:79
+msgid "The app is closing."
+msgstr "A aplicação está a fechar."
+
 #: app/src/ui/window/attachments.rs:64
 msgid "Could not open {file}: {reason}"
 msgstr "Não foi possível abrir {file}: {reason}"
@@ -3809,6 +3812,111 @@ msgstr "As imagens de {sender} passam a carregar"
 #: app/src/ui/window/images.rs:172
 msgid "Could not remember that sender: {reason}"
 msgstr "Não foi possível memorizar esse remetente: {reason}"
+
+#: app/src/ui/window/invitation.rs:162
+msgid "This invitation names no event, so there is nothing to answer"
+msgstr ""
+"Este convite não indica nenhum evento, por isso não há nada a responder"
+
+#: app/src/ui/window/invitation.rs:187
+msgid "This invitation names no organizer, so there is nobody to reply to"
+msgstr ""
+"Este convite não indica nenhum organizador, por isso não há a quem responder"
+
+#: app/src/ui/window/invitation.rs:204
+msgid "Could not send your reply: {reason}"
+msgstr "Não foi possível enviar a sua resposta: {reason}"
+
+#: app/src/ui/window/invitation.rs:235
+msgid "Nobody"
+msgstr "Ninguém"
+
+#: app/src/ui/window/invitation.rs:239
+msgid "Propose a New Time"
+msgstr "Propor outra hora"
+
+#: app/src/ui/window/invitation.rs:241
+msgid "The organizer decides. {organizer} hears what you suggest."
+msgstr "O organizador decide. {organizer} fica a saber o que sugere."
+
+#: app/src/ui/window/invitation.rs:244
+msgid "Propose"
+msgstr "Propor"
+
+#: app/src/ui/window/invitation.rs:262
+msgid "This invitation names no organizer, so there is nobody to ask"
+msgstr ""
+"Este convite não indica nenhum organizador, por isso não há a quem perguntar"
+
+#: app/src/ui/window/invitation.rs:267
+msgid "Proposed a new time to {organizer}"
+msgstr "Proposta outra hora a {organizer}"
+
+#: app/src/ui/window/invitation.rs:270
+msgid "Proposed a new time"
+msgstr "Proposta outra hora"
+
+#: app/src/ui/window/invitation.rs:272
+msgid "New time proposed. The organizer decides."
+msgstr "Outra hora proposta. O organizador decide."
+
+#: app/src/ui/window/invitation.rs:275
+msgid "Could not send your proposal: {reason}"
+msgstr "Não foi possível enviar a sua proposta: {reason}"
+
+#: app/src/ui/window/invitation.rs:295
+msgid "Allow Penguin Mail to Use Your Calendar"
+msgstr "Permitir que o Penguin Mail use o seu calendário"
+
+#: app/src/ui/window/invitation.rs:298
+msgid ""
+"Your reply went to the organizer as mail. With permission to change events "
+"on the calendar for {account}, the meeting is marked on your own calendar "
+"too. Google asks you to confirm in your browser."
+msgstr ""
+"A sua resposta seguiu por correio para o organizador. Com permissão para "
+"alterar eventos no calendário de {account}, a reunião fica também marcada no "
+"seu calendário. A Google pede-lhe confirmação no navegador."
+
+#: app/src/ui/window/invitation.rs:338
+msgid "Could not save the invitation: {reason}"
+msgstr "Não foi possível guardar o convite: {reason}"
+
+#: app/src/ui/window/invitation.rs:350
+msgid "No app on this desktop opens invitations: {reason}"
+msgstr "Nenhuma aplicação deste ambiente de trabalho abre convites: {reason}"
+
+#: app/src/ui/window/invitation.rs:390
+msgid "Replied Yes"
+msgstr "Respondeu Sim"
+
+#: app/src/ui/window/invitation.rs:391
+msgid "Replied No"
+msgstr "Respondeu Não"
+
+#: app/src/ui/window/invitation.rs:392
+msgid "Replied Maybe"
+msgstr "Respondeu Talvez"
+
+#: app/src/ui/window/invitation.rs:395
+msgid "{answer}. The organizer has been told."
+msgstr "{answer}. O organizador foi avisado."
+
+#: app/src/ui/window/invitation.rs:396
+msgid "{answer}. Your reply is on its way to the organizer."
+msgstr "{answer}. A sua resposta vai a caminho do organizador."
+
+#: app/src/ui/window/invitation.rs:406
+msgid "Answered on your calendar"
+msgstr "Respondido no seu calendário"
+
+#: app/src/ui/window/invitation.rs:408
+msgid "Replied by email to {organizer}"
+msgstr "Resposta enviada por e-mail para {organizer}"
+
+#: app/src/ui/window/invitation.rs:411
+msgid "Replied by email"
+msgstr "Resposta enviada por e-mail"
 
 #: app/src/ui/window/organize.rs:28
 msgid "Drop mail on its own account's mailboxes"
@@ -4236,8 +4344,7 @@ msgstr ""
 "O Gmail esteve ocupado durante {waited}, por isso {action} não chegou a "
 "acontecer em {conversations}."
 
-#: sync/src/account/writes.rs:448 sync/src/actions.rs:243
-#: sync/src/actions.rs:268
+#: sync/src/account/writes.rs:448
 msgid "{action} failed: {reason}"
 msgstr "{action} falhou: {reason}"
 
