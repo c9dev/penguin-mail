@@ -12,47 +12,52 @@ use mailrs_ai::{AgentEvent, Conversation, ProviderConfig};
 use crate::assistant::{self, Host, ToolRequest, to_pango};
 use crate::core::Core;
 use crate::settings::{AiProvider, Settings};
+use mailrs_domain::translate::gettext;
 
-/// Starting points shown in an empty chat.
-const SUGGESTIONS: [&str; 5] = [
-    "Summarize this conversation",
-    "What needs a reply today?",
-    "Archive newsletters older than a week",
-    "Set an out-of-office reply for next week",
-    "Draft a reply to the open conversation",
-];
+/// Starting points shown in an empty chat. The reader types over them, so
+/// they come out in the reader's language and not the model's.
+fn suggestions() -> [String; 5] {
+    [
+        gettext("Summarize this conversation"),
+        gettext("What needs a reply today?"),
+        gettext("Archive newsletters older than a week"),
+        gettext("Set an out-of-office reply for next week"),
+        gettext("Draft a reply to the open conversation"),
+    ]
+}
 
-/// What the pane shows while a tool runs.
-fn activity(name: &str) -> &'static str {
+/// What the pane shows while a tool runs. The name on the left is the
+/// tool's own, which the model knows and nobody reads.
+fn activity(name: &str) -> String {
     match name {
-        "get_context" => "Looking at the screen",
-        "list_mail" => "Reading a mailbox",
-        "search_mail" => "Searching mail",
-        "read_conversation" => "Reading a conversation",
-        "organize" => "Organizing mail",
-        "label" => "Changing labels",
-        "remind_me" => "Setting reminders",
-        "draft_email" => "Writing a draft",
-        "send_email" => "Sending mail",
-        "block_sender" => "Blocking a sender",
-        "get_automatic_reply" => "Checking the automatic reply",
-        "set_automatic_reply" => "Setting the automatic reply",
-        "list_rules" => "Reading rules",
-        "create_rule" => "Creating a rule",
-        "delete_rule" => "Deleting a rule",
-        "create_label" => "Creating a label",
-        "get_settings" => "Reading settings",
-        "change_setting" => "Changing a setting",
-        "set_signature" => "Setting a signature",
-        "vip" => "Updating VIPs",
-        "create_smart_mailbox" => "Creating a smart mailbox",
-        "open_conversation" => "Opening a conversation",
-        "categorize_sender" => "Sorting a sender",
-        "dismiss_follow_up" => "Dismissing a follow-up",
-        "list_hidden_addresses" => "Reading hidden addresses",
-        "create_hidden_address" => "Making a hidden address",
-        "set_hidden_address" => "Changing a hidden address",
-        _ => "Working",
+        "get_context" => gettext("Looking at the screen"),
+        "list_mail" => gettext("Reading a mailbox"),
+        "search_mail" => gettext("Searching mail"),
+        "read_conversation" => gettext("Reading a conversation"),
+        "organize" => gettext("Organizing mail"),
+        "label" => gettext("Changing labels"),
+        "remind_me" => gettext("Setting reminders"),
+        "draft_email" => gettext("Writing a draft"),
+        "send_email" => gettext("Sending mail"),
+        "block_sender" => gettext("Blocking a sender"),
+        "get_automatic_reply" => gettext("Checking the automatic reply"),
+        "set_automatic_reply" => gettext("Setting the automatic reply"),
+        "list_rules" => gettext("Reading rules"),
+        "create_rule" => gettext("Creating a rule"),
+        "delete_rule" => gettext("Deleting a rule"),
+        "create_label" => gettext("Creating a label"),
+        "get_settings" => gettext("Reading settings"),
+        "change_setting" => gettext("Changing a setting"),
+        "set_signature" => gettext("Setting a signature"),
+        "vip" => gettext("Updating VIPs"),
+        "create_smart_mailbox" => gettext("Creating a smart mailbox"),
+        "open_conversation" => gettext("Opening a conversation"),
+        "categorize_sender" => gettext("Sorting a sender"),
+        "dismiss_follow_up" => gettext("Dismissing a follow-up"),
+        "list_hidden_addresses" => gettext("Reading hidden addresses"),
+        "create_hidden_address" => gettext("Making a hidden address"),
+        "set_hidden_address" => gettext("Changing a hidden address"),
+        _ => gettext("Working"),
     }
 }
 
@@ -88,10 +93,10 @@ impl AssistantPane {
         settings: impl Fn() -> Settings + 'static,
         on_setup: impl Fn() + 'static,
     ) -> Rc<AssistantPane> {
-        let title = adw::WindowTitle::new("Assistant", "");
+        let title = adw::WindowTitle::new(&gettext("Assistant"), "");
         let new_chat = gtk::Button::builder()
             .icon_name("list-add-symbolic")
-            .tooltip_text("New Chat")
+            .tooltip_text(gettext("New Chat"))
             .build();
         let header = adw::HeaderBar::builder()
             .title_widget(&title)
@@ -107,21 +112,24 @@ impl AssistantPane {
             .margin_start(12)
             .margin_end(12)
             .build();
-        let suggestions = gtk::Box::builder()
+        let suggestion_list = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .spacing(6)
             .valign(gtk::Align::End)
             .vexpand(true)
             .build();
         let intro = gtk::Label::builder()
-            .label("Ask about your mail, or tell me what to tidy. I can search, summarize, sort, draft, and change settings.")
+            .label(gettext(
+                "Ask about your mail, or tell me what to tidy. I can search, summarize, \
+                 sort, draft, and change settings.",
+            ))
             .wrap(true)
             .xalign(0.0)
             .css_classes(["dim-label"])
             .margin_bottom(6)
             .build();
-        suggestions.append(&intro);
-        transcript.append(&suggestions);
+        suggestion_list.append(&intro);
+        transcript.append(&suggestion_list);
         let scroller = gtk::ScrolledWindow::builder()
             .child(&transcript)
             .hscrollbar_policy(gtk::PolicyType::Never)
@@ -129,12 +137,12 @@ impl AssistantPane {
             .build();
 
         let entry = gtk::Entry::builder()
-            .placeholder_text("Ask Penguin Mail…")
+            .placeholder_text(gettext("Ask Penguin Mail…"))
             .hexpand(true)
             .build();
         let send = gtk::Button::builder()
             .icon_name("go-up-symbolic")
-            .tooltip_text("Send")
+            .tooltip_text(gettext("Send"))
             .css_classes(["circular", "suggested-action"])
             .build();
         let input = gtk::Box::builder()
@@ -151,14 +159,17 @@ impl AssistantPane {
         chat.append(&input);
 
         let setup_button = gtk::Button::builder()
-            .label("Choose a Model")
+            .label(gettext("Choose a Model"))
             .halign(gtk::Align::Center)
             .css_classes(["pill", "suggested-action"])
             .build();
         let setup = adw::StatusPage::builder()
             .icon_name("penguin-mail-sparkle-symbolic")
-            .title("Set Up the Assistant")
-            .description("Use a local model from LM Studio, Ollama, or Unsloth, an Anthropic API key, or your Claude subscription.")
+            .title(gettext("Set Up the Assistant"))
+            .description(gettext(
+                "Use a local model from LM Studio, Ollama, or Unsloth, an Anthropic \
+                 API key, or your Claude subscription.",
+            ))
             .child(&setup_button)
             .build();
         setup.add_css_class("compact");
@@ -179,7 +190,7 @@ impl AssistantPane {
             stack,
             transcript,
             scroller,
-            suggestions: suggestions.clone(),
+            suggestions: suggestion_list.clone(),
             entry,
             send,
             core,
@@ -191,19 +202,19 @@ impl AssistantPane {
             bubble: RefCell::new(None),
             working: RefCell::new(Vec::new()),
         });
-        for text in SUGGESTIONS {
+        for text in suggestions() {
             let button = gtk::Button::builder()
-                .label(text)
+                .label(&text)
                 .css_classes(["flat", "assistant-suggestion"])
                 .halign(gtk::Align::Start)
                 .build();
             let weak = Rc::downgrade(&pane);
             button.connect_clicked(move |_| {
                 if let Some(pane) = weak.upgrade() {
-                    pane.ask(text.to_string());
+                    pane.ask(text.clone());
                 }
             });
-            suggestions.append(&button);
+            suggestion_list.append(&button);
         }
         setup_button.connect_clicked(move |_| on_setup());
         let weak = Rc::downgrade(&pane);
@@ -245,7 +256,7 @@ impl AssistantPane {
             AiProvider::Anthropic => ai.anthropic_model.clone(),
             AiProvider::ClaudeCode => {
                 if ai.claude_model.is_empty() {
-                    "Claude".into()
+                    "Claude".to_string()
                 } else {
                     format!("Claude {}", ai.claude_model)
                 }
@@ -357,8 +368,10 @@ impl AssistantPane {
         } else {
             "go-up-symbolic"
         });
-        self.send
-            .set_tooltip_text(Some(if running { "Stop" } else { "Send" }));
+        self.send.set_tooltip_text(Some(&match running {
+            true => gettext("Stop"),
+            false => gettext("Send"),
+        }));
         if !running {
             self.entry.grab_focus();
         }
@@ -477,9 +490,9 @@ impl AssistantPane {
             .margin_bottom(12)
             .margin_end(12)
             .build();
-        let deny = gtk::Button::with_label("Don't Allow");
+        let deny = gtk::Button::with_label(&gettext("Don't Allow"));
         let allow = gtk::Button::builder()
-            .label("Allow")
+            .label(gettext("Allow"))
             .css_classes(["suggested-action"])
             .build();
         buttons.append(&deny);
@@ -498,7 +511,11 @@ impl AssistantPane {
         buttons.set_visible(false);
         card.append(
             &gtk::Label::builder()
-                .label(if approved { "Allowed" } else { "Not allowed" })
+                .label(if approved {
+                    gettext("Allowed")
+                } else {
+                    gettext("Not allowed")
+                })
                 .xalign(0.0)
                 .css_classes(["dim-label", "caption"])
                 .margin_start(12)

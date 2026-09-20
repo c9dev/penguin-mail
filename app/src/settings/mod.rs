@@ -4,6 +4,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
+use mailrs_domain::translate::gettext;
 use serde::{Deserialize, Serialize};
 
 mod change;
@@ -103,12 +104,12 @@ impl Choice for AiProvider {
         AiProvider::Anthropic,
         AiProvider::ClaudeCode,
     ];
-    fn label(self) -> &'static str {
+    fn label(self) -> String {
         match self {
-            AiProvider::Off => "Off",
-            AiProvider::Local => "Local or OpenAI-compatible server",
-            AiProvider::Anthropic => "Anthropic API key",
-            AiProvider::ClaudeCode => "Claude subscription (Claude Code)",
+            AiProvider::Off => gettext("Off"),
+            AiProvider::Local => gettext("Local or OpenAI-compatible server"),
+            AiProvider::Anthropic => gettext("Anthropic API key"),
+            AiProvider::ClaudeCode => gettext("Claude subscription (Claude Code)"),
         }
     }
 }
@@ -196,10 +197,10 @@ pub enum ComposeFormat {
 
 impl Choice for ComposeFormat {
     const ALL: &'static [Self] = &[ComposeFormat::Rich, ComposeFormat::Markdown];
-    fn label(self) -> &'static str {
+    fn label(self) -> String {
         match self {
-            ComposeFormat::Rich => "Rich text",
-            ComposeFormat::Markdown => "Markdown",
+            ComposeFormat::Rich => gettext("Rich text"),
+            ComposeFormat::Markdown => gettext("Markdown"),
         }
     }
 }
@@ -207,7 +208,7 @@ impl Choice for ComposeFormat {
 /// A preference with a fixed set of choices, shown as a combo row.
 pub trait Choice: Sized + Copy + PartialEq + 'static {
     const ALL: &'static [Self];
-    fn label(self) -> &'static str;
+    fn label(self) -> String;
 
     fn index(self) -> u32 {
         Self::ALL.iter().position(|c| *c == self).unwrap_or(0) as u32
@@ -235,11 +236,11 @@ impl Choice for MarkRead {
         MarkRead::AfterDelay,
         MarkRead::Manually,
     ];
-    fn label(self) -> &'static str {
+    fn label(self) -> String {
         match self {
-            MarkRead::Immediately => "When opened",
-            MarkRead::AfterDelay => "After 2 seconds",
-            MarkRead::Manually => "Only when I choose",
+            MarkRead::Immediately => gettext("When opened"),
+            MarkRead::AfterDelay => gettext("After 2 seconds"),
+            MarkRead::Manually => gettext("Only when I choose"),
         }
     }
 }
@@ -253,10 +254,10 @@ pub enum RemoteImages {
 
 impl Choice for RemoteImages {
     const ALL: &'static [Self] = &[RemoteImages::Ask, RemoteImages::Always];
-    fn label(self) -> &'static str {
+    fn label(self) -> String {
         match self {
-            RemoteImages::Ask => "Ask each time",
-            RemoteImages::Always => "Always load",
+            RemoteImages::Ask => gettext("Ask each time"),
+            RemoteImages::Always => gettext("Always load"),
         }
     }
 }
@@ -288,12 +289,12 @@ impl Choice for TextSize {
         TextSize::Large,
         TextSize::Larger,
     ];
-    fn label(self) -> &'static str {
+    fn label(self) -> String {
         match self {
-            TextSize::Small => "Small",
-            TextSize::Normal => "Default",
-            TextSize::Large => "Large",
-            TextSize::Larger => "Larger",
+            TextSize::Small => gettext("Small"),
+            TextSize::Normal => gettext("Default"),
+            TextSize::Large => gettext("Large"),
+            TextSize::Larger => gettext("Larger"),
         }
     }
 }
@@ -328,13 +329,13 @@ impl Choice for UndoSend {
         UndoSend::Twenty,
         UndoSend::Thirty,
     ];
-    fn label(self) -> &'static str {
+    fn label(self) -> String {
         match self {
-            UndoSend::Off => "Off",
-            UndoSend::Five => "5 seconds",
-            UndoSend::Ten => "10 seconds",
-            UndoSend::Twenty => "20 seconds",
-            UndoSend::Thirty => "30 seconds",
+            UndoSend::Off => gettext("Off"),
+            UndoSend::Five => gettext("5 seconds"),
+            UndoSend::Ten => gettext("10 seconds"),
+            UndoSend::Twenty => gettext("20 seconds"),
+            UndoSend::Thirty => gettext("30 seconds"),
         }
     }
 }
@@ -349,36 +350,46 @@ pub enum ColorScheme {
 
 impl Choice for ColorScheme {
     const ALL: &'static [Self] = &[ColorScheme::System, ColorScheme::Light, ColorScheme::Dark];
-    fn label(self) -> &'static str {
+    fn label(self) -> String {
         match self {
-            ColorScheme::System => "Follow system",
-            ColorScheme::Light => "Light",
-            ColorScheme::Dark => "Dark",
+            ColorScheme::System => gettext("Follow system"),
+            ColorScheme::Light => gettext("Light"),
+            ColorScheme::Dark => gettext("Dark"),
         }
     }
 }
 
 /// How often each account checks Gmail, in seconds.
-pub const POLL_CHOICES: [(i64, &str); 4] = [
-    (30, "Every 30 seconds"),
-    (60, "Every minute"),
-    (300, "Every 5 minutes"),
-    (900, "Every 15 minutes"),
-];
+pub fn poll_choices() -> Vec<(i64, String)> {
+    vec![
+        (30, gettext("Every 30 seconds")),
+        (60, gettext("Every minute")),
+        (300, gettext("Every 5 minutes")),
+        (900, gettext("Every 15 minutes")),
+    ]
+}
 
 /// How many days of mail stay on this computer.
-pub const WINDOW_CHOICES: [(i64, &str); 4] = [
-    (14, "2 weeks"),
-    (30, "30 days"),
-    (90, "90 days"),
-    (365, "1 year"),
-];
+pub fn window_choices() -> Vec<(i64, String)> {
+    vec![
+        (14, gettext("2 weeks")),
+        (30, gettext("30 days")),
+        (90, gettext("90 days")),
+        (365, gettext("1 year")),
+    ]
+}
 
 /// Body cache limit in megabytes.
-pub const CACHE_CHOICES: [(i64, &str); 3] = [(256, "256 MB"), (1024, "1 GB"), (4096, "4 GB")];
+pub fn cache_choices() -> Vec<(i64, String)> {
+    vec![
+        (256, gettext("256 MB")),
+        (1024, gettext("1 GB")),
+        (4096, gettext("4 GB")),
+    ]
+}
 
 /// The index of the choice closest to `value`.
-pub fn nearest<T: Copy + Into<i64>>(choices: &[(T, &str)], value: T) -> u32 {
+pub fn nearest<T: Copy + Into<i64>>(choices: &[(T, String)], value: T) -> u32 {
     let value: i64 = value.into();
     choices
         .iter()
@@ -592,8 +603,8 @@ mod tests {
             TextSize::Larger
         );
         assert_eq!(MarkRead::from_index(99), MarkRead::Immediately);
-        assert_eq!(nearest(&POLL_CHOICES, 45), 0);
-        assert_eq!(nearest(&WINDOW_CHOICES, 100), 2);
+        assert_eq!(nearest(&poll_choices(), 45), 0);
+        assert_eq!(nearest(&window_choices(), 100), 2);
     }
 
     #[test]

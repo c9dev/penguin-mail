@@ -11,6 +11,7 @@ use mailrs_sync::Permitted;
 
 use crate::core::Core;
 use crate::rules::{RuleForm, describe_action, describe_criteria};
+use mailrs_domain::translate::{fill, gettext};
 
 struct Rules {
     core: Rc<Core>,
@@ -48,14 +49,16 @@ pub fn present(
         Some("loading"),
     );
     let list = adw::PreferencesGroup::builder()
-        .description("Gmail runs these on new mail as it arrives, even when this computer is off.")
+        .description(gettext(
+            "Gmail runs these on new mail as it arrives, even when this computer is off.",
+        ))
         .build();
     let page = adw::PreferencesPage::new();
     page.add(&list);
     stack.add_named(&page, Some("list"));
     let add = gtk::Button::builder()
         .icon_name("list-add-symbolic")
-        .tooltip_text("New Rule")
+        .tooltip_text(gettext("New Rule"))
         .build();
     let header = adw::HeaderBar::new();
     header.pack_start(&add);
@@ -65,7 +68,10 @@ pub fn present(
     let nav = adw::NavigationView::new();
     nav.add(
         &adw::NavigationPage::builder()
-            .title(format!("Rules for {}", account.email))
+            .title(fill(
+                &gettext("Rules for {account}"),
+                &[("account", &account.email)],
+            ))
             .tag("rules")
             .child(&toolbar)
             .build(),
@@ -123,7 +129,7 @@ impl Rules {
 
     fn reload(self: &Rc<Self>) {
         if self.core.account(self.account.id).is_none() {
-            return self.problem("This account is not syncing yet.");
+            return self.problem(&gettext("This account is not syncing yet."));
         }
         self.stack.set_visible_child_name("loading");
         let (this, settings, account_id) =
@@ -147,8 +153,8 @@ impl Rules {
         }
         if filters.is_empty() {
             let row = adw::ActionRow::builder()
-                .title("No rules yet")
-                .subtitle("Add one with the + button.")
+                .title(gettext("No rules yet"))
+                .subtitle(gettext("Add one with the + button."))
                 .build();
             self.list.add(&row);
             self.shown.borrow_mut().push(row);
@@ -165,7 +171,7 @@ impl Rules {
                 .build();
             let delete = gtk::Button::builder()
                 .icon_name("user-trash-symbolic")
-                .tooltip_text("Delete Rule")
+                .tooltip_text(gettext("Delete Rule"))
                 .valign(gtk::Align::Center)
                 .css_classes(["flat"])
                 .build();
@@ -192,11 +198,14 @@ impl Rules {
                 .await;
             match deleted {
                 Ok(Permitted::Done(())) => {
-                    this.toast("Rule deleted");
+                    this.toast(&gettext("Rule deleted"));
                     this.reload();
                 }
                 Ok(Permitted::NeedsPermission) => this.ask_for_access(),
-                Err(err) => this.toast(&format!("Could not delete the rule: {err}")),
+                Err(err) => this.toast(&fill(
+                    &gettext("Could not delete the rule: {reason}"),
+                    &[("reason", &err.to_string())],
+                )),
             }
         });
     }
@@ -204,7 +213,7 @@ impl Rules {
     fn problem(&self, message: &str) {
         let page = adw::StatusPage::builder()
             .icon_name("dialog-warning-symbolic")
-            .title("Could Not Load the Rules")
+            .title(gettext("Could Not Load the Rules"))
             .description(glib::markup_escape_text(message).as_str())
             .build();
         self.replace_page("problem", &page);
@@ -213,14 +222,17 @@ impl Rules {
     fn ask_for_access(self: &Rc<Self>) {
         let page = adw::StatusPage::builder()
             .icon_name("mail-send-symbolic")
-            .title("Allow Rules")
-            .description(format!(
-                "Penguin Mail needs permission to change Gmail settings for {}. Google asks you to confirm in your browser.",
-                self.account.email
+            .title(gettext("Allow Rules"))
+            .description(fill(
+                &gettext(
+                    "Penguin Mail needs permission to change Gmail settings for \
+                     {account}. Google asks you to confirm in your browser.",
+                ),
+                &[("account", &self.account.email)],
             ))
             .build();
         let button = gtk::Button::builder()
-            .label("Grant Access")
+            .label(gettext("Grant Access"))
             .halign(gtk::Align::Center)
             .css_classes(["pill", "suggested-action"])
             .build();
@@ -248,15 +260,15 @@ impl Rules {
         let entry = |title: &str| adw::EntryRow::builder().title(title).build();
         let switch = |title: &str| adw::SwitchRow::builder().title(title).build();
         let (from, to, subject, has, not) = (
-            entry("From"),
-            entry("To"),
-            entry("Subject"),
-            entry("Has the Words"),
-            entry("Doesn't Have"),
+            entry(&gettext("From")),
+            entry(&gettext("To")),
+            entry(&gettext("Subject")),
+            entry(&gettext("Has the Words")),
+            entry(&gettext("Doesn't Have")),
         );
-        let attachment = switch("Has an Attachment");
+        let attachment = switch(&gettext("Has an Attachment"));
         let when = adw::PreferencesGroup::builder()
-            .title("When Mail Matches")
+            .title(gettext("When Mail Matches"))
             .build();
         for row in [&from, &to, &subject, &has, &not] {
             when.add(row);
@@ -264,20 +276,22 @@ impl Rules {
         when.add(&attachment);
 
         let (skip, read, star, never_spam, trash) = (
-            switch("Skip the Inbox"),
-            switch("Mark as Read"),
-            switch("Star It"),
-            switch("Never Send to Spam"),
-            switch("Delete It"),
+            switch(&gettext("Skip the Inbox")),
+            switch(&gettext("Mark as Read")),
+            switch(&gettext("Star It")),
+            switch(&gettext("Never Send to Spam")),
+            switch(&gettext("Delete It")),
         );
-        let mut names = vec!["Don't Apply a Label".to_string()];
+        let mut names = vec![gettext("Don't Apply a Label")];
         names.extend(self.labels.iter().map(|l| l.name.replace('/', " › ")));
         let refs: Vec<&str> = names.iter().map(String::as_str).collect();
         let label = adw::ComboRow::builder()
-            .title("Apply Label")
+            .title(gettext("Apply Label"))
             .model(&gtk::StringList::new(&refs))
             .build();
-        let then = adw::PreferencesGroup::builder().title("Do This").build();
+        let then = adw::PreferencesGroup::builder()
+            .title(gettext("Do This"))
+            .build();
         for row in [&skip, &read, &star] {
             then.add(row);
         }
@@ -289,7 +303,7 @@ impl Rules {
         page.add(&when);
         page.add(&then);
         let create = gtk::Button::builder()
-            .label("Create")
+            .label(gettext("Create"))
             .css_classes(["suggested-action"])
             .build();
         let header = adw::HeaderBar::new();
@@ -299,7 +313,7 @@ impl Rules {
         toolbar.set_content(Some(&page));
         self.nav.push(
             &adw::NavigationPage::builder()
-                .title("New Rule")
+                .title(gettext("New Rule"))
                 .tag("new-rule")
                 .child(&toolbar)
                 .build(),
@@ -340,7 +354,7 @@ impl Rules {
                 match added {
                     Ok(Permitted::Done(_)) => {
                         rules.nav.pop();
-                        rules.toast("Rule added");
+                        rules.toast(&gettext("Rule added"));
                         rules.reload();
                     }
                     Ok(Permitted::NeedsPermission) => {
@@ -349,7 +363,10 @@ impl Rules {
                     }
                     Err(err) => {
                         button.set_sensitive(true);
-                        rules.toast(&format!("Could not add the rule: {err}"));
+                        rules.toast(&fill(
+                            &gettext("Could not add the rule: {reason}"),
+                            &[("reason", &err.to_string())],
+                        ));
                     }
                 }
             });

@@ -1,6 +1,7 @@
 //! The StatusNotifierItem shown by Ubuntu's AppIndicator extension.
 
 use crate::APP_ID;
+use mailrs_domain::translate::gettext;
 
 pub enum TrayCommand {
     Toggle,
@@ -24,7 +25,7 @@ impl MailTray {
 
     fn summary(&self) -> String {
         match self.unread {
-            0 => "No unread mail".into(),
+            0 => gettext("No unread mail"),
             1 => "1 unread message".into(),
             n => format!("{n} unread messages"),
         }
@@ -97,11 +98,11 @@ impl ksni::Tray for MailTray {
             }
             .into()
         };
-        items.push(item("Open Penguin Mail", || TrayCommand::Open));
-        items.push(item("New Message", || TrayCommand::Compose));
-        items.push(item("Check for Mail", || TrayCommand::Check));
+        items.push(item(&gettext("Open Penguin Mail"), || TrayCommand::Open));
+        items.push(item(&gettext("New Message"), || TrayCommand::Compose));
+        items.push(item(&gettext("Check for Mail"), || TrayCommand::Check));
         items.push(MenuItem::Separator);
-        items.push(item("Quit", || TrayCommand::Quit));
+        items.push(item(&gettext("Quit"), || TrayCommand::Quit));
         items
     }
 }

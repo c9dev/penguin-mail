@@ -11,11 +11,17 @@ use mailrs_sync::Permitted;
 
 use super::window::MainWindow;
 use crate::hide_my_email::HiddenAddress;
+use mailrs_domain::translate::{fill, gettext};
 
-const ABOUT: &str = "Gmail delivers mail sent to these addresses to your inbox. Each one shows \
-which site shared your address, and you can turn one off when the spam starts. Your real \
-address is part of each one, so anyone who removes the tag can still reach you, and your \
-replies come from your main address.";
+/// What the list says a hidden address is for.
+fn about() -> String {
+    gettext(
+        "Gmail delivers mail sent to these addresses to your inbox. Each one shows \
+         which site shared your address, and you can turn one off when the spam \
+         starts. Your real address is part of each one, so anyone who removes the tag \
+         can still reach you, and your replies come from your main address.",
+    )
+}
 
 struct Dialog {
     win: Rc<MainWindow>,
@@ -43,13 +49,15 @@ pub fn present(
     let stack = gtk::Stack::builder()
         .transition_type(gtk::StackTransitionType::Crossfade)
         .build();
-    let list = adw::PreferencesGroup::builder().description(ABOUT).build();
+    let list = adw::PreferencesGroup::builder()
+        .description(about())
+        .build();
     let page = adw::PreferencesPage::new();
     page.add(&list);
     stack.add_named(&page, Some("list"));
     let add = gtk::Button::builder()
         .icon_name("list-add-symbolic")
-        .tooltip_text("Create Address")
+        .tooltip_text(gettext("Create Address"))
         .build();
     let header = adw::HeaderBar::new();
     header.pack_start(&add);
@@ -57,7 +65,7 @@ pub fn present(
     toolbar.add_top_bar(&header);
     toolbar.set_content(Some(&stack));
     let home = adw::NavigationPage::builder()
-        .title("Hide My Email")
+        .title(gettext("Hide My Email"))
         .tag("addresses")
         .child(&toolbar)
         .build();
@@ -103,7 +111,12 @@ pub fn present(
 
 fn created_on(ts: mailrs_domain::EpochMillis) -> String {
     crate::format::local(ts)
-        .map(|when| format!("Created {}", when.format("%-d %b %Y")))
+        .map(|when| {
+            fill(
+                &gettext("Created {date}"),
+                &[("date", &when.format(&gettext("%-d %b %Y")).to_string())],
+            )
+        })
         .unwrap_or_default()
 }
 
@@ -117,8 +130,9 @@ impl Dialog {
     }
 
     /// Handles a failed Gmail call with a toast naming what it was doing.
-    fn failed(&self, err: &anyhow::Error, what: &str) {
-        self.toast(&format!("Could not {what}: {err}"));
+    /// `said` is the whole sentence, with `{reason}` where the error goes.
+    fn failed(&self, err: &anyhow::Error, said: &str) {
+        self.toast(&fill(said, &[("reason", &err.to_string())]));
     }
 
     fn reload(self: &Rc<Self>) {
@@ -128,8 +142,8 @@ impl Dialog {
         let addresses = self.win.hidden_addresses();
         if addresses.is_empty() {
             let row = adw::ActionRow::builder()
-                .title("No addresses yet")
-                .subtitle("Create one with the + button.")
+                .title(gettext("No addresses yet"))
+                .subtitle(gettext("Create one with the + button."))
                 .build();
             self.list.add(&row);
             self.shown.borrow_mut().push(row.upcast());
@@ -149,7 +163,7 @@ impl Dialog {
         }
         details.push(created_on(hidden.created));
         if !hidden.active {
-            details.push("Off: mail goes to the Trash".into());
+            details.push(gettext("Off: mail goes to the Trash"));
         }
         let row = adw::ActionRow::builder()
             .title(glib::markup_escape_text(&hidden.address))
@@ -159,7 +173,7 @@ impl Dialog {
         if !hidden.active {
             row.add_css_class("dim-label");
         }
-        let button = |icon: &str, tip: &str| {
+        let button = |icon: &str, tip: String| {
             gtk::Button::builder()
                 .icon_name(icon)
                 .tooltip_text(tip)
@@ -167,13 +181,13 @@ impl Dialog {
                 .css_classes(["flat"])
                 .build()
         };
-        let copy_button = button("edit-copy-symbolic", "Copy Address");
+        let copy_button = button("edit-copy-symbolic", gettext("Copy Address"));
         let address = hidden.address.clone();
         let weak = Rc::downgrade(self);
         copy_button.connect_clicked(move |b| {
             copy(b, &address);
             if let Some(this) = weak.upgrade() {
-                this.toast("Address copied");
+                this.toast(&gettext("Address copied"));
             }
         });
         row.add_suffix(&copy_button);
@@ -181,7 +195,7 @@ impl Dialog {
         let switch = gtk::Switch::builder()
             .active(hidden.active)
             .valign(gtk::Align::Center)
-            .tooltip_text("Receive Mail")
+            .tooltip_text(gettext("Receive Mail"))
             .build();
         let (address, account) = (hidden.address.clone(), hidden.account.clone());
         let weak = Rc::downgrade(self);
@@ -194,13 +208,15 @@ impl Dialog {
             glib::spawn_future_local(async move {
                 match this.win.set_hidden_address_active(&address, active).await {
                     Ok(Permitted::Done(())) if active => {
-                        this.toast("Mail to this address reaches you again")
+                        this.toast(&gettext("Mail to this address reaches you again"))
                     }
                     Ok(Permitted::Done(())) => {
-                        this.toast("Mail to this address now goes to the Trash")
+                        this.toast(&gettext("Mail to this address now goes to the Trash"))
                     }
                     Ok(Permitted::NeedsPermission) => this.ask_for_access(&account),
-                    Err(err) => this.failed(&err, "change the address"),
+                    Err(err) => {
+                        this.failed(&err, &gettext("Could not change the address: {reason}"))
+                    }
                 }
                 this.reload();
             });
@@ -208,7 +224,7 @@ impl Dialog {
         });
         row.add_suffix(&switch);
 
-        let delete = button("user-trash-symbolic", "Delete Address");
+        let delete = button("user-trash-symbolic", gettext("Delete Address"));
         let (address, account) = (hidden.address.clone(), hidden.account.clone());
         let weak = Rc::downgrade(self);
         delete.connect_clicked(move |_| {
@@ -222,13 +238,19 @@ impl Dialog {
 
     fn confirm_delete(self: &Rc<Self>, address: String, account: String) {
         let alert = adw::AlertDialog::new(
-            Some("Delete Address?"),
-            Some(&format!(
-                "Mail sent to {address} arrives in your inbox again, without the Hide My Email \
-                 label. To stop that mail, turn the address off instead."
+            Some(&gettext("Delete Address?")),
+            Some(&fill(
+                &gettext(
+                    "Mail sent to {address} arrives in your inbox again, without the \
+                     Hide My Email label. To stop that mail, turn the address off instead.",
+                ),
+                &[("address", &address)],
             )),
         );
-        alert.add_responses(&[("cancel", "Cancel"), ("delete", "Delete")]);
+        alert.add_responses(&[
+            ("cancel", &gettext("Cancel")),
+            ("delete", &gettext("Delete")),
+        ]);
         alert.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
         alert.set_close_response("cancel");
         let this = Rc::clone(self);
@@ -237,9 +259,9 @@ impl Dialog {
                 return;
             }
             match this.win.delete_hidden_address(&address).await {
-                Ok(Permitted::Done(())) => this.toast("Address deleted"),
+                Ok(Permitted::Done(())) => this.toast(&gettext("Address deleted")),
                 Ok(Permitted::NeedsPermission) => this.ask_for_access(&account),
-                Err(err) => this.failed(&err, "delete the address"),
+                Err(err) => this.failed(&err, &gettext("Could not delete the address: {reason}")),
             }
             this.reload();
         });
@@ -249,13 +271,17 @@ impl Dialog {
         self.nav.pop_to_page(&self.home);
         let page = adw::StatusPage::builder()
             .icon_name("mail-send-symbolic")
-            .title("Allow Hide My Email")
-            .description(format!(
-                "Penguin Mail needs permission to change Gmail settings for {account}. Google asks you to confirm in your browser."
+            .title(gettext("Allow Hide My Email"))
+            .description(fill(
+                &gettext(
+                    "Penguin Mail needs permission to change Gmail settings for \
+                     {account}. Google asks you to confirm in your browser.",
+                ),
+                &[("account", account)],
             ))
             .build();
         let button = gtk::Button::builder()
-            .label("Grant Access")
+            .label(gettext("Grant Access"))
             .halign(gtk::Align::Center)
             .css_classes(["pill", "suggested-action"])
             .build();
@@ -277,17 +303,17 @@ impl Dialog {
     /// The Create Address page.
     fn show_form(self: &Rc<Self>) {
         if self.accounts.is_empty() {
-            return self.toast("Add an account first");
+            return self.toast(&gettext("Add an account first"));
         }
         let group = adw::PreferencesGroup::builder()
-            .description(
+            .description(gettext(
                 "You get a new address that ends in your own, such as \
                  name+kite.fern482@gmail.com. Give it to one site only.",
-            )
+            ))
             .build();
         let emails: Vec<&str> = self.accounts.iter().map(|a| a.email.as_str()).collect();
         let account = adw::ComboRow::builder()
-            .title("Account")
+            .title(gettext("Account"))
             .model(&gtk::StringList::new(&emails))
             .visible(self.accounts.len() > 1)
             .build();
@@ -298,14 +324,14 @@ impl Dialog {
             account.set_selected(at as u32);
         }
         let note = adw::EntryRow::builder()
-            .title("Where Did You Use It?")
+            .title(gettext("Where Did You Use It?"))
             .build();
         group.add(&account);
         group.add(&note);
         let page = adw::PreferencesPage::new();
         page.add(&group);
         let create = gtk::Button::builder()
-            .label("Create")
+            .label(gettext("Create"))
             .css_classes(["suggested-action"])
             .build();
         let header = adw::HeaderBar::new();
@@ -315,7 +341,7 @@ impl Dialog {
         toolbar.set_content(Some(&page));
         self.nav.push(
             &adw::NavigationPage::builder()
-                .title("Create Address")
+                .title(gettext("Create Address"))
                 .tag("create")
                 .child(&toolbar)
                 .build(),
@@ -343,7 +369,7 @@ impl Dialog {
                     }
                     Err(err) => {
                         button.set_sensitive(true);
-                        this.failed(&err, "create the address");
+                        this.failed(&err, &gettext("Could not create the address: {reason}"));
                     }
                 }
             });
@@ -368,7 +394,7 @@ impl Dialog {
             .build();
         content.append(
             &gtk::Label::builder()
-                .label("Your New Address")
+                .label(gettext("Your New Address"))
                 .css_classes(["title-2"])
                 .build(),
         );
@@ -383,7 +409,7 @@ impl Dialog {
                 .build(),
         );
         let copy_button = gtk::Button::builder()
-            .label("Copy")
+            .label(gettext("Copy"))
             .halign(gtk::Align::Center)
             .css_classes(["pill"])
             .build();
@@ -391,23 +417,23 @@ impl Dialog {
         copy_button.connect_clicked(move |b| {
             copy(b, &address);
             if let Some(this) = weak.upgrade() {
-                this.toast("Address copied");
+                this.toast(&gettext("Address copied"));
             }
         });
         content.append(&copy_button);
         content.append(
             &gtk::Label::builder()
-                .label(
-                    "It is on your clipboard. Mail sent to it gets the Hide My Email label \
-                     in Gmail.",
-                )
+                .label(gettext(
+                    "It is on your clipboard. Mail sent to it gets the Hide My Email \
+                     label in Gmail.",
+                ))
                 .wrap(true)
                 .justify(gtk::Justification::Center)
                 .css_classes(["dim-label"])
                 .build(),
         );
         let done = gtk::Button::builder()
-            .label("Done")
+            .label(gettext("Done"))
             .css_classes(["suggested-action"])
             .build();
         let weak = Rc::downgrade(self);
@@ -422,7 +448,7 @@ impl Dialog {
         toolbar.add_top_bar(&header);
         toolbar.set_content(Some(&content));
         let page = adw::NavigationPage::builder()
-            .title("Address Created")
+            .title(gettext("Address Created"))
             .tag("created")
             .child(&toolbar)
             .build();
