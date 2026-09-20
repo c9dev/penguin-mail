@@ -207,9 +207,15 @@ impl MainWindow {
                     .file_name()
                     .map(|n| n.to_string_lossy().into_owned())
                     .unwrap_or_else(|| attachment.filename.clone());
-                self.toast(&format!("Saved {name} to Downloads"));
+                self.toast(&fill(
+                    &gettext("Saved {file} to Downloads"),
+                    &[("file", &name)],
+                ));
             }
-            Err(err) => self.toast(&format!("Could not save {}: {err}", attachment.filename)),
+            Err(err) => self.toast(&fill(
+                &gettext("Could not save {file}: {reason}"),
+                &[("file", &attachment.filename), ("reason", &err.to_string())],
+            )),
         }
     }
 

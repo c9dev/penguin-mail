@@ -635,7 +635,7 @@ msgstr "Sem encriptação em trânsito"
 msgid "Quick Look"
 msgstr "Vista rápida"
 
-#: app/src/render.rs:320 app/src/ui/window/attachments.rs:294
+#: app/src/render.rs:320 app/src/ui/window/attachments.rs:300
 msgid "Save to Downloads"
 msgstr "Guardar nas transferências"
 
@@ -3417,11 +3417,13 @@ msgstr "Não foi possível incluir {file}: {reason}"
 msgid "Downloading {file}…"
 msgstr "A transferir {file}…"
 
-#: app/src/ui/window.rs:2267 app/src/ui/window/attachments.rs:362
+#: app/src/ui/window.rs:2267 app/src/ui/window/attachments.rs:211
+#: app/src/ui/window/attachments.rs:368
 msgid "Saved {file} to Downloads"
 msgstr "{file} guardado nas transferências"
 
-#: app/src/ui/window.rs:2285 app/src/ui/window/attachments.rs:367
+#: app/src/ui/window.rs:2285 app/src/ui/window/attachments.rs:216
+#: app/src/ui/window/attachments.rs:373
 msgid "Could not save {file}: {reason}"
 msgstr "Não foi possível guardar {file}: {reason}"
 
@@ -3654,11 +3656,11 @@ msgstr[1] "{count} anexos guardados em {folder}"
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr "{count} guardados em {folder}. Não foi possível guardar {files}"
 
-#: app/src/ui/window/attachments.rs:245
+#: app/src/ui/window/attachments.rs:251
 msgid "Could not open {file}"
 msgstr "Não foi possível abrir {file}"
 
-#: app/src/ui/window/attachments.rs:298
+#: app/src/ui/window/attachments.rs:304
 msgid "Open in Another Program"
 msgstr "Abrir noutro programa"
 
@@ -3813,62 +3815,66 @@ msgstr "As imagens de {sender} passam a carregar"
 msgid "Could not remember that sender: {reason}"
 msgstr "Não foi possível memorizar esse remetente: {reason}"
 
-#: app/src/ui/window/invitation.rs:162
+#: app/src/ui/window/invitation.rs:108
+msgid "Could not open Settings: {reason}"
+msgstr "Não foi possível abrir as Definições: {reason}"
+
+#: app/src/ui/window/invitation.rs:165
 msgid "This invitation names no event, so there is nothing to answer"
 msgstr ""
 "Este convite não indica nenhum evento, por isso não há nada a responder"
 
-#: app/src/ui/window/invitation.rs:187
+#: app/src/ui/window/invitation.rs:190
 msgid "This invitation names no organizer, so there is nobody to reply to"
 msgstr ""
 "Este convite não indica nenhum organizador, por isso não há a quem responder"
 
-#: app/src/ui/window/invitation.rs:204
+#: app/src/ui/window/invitation.rs:207
 msgid "Could not send your reply: {reason}"
 msgstr "Não foi possível enviar a sua resposta: {reason}"
 
-#: app/src/ui/window/invitation.rs:235
+#: app/src/ui/window/invitation.rs:238
 msgid "Nobody"
 msgstr "Ninguém"
 
-#: app/src/ui/window/invitation.rs:239
+#: app/src/ui/window/invitation.rs:242
 msgid "Propose a New Time"
 msgstr "Propor outra hora"
 
-#: app/src/ui/window/invitation.rs:241
+#: app/src/ui/window/invitation.rs:244
 msgid "The organizer decides. {organizer} hears what you suggest."
 msgstr "O organizador decide. {organizer} fica a saber o que sugere."
 
-#: app/src/ui/window/invitation.rs:244
+#: app/src/ui/window/invitation.rs:247
 msgid "Propose"
 msgstr "Propor"
 
-#: app/src/ui/window/invitation.rs:262
+#: app/src/ui/window/invitation.rs:265
 msgid "This invitation names no organizer, so there is nobody to ask"
 msgstr ""
 "Este convite não indica nenhum organizador, por isso não há a quem perguntar"
 
-#: app/src/ui/window/invitation.rs:267
+#: app/src/ui/window/invitation.rs:270
 msgid "Proposed a new time to {organizer}"
 msgstr "Proposta outra hora a {organizer}"
 
-#: app/src/ui/window/invitation.rs:270
+#: app/src/ui/window/invitation.rs:273
 msgid "Proposed a new time"
 msgstr "Proposta outra hora"
 
-#: app/src/ui/window/invitation.rs:272
+#: app/src/ui/window/invitation.rs:275
 msgid "New time proposed. The organizer decides."
 msgstr "Outra hora proposta. O organizador decide."
 
-#: app/src/ui/window/invitation.rs:275
+#: app/src/ui/window/invitation.rs:278
 msgid "Could not send your proposal: {reason}"
 msgstr "Não foi possível enviar a sua proposta: {reason}"
 
-#: app/src/ui/window/invitation.rs:295
+#: app/src/ui/window/invitation.rs:298
 msgid "Allow Penguin Mail to Use Your Calendar"
 msgstr "Permitir que o Penguin Mail use o seu calendário"
 
-#: app/src/ui/window/invitation.rs:298
+#: app/src/ui/window/invitation.rs:301
 msgid ""
 "Your reply went to the organizer as mail. With permission to change events "
 "on the calendar for {account}, the meeting is marked on your own calendar "
@@ -3878,43 +3884,43 @@ msgstr ""
 "alterar eventos no calendário de {account}, a reunião fica também marcada no "
 "seu calendário. A Google pede-lhe confirmação no navegador."
 
-#: app/src/ui/window/invitation.rs:338
+#: app/src/ui/window/invitation.rs:341
 msgid "Could not save the invitation: {reason}"
 msgstr "Não foi possível guardar o convite: {reason}"
 
-#: app/src/ui/window/invitation.rs:350
+#: app/src/ui/window/invitation.rs:353
 msgid "No app on this desktop opens invitations: {reason}"
 msgstr "Nenhuma aplicação deste ambiente de trabalho abre convites: {reason}"
 
-#: app/src/ui/window/invitation.rs:390
+#: app/src/ui/window/invitation.rs:393
 msgid "Replied Yes"
 msgstr "Respondeu Sim"
 
-#: app/src/ui/window/invitation.rs:391
+#: app/src/ui/window/invitation.rs:394
 msgid "Replied No"
 msgstr "Respondeu Não"
 
-#: app/src/ui/window/invitation.rs:392
+#: app/src/ui/window/invitation.rs:395
 msgid "Replied Maybe"
 msgstr "Respondeu Talvez"
 
-#: app/src/ui/window/invitation.rs:395
+#: app/src/ui/window/invitation.rs:398
 msgid "{answer}. The organizer has been told."
 msgstr "{answer}. O organizador foi avisado."
 
-#: app/src/ui/window/invitation.rs:396
+#: app/src/ui/window/invitation.rs:399
 msgid "{answer}. Your reply is on its way to the organizer."
 msgstr "{answer}. A sua resposta vai a caminho do organizador."
 
-#: app/src/ui/window/invitation.rs:406
+#: app/src/ui/window/invitation.rs:409
 msgid "Answered on your calendar"
 msgstr "Respondido no seu calendário"
 
-#: app/src/ui/window/invitation.rs:408
+#: app/src/ui/window/invitation.rs:411
 msgid "Replied by email to {organizer}"
 msgstr "Resposta enviada por e-mail para {organizer}"
 
-#: app/src/ui/window/invitation.rs:411
+#: app/src/ui/window/invitation.rs:414
 msgid "Replied by email"
 msgstr "Resposta enviada por e-mail"
 
@@ -4361,6 +4367,10 @@ msgstr[1] "{count} segundos"
 #: sync/src/account/writes.rs:476
 msgid "a minute"
 msgstr "um minuto"
+
+#: sync/src/actions.rs:209
+msgid "Delete Forever failed: {reason}"
+msgstr "Eliminar definitivamente falhou: {reason}"
 
 #: sync/src/mailbox.rs:89
 msgid "{color} Flag"

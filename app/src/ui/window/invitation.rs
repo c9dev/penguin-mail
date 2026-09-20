@@ -104,7 +104,10 @@ impl MainWindow {
             app.change_settings(Change::OfferedToGnome(account.email));
         }
         if open && let Err(err) = goa::open_online_accounts() {
-            self.toast(&format!("Could not open Settings: {err}"));
+            self.toast(&fill(
+                &gettext("Could not open Settings: {reason}"),
+                &[("reason", &err.to_string())],
+            ));
         }
     }
 

@@ -205,7 +205,10 @@ impl<A: Accounts> MailActions<A> {
                 }
                 Err(err) => outcome.failed.push(Failure {
                     target: target.clone(),
-                    error: format!("Delete Forever failed: {err}"),
+                    error: fill(
+                        &gettext("Delete Forever failed: {reason}"),
+                        &[("reason", &err.to_string())],
+                    ),
                 }),
             }
         }

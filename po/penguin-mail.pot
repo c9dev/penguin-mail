@@ -611,7 +611,7 @@ msgstr ""
 msgid "Quick Look"
 msgstr ""
 
-#: app/src/render.rs:320 app/src/ui/window/attachments.rs:294
+#: app/src/render.rs:320 app/src/ui/window/attachments.rs:300
 msgid "Save to Downloads"
 msgstr ""
 
@@ -3298,11 +3298,13 @@ msgstr ""
 msgid "Downloading {file}…"
 msgstr ""
 
-#: app/src/ui/window.rs:2267 app/src/ui/window/attachments.rs:362
+#: app/src/ui/window.rs:2267 app/src/ui/window/attachments.rs:211
+#: app/src/ui/window/attachments.rs:368
 msgid "Saved {file} to Downloads"
 msgstr ""
 
-#: app/src/ui/window.rs:2285 app/src/ui/window/attachments.rs:367
+#: app/src/ui/window.rs:2285 app/src/ui/window/attachments.rs:216
+#: app/src/ui/window/attachments.rs:373
 msgid "Could not save {file}: {reason}"
 msgstr ""
 
@@ -3528,11 +3530,11 @@ msgstr[1] ""
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr ""
 
-#: app/src/ui/window/attachments.rs:245
+#: app/src/ui/window/attachments.rs:251
 msgid "Could not open {file}"
 msgstr ""
 
-#: app/src/ui/window/attachments.rs:298
+#: app/src/ui/window/attachments.rs:304
 msgid "Open in Another Program"
 msgstr ""
 
@@ -3684,102 +3686,106 @@ msgstr ""
 msgid "Could not remember that sender: {reason}"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:162
+#: app/src/ui/window/invitation.rs:108
+msgid "Could not open Settings: {reason}"
+msgstr ""
+
+#: app/src/ui/window/invitation.rs:165
 msgid "This invitation names no event, so there is nothing to answer"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:187
+#: app/src/ui/window/invitation.rs:190
 msgid "This invitation names no organizer, so there is nobody to reply to"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:204
+#: app/src/ui/window/invitation.rs:207
 msgid "Could not send your reply: {reason}"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:235
+#: app/src/ui/window/invitation.rs:238
 msgid "Nobody"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:239
+#: app/src/ui/window/invitation.rs:242
 msgid "Propose a New Time"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:241
+#: app/src/ui/window/invitation.rs:244
 msgid "The organizer decides. {organizer} hears what you suggest."
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:244
+#: app/src/ui/window/invitation.rs:247
 msgid "Propose"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:262
+#: app/src/ui/window/invitation.rs:265
 msgid "This invitation names no organizer, so there is nobody to ask"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:267
+#: app/src/ui/window/invitation.rs:270
 msgid "Proposed a new time to {organizer}"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:270
+#: app/src/ui/window/invitation.rs:273
 msgid "Proposed a new time"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:272
+#: app/src/ui/window/invitation.rs:275
 msgid "New time proposed. The organizer decides."
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:275
+#: app/src/ui/window/invitation.rs:278
 msgid "Could not send your proposal: {reason}"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:295
+#: app/src/ui/window/invitation.rs:298
 msgid "Allow Penguin Mail to Use Your Calendar"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:298
+#: app/src/ui/window/invitation.rs:301
 msgid ""
 "Your reply went to the organizer as mail. With permission to change events "
 "on the calendar for {account}, the meeting is marked on your own calendar "
 "too. Google asks you to confirm in your browser."
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:338
+#: app/src/ui/window/invitation.rs:341
 msgid "Could not save the invitation: {reason}"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:350
+#: app/src/ui/window/invitation.rs:353
 msgid "No app on this desktop opens invitations: {reason}"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:390
+#: app/src/ui/window/invitation.rs:393
 msgid "Replied Yes"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:391
+#: app/src/ui/window/invitation.rs:394
 msgid "Replied No"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:392
+#: app/src/ui/window/invitation.rs:395
 msgid "Replied Maybe"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:395
+#: app/src/ui/window/invitation.rs:398
 msgid "{answer}. The organizer has been told."
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:396
+#: app/src/ui/window/invitation.rs:399
 msgid "{answer}. Your reply is on its way to the organizer."
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:406
+#: app/src/ui/window/invitation.rs:409
 msgid "Answered on your calendar"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:408
+#: app/src/ui/window/invitation.rs:411
 msgid "Replied by email to {organizer}"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:411
+#: app/src/ui/window/invitation.rs:414
 msgid "Replied by email"
 msgstr ""
 
@@ -4212,6 +4218,10 @@ msgstr[1] ""
 
 #: sync/src/account/writes.rs:476
 msgid "a minute"
+msgstr ""
+
+#: sync/src/actions.rs:209
+msgid "Delete Forever failed: {reason}"
 msgstr ""
 
 #: sync/src/mailbox.rs:89
