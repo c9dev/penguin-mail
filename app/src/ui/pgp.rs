@@ -12,7 +12,7 @@ use std::rc::Rc;
 use adw::prelude::*;
 use mailrs_domain::translate::gettext;
 
-use crate::pgp::{Mark, Tone};
+use crate::protection::{Mark, Tone};
 use crate::ui::name;
 
 pub struct PgpCard {

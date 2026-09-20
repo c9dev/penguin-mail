@@ -1,18 +1,29 @@
 //! OpenPGP in the app: which call a message needs, what comes back when
 //! gpg has run, and which recipients stand between a draft and encryption.
 //!
-//! `mailrs_pgp` runs gpg and `ui::pgp` draws the answer. What is left here
-//! is the deciding and the wording, so both sit under plain unit tests and
-//! neither needs a window. Every call below blocks, so the window hands
-//! them to `Core::gpg` rather than running them itself.
+//! It is one of the two adapters over `protection`, `smime` being the
+//! other, and a [`Mark`] from here fills the same card in the same three
+//! tones, so a reader never has to know which standard a message arrived
+//! under. `mailrs_pgp` runs gpg and `ui::pgp` draws the answer. What is
+//! left here is the deciding and the wording, so both sit under plain unit
+//! tests and neither needs a window. Every call below blocks, so the
+//! window hands them to `Core::gpg` rather than running them itself.
 
 use std::process::Command;
 
-use mail_parser::{MessageParser, MimeHeaders};
-use mailrs_domain::translate::{fill, fill_plural, gettext};
+use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{MessageBody, Protection};
 use mailrs_gmail::body::decode_charset;
 use mailrs_pgp::{Pgp, PgpError, Recipient, Signature, Trust, Verdict, inline};
+
+use crate::protection::{self, Mark, Read, Tone};
+
+/// What a good signature from a key nobody has vouched for is worth. The
+/// key is the name under OpenPGP, so a key nobody has vouched for still
+/// signs, and the line under the title is where the card says as much.
+/// `smime` answers the same question with `Tone::Unchecked`, because there
+/// only the chain says who the signer is.
+const UNVOUCHED: Tone = Tone::Good;
 
 /// Which call of the engine one message needs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -25,46 +36,14 @@ pub enum Opening {
     Inline,
 }
 
-/// What gpg made of one message: the mark to put above it, and the body to
-/// draw in place of the one that arrived, when gpg opened something.
-pub struct Read {
-    pub mark: Mark,
-    pub body: Option<MessageBody>,
-    /// The bytes of the files inside, in the order `body.attachments`
-    /// lists them. They exist nowhere else: Gmail holds the ciphertext, so
-    /// an attachment out of a decrypted message has no attachment id to
-    /// fetch and these bytes are the only copy.
-    pub files: Vec<Vec<u8>>,
-}
-
-/// What the card says about a message, and how loudly.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Mark {
-    pub title: String,
-    /// The line under the title, when there is more to say.
-    pub detail: Option<String>,
-    pub tone: Tone,
-}
-
-/// How much of the message the card is vouching for.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Tone {
-    /// The text is the text the signer wrote.
-    Good,
-    /// Something is wrong with the message.
-    Bad,
-    /// Nothing on this computer could check it.
-    Unchecked,
-}
-
 /// Which call `body` needs before it is drawn, in the order RFC 3156 reads
 /// a message: the wrapper first, and the text only when there is none.
 pub fn opening(body: &MessageBody) -> Option<Opening> {
     match body.protection {
         Some(Protection::Signed) => Some(Opening::Verify),
         Some(Protection::Encrypted) => Some(Opening::Decrypt),
-        // S/MIME is the other engine's work, and `smime::engine` is where
-        // a message goes to find out which of the two it needs.
+        // S/MIME is the other engine's work, and `protection::engine` is
+        // where a message goes to find out which of the two it needs.
         Some(_) => None,
         None => inline::armor(body.text.as_deref()?).map(|_| Opening::Inline),
     }
@@ -78,28 +57,28 @@ pub fn opening(body: &MessageBody) -> Option<Opening> {
 pub fn read(pgp: &Pgp, opening: Opening, raw: &[u8], body: &MessageBody) -> Read {
     match opening {
         Opening::Verify => {
-            let Some((part, signature)) = wrapper_parts(raw) else {
-                return mark_only(unreadable());
+            let Some((part, signature)) = protection::wrapper_parts(raw) else {
+                return protection::mark_only(unreadable());
             };
             match pgp.verify(part, signature) {
-                Ok(found) => mark_only(signed(&found)),
-                Err(err) => mark_only(refused(&err)),
+                Ok(found) => protection::mark_only(signed(&found)),
+                Err(err) => protection::mark_only(refused(&err)),
             }
         }
         Opening::Decrypt => {
-            let Some((_, ciphertext)) = wrapper_parts(raw) else {
-                return mark_only(unreadable());
+            let Some((_, ciphertext)) = protection::wrapper_parts(raw) else {
+                return protection::mark_only(unreadable());
             };
             match pgp.decrypt(ciphertext) {
                 Ok(opened) => {
-                    let (inside, files) = opened_body(&opened.part);
+                    let (inside, files) = protection::opened_body(&opened.part);
                     Read {
                         mark: encrypted(opened.signature.as_ref(), inside.attachments.len()),
                         body: Some(inside),
                         files,
                     }
                 }
-                Err(err) => mark_only(refused(&err)),
+                Err(err) => protection::mark_only(refused(&err)),
             }
         }
         Opening::Inline => {
@@ -120,7 +99,7 @@ pub fn read(pgp: &Pgp, opening: Opening, raw: &[u8], body: &MessageBody) -> Read
                     // it are Gmail's own, with ids that still work.
                     files: Vec::new(),
                 },
-                Err(err) => mark_only(refused(&err)),
+                Err(err) => protection::mark_only(refused(&err)),
             }
         }
     }
@@ -130,13 +109,13 @@ pub fn read(pgp: &Pgp, opening: Opening, raw: &[u8], body: &MessageBody) -> Read
 /// its first line, as in `gpg (GnuPG) 2.4.8`.
 pub fn version(pgp: &Pgp) -> Option<String> {
     let run = Command::new(pgp.program()).arg("--version").output().ok()?;
-    version_of(&String::from_utf8_lossy(&run.stdout))
+    protection::version_of(&String::from_utf8_lossy(&run.stdout))
 }
 
 /// Why this draft cannot be encrypted under OpenPGP, for the Encrypt
 /// button to say. `None` means every recipient has a key. What a blind
 /// copy does to encryption is the same under either standard, so
-/// `smime::encrypting` answers that before either of these runs.
+/// `protection::encrypting` answers that before either of these runs.
 pub fn cannot_encrypt(held: &[Recipient]) -> Option<String> {
     if held.is_empty() {
         return Some(gettext("Add a recipient whose key gpg holds."));
@@ -149,7 +128,7 @@ pub fn cannot_encrypt(held: &[Recipient]) -> Option<String> {
     (!missing.is_empty()).then(|| {
         fill(
             &gettext("gpg holds no key for {addresses}."),
-            &[("addresses", &listed(&missing))],
+            &[("addresses", &protection::listed(&missing))],
         )
     })
 }
@@ -168,34 +147,16 @@ pub fn own_keys(held: &[Recipient]) -> String {
         ([], _) => gettext("gpg holds no key for any of the addresses you send from."),
         (mine, []) => fill(
             &gettext("gpg holds a key for {addresses}."),
-            &[("addresses", &joined(mine))],
+            &[("addresses", &protection::joined(mine))],
         ),
         (mine, missing) => fill(
             &gettext("gpg holds a key for {addresses}, and none for {without}."),
-            &[("addresses", &joined(mine)), ("without", &joined(missing))],
+            &[
+                ("addresses", &protection::joined(mine)),
+                ("without", &protection::joined(missing)),
+            ],
         ),
     }
-}
-
-/// The two parts of the entity `raw` holds: the first whole, headers and
-/// all, and the second's body on its own.
-///
-/// These are slices of the message rather than anything parsed and put
-/// back together, because a signature covers the first part byte for byte.
-/// The CRLF before a boundary belongs to the boundary, so it comes off
-/// here, and a message whose lines end some other way never signed
-/// anything a reader could check.
-pub(crate) fn wrapper_parts(raw: &[u8]) -> Option<(&[u8], &[u8])> {
-    let blank = find(raw, b"\r\n\r\n")?;
-    let boundary = param(&unfolded(&raw[..blank], "content-type")?, "boundary")?;
-    let open = format!("--{boundary}\r\n").into_bytes();
-    let next = format!("\r\n--{boundary}").into_bytes();
-    let body = &raw[blank + 4..];
-    let first = &body[find(body, &open)? + open.len()..];
-    let (first, after) = first.split_at(find(first, &next)?);
-    let second = after.get(next.len()..)?.strip_prefix(b"\r\n")?;
-    let second = &second[..find(second, &next)?];
-    Some((first, &second[find(second, b"\r\n\r\n")? + 4..]))
 }
 
 /// What the card says about a signature over a message that arrived in the
@@ -210,6 +171,7 @@ fn signed(signature: &Signature) -> Mark {
             detail: Some(vouching(signature.trust)),
             tone: match signature.trust {
                 Trust::Never => Tone::Bad,
+                Trust::Unknown => UNVOUCHED,
                 _ => Tone::Good,
             },
         },
@@ -274,47 +236,15 @@ fn signed(signature: &Signature) -> Mark {
 }
 
 /// What the card says about a message that arrived encrypted, with the
-/// signature that travelled inside it when it carried one. A signature
-/// wrapped around somebody else's ciphertext means nothing, so only the
-/// inner one is shown.
+/// signature that travelled inside it when it carried one.
 fn encrypted(signature: Option<&Signature>, files: usize) -> Mark {
-    let mut mark = match signature {
-        Some(signature) if signature.verdict == Verdict::Good => Mark {
-            title: fill(
-                &gettext("Encrypted, and signed by {signer}"),
-                &[("signer", &signer(signature))],
-            ),
-            detail: Some(vouching(signature.trust)),
-            tone: match signature.trust {
-                Trust::Never => Tone::Bad,
-                _ => Tone::Good,
-            },
-        },
-        Some(signature) => {
-            let found = signed(signature);
-            Mark {
-                title: fill(&gettext("Encrypted. {what}"), &[("what", &found.title)]),
-                ..found
-            }
-        }
-        None => Mark {
-            title: gettext("This message arrived encrypted"),
-            detail: Some(gettext(
-                "Nobody signed it, so it says nothing about who sent it.",
-            )),
-            tone: Tone::Unchecked,
-        },
-    };
-    if let Some(line) = files_line(files) {
-        mark.detail = Some(match mark.detail {
-            Some(detail) => fill(
-                &gettext("{detail} {files}"),
-                &[("detail", &detail), ("files", &line)],
-            ),
-            None => line,
-        });
-    }
-    mark
+    protection::encrypted(
+        signature.map(|signature| protection::Inside {
+            good_signer: (signature.verdict == Verdict::Good).then(|| signer(signature)),
+            mark: signed(signature),
+        }),
+        files,
+    )
 }
 
 /// What the card says when gpg would not open a message.
@@ -348,24 +278,6 @@ fn unreadable() -> Mark {
     }
 }
 
-/// The files inside an encrypted message, which stay inside it: they never
-/// reach Gmail, so nothing in the window can fetch one.
-/// What the card says about the files inside. They came out of the
-/// encryption and live in this window alone, so saving one writes the copy
-/// that exists rather than fetching anything.
-pub(crate) fn files_line(files: usize) -> Option<String> {
-    match files {
-        0 => None,
-        1 => Some(gettext("It carries a file, kept in this window only.")),
-        count => Some(fill_plural(
-            "It carries {count} file, kept in this window only.",
-            "It carries {count} files, kept in this window only.",
-            count,
-            &[("count", &count.to_string())],
-        )),
-    }
-}
-
 /// How far the trust database vouches for the key's owner, said plainly.
 /// A key nobody has vouched for still signs; the two are separate answers
 /// and running them together tells people the wrong thing.
@@ -387,127 +299,6 @@ fn signer(signature: &Signature) -> String {
         (None, Some(key_id)) => fill(&gettext("key {key}"), &[("key", key_id)]),
         (None, None) => gettext("a key gpg would not name"),
     }
-}
-
-/// The message inside the encryption, read as the mail it is.
-/// What was inside the encryption: the message to draw, and the bytes of
-/// each file it carries, in the same order.
-pub(crate) fn opened_body(part: &[u8]) -> (MessageBody, Vec<Vec<u8>>) {
-    let Some(parsed) = MessageParser::default().parse(part) else {
-        return (
-            MessageBody {
-                text: Some(String::from_utf8_lossy(part).into_owned()),
-                ..MessageBody::default()
-            },
-            Vec::new(),
-        );
-    };
-    let mut attachments = Vec::new();
-    let mut files = Vec::new();
-    for (index, found) in parsed.attachments().enumerate() {
-        let mime_type = found
-            .content_type()
-            .map(|content| match content.subtype() {
-                Some(subtype) => format!("{}/{subtype}", content.ctype()),
-                None => content.ctype().to_string(),
-            })
-            .unwrap_or_else(|| "application/octet-stream".to_string())
-            .to_ascii_lowercase();
-        attachments.push(mailrs_domain::Attachment {
-            // No part id and no attachment id: Gmail never saw this part,
-            // so the window reads it out of `Read::files` by this index.
-            part_id: index.to_string(),
-            filename: found.attachment_name().unwrap_or("attachment").to_string(),
-            mime_type,
-            size: found.len() as i64,
-            attachment_id: None,
-            content_id: found.content_id().map(str::to_string),
-        });
-        files.push(found.contents().to_vec());
-    }
-    (
-        MessageBody {
-            html: parsed.body_html(0).map(|html| html.into_owned()),
-            text: parsed.body_text(0).map(|text| text.into_owned()),
-            attachments,
-            ..MessageBody::default()
-        },
-        files,
-    )
-}
-
-pub(crate) fn mark_only(mark: Mark) -> Read {
-    Read {
-        mark,
-        body: None,
-        files: Vec::new(),
-    }
-}
-
-/// "ann@example.com", "ann@example.com or bo@example.com", and with more
-/// than two, commas until the last.
-pub(crate) fn listed(names: &[&str]) -> String {
-    match names {
-        [] => String::new(),
-        [one] => (*one).to_string(),
-        [rest @ .., last] => fill(
-            &gettext("{names} or {last}"),
-            &[("names", &rest.join(", ")), ("last", last)],
-        ),
-    }
-}
-
-/// The same list, for a sentence that wants "and" between the last two.
-pub(crate) fn joined(names: &[&str]) -> String {
-    match names {
-        [] => String::new(),
-        [one] => (*one).to_string(),
-        [rest @ .., last] => fill(
-            &gettext("{names} and {last}"),
-            &[("names", &rest.join(", ")), ("last", last)],
-        ),
-    }
-}
-
-/// The version out of `gpg --version`, which leads with `gpg (GnuPG) 2.4.8`.
-pub(crate) fn version_of(output: &str) -> Option<String> {
-    let line = output.lines().next()?.trim();
-    let version = line.rsplit(' ').next()?;
-    version
-        .chars()
-        .next()
-        .is_some_and(|c| c.is_ascii_digit())
-        .then(|| version.to_string())
-}
-
-/// The value of one header, the lines it folds onto joined back on. Header
-/// values are only read here, so bytes that are not UTF-8 lose nothing.
-pub(crate) fn unfolded(headers: &[u8], name: &str) -> Option<String> {
-    let text = String::from_utf8_lossy(headers)
-        .replace("\r\n ", " ")
-        .replace("\r\n\t", " ");
-    text.lines().find_map(|line| {
-        let (key, value) = line.split_once(':')?;
-        key.trim()
-            .eq_ignore_ascii_case(name)
-            .then(|| value.trim().to_string())
-    })
-}
-
-/// One parameter of a header value, without its quotes.
-pub(crate) fn param(value: &str, name: &str) -> Option<String> {
-    value.split(';').skip(1).find_map(|parameter| {
-        let (key, value) = parameter.split_once('=')?;
-        key.trim()
-            .eq_ignore_ascii_case(name)
-            .then(|| value.trim().trim_matches('"').to_string())
-    })
-}
-
-pub(crate) fn find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
-    haystack
-        .windows(needle.len())
-        .position(|window| window == needle)
 }
 
 #[cfg(test)]
@@ -663,36 +454,6 @@ mod tests {
     }
 
     #[test]
-    fn the_signed_part_comes_out_as_it_arrived() {
-        let raw = b"From: ada@example.test\r\n\
-                    Content-Type: multipart/signed; micalg=pgp-sha256;\r\n \
-                    protocol=\"application/pgp-signature\"; boundary=\"edge\"\r\n\
-                    \r\n\
-                    --edge\r\n\
-                    Content-Type: text/plain\r\n\
-                    \r\n\
-                    Meet at six.\r\n\
-                    --edge\r\n\
-                    Content-Type: application/pgp-signature\r\n\
-                    \r\n\
-                    -----BEGIN PGP SIGNATURE-----\r\n\
-                    -----END PGP SIGNATURE-----\r\n\
-                    --edge--\r\n";
-        let (part, signature) = wrapper_parts(raw).expect("two parts");
-        assert_eq!(part, b"Content-Type: text/plain\r\n\r\nMeet at six.");
-        assert_eq!(
-            signature,
-            b"-----BEGIN PGP SIGNATURE-----\r\n-----END PGP SIGNATURE-----"
-        );
-    }
-
-    #[test]
-    fn a_message_missing_its_boundary_gives_back_nothing() {
-        let raw = b"Content-Type: multipart/signed\r\n\r\nMeet at six.\r\n";
-        assert!(wrapper_parts(raw).is_none());
-    }
-
-    #[test]
     fn a_good_signature_names_the_signer_and_how_far_the_key_is_trusted() {
         let mark = signed(&signature(Verdict::Good, Trust::Unknown));
         assert_eq!(mark.title, "Signed by Ada Lovelace <ada@example.test>");
@@ -779,31 +540,6 @@ mod tests {
     }
 
     #[test]
-    fn a_file_inside_the_encryption_comes_out_with_its_bytes_and_its_type() {
-        let part = b"Content-Type: multipart/mixed; boundary=\"b\"\r\n\r\n\
-            --b\r\nContent-Type: text/plain\r\n\r\nHere it is.\r\n\
-            --b\r\nContent-Type: image/png; name=\"cat.png\"\r\n\
-            Content-Disposition: attachment; filename=\"cat.png\"\r\n\
-            Content-Transfer-Encoding: base64\r\n\r\niVBORwECAwQ=\r\n--b--\r\n";
-        let (body, files) = opened_body(part);
-        assert_eq!(body.attachments.len(), 1);
-        let found = &body.attachments[0];
-        assert_eq!(found.filename, "cat.png");
-        assert_eq!(
-            found.mime_type, "image/png",
-            "the row needs it for a picture"
-        );
-        assert!(
-            found.attachment_id.is_none(),
-            "Gmail never saw this part, so there is nothing to fetch"
-        );
-        // The bytes line up with the attachment list, which is how the
-        // window finds them when somebody asks to save or open one.
-        assert_eq!(files.len(), 1);
-        assert_eq!(files[0], vec![0x89, 0x50, 0x4e, 0x47, 1, 2, 3, 4]);
-    }
-
-    #[test]
     fn a_message_for_somebody_else_says_so_where_the_message_would_be() {
         let mark = refused(&PgpError::NotForYou);
         assert_eq!(
@@ -863,16 +599,6 @@ mod tests {
             ]),
             "gpg holds a key for ada@example.test, and none for work@example.test."
         );
-    }
-
-    #[test]
-    fn the_version_is_the_last_word_of_the_first_line() {
-        assert_eq!(
-            version_of("gpg (GnuPG) 2.4.8\nlibgcrypt 1.12.0\n").as_deref(),
-            Some("2.4.8")
-        );
-        assert_eq!(version_of("").as_deref(), None);
-        assert_eq!(version_of("gpg: no such option").as_deref(), None);
     }
 
     #[test]

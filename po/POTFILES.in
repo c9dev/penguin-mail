@@ -11,6 +11,7 @@ app/src/format.rs
 app/src/main.rs
 app/src/notify.rs
 app/src/pgp.rs
+app/src/protection.rs
 app/src/render.rs
 app/src/rules.rs
 app/src/search.rs

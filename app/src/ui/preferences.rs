@@ -498,7 +498,8 @@ fn protection_group(
                 )),
             }
         }
-        let named = crate::pgp::joined(&programs.iter().map(String::as_str).collect::<Vec<_>>());
+        let named =
+            crate::protection::joined(&programs.iter().map(String::as_str).collect::<Vec<_>>());
         filling.set_description(Some(&fill(
             &gettext(
                 "Penguin Mail signs and encrypts through {programs}, which holds your \
@@ -565,7 +566,8 @@ fn spelling_group(
             .map(|language| (language.clone(), vec![language.clone()])),
     );
     if installed.len() > 1 {
-        let both = crate::pgp::joined(&installed.iter().map(String::as_str).collect::<Vec<_>>());
+        let both =
+            crate::protection::joined(&installed.iter().map(String::as_str).collect::<Vec<_>>());
         choices.push((both, installed.clone()));
     }
     for account in accounts {

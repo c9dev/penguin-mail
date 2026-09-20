@@ -24,10 +24,9 @@ use super::pgp::PgpCard;
 use super::translation::TranslationCard;
 use super::{name, name_with_shortcut};
 use crate::compose::ReplyKind;
-use crate::pgp::Mark;
+use crate::protection::{self, Engine, Mark};
 use crate::render::{BodyState, Conversation, MessageView, Theme, render};
 use crate::sanitize::sanitize_html;
-use crate::smime::{self, Engine};
 use crate::translation::{Body, Prose, Translation};
 
 /// Everything shown for one open thread.
@@ -121,7 +120,7 @@ impl OpenThread {
     pub fn protected(&self) -> Option<(&MessageMeta, Engine)> {
         self.messages.iter().rev().find_map(|meta| {
             let body = self.bodies.get(&meta.id)?.as_ref().ok()?;
-            Some((meta, smime::engine(body)?))
+            Some((meta, protection::engine(body)?))
         })
     }
 

@@ -29,9 +29,9 @@ use crate::compose::{
 };
 use crate::core::Core;
 use crate::format::{future_date, human_size, send_later_presets};
+use crate::protection::{self, Held, Standard};
 use crate::richtext::{Block, BlockKind, RichBody, Style};
 use crate::settings::ComposeFormat;
-use crate::smime::{self, Held, Standard};
 use crate::templates::{self, Filling};
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
@@ -1079,13 +1079,13 @@ impl Composer {
     /// Offers encryption when one of the standards can do it, and says
     /// what is in the way when neither can.
     fn show_keys(&self, held: &Held, blind: bool) {
-        let choice = smime::encrypting(held, blind);
+        let choice = protection::encrypting(held, blind);
         if let Ok(standard) = choice {
             self.encrypting_with.set(standard);
         }
         self.encrypt.set_sensitive(choice.is_ok());
         self.encrypt.set_tooltip_text(Some(&match &choice {
-            Ok(standard) => smime::encrypting_with(*standard),
+            Ok(standard) => protection::encrypting_with(*standard),
             Err(problem) => problem.clone(),
         }));
         self.filling_keys.set(true);
@@ -1119,7 +1119,7 @@ impl Composer {
                     .await
                     .ok();
             }
-            this.signing_with.set(smime::signing(&held));
+            this.signing_with.set(protection::signing(&held));
         });
     }
 

@@ -16,6 +16,7 @@ mod images;
 mod language;
 mod notify;
 mod pgp;
+mod protection;
 mod render;
 mod richtext;
 mod rules;
