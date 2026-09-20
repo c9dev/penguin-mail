@@ -61,17 +61,23 @@ fn to_queued(row: &Row<'_>) -> rusqlite::Result<Queued> {
     })
 }
 
-/// Stores a message, or replaces the one already holding the same Gmail
-/// draft. Gives back the row's id.
+/// Stores a message: as a new row, or over the row it already has, which
+/// is the one its id names or the one holding the same Gmail draft. Gives
+/// back the row's id.
 pub fn put(conn: &Connection, message: &Queued) -> Result<i64> {
-    if let Some(draft_id) = &message.draft_id {
+    let already = match (message.id, &message.draft_id) {
+        (id, _) if id > 0 => Some(id),
+        (_, Some(draft_id)) => find_draft(conn, message.account_id, draft_id)?.map(|m| m.id),
+        _ => None,
+    };
+    if let Some(id) = already {
         let changed = conn.execute(
-            "UPDATE outbox SET message_id = ?3, thread_id = ?4, subject = ?5, recipients = ?6, \
-             send_at = ?7, raw = ?8, composer = ?9, attempts = ?10, problem = ?11 \
-             WHERE account_id = ?1 AND draft_id = ?2",
+            "UPDATE outbox SET draft_id = ?2, message_id = ?3, thread_id = ?4, subject = ?5, \
+             recipients = ?6, send_at = ?7, raw = ?8, composer = ?9, attempts = ?10, \
+             problem = ?11 WHERE id = ?1",
             params![
-                message.account_id,
-                draft_id,
+                id,
+                message.draft_id,
                 message.message_id,
                 message.thread_id,
                 message.subject,
@@ -84,7 +90,7 @@ pub fn put(conn: &Connection, message: &Queued) -> Result<i64> {
             ],
         )?;
         if changed > 0 {
-            return Ok(find_draft(conn, message.account_id, draft_id)?.map_or(0, |m| m.id));
+            return Ok(id);
         }
     }
     conn.execute(

@@ -64,10 +64,7 @@ impl<A: Accounts> Outbox<A> {
     pub async fn post(&self, mut message: Queued) -> Result<Posted, SyncError> {
         match self.attempt(&message).await {
             Ok(sent) => {
-                if message.id > 0 {
-                    let id = message.id;
-                    self.db.write(move |c| outbox::remove(c, id)).await?;
-                }
+                self.forget(&message).await?;
                 Ok(Posted::Sent(sent))
             }
             Err(err) if err.worth_retrying() => {
@@ -121,8 +118,7 @@ impl<A: Accounts> Outbox<A> {
             }
             match self.attempt(&message).await {
                 Ok(_) => {
-                    let id = message.id;
-                    self.db.write(move |c| outbox::remove(c, id)).await?;
+                    self.forget(&message).await?;
                     drained.sent.push(message);
                 }
                 Err(err) => {
@@ -200,6 +196,20 @@ impl<A: Accounts> Outbox<A> {
         let raw = message.raw.clone().unwrap_or_default();
         sync.save_draft(raw, message.thread_id.clone(), message.draft_id.clone())
             .await
+    }
+
+    /// Takes a message that has gone out off the table, whether it was
+    /// waiting under its own row or under the Gmail draft it occupied.
+    async fn forget(&self, message: &Queued) -> Result<(), SyncError> {
+        let (id, account_id, draft_id) = (message.id, message.account_id, message.draft_id.clone());
+        self.db
+            .write(move |c| match (id, draft_id) {
+                (id, _) if id > 0 => outbox::remove(c, id),
+                (_, Some(draft_id)) => outbox::remove_draft(c, account_id, &draft_id),
+                _ => Ok(()),
+            })
+            .await?;
+        Ok(())
     }
 
     /// Keeps a message that would not go out, with why and when to try
