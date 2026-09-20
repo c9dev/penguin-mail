@@ -152,8 +152,6 @@ pub struct ConversationView {
     /// The event card above the message, shown when the open message
     /// carries an invitation.
     pub card: Rc<EventCard>,
-    /// What that card shows now.
-    showing: RefCell<Option<Showing>>,
     /// Cleaned HTML per message. A thread renders at least twice per open.
     sanitized: RefCell<HashMap<String, CleanBody>>,
     list_banner: adw::Banner,
@@ -424,7 +422,6 @@ impl ConversationView {
             content,
             banner,
             card,
-            showing: RefCell::new(None),
             list_banner,
             sanitized: RefCell::new(HashMap::new()),
             sender_menu,
@@ -619,16 +616,15 @@ impl ConversationView {
     /// Puts an invitation above the message, or takes the card away when
     /// the message carries none.
     pub fn show_invitation(&self, showing: Option<Showing>) {
-        match &showing {
+        match showing {
             Some(showing) => self.card.show(showing),
             None => self.card.hide(),
         }
-        *self.showing.borrow_mut() = showing;
     }
 
     /// Reads what the card shows. `None` means no invitation is on screen.
     pub fn with_invitation<R>(&self, f: impl FnOnce(&Showing) -> R) -> Option<R> {
-        self.showing.borrow().as_ref().map(f)
+        self.card.with_showing(f)
     }
 
     /// Whether `row` is what the view shows now.

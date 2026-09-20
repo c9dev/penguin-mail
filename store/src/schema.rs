@@ -188,6 +188,8 @@ CREATE TABLE invitations (
     answer     TEXT,
     message_id TEXT NOT NULL,
     seen_at    INTEGER NOT NULL,
+    news       TEXT,
+    moved_from INTEGER,
     PRIMARY KEY (account_id, uid)
 );
 "#,

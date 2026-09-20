@@ -107,14 +107,42 @@ async fn a_later_version_says_the_meeting_moved() {
         })
     );
 
-    // Opening the older message again says nothing new: the store already
-    // holds the later version.
+    // Reading the update again says the same thing. The window reads a
+    // message twice on the way in, once from the store and once when the
+    // body lands, and the second reading must not wipe the line.
+    let reread = invitations
+        .open(h.account_id, "m2", &invite(2, "20260311T140000Z"), 2_500)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(reread.change, opened.change);
+
+    // Opening the older message again says nothing new: what changed after
+    // it arrived is not its doing.
     let again = invitations
         .open(h.account_id, "m1", &invite(0, "20260310T090000Z"), 3_000)
         .await
         .unwrap()
         .unwrap();
     assert_eq!(again.change, None);
+}
+
+#[tokio::test]
+async fn a_cancellation_says_so_however_often_it_is_read() {
+    let h = harness().await;
+    let invitations = invitations(&h);
+    invitations
+        .open(h.account_id, "m1", &invite(0, "20260310T090000Z"), 1_000)
+        .await
+        .unwrap();
+    for at in [2_000, 2_500, 3_000] {
+        let opened = invitations
+            .open(h.account_id, "m2", &cancellation(3), at)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(opened.change, Some(Change::Cancelled), "read at {at}");
+    }
 }
 
 #[tokio::test]

@@ -29,6 +29,7 @@ impl MainWindow {
             view.show_invitation(None);
             return;
         };
+        let me = self.addresses_for(account_id);
         let invitations = self.core.invitations();
         let opened = self
             .core
@@ -43,6 +44,7 @@ impl MainWindow {
                 invitation: opened.invitation,
                 change: opened.change,
                 answer: opened.answer,
+                me,
             }),
             Ok(None) => None,
             Err(err) => {

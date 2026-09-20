@@ -5,12 +5,12 @@
 //! user who declines the calendar permission still has Google's own Yes,
 //! No and Maybe links there.
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
 use chrono::Local;
-use mailrs_domain::invitation::{Answer, Guest, Invitation, Method};
+use mailrs_domain::invitation::{Answer, Invitation, Method};
 use mailrs_sync::Change;
 
 use crate::format::{event_moved_from, event_tile, event_when};
@@ -24,11 +24,22 @@ pub enum Action {
 }
 
 /// One invitation as the card shows it.
+#[derive(Clone)]
 pub struct Showing {
     pub invitation: Invitation,
     pub change: Option<Change>,
-    /// The answer the user already sent, if any.
+    /// The answer the user already sent, if any. It wins over the guest
+    /// list the organizer sent, which was written before the user answered.
     pub answer: Option<Answer>,
+    /// The addresses of the account the message arrived in, so the card can
+    /// find the user among the guests and call them "You".
+    pub me: Vec<String>,
+}
+
+/// One line of the guest list.
+struct Attending {
+    name: String,
+    answer: Option<Answer>,
 }
 
 pub struct EventCard {
@@ -46,6 +57,9 @@ pub struct EventCard {
     answers: gtk::Box,
     buttons: Vec<(Answer, gtk::ToggleButton)>,
     add: gtk::Button,
+    /// What the card shows now. The window reads it back to answer the
+    /// invitation, so the card is the one place that holds it.
+    showing: RefCell<Option<Showing>>,
     /// Set while the card fills its buttons in, so setting one does not
     /// look like the user pressing it.
     filling: Cell<bool>,
@@ -167,6 +181,7 @@ impl EventCard {
             answers,
             buttons,
             add,
+            showing: RefCell::new(None),
             filling: Cell::new(false),
         });
 
@@ -193,7 +208,36 @@ impl EventCard {
     }
 
     /// Fills the card from an invitation and shows it.
-    pub fn show(&self, showing: &Showing) {
+    pub fn show(&self, showing: Showing) {
+        self.draw(&showing);
+        *self.showing.borrow_mut() = Some(showing);
+    }
+
+    pub fn hide(&self) {
+        self.widget.set_visible(false);
+        *self.showing.borrow_mut() = None;
+    }
+
+    /// Reads what the card shows. `None` means no invitation is on screen.
+    pub fn with_showing<R>(&self, f: impl FnOnce(&Showing) -> R) -> Option<R> {
+        self.showing.borrow().as_ref().map(f)
+    }
+
+    /// Puts the card back where an answer left it: on the one that went
+    /// through, or on the one it showed before an answer that did not.
+    pub fn set_answer(&self, answer: Option<Answer>) {
+        let updated = {
+            let mut held = self.showing.borrow_mut();
+            let Some(showing) = held.as_mut() else {
+                return;
+            };
+            showing.answer = answer;
+            showing.clone()
+        };
+        self.draw(&updated);
+    }
+
+    fn draw(&self, showing: &Showing) {
         let now = Local::now();
         let event = &showing.invitation;
         self.title.set_text(if event.summary.is_empty() {
@@ -218,7 +262,7 @@ impl EventCard {
         set_line(&self.repeats, event.repeats.clone());
         set_line(&self.location, event.location.clone());
         set_line(&self.organizer, organizer_line(event));
-        self.fill_guests(event);
+        self.fill_guests(showing);
         set_line(&self.news, news(showing, now));
         self.news
             .set_css_classes(&["invitation-news", news_tone(showing)]);
@@ -229,17 +273,6 @@ impl EventCard {
         self.answers.set_visible(answerable);
         self.mark(showing.answer);
         self.widget.set_visible(true);
-    }
-
-    pub fn hide(&self) {
-        self.widget.set_visible(false);
-    }
-
-    /// Puts the buttons back where an answer left them: on the one that
-    /// went through, or on the one the card showed before an answer that
-    /// did not.
-    pub fn set_answer(&self, answer: Option<Answer>) {
-        self.mark(answer);
     }
 
     /// Puts the pressed look on one answer and takes it off the others.
@@ -256,23 +289,24 @@ impl EventCard {
         self.filling.set(false);
     }
 
-    fn fill_guests(&self, event: &Invitation) {
+    fn fill_guests(&self, showing: &Showing) {
         while let Some(child) = self.guest_list.first_child() {
             self.guest_list.remove(&child);
         }
-        if event.guests.is_empty() {
+        let attending = attending(showing);
+        if attending.is_empty() {
             self.guests.set_visible(false);
             return;
         }
         self.guests.set_visible(true);
-        self.guests.set_label(Some(&guest_summary(&event.guests)));
-        for guest in &event.guests {
+        self.guests.set_label(Some(&guest_summary(&attending)));
+        for guest in &attending {
             let row = gtk::Box::builder().spacing(8).build();
             let name = gtk::Label::builder()
                 .xalign(0.0)
                 .hexpand(true)
                 .ellipsize(gtk::pango::EllipsizeMode::End)
-                .label(guest.who.display())
+                .label(&guest.name)
                 .build();
             let said = gtk::Label::builder()
                 .css_classes(["dim-label", "caption"])
@@ -297,8 +331,38 @@ fn organizer_line(event: &Invitation) -> Option<String> {
     })
 }
 
-/// "4 guests · 2 yes, 1 maybe, 1 no reply".
-fn guest_summary(guests: &[Guest]) -> String {
+/// The guest list as the card shows it: the user's own row reads "You"
+/// and carries the answer they sent, which the organizer's copy of the
+/// list predates.
+fn attending(showing: &Showing) -> Vec<Attending> {
+    let me = showing
+        .invitation
+        .me(&showing.me)
+        .map(|guest| guest.who.email.clone());
+    showing
+        .invitation
+        .guests
+        .iter()
+        .map(|guest| {
+            let mine = me.as_deref() == Some(guest.who.email.as_str());
+            Attending {
+                name: if mine {
+                    "You".to_string()
+                } else {
+                    guest.who.display().to_string()
+                },
+                answer: if mine {
+                    showing.answer.or(guest.answer)
+                } else {
+                    guest.answer
+                },
+            }
+        })
+        .collect()
+}
+
+/// "4 guests · 2 yes, 1 maybe, 1 awaiting".
+fn guest_summary(guests: &[Attending]) -> String {
     let count = |wanted: Option<Answer>| guests.iter().filter(|g| g.answer == wanted).count();
     let mut parts = Vec::new();
     for (answer, word) in [

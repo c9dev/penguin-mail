@@ -13,7 +13,7 @@ use mailrs_domain::{
     MessageMeta, system_label,
 };
 use mailrs_gmail::{LabelColor, RemoteLabel};
-use mailrs_store::{Result, accounts, bodies, labels, messages};
+use mailrs_store::{Result, accounts, bodies, invitations, labels, messages};
 use mailrs_sync::fake::FakeGmail;
 use rusqlite::Connection;
 
@@ -26,6 +26,10 @@ const DRAFT_ID: &str = "demo-draft";
 
 /// The event behind the sample invitation, as Google would write it.
 const INVITE_UID: &str = "7f3k2q9demo1invite@google.com";
+
+/// The event the sample update moves. The demo remembers an older version
+/// of it, so opening the update says what changed.
+const MOVED_UID: &str = "2b8h5x0demo2moved@google.com";
 
 pub const ACCOUNTS: [&str; 3] = [
     "dana.reyes@example.com",
@@ -368,7 +372,7 @@ fn samples() -> Vec<Sample> {
         Sample {
             account: 1,
             thread: "t-design-review",
-            id: "invite-1",
+            id: "design-review-1",
             from: ("Priya Raman", "priya@fernwood.example"),
             to: &[ME, ("Jonas Weber", "jonas@fernwood.example")],
             subject: "Invitation: Offline editor design review",
@@ -377,6 +381,19 @@ fn samples() -> Vec<Sample> {
             text: "Walking through the offline editor design before we commit to a date. Agenda in the deck; bring questions about conflict resolution.\n\nPriya",
             html: None,
             attachments: &[("invite.ics", "text/calendar", 1_284)],
+        },
+        Sample {
+            account: 1,
+            thread: "t-planning",
+            id: "planning-1",
+            from: ("Jonas Weber", "jonas@fernwood.example"),
+            to: &[ME],
+            subject: "Updated invitation: Sprint planning",
+            minutes_ago: 2 * HOUR,
+            labels: &["INBOX", "UNREAD"],
+            text: "Moved this so the whole team can make it. Same room.\n\nJonas",
+            html: None,
+            attachments: &[("invite.ics", "text/calendar", 892)],
         },
         Sample {
             account: 0,
@@ -456,16 +473,43 @@ pub fn seed(conn: &Connection, now: EpochMillis) -> Result<DemoGmail> {
                     .draft_messages
                     .insert(DRAFT_ID.into(), meta.id.clone());
             }
-            if sample.id == "invite-1" {
+            if sample.id == "design-review-1" {
                 // Google puts an invitation on the guest's calendar as it
                 // arrives, so the demo has an event to answer.
                 state.calendar.insert(INVITE_UID.into(), None);
+            }
+            if sample.id == "planning-1" {
+                state.calendar.insert(MOVED_UID.into(), None);
             }
             state.bodies.insert(meta.id.clone(), body.clone());
             state.messages.insert(meta.id.clone(), meta.clone());
         });
     }
+    remember_the_older_invitation(conn, account_ids[1], now)?;
     Ok(DemoGmail(gmail))
+}
+
+/// Puts the version of the sprint planning meeting that came before the
+/// update in the inbox into the store, as if the demo had opened it last
+/// week. The card then says the meeting moved, and from when.
+fn remember_the_older_invitation(
+    conn: &Connection,
+    account_id: AccountId,
+    now: EpochMillis,
+) -> Result<()> {
+    let older = invitations::Saved {
+        uid: MOVED_UID.into(),
+        sequence: 0,
+        starts_at: Some(planning_was(now).timestamp_millis()),
+        all_day: false,
+        summary: "Sprint planning".into(),
+        cancelled: false,
+        answer: None,
+        message_id: "planning-0".into(),
+        news: None,
+        moved_from: None,
+    };
+    invitations::remember(conn, account_id, &older, now)
 }
 
 /// The labels one demo account has. Only the work account has user labels.
@@ -603,7 +647,11 @@ impl Sample {
                     .to_string()
             }),
             one_click_unsubscribe: false,
-            calendar: (self.id == "invite-1").then(|| invitation_ics(now)),
+            calendar: match self.id {
+                "design-review-1" => Some(invitation_ics(now)),
+                "planning-1" => Some(moved_ics(now)),
+                _ => None,
+            },
         }
     }
 }
@@ -650,14 +698,78 @@ fn invitation_ics(now: EpochMillis) -> String {
     .join("\r\n")
 }
 
+/// The update that moves the sprint planning meeting.
+fn moved_ics(now: EpochMillis) -> String {
+    let stamp = |at: chrono::DateTime<chrono::Utc>| at.format("%Y%m%dT%H%M%SZ").to_string();
+    let sent = chrono::DateTime::from_timestamp_millis(now).unwrap_or_default();
+    let start = planning_is(now);
+    let end = start + chrono::Duration::minutes(60);
+    [
+        "BEGIN:VCALENDAR".to_string(),
+        "PRODID:-//Google Inc//Google Calendar 70.9054//EN".to_string(),
+        "VERSION:2.0".to_string(),
+        "METHOD:REQUEST".to_string(),
+        "BEGIN:VEVENT".to_string(),
+        format!("UID:{MOVED_UID}"),
+        "SEQUENCE:1".to_string(),
+        "STATUS:CONFIRMED".to_string(),
+        "SUMMARY:Sprint planning".to_string(),
+        "LOCATION:Meeting Room 1\\, Fernwood HQ".to_string(),
+        format!("DTSTAMP:{}", stamp(sent)),
+        format!("DTSTART:{}", stamp(start.with_timezone(&chrono::Utc))),
+        format!("DTEND:{}", stamp(end.with_timezone(&chrono::Utc))),
+        "ORGANIZER;CN=Jonas Weber:mailto:jonas@fernwood.example".to_string(),
+        format!(
+            "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE;CN=Dana Reyes:mailto:{}",
+            ACCOUNTS[1]
+        ),
+        "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;CN=Jonas Weber:mailto:jonas@fernwood.example".to_string(),
+        "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;CN=Priya Raman:mailto:priya@fernwood.example".to_string(),
+        "END:VEVENT".to_string(),
+        "END:VCALENDAR".to_string(),
+        String::new(),
+    ]
+    .join("\r\n")
+}
+
+/// Where the sprint planning meeting sat before the update: Wednesday at
+/// 15:00 local.
+fn planning_was(now: EpochMillis) -> chrono::DateTime<chrono::Local> {
+    weekday_at(now, chrono::Weekday::Wed, 15)
+}
+
+/// Where it sits now: Thursday at 11:00 local.
+fn planning_is(now: EpochMillis) -> chrono::DateTime<chrono::Local> {
+    weekday_at(now, chrono::Weekday::Thu, 11)
+}
+
+/// The next `weekday` after `now`, at `hour` local.
+fn weekday_at(
+    now: EpochMillis,
+    weekday: chrono::Weekday,
+    hour: u32,
+) -> chrono::DateTime<chrono::Local> {
+    let from = chrono::DateTime::from_timestamp_millis(now)
+        .unwrap_or_default()
+        .with_timezone(&chrono::Local);
+    next_weekday(from, weekday, hour)
+}
+
 /// The next Tuesday after `from`, at 14:00 local.
 fn next_tuesday(from: chrono::DateTime<chrono::Local>) -> chrono::DateTime<chrono::Local> {
+    next_weekday(from, chrono::Weekday::Tue, 14)
+}
+
+/// The next `weekday` after `from`, at `hour` local.
+fn next_weekday(
+    from: chrono::DateTime<chrono::Local>,
+    weekday: chrono::Weekday,
+    hour: u32,
+) -> chrono::DateTime<chrono::Local> {
     use chrono::{Datelike, TimeZone};
-    let days = (chrono::Weekday::Tue.num_days_from_monday() + 7
-        - from.weekday().num_days_from_monday())
-        % 7;
+    let days = (weekday.num_days_from_monday() + 7 - from.weekday().num_days_from_monday()) % 7;
     let day = from.date_naive() + chrono::Days::new(if days == 0 { 7 } else { u64::from(days) });
-    day.and_hms_opt(14, 0, 0)
+    day.and_hms_opt(hour, 0, 0)
         .and_then(|at| chrono::Local.from_local_datetime(&at).earliest())
         .unwrap_or(from)
 }
@@ -682,6 +794,44 @@ mod tests {
             .map(|f| f.thread_id)
             .collect();
         assert_eq!(waiting, ["t-invoice", "t-lease"]);
+    }
+
+    #[test]
+    fn no_two_samples_in_one_account_share_a_message_id() {
+        let mut seen = std::collections::HashSet::new();
+        for sample in samples() {
+            assert!(
+                seen.insert((sample.account, sample.id)),
+                "{} is used twice in account {}",
+                sample.id,
+                sample.account
+            );
+        }
+    }
+
+    #[test]
+    fn the_invitations_land_in_the_demo_mailbox() {
+        let conn = open_in_memory().unwrap();
+        let now = 1_758_000_000_000;
+        seed(&conn, now).unwrap();
+        let work = accounts::account_by_email(&conn, ACCOUNTS[1])
+            .unwrap()
+            .unwrap()
+            .id;
+        for id in ["design-review-1", "planning-1"] {
+            let body = bodies::get_body(&conn, work, id, now).unwrap().unwrap();
+            let ics = body.calendar.expect("the message carries an invitation");
+            let invitation =
+                mailrs_domain::invitation::read(&ics).expect("the part holds an event");
+            assert!(invitation.when.is_some(), "{id}");
+            assert!(!invitation.guests.is_empty(), "{id}");
+        }
+        // The update in the inbox moves a meeting the demo already knows.
+        let held = mailrs_store::invitations::saved(&conn, work, MOVED_UID)
+            .unwrap()
+            .expect("the older version is remembered");
+        assert_eq!(held.sequence, 0);
+        assert_eq!(held.starts_at, Some(planning_was(now).timestamp_millis()));
     }
 
     #[test]

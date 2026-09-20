@@ -18,8 +18,8 @@ use crate::settings::Permitted;
 use crate::{AccountSync, Accounts, SyncError};
 
 /// What a message does to an event the user already has. `None` alongside
-/// it means the message is the first word on this event, or says nothing
-/// the user has not seen.
+/// it means the message is the first word on this event, or an older
+/// version of one the user has already seen change.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Change {
     /// The event moved. `was` is the start it had before.
@@ -32,6 +32,17 @@ pub enum Change {
     Updated,
     /// The organizer called off an event the user already has.
     Cancelled,
+}
+
+impl Change {
+    /// The word the store keeps for this change.
+    fn word(self) -> &'static str {
+        match self {
+            Change::Moved { .. } => "moved",
+            Change::Updated => "updated",
+            Change::Cancelled => "cancelled",
+        }
+    }
 }
 
 /// One invitation as the window shows it.
@@ -75,16 +86,30 @@ impl<A: Accounts> Invitations<A> {
                 answer: None,
             }));
         }
-        let seen = row(&invitation, message_id);
+        let mut seen = row(&invitation, message_id);
         let uid = invitation.uid.clone();
+        let sequence = invitation.sequence;
         let (change, answer) = self
             .db
             .write(move |c| {
                 let held = store::saved(c, account_id, &uid)?;
-                let change = compare(held.as_ref(), &seen);
+                if let Some(change) = compare(held.as_ref(), &seen) {
+                    seen.news = Some(change.word().to_string());
+                    seen.moved_from = match change {
+                        Change::Moved { was, .. } => Some(was),
+                        _ => None,
+                    };
+                }
                 store::remember(c, account_id, &seen, now)?;
-                let answer = store::saved(c, account_id, &uid)?.and_then(|row| row.answer);
-                Ok((change, answer))
+                // The row that comes back speaks for the version it holds.
+                // An older message than that one gets no news of its own:
+                // what changed after it arrived is not its doing.
+                let held =
+                    store::saved(c, account_id, &uid)?.filter(|row| row.sequence == sequence);
+                Ok((
+                    held.as_ref().and_then(change_of),
+                    held.and_then(|row| row.answer),
+                ))
             })
             .await?;
         Ok(Some(Opened {
@@ -140,6 +165,21 @@ fn row(invitation: &Invitation, message_id: &str) -> store::Saved {
         cancelled: invitation.cancelled(),
         answer: None,
         message_id: message_id.to_string(),
+        news: None,
+        moved_from: None,
+    }
+}
+
+/// The change a stored row records, read back out of it.
+fn change_of(row: &store::Saved) -> Option<Change> {
+    match row.news.as_deref()? {
+        "moved" => Some(Change::Moved {
+            was: row.moved_from?,
+            all_day: row.all_day,
+        }),
+        "updated" => Some(Change::Updated),
+        "cancelled" => Some(Change::Cancelled),
+        _ => None,
     }
 }
 
