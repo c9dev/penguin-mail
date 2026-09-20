@@ -20,11 +20,13 @@ use webkit::prelude::*;
 use super::find::FindBar;
 use super::invitation::{self, EventCard, Showing};
 use super::pgp::PgpCard;
+use super::translation::TranslationCard;
 use crate::compose::ReplyKind;
 use crate::pgp::Mark;
 use crate::render::{BodyState, Conversation, MessageView, Theme, render};
 use crate::sanitize::sanitize_html;
 use crate::smime::{self, Engine};
+use crate::translation::{Body, Prose, Translation};
 
 /// Everything shown for one open thread.
 pub struct OpenThread {
@@ -65,6 +67,10 @@ pub struct OpenThread {
     pub pgp_asked: bool,
     /// The flag colour chosen here, when the thread is flagged.
     pub flag_color: Option<FlagColor>,
+    /// Messages translated in this window, by message id. They go no
+    /// further than this: a translation is text a model derived, and
+    /// tomorrow's model would write it differently.
+    pub translations: HashMap<String, Translation>,
 }
 
 impl OpenThread {
@@ -169,6 +175,9 @@ pub enum Action {
     Mailto(String),
     /// The card for one sender, asked for by clicking their name.
     ShowContact(String),
+    /// The translation card's button: translate the open message, or turn
+    /// the translation it already has over.
+    Translate,
 }
 
 struct Buttons {
@@ -211,6 +220,9 @@ pub struct ConversationView {
     /// The card above that, shown when gpg has something to say about the
     /// message.
     seal: Rc<PgpCard>,
+    /// The card between the event card and the message, shown when the
+    /// message is in a language the interface is not in.
+    pub translate: Rc<TranslationCard>,
     /// Ctrl+F over the message. WebKit finds the text; the bar says where
     /// in the matches the reader is.
     find: Rc<FindBar>,
@@ -332,11 +344,16 @@ impl ConversationView {
             EventCard::new(move |action| on_action(Action::Invitation(action)))
         };
         let seal = PgpCard::new();
+        let translate = {
+            let on_action = Rc::clone(&on_action);
+            TranslationCard::new(move || on_action(Action::Translate))
+        };
         let web_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
         web_box.append(&list_banner);
         web_box.append(&banner);
         web_box.append(&seal.widget);
         web_box.append(&card.widget);
+        web_box.append(&translate.widget);
         web_box.append(&webview);
         let stack = gtk::Stack::builder()
             .transition_type(gtk::StackTransitionType::Crossfade)
@@ -521,6 +538,7 @@ impl ConversationView {
             banner,
             card,
             seal,
+            translate,
             find,
             find_closed: RefCell::new(Vec::new()),
             list_banner,
@@ -768,6 +786,7 @@ impl ConversationView {
         self.list_banner.set_revealed(false);
         self.show_invitation(None);
         self.seal.hide();
+        self.translate.hide();
         self.set_buttons_shown(true);
         let b = &self.buttons;
         for button in [&b.reply, &b.reply_all, &b.forward, &b.edit] {
@@ -812,6 +831,7 @@ impl ConversationView {
         self.list_banner.set_revealed(false);
         self.show_invitation(None);
         self.seal.hide();
+        self.translate.hide();
     }
 
     /// Puts an invitation above the message, or takes the card away when
@@ -826,6 +846,25 @@ impl ConversationView {
     /// Reads what the card shows. `None` means no invitation is on screen.
     pub fn with_invitation<R>(&self, f: impl FnOnce(&Showing) -> R) -> Option<R> {
         self.card.with_showing(f)
+    }
+
+    /// The message a translation applies to, with the prose the page
+    /// draws for it: the newest open message whose body has arrived. The
+    /// HTML is the cleaned copy, so the words come out of the markup the
+    /// reader is actually looking at.
+    pub fn open_prose(&self) -> Option<(String, Prose)> {
+        let open = self.open.borrow();
+        let open = open.as_ref()?;
+        let meta = open.messages.iter().rev().find(|meta| {
+            open.expanded.contains(&meta.id) && open.bodies.get(&meta.id).is_some_and(Result::is_ok)
+        })?;
+        let body = open.bodies.get(&meta.id)?.as_ref().ok()?;
+        let clean = self.sanitized.borrow();
+        let prose = match clean.get(&meta.id) {
+            Some(cleaned) => Prose::read(Body::Html(&cleaned.html)),
+            None => Prose::read(Body::Text(body.text.as_deref().unwrap_or(""))),
+        };
+        Some((meta.id.clone(), prose))
     }
 
     /// Whether `row` is what the view shows now.
@@ -857,6 +896,8 @@ impl ConversationView {
         // Before the thread changes, so the old search stops colouring
         // the new message and the old messages close again.
         self.find.close();
+        // The card belongs to the thread that is leaving.
+        self.translate.hide();
         *self.open.borrow_mut() = Some(thread);
         self.stack.set_visible_child_name("thread");
         self.render(scroll);
@@ -901,17 +942,30 @@ impl ConversationView {
         let views: Vec<MessageView> = open
             .messages
             .iter()
-            .map(|meta| MessageView {
-                meta,
-                body: match open.bodies.get(&meta.id) {
-                    None => BodyState::Loading,
-                    Some(Ok(body)) => BodyState::Loaded(body),
-                    Some(Err(reason)) => BodyState::Failed(reason),
-                },
-                expanded: open.expanded.contains(&meta.id),
-                inline_images: open.inline_images.get(&meta.id).unwrap_or(&empty),
-                thumbnails: &open.thumbnails,
-                sanitized: clean.get(&meta.id).map(|body| body.html.as_str()),
+            .map(|meta| {
+                // A message showing its translation draws that body and
+                // the HTML cleaned when it arrived; the one that came in
+                // the post stays where it was, for the way back.
+                let said = open
+                    .translations
+                    .get(&meta.id)
+                    .filter(|translation| translation.shown);
+                MessageView {
+                    meta,
+                    body: match (said, open.bodies.get(&meta.id)) {
+                        (Some(translation), _) => BodyState::Loaded(&translation.body),
+                        (None, None) => BodyState::Loading,
+                        (None, Some(Ok(body))) => BodyState::Loaded(body),
+                        (None, Some(Err(reason))) => BodyState::Failed(reason),
+                    },
+                    expanded: open.expanded.contains(&meta.id),
+                    inline_images: open.inline_images.get(&meta.id).unwrap_or(&empty),
+                    thumbnails: &open.thumbnails,
+                    sanitized: match said {
+                        Some(translation) => translation.clean.as_deref(),
+                        None => clean.get(&meta.id).map(|body| body.html.as_str()),
+                    },
+                }
             })
             .collect();
         let html = render(

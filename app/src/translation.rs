@@ -388,7 +388,7 @@ fn script_of(c: char) -> Script {
     match c as u32 {
         0x0041..=0x024F | 0x1E00..=0x1EFF => Script::Latin,
         0x0370..=0x03FF | 0x1F00..=0x1FFF => Script::Greek,
-        0x0400..=0x04FF | 0x0500..=0x052F => Script::Cyrillic,
+        0x0400..=0x052F => Script::Cyrillic,
         0x0590..=0x05FF => Script::Hebrew,
         0x0600..=0x06FF | 0x0750..=0x077F => Script::Arabic,
         0x3040..=0x30FF => Script::Kana,
@@ -691,10 +691,8 @@ pub fn read_reply(reply: &str, count: usize) -> Vec<Option<String>> {
             }
         }
     }
-    for said in out.iter_mut() {
-        if let Some(text) = said {
-            *text = flatten(text);
-        }
+    for said in out.iter_mut().flatten() {
+        *said = flatten(said);
     }
     out
 }
