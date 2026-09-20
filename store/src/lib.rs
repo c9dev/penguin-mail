@@ -2,6 +2,7 @@
 //! them on the writer thread or on pooled readers.
 
 pub mod accounts;
+pub mod address_book;
 pub mod bodies;
 pub mod contacts;
 mod db;

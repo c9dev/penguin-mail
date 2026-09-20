@@ -2,7 +2,7 @@ mod common;
 
 use common::{db, meta, store};
 use mailrs_domain::Address;
-use mailrs_store::contacts::list_contacts;
+use mailrs_store::contacts::list_correspondents;
 
 fn addr(name: Option<&str>, email: &str) -> Address {
     Address {
@@ -26,7 +26,7 @@ fn people_you_write_to_rank_first() {
     robot.from = Some(addr(Some("Shop"), "no-reply@shop.example"));
     store(&conn, &[sent, first, second, robot]);
 
-    let contacts = list_contacts(&conn).unwrap();
+    let contacts = list_correspondents(&conn).unwrap();
     let summary: Vec<(&str, Option<&str>, i64)> = contacts
         .iter()
         .map(|c| (c.email.as_str(), c.name.as_deref(), c.score))

@@ -6,13 +6,13 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gdk, glib, pango};
-use mailrs_store::contacts::Contact;
+use mailrs_store::contacts::Suggestion;
 
 use crate::compose::{format_recipients, parse_recipients};
 use crate::contacts::{current_token, suggest};
 
-/// Shared, replaceable list of known correspondents.
-pub type Contacts = Rc<RefCell<Rc<Vec<Contact>>>>;
+/// Shared, replaceable list of people to suggest.
+pub type Contacts = Rc<RefCell<Rc<Vec<Suggestion>>>>;
 
 const SHOWN: usize = 6;
 
@@ -21,7 +21,7 @@ struct Completion {
     popover: gtk::Popover,
     list: gtk::ListBox,
     contacts: Contacts,
-    shown: RefCell<Vec<Contact>>,
+    shown: RefCell<Vec<Suggestion>>,
 }
 
 /// Adds suggestions to `entry`.
@@ -129,7 +129,7 @@ impl Completion {
             .map(|a| a.email)
             .collect();
         let contacts = Rc::clone(&self.contacts.borrow());
-        let found: Vec<Contact> = suggest(&contacts, token, &entered, SHOWN)
+        let found: Vec<Suggestion> = suggest(&contacts, token, &entered, SHOWN)
             .into_iter()
             .cloned()
             .collect();
@@ -183,7 +183,7 @@ fn focused(entry: &gtk::Entry) -> bool {
     entry.state_flags().contains(gtk::StateFlags::FOCUS_WITHIN)
 }
 
-fn row(contact: &Contact) -> gtk::ListBoxRow {
+fn row(contact: &Suggestion) -> gtk::ListBoxRow {
     let content = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(2)

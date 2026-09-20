@@ -424,7 +424,7 @@ impl App {
         }
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            match this.core.read(mailrs_store::contacts::list_contacts).await {
+            match this.core.read(mailrs_store::contacts::suggestions).await {
                 Ok(found) => *this.contacts.borrow_mut() = Rc::new(found),
                 Err(err) => tracing::warn!(error = %err, "could not load contacts"),
             }
