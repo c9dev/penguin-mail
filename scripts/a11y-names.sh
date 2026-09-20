@@ -34,10 +34,13 @@ PATIENCE = 60
 
 # Roles a person acts on. Everything else is scenery, and a heading or a
 # label says what it says through its own text.
+# Both spellings of a plain button are here: AT-SPI has called it one and
+# then the other, and which one arrives is the toolkit's business.
 ACTS = {
-    "check box", "combo box", "entry", "link", "list item", "menu item",
-    "page tab", "password text", "push button", "radio button", "slider",
-    "spin button", "switch", "table cell", "text", "toggle button",
+    "button", "check box", "combo box", "entry", "link", "list item",
+    "menu item", "page tab", "password text", "push button",
+    "radio button", "slider", "spin button", "switch", "table cell",
+    "text", "toggle button",
 }
 
 found = []
