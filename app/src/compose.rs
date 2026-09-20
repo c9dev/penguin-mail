@@ -145,7 +145,7 @@ impl Draft {
             .iter()
             .chain(&self.cc)
             .chain(&self.bcc)
-            .find(|a| !looks_like_address(&a.email))
+            .find(|a| !is_address(&a.email))
             .map(|a| format!("“{}” is not an email address.", a.email))
     }
 
@@ -163,7 +163,8 @@ impl Draft {
     }
 }
 
-fn looks_like_address(email: &str) -> bool {
+/// Whether this reads as an address the message can go to.
+pub fn is_address(email: &str) -> bool {
     let mut parts = email.splitn(2, '@');
     let (local, domain) = (parts.next().unwrap_or(""), parts.next().unwrap_or(""));
     !local.is_empty()
@@ -740,6 +741,17 @@ mod tests {
     fn a_rich_body_decides_both_parts_of_the_message() {
         use crate::richtext::{Block, BlockKind, Span, Style};
 
+        let bold = |text: &str| Span {
+            style: Style {
+                bold: true,
+                ..Style::default()
+            },
+            ..Span::plain(text)
+        };
+        let link = |text: &str, url: &str| Span {
+            link: Some(url.into()),
+            ..Span::plain(text)
+        };
         let mut draft = Draft::new(1, me());
         draft.to = vec![addr(None, "ann@example.com")];
         draft.bcc = vec![addr(None, "cy@example.com")];
@@ -749,15 +761,9 @@ mod tests {
                     BlockKind::Paragraph,
                     vec![
                         Span::plain("Hi "),
-                        Span::styled(
-                            "Ann",
-                            Style {
-                                bold: true,
-                                ..Style::default()
-                            },
-                        ),
+                        bold("Ann"),
                         Span::plain(", see "),
-                        Span::linked("the menu", "https://example.com/menu"),
+                        link("the menu", "https://example.com/menu"),
                     ],
                 ),
                 Block::new(BlockKind::Bullet, vec![Span::plain("soup")]),

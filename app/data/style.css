@@ -35,12 +35,34 @@
 .account-6 { background: #d56199; } .account-7 { background: #9141ac; } .account-8 { background: #6f8396; }
 
 /* Composer */
-.composer-field { padding: 4px 12px; }
-.composer-field label.dim-label { min-width: 64px; }
+.composer-field { padding: 5px 12px 5px 12px; }
+.composer-field label.dim-label { min-width: 56px; margin-top: 7px; }
 .composer-field entry, .composer-field text { background: none; box-shadow: none; }
 .composer-body { font-size: 1.04em; line-height: 1.5; }
-.attachment-chip { padding: 4px 4px 4px 10px; border-radius: 999px; background: alpha(currentColor, 0.08); }
-.attachment-chip button { min-height: 22px; min-width: 22px; padding: 0; }
+.cc-toggle { font-size: 0.85em; opacity: 0.7; padding: 2px 8px; min-height: 24px; }
+
+/* Recipients, as chips with the address under the pointer. */
+.recipient-chip {
+  padding: 1px 2px 1px 10px; border-radius: 999px;
+  background: alpha(currentColor, 0.09);
+}
+.recipient-chip.invalid { background: alpha(@error_color, 0.18); color: var(--error-color); }
+.recipient-chip button { min-height: 20px; min-width: 20px; padding: 0; opacity: 0.7; }
+.recipient-entry { padding-left: 2px; }
+
+/* The formatting bar: one group of buttons per kind of formatting. */
+.format-bar { padding: 1px 2px; }
+.format-group { padding: 0 6px; }
+.format-group + .format-group { border-left: 1px solid alpha(currentColor, 0.15); }
+.format-bar button { min-width: 28px; min-height: 26px; padding: 2px 4px; }
+.format-bar togglebutton:checked { background: alpha(currentColor, 0.16); }
+
+/* Attachments: one row per file, with its size. */
+.attachment-row {
+  padding: 4px 4px 4px 10px; border-radius: 8px;
+  background: alpha(currentColor, 0.07);
+}
+.attachment-row button { min-height: 22px; min-width: 22px; padding: 0; }
 
 /* Welcome */
 .welcome-card { margin-top: 12px; }

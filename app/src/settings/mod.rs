@@ -154,12 +154,6 @@ pub enum ComposeFormat {
     Markdown,
 }
 
-impl ComposeFormat {
-    pub fn is_rich(self) -> bool {
-        self == ComposeFormat::Rich
-    }
-}
-
 impl Choice for ComposeFormat {
     const ALL: &'static [Self] = &[ComposeFormat::Rich, ComposeFormat::Markdown];
     fn label(self) -> &'static str {

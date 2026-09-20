@@ -54,20 +54,6 @@ impl Span {
         }
     }
 
-    pub fn styled(text: impl Into<String>, style: Style) -> Span {
-        Span {
-            style,
-            ..Span::plain(text)
-        }
-    }
-
-    pub fn linked(text: impl Into<String>, url: impl Into<String>) -> Span {
-        Span {
-            link: Some(url.into()),
-            ..Span::plain(text)
-        }
-    }
-
     pub fn image(alt: impl Into<String>, src: impl Into<String>) -> Span {
         Span {
             image: Some(src.into()),
@@ -567,13 +553,20 @@ mod tests {
     use super::*;
 
     fn bold(text: &str) -> Span {
-        Span::styled(
-            text,
-            Style {
+        Span {
+            style: Style {
                 bold: true,
                 ..Style::default()
             },
-        )
+            ..Span::plain(text)
+        }
+    }
+
+    fn linked(text: &str, url: &str) -> Span {
+        Span {
+            link: Some(url.into()),
+            ..Span::plain(text)
+        }
     }
 
     fn body(blocks: Vec<Block>) -> RichBody {
@@ -588,7 +581,7 @@ mod tests {
                 Span::plain("Hi "),
                 bold("Ann"),
                 Span::plain(", see "),
-                Span::linked("the menu", "https://example.com/menu"),
+                linked("the menu", "https://example.com/menu"),
             ],
         )]);
         let html = doc.to_html();
@@ -686,10 +679,7 @@ mod tests {
             "{doc:#?}"
         );
         assert_eq!(doc.blocks[2].spans[1], bold("Ann"));
-        assert_eq!(
-            doc.blocks[2].spans[3],
-            Span::linked("the menu", "https://e.com")
-        );
+        assert_eq!(doc.blocks[2].spans[3], linked("the menu", "https://e.com"));
         assert_eq!(doc.blocks[3].text(), "Second line.");
     }
 
