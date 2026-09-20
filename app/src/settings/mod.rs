@@ -49,6 +49,8 @@ pub struct Settings {
     pub inbox_categories: bool,
     /// Show Follow Up for sent mail nobody has answered.
     pub suggest_follow_ups: bool,
+    /// What a new message starts as: styled text, or Markdown source.
+    pub compose_format: ComposeFormat,
 }
 
 /// Where the assistant's model runs.
@@ -137,6 +139,33 @@ impl Default for Settings {
             hidden_addresses: Vec::new(),
             inbox_categories: true,
             suggest_follow_ups: true,
+            compose_format: ComposeFormat::Rich,
+        }
+    }
+}
+
+/// How the composer holds a message while it is being written.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ComposeFormat {
+    /// Bold shows as bold: the formatting bar styles the text itself.
+    Rich,
+    /// The writer types Markdown and sees its marks.
+    Markdown,
+}
+
+impl ComposeFormat {
+    pub fn is_rich(self) -> bool {
+        self == ComposeFormat::Rich
+    }
+}
+
+impl Choice for ComposeFormat {
+    const ALL: &'static [Self] = &[ComposeFormat::Rich, ComposeFormat::Markdown];
+    fn label(self) -> &'static str {
+        match self {
+            ComposeFormat::Rich => "Rich text",
+            ComposeFormat::Markdown => "Markdown",
         }
     }
 }

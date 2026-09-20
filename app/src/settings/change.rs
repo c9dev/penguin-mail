@@ -11,7 +11,8 @@ use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
 use super::{
-    AiProvider, Choice, ColorScheme, MarkRead, RemoteImages, Settings, TextSize, UndoSend,
+    AiProvider, Choice, ColorScheme, ComposeFormat, MarkRead, RemoteImages, Settings, TextSize,
+    UndoSend,
 };
 
 /// One named change to the preferences.
@@ -32,6 +33,8 @@ pub enum Change {
     DefaultAccount(Option<String>),
     InboxCategories(bool),
     SuggestFollowUps(bool),
+    /// What a new message starts as.
+    ComposeFormat(ComposeFormat),
     /// The colour the flag button reaches for next.
     FlagColor(FlagColor),
     /// An account's signature. Blank text removes it.
@@ -127,6 +130,7 @@ impl Change {
             Change::DefaultAccount(email) => settings.default_account = email,
             Change::InboxCategories(on) => settings.inbox_categories = on,
             Change::SuggestFollowUps(on) => settings.suggest_follow_ups = on,
+            Change::ComposeFormat(format) => settings.compose_format = format,
             Change::FlagColor(color) => settings.flag_color = color,
             Change::Signature { email, text } => settings.set_signature(&email, &text),
             Change::ToggleVip { email, name } => {
@@ -213,11 +217,12 @@ pub enum Setting {
     NotifyVipsOnly,
     UndoSend,
     DefaultAccount,
+    ComposeFormat,
 }
 
 impl Setting {
     /// In the order the assistant sees them.
-    pub const ALL: [Setting; 10] = [
+    pub const ALL: [Setting; 11] = [
         Setting::Threading,
         Setting::MarkRead,
         Setting::RemoteImages,
@@ -228,6 +233,7 @@ impl Setting {
         Setting::NotifyVipsOnly,
         Setting::UndoSend,
         Setting::DefaultAccount,
+        Setting::ComposeFormat,
     ];
 
     /// The key in `settings.toml`, which is the name the tool takes too.
@@ -243,6 +249,7 @@ impl Setting {
             Setting::NotifyVipsOnly => "notify_vips_only",
             Setting::UndoSend => "undo_send",
             Setting::DefaultAccount => "default_account",
+            Setting::ComposeFormat => "compose_format",
         }
     }
 
@@ -263,6 +270,7 @@ impl Setting {
             Setting::NotifyVipsOnly => json!(settings.notify_vips_only),
             Setting::UndoSend => json!(settings.undo_send),
             Setting::DefaultAccount => json!(settings.default_account),
+            Setting::ComposeFormat => json!(settings.compose_format),
         }
     }
 
@@ -282,6 +290,7 @@ impl Setting {
             Setting::NotifyVipsOnly => Change::NotifyVipsOnly(read(value)?),
             Setting::UndoSend => Change::UndoSend(read(value)?),
             Setting::DefaultAccount => Change::DefaultAccount(read(value)?),
+            Setting::ComposeFormat => Change::ComposeFormat(read(value)?),
         })
     }
 }
@@ -374,6 +383,7 @@ impl Effects {
             hidden_addresses,
             inbox_categories,
             suggest_follow_ups,
+            compose_format,
         } = after;
         // These leave the window as it is. The flag colour, the delay before
         // Send commits, and the rest are read when they are needed, so
@@ -389,6 +399,7 @@ impl Effects {
             flag_color,
             notify_vips_only,
             hidden_addresses,
+            compose_format,
         );
         let smart_changed = *smart_mailboxes != before.smart_mailboxes;
         let colors_changed = *account_colors != before.account_colors;

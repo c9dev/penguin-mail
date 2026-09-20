@@ -12,6 +12,7 @@ mod format;
 mod hide_my_email;
 mod notify;
 mod render;
+mod richtext;
 mod rules;
 mod sanitize;
 mod search;

@@ -1,6 +1,12 @@
 //! What the composer sends: reply and forward drafts, Markdown rendering,
-//! and MIME assembly. The `text/plain` part of every message is the
-//! Markdown source, which is how a saved draft reopens as Markdown.
+//! and MIME assembly.
+//!
+//! A draft carries its body twice over. `markdown` is the source every
+//! caller writes, from a reply's quote to the assistant's `draft_email`,
+//! and it is the `text/plain` part of a message written as Markdown, which
+//! is how such a draft reopens. `rich` is set when the writer used rich
+//! text: it then decides both parts, HTML from the styled blocks and plain
+//! text stripped from the same blocks.
 
 use mail_builder::MessageBuilder;
 use mail_builder::headers::address::Address as MimeAddress;
@@ -10,6 +16,7 @@ use mailrs_gmail::convert::unescape_snippet;
 use pulldown_cmark::{Event, Options, Parser, html};
 
 use crate::format::full_date;
+use crate::richtext::{self, RichBody};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OutgoingAttachment {
@@ -82,8 +89,13 @@ pub struct Draft {
     pub from: Address,
     pub to: Vec<Address>,
     pub cc: Vec<Address>,
+    pub bcc: Vec<Address>,
     pub subject: String,
     pub markdown: String,
+    /// The body as the writer styled it, when the composer is in rich text.
+    /// It decides what goes out; `markdown` is then the same body written
+    /// as Markdown.
+    pub rich: Option<RichBody>,
     /// `Message-ID` of the message this replies to, with angle brackets.
     pub in_reply_to: Option<String>,
     pub references: Vec<String>,
@@ -111,8 +123,10 @@ impl Draft {
             from,
             to: vec![],
             cc: vec![],
+            bcc: vec![],
             subject: String::new(),
             markdown: String::new(),
+            rich: None,
             in_reply_to: None,
             references: vec![],
             thread_id: None,
@@ -124,14 +138,28 @@ impl Draft {
 
     /// Why this draft cannot be sent yet, if anything stops it.
     pub fn problem(&self) -> Option<String> {
-        if self.to.is_empty() && self.cc.is_empty() {
+        if self.to.is_empty() && self.cc.is_empty() && self.bcc.is_empty() {
             return Some("Add at least one recipient.".into());
         }
         self.to
             .iter()
             .chain(&self.cc)
+            .chain(&self.bcc)
             .find(|a| !looks_like_address(&a.email))
             .map(|a| format!("“{}” is not an email address.", a.email))
+    }
+
+    /// Whether the body still refers to the inline image `cid`.
+    fn shows_image(&self, cid: &str) -> bool {
+        let needle = format!("cid:{cid}");
+        match &self.rich {
+            Some(rich) => rich
+                .blocks
+                .iter()
+                .flat_map(|b| &b.spans)
+                .any(|s| s.image.as_deref() == Some(needle.as_str())),
+            None => self.markdown.contains(&needle),
+        }
     }
 }
 
@@ -368,13 +396,14 @@ pub fn markdown_to_html(markdown: &str) -> String {
     let mut body = String::new();
     html::push_html(&mut body, events);
     let body = body
-        .replace("<blockquote>", "<blockquote style=\"margin:0 0 0 0.8ex;border-left:2px solid #ccc;padding-left:1ex;color:#555\">")
-        .replace("<pre>", "<pre style=\"background:#f6f6f8;padding:10px;border-radius:6px;overflow:auto\">")
-        .replace("<p>", "<p style=\"margin:0 0 1em\">")
-        .replace("<img ", "<img style=\"max-width:100%;height:auto\" ");
-    format!(
-        "<div style=\"font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5\">{body}</div>"
-    )
+        .replace(
+            "<blockquote>",
+            &format!("<blockquote style=\"{}\">", richtext::QUOTE),
+        )
+        .replace("<pre>", &format!("<pre style=\"{}\">", richtext::PRE))
+        .replace("<p>", &format!("<p style=\"{}\">", richtext::PARAGRAPH))
+        .replace("<img ", &format!("<img style=\"{}\" ", richtext::IMAGE));
+    richtext::document(&body)
 }
 
 /// Recipients as the composer shows them: `Name <email>`, comma separated,
@@ -427,18 +456,25 @@ fn bare_id(id: &str) -> String {
 /// The RFC 822 bytes for `draft`: `multipart/alternative` with the Markdown
 /// source as text and its rendering as HTML, plus any attachments.
 pub fn build_mime(draft: &Draft, date_secs: i64, message_id: &str) -> Result<Vec<u8>, String> {
+    let (text, html) = match &draft.rich {
+        Some(rich) => (rich.to_plain(), rich.to_html()),
+        None => (draft.markdown.clone(), markdown_to_html(&draft.markdown)),
+    };
     let mut builder = MessageBuilder::new()
         .from(mime_address(&draft.from))
         .subject(draft.subject.trim().to_string())
         .date(date_secs)
         .message_id(bare_id(message_id))
-        .text_body(draft.markdown.clone())
-        .html_body(markdown_to_html(&draft.markdown));
+        .text_body(text)
+        .html_body(html);
     if !draft.to.is_empty() {
         builder = builder.to(draft.to.iter().map(mime_address).collect::<Vec<_>>());
     }
     if !draft.cc.is_empty() {
         builder = builder.cc(draft.cc.iter().map(mime_address).collect::<Vec<_>>());
+    }
+    if !draft.bcc.is_empty() {
+        builder = builder.bcc(draft.bcc.iter().map(mime_address).collect::<Vec<_>>());
     }
     if let Some(parent) = &draft.in_reply_to {
         builder = builder.in_reply_to(bare_id(parent));
@@ -455,7 +491,7 @@ pub fn build_mime(draft: &Draft, date_secs: i64, message_id: &str) -> Result<Vec
     for attachment in &draft.attachments {
         builder = match &attachment.content_id {
             // An image the text shows, unless the text no longer refers to it.
-            Some(cid) if draft.markdown.contains(&format!("cid:{cid}")) => builder.inline(
+            Some(cid) if draft.shows_image(cid) => builder.inline(
                 attachment.mime_type.clone(),
                 cid.clone(),
                 attachment.data.clone(),
@@ -698,6 +734,79 @@ mod tests {
             parsed.attachments().next().unwrap().attachment_name(),
             Some("menu.pdf")
         );
+    }
+
+    #[test]
+    fn a_rich_body_decides_both_parts_of_the_message() {
+        use crate::richtext::{Block, BlockKind, Span, Style};
+
+        let mut draft = Draft::new(1, me());
+        draft.to = vec![addr(None, "ann@example.com")];
+        draft.bcc = vec![addr(None, "cy@example.com")];
+        draft.rich = Some(RichBody {
+            blocks: vec![
+                Block::new(
+                    BlockKind::Paragraph,
+                    vec![
+                        Span::plain("Hi "),
+                        Span::styled(
+                            "Ann",
+                            Style {
+                                bold: true,
+                                ..Style::default()
+                            },
+                        ),
+                        Span::plain(", see "),
+                        Span::linked("the menu", "https://example.com/menu"),
+                    ],
+                ),
+                Block::new(BlockKind::Bullet, vec![Span::plain("soup")]),
+            ],
+        });
+        draft.markdown = draft.rich.as_ref().unwrap().to_markdown();
+        let raw = build_mime(&draft, 0, "id@example.com").unwrap();
+        let parsed = MessageParser::default().parse(&raw).unwrap();
+        assert_eq!(
+            parsed.bcc().unwrap().first().unwrap().address(),
+            Some("cy@example.com")
+        );
+        let text = parsed.body_text(0).unwrap().replace("\r\n", "\n");
+        assert_eq!(
+            text.trim_end(),
+            "Hi Ann, see the menu <https://example.com/menu>\n- soup"
+        );
+        let html = parsed.body_html(0).unwrap();
+        assert!(html.contains("<strong>Ann</strong>"), "{html}");
+        assert!(html.contains("<li>soup</li>"), "{html}");
+        assert!(!html.contains("**"), "{html}");
+    }
+
+    #[test]
+    fn a_rich_body_keeps_the_images_it_still_shows() {
+        use crate::richtext::{Block, BlockKind, Span};
+
+        let mut draft = Draft::new(1, me());
+        draft.to = vec![addr(None, "ann@example.com")];
+        draft.rich = Some(RichBody {
+            blocks: vec![Block::new(
+                BlockKind::Paragraph,
+                vec![Span::image("map", "cid:map1@mailrs")],
+            )],
+        });
+        let image = |cid: &str| OutgoingAttachment {
+            filename: format!("{cid}.png"),
+            mime_type: "image/png".into(),
+            data: vec![137, 80, 78, 71],
+            content_id: Some(cid.into()),
+        };
+        draft.attachments = vec![image("map1@mailrs"), image("gone@mailrs")];
+        let raw = build_mime(&draft, 0, "id@example.com").unwrap();
+        let parsed = MessageParser::default().parse(&raw).unwrap();
+        let ids: Vec<&str> = parsed
+            .attachments()
+            .filter_map(|a| a.content_id())
+            .collect();
+        assert_eq!(ids, ["map1@mailrs"]);
     }
 
     #[test]
