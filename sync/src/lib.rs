@@ -9,6 +9,7 @@ mod connect;
 pub mod contacts;
 mod engine;
 mod error;
+pub mod export;
 pub mod invitations;
 pub mod mailbox;
 mod settings;
