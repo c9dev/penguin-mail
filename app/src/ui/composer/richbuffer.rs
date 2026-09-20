@@ -430,3 +430,91 @@ pub fn has(style: Style, name: &str) -> bool {
         _ => false,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A buffer to write into, or `None` where no display can be opened,
+    /// which is how these run on a machine without a screen.
+    fn buffer() -> Option<gtk::TextBuffer> {
+        if gtk::init().is_err() {
+            return None;
+        }
+        let buffer = gtk::TextBuffer::new(None);
+        install(&buffer);
+        Some(buffer)
+    }
+
+    fn view(buffer: &gtk::TextBuffer) -> gtk::TextView {
+        gtk::TextView::with_buffer(buffer)
+    }
+
+    fn body() -> RichBody {
+        RichBody::from_markdown(
+            "Hi **Ann**, see [the menu](https://e.com).\nFriday works.\n\n- soup\n- salad\n\n1. first\n2. second\n\n> quoted\n\n# Title",
+        )
+    }
+
+    #[test]
+    fn a_body_written_into_the_buffer_reads_back_the_same() {
+        let Some(buffer) = buffer() else { return };
+        let mut anchors = Anchors::new();
+        let wanted = body();
+        write(&view(&buffer), &wanted, &[], &mut anchors);
+        let read_back = read(&buffer, &anchors);
+        assert_eq!(read_back, wanted, "{}", read_back.to_markdown());
+        assert_eq!(read_back.to_html(), wanted.to_html());
+    }
+
+    #[test]
+    fn list_markers_stay_out_of_the_text() {
+        let Some(buffer) = buffer() else { return };
+        let mut anchors = Anchors::new();
+        write(&view(&buffer), &body(), &[], &mut anchors);
+        let plain = read(&buffer, &anchors).to_plain();
+        assert!(!plain.contains('\u{2022}'), "{plain}");
+        assert!(plain.contains("- soup"), "{plain}");
+        assert!(plain.contains("2. second"), "{plain}");
+    }
+
+    #[test]
+    fn a_line_changes_kind_and_the_numbers_follow() {
+        let Some(buffer) = buffer() else { return };
+        let mut anchors = Anchors::new();
+        let mut body = RichBody::default();
+        for text in ["one", "two", "three"] {
+            body.blocks.push(Block::new(
+                BlockKind::Numbered,
+                vec![crate::richtext::Span::plain(text)],
+            ));
+        }
+        write(&view(&buffer), &body, &[], &mut anchors);
+        assert_eq!(
+            read(&buffer, &anchors).to_plain(),
+            "1. one\n2. two\n3. three"
+        );
+        set_kind(&buffer, 0, BlockKind::Quote);
+        renumber(&buffer);
+        assert_eq!(
+            read(&buffer, &anchors).to_plain(),
+            "> one\n1. two\n2. three"
+        );
+        assert_eq!(kind_at(&buffer, 0), BlockKind::Quote);
+    }
+
+    #[test]
+    fn typing_after_styled_words_carries_the_style_on() {
+        let Some(buffer) = buffer() else { return };
+        let mut anchors = Anchors::new();
+        write(
+            &view(&buffer),
+            &RichBody::from_markdown("**bold**"),
+            &[],
+            &mut anchors,
+        );
+        let (style, link) = style_before(&buffer.end_iter());
+        assert!(style.bold && link.is_none());
+        assert_eq!(style_before(&buffer.start_iter()), (Style::default(), None));
+    }
+}
