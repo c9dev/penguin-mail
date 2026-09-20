@@ -18,9 +18,9 @@ use mailrs_smime::{Smime, SmimeError};
 use mailrs_store::{Db, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::{
-    AccountSettings, AccountSync, Accounts, AnyGmail, Changed, ContactBook, Counts, Failure,
-    History, Invitations, Listing, MailAction, MailActions, Mailbox, Mailboxes, Outbox, Outcome,
-    Permitted, Scope, SyncEngine, Undone, View, connect_account, now_millis,
+    AccountSettings, AccountSync, Accounts, AnyGmail, ContactBook, Failure, History, Invitations,
+    MailAction, MailActions, Mailboxes, Outbox, Outcome, Permitted, SyncEngine, Undone,
+    connect_account, now_millis,
 };
 
 use crate::assistant::run::{Background, Modules};
@@ -396,6 +396,12 @@ impl Core {
         self.engine.account(account_id)
     }
 
+    /// One page of a mailbox, the sidebar counts, and fresh rows for the
+    /// threads a change event named. See `mailrs_sync::Mailboxes`.
+    pub fn lists(&self) -> Arc<Lists> {
+        Arc::clone(&self.lists)
+    }
+
     /// The Gmail settings of every account: automatic replies, rules,
     /// blocked senders, and hidden addresses.
     pub fn gmail_settings(&self) -> Arc<GmailSettings> {
@@ -454,44 +460,6 @@ impl Core {
     pub async fn erase(&self, targets: Vec<Target>) -> Result<Permitted<Outcome>> {
         let actions = Arc::clone(&self.actions);
         self.call(async move { actions.erase(&targets).await })
-            .await
-    }
-
-    /// One page of a mailbox. See `Mailboxes::list`.
-    pub async fn list(
-        &self,
-        mailbox: Mailbox,
-        scope: Scope,
-        view: View,
-        from: usize,
-    ) -> Result<Listing> {
-        let lists = Arc::clone(&self.lists);
-        self.call(async move { lists.list(&mailbox, &scope, &view, from).await })
-            .await
-    }
-
-    /// Counts for the sidebar and the category switcher.
-    pub async fn counts(
-        &self,
-        sidebar: Vec<Mailbox>,
-        shown: Mailbox,
-        view: View,
-    ) -> Result<Counts> {
-        let lists = Arc::clone(&self.lists);
-        self.call(async move { lists.counts(&sidebar, &shown, &view).await })
-            .await
-    }
-
-    /// Fresh rows for the threads a change event named, or `None` when the
-    /// list has to be loaded again.
-    pub async fn changed_rows(
-        &self,
-        mailbox: Mailbox,
-        changed: Vec<(AccountId, String)>,
-        view: View,
-    ) -> Result<Option<Changed>> {
-        let lists = Arc::clone(&self.lists);
-        self.call(async move { lists.changed(&mailbox, &changed, &view).await })
             .await
     }
 
