@@ -11,7 +11,8 @@ use mailrs_domain::Address;
 
 use crate::compose::{format_recipients, is_address, parse_recipients};
 use crate::ui::autocomplete::{self, Contacts};
-use mailrs_domain::translate::gettext;
+use crate::ui::name;
+use mailrs_domain::translate::{fill, gettext};
 
 pub struct Recipients {
     /// The chips and the entry, wrapping onto as many lines as they need.
@@ -26,6 +27,23 @@ pub struct Recipients {
     /// itself, so it has to hand it on.
     next: RefCell<Option<Box<dyn Fn()>>>,
     previous: RefCell<Option<Box<dyn Fn()>>>,
+}
+
+/// What one chip says out loud: the name it shows, the address behind it
+/// when they differ, and whether the address is one that could be sent to.
+/// Red on the chip is the only sign of that on screen.
+fn chip_name(shown: &str, email: &str, valid: bool) -> String {
+    let full = match shown == email {
+        true => shown.to_string(),
+        false => fill(
+            &gettext("{name}, {address}"),
+            &[("name", shown), ("address", email)],
+        ),
+    };
+    match valid {
+        true => full,
+        false => fill(&gettext("{recipient}, not an address"), &[("recipient", &full)]),
+    }
 }
 
 impl Recipients {
@@ -47,6 +65,9 @@ impl Recipients {
             .hexpand(true)
             .homogeneous(false)
             .build();
+        // The placeholder is what the row is called; an entry's
+        // placeholder is not its name, so it is given as one too.
+        name(&entry, placeholder);
         autocomplete::attach(&entry, contacts);
         let holder = gtk::FlowBoxChild::builder()
             .child(&entry)
@@ -184,6 +205,10 @@ impl Recipients {
                 .tooltip_text(gettext("Remove"))
                 .can_focus(false)
                 .build();
+            name(
+                &remove,
+                &fill(&gettext("Remove {recipient}"), &[("recipient", &label)]),
+            );
             let weak = Rc::downgrade(self);
             remove.connect_clicked(move |_| {
                 if let Some(field) = weak.upgrade() {
@@ -191,12 +216,12 @@ impl Recipients {
                 }
             });
             chip.append(&remove);
-            self.field.append(
-                &gtk::FlowBoxChild::builder()
-                    .child(&chip)
-                    .focusable(false)
-                    .build(),
-            );
+            let holder = gtk::FlowBoxChild::builder()
+                .child(&chip)
+                .focusable(false)
+                .build();
+            name(&holder, &chip_name(&label, &address.email, valid));
+            self.field.append(&holder);
         }
         self.field.append(&self.holder);
         if typing {
@@ -264,5 +289,30 @@ impl Recipients {
             }
         });
         self.entry.add_controller(focus);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::chip_name;
+
+    #[test]
+    fn a_chip_says_the_address_behind_the_name_it_shows() {
+        assert_eq!(
+            chip_name("Ann Lee", "ann@example.com", true),
+            "Ann Lee, ann@example.com"
+        );
+        assert_eq!(
+            chip_name("bo@example.com", "bo@example.com", true),
+            "bo@example.com"
+        );
+    }
+
+    #[test]
+    fn a_chip_the_colour_marks_as_wrong_says_so() {
+        assert_eq!(
+            chip_name("not an email", "not an email", false),
+            "not an email, not an address"
+        );
     }
 }

@@ -21,6 +21,7 @@ use webkit::prelude::*;
 
 use self::recipients::Recipients;
 use super::autocomplete::Contacts;
+use super::{labelled_by, name};
 use crate::attachcheck::{self, Promise};
 use crate::compose::{
     Draft, LinePrefix, OutgoingAttachment, SendWhen, build_mime, format_recipients, is_address,
@@ -225,6 +226,9 @@ impl Composer {
             .tooltip_text(gettext("Add a recipient this computer can encrypt to."))
             .sensitive(false)
             .build();
+        name(&attach, &gettext("Attach Files"));
+        name(&preview_toggle, &gettext("Preview"));
+        name(&template_button, &gettext("Templates"));
         let protection = gtk::Box::builder()
             .css_classes(["linked"])
             .visible(has_engine)
@@ -266,7 +270,6 @@ impl Composer {
             .css_classes(["flat", "cc-toggle"])
             // Stays on the first line when the chips wrap below it.
             .valign(gtk::Align::Start)
-            .can_focus(false)
             .active(!draft.cc.is_empty() || !draft.bcc.is_empty())
             .build();
         let fields = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -307,6 +310,7 @@ impl Composer {
             .css_classes(["composer-body"])
             .vexpand(true)
             .build();
+        name(&body, &gettext("Message"));
         richbuffer::install(&body.buffer());
         let settings = webkit::Settings::new();
         settings.set_enable_javascript(false);
@@ -885,6 +889,7 @@ impl Composer {
             .tooltip_text(gettext("Do Not Forward the Original"))
             .css_classes(["flat", "circular"])
             .build();
+        name(&drop, &gettext("Do Not Forward the Original"));
         let weak = Rc::downgrade(self);
         drop.connect_clicked(move |_| {
             if let Some(c) = weak.upgrade() {
@@ -1405,6 +1410,13 @@ impl Composer {
                 .css_classes(["flat", "circular"])
                 .tooltip_text(gettext("Remove"))
                 .build();
+            name(
+                &remove,
+                &fill(
+                    &gettext("Remove {file}"),
+                    &[("file", &attachment.filename)],
+                ),
+            );
             let weak = Rc::downgrade(self);
             remove.connect_clicked(move |_| {
                 if let Some(c) = weak.upgrade() {
@@ -1450,10 +1462,13 @@ impl Composer {
         ] {
             let button = gtk::ToggleButton::builder()
                 .child(&label(markup))
-                .tooltip_text(tip)
+                .tooltip_text(&tip)
                 .css_classes(["flat"])
                 .can_focus(false)
                 .build();
+            // The letter on the button is markup, which reads out as the
+            // bare letter; the name says what the letter stands for.
+            name(&button, &tip);
             let weak = Rc::downgrade(self);
             button.connect_clicked(move |_| {
                 if let Some(c) = weak.upgrade() {
@@ -1468,10 +1483,11 @@ impl Composer {
         let button = |bar: &gtk::Box, icon: &str, tip: String| {
             let button = gtk::Button::builder()
                 .icon_name(icon)
-                .tooltip_text(tip)
+                .tooltip_text(&tip)
                 .css_classes(["flat"])
                 .can_focus(false)
                 .build();
+            name(&button, &tip);
             bar.append(&button);
             button
         };
@@ -2390,6 +2406,7 @@ fn field(label: &str, widget: &impl IsA<gtk::Widget>, column: &gtk::SizeGroup) -
         .css_classes(["dim-label", "composer-label"])
         .build();
     column.add_widget(&label);
+    labelled_by(widget, &label);
     row.append(&label);
     row.append(widget);
     row

@@ -53,8 +53,12 @@ pub fn describe(widget: &impl IsA<gtk::Accessible>, spoken: &str, detail: &str) 
 
 /// Points `widget` at the label standing beside it, so a field reads out
 /// under that word rather than under nothing.
-pub fn labelled_by(widget: &impl IsA<gtk::Accessible>, label: &impl IsA<gtk::Accessible>) {
-    widget.update_relation(&[gtk::accessible::Relation::LabelledBy(&[label.as_ref()])]);
+pub fn labelled_by(widget: &impl IsA<gtk::Widget>, label: &impl IsA<gtk::Widget>) {
+    widget
+        .as_ref()
+        .update_relation(&[gtk::accessible::Relation::LabelledBy(&[
+            label.as_ref().upcast_ref()
+        ])]);
 }
 
 /// How the sidebar and window show a `Folder`.
