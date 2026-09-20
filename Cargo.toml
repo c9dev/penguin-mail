@@ -20,11 +20,13 @@ anyhow = "1.0.104"
 async-channel = "2.5.0"
 base64 = "0.23.1"
 chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
+chrono-tz = { version = "0.10.4", default-features = false, features = ["std"] }
 clap = { version = "4.6.7", features = ["derive"] }
 dirs = "7.0.0"
 encoding_rs = "0.8.41"
 futures = "0.3.34"
 gtk = { package = "gtk4", version = "0.11.4", features = ["v4_20"] }
+icalendar = "0.17.13"
 keyring = "4.2.0"
 ksni = "0.3.6"
 mail-builder = "1.0.0"

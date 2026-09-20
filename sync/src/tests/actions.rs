@@ -8,7 +8,9 @@ use mailrs_store::{accounts, flags, labels, reminders};
 
 use super::{Connected, Harness, harness};
 use crate::fake::{FakeGmail, meta};
-use crate::{AccountSync, History, MailAction, MailActions, TriageAction, now_millis};
+use crate::{
+    AccountSync, History, MailAction, MailActions, Outcome, Permitted, TriageAction, now_millis,
+};
 
 fn actions(h: &Harness) -> MailActions<Connected> {
     actions_over(h, [])
@@ -113,6 +115,65 @@ async fn a_failing_account_does_not_stop_the_others() {
     assert_eq!(failed, [refused, unknown]);
     assert!(outcome.first_error().unwrap().starts_with("Archive failed"));
     assert!(h.threads("INBOX").await.is_empty());
+}
+
+/// One account holding out does not swallow the rest of the selection,
+/// and the account that gave up says how much of it did not land.
+#[tokio::test]
+async fn an_account_that_waits_out_its_ceiling_reports_what_it_left() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    let busy_id =
+        h.db.write(|c| accounts::insert_account(c, "you@example.com", 0))
+            .await
+            .unwrap();
+    let busy_fake = Arc::new(FakeGmail::new());
+    busy_fake.seed(mailrs_domain::MessageMeta {
+        account_id: busy_id,
+        ..meta("x", "t2", now_millis(), &["INBOX"])
+    });
+    busy_fake.with(|s| s.page_size = 1000);
+    let (sender, events) = async_channel::unbounded();
+    let busy = Arc::new(
+        AccountSync::new(busy_id, Arc::clone(&busy_fake), h.db.clone(), sender)
+            .with_retry_max(Duration::from_millis(10))
+            .with_wait_ceiling(Duration::from_millis(60)),
+    );
+    busy.bootstrap().await.unwrap();
+    // Gmail says it is busy for longer than the action may wait.
+    for _ in 0..10 {
+        busy_fake.fail_next(GmailError::RateLimited {
+            retry_after: Some(Duration::from_millis(50)),
+        });
+    }
+    let (held_up, fine) = (
+        Target::thread(busy_id, "t2"),
+        Target::thread(h.account_id, "t1"),
+    );
+
+    let outcome = actions_over(&h, [busy])
+        .run(
+            &[held_up.clone(), fine.clone()],
+            MailAction::Triage(TriageAction::Trash),
+            History::Record,
+        )
+        .await;
+
+    assert_eq!(outcome.done, [fine], "the other account still went through");
+    let failed: Vec<Target> = outcome.failed.iter().map(|f| f.target.clone()).collect();
+    assert_eq!(failed, [held_up]);
+    let told: Vec<String> = std::iter::from_fn(|| events.try_recv().ok())
+        .filter_map(|e| match e {
+            mailrs_domain::ChangeEvent::WriteFailed { message, .. } => Some(message),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        told,
+        ["Gmail stayed busy for a moment, so move to trash did not go through for 1 conversation."]
+    );
+    assert!(h.threads("INBOX").await.is_empty(), "t1 went to the trash");
 }
 
 #[tokio::test]
@@ -222,4 +283,90 @@ async fn labelling_by_name_creates_a_missing_label() {
         .fake
         .with(|s| s.labels.iter().filter(|l| l.name == "Receipts").count());
     assert_eq!(named, 1, "the second run finds the label by name");
+}
+
+/// Whether the fake still holds a message.
+fn in_gmail(h: &Harness, id: &str) -> bool {
+    h.fake.with(|s| s.messages.contains_key(id))
+}
+
+#[tokio::test]
+async fn deleting_forever_takes_the_mail_out_of_gmail_and_the_store() {
+    let h = harness().await;
+    let now = now_millis();
+    h.fake.seed(meta("a", "t1", now, &["INBOX"]));
+    h.fake.seed(meta("b", "t2", now + 1, &["INBOX"]));
+    h.bootstrap_all().await;
+    let actions = actions(&h);
+    let target = Target::thread(h.account_id, "t1");
+
+    // The Delete key in the inbox moves it to the Trash first.
+    let trashed = MailAction::Triage(TriageAction::Trash);
+    actions
+        .run(std::slice::from_ref(&target), trashed, History::Record)
+        .await;
+    assert!(h.labels_of("a").await.contains(&"TRASH".to_string()));
+
+    let erased = actions.erase(std::slice::from_ref(&target)).await.unwrap();
+    assert_eq!(
+        erased,
+        Permitted::Done(Outcome {
+            done: vec![target],
+            failed: vec![],
+        })
+    );
+    assert!(!in_gmail(&h, "a"), "Gmail no longer holds the message");
+    assert!(h.thread("t1").await.is_none(), "the store keeps no row");
+    assert!(h.labels_of("a").await.is_empty(), "and no labels");
+    assert_eq!(h.threads("INBOX").await, ["t2"], "the rest is untouched");
+    assert!(actions.undo().await.is_none(), "erasing records no undo");
+}
+
+#[tokio::test]
+async fn deleting_forever_without_the_permission_changes_nothing() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    let actions = actions(&h);
+
+    h.fake.fail_next(GmailError::MissingScope);
+    let erased = actions
+        .erase(&[Target::thread(h.account_id, "t1")])
+        .await
+        .unwrap();
+
+    assert_eq!(erased, Permitted::NeedsPermission);
+    assert!(in_gmail(&h, "a"), "Gmail still holds the message");
+    assert_eq!(h.threads("INBOX").await, ["t1"]);
+    assert_eq!(h.labels_of("a").await, ["INBOX"]);
+}
+
+#[tokio::test]
+async fn erasing_one_message_leaves_the_rest_of_its_thread_consistent() {
+    let h = harness().await;
+    let now = now_millis();
+    h.fake.seed(meta("a", "t1", now, &["INBOX", "UNREAD"]));
+    h.fake.seed(meta("b", "t1", now + 1, &["SENT"]));
+    h.bootstrap_all().await;
+    let actions = actions(&h);
+    let target = Target {
+        account_id: h.account_id,
+        thread_id: "t1".into(),
+        message_id: Some("b".into()),
+    };
+
+    let erased = actions.erase(std::slice::from_ref(&target)).await.unwrap();
+    assert_eq!(erased.done().map(|o| o.done), Some(vec![target]));
+
+    assert!(!in_gmail(&h, "b") && in_gmail(&h, "a"));
+    assert!(h.labels_of("b").await.is_empty());
+    assert_eq!(h.labels_of("a").await, ["INBOX", "UNREAD"]);
+    let thread = h.thread("t1").await.expect("the thread survives");
+    assert_eq!(thread.message_count, 1);
+    assert!(thread.unread);
+    assert_eq!(h.threads("INBOX").await, ["t1"]);
+    assert!(
+        h.threads("SENT").await.is_empty(),
+        "the thread lost the sent label with its only sent message"
+    );
 }

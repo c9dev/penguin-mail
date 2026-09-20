@@ -1,0 +1,41 @@
+{
+  "connections": [
+    {
+      "resourceName": "people/c2",
+      "etag": "%EgUBAj0JPhoEAQIFByIMUzRLYmdQV2xVVUE9",
+      "metadata": {
+        "sources": [{ "type": "CONTACT", "id": "c2", "etag": "#S4KbgPWlUUA=" }],
+        "deleted": true,
+        "objectType": "PERSON"
+      }
+    },
+    {
+      "resourceName": "people/c1",
+      "etag": "%EgcBAj0JPjcuGgQBAgUHIgxLcWZVdTFoUU5Jbz0=",
+      "metadata": {
+        "sources": [
+          { "type": "CONTACT", "id": "c1", "etag": "#KqfUu1hQNIo=", "updateTime": "2026-09-18T20:15:00.113Z" }
+        ],
+        "objectType": "PERSON"
+      },
+      "names": [
+        {
+          "metadata": { "primary": true, "source": { "type": "CONTACT", "id": "c1" } },
+          "displayName": "Mara Okafor",
+          "givenName": "Mara",
+          "familyName": "Okafor"
+        }
+      ],
+      "emailAddresses": [
+        {
+          "metadata": { "primary": true, "source": { "type": "CONTACT", "id": "c1" } },
+          "value": "mara.okafor@example.org",
+          "type": "home"
+        }
+      ]
+    }
+  ],
+  "nextSyncToken": "sync-token-2",
+  "totalPeople": 2,
+  "totalItems": 2
+}

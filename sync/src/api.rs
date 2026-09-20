@@ -1,11 +1,12 @@
 //! What the sync engine needs from Gmail. A trait, so tests can use a fake.
 
+use mailrs_domain::invitation::Answer;
 use mailrs_domain::{AccountId, Filter, MessageBody, MessageMeta, Vacation};
 use mailrs_gmail::body::extract_body;
 use mailrs_gmail::convert::message_meta;
 use mailrs_gmail::{
-    GmailClient, GmailError, HistoryPage, LabelColor, MessagePage, Profile, RemoteLabel, SendAs,
-    html_to_text,
+    AccountQuota, Answered, ConnectionsPage, GmailClient, GmailError, HistoryPage, LabelColor,
+    MessagePage, Profile, RemoteLabel, SendAs, html_to_text,
 };
 
 /// Page size for window listings.
@@ -13,6 +14,14 @@ pub const LIST_PAGE_SIZE: u32 = 100;
 
 /// Gmail operations for one account.
 pub trait GmailApi: Send + Sync + 'static {
+    /// The budget this account's calls come out of, where there is one.
+    /// The sync loops read it to see whether the user is waiting on Gmail,
+    /// and a mail action waiting out a 429 marks itself on it. A fake
+    /// nobody paces answers `None`, and then nothing waits for anything.
+    fn quota(&self) -> Option<&AccountQuota> {
+        None
+    }
+
     fn profile(&self) -> impl Future<Output = Result<Profile, GmailError>> + Send;
 
     fn labels(&self) -> impl Future<Output = Result<Vec<RemoteLabel>, GmailError>> + Send;
@@ -52,9 +61,28 @@ pub trait GmailApi: Send + Sync + 'static {
         remove: &[String],
     ) -> impl Future<Output = Result<(), GmailError>> + Send;
 
+    /// One label change over many messages in a single call. Gmail charges
+    /// 50 units for it whatever the count, against 5 for each
+    /// `modify_labels`, so bulk work goes through here. At most
+    /// [`mailrs_gmail::BATCH_LIMIT`] ids; the caller splits longer lists.
+    fn batch_modify(
+        &self,
+        ids: &[String],
+        add: &[String],
+        remove: &[String],
+    ) -> impl Future<Output = Result<(), GmailError>> + Send;
+
     fn trash(&self, id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
 
     fn untrash(&self, id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
+
+    /// Erases messages for good. Gmail cannot bring them back, and it
+    /// answers `GmailError::MissingScope` until the account grants the
+    /// delete permission.
+    fn delete_messages(
+        &self,
+        ids: &[String],
+    ) -> impl Future<Output = Result<(), GmailError>> + Send;
 
     /// Sends raw RFC 822 bytes. Returns the new message id.
     fn send(
@@ -135,6 +163,31 @@ pub trait GmailApi: Send + Sync + 'static {
         &self,
         vacation: &Vacation,
     ) -> impl Future<Output = Result<(), GmailError>> + Send;
+
+    /// One page of the account's Google contacts. `sync_token` from the
+    /// last refresh asks for changes alone. Google answers
+    /// `GmailError::MissingScope` until the account grants the contacts
+    /// permission, and `GmailError::ExpiredSyncToken` once a token is too
+    /// old to answer from.
+    fn connections(
+        &self,
+        page_token: Option<&str>,
+        sync_token: Option<&str>,
+    ) -> impl Future<Output = Result<ConnectionsPage, GmailError>> + Send;
+
+    /// The bytes of one contact photo, at the size its URL asks for.
+    fn contact_photo(&self, url: &str) -> impl Future<Output = Result<Vec<u8>, GmailError>> + Send;
+    /// Answers the event `ical_uid` names as `me`, through Google
+    /// Calendar, and lets Google tell the organizer. Answers
+    /// `GmailError::MissingScope` until the account grants the calendar
+    /// permission, so a caller offers to ask for it rather than showing an
+    /// error.
+    fn answer_invitation(
+        &self,
+        ical_uid: &str,
+        me: &str,
+        answer: Answer,
+    ) -> impl Future<Output = Result<Answered, GmailError>> + Send;
 }
 
 /// Gmail for one account: the real client, or the in-memory fake behind
@@ -158,6 +211,12 @@ macro_rules! forward {
 
 #[cfg(any(test, feature = "fake"))]
 impl GmailApi for AnyGmail {
+    fn quota(&self) -> Option<&AccountQuota> {
+        match self {
+            AnyGmail::Real(api) => api.quota(),
+            AnyGmail::Fake(api) => api.quota(),
+        }
+    }
     async fn profile(&self) -> Result<Profile, GmailError> {
         forward!(self, profile())
     }
@@ -195,11 +254,22 @@ impl GmailApi for AnyGmail {
     ) -> Result<(), GmailError> {
         forward!(self, modify_labels(id, add, remove))
     }
+    async fn batch_modify(
+        &self,
+        ids: &[String],
+        add: &[String],
+        remove: &[String],
+    ) -> Result<(), GmailError> {
+        forward!(self, batch_modify(ids, add, remove))
+    }
     async fn trash(&self, id: &str) -> Result<(), GmailError> {
         forward!(self, trash(id))
     }
     async fn untrash(&self, id: &str) -> Result<(), GmailError> {
         forward!(self, untrash(id))
+    }
+    async fn delete_messages(&self, ids: &[String]) -> Result<(), GmailError> {
+        forward!(self, delete_messages(ids))
     }
     async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, GmailError> {
         forward!(self, send(raw, thread_id))
@@ -272,6 +342,25 @@ impl GmailApi for AnyGmail {
     async fn set_vacation(&self, vacation: &Vacation) -> Result<(), GmailError> {
         forward!(self, set_vacation(vacation))
     }
+    async fn connections(
+        &self,
+        page_token: Option<&str>,
+        sync_token: Option<&str>,
+    ) -> Result<ConnectionsPage, GmailError> {
+        forward!(self, connections(page_token, sync_token))
+    }
+    async fn contact_photo(&self, url: &str) -> Result<Vec<u8>, GmailError> {
+        forward!(self, contact_photo(url))
+    }
+
+    async fn answer_invitation(
+        &self,
+        ical_uid: &str,
+        me: &str,
+        answer: Answer,
+    ) -> Result<Answered, GmailError> {
+        forward!(self, answer_invitation(ical_uid, me, answer))
+    }
 }
 
 /// Where a saved draft lives in Gmail.
@@ -290,6 +379,10 @@ pub struct AccountClient {
 }
 
 impl GmailApi for AccountClient {
+    fn quota(&self) -> Option<&AccountQuota> {
+        Some(self.client.quota())
+    }
+
     async fn profile(&self) -> Result<Profile, GmailError> {
         self.client.profile().await
     }
@@ -352,12 +445,25 @@ impl GmailApi for AccountClient {
         self.client.modify(id, add, remove).await
     }
 
+    async fn batch_modify(
+        &self,
+        ids: &[String],
+        add: &[String],
+        remove: &[String],
+    ) -> Result<(), GmailError> {
+        self.client.batch_modify(ids, add, remove).await
+    }
+
     async fn trash(&self, id: &str) -> Result<(), GmailError> {
         self.client.trash(id).await
     }
 
     async fn untrash(&self, id: &str) -> Result<(), GmailError> {
         self.client.untrash(id).await
+    }
+
+    async fn delete_messages(&self, ids: &[String]) -> Result<(), GmailError> {
+        self.client.batch_delete(ids).await
     }
 
     async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, GmailError> {
@@ -435,6 +541,15 @@ impl GmailApi for AccountClient {
         self.client.set_vacation(vacation).await
     }
 
+    async fn answer_invitation(
+        &self,
+        ical_uid: &str,
+        me: &str,
+        answer: Answer,
+    ) -> Result<Answered, GmailError> {
+        self.client.answer_invitation(ical_uid, me, answer).await
+    }
+
     async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {
         self.client.create_label(name).await
     }
@@ -469,5 +584,17 @@ impl GmailApi for AccountClient {
         color: &LabelColor,
     ) -> Result<RemoteLabel, GmailError> {
         self.client.set_label_color(id, color).await
+    }
+
+    async fn connections(
+        &self,
+        page_token: Option<&str>,
+        sync_token: Option<&str>,
+    ) -> Result<ConnectionsPage, GmailError> {
+        self.client.connections(page_token, sync_token).await
+    }
+
+    async fn contact_photo(&self, url: &str) -> Result<Vec<u8>, GmailError> {
+        self.client.contact_photo(url).await
     }
 }

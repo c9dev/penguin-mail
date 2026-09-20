@@ -9,12 +9,26 @@ use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
 
 use crate::Result;
 
+/// The labels a list hides. Gmail shows trashed and spam mail only in the
+/// Trash and Spam lists, so every other list leaves it out, whether it asks
+/// for one label or for any mail.
+const HIDDEN: [&str; 2] = [TRASH, SPAM];
+
+/// The hidden labels that a list of `label_id` still leaves out. Listing
+/// the Trash keeps trashed mail; it only drops what is also spam.
+fn hidden_from(label_id: &str) -> Vec<&'static str> {
+    HIDDEN.into_iter().filter(|l| *l != label_id).collect()
+}
+
 /// Which threads a list shows: one label, across all accounts or one,
 /// optionally narrowed to a flag colour or to some senders.
+///
+/// Whichever label it names, the list leaves out mail in the Trash and
+/// Spam, as Gmail's own Sent and label views do.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ThreadFilter {
     pub account_id: Option<AccountId>,
-    /// Empty means any mail outside Trash and Spam.
+    /// Empty means any mail with a label or without one.
     pub label_id: String,
     /// Only mail starred with this colour. Starred mail without a colour
     /// counts as red.
@@ -176,7 +190,7 @@ impl ThreadFilter {
                     .push(" AND ");
             }
             sql.push("NOT ");
-            rows.has_any(sql, &[TRASH, SPAM]);
+            rows.has_any(sql, &HIDDEN);
         } else {
             sql.push(&format!(
                 "FROM {labels} d CROSS JOIN {table} {row} \
@@ -185,6 +199,11 @@ impl ThreadFilter {
             .bind(self.label_id.clone());
             if let Some(account) = self.account_id {
                 sql.push(" AND d.account_id = ").bind(account);
+            }
+            let hidden = hidden_from(&self.label_id);
+            if !hidden.is_empty() {
+                sql.push(" AND NOT ");
+                rows.has_any(sql, &hidden);
             }
         }
         if !self.thread_ids.is_empty() {
@@ -402,13 +421,17 @@ impl LabelCounts {
 }
 
 /// Every label's thread and unread counts, for the sidebar, in one query
-/// instead of two per mailbox.
+/// instead of two per mailbox. A label leaves out the same trashed and spam
+/// mail `ThreadFilter` does, so a count and its list agree.
 pub fn label_counts(conn: &Connection) -> Result<LabelCounts> {
-    let mut stmt = conn.prepare_cached(
+    let mut stmt = conn.prepare_cached(&format!(
         "SELECT d.account_id, d.label_id, COUNT(*), SUM(t.unread) FROM thread_labels d \
          CROSS JOIN threads t ON t.account_id = d.account_id AND t.id = d.thread_id \
-         GROUP BY d.label_id, d.account_id",
-    )?;
+         WHERE NOT EXISTS (SELECT 1 FROM thread_labels h WHERE h.account_id = d.account_id \
+             AND h.thread_id = d.thread_id AND h.label_id IN ('{TRASH}', '{SPAM}') \
+             AND h.label_id <> d.label_id) \
+         GROUP BY d.label_id, d.account_id"
+    ))?;
     let rows = stmt.query_map([], |row| {
         Ok((
             (row.get::<_, AccountId>(0)?, row.get::<_, String>(1)?),

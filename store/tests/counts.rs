@@ -33,11 +33,12 @@ fn label_counts_match_the_query_per_mailbox() {
             "{label}"
         );
     }
+    // Seven inbox threads, less the trashed one and the one in Spam.
     assert_eq!(
         counts.unified("INBOX"),
         Count {
-            threads: 7,
-            unread: 4
+            threads: 5,
+            unread: 3
         }
     );
     assert_eq!(
@@ -93,8 +94,9 @@ fn category_counts_match_the_query_per_category() {
         }
     }
     let unified = threads::category_unread_threads(&conn, &ThreadFilter::unified("INBOX")).unwrap();
-    assert_eq!(unified[&Category::All], 4);
+    assert_eq!(unified[&Category::All], 3);
     assert_eq!(unified[&Category::Updates], 1);
     assert_eq!(unified[&Category::Social], 2);
-    assert_eq!(unified[&Category::Primary], 1);
+    // The one unread thread without a category label is in the Trash.
+    assert_eq!(unified[&Category::Primary], 0);
 }

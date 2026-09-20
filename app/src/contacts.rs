@@ -1,15 +1,15 @@
 //! Matching typed text against known correspondents.
 
-use mailrs_store::contacts::Contact;
+use mailrs_store::contacts::Suggestion;
 
-/// Contacts whose address or any word of whose name starts with `query`,
+/// People whose address or any word of whose name starts with `query`,
 /// best first, leaving out addresses already in `entered`.
 pub fn suggest<'a>(
-    contacts: &'a [Contact],
+    contacts: &'a [Suggestion],
     query: &str,
     entered: &[String],
     limit: usize,
-) -> Vec<&'a Contact> {
+) -> Vec<&'a Suggestion> {
     let query = query.trim().to_lowercase();
     if query.is_empty() {
         return Vec::new();
@@ -44,10 +44,13 @@ pub fn current_token(text: &str) -> (usize, &str) {
 mod tests {
     use super::*;
 
-    fn contact(name: Option<&str>, email: &str) -> Contact {
-        Contact {
+    fn contact(name: Option<&str>, email: &str) -> Suggestion {
+        Suggestion {
             name: name.map(str::to_string),
             email: email.into(),
+            organization: None,
+            photo_file: None,
+            known: false,
             score: 1,
             last_seen: 0,
         }
@@ -60,7 +63,7 @@ mod tests {
             contact(Some("Priya Raman"), "priya.raman@work.example"),
             contact(None, "leeroy@example.com"),
         ];
-        let emails = |found: Vec<&Contact>| -> Vec<String> {
+        let emails = |found: Vec<&Suggestion>| -> Vec<String> {
             found.into_iter().map(|c| c.email.clone()).collect()
         };
         assert_eq!(

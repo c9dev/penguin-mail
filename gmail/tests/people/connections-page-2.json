@@ -1,0 +1,65 @@
+{
+  "connections": [
+    {
+      "resourceName": "people/c3",
+      "etag": "%EgcBAj0JPjcuGgQBAgUHIgxVUmV4b0NtRktXOD0=",
+      "metadata": {
+        "sources": [
+          { "type": "CONTACT", "id": "c3", "etag": "#URexoCmFKW8=", "updateTime": "2026-09-01T07:22:10.004Z" }
+        ],
+        "objectType": "PERSON"
+      },
+      "names": [
+        {
+          "metadata": { "primary": true, "source": { "type": "CONTACT", "id": "c3" } },
+          "displayName": "Priya Raman",
+          "givenName": "Priya",
+          "familyName": "Raman"
+        }
+      ],
+      "organizations": [
+        {
+          "metadata": { "source": { "type": "CONTACT", "id": "c3" } },
+          "name": "Fernwood",
+          "title": "Head of Product"
+        }
+      ],
+      "emailAddresses": [
+        {
+          "metadata": { "primary": true, "source": { "type": "CONTACT", "id": "c3" } },
+          "value": "priya@fernwood.example",
+          "type": "work",
+          "formattedType": "Work"
+        }
+      ]
+    },
+    {
+      "resourceName": "people/c4",
+      "etag": "%EgUBAj0JPhoEAQIFByIMd0FVMlRuRmhIaFE9",
+      "metadata": {
+        "sources": [
+          { "type": "CONTACT", "id": "c4", "etag": "#wAU2TnFhHhQ=", "updateTime": "2025-11-19T11:03:44.517Z" }
+        ],
+        "objectType": "PERSON"
+      },
+      "names": [
+        {
+          "metadata": { "primary": true, "source": { "type": "CONTACT", "id": "c4" } },
+          "displayName": "The Locksmith",
+          "givenName": "The",
+          "familyName": "Locksmith"
+        }
+      ],
+      "phoneNumbers": [
+        {
+          "metadata": { "primary": true, "source": { "type": "CONTACT", "id": "c4" } },
+          "value": "+1 555 0199",
+          "type": "work"
+        }
+      ]
+    }
+  ],
+  "nextSyncToken": "sync-token-1",
+  "totalPeople": 3,
+  "totalItems": 3
+}

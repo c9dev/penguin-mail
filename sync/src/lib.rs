@@ -6,8 +6,10 @@ mod api;
 mod backoff;
 pub mod config;
 mod connect;
+pub mod contacts;
 mod engine;
 mod error;
+pub mod invitations;
 pub mod mailbox;
 mod settings;
 mod triage;
@@ -19,6 +21,12 @@ pub mod fake;
 #[cfg(test)]
 mod tests;
 
+/// How long one mail action waits on a Gmail that keeps saying it is busy
+/// before it stops and reports what did not go through. Gmail's own
+/// `Retry-After` runs to a second or two, so a minute covers a long run of
+/// them; past that the user deserves to hear rather than keep waiting.
+pub const WAIT_CEILING: std::time::Duration = std::time::Duration::from_secs(60);
+
 pub use account::{
     AccountSync, DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS, FETCH_CONCURRENCY, SendAsAddress,
 };
@@ -26,10 +34,12 @@ pub use actions::{Accounts, Failure, History, MailAction, MailActions, Outcome};
 #[cfg(any(test, feature = "fake"))]
 pub use api::AnyGmail;
 pub use api::{AccountClient, GmailApi, LIST_PAGE_SIZE, SavedDraft};
-pub use backoff::backoff_delay;
+pub use backoff::{backoff_delay, poll_offset, with_jitter};
 pub use connect::connect_account;
+pub use contacts::{Card, ContactBook, Refreshed};
 pub use engine::{EngineConfig, SyncEngine};
 pub use error::SyncError;
+pub use invitations::{Change, Invitations, Opened};
 pub use mailbox::{
     Changed, Counts, Empty, Listing, Mailbox, Mailboxes, PAGE, Scope, View, summarize_search,
 };

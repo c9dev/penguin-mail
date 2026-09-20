@@ -13,7 +13,7 @@ use mailrs_domain::{
     MessageMeta, system_label,
 };
 use mailrs_gmail::{LabelColor, RemoteLabel, SendAs};
-use mailrs_store::{Result, accounts, bodies, labels, messages};
+use mailrs_store::{Result, accounts, address_book, bodies, invitations, labels, messages};
 use mailrs_sync::fake::FakeGmail;
 use rusqlite::Connection;
 
@@ -23,6 +23,13 @@ const HISTORY_ID: u64 = 1;
 
 /// The id of the draft behind the sample draft message, as Gmail would hold it.
 const DRAFT_ID: &str = "demo-draft";
+
+/// The event behind the sample invitation, as Google would write it.
+const INVITE_UID: &str = "7f3k2q9demo1invite@google.com";
+
+/// The event the sample update moves. The demo remembers an older version
+/// of it, so opening the update says what changed.
+const MOVED_UID: &str = "2b8h5x0demo2moved@google.com";
 
 pub const ACCOUNTS: [&str; 3] = [
     "dana.reyes@example.com",
@@ -363,6 +370,32 @@ fn samples() -> Vec<Sample> {
             attachments: &[],
         },
         Sample {
+            account: 1,
+            thread: "t-design-review",
+            id: "design-review-1",
+            from: ("Priya Raman", "priya@fernwood.example"),
+            to: &[ME, ("Jonas Weber", "jonas@fernwood.example")],
+            subject: "Invitation: Offline editor design review",
+            minutes_ago: 4 * HOUR,
+            labels: &["INBOX", "UNREAD"],
+            text: "Walking through the offline editor design before we commit to a date. Agenda in the deck; bring questions about conflict resolution.\n\nPriya",
+            html: None,
+            attachments: &[("invite.ics", "text/calendar", 1_284)],
+        },
+        Sample {
+            account: 1,
+            thread: "t-planning",
+            id: "planning-1",
+            from: ("Jonas Weber", "jonas@fernwood.example"),
+            to: &[ME],
+            subject: "Updated invitation: Sprint planning",
+            minutes_ago: 2 * HOUR,
+            labels: &["INBOX", "UNREAD"],
+            text: "Moved this so the whole team can make it. Same room.\n\nJonas",
+            html: None,
+            attachments: &[("invite.ics", "text/calendar", 892)],
+        },
+        Sample {
             account: 0,
             thread: "t-prize",
             id: "prize-1",
@@ -421,7 +454,7 @@ pub fn seed(conn: &Connection, now: EpochMillis) -> Result<DemoGmail> {
         let account_id = account_ids[sample.account];
         let fake = &gmail[&account_id];
         let meta = sample.meta(account_id, now);
-        let body = sample.body();
+        let body = sample.body(now);
         messages::upsert_message(conn, &meta, 2)?;
         messages::refresh_thread(conn, account_id, sample.thread)?;
         bodies::put_body(conn, account_id, sample.id, &body, now)?;
@@ -440,11 +473,172 @@ pub fn seed(conn: &Connection, now: EpochMillis) -> Result<DemoGmail> {
                     .draft_messages
                     .insert(DRAFT_ID.into(), meta.id.clone());
             }
+            if sample.id == "design-review-1" {
+                // Google puts an invitation on the guest's calendar as it
+                // arrives, so the demo has an event to answer.
+                state.calendar.insert(INVITE_UID.into(), None);
+            }
+            if sample.id == "planning-1" {
+                state.calendar.insert(MOVED_UID.into(), None);
+            }
             state.bodies.insert(meta.id.clone(), body.clone());
             state.messages.insert(meta.id.clone(), meta.clone());
         });
     }
+    remember_the_older_invitation(conn, account_ids[1], now)?;
     Ok(DemoGmail(gmail))
+}
+
+/// The contacts the demo accounts have written down, with a photo each
+/// where a real address book would have one. Demo photos are drawn here
+/// rather than shipped, so nothing in the repository is a picture of a
+/// person who does not exist.
+struct SampleContact {
+    /// Whose address book holds them: an index into [`ACCOUNTS`].
+    account: usize,
+    resource: &'static str,
+    name: &'static str,
+    email: &'static str,
+    organization: &'static str,
+    phone: Option<&'static str>,
+    /// The colour their drawn portrait uses. `None` leaves them with
+    /// initials, as a contact with no photo has.
+    photo: Option<(u8, u8, u8)>,
+}
+
+const CONTACTS: [SampleContact; 4] = [
+    SampleContact {
+        account: 0,
+        resource: "people/c1",
+        name: "Mara Okafor",
+        email: "mara.okafor@example.org",
+        organization: "Ridgeline Trails",
+        phone: Some("+1 555 0100"),
+        photo: Some((0x2d, 0x6a, 0x4f)),
+    },
+    SampleContact {
+        account: 1,
+        resource: "people/c2",
+        name: "Priya Raman",
+        email: "priya@fernwood.example",
+        organization: "Fernwood",
+        phone: Some("+1 555 0142"),
+        photo: Some((0x7b, 0x2c, 0x6b)),
+    },
+    SampleContact {
+        account: 1,
+        resource: "people/c3",
+        name: "Jonas Weber",
+        email: "jonas@fernwood.example",
+        organization: "Fernwood",
+        phone: None,
+        photo: None,
+    },
+    SampleContact {
+        account: 2,
+        resource: "people/c4",
+        name: "Sam Iyer",
+        email: "s.iyer@uni.example",
+        organization: "Department of Geology",
+        phone: None,
+        photo: Some((0x1b, 0x4d, 0x7a)),
+    },
+];
+
+/// Writes the demo address books, with a photo on disk for the contacts
+/// that have one. A photo that cannot be written leaves that contact with
+/// initials, which is what a real one with no photo shows.
+pub fn seed_contacts(conn: &Connection, photo_dir: &std::path::Path) -> Result<()> {
+    let ids = accounts::list_accounts(conn)?;
+    let _ = std::fs::create_dir_all(photo_dir);
+    for contact in CONTACTS {
+        let Some(account_id) = ids.get(contact.account).map(|a| a.id) else {
+            continue;
+        };
+        let photo_file = contact.photo.and_then(|color| {
+            let file = format!("{account_id}-{}.png", contact.resource.replace('/', "-"));
+            match std::fs::write(photo_dir.join(&file), portrait(color)) {
+                Ok(()) => Some(file),
+                Err(err) => {
+                    tracing::warn!(error = %err, "could not write a demo contact photo");
+                    None
+                }
+            }
+        });
+        address_book::save(
+            conn,
+            &[address_book::Contact {
+                account_id,
+                resource: contact.resource.into(),
+                name: Some(contact.name.into()),
+                emails: vec![contact.email.into()],
+                organization: Some(contact.organization.into()),
+                phone: contact.phone.map(str::to_string),
+                photo_url: contact
+                    .photo
+                    .map(|_| format!("https://photos.example/{}", contact.resource)),
+                photo_file,
+            }],
+        )?;
+    }
+    Ok(())
+}
+
+/// A stand-in portrait: a head and shoulders in one colour on a lighter
+/// wash of it, as a PNG.
+fn portrait(color: (u8, u8, u8)) -> Vec<u8> {
+    const SIZE: usize = 128;
+    let (r, g, b) = color;
+    let wash = |c: u8| (u16::from(c) / 3 + 175).min(255) as u8;
+    let mut pixels = vec![0u8; SIZE * SIZE * 3];
+    for y in 0..SIZE {
+        for x in 0..SIZE {
+            let (dx, dy) = (x as f32 - 64.0, y as f32 - 48.0);
+            let head = (dx / 27.0).powi(2) + (dy / 31.0).powi(2) <= 1.0;
+            let shoulders = (dx / 58.0).powi(2) + ((y as f32 - 150.0) / 62.0).powi(2) <= 1.0;
+            let ink = head || shoulders;
+            let at = (y * SIZE + x) * 3;
+            pixels[at] = if ink { r } else { wash(r) };
+            pixels[at + 1] = if ink { g } else { wash(g) };
+            pixels[at + 2] = if ink { b } else { wash(b) };
+        }
+    }
+    let pixbuf = gtk::gdk_pixbuf::Pixbuf::from_mut_slice(
+        pixels,
+        gtk::gdk_pixbuf::Colorspace::Rgb,
+        false,
+        8,
+        SIZE as i32,
+        SIZE as i32,
+        (SIZE * 3) as i32,
+    );
+    pixbuf
+        .save_to_bufferv("png", &[])
+        .map(|bytes| bytes.to_vec())
+        .unwrap_or_default()
+}
+
+/// Puts the version of the sprint planning meeting that came before the
+/// update in the inbox into the store, as if the demo had opened it last
+/// week. The card then says the meeting moved, and from when.
+fn remember_the_older_invitation(
+    conn: &Connection,
+    account_id: AccountId,
+    now: EpochMillis,
+) -> Result<()> {
+    let older = invitations::Saved {
+        uid: MOVED_UID.into(),
+        sequence: 0,
+        starts_at: Some(planning_was(now).timestamp_millis()),
+        all_day: false,
+        summary: "Sprint planning".into(),
+        cancelled: false,
+        answer: None,
+        message_id: "planning-0".into(),
+        news: None,
+        moved_from: None,
+    };
+    invitations::remember(conn, account_id, &older, now)
 }
 
 /// The labels one demo account has. Only the work account has user labels.
@@ -583,7 +777,7 @@ impl Sample {
         }
     }
 
-    fn body(&self) -> MessageBody {
+    fn body(&self, now: EpochMillis) -> MessageBody {
         MessageBody {
             text: Some(self.text.into()),
             html: self.html.map(str::to_string),
@@ -605,8 +799,131 @@ impl Sample {
                     .to_string()
             }),
             one_click_unsubscribe: false,
+            calendar: match self.id {
+                "design-review-1" => Some(invitation_ics(now)),
+                "planning-1" => Some(moved_ics(now)),
+                _ => None,
+            },
         }
     }
+}
+
+/// The sample invitation, written around `now` so the meeting is always a
+/// few days out and the card shows a real date.
+fn invitation_ics(now: EpochMillis) -> String {
+    let stamp = |at: chrono::DateTime<chrono::Utc>| at.format("%Y%m%dT%H%M%SZ").to_string();
+    let sent = chrono::DateTime::from_timestamp_millis(now).unwrap_or_default();
+    let start = next_tuesday(sent.with_timezone(&chrono::Local));
+    let end = start + chrono::Duration::minutes(45);
+    let until = start + chrono::Duration::weeks(8);
+    [
+        "BEGIN:VCALENDAR".to_string(),
+        "PRODID:-//Google Inc//Google Calendar 70.9054//EN".to_string(),
+        "VERSION:2.0".to_string(),
+        "METHOD:REQUEST".to_string(),
+        "BEGIN:VEVENT".to_string(),
+        format!("UID:{INVITE_UID}"),
+        "SEQUENCE:0".to_string(),
+        "STATUS:CONFIRMED".to_string(),
+        "SUMMARY:Offline editor design review".to_string(),
+        "LOCATION:Meeting Room 2\\, Fernwood HQ".to_string(),
+        "DESCRIPTION:Agenda in the deck. Bring questions about conflict resolution.".to_string(),
+        format!("DTSTAMP:{}", stamp(sent)),
+        format!("DTSTART:{}", stamp(start.with_timezone(&chrono::Utc))),
+        format!("DTEND:{}", stamp(end.with_timezone(&chrono::Utc))),
+        format!(
+            "RRULE:FREQ=WEEKLY;BYDAY=TU;UNTIL={}",
+            stamp(until.with_timezone(&chrono::Utc))
+        ),
+        "ORGANIZER;CN=Priya Raman:mailto:priya@fernwood.example".to_string(),
+        format!(
+            "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE;CN=Dana Reyes:mailto:{}",
+            ACCOUNTS[1]
+        ),
+        "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;CN=Priya Raman:mailto:priya@fernwood.example".to_string(),
+        "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=TENTATIVE;CN=Jonas Weber:mailto:jonas@fernwood.example".to_string(),
+        "ATTENDEE;ROLE=OPT-PARTICIPANT;PARTSTAT=DECLINED;CN=Mara Okafor:mailto:mara.okafor@example.org".to_string(),
+        "END:VEVENT".to_string(),
+        "END:VCALENDAR".to_string(),
+        String::new(),
+    ]
+    .join("\r\n")
+}
+
+/// The update that moves the sprint planning meeting.
+fn moved_ics(now: EpochMillis) -> String {
+    let stamp = |at: chrono::DateTime<chrono::Utc>| at.format("%Y%m%dT%H%M%SZ").to_string();
+    let sent = chrono::DateTime::from_timestamp_millis(now).unwrap_or_default();
+    let start = planning_is(now);
+    let end = start + chrono::Duration::minutes(60);
+    [
+        "BEGIN:VCALENDAR".to_string(),
+        "PRODID:-//Google Inc//Google Calendar 70.9054//EN".to_string(),
+        "VERSION:2.0".to_string(),
+        "METHOD:REQUEST".to_string(),
+        "BEGIN:VEVENT".to_string(),
+        format!("UID:{MOVED_UID}"),
+        "SEQUENCE:1".to_string(),
+        "STATUS:CONFIRMED".to_string(),
+        "SUMMARY:Sprint planning".to_string(),
+        "LOCATION:Meeting Room 1\\, Fernwood HQ".to_string(),
+        format!("DTSTAMP:{}", stamp(sent)),
+        format!("DTSTART:{}", stamp(start.with_timezone(&chrono::Utc))),
+        format!("DTEND:{}", stamp(end.with_timezone(&chrono::Utc))),
+        "ORGANIZER;CN=Jonas Weber:mailto:jonas@fernwood.example".to_string(),
+        format!(
+            "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE;CN=Dana Reyes:mailto:{}",
+            ACCOUNTS[1]
+        ),
+        "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;CN=Jonas Weber:mailto:jonas@fernwood.example".to_string(),
+        "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;CN=Priya Raman:mailto:priya@fernwood.example".to_string(),
+        "END:VEVENT".to_string(),
+        "END:VCALENDAR".to_string(),
+        String::new(),
+    ]
+    .join("\r\n")
+}
+
+/// Where the sprint planning meeting sat before the update: Wednesday at
+/// 15:00 local.
+fn planning_was(now: EpochMillis) -> chrono::DateTime<chrono::Local> {
+    weekday_at(now, chrono::Weekday::Wed, 15)
+}
+
+/// Where it sits now: Thursday at 11:00 local.
+fn planning_is(now: EpochMillis) -> chrono::DateTime<chrono::Local> {
+    weekday_at(now, chrono::Weekday::Thu, 11)
+}
+
+/// The next `weekday` after `now`, at `hour` local.
+fn weekday_at(
+    now: EpochMillis,
+    weekday: chrono::Weekday,
+    hour: u32,
+) -> chrono::DateTime<chrono::Local> {
+    let from = chrono::DateTime::from_timestamp_millis(now)
+        .unwrap_or_default()
+        .with_timezone(&chrono::Local);
+    next_weekday(from, weekday, hour)
+}
+
+/// The next Tuesday after `from`, at 14:00 local.
+fn next_tuesday(from: chrono::DateTime<chrono::Local>) -> chrono::DateTime<chrono::Local> {
+    next_weekday(from, chrono::Weekday::Tue, 14)
+}
+
+/// The next `weekday` after `from`, at `hour` local.
+fn next_weekday(
+    from: chrono::DateTime<chrono::Local>,
+    weekday: chrono::Weekday,
+    hour: u32,
+) -> chrono::DateTime<chrono::Local> {
+    use chrono::{Datelike, TimeZone};
+    let days = (weekday.num_days_from_monday() + 7 - from.weekday().num_days_from_monday()) % 7;
+    let day = from.date_naive() + chrono::Days::new(if days == 0 { 7 } else { u64::from(days) });
+    day.and_hms_opt(hour, 0, 0)
+        .and_then(|at| chrono::Local.from_local_datetime(&at).earliest())
+        .unwrap_or(from)
 }
 
 #[cfg(test)]
@@ -619,6 +936,31 @@ mod tests {
     use super::*;
 
     #[test]
+    fn the_demo_contacts_have_photos_and_rank_first() {
+        let conn = open_in_memory().unwrap();
+        seed(&conn, 1_700_000_000_000).unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        seed_contacts(&conn, dir.path()).unwrap();
+
+        let mara = mailrs_store::address_book::find(&conn, "mara.okafor@example.org")
+            .unwrap()
+            .expect("Mara is in the demo address book");
+        assert_eq!(mara.organization.as_deref(), Some("Ridgeline Trails"));
+        let photo = dir.path().join(mara.photo_file.expect("Mara has a photo"));
+        // A PNG, so the avatar can read it.
+        assert_eq!(&std::fs::read(&photo).unwrap()[1..4], b"PNG");
+
+        let suggestions = mailrs_store::contacts::suggestions(&conn).unwrap();
+        let known: Vec<&str> = suggestions
+            .iter()
+            .take_while(|s| s.known)
+            .map(|s| s.email.as_str())
+            .collect();
+        assert_eq!(known.len(), 4, "every demo contact comes before the rest");
+        assert!(known.contains(&"jonas@fernwood.example"));
+    }
+
+    #[test]
     fn two_sent_messages_wait_for_a_reply() {
         let conn = open_in_memory().unwrap();
         let now = 1_758_000_000_000;
@@ -629,6 +971,44 @@ mod tests {
             .map(|f| f.thread_id)
             .collect();
         assert_eq!(waiting, ["t-invoice", "t-lease"]);
+    }
+
+    #[test]
+    fn no_two_samples_in_one_account_share_a_message_id() {
+        let mut seen = std::collections::HashSet::new();
+        for sample in samples() {
+            assert!(
+                seen.insert((sample.account, sample.id)),
+                "{} is used twice in account {}",
+                sample.id,
+                sample.account
+            );
+        }
+    }
+
+    #[test]
+    fn the_invitations_land_in_the_demo_mailbox() {
+        let conn = open_in_memory().unwrap();
+        let now = 1_758_000_000_000;
+        seed(&conn, now).unwrap();
+        let work = accounts::account_by_email(&conn, ACCOUNTS[1])
+            .unwrap()
+            .unwrap()
+            .id;
+        for id in ["design-review-1", "planning-1"] {
+            let body = bodies::get_body(&conn, work, id, now).unwrap().unwrap();
+            let ics = body.calendar.expect("the message carries an invitation");
+            let invitation =
+                mailrs_domain::invitation::read(&ics).expect("the part holds an event");
+            assert!(invitation.when.is_some(), "{id}");
+            assert!(!invitation.guests.is_empty(), "{id}");
+        }
+        // The update in the inbox moves a meeting the demo already knows.
+        let held = mailrs_store::invitations::saved(&conn, work, MOVED_UID)
+            .unwrap()
+            .expect("the older version is remembered");
+        assert_eq!(held.sequence, 0);
+        assert_eq!(held.starts_at, Some(planning_was(now).timestamp_millis()));
     }
 
     #[test]

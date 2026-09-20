@@ -11,21 +11,28 @@ use serde::de::DeserializeOwned;
 use serde_json::json;
 use tokio::sync::Mutex;
 
+use crate::GmailError;
 use crate::convert::{HistoryPage, history_page};
 use crate::convert::{html_to_text, text_to_html};
+use crate::limiter::{self, AccountQuota};
 use crate::model::{
     AttachmentBody, Draft, DraftList, HistoryList, LabelColor, LabelList, Message, MessagePage,
     Profile, RemoteLabel, SendAs, SendAsList, Thread, VacationSettings,
 };
 use crate::oauth::{AccessToken, LoopbackListener, OAuthClient, Pkce, random_token};
-use crate::{GmailError, QuotaLimiter};
+use crate::people::{self, ConnectionsPage};
 
 pub const GMAIL_API_BASE: &str = "https://gmail.googleapis.com/gmail/v1/users/me";
 
 const METADATA_HEADERS: [&str; 5] = ["From", "To", "Cc", "Subject", "Message-ID"];
 
-/// Quota units per call, from Gmail's usage-limits table.
-mod cost {
+/// Message ids Gmail takes in one `batchModify` or `batchDelete` call.
+pub const BATCH_LIMIT: usize = 1000;
+
+/// Quota units per call, from Gmail's usage-limits table. The in-memory
+/// Gmail prices its calls from the same table, so a test can add up what an
+/// operation would spend against the real API.
+pub mod cost {
     pub const PROFILE: u32 = 1;
     pub const LABELS: u32 = 1;
     pub const LIST: u32 = 5;
@@ -34,6 +41,10 @@ mod cost {
     pub const HISTORY: u32 = 2;
     pub const MODIFY: u32 = 5;
     pub const TRASH: u32 = 5;
+    pub const DELETE: u32 = 10;
+    /// One call for up to [`super::BATCH_LIMIT`] messages.
+    pub const BATCH_MODIFY: u32 = 50;
+    pub const BATCH_DELETE: u32 = 50;
     pub const SEND: u32 = 100;
     pub const DRAFT_CREATE: u32 = 10;
     pub const DRAFT_UPDATE: u32 = 15;
@@ -42,6 +53,10 @@ mod cost {
     pub const SEND_AS: u32 = 1;
     pub const ATTACHMENT: u32 = 5;
     pub const SETTINGS: u32 = 1;
+    /// One page of contacts. The People API keeps a budget of its own, so
+    /// this only stops a refresh from crowding out the mail the user is
+    /// waiting for.
+    pub const CONNECTIONS: u32 = 5;
 }
 
 /// A Gmail client for one account.
@@ -49,24 +64,52 @@ pub struct GmailClient {
     oauth: OAuthClient,
     refresh_token: String,
     base_url: String,
+    /// The People API, which lives at a host of its own.
+    people_url: String,
+    /// Answering an invitation goes to the Calendar API, which is another
+    /// server behind the same access token. See `crate::calendar`.
+    pub(crate) calendar_base_url: String,
     access: Mutex<Option<AccessToken>>,
-    limiter: QuotaLimiter,
+    quota: std::sync::Arc<AccountQuota>,
 }
 
 impl GmailClient {
+    /// A client with a quota of its own. The consent flow uses this; an
+    /// account the app syncs wants [`GmailClient::for_account`], so two
+    /// clients for one address cannot each spend that address's budget.
     pub fn new(oauth: OAuthClient, refresh_token: String) -> Self {
+        let quota = std::sync::Arc::new(AccountQuota::standalone());
         GmailClient {
             oauth,
             refresh_token,
             base_url: GMAIL_API_BASE.to_string(),
+            people_url: people::PEOPLE_API_BASE.to_string(),
+            calendar_base_url: crate::calendar::CALENDAR_API_BASE.to_string(),
             access: Mutex::new(None),
-            limiter: QuotaLimiter::gmail(),
+            quota,
+        }
+    }
+
+    /// A client that spends `email`'s share of the OAuth client's quota.
+    /// Every client built this way for one address waits on one bucket, and
+    /// all of them wait on the project's bucket as well.
+    pub fn for_account(oauth: OAuthClient, refresh_token: String, email: &str) -> Self {
+        let quota = oauth.account_quota(email);
+        GmailClient {
+            quota,
+            ..GmailClient::new(oauth, refresh_token)
         }
     }
 
     /// Points the client at another server. Tests use this.
     pub fn with_base_url(mut self, base_url: impl Into<String>) -> Self {
         self.base_url = base_url.into();
+        self
+    }
+
+    /// Points the contacts calls at another server. Tests use this.
+    pub fn with_people_url(mut self, people_url: impl Into<String>) -> Self {
+        self.people_url = people_url.into();
         self
     }
 
@@ -170,6 +213,55 @@ impl GmailClient {
             })
             .await?;
         Ok(())
+    }
+
+    /// One label change over up to [`BATCH_LIMIT`] messages. Gmail charges
+    /// 50 units for the call however many ids it carries, against 5 units
+    /// for each `modify`, so it is worth it from the eleventh message on.
+    pub async fn batch_modify(
+        &self,
+        ids: &[String],
+        add: &[String],
+        remove: &[String],
+    ) -> Result<(), GmailError> {
+        assert!(
+            ids.len() <= BATCH_LIMIT,
+            "batch of {} exceeds Gmail's limit of {BATCH_LIMIT}",
+            ids.len()
+        );
+        self.call_empty(cost::BATCH_MODIFY, || {
+            self.http()
+                .post(self.url("messages/batchModify"))
+                .json(&json!({
+                    "ids": ids,
+                    "addLabelIds": add,
+                    "removeLabelIds": remove,
+                }))
+        })
+        .await
+    }
+
+    /// Erases up to [`BATCH_LIMIT`] messages. Gmail does not put them in the
+    /// Trash and nothing brings them back. Gmail refuses the call with a 403
+    /// until the account grants [`DELETE_SCOPE`], which arrives here as
+    /// [`GmailError::MissingScope`].
+    ///
+    /// [`DELETE_SCOPE`]: crate::DELETE_SCOPE
+    pub async fn batch_delete(&self, ids: &[String]) -> Result<(), GmailError> {
+        if ids.is_empty() {
+            return Ok(());
+        }
+        assert!(
+            ids.len() <= BATCH_LIMIT,
+            "batch of {} exceeds Gmail's limit of {BATCH_LIMIT}",
+            ids.len()
+        );
+        self.call_empty(cost::BATCH_DELETE, || {
+            self.http()
+                .post(self.url("messages/batchDelete"))
+                .json(&json!({"ids": ids}))
+        })
+        .await
     }
 
     pub async fn trash(&self, id: &str) -> Result<(), GmailError> {
@@ -441,8 +533,76 @@ impl GmailClient {
             .map_err(|e| GmailError::Decode(e.to_string()))
     }
 
-    fn http(&self) -> &reqwest::Client {
+    /// One page of the account's Google contacts. Pass `page_token` to
+    /// walk a long address book, or `sync_token` from the last refresh to
+    /// ask only for what changed. Gmail answers
+    /// [`GmailError::MissingScope`] until the account grants
+    /// [`CONTACTS_SCOPE`], and [`GmailError::ExpiredSyncToken`] when the
+    /// token is too old to answer from.
+    ///
+    /// [`CONTACTS_SCOPE`]: crate::people::CONTACTS_SCOPE
+    pub async fn connections(
+        &self,
+        page_token: Option<&str>,
+        sync_token: Option<&str>,
+    ) -> Result<ConnectionsPage, GmailError> {
+        let url = format!("{}/people/me/connections", self.people_url);
+        let body = self
+            .send_request(cost::CONNECTIONS, || {
+                let mut request = self.http().get(&url).query(&[
+                    ("personFields", people::PERSON_FIELDS),
+                    ("pageSize", &people::PAGE_SIZE.to_string()),
+                    ("requestSyncToken", "true"),
+                ]);
+                if let Some(token) = page_token {
+                    request = request.query(&[("pageToken", token)]);
+                }
+                if let Some(token) = sync_token {
+                    request = request.query(&[("syncToken", token)]);
+                }
+                request
+            })
+            .await?
+            .text()
+            .await
+            .map_err(|e| GmailError::Decode(e.to_string()))?;
+        people::parse_connections(&body)
+    }
+
+    /// The bytes of one contact photo. Google serves these from a plain
+    /// file host that takes no token and counts against no quota.
+    pub async fn contact_photo(&self, url: &str) -> Result<Vec<u8>, GmailError> {
+        let response = self.http().get(url).send().await?;
+        if !response.status().is_success() {
+            return Err(error_from_response(response).await);
+        }
+        Ok(response.bytes().await?.to_vec())
+    }
+
+    /// The bucket this client spends from, so a caller can see whether the
+    /// user is waiting on it.
+    pub fn quota(&self) -> &AccountQuota {
+        &self.quota
+    }
+
+    pub(crate) fn http(&self) -> &reqwest::Client {
         self.oauth.http()
+    }
+
+    /// Sends a request to a full URL and decodes the JSON reply. Calls
+    /// outside Gmail go through here, so they ask the account's Gmail
+    /// budget for nothing: the Calendar API counts against a budget of its
+    /// own, and charging this one would slow mail down for no reason.
+    pub(crate) async fn call_at<T: DeserializeOwned>(
+        &self,
+        url: &str,
+        build: impl Fn(&str) -> RequestBuilder,
+    ) -> Result<T, GmailError> {
+        let response = self.send_request(0, || build(url)).await?;
+        response
+            .json::<T>()
+            .await
+            .map_err(|e| GmailError::Decode(e.to_string()))
     }
 
     fn url(&self, path: &str) -> String {
@@ -493,7 +653,7 @@ impl GmailClient {
         units: u32,
         build: impl Fn() -> RequestBuilder,
     ) -> Result<Response, GmailError> {
-        self.limiter.acquire(units).await;
+        self.quota.acquire(units, limiter::priority()).await;
         let mut retried = false;
         loop {
             let token = self.bearer().await?;
@@ -507,7 +667,17 @@ impl GmailClient {
             if status.is_success() {
                 return Ok(response);
             }
-            return Err(error_from_response(response).await);
+            let error = error_from_response(response).await;
+            if matches!(error, GmailError::RateLimited { .. }) {
+                // Gmail's limit is a moving average, so this account will
+                // not take the pace we are keeping. Drop it and climb back.
+                self.quota.slow_down();
+                tracing::debug!(
+                    rate = self.quota.rate(),
+                    "Gmail refused; slowing this account"
+                );
+            }
+            return Err(error);
         }
     }
 }
@@ -548,6 +718,7 @@ async fn error_from_response(response: Response) -> GmailError {
         403 if body.contains("rateLimitExceeded") || body.contains("userRateLimitExceeded") => {
             GmailError::RateLimited { retry_after }
         }
+        400 if body.contains("EXPIRED_SYNC_TOKEN") => GmailError::ExpiredSyncToken,
         _ => GmailError::Http { status, body },
     }
 }
@@ -583,17 +754,19 @@ pub struct Authorized {
 }
 
 /// Runs the consent flow for one account. `open_browser` receives Google's
-/// consent URL; the flow finishes when the browser redirects back.
+/// consent URL; the flow finishes when the browser redirects back. `extra`
+/// names permissions to ask for on top of the ones sign-in always requests.
 pub async fn authorize(
     oauth: &OAuthClient,
     api_base: &str,
+    extra: &[&str],
     open_browser: impl FnOnce(&str),
 ) -> Result<Authorized, GmailError> {
     let listener = LoopbackListener::bind().await?;
     let redirect_uri = listener.redirect_uri.clone();
     let pkce = Pkce::generate();
     let state = random_token(16);
-    open_browser(&oauth.authorize_url(&redirect_uri, &pkce, &state)?);
+    open_browser(&oauth.authorize_url(&redirect_uri, &pkce, &state, extra)?);
     let code = listener.wait_for_code(&state).await?;
     let tokens = oauth.exchange_code(&code, &redirect_uri, &pkce).await?;
     let client = GmailClient::new(oauth.clone(), tokens.refresh_token.clone())

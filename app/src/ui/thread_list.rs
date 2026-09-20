@@ -3,7 +3,7 @@
 //! Every row is held once, behind an `Rc`, and shared with the list model.
 
 use std::cell::{Cell, RefCell};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -11,7 +11,7 @@ use gtk::{gdk, gio, glib};
 use mailrs_domain::{AccountId, ThreadSummary};
 
 use super::sidebar::DRAG_MAIL;
-use super::thread_row::ThreadRow;
+use super::thread_row::{Avatar, ThreadRow};
 use crate::diff::splice;
 
 /// What is selected in the list.
@@ -52,6 +52,9 @@ pub struct ThreadList {
     show_accounts: Rc<Cell<bool>>,
     /// Lower-case VIP addresses; their rows get a star.
     vips: Rc<RefCell<HashSet<String>>>,
+    /// Contact photos by lower-case sender address, already decoded. Empty
+    /// while contacts are off, and then rows show no face at all.
+    photos: Rc<RefCell<HashMap<String, gdk::Texture>>>,
     muted: Cell<bool>,
 }
 
@@ -116,6 +119,9 @@ impl ThreadList {
         let shown = Rc::clone(&show_accounts);
         let vips: Rc<RefCell<HashSet<String>>> = Rc::new(RefCell::new(HashSet::new()));
         let starred_people = Rc::clone(&vips);
+        let photos: Rc<RefCell<HashMap<String, gdk::Texture>>> =
+            Rc::new(RefCell::new(HashMap::new()));
+        let faces = Rc::clone(&photos);
         factory.connect_bind(move |_, item| {
             let item = item
                 .downcast_ref::<gtk::ListItem>()
@@ -127,10 +133,18 @@ impl ThreadList {
                 return;
             };
             let thread = object.borrow::<Row>();
-            let vip = starred_people
-                .borrow()
-                .contains(&thread.from_email.to_lowercase());
-            row.bind(&thread, shown.get(), vip);
+            let sender = thread.from_email.to_lowercase();
+            let vip = starred_people.borrow().contains(&sender);
+            let faces = faces.borrow();
+            let avatar = if faces.is_empty() {
+                Avatar::Hidden
+            } else {
+                match faces.get(&sender) {
+                    Some(photo) => Avatar::Photo(photo),
+                    None => Avatar::Initials,
+                }
+            };
+            row.bind(&thread, shown.get(), vip, avatar);
         });
         let view = gtk::ListView::builder()
             .model(&selection)
@@ -237,6 +251,7 @@ impl ThreadList {
             dragged,
             show_accounts,
             vips,
+            photos,
             muted: Cell::new(false),
         });
         let weak = Rc::downgrade(&list);
@@ -272,6 +287,31 @@ impl ThreadList {
     pub fn rebind(&self) {
         let rows = self.rows.borrow().clone();
         self.replace_all(&rows);
+    }
+
+    /// The contact photos rows may show, by lower-case address. An empty
+    /// map takes the whole avatar column away, which is how the list looks
+    /// while contacts are off.
+    pub fn set_photos(&self, files: &HashMap<String, std::path::PathBuf>) {
+        let mut photos = self.photos.borrow_mut();
+        let before = photos.len();
+        photos.retain(|email, _| files.contains_key(email));
+        for (email, file) in files {
+            if photos.contains_key(email) {
+                continue;
+            }
+            match gdk::Texture::from_filename(file) {
+                Ok(texture) => {
+                    photos.insert(email.clone(), texture);
+                }
+                Err(err) => tracing::debug!(error = %err, "could not read a contact photo"),
+            }
+        }
+        let changed = before != photos.len();
+        drop(photos);
+        if changed {
+            self.rebind();
+        }
     }
 
     /// Marks rows from these addresses as VIP mail.

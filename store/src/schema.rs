@@ -173,6 +173,56 @@ UPDATE threads SET
 DROP INDEX bodies_by_access;
 CREATE INDEX bodies_by_access ON bodies(accessed_at, account_id, message_id, size);
 "#,
+    // The address book each account reads from Google, and the sync token
+    // that makes the next read cheap.
+    r#"
+CREATE TABLE contacts (
+    account_id   INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    resource     TEXT NOT NULL,
+    name         TEXT,
+    organization TEXT,
+    phone        TEXT,
+    photo_url    TEXT,
+    photo_file   TEXT,
+    PRIMARY KEY (account_id, resource)
+);
+
+CREATE TABLE contact_addresses (
+    account_id INTEGER NOT NULL,
+    resource   TEXT NOT NULL,
+    email      TEXT NOT NULL,
+    rank       INTEGER NOT NULL,
+    PRIMARY KEY (account_id, resource, email),
+    FOREIGN KEY (account_id, resource) REFERENCES contacts(account_id, resource) ON DELETE CASCADE
+);
+CREATE INDEX contact_addresses_by_email ON contact_addresses(email);
+
+CREATE TABLE contact_books (
+    account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+    sync_token TEXT,
+    synced_at  INTEGER NOT NULL
+);
+"#,
+    // The invitation a message carries, and the answer the user gave it.
+    r#"
+ALTER TABLE bodies ADD COLUMN calendar TEXT;
+
+CREATE TABLE invitations (
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    uid        TEXT NOT NULL,
+    sequence   INTEGER NOT NULL,
+    starts_at  INTEGER,
+    all_day    INTEGER NOT NULL DEFAULT 0,
+    summary    TEXT NOT NULL DEFAULT '',
+    cancelled  INTEGER NOT NULL DEFAULT 0,
+    answer     TEXT,
+    message_id TEXT NOT NULL,
+    seen_at    INTEGER NOT NULL,
+    news       TEXT,
+    moved_from INTEGER,
+    PRIMARY KEY (account_id, uid)
+);
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,

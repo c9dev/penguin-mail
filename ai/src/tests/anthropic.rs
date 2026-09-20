@@ -282,19 +282,92 @@ async fn max_tokens_and_stream_errors_are_reported() {
 }
 
 #[tokio::test]
-async fn lists_models() {
+async fn lists_models_across_pages_with_their_names() {
     let server = MockServer::start().await;
+    // Recorded from GET /v1/models, cut to two models a page.
+    let first = ResponseTemplate::new(200).set_body_json(json!({
+        "data": [
+            {"type": "model", "id": "claude-opus-5", "display_name": "Claude Opus 5",
+             "created_at": "2026-02-05T00:00:00Z"},
+            {"type": "model", "id": "claude-sonnet-4-5-20250929",
+             "display_name": "Claude Sonnet 4.5", "created_at": "2025-09-29T00:00:00Z"}
+        ],
+        "first_id": "claude-opus-5",
+        "last_id": "claude-sonnet-4-5-20250929",
+        "has_more": true,
+    }));
+    let second = ResponseTemplate::new(200).set_body_json(json!({
+        "data": [
+            {"type": "model", "id": "claude-haiku-4-5-20251001",
+             "display_name": "Claude Haiku 4.5", "created_at": "2025-10-01T00:00:00Z"}
+        ],
+        "first_id": "claude-haiku-4-5-20251001",
+        "last_id": "claude-haiku-4-5-20251001",
+        "has_more": false,
+    }));
     Mock::given(method("GET"))
         .and(path("/v1/models"))
         .and(header("x-api-key", "sk-ant-test"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-            "data": [{"id": "claude-opus-5", "type": "model"}, {"id": "claude-sonnet-5", "type": "model"}],
-            "has_more": false,
-        })))
+        .and(header("anthropic-version", "2023-06-01"))
+        .respond_with(Sequence::new(vec![first, second]))
         .mount(&server)
         .await;
     let models = crate::providers::anthropic_models(&server.uri(), "sk-ant-test")
         .await
         .unwrap();
-    assert_eq!(models, vec!["claude-opus-5", "claude-sonnet-5"]);
+    assert_eq!(models.note, None);
+    assert_eq!(
+        models
+            .models
+            .iter()
+            .map(|m| (m.id.as_str(), m.name.as_str(), m.alias))
+            .collect::<Vec<_>>(),
+        vec![
+            ("claude-opus-5", "Claude Opus 5", false),
+            ("claude-sonnet-4-5-20250929", "Claude Sonnet 4.5", false),
+            ("claude-haiku-4-5-20251001", "Claude Haiku 4.5", false),
+        ]
+    );
+    // The second page asks for what follows the last id of the first.
+    let asked: Vec<String> = server
+        .received_requests()
+        .await
+        .unwrap()
+        .iter()
+        .map(|r| r.url.query().unwrap_or_default().to_string())
+        .collect();
+    assert_eq!(asked.len(), 2);
+    assert!(
+        asked[1].contains("after_id=claude-sonnet-4-5-20250929"),
+        "{asked:?}"
+    );
+}
+
+#[tokio::test]
+async fn says_plainly_when_the_key_is_missing_or_refused() {
+    let err = crate::providers::anthropic_models("http://127.0.0.1:1", "  ")
+        .await
+        .unwrap_err();
+    assert!(
+        err.to_string().contains("Add an Anthropic API key"),
+        "{err}"
+    );
+
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/v1/models"))
+        .respond_with(ResponseTemplate::new(401).set_body_json(json!({
+            "type": "error",
+            "error": {"type": "authentication_error", "message": "invalid x-api-key"},
+        })))
+        .mount(&server)
+        .await;
+    let err = crate::providers::anthropic_models(&server.uri(), "sk-ant-wrong")
+        .await
+        .unwrap_err();
+    assert!(
+        err.to_string()
+            .contains("rejected the API key: invalid x-api-key"),
+        "{err}"
+    );
 }

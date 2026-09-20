@@ -18,6 +18,7 @@ fn body(text: &str) -> MessageBody {
         }],
         list_unsubscribe: Some("<https://news.example/u>".into()),
         one_click_unsubscribe: true,
+        calendar: Some("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n".into()),
     }
 }
 

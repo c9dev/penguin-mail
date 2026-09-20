@@ -62,6 +62,12 @@ pub struct Settings {
     /// without waiting on the network; the app refreshes it in the
     /// background.
     pub send_as: BTreeMap<String, Vec<crate::compose::SendAsAddress>>,
+    /// What a new message starts as: styled text, or Markdown source.
+    pub compose_format: ComposeFormat,
+    /// Read each account's Google contacts, for names, photos, and
+    /// recipient suggestions. Off until the owner turns it on, because it
+    /// is the one thing here that asks Google for more access.
+    pub contacts: bool,
 }
 
 /// Where the assistant's model runs.
@@ -154,6 +160,28 @@ impl Default for Settings {
             spell_words: Vec::new(),
             last_sender: BTreeMap::new(),
             send_as: BTreeMap::new(),
+            compose_format: ComposeFormat::Rich,
+            contacts: false,
+        }
+    }
+}
+
+/// How the composer holds a message while it is being written.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ComposeFormat {
+    /// Bold shows as bold: the formatting bar styles the text itself.
+    Rich,
+    /// The writer types Markdown and sees its marks.
+    Markdown,
+}
+
+impl Choice for ComposeFormat {
+    const ALL: &'static [Self] = &[ComposeFormat::Rich, ComposeFormat::Markdown];
+    fn label(self) -> &'static str {
+        match self {
+            ComposeFormat::Rich => "Rich text",
+            ComposeFormat::Markdown => "Markdown",
         }
     }
 }

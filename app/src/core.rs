@@ -16,9 +16,9 @@ use mailrs_gmail::{GMAIL_API_BASE, KeyringTokenStore, OAuthClient, TokenStore, a
 use mailrs_store::{Db, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::{
-    AccountSettings, AccountSync, Accounts, AnyGmail, Changed, Counts, Failure, History, Listing,
-    MailAction, MailActions, Mailbox, Mailboxes, Outcome, Scope, SyncEngine, View, connect_account,
-    now_millis,
+    AccountSettings, AccountSync, Accounts, AnyGmail, Changed, ContactBook, Counts, Failure,
+    History, Invitations, Listing, MailAction, MailActions, Mailbox, Mailboxes, Outcome, Permitted,
+    Scope, SyncEngine, View, connect_account, now_millis,
 };
 
 use crate::assistant::run::{Background, Modules};
@@ -37,6 +37,11 @@ pub type Lists = Mailboxes<RunningEngine>;
 /// Changes an account's Gmail settings for the dialogs and the assistant
 /// alike. See `mailrs_sync::AccountSettings`.
 pub type GmailSettings = AccountSettings<RunningEngine>;
+/// Reads the accounts' Google contacts. See `mailrs_sync::ContactBook`.
+pub type Contacts = ContactBook<RunningEngine>;
+/// Reads the invitations in mail and answers them. See
+/// `mailrs_sync::Invitations`.
+pub type Events = Invitations<RunningEngine>;
 
 /// The engine that runs now. Changing the sync settings replaces it, so mail
 /// actions look accounts up here rather than keep one engine.
@@ -75,6 +80,8 @@ pub struct Core {
     actions: Arc<Actions>,
     lists: Arc<Lists>,
     gmail_settings: Arc<GmailSettings>,
+    contacts: Arc<Contacts>,
+    invitations: Arc<Events>,
     config: RefCell<Option<Config>>,
     tokens: Arc<dyn TokenStore>,
     events_tx: async_channel::Sender<ChangeEvent>,
@@ -140,6 +147,13 @@ impl Core {
         let actions = Arc::new(MailActions::new(Arc::clone(&engine), db.clone()));
         let lists = Arc::new(Mailboxes::new(Arc::clone(&engine), db.clone()));
         let gmail_settings = Arc::new(AccountSettings::new(Arc::clone(&engine), db.clone()));
+        let photo_dir = contact_photo_dir(demo, &dir);
+        if demo {
+            let photos = photo_dir.clone();
+            runtime.block_on(db.write(move |c| demo::seed_contacts(c, &photos)))?;
+        }
+        let contacts = Arc::new(ContactBook::new(Arc::clone(&engine), db.clone(), photo_dir));
+        let invitations = Arc::new(Invitations::new(Arc::clone(&engine), db.clone()));
         let core = Rc::new(Core {
             runtime,
             db,
@@ -149,6 +163,8 @@ impl Core {
             actions,
             lists,
             gmail_settings,
+            contacts,
+            invitations,
             config: RefCell::new(config),
             tokens: Arc::new(KeyringTokenStore::new()),
             events_tx,
@@ -319,6 +335,17 @@ impl Core {
         Arc::clone(&self.gmail_settings)
     }
 
+    /// The accounts' Google contacts: names, photos, and the rest.
+    pub fn contacts(&self) -> Arc<Contacts> {
+        Arc::clone(&self.contacts)
+    }
+
+    /// The invitations in mail: what one says, and the answer the user
+    /// sends back.
+    pub fn invitations(&self) -> Arc<Events> {
+        Arc::clone(&self.invitations)
+    }
+
     /// The modules the assistant's tools work through.
     pub fn modules(&self) -> Modules<RunningEngine> {
         Modules {
@@ -348,6 +375,13 @@ impl Core {
                 })
                 .collect(),
         })
+    }
+
+    /// Erases the targets for good. See `MailActions::erase`.
+    pub async fn erase(&self, targets: Vec<Target>) -> Result<Permitted<Outcome>> {
+        let actions = Arc::clone(&self.actions);
+        self.call(async move { actions.erase(&targets).await })
+            .await
     }
 
     /// One page of a mailbox. See `Mailboxes::list`.
@@ -412,19 +446,32 @@ impl Core {
         }
     }
 
+    /// Checks every account now instead of at its next tick. The kept
+    /// Gmail search goes too, since asking for new mail means the folder
+    /// on screen should be listed again rather than answered from memory.
     pub fn poke_all(&self) {
+        self.forget_remote();
         if let Some(engine) = self.engine.current() {
             engine.poke_all();
         }
     }
 
+    /// Drops the Gmail search the last folder or search listing kept, so
+    /// the next listing asks Gmail again.
+    pub fn forget_remote(&self) {
+        self.lists.forget_remote();
+    }
+
     /// Runs the browser consent flow, stores the refresh token, and starts
     /// syncing the account. `urls` receives the consent URL to open. When
-    /// `expected` is set, the user must pick that account.
+    /// `expected` is set, the user must pick that account. `extra` names
+    /// permissions to ask for beyond the ones sign-in always requests, such
+    /// as `DELETE_SCOPE`; an account that already granted them keeps them.
     pub async fn authorize_account(
         &self,
         urls: async_channel::Sender<String>,
         expected: Option<String>,
+        extra: &[&'static str],
     ) -> Result<Account> {
         if self.demo {
             bail!("Demo mode cannot add real accounts.");
@@ -435,8 +482,9 @@ impl Core {
             .current()
             .ok_or_else(|| anyhow!("sync is not running"))?;
         let (db, tokens) = (self.db.clone(), Arc::clone(&self.tokens));
+        let extra = extra.to_vec();
         self.call(async move {
-            let flow = authorize(&oauth, GMAIL_API_BASE, move |url| {
+            let flow = authorize(&oauth, GMAIL_API_BASE, &extra, move |url: &str| {
                 let _ = urls.try_send(url.to_string());
             });
             let authorized = tokio::time::timeout(std::time::Duration::from_secs(300), flow)
@@ -499,6 +547,18 @@ impl Background for Core {
             task.await;
         });
     }
+}
+
+/// Where contact photos are kept: the cache directory, since Google
+/// serves them again whenever they are wanted. Demo photos sit beside the
+/// demo's throwaway store.
+fn contact_photo_dir(demo: bool, data_dir: &std::path::Path) -> PathBuf {
+    if demo {
+        return data_dir.join("contact-photos");
+    }
+    gtk::glib::user_cache_dir()
+        .join(mailrs_sync::config::DIR_NAME)
+        .join("contact-photos")
 }
 
 /// Gmail for one account: the sample mailbox in demo mode, or the real

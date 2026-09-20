@@ -5,7 +5,8 @@
 //! Remind Me, and Send Later build their rows.
 
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use chrono::{DateTime, Local, TimeZone};
 use mailrs_domain::{
@@ -25,6 +26,15 @@ const REMOTE_LIMIT: usize = 100;
 
 /// Rows a Gmail search brings back for what the user typed.
 const SEARCH_LIMIT: usize = 50;
+
+/// Rows of a Gmail search whose metadata is fetched at once. Gmail charges
+/// 5 units a message for it, so a folder pays for the screenful it shows
+/// and leaves the rest until the reader scrolls.
+const REMOTE_PAGE: usize = 25;
+
+/// How long a Gmail search answers again without asking Gmail. The engine
+/// polls every 30 seconds, so a folder is at most one poll behind.
+const REMOTE_FRESH: Duration = Duration::from_secs(60);
 
 const DAY: EpochMillis = 24 * 60 * 60 * 1000;
 
@@ -321,15 +331,73 @@ pub struct Counts {
     pub categories: HashMap<Category, i64>,
 }
 
+/// What one Gmail search returned, so the folder it fills does not ask
+/// again on every refresh. Gmail hands back every id in one 5-unit call
+/// but charges 5 units for each message's metadata, so the ids are kept
+/// and the metadata is fetched a screen at a time.
+struct RemoteListing {
+    query: String,
+    accounts: Vec<AccountId>,
+    at: Instant,
+    /// Per account: the ids the search returned, newest first, and the
+    /// metadata fetched so far.
+    pages: Vec<RemotePage>,
+    notices: Vec<String>,
+}
+
+#[derive(Default)]
+struct RemotePage {
+    /// Whether the search has run for this account yet.
+    listed: bool,
+    ids: Vec<String>,
+    metas: Vec<MessageMeta>,
+    /// Ids whose metadata has been asked for, from the front of `ids`.
+    fetched: usize,
+}
+
+impl RemoteListing {
+    /// Whether this is still the search the caller wants, and recent
+    /// enough to answer from.
+    fn answers(&self, query: &str, accounts: &[AccountId]) -> bool {
+        self.query == query && self.accounts == accounts && self.at.elapsed() < REMOTE_FRESH
+    }
+
+    /// Whether every account has metadata for its first `wanted` ids, or
+    /// has no more ids to fetch.
+    fn complete(&self, wanted: usize) -> bool {
+        !self.pages.is_empty() && self.pages.iter().all(|p| p.done() || p.fetched >= wanted)
+    }
+}
+
+impl RemotePage {
+    /// Whether Gmail has no more ids to fetch metadata for.
+    fn done(&self) -> bool {
+        self.listed && self.fetched >= self.ids.len()
+    }
+}
+
 /// Reads mailboxes. One instance serves the window and the assistant.
 pub struct Mailboxes<A: Accounts> {
     accounts: Arc<A>,
     db: Db,
+    /// The last Gmail search, kept so a folder that reloads a second later
+    /// costs nothing.
+    remote: Mutex<Option<RemoteListing>>,
 }
 
 impl<A: Accounts> Mailboxes<A> {
     pub fn new(accounts: Arc<A>, db: Db) -> Self {
-        Mailboxes { accounts, db }
+        Mailboxes {
+            accounts,
+            db,
+            remote: Mutex::new(None),
+        }
+    }
+
+    /// Throws away the kept Gmail search, so the next listing asks Gmail
+    /// again. The window calls this when the reader asks for a refresh.
+    pub fn forget_remote(&self) {
+        *self.remote.lock().expect("remote listing poisoned") = None;
     }
 
     /// One page of `mailbox`, skipping the `from` rows the caller holds.
@@ -348,10 +416,10 @@ impl<A: Accounts> Mailboxes<A> {
         };
         match mailbox {
             Mailbox::Folder { account_id, folder } => {
-                self.remote(folder.query(), *account_id, scope, view, base)
+                self.remote(folder.query(), *account_id, scope, view, base, from)
                     .await
             }
-            Mailbox::Search { query, account_id } if from == 0 => {
+            Mailbox::Search { query, account_id } => {
                 let limit = view.limit.unwrap_or(SEARCH_LIMIT);
                 let found = self
                     .remote(
@@ -363,6 +431,7 @@ impl<A: Accounts> Mailboxes<A> {
                             ..view.clone()
                         },
                         base,
+                        from,
                     )
                     .await?;
                 Ok(Listing {
@@ -370,7 +439,7 @@ impl<A: Accounts> Mailboxes<A> {
                     ..found
                 })
             }
-            Mailbox::Smart(smart) if from == 0 => {
+            Mailbox::Smart(smart) => {
                 let Some(query) = smart.query() else {
                     return Ok(Listing {
                         notices: vec!["This smart mailbox has no conditions".into()],
@@ -378,9 +447,8 @@ impl<A: Accounts> Mailboxes<A> {
                     });
                 };
                 let only = smart.account.as_deref().and_then(|e| scope.id_of(e));
-                self.remote(&query, only, scope, view, base).await
+                self.remote(&query, only, scope, view, base, from).await
             }
-            _ if from > 0 && mailbox.is_remote() => Ok(base),
             Mailbox::Scheduled => self.scheduled(view, base, from).await,
             Mailbox::Reminders => self.reminders(view, base, from).await,
             Mailbox::FollowUp => self.follow_ups(view, base, from).await,
@@ -585,7 +653,14 @@ impl<A: Accounts> Mailboxes<A> {
     }
 
     /// Lists a Gmail search across the accounts in scope, one row per
-    /// conversation when threading is on.
+    /// conversation when threading is on, skipping the `from` rows the
+    /// caller already has.
+    ///
+    /// The ids come from one 5-unit call per account and are kept for
+    /// [`REMOTE_FRESH`]; metadata costs 5 units a message, so it is fetched
+    /// [`REMOTE_PAGE`] rows at a time as the reader scrolls. Opening Junk
+    /// with 100 messages in it costs 130 units rather than 505, and opening
+    /// it again a moment later costs nothing.
     async fn remote(
         &self,
         query: &str,
@@ -593,36 +668,112 @@ impl<A: Accounts> Mailboxes<A> {
         scope: &Scope,
         view: &View,
         base: Listing,
+        from: usize,
     ) -> Result<Listing, SyncError> {
         let limit = view.limit.unwrap_or(REMOTE_LIMIT);
         let targets = scope.searched(only);
-        let searches = targets.iter().map(|account| {
-            let sync = self.accounts.account(account.id);
-            let query = query.to_string();
-            async move {
-                match sync {
-                    Some(sync) => sync.search(&query, limit).await,
-                    None => Ok(Vec::new()),
-                }
+        let ids: Vec<AccountId> = targets.iter().map(|a| a.id).collect();
+
+        let kept = {
+            let mut held = self.remote.lock().expect("remote listing poisoned");
+            match held.take() {
+                Some(listing) if listing.answers(query, &ids) => Some(listing),
+                _ => None,
             }
+        };
+        let mut listing = kept.unwrap_or_else(|| RemoteListing {
+            query: query.to_string(),
+            accounts: ids,
+            at: Instant::now(),
+            pages: Vec::new(),
+            notices: Vec::new(),
         });
-        let results = futures::future::join_all(searches).await;
-        let (mut hits, mut notices) = (Vec::new(), Vec::new());
+
+        // Grouping messages into conversations can leave a page with fewer
+        // rows than it fetched messages, so keep asking until the page the
+        // reader wants has rows in it or Gmail has no more ids.
+        let mut wanted = (from + REMOTE_PAGE).min(limit);
+        let mut rows = Self::rows(&listing, view, limit);
+        while rows.len() <= from && !listing.complete(wanted) {
+            self.fetch_page(&mut listing, &targets, limit, wanted).await;
+            rows = Self::rows(&listing, view, limit);
+            wanted = (wanted + REMOTE_PAGE).min(limit);
+            if wanted >= limit && listing.complete(wanted) {
+                break;
+            }
+        }
+
+        let more = rows.len() < limit && !listing.complete(limit);
+        let notices = listing.notices.clone();
+        *self.remote.lock().expect("remote listing poisoned") = Some(listing);
+        Ok(Listing {
+            rows: rows.split_off(from.min(rows.len())),
+            notices,
+            more,
+            ..base
+        })
+    }
+
+    /// Fetches metadata up to the `wanted`th id of every account, listing
+    /// the ids first for an account that has none yet.
+    async fn fetch_page(
+        &self,
+        listing: &mut RemoteListing,
+        targets: &[&Account],
+        limit: usize,
+        wanted: usize,
+    ) {
+        if listing.pages.is_empty() {
+            listing.pages = targets.iter().map(|_| RemotePage::default()).collect();
+        }
+        let loads = targets
+            .iter()
+            .zip(listing.pages.drain(..))
+            .map(|(account, mut page)| {
+                let sync = self.accounts.account(account.id);
+                let query = listing.query.clone();
+                async move {
+                    let Some(sync) = sync else {
+                        return Ok(page);
+                    };
+                    if !page.listed {
+                        page.ids = sync.search_ids(&query, limit).await?;
+                        page.listed = true;
+                    }
+                    let take = wanted.min(page.ids.len());
+                    if take > page.fetched {
+                        let next = sync.metadata_of(&page.ids[page.fetched..take]).await?;
+                        page.metas.extend(next);
+                        page.fetched = take;
+                    }
+                    Ok(page)
+                }
+            });
+        let results: Vec<Result<RemotePage, SyncError>> = futures::future::join_all(loads).await;
         for (account, result) in targets.iter().zip(results) {
             match result {
-                Ok(found) => hits.extend(found),
+                Ok(page) => listing.pages.push(page),
                 Err(err) => {
-                    notices.push(format!("Could not load mail for {}: {err}", account.email))
+                    listing
+                        .notices
+                        .push(format!("Could not load mail for {}: {err}", account.email));
+                    listing.pages.push(RemotePage::default());
                 }
             }
         }
+    }
+
+    /// The rows of a kept search, merged across its accounts and newest
+    /// first.
+    fn rows(listing: &RemoteListing, view: &View, limit: usize) -> Vec<ThreadSummary> {
+        let hits: Vec<MessageMeta> = listing
+            .pages
+            .iter()
+            .flat_map(|p| p.metas.iter().cloned())
+            .collect();
         let mut rows = summarize_search(hits, view.threading);
         rows.truncate(limit);
-        Ok(Listing {
-            rows,
-            notices,
-            ..base
-        })
+        rows
     }
 
     async fn scheduled(

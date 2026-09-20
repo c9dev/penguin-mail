@@ -13,19 +13,26 @@ time, and keeps your mail on your own computer.
 - **Conversations in one view.** Older messages fold down to a line; quoted
   text and signatures are dimmed. HTML mail renders in its own sandbox with
   scripts off and remote images blocked until you ask for them.
-- **A Markdown composer.** Replies, reply-all, and forwards thread correctly
-  in Gmail. Drafts save to Gmail, so they follow you to your phone.
+- **A composer that shows formatting as you write it.** Bold reads as bold,
+  not as asterisks. Recipients are chips, Cc and Bcc stay hidden until you
+  want them, and attachments list their sizes. Replies, reply-all, and
+  forwards thread correctly in Gmail, and drafts save to Gmail with their
+  formatting, so they follow you to your phone and come back whole.
 - **Gmail search**, with its full query syntax, across one account or all.
 - **Junk, Trash, and All Mail**, for every account together or one at a
   time, read live from Gmail. Not Junk and Move to Inbox put mail back.
+  In the Trash, Delete Forever erases mail through Gmail. Penguin Mail asks
+  Google for that permission the first time you use it, never at sign-in,
+  and asks you to confirm each time, since nothing can undo it.
 - **Recipient suggestions** in To and Cc, from people you have written to
   and heard from.
 - **Undo Send and Send Later.** Sent mail waits a few seconds with an Undo
   button (Preferences sets how long). Send Later, on the arrow next to
   Send, schedules a message; it waits in Send Later and goes out on time
   while Penguin Mail runs, even in the tray.
-- **Formatting without Markdown**: a bar for bold, italic, strikethrough,
-  links, lists, and quotes. Paste, drop, or insert images into the text.
+- **Markdown when you want it.** Format Markdown turns Markdown in the body
+  into formatted text; Edit as Markdown goes back. Preferences sets which
+  one new messages start in. Paste, drop, or insert images into the text.
 - **Tray and notifications.** An unread count in the tray and a notification
   for new mail, which opens the thread when clicked.
 - **Select several at once** with Ctrl+click, Shift+click, or Ctrl+A, then
@@ -238,7 +245,7 @@ gap. The design and its trade-offs are written up in
 ## Development
 
 ```sh
-cargo test --workspace                          # about 310 tests, no network
+cargo test --workspace                          # about 400 tests, no network
 cargo clippy --workspace --all-targets -- -D warnings
 cargo run -p mailrs -- --demo                   # the UI with sample data
 scripts/smoke.sh                                # by hand, against a real account

@@ -22,6 +22,13 @@ pub fn extract_body(payload: &MessagePart) -> MessageBody {
 }
 
 fn walk(part: &MessagePart, body: &mut MessageBody) {
+    // An invitation arrives as a `text/calendar` part beside the text and
+    // the HTML, and again as an `.ics` file. The part beside the text
+    // carries its content inline, so it is the one worth reading; the file
+    // still shows up in the attachment list below.
+    if body.calendar.is_none() && is_calendar(part) {
+        body.calendar = decode_text(part).filter(|ics| ics.contains("BEGIN:VCALENDAR"));
+    }
     if !part.filename.is_empty() {
         body.attachments.push(Attachment {
             part_id: part.part_id.clone(),
@@ -48,16 +55,47 @@ fn walk(part: &MessagePart, body: &mut MessageBody) {
     }
 }
 
+/// Whether a part holds iCalendar text. Gmail labels the inline part
+/// `text/calendar`; Outlook sends the file as `application/ics` and
+/// sometimes as `application/octet-stream` with an `.ics` name.
+fn is_calendar(part: &MessagePart) -> bool {
+    part.mime_type.eq_ignore_ascii_case("text/calendar")
+        || part.mime_type.eq_ignore_ascii_case("application/ics")
+        || part
+            .mime_type
+            .to_ascii_lowercase()
+            .starts_with("text/calendar;")
+        || part.filename.to_ascii_lowercase().ends_with(".ics")
+}
+
 fn decode_text(part: &MessagePart) -> Option<String> {
     let data = part.body.data.as_deref()?;
     let bytes = URL_SAFE_NO_PAD_INDIFFERENT.decode(data.trim()).ok()?;
-    let charset = find_header(part, "Content-Type")
-        .and_then(charset_param)
-        .unwrap_or("utf-8");
-    let encoding =
-        encoding_rs::Encoding::for_label(charset.as_bytes()).unwrap_or(encoding_rs::UTF_8);
-    let (text, _, _) = encoding.decode(&bytes);
-    Some(text.into_owned())
+    let charset = find_header(part, "Content-Type").and_then(charset_param);
+    Some(decode_charset(&bytes, charset))
+}
+
+/// Text from `bytes`, read in the charset the part declares. The bytes win
+/// over the label when they are valid UTF-8 and hold a character above
+/// ASCII: plenty of mailers send UTF-8 under `iso-8859-1` or `us-ascii`,
+/// and obeying the label is what turns "Direção" into "DireÃ§Ã£o". A part
+/// that says UTF-8 but is not falls the other way, to windows-1252, rather
+/// than showing a row of replacement characters.
+pub fn decode_charset(bytes: &[u8], charset: Option<&str>) -> String {
+    let declared = charset
+        .and_then(|label| encoding_rs::Encoding::for_label(label.as_bytes()))
+        .unwrap_or(encoding_rs::UTF_8);
+    if declared != encoding_rs::UTF_8
+        && let Ok(text) = std::str::from_utf8(bytes)
+        && !text.is_ascii()
+    {
+        return text.to_string();
+    }
+    let (text, _, replaced) = declared.decode(bytes);
+    if replaced && declared == encoding_rs::UTF_8 {
+        return encoding_rs::WINDOWS_1252.decode(bytes).0.into_owned();
+    }
+    text.into_owned()
 }
 
 /// The `charset` parameter of a `Content-Type` value, without quotes.

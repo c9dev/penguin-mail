@@ -29,7 +29,9 @@ fn oauth(server: &MockServer) -> OAuthClient {
 }
 
 fn client(server: &MockServer) -> GmailClient {
-    GmailClient::new(oauth(server), "rt".into()).with_base_url(format!("{}{API}", server.uri()))
+    GmailClient::new(oauth(server), "rt".into())
+        .with_base_url(format!("{}{API}", server.uri()))
+        .with_people_url(format!("{}/v1", server.uri()))
 }
 
 fn message_json(id: &str) -> serde_json::Value {
@@ -239,6 +241,38 @@ async fn modify_and_trash_post_to_gmail() {
 }
 
 #[tokio::test]
+async fn a_batch_changes_every_message_in_one_post() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("POST"))
+        .and(path(format!("{API}/messages/batchModify")))
+        .and(body_json(json!({
+            "ids": ["m1", "m2", "m3"],
+            "addLabelIds": ["TRASH"],
+            "removeLabelIds": ["INBOX"],
+        })))
+        .respond_with(ResponseTemplate::new(204))
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path(format!("{API}/messages/batchDelete")))
+        .and(body_json(json!({"ids": ["m1", "m2"]})))
+        .respond_with(ResponseTemplate::new(204))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let client = client(&server);
+    let ids = ["m1".to_string(), "m2".to_string(), "m3".to_string()];
+
+    client
+        .batch_modify(&ids, &["TRASH".into()], &["INBOX".into()])
+        .await
+        .unwrap();
+    client.batch_delete(&ids[..2]).await.unwrap();
+}
+
+#[tokio::test]
 async fn authorize_runs_the_consent_flow() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
@@ -262,7 +296,7 @@ async fn authorize_runs_the_consent_flow() {
         .await;
 
     let api = format!("{}{API}", server.uri());
-    let authorized = authorize(&oauth(&server), &api, |consent_url| {
+    let authorized = authorize(&oauth(&server), &api, &[], |consent_url| {
         let url = url::Url::parse(consent_url).unwrap();
         let q: HashMap<String, String> = url.query_pairs().into_owned().collect();
         let redirect = q["redirect_uri"].trim_start_matches("http://").to_string();
@@ -458,4 +492,67 @@ async fn the_raw_message_is_decoded() {
         client(&server).raw_message("m1").await.unwrap(),
         b"Subject: Hi\r\n\r\nbody"
     );
+}
+
+#[tokio::test]
+async fn contacts_page_through_and_hand_back_a_sync_token() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    let first = include_str!("people/connections-page-1.json");
+    let last = include_str!("people/connections-page-2.json");
+    Mock::given(method("GET"))
+        .and(path("/v1/people/me/connections"))
+        .and(header("authorization", "Bearer at-1"))
+        .and(query_param(
+            "personFields",
+            "names,emailAddresses,photos,organizations,phoneNumbers",
+        ))
+        .and(query_param("requestSyncToken", "true"))
+        .and(query_param("pageToken", "page-2"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(last, "application/json"))
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/v1/people/me/connections"))
+        .and(query_param("syncToken", "sync-token-1"))
+        .respond_with(ResponseTemplate::new(400).set_body_json(json!({"error": {
+            "code": 400,
+            "status": "FAILED_PRECONDITION",
+            "details": [{"reason": "EXPIRED_SYNC_TOKEN"}],
+        }})))
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/v1/people/me/connections"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(first, "application/json"))
+        .mount(&server)
+        .await;
+
+    let client = client(&server);
+    let page = client.connections(None, None).await.unwrap();
+    assert_eq!(page.people.len(), 2);
+    assert_eq!(page.next_page_token.as_deref(), Some("page-2"));
+
+    let page = client.connections(Some("page-2"), None).await.unwrap();
+    assert_eq!(page.next_sync_token.as_deref(), Some("sync-token-1"));
+
+    assert!(matches!(
+        client.connections(None, Some("sync-token-1")).await,
+        Err(GmailError::ExpiredSyncToken)
+    ));
+}
+
+#[tokio::test]
+async fn a_contact_photo_arrives_as_plain_bytes() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/photos/mara"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(b"jpeg-bytes".to_vec(), "image/jpeg"))
+        .mount(&server)
+        .await;
+    let photo = client(&server)
+        .contact_photo(&format!("{}/photos/mara", server.uri()))
+        .await
+        .unwrap();
+    assert_eq!(photo, b"jpeg-bytes");
 }

@@ -7,12 +7,14 @@ use serde::{Deserialize, Serialize};
 
 mod category;
 mod folder;
+pub mod invitation;
 pub mod smart;
 pub mod system_label;
 mod target;
 
 pub use category::Category;
 pub use folder::Folder;
+pub use invitation::Invitation;
 pub use smart::SmartMailbox;
 pub use target::Target;
 
@@ -273,6 +275,10 @@ pub struct MessageBody {
     /// a single POST to the https link unsubscribes (RFC 8058).
     #[serde(default)]
     pub one_click_unsubscribe: bool,
+    /// The `text/calendar` part as it arrived, when the message carries
+    /// one. `mailrs_domain::invitation::read` turns it into an event.
+    #[serde(default)]
+    pub calendar: Option<String>,
 }
 
 /// A Gmail filter: mail matching `criteria` gets `action`. Field names
@@ -372,6 +378,13 @@ pub enum ChangeEvent {
         message_ids: Vec<String>,
     },
     WriteFailed {
+        account_id: AccountId,
+        message: String,
+    },
+    /// Gmail asked a mail action to slow down and the action is waiting it
+    /// out. Says so once per action, so the window can show that the work
+    /// is still going instead of looking stuck.
+    WaitingOnGmail {
         account_id: AccountId,
         message: String,
     },

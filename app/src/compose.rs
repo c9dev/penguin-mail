@@ -1,6 +1,12 @@
 //! What the composer sends: reply and forward drafts, Markdown rendering,
-//! and MIME assembly. The `text/plain` part of every message is the
-//! Markdown source, which is how a saved draft reopens as Markdown.
+//! and MIME assembly.
+//!
+//! A draft carries its body twice over. `markdown` is the source every
+//! caller writes, from a reply's quote to the assistant's `draft_email`,
+//! and it is the `text/plain` part of a message written as Markdown, which
+//! is how such a draft reopens. `rich` is set when the writer used rich
+//! text: it then decides both parts, HTML from the styled blocks and plain
+//! text stripped from the same blocks.
 
 use mail_builder::MessageBuilder;
 use mail_builder::headers::address::Address as MimeAddress;
@@ -11,6 +17,7 @@ use pulldown_cmark::{Event, Options, Parser, html};
 use serde::{Deserialize, Serialize};
 
 use crate::format::full_date;
+use crate::richtext::{self, RichBody};
 
 /// One address an account may send mail as, as Gmail last reported it: the
 /// account's own address, or an alias Gmail has verified. Gmail keeps a
@@ -156,6 +163,10 @@ pub struct Draft {
     pub bcc: Vec<Address>,
     pub subject: String,
     pub markdown: String,
+    /// The body as the writer styled it, when the composer is in rich text.
+    /// It decides what goes out; `markdown` is then the same body written
+    /// as Markdown.
+    pub rich: Option<RichBody>,
     /// `Message-ID` of the message this replies to, with angle brackets.
     pub in_reply_to: Option<String>,
     pub references: Vec<String>,
@@ -186,6 +197,7 @@ impl Draft {
             bcc: vec![],
             subject: String::new(),
             markdown: String::new(),
+            rich: None,
             in_reply_to: None,
             references: vec![],
             thread_id: None,
@@ -204,12 +216,40 @@ impl Draft {
             .iter()
             .chain(&self.cc)
             .chain(&self.bcc)
-            .find(|a| !looks_like_address(&a.email))
+            .find(|a| !is_address(&a.email))
             .map(|a| format!("“{}” is not an email address.", a.email))
+    }
+
+    /// Takes the body of a message this composer reopens: the Markdown
+    /// source from the text part, and the styled blocks from the HTML
+    /// part, so a draft written in rich text comes back as it was
+    /// written, wherever it was written.
+    pub fn take_body(&mut self, body: &MessageBody) {
+        self.markdown = body_text(body);
+        self.rich = body
+            .html
+            .as_deref()
+            .filter(|html| !html.trim().is_empty())
+            .map(RichBody::from_html)
+            .filter(|rich| !rich.is_empty());
+    }
+
+    /// Whether the body still refers to the inline image `cid`.
+    fn shows_image(&self, cid: &str) -> bool {
+        let needle = format!("cid:{cid}");
+        match &self.rich {
+            Some(rich) => rich
+                .blocks
+                .iter()
+                .flat_map(|b| &b.spans)
+                .any(|s| s.image.as_deref() == Some(needle.as_str())),
+            None => self.markdown.contains(&needle),
+        }
     }
 }
 
-fn looks_like_address(email: &str) -> bool {
+/// Whether this reads as an address the message can go to.
+pub fn is_address(email: &str) -> bool {
     let mut parts = email.splitn(2, '@');
     let (local, domain) = (parts.next().unwrap_or(""), parts.next().unwrap_or(""));
     !local.is_empty()
@@ -507,13 +547,14 @@ pub fn markdown_to_html(markdown: &str) -> String {
     let mut body = String::new();
     html::push_html(&mut body, events);
     let body = body
-        .replace("<blockquote>", "<blockquote style=\"margin:0 0 0 0.8ex;border-left:2px solid #ccc;padding-left:1ex;color:#555\">")
-        .replace("<pre>", "<pre style=\"background:#f6f6f8;padding:10px;border-radius:6px;overflow:auto\">")
-        .replace("<p>", "<p style=\"margin:0 0 1em\">")
-        .replace("<img ", "<img style=\"max-width:100%;height:auto\" ");
-    format!(
-        "<div style=\"font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5\">{body}</div>"
-    )
+        .replace(
+            "<blockquote>",
+            &format!("<blockquote style=\"{}\">", richtext::QUOTE),
+        )
+        .replace("<pre>", &format!("<pre style=\"{}\">", richtext::PRE))
+        .replace("<p>", &format!("<p style=\"{}\">", richtext::PARAGRAPH))
+        .replace("<img ", &format!("<img style=\"{}\" ", richtext::IMAGE));
+    richtext::document(&body)
 }
 
 /// Recipients as the composer shows them: `Name <email>`, comma separated,
@@ -566,13 +607,17 @@ fn bare_id(id: &str) -> String {
 /// The RFC 822 bytes for `draft`: `multipart/alternative` with the Markdown
 /// source as text and its rendering as HTML, plus any attachments.
 pub fn build_mime(draft: &Draft, date_secs: i64, message_id: &str) -> Result<Vec<u8>, String> {
+    let (text, html) = match &draft.rich {
+        Some(rich) => (rich.to_plain(), rich.to_html()),
+        None => (draft.markdown.clone(), markdown_to_html(&draft.markdown)),
+    };
     let mut builder = MessageBuilder::new()
         .from(mime_address(&draft.from))
         .subject(draft.subject.trim().to_string())
         .date(date_secs)
         .message_id(bare_id(message_id))
-        .text_body(draft.markdown.clone())
-        .html_body(markdown_to_html(&draft.markdown));
+        .text_body(text)
+        .html_body(html);
     if !draft.to.is_empty() {
         builder = builder.to(draft.to.iter().map(mime_address).collect::<Vec<_>>());
     }
@@ -597,7 +642,7 @@ pub fn build_mime(draft: &Draft, date_secs: i64, message_id: &str) -> Result<Vec
     for attachment in &draft.attachments {
         builder = match &attachment.content_id {
             // An image the text shows, unless the text no longer refers to it.
-            Some(cid) if draft.markdown.contains(&format!("cid:{cid}")) => builder.inline(
+            Some(cid) if draft.shows_image(cid) => builder.inline(
                 attachment.mime_type.clone(),
                 cid.clone(),
                 attachment.data.clone(),
@@ -987,6 +1032,84 @@ mod tests {
     }
 
     #[test]
+    fn a_rich_body_decides_both_parts_of_the_message() {
+        use crate::richtext::{Block, BlockKind, Span, Style};
+
+        let bold = |text: &str| Span {
+            style: Style {
+                bold: true,
+                ..Style::default()
+            },
+            ..Span::plain(text)
+        };
+        let link = |text: &str, url: &str| Span {
+            link: Some(url.into()),
+            ..Span::plain(text)
+        };
+        let mut draft = Draft::new(1, me());
+        draft.to = vec![addr(None, "ann@example.com")];
+        draft.bcc = vec![addr(None, "cy@example.com")];
+        draft.rich = Some(RichBody {
+            blocks: vec![
+                Block::new(
+                    BlockKind::Paragraph,
+                    vec![
+                        Span::plain("Hi "),
+                        bold("Ann"),
+                        Span::plain(", see "),
+                        link("the menu", "https://example.com/menu"),
+                    ],
+                ),
+                Block::new(BlockKind::Bullet, vec![Span::plain("soup")]),
+            ],
+        });
+        draft.markdown = draft.rich.as_ref().unwrap().to_markdown();
+        let raw = build_mime(&draft, 0, "id@example.com").unwrap();
+        let parsed = MessageParser::default().parse(&raw).unwrap();
+        assert_eq!(
+            parsed.bcc().unwrap().first().unwrap().address(),
+            Some("cy@example.com")
+        );
+        let text = parsed.body_text(0).unwrap().replace("\r\n", "\n");
+        assert_eq!(
+            text.trim_end(),
+            "Hi Ann, see the menu <https://example.com/menu>\n- soup"
+        );
+        let html = parsed.body_html(0).unwrap();
+        assert!(html.contains("<strong>Ann</strong>"), "{html}");
+        assert!(html.contains("<li>soup</li>"), "{html}");
+        assert!(!html.contains("**"), "{html}");
+    }
+
+    #[test]
+    fn a_rich_body_keeps_the_images_it_still_shows() {
+        use crate::richtext::{Block, BlockKind, Span};
+
+        let mut draft = Draft::new(1, me());
+        draft.to = vec![addr(None, "ann@example.com")];
+        draft.rich = Some(RichBody {
+            blocks: vec![Block::new(
+                BlockKind::Paragraph,
+                vec![Span::image("map", "cid:map1@mailrs")],
+            )],
+        });
+        let image = |cid: &str| OutgoingAttachment {
+            filename: format!("{cid}.png"),
+            mime_type: "image/png".into(),
+            data: vec![137, 80, 78, 71],
+            content_id: Some(cid.into()),
+        };
+        draft.attachments = vec![image("map1@mailrs"), image("gone@mailrs")];
+        let raw = build_mime(&draft, 0, "id@example.com").unwrap();
+        let parsed = MessageParser::default().parse(&raw).unwrap();
+        let ids: Vec<&str> = parsed
+            .attachments()
+            .filter_map(|a| a.content_id())
+            .collect();
+        assert_eq!(ids, ["map1@mailrs"]);
+    }
+
+    #[test]
     fn drafts_without_recipients_or_with_bad_ones_cannot_be_sent() {
         let mut draft = Draft::new(1, me());
         assert!(draft.problem().is_some());
@@ -1074,6 +1197,88 @@ mod tests {
             "\n\n-- \nDana\n\nOn Monday, Ann wrote:\n> hi"
         );
         assert_eq!(with_signature("body", "  "), "body");
+    }
+
+    #[test]
+    fn a_rich_draft_comes_back_from_the_message_it_was_saved_as() {
+        use crate::richtext::{Block, BlockKind, Span, Style};
+
+        let bold = |text: &str| Span {
+            style: Style {
+                bold: true,
+                ..Style::default()
+            },
+            ..Span::plain(text)
+        };
+        let mut draft = Draft::new(1, me());
+        draft.to = vec![addr(None, "ann@example.com")];
+        draft.subject = "Lunch".into();
+        draft.rich = Some(RichBody {
+            blocks: vec![
+                Block::new(
+                    BlockKind::Paragraph,
+                    vec![
+                        Span::plain("Hi "),
+                        bold("Ann"),
+                        Span::plain(", the menu is "),
+                        Span {
+                            link: Some("https://e.com/menu".into()),
+                            ..Span::plain("here")
+                        },
+                    ],
+                ),
+                Block::default(),
+                Block::new(BlockKind::Bullet, vec![Span::plain("soup")]),
+                Block::new(BlockKind::Bullet, vec![Span::plain("salad")]),
+            ],
+        });
+        draft.markdown = draft.rich.as_ref().unwrap().to_markdown();
+
+        // Save it the way the composer does, then reopen it from Gmail.
+        let raw = build_mime(&draft, 0, "id@example.com").unwrap();
+        let parsed = MessageParser::default().parse(&raw).unwrap();
+        let body = MessageBody {
+            text: parsed.body_text(0).map(|t| t.to_string()),
+            html: parsed.body_html(0).map(|h| h.to_string()),
+            ..Default::default()
+        };
+        let mut reopened = Draft::new(1, me());
+        reopened.take_body(&body);
+        assert_eq!(reopened.rich, draft.rich, "{:#?}", reopened.rich);
+        // What goes out the second time is what went out the first.
+        let again = build_mime(&reopened, 0, "id@example.com").unwrap();
+        let parsed_again = MessageParser::default().parse(&again).unwrap();
+        assert_eq!(parsed_again.body_html(0), parsed.body_html(0));
+    }
+
+    #[test]
+    fn a_draft_written_in_another_client_reopens_with_its_words() {
+        let body = MessageBody {
+            text: Some("Hi Ann,\r\nBringing soup.".into()),
+            html: Some(
+                "<div dir=\"ltr\"><div>Hi Ann,</div><div>Bringing <b>soup</b>.</div></div>".into(),
+            ),
+            ..Default::default()
+        };
+        let mut draft = Draft::new(1, me());
+        draft.take_body(&body);
+        assert_eq!(draft.markdown, "Hi Ann,\nBringing soup.");
+        let rich = draft.rich.expect("the HTML part opens as rich text");
+        assert_eq!(rich.to_plain(), "Hi Ann,\nBringing soup.");
+        assert!(rich.blocks[1].spans[1].style.bold);
+    }
+
+    #[test]
+    fn a_draft_with_no_html_reopens_as_markdown() {
+        let body = MessageBody {
+            text: Some("# Title\r\nBody".into()),
+            html: None,
+            ..Default::default()
+        };
+        let mut draft = Draft::new(1, me());
+        draft.take_body(&body);
+        assert_eq!(draft.markdown, "# Title\nBody");
+        assert!(draft.rich.is_none());
     }
 
     #[test]

@@ -34,39 +34,35 @@
 .account-3 { background: #c88800; } .account-4 { background: #ed5b00; } .account-5 { background: #e62d42; }
 .account-6 { background: #d56199; } .account-7 { background: #9141ac; } .account-8 { background: #6f8396; }
 
-/* Composer.
-   The header rows are one stack: a label column of fixed width on the left,
-   and every field starting at the same edge with the same height and no
-   background of its own. Padding is in em, so the columns hold together at
-   the Larger text size too. */
-.composer-field { padding: 2px 12px; }
-.composer-field > .composer-label {
-  min-width: 4.2em;
-  padding-right: 0.85em;
-  font-size: 0.94em;
-}
-/* GTK gives entries and dropdown buttons their own padding, which would put
-   each field at a different left edge. Take it off and the column lines up. */
-.composer-field entry,
-.composer-field text,
-.composer-field > .composer-from > button {
-  background: none;
-  box-shadow: none;
-  border: none;
-  outline: none;
-  min-height: 2.2em;
-  padding-left: 0;
-  padding-right: 0;
-}
-.composer-field > .composer-from > button { padding-top: 0; padding-bottom: 0; }
-.composer-field > .composer-from > button > box > label { padding-left: 0; }
-/* The row itself shows the focus, since the flat fields no longer can. */
-.composer-field:focus-within > .composer-label { color: var(--accent-color); }
-.composer-more { min-height: 1.7em; padding: 0 0.6em; font-size: 0.88em; }
-.composer-from-heading { padding: 6px 10px 2px; font-size: 0.82em; font-weight: 700; }
+/* Composer */
+.composer-field { padding: 5px 12px 5px 12px; }
+.composer-field label.dim-label { min-width: 56px; margin-top: 7px; }
+.composer-field entry, .composer-field text { background: none; box-shadow: none; }
 .composer-body { font-size: 1.04em; line-height: 1.5; }
-.attachment-chip { padding: 4px 4px 4px 10px; border-radius: 999px; background: alpha(currentColor, 0.08); }
-.attachment-chip button { min-height: 22px; min-width: 22px; padding: 0; }
+.cc-toggle { font-size: 0.85em; opacity: 0.7; padding: 2px 8px; min-height: 24px; }
+
+/* Recipients, as chips with the address under the pointer. */
+.recipient-chip {
+  padding: 1px 2px 1px 10px; border-radius: 999px;
+  background: alpha(currentColor, 0.09);
+}
+.recipient-chip.invalid { background: alpha(@error_color, 0.18); color: var(--error-color); }
+.recipient-chip button { min-height: 20px; min-width: 20px; padding: 0; opacity: 0.7; }
+.recipient-entry { padding-left: 2px; }
+
+/* The formatting bar: one group of buttons per kind of formatting. */
+.format-bar { padding: 1px 2px; }
+.format-group { padding: 0 6px; }
+.format-group + .format-group { border-left: 1px solid alpha(currentColor, 0.15); }
+.format-bar button { min-width: 28px; min-height: 26px; padding: 2px 4px; }
+.format-bar togglebutton:checked { background: alpha(currentColor, 0.16); }
+
+/* Attachments: one row per file, with its size. */
+.attachment-row {
+  padding: 4px 4px 4px 10px; border-radius: 8px;
+  background: alpha(currentColor, 0.07);
+}
+.attachment-row button { min-height: 22px; min-width: 22px; padding: 0; }
 
 /* Welcome */
 .welcome-card { margin-top: 12px; }
@@ -110,9 +106,27 @@
 .assistant-suggestion { padding: 6px 10px; border-radius: 10px; }
 .assistant-confirm label { font-weight: 600; }
 
-/* Inbox categories: the switcher's unread counts. */
-.category-bar .category-count { font-size: 0.8em; font-weight: 700; font-feature-settings: "tnum"; opacity: 0.7; }
-.category-bar > button { padding-left: 9px; padding-right: 9px; }
+/* Inbox categories: the switcher above an inbox's thread list. */
+.category-bar > toggle { min-width: 34px; min-height: 30px; padding-left: 5px; padding-right: 5px; }
+/* The switcher reads as one strip, so drop the dividers between the icons. */
+.category-bar > separator { background: none; }
+.category-bar .category-name { margin-left: 5px; margin-right: 2px; }
+/* The chosen category leads; the rest sit back a little. */
+.category-bar > toggle image { opacity: 0.75; transition: opacity 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+.category-bar > toggle:checked image, .category-bar > toggle:hover image { opacity: 1; }
+/* The unread count rides the icon's top right corner. */
+.category-bar .category-count {
+  min-width: 9px;
+  padding: 0 2px;
+  border-radius: 99px;
+  font-size: 0.6em;
+  font-weight: 700;
+  font-feature-settings: "tnum";
+  color: var(--accent-fg-color);
+  background: var(--accent-bg-color);
+  transition: opacity 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.category-bar .category-count.no-mail { opacity: 0; }
 
 /* Follow Up: the banner above All Inboxes. */
 .follow-up-banner {
@@ -120,3 +134,42 @@
   background: alpha(var(--accent-bg-color), 0.16);
 }
 .follow-up-banner > image { color: var(--accent-color); }
+
+/* The event card above an invitation, after Apple Mail's. */
+.invitation-area {
+  padding: 12px 16px 4px 16px;
+  background: var(--view-bg-color);
+}
+ /* Adwaita's card style draws the surface; this adds the room inside. */
+.invitation-card { padding: 14px 16px; border-radius: 12px; }
+.invitation-tile {
+  min-width: 52px;
+  padding: 6px 4px 8px 4px;
+  border-radius: 10px;
+  background: alpha(var(--accent-bg-color), 0.14);
+}
+.invitation-month {
+  font-size: 0.72em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent-color);
+}
+.invitation-day {
+  font-size: 1.6em;
+  font-weight: 300;
+  line-height: 1;
+}
+.invitation-when { font-weight: 600; }
+.invitation-news {
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+.invitation-news.changed {
+  color: var(--accent-color);
+  background: alpha(var(--accent-bg-color), 0.14);
+}
+.invitation-news.cancelled {
+  color: var(--error-color);
+  background: alpha(var(--error-bg-color), 0.16);
+}

@@ -14,9 +14,11 @@ use mailrs_domain::{
     Account, AccountId, AccountState, ChangeEvent, Folder, Label, MessageBody, MessageMeta, Target,
     ThreadSummary, system_label,
 };
+use mailrs_gmail::{CONTACTS_SCOPE, DELETE_SCOPE};
 use mailrs_store::{accounts, labels, messages};
-use mailrs_sync::{History, Listing, MailAction, Outcome, Scope, TriageAction, View};
+use mailrs_sync::{History, Listing, MailAction, Outcome, Permitted, Scope, TriageAction, View};
 
+use super::contact_card;
 use super::conversation::{Action, ConversationView, OpenThread};
 use super::sidebar::Sidebar;
 use super::thread_list::{Picked, ThreadList};
@@ -34,6 +36,7 @@ mod detached;
 mod flags;
 mod followup;
 mod hide_my_email;
+mod invitation;
 mod organize;
 mod reminders;
 mod scheduled;
@@ -41,6 +44,23 @@ mod senders;
 
 /// Largest inline image embedded into a page.
 const INLINE_IMAGE_LIMIT: usize = 5 * 1024 * 1024;
+
+/// Bodies fetched at once when a thread opens. Each one is a 5-unit Gmail
+/// call and an account may spend 250 units a second.
+const BODY_FETCHES: usize = 10;
+
+/// Inline images kept in memory, so reopening a conversation does not
+/// download the same pictures again.
+const INLINE_IMAGE_CACHE: usize = 64;
+
+/// Whether a refresh should list the mailbox again. Listing a folder or a
+/// search means a Gmail search for every account on screen, so the window
+/// asks for one only when the rows themselves can have changed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Reload {
+    Yes,
+    No,
+}
 
 type WindowAction = Box<dyn Fn(&Rc<MainWindow>)>;
 type AccountAction = Box<dyn Fn(&Rc<MainWindow>, Account)>;
@@ -77,6 +97,46 @@ pub struct MainWindow {
     assistant_split: adw::OverlaySplitView,
     categories: categories::CategoryBar,
     follow_up: followup::FollowUpBanner,
+    /// Inline images already downloaded, by account, message and
+    /// attachment id. Gmail charges 5 units for each one and a
+    /// conversation is often reopened.
+    inline_cache: RefCell<HashMap<(AccountId, String, String), String>>,
+}
+
+/// What one row holds, for a line the user reads.
+fn row_noun(count: usize, threaded: bool) -> &'static str {
+    match (threaded, count) {
+        (true, 1) => "conversation",
+        (true, _) => "conversations",
+        (false, 1) => "message",
+        (false, _) => "messages",
+    }
+}
+
+/// The heading on the Delete Forever dialog, which names how much goes.
+fn delete_forever_heading(count: usize, threaded: bool) -> String {
+    let noun = row_noun(count, threaded);
+    match count {
+        1 => format!("Delete This {} Forever?", capitalized(noun)),
+        _ => format!("Delete {count} {} Forever?", capitalized(noun)),
+    }
+}
+
+/// The toast after erasing.
+fn deleted_forever_message(count: usize, threaded: bool) -> String {
+    match count {
+        1 => "Deleted forever".into(),
+        _ => format!("Deleted {count} {} forever", row_noun(count, threaded)),
+    }
+}
+
+/// `word` with its first letter in upper case, for a dialog heading.
+fn capitalized(word: &str) -> String {
+    let mut letters = word.chars();
+    match letters.next() {
+        Some(first) => first.to_uppercase().chain(letters).collect(),
+        None => String::new(),
+    }
 }
 
 /// The toast after an action, or `None` when the change speaks for itself.
@@ -89,12 +149,7 @@ fn done_message(action: &MailAction, count: usize, threaded: bool) -> Option<Str
         MailAction::Label { .. } => return Some("Labels changed".into()),
         MailAction::Remind { .. } | MailAction::CancelReminder => return None,
     };
-    let noun = match (threaded, count) {
-        (true, 1) => "conversation",
-        (true, _) => "conversations",
-        (false, 1) => "message",
-        (false, _) => "messages",
-    };
+    let noun = row_noun(count, threaded);
     let many = count > 1;
     Some(match action {
         TriageAction::Archive if many => format!("Archived {count} {noun}"),
@@ -277,6 +332,7 @@ impl MainWindow {
                 assistant_split,
                 categories: categories::CategoryBar::new(),
                 follow_up: followup::FollowUpBanner::new(),
+                inline_cache: RefCell::new(HashMap::new()),
             }
         });
         if window.core.demo {
@@ -367,7 +423,7 @@ impl MainWindow {
         window
             .conversation
             .set_zoom(app.settings().text_size.zoom());
-        window.refresh_accounts();
+        window.refresh_accounts(Reload::Yes);
         window
     }
 
@@ -396,9 +452,11 @@ impl MainWindow {
 
     pub fn handle(self: &Rc<Self>, event: &ChangeEvent) {
         match event {
-            ChangeEvent::AccountStateChanged { .. } | ChangeEvent::LabelsChanged { .. } => {
-                self.refresh_accounts()
-            }
+            // An account going offline and back changes the banner and the
+            // sidebar, not the rows. Listing again would cost a Gmail
+            // search for every folder and search on screen.
+            ChangeEvent::AccountStateChanged { .. } => self.refresh_accounts(Reload::No),
+            ChangeEvent::LabelsChanged { .. } => self.refresh_accounts(Reload::Yes),
             ChangeEvent::ThreadsChanged {
                 account_id,
                 thread_ids,
@@ -409,6 +467,10 @@ impl MainWindow {
             }
             ChangeEvent::NewMail { .. } => self.queue_refresh(),
             ChangeEvent::WriteFailed { message, .. } => self.toast(message),
+            // Gmail can hold a bulk change up for the best part of a
+            // minute. Say so, or the window looks stuck and the reader
+            // presses Delete again.
+            ChangeEvent::WaitingOnGmail { message, .. } => self.toast(message),
         }
     }
 
@@ -440,7 +502,10 @@ impl MainWindow {
         });
     }
 
-    fn refresh_accounts(self: &Rc<Self>) {
+    /// Re-reads the accounts and their labels, and with [`Reload::Yes`]
+    /// lists the mailbox again. A remote mailbox lists through Gmail, so
+    /// only a change that can alter its rows is worth that.
+    fn refresh_accounts(self: &Rc<Self>, reload: Reload) {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let loaded = this
@@ -508,7 +573,9 @@ impl MainWindow {
             }
             this.follow_categories();
             this.refresh_counts();
-            this.reload_list();
+            if reload == Reload::Yes {
+                this.reload_list();
+            }
         });
     }
 
@@ -672,6 +739,17 @@ impl MainWindow {
                     this.follow_selection();
                     this.list.set_title(&title, &fresh.subtitle);
                 }
+                // A folder or a search lists through Gmail, and nothing
+                // that changed elsewhere changes its rows. Drop the rows
+                // that left the folder and leave the rest alone, rather
+                // than paying for the whole search again.
+                None if this.mailbox.borrow().is_remote() => {
+                    let targets = changed
+                        .iter()
+                        .map(|(account_id, thread_id)| Target::thread(*account_id, thread_id))
+                        .collect::<Vec<_>>();
+                    this.prune_folder(&targets);
+                }
                 None => this.reload_list(),
             }
         });
@@ -743,6 +821,14 @@ impl MainWindow {
                 found.retain(|m| &m.id == id);
             }
             let expanded = default_expanded(&found);
+            let photos = this.app.upgrade().map_or_else(HashMap::new, |app| {
+                app.sender_photos(
+                    found
+                        .iter()
+                        .filter_map(|m| m.from.as_ref())
+                        .map(|a| a.email.clone()),
+                )
+            });
             let thread = OpenThread {
                 account_id,
                 thread_id: thread_id.clone(),
@@ -760,11 +846,13 @@ impl MainWindow {
                 only_message: only,
                 me,
                 inline_images: HashMap::new(),
+                photos,
                 unsubscribed: false,
                 flag_color: summary.flag_color,
             };
             view.show(thread, true);
             view.set_sender_vip(sender_is_vip(&view, &this.settings()));
+            this.refresh_invitation(&view).await;
             this.complete_thread(view, account_id, thread_id).await;
         });
     }
@@ -827,8 +915,16 @@ impl MainWindow {
                 (id, result.map_err(|e| e.to_string()))
             }
         });
-        let loaded = futures::future::join_all(fetches).await;
-        let images = self.inline_images(&sync, &loaded).await;
+        // A long thread would otherwise fire one Gmail call per message at
+        // once, and 30 of them at 5 units each is most of a second's budget.
+        let loaded: Vec<(String, Result<MessageBody, String>)> = {
+            use futures::StreamExt;
+            futures::stream::iter(fetches)
+                .buffered(BODY_FETCHES)
+                .collect()
+                .await
+        };
+        let images = self.inline_images(account_id, &sync, &loaded).await;
         if !view.is_showing(account_id, &thread_id) {
             return;
         }
@@ -841,6 +937,7 @@ impl MainWindow {
             })
             .unwrap_or(false);
         view.render(false);
+        self.refresh_invitation(&view).await;
         if unread {
             self.mark_read_later(&view, account_id, thread_id);
         }
@@ -888,6 +985,7 @@ impl MainWindow {
     /// Downloads `cid:` images that HTML bodies reference, as `data:` URIs.
     async fn inline_images(
         &self,
+        account_id: AccountId,
         sync: &std::sync::Arc<crate::core::Sync>,
         loaded: &[(String, Result<MessageBody, String>)],
     ) -> HashMap<String, HashMap<String, String>> {
@@ -909,6 +1007,11 @@ impl MainWindow {
                 {
                     continue;
                 }
+                let key = (account_id, message_id.clone(), attachment_id.clone());
+                if let Some(held) = self.inline_cache.borrow().get(&key) {
+                    images.insert(cid.clone(), held.clone());
+                    continue;
+                }
                 let (s, m, a) = (sync.clone(), message_id.clone(), attachment_id.clone());
                 if let Ok(bytes) = self
                     .core
@@ -916,10 +1019,13 @@ impl MainWindow {
                     .await
                 {
                     let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
-                    images.insert(
-                        cid.clone(),
-                        format!("data:{};base64,{encoded}", attachment.mime_type),
-                    );
+                    let url = format!("data:{};base64,{encoded}", attachment.mime_type);
+                    let mut cache = self.inline_cache.borrow_mut();
+                    if cache.len() >= INLINE_IMAGE_CACHE {
+                        cache.clear();
+                    }
+                    cache.insert(key, url.clone());
+                    images.insert(cid.clone(), url);
                 }
             }
             out.insert(message_id.clone(), images);
@@ -1047,6 +1153,10 @@ impl MainWindow {
 
     fn act(self: &Rc<Self>, action: Action) {
         match action {
+            Action::Invitation(action) => {
+                let view = Rc::clone(&self.conversation);
+                self.invitation_action(&view, action)
+            }
             Action::Reply(kind) => self.reply(kind),
             Action::EditDraft => self.edit_draft(),
             Action::Archive => self.triage(TriageAction::Archive),
@@ -1078,7 +1188,87 @@ impl MainWindow {
                     app.compose(app.signed(draft));
                 }
             }
+            Action::ShowContact(address) => self.show_contact(address),
         }
+    }
+
+    /// Opens the card for one sender: what the address book knows, or the
+    /// message header alone when the address book has never heard of them.
+    fn show_contact(self: &Rc<Self>, address: String) {
+        if address.trim().is_empty() {
+            return;
+        }
+        let name = self
+            .conversation
+            .with_open(|open| {
+                open.messages
+                    .iter()
+                    .filter_map(|m| m.from.clone())
+                    .find(|a| a.email.eq_ignore_ascii_case(&address))
+                    .map(|a| a.display().to_string())
+            })
+            .flatten();
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let book = this.core.contacts();
+            let looked_up = {
+                let (book, address) = (book, address.clone());
+                this.core
+                    .call(async move { book.card(&address).await })
+                    .await
+            };
+            let card = looked_up.unwrap_or_else(|err| {
+                tracing::warn!(error = %err, "could not read the contact");
+                None
+            });
+            let Some(app) = this.app.upgrade() else {
+                return;
+            };
+            let vip = app.settings().is_vip(&address);
+            let person = match card {
+                Some(card) => contact_card::Person {
+                    name: card.contact.display().to_string(),
+                    email: card.contact.email().unwrap_or(address.as_str()).to_string(),
+                    addresses: card.contact.emails.clone(),
+                    organization: card.contact.organization.clone(),
+                    phone: card.contact.phone.clone(),
+                    photo: card.photo,
+                    vip,
+                },
+                None => contact_card::Person {
+                    name: name.unwrap_or_else(|| address.clone()),
+                    email: address.clone(),
+                    addresses: vec![address.clone()],
+                    organization: None,
+                    phone: None,
+                    photo: app.photo(&address),
+                    vip,
+                },
+            };
+            let display = person.name.clone();
+            let window = Rc::clone(&this);
+            contact_card::present(&this.window, person, move |choice| match choice {
+                contact_card::Choice::Write(to) => window.act(Action::Mailto(to)),
+                contact_card::Choice::ToggleVip => {
+                    let Some(app) = window.app.upgrade() else {
+                        return;
+                    };
+                    app.change_settings(Change::ToggleVip {
+                        email: address.clone(),
+                        name: display.clone(),
+                    });
+                    let added = app.settings().is_vip(&address);
+                    window.toast(&if added {
+                        format!("Added {display} to VIPs")
+                    } else {
+                        format!("Removed {display} from VIPs")
+                    });
+                }
+                contact_card::Choice::AllMail => {
+                    window.search(format!("from:{address}"));
+                }
+            });
+        });
     }
 
     /// The account a new message comes from: the one set in Preferences,
@@ -1120,27 +1310,14 @@ impl MainWindow {
         self.perform(targets, MailAction::Triage(action), History::Record, None);
     }
 
-    /// In the Trash, the trash button puts mail back in the inbox. Gmail
-    /// empties the Trash itself after 30 days.
-    /// The Delete key. Gmail's permission for Penguin Mail covers moving mail to
-    /// the Trash, not erasing it, so inside the Trash it only explains that.
+    /// The Delete key. Outside the Trash it moves mail there. Inside it
+    /// offers Delete Forever, which erases the mail from Gmail.
     fn delete_key(self: &Rc<Self>) {
-        if *self.mailbox.borrow() == Mailbox::Scheduled {
-            return self.cancel_scheduled(self.targets());
-        }
-        if *self.mailbox.borrow() == Mailbox::Reminders {
-            return self.cancel_reminders(self.targets());
-        }
-        if *self.mailbox.borrow() == Mailbox::FollowUp {
-            return self.dismiss_follow_ups(self.targets());
-        }
-        if self.mailbox.borrow().folder() == Some(Folder::Trash) {
-            self.toast("Gmail deletes mail in the Trash for good after 30 days");
-        } else {
-            self.triage(TriageAction::Trash);
-        }
+        self.trash()
     }
 
+    /// The toolbar's trash button, and the Delete key with it. Mailboxes
+    /// that hold something other than mail cancel it instead.
     fn trash(self: &Rc<Self>) {
         if *self.mailbox.borrow() == Mailbox::Scheduled {
             return self.cancel_scheduled(self.targets());
@@ -1152,10 +1329,150 @@ impl MainWindow {
             return self.dismiss_follow_ups(self.targets());
         }
         if self.mailbox.borrow().folder() == Some(Folder::Trash) {
-            self.triage(TriageAction::Untrash);
+            self.confirm_delete_forever();
         } else {
             self.triage(TriageAction::Trash);
         }
+    }
+
+    /// Asks before erasing, because Gmail cannot bring the mail back and no
+    /// Undo follows.
+    fn confirm_delete_forever(self: &Rc<Self>) {
+        let targets = self.targets();
+        if targets.is_empty() {
+            return;
+        }
+        let threaded = self.settings().threading;
+        let dialog = adw::AlertDialog::new(
+            Some(&delete_forever_heading(targets.len(), threaded)),
+            Some(match targets.len() {
+                1 => "Gmail deletes it from every device and cannot bring it back.",
+                _ => "Gmail deletes them from every device and cannot bring them back.",
+            }),
+        );
+        dialog.add_responses(&[("cancel", "Cancel"), ("delete", "Delete Forever")]);
+        dialog.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
+        dialog.set_close_response("cancel");
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            if dialog.choose_future(Some(&this.window)).await == "delete" {
+                this.delete_forever(targets);
+            }
+        });
+    }
+
+    /// Erases the targets. Nothing reverses this, so the toast offers no
+    /// Undo, and a missing permission leaves every row where it is.
+    fn delete_forever(self: &Rc<Self>, targets: Vec<Target>) {
+        let account_id = targets[0].account_id;
+        let next = self.list.neighbour_of_selected();
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let erased = this.core.erase(targets).await;
+            let outcome = match erased {
+                Ok(Permitted::Done(outcome)) => outcome,
+                Ok(Permitted::NeedsPermission) => return this.ask_for_delete_access(account_id),
+                Err(err) => return this.toast(&format!("Could not delete the mail: {err}")),
+            };
+            if !outcome.done.is_empty() {
+                this.conversation.clear();
+                this.list.unselect();
+                this.list
+                    .retain(|row| !outcome.done.contains(&Target::from_row(row)));
+                match next {
+                    Some(next) => {
+                        this.list
+                            .select(next.account_id, &next.id, next.message_id.as_deref())
+                    }
+                    None => this.nav.set_show_content(false),
+                }
+                this.queue_refresh();
+            }
+            if let Some(error) = outcome.first_error() {
+                return this.toast(error);
+            }
+            this.toast(&deleted_forever_message(
+                outcome.done.len(),
+                this.settings().threading,
+            ));
+        });
+    }
+
+    /// Reloads the photos the open conversation shows and draws it again.
+    fn reopen_for_photos(self: &Rc<Self>) {
+        let Some(app) = self.app.upgrade() else {
+            return;
+        };
+        let senders = self.conversation.with_open(|open| {
+            open.messages
+                .iter()
+                .filter_map(|m| m.from.as_ref())
+                .map(|a| a.email.clone())
+                .collect::<Vec<_>>()
+        });
+        let Some(senders) = senders else { return };
+        let photos = app.sender_photos(senders.into_iter());
+        self.conversation.with_open(|open| open.photos = photos);
+        self.conversation.render(false);
+    }
+
+    /// Explains that reading contacts needs one more Google permission,
+    /// and offers to ask for it. Preferences reaches this through the app
+    /// the first time somebody turns contacts on.
+    pub fn ask_for_contacts_access(self: &Rc<Self>, account_id: AccountId) {
+        let Some(account) = self.account(account_id) else {
+            return;
+        };
+        let dialog = adw::AlertDialog::new(
+            Some("Allow Penguin Mail to Read Your Contacts"),
+            Some(&format!(
+                "Reading the contacts of {} needs one more permission. Google asks you to confirm in your browser. Names and photos stay on this computer.",
+                account.email
+            )),
+        );
+        dialog.add_responses(&[("cancel", "Not Now"), ("grant", "Grant Access")]);
+        dialog.set_response_appearance("grant", adw::ResponseAppearance::Suggested);
+        dialog.set_close_response("cancel");
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            if dialog.choose_future(Some(&this.window)).await == "grant" {
+                this.authorize_with(Some(account.email), &[CONTACTS_SCOPE]);
+            }
+        });
+    }
+
+    /// Hands the list the contact photos that are now on disk, so rows
+    /// show faces instead of initials.
+    pub fn contacts_loaded(self: &Rc<Self>) {
+        let Some(app) = self.app.upgrade() else {
+            return;
+        };
+        self.list.set_photos(&app.photos());
+        self.reopen_for_photos();
+    }
+
+    /// Explains that erasing mail needs one more Gmail permission, and
+    /// offers to ask Google for it.
+    fn ask_for_delete_access(self: &Rc<Self>, account_id: AccountId) {
+        let Some(account) = self.account(account_id) else {
+            return;
+        };
+        let dialog = adw::AlertDialog::new(
+            Some("Allow Penguin Mail to Delete Mail"),
+            Some(&format!(
+                "Deleting mail for good needs one more permission for {}. Google asks you to confirm in your browser.",
+                account.email
+            )),
+        );
+        dialog.add_responses(&[("cancel", "Not Now"), ("grant", "Grant Access")]);
+        dialog.set_response_appearance("grant", adw::ResponseAppearance::Suggested);
+        dialog.set_close_response("cancel");
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            if dialog.choose_future(Some(&this.window)).await == "grant" {
+                this.authorize_with(Some(account.email), &[DELETE_SCOPE]);
+            }
+        });
     }
 
     /// Whether `action` takes the targets out of the list on screen.
@@ -1216,7 +1533,9 @@ impl MainWindow {
                 return this.toast(error);
             }
             if history == History::Skip {
-                // Putting mail back can add rows to a Gmail folder.
+                // Putting mail back can add rows to a Gmail folder, and
+                // only a fresh search shows them.
+                this.core.forget_remote();
                 this.reload_folder();
                 return;
             }
@@ -1274,8 +1593,16 @@ impl MainWindow {
             let Some(outcome) = this.core.undo().await else {
                 return this.toast("Nothing to undo");
             };
-            this.reload_folder();
-            this.queue_refresh();
+            // Undo can put rows back into a Gmail folder, which only a
+            // fresh search shows. The store's own change events cover
+            // every other mailbox, so one reload is enough either way.
+            if this.mailbox.borrow().is_remote() {
+                this.core.forget_remote();
+                this.reload_folder();
+                this.refresh_counts();
+            } else {
+                this.queue_refresh();
+            }
             this.refresh_flag_color();
             this.reminders_changed();
             this.toast(outcome.first_error().unwrap_or("Undone"));
@@ -1522,8 +1849,8 @@ impl MainWindow {
                 .find(|m| m.has_label(system_label::DRAFT))?
                 .clone();
             let body = match open.bodies.get(&draft.id) {
-                Some(Ok(body)) => compose::body_text(body),
-                _ => String::new(),
+                Some(Ok(body)) => Some(body.clone()),
+                _ => None,
             };
             Some((
                 open.account_id,
@@ -1533,7 +1860,7 @@ impl MainWindow {
                 body,
             ))
         });
-        let Some(Some((account_id, thread_id, in_thread, message, markdown))) = found else {
+        let Some(Some((account_id, thread_id, in_thread, message, body))) = found else {
             return;
         };
         let Some(sync) = self.core.account(account_id) else {
@@ -1552,7 +1879,9 @@ impl MainWindow {
             draft.to = message.to.clone();
             draft.cc = message.cc.clone();
             draft.subject = message.subject.clone();
-            draft.markdown = markdown;
+            if let Some(body) = &body {
+                draft.take_body(body);
+            }
             draft.thread_id = in_thread.then_some(thread_id);
             if let Some(id) = draft_id.clone() {
                 draft.send_at = this
@@ -1644,12 +1973,18 @@ impl MainWindow {
             .core
             .save_config(mailrs_sync::config::Config::new(client_id, client_secret))
         {
-            Ok(()) => self.refresh_accounts(),
+            Ok(()) => self.refresh_accounts(Reload::Yes),
             Err(err) => self.toast(&format!("Could not save the settings: {err}")),
         }
     }
 
     fn authorize(self: &Rc<Self>, expected: Option<String>) {
+        self.authorize_with(expected, &[]);
+    }
+
+    /// Runs the consent flow, asking Google for `extra` permissions on top
+    /// of the ones sign-in always requests.
+    fn authorize_with(self: &Rc<Self>, expected: Option<String>, extra: &'static [&'static str]) {
         if self.authorizing.replace(true) {
             return;
         }
@@ -1666,10 +2001,10 @@ impl MainWindow {
         self.toast("Continue in your browser");
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            match this.core.authorize_account(urls, expected).await {
+            match this.core.authorize_account(urls, expected, extra).await {
                 Ok(account) => {
                     this.toast(&format!("Added {}. Downloading mail…", account.email));
-                    this.refresh_accounts();
+                    this.refresh_accounts(Reload::Yes);
                 }
                 Err(err) => this.toast(&err.to_string()),
             }
@@ -1711,7 +2046,7 @@ impl MainWindow {
                 Ok(()) => this.toast(&format!("Removed {email}")),
                 Err(err) => this.toast(&format!("Could not remove {email}: {err}")),
             }
-            this.refresh_accounts();
+            this.refresh_accounts(Reload::Yes);
         });
     }
 
@@ -2270,7 +2605,7 @@ impl MainWindow {
                     _ => self.reload_list(),
                 }
             }
-            Effect::Accounts => self.refresh_accounts(),
+            Effect::Accounts => self.refresh_accounts(Reload::Yes),
             Effect::RowColors => {
                 // Rows carry account colours; Effect::Accounts sets the new
                 // ones first.
@@ -2307,6 +2642,12 @@ impl MainWindow {
             }
             Effect::Assistant => self.assistant.refresh(),
             Effect::TextSize => self.conversation.set_zoom(settings.text_size.zoom()),
+            Effect::Contacts => {
+                if let Some(app) = self.app.upgrade() {
+                    self.list.set_photos(&app.photos());
+                }
+                self.reopen_for_photos();
+            }
             // The app follows the light or dark choice; no window to redraw.
             Effect::Theme => {}
         }

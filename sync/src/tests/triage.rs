@@ -61,6 +61,105 @@ async fn transient_failures_are_retried() {
     assert_eq!(h.fake.with(|s| s.remote_writes.len()), 1);
 }
 
+#[tokio::test(start_paused = true)]
+async fn a_rate_limited_write_waits_out_gmails_retry_after() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    h.fake.fail_next(GmailError::RateLimited {
+        retry_after: Some(std::time::Duration::from_secs(20)),
+    });
+    let started = tokio::time::Instant::now();
+
+    h.sync
+        .triage_thread("t1", &TriageAction::Archive)
+        .await
+        .unwrap();
+
+    // Gmail asked for 20 seconds and got them, give or take the jitter
+    // that keeps several accounts from returning on the same tick. The
+    // plain backoff would have waited one second.
+    let waited = started.elapsed();
+    assert!(
+        waited >= std::time::Duration::from_secs(16),
+        "waited {waited:?}"
+    );
+    assert!(
+        waited <= std::time::Duration::from_secs(24),
+        "waited {waited:?}"
+    );
+    assert_eq!(h.threads("INBOX").await, Vec::<String>::new());
+}
+
+#[tokio::test]
+async fn a_run_of_rate_limits_is_waited_out_rather_than_failed() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    // Three 429s in a row, which used to be one more than the action had
+    // attempts for, and it gave the user a failure to repeat by hand.
+    for _ in 0..3 {
+        h.fake
+            .fail_next(GmailError::RateLimited { retry_after: None });
+    }
+
+    h.sync
+        .triage_thread("t1", &TriageAction::Trash)
+        .await
+        .unwrap();
+
+    assert!(h.threads("INBOX").await.is_empty());
+    let told: Vec<String> = h
+        .drain()
+        .into_iter()
+        .filter_map(|e| match e {
+            ChangeEvent::WaitingOnGmail { message, .. } => Some(message),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        told,
+        ["Gmail is busy. Still working on 1 conversation."],
+        "the window is told once, not once per retry"
+    );
+}
+
+#[tokio::test]
+async fn a_rate_limit_that_outlasts_the_ceiling_reports_plainly() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    let sync = h.sync_with(std::time::Duration::from_millis(60));
+    for _ in 0..10 {
+        h.fake.fail_next(GmailError::RateLimited {
+            retry_after: Some(std::time::Duration::from_millis(50)),
+        });
+    }
+
+    let err = sync
+        .triage_thread("t1", &TriageAction::Trash)
+        .await
+        .unwrap_err();
+
+    assert!(matches!(
+        err,
+        crate::SyncError::Gmail(GmailError::RateLimited { .. })
+    ));
+    let told: Vec<String> = h
+        .drain()
+        .into_iter()
+        .filter_map(|e| match e {
+            ChangeEvent::WriteFailed { message, .. } => Some(message),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        told,
+        ["Gmail stayed busy for a moment, so move to trash did not go through for 1 conversation."]
+    );
+    assert_eq!(h.threads("INBOX").await, ["t1"], "the thread comes back");
+}
+
 #[tokio::test]
 async fn trash_uses_the_trash_call() {
     let h = harness().await;

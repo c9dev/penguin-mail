@@ -2,21 +2,27 @@
 
 pub mod address;
 pub mod body;
+pub mod calendar;
 mod client;
 pub mod convert;
 mod error;
-mod limiter;
+pub mod limiter;
 pub mod model;
 mod oauth;
+pub mod people;
 mod token_store;
 
-pub use client::{Authorized, GMAIL_API_BASE, GmailClient, authorize, one_click_unsubscribe};
+pub use calendar::{Answered, CALENDAR_API_BASE, CALENDAR_SCOPE};
+pub use client::{
+    Authorized, BATCH_LIMIT, GMAIL_API_BASE, GmailClient, authorize, cost, one_click_unsubscribe,
+};
 pub use convert::{HistoryChange, HistoryPage, html_to_text};
 pub use error::GmailError;
-pub use limiter::QuotaLimiter;
+pub use limiter::{AccountQuota, Priority, QuotaLimiter, QuotaPool, Waiting};
 pub use model::{Draft, LabelColor, MessagePage, MessageRef, Profile, RemoteLabel, SendAs};
 pub use oauth::{
-    AccessToken, GMAIL_SCOPE, LoopbackListener, OAuthClient, Pkce, SETTINGS_SCOPE, Tokens,
-    parse_redirect, random_token,
+    AccessToken, DELETE_SCOPE, GMAIL_SCOPE, LoopbackListener, OAuthClient, Pkce, SETTINGS_SCOPE,
+    Tokens, parse_redirect, random_token,
 };
+pub use people::{CONTACTS_SCOPE, ConnectionsPage, Person};
 pub use token_store::{KeyringTokenStore, MemoryTokenStore, TokenStore};

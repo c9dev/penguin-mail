@@ -2,12 +2,14 @@
 //! them on the writer thread or on pooled readers.
 
 pub mod accounts;
+pub mod address_book;
 pub mod bodies;
 pub mod contacts;
 mod db;
 mod error;
 pub mod flags;
 pub mod follow_ups;
+pub mod invitations;
 pub mod labels;
 pub mod messages;
 pub mod reminders;

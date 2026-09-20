@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use mailrs_gmail::{
-    GMAIL_SCOPE, GmailError, LoopbackListener, OAuthClient, Pkce, SETTINGS_SCOPE, parse_redirect,
+    CALENDAR_SCOPE, DELETE_SCOPE, GMAIL_SCOPE, GmailError, LoopbackListener, OAuthClient, Pkce,
+    SETTINGS_SCOPE, parse_redirect,
 };
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -35,7 +36,7 @@ fn authorize_url_carries_pkce_and_offline_access() {
     let pkce = Pkce::generate();
     let url = url::Url::parse(
         &client
-            .authorize_url("http://127.0.0.1:5000", &pkce, "st")
+            .authorize_url("http://127.0.0.1:5000", &pkce, "st", &[])
             .unwrap(),
     )
     .unwrap();
@@ -51,6 +52,39 @@ fn authorize_url_carries_pkce_and_offline_access() {
     assert_eq!(q["state"], "st");
     assert_eq!(q["access_type"], "offline");
     assert_eq!(q["prompt"], "consent");
+}
+
+#[test]
+fn only_an_asked_for_extra_scope_joins_the_consent_url() {
+    let client = OAuthClient::new("cid", "secret");
+    let pkce = Pkce::generate();
+    let scope = |extra: &[&str]| -> String {
+        let url = url::Url::parse(
+            &client
+                .authorize_url("http://127.0.0.1:5000", &pkce, "st", extra)
+                .unwrap(),
+        )
+        .unwrap();
+        url.query_pairs()
+            .into_owned()
+            .collect::<HashMap<String, String>>()["scope"]
+            .clone()
+    };
+    assert!(!scope(&[]).contains(DELETE_SCOPE), "sign-in leaves it out");
+    assert_eq!(
+        scope(&[DELETE_SCOPE]),
+        format!("{GMAIL_SCOPE} {SETTINGS_SCOPE} {DELETE_SCOPE}")
+    );
+    assert!(
+        !scope(&[]).contains(CALENDAR_SCOPE),
+        "answering an invitation is asked for when somebody answers one"
+    );
+    assert_eq!(
+        scope(&[CALENDAR_SCOPE]),
+        format!("{GMAIL_SCOPE} {SETTINGS_SCOPE} {CALENDAR_SCOPE}")
+    );
+    // Asking twice for a scope sign-in already covers changes nothing.
+    assert_eq!(scope(&[SETTINGS_SCOPE]), scope(&[]));
 }
 
 #[test]

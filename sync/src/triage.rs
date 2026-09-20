@@ -2,8 +2,9 @@ use std::str::FromStr;
 
 use mailrs_domain::system_label;
 
-/// A label change the user asked for on a whole thread.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// A label change the user asked for on a whole thread. Ordered, so a bulk
+/// action can group the targets that want the same change.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TriageAction {
     Archive,
     MarkRead,

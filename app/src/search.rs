@@ -1,6 +1,6 @@
 //! Suggestions while typing a search, as Apple Mail offers them.
 
-use mailrs_store::contacts::Contact;
+use mailrs_store::contacts::Suggestion as Person;
 
 use crate::contacts::suggest;
 
@@ -14,7 +14,7 @@ pub struct Suggestion {
 
 /// Suggestions for the word being typed at the end of `text`: the subject,
 /// people it could be from or to, and labels it could name.
-pub fn suggestions(text: &str, contacts: &[Contact], labels: &[String]) -> Vec<Suggestion> {
+pub fn suggestions(text: &str, contacts: &[Person], labels: &[String]) -> Vec<Suggestion> {
     if text.ends_with(char::is_whitespace) {
         return Vec::new();
     }
@@ -74,9 +74,12 @@ mod tests {
 
     #[test]
     fn the_last_word_becomes_subject_people_and_labels() {
-        let contacts = [Contact {
+        let contacts = [Person {
             name: Some("Ann Lee".into()),
             email: "ann@example.com".into(),
+            organization: None,
+            photo_file: None,
+            known: true,
             score: 3,
             last_seen: 0,
         }];

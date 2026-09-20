@@ -22,14 +22,14 @@ pub const HIDE_MY_EMAIL_LABEL: &str = "Hide My Email";
 
 const DAY: EpochMillis = 24 * 60 * 60 * 1000;
 
-/// What a Gmail settings call gave back. Gmail refuses every one of them
-/// until the account grants the settings permission, and the caller asks
-/// the user for it, so that refusal is a value to match on rather than an
-/// error to take apart.
+/// What a Gmail call that needs a permission of its own gave back: every
+/// settings call, and erasing mail. Gmail refuses those until the account
+/// grants the permission, and the caller then asks the user for it, so the
+/// refusal is a value to match on rather than an error to take apart.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Permitted<T> {
     Done(T),
-    /// Gmail wants the settings permission before it answers.
+    /// Gmail wants the permission before it answers.
     NeedsPermission,
 }
 

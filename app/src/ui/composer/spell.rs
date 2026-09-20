@@ -1,17 +1,21 @@
 //! Spell check while writing.
 //!
 //! Penguin Mail checks the words itself rather than handing the text view to
-//! a spell-check widget. Two reasons. The composer edits Markdown, so whole
-//! stretches of it are not prose: a quoted reply, a fenced code block, the
-//! target of a link. And a squiggle has to be a mark on top of the text, not
-//! a change to it, because the text is what gets sent.
+//! a spell-check widget. Two reasons. Whole stretches of a draft are not the
+//! writer's prose: a quoted reply, a code block, a list marker GTK drew, a
+//! run of inline code. And a squiggle has to be a mark on top of the text,
+//! not a change to it, because the text is what gets sent.
 //!
-//! So the squiggle is a [`gtk::TextTag`] with Pango's error underline. Tags
-//! live beside the text, never in it: [`Composer::markdown`] reads the buffer
-//! with `include_hidden_chars` off and gets the characters alone, so nothing
-//! a checker marked can reach the MIME body.
+//! So the squiggle is a [`gtk::TextTag`] named `misspelled` with Pango's
+//! error underline, and it lies beside the characters rather than in them.
+//! [`richbuffer::read`] builds the outgoing body from the block kinds, the
+//! four style tags and the link tags, and asks about nothing else, so a tag
+//! this module applies cannot reach the HTML or the plain text part.
 //!
-//! [`Composer::markdown`]: super::Composer
+//! What counts as prose comes from the buffer, not from reading the text:
+//! [`richbuffer::kind_at`] gives every line its kind in rich text and in
+//! Markdown alike, and the tags on a character say whether it is a marker,
+//! inline code, or a picture.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashSet;
@@ -21,6 +25,9 @@ use std::rc::Rc;
 
 use gtk::prelude::*;
 use gtk::{gio, glib, pango};
+
+use super::richbuffer;
+use crate::richtext::BlockKind;
 
 /// The tag that draws the squiggle.
 const TAG: &str = "misspelled";
@@ -207,108 +214,89 @@ pub fn languages_to_load(wanted: &[String], locale: &str, installed: &[String]) 
     out
 }
 
-/// The stretches of `markdown` that are prose, as byte ranges.
+/// Whether a line of this kind holds the writer's own prose. A quoted
+/// reply is someone else's words, and a code block is not prose at all, so
+/// neither gets a squiggle. The buffer carries the kind on every line, in
+/// rich text and in Markdown alike, so nothing here has to read the text to
+/// find out.
+pub fn checks_prose(kind: BlockKind) -> bool {
+    !matches!(kind, BlockKind::Quote | BlockKind::Code)
+}
+
+/// Whether a line opens or closes a fenced code block. Rich text gives
+/// fenced code its own kind, but Markdown keeps the fences as text, so the
+/// lines between them have to be counted out.
+fn is_fence(line: &str) -> bool {
+    let line = line.trim_start();
+    line.starts_with("```") || line.starts_with("~~~")
+}
+
+/// Whether the character at `iter` is prose: not a list marker the writer
+/// cannot edit, not a run of inline code, and not a picture.
+fn is_prose(iter: &gtk::TextIter) -> bool {
+    if iter.child_anchor().is_some() {
+        return false;
+    }
+    !iter.tags().iter().any(|tag| {
+        matches!(
+            tag.name().as_deref(),
+            Some(richbuffer::MARKER) | Some("code")
+        )
+    })
+}
+
+/// Every stretch of prose in `buffer`, as the pair of iters around it.
 ///
-/// Quoted lines, fenced code, inline code, and the targets of links and
-/// images are left out. A squiggle under someone else's sentence, or under
-/// half a URL, is noise the writer cannot act on.
-pub fn prose_ranges(markdown: &str) -> Vec<Range<usize>> {
-    let mut ranges = Vec::new();
+/// One walk covers both ways of writing: the line kinds rule out quotes and
+/// code blocks, the tags rule out list markers, inline code and pictures,
+/// and what is left is what a dictionary should see.
+fn prose_runs(buffer: &gtk::TextBuffer) -> Vec<(gtk::TextIter, gtk::TextIter)> {
+    let mut runs = Vec::new();
     let mut fenced = false;
-    let mut at = 0;
-    for line in markdown.split_inclusive('\n') {
-        let start = at;
-        at += line.len();
-        let trimmed = line.trim_start();
-        if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
+    for line in 0..buffer.line_count() {
+        let Some(start) = buffer.iter_at_line(line) else {
+            continue;
+        };
+        let mut last = start;
+        if !last.ends_line() {
+            last.forward_to_line_end();
+        }
+        if is_fence(&buffer.text(&start, &last, false)) {
             fenced = !fenced;
             continue;
         }
-        if fenced || trimmed.starts_with('>') {
+        if fenced || !checks_prose(richbuffer::kind_at(buffer, line)) {
             continue;
         }
-        let indent = line.len() - trimmed.len();
-        prose_in_line(&line[indent..], start + indent, &mut ranges);
-    }
-    ranges
-}
-
-/// Adds the prose of one line, cutting out code spans and link targets.
-fn prose_in_line(line: &str, offset: usize, ranges: &mut Vec<Range<usize>>) {
-    let bytes = line.as_bytes();
-    let mut at = 0;
-    let mut prose = 0;
-    let push = |from: usize, to: usize, ranges: &mut Vec<Range<usize>>| {
-        if to > from {
-            ranges.push(offset + from..offset + to);
-        }
-    };
-    // Where a stretch that started at `at` ends, given its closing byte.
-    let closes = |at: usize, close: char| {
-        line[at + 1..]
-            .find(close)
-            .map_or(bytes.len(), |i| at + 1 + i + 1)
-    };
-    while at < bytes.len() {
-        let end = match bytes[at] {
-            // A code span runs to the next backtick, or to the end of the line.
-            b'`' => closes(at, '`'),
-            // `](target)`: the link text stays, the target goes.
-            b'(' if at > 0 && bytes[at - 1] == b']' => closes(at, ')'),
-            // `<https://…>`, and HTML the writer pasted in. A lone `<` with a
-            // space after it is arithmetic, so leave that alone.
-            b'<' if !bytes.get(at + 1).is_some_and(u8::is_ascii_whitespace) => {
-                match line[at + 1..].find(['>', ' ']) {
-                    Some(i) if line.as_bytes()[at + 1 + i] == b'>' => at + 1 + i + 1,
-                    _ => at + 1,
+        let mut iter = start;
+        let mut run: Option<gtk::TextIter> = None;
+        while iter < last {
+            match is_prose(&iter) {
+                true => {
+                    run.get_or_insert(iter);
+                }
+                false => {
+                    if let Some(from) = run.take() {
+                        runs.push((from, iter));
+                    }
                 }
             }
-            _ => at + 1,
-        };
-        if end > at + 1 {
-            push(prose, at, ranges);
-            prose = end;
+            iter.forward_char();
         }
-        at = end;
-    }
-    push(prose, bytes.len(), ranges);
-}
-
-/// Every word of `markdown` a dictionary should judge, as character offsets
-/// into the buffer, in the order they appear.
-///
-/// Character offsets, not bytes, because that is what a [`gtk::TextBuffer`]
-/// counts in. Words with a digit, an underscore, or an `@` in them are left
-/// out: they are identifiers and addresses, and no dictionary knows them.
-pub fn words_to_check(markdown: &str) -> Vec<(Range<usize>, &str)> {
-    let mut words = Vec::new();
-    // Byte offsets come out of `prose_ranges` in order, so one cursor turns
-    // them into character offsets without rescanning the text each time.
-    let mut byte = 0;
-    let mut character = 0;
-    let mut chars_at = |to: usize, text: &str| {
-        character += text[byte..to].chars().count();
-        byte = to;
-        character
-    };
-    for range in prose_ranges(markdown) {
-        let slice = &markdown[range.clone()];
-        for (at, word) in split_words(slice) {
-            let start = chars_at(range.start + at.start, markdown);
-            let end = chars_at(range.start + at.end, markdown);
-            words.push((start..end, word));
+        if let Some(from) = run {
+            runs.push((from, last));
         }
     }
-    words
+    runs
 }
 
-/// Words in one stretch of prose, with their byte offsets inside it.
+/// The words in `text` a dictionary should judge, with their byte offsets.
 ///
 /// Whitespace splits the text into tokens first, and a token carrying a
 /// digit, an underscore, an `@`, or a slash is dropped whole: it is an
 /// address, a path, or an identifier, and the dictionary would mark every
 /// part of it. Only then does a token break into words.
-fn split_words(text: &str) -> Vec<(Range<usize>, &str)> {
+pub fn words_in(text: &str) -> Vec<(Range<usize>, &str)> {
     let mut words = Vec::new();
     let mut at = 0;
     for token in text.split_inclusive(char::is_whitespace) {
@@ -321,7 +309,7 @@ fn split_words(text: &str) -> Vec<(Range<usize>, &str)> {
         for (offset, c) in token.char_indices() {
             // An apostrophe holds a word together, as in "doesn't", but only
             // between letters: the ones around a quotation are punctuation.
-            let inside = matches!(c, '\'' | '’') && from.is_some();
+            let inside = matches!(c, '\'' | '\u{2019}') && from.is_some();
             if c.is_alphabetic() || inside {
                 from.get_or_insert(offset);
             } else if let Some(word_at) = from.take() {
@@ -343,9 +331,8 @@ fn push_word<'a>(
     offset: usize,
     out: &mut Vec<(Range<usize>, &'a str)>,
 ) {
-    let word = token[from..to].trim_end_matches(['\'', '’']);
-    // One letter is "I" or "a"; two is an initial or a unit. Neither is
-    // worth a squiggle.
+    let word = token[from..to].trim_end_matches(['\'', '\u{2019}']);
+    // One letter is "I" or "a". Neither is worth a squiggle.
     if word.chars().count() >= 2 {
         out.push((offset + from..offset + from + word.len(), word));
     }
@@ -426,34 +413,40 @@ impl SpellCheck {
     /// Marks every misspelling in the buffer and clears the rest.
     pub fn recheck(&self) {
         let buffer = self.view.buffer();
-        let text = buffer
-            .text(&buffer.start_iter(), &buffer.end_iter(), false)
-            .to_string();
         buffer.remove_tag_by_name(TAG, &buffer.start_iter(), &buffer.end_iter());
-        for (range, word) in words_to_check(&text) {
-            if self.dictionaries.accepts(word) {
-                continue;
-            }
-            let start = buffer.iter_at_offset(range.start as i32);
-            let end = buffer.iter_at_offset(range.end as i32);
-            buffer.apply_tag_by_name(TAG, &start, &end);
+        for (start, end, _) in self.misspellings() {
+            let (from, to) = (buffer.iter_at_offset(start), buffer.iter_at_offset(end));
+            buffer.apply_tag_by_name(TAG, &from, &to);
         }
     }
 
-    /// The misspelled word at `offset`, with its bounds. A click just after
-    /// the last letter counts, the way it does when you double-click a word.
-    fn word_at(&self, offset: i32) -> Option<(i32, i32, String)> {
+    /// Every misspelling in the buffer, as character offsets and the word.
+    ///
+    /// Character offsets, not bytes, because that is what a
+    /// [`gtk::TextBuffer`] counts in, and an accented letter would otherwise
+    /// shift every squiggle after it.
+    fn misspellings(&self) -> Vec<(i32, i32, String)> {
         let buffer = self.view.buffer();
-        let text = buffer
-            .text(&buffer.start_iter(), &buffer.end_iter(), false)
-            .to_string();
-        words_to_check(&text)
+        let mut found = Vec::new();
+        for (from, to) in prose_runs(&buffer) {
+            let text = buffer.text(&from, &to, false).to_string();
+            for (at, word) in words_in(&text) {
+                if self.dictionaries.accepts(word) {
+                    continue;
+                }
+                let start = from.offset() + text[..at.start].chars().count() as i32;
+                found.push((start, start + word.chars().count() as i32, word.to_string()));
+            }
+        }
+        found
+    }
+
+    /// The misspelled word at `offset`. A click just after the last letter
+    /// counts, the way it does when you double-click a word.
+    fn word_at(&self, offset: i32) -> Option<(i32, i32, String)> {
+        self.misspellings()
             .into_iter()
-            .find(|(range, word)| {
-                (range.start..=range.end).contains(&(offset as usize))
-                    && !self.dictionaries.accepts(word)
-            })
-            .map(|(range, word)| (range.start as i32, range.end as i32, word.to_string()))
+            .find(|(start, end, _)| (*start..=*end).contains(&offset))
     }
 
     /// Puts corrections on the text view's own context menu when the
@@ -564,29 +557,39 @@ impl SpellCheck {
 mod tests {
     use super::*;
 
-    fn checked(markdown: &str) -> Vec<&str> {
-        words_to_check(markdown).into_iter().map(|w| w.1).collect()
+    fn checked(text: &str) -> Vec<&str> {
+        words_in(text).into_iter().map(|w| w.1).collect()
     }
 
     #[test]
-    fn prose_is_checked_and_quoted_text_is_not() {
-        let text = "Teh plan looks fine.\n> teh plan looks fine\nSee yuo then.";
+    fn a_quote_and_a_code_block_are_not_prose() {
+        // These two kinds are the whole rule, so a new kind has to be
+        // decided here rather than slipping through as prose.
+        assert!(!checks_prose(BlockKind::Quote));
+        assert!(!checks_prose(BlockKind::Code));
+        for kind in [
+            BlockKind::Paragraph,
+            BlockKind::Heading(1),
+            BlockKind::Bullet,
+            BlockKind::Numbered,
+        ] {
+            assert!(checks_prose(kind), "{kind:?}");
+        }
+    }
+
+    #[test]
+    fn a_markdown_fence_opens_and_closes() {
+        assert!(is_fence("```"));
+        assert!(is_fence("   ~~~rust"));
+        assert!(!is_fence("almost ```"));
+    }
+
+    #[test]
+    fn words_come_out_of_a_line_of_prose() {
         assert_eq!(
-            checked(text),
-            ["Teh", "plan", "looks", "fine", "See", "yuo", "then"]
+            checked("Teh plan looks fine."),
+            ["Teh", "plan", "looks", "fine"]
         );
-    }
-
-    #[test]
-    fn fenced_code_is_left_alone() {
-        let text = "before\n```\nlet mispeled = 1;\n```\nafter";
-        assert_eq!(checked(text), ["before", "after"]);
-    }
-
-    #[test]
-    fn inline_code_and_link_targets_are_left_alone() {
-        let text = "Run `cargo bild` and read [the guide](https://exmaple.com/setup).";
-        assert_eq!(checked(text), ["Run", "and", "read", "the", "guide"]);
     }
 
     #[test]
@@ -596,35 +599,39 @@ mod tests {
     }
 
     #[test]
+    fn a_url_is_dropped_whole_rather_than_marked_in_pieces() {
+        assert_eq!(checked("See https://exmaple.com/setup now"), ["See", "now"]);
+    }
+
+    #[test]
     fn a_word_keeps_its_apostrophe_but_not_the_quotes_around_it() {
         assert_eq!(checked("'It doesn't' matter"), ["It", "doesn't", "matter"]);
     }
 
     #[test]
-    fn offsets_are_characters_so_accents_do_not_shift_the_squiggle() {
-        // "Olá" is three characters and four bytes; the word after it must
-        // still line up with what the buffer counts.
-        let words = words_to_check("Olá mundo");
-        assert_eq!(words, [(0..3, "Olá"), (4..9, "mundo")]);
+    fn a_squiggle_is_a_tag_the_serializer_never_asks_about() {
+        // `richbuffer::read` builds the outgoing body from the block kinds,
+        // the four style tags and the link tags. The squiggle is none of
+        // them, so there is no path from a mark to the message.
+        assert!(!richbuffer::STYLES.contains(&TAG));
+        for kind in [
+            BlockKind::Paragraph,
+            BlockKind::Quote,
+            BlockKind::Code,
+            BlockKind::Bullet,
+        ] {
+            assert_ne!(richbuffer::block_tag(kind), TAG);
+        }
     }
 
     #[test]
-    fn a_squiggle_points_at_the_text_and_never_joins_it() {
-        // The checker hands back ranges, never replacement text, so the
-        // markdown that reaches the MIME builder is what the person typed
-        // and the tag name appears nowhere in the HTML.
-        let markdown = "Teh plan looks fine. Call **yuo** back.";
-        for (range, word) in words_to_check(markdown) {
-            let at: String = markdown
-                .chars()
-                .skip(range.start)
-                .take(range.end - range.start)
-                .collect();
-            assert_eq!(at, word);
+    fn offsets_are_bytes_inside_the_line_and_the_word_is_the_text_there() {
+        // The buffer counts characters, so the caller converts; what this
+        // hands back has to address the real bytes of what it was given.
+        let text = "Olá mundo";
+        for (range, word) in words_in(text) {
+            assert_eq!(&text[range], word);
         }
-        let html = crate::compose::markdown_to_html(markdown);
-        assert!(!html.contains(TAG) && !html.contains("underline"));
-        assert!(html.contains("Teh plan looks fine."));
     }
 
     #[test]

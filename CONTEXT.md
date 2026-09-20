@@ -42,6 +42,8 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Settings permission**: the Gmail access an account grants once so Penguin Mail may read and change its account settings. Without it every `AccountSettings` call answers `Permitted::NeedsPermission`, and the caller offers Grant Access rather than showing an error. _Avoid_: scope, consent.
 
+**Delete permission**: the Gmail access an account grants so Penguin Mail may erase mail. Sign-in never asks for it; the window asks the first time somebody chooses Delete Forever in the Trash, and until then `MailActions::erase` answers `Permitted::NeedsPermission` and changes nothing. The assistant has no tool that erases mail. _Avoid_: scope, full access.
+
 **Tool call**: one thing the assistant asks the app to do, by name and with JSON: list a mailbox, organize mail, change a setting. `mailrs::assistant::tools` declares what the model may call and `mailrs::assistant::run` runs it against the modules. The tools change mail through the same `MailActions` and `AccountSettings` the window uses, so the assistant cannot do anything the user could not. _Avoid_: function call, command, action.
 
 **Desk**: the port the tools read the window through: the preferences, the accounts and their labels, the view, and what is on screen, meaning the mailbox, the open conversation, and the selected rows. `mailrs::assistant::run::Desk`. Every method gives back plain data, so a test fills one in without a widget. _Avoid_: context, state, session.
@@ -49,6 +51,35 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 **Effect port**: the port the tools change the window through: approve, open, compose, send, copy, ask for the settings permission, and the rest. `mailrs::assistant::run::Effects`. The window is one adapter behind it and the tests are another, so the whole tool loop runs with no GTK. Not to be confused with a settings `Effect`, which names a part of the window a preference left stale. _Avoid_: side effect, callback, handler.
 
 **In-memory Gmail**: `mailrs_sync::fake::FakeGmail`, one account's mailbox held in memory behind the same `GmailApi` seam as the real client. It answers Gmail's search language, keeps a history log, and takes writes. Sync's tests and `penguin-mail --demo` both run on it, so there is one fake to keep honest rather than two; sync ships it under the `fake` feature so only the app and the tests carry it. _Avoid_: mock, stub, demo API.
+
+**Rich body**: the composer's message while it is being written as rich text: lines with a kind, each carrying runs of styled words. `mailrs::richtext::RichBody`. It becomes the HTML part of the message, the plain text part beside it, and the Markdown a writer who prefers marks sees, and it reads Markdown back in, which is how a reply's quote and the assistant's drafts arrive. _Avoid_: document, rich text, formatted body.
+
+**Foreground work**: a Gmail call the user is waiting on: a mail action, opening a thread, listing a folder, and whatever the assistant runs on their behalf. It takes the account's quota ahead of background work and waits out a rate limit rather than failing. `mailrs_gmail::Priority::Foreground`, which is what a call is unless some caller wrapped it in `limiter::background`. _Avoid_: user action (too narrow, the assistant counts too), interactive.
+
+**Background work**: a Gmail call nobody is waiting on: backfill, history polling, pruning. The sync engine runs its whole tick as background work, which leaves 100 of the account's 250 unit burst for the user and stands aside while a foreground call waits. `mailrs_gmail::Priority::Background`. _Avoid_: sync work, low priority.
+
+**Quota bucket**: the tokens one account may spend at Gmail, refilled at 200 units a second up to a 250 unit burst, under Gmail's own 250 a second. `mailrs_gmail::AccountQuota`, one per address in the OAuth client's `QuotaPool`, plus a project bucket every account waits on. Every call spends from it before it goes out, so batching and pacing show up here rather than in a 429. _Avoid_: rate limiter, throttle.
+
+**Address book**: the contacts one Google account holds, stored on this computer: each person's name, addresses, photo, organization, and phone number. `mailrs_store::address_book` keeps one per account, and `mailrs_sync::ContactBook` reads it from the People API, walking the pages and keeping the sync token so later refreshes cost one call. It stays empty until the owner turns contacts on in Preferences, and turning them off deletes it. _Avoid_: Google Contacts, contacts (which also names the suggestion list).
+
+**Contact**: one person in an address book, with every address Google holds for them, the primary one first. `mailrs_store::address_book::Contact`. _Avoid_: person, entry, card.
+
+**Correspondent**: someone Penguin Mail found by reading stored mail rather than an address book. `mailrs_store::contacts::Correspondent` scores them by how often they come up, weighing someone written to above someone who only wrote. _Avoid_: contact, sender.
+
+**Recipient suggestion**: one row of what the composer offers while an address is typed, and what search offers for a name. `mailrs_store::contacts::Suggestion` merges the address books with the correspondents: a contact comes first whatever the mail says, and mail orders the contacts among themselves. _Avoid_: completion, autocomplete entry.
+
+**Contacts permission**: the Google access an account grants once so Penguin Mail may read its contacts. Sign-in leaves it out, and the window asks for it the first time somebody turns contacts on, so an account that never does is never asked. Without it every `ContactBook` call answers `Permitted::NeedsPermission`, as the settings calls do. _Avoid_: scope, consent.
+
+**Contact card**: what the sender's face or name in a conversation opens: their photo, name, addresses, and organization, with the three things the app already does about a person. `mailrs::ui::contact_card`. A sender in no address book still gets one, built from the message header. _Avoid_: profile, popover, details.
+**Invitation**: what one `text/calendar` part of a message says about one event: its title, when it runs, where, who is coming and what each of them said, the organizer, how it repeats, and the UID and sequence that tell one version of an event from the next. `mailrs_domain::invitation::Invitation`. _Avoid_: meeting request, calendar event, ICS.
+
+**Answer**: Yes, No or Maybe. It is what a guest said about an invitation and what the user sends back through Google Calendar, so one type covers both. `mailrs_domain::invitation::Answer`. _Avoid_: RSVP, response, PARTSTAT.
+
+**Invitation change**: what a message does to an event the user already has: it moves it, changes something else about it, or cancels it. `mailrs_sync::invitations::Change`. Only a version with a higher sequence changes anything, and the store keeps what each version changed, so reopening the message says the same thing twice rather than falling silent. Not to be confused with a settings `Change`, which is one named change to the preferences. _Avoid_: update, diff, revision.
+
+**Event card**: the card above the message body that shows an invitation, with Yes, No and Maybe in it. `mailrs::ui::invitation::EventCard`. The message itself goes on being drawn below, so Google's own links keep working for anyone who declines the calendar permission. _Avoid_: banner, widget, preview.
+
+**Calendar permission**: the Google Calendar access an account grants once so Penguin Mail may answer invitations for it. Without it every `Invitations::answer` call answers `Permitted::NeedsPermission`, and the window offers Grant Access rather than showing an error. Sign-in never asks for it. _Avoid_: scope, consent.
 
 **Send-as address**: one address an account may send mail as: its own, or an alias whose owner has confirmed it. Gmail keeps a display name and a signature per address, so choosing one chooses all three. `mailrs_sync::SendAsAddress` is what Gmail reports; `mailrs::compose::SendAsAddress` is the copy Preferences keeps, so a composer opens without waiting on the network. An alias Gmail has not verified is left out, since Gmail would refuse to send from it. _Avoid_: alias, from address, sender.
 

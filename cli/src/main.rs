@@ -51,6 +51,9 @@ enum Command {
     },
     /// Fetch a whole thread from Gmail and print it as text.
     Show { account: String, thread_id: String },
+    /// Report why a message may look blank, in counts alone. It prints no
+    /// mail, so its output is safe to share.
+    Diagnose { account: String, thread_id: String },
     /// Apply archive, read, unread, star, unstar, trash, label:ID, or unlabel:ID to a thread.
     Triage {
         account: String,
@@ -96,6 +99,9 @@ async fn main() -> Result<()> {
         Command::Show { account, thread_id } => {
             show_thread(&db, &load_config()?, &account, &thread_id).await
         }
+        Command::Diagnose { account, thread_id } => {
+            diagnose(&db, &load_config()?, &account, &thread_id).await
+        }
         Command::Triage {
             account,
             thread_id,
@@ -119,7 +125,7 @@ fn token_store() -> Arc<dyn TokenStore> {
 
 async fn add_account(db: &Db, config: &Config) -> Result<()> {
     let oauth = oauth(config);
-    let flow = authorize(&oauth, GMAIL_API_BASE, |url| {
+    let flow = authorize(&oauth, GMAIL_API_BASE, &[], |url| {
         println!(
             "Opening your browser for Google's consent screen. If it does not open, visit:\n\n{url}\n"
         );
@@ -234,6 +240,10 @@ fn print_event(emails: &HashMap<AccountId, String>, event: &ChangeEvent) {
         ChangeEvent::WriteFailed {
             account_id,
             message,
+        }
+        | ChangeEvent::WaitingOnGmail {
+            account_id,
+            message,
         } => println!("{}: {message}", who(emails, *account_id)),
     }
 }
@@ -298,6 +308,118 @@ async fn show_thread(db: &Db, config: &Config, email: &str, thread_id: &str) -> 
         println!("{}", "-".repeat(72));
     }
     Ok(())
+}
+
+/// Counts what a message holds, so a blank one can be explained without
+/// anybody reading the mail. Every line is a number or a yes.
+async fn diagnose(db: &Db, config: &Config, email: &str, thread_id: &str) -> Result<()> {
+    let sync = account_sync(db, config, email).await?;
+    sync.ensure_thread(thread_id).await?;
+    let (account_id, thread) = (sync.account_id(), thread_id.to_string());
+    let messages = db
+        .read(move |c| messages::thread_messages(c, account_id, &thread))
+        .await?;
+    if messages.is_empty() {
+        bail!("Gmail has no thread {thread_id} in {email}");
+    }
+    for (index, message) in messages.iter().enumerate() {
+        let body = sync.body(&message.id).await?;
+        let html = body.html.unwrap_or_default();
+        let text = body.text.unwrap_or_default();
+        let lower = html.to_ascii_lowercase();
+        let images = body
+            .attachments
+            .iter()
+            .filter(|a| a.mime_type.starts_with("image/"))
+            .count();
+        let inline = body
+            .attachments
+            .iter()
+            .filter(|a| a.content_id.is_some())
+            .count();
+        println!("message {}", index + 1);
+        println!("  html bytes            {}", html.len());
+        println!("  text bytes            {}", text.len());
+        println!("  <img> tags            {}", lower.matches("<img").count());
+        println!(
+            "  remote image sources  {}",
+            lower.matches("src=\"http").count() + lower.matches("src='http").count()
+        );
+        println!("  cid: image sources    {}", lower.matches("cid:").count());
+        println!("  attached images       {images}, of them inline {inline}");
+        println!(
+            "  background-image      {}",
+            lower.matches("background-image").count()
+        );
+        println!(
+            "  <style> blocks        {}",
+            lower.matches("<style").count()
+        );
+        println!(
+            "  display:none rules    {}",
+            lower.replace(' ', "").matches("display:none").count()
+        );
+        println!(
+            "  dark mode rules       {}",
+            lower.matches("prefers-color-scheme").count()
+        );
+        let squashed = lower.replace(' ', "");
+        println!(
+            "  near-white text rules {}",
+            squashed.matches("color:#fff").count()
+                + squashed.matches("color:#ffffff").count()
+                + squashed.matches("color:white").count()
+                + squashed.matches("color:rgb(255,255,255)").count()
+        );
+        println!(
+            "  remote backgrounds    {}",
+            squashed.matches("background-image:url(http").count()
+                + squashed.matches("background:url(http").count()
+        );
+        println!("  words outside tags    {}", visible_words(&html));
+    }
+    Ok(())
+}
+
+/// How many words a reader would see: text outside tags, with script and
+/// style contents left out.
+fn visible_words(html: &str) -> usize {
+    let mut words = 0;
+    let mut inside_tag = false;
+    let mut skipping: Option<&str> = None;
+    let mut word = false;
+    let lower = html.to_ascii_lowercase();
+    let bytes = lower.as_bytes();
+    for (index, ch) in lower.char_indices() {
+        if let Some(tag) = skipping {
+            if lower[index..].starts_with(tag) {
+                skipping = None;
+            }
+            continue;
+        }
+        match ch {
+            '<' => {
+                inside_tag = true;
+                word = false;
+                if lower[index..].starts_with("<script") {
+                    skipping = Some("</script");
+                } else if lower[index..].starts_with("<style") {
+                    skipping = Some("</style");
+                }
+            }
+            '>' => inside_tag = false,
+            _ if inside_tag => {}
+            c if c.is_whitespace() => word = false,
+            _ => {
+                if !word {
+                    words += 1;
+                    word = true;
+                }
+            }
+        }
+        let _ = bytes;
+    }
+    words
 }
 
 async fn triage(

@@ -5,4 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+chrono.workspace = true
+chrono-tz.workspace = true
+icalendar.workspace = true
 serde.workspace = true

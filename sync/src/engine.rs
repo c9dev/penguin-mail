@@ -12,7 +12,9 @@ use tokio::task::JoinHandle;
 use tokio::time::Instant;
 
 use crate::account::{DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS};
-use crate::{AccountSync, GmailApi, SyncError, backoff_delay, now_millis};
+use crate::{
+    AccountSync, GmailApi, SyncError, backoff_delay, now_millis, poll_offset, with_jitter,
+};
 
 const PRUNE_INTERVAL: Duration = Duration::from_secs(60 * 60);
 
@@ -22,6 +24,13 @@ pub struct EngineConfig {
     pub max_backoff: Duration,
     pub window_days: i64,
     pub body_cache_bytes: i64,
+    /// Gap between backfill pages. A page of 100 messages costs 505 quota
+    /// units, about two and a half seconds of an account's budget, so
+    /// pages back to back leave the user nothing. The gap lets the bucket
+    /// refill before anybody presses Delete.
+    pub backfill_pause: Duration,
+    /// The gap while the user is already waiting on Gmail.
+    pub backfill_busy_pause: Duration,
 }
 
 impl Default for EngineConfig {
@@ -31,6 +40,8 @@ impl Default for EngineConfig {
             max_backoff: Duration::from_secs(300),
             window_days: DEFAULT_WINDOW_DAYS,
             body_cache_bytes: DEFAULT_BODY_CACHE_BYTES,
+            backfill_pause: Duration::from_millis(500),
+            backfill_busy_pause: Duration::from_secs(5),
         }
     }
 }
@@ -165,8 +176,23 @@ async fn run_account<G: GmailApi>(
     let mut failures: u32 = 0;
     let mut next_poll = Instant::now();
     let mut next_prune = Instant::now();
+    // Six accounts start together but should not ask for their history on
+    // the same second afterwards, so each one takes its own place in the
+    // cycle from its second poll on.
+    let mut stagger = poll_offset(sync.account_id(), config.poll_interval);
     loop {
-        match tick(&sync, &mut next_poll, &mut next_prune, &config).await {
+        // Everything this loop asks Gmail for is background work, so it
+        // waits behind whatever the user is doing and leaves the account
+        // budget the user's next action needs.
+        match mailrs_gmail::limiter::background(tick(
+            &sync,
+            &mut next_poll,
+            &mut next_prune,
+            &mut stagger,
+            &config,
+        ))
+        .await
+        {
             Ok(more_backfill) => {
                 failures = 0;
                 if reported != Some(AccountState::Ok) {
@@ -174,6 +200,20 @@ async fn run_account<G: GmailApi>(
                     report(&sync, AccountState::Ok).await;
                 }
                 if more_backfill {
+                    // Backfill has the whole mailbox to load and no hurry.
+                    // A gap between pages keeps the account's budget from
+                    // running at nothing, and a longer one gets out of the
+                    // way of a user action that is already waiting.
+                    let pause = match sync.foreground_waiting() {
+                        true => config.backfill_busy_pause,
+                        false => config.backfill_pause,
+                    };
+                    tokio::select! {
+                        _ = tokio::time::sleep(pause) => {}
+                        // Somebody asked for a refresh, which still wants
+                        // history before the next page.
+                        _ = poke.notified() => next_poll = Instant::now(),
+                    }
                     continue;
                 }
                 tokio::select! {
@@ -196,9 +236,14 @@ async fn run_account<G: GmailApi>(
                         reported = Some(state);
                         report(&sync, state).await;
                     }
-                    let delay = retry_after.unwrap_or_else(|| {
-                        backoff_delay(failures, config.max_backoff, rand::random_range(-1.0..=1.0))
-                    });
+                    // Gmail hands every account the same Retry-After, so
+                    // wait a jittered version of it rather than the number
+                    // itself, or all six come back on the same tick.
+                    let jitter = rand::random_range(-1.0..=1.0);
+                    let delay = match retry_after {
+                        Some(after) => with_jitter(after, jitter),
+                        None => backoff_delay(failures, config.max_backoff, jitter),
+                    };
                     failures = failures.saturating_add(1);
                     tokio::select! {
                         _ = tokio::time::sleep(delay) => {}
@@ -216,11 +261,12 @@ async fn tick<G: GmailApi>(
     sync: &AccountSync<G>,
     next_poll: &mut Instant,
     next_prune: &mut Instant,
+    stagger: &mut Duration,
     config: &EngineConfig,
 ) -> Result<bool, SyncError> {
     if Instant::now() >= *next_poll {
         sync.incremental().await?;
-        *next_poll = Instant::now() + config.poll_interval;
+        *next_poll = Instant::now() + config.poll_interval + std::mem::take(stagger);
     }
     if Instant::now() >= *next_prune {
         sync.prune(now_millis()).await?;

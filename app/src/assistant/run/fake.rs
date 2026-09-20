@@ -15,7 +15,7 @@ use mailrs_domain::{
     LabelKind, MessageBody, MessageMeta, ThreadSummary, Vacation,
 };
 use mailrs_gmail::{
-    GmailError, HistoryPage, LabelColor, MessagePage, MessageRef, Profile, RemoteLabel,
+    Answered, GmailError, HistoryPage, LabelColor, MessagePage, MessageRef, Profile, RemoteLabel,
 };
 use mailrs_store::{Db, accounts, labels, messages};
 use mailrs_sync::{
@@ -195,6 +195,18 @@ impl GmailApi for Gmail {
         Ok(())
     }
 
+    async fn batch_modify(
+        &self,
+        ids: &[String],
+        add: &[String],
+        remove: &[String],
+    ) -> Result<(), GmailError> {
+        for id in ids {
+            self.modify_labels(id, add, remove).await?;
+        }
+        Ok(())
+    }
+
     async fn trash(&self, id: &str) -> Result<(), GmailError> {
         self.with(|i| i.writes.push(format!("trash {id}")));
         Ok(())
@@ -203,6 +215,11 @@ impl GmailApi for Gmail {
     async fn untrash(&self, id: &str) -> Result<(), GmailError> {
         self.with(|i| i.writes.push(format!("untrash {id}")));
         Ok(())
+    }
+
+    /// The assistant has no way to erase mail, so a call here is a bug.
+    async fn delete_messages(&self, ids: &[String]) -> Result<(), GmailError> {
+        panic!("the assistant asked Gmail to erase {ids:?}");
     }
 
     async fn send(&self, _raw: &[u8], _thread_id: Option<&str>) -> Result<String, GmailError> {
@@ -326,6 +343,31 @@ impl GmailApi for Gmail {
         self.allowed()?;
         self.with(|i| i.vacation = vacation.clone());
         Ok(())
+    }
+
+    /// The assistant has no contacts tool, so this account has none.
+    async fn connections(
+        &self,
+        _page_token: Option<&str>,
+        _sync_token: Option<&str>,
+    ) -> Result<mailrs_gmail::ConnectionsPage, GmailError> {
+        Ok(mailrs_gmail::ConnectionsPage::default())
+    }
+
+    async fn contact_photo(&self, _url: &str) -> Result<Vec<u8>, GmailError> {
+        Err(GmailError::NotFound)
+    }
+
+    /// The assistant answers no invitations, so nothing here keeps a
+    /// calendar. The `Answer` below is the invitation's, not the one the
+    /// tool loop hands back.
+    async fn answer_invitation(
+        &self,
+        _ical_uid: &str,
+        _me: &str,
+        _answer: mailrs_domain::invitation::Answer,
+    ) -> Result<Answered, GmailError> {
+        Ok(Answered::NotOnCalendar)
     }
 }
 

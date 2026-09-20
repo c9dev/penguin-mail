@@ -11,7 +11,8 @@ use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
 use super::{
-    AiProvider, Choice, ColorScheme, MarkRead, RemoteImages, Settings, TextSize, UndoSend,
+    AiProvider, Choice, ColorScheme, ComposeFormat, MarkRead, RemoteImages, Settings, TextSize,
+    UndoSend,
 };
 
 /// One named change to the preferences.
@@ -32,6 +33,10 @@ pub enum Change {
     DefaultAccount(Option<String>),
     InboxCategories(bool),
     SuggestFollowUps(bool),
+    /// What a new message starts as.
+    ComposeFormat(ComposeFormat),
+    /// Read the accounts' Google contacts, or stop and forget them.
+    Contacts(bool),
     /// The colour the flag button reaches for next.
     FlagColor(FlagColor),
     /// An account's signature. Blank text removes it.
@@ -145,6 +150,8 @@ impl Change {
             Change::DefaultAccount(email) => settings.default_account = email,
             Change::InboxCategories(on) => settings.inbox_categories = on,
             Change::SuggestFollowUps(on) => settings.suggest_follow_ups = on,
+            Change::ComposeFormat(format) => settings.compose_format = format,
+            Change::Contacts(on) => settings.contacts = on,
             Change::FlagColor(color) => settings.flag_color = color,
             Change::Signature { email, text } => settings.set_signature(&email, &text),
             Change::ToggleVip { email, name } => {
@@ -252,11 +259,12 @@ pub enum Setting {
     NotifyVipsOnly,
     UndoSend,
     DefaultAccount,
+    ComposeFormat,
 }
 
 impl Setting {
     /// In the order the assistant sees them.
-    pub const ALL: [Setting; 10] = [
+    pub const ALL: [Setting; 11] = [
         Setting::Threading,
         Setting::MarkRead,
         Setting::RemoteImages,
@@ -267,6 +275,7 @@ impl Setting {
         Setting::NotifyVipsOnly,
         Setting::UndoSend,
         Setting::DefaultAccount,
+        Setting::ComposeFormat,
     ];
 
     /// The key in `settings.toml`, which is the name the tool takes too.
@@ -282,6 +291,7 @@ impl Setting {
             Setting::NotifyVipsOnly => "notify_vips_only",
             Setting::UndoSend => "undo_send",
             Setting::DefaultAccount => "default_account",
+            Setting::ComposeFormat => "compose_format",
         }
     }
 
@@ -302,6 +312,7 @@ impl Setting {
             Setting::NotifyVipsOnly => json!(settings.notify_vips_only),
             Setting::UndoSend => json!(settings.undo_send),
             Setting::DefaultAccount => json!(settings.default_account),
+            Setting::ComposeFormat => json!(settings.compose_format),
         }
     }
 
@@ -321,6 +332,7 @@ impl Setting {
             Setting::NotifyVipsOnly => Change::NotifyVipsOnly(read(value)?),
             Setting::UndoSend => Change::UndoSend(read(value)?),
             Setting::DefaultAccount => Change::DefaultAccount(read(value)?),
+            Setting::ComposeFormat => Change::ComposeFormat(read(value)?),
         })
     }
 }
@@ -347,6 +359,9 @@ pub enum Effect {
     Assistant,
     /// How large the conversation's text is.
     TextSize,
+    /// Whether contacts supply names and photos, which rows and the open
+    /// conversation show.
+    Contacts,
     /// Light or dark.
     Theme,
 }
@@ -354,7 +369,7 @@ pub enum Effect {
 impl Effect {
     /// In the order the window applies them: accounts first, because the
     /// rows and the smart mailbox on screen read what it sets.
-    pub const ALL: [Effect; 10] = [
+    pub const ALL: [Effect; 11] = [
         Effect::ListShape,
         Effect::Accounts,
         Effect::RowColors,
@@ -364,6 +379,7 @@ impl Effect {
         Effect::Categories,
         Effect::Assistant,
         Effect::TextSize,
+        Effect::Contacts,
         Effect::Theme,
     ];
 }
@@ -417,6 +433,8 @@ impl Effects {
             spell_words,
             last_sender,
             send_as,
+            compose_format,
+            contacts,
         } = after;
         // These leave the window as it is. The flag colour, the delay before
         // Send commits, and the rest are read when they are needed, so
@@ -438,6 +456,7 @@ impl Effects {
             spell_words,
             last_sender,
             send_as,
+            compose_format,
         );
         let smart_changed = *smart_mailboxes != before.smart_mailboxes;
         let colors_changed = *account_colors != before.account_colors;
@@ -461,6 +480,7 @@ impl Effects {
                 Effect::Categories => *inbox_categories != before.inbox_categories,
                 Effect::Assistant => *ai != before.ai,
                 Effect::TextSize => *text_size != before.text_size,
+                Effect::Contacts => *contacts != before.contacts,
                 Effect::Theme => *color_scheme != before.color_scheme,
             })
             .collect();
@@ -680,6 +700,7 @@ mod tests {
         after.inbox_categories = !before.inbox_categories;
         after.ai.local_model = "qwen".into();
         after.text_size = TextSize::Small;
+        after.contacts = !before.contacts;
         after.color_scheme = ColorScheme::Dark;
         let effects = Effects::between(&before, &after);
         assert_eq!(effects.iter().collect::<Vec<_>>(), Effect::ALL);
@@ -707,6 +728,7 @@ mod tests {
             Change::InboxCategories(false),
             Change::Ai(AiChange::ConfirmActions(false)),
             Change::StepTextSize(1),
+            Change::Contacts(true),
             Change::ColorScheme(ColorScheme::Light),
         ];
         let mut seen: Vec<Effect> = Vec::new();
@@ -750,6 +772,9 @@ mod tests {
                 "account_names",
                 "account_order",
                 "ai",
+                // Reading contacts asks Google for access of its own, so
+                // it stays a choice the person makes in Preferences.
+                "contacts",
                 "flag_color",
                 "hidden_addresses",
                 "inbox_categories",
