@@ -65,8 +65,10 @@ allows only the mail tools, and uses `--permission-mode dontAsk`, so
 nothing outside that list runs. Claude Code still reads your global
 `~/.claude/CLAUDE.md` and runs your hooks, as it does in any session.
 
-The model field takes Claude Code's aliases: `opus`, `sonnet`, or `haiku`.
-Leave it empty for your plan's default.
+The model field lists what your `claude` install offers: its own default,
+the aliases with the version each points at today, and the dated ids for
+pinning one. Penguin Mail reads that list from the catalog the CLI keeps,
+so it matches whatever version you have.
 
 ## What it asks before doing
 
