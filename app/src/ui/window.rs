@@ -1328,23 +1328,21 @@ impl MainWindow {
         self.perform(targets, MailAction::Triage(action), History::Record, None);
     }
 
-    /// Mutes or unmutes the targets. Gmail archives the replies to a muted
-    /// thread with its own filters, so muting is the label and one archive.
-    fn mute(self: &Rc<Self>, muted: bool) {
+    /// Mutes the targets, or unmutes them when they are muted already.
+    /// Gmail archives the replies to a muted thread with its own filters,
+    /// so muting here is the label and one archive.
+    fn toggle_mute(self: &Rc<Self>) {
         let targets = self.targets();
         if targets.is_empty() {
             return;
         }
-        self.follow_out(&match muted {
-            true => TriageAction::Mute,
-            false => TriageAction::Unmute,
+        let muted = !self.targets_muted();
+        self.follow_out(&if muted {
+            TriageAction::Mute
+        } else {
+            TriageAction::Unmute
         });
         self.perform(targets, MailAction::Mute { muted }, History::Record, None);
-    }
-
-    /// Mute or unmute, whichever the targets are not already.
-    fn toggle_mute(self: &Rc<Self>) {
-        self.mute(!self.targets_muted());
     }
 
     /// Moves on to the next row when `action` takes the targets out of the
