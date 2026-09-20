@@ -358,6 +358,7 @@ impl ConversationView {
         let sender = gio::Menu::new();
         sender.append(Some("Add Sender to VIPs"), Some("win.toggle-vip"));
         sender.append(Some("Unsubscribe…"), Some("win.unsubscribe"));
+        sender.append(Some("Always Load Images…"), Some("win.always-load-images"));
         sender.append(Some("Block Sender…"), Some("win.block-sender"));
         let categories = gio::Menu::new();
         for (name, key) in [

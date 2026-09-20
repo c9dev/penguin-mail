@@ -98,6 +98,7 @@ fn general_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         settings.remote_images,
         Change::RemoteImages,
     ));
+    reading.add(&allowed_image_senders(app));
     reading.add(&combo(
         app,
         "Text Size",
@@ -489,6 +490,71 @@ fn sync_page(app: &Rc<App>, pending: &Rc<RefCell<SyncConfig>>) -> adw::Preferenc
     startup.add(&login);
     page.add(&startup);
     page
+}
+
+/// The senders whose images load without asking, each with a way off the
+/// list. The rows fill in once the store answers, so opening Preferences
+/// never waits on it.
+fn allowed_image_senders(app: &Rc<App>) -> adw::ExpanderRow {
+    let row = adw::ExpanderRow::builder()
+        .title("Senders Who May Load Images")
+        .subtitle("Nobody yet")
+        .build();
+    let (app, shown) = (Rc::clone(app), row.clone());
+    glib::spawn_future_local(async move {
+        let Ok(list) = app.core.read(mailrs_store::image_senders::list).await else {
+            return;
+        };
+        shown.set_subtitle(&match list.len() {
+            0 => "Nobody yet".to_string(),
+            1 => "One sender".to_string(),
+            many => format!("{many} senders"),
+        });
+        for entry in list {
+            let item = adw::ActionRow::builder()
+                .title(glib::markup_escape_text(&entry.sender))
+                .subtitle(if entry.whole_domain {
+                    "Anyone at this domain"
+                } else {
+                    "This address"
+                })
+                .build();
+            let remove = gtk::Button::builder()
+                .icon_name("user-trash-symbolic")
+                .tooltip_text("Stop Loading Images from This Sender")
+                .valign(gtk::Align::Center)
+                .css_classes(["flat"])
+                .build();
+            let (app, sender, listed, removed) = (
+                Rc::clone(&app),
+                entry.sender.clone(),
+                shown.clone(),
+                item.clone(),
+            );
+            remove.connect_clicked(move |_| {
+                let (app, sender) = (Rc::clone(&app), sender.clone());
+                let (listed, removed) = (listed.clone(), removed.clone());
+                glib::spawn_future_local(async move {
+                    let gone = sender.clone();
+                    if app
+                        .core
+                        .read(move |c| mailrs_store::image_senders::forget(c, &gone))
+                        .await
+                        .is_ok()
+                    {
+                        listed.remove(&removed);
+                        // The window keeps its own copy of the list.
+                        if let Some(window) = app.window() {
+                            window.reload_image_senders();
+                        }
+                    }
+                });
+            });
+            item.add_suffix(&remove);
+            shown.add_row(&item);
+        }
+    });
+    row
 }
 
 fn switch(

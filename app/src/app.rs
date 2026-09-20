@@ -339,7 +339,7 @@ impl App {
         });
     }
 
-    fn window(&self) -> Option<Rc<MainWindow>> {
+    pub(crate) fn window(&self) -> Option<Rc<MainWindow>> {
         self.window.borrow().clone()
     }
 

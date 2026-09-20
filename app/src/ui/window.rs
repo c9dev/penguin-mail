@@ -27,7 +27,7 @@ use crate::app::App;
 use crate::assistant::ToolRequest;
 use crate::compose::{self, Draft, OutgoingAttachment, ReplyKind};
 use crate::core::Core;
-use crate::settings::{Change, Effect, Effects, MarkRead, RemoteImages, Settings};
+use crate::settings::{Change, Effect, Effects, MarkRead, Settings};
 
 mod arrange;
 mod assistant;
@@ -38,6 +38,7 @@ mod export;
 mod flags;
 mod followup;
 mod hide_my_email;
+mod images;
 mod invitation;
 mod organize;
 mod reminders;
@@ -122,6 +123,9 @@ pub struct MainWindow {
     /// Pictures for the attachment rows, held the same way and for the
     /// same reason.
     thumbnail_cache: RefCell<HashMap<(AccountId, String, String), String>>,
+    /// Senders whose remote images may load. Read from the store once and
+    /// kept here, since every thread that opens asks about it.
+    image_senders: RefCell<Vec<mailrs_store::image_senders::ImageSender>>,
 }
 
 /// What one row holds, for a line the user reads.
@@ -371,6 +375,7 @@ impl MainWindow {
                 follow_up: followup::FollowUpBanner::new(),
                 inline_cache: RefCell::new(HashMap::new()),
                 thumbnail_cache: RefCell::new(HashMap::new()),
+                image_senders: RefCell::new(Vec::new()),
             }
         });
         if window.core.demo {
@@ -462,6 +467,7 @@ impl MainWindow {
             .conversation
             .set_zoom(app.settings().text_size.zoom());
         window.refresh_accounts(Reload::Yes);
+        window.reload_image_senders();
         window
     }
 
@@ -836,7 +842,7 @@ impl MainWindow {
     pub(super) fn load_into(self: &Rc<Self>, view: Rc<ConversationView>, summary: ThreadSummary) {
         let (account_id, thread_id) = (summary.account_id, summary.id.clone());
         let only = summary.message_id.clone();
-        let images_allowed = self.settings().remote_images == RemoteImages::Always;
+        let images_allowed = self.images_allowed_for(std::slice::from_ref(&summary.from_email));
         let me = self.addresses_for(account_id);
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
@@ -867,6 +873,11 @@ impl MainWindow {
                         .map(|a| a.email.clone()),
                 )
             });
+            let senders: Vec<String> = found
+                .iter()
+                .map(|m| m.from.as_ref().map(|a| a.email.clone()).unwrap_or_default())
+                .collect();
+            let images_allowed = images_allowed || this.images_allowed_for(&senders);
             let thread = OpenThread {
                 account_id,
                 thread_id: thread_id.clone(),
@@ -1277,8 +1288,8 @@ impl MainWindow {
             }
             Action::Unsubscribe => self.unsubscribe(),
             Action::LoadImages => {
-                self.conversation.with_open(|o| o.images_allowed = true);
-                self.conversation.render(false);
+                let view = Rc::clone(&self.conversation);
+                self.load_images_once(&view);
             }
             Action::SaveAttachment { message_id, index } => self.save_attachment(message_id, index),
             Action::PreviewAttachment { message_id, index } => {
@@ -2292,6 +2303,13 @@ impl MainWindow {
         add("export", Box::new(|win| win.export()));
         add("open-window", Box::new(|win| win.open_current_in_window()));
         add("block-sender", Box::new(|win| win.block_sender()));
+        add(
+            "always-load-images",
+            Box::new(|win| {
+                let view = Rc::clone(&win.conversation);
+                win.always_load_images(&view)
+            }),
+        );
         add("select-all", Box::new(|win| win.list.select_all()));
         add("zoom-in", Box::new(|win| win.change_text_size(1)));
         add("zoom-out", Box::new(|win| win.change_text_size(-1)));

@@ -233,6 +233,17 @@ CREATE TABLE templates (
     markdown TEXT NOT NULL DEFAULT ''
 );
 "#,
+    // Senders whose remote images may load. Like templates, this follows
+    // the person rather than an account. `sender` holds a lower-case
+    // address, or a lower-case domain when `whole_domain` is set, and an
+    // address always carries an `@`, so the two never collide.
+    r#"
+CREATE TABLE image_senders (
+    sender       TEXT PRIMARY KEY,
+    whole_domain INTEGER NOT NULL DEFAULT 0,
+    allowed_at   INTEGER NOT NULL
+);
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,

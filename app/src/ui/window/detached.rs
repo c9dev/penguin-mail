@@ -119,10 +119,7 @@ impl MainWindow {
                     false,
                 );
             }
-            Action::LoadImages => {
-                view.with_open(|o| o.images_allowed = true);
-                view.render(false);
-            }
+            Action::LoadImages => self.load_images_once(&Rc::clone(view)),
             Action::SaveAttachment { message_id, index } => {
                 self.save_attachment_from(view, message_id, index)
             }
@@ -181,6 +178,10 @@ impl MainWindow {
         add(
             "block-sender",
             Box::new(|win, view| win.block_sender_from(Rc::clone(view))),
+        );
+        add(
+            "always-load-images",
+            Box::new(|win, view| win.always_load_images(&Rc::clone(view))),
         );
         let categorize = gio::SimpleAction::new("categorize-sender", Some(glib::VariantTy::STRING));
         let (win, target) = (Rc::downgrade(self), Rc::downgrade(view));

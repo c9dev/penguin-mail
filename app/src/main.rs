@@ -11,6 +11,7 @@ mod demo;
 mod diff;
 mod format;
 mod hide_my_email;
+mod images;
 mod notify;
 mod render;
 mod richtext;
