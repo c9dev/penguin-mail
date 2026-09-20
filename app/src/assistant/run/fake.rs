@@ -19,8 +19,8 @@ use mailrs_gmail::{
 };
 use mailrs_store::{Db, accounts, labels, messages};
 use mailrs_sync::{
-    AccountSettings, AccountSync, Accounts, GmailApi, MailAction, MailActions, Mailboxes, Outcome,
-    Permitted, SavedDraft, View,
+    AccountSettings, AccountSync, Accounts, DraftRef, GmailApi, MailAction, MailActions, Mailboxes,
+    Outcome, Permitted, SavedDraft, View,
 };
 use serde_json::Value;
 
@@ -247,8 +247,8 @@ impl GmailApi for Gmail {
         Ok(())
     }
 
-    async fn draft_for_message(&self, _message_id: &str) -> Result<Option<String>, GmailError> {
-        Ok(None)
+    async fn list_drafts(&self) -> Result<Vec<DraftRef>, GmailError> {
+        Ok(Vec::new())
     }
 
     async fn send_as(&self) -> Result<Vec<mailrs_gmail::SendAs>, GmailError> {

@@ -35,7 +35,7 @@ pub use account::{
 pub use actions::{Accounts, Failure, History, MailAction, MailActions, Outcome};
 #[cfg(any(test, feature = "fake"))]
 pub use api::AnyGmail;
-pub use api::{AccountClient, GmailApi, LIST_PAGE_SIZE, SavedDraft};
+pub use api::{AccountClient, DraftRef, GmailApi, LIST_PAGE_SIZE, SavedDraft};
 pub use backoff::{MOST_TRIES, backoff_delay, poll_offset, retry_delay, with_jitter};
 pub use connect::connect_account;
 pub use contacts::{Card, ContactBook, Refreshed};

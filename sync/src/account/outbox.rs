@@ -3,7 +3,7 @@
 
 use mailrs_domain::{EpochMillis, Filter, MessageMeta, Vacation};
 use mailrs_gmail::{GmailError, SendAs, html_to_text};
-use mailrs_store::messages;
+use mailrs_store::{drafts, messages};
 
 use super::AccountSync;
 use crate::{GmailApi, SavedDraft, SyncError};
@@ -32,11 +32,13 @@ impl<G: GmailApi> AccountSync<G> {
         draft_id: Option<String>,
     ) -> Result<String, SyncError> {
         let message_id = self.api.send(&raw, thread_id.as_deref()).await?;
-        if let Some(draft_id) = draft_id
-            && let Err(err) = self.api.delete_draft(&draft_id).await
-            && !matches!(err, GmailError::NotFound)
-        {
-            tracing::warn!(account = self.account_id, error = %err, "sent, but could not delete the draft");
+        if let Some(draft_id) = draft_id {
+            if let Err(err) = self.api.delete_draft(&draft_id).await
+                && !matches!(err, GmailError::NotFound)
+            {
+                tracing::warn!(account = self.account_id, error = %err, "sent, but could not delete the draft");
+            }
+            self.forget_draft(&draft_id).await?;
         }
         Ok(message_id)
     }
@@ -50,38 +52,86 @@ impl<G: GmailApi> AccountSync<G> {
         draft_id: Option<String>,
     ) -> Result<SavedDraft, SyncError> {
         let thread_id = thread_id.as_deref();
-        match self
+        let saved = match self
             .api
             .save_draft(draft_id.as_deref(), &raw, thread_id)
             .await
         {
             Err(GmailError::NotFound) if draft_id.is_some() => {
-                Ok(self.api.save_draft(None, &raw, thread_id).await?)
+                self.api.save_draft(None, &raw, thread_id).await?
             }
-            other => Ok(other?),
-        }
+            other => other?,
+        };
+        // Gmail's answer names both the draft and the message it now
+        // holds, which is the pair `drafts.list` would otherwise be asked
+        // for. Storing it here is what keeps every draft this app writes
+        // out of that listing.
+        let account_id = self.account_id;
+        let (draft, message) = (saved.draft_id.clone(), saved.message_id.clone());
+        self.db
+            .write(move |c| drafts::remember(c, account_id, &draft, &message))
+            .await?;
+        Ok(saved)
     }
 
     /// Sends a draft as Gmail holds it, as a scheduled send does. Returns
     /// `None` when the draft is gone, sent or deleted elsewhere.
     pub async fn send_draft(&self, draft_id: &str) -> Result<Option<String>, SyncError> {
-        match self.api.send_draft(draft_id).await {
-            Ok(id) => Ok(Some(id)),
-            Err(GmailError::NotFound) => Ok(None),
-            Err(err) => Err(err.into()),
-        }
+        let sent = match self.api.send_draft(draft_id).await {
+            Ok(id) => Some(id),
+            Err(GmailError::NotFound) => None,
+            Err(err) => return Err(err.into()),
+        };
+        self.forget_draft(draft_id).await?;
+        Ok(sent)
     }
 
     pub async fn delete_draft(&self, draft_id: &str) -> Result<(), SyncError> {
         match self.api.delete_draft(draft_id).await {
-            Ok(()) | Err(GmailError::NotFound) => Ok(()),
-            Err(err) => Err(err.into()),
+            Ok(()) | Err(GmailError::NotFound) => {}
+            Err(err) => return Err(err.into()),
         }
+        self.forget_draft(draft_id).await
     }
 
-    /// The draft backed by `message_id`, for reopening a draft in the composer.
+    /// The draft backed by `message_id`, for reopening a draft in the
+    /// composer. The store answers for a draft it already knows, which
+    /// costs nothing. Otherwise `drafts.list` walks the whole account, and
+    /// every pair it hands back is stored, so the account pays that once
+    /// rather than once per draft opened.
     pub async fn draft_id_for(&self, message_id: &str) -> Result<Option<String>, SyncError> {
-        Ok(self.api.draft_for_message(message_id).await?)
+        let account_id = self.account_id;
+        let wanted = message_id.to_string();
+        if let Some(draft_id) = self
+            .db
+            .read(move |c| drafts::draft_of(c, account_id, &wanted))
+            .await?
+        {
+            return Ok(Some(draft_id));
+        }
+        let listed = self.api.list_drafts().await?;
+        let found = listed
+            .iter()
+            .find(|d| d.message_id == message_id)
+            .map(|d| d.draft_id.clone());
+        let pairs: Vec<(String, String)> = listed
+            .into_iter()
+            .map(|d| (d.draft_id, d.message_id))
+            .collect();
+        self.db
+            .write(move |c| drafts::replace_all(c, account_id, &pairs))
+            .await?;
+        Ok(found)
+    }
+
+    /// Drops the stored pair for a draft that has left Gmail.
+    async fn forget_draft(&self, draft_id: &str) -> Result<(), SyncError> {
+        let account_id = self.account_id;
+        let draft_id = draft_id.to_string();
+        self.db
+            .write(move |c| drafts::forget(c, account_id, &draft_id))
+            .await?;
+        Ok(())
     }
 
     /// Runs a Gmail search and returns up to `limit` messages, newest first.

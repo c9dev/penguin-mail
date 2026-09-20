@@ -105,11 +105,11 @@ pub trait GmailApi: Send + Sync + 'static {
 
     fn delete_draft(&self, draft_id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
 
-    /// The draft whose current message is `message_id`, if any.
-    fn draft_for_message(
-        &self,
-        message_id: &str,
-    ) -> impl Future<Output = Result<Option<String>, GmailError>> + Send;
+    /// Every draft in the account, each with the message inside it.
+    /// Nothing else in Gmail maps the two, and the call charges 5 units a
+    /// page of the whole account, so a caller stores what comes back
+    /// rather than asking again for the next draft.
+    fn list_drafts(&self) -> impl Future<Output = Result<Vec<DraftRef>, GmailError>> + Send;
 
     /// The display name of the account's default send-as identity.
     fn display_name(&self) -> impl Future<Output = Result<Option<String>, GmailError>> + Send;
@@ -301,8 +301,8 @@ impl GmailApi for AnyGmail {
     async fn delete_draft(&self, draft_id: &str) -> Result<(), GmailError> {
         forward!(self, delete_draft(draft_id))
     }
-    async fn draft_for_message(&self, message_id: &str) -> Result<Option<String>, GmailError> {
-        forward!(self, draft_for_message(message_id))
+    async fn list_drafts(&self) -> Result<Vec<DraftRef>, GmailError> {
+        forward!(self, list_drafts())
     }
     async fn send_as(&self) -> Result<Vec<SendAs>, GmailError> {
         forward!(self, send_as())
@@ -389,6 +389,14 @@ impl GmailApi for AnyGmail {
 /// calendar could mean.
 fn rfc3339(at: EpochMillis) -> Option<String> {
     chrono::DateTime::from_timestamp_millis(at).map(|at| at.to_rfc3339())
+}
+
+/// One draft as `drafts.list` reports it: Gmail's two names for it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DraftRef {
+    pub draft_id: String,
+    /// The message the draft holds now. Every edit replaces it.
+    pub message_id: String,
 }
 
 /// Where a saved draft lives in Gmail.
@@ -523,12 +531,17 @@ impl GmailApi for AccountClient {
         self.client.delete_draft(draft_id).await
     }
 
-    async fn draft_for_message(&self, message_id: &str) -> Result<Option<String>, GmailError> {
-        let drafts = self.client.list_drafts().await?;
-        Ok(drafts
+    async fn list_drafts(&self) -> Result<Vec<DraftRef>, GmailError> {
+        Ok(self
+            .client
+            .list_drafts()
+            .await?
             .into_iter()
-            .find(|d| d.message.id == message_id)
-            .map(|d| d.id))
+            .map(|d| DraftRef {
+                draft_id: d.id,
+                message_id: d.message.id,
+            })
+            .collect())
     }
 
     async fn send_as(&self) -> Result<Vec<SendAs>, GmailError> {

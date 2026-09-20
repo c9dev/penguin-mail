@@ -22,7 +22,7 @@ use mailrs_gmail::{
     RemoteLabel, SendAs, cost, limiter,
 };
 
-use crate::api::{GmailApi, SavedDraft};
+use crate::api::{DraftRef, GmailApi, SavedDraft};
 use query::Query;
 
 pub struct FakeGmail {
@@ -591,13 +591,21 @@ impl GmailApi for FakeGmail {
         })
     }
 
-    async fn draft_for_message(&self, message_id: &str) -> Result<Option<String>, GmailError> {
-        self.call("users.drafts.list", cost::DRAFT_LIST).await?;
+    async fn list_drafts(&self) -> Result<Vec<DraftRef>, GmailError> {
+        // Gmail charges per page and the real client follows every page
+        // token, so the count of drafts is what this costs.
+        let pages = self.with(|s| s.draft_messages.len().div_ceil(s.page_size).max(1));
+        for _ in 0..pages {
+            self.call("users.drafts.list", cost::DRAFT_LIST).await?;
+        }
         Ok(self.with(|s| {
             s.draft_messages
                 .iter()
-                .find(|(_, m)| *m == message_id)
-                .map(|(d, _)| d.clone())
+                .map(|(draft_id, message_id)| DraftRef {
+                    draft_id: draft_id.clone(),
+                    message_id: message_id.clone(),
+                })
+                .collect()
         }))
     }
 

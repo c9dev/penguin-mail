@@ -1204,10 +1204,10 @@ mod tests {
             .unwrap()
             .id;
         let api = gmail.account(work).expect("the account has a mailbox");
-        assert_eq!(
-            api.draft_for_message("draft-1").await.unwrap().as_deref(),
-            Some(DRAFT_ID)
-        );
+        let listed = api.list_drafts().await.unwrap();
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].draft_id, DRAFT_ID);
+        assert_eq!(listed[0].message_id, "draft-1");
         let file = api
             .attachment("roadmap-1", "roadmap-1-att-0")
             .await
