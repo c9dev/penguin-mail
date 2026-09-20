@@ -10,9 +10,8 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use chrono::{DateTime, Days, Local, TimeDelta};
-use mailrs_domain::Address;
-use mailrs_domain::EpochMillis;
 use mailrs_domain::invitation::{Answer, Invitation, Method, Scope, When};
+use mailrs_domain::{Address, EpochMillis};
 use mailrs_sync::Change;
 
 use crate::format::{event_moved_from, event_tile, event_when};

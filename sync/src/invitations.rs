@@ -7,14 +7,14 @@
 //! while Gmail does not. The card in the window and its tests both go
 //! through here, so neither works out any of that for itself.
 //!
-//! An answer has two roads to the organizer. Google Calendar is the better
-//! one when it is open, since one call tells the organizer and marks the
-//! user's own calendar; it is open only for an event Google already holds,
-//! which leaves out every invitation from Exchange, every one forwarded by
-//! hand, and every one that arrived at an address the calendar does not
-//! belong to. The other road is the one RFC 5546 lays out: mail the
-//! organizer a `METHOD:REPLY` object. That one needs nobody's permission,
-//! so it is what the answer falls back to.
+//! An answer reaches the organizer one of two ways. Google Calendar is
+//! the better one where it works, since a single call tells the organizer
+//! and marks the user's own calendar; it works only for an event Google
+//! already holds, which leaves out an invitation from Exchange, one
+//! forwarded by hand, and one that arrived at an address the calendar does
+//! not belong to. The other is RFC 5546's: mail the organizer a
+//! `METHOD:REPLY` object. That needs nobody's permission, so it is what an
+//! answer falls back to.
 
 mod mail;
 

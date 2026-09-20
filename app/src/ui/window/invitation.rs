@@ -3,9 +3,9 @@
 //! step, and hand the `.ics` to the desktop so GNOME Calendar files the
 //! event.
 //!
-//! The answer leaves by one of two roads, and `mailrs_sync` picks it. The
-//! card says which one it took, since a reply Google filed shows up on the
-//! user's calendar and a reply that went out as mail does not.
+//! `mailrs_sync` decides how an answer goes out. The card says which way
+//! it went, since an answer Google filed shows up on the user's own
+//! calendar and one that left as mail does not.
 
 use std::cell::RefCell;
 use std::collections::HashSet;
