@@ -36,6 +36,24 @@ fn bodies_round_trip_with_attachments() {
 }
 
 #[test]
+fn every_wrapper_a_message_can_arrive_in_survives_the_store() {
+    let (conn, id) = db();
+    store(&conn, &[meta(id, "a", "t1", 100, &["INBOX"])]);
+    for (at, protection) in Protection::ALL.into_iter().enumerate() {
+        let kept = MessageBody {
+            protection: Some(protection),
+            ..body("hi")
+        };
+        bodies::put_body(&conn, id, "a", &kept, at as i64).unwrap();
+        assert_eq!(
+            bodies::get_body(&conn, id, "a", at as i64).unwrap(),
+            Some(kept),
+            "{protection:?}"
+        );
+    }
+}
+
+#[test]
 fn eviction_keeps_the_most_recently_read_bodies() {
     let (conn, id) = db();
     store(

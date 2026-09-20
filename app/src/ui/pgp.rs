@@ -1,8 +1,11 @@
-//! The OpenPGP card: what gpg made of a message, on a strip above it.
+//! The protection card: what the engine made of a message, on a strip
+//! above it.
 //!
-//! It sits where the event card sits and says the same kind of thing: one
-//! line for what happened, one for how much it is worth. It has no buttons,
-//! because nothing here is the reader's to answer.
+//! One card covers both standards, because a reader cares what happened to
+//! the message rather than which of them carried it. It sits where the
+//! event card sits and says the same kind of thing: one line for what
+//! happened, one for how much it is worth. It has no buttons, because
+//! nothing here is the reader's to answer.
 
 use std::rc::Rc;
 

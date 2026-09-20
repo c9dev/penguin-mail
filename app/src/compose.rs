@@ -869,8 +869,8 @@ pub fn build_mime(draft: &Draft, date_secs: i64, message_id: &str) -> Result<Vec
 }
 
 /// The body of `draft` as one MIME entity: the headers that describe the
-/// body, a blank line, and the body. This is what the OpenPGP engine signs
-/// or encrypts, which is why it carries no `From`, `To` or `Subject`.
+/// body, a blank line, and the body. This is what the engine signs or
+/// encrypts, which is why it carries no `From`, `To` or `Subject`.
 pub fn build_body_part(draft: &Draft) -> Result<Vec<u8>, String> {
     let (text, html) = written(draft);
     let mut out = Vec::new();
@@ -883,9 +883,10 @@ pub fn build_body_part(draft: &Draft) -> Result<Vec<u8>, String> {
 
 /// The message `draft` describes, with `entity` as its body.
 ///
-/// `entity` is what `Pgp::sign` or `Pgp::encrypt` handed back: a
-/// `Content-Type` header, a blank line, and the parts under it. The header
-/// goes on the message and the rest goes in as the body, byte for byte.
+/// `entity` is what either engine's `sign` or `encrypt` handed back: the
+/// headers that describe it, a blank line, and the body under them. Those
+/// headers go on the message and the rest goes in as its body, byte for
+/// byte.
 /// Rewrapping a line or re-encoding a part here would leave the signature
 /// covering bytes that no longer exist, and the reader seeing a warning
 /// instead of a message.
