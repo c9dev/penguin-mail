@@ -588,6 +588,18 @@ impl ThreadList {
 /// selected before.
 fn context_menu(row: &ThreadRow, item: &gtk::ListItem, selection: &gtk::MultiSelection) {
     let menu = gio::Menu::new();
+    // Only the Outbox turns these two on, and GTK leaves an item whose
+    // action is off out of the menu rather than greying it.
+    let waiting = gio::Menu::new();
+    for (text, action) in [
+        ("Edit…", "win.outbox-edit"),
+        ("Send Now", "win.outbox-send"),
+    ] {
+        let item = gio::MenuItem::new(Some(text), Some(action));
+        item.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
+        waiting.append_item(&item);
+    }
+    menu.append_section(None, &waiting);
     menu.append(Some("Export…"), Some("win.export"));
     let popover = gtk::PopoverMenu::from_model(Some(&menu));
     popover.set_has_arrow(false);

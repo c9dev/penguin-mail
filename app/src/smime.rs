@@ -12,6 +12,7 @@ use std::process::Command;
 
 use mailrs_domain::{MessageBody, Protection};
 use mailrs_smime::{Chain, Recipient, Signature, Smime, SmimeError, Verdict};
+use serde::{Deserialize, Serialize};
 
 use crate::pgp::{self, Mark, Read, Tone};
 
@@ -35,7 +36,7 @@ pub enum Engine {
 }
 
 /// Which standard a message goes out under.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Standard {
     #[default]
     Pgp,
