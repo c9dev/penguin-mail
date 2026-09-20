@@ -387,6 +387,44 @@ async fn a_scheduled_send_that_fails_moves_into_the_outbox() {
 }
 
 #[tokio::test]
+async fn a_message_queued_before_a_restart_goes_out_after_one() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let fake = Arc::new(crate::fake::FakeGmail::new());
+    let (sender, _events) = async_channel::unbounded();
+    let outbox_over = |db: &mailrs_store::Db| {
+        let sync = Arc::new(crate::AccountSync::new(
+            1,
+            Arc::clone(&fake),
+            db.clone(),
+            sender.clone(),
+        ));
+        Outbox::new(Arc::new(Connected(HashMap::from([(1, sync)]))), db.clone())
+    };
+
+    let db = mailrs_store::Db::open(&path).unwrap();
+    db.write(|c| mailrs_store::accounts::insert_account(c, "me@example.com", 0))
+        .await
+        .unwrap();
+    fake.fail_next(GmailError::Network("offline".into()));
+    let posted = outbox_over(&db).post(message(1, "Report")).await.unwrap();
+    assert!(matches!(posted, Posted::Waiting(_)), "got {posted:?}");
+    drop(db);
+
+    // A new run of the app, over the same file the last one left behind.
+    let db = mailrs_store::Db::open(&path).unwrap();
+    let later = now_millis() + 24 * 60 * 60 * 1000;
+    let drained = outbox_over(&db).send_due(later).await.unwrap();
+    assert_eq!(drained.sent.len(), 1, "the message was still here");
+    assert_eq!(
+        fake.with(|s| s.sent.clone()),
+        [(b"Subject: Report\r\n\r\nhello".to_vec(), None)],
+        "and went out byte for byte as it was written"
+    );
+    assert!(db.read(outbox::list).await.unwrap().is_empty());
+}
+
+#[tokio::test]
 async fn the_network_coming_back_brings_every_stuck_message_forward() {
     let h = harness().await;
     let mut waiting = message(h.account_id, "Report");
