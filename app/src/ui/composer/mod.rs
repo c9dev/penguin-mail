@@ -16,6 +16,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gdk, gio, glib};
+use mailrs_store::templates::Template;
 use webkit::prelude::*;
 
 use self::recipients::Recipients;
@@ -28,6 +29,7 @@ use crate::core::Core;
 use crate::format::{future_date, human_size, send_later_presets};
 use crate::richtext::{Block, BlockKind, RichBody, Style};
 use crate::settings::ComposeFormat;
+use crate::templates::{self, Filling};
 
 pub use crate::compose::Identity;
 
@@ -82,6 +84,9 @@ pub struct Composer {
     showing: Cell<usize>,
     /// The spell checker marking up the body, when one could start.
     spell: RefCell<Option<Rc<spell::SpellCheck>>>,
+    /// The saved templates, and the menu section that lists them.
+    templates: RefCell<Vec<Template>>,
+    template_items: gio::Menu,
     remember: Rc<dyn Fn(Remembered)>,
     base: RefCell<Draft>,
     attachments: RefCell<Vec<OutgoingAttachment>>,
@@ -147,10 +152,22 @@ impl Composer {
             .icon_name("view-reveal-symbolic")
             .tooltip_text("Preview")
             .build();
+        let template_items = gio::Menu::new();
+        let template_menu = gio::Menu::new();
+        template_menu.append_section(None, &template_items);
+        let saving = gio::Menu::new();
+        saving.append(Some("Save as Template…"), Some("composer.save-template"));
+        template_menu.append_section(None, &saving);
+        let template_button = gtk::MenuButton::builder()
+            .icon_name("insert-text-symbolic")
+            .tooltip_text("Templates")
+            .menu_model(&template_menu)
+            .build();
         let header = adw::HeaderBar::builder().title_widget(&title).build();
         header.pack_end(&send);
         header.pack_end(&preview_toggle);
         header.pack_end(&attach);
+        header.pack_end(&template_button);
 
         let from = from_dropdown(&identities);
         let last = last_used
@@ -298,6 +315,8 @@ impl Composer {
             identities,
             showing: Cell::new(selected),
             spell: RefCell::new(None),
+            templates: RefCell::new(Vec::new()),
+            template_items,
             remember,
             base: RefCell::new(draft),
             attachments: RefCell::new(attachments),
@@ -318,6 +337,7 @@ impl Composer {
         composer.fill_format_bar(&format_bar);
         composer.accept_images();
         composer.check_send();
+        composer.load_templates();
         let this = Rc::clone(&composer);
         glib::spawn_future_local(async move { this.check_spelling(dictionaries.await) });
         composer.window.present();
@@ -487,6 +507,14 @@ impl Composer {
             });
         });
         actions.add_action(&block);
+        let template = gio::SimpleAction::new("template", Some(glib::VariantTy::INT64));
+        let weak = Rc::downgrade(self);
+        template.connect_activate(move |_, id| {
+            if let (Some(c), Some(id)) = (weak.upgrade(), id.and_then(|v| v.get::<i64>())) {
+                c.insert_template(id);
+            }
+        });
+        actions.add_action(&template);
         for (name, run) in [
             (
                 "format-markdown",
@@ -494,6 +522,7 @@ impl Composer {
             ),
             ("edit-markdown", Box::new(|c| c.edit_as_markdown())),
             ("clear-format", Box::new(|c| c.clear_format())),
+            ("save-template", Box::new(|c| c.save_as_template())),
         ] {
             let action = gio::SimpleAction::new(name, None);
             let weak = Rc::downgrade(self);
@@ -1642,6 +1671,125 @@ impl Composer {
             true
         });
         self.window.add_controller(drop);
+    }
+
+    /// Reads the saved templates in and lists them in the header menu.
+    /// Preferences may have changed them while this window was open, so
+    /// this runs again after every save.
+    fn load_templates(self: &Rc<Self>) {
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            match this.core.read(mailrs_store::templates::list).await {
+                Ok(saved) => {
+                    *this.templates.borrow_mut() = saved;
+                    this.fill_template_menu();
+                }
+                Err(err) => tracing::warn!(error = %err, "could not read the templates"),
+            }
+        });
+    }
+
+    fn fill_template_menu(&self) {
+        self.template_items.remove_all();
+        let templates = self.templates.borrow();
+        if templates.is_empty() {
+            // Nothing answers this action, which is what greys the item out.
+            self.template_items
+                .append(Some("No Templates Yet"), Some("composer.none"));
+            return;
+        }
+        for template in templates.iter() {
+            let item = gio::MenuItem::new(Some(&template.name), None);
+            item.set_action_and_target_value(
+                Some("composer.template"),
+                Some(&template.id.to_variant()),
+            );
+            self.template_items.append_item(&item);
+        }
+    }
+
+    /// What a template's placeholders stand for in this message.
+    fn filling(&self) -> Filling {
+        Filling {
+            recipient: self.to.addresses().first().cloned(),
+            subject: self.subject.text().trim().to_string(),
+            date: templates::today(chrono::Local::now()),
+        }
+    }
+
+    /// Puts a template in at the cursor, its placeholders filled. One with
+    /// a subject gives it to a message that has none of its own.
+    fn insert_template(self: &Rc<Self>, id: i64) {
+        let found = self.templates.borrow().iter().find(|t| t.id == id).cloned();
+        let Some(template) = found else { return };
+        let mut filling = self.filling();
+        if filling.subject.is_empty() && !template.subject.trim().is_empty() {
+            self.subject
+                .set_text(&templates::expand(&template.subject, &filling));
+            filling.subject = self.subject.text().trim().to_string();
+        }
+        let body = templates::fill(&RichBody::from_markdown(&template.markdown), &filling);
+        let buffer = self.body.buffer();
+        self.busy.set(true);
+        buffer.begin_user_action();
+        match self.format.get() {
+            ComposeFormat::Rich => richbuffer::insert(&buffer, &body),
+            ComposeFormat::Markdown => buffer.insert_at_cursor(&body.to_markdown()),
+        }
+        buffer.end_user_action();
+        self.busy.set(false);
+        self.dirty.set(true);
+        self.body.grab_focus();
+    }
+
+    /// Keeps what is written as a template, under a name the writer gives
+    /// it. The body is saved as written, so its placeholders fill in again
+    /// the next time it goes into a message.
+    fn save_as_template(self: &Rc<Self>) {
+        let written = Template {
+            id: 0,
+            name: String::new(),
+            subject: self.subject.text().trim().to_string(),
+            markdown: self.markdown(),
+        };
+        let dialog = adw::AlertDialog::new(
+            Some("Save as Template"),
+            Some("Placeholders such as {{first_name}} fill in each time you use it."),
+        );
+        let name = gtk::Entry::builder()
+            .placeholder_text("Name")
+            .text(&written.subject)
+            .activates_default(true)
+            .build();
+        dialog.set_extra_child(Some(&name));
+        dialog.add_responses(&[("cancel", "Cancel"), ("save", "Save")]);
+        dialog.set_response_appearance("save", adw::ResponseAppearance::Suggested);
+        dialog.set_default_response(Some("save"));
+        dialog.set_close_response("cancel");
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            if dialog.choose_future(Some(&this.window)).await.as_str() != "save" {
+                return;
+            }
+            let template = Template {
+                name: name.text().trim().to_string(),
+                ..written
+            };
+            if template.name.is_empty() {
+                return this.toast("Give the template a name");
+            }
+            match this
+                .core
+                .write(move |c| mailrs_store::templates::add(c, &template))
+                .await
+            {
+                Ok(_) => {
+                    this.toast("Template saved");
+                    this.load_templates();
+                }
+                Err(err) => this.toast(&format!("Template not saved: {err}")),
+            }
+        });
     }
 }
 
