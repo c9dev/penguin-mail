@@ -10,6 +10,10 @@ pub enum GmailError {
     /// The account never granted a scope this call needs.
     #[error("Penguin Mail needs more access to this account; grant it and try again")]
     MissingScope,
+    /// The sync token has aged out. Google answers this rather than send
+    /// changes it no longer holds; the caller reads everything again.
+    #[error("the sync token expired; read it all again")]
+    ExpiredSyncToken,
     #[error("not found")]
     NotFound,
     #[error("Gmail returned HTTP {status}: {body}")]

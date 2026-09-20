@@ -20,6 +20,7 @@ use crate::model::{
     Profile, RemoteLabel, SendAs, SendAsList, Thread, VacationSettings,
 };
 use crate::oauth::{AccessToken, LoopbackListener, OAuthClient, Pkce, random_token};
+use crate::people::{self, ConnectionsPage};
 
 pub const GMAIL_API_BASE: &str = "https://gmail.googleapis.com/gmail/v1/users/me";
 
@@ -52,6 +53,10 @@ pub mod cost {
     pub const SEND_AS: u32 = 1;
     pub const ATTACHMENT: u32 = 5;
     pub const SETTINGS: u32 = 1;
+    /// One page of contacts. The People API keeps a budget of its own, so
+    /// this only stops a refresh from crowding out the mail the user is
+    /// waiting for.
+    pub const CONNECTIONS: u32 = 5;
 }
 
 /// A Gmail client for one account.
@@ -59,6 +64,8 @@ pub struct GmailClient {
     oauth: OAuthClient,
     refresh_token: String,
     base_url: String,
+    /// The People API, which lives at a host of its own.
+    people_url: String,
     access: Mutex<Option<AccessToken>>,
     quota: std::sync::Arc<AccountQuota>,
 }
@@ -73,6 +80,7 @@ impl GmailClient {
             oauth,
             refresh_token,
             base_url: GMAIL_API_BASE.to_string(),
+            people_url: people::PEOPLE_API_BASE.to_string(),
             access: Mutex::new(None),
             quota,
         }
@@ -92,6 +100,12 @@ impl GmailClient {
     /// Points the client at another server. Tests use this.
     pub fn with_base_url(mut self, base_url: impl Into<String>) -> Self {
         self.base_url = base_url.into();
+        self
+    }
+
+    /// Points the contacts calls at another server. Tests use this.
+    pub fn with_people_url(mut self, people_url: impl Into<String>) -> Self {
+        self.people_url = people_url.into();
         self
     }
 
@@ -515,6 +529,52 @@ impl GmailClient {
             .map_err(|e| GmailError::Decode(e.to_string()))
     }
 
+    /// One page of the account's Google contacts. Pass `page_token` to
+    /// walk a long address book, or `sync_token` from the last refresh to
+    /// ask only for what changed. Gmail answers
+    /// [`GmailError::MissingScope`] until the account grants
+    /// [`CONTACTS_SCOPE`], and [`GmailError::ExpiredSyncToken`] when the
+    /// token is too old to answer from.
+    ///
+    /// [`CONTACTS_SCOPE`]: crate::people::CONTACTS_SCOPE
+    pub async fn connections(
+        &self,
+        page_token: Option<&str>,
+        sync_token: Option<&str>,
+    ) -> Result<ConnectionsPage, GmailError> {
+        let url = format!("{}/people/me/connections", self.people_url);
+        let body = self
+            .send_request(cost::CONNECTIONS, || {
+                let mut request = self.http().get(&url).query(&[
+                    ("personFields", people::PERSON_FIELDS),
+                    ("pageSize", &people::PAGE_SIZE.to_string()),
+                    ("requestSyncToken", "true"),
+                ]);
+                if let Some(token) = page_token {
+                    request = request.query(&[("pageToken", token)]);
+                }
+                if let Some(token) = sync_token {
+                    request = request.query(&[("syncToken", token)]);
+                }
+                request
+            })
+            .await?
+            .text()
+            .await
+            .map_err(|e| GmailError::Decode(e.to_string()))?;
+        people::parse_connections(&body)
+    }
+
+    /// The bytes of one contact photo. Google serves these from a plain
+    /// file host that takes no token and counts against no quota.
+    pub async fn contact_photo(&self, url: &str) -> Result<Vec<u8>, GmailError> {
+        let response = self.http().get(url).send().await?;
+        if !response.status().is_success() {
+            return Err(error_from_response(response).await);
+        }
+        Ok(response.bytes().await?.to_vec())
+    }
+
     /// The bucket this client spends from, so a caller can see whether the
     /// user is waiting on it.
     pub fn quota(&self) -> &AccountQuota {
@@ -638,6 +698,7 @@ async fn error_from_response(response: Response) -> GmailError {
         403 if body.contains("rateLimitExceeded") || body.contains("userRateLimitExceeded") => {
             GmailError::RateLimited { retry_after }
         }
+        400 if body.contains("EXPIRED_SYNC_TOKEN") => GmailError::ExpiredSyncToken,
         _ => GmailError::Http { status, body },
     }
 }

@@ -1,0 +1,96 @@
+{
+  "connections": [
+    {
+      "resourceName": "people/c1",
+      "etag": "%EgcBAj0JPjcuGgQBAgUHIgxaR2p0Q0RabUZZMD0=",
+      "metadata": {
+        "sources": [
+          { "type": "CONTACT", "id": "c1", "etag": "#zGjtCDZmFY0=", "updateTime": "2026-08-14T09:12:41.281Z" }
+        ],
+        "objectType": "PERSON"
+      },
+      "names": [
+        {
+          "metadata": { "primary": true, "source": { "type": "CONTACT", "id": "c1" } },
+          "displayName": "Mara Okafor",
+          "givenName": "Mara",
+          "familyName": "Okafor",
+          "displayNameLastFirst": "Okafor, Mara",
+          "unstructuredName": "Mara Okafor"
+        }
+      ],
+      "photos": [
+        {
+          "metadata": { "primary": true, "source": { "type": "CONTACT", "id": "c1" } },
+          "url": "https://lh3.googleusercontent.com/mara=s100"
+        }
+      ],
+      "organizations": [
+        {
+          "metadata": { "primary": true, "source": { "type": "CONTACT", "id": "c1" } },
+          "name": "Fernwood",
+          "title": "Trail Lead"
+        }
+      ],
+      "phoneNumbers": [
+        {
+          "metadata": { "primary": true, "source": { "type": "CONTACT", "id": "c1" } },
+          "value": "+1 555 0100",
+          "canonicalForm": "+15550100",
+          "type": "mobile",
+          "formattedType": "Mobile"
+        }
+      ],
+      "emailAddresses": [
+        {
+          "metadata": { "source": { "type": "CONTACT", "id": "c1" } },
+          "value": "mara@fernwood.example",
+          "type": "work",
+          "formattedType": "Work"
+        },
+        {
+          "metadata": { "primary": true, "source": { "type": "CONTACT", "id": "c1" } },
+          "value": "mara.okafor@example.org",
+          "type": "home",
+          "formattedType": "Home"
+        }
+      ]
+    },
+    {
+      "resourceName": "people/c2",
+      "etag": "%EgcBAj0JPjcuGgQBAgUHIgxTYkRnUjFwVjQwND0=",
+      "metadata": {
+        "sources": [
+          { "type": "CONTACT", "id": "c2", "etag": "#SbDgR1pV404=", "updateTime": "2026-07-02T18:40:02.918Z" }
+        ],
+        "objectType": "PERSON"
+      },
+      "names": [
+        {
+          "metadata": { "primary": true, "source": { "type": "CONTACT", "id": "c2" } },
+          "displayName": "Theo Lang",
+          "givenName": "Theo",
+          "familyName": "Lang"
+        }
+      ],
+      "photos": [
+        {
+          "metadata": { "primary": true, "source": { "type": "CONTACT", "id": "c2" } },
+          "url": "https://lh3.googleusercontent.com/-XdUIqdMkCWA/AAAAAAAAAAI/AAAAAAAAAAA/default-user=s100",
+          "default": true
+        }
+      ],
+      "emailAddresses": [
+        {
+          "metadata": { "primary": true, "source": { "type": "CONTACT", "id": "c2" } },
+          "value": "theo@example.org",
+          "type": "home",
+          "formattedType": "Home"
+        }
+      ]
+    }
+  ],
+  "nextPageToken": "page-2",
+  "totalPeople": 3,
+  "totalItems": 3
+}

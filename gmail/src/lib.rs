@@ -8,6 +8,7 @@ mod error;
 pub mod limiter;
 pub mod model;
 mod oauth;
+pub mod people;
 mod token_store;
 
 pub use client::{
@@ -21,4 +22,5 @@ pub use oauth::{
     AccessToken, DELETE_SCOPE, GMAIL_SCOPE, LoopbackListener, OAuthClient, Pkce, SETTINGS_SCOPE,
     Tokens, parse_redirect, random_token,
 };
+pub use people::{CONTACTS_SCOPE, ConnectionsPage, Person};
 pub use token_store::{KeyringTokenStore, MemoryTokenStore, TokenStore};
