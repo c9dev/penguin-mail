@@ -42,6 +42,9 @@ mod imp {
             row.set_orientation(gtk::Orientation::Horizontal);
             row.set_spacing(8);
             row.add_css_class("thread-row");
+            // A box says nothing out loud whatever name it is given, so
+            // the row takes the role its place in the list calls for.
+            row.set_accessible_role(gtk::AccessibleRole::ListItem);
 
             let dot = gtk::Box::builder()
                 .valign(gtk::Align::Start)

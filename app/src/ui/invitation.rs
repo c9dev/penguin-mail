@@ -141,14 +141,10 @@ impl EventCard {
         let day = gtk::Label::builder()
             .css_classes(["invitation-day"])
             .build();
-        // The tile repeats the date the line beside it already gives in
-        // full, so it is left out of the accessible tree rather than read
-        // twice as "Sep" and "24".
         let tile = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .valign(gtk::Align::Start)
             .css_classes(["invitation-tile"])
-            .accessible_role(gtk::AccessibleRole::Presentation)
             .build();
         tile.append(&month);
         tile.append(&day);
