@@ -253,6 +253,13 @@ fn writing_page(
         settings.undo_send,
         Change::UndoSend,
     ));
+    sending.add(&switch(
+        app,
+        "Check for Missing Attachments",
+        Some("Ask before sending a message that promises a file and carries none"),
+        settings.check_attachments,
+        Change::CheckAttachments,
+    ));
     page.add(&sending);
 
     let signatures = adw::PreferencesGroup::builder()

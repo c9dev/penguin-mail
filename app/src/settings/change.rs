@@ -40,6 +40,8 @@ pub enum Change {
     SuggestFollowUps(bool),
     /// What a new message starts as.
     ComposeFormat(ComposeFormat),
+    /// Ask before a message that promises a file goes without one.
+    CheckAttachments(bool),
     /// Read the accounts' Google contacts, or stop and forget them.
     Contacts(bool),
     /// The colour the flag button reaches for next.
@@ -159,6 +161,7 @@ impl Change {
             Change::InboxCategories(on) => settings.inbox_categories = on,
             Change::SuggestFollowUps(on) => settings.suggest_follow_ups = on,
             Change::ComposeFormat(format) => settings.compose_format = format,
+            Change::CheckAttachments(on) => settings.check_attachments = on,
             Change::Contacts(on) => settings.contacts = on,
             Change::FlagColor(color) => settings.flag_color = color,
             Change::Signature { email, text } => settings.set_signature(&email, &text),
@@ -443,6 +446,7 @@ impl Effects {
             last_sender,
             send_as,
             compose_format,
+            check_attachments,
             contacts,
         } = after;
         // These leave the window as it is. The flag colour, the delay before
@@ -467,6 +471,7 @@ impl Effects {
             last_sender,
             send_as,
             compose_format,
+            check_attachments,
         );
         let smart_changed = *smart_mailboxes != before.smart_mailboxes;
         let colors_changed = *account_colors != before.account_colors;
@@ -782,6 +787,9 @@ mod tests {
                 "account_names",
                 "account_order",
                 "ai",
+                // The composer reads this as a message goes out, so the
+                // assistant has no business turning the warning off.
+                "check_attachments",
                 // Reading contacts asks Google for access of its own, so
                 // it stays a choice the person makes in Preferences.
                 "contacts",

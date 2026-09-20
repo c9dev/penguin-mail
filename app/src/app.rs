@@ -562,6 +562,7 @@ impl App {
                     });
                 })
             },
+            check_attachments: self.settings.borrow().check_attachments,
         };
         let this = Rc::downgrade(self);
         let format = self.settings.borrow().compose_format;

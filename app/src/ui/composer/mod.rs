@@ -47,6 +47,8 @@ pub struct Writing {
     /// Called with the address a message goes out from, and with every word
     /// Add to Dictionary keeps, so Preferences remembers both.
     pub remember: Rc<dyn Fn(Remembered)>,
+    /// Ask before a message that promises a file goes without one.
+    pub check_attachments: bool,
 }
 
 /// Something the composer learned that outlives it.
@@ -101,6 +103,8 @@ pub struct Composer {
     inserted: RefCell<Vec<(i32, i32)>>,
     /// True while the composer edits the buffer itself.
     busy: Cell<bool>,
+    /// Whether a message that promises a file is worth asking about.
+    check_attachments: bool,
     /// Set once Send Anyway answered the missing attachment dialog, so the
     /// same message is not asked about twice.
     asked: Cell<bool>,
@@ -127,6 +131,7 @@ impl Composer {
             last_used,
             dictionaries,
             remember,
+            check_attachments,
         } = writing;
         let title = adw::WindowTitle::new("New Message", "");
         let later = gio::Menu::new();
@@ -341,6 +346,7 @@ impl Composer {
             typing: RefCell::new(None),
             inserted: RefCell::new(Vec::new()),
             busy: Cell::new(false),
+            check_attachments,
             asked: Cell::new(false),
             dirty: Cell::new(false),
             closing: Cell::new(false),
@@ -948,7 +954,7 @@ impl Composer {
     /// arrives with the message either way, but not a promise of a file:
     /// only an attachment comes out of the reader's mail as one.
     fn unkept_promise(&self, draft: &Draft) -> Option<Promise> {
-        if self.asked.get() {
+        if !self.check_attachments || self.asked.get() {
             return None;
         }
         let promise = attachcheck::promised(&draft.subject, &draft.markdown)?;
