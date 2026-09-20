@@ -38,7 +38,7 @@ impl<G: GmailApi> AccountSync<G> {
             {
                 tracing::warn!(account = self.account_id, error = %err, "sent, but could not delete the draft");
             }
-            self.forget_draft(&draft_id).await?;
+            self.forget_draft(&draft_id).await;
         }
         Ok(message_id)
     }
@@ -64,13 +64,10 @@ impl<G: GmailApi> AccountSync<G> {
         };
         // Gmail's answer names both the draft and the message it now
         // holds, which is the pair `drafts.list` would otherwise be asked
-        // for. Storing it here is what keeps every draft this app writes
+        // for. Keeping it here is what leaves every draft this app writes
         // out of that listing.
-        let account_id = self.account_id;
-        let (draft, message) = (saved.draft_id.clone(), saved.message_id.clone());
-        self.db
-            .write(move |c| drafts::remember(c, account_id, &draft, &message))
-            .await?;
+        self.remember_draft(&saved.draft_id, &saved.message_id)
+            .await;
         Ok(saved)
     }
 
@@ -82,7 +79,7 @@ impl<G: GmailApi> AccountSync<G> {
             Err(GmailError::NotFound) => None,
             Err(err) => return Err(err.into()),
         };
-        self.forget_draft(draft_id).await?;
+        self.forget_draft(draft_id).await;
         Ok(sent)
     }
 
@@ -91,7 +88,8 @@ impl<G: GmailApi> AccountSync<G> {
             Ok(()) | Err(GmailError::NotFound) => {}
             Err(err) => return Err(err.into()),
         }
-        self.forget_draft(draft_id).await
+        self.forget_draft(draft_id).await;
+        Ok(())
     }
 
     /// The draft backed by `message_id`, for reopening a draft in the
@@ -118,20 +116,44 @@ impl<G: GmailApi> AccountSync<G> {
             .into_iter()
             .map(|d| (d.draft_id, d.message_id))
             .collect();
-        self.db
-            .write(move |c| drafts::replace_all(c, account_id, &pairs))
-            .await?;
+        self.pair_written(
+            self.db
+                .write(move |c| drafts::replace_all(c, account_id, &pairs))
+                .await,
+        );
         Ok(found)
     }
 
+    /// Records which message a draft holds now.
+    async fn remember_draft(&self, draft_id: &str, message_id: &str) {
+        let account_id = self.account_id;
+        let (draft_id, message_id) = (draft_id.to_string(), message_id.to_string());
+        self.pair_written(
+            self.db
+                .write(move |c| drafts::remember(c, account_id, &draft_id, &message_id))
+                .await,
+        );
+    }
+
     /// Drops the stored pair for a draft that has left Gmail.
-    async fn forget_draft(&self, draft_id: &str) -> Result<(), SyncError> {
+    async fn forget_draft(&self, draft_id: &str) {
         let account_id = self.account_id;
         let draft_id = draft_id.to_string();
-        self.db
-            .write(move |c| drafts::forget(c, account_id, &draft_id))
-            .await?;
-        Ok(())
+        self.pair_written(
+            self.db
+                .write(move |c| drafts::forget(c, account_id, &draft_id))
+                .await,
+        );
+    }
+
+    /// A stored pair saves a lookup and does nothing else, and the Gmail
+    /// call that produced it has already gone through, so a store that
+    /// refuses the write gets a line in the log. Failing the call over it
+    /// would have the caller save or send the same message a second time.
+    fn pair_written(&self, outcome: mailrs_store::Result<()>) {
+        if let Err(err) = outcome {
+            tracing::warn!(account = self.account_id, error = %err, "could not store which draft holds which message");
+        }
     }
 
     /// Runs a Gmail search and returns up to `limit` messages, newest first.
