@@ -5,6 +5,7 @@ mod gpg;
 pub mod mime;
 mod read;
 pub mod status;
+mod write;
 
 pub use error::PgpError;
 pub use gpg::Pgp;

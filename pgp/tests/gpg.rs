@@ -104,6 +104,54 @@ fn detached(home: &Home, data: &[u8]) -> Vec<u8> {
     out.stdout
 }
 
+/// The parts of a multipart entity, each as the bytes that sit between its
+/// boundaries. A mail client reads a received message this way, and the
+/// first part of a `multipart/signed` is what the signature covers, so this
+/// takes the bytes as they are rather than parsing and rebuilding them.
+fn parts(entity: &[u8]) -> Vec<Vec<u8>> {
+    let head = String::from_utf8_lossy(&entity[..entity.len().min(400)]).to_string();
+    let boundary = head
+        .split("boundary=\"")
+        .nth(1)
+        .and_then(|rest| rest.split('"').next())
+        .expect("a boundary");
+    let open = format!("--{boundary}\r\n").into_bytes();
+    let separator = format!("\r\n--{boundary}").into_bytes();
+    let mut rest = &entity[find(entity, &open).expect("a first boundary") + open.len()..];
+    let mut out = Vec::new();
+    while let Some(at) = find(rest, &separator) {
+        out.push(rest[..at].to_vec());
+        let after = &rest[at + separator.len()..];
+        match after.strip_prefix(b"\r\n") {
+            Some(next) => rest = next,
+            None => break,
+        }
+    }
+    out
+}
+
+/// The body of one part, without the headers that name it.
+fn body_of(part: &[u8]) -> Vec<u8> {
+    let at = find(part, b"\r\n\r\n").expect("a blank line");
+    part[at + 4..].to_vec()
+}
+
+fn find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+    haystack
+        .windows(needle.len())
+        .position(|window| window == needle)
+}
+
+/// What a mail server does to a line that ends in whitespace.
+fn strip_trailing_whitespace(part: &[u8]) -> Vec<u8> {
+    String::from_utf8_lossy(part)
+        .split("\r\n")
+        .map(|line| line.trim_end_matches([' ', '\t']))
+        .collect::<Vec<_>>()
+        .join("\r\n")
+        .into_bytes()
+}
+
 /// Ciphertext for `home`'s own key, made by gpg itself.
 fn sealed(home: &Home, data: &[u8], sign: bool) -> Vec<u8> {
     let file = home.dir.path().join("plain");
@@ -229,5 +277,159 @@ fn a_message_sealed_for_somebody_else_says_so() {
     assert!(
         matches!(err, mailrs_pgp::PgpError::NotForYou),
         "expected NotForYou, got {err}"
+    );
+}
+
+#[test]
+fn a_part_signed_here_verifies_here() {
+    let Some(home) = Home::new("Ada Lovelace", "ada@example.test") else {
+        return;
+    };
+    let body = home
+        .pgp
+        .sign(
+            b"Content-Type: text/plain\r\n\r\nMeet at six.\r\n",
+            &home.address,
+        )
+        .expect("a signed body");
+
+    assert!(
+        String::from_utf8_lossy(&body).starts_with("Content-Type: multipart/signed;"),
+        "{}",
+        String::from_utf8_lossy(&body)
+    );
+    let parts = parts(&body);
+    assert_eq!(parts.len(), 2, "{}", String::from_utf8_lossy(&body));
+    let found = home
+        .pgp
+        .verify(&parts[0], &body_of(&parts[1]))
+        .expect("a verdict");
+    assert!(found.is_good(), "{found:?}");
+    assert_eq!(
+        found.signer.as_deref(),
+        Some("Ada Lovelace <ada@example.test>")
+    );
+}
+
+#[test]
+fn a_part_written_with_unix_line_endings_verifies_once_it_is_mail() {
+    let Some(home) = Home::new("Ada Lovelace", "ada@example.test") else {
+        return;
+    };
+    // What the composer holds. Every hop it crosses will make these CRLF,
+    // so they are CRLF before the signature is made over them.
+    let part = b"Content-Type: text/plain\n\nMeet at six.\nBring tea.\n";
+    let body = home.pgp.sign(part, &home.address).expect("a signed body");
+
+    let parts = parts(&body);
+    assert!(!parts[0].windows(2).any(|pair| pair == b"\n\n"));
+    let found = home
+        .pgp
+        .verify(&parts[0], &body_of(&parts[1]))
+        .expect("a verdict");
+    assert!(found.is_good(), "{found:?}");
+}
+
+#[test]
+fn a_body_whose_lines_end_in_whitespace_survives_a_server_stripping_it() {
+    let Some(home) = Home::new("Ada Lovelace", "ada@example.test") else {
+        return;
+    };
+    let part = b"Content-Type: text/plain\r\n\r\nMeet at six.   \r\nBring tea.\t\r\n";
+    let body = home.pgp.sign(part, &home.address).expect("a signed body");
+
+    let parts = parts(&body);
+    let signed = &parts[0];
+    // The whitespace is encoded, so the server that strips it finds none.
+    assert_eq!(&strip_trailing_whitespace(signed), signed);
+    assert!(String::from_utf8_lossy(signed).contains("=20"));
+    let found = home
+        .pgp
+        .verify(&strip_trailing_whitespace(signed), &body_of(&parts[1]))
+        .expect("a verdict");
+    assert!(found.is_good(), "{found:?}");
+}
+
+#[test]
+fn signing_as_an_address_with_no_secret_key_says_so() {
+    let Some(home) = Home::new("Ada Lovelace", "ada@example.test") else {
+        return;
+    };
+    let err = home
+        .pgp
+        .sign(
+            b"Content-Type: text/plain\r\n\r\nHello.\r\n",
+            "nobody@example.test",
+        )
+        .expect_err("no key to sign with");
+
+    assert!(
+        matches!(err, mailrs_pgp::PgpError::CannotSign(ref who) if who.contains("nobody")),
+        "expected CannotSign, got {err}"
+    );
+}
+
+#[test]
+fn a_part_encrypted_here_opens_here_with_its_signature() {
+    let Some(home) = Home::new("Ada Lovelace", "ada@example.test") else {
+        return;
+    };
+    let part = b"Content-Type: text/plain\r\n\r\nThe key is under the mat.\r\n";
+    let body = home
+        .pgp
+        .encrypt(
+            part,
+            std::slice::from_ref(&home.address),
+            Some(&home.address),
+        )
+        .expect("an encrypted body");
+
+    let parts = parts(&body);
+    assert_eq!(parts.len(), 2, "{}", String::from_utf8_lossy(&body));
+    assert!(String::from_utf8_lossy(&parts[0]).contains("Version: 1"));
+    let opened = home
+        .pgp
+        .decrypt(&body_of(&parts[1]))
+        .expect("the part inside");
+    assert_eq!(opened.part, part);
+    assert!(opened.signature.expect("a signature").is_good());
+}
+
+#[test]
+fn encrypting_without_a_sender_key_leaves_the_message_unsigned() {
+    let Some(home) = Home::new("Ada Lovelace", "ada@example.test") else {
+        return;
+    };
+    let part = b"Content-Type: text/plain\r\n\r\nNo name on this.\r\n";
+    let body = home
+        .pgp
+        .encrypt(part, std::slice::from_ref(&home.address), None)
+        .expect("an encrypted body");
+
+    let opened = home
+        .pgp
+        .decrypt(&body_of(&parts(&body)[1]))
+        .expect("the part inside");
+    assert_eq!(opened.part, part);
+    assert!(opened.signature.is_none());
+}
+
+#[test]
+fn encrypting_to_somebody_with_no_key_names_them() {
+    let Some(home) = Home::new("Ada Lovelace", "ada@example.test") else {
+        return;
+    };
+    let err = home
+        .pgp
+        .encrypt(
+            b"Content-Type: text/plain\r\n\r\nHello.\r\n",
+            &["stranger@example.test".to_string()],
+            Some(&home.address),
+        )
+        .expect_err("no key for the stranger");
+
+    assert!(
+        matches!(err, mailrs_pgp::PgpError::NoKeyFor(ref who) if who.contains("stranger")),
+        "expected NoKeyFor, got {err}"
     );
 }

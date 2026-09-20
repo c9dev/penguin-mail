@@ -135,16 +135,34 @@ impl Run {
         if self.says("NODATA") {
             return PgpError::NotPgp;
         }
+        // `INV_RECP <reason> <recipient>`, and the same shape for the signer.
         if let Some(rest) = self.field("INV_RECP") {
-            // `INV_RECP <reason> <recipient>`.
-            let who = rest.split_once(' ').map_or(rest, |(_, who)| who);
-            return PgpError::NoKeyFor(who.to_string());
+            return PgpError::NoKeyFor(named(rest));
+        }
+        if let Some(rest) = self.field("INV_SGNR") {
+            return PgpError::CannotSign(named(rest));
         }
         PgpError::Gpg(match self.field("FAILURE") {
             Some(rest) => rest.to_string(),
             None => self.status.join("; "),
         })
     }
+}
+
+/// The address at the end of a status line that leads with a reason code.
+fn named(rest: &str) -> String {
+    rest.split_once(' ')
+        .map_or(rest, |(_, who)| who)
+        .trim()
+        .to_string()
+}
+
+/// How gpg should be asked for the key belonging to one address. The angle
+/// brackets make it an exact match on the address rather than a search for
+/// that text anywhere in a user id, so asking for `ann@example.com` cannot
+/// land on a key that spells itself `ann@example.com.example.net`.
+pub(crate) fn user_id(address: &str) -> String {
+    format!("<{}>", address.trim().trim_matches(['<', '>']))
 }
 
 /// The first entry of `path` holding an executable file called `name`.
