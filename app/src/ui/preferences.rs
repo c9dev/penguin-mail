@@ -664,7 +664,7 @@ fn sync_page(app: &Rc<App>, pending: &Rc<RefCell<SyncConfig>>) -> adw::Preferenc
         Some(path) if !app.core.demo => {
             login.set_active(autostart::is_enabled(&path));
             login.connect_active_notify(move |row| {
-                let exe = std::env::current_exe().unwrap_or_else(|_| "penguin-mail".into());
+                let exe = crate::exe::path().unwrap_or_else(|_| "penguin-mail".into());
                 if let Err(err) = autostart::set_enabled(&path, &exe, row.is_active()) {
                     tracing::warn!(error = %err, "could not change the login item");
                 }

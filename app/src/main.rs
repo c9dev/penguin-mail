@@ -9,6 +9,7 @@ mod contacts;
 mod core;
 mod demo;
 mod diff;
+mod exe;
 mod format;
 mod goa;
 mod hide_my_email;

@@ -35,7 +35,7 @@ pub fn locale_dir() -> PathBuf {
     // `<prefix>/bin/penguin-mail` once installed, `target/<profile>/
     // penguin-mail` in the build tree: both sit two directories below the
     // one that holds the catalogues.
-    let above = std::env::current_exe()
+    let above = crate::exe::path()
         .ok()
         .and_then(|exe| exe.parent().and_then(Path::parent).map(Path::to_path_buf));
     let Some(above) = above else {
