@@ -74,23 +74,23 @@ msgstr ""
 msgid "Could not reach GitHub to check for updates"
 msgstr ""
 
-#: app/src/assistant/mod.rs:101
+#: app/src/assistant/mod.rs:102
 msgid "The assistant is off. Choose a model in Preferences."
 msgstr ""
 
-#: app/src/assistant/mod.rs:103
+#: app/src/assistant/mod.rs:104
 msgid "Translation has no model. Choose one in Preferences, on the AI page."
 msgstr ""
 
-#: app/src/assistant/mod.rs:109
+#: app/src/assistant/mod.rs:110
 msgid "Choose a model for the local server in Preferences."
 msgstr ""
 
-#: app/src/assistant/mod.rs:121
+#: app/src/assistant/mod.rs:122
 msgid "Add an Anthropic API key in Preferences."
 msgstr ""
 
-#: app/src/assistant/mod.rs:128
+#: app/src/assistant/mod.rs:129
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr ""
 
@@ -144,6 +144,144 @@ msgstr ""
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a Gmail rule for "
 "their future mail?"
+msgstr ""
+
+#: app/src/assistant/turn.rs:57
+msgid "Waiting for the model…"
+msgstr ""
+
+#: app/src/assistant/turn.rs:58 app/src/assistant/turn.rs:259
+msgid "Thinking…"
+msgstr ""
+
+#: app/src/assistant/turn.rs:59
+msgid "{activity}…"
+msgstr ""
+
+#: app/src/assistant/turn.rs:60
+msgid "Waiting for your answer…"
+msgstr ""
+
+#: app/src/assistant/turn.rs:61
+msgid "Writing…"
+msgstr ""
+
+#: app/src/assistant/turn.rs:264
+msgid "Thought for {count} second"
+msgid_plural "Thought for {count} seconds"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/assistant/turn.rs:277
+msgid "Looking at the screen"
+msgstr ""
+
+#: app/src/assistant/turn.rs:278
+msgid "Reading a mailbox"
+msgstr ""
+
+#: app/src/assistant/turn.rs:279
+msgid "Searching mail"
+msgstr ""
+
+#: app/src/assistant/turn.rs:280
+msgid "Reading a conversation"
+msgstr ""
+
+#: app/src/assistant/turn.rs:281
+msgid "Organizing mail"
+msgstr ""
+
+#: app/src/assistant/turn.rs:282
+msgid "Changing labels"
+msgstr ""
+
+#: app/src/assistant/turn.rs:283
+msgid "Setting reminders"
+msgstr ""
+
+#: app/src/assistant/turn.rs:284
+msgid "Writing a draft"
+msgstr ""
+
+#: app/src/assistant/turn.rs:285
+msgid "Sending mail"
+msgstr ""
+
+#: app/src/assistant/turn.rs:286
+msgid "Blocking a sender"
+msgstr ""
+
+#: app/src/assistant/turn.rs:287
+msgid "Checking the automatic reply"
+msgstr ""
+
+#: app/src/assistant/turn.rs:288
+msgid "Setting the automatic reply"
+msgstr ""
+
+#: app/src/assistant/turn.rs:289
+msgid "Reading rules"
+msgstr ""
+
+#: app/src/assistant/turn.rs:290
+msgid "Creating a rule"
+msgstr ""
+
+#: app/src/assistant/turn.rs:291
+msgid "Deleting a rule"
+msgstr ""
+
+#: app/src/assistant/turn.rs:292
+msgid "Creating a label"
+msgstr ""
+
+#: app/src/assistant/turn.rs:293
+msgid "Reading settings"
+msgstr ""
+
+#: app/src/assistant/turn.rs:294
+msgid "Changing a setting"
+msgstr ""
+
+#: app/src/assistant/turn.rs:295
+msgid "Setting a signature"
+msgstr ""
+
+#: app/src/assistant/turn.rs:296
+msgid "Updating VIPs"
+msgstr ""
+
+#: app/src/assistant/turn.rs:297
+msgid "Creating a smart mailbox"
+msgstr ""
+
+#: app/src/assistant/turn.rs:298
+msgid "Opening a conversation"
+msgstr ""
+
+#: app/src/assistant/turn.rs:299
+msgid "Sorting a sender"
+msgstr ""
+
+#: app/src/assistant/turn.rs:300
+msgid "Dismissing a follow-up"
+msgstr ""
+
+#: app/src/assistant/turn.rs:301
+msgid "Reading hidden addresses"
+msgstr ""
+
+#: app/src/assistant/turn.rs:302
+msgid "Making a hidden address"
+msgstr ""
+
+#: app/src/assistant/turn.rs:303
+msgid "Changing a hidden address"
+msgstr ""
+
+#: app/src/assistant/turn.rs:304
+msgid "Working"
 msgstr ""
 
 #: app/src/compose.rs:423
@@ -771,151 +909,151 @@ msgstr ""
 msgid "In {label}"
 msgstr ""
 
-#: app/src/settings/mod.rs:133 app/src/settings/mod.rs:526
+#: app/src/settings/mod.rs:136 app/src/settings/mod.rs:530
 msgid "Off"
 msgstr ""
 
-#: app/src/settings/mod.rs:134
+#: app/src/settings/mod.rs:137
 msgid "Local server"
 msgstr ""
 
-#: app/src/settings/mod.rs:135
+#: app/src/settings/mod.rs:138
 msgid "Anthropic API"
 msgstr ""
 
-#: app/src/settings/mod.rs:136
+#: app/src/settings/mod.rs:139
 msgid "Claude subscription"
 msgstr ""
 
-#: app/src/settings/mod.rs:156 app/src/ui/assistant.rs:96
+#: app/src/settings/mod.rs:159 app/src/ui/assistant.rs:82
 msgid "Assistant"
 msgstr ""
 
-#: app/src/settings/mod.rs:157
+#: app/src/settings/mod.rs:160
 msgid "Translation"
 msgstr ""
 
-#: app/src/settings/mod.rs:163
+#: app/src/settings/mod.rs:166
 msgid "Answers questions and acts on your mail"
 msgstr ""
 
-#: app/src/settings/mod.rs:164
+#: app/src/settings/mod.rs:167
 msgid "Translates a message when you ask"
 msgstr ""
 
-#: app/src/settings/mod.rs:201
+#: app/src/settings/mod.rs:204
 msgid "Same as the Assistant"
 msgstr ""
 
-#: app/src/settings/mod.rs:385
+#: app/src/settings/mod.rs:389
 msgid "Rich text"
 msgstr ""
 
-#: app/src/settings/mod.rs:386
+#: app/src/settings/mod.rs:390
 msgid "Markdown"
 msgstr ""
 
-#: app/src/settings/mod.rs:433
+#: app/src/settings/mod.rs:437
 msgid "When opened"
 msgstr ""
 
-#: app/src/settings/mod.rs:434
+#: app/src/settings/mod.rs:438
 msgid "After 2 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:435
+#: app/src/settings/mod.rs:439
 msgid "Only when I choose"
 msgstr ""
 
-#: app/src/settings/mod.rs:451
+#: app/src/settings/mod.rs:455
 msgid "Ask each time"
 msgstr ""
 
-#: app/src/settings/mod.rs:452
+#: app/src/settings/mod.rs:456
 msgid "Always load"
 msgstr ""
 
-#: app/src/settings/mod.rs:486
+#: app/src/settings/mod.rs:490
 msgid "Small"
 msgstr ""
 
-#: app/src/settings/mod.rs:487
+#: app/src/settings/mod.rs:491
 msgid "Default"
 msgstr ""
 
-#: app/src/settings/mod.rs:488
+#: app/src/settings/mod.rs:492
 msgid "Large"
 msgstr ""
 
-#: app/src/settings/mod.rs:489
+#: app/src/settings/mod.rs:493
 msgid "Larger"
 msgstr ""
 
-#: app/src/settings/mod.rs:527
+#: app/src/settings/mod.rs:531
 msgid "5 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:528
+#: app/src/settings/mod.rs:532
 msgid "10 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:529
+#: app/src/settings/mod.rs:533
 msgid "20 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:530
+#: app/src/settings/mod.rs:534
 msgid "30 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:547
+#: app/src/settings/mod.rs:551
 msgid "Follow system"
 msgstr ""
 
-#: app/src/settings/mod.rs:548
+#: app/src/settings/mod.rs:552
 msgid "Light"
 msgstr ""
 
-#: app/src/settings/mod.rs:549
+#: app/src/settings/mod.rs:553
 msgid "Dark"
 msgstr ""
 
-#: app/src/settings/mod.rs:559
+#: app/src/settings/mod.rs:563
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/settings/mod.rs:567
+#: app/src/settings/mod.rs:571
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/settings/mod.rs:584
+#: app/src/settings/mod.rs:588
 msgid "2 weeks"
 msgstr ""
 
-#: app/src/settings/mod.rs:585
+#: app/src/settings/mod.rs:589
 msgid "30 days"
 msgstr ""
 
-#: app/src/settings/mod.rs:586
+#: app/src/settings/mod.rs:590
 msgid "90 days"
 msgstr ""
 
-#: app/src/settings/mod.rs:587
+#: app/src/settings/mod.rs:591
 msgid "1 year"
 msgstr ""
 
-#: app/src/settings/mod.rs:594
+#: app/src/settings/mod.rs:598
 msgid "256 MB"
 msgstr ""
 
-#: app/src/settings/mod.rs:595
+#: app/src/settings/mod.rs:599
 msgid "1 GB"
 msgstr ""
 
-#: app/src/settings/mod.rs:596
+#: app/src/settings/mod.rs:600
 msgid "4 GB"
 msgstr ""
 
@@ -1197,201 +1335,101 @@ msgstr ""
 msgid "The update to {version} failed"
 msgstr ""
 
-#: app/src/ui/assistant.rs:21
+#: app/src/ui/assistant.rs:30
 msgid "Summarize this conversation"
 msgstr ""
 
-#: app/src/ui/assistant.rs:22
+#: app/src/ui/assistant.rs:31
 msgid "What needs a reply today?"
 msgstr ""
 
-#: app/src/ui/assistant.rs:23
+#: app/src/ui/assistant.rs:32
 msgid "Archive newsletters older than a week"
 msgstr ""
 
-#: app/src/ui/assistant.rs:24
+#: app/src/ui/assistant.rs:33
 msgid "Set an out-of-office reply for next week"
 msgstr ""
 
-#: app/src/ui/assistant.rs:25
+#: app/src/ui/assistant.rs:34
 msgid "Draft a reply to the open conversation"
 msgstr ""
 
-#: app/src/ui/assistant.rs:33
-msgid "Looking at the screen"
-msgstr ""
-
-#: app/src/ui/assistant.rs:34
-msgid "Reading a mailbox"
-msgstr ""
-
-#: app/src/ui/assistant.rs:35
-msgid "Searching mail"
-msgstr ""
-
-#: app/src/ui/assistant.rs:36
-msgid "Reading a conversation"
-msgstr ""
-
-#: app/src/ui/assistant.rs:37
-msgid "Organizing mail"
-msgstr ""
-
-#: app/src/ui/assistant.rs:38
-msgid "Changing labels"
-msgstr ""
-
-#: app/src/ui/assistant.rs:39
-msgid "Setting reminders"
-msgstr ""
-
-#: app/src/ui/assistant.rs:40
-msgid "Writing a draft"
-msgstr ""
-
-#: app/src/ui/assistant.rs:41
-msgid "Sending mail"
-msgstr ""
-
-#: app/src/ui/assistant.rs:42
-msgid "Blocking a sender"
-msgstr ""
-
-#: app/src/ui/assistant.rs:43
-msgid "Checking the automatic reply"
-msgstr ""
-
-#: app/src/ui/assistant.rs:44
-msgid "Setting the automatic reply"
-msgstr ""
-
-#: app/src/ui/assistant.rs:45
-msgid "Reading rules"
-msgstr ""
-
-#: app/src/ui/assistant.rs:46
-msgid "Creating a rule"
-msgstr ""
-
-#: app/src/ui/assistant.rs:47
-msgid "Deleting a rule"
-msgstr ""
-
-#: app/src/ui/assistant.rs:48
-msgid "Creating a label"
-msgstr ""
-
-#: app/src/ui/assistant.rs:49
-msgid "Reading settings"
-msgstr ""
-
-#: app/src/ui/assistant.rs:50
-msgid "Changing a setting"
-msgstr ""
-
-#: app/src/ui/assistant.rs:51
-msgid "Setting a signature"
-msgstr ""
-
-#: app/src/ui/assistant.rs:52
-msgid "Updating VIPs"
-msgstr ""
-
-#: app/src/ui/assistant.rs:53
-msgid "Creating a smart mailbox"
-msgstr ""
-
-#: app/src/ui/assistant.rs:54
-msgid "Opening a conversation"
-msgstr ""
-
-#: app/src/ui/assistant.rs:55
-msgid "Sorting a sender"
-msgstr ""
-
-#: app/src/ui/assistant.rs:56
-msgid "Dismissing a follow-up"
-msgstr ""
-
-#: app/src/ui/assistant.rs:57
-msgid "Reading hidden addresses"
-msgstr ""
-
-#: app/src/ui/assistant.rs:58
-msgid "Making a hidden address"
-msgstr ""
-
-#: app/src/ui/assistant.rs:59
-msgid "Changing a hidden address"
-msgstr ""
-
-#: app/src/ui/assistant.rs:60
-msgid "Working"
-msgstr ""
-
-#: app/src/ui/assistant.rs:99 app/src/ui/assistant.rs:101
+#: app/src/ui/assistant.rs:85 app/src/ui/assistant.rs:87
 msgid "New Chat"
 msgstr ""
 
-#: app/src/ui/assistant.rs:124
+#: app/src/ui/assistant.rs:110
 msgid ""
 "Ask about your mail, or tell me what to tidy. I can search, summarize, sort, "
 "draft, and change settings."
 msgstr ""
 
-#: app/src/ui/assistant.rs:141
+#: app/src/ui/assistant.rs:134
 msgid "Ask Penguin Mail…"
 msgstr ""
 
-#: app/src/ui/assistant.rs:146 app/src/ui/assistant.rs:150
-#: app/src/ui/assistant.rs:376 app/src/ui/composer/mod.rs:206
+#: app/src/ui/assistant.rs:139 app/src/ui/assistant.rs:143
+#: app/src/ui/assistant.rs:396 app/src/ui/composer/mod.rs:206
 #: app/src/ui/window.rs:3269
 msgid "Send"
 msgstr ""
 
-#: app/src/ui/assistant.rs:149
+#: app/src/ui/assistant.rs:142
 msgid "Ask Penguin Mail"
 msgstr ""
 
-#: app/src/ui/assistant.rs:165
+#: app/src/ui/assistant.rs:158
 msgid "Choose a Model"
 msgstr ""
 
-#: app/src/ui/assistant.rs:171
+#: app/src/ui/assistant.rs:164
 msgid "Set Up the Assistant"
 msgstr ""
 
-#: app/src/ui/assistant.rs:173
+#: app/src/ui/assistant.rs:166
 msgid ""
 "Use a local model from LM Studio, Ollama, or Unsloth, an Anthropic API key, "
 "or your Claude subscription."
 msgstr ""
 
-#: app/src/ui/assistant.rs:375
+#: app/src/ui/assistant.rs:395
 msgid "Stop"
 msgstr ""
 
-#: app/src/ui/assistant.rs:498
+#: app/src/ui/assistant.rs:493
 msgid "Don't Allow"
 msgstr ""
 
-#: app/src/ui/assistant.rs:500
+#: app/src/ui/assistant.rs:495
 msgid "Allow"
 msgstr ""
 
-#: app/src/ui/assistant.rs:520
+#: app/src/ui/assistant.rs:526
 msgid "Allowed"
 msgstr ""
 
-#: app/src/ui/assistant.rs:522
+#: app/src/ui/assistant.rs:528
 msgid "Not allowed"
 msgstr ""
 
-#: app/src/ui/assistant.rs:565 app/src/ui/hide_my_email.rs:457
+#: app/src/ui/assistant.rs:743
+msgid "Result"
+msgstr ""
+
+#: app/src/ui/assistant.rs:751
+msgid "Input"
+msgstr ""
+
+#: app/src/ui/assistant.rs:829
+msgid "Running"
+msgstr ""
+
+#: app/src/ui/assistant.rs:830 app/src/ui/hide_my_email.rs:457
 msgid "Done"
 msgstr ""
 
-#: app/src/ui/assistant.rs:566
+#: app/src/ui/assistant.rs:831
 msgid "Failed"
 msgstr ""
 
@@ -1472,79 +1510,92 @@ msgid ""
 "such as automatic replies and rules"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:190
+#: app/src/ui/assistant_prefs.rs:172 app/src/ui/conversation.rs:584
+#: app/src/ui/window/detached.rs:57
+msgid "Conversation"
+msgstr ""
+
+#: app/src/ui/assistant_prefs.rs:175
+msgid "Show Details Expanded"
+msgstr ""
+
+#: app/src/ui/assistant_prefs.rs:177
+msgid "Open the model's thinking and each tool it runs as they appear"
+msgstr ""
+
+#: app/src/ui/assistant_prefs.rs:209
 msgid "Test"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:194
+#: app/src/ui/assistant_prefs.rs:213
 msgid "Test the Connection"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:219
+#: app/src/ui/assistant_prefs.rs:238
 msgid "No answer: {reason}"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:279
+#: app/src/ui/assistant_prefs.rs:298
 msgid "Connection"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:425
+#: app/src/ui/assistant_prefs.rs:444
 msgid "Claude Code's own default"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:433
+#: app/src/ui/assistant_prefs.rs:452
 msgid "Model"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:452 app/src/ui/assistant_prefs.rs:456
+#: app/src/ui/assistant_prefs.rs:471 app/src/ui/assistant_prefs.rs:475
 msgid "Models You Can Use"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:477
+#: app/src/ui/assistant_prefs.rs:496
 msgid "Search models"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:494
+#: app/src/ui/assistant_prefs.rs:513
 msgid "Asking for the model list…"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:610
+#: app/src/ui/assistant_prefs.rs:629
 msgid "This provider lists no models. Type a name in the field instead."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:645
+#: app/src/ui/assistant_prefs.rs:664
 msgid "alias"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:685
+#: app/src/ui/assistant_prefs.rs:704
 msgid "Found on This Computer"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:689
+#: app/src/ui/assistant_prefs.rs:708
 msgid "Looking for LM Studio, Ollama, Unsloth, and Claude Code…"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:705
+#: app/src/ui/assistant_prefs.rs:724
 msgid "Nothing found"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:707
+#: app/src/ui/assistant_prefs.rs:726
 msgid ""
 "Start LM Studio's server or Ollama, or install Claude Code, then open "
 "Preferences again."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:719
+#: app/src/ui/assistant_prefs.rs:738
 msgid "{model} and {count} more"
 msgid_plural "{model} and {count} more"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/assistant_prefs.rs:730
+#: app/src/ui/assistant_prefs.rs:749
 msgid "Use"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:735
+#: app/src/ui/assistant_prefs.rs:754
 msgid "Use {provider}"
 msgstr ""
 
@@ -2155,10 +2206,6 @@ msgstr ""
 
 #: app/src/ui/conversation.rs:556 app/src/ui/conversation.rs:558
 msgid "Labels (L)"
-msgstr ""
-
-#: app/src/ui/conversation.rs:584 app/src/ui/window/detached.rs:57
-msgid "Conversation"
 msgstr ""
 
 #: app/src/ui/conversation.rs:749

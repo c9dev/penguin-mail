@@ -6,7 +6,7 @@ use std::sync::Arc;
 use serde_json::{Value, json};
 
 use super::{
-    MAX_ROUNDS, emit, error_text, finish_tool, http_client, network, outcome_text, run_tool,
+    MAX_ROUNDS, emit, error_text, http_client, network, outcome_text, refuse_tool, run_tool,
     too_many_rounds,
 };
 use crate::sse::SseReader;
@@ -15,6 +15,10 @@ use crate::{AgentEvent, AiError, Model, ModelList, ToolHost, ToolOutcome, ToolSp
 pub(crate) const ANTHROPIC_BASE: &str = "https://api.anthropic.com";
 const API_VERSION: &str = "2023-06-01";
 const MAX_TOKENS: u32 = 64_000;
+/// Tokens a model with a fixed thinking budget may spend thinking in one
+/// request. It has to stay below `MAX_TOKENS`, which covers thinking and
+/// reply together.
+const THINKING_BUDGET: u32 = 16_000;
 /// Models asked for per page of `/v1/models`, the most the API allows.
 const MODEL_PAGE: u32 = 1000;
 /// Pages read before the list stops, so a runaway cursor cannot loop.
@@ -36,6 +40,8 @@ pub(crate) struct AnthropicChat {
     system_prompt: String,
     history: Vec<Value>,
     client: reqwest::Client,
+    /// Ask the model to think, when it can.
+    pub(crate) think: bool,
 }
 
 /// A content block being assembled from stream events.
@@ -66,6 +72,7 @@ impl AnthropicChat {
             system_prompt,
             history: Vec::new(),
             client: http_client(),
+            think: false,
         }
     }
 
@@ -137,6 +144,11 @@ impl AnthropicChat {
         if !self.system_prompt.is_empty() {
             body["system"] = json!(self.system_prompt);
         }
+        if self.think
+            && let Some(thinking) = thinking_request(&self.model)
+        {
+            body["thinking"] = thinking;
+        }
         if !specs.is_empty() {
             body["tools"] = specs
                 .iter()
@@ -186,19 +198,11 @@ async fn run_tools(
         let name = block["name"].as_str().unwrap_or_default();
         let outcome = match reply.bad_input.get(id) {
             Some(raw) => {
-                emit(
-                    events,
-                    AgentEvent::ToolStarted {
-                        name: name.to_string(),
-                        input: Value::String(raw.clone()),
-                    },
-                )
-                .await;
                 let outcome = ToolOutcome::Err(json!({"INVALID_JSON": raw}).to_string());
-                finish_tool(events, name, &outcome).await;
+                refuse_tool(events, id, name, raw, &outcome).await;
                 outcome
             }
-            None => run_tool(host, events, name, block["input"].clone()).await,
+            None => run_tool(host, events, id, name, block["input"].clone()).await,
         };
         let mut result = json!({
             "type": "tool_result",
@@ -211,6 +215,49 @@ async fn run_tools(
         results.push(result);
     }
     results
+}
+
+/// The `thinking` field for a model, or `None` for one that cannot think.
+///
+/// Anthropic changed how a request asks. Models from Claude 3.7 to the 4.5
+/// family take a fixed budget. From 4.6 on they choose how long to think
+/// (`adaptive`), and from 4.7 on they reject a budget with an error. Those
+/// newer models also hide the thinking unless asked for a summary, and a
+/// pane that shows nothing while the model thinks looks stuck. An unknown
+/// name gets no field, since a model without thinking rejects one.
+pub(crate) fn thinking_request(model: &str) -> Option<Value> {
+    let model = model.trim().to_lowercase();
+    let rest = model.strip_prefix("claude-")?;
+    let parts: Vec<&str> = rest.split('-').collect();
+    // A version number, as opposed to a date suffix such as 20250929.
+    let number = |part: Option<&&str>| {
+        part.filter(|p| p.len() <= 2)
+            .and_then(|p| p.parse::<u32>().ok())
+    };
+    let version = match parts.first().copied() {
+        Some("fable" | "mythos") => return Some(adaptive(true)),
+        Some("opus" | "sonnet" | "haiku") => {
+            (number(parts.get(1))?, number(parts.get(2)).unwrap_or(0))
+        }
+        // The older naming, as in claude-3-7-sonnet-20250219.
+        _ => (number(parts.first())?, number(parts.get(1)).unwrap_or(0)),
+    };
+    match version {
+        v if v < (3, 7) => None,
+        v if v < (4, 6) => Some(json!({"type": "enabled", "budget_tokens": THINKING_BUDGET})),
+        (4, 6) => Some(adaptive(false)),
+        _ => Some(adaptive(true)),
+    }
+}
+
+/// Adaptive thinking; `summarized` asks for readable text where the model
+/// would otherwise send it empty.
+fn adaptive(summarized: bool) -> Value {
+    if summarized {
+        json!({"type": "adaptive", "display": "summarized"})
+    } else {
+        json!({"type": "adaptive"})
+    }
 }
 
 fn reply_text(content: &[Value]) -> String {
@@ -260,11 +307,11 @@ async fn read_stream(
                         }
                     }
                     "thinking_delta" => {
-                        append(
-                            &mut block.value,
-                            "thinking",
-                            delta["thinking"].as_str().unwrap_or_default(),
-                        );
+                        let thinking = delta["thinking"].as_str().unwrap_or_default();
+                        append(&mut block.value, "thinking", thinking);
+                        if !thinking.is_empty() {
+                            emit(events, AgentEvent::Thinking(thinking.to_string())).await;
+                        }
                     }
                     "signature_delta" => {
                         append(

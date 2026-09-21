@@ -398,14 +398,22 @@ impl Turn {
                     self.wrote_text = true;
                     emit(events, AgentEvent::Text(text)).await;
                 }
+                // Claude Code writes each thinking block whole, once the
+                // model has finished it. Blocks the model hid arrive empty.
+                "thinking" => {
+                    let thinking = block["thinking"].as_str().unwrap_or_default();
+                    if !thinking.is_empty() {
+                        emit(events, AgentEvent::Thinking(thinking.to_string())).await;
+                    }
+                }
                 "tool_use" => {
                     let name = tool_name(block["name"].as_str().unwrap_or_default());
-                    if let Some(id) = block["id"].as_str() {
-                        self.tools.insert(id.to_string(), name.clone());
-                    }
+                    let id = block["id"].as_str().unwrap_or_default().to_string();
+                    self.tools.insert(id.clone(), name.clone());
                     emit(
                         events,
                         AgentEvent::ToolStarted {
+                            id,
                             name,
                             input: block["input"].clone(),
                         },
@@ -440,9 +448,11 @@ impl Turn {
             emit(
                 events,
                 AgentEvent::ToolFinished {
+                    id: id.to_string(),
                     name,
                     ok: !block["is_error"].as_bool().unwrap_or(false),
                     preview: preview(&text),
+                    output: text,
                 },
             )
             .await;

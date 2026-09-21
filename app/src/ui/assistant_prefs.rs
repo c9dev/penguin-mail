@@ -167,6 +167,25 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
     });
     safety.add(&confirm);
     page.add(&safety);
+
+    let details = adw::PreferencesGroup::builder()
+        .title(gettext("Conversation"))
+        .build();
+    let expanded = adw::SwitchRow::builder()
+        .title(gettext("Show Details Expanded"))
+        .subtitle(gettext(
+            "Open the model's thinking and each tool it runs as they appear",
+        ))
+        .active(app.settings().assistant_details_expanded)
+        .build();
+    let weak = Rc::downgrade(app);
+    expanded.connect_active_notify(move |row| {
+        if let Some(app) = weak.upgrade() {
+            app.change_settings(Change::AssistantDetailsExpanded(row.is_active()));
+        }
+    });
+    details.add(&expanded);
+    page.add(&details);
     page
 }
 

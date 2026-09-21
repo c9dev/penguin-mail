@@ -51,7 +51,13 @@ async fn runs_claude_headless_and_maps_its_stream() {
         lines(&[
             json!({"type": "system", "subtype": "init", "session_id": "sess-1",
                 "tools": ["mcp__penguin-mail__search_mail"], "mcp_servers": [{"name": "penguin-mail", "status": "connected"}]}),
+            // Recorded from `claude -p --output-format stream-json`: a
+            // thinking block comes whole, with its signature.
             json!({"type": "assistant", "session_id": "sess-1", "message": {"role": "assistant", "content": [
+                {"type": "thinking", "thinking": "The user wants x.", "signature": "EqoBCkgIBxAB"},
+            ]}}),
+            json!({"type": "assistant", "session_id": "sess-1", "message": {"role": "assistant", "content": [
+                {"type": "thinking", "thinking": "", "signature": "EqoBCkgIBxAC"},
                 {"type": "text", "text": "Looking."},
                 {"type": "tool_use", "id": "tu_1", "name": "mcp__penguin-mail__search_mail", "input": {"query": "x"}},
             ]}}),
@@ -87,15 +93,19 @@ async fn runs_claude_headless_and_maps_its_stream() {
     assert_eq!(
         drain(&rx),
         vec![
+            AgentEvent::Thinking("The user wants x.".into()),
             AgentEvent::Text("Looking.".into()),
             AgentEvent::ToolStarted {
+                id: "tu_1".into(),
                 name: "search_mail".into(),
                 input: json!({"query": "x"}),
             },
             AgentEvent::ToolFinished {
+                id: "tu_1".into(),
                 name: "search_mail".into(),
                 ok: true,
                 preview: "{\"hits\":2}".into(),
+                output: "{\"hits\":2}".into(),
             },
             AgentEvent::Text("\n\nTwo hits.".into()),
         ]

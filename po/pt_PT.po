@@ -79,23 +79,23 @@ msgstr "O Penguin Mail {version} está atualizado"
 msgid "Could not reach GitHub to check for updates"
 msgstr "Não foi possível contactar o GitHub para procurar atualizações"
 
-#: app/src/assistant/mod.rs:101
+#: app/src/assistant/mod.rs:102
 msgid "The assistant is off. Choose a model in Preferences."
 msgstr "O assistente está desligado. Escolha um modelo nas Preferências."
 
-#: app/src/assistant/mod.rs:103
+#: app/src/assistant/mod.rs:104
 msgid "Translation has no model. Choose one in Preferences, on the AI page."
 msgstr "A tradução não tem modelo. Escolha um nas Preferências, na página IA."
 
-#: app/src/assistant/mod.rs:109
+#: app/src/assistant/mod.rs:110
 msgid "Choose a model for the local server in Preferences."
 msgstr "Escolha um modelo para o servidor local nas Preferências."
 
-#: app/src/assistant/mod.rs:121
+#: app/src/assistant/mod.rs:122
 msgid "Add an Anthropic API key in Preferences."
 msgstr "Adicione uma chave de API da Anthropic nas Preferências."
 
-#: app/src/assistant/mod.rs:128
+#: app/src/assistant/mod.rs:129
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr ""
 "O Claude Code não está instalado. Instale-o, inicie sessão e tente de novo."
@@ -157,6 +157,144 @@ msgid ""
 msgstr ""
 "Mover o correio de {sender} para {category} em {account} e criar uma regra "
 "do Gmail para o correio futuro?"
+
+#: app/src/assistant/turn.rs:57
+msgid "Waiting for the model…"
+msgstr "À espera do modelo…"
+
+#: app/src/assistant/turn.rs:58 app/src/assistant/turn.rs:259
+msgid "Thinking…"
+msgstr "A pensar…"
+
+#: app/src/assistant/turn.rs:59
+msgid "{activity}…"
+msgstr "{activity}…"
+
+#: app/src/assistant/turn.rs:60
+msgid "Waiting for your answer…"
+msgstr "À espera da sua resposta…"
+
+#: app/src/assistant/turn.rs:61
+msgid "Writing…"
+msgstr "A escrever…"
+
+#: app/src/assistant/turn.rs:264
+msgid "Thought for {count} second"
+msgid_plural "Thought for {count} seconds"
+msgstr[0] "Pensou durante {count} segundo"
+msgstr[1] "Pensou durante {count} segundos"
+
+#: app/src/assistant/turn.rs:277
+msgid "Looking at the screen"
+msgstr "A olhar para o ecrã"
+
+#: app/src/assistant/turn.rs:278
+msgid "Reading a mailbox"
+msgstr "A ler uma caixa de correio"
+
+#: app/src/assistant/turn.rs:279
+msgid "Searching mail"
+msgstr "A pesquisar correio"
+
+#: app/src/assistant/turn.rs:280
+msgid "Reading a conversation"
+msgstr "A ler uma conversa"
+
+#: app/src/assistant/turn.rs:281
+msgid "Organizing mail"
+msgstr "A organizar correio"
+
+#: app/src/assistant/turn.rs:282
+msgid "Changing labels"
+msgstr "A alterar etiquetas"
+
+#: app/src/assistant/turn.rs:283
+msgid "Setting reminders"
+msgstr "A definir lembretes"
+
+#: app/src/assistant/turn.rs:284
+msgid "Writing a draft"
+msgstr "A escrever um rascunho"
+
+#: app/src/assistant/turn.rs:285
+msgid "Sending mail"
+msgstr "A enviar correio"
+
+#: app/src/assistant/turn.rs:286
+msgid "Blocking a sender"
+msgstr "A bloquear um remetente"
+
+#: app/src/assistant/turn.rs:287
+msgid "Checking the automatic reply"
+msgstr "A verificar a resposta automática"
+
+#: app/src/assistant/turn.rs:288
+msgid "Setting the automatic reply"
+msgstr "A definir a resposta automática"
+
+#: app/src/assistant/turn.rs:289
+msgid "Reading rules"
+msgstr "A ler regras"
+
+#: app/src/assistant/turn.rs:290
+msgid "Creating a rule"
+msgstr "A criar uma regra"
+
+#: app/src/assistant/turn.rs:291
+msgid "Deleting a rule"
+msgstr "A eliminar uma regra"
+
+#: app/src/assistant/turn.rs:292
+msgid "Creating a label"
+msgstr "A criar uma etiqueta"
+
+#: app/src/assistant/turn.rs:293
+msgid "Reading settings"
+msgstr "A ler definições"
+
+#: app/src/assistant/turn.rs:294
+msgid "Changing a setting"
+msgstr "A alterar uma definição"
+
+#: app/src/assistant/turn.rs:295
+msgid "Setting a signature"
+msgstr "A definir uma assinatura"
+
+#: app/src/assistant/turn.rs:296
+msgid "Updating VIPs"
+msgstr "A atualizar os VIP"
+
+#: app/src/assistant/turn.rs:297
+msgid "Creating a smart mailbox"
+msgstr "A criar uma caixa inteligente"
+
+#: app/src/assistant/turn.rs:298
+msgid "Opening a conversation"
+msgstr "A abrir uma conversa"
+
+#: app/src/assistant/turn.rs:299
+msgid "Sorting a sender"
+msgstr "A organizar um remetente"
+
+#: app/src/assistant/turn.rs:300
+msgid "Dismissing a follow-up"
+msgstr "A dispensar um seguimento"
+
+#: app/src/assistant/turn.rs:301
+msgid "Reading hidden addresses"
+msgstr "A ler endereços ocultos"
+
+#: app/src/assistant/turn.rs:302
+msgid "Making a hidden address"
+msgstr "A criar um endereço oculto"
+
+#: app/src/assistant/turn.rs:303
+msgid "Changing a hidden address"
+msgstr "A alterar um endereço oculto"
+
+#: app/src/assistant/turn.rs:304
+msgid "Working"
+msgstr "A trabalhar"
 
 #: app/src/compose.rs:423
 msgid "Add at least one recipient."
@@ -796,151 +934,151 @@ msgstr "Para {person}"
 msgid "In {label}"
 msgstr "Em {label}"
 
-#: app/src/settings/mod.rs:133 app/src/settings/mod.rs:526
+#: app/src/settings/mod.rs:136 app/src/settings/mod.rs:530
 msgid "Off"
 msgstr "Desligado"
 
-#: app/src/settings/mod.rs:134
+#: app/src/settings/mod.rs:137
 msgid "Local server"
 msgstr "Servidor local"
 
-#: app/src/settings/mod.rs:135
+#: app/src/settings/mod.rs:138
 msgid "Anthropic API"
 msgstr "API da Anthropic"
 
-#: app/src/settings/mod.rs:136
+#: app/src/settings/mod.rs:139
 msgid "Claude subscription"
 msgstr "Subscrição do Claude"
 
-#: app/src/settings/mod.rs:156 app/src/ui/assistant.rs:96
+#: app/src/settings/mod.rs:159 app/src/ui/assistant.rs:82
 msgid "Assistant"
 msgstr "Assistente"
 
-#: app/src/settings/mod.rs:157
+#: app/src/settings/mod.rs:160
 msgid "Translation"
 msgstr "Tradução"
 
-#: app/src/settings/mod.rs:163
+#: app/src/settings/mod.rs:166
 msgid "Answers questions and acts on your mail"
 msgstr "Responde a perguntas e trata do seu correio"
 
-#: app/src/settings/mod.rs:164
+#: app/src/settings/mod.rs:167
 msgid "Translates a message when you ask"
 msgstr "Traduz uma mensagem quando o pede"
 
-#: app/src/settings/mod.rs:201
+#: app/src/settings/mod.rs:204
 msgid "Same as the Assistant"
 msgstr "O mesmo do assistente"
 
-#: app/src/settings/mod.rs:385
+#: app/src/settings/mod.rs:389
 msgid "Rich text"
 msgstr "Texto formatado"
 
-#: app/src/settings/mod.rs:386
+#: app/src/settings/mod.rs:390
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:433
+#: app/src/settings/mod.rs:437
 msgid "When opened"
 msgstr "Ao abrir"
 
-#: app/src/settings/mod.rs:434
+#: app/src/settings/mod.rs:438
 msgid "After 2 seconds"
 msgstr "Ao fim de 2 segundos"
 
-#: app/src/settings/mod.rs:435
+#: app/src/settings/mod.rs:439
 msgid "Only when I choose"
 msgstr "Apenas quando eu escolher"
 
-#: app/src/settings/mod.rs:451
+#: app/src/settings/mod.rs:455
 msgid "Ask each time"
 msgstr "Perguntar de cada vez"
 
-#: app/src/settings/mod.rs:452
+#: app/src/settings/mod.rs:456
 msgid "Always load"
 msgstr "Carregar sempre"
 
-#: app/src/settings/mod.rs:486
+#: app/src/settings/mod.rs:490
 msgid "Small"
 msgstr "Pequeno"
 
-#: app/src/settings/mod.rs:487
+#: app/src/settings/mod.rs:491
 msgid "Default"
 msgstr "Predefinido"
 
-#: app/src/settings/mod.rs:488
+#: app/src/settings/mod.rs:492
 msgid "Large"
 msgstr "Grande"
 
-#: app/src/settings/mod.rs:489
+#: app/src/settings/mod.rs:493
 msgid "Larger"
 msgstr "Maior"
 
-#: app/src/settings/mod.rs:527
+#: app/src/settings/mod.rs:531
 msgid "5 seconds"
 msgstr "5 segundos"
 
-#: app/src/settings/mod.rs:528
+#: app/src/settings/mod.rs:532
 msgid "10 seconds"
 msgstr "10 segundos"
 
-#: app/src/settings/mod.rs:529
+#: app/src/settings/mod.rs:533
 msgid "20 seconds"
 msgstr "20 segundos"
 
-#: app/src/settings/mod.rs:530
+#: app/src/settings/mod.rs:534
 msgid "30 seconds"
 msgstr "30 segundos"
 
-#: app/src/settings/mod.rs:547
+#: app/src/settings/mod.rs:551
 msgid "Follow system"
 msgstr "Seguir o sistema"
 
-#: app/src/settings/mod.rs:548
+#: app/src/settings/mod.rs:552
 msgid "Light"
 msgstr "Claro"
 
-#: app/src/settings/mod.rs:549
+#: app/src/settings/mod.rs:553
 msgid "Dark"
 msgstr "Escuro"
 
-#: app/src/settings/mod.rs:559
+#: app/src/settings/mod.rs:563
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "A cada segundo"
 msgstr[1] "A cada {count} segundos"
 
-#: app/src/settings/mod.rs:567
+#: app/src/settings/mod.rs:571
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "A cada minuto"
 msgstr[1] "A cada {count} minutos"
 
-#: app/src/settings/mod.rs:584
+#: app/src/settings/mod.rs:588
 msgid "2 weeks"
 msgstr "2 semanas"
 
-#: app/src/settings/mod.rs:585
+#: app/src/settings/mod.rs:589
 msgid "30 days"
 msgstr "30 dias"
 
-#: app/src/settings/mod.rs:586
+#: app/src/settings/mod.rs:590
 msgid "90 days"
 msgstr "90 dias"
 
-#: app/src/settings/mod.rs:587
+#: app/src/settings/mod.rs:591
 msgid "1 year"
 msgstr "1 ano"
 
-#: app/src/settings/mod.rs:594
+#: app/src/settings/mod.rs:598
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:595
+#: app/src/settings/mod.rs:599
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:596
+#: app/src/settings/mod.rs:600
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -1233,143 +1371,31 @@ msgstr "Mostrar registo"
 msgid "The update to {version} failed"
 msgstr "A atualização para a versão {version} falhou"
 
-#: app/src/ui/assistant.rs:21
+#: app/src/ui/assistant.rs:30
 msgid "Summarize this conversation"
 msgstr "Resume esta conversa"
 
-#: app/src/ui/assistant.rs:22
+#: app/src/ui/assistant.rs:31
 msgid "What needs a reply today?"
 msgstr "O que precisa de resposta hoje?"
 
-#: app/src/ui/assistant.rs:23
+#: app/src/ui/assistant.rs:32
 msgid "Archive newsletters older than a week"
 msgstr "Arquiva as newsletters com mais de uma semana"
 
-#: app/src/ui/assistant.rs:24
+#: app/src/ui/assistant.rs:33
 msgid "Set an out-of-office reply for next week"
 msgstr "Define uma resposta de ausência para a próxima semana"
 
-#: app/src/ui/assistant.rs:25
+#: app/src/ui/assistant.rs:34
 msgid "Draft a reply to the open conversation"
 msgstr "Redige uma resposta para a conversa aberta"
 
-#: app/src/ui/assistant.rs:33
-msgid "Looking at the screen"
-msgstr "A olhar para o ecrã"
-
-#: app/src/ui/assistant.rs:34
-msgid "Reading a mailbox"
-msgstr "A ler uma caixa de correio"
-
-#: app/src/ui/assistant.rs:35
-msgid "Searching mail"
-msgstr "A pesquisar correio"
-
-#: app/src/ui/assistant.rs:36
-msgid "Reading a conversation"
-msgstr "A ler uma conversa"
-
-#: app/src/ui/assistant.rs:37
-msgid "Organizing mail"
-msgstr "A organizar correio"
-
-#: app/src/ui/assistant.rs:38
-msgid "Changing labels"
-msgstr "A alterar etiquetas"
-
-#: app/src/ui/assistant.rs:39
-msgid "Setting reminders"
-msgstr "A definir lembretes"
-
-#: app/src/ui/assistant.rs:40
-msgid "Writing a draft"
-msgstr "A escrever um rascunho"
-
-#: app/src/ui/assistant.rs:41
-msgid "Sending mail"
-msgstr "A enviar correio"
-
-#: app/src/ui/assistant.rs:42
-msgid "Blocking a sender"
-msgstr "A bloquear um remetente"
-
-#: app/src/ui/assistant.rs:43
-msgid "Checking the automatic reply"
-msgstr "A verificar a resposta automática"
-
-#: app/src/ui/assistant.rs:44
-msgid "Setting the automatic reply"
-msgstr "A definir a resposta automática"
-
-#: app/src/ui/assistant.rs:45
-msgid "Reading rules"
-msgstr "A ler regras"
-
-#: app/src/ui/assistant.rs:46
-msgid "Creating a rule"
-msgstr "A criar uma regra"
-
-#: app/src/ui/assistant.rs:47
-msgid "Deleting a rule"
-msgstr "A eliminar uma regra"
-
-#: app/src/ui/assistant.rs:48
-msgid "Creating a label"
-msgstr "A criar uma etiqueta"
-
-#: app/src/ui/assistant.rs:49
-msgid "Reading settings"
-msgstr "A ler definições"
-
-#: app/src/ui/assistant.rs:50
-msgid "Changing a setting"
-msgstr "A alterar uma definição"
-
-#: app/src/ui/assistant.rs:51
-msgid "Setting a signature"
-msgstr "A definir uma assinatura"
-
-#: app/src/ui/assistant.rs:52
-msgid "Updating VIPs"
-msgstr "A atualizar os VIP"
-
-#: app/src/ui/assistant.rs:53
-msgid "Creating a smart mailbox"
-msgstr "A criar uma caixa inteligente"
-
-#: app/src/ui/assistant.rs:54
-msgid "Opening a conversation"
-msgstr "A abrir uma conversa"
-
-#: app/src/ui/assistant.rs:55
-msgid "Sorting a sender"
-msgstr "A organizar um remetente"
-
-#: app/src/ui/assistant.rs:56
-msgid "Dismissing a follow-up"
-msgstr "A dispensar um seguimento"
-
-#: app/src/ui/assistant.rs:57
-msgid "Reading hidden addresses"
-msgstr "A ler endereços ocultos"
-
-#: app/src/ui/assistant.rs:58
-msgid "Making a hidden address"
-msgstr "A criar um endereço oculto"
-
-#: app/src/ui/assistant.rs:59
-msgid "Changing a hidden address"
-msgstr "A alterar um endereço oculto"
-
-#: app/src/ui/assistant.rs:60
-msgid "Working"
-msgstr "A trabalhar"
-
-#: app/src/ui/assistant.rs:99 app/src/ui/assistant.rs:101
+#: app/src/ui/assistant.rs:85 app/src/ui/assistant.rs:87
 msgid "New Chat"
 msgstr "Nova conversa"
 
-#: app/src/ui/assistant.rs:124
+#: app/src/ui/assistant.rs:110
 msgid ""
 "Ask about your mail, or tell me what to tidy. I can search, summarize, sort, "
 "draft, and change settings."
@@ -1377,29 +1403,29 @@ msgstr ""
 "Pergunte sobre o seu correio ou diga-me o que arrumar. Sei pesquisar, "
 "resumir, organizar, redigir e alterar definições."
 
-#: app/src/ui/assistant.rs:141
+#: app/src/ui/assistant.rs:134
 msgid "Ask Penguin Mail…"
 msgstr "Pergunte ao Penguin Mail…"
 
-#: app/src/ui/assistant.rs:146 app/src/ui/assistant.rs:150
-#: app/src/ui/assistant.rs:376 app/src/ui/composer/mod.rs:206
+#: app/src/ui/assistant.rs:139 app/src/ui/assistant.rs:143
+#: app/src/ui/assistant.rs:396 app/src/ui/composer/mod.rs:206
 #: app/src/ui/window.rs:3269
 msgid "Send"
 msgstr "Enviar"
 
-#: app/src/ui/assistant.rs:149
+#: app/src/ui/assistant.rs:142
 msgid "Ask Penguin Mail"
 msgstr "Perguntar ao Penguin Mail"
 
-#: app/src/ui/assistant.rs:165
+#: app/src/ui/assistant.rs:158
 msgid "Choose a Model"
 msgstr "Escolher um modelo"
 
-#: app/src/ui/assistant.rs:171
+#: app/src/ui/assistant.rs:164
 msgid "Set Up the Assistant"
 msgstr "Configurar o assistente"
 
-#: app/src/ui/assistant.rs:173
+#: app/src/ui/assistant.rs:166
 msgid ""
 "Use a local model from LM Studio, Ollama, or Unsloth, an Anthropic API key, "
 "or your Claude subscription."
@@ -1407,31 +1433,43 @@ msgstr ""
 "Use um modelo local do LM Studio, do Ollama ou do Unsloth, uma chave de API "
 "da Anthropic ou a sua subscrição do Claude."
 
-#: app/src/ui/assistant.rs:375
+#: app/src/ui/assistant.rs:395
 msgid "Stop"
 msgstr "Parar"
 
-#: app/src/ui/assistant.rs:498
+#: app/src/ui/assistant.rs:493
 msgid "Don't Allow"
 msgstr "Não permitir"
 
-#: app/src/ui/assistant.rs:500
+#: app/src/ui/assistant.rs:495
 msgid "Allow"
 msgstr "Permitir"
 
-#: app/src/ui/assistant.rs:520
+#: app/src/ui/assistant.rs:526
 msgid "Allowed"
 msgstr "Permitido"
 
-#: app/src/ui/assistant.rs:522
+#: app/src/ui/assistant.rs:528
 msgid "Not allowed"
 msgstr "Não permitido"
 
-#: app/src/ui/assistant.rs:565 app/src/ui/hide_my_email.rs:457
+#: app/src/ui/assistant.rs:743
+msgid "Result"
+msgstr "Resultado"
+
+#: app/src/ui/assistant.rs:751
+msgid "Input"
+msgstr "Entrada"
+
+#: app/src/ui/assistant.rs:829
+msgid "Running"
+msgstr "Em curso"
+
+#: app/src/ui/assistant.rs:830 app/src/ui/hide_my_email.rs:457
 msgid "Done"
 msgstr "Concluído"
 
-#: app/src/ui/assistant.rs:566
+#: app/src/ui/assistant.rs:831
 msgid "Failed"
 msgstr "Falhou"
 
@@ -1448,7 +1486,11 @@ msgid ""
 "A local server is LM Studio, Ollama, or any server with OpenAI's API. Local "
 "models keep your mail on this computer. With Anthropic or a Claude "
 "subscription, what a feature reads goes to Anthropic."
-msgstr "Um servidor local é o LM Studio, o Ollama ou qualquer servidor com a API da OpenAI. Os modelos locais mantêm o seu correio neste computador. Com a Anthropic ou com uma subscrição do Claude, o que uma funcionalidade lê vai para a Anthropic."
+msgstr ""
+"Um servidor local é o LM Studio, o Ollama ou qualquer servidor com a API da "
+"OpenAI. Os modelos locais mantêm o seu correio neste computador. Com a "
+"Anthropic ou com uma subscrição do Claude, o que uma funcionalidade lê vai "
+"para a Anthropic."
 
 #: app/src/ui/assistant_prefs.rs:40
 msgid "Server Address"
@@ -1516,63 +1558,76 @@ msgstr ""
 "Aprovar cada mensagem que o assistente envia e cada alteração às definições "
 "do Gmail, como respostas automáticas e regras"
 
-#: app/src/ui/assistant_prefs.rs:190
+#: app/src/ui/assistant_prefs.rs:172 app/src/ui/conversation.rs:584
+#: app/src/ui/window/detached.rs:57
+msgid "Conversation"
+msgstr "Conversa"
+
+#: app/src/ui/assistant_prefs.rs:175
+msgid "Show Details Expanded"
+msgstr "Mostrar os detalhes abertos"
+
+#: app/src/ui/assistant_prefs.rs:177
+msgid "Open the model's thinking and each tool it runs as they appear"
+msgstr "Abrir o raciocínio do modelo e cada ferramenta que usa à medida que aparecem"
+
+#: app/src/ui/assistant_prefs.rs:209
 msgid "Test"
 msgstr "Testar"
 
-#: app/src/ui/assistant_prefs.rs:194
+#: app/src/ui/assistant_prefs.rs:213
 msgid "Test the Connection"
 msgstr "Testar a ligação"
 
-#: app/src/ui/assistant_prefs.rs:219
+#: app/src/ui/assistant_prefs.rs:238
 msgid "No answer: {reason}"
 msgstr "Sem resposta: {reason}"
 
-#: app/src/ui/assistant_prefs.rs:279
+#: app/src/ui/assistant_prefs.rs:298
 msgid "Connection"
 msgstr "Ligação"
 
-#: app/src/ui/assistant_prefs.rs:425
+#: app/src/ui/assistant_prefs.rs:444
 msgid "Claude Code's own default"
 msgstr "A predefinição do próprio Claude Code"
 
-#: app/src/ui/assistant_prefs.rs:433
+#: app/src/ui/assistant_prefs.rs:452
 msgid "Model"
 msgstr "Modelo"
 
-#: app/src/ui/assistant_prefs.rs:452 app/src/ui/assistant_prefs.rs:456
+#: app/src/ui/assistant_prefs.rs:471 app/src/ui/assistant_prefs.rs:475
 msgid "Models You Can Use"
 msgstr "Modelos que pode usar"
 
-#: app/src/ui/assistant_prefs.rs:477
+#: app/src/ui/assistant_prefs.rs:496
 msgid "Search models"
 msgstr "Pesquisar modelos"
 
-#: app/src/ui/assistant_prefs.rs:494
+#: app/src/ui/assistant_prefs.rs:513
 msgid "Asking for the model list…"
 msgstr "A pedir a lista de modelos…"
 
-#: app/src/ui/assistant_prefs.rs:610
+#: app/src/ui/assistant_prefs.rs:629
 msgid "This provider lists no models. Type a name in the field instead."
 msgstr "Este fornecedor não lista modelos. Escreva antes um nome no campo."
 
-#: app/src/ui/assistant_prefs.rs:645
+#: app/src/ui/assistant_prefs.rs:664
 msgid "alias"
 msgstr "alcunha"
 
-#: app/src/ui/assistant_prefs.rs:685
+#: app/src/ui/assistant_prefs.rs:704
 msgid "Found on This Computer"
 msgstr "Encontrado neste computador"
 
-#: app/src/ui/assistant_prefs.rs:689
+#: app/src/ui/assistant_prefs.rs:708
 msgid "Looking for LM Studio, Ollama, Unsloth, and Claude Code…"
 msgstr "À procura do LM Studio, do Ollama, do Unsloth e do Claude Code…"
 
-#: app/src/ui/assistant_prefs.rs:705
+#: app/src/ui/assistant_prefs.rs:724
 msgid "Nothing found"
 msgstr "Nada encontrado"
 
-#: app/src/ui/assistant_prefs.rs:707
+#: app/src/ui/assistant_prefs.rs:726
 msgid ""
 "Start LM Studio's server or Ollama, or install Claude Code, then open "
 "Preferences again."
@@ -1580,17 +1635,17 @@ msgstr ""
 "Inicie o servidor do LM Studio ou o Ollama, ou instale o Claude Code, e "
 "volte a abrir as Preferências."
 
-#: app/src/ui/assistant_prefs.rs:719
+#: app/src/ui/assistant_prefs.rs:738
 msgid "{model} and {count} more"
 msgid_plural "{model} and {count} more"
 msgstr[0] "{model} e mais {count}"
 msgstr[1] "{model} e mais {count}"
 
-#: app/src/ui/assistant_prefs.rs:730
+#: app/src/ui/assistant_prefs.rs:749
 msgid "Use"
 msgstr "Usar"
 
-#: app/src/ui/assistant_prefs.rs:735
+#: app/src/ui/assistant_prefs.rs:754
 msgid "Use {provider}"
 msgstr "Usar {provider}"
 
@@ -2214,10 +2269,6 @@ msgstr "Categorizar remetente"
 #: app/src/ui/conversation.rs:556 app/src/ui/conversation.rs:558
 msgid "Labels (L)"
 msgstr "Etiquetas (L)"
-
-#: app/src/ui/conversation.rs:584 app/src/ui/window/detached.rs:57
-msgid "Conversation"
-msgstr "Conversa"
 
 #: app/src/ui/conversation.rs:749
 msgid "Remove Sender from VIPs"
@@ -5056,6 +5107,20 @@ msgstr "Marcar como spam"
 #: sync/src/triage.rs:102
 msgid "Mark as not junk"
 msgstr "Marcar como não sendo spam"
+
+#~ msgid "Anthropic API key"
+#~ msgstr "Chave de API da Anthropic"
+
+#~ msgid "Claude subscription (Claude Code)"
+#~ msgstr "Subscrição do Claude (Claude Code)"
+
+#~ msgid ""
+#~ "Local models keep your mail on this computer. With Anthropic or a Claude "
+#~ "subscription, the mail the assistant reads goes to Anthropic."
+#~ msgstr ""
+#~ "Os modelos locais mantêm o seu correio neste computador. Com a Anthropic "
+#~ "ou com uma subscrição do Claude, o correio que o assistente lê vai para a "
+#~ "Anthropic."
 
 #~ msgid "Local or OpenAI-compatible server"
 #~ msgstr "Servidor local ou compatível com a OpenAI"

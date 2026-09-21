@@ -71,15 +71,24 @@ pub enum ProviderConfig {
 pub enum AgentEvent {
     /// More of the assistant's reply text.
     Text(String),
+    /// More of what the model thought before answering. Providers that
+    /// hide their reasoning send none.
+    Thinking(String),
     ToolStarted {
+        /// Matches the call to its [`AgentEvent::ToolFinished`], since two
+        /// calls to the same tool can run in one turn.
+        id: String,
         name: String,
         input: serde_json::Value,
     },
     ToolFinished {
+        id: String,
         name: String,
         ok: bool,
         /// A short, human-readable result.
         preview: String,
+        /// The whole result, as the model reads it.
+        output: String,
     },
 }
 
@@ -103,6 +112,14 @@ impl Conversation {
         Conversation {
             inner: providers::State::new(config, system_prompt),
         }
+    }
+
+    /// Asks the model to think before it answers, where the provider lets
+    /// a request ask. The assistant wants this; a translation does not,
+    /// because thinking makes a short job slow and costs tokens.
+    pub fn with_thinking(mut self) -> Conversation {
+        self.inner.ask_for_thinking();
+        self
     }
 
     /// Sends a user message and runs tools until the model answers. Streams

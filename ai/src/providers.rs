@@ -3,6 +3,7 @@
 mod anthropic;
 mod claude_code;
 mod openai;
+mod think;
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -15,9 +16,13 @@ pub(crate) use anthropic::AnthropicChat;
 #[cfg(test)]
 pub(crate) use anthropic::list_models as anthropic_models;
 #[cfg(test)]
+pub(crate) use anthropic::thinking_request;
+#[cfg(test)]
 pub(crate) use claude_code::catalog_models;
 pub(crate) use claude_code::{ClaudeCodeChat, claude_aliases};
 pub(crate) use openai::{OpenAiChat, model_ids};
+#[cfg(test)]
+pub(crate) use think::{Piece, ThinkTags};
 
 /// Model requests per user message before the loop gives up.
 pub(crate) const MAX_ROUNDS: usize = 25;
@@ -48,6 +53,15 @@ impl State {
             ProviderConfig::ClaudeCode { command, model } => {
                 State::ClaudeCode(ClaudeCodeChat::new(command, model, system_prompt))
             }
+        }
+    }
+
+    /// Only Anthropic's API takes a request for thinking. Claude Code thinks
+    /// as its own settings say, and local servers think when their model
+    /// does, sending it back as `reasoning_content` or `<think>` spans.
+    pub(crate) fn ask_for_thinking(&mut self) {
+        if let State::Anthropic(chat) = self {
+            chat.think = true;
         }
     }
 
@@ -137,12 +151,14 @@ pub(crate) async fn emit(events: &async_channel::Sender<AgentEvent>, event: Agen
 pub(crate) async fn run_tool(
     host: &Arc<dyn ToolHost>,
     events: &async_channel::Sender<AgentEvent>,
+    id: &str,
     name: &str,
     input: Value,
 ) -> ToolOutcome {
     emit(
         events,
         AgentEvent::ToolStarted {
+            id: id.to_string(),
             name: name.to_string(),
             input: input.clone(),
         },
@@ -150,22 +166,47 @@ pub(crate) async fn run_tool(
     .await;
     tracing::debug!(tool = name, "running tool");
     let outcome = host.call(name.to_string(), input).await;
-    finish_tool(events, name, &outcome).await;
+    finish_tool(events, id, name, &outcome).await;
     outcome
+}
+
+/// Reports a call that never reached the host, because its input was not
+/// JSON the tool could take. The UI shows the raw text it came as.
+pub(crate) async fn refuse_tool(
+    events: &async_channel::Sender<AgentEvent>,
+    id: &str,
+    name: &str,
+    raw: &str,
+    outcome: &ToolOutcome,
+) {
+    emit(
+        events,
+        AgentEvent::ToolStarted {
+            id: id.to_string(),
+            name: name.to_string(),
+            input: Value::String(raw.to_string()),
+        },
+    )
+    .await;
+    finish_tool(events, id, name, outcome).await;
 }
 
 pub(crate) async fn finish_tool(
     events: &async_channel::Sender<AgentEvent>,
+    id: &str,
     name: &str,
     outcome: &ToolOutcome,
 ) {
     let ok = matches!(outcome, ToolOutcome::Ok(_));
+    let output = outcome_text(outcome);
     emit(
         events,
         AgentEvent::ToolFinished {
+            id: id.to_string(),
             name: name.to_string(),
             ok,
-            preview: preview(&outcome_text(outcome)),
+            preview: preview(&output),
+            output,
         },
     )
     .await;

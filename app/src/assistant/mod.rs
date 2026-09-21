@@ -6,6 +6,7 @@ mod markup;
 mod prompt;
 pub mod run;
 pub mod tools;
+pub mod turn;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -138,12 +139,6 @@ pub fn model_for(ai: &AiSettings, feature: Feature) -> Result<ProviderConfig, St
             })
         }
     }
-}
-
-/// The assistant's model. The assistant pane still calls it by this name;
-/// it goes once the pane names its feature.
-pub fn provider_config(ai: &AiSettings) -> Result<ProviderConfig, String> {
-    model_for(ai, Feature::Assistant)
 }
 
 /// The `claude` command, from `PATH` or its usual install places.

@@ -16,6 +16,22 @@ It reads mail with the same tools you use: it lists mailboxes, searches
 Gmail, and reads conversations. It acts through the app too, so Ctrl+Z
 undoes what it archived, trashed, flagged, or marked.
 
+## What it did
+
+Under your question, the assistant's answer shows what the model did, in
+the order it happened:
+
+- **Thought for N seconds**: what the model thought before acting. Claude
+  and reasoning models such as Qwen 3 and DeepSeek R1 send it; other
+  models skip this row.
+- One row per tool it ran, such as **Reading a mailbox** with what it
+  asked for beside it, and a mark for done or failed.
+- The reply.
+
+Each row folds to one line. Click it, or press Space on it, to see the
+thinking, or the tool's input and the result the model read. While the
+model works, a line at the bottom says what it is doing now.
+
 ## Pick a model
 
 Open Preferences (Ctrl+,) and go to the AI page. It has two groups:

@@ -162,7 +162,18 @@
   margin-left: 36px;
 }
 .assistant-reply { padding-left: 2px; padding-right: 2px; }
-.assistant-activity { margin-left: 2px; }
+/* A turn's thinking and tool rows: one quiet line each until opened. */
+.assistant-step > title { padding: 3px 2px; border-radius: 6px; }
+.assistant-step > title:hover { background: alpha(currentColor, 0.06); }
+.assistant-step-title { font-weight: 600; }
+.assistant-step-body { margin-top: 4px; margin-bottom: 4px; }
+.assistant-thinking { margin-top: 2px; margin-bottom: 4px; }
+.assistant-detail {
+  background: alpha(currentColor, 0.05);
+  border-radius: 8px;
+}
+.assistant-detail > viewport > label { padding: 6px 8px; }
+.assistant-status { margin-left: 2px; }
 .assistant-note.error { color: var(--error-color); }
 .assistant-suggestion { padding: 6px 10px; border-radius: 10px; }
 .assistant-confirm label { font-weight: 600; }

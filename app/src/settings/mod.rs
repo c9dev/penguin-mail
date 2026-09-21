@@ -51,6 +51,9 @@ pub struct Settings {
     /// A name shown instead of the address in the sidebar.
     pub account_names: BTreeMap<String, String>,
     pub ai: AiSettings,
+    /// Open the assistant's thinking and tool rows as they appear, rather
+    /// than folded to one line each.
+    pub assistant_details_expanded: bool,
     /// Plus addresses made with Hide My Email, oldest first.
     pub hidden_addresses: Vec<crate::hide_my_email::HiddenAddress>,
     /// Split inboxes into Primary, Updates, Promotions, and Social, from
@@ -346,6 +349,7 @@ impl Default for Settings {
             account_colors: BTreeMap::new(),
             account_names: BTreeMap::new(),
             ai: AiSettings::default(),
+            assistant_details_expanded: false,
             hidden_addresses: Vec::new(),
             inbox_categories: true,
             default_category: Category::All,
