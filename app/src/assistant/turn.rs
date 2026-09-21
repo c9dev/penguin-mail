@@ -301,6 +301,9 @@ pub fn tool_label(name: &str) -> String {
         "list_hidden_addresses" => gettext("Reading hidden addresses"),
         "create_hidden_address" => gettext("Making a hidden address"),
         "set_hidden_address" => gettext("Changing a hidden address"),
+        // The app's own web tools, Anthropic's, and Claude Code's.
+        "web_search" | "WebSearch" => gettext("Searching the web"),
+        "fetch_page" | "web_fetch" | "WebFetch" => gettext("Reading a web page"),
         _ => gettext("Working"),
     }
 }

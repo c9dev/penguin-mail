@@ -250,6 +250,10 @@ pub struct AiSettings {
     /// Features other than the assistant that do not follow it. A feature
     /// missing here uses the assistant's model.
     pub uses: BTreeMap<Feature, Use>,
+    /// How the assistant searches the web and reads pages.
+    pub web_search: WebSearch,
+    /// The SearXNG server web search asks, such as `http://localhost:8080`.
+    pub searxng_url: String,
 }
 
 impl Default for AiSettings {
@@ -263,6 +267,42 @@ impl Default for AiSettings {
             claude_command: String::new(),
             confirm_actions: true,
             uses: BTreeMap::new(),
+            web_search: WebSearch::Claude,
+            searxng_url: String::new(),
+        }
+    }
+}
+
+/// How the assistant reaches the web. Claude, through the API or a
+/// subscription, always uses Anthropic's own search once this is on; the
+/// engines are for a local model, which has no search of its own.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum WebSearch {
+    /// No web tools for any model.
+    Off,
+    /// Claude searches with Anthropic's tools. A local model can read a
+    /// page it is given but has nothing to search with.
+    Claude,
+    /// A local model searches with the Brave Search API.
+    Brave,
+    /// A local model searches with a SearXNG server.
+    Searxng,
+}
+
+impl Choice for WebSearch {
+    const ALL: &'static [Self] = &[
+        WebSearch::Off,
+        WebSearch::Claude,
+        WebSearch::Brave,
+        WebSearch::Searxng,
+    ];
+    fn label(self) -> String {
+        match self {
+            WebSearch::Off => gettext("Off"),
+            WebSearch::Claude => gettext("Claude's own only"),
+            WebSearch::Brave => gettext("Brave Search"),
+            WebSearch::Searxng => gettext("SearXNG"),
         }
     }
 }
@@ -863,6 +903,8 @@ mod tests {
             ai.resolved(Feature::Translation),
             (AiProvider::Local, "qwen3".to_string())
         );
+        // Web search came later, and an older file starts on Claude's own.
+        assert_eq!(ai.web_search, WebSearch::Claude);
         assert!(!ai.confirm_actions, "the rest of the section survives");
     }
 

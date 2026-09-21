@@ -26,9 +26,10 @@ use mailrs_domain::translate::gettext;
 /// The keyring service that holds the assistant's API keys.
 const KEY_SERVICE: &str = "mailrs-ai";
 
-/// Keyring entry names, one per provider that takes a key.
+/// Keyring entry names, one per service that takes a key.
 pub const LOCAL_KEY: &str = "local";
 pub const ANTHROPIC_KEY: &str = "anthropic";
+pub const BRAVE_KEY: &str = "brave-search";
 
 fn keys() -> KeyringTokenStore {
     KeyringTokenStore::with_service(KEY_SERVICE)
@@ -37,12 +38,12 @@ fn keys() -> KeyringTokenStore {
 /// Keys read from the keyring, so the GTK thread never waits on it.
 static CACHE: Mutex<Option<HashMap<String, String>>> = Mutex::new(None);
 
-/// Reads both keys from the keyring on a background thread. Call once at
+/// Reads every key from the keyring on a background thread. Call once at
 /// startup; until it finishes, no key is known.
 pub fn preload_keys() {
     std::thread::spawn(|| {
         let store = keys();
-        let found: HashMap<String, String> = [LOCAL_KEY, ANTHROPIC_KEY]
+        let found: HashMap<String, String> = [LOCAL_KEY, ANTHROPIC_KEY, BRAVE_KEY]
             .into_iter()
             .filter_map(|name| {
                 let key = store.load(name).ok().flatten()?;

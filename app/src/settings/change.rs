@@ -12,7 +12,7 @@ use serde_json::{Value, json};
 
 use super::{
     Choice, ColorScheme, ComposeFormat, Feature, MarkRead, RemoteImages, Settings, TextSize,
-    UndoSend, Use,
+    UndoSend, Use, WebSearch,
 };
 
 /// One named change to the preferences.
@@ -147,6 +147,10 @@ pub enum AiChange {
         base_url: String,
         model: String,
     },
+    /// How the assistant searches the web.
+    WebSearch(WebSearch),
+    /// The SearXNG server a local model searches with.
+    SearxngUrl(String),
 }
 
 impl Change {
@@ -306,6 +310,8 @@ impl AiChange {
                 ai.base_url = base_url;
                 ai.local_model = model;
             }
+            AiChange::WebSearch(choice) => ai.web_search = choice,
+            AiChange::SearxngUrl(url) => ai.searxng_url = url.trim().trim_end_matches('/').into(),
         }
     }
 }
@@ -605,6 +611,16 @@ mod tests {
 
     fn effects(change: Change) -> Effects {
         change.apply(&mut Settings::default())
+    }
+
+    #[test]
+    fn web_search_picks_an_engine_and_keeps_its_address_tidy() {
+        let mut settings = Settings::default();
+        let changed = Change::Ai(AiChange::WebSearch(WebSearch::Searxng)).apply(&mut settings);
+        assert!(changed.has(Effect::Assistant));
+        Change::Ai(AiChange::SearxngUrl(" http://searx.lan:8080/ ".into())).apply(&mut settings);
+        assert_eq!(settings.ai.web_search, WebSearch::Searxng);
+        assert_eq!(settings.ai.searxng_url, "http://searx.lan:8080");
     }
 
     fn effects_from(settings: &Settings, change: Change) -> Effects {

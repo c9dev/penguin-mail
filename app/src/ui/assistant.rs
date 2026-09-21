@@ -360,6 +360,7 @@ impl AssistantPane {
         let (stop, stopped) = async_channel::bounded::<()>(1);
         *self.stop.borrow_mut() = Some(stop);
         let settings = (self.settings)();
+        let web = settings.ai.web_search != crate::settings::WebSearch::Off;
         let host = Arc::new(Toolbox::new(
             Host::new(assistant::tools::specs(), self.requests.clone()),
             sources::for_settings(&settings),
@@ -379,6 +380,7 @@ impl AssistantPane {
                 .core
                 .call(async move {
                     let mut conversation = conversation.lock().await;
+                    conversation.set_web(web);
                     tokio::select! {
                         reply = conversation.send(text, host, events) => reply.map_err(anyhow::Error::from),
                         _ = stopped.recv() => Err(anyhow::anyhow!("Stopped.")),

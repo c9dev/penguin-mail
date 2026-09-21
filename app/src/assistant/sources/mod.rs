@@ -8,6 +8,8 @@
 //! Claude Code through the bridge in front of it, so the asking below holds
 //! whichever model runs.
 
+pub mod web;
+
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
@@ -49,8 +51,10 @@ pub trait Source: Send + Sync {
 }
 
 /// The sources the settings turn on. Each later part adds its own here.
-pub fn for_settings(_settings: &Settings) -> Vec<Arc<dyn Source>> {
-    Vec::new()
+pub fn for_settings(settings: &Settings) -> Vec<Arc<dyn Source>> {
+    let mut sources = Vec::new();
+    sources.extend(web::for_settings(settings));
+    sources
 }
 
 /// Everything the model can call: the mail tools and every source.

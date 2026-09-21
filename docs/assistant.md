@@ -88,15 +88,44 @@ runs on your Pro or Max plan with no API key. Penguin Mail looks for
 `claude` on your PATH and in `~/.local/bin`.
 
 Penguin Mail starts `claude -p` for each message and hands it the mail
-tools over MCP. It turns off Claude Code's own tools (files, shell, web),
-allows only the mail tools, and uses `--permission-mode dontAsk`, so
-nothing outside that list runs. Claude Code still reads your global
+tools over MCP. It turns off Claude Code's own tools for files and the
+shell, allows only the mail tools plus WebSearch and WebFetch while web
+search is on, and uses `--permission-mode dontAsk`, so nothing outside that
+list runs. Claude Code still reads your global
 `~/.claude/CLAUDE.md` and runs your hooks, as it does in any session.
 
 The model field lists what your `claude` install offers: its own default,
 the aliases with the version each points at today, and the dated ids for
 pinning one. Penguin Mail reads that list from the catalog the CLI keeps,
 so it matches whatever version you have.
+
+## Web search
+
+The assistant can search the web and read a page, such as a link in a
+message. Pick how under **Web Search** on the AI page:
+
+- **Off**: no web tools for any model.
+- **Claude's own only**, the default: Claude searches with Anthropic's
+  tools, through the API or your subscription. A local model can read a
+  page you point it at but cannot search.
+- **Brave Search**: Claude still uses Anthropic's search, and a local
+  model searches with Brave. Get a key at
+  [brave.com/search/api](https://brave.com/search/api/) and paste it into
+  **Brave Search API Key**. It goes into the keyring.
+- **SearXNG**: a local model searches with a SearXNG server you run or
+  trust. Enter its address, such as `http://localhost:8080`. Penguin Mail
+  asks SearXNG for JSON, which a fresh install does not serve: add `json`
+  under `search.formats` in its `settings.yml`.
+
+**Test** runs one search and shows the first result's title, or what went
+wrong.
+
+A local model reads a page through Penguin Mail: it downloads up to 2 MB
+in 20 seconds and reads the text, without scripts or styles. It will not
+open an address on your computer or your home network, so a message cannot
+send the model to your router. Neither tool asks before it runs, since both
+only read. The model is told that search results and pages are written by
+strangers and that it must not follow instructions in them.
 
 ## What it asks before doing
 
@@ -123,6 +152,10 @@ the model chosen for it, so the assistant and translation can go to
 different places. The assistant reads only what a task needs, but that can
 be whole conversations. Translation sends the message you asked it to
 translate, and only after you press the button.
+
+A web search sends its words to the search engine in use: Anthropic for
+Claude, or Brave or your SearXNG server for a local model. Those words come
+from your request and can include what the assistant read in your mail.
 
 The assistant treats mail as data. Its instructions tell it never to follow
 instructions written inside an email, and the approval cards stop a message

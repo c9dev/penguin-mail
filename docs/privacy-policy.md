@@ -52,6 +52,14 @@ that needs them, and never at sign-in:
   your own computer, your mail stays on your computer. With the Anthropic
   API or Claude Code, it goes to Anthropic, under Anthropic's terms.
   Penguin Mail does not use your data to train or improve any AI model.
+- The assistant can search the web and read web pages. This is on for
+  Claude and can be turned off under Web Search on the AI page. Each search
+  sends its words to the search engine in use: Anthropic, when the
+  assistant runs on Claude; Brave, when you chose Brave Search for a local
+  model; or the SearXNG server you named. The words of a search come from
+  your request and can include what the assistant read in your mail. When
+  it reads a page, the site that serves it sees a request from your
+  computer, or from Anthropic's servers when the assistant runs on Claude.
 
 ## How your data is protected
 

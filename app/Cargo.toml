@@ -47,8 +47,11 @@ tokio.workspace = true
 toml.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+# The web source checks a page's host before it downloads anything.
+url.workspace = true
 webkit.workspace = true
 
 [dev-dependencies]
 mail-parser.workspace = true
 tempfile.workspace = true
+wiremock.workspace = true

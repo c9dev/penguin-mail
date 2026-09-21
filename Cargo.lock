@@ -2009,7 +2009,9 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
+ "url",
  "webkit6",
+ "wiremock",
 ]
 
 [[package]]

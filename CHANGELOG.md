@@ -16,6 +16,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   rows under your question that open to show the details, with a line
   underneath saying what it is doing now: waiting, thinking, running a
   tool, waiting for your answer, or writing.
+- The assistant can search the web and read pages. Claude uses Anthropic's
+  own search; a local model can search with Brave Search or your own
+  SearXNG server, chosen under Web Search on the AI page.
 
 ### Improved
 

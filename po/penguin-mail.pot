@@ -74,23 +74,23 @@ msgstr ""
 msgid "Could not reach GitHub to check for updates"
 msgstr ""
 
-#: app/src/assistant/mod.rs:103
+#: app/src/assistant/mod.rs:104
 msgid "The assistant is off. Choose a model in Preferences."
 msgstr ""
 
-#: app/src/assistant/mod.rs:105
+#: app/src/assistant/mod.rs:106
 msgid "Translation has no model. Choose one in Preferences, on the AI page."
 msgstr ""
 
-#: app/src/assistant/mod.rs:111
+#: app/src/assistant/mod.rs:112
 msgid "Choose a model for the local server in Preferences."
 msgstr ""
 
-#: app/src/assistant/mod.rs:123
+#: app/src/assistant/mod.rs:124
 msgid "Add an Anthropic API key in Preferences."
 msgstr ""
 
-#: app/src/assistant/mod.rs:130
+#: app/src/assistant/mod.rs:131
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr ""
 
@@ -144,6 +144,18 @@ msgstr ""
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a Gmail rule for "
 "their future mail?"
+msgstr ""
+
+#: app/src/assistant/sources/web.rs:61
+msgid "Add a Brave Search API key."
+msgstr ""
+
+#: app/src/assistant/sources/web.rs:63
+msgid "Enter the address of a SearXNG server."
+msgstr ""
+
+#: app/src/assistant/sources/web.rs:67
+msgid "Choose Brave Search or SearXNG for a local model to search with."
 msgstr ""
 
 #: app/src/assistant/turn.rs:57
@@ -280,7 +292,16 @@ msgstr ""
 msgid "Changing a hidden address"
 msgstr ""
 
-#: app/src/assistant/turn.rs:304
+#. The app's own web tools, Anthropic's, and Claude Code's.
+#: app/src/assistant/turn.rs:305
+msgid "Searching the web"
+msgstr ""
+
+#: app/src/assistant/turn.rs:306
+msgid "Reading a web page"
+msgstr ""
+
+#: app/src/assistant/turn.rs:307
 msgid "Working"
 msgstr ""
 
@@ -909,7 +930,8 @@ msgstr ""
 msgid "In {label}"
 msgstr ""
 
-#: app/src/settings/mod.rs:139 app/src/settings/mod.rs:534
+#: app/src/settings/mod.rs:139 app/src/settings/mod.rs:302
+#: app/src/settings/mod.rs:574
 msgid "Off"
 msgstr ""
 
@@ -945,115 +967,127 @@ msgstr ""
 msgid "Same as the Assistant"
 msgstr ""
 
-#: app/src/settings/mod.rs:393
+#: app/src/settings/mod.rs:303
+msgid "Claude's own only"
+msgstr ""
+
+#: app/src/settings/mod.rs:304
+msgid "Brave Search"
+msgstr ""
+
+#: app/src/settings/mod.rs:305
+msgid "SearXNG"
+msgstr ""
+
+#: app/src/settings/mod.rs:433
 msgid "Rich text"
 msgstr ""
 
-#: app/src/settings/mod.rs:394
+#: app/src/settings/mod.rs:434
 msgid "Markdown"
 msgstr ""
 
-#: app/src/settings/mod.rs:441
+#: app/src/settings/mod.rs:481
 msgid "When opened"
 msgstr ""
 
-#: app/src/settings/mod.rs:442
+#: app/src/settings/mod.rs:482
 msgid "After 2 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:443
+#: app/src/settings/mod.rs:483
 msgid "Only when I choose"
 msgstr ""
 
-#: app/src/settings/mod.rs:459
+#: app/src/settings/mod.rs:499
 msgid "Ask each time"
 msgstr ""
 
-#: app/src/settings/mod.rs:460
+#: app/src/settings/mod.rs:500
 msgid "Always load"
 msgstr ""
 
-#: app/src/settings/mod.rs:494
+#: app/src/settings/mod.rs:534
 msgid "Small"
 msgstr ""
 
-#: app/src/settings/mod.rs:495
+#: app/src/settings/mod.rs:535
 msgid "Default"
 msgstr ""
 
-#: app/src/settings/mod.rs:496
+#: app/src/settings/mod.rs:536
 msgid "Large"
 msgstr ""
 
-#: app/src/settings/mod.rs:497
+#: app/src/settings/mod.rs:537
 msgid "Larger"
 msgstr ""
 
-#: app/src/settings/mod.rs:535
+#: app/src/settings/mod.rs:575
 msgid "5 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:536
+#: app/src/settings/mod.rs:576
 msgid "10 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:537
+#: app/src/settings/mod.rs:577
 msgid "20 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:538
+#: app/src/settings/mod.rs:578
 msgid "30 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:555
+#: app/src/settings/mod.rs:595
 msgid "Follow system"
 msgstr ""
 
-#: app/src/settings/mod.rs:556
+#: app/src/settings/mod.rs:596
 msgid "Light"
 msgstr ""
 
-#: app/src/settings/mod.rs:557
+#: app/src/settings/mod.rs:597
 msgid "Dark"
 msgstr ""
 
-#: app/src/settings/mod.rs:567
+#: app/src/settings/mod.rs:607
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/settings/mod.rs:575
+#: app/src/settings/mod.rs:615
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/settings/mod.rs:592
+#: app/src/settings/mod.rs:632
 msgid "2 weeks"
 msgstr ""
 
-#: app/src/settings/mod.rs:593
+#: app/src/settings/mod.rs:633
 msgid "30 days"
 msgstr ""
 
-#: app/src/settings/mod.rs:594
+#: app/src/settings/mod.rs:634
 msgid "90 days"
 msgstr ""
 
-#: app/src/settings/mod.rs:595
+#: app/src/settings/mod.rs:635
 msgid "1 year"
 msgstr ""
 
-#: app/src/settings/mod.rs:602
+#: app/src/settings/mod.rs:642
 msgid "256 MB"
 msgstr ""
 
-#: app/src/settings/mod.rs:603
+#: app/src/settings/mod.rs:643
 msgid "1 GB"
 msgstr ""
 
-#: app/src/settings/mod.rs:604
+#: app/src/settings/mod.rs:644
 msgid "4 GB"
 msgstr ""
 
@@ -1370,7 +1404,7 @@ msgid "Ask Penguin Mail…"
 msgstr ""
 
 #: app/src/ui/assistant.rs:146 app/src/ui/assistant.rs:150
-#: app/src/ui/assistant.rs:422 app/src/ui/composer/mod.rs:206
+#: app/src/ui/assistant.rs:424 app/src/ui/composer/mod.rs:206
 #: app/src/ui/window.rs:3277
 msgid "Send"
 msgstr ""
@@ -1393,51 +1427,51 @@ msgid ""
 "or your Claude subscription."
 msgstr ""
 
-#: app/src/ui/assistant.rs:421
+#: app/src/ui/assistant.rs:423
 msgid "Stop"
 msgstr ""
 
-#: app/src/ui/assistant.rs:526
+#: app/src/ui/assistant.rs:528
 msgid "Don't Allow"
 msgstr ""
 
-#: app/src/ui/assistant.rs:528
+#: app/src/ui/assistant.rs:530
 msgid "Allow"
 msgstr ""
 
-#: app/src/ui/assistant.rs:532
+#: app/src/ui/assistant.rs:534
 msgid "Always Allow"
 msgstr ""
 
-#: app/src/ui/assistant.rs:568
+#: app/src/ui/assistant.rs:570
 msgid "Allowed"
 msgstr ""
 
-#: app/src/ui/assistant.rs:569
+#: app/src/ui/assistant.rs:571
 msgid "Always allowed"
 msgstr ""
 
-#: app/src/ui/assistant.rs:570
+#: app/src/ui/assistant.rs:572
 msgid "Not allowed"
 msgstr ""
 
-#: app/src/ui/assistant.rs:785
+#: app/src/ui/assistant.rs:787
 msgid "Result"
 msgstr ""
 
-#: app/src/ui/assistant.rs:793
+#: app/src/ui/assistant.rs:795
 msgid "Input"
 msgstr ""
 
-#: app/src/ui/assistant.rs:871
+#: app/src/ui/assistant.rs:873
 msgid "Running"
 msgstr ""
 
-#: app/src/ui/assistant.rs:872 app/src/ui/hide_my_email.rs:457
+#: app/src/ui/assistant.rs:874 app/src/ui/hide_my_email.rs:457
 msgid "Done"
 msgstr ""
 
-#: app/src/ui/assistant.rs:873
+#: app/src/ui/assistant.rs:875
 msgid "Failed"
 msgstr ""
 
@@ -1504,125 +1538,168 @@ msgstr ""
 msgid "Each feature sends what it reads to the model chosen for it."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:151
+#: app/src/ui/assistant_prefs.rs:152
 msgid "Safety"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:154
+#: app/src/ui/assistant_prefs.rs:155
 msgid "Ask Before Acting"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:156
+#: app/src/ui/assistant_prefs.rs:157
 msgid ""
 "Approve each message the assistant sends and each change to Gmail settings, "
 "such as automatic replies and rules"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:172 app/src/ui/conversation.rs:584
+#: app/src/ui/assistant_prefs.rs:173 app/src/ui/conversation.rs:584
 #: app/src/ui/window/detached.rs:57
 msgid "Conversation"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:175
+#: app/src/ui/assistant_prefs.rs:176
 msgid "Show Details Expanded"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:177
+#: app/src/ui/assistant_prefs.rs:178
 msgid "Open the model's thinking and each tool it runs as they appear"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:197
+#: app/src/ui/assistant_prefs.rs:198
 msgid "Always Allowed"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:199
+#: app/src/ui/assistant_prefs.rs:200
 msgid ""
 "Tools from outside sources that run without asking. Remove one to be asked "
 "again next time."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:215
+#: app/src/ui/assistant_prefs.rs:216
 msgid "Ask Again"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:219
+#: app/src/ui/assistant_prefs.rs:220
 msgid "Ask again before {tool}"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:252
+#: app/src/ui/assistant_prefs.rs:253 app/src/ui/assistant_web_prefs.rs:59
 msgid "Test"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:256
+#: app/src/ui/assistant_prefs.rs:257
 msgid "Test the Connection"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:281
+#: app/src/ui/assistant_prefs.rs:282 app/src/ui/assistant_web_prefs.rs:90
 msgid "No answer: {reason}"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:341
+#: app/src/ui/assistant_prefs.rs:342
 msgid "Connection"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:487
+#: app/src/ui/assistant_prefs.rs:488
 msgid "Claude Code's own default"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:495
+#: app/src/ui/assistant_prefs.rs:496
 msgid "Model"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:514 app/src/ui/assistant_prefs.rs:518
+#: app/src/ui/assistant_prefs.rs:515 app/src/ui/assistant_prefs.rs:519
 msgid "Models You Can Use"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:539
+#: app/src/ui/assistant_prefs.rs:540
 msgid "Search models"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:556
+#: app/src/ui/assistant_prefs.rs:557
 msgid "Asking for the model list…"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:672
+#: app/src/ui/assistant_prefs.rs:673
 msgid "This provider lists no models. Type a name in the field instead."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:707
+#: app/src/ui/assistant_prefs.rs:708
 msgid "alias"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:747
+#: app/src/ui/assistant_prefs.rs:748
 msgid "Found on This Computer"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:751
+#: app/src/ui/assistant_prefs.rs:752
 msgid "Looking for LM Studio, Ollama, Unsloth, and Claude Code…"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:767
+#: app/src/ui/assistant_prefs.rs:768
 msgid "Nothing found"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:769
+#: app/src/ui/assistant_prefs.rs:770
 msgid ""
 "Start LM Studio's server or Ollama, or install Claude Code, then open "
 "Preferences again."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:781
+#: app/src/ui/assistant_prefs.rs:782
 msgid "{model} and {count} more"
 msgid_plural "{model} and {count} more"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/assistant_prefs.rs:792
+#: app/src/ui/assistant_prefs.rs:793
 msgid "Use"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:797
+#: app/src/ui/assistant_prefs.rs:798
 msgid "Use {provider}"
+msgstr ""
+
+#: app/src/ui/assistant_web_prefs.rs:18
+msgid "Web Search"
+msgstr ""
+
+#: app/src/ui/assistant_web_prefs.rs:20
+msgid ""
+"Lets the assistant search the web and read pages. Claude searches with "
+"Anthropic's own tools. A local model searches with the engine chosen here, "
+"which receives every query."
+msgstr ""
+
+#: app/src/ui/assistant_web_prefs.rs:29
+msgid "Search With"
+msgstr ""
+
+#: app/src/ui/assistant_web_prefs.rs:47
+msgid "SearXNG Server Address"
+msgstr ""
+
+#: app/src/ui/assistant_web_prefs.rs:63
+msgid "Test the Search"
+msgstr ""
+
+#: app/src/ui/assistant_web_prefs.rs:64
+msgid "Runs one search and shows the first result"
+msgstr ""
+
+#: app/src/ui/assistant_web_prefs.rs:79
+msgid "Searching…"
+msgstr ""
+
+#: app/src/ui/assistant_web_prefs.rs:88
+msgid "First result: {title}"
+msgstr ""
+
+#: app/src/ui/assistant_web_prefs.rs:126
+msgid "Brave Search API Key (Saved)"
+msgstr ""
+
+#: app/src/ui/assistant_web_prefs.rs:127
+msgid "Brave Search API Key"
 msgstr ""
 
 #: app/src/ui/composer/mod.rs:198 app/src/ui/conversation.rs:1276
@@ -2622,31 +2699,31 @@ msgstr ""
 msgid "This meeting is canceled"
 msgstr ""
 
-#: app/src/ui/mod.rs:132
+#: app/src/ui/mod.rs:133
 msgid "Gray"
 msgstr ""
 
-#: app/src/ui/mod.rs:146 app/src/ui/sidebar.rs:464
+#: app/src/ui/mod.rs:147 app/src/ui/sidebar.rs:464
 msgid "Inbox"
 msgstr ""
 
-#: app/src/ui/mod.rs:147
+#: app/src/ui/mod.rs:148
 msgid "Flagged"
 msgstr ""
 
-#: app/src/ui/mod.rs:148
+#: app/src/ui/mod.rs:149
 msgid "Sent"
 msgstr ""
 
-#: app/src/ui/mod.rs:149
+#: app/src/ui/mod.rs:150
 msgid "Drafts"
 msgstr ""
 
-#: app/src/ui/mod.rs:150 app/src/ui/thread_row.rs:78 app/src/ui/window.rs:254
+#: app/src/ui/mod.rs:151 app/src/ui/thread_row.rs:78 app/src/ui/window.rs:254
 msgid "Muted"
 msgstr ""
 
-#: app/src/ui/mod.rs:151 app/src/ui/thread_list.rs:245
+#: app/src/ui/mod.rs:152 app/src/ui/thread_list.rs:245
 msgid "Mail"
 msgstr ""
 
