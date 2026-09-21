@@ -278,7 +278,7 @@ take.
 ## Development
 
 ```sh
-cargo test --workspace                          # about 700 tests, no network
+cargo test --workspace                          # no network
 cargo clippy --workspace --all-targets -- -D warnings
 cargo run -p mailrs -- --demo                   # the UI with sample data
 scripts/smoke.sh                                # by hand, against a real account
