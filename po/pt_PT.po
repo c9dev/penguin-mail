@@ -358,13 +358,13 @@ msgstr "penguin-mail: opção desconhecida {option}"
 msgid "Penguin Mail Could Not Start"
 msgstr "O Penguin Mail não conseguiu arrancar"
 
-#: app/src/notify.rs:49 app/src/ui/conversation.rs:306
-#: app/src/ui/window.rs:3148
+#: app/src/notify.rs:49 app/src/ui/conversation.rs:345
+#: app/src/ui/window.rs:3096
 msgid "Archive"
 msgstr "Arquivar"
 
-#: app/src/notify.rs:50 app/src/ui/conversation.rs:307
-#: app/src/ui/conversation.rs:768 app/src/ui/preferences.rs:106
+#: app/src/notify.rs:50 app/src/ui/conversation.rs:346
+#: app/src/ui/conversation.rs:807 app/src/ui/preferences.rs:106
 #: app/src/ui/rules.rs:288
 msgid "Mark as Read"
 msgstr "Marcar como lida"
@@ -375,7 +375,7 @@ msgstr "Marcar como lida"
 msgid "Delete"
 msgstr "Eliminar"
 
-#: app/src/notify.rs:52 app/src/ui/window.rs:3163
+#: app/src/notify.rs:52 app/src/ui/window.rs:3111
 msgid "Reply"
 msgstr "Responder"
 
@@ -385,7 +385,7 @@ msgid_plural "{count} new messages"
 msgstr[0] "{count} mensagem nova"
 msgstr[1] "{count} mensagens novas"
 
-#: app/src/notify.rs:127 app/src/ui/window.rs:3162
+#: app/src/notify.rs:127 app/src/ui/window.rs:3110
 msgid "New message"
 msgstr "Nova mensagem"
 
@@ -397,7 +397,7 @@ msgstr "(sem assunto)"
 msgid "From {senders}"
 msgstr "De {senders}"
 
-#: app/src/notify.rs:195 app/src/ui/window.rs:2320
+#: app/src/notify.rs:195 app/src/ui/window.rs:2271
 msgid "Open"
 msgstr "Abrir"
 
@@ -661,8 +661,8 @@ msgstr[1] "{count} anexos"
 msgid "Quick Look"
 msgstr "Vista rápida"
 
-#: app/src/render.rs:352 app/src/ui/window/attachments.rs:300
-#: app/src/ui/window/attachments.rs:306
+#: app/src/render.rs:352 app/src/ui/window/attachments.rs:299
+#: app/src/ui/window/attachments.rs:305
 msgid "Save to Downloads"
 msgstr "Guardar nas transferências"
 
@@ -1096,11 +1096,11 @@ msgstr "Abrir o Penguin Mail"
 msgid "New Message"
 msgstr "Nova mensagem"
 
-#: app/src/tray.rs:129 app/src/ui/sidebar.rs:727 app/src/ui/window.rs:2720
+#: app/src/tray.rs:129 app/src/ui/sidebar.rs:727 app/src/ui/window.rs:2671
 msgid "Check for Mail"
 msgstr "Procurar correio"
 
-#: app/src/tray.rs:131 app/src/ui/window.rs:2729 app/src/ui/window.rs:3181
+#: app/src/tray.rs:131 app/src/ui/window.rs:2680 app/src/ui/window.rs:3129
 msgid "Quit"
 msgstr "Sair"
 
@@ -1258,7 +1258,7 @@ msgstr "Pergunte ao Penguin Mail…"
 
 #: app/src/ui/assistant.rs:146 app/src/ui/assistant.rs:150
 #: app/src/ui/assistant.rs:376 app/src/ui/composer/mod.rs:206
-#: app/src/ui/window.rs:3166
+#: app/src/ui/window.rs:3114
 msgid "Send"
 msgstr "Enviar"
 
@@ -1451,7 +1451,7 @@ msgstr "Usar"
 msgid "Use {provider}"
 msgstr "Usar {provider}"
 
-#: app/src/ui/composer/mod.rs:198 app/src/ui/conversation.rs:1038
+#: app/src/ui/composer/mod.rs:198 app/src/ui/conversation.rs:1237
 msgid "Choose a Time…"
 msgstr "Escolher uma hora…"
 
@@ -1634,11 +1634,11 @@ msgstr "Descartar"
 #: app/src/ui/composer/mod.rs:2228 app/src/ui/hide_my_email.rs:272
 #: app/src/ui/smart_editor.rs:150 app/src/ui/templates.rs:153
 #: app/src/ui/templates.rs:245 app/src/ui/vacation.rs:43 app/src/ui/when.rs:52
-#: app/src/ui/window.rs:1648 app/src/ui/window.rs:2419
+#: app/src/ui/window.rs:1601 app/src/ui/window.rs:2370
 #: app/src/ui/window/arrange.rs:104 app/src/ui/window/arrange.rs:149
-#: app/src/ui/window/images.rs:108 app/src/ui/window/organize.rs:84
+#: app/src/ui/window/images.rs:107 app/src/ui/window/organize.rs:84
 #: app/src/ui/window/organize.rs:135 app/src/ui/window/organize.rs:178
-#: app/src/ui/window/senders.rs:61 app/src/ui/window/senders.rs:154
+#: app/src/ui/window/senders.rs:61 app/src/ui/window/senders.rs:153
 msgid "Cancel"
 msgstr "Cancelar"
 
@@ -1655,7 +1655,7 @@ msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
 #: app/src/ui/composer/mod.rs:1445 app/src/ui/composer/recipients.rs:208
-#: app/src/ui/window.rs:2420
+#: app/src/ui/window.rs:2371
 msgid "Remove"
 msgstr "Remover"
 
@@ -1850,231 +1850,231 @@ msgstr "Adicionar aos VIP"
 msgid "All Their Mail"
 msgstr "Todo o correio desta pessoa"
 
-#: app/src/ui/conversation.rs:285
+#: app/src/ui/conversation.rs:324
 msgid "No Conversation Selected"
 msgstr "Nenhuma conversa selecionada"
 
-#: app/src/ui/conversation.rs:289
+#: app/src/ui/conversation.rs:328
 msgid "Remote images are hidden to protect your privacy"
 msgstr "As imagens remotas estão ocultas para proteger a sua privacidade"
 
-#: app/src/ui/conversation.rs:290
+#: app/src/ui/conversation.rs:329
 msgid "Load Images"
 msgstr "Carregar imagens"
 
-#: app/src/ui/conversation.rs:294
+#: app/src/ui/conversation.rs:333
 msgid "This message is from a mailing list"
 msgstr "Esta mensagem vem de uma lista de distribuição"
 
-#: app/src/ui/conversation.rs:295 app/src/ui/window/senders.rs:62
+#: app/src/ui/conversation.rs:334 app/src/ui/window/senders.rs:62
 msgid "Unsubscribe"
 msgstr "Cancelar subscrição"
 
-#: app/src/ui/conversation.rs:308 app/src/ui/conversation.rs:775
+#: app/src/ui/conversation.rs:347 app/src/ui/conversation.rs:814
 msgid "Flag"
 msgstr "Marcar"
 
-#: app/src/ui/conversation.rs:309 app/src/ui/conversation.rs:428
-#: app/src/ui/conversation.rs:689 app/src/ui/conversation.rs:780
+#: app/src/ui/conversation.rs:348 app/src/ui/conversation.rs:467
+#: app/src/ui/conversation.rs:728 app/src/ui/conversation.rs:819
 msgid "Mute"
 msgstr "Silenciar"
 
-#: app/src/ui/conversation.rs:310 app/src/ui/conversation.rs:429
-#: app/src/ui/conversation.rs:742 app/src/ui/window.rs:3150
+#: app/src/ui/conversation.rs:349 app/src/ui/conversation.rs:468
+#: app/src/ui/conversation.rs:781 app/src/ui/window.rs:3098
 msgid "Junk"
 msgstr "Spam"
 
-#: app/src/ui/conversation.rs:311 app/src/ui/conversation.rs:738
+#: app/src/ui/conversation.rs:350 app/src/ui/conversation.rs:777
 msgid "Move to Trash"
 msgstr "Mover para o lixo"
 
-#: app/src/ui/conversation.rs:338
+#: app/src/ui/conversation.rs:377
 msgid "Several Conversations Selected"
 msgstr "Várias conversas selecionadas"
 
-#: app/src/ui/conversation.rs:340
+#: app/src/ui/conversation.rs:379
 msgid "Actions and shortcuts apply to all of them. Esc clears the selection."
 msgstr "As ações e os atalhos aplicam-se a todas. Esc limpa a seleção."
 
-#: app/src/ui/conversation.rs:378
+#: app/src/ui/conversation.rs:417
 msgid "Archive (E or Ctrl+Alt+A)"
 msgstr "Arquivar (E ou Ctrl+Alt+A)"
 
-#: app/src/ui/conversation.rs:380 app/src/ui/conversation.rs:721
+#: app/src/ui/conversation.rs:419 app/src/ui/conversation.rs:760
 msgid "Move to Trash (Delete)"
 msgstr "Mover para o lixo (Delete)"
 
-#: app/src/ui/conversation.rs:381 app/src/ui/conversation.rs:731
+#: app/src/ui/conversation.rs:420 app/src/ui/conversation.rs:770
 msgid "Junk (Ctrl+Shift+J)"
 msgstr "Spam (Ctrl+Shift+J)"
 
-#: app/src/ui/conversation.rs:384
+#: app/src/ui/conversation.rs:423
 msgid "Mark as Unread (Ctrl+Shift+U)"
 msgstr "Marcar como não lida (Ctrl+Shift+U)"
 
-#: app/src/ui/conversation.rs:389 app/src/ui/conversation.rs:393
-#: app/src/ui/conversation.rs:1072
+#: app/src/ui/conversation.rs:428 app/src/ui/conversation.rs:432
+#: app/src/ui/conversation.rs:1271
 msgid "Flag (Ctrl+Shift+L)"
 msgstr "Marcar (Ctrl+Shift+L)"
 
-#: app/src/ui/conversation.rs:390
+#: app/src/ui/conversation.rs:429
 msgid "Flag Color"
 msgstr "Cor da marca"
 
-#: app/src/ui/conversation.rs:396
+#: app/src/ui/conversation.rs:435
 msgid "Reply (Ctrl+R)"
 msgstr "Responder (Ctrl+R)"
 
-#: app/src/ui/conversation.rs:399
+#: app/src/ui/conversation.rs:438
 msgid "Reply All (Ctrl+Shift+R)"
 msgstr "Responder a todos (Ctrl+Shift+R)"
 
-#: app/src/ui/conversation.rs:401
+#: app/src/ui/conversation.rs:440
 msgid "Forward (Ctrl+Shift+F)"
 msgstr "Reencaminhar (Ctrl+Shift+F)"
 
-#: app/src/ui/conversation.rs:403
+#: app/src/ui/conversation.rs:442
 msgid "Edit Draft"
 msgstr "Editar rascunho"
 
-#: app/src/ui/conversation.rs:410 app/src/ui/conversation.rs:413
+#: app/src/ui/conversation.rs:449 app/src/ui/conversation.rs:452
 msgid "More Actions"
 msgstr "Mais ações"
 
-#: app/src/ui/conversation.rs:419
+#: app/src/ui/conversation.rs:458
 msgid "Reply All"
 msgstr "Responder a todos"
 
-#: app/src/ui/conversation.rs:420 app/src/ui/window.rs:3165
+#: app/src/ui/conversation.rs:459 app/src/ui/window.rs:3113
 msgid "Forward"
 msgstr "Reencaminhar"
 
-#: app/src/ui/conversation.rs:423
+#: app/src/ui/conversation.rs:462
 msgid "Flag or Unflag"
 msgstr "Marcar ou desmarcar"
 
-#: app/src/ui/conversation.rs:425
+#: app/src/ui/conversation.rs:464
 msgid "Mark Read or Unread"
 msgstr "Marcar como lida ou não lida"
 
-#: app/src/ui/conversation.rs:430
+#: app/src/ui/conversation.rs:469
 msgid "Labels…"
 msgstr "Etiquetas…"
 
-#: app/src/ui/conversation.rs:432 app/src/ui/sidebar.rs:259
+#: app/src/ui/conversation.rs:471 app/src/ui/sidebar.rs:259
 #: app/src/ui/window/reminders.rs:40 app/src/ui/window/reminders.rs:45
 msgid "Remind Me"
 msgstr "Lembrar-me"
 
-#: app/src/ui/conversation.rs:435
+#: app/src/ui/conversation.rs:474
 msgid "Dismiss Follow-Up"
 msgstr "Dispensar seguimento"
 
-#: app/src/ui/conversation.rs:443
+#: app/src/ui/conversation.rs:482
 msgid "Open in New Window"
 msgstr "Abrir numa janela nova"
 
-#: app/src/ui/conversation.rs:446
+#: app/src/ui/conversation.rs:485
 msgid "Print…"
 msgstr "Imprimir…"
 
-#: app/src/ui/conversation.rs:447
+#: app/src/ui/conversation.rs:486
 msgid "View Source"
 msgstr "Ver a origem"
 
-#: app/src/ui/conversation.rs:448 app/src/ui/thread_list.rs:618
+#: app/src/ui/conversation.rs:487 app/src/ui/thread_list.rs:618
 msgid "Export…"
 msgstr "Exportar…"
 
-#: app/src/ui/conversation.rs:451 app/src/ui/conversation.rs:674
+#: app/src/ui/conversation.rs:490 app/src/ui/conversation.rs:713
 msgid "Add Sender to VIPs"
 msgstr "Adicionar remetente aos VIP"
 
-#: app/src/ui/conversation.rs:452
+#: app/src/ui/conversation.rs:491
 msgid "Unsubscribe…"
 msgstr "Cancelar subscrição…"
 
-#: app/src/ui/conversation.rs:454
+#: app/src/ui/conversation.rs:493
 msgid "Always Load Images…"
 msgstr "Carregar sempre as imagens…"
 
-#: app/src/ui/conversation.rs:457
+#: app/src/ui/conversation.rs:496
 msgid "Block Sender…"
 msgstr "Bloquear remetente…"
 
-#: app/src/ui/conversation.rs:468
+#: app/src/ui/conversation.rs:507
 msgid "Categorize Sender"
 msgstr "Categorizar remetente"
 
-#: app/src/ui/conversation.rs:479 app/src/ui/conversation.rs:481
+#: app/src/ui/conversation.rs:518 app/src/ui/conversation.rs:520
 msgid "Labels (L)"
 msgstr "Etiquetas (L)"
 
-#: app/src/ui/conversation.rs:507 app/src/ui/window/detached.rs:56
+#: app/src/ui/conversation.rs:546 app/src/ui/window/detached.rs:56
 msgid "Conversation"
 msgstr "Conversa"
 
-#: app/src/ui/conversation.rs:672
+#: app/src/ui/conversation.rs:711
 msgid "Remove Sender from VIPs"
 msgstr "Remover remetente dos VIP"
 
-#: app/src/ui/conversation.rs:687 app/src/ui/conversation.rs:778
+#: app/src/ui/conversation.rs:726 app/src/ui/conversation.rs:817
 msgid "Unmute"
 msgstr "Retirar silêncio"
 
-#: app/src/ui/conversation.rs:720
+#: app/src/ui/conversation.rs:759
 msgid "Delete Forever (Delete)"
 msgstr "Eliminar definitivamente (Delete)"
 
-#: app/src/ui/conversation.rs:729
+#: app/src/ui/conversation.rs:768
 msgid "Not Junk (Ctrl+Shift+J)"
 msgstr "Não é spam (Ctrl+Shift+J)"
 
-#: app/src/ui/conversation.rs:737 app/src/ui/window.rs:1649
+#: app/src/ui/conversation.rs:776 app/src/ui/window.rs:1602
 msgid "Delete Forever"
 msgstr "Eliminar definitivamente"
 
-#: app/src/ui/conversation.rs:741
+#: app/src/ui/conversation.rs:780
 msgid "Not Junk"
 msgstr "Não é spam"
 
-#: app/src/ui/conversation.rs:770
+#: app/src/ui/conversation.rs:809
 msgid "Mark as Unread"
 msgstr "Marcar como não lida"
 
-#: app/src/ui/conversation.rs:773
+#: app/src/ui/conversation.rs:812
 msgid "Unflag"
 msgstr "Desmarcar"
 
-#: app/src/ui/conversation.rs:788
+#: app/src/ui/conversation.rs:827
 msgid "{count} Conversation Selected"
 msgid_plural "{count} Conversations Selected"
 msgstr[0] "{count} conversa selecionada"
 msgstr[1] "{count} conversas selecionadas"
 
-#: app/src/ui/conversation.rs:794
+#: app/src/ui/conversation.rs:833
 msgid "{count} Message Selected"
 msgid_plural "{count} Messages Selected"
 msgstr[0] "{count} mensagem selecionada"
 msgstr[1] "{count} mensagens selecionadas"
 
-#: app/src/ui/conversation.rs:1071
+#: app/src/ui/conversation.rs:1270
 msgid "Unflag (Ctrl+Shift+L)"
 msgstr "Desmarcar (Ctrl+Shift+L)"
 
-#: app/src/ui/conversation.rs:1084
+#: app/src/ui/conversation.rs:1283
 msgid "Mark as Read (U)"
 msgstr "Marcar como lida (U)"
 
-#: app/src/ui/conversation.rs:1085
+#: app/src/ui/conversation.rs:1284
 msgid "Mark as Unread (U)"
 msgstr "Marcar como não lida (U)"
 
-#: app/src/ui/conversation.rs:1225
+#: app/src/ui/conversation.rs:1424
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr "{color} (Ctrl+Alt+{number})"
 
-#: app/src/ui/conversation.rs:1242
+#: app/src/ui/conversation.rs:1441
 msgid "Clear Flag"
 msgstr "Retirar a marca"
 
@@ -2088,7 +2088,7 @@ msgid_plural "{position} of {total} matches"
 msgstr[0] "{position} de {total} correspondência"
 msgstr[1] "{position} de {total} correspondências"
 
-#: app/src/ui/find.rs:128 app/src/ui/find.rs:143 app/src/ui/window.rs:3131
+#: app/src/ui/find.rs:128 app/src/ui/find.rs:143 app/src/ui/window.rs:3079
 msgid "Find in the conversation"
 msgstr "Localizar na conversa"
 
@@ -2204,7 +2204,7 @@ msgid "Allow Hide My Email"
 msgstr "Permitir Ocultar o meu e-mail"
 
 #: app/src/ui/hide_my_email.rs:298 app/src/ui/rules.rs:236
-#: app/src/ui/window/senders.rs:203
+#: app/src/ui/window/senders.rs:202
 msgid ""
 "Penguin Mail needs permission to change Gmail settings for {account}. Google "
 "asks you to confirm in your browser."
@@ -2213,12 +2213,12 @@ msgstr ""
 "{account}. A Google pede-lhe confirmação no navegador."
 
 #: app/src/ui/hide_my_email.rs:305 app/src/ui/rules.rs:243
-#: app/src/ui/vacation.rs:96 app/src/ui/window.rs:1745
-#: app/src/ui/window.rs:1785 app/src/ui/window/senders.rs:211
+#: app/src/ui/vacation.rs:96 app/src/ui/window.rs:1697
+#: app/src/ui/window.rs:1737 app/src/ui/window/senders.rs:210
 msgid "Grant Access"
 msgstr "Conceder acesso"
 
-#: app/src/ui/hide_my_email.rs:327 app/src/ui/window.rs:2837
+#: app/src/ui/hide_my_email.rs:327 app/src/ui/window.rs:2788
 msgid "Add an account first"
 msgstr "Adicione primeiro uma conta"
 
@@ -2304,8 +2304,8 @@ msgstr ""
 msgid "Open Settings"
 msgstr "Abrir as Definições"
 
-#: app/src/ui/invitation.rs:276 app/src/ui/window.rs:1744
-#: app/src/ui/window.rs:1784 app/src/ui/window/senders.rs:210
+#: app/src/ui/invitation.rs:276 app/src/ui/window.rs:1696
+#: app/src/ui/window.rs:1736 app/src/ui/window/senders.rs:209
 msgid "Not Now"
 msgstr "Agora não"
 
@@ -2473,11 +2473,11 @@ msgstr "Aviso"
 msgid "Not checked"
 msgstr "Não verificada"
 
-#: app/src/ui/preferences.rs:63 app/src/ui/window.rs:3176
+#: app/src/ui/preferences.rs:63 app/src/ui/window.rs:3124
 msgid "General"
 msgstr "Geral"
 
-#: app/src/ui/preferences.rs:68 app/src/ui/window.rs:3126
+#: app/src/ui/preferences.rs:68 app/src/ui/window.rs:3074
 msgid "Reading"
 msgstr "Leitura"
 
@@ -2595,7 +2595,7 @@ msgstr "Botões"
 msgid "What a notification offers besides opening the conversation"
 msgstr "O que uma notificação oferece além de abrir a conversa"
 
-#: app/src/ui/preferences.rs:228 app/src/ui/window.rs:3160
+#: app/src/ui/preferences.rs:228 app/src/ui/window.rs:3108
 msgid "Writing"
 msgstr "Escrita"
 
@@ -3058,11 +3058,11 @@ msgstr "Assinatura…"
 msgid "Rules…"
 msgstr "Regras…"
 
-#: app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2723
+#: app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2674
 msgid "Hide My Email…"
 msgstr "Ocultar o meu e-mail…"
 
-#: app/src/ui/sidebar.rs:736 app/src/ui/window.rs:1987
+#: app/src/ui/sidebar.rs:736 app/src/ui/window.rs:1938
 msgid "New Label…"
 msgstr "Nova etiqueta…"
 
@@ -3407,7 +3407,7 @@ msgstr ""
 "Cloud, para que mais ninguém chegue ao seu correio. Cole o ID e o segredo do "
 "cliente para começar."
 
-#: app/src/ui/welcome.rs:97 app/src/ui/window.rs:2394
+#: app/src/ui/welcome.rs:97 app/src/ui/window.rs:2345
 msgid "Sign In with Google"
 msgstr "Iniciar sessão com a Google"
 
@@ -3605,7 +3605,7 @@ msgstr[1] "{count} mensagens movidas para a caixa de entrada"
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (demonstração)"
 
-#: app/src/ui/window.rs:439 app/src/ui/window.rs:3197
+#: app/src/ui/window.rs:439 app/src/ui/window.rs:3145
 msgid "Penguin Mail"
 msgstr "Penguin Mail"
 
@@ -3621,30 +3621,30 @@ msgstr "Inicie sessão de novo para {account} continuar a sincronizar"
 msgid "Sign In"
 msgstr "Iniciar sessão"
 
-#: app/src/ui/window.rs:956 app/src/ui/window.rs:3130
+#: app/src/ui/window.rs:956 app/src/ui/window.rs:3078
 msgid "Search"
 msgstr "Pesquisa"
 
-#: app/src/ui/window.rs:1643
+#: app/src/ui/window.rs:1596
 msgid "Gmail deletes it from every device and cannot bring it back."
 msgstr ""
 "O Gmail elimina-a de todos os dispositivos e não a consegue trazer de volta."
 
-#: app/src/ui/window.rs:1644
+#: app/src/ui/window.rs:1597
 msgid "Gmail deletes them from every device and cannot bring them back."
 msgstr ""
 "O Gmail elimina-as de todos os dispositivos e não as consegue trazer de "
 "volta."
 
-#: app/src/ui/window.rs:1678
+#: app/src/ui/window.rs:1631
 msgid "Could not delete the mail: {reason}"
 msgstr "Não foi possível eliminar o correio: {reason}"
 
-#: app/src/ui/window.rs:1733
+#: app/src/ui/window.rs:1685
 msgid "Allow Penguin Mail to Read Your Contacts"
 msgstr "Permitir que o Penguin Mail leia os seus contactos"
 
-#: app/src/ui/window.rs:1736
+#: app/src/ui/window.rs:1688
 msgid ""
 "Reading the contacts of {account} needs one more permission. Google asks you "
 "to confirm in your browser. Names and photos stay on this computer."
@@ -3653,11 +3653,11 @@ msgstr ""
 "lhe confirmação no navegador. Os nomes e as fotografias ficam neste "
 "computador."
 
-#: app/src/ui/window.rs:1774
+#: app/src/ui/window.rs:1726
 msgid "Allow Penguin Mail to Delete Mail"
 msgstr "Permitir que o Penguin Mail elimine correio"
 
-#: app/src/ui/window.rs:1777
+#: app/src/ui/window.rs:1729
 msgid ""
 "Deleting mail for good needs one more permission for {account}. Google asks "
 "you to confirm in your browser."
@@ -3665,70 +3665,70 @@ msgstr ""
 "Eliminar correio de vez precisa de mais uma permissão para {account}. A "
 "Google pede-lhe confirmação no navegador."
 
-#: app/src/ui/window.rs:1876 app/src/ui/window.rs:3156
+#: app/src/ui/window.rs:1828 app/src/ui/window.rs:3104
 #: app/src/ui/window/followup.rs:184 app/src/ui/window/scheduled.rs:18
 msgid "Undo"
 msgstr "Anular"
 
-#: app/src/ui/window.rs:1922
+#: app/src/ui/window.rs:1873
 msgid "Nothing to undo"
 msgstr "Nada para anular"
 
-#: app/src/ui/window.rs:1939
+#: app/src/ui/window.rs:1890
 msgid "{action} undone"
 msgstr "Anulado: {action}"
 
-#: app/src/ui/window.rs:1965
+#: app/src/ui/window.rs:1916
 msgid "Open or select mail to label it."
 msgstr "Abra ou selecione correio para o etiquetar."
 
-#: app/src/ui/window.rs:1967
+#: app/src/ui/window.rs:1918
 msgid "Select mail from one account to label it."
 msgstr "Selecione correio de uma só conta para o etiquetar."
 
-#: app/src/ui/window.rs:2007
+#: app/src/ui/window.rs:1958
 msgid "This account has no labels yet."
 msgstr "Esta conta ainda não tem etiquetas."
 
-#: app/src/ui/window.rs:2188
+#: app/src/ui/window.rs:2139
 msgid "Could not include {file}: {reason}"
 msgstr "Não foi possível incluir {file}: {reason}"
 
-#: app/src/ui/window.rs:2296
+#: app/src/ui/window.rs:2247
 msgid "Downloading {file}…"
 msgstr "A transferir {file}…"
 
-#: app/src/ui/window.rs:2317 app/src/ui/window/attachments.rs:211
-#: app/src/ui/window/attachments.rs:377
+#: app/src/ui/window.rs:2268 app/src/ui/window/attachments.rs:211
+#: app/src/ui/window/attachments.rs:376
 msgid "Saved {file} to Downloads"
 msgstr "{file} guardado nas transferências"
 
-#: app/src/ui/window.rs:2335 app/src/ui/window/attachments.rs:216
-#: app/src/ui/window/attachments.rs:382
+#: app/src/ui/window.rs:2286 app/src/ui/window/attachments.rs:216
+#: app/src/ui/window/attachments.rs:381
 msgid "Could not save {file}: {reason}"
 msgstr "Não foi possível guardar {file}: {reason}"
 
-#: app/src/ui/window.rs:2351
+#: app/src/ui/window.rs:2302
 msgid "Could not save the settings: {reason}"
 msgstr "Não foi possível guardar as definições: {reason}"
 
-#: app/src/ui/window.rs:2376
+#: app/src/ui/window.rs:2327
 msgid "Waiting for Your Browser…"
 msgstr "À espera do seu navegador…"
 
-#: app/src/ui/window.rs:2378
+#: app/src/ui/window.rs:2329
 msgid "Continue in your browser"
 msgstr "Continue no seu navegador"
 
-#: app/src/ui/window.rs:2384
+#: app/src/ui/window.rs:2335
 msgid "Added {account}. Downloading mail…"
 msgstr "{account} adicionada. A transferir correio…"
 
-#: app/src/ui/window.rs:2410
+#: app/src/ui/window.rs:2361
 msgid "Remove {account}?"
 msgstr "Remover {account}?"
 
-#: app/src/ui/window.rs:2414
+#: app/src/ui/window.rs:2365
 msgid ""
 "Its downloaded mail and saved sign-in are deleted from this computer. "
 "Nothing changes in Gmail."
@@ -3736,151 +3736,151 @@ msgstr ""
 "O correio transferido e a sessão guardada são eliminados deste computador. "
 "Nada muda no Gmail."
 
-#: app/src/ui/window.rs:2434
+#: app/src/ui/window.rs:2385
 msgid "Removed {account}"
 msgstr "{account} removida"
 
-#: app/src/ui/window.rs:2436
+#: app/src/ui/window.rs:2387
 msgid "Could not remove {account}: {reason}"
 msgstr "Não foi possível remover {account}: {reason}"
 
-#: app/src/ui/window.rs:2470
+#: app/src/ui/window.rs:2421
 msgid "Checking for mail"
 msgstr "A procurar correio"
 
-#: app/src/ui/window.rs:2721
+#: app/src/ui/window.rs:2672
 msgid "Add Account…"
 msgstr "Adicionar conta…"
 
-#: app/src/ui/window.rs:2722
+#: app/src/ui/window.rs:2673
 msgid "New Smart Mailbox…"
 msgstr "Nova caixa inteligente…"
 
-#: app/src/ui/window.rs:2726 app/src/ui/window.rs:3178
+#: app/src/ui/window.rs:2677 app/src/ui/window.rs:3126
 msgid "Preferences"
 msgstr "Preferências"
 
-#: app/src/ui/window.rs:2727
+#: app/src/ui/window.rs:2678
 msgid "Keyboard Shortcuts"
 msgstr "Atalhos de teclado"
 
-#: app/src/ui/window.rs:2728
+#: app/src/ui/window.rs:2679
 msgid "About Penguin Mail"
 msgstr "Acerca do Penguin Mail"
 
-#: app/src/ui/window.rs:2735 app/src/ui/window.rs:2737
+#: app/src/ui/window.rs:2686 app/src/ui/window.rs:2688
 msgid "Main Menu"
 msgstr "Menu principal"
 
-#: app/src/ui/window.rs:3014
+#: app/src/ui/window.rs:2962
 msgid "Open a message from the person first"
 msgstr "Abra primeiro uma mensagem dessa pessoa"
 
-#: app/src/ui/window.rs:3097 app/src/ui/window/outbox.rs:77
+#: app/src/ui/window.rs:3045 app/src/ui/window/outbox.rs:77
 msgid "Message sent"
 msgstr "Mensagem enviada"
 
-#: app/src/ui/window.rs:3106
+#: app/src/ui/window.rs:3054
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "O Penguin Mail mostra o novo idioma depois de reiniciar"
 
-#: app/src/ui/window.rs:3108
+#: app/src/ui/window.rs:3056
 msgid "Restart"
 msgstr "Reiniciar"
 
-#: app/src/ui/window.rs:3128
+#: app/src/ui/window.rs:3076
 msgid "Next or previous conversation"
 msgstr "Conversa seguinte ou anterior"
 
-#: app/src/ui/window.rs:3129
+#: app/src/ui/window.rs:3077
 msgid "Open mailbox 1 to 9"
 msgstr "Abrir a caixa de correio 1 a 9"
 
-#: app/src/ui/window.rs:3132
+#: app/src/ui/window.rs:3080
 msgid "Get new mail"
 msgstr "Receber correio novo"
 
-#: app/src/ui/window.rs:3133
+#: app/src/ui/window.rs:3081
 msgid "Select all"
 msgstr "Selecionar tudo"
 
-#: app/src/ui/window.rs:3134
+#: app/src/ui/window.rs:3082
 msgid "Clear the selection"
 msgstr "Limpar a seleção"
 
-#: app/src/ui/window.rs:3136
+#: app/src/ui/window.rs:3084
 msgid "Bigger or smaller text"
 msgstr "Texto maior ou menor"
 
-#: app/src/ui/window.rs:3139
+#: app/src/ui/window.rs:3087
 msgid "Open in a new window"
 msgstr "Abrir numa janela nova"
 
-#: app/src/ui/window.rs:3140
+#: app/src/ui/window.rs:3088
 msgid "Print"
 msgstr "Imprimir"
 
-#: app/src/ui/window.rs:3141
+#: app/src/ui/window.rs:3089
 msgid "View source"
 msgstr "Ver a origem"
 
-#: app/src/ui/window.rs:3142
+#: app/src/ui/window.rs:3090
 msgid "Normal text size"
 msgstr "Tamanho de texto normal"
 
-#: app/src/ui/window.rs:3146
+#: app/src/ui/window.rs:3094
 msgid "Organizing"
 msgstr "Organização"
 
-#: app/src/ui/window.rs:3149
+#: app/src/ui/window.rs:3097
 msgid "Move to trash"
 msgstr "Mover para o lixo"
 
-#: app/src/ui/window.rs:3151
+#: app/src/ui/window.rs:3099
 msgid "Flag or unflag"
 msgstr "Marcar ou desmarcar"
 
-#: app/src/ui/window.rs:3152
+#: app/src/ui/window.rs:3100
 msgid "Flag colors"
 msgstr "Cores das marcas"
 
-#: app/src/ui/window.rs:3153
+#: app/src/ui/window.rs:3101
 msgid "Mark read or unread"
 msgstr "Marcar como lida ou não lida"
 
-#: app/src/ui/window.rs:3154
+#: app/src/ui/window.rs:3102
 msgid "Mute or unmute"
 msgstr "Silenciar ou retirar o silêncio"
 
-#: app/src/ui/window.rs:3155
+#: app/src/ui/window.rs:3103
 msgid "Labels"
 msgstr "Etiquetas"
 
-#: app/src/ui/window.rs:3164
+#: app/src/ui/window.rs:3112
 msgid "Reply all"
 msgstr "Responder a todos"
 
-#: app/src/ui/window.rs:3167
+#: app/src/ui/window.rs:3115
 msgid "Attach files"
 msgstr "Anexar ficheiros"
 
-#: app/src/ui/window.rs:3169
+#: app/src/ui/window.rs:3117
 msgid "Bold, italic, link"
 msgstr "Negrito, itálico, ligação"
 
-#: app/src/ui/window.rs:3172
+#: app/src/ui/window.rs:3120
 msgid "Save draft"
 msgstr "Guardar rascunho"
 
-#: app/src/ui/window.rs:3179
+#: app/src/ui/window.rs:3127
 msgid "Keyboard shortcuts"
 msgstr "Atalhos de teclado"
 
-#: app/src/ui/window.rs:3180
+#: app/src/ui/window.rs:3128
 msgid "Close window"
 msgstr "Fechar a janela"
 
-#: app/src/ui/window.rs:3202
+#: app/src/ui/window.rs:3150
 msgid ""
 "A fast, private Gmail client for the GNOME desktop. Mail stays on your "
 "computer and your own Google Cloud project."
@@ -3937,15 +3937,15 @@ msgstr[1] "{count} anexos guardados em {folder}"
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr "{count} guardados em {folder}. Não foi possível guardar {files}"
 
-#: app/src/ui/window/attachments.rs:251
+#: app/src/ui/window/attachments.rs:250
 msgid "Could not open {file}"
 msgstr "Não foi possível abrir {file}"
 
-#: app/src/ui/window/attachments.rs:304 app/src/ui/window/attachments.rs:307
+#: app/src/ui/window/attachments.rs:303 app/src/ui/window/attachments.rs:306
 msgid "Open in Another Program"
 msgstr "Abrir noutro programa"
 
-#: app/src/ui/window/attachments.rs:311
+#: app/src/ui/window/attachments.rs:310
 msgid "{file}, preview"
 msgstr "{file}, pré-visualização"
 
@@ -3981,7 +3981,7 @@ msgstr "Abra primeiro uma conversa"
 #: app/src/ui/window/detached.rs:241 app/src/ui/window/export.rs:83
 #: app/src/ui/window/organize.rs:100 app/src/ui/window/organize.rs:151
 #: app/src/ui/window/organize.rs:189 app/src/ui/window/organize.rs:227
-#: app/src/ui/window/senders.rs:163
+#: app/src/ui/window/senders.rs:162
 msgid "That account is not connected"
 msgstr "Essa conta não está ligada"
 
@@ -4060,107 +4060,107 @@ msgstr[1] "{count} seguimentos dispensados"
 msgid "Could not undo: {reason}"
 msgstr "Não foi possível anular: {reason}"
 
-#: app/src/ui/window/images.rs:69
+#: app/src/ui/window/images.rs:67
 msgid "Always load images from {sender}?"
 msgstr "Carregar sempre as imagens de {sender}?"
 
-#: app/src/ui/window/images.rs:74
+#: app/src/ui/window/images.rs:72
 msgid "Always"
 msgstr "Sempre"
 
-#: app/src/ui/window/images.rs:99
+#: app/src/ui/window/images.rs:98
 msgid "This message has no sender to remember."
 msgstr "Esta mensagem não tem remetente para memorizar."
 
-#: app/src/ui/window/images.rs:103
+#: app/src/ui/window/images.rs:102
 msgid "Always Load Images?"
 msgstr "Carregar sempre as imagens?"
 
-#: app/src/ui/window/images.rs:105
+#: app/src/ui/window/images.rs:104
 msgid "Loading a remote image tells the sender when you opened their mail."
 msgstr ""
 "Carregar uma imagem remota diz ao remetente quando abriu o correio dele."
 
-#: app/src/ui/window/images.rs:111
+#: app/src/ui/window/images.rs:110
 msgid "From {sender}"
 msgstr "De {sender}"
 
-#: app/src/ui/window/images.rs:117
+#: app/src/ui/window/images.rs:116
 msgid "From Anyone at {domain}"
 msgstr "De qualquer pessoa de {domain}"
 
-#: app/src/ui/window/images.rs:161
+#: app/src/ui/window/images.rs:159
 msgid "Images from anyone at {domain} will load from now on"
 msgstr "As imagens de qualquer pessoa de {domain} passam a carregar"
 
-#: app/src/ui/window/images.rs:166
+#: app/src/ui/window/images.rs:164
 msgid "Images from {sender} will load from now on"
 msgstr "As imagens de {sender} passam a carregar"
 
-#: app/src/ui/window/images.rs:172
+#: app/src/ui/window/images.rs:170
 msgid "Could not remember that sender: {reason}"
 msgstr "Não foi possível memorizar esse remetente: {reason}"
 
-#: app/src/ui/window/invitation.rs:108
+#: app/src/ui/window/invitation.rs:106
 msgid "Could not open Settings: {reason}"
 msgstr "Não foi possível abrir as Definições: {reason}"
 
-#: app/src/ui/window/invitation.rs:165
+#: app/src/ui/window/invitation.rs:163
 msgid "This invitation names no event, so there is nothing to answer"
 msgstr ""
 "Este convite não indica nenhum evento, por isso não há nada a responder"
 
-#: app/src/ui/window/invitation.rs:191
+#: app/src/ui/window/invitation.rs:189
 msgid "This invitation names no organizer, so there is nobody to reply to"
 msgstr ""
 "Este convite não indica nenhum organizador, por isso não há a quem responder"
 
-#: app/src/ui/window/invitation.rs:209
+#: app/src/ui/window/invitation.rs:207
 msgid "Could not send your reply: {reason}"
 msgstr "Não foi possível enviar a sua resposta: {reason}"
 
-#: app/src/ui/window/invitation.rs:241
+#: app/src/ui/window/invitation.rs:239
 msgid "Nobody"
 msgstr "Ninguém"
 
-#: app/src/ui/window/invitation.rs:245
+#: app/src/ui/window/invitation.rs:243
 msgid "Propose a New Time"
 msgstr "Propor outra hora"
 
-#: app/src/ui/window/invitation.rs:247
+#: app/src/ui/window/invitation.rs:245
 msgid "The organizer decides. {organizer} hears what you suggest."
 msgstr "O organizador decide. {organizer} fica a saber o que sugere."
 
-#: app/src/ui/window/invitation.rs:250
+#: app/src/ui/window/invitation.rs:248
 msgid "Propose"
 msgstr "Propor"
 
-#: app/src/ui/window/invitation.rs:268
+#: app/src/ui/window/invitation.rs:266
 msgid "This invitation names no organizer, so there is nobody to ask"
 msgstr ""
 "Este convite não indica nenhum organizador, por isso não há a quem perguntar"
 
-#: app/src/ui/window/invitation.rs:275
+#: app/src/ui/window/invitation.rs:273
 msgid "Proposed a new time to {organizer}"
 msgstr "Proposta outra hora a {organizer}"
 
-#: app/src/ui/window/invitation.rs:278
+#: app/src/ui/window/invitation.rs:276
 msgid "Proposed a new time"
 msgstr "Proposta outra hora"
 
-#: app/src/ui/window/invitation.rs:281
+#: app/src/ui/window/invitation.rs:279
 msgid "New time proposed. The organizer decides."
 msgstr "Outra hora proposta. O organizador decide."
 
-#: app/src/ui/window/invitation.rs:284
+#: app/src/ui/window/invitation.rs:282
 msgid "Could not send your proposal: {reason}"
 msgstr "Não foi possível enviar a sua proposta: {reason}"
 
-#: app/src/ui/window/invitation.rs:304
+#: app/src/ui/window/invitation.rs:302
 msgid "Allow Penguin Mail to Use Your Calendar"
 msgstr "Permitir que o Penguin Mail use o seu calendário"
 
-#: app/src/ui/window/invitation.rs:307
+#: app/src/ui/window/invitation.rs:305
 msgid ""
 "Your reply went to the organizer as mail. With permission to change events "
 "on the calendar for {account}, the meeting is marked on your own calendar "
@@ -4170,43 +4170,43 @@ msgstr ""
 "alterar eventos no calendário de {account}, a reunião fica também marcada no "
 "seu calendário. A Google pede-lhe confirmação no navegador."
 
-#: app/src/ui/window/invitation.rs:347
+#: app/src/ui/window/invitation.rs:343
 msgid "Could not save the invitation: {reason}"
 msgstr "Não foi possível guardar o convite: {reason}"
 
-#: app/src/ui/window/invitation.rs:359
+#: app/src/ui/window/invitation.rs:355
 msgid "No app on this desktop opens invitations: {reason}"
 msgstr "Nenhuma aplicação deste ambiente de trabalho abre convites: {reason}"
 
-#: app/src/ui/window/invitation.rs:399
+#: app/src/ui/window/invitation.rs:395
 msgid "Replied Yes"
 msgstr "Respondeu Sim"
 
-#: app/src/ui/window/invitation.rs:400
+#: app/src/ui/window/invitation.rs:396
 msgid "Replied No"
 msgstr "Respondeu Não"
 
-#: app/src/ui/window/invitation.rs:401
+#: app/src/ui/window/invitation.rs:397
 msgid "Replied Maybe"
 msgstr "Respondeu Talvez"
 
-#: app/src/ui/window/invitation.rs:404
+#: app/src/ui/window/invitation.rs:400
 msgid "{answer}. The organizer has been told."
 msgstr "{answer}. O organizador foi avisado."
 
-#: app/src/ui/window/invitation.rs:405
+#: app/src/ui/window/invitation.rs:401
 msgid "{answer}. Your reply is on its way to the organizer."
 msgstr "{answer}. A sua resposta vai a caminho do organizador."
 
-#: app/src/ui/window/invitation.rs:415
+#: app/src/ui/window/invitation.rs:411
 msgid "Answered on your calendar"
 msgstr "Respondido no seu calendário"
 
-#: app/src/ui/window/invitation.rs:417
+#: app/src/ui/window/invitation.rs:413
 msgid "Replied by email to {organizer}"
 msgstr "Resposta enviada por e-mail para {organizer}"
 
-#: app/src/ui/window/invitation.rs:420
+#: app/src/ui/window/invitation.rs:416
 msgid "Replied by email"
 msgstr "Resposta enviada por e-mail"
 
@@ -4359,23 +4359,23 @@ msgstr "A página de cancelamento do remetente abre no seu navegador."
 msgid "Unsubscribe from {sender}?"
 msgstr "Cancelar a subscrição de {sender}?"
 
-#: app/src/ui/window/senders.rs:103
+#: app/src/ui/window/senders.rs:102
 msgid "Unsubscribed from {sender}"
 msgstr "Subscrição de {sender} cancelada"
 
-#: app/src/ui/window/senders.rs:108
+#: app/src/ui/window/senders.rs:107
 msgid "Could not unsubscribe: {reason}"
 msgstr "Não foi possível cancelar a subscrição: {reason}"
 
-#: app/src/ui/window/senders.rs:138
+#: app/src/ui/window/senders.rs:137
 msgid "Open a message from the sender to block"
 msgstr "Abra uma mensagem do remetente a bloquear"
 
-#: app/src/ui/window/senders.rs:143
+#: app/src/ui/window/senders.rs:142
 msgid "Block {sender}?"
 msgstr "Bloquear {sender}?"
 
-#: app/src/ui/window/senders.rs:148
+#: app/src/ui/window/senders.rs:147
 msgid ""
 "New mail from {email} goes straight to the Trash. This conversation moves "
 "there now. Remove the rule under Rules to unblock."
@@ -4383,27 +4383,27 @@ msgstr ""
 "O correio novo de {email} vai direto para o lixo. Esta conversa muda para lá "
 "agora. Remova a regra em Regras para desbloquear."
 
-#: app/src/ui/window/senders.rs:154
+#: app/src/ui/window/senders.rs:153
 msgid "Block"
 msgstr "Bloquear"
 
-#: app/src/ui/window/senders.rs:181
+#: app/src/ui/window/senders.rs:180
 msgid "Blocked {sender}"
 msgstr "{sender} bloqueado"
 
-#: app/src/ui/window/senders.rs:186
+#: app/src/ui/window/senders.rs:185
 msgid "Could not block the sender: {reason}"
 msgstr "Não foi possível bloquear o remetente: {reason}"
 
-#: app/src/ui/window/senders.rs:200
+#: app/src/ui/window/senders.rs:199
 msgid "Allow Changes to Gmail Settings"
 msgstr "Permitir alterações às definições do Gmail"
 
-#: app/src/ui/window/translation.rs:120
+#: app/src/ui/window/translation.rs:108
 msgid "The model could not translate this: {reason}"
 msgstr "O modelo não conseguiu traduzir isto: {reason}"
 
-#: app/src/ui/window/translation.rs:129
+#: app/src/ui/window/translation.rs:117
 msgid "The model sent nothing back to put in the message."
 msgstr "O modelo não devolveu nada para pôr na mensagem."
 
