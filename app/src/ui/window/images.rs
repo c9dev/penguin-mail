@@ -50,16 +50,14 @@ impl MainWindow {
     /// images is the moment the question makes sense; the same choice
     /// stays in the More menu for anyone who lets the toast go.
     pub(super) fn load_images_once(self: &Rc<Self>, view: &Rc<ConversationView>) {
-        view.with_open(|open| open.images_allowed = true);
-        view.render(false);
+        view.allow_images();
         let from = view
-            .with_open(|open| {
+            .find(|open| {
                 open.messages
                     .last()
                     .and_then(|m| m.from.as_ref())
                     .map(|a| a.email.to_lowercase())
             })
-            .flatten()
             .filter(|a| !a.trim().is_empty());
         let Some(from) = from else { return };
         if images::allowed(&self.image_senders.borrow(), Some(&from)) {
@@ -87,18 +85,19 @@ impl MainWindow {
     /// Asks whether to allow this sender or their whole domain, then
     /// records the answer and redraws the conversation without the banner.
     pub(super) fn always_load_images(self: &Rc<Self>, view: &Rc<ConversationView>) {
-        let Some(from) = view.with_open(|open| {
+        let Some(from) = view.read(|open| {
             open.messages
                 .last()
                 .and_then(|m| m.from.as_ref())
                 .map(|a| a.email.to_lowercase())
+                .unwrap_or_default()
         }) else {
             return;
         };
-        let Some(from) = from.filter(|a| !a.trim().is_empty()) else {
+        if from.trim().is_empty() {
             self.toast(&gettext("This message has no sender to remember."));
             return;
-        };
+        }
         let dialog = adw::AlertDialog::builder()
             .heading(gettext("Always Load Images?"))
             .body(gettext(
@@ -154,8 +153,7 @@ impl MainWindow {
         match written {
             Ok(list) => {
                 *self.image_senders.borrow_mut() = list;
-                view.with_open(|open| open.images_allowed = true);
-                view.render(false);
+                view.allow_images();
                 self.toast(&if whole_domain {
                     fill(
                         &gettext("Images from anyone at {domain} will load from now on"),

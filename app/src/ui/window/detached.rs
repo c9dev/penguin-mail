@@ -23,7 +23,7 @@ type MakeAction = fn() -> Action;
 impl MainWindow {
     /// Opens the conversation on screen in its own window.
     pub(super) fn open_current_in_window(self: &Rc<Self>) {
-        let summary = self.conversation.with_open(|o| ThreadSummary {
+        let summary = self.conversation.read(|o| ThreadSummary {
             account_id: o.account_id,
             id: o.thread_id.clone(),
             message_id: o.only_message.clone(),
@@ -75,7 +75,7 @@ impl MainWindow {
     /// but on its own conversation.
     fn act_in_window(self: &Rc<Self>, view: &Rc<ConversationView>, action: Action) {
         let organize = |action: TriageAction, closes: bool| {
-            let Some(target) = view.with_open(|o| Target {
+            let Some(target) = view.read(|o| Target {
                 account_id: o.account_id,
                 thread_id: o.thread_id.clone(),
                 message_id: o.only_message.clone(),
@@ -99,7 +99,7 @@ impl MainWindow {
             Action::Trash => organize(TriageAction::Trash, true),
             Action::Junk => organize(TriageAction::Junk, true),
             Action::ToggleStar => {
-                let starred = view.with_open(|o| o.starred()).unwrap_or(false);
+                let starred = view.read(|o| o.starred()).unwrap_or(false);
                 organize(
                     if starred {
                         TriageAction::Unstar
@@ -110,7 +110,7 @@ impl MainWindow {
                 );
             }
             Action::ToggleRead => {
-                let unread = view.with_open(|o| o.unread()).unwrap_or(false);
+                let unread = view.read(|o| o.unread()).unwrap_or(false);
                 organize(
                     if unread {
                         TriageAction::MarkRead
@@ -227,14 +227,14 @@ impl MainWindow {
 
     /// Shows the newest message in `view` as it arrived, headers and all.
     pub(super) fn view_source(self: &Rc<Self>, view: &ConversationView) {
-        let found = view.with_open(|o| {
+        let found = view.find(|o| {
             let message = match &o.only_message {
                 Some(id) => o.messages.iter().find(|m| &m.id == id),
                 None => o.messages.last(),
             }?;
             Some((o.account_id, message.id.clone(), message.subject.clone()))
         });
-        let Some(Some((account_id, message_id, subject))) = found else {
+        let Some((account_id, message_id, subject)) = found else {
             return;
         };
         let Some(sync) = self.core.account(account_id) else {

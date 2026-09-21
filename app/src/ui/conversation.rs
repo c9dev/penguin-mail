@@ -131,6 +131,45 @@ impl OpenThread {
         body.list_unsubscribe.is_some().then_some((target, body))
     }
 
+    /// Takes in the thread's messages as the store now has them, and
+    /// answers with the ids whose bodies are still missing. A message that
+    /// was not here before and arrived unread opens, since the reader has
+    /// not seen it; one they closed themselves stays closed. A thread
+    /// showing one message keeps only that one, and an empty answer from
+    /// the store leaves the list alone.
+    fn take_messages(&mut self, fresh: &[MessageMeta]) -> Vec<String> {
+        let fresh: Vec<MessageMeta> = fresh
+            .iter()
+            .filter(|m| self.only_message.as_ref().is_none_or(|id| &m.id == id))
+            .cloned()
+            .collect();
+        for meta in &fresh {
+            if !self.messages.iter().any(|m| m.id == meta.id) && meta.is_unread() {
+                self.expanded.insert(meta.id.clone());
+            }
+        }
+        if !fresh.is_empty() {
+            self.messages = fresh;
+        }
+        self.messages
+            .iter()
+            .filter(|m| !self.bodies.contains_key(&m.id))
+            .map(|m| m.id.clone())
+            .collect()
+    }
+
+    /// Replaces the messages and answers whether their ids differ from the
+    /// ones that were here, in that order.
+    fn replace_messages(&mut self, fresh: Vec<MessageMeta>) -> bool {
+        let same = self
+            .messages
+            .iter()
+            .map(|m| &m.id)
+            .eq(fresh.iter().map(|m| &m.id));
+        self.messages = fresh;
+        !same
+    }
+
     fn has_remote_images(&self) -> bool {
         self.bodies
             .values()
@@ -903,8 +942,168 @@ impl ConversationView {
             .is_some_and(|o| o.account_id == account_id && o.thread_id == thread_id)
     }
 
-    pub fn with_open<R>(&self, f: impl FnOnce(&mut OpenThread) -> R) -> Option<R> {
+    /// Reads the open thread. `None` means no conversation is on screen.
+    pub fn read<R>(&self, f: impl FnOnce(&OpenThread) -> R) -> Option<R> {
+        self.open.borrow().as_ref().map(f)
+    }
+
+    /// Reads the open thread for something it may not hold, such as one
+    /// message's body. `None` covers both: no conversation on screen, and
+    /// nothing there to read.
+    pub fn find<R>(&self, f: impl FnOnce(&OpenThread) -> Option<R>) -> Option<R> {
+        self.open.borrow().as_ref().and_then(f)
+    }
+
+    /// The one way the thread changes. Each named change below goes
+    /// through here and then redraws whatever its own change touched, so
+    /// no caller has to know which of the fields the page is drawn from.
+    fn change<R>(&self, f: impl FnOnce(&mut OpenThread) -> R) -> Option<R> {
         self.open.borrow_mut().as_mut().map(f)
+    }
+
+    /// The thread's messages as the store now has them. One that arrived
+    /// unread opens, since the reader has not seen it. Gives back the ids
+    /// whose bodies are still missing. Nothing is redrawn: those bodies
+    /// are what the caller fetches next, and they bring a redraw with them.
+    pub fn messages_arrived(&self, fresh: &[MessageMeta]) -> Vec<String> {
+        self.change(|open| open.take_messages(fresh))
+            .unwrap_or_default()
+    }
+
+    /// Replaces the messages after the store changed under the thread, and
+    /// answers whether the ids differ from what was on screen. Nothing is
+    /// redrawn: that answer is what decides between a redraw and a fetch.
+    pub fn replace_messages(&self, fresh: Vec<MessageMeta>) -> bool {
+        self.change(|open| open.replace_messages(fresh))
+            .unwrap_or(false)
+    }
+
+    /// Bodies and the inline images that go in them, as they come back
+    /// from Gmail, and the redraw that puts them on screen.
+    pub fn bodies_arrived(
+        &self,
+        bodies: Vec<(String, Result<MessageBody, String>)>,
+        images: HashMap<String, HashMap<String, String>>,
+    ) {
+        self.change(|open| {
+            open.bodies.extend(bodies);
+            open.inline_images.extend(images);
+        });
+        self.render(false);
+    }
+
+    /// The pictures for the attachment rows, and the redraw that shows
+    /// them.
+    pub fn thumbnails_arrived(&self, found: HashMap<String, String>) {
+        self.change(|open| open.thumbnails.extend(found));
+        self.render(false);
+    }
+
+    /// The senders' photos, and the redraw that puts them in the message
+    /// headers.
+    pub fn set_photos(&self, photos: HashMap<String, String>) {
+        self.change(|open| open.photos = photos);
+        self.render(false);
+    }
+
+    /// The colour this thread is flagged in. The page says nothing about
+    /// it, so only the header buttons are drawn again.
+    pub fn set_flag_color(&self, color: Option<FlagColor>) {
+        self.change(|open| open.flag_color = color);
+        self.render_buttons();
+    }
+
+    /// Lets this thread load remote images, and draws it again without the
+    /// filter that was blocking them.
+    pub fn allow_images(&self) {
+        self.change(|open| open.images_allowed = true);
+        self.render(false);
+    }
+
+    /// Notes that the list has been unsubscribed from, which takes its
+    /// banner down. The message itself does not change.
+    pub fn mark_unsubscribed(&self) {
+        self.change(|open| open.unsubscribed = true);
+        self.render_buttons();
+    }
+
+    /// The protected message and the engine that reads it, given `have` to
+    /// say which engines this computer has. Once per thread: a second call
+    /// gives nothing back, because either engine may hold a pinentry in
+    /// front of the person for as long as they take and asking twice would
+    /// put up two of them.
+    pub fn take_protected(
+        &self,
+        have: impl Fn(Engine) -> bool,
+    ) -> Option<(String, Engine, MessageBody)> {
+        self.change(|open| {
+            if open.pgp_asked {
+                return None;
+            }
+            let (message_id, opening) = {
+                let (meta, opening) = open.protected()?;
+                (meta.id.clone(), opening)
+            };
+            if !have(opening) {
+                return None;
+            }
+            let body = open.bodies.get(&message_id)?.as_ref().ok()?.clone();
+            open.pgp_asked = true;
+            Some((message_id, opening, body))
+        })
+        .flatten()
+    }
+
+    /// What the engine made of that message: the mark for the card, and,
+    /// when it opened one, the body and the files that were inside. Those
+    /// go no further than this window, since Gmail holds the ciphertext
+    /// and nothing else. The message on screen may now be the opened one,
+    /// so the thread is drawn again.
+    pub fn engine_answered(&self, message_id: String, read: protection::Read) {
+        self.change(|open| {
+            open.pgp = Some(read.mark);
+            if let Some(body) = read.body {
+                if !read.files.is_empty() {
+                    open.opened_files.insert(message_id.clone(), read.files);
+                }
+                open.bodies.insert(message_id, Ok(body));
+            }
+        });
+        self.render(false);
+    }
+
+    /// One message's translation, the card that says where it came from,
+    /// and the redraw that puts the translated words in the page.
+    pub fn translated(&self, message_id: String, translation: Translation) {
+        let (from, cut) = (translation.from, translation.cut);
+        let kept = self.change(|open| {
+            open.translations.insert(message_id, translation);
+        });
+        if kept.is_none() {
+            return;
+        }
+        self.translate.done(from, cut, true);
+        self.render(false);
+    }
+
+    /// Turns the message over: the translation, or what arrived, whichever
+    /// is not on screen. Both are kept, so this costs no second request.
+    /// `false` when the message has no translation to turn.
+    pub fn turn_translation(&self, message_id: &str) -> bool {
+        let turned = self
+            .change(|open| {
+                open.translations.get_mut(message_id).map(|said| {
+                    said.shown = !said.shown;
+                    (said.from, said.cut, said.shown)
+                })
+            })
+            .flatten();
+        let Some((from, cut, shown)) = turned else {
+            return false;
+        };
+        self.translate.done(from, cut, shown);
+        self.render(false);
+        true
     }
 
     /// Shows a thread. `scroll` jumps to the first expanded message.
@@ -1154,7 +1353,7 @@ impl ConversationView {
     }
 
     fn toggle(&self, id: &str) {
-        let expanded = self.with_open(|open| {
+        let expanded = self.change(|open| {
             if !open.expanded.remove(id) {
                 open.expanded.insert(id.to_string());
             }
@@ -1170,7 +1369,7 @@ impl ConversationView {
     /// a closed message's body, and WebKit finds nothing in it.
     fn open_every_message(&self) -> Vec<String> {
         let closed = self
-            .with_open(|open| {
+            .change(|open| {
                 let closed: Vec<String> = open
                     .messages
                     .iter()
@@ -1189,7 +1388,7 @@ impl ConversationView {
 
     /// Closes the messages the find bar opened.
     fn close_messages(&self, ids: &[String]) {
-        self.with_open(|open| {
+        self.change(|open| {
             for id in ids {
                 open.expanded.remove(id);
             }
@@ -1317,7 +1516,6 @@ fn network_session() -> webkit::NetworkSession {
 mod tests {
     use super::body_mark;
     use std::collections::HashMap;
-
     fn images(entries: &[(&str, &str)]) -> HashMap<String, String> {
         entries
             .iter()

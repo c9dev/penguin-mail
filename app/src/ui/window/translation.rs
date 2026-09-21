@@ -31,13 +31,11 @@ impl MainWindow {
         };
         // A message that has been translated keeps its card, whatever a
         // second reading of the words would say about it.
-        let done = view
-            .with_open(|open| {
-                open.translations
-                    .get(&message_id)
-                    .map(|said| (said.from, said.cut, said.shown))
-            })
-            .flatten();
+        let done = view.find(|open| {
+            open.translations
+                .get(&message_id)
+                .map(|said| (said.from, said.cut, said.shown))
+        });
         if let Some((from, cut, shown)) = done {
             view.translate.done(from, cut, shown);
             return;
@@ -63,17 +61,7 @@ impl MainWindow {
         let Some((message_id, prose)) = view.open_prose() else {
             return;
         };
-        let turned = view
-            .with_open(|open| {
-                open.translations.get_mut(&message_id).map(|said| {
-                    said.shown = !said.shown;
-                    (said.from, said.cut, said.shown)
-                })
-            })
-            .flatten();
-        if let Some((from, cut, shown)) = turned {
-            view.translate.done(from, cut, shown);
-            view.render(false);
+        if view.turn_translation(&message_id) {
             return;
         }
         let Some(interface) = self.interface_language() else {
@@ -131,50 +119,43 @@ impl MainWindow {
                 this.toast(&problem);
                 return;
             }
-            let kept = view
-                .with_open(|open| {
-                    let Some(Ok(arrived)) = open.bodies.get(&message_id) else {
-                        return false;
-                    };
-                    let images = open
-                        .inline_images
-                        .get(&message_id)
-                        .cloned()
-                        .unwrap_or_default();
-                    let rebuilt = prose.rebuild(&said);
-                    let mut body = arrived.clone();
-                    // Model output is cleaned like any other mail HTML
-                    // before it reaches the WebView.
-                    let clean = match arrived
-                        .html
-                        .as_deref()
-                        .is_some_and(|h| !h.trim().is_empty())
-                    {
-                        true => Some(sanitize_html(&rebuilt, &images)),
-                        false => {
-                            body.text = Some(rebuilt);
-                            None
-                        }
-                    };
-                    open.translations.insert(
-                        message_id.clone(),
-                        Translation {
-                            from,
-                            body,
-                            clean,
-                            cut,
-                            shown: true,
-                        },
-                    );
-                    true
+            let made = view.find(|open| {
+                let Some(Ok(arrived)) = open.bodies.get(&message_id) else {
+                    return None;
+                };
+                let images = open
+                    .inline_images
+                    .get(&message_id)
+                    .cloned()
+                    .unwrap_or_default();
+                let rebuilt = prose.rebuild(&said);
+                let mut body = arrived.clone();
+                // Model output is cleaned like any other mail HTML before
+                // it reaches the WebView.
+                let clean = match arrived
+                    .html
+                    .as_deref()
+                    .is_some_and(|h| !h.trim().is_empty())
+                {
+                    true => Some(sanitize_html(&rebuilt, &images)),
+                    false => {
+                        body.text = Some(rebuilt);
+                        None
+                    }
+                };
+                Some(Translation {
+                    from,
+                    body,
+                    clean,
+                    cut,
+                    shown: true,
                 })
-                .unwrap_or(false);
-            if !kept {
+            });
+            let Some(translation) = made else {
                 view.translate.hide();
                 return;
-            }
-            view.translate.done(from, cut, true);
-            view.render(false);
+            };
+            view.translated(message_id, translation);
         });
     }
 

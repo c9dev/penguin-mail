@@ -36,12 +36,10 @@ impl MainWindow {
     /// Reads the invitation in the message `view` shows and puts it on the
     /// card, or takes the card away when the message carries none.
     pub(super) async fn refresh_invitation(self: &Rc<Self>, view: &Rc<ConversationView>) {
-        let found = view
-            .with_open(|open| {
-                open.invitation()
-                    .map(|(meta, ics)| (open.account_id, meta.id.clone(), ics.to_string()))
-            })
-            .flatten();
+        let found = view.find(|open| {
+            open.invitation()
+                .map(|(meta, ics)| (open.account_id, meta.id.clone(), ics.to_string()))
+        });
         let Some((account_id, message_id, ics)) = found else {
             view.show_invitation(None);
             return;
@@ -97,7 +95,7 @@ impl MainWindow {
     /// Records the answer to that offer, and opens Online Accounts when
     /// the answer was yes.
     fn answer_gnome_offer(self: &Rc<Self>, view: &Rc<ConversationView>, open: bool) {
-        let Some(account_id) = view.with_open(|open| open.account_id) else {
+        let Some(account_id) = view.read(|open| open.account_id) else {
             return;
         };
         if let (Some(app), Some(account)) = (self.app.upgrade(), self.account(account_id)) {
@@ -154,7 +152,7 @@ impl MainWindow {
         answer: Answer,
         scope: Scope,
     ) {
-        let account_id = view.with_open(|open| open.account_id);
+        let account_id = view.read(|open| open.account_id);
         let found =
             view.with_invitation(|showing| (showing.invitation.clone(), showing.answering_as()));
         let (Some(account_id), Some((invitation, Some(me)))) = (account_id, found) else {
@@ -218,7 +216,7 @@ impl MainWindow {
     /// not an answer, so it leaves the answer buttons where they were:
     /// nothing is settled until the organizer says so.
     fn propose_time(self: &Rc<Self>, view: &Rc<ConversationView>, proposal: Proposal) {
-        let account_id = view.with_open(|open| open.account_id);
+        let account_id = view.read(|open| open.account_id);
         let found =
             view.with_invitation(|showing| (showing.invitation.clone(), showing.answering_as()));
         let (Some(account_id), Some((invitation, Some(me)))) = (account_id, found) else {
@@ -329,9 +327,7 @@ impl MainWindow {
     /// handler, which on GNOME is Calendar. The event then shows up in the
     /// shell clock like any other.
     fn add_to_calendar(self: &Rc<Self>, view: &Rc<ConversationView>) {
-        let found = view
-            .with_open(|open| open.invitation().map(|(_, ics)| ics.to_string()))
-            .flatten();
+        let found = view.find(|open| open.invitation().map(|(_, ics)| ics.to_string()));
         let Some(ics) = found else {
             return;
         };

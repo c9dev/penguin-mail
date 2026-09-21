@@ -75,7 +75,7 @@ impl MainWindow {
         view: &ConversationView,
         message_id: String,
     ) {
-        let found = view.with_open(|open| {
+        let found = view.find(|open| {
             let held = open
                 .opened_files
                 .get(&message_id)
@@ -95,7 +95,7 @@ impl MainWindow {
                 .collect();
             Some((open.account_id, files, held))
         });
-        let Some(Some((account_id, files, held))) = found else {
+        let Some((account_id, files, held)) = found else {
             return;
         };
         if files.is_empty() {
@@ -226,11 +226,10 @@ impl MainWindow {
         message_id: &str,
         index: usize,
     ) -> Option<(AccountId, Attachment)> {
-        view.with_open(|open| {
+        view.find(|open| {
             let body = open.bodies.get(message_id)?.as_ref().ok()?;
             Some((open.account_id, body.attachments.get(index)?.clone()))
         })
-        .flatten()
     }
 
     /// Puts `data` on disk under the app's cache, so the desktop and a
@@ -441,8 +440,7 @@ impl MainWindow {
 /// The bytes of one file that came out of an encrypted message, when the
 /// open thread holds them.
 fn opened_file(view: &ConversationView, message_id: &str, index: usize) -> Option<Vec<u8>> {
-    view.with_open(|open| open.opened_files.get(message_id)?.get(index).cloned())
-        .flatten()
+    view.find(|open| open.opened_files.get(message_id)?.get(index).cloned())
 }
 
 /// How many thumbnails to hold before starting over.

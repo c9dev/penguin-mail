@@ -55,7 +55,7 @@ impl MainWindow {
     /// Writes the conversation `view` shows. A separate window has no list
     /// of its own, so its menu comes here.
     pub(super) fn export_conversation(self: &Rc<Self>, view: &ConversationView) {
-        let open = view.with_open(|open| {
+        let open = view.read(|open| {
             let date = open.messages.last().map(|m| m.date).unwrap_or_default();
             (
                 (

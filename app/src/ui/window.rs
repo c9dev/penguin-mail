@@ -1081,28 +1081,7 @@ impl MainWindow {
             .read(move |c| messages::thread_messages(c, account_id, &key))
             .await
             .unwrap_or_default();
-        let missing: Vec<String> = view
-            .with_open(|open| {
-                let fresh: Vec<MessageMeta> = fresh
-                    .iter()
-                    .filter(|m| open.only_message.as_ref().is_none_or(|id| &m.id == id))
-                    .cloned()
-                    .collect();
-                for meta in &fresh {
-                    if !open.messages.iter().any(|m| m.id == meta.id) && meta.is_unread() {
-                        open.expanded.insert(meta.id.clone());
-                    }
-                }
-                if !fresh.is_empty() {
-                    open.messages = fresh.clone();
-                }
-                open.messages
-                    .iter()
-                    .filter(|m| !open.bodies.contains_key(&m.id))
-                    .map(|m| m.id.clone())
-                    .collect()
-            })
-            .unwrap_or_default();
+        let missing = view.messages_arrived(&fresh);
         let fetches = missing.into_iter().map(|id| {
             let (core, sync) = (Rc::clone(&self.core), sync.clone());
             async move {
@@ -1124,14 +1103,8 @@ impl MainWindow {
         if !view.is_showing(account_id, &thread_id) {
             return;
         }
-        let unread = view
-            .with_open(|open| {
-                open.bodies.extend(loaded.clone());
-                open.inline_images.extend(images);
-                open.unread()
-            })
-            .unwrap_or(false);
-        view.render(false);
+        view.bodies_arrived(loaded, images);
+        let unread = view.read(|open| open.unread()).unwrap_or(false);
         self.refresh_invitation(&view).await;
         self.start_pgp(&view);
         self.refresh_translation(&view);
@@ -1156,7 +1129,7 @@ impl MainWindow {
         // message read before is already in the store, and its pictures
         // are just as worth showing.
         let loaded: Vec<(String, Result<MessageBody, String>)> = view
-            .with_open(|open| {
+            .read(|open| {
                 open.bodies
                     .iter()
                     .filter(|(_, body)| {
@@ -1184,8 +1157,7 @@ impl MainWindow {
             if found.is_empty() || !view.is_showing(account_id, &thread_id) {
                 return;
             }
-            view.with_open(|open| open.thumbnails.extend(found));
-            view.render(false);
+            view.thumbnails_arrived(found);
         });
     }
 
@@ -1201,14 +1173,14 @@ impl MainWindow {
             MarkRead::AfterDelay => 2,
             MarkRead::Manually => return,
         };
-        let only = view.with_open(|o| o.only_message.clone()).flatten();
+        let only = view.find(|o| o.only_message.clone());
         let (weak, view) = (Rc::downgrade(self), Rc::downgrade(view));
         glib::timeout_add_seconds_local_once(delay, move || {
             let (Some(win), Some(view)) = (weak.upgrade(), view.upgrade()) else {
                 return;
             };
             let still_open = view
-                .with_open(|o| {
+                .read(|o| {
                     o.account_id == account_id && o.thread_id == thread_id && o.only_message == only
                 })
                 .unwrap_or(false);
@@ -1284,7 +1256,7 @@ impl MainWindow {
     fn refresh_open_thread(self: &Rc<Self>) {
         let Some((account_id, thread_id)) = self
             .conversation
-            .with_open(|o| (o.account_id, o.thread_id.clone()))
+            .read(|o| (o.account_id, o.thread_id.clone()))
         else {
             return;
         };
@@ -1301,10 +1273,7 @@ impl MainWindow {
             if !this.conversation.is_showing(account_id, &thread_id) {
                 return;
             }
-            let only = this
-                .conversation
-                .with_open(|o| o.only_message.clone())
-                .flatten();
+            let only = this.conversation.find(|o| o.only_message.clone());
             let fresh: Vec<MessageMeta> = fresh
                 .into_iter()
                 .filter(|m| only.as_ref().is_none_or(|id| &m.id == id))
@@ -1313,18 +1282,7 @@ impl MainWindow {
                 this.conversation.clear();
                 return;
             }
-            let changed = this
-                .conversation
-                .with_open(|open| {
-                    let same = open
-                        .messages
-                        .iter()
-                        .map(|m| &m.id)
-                        .eq(fresh.iter().map(|m| &m.id));
-                    open.messages = fresh;
-                    !same
-                })
-                .unwrap_or(false);
+            let changed = this.conversation.replace_messages(fresh);
             if changed {
                 this.complete_thread(Rc::clone(&this.conversation), account_id, thread_id)
                     .await;
@@ -1373,7 +1331,7 @@ impl MainWindow {
             return rows.iter().map(Target::from_row).collect();
         }
         self.conversation
-            .with_open(|o| Target {
+            .read(|o| Target {
                 account_id: o.account_id,
                 thread_id: o.thread_id.clone(),
                 message_id: o.only_message.clone(),
@@ -1392,7 +1350,7 @@ impl MainWindow {
             );
         }
         self.conversation
-            .with_open(|o| (o.unread(), o.starred()))
+            .read(|o| (o.unread(), o.starred()))
             .or_else(|| rows.first().map(|r| (r.unread, r.starred)))
             .unwrap_or((false, false))
     }
@@ -1404,7 +1362,7 @@ impl MainWindow {
             return rows.iter().all(|r| r.muted);
         }
         self.conversation
-            .with_open(|o| o.muted())
+            .read(|o| o.muted())
             .or_else(|| rows.first().map(|r| r.muted))
             .unwrap_or(false)
     }
@@ -1468,16 +1426,13 @@ impl MainWindow {
         if address.trim().is_empty() {
             return;
         }
-        let name = self
-            .conversation
-            .with_open(|open| {
-                open.messages
-                    .iter()
-                    .filter_map(|m| m.from.clone())
-                    .find(|a| a.email.eq_ignore_ascii_case(&address))
-                    .map(|a| a.display().to_string())
-            })
-            .flatten();
+        let name = self.conversation.find(|open| {
+            open.messages
+                .iter()
+                .filter_map(|m| m.from.clone())
+                .find(|a| a.email.eq_ignore_ascii_case(&address))
+                .map(|a| a.display().to_string())
+        });
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let book = this.core.contacts();
@@ -1549,7 +1504,7 @@ impl MainWindow {
                     .find(|a| a.email.eq_ignore_ascii_case(&email))
                     .map(|a| a.id)
             })
-            .or_else(|| self.conversation.with_open(|o| o.account_id))
+            .or_else(|| self.conversation.read(|o| o.account_id))
             .or_else(|| self.mailbox.borrow().account())
             .or_else(|| self.accounts.borrow().first().map(|a| a.id))
     }
@@ -1707,7 +1662,7 @@ impl MainWindow {
         let Some(app) = self.app.upgrade() else {
             return;
         };
-        let senders = self.conversation.with_open(|open| {
+        let senders = self.conversation.read(|open| {
             open.messages
                 .iter()
                 .filter_map(|m| m.from.as_ref())
@@ -1716,8 +1671,7 @@ impl MainWindow {
         });
         let Some(senders) = senders else { return };
         let photos = app.sender_photos(senders.into_iter());
-        self.conversation.with_open(|open| open.photos = photos);
-        self.conversation.render(false);
+        self.conversation.set_photos(photos);
     }
 
     /// Explains that reading contacts needs one more Google permission,
@@ -1828,7 +1782,7 @@ impl MainWindow {
             }
             this.list
                 .retain(|row| !gone.contains(&Target::from_row(row)));
-            if this.conversation.with_open(|o| {
+            if this.conversation.read(|o| {
                 gone.iter()
                     .any(|t| t.account_id == o.account_id && t.thread_id == o.thread_id)
             }) == Some(true)
@@ -1893,15 +1847,14 @@ impl MainWindow {
         }
         match action {
             MailAction::Flag(color) => {
-                let open_flagged = self.conversation.with_open(|o| {
+                let open_flagged = self.conversation.read(|o| {
                     outcome
                         .done
                         .iter()
                         .any(|t| t.account_id == o.account_id && t.thread_id == o.thread_id)
                 });
                 if open_flagged == Some(true) {
-                    self.conversation.with_open(|o| o.flag_color = *color);
-                    self.conversation.render_buttons();
+                    self.conversation.set_flag_color(*color);
                 }
                 self.queue_refresh();
             }
@@ -2009,7 +1962,7 @@ impl MainWindow {
         }
         let applied: HashSet<String> = if targets.len() == 1 {
             self.conversation
-                .with_open(|o| {
+                .read(|o| {
                     o.messages
                         .iter()
                         .flat_map(|m| m.label_ids.clone())
@@ -2108,7 +2061,7 @@ impl MainWindow {
         let Some(app) = self.app.upgrade() else {
             return;
         };
-        let prepared = view.with_open(|open| {
+        let prepared = view.find(|open| {
             let target = open.reply_target()?.clone();
             let text = match open.bodies.get(&target.id) {
                 Some(Ok(body)) => compose::body_text(body),
@@ -2133,7 +2086,7 @@ impl MainWindow {
                 attachments,
             ))
         });
-        let Some(Some((account_id, target, text, html, thread, attachments))) = prepared else {
+        let Some((account_id, target, text, html, thread, attachments)) = prepared else {
             return;
         };
         let forwarded_html = html.clone();
@@ -2201,7 +2154,7 @@ impl MainWindow {
         let Some(app) = self.app.upgrade() else {
             return;
         };
-        let found = view.with_open(|open| {
+        let found = view.find(|open| {
             let draft = open
                 .messages
                 .iter()
@@ -2220,7 +2173,7 @@ impl MainWindow {
                 body,
             ))
         });
-        let Some(Some((account_id, thread_id, in_thread, message, body))) = found else {
+        let Some((account_id, thread_id, in_thread, message, body)) = found else {
             return;
         };
         let Some(sync) = self.core.account(account_id) else {
@@ -2268,11 +2221,11 @@ impl MainWindow {
         message_id: String,
         index: usize,
     ) {
-        let found = view.with_open(|open| {
+        let found = view.find(|open| {
             let body = open.bodies.get(&message_id)?.as_ref().ok()?;
             Some((open.account_id, body.attachments.get(index)?.clone()))
         });
-        let Some(Some((account_id, attachment))) = found else {
+        let Some((account_id, attachment)) = found else {
             return;
         };
         // A file out of an encrypted message never reached Gmail, so its
@@ -2424,7 +2377,7 @@ impl MainWindow {
             if dialog.choose_future(Some(&this.window)).await != "remove" {
                 return;
             }
-            if this.conversation.with_open(|o| o.account_id) == Some(account.id) {
+            if this.conversation.read(|o| o.account_id) == Some(account.id) {
                 this.conversation.clear();
             }
             let email = account.email.clone();
@@ -2864,7 +2817,7 @@ impl MainWindow {
         loop {
             let quotable = self
                 .conversation
-                .with_open(|open| {
+                .read(|open| {
                     open.account_id == account_id
                         && open.thread_id == thread_id
                         && open
@@ -2997,18 +2950,15 @@ impl MainWindow {
 
     /// Adds the open conversation's sender to the VIPs, or takes them off.
     fn toggle_vip(self: &Rc<Self>) {
-        let me = self
-            .conversation
-            .with_open(|o| o.me.clone())
-            .unwrap_or_default();
-        let sender = self.conversation.with_open(|o| {
+        let me = self.conversation.read(|o| o.me.clone()).unwrap_or_default();
+        let sender = self.conversation.find(|o| {
             o.messages
                 .iter()
                 .rev()
                 .filter_map(|m| m.from.clone())
                 .find(|a| !me.iter().any(|mine| mine.eq_ignore_ascii_case(&a.email)))
         });
-        let (Some(Some(sender)), Some(app)) = (sender, self.app.upgrade()) else {
+        let (Some(sender), Some(app)) = (sender, self.app.upgrade()) else {
             return self.toast(&gettext("Open a message from the person first"));
         };
         let name = sender.name.clone().unwrap_or_default();
@@ -3236,7 +3186,7 @@ fn default_expanded(messages: &[MessageMeta]) -> HashSet<String> {
 
 /// Whether the newest sender in `view` who is not the user is a VIP.
 fn sender_is_vip(view: &ConversationView, settings: &Settings) -> bool {
-    view.with_open(|o| {
+    view.read(|o| {
         o.messages
             .iter()
             .rev()

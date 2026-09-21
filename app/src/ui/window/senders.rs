@@ -19,7 +19,7 @@ impl MainWindow {
     }
 
     pub(super) fn unsubscribe_from(self: &Rc<Self>, view: Rc<ConversationView>) {
-        let found = view.with_open(|open| {
+        let found = view.find(|open| {
             let (meta, body) = open.list_unsubscribe()?;
             let header = body.list_unsubscribe.clone()?;
             let sender = meta
@@ -33,7 +33,7 @@ impl MainWindow {
                 choose(&header, body.one_click_unsubscribe),
             ))
         });
-        let Some(Some((account_id, sender, method))) = found else {
+        let Some((account_id, sender, method)) = found else {
             return self.toast(&gettext("This message has no unsubscribe link"));
         };
         let Some(method) = method else {
@@ -97,8 +97,7 @@ impl MainWindow {
             };
             match done {
                 Ok(()) => {
-                    view.with_open(|o| o.unsubscribed = true);
-                    view.render_buttons();
+                    view.mark_unsubscribed();
                     this.toast(&fill(
                         &gettext("Unsubscribed from {sender}"),
                         &[("sender", &sender)],
@@ -119,7 +118,7 @@ impl MainWindow {
     }
 
     pub(super) fn block_sender_from(self: &Rc<Self>, view: Rc<ConversationView>) {
-        let found = view.with_open(|open| {
+        let found = view.find(|open| {
             let me = open.me.clone();
             let sender = open
                 .messages
@@ -134,7 +133,7 @@ impl MainWindow {
             };
             Some((open.account_id, sender, target))
         });
-        let Some(Some((account_id, sender, target))) = found else {
+        let Some((account_id, sender, target)) = found else {
             return self.toast(&gettext("Open a message from the sender to block"));
         };
         let email = sender.email.clone();
@@ -171,7 +170,7 @@ impl MainWindow {
             };
             match blocking {
                 Ok(Permitted::Done(_)) => {
-                    if view.with_open(|o| o.thread_id == target.thread_id) == Some(true) {
+                    if view.read(|o| o.thread_id == target.thread_id) == Some(true) {
                         view.clear();
                     }
                     this.perform(

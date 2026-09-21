@@ -231,7 +231,7 @@ impl MainWindow {
         view: Rc<ConversationView>,
         category: Category,
     ) {
-        let found = view.with_open(|open| {
+        let found = view.find(|open| {
             let me = open.me.clone();
             let sender = open
                 .messages
@@ -242,7 +242,7 @@ impl MainWindow {
             let who = sender.display().to_string();
             Some((open.account_id, sender.email, who, open.thread_id.clone()))
         });
-        let Some(Some((account_id, email, who, open_thread))) = found else {
+        let Some((account_id, email, who, open_thread)) = found else {
             return self.toast(&gettext("Open a message from the sender first"));
         };
         self.categorize_sender(account_id, email, who, Some(open_thread), category);

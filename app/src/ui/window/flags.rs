@@ -34,7 +34,7 @@ impl MainWindow {
     pub(super) fn refresh_flag_color(self: &Rc<Self>) {
         let Some((account_id, thread_id)) = self
             .conversation
-            .with_open(|o| (o.account_id, o.thread_id.clone()))
+            .read(|o| (o.account_id, o.thread_id.clone()))
         else {
             return;
         };
@@ -50,8 +50,7 @@ impl MainWindow {
             };
             if this.conversation.is_showing(account_id, &thread_id) {
                 this.conversation
-                    .with_open(|o| o.flag_color = summary.and_then(|s| s.flag_color));
-                this.conversation.render_buttons();
+                    .set_flag_color(summary.and_then(|s| s.flag_color));
             }
         });
     }

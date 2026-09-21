@@ -32,32 +32,18 @@ impl MainWindow {
         if !self.core.has_gpg() && !self.core.has_gpgsm() {
             return;
         }
-        let found = view.with_open(|open| {
-            if open.pgp_asked {
-                return None;
-            }
-            let (message_id, opening) = {
-                let (meta, opening) = open.protected()?;
-                (meta.id.clone(), opening)
-            };
-            // The message names its standard, and the engine that reads it
-            // may be the one this computer lacks.
-            match opening {
-                Engine::Pgp(_) if !self.core.has_gpg() => return None,
-                Engine::Smime(_) if !self.core.has_gpgsm() => return None,
-                _ => {}
-            }
-            let body = open.bodies.get(&message_id)?.as_ref().ok()?.clone();
-            open.pgp_asked = true;
-            Some((
-                open.account_id,
-                open.thread_id.clone(),
-                message_id,
-                opening,
-                body,
-            ))
+        let Some((account_id, thread_id)) =
+            view.read(|open| (open.account_id, open.thread_id.clone()))
+        else {
+            return;
+        };
+        // The message names its standard, and the engine that reads it may
+        // be the one this computer lacks.
+        let found = view.take_protected(|opening| match opening {
+            Engine::Pgp(_) => self.core.has_gpg(),
+            Engine::Smime(_) => self.core.has_gpgsm(),
         });
-        let Some(Some((account_id, thread_id, message_id, opening, body))) = found else {
+        let Some((message_id, opening, body)) = found else {
             return;
         };
         let Some(sync) = self.core.account(account_id) else {
@@ -100,18 +86,9 @@ impl MainWindow {
         if !view.is_showing(account_id, &thread_id) {
             return;
         }
-        view.with_open(|open| {
-            open.pgp = Some(read.mark);
-            // What was inside the encryption is what the reader wanted, and
-            // it goes no further than this window: the store keeps the
-            // message as Gmail holds it, ciphertext and all.
-            if let Some(body) = read.body {
-                if !read.files.is_empty() {
-                    open.opened_files.insert(message_id.clone(), read.files);
-                }
-                open.bodies.insert(message_id, Ok(body));
-            }
-        });
-        view.render(false);
+        // What was inside the encryption is what the reader wanted, and it
+        // goes no further than this window: the store keeps the message as
+        // Gmail holds it, ciphertext and all.
+        view.engine_answered(message_id, read);
     }
 }
