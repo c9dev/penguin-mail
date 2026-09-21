@@ -605,6 +605,16 @@ impl GmailClient {
             .map_err(|e| GmailError::Decode(e.to_string()))
     }
 
+    /// As [`GmailClient::call_at`], for a call whose answer has no body,
+    /// such as deleting an event.
+    pub(crate) async fn call_at_empty(
+        &self,
+        url: &str,
+        build: impl Fn(&str) -> RequestBuilder,
+    ) -> Result<(), GmailError> {
+        self.send_request(0, || build(url)).await.map(|_| ())
+    }
+
     fn url(&self, path: &str) -> String {
         format!("{}/{path}", self.base_url)
     }

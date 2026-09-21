@@ -1,5 +1,6 @@
-//! Answering an invitation through Google Calendar, and asking it what
-//! else the user has on.
+//! Answering an invitation through Google Calendar, asking it what else
+//! the user has on, and the events on the primary calendar that the
+//! assistant lists, creates, changes and deletes.
 //!
 //! The Gmail permission an account grants at sign-in says nothing about
 //! calendars, so Google turns every call here down until the account
@@ -50,6 +51,133 @@ pub struct Busy {
 struct EventList {
     #[serde(default)]
     items: Vec<Value>,
+    #[serde(default, rename = "nextPageToken")]
+    next_page_token: Option<String>,
+}
+
+/// Most events one listing reads, over however many pages that takes.
+/// A window with more than this is too wide to be worth reading whole.
+const MOST_EVENTS: usize = 500;
+
+/// When an event starts or ends, in the two forms Google writes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EventTime {
+    /// An instant, as an RFC 3339 timestamp.
+    At(String),
+    /// A whole day, as `YYYY-MM-DD`. An all-day event ends on the day
+    /// after its last one, as iCalendar has it.
+    Day(String),
+}
+
+impl EventTime {
+    fn json(&self) -> Value {
+        match self {
+            EventTime::At(at) => json!({ "dateTime": at }),
+            EventTime::Day(day) => json!({ "date": day }),
+        }
+    }
+
+    fn read(value: Option<&Value>) -> Option<EventTime> {
+        let value = value?;
+        if let Some(at) = value.get("dateTime").and_then(Value::as_str) {
+            return Some(EventTime::At(at.to_string()));
+        }
+        value
+            .get("date")
+            .and_then(Value::as_str)
+            .map(|day| EventTime::Day(day.to_string()))
+    }
+}
+
+/// One guest on an event.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Guest {
+    pub email: String,
+    pub name: Option<String>,
+    /// Google's word for the guest's answer: `needsAction`, `accepted`,
+    /// `tentative` or `declined`.
+    pub answer: String,
+    /// This guest is the account itself.
+    pub me: bool,
+}
+
+/// One event on the account's primary calendar.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Event {
+    /// Google's id, which the calls that change an event take.
+    pub id: String,
+    /// The iCalendar UID an invitation for this event carries.
+    pub uid: String,
+    pub summary: String,
+    pub start: Option<EventTime>,
+    pub end: Option<EventTime>,
+    pub location: String,
+    pub description: String,
+    pub organizer: Option<String>,
+    pub guests: Vec<Guest>,
+    pub cancelled: bool,
+    /// Whether the event takes the user's time, by the same test a clash
+    /// uses: not declined, not marked free, not cancelled, not all day.
+    pub busy: bool,
+    /// The event's page in Google Calendar.
+    pub link: Option<String>,
+}
+
+/// What to write on an event. A field left `None` stays as it is.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct EventFields {
+    pub summary: Option<String>,
+    pub start: Option<EventTime>,
+    pub end: Option<EventTime>,
+    pub location: Option<String>,
+    pub description: Option<String>,
+    /// The guests' addresses. This replaces the guest list, and a guest
+    /// who stays on it keeps the answer they already gave.
+    pub guests: Option<Vec<String>>,
+}
+
+impl EventFields {
+    /// The fields as the Calendar API takes them. `held` is the guest list
+    /// the event has now, so a guest who stays keeps their answer.
+    fn json(&self, held: &[Value]) -> Value {
+        let mut body = serde_json::Map::new();
+        let mut put = |key: &str, value: Value| {
+            body.insert(key.to_string(), value);
+        };
+        if let Some(summary) = &self.summary {
+            put("summary", json!(summary));
+        }
+        if let Some(start) = &self.start {
+            put("start", start.json());
+        }
+        if let Some(end) = &self.end {
+            put("end", end.json());
+        }
+        if let Some(location) = &self.location {
+            put("location", json!(location));
+        }
+        if let Some(description) = &self.description {
+            put("description", json!(description));
+        }
+        if let Some(guests) = &self.guests {
+            let list: Vec<Value> = guests
+                .iter()
+                .map(|email| {
+                    held.iter()
+                        .find(|guest| {
+                            guest
+                                .get("email")
+                                .and_then(Value::as_str)
+                                .is_some_and(|held| held.eq_ignore_ascii_case(email))
+                        })
+                        .cloned()
+                        .unwrap_or_else(|| json!({ "email": email }))
+                })
+                .collect();
+            put("attendees", Value::Array(list));
+        }
+        Value::Object(body)
+    }
 }
 
 impl GmailClient {
@@ -180,6 +308,142 @@ impl GmailClient {
             .filter(|event| busy(event))
             .map(busy_of)
             .collect())
+    }
+
+    /// Every event on the primary calendar that overlaps `from` to `to`,
+    /// both RFC 3339 timestamps, in the order they start. A repeating
+    /// event comes back as one event per occurrence.
+    pub async fn events_between(&self, from: &str, to: &str) -> Result<Vec<Event>, GmailError> {
+        let url = format!("{}/calendars/primary/events", self.calendar_base_url);
+        let mut events = Vec::new();
+        let mut page: Option<String> = None;
+        loop {
+            let list: EventList = self
+                .call_at(&url, |url| {
+                    let mut query = vec![
+                        ("timeMin", from),
+                        ("timeMax", to),
+                        ("singleEvents", "true"),
+                        ("orderBy", "startTime"),
+                        ("maxResults", "250"),
+                    ];
+                    if let Some(token) = &page {
+                        query.push(("pageToken", token));
+                    }
+                    self.http().get(url).query(&query)
+                })
+                .await?;
+            events.extend(list.items.iter().map(event_of));
+            match list.next_page_token {
+                Some(token) if events.len() < MOST_EVENTS => page = Some(token),
+                _ => break,
+            }
+        }
+        events.truncate(MOST_EVENTS);
+        Ok(events)
+    }
+
+    /// Puts a new event on the primary calendar and invites its guests.
+    pub async fn create_event(&self, fields: &EventFields) -> Result<Event, GmailError> {
+        let url = format!("{}/calendars/primary/events", self.calendar_base_url);
+        let event: Value = self
+            .call_at(&url, |url| {
+                self.http()
+                    .post(url)
+                    .query(&[("sendUpdates", "all")])
+                    .json(&fields.json(&[]))
+            })
+            .await?;
+        Ok(event_of(&event))
+    }
+
+    /// Changes the fields `fields` sets on event `id` and tells its
+    /// guests. A new guest list costs one more call first, to read the
+    /// answers the guests who stay have already given.
+    pub async fn update_event(&self, id: &str, fields: &EventFields) -> Result<Event, GmailError> {
+        let url = format!("{}/calendars/primary/events/{id}", self.calendar_base_url);
+        let held: Vec<Value> = match fields.guests {
+            Some(_) => {
+                let event: Value = self.call_at(&url, |url| self.http().get(url)).await?;
+                event
+                    .get("attendees")
+                    .and_then(Value::as_array)
+                    .cloned()
+                    .unwrap_or_default()
+            }
+            None => Vec::new(),
+        };
+        let event: Value = self
+            .call_at(&url, |url| {
+                self.http()
+                    .patch(url)
+                    .query(&[("sendUpdates", "all")])
+                    .json(&fields.json(&held))
+            })
+            .await?;
+        Ok(event_of(&event))
+    }
+
+    /// Takes event `id` off the primary calendar and tells its guests.
+    pub async fn delete_event(&self, id: &str) -> Result<(), GmailError> {
+        let url = format!("{}/calendars/primary/events/{id}", self.calendar_base_url);
+        self.call_at_empty(&url, |url| {
+            self.http().delete(url).query(&[("sendUpdates", "all")])
+        })
+        .await
+    }
+}
+
+/// The event as the tools read it, from Google's JSON.
+fn event_of(event: &Value) -> Event {
+    let text = |key: &str| {
+        event
+            .get(key)
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string()
+    };
+    let guests = event
+        .get("attendees")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|guest| {
+            let email = guest.get("email").and_then(Value::as_str)?;
+            Some(Guest {
+                email: email.to_string(),
+                name: guest
+                    .get("displayName")
+                    .and_then(Value::as_str)
+                    .map(str::to_string),
+                answer: guest
+                    .get("responseStatus")
+                    .and_then(Value::as_str)
+                    .unwrap_or("needsAction")
+                    .to_string(),
+                me: guest.get("self").and_then(Value::as_bool) == Some(true),
+            })
+        })
+        .collect();
+    Event {
+        id: text("id"),
+        uid: text("iCalUID"),
+        summary: text("summary"),
+        start: EventTime::read(event.get("start")),
+        end: EventTime::read(event.get("end")),
+        location: text("location"),
+        description: text("description"),
+        organizer: event
+            .pointer("/organizer/email")
+            .and_then(Value::as_str)
+            .map(str::to_string),
+        guests,
+        cancelled: text("status") == "cancelled",
+        busy: busy(event),
+        link: event
+            .get("htmlLink")
+            .and_then(Value::as_str)
+            .map(str::to_string),
     }
 }
 
