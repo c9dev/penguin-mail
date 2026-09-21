@@ -1,0 +1,20 @@
+name: Label pull requests
+
+# pull_request_target runs with the base branch's code and a token that can
+# write labels. It never checks out the pull request, so the changes under
+# review cannot run with that token.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13 # v7.0.0
+        with:
+          sync-labels: true

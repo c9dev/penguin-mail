@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    name: Tests, clippy, translations, accessibility
+    runs-on: ubuntu-latest
+    # GitHub's hosted runners stop short of the GTK, libadwaita and WebKitGTK
+    # the app needs, so the gate runs on the release it targets.
+    container: ubuntu:26.04
+    timeout-minutes: 60
+    env:
+      CARGO_TERM_COLOR: always
+      # A build machine must not pass the crypto tests by skipping them.
+      PENGUIN_MAIL_REQUIRE_CRYPTO: "1"
+    steps:
+      - name: Install git
+        run: apt-get update && apt-get install -y --no-install-recommends git ca-certificates
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install build dependencies
+        run: scripts/ci-deps.sh
+      - name: Put cargo on PATH
+        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Tests
+        run: cargo test --workspace
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Translation template is current
+        run: scripts/update-po.sh --check
+      - name: Every control has an accessible name
+        run: scripts/a11y-names.sh

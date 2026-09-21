@@ -1,0 +1,92 @@
+name: Release
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+  # A trial run from the Actions tab builds the packages and keeps them as a
+  # workflow artifact. It publishes nothing.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build the packages
+    runs-on: ubuntu-latest
+    container: ubuntu:26.04
+    timeout-minutes: 90
+    env:
+      CARGO_TERM_COLOR: always
+      PENGUIN_MAIL_REQUIRE_CRYPTO: "1"
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Install git
+        run: apt-get update && apt-get install -y --no-install-recommends git ca-certificates
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install build dependencies
+        run: scripts/ci-deps.sh
+      - name: Put cargo on PATH
+        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - name: Read the version
+        id: version
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          version=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
+          if [ "$REF_TYPE" = tag ] && [ "$REF_NAME" != "v$version" ]; then
+            echo "::error::Tag $REF_NAME does not match version $version in Cargo.toml"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Tests
+        run: cargo test --workspace
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Translation template is current
+        run: scripts/update-po.sh --check
+      - name: Build
+        run: cargo build --release -p mailrs -p mailrs-cli
+      - name: Pack
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          scripts/stage.sh tree
+          scripts/package.sh tree "$VERSION" dist
+      - name: Take out the changelog section
+        if: github.ref_type == 'tag'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: scripts/changelog.sh section "$VERSION" > dist/notes.md
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: penguin-mail-${{ steps.version.outputs.version }}
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish the release
+    needs: build
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: penguin-mail-${{ needs.build.outputs.version }}
+          path: dist
+      - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          name: Penguin Mail ${{ needs.build.outputs.version }}
+          body_path: dist/notes.md
+          make_latest: "true"
+          fail_on_unmatched_files: true
+          files: |
+            dist/*.deb
+            dist/*.tar.gz
+            dist/*.zip
+            dist/SHA256SUMS

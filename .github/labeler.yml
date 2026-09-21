@@ -1,0 +1,50 @@
+# Labels a pull request by the parts of the code it touches. The crate map
+# is in README.md under "How it is built".
+
+ui:
+  - changed-files:
+      - any-glob-to-any-file: ["app/src/ui/**", "app/data/**"]
+
+app:
+  - changed-files:
+      - all-globs-to-any-file: ["app/**", "!app/src/ui/**", "!app/data/**"]
+
+sync:
+  - changed-files:
+      - any-glob-to-any-file: ["sync/**"]
+
+store:
+  - changed-files:
+      - any-glob-to-any-file: ["store/**"]
+
+gmail:
+  - changed-files:
+      - any-glob-to-any-file: ["gmail/**"]
+
+domain:
+  - changed-files:
+      - any-glob-to-any-file: ["domain/**"]
+
+assistant:
+  - changed-files:
+      - any-glob-to-any-file: ["ai/**", "app/src/assistant/**"]
+
+crypto:
+  - changed-files:
+      - any-glob-to-any-file: ["pgp/**", "smime/**", "app/src/pgp.rs", "app/src/smime.rs"]
+
+cli:
+  - changed-files:
+      - any-glob-to-any-file: ["cli/**"]
+
+translations:
+  - changed-files:
+      - any-glob-to-any-file: ["po/**"]
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file: ["docs/**", "*.md", "CONTEXT.md"]
+
+build:
+  - changed-files:
+      - any-glob-to-any-file: [".github/**", "scripts/**", "Cargo.toml", "Cargo.lock", "*/Cargo.toml", "*/build.rs"]
