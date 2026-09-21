@@ -631,10 +631,14 @@ impl GmailClient {
         build: impl Fn() -> RequestBuilder,
     ) -> Result<T, GmailError> {
         let response = self.send_request(units, build).await?;
-        response
-            .json::<T>()
+        let body = response
+            .text()
             .await
-            .map_err(|e| GmailError::Decode(e.to_string()))
+            .map_err(|e| GmailError::Decode(e.to_string()))?;
+        // Gmail answers some lists that have nothing in them, such as the
+        // filters of an account with none, with no body at all, not `{}`.
+        let body = if body.trim().is_empty() { "{}" } else { &body };
+        serde_json::from_str(body).map_err(|e| GmailError::Decode(e.to_string()))
     }
 
     /// Sends the request `build` makes and ignores the reply body.

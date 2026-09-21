@@ -556,3 +556,17 @@ async fn a_contact_photo_arrives_as_plain_bytes() {
         .unwrap();
     assert_eq!(photo, b"jpeg-bytes");
 }
+
+/// Gmail answers the filter list of an account that has none with an empty
+/// body, not `{}`. The Rules dialog showed a decode error for it.
+#[tokio::test]
+async fn an_account_with_no_filters_lists_none() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("GET"))
+        .and(path(format!("{API}/settings/filters")))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&server)
+        .await;
+    assert_eq!(client(&server).filters().await.unwrap(), vec![]);
+}

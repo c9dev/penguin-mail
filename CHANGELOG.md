@@ -14,6 +14,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - Updates download even while GitHub's download links are failing, and a
   brief server error no longer stops an update.
+- Rules open for an account that has none yet, instead of showing an
+  error.
+- The focus ring in a new message is a single thin line around the whole
+  row, with room around the text.
 
 ## 0.1.2 (2026-09-21)
 
