@@ -1,6 +1,7 @@
 [package]
 name = "mailrs"
 version.workspace = true
+license.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 description = "A Gmail client for the GNOME desktop"

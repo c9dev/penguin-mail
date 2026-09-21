@@ -6,6 +6,8 @@ members = ["domain", "gmail", "store", "sync", "pgp", "smime", "ai", "cli", "app
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.98"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/c9dev/penguin-mail"
 
 [workspace.dependencies]
 mailrs-domain = { path = "domain" }
