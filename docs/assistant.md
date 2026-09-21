@@ -11,10 +11,41 @@ assistant on the right. Ask it about your mail in plain words:
 - "Which mail I sent is still waiting on an answer?"
 - "Move everything from Trail Notes to Promotions."
 - "Make me a Hide My Email address for the bike shop."
+- "Mute this thread."
+- "Send my draft to the landlord tomorrow at 8."
+- "Reply to Theo with my Thanks template."
+- "Unsubscribe me from Trail Notes."
+- "What does the PDF Priya sent say about the deadline?"
+- "What is Mara's address at Fernwood?"
 
 It reads mail with the same tools you use: it lists mailboxes, searches
 Gmail, and reads conversations. It acts through the app too, so Ctrl+Z
-undoes what it archived, trashed, flagged, or marked.
+undoes what it archived, trashed, flagged, muted, or marked.
+
+It reads an attachment as text when the file is plain text, a web page or
+a PDF. PDFs need `pdftotext`, which the `poppler-utils` package installs;
+other files, such as pictures, it can name but not read.
+
+## Your calendar
+
+The assistant reads and changes the primary Google calendar of each
+account:
+
+- "What's on my calendar next week?"
+- "Find me an hour with nobody booked on Thursday or Friday."
+- "Put the kite festival on my calendar, the 14th to the 16th."
+- "Move the design crit to 3 pm and add Ann."
+- "Cancel Friday's dentist appointment."
+- "Say yes to Priya's roadmap review."
+
+Times are your local time. Free time counts from 09:00 to 18:00 on
+weekdays unless you ask for other hours or the weekend. Google tells the
+guests about every event the assistant adds, changes or deletes.
+
+The first time a calendar question comes up, Penguin Mail asks for
+permission to use the calendar, and Google confirms it in your browser.
+If the Google Cloud project Penguin Mail signs in with has the Calendar
+API switched off, a dialog says so and opens the page that turns it on.
 
 ## What it did
 
@@ -102,11 +133,18 @@ so it matches whatever version you have.
 
 By default, the assistant asks you before it:
 
-- sends mail,
+- sends mail, now or later,
 - turns an automatic reply on or off,
 - creates or deletes a Gmail filter,
 - blocks a sender or sorts one into a category,
-- moves more than 25 conversations to the Trash.
+- moves more than 25 conversations to the Trash,
+- deletes mail forever,
+- unsubscribes you from a list,
+- adds, changes or deletes a calendar event,
+- answers an invitation.
+
+Deleting forever needs one more Google permission, which Penguin Mail
+asks for the first time, as the Delete Forever button does.
 
 A card appears in the chat with the details and **Allow** and **Don't
 Allow** buttons. Turn **Ask Before Acting** off under Safety to skip the
