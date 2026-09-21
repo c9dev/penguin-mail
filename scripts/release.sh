@@ -51,24 +51,39 @@ cargo update -q --workspace
 # The translation template names the version in its header.
 scripts/update-po.sh >/dev/null
 
+# Changes are written up for people as they land, under "## Unreleased".
+# That section is the draft; the commits since the last release sit below
+# it, commented out, for anything the write-up missed.
 notes=$(mktemp)
 {
-    echo "# The changelog section for Penguin Mail $version. Cut or reword the lines"
-    echo "# someone installing the app would not care about. Lines starting with #"
-    echo "# are dropped. Leave nothing and the release stops."
-    scripts/changelog.sh draft
+    echo "# What changed in Penguin Mail $version, for the people who use it. One"
+    echo "# short line per change, in plain words, under ### New, ### Improved or"
+    echo "# ### Fixed. Lines starting with \"# \" are dropped. With no line starting"
+    echo "# \"- \" left, the release stops."
+    echo "#"
+    scripts/changelog.sh section Unreleased || true
+    echo
+    echo "# Commits since the last release, for reference:"
+    scripts/changelog.sh draft | sed 's/^/# /'
 } > "$notes"
 "${VISUAL:-${EDITOR:-nano}}" "$notes"
-body=$(grep -v '^#' "$notes" | sed -e '/./,$!d')
+body=$(grep -v -E '^#( |$)' "$notes" | sed -e '/./,$!d' | sed -e ':a' -e '/^\n*$/{$d;N;ba' -e '}')
 rm -f "$notes"
-[ -n "$(tr -d '[:space:]' <<<"$body")" ] || fail "the changelog section is empty"
+grep -q '^- ' <<<"$body" || fail "the changelog lists no changes"
 
+# The release takes the Unreleased section's place, and an empty Unreleased
+# heading goes back on top for the next round.
 section="## $version ($(date +%Y-%m-%d))
 
 $body"
-# The new section goes under the title, above the last release.
-awk -v s="$section" 'NR > 1 && /^## / && !done { print s; print ""; done = 1 } { print }
-    END { if (!done) { print ""; print s } }' CHANGELOG.md > CHANGELOG.md.new
+awk -v s="$section" '
+    /^## Unreleased/ { print; print ""; print s; print ""; skipping = 1; placed = 1; next }
+    skipping && /^## / { skipping = 0 }
+    skipping { next }
+    !placed && /^## / { print "## Unreleased"; print ""; print s; print ""; placed = 1 }
+    { print }
+    END { if (!placed) { print ""; print "## Unreleased"; print ""; print s } }
+' CHANGELOG.md > CHANGELOG.md.new
 mv CHANGELOG.md.new CHANGELOG.md
 
 echo "Running the gate for $version."

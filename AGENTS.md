@@ -107,6 +107,16 @@ a good icon look broken.
   adverbs propping up verbs. Comments explain why, in full sentences,
   matching the density of the code around them.
 
+## The changelog
+
+A change someone using the app would notice gets a line under
+`## Unreleased` in `CHANGELOG.md`, in the same commit, under `### New`,
+`### Improved` or `### Fixed`. Write it for that person: what they can now
+do or what stopped going wrong, in plain words, one line. "Search finds
+mail in every account again", not "Pass the account filter through to the
+listing". Refactors, tests, CI and docs get no line. `scripts/release.sh`
+turns the section into the release notes.
+
 ## Commits
 
 Subject: one plain sentence saying what changed for a person or for the
