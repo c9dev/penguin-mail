@@ -1660,23 +1660,23 @@ msgstr ""
 msgid "Not allowed"
 msgstr ""
 
-#: app/src/ui/assistant.rs:806
+#: app/src/ui/assistant.rs:829
 msgid "Result"
 msgstr ""
 
-#: app/src/ui/assistant.rs:814
+#: app/src/ui/assistant.rs:837
 msgid "Input"
 msgstr ""
 
-#: app/src/ui/assistant.rs:892
+#: app/src/ui/assistant.rs:915
 msgid "Running"
 msgstr ""
 
-#: app/src/ui/assistant.rs:893 app/src/ui/hide_my_email.rs:457
+#: app/src/ui/assistant.rs:916 app/src/ui/hide_my_email.rs:457
 msgid "Done"
 msgstr ""
 
-#: app/src/ui/assistant.rs:894
+#: app/src/ui/assistant.rs:917
 msgid "Failed"
 msgstr ""
 

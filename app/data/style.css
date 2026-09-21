@@ -168,16 +168,18 @@
    than the reply text, with a small chevron. */
 .assistant-step title { padding: 2px 2px; border-radius: 6px; font-size: 0.86em; }
 .assistant-step title:hover { background: alpha(currentColor, 0.06); }
+/* The row draws its own arrow after the status icon; GTK's goes. */
 .assistant-step title > expander {
-  min-width: 10px;
-  min-height: 10px;
-  -gtk-icon-size: 10px;
-  margin-right: 2px;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  -gtk-icon-source: none;
+  -gtk-icon-size: 0;
 }
 /* Dimmer than the reply, and the summary beside it dimmer still, so the
    answer is what the eye lands on. */
 .assistant-step-title { font-weight: 600; opacity: 0.72; }
-.assistant-step title > expander { opacity: 0.6; }
+.assistant-step-arrow { opacity: 0.6; }
 .assistant-step-body { margin-top: 4px; margin-bottom: 4px; }
 .assistant-thinking { margin-top: 2px; margin-bottom: 4px; }
 .assistant-detail {

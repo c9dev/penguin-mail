@@ -700,6 +700,16 @@ enum Mark {
     Failed,
 }
 
+/// The arrow a detail row shows: pointing at the title while folded, down
+/// while open.
+fn arrow_icon(open: bool) -> &'static str {
+    if open {
+        "pan-down-symbolic"
+    } else {
+        "pan-end-symbolic"
+    }
+}
+
 /// A row that folds to one line: an icon, a title, and a dim summary.
 struct Detail {
     expander: gtk::Expander,
@@ -725,8 +735,18 @@ impl Detail {
             .ellipsize(pango::EllipsizeMode::End)
             .css_classes(["dim-label"])
             .build();
-        let header = gtk::Box::builder().spacing(8).build();
+        // GtkExpander draws its own arrow before the whole label, which put
+        // it left of the status icon. Its arrow is hidden in the style
+        // sheet, and this one sits between the icon and the title.
+        let arrow = gtk::Image::builder()
+            .icon_name(arrow_icon(open))
+            .pixel_size(10)
+            .css_classes(["assistant-step-arrow"])
+            .build();
+        arrow.set_accessible_role(gtk::AccessibleRole::Presentation);
+        let header = gtk::Box::builder().spacing(6).build();
         header.append(&mark);
+        header.append(&arrow);
         header.append(&title);
         header.append(&summary);
         let expander = gtk::Expander::builder()
@@ -734,6 +754,9 @@ impl Detail {
             .expanded(open)
             .css_classes(["assistant-step"])
             .build();
+        expander.connect_expanded_notify(move |expander| {
+            arrow.set_icon_name(Some(arrow_icon(expander.is_expanded())));
+        });
         Detail {
             expander,
             mark,
