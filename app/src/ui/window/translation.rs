@@ -89,9 +89,17 @@ impl MainWindow {
             .iter()
             .map(|piece| piece.to_string())
             .collect();
+        // The thread the reader asked about. They may move on while the
+        // model works, and the card on screen then belongs to another
+        // thread, which this answer says nothing about.
+        let Some(asked_about) = view.read(|open| (open.account_id, open.thread_id.clone())) else {
+            return;
+        };
         view.translate.working();
         let (this, view) = (Rc::clone(self), Rc::clone(view));
         glib::spawn_future_local(async move {
+            let (account_id, thread_id) = asked_about;
+            let still_open = || view.is_showing(account_id, &thread_id);
             let answer = this
                 .core
                 .call(async move {
@@ -108,14 +116,18 @@ impl MainWindow {
                         &gettext("The model could not translate this: {reason}"),
                         &[("reason", &err.to_string())],
                     );
-                    view.translate.problem(&problem);
+                    if still_open() {
+                        view.translate.problem(&problem);
+                    }
                     this.toast(&problem);
                     return;
                 }
             };
             if said.iter().all(Option::is_none) {
                 let problem = gettext("The model sent nothing back to put in the message.");
-                view.translate.problem(&problem);
+                if still_open() {
+                    view.translate.problem(&problem);
+                }
                 this.toast(&problem);
                 return;
             }
@@ -152,7 +164,9 @@ impl MainWindow {
                 })
             });
             let Some(translation) = made else {
-                view.translate.hide();
+                if still_open() {
+                    view.translate.hide();
+                }
                 return;
             };
             view.translated(message_id, translation);

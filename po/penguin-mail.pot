@@ -4253,11 +4253,11 @@ msgstr ""
 msgid "Allow Changes to Gmail Settings"
 msgstr ""
 
-#: app/src/ui/window/translation.rs:108
+#: app/src/ui/window/translation.rs:116
 msgid "The model could not translate this: {reason}"
 msgstr ""
 
-#: app/src/ui/window/translation.rs:117
+#: app/src/ui/window/translation.rs:127
 msgid "The model sent nothing back to put in the message."
 msgstr ""
 

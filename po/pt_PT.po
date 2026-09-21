@@ -4399,11 +4399,11 @@ msgstr "Não foi possível bloquear o remetente: {reason}"
 msgid "Allow Changes to Gmail Settings"
 msgstr "Permitir alterações às definições do Gmail"
 
-#: app/src/ui/window/translation.rs:108
+#: app/src/ui/window/translation.rs:116
 msgid "The model could not translate this: {reason}"
 msgstr "O modelo não conseguiu traduzir isto: {reason}"
 
-#: app/src/ui/window/translation.rs:117
+#: app/src/ui/window/translation.rs:127
 msgid "The model sent nothing back to put in the message."
 msgstr "O modelo não devolveu nada para pôr na mensagem."
 
