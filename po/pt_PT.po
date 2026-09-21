@@ -79,19 +79,19 @@ msgstr "O Penguin Mail {version} está atualizado"
 msgid "Could not reach GitHub to check for updates"
 msgstr "Não foi possível contactar o GitHub para procurar atualizações"
 
-#: app/src/assistant/mod.rs:97
+#: app/src/assistant/mod.rs:98
 msgid "The assistant is off. Choose a model in Preferences."
 msgstr "O assistente está desligado. Escolha um modelo nas Preferências."
 
-#: app/src/assistant/mod.rs:102
+#: app/src/assistant/mod.rs:103
 msgid "Choose a model for the local server in Preferences."
 msgstr "Escolha um modelo para o servidor local nas Preferências."
 
-#: app/src/assistant/mod.rs:114
+#: app/src/assistant/mod.rs:115
 msgid "Add an Anthropic API key in Preferences."
 msgstr "Adicione uma chave de API da Anthropic nas Preferências."
 
-#: app/src/assistant/mod.rs:124
+#: app/src/assistant/mod.rs:125
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr ""
 "O Claude Code não está instalado. Instale-o, inicie sessão e tente de novo."
@@ -153,6 +153,144 @@ msgid ""
 msgstr ""
 "Mover o correio de {sender} para {category} em {account} e criar uma regra "
 "do Gmail para o correio futuro?"
+
+#: app/src/assistant/turn.rs:57
+msgid "Waiting for the model…"
+msgstr "À espera do modelo…"
+
+#: app/src/assistant/turn.rs:58 app/src/assistant/turn.rs:259
+msgid "Thinking…"
+msgstr "A pensar…"
+
+#: app/src/assistant/turn.rs:59
+msgid "{activity}…"
+msgstr "{activity}…"
+
+#: app/src/assistant/turn.rs:60
+msgid "Waiting for your answer…"
+msgstr "À espera da sua resposta…"
+
+#: app/src/assistant/turn.rs:61
+msgid "Writing…"
+msgstr "A escrever…"
+
+#: app/src/assistant/turn.rs:264
+msgid "Thought for {count} second"
+msgid_plural "Thought for {count} seconds"
+msgstr[0] "Pensou durante {count} segundo"
+msgstr[1] "Pensou durante {count} segundos"
+
+#: app/src/assistant/turn.rs:277
+msgid "Looking at the screen"
+msgstr "A olhar para o ecrã"
+
+#: app/src/assistant/turn.rs:278
+msgid "Reading a mailbox"
+msgstr "A ler uma caixa de correio"
+
+#: app/src/assistant/turn.rs:279
+msgid "Searching mail"
+msgstr "A pesquisar correio"
+
+#: app/src/assistant/turn.rs:280
+msgid "Reading a conversation"
+msgstr "A ler uma conversa"
+
+#: app/src/assistant/turn.rs:281
+msgid "Organizing mail"
+msgstr "A organizar correio"
+
+#: app/src/assistant/turn.rs:282
+msgid "Changing labels"
+msgstr "A alterar etiquetas"
+
+#: app/src/assistant/turn.rs:283
+msgid "Setting reminders"
+msgstr "A definir lembretes"
+
+#: app/src/assistant/turn.rs:284
+msgid "Writing a draft"
+msgstr "A escrever um rascunho"
+
+#: app/src/assistant/turn.rs:285
+msgid "Sending mail"
+msgstr "A enviar correio"
+
+#: app/src/assistant/turn.rs:286
+msgid "Blocking a sender"
+msgstr "A bloquear um remetente"
+
+#: app/src/assistant/turn.rs:287
+msgid "Checking the automatic reply"
+msgstr "A verificar a resposta automática"
+
+#: app/src/assistant/turn.rs:288
+msgid "Setting the automatic reply"
+msgstr "A definir a resposta automática"
+
+#: app/src/assistant/turn.rs:289
+msgid "Reading rules"
+msgstr "A ler regras"
+
+#: app/src/assistant/turn.rs:290
+msgid "Creating a rule"
+msgstr "A criar uma regra"
+
+#: app/src/assistant/turn.rs:291
+msgid "Deleting a rule"
+msgstr "A eliminar uma regra"
+
+#: app/src/assistant/turn.rs:292
+msgid "Creating a label"
+msgstr "A criar uma etiqueta"
+
+#: app/src/assistant/turn.rs:293
+msgid "Reading settings"
+msgstr "A ler definições"
+
+#: app/src/assistant/turn.rs:294
+msgid "Changing a setting"
+msgstr "A alterar uma definição"
+
+#: app/src/assistant/turn.rs:295
+msgid "Setting a signature"
+msgstr "A definir uma assinatura"
+
+#: app/src/assistant/turn.rs:296
+msgid "Updating VIPs"
+msgstr "A atualizar os VIP"
+
+#: app/src/assistant/turn.rs:297
+msgid "Creating a smart mailbox"
+msgstr "A criar uma caixa inteligente"
+
+#: app/src/assistant/turn.rs:298
+msgid "Opening a conversation"
+msgstr "A abrir uma conversa"
+
+#: app/src/assistant/turn.rs:299
+msgid "Sorting a sender"
+msgstr "A organizar um remetente"
+
+#: app/src/assistant/turn.rs:300
+msgid "Dismissing a follow-up"
+msgstr "A dispensar um seguimento"
+
+#: app/src/assistant/turn.rs:301
+msgid "Reading hidden addresses"
+msgstr "A ler endereços ocultos"
+
+#: app/src/assistant/turn.rs:302
+msgid "Making a hidden address"
+msgstr "A criar um endereço oculto"
+
+#: app/src/assistant/turn.rs:303
+msgid "Changing a hidden address"
+msgstr "A alterar um endereço oculto"
+
+#: app/src/assistant/turn.rs:304
+msgid "Working"
+msgstr "A trabalhar"
 
 #: app/src/compose.rs:423
 msgid "Add at least one recipient."
@@ -792,131 +930,131 @@ msgstr "Para {person}"
 msgid "In {label}"
 msgstr "Em {label}"
 
-#: app/src/settings/mod.rs:132 app/src/settings/mod.rs:372
+#: app/src/settings/mod.rs:135 app/src/settings/mod.rs:376
 msgid "Off"
 msgstr "Desligado"
 
-#: app/src/settings/mod.rs:133
+#: app/src/settings/mod.rs:136
 msgid "Local or OpenAI-compatible server"
 msgstr "Servidor local ou compatível com a OpenAI"
 
-#: app/src/settings/mod.rs:134
+#: app/src/settings/mod.rs:137
 msgid "Anthropic API key"
 msgstr "Chave de API da Anthropic"
 
-#: app/src/settings/mod.rs:135
+#: app/src/settings/mod.rs:138
 msgid "Claude subscription (Claude Code)"
 msgstr "Subscrição do Claude (Claude Code)"
 
-#: app/src/settings/mod.rs:231
+#: app/src/settings/mod.rs:235
 msgid "Rich text"
 msgstr "Texto formatado"
 
-#: app/src/settings/mod.rs:232
+#: app/src/settings/mod.rs:236
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:279
+#: app/src/settings/mod.rs:283
 msgid "When opened"
 msgstr "Ao abrir"
 
-#: app/src/settings/mod.rs:280
+#: app/src/settings/mod.rs:284
 msgid "After 2 seconds"
 msgstr "Ao fim de 2 segundos"
 
-#: app/src/settings/mod.rs:281
+#: app/src/settings/mod.rs:285
 msgid "Only when I choose"
 msgstr "Apenas quando eu escolher"
 
-#: app/src/settings/mod.rs:297
+#: app/src/settings/mod.rs:301
 msgid "Ask each time"
 msgstr "Perguntar de cada vez"
 
-#: app/src/settings/mod.rs:298
+#: app/src/settings/mod.rs:302
 msgid "Always load"
 msgstr "Carregar sempre"
 
-#: app/src/settings/mod.rs:332
+#: app/src/settings/mod.rs:336
 msgid "Small"
 msgstr "Pequeno"
 
-#: app/src/settings/mod.rs:333
+#: app/src/settings/mod.rs:337
 msgid "Default"
 msgstr "Predefinido"
 
-#: app/src/settings/mod.rs:334
+#: app/src/settings/mod.rs:338
 msgid "Large"
 msgstr "Grande"
 
-#: app/src/settings/mod.rs:335
+#: app/src/settings/mod.rs:339
 msgid "Larger"
 msgstr "Maior"
 
-#: app/src/settings/mod.rs:373
+#: app/src/settings/mod.rs:377
 msgid "5 seconds"
 msgstr "5 segundos"
 
-#: app/src/settings/mod.rs:374
+#: app/src/settings/mod.rs:378
 msgid "10 seconds"
 msgstr "10 segundos"
 
-#: app/src/settings/mod.rs:375
+#: app/src/settings/mod.rs:379
 msgid "20 seconds"
 msgstr "20 segundos"
 
-#: app/src/settings/mod.rs:376
+#: app/src/settings/mod.rs:380
 msgid "30 seconds"
 msgstr "30 segundos"
 
-#: app/src/settings/mod.rs:393
+#: app/src/settings/mod.rs:397
 msgid "Follow system"
 msgstr "Seguir o sistema"
 
-#: app/src/settings/mod.rs:394
+#: app/src/settings/mod.rs:398
 msgid "Light"
 msgstr "Claro"
 
-#: app/src/settings/mod.rs:395
+#: app/src/settings/mod.rs:399
 msgid "Dark"
 msgstr "Escuro"
 
-#: app/src/settings/mod.rs:405
+#: app/src/settings/mod.rs:409
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "A cada segundo"
 msgstr[1] "A cada {count} segundos"
 
-#: app/src/settings/mod.rs:413
+#: app/src/settings/mod.rs:417
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "A cada minuto"
 msgstr[1] "A cada {count} minutos"
 
-#: app/src/settings/mod.rs:430
+#: app/src/settings/mod.rs:434
 msgid "2 weeks"
 msgstr "2 semanas"
 
-#: app/src/settings/mod.rs:431
+#: app/src/settings/mod.rs:435
 msgid "30 days"
 msgstr "30 dias"
 
-#: app/src/settings/mod.rs:432
+#: app/src/settings/mod.rs:436
 msgid "90 days"
 msgstr "90 dias"
 
-#: app/src/settings/mod.rs:433
+#: app/src/settings/mod.rs:437
 msgid "1 year"
 msgstr "1 ano"
 
-#: app/src/settings/mod.rs:440
+#: app/src/settings/mod.rs:444
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:441
+#: app/src/settings/mod.rs:445
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:442
+#: app/src/settings/mod.rs:446
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -1209,147 +1347,35 @@ msgstr "Mostrar registo"
 msgid "The update to {version} failed"
 msgstr "A atualização para a versão {version} falhou"
 
-#: app/src/ui/assistant.rs:21
+#: app/src/ui/assistant.rs:30
 msgid "Summarize this conversation"
 msgstr "Resume esta conversa"
 
-#: app/src/ui/assistant.rs:22
+#: app/src/ui/assistant.rs:31
 msgid "What needs a reply today?"
 msgstr "O que precisa de resposta hoje?"
 
-#: app/src/ui/assistant.rs:23
+#: app/src/ui/assistant.rs:32
 msgid "Archive newsletters older than a week"
 msgstr "Arquiva as newsletters com mais de uma semana"
 
-#: app/src/ui/assistant.rs:24
+#: app/src/ui/assistant.rs:33
 msgid "Set an out-of-office reply for next week"
 msgstr "Define uma resposta de ausência para a próxima semana"
 
-#: app/src/ui/assistant.rs:25
+#: app/src/ui/assistant.rs:34
 msgid "Draft a reply to the open conversation"
 msgstr "Redige uma resposta para a conversa aberta"
 
-#: app/src/ui/assistant.rs:33
-msgid "Looking at the screen"
-msgstr "A olhar para o ecrã"
-
-#: app/src/ui/assistant.rs:34
-msgid "Reading a mailbox"
-msgstr "A ler uma caixa de correio"
-
-#: app/src/ui/assistant.rs:35
-msgid "Searching mail"
-msgstr "A pesquisar correio"
-
-#: app/src/ui/assistant.rs:36
-msgid "Reading a conversation"
-msgstr "A ler uma conversa"
-
-#: app/src/ui/assistant.rs:37
-msgid "Organizing mail"
-msgstr "A organizar correio"
-
-#: app/src/ui/assistant.rs:38
-msgid "Changing labels"
-msgstr "A alterar etiquetas"
-
-#: app/src/ui/assistant.rs:39
-msgid "Setting reminders"
-msgstr "A definir lembretes"
-
-#: app/src/ui/assistant.rs:40
-msgid "Writing a draft"
-msgstr "A escrever um rascunho"
-
-#: app/src/ui/assistant.rs:41
-msgid "Sending mail"
-msgstr "A enviar correio"
-
-#: app/src/ui/assistant.rs:42
-msgid "Blocking a sender"
-msgstr "A bloquear um remetente"
-
-#: app/src/ui/assistant.rs:43
-msgid "Checking the automatic reply"
-msgstr "A verificar a resposta automática"
-
-#: app/src/ui/assistant.rs:44
-msgid "Setting the automatic reply"
-msgstr "A definir a resposta automática"
-
-#: app/src/ui/assistant.rs:45
-msgid "Reading rules"
-msgstr "A ler regras"
-
-#: app/src/ui/assistant.rs:46
-msgid "Creating a rule"
-msgstr "A criar uma regra"
-
-#: app/src/ui/assistant.rs:47
-msgid "Deleting a rule"
-msgstr "A eliminar uma regra"
-
-#: app/src/ui/assistant.rs:48
-msgid "Creating a label"
-msgstr "A criar uma etiqueta"
-
-#: app/src/ui/assistant.rs:49
-msgid "Reading settings"
-msgstr "A ler definições"
-
-#: app/src/ui/assistant.rs:50
-msgid "Changing a setting"
-msgstr "A alterar uma definição"
-
-#: app/src/ui/assistant.rs:51
-msgid "Setting a signature"
-msgstr "A definir uma assinatura"
-
-#: app/src/ui/assistant.rs:52
-msgid "Updating VIPs"
-msgstr "A atualizar os VIP"
-
-#: app/src/ui/assistant.rs:53
-msgid "Creating a smart mailbox"
-msgstr "A criar uma caixa inteligente"
-
-#: app/src/ui/assistant.rs:54
-msgid "Opening a conversation"
-msgstr "A abrir uma conversa"
-
-#: app/src/ui/assistant.rs:55
-msgid "Sorting a sender"
-msgstr "A organizar um remetente"
-
-#: app/src/ui/assistant.rs:56
-msgid "Dismissing a follow-up"
-msgstr "A dispensar um seguimento"
-
-#: app/src/ui/assistant.rs:57
-msgid "Reading hidden addresses"
-msgstr "A ler endereços ocultos"
-
-#: app/src/ui/assistant.rs:58
-msgid "Making a hidden address"
-msgstr "A criar um endereço oculto"
-
-#: app/src/ui/assistant.rs:59
-msgid "Changing a hidden address"
-msgstr "A alterar um endereço oculto"
-
-#: app/src/ui/assistant.rs:60
-msgid "Working"
-msgstr "A trabalhar"
-
-#: app/src/ui/assistant.rs:96 app/src/ui/assistant_prefs.rs:22
+#: app/src/ui/assistant.rs:82 app/src/ui/assistant_prefs.rs:22
 msgid "Assistant"
 msgstr "Assistente"
 
-#: app/src/ui/assistant.rs:99 app/src/ui/assistant.rs:101
+#: app/src/ui/assistant.rs:85 app/src/ui/assistant.rs:87
 msgid "New Chat"
 msgstr "Nova conversa"
 
-#: app/src/ui/assistant.rs:124
+#: app/src/ui/assistant.rs:110
 msgid ""
 "Ask about your mail, or tell me what to tidy. I can search, summarize, sort, "
 "draft, and change settings."
@@ -1357,29 +1383,29 @@ msgstr ""
 "Pergunte sobre o seu correio ou diga-me o que arrumar. Sei pesquisar, "
 "resumir, organizar, redigir e alterar definições."
 
-#: app/src/ui/assistant.rs:141
+#: app/src/ui/assistant.rs:134
 msgid "Ask Penguin Mail…"
 msgstr "Pergunte ao Penguin Mail…"
 
-#: app/src/ui/assistant.rs:146 app/src/ui/assistant.rs:150
-#: app/src/ui/assistant.rs:376 app/src/ui/composer/mod.rs:206
+#: app/src/ui/assistant.rs:139 app/src/ui/assistant.rs:143
+#: app/src/ui/assistant.rs:393 app/src/ui/composer/mod.rs:206
 #: app/src/ui/window.rs:3269
 msgid "Send"
 msgstr "Enviar"
 
-#: app/src/ui/assistant.rs:149
+#: app/src/ui/assistant.rs:142
 msgid "Ask Penguin Mail"
 msgstr "Perguntar ao Penguin Mail"
 
-#: app/src/ui/assistant.rs:165
+#: app/src/ui/assistant.rs:158
 msgid "Choose a Model"
 msgstr "Escolher um modelo"
 
-#: app/src/ui/assistant.rs:171
+#: app/src/ui/assistant.rs:164
 msgid "Set Up the Assistant"
 msgstr "Configurar o assistente"
 
-#: app/src/ui/assistant.rs:173
+#: app/src/ui/assistant.rs:166
 msgid ""
 "Use a local model from LM Studio, Ollama, or Unsloth, an Anthropic API key, "
 "or your Claude subscription."
@@ -1387,31 +1413,43 @@ msgstr ""
 "Use um modelo local do LM Studio, do Ollama ou do Unsloth, uma chave de API "
 "da Anthropic ou a sua subscrição do Claude."
 
-#: app/src/ui/assistant.rs:375
+#: app/src/ui/assistant.rs:392
 msgid "Stop"
 msgstr "Parar"
 
-#: app/src/ui/assistant.rs:498
+#: app/src/ui/assistant.rs:490
 msgid "Don't Allow"
 msgstr "Não permitir"
 
-#: app/src/ui/assistant.rs:500
+#: app/src/ui/assistant.rs:492
 msgid "Allow"
 msgstr "Permitir"
 
-#: app/src/ui/assistant.rs:520
+#: app/src/ui/assistant.rs:523
 msgid "Allowed"
 msgstr "Permitido"
 
-#: app/src/ui/assistant.rs:522
+#: app/src/ui/assistant.rs:525
 msgid "Not allowed"
 msgstr "Não permitido"
 
-#: app/src/ui/assistant.rs:565 app/src/ui/hide_my_email.rs:457
+#: app/src/ui/assistant.rs:740
+msgid "Result"
+msgstr "Resultado"
+
+#: app/src/ui/assistant.rs:748
+msgid "Input"
+msgstr "Entrada"
+
+#: app/src/ui/assistant.rs:826
+msgid "Running"
+msgstr "Em curso"
+
+#: app/src/ui/assistant.rs:827 app/src/ui/hide_my_email.rs:457
 msgid "Done"
 msgstr "Concluído"
 
-#: app/src/ui/assistant.rs:566
+#: app/src/ui/assistant.rs:828
 msgid "Failed"
 msgstr "Falhou"
 
@@ -3836,7 +3874,10 @@ msgid ""
 "The Google Cloud project Penguin Mail signs in with has the {service} "
 "switched off, so Google refuses before it can ask for your permission. Turn "
 "it on, wait a minute, and try again."
-msgstr "O projeto do Google Cloud com que o Penguin Mail inicia sessão tem a {service} desligada, por isso a Google recusa antes de poder pedir a sua autorização. Ligue-a, espere um minuto e tente de novo."
+msgstr ""
+"O projeto do Google Cloud com que o Penguin Mail inicia sessão tem a "
+"{service} desligada, por isso a Google recusa antes de poder pedir a sua "
+"autorização. Ligue-a, espere um minuto e tente de novo."
 
 #: app/src/ui/window.rs:1829
 msgid "Open Google Cloud"

@@ -123,6 +123,10 @@ pub enum Change {
     OfferedToGnome(String),
     Ai(AiChange),
     /// Open the assistant's thinking and tool rows as they appear.
+    // The Show Details Expanded switch on the AI page sends this. That page
+    // is being rebuilt apart from the pane, so until it lands only the tests
+    // make the change.
+    #[allow(dead_code)]
     AssistantDetailsExpanded(bool),
 }
 

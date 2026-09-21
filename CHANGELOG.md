@@ -10,6 +10,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Preferences has a Contacts & Calendar page. Google contacts turn on and
   off for each account, and it shows which accounts GNOME Calendar can see,
   with a button to add the others.
+- The assistant shows what the model thought and each tool it ran, as
+  rows under your question that open to show the details, with a line
+  underneath saying what it is doing now: waiting, thinking, running a
+  tool, waiting for your answer, or writing.
 
 ### Improved
 
@@ -18,6 +22,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Asking the assistant something scrolls the chat down to your question
+  when the chat is already full. The chat glides down with the answer
+  only while you are at the end, so reading an earlier answer keeps your
+  place.
 - Updates download even while GitHub's download links are failing, and a
   brief server error no longer stops an update.
 - Rules open for an account that has none yet, instead of showing an
