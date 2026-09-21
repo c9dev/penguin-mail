@@ -5,8 +5,8 @@ use mailrs_domain::{AccountId, EpochMillis, Filter, MessageBody, MessageMeta, Va
 use mailrs_gmail::body::extract_body;
 use mailrs_gmail::convert::message_meta;
 use mailrs_gmail::{
-    AccountQuota, Answered, Busy, ConnectionsPage, GmailClient, GmailError, HistoryPage,
-    LabelColor, MessagePage, Profile, RemoteLabel, SendAs, html_to_text,
+    AccountQuota, Answered, Busy, ConnectionsPage, Event, EventFields, GmailClient, GmailError,
+    HistoryPage, LabelColor, MessagePage, Profile, RemoteLabel, SendAs, html_to_text,
 };
 
 /// Page size for window listings.
@@ -201,6 +201,32 @@ pub trait GmailApi: Send + Sync + 'static {
         from: EpochMillis,
         to: EpochMillis,
     ) -> impl Future<Output = Result<Vec<Busy>, GmailError>> + Send;
+
+    /// Every event on the account's primary calendar that overlaps `from`
+    /// to `to`, in the order they start. Answers `GmailError::MissingScope`
+    /// until the account grants the calendar permission, as the other
+    /// calendar calls do.
+    fn events_between(
+        &self,
+        from: EpochMillis,
+        to: EpochMillis,
+    ) -> impl Future<Output = Result<Vec<Event>, GmailError>> + Send;
+
+    /// Puts a new event on the primary calendar and invites its guests.
+    fn create_event(
+        &self,
+        fields: &EventFields,
+    ) -> impl Future<Output = Result<Event, GmailError>> + Send;
+
+    /// Changes the fields `fields` sets on event `id` and tells its guests.
+    fn update_event(
+        &self,
+        id: &str,
+        fields: &EventFields,
+    ) -> impl Future<Output = Result<Event, GmailError>> + Send;
+
+    /// Takes event `id` off the primary calendar and tells its guests.
+    fn delete_event(&self, id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
 }
 
 /// Gmail for one account: the real client, or the in-memory fake behind
@@ -382,6 +408,26 @@ impl GmailApi for AnyGmail {
         to: EpochMillis,
     ) -> Result<Vec<Busy>, GmailError> {
         forward!(self, busy_between(from, to))
+    }
+
+    async fn events_between(
+        &self,
+        from: EpochMillis,
+        to: EpochMillis,
+    ) -> Result<Vec<Event>, GmailError> {
+        forward!(self, events_between(from, to))
+    }
+
+    async fn create_event(&self, fields: &EventFields) -> Result<Event, GmailError> {
+        forward!(self, create_event(fields))
+    }
+
+    async fn update_event(&self, id: &str, fields: &EventFields) -> Result<Event, GmailError> {
+        forward!(self, update_event(id, fields))
+    }
+
+    async fn delete_event(&self, id: &str) -> Result<(), GmailError> {
+        forward!(self, delete_event(id))
     }
 }
 
@@ -607,6 +653,29 @@ impl GmailApi for AccountClient {
             return Ok(Vec::new());
         };
         self.client.busy_between(&from, &to).await
+    }
+
+    async fn events_between(
+        &self,
+        from: EpochMillis,
+        to: EpochMillis,
+    ) -> Result<Vec<Event>, GmailError> {
+        let (Some(from), Some(to)) = (rfc3339(from), rfc3339(to)) else {
+            return Ok(Vec::new());
+        };
+        self.client.events_between(&from, &to).await
+    }
+
+    async fn create_event(&self, fields: &EventFields) -> Result<Event, GmailError> {
+        self.client.create_event(fields).await
+    }
+
+    async fn update_event(&self, id: &str, fields: &EventFields) -> Result<Event, GmailError> {
+        self.client.update_event(id, fields).await
+    }
+
+    async fn delete_event(&self, id: &str) -> Result<(), GmailError> {
+        self.client.delete_event(id).await
     }
 
     async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {

@@ -17,9 +17,9 @@ use mailrs_domain::{
     Address, EpochMillis, Filter, MessageBody, MessageMeta, Vacation, system_label,
 };
 use mailrs_gmail::{
-    AccountQuota, Answered, BATCH_LIMIT, Busy, ConnectionsPage, GmailError, HistoryChange,
-    HistoryPage, LabelColor, MessagePage, MessageRef, Person, Priority, Profile, QuotaLimiter,
-    RemoteLabel, SendAs, cost, limiter,
+    AccountQuota, Answered, BATCH_LIMIT, Busy, ConnectionsPage, Event, EventFields, GmailError,
+    Guest, HistoryChange, HistoryPage, LabelColor, MessagePage, MessageRef, Person, Priority,
+    Profile, QuotaLimiter, RemoteLabel, SendAs, cost, limiter,
 };
 
 use crate::api::{DraftRef, GmailApi, SavedDraft};
@@ -84,6 +84,11 @@ pub struct FakeState {
     /// The occurrence each answer named, oldest first, and `None` for an
     /// answer that covered the whole series.
     pub answered_occurrences: Vec<Option<EpochMillis>>,
+    /// The events on the primary calendar that the event calls list and
+    /// change. Kept apart from `calendar` and `busy`, which stand in for
+    /// the calls an invitation makes.
+    pub events: Vec<Event>,
+    next_event: u32,
 }
 
 /// Calls made and quota units spent, priced from Gmail's usage-limits
@@ -181,6 +186,8 @@ impl FakeGmail {
                 calendar: HashMap::new(),
                 busy: Vec::new(),
                 answered_occurrences: Vec::new(),
+                events: Vec::new(),
+                next_event: 0,
             }),
         }
     }
@@ -706,6 +713,65 @@ impl GmailApi for FakeGmail {
         }))
     }
 
+    async fn events_between(
+        &self,
+        from: EpochMillis,
+        to: EpochMillis,
+    ) -> Result<Vec<Event>, GmailError> {
+        self.call("calendar.events.list", 0).await?;
+        let mut events: Vec<Event> = self.with(|s| {
+            s.events
+                .iter()
+                .filter(|event| {
+                    crate::calendar::span(event)
+                        .is_some_and(|(starts, ends)| starts < to && ends.max(starts + 1) > from)
+                })
+                .cloned()
+                .collect()
+        });
+        events.sort_by_key(|event| crate::calendar::span(event).map(|(starts, _)| starts));
+        Ok(events)
+    }
+
+    async fn create_event(&self, fields: &EventFields) -> Result<Event, GmailError> {
+        self.call("calendar.events.insert", 0).await?;
+        Ok(self.with(|s| {
+            s.next_event += 1;
+            let mut event = Event {
+                id: format!("event-{}", s.next_event),
+                uid: format!("event-{}@google.com", s.next_event),
+                busy: true,
+                ..Event::default()
+            };
+            apply(&mut event, fields);
+            s.events.push(event.clone());
+            event
+        }))
+    }
+
+    async fn update_event(&self, id: &str, fields: &EventFields) -> Result<Event, GmailError> {
+        self.call("calendar.events.patch", 0).await?;
+        self.with(|s| {
+            let event = s.events.iter_mut().find(|e| e.id == id)?;
+            apply(event, fields);
+            Some(event.clone())
+        })
+        .ok_or(GmailError::NotFound)
+    }
+
+    async fn delete_event(&self, id: &str) -> Result<(), GmailError> {
+        self.call("calendar.events.delete", 0).await?;
+        self.with(|s| {
+            let before = s.events.len();
+            s.events.retain(|e| e.id != id);
+            if s.events.len() == before {
+                Err(GmailError::NotFound)
+            } else {
+                Ok(())
+            }
+        })
+    }
+
     async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {
         self.call("users.labels.create", cost::LABELS).await?;
         Ok(self.with(|s| {
@@ -862,5 +928,43 @@ impl GmailApi for FakeGmail {
     async fn contact_photo(&self, url: &str) -> Result<Vec<u8>, GmailError> {
         self.with(|s| s.photos.get(url).cloned())
             .ok_or(GmailError::NotFound)
+    }
+}
+
+/// Writes what `fields` sets onto `event`, as Google's patch does. A guest
+/// who stays on a new list keeps the answer they gave.
+fn apply(event: &mut Event, fields: &EventFields) {
+    if let Some(summary) = &fields.summary {
+        event.summary = summary.clone();
+    }
+    if let Some(start) = &fields.start {
+        event.start = Some(start.clone());
+    }
+    if let Some(end) = &fields.end {
+        event.end = Some(end.clone());
+    }
+    if let Some(location) = &fields.location {
+        event.location = location.clone();
+    }
+    if let Some(description) = &fields.description {
+        event.description = description.clone();
+    }
+    if let Some(guests) = &fields.guests {
+        event.guests = guests
+            .iter()
+            .map(|email| {
+                event
+                    .guests
+                    .iter()
+                    .find(|g| g.email.eq_ignore_ascii_case(email))
+                    .cloned()
+                    .unwrap_or_else(|| Guest {
+                        email: email.clone(),
+                        name: None,
+                        answer: "needsAction".into(),
+                        me: false,
+                    })
+            })
+            .collect();
     }
 }

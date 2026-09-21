@@ -4,6 +4,7 @@ mod account;
 mod actions;
 mod api;
 mod backoff;
+pub mod calendar;
 pub mod config;
 mod connect;
 pub mod contacts;
@@ -37,6 +38,7 @@ pub use actions::{Accounts, Failure, History, MailAction, MailActions, Outcome, 
 pub use api::AnyGmail;
 pub use api::{AccountClient, DraftRef, GmailApi, LIST_PAGE_SIZE, SavedDraft};
 pub use backoff::{MOST_TRIES, backoff_delay, poll_offset, retry_delay, with_jitter};
+pub use calendar::Calendar;
 pub use connect::connect_account;
 pub use contacts::{Card, ContactBook, Refreshed};
 pub use engine::{EngineConfig, SyncEngine};

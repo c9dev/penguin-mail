@@ -255,6 +255,57 @@ async fn an_answer_reaches_the_calendar_and_comes_back_on_reopening() {
 }
 
 #[tokio::test]
+async fn a_message_is_answered_from_the_invitation_it_carries() {
+    let h = harness().await;
+    let invitations = invitations(&h);
+    h.fake.with(|s| {
+        s.calendar.insert(UID.into(), None);
+        s.bodies.insert(
+            "m1".into(),
+            mailrs_domain::MessageBody {
+                calendar: Some(invite(0, "20260310T090000Z")),
+                ..Default::default()
+            },
+        );
+        s.bodies.insert(
+            "m2".into(),
+            mailrs_domain::MessageBody {
+                calendar: Some(cancellation(1)),
+                ..Default::default()
+            },
+        );
+        s.bodies
+            .insert("m3".into(), mailrs_domain::MessageBody::default());
+    });
+
+    let (invitation, sent) = invitations
+        .answer_message(h.account_id, "m1", "me@example.com", Answer::Yes, 1_000)
+        .await
+        .unwrap()
+        .expect("the message holds an invitation");
+    assert_eq!(invitation.summary, "Design review");
+    assert_eq!(sent.told, Told::Calendar);
+    assert_eq!(h.fake.with(|s| s.calendar[UID]), Some(Answer::Yes));
+    let reopened = invitations
+        .open(h.account_id, "m1", &invite(0, "20260310T090000Z"), 2_000)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(reopened.answer, Some(Answer::Yes), "the card shows it too");
+
+    for nothing in ["m2", "m3"] {
+        assert!(
+            invitations
+                .answer_message(h.account_id, nothing, "me@example.com", Answer::Yes, 3_000)
+                .await
+                .unwrap()
+                .is_none(),
+            "{nothing} waits on no answer"
+        );
+    }
+}
+
+#[tokio::test]
 async fn a_newer_version_asks_again() {
     let h = harness().await;
     let invitations = invitations(&h);

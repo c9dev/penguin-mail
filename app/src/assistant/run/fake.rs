@@ -15,9 +15,11 @@ use mailrs_domain::{
     LabelKind, MessageBody, MessageMeta, ThreadSummary, Vacation,
 };
 use mailrs_gmail::{
-    Answered, GmailError, HistoryPage, LabelColor, MessagePage, MessageRef, Profile, RemoteLabel,
+    Answered, Event, EventFields, GmailError, Guest, HistoryPage, LabelColor, MessagePage,
+    MessageRef, Profile, RemoteLabel,
 };
 use mailrs_store::{Db, accounts, labels, messages};
+use mailrs_sync::calendar::span;
 use mailrs_sync::{
     AccountSettings, AccountSync, Accounts, DraftRef, GmailApi, MailAction, MailActions, Mailboxes,
     Outcome, Permitted, SavedDraft, View,
@@ -49,6 +51,17 @@ pub struct Inbox {
     /// False until the account grants the settings permission, as Gmail
     /// behaves before the user says yes.
     pub settings_allowed: bool,
+    /// The events on the primary calendar.
+    pub events: Vec<Event>,
+    /// False until the account grants the calendar permission.
+    pub calendar_allowed: bool,
+    /// Set to the page that turns the Calendar API on, to play a Google
+    /// Cloud project that has it switched off.
+    pub calendar_off: Option<String>,
+    /// False until the account grants the delete permission.
+    pub delete_allowed: bool,
+    /// Attachment bytes by message id and attachment id.
+    pub attachments: HashMap<(String, String), Vec<u8>>,
     next_id: u32,
 }
 
@@ -56,6 +69,8 @@ impl Gmail {
     pub fn new() -> Gmail {
         Gmail(Mutex::new(Inbox {
             settings_allowed: true,
+            calendar_allowed: true,
+            delete_allowed: true,
             ..Inbox::default()
         }))
     }
@@ -75,6 +90,19 @@ impl Gmail {
             true => Ok(()),
             false => Err(GmailError::MissingScope),
         }
+    }
+
+    /// Google's answer to a calendar call: the Calendar API switched off
+    /// in the project, the permission not granted yet, or yes.
+    fn calendar(&self) -> Result<(), GmailError> {
+        self.with(|i| match (&i.calendar_off, i.calendar_allowed) {
+            (Some(url), _) => Err(GmailError::ApiDisabled {
+                service: "Google Calendar API".into(),
+                enable_url: url.clone(),
+            }),
+            (None, false) => Err(GmailError::MissingScope),
+            (None, true) => Ok(()),
+        })
     }
 
     fn mint(&self, prefix: &str) -> String {
@@ -217,9 +245,16 @@ impl GmailApi for Gmail {
         Ok(())
     }
 
-    /// The assistant has no way to erase mail, so a call here is a bug.
+    /// Erases the messages, once the account grants the delete permission.
     async fn delete_messages(&self, ids: &[String]) -> Result<(), GmailError> {
-        panic!("the assistant asked Gmail to erase {ids:?}");
+        if !self.with(|i| i.delete_allowed) {
+            return Err(GmailError::MissingScope);
+        }
+        self.with(|i| {
+            i.writes.push(format!("erase {}", ids.join(",")));
+            i.messages.retain(|m| !ids.contains(&m.id));
+        });
+        Ok(())
     }
 
     async fn send(&self, _raw: &[u8], _thread_id: Option<&str>) -> Result<String, GmailError> {
@@ -259,8 +294,13 @@ impl GmailApi for Gmail {
         Ok(Some("Dana".into()))
     }
 
-    async fn attachment(&self, _message: &str, _id: &str) -> Result<Vec<u8>, GmailError> {
-        Ok(Vec::new())
+    async fn attachment(&self, message: &str, id: &str) -> Result<Vec<u8>, GmailError> {
+        self.with(|i| {
+            i.attachments
+                .get(&(message.to_string(), id.to_string()))
+                .cloned()
+        })
+        .ok_or(GmailError::NotFound)
     }
 
     async fn raw_message(&self, _id: &str) -> Result<Vec<u8>, GmailError> {
@@ -377,6 +417,92 @@ impl GmailApi for Gmail {
         _to: mailrs_domain::EpochMillis,
     ) -> Result<Vec<mailrs_gmail::Busy>, GmailError> {
         Ok(Vec::new())
+    }
+
+    async fn events_between(
+        &self,
+        from: EpochMillis,
+        to: EpochMillis,
+    ) -> Result<Vec<Event>, GmailError> {
+        self.calendar()?;
+        let mut events: Vec<Event> = self.with(|i| {
+            i.events
+                .iter()
+                .filter(|e| span(e).is_some_and(|(starts, ends)| starts < to && ends > from))
+                .cloned()
+                .collect()
+        });
+        events.sort_by_key(|e| span(e).map(|(starts, _)| starts));
+        Ok(events)
+    }
+
+    async fn create_event(&self, fields: &EventFields) -> Result<Event, GmailError> {
+        self.calendar()?;
+        let mut event = Event {
+            id: self.mint("event"),
+            busy: true,
+            ..Event::default()
+        };
+        write_event(&mut event, fields);
+        self.with(|i| {
+            i.writes.push(format!("create event {}", event.id));
+            i.events.push(event.clone());
+        });
+        Ok(event)
+    }
+
+    async fn update_event(&self, id: &str, fields: &EventFields) -> Result<Event, GmailError> {
+        self.calendar()?;
+        self.with(|i| {
+            i.writes.push(format!("update event {id}"));
+            let event = i.events.iter_mut().find(|e| e.id == id)?;
+            write_event(event, fields);
+            Some(event.clone())
+        })
+        .ok_or(GmailError::NotFound)
+    }
+
+    async fn delete_event(&self, id: &str) -> Result<(), GmailError> {
+        self.calendar()?;
+        self.with(|i| {
+            i.writes.push(format!("delete event {id}"));
+            let before = i.events.len();
+            i.events.retain(|e| e.id != id);
+            match i.events.len() < before {
+                true => Ok(()),
+                false => Err(GmailError::NotFound),
+            }
+        })
+    }
+}
+
+/// What `fields` sets, written onto `event` the way Google's patch does.
+fn write_event(event: &mut Event, fields: &EventFields) {
+    if let Some(summary) = &fields.summary {
+        event.summary = summary.clone();
+    }
+    if let Some(start) = &fields.start {
+        event.start = Some(start.clone());
+    }
+    if let Some(end) = &fields.end {
+        event.end = Some(end.clone());
+    }
+    if let Some(location) = &fields.location {
+        event.location = location.clone();
+    }
+    if let Some(description) = &fields.description {
+        event.description = description.clone();
+    }
+    if let Some(guests) = &fields.guests {
+        event.guests = guests
+            .iter()
+            .map(|email| Guest {
+                email: email.clone(),
+                name: None,
+                answer: "needsAction".into(),
+                me: false,
+            })
+            .collect();
     }
 }
 

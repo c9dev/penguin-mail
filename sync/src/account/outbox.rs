@@ -329,4 +329,33 @@ impl<G: GmailApi> AccountSync<G> {
     ) -> Result<Vec<mailrs_gmail::Busy>, SyncError> {
         Ok(self.api.busy_between(from, to).await?)
     }
+
+    /// Every event on the account's primary calendar between `from` and
+    /// `to`.
+    pub async fn events_between(
+        &self,
+        from: EpochMillis,
+        to: EpochMillis,
+    ) -> Result<Vec<mailrs_gmail::Event>, SyncError> {
+        Ok(self.api.events_between(from, to).await?)
+    }
+
+    pub async fn create_event(
+        &self,
+        fields: &mailrs_gmail::EventFields,
+    ) -> Result<mailrs_gmail::Event, SyncError> {
+        Ok(self.api.create_event(fields).await?)
+    }
+
+    pub async fn update_event(
+        &self,
+        id: &str,
+        fields: &mailrs_gmail::EventFields,
+    ) -> Result<mailrs_gmail::Event, SyncError> {
+        Ok(self.api.update_event(id, fields).await?)
+    }
+
+    pub async fn delete_event(&self, id: &str) -> Result<(), SyncError> {
+        Ok(self.api.delete_event(id).await?)
+    }
 }
