@@ -99,6 +99,12 @@ pub struct MainWindow {
     toasts: adw::ToastOverlay,
     /// Says a release is available, installing, waiting to restart, or failed.
     update_banner: adw::Banner,
+    /// The main menu's update entry: Check for Updates, or what to do with
+    /// the one that is waiting.
+    update_menu: gio::Menu,
+    /// The About window while it is open, so an update's progress reaches
+    /// its button.
+    about: RefCell<Option<Rc<crate::ui::about::About>>>,
     stack: gtk::Stack,
     split: adw::OverlaySplitView,
     nav: adw::NavigationSplitView,
@@ -490,6 +496,8 @@ impl MainWindow {
                 core: Rc::clone(&app.core),
                 toasts,
                 update_banner,
+                update_menu: gio::Menu::new(),
+                about: RefCell::new(None),
                 stack,
                 split,
                 nav,
@@ -629,8 +637,32 @@ impl MainWindow {
     pub fn show_update(&self, state: &crate::update::State) {
         use crate::update::State;
         let banner = &self.update_banner;
+        if let Some(about) = self.about.borrow().as_ref() {
+            about.show_update(state);
+        }
+        let (entry, action) = match state {
+            State::Available(release) => (
+                fill(
+                    &gettext("Install Update {version}"),
+                    &[("version", &release.version.to_string())],
+                ),
+                Some("app.install-update"),
+            ),
+            State::Installing(_) => (gettext("Installing Update…"), None),
+            State::Installed(_) => (gettext("Restart to Update"), Some("app.restart-for-update")),
+            State::Failed { .. } => (gettext("Show Update Log"), Some("app.update-log")),
+            State::Checking => (gettext("Checking for Updates…"), None),
+            State::Idle | State::Current | State::Unreachable => {
+                (gettext("Check for Updates"), Some("app.check-for-updates"))
+            }
+        };
+        self.update_menu.remove_all();
+        // An entry with no action shows greyed out, which is right while a
+        // check or an install is running.
+        self.update_menu.append(Some(&entry), action);
         let (title, button) = match state {
-            State::Idle => {
+            // These answer a check; the About window and a toast say so.
+            State::Idle | State::Checking | State::Current | State::Unreachable => {
                 banner.set_revealed(false);
                 return;
             }
@@ -2735,6 +2767,9 @@ impl MainWindow {
         first.append(Some(&gettext("New Smart Mailbox…")), Some("win.smart-new"));
         first.append(Some(&gettext("Hide My Email…")), Some("win.hide-my-email"));
         menu.append_section(None, &first);
+        if self.app.upgrade().is_some_and(|app| app.can_update()) {
+            menu.append_section(None, &self.update_menu);
+        }
         let second = gio::Menu::new();
         second.append(Some(&gettext("Preferences")), Some("win.preferences"));
         second.append(Some(&gettext("Keyboard Shortcuts")), Some("win.shortcuts"));
@@ -3223,18 +3258,31 @@ impl MainWindow {
         dialog.present(Some(&self.window));
     }
 
-    fn show_about(&self) {
-        let about = adw::AboutDialog::builder()
-            .application_name(gettext("Penguin Mail"))
-            .application_icon(crate::APP_ID)
-            .version(env!("CARGO_PKG_VERSION"))
-            .developer_name("David Santos")
-            .comments(gettext(
-                "A fast, private Gmail client for the GNOME desktop. Mail stays on your \
-                 computer and your own Google Cloud project.",
-            ))
-            .build();
-        about.present(Some(&self.window));
+    fn show_about(self: &Rc<Self>) {
+        let Some(app) = self.app.upgrade() else {
+            return;
+        };
+        let about = crate::ui::about::About::new(app.can_update());
+        if let Some(state) = app.update_state() {
+            about.show_update(&state);
+        }
+        let weak = Rc::downgrade(self);
+        about.dialog.connect_closed(move |_| {
+            if let Some(win) = weak.upgrade() {
+                win.about.replace(None);
+            }
+        });
+        about.dialog.present(Some(&self.window));
+        self.about.replace(Some(about));
+    }
+
+    /// The answer to a check the person asked for, when nothing is waiting
+    /// to install. The About window shows it under its button, so a toast
+    /// would only repeat it.
+    pub fn answer_update_check(&self, text: &str) {
+        if self.about.borrow().is_none() {
+            self.toast(text);
+        }
     }
 }
 

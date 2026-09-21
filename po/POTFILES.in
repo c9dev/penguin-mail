@@ -20,6 +20,7 @@ app/src/settings/mod.rs
 app/src/smime.rs
 app/src/translation.rs
 app/src/tray.rs
+app/src/ui/about.rs
 app/src/ui/assistant.rs
 app/src/ui/assistant_prefs.rs
 app/src/ui/composer/mod.rs

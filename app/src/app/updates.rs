@@ -84,6 +84,10 @@ impl App {
             return;
         }
         self.update_settings(|s| s.last_update_check = Some(now));
+        let before = updater.state();
+        if asked {
+            self.set_update_state(State::Checking);
+        }
         let client = updater.client();
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
@@ -114,8 +118,9 @@ impl App {
                     this.set_update_state(State::Available(release));
                 }
                 Ok(_) => {
+                    this.set_update_state(State::Current);
                     if asked {
-                        update::tell(fill(
+                        this.answer_update_check(fill(
                             &gettext("Penguin Mail {version} is up to date"),
                             &[("version", &running.to_string())],
                         ));
@@ -124,7 +129,14 @@ impl App {
                 Err(err) => {
                     tracing::info!(error = %err, "could not check for updates");
                     if asked {
-                        update::tell(gettext("Could not reach GitHub to check for updates"));
+                        this.set_update_state(State::Unreachable);
+                        this.answer_update_check(gettext(
+                            "Could not reach GitHub to check for updates",
+                        ));
+                    } else {
+                        // A check nobody asked for fails quietly and leaves
+                        // whatever was offered before on offer.
+                        this.set_update_state(before);
                     }
                 }
             }
@@ -253,6 +265,20 @@ impl App {
                 let err = command.exec();
                 tracing::warn!(error = %err, "could not restart into the update");
             }
+        }
+    }
+
+    /// Where an update stands, when this copy updates at all.
+    pub fn update_state(&self) -> Option<State> {
+        self.updater.as_ref().map(|u| u.state())
+    }
+
+    /// Answers a check the person asked for: in the window when it is open,
+    /// in a notification when they asked from the tray with no window.
+    fn answer_update_check(&self, text: String) {
+        match self.window() {
+            Some(window) => window.answer_update_check(&text),
+            None => update::tell(text),
         }
     }
 

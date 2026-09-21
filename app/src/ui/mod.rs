@@ -1,6 +1,7 @@
 //! The GTK interface. Widgets are built in code; only the thread row is a
 //! GObject subclass, because list rows need a widget type to recycle.
 
+pub mod about;
 pub mod assistant;
 pub mod assistant_prefs;
 pub mod autocomplete;

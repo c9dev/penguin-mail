@@ -5,6 +5,17 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### New
+
+- The About window has a Check for Updates button that shows its progress
+  and installs the new version when one is out.
+- The main menu has an entry for updates: check, install, or restart into
+  the new version.
+
+### Fixed
+
+- The Install, Restart and Show Log buttons on the update banner work.
+
 ## 0.1.1 (2026-09-21)
 
 The first public release.

@@ -18,6 +18,12 @@ use version::{Method, Release, Version};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum State {
     Idle,
+    /// A check the person asked for is on its way.
+    Checking,
+    /// The last check found nothing newer than this copy.
+    Current,
+    /// The last check the person asked for could not reach GitHub.
+    Unreachable,
     Available(Release),
     Installing(Version),
     /// Installed, and waiting for the app to restart into it.
@@ -74,9 +80,11 @@ pub struct Updater {
 
 impl Updater {
     /// An updater for the running binary, or none when this copy never
-    /// updates: the demo, and a cargo build.
+    /// updates: the demo, and a cargo build. A demo pointed at a test
+    /// release server with PENGUIN_MAIL_RELEASES_URL gets one, so the update
+    /// screens can be seen and tested without a real account.
     pub fn for_this_copy(demo: bool) -> Option<Updater> {
-        if demo {
+        if demo && std::env::var_os("PENGUIN_MAIL_RELEASES_URL").is_none() {
             return None;
         }
         let exe = crate::exe::path().ok()?;
