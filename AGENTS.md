@@ -7,14 +7,17 @@ the code uses are in `CONTEXT.md`. Read both before changing behaviour.
 
 ## Where to look
 
-- `docs/remaining-work.md`: the backlog. Start here when asked what is
-  left or what to do next, and update it when you close or find an item.
+- GitHub Issues: the public backlog. Start here when asked what is left
+  or what to do next.
 - `CONTEXT.md`: the glossary. A new domain term goes in here in the same
   change that introduces it.
 - `docs/accessibility.md`, `docs/assistant.md`, `docs/setup.md`,
   `po/README.md`: read the one matching the area you touch.
-- `docs/superpowers/specs/` and `docs/superpowers/plans/`: the original
-  design and build plans. History, not instructions.
+- On the owner's machine only, and gitignored: `docs/remaining-work.md`,
+  their own backlog, which you update when you close or find an item;
+  `docs/superpowers/`, the design specs and build plans, history rather
+  than instructions; and `docs/agents/`, notes for their agent skills. A
+  contributor's checkout has none of these. Never commit them.
 
 ## The gate
 
@@ -129,12 +132,12 @@ penguin and an orange beak. Keep new icons in that idiom.
 
 ### Issue tracker
 
-Issues live in GitHub Issues for c9dev/penguin-mail, through the `gh` CLI. See `docs/agents/issue-tracker.md`.
+Issues live in GitHub Issues for c9dev/penguin-mail, through the `gh` CLI. Anyone can open one, through the forms in `.github/ISSUE_TEMPLATE/`.
 
 ### Triage labels
 
-The five default labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+The five triage labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. The issue forms add `needs-triage`.
 
 ### Domain docs
 
-Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root.

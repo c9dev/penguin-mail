@@ -266,14 +266,13 @@ code uses are defined in [CONTEXT.md](CONTEXT.md).
 Sync follows Gmail's history API, polling every 30 seconds per account, so a
 change made on your phone shows up here within half a minute. When history
 runs out, the account re-lists its mail and removes anything deleted in the
-gap. The design and its trade-offs are written up in
-[docs/superpowers/specs/](docs/superpowers/specs/2026-09-17-gmail-client-design.md).
+gap.
 
 ## What is left
 
-[docs/remaining-work.md](docs/remaining-work.md) lists what is known to be
-missing or half done, with where each one lives and what closing it would
-take.
+[Issues](https://github.com/c9dev/penguin-mail/issues) lists what is known
+to be missing or broken. Anyone can add to it; see
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Development
 

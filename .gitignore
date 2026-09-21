@@ -3,3 +3,11 @@
 *.db-wal
 *.db-shm
 .claude/worktrees/
+
+# The owner's own working notes and agent setup stay on their machine.
+.agents/
+.claude/
+skills-lock.json
+docs/agents/
+docs/superpowers/
+docs/remaining-work.md
