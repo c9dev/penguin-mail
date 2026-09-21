@@ -48,7 +48,12 @@ impl About {
         name.set_wrap(true);
         content.append(&name);
 
-        let developer = gtk::Label::new(Some("David Santos"));
+        // A link, so the name opens the studio's site as the rows below
+        // open theirs.
+        let developer = gtk::Label::builder()
+            .label(r#"<a href="https://pivotd.com">Pivotd</a>"#)
+            .use_markup(true)
+            .build();
         content.append(&developer);
 
         let version = gtk::Label::new(Some(&fill(

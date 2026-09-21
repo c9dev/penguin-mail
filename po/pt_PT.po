@@ -1118,8 +1118,8 @@ msgstr "Instalar a atualização {version}"
 msgid "What's New in {version}"
 msgstr "Novidades da versão {version}"
 
-#: app/src/tray.rs:147 app/src/ui/about.rs:74 app/src/ui/about.rs:181
-#: app/src/ui/about.rs:189 app/src/ui/about.rs:196
+#: app/src/tray.rs:147 app/src/ui/about.rs:79 app/src/ui/about.rs:186
+#: app/src/ui/about.rs:194 app/src/ui/about.rs:201
 #: app/src/ui/preferences.rs:682 app/src/ui/window.rs:656
 msgid "Check for Updates"
 msgstr "Procurar atualizações"
@@ -1132,11 +1132,11 @@ msgstr "Sair"
 msgid "Penguin Mail"
 msgstr "Penguin Mail"
 
-#: app/src/ui/about.rs:55
+#: app/src/ui/about.rs:60
 msgid "Version {version}"
 msgstr "Versão {version}"
 
-#: app/src/ui/about.rs:64
+#: app/src/ui/about.rs:69
 msgid ""
 "A fast, private Gmail client for the GNOME desktop. Mail stays on your "
 "computer and your own Google Cloud project."
@@ -1144,67 +1144,68 @@ msgstr ""
 "Um cliente de Gmail rápido e privado para o ambiente de trabalho GNOME. O "
 "correio fica no seu computador e no seu próprio projeto do Google Cloud."
 
-#: app/src/ui/about.rs:129
+#: app/src/ui/about.rs:134
 msgid "What's New"
 msgstr "Novidades"
 
-#: app/src/ui/about.rs:133
+#: app/src/ui/about.rs:138
 msgid "Website"
 msgstr "Página web"
 
-#: app/src/ui/about.rs:135
+#: app/src/ui/about.rs:140
 msgid "Report a Problem"
 msgstr "Comunicar um problema"
 
-#: app/src/ui/about.rs:140
+#: app/src/ui/about.rs:145
 msgid "License"
 msgstr "Licença"
 
-#: app/src/ui/about.rs:157 app/src/ui/window.rs:2776
+#: app/src/ui/about.rs:162 app/src/ui/window.rs:2776
 msgid "About Penguin Mail"
 msgstr "Acerca do Penguin Mail"
 
-#: app/src/ui/about.rs:187
+#: app/src/ui/about.rs:192
 msgid "Checking…"
 msgstr "A procurar…"
 
-#: app/src/ui/about.rs:193
+#: app/src/ui/about.rs:198
 msgid "Penguin Mail is up to date"
 msgstr "O Penguin Mail está atualizado"
 
-#: app/src/ui/about.rs:201
-msgid "Could not reach GitHub. Check your connection and try again."
-msgstr "Não foi possível contactar o GitHub. Verifique a ligação e tente de novo."
-
 #: app/src/ui/about.rs:206
+msgid "Could not reach GitHub. Check your connection and try again."
+msgstr ""
+"Não foi possível contactar o GitHub. Verifique a ligação e tente de novo."
+
+#: app/src/ui/about.rs:211
 msgid "Install {version}"
 msgstr "Instalar a {version}"
 
-#: app/src/ui/about.rs:213
+#: app/src/ui/about.rs:218
 msgid "Version {version} is available"
 msgstr "A versão {version} está disponível"
 
-#: app/src/ui/about.rs:218
+#: app/src/ui/about.rs:223
 msgid "Installing…"
 msgstr "A instalar…"
 
-#: app/src/ui/about.rs:223
+#: app/src/ui/about.rs:228
 msgid "Installing version {version}"
 msgstr "A instalar a versão {version}"
 
-#: app/src/ui/about.rs:228 app/src/ui/window.rs:652
+#: app/src/ui/about.rs:233 app/src/ui/window.rs:652
 msgid "Restart to Update"
 msgstr "Reiniciar para atualizar"
 
-#: app/src/ui/about.rs:233
+#: app/src/ui/about.rs:238
 msgid "Version {version} is installed"
 msgstr "A versão {version} está instalada"
 
-#: app/src/ui/about.rs:238 app/src/ui/window.rs:692
+#: app/src/ui/about.rs:243 app/src/ui/window.rs:692
 msgid "Show Log"
 msgstr "Mostrar registo"
 
-#: app/src/ui/about.rs:243 app/src/ui/window.rs:689
+#: app/src/ui/about.rs:248 app/src/ui/window.rs:689
 msgid "The update to {version} failed"
 msgstr "A atualização para a versão {version} falhou"
 
