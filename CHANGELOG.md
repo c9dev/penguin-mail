@@ -5,6 +5,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+## 0.1.3 (2026-09-21)
+
 ### New
 
 - Preferences has a Contacts & Calendar page. Google contacts turn on and
