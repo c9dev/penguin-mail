@@ -17,6 +17,8 @@ use serde_json::Value;
 use super::Host;
 use crate::settings::Settings;
 
+pub mod skills;
+
 /// What the person answered when a source asked before a call.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Verdict {
@@ -46,11 +48,29 @@ pub trait Source: Send + Sync {
     /// runs without asking.
     fn ask(&self, name: &str, input: &Value) -> Option<String>;
     fn call(&self, name: String, input: Value) -> BoxFuture<ToolOutcome>;
+    /// What this source adds to the system prompt, such as the skills the
+    /// model may use.
+    fn prompt(&self) -> Option<String> {
+        None
+    }
 }
 
 /// The sources the settings turn on. Each later part adds its own here.
-pub fn for_settings(_settings: &Settings) -> Vec<Arc<dyn Source>> {
-    Vec::new()
+pub fn for_settings(settings: &Settings) -> Vec<Arc<dyn Source>> {
+    let mut sources = Vec::new();
+    sources.extend(skills::sources(settings));
+    sources
+}
+
+/// The system prompt for a conversation over `sources`: `base`, then what
+/// each source adds, a blank line apart.
+pub fn system_prompt(base: &str, sources: &[Arc<dyn Source>]) -> String {
+    let mut prompt = base.to_string();
+    for text in sources.iter().filter_map(|source| source.prompt()) {
+        prompt.push_str("\n\n");
+        prompt.push_str(&text);
+    }
+    prompt
 }
 
 /// Everything the model can call: the mail tools and every source.

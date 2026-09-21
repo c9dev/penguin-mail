@@ -146,6 +146,43 @@ msgid ""
 "their future mail?"
 msgstr ""
 
+#: app/src/assistant/sources/skills/mod.rs:59
+msgid "Penguin Mail"
+msgstr ""
+
+#: app/src/assistant/sources/skills/mod.rs:60
+msgid "Claude Code"
+msgstr ""
+
+#: app/src/assistant/sources/skills/sandbox.rs:230
+msgid ""
+"Skill scripts need bubblewrap, which is not installed. Install the "
+"bubblewrap package to run them."
+msgstr ""
+
+#: app/src/assistant/sources/skills/sandbox.rs:249
+#: app/src/assistant/sources/skills/sandbox.rs:255
+msgid ""
+"Skill scripts cannot run: bubblewrap failed to start a sandbox ({reason})."
+msgstr ""
+
+#: app/src/assistant/sources/skills/shell.rs:166
+msgid "It can reach the internet."
+msgstr ""
+
+#: app/src/assistant/sources/skills/shell.rs:168
+msgid "It cannot reach the internet."
+msgstr ""
+
+#: app/src/assistant/sources/skills/shell.rs:172
+msgid ""
+"Run this command for the skill {skill}?\n"
+"\n"
+"{command}\n"
+"\n"
+"It runs in a sandbox with no access to your mail or home folder. {network}"
+msgstr ""
+
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
 msgstr ""
@@ -909,151 +946,151 @@ msgstr ""
 msgid "In {label}"
 msgstr ""
 
-#: app/src/settings/mod.rs:139 app/src/settings/mod.rs:534
+#: app/src/settings/mod.rs:153 app/src/settings/mod.rs:549
 msgid "Off"
 msgstr ""
 
-#: app/src/settings/mod.rs:140
+#: app/src/settings/mod.rs:154
 msgid "Local server"
 msgstr ""
 
-#: app/src/settings/mod.rs:141
+#: app/src/settings/mod.rs:155
 msgid "Anthropic API"
 msgstr ""
 
-#: app/src/settings/mod.rs:142
+#: app/src/settings/mod.rs:156
 msgid "Claude subscription"
 msgstr ""
 
-#: app/src/settings/mod.rs:162 app/src/ui/assistant.rs:89
+#: app/src/settings/mod.rs:176 app/src/ui/assistant.rs:99
 msgid "Assistant"
 msgstr ""
 
-#: app/src/settings/mod.rs:163
+#: app/src/settings/mod.rs:177
 msgid "Translation"
 msgstr ""
 
-#: app/src/settings/mod.rs:169
+#: app/src/settings/mod.rs:183
 msgid "Answers questions and acts on your mail"
 msgstr ""
 
-#: app/src/settings/mod.rs:170
+#: app/src/settings/mod.rs:184
 msgid "Translates a message when you ask"
 msgstr ""
 
-#: app/src/settings/mod.rs:207
+#: app/src/settings/mod.rs:221
 msgid "Same as the Assistant"
 msgstr ""
 
-#: app/src/settings/mod.rs:393
+#: app/src/settings/mod.rs:408
 msgid "Rich text"
 msgstr ""
 
-#: app/src/settings/mod.rs:394
+#: app/src/settings/mod.rs:409
 msgid "Markdown"
 msgstr ""
 
-#: app/src/settings/mod.rs:441
+#: app/src/settings/mod.rs:456
 msgid "When opened"
 msgstr ""
 
-#: app/src/settings/mod.rs:442
+#: app/src/settings/mod.rs:457
 msgid "After 2 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:443
+#: app/src/settings/mod.rs:458
 msgid "Only when I choose"
 msgstr ""
 
-#: app/src/settings/mod.rs:459
+#: app/src/settings/mod.rs:474
 msgid "Ask each time"
 msgstr ""
 
-#: app/src/settings/mod.rs:460
+#: app/src/settings/mod.rs:475
 msgid "Always load"
 msgstr ""
 
-#: app/src/settings/mod.rs:494
+#: app/src/settings/mod.rs:509
 msgid "Small"
 msgstr ""
 
-#: app/src/settings/mod.rs:495
+#: app/src/settings/mod.rs:510
 msgid "Default"
 msgstr ""
 
-#: app/src/settings/mod.rs:496
+#: app/src/settings/mod.rs:511
 msgid "Large"
 msgstr ""
 
-#: app/src/settings/mod.rs:497
+#: app/src/settings/mod.rs:512
 msgid "Larger"
 msgstr ""
 
-#: app/src/settings/mod.rs:535
+#: app/src/settings/mod.rs:550
 msgid "5 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:536
+#: app/src/settings/mod.rs:551
 msgid "10 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:537
+#: app/src/settings/mod.rs:552
 msgid "20 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:538
+#: app/src/settings/mod.rs:553
 msgid "30 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:555
+#: app/src/settings/mod.rs:570
 msgid "Follow system"
 msgstr ""
 
-#: app/src/settings/mod.rs:556
+#: app/src/settings/mod.rs:571
 msgid "Light"
 msgstr ""
 
-#: app/src/settings/mod.rs:557
+#: app/src/settings/mod.rs:572
 msgid "Dark"
 msgstr ""
 
-#: app/src/settings/mod.rs:567
+#: app/src/settings/mod.rs:582
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/settings/mod.rs:575
+#: app/src/settings/mod.rs:590
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/settings/mod.rs:592
+#: app/src/settings/mod.rs:607
 msgid "2 weeks"
 msgstr ""
 
-#: app/src/settings/mod.rs:593
+#: app/src/settings/mod.rs:608
 msgid "30 days"
 msgstr ""
 
-#: app/src/settings/mod.rs:594
+#: app/src/settings/mod.rs:609
 msgid "90 days"
 msgstr ""
 
-#: app/src/settings/mod.rs:595
+#: app/src/settings/mod.rs:610
 msgid "1 year"
 msgstr ""
 
-#: app/src/settings/mod.rs:602
+#: app/src/settings/mod.rs:617
 msgid "256 MB"
 msgstr ""
 
-#: app/src/settings/mod.rs:603
+#: app/src/settings/mod.rs:618
 msgid "1 GB"
 msgstr ""
 
-#: app/src/settings/mod.rs:604
+#: app/src/settings/mod.rs:619
 msgid "4 GB"
 msgstr ""
 
@@ -1257,10 +1294,6 @@ msgstr ""
 msgid "Quit"
 msgstr ""
 
-#: app/src/ui/about.rs:46 app/src/ui/window.rs:467
-msgid "Penguin Mail"
-msgstr ""
-
 #: app/src/ui/about.rs:60
 msgid "Version {version}"
 msgstr ""
@@ -1355,89 +1388,89 @@ msgstr ""
 msgid "Draft a reply to the open conversation"
 msgstr ""
 
-#: app/src/ui/assistant.rs:92 app/src/ui/assistant.rs:94
+#: app/src/ui/assistant.rs:102 app/src/ui/assistant.rs:104
 msgid "New Chat"
 msgstr ""
 
-#: app/src/ui/assistant.rs:117
+#: app/src/ui/assistant.rs:127
 msgid ""
 "Ask about your mail, or tell me what to tidy. I can search, summarize, sort, "
 "draft, and change settings."
 msgstr ""
 
-#: app/src/ui/assistant.rs:141
+#: app/src/ui/assistant.rs:151
 msgid "Ask Penguin Mail…"
 msgstr ""
 
-#: app/src/ui/assistant.rs:146 app/src/ui/assistant.rs:150
-#: app/src/ui/assistant.rs:422 app/src/ui/composer/mod.rs:206
+#: app/src/ui/assistant.rs:156 app/src/ui/assistant.rs:160
+#: app/src/ui/assistant.rs:439 app/src/ui/composer/mod.rs:206
 #: app/src/ui/window.rs:3277
 msgid "Send"
 msgstr ""
 
-#: app/src/ui/assistant.rs:149
+#: app/src/ui/assistant.rs:159
 msgid "Ask Penguin Mail"
 msgstr ""
 
-#: app/src/ui/assistant.rs:165
+#: app/src/ui/assistant.rs:175
 msgid "Choose a Model"
 msgstr ""
 
-#: app/src/ui/assistant.rs:171
+#: app/src/ui/assistant.rs:181
 msgid "Set Up the Assistant"
 msgstr ""
 
-#: app/src/ui/assistant.rs:173
+#: app/src/ui/assistant.rs:183
 msgid ""
 "Use a local model from LM Studio, Ollama, or Unsloth, an Anthropic API key, "
 "or your Claude subscription."
 msgstr ""
 
-#: app/src/ui/assistant.rs:421
+#: app/src/ui/assistant.rs:438
 msgid "Stop"
 msgstr ""
 
-#: app/src/ui/assistant.rs:526
+#: app/src/ui/assistant.rs:543
 msgid "Don't Allow"
 msgstr ""
 
-#: app/src/ui/assistant.rs:528
+#: app/src/ui/assistant.rs:545
 msgid "Allow"
 msgstr ""
 
-#: app/src/ui/assistant.rs:532
+#: app/src/ui/assistant.rs:549
 msgid "Always Allow"
 msgstr ""
 
-#: app/src/ui/assistant.rs:568
+#: app/src/ui/assistant.rs:585
 msgid "Allowed"
 msgstr ""
 
-#: app/src/ui/assistant.rs:569
+#: app/src/ui/assistant.rs:586
 msgid "Always allowed"
 msgstr ""
 
-#: app/src/ui/assistant.rs:570
+#: app/src/ui/assistant.rs:587
 msgid "Not allowed"
 msgstr ""
 
-#: app/src/ui/assistant.rs:785
+#: app/src/ui/assistant.rs:802
 msgid "Result"
 msgstr ""
 
-#: app/src/ui/assistant.rs:793
+#: app/src/ui/assistant.rs:810
 msgid "Input"
 msgstr ""
 
-#: app/src/ui/assistant.rs:871
+#: app/src/ui/assistant.rs:888
 msgid "Running"
 msgstr ""
 
-#: app/src/ui/assistant.rs:872 app/src/ui/hide_my_email.rs:457
+#: app/src/ui/assistant.rs:889 app/src/ui/hide_my_email.rs:457
 msgid "Done"
 msgstr ""
 
-#: app/src/ui/assistant.rs:873
+#: app/src/ui/assistant.rs:890
 msgid "Failed"
 msgstr ""
 
@@ -1504,125 +1537,175 @@ msgstr ""
 msgid "Each feature sends what it reads to the model chosen for it."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:151
+#: app/src/ui/assistant_prefs.rs:152
 msgid "Safety"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:154
+#: app/src/ui/assistant_prefs.rs:155
 msgid "Ask Before Acting"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:156
+#: app/src/ui/assistant_prefs.rs:157
 msgid ""
 "Approve each message the assistant sends and each change to Gmail settings, "
 "such as automatic replies and rules"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:172 app/src/ui/conversation.rs:584
+#: app/src/ui/assistant_prefs.rs:173 app/src/ui/conversation.rs:584
 #: app/src/ui/window/detached.rs:57
 msgid "Conversation"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:175
+#: app/src/ui/assistant_prefs.rs:176
 msgid "Show Details Expanded"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:177
+#: app/src/ui/assistant_prefs.rs:178
 msgid "Open the model's thinking and each tool it runs as they appear"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:197
+#: app/src/ui/assistant_prefs.rs:198
 msgid "Always Allowed"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:199
+#: app/src/ui/assistant_prefs.rs:200
 msgid ""
 "Tools from outside sources that run without asking. Remove one to be asked "
 "again next time."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:215
+#: app/src/ui/assistant_prefs.rs:216
 msgid "Ask Again"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:219
+#: app/src/ui/assistant_prefs.rs:220
 msgid "Ask again before {tool}"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:252
+#: app/src/ui/assistant_prefs.rs:253
 msgid "Test"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:256
+#: app/src/ui/assistant_prefs.rs:257
 msgid "Test the Connection"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:281
+#: app/src/ui/assistant_prefs.rs:282
 msgid "No answer: {reason}"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:341
+#: app/src/ui/assistant_prefs.rs:342
 msgid "Connection"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:487
+#: app/src/ui/assistant_prefs.rs:488
 msgid "Claude Code's own default"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:495
+#: app/src/ui/assistant_prefs.rs:496
 msgid "Model"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:514 app/src/ui/assistant_prefs.rs:518
+#: app/src/ui/assistant_prefs.rs:515 app/src/ui/assistant_prefs.rs:519
 msgid "Models You Can Use"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:539
+#: app/src/ui/assistant_prefs.rs:540
 msgid "Search models"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:556
+#: app/src/ui/assistant_prefs.rs:557
 msgid "Asking for the model list…"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:672
+#: app/src/ui/assistant_prefs.rs:673
 msgid "This provider lists no models. Type a name in the field instead."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:707
+#: app/src/ui/assistant_prefs.rs:708
 msgid "alias"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:747
+#: app/src/ui/assistant_prefs.rs:748
 msgid "Found on This Computer"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:751
+#: app/src/ui/assistant_prefs.rs:752
 msgid "Looking for LM Studio, Ollama, Unsloth, and Claude Code…"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:767
+#: app/src/ui/assistant_prefs.rs:768
 msgid "Nothing found"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:769
+#: app/src/ui/assistant_prefs.rs:770
 msgid ""
 "Start LM Studio's server or Ollama, or install Claude Code, then open "
 "Preferences again."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:781
+#: app/src/ui/assistant_prefs.rs:782
 msgid "{model} and {count} more"
 msgid_plural "{model} and {count} more"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/assistant_prefs.rs:792
+#: app/src/ui/assistant_prefs.rs:793
 msgid "Use"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:797
+#: app/src/ui/assistant_prefs.rs:798
 msgid "Use {provider}"
+msgstr ""
+
+#: app/src/ui/assistant_skills_prefs.rs:17
+msgid "Skills"
+msgstr ""
+
+#: app/src/ui/assistant_skills_prefs.rs:19
+msgid ""
+"Instructions the assistant follows for one kind of task, found in Penguin "
+"Mail's skills folder and in Claude Code's. Each skill is off until you turn "
+"it on. Scripts in a skill run in a sandbox that cannot reach your mail, keys "
+"or home folder, and the assistant asks before each command."
+msgstr ""
+
+#: app/src/ui/assistant_skills_prefs.rs:26
+msgid "Open Folder"
+msgstr ""
+
+#: app/src/ui/assistant_skills_prefs.rs:28
+msgid "Open Penguin Mail's skills folder"
+msgstr ""
+
+#: app/src/ui/assistant_skills_prefs.rs:38
+msgid "Scripts Cannot Run"
+msgstr ""
+
+#: app/src/ui/assistant_skills_prefs.rs:47
+msgid "No Skills Found"
+msgstr ""
+
+#: app/src/ui/assistant_skills_prefs.rs:49
+msgid "Put a folder holding a SKILL.md file in {folder}."
+msgstr ""
+
+#: app/src/ui/assistant_skills_prefs.rs:64
+msgid "{origin}: {description}"
+msgstr ""
+
+#: app/src/ui/assistant_skills_prefs.rs:106
+msgid "Use the skill {skill}"
+msgstr ""
+
+#: app/src/ui/assistant_skills_prefs.rs:119
+msgid "Allow Network"
+msgstr ""
+
+#: app/src/ui/assistant_skills_prefs.rs:121
+msgid ""
+"Let this skill's scripts reach the internet. Without it they can only use "
+"what is on this computer."
 msgstr ""
 
 #: app/src/ui/composer/mod.rs:198 app/src/ui/conversation.rs:1276
@@ -2622,31 +2705,31 @@ msgstr ""
 msgid "This meeting is canceled"
 msgstr ""
 
-#: app/src/ui/mod.rs:132
+#: app/src/ui/mod.rs:133
 msgid "Gray"
 msgstr ""
 
-#: app/src/ui/mod.rs:146 app/src/ui/sidebar.rs:464
+#: app/src/ui/mod.rs:147 app/src/ui/sidebar.rs:464
 msgid "Inbox"
 msgstr ""
 
-#: app/src/ui/mod.rs:147
+#: app/src/ui/mod.rs:148
 msgid "Flagged"
 msgstr ""
 
-#: app/src/ui/mod.rs:148
+#: app/src/ui/mod.rs:149
 msgid "Sent"
 msgstr ""
 
-#: app/src/ui/mod.rs:149
+#: app/src/ui/mod.rs:150
 msgid "Drafts"
 msgstr ""
 
-#: app/src/ui/mod.rs:150 app/src/ui/thread_row.rs:78 app/src/ui/window.rs:254
+#: app/src/ui/mod.rs:151 app/src/ui/thread_row.rs:78 app/src/ui/window.rs:254
 msgid "Muted"
 msgstr ""
 
-#: app/src/ui/mod.rs:151 app/src/ui/thread_list.rs:245
+#: app/src/ui/mod.rs:152 app/src/ui/thread_list.rs:245
 msgid "Mail"
 msgstr ""
 
