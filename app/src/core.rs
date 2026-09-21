@@ -131,6 +131,7 @@ impl Core {
             std::env::temp_dir().join(format!("penguin-mail-demo-{}", std::process::id()))
         } else {
             migrate_old_dirs();
+            mailrs_sync::config::secure_dirs();
             data_dir()?
         };
         std::fs::create_dir_all(&dir)

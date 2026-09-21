@@ -154,15 +154,15 @@ msgstr ""
 msgid "On {date}, {sender} wrote:"
 msgstr ""
 
-#: app/src/core.rs:509
+#: app/src/core.rs:510
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 
-#: app/src/core.rs:526
+#: app/src/core.rs:527
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 
-#: app/src/core.rs:534
+#: app/src/core.rs:535
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 

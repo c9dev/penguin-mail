@@ -154,6 +154,28 @@ pub fn data_dir() -> Result<PathBuf, ConfigError> {
     Ok(dir.join(DIR_NAME))
 }
 
+/// Creates `dir` if it is missing and makes it readable by its owner alone.
+/// A folder is enough: whatever mode the files inside it get, nobody else
+/// can reach them through it.
+pub fn private_dir(dir: &Path) -> std::io::Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::create_dir_all(dir)?;
+    std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700))
+}
+
+/// Closes the folders Penguin Mail keeps anything in to other people on the
+/// computer: the config, the mail store and contact photos, and the cache.
+/// Folders made by an older copy with the default mode are closed too.
+pub fn secure_dirs() {
+    let config = dirs::config_dir().map(|d| d.join(DIR_NAME));
+    let cache = dirs::cache_dir().map(|d| d.join(DIR_NAME));
+    for dir in [config, data_dir().ok(), cache].into_iter().flatten() {
+        if let Err(err) = private_dir(&dir) {
+            tracing::warn!("could not make {} private: {err}", dir.display());
+        }
+    }
+}
+
 /// Renames `~/.config/mailrs`, `~/.local/share/mailrs`, and `~/.cache/mailrs`
 /// to `penguin-mail`, so an upgrade keeps the config, settings, and mail
 /// store. Call it at startup, before reading any of them.
@@ -189,6 +211,21 @@ mod tests {
     use std::time::Duration;
 
     use super::{Config, move_old_dir};
+
+    #[test]
+    fn a_private_folder_is_the_owners_alone_whether_new_or_old() {
+        let base = tempfile::tempdir().unwrap();
+        let fresh = base.path().join("fresh/penguin-mail");
+        super::private_dir(&fresh).unwrap();
+        let mode = |p: &std::path::Path| std::fs::metadata(p).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode(&fresh), 0o700);
+        // A folder an older copy made with the default mode is tightened.
+        let old = base.path().join("old");
+        std::fs::create_dir(&old).unwrap();
+        std::fs::set_permissions(&old, std::fs::Permissions::from_mode(0o755)).unwrap();
+        super::private_dir(&old).unwrap();
+        assert_eq!(mode(&old), 0o700);
+    }
 
     #[test]
     fn a_minimal_config_uses_the_engine_defaults() {

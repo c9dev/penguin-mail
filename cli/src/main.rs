@@ -17,7 +17,7 @@ use mailrs_sync::{
     AccountClient, AccountSync, SyncEngine, TriageAction, connect_account, export, now_millis,
 };
 
-use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
+use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs, secure_dirs};
 
 /// How long `account add` waits for the browser.
 const CONSENT_TIMEOUT: Duration = Duration::from_secs(300);
@@ -95,6 +95,7 @@ async fn main() -> Result<()> {
         .init();
     let cli = Cli::parse();
     migrate_old_dirs();
+    secure_dirs();
     let dir = data_dir()?;
     std::fs::create_dir_all(&dir).with_context(|| format!("could not create {}", dir.display()))?;
     let db = Db::open(&dir.join("mailrs.db"))?;

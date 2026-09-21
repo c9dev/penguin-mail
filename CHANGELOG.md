@@ -14,6 +14,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - The main menu has an entry for updates: check, install, or restart into
   the new version.
 
+### Improved
+
+- Your mail, settings and cache folders can only be opened by your own
+  user account, not by other people who use the same computer.
+
 ### Fixed
 
 - The Install, Restart and Show Log buttons on the update banner work.
