@@ -18,17 +18,28 @@ undoes what it archived, trashed, flagged, or marked.
 
 ## Pick a model
 
-Open Preferences (Ctrl+,) and go to the Assistant page. **Found on This
-Computer** lists the servers and tools Penguin Mail found, each with a
-**Use** button. You can also set one up by hand.
+Open Preferences (Ctrl+,) and go to the AI page. It has two groups:
+
+- **Connections** holds each place a model can run: a local server, the
+  Anthropic API, and your Claude subscription. Set up each one once, with
+  its address, key, or command, and test it there.
+- **Used For** has a row for each feature that sends words to a model: the
+  assistant and translation. Each row picks a connection and a model on
+  it. Translation starts on **Same as the Assistant**; pick a connection
+  for it to run on a model of its own, such as a small, fast local model
+  while the assistant runs on Claude. Choose **Off** to turn a feature off.
+
+**Found on This Computer** lists the servers and tools Penguin Mail found,
+each with a **Use** button that sets up the connection and puts the
+assistant on it. You can also set one up by hand.
 
 ### LM Studio
 
 1. In LM Studio, load a model and start the server on the Developer tab.
    It listens on `http://localhost:1234/v1`.
-2. In Penguin Mail, choose **Local or OpenAI-compatible server**. The
-   default URL already points at LM Studio. Pick the model from the list
-   next to the Model field.
+2. In Penguin Mail, choose **Local server** for the assistant. The
+   default address already points at LM Studio. Pick the model from the
+   list next to the Model field.
 
 Pick a model trained for tool calls, such as Qwen 3, Llama 3.1 or newer, or
 Mistral Small. A model without tool calls can still chat and summarize what
@@ -39,23 +50,24 @@ you paste, but it cannot touch your mail.
 Unsloth Studio serves its API on port 8888 and asks for a key.
 
 1. Copy the API key from Unsloth Studio.
-2. Choose **Local or OpenAI-compatible server**, set the URL to
-   `http://localhost:8888/v1`, and paste the key into **API Key
-   (Optional)**.
+2. Under **Local server** in Connections, set the address to
+   `http://localhost:8888/v1` and paste the key into **API Key
+   (Optional)**. Then choose **Local server** for the assistant.
 
 Ollama (port 11434), llama.cpp's server (8080), and vLLM (8000) work the
 same way. Any server that speaks the OpenAI chat completions API does.
 
 ### Claude with an API key
 
-Choose **Anthropic API key** and paste a key from console.anthropic.com. The
-default model is `claude-opus-5`. If `ANTHROPIC_API_KEY` is set when
+Paste a key from console.anthropic.com under **Anthropic API** in
+Connections, then choose **Anthropic API** for the assistant. The default
+model is `claude-opus-5`. If `ANTHROPIC_API_KEY` is set when
 Penguin Mail starts, the Found list offers it.
 
 ### Your Claude subscription
 
 If Claude Code is installed and signed in, the Found list shows it. Press
-**Use**, or choose **Claude subscription (Claude Code)**, and the assistant
+**Use**, or choose **Claude subscription**, and the assistant
 runs on your Pro or Max plan with no API key. Penguin Mail looks for
 `claude` on your PATH and in `~/.local/bin`.
 
@@ -90,8 +102,11 @@ API keys live in the GNOME keyring, under the service `mailrs-ai`. The
 settings file never holds them.
 
 A local server keeps your mail on your computer. The Anthropic API and
-Claude Code send what the assistant reads to Anthropic. The assistant reads
-only what a task needs, but that can be whole conversations.
+Claude Code send what a feature reads to Anthropic. Each feature sends to
+the model chosen for it, so the assistant and translation can go to
+different places. The assistant reads only what a task needs, but that can
+be whole conversations. Translation sends the message you asked it to
+translate, and only after you press the button.
 
 The assistant treats mail as data. Its instructions tell it never to follow
 instructions written inside an email, and the approval cards stop a message

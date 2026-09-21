@@ -43,12 +43,15 @@ that needs them, and never at sign-in:
   those images from wherever the sender hosted them. When you click
   Unsubscribe, Penguin Mail contacts the address the mailing list gave for
   that purpose.
-- The assistant is off until you choose a model for it. If you choose a
-  model running on your own computer, your mail stays on your computer. If
-  you choose the Anthropic API or Claude Code, the messages the assistant
-  reads to answer your request are sent to Anthropic, under Anthropic's
-  terms, and only when you ask the assistant something. Penguin Mail does
-  not use your data to train or improve any AI model.
+- Penguin Mail has two AI features, the assistant and translation. Each is
+  off until you choose a model for it, and each sends what it reads to the
+  model chosen for it, which may run on your own computer or at Anthropic.
+  The assistant sends the messages it reads to answer your request, and
+  only when you ask it something. Translation sends the message you asked
+  to translate, and only when you press Translate. With a model running on
+  your own computer, your mail stays on your computer. With the Anthropic
+  API or Claude Code, it goes to Anthropic, under Anthropic's terms.
+  Penguin Mail does not use your data to train or improve any AI model.
 
 ## How your data is protected
 
