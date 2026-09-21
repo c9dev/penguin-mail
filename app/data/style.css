@@ -174,7 +174,10 @@
   -gtk-icon-size: 10px;
   margin-right: 2px;
 }
-.assistant-step-title { font-weight: 600; }
+/* Dimmer than the reply, and the summary beside it dimmer still, so the
+   answer is what the eye lands on. */
+.assistant-step-title { font-weight: 600; opacity: 0.72; }
+.assistant-step title > expander { opacity: 0.6; }
 .assistant-step-body { margin-top: 4px; margin-bottom: 4px; }
 .assistant-thinking { margin-top: 2px; margin-bottom: 4px; }
 .assistant-detail {

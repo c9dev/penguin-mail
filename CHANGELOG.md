@@ -37,8 +37,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
-- The thinking and tool rows under an answer use smaller text and a
-  smaller arrow, so they sit quietly beside the reply.
+- The thinking and tool rows under an answer use smaller, dimmer text and
+  a smaller arrow, so they sit quietly beside the reply.
 - Your mail, settings and cache folders can only be opened by your own
   user account, not by other people who use the same computer.
 
