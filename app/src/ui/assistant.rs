@@ -46,6 +46,16 @@ const NEAR_END: f64 = 48.0;
 
 type SettingsSource = Box<dyn Fn() -> Settings>;
 
+/// One chat: the model it runs on, what was said, and the tool sources it
+/// started with. The sources stay for the whole chat, because the system
+/// prompt names what they offer and a skill's scratch folder lasts as long
+/// as the chat does.
+struct Chat {
+    config: ProviderConfig,
+    conversation: Arc<tokio::sync::Mutex<Conversation>>,
+    sources: Vec<Arc<dyn sources::Source>>,
+}
+
 pub struct AssistantPane {
     pub page: adw::ToolbarView,
     title: adw::WindowTitle,
@@ -62,7 +72,7 @@ pub struct AssistantPane {
     /// Saves an Always Allow answer, keyed `source/tool`.
     on_allow: Box<dyn Fn(String)>,
     settings: SettingsSource,
-    chat: RefCell<Option<(ProviderConfig, Arc<tokio::sync::Mutex<Conversation>>)>>,
+    chat: RefCell<Option<Chat>>,
     running: Cell<bool>,
     stop: RefCell<Option<async_channel::Sender<()>>>,
     /// The turn in progress.
@@ -336,17 +346,25 @@ impl AssistantPane {
                 return self.note(&problem, true);
             }
         };
-        let conversation = {
+        let settings = (self.settings)();
+        let (conversation, chat_sources) = {
             let mut chat = self.chat.borrow_mut();
             match chat.as_ref() {
-                Some((current, conversation)) if *current == config => Arc::clone(conversation),
+                Some(current) if current.config == config => {
+                    (Arc::clone(&current.conversation), current.sources.clone())
+                }
                 _ => {
+                    let chat_sources = sources::for_settings(&settings);
+                    let prompt = sources::system_prompt(assistant::SYSTEM_PROMPT, &chat_sources);
                     let conversation = Arc::new(tokio::sync::Mutex::new(
-                        Conversation::new(config.clone(), assistant::SYSTEM_PROMPT.to_string())
-                            .with_thinking(),
+                        Conversation::new(config.clone(), prompt).with_thinking(),
                     ));
-                    *chat = Some((config, Arc::clone(&conversation)));
-                    conversation
+                    *chat = Some(Chat {
+                        config,
+                        conversation: Arc::clone(&conversation),
+                        sources: chat_sources.clone(),
+                    });
+                    (conversation, chat_sources)
                 }
             }
         };
@@ -359,11 +377,10 @@ impl AssistantPane {
         let (events, received) = async_channel::unbounded::<AgentEvent>();
         let (stop, stopped) = async_channel::bounded::<()>(1);
         *self.stop.borrow_mut() = Some(stop);
-        let settings = (self.settings)();
         let web = settings.ai.web_search != crate::settings::WebSearch::Off;
         let host = Arc::new(Toolbox::new(
             Host::new(assistant::tools::specs(), self.requests.clone()),
-            sources::for_settings(&settings),
+            chat_sources,
             self.approvals.clone(),
             settings.assistant_allowed_tools,
         ));

@@ -144,6 +144,16 @@ pub enum Change {
         name: String,
         on: bool,
     },
+    /// Offers one skill to the assistant, or stops offering it.
+    SkillEnabled {
+        id: String,
+        on: bool,
+    },
+    /// Lets one skill's commands reach the network, or cuts them off.
+    SkillNetwork {
+        id: String,
+        on: bool,
+    },
 }
 
 /// A change to the AI settings. API keys live in the keyring and never come
@@ -330,6 +340,16 @@ impl Change {
                     server.enabled = on;
                 }
             }
+            Change::SkillEnabled { id, on } => {
+                let mut skill = settings.skill(&id);
+                skill.enabled = on;
+                set_skill(settings, id, skill);
+            }
+            Change::SkillNetwork { id, on } => {
+                let mut skill = settings.skill(&id);
+                skill.allow_network = on;
+                set_skill(settings, id, skill);
+            }
         }
     }
 }
@@ -356,6 +376,16 @@ impl AiChange {
             AiChange::WebSearch(choice) => ai.web_search = choice,
             AiChange::SearxngUrl(url) => ai.searxng_url = url.trim().trim_end_matches('/').into(),
         }
+    }
+}
+
+/// Stores one skill's switches. A skill with both off keeps no entry, so
+/// the file lists only the skills somebody turned something on for.
+fn set_skill(settings: &mut Settings, id: String, skill: super::SkillSettings) {
+    if skill == super::SkillSettings::default() {
+        settings.assistant_skills.remove(&id);
+    } else {
+        settings.assistant_skills.insert(id, skill);
     }
 }
 
@@ -552,6 +582,7 @@ impl Effects {
             ai,
             assistant_details_expanded,
             assistant_allowed_tools,
+            assistant_skills,
             hidden_addresses,
             inbox_categories,
             default_category,
@@ -606,6 +637,9 @@ impl Effects {
             assistant_allowed_tools,
             // So do these, and the AI page stops a server it turns off.
             mcp_servers,
+            // A chat reads the skills as it starts, so a switch changes the
+            // next chat rather than the one on screen.
+            assistant_skills,
             // The updater reads these when its timer fires.
             check_for_updates,
             last_update_check,
@@ -784,6 +818,14 @@ mod tests {
                 text: "Ann".into(),
             },
             Change::AssistantDetailsExpanded(true),
+            Change::SkillEnabled {
+                id: "claude-code/pdf".into(),
+                on: true,
+            },
+            Change::SkillNetwork {
+                id: "claude-code/pdf".into(),
+                on: true,
+            },
         ];
         for change in quiet {
             let named = format!("{change:?}");
@@ -966,6 +1008,37 @@ mod tests {
     }
 
     #[test]
+    fn a_skill_keeps_an_entry_only_while_a_switch_is_on() {
+        let mut settings = Settings::default();
+        let id = "penguin-mail/receipts".to_string();
+        assert_eq!(settings.skill(&id), super::super::SkillSettings::default());
+        Change::SkillEnabled {
+            id: id.clone(),
+            on: true,
+        }
+        .apply_to(&mut settings);
+        Change::SkillNetwork {
+            id: id.clone(),
+            on: true,
+        }
+        .apply_to(&mut settings);
+        let skill = settings.skill(&id);
+        assert!(skill.enabled && skill.allow_network);
+        Change::SkillEnabled {
+            id: id.clone(),
+            on: false,
+        }
+        .apply_to(&mut settings);
+        assert!(settings.skill(&id).allow_network);
+        Change::SkillNetwork {
+            id: id.clone(),
+            on: false,
+        }
+        .apply_to(&mut settings);
+        assert!(settings.assistant_skills.is_empty());
+    }
+
+    #[test]
     fn the_old_switch_for_every_account_folds_in_once() {
         let emails = || vec!["ann@example.com".to_string(), "bo@example.com".to_string()];
         let mut settings = Settings {
@@ -1061,6 +1134,9 @@ mod tests {
                 // with the rest of its settings, on the AI page.
                 "assistant_allowed_tools",
                 "assistant_details_expanded",
+                // Skills and whether their scripts reach the network are
+                // for the person to turn on, never the model.
+                "assistant_skills",
                 // The composer reads this as a message goes out, so the
                 // assistant has no business turning the warning off.
                 "check_attachments",

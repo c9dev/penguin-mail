@@ -152,6 +152,7 @@ impl App {
         app.start_update_checks();
         if !app.core.demo {
             crate::assistant::preload_keys();
+            crate::assistant::sources::skills::shell::clear_leftovers();
         }
         app
     }

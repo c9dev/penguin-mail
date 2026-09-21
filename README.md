@@ -114,10 +114,25 @@ Gmail runs all four, so they work with your computer off.
 
 An assistant pane (Ctrl+J) summarizes, sorts, cleans up, drafts replies and
 changes settings such as an automatic reply, using the app's own tools. It
-runs on a local model (LM Studio, Ollama, or any OpenAI-compatible server),
-an Anthropic API key, or your Claude subscription through Claude Code. It
-asks before it sends mail or changes Gmail settings, and it is off until you
-pick a model. [docs/assistant.md](docs/assistant.md) covers setup.
+also reads and changes your Google Calendar, finds free time, looks people
+up in your contacts, and reads attachments.
+
+- **Any model, per job.** It runs on a local model (LM Studio, Ollama, or
+  any OpenAI-compatible server), an Anthropic API key, or your Claude
+  subscription through Claude Code, and translation can use a different
+  model from the assistant.
+- **You see the work.** Each answer shows the model's thinking and every
+  tool it ran, folded up until you open them, and a line saying what it is
+  doing right now.
+- **Web search**, through Claude's own search or, for a local model, Brave
+  Search or your own SearXNG.
+- **MCP servers** you add give it more tools, and **skills** teach it your
+  routines. A skill's scripts run in a sandbox with no access to your mail,
+  keys or home folder.
+
+It asks before it sends mail, changes Gmail settings or your calendar, or
+uses a tool from outside the app, and it is off until you pick a model.
+[docs/assistant.md](docs/assistant.md) covers setup.
 
 ### On the desktop
 

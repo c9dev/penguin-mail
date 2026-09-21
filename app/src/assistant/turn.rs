@@ -318,6 +318,9 @@ pub fn tool_label(name: &str) -> String {
         "update_event" => gettext("Changing an event"),
         "delete_event" => gettext("Deleting an event"),
         "answer_invitation" => gettext("Answering an invitation"),
+        "use_skill" => gettext("Reading a skill"),
+        "read_skill_file" => gettext("Reading a skill's file"),
+        "run_command" => gettext("Running a command in the sandbox"),
         _ => gettext("Working"),
     }
 }

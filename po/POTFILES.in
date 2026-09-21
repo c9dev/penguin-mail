@@ -9,6 +9,9 @@ app/src/assistant/run.rs
 app/src/assistant/run/calendar.rs
 app/src/assistant/run/mail.rs
 app/src/assistant/sources/mcp/mod.rs
+app/src/assistant/sources/skills/mod.rs
+app/src/assistant/sources/skills/sandbox.rs
+app/src/assistant/sources/skills/shell.rs
 app/src/assistant/sources/web.rs
 app/src/assistant/turn.rs
 app/src/compose.rs
@@ -29,6 +32,7 @@ app/src/ui/about.rs
 app/src/ui/assistant.rs
 app/src/ui/assistant_mcp_prefs.rs
 app/src/ui/assistant_prefs.rs
+app/src/ui/assistant_skills_prefs.rs
 app/src/ui/assistant_web_prefs.rs
 app/src/ui/composer/mod.rs
 app/src/ui/composer/recipients.rs

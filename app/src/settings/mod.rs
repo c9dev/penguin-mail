@@ -60,6 +60,9 @@ pub struct Settings {
     /// Tools from outside sources the person answered Always Allow for, as
     /// `source/tool`, such as `mcp:github/github__list_issues`.
     pub assistant_allowed_tools: Vec<String>,
+    /// What the person turned on for each skill, keyed by skill id such as
+    /// `claude-code/pdf`. A skill with no entry is off.
+    pub assistant_skills: BTreeMap<String, SkillSettings>,
     /// Plus addresses made with Hide My Email, oldest first.
     pub hidden_addresses: Vec<crate::hide_my_email::HiddenAddress>,
     /// Split inboxes into Primary, Updates, Promotions, and Social, from
@@ -114,6 +117,17 @@ pub struct Settings {
     /// until the owner turns it on, because each asks Google for more
     /// access.
     pub contact_accounts: Vec<String>,
+}
+
+/// One skill's switches on the AI page. Both start off: a skill is text
+/// the model follows, and scripts reaching the internet is a second choice
+/// on top of that.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct SkillSettings {
+    pub enabled: bool,
+    /// Lets this skill's commands reach the network from the sandbox.
+    pub allow_network: bool,
 }
 
 /// A connection: where a model runs. `Off` is no connection, which turns a
@@ -398,6 +412,7 @@ impl Default for Settings {
             ai: AiSettings::default(),
             assistant_details_expanded: false,
             assistant_allowed_tools: Vec::new(),
+            assistant_skills: BTreeMap::new(),
             hidden_addresses: Vec::new(),
             inbox_categories: true,
             default_category: Category::All,
@@ -664,6 +679,11 @@ impl Settings {
     pub fn reads_contacts(&self, email: &str) -> bool {
         let email = email.to_lowercase();
         self.contact_accounts.contains(&email)
+    }
+
+    /// The switches for one skill, off when the file has no entry for it.
+    pub fn skill(&self, id: &str) -> SkillSettings {
+        self.assistant_skills.get(id).copied().unwrap_or_default()
     }
 
     /// Reads the file, falling back to defaults when it is missing or invalid.

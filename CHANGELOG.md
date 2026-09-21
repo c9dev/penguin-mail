@@ -29,6 +29,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - The assistant can use tools from MCP servers you add on the AI page, by
   a command or a URL. It asks before each call, and Always Allow stops the
   asking for a tool you trust.
+- The assistant can follow skills: folders of instructions for one kind of
+  task, from Penguin Mail's own skills folder or Claude Code's. Turn each
+  one on under Skills on the AI page. A skill's scripts run in a sandbox
+  with no access to your mail or home folder, after you allow each
+  command, and reach the internet only if you allow it for that skill.
 
 ### Improved
 

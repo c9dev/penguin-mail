@@ -56,6 +56,9 @@ Installing for the owner: `NO_AUTOSTART=1 scripts/install.sh`.
   trust dialog on the owner's screen. In product code, every read-only
   `gpgsm` call goes through `read_only()` (`--pinentry-mode error`) for
   the same reason; only decryption may ask for a passphrase.
+- **Sandbox tests** for skill scripts run real `bwrap` and skip when it
+  is missing or cannot start, as in an unprivileged container.
+  `PENGUIN_MAIL_REQUIRE_SANDBOX=1` turns the skip into a failure.
 - **Migrations** live in one ordered array in `store/src/schema.rs`,
   numbered by position and tracked with `PRAGMA user_version`. Append
   only. Two branches that each add one collide on the number: renumber
