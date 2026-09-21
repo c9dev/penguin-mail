@@ -6,7 +6,16 @@ project once, then add each Gmail account from the command line.
 ## 1. Create the Cloud project
 
 1. Open <https://console.cloud.google.com/> and create a project called `penguin-mail`.
-2. Enable the Gmail API: APIs & Services, Library, Gmail API, Enable.
+2. Enable three APIs. For each one, go to APIs & Services, Library, search
+   for it, and click Enable:
+   - **Gmail API**, for your mail. Nothing works without it.
+   - **People API**, for Google contacts. Without it, turning contacts on
+     for an account does nothing.
+   - **Google Calendar API**, so answering an invitation also updates your
+     calendar. Without it, answers still reach the organizer by email.
+
+   Penguin Mail tells you which one to turn on if you skip one, with a
+   button that opens the right page.
 
 ## 2. Configure consent
 

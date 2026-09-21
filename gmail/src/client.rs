@@ -714,6 +714,9 @@ async fn error_from_response(response: Response) -> GmailError {
         401 => GmailError::NeedsReauth,
         404 => GmailError::NotFound,
         429 => GmailError::RateLimited { retry_after },
+        403 if body.contains("SERVICE_DISABLED") => {
+            api_disabled(&body).unwrap_or(GmailError::Http { status, body })
+        }
         403 if body.contains("ACCESS_TOKEN_SCOPE_INSUFFICIENT")
             || body.contains("insufficientPermissions") =>
         {
@@ -725,6 +728,25 @@ async fn error_from_response(response: Response) -> GmailError {
         400 if body.contains("EXPIRED_SYNC_TOKEN") => GmailError::ExpiredSyncToken,
         _ => GmailError::Http { status, body },
     }
+}
+
+/// Reads the API's name and the page that turns it on out of Google's
+/// SERVICE_DISABLED answer, which carries both in its ErrorInfo detail.
+fn api_disabled(body: &str) -> Option<GmailError> {
+    let answer: serde_json::Value = serde_json::from_str(body).ok()?;
+    let details = answer.pointer("/error/details")?.as_array()?;
+    let info = details
+        .iter()
+        .find(|d| d.get("reason").and_then(|r| r.as_str()) == Some("SERVICE_DISABLED"))?;
+    let field = |name: &str| {
+        info.pointer(&format!("/metadata/{name}"))
+            .and_then(|v| v.as_str())
+            .map(str::to_string)
+    };
+    Some(GmailError::ApiDisabled {
+        service: field("serviceTitle").or_else(|| field("service"))?,
+        enable_url: field("activationUrl")?,
+    })
 }
 
 /// Leaves a mailing list the RFC 8058 way: one POST to the list's https

@@ -377,6 +377,38 @@ async fn an_invitation_with_no_organizer_has_nobody_to_answer() {
     assert_eq!(reopened.answer, None, "nothing was answered");
 }
 
+/// A project with the Calendar API switched off refuses outright. The
+/// answer still goes by mail, and the window says what to turn on.
+#[tokio::test]
+async fn a_calendar_api_switched_off_still_reaches_the_organizer() {
+    let h = harness().await;
+    let invitations = invitations(&h);
+    let invitation = read(&invite(0, "20260310T090000Z"));
+    h.fake.with(|s| s.calendar.insert(UID.into(), None));
+    h.fake.fail_next(GmailError::ApiDisabled {
+        service: "Google Calendar API".into(),
+        enable_url: "https://console.developers.google.com/apis/api/calendar-json.googleapis.com"
+            .into(),
+    });
+
+    let sent = invitations
+        .answer(
+            h.account_id,
+            &invitation,
+            &me(),
+            Answer::Yes,
+            Scope::Series,
+            1_000,
+        )
+        .await
+        .unwrap();
+    assert_eq!(sent.told, Told::Organizer);
+    assert!(!sent.needs_permission, "a permission would not help");
+    let off = sent.api_off.expect("the window says what to turn on");
+    assert_eq!(off.service, "Google Calendar API");
+    assert!(sent_message(&h).contains("PARTSTAT=ACCEPTED"));
+}
+
 #[tokio::test]
 async fn a_missing_calendar_permission_still_reaches_the_organizer() {
     let h = harness().await;

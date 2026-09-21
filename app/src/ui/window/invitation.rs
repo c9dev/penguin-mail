@@ -200,6 +200,9 @@ impl MainWindow {
                     if sent.needs_permission {
                         this.offer_calendar_access(account_id);
                     }
+                    if let Some(off) = &sent.api_off {
+                        this.explain_api_off(&off.service, &off.enable_url);
+                    }
                 }
                 Err(err) => {
                     view.card.set_answer(&uid, before);

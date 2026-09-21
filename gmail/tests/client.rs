@@ -570,3 +570,38 @@ async fn an_account_with_no_filters_lists_none() {
         .await;
     assert_eq!(client(&server).filters().await.unwrap(), vec![]);
 }
+
+/// A Google Cloud project without the People API switched on refuses before
+/// any question of permission, so asking the person to grant access would
+/// change nothing. The error names the API and the page that turns it on.
+#[tokio::test]
+async fn an_api_switched_off_in_the_project_says_which_and_where() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    let url =
+        "https://console.developers.google.com/apis/api/people.googleapis.com/overview?project=7";
+    Mock::given(method("GET"))
+        .and(path("/v1/people/me/connections"))
+        .respond_with(ResponseTemplate::new(403).set_body_json(json!({"error": {
+            "code": 403,
+            "message": "People API has not been used in project 7 before or it is disabled.",
+            "status": "PERMISSION_DENIED",
+            "details": [{
+                "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+                "reason": "SERVICE_DISABLED",
+                "metadata": {"serviceTitle": "People API", "activationUrl": url}
+            }]
+        }})))
+        .mount(&server)
+        .await;
+    match client(&server).connections(None, None).await {
+        Err(GmailError::ApiDisabled {
+            service,
+            enable_url,
+        }) => {
+            assert_eq!(service, "People API");
+            assert_eq!(enable_url, url);
+        }
+        other => panic!("unexpected result: {other:?}"),
+    }
+}

@@ -23,6 +23,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Rules open for an account that has none yet, instead of showing an
   error.
 - Contacts load for every account, not only the first one.
+- When the Google Cloud project has the People or Calendar API switched
+  off, Penguin Mail says which one and opens the page that turns it on,
+  instead of doing nothing. An invitation answer still reaches the
+  organizer by email.
 - The focus ring in a new message is a single thin line around the whole
   row, with room around the text.
 

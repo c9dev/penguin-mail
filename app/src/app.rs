@@ -771,7 +771,17 @@ impl App {
                     this.contacts_stale.set(true);
                     this.reload_contacts();
                 }
-                Err(err) => tracing::warn!(error = %err, "could not read the address book"),
+                Err(err) => {
+                    // A People API switched off in the Google Cloud project
+                    // refuses before Google can ask for the permission, so
+                    // the person has to hear what to turn on.
+                    if let (true, Some(window), Some((service, url))) =
+                        (ask, this.window(), api_off(&err))
+                    {
+                        window.explain_api_off(&service, &url);
+                    }
+                    tracing::warn!(error = %err, "could not read the address book");
+                }
             }
         });
     }
@@ -1108,6 +1118,23 @@ impl App {
                     .await;
             });
         });
+    }
+}
+
+/// The API and its enable page, when `err` is Google saying the Cloud
+/// project has that API switched off.
+fn api_off(err: &anyhow::Error) -> Option<(String, String)> {
+    use mailrs_gmail::GmailError;
+    let gmail = match err.downcast_ref::<mailrs_sync::SyncError>() {
+        Some(mailrs_sync::SyncError::Gmail(gmail)) => gmail,
+        _ => err.downcast_ref::<GmailError>()?,
+    };
+    match gmail {
+        GmailError::ApiDisabled {
+            service,
+            enable_url,
+        } => Some((service.clone(), enable_url.clone())),
+        _ => None,
     }
 }
 

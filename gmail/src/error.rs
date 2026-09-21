@@ -10,6 +10,11 @@ pub enum GmailError {
     /// The account never granted a scope this call needs.
     #[error("Penguin Mail needs more access to this account; grant it and try again")]
     MissingScope,
+    /// The Google Cloud project behind the OAuth client has this API
+    /// switched off. Google refuses before any question of permission, so
+    /// only turning it on at `enable_url` helps.
+    #[error("{service} is switched off in the Google Cloud project; turn it on at {enable_url}")]
+    ApiDisabled { service: String, enable_url: String },
     /// The sync token has aged out. Google answers this rather than send
     /// changes it no longer holds; the caller reads everything again.
     #[error("the sync token expired; read it all again")]

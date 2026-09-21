@@ -78,13 +78,24 @@ pub enum Told {
 }
 
 /// What answering an invitation did.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Sent {
     pub told: Told,
     /// Google turned the calendar call down for want of the permission.
     /// The answer went out all the same; the caller offers to ask for the
     /// permission so that the user's own calendar keeps up from here on.
     pub needs_permission: bool,
+    /// The Google Cloud project has the Calendar API switched off, so the
+    /// answer went by mail instead and no permission would change that.
+    pub api_off: Option<ApiOff>,
+}
+
+/// An API the Google Cloud project has switched off, and the page that
+/// turns it on.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ApiOff {
+    pub service: String,
+    pub enable_url: String,
 }
 
 /// How long an event with no end of its own is taken to run for, when
@@ -238,6 +249,7 @@ impl<A: Accounts> Invitations<A> {
         let mut sent = Sent {
             told: Told::Nobody,
             needs_permission: false,
+            api_off: None,
         };
         // Google needs an instant to find one occurrence of a series by.
         // An occurrence whose zone this app could not work out leaves it
@@ -258,6 +270,15 @@ impl<A: Accounts> Invitations<A> {
                 // by mail and the caller offers to ask for the permission,
                 // which keeps the user's own calendar in step from here on.
                 Err(SyncError::Gmail(GmailError::MissingScope)) => sent.needs_permission = true,
+                Err(SyncError::Gmail(GmailError::ApiDisabled {
+                    service,
+                    enable_url,
+                })) => {
+                    sent.api_off = Some(ApiOff {
+                        service,
+                        enable_url,
+                    })
+                }
                 Err(err) => return Err(err),
             }
         }

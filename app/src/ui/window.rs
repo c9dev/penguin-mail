@@ -1806,6 +1806,43 @@ impl MainWindow {
         });
     }
 
+    /// Says an API is switched off in the Google Cloud project Penguin Mail
+    /// signs in with. No permission fixes that, so this offers the page in
+    /// Google Cloud that turns it on.
+    pub fn explain_api_off(self: &Rc<Self>, service: &str, enable_url: &str) {
+        let dialog = adw::AlertDialog::new(
+            Some(&fill(
+                &gettext("Turn On the {service}"),
+                &[("service", service)],
+            )),
+            Some(&fill(
+                &gettext(
+                    "The Google Cloud project Penguin Mail signs in with has the {service} \
+                     switched off, so Google refuses before it can ask for your permission. \
+                     Turn it on, wait a minute, and try again.",
+                ),
+                &[("service", service)],
+            )),
+        );
+        dialog.add_responses(&[
+            ("cancel", &gettext("Not Now")),
+            ("open", &gettext("Open Google Cloud")),
+        ]);
+        dialog.set_response_appearance("open", adw::ResponseAppearance::Suggested);
+        dialog.set_close_response("cancel");
+        let this = Rc::clone(self);
+        let url = enable_url.to_string();
+        glib::spawn_future_local(async move {
+            if dialog.choose_future(Some(&this.window)).await == "open" {
+                gtk::UriLauncher::new(&url).launch(
+                    Some(&this.window),
+                    gio::Cancellable::NONE,
+                    |_| {},
+                );
+            }
+        });
+    }
+
     /// Hands the list the contact photos that are now on disk, so rows
     /// show faces instead of initials.
     pub fn contacts_loaded(self: &Rc<Self>) {
