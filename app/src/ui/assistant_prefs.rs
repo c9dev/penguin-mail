@@ -1,7 +1,7 @@
-//! Preferences → Assistant: which model the assistant uses, and whether it
-//! asks before acting.
+//! Preferences → AI: the connections a model can run on, which model each
+//! AI feature uses, and whether the assistant asks before acting.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -10,7 +10,7 @@ use mailrs_ai::{Model, ModelList, ProviderConfig};
 
 use crate::app::App;
 use crate::assistant::{self, ANTHROPIC_KEY, LOCAL_KEY};
-use crate::settings::{AiChange, AiProvider, AiSettings, Change, Choice};
+use crate::settings::{AiChange, AiProvider, AiSettings, Change, Choice, Feature, Use};
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 /// Models a picker shows before it grows a search box.
@@ -18,27 +18,22 @@ const SEARCH_FROM: usize = 8;
 
 pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesPage {
     let ai = app.settings().ai;
+    // Other code opens this page by the name it had when it was called
+    // Assistant, so the name stays.
     let page = adw::PreferencesPage::builder()
-        .title(gettext("Assistant"))
+        .title(gettext("AI"))
         .name("assistant")
         .icon_name("penguin-mail-sparkle-symbolic")
         .build();
 
-    let model = adw::PreferencesGroup::builder()
-        .title(gettext("Model"))
+    let connections = adw::PreferencesGroup::builder()
+        .title(gettext("Connections"))
         .description(gettext(
-            "Local models keep your mail on this computer. With Anthropic or a Claude \
-             subscription, the mail the assistant reads goes to Anthropic.",
+            "A local server is LM Studio, Ollama, or any server with OpenAI's API. Local \
+             models keep your mail on this computer. With Anthropic or a Claude \
+             subscription, what a feature reads goes to Anthropic.",
         ))
         .build();
-    let labels: Vec<String> = AiProvider::ALL.iter().map(|p| p.label()).collect();
-    let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
-    let provider = adw::ComboRow::builder()
-        .title(gettext("Provider"))
-        .model(&gtk::StringList::new(&labels))
-        .selected(ai.provider.index())
-        .build();
-    model.add(&provider);
 
     // A local or OpenAI-compatible server.
     let base_url = adw::EntryRow::builder()
@@ -55,110 +50,43 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
         .title(gettext("Anthropic API Key"))
         .show_apply_button(true)
         .build();
-    // Every picker and the Test button read the fields through this, so
-    // they ask what the dialog shows rather than what was last saved.
+    // Every picker and Test button reads the fields through this, so they
+    // ask what the dialog shows rather than what was last saved.
     let typed = Typed {
         base_url: base_url.clone(),
         local_key: local_key.clone(),
         anthropic_key: anthropic_key.clone(),
     };
-    let local_model = model_row(
-        app,
-        &ai.local_model,
-        Picker {
-            provider: AiProvider::Local,
-            default_label: None,
-            change: AiChange::LocalModel,
-        },
-        typed.clone(),
-    );
 
-    let anthropic_model = model_row(
-        app,
-        &ai.anthropic_model,
-        Picker {
-            provider: AiProvider::Anthropic,
-            default_label: None,
-            change: AiChange::AnthropicModel,
-        },
-        typed.clone(),
-    );
-    // Claude Code.
+    let local = connection_row(AiProvider::Local, &ai.base_url);
+    local.add_row(&base_url);
+    local.add_row(&local_key);
+    local.add_row(&test_row(app, dialog, AiProvider::Local, &typed));
+    let anthropic = connection_row(AiProvider::Anthropic, "");
+    anthropic.add_row(&anthropic_key);
+    anthropic.add_row(&test_row(app, dialog, AiProvider::Anthropic, &typed));
     let found = assistant::find_claude();
-    let claude = adw::ActionRow::builder()
-        .title(gettext("Claude Code"))
-        .subtitle(match &found {
+    let claude = connection_row(
+        AiProvider::ClaudeCode,
+        &match &found {
             Some(path) => fill(
                 &gettext("Uses your Claude subscription through {path}"),
                 &[("path", &path.display().to_string())],
             ),
             None => gettext("Not found. Install Claude Code and sign in by running claude once."),
-        })
-        .build();
-    let claude_model = model_row(
-        app,
-        &ai.claude_model,
-        Picker {
-            provider: AiProvider::ClaudeCode,
-            default_label: Some(gettext("Claude Code's own default")),
-            change: AiChange::ClaudeModel,
         },
-        typed.clone(),
     );
-    for row in [
-        base_url.upcast_ref::<gtk::Widget>(),
-        local_key.upcast_ref(),
-        local_model.upcast_ref(),
-        anthropic_key.upcast_ref(),
-        anthropic_model.upcast_ref(),
-        claude.upcast_ref(),
-        claude_model.upcast_ref(),
-    ] {
-        model.add(row);
+    claude.add_row(&test_row(app, dialog, AiProvider::ClaudeCode, &typed));
+    for row in [&local, &anthropic, &claude] {
+        connections.add(row);
     }
-    let test = gtk::Button::builder()
-        .label(gettext("Test"))
-        .valign(gtk::Align::Center)
-        .build();
-    let test_row = adw::ActionRow::builder()
-        .title(gettext("Test the Connection"))
-        .build();
-    test_row.add_suffix(&test);
-    model.add(&test_row);
-    page.add(&model);
+    page.add(&connections);
 
-    let show_rows = {
-        let (base_url, local_key, local_model) =
-            (base_url.clone(), local_key.clone(), local_model.clone());
-        let (anthropic_key, anthropic_model) = (anthropic_key.clone(), anthropic_model.clone());
-        let (claude, claude_model, test_row) =
-            (claude.clone(), claude_model.clone(), test_row.clone());
-        move |chosen: AiProvider| {
-            let local = chosen == AiProvider::Local;
-            let anthropic = chosen == AiProvider::Anthropic;
-            let code = chosen == AiProvider::ClaudeCode;
-            base_url.set_visible(local);
-            local_key.set_visible(local);
-            local_model.set_visible(local);
-            anthropic_key.set_visible(anthropic);
-            anthropic_model.set_visible(anthropic);
-            claude.set_visible(code);
-            claude_model.set_visible(code);
-            test_row.set_visible(chosen != AiProvider::Off);
-        }
-    };
-    show_rows(ai.provider);
-    let weak = Rc::downgrade(app);
-    provider.connect_selected_notify(move |row| {
-        let chosen = AiProvider::from_index(row.selected());
-        show_rows(chosen);
-        if let Some(app) = weak.upgrade() {
-            app.change_settings(Change::Ai(AiChange::Provider(chosen)));
-        }
-    });
+    let base_url_shown = local.clone();
     let weak = Rc::downgrade(app);
     base_url.connect_apply(move |row| {
         let url = row.text().trim().trim_end_matches('/').to_string();
+        base_url_shown.set_subtitle(&glib::markup_escape_text(&url));
         if let Some(app) = weak.upgrade() {
             app.change_settings(Change::Ai(AiChange::BaseUrl(url)));
         }
@@ -177,42 +105,47 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
             row.set_text("");
         });
     };
+    let key_state = |saved: bool| {
+        if saved {
+            gettext("Key saved in the keyring")
+        } else {
+            gettext("No key saved")
+        }
+    };
+    let saved = assistant::load_key(ANTHROPIC_KEY).is_some();
+    anthropic.set_subtitle(&key_state(saved));
+    // Connected before `save`, which empties the field, so this still sees
+    // what was typed.
+    let anthropic_shown = anthropic.clone();
+    anthropic_key.connect_apply(move |row| {
+        anthropic_shown.set_subtitle(&key_state(!row.text().trim().is_empty()));
+    });
     save(LOCAL_KEY, &local_key);
     save(ANTHROPIC_KEY, &anthropic_key);
-    if assistant::load_key(ANTHROPIC_KEY).is_some() {
+    if saved {
         anthropic_key.set_title(&gettext("Anthropic API Key (Saved)"));
     }
-    let (weak, toasts) = (Rc::downgrade(app), dialog.clone());
-    let testing = typed.clone();
-    test.connect_clicked(move |button| {
-        let Some(app) = weak.upgrade() else { return };
-        // Test what the dialog shows. Testing the saved address while the
-        // person looks at a different one is how a working server gets
-        // reported as broken.
-        let provider = app.settings().ai.provider;
-        let config = match testing.config(&app, provider) {
-            Ok(config) => config,
-            Err(problem) => return toasts.add_toast(adw::Toast::new(&problem)),
-        };
-        button.set_sensitive(false);
-        let (button, toasts) = (button.clone(), toasts.clone());
-        glib::spawn_future_local(async move {
-            let result = app
-                .core
-                .call(async move { mailrs_ai::test(&config).await })
-                .await;
-            button.set_sensitive(true);
-            toasts.add_toast(adw::Toast::new(&match result {
-                Ok(answer) => answer,
-                Err(err) => fill(
-                    &gettext("No answer: {reason}"),
-                    &[("reason", &err.to_string())],
-                ),
-            }));
-        });
-    });
 
-    page.add(&detected_group(app, &provider, &base_url, &local_model));
+    let used_for = adw::PreferencesGroup::builder()
+        .title(gettext("Used For"))
+        .description(gettext(
+            "Each feature sends what it reads to the model chosen for it.",
+        ))
+        .build();
+    let rows: Vec<FeatureRow> = Feature::ALL
+        .into_iter()
+        .map(|feature| feature_row(app, &ai, feature, &typed))
+        .collect();
+    for row in &rows {
+        used_for.add(&row.expander);
+    }
+    page.add(&used_for);
+
+    let assistant_row = rows
+        .into_iter()
+        .find(|row| row.feature == Feature::Assistant)
+        .expect("Feature::ALL holds the assistant");
+    page.add(&detected_group(app, assistant_row, &base_url, &local));
 
     let safety = adw::PreferencesGroup::builder()
         .title(gettext("Safety"))
@@ -237,6 +170,177 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
     page
 }
 
+/// One connection under Connections, holding the rows that set it up.
+fn connection_row(connection: AiProvider, subtitle: &str) -> adw::ExpanderRow {
+    adw::ExpanderRow::builder()
+        .title(connection.label())
+        .subtitle(glib::markup_escape_text(subtitle))
+        .build()
+}
+
+/// The Test row inside a connection. It asks the model the assistant would
+/// use there, or the first feature that runs on it.
+fn test_row(
+    app: &Rc<App>,
+    dialog: &adw::PreferencesDialog,
+    connection: AiProvider,
+    typed: &Typed,
+) -> adw::ActionRow {
+    let test = gtk::Button::builder()
+        .label(gettext("Test"))
+        .valign(gtk::Align::Center)
+        .build();
+    let row = adw::ActionRow::builder()
+        .title(gettext("Test the Connection"))
+        .build();
+    row.add_suffix(&test);
+    let (weak, toasts, typed) = (Rc::downgrade(app), dialog.clone(), typed.clone());
+    test.connect_clicked(move |button| {
+        let Some(app) = weak.upgrade() else { return };
+        // Test what the dialog shows. Testing the saved address while the
+        // person looks at a different one is how a working server gets
+        // reported as broken.
+        let ai = app.settings().ai;
+        let config = match typed.config(ai.clone(), connection, &model_to_test(&ai, connection)) {
+            Ok(config) => config,
+            Err(problem) => return toasts.add_toast(adw::Toast::new(&problem)),
+        };
+        button.set_sensitive(false);
+        let (button, toasts) = (button.clone(), toasts.clone());
+        glib::spawn_future_local(async move {
+            let result = app
+                .core
+                .call(async move { mailrs_ai::test(&config).await })
+                .await;
+            button.set_sensitive(true);
+            toasts.add_toast(adw::Toast::new(&match result {
+                Ok(answer) => answer,
+                Err(err) => fill(
+                    &gettext("No answer: {reason}"),
+                    &[("reason", &err.to_string())],
+                ),
+            }));
+        });
+    });
+    row
+}
+
+/// The model a connection's Test button asks: the one a feature already
+/// runs there, else the assistant's model for it.
+fn model_to_test(ai: &AiSettings, connection: AiProvider) -> String {
+    Feature::ALL
+        .into_iter()
+        .map(|feature| ai.resolved(feature))
+        .find(|(on, model)| *on == connection && !model.trim().is_empty())
+        .map(|(_, model)| model)
+        .unwrap_or_else(|| ai.model_on(connection).to_string())
+}
+
+/// One feature under Used For: where it runs and on which model.
+#[derive(Clone)]
+struct FeatureRow {
+    feature: Feature,
+    expander: adw::ExpanderRow,
+    connection: adw::ComboRow,
+    model: adw::EntryRow,
+}
+
+impl FeatureRow {
+    /// Moves the feature to a connection, as if picked in its drop-down.
+    fn choose(&self, app: &App, connection: AiProvider) {
+        let at = self.feature.choices().iter().position(
+            |choice| matches!(choice, Use::Model { connection: c, .. } if *c == connection),
+        );
+        let Some(at) = at else { return };
+        if self.connection.selected() == at as u32 {
+            // The drop-down does not tell anyone when it is set to what it
+            // already shows, and the connection's model may have changed
+            // under it.
+            if let Use::Model { model, .. } = app.settings().ai.use_for(self.feature) {
+                self.model.set_text(&model);
+            }
+        } else {
+            self.connection.set_selected(at as u32);
+        }
+    }
+}
+
+fn feature_row(app: &Rc<App>, ai: &AiSettings, feature: Feature, typed: &Typed) -> FeatureRow {
+    let choices = feature.choices();
+    let current = ai.use_for(feature);
+    let labels: Vec<String> = choices.iter().map(Use::label).collect();
+    let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
+    let expander = adw::ExpanderRow::builder()
+        .title(feature.label())
+        .subtitle(feature.description())
+        .expanded(true)
+        .build();
+    let connection = adw::ComboRow::builder()
+        .title(gettext("Connection"))
+        .model(&gtk::StringList::new(&labels))
+        .selected(
+            choices
+                .iter()
+                .position(|choice| choice.same_choice(&current))
+                .unwrap_or(0) as u32,
+        )
+        .build();
+    let (on, model) = match &current {
+        Use::Model { connection, model } => (*connection, model.as_str()),
+        Use::SameAsAssistant => (AiProvider::Off, ""),
+    };
+    let picker = Picker {
+        feature,
+        connection: Rc::new(Cell::new(on)),
+    };
+    let model_row = model_row(app, model, picker.clone(), typed.clone());
+    model_row.set_visible(on != AiProvider::Off);
+    let model_shown = model_row.clone();
+    expander.add_row(&connection);
+    expander.add_row(&model_row);
+
+    let weak = Rc::downgrade(app);
+    connection.connect_selected_notify(move |row| {
+        let Some(app) = weak.upgrade() else { return };
+        let Some(choice) = choices.get(row.selected() as usize).cloned() else {
+            return;
+        };
+        let ai = app.settings().ai;
+        let choice = match choice {
+            Use::SameAsAssistant => Use::SameAsAssistant,
+            Use::Model { connection, .. } => {
+                // Staying on a connection keeps the model already chosen
+                // there. Moving to another one starts from the assistant's
+                // model on it, which is a model that connection has.
+                let model = match ai.use_for(feature) {
+                    Use::Model {
+                        connection: was,
+                        model,
+                    } if was == connection => model,
+                    _ => ai.model_on(connection).to_string(),
+                };
+                Use::Model { connection, model }
+            }
+        };
+        let on = match &choice {
+            Use::Model { connection, model } => {
+                model_row.set_text(model);
+                *connection
+            }
+            Use::SameAsAssistant => AiProvider::Off,
+        };
+        picker.connection.set(on);
+        model_row.set_visible(on != AiProvider::Off);
+        app.change_settings(Change::Ai(AiChange::Use { feature, choice }));
+    });
+    FeatureRow {
+        feature,
+        expander,
+        connection,
+        model: model_shown,
+    }
+}
+
 /// The fields the dialog shows, so the model list and the Test button ask
 /// the server the person is looking at rather than the one last saved.
 ///
@@ -252,44 +356,44 @@ struct Typed {
 }
 
 impl Typed {
-    /// The provider's settings with whatever is on screen written over
-    /// them, ready to talk to.
-    fn config(&self, app: &App, provider: AiProvider) -> Result<ProviderConfig, String> {
-        self.built(app.settings().ai, provider)
-    }
-
-    /// The same, with a model name standing in, for asking a server what
-    /// it offers before a model has been chosen.
-    fn listing(&self, app: &App, provider: AiProvider) -> Result<ProviderConfig, String> {
-        let mut ai = app.settings().ai;
-        if ai.local_model.trim().is_empty() {
-            ai.local_model = "list".into();
-        }
-        self.built(ai, provider)
-    }
-
-    fn built(&self, mut ai: AiSettings, provider: AiProvider) -> Result<ProviderConfig, String> {
-        ai.provider = provider;
+    /// A connection with whatever is on screen written over the saved
+    /// settings, ready to talk to `model`. It goes through
+    /// `assistant::model_for` like every feature does, as the assistant on
+    /// a copy of the settings, so testing a connection builds the same
+    /// thing using it would.
+    fn config(
+        &self,
+        mut ai: AiSettings,
+        connection: AiProvider,
+        model: &str,
+    ) -> Result<ProviderConfig, String> {
+        ai.set_use(
+            Feature::Assistant,
+            Use::Model {
+                connection,
+                model: model.to_string(),
+            },
+        );
         let address = self.base_url.text().trim().to_string();
         if !address.is_empty() {
             ai.base_url = address;
         }
         // A key typed and not applied is still in its field: one that
         // reached the keyring clears it.
-        let typed_key = match provider {
+        let typed_key = match connection {
             AiProvider::Local => self.local_key.text().trim().to_string(),
             AiProvider::Anthropic => self.anthropic_key.text().trim().to_string(),
             _ => String::new(),
         };
-        if provider == AiProvider::Anthropic && !typed_key.is_empty() {
-            // `provider_config` refuses for want of a saved key before it
-            // could be told about this one, so this answers in its place.
+        if connection == AiProvider::Anthropic && !typed_key.is_empty() {
+            // `model_for` refuses for want of a saved key before it could
+            // be told about this one, so this answers in its place.
             return Ok(ProviderConfig::Anthropic {
                 api_key: typed_key,
-                model: ai.anthropic_model.trim().to_string(),
+                model: model.trim().to_string(),
             });
         }
-        let mut config = assistant::provider_config(&ai)?;
+        let mut config = assistant::model_for(&ai, Feature::Assistant)?;
         if let ProviderConfig::OpenAiCompatible { api_key, .. } = &mut config
             && !typed_key.is_empty()
         {
@@ -297,31 +401,50 @@ impl Typed {
         }
         Ok(config)
     }
+
+    /// The same, with a model name standing in, for asking a server what
+    /// it offers before a model has been chosen.
+    fn listing(&self, app: &App, connection: AiProvider) -> Result<ProviderConfig, String> {
+        self.config(app.settings().ai, connection, "list")
+    }
 }
 
-/// What one provider's model picker lists and what it saves.
+/// Which feature a model picker belongs to, and the connection its
+/// drop-down shows now.
 #[derive(Clone)]
 struct Picker {
-    provider: AiProvider,
-    /// The first entry, which empties the field. Claude Code picks its own
-    /// model then; the other providers need a name.
-    default_label: Option<String>,
-    change: fn(String) -> AiChange,
+    feature: Feature,
+    connection: Rc<Cell<AiProvider>>,
 }
 
-/// The Model row every provider gets: a field you can type into, and a
-/// picker listing what the provider can run.
+impl Picker {
+    /// The first entry, which empties the field. Claude Code picks its own
+    /// model then; the other connections need a name.
+    fn default_label(&self) -> Option<String> {
+        (self.connection.get() == AiProvider::ClaudeCode)
+            .then(|| gettext("Claude Code's own default"))
+    }
+}
+
+/// The Model row every feature gets: a field you can type into, and a
+/// picker listing what the connection can run.
 fn model_row(app: &Rc<App>, current: &str, picker: Picker, typed: Typed) -> adw::EntryRow {
     let row = adw::EntryRow::builder()
         .title(gettext("Model"))
         .text(current)
         .show_apply_button(true)
         .build();
-    let weak = Rc::downgrade(app);
+    let (weak, saving) = (Rc::downgrade(app), picker.clone());
     row.connect_apply(move |row| {
-        let model = row.text().trim().to_string();
+        let choice = Use::Model {
+            connection: saving.connection.get(),
+            model: row.text().trim().to_string(),
+        };
         if let Some(app) = weak.upgrade() {
-            app.change_settings(Change::Ai((picker.change)(model)));
+            app.change_settings(Change::Ai(AiChange::Use {
+                feature: saving.feature,
+                choice,
+            }));
         }
     });
     let pick = gtk::MenuButton::builder()
@@ -415,7 +538,7 @@ fn fill_popover(
         }
     });
 
-    let config = typed.listing(app, picker.provider);
+    let config = typed.listing(app, picker.connection.get());
     let (app, entry, popover) = (Rc::clone(app), entry.clone(), popover.clone());
     glib::spawn_future_local(async move {
         let config = match config {
@@ -465,7 +588,7 @@ fn show_models(
 ) {
     let chosen = entry.text().trim().to_string();
     let mut models: Vec<Model> = Vec::new();
-    if let Some(label) = picker.default_label {
+    if let Some(label) = picker.default_label() {
         models.push(Model::named(String::new(), label));
     }
     models.extend(listed.models.iter().cloned());
@@ -550,12 +673,13 @@ fn sentence(err: &anyhow::Error) -> String {
     format!("{start}{}.", chars.as_str().trim_end_matches('.'))
 }
 
-/// Servers and Claude Code found on this computer, each with a Use button.
+/// Servers and Claude Code found on this computer, each with a Use button
+/// that sets up the connection and puts the assistant on it.
 fn detected_group(
     app: &Rc<App>,
-    provider: &adw::ComboRow,
+    assistant_row: FeatureRow,
     base_url: &adw::EntryRow,
-    local_model: &adw::EntryRow,
+    local: &adw::ExpanderRow,
 ) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::builder()
         .title(gettext("Found on This Computer"))
@@ -567,8 +691,7 @@ fn detected_group(
         .build();
     group.add(&looking);
     let (app, group_ref) = (Rc::clone(app), group.clone());
-    let (provider, base_url, local_model) =
-        (provider.clone(), base_url.clone(), local_model.clone());
+    let (base_url, local) = (base_url.clone(), local.clone());
     glib::spawn_future_local(async move {
         let found = app
             .core
@@ -611,36 +734,39 @@ fn detected_group(
                 &use_it,
                 &fill(&gettext("Use {provider}"), &[("provider", &item.label)]),
             );
-            let (app, provider, base_url, local_model) = (
+            let (app, assistant_row, base_url, local) = (
                 Rc::clone(&app),
-                provider.clone(),
+                assistant_row.clone(),
                 base_url.clone(),
-                local_model.clone(),
+                local.clone(),
             );
             use_it.connect_clicked(move |_| {
                 let config = item.config.clone();
                 let first = item.models.first().cloned().unwrap_or_default();
-                match config {
+                // The connection is saved first, so moving the assistant
+                // onto it picks up the model just found.
+                let connection = match config {
                     ProviderConfig::OpenAiCompatible { base_url: url, .. } => {
                         base_url.set_text(&url);
-                        local_model.set_text(&first);
+                        local.set_subtitle(&glib::markup_escape_text(&url));
                         app.change_settings(Change::Ai(AiChange::LocalServer {
                             base_url: url,
                             model: first,
                         }));
-                        provider.set_selected(AiProvider::Local.index());
+                        AiProvider::Local
                     }
                     ProviderConfig::Anthropic { api_key, .. } => {
                         assistant::save_key(ANTHROPIC_KEY, &api_key);
-                        provider.set_selected(AiProvider::Anthropic.index());
+                        AiProvider::Anthropic
                     }
                     ProviderConfig::ClaudeCode { command, .. } => {
                         app.change_settings(Change::Ai(AiChange::ClaudeCommand(
                             command.display().to_string(),
                         )));
-                        provider.set_selected(AiProvider::ClaudeCode.index());
+                        AiProvider::ClaudeCode
                     }
-                }
+                };
+                assistant_row.choose(&app, connection);
             });
             row.add_suffix(&use_it);
             group_ref.add(&row);

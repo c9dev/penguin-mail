@@ -74,19 +74,23 @@ msgstr ""
 msgid "Could not reach GitHub to check for updates"
 msgstr ""
 
-#: app/src/assistant/mod.rs:97
+#: app/src/assistant/mod.rs:101
 msgid "The assistant is off. Choose a model in Preferences."
 msgstr ""
 
-#: app/src/assistant/mod.rs:102
+#: app/src/assistant/mod.rs:103
+msgid "Translation has no model. Choose one in Preferences, on the AI page."
+msgstr ""
+
+#: app/src/assistant/mod.rs:109
 msgid "Choose a model for the local server in Preferences."
 msgstr ""
 
-#: app/src/assistant/mod.rs:114
+#: app/src/assistant/mod.rs:121
 msgid "Add an Anthropic API key in Preferences."
 msgstr ""
 
-#: app/src/assistant/mod.rs:124
+#: app/src/assistant/mod.rs:128
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr ""
 
@@ -767,131 +771,151 @@ msgstr ""
 msgid "In {label}"
 msgstr ""
 
-#: app/src/settings/mod.rs:132 app/src/settings/mod.rs:372
+#: app/src/settings/mod.rs:133 app/src/settings/mod.rs:526
 msgid "Off"
 msgstr ""
 
-#: app/src/settings/mod.rs:133
-msgid "Local or OpenAI-compatible server"
-msgstr ""
-
 #: app/src/settings/mod.rs:134
-msgid "Anthropic API key"
+msgid "Local server"
 msgstr ""
 
 #: app/src/settings/mod.rs:135
-msgid "Claude subscription (Claude Code)"
+msgid "Anthropic API"
 msgstr ""
 
-#: app/src/settings/mod.rs:231
+#: app/src/settings/mod.rs:136
+msgid "Claude subscription"
+msgstr ""
+
+#: app/src/settings/mod.rs:156 app/src/ui/assistant.rs:96
+msgid "Assistant"
+msgstr ""
+
+#: app/src/settings/mod.rs:157
+msgid "Translation"
+msgstr ""
+
+#: app/src/settings/mod.rs:163
+msgid "Answers questions and acts on your mail"
+msgstr ""
+
+#: app/src/settings/mod.rs:164
+msgid "Translates a message when you ask"
+msgstr ""
+
+#: app/src/settings/mod.rs:201
+msgid "Same as the Assistant"
+msgstr ""
+
+#: app/src/settings/mod.rs:385
 msgid "Rich text"
 msgstr ""
 
-#: app/src/settings/mod.rs:232
+#: app/src/settings/mod.rs:386
 msgid "Markdown"
 msgstr ""
 
-#: app/src/settings/mod.rs:279
+#: app/src/settings/mod.rs:433
 msgid "When opened"
 msgstr ""
 
-#: app/src/settings/mod.rs:280
+#: app/src/settings/mod.rs:434
 msgid "After 2 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:281
+#: app/src/settings/mod.rs:435
 msgid "Only when I choose"
 msgstr ""
 
-#: app/src/settings/mod.rs:297
+#: app/src/settings/mod.rs:451
 msgid "Ask each time"
 msgstr ""
 
-#: app/src/settings/mod.rs:298
+#: app/src/settings/mod.rs:452
 msgid "Always load"
 msgstr ""
 
-#: app/src/settings/mod.rs:332
+#: app/src/settings/mod.rs:486
 msgid "Small"
 msgstr ""
 
-#: app/src/settings/mod.rs:333
+#: app/src/settings/mod.rs:487
 msgid "Default"
 msgstr ""
 
-#: app/src/settings/mod.rs:334
+#: app/src/settings/mod.rs:488
 msgid "Large"
 msgstr ""
 
-#: app/src/settings/mod.rs:335
+#: app/src/settings/mod.rs:489
 msgid "Larger"
 msgstr ""
 
-#: app/src/settings/mod.rs:373
+#: app/src/settings/mod.rs:527
 msgid "5 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:374
+#: app/src/settings/mod.rs:528
 msgid "10 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:375
+#: app/src/settings/mod.rs:529
 msgid "20 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:376
+#: app/src/settings/mod.rs:530
 msgid "30 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:393
+#: app/src/settings/mod.rs:547
 msgid "Follow system"
 msgstr ""
 
-#: app/src/settings/mod.rs:394
+#: app/src/settings/mod.rs:548
 msgid "Light"
 msgstr ""
 
-#: app/src/settings/mod.rs:395
+#: app/src/settings/mod.rs:549
 msgid "Dark"
 msgstr ""
 
-#: app/src/settings/mod.rs:405
+#: app/src/settings/mod.rs:559
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/settings/mod.rs:413
+#: app/src/settings/mod.rs:567
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/settings/mod.rs:430
+#: app/src/settings/mod.rs:584
 msgid "2 weeks"
 msgstr ""
 
-#: app/src/settings/mod.rs:431
+#: app/src/settings/mod.rs:585
 msgid "30 days"
 msgstr ""
 
-#: app/src/settings/mod.rs:432
+#: app/src/settings/mod.rs:586
 msgid "90 days"
 msgstr ""
 
-#: app/src/settings/mod.rs:433
+#: app/src/settings/mod.rs:587
 msgid "1 year"
 msgstr ""
 
-#: app/src/settings/mod.rs:440
+#: app/src/settings/mod.rs:594
 msgid "256 MB"
 msgstr ""
 
-#: app/src/settings/mod.rs:441
+#: app/src/settings/mod.rs:595
 msgid "1 GB"
 msgstr ""
 
-#: app/src/settings/mod.rs:442
+#: app/src/settings/mod.rs:596
 msgid "4 GB"
 msgstr ""
 
@@ -1305,10 +1329,6 @@ msgstr ""
 msgid "Working"
 msgstr ""
 
-#: app/src/ui/assistant.rs:96 app/src/ui/assistant_prefs.rs:22
-msgid "Assistant"
-msgstr ""
-
 #: app/src/ui/assistant.rs:99 app/src/ui/assistant.rs:101
 msgid "New Chat"
 msgstr ""
@@ -1375,135 +1395,156 @@ msgstr ""
 msgid "Failed"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:28 app/src/ui/assistant_prefs.rs:316
-msgid "Model"
+#: app/src/ui/assistant_prefs.rs:24
+msgid "AI"
 msgstr ""
 
 #: app/src/ui/assistant_prefs.rs:30
+msgid "Connections"
+msgstr ""
+
+#: app/src/ui/assistant_prefs.rs:32
 msgid ""
-"Local models keep your mail on this computer. With Anthropic or a Claude "
-"subscription, the mail the assistant reads goes to Anthropic."
+"A local server is LM Studio, Ollama, or any server with OpenAI's API. Local "
+"models keep your mail on this computer. With Anthropic or a Claude "
+"subscription, what a feature reads goes to Anthropic."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:37
-msgid "Provider"
-msgstr ""
-
-#: app/src/ui/assistant_prefs.rs:45
+#: app/src/ui/assistant_prefs.rs:40
 msgid "Server Address"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:50
+#: app/src/ui/assistant_prefs.rs:45
 msgid "API Key (Optional)"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:55
+#: app/src/ui/assistant_prefs.rs:50
 msgid "Anthropic API Key"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:89
-msgid "Claude Code"
-msgstr ""
-
-#: app/src/ui/assistant_prefs.rs:92
+#: app/src/ui/assistant_prefs.rs:73
 msgid "Uses your Claude subscription through {path}"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:95
+#: app/src/ui/assistant_prefs.rs:76
 msgid "Not found. Install Claude Code and sign in by running claude once."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:103
-msgid "Claude Code's own default"
-msgstr ""
-
-#: app/src/ui/assistant_prefs.rs:120
-msgid "Test"
-msgstr ""
-
-#: app/src/ui/assistant_prefs.rs:124
-msgid "Test the Connection"
-msgstr ""
-
-#: app/src/ui/assistant_prefs.rs:173
+#: app/src/ui/assistant_prefs.rs:101
 msgid "Removed the key"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:175
+#: app/src/ui/assistant_prefs.rs:103
 msgid "Saved in the keyring"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:183
+#: app/src/ui/assistant_prefs.rs:110
+msgid "Key saved in the keyring"
+msgstr ""
+
+#: app/src/ui/assistant_prefs.rs:112
+msgid "No key saved"
+msgstr ""
+
+#: app/src/ui/assistant_prefs.rs:126
 msgid "Anthropic API Key (Saved)"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:208
-msgid "No answer: {reason}"
+#: app/src/ui/assistant_prefs.rs:130
+msgid "Used For"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:218
+#: app/src/ui/assistant_prefs.rs:132
+msgid "Each feature sends what it reads to the model chosen for it."
+msgstr ""
+
+#: app/src/ui/assistant_prefs.rs:151
 msgid "Safety"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:221
+#: app/src/ui/assistant_prefs.rs:154
 msgid "Ask Before Acting"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:223
+#: app/src/ui/assistant_prefs.rs:156
 msgid ""
 "Approve each message the assistant sends and each change to Gmail settings, "
 "such as automatic replies and rules"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:329 app/src/ui/assistant_prefs.rs:333
+#: app/src/ui/assistant_prefs.rs:190
+msgid "Test"
+msgstr ""
+
+#: app/src/ui/assistant_prefs.rs:194
+msgid "Test the Connection"
+msgstr ""
+
+#: app/src/ui/assistant_prefs.rs:219
+msgid "No answer: {reason}"
+msgstr ""
+
+#: app/src/ui/assistant_prefs.rs:279
+msgid "Connection"
+msgstr ""
+
+#: app/src/ui/assistant_prefs.rs:425
+msgid "Claude Code's own default"
+msgstr ""
+
+#: app/src/ui/assistant_prefs.rs:433
+msgid "Model"
+msgstr ""
+
+#: app/src/ui/assistant_prefs.rs:452 app/src/ui/assistant_prefs.rs:456
 msgid "Models You Can Use"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:354
+#: app/src/ui/assistant_prefs.rs:477
 msgid "Search models"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:371
+#: app/src/ui/assistant_prefs.rs:494
 msgid "Asking for the model list…"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:487
+#: app/src/ui/assistant_prefs.rs:610
 msgid "This provider lists no models. Type a name in the field instead."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:522
+#: app/src/ui/assistant_prefs.rs:645
 msgid "alias"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:561
+#: app/src/ui/assistant_prefs.rs:685
 msgid "Found on This Computer"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:565
+#: app/src/ui/assistant_prefs.rs:689
 msgid "Looking for LM Studio, Ollama, Unsloth, and Claude Code…"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:582
+#: app/src/ui/assistant_prefs.rs:705
 msgid "Nothing found"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:584
+#: app/src/ui/assistant_prefs.rs:707
 msgid ""
 "Start LM Studio's server or Ollama, or install Claude Code, then open "
 "Preferences again."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:596
+#: app/src/ui/assistant_prefs.rs:719
 msgid "{model} and {count} more"
 msgid_plural "{model} and {count} more"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/assistant_prefs.rs:607
+#: app/src/ui/assistant_prefs.rs:730
 msgid "Use"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:612
+#: app/src/ui/assistant_prefs.rs:735
 msgid "Use {provider}"
 msgstr ""
 

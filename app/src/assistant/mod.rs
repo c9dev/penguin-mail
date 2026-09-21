@@ -18,7 +18,7 @@ pub use host::{Host, ToolRequest};
 pub use markup::to_pango;
 pub use prompt::SYSTEM_PROMPT;
 
-use crate::settings::{AiProvider, AiSettings};
+use crate::settings::{AiProvider, AiSettings, Feature};
 use mailrs_domain::translate::gettext;
 
 /// The keyring service that holds the assistant's API keys.
@@ -90,14 +90,21 @@ pub fn save_key(name: &str, key: &str) {
     });
 }
 
-/// The provider the settings describe, with keys from the keyring.
-pub fn provider_config(ai: &AiSettings) -> Result<ProviderConfig, String> {
-    match ai.provider {
-        AiProvider::Off => Err(gettext(
-            "The assistant is off. Choose a model in Preferences.",
-        )),
+/// The model a feature runs on, with keys from the keyring. This is the one
+/// way to a `ProviderConfig`, so every feature names itself and gets the
+/// model chosen for it on the AI page.
+pub fn model_for(ai: &AiSettings, feature: Feature) -> Result<ProviderConfig, String> {
+    let (connection, model) = ai.resolved(feature);
+    let model = model.trim().to_string();
+    match connection {
+        AiProvider::Off => Err(match feature {
+            Feature::Assistant => gettext("The assistant is off. Choose a model in Preferences."),
+            Feature::Translation => {
+                gettext("Translation has no model. Choose one in Preferences, on the AI page.")
+            }
+        }),
         AiProvider::Local => {
-            if ai.local_model.trim().is_empty() {
+            if model.is_empty() {
                 return Err(gettext(
                     "Choose a model for the local server in Preferences.",
                 ));
@@ -105,17 +112,14 @@ pub fn provider_config(ai: &AiSettings) -> Result<ProviderConfig, String> {
             Ok(ProviderConfig::OpenAiCompatible {
                 base_url: ai.base_url.trim().to_string(),
                 api_key: load_key(LOCAL_KEY),
-                model: ai.local_model.trim().to_string(),
+                model,
             })
         }
         AiProvider::Anthropic => {
             let api_key = load_key(ANTHROPIC_KEY)
                 .or_else(|| std::env::var("ANTHROPIC_API_KEY").ok())
                 .ok_or_else(|| gettext("Add an Anthropic API key in Preferences."))?;
-            Ok(ProviderConfig::Anthropic {
-                api_key,
-                model: ai.anthropic_model.trim().to_string(),
-            })
+            Ok(ProviderConfig::Anthropic { api_key, model })
         }
         AiProvider::ClaudeCode => {
             let command = if ai.claude_command.trim().is_empty() {
@@ -130,10 +134,16 @@ pub fn provider_config(ai: &AiSettings) -> Result<ProviderConfig, String> {
             };
             Ok(ProviderConfig::ClaudeCode {
                 command,
-                model: Some(ai.claude_model.trim().to_string()).filter(|m| !m.is_empty()),
+                model: Some(model).filter(|m| !m.is_empty()),
             })
         }
     }
+}
+
+/// The assistant's model. The assistant pane still calls it by this name;
+/// it goes once the pane names its feature.
+pub fn provider_config(ai: &AiSettings) -> Result<ProviderConfig, String> {
+    model_for(ai, Feature::Assistant)
 }
 
 /// The `claude` command, from `PATH` or its usual install places.
@@ -150,4 +160,90 @@ pub fn find_claude() -> Option<PathBuf> {
             .map(|p| home.join(p))
             .find(|p| p.is_file())
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::settings::Use;
+
+    fn local(model: &str) -> AiSettings {
+        AiSettings {
+            provider: AiProvider::Local,
+            base_url: "http://127.0.0.1:1234/v1".into(),
+            local_model: model.into(),
+            ..AiSettings::default()
+        }
+    }
+
+    fn model_of(config: ProviderConfig) -> String {
+        match config {
+            ProviderConfig::OpenAiCompatible { model, .. } => model,
+            other => panic!("expected the local server, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_feature_following_the_assistant_gets_the_assistants_model() {
+        let ai = local("qwen3");
+        assert_eq!(ai.use_for(Feature::Translation), Use::SameAsAssistant);
+        assert_eq!(
+            model_for(&ai, Feature::Translation),
+            model_for(&ai, Feature::Assistant)
+        );
+        assert_eq!(
+            model_of(model_for(&ai, Feature::Translation).unwrap()),
+            "qwen3"
+        );
+    }
+
+    #[test]
+    fn a_feature_with_a_model_of_its_own_gets_that_one() {
+        let mut ai = local("qwen3");
+        ai.set_use(
+            Feature::Translation,
+            Use::Model {
+                connection: AiProvider::Local,
+                model: " gemma-3 ".into(),
+            },
+        );
+        assert_eq!(
+            model_of(model_for(&ai, Feature::Translation).unwrap()),
+            "gemma-3"
+        );
+        assert_eq!(
+            model_of(model_for(&ai, Feature::Assistant).unwrap()),
+            "qwen3"
+        );
+    }
+
+    #[test]
+    fn a_feature_can_be_off_while_the_assistant_runs() {
+        let mut ai = local("qwen3");
+        ai.set_use(
+            Feature::Translation,
+            Use::Model {
+                connection: AiProvider::Off,
+                model: String::new(),
+            },
+        );
+        let problem = model_for(&ai, Feature::Translation).expect_err("translation is off");
+        assert!(problem.contains("Translation"), "{problem}");
+        assert!(model_for(&ai, Feature::Assistant).is_ok());
+    }
+
+    #[test]
+    fn with_the_assistant_off_a_follower_says_it_has_no_model() {
+        let ai = AiSettings::default();
+        for feature in Feature::ALL {
+            let problem = model_for(&ai, feature).expect_err("nothing is chosen");
+            assert!(problem.contains("Preferences"), "{feature:?}: {problem}");
+        }
+    }
+
+    #[test]
+    fn a_local_server_needs_a_model_name() {
+        let problem = model_for(&local("  "), Feature::Assistant).expect_err("no model");
+        assert!(problem.contains("local server"), "{problem}");
+    }
 }

@@ -22,7 +22,7 @@ use mailrs_domain::MessageBody;
 
 use crate::assistant;
 use crate::render::escape;
-use crate::settings::AiSettings;
+use crate::settings::{AiSettings, Feature};
 use mailrs_domain::translate::{fill, gettext};
 
 /// How much of a message is read to tell its language. A paragraph settles
@@ -724,7 +724,7 @@ pub struct Translation {
 /// them. `Err` says why there is nowhere to send them, in the words
 /// Preferences uses.
 pub fn destination(ai: &AiSettings) -> Result<(ProviderConfig, String), String> {
-    let config = assistant::provider_config(ai)?;
+    let config = assistant::model_for(ai, Feature::Translation)?;
     let said = match &config {
         ProviderConfig::OpenAiCompatible {
             base_url, model, ..

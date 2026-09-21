@@ -107,7 +107,8 @@ pub struct Settings {
     pub contact_accounts: Vec<String>,
 }
 
-/// Where the assistant's model runs.
+/// A connection: where a model runs. `Off` is no connection, which turns a
+/// feature off.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum AiProvider {
@@ -130,29 +131,119 @@ impl Choice for AiProvider {
     fn label(self) -> String {
         match self {
             AiProvider::Off => gettext("Off"),
-            AiProvider::Local => gettext("Local or OpenAI-compatible server"),
-            AiProvider::Anthropic => gettext("Anthropic API key"),
-            AiProvider::ClaudeCode => gettext("Claude subscription (Claude Code)"),
+            AiProvider::Local => gettext("Local server"),
+            AiProvider::Anthropic => gettext("Anthropic API"),
+            AiProvider::ClaudeCode => gettext("Claude subscription"),
         }
     }
 }
 
-/// The assistant's model and how careful it is. API keys live in the
-/// keyring, not here.
+/// Something in the app that sends words to a model. Each one has a row
+/// under Used For on the AI page, and each can run on a model of its own.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Feature {
+    Assistant,
+    Translation,
+}
+
+impl Feature {
+    /// In the order the AI page lists them.
+    pub const ALL: [Feature; 2] = [Feature::Assistant, Feature::Translation];
+
+    pub fn label(self) -> String {
+        match self {
+            Feature::Assistant => gettext("Assistant"),
+            Feature::Translation => gettext("Translation"),
+        }
+    }
+
+    pub fn description(self) -> String {
+        match self {
+            Feature::Assistant => gettext("Answers questions and acts on your mail"),
+            Feature::Translation => gettext("Translates a message when you ask"),
+        }
+    }
+
+    /// What this feature's row offers, in order. `SameAsAssistant` comes
+    /// first for every feature but the assistant, which has no one else to
+    /// follow. The model in each `Use::Model` is left empty: the row fills
+    /// it in.
+    pub fn choices(self) -> Vec<Use> {
+        let follow = (self != Feature::Assistant).then_some(Use::SameAsAssistant);
+        follow
+            .into_iter()
+            .chain(AiProvider::ALL.iter().map(|&connection| Use::Model {
+                connection,
+                model: String::new(),
+            }))
+            .collect()
+    }
+}
+
+/// Which model a feature uses.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "kebab-case")]
+pub enum Use {
+    /// Whatever the assistant uses, including nothing when it is off.
+    SameAsAssistant,
+    /// A model on one connection. `AiProvider::Off` turns the feature off.
+    Model {
+        connection: AiProvider,
+        model: String,
+    },
+}
+
+impl Use {
+    /// The label a feature's row shows for this choice.
+    pub fn label(&self) -> String {
+        match self {
+            Use::SameAsAssistant => gettext("Same as the Assistant"),
+            Use::Model { connection, .. } => connection.label(),
+        }
+    }
+
+    /// Whether two uses are the same row in the drop-down, whatever model
+    /// each names.
+    pub fn same_choice(&self, other: &Use) -> bool {
+        match (self, other) {
+            (Use::SameAsAssistant, Use::SameAsAssistant) => true,
+            (Use::Model { connection: a, .. }, Use::Model { connection: b, .. }) => a == b,
+            _ => false,
+        }
+    }
+}
+
+/// The AI features' models and how careful the assistant is. API keys live
+/// in the keyring, not here.
+///
+/// The assistant's choice stays in the fields it always had: `provider` and
+/// one model per connection. An old settings file therefore loads with the
+/// assistant where it was and every other feature following it, and a file
+/// written now still reads the same way to an older version. Other features
+/// that pick a model of their own keep it in `uses`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AiSettings {
+    /// The assistant's connection.
     pub provider: AiProvider,
     /// The local server's API address, ending in `/v1`.
     pub base_url: String,
+    /// The assistant's model on a local server, and the one another feature
+    /// starts from when it moves there.
     pub local_model: String,
+    /// The same, with Anthropic's API.
     pub anthropic_model: String,
-    /// A Claude Code model alias such as `sonnet`; empty uses its default.
+    /// The same, as a Claude Code model alias such as `sonnet`; empty uses
+    /// its default.
     pub claude_model: String,
     /// The `claude` command; empty finds it automatically.
     pub claude_command: String,
     /// Ask before the assistant sends mail or changes Gmail settings.
     pub confirm_actions: bool,
+    /// Features other than the assistant that do not follow it. A feature
+    /// missing here uses the assistant's model.
+    pub uses: BTreeMap<Feature, Use>,
 }
 
 impl Default for AiSettings {
@@ -165,6 +256,69 @@ impl Default for AiSettings {
             claude_model: String::new(),
             claude_command: String::new(),
             confirm_actions: true,
+            uses: BTreeMap::new(),
+        }
+    }
+}
+
+impl AiSettings {
+    /// The assistant's model on one connection.
+    pub fn model_on(&self, connection: AiProvider) -> &str {
+        match connection {
+            AiProvider::Off => "",
+            AiProvider::Local => &self.local_model,
+            AiProvider::Anthropic => &self.anthropic_model,
+            AiProvider::ClaudeCode => &self.claude_model,
+        }
+    }
+
+    /// What a feature's row shows: the assistant's connection and model,
+    /// or another feature's own choice.
+    pub fn use_for(&self, feature: Feature) -> Use {
+        match feature {
+            Feature::Assistant => Use::Model {
+                connection: self.provider,
+                model: self.model_on(self.provider).to_string(),
+            },
+            _ => self
+                .uses
+                .get(&feature)
+                .cloned()
+                .unwrap_or(Use::SameAsAssistant),
+        }
+    }
+
+    /// The connection and model a feature runs on, following the assistant
+    /// where the feature says to.
+    pub fn resolved(&self, feature: Feature) -> (AiProvider, String) {
+        match self.use_for(feature) {
+            Use::SameAsAssistant => (self.provider, self.model_on(self.provider).to_string()),
+            Use::Model { connection, model } => (connection, model),
+        }
+    }
+
+    /// Chooses a feature's model. The assistant cannot follow itself, so
+    /// `SameAsAssistant` leaves it as it was.
+    pub fn set_use(&mut self, feature: Feature, choice: Use) {
+        match (feature, choice) {
+            (Feature::Assistant, Use::SameAsAssistant) => {}
+            (Feature::Assistant, Use::Model { connection, model }) => {
+                self.provider = connection;
+                match connection {
+                    AiProvider::Off => {}
+                    AiProvider::Local => self.local_model = model,
+                    AiProvider::Anthropic => self.anthropic_model = model,
+                    AiProvider::ClaudeCode => self.claude_model = model,
+                }
+            }
+            // Following the assistant is what a missing entry means, so the
+            // file keeps no line for it.
+            (feature, Use::SameAsAssistant) => {
+                self.uses.remove(&feature);
+            }
+            (feature, choice) => {
+                self.uses.insert(feature, choice);
+            }
         }
     }
 }
@@ -675,6 +829,91 @@ mod tests {
         assert!(!partial.threading);
         assert_eq!(partial.mark_read, MarkRead::AfterDelay);
         assert!(partial.notifications, "missing keys take their defaults");
+    }
+
+    #[test]
+    fn a_file_from_before_models_per_feature_keeps_every_feature_where_it_was() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.toml");
+        std::fs::write(
+            &path,
+            "[ai]\nprovider = \"local\"\nbase_url = \"http://127.0.0.1:1234/v1\"\n\
+             local_model = \"qwen3\"\nanthropic_model = \"claude-opus-5\"\n\
+             confirm_actions = false\n",
+        )
+        .unwrap();
+        let ai = Settings::load(&path).ai;
+        assert_eq!(
+            ai.use_for(Feature::Assistant),
+            Use::Model {
+                connection: AiProvider::Local,
+                model: "qwen3".into()
+            }
+        );
+        assert_eq!(ai.use_for(Feature::Translation), Use::SameAsAssistant);
+        assert_eq!(
+            ai.resolved(Feature::Translation),
+            (AiProvider::Local, "qwen3".to_string())
+        );
+        assert!(!ai.confirm_actions, "the rest of the section survives");
+    }
+
+    #[test]
+    fn a_feature_with_its_own_model_survives_the_settings_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.toml");
+        let mut settings = Settings::default();
+        settings.ai.set_use(
+            Feature::Assistant,
+            Use::Model {
+                connection: AiProvider::ClaudeCode,
+                model: "sonnet".into(),
+            },
+        );
+        settings.ai.set_use(
+            Feature::Translation,
+            Use::Model {
+                connection: AiProvider::Local,
+                model: "gemma-3".into(),
+            },
+        );
+        settings.save(&path).unwrap();
+        assert_eq!(Settings::load(&path), settings);
+    }
+
+    #[test]
+    fn every_feature_has_a_row_offering_every_connection() {
+        // The AI page draws one row per entry in Feature::ALL. This match
+        // stops compiling when a feature is added, until it is listed.
+        for feature in Feature::ALL {
+            match feature {
+                Feature::Assistant | Feature::Translation => {}
+            }
+        }
+        assert_eq!(Feature::ALL.len(), 2);
+        for feature in Feature::ALL {
+            assert!(!feature.label().is_empty());
+            assert!(!feature.description().is_empty());
+            let choices = feature.choices();
+            for connection in AiProvider::ALL {
+                assert!(
+                    choices.iter().any(|choice| matches!(
+                        choice,
+                        Use::Model { connection: c, .. } if c == connection
+                    )),
+                    "{feature:?} offers {connection:?}"
+                );
+            }
+            // Only the assistant has no one to follow.
+            assert_eq!(
+                choices.first() == Some(&Use::SameAsAssistant),
+                feature != Feature::Assistant,
+                "{feature:?}"
+            );
+            // The row shows the choice the settings hold.
+            let current = Settings::default().ai.use_for(feature);
+            assert!(choices.iter().any(|c| c.same_choice(&current)));
+        }
     }
 
     #[test]

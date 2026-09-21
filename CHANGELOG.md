@@ -10,6 +10,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Preferences has a Contacts & Calendar page. Google contacts turn on and
   off for each account, and it shows which accounts GNOME Calendar can see,
   with a button to add the others.
+- Translation can use a model of its own, such as a small local one while
+  the assistant runs on Claude. Preferences calls the page AI now.
 
 ### Improved
 

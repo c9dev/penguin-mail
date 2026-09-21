@@ -11,8 +11,8 @@ use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
 use super::{
-    AiProvider, Choice, ColorScheme, ComposeFormat, MarkRead, RemoteImages, Settings, TextSize,
-    UndoSend,
+    Choice, ColorScheme, ComposeFormat, Feature, MarkRead, RemoteImages, Settings, TextSize,
+    UndoSend, Use,
 };
 
 /// One named change to the preferences.
@@ -124,15 +124,16 @@ pub enum Change {
     Ai(AiChange),
 }
 
-/// A change to the assistant's settings. API keys live in the keyring and
-/// never come through here.
+/// A change to the AI settings. API keys live in the keyring and never come
+/// through here.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AiChange {
-    Provider(AiProvider),
+    /// Which model one feature uses.
+    Use {
+        feature: Feature,
+        choice: Use,
+    },
     BaseUrl(String),
-    LocalModel(String),
-    AnthropicModel(String),
-    ClaudeModel(String),
     ClaudeCommand(String),
     ConfirmActions(bool),
     /// A server the app found on this machine: its address and first model.
@@ -284,11 +285,8 @@ impl Change {
 impl AiChange {
     fn apply_to(self, ai: &mut super::AiSettings) {
         match self {
-            AiChange::Provider(provider) => ai.provider = provider,
+            AiChange::Use { feature, choice } => ai.set_use(feature, choice),
             AiChange::BaseUrl(url) => ai.base_url = url,
-            AiChange::LocalModel(model) => ai.local_model = model,
-            AiChange::AnthropicModel(model) => ai.anthropic_model = model,
-            AiChange::ClaudeModel(alias) => ai.claude_model = alias,
             AiChange::ClaudeCommand(command) => ai.claude_command = command,
             AiChange::ConfirmActions(on) => ai.confirm_actions = on,
             AiChange::LocalServer { base_url, model } => {
@@ -410,7 +408,8 @@ pub enum Effect {
     FollowUps,
     /// Whether the inbox splits into categories.
     Categories,
-    /// The assistant's provider or model.
+    /// A connection, or the model an AI feature uses. The assistant pane
+    /// shows its model, so it reads the settings again.
     Assistant,
     /// How large the conversation's text is.
     TextSize,
@@ -581,6 +580,7 @@ impl Effects {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::settings::AiProvider;
     use mailrs_domain::smart::{Condition, Field};
 
     fn effects(change: Change) -> Effects {
@@ -619,9 +619,70 @@ mod tests {
         assert!(effects(Change::SuggestFollowUps(false)).has(Effect::FollowUps));
         assert!(effects(Change::TextSize(TextSize::Large)).has(Effect::TextSize));
         assert!(effects(Change::ColorScheme(ColorScheme::Dark)).has(Effect::Theme));
-        assert!(
-            effects(Change::Ai(AiChange::Provider(AiProvider::Anthropic))).has(Effect::Assistant)
+        let anthropic = Change::Ai(AiChange::Use {
+            feature: Feature::Assistant,
+            choice: Use::Model {
+                connection: AiProvider::Anthropic,
+                model: "claude-opus-5".into(),
+            },
+        });
+        assert!(effects(anthropic).has(Effect::Assistant));
+    }
+
+    #[test]
+    fn each_feature_takes_a_model_of_its_own_or_follows_the_assistant() {
+        let mut settings = Settings::default();
+        let choose = |feature, connection, model: &str| {
+            Change::Ai(AiChange::Use {
+                feature,
+                choice: Use::Model {
+                    connection,
+                    model: model.into(),
+                },
+            })
+        };
+        let effects = choose(Feature::Assistant, AiProvider::Local, "qwen").apply(&mut settings);
+        assert!(effects.has(Effect::Assistant));
+        // The assistant's choice lands where older versions look for it.
+        assert_eq!(settings.ai.provider, AiProvider::Local);
+        assert_eq!(settings.ai.local_model, "qwen");
+        assert!(settings.ai.uses.is_empty());
+
+        choose(
+            Feature::Translation,
+            AiProvider::Anthropic,
+            "claude-haiku-4-5",
+        )
+        .apply(&mut settings);
+        assert_eq!(
+            settings.ai.resolved(Feature::Translation),
+            (AiProvider::Anthropic, "claude-haiku-4-5".to_string())
         );
+        assert_eq!(
+            settings.ai.resolved(Feature::Assistant),
+            (AiProvider::Local, "qwen".to_string())
+        );
+
+        let back = Change::Ai(AiChange::Use {
+            feature: Feature::Translation,
+            choice: Use::SameAsAssistant,
+        });
+        back.apply(&mut settings);
+        assert!(settings.ai.uses.is_empty(), "following leaves no entry");
+        assert_eq!(
+            settings.ai.resolved(Feature::Translation),
+            (AiProvider::Local, "qwen".to_string())
+        );
+
+        // The assistant has nobody to follow, so asking it to changes nothing.
+        let before = settings.clone();
+        let effects = Change::Ai(AiChange::Use {
+            feature: Feature::Assistant,
+            choice: Use::SameAsAssistant,
+        })
+        .apply(&mut settings);
+        assert!(effects.is_empty());
+        assert_eq!(settings, before);
     }
 
     #[test]
