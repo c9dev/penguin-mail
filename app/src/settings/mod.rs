@@ -54,6 +54,9 @@ pub struct Settings {
     /// Open the assistant's thinking and tool rows as they appear, rather
     /// than folded to one line each.
     pub assistant_details_expanded: bool,
+    /// Tools from outside sources the person answered Always Allow for, as
+    /// `source/tool`, such as `mcp:github/github__list_issues`.
+    pub assistant_allowed_tools: Vec<String>,
     /// Plus addresses made with Hide My Email, oldest first.
     pub hidden_addresses: Vec<crate::hide_my_email::HiddenAddress>,
     /// Split inboxes into Primary, Updates, Promotions, and Social, from
@@ -350,6 +353,7 @@ impl Default for Settings {
             account_names: BTreeMap::new(),
             ai: AiSettings::default(),
             assistant_details_expanded: false,
+            assistant_allowed_tools: Vec::new(),
             hidden_addresses: Vec::new(),
             inbox_categories: true,
             default_category: Category::All,

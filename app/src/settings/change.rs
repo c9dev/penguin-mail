@@ -124,6 +124,10 @@ pub enum Change {
     Ai(AiChange),
     /// Open the assistant's thinking and tool rows as they appear.
     AssistantDetailsExpanded(bool),
+    /// Runs this outside tool, `source/tool`, from now on without asking.
+    AllowTool(String),
+    /// Asks before this outside tool again.
+    ForbidTool(String),
 }
 
 /// A change to the AI settings. API keys live in the keyring and never come
@@ -281,6 +285,12 @@ impl Change {
             }
             Change::Ai(change) => change.apply_to(&mut settings.ai),
             Change::AssistantDetailsExpanded(on) => settings.assistant_details_expanded = on,
+            Change::AllowTool(key) => {
+                if !settings.assistant_allowed_tools.contains(&key) {
+                    settings.assistant_allowed_tools.push(key);
+                }
+            }
+            Change::ForbidTool(key) => settings.assistant_allowed_tools.retain(|k| *k != key),
         }
     }
 }
@@ -491,6 +501,7 @@ impl Effects {
             account_names,
             ai,
             assistant_details_expanded,
+            assistant_allowed_tools,
             hidden_addresses,
             inbox_categories,
             default_category,
@@ -541,6 +552,8 @@ impl Effects {
             // The pane reads this as it adds a row, and rows already in the
             // chat stay as the reader left them.
             assistant_details_expanded,
+            // The toolbox reads these when a turn starts.
+            assistant_allowed_tools,
             // The updater reads these when its timer fires.
             check_for_updates,
             last_update_check,
@@ -984,6 +997,7 @@ mod tests {
                 "announced_update",
                 // How the assistant's pane lays out its own turns belongs
                 // with the rest of its settings, on the AI page.
+                "assistant_allowed_tools",
                 "assistant_details_expanded",
                 // The composer reads this as a message goes out, so the
                 // assistant has no business turning the warning off.

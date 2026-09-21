@@ -422,6 +422,14 @@ impl MainWindow {
                         win.show_preferences_page("assistant");
                     }
                 },
+                {
+                    let app = Rc::downgrade(app);
+                    move |key| {
+                        if let Some(app) = app.upgrade() {
+                            app.change_settings(crate::settings::Change::AllowTool(key));
+                        }
+                    }
+                },
             );
             let assistant_split = adw::OverlaySplitView::builder()
                 .sidebar(&assistant.page)

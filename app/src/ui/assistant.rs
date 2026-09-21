@@ -15,6 +15,7 @@ use adw::prelude::*;
 use gtk::{glib, pango};
 use mailrs_ai::{AgentEvent, Conversation, ProviderConfig};
 
+use crate::assistant::sources::{self, ApprovalRequest, Toolbox, Verdict};
 use crate::assistant::turn::{
     self, Phase, Step, ToolState, Turn, Update, input_summary, thinking_title, tool_label,
 };
@@ -56,6 +57,10 @@ pub struct AssistantPane {
     send: gtk::Button,
     core: Rc<Core>,
     requests: async_channel::Sender<ToolRequest>,
+    /// Questions from outside tool sources, answered on this thread.
+    approvals: async_channel::Sender<ApprovalRequest>,
+    /// Saves an Always Allow answer, keyed `source/tool`.
+    on_allow: Box<dyn Fn(String)>,
     settings: SettingsSource,
     chat: RefCell<Option<(ProviderConfig, Arc<tokio::sync::Mutex<Conversation>>)>>,
     running: Cell<bool>,
@@ -78,7 +83,9 @@ impl AssistantPane {
         requests: async_channel::Sender<ToolRequest>,
         settings: impl Fn() -> Settings + 'static,
         on_setup: impl Fn() + 'static,
+        on_allow: impl Fn(String) + 'static,
     ) -> Rc<AssistantPane> {
+        let (approvals, asked) = async_channel::unbounded::<ApprovalRequest>();
         let title = adw::WindowTitle::new(&gettext("Assistant"), "");
         let new_chat = gtk::Button::builder()
             .icon_name("list-add-symbolic")
@@ -203,6 +210,8 @@ impl AssistantPane {
             send,
             core,
             requests,
+            approvals,
+            on_allow: Box::new(on_allow),
             settings: Box::new(settings),
             chat: RefCell::new(None),
             running: Cell::new(false),
@@ -211,6 +220,17 @@ impl AssistantPane {
             follow: Cell::new(true),
             glide,
             scrolled_to: Cell::new(0.0),
+        });
+        let weak = Rc::downgrade(&pane);
+        glib::spawn_future_local(async move {
+            while let Ok(request) = asked.recv().await {
+                let Some(pane) = weak.upgrade() else { break };
+                let verdict = pane.decide(&request.question, true).await;
+                if verdict == Verdict::Always {
+                    (pane.on_allow)(request.key.clone());
+                }
+                let _ = request.reply.send(verdict).await;
+            }
         });
         for text in suggestions() {
             let button = gtk::Button::builder()
@@ -339,7 +359,13 @@ impl AssistantPane {
         let (events, received) = async_channel::unbounded::<AgentEvent>();
         let (stop, stopped) = async_channel::bounded::<()>(1);
         *self.stop.borrow_mut() = Some(stop);
-        let host = Arc::new(Host::new(assistant::tools::specs(), self.requests.clone()));
+        let settings = (self.settings)();
+        let host = Arc::new(Toolbox::new(
+            Host::new(assistant::tools::specs(), self.requests.clone()),
+            sources::for_settings(&settings),
+            self.approvals.clone(),
+            settings.assistant_allowed_tools,
+        ));
         let this = Rc::clone(self);
         let late = received.clone();
         glib::spawn_future_local(async move {
@@ -469,6 +495,13 @@ impl AssistantPane {
 
     /// Asks the user to approve an action. Resolves to their answer.
     pub async fn confirm(&self, question: &str) -> bool {
+        self.decide(question, false).await != Verdict::Deny
+    }
+
+    /// Puts an approval card under the running call. With `always`, the
+    /// card also offers Always Allow, which outside tools take and the mail
+    /// tools do not: those follow the Ask Before Acting switch instead.
+    async fn decide(&self, question: &str, always: bool) -> Verdict {
         let card = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .spacing(10)
@@ -495,7 +528,12 @@ impl AssistantPane {
             .label(gettext("Allow"))
             .css_classes(["suggested-action"])
             .build();
+        let forever = gtk::Button::builder()
+            .label(gettext("Always Allow"))
+            .visible(always)
+            .build();
         buttons.append(&deny);
+        buttons.append(&forever);
         buttons.append(&allow);
         card.append(&buttons);
         // The card joins the turn, under the call that asked for it.
@@ -507,14 +545,18 @@ impl AssistantPane {
             }
             None => self.transcript.append(&card),
         }
-        let (answer, answered) = async_channel::bounded::<bool>(1);
-        for (button, value) in [(&allow, true), (&deny, false)] {
+        let (answer, answered) = async_channel::bounded::<Verdict>(1);
+        for (button, value) in [
+            (&allow, Verdict::Once),
+            (&forever, Verdict::Always),
+            (&deny, Verdict::Deny),
+        ] {
             let answer = answer.clone();
             button.connect_clicked(move |_| {
                 let _ = answer.try_send(value);
             });
         }
-        let approved = answered.recv().await.unwrap_or(false);
+        let verdict = answered.recv().await.unwrap_or(Verdict::Deny);
         if let Some(view) = self.turn.borrow_mut().as_mut() {
             view.turn.set_awaiting_approval(false);
             view.show_phase();
@@ -522,10 +564,10 @@ impl AssistantPane {
         buttons.set_visible(false);
         card.append(
             &gtk::Label::builder()
-                .label(if approved {
-                    gettext("Allowed")
-                } else {
-                    gettext("Not allowed")
+                .label(match verdict {
+                    Verdict::Once => gettext("Allowed"),
+                    Verdict::Always => gettext("Always allowed"),
+                    Verdict::Deny => gettext("Not allowed"),
                 })
                 .xalign(0.0)
                 .css_classes(["dim-label", "caption"])
@@ -533,7 +575,7 @@ impl AssistantPane {
                 .margin_bottom(10)
                 .build(),
         );
-        approved
+        verdict
     }
 
     /// Follows new content down while a turn runs and the reader is at the

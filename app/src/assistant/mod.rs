@@ -5,6 +5,7 @@ mod host;
 mod markup;
 mod prompt;
 pub mod run;
+pub mod sources;
 pub mod tools;
 pub mod turn;
 

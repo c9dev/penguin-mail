@@ -186,7 +186,50 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
     });
     details.add(&expanded);
     page.add(&details);
+    page.add(&always_allowed(app));
     page
+}
+
+/// The outside tools answered Always Allow, each with a way to go back to
+/// being asked. Hidden while there are none.
+fn always_allowed(app: &Rc<App>) -> adw::PreferencesGroup {
+    let group = adw::PreferencesGroup::builder()
+        .title(gettext("Always Allowed"))
+        .description(gettext(
+            "Tools from outside sources that run without asking. Remove one to be asked \
+             again next time.",
+        ))
+        .build();
+    let keys = app.settings().assistant_allowed_tools;
+    group.set_visible(!keys.is_empty());
+    for key in keys {
+        let (source, tool) = key.split_once('/').unwrap_or(("", key.as_str()));
+        let row = adw::ActionRow::builder()
+            .title(glib::markup_escape_text(tool))
+            .subtitle(glib::markup_escape_text(source))
+            .build();
+        let remove = gtk::Button::builder()
+            .icon_name("user-trash-symbolic")
+            .valign(gtk::Align::Center)
+            .css_classes(["flat"])
+            .tooltip_text(gettext("Ask Again"))
+            .build();
+        crate::ui::name(
+            &remove,
+            &mailrs_domain::translate::fill(&gettext("Ask again before {tool}"), &[("tool", tool)]),
+        );
+        let weak = Rc::downgrade(app);
+        let (row_ref, group_ref) = (row.clone(), group.clone());
+        remove.connect_clicked(move |_| {
+            if let Some(app) = weak.upgrade() {
+                app.change_settings(Change::ForbidTool(key.clone()));
+            }
+            group_ref.remove(&row_ref);
+        });
+        row.add_suffix(&remove);
+        group.add(&row);
+    }
+    group
 }
 
 /// One connection under Connections, holding the rows that set it up.
