@@ -155,10 +155,10 @@ impl App {
             return;
         };
         let version = release.version;
-        let (package_name, package_url, sums_url) = (
+        let (package_name, package_asset, sums_asset) = (
             files.package.name.clone(),
-            files.package.url.clone(),
-            files.sums.url.clone(),
+            files.package.clone(),
+            files.sums.clone(),
         );
         let work = glib::user_cache_dir()
             .join(mailrs_sync::config::DIR_NAME)
@@ -182,8 +182,8 @@ impl App {
                     };
                     let package = work.join(&package_name);
                     let fetched = async {
-                        github::download(&client, &package_url, &package).await?;
-                        github::text(&client, &sums_url).await
+                        github::download(&client, &package_asset, &package).await?;
+                        github::text(&client, &sums_asset).await
                     }
                     .await;
                     let result = match fetched {

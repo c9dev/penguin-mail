@@ -5,6 +5,16 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Improved
+
+- Your mail, settings and cache folders can only be opened by your own
+  user account, not by other people who use the same computer.
+
+### Fixed
+
+- Updates download even while GitHub's download links are failing, and a
+  brief server error no longer stops an update.
+
 ## 0.1.2 (2026-09-21)
 
 ### New
@@ -13,11 +23,6 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   and installs the new version when one is out.
 - The main menu has an entry for updates: check, install, or restart into
   the new version.
-
-### Improved
-
-- Your mail, settings and cache folders can only be opened by your own
-  user account, not by other people who use the same computer.
 
 ### Fixed
 

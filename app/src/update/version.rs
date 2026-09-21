@@ -36,11 +36,16 @@ impl fmt::Display for Version {
     }
 }
 
-/// One file attached to a release.
+/// One file attached to a release, with the two addresses GitHub serves it
+/// from.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Asset {
     pub name: String,
+    /// The download link a browser follows.
     pub url: String,
+    /// The same file through GitHub's API. It takes a separate path through
+    /// GitHub's servers, which has kept working while the first failed.
+    pub api: Option<String>,
 }
 
 /// A published version: its number, its page on GitHub, and its files.
@@ -95,6 +100,7 @@ mod tests {
                 .map(|n| Asset {
                     name: n.to_string(),
                     url: format!("https://x/{n}"),
+                    api: None,
                 })
                 .collect(),
         }
