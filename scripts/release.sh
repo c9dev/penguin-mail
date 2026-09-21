@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Publishes a new version of Penguin Mail. Bumps the version, writes its
-# changelog section, runs the gate, commits "Release X.Y.Z", tags vX.Y.Z,
+# changelog section, brings the translation template up to the new version,
+# runs the gate, commits "Release X.Y.Z", tags vX.Y.Z,
 # and pushes. The pushed tag starts .github/workflows/release.yml, which
 # builds the .deb, the tarball and the zip and publishes the release.
 #
@@ -41,12 +42,14 @@ major) version="$((major + 1)).0.0" ;;
 esac
 git rev-parse -q --verify "refs/tags/v$version" >/dev/null && fail "v$version is already tagged"
 
-# Whatever stops the script from here on puts the three files back.
-restore() { git checkout -q -- Cargo.toml Cargo.lock CHANGELOG.md; }
+# Whatever stops the script from here on puts these files back.
+restore() { git checkout -q -- Cargo.toml Cargo.lock CHANGELOG.md po; }
 trap restore EXIT
 
 sed -i "/^\[workspace.package\]/,/^\[/s/^version = \".*\"/version = \"$version\"/" Cargo.toml
 cargo update -q --workspace
+# The translation template names the version in its header.
+scripts/update-po.sh >/dev/null
 
 notes=$(mktemp)
 {
@@ -81,7 +84,7 @@ if [ -n "$dry" ]; then
     exit 0
 fi
 
-git add Cargo.toml Cargo.lock CHANGELOG.md
+git add Cargo.toml Cargo.lock CHANGELOG.md po
 git commit -q -m "Release $version"
 trap - EXIT
 git tag -a "v$version" -F <(scripts/changelog.sh section "$version")

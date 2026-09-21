@@ -18,3 +18,5 @@ apt-get install -y --no-install-recommends \
 rust=$(sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)
 curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal \
     --default-toolchain "$rust" --component clippy
+# update-po.sh reads the Rust sources with xtr.
+"$HOME/.cargo/bin/cargo" install --locked xtr --version 0.1.11
