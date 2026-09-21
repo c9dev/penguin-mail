@@ -1007,8 +1007,14 @@ impl App {
             commands,
         };
         let slot = Arc::clone(&self.tray);
+        // The restart that returns memory execs in place and keeps the pid,
+        // so the default name, StatusNotifierItem-<pid>-1, comes back while
+        // the AppIndicators extension is still timing out the old owner. When
+        // the new process registers inside that 500 ms window, the extension
+        // sometimes destroys the indicator after accepting the registration,
+        // and the icon stays gone. A unique connection name never repeats.
         self.core.spawn(async move {
-            match tray.spawn().await {
+            match tray.disable_dbus_name(true).spawn().await {
                 Ok(handle) => *slot.lock().expect("tray slot poisoned") = Some(handle),
                 Err(err) => tracing::warn!(error = %err, "could not add the tray icon"),
             }
