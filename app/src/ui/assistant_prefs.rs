@@ -140,6 +140,7 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
         used_for.add(&row.expander);
     }
     page.add(&used_for);
+    page.add(&crate::ui::assistant_mcp_prefs::group(app, dialog));
 
     let assistant_row = rows
         .into_iter()

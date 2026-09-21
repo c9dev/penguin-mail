@@ -16,6 +16,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   rows under your question that open to show the details, with a line
   underneath saying what it is doing now: waiting, thinking, running a
   tool, waiting for your answer, or writing.
+- The assistant can use tools from MCP servers you add on the AI page, by
+  a command or a URL. It asks before each call, and Always Allow stops the
+  asking for a tool you trust.
 
 ### Improved
 

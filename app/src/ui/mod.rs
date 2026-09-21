@@ -3,6 +3,7 @@
 
 pub mod about;
 pub mod assistant;
+pub mod assistant_mcp_prefs;
 pub mod assistant_prefs;
 pub mod autocomplete;
 pub mod composer;

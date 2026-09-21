@@ -66,6 +66,22 @@ pub fn load_key(name: &str) -> Option<String> {
         .and_then(|keys| keys.get(name).cloned())
 }
 
+/// A stored key, read from the keyring itself when the startup preload did
+/// not cover it, as for an MCP server's token. It can wait on the keyring,
+/// so it belongs off the GTK thread.
+pub fn read_key(name: &str) -> Option<String> {
+    if let Some(key) = load_key(name) {
+        return Some(key);
+    }
+    let key = keys().load(name).ok().flatten().filter(|k| !k.is_empty())?;
+    CACHE
+        .lock()
+        .expect("the key cache lock is never poisoned")
+        .get_or_insert_with(HashMap::new)
+        .insert(name.to_string(), key.clone());
+    Some(key)
+}
+
 /// Stores an API key, or removes it when empty. The keyring write happens
 /// in the background.
 pub fn save_key(name: &str, key: &str) {

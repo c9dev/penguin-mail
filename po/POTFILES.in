@@ -6,6 +6,7 @@ app/src/app/sending.rs
 app/src/app/updates.rs
 app/src/assistant/mod.rs
 app/src/assistant/run.rs
+app/src/assistant/sources/mcp/mod.rs
 app/src/assistant/turn.rs
 app/src/compose.rs
 app/src/core.rs
@@ -23,6 +24,7 @@ app/src/translation.rs
 app/src/tray.rs
 app/src/ui/about.rs
 app/src/ui/assistant.rs
+app/src/ui/assistant_mcp_prefs.rs
 app/src/ui/assistant_prefs.rs
 app/src/ui/composer/mod.rs
 app/src/ui/composer/recipients.rs

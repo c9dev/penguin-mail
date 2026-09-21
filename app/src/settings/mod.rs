@@ -50,6 +50,9 @@ pub struct Settings {
     pub account_colors: BTreeMap<String, usize>,
     /// A name shown instead of the address in the sidebar.
     pub account_names: BTreeMap<String, String>,
+    /// MCP servers whose tools the assistant may use, in the order the AI
+    /// page lists them.
+    pub mcp_servers: Vec<crate::assistant::sources::mcp::McpServer>,
     pub ai: AiSettings,
     /// Open the assistant's thinking and tool rows as they appear, rather
     /// than folded to one line each.
@@ -351,6 +354,7 @@ impl Default for Settings {
             account_order: Vec::new(),
             account_colors: BTreeMap::new(),
             account_names: BTreeMap::new(),
+            mcp_servers: Vec::new(),
             ai: AiSettings::default(),
             assistant_details_expanded: false,
             assistant_allowed_tools: Vec::new(),
