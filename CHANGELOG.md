@@ -5,6 +5,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+## 0.1.2 (2026-09-21)
+
 ### New
 
 - The About window has a Check for Updates button that shows its progress
