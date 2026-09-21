@@ -8,6 +8,8 @@
 //! chain reaches no root this computer trusts is [`Tone::Unchecked`]. Each
 //! adapter says which it takes, and why, in its own `UNVOUCHED`.
 
+pub mod run;
+
 use mail_parser::{MessageParser, MimeHeaders};
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{MessageBody, Protection};

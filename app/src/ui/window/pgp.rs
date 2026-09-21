@@ -1,17 +1,16 @@
-//! Running the engine the message on screen needs, OpenPGP or S/MIME.
-//!
-//! The bytes come from Gmail's `format=raw`, because a signature covers the
-//! message as it was sent and the parts the API hands back have been
-//! decoded since. The engine then runs on a thread of its own, since it may
-//! put a pinentry in front of the person and wait as long as they take to
-//! type.
+//! The window behind the engine run. `crate::protection::run` decides what
+//! happens to a protected message; this file is the adapter that gives it
+//! the thread on screen and makes the calls it asks for, on the GTK thread.
 
 use std::rc::Rc;
 
 use gtk::glib;
+use mailrs_domain::{AccountId, MessageBody};
 
 use super::MainWindow;
-use crate::protection::Engine;
+use crate::core::Core;
+use crate::protection::run::{Answer, Claimed, Desk, Effects, Engines, Installed};
+use crate::protection::{Engine, Read};
 use crate::ui::conversation::ConversationView;
 use crate::{pgp, smime};
 
@@ -21,74 +20,85 @@ impl MainWindow {
     /// as the person takes to type, and the rest of opening a thread has no
     /// reason to wait for that.
     pub(super) fn start_pgp(self: &Rc<Self>, view: &Rc<ConversationView>) {
-        let (this, view) = (Rc::clone(self), Rc::clone(view));
-        glib::spawn_future_local(async move { this.refresh_pgp(&view).await });
+        let engines = self.engines(view);
+        glib::spawn_future_local(async move { engines.run().await });
     }
 
-    /// Checks or opens the protected message in `view` and puts what the
-    /// engine said above it. A thread that has been through this keeps the
-    /// answer, so redrawing never asks again.
-    async fn refresh_pgp(self: &Rc<Self>, view: &Rc<ConversationView>) {
-        if !self.core.has_gpg() && !self.core.has_gpgsm() {
-            return;
-        }
-        let Some((account_id, thread_id)) =
-            view.read(|open| (open.account_id, open.thread_id.clone()))
-        else {
-            return;
-        };
-        // The message names its standard, and the engine that reads it may
-        // be the one this computer lacks.
-        let found = view.take_protected(|opening| match opening {
-            Engine::Pgp(_) => self.core.has_gpg(),
-            Engine::Smime(_) => self.core.has_gpgsm(),
+    /// The engines, with this window behind both ports.
+    fn engines(self: &Rc<Self>, view: &Rc<ConversationView>) -> Engines {
+        let ports = Rc::new(Ports {
+            core: Rc::clone(&self.core),
+            view: Rc::clone(view),
         });
-        let Some((message_id, opening, body)) = found else {
-            return;
-        };
-        let Some(sync) = self.core.account(account_id) else {
-            return;
-        };
-        let key = message_id.clone();
-        let raw = match self
-            .core
-            .call(async move { sync.raw_message(&key).await })
-            .await
-        {
-            Ok(raw) => raw,
-            Err(err) => {
-                tracing::info!(error = %err, "could not fetch the message to check how it was signed");
-                return;
-            }
-        };
-        if !view.is_showing(account_id, &thread_id) {
-            return;
+        Engines::new(Rc::clone(&ports) as Rc<dyn Desk>, ports as Rc<dyn Effects>)
+    }
+}
+
+/// The window as the engine run sees it.
+struct Ports {
+    core: Rc<Core>,
+    view: Rc<ConversationView>,
+}
+
+impl Desk for Ports {
+    fn installed(&self) -> Installed {
+        Installed {
+            pgp: self.core.has_gpg(),
+            smime: self.core.has_gpgsm(),
         }
-        let read = match opening {
-            Engine::Pgp(opening) => {
-                self.core
-                    .gpg(move |pgp| Ok(pgp::read(pgp, opening, &raw, &body)))
-                    .await
+    }
+
+    fn claim(&self, installed: Installed) -> Option<Claimed> {
+        self.view.take_protected(installed)
+    }
+
+    fn is_showing(&self, account_id: AccountId, thread_id: &str) -> bool {
+        self.view.is_showing(account_id, thread_id)
+    }
+}
+
+impl Effects for Ports {
+    fn raw_message(
+        &self,
+        account_id: AccountId,
+        message_id: String,
+    ) -> Answer<'_, Result<Vec<u8>, String>> {
+        Box::pin(async move {
+            let sync = self
+                .core
+                .account(account_id)
+                .ok_or_else(|| "the account has stopped syncing".to_string())?;
+            self.core
+                .call(async move { sync.raw_message(&message_id).await })
+                .await
+                .map_err(|err| err.to_string())
+        })
+    }
+
+    fn ask(
+        &self,
+        opening: Engine,
+        raw: Vec<u8>,
+        body: MessageBody,
+    ) -> Answer<'_, Result<Read, String>> {
+        Box::pin(async move {
+            match opening {
+                Engine::Pgp(opening) => {
+                    self.core
+                        .gpg(move |pgp| Ok(pgp::read(pgp, opening, &raw, &body)))
+                        .await
+                }
+                Engine::Smime(opening) => {
+                    self.core
+                        .gpgsm(move |smime| Ok(smime::read(smime, opening, &raw)))
+                        .await
+                }
             }
-            Engine::Smime(opening) => {
-                self.core
-                    .gpgsm(move |smime| Ok(smime::read(smime, opening, &raw)))
-                    .await
-            }
-        };
-        let read = match read {
-            Ok(read) => read,
-            Err(err) => {
-                tracing::info!(error = %err, "the engine could not be asked about this message");
-                return;
-            }
-        };
-        if !view.is_showing(account_id, &thread_id) {
-            return;
-        }
-        // What was inside the encryption is what the reader wanted, and it
-        // goes no further than this window: the store keeps the message as
-        // Gmail holds it, ciphertext and all.
-        view.engine_answered(message_id, read);
+            .map_err(|err| err.to_string())
+        })
+    }
+
+    fn answered(&self, message_id: String, read: Read) {
+        self.view.engine_answered(message_id, read);
     }
 }

@@ -24,6 +24,7 @@ use super::pgp::PgpCard;
 use super::translation::TranslationCard;
 use super::{name, name_with_shortcut};
 use crate::compose::ReplyKind;
+use crate::protection::run::{Claimed, Installed};
 use crate::protection::{self, Engine, Mark};
 use crate::render::{BodyState, Conversation, MessageView, Theme, render};
 use crate::sanitize::sanitize_html;
@@ -130,6 +131,34 @@ impl OpenThread {
         self.messages.iter().rev().find_map(|meta| {
             let body = self.bodies.get(&meta.id)?.as_ref().ok()?;
             Some((meta, protection::engine(body)?))
+        })
+    }
+
+    /// That message, claimed for one engine run, with what the engine
+    /// needs to read it. `installed` says which engines this computer has,
+    /// so a message whose engine is missing is left unclaimed for the day
+    /// it turns up. Once per thread: a second call gives nothing back,
+    /// because either engine may hold a pinentry in front of the person
+    /// for as long as they take and asking twice would put up two of them.
+    pub fn take_protected(&mut self, installed: Installed) -> Option<Claimed> {
+        if self.pgp_asked {
+            return None;
+        }
+        let (message_id, opening) = {
+            let (meta, opening) = self.protected()?;
+            (meta.id.clone(), opening)
+        };
+        if !installed.runs(opening) {
+            return None;
+        }
+        let body = self.bodies.get(&message_id)?.as_ref().ok()?.clone();
+        self.pgp_asked = true;
+        Some(Claimed {
+            account_id: self.account_id,
+            thread_id: self.thread_id.clone(),
+            message_id,
+            opening,
+            body,
         })
     }
 
@@ -1058,31 +1087,10 @@ impl ConversationView {
         self.render_buttons();
     }
 
-    /// The protected message and the engine that reads it, given `have` to
-    /// say which engines this computer has. Once per thread: a second call
-    /// gives nothing back, because either engine may hold a pinentry in
-    /// front of the person for as long as they take and asking twice would
-    /// put up two of them.
-    pub fn take_protected(
-        &self,
-        have: impl Fn(Engine) -> bool,
-    ) -> Option<(String, Engine, MessageBody)> {
-        self.change(|open| {
-            if open.pgp_asked {
-                return None;
-            }
-            let (message_id, opening) = {
-                let (meta, opening) = open.protected()?;
-                (meta.id.clone(), opening)
-            };
-            if !have(opening) {
-                return None;
-            }
-            let body = open.bodies.get(&message_id)?.as_ref().ok()?.clone();
-            open.pgp_asked = true;
-            Some((message_id, opening, body))
-        })
-        .flatten()
+    /// The thread's protected message, claimed for one engine run. See
+    /// [`OpenThread::take_protected`] for the once-per-thread rule.
+    pub fn take_protected(&self, installed: Installed) -> Option<Claimed> {
+        self.change(|open| open.take_protected(installed)).flatten()
     }
 
     /// What the engine made of that message: the mark for the card, and,
