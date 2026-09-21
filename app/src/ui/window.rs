@@ -479,6 +479,10 @@ impl MainWindow {
 
             let actions = gio::SimpleActionGroup::new();
             window.insert_action_group("win", Some(&actions));
+            // A plain adw::Window, unlike GtkApplicationWindow, does not
+            // reach the application's own actions. The update banner, menu
+            // entry and About button all run app.* actions.
+            window.insert_action_group("app", Some(&app.gio));
             MainWindow {
                 window,
                 actions,
