@@ -1,0 +1,76 @@
+name: Bug report
+description: Penguin Mail did something wrong or crashed.
+labels: [bug, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue is public. Leave out message content, addresses, and account names
+        you would not post in public. A security problem goes to
+        [a private advisory](https://github.com/c9dev/penguin-mail/security/advisories/new) instead.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The output of `penguin-mail --version`.
+      placeholder: penguin-mail 0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How you installed it
+      options:
+        - The .deb from a release
+        - The tarball or zip from a release
+        - Built from source with scripts/install.sh
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System
+      description: Distribution and version, and the desktop you use.
+      placeholder: Ubuntu 26.04, GNOME 50
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps
+      description: What you did, one step per line, so someone else can do the same.
+      placeholder: |
+        1. Open a conversation with an attachment
+        2. Click Save on the attachment
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: Attach a screenshot if it shows the problem. Blur anything private first.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: |
+        The app's lines from around the time it happened, from
+        `journalctl --user --since "10 minutes ago" | grep -i penguin`.
+        Read them before pasting: they can name accounts and subjects.
+      render: text
+  - type: checkboxes
+    id: private
+    attributes:
+      label: Before you send
+      options:
+        - label: I removed message content, addresses and anything else private from this report.
+          required: true

@@ -1,0 +1,30 @@
+name: Idea
+description: Something Penguin Mail should do and does not.
+labels: [enhancement, needs-triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you are trying to do
+      description: The task in your day that the app gets in the way of, or cannot do.
+      placeholder: I get invoices from twenty senders and want them in one place without writing a filter for each.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+      description: How you picture it working. A sketch or a screenshot from another client is welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: now
+    attributes:
+      label: What you do today
+      description: Your workaround, if you have one, or which other client does this well.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The output of `penguin-mail --version`.
+      placeholder: penguin-mail 0.1.0
