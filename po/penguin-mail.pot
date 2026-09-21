@@ -1774,7 +1774,7 @@ msgstr ""
 msgid "Test the Server"
 msgstr ""
 
-#: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/assistant_prefs.rs:255
+#: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/assistant_prefs.rs:257
 #: app/src/ui/assistant_web_prefs.rs:59
 msgid "Test"
 msgstr ""
@@ -1889,120 +1889,120 @@ msgstr ""
 msgid "Each feature sends what it reads to the model chosen for it."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:154
+#: app/src/ui/assistant_prefs.rs:151
 msgid "Safety"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:157
+#: app/src/ui/assistant_prefs.rs:154
 msgid "Ask Before Acting"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:159
+#: app/src/ui/assistant_prefs.rs:156
 msgid ""
 "Approve each message the assistant sends and each change to Gmail settings, "
 "such as automatic replies and rules"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:175 app/src/ui/conversation.rs:584
+#: app/src/ui/assistant_prefs.rs:177 app/src/ui/conversation.rs:584
 #: app/src/ui/window/detached.rs:57
 msgid "Conversation"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:178
+#: app/src/ui/assistant_prefs.rs:180
 msgid "Show Details Expanded"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:180
+#: app/src/ui/assistant_prefs.rs:182
 msgid "Open the model's thinking and each tool it runs as they appear"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:200
+#: app/src/ui/assistant_prefs.rs:202
 msgid "Always Allowed"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:202
+#: app/src/ui/assistant_prefs.rs:204
 msgid ""
 "Tools from outside sources that run without asking. Remove one to be asked "
 "again next time."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:218
+#: app/src/ui/assistant_prefs.rs:220
 msgid "Ask Again"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:222
+#: app/src/ui/assistant_prefs.rs:224
 msgid "Ask again before {tool}"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:259
+#: app/src/ui/assistant_prefs.rs:261
 msgid "Test the Connection"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:284 app/src/ui/assistant_web_prefs.rs:90
+#: app/src/ui/assistant_prefs.rs:286 app/src/ui/assistant_web_prefs.rs:90
 msgid "No answer: {reason}"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:344
+#: app/src/ui/assistant_prefs.rs:346
 msgid "Connection"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:490
+#: app/src/ui/assistant_prefs.rs:492
 msgid "Claude Code's own default"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:498
+#: app/src/ui/assistant_prefs.rs:500
 msgid "Model"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:517 app/src/ui/assistant_prefs.rs:521
+#: app/src/ui/assistant_prefs.rs:519 app/src/ui/assistant_prefs.rs:523
 msgid "Models You Can Use"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:542
+#: app/src/ui/assistant_prefs.rs:544
 msgid "Search models"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:559
+#: app/src/ui/assistant_prefs.rs:561
 msgid "Asking for the model list…"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:675
+#: app/src/ui/assistant_prefs.rs:677
 msgid "This provider lists no models. Type a name in the field instead."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:710
+#: app/src/ui/assistant_prefs.rs:712
 msgid "alias"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:750
+#: app/src/ui/assistant_prefs.rs:752
 msgid "Found on This Computer"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:754
+#: app/src/ui/assistant_prefs.rs:756
 msgid "Looking for LM Studio, Ollama, Unsloth, and Claude Code…"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:770
+#: app/src/ui/assistant_prefs.rs:772
 msgid "Nothing found"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:772
+#: app/src/ui/assistant_prefs.rs:774
 msgid ""
 "Start LM Studio's server or Ollama, or install Claude Code, then open "
 "Preferences again."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:784
+#: app/src/ui/assistant_prefs.rs:786
 msgid "{model} and {count} more"
 msgid_plural "{model} and {count} more"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/assistant_prefs.rs:795
+#: app/src/ui/assistant_prefs.rs:797
 msgid "Use"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:800
+#: app/src/ui/assistant_prefs.rs:802
 msgid "Use {provider}"
 msgstr ""
 

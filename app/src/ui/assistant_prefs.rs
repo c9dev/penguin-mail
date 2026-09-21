@@ -140,9 +140,6 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
         used_for.add(&row.expander);
     }
     page.add(&used_for);
-    page.add(&crate::ui::assistant_web_prefs::group(app));
-    page.add(&crate::ui::assistant_mcp_prefs::group(app, dialog));
-    page.add(&super::assistant_skills_prefs::group(app));
 
     let assistant_row = rows
         .into_iter()
@@ -170,6 +167,11 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
     });
     safety.add(&confirm);
     page.add(&safety);
+    // What the assistant can reach beyond the mail tools, after the
+    // settings that choose and restrain the model itself.
+    page.add(&crate::ui::assistant_web_prefs::group(app));
+    page.add(&crate::ui::assistant_mcp_prefs::group(app, dialog));
+    page.add(&crate::ui::assistant_skills_prefs::group(app));
 
     let details = adw::PreferencesGroup::builder()
         .title(gettext("Conversation"))
