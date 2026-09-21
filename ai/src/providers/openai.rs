@@ -6,9 +6,10 @@ use std::sync::Arc;
 
 use serde_json::{Value, json};
 
+use super::think::{Piece, ThinkTags};
 use super::{
-    MAX_ROUNDS, emit, error_text, finish_tool, http_client, network, outcome_text,
-    parse_tool_input, run_tool, too_many_rounds,
+    MAX_ROUNDS, emit, error_text, http_client, network, outcome_text, parse_tool_input,
+    refuse_tool, run_tool, too_many_rounds,
 };
 use crate::sse::SseReader;
 use crate::{AgentEvent, AiError, Model, ModelList, ToolHost, ToolOutcome, ToolSpec};
@@ -99,18 +100,10 @@ impl OpenAiChat {
             }
             for call in reply.calls {
                 let outcome = match parse_tool_input(&call.arguments) {
-                    Ok(input) => run_tool(host, events, &call.name, input).await,
+                    Ok(input) => run_tool(host, events, &call.id, &call.name, input).await,
                     Err(message) => {
-                        emit(
-                            events,
-                            AgentEvent::ToolStarted {
-                                name: call.name.clone(),
-                                input: Value::String(call.arguments.clone()),
-                            },
-                        )
-                        .await;
                         let outcome = ToolOutcome::Err(message);
-                        finish_tool(events, &call.name, &outcome).await;
+                        refuse_tool(events, &call.id, &call.name, &call.arguments, &outcome).await;
                         outcome
                     }
                 };
@@ -229,6 +222,7 @@ async fn read_stream(
     events: &async_channel::Sender<AgentEvent>,
 ) -> Result<Reply, AiError> {
     let mut content = String::new();
+    let mut tags = ThinkTags::default();
     let mut calls: BTreeMap<u64, PendingCall> = BTreeMap::new();
     while let Some(event) = sse.next().await? {
         if event.data.trim() == "[DONE]" {
@@ -244,11 +238,18 @@ async fn read_stream(
             continue;
         };
         let delta = &choice["delta"];
-        if let Some(text) = delta["content"].as_str()
-            && !text.is_empty()
+        // LM Studio, vLLM and DeepSeek name the field `reasoning_content`;
+        // Ollama and OpenRouter name it `reasoning`.
+        let reasoning = delta["reasoning_content"]
+            .as_str()
+            .or_else(|| delta["reasoning"].as_str());
+        if let Some(thinking) = reasoning
+            && !thinking.is_empty()
         {
-            content.push_str(text);
-            emit(events, AgentEvent::Text(text.to_string())).await;
+            emit(events, AgentEvent::Thinking(thinking.to_string())).await;
+        }
+        if let Some(text) = delta["content"].as_str() {
+            give(tags.push(text), &mut content, events).await;
         }
         for fragment in delta["tool_calls"].as_array().into_iter().flatten() {
             let index = fragment["index"].as_u64().unwrap_or(0);
@@ -268,10 +269,30 @@ async fn read_stream(
             }
         }
     }
+    give(tags.finish(), &mut content, events).await;
     Ok(Reply {
         content,
         calls: calls.into_values().collect(),
     })
+}
+
+/// Streams reply text to the UI and keeps it for the history. Reasoning
+/// goes to the UI alone: the model does not need its old thoughts back,
+/// and they would fill the chat.
+async fn give(
+    pieces: Vec<Piece>,
+    content: &mut String,
+    events: &async_channel::Sender<AgentEvent>,
+) {
+    for piece in pieces {
+        match piece {
+            Piece::Text(text) => {
+                content.push_str(&text);
+                emit(events, AgentEvent::Text(text)).await;
+            }
+            Piece::Thinking(text) => emit(events, AgentEvent::Thinking(text)).await,
+        }
+    }
 }
 
 pub(crate) async fn list_models(

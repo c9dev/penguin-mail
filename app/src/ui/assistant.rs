@@ -408,7 +408,10 @@ impl AssistantPane {
                 self.working.borrow_mut().push((name, row));
                 self.scroll_down();
             }
-            AgentEvent::ToolFinished { name, ok, preview } => {
+            AgentEvent::Thinking(_) => {}
+            AgentEvent::ToolFinished {
+                name, ok, preview, ..
+            } => {
                 let row = {
                     let mut working = self.working.borrow_mut();
                     working

@@ -60,12 +60,14 @@ fn text_reply(text: &str) -> ResponseTemplate {
 }
 
 fn chat(server: &MockServer) -> AnthropicChat {
-    AnthropicChat::new(
+    let mut chat = AnthropicChat::new(
         server.uri(),
         "sk-ant-test".into(),
         "claude-opus-5".into(),
         "You sort mail.".into(),
-    )
+    );
+    chat.think = true;
+    chat
 }
 
 #[tokio::test]
@@ -146,14 +148,40 @@ async fn runs_tools_and_echoes_thinking_back_unchanged() {
         ]
     );
     let seen = drain(&rx);
-    assert_eq!(seen[0], AgentEvent::Text("Checking.".into()));
     assert_eq!(
-        seen[1],
+        seen[..3],
+        [
+            AgentEvent::Thinking("Need to ".into()),
+            AgentEvent::Thinking("search.".into()),
+            AgentEvent::Text("Checking.".into()),
+        ]
+    );
+    assert_eq!(
+        seen[3],
         AgentEvent::ToolStarted {
+            id: "toolu_1".into(),
             name: "search_mail".into(),
             input: json!({"query": "invoice"}),
         }
     );
+    // Two calls to one tool stay apart by id; the broken one shows its raw
+    // input and fails.
+    let finished: Vec<(&str, bool)> = seen
+        .iter()
+        .filter_map(|e| match e {
+            AgentEvent::ToolFinished { id, ok, .. } => Some((id.as_str(), *ok)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        finished,
+        [("toolu_1", true), ("toolu_2", false), ("toolu_3", false)]
+    );
+    assert!(seen.contains(&AgentEvent::ToolStarted {
+        id: "toolu_3".into(),
+        name: "search_mail".into(),
+        input: json!("{\"query\": \"x"),
+    }));
     assert_eq!(seen.last(), Some(&AgentEvent::Text("Two invoices.".into())));
 
     let requests = server.received_requests().await.unwrap();
@@ -161,7 +189,10 @@ async fn runs_tools_and_echoes_thinking_back_unchanged() {
     assert_eq!(first["max_tokens"], json!(64000));
     assert_eq!(first["stream"], json!(true));
     assert_eq!(first["system"], json!("You sort mail."));
-    assert!(first.get("thinking").is_none());
+    assert_eq!(
+        first["thinking"],
+        json!({"type": "adaptive", "display": "summarized"})
+    );
     assert_eq!(first["tools"][0]["name"], json!("search_mail"));
     assert_eq!(
         first["tools"][0]["input_schema"]["required"],
@@ -370,4 +401,61 @@ async fn says_plainly_when_the_key_is_missing_or_refused() {
             .contains("rejected the API key: invalid x-api-key"),
         "{err}"
     );
+}
+
+#[test]
+fn each_model_family_asks_for_thinking_its_own_way() {
+    use crate::providers::thinking_request;
+    let summarized = json!({"type": "adaptive", "display": "summarized"});
+    let budget = json!({"type": "enabled", "budget_tokens": 16000});
+    for model in [
+        "claude-opus-5",
+        "claude-fable-5-1",
+        "claude-sonnet-5",
+        "claude-opus-4-8",
+        "claude-opus-4-7",
+    ] {
+        assert_eq!(thinking_request(model), Some(summarized.clone()), "{model}");
+    }
+    assert_eq!(
+        thinking_request("claude-sonnet-4-6"),
+        Some(json!({"type": "adaptive"}))
+    );
+    for model in [
+        "claude-haiku-4-5",
+        "claude-haiku-4-5-20251001",
+        "claude-sonnet-4-5-20250929",
+        "claude-opus-4-1",
+        "claude-sonnet-4-20250514",
+        "claude-3-7-sonnet-20250219",
+    ] {
+        assert_eq!(thinking_request(model), Some(budget.clone()), "{model}");
+    }
+    for model in [
+        "claude-3-5-haiku-20241022",
+        "claude-3-opus-20240229",
+        "gpt-5",
+        "",
+    ] {
+        assert_eq!(thinking_request(model), None, "{model}");
+    }
+}
+
+#[tokio::test]
+async fn a_chat_that_does_not_ask_sends_no_thinking_field() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/messages"))
+        .respond_with(text_reply("Olá."))
+        .mount(&server)
+        .await;
+    let mut chat = chat(&server);
+    chat.think = false;
+    let (tx, _rx) = async_channel::unbounded();
+    chat.send("Hi".into(), Arc::new(FakeHost::default()), &tx)
+        .await
+        .unwrap();
+    let requests = server.received_requests().await.unwrap();
+    let body: Value = requests[0].body_json().unwrap();
+    assert!(body.get("thinking").is_none());
 }

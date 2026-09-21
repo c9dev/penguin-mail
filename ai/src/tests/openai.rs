@@ -70,13 +70,16 @@ async fn streams_text_and_runs_a_tool_round_trip() {
         vec![
             AgentEvent::Text("Let me look.".into()),
             AgentEvent::ToolStarted {
+                id: "call_1".into(),
                 name: "search_mail".into(),
                 input: json!({"query": "invoice"}),
             },
             AgentEvent::ToolFinished {
+                id: "call_1".into(),
                 name: "search_mail".into(),
                 ok: true,
                 preview: r#"{"hits":2}"#.into(),
+                output: r#"{"hits":2}"#.into(),
             },
             AgentEvent::Text("Found ".into()),
             AgentEvent::Text("2.".into()),
@@ -266,4 +269,111 @@ async fn lists_models_from_the_models_endpoint() {
         crate::test(&config).await.unwrap(),
         "Connected, 3 models available"
     );
+}
+
+#[tokio::test]
+async fn reasoning_streams_as_thinking_and_stays_out_of_the_reply() {
+    let server = MockServer::start().await;
+    // LM Studio and vLLM put reasoning in `reasoning_content`, Ollama in
+    // `reasoning`, and a server that parses nothing leaves `<think>` tags in
+    // the content, cut wherever the chunks fall.
+    let first = stream(&[
+        delta(json!({"role": "assistant", "content": null, "reasoning_content": "The user "})),
+        delta(json!({"reasoning": "wants mail."})),
+        delta(
+            json!({"content": "", "tool_calls": [{"index": 0, "id": "call_1", "type": "function",
+            "function": {"name": "search_mail", "arguments": "{\"query\":\"a\"}"}}]}),
+        ),
+        delta(
+            json!({"content": null, "tool_calls": [{"index": 1, "id": "call_2", "type": "function",
+            "function": {"name": "search_mail", "arguments": "{\"query\":\"b\"}"}}]}),
+        ),
+    ]);
+    let second = stream(&[
+        delta(json!({"content": "<thi"})),
+        delta(json!({"content": "nk>Two hits"})),
+        delta(json!({"content": " each.</th"})),
+        delta(json!({"content": "ink>\n\nFound 4."})),
+    ]);
+    Mock::given(method("POST"))
+        .and(path("/v1/chat/completions"))
+        .respond_with(Sequence::new(vec![first, second]))
+        .mount(&server)
+        .await;
+
+    let host = Arc::new(FakeHost::default());
+    let (tx, rx) = async_channel::unbounded();
+    let mut chat = OpenAiChat::new(
+        &format!("{}/v1", server.uri()),
+        None,
+        "qwen3".into(),
+        String::new(),
+    );
+    let reply = chat.send("Go".into(), host, &tx).await.unwrap();
+    assert_eq!(reply, "Found 4.");
+
+    let seen = drain(&rx);
+    let started: Vec<&str> = seen
+        .iter()
+        .filter_map(|e| match e {
+            AgentEvent::ToolStarted { id, .. } => Some(id.as_str()),
+            _ => None,
+        })
+        .collect();
+    let finished: Vec<&str> = seen
+        .iter()
+        .filter_map(|e| match e {
+            AgentEvent::ToolFinished { id, .. } => Some(id.as_str()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(started, ["call_1", "call_2"]);
+    assert_eq!(finished, ["call_1", "call_2"]);
+    let words: Vec<&AgentEvent> = seen
+        .iter()
+        .filter(|e| matches!(e, AgentEvent::Text(_) | AgentEvent::Thinking(_)))
+        .collect();
+    assert_eq!(
+        words,
+        [
+            &AgentEvent::Thinking("The user ".into()),
+            &AgentEvent::Thinking("wants mail.".into()),
+            &AgentEvent::Thinking("Two hits".into()),
+            &AgentEvent::Thinking(" each.".into()),
+            &AgentEvent::Text("Found 4.".into()),
+        ]
+    );
+
+    // The history keeps the reply and leaves the reasoning out.
+    let requests = server.received_requests().await.unwrap();
+    let second: Value = requests[1].body_json().unwrap();
+    assert_eq!(second["messages"][1]["content"], json!(""));
+}
+
+#[test]
+fn think_tags_split_wherever_the_chunks_fall() {
+    use crate::providers::{Piece, ThinkTags};
+    let whole = "Sure. <think>plan á</think>\n\nDone <b>.";
+    // Every way of cutting the text in two gives the same pieces.
+    for cut in (0..=whole.len()).filter(|&i| whole.is_char_boundary(i)) {
+        let mut tags = ThinkTags::default();
+        let mut pieces = tags.push(&whole[..cut]);
+        pieces.extend(tags.push(&whole[cut..]));
+        pieces.extend(tags.finish());
+        let mut text = String::new();
+        let mut thinking = String::new();
+        for piece in pieces {
+            match piece {
+                Piece::Text(t) => text.push_str(&t),
+                Piece::Thinking(t) => thinking.push_str(&t),
+            }
+        }
+        assert_eq!(text, "Sure. Done <b>.", "cut at {cut}");
+        assert_eq!(thinking, "plan á", "cut at {cut}");
+    }
+    // A stream that ends inside a span keeps what it thought.
+    let mut tags = ThinkTags::default();
+    assert_eq!(tags.push("<think>half"), [Piece::Thinking("half".into())]);
+    assert_eq!(tags.push("</thi"), []);
+    assert_eq!(tags.finish(), [Piece::Thinking("</thi".into())]);
 }
