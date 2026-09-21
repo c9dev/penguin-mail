@@ -112,6 +112,63 @@ A card appears in the chat with the details and **Allow** and **Don't
 Allow** buttons. Turn **Ask Before Acting** off under Safety to skip the
 cards. Drafts always open in a composer window for you to send.
 
+## Skills
+
+A skill is a folder of instructions for one kind of task, such as
+totalling receipts or filling in a form. When a request fits a skill you
+turned on, the assistant reads its instructions and follows them.
+
+Each skill folder holds a `SKILL.md` that starts with a name and a
+description between two `---` lines:
+
+```markdown
+---
+name: receipts
+description: Totals the receipts in a conversation and drafts an expense report.
+---
+
+Read each receipt in the conversation, add up the amounts by currency, and
+draft a reply with the totals as a table.
+```
+
+Below the second `---` go the instructions themselves. Files beside
+`SKILL.md`, such as reference notes or scripts, are for the instructions
+to point at.
+
+Penguin Mail reads skills from two folders:
+
+- `~/.config/penguin-mail/skills/`, its own. **Open Folder** on the AI page
+  creates it and opens it.
+- `~/.claude/skills/`, where Claude Code keeps skills, so the ones you
+  already have work here too. Links to skill folders elsewhere work.
+
+Under **Skills** on the AI page, each skill has a switch. Every skill is
+off until you turn it on, and a change applies from the next new chat.
+The assistant sees the name and description of each skill you turned on,
+and reads the rest only when a request calls for it.
+
+### Scripts
+
+A skill with scripts (a `scripts/` folder, or files such as `.py` and
+`.sh`) can run commands. The assistant asks before each one and shows you
+the exact command. The command runs in a sandbox made with
+[bubblewrap](https://github.com/containers/bubblewrap), which must be
+installed (`sudo apt install bubblewrap`). Inside the sandbox, the command:
+
+- can read the system's programs and libraries, and the skill's own
+  folder at `/skill`;
+- can write only to `/work`, a scratch folder that lasts until you start
+  a new chat, and to an empty `/tmp`;
+- cannot see your home folder, so it has no access to your mail, your
+  keys, your settings or any of your files;
+- cannot reach the internet unless you turn on **Allow Network** for that
+  skill;
+- is stopped after 60 seconds, and the assistant reads at most 1 MB of
+  what it prints.
+
+The assistant can also feed a command text on standard input, such as a
+message it read. A script sees only what the assistant hands it.
+
 ## Keys and privacy
 
 API keys live in the GNOME keyring, under the service `mailrs-ai`. The
@@ -123,6 +180,10 @@ the model chosen for it, so the assistant and translation can go to
 different places. The assistant reads only what a task needs, but that can
 be whole conversations. Translation sends the message you asked it to
 translate, and only after you press the button.
+
+Skill scripts run on this computer, in the sandbox described under
+Scripts, and send nothing anywhere unless you allowed that skill the
+network.
 
 The assistant treats mail as data. Its instructions tell it never to follow
 instructions written inside an email, and the approval cards stop a message

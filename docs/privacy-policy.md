@@ -52,6 +52,11 @@ that needs them, and never at sign-in:
   your own computer, your mail stays on your computer. With the Anthropic
   API or Claude Code, it goes to Anthropic, under Anthropic's terms.
   Penguin Mail does not use your data to train or improve any AI model.
+- The assistant can follow skills, which are instruction folders you add
+  and turn on yourself. A skill's scripts run on your computer in a
+  sandbox that has no access to your mail, your keys or your home folder,
+  and no network unless you allow it for that skill. The assistant asks
+  before each script runs.
 
 ## How your data is protected
 
