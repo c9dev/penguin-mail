@@ -127,6 +127,30 @@ pub fn list(conn: &Connection) -> Result<Vec<Contact>> {
     read(conn, "1 = 1", [])
 }
 
+/// The contacts every word of `query` finds in a name, an address or an
+/// organization, whatever the case, by name. The address books hold a few
+/// thousand people at most, so the words are matched here rather than in
+/// SQL, which would need the addresses joined in once per word.
+pub fn search(conn: &Connection, query: &str) -> Result<Vec<Contact>> {
+    let words: Vec<String> = query.split_whitespace().map(str::to_lowercase).collect();
+    if words.is_empty() {
+        return Ok(Vec::new());
+    }
+    Ok(list(conn)?
+        .into_iter()
+        .filter(|contact| {
+            let text = [
+                contact.name.as_deref().unwrap_or_default(),
+                contact.organization.as_deref().unwrap_or_default(),
+                &contact.emails.join(" "),
+            ]
+            .join(" ")
+            .to_lowercase();
+            words.iter().all(|word| text.contains(word))
+        })
+        .collect())
+}
+
 /// The contact holding `email`, whichever account wrote it down.
 pub fn find(conn: &Connection, email: &str) -> Result<Option<Contact>> {
     let key = email.trim().to_lowercase();
@@ -254,6 +278,34 @@ mod tests {
         assert_eq!(found.emails, ["mara@example.org", "mara.work@example.org"]);
         assert_eq!(found.email(), Some("mara@example.org"));
         assert_eq!(found.display(), "Mara Okafor");
+    }
+
+    #[test]
+    fn search_finds_every_word_in_a_name_an_address_or_an_organization() {
+        let conn = open_in_memory().unwrap();
+        let id = accounts::insert_account(&conn, "dana@example.com", 0).unwrap();
+        let mut mara = contact(id, "people/c1", "Mara Okafor", &["mara@example.org"]);
+        mara.organization = Some("Fernwood Kites".into());
+        save(
+            &conn,
+            &[
+                mara,
+                contact(id, "people/c2", "Theo Lang", &["theo@fernwood.example"]),
+            ],
+        )
+        .unwrap();
+        let names = |query: &str| -> Vec<String> {
+            search(&conn, query)
+                .unwrap()
+                .iter()
+                .map(|c| c.display().to_string())
+                .collect()
+        };
+        assert_eq!(names("mara"), ["Mara Okafor"]);
+        assert_eq!(names("FERNWOOD"), ["Mara Okafor", "Theo Lang"]);
+        assert_eq!(names("fernwood theo"), ["Theo Lang"]);
+        assert!(names("priya").is_empty());
+        assert!(names("  ").is_empty(), "no words find nobody");
     }
 
     #[test]

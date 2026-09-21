@@ -7,16 +7,19 @@ use std::rc::Rc;
 
 use mailrs_ai::ToolOutcome;
 use mailrs_domain::translate::gettext;
-use mailrs_domain::{Account, AccountId, Category, Label, ThreadSummary};
+use mailrs_domain::{Account, AccountId, Category, EpochMillis, Label, ThreadSummary};
 use mailrs_sync::{MailAction, Outcome, Permitted, View};
 use serde_json::Value;
 
 use super::MainWindow;
-use crate::assistant::run::{Answer, Background, Desk, Effects, OnScreen, OpenConversation, Tools};
+use crate::assistant::run::{
+    Answer, Background, Desk, Effects, OnScreen, OpenConversation, Permission, Tools,
+};
 use crate::compose::{Draft, SendWhen};
 use crate::core::RunningEngine;
 use crate::hide_my_email::HiddenAddress;
 use crate::settings::{Change, Settings};
+use crate::unsubscribe::Unsubscribe;
 
 impl MainWindow {
     /// Runs one tool call from the assistant.
@@ -84,8 +87,34 @@ impl Effects for Ports {
         Box::pin(async move { self.0.assistant.confirm(&question).await })
     }
 
-    fn ask_permission(&self, account_id: AccountId) {
-        self.0.ask_for_settings_access(account_id);
+    fn ask_permission(&self, account_id: AccountId, permission: Permission) {
+        match permission {
+            Permission::Settings => self.0.ask_for_settings_access(account_id),
+            Permission::Calendar => self.0.ask_for_calendar_access(account_id),
+            Permission::Delete => self.0.ask_for_delete_access(account_id),
+        }
+    }
+
+    fn explain_api_off(&self, service: &str, enable_url: &str) {
+        self.0.explain_api_off(service, enable_url);
+    }
+
+    fn send_later(&self, draft: Draft, at: EpochMillis) -> Result<(), String> {
+        let app = self.0.app.upgrade().ok_or_else(closing)?;
+        let draft = match draft.draft_id {
+            Some(_) => draft,
+            None => app.signed(draft),
+        };
+        app.send(draft, SendWhen::At(at));
+        Ok(())
+    }
+
+    fn unsubscribe(
+        &self,
+        account_id: AccountId,
+        how: Unsubscribe,
+    ) -> Answer<'_, Result<(), String>> {
+        Box::pin(async move { self.0.leave_list(account_id, how).await })
     }
 
     fn change_settings(&self, change: Change) -> Result<(), String> {

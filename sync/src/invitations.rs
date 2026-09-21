@@ -20,7 +20,7 @@ mod mail;
 
 use std::sync::{Arc, Mutex};
 
-use mailrs_domain::invitation::{self, Answer, Invitation, Scope, When};
+use mailrs_domain::invitation::{self, Answer, Invitation, Method, Scope, When};
 use mailrs_domain::{AccountId, Address, EpochMillis};
 use mailrs_gmail::{Answered, GmailError, limiter};
 use mailrs_store::{Db, invitations as store};
@@ -294,6 +294,52 @@ impl<A: Accounts> Invitations<A> {
                 .await?;
         }
         Ok(sent)
+    }
+
+    /// Answers the invitation in message `message_id` as the account
+    /// address `me`, for a caller that holds the message rather than an
+    /// open card: the assistant. The answer goes out as [`Self::answer`]
+    /// sends it. An invitation to one occurrence of a repeating event is
+    /// answered for that occurrence, the smaller of the two things the
+    /// answer could mean. `None` means the message holds no invitation
+    /// that waits on an answer, such as a cancellation or somebody's reply.
+    pub async fn answer_message(
+        &self,
+        account_id: AccountId,
+        message_id: &str,
+        me: &str,
+        answer: Answer,
+        now: EpochMillis,
+    ) -> Result<Option<(Invitation, Sent)>, SyncError> {
+        let body = self.sync(account_id)?.body(message_id).await?;
+        let Some(ics) = body.calendar else {
+            return Ok(None);
+        };
+        let Some(opened) = self.open(account_id, message_id, &ics, now).await? else {
+            return Ok(None);
+        };
+        let invitation = opened.invitation;
+        if invitation.uid.trim().is_empty()
+            || invitation.method != Method::Request
+            || invitation.cancelled()
+        {
+            return Ok(None);
+        }
+        let guest = invitation
+            .me(&[me.to_string()])
+            .map(|guest| guest.who.clone());
+        let me = guest.unwrap_or_else(|| Address {
+            name: None,
+            email: me.to_string(),
+        });
+        let scope = match invitation.occurrence {
+            Some(_) => Scope::Occurrence,
+            None => Scope::Series,
+        };
+        let sent = self
+            .answer(account_id, &invitation, &me, answer, scope, now)
+            .await?;
+        Ok(Some((invitation, sent)))
     }
 
     /// Proposes another time for the event and mails the organizer the

@@ -15,19 +15,22 @@ use mailrs_domain::{
     LabelKind, MessageBody, MessageMeta, ThreadSummary, Vacation,
 };
 use mailrs_gmail::{
-    Answered, GmailError, HistoryPage, LabelColor, MessagePage, MessageRef, Profile, RemoteLabel,
+    Answered, Event, EventFields, GmailError, Guest, HistoryPage, LabelColor, MessagePage,
+    MessageRef, Profile, RemoteLabel,
 };
 use mailrs_store::{Db, accounts, labels, messages};
+use mailrs_sync::calendar::span;
 use mailrs_sync::{
-    AccountSettings, AccountSync, Accounts, DraftRef, GmailApi, MailAction, MailActions, Mailboxes,
-    Outcome, Permitted, SavedDraft, View,
+    AccountSettings, AccountSync, Accounts, Calendar, DraftRef, GmailApi, Invitations, MailAction,
+    MailActions, Mailboxes, Outcome, Permitted, SavedDraft, View,
 };
 use serde_json::Value;
 
-use super::{Answer, Background, Desk, Effects, Modules, OnScreen, Tools};
+use super::{Answer, Background, Desk, Effects, Modules, OnScreen, Permission, Tools};
 use crate::compose::Draft;
 use crate::hide_my_email::HiddenAddress;
 use crate::settings::{Change, Settings};
+use crate::unsubscribe::Unsubscribe;
 
 /// The address every fixture account belongs to.
 pub const ME: &str = "dana@example.com";
@@ -49,6 +52,19 @@ pub struct Inbox {
     /// False until the account grants the settings permission, as Gmail
     /// behaves before the user says yes.
     pub settings_allowed: bool,
+    /// The events on the primary calendar.
+    pub events: Vec<Event>,
+    /// False until the account grants the calendar permission.
+    pub calendar_allowed: bool,
+    /// Set to the page that turns the Calendar API on, to play a Google
+    /// Cloud project that has it switched off.
+    pub calendar_off: Option<String>,
+    /// False until the account grants the delete permission.
+    pub delete_allowed: bool,
+    /// Attachment bytes by message id and attachment id.
+    pub attachments: HashMap<(String, String), Vec<u8>>,
+    /// The account's drafts, each with the message inside it.
+    pub drafts: Vec<DraftRef>,
     next_id: u32,
 }
 
@@ -56,6 +72,8 @@ impl Gmail {
     pub fn new() -> Gmail {
         Gmail(Mutex::new(Inbox {
             settings_allowed: true,
+            calendar_allowed: true,
+            delete_allowed: true,
             ..Inbox::default()
         }))
     }
@@ -75,6 +93,19 @@ impl Gmail {
             true => Ok(()),
             false => Err(GmailError::MissingScope),
         }
+    }
+
+    /// Google's answer to a calendar call: the Calendar API switched off
+    /// in the project, the permission not granted yet, or yes.
+    fn calendar(&self) -> Result<(), GmailError> {
+        self.with(|i| match (&i.calendar_off, i.calendar_allowed) {
+            (Some(url), _) => Err(GmailError::ApiDisabled {
+                service: "Google Calendar API".into(),
+                enable_url: url.clone(),
+            }),
+            (None, false) => Err(GmailError::MissingScope),
+            (None, true) => Ok(()),
+        })
     }
 
     fn mint(&self, prefix: &str) -> String {
@@ -217,9 +248,16 @@ impl GmailApi for Gmail {
         Ok(())
     }
 
-    /// The assistant has no way to erase mail, so a call here is a bug.
+    /// Erases the messages, once the account grants the delete permission.
     async fn delete_messages(&self, ids: &[String]) -> Result<(), GmailError> {
-        panic!("the assistant asked Gmail to erase {ids:?}");
+        if !self.with(|i| i.delete_allowed) {
+            return Err(GmailError::MissingScope);
+        }
+        self.with(|i| {
+            i.writes.push(format!("erase {}", ids.join(",")));
+            i.messages.retain(|m| !ids.contains(&m.id));
+        });
+        Ok(())
     }
 
     async fn send(&self, _raw: &[u8], _thread_id: Option<&str>) -> Result<String, GmailError> {
@@ -248,7 +286,7 @@ impl GmailApi for Gmail {
     }
 
     async fn list_drafts(&self) -> Result<Vec<DraftRef>, GmailError> {
-        Ok(Vec::new())
+        Ok(self.with(|i| i.drafts.clone()))
     }
 
     async fn send_as(&self) -> Result<Vec<mailrs_gmail::SendAs>, GmailError> {
@@ -259,8 +297,13 @@ impl GmailApi for Gmail {
         Ok(Some("Dana".into()))
     }
 
-    async fn attachment(&self, _message: &str, _id: &str) -> Result<Vec<u8>, GmailError> {
-        Ok(Vec::new())
+    async fn attachment(&self, message: &str, id: &str) -> Result<Vec<u8>, GmailError> {
+        self.with(|i| {
+            i.attachments
+                .get(&(message.to_string(), id.to_string()))
+                .cloned()
+        })
+        .ok_or(GmailError::NotFound)
     }
 
     async fn raw_message(&self, _id: &str) -> Result<Vec<u8>, GmailError> {
@@ -378,6 +421,92 @@ impl GmailApi for Gmail {
     ) -> Result<Vec<mailrs_gmail::Busy>, GmailError> {
         Ok(Vec::new())
     }
+
+    async fn events_between(
+        &self,
+        from: EpochMillis,
+        to: EpochMillis,
+    ) -> Result<Vec<Event>, GmailError> {
+        self.calendar()?;
+        let mut events: Vec<Event> = self.with(|i| {
+            i.events
+                .iter()
+                .filter(|e| span(e).is_some_and(|(starts, ends)| starts < to && ends > from))
+                .cloned()
+                .collect()
+        });
+        events.sort_by_key(|e| span(e).map(|(starts, _)| starts));
+        Ok(events)
+    }
+
+    async fn create_event(&self, fields: &EventFields) -> Result<Event, GmailError> {
+        self.calendar()?;
+        let mut event = Event {
+            id: self.mint("event"),
+            busy: true,
+            ..Event::default()
+        };
+        write_event(&mut event, fields);
+        self.with(|i| {
+            i.writes.push(format!("create event {}", event.id));
+            i.events.push(event.clone());
+        });
+        Ok(event)
+    }
+
+    async fn update_event(&self, id: &str, fields: &EventFields) -> Result<Event, GmailError> {
+        self.calendar()?;
+        self.with(|i| {
+            i.writes.push(format!("update event {id}"));
+            let event = i.events.iter_mut().find(|e| e.id == id)?;
+            write_event(event, fields);
+            Some(event.clone())
+        })
+        .ok_or(GmailError::NotFound)
+    }
+
+    async fn delete_event(&self, id: &str) -> Result<(), GmailError> {
+        self.calendar()?;
+        self.with(|i| {
+            i.writes.push(format!("delete event {id}"));
+            let before = i.events.len();
+            i.events.retain(|e| e.id != id);
+            match i.events.len() < before {
+                true => Ok(()),
+                false => Err(GmailError::NotFound),
+            }
+        })
+    }
+}
+
+/// What `fields` sets, written onto `event` the way Google's patch does.
+fn write_event(event: &mut Event, fields: &EventFields) {
+    if let Some(summary) = &fields.summary {
+        event.summary = summary.clone();
+    }
+    if let Some(start) = &fields.start {
+        event.start = Some(start.clone());
+    }
+    if let Some(end) = &fields.end {
+        event.end = Some(end.clone());
+    }
+    if let Some(location) = &fields.location {
+        event.location = location.clone();
+    }
+    if let Some(description) = &fields.description {
+        event.description = description.clone();
+    }
+    if let Some(guests) = &fields.guests {
+        event.guests = guests
+            .iter()
+            .map(|email| Guest {
+                email: email.clone(),
+                name: None,
+                answer: "needsAction".into(),
+                me: false,
+            })
+            .collect();
+    }
 }
 
 /// The accounts a test connects, by id.
@@ -443,8 +572,13 @@ pub struct Asked {
     pub sent: Vec<Draft>,
     pub opened: Vec<ThreadSummary>,
     pub copied: Vec<String>,
-    /// Accounts offered the Gmail settings permission.
-    pub permission_asked: Vec<AccountId>,
+    /// Accounts offered a permission, and which.
+    pub permission_asked: Vec<(AccountId, Permission)>,
+    /// The switched-off APIs the window was asked to explain.
+    pub api_off: Vec<(String, String)>,
+    /// Messages handed to Send Later, with their times.
+    pub scheduled: Vec<(Draft, EpochMillis)>,
+    pub unsubscribed: Vec<(AccountId, Unsubscribe)>,
     pub mail_changed: Vec<(MailAction, Outcome)>,
     pub relisted: usize,
     pub categorized: Vec<(AccountId, String, String, Category)>,
@@ -464,8 +598,32 @@ impl Effects for FakeEffects {
         Box::pin(async move { answer })
     }
 
-    fn ask_permission(&self, account_id: AccountId) {
-        self.0.borrow_mut().permission_asked.push(account_id);
+    fn ask_permission(&self, account_id: AccountId, permission: Permission) {
+        self.0
+            .borrow_mut()
+            .permission_asked
+            .push((account_id, permission));
+    }
+
+    fn explain_api_off(&self, service: &str, enable_url: &str) {
+        self.0
+            .borrow_mut()
+            .api_off
+            .push((service.to_string(), enable_url.to_string()));
+    }
+
+    fn send_later(&self, draft: Draft, at: EpochMillis) -> Result<(), String> {
+        self.0.borrow_mut().scheduled.push((draft, at));
+        Ok(())
+    }
+
+    fn unsubscribe(
+        &self,
+        account_id: AccountId,
+        how: Unsubscribe,
+    ) -> Answer<'_, Result<(), String>> {
+        self.0.borrow_mut().unsubscribed.push((account_id, how));
+        Box::pin(async move { Ok(()) })
     }
 
     fn change_settings(&self, change: Change) -> Result<(), String> {
@@ -658,6 +816,8 @@ impl Harness {
             mail: Arc::new(MailActions::new(Arc::clone(&connected), db.clone())),
             lists: Arc::new(Mailboxes::new(Arc::clone(&connected), db.clone())),
             gmail: Arc::new(AccountSettings::new(Arc::clone(&connected), db.clone())),
+            calendar: Arc::new(Calendar::new(Arc::clone(&connected))),
+            invitations: Arc::new(Invitations::new(Arc::clone(&connected), db.clone())),
             accounts: connected,
             db: db.clone(),
         };

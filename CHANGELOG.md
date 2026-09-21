@@ -19,6 +19,13 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - The assistant can search the web and read pages. Claude uses Anthropic's
   own search; a local model can search with Brave Search or your own
   SearXNG server, chosen under Web Search on the AI page.
+- The assistant can use your Google calendar: it lists what is on, finds
+  free time, adds, moves and deletes events, and answers invitations,
+  asking you before each change.
+- The assistant can mute conversations, delete mail forever, send mail
+  later, write from your templates, unsubscribe you from lists, read
+  text, web page and PDF attachments, and look people up in your
+  contacts.
 
 ### Improved
 

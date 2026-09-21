@@ -94,33 +94,33 @@ msgstr ""
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr ""
 
-#: app/src/assistant/run.rs:632
+#: app/src/assistant/run.rs:735
 msgid "Move {count} conversation to the Trash?"
 msgid_plural "Move {count} conversations to the Trash?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/assistant/run.rs:797
+#: app/src/assistant/run.rs:822
 msgid "Send “{subject}” to {recipients}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:812
+#: app/src/assistant/run.rs:911
 msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr ""
 
-#: app/src/assistant/run.rs:889
+#: app/src/assistant/run.rs:988
 msgid " from {first} to {last}"
 msgstr ""
 
-#: app/src/assistant/run.rs:892
+#: app/src/assistant/run.rs:991
 msgid " until {last}"
 msgstr ""
 
-#: app/src/assistant/run.rs:893
+#: app/src/assistant/run.rs:992
 msgid " from {first}"
 msgstr ""
 
-#: app/src/assistant/run.rs:899
+#: app/src/assistant/run.rs:998
 msgid ""
 "Turn on the automatic reply for {account}{dates}?\n"
 "\n"
@@ -128,22 +128,122 @@ msgid ""
 "{body}"
 msgstr ""
 
-#: app/src/assistant/run.rs:910
+#: app/src/assistant/run.rs:1009
 msgid "Turn off the automatic reply for {account}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:988
+#: app/src/assistant/run.rs:1087
 msgid "Create a Gmail rule for {account}: {when} → {then}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1014
+#: app/src/assistant/run.rs:1113
 msgid "Delete a Gmail rule from {account}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1135
+#: app/src/assistant/run.rs:1234
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a Gmail rule for "
 "their future mail?"
+msgstr ""
+
+#: app/src/assistant/run/calendar.rs:191 app/src/assistant/run/calendar.rs:195
+#: app/src/assistant/run/calendar.rs:199
+msgid "{first} to {last}"
+msgstr ""
+
+#: app/src/assistant/run/calendar.rs:312
+msgid "Add “{title}” to the calendar for {account}, {when}?"
+msgstr ""
+
+#: app/src/assistant/run/calendar.rs:322
+msgid "Google sends an invitation to {guests}."
+msgstr ""
+
+#: app/src/assistant/run/calendar.rs:368
+msgid "Title: {value}"
+msgstr ""
+
+#: app/src/assistant/run/calendar.rs:371
+msgid "Starts: {value}"
+msgstr ""
+
+#: app/src/assistant/run/calendar.rs:374
+msgid "Ends: {value}"
+msgstr ""
+
+#: app/src/assistant/run/calendar.rs:377
+msgid "Where: {value}"
+msgstr ""
+
+#: app/src/assistant/run/calendar.rs:380
+msgid "Guests: {value}"
+msgstr ""
+
+#: app/src/assistant/run/calendar.rs:384
+msgid "Description: {value}"
+msgstr ""
+
+#: app/src/assistant/run/calendar.rs:389
+msgid "Change “{title}” on the calendar for {account}? Its guests are told."
+msgstr ""
+
+#: app/src/assistant/run/calendar.rs:393
+msgid "Change an event on the calendar for {account}? Its guests are told."
+msgstr ""
+
+#: app/src/assistant/run/calendar.rs:414
+msgid "Delete “{title}” from the calendar for {account}? Its guests are told."
+msgstr ""
+
+#: app/src/assistant/run/calendar.rs:418
+msgid "Delete an event from the calendar for {account}? Its guests are told."
+msgstr ""
+
+#: app/src/assistant/run/calendar.rs:436
+msgid "Yes"
+msgstr ""
+
+#: app/src/assistant/run/calendar.rs:437
+msgid "No"
+msgstr ""
+
+#: app/src/assistant/run/calendar.rs:438
+msgid "Maybe"
+msgstr ""
+
+#: app/src/assistant/run/calendar.rs:451
+msgid "Answer {answer} to “{title}”?"
+msgstr ""
+
+#: app/src/assistant/run/mail.rs:163
+msgid "Delete {count} conversation forever? Gmail cannot bring it back."
+msgid_plural ""
+"Delete {count} conversations forever? Gmail cannot bring them back."
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/assistant/run/mail.rs:204
+msgid "Send “{subject}” to {recipients} {when}?"
+msgstr ""
+
+#: app/src/assistant/run/mail.rs:328
+msgid "this list"
+msgstr ""
+
+#: app/src/assistant/run/mail.rs:332
+msgid "Penguin Mail asks the sender to take you off the list."
+msgstr ""
+
+#: app/src/assistant/run/mail.rs:336
+msgid "Penguin Mail sends the list an unsubscribe request from your account."
+msgstr ""
+
+#: app/src/assistant/run/mail.rs:340
+msgid "The sender's unsubscribe page opens in your browser."
+msgstr ""
+
+#: app/src/assistant/run/mail.rs:344
+msgid "Unsubscribe from {sender}?"
 msgstr ""
 
 #: app/src/assistant/sources/web.rs:61
@@ -302,6 +402,62 @@ msgid "Reading a web page"
 msgstr ""
 
 #: app/src/assistant/turn.rs:307
+msgid "Muting conversations"
+msgstr ""
+
+#: app/src/assistant/turn.rs:308
+msgid "Deleting mail forever"
+msgstr ""
+
+#: app/src/assistant/turn.rs:309
+msgid "Scheduling a message"
+msgstr ""
+
+#: app/src/assistant/turn.rs:310
+msgid "Reading templates"
+msgstr ""
+
+#: app/src/assistant/turn.rs:311
+msgid "Writing from a template"
+msgstr ""
+
+#: app/src/assistant/turn.rs:312
+msgid "Unsubscribing"
+msgstr ""
+
+#: app/src/assistant/turn.rs:313
+msgid "Reading an attachment"
+msgstr ""
+
+#: app/src/assistant/turn.rs:314
+msgid "Looking up a contact"
+msgstr ""
+
+#: app/src/assistant/turn.rs:315
+msgid "Reading the calendar"
+msgstr ""
+
+#: app/src/assistant/turn.rs:316
+msgid "Finding free time"
+msgstr ""
+
+#: app/src/assistant/turn.rs:317
+msgid "Adding an event"
+msgstr ""
+
+#: app/src/assistant/turn.rs:318
+msgid "Changing an event"
+msgstr ""
+
+#: app/src/assistant/turn.rs:319
+msgid "Deleting an event"
+msgstr ""
+
+#: app/src/assistant/turn.rs:320
+msgid "Answering an invitation"
+msgstr ""
+
+#: app/src/assistant/turn.rs:321
 msgid "Working"
 msgstr ""
 
@@ -317,15 +473,15 @@ msgstr ""
 msgid "On {date}, {sender} wrote:"
 msgstr ""
 
-#: app/src/core.rs:510
+#: app/src/core.rs:512
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 
-#: app/src/core.rs:527
+#: app/src/core.rs:529
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 
-#: app/src/core.rs:535
+#: app/src/core.rs:537
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 
@@ -1886,7 +2042,7 @@ msgstr ""
 #: app/src/ui/window/arrange.rs:104 app/src/ui/window/arrange.rs:149
 #: app/src/ui/window/images.rs:107 app/src/ui/window/organize.rs:84
 #: app/src/ui/window/organize.rs:135 app/src/ui/window/organize.rs:178
-#: app/src/ui/window/senders.rs:61 app/src/ui/window/senders.rs:153
+#: app/src/ui/window/senders.rs:61 app/src/ui/window/senders.rs:163
 msgid "Cancel"
 msgstr ""
 
@@ -2493,7 +2649,7 @@ msgid "Allow Hide My Email"
 msgstr ""
 
 #: app/src/ui/hide_my_email.rs:298 app/src/ui/rules.rs:236
-#: app/src/ui/window/senders.rs:202
+#: app/src/ui/window/senders.rs:212
 msgid ""
 "Penguin Mail needs permission to change Gmail settings for {account}. Google "
 "asks you to confirm in your browser."
@@ -2501,7 +2657,7 @@ msgstr ""
 
 #: app/src/ui/hide_my_email.rs:305 app/src/ui/rules.rs:243
 #: app/src/ui/vacation.rs:96 app/src/ui/window.rs:1805
-#: app/src/ui/window.rs:1882 app/src/ui/window/senders.rs:210
+#: app/src/ui/window.rs:1882 app/src/ui/window/senders.rs:220
 msgid "Grant Access"
 msgstr ""
 
@@ -2587,7 +2743,7 @@ msgstr ""
 
 #: app/src/ui/invitation.rs:276 app/src/ui/window.rs:1804
 #: app/src/ui/window.rs:1836 app/src/ui/window.rs:1881
-#: app/src/ui/window/senders.rs:209
+#: app/src/ui/window/senders.rs:219
 msgid "Not Now"
 msgstr ""
 
@@ -4139,10 +4295,6 @@ msgid ""
 "address."
 msgstr ""
 
-#: app/src/ui/window/assistant.rs:79
-msgid "The app is closing."
-msgstr ""
-
 #: app/src/ui/window/attachments.rs:64
 msgid "Could not open {file}: {reason}"
 msgstr ""
@@ -4209,7 +4361,7 @@ msgstr ""
 #: app/src/ui/window/detached.rs:196 app/src/ui/window/export.rs:83
 #: app/src/ui/window/organize.rs:100 app/src/ui/window/organize.rs:151
 #: app/src/ui/window/organize.rs:189 app/src/ui/window/organize.rs:227
-#: app/src/ui/window/senders.rs:162
+#: app/src/ui/window/senders.rs:172
 msgid "That account is not connected"
 msgstr ""
 
@@ -4380,7 +4532,7 @@ msgstr ""
 msgid "Could not send your proposal: {reason}"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:305
+#: app/src/ui/window/invitation.rs:305 app/src/ui/window/invitation.rs:338
 msgid "Allow Penguin Mail to Use Your Calendar"
 msgstr ""
 
@@ -4391,43 +4543,49 @@ msgid ""
 "too. Google asks you to confirm in your browser."
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:346
+#: app/src/ui/window/invitation.rs:341
+msgid ""
+"The assistant needs permission to read and change events on the calendar for "
+"{account}. Google asks you to confirm in your browser."
+msgstr ""
+
+#: app/src/ui/window/invitation.rs:378
 msgid "Could not save the invitation: {reason}"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:358
+#: app/src/ui/window/invitation.rs:390
 msgid "No app on this desktop opens invitations: {reason}"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:398
+#: app/src/ui/window/invitation.rs:430
 msgid "Replied Yes"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:399
+#: app/src/ui/window/invitation.rs:431
 msgid "Replied No"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:400
+#: app/src/ui/window/invitation.rs:432
 msgid "Replied Maybe"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:403
+#: app/src/ui/window/invitation.rs:435
 msgid "{answer}. The organizer has been told."
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:404
+#: app/src/ui/window/invitation.rs:436
 msgid "{answer}. Your reply is on its way to the organizer."
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:414
+#: app/src/ui/window/invitation.rs:446
 msgid "Answered on your calendar"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:416
+#: app/src/ui/window/invitation.rs:448
 msgid "Replied by email to {organizer}"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:419
+#: app/src/ui/window/invitation.rs:451
 msgid "Replied by email"
 msgstr ""
 
@@ -4545,10 +4703,6 @@ msgstr ""
 msgid "Could not cancel: {reason}"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:29
-msgid "this list"
-msgstr ""
-
 #: app/src/ui/window/senders.rs:37
 msgid "This message has no unsubscribe link"
 msgstr ""
@@ -4557,57 +4711,45 @@ msgstr ""
 msgid "This message's unsubscribe link is not one Penguin Mail can use"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:46
-msgid "Penguin Mail asks the sender to take you off the list."
-msgstr ""
-
-#: app/src/ui/window/senders.rs:49
-msgid "Penguin Mail sends the list an unsubscribe request from your account."
-msgstr ""
-
-#: app/src/ui/window/senders.rs:51
-msgid "The sender's unsubscribe page opens in your browser."
-msgstr ""
-
-#: app/src/ui/window/senders.rs:55
-msgid "Unsubscribe from {sender}?"
-msgstr ""
-
-#: app/src/ui/window/senders.rs:102
+#: app/src/ui/window/senders.rs:76
 msgid "Unsubscribed from {sender}"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:107
+#: app/src/ui/window/senders.rs:81
 msgid "Could not unsubscribe: {reason}"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:137
-msgid "Open a message from the sender to block"
-msgstr ""
-
-#: app/src/ui/window/senders.rs:142
-msgid "Block {sender}?"
+#: app/src/ui/window/senders.rs:105
+msgid "The app is closing."
 msgstr ""
 
 #: app/src/ui/window/senders.rs:147
+msgid "Open a message from the sender to block"
+msgstr ""
+
+#: app/src/ui/window/senders.rs:152
+msgid "Block {sender}?"
+msgstr ""
+
+#: app/src/ui/window/senders.rs:157
 msgid ""
 "New mail from {email} goes straight to the Trash. This conversation moves "
 "there now. Remove the rule under Rules to unblock."
 msgstr ""
 
-#: app/src/ui/window/senders.rs:153
+#: app/src/ui/window/senders.rs:163
 msgid "Block"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:180
+#: app/src/ui/window/senders.rs:190
 msgid "Blocked {sender}"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:185
+#: app/src/ui/window/senders.rs:195
 msgid "Could not block the sender: {reason}"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:199
+#: app/src/ui/window/senders.rs:209
 msgid "Allow Changes to Gmail Settings"
 msgstr ""
 
@@ -4641,18 +4783,6 @@ msgstr ""
 
 #: domain/src/category.rs:62
 msgid "Social"
-msgstr ""
-
-#: domain/src/invitation.rs:68
-msgid "Yes"
-msgstr ""
-
-#: domain/src/invitation.rs:69
-msgid "No"
-msgstr ""
-
-#: domain/src/invitation.rs:70 domain/src/invitation.rs:79
-msgid "Maybe"
 msgstr ""
 
 #: domain/src/invitation.rs:77
