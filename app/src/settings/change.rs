@@ -122,6 +122,8 @@ pub enum Change {
     /// whichever way the person answered.
     OfferedToGnome(String),
     Ai(AiChange),
+    /// Open the assistant's thinking and tool rows as they appear.
+    AssistantDetailsExpanded(bool),
 }
 
 /// A change to the assistant's settings. API keys live in the keyring and
@@ -277,6 +279,7 @@ impl Change {
                 }
             }
             Change::Ai(change) => change.apply_to(&mut settings.ai),
+            Change::AssistantDetailsExpanded(on) => settings.assistant_details_expanded = on,
         }
     }
 }
@@ -488,6 +491,7 @@ impl Effects {
             account_colors,
             account_names,
             ai,
+            assistant_details_expanded,
             hidden_addresses,
             inbox_categories,
             default_category,
@@ -535,6 +539,9 @@ impl Effects {
             // The event card reads this as it goes up, and it changes
             // nothing that is already on screen.
             offered_to_gnome,
+            // The pane reads this as it adds a row, and rows already in the
+            // chat stay as the reader left them.
+            assistant_details_expanded,
             // The updater reads these when its timer fires.
             check_for_updates,
             last_update_check,
@@ -640,6 +647,7 @@ mod tests {
                 email: "ann@example.com".into(),
                 text: "Ann".into(),
             },
+            Change::AssistantDetailsExpanded(true),
         ];
         for change in quiet {
             let named = format!("{change:?}");
@@ -913,6 +921,9 @@ mod tests {
                 "ai",
                 // The updater's own record of what it announced.
                 "announced_update",
+                // How the assistant's pane lays out its own turns belongs
+                // with the rest of its settings, on the AI page.
+                "assistant_details_expanded",
                 // The composer reads this as a message goes out, so the
                 // assistant has no business turning the warning off.
                 "check_attachments",
