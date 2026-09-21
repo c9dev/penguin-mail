@@ -326,6 +326,38 @@ impl MainWindow {
         });
     }
 
+    /// Explains that the assistant's calendar tools need the calendar
+    /// permission, and offers to ask Google for it. Unlike the offer after
+    /// an answer, nothing has happened yet without it, so this asks every
+    /// time a tool finds it missing.
+    pub(super) fn ask_for_calendar_access(self: &Rc<Self>, account_id: AccountId) {
+        let Some(account) = self.account(account_id) else {
+            return;
+        };
+        let dialog = adw::AlertDialog::new(
+            Some(&gettext("Allow Penguin Mail to Use Your Calendar")),
+            Some(&fill(
+                &gettext(
+                    "The assistant needs permission to read and change events on the \
+                     calendar for {account}. Google asks you to confirm in your browser.",
+                ),
+                &[("account", &account.email)],
+            )),
+        );
+        dialog.add_responses(&[
+            ("cancel", &gettext("Not Now")),
+            ("grant", &gettext("Grant Access")),
+        ]);
+        dialog.set_response_appearance("grant", adw::ResponseAppearance::Suggested);
+        dialog.set_close_response("cancel");
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            if dialog.choose_future(Some(&this.window)).await == "grant" {
+                this.authorize_with(Some(account.email), &[CALENDAR_SCOPE]);
+            }
+        });
+    }
+
     /// Writes the invitation to a file and opens it with the desktop's
     /// handler, which on GNOME is Calendar. The event then shows up in the
     /// shell clock like any other.

@@ -438,6 +438,8 @@ impl Core {
             mail: Arc::clone(&self.actions),
             lists: Arc::clone(&self.lists),
             gmail: Arc::clone(&self.gmail_settings),
+            calendar: Arc::new(mailrs_sync::Calendar::new(Arc::clone(&self.engine))),
+            invitations: Arc::clone(&self.invitations),
             accounts: Arc::clone(&self.engine),
             db: self.db.clone(),
         }

@@ -12,17 +12,19 @@ use std::pin::Pin;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use chrono::{Local, NaiveDate, NaiveDateTime, TimeZone};
+use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, TimeZone};
 use mailrs_ai::ToolOutcome;
 use mailrs_domain::smart::{Condition, SmartMailbox};
 use mailrs_domain::{
-    Account, AccountId, Category, FlagColor, Folder, Label, LabelKind, Target, ThreadSummary,
-    system_label,
+    Account, AccountId, Category, EpochMillis, FlagColor, Folder, Label, LabelKind, Target,
+    ThreadSummary, system_label,
 };
+use mailrs_gmail::GmailError;
 use mailrs_store::{Db, messages};
 use mailrs_sync::{
-    AccountSettings, AccountSync, Accounts, AutomaticReply, Failure, History, MailAction,
-    MailActions, Mailbox, Mailboxes, Outcome, Permitted, Scope, TriageAction, View,
+    AccountSettings, AccountSync, Accounts, AutomaticReply, Calendar, Failure, History,
+    Invitations, MailAction, MailActions, Mailbox, Mailboxes, Outcome, Permitted, Scope, SyncError,
+    TriageAction, View,
 };
 use serde_json::{Value, json};
 
@@ -32,10 +34,13 @@ use crate::rules::{RuleForm, describe_action, describe_criteria};
 use crate::settings::{
     Change, Choice, ColorScheme, MarkRead, RemoteImages, Setting, Settings, TextSize, UndoSend,
 };
+use crate::unsubscribe::Unsubscribe;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
+mod calendar;
 #[cfg(test)]
 mod fake;
+mod mail;
 #[cfg(test)]
 mod tests;
 
@@ -81,12 +86,36 @@ pub trait Desk {
     fn default_account(&self) -> Option<AccountId>;
 }
 
+/// A Google permission sign-in leaves out, which a tool can find missing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Permission {
+    /// Reading and changing the account's Gmail settings.
+    Settings,
+    /// Reading and changing the events on the account's calendar.
+    Calendar,
+    /// Erasing mail for good.
+    Delete,
+}
+
 /// What the tools ask the window to do. A test records the calls instead.
 pub trait Effects {
     /// Asks the user to approve an action. `true` when they agree.
     fn confirm(&self, question: String) -> Answer<'_, bool>;
-    /// Offers the account the Gmail settings permission it still lacks.
-    fn ask_permission(&self, account_id: AccountId);
+    /// Offers the account a Google permission it still lacks.
+    fn ask_permission(&self, account_id: AccountId, permission: Permission);
+    /// Tells the user that the Google Cloud project has `service` switched
+    /// off, and offers the page at `enable_url` that turns it on.
+    fn explain_api_off(&self, service: &str, enable_url: &str);
+    /// Sends the draft at `at`, from a Gmail draft, as Send Later does. A
+    /// draft with no `draft_id` is new and gets its signature first; one
+    /// that has an id already went through a composer that signed it.
+    fn send_later(&self, draft: Draft, at: EpochMillis) -> Result<(), String>;
+    /// Leaves a mailing list the way `how` says, from the account.
+    fn unsubscribe(
+        &self,
+        account_id: AccountId,
+        how: Unsubscribe,
+    ) -> Answer<'_, Result<(), String>>;
     fn change_settings(&self, change: Change) -> Result<(), String>;
     /// A blank message from the account, carrying its identity.
     fn new_draft(&self, account_id: AccountId) -> Result<Draft, String>;
@@ -130,11 +159,14 @@ pub trait Background {
 }
 
 /// The modules a tool call works through: mail actions, mailbox listing,
-/// Gmail settings, the accounts that sync, and the store.
+/// Gmail settings, the calendar, the invitations in mail, the accounts
+/// that sync, and the store.
 pub struct Modules<A: Accounts> {
     pub mail: Arc<MailActions<A>>,
     pub lists: Arc<Mailboxes<A>>,
     pub gmail: Arc<AccountSettings<A>>,
+    pub calendar: Arc<Calendar<A>>,
+    pub invitations: Arc<Invitations<A>>,
     pub accounts: Arc<A>,
     pub db: Db,
 }
@@ -225,6 +257,20 @@ impl<A: Accounts> Tools<A> {
             "list_hidden_addresses" => Ok(self.hidden_list()),
             "create_hidden_address" => self.hidden_create(&input).await,
             "set_hidden_address" => self.hidden_set(&input).await,
+            "list_events" => self.list_events(&input).await,
+            "find_free_time" => self.find_free_time(&input).await,
+            "create_event" => self.create_event(&input).await,
+            "update_event" => self.update_event(&input).await,
+            "delete_event" => self.delete_event(&input).await,
+            "answer_invitation" => self.answer_invitation(&input).await,
+            "find_contact" => self.find_contact(&input).await,
+            "mute" => self.mute(&input).await,
+            "delete_forever" => self.delete_forever(&input).await,
+            "send_later" => self.send_later(&input).await,
+            "list_templates" => self.list_templates().await,
+            "insert_template" => self.insert_template(&input).await,
+            "unsubscribe" => self.unsubscribe(&input).await,
+            "read_attachment" => self.read_attachment(&input).await,
             other => Err(format!("There is no tool called {other}.")),
         };
         match result {
@@ -364,11 +410,65 @@ impl<A: Accounts> Tools<A> {
 
     /// Asks the user for the Gmail settings permission, and says so.
     fn needs_permission(&self, account: &Account) -> String {
-        self.effects.ask_permission(account.id);
+        self.effects
+            .ask_permission(account.id, Permission::Settings);
         format!(
             "Penguin Mail needs permission to change Gmail settings for {}. The user was asked to grant it; try again once they have.",
             account.email
         )
+    }
+
+    /// Runs a call that needs a Google permission, and turns the two ways
+    /// Google can refuse into what the model should hear. A missing
+    /// permission asks the user for it; an API the Cloud project has
+    /// switched off shows the user where to turn it on, since no
+    /// permission would help.
+    async fn permitted<T: Send + 'static>(
+        &self,
+        account: &Account,
+        permission: Permission,
+        task: impl Future<Output = Result<Permitted<T>, SyncError>> + Send + 'static,
+    ) -> Result<T, String> {
+        match self.away(task).await? {
+            Ok(Permitted::Done(value)) => Ok(value),
+            Ok(Permitted::NeedsPermission) => {
+                self.effects.ask_permission(account.id, permission);
+                let what = match permission {
+                    Permission::Settings => "change Gmail settings",
+                    Permission::Calendar => "use the calendar",
+                    Permission::Delete => "delete mail for good",
+                };
+                Err(format!(
+                    "Penguin Mail needs permission to {what} for {}. The user was asked to grant it; try again once they have.",
+                    account.email
+                ))
+            }
+            Err(SyncError::Gmail(GmailError::ApiDisabled {
+                service,
+                enable_url,
+            })) => {
+                self.effects.explain_api_off(&service, &enable_url);
+                Err(format!(
+                    "The {service} is switched off in the Google Cloud project Penguin Mail signs in with, so Google refuses the call. The user was shown where to turn it on ({enable_url}); try again once they have."
+                ))
+            }
+            Err(err) => Err(err.to_string()),
+        }
+    }
+
+    /// The account a tool names, or the default one when it names none.
+    fn account_or_default(&self, input: &Value) -> Result<Account, String> {
+        match text(input, "account") {
+            Some(email) => self.account_named(&email),
+            None => {
+                let id = self.desk.default_account().ok_or("Add an account first.")?;
+                self.desk
+                    .accounts()
+                    .into_iter()
+                    .find(|a| a.id == id)
+                    .ok_or_else(|| "Add an account first.".to_string())
+            }
+        }
     }
 
     // ---- Reading ---------------------------------------------------------
@@ -592,6 +692,7 @@ impl<A: Accounts> Tools<A> {
                     .collect::<Vec<_>>()
             };
             out.push(json!({
+                "message_id": meta.id,
                 "from": meta.from.as_ref().map(|a| format!("{} <{}>", a.display(), a.email)),
                 "to": people(&meta.to),
                 "cc": people(&meta.cc),
@@ -599,6 +700,8 @@ impl<A: Accounts> Tools<A> {
                 "subject": meta.subject,
                 "labels": meta.label_ids,
                 "text": body_text,
+                "invitation": body.as_ref().is_some_and(|b| b.calendar.is_some()),
+                "unsubscribe": body.as_ref().is_some_and(|b| b.list_unsubscribe.is_some()),
                 "attachments": body
                     .map(|b| b.attachments.iter().map(|a| a.filename.clone()).collect::<Vec<_>>())
                     .unwrap_or_default(),
@@ -694,18 +797,7 @@ impl<A: Accounts> Tools<A> {
 
     async fn remind(&self, input: &Value) -> ToolResult {
         let targets = self.parse_targets(input)?;
-        let at = required(input, "at")?;
-        let naive = NaiveDateTime::parse_from_str(&at, "%Y-%m-%dT%H:%M")
-            .or_else(|_| NaiveDateTime::parse_from_str(&at, "%Y-%m-%dT%H:%M:%S"))
-            .map_err(|_| format!("Could not read the time {at}; use YYYY-MM-DDTHH:MM."))?;
-        let when = Local
-            .from_local_datetime(&naive)
-            .earliest()
-            .ok_or("That time does not exist here.")?
-            .timestamp_millis();
-        if when <= Local::now().timestamp_millis() {
-            return Err("That time is in the past.".into());
-        }
+        let when = future_instant(&required(input, "at")?)?;
         let mut result = report(&self.act(targets, MailAction::Remind { at: when }).await)?;
         result["returns"] = json!(crate::format::future_date(when, Local::now()));
         Ok(result)
@@ -715,6 +807,30 @@ impl<A: Accounts> Tools<A> {
 
     /// Opens a draft, or sends after the user approves.
     async fn message(&self, input: &Value, send: bool) -> ToolResult {
+        let draft = self.draft_from(input).await?;
+        if !send {
+            self.effects.compose(draft)?;
+            return Ok(
+                json!({"opened": "A composer window shows the draft for the user to review."}),
+            );
+        }
+        if let Some(problem) = draft.problem() {
+            return Err(problem);
+        }
+        let to = compose::format_recipients(&draft.to);
+        self.approve(&fill(
+            &gettext("Send “{subject}” to {recipients}?"),
+            &[("subject", &draft.subject), ("recipients", &to)],
+        ))
+        .await?;
+        let delay = self.desk.settings().undo_send.seconds();
+        self.effects.send(draft)?;
+        Ok(json!({"sent": true, "undo_seconds": delay}))
+    }
+
+    /// The message the fields `message_fields` describes, threaded into
+    /// the conversation `reply_to` names.
+    async fn draft_from(&self, input: &Value) -> Result<Draft, String> {
         let list = |key: &str| -> String {
             input
                 .get(key)
@@ -783,24 +899,7 @@ impl<A: Accounts> Tools<A> {
                 };
             }
         }
-        if !send {
-            self.effects.compose(draft)?;
-            return Ok(
-                json!({"opened": "A composer window shows the draft for the user to review."}),
-            );
-        }
-        if let Some(problem) = draft.problem() {
-            return Err(problem);
-        }
-        let to = compose::format_recipients(&draft.to);
-        self.approve(&fill(
-            &gettext("Send “{subject}” to {recipients}?"),
-            &[("subject", &draft.subject), ("recipients", &to)],
-        ))
-        .await?;
-        let delay = self.desk.settings().undo_send.seconds();
-        self.effects.send(draft)?;
-        Ok(json!({"sent": true, "undo_seconds": delay}))
+        Ok(draft)
     }
 
     // ---- Gmail settings --------------------------------------------------
@@ -1207,6 +1306,42 @@ impl<A: Accounts> Tools<A> {
             Err(err) => Err(err),
         }
     }
+}
+
+/// A moment a tool was given, in the forms the tool specs promise: local
+/// time as `YYYY-MM-DDTHH:MM`, with seconds or without, or RFC 3339 with an
+/// offset of its own.
+fn instant(text: &str) -> Result<EpochMillis, String> {
+    let text = text.trim();
+    if let Ok(at) = DateTime::parse_from_rfc3339(text) {
+        return Ok(at.timestamp_millis());
+    }
+    let naive = ["%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M"]
+        .iter()
+        .find_map(|shape| NaiveDateTime::parse_from_str(text, shape).ok())
+        .ok_or_else(|| format!("Could not read the time {text}; use YYYY-MM-DDTHH:MM."))?;
+    Local
+        .from_local_datetime(&naive)
+        .earliest()
+        .map(|at| at.timestamp_millis())
+        .ok_or_else(|| "That time does not exist here.".to_string())
+}
+
+/// As [`instant`], for a time something is to happen at.
+fn future_instant(text: &str) -> Result<EpochMillis, String> {
+    let at = instant(text)?;
+    if at <= Local::now().timestamp_millis() {
+        return Err("That time is in the past.".into());
+    }
+    Ok(at)
+}
+
+/// A moment as the tools write one back: local time, `YYYY-MM-DDTHH:MM`,
+/// the shape they take it in.
+fn local_text(at: EpochMillis) -> String {
+    crate::format::local(at)
+        .map(|at| at.format("%Y-%m-%dT%H:%M").to_string())
+        .unwrap_or_default()
 }
 
 fn reply_json(reply: &AutomaticReply) -> Value {

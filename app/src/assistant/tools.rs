@@ -304,6 +304,156 @@ pub fn specs() -> Vec<ToolSpec> {
             json!({"account": account("The account."), "thread_id": {"type": "string"}}),
             &["account", "thread_id"],
         ),
+        tool(
+            "mute",
+            "Mutes conversations: they leave the inbox, and replies to them skip it too. Set mute to false to unmute and bring them back. Reversible with Ctrl+Z.",
+            json!({
+                "targets": targets(),
+                "mute": {"type": "boolean", "description": "False unmutes. Defaults to true."}
+            }),
+            &["targets"],
+        ),
+        tool(
+            "delete_forever",
+            "Erases conversations from Gmail for good. Nothing brings them back, so use organize with trash unless the user asked for this. The user approves it first.",
+            json!({"targets": targets()}),
+            &["targets"],
+        ),
+        tool(
+            "send_later",
+            "Schedules a message to go out at a local time. Give the message's fields, as for send_email, or name a draft the user already wrote. The user approves it first.",
+            {
+                let mut fields = message_fields();
+                fields["at"] = json!({"type": "string", "description": "When to send it, local time, as YYYY-MM-DDTHH:MM."});
+                fields["draft"] = json!({
+                    "type": "object",
+                    "description": "A saved draft to send as it stands, instead of the other fields: the conversation list_mail with mailbox drafts gave.",
+                    "properties": {
+                        "account": {"type": "string"},
+                        "thread_id": {"type": "string"}
+                    },
+                    "required": ["account", "thread_id"],
+                    "additionalProperties": false
+                });
+                fields
+            },
+            &["at"],
+        ),
+        tool(
+            "list_templates",
+            "Lists the user's saved templates with their subjects and bodies. Placeholders such as {{first_name}} fill in when a template is used.",
+            json!({}),
+            &[],
+        ),
+        tool(
+            "insert_template",
+            "Opens a composer with a saved template, its placeholders filled in from the first recipient, the subject, and today's date. Takes the same fields as draft_email, with the template in place of the body.",
+            {
+                let mut fields = message_fields();
+                if let Some(fields) = fields.as_object_mut() {
+                    fields.remove("body");
+                }
+                fields["template"] = json!({"type": "string", "description": "The template's name, as list_templates gave it."});
+                fields
+            },
+            &["template"],
+        ),
+        tool(
+            "unsubscribe",
+            "Leaves the mailing list a conversation came from, using its List-Unsubscribe link: a one-click request, an email to the list, or the sender's page opened in the browser. The user approves it first.",
+            json!({"account": account("The account."), "thread_id": {"type": "string"}}),
+            &["account", "thread_id"],
+        ),
+        tool(
+            "read_attachment",
+            "Reads an attachment as text: plain text, HTML, and PDF files. Other files come back with a note saying they cannot be read.",
+            json!({
+                "account": account("The account."),
+                "message_id": {"type": "string", "description": "The message_id read_conversation gave."},
+                "attachment": {"type": "string", "description": "The file name, or its number in the message's list, starting at 1."}
+            }),
+            &["account", "message_id", "attachment"],
+        ),
+        tool(
+            "find_contact",
+            "Looks people up by name, address, or organization: first in the address books Penguin Mail keeps from Google Contacts, then among the people in stored mail.",
+            json!({"query": {"type": "string", "description": "Words to find, such as \"priya\" or \"fernwood\"."}}),
+            &["query"],
+        ),
+        tool(
+            "list_events",
+            "Lists the events on an account's Google calendar between two local times, with their ids, times, places, guests, and the user's own answer.",
+            json!({
+                "from": {"type": "string", "description": "Local time as YYYY-MM-DDTHH:MM, or a day as YYYY-MM-DD for its start."},
+                "to": {"type": "string", "description": "Local time as YYYY-MM-DDTHH:MM, or a day as YYYY-MM-DD, which counts in full."},
+                "account": account("The calendar's account. Defaults to the default account.")
+            }),
+            &["from", "to"],
+        ),
+        tool(
+            "find_free_time",
+            "Finds free stretches of at least the given length on an account's calendar, inside working hours on each day between two local times.",
+            json!({
+                "from": {"type": "string", "description": "Local time as YYYY-MM-DDTHH:MM, or a day as YYYY-MM-DD."},
+                "to": {"type": "string", "description": "Local time as YYYY-MM-DDTHH:MM, or a day as YYYY-MM-DD, which counts in full."},
+                "minutes": {"type": "integer", "minimum": 5, "maximum": 1440, "description": "How long the free stretch must be."},
+                "day_starts": {"type": "string", "description": "HH:MM. Defaults to 09:00."},
+                "day_ends": {"type": "string", "description": "HH:MM. Defaults to 18:00."},
+                "weekends": {"type": "boolean", "description": "Include Saturdays and Sundays. Defaults to false."},
+                "account": account("The calendar's account. Defaults to the default account.")
+            }),
+            &["from", "to", "minutes"],
+        ),
+        tool(
+            "create_event",
+            "Puts an event on an account's Google calendar and invites its guests. Give start and end as local times, or both as days for an all-day event. The user approves it first.",
+            json!({
+                "title": {"type": "string"},
+                "start": {"type": "string", "description": "Local time as YYYY-MM-DDTHH:MM, or the first day as YYYY-MM-DD."},
+                "end": {"type": "string", "description": "Local time as YYYY-MM-DDTHH:MM, or the last day as YYYY-MM-DD."},
+                "attendees": {"type": "array", "items": {"type": "string"}, "description": "Guests' addresses. Google emails each an invitation."},
+                "location": {"type": "string"},
+                "description": {"type": "string"},
+                "account": account("The calendar's account. Defaults to the default account.")
+            }),
+            &["title", "start", "end"],
+        ),
+        tool(
+            "update_event",
+            "Changes an event on the calendar by the id list_events gave. Only the fields given change; attendees replaces the guest list. Google tells the guests. The user approves it first.",
+            json!({
+                "id": {"type": "string"},
+                "current_title": {"type": "string", "description": "The event's title now, for the confirmation."},
+                "title": {"type": "string", "description": "A new title."},
+                "start": {"type": "string", "description": "Local time as YYYY-MM-DDTHH:MM, or a day as YYYY-MM-DD."},
+                "end": {"type": "string", "description": "Local time as YYYY-MM-DDTHH:MM, or the last day as YYYY-MM-DD."},
+                "attendees": {"type": "array", "items": {"type": "string"}},
+                "location": {"type": "string"},
+                "description": {"type": "string"},
+                "account": account("The calendar's account. Defaults to the default account.")
+            }),
+            &["id"],
+        ),
+        tool(
+            "delete_event",
+            "Deletes an event from the calendar by the id list_events gave. Google tells the guests. The user approves it first.",
+            json!({
+                "id": {"type": "string"},
+                "title": {"type": "string", "description": "The event's title, for the confirmation."},
+                "account": account("The calendar's account. Defaults to the default account.")
+            }),
+            &["id"],
+        ),
+        tool(
+            "answer_invitation",
+            "Answers the meeting invitation in a message: yes, no, or maybe. Google Calendar records it when it holds the event; otherwise the answer goes to the organizer by email. The user approves it first.",
+            json!({
+                "account": account("The message's account."),
+                "message_id": {"type": "string", "description": "The message read_conversation marked as holding an invitation."},
+                "answer": {"type": "string", "enum": ["yes", "no", "maybe"]}
+            }),
+            &["account", "message_id", "answer"],
+        ),
     ]
 }
 

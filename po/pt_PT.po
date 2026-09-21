@@ -100,33 +100,33 @@ msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr ""
 "O Claude Code não está instalado. Instale-o, inicie sessão e tente de novo."
 
-#: app/src/assistant/run.rs:632
+#: app/src/assistant/run.rs:735
 msgid "Move {count} conversation to the Trash?"
 msgid_plural "Move {count} conversations to the Trash?"
 msgstr[0] "Mover {count} conversa para o lixo?"
 msgstr[1] "Mover {count} conversas para o lixo?"
 
-#: app/src/assistant/run.rs:797
+#: app/src/assistant/run.rs:822
 msgid "Send “{subject}” to {recipients}?"
 msgstr "Enviar “{subject}” para {recipients}?"
 
-#: app/src/assistant/run.rs:812
+#: app/src/assistant/run.rs:911
 msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr "Bloquear {address}? O correio futuro vai direto para o lixo."
 
-#: app/src/assistant/run.rs:889
+#: app/src/assistant/run.rs:988
 msgid " from {first} to {last}"
 msgstr ", de {first} a {last}"
 
-#: app/src/assistant/run.rs:892
+#: app/src/assistant/run.rs:991
 msgid " until {last}"
 msgstr ", até {last}"
 
-#: app/src/assistant/run.rs:893
+#: app/src/assistant/run.rs:992
 msgid " from {first}"
 msgstr ", a partir de {first}"
 
-#: app/src/assistant/run.rs:899
+#: app/src/assistant/run.rs:998
 msgid ""
 "Turn on the automatic reply for {account}{dates}?\n"
 "\n"
@@ -138,25 +138,126 @@ msgstr ""
 "“{subject}”\n"
 "{body}"
 
-#: app/src/assistant/run.rs:910
+#: app/src/assistant/run.rs:1009
 msgid "Turn off the automatic reply for {account}?"
 msgstr "Desligar a resposta automática de {account}?"
 
-#: app/src/assistant/run.rs:988
+#: app/src/assistant/run.rs:1087
 msgid "Create a Gmail rule for {account}: {when} → {then}?"
 msgstr "Criar uma regra do Gmail para {account}: {when} → {then}?"
 
-#: app/src/assistant/run.rs:1014
+#: app/src/assistant/run.rs:1113
 msgid "Delete a Gmail rule from {account}?"
 msgstr "Eliminar uma regra do Gmail de {account}?"
 
-#: app/src/assistant/run.rs:1135
+#: app/src/assistant/run.rs:1234
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a Gmail rule for "
 "their future mail?"
 msgstr ""
 "Mover o correio de {sender} para {category} em {account} e criar uma regra "
 "do Gmail para o correio futuro?"
+
+#: app/src/assistant/run/calendar.rs:191 app/src/assistant/run/calendar.rs:195
+#: app/src/assistant/run/calendar.rs:199
+msgid "{first} to {last}"
+msgstr "{first} a {last}"
+
+#: app/src/assistant/run/calendar.rs:312
+msgid "Add “{title}” to the calendar for {account}, {when}?"
+msgstr "Adicionar “{title}” ao calendário de {account}, {when}?"
+
+#: app/src/assistant/run/calendar.rs:322
+msgid "Google sends an invitation to {guests}."
+msgstr "A Google envia um convite a {guests}."
+
+#: app/src/assistant/run/calendar.rs:368
+msgid "Title: {value}"
+msgstr "Título: {value}"
+
+#: app/src/assistant/run/calendar.rs:371
+msgid "Starts: {value}"
+msgstr "Começa: {value}"
+
+#: app/src/assistant/run/calendar.rs:374
+msgid "Ends: {value}"
+msgstr "Termina: {value}"
+
+#: app/src/assistant/run/calendar.rs:377
+msgid "Where: {value}"
+msgstr "Local: {value}"
+
+#: app/src/assistant/run/calendar.rs:380
+msgid "Guests: {value}"
+msgstr "Convidados: {value}"
+
+#: app/src/assistant/run/calendar.rs:384
+msgid "Description: {value}"
+msgstr "Descrição: {value}"
+
+#: app/src/assistant/run/calendar.rs:389
+msgid "Change “{title}” on the calendar for {account}? Its guests are told."
+msgstr "Alterar “{title}” no calendário de {account}? Os convidados são avisados."
+
+#: app/src/assistant/run/calendar.rs:393
+msgid "Change an event on the calendar for {account}? Its guests are told."
+msgstr "Alterar um evento no calendário de {account}? Os convidados são avisados."
+
+#: app/src/assistant/run/calendar.rs:414
+msgid "Delete “{title}” from the calendar for {account}? Its guests are told."
+msgstr "Eliminar “{title}” do calendário de {account}? Os convidados são avisados."
+
+#: app/src/assistant/run/calendar.rs:418
+msgid "Delete an event from the calendar for {account}? Its guests are told."
+msgstr "Eliminar um evento do calendário de {account}? Os convidados são avisados."
+
+#: app/src/assistant/run/calendar.rs:436
+msgid "Yes"
+msgstr "Sim"
+
+#: app/src/assistant/run/calendar.rs:437
+msgid "No"
+msgstr "Não"
+
+#: app/src/assistant/run/calendar.rs:438
+msgid "Maybe"
+msgstr "Talvez"
+
+#: app/src/assistant/run/calendar.rs:451
+msgid "Answer {answer} to “{title}”?"
+msgstr "Responder {answer} a “{title}”?"
+
+#: app/src/assistant/run/mail.rs:163
+msgid "Delete {count} conversation forever? Gmail cannot bring it back."
+msgid_plural ""
+"Delete {count} conversations forever? Gmail cannot bring them back."
+msgstr[0] "Eliminar {count} conversa definitivamente? O Gmail não a consegue recuperar."
+msgstr[1] "Eliminar {count} conversas definitivamente? O Gmail não as consegue recuperar."
+
+#: app/src/assistant/run/mail.rs:204
+msgid "Send “{subject}” to {recipients} {when}?"
+msgstr "Enviar “{subject}” para {recipients} {when}?"
+
+#: app/src/assistant/run/mail.rs:328
+msgid "this list"
+msgstr "esta lista"
+
+#: app/src/assistant/run/mail.rs:332
+msgid "Penguin Mail asks the sender to take you off the list."
+msgstr "O Penguin Mail pede ao remetente que o retire da lista."
+
+#: app/src/assistant/run/mail.rs:336
+msgid "Penguin Mail sends the list an unsubscribe request from your account."
+msgstr ""
+"O Penguin Mail envia à lista um pedido de cancelamento a partir da sua conta."
+
+#: app/src/assistant/run/mail.rs:340
+msgid "The sender's unsubscribe page opens in your browser."
+msgstr "A página de cancelamento do remetente abre no seu navegador."
+
+#: app/src/assistant/run/mail.rs:344
+msgid "Unsubscribe from {sender}?"
+msgstr "Cancelar a subscrição de {sender}?"
 
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
@@ -293,6 +394,62 @@ msgid "Changing a hidden address"
 msgstr "A alterar um endereço oculto"
 
 #: app/src/assistant/turn.rs:304
+msgid "Muting conversations"
+msgstr "A silenciar conversas"
+
+#: app/src/assistant/turn.rs:305
+msgid "Deleting mail forever"
+msgstr "A eliminar correio definitivamente"
+
+#: app/src/assistant/turn.rs:306
+msgid "Scheduling a message"
+msgstr "A agendar uma mensagem"
+
+#: app/src/assistant/turn.rs:307
+msgid "Reading templates"
+msgstr "A ler modelos"
+
+#: app/src/assistant/turn.rs:308
+msgid "Writing from a template"
+msgstr "A escrever a partir de um modelo"
+
+#: app/src/assistant/turn.rs:309
+msgid "Unsubscribing"
+msgstr "A cancelar a subscrição"
+
+#: app/src/assistant/turn.rs:310
+msgid "Reading an attachment"
+msgstr "A ler um anexo"
+
+#: app/src/assistant/turn.rs:311
+msgid "Looking up a contact"
+msgstr "A procurar um contacto"
+
+#: app/src/assistant/turn.rs:312
+msgid "Reading the calendar"
+msgstr "A ler o calendário"
+
+#: app/src/assistant/turn.rs:313
+msgid "Finding free time"
+msgstr "A procurar tempo livre"
+
+#: app/src/assistant/turn.rs:314
+msgid "Adding an event"
+msgstr "A adicionar um evento"
+
+#: app/src/assistant/turn.rs:315
+msgid "Changing an event"
+msgstr "A alterar um evento"
+
+#: app/src/assistant/turn.rs:316
+msgid "Deleting an event"
+msgstr "A eliminar um evento"
+
+#: app/src/assistant/turn.rs:317
+msgid "Answering an invitation"
+msgstr "A responder a um convite"
+
+#: app/src/assistant/turn.rs:318
 msgid "Working"
 msgstr "A trabalhar"
 
@@ -308,15 +465,15 @@ msgstr "“{address}” não é um endereço de e-mail."
 msgid "On {date}, {sender} wrote:"
 msgstr "A {date}, {sender} escreveu:"
 
-#: app/src/core.rs:510
+#: app/src/core.rs:512
 msgid "Demo mode cannot add real accounts."
 msgstr "O modo de demonstração não adiciona contas reais."
 
-#: app/src/core.rs:527
+#: app/src/core.rs:529
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Desistiu de esperar pelo navegador ao fim de cinco minutos."
 
-#: app/src/core.rs:535
+#: app/src/core.rs:537
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 "Iniciou sessão como {account}. Escolha {wanted} para voltar a ligar essa "
@@ -1588,7 +1745,9 @@ msgstr "Sempre permitidas"
 msgid ""
 "Tools from outside sources that run without asking. Remove one to be asked "
 "again next time."
-msgstr "Ferramentas de fontes externas que correm sem perguntar. Remova uma para voltar a ser perguntado da próxima vez."
+msgstr ""
+"Ferramentas de fontes externas que correm sem perguntar. Remova uma para "
+"voltar a ser perguntado da próxima vez."
 
 #: app/src/ui/assistant_prefs.rs:215
 msgid "Ask Again"
@@ -1863,7 +2022,7 @@ msgstr "Descartar"
 #: app/src/ui/window/arrange.rs:104 app/src/ui/window/arrange.rs:149
 #: app/src/ui/window/images.rs:107 app/src/ui/window/organize.rs:84
 #: app/src/ui/window/organize.rs:135 app/src/ui/window/organize.rs:178
-#: app/src/ui/window/senders.rs:61 app/src/ui/window/senders.rs:153
+#: app/src/ui/window/senders.rs:61 app/src/ui/window/senders.rs:163
 msgid "Cancel"
 msgstr "Cancelar"
 
@@ -2487,7 +2646,7 @@ msgid "Allow Hide My Email"
 msgstr "Permitir Ocultar o meu e-mail"
 
 #: app/src/ui/hide_my_email.rs:298 app/src/ui/rules.rs:236
-#: app/src/ui/window/senders.rs:202
+#: app/src/ui/window/senders.rs:212
 msgid ""
 "Penguin Mail needs permission to change Gmail settings for {account}. Google "
 "asks you to confirm in your browser."
@@ -2497,7 +2656,7 @@ msgstr ""
 
 #: app/src/ui/hide_my_email.rs:305 app/src/ui/rules.rs:243
 #: app/src/ui/vacation.rs:96 app/src/ui/window.rs:1805
-#: app/src/ui/window.rs:1882 app/src/ui/window/senders.rs:210
+#: app/src/ui/window.rs:1882 app/src/ui/window/senders.rs:220
 msgid "Grant Access"
 msgstr "Conceder acesso"
 
@@ -2589,7 +2748,7 @@ msgstr "Abrir as Definições"
 
 #: app/src/ui/invitation.rs:276 app/src/ui/window.rs:1804
 #: app/src/ui/window.rs:1836 app/src/ui/window.rs:1881
-#: app/src/ui/window/senders.rs:209
+#: app/src/ui/window/senders.rs:219
 msgid "Not Now"
 msgstr "Agora não"
 
@@ -4201,10 +4360,6 @@ msgstr ""
 "A barra lateral mostra o nome em vez do endereço. Deixe vazio para ficar o "
 "endereço."
 
-#: app/src/ui/window/assistant.rs:79
-msgid "The app is closing."
-msgstr "A aplicação está a fechar."
-
 #: app/src/ui/window/attachments.rs:64
 msgid "Could not open {file}: {reason}"
 msgstr "Não foi possível abrir {file}: {reason}"
@@ -4273,7 +4428,7 @@ msgstr "Abra primeiro uma conversa"
 #: app/src/ui/window/detached.rs:196 app/src/ui/window/export.rs:83
 #: app/src/ui/window/organize.rs:100 app/src/ui/window/organize.rs:151
 #: app/src/ui/window/organize.rs:189 app/src/ui/window/organize.rs:227
-#: app/src/ui/window/senders.rs:162
+#: app/src/ui/window/senders.rs:172
 msgid "That account is not connected"
 msgstr "Essa conta não está ligada"
 
@@ -4448,7 +4603,7 @@ msgstr "Outra hora proposta. O organizador decide."
 msgid "Could not send your proposal: {reason}"
 msgstr "Não foi possível enviar a sua proposta: {reason}"
 
-#: app/src/ui/window/invitation.rs:305
+#: app/src/ui/window/invitation.rs:305 app/src/ui/window/invitation.rs:338
 msgid "Allow Penguin Mail to Use Your Calendar"
 msgstr "Permitir que o Penguin Mail use o seu calendário"
 
@@ -4462,43 +4617,49 @@ msgstr ""
 "alterar eventos no calendário de {account}, a reunião fica também marcada no "
 "seu calendário. A Google pede-lhe confirmação no navegador."
 
-#: app/src/ui/window/invitation.rs:346
+#: app/src/ui/window/invitation.rs:341
+msgid ""
+"The assistant needs permission to read and change events on the calendar for "
+"{account}. Google asks you to confirm in your browser."
+msgstr "O assistente precisa de permissão para ler e alterar eventos no calendário de {account}. A Google pede-lhe confirmação no navegador."
+
+#: app/src/ui/window/invitation.rs:378
 msgid "Could not save the invitation: {reason}"
 msgstr "Não foi possível guardar o convite: {reason}"
 
-#: app/src/ui/window/invitation.rs:358
+#: app/src/ui/window/invitation.rs:390
 msgid "No app on this desktop opens invitations: {reason}"
 msgstr "Nenhuma aplicação deste ambiente de trabalho abre convites: {reason}"
 
-#: app/src/ui/window/invitation.rs:398
+#: app/src/ui/window/invitation.rs:430
 msgid "Replied Yes"
 msgstr "Respondeu Sim"
 
-#: app/src/ui/window/invitation.rs:399
+#: app/src/ui/window/invitation.rs:431
 msgid "Replied No"
 msgstr "Respondeu Não"
 
-#: app/src/ui/window/invitation.rs:400
+#: app/src/ui/window/invitation.rs:432
 msgid "Replied Maybe"
 msgstr "Respondeu Talvez"
 
-#: app/src/ui/window/invitation.rs:403
+#: app/src/ui/window/invitation.rs:435
 msgid "{answer}. The organizer has been told."
 msgstr "{answer}. O organizador foi avisado."
 
-#: app/src/ui/window/invitation.rs:404
+#: app/src/ui/window/invitation.rs:436
 msgid "{answer}. Your reply is on its way to the organizer."
 msgstr "{answer}. A sua resposta vai a caminho do organizador."
 
-#: app/src/ui/window/invitation.rs:414
+#: app/src/ui/window/invitation.rs:446
 msgid "Answered on your calendar"
 msgstr "Respondido no seu calendário"
 
-#: app/src/ui/window/invitation.rs:416
+#: app/src/ui/window/invitation.rs:448
 msgid "Replied by email to {organizer}"
 msgstr "Resposta enviada por e-mail para {organizer}"
 
-#: app/src/ui/window/invitation.rs:419
+#: app/src/ui/window/invitation.rs:451
 msgid "Replied by email"
 msgstr "Resposta enviada por e-mail"
 
@@ -4620,10 +4781,6 @@ msgstr "Não vão ser enviadas. As mensagens estão nos rascunhos."
 msgid "Could not cancel: {reason}"
 msgstr "Não foi possível cancelar: {reason}"
 
-#: app/src/ui/window/senders.rs:29
-msgid "this list"
-msgstr "esta lista"
-
 #: app/src/ui/window/senders.rs:37
 msgid "This message has no unsubscribe link"
 msgstr "Esta mensagem não tem ligação para cancelar a subscrição"
@@ -4634,40 +4791,27 @@ msgstr ""
 "A ligação de cancelamento desta mensagem não é uma que o Penguin Mail possa "
 "usar"
 
-#: app/src/ui/window/senders.rs:46
-msgid "Penguin Mail asks the sender to take you off the list."
-msgstr "O Penguin Mail pede ao remetente que o retire da lista."
-
-#: app/src/ui/window/senders.rs:49
-msgid "Penguin Mail sends the list an unsubscribe request from your account."
-msgstr ""
-"O Penguin Mail envia à lista um pedido de cancelamento a partir da sua conta."
-
-#: app/src/ui/window/senders.rs:51
-msgid "The sender's unsubscribe page opens in your browser."
-msgstr "A página de cancelamento do remetente abre no seu navegador."
-
-#: app/src/ui/window/senders.rs:55
-msgid "Unsubscribe from {sender}?"
-msgstr "Cancelar a subscrição de {sender}?"
-
-#: app/src/ui/window/senders.rs:102
+#: app/src/ui/window/senders.rs:76
 msgid "Unsubscribed from {sender}"
 msgstr "Subscrição de {sender} cancelada"
 
-#: app/src/ui/window/senders.rs:107
+#: app/src/ui/window/senders.rs:81
 msgid "Could not unsubscribe: {reason}"
 msgstr "Não foi possível cancelar a subscrição: {reason}"
 
-#: app/src/ui/window/senders.rs:137
+#: app/src/ui/window/senders.rs:105
+msgid "The app is closing."
+msgstr "A aplicação está a fechar."
+
+#: app/src/ui/window/senders.rs:147
 msgid "Open a message from the sender to block"
 msgstr "Abra uma mensagem do remetente a bloquear"
 
-#: app/src/ui/window/senders.rs:142
+#: app/src/ui/window/senders.rs:152
 msgid "Block {sender}?"
 msgstr "Bloquear {sender}?"
 
-#: app/src/ui/window/senders.rs:147
+#: app/src/ui/window/senders.rs:157
 msgid ""
 "New mail from {email} goes straight to the Trash. This conversation moves "
 "there now. Remove the rule under Rules to unblock."
@@ -4675,19 +4819,19 @@ msgstr ""
 "O correio novo de {email} vai direto para o lixo. Esta conversa muda para lá "
 "agora. Remova a regra em Regras para desbloquear."
 
-#: app/src/ui/window/senders.rs:153
+#: app/src/ui/window/senders.rs:163
 msgid "Block"
 msgstr "Bloquear"
 
-#: app/src/ui/window/senders.rs:180
+#: app/src/ui/window/senders.rs:190
 msgid "Blocked {sender}"
 msgstr "{sender} bloqueado"
 
-#: app/src/ui/window/senders.rs:185
+#: app/src/ui/window/senders.rs:195
 msgid "Could not block the sender: {reason}"
 msgstr "Não foi possível bloquear o remetente: {reason}"
 
-#: app/src/ui/window/senders.rs:199
+#: app/src/ui/window/senders.rs:209
 msgid "Allow Changes to Gmail Settings"
 msgstr "Permitir alterações às definições do Gmail"
 
@@ -4722,18 +4866,6 @@ msgstr "Promoções"
 #: domain/src/category.rs:62
 msgid "Social"
 msgstr "Social"
-
-#: domain/src/invitation.rs:68
-msgid "Yes"
-msgstr "Sim"
-
-#: domain/src/invitation.rs:69
-msgid "No"
-msgstr "Não"
-
-#: domain/src/invitation.rs:70 domain/src/invitation.rs:79
-msgid "Maybe"
-msgstr "Talvez"
 
 #: domain/src/invitation.rs:77
 msgid "Going"

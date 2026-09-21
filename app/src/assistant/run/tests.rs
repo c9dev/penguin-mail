@@ -6,10 +6,13 @@ use mailrs_domain::{Category, FlagColor, MessageBody, MessageMeta, Vacation, sys
 use mailrs_sync::{MailAction, Permitted, TriageAction};
 use serde_json::{Value, json};
 
-use super::OpenConversation;
 use super::fake::{Harness, ME, labelled, meta};
+use super::{OpenConversation, Permission};
 use crate::hide_my_email::HiddenAddress;
 use crate::settings::{Change, TextSize};
+
+mod calendar;
+mod mail;
 
 const DAY: i64 = 24 * 60 * 60 * 1000;
 
@@ -525,7 +528,10 @@ async fn gmail_settings_ask_for_the_permission_instead_of_failing() {
              The user was asked to grant it; try again once they have."
         ))
     );
-    assert_eq!(h.asked().permission_asked, [h.account_id]);
+    assert_eq!(
+        h.asked().permission_asked,
+        [(h.account_id, Permission::Settings)]
+    );
 }
 
 #[tokio::test]
@@ -924,6 +930,21 @@ async fn every_tool_answers_without_a_window() {
             json!({"account": ME, "thread_id": "t1"}),
         ),
         ("list_hidden_addresses", json!({})),
+        ("mute", json!({"targets": [target("t3")]})),
+        ("list_templates", json!({})),
+        ("find_contact", json!({"query": "ann"})),
+        (
+            "send_later",
+            json!({"to": ["ann@example.com"], "body": "Hi", "at": later}),
+        ),
+        (
+            "list_events",
+            json!({"from": "2030-03-11", "to": "2030-03-12"}),
+        ),
+        (
+            "find_free_time",
+            json!({"from": "2030-03-11", "to": "2030-03-12", "minutes": 30}),
+        ),
     ];
     for (name, input) in calls {
         let answer = h.run(name, input).await;

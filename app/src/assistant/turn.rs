@@ -301,6 +301,20 @@ pub fn tool_label(name: &str) -> String {
         "list_hidden_addresses" => gettext("Reading hidden addresses"),
         "create_hidden_address" => gettext("Making a hidden address"),
         "set_hidden_address" => gettext("Changing a hidden address"),
+        "mute" => gettext("Muting conversations"),
+        "delete_forever" => gettext("Deleting mail forever"),
+        "send_later" => gettext("Scheduling a message"),
+        "list_templates" => gettext("Reading templates"),
+        "insert_template" => gettext("Writing from a template"),
+        "unsubscribe" => gettext("Unsubscribing"),
+        "read_attachment" => gettext("Reading an attachment"),
+        "find_contact" => gettext("Looking up a contact"),
+        "list_events" => gettext("Reading the calendar"),
+        "find_free_time" => gettext("Finding free time"),
+        "create_event" => gettext("Adding an event"),
+        "update_event" => gettext("Changing an event"),
+        "delete_event" => gettext("Deleting an event"),
+        "answer_invitation" => gettext("Answering an invitation"),
         _ => gettext("Working"),
     }
 }
@@ -310,8 +324,19 @@ const SUMMARY_CHARS: usize = 60;
 
 /// Input fields that say most about a call, first in its summary. The rest
 /// follow by name, since a JSON object keeps no order of its own.
-const TELLING: [&str; 8] = [
-    "query", "mailbox", "category", "label", "name", "email", "to", "subject",
+const TELLING: [&str; 12] = [
+    "query",
+    "mailbox",
+    "category",
+    "label",
+    "name",
+    "title",
+    "template",
+    "attachment",
+    "email",
+    "to",
+    "subject",
+    "from",
 ];
 
 /// One line saying what a call was asked to do: the input's plain values,

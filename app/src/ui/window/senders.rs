@@ -69,33 +69,7 @@ impl MainWindow {
             if dialog.choose_future(Some(&this.window)).await != "unsubscribe" {
                 return;
             }
-            let done = match method {
-                Unsubscribe::OneClick(url) => this
-                    .core
-                    .call(async move { mailrs_gmail::one_click_unsubscribe(&url).await })
-                    .await
-                    .map_err(|e| e.to_string()),
-                Unsubscribe::Email { to, subject, body } => {
-                    let Some(app) = this.app.upgrade() else {
-                        return;
-                    };
-                    let mut draft = Draft::new(account_id, app.identity(account_id));
-                    draft.to = crate::compose::parse_recipients(&to);
-                    draft.subject = subject;
-                    draft.markdown = body;
-                    app.send_immediately(draft);
-                    Ok(())
-                }
-                Unsubscribe::Page(url) => {
-                    gtk::UriLauncher::new(&url).launch(
-                        Some(&this.window),
-                        gio::Cancellable::NONE,
-                        |_| {},
-                    );
-                    Ok(())
-                }
-            };
-            match done {
+            match this.leave_list(account_id, method).await {
                 Ok(()) => {
                     view.mark_unsubscribed();
                     this.toast(&fill(
@@ -109,6 +83,42 @@ impl MainWindow {
                 )),
             }
         });
+    }
+
+    /// Leaves a mailing list the way `how` says, from the account. The
+    /// Unsubscribe button and the assistant both end here.
+    pub(super) async fn leave_list(
+        self: &Rc<Self>,
+        account_id: mailrs_domain::AccountId,
+        how: Unsubscribe,
+    ) -> Result<(), String> {
+        match how {
+            Unsubscribe::OneClick(url) => self
+                .core
+                .call(async move { mailrs_gmail::one_click_unsubscribe(&url).await })
+                .await
+                .map_err(|e| e.to_string()),
+            Unsubscribe::Email { to, subject, body } => {
+                let app = self
+                    .app
+                    .upgrade()
+                    .ok_or_else(|| gettext("The app is closing."))?;
+                let mut draft = Draft::new(account_id, app.identity(account_id));
+                draft.to = crate::compose::parse_recipients(&to);
+                draft.subject = subject;
+                draft.markdown = body;
+                app.send_immediately(draft);
+                Ok(())
+            }
+            Unsubscribe::Page(url) => {
+                gtk::UriLauncher::new(&url).launch(
+                    Some(&self.window),
+                    gio::Cancellable::NONE,
+                    |_| {},
+                );
+                Ok(())
+            }
+        }
     }
 
     /// Sends future mail from the open thread's sender to the Trash with a

@@ -6,6 +6,8 @@ app/src/app/sending.rs
 app/src/app/updates.rs
 app/src/assistant/mod.rs
 app/src/assistant/run.rs
+app/src/assistant/run/calendar.rs
+app/src/assistant/run/mail.rs
 app/src/assistant/turn.rs
 app/src/compose.rs
 app/src/core.rs

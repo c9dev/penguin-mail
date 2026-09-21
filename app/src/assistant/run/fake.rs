@@ -21,15 +21,16 @@ use mailrs_gmail::{
 use mailrs_store::{Db, accounts, labels, messages};
 use mailrs_sync::calendar::span;
 use mailrs_sync::{
-    AccountSettings, AccountSync, Accounts, DraftRef, GmailApi, MailAction, MailActions, Mailboxes,
-    Outcome, Permitted, SavedDraft, View,
+    AccountSettings, AccountSync, Accounts, Calendar, DraftRef, GmailApi, Invitations, MailAction,
+    MailActions, Mailboxes, Outcome, Permitted, SavedDraft, View,
 };
 use serde_json::Value;
 
-use super::{Answer, Background, Desk, Effects, Modules, OnScreen, Tools};
+use super::{Answer, Background, Desk, Effects, Modules, OnScreen, Permission, Tools};
 use crate::compose::Draft;
 use crate::hide_my_email::HiddenAddress;
 use crate::settings::{Change, Settings};
+use crate::unsubscribe::Unsubscribe;
 
 /// The address every fixture account belongs to.
 pub const ME: &str = "dana@example.com";
@@ -62,6 +63,8 @@ pub struct Inbox {
     pub delete_allowed: bool,
     /// Attachment bytes by message id and attachment id.
     pub attachments: HashMap<(String, String), Vec<u8>>,
+    /// The account's drafts, each with the message inside it.
+    pub drafts: Vec<DraftRef>,
     next_id: u32,
 }
 
@@ -283,7 +286,7 @@ impl GmailApi for Gmail {
     }
 
     async fn list_drafts(&self) -> Result<Vec<DraftRef>, GmailError> {
-        Ok(Vec::new())
+        Ok(self.with(|i| i.drafts.clone()))
     }
 
     async fn send_as(&self) -> Result<Vec<mailrs_gmail::SendAs>, GmailError> {
@@ -569,8 +572,13 @@ pub struct Asked {
     pub sent: Vec<Draft>,
     pub opened: Vec<ThreadSummary>,
     pub copied: Vec<String>,
-    /// Accounts offered the Gmail settings permission.
-    pub permission_asked: Vec<AccountId>,
+    /// Accounts offered a permission, and which.
+    pub permission_asked: Vec<(AccountId, Permission)>,
+    /// The switched-off APIs the window was asked to explain.
+    pub api_off: Vec<(String, String)>,
+    /// Messages handed to Send Later, with their times.
+    pub scheduled: Vec<(Draft, EpochMillis)>,
+    pub unsubscribed: Vec<(AccountId, Unsubscribe)>,
     pub mail_changed: Vec<(MailAction, Outcome)>,
     pub relisted: usize,
     pub categorized: Vec<(AccountId, String, String, Category)>,
@@ -590,8 +598,32 @@ impl Effects for FakeEffects {
         Box::pin(async move { answer })
     }
 
-    fn ask_permission(&self, account_id: AccountId) {
-        self.0.borrow_mut().permission_asked.push(account_id);
+    fn ask_permission(&self, account_id: AccountId, permission: Permission) {
+        self.0
+            .borrow_mut()
+            .permission_asked
+            .push((account_id, permission));
+    }
+
+    fn explain_api_off(&self, service: &str, enable_url: &str) {
+        self.0
+            .borrow_mut()
+            .api_off
+            .push((service.to_string(), enable_url.to_string()));
+    }
+
+    fn send_later(&self, draft: Draft, at: EpochMillis) -> Result<(), String> {
+        self.0.borrow_mut().scheduled.push((draft, at));
+        Ok(())
+    }
+
+    fn unsubscribe(
+        &self,
+        account_id: AccountId,
+        how: Unsubscribe,
+    ) -> Answer<'_, Result<(), String>> {
+        self.0.borrow_mut().unsubscribed.push((account_id, how));
+        Box::pin(async move { Ok(()) })
     }
 
     fn change_settings(&self, change: Change) -> Result<(), String> {
@@ -784,6 +816,8 @@ impl Harness {
             mail: Arc::new(MailActions::new(Arc::clone(&connected), db.clone())),
             lists: Arc::new(Mailboxes::new(Arc::clone(&connected), db.clone())),
             gmail: Arc::new(AccountSettings::new(Arc::clone(&connected), db.clone())),
+            calendar: Arc::new(Calendar::new(Arc::clone(&connected))),
+            invitations: Arc::new(Invitations::new(Arc::clone(&connected), db.clone())),
             accounts: connected,
             db: db.clone(),
         };
