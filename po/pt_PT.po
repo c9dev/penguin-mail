@@ -361,7 +361,7 @@ msgid "Penguin Mail Could Not Start"
 msgstr "O Penguin Mail não conseguiu arrancar"
 
 #: app/src/notify.rs:49 app/src/ui/conversation.rs:383
-#: app/src/ui/window.rs:3093
+#: app/src/ui/window.rs:3114
 msgid "Archive"
 msgstr "Arquivar"
 
@@ -377,7 +377,7 @@ msgstr "Marcar como lida"
 msgid "Delete"
 msgstr "Eliminar"
 
-#: app/src/notify.rs:52 app/src/ui/window.rs:3108
+#: app/src/notify.rs:52 app/src/ui/window.rs:3129
 msgid "Reply"
 msgstr "Responder"
 
@@ -387,7 +387,7 @@ msgid_plural "{count} new messages"
 msgstr[0] "{count} mensagem nova"
 msgstr[1] "{count} mensagens novas"
 
-#: app/src/notify.rs:127 app/src/ui/window.rs:3107
+#: app/src/notify.rs:127 app/src/ui/window.rs:3128
 msgid "New message"
 msgstr "Nova mensagem"
 
@@ -1102,7 +1102,7 @@ msgstr "Nova mensagem"
 msgid "Check for Mail"
 msgstr "Procurar correio"
 
-#: app/src/tray.rs:131 app/src/ui/window.rs:2677 app/src/ui/window.rs:3126
+#: app/src/tray.rs:131 app/src/ui/window.rs:2677 app/src/ui/window.rs:3147
 msgid "Quit"
 msgstr "Sair"
 
@@ -1260,7 +1260,7 @@ msgstr "Pergunte ao Penguin Mail…"
 
 #: app/src/ui/assistant.rs:146 app/src/ui/assistant.rs:150
 #: app/src/ui/assistant.rs:376 app/src/ui/composer/mod.rs:206
-#: app/src/ui/window.rs:3111
+#: app/src/ui/window.rs:3132
 msgid "Send"
 msgstr "Enviar"
 
@@ -1882,7 +1882,7 @@ msgid "Mute"
 msgstr "Silenciar"
 
 #: app/src/ui/conversation.rs:387 app/src/ui/conversation.rs:506
-#: app/src/ui/conversation.rs:841 app/src/ui/window.rs:3095
+#: app/src/ui/conversation.rs:841 app/src/ui/window.rs:3116
 msgid "Junk"
 msgstr "Spam"
 
@@ -1947,7 +1947,7 @@ msgstr "Mais ações"
 msgid "Reply All"
 msgstr "Responder a todos"
 
-#: app/src/ui/conversation.rs:497 app/src/ui/window.rs:3110
+#: app/src/ui/conversation.rs:497 app/src/ui/window.rs:3131
 msgid "Forward"
 msgstr "Reencaminhar"
 
@@ -2090,7 +2090,7 @@ msgid_plural "{position} of {total} matches"
 msgstr[0] "{position} de {total} correspondência"
 msgstr[1] "{position} de {total} correspondências"
 
-#: app/src/ui/find.rs:128 app/src/ui/find.rs:143 app/src/ui/window.rs:3076
+#: app/src/ui/find.rs:128 app/src/ui/find.rs:143 app/src/ui/window.rs:3097
 msgid "Find in the conversation"
 msgstr "Localizar na conversa"
 
@@ -2475,11 +2475,11 @@ msgstr "Aviso"
 msgid "Not checked"
 msgstr "Não verificada"
 
-#: app/src/ui/preferences.rs:63 app/src/ui/window.rs:3121
+#: app/src/ui/preferences.rs:63 app/src/ui/window.rs:3142
 msgid "General"
 msgstr "Geral"
 
-#: app/src/ui/preferences.rs:68 app/src/ui/window.rs:3071
+#: app/src/ui/preferences.rs:68 app/src/ui/window.rs:3092
 msgid "Reading"
 msgstr "Leitura"
 
@@ -2597,7 +2597,7 @@ msgstr "Botões"
 msgid "What a notification offers besides opening the conversation"
 msgstr "O que uma notificação oferece além de abrir a conversa"
 
-#: app/src/ui/preferences.rs:228 app/src/ui/window.rs:3105
+#: app/src/ui/preferences.rs:228 app/src/ui/window.rs:3126
 msgid "Writing"
 msgstr "Escrita"
 
@@ -3607,7 +3607,7 @@ msgstr[1] "{count} mensagens movidas para a caixa de entrada"
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (demonstração)"
 
-#: app/src/ui/window.rs:444 app/src/ui/window.rs:3142
+#: app/src/ui/window.rs:444 app/src/ui/window.rs:3163
 msgid "Penguin Mail"
 msgstr "Penguin Mail"
 
@@ -3623,7 +3623,7 @@ msgstr "Inicie sessão de novo para {account} continuar a sincronizar"
 msgid "Sign In"
 msgstr "Iniciar sessão"
 
-#: app/src/ui/window.rs:962 app/src/ui/window.rs:3075
+#: app/src/ui/window.rs:962 app/src/ui/window.rs:3096
 msgid "Search"
 msgstr "Pesquisa"
 
@@ -3667,7 +3667,7 @@ msgstr ""
 "Eliminar correio de vez precisa de mais uma permissão para {account}. A "
 "Google pede-lhe confirmação no navegador."
 
-#: app/src/ui/window.rs:1831 app/src/ui/window.rs:3101
+#: app/src/ui/window.rs:1831 app/src/ui/window.rs:3122
 #: app/src/ui/window/followup.rs:184 app/src/ui/window/scheduled.rs:18
 msgid "Undo"
 msgstr "Anular"
@@ -3758,7 +3758,7 @@ msgstr "Adicionar conta…"
 msgid "New Smart Mailbox…"
 msgstr "Nova caixa inteligente…"
 
-#: app/src/ui/window.rs:2674 app/src/ui/window.rs:3123
+#: app/src/ui/window.rs:2674 app/src/ui/window.rs:3144
 msgid "Preferences"
 msgstr "Preferências"
 
@@ -3774,115 +3774,115 @@ msgstr "Acerca do Penguin Mail"
 msgid "Main Menu"
 msgstr "Menu principal"
 
-#: app/src/ui/window.rs:2959
+#: app/src/ui/window.rs:2980
 msgid "Open a message from the person first"
 msgstr "Abra primeiro uma mensagem dessa pessoa"
 
-#: app/src/ui/window.rs:3042 app/src/ui/window/outbox.rs:77
+#: app/src/ui/window.rs:3063 app/src/ui/window/outbox.rs:77
 msgid "Message sent"
 msgstr "Mensagem enviada"
 
-#: app/src/ui/window.rs:3051
+#: app/src/ui/window.rs:3072
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "O Penguin Mail mostra o novo idioma depois de reiniciar"
 
-#: app/src/ui/window.rs:3053
+#: app/src/ui/window.rs:3074
 msgid "Restart"
 msgstr "Reiniciar"
 
-#: app/src/ui/window.rs:3073
+#: app/src/ui/window.rs:3094
 msgid "Next or previous conversation"
 msgstr "Conversa seguinte ou anterior"
 
-#: app/src/ui/window.rs:3074
+#: app/src/ui/window.rs:3095
 msgid "Open mailbox 1 to 9"
 msgstr "Abrir a caixa de correio 1 a 9"
 
-#: app/src/ui/window.rs:3077
+#: app/src/ui/window.rs:3098
 msgid "Get new mail"
 msgstr "Receber correio novo"
 
-#: app/src/ui/window.rs:3078
+#: app/src/ui/window.rs:3099
 msgid "Select all"
 msgstr "Selecionar tudo"
 
-#: app/src/ui/window.rs:3079
+#: app/src/ui/window.rs:3100
 msgid "Clear the selection"
 msgstr "Limpar a seleção"
 
-#: app/src/ui/window.rs:3081
+#: app/src/ui/window.rs:3102
 msgid "Bigger or smaller text"
 msgstr "Texto maior ou menor"
 
-#: app/src/ui/window.rs:3084
+#: app/src/ui/window.rs:3105
 msgid "Open in a new window"
 msgstr "Abrir numa janela nova"
 
-#: app/src/ui/window.rs:3085
+#: app/src/ui/window.rs:3106
 msgid "Print"
 msgstr "Imprimir"
 
-#: app/src/ui/window.rs:3086
+#: app/src/ui/window.rs:3107
 msgid "View source"
 msgstr "Ver a origem"
 
-#: app/src/ui/window.rs:3087
+#: app/src/ui/window.rs:3108
 msgid "Normal text size"
 msgstr "Tamanho de texto normal"
 
-#: app/src/ui/window.rs:3091
+#: app/src/ui/window.rs:3112
 msgid "Organizing"
 msgstr "Organização"
 
-#: app/src/ui/window.rs:3094
+#: app/src/ui/window.rs:3115
 msgid "Move to trash"
 msgstr "Mover para o lixo"
 
-#: app/src/ui/window.rs:3096
+#: app/src/ui/window.rs:3117
 msgid "Flag or unflag"
 msgstr "Marcar ou desmarcar"
 
-#: app/src/ui/window.rs:3097
+#: app/src/ui/window.rs:3118
 msgid "Flag colors"
 msgstr "Cores das marcas"
 
-#: app/src/ui/window.rs:3098
+#: app/src/ui/window.rs:3119
 msgid "Mark read or unread"
 msgstr "Marcar como lida ou não lida"
 
-#: app/src/ui/window.rs:3099
+#: app/src/ui/window.rs:3120
 msgid "Mute or unmute"
 msgstr "Silenciar ou retirar o silêncio"
 
-#: app/src/ui/window.rs:3100
+#: app/src/ui/window.rs:3121
 msgid "Labels"
 msgstr "Etiquetas"
 
-#: app/src/ui/window.rs:3109
+#: app/src/ui/window.rs:3130
 msgid "Reply all"
 msgstr "Responder a todos"
 
-#: app/src/ui/window.rs:3112
+#: app/src/ui/window.rs:3133
 msgid "Attach files"
 msgstr "Anexar ficheiros"
 
-#: app/src/ui/window.rs:3114
+#: app/src/ui/window.rs:3135
 msgid "Bold, italic, link"
 msgstr "Negrito, itálico, ligação"
 
-#: app/src/ui/window.rs:3117
+#: app/src/ui/window.rs:3138
 msgid "Save draft"
 msgstr "Guardar rascunho"
 
-#: app/src/ui/window.rs:3124
+#: app/src/ui/window.rs:3145
 msgid "Keyboard shortcuts"
 msgstr "Atalhos de teclado"
 
-#: app/src/ui/window.rs:3125
+#: app/src/ui/window.rs:3146
 msgid "Close window"
 msgstr "Fechar a janela"
 
-#: app/src/ui/window.rs:3147
+#: app/src/ui/window.rs:3168
 msgid ""
 "A fast, private Gmail client for the GNOME desktop. Mail stays on your "
 "computer and your own Google Cloud project."

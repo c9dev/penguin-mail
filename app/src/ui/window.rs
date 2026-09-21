@@ -2833,15 +2833,18 @@ impl MainWindow {
     /// Screenshot hooks, honoured only in demo mode: `MAILRS_DEMO_OPEN`
     /// opens a thread by id, `MAILRS_DEMO_SEARCH` runs a search,
     /// `MAILRS_DEMO_COMPOSE=reply` opens a reply to the open thread, and
-    /// `MAILRS_DEMO_ACTION` activates a window action such as `shortcuts`.
+    /// `MAILRS_DEMO_ACTION` activates a window action such as `shortcuts`,
+    /// or one with a target such as `account-rules(int64 1)`. With a
+    /// thread to open, the action waits for it, so `toggle-vip` has a
+    /// sender to add.
     pub fn run_demo_script(self: &Rc<Self>) {
         if !self.core.demo {
             return;
         }
         let this = Rc::clone(self);
         glib::timeout_add_local_once(std::time::Duration::from_millis(900), move || {
-            if let Ok(action) = std::env::var("MAILRS_DEMO_ACTION") {
-                let _ = WidgetExt::activate_action(&this.window, &format!("win.{action}"), None);
+            if std::env::var_os("MAILRS_DEMO_OPEN").is_none() {
+                this.run_demo_action();
             }
             if let Ok(query) = std::env::var("MAILRS_DEMO_SEARCH") {
                 this.list.open_search();
@@ -2866,19 +2869,37 @@ impl MainWindow {
                     if let Ok(Some(account_id)) = found {
                         let _ = rows;
                         finder.list.select(account_id, &thread_id, None);
-                        if std::env::var("MAILRS_DEMO_COMPOSE").as_deref() == Ok("reply") {
-                            let replier = Rc::clone(&finder);
-                            glib::timeout_add_local_once(
-                                std::time::Duration::from_millis(900),
-                                move || {
+                        let replier = Rc::clone(&finder);
+                        glib::timeout_add_local_once(
+                            std::time::Duration::from_millis(900),
+                            move || {
+                                if std::env::var("MAILRS_DEMO_COMPOSE").as_deref() == Ok("reply") {
                                     replier.reply(ReplyKind::Reply);
-                                },
-                            );
-                        }
+                                }
+                                replier.run_demo_action();
+                            },
+                        );
                     }
                 });
             }
         });
+    }
+
+    /// Activates the window action `MAILRS_DEMO_ACTION` names, if any.
+    fn run_demo_action(&self) {
+        let Ok(detailed) = std::env::var("MAILRS_DEMO_ACTION") else {
+            return;
+        };
+        match gio::Action::parse_detailed_name(&detailed) {
+            Ok((name, target)) => {
+                let _ = WidgetExt::activate_action(
+                    &self.window,
+                    &format!("win.{name}"),
+                    target.as_ref(),
+                );
+            }
+            Err(err) => tracing::warn!(action = %detailed, error = %err, "unreadable demo action"),
+        }
     }
 
     fn settings(&self) -> Settings {
