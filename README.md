@@ -8,7 +8,7 @@ A Gmail client for the GNOME desktop, written in Rust.
 
 [![CI](https://github.com/c9dev/penguin-mail/actions/workflows/ci.yml/badge.svg)](https://github.com/c9dev/penguin-mail/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/c9dev/penguin-mail?sort=semver&label=release)](https://github.com/c9dev/penguin-mail/releases/latest)
-[![Licence: GPL-3.0-or-later](https://img.shields.io/badge/licence-GPL--3.0--or--later-blue)](LICENSE)
+[![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
 [![Rust 1.98](https://img.shields.io/badge/rust-1.98-orange?logo=rust)](https://www.rust-lang.org)
 [![GTK 4 and libadwaita 1.8](https://img.shields.io/badge/GTK_4-libadwaita_1.8-4a86cf?logo=gnome)](https://gnome.pages.gitlab.gnome.org/libadwaita/)
 [![Ubuntu 26.04](https://img.shields.io/badge/Ubuntu-26.04-e95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
@@ -29,7 +29,7 @@ server sees your mail.
 ### Reading
 
 - **One inbox for every account**, plus each account's Inbox, Flagged,
-  Sent, Drafts and labels. A coloured dot tells accounts apart.
+  Sent, Drafts and labels. A colored dot tells accounts apart.
 - **Conversations in one view.** Older messages fold down to a line, and
   quoted text and signatures are dimmed. HTML mail renders in its own
   sandbox with scripts off and remote images blocked until you ask for them.
@@ -69,8 +69,8 @@ server sees your mail.
 - **Select several at once** with Ctrl+click, Shift+click or Ctrl+A, then
   archive, trash, junk, flag, mark or label them together. Ctrl+Z undoes
   each one.
-- **Flags in seven colours**, as in Apple Mail. The flag syncs through
-  Gmail's star, and the colour stays on this computer.
+- **Flags in seven colors**, as in Apple Mail. The flag syncs through
+  Gmail's star, and the color stays on this computer.
 - **VIPs.** Their mail gathers in a VIPs mailbox, their rows get a star, and
   notifications can be limited to them.
 - **Smart Mailboxes**: saved conditions such as sender, subject, label, age,
@@ -234,7 +234,7 @@ keys work whenever you are not typing. `Ctrl+?` lists every shortcut.
 | `Delete` or `#` | Move to trash | `Ctrl+Shift+F` or `f` | Forward |
 | `Ctrl+Shift+J` | Junk | `Ctrl+N` or `c` | New message |
 | `Ctrl+Shift+L` or `s` | Flag or unflag | `Ctrl+Shift+D` | Send |
-| `Ctrl+Alt+1` to `Ctrl+Alt+7` | Flag colour | `Ctrl+Shift+A` | Attach files |
+| `Ctrl+Alt+1` to `Ctrl+Alt+7` | Flag color | `Ctrl+Shift+A` | Attach files |
 | `Ctrl+Shift+U` or `u` | Mark read or unread | `Ctrl+B` / `Ctrl+I` / `Ctrl+K` | Bold, italic, link |
 | `Ctrl+Alt+M` or `l` | Labels | `Ctrl+F` or `/` | Search |
 | `Ctrl+Z` | Undo | `Ctrl+1` to `Ctrl+9` | Open a mailbox |
@@ -338,7 +338,7 @@ open to collaborators only. [CONTRIBUTING.md](CONTRIBUTING.md) says what a
 useful report holds, and [SECURITY.md](SECURITY.md) says where to send a
 vulnerability.
 
-## Licence
+## License
 
 Penguin Mail is free software under the
 [GNU General Public License, version 3 or later](LICENSE).
