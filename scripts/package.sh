@@ -35,7 +35,7 @@ cat > "$root/DEBIAN/control" <<CONTROL
 Package: penguin-mail
 Version: $version
 Architecture: amd64
-Maintainer: David Santos <g0shed@users.noreply.github.com>
+Maintainer: Pivotd <penguin@pivotd.com>
 Installed-Size: $size
 Depends: $depends
 Recommends: gnupg, gpgsm, gnome-shell-extension-appindicator
