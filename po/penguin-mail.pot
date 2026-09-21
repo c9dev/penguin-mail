@@ -336,13 +336,13 @@ msgstr ""
 msgid "Penguin Mail Could Not Start"
 msgstr ""
 
-#: app/src/notify.rs:49 app/src/ui/conversation.rs:354
+#: app/src/notify.rs:49 app/src/ui/conversation.rs:383
 #: app/src/ui/window.rs:3093
 msgid "Archive"
 msgstr ""
 
-#: app/src/notify.rs:50 app/src/ui/conversation.rs:355
-#: app/src/ui/conversation.rs:838 app/src/ui/preferences.rs:106
+#: app/src/notify.rs:50 app/src/ui/conversation.rs:384
+#: app/src/ui/conversation.rs:867 app/src/ui/preferences.rs:106
 #: app/src/ui/rules.rs:288
 msgid "Mark as Read"
 msgstr ""
@@ -499,57 +499,57 @@ msgstr ""
 msgid "a key gpg would not name"
 msgstr ""
 
-#: app/src/protection.rs:139
+#: app/src/protection.rs:141
 msgid "Encrypt this message to the recipients' keys"
 msgstr ""
 
-#: app/src/protection.rs:140
+#: app/src/protection.rs:142
 msgid "Encrypt this message to the recipients' certificates"
 msgstr ""
 
-#: app/src/protection.rs:166
+#: app/src/protection.rs:168
 msgid "gpg holds no key and gpgsm no certificate for {addresses}."
 msgstr ""
 
-#: app/src/protection.rs:174
+#: app/src/protection.rs:176
 msgid "A message goes out under one standard or the other. {pgp} {smime}"
 msgstr ""
 
-#: app/src/protection.rs:222
+#: app/src/protection.rs:224
 msgid "Encrypted, and signed by {signer}"
 msgstr ""
 
-#: app/src/protection.rs:228
+#: app/src/protection.rs:230
 msgid "Encrypted. {what}"
 msgstr ""
 
-#: app/src/protection.rs:232
+#: app/src/protection.rs:234
 msgid "This message arrived encrypted"
 msgstr ""
 
-#: app/src/protection.rs:234
+#: app/src/protection.rs:236
 msgid "Nobody signed it, so it says nothing about who sent it."
 msgstr ""
 
-#: app/src/protection.rs:242
+#: app/src/protection.rs:244
 msgid "{detail} {files}"
 msgstr ""
 
-#: app/src/protection.rs:257
+#: app/src/protection.rs:259
 msgid "It carries a file, kept in this window only."
 msgstr ""
 
-#: app/src/protection.rs:259
+#: app/src/protection.rs:261
 msgid "It carries {count} file, kept in this window only."
 msgid_plural "It carries {count} files, kept in this window only."
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/protection.rs:328
+#: app/src/protection.rs:330
 msgid "{names} or {last}"
 msgstr ""
 
-#: app/src/protection.rs:340
+#: app/src/protection.rs:342
 msgid "{names} and {last}"
 msgstr ""
 
@@ -1406,7 +1406,7 @@ msgstr ""
 msgid "Use {provider}"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:198 app/src/ui/conversation.rs:1268
+#: app/src/ui/composer/mod.rs:198 app/src/ui/conversation.rs:1276
 msgid "Choose a Time…"
 msgstr ""
 
@@ -1802,231 +1802,231 @@ msgstr ""
 msgid "All Their Mail"
 msgstr ""
 
-#: app/src/ui/conversation.rs:333
+#: app/src/ui/conversation.rs:362
 msgid "No Conversation Selected"
 msgstr ""
 
-#: app/src/ui/conversation.rs:337
+#: app/src/ui/conversation.rs:366
 msgid "Remote images are hidden to protect your privacy"
 msgstr ""
 
-#: app/src/ui/conversation.rs:338
+#: app/src/ui/conversation.rs:367
 msgid "Load Images"
 msgstr ""
 
-#: app/src/ui/conversation.rs:342
+#: app/src/ui/conversation.rs:371
 msgid "This message is from a mailing list"
 msgstr ""
 
-#: app/src/ui/conversation.rs:343 app/src/ui/window/senders.rs:62
+#: app/src/ui/conversation.rs:372 app/src/ui/window/senders.rs:62
 msgid "Unsubscribe"
 msgstr ""
 
-#: app/src/ui/conversation.rs:356 app/src/ui/conversation.rs:845
+#: app/src/ui/conversation.rs:385 app/src/ui/conversation.rs:874
 msgid "Flag"
 msgstr ""
 
-#: app/src/ui/conversation.rs:357 app/src/ui/conversation.rs:476
-#: app/src/ui/conversation.rs:737 app/src/ui/conversation.rs:850
+#: app/src/ui/conversation.rs:386 app/src/ui/conversation.rs:505
+#: app/src/ui/conversation.rs:766 app/src/ui/conversation.rs:879
 msgid "Mute"
 msgstr ""
 
-#: app/src/ui/conversation.rs:358 app/src/ui/conversation.rs:477
-#: app/src/ui/conversation.rs:812 app/src/ui/window.rs:3095
+#: app/src/ui/conversation.rs:387 app/src/ui/conversation.rs:506
+#: app/src/ui/conversation.rs:841 app/src/ui/window.rs:3095
 msgid "Junk"
 msgstr ""
 
-#: app/src/ui/conversation.rs:359 app/src/ui/conversation.rs:808
+#: app/src/ui/conversation.rs:388 app/src/ui/conversation.rs:837
 msgid "Move to Trash"
 msgstr ""
 
-#: app/src/ui/conversation.rs:386
+#: app/src/ui/conversation.rs:415
 msgid "Several Conversations Selected"
 msgstr ""
 
-#: app/src/ui/conversation.rs:388
+#: app/src/ui/conversation.rs:417
 msgid "Actions and shortcuts apply to all of them. Esc clears the selection."
 msgstr ""
 
-#: app/src/ui/conversation.rs:426
+#: app/src/ui/conversation.rs:455
 msgid "Archive (E or Ctrl+Alt+A)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:428 app/src/ui/conversation.rs:791
+#: app/src/ui/conversation.rs:457 app/src/ui/conversation.rs:820
 msgid "Move to Trash (Delete)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:429 app/src/ui/conversation.rs:801
+#: app/src/ui/conversation.rs:458 app/src/ui/conversation.rs:830
 msgid "Junk (Ctrl+Shift+J)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:432
+#: app/src/ui/conversation.rs:461
 msgid "Mark as Unread (Ctrl+Shift+U)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:437 app/src/ui/conversation.rs:441
-#: app/src/ui/conversation.rs:1302
+#: app/src/ui/conversation.rs:466 app/src/ui/conversation.rs:470
+#: app/src/ui/conversation.rs:1310
 msgid "Flag (Ctrl+Shift+L)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:438
+#: app/src/ui/conversation.rs:467
 msgid "Flag Color"
 msgstr ""
 
-#: app/src/ui/conversation.rs:444
+#: app/src/ui/conversation.rs:473
 msgid "Reply (Ctrl+R)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:447
+#: app/src/ui/conversation.rs:476
 msgid "Reply All (Ctrl+Shift+R)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:449
+#: app/src/ui/conversation.rs:478
 msgid "Forward (Ctrl+Shift+F)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:451
+#: app/src/ui/conversation.rs:480
 msgid "Edit Draft"
 msgstr ""
 
-#: app/src/ui/conversation.rs:458 app/src/ui/conversation.rs:461
+#: app/src/ui/conversation.rs:487 app/src/ui/conversation.rs:490
 msgid "More Actions"
 msgstr ""
 
-#: app/src/ui/conversation.rs:467
+#: app/src/ui/conversation.rs:496
 msgid "Reply All"
 msgstr ""
 
-#: app/src/ui/conversation.rs:468 app/src/ui/window.rs:3110
+#: app/src/ui/conversation.rs:497 app/src/ui/window.rs:3110
 msgid "Forward"
 msgstr ""
 
-#: app/src/ui/conversation.rs:471
+#: app/src/ui/conversation.rs:500
 msgid "Flag or Unflag"
 msgstr ""
 
-#: app/src/ui/conversation.rs:473
+#: app/src/ui/conversation.rs:502
 msgid "Mark Read or Unread"
 msgstr ""
 
-#: app/src/ui/conversation.rs:478
+#: app/src/ui/conversation.rs:507
 msgid "Labels…"
 msgstr ""
 
-#: app/src/ui/conversation.rs:480 app/src/ui/sidebar.rs:259
+#: app/src/ui/conversation.rs:509 app/src/ui/sidebar.rs:259
 #: app/src/ui/window/reminders.rs:40 app/src/ui/window/reminders.rs:45
 msgid "Remind Me"
 msgstr ""
 
-#: app/src/ui/conversation.rs:483
+#: app/src/ui/conversation.rs:512
 msgid "Dismiss Follow-Up"
 msgstr ""
 
-#: app/src/ui/conversation.rs:491
+#: app/src/ui/conversation.rs:520
 msgid "Open in New Window"
 msgstr ""
 
-#: app/src/ui/conversation.rs:494
+#: app/src/ui/conversation.rs:523
 msgid "Print…"
 msgstr ""
 
-#: app/src/ui/conversation.rs:495
+#: app/src/ui/conversation.rs:524
 msgid "View Source"
 msgstr ""
 
-#: app/src/ui/conversation.rs:496 app/src/ui/thread_list.rs:618
+#: app/src/ui/conversation.rs:525 app/src/ui/thread_list.rs:618
 msgid "Export…"
 msgstr ""
 
-#: app/src/ui/conversation.rs:499 app/src/ui/conversation.rs:722
+#: app/src/ui/conversation.rs:528 app/src/ui/conversation.rs:751
 msgid "Add Sender to VIPs"
 msgstr ""
 
-#: app/src/ui/conversation.rs:500
+#: app/src/ui/conversation.rs:529
 msgid "Unsubscribe…"
 msgstr ""
 
-#: app/src/ui/conversation.rs:502
+#: app/src/ui/conversation.rs:531
 msgid "Always Load Images…"
 msgstr ""
 
-#: app/src/ui/conversation.rs:505
+#: app/src/ui/conversation.rs:534
 msgid "Block Sender…"
 msgstr ""
 
-#: app/src/ui/conversation.rs:516
+#: app/src/ui/conversation.rs:545
 msgid "Categorize Sender"
 msgstr ""
 
-#: app/src/ui/conversation.rs:527 app/src/ui/conversation.rs:529
+#: app/src/ui/conversation.rs:556 app/src/ui/conversation.rs:558
 msgid "Labels (L)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:555 app/src/ui/window/detached.rs:57
+#: app/src/ui/conversation.rs:584 app/src/ui/window/detached.rs:57
 msgid "Conversation"
 msgstr ""
 
-#: app/src/ui/conversation.rs:720
+#: app/src/ui/conversation.rs:749
 msgid "Remove Sender from VIPs"
 msgstr ""
 
-#: app/src/ui/conversation.rs:735 app/src/ui/conversation.rs:848
+#: app/src/ui/conversation.rs:764 app/src/ui/conversation.rs:877
 msgid "Unmute"
 msgstr ""
 
-#: app/src/ui/conversation.rs:790
+#: app/src/ui/conversation.rs:819
 msgid "Delete Forever (Delete)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:799
+#: app/src/ui/conversation.rs:828
 msgid "Not Junk (Ctrl+Shift+J)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:807 app/src/ui/window.rs:1595
+#: app/src/ui/conversation.rs:836 app/src/ui/window.rs:1595
 msgid "Delete Forever"
 msgstr ""
 
-#: app/src/ui/conversation.rs:811
+#: app/src/ui/conversation.rs:840
 msgid "Not Junk"
 msgstr ""
 
-#: app/src/ui/conversation.rs:840
+#: app/src/ui/conversation.rs:869
 msgid "Mark as Unread"
 msgstr ""
 
-#: app/src/ui/conversation.rs:843
+#: app/src/ui/conversation.rs:872
 msgid "Unflag"
 msgstr ""
 
-#: app/src/ui/conversation.rs:858
+#: app/src/ui/conversation.rs:887
 msgid "{count} Conversation Selected"
 msgid_plural "{count} Conversations Selected"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/conversation.rs:864
+#: app/src/ui/conversation.rs:893
 msgid "{count} Message Selected"
 msgid_plural "{count} Messages Selected"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/conversation.rs:1301
+#: app/src/ui/conversation.rs:1309
 msgid "Unflag (Ctrl+Shift+L)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1314
+#: app/src/ui/conversation.rs:1322
 msgid "Mark as Read (U)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1315
+#: app/src/ui/conversation.rs:1323
 msgid "Mark as Unread (U)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1455
+#: app/src/ui/conversation.rs:1463
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1472
+#: app/src/ui/conversation.rs:1480
 msgid "Clear Flag"
 msgstr ""
 
