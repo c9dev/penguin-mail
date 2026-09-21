@@ -56,15 +56,4 @@ impl MainWindow {
             });
         }
     }
-
-    /// The flag button and Ctrl+Shift+L: flag in the last colour used, or
-    /// take the flag off when everything is flagged already.
-    pub(super) fn toggle_flag(self: &Rc<Self>) {
-        let (_, all_flagged) = self.target_marks();
-        if all_flagged {
-            self.flag(None);
-        } else {
-            self.flag(Some(self.settings().flag_color));
-        }
-    }
 }

@@ -7,9 +7,8 @@ use std::rc::{Rc, Weak};
 use adw::prelude::*;
 use gtk::{gio, glib};
 use mailrs_domain::{Folder, ThreadSummary};
-use mailrs_sync::{History, MailAction, TriageAction};
 
-use super::{MainWindow, Target};
+use super::MainWindow;
 use crate::compose::ReplyKind;
 use crate::ui::conversation::{Action, ConversationView};
 use mailrs_domain::Category;
@@ -43,7 +42,7 @@ impl MainWindow {
             let (Some(win), Some(view)) = (win.upgrade(), slot.borrow().upgrade()) else {
                 return;
             };
-            win.act_in_window(&view, action);
+            win.act_from(&view, action);
         });
         *holder.borrow_mut() = Rc::downgrade(&view);
         view.set_detached();
@@ -97,73 +96,6 @@ impl MainWindow {
         }
     }
 
-    /// What a separate window's buttons do: the same as the main window,
-    /// but on its own conversation.
-    fn act_in_window(self: &Rc<Self>, view: &Rc<ConversationView>, action: Action) {
-        let organize = |action: TriageAction, closes: bool| {
-            let Some(target) = view.with_open(|o| Target {
-                account_id: o.account_id,
-                thread_id: o.thread_id.clone(),
-                message_id: o.only_message.clone(),
-            }) else {
-                return;
-            };
-            self.perform(
-                vec![target],
-                MailAction::Triage(action),
-                History::Record,
-                None,
-            );
-            if closes && let Some(window) = view.page.root().and_downcast::<gtk::Window>() {
-                window.close();
-            }
-        };
-        match action {
-            Action::Reply(kind) => self.reply_from(view, kind),
-            Action::EditDraft => self.edit_draft_from(view),
-            Action::Archive => organize(TriageAction::Archive, true),
-            Action::Trash => organize(TriageAction::Trash, true),
-            Action::Junk => organize(TriageAction::Junk, true),
-            Action::ToggleStar => {
-                let starred = view.with_open(|o| o.starred()).unwrap_or(false);
-                organize(
-                    if starred {
-                        TriageAction::Unstar
-                    } else {
-                        TriageAction::Star
-                    },
-                    false,
-                );
-            }
-            Action::ToggleRead => {
-                let unread = view.with_open(|o| o.unread()).unwrap_or(false);
-                organize(
-                    if unread {
-                        TriageAction::MarkRead
-                    } else {
-                        TriageAction::MarkUnread
-                    },
-                    false,
-                );
-            }
-            Action::LoadImages => self.load_images_once(&Rc::clone(view)),
-            Action::SaveAttachment { message_id, index } => {
-                self.save_attachment_from(view, message_id, index)
-            }
-            Action::PreviewAttachment { message_id, index } => {
-                self.preview_attachment_from(view, message_id, index)
-            }
-            Action::SaveAllAttachments { message_id } => {
-                self.save_all_attachments_from(view, message_id)
-            }
-            Action::Unsubscribe => self.unsubscribe_from(Rc::clone(view)),
-            Action::Invitation(action) => self.invitation_action(view, action),
-            Action::Mailto(address) => self.act(Action::Mailto(address)),
-            Action::ShowContact(address) => self.act(Action::ShowContact(address)),
-            Action::Translate => self.translate_message(view),
-        }
-    }
-
     /// The `win.*` actions a separate window's menus and keys use.
     fn install_window_actions(self: &Rc<Self>, window: &adw::Window, view: &Rc<ConversationView>) {
         let group = gio::SimpleActionGroup::new();
@@ -188,10 +120,7 @@ impl MainWindow {
             ("toggle-read", || Action::ToggleRead),
         ];
         for (name, make) in entries {
-            add(
-                name,
-                Box::new(move |win, view| win.act_in_window(view, make())),
-            );
+            add(name, Box::new(move |win, view| win.act_from(view, make())));
         }
         add("find", Box::new(|_, view| view.open_find()));
         add("print", Box::new(|_, view| view.print()));
