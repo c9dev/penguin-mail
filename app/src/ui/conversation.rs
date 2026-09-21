@@ -1514,8 +1514,115 @@ fn network_session() -> webkit::NetworkSession {
 
 #[cfg(test)]
 mod tests {
-    use super::body_mark;
-    use std::collections::HashMap;
+    use super::{OpenThread, body_mark};
+    use mailrs_domain::{MessageMeta, system_label};
+    use std::collections::{HashMap, HashSet};
+
+    /// One message of a thread. `unread` puts Gmail's own label on it.
+    fn message(id: &str, unread: bool) -> MessageMeta {
+        MessageMeta {
+            account_id: 1,
+            id: id.to_string(),
+            thread_id: "t1".to_string(),
+            rfc822_msgid: None,
+            from: None,
+            to: Vec::new(),
+            cc: Vec::new(),
+            subject: "Lunch".to_string(),
+            date: 0,
+            snippet: String::new(),
+            size: 0,
+            has_attachments: false,
+            label_ids: match unread {
+                true => vec![system_label::UNREAD.to_string()],
+                false => Vec::new(),
+            },
+        }
+    }
+
+    /// A thread with these messages on screen and nothing else filled in.
+    fn thread(messages: Vec<MessageMeta>) -> OpenThread {
+        OpenThread {
+            account_id: 1,
+            thread_id: "t1".to_string(),
+            subject: "Lunch".to_string(),
+            messages,
+            bodies: HashMap::new(),
+            expanded: HashSet::new(),
+            images_allowed: false,
+            only_message: None,
+            me: Vec::new(),
+            inline_images: HashMap::new(),
+            thumbnails: HashMap::new(),
+            opened_files: HashMap::new(),
+            photos: HashMap::new(),
+            unsubscribed: false,
+            pgp: None,
+            pgp_asked: false,
+            flag_color: None,
+            translations: HashMap::new(),
+        }
+    }
+
+    #[test]
+    fn a_message_that_arrives_unread_opens() {
+        let mut open = thread(vec![message("m1", false)]);
+        open.take_messages(&[message("m1", false), message("m2", true)]);
+        assert!(open.expanded.contains("m2"));
+    }
+
+    #[test]
+    fn a_message_that_arrives_read_stays_closed() {
+        let mut open = thread(vec![message("m1", false)]);
+        open.take_messages(&[message("m1", false), message("m2", false)]);
+        assert!(open.expanded.is_empty());
+    }
+
+    #[test]
+    fn a_message_the_reader_closed_does_not_open_again() {
+        let mut open = thread(vec![message("m1", true)]);
+        open.take_messages(&[message("m1", true)]);
+        assert!(open.expanded.is_empty());
+    }
+
+    #[test]
+    fn a_thread_showing_one_message_keeps_only_that_one() {
+        let mut open = thread(vec![message("m2", false)]);
+        open.only_message = Some("m2".to_string());
+        open.take_messages(&[message("m1", true), message("m2", false)]);
+        let ids: Vec<&str> = open.messages.iter().map(|m| m.id.as_str()).collect();
+        assert_eq!(ids, ["m2"]);
+    }
+
+    #[test]
+    fn the_messages_with_no_body_yet_are_the_ones_asked_for() {
+        let mut open = thread(Vec::new());
+        open.bodies
+            .insert("m1".to_string(), Err("gone".to_string()));
+        let missing = open.take_messages(&[message("m1", false), message("m2", false)]);
+        assert_eq!(missing, ["m2"]);
+    }
+
+    #[test]
+    fn an_empty_answer_from_the_store_leaves_the_messages_alone() {
+        let mut open = thread(vec![message("m1", false)]);
+        open.take_messages(&[]);
+        let ids: Vec<&str> = open.messages.iter().map(|m| m.id.as_str()).collect();
+        assert_eq!(ids, ["m1"]);
+    }
+
+    #[test]
+    fn the_same_ids_in_the_same_order_are_not_a_change() {
+        let mut open = thread(vec![message("m1", false), message("m2", false)]);
+        assert!(!open.replace_messages(vec![message("m1", true), message("m2", false)]));
+    }
+
+    #[test]
+    fn a_message_the_thread_did_not_have_is_a_change() {
+        let mut open = thread(vec![message("m1", false)]);
+        assert!(open.replace_messages(vec![message("m1", false), message("m2", false)]));
+    }
+
     fn images(entries: &[(&str, &str)]) -> HashMap<String, String> {
         entries
             .iter()
