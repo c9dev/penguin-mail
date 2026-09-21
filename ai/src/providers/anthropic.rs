@@ -6,8 +6,8 @@ use std::sync::Arc;
 use serde_json::{Value, json};
 
 use super::{
-    MAX_ROUNDS, emit, error_text, http_client, network, outcome_text, refuse_tool, run_tool,
-    too_many_rounds,
+    MAX_ROUNDS, emit, error_text, finish_tool, http_client, network, outcome_text, refuse_tool,
+    run_tool, too_many_rounds, truncate,
 };
 use crate::sse::SseReader;
 use crate::{AgentEvent, AiError, Model, ModelList, ToolHost, ToolOutcome, ToolSpec};
@@ -23,6 +23,18 @@ const THINKING_BUDGET: u32 = 16_000;
 const MODEL_PAGE: u32 = 1000;
 /// Pages read before the list stops, so a runaway cursor cannot loop.
 const MAX_MODEL_PAGES: usize = 20;
+/// Anthropic's own web search and page fetch, run on its servers. These
+/// are the newest versions the docs list.
+pub(crate) const WEB_SEARCH_TOOL: &str = "web_search_20260318";
+pub(crate) const WEB_FETCH_TOOL: &str = "web_fetch_20260318";
+/// Searches and fetches the model may run in one request.
+const WEB_USES: u32 = 8;
+/// Tokens of one fetched page that reach the model. A page goes back with
+/// every later request of the chat, so a long one would crowd out the mail
+/// the chat is about.
+const FETCH_TOKENS: u32 = 20_000;
+/// Characters of a fetched page the tool row shows.
+const FETCH_SHOWN: usize = 2_000;
 
 /// The API base, or `PENGUIN_MAIL_ANTHROPIC_BASE` when set.
 pub(crate) fn default_base() -> String {
@@ -42,6 +54,8 @@ pub(crate) struct AnthropicChat {
     client: reqwest::Client,
     /// Ask the model to think, when it can.
     pub(crate) think: bool,
+    /// Offer Anthropic's web search and page fetch.
+    pub(crate) web: bool,
 }
 
 /// A content block being assembled from stream events.
@@ -73,6 +87,7 @@ impl AnthropicChat {
             history: Vec::new(),
             client: http_client(),
             think: false,
+            web: false,
         }
     }
 
@@ -149,17 +164,21 @@ impl AnthropicChat {
         {
             body["thinking"] = thinking;
         }
-        if !specs.is_empty() {
-            body["tools"] = specs
-                .iter()
-                .map(|s| {
-                    json!({
-                        "name": s.name,
-                        "description": s.description,
-                        "input_schema": s.input_schema,
-                    })
+        let mut tools: Vec<Value> = specs
+            .iter()
+            .map(|s| {
+                json!({
+                    "name": s.name,
+                    "description": s.description,
+                    "input_schema": s.input_schema,
                 })
-                .collect();
+            })
+            .collect();
+        if self.web {
+            tools.extend(web_tools());
+        }
+        if !tools.is_empty() {
+            body["tools"] = json!(tools);
         }
         tracing::debug!(model = %self.model, "messages request");
         let response = self
@@ -215,6 +234,87 @@ async fn run_tools(
         results.push(result);
     }
     results
+}
+
+/// Anthropic's web search and page fetch, as the request declares them.
+///
+/// Both run as direct calls. From their 2026 versions on they default to
+/// running inside Anthropic's code execution, which filters what comes back
+/// but refuses models older than Claude 4.6 and adds code blocks and a
+/// container to the chat. Direct calls work on every model that has the
+/// tools, and the page size cap does the filtering's job.
+pub(crate) fn web_tools() -> Vec<Value> {
+    vec![
+        json!({
+            "type": WEB_SEARCH_TOOL,
+            "name": "web_search",
+            "max_uses": WEB_USES,
+            "allowed_callers": ["direct"],
+        }),
+        json!({
+            "type": WEB_FETCH_TOOL,
+            "name": "web_fetch",
+            "max_uses": WEB_USES,
+            "max_content_tokens": FETCH_TOKENS,
+            "allowed_callers": ["direct"],
+        }),
+    ]
+}
+
+/// The tool row for a server tool's result block, such as
+/// `web_search_tool_result`: the tool's name and what it found. The block
+/// itself goes back to Anthropic unchanged; this is only what the pane
+/// shows.
+pub(crate) fn server_result(block: &Value) -> (String, ToolOutcome) {
+    let kind = block["type"].as_str().unwrap_or_default();
+    let name = kind
+        .strip_suffix("_tool_result")
+        .unwrap_or(kind)
+        .to_string();
+    let content = &block["content"];
+    if let Some(code) = content["error_code"].as_str() {
+        let problem = format!("{name} failed: {code}");
+        return (name, ToolOutcome::Err(problem));
+    }
+    let text = match kind {
+        "web_search_tool_result" => {
+            let hits: Vec<String> = content
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|hit| {
+                    format!(
+                        "{}\n{}",
+                        hit["title"].as_str().unwrap_or_default(),
+                        hit["url"].as_str().unwrap_or_default()
+                    )
+                })
+                .collect();
+            match hits.is_empty() {
+                true => "No results.".to_string(),
+                false => hits.join("\n\n"),
+            }
+        }
+        "web_fetch_tool_result" => {
+            let document = &content["content"];
+            let url = content["url"].as_str().unwrap_or_default();
+            let title = document["title"].as_str().unwrap_or(url);
+            let source = &document["source"];
+            let body = match source["type"].as_str() {
+                Some("text") => truncate(source["data"].as_str().unwrap_or_default(), FETCH_SHOWN),
+                _ => source["media_type"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .to_string(),
+            };
+            format!("{title}\n{url}\n\n{body}")
+        }
+        _ => truncate(&content.to_string(), FETCH_SHOWN),
+    };
+    (
+        name,
+        ToolOutcome::Ok(Value::String(text.trim_end().to_string())),
+    )
 }
 
 /// The `thinking` field for a model, or `None` for one that cannot think.
@@ -282,8 +382,15 @@ async fn read_stream(
         match data["type"].as_str().unwrap_or(&event.event) {
             "content_block_start" => {
                 let mut value = data["content_block"].clone();
-                if value["type"] == "tool_use" {
+                if value["type"] == "tool_use" || value["type"] == "server_tool_use" {
                     value["input"] = json!({});
+                }
+                // A server tool's result arrives whole, in this one event.
+                if let Some(id) = value["tool_use_id"].as_str()
+                    && value["type"] != "tool_result"
+                {
+                    let (name, outcome) = server_result(&value);
+                    finish_tool(events, id, &name, &outcome).await;
                 }
                 blocks.insert(
                     index,
@@ -325,8 +432,37 @@ async fn read_stream(
                             .json
                             .push_str(delta["partial_json"].as_str().unwrap_or_default());
                     }
+                    // Web search cites its sources. Each citation carries an
+                    // index Anthropic wants back on later requests.
+                    "citations_delta" => match &mut block.value["citations"] {
+                        Value::Array(citations) => citations.push(delta["citation"].clone()),
+                        other => *other = json!([delta["citation"].clone()]),
+                    },
                     other => tracing::debug!(delta = other, "ignoring content delta"),
                 }
+            }
+            // A server tool runs on Anthropic's side as soon as its input is
+            // complete, so its row starts here rather than in `run_tools`.
+            "content_block_stop" => {
+                let Some(block) = blocks.get_mut(&index) else {
+                    continue;
+                };
+                if block.value["type"] != "server_tool_use" {
+                    continue;
+                }
+                if let Ok(input @ Value::Object(_)) = serde_json::from_str::<Value>(&block.json) {
+                    block.value["input"] = input;
+                }
+                block.json.clear();
+                emit(
+                    events,
+                    AgentEvent::ToolStarted {
+                        id: block.value["id"].as_str().unwrap_or_default().to_string(),
+                        name: block.value["name"].as_str().unwrap_or_default().to_string(),
+                        input: block.value["input"].clone(),
+                    },
+                )
+                .await;
             }
             "message_delta" => {
                 if let Some(reason) = data["delta"]["stop_reason"].as_str() {
@@ -341,7 +477,7 @@ async fn read_stream(
                 let message = data["error"]["message"].as_str().unwrap_or("unknown error");
                 return Err(AiError::Api(message.to_string()));
             }
-            // message_start, content_block_stop and ping carry nothing we keep.
+            // message_start and ping carry nothing we keep.
             _ => {}
         }
     }

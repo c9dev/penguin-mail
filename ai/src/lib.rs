@@ -122,6 +122,13 @@ impl Conversation {
         self
     }
 
+    /// Lets Claude search the web and read pages with Anthropic's own tools,
+    /// through the API or Claude Code, from the next message on. A local
+    /// model ignores this: its web tools come from the tool host.
+    pub fn set_web(&mut self, on: bool) {
+        self.inner.set_web(on);
+    }
+
     /// Sends a user message and runs tools until the model answers. Streams
     /// progress to `events`; returns the final reply text.
     pub async fn send(

@@ -197,7 +197,12 @@ pub(crate) struct ClaudeCodeChat {
     session_id: Option<String>,
     work_dir: PathBuf,
     bridge_command: Option<PathBuf>,
+    /// Let Claude Code search the web and read pages with its own tools.
+    pub(crate) web: bool,
 }
+
+/// Claude Code's built-in web tools, as `--tools` names them.
+const WEB_TOOLS: &str = "WebSearch,WebFetch";
 
 impl ClaudeCodeChat {
     pub(crate) fn new(
@@ -212,6 +217,7 @@ impl ClaudeCodeChat {
             session_id: None,
             work_dir: default_work_dir(),
             bridge_command: None,
+            web: false,
         }
     }
 
@@ -316,11 +322,15 @@ impl ClaudeCodeChat {
             "--strict-mcp-config",
             "--mcp-config",
             mcp_config,
-            // No built-in tools: no shell, no file access, no web.
+            // No shell and no file access. The web tools only read, so they
+            // join the mail tools when web search is on.
             "--tools",
-            "",
+            if self.web { WEB_TOOLS } else { "" },
             "--allowedTools",
-            &format!("mcp__{SERVER_NAME}"),
+            &match self.web {
+                true => format!("mcp__{SERVER_NAME},{WEB_TOOLS}"),
+                false => format!("mcp__{SERVER_NAME}"),
+            },
             // Anything not allowed above is refused without a prompt.
             "--permission-mode",
             "dontAsk",

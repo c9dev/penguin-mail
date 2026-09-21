@@ -458,4 +458,121 @@ async fn a_chat_that_does_not_ask_sends_no_thinking_field() {
     let requests = server.received_requests().await.unwrap();
     let body: Value = requests[0].body_json().unwrap();
     assert!(body.get("thinking").is_none());
+    // Web search is off unless asked for, so only the host's tools go out.
+    assert_eq!(body["tools"].as_array().map(Vec::len), Some(2));
+}
+
+/// A turn that searched and tried a fetch, in the shape Anthropic's docs
+/// give for a streamed web search: the calls stream like tool calls and
+/// each result arrives whole in one `content_block_start`.
+const WEB_TURN: &str = include_str!("fixtures/anthropic-web.sse");
+
+#[tokio::test]
+async fn web_search_runs_on_anthropic_and_goes_back_unchanged() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/messages"))
+        .respond_with(Sequence::new(vec![
+            ResponseTemplate::new(200)
+                .insert_header("content-type", "text/event-stream")
+                .set_body_string(WEB_TURN),
+            text_reply("Boa viagem."),
+        ]))
+        .mount(&server)
+        .await;
+    let mut chat = chat(&server);
+    chat.web = true;
+    let host = Arc::new(FakeHost::default());
+    let (tx, rx) = async_channel::unbounded();
+    let reply = chat
+        .send("When is the next ferry?".into(), host.clone(), &tx)
+        .await
+        .unwrap();
+    assert_eq!(reply, "Let me look that up.Ferries leave every 20 minutes.");
+    // Anthropic ran both tools; none of it reached the app's host.
+    assert!(host.calls().is_empty());
+
+    let requests = server.received_requests().await.unwrap();
+    let first: Value = requests[0].body_json().unwrap();
+    let tools = first["tools"].as_array().unwrap();
+    assert_eq!(tools[0]["name"], json!("search_mail"));
+    assert_eq!(
+        tools[2],
+        json!({"type": "web_search_20260318", "name": "web_search", "max_uses": 8,
+            "allowed_callers": ["direct"]})
+    );
+    assert_eq!(tools[3]["type"], json!("web_fetch_20260318"));
+    assert_eq!(tools[3]["name"], json!("web_fetch"));
+    assert_eq!(tools[3]["allowed_callers"], json!(["direct"]));
+
+    let seen = drain(&rx);
+    let rows: Vec<AgentEvent> = seen
+        .into_iter()
+        .filter(|e| !matches!(e, AgentEvent::Text(_)))
+        .collect();
+    assert_eq!(
+        rows[0],
+        AgentEvent::ToolStarted {
+            id: "srvtoolu_01Search".into(),
+            name: "web_search".into(),
+            input: json!({"query": "Lisbon ferry timetable"}),
+        }
+    );
+    let AgentEvent::ToolFinished {
+        id,
+        name,
+        ok,
+        output,
+        ..
+    } = &rows[1]
+    else {
+        panic!("expected the search result, got {:?}", rows[1]);
+    };
+    assert_eq!(
+        (id.as_str(), name.as_str(), *ok),
+        ("srvtoolu_01Search", "web_search", true)
+    );
+    assert!(
+        output.starts_with("Transtejo timetables\nhttps://ttsl.pt/horarios"),
+        "{output}"
+    );
+    assert!(matches!(&rows[2], AgentEvent::ToolStarted { name, .. } if name == "web_fetch"));
+    assert!(matches!(
+        &rows[3],
+        AgentEvent::ToolFinished { ok: false, output, .. } if output.contains("url_not_accessible")
+    ));
+
+    // The next message carries every block back as it came, encrypted
+    // content and citations included.
+    chat.send("Thanks".into(), host, &tx).await.unwrap();
+    let requests = server.received_requests().await.unwrap();
+    let second: Value = requests[1].body_json().unwrap();
+    let content = second["messages"][1]["content"].as_array().unwrap();
+    let kinds: Vec<&str> = content
+        .iter()
+        .map(|b| b["type"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        kinds,
+        [
+            "text",
+            "server_tool_use",
+            "web_search_tool_result",
+            "server_tool_use",
+            "web_fetch_tool_result",
+            "text"
+        ]
+    );
+    assert_eq!(
+        content[1]["input"],
+        json!({"query": "Lisbon ferry timetable"})
+    );
+    assert_eq!(
+        content[2]["content"][0]["encrypted_content"],
+        json!("EqgfCioIARgBIiQ3YTAw")
+    );
+    assert_eq!(
+        content[5]["citations"][0]["encrypted_index"],
+        json!("Eo8BCioIAhgBIiQy")
+    );
 }

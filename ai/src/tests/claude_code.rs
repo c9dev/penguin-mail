@@ -150,6 +150,36 @@ async fn runs_claude_headless_and_maps_its_stream() {
 }
 
 #[tokio::test]
+async fn web_search_turns_on_claude_codes_own_web_tools() {
+    let dir = tempfile::tempdir().unwrap();
+    let bin = dir.path().join("bin");
+    std::fs::create_dir(&bin).unwrap();
+    let script = write_script(&bin);
+    let result = lines(&[json!({"type": "result", "subtype": "success",
+        "is_error": false, "result": "Done.", "session_id": "sess-web"})]);
+    std::fs::write(bin.join("out-0"), &result).unwrap();
+    std::fs::write(bin.join("out-1"), &result).unwrap();
+    let mut chat = ClaudeCodeChat::new(script, None, String::new())
+        .with_paths(dir.path().join("work"), dir.path().join("bridge"));
+    chat.web = true;
+    let host = Arc::new(FakeHost::default());
+    let (tx, _rx) = async_channel::unbounded();
+    chat.send("news?".into(), host.clone(), &tx).await.unwrap();
+    let args = argv(&bin, 0);
+    assert_eq!(flag(&args, "--tools"), Some("WebSearch,WebFetch"));
+    assert_eq!(
+        flag(&args, "--allowedTools"),
+        Some("mcp__penguin-mail,WebSearch,WebFetch")
+    );
+    // Turned off, the next run has no built-in tools again.
+    chat.web = false;
+    chat.send("again".into(), host, &tx).await.unwrap();
+    let args = argv(&bin, 1);
+    assert_eq!(flag(&args, "--tools"), Some(""));
+    assert_eq!(flag(&args, "--allowedTools"), Some("mcp__penguin-mail"));
+}
+
+#[tokio::test]
 async fn reports_a_crash_with_its_stderr() {
     let dir = tempfile::tempdir().unwrap();
     let script = dir.path().join("claude");

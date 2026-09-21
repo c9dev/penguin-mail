@@ -65,6 +65,16 @@ impl State {
         }
     }
 
+    /// Anthropic's API and Claude Code bring their own web tools. A local
+    /// server has none, and the app offers its own through the tool host.
+    pub(crate) fn set_web(&mut self, on: bool) {
+        match self {
+            State::Anthropic(chat) => chat.web = on,
+            State::ClaudeCode(chat) => chat.web = on,
+            State::OpenAi(_) => {}
+        }
+    }
+
     pub(crate) async fn send(
         &mut self,
         text: String,
