@@ -35,6 +35,12 @@ pub fn worth_offering(email: &str) -> bool {
     has_settings() && !known_in(&gtk::glib::user_config_dir(), email)
 }
 
+/// Where `email` stands with GNOME: `None` on a desktop without Online
+/// Accounts, otherwise whether GNOME knows the address.
+pub fn known(email: &str) -> Option<bool> {
+    has_settings().then(|| known_in(&gtk::glib::user_config_dir(), email))
+}
+
 /// Opens Online Accounts in GNOME Settings.
 pub fn open_online_accounts() -> Result<(), gtk::glib::Error> {
     let settings =

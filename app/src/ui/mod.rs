@@ -7,6 +7,7 @@ pub mod assistant_prefs;
 pub mod autocomplete;
 pub mod composer;
 pub mod contact_card;
+pub mod contacts_prefs;
 pub mod conversation;
 pub mod find;
 pub mod hide_my_email;

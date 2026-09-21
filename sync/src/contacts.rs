@@ -33,12 +33,15 @@ pub const REFRESH_AFTER: EpochMillis = 6 * 60 * 60 * 1000;
 const PAGE_LIMIT: usize = 100;
 
 /// What one refresh brought back.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Refreshed {
     /// Contacts stored, whether or not they changed.
     pub contacts: usize,
     /// Photos downloaded, which is zero on every refresh after the first.
     pub photos: usize,
+    /// Accounts whose contacts Google would not hand over until the person
+    /// grants the permission. The rest were read regardless.
+    pub needs_permission: Vec<AccountId>,
 }
 
 /// One contact as a card shows them.
@@ -100,7 +103,7 @@ impl<A: Accounts> ContactBook<A> {
         &self,
         accounts: &[AccountId],
         now: EpochMillis,
-    ) -> Result<Permitted<Refreshed>, SyncError> {
+    ) -> Result<Refreshed, SyncError> {
         let mut total = Refreshed::default();
         for account_id in accounts {
             let stored = self
@@ -118,10 +121,10 @@ impl<A: Accounts> ContactBook<A> {
                     total.contacts += one.contacts;
                     total.photos += one.photos;
                 }
-                Permitted::NeedsPermission => return Ok(Permitted::NeedsPermission),
+                Permitted::NeedsPermission => total.needs_permission.push(*account_id),
             }
         }
-        Ok(Permitted::Done(total))
+        Ok(total)
     }
 
     /// Drops everything stored for an account, photos included. Turning
@@ -228,7 +231,7 @@ impl<A: Accounts> ContactBook<A> {
                             .await?;
                         return Ok(Permitted::Done(Refreshed {
                             contacts: stored,
-                            photos: 0,
+                            ..Refreshed::default()
                         }));
                     }
                 }
@@ -239,7 +242,7 @@ impl<A: Accounts> ContactBook<A> {
             );
             return Ok(Permitted::Done(Refreshed {
                 contacts: stored,
-                photos: 0,
+                ..Refreshed::default()
             }));
         }
     }

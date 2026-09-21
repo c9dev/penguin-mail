@@ -351,7 +351,7 @@ msgid "Archive"
 msgstr ""
 
 #: app/src/notify.rs:50 app/src/ui/conversation.rs:384
-#: app/src/ui/conversation.rs:867 app/src/ui/preferences.rs:106
+#: app/src/ui/conversation.rs:867 app/src/ui/preferences.rs:107
 #: app/src/ui/rules.rs:288
 msgid "Mark as Read"
 msgstr ""
@@ -767,131 +767,131 @@ msgstr ""
 msgid "In {label}"
 msgstr ""
 
-#: app/src/settings/mod.rs:127 app/src/settings/mod.rs:366
+#: app/src/settings/mod.rs:132 app/src/settings/mod.rs:372
 msgid "Off"
 msgstr ""
 
-#: app/src/settings/mod.rs:128
+#: app/src/settings/mod.rs:133
 msgid "Local or OpenAI-compatible server"
 msgstr ""
 
-#: app/src/settings/mod.rs:129
+#: app/src/settings/mod.rs:134
 msgid "Anthropic API key"
 msgstr ""
 
-#: app/src/settings/mod.rs:130
+#: app/src/settings/mod.rs:135
 msgid "Claude subscription (Claude Code)"
 msgstr ""
 
-#: app/src/settings/mod.rs:225
+#: app/src/settings/mod.rs:231
 msgid "Rich text"
 msgstr ""
 
-#: app/src/settings/mod.rs:226
+#: app/src/settings/mod.rs:232
 msgid "Markdown"
 msgstr ""
 
-#: app/src/settings/mod.rs:273
+#: app/src/settings/mod.rs:279
 msgid "When opened"
 msgstr ""
 
-#: app/src/settings/mod.rs:274
+#: app/src/settings/mod.rs:280
 msgid "After 2 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:275
+#: app/src/settings/mod.rs:281
 msgid "Only when I choose"
 msgstr ""
 
-#: app/src/settings/mod.rs:291
+#: app/src/settings/mod.rs:297
 msgid "Ask each time"
 msgstr ""
 
-#: app/src/settings/mod.rs:292
+#: app/src/settings/mod.rs:298
 msgid "Always load"
 msgstr ""
 
-#: app/src/settings/mod.rs:326
+#: app/src/settings/mod.rs:332
 msgid "Small"
 msgstr ""
 
-#: app/src/settings/mod.rs:327
+#: app/src/settings/mod.rs:333
 msgid "Default"
 msgstr ""
 
-#: app/src/settings/mod.rs:328
+#: app/src/settings/mod.rs:334
 msgid "Large"
 msgstr ""
 
-#: app/src/settings/mod.rs:329
+#: app/src/settings/mod.rs:335
 msgid "Larger"
 msgstr ""
 
-#: app/src/settings/mod.rs:367
+#: app/src/settings/mod.rs:373
 msgid "5 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:368
+#: app/src/settings/mod.rs:374
 msgid "10 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:369
+#: app/src/settings/mod.rs:375
 msgid "20 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:370
+#: app/src/settings/mod.rs:376
 msgid "30 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:387
+#: app/src/settings/mod.rs:393
 msgid "Follow system"
 msgstr ""
 
-#: app/src/settings/mod.rs:388
+#: app/src/settings/mod.rs:394
 msgid "Light"
 msgstr ""
 
-#: app/src/settings/mod.rs:389
+#: app/src/settings/mod.rs:395
 msgid "Dark"
 msgstr ""
 
-#: app/src/settings/mod.rs:399
+#: app/src/settings/mod.rs:405
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/settings/mod.rs:407
+#: app/src/settings/mod.rs:413
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/settings/mod.rs:424
+#: app/src/settings/mod.rs:430
 msgid "2 weeks"
 msgstr ""
 
-#: app/src/settings/mod.rs:425
+#: app/src/settings/mod.rs:431
 msgid "30 days"
 msgstr ""
 
-#: app/src/settings/mod.rs:426
+#: app/src/settings/mod.rs:432
 msgid "90 days"
 msgstr ""
 
-#: app/src/settings/mod.rs:427
+#: app/src/settings/mod.rs:433
 msgid "1 year"
 msgstr ""
 
-#: app/src/settings/mod.rs:434
+#: app/src/settings/mod.rs:440
 msgid "256 MB"
 msgstr ""
 
-#: app/src/settings/mod.rs:435
+#: app/src/settings/mod.rs:441
 msgid "1 GB"
 msgstr ""
 
-#: app/src/settings/mod.rs:436
+#: app/src/settings/mod.rs:442
 msgid "4 GB"
 msgstr ""
 
@@ -1087,7 +1087,7 @@ msgstr ""
 
 #: app/src/tray.rs:147 app/src/ui/about.rs:79 app/src/ui/about.rs:186
 #: app/src/ui/about.rs:194 app/src/ui/about.rs:201
-#: app/src/ui/preferences.rs:682 app/src/ui/window.rs:656
+#: app/src/ui/preferences.rs:665 app/src/ui/window.rs:656
 msgid "Check for Updates"
 msgstr ""
 
@@ -1903,6 +1903,59 @@ msgstr ""
 msgid "All Their Mail"
 msgstr ""
 
+#: app/src/ui/contacts_prefs.rs:15
+msgid "Contacts & Calendar"
+msgstr ""
+
+#: app/src/ui/contacts_prefs.rs:29
+msgid "Google Contacts"
+msgstr ""
+
+#: app/src/ui/contacts_prefs.rs:31
+msgid ""
+"Penguin Mail can read an account's contacts: names, email addresses, photos, "
+"organizations, and phone numbers. It uses them to suggest recipients, to "
+"show faces beside mail, and to fill the card behind a sender's name. What it "
+"reads stays on this computer, and turning an account off deletes its "
+"contacts."
+msgstr ""
+
+#: app/src/ui/contacts_prefs.rs:40
+msgid "No accounts yet"
+msgstr ""
+
+#: app/src/ui/contacts_prefs.rs:47
+msgid "Google asks your permission the first time"
+msgstr ""
+
+#: app/src/ui/contacts_prefs.rs:67
+msgid "Calendar"
+msgstr ""
+
+#: app/src/ui/contacts_prefs.rs:69
+msgid ""
+"Answering a meeting invitation records your answer in that account's Google "
+"Calendar, and Google asks your permission the first time. To see the "
+"meetings in GNOME Calendar and the clock, add the account to GNOME Online "
+"Accounts."
+msgstr ""
+
+#: app/src/ui/contacts_prefs.rs:82
+msgid "In GNOME Online Accounts"
+msgstr ""
+
+#: app/src/ui/contacts_prefs.rs:84
+msgid "Not in GNOME Online Accounts"
+msgstr ""
+
+#: app/src/ui/contacts_prefs.rs:86
+msgid "Add…"
+msgstr ""
+
+#: app/src/ui/contacts_prefs.rs:92
+msgid "Add {account} to GNOME Online Accounts"
+msgstr ""
+
 #: app/src/ui/conversation.rs:362
 msgid "No Conversation Selected"
 msgstr ""
@@ -2454,31 +2507,31 @@ msgstr ""
 msgid "This meeting is canceled"
 msgstr ""
 
-#: app/src/ui/mod.rs:131
+#: app/src/ui/mod.rs:132
 msgid "Gray"
 msgstr ""
 
-#: app/src/ui/mod.rs:145 app/src/ui/sidebar.rs:464
+#: app/src/ui/mod.rs:146 app/src/ui/sidebar.rs:464
 msgid "Inbox"
 msgstr ""
 
-#: app/src/ui/mod.rs:146
+#: app/src/ui/mod.rs:147
 msgid "Flagged"
 msgstr ""
 
-#: app/src/ui/mod.rs:147
+#: app/src/ui/mod.rs:148
 msgid "Sent"
 msgstr ""
 
-#: app/src/ui/mod.rs:148
+#: app/src/ui/mod.rs:149
 msgid "Drafts"
 msgstr ""
 
-#: app/src/ui/mod.rs:149 app/src/ui/thread_row.rs:78 app/src/ui/window.rs:254
+#: app/src/ui/mod.rs:150 app/src/ui/thread_row.rs:78 app/src/ui/window.rs:254
 msgid "Muted"
 msgstr ""
 
-#: app/src/ui/mod.rs:150 app/src/ui/thread_list.rs:245
+#: app/src/ui/mod.rs:151 app/src/ui/thread_list.rs:245
 msgid "Mail"
 msgstr ""
 
@@ -2510,375 +2563,354 @@ msgstr ""
 msgid "Not checked"
 msgstr ""
 
-#: app/src/ui/preferences.rs:63 app/src/ui/window.rs:3242
+#: app/src/ui/preferences.rs:64 app/src/ui/window.rs:3242
 msgid "General"
 msgstr ""
 
-#: app/src/ui/preferences.rs:68 app/src/ui/window.rs:3192
+#: app/src/ui/preferences.rs:69 app/src/ui/window.rs:3192
 msgid "Reading"
 msgstr ""
 
-#: app/src/ui/preferences.rs:72
+#: app/src/ui/preferences.rs:73
 msgid "Group Messages into Conversations"
 msgstr ""
 
-#: app/src/ui/preferences.rs:74
+#: app/src/ui/preferences.rs:75
 msgid "Show a thread's replies together instead of one row per message"
 msgstr ""
 
-#: app/src/ui/preferences.rs:81
+#: app/src/ui/preferences.rs:82
 msgid "Group Inbox into Categories"
 msgstr ""
 
-#: app/src/ui/preferences.rs:83
+#: app/src/ui/preferences.rs:84
 msgid ""
 "Sort the inbox into Primary, Updates, Promotions, and Social, as Gmail does"
 msgstr ""
 
-#: app/src/ui/preferences.rs:90
+#: app/src/ui/preferences.rs:91
 msgid "Open the Inbox On"
 msgstr ""
 
-#: app/src/ui/preferences.rs:91
+#: app/src/ui/preferences.rs:92
 msgid "Which category the window starts on"
 msgstr ""
 
-#: app/src/ui/preferences.rs:97
+#: app/src/ui/preferences.rs:98
 msgid "Suggest Follow-Ups"
 msgstr ""
 
-#: app/src/ui/preferences.rs:99
+#: app/src/ui/preferences.rs:100
 msgid "List mail you sent that has had no reply for three days"
 msgstr ""
 
-#: app/src/ui/preferences.rs:113
+#: app/src/ui/preferences.rs:114
 msgid "Remote Images"
 msgstr ""
 
-#: app/src/ui/preferences.rs:115
+#: app/src/ui/preferences.rs:116
 msgid "Loading them can tell senders when you read their mail"
 msgstr ""
 
-#: app/src/ui/preferences.rs:123
+#: app/src/ui/preferences.rs:124
 msgid "Text Size"
 msgstr ""
 
-#: app/src/ui/preferences.rs:131
-msgid "Contacts"
-msgstr ""
-
-#: app/src/ui/preferences.rs:133
-msgid ""
-"Penguin Mail can read the contacts of each Google account: names, email "
-"addresses, photos, organizations, and phone numbers. It uses them to suggest "
-"recipients, to show faces beside mail, and to fill the card behind a "
-"sender's name. What it reads stays on this computer, and turning this off "
-"deletes it."
-msgstr ""
-
-#: app/src/ui/preferences.rs:141
-msgid "Use Google Contacts"
-msgstr ""
-
-#: app/src/ui/preferences.rs:142
-msgid "Google asks your permission the first time"
-msgstr ""
-
-#: app/src/ui/preferences.rs:149
+#: app/src/ui/preferences.rs:132
 msgid "Appearance"
 msgstr ""
 
-#: app/src/ui/preferences.rs:153
+#: app/src/ui/preferences.rs:136
 msgid "Style"
 msgstr ""
 
-#: app/src/ui/preferences.rs:162
+#: app/src/ui/preferences.rs:145
 msgid "Notifications"
 msgstr ""
 
-#: app/src/ui/preferences.rs:166
+#: app/src/ui/preferences.rs:149
 msgid "Notify About New Mail"
 msgstr ""
 
-#: app/src/ui/preferences.rs:173
+#: app/src/ui/preferences.rs:156
 msgid "Show Sender and Subject"
 msgstr ""
 
-#: app/src/ui/preferences.rs:174
+#: app/src/ui/preferences.rs:157
 msgid "Turn off to see only how much mail arrived"
 msgstr ""
 
-#: app/src/ui/preferences.rs:184
+#: app/src/ui/preferences.rs:167
 msgid "Only for VIPs"
 msgstr ""
 
-#: app/src/ui/preferences.rs:185
+#: app/src/ui/preferences.rs:168
 msgid "Stay quiet about mail from everyone else"
 msgstr ""
 
-#: app/src/ui/preferences.rs:194
+#: app/src/ui/preferences.rs:177
 msgid "Buttons"
 msgstr ""
 
-#: app/src/ui/preferences.rs:196
+#: app/src/ui/preferences.rs:179
 msgid "What a notification offers besides opening the conversation"
 msgstr ""
 
-#: app/src/ui/preferences.rs:228 app/src/ui/window.rs:3226
+#: app/src/ui/preferences.rs:211 app/src/ui/window.rs:3226
 msgid "Writing"
 msgstr ""
 
-#: app/src/ui/preferences.rs:233
+#: app/src/ui/preferences.rs:216
 msgid "No Accounts Yet"
 msgstr ""
 
-#: app/src/ui/preferences.rs:235
+#: app/src/ui/preferences.rs:218
 msgid "Add an account to choose a sender and write signatures."
 msgstr ""
 
-#: app/src/ui/preferences.rs:244
+#: app/src/ui/preferences.rs:227
 msgid "New Messages"
 msgstr ""
 
-#: app/src/ui/preferences.rs:254
+#: app/src/ui/preferences.rs:237
 msgid "Send New Messages From"
 msgstr ""
 
-#: app/src/ui/preferences.rs:256
+#: app/src/ui/preferences.rs:239
 msgid "Replies always come from the account that received the message"
 msgstr ""
 
-#: app/src/ui/preferences.rs:273
+#: app/src/ui/preferences.rs:256
 msgid "New Messages Start As"
 msgstr ""
 
-#: app/src/ui/preferences.rs:275
+#: app/src/ui/preferences.rs:258
 msgid "Rich text styles the words themselves; Markdown shows its marks"
 msgstr ""
 
-#: app/src/ui/preferences.rs:282
+#: app/src/ui/preferences.rs:265
 msgid "Undo Send"
 msgstr ""
 
-#: app/src/ui/preferences.rs:284
+#: app/src/ui/preferences.rs:267
 msgid "How long you can take a message back after sending it"
 msgstr ""
 
-#: app/src/ui/preferences.rs:291
+#: app/src/ui/preferences.rs:274
 msgid "Check for Missing Attachments"
 msgstr ""
 
-#: app/src/ui/preferences.rs:293
+#: app/src/ui/preferences.rs:276
 msgid "Ask before sending a message that promises a file and carries none"
 msgstr ""
 
-#: app/src/ui/preferences.rs:301
+#: app/src/ui/preferences.rs:284
 msgid "Signatures"
 msgstr ""
 
-#: app/src/ui/preferences.rs:303
+#: app/src/ui/preferences.rs:286
 msgid ""
 "Added below new messages and above quoted text in replies. Markdown works."
 msgstr ""
 
-#: app/src/ui/preferences.rs:325
+#: app/src/ui/preferences.rs:308
 msgid "Signature for {account}"
 msgstr ""
 
-#: app/src/ui/preferences.rs:338
+#: app/src/ui/preferences.rs:321
 msgid "Import from Gmail"
 msgstr ""
 
-#: app/src/ui/preferences.rs:355
+#: app/src/ui/preferences.rs:338
 msgid "This account is not syncing yet"
 msgstr ""
 
-#: app/src/ui/preferences.rs:369
+#: app/src/ui/preferences.rs:352
 msgid "Imported the signature from Gmail"
 msgstr ""
 
-#: app/src/ui/preferences.rs:373
+#: app/src/ui/preferences.rs:356
 msgid "Gmail has no signature for this account"
 msgstr ""
 
-#: app/src/ui/preferences.rs:377
+#: app/src/ui/preferences.rs:360
 msgid "Could not import: {reason}"
 msgstr ""
 
-#: app/src/ui/preferences.rs:425
+#: app/src/ui/preferences.rs:408
 msgid "Signing and Encryption"
 msgstr ""
 
-#: app/src/ui/preferences.rs:427
+#: app/src/ui/preferences.rs:410
 msgid ""
 "Penguin Mail signs and encrypts through GnuPG, which holds your keys and "
 "asks for your passphrase itself."
 msgstr ""
 
-#: app/src/ui/preferences.rs:432
+#: app/src/ui/preferences.rs:415
 msgid "Your OpenPGP Keys"
 msgstr ""
 
-#: app/src/ui/preferences.rs:433
+#: app/src/ui/preferences.rs:416
 msgid "Asking gpg…"
 msgstr ""
 
-#: app/src/ui/preferences.rs:437
+#: app/src/ui/preferences.rs:420
 msgid "Your S/MIME Certificates"
 msgstr ""
 
-#: app/src/ui/preferences.rs:438
+#: app/src/ui/preferences.rs:421
 msgid "Asking gpgsm…"
 msgstr ""
 
-#: app/src/ui/preferences.rs:445
+#: app/src/ui/preferences.rs:428
 msgid "Sign My Messages by Default"
 msgstr ""
 
-#: app/src/ui/preferences.rs:446
+#: app/src/ui/preferences.rs:429
 msgid "New messages open with Sign turned on"
 msgstr ""
 
-#: app/src/ui/preferences.rs:452
+#: app/src/ui/preferences.rs:435
 msgid "Encrypt When I Can"
 msgstr ""
 
-#: app/src/ui/preferences.rs:454
+#: app/src/ui/preferences.rs:437
 msgid "Turn Encrypt on as soon as every recipient has a key or a certificate"
 msgstr ""
 
-#: app/src/ui/preferences.rs:477
+#: app/src/ui/preferences.rs:460
 msgid "gpg could not be asked: {reason}"
 msgstr ""
 
-#: app/src/ui/preferences.rs:496
+#: app/src/ui/preferences.rs:479
 msgid "gpgsm could not be asked: {reason}"
 msgstr ""
 
-#: app/src/ui/preferences.rs:505
+#: app/src/ui/preferences.rs:488
 msgid ""
 "Penguin Mail signs and encrypts through {programs}, which holds your keys "
 "and asks for your passphrase itself."
 msgstr ""
 
-#: app/src/ui/preferences.rs:536
+#: app/src/ui/preferences.rs:519
 msgid "Spelling"
 msgstr ""
 
-#: app/src/ui/preferences.rs:539
+#: app/src/ui/preferences.rs:522
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
 "reopen the composer."
 msgstr ""
 
-#: app/src/ui/preferences.rs:545
+#: app/src/ui/preferences.rs:528
 msgid "Dictionaries found: {languages}."
 msgstr ""
 
-#: app/src/ui/preferences.rs:558
+#: app/src/ui/preferences.rs:541
 msgid "Follow the System Language ({language})"
 msgstr ""
 
-#: app/src/ui/preferences.rs:585
+#: app/src/ui/preferences.rs:568
 msgid "Check Spelling In"
 msgstr ""
 
-#: app/src/ui/preferences.rs:609
+#: app/src/ui/preferences.rs:592
 msgid "Sync"
 msgstr ""
 
-#: app/src/ui/preferences.rs:615
+#: app/src/ui/preferences.rs:598
 msgid "Checking"
 msgstr ""
 
-#: app/src/ui/preferences.rs:621
+#: app/src/ui/preferences.rs:604
 msgid "Check for New Mail"
 msgstr ""
 
-#: app/src/ui/preferences.rs:630
+#: app/src/ui/preferences.rs:613
 msgid "Storage"
 msgstr ""
 
-#: app/src/ui/preferences.rs:635
+#: app/src/ui/preferences.rs:618
 msgid "Keep Mail on This Computer For"
 msgstr ""
 
-#: app/src/ui/preferences.rs:637
+#: app/src/ui/preferences.rs:620
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr ""
 
-#: app/src/ui/preferences.rs:646
+#: app/src/ui/preferences.rs:629
 msgid "Message Cache"
 msgstr ""
 
-#: app/src/ui/preferences.rs:648
+#: app/src/ui/preferences.rs:631
 msgid "Bodies of mail you have read, kept for opening offline"
 msgstr ""
 
-#: app/src/ui/preferences.rs:657
+#: app/src/ui/preferences.rs:640
 msgid "Startup"
 msgstr ""
 
-#: app/src/ui/preferences.rs:660
+#: app/src/ui/preferences.rs:643
 msgid "Start in the Tray at Login"
 msgstr ""
 
-#: app/src/ui/preferences.rs:661
+#: app/src/ui/preferences.rs:644
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr ""
 
-#: app/src/ui/preferences.rs:675
+#: app/src/ui/preferences.rs:658
 msgid "Not available in demo mode"
 msgstr ""
 
-#: app/src/ui/preferences.rs:683
+#: app/src/ui/preferences.rs:666
 msgid "Look for a new release once a day"
 msgstr ""
 
-#: app/src/ui/preferences.rs:697
+#: app/src/ui/preferences.rs:680
 msgid "Senders Who May Load Images"
 msgstr ""
 
-#: app/src/ui/preferences.rs:698 app/src/ui/preferences.rs:706
+#: app/src/ui/preferences.rs:681 app/src/ui/preferences.rs:689
 msgid "Nobody yet"
 msgstr ""
 
-#: app/src/ui/preferences.rs:708
+#: app/src/ui/preferences.rs:691
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/preferences.rs:718
+#: app/src/ui/preferences.rs:701
 msgid "Anyone at this domain"
 msgstr ""
 
-#: app/src/ui/preferences.rs:720
+#: app/src/ui/preferences.rs:703
 msgid "This address"
 msgstr ""
 
-#: app/src/ui/preferences.rs:725
+#: app/src/ui/preferences.rs:708
 msgid "Stop Loading Images from This Sender"
 msgstr ""
 
-#: app/src/ui/preferences.rs:732
+#: app/src/ui/preferences.rs:715
 msgid "Stop loading images from {sender}"
 msgstr ""
 
-#: app/src/ui/preferences.rs:809
+#: app/src/ui/preferences.rs:792
 msgid "Follow System"
 msgstr ""
 
-#: app/src/ui/preferences.rs:813
+#: app/src/ui/preferences.rs:796
 msgid "Language"
 msgstr ""
 
-#: app/src/ui/preferences.rs:814
+#: app/src/ui/preferences.rs:797
 msgid "Penguin Mail shows a new language after a restart"
 msgstr ""
 
-#: app/src/ui/preferences.rs:886
+#: app/src/ui/preferences.rs:869
 msgid "No signature"
 msgstr ""
 

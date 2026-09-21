@@ -31,6 +31,7 @@ pub fn present(
     dialog.add(&general_page(app, &settings));
     let writing = writing_page(app, &settings, accounts, signature_of, &dialog);
     dialog.add(&writing);
+    dialog.add(&super::contacts_prefs::page(app, &settings, accounts));
     if signature_of.is_some() {
         dialog.set_visible_page(&writing);
     }
@@ -126,24 +127,6 @@ fn general_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
         Change::TextSize,
     ));
     page.add(&reading);
-
-    let contacts = adw::PreferencesGroup::builder()
-        .title(gettext("Contacts"))
-        .description(gettext(
-            "Penguin Mail can read the contacts of each Google account: names, email \
-             addresses, photos, organizations, and phone numbers. It uses them to suggest \
-             recipients, to show faces beside mail, and to fill the card behind a sender's \
-             name. What it reads stays on this computer, and turning this off deletes it.",
-        ))
-        .build();
-    contacts.add(&switch_with(
-        app,
-        &gettext("Use Google Contacts"),
-        Some(&gettext("Google asks your permission the first time")),
-        settings.contacts,
-        |app, on| app.set_contacts(on),
-    ));
-    page.add(&contacts);
 
     let appearance = adw::PreferencesGroup::builder()
         .title(gettext("Appearance"))

@@ -540,7 +540,16 @@ impl App {
                 // Give the engine a moment to connect before asking for display names.
                 glib::timeout_future(std::time::Duration::from_millis(500)).await;
                 this.remember_accounts(&accounts);
-                this.refresh_contacts(false);
+                // Contacts were one switch for every account before, which
+                // only ever asked the first account for its permission. This
+                // turns that into each account's own, once, and asks every
+                // account that still lacks it.
+                let folding = this.settings.borrow().contacts;
+                if folding {
+                    let emails = accounts.iter().map(|a| a.email.clone()).collect();
+                    this.change_settings(Change::AllContacts(emails));
+                }
+                this.refresh_contacts(folding);
             }
         });
     }
@@ -677,28 +686,37 @@ impl App {
         found
     }
 
-    /// Turns contacts on or off. Turning them on reads each account's
+    /// Turns one account's contacts on or off. Turning them on reads its
     /// address book, which is when Google asks for the permission; turning
-    /// them off deletes every contact and photo from this computer.
-    pub fn set_contacts(self: &Rc<Self>, on: bool) {
-        self.change_settings(Change::Contacts(on));
+    /// them off deletes that account's contacts and photos from this
+    /// computer and leaves the other accounts' alone.
+    pub fn set_account_contacts(self: &Rc<Self>, email: &str, on: bool) {
+        self.change_settings(Change::AccountContacts {
+            email: email.to_string(),
+            on,
+        });
         if on {
             self.refresh_contacts(true);
             return;
         }
-        let accounts: Vec<AccountId> = self.accounts.borrow().iter().map(|a| a.id).collect();
+        let Some(account_id) = self
+            .accounts
+            .borrow()
+            .iter()
+            .find(|a| a.email.eq_ignore_ascii_case(email))
+            .map(|a| a.id)
+        else {
+            return;
+        };
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let book = this.core.contacts();
-            for account_id in accounts {
-                let book = Arc::clone(&book);
-                if let Err(err) = this
-                    .core
-                    .call(async move { book.forget(account_id).await })
-                    .await
-                {
-                    tracing::warn!(error = %err, "could not delete the stored contacts");
-                }
+            if let Err(err) = this
+                .core
+                .call(async move { book.forget(account_id).await })
+                .await
+            {
+                tracing::warn!(error = %err, "could not delete the stored contacts");
             }
             this.photos.borrow_mut().clear();
             this.contacts_stale.set(true);
@@ -711,10 +729,15 @@ impl App {
     /// this is safe to call on a timer. With `ask`, a missing permission
     /// puts the Grant Access dialog on screen instead of a log line.
     pub fn refresh_contacts(self: &Rc<Self>, ask: bool) {
-        if !self.settings.borrow().contacts {
-            return;
-        }
-        let accounts: Vec<AccountId> = self.accounts.borrow().iter().map(|a| a.id).collect();
+        let accounts: Vec<AccountId> = {
+            let settings = self.settings.borrow();
+            self.accounts
+                .borrow()
+                .iter()
+                .filter(|a| settings.reads_contacts(&a.email))
+                .map(|a| a.id)
+                .collect()
+        };
         if accounts.is_empty() {
             return;
         }
@@ -729,7 +752,14 @@ impl App {
                     .await
             };
             match read {
-                Ok(mailrs_sync::Permitted::Done(refreshed)) => {
+                Ok(refreshed) => {
+                    // Each account Google refused asks for itself, so the
+                    // person grants the one they just switched on.
+                    if let (true, Some(window)) = (ask, this.window()) {
+                        for account_id in &refreshed.needs_permission {
+                            window.ask_for_contacts_access(*account_id);
+                        }
+                    }
                     if refreshed.contacts == 0 && refreshed.photos == 0 {
                         return;
                     }
@@ -740,13 +770,6 @@ impl App {
                     );
                     this.contacts_stale.set(true);
                     this.reload_contacts();
-                }
-                Ok(mailrs_sync::Permitted::NeedsPermission) => {
-                    if let (true, Some(window), Some(first)) =
-                        (ask, this.window(), accounts.first().copied())
-                    {
-                        window.ask_for_contacts_access(first);
-                    }
                 }
                 Err(err) => tracing::warn!(error = %err, "could not read the address book"),
             }

@@ -96,10 +96,15 @@ pub struct Settings {
     /// The newest release already announced in a notification, so each one
     /// is announced once.
     pub announced_update: Option<String>,
-    /// Read each account's Google contacts, for names, photos, and
-    /// recipient suggestions. Off until the owner turns it on, because it
-    /// is the one thing here that asks Google for more access.
+    /// Before contacts were chosen per account, one switch for all of them.
+    /// True folds into `contact_accounts` as every account the first time
+    /// the accounts load, and goes back to false.
     pub contacts: bool,
+    /// The accounts whose Google contacts Penguin Mail reads, for names,
+    /// photos, and recipient suggestions, by lower-case address. Each is off
+    /// until the owner turns it on, because each asks Google for more
+    /// access.
+    pub contact_accounts: Vec<String>,
 }
 
 /// Where the assistant's model runs.
@@ -200,6 +205,7 @@ impl Default for Settings {
             sign_by_default: false,
             encrypt_when_possible: false,
             contacts: false,
+            contact_accounts: Vec::new(),
             offered_to_gnome: Vec::new(),
             check_for_updates: true,
             last_update_check: None,
@@ -448,6 +454,12 @@ pub fn nearest<T: Copy + Into<i64>>(choices: &[(T, String)], value: T) -> u32 {
 }
 
 impl Settings {
+    /// Whether Penguin Mail reads this account's Google contacts.
+    pub fn reads_contacts(&self, email: &str) -> bool {
+        let email = email.to_lowercase();
+        self.contact_accounts.contains(&email)
+    }
+
     /// Reads the file, falling back to defaults when it is missing or invalid.
     pub fn load(path: &Path) -> Settings {
         match std::fs::read_to_string(path) {

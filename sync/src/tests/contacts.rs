@@ -72,7 +72,8 @@ async fn a_refresh_walks_every_page_and_downloads_each_photo_once() {
         refreshed,
         Permitted::Done(Refreshed {
             contacts: 4,
-            photos: 1
+            photos: 1,
+            needs_permission: Vec::new(),
         })
     );
     let mara = b.book.card("MARA@example.org").await.unwrap().unwrap();
@@ -88,7 +89,8 @@ async fn a_refresh_walks_every_page_and_downloads_each_photo_once() {
         again,
         Permitted::Done(Refreshed {
             contacts: 0,
-            photos: 0
+            photos: 0,
+            needs_permission: Vec::new(),
         })
     );
     assert_eq!(
@@ -108,6 +110,31 @@ async fn contacts_wait_for_the_permission() {
         b.book.refresh(h.account_id).await.unwrap(),
         Permitted::NeedsPermission
     );
+}
+
+/// One account without the permission used to stop the refresh, so every
+/// account after it went unread. The harness has one account, so it goes
+/// in twice, and Google refuses only the first read.
+#[tokio::test]
+async fn an_account_without_the_permission_does_not_hold_up_the_rest() {
+    let h = harness().await;
+    let b = book(&h);
+    h.fake.with(|s| {
+        s.contacts = vec![person(
+            "people/c1",
+            "Mara Okafor",
+            &["mara@example.org"],
+            None,
+        )]
+    });
+    h.fake.fail_next(GmailError::MissingScope);
+    let read = b
+        .book
+        .refresh_stale(&[h.account_id, h.account_id], crate::now_millis())
+        .await
+        .unwrap();
+    assert_eq!(read.needs_permission, vec![h.account_id]);
+    assert_eq!(read.contacts, 1);
 }
 
 #[tokio::test]
@@ -138,7 +165,8 @@ async fn an_expired_sync_token_reads_the_whole_address_book_again() {
         refreshed,
         Permitted::Done(Refreshed {
             contacts: 1,
-            photos: 0
+            photos: 0,
+            needs_permission: Vec::new(),
         })
     );
     // Reading it all again replaces what the stale token would have kept.
@@ -162,12 +190,7 @@ async fn a_fresh_address_book_is_left_alone() {
     let calls = h.fake.with(|s| s.usage.calls_to("people.connections.list"));
 
     let now = crate::now_millis();
-    b.book
-        .refresh_stale(&[h.account_id], now)
-        .await
-        .unwrap()
-        .done()
-        .unwrap();
+    b.book.refresh_stale(&[h.account_id], now).await.unwrap();
     assert_eq!(
         h.fake.with(|s| s.usage.calls_to("people.connections.list")),
         calls,
@@ -177,8 +200,6 @@ async fn a_fresh_address_book_is_left_alone() {
     b.book
         .refresh_stale(&[h.account_id], now + REFRESH_AFTER + 1)
         .await
-        .unwrap()
-        .done()
         .unwrap();
     assert!(h.fake.with(|s| s.usage.calls_to("people.connections.list")) > calls);
 }

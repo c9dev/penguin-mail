@@ -50,8 +50,14 @@ pub enum Change {
     SignByDefault(bool),
     /// Turn Encrypt on whenever gpg holds a key for every recipient.
     EncryptWhenPossible(bool),
-    /// Read the accounts' Google contacts, or stop and forget them.
-    Contacts(bool),
+    /// Read one account's Google contacts, or stop and forget them.
+    AccountContacts {
+        email: String,
+        on: bool,
+    },
+    /// Folds the old one switch for every account into the per-account
+    /// list: all of `emails` when it was on.
+    AllContacts(Vec<String>),
     /// The colour the flag button reaches for next.
     FlagColor(FlagColor),
     /// An account's signature. Blank text removes it.
@@ -178,7 +184,23 @@ impl Change {
             Change::CheckAttachments(on) => settings.check_attachments = on,
             Change::SignByDefault(on) => settings.sign_by_default = on,
             Change::EncryptWhenPossible(on) => settings.encrypt_when_possible = on,
-            Change::Contacts(on) => settings.contacts = on,
+            Change::AccountContacts { email, on } => {
+                let email = email.to_lowercase();
+                settings.contact_accounts.retain(|e| *e != email);
+                if on {
+                    settings.contact_accounts.push(email);
+                }
+            }
+            Change::AllContacts(emails) => {
+                if std::mem::take(&mut settings.contacts) {
+                    for email in emails {
+                        let email = email.to_lowercase();
+                        if !settings.contact_accounts.contains(&email) {
+                            settings.contact_accounts.push(email);
+                        }
+                    }
+                }
+            }
             Change::FlagColor(color) => settings.flag_color = color,
             Change::Signature { email, text } => settings.set_signature(&email, &text),
             Change::ToggleVip { email, name } => {
@@ -479,6 +501,7 @@ impl Effects {
             sign_by_default,
             encrypt_when_possible,
             contacts,
+            contact_accounts,
             offered_to_gnome,
             check_for_updates,
             last_update_check,
@@ -544,7 +567,9 @@ impl Effects {
                 }
                 Effect::Assistant => *ai != before.ai,
                 Effect::TextSize => *text_size != before.text_size,
-                Effect::Contacts => *contacts != before.contacts,
+                Effect::Contacts => {
+                    *contacts != before.contacts || *contact_accounts != before.contact_accounts
+                }
                 Effect::Theme => *color_scheme != before.color_scheme,
                 Effect::Language => *language != before.language,
             })
@@ -765,11 +790,55 @@ mod tests {
         after.inbox_categories = !before.inbox_categories;
         after.ai.local_model = "qwen".into();
         after.text_size = TextSize::Small;
-        after.contacts = !before.contacts;
+        after.contact_accounts = vec!["ann@example.com".into()];
         after.color_scheme = ColorScheme::Dark;
         after.language = "pt_PT".into();
         let effects = Effects::between(&before, &after);
         assert_eq!(effects.iter().collect::<Vec<_>>(), Effect::ALL);
+    }
+
+    #[test]
+    fn contacts_turn_on_and_off_one_account_at_a_time() {
+        let mut settings = Settings::default();
+        let on = |email: &str, on| Change::AccountContacts {
+            email: email.into(),
+            on,
+        };
+        assert!(
+            on("Ann@Example.com", true)
+                .apply(&mut settings)
+                .has(Effect::Contacts)
+        );
+        on("bo@example.com", true).apply(&mut settings);
+        on("ann@example.com", true).apply(&mut settings);
+        assert_eq!(
+            settings.contact_accounts,
+            ["bo@example.com", "ann@example.com"]
+        );
+        assert!(settings.reads_contacts("ANN@example.com"));
+        on("ann@example.com", false).apply(&mut settings);
+        assert!(!settings.reads_contacts("ann@example.com"));
+        assert!(settings.reads_contacts("bo@example.com"));
+    }
+
+    #[test]
+    fn the_old_switch_for_every_account_folds_in_once() {
+        let emails = || vec!["ann@example.com".to_string(), "bo@example.com".to_string()];
+        let mut settings = Settings {
+            contacts: true,
+            ..Settings::default()
+        };
+        Change::AllContacts(emails()).apply(&mut settings);
+        assert!(!settings.contacts);
+        assert_eq!(settings.contact_accounts, emails());
+        // Off afterwards stays off: the fold does not run twice.
+        Change::AccountContacts {
+            email: "bo@example.com".into(),
+            on: false,
+        }
+        .apply(&mut settings);
+        Change::AllContacts(emails()).apply(&mut settings);
+        assert!(!settings.reads_contacts("bo@example.com"));
     }
 
     #[test]
@@ -794,7 +863,10 @@ mod tests {
             Change::InboxCategories(false),
             Change::Ai(AiChange::ConfirmActions(false)),
             Change::StepTextSize(1),
-            Change::Contacts(true),
+            Change::AccountContacts {
+                email: "ann@example.com".into(),
+                on: true,
+            },
             Change::ColorScheme(ColorScheme::Light),
             Change::Language("pt_PT".into()),
         ];
@@ -849,6 +921,7 @@ mod tests {
                 "check_for_updates",
                 // Reading contacts asks Google for access of its own, so
                 // it stays a choice the person makes in Preferences.
+                "contact_accounts",
                 "contacts",
                 // How the inbox is arranged, and which slice of it opens
                 // first, is the person's own view of their mail. It sits

@@ -27,6 +27,7 @@ app/src/ui/composer/mod.rs
 app/src/ui/composer/recipients.rs
 app/src/ui/composer/spell.rs
 app/src/ui/contact_card.rs
+app/src/ui/contacts_prefs.rs
 app/src/ui/conversation.rs
 app/src/ui/find.rs
 app/src/ui/hide_my_email.rs

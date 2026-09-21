@@ -5,6 +5,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### New
+
+- Preferences has a Contacts & Calendar page. Google contacts turn on and
+  off for each account, and it shows which accounts GNOME Calendar can see,
+  with a button to add the others.
+
 ### Improved
 
 - Your mail, settings and cache folders can only be opened by your own
@@ -16,6 +22,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   brief server error no longer stops an update.
 - Rules open for an account that has none yet, instead of showing an
   error.
+- Contacts load for every account, not only the first one.
 - The focus ring in a new message is a single thin line around the whole
   row, with room around the text.
 
