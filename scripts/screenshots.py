@@ -513,6 +513,8 @@ ANSWER = """**Waiting on a reply**
 1. **Trail Notes**: five autumn loops under 15 km, and a gear list for cold mornings.
 2. **Linden Books**: 20% off travel guides until Sunday night with the code WANDER. You have not opened it yet."""
 
+REASONING = """The person wants two things: sent mail still waiting on an answer, and what sits in Promotions. The follow_up mailbox lists sent mail that has waited three days or more, and the inbox with the promotions category covers the second. Both calls can go out together."""
+
 MODEL = "scripted-demo"
 
 
@@ -545,7 +547,10 @@ class ScriptedModel(http.server.BaseHTTPRequestHandler):
                 ("list_mail", {"mailbox": "follow_up"}),
                 ("list_mail", {"mailbox": "inbox", "category": "promotions"}),
             ]
+            # It thinks first, the way LM Studio streams a reasoning model.
             chunks = [
+                {"reasoning_content": piece} for piece in re.findall(r"\S+\s*", REASONING)
+            ] + [
                 {
                     "tool_calls": [
                         {
