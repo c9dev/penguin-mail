@@ -1,47 +1,99 @@
 # Penguin Mail privacy policy
 
-Last updated: 19 September 2026
+Last updated: 21 September 2026
 
-Penguin Mail is a desktop email client for Gmail. It runs on your own computer.
-This policy explains what it does with your data.
+Penguin Mail is a desktop email client for Gmail, published by Pivotd
+(https://pivotd.com). It runs on your own computer. This policy explains what
+it accesses, where that data goes, and how it is protected.
 
 ## What Penguin Mail accesses
 
-With your permission, granted through Google's sign-in page, Penguin Mail uses the
-Gmail API scope `gmail.modify` to:
+You grant access through Google's own sign-in page. When you add an account,
+Penguin Mail asks for two permissions:
 
-- read your messages, labels, and drafts, so it can show them;
-- change labels, so you can archive, star, and mark mail read or unread;
-- move messages to the trash;
-- save drafts and send messages that you write.
+- `gmail.modify`, to read your messages, labels and drafts so it can show
+  them; to change labels, so you can archive, star, and mark mail read or
+  unread; to move messages to the Trash; and to save drafts and send the
+  messages you write.
+- `gmail.settings.basic`, to read and change your automatic reply, your
+  signature, and your Gmail filters, when you change them in Penguin Mail.
 
-Penguin Mail does not permanently delete mail and does not change your Gmail
-settings.
+Three more permissions are asked for only when you first use the feature
+that needs them, and never at sign-in:
+
+- `https://mail.google.com/`, when you first choose Delete Forever in the
+  Trash, which erases mail permanently.
+- `contacts.readonly`, when you turn on contacts in Preferences, to show
+  your contacts' names and photos and suggest recipients.
+- `calendar.events`, when you first answer a meeting invitation, to record
+  your answer in Google Calendar.
 
 ## Where your data goes
 
-- Messages are downloaded from Google's servers straight to your computer
-  and stored in a local database in your user folder.
-- The sign-in token is stored in your desktop's keyring.
-- Penguin Mail has no server of its own. No data is sent to the developer or to
-  any third party, and Penguin Mail contains no analytics or advertising.
-- The only network service Penguin Mail talks to is Google's Gmail API. When you
-  choose to load remote images in a message, your computer fetches those
-  images from wherever the sender hosted them.
+- Your mail is downloaded from Google straight to your computer and kept in
+  a local database in your user folder: the last 30 days of mail plus
+  everything in your inbox.
+- Penguin Mail has no server of its own. No data is sent to Pivotd or to any
+  third party, and Penguin Mail contains no analytics, tracking or
+  advertising.
+- Penguin Mail connects to Google's Gmail, People and Calendar APIs, and to
+  GitHub once a day to check for a new version of the app. The update check
+  sends nothing about you or your mail.
+- When you choose to load remote images in a message, your computer fetches
+  those images from wherever the sender hosted them. When you click
+  Unsubscribe, Penguin Mail contacts the address the mailing list gave for
+  that purpose.
+- The assistant is off until you choose a model for it. If you choose a
+  model running on your own computer, your mail stays on your computer. If
+  you choose the Anthropic API or Claude Code, the messages the assistant
+  reads to answer your request are sent to Anthropic, under Anthropic's
+  terms, and only when you ask the assistant something. Penguin Mail does
+  not use your data to train or improve any AI model.
+
+## How your data is protected
+
+- **In transit.** Every connection to Google uses HTTPS with TLS. Sign-in
+  uses OAuth 2.0 with PKCE through your web browser, so Penguin Mail never
+  sees your Google password.
+- **Sign-in tokens.** Google's refresh tokens, and any assistant API keys,
+  are stored in your desktop's keyring (GNOME Keyring or another Secret
+  Service), which encrypts them with your login password. Short-lived
+  access tokens are kept in memory only and never written to disk.
+- **Files on disk.** The folders Penguin Mail keeps its data in are readable
+  by your user account alone, and its configuration file is written the
+  same way. Penguin Mail does not add its own encryption to the local mail
+  database, so we recommend turning on full-disk encryption, which Ubuntu
+  offers during installation.
+- **Reading mail safely.** Messages are displayed with JavaScript turned off
+  and in a sandbox. Remote content is blocked twice, by a content filter and
+  by the page's own security policy, so senders cannot track when you open
+  a message unless you allow images for it.
+- **Encryption and signatures.** OpenPGP and S/MIME are handled by your own
+  GnuPG installation. Penguin Mail never holds your private keys or asks
+  for their passphrases.
+- **Updates.** New versions are downloaded from GitHub over HTTPS and checked
+  against a published SHA-256 checksum before they are installed.
+- **Security reports.** Vulnerabilities can be reported privately, as
+  described at https://github.com/c9dev/penguin-mail/security.
 
 ## Keeping and removing data
 
-Removing an account in Penguin Mail deletes its downloaded mail and its sign-in
-token from your computer. To revoke Penguin Mail's access on Google's side, visit
+Your data stays on your computer until you remove it. Removing an account in
+Penguin Mail deletes its downloaded mail and its sign-in token from your
+computer. Uninstalling the app and deleting `~/.local/share/penguin-mail`,
+`~/.config/penguin-mail` and `~/.cache/penguin-mail` removes everything else.
+To revoke Penguin Mail's access on Google's side, visit
 https://myaccount.google.com/permissions.
 
 ## Google API Services User Data Policy
 
-Penguin Mail's use of information received from Google APIs adheres to the
-Google API Services User Data Policy, including the Limited Use
-requirements.
+Penguin Mail's use and transfer of information received from Google APIs
+adheres to the Google API Services User Data Policy, including the Limited
+Use requirements. Data from Google APIs is used only to provide the features
+you see in the app, is never sold, is never used for advertising, and is
+never used to develop, improve or train generalized AI or machine learning
+models.
 
 ## Contact
 
-Questions about this policy: the email address listed as the developer
-contact on the app's Google consent screen.
+Questions about this policy: penguin@pivotd.com.
