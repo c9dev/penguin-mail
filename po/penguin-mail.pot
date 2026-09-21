@@ -74,23 +74,23 @@ msgstr ""
 msgid "Could not reach GitHub to check for updates"
 msgstr ""
 
-#: app/src/assistant/mod.rs:104
+#: app/src/assistant/mod.rs:120
 msgid "The assistant is off. Choose a model in Preferences."
 msgstr ""
 
-#: app/src/assistant/mod.rs:106
+#: app/src/assistant/mod.rs:122
 msgid "Translation has no model. Choose one in Preferences, on the AI page."
 msgstr ""
 
-#: app/src/assistant/mod.rs:112
+#: app/src/assistant/mod.rs:128
 msgid "Choose a model for the local server in Preferences."
 msgstr ""
 
-#: app/src/assistant/mod.rs:124
+#: app/src/assistant/mod.rs:140
 msgid "Add an Anthropic API key in Preferences."
 msgstr ""
 
-#: app/src/assistant/mod.rs:131
+#: app/src/assistant/mod.rs:147
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr ""
 
@@ -244,6 +244,10 @@ msgstr ""
 
 #: app/src/assistant/run/mail.rs:344
 msgid "Unsubscribe from {sender}?"
+msgstr ""
+
+#: app/src/assistant/sources/mcp/mod.rs:193
+msgid "Run {tool} on the MCP server {server}?"
 msgstr ""
 
 #: app/src/assistant/sources/web.rs:61
@@ -660,7 +664,7 @@ msgstr ""
 msgid "penguin-mail: unknown option {option}"
 msgstr ""
 
-#: app/src/main.rs:214
+#: app/src/main.rs:218
 msgid "Penguin Mail Could Not Start"
 msgstr ""
 
@@ -1086,164 +1090,164 @@ msgstr ""
 msgid "In {label}"
 msgstr ""
 
-#: app/src/settings/mod.rs:139 app/src/settings/mod.rs:302
-#: app/src/settings/mod.rs:574
+#: app/src/settings/mod.rs:142 app/src/settings/mod.rs:305
+#: app/src/settings/mod.rs:578 app/src/ui/assistant_mcp_prefs.rs:184
 msgid "Off"
 msgstr ""
 
-#: app/src/settings/mod.rs:140
+#: app/src/settings/mod.rs:143
 msgid "Local server"
 msgstr ""
 
-#: app/src/settings/mod.rs:141
+#: app/src/settings/mod.rs:144
 msgid "Anthropic API"
 msgstr ""
 
-#: app/src/settings/mod.rs:142
+#: app/src/settings/mod.rs:145
 msgid "Claude subscription"
 msgstr ""
 
-#: app/src/settings/mod.rs:162 app/src/ui/assistant.rs:89
+#: app/src/settings/mod.rs:165 app/src/ui/assistant.rs:89
 msgid "Assistant"
 msgstr ""
 
-#: app/src/settings/mod.rs:163
+#: app/src/settings/mod.rs:166
 msgid "Translation"
 msgstr ""
 
-#: app/src/settings/mod.rs:169
+#: app/src/settings/mod.rs:172
 msgid "Answers questions and acts on your mail"
 msgstr ""
 
-#: app/src/settings/mod.rs:170
+#: app/src/settings/mod.rs:173
 msgid "Translates a message when you ask"
 msgstr ""
 
-#: app/src/settings/mod.rs:207
+#: app/src/settings/mod.rs:210
 msgid "Same as the Assistant"
 msgstr ""
 
-#: app/src/settings/mod.rs:303
+#: app/src/settings/mod.rs:306
 msgid "Claude's own only"
 msgstr ""
 
-#: app/src/settings/mod.rs:304
+#: app/src/settings/mod.rs:307
 msgid "Brave Search"
 msgstr ""
 
-#: app/src/settings/mod.rs:305
+#: app/src/settings/mod.rs:308
 msgid "SearXNG"
 msgstr ""
 
-#: app/src/settings/mod.rs:433
+#: app/src/settings/mod.rs:437
 msgid "Rich text"
 msgstr ""
 
-#: app/src/settings/mod.rs:434
+#: app/src/settings/mod.rs:438
 msgid "Markdown"
 msgstr ""
 
-#: app/src/settings/mod.rs:481
+#: app/src/settings/mod.rs:485
 msgid "When opened"
 msgstr ""
 
-#: app/src/settings/mod.rs:482
+#: app/src/settings/mod.rs:486
 msgid "After 2 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:483
+#: app/src/settings/mod.rs:487
 msgid "Only when I choose"
 msgstr ""
 
-#: app/src/settings/mod.rs:499
+#: app/src/settings/mod.rs:503
 msgid "Ask each time"
 msgstr ""
 
-#: app/src/settings/mod.rs:500
+#: app/src/settings/mod.rs:504
 msgid "Always load"
 msgstr ""
 
-#: app/src/settings/mod.rs:534
+#: app/src/settings/mod.rs:538
 msgid "Small"
 msgstr ""
 
-#: app/src/settings/mod.rs:535
+#: app/src/settings/mod.rs:539
 msgid "Default"
 msgstr ""
 
-#: app/src/settings/mod.rs:536
+#: app/src/settings/mod.rs:540
 msgid "Large"
 msgstr ""
 
-#: app/src/settings/mod.rs:537
+#: app/src/settings/mod.rs:541
 msgid "Larger"
 msgstr ""
 
-#: app/src/settings/mod.rs:575
+#: app/src/settings/mod.rs:579
 msgid "5 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:576
+#: app/src/settings/mod.rs:580
 msgid "10 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:577
+#: app/src/settings/mod.rs:581
 msgid "20 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:578
+#: app/src/settings/mod.rs:582
 msgid "30 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:595
+#: app/src/settings/mod.rs:599
 msgid "Follow system"
 msgstr ""
 
-#: app/src/settings/mod.rs:596
+#: app/src/settings/mod.rs:600
 msgid "Light"
 msgstr ""
 
-#: app/src/settings/mod.rs:597
+#: app/src/settings/mod.rs:601
 msgid "Dark"
 msgstr ""
 
-#: app/src/settings/mod.rs:607
+#: app/src/settings/mod.rs:611
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/settings/mod.rs:615
+#: app/src/settings/mod.rs:619
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/settings/mod.rs:632
+#: app/src/settings/mod.rs:636
 msgid "2 weeks"
 msgstr ""
 
-#: app/src/settings/mod.rs:633
+#: app/src/settings/mod.rs:637
 msgid "30 days"
 msgstr ""
 
-#: app/src/settings/mod.rs:634
+#: app/src/settings/mod.rs:638
 msgid "90 days"
 msgstr ""
 
-#: app/src/settings/mod.rs:635
+#: app/src/settings/mod.rs:639
 msgid "1 year"
 msgstr ""
 
-#: app/src/settings/mod.rs:642
+#: app/src/settings/mod.rs:646
 msgid "256 MB"
 msgstr ""
 
-#: app/src/settings/mod.rs:643
+#: app/src/settings/mod.rs:647
 msgid "1 GB"
 msgstr ""
 
-#: app/src/settings/mod.rs:644
+#: app/src/settings/mod.rs:648
 msgid "4 GB"
 msgstr ""
 
@@ -1631,6 +1635,152 @@ msgstr ""
 msgid "Failed"
 msgstr ""
 
+#: app/src/ui/assistant_mcp_prefs.rs:26
+msgid "MCP Servers"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:28
+msgid ""
+"Tools from servers you add. The assistant asks before each call, unless you "
+"choose Always Allow. A server gets what the assistant sends it."
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:36 app/src/ui/assistant_mcp_prefs.rs:38
+#: app/src/ui/assistant_mcp_prefs.rs:361
+msgid "Add Server"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:105
+msgid "Use {server}"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:111
+msgid "Edit"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:115
+msgid "Edit {server}"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1445
+#: app/src/ui/composer/recipients.rs:208 app/src/ui/window.rs:2510
+msgid "Remove"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:125
+msgid "Remove {server}"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:153
+msgid "Removed {server}"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:223
+msgid "Starts when the assistant needs it"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:224
+msgid "Starting…"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:226
+msgid "Connected, {count} tool"
+msgid_plural "Connected, {count} tools"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:232
+msgid "Could not connect: {reason}"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:249
+msgid ""
+"A command runs on this computer and talks over its input and output, as in "
+"npx -y @modelcontextprotocol/server-filesystem ~/Documents. Put NAME=value "
+"in front for the environment. A URL reaches a server over HTTP."
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:254 app/src/ui/composer/mod.rs:2223
+#: app/src/ui/smart_editor.rs:37 app/src/ui/templates.rs:196
+msgid "Name"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:255
+msgid "Command"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:255 app/src/ui/assistant_mcp_prefs.rs:263
+msgid "URL"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:257
+msgid "Connect With"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:261
+msgid "Command Line"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:265
+msgid "Bearer Token (Optional)"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:268
+msgid "Test the Server"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/assistant_prefs.rs:254
+#: app/src/ui/assistant_web_prefs.rs:59
+msgid "Test"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:341 app/src/ui/composer/mod.rs:2228
+#: app/src/ui/smart_editor.rs:144 app/src/ui/templates.rs:239
+#: app/src/ui/vacation.rs:39 app/src/ui/window/arrange.rs:149
+msgid "Save"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:343
+msgid "Add"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:347 app/src/ui/composer/mod.rs:1346
+#: app/src/ui/composer/mod.rs:1763 app/src/ui/composer/mod.rs:2228
+#: app/src/ui/hide_my_email.rs:272 app/src/ui/smart_editor.rs:150
+#: app/src/ui/templates.rs:153 app/src/ui/templates.rs:245
+#: app/src/ui/vacation.rs:43 app/src/ui/when.rs:52 app/src/ui/window.rs:1699
+#: app/src/ui/window.rs:2509 app/src/ui/window/arrange.rs:104
+#: app/src/ui/window/arrange.rs:149 app/src/ui/window/images.rs:107
+#: app/src/ui/window/organize.rs:84 app/src/ui/window/organize.rs:135
+#: app/src/ui/window/organize.rs:178 app/src/ui/window/senders.rs:61
+#: app/src/ui/window/senders.rs:163
+msgid "Cancel"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:359
+msgid "Edit Server"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:382
+msgid "Give the server a short name of letters, digits, - and _"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:391
+msgid "Another server has that name"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:396
+msgid "Enter a URL that starts with http:// or https://"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:402
+msgid "The command line does not read: {problem}"
+msgstr ""
+
+#: app/src/ui/assistant_mcp_prefs.rs:436
+msgid "Connecting…"
+msgstr ""
+
 #: app/src/ui/assistant_prefs.rs:24
 msgid "AI"
 msgstr ""
@@ -1694,124 +1844,120 @@ msgstr ""
 msgid "Each feature sends what it reads to the model chosen for it."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:152
+#: app/src/ui/assistant_prefs.rs:153
 msgid "Safety"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:155
+#: app/src/ui/assistant_prefs.rs:156
 msgid "Ask Before Acting"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:157
+#: app/src/ui/assistant_prefs.rs:158
 msgid ""
 "Approve each message the assistant sends and each change to Gmail settings, "
 "such as automatic replies and rules"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:173 app/src/ui/conversation.rs:584
+#: app/src/ui/assistant_prefs.rs:174 app/src/ui/conversation.rs:584
 #: app/src/ui/window/detached.rs:57
 msgid "Conversation"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:176
+#: app/src/ui/assistant_prefs.rs:177
 msgid "Show Details Expanded"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:178
+#: app/src/ui/assistant_prefs.rs:179
 msgid "Open the model's thinking and each tool it runs as they appear"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:198
+#: app/src/ui/assistant_prefs.rs:199
 msgid "Always Allowed"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:200
+#: app/src/ui/assistant_prefs.rs:201
 msgid ""
 "Tools from outside sources that run without asking. Remove one to be asked "
 "again next time."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:216
+#: app/src/ui/assistant_prefs.rs:217
 msgid "Ask Again"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:220
+#: app/src/ui/assistant_prefs.rs:221
 msgid "Ask again before {tool}"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:253 app/src/ui/assistant_web_prefs.rs:59
-msgid "Test"
-msgstr ""
-
-#: app/src/ui/assistant_prefs.rs:257
+#: app/src/ui/assistant_prefs.rs:258
 msgid "Test the Connection"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:282 app/src/ui/assistant_web_prefs.rs:90
+#: app/src/ui/assistant_prefs.rs:283 app/src/ui/assistant_web_prefs.rs:90
 msgid "No answer: {reason}"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:342
+#: app/src/ui/assistant_prefs.rs:343
 msgid "Connection"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:488
+#: app/src/ui/assistant_prefs.rs:489
 msgid "Claude Code's own default"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:496
+#: app/src/ui/assistant_prefs.rs:497
 msgid "Model"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:515 app/src/ui/assistant_prefs.rs:519
+#: app/src/ui/assistant_prefs.rs:516 app/src/ui/assistant_prefs.rs:520
 msgid "Models You Can Use"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:540
+#: app/src/ui/assistant_prefs.rs:541
 msgid "Search models"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:557
+#: app/src/ui/assistant_prefs.rs:558
 msgid "Asking for the model list…"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:673
+#: app/src/ui/assistant_prefs.rs:674
 msgid "This provider lists no models. Type a name in the field instead."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:708
+#: app/src/ui/assistant_prefs.rs:709
 msgid "alias"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:748
+#: app/src/ui/assistant_prefs.rs:749
 msgid "Found on This Computer"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:752
+#: app/src/ui/assistant_prefs.rs:753
 msgid "Looking for LM Studio, Ollama, Unsloth, and Claude Code…"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:768
+#: app/src/ui/assistant_prefs.rs:769
 msgid "Nothing found"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:770
+#: app/src/ui/assistant_prefs.rs:771
 msgid ""
 "Start LM Studio's server or Ollama, or install Claude Code, then open "
 "Preferences again."
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:782
+#: app/src/ui/assistant_prefs.rs:783
 msgid "{model} and {count} more"
 msgid_plural "{model} and {count} more"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/assistant_prefs.rs:793
+#: app/src/ui/assistant_prefs.rs:794
 msgid "Use"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:798
+#: app/src/ui/assistant_prefs.rs:799
 msgid "Use {provider}"
 msgstr ""
 
@@ -2034,18 +2180,6 @@ msgstr ""
 msgid "Discard"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1346 app/src/ui/composer/mod.rs:1763
-#: app/src/ui/composer/mod.rs:2228 app/src/ui/hide_my_email.rs:272
-#: app/src/ui/smart_editor.rs:150 app/src/ui/templates.rs:153
-#: app/src/ui/templates.rs:245 app/src/ui/vacation.rs:43 app/src/ui/when.rs:52
-#: app/src/ui/window.rs:1699 app/src/ui/window.rs:2509
-#: app/src/ui/window/arrange.rs:104 app/src/ui/window/arrange.rs:149
-#: app/src/ui/window/images.rs:107 app/src/ui/window/organize.rs:84
-#: app/src/ui/window/organize.rs:135 app/src/ui/window/organize.rs:178
-#: app/src/ui/window/senders.rs:61 app/src/ui/window/senders.rs:163
-msgid "Cancel"
-msgstr ""
-
 #: app/src/ui/composer/mod.rs:1347
 msgid "Save Draft"
 msgstr ""
@@ -2056,11 +2190,6 @@ msgstr ""
 
 #: app/src/ui/composer/mod.rs:1404
 msgid "{files}  ·  {size}"
-msgstr ""
-
-#: app/src/ui/composer/mod.rs:1445 app/src/ui/composer/recipients.rs:208
-#: app/src/ui/window.rs:2510
-msgid "Remove"
 msgstr ""
 
 #: app/src/ui/composer/mod.rs:1449
@@ -2181,17 +2310,6 @@ msgstr ""
 
 #: app/src/ui/composer/mod.rs:2219
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
-msgstr ""
-
-#: app/src/ui/composer/mod.rs:2223 app/src/ui/smart_editor.rs:37
-#: app/src/ui/templates.rs:196
-msgid "Name"
-msgstr ""
-
-#: app/src/ui/composer/mod.rs:2228 app/src/ui/smart_editor.rs:144
-#: app/src/ui/templates.rs:239 app/src/ui/vacation.rs:39
-#: app/src/ui/window/arrange.rs:149
-msgid "Save"
 msgstr ""
 
 #: app/src/ui/composer/mod.rs:2242 app/src/ui/templates.rs:286
@@ -2855,31 +2973,31 @@ msgstr ""
 msgid "This meeting is canceled"
 msgstr ""
 
-#: app/src/ui/mod.rs:133
+#: app/src/ui/mod.rs:134
 msgid "Gray"
 msgstr ""
 
-#: app/src/ui/mod.rs:147 app/src/ui/sidebar.rs:464
+#: app/src/ui/mod.rs:148 app/src/ui/sidebar.rs:464
 msgid "Inbox"
 msgstr ""
 
-#: app/src/ui/mod.rs:148
+#: app/src/ui/mod.rs:149
 msgid "Flagged"
 msgstr ""
 
-#: app/src/ui/mod.rs:149
+#: app/src/ui/mod.rs:150
 msgid "Sent"
 msgstr ""
 
-#: app/src/ui/mod.rs:150
+#: app/src/ui/mod.rs:151
 msgid "Drafts"
 msgstr ""
 
-#: app/src/ui/mod.rs:151 app/src/ui/thread_row.rs:78 app/src/ui/window.rs:254
+#: app/src/ui/mod.rs:152 app/src/ui/thread_row.rs:78 app/src/ui/window.rs:254
 msgid "Muted"
 msgstr ""
 
-#: app/src/ui/mod.rs:152 app/src/ui/thread_list.rs:245
+#: app/src/ui/mod.rs:153 app/src/ui/thread_list.rs:245
 msgid "Mail"
 msgstr ""
 

@@ -2019,6 +2019,7 @@ name = "mailrs-ai"
 version = "0.1.2"
 dependencies = [
  "async-channel",
+ "base64 0.23.1",
  "futures",
  "reqwest",
  "serde",

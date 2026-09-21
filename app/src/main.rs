@@ -159,7 +159,11 @@ fn main() -> glib::ExitCode {
             app.activate();
         }
     });
-    gio_app.run_with_args(&args[..1])
+    let code = gio_app.run_with_args(&args[..1]);
+    // The MCP servers live in a static, which nothing drops, and a stdio
+    // server would outlive the app without this.
+    assistant::sources::mcp::registry().stop_all();
+    code
 }
 
 /// The address part of a `mailto:` URI, percent-decoded.

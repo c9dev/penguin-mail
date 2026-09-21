@@ -10,6 +10,8 @@ use mailrs_domain::{Category, FlagColor, SmartMailbox};
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
+use crate::assistant::sources::mcp::McpServer;
+
 use super::{
     Choice, ColorScheme, ComposeFormat, Feature, MarkRead, RemoteImages, Settings, TextSize,
     UndoSend, Use, WebSearch,
@@ -128,6 +130,20 @@ pub enum Change {
     AllowTool(String),
     /// Asks before this outside tool again.
     ForbidTool(String),
+    /// Adds an MCP server, or replaces the one named `was`. A server that
+    /// changes its name loses the tools answered Always Allow under the
+    /// old one, since the keys carry the name.
+    SaveMcpServer {
+        was: Option<String>,
+        server: McpServer,
+    },
+    /// Removes an MCP server with the tools of it answered Always Allow.
+    RemoveMcpServer(String),
+    /// Offers an MCP server's tools to the assistant, or stops offering them.
+    EnableMcpServer {
+        name: String,
+        on: bool,
+    },
 }
 
 /// A change to the AI settings. API keys live in the keyring and never come
@@ -295,8 +311,35 @@ impl Change {
                 }
             }
             Change::ForbidTool(key) => settings.assistant_allowed_tools.retain(|k| *k != key),
+            Change::SaveMcpServer { was, server } => {
+                let replaced = was.as_deref().unwrap_or(&server.name).to_string();
+                if replaced != server.name {
+                    forget_mcp_tools(settings, &replaced);
+                }
+                match settings.mcp_servers.iter_mut().find(|s| s.name == replaced) {
+                    Some(slot) => *slot = server,
+                    None => settings.mcp_servers.push(server),
+                }
+            }
+            Change::RemoveMcpServer(name) => {
+                settings.mcp_servers.retain(|s| s.name != name);
+                forget_mcp_tools(settings, &name);
+            }
+            Change::EnableMcpServer { name, on } => {
+                if let Some(server) = settings.mcp_servers.iter_mut().find(|s| s.name == name) {
+                    server.enabled = on;
+                }
+            }
         }
     }
+}
+
+/// Drops the Always Allow answers for one MCP server's tools.
+fn forget_mcp_tools(settings: &mut Settings, server: &str) {
+    let prefix = format!("mcp:{server}/");
+    settings
+        .assistant_allowed_tools
+        .retain(|key| !key.starts_with(&prefix));
 }
 
 impl AiChange {
@@ -505,6 +548,7 @@ impl Effects {
             account_order,
             account_colors,
             account_names,
+            mcp_servers,
             ai,
             assistant_details_expanded,
             assistant_allowed_tools,
@@ -560,6 +604,8 @@ impl Effects {
             assistant_details_expanded,
             // The toolbox reads these when a turn starts.
             assistant_allowed_tools,
+            // So do these, and the AI page stops a server it turns off.
+            mcp_servers,
             // The updater reads these when its timer fires.
             check_for_updates,
             last_update_check,
@@ -1041,6 +1087,9 @@ mod tests {
                 "language",
                 "last_sender",
                 "last_update_check",
+                // Each server runs commands or reaches a service of the
+                // person's choosing, so only Preferences adds one.
+                "mcp_servers",
                 // Which buttons a notification carries is a list, and a
                 // setting the assistant changes by name holds one value.
                 "notification_buttons",

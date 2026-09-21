@@ -26,6 +26,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   later, write from your templates, unsubscribe you from lists, read
   text, web page and PDF attachments, and look people up in your
   contacts.
+- The assistant can use tools from MCP servers you add on the AI page, by
+  a command or a URL. It asks before each call, and Always Allow stops the
+  asking for a tool you trust.
 
 ### Improved
 

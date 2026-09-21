@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 pub mod bridge;
 mod detect;
 mod history;
+pub mod mcp;
 mod providers;
 mod sse;
 #[cfg(test)]
@@ -44,6 +45,12 @@ pub enum ToolOutcome {
 pub trait ToolHost: Send + Sync + 'static {
     fn specs(&self) -> Vec<ToolSpec>;
     fn call(&self, name: String, input: serde_json::Value) -> BoxFuture<ToolOutcome>;
+    /// Gets the tools ready before the model first sees them, such as
+    /// starting the servers some of them come from. [`ToolHost::specs`]
+    /// cannot wait, so a turn waits here first.
+    fn prepare(&self) -> BoxFuture<()> {
+        Box::pin(async {})
+    }
 }
 
 /// Where the model runs. Chosen in Preferences.
@@ -137,6 +144,7 @@ impl Conversation {
         host: Arc<dyn ToolHost>,
         events: async_channel::Sender<AgentEvent>,
     ) -> Result<String, AiError> {
+        host.prepare().await;
         self.inner.send(text, host, events).await
     }
 }

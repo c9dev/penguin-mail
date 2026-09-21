@@ -8,6 +8,7 @@
 //! Claude Code through the bridge in front of it, so the asking below holds
 //! whichever model runs.
 
+pub mod mcp;
 pub mod web;
 
 use std::collections::HashSet;
@@ -48,12 +49,18 @@ pub trait Source: Send + Sync {
     /// runs without asking.
     fn ask(&self, name: &str, input: &Value) -> Option<String>;
     fn call(&self, name: String, input: Value) -> BoxFuture<ToolOutcome>;
+    /// Gets the tools ready before a turn lists them, such as starting a
+    /// server. Most sources have nothing to wait for.
+    fn prepare(&self) -> BoxFuture<()> {
+        Box::pin(async {})
+    }
 }
 
 /// The sources the settings turn on. Each later part adds its own here.
 pub fn for_settings(settings: &Settings) -> Vec<Arc<dyn Source>> {
     let mut sources = Vec::new();
     sources.extend(web::for_settings(settings));
+    sources.extend(mcp::sources(&settings.mcp_servers));
     sources
 }
 
@@ -97,6 +104,13 @@ impl ToolHost for Toolbox {
             specs.extend(source.specs());
         }
         specs
+    }
+
+    fn prepare(&self) -> BoxFuture<()> {
+        let waits: Vec<_> = self.sources.iter().map(|source| source.prepare()).collect();
+        Box::pin(async move {
+            futures::future::join_all(waits).await;
+        })
     }
 
     fn call(&self, name: String, input: Value) -> BoxFuture<ToolOutcome> {

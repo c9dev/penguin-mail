@@ -157,6 +157,52 @@ open an address on your computer or your home network, so a message cannot
 send the model to your router. Neither tool asks before it runs, since both
 only read. The model is told that search results and pages are written by
 strangers and that it must not follow instructions in them.
+## Add MCP servers
+
+An MCP server gives the assistant tools from outside Penguin Mail, such as
+your files or an issue tracker. Add one in Preferences, on the AI page,
+under **MCP Servers**: press **+**, give it a short name, and choose how
+Penguin Mail reaches it.
+
+**Command** starts a program on this computer and talks to it over its
+input and output. Type the command line the way the server's README
+prints it. Quotes work as they do in a shell, and `NAME=value` words in
+front set environment variables. The filesystem server, for one folder:
+
+```
+npx -y @modelcontextprotocol/server-filesystem /home/ana/Documents
+```
+
+Environment variables are saved in the settings file, so a server that
+takes a secret there keeps it in that file.
+
+**URL** reaches a server over HTTP. Paste its address, and its bearer
+token if it takes one; the token goes to the keyring:
+
+```
+https://mcp.example.com/mcp
+```
+
+Penguin Mail cannot sign in to a server through a browser. A server that
+needs that says so when you press **Test**.
+
+**Test** connects, lists the server's tools, and says how many there are
+or what went wrong. The server's row says the same once the assistant has
+used it.
+
+A server starts the first time the assistant needs it, stays running for
+later questions, and stops when you turn it off, remove it, or quit
+Penguin Mail. One that fails to start offers no tools, and its row says
+why. The assistant sees each tool as `name__tool`, such as
+`files__read_file`, and asks you before each call, showing the tool and
+what it will send. **Always Allow** stops the asking for that tool, and
+the **Always Allowed** list on the AI page takes that back.
+
+Penguin Mail speaks MCP revision 2026-07-28, and the handshake of
+2025-11-25 and earlier for the servers that still use it, over a command
+or Streamable HTTP. With your Claude subscription, the tools reach Claude
+Code through the same bridge as the mail tools, and the asking holds there
+too.
 
 ## What it asks before doing
 
@@ -189,7 +235,9 @@ Claude Code send what a feature reads to Anthropic. Each feature sends to
 the model chosen for it, so the assistant and translation can go to
 different places. The assistant reads only what a task needs, but that can
 be whole conversations. Translation sends the message you asked it to
-translate, and only after you press the button.
+translate, and only after you press the button. An MCP server you add gets
+what the assistant sends it in each call, which can include text from your
+mail.
 
 A web search sends its words to the search engine in use: Anthropic for
 Claude, or Brave or your SearXNG server for a local model. Those words come

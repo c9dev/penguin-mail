@@ -60,15 +60,22 @@ that needs them, and never at sign-in:
   your request and can include what the assistant read in your mail. When
   it reads a page, the site that serves it sees a request from your
   computer, or from Anthropic's servers when the assistant runs on Claude.
+- On the AI page you can add MCP servers: programs on your computer or
+  services on the web that give the assistant more tools. Penguin Mail adds
+  none by itself. A server you add receives what the assistant sends it in
+  each tool call, which can include text from your mail, and the assistant
+  asks you before each call unless you chose Always Allow for that tool.
+  What the server does with it is up to whoever runs the server.
 
 ## How your data is protected
 
 - **In transit.** Every connection to Google uses HTTPS with TLS. Sign-in
   uses OAuth 2.0 with PKCE through your web browser, so Penguin Mail never
   sees your Google password.
-- **Sign-in tokens.** Google's refresh tokens, and any assistant API keys,
-  are stored in your desktop's keyring (GNOME Keyring or another Secret
-  Service), which encrypts them with your login password. Short-lived
+- **Sign-in tokens.** Google's refresh tokens, any assistant API keys, and
+  the tokens of MCP servers you add are stored in your desktop's keyring
+  (GNOME Keyring or another Secret Service), which encrypts them with your
+  login password. Short-lived
   access tokens are kept in memory only and never written to disk.
 - **Files on disk.** The folders Penguin Mail keeps its data in are readable
   by your user account alone, and its configuration file is written the
