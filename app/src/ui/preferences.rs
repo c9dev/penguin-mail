@@ -676,6 +676,15 @@ fn sync_page(app: &Rc<App>, pending: &Rc<RefCell<SyncConfig>>) -> adw::Preferenc
         }
     }
     startup.add(&login);
+    if app.can_update() {
+        startup.add(&switch(
+            app,
+            &gettext("Check for Updates"),
+            Some(&gettext("Look for a new release once a day")),
+            app.settings().check_for_updates,
+            Change::CheckForUpdates,
+        ));
+    }
     page.add(&startup);
     page
 }

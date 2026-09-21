@@ -87,6 +87,15 @@ pub struct Settings {
     /// The offer is worth making once: whoever says no to it means no,
     /// and whoever says yes has GNOME asking them the rest.
     pub offered_to_gnome: Vec<String>,
+    /// Ask GitHub once a day whether a newer release is out.
+    pub check_for_updates: bool,
+    /// When the last timed check ran, in seconds since the Unix epoch. The
+    /// app restarts itself after its window closes, so without this it
+    /// would check on every start.
+    pub last_update_check: Option<i64>,
+    /// The newest release already announced in a notification, so each one
+    /// is announced once.
+    pub announced_update: Option<String>,
     /// Read each account's Google contacts, for names, photos, and
     /// recipient suggestions. Off until the owner turns it on, because it
     /// is the one thing here that asks Google for more access.
@@ -192,6 +201,9 @@ impl Default for Settings {
             encrypt_when_possible: false,
             contacts: false,
             offered_to_gnome: Vec::new(),
+            check_for_updates: true,
+            last_update_check: None,
+            announced_update: None,
         }
     }
 }

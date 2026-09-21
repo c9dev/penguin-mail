@@ -41,6 +41,7 @@ pub enum Change {
     InboxCategories(bool),
     DefaultCategory(Category),
     SuggestFollowUps(bool),
+    CheckForUpdates(bool),
     /// What a new message starts as.
     ComposeFormat(ComposeFormat),
     /// Ask before a message that promises a file goes without one.
@@ -172,6 +173,7 @@ impl Change {
             Change::InboxCategories(on) => settings.inbox_categories = on,
             Change::DefaultCategory(category) => settings.default_category = category,
             Change::SuggestFollowUps(on) => settings.suggest_follow_ups = on,
+            Change::CheckForUpdates(on) => settings.check_for_updates = on,
             Change::ComposeFormat(format) => settings.compose_format = format,
             Change::CheckAttachments(on) => settings.check_attachments = on,
             Change::SignByDefault(on) => settings.sign_by_default = on,
@@ -478,6 +480,9 @@ impl Effects {
             encrypt_when_possible,
             contacts,
             offered_to_gnome,
+            check_for_updates,
+            last_update_check,
+            announced_update,
         } = after;
         // These leave the window as it is. The flag colour, the delay before
         // Send commits, and the rest are read when they are needed, so
@@ -507,6 +512,10 @@ impl Effects {
             // The event card reads this as it goes up, and it changes
             // nothing that is already on screen.
             offered_to_gnome,
+            // The updater reads these when its timer fires.
+            check_for_updates,
+            last_update_check,
+            announced_update,
         );
         let smart_changed = *smart_mailboxes != before.smart_mailboxes;
         let colors_changed = *account_colors != before.account_colors;
@@ -830,9 +839,14 @@ mod tests {
                 "account_names",
                 "account_order",
                 "ai",
+                // The updater's own record of what it announced.
+                "announced_update",
                 // The composer reads this as a message goes out, so the
                 // assistant has no business turning the warning off.
                 "check_attachments",
+                // Whether the app asks GitHub for new releases is the
+                // person's call, made in Preferences.
+                "check_for_updates",
                 // Reading contacts asks Google for access of its own, so
                 // it stays a choice the person makes in Preferences.
                 "contacts",
@@ -851,6 +865,7 @@ mod tests {
                 // so it would change a preference with nothing to show.
                 "language",
                 "last_sender",
+                "last_update_check",
                 // Which buttons a notification carries is a list, and a
                 // setting the assistant changes by name holds one value.
                 "notification_buttons",

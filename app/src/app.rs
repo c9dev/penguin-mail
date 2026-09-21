@@ -32,6 +32,7 @@ const BLOCK_REMOTE_RULES: &str = r#"[
 ]"#;
 
 mod sending;
+mod updates;
 
 type AppAction = Box<dyn Fn(&Rc<App>)>;
 
@@ -71,6 +72,9 @@ pub struct App {
     /// Which languages a dictionary is installed for, read once.
     installed_dictionaries: RefCell<Option<Vec<String>>>,
     scheduler_running: Cell<bool>,
+    /// Finds and installs newer releases. None in the demo and in a cargo
+    /// build, which never update.
+    updater: Option<Rc<crate::update::Updater>>,
     _hold: gio::ApplicationHoldGuard,
 }
 
@@ -121,6 +125,7 @@ impl App {
             dictionaries: RefCell::new(HashMap::new()),
             installed_dictionaries: RefCell::new(None),
             scheduler_running: Cell::new(false),
+            updater: crate::update::Updater::for_this_copy(core_demo).map(Rc::new),
             _hold: gio_app.hold(),
         });
         app.install_actions();
@@ -144,6 +149,7 @@ impl App {
         app.load_accounts();
         app.start_scheduler();
         app.watch_contacts();
+        app.start_update_checks();
         if !app.core.demo {
             crate::assistant::preload_keys();
         }
@@ -279,6 +285,9 @@ impl App {
             self.compile_filter();
         }
         let window = MainWindow::new(self);
+        if let Some(updater) = &self.updater {
+            window.show_update(&updater.state());
+        }
         *self.window.borrow_mut() = Some(Rc::clone(&window));
         self.window_opened();
         window.present();
@@ -1005,6 +1014,8 @@ impl App {
             unread: 0,
             accounts: Vec::new(),
             commands,
+            can_update: self.updater.is_some(),
+            update: None,
         };
         let slot = Arc::clone(&self.tray);
         // The restart that returns memory execs in place and keeps the pid,
@@ -1034,6 +1045,9 @@ impl App {
                     }
                     TrayCommand::Compose => this.compose_to(""),
                     TrayCommand::Check => this.core.poke_all(),
+                    TrayCommand::CheckForUpdates => this.check_for_updates(true),
+                    TrayCommand::InstallUpdate => this.install_update(),
+                    TrayCommand::WhatsNew => this.open_release_notes(),
                     TrayCommand::Quit => this.quit(),
                 }
             }

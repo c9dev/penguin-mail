@@ -97,6 +97,8 @@ pub struct MainWindow {
     app: Weak<App>,
     core: Rc<Core>,
     toasts: adw::ToastOverlay,
+    /// Says a release is available, installing, waiting to restart, or failed.
+    update_banner: adw::Banner,
     stack: gtk::Stack,
     split: adw::OverlaySplitView,
     nav: adw::NavigationSplitView,
@@ -435,8 +437,15 @@ impl MainWindow {
             stack.add_named(&assistant_split, Some("mail"));
             stack.add_named(&setup, Some("setup"));
             stack.add_named(&first_page, Some("first-account"));
+            // An update's banner spans the whole window, above the panes,
+            // since it is about the app and not the mail on screen.
+            let update_banner = adw::Banner::builder().revealed(false).build();
+            let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
+            content.append(&update_banner);
+            content.append(&stack);
+            stack.set_vexpand(true);
             let toasts = adw::ToastOverlay::new();
-            toasts.set_child(Some(&stack));
+            toasts.set_child(Some(&content));
             let window = adw::Window::builder()
                 .title(if app.core.demo {
                     gettext("Penguin Mail (Demo)")
@@ -476,6 +485,7 @@ impl MainWindow {
                 app: Rc::downgrade(app),
                 core: Rc::clone(&app.core),
                 toasts,
+                update_banner,
                 stack,
                 split,
                 nav,
@@ -607,6 +617,57 @@ impl MainWindow {
 
     pub fn install_filter(&self, filter: webkit::UserContentFilter) {
         self.conversation.set_filter(filter);
+    }
+
+    /// Shows where an update stands, or hides the banner when nothing does.
+    /// Each state's button runs an app action, so the banner needs no
+    /// callbacks of its own.
+    pub fn show_update(&self, state: &crate::update::State) {
+        use crate::update::State;
+        let banner = &self.update_banner;
+        let (title, button) = match state {
+            State::Idle => {
+                banner.set_revealed(false);
+                return;
+            }
+            State::Available(release) => (
+                fill(
+                    &gettext("Penguin Mail {version} is available"),
+                    &[("version", &release.version.to_string())],
+                ),
+                Some((gettext("Install"), "app.install-update")),
+            ),
+            State::Installing(version) => (
+                fill(
+                    &gettext("Installing Penguin Mail {version}"),
+                    &[("version", &version.to_string())],
+                ),
+                None,
+            ),
+            State::Installed(_) => (
+                gettext("Restart to finish updating"),
+                Some((gettext("Restart"), "app.restart-for-update")),
+            ),
+            State::Failed { version, .. } => (
+                fill(
+                    &gettext("The update to {version} failed"),
+                    &[("version", &version.to_string())],
+                ),
+                Some((gettext("Show Log"), "app.update-log")),
+            ),
+        };
+        banner.set_title(&title);
+        match button {
+            Some((label, action)) => {
+                banner.set_button_label(Some(&label));
+                banner.set_action_name(Some(action));
+            }
+            None => {
+                banner.set_button_label(None);
+                banner.set_action_name(None);
+            }
+        }
+        banner.set_revealed(true);
     }
 
     fn toast(&self, text: &str) {

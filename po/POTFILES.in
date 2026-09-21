@@ -3,6 +3,7 @@
 # from what it found.
 app/data/dev.penguinmail.PenguinMail.desktop
 app/src/app/sending.rs
+app/src/app/updates.rs
 app/src/assistant/mod.rs
 app/src/assistant/run.rs
 app/src/compose.rs
@@ -59,6 +60,7 @@ app/src/ui/window/reminders.rs
 app/src/ui/window/scheduled.rs
 app/src/ui/window/senders.rs
 app/src/ui/window/translation.rs
+app/src/update/mod.rs
 domain/src/category.rs
 domain/src/invitation.rs
 domain/src/invitation/recurrence.rs

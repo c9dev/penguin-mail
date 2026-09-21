@@ -30,6 +30,7 @@ mod translation;
 mod tray;
 mod ui;
 mod unsubscribe;
+mod update;
 
 use std::cell::RefCell;
 use std::rc::Rc;

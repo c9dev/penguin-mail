@@ -8,6 +8,9 @@ pub enum TrayCommand {
     Open,
     Compose,
     Check,
+    CheckForUpdates,
+    InstallUpdate,
+    WhatsNew,
     Quit,
 }
 
@@ -44,6 +47,10 @@ pub struct MailTray {
     /// Each account's address and unread INBOX count.
     pub accounts: Vec<(String, i64)>,
     pub commands: async_channel::Sender<TrayCommand>,
+    /// This copy can update itself, so the menu offers a check.
+    pub can_update: bool,
+    /// A newer release waiting to be installed.
+    pub update: Option<String>,
 }
 
 impl MailTray {
@@ -127,6 +134,20 @@ impl ksni::Tray for MailTray {
         items.push(item(&gettext("Open Penguin Mail"), || TrayCommand::Open));
         items.push(item(&gettext("New Message"), || TrayCommand::Compose));
         items.push(item(&gettext("Check for Mail"), || TrayCommand::Check));
+        if let Some(version) = &self.update {
+            items.push(MenuItem::Separator);
+            let install = fill(
+                &gettext("Install Update {version}"),
+                &[("version", version)],
+            );
+            let notes = fill(&gettext("What's New in {version}"), &[("version", version)]);
+            items.push(item(&install, || TrayCommand::InstallUpdate));
+            items.push(item(&notes, || TrayCommand::WhatsNew));
+        } else if self.can_update {
+            items.push(item(&gettext("Check for Updates"), || {
+                TrayCommand::CheckForUpdates
+            }));
+        }
         items.push(MenuItem::Separator);
         items.push(item(&gettext("Quit"), || TrayCommand::Quit));
         items
