@@ -6,10 +6,9 @@ use std::rc::{Rc, Weak};
 
 use adw::prelude::*;
 use gtk::{gio, glib};
-use mailrs_domain::ThreadSummary;
-use mailrs_sync::{History, MailAction, TriageAction};
+use mailrs_domain::{Folder, ThreadSummary};
 
-use super::{MainWindow, Target};
+use super::MainWindow;
 use crate::compose::ReplyKind;
 use crate::ui::conversation::{Action, ConversationView};
 use mailrs_domain::Category;
@@ -43,10 +42,12 @@ impl MainWindow {
             let (Some(win), Some(view)) = (win.upgrade(), slot.borrow().upgrade()) else {
                 return;
             };
-            win.act_in_window(&view, action);
+            win.act_from(&view, action);
         });
         *holder.borrow_mut() = Rc::downgrade(&view);
         view.set_detached();
+        self.detached.borrow_mut().push(Rc::downgrade(&view));
+        view.set_folder(self.mailbox.borrow().folder());
         if let Some(filter) = self.app.upgrade().and_then(|app| app.filter()) {
             view.set_filter(filter);
         }
@@ -71,70 +72,27 @@ impl MainWindow {
         self.load_into(view, summary);
     }
 
-    /// What a separate window's buttons do: the same as the main window,
-    /// but on its own conversation.
-    fn act_in_window(self: &Rc<Self>, view: &Rc<ConversationView>, action: Action) {
-        let organize = |action: TriageAction, closes: bool| {
-            let Some(target) = view.read(|o| Target {
-                account_id: o.account_id,
-                thread_id: o.thread_id.clone(),
-                message_id: o.only_message.clone(),
-            }) else {
-                return;
-            };
-            self.perform(
-                vec![target],
-                MailAction::Triage(action),
-                History::Record,
-                None,
-            );
-            if closes && let Some(window) = view.page.root().and_downcast::<gtk::Window>() {
-                window.close();
-            }
-        };
-        match action {
-            Action::Reply(kind) => self.reply_from(view, kind),
-            Action::EditDraft => self.edit_draft_from(view),
-            Action::Archive => organize(TriageAction::Archive, true),
-            Action::Trash => organize(TriageAction::Trash, true),
-            Action::Junk => organize(TriageAction::Junk, true),
-            Action::ToggleStar => {
-                let starred = view.read(|o| o.starred()).unwrap_or(false);
-                organize(
-                    if starred {
-                        TriageAction::Unstar
-                    } else {
-                        TriageAction::Star
-                    },
-                    false,
-                );
-            }
-            Action::ToggleRead => {
-                let unread = view.read(|o| o.unread()).unwrap_or(false);
-                organize(
-                    if unread {
-                        TriageAction::MarkRead
-                    } else {
-                        TriageAction::MarkUnread
-                    },
-                    false,
-                );
-            }
-            Action::LoadImages => self.load_images_once(&Rc::clone(view)),
-            Action::SaveAttachment { message_id, index } => {
-                self.save_attachment_from(view, message_id, index)
-            }
-            Action::PreviewAttachment { message_id, index } => {
-                self.preview_attachment_from(view, message_id, index)
-            }
-            Action::SaveAllAttachments { message_id } => {
-                self.save_all_attachments_from(view, message_id)
-            }
-            Action::Unsubscribe => self.unsubscribe_from(Rc::clone(view)),
-            Action::Invitation(action) => self.invitation_action(view, action),
-            Action::Mailto(address) => self.act(Action::Mailto(address)),
-            Action::ShowContact(address) => self.act(Action::ShowContact(address)),
-            Action::Translate => self.translate_message(view),
+    /// Every conversation on screen: the main window's, and one for each
+    /// window of its own. Windows that have closed drop out here.
+    pub(super) fn views(&self) -> Vec<Rc<ConversationView>> {
+        let mut views = vec![Rc::clone(&self.conversation)];
+        self.detached
+            .borrow_mut()
+            .retain(|held| match held.upgrade() {
+                Some(view) => {
+                    views.push(view);
+                    true
+                }
+                None => false,
+            });
+        views
+    }
+
+    /// Tells every conversation on screen which folder its mail is in, so
+    /// the trash and junk buttons say what they do.
+    pub(super) fn set_folder(self: &Rc<Self>, folder: Option<Folder>) {
+        for view in self.views() {
+            view.set_folder(folder);
         }
     }
 
@@ -162,10 +120,7 @@ impl MainWindow {
             ("toggle-read", || Action::ToggleRead),
         ];
         for (name, make) in entries {
-            add(
-                name,
-                Box::new(move |win, view| win.act_in_window(view, make())),
-            );
+            add(name, Box::new(move |win, view| win.act_from(view, make())));
         }
         add("find", Box::new(|_, view| view.open_find()));
         add("print", Box::new(|_, view| view.print()));

@@ -29,40 +29,29 @@ impl MainWindow {
         self.perform(targets, MailAction::Flag(color), History::Record, None);
     }
 
-    /// Re-reads the open conversation's flag colour. The store's change
-    /// events do not carry it, so an undo needs this.
+    /// Re-reads the flag colour of every conversation on screen, the ones
+    /// in windows of their own among them. The store's change events do
+    /// not carry the colour, so an undo needs this.
     pub(super) fn refresh_flag_color(self: &Rc<Self>) {
-        let Some((account_id, thread_id)) = self
-            .conversation
-            .read(|o| (o.account_id, o.thread_id.clone()))
-        else {
-            return;
-        };
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            let key = thread_id.clone();
-            let Ok(summary) = this
-                .core
-                .read(move |c| threads::get_thread(c, account_id, &key))
-                .await
+        for view in self.views() {
+            let Some((account_id, thread_id)) = view.read(|o| (o.account_id, o.thread_id.clone()))
             else {
-                return;
+                continue;
             };
-            if this.conversation.is_showing(account_id, &thread_id) {
-                this.conversation
-                    .set_flag_color(summary.and_then(|s| s.flag_color));
-            }
-        });
-    }
-
-    /// The flag button and Ctrl+Shift+L: flag in the last colour used, or
-    /// take the flag off when everything is flagged already.
-    pub(super) fn toggle_flag(self: &Rc<Self>) {
-        let (_, all_flagged) = self.target_marks();
-        if all_flagged {
-            self.flag(None);
-        } else {
-            self.flag(Some(self.settings().flag_color));
+            let this = Rc::clone(self);
+            glib::spawn_future_local(async move {
+                let key = thread_id.clone();
+                let Ok(summary) = this
+                    .core
+                    .read(move |c| threads::get_thread(c, account_id, &key))
+                    .await
+                else {
+                    return;
+                };
+                if view.is_showing(account_id, &thread_id) {
+                    view.set_flag_color(summary.and_then(|s| s.flag_color));
+                }
+            });
         }
     }
 }

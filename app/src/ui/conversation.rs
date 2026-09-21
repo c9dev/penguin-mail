@@ -14,7 +14,7 @@ use adw::prelude::*;
 use gtk::{gdk, gio, glib};
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{
-    AccountId, Category, FlagColor, Folder, MessageBody, MessageMeta, system_label,
+    AccountId, Category, FlagColor, Folder, MessageBody, MessageMeta, Target, system_label,
 };
 use webkit::prelude::*;
 
@@ -95,6 +95,15 @@ impl OpenThread {
         self.messages
             .iter()
             .any(|m| m.has_label(system_label::MUTE))
+    }
+
+    /// What a mail action on this conversation applies to.
+    pub fn target(&self) -> Target {
+        Target {
+            account_id: self.account_id,
+            thread_id: self.thread_id.clone(),
+            message_id: self.only_message.clone(),
+        }
     }
 
     /// The message a reply answers: the newest one that is not a draft.
@@ -744,6 +753,28 @@ impl ConversationView {
     pub fn set_detached(&self) {
         self.label_button.set_visible(false);
         self.detached.set(true);
+    }
+
+    /// Whether this conversation is in a window of its own, which has no
+    /// thread list and so no row selection to act on.
+    pub fn detached(&self) -> bool {
+        self.detached.get()
+    }
+
+    /// The window this conversation is in, which a dialog raised from it
+    /// sits over.
+    pub fn window(&self) -> Option<gtk::Window> {
+        self.page.root().and_downcast::<gtk::Window>()
+    }
+
+    /// Closes the window a detached conversation lives in. The main
+    /// window's conversation stays where it is.
+    pub fn close_detached(&self) {
+        if self.detached.get()
+            && let Some(window) = self.window()
+        {
+            window.close();
+        }
     }
 
     /// Installs the compiled filter that blocks remote content.

@@ -50,6 +50,7 @@ mod reminders;
 mod scheduled;
 mod senders;
 mod translation;
+mod triage;
 
 /// Largest inline image embedded into a page.
 const INLINE_IMAGE_LIMIT: usize = 5 * 1024 * 1024;
@@ -132,6 +133,10 @@ pub struct MainWindow {
     /// Senders whose remote images may load. Read from the store once and
     /// kept here, since every thread that opens asks about it.
     image_senders: RefCell<Vec<mailrs_store::image_senders::ImageSender>>,
+    /// The conversations in windows of their own, so a flag colour or an
+    /// undo reaches them too. An entry that no longer upgrades is a window
+    /// somebody closed.
+    detached: RefCell<Vec<Weak<ConversationView>>>,
 }
 
 /// The heading on the Delete Forever dialog, which names how much goes.
@@ -496,6 +501,7 @@ impl MainWindow {
                 inline_cache: RefCell::new(HashMap::new()),
                 thumbnail_cache: RefCell::new(HashMap::new()),
                 image_senders: RefCell::new(Vec::new()),
+                detached: RefCell::new(Vec::new()),
             }
         });
         if window.core.demo {
@@ -813,7 +819,7 @@ impl MainWindow {
         if self.split.is_collapsed() {
             self.split.set_show_sidebar(false);
         }
-        self.conversation.set_folder(mailbox.folder());
+        self.set_folder(mailbox.folder());
         self.follow_outbox();
         self.follow_categories();
         self.follow_follow_ups();
@@ -955,7 +961,7 @@ impl MainWindow {
         self.follow_follow_ups();
         self.list.set_title(&gettext("Search"), &query);
         self.conversation.clear();
-        self.conversation.set_folder(None);
+        self.set_folder(None);
         self.reload_list();
     }
 
@@ -1331,28 +1337,41 @@ impl MainWindow {
             return rows.iter().map(Target::from_row).collect();
         }
         self.conversation
-            .read(|o| Target {
-                account_id: o.account_id,
-                thread_id: o.thread_id.clone(),
-                message_id: o.only_message.clone(),
-            })
+            .read(|o| o.target())
             .map(|t| vec![t])
             .unwrap_or_else(|| rows.iter().map(Target::from_row).collect())
     }
 
-    /// Whether any target is unread, and whether every target is starred.
-    fn target_marks(&self) -> (bool, bool) {
+    /// What an action on `view` applies to. A conversation in a window of
+    /// its own has no thread list behind it, so it stands for itself.
+    fn targets_from(&self, view: &ConversationView) -> Vec<Target> {
+        if view.detached() {
+            return view.read(|o| o.target()).into_iter().collect();
+        }
+        self.targets()
+    }
+
+    /// What the targets carry: any of them unread, all of them flagged.
+    fn target_marks(&self) -> triage::Marks {
         let rows = self.list.selected_rows();
         if rows.len() > 1 {
-            return (
-                rows.iter().any(|r| r.unread),
-                rows.iter().all(|r| r.starred),
-            );
+            return triage::Marks {
+                unread: rows.iter().any(|r| r.unread),
+                flagged: rows.iter().all(|r| r.starred),
+            };
         }
         self.conversation
-            .read(|o| (o.unread(), o.starred()))
-            .or_else(|| rows.first().map(|r| (r.unread, r.starred)))
-            .unwrap_or((false, false))
+            .read(triage::Marks::from_open)
+            .or_else(|| rows.first().map(triage::Marks::from_row))
+            .unwrap_or_default()
+    }
+
+    /// What the targets of an action on `view` carry.
+    fn target_marks_from(&self, view: &ConversationView) -> triage::Marks {
+        if view.detached() {
+            return view.read(triage::Marks::from_open).unwrap_or_default();
+        }
+        self.target_marks()
     }
 
     /// Whether every target is muted. False when nothing is selected.
@@ -1368,41 +1387,33 @@ impl MainWindow {
     }
 
     fn act(self: &Rc<Self>, action: Action) {
+        let view = Rc::clone(&self.conversation);
+        self.act_from(&view, action);
+    }
+
+    /// The one table over [`Action`]: what a conversation's buttons, menus
+    /// and keys do, whether the conversation is in the main window or in a
+    /// window of its own. `view` says what the action applies to.
+    pub(super) fn act_from(self: &Rc<Self>, view: &Rc<ConversationView>, action: Action) {
         match action {
-            Action::Invitation(action) => {
-                let view = Rc::clone(&self.conversation);
-                self.invitation_action(&view, action)
+            Action::Invitation(action) => self.invitation_action(view, action),
+            Action::Reply(kind) => self.reply_from(view, kind),
+            Action::EditDraft => self.edit_draft_from(view),
+            Action::Archive
+            | Action::Trash
+            | Action::Junk
+            | Action::ToggleStar
+            | Action::ToggleRead => self.organize_from(view, &action),
+            Action::Unsubscribe => self.unsubscribe_from(Rc::clone(view)),
+            Action::LoadImages => self.load_images_once(view),
+            Action::SaveAttachment { message_id, index } => {
+                self.save_attachment_from(view, message_id, index)
             }
-            Action::Reply(kind) => self.reply(kind),
-            Action::EditDraft => self.edit_draft(),
-            Action::Archive => self.triage(TriageAction::Archive),
-            Action::Trash => self.trash(),
-            Action::Junk => self.triage(match self.mailbox.borrow().folder() {
-                Some(Folder::Junk) => TriageAction::NotJunk,
-                _ => TriageAction::Junk,
-            }),
-            Action::ToggleStar => self.toggle_flag(),
-            Action::ToggleRead => {
-                let (unread, _) = self.target_marks();
-                self.triage(if unread {
-                    TriageAction::MarkRead
-                } else {
-                    TriageAction::MarkUnread
-                });
-            }
-            Action::Unsubscribe => self.unsubscribe(),
-            Action::LoadImages => {
-                let view = Rc::clone(&self.conversation);
-                self.load_images_once(&view);
-            }
-            Action::SaveAttachment { message_id, index } => self.save_attachment(message_id, index),
             Action::PreviewAttachment { message_id, index } => {
-                let view = Rc::clone(&self.conversation);
-                self.preview_attachment_from(&view, message_id, index)
+                self.preview_attachment_from(view, message_id, index)
             }
             Action::SaveAllAttachments { message_id } => {
-                let view = Rc::clone(&self.conversation);
-                self.save_all_attachments_from(&view, message_id)
+                self.save_all_attachments_from(view, message_id)
             }
             Action::Mailto(address) => {
                 let account_id = self.default_account();
@@ -1412,21 +1423,18 @@ impl MainWindow {
                     app.compose(app.signed(draft));
                 }
             }
-            Action::ShowContact(address) => self.show_contact(address),
-            Action::Translate => {
-                let view = Rc::clone(&self.conversation);
-                self.translate_message(&view);
-            }
+            Action::ShowContact(address) => self.show_contact_from(view, address),
+            Action::Translate => self.translate_message(view),
         }
     }
 
     /// Opens the card for one sender: what the address book knows, or the
     /// message header alone when the address book has never heard of them.
-    fn show_contact(self: &Rc<Self>, address: String) {
+    fn show_contact_from(self: &Rc<Self>, view: &ConversationView, address: String) {
         if address.trim().is_empty() {
             return;
         }
-        let name = self.conversation.find(|open| {
+        let name = view.find(|open| {
             open.messages
                 .iter()
                 .filter_map(|m| m.from.clone())
@@ -1540,8 +1548,19 @@ impl MainWindow {
     /// Moves on to the next row when `action` takes the targets out of the
     /// list on screen, as Apple Mail does.
     fn follow_out(self: &Rc<Self>, action: &TriageAction) {
+        let view = Rc::clone(&self.conversation);
+        self.follow_out_from(&view, action);
+    }
+
+    /// Moves on once `action` takes the targets out of the mailbox on
+    /// screen: the main window goes to the next row, and a conversation in
+    /// a window of its own has nowhere to go, so the window closes.
+    fn follow_out_from(self: &Rc<Self>, view: &ConversationView, action: &TriageAction) {
         if !self.leaves_list(action) {
             return;
+        }
+        if view.detached() {
+            return view.close_detached();
         }
         let next = self.list.neighbour_of_selected();
         self.conversation.clear();
@@ -1557,38 +1576,12 @@ impl MainWindow {
     /// The Delete key. Outside the Trash it moves mail there. Inside it
     /// offers Delete Forever, which erases the mail from Gmail.
     fn delete_key(self: &Rc<Self>) {
-        self.trash()
-    }
-
-    /// The toolbar's trash button, and the Delete key with it. Mailboxes
-    /// that hold something other than mail cancel it instead.
-    fn trash(self: &Rc<Self>) {
-        if *self.mailbox.borrow() == Mailbox::Scheduled {
-            return self.cancel_scheduled(self.targets());
-        }
-        if *self.mailbox.borrow() == Mailbox::Outbox {
-            return self.drop_queued();
-        }
-        if *self.mailbox.borrow() == Mailbox::Reminders {
-            return self.cancel_reminders(self.targets());
-        }
-        if *self.mailbox.borrow() == Mailbox::FollowUp {
-            return self.dismiss_follow_ups(self.targets());
-        }
-        if self.mailbox.borrow().folder() == Some(Folder::Trash) {
-            self.confirm_delete_forever();
-        } else {
-            self.triage(TriageAction::Trash);
-        }
+        self.act(Action::Trash)
     }
 
     /// Asks before erasing, because Gmail cannot bring the mail back and no
     /// Undo follows.
-    fn confirm_delete_forever(self: &Rc<Self>) {
-        let targets = self.targets();
-        if targets.is_empty() {
-            return;
-        }
+    fn confirm_delete_forever(self: &Rc<Self>, view: &Rc<ConversationView>, targets: Vec<Target>) {
         let threaded = self.settings().threading;
         let dialog = adw::AlertDialog::new(
             Some(&delete_forever_heading(targets.len(), threaded)),
@@ -1603,20 +1596,25 @@ impl MainWindow {
         ]);
         dialog.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
         dialog.set_close_response("cancel");
-        let this = Rc::clone(self);
+        // The question belongs over the window it was asked in, which for
+        // a detached conversation is not the main one.
+        let parent = view
+            .window()
+            .unwrap_or_else(|| self.window.clone().upcast());
+        let (this, view) = (Rc::clone(self), Rc::clone(view));
         glib::spawn_future_local(async move {
-            if dialog.choose_future(Some(&this.window)).await == "delete" {
-                this.delete_forever(targets);
+            if dialog.choose_future(Some(&parent)).await == "delete" {
+                this.delete_forever(&view, targets);
             }
         });
     }
 
     /// Erases the targets. Nothing reverses this, so the toast offers no
     /// Undo, and a missing permission leaves every row where it is.
-    fn delete_forever(self: &Rc<Self>, targets: Vec<Target>) {
+    fn delete_forever(self: &Rc<Self>, view: &Rc<ConversationView>, targets: Vec<Target>) {
         let account_id = targets[0].account_id;
         let next = self.list.neighbour_of_selected();
-        let this = Rc::clone(self);
+        let (this, view) = (Rc::clone(self), Rc::clone(view));
         glib::spawn_future_local(async move {
             let actions = this.core.actions();
             let erased = this
@@ -1634,16 +1632,21 @@ impl MainWindow {
                 }
             };
             if !outcome.done.is_empty() {
-                this.conversation.clear();
-                this.list.unselect();
-                this.list
-                    .retain(|row| !outcome.done.contains(&Target::from_row(row)));
-                match next {
-                    Some(next) => {
-                        this.list
-                            .select(next.account_id, &next.id, next.message_id.as_deref())
+                let kept = |row: &ThreadSummary| !outcome.done.contains(&Target::from_row(row));
+                if view.detached() {
+                    this.list.retain(kept);
+                    view.close_detached();
+                } else {
+                    this.conversation.clear();
+                    this.list.unselect();
+                    this.list.retain(kept);
+                    match next {
+                        Some(next) => {
+                            this.list
+                                .select(next.account_id, &next.id, next.message_id.as_deref())
+                        }
+                        None => this.nav.set_show_content(false),
                     }
-                    None => this.nav.set_show_content(false),
                 }
                 this.queue_refresh();
             }
@@ -1847,14 +1850,16 @@ impl MainWindow {
         }
         match action {
             MailAction::Flag(color) => {
-                let open_flagged = self.conversation.read(|o| {
-                    outcome
-                        .done
-                        .iter()
-                        .any(|t| t.account_id == o.account_id && t.thread_id == o.thread_id)
-                });
-                if open_flagged == Some(true) {
-                    self.conversation.set_flag_color(*color);
+                for view in self.views() {
+                    let flagged = view.read(|o| {
+                        outcome
+                            .done
+                            .iter()
+                            .any(|t| t.account_id == o.account_id && t.thread_id == o.thread_id)
+                    });
+                    if flagged == Some(true) {
+                        view.set_flag_color(*color);
+                    }
                 }
                 self.queue_refresh();
             }
@@ -2145,10 +2150,6 @@ impl MainWindow {
         });
     }
 
-    fn edit_draft(self: &Rc<Self>) {
-        self.edit_draft_from(&self.conversation);
-    }
-
     /// Opens the draft in `view` in the composer.
     pub(super) fn edit_draft_from(self: &Rc<Self>, view: &ConversationView) {
         let Some(app) = self.app.upgrade() else {
@@ -2208,10 +2209,6 @@ impl MainWindow {
             draft.draft_id = draft_id;
             app.compose(draft);
         });
-    }
-
-    fn save_attachment(self: &Rc<Self>, message_id: String, index: usize) {
-        self.save_attachment_from(&self.conversation, message_id, index);
     }
 
     /// Downloads attachment `index` of `message_id` in `view`.
@@ -2426,8 +2423,8 @@ impl MainWindow {
         add("reply", Box::new(|win| win.reply(ReplyKind::Reply)));
         add("reply-all", Box::new(|win| win.reply(ReplyKind::ReplyAll)));
         add("forward", Box::new(|win| win.reply(ReplyKind::Forward)));
-        add("archive", Box::new(|win| win.triage(TriageAction::Archive)));
-        add("trash", Box::new(|win| win.trash()));
+        add("archive", Box::new(|win| win.act(Action::Archive)));
+        add("trash", Box::new(|win| win.act(Action::Trash)));
         add("junk", Box::new(|win| win.act(Action::Junk)));
         add("mute", Box::new(|win| win.toggle_mute()));
         add(
@@ -2738,7 +2735,7 @@ impl MainWindow {
             match key.to_unicode() {
                 Some('j') => win.list.step(1),
                 Some('k') => win.list.step(-1),
-                Some('e') => win.triage(TriageAction::Archive),
+                Some('e') => win.act(Action::Archive),
                 Some('#') => win.delete_key(),
                 Some('s') => win.act(Action::ToggleStar),
                 Some('M') => win.toggle_mute(),
