@@ -698,7 +698,7 @@ msgstr ""
 msgid "Slate"
 msgstr ""
 
-#: app/src/main.rs:48
+#: app/src/main.rs:49
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]]\n"
 "\n"
@@ -709,11 +709,11 @@ msgid ""
 "  mailto:...     the same as --compose mailto:..."
 msgstr ""
 
-#: app/src/main.rs:106
+#: app/src/main.rs:109
 msgid "penguin-mail: unknown option {option}"
 msgstr ""
 
-#: app/src/main.rs:218
+#: app/src/main.rs:221
 msgid "Penguin Mail Could Not Start"
 msgstr ""
 

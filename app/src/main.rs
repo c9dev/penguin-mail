@@ -15,6 +15,7 @@ mod goa;
 mod hide_my_email;
 mod images;
 mod language;
+mod logging;
 mod notify;
 mod pgp;
 mod protection;
@@ -57,7 +58,9 @@ fn usage() -> String {
 
 fn main() -> glib::ExitCode {
     tracing_subscriber::fmt()
-        .with_writer(std::io::stderr)
+        .with_writer(logging::Writer {
+            details: logging::details(),
+        })
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
                 tracing_subscriber::EnvFilter::new("warn,penguin_mail=info,mailrs_sync=info")

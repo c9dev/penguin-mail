@@ -104,7 +104,8 @@ body:
       description: |
         The app's lines from around the time it happened, from
         `journalctl --user --since "10 minutes ago" | grep -i penguin`.
-        Read them before pasting: they can name accounts and subjects.
+        Penguin Mail masks email addresses in its log, but read the lines
+        before pasting: a subject or a name can still show.
       render: text
   - type: checkboxes
     id: private

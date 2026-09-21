@@ -87,6 +87,9 @@ that needs them, and never at sign-in:
   same way. Penguin Mail does not add its own encryption to the local mail
   database, so we recommend turning on full-disk encryption, which Ubuntu
   offers during installation.
+- **Logs.** Penguin Mail writes problems to your system log so they can be
+  diagnosed. It masks email addresses there, keeping only their first
+  letter and domain, and it never logs message text or sign-in tokens.
 - **Reading mail safely.** Messages are displayed with JavaScript turned off
   and in a sandbox. Remote content is blocked twice, by a content filter and
   by the page's own security policy, so senders cannot track when you open

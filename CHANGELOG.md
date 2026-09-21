@@ -5,6 +5,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Improved
+
+- Penguin Mail masks email addresses in its log, so the system journal no
+  longer holds the addresses of your accounts or the people you write to.
+
 ## 0.1.3 (2026-09-21)
 
 ### New

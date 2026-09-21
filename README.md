@@ -358,6 +358,10 @@ scripts/update-po.sh --check                          # translation template cur
 scripts/a11y-names.sh                                 # every control has a name
 ```
 
+Release builds mask email addresses in the log, as `d…@example.com`.
+Debug builds keep them whole, and `PENGUIN_MAIL_LOG_DETAILS=1` does the
+same for an installed copy while you look into a problem.
+
 CI runs those four checks on every push, in an Ubuntu 26.04 container set up
 by `scripts/ci-deps.sh`. The OpenPGP and S/MIME tests build a throwaway
 GnuPG keyring and skip when `gpg` or `gpgsm` is missing.
