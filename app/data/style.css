@@ -163,8 +163,17 @@
 }
 .assistant-reply { padding-left: 2px; padding-right: 2px; }
 /* A turn's thinking and tool rows: one quiet line each until opened. */
-.assistant-step > title { padding: 3px 2px; border-radius: 6px; }
-.assistant-step > title:hover { background: alpha(currentColor, 0.06); }
+/* GTK 4 puts a box between the expander and its title, so these match
+   any depth. The row reads as a quiet aside to the reply: a size smaller
+   than the reply text, with a small chevron. */
+.assistant-step title { padding: 2px 2px; border-radius: 6px; font-size: 0.86em; }
+.assistant-step title:hover { background: alpha(currentColor, 0.06); }
+.assistant-step title > expander {
+  min-width: 10px;
+  min-height: 10px;
+  -gtk-icon-size: 10px;
+  margin-right: 2px;
+}
 .assistant-step-title { font-weight: 600; }
 .assistant-step-body { margin-top: 4px; margin-bottom: 4px; }
 .assistant-thinking { margin-top: 2px; margin-bottom: 4px; }

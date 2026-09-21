@@ -711,7 +711,7 @@ struct Detail {
 impl Detail {
     fn new(open: bool) -> Detail {
         let mark = gtk::Box::builder()
-            .width_request(16)
+            .width_request(14)
             .halign(gtk::Align::Center)
             .valign(gtk::Align::Center)
             .build();
@@ -750,8 +750,8 @@ impl Detail {
             Mark::Working => {
                 self.mark.append(
                     &adw::Spinner::builder()
-                        .width_request(14)
-                        .height_request(14)
+                        .width_request(12)
+                        .height_request(12)
                         .build(),
                 );
                 return;
@@ -761,6 +761,8 @@ impl Detail {
             Mark::Failed => "dialog-warning-symbolic",
         };
         let image = gtk::Image::from_icon_name(icon);
+        // Sized to the row's smaller text rather than the usual 16 px.
+        image.set_pixel_size(12);
         image.add_css_class(match mark {
             Mark::Failed => "warning",
             _ => "dim-label",
