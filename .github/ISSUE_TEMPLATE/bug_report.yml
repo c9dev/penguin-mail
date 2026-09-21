@@ -38,13 +38,52 @@ body:
   - type: textarea
     id: steps
     attributes:
-      label: Steps
-      description: What you did, one step per line, so someone else can do the same.
+      label: Steps to reproduce
+      description: |
+        Start from something anyone can set up, such as "a fresh start with one account",
+        then list what you did, one step per line. Name the buttons and keys you used.
       placeholder: |
-        1. Open a conversation with an attachment
-        2. Click Save on the attachment
+        1. Start Penguin Mail with one Gmail account and the window closed
+        2. Click the tray icon to open the window
+        3. Open a conversation that has a PDF attachment
+        4. Press Ctrl+S on the attachment
     validations:
       required: true
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often it happens
+      options:
+        - Every time I follow the steps
+        - Sometimes
+        - It happened once
+    validations:
+      required: true
+  - type: dropdown
+    id: demo
+    attributes:
+      label: Does it happen in the demo?
+      description: |
+        `penguin-mail --demo` opens sample accounts that never touch Gmail. If the bug shows
+        there, anyone can reproduce it without your mail.
+      options:
+        - "Yes"
+        - "No"
+        - I did not try
+    validations:
+      required: true
+  - type: textarea
+    id: message
+    attributes:
+      label: The message that triggers it
+      description: |
+        If one message causes the bug (it renders wrong, will not open, breaks a reply),
+        describe it: HTML or plain text, attachments, an invitation, encrypted or signed,
+        the sending app if you know it. Better still, attach the raw message: in Gmail,
+        More, Show original, Download original. Replace names, addresses and text with
+        made-up ones before you attach it, and check it still triggers the bug.
+    validations:
+      required: false
   - type: textarea
     id: expected
     attributes:
