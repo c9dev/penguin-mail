@@ -2,3 +2,300 @@
 
 Each release of Penguin Mail, newest first. GitHub shows the same text on
 the [releases page](https://github.com/c9dev/penguin-mail/releases).
+
+## 0.1.1 (2026-09-21)
+
+- Say how updates reach an installed copy, and name release and update
+- Find a newer release, install it, and restart into it
+- Keep the README in American spelling, as it was before the rewrite
+- Rewrite the README for people arriving at a public project
+- Give CI the string extractor, and let a release bring the template along
+- Keep the owner's notes and agent setup off the public repository
+- Run the gate on GitHub, publish tagged releases, and label pull requests
+- Split installing into laying out a tree and copying it, and pack releases from it
+- Add a script that retakes every README screenshot from the demo
+- Let a demo action take a target and wait for the opened thread
+- Ask bug reports for steps to reproduce and the message behind them
+- Give issues a form and pull requests a checklist
+- Say how to report bugs and vulnerabilities, and that pull requests are closed
+- Print the version with penguin-mail --version
+- License Penguin Mail under the GPL, version 3 or later
+- Start the installed file when the running one was replaced
+- Keep the tray icon through the background restart
+- Write down what a new session needs before it touches the code
+- Leave another thread's card alone when the model answers late
+- Name the claim and the wanted answer in the glossary
+- Run the engine over a window made of fakes
+- Put the engine run behind a desk and an effect port
+- Test the rules that decide which of a thread's messages opens
+- Give the open thread a reading path and a named change for each rule
+- Write the fetched thread into the view that asked for it
+- Give both conversation windows one table of mail actions
+- Let the window reach every conversation it has on screen
+- Say in the glossary where the shared words live
+- Give the two standards one module for what they share
+- Tell two bodies of the same length apart when cleaning one
+- Let a late answer land only on the invitation it answers
+- Hand the window the mail actions instead of two forwarders
+- Hand the window the mailbox reader instead of three forwarders
+- Ask again about keys when a recipient turns blind
+- Write down what is left
+- Take the accessibility check's own daemons down with it
+- Let a recipient field take the cursor back
+- Count plain buttons in the accessibility check, under either of its names
+- Put a focus ring back on the composer's fields and open its format menu to the keyboard
+- Translate the names a screen reader says into European Portuguese
+- Say what the mailboxes under an account are
+- Name the conversation toolbar from its tooltips, keys apart
+- Give an account row the same hover as a mailbox row
+- Add a script that walks the accessible tree and names what is unnamed
+- Let a thread row carry its own name in the accessible tree
+- Update GitHub Sponsors username in FUNDING.yml
+- Say which Portuguese the model is asked for, and what a translated body draws
+- Say so when a translation comes back empty, and test the whole turn
+- Give the message page headings, alt text, link names and a language
+- Name a translation and its card in the glossary
+- Drop the icon concepts and the folder they sat in
+- Say what the tray's numbers count, and translate them
+- Offer a translation above a message the reader would rather not read
+- Name the buttons in Preferences, Rules, Templates and the other dialogs
+- Put the penguin on the square the icon pack uses
+- Name the find bar, the invitation card and the protection card
+- Work out a message's language and cut its prose out of the markup
+- Name the composer's header, formatting bar and recipient chips
+- Put the penguin in the Gruvbox palette
+- Read a sidebar row's unread badge as part of the row
+- Name the window's toolbars and the label popover for a screen reader
+- Let a labelling action say its own name rather than borrow an empty relabel
+- Give the find bar a name in the glossary
+- Name what each undo took back, in the glossary and in Portuguese
+- Say plainly what keeps a stored draft pair honest
+- Name the find bar's widget as the other cards name theirs
+- Never fail a send over a draft pair the store would not take
+- Cover the stack's depth, its order, and the mail that moved under it
+- Find text inside the open conversation with Ctrl+F
+- Pin what opening a draft costs an account with two hundred of them
+- Keep a stack of undos so a change of mind reaches further back than one action
+- Let the store answer which draft a message belongs to
+- Keep Gmail's two names for a draft side by side in the store
+- Fall back when the chosen language has no locale on this computer
+- Catch the last toasts that were still speaking English
+- Extract one file at a time, so no mailbox loses its words to a shared module name
+- Ship the European Portuguese translation
+- Ask the server the model picker is pointed at
+- Translate the rules, the search suggestions and what the assistant asks before acting
+- Show the details of a message read before today
+- Translate Preferences, the assistant pane, the dialogs and the tray
+- Say who really sent a message
+- Say plainly which way an answer leaves
+- Translate the composer, its templates, and the words a reply carries
+- Name the reply, the scope and the clash in the glossary
+- Point an account GNOME does not know at Online Accounts
+- Put Delete beside Edit and Send Now on a waiting message
+- Let the inbox open on the category you want
+- Translate the conversation, its cards, and the dates and sizes beside them
+- Offer the organizer another time for the meeting
+- Leave a message alone while its account is still connecting
+- Ask whether an answer covers one occurrence or the series
+- Prove a queued message outlives the run that wrote it
+- Name the outbox in the glossary and the README
+- Let an answer name one occurrence of a repeating event
+- Send through the outbox and give it a mailbox of its own
+- Take a sent message off the table by whichever name it waited under
+- Stop a signed message putting a window on the screen
+- Translate the main window: its menus, toasts, dialogs and shortcuts
+- Say on the card what else the hour already holds
+- Give sync an outbox that holds a message until it can go
+- Mail the organizer the reply when Google cannot take it
+- Put the mailbox names, counts and empty lists through the translations
+- Grow Send Later into one table of messages waiting to go out
+- Write the iTIP object that answers an invitation without Google
+- Open the files inside an encrypted message
+- Let Preferences choose the language the interface speaks
+- Bind the text domain at startup and add the tools that build the catalogues
+- Stop a build machine passing the crypto tests it never ran
+- Say what the card shows when only the inner signature fails
+- Say the card and the body part belong to both standards
+- Name S/MIME in the glossary and the README
+- Put S/MIME mail on the same card and behind the same toggles
+- Tell the two standards apart when a message arrives wrapped
+- Read and write S/MIME mail through the person's own gpgsm
+- Name the OpenPGP types the way the modules around them do
+- Say in the README that mail can go out signed
+- Let a thread open while gpg waits on the pinentry
+- Send a draft through gpg and read it back in one test
+- Offer signing and encryption in the composer and Preferences
+- Show what gpg made of a message above it
+- Decide what OpenPGP a message needs and what to say about it
+- Say which OpenPGP wrapper a message arrived in
+- Remember which senders may load their images
+- Say at the top of the crate what runs the person's gpg
+- Write down how a mail client wires the pgp crate in
+- Open the PGP older mail writes into the body itself
+- Say which recipients hold a key a message can go to
+- Sign and seal a part into the bodies RFC 3156 asks for
+- Put a part beyond the reach of what mail servers rewrite
+- Show an attachment, save them all, and drag one out
+- Check a signature and open a sealed part through gpg
+- Name the promise of a file in the glossary
+- Let the missing attachment question be turned off in Preferences
+- Find the person's gpg and read the lines it writes for machines
+- Ask before sending a message that promises a file it does not carry
+- Fold the mute toggle into one method
+- Name the muted thread in the glossary and cover its drag
+- Give the window Mute, its mailbox, and its mark on a row
+- Say plainly what an unknown placeholder does
+- Send an image and a forwarded message the way they arrived
+- Put Export in the conversation menu and under a right click
+- Name the template and the placeholder in the glossary
+- Keep the templates list in Preferences, beside the signatures
+- Name the notification button in the glossary
+- Put the notification buttons under the notification switches
+- Let a new-mail notification archive, read, delete and reply
+- Add an export subcommand that writes mbox and eml files
+- Let a conversation come out of sync as an mbox
+- Let a conversation be muted the way Gmail mutes one
+- Let the composer drop a saved template in at the cursor
+- Write mail out as mboxrd, quoting every line that reads From
+- Keep saved templates in a table of their own
+- Line the composer's header rows up into one stack
+- Name the send-as address, the identity, and the squiggle
+- Let the event card take Adwaita's card surface
+- Say what an update to a meeting changed
+- Line the composer's header rows up into one stack
+- Name the address book and the terms around it
+- Give the demo four contacts, three with photos
+- Show an invitation as a card above the message
+- Show contacts in the list, the conversation, and a card
+- Answer an invitation through Google Calendar
+- Send as an account's aliases, and check spelling while writing
+- Refresh each account's address book behind one module
+- Read an account's contacts from Google's People API
+- Read an invitation out of a text/calendar part
+- Keep an address book beside the addresses mail turns up
+- Let each account find the pace Gmail accepts
+- Poll history when a refresh lands during the backfill pause
+- Name foreground work, background work, and the quota bucket
+- Wait out a busy Gmail instead of handing back a failure
+- Give the user's Gmail calls the budget before backfill's
+- Add a command that says why a message looks blank
+- Show mail in its light colors, not its dark ones
+- Read a message in the charset its bytes show, not the one it claims
+- Describe the composer, Delete Forever, and the model list
+- Reopen a rich draft with its formatting
+- Give a reply room to write in
+- Test the buffer against the rich body
+- Keep the link on the words it was meant for
+- Write email as rich text in the composer
+- Keep the badge empty for a count of zero or less
+- Put the unread count in the category tooltip
+- Give a remote listing real pages
+- Dim the icons of the categories not chosen
+- Pay for the rows a Gmail folder shows, once
+- Leave no empty frame when a model list fails
+- Rebuild the inbox category switcher
+- Send one Gmail call per account for a bulk action
+- Hold the composer's body as styled blocks
+- List every provider's models with their versions
+- Erase mail from the Trash with Delete Forever
+- Count what each Gmail operation costs
+- Hide trashed and spam mail from every label list
+- Run the demo on the in-memory Gmail
+- Ship the in-memory Gmail under a feature
+- Teach the fake Gmail to answer a search
+- Name the assistant's tool call and its two ports
+- Test the assistant's tools headless
+- Run the assistant's tools without a window
+- Describe where the mail logic lives
+- Hold an account's Gmail settings in one module
+- Name every settings change and say what it redraws
+- Name row CSS classes once
+- Trust the store when opening a thread after a history tick
+- Keep the unread count with the rows a change event moves
+- Page the thread list and hold each row once
+- Turn a mailbox into rows in one module
+- Let a thread filter name the threads it wants
+- Clean each message's HTML once
+- Record SQLite statistics when the writer closes
+- Serve cached bodies from the reader pool
+- Announce a thread only when opening it changed something
+- Stop the WebKit process when a window closes
+- Count every mailbox in one grouped query
+- Start a label's thread list at the label index
+- Keep each thread's flag colour and newest sender on its row
+- Probe a thread's labels from its own messages
+- Stop reloading contacts and let old chat turns drop
+- Make the window and the assistant thin over mail actions
+- Give mail actions one home in the sync crate
+- Give Gmail's label vocabulary one home in the domain crate
+- Add agent skill configuration
+- Document the assistant, categories, Follow Up, and Hide My Email
+- Let the assistant use categories, follow-ups, and Hide My Email
+- Show the dates and message when the assistant asks to set an automatic reply
+- Suggest following up on unanswered mail
+- Sort the inbox into categories
+- Add Hide My Email on Gmail plus addresses
+- Find local model servers and Claude Code on this machine
+- Run the assistant on local servers, Anthropic, or Claude Code
+- Serve the app's tools to Claude Code over an MCP bridge
+- Add the assistant pane, its tools, and its settings
+- Use the Penguin Mail name in the README and setup docs
+- Draw a penguin holding a letter as the app icon
+- Rename the app to Penguin Mail
+- Scaffold the AI crate's interface
+- Spell colour the American way in the README
+- Document flags, VIPs, smart mailboxes, Remind Me, and arranging
+- Suggest searches as you type, and remove VIPs from the sidebar
+- Add Remind Me
+- Colour Gmail labels
+- Add smart mailboxes, and let accounts be reordered, recoloured, and named
+- Add VIPs
+- Flag mail in seven colours
+- Document the new mailboxes, sending, formatting, and Gmail settings
+- Add a Rules editor for Gmail filters
+- Print, view source, and open conversations in their own window
+- Add a formatting bar and inline images to the composer
+- Unsubscribe from mailing lists and block senders
+- Drag mail onto mailboxes, and create, rename, and delete labels
+- Add Undo Send and Send Later
+- Add Junk, Trash, and All Mail mailboxes
+- Suggest recipients from past mail, and triage threads the store lacks
+- Add automatic replies, signature import, and composer shortcuts
+- Select several conversations, undo, labels, and Apple Mail shortcuts
+- Indent account mailboxes and nest Gmail labels in the sidebar
+- Use the stacked envelopes as the app icon
+- Add Preferences, a conversation grouping switch, and a new icon
+- Add desktop integration, install scripts, README, and screenshots
+- Start GTK only when a window opens, and restart lean after it closes
+- Add the GTK app: three-pane window, conversation view, composer, first run, tray, and notifications
+- Add the GTK-to-tokio bridge and a local Gmail stand-in for demo mode
+- Add sample mail for demo mode
+- Build replies, forwards, and MIME messages from Markdown drafts
+- Render conversations to a script-free HTML page
+- Start the mailrs app crate with formatting, list diffing, and an HTML sanitizer
+- Move config handling into the sync crate so the app can share and write it
+- Add sending, Gmail drafts, search, attachments, and identity to account sync
+- Add send, drafts, send-as identities, and attachment download to the Gmail client
+- Document Google Cloud setup and add a manual smoke test
+- Format with rustfmt defaults and apply clippy suggestions
+- Add the mailrs-cli binary and keyring-backed account connection
+- Run one sync loop per account with polling, backoff, and re-auth handling
+- Apply triage optimistically and revert when Gmail refuses
+- Fetch whole threads on open and cache bodies
+- Replay Gmail history incrementally and re-bootstrap when it expires
+- Bootstrap accounts, backfill the window, and prune old threads
+- Add the GmailApi trait, a fake Gmail, backoff, and triage actions
+- Add an async Db handle with a writer thread and reader pool
+- Cache message bodies with LRU eviction
+- Prune threads that leave the window and sweep stale generations
+- Query thread lists per account and across accounts
+- Store messages and labels and derive thread summaries
+- Add the SQLite schema and account storage
+- Store refresh tokens in the keyring behind a TokenStore trait
+- Add the Gmail client with token caching, error classification, and authorize flow
+- Add a token-bucket limiter for Gmail quota units
+- Add PKCE, token endpoint calls, and the loopback redirect listener
+- Extract text, HTML, and attachments from Gmail part trees
+- Parse address lists and convert Gmail messages and history
+- Add Gmail error type and wire model
+- Add workspace and domain types
