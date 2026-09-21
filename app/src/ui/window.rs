@@ -1081,8 +1081,7 @@ impl MainWindow {
             .read(move |c| messages::thread_messages(c, account_id, &key))
             .await
             .unwrap_or_default();
-        let missing: Vec<String> = self
-            .conversation
+        let missing: Vec<String> = view
             .with_open(|open| {
                 let fresh: Vec<MessageMeta> = fresh
                     .iter()
@@ -1125,8 +1124,7 @@ impl MainWindow {
         if !view.is_showing(account_id, &thread_id) {
             return;
         }
-        let unread = self
-            .conversation
+        let unread = view
             .with_open(|open| {
                 open.bodies.extend(loaded.clone());
                 open.inline_images.extend(images);
