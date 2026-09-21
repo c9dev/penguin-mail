@@ -322,17 +322,18 @@ msgstr ""
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]]\n"
 "\n"
+"  --version      print the version and quit\n"
 "  --background   start in the tray without opening a window\n"
 "  --demo         open sample mail in a throwaway store; nothing syncs\n"
 "  --compose      open a new message, addressed to ADDRESS when given\n"
 "  mailto:...     the same as --compose mailto:..."
 msgstr ""
 
-#: app/src/main.rs:100
+#: app/src/main.rs:105
 msgid "penguin-mail: unknown option {option}"
 msgstr ""
 
-#: app/src/main.rs:208
+#: app/src/main.rs:213
 msgid "Penguin Mail Could Not Start"
 msgstr ""
 

@@ -46,6 +46,7 @@ fn usage() -> String {
     gettext(
         "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]]
 
+  --version      print the version and quit
   --background   start in the tray without opening a window
   --demo         open sample mail in a throwaway store; nothing syncs
   --compose      open a new message, addressed to ADDRESS when given
@@ -91,6 +92,10 @@ fn main() -> glib::ExitCode {
     }
     if args.iter().any(|a| a == "--help" || a == "-h") {
         println!("{}", usage());
+        return glib::ExitCode::SUCCESS;
+    }
+    if args.iter().any(|a| a == "--version") {
+        println!("penguin-mail {}", env!("CARGO_PKG_VERSION"));
         return glib::ExitCode::SUCCESS;
     }
     if let Some(unknown) = args.iter().skip(1).find(|a| {

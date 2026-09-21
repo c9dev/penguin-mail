@@ -336,6 +336,7 @@ msgstr "Ardósia"
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]]\n"
 "\n"
+"  --version      print the version and quit\n"
 "  --background   start in the tray without opening a window\n"
 "  --demo         open sample mail in a throwaway store; nothing syncs\n"
 "  --compose      open a new message, addressed to ADDRESS when given\n"
@@ -344,17 +345,18 @@ msgstr ""
 "Utilização: penguin-mail [--background] [--demo] [--compose "
 "[mailto:ENDEREÇO]]\n"
 "\n"
+"  --version      mostra a versão e sai\n"
 "  --background   arranca na área de notificação, sem abrir janela\n"
 "  --demo         abre correio de exemplo num arquivo descartável; nada "
 "sincroniza\n"
 "  --compose      abre uma mensagem nova, para ENDEREÇO quando indicado\n"
 "  mailto:...     o mesmo que --compose mailto:..."
 
-#: app/src/main.rs:100
+#: app/src/main.rs:105
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: opção desconhecida {option}"
 
-#: app/src/main.rs:208
+#: app/src/main.rs:213
 msgid "Penguin Mail Could Not Start"
 msgstr "O Penguin Mail não conseguiu arrancar"
 
