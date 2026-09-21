@@ -210,6 +210,30 @@ create once in your own Google Cloud project.
 [docs/setup.md](docs/setup.md) walks through it in about ten minutes. After
 that, **Sign In with Google** adds each account.
 
+### Updates
+
+An installed Penguin Mail checks GitHub for a new release once a day. When
+one is out, it says so in a notification, a banner across the window, and the
+tray menu, and **Install** does the rest:
+
+- **From the .deb**, it downloads the new `.deb` and installs it with apt.
+  GNOME asks for your password, because apt changes files under `/usr`.
+- **From the tarball or from source**, it downloads the new tarball and
+  installs it into the same folder as before, with no password.
+
+Every download is checked against the release's `SHA256SUMS` first. Once
+the new version is in, Penguin Mail restarts into it. With a message open in
+the composer, it waits and shows **Restart** instead, since a draft saves
+only when you save it.
+
+**Check for Updates** in the tray menu checks at once. To stop the daily
+check, turn off **Check for Updates** under Preferences, Startup. A copy run
+with `cargo run` or as the demo never checks.
+
+To update by hand, download the new release and install it the same way as
+the first time. For a copy built from source, pull and run
+`scripts/install.sh` again.
+
 ### Try it without an account
 
 ```sh
