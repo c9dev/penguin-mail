@@ -6,13 +6,12 @@
 
 use mailrs_domain::translate::gettext;
 
-const CHOSEN: usize = cfg!(feature = "packaging-rpm") as usize
-    + cfg!(feature = "packaging-flatpak") as usize
-    + cfg!(feature = "packaging-snap") as usize;
-const _: () = assert!(
-    CHOSEN <= 1,
-    "a build is for one kind of package; pick one packaging-* feature"
-);
+#[cfg(any(
+    all(feature = "packaging-rpm", feature = "packaging-flatpak"),
+    all(feature = "packaging-rpm", feature = "packaging-snap"),
+    all(feature = "packaging-flatpak", feature = "packaging-snap"),
+))]
+compile_error!("a build is for one kind of package; pick one packaging-* feature");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Packaging {
