@@ -323,7 +323,7 @@ impl App {
                 app.shed_after(generation, 10);
                 return;
             }
-            let Ok(exe) = crate::exe::path() else {
+            let Ok(exe) = crate::exe::launcher() else {
                 return;
             };
             tracing::info!("no window for a while; restarting in the background to return memory");
@@ -821,7 +821,7 @@ impl App {
     /// copy. The Language preference needs it: GTK and gettext both read
     /// the locale as the process starts.
     pub fn restart(&self) {
-        let Ok(exe) = crate::exe::path() else {
+        let Ok(exe) = crate::exe::launcher() else {
             return;
         };
         let args: Vec<String> = std::env::args().skip(1).collect();
