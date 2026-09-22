@@ -14,10 +14,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- A conversation whose first messages you deleted shows in the inbox again
+  when a reply arrives, as it does in Gmail.
+- A conversation you clicked just before switching mailboxes or inbox
+  categories no longer opens in the new one and gets marked read there.
 - Marking a conversation read or unread shows in its own window, whether
   you did it there or in the main window.
-- A conversation you clicked just before switching inbox categories no
-  longer opens in the new category.
 - Delete Forever no longer closes a conversation you opened while Gmail was
   still deleting.
 - The Keyboard Shortcuts window lists Ctrl+J, which shows or hides the
@@ -25,10 +27,6 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - A conversation in its own window decides whether Archive, Delete or Mute
   close it by the mailbox you opened it from, not the one the main window
   has moved on to.
-- A conversation whose first messages you deleted shows in the inbox again
-  when a reply arrives, as it does in Gmail.
-- A conversation you clicked just before switching mailboxes no longer opens
-  in the new mailbox and gets marked read there.
 - Ctrl+Z after dismissing a follow-up brings it back, rather than undoing
   what you did before, and it also takes back a dismissal the assistant made.
 - "Always load images from" a sender works again, and so does removing a
