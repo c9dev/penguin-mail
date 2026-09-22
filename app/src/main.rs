@@ -126,7 +126,7 @@ fn main() -> glib::ExitCode {
     let demo = args.iter().any(|a| a == "--demo");
     let background = args.iter().any(|a| a == "--background");
     if !demo {
-        old_id::carry_over(&glib::user_config_dir());
+        old_id::carry_over_on_start();
     }
 
     // Wayland and X11 name the window after the program; matching the
