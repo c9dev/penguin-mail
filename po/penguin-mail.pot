@@ -5844,6 +5844,10 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] ""
 msgstr[1] ""
 
+#: sync/src/error.rs:28
+msgid "Gmail keeps “{name}” for its own label. Choose another name."
+msgstr ""
+
 #: sync/src/mailbox.rs:90
 msgid "{color} Flag"
 msgstr ""

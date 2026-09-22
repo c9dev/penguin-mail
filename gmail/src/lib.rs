@@ -22,7 +22,9 @@ pub use client::{
 pub use convert::{HistoryChange, HistoryPage, html_to_text};
 pub use error::GmailError;
 pub use limiter::{AccountQuota, Priority, QuotaLimiter, QuotaPool, Waiting};
-pub use model::{Draft, LabelColor, MessagePage, MessageRef, Profile, RemoteLabel, SendAs};
+pub use model::{
+    Draft, LabelColor, MessagePage, MessageRef, Profile, RemoteLabel, SendAs, is_reserved_label_name,
+};
 pub use oauth::{
     AccessToken, DELETE_SCOPE, GMAIL_SCOPE, LoopbackListener, OAuthClient, Pkce, SETTINGS_SCOPE,
     Tokens, parse_redirect, random_token,

@@ -21,7 +21,9 @@ pub enum GmailError {
     ExpiredSyncToken,
     #[error("not found")]
     NotFound,
-    #[error("Gmail returned HTTP {status}: {body}")]
+    /// Any other refusal. The body stays whole for the log, which prints
+    /// the error with `{:?}`; what a person reads is Google's own message.
+    #[error("{}", describe_http(*status, body))]
     Http { status: u16, body: String },
     #[error("network error: {0}")]
     Network(String),
@@ -31,6 +33,25 @@ pub enum GmailError {
     OAuth(String),
     #[error("keyring error: {0}")]
     Keyring(String),
+}
+
+/// Google's own words for a refusal, when the body is its JSON error.
+/// Anything else, such as a proxy's HTML page, is left out: a person
+/// cannot read it and the log keeps it.
+fn describe_http(status: u16, body: &str) -> String {
+    let message = serde_json::from_str::<serde_json::Value>(body)
+        .ok()
+        .and_then(|answer| {
+            answer
+                .pointer("/error/message")
+                .and_then(|m| m.as_str())
+                .map(str::to_string)
+        })
+        .filter(|m| !m.trim().is_empty());
+    match message {
+        Some(message) => format!("Gmail refused it: {message}"),
+        None => format!("Gmail returned HTTP {status}"),
+    }
 }
 
 impl GmailError {
@@ -51,5 +72,29 @@ impl From<reqwest::Error> for GmailError {
         } else {
             GmailError::Network(err.to_string())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_refusal_in_googles_json_says_googles_message() {
+        let body = r#"{"error":{"code":400,"message":"Invalid label name","status":"INVALID_ARGUMENT"}}"#;
+        let err = GmailError::Http {
+            status: 400,
+            body: body.into(),
+        };
+        assert_eq!(err.to_string(), "Gmail refused it: Invalid label name");
+    }
+
+    #[test]
+    fn a_body_that_is_not_googles_json_is_left_out() {
+        let err = GmailError::Http {
+            status: 502,
+            body: "<html><body>Bad gateway</body></html>".into(),
+        };
+        assert_eq!(err.to_string(), "Gmail returned HTTP 502");
     }
 }

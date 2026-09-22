@@ -98,5 +98,6 @@ domain/src/translate.rs
 sync/src/account/writes.rs
 sync/src/actions.rs
 sync/src/actions/labelling.rs
+sync/src/error.rs
 sync/src/mailbox.rs
 sync/src/triage.rs

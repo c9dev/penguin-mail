@@ -241,3 +241,48 @@ pub struct SendAsList {
 pub struct AttachmentBody {
     pub data: Option<String>,
 }
+
+/// Names Gmail keeps for its own labels. Creating or renaming a label to
+/// one of them fails with "Invalid label name", whatever the case.
+const RESERVED_LABEL_NAMES: [&str; 14] = [
+    "inbox",
+    "sent",
+    "draft",
+    "drafts",
+    "spam",
+    "trash",
+    "starred",
+    "important",
+    "unread",
+    "chat",
+    "chats",
+    "all mail",
+    "scheduled",
+    "snoozed",
+];
+
+/// Whether Gmail refuses `name` for a user label because one of its own
+/// labels has it. Only the whole name counts: "Clients/Inbox" is fine.
+pub fn is_reserved_label_name(name: &str) -> bool {
+    let name = name.trim().to_lowercase();
+    RESERVED_LABEL_NAMES.contains(&name.as_str())
+}
+
+#[cfg(test)]
+mod reserved_tests {
+    use super::*;
+
+    #[test]
+    fn gmails_own_label_names_are_reserved_whatever_their_case() {
+        for name in ["Important", " starred ", "INBOX", "All Mail", "drafts", "Spam"] {
+            assert!(is_reserved_label_name(name), "{name}");
+        }
+    }
+
+    #[test]
+    fn an_ordinary_or_nested_name_is_not_reserved() {
+        for name in ["Work", "Important stuff", "Clients/Inbox"] {
+            assert!(!is_reserved_label_name(name), "{name}");
+        }
+    }
+}

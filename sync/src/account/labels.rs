@@ -7,13 +7,19 @@ use mailrs_gmail::{LabelColor, RemoteLabel};
 use mailrs_store::labels;
 
 use super::AccountSync;
+use mailrs_gmail::is_reserved_label_name;
+
 use crate::{GmailApi, SyncError};
 
 impl<G: GmailApi> AccountSync<G> {
     /// Creates a label in Gmail and stores it. Slashes nest it under
     /// another label, as in Gmail: "Work/Clients".
     pub async fn create_label(&self, name: &str) -> Result<Label, SyncError> {
-        let remote = self.api.create_label(name.trim()).await?;
+        let name = name.trim();
+        if is_reserved_label_name(name) {
+            return Err(SyncError::ReservedLabel(name.to_string()));
+        }
+        let remote = self.api.create_label(name).await?;
         let label = self.user_label(&remote);
         let stored = label.clone();
         self.db
@@ -36,6 +42,9 @@ impl<G: GmailApi> AccountSync<G> {
             return Ok(());
         };
         let name = name.trim().to_string();
+        if is_reserved_label_name(&name) {
+            return Err(SyncError::ReservedLabel(name));
+        }
         let prefix = format!("{old}/");
         let mut renamed = vec![self.api.rename_label(id, &name).await?];
         for child in all.iter().filter(|l| l.name.starts_with(&prefix)) {

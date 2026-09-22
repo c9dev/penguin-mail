@@ -51,3 +51,23 @@ async fn a_label_colour_is_kept() {
     let travel = stored.iter().find(|l| l.id == label.id).unwrap();
     assert_eq!(travel.color.as_deref(), Some("#16a766"));
 }
+
+#[tokio::test]
+async fn a_name_gmail_keeps_for_itself_is_refused_before_gmail_is_asked() {
+    let h = harness().await;
+    h.bootstrap_all().await;
+    let before = h.fake.with(|s| s.labels.len());
+    let err = h.sync.create_label(" important ").await.unwrap_err();
+    assert!(matches!(err, crate::SyncError::ReservedLabel(ref name) if name == "important"));
+    assert_eq!(h.fake.with(|s| s.labels.len()), before);
+}
+
+#[tokio::test]
+async fn a_label_cannot_be_renamed_to_a_name_gmail_keeps() {
+    let h = harness().await;
+    h.bootstrap_all().await;
+    let work = h.sync.create_label("Work").await.unwrap();
+    let err = h.sync.rename_label(&work.id, "Starred").await.unwrap_err();
+    assert!(matches!(err, crate::SyncError::ReservedLabel(_)));
+    assert!(h.fake.with(|s| s.labels.iter().any(|l| l.name == "Work")));
+}

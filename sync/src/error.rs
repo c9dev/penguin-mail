@@ -1,4 +1,5 @@
 use mailrs_domain::AccountId;
+use mailrs_domain::translate::{fill, gettext};
 use mailrs_gmail::GmailError;
 use mailrs_store::StoreError;
 
@@ -16,6 +17,17 @@ pub enum SyncError {
     Mime(String),
     #[error("{0} is not an email address")]
     NotAnAddress(String),
+    /// A label name Gmail keeps for one of its own labels. Gmail would
+    /// answer "Invalid label name", which does not say why.
+    #[error("{}", reserved_label(.0))]
+    ReservedLabel(String),
+}
+
+fn reserved_label(name: &str) -> String {
+    fill(
+        &gettext("Gmail keeps “{name}” for its own label. Choose another name."),
+        &[("name", name)],
+    )
 }
 
 impl SyncError {
@@ -35,7 +47,7 @@ impl SyncError {
             SyncError::Store(_) => true,
             // The account is still connecting.
             SyncError::UnknownAccount(_) => true,
-            SyncError::NoLabel(_) => false,
+            SyncError::NoLabel(_) | SyncError::ReservedLabel(_) => false,
             // The bytes could not be written at all, so the same draft
             // would fail the same way on every try.
             SyncError::Mime(_) => false,

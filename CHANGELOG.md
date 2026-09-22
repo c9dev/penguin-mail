@@ -13,6 +13,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Naming a label Important, Starred, Inbox or another name Gmail keeps for
+  itself now says why it cannot be used, instead of failing with Gmail's
+  "Invalid label name".
+- When Gmail refuses something, the message shows Gmail's own words, not
+  the whole reply it sent.
 - Unsubscribing no longer sits on "Reading the page…" for ever when
   the page needs the AI model and the model is Claude Code.
 - Right-clicking a conversation that was not selected yet opens its

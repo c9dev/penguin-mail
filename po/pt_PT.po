@@ -6071,6 +6071,10 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] "Etiqueta nova em: {accounts}."
 msgstr[1] "Etiquetas novas em: {accounts}."
 
+#: sync/src/error.rs:28
+msgid "Gmail keeps “{name}” for its own label. Choose another name."
+msgstr "O Gmail reserva “{name}” para uma etiqueta sua. Escolha outro nome."
+
 #: sync/src/mailbox.rs:90
 msgid "{color} Flag"
 msgstr "Marca: {color}"
