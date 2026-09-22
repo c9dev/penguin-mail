@@ -2,12 +2,14 @@
 //! writes such a word calls through here, so there is one text domain and
 //! one way to put a value into a sentence.
 //!
-//! `gettext` and `ngettext` come straight from the C library the desktop
-//! already uses. A string with a value in it goes through [`fill`] rather
+//! `gettext`, `ngettext` and `pgettext` come straight from the C library
+//! the desktop already uses. `pgettext` takes a context for an English word
+//! that other languages split in two, such as "Archive" the button and
+//! "Archive" the mailbox. A string with a value in it goes through [`fill`] rather
 //! than `format!`, because a translator has to be able to move the value
 //! to wherever the sentence wants it.
 
-pub use gettextrs::{gettext, ngettext};
+pub use gettextrs::{gettext, ngettext, pgettext};
 
 /// The text domain, which is also the name of the `.mo` files.
 pub const DOMAIN: &str = "penguin-mail";

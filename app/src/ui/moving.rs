@@ -54,7 +54,7 @@ pub fn move_action(from: &Mailbox, to: &Mailbox) -> Result<TriageAction, String>
         (Some(Folder::Junk), _) if dest_label(to) == Some(system_label::INBOX) => {
             return Ok(TriageAction::NotJunk);
         }
-        (Some(Folder::Junk), Some(Folder::AllMail)) => {
+        (Some(Folder::Junk), Some(Folder::AllMail | Folder::Archive)) => {
             return Ok(relabel(vec![], vec![system_label::SPAM.into()]));
         }
         (Some(Folder::Junk), _) => {
@@ -73,6 +73,17 @@ pub fn move_action(from: &Mailbox, to: &Mailbox) -> Result<TriageAction, String>
                 ),
                 None => TriageAction::Junk,
             });
+        }
+        // Archiving leaves the inbox; from a label, the mail leaves that
+        // label too, as it does on any other move.
+        Some(Folder::Archive) => {
+            return match source {
+                _ if from_folder == Some(Folder::Archive) => Err(already()),
+                Some(label) if label != system_label::INBOX => {
+                    Ok(relabel(vec![], vec![label, system_label::INBOX.into()]))
+                }
+                _ => Ok(TriageAction::Archive),
+            };
         }
         Some(Folder::AllMail) => {
             return match source.as_deref() {
@@ -129,6 +140,10 @@ mod tests {
             Ok(TriageAction::Archive)
         );
         assert_eq!(
+            move_action(&inbox, &folder(Folder::Archive)),
+            Ok(TriageAction::Archive)
+        );
+        assert_eq!(
             move_action(&inbox, &folder(Folder::Trash)),
             Ok(TriageAction::Trash)
         );
@@ -164,6 +179,24 @@ mod tests {
         assert_eq!(
             move_action(&Mailbox::Unified("SENT"), &label("INBOX")),
             Ok(TriageAction::AddLabel("INBOX".into()))
+        );
+    }
+
+    #[test]
+    fn the_archive_takes_mail_out_of_the_inbox_and_gives_it_back() {
+        let archive = folder(Folder::Archive);
+        assert_eq!(
+            move_action(&label("Work"), &archive),
+            Ok(relabel(&[], &["Work", "INBOX"]))
+        );
+        assert_eq!(
+            move_action(&archive, &Mailbox::Unified("INBOX")),
+            Ok(TriageAction::AddLabel("INBOX".into()))
+        );
+        assert!(move_action(&archive, &archive).is_err());
+        assert_eq!(
+            move_action(&folder(Folder::Junk), &archive),
+            Ok(relabel(&[], &["SPAM"]))
         );
     }
 

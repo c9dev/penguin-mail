@@ -220,6 +220,8 @@ enum MailboxName {
     Vips,
     /// Sent mail that has waited 3 to 30 days for a reply.
     FollowUp,
+    /// Received mail taken out of the inbox.
+    Archive,
     Junk,
     Trash,
     AllMail,
@@ -228,13 +230,14 @@ enum MailboxName {
 }
 
 impl MailboxName {
-    const ALL: [MailboxName; 10] = [
+    const ALL: [MailboxName; 11] = [
         MailboxName::Inbox,
         MailboxName::Flagged,
         MailboxName::Sent,
         MailboxName::Drafts,
         MailboxName::Vips,
         MailboxName::FollowUp,
+        MailboxName::Archive,
         MailboxName::Junk,
         MailboxName::Trash,
         MailboxName::AllMail,
@@ -249,6 +252,7 @@ impl MailboxName {
             MailboxName::Drafts => "drafts",
             MailboxName::Vips => "vips",
             MailboxName::FollowUp => "follow_up",
+            MailboxName::Archive => "archive",
             MailboxName::Junk => "junk",
             MailboxName::Trash => "trash",
             MailboxName::AllMail => "all_mail",
@@ -659,6 +663,7 @@ impl<A: Accounts> Tools<A> {
             MailboxName::Sent => vec![at(system_label::SENT)],
             MailboxName::Drafts => vec![at(system_label::DRAFT)],
             MailboxName::FollowUp => vec![Mailbox::FollowUp],
+            MailboxName::Archive => vec![folder(Folder::Archive)],
             MailboxName::Junk => vec![folder(Folder::Junk)],
             MailboxName::Trash => vec![folder(Folder::Trash)],
             MailboxName::AllMail => vec![folder(Folder::AllMail)],

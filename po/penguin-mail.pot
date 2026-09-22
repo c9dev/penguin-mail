@@ -94,33 +94,33 @@ msgstr ""
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr ""
 
-#: app/src/assistant/run.rs:786
+#: app/src/assistant/run.rs:791
 msgid "Move {count} conversation to the Trash?"
 msgid_plural "Move {count} conversations to the Trash?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/assistant/run.rs:874
+#: app/src/assistant/run.rs:879
 msgid "Send “{subject}” to {recipients}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:964
+#: app/src/assistant/run.rs:969
 msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr ""
 
-#: app/src/assistant/run.rs:1044
+#: app/src/assistant/run.rs:1049
 msgid " from {first} to {last}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1047
+#: app/src/assistant/run.rs:1052
 msgid " until {last}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1048
+#: app/src/assistant/run.rs:1053
 msgid " from {first}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1054
+#: app/src/assistant/run.rs:1059
 msgid ""
 "Turn on the automatic reply for {account}{dates}?\n"
 "\n"
@@ -128,19 +128,19 @@ msgid ""
 "{body}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1065
+#: app/src/assistant/run.rs:1070
 msgid "Turn off the automatic reply for {account}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1144
+#: app/src/assistant/run.rs:1149
 msgid "Create a Gmail rule for {account}: {when} → {then}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1171
+#: app/src/assistant/run.rs:1176
 msgid "Delete a Gmail rule from {account}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1293
+#: app/src/assistant/run.rs:1298
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a Gmail rule for "
 "their future mail?"
@@ -1521,7 +1521,7 @@ msgstr ""
 msgid "New Message"
 msgstr ""
 
-#: app/src/tray.rs:136 app/src/ui/sidebar.rs:727 app/src/ui/window.rs:2110
+#: app/src/tray.rs:136 app/src/ui/sidebar.rs:723 app/src/ui/window.rs:2110
 msgid "Check for Mail"
 msgstr ""
 
@@ -3130,11 +3130,11 @@ msgstr ""
 msgid "Move it from the Trash to the Inbox first"
 msgstr ""
 
-#: app/src/ui/moving.rs:81
+#: app/src/ui/moving.rs:92
 msgid "The mail is already in All Mail"
 msgstr ""
 
-#: app/src/ui/moving.rs:86
+#: app/src/ui/moving.rs:97
 msgid "Mail cannot go there"
 msgstr ""
 
@@ -3630,7 +3630,7 @@ msgstr ""
 msgid "Accounts"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:471 app/src/ui/sidebar.rs:783
+#: app/src/ui/sidebar.rs:471 app/src/ui/sidebar.rs:779
 msgid "Show or hide this account's mailboxes"
 msgstr ""
 
@@ -3650,75 +3650,75 @@ msgstr[1] ""
 msgid "Edit…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:565 app/src/ui/sidebar.rs:750
+#: app/src/ui/sidebar.rs:565 app/src/ui/sidebar.rs:746
 msgid "Move Up"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:566 app/src/ui/sidebar.rs:751
+#: app/src/ui/sidebar.rs:566 app/src/ui/sidebar.rs:747
 msgid "Move Down"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:569 app/src/ui/sidebar.rs:631
+#: app/src/ui/sidebar.rs:569 app/src/ui/sidebar.rs:627
 msgid "Delete…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:620 app/src/ui/sidebar.rs:739
+#: app/src/ui/sidebar.rs:616 app/src/ui/sidebar.rs:735
 msgid "Rename…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:630 app/src/ui/sidebar.rs:749
+#: app/src/ui/sidebar.rs:626 app/src/ui/sidebar.rs:745
 msgid "Color"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:691
+#: app/src/ui/sidebar.rs:687
 msgid "Sign in again to keep syncing"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:693
+#: app/src/ui/sidebar.rs:689
 msgid "Offline"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:696
+#: app/src/ui/sidebar.rs:692
 msgid "Gmail is not responding; retrying"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:699
+#: app/src/ui/sidebar.rs:695
 msgid "Downloading mail"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:729
+#: app/src/ui/sidebar.rs:725
 msgid "Automatic Reply…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:730
+#: app/src/ui/sidebar.rs:726
 msgid "Signature…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:731
+#: app/src/ui/sidebar.rs:727
 msgid "Rules…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2113
+#: app/src/ui/sidebar.rs:729 app/src/ui/window.rs:2113
 msgid "Hide My Email…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:736 app/src/ui/window.rs:1510
+#: app/src/ui/sidebar.rs:732 app/src/ui/window.rs:1510
 msgid "New Label…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:754
+#: app/src/ui/sidebar.rs:750
 msgid "Sign In Again…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:757
+#: app/src/ui/sidebar.rs:753
 msgid "Remove Account…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:764
+#: app/src/ui/sidebar.rs:760
 msgid "Account options"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:769
+#: app/src/ui/sidebar.rs:765
 msgid "Options for {account}"
 msgstr ""
 
@@ -5200,23 +5200,23 @@ msgstr[1] ""
 msgid "a minute"
 msgstr ""
 
-#: sync/src/actions.rs:96
+#: sync/src/actions.rs:101
 msgid "Cancel Reminder"
 msgstr ""
 
-#: sync/src/actions.rs:99
+#: sync/src/actions.rs:104
 msgid "Change labels"
 msgstr ""
 
-#: sync/src/actions.rs:292
+#: sync/src/actions.rs:297
 msgid "Delete Forever failed: {reason}"
 msgstr ""
 
-#: sync/src/actions.rs:417
+#: sync/src/actions.rs:422
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr ""
 
-#: sync/src/actions.rs:483
+#: sync/src/actions.rs:488
 msgid "Could not undo: {reason}"
 msgstr ""
 
@@ -5257,90 +5257,99 @@ msgid "No Matching Mail"
 msgstr ""
 
 #: sync/src/mailbox.rs:172
-msgid "No Junk"
+msgid "No Archived Mail"
 msgstr ""
 
 #: sync/src/mailbox.rs:173
+msgid "No Junk"
+msgstr ""
+
+#: sync/src/mailbox.rs:174
 msgid "Trash Is Empty"
 msgstr ""
 
-#: sync/src/mailbox.rs:179
+#: sync/src/mailbox.rs:180
 msgid "Inbox Zero"
 msgstr ""
 
-#: sync/src/mailbox.rs:180
+#: sync/src/mailbox.rs:181
 msgid "No Starred Mail"
 msgstr ""
 
-#: sync/src/mailbox.rs:181
+#: sync/src/mailbox.rs:182
 msgid "No Sent Mail"
 msgstr ""
 
-#: sync/src/mailbox.rs:182
+#: sync/src/mailbox.rs:183
 msgid "No Drafts"
 msgstr ""
 
-#: sync/src/mailbox.rs:183
+#: sync/src/mailbox.rs:184
 msgid "No Muted Mail"
 msgstr ""
 
 #: sync/src/mailbox.rs:228
+msgctxt "mailbox"
+msgid "Archive"
+msgstr ""
+
+#: sync/src/mailbox.rs:230
 msgid "Trash"
 msgstr ""
 
-#: sync/src/mailbox.rs:229
+#: sync/src/mailbox.rs:231
 msgid "All Mail"
 msgstr ""
 
-#: sync/src/mailbox.rs:467
+#: sync/src/mailbox.rs:470
 msgid "This smart mailbox has no conditions"
 msgstr ""
 
-#: sync/src/mailbox.rs:783
+#: sync/src/mailbox.rs:786
 msgid "Could not load mail for {account}: {reason}"
 msgstr ""
 
-#: sync/src/mailbox.rs:828
+#: sync/src/mailbox.rs:831
 msgid "Sends {when}"
 msgstr ""
 
-#: sync/src/mailbox.rs:904
+#: sync/src/mailbox.rs:907
 msgid "Returns {when}"
 msgstr ""
 
-#: sync/src/mailbox.rs:947 sync/src/mailbox.rs:1018
+#: sync/src/mailbox.rs:950 sync/src/mailbox.rs:1021
 msgid "No recipients"
 msgstr ""
 
-#: sync/src/mailbox.rs:950 sync/src/mailbox.rs:1021
+#: sync/src/mailbox.rs:953 sync/src/mailbox.rs:1024
 msgid "To {recipients}"
 msgstr ""
 
-#: sync/src/mailbox.rs:983
+#: sync/src/mailbox.rs:986
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] ""
 msgstr[1] ""
 
-#: sync/src/mailbox.rs:993
+#: sync/src/mailbox.rs:996
 msgid "Sent yesterday, no reply yet"
 msgstr ""
 
-#: sync/src/mailbox.rs:995
+#: sync/src/mailbox.rs:998
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] ""
 msgstr[1] ""
 
-#: sync/src/mailbox.rs:1029
+#: sync/src/mailbox.rs:1032
 msgid "Not sent"
 msgstr ""
 
-#: sync/src/mailbox.rs:1037
+#: sync/src/mailbox.rs:1040
 msgid "{problem}. Trying again {when}"
 msgstr ""
 
-#: sync/src/mailbox.rs:1044
+#: sync/src/mailbox.rs:1047
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr ""
 

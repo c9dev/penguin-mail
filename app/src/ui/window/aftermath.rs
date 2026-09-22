@@ -148,12 +148,14 @@ pub(super) fn leaves(action: &MailAction, mailbox: &Mailbox) -> bool {
 fn leaves_list(mailbox: &Mailbox, action: &TriageAction) -> bool {
     let folder = mailbox.folder();
     match action {
-        TriageAction::Archive => folder != Some(Folder::AllMail),
+        TriageAction::Archive => !matches!(folder, Some(Folder::AllMail | Folder::Archive)),
         TriageAction::Trash => folder != Some(Folder::Trash),
         TriageAction::Junk => folder != Some(Folder::Junk),
         TriageAction::Untrash => folder == Some(Folder::Trash),
         TriageAction::NotJunk => folder == Some(Folder::Junk),
-        TriageAction::Mute => folder != Some(Folder::AllMail) && !lists_muted(mailbox),
+        TriageAction::Mute => {
+            !matches!(folder, Some(Folder::AllMail | Folder::Archive)) && !lists_muted(mailbox)
+        }
         TriageAction::Unmute => lists_muted(mailbox),
         _ => false,
     }
@@ -397,6 +399,14 @@ mod tests {
         let triage = |action| MailAction::Triage(action);
         assert!(leaves(&triage(TriageAction::Archive), &inbox()));
         assert!(!leaves(&triage(TriageAction::Archive), &all_mail));
+        assert!(!leaves(
+            &triage(TriageAction::Archive),
+            &folder(Folder::Archive)
+        ));
+        assert!(leaves(
+            &triage(TriageAction::Trash),
+            &folder(Folder::Archive)
+        ));
         assert!(leaves(&triage(TriageAction::Trash), &all_mail));
         assert!(!leaves(&triage(TriageAction::MarkRead), &inbox()));
         assert!(!leaves(&MailAction::Mute { muted: true }, &all_mail));

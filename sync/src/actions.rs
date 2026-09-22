@@ -20,6 +20,11 @@ mod returning;
 pub use categorize::Categorized;
 pub use returning::Returned;
 
+/// The folders Undo places mail in, most specific first. Archive is left
+/// out: All Mail holds archived mail too, and Undo only needs to know
+/// whether mail went to the Junk or the Trash since.
+const PLACES: [Folder; 3] = [Folder::Junk, Folder::Trash, Folder::AllMail];
+
 /// Finds the sync handle of a connected account.
 pub trait Accounts: Send + Sync + 'static {
     type Api: GmailApi;
@@ -534,7 +539,7 @@ impl<A: Accounts> MailActions<A> {
     /// when it was recorded counts as still there.
     async fn moved(&self, relabel: &[Reversal]) -> Vec<bool> {
         let mut moved = vec![false; relabel.len()];
-        for folder in Folder::ALL {
+        for folder in PLACES {
             let members: Vec<usize> = relabel
                 .iter()
                 .enumerate()
@@ -574,7 +579,7 @@ impl<A: Accounts> MailActions<A> {
                         .filter(|m| target.message_id.as_ref().is_none_or(|id| &m.id == id))
                         .collect();
                     folders.push(
-                        Folder::ALL
+                        PLACES
                             .into_iter()
                             .find(|f| mine.iter().any(|m| f.holds(&m.label_ids))),
                     );

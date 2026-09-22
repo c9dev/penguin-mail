@@ -245,7 +245,7 @@ impl Sidebar {
         self.add_mailbox(
             Mailbox::Outbox,
             &gettext("Outbox"),
-            "mail-outbox-symbolic",
+            "penguin-mail-outbox-symbolic",
             0,
         );
         self.add_mailbox(
@@ -426,7 +426,7 @@ impl Sidebar {
         for row in self.rows.borrow().iter() {
             let count = counts.get(&row.mailbox).copied().unwrap_or(0);
             if hidden_until_used(&row.mailbox) {
-                // The Outbox, Send Later and each flag colour appear
+                // Send Later, Remind Me, Follow Up and each flag colour appear
                 // only while in use.
                 row.row
                     .set_visible(count > 0 || selected.as_ref() == Some(&row.row));
@@ -581,11 +581,7 @@ fn css_hex(color: &str) -> Option<String> {
 fn hidden_until_used(mailbox: &Mailbox) -> bool {
     matches!(
         mailbox,
-        Mailbox::Outbox
-            | Mailbox::Scheduled
-            | Mailbox::Reminders
-            | Mailbox::FollowUp
-            | Mailbox::Flag(_)
+        Mailbox::Scheduled | Mailbox::Reminders | Mailbox::FollowUp | Mailbox::Flag(_)
     )
 }
 

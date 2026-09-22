@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use chrono::{DateTime, Local, TimeZone};
-use mailrs_domain::translate::{fill, fill_plural, gettext};
+use mailrs_domain::translate::{fill, fill_plural, gettext, pgettext};
 use mailrs_domain::{
     Account, AccountId, Category, EpochMillis, FlagColor, Folder, MessageMeta, SmartMailbox,
     ThreadSummary, system_label,
@@ -153,7 +153,7 @@ impl Mailbox {
                 return empty(gettext("Nothing Scheduled"), "mail-send-symbolic");
             }
             Mailbox::Outbox => {
-                return empty(gettext("Outbox Is Empty"), "mail-outbox-symbolic");
+                return empty(gettext("Outbox Is Empty"), "penguin-mail-outbox-symbolic");
             }
             Mailbox::Reminders => return empty(gettext("No Reminders"), "alarm-symbolic"),
             Mailbox::FollowUp => {
@@ -169,6 +169,7 @@ impl Mailbox {
             Mailbox::Folder { folder, .. } => {
                 let icon = folder_icon(*folder);
                 return match folder {
+                    Folder::Archive => empty(gettext("No Archived Mail"), icon),
                     Folder::Junk => empty(gettext("No Junk"), icon),
                     Folder::Trash => empty(gettext("Trash Is Empty"), icon),
                     Folder::AllMail => empty(gettext("No Mail"), icon),
@@ -224,6 +225,7 @@ pub fn unified_name(label: &str) -> String {
 
 pub fn folder_name(folder: Folder) -> String {
     match folder {
+        Folder::Archive => pgettext("mailbox", "Archive"),
         Folder::Junk => gettext("Junk"),
         Folder::Trash => gettext("Trash"),
         Folder::AllMail => gettext("All Mail"),
@@ -232,9 +234,10 @@ pub fn folder_name(folder: Folder) -> String {
 
 pub fn folder_icon(folder: Folder) -> &'static str {
     match folder {
+        Folder::Archive => "penguin-mail-archive-symbolic",
         Folder::Junk => "mail-mark-junk-symbolic",
         Folder::Trash => "user-trash-symbolic",
-        Folder::AllMail => "penguin-mail-archive-symbolic",
+        Folder::AllMail => "penguin-mail-all-mail-symbolic",
     }
 }
 

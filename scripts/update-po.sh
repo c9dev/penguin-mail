@@ -12,9 +12,9 @@ cd "$(dirname "$0")/.."
 pot=po/penguin-mail.pot
 version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
 
-# `gettext` and `ngettext` are what the C library offers; `fill_plural`
-# takes the two forms `ngettext` would and is named beside them.
-keywords=(-kgettext -kngettext:1,2 -kfill_plural:1,2)
+# `gettext`, `ngettext` and `pgettext` are what the C library offers;
+# `fill_plural` takes the two forms `ngettext` would and is named beside them.
+keywords=(-kgettext -kngettext:1,2 -kpgettext:1c,2 -kfill_plural:1,2)
 
 if ! command -v xtr >/dev/null; then
     echo "update-po.sh needs xtr: cargo install xtr" >&2

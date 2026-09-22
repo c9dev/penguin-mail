@@ -3,6 +3,8 @@
   <gresource prefix="/dev/penguinmail/PenguinMail">
     <file>icons/scalable/actions/penguin-mail-inbox-symbolic.svg</file>
     <file>icons/scalable/actions/penguin-mail-archive-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-all-mail-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-outbox-symbolic.svg</file>
     <file>icons/scalable/actions/penguin-mail-tag-symbolic.svg</file>
     <file>icons/scalable/actions/penguin-mail-link-symbolic.svg</file>
     <file>icons/scalable/actions/penguin-mail-sparkle-symbolic.svg</file>

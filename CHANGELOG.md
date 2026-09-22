@@ -5,6 +5,16 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### New
+
+- An Archive mailbox lists the mail you took out of the inbox, across all
+  accounts and under each one. Drag mail onto it to archive it.
+
+### Improved
+
+- The Outbox stays in the sidebar, so you can check it before a message
+  gets stuck there.
+
 ## 0.1.4 (2026-09-22)
 
 ### Improved

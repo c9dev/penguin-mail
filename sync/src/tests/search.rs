@@ -56,6 +56,16 @@ async fn spam_and_trash_stay_out_until_a_search_asks_for_them() {
 }
 
 #[tokio::test]
+async fn the_archive_search_finds_received_mail_outside_the_inbox() {
+    let fake = mailbox().await;
+    fake.seed(meta("mine", "t6", now_millis(), &["SENT"]));
+    assert_eq!(
+        found(&fake, mailrs_domain::Folder::Archive.query()).await,
+        ["archived", "ancient"]
+    );
+}
+
+#[tokio::test]
 async fn braces_hold_any_one_term_and_a_dash_holds_none() {
     let fake = mailbox().await;
     // The window query: recent mail, plus everything in the inbox.

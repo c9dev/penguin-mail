@@ -12,7 +12,7 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Category**: a slice of the inbox that Penguin Mail shows: All, Primary, Updates, Promotions, or Social. Each one is defined by the category labels a thread has or lacks. Primary is mail with no category label but Personal, and Social includes Forums. _Avoid_: tab, inbox type.
 
-**Folder**: Junk, Trash, or All Mail. The local store does not keep this mail, so the app lists a folder with a Gmail search and checks a message's labels to see if it still belongs there. _Avoid_: mailbox, spam folder.
+**Folder**: Archive, Junk, Trash, or All Mail. Archive is the received mail outside the inbox, which Gmail has no label for. The local store does not keep this mail, so the app lists a folder with a Gmail search and checks a message's labels to see if it still belongs there. _Avoid_: mailbox, spam folder.
 
 **Target**: what a mail action applies to: a thread, or one message of it when the list shows messages instead of conversations. `mailrs_domain::Target`. _Avoid_: selection, item.
 
@@ -32,7 +32,7 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Queued message**: a message waiting to go out, kept on this computer with the bytes it will be sent from, what the composer needs to reopen it, the tries already behind it, and the time of the next one. `mailrs_store::outbox::Queued`, sent by `mailrs_sync::Outbox`. One table holds both kinds, because both are a message waiting: a Send Later message, whose hour has not come and whose bytes Gmail holds as a draft, and one that hit a problem on the way out. The recorded problem is what tells the two apart and decides which mailbox lists the message. _Avoid_: pending message, spool entry, draft.
 
-**Outbox**: the mailbox listing the queued messages with a problem against them, each row saying why the message has not gone and when the next try is. It appears in the sidebar only while it holds something. The wait between tries doubles from half a minute to half an hour, the network coming back cuts it short, and after about a day of tries the outbox stops and leaves the message to the person, as it does at once for a failure nothing would fix. A message inside its Undo Send window is not here yet, since nothing is stored until that delay runs out. _Avoid_: queue, spool, pending.
+**Outbox**: the mailbox listing the queued messages with a problem against them, each row saying why the message has not gone and when the next try is. It stays in the sidebar when empty, so a person can look before anything goes wrong. The wait between tries doubles from half a minute to half an hour, the network coming back cuts it short, and after about a day of tries the outbox stops and leaves the message to the person, as it does at once for a failure nothing would fix. A message inside its Undo Send window is not here yet, since nothing is stored until that delay runs out. _Avoid_: queue, spool, pending.
 
 **Smart mailbox**: conditions saved in Preferences that become a Gmail search, such as "from Ann" and "newer than 7 days". `mailrs_domain::SmartMailbox`. _Avoid_: saved search, filter.
 

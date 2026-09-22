@@ -216,7 +216,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "list_mail",
             label: || gettext("Reading a mailbox"),
-            description: "Lists conversations in a mailbox, newest first. Inbox, flagged, sent, drafts, VIPs, and labels read the mail kept on this computer (the last few weeks plus everything in the inbox); junk, trash, and all_mail ask Gmail.",
+            description: "Lists conversations in a mailbox, newest first. Inbox, flagged, sent, drafts, VIPs, and labels read the mail kept on this computer (the last few weeks plus everything in the inbox); archive, junk, trash, and all_mail ask Gmail. archive is received mail taken out of the inbox.",
             input: || {
                 json!({
                     "mailbox": {"type": "string", "enum": MailboxName::ALL.map(MailboxName::key), "description": "follow_up lists sent mail that has waited 3 to 30 days for a reply."},
