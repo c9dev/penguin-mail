@@ -342,16 +342,87 @@ async fn a_search_reuses_the_metadata_the_store_holds() {
 }
 
 #[tokio::test]
-async fn a_first_sync_costs_five_units_a_message() {
+async fn a_first_sync_fetches_each_conversation_in_one_call() {
     let h = harness().await;
     let all = synced(&h.db, 6, 50, 2).await;
 
     let usage = first_sync(&all).await;
 
-    report("first sync, 6 accounts, 100 messages each", &usage);
+    report("first sync, 6 accounts, 50 conversations of 2 each", &usage);
     // Per account: the profile and the label list, one listing call per
-    // page of 100, and one metadata fetch per message. Gmail has no batch
-    // get, so the metadata dominates and only a smaller window trims it.
-    assert_eq!(usage.calls_to("users.messages.get"), 600);
-    assert_eq!(usage.units, 6 * (1 + 1 + 5 + 100 * 5));
+    // page of 100, and one `threads.get` per conversation. Two messages
+    // cost the same 10 units either way; one call instead of two halves
+    // the round trips.
+    assert_eq!(usage.calls_to("users.messages.get"), 0);
+    assert_eq!(usage.calls_to("users.threads.get"), 300);
+    assert_eq!(usage.units, 6 * (1 + 1 + 5 + 50 * 10));
+}
+
+/// Conversation sizes for a mailbox of 300 messages in 120 threads: half
+/// of them a lone message, the rest replies of two, five and eight.
+const SIZES: [(usize, usize); 4] = [(60, 1), (30, 2), (20, 5), (10, 8)];
+
+/// Seeds that mailbox into one fresh account, a conversation every few
+/// hours across the window and its replies minutes apart, and pages the
+/// listing at 100 as the real client does.
+async fn realistic(db: &Db) -> Synced {
+    const HOUR: i64 = 60 * 60 * 1000;
+    let id = db
+        .write(|c| accounts::insert_account(c, "busy@example.com", 0))
+        .await
+        .unwrap();
+    let fake = Arc::new(FakeGmail::new());
+    fake.with(|s| s.page_size = 100);
+    let now = now_millis();
+    let mut thread = 0;
+    for (count, size) in SIZES {
+        for _ in 0..count {
+            // Interleave the sizes so every page holds a mix.
+            let started = now - ((thread * 37) % 120) as i64 * 5 * HOUR;
+            for reply in 0..size {
+                fake.seed(MessageMeta {
+                    account_id: id,
+                    ..meta(
+                        &format!("t{thread}m{reply}"),
+                        &format!("t{thread}"),
+                        started + reply as i64 * 10 * 60 * 1000,
+                        &["INBOX"],
+                    )
+                });
+            }
+            thread += 1;
+        }
+    }
+    let (sender, _events) = async_channel::unbounded();
+    let sync = Arc::new(AccountSync::new(id, Arc::clone(&fake), db.clone(), sender));
+    Synced { id, fake, sync }
+}
+
+#[tokio::test]
+async fn a_first_sync_of_a_busy_mailbox_spends_by_conversation() {
+    let h = harness().await;
+    let all = vec![realistic(&h.db).await];
+
+    let usage = first_sync(&all).await;
+
+    report("first sync, 300 messages in 120 conversations", &usage);
+    let stored =
+        h.db.read(|c| {
+            Ok(c.query_row("SELECT COUNT(*) FROM messages", [], |row| {
+                row.get::<_, i64>(0)
+            })?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(stored, 300, "every message in the window, and no more");
+    // A message at a time this cost 305 calls and 1517 units: the profile,
+    // the labels, three pages, and 300 `messages.get`. Now the 60 lone
+    // messages still cost one each, and the other 60 conversations cost a
+    // `threads.get` each, plus one more for a conversation the page break
+    // splits.
+    assert_eq!(usage.calls_to("users.messages.list"), 3);
+    assert_eq!(usage.calls_to("users.messages.get"), 60);
+    assert_eq!(usage.calls_to("users.threads.get"), 61);
+    assert_eq!(usage.calls, 126);
+    assert_eq!(usage.units, 1 + 1 + 3 * 5 + 60 * 5 + 61 * 10);
 }

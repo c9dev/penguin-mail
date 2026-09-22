@@ -1,5 +1,5 @@
 use mailrs_domain::{AccountState, ChangeEvent};
-use mailrs_store::{accounts, labels};
+use mailrs_store::{accounts, labels, messages};
 
 use super::harness;
 use crate::fake::meta;
@@ -93,6 +93,31 @@ async fn fill_store_leaves_a_finished_first_sync() {
     let cursor = h.cursor().await;
     assert!(cursor.backfill_done);
     assert_eq!(cursor.history_id, Some(100));
+}
+
+/// Two listed replies come in one `threads.get`, which also returns the
+/// thread's old archived start. The window leaves that out, so the store
+/// must too.
+#[tokio::test]
+async fn a_thread_fetch_stores_only_the_listed_messages() {
+    let h = harness().await;
+    let now = now_millis();
+    h.fake.seed(meta("start", "t", now - 40 * DAY, &[]));
+    h.fake.seed(meta("reply1", "t", now - 1000, &["INBOX"]));
+    h.fake.seed(meta("reply2", "t", now, &["INBOX"]));
+    crate::fake::fill_store(&h.sync).await.unwrap();
+
+    assert_eq!(h.fake.usage().calls_to("users.threads.get"), 1);
+    assert_eq!(h.fake.usage().calls_to("users.messages.get"), 0);
+    let stored =
+        h.db.read(|c| messages::existing_ids(c, 1, &["start".to_string()]))
+            .await
+            .unwrap();
+    assert!(
+        stored.is_empty(),
+        "the archived start is outside the window"
+    );
+    assert_eq!(h.thread("t").await.unwrap().message_count, 2);
 }
 
 #[tokio::test]
