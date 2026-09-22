@@ -762,11 +762,11 @@ msgstr ""
 msgid "Open"
 msgstr ""
 
-#: app/src/open_thread/run/translation.rs:111
+#: app/src/open_thread/run/translation.rs:121
 msgid "The model sent nothing back to put in the message."
 msgstr ""
 
-#: app/src/open_thread/run/translation.rs:115
+#: app/src/open_thread/run/translation.rs:125
 msgid "The model could not translate this: {reason}"
 msgstr ""
 
@@ -1488,19 +1488,19 @@ msgstr ""
 msgid "English"
 msgstr ""
 
-#: app/src/translation.rs:733
+#: app/src/translation.rs:845
 msgid "The message goes to {host}, for {model} to read."
 msgstr ""
 
-#: app/src/translation.rs:737
+#: app/src/translation.rs:849
 msgid "The message goes to {model} on this computer and no further."
 msgstr ""
 
-#: app/src/translation.rs:742
+#: app/src/translation.rs:854
 msgid "The message goes to Anthropic, for {model} to read."
 msgstr ""
 
-#: app/src/translation.rs:746
+#: app/src/translation.rs:858
 msgid ""
 "The message goes to Anthropic, for Claude to read through your subscription."
 msgstr ""

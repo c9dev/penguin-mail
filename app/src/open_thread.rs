@@ -12,7 +12,7 @@ use mailrs_domain::{
 
 use crate::protection::run::{Claimed, Installed};
 use crate::protection::{self, Engine, Mark};
-use crate::translation::{Language, Translation};
+use crate::translation::{Body, Language, Prose, Translation};
 
 pub mod run;
 
@@ -326,6 +326,42 @@ impl OpenThread {
         let said = self.translations.get_mut(message_id)?;
         said.shown = !said.shown;
         Some((said.from, said.cut, said.shown))
+    }
+
+    /// The words the sender of `message_id` wrote in the thread's other
+    /// messages, without what they quoted. A short note borrows its
+    /// language from these when its own words are too few to tell.
+    pub fn same_writer(&self, message_id: &str) -> String {
+        let writer = |meta: &MessageMeta| meta.from.as_ref().map(|a| a.email.to_lowercase());
+        let Some(who) = self
+            .messages
+            .iter()
+            .find(|meta| meta.id == message_id)
+            .and_then(writer)
+        else {
+            return String::new();
+        };
+        let mut out = String::new();
+        for meta in self.messages.iter().rev() {
+            if meta.id == message_id || writer(meta).as_deref() != Some(who.as_str()) {
+                continue;
+            }
+            let Some(Ok(body)) = self.bodies.get(&meta.id) else {
+                continue;
+            };
+            // The raw HTML is enough to count words in: `Prose` skips the
+            // stylesheet and the tags either way.
+            let prose = match (&body.text, &body.html) {
+                (Some(text), _) if !text.trim().is_empty() => Prose::read(Body::Text(text)),
+                (_, Some(html)) => Prose::read(Body::Html(html)),
+                _ => continue,
+            };
+            if !out.is_empty() {
+                out.push(' ');
+            }
+            out.push_str(&prose.sample());
+        }
+        out
     }
 
     /// A message's body as it arrived, with its inline images, which is

@@ -87,6 +87,9 @@ pub trait Desk: Screen {
     /// The message a translation applies to, with the prose the page
     /// draws for it.
     fn prose(&self) -> Option<(String, Prose)>;
+    /// What the sender of `message_id` wrote in the thread's other
+    /// messages, for a note too short to tell its language alone.
+    fn same_writer(&self, message_id: &str) -> String;
     /// What the card says about a message translated here: the language
     /// it came from, whether it was cut short, and whether it is shown.
     fn translation_of(&self, message_id: &str) -> Option<(Option<Language>, bool, bool)>;

@@ -13,7 +13,7 @@ use mailrs_domain::translate::{fill, gettext};
 
 use super::ThreadRun;
 use crate::sanitize::sanitize_html;
-use crate::translation::{self, Language, Reading, Translation};
+use crate::translation::{self, Language, Prose, Reading, Translation};
 
 /// What the translation card shows.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -52,13 +52,23 @@ impl ThreadRun {
         let Some(interface) = self.desk.interface_language() else {
             return Card::Hidden;
         };
-        let Reading::Other(from) = translation::read_language(&prose.sample(), interface) else {
+        let Reading::Other(from) = self.read_message(&message_id, &prose, interface) else {
             return Card::Hidden;
         };
         Card::Offered {
             from,
             goes: self.desk.translation_destination(),
         }
+    }
+
+    /// The language of the message on screen, with its writer's other
+    /// messages in the thread to fall back on.
+    fn read_message(&self, message_id: &str, prose: &Prose, interface: Language) -> Reading {
+        translation::read_message(
+            &prose.sample(),
+            &self.desk.same_writer(message_id),
+            interface,
+        )
     }
 
     /// The card's button: translate the message on screen, or turn over
@@ -81,7 +91,7 @@ impl ThreadRun {
             wanted.anyway(|effects| effects.toast(problem));
             return;
         }
-        let from = match translation::read_language(&prose.sample(), interface) {
+        let from = match self.read_message(&message_id, &prose, interface) {
             Reading::Other(from) => from,
             _ => None,
         };

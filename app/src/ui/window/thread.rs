@@ -166,6 +166,12 @@ impl Desk for Ports {
         self.view.open_prose()
     }
 
+    fn same_writer(&self, message_id: &str) -> String {
+        self.view
+            .read(|open| open.same_writer(message_id))
+            .unwrap_or_default()
+    }
+
     fn translation_of(&self, message_id: &str) -> Option<(Option<Language>, bool, bool)> {
         self.view.find(|open| open.translation_of(message_id))
     }

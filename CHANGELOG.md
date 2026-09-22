@@ -28,11 +28,17 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   without waiting on Gmail again.
 - Labelling mail by name asks before it creates the label in an account
   that lacks it. Say no, and only mail in accounts with the label gets it.
+- A short message in another language, such as "Ok, obrigado!", now gets
+  the offer to translate it, and so does a short reply from someone who
+  wrote to you in that language earlier in the conversation.
 
 ### Fixed
 
 - Dates name the weekday and month in the language the app speaks, so a
   Portuguese window says "sex 11 set" instead of "Fri 11 Sep".
+- The offer to translate a message no longer names the wrong language
+  when it could be Portuguese or Spanish, or German or Dutch. When the
+  words leave it close, it says the message is in another language.
 - A conversation opened right after a sync shows its older replies too,
   not only the recent messages kept on this computer.
 - Declining a rule the assistant proposed no longer leaves its new label

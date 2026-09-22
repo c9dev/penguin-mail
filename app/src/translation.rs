@@ -246,10 +246,19 @@ pub enum Reading {
 /// the language the interface is in.
 ///
 /// A different script settles it on its own. Otherwise the commonest
-/// words decide: a language is named when it holds enough of the sample
-/// and holds twice what the interface's own language holds, and a sample
-/// long enough to show the interface's words and showing almost none of
-/// them is in something else, even when nothing here can name it.
+/// words decide. Another language is offered when it holds enough of the
+/// sample and half as many again as the interface's own language holds.
+/// Twice was too strict: Portuguese uses "a" and "me" all the time, and
+/// both count as English. A sample long enough to show the interface's
+/// words and showing almost none of them is in something else, even when
+/// nothing here can name it.
+///
+/// Offering and naming are two questions. Portuguese and Spanish share
+/// half their small words, as German and Dutch share some of theirs, so a
+/// message can be plainly foreign and still close between two languages.
+/// The name goes on the card only when the words the leader has and the
+/// next foreign language lacks outnumber the reverse more than two to
+/// one. Otherwise the card says "another language".
 pub fn read_language(text: &str, interface: Language) -> Reading {
     let sample: String = text.chars().take(SAMPLE_CHARS).collect();
     if let Some(script) = dominant_script(&sample)
@@ -262,35 +271,138 @@ pub fn read_language(text: &str, interface: Language) -> Reading {
     }
     let words = words(&sample);
     let total = words.len();
+    let count = Count::of(&words, interface);
     if total < ENOUGH_WORDS {
-        return Reading::Unsure;
+        return short_note(&count, total);
     }
-    let counted: Vec<(Language, usize)> = KNOWN
-        .iter()
-        .map(|language| (*language, hits(&words, language)))
-        .collect();
-    let mine = counted
-        .iter()
-        .find(|(language, _)| language.code == interface.code)
-        .map_or(0, |(_, hits)| *hits);
-    let (best, best_hits) = counted
-        .iter()
-        .copied()
-        .max_by_key(|(_, hits)| *hits)
-        .unwrap_or((interface, 0));
-    let named = best.code != interface.code
-        && best_hits >= NAMED_WORDS
-        && best_hits * 100 >= total * NAMED_PERCENT
-        && best_hits >= mine * 2;
-    if named {
-        return Reading::Other(Some(best));
+    let offered = count.best_hits >= NAMED_WORDS
+        && count.best_hits * 100 >= total * NAMED_PERCENT
+        && count.best_hits * 2 >= count.mine * 3;
+    if offered {
+        return Reading::Other(count.named());
     }
-    if total >= ENOUGH_FOR_ABSENCE && mine * 100 < total * ABSENT_PERCENT {
+    if total >= ENOUGH_FOR_ABSENCE && count.mine * 100 < total * ABSENT_PERCENT {
         return Reading::Other(None);
     }
-    match mine * 100 >= total * ABSENT_PERCENT {
+    match count.mine * 100 >= total * ABSENT_PERCENT {
         true => Reading::Same,
         false => Reading::Unsure,
+    }
+}
+
+/// A note too short for the percentages above, such as "Ok, obrigado!".
+///
+/// Short notes are most of what lands in an inbox, and a card over each
+/// of them would bury the mail. So one gets a card only on firm evidence:
+/// none of the interface's words, and a third of its words belonging to a
+/// single language that beats every other. On that evidence the language
+/// can be named as well.
+fn short_note(count: &Count, total: usize) -> Reading {
+    let firm = count.mine == 0
+        && count.best_hits > 0
+        && count.best_hits * 3 >= total
+        && count.best_hits > count.runner_up;
+    match firm {
+        true => Reading::Other(Some(count.best)),
+        false => Reading::Unsure,
+    }
+}
+
+/// How the known languages' words scored in one sample.
+struct Count {
+    /// The interface's own language's hits.
+    mine: usize,
+    /// The foreign language with the most hits, and how many it has.
+    best: Language,
+    best_hits: usize,
+    /// The most hits another foreign language has. The interface's own
+    /// language is left out: whether to offer settles that contest.
+    runner_up: usize,
+    /// Hits on words the leader has and the runner-up lacks, and the other
+    /// way round. "de" and "que" count for Portuguese and Spanish alike,
+    /// so only these say which of the two a message is in.
+    lead: usize,
+    trail: usize,
+}
+
+impl Count {
+    fn of(words: &[String], interface: Language) -> Count {
+        let counted: Vec<(Language, usize)> = KNOWN
+            .iter()
+            .map(|language| (*language, hits(words, language)))
+            .collect();
+        let mine = counted
+            .iter()
+            .find(|(language, _)| language.code == interface.code)
+            .map_or(0, |(_, hits)| *hits);
+        // A tie goes to the language listed first in `KNOWN`. It names
+        // nobody either way, since neither side then has a lead.
+        let first_most = |most: (Language, usize), next: (Language, usize)| match next.1 > most.1 {
+            true => next,
+            false => most,
+        };
+        let (best, best_hits) = counted
+            .iter()
+            .copied()
+            .filter(|(language, _)| language.code != interface.code)
+            .fold((interface, 0), first_most);
+        let (runner, runner_up) = counted
+            .iter()
+            .copied()
+            .filter(|(language, _)| language.code != best.code && language.code != interface.code)
+            .fold((interface, 0), first_most);
+        let only = |ours: &Language, theirs: &Language| {
+            words
+                .iter()
+                .filter(|word| {
+                    ours.words.contains(&word.as_str()) && !theirs.words.contains(&word.as_str())
+                })
+                .count()
+        };
+        // With no foreign language behind it, every hit the leader has is
+        // its own.
+        let (lead, trail) = match runner_up {
+            0 => (best_hits, 0),
+            _ => (only(&best, &runner), only(&runner, &best)),
+        };
+        Count {
+            mine,
+            best,
+            best_hits,
+            runner_up,
+            lead,
+            trail,
+        }
+    }
+
+    /// The leader, when the words only it has number more than twice the
+    /// runner-up's own. A tie on those words, or a lead of two to one, is
+    /// a message that mixes the two.
+    fn named(&self) -> Option<Language> {
+        (self.lead > self.trail * 2).then_some(self.best)
+    }
+}
+
+/// The language of the message on screen, `own`, helped by `writer`: what
+/// the same sender wrote in the thread's other messages.
+///
+/// A note too short to read on its own, with none of the interface's words
+/// in it, takes the language its writer used in the longer messages
+/// around it. Someone who wrote three paragraphs in Portuguese and then
+/// "Combinado, até lá" has not switched language.
+pub fn read_message(own: &str, writer: &str, interface: Language) -> Reading {
+    let alone = read_language(own, interface);
+    if alone != Reading::Unsure {
+        return alone;
+    }
+    let sample: String = own.chars().take(SAMPLE_CHARS).collect();
+    let words = words(&sample);
+    if words.is_empty() || words.len() >= ENOUGH_WORDS || hits(&words, &interface) > 0 {
+        return alone;
+    }
+    match read_language(writer, interface) {
+        Reading::Other(from) => Reading::Other(from),
+        _ => Reading::Unsure,
     }
 }
 
@@ -877,9 +989,125 @@ mod tests {
     }
 
     #[test]
-    fn too_few_words_say_nothing() {
-        assert_eq!(read_language("Ok, obrigado!", ENGLISH), Reading::Unsure);
+    fn a_short_note_in_another_language_is_offered_and_named() {
+        let cases = [
+            ("Ok, obrigado!", PORTUGUESE),
+            ("Vale, muchas gracias.", SPANISH),
+            ("Danke, bis morgen!", GERMAN),
+            ("Dank je, tot morgen.", DUTCH),
+        ];
+        for (text, language) in cases {
+            assert_eq!(
+                read_language(text, ENGLISH),
+                Reading::Other(Some(language)),
+                "{text}"
+            );
+        }
+        assert_eq!(
+            read_language("Thanks, see you tomorrow.", PORTUGUESE),
+            Reading::Other(Some(ENGLISH))
+        );
+    }
+
+    #[test]
+    fn a_short_note_with_the_interfaces_own_words_gets_no_card() {
+        assert_eq!(
+            read_language("Thanks, see you tomorrow.", ENGLISH),
+            Reading::Unsure
+        );
+        assert_eq!(read_language("Ok, obrigado!", PORTUGUESE), Reading::Unsure);
+        // "Obrigado" is Portuguese and "from" English: no clear winner.
+        assert_eq!(
+            read_language("Obrigado. Sent from my phone", ENGLISH),
+            Reading::Unsure
+        );
+    }
+
+    #[test]
+    fn a_short_note_with_no_words_to_count_says_nothing() {
+        assert_eq!(
+            read_language("Combinado, até lá.", ENGLISH),
+            Reading::Unsure
+        );
+        assert_eq!(read_language("Ok", ENGLISH), Reading::Unsure);
         assert_eq!(read_language("", ENGLISH), Reading::Unsure);
+    }
+
+    #[test]
+    fn a_short_note_takes_the_language_its_writer_used_in_the_thread() {
+        assert_eq!(
+            read_message("Combinado, até lá.", PORTUGUESE_NOTE, ENGLISH),
+            Reading::Other(Some(PORTUGUESE))
+        );
+        // The writer's other messages never outvote the note's own words.
+        assert_eq!(
+            read_message("Thanks, see you there.", PORTUGUESE_NOTE, ENGLISH),
+            Reading::Unsure
+        );
+        assert_eq!(
+            read_message("Combinado, até lá.", ENGLISH_NOTE, ENGLISH),
+            Reading::Unsure
+        );
+        assert_eq!(
+            read_message("Combinado, até lá.", "", ENGLISH),
+            Reading::Unsure
+        );
+        // A picture with no words under it has no language to borrow.
+        assert_eq!(read_message("", PORTUGUESE_NOTE, ENGLISH), Reading::Unsure);
+    }
+
+    #[test]
+    fn portuguese_that_uses_english_looking_words_is_still_offered() {
+        let text = "Se puder, diga-me quando chega a encomenda, que não a encontro em casa.";
+        assert_eq!(
+            read_language(text, ENGLISH),
+            Reading::Other(Some(PORTUGUESE))
+        );
+    }
+
+    #[test]
+    fn neighbouring_languages_are_named_when_one_clearly_leads() {
+        let cases = [
+            (
+                "De reunião de sexta ficou para segunda, por causa da viagem do diretor.",
+                PORTUGUESE,
+            ),
+            (
+                "La reunión del viernes se pasó al lunes, por el viaje del director.",
+                SPANISH,
+            ),
+            (
+                "Wir sind morgen um zehn Uhr im Büro, und die Unterlagen liegen auf dem Tisch.",
+                GERMAN,
+            ),
+            (
+                "Wij zijn morgen om tien uur op kantoor, en de papieren liggen op de tafel.",
+                DUTCH,
+            ),
+        ];
+        for (text, language) in cases {
+            assert_eq!(
+                read_language(text, ENGLISH),
+                Reading::Other(Some(language)),
+                "{text}"
+            );
+        }
+    }
+
+    #[test]
+    fn english_words_in_a_german_message_do_not_hide_its_name() {
+        let text = "Danke für alles, wir sehen uns morgen und bitte bring the charger, \
+             the keys and the map mit.";
+        assert_eq!(read_language(text, ENGLISH), Reading::Other(Some(GERMAN)));
+    }
+
+    #[test]
+    fn a_close_call_between_two_languages_names_neither() {
+        let portunhol = "Hola Ana, obrigado por todo, que tengas un buen día. Beijinhos \
+             para a família, y hasta pronto.";
+        assert_eq!(read_language(portunhol, ENGLISH), Reading::Other(None));
+        let between = "Ik bin morgen in het Büro und wir haben de Unterlagen op tafel, bitte.";
+        assert_eq!(read_language(between, ENGLISH), Reading::Other(None));
     }
 
     #[test]

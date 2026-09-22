@@ -340,6 +340,46 @@ async fn a_message_in_another_language_gets_the_offer() {
     );
 }
 
+/// Ann writes a paragraph in Portuguese, then a short answer with no
+/// words the counting knows.
+fn short_answer_after_portuguese(writer: &str) -> std::rc::Rc<FakeWindow> {
+    let window = FakeWindow::new();
+    let mut second = meta("m2", true);
+    if let Some(from) = second.from.as_mut() {
+        from.email = writer.to_string();
+    }
+    window.with(|screen| {
+        let messages = vec![meta("m1", false), second];
+        screen.messages = messages.clone();
+        if let Some(stored) = screen.stored.get_mut(THREAD) {
+            stored.messages = messages;
+        }
+        screen.gmail.insert("m1".to_string(), portuguese());
+        screen
+            .gmail
+            .insert("m2".to_string(), body("Combinado, até lá."));
+    });
+    window
+}
+
+#[tokio::test]
+async fn a_short_answer_takes_the_language_its_writer_used_before() {
+    let window = short_answer_after_portuguese("ann@example.com");
+    window.run().open(row(THREAD)).await;
+    let last = window.0.borrow().cards.last().cloned();
+    assert!(
+        matches!(last, Some(Card::Offered { from: Some(from), .. }) if from.code == "pt"),
+        "{last:?}"
+    );
+}
+
+#[tokio::test]
+async fn a_short_answer_from_someone_else_borrows_nothing() {
+    let window = short_answer_after_portuguese("bob@example.com");
+    window.run().open(row(THREAD)).await;
+    assert_eq!(window.0.borrow().cards.last(), Some(&Card::Hidden));
+}
+
 #[tokio::test]
 async fn a_message_in_the_interface_language_gets_no_card() {
     let window = FakeWindow::new();

@@ -397,6 +397,10 @@ impl Desk for FakeWindow {
         .flatten()
     }
 
+    fn same_writer(&self, message_id: &str) -> String {
+        self.read(|open| open.same_writer(message_id))
+    }
+
     fn translation_of(&self, message_id: &str) -> Option<(Option<Language>, bool, bool)> {
         self.open(|open| open.translation_of(message_id)).flatten()
     }
