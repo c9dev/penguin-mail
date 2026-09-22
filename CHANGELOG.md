@@ -5,6 +5,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Fixed
+
+- Cancel Send keeps a message you scheduled while offline. It goes to
+  Drafts, or, while Gmail is still out of reach, opens in a composer for
+  you to save.
+
 ## 0.1.5 (2026-09-22)
 
 ### New

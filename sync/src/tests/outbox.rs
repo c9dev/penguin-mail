@@ -664,18 +664,18 @@ async fn cancelling_send_later_stops_the_named_messages_and_keeps_their_drafts()
     assert_eq!(
         outbox.cancel_scheduled(&targets).await.unwrap(),
         Cancelled {
-            in_drafts: 1,
-            deleted: 1
+            in_drafts: 2,
+            unsaved: vec![]
         },
-        "the one Gmail never saw has no draft to go back to"
+        "the one Gmail never saw goes to Drafts now that Gmail answers"
     );
     let left = h.db.read(outbox::scheduled).await.unwrap();
     assert_eq!(left.len(), 1);
     assert_eq!(left[0].subject, "Tuesday");
     assert_eq!(
         h.fake.with(|s| s.drafts.len()),
-        2,
-        "the Gmail drafts stay in Drafts"
+        3,
+        "the Gmail drafts stay in Drafts, and Wednesday joins them"
     );
 
     // An open draft names its message rather than its thread.
@@ -688,10 +688,40 @@ async fn cancelling_send_later_stops_the_named_messages_and_keeps_their_drafts()
         outbox.cancel_scheduled(&[by_message]).await.unwrap(),
         Cancelled {
             in_drafts: 1,
-            deleted: 0
+            unsaved: vec![]
         }
     );
     assert!(h.db.read(outbox::scheduled).await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn cancelling_a_message_gmail_never_had_while_gmail_is_away_keeps_it() {
+    let h = harness().await;
+    let outbox = queue(&h);
+    let mut later = message(h.account_id, "Wednesday");
+    later.send_at = now_millis() + 24 * 60 * 60 * 1000;
+    h.fake.fail_next(GmailError::Network("offline".into()));
+    let Posted::Waiting(offline) = outbox.schedule(later).await.unwrap() else {
+        panic!("Send Later keeps a message it could not hand to Gmail");
+    };
+
+    h.fake.fail_next(GmailError::NeedsReauth);
+    let cancelled = outbox
+        .cancel_scheduled(&[Target::thread(h.account_id, outbox_row(offline))])
+        .await
+        .unwrap();
+    assert_eq!(cancelled.in_drafts, 0);
+    assert_eq!(
+        cancelled.unsaved.len(),
+        1,
+        "the app reopens it for the writer"
+    );
+    assert_eq!(cancelled.unsaved[0].subject, "Wednesday");
+    assert_eq!(
+        h.db.read(outbox::scheduled).await.unwrap().len(),
+        1,
+        "nothing is lost until the writer has it open again"
+    );
 }
 
 #[tokio::test]

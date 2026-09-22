@@ -49,13 +49,16 @@ pub struct Drained {
 }
 
 /// What cancelling Send Later did with the messages it stopped.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Cancelled {
-    /// The messages Gmail already held as drafts, which stay in Drafts.
+    /// The messages that are in Gmail's Drafts now: the ones Gmail already
+    /// held as drafts, and the ones scheduled while Gmail was out of reach,
+    /// which cancelling saved there.
     pub in_drafts: usize,
-    /// The messages scheduled while Gmail was out of reach. Their only
-    /// copy was the bytes waiting here, so cancelling deleted them.
-    pub deleted: usize,
+    /// Messages Gmail never had that it could not take as drafts either.
+    /// They stay in the table, since their bytes are the only copy, and
+    /// the app reopens each in a composer before it drops the row.
+    pub unsaved: Vec<Queued>,
 }
 
 /// Sends the messages waiting to go out. See the module docs.
@@ -233,22 +236,31 @@ impl<A: Accounts> Outbox<A> {
     /// place in the table, so a target matching any of the three stops it.
     pub async fn cancel_scheduled(&self, targets: &[Target]) -> Result<Cancelled, SyncError> {
         let targets = targets.to_vec();
-        Ok(self
+        let named: Vec<Queued> = self
             .db
-            .write(move |c| {
-                let mut cancelled = Cancelled::default();
-                for item in outbox::scheduled(c)? {
-                    if targets.iter().any(|t| names(t, &item)) {
-                        outbox::remove(c, item.id)?;
-                        match item.draft_id {
-                            Some(_) => cancelled.in_drafts += 1,
-                            None => cancelled.deleted += 1,
-                        }
-                    }
-                }
-                Ok(cancelled)
+            .read(move |c| {
+                Ok(outbox::scheduled(c)?
+                    .into_iter()
+                    .filter(|item| targets.iter().any(|t| names(t, item)))
+                    .collect())
             })
-            .await?)
+            .await?;
+        let mut cancelled = Cancelled::default();
+        for item in named {
+            // A message Gmail never had goes to Drafts now, so cancelling
+            // does not throw away the only copy.
+            if item.draft_id.is_none()
+                && let Err(err) = self.save_draft(&item).await
+            {
+                tracing::info!(error = %err, "could not save a cancelled message to Drafts");
+                cancelled.unsaved.push(item);
+                continue;
+            }
+            let id = item.id;
+            self.db.write(move |c| outbox::remove(c, id)).await?;
+            cancelled.in_drafts += 1;
+        }
+        Ok(cancelled)
     }
 
     /// One try at Gmail: from the bytes this computer holds, or from the

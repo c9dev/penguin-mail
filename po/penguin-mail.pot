@@ -4353,7 +4353,7 @@ msgstr ""
 msgid "Open Google Cloud"
 msgstr ""
 
-#: app/src/ui/window.rs:1448 app/src/ui/window/scheduled.rs:18
+#: app/src/ui/window.rs:1448 app/src/ui/window/scheduled.rs:21
 #: app/src/ui/window/shortcuts.rs:409
 msgid "Undo"
 msgstr ""
@@ -4849,7 +4849,7 @@ msgstr ""
 msgid "Back in the Inbox"
 msgstr ""
 
-#: app/src/ui/window/scheduled.rs:17
+#: app/src/ui/window/scheduled.rs:20
 msgid "Sending…"
 msgstr ""
 
@@ -4857,26 +4857,35 @@ msgstr ""
 msgid "Could not cancel: {reason}"
 msgstr ""
 
-#: app/src/ui/window/scheduled.rs:71
-msgid "Won't be sent. Gmail never had a draft of it, so the message is gone."
-msgstr ""
-
-#: app/src/ui/window/scheduled.rs:72
+#: app/src/ui/window/scheduled.rs:107
 msgid ""
-"Won't be sent. Gmail never had drafts of them, so the messages are gone."
+"Gmail is out of reach and Penguin Mail cannot reopen a message, so it stays "
+"in Send Later."
 msgstr ""
 
-#: app/src/ui/window/scheduled.rs:73
+#: app/src/ui/window/scheduled.rs:110
+msgid ""
+"Won't be sent. Gmail is out of reach, so the message is open for you to save."
+msgstr ""
+
+#: app/src/ui/window/scheduled.rs:113
+msgid ""
+"Won't be sent. Gmail is out of reach, so the messages are open for you to "
+"save."
+msgstr ""
+
+#: app/src/ui/window/scheduled.rs:115
 msgid "Won't be sent. The message is in Drafts."
 msgstr ""
 
-#: app/src/ui/window/scheduled.rs:74
+#: app/src/ui/window/scheduled.rs:116
 msgid "Won't be sent. The messages are in Drafts."
 msgstr ""
 
-#: app/src/ui/window/scheduled.rs:75
+#: app/src/ui/window/scheduled.rs:118
 msgid ""
-"Won't be sent. The messages Gmail had are in Drafts, and the others are gone."
+"Won't be sent. Some are in Drafts, and the ones Gmail could not take are "
+"open for you to save."
 msgstr ""
 
 #: app/src/ui/window/senders.rs:34

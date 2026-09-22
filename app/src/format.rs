@@ -399,10 +399,7 @@ mod tests {
         // A queued message carries the hour it goes out.
         let now = Local.with_ymd_and_hms(2026, 9, 19, 15, 0, 0).unwrap();
         assert_eq!(header_date(at(2026, 9, 19, 21, 0), now), "Today at 21:00");
-        assert_eq!(
-            header_date(at(2026, 9, 20, 8, 0), now),
-            "Tomorrow at 08:00"
-        );
+        assert_eq!(header_date(at(2026, 9, 20, 8, 0), now), "Tomorrow at 08:00");
         assert_eq!(
             header_date(at(2026, 9, 22, 8, 0), now),
             "Tue 22 Sep at 08:00"

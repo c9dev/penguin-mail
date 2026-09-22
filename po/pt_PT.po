@@ -4533,7 +4533,7 @@ msgstr ""
 msgid "Open Google Cloud"
 msgstr "Abrir o Google Cloud"
 
-#: app/src/ui/window.rs:1448 app/src/ui/window/scheduled.rs:18
+#: app/src/ui/window.rs:1448 app/src/ui/window/scheduled.rs:21
 #: app/src/ui/window/shortcuts.rs:409
 msgid "Undo"
 msgstr "Anular"
@@ -5044,7 +5044,7 @@ msgstr ""
 msgid "Back in the Inbox"
 msgstr "De volta à caixa de entrada"
 
-#: app/src/ui/window/scheduled.rs:17
+#: app/src/ui/window/scheduled.rs:20
 msgid "Sending…"
 msgstr "A enviar…"
 
@@ -5052,33 +5052,36 @@ msgstr "A enviar…"
 msgid "Could not cancel: {reason}"
 msgstr "Não foi possível cancelar: {reason}"
 
-#: app/src/ui/window/scheduled.rs:71
-msgid "Won't be sent. Gmail never had a draft of it, so the message is gone."
-msgstr ""
-"Não vai ser enviada. O Gmail nunca teve um rascunho dela, por isso a "
-"mensagem desapareceu."
-
-#: app/src/ui/window/scheduled.rs:72
+#: app/src/ui/window/scheduled.rs:107
 msgid ""
-"Won't be sent. Gmail never had drafts of them, so the messages are gone."
-msgstr ""
-"Não vão ser enviadas. O Gmail nunca teve rascunhos delas, por isso as "
-"mensagens desapareceram."
+"Gmail is out of reach and Penguin Mail cannot reopen a message, so it stays "
+"in Send Later."
+msgstr "O Gmail está inacessível e o Penguin Mail não consegue reabrir uma mensagem, por isso ela continua em Enviar mais tarde."
 
-#: app/src/ui/window/scheduled.rs:73
+#: app/src/ui/window/scheduled.rs:110
+msgid ""
+"Won't be sent. Gmail is out of reach, so the message is open for you to save."
+msgstr "Não vai ser enviada. O Gmail está inacessível, por isso a mensagem ficou aberta para a guardar."
+
+#: app/src/ui/window/scheduled.rs:113
+msgid ""
+"Won't be sent. Gmail is out of reach, so the messages are open for you to "
+"save."
+msgstr "Não vão ser enviadas. O Gmail está inacessível, por isso as mensagens ficaram abertas para as guardar."
+
+#: app/src/ui/window/scheduled.rs:115
 msgid "Won't be sent. The message is in Drafts."
 msgstr "Não vai ser enviada. A mensagem está nos rascunhos."
 
-#: app/src/ui/window/scheduled.rs:74
+#: app/src/ui/window/scheduled.rs:116
 msgid "Won't be sent. The messages are in Drafts."
 msgstr "Não vão ser enviadas. As mensagens estão nos rascunhos."
 
-#: app/src/ui/window/scheduled.rs:75
+#: app/src/ui/window/scheduled.rs:118
 msgid ""
-"Won't be sent. The messages Gmail had are in Drafts, and the others are gone."
-msgstr ""
-"Não vão ser enviadas. As mensagens que o Gmail tinha estão nos rascunhos, e "
-"as outras desapareceram."
+"Won't be sent. Some are in Drafts, and the ones Gmail could not take are "
+"open for you to save."
+msgstr "Não vão ser enviadas. Algumas estão nos rascunhos, e as que o Gmail não aceitou ficaram abertas para as guardar."
 
 #: app/src/ui/window/senders.rs:34
 msgid "This message has no unsubscribe link"
