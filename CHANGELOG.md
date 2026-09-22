@@ -22,6 +22,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - The assistant can export conversations as an mbox file, or one message
   as an .eml file, to your Downloads folder or a place you name. It never
   replaces a file without saying so first.
+- The assistant can forward a message, add a Bcc, attach files from your
+  mail or from this computer, and sign or encrypt what it sends. It asks
+  before it reads a file from this computer, and names the path.
+- The assistant lists your drafts, and changes or deletes one when you
+  ask, encrypted drafts included.
 
 ### Fixed
 

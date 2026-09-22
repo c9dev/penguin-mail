@@ -26,9 +26,13 @@ use mailrs_sync::{
 use serde_json::Value;
 use tokio::task::JoinHandle;
 
+use base64::Engine as _;
+use base64::engine::general_purpose::STANDARD;
+
 use super::{Answer, Background, Desk, Effects, Modules, OnScreen, Permission, Tools};
-use crate::compose::Draft;
+use crate::compose::{self, Draft};
 use crate::hide_my_email::HiddenAddress;
+use crate::protection::{self, Held, Standard};
 use crate::settings::{Change, Settings};
 use crate::unsubscribe::Unsubscribe;
 
@@ -132,6 +136,11 @@ pub struct Asked {
     pub undone: Vec<Outcome>,
     /// How often a tool told the window to read the image senders again.
     pub image_senders_changed: usize,
+    /// The addresses gpg holds a key for, or `None` for a computer with no
+    /// gpg. The fake has no gpgsm.
+    pub keys: Option<Vec<String>>,
+    /// Drafts saved back into Gmail, as the window's Save Draft saves them.
+    pub saved_drafts: Vec<Draft>,
     /// Categorize Sender runs in the background, as the window runs it.
     /// `Harness::categorized` waits for these.
     sorting: Vec<JoinHandle<Categorized>>,
@@ -145,6 +154,7 @@ pub struct FakeEffects {
     desk: Rc<FakeDesk>,
     mail: Arc<MailActions<Connected>>,
     gmail: Arc<AccountSettings<Connected>>,
+    connected: Arc<Connected>,
 }
 
 impl FakeEffects {
@@ -329,6 +339,92 @@ impl Effects for FakeEffects {
 
     fn image_senders_changed(&self) {
         self.asked.borrow_mut().image_senders_changed += 1;
+    }
+
+    // The engines and Gmail's Drafts. The fake gpg holds the keys a test
+    // lists, and "encrypts" a draft by wrapping its body in base64 under
+    // the header an encrypted draft carries, so a draft saved encrypted
+    // reopens through the same `protection::draft` code the window's does.
+
+    fn keys(&self, addresses: Vec<String>) -> Answer<'_, Held> {
+        let held = self.asked.borrow().keys.clone().map(|keys| {
+            addresses
+                .iter()
+                .map(|address| mailrs_pgp::Recipient {
+                    address: address.clone(),
+                    key: keys.contains(address).then(|| mailrs_pgp::Key {
+                        fingerprint: "F".repeat(40),
+                        user_id: format!("<{address}>"),
+                        trust: mailrs_pgp::Trust::Unknown,
+                    }),
+                })
+                .collect()
+        });
+        Box::pin(async move {
+            Held {
+                pgp: held,
+                smime: None,
+            }
+        })
+    }
+
+    fn signing_standard(&self, _from: String) -> Answer<'_, Standard> {
+        Box::pin(async { Standard::Pgp })
+    }
+
+    fn reopen_draft(&self, raw: Vec<u8>, draft: Draft) -> Answer<'_, Result<Draft, String>> {
+        Box::pin(async move {
+            let mut draft = draft;
+            match protection::draft::standard_of(&raw) {
+                None => protection::draft::reopen_plain(&raw, &mut draft),
+                Some(standard) => {
+                    let blank = protection::find(&raw, b"\r\n\r\n").ok_or("no body")? + 4;
+                    let wrapped: String = String::from_utf8_lossy(&raw[blank..])
+                        .split_whitespace()
+                        .collect();
+                    let part = STANDARD.decode(wrapped).map_err(|e| e.to_string())?;
+                    let (body, files) = protection::opened_body(&part);
+                    let read = protection::Read {
+                        mark: protection::Mark {
+                            title: "Encrypted".into(),
+                            detail: None,
+                            tone: protection::Tone::Good,
+                        },
+                        body: Some(body),
+                        files,
+                    };
+                    protection::draft::reopen(&raw, standard, read, &mut draft)?;
+                }
+            }
+            Ok(draft)
+        })
+    }
+
+    fn save_draft(&self, draft: Draft) -> Answer<'_, Result<(), String>> {
+        Box::pin(async move {
+            let id = compose::new_message_id(&draft.from.email);
+            let raw = match draft.encrypt {
+                false => compose::build_mime(&draft, NOW / 1000, &id)?,
+                true => {
+                    let part = compose::build_body_part(&draft)?;
+                    let entity = format!(
+                        "Content-Type: multipart/encrypted; protocol=\"application/pgp-encrypted\"; boundary=\"fake\"\r\n\r\n{}\r\n",
+                        STANDARD.encode(part)
+                    );
+                    protection::draft::build(&draft, NOW / 1000, &id, entity.into_bytes())?
+                }
+            };
+            let account = self
+                .connected
+                .account(draft.account_id)
+                .ok_or("that account is not connected")?;
+            account
+                .save_draft(raw, draft.thread_id.clone(), draft.draft_id.clone())
+                .await
+                .map_err(|e| e.to_string())?;
+            self.asked.borrow_mut().saved_drafts.push(draft);
+            Ok(())
+        })
     }
 }
 
@@ -522,6 +618,7 @@ impl Harness {
             desk: Rc::clone(&desk),
             mail,
             gmail: settings,
+            connected: Arc::clone(&modules.accounts),
         });
         let tools = Tools::new(
             modules,

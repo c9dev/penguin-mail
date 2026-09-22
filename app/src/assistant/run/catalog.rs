@@ -159,6 +159,7 @@ fn message_fields() -> Value {
         "account": account("Account to send from. Defaults to the one the reply goes to, else the default account."),
         "to": {"type": "array", "items": {"type": "string"}, "description": "Recipients, as addresses or \"Name <address>\"."},
         "cc": {"type": "array", "items": {"type": "string"}},
+        "bcc": {"type": "array", "items": {"type": "string"}, "description": "Blind copies: the other recipients do not see these."},
         "subject": {"type": "string"},
         "body": {"type": "string", "description": "The message in Markdown. Leave out the signature; the app adds it."},
         "reply_to": {
@@ -169,6 +170,38 @@ fn message_fields() -> Value {
                 "thread_id": {"type": "string"}
             },
             "required": ["account", "thread_id"],
+            "additionalProperties": false
+        },
+        "forward": {
+            "type": "object",
+            "description": "Set to forward a message: it goes below the body under a forwarded-message header, with its files. The subject defaults to \"Fwd: \" and the original's. Not with reply_to.",
+            "properties": {
+                "account": {"type": "string"},
+                "message_id": {"type": "string", "description": "The message_id read_conversation gave."}
+            },
+            "required": ["account", "message_id"],
+            "additionalProperties": false
+        },
+        "attachments": attachments(),
+        "sign": {"type": "boolean", "description": "Sign with the sender's OpenPGP key or S/MIME certificate. Defaults to the user's setting."},
+        "encrypt": {"type": "boolean", "description": "Encrypt to every recipient's key or certificate. Fails, naming who, when a recipient has none. Defaults to the user's setting, which encrypts only when it can."}
+    })
+}
+
+/// Files a message carries: out of messages in the mail, or off this
+/// computer by path.
+fn attachments() -> Value {
+    json!({
+        "type": "array",
+        "description": "Files to attach. Give message_id and attachment for a file in a message, or path for a file on this computer the user named. The user sees every path before anything is read; hidden folders and system folders are refused.",
+        "items": {
+            "type": "object",
+            "properties": {
+                "message_id": {"type": "string", "description": "The message_id read_conversation gave."},
+                "attachment": {"type": "string", "description": "The file name, or its number in the message's list, starting at 1."},
+                "account": {"type": "string", "description": "The message's account, when it is not the one the message goes from."},
+                "path": {"type": "string", "description": "A file on this computer, as a full path or starting with ~/."}
+            },
             "additionalProperties": false
         }
     })
@@ -303,10 +336,10 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "draft_email",
             label: || gettext("Writing a draft"),
-            description: "Opens a composer window with a message for the user to review and send. Use this unless the user asked you to send.",
+            description: "Opens a composer window with a message for the user to review and send. Use this unless the user asked you to send. The user approves files from this computer first.",
             input: message_fields,
             required: &["body"],
-            run: Run::Now(|t, input| Box::pin(t.draft(input))),
+            run: Run::AsksFirst(|t, input| Box::pin(t.draft(input))),
         },
         MailTool {
             name: "send_email",
@@ -315,6 +348,49 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
             input: message_fields,
             required: &["to", "subject", "body"],
             run: Run::AsksFirst(|t, input| Box::pin(t.send(input))),
+        },
+        MailTool {
+            name: "list_drafts",
+            label: || gettext("Reading drafts"),
+            description: "Lists the drafts waiting in Gmail, newest first, with their subjects, recipients, dates and message ids. Read one with read_conversation.",
+            input: || json!({"account": account("Limit to one account. All accounts when left out.")}),
+            required: &[],
+            run: Run::Now(|t, input| Box::pin(t.list_drafts(input))),
+        },
+        MailTool {
+            name: "edit_draft",
+            label: || gettext("Changing a draft"),
+            description: "Changes a draft Gmail keeps and saves it back. Only the fields given change: to, cc and bcc replace the lists, body replaces the whole text, attachments adds files, remove_attachments takes files out by name. An encrypted draft stays encrypted unless encrypt is false. The user approves it first.",
+            input: || {
+                json!({
+                    "account": account("The draft's account."),
+                    "message_id": {"type": "string", "description": "The draft's message_id, from list_drafts."},
+                    "to": {"type": "array", "items": {"type": "string"}},
+                    "cc": {"type": "array", "items": {"type": "string"}},
+                    "bcc": {"type": "array", "items": {"type": "string"}},
+                    "subject": {"type": "string"},
+                    "body": {"type": "string", "description": "The new text in Markdown, signature included. Read the draft first to keep what should stay."},
+                    "attachments": attachments(),
+                    "remove_attachments": {"type": "array", "items": {"type": "string"}, "description": "File names to take out."},
+                    "sign": {"type": "boolean"},
+                    "encrypt": {"type": "boolean"}
+                })
+            },
+            required: &["account", "message_id"],
+            run: Run::AsksFirst(|t, input| Box::pin(t.edit_draft(input))),
+        },
+        MailTool {
+            name: "delete_draft",
+            label: || gettext("Deleting a draft"),
+            description: "Deletes a draft from Gmail for good. The user approves it first.",
+            input: || {
+                json!({
+                    "account": account("The draft's account."),
+                    "message_id": {"type": "string", "description": "The draft's message_id, from list_drafts."}
+                })
+            },
+            required: &["account", "message_id"],
+            run: Run::AsksFirst(|t, input| Box::pin(t.delete_draft(input))),
         },
         MailTool {
             name: "block_sender",

@@ -246,11 +246,10 @@ async fn a_discarded_draft_leaves_gmail_and_the_store() {
     assert!(h.sync.discard_draft(&saved.message_id).await.unwrap());
     assert!(h.fake.with(|s| s.drafts.is_empty()), "Gmail holds no draft");
     let (account_id, id) = (h.account_id, saved.message_id.clone());
-    let stored = h
-        .db
-        .read(move |c| messages::thread_id_of(c, account_id, &id))
-        .await
-        .unwrap();
+    let stored =
+        h.db.read(move |c| messages::thread_id_of(c, account_id, &id))
+            .await
+            .unwrap();
     assert_eq!(stored, None, "the Drafts mailbox drops it at once");
     assert_eq!(stored_pair(&h, &saved.message_id).await, None);
 

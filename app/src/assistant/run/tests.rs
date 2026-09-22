@@ -16,6 +16,7 @@ mod calendar;
 mod mail;
 mod manage;
 mod queue;
+mod writing;
 
 const DAY: i64 = 24 * 60 * 60 * 1000;
 
@@ -983,13 +984,17 @@ async fn set_signature_names_the_account() {
 }
 
 /// An input each tool accepts in the fixture mailbox, or `None` for a tool
-/// that needs fixtures of its own (attachments, events, invitations, the
+/// that needs fixtures of its own (attachments, events, invitations, drafts, the
 /// delete permission) or an earlier call's answer. Those have tests in
-/// `tests/mail.rs`, `tests/calendar.rs`, `tests/manage.rs` and the end of
-/// the table test.
+/// `tests/mail.rs`, `tests/calendar.rs`, `tests/manage.rs`, `tests/writing.rs`
+/// and the end of the table test.
 fn sample(name: &str, later: &str) -> Option<Value> {
     Some(match name {
-        "get_context" | "get_settings" | "list_hidden_addresses" | "list_templates" => json!({}),
+        "get_context"
+        | "get_settings"
+        | "list_hidden_addresses"
+        | "list_templates"
+        | "list_drafts" => json!({}),
         "list_mail" => json!({"mailbox": "inbox"}),
         "search_mail" => json!({"query": "kite"}),
         "read_conversation" | "open_conversation" | "dismiss_follow_up" => {
@@ -1041,7 +1046,9 @@ fn sample(name: &str, later: &str) -> Option<Value> {
         | "delete_smart_mailbox"
         | "delete_template"
         | "update_contact"
-        | "forget_image_sender" => return None,
+        | "forget_image_sender"
+        | "edit_draft"
+        | "delete_draft" => return None,
         "list_reminders" => json!({}),
         "unmute" => json!({"targets": [target("t3")]}),
         // These need a queued message, a reminder, or an action to undo,

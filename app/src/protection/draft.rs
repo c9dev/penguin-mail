@@ -142,7 +142,10 @@ pub async fn save(
     let Some(account) = core.account(draft.account_id) else {
         return Err(gettext("That account is not connected."));
     };
-    let (date, message_id) = (now_millis() / 1000, compose::new_message_id(&draft.from.email));
+    let (date, message_id) = (
+        now_millis() / 1000,
+        compose::new_message_id(&draft.from.email),
+    );
     let raw = match secret {
         true => {
             let mut kept = draft.clone();

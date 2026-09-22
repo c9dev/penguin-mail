@@ -57,6 +57,38 @@ It reads an attachment as text when the file is plain text, a web page or
 a PDF. PDFs need `pdftotext`, which the `poppler-utils` package installs;
 other files, such as pictures, it can name but not read.
 
+## Writing and drafts
+
+The assistant writes mail the way the composer does:
+
+- "Forward Theo's kite plans to Ann, with the map he attached."
+- "Send the minutes to the committee and Bcc the treasurer."
+- "Email ~/Documents/lease.pdf to the landlord, signed and encrypted."
+- "What drafts do I have?"
+- "Add Bo to my draft about the fern swap and change the subject."
+- "Delete the draft to the plumber."
+
+A message it drafts opens in a composer for you to finish. One it sends
+waits for you to allow it, and the question names every recipient, the
+blind copies, the files, and whether it goes out signed or encrypted.
+Signing and encrypting follow your settings under Preferences unless you
+ask otherwise. It encrypts only when it has a key or certificate for
+every recipient, and when one is missing it tells you whose; a Bcc stays
+hidden inside an OpenPGP message.
+
+It attaches a file from a message you have, or a file on this computer
+that you name by its path. Before it reads a file from this computer it
+shows you the whole path and waits for you to allow it. It will not
+attach anything from a hidden folder, such as `~/.ssh` or `~/.gnupg`,
+from the system folders, or from Penguin Mail's own data. It does not
+forward an encrypted message or its files; forward those yourself from
+the conversation.
+
+It lists your drafts, changes one, and deletes one, asking before each
+change. An encrypted draft stays encrypted to your own key when it goes
+back to Gmail, and opening it may ask for your passphrase. Gmail deletes
+a draft for good, with no copy in the Trash.
+
 ## Your calendar
 
 The assistant reads and changes the primary Google calendar of each

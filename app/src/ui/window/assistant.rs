@@ -22,6 +22,7 @@ use crate::compose::{Draft, SendWhen};
 use crate::core::RunningEngine;
 use crate::hide_my_email::HiddenAddress;
 use crate::permission::Occasion;
+use crate::protection::{self, Held, Standard};
 use crate::settings::{Change, Settings};
 use crate::unsubscribe::Unsubscribe;
 
@@ -218,5 +219,29 @@ impl Effects for Ports {
 
     fn image_senders_changed(&self) {
         self.0.reload_image_senders();
+    }
+
+    fn keys(&self, addresses: Vec<String>) -> Answer<'_, Held> {
+        Box::pin(async move { protection::held(&self.0.core, &addresses).await })
+    }
+
+    fn signing_standard(&self, from: String) -> Answer<'_, Standard> {
+        Box::pin(async move { protection::signing_for(&self.0.core, &from).await })
+    }
+
+    fn reopen_draft(&self, raw: Vec<u8>, draft: Draft) -> Answer<'_, Result<Draft, String>> {
+        Box::pin(async move {
+            let mut draft = draft;
+            protection::draft::reopened(&self.0.core, raw, &mut draft).await?;
+            Ok(draft)
+        })
+    }
+
+    fn save_draft(&self, draft: Draft) -> Answer<'_, Result<(), String>> {
+        Box::pin(async move {
+            protection::draft::save(&self.0.core, &draft, draft.encrypt, draft.standard)
+                .await
+                .map(|_| ())
+        })
     }
 }

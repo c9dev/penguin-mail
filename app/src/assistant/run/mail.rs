@@ -94,6 +94,32 @@ pub(super) async fn pdf_text(bytes: Vec<u8>) -> Result<Option<String>, String> {
     Ok(Some(String::from_utf8_lossy(&output.stdout).into_owned()))
 }
 
+/// The attachment `wanted` names among `files`: by its file name, or by
+/// its number in the list, counting from 1. Reading a file and attaching
+/// one to a message find it the same way.
+pub(super) fn named_attachment<'a>(
+    files: &'a [mailrs_domain::Attachment],
+    wanted: &str,
+) -> Result<&'a mailrs_domain::Attachment, String> {
+    let found = files
+        .iter()
+        .find(|a| a.filename.eq_ignore_ascii_case(wanted))
+        .or_else(|| {
+            let number: usize = wanted.parse().ok()?;
+            files.get(number.checked_sub(1)?)
+        });
+    found.ok_or_else(|| {
+        let names: Vec<&str> = files.iter().map(|a| a.filename.as_str()).collect();
+        match names.is_empty() {
+            true => "That message has no attachments.".into(),
+            false => format!(
+                "That message has no attachment called {wanted}. It has: {}.",
+                names.join(", ")
+            ),
+        }
+    })
+}
+
 /// The unsubscribe links of the newest message in the thread that has
 /// any, with the message they came from.
 fn newest_with_list(
@@ -366,24 +392,7 @@ impl<A: Accounts> Tools<A> {
         let wanted = required(input, "attachment")?;
         let (s, id) = (Arc::clone(&sync), message_id.clone());
         let body = self.call(async move { s.body(&id).await }).await?;
-        let files = &body.attachments;
-        let found = files
-            .iter()
-            .find(|a| a.filename.eq_ignore_ascii_case(&wanted))
-            .or_else(|| {
-                let number: usize = wanted.parse().ok()?;
-                files.get(number.checked_sub(1)?)
-            });
-        let Some(file) = found else {
-            let names: Vec<&str> = files.iter().map(|a| a.filename.as_str()).collect();
-            return Err(match names.is_empty() {
-                true => "That message has no attachments.".into(),
-                false => format!(
-                    "That message has no attachment called {wanted}. It has: {}.",
-                    names.join(", ")
-                ),
-            });
-        };
+        let file = named_attachment(&body.attachments, &wanted)?;
         let handle = file
             .attachment_id
             .clone()

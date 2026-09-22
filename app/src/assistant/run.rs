@@ -31,6 +31,7 @@ use serde_json::{Value, json};
 
 use crate::compose::{self, Draft};
 use crate::hide_my_email::HiddenAddress;
+use crate::protection::{Held, Standard};
 use crate::rules::{RuleForm, describe_action, describe_criteria};
 use crate::settings::{
     Change, Choice, ColorScheme, MarkRead, RemoteImages, Setting, Settings, TextSize, UndoSend,
@@ -47,6 +48,7 @@ mod manage;
 mod queue;
 #[cfg(test)]
 mod tests;
+mod writing;
 
 use catalog::Plan;
 pub use catalog::{label, specs};
@@ -170,6 +172,23 @@ pub trait Effects {
     /// Reads the senders allowed to load remote images again, after a
     /// tool changed the list the window keeps a copy of.
     fn image_senders_changed(&self);
+
+    // ---- The engines and Gmail's Drafts, for the writing tools ----------
+    // The composer reaches gpg, gpgsm and the drafts through the core. The
+    // writing tools ask the window, so a test can stand in for all three.
+
+    /// What gpg and gpgsm hold for `addresses`. An engine this computer
+    /// lacks answers `None`.
+    fn keys(&self, addresses: Vec<String>) -> Answer<'_, Held>;
+    /// Which standard signs a message from `from`.
+    fn signing_standard(&self, from: String) -> Answer<'_, Standard>;
+    /// `draft` filled in from the Gmail draft `raw`, opened whichever way
+    /// Gmail holds it. An encrypted one goes to its engine, which may ask
+    /// for the passphrase.
+    fn reopen_draft(&self, raw: Vec<u8>, draft: Draft) -> Answer<'_, Result<Draft, String>>;
+    /// Saves `draft` over the Gmail draft it names, encrypted to the writer
+    /// when it goes out encrypted, as the composer's Save Draft does.
+    fn save_draft(&self, draft: Draft) -> Answer<'_, Result<(), String>>;
 }
 
 /// Hands a future to the sync runtime. The GTK thread has no tokio reactor
@@ -976,106 +995,6 @@ impl<A: Accounts> Tools<A> {
         let mut result = report(&self.act(targets, MailAction::Remind { at: when }).await)?;
         result["returns"] = json!(crate::format::future_date(when, Local::now()));
         Ok(result)
-    }
-
-    // ---- Writing ---------------------------------------------------------
-
-    /// Opens a composer on the message for the user to review.
-    async fn draft(&self, input: &Value) -> ToolResult {
-        let draft = self.draft_from(input).await?;
-        self.effects.compose(draft)?;
-        Ok(json!({"opened": "A composer window shows the draft for the user to review."}))
-    }
-
-    async fn send<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
-        let draft = self.draft_from(input).await?;
-        if let Some(problem) = draft.problem() {
-            return Err(problem);
-        }
-        let to = compose::format_recipients(&draft.to);
-        let question = fill(
-            &gettext("Send “{subject}” to {recipients}?"),
-            &[("subject", &draft.subject), ("recipients", &to)],
-        );
-        Ok(Plan::ask(question, async move {
-            let delay = self.desk.settings().undo_send.seconds();
-            self.effects.send(draft)?;
-            Ok(json!({"sent": true, "undo_seconds": delay}))
-        }))
-    }
-
-    /// The message the fields `message_fields` describes, threaded into
-    /// the conversation `reply_to` names.
-    async fn draft_from(&self, input: &Value) -> Result<Draft, String> {
-        let list = |key: &str| -> String {
-            input
-                .get(key)
-                .and_then(Value::as_array)
-                .map(|a| {
-                    a.iter()
-                        .filter_map(Value::as_str)
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                })
-                .unwrap_or_default()
-        };
-        let reply = input.get("reply_to").filter(|v| v.is_object());
-        let reply_account = match reply {
-            Some(r) => Some(self.account_named(&required(r, "account")?)?),
-            None => None,
-        };
-        let account = match text(input, "account") {
-            Some(email) => self.account_named(&email)?,
-            None => match &reply_account {
-                Some(a) => a.clone(),
-                None => {
-                    let id = self.desk.default_account().ok_or("Add an account first.")?;
-                    self.desk
-                        .accounts()
-                        .into_iter()
-                        .find(|a| a.id == id)
-                        .ok_or("Add an account first.")?
-                }
-            },
-        };
-        let mut draft = self.effects.new_draft(account.id)?;
-        draft.to = compose::parse_recipients(&list("to"));
-        draft.cc = compose::parse_recipients(&list("cc"));
-        draft.subject = text(input, "subject").unwrap_or_default();
-        draft.markdown = input
-            .get("body")
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .to_string();
-        if let (Some(r), Some(reply_account)) = (reply, &reply_account)
-            && reply_account.id == account.id
-        {
-            let thread_id = required(r, "thread_id")?;
-            let key = thread_id.clone();
-            let found = self
-                .read(move |c| messages::thread_messages(c, account.id, &key))
-                .await?;
-            let parent = found
-                .iter()
-                .rev()
-                .find(|m| !m.has_label(system_label::DRAFT));
-            draft.thread_id = Some(thread_id);
-            draft.in_reply_to = parent.and_then(|m| m.rfc822_msgid.clone());
-            draft.references = found
-                .iter()
-                .filter_map(|m| m.rfc822_msgid.clone())
-                .collect();
-            if draft.subject.is_empty()
-                && let Some(parent) = parent
-            {
-                draft.subject = if parent.subject.to_lowercase().starts_with("re:") {
-                    parent.subject.clone()
-                } else {
-                    format!("Re: {}", parent.subject)
-                };
-            }
-        }
-        Ok(draft)
     }
 
     // ---- Gmail settings --------------------------------------------------
