@@ -69,6 +69,9 @@ server sees your mail.
 - **Select several at once** with Ctrl+click, Shift+click or Ctrl+A, then
   archive, trash, junk, flag, mark or label them together. Ctrl+Z undoes
   each one.
+- **One message at a time.** Right-click a message inside a conversation
+  to reply to it, archive it, trash it, mark it, flag it, label it or
+  export it on its own. The rest of the thread stays where it is.
 - **Flags in seven colors**, as in Apple Mail. The flag syncs through
   Gmail's star, and the color stays on this computer.
 - **VIPs.** Their mail gathers in a VIPs mailbox, their rows get a star, and

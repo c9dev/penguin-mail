@@ -46,6 +46,7 @@ mod followup;
 mod hide_my_email;
 mod images;
 mod invitation;
+mod message_menu;
 mod notice;
 mod organize;
 mod outbox;
@@ -1149,6 +1150,9 @@ impl MainWindow {
                 }
             }
             Action::ShowContact(address) => self.show_contact_from(view, address),
+            Action::MessageMenu { message_id, x, y } => {
+                self.open_message_menu(view, &message_id, x, y)
+            }
             Action::Translate => self.translate_message(view),
         }
     }
@@ -1236,16 +1240,24 @@ impl MainWindow {
             .or_else(|| self.mailbox.borrow().account())
     }
 
-    /// Applies `action` to the targets and keeps an undo for it. Actions that
-    /// take mail out of the list move on to the next row, as Apple Mail does.
-    fn triage(self: &Rc<Self>, action: TriageAction) {
-        let view = Rc::clone(&self.conversation);
-        let targets = self.reach(&view).targets;
+    /// Applies a label change to `targets` and keeps an undo for it.
+    /// `follow` is the conversation to move on from once the change takes
+    /// its mail out of the mailbox on screen, as Apple Mail does. A change
+    /// to one message of a longer thread passes none: the thread stays
+    /// where it is, and so does the reader.
+    pub(super) fn triage_targets(
+        self: &Rc<Self>,
+        targets: Vec<Target>,
+        action: TriageAction,
+        follow: Option<&Rc<ConversationView>>,
+    ) {
         if targets.is_empty() {
             return;
         }
         let action = MailAction::Triage(action);
-        self.follow_out(&view, &action);
+        if let Some(view) = follow {
+            self.follow_out(view, &action);
+        }
         self.perform(targets, action, History::Record, None);
     }
 
@@ -1492,12 +1504,36 @@ impl MainWindow {
         });
     }
 
-    /// Labels of the targets' account, checked when the one open
-    /// conversation already has them. Mail from several accounts gets
-    /// every label name those accounts hold.
+    /// The label list for what the Labels button reaches: the selection,
+    /// or the open conversation.
     fn label_popover(self: &Rc<Self>) -> gtk::Popover {
+        let view = Rc::clone(&self.conversation);
+        let targets = self.reach(&view).targets;
+        let applied: HashSet<String> = match targets.len() {
+            1 => view
+                .read(|o| {
+                    o.messages
+                        .iter()
+                        .flat_map(|m| m.label_ids.clone())
+                        .collect()
+                })
+                .unwrap_or_default(),
+            _ => HashSet::new(),
+        };
+        self.label_popover_for(targets, applied, Some(view))
+    }
+
+    /// Labels of the targets' account, with `applied` already ticked. Mail
+    /// from several accounts gets every label name those accounts hold.
+    /// `follow` is the conversation to move on from when a label change
+    /// takes its mail out of the mailbox on screen.
+    pub(super) fn label_popover_for(
+        self: &Rc<Self>,
+        targets: Vec<Target>,
+        applied: HashSet<String>,
+        follow: Option<Rc<ConversationView>>,
+    ) -> gtk::Popover {
         let popover = gtk::Popover::new();
-        let targets = self.reach(&self.conversation).targets;
         let accounts: HashSet<AccountId> = targets.iter().map(|t| t.account_id).collect();
         let message = |text: &str| {
             gtk::Label::builder()
@@ -1542,17 +1578,25 @@ impl MainWindow {
             .margin_top(4)
             .build();
         let (weak, pop) = (Rc::downgrade(self), popover.clone());
-        create.connect_clicked(move |_| {
-            pop.popdown();
-            if let Some(win) = weak.upgrade() {
-                win.new_label(
-                    account_id,
-                    Some(Box::new(|win, label_id| {
-                        win.triage(TriageAction::AddLabel(label_id))
-                    })),
-                );
-            }
-        });
+        {
+            let (targets, follow) = (targets.clone(), follow.clone());
+            create.connect_clicked(move |_| {
+                pop.popdown();
+                if let Some(win) = weak.upgrade() {
+                    let (targets, follow) = (targets.clone(), follow.clone());
+                    win.new_label(
+                        account_id,
+                        Some(Box::new(move |win, label_id| {
+                            win.triage_targets(
+                                targets.clone(),
+                                TriageAction::AddLabel(label_id),
+                                follow.as_ref(),
+                            )
+                        })),
+                    );
+                }
+            });
+        }
         if labels.is_empty() {
             let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
             content.append(&message(&gettext("This account has no labels yet.")));
@@ -1560,18 +1604,6 @@ impl MainWindow {
             popover.set_child(Some(&content));
             return popover;
         }
-        let applied: HashSet<String> = if targets.len() == 1 {
-            self.conversation
-                .read(|o| {
-                    o.messages
-                        .iter()
-                        .flat_map(|m| m.label_ids.clone())
-                        .collect()
-                })
-                .unwrap_or_default()
-        } else {
-            HashSet::new()
-        };
         let list = gtk::ListBox::builder()
             .css_classes(["navigation-sidebar"])
             .selection_mode(gtk::SelectionMode::None)
@@ -1610,11 +1642,15 @@ impl MainWindow {
                 return;
             };
             pop.popdown();
-            win.triage(if applied.contains(&label.id) {
-                TriageAction::RemoveLabel(label.id.clone())
-            } else {
-                TriageAction::AddLabel(label.id.clone())
-            });
+            win.triage_targets(
+                targets.clone(),
+                if applied.contains(&label.id) {
+                    TriageAction::RemoveLabel(label.id.clone())
+                } else {
+                    TriageAction::AddLabel(label.id.clone())
+                },
+                follow.as_ref(),
+            );
         });
         let scroller = gtk::ScrolledWindow::builder()
             .child(&list)
@@ -1654,11 +1690,25 @@ impl MainWindow {
 
     /// Replies to or forwards the newest message in `view`.
     pub(super) fn reply(self: &Rc<Self>, view: &ConversationView, kind: ReplyKind) {
+        self.reply_to(view, kind, None)
+    }
+
+    /// Replies to or forwards one message of `view`, or its newest one
+    /// when `only` names none.
+    pub(super) fn reply_to(
+        self: &Rc<Self>,
+        view: &ConversationView,
+        kind: ReplyKind,
+        only: Option<&str>,
+    ) {
         let Some(app) = self.app.upgrade() else {
             return;
         };
         let prepared = view.find(|open| {
-            let target = open.reply_target()?.clone();
+            let target = match only {
+                Some(id) => open.messages.iter().find(|m| m.id == id)?.clone(),
+                None => open.reply_target()?.clone(),
+            };
             let text = match open.bodies.get(&target.id) {
                 Some(Ok(body)) => compose::body_text(body),
                 _ => target.snippet.clone(),
@@ -2281,11 +2331,12 @@ impl MainWindow {
 
     /// Screenshot hooks, honoured only in demo mode: `MAILRS_DEMO_OPEN`
     /// opens a thread by id, `MAILRS_DEMO_SEARCH` runs a search,
-    /// `MAILRS_DEMO_COMPOSE=reply` opens a reply to the open thread, and
-    /// `MAILRS_DEMO_ACTION` activates a window action such as `shortcuts`,
-    /// or one with a target such as `account-rules(int64 1)`. With a
-    /// thread to open, the action waits for it, so `toggle-vip` has a
-    /// sender to add.
+    /// `MAILRS_DEMO_COMPOSE=reply` opens a reply to the open thread,
+    /// `MAILRS_DEMO_MESSAGE_MENU` right-clicks the message at that
+    /// position in the open thread, and `MAILRS_DEMO_ACTION` activates a
+    /// window action such as `shortcuts`, or one with a target such as
+    /// `account-rules(int64 1)`. With a thread to open, the action waits
+    /// for it, so `toggle-vip` has a sender to add.
     pub fn run_demo_script(self: &Rc<Self>) {
         if !self.core.demo {
             return;
@@ -2322,6 +2373,11 @@ impl MainWindow {
                             move || {
                                 if std::env::var("MAILRS_DEMO_COMPOSE").as_deref() == Ok("reply") {
                                     replier.reply(&replier.conversation, ReplyKind::Reply);
+                                }
+                                if let Ok(position) = std::env::var("MAILRS_DEMO_MESSAGE_MENU")
+                                    && let Ok(position) = position.parse()
+                                {
+                                    replier.conversation.ask_message_menu(position);
                                 }
                                 replier.run_demo_action();
                             },

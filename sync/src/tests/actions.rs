@@ -258,6 +258,35 @@ async fn a_message_target_changes_only_that_message() {
 }
 
 #[tokio::test]
+async fn archiving_one_message_leaves_the_rest_of_its_thread_in_the_inbox() {
+    let h = harness().await;
+    let now = now_millis();
+    for (index, id) in ["a", "b", "c"].into_iter().enumerate() {
+        h.fake
+            .seed(meta(id, "t1", now - 1000 + index as i64, &["INBOX"]));
+    }
+    h.bootstrap_all().await;
+    let actions = actions(&h);
+    let target = Target {
+        message_id: Some("b".into()),
+        ..Target::thread(h.account_id, "t1")
+    };
+
+    let outcome = actions
+        .run(std::slice::from_ref(&target), ARCHIVE, History::Record)
+        .await;
+    assert_eq!(outcome.done, std::slice::from_ref(&target));
+    assert!(h.labels_of("b").await.is_empty());
+    assert_eq!(h.labels_of("a").await, ["INBOX"]);
+    assert_eq!(h.labels_of("c").await, ["INBOX"]);
+    assert_eq!(h.threads("INBOX").await, ["t1"], "the thread stays");
+
+    let undone = actions.undo().await.expect("an undo");
+    assert_eq!(undone.outcome.done, [target]);
+    assert_eq!(h.labels_of("b").await, ["INBOX"]);
+}
+
+#[tokio::test]
 async fn a_failing_account_does_not_stop_the_others() {
     let h = harness().await;
     h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));

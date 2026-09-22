@@ -1,9 +1,10 @@
 //! The right pane: the whole thread in one WebView.
 //!
 //! Page JavaScript is off (`enable-javascript-markup` is false), so email
-//! cannot run scripts. The app still runs two tiny scripts of its own
-//! through the WebKit API: collapsing a message and scrolling to one.
-//! Finding text is WebKit's own, through [`FindBar`].
+//! cannot run scripts. The app still runs a few tiny scripts of its own
+//! through the WebKit API: collapsing a message, scrolling to one, and
+//! [`MENU_SCRIPT`], which asks for the menu of the message under the
+//! pointer. Finding text is WebKit's own, through [`FindBar`].
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -59,10 +60,63 @@ pub enum Action {
     Mailto(String),
     /// The card for one sender, asked for by clicking their name.
     ShowContact(String),
+    /// The menu for one message of the thread, asked for by a right click
+    /// or the Menu key. The point is where the pointer was, in the web
+    /// view's own coordinates.
+    MessageMenu {
+        message_id: String,
+        x: f64,
+        y: f64,
+    },
     /// The translation card's button: translate the open message, or turn
     /// the translation it already has over.
     Translate,
 }
+
+/// The one script the page carries of its own accord. WebKit injects it
+/// after each load, so it outlives the redraws a thread goes through.
+///
+/// It exists because the app cannot tell which message the pointer is
+/// over: WebKit's own `context-menu` signal arrives with a hit test and no
+/// way to run JavaScript, and the message bodies sit inside shadow roots
+/// where the signal's node says little. The script reads the message under
+/// the pointer and asks for its menu through the `mailrs:` scheme the app
+/// already intercepts, by clicking a link the way the page's own links are
+/// clicked.
+///
+/// A right click over selected words keeps WebKit's own menu, so Copy
+/// still works on a quotation the reader picked out.
+const MENU_SCRIPT: &str = r#"(function () {
+  var asked = 0;
+  var ask = function (article, x, y) {
+    var id = article.id.substring(2);
+    var link = document.createElement('a');
+    link.href = 'mailrs:menu/' + id + '/' + Math.round(x) + '/' + Math.round(y) +
+      '/' + (++asked);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+  var messageAt = function (node) {
+    return node && node.closest ? node.closest('.message') : null;
+  };
+  document.addEventListener('contextmenu', function (event) {
+    if (String(window.getSelection())) return;
+    var article = messageAt(event.target);
+    if (!article) return;
+    event.preventDefault();
+    ask(article, event.clientX, event.clientY);
+  }, true);
+  document.addEventListener('keydown', function (event) {
+    if (event.key !== 'ContextMenu' && !(event.key === 'F10' && event.shiftKey)) return;
+    var article = messageAt(document.activeElement) ||
+      document.querySelector('.message.expanded');
+    if (!article) return;
+    event.preventDefault();
+    var box = article.getBoundingClientRect();
+    ask(article, box.left + 16, box.top + 16);
+  }, true);
+})()"#;
 
 struct Buttons {
     archive: gtk::Button,
@@ -127,6 +181,15 @@ pub struct ConversationView {
     /// Remind Me times, recomputed whenever a conversation opens.
     remind: gio::Menu,
     buttons: Buttons,
+    /// The menu for one message. One popover serves the whole thread: the
+    /// model changes with the message the menu was asked for.
+    menu: gtk::PopoverMenu,
+    /// Where that menu last opened, in the web view's coordinates, so a
+    /// popover an item leads to comes up in the same place.
+    menu_at: Cell<(i32, i32)>,
+    /// The popover an item led to, such as the label list. Held so the one
+    /// before it lets go of the view.
+    menu_popover: RefCell<Option<gtk::Popover>>,
     filter: RefCell<Option<webkit::UserContentFilter>>,
     open: RefCell<Option<OpenThread>>,
     /// Counts the threads asked for, so a store read that answers after a
@@ -141,6 +204,13 @@ impl ConversationView {
     pub fn new(on_action: impl Fn(Action) + 'static) -> Rc<ConversationView> {
         let on_action: Rc<dyn Fn(Action)> = Rc::new(on_action);
         let content = webkit::UserContentManager::new();
+        content.add_script(&webkit::UserScript::new(
+            MENU_SCRIPT,
+            webkit::UserContentInjectedFrames::TopFrame,
+            webkit::UserScriptInjectionTime::End,
+            &[],
+            &[],
+        ));
         let settings = webkit::Settings::new();
         settings.set_enable_javascript(true);
         settings.set_enable_javascript_markup(false);
@@ -389,6 +459,10 @@ impl ConversationView {
         ] {
             header.pack_end(widget);
         }
+        let menu_popover = gtk::PopoverMenu::from_model(None::<&gio::Menu>);
+        menu_popover.set_has_arrow(false);
+        menu_popover.set_halign(gtk::Align::Start);
+        menu_popover.set_parent(&webview);
         let find = FindBar::new(&webview);
         let toolbar = adw::ToolbarView::new();
         toolbar.add_top_bar(&header);
@@ -452,6 +526,9 @@ impl ConversationView {
             mark_menu,
             remind,
             buttons,
+            menu: menu_popover,
+            menu_at: Cell::new((0, 0)),
+            menu_popover: RefCell::new(None),
             filter: RefCell::new(None),
             open: RefCell::new(None),
             loading: Cell::new(0),
@@ -461,6 +538,16 @@ impl ConversationView {
         });
 
         view.set_buttons_shown(false);
+        // A popover parented on a widget has to let go of it before the
+        // widget goes, or GTK finalizes a widget that still has a parent.
+        let weak = Rc::downgrade(&view);
+        view.webview.connect_destroy(move |_| {
+            let Some(view) = weak.upgrade() else { return };
+            view.menu.unparent();
+            if let Some(popover) = view.menu_popover.take() {
+                popover.unparent();
+            }
+        });
         let weak = Rc::downgrade(&view);
         let actions = Rc::clone(&on_action);
         view.webview
@@ -582,6 +669,50 @@ impl ConversationView {
                 gettext("Mute")
             }),
             Some("win.mute"),
+        );
+    }
+
+    /// Opens `model` as the menu for one message, at the point the reader
+    /// asked from. The page measures in CSS pixels and the widget in its
+    /// own, so the zoom level stands between the two.
+    pub fn popup_message_menu(&self, model: &gio::Menu, x: f64, y: f64) {
+        let zoom = self.webview.zoom_level();
+        let at = ((x * zoom) as i32, (y * zoom) as i32);
+        self.menu_at.set(at);
+        self.menu.set_menu_model(Some(model));
+        self.menu
+            .set_pointing_to(Some(&gdk::Rectangle::new(at.0, at.1, 1, 1)));
+        self.menu.popup();
+    }
+
+    /// Puts `popover` where the message menu was, for an item that leads
+    /// to a popover of its own, such as the label list.
+    pub fn popup_where_menu_was(&self, popover: &gtk::Popover) {
+        if let Some(before) = self.menu_popover.replace(Some(popover.clone())) {
+            before.unparent();
+        }
+        let (x, y) = self.menu_at.get();
+        popover.set_has_arrow(false);
+        popover.set_halign(gtk::Align::Start);
+        popover.set_parent(&self.webview);
+        popover.set_pointing_to(Some(&gdk::Rectangle::new(x, y, 1, 1)));
+        popover.popup();
+    }
+
+    /// The screenshot hook's way in: asks for the menu of the message at
+    /// `position`, counting from one, as a right click on it would. It
+    /// goes through the page rather than around it, so a screenshot shows
+    /// what a reader's own click shows.
+    pub fn ask_message_menu(&self, position: usize) {
+        run_script(
+            &self.webview,
+            &format!(
+                "(function(){{var m=document.querySelectorAll('.message')[{}];if(!m)return;\
+                 var b=m.getBoundingClientRect();\
+                 m.dispatchEvent(new MouseEvent('contextmenu',{{bubbles:true,cancelable:true,\
+                 clientX:b.left+140,clientY:b.top+14}}));}})()",
+                position.saturating_sub(1)
+            ),
         );
     }
 
@@ -1229,6 +1360,18 @@ impl ConversationView {
             actions(Action::SaveAllAttachments {
                 message_id: message_id.to_string(),
             });
+        } else if let Some(rest) = uri.strip_prefix("mailrs:menu/") {
+            let mut parts = rest.split('/');
+            if let (Some(id), Some(x), Some(y)) = (parts.next(), parts.next(), parts.next())
+                && id == script_safe(id)
+                && let (Ok(x), Ok(y)) = (x.parse(), y.parse())
+            {
+                actions(Action::MessageMenu {
+                    message_id: id.to_string(),
+                    x,
+                    y,
+                });
+            }
         } else if let Some(address) = uri.strip_prefix("mailrs:contact/") {
             actions(Action::ShowContact(address.to_string()));
         } else if let Some(address) = uri.strip_prefix("mailto:") {

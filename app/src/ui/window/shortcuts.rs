@@ -36,6 +36,9 @@ pub(super) enum Place {
     /// The thread list, which installs its keys itself, for the same
     /// reason: they open the menu of the row with the focus.
     List,
+    /// The message on screen, whose keys the page answers rather than
+    /// GTK: they open the menu of the message with the focus.
+    Page,
 }
 
 impl Place {
@@ -124,6 +127,11 @@ const fn composer(trigger: &'static str) -> Key {
 /// A key the thread list installs itself.
 const fn list(trigger: &'static str) -> Key {
     key(trigger, "", Place::List)
+}
+
+/// A key the message on screen answers in the page itself.
+const fn page(trigger: &'static str) -> Key {
+    key(trigger, "", Place::Page)
 }
 
 impl Key {
@@ -317,6 +325,11 @@ pub(super) static SHORTCUTS: &[Shortcut] = &[
         section: Section::Reading,
         description: || gettext("Open the menu of the conversation in focus"),
         keys: &[list(MENU_KEYS[0]), list(MENU_KEYS[1])],
+    },
+    Shortcut {
+        section: Section::Reading,
+        description: || gettext("Open the menu of the message in focus"),
+        keys: &[page(MENU_KEYS[0]), page(MENU_KEYS[1])],
     },
     Shortcut {
         section: Section::Reading,
@@ -618,6 +631,43 @@ pub(super) static VIEW_ACTIONS: &[(&str, ViewRun)] = &[
     }),
 ];
 
+/// What one message's menu reaches. Each takes the id of the message the
+/// item was opened on, so the change lands on that message alone.
+pub(super) type MessageRun = fn(&Rc<MainWindow>, &Rc<ConversationView>, &str);
+
+/// The menu a right click inside a message opens. These have no keys of
+/// their own: the menu names the message, and a key would not.
+pub(super) static MESSAGE_ACTIONS: &[(&str, MessageRun)] = &[
+    ("message-reply", |win, view, id| {
+        win.reply_to(view, ReplyKind::Reply, Some(id))
+    }),
+    ("message-reply-all", |win, view, id| {
+        win.reply_to(view, ReplyKind::ReplyAll, Some(id))
+    }),
+    ("message-forward", |win, view, id| {
+        win.reply_to(view, ReplyKind::Forward, Some(id))
+    }),
+    ("message-archive", |win, view, id| {
+        win.organize_message(view, &Action::Archive, id)
+    }),
+    ("message-trash", |win, view, id| {
+        win.organize_message(view, &Action::Trash, id)
+    }),
+    ("message-toggle-read", |win, view, id| {
+        win.organize_message(view, &Action::ToggleRead, id)
+    }),
+    ("message-flag", |win, view, id| {
+        win.organize_message(view, &Action::ToggleStar, id)
+    }),
+    ("message-label", |win, view, id| win.label_message(view, id)),
+    ("message-export", |win, view, id| {
+        win.export_message(view, id)
+    }),
+    ("message-copy-address", |win, view, id| {
+        win.copy_sender_address(view, id)
+    }),
+];
+
 impl MainWindow {
     /// Adds [`VIEW_ACTIONS`] to `group`, each running on `view`, and the
     /// menu's Move Sender To entries, which name a category.
@@ -636,6 +686,37 @@ impl MainWindow {
             });
             group.add_action(&action);
         }
+        for (name, run) in MESSAGE_ACTIONS {
+            let action = gio::SimpleAction::new(name, Some(glib::VariantTy::STRING));
+            let (win, target) = (Rc::downgrade(self), Rc::downgrade(view));
+            action.connect_activate(move |_, parameter| {
+                let (Some(win), Some(view), Some(id)) = (
+                    win.upgrade(),
+                    target.upgrade(),
+                    parameter.and_then(|p| p.get::<String>()),
+                ) else {
+                    return;
+                };
+                run(&win, &view, &id);
+            });
+            group.add_action(&action);
+        }
+        let flag_color = gio::SimpleAction::new(
+            "message-flag-color",
+            Some(&glib::VariantType::new("(ss)").expect("valid type")),
+        );
+        let (win, target) = (Rc::downgrade(self), Rc::downgrade(view));
+        flag_color.connect_activate(move |_, parameter| {
+            let (Some(win), Some(view), Some((color, id))) = (
+                win.upgrade(),
+                target.upgrade(),
+                parameter.and_then(|p| p.get::<(String, String)>()),
+            ) else {
+                return;
+            };
+            win.flag_message(&view, &id, color.parse().ok());
+        });
+        group.add_action(&flag_color);
         let categorize = gio::SimpleAction::new("categorize-sender", Some(glib::VariantTy::STRING));
         let (win, target) = (Rc::downgrade(self), Rc::downgrade(view));
         categorize.connect_activate(move |_, parameter| {
@@ -700,11 +781,12 @@ impl MainWindow {
 mod tests {
     use super::*;
 
-    const PLACES: [Place; 4] = [
+    const PLACES: [Place; 5] = [
         Place::Main,
         Place::Conversation,
         Place::Composer,
         Place::List,
+        Place::Page,
     ];
 
     /// The main window's actions that take an argument, which
@@ -767,7 +849,7 @@ mod tests {
             if key.place.reaches(Place::Conversation) {
                 assert!(known(&view), "no conversation action for {}", key.trigger);
             }
-            if matches!(key.place, Place::Composer | Place::List) {
+            if matches!(key.place, Place::Composer | Place::List | Place::Page) {
                 assert!(key.action.is_empty() && !key.letter);
             }
         }

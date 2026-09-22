@@ -28,6 +28,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Unsubscribe fills in and sends a newsletter's own unsubscribe page,
   after you confirm what it will press. A page it cannot read still opens
   in your browser.
+- Right-click a message inside an open conversation for a menu that acts
+  on that message alone: reply to it, archive it, trash it, mark it,
+  flag it in a colour, label it, export it, or copy its sender's address.
+  Archiving one message of five leaves the other four in the inbox, and
+  Ctrl+Z takes it back. The Menu key and Shift+F10 open the same menu for
+  the message you are on.
 - The assistant can send a message waiting in Send Later or the Outbox
   now, cancel it, give it a new time, or delete it from the Outbox.
 - The assistant lists your reminders and can move or cancel one.

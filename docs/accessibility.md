@@ -70,6 +70,18 @@ controller on the row would never see the key: the list view takes both
 keys itself and opens the menu of the row in focus, over the row. The
 Keyboard Shortcuts dialog lists them.
 
+One message of an open conversation has a menu of its own, holding what
+acts on that message alone. The messages are drawn in a web view, so the
+page answers both the right click and the keys: a script injected into
+every load listens for `contextmenu`, and for Menu and Shift+F10, finds
+the message under the pointer or under the focus, and asks the app for
+its menu through a `mailrs:menu/` link. The header link that opens and
+closes a message is what takes the focus, so the keys always have a
+message to name. The menu's first section carries a heading saying whose
+message it is, since the items themselves read as `Archive` and
+`Move to Trash`, the same words the header buttons use. The Keyboard
+Shortcuts dialog lists both keys.
+
 A queued message opens in the conversation pane like any other, with a
 card above it that says when it goes or why it has not gone, with
 buttons that act on it.
