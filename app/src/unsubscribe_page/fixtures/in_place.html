@@ -1,0 +1,37 @@
+<!doctype html>
+<!--
+  A page that answers where it stands rather than posting anywhere, which
+  is what the submission script has to cope with. It is the one fixture
+  with no JSON beside it: the GTK test presses it and reads back what it
+  says, so the ids the extraction script left behind, the typing, the
+  ticking and the press are all checked against a real engine.
+
+  The box starts ticked on purpose. A plan that toggled it would leave it
+  off, and the page would say so.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Leave the Example list</title>
+  </head>
+  <body>
+    <h1>Leave the Example list</h1>
+    <p>Tell us where you read this newsletter and we will stop sending it.</p>
+    <form id="leave" method="post" action="/leave">
+      <label for="address">Email address</label>
+      <input type="email" id="address" name="address" required />
+      <label><input type="checkbox" id="all" name="all" checked /> Unsubscribe from all emails</label>
+      <button type="submit">Unsubscribe</button>
+    </form>
+    <p id="said"></p>
+    <script>
+      document.getElementById("leave").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const address = document.getElementById("address").value;
+        const all = document.getElementById("all").checked ? "yes" : "no";
+        document.getElementById("said").textContent =
+          `You have been unsubscribed. ${address} all: ${all}`;
+      });
+    </script>
+  </body>
+</html>

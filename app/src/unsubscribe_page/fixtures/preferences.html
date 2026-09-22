@@ -1,0 +1,32 @@
+<!doctype html>
+<!--
+  A preferences centre with a box that means all of it, which is the one
+  such page the rules will act on. The matching preferences.json is what
+  extract.js reads off this page.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Email preferences</title>
+  </head>
+  <body>
+    <h1>Email preferences</h1>
+    <p>Choose what you want to hear about.</p>
+    <form method="post" action="/preferences">
+      <label for="address">Your email</label>
+      <input type="email" id="address" name="address" value="" />
+      <ul>
+        <li>
+          <label><input type="checkbox" name="topic" value="product" checked /> Product updates</label>
+        </li>
+        <li>
+          <label><input type="checkbox" name="topic" value="deals" checked /> Weekly deals</label>
+        </li>
+        <li>
+          <label><input type="checkbox" name="none" value="all" /> Unsubscribe from all emails</label>
+        </li>
+      </ul>
+      <button type="submit">Save preferences</button>
+    </form>
+  </body>
+</html>

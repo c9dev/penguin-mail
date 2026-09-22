@@ -1,7 +1,7 @@
 {
   "url": "https://preferences.example.design/p/71d",
   "title": "Email preferences",
-  "text": "Email preferences\nChoose what you want to hear about.",
+  "text": "Email preferences\nChoose what you want to hear about.\nYour email\nProduct updates\nWeekly deals\nUnsubscribe from all emails\nSave preferences",
   "forms": [
     {
       "id": 0,

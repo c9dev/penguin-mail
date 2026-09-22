@@ -32,6 +32,7 @@ use serde::{Deserialize, Serialize};
 mod adviser;
 mod rules;
 mod run;
+mod webkit;
 pub mod words;
 
 #[cfg(test)]
@@ -45,6 +46,8 @@ pub use adviser::{ModelAdviser, model_adviser};
 pub use rules::{pick, says_done, valid};
 #[allow(unused_imports)]
 pub use run::{Adviser, Answer, Browser, Prepared, Step, finish, prepare};
+#[allow(unused_imports)]
+pub use self::webkit::WebkitBrowser;
 
 /// A page as the extraction script reports it. Every id in it is the
 /// script's own, unique across the page, and a [`Plan`] names nothing

@@ -1,7 +1,7 @@
 {
   "url": "https://news.shop.example/unsubscribe?u=9f2",
   "title": "Unsubscribe from Shop News",
-  "text": "Unsubscribe from Shop News\nPress the button below and we will stop sending you this newsletter.",
+  "text": "Unsubscribe from Shop News\nPress the button below and we will stop sending you this newsletter.\nUnsubscribe",
   "forms": [
     {
       "id": 0,

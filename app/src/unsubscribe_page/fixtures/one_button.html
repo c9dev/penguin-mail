@@ -1,0 +1,19 @@
+<!doctype html>
+<!--
+  The commonest shape: a token the sender already knows, and one button.
+  The matching one_button.json is what extract.js reads off this page.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Unsubscribe from Shop News</title>
+  </head>
+  <body>
+    <h1>Unsubscribe from Shop News</h1>
+    <p>Press the button below and we will stop sending you this newsletter.</p>
+    <form method="post" action="/unsubscribe">
+      <input type="hidden" name="token" value="9f2" required />
+      <button type="submit">Unsubscribe</button>
+    </form>
+  </body>
+</html>

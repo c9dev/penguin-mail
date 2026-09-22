@@ -1,7 +1,7 @@
 {
   "url": "https://lists.example.com/leave",
   "title": "Leave Example Weekly",
-  "text": "Leave Example Weekly\nType the address you receive this newsletter at and confirm.",
+  "text": "Leave Example Weekly\nType the address you receive this newsletter at and confirm.\nEmail address Confirm",
   "forms": [
     {
       "id": 0,

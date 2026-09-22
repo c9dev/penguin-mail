@@ -508,6 +508,70 @@ mod tests {
         a_line_changes_kind_and_the_numbers_follow();
         typing_after_styled_words_carries_the_style_on();
         an_inserted_body_lands_at_the_cursor();
+        // The extraction script needs a real engine to run in, and this
+        // is the one test binary that starts one.
+        an_unsubscribe_page_reads_back_as_its_fixture();
+    }
+
+    /// The three page shapes the rules are tested on, as HTML, read by
+    /// the script that will read the sender's own page. The JSON beside
+    /// each file is what the page logic's tests work from, so a change
+    /// to the script that stops matching them shows up here rather than
+    /// on somebody's newsletter.
+    fn an_unsubscribe_page_reads_back_as_its_fixture() {
+        use crate::unsubscribe_page::{Browser, PageForm, Pick, WebkitBrowser, pick, says_done};
+
+        const DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/src/unsubscribe_page/fixtures/");
+        let pages = [
+            (
+                "one_button",
+                include_str!("../../unsubscribe_page/fixtures/one_button.json"),
+            ),
+            (
+                "email_confirm",
+                include_str!("../../unsubscribe_page/fixtures/email_confirm.json"),
+            ),
+            (
+                "preferences",
+                include_str!("../../unsubscribe_page/fixtures/preferences.json"),
+            ),
+        ];
+        let browser = WebkitBrowser::new();
+        for (name, written) in pages {
+            let url = format!("file://{DIR}{name}.html");
+            let read = glib::MainContext::default()
+                .block_on(browser.load(&url))
+                .unwrap_or_else(|err| panic!("{name}: {err}"));
+            assert!(read.url.ends_with(&format!("{name}.html")), "{}", read.url);
+            let wanted: PageForm =
+                serde_json::from_str(written).expect("the fixture is a PageForm");
+            // The fixture says where the sender's own page lives; this
+            // one came off the disk.
+            let read = PageForm {
+                url: wanted.url.clone(),
+                ..read
+            };
+            assert_eq!(read, wanted, "{name}");
+        }
+
+        // The other half: the ids the script left on the page are still
+        // there to fill, tick and press, and the page after the press is
+        // what gets read back. The box on this page starts ticked, so a
+        // plan that toggled it instead of setting it would come back
+        // saying "all: no".
+        const ME: &str = "david@example.com";
+        let read = glib::MainContext::default()
+            .block_on(browser.load(&format!("file://{DIR}in_place.html")))
+            .expect("in_place loads");
+        let Pick::Submit(plan) = pick(&read, ME) else {
+            panic!("the rules gave up on in_place: {read:?}");
+        };
+        let after = glib::MainContext::default()
+            .block_on(browser.submit(&plan, ME))
+            .expect("in_place takes the plan");
+        assert!(says_done(&after), "{}", after.text);
+        assert!(after.text.contains(ME), "{}", after.text);
+        assert!(after.text.contains("all: yes"), "{}", after.text);
     }
 
     fn buffer() -> (gtk::TextView, gtk::TextBuffer, Anchors) {
