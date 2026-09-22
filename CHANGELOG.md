@@ -5,6 +5,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+## 0.1.4 (2026-09-22)
+
 ### Improved
 
 - Penguin Mail masks email addresses in its log, so the system journal no
