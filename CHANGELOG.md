@@ -7,6 +7,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Penguin Mail comes as an rpm for Fedora, with a dnf repository of its
+  own, so `sudo dnf upgrade` brings each new version.
 - In the Flatpak and the snap, Preferences says that the store brings
   updates, and why skills are off there: their scripts need a sandbox of
   their own, which cannot start inside the one the app runs in.

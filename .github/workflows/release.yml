@@ -67,9 +67,74 @@ jobs:
           path: dist/
           if-no-files-found: error
 
+  rpm:
+    name: Build the rpm
+    needs: build
+    runs-on: ubuntu-latest
+    # The oldest Fedora with GTK 4.20 and libadwaita 1.8. rpm requires the
+    # libraries the binaries link against, so an rpm built here installs on
+    # this release and the ones after it.
+    container: fedora:43
+    timeout-minutes: 90
+    env:
+      CARGO_TERM_COLOR: always
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - name: Install git
+        run: dnf install -y git
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install build dependencies
+        run: scripts/ci-deps.sh
+      - name: Put cargo on PATH
+        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Build
+        run: cargo build --release -p mailrs -p mailrs-cli
+      # The apt repository's key signs the rpm too. A release must go out
+      # signed, since the .repo file it installs turns on gpgcheck; a trial
+      # run without the secret builds an unsigned rpm and says so.
+      - name: Import the signing key
+        env:
+          APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          if [ -z "$APT_SIGNING_KEY" ]; then
+            if [ "$REF_TYPE" = tag ]; then
+              echo "::error::APT_SIGNING_KEY is not set, and a released rpm must be signed"
+              exit 1
+            fi
+            echo "::warning::APT_SIGNING_KEY is not set; the rpm is unsigned"
+            exit 0
+          fi
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
+          mkdir -m 700 "$GNUPGHOME"
+          echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
+          printf '%s\n' "$APT_SIGNING_KEY" | gpg --batch --import
+          echo "RPM_SIGN_KEY=FE3C3B6E699AF939DC4670DCF3A853035C3E2B8E" >> "$GITHUB_ENV"
+      - name: Pack
+        run: |
+          scripts/stage.sh tree
+          scripts/package-rpm.sh tree "$VERSION" dist
+      # Installs the rpm the way a person would and starts it on a virtual
+      # display, which catches a library the rpm forgot to require.
+      - name: Install and start it
+        run: |
+          if [ -n "${RPM_SIGN_KEY:-}" ]; then
+            rpm --import packaging/apt/penguin-mail-archive-keyring.asc
+            rpm -K "dist/penguin-mail-$VERSION-1.x86_64.rpm"
+          fi
+          dnf install -y "./dist/penguin-mail-$VERSION-1.x86_64.rpm"
+          penguin-mail --version
+          scripts/smoke-start.sh /usr/bin/penguin-mail
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: penguin-mail-${{ needs.build.outputs.version }}-rpm
+          path: dist/*.rpm
+          if-no-files-found: error
+
   publish:
     name: Publish the release
-    needs: build
+    needs: [build, rpm]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     permissions:
@@ -77,8 +142,17 @@ jobs:
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: penguin-mail-${{ needs.build.outputs.version }}
+          pattern: penguin-mail-${{ needs.build.outputs.version }}*
+          merge-multiple: true
           path: dist
+      # Each package comes from its own job, so the sums are written once
+      # every file is in one place. The updater checks its download here.
+      - name: Write the checksums
+        run: |
+          cd dist
+          rm -f SHA256SUMS
+          sha256sum *.deb *.rpm *.tar.gz *.zip > SHA256SUMS
+          cat SHA256SUMS
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           name: Penguin Mail ${{ needs.build.outputs.version }}
@@ -87,6 +161,7 @@ jobs:
           fail_on_unmatched_files: true
           files: |
             dist/*.deb
+            dist/*.rpm
             dist/*.tar.gz
             dist/*.zip
             dist/SHA256SUMS

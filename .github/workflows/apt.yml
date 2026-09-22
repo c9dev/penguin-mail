@@ -1,8 +1,9 @@
-name: Apt repository
+name: Package repositories
 
-# Rebuilds the apt repository on GitHub Pages from the newest releases.
-# It runs after each tagged release, and by hand from the Actions tab to
-# publish again without a new release.
+# Rebuilds the apt and dnf repositories on GitHub Pages from the newest
+# releases: apt at the site's root, where it has always been, and dnf under
+# /rpm. It runs after each tagged release, and by hand from the Actions tab
+# to publish again without a new release.
 on:
   workflow_run:
     workflows: ["Release"]
@@ -18,7 +19,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build the repository
+    name: Build the repositories
     # A trial run of Release from the Actions tab publishes nothing, so it
     # has nothing to add here either.
     if: >-
@@ -32,15 +33,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         # The five newest releases: enough for a person to step back one
-        # version with apt, and a site well inside Pages' size limit.
+        # version with apt or dnf, and a site well inside Pages' size limit.
+        # Releases from before the rpm have none, which is fine.
         run: |
-          mkdir debs
+          mkdir debs rpms
           gh release list --exclude-drafts --exclude-pre-releases --limit 5 \
               --json tagName --jq '.[].tagName' |
           while read -r tag; do
               gh release download "$tag" --pattern '*.deb' --dir debs
+              gh release download "$tag" --pattern '*.rpm' --dir rpms || true
           done
-          ls -l debs
+          ls -l debs rpms
+      - name: Install createrepo_c
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends createrepo-c
       - name: Import the signing key
         env:
           APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
@@ -50,7 +55,11 @@ jobs:
           echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
           printf '%s\n' "$APT_SIGNING_KEY" | gpg --batch --import
       - name: Build and sign
-        run: scripts/apt-repo.sh debs site
+        run: |
+          scripts/apt-repo.sh debs site
+          if compgen -G 'rpms/*.rpm' >/dev/null; then
+              scripts/rpm-repo.sh rpms site/rpm
+          fi
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site
