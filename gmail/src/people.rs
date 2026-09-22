@@ -5,12 +5,17 @@
 //! [`Person`] values and leaves the HTTP to [`crate::GmailClient`].
 
 use serde::Deserialize;
+use serde_json::json;
 
 use crate::GmailError;
 
 /// Read the account's contacts, and nothing else. Google asks for this one
 /// on its own, the first time somebody turns contacts on.
 pub const CONTACTS_SCOPE: &str = "https://www.googleapis.com/auth/contacts.readonly";
+
+/// Read and change the account's contacts. Google asks for this one on its
+/// own, the first time the assistant adds or changes a contact.
+pub const CONTACTS_WRITE_SCOPE: &str = "https://www.googleapis.com/auth/contacts";
 
 pub const PEOPLE_API_BASE: &str = "https://people.googleapis.com/v1";
 
@@ -56,6 +61,70 @@ pub struct ConnectionsPage {
     pub next_sync_token: Option<String>,
 }
 
+/// What adding or changing a contact writes. When changing one, a field
+/// left `None` stays as Google holds it, and a list given replaces the
+/// whole list.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ContactFields {
+    pub name: Option<String>,
+    pub emails: Option<Vec<String>>,
+    pub phones: Option<Vec<String>>,
+    pub organization: Option<String>,
+}
+
+impl ContactFields {
+    /// The person as the People API takes one, with only the fields set.
+    /// Google splits the free-form name into given and family names
+    /// itself, which suits names that do not split on the last space.
+    pub fn body(&self) -> serde_json::Value {
+        let mut body = serde_json::Map::new();
+        if let Some(name) = &self.name {
+            body.insert("names".into(), json!([{"unstructuredName": name}]));
+        }
+        if let Some(emails) = &self.emails {
+            let values: Vec<_> = emails.iter().map(|e| json!({"value": e})).collect();
+            body.insert("emailAddresses".into(), values.into());
+        }
+        if let Some(phones) = &self.phones {
+            let values: Vec<_> = phones.iter().map(|p| json!({"value": p})).collect();
+            body.insert("phoneNumbers".into(), values.into());
+        }
+        if let Some(organization) = &self.organization {
+            body.insert("organizations".into(), json!([{"name": organization}]));
+        }
+        body.into()
+    }
+
+    /// The fields a change names, as `updatePersonFields` lists them.
+    pub fn mask(&self) -> String {
+        [
+            (self.name.is_some(), "names"),
+            (self.emails.is_some(), "emailAddresses"),
+            (self.phones.is_some(), "phoneNumbers"),
+            (self.organization.is_some(), "organizations"),
+        ]
+        .iter()
+        .filter(|(set, _)| *set)
+        .map(|(_, field)| *field)
+        .collect::<Vec<_>>()
+        .join(",")
+    }
+
+    /// Whether the change names no field at all.
+    pub fn is_empty(&self) -> bool {
+        self.mask().is_empty()
+    }
+}
+
+/// One person as `people.get`, `createContact` and `updateContact` send
+/// them back, with the etag a later change must hand in.
+pub fn parse_person(body: &str) -> Result<(Person, String), GmailError> {
+    let reply: Connection =
+        serde_json::from_str(body).map_err(|e| GmailError::Decode(e.to_string()))?;
+    let etag = reply.etag.clone().unwrap_or_default();
+    Ok((flatten(reply), etag))
+}
+
 /// Reads one page. A person with no address is left out: there is nothing
 /// to suggest them by and nothing to match a message against.
 pub fn parse_connections(body: &str) -> Result<ConnectionsPage, GmailError> {
@@ -70,31 +139,34 @@ pub fn parse_connections(body: &str) -> Result<ConnectionsPage, GmailError> {
         if person.resource_name.is_empty() {
             continue;
         }
-        if person.metadata.is_some_and(|m| m.deleted) {
+        if person.metadata.as_ref().is_some_and(|m| m.deleted) {
             page.deleted.push(person.resource_name);
             continue;
         }
-        let emails = addresses(&person.email_addresses);
-        if emails.is_empty() {
-            continue;
+        let person = flatten(person);
+        if !person.emails.is_empty() {
+            page.people.push(person);
         }
-        page.people.push(Person {
-            resource: person.resource_name,
-            name: primary(&person.names, |n| n.display_name.as_deref()),
-            emails,
-            photo_url: person
-                .photos
-                .iter()
-                // `default` marks Google's grey silhouette, which says
-                // this contact has no photo of their own.
-                .filter(|p| !p.default)
-                .find_map(|p| p.url.as_deref())
-                .map(|url| photo_url(url, PHOTO_PIXELS)),
-            organization: primary(&person.organizations, |o| o.name.as_deref()),
-            phone: primary(&person.phone_numbers, |p| p.value.as_deref()),
-        });
     }
     Ok(page)
+}
+
+fn flatten(person: Connection) -> Person {
+    Person {
+        name: primary(&person.names, |n| n.display_name.as_deref()),
+        emails: addresses(&person.email_addresses),
+        photo_url: person
+            .photos
+            .iter()
+            // `default` marks Google's grey silhouette, which says this
+            // contact has no photo of their own.
+            .filter(|p| !p.default)
+            .find_map(|p| p.url.as_deref())
+            .map(|url| photo_url(url, PHOTO_PIXELS)),
+        organization: primary(&person.organizations, |o| o.name.as_deref()),
+        phone: primary(&person.phone_numbers, |p| p.value.as_deref()),
+        resource: person.resource_name,
+    }
 }
 
 /// The same photo at `pixels` square, cropped to the face. Google serves
@@ -163,6 +235,7 @@ struct Connections {
 struct Connection {
     #[serde(default)]
     resource_name: String,
+    etag: Option<String>,
     metadata: Option<PersonMetadata>,
     #[serde(default)]
     names: Vec<Name>,
@@ -300,6 +373,36 @@ mod tests {
         let page = parse_connections("{\"totalPeople\":0}").unwrap();
         assert_eq!(page, ConnectionsPage::default());
         assert!(parse_connections("not json").is_err());
+    }
+
+    #[test]
+    fn a_contact_writes_only_the_fields_it_names() {
+        let fields = ContactFields {
+            name: Some("Priya Shah".into()),
+            phones: Some(vec!["+351 21 000 0000".into()]),
+            ..ContactFields::default()
+        };
+        assert_eq!(
+            fields.body(),
+            json!({
+                "names": [{"unstructuredName": "Priya Shah"}],
+                "phoneNumbers": [{"value": "+351 21 000 0000"}],
+            })
+        );
+        assert_eq!(fields.mask(), "names,phoneNumbers");
+        assert!(ContactFields::default().is_empty());
+    }
+
+    #[test]
+    fn one_person_parses_with_its_etag() {
+        let (person, etag) = parse_person(
+            r#"{"resourceName":"people/c9","etag":"%Ej4","names":[{"displayName":"Priya Shah"}],"emailAddresses":[{"value":"priya@example.org"}]}"#,
+        )
+        .unwrap();
+        assert_eq!(person.resource, "people/c9");
+        assert_eq!(person.name.as_deref(), Some("Priya Shah"));
+        assert_eq!(person.emails, ["priya@example.org"]);
+        assert_eq!(etag, "%Ej4");
     }
 
     #[test]

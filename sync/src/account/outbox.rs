@@ -288,6 +288,23 @@ impl<G: GmailApi> AccountSync<G> {
         Ok(self.api.contact_photo(url).await?)
     }
 
+    /// Adds a contact to the account's Google contacts.
+    pub async fn create_contact(
+        &self,
+        fields: &mailrs_gmail::ContactFields,
+    ) -> Result<mailrs_gmail::Person, SyncError> {
+        Ok(self.api.create_contact(fields).await?)
+    }
+
+    /// Changes the fields `fields` names on the contact `resource`.
+    pub async fn update_contact(
+        &self,
+        resource: &str,
+        fields: &mailrs_gmail::ContactFields,
+    ) -> Result<mailrs_gmail::Person, SyncError> {
+        Ok(self.api.update_contact(resource, fields).await?)
+    }
+
     /// Answers an invitation through Google Calendar as `me`.
     /// `occurrence` names one occurrence of a repeating event; `None`
     /// answers the series.

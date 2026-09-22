@@ -5,8 +5,9 @@ use mailrs_domain::{AccountId, EpochMillis, Filter, MessageBody, MessageMeta, Va
 use mailrs_gmail::body::extract_body;
 use mailrs_gmail::convert::message_meta;
 use mailrs_gmail::{
-    AccountQuota, Answered, Busy, ConnectionsPage, Event, EventFields, GmailClient, GmailError,
-    HistoryPage, LabelColor, MessagePage, Profile, RemoteLabel, SendAs, Series, html_to_text,
+    AccountQuota, Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, GmailClient,
+    GmailError, HistoryPage, LabelColor, MessagePage, Person, Profile, RemoteLabel, SendAs, Series,
+    html_to_text,
 };
 
 /// Page size for window listings.
@@ -163,6 +164,10 @@ pub trait GmailApi: Send + Sync + 'static {
         color: &LabelColor,
     ) -> impl Future<Output = Result<RemoteLabel, GmailError>> + Send;
 
+    /// How many conversations carry the label in the whole mailbox, not
+    /// only in the part this computer keeps.
+    fn label_threads(&self, id: &str) -> impl Future<Output = Result<u64, GmailError>> + Send;
+
     /// The signature of the default send-as identity, as plain text.
     fn signature(&self) -> impl Future<Output = Result<Option<String>, GmailError>> + Send;
 
@@ -186,6 +191,21 @@ pub trait GmailApi: Send + Sync + 'static {
 
     /// The bytes of one contact photo, at the size its URL asks for.
     fn contact_photo(&self, url: &str) -> impl Future<Output = Result<Vec<u8>, GmailError>> + Send;
+
+    /// Adds a contact to the account's Google contacts. Google answers
+    /// `GmailError::MissingScope` until the account grants the permission
+    /// to change contacts.
+    fn create_contact(
+        &self,
+        fields: &ContactFields,
+    ) -> impl Future<Output = Result<Person, GmailError>> + Send;
+
+    /// Changes the fields `fields` names on the contact `resource`.
+    fn update_contact(
+        &self,
+        resource: &str,
+        fields: &ContactFields,
+    ) -> impl Future<Output = Result<Person, GmailError>> + Send;
     /// Answers the event `ical_uid` names as `me`, through Google
     /// Calendar, and lets Google tell the organizer. Answers
     /// `GmailError::MissingScope` until the account grants the calendar
@@ -413,6 +433,19 @@ impl GmailApi for AnyGmail {
     }
     async fn contact_photo(&self, url: &str) -> Result<Vec<u8>, GmailError> {
         forward!(self, contact_photo(url))
+    }
+    async fn label_threads(&self, id: &str) -> Result<u64, GmailError> {
+        forward!(self, label_threads(id))
+    }
+    async fn create_contact(&self, fields: &ContactFields) -> Result<Person, GmailError> {
+        forward!(self, create_contact(fields))
+    }
+    async fn update_contact(
+        &self,
+        resource: &str,
+        fields: &ContactFields,
+    ) -> Result<Person, GmailError> {
+        forward!(self, update_contact(resource, fields))
     }
 
     async fn answer_invitation(
@@ -770,5 +803,21 @@ impl GmailApi for AccountClient {
 
     async fn contact_photo(&self, url: &str) -> Result<Vec<u8>, GmailError> {
         self.client.contact_photo(url).await
+    }
+
+    async fn label_threads(&self, id: &str) -> Result<u64, GmailError> {
+        self.client.label_threads(id).await
+    }
+
+    async fn create_contact(&self, fields: &ContactFields) -> Result<Person, GmailError> {
+        self.client.create_contact(fields).await
+    }
+
+    async fn update_contact(
+        &self,
+        resource: &str,
+        fields: &ContactFields,
+    ) -> Result<Person, GmailError> {
+        self.client.update_contact(resource, fields).await
     }
 }

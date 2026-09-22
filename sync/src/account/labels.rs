@@ -68,6 +68,11 @@ impl<G: GmailApi> AccountSync<G> {
         Ok(())
     }
 
+    /// How many conversations in the whole mailbox carry the label.
+    pub async fn label_threads(&self, id: &str) -> Result<u64, SyncError> {
+        Ok(self.api.label_threads(id).await?)
+    }
+
     /// Deletes a label. Its mail stays, without the label.
     pub async fn delete_label(&self, id: &str) -> Result<(), SyncError> {
         self.api.delete_label(id).await?;

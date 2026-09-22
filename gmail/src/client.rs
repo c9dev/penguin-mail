@@ -20,7 +20,7 @@ use crate::model::{
     Profile, RemoteLabel, SendAs, SendAsList, Thread, VacationSettings,
 };
 use crate::oauth::{AccessToken, LoopbackListener, OAuthClient, Pkce, random_token};
-use crate::people::{self, ConnectionsPage};
+use crate::people::{self, ConnectionsPage, ContactFields, Person};
 
 pub const GMAIL_API_BASE: &str = "https://gmail.googleapis.com/gmail/v1/users/me";
 
@@ -57,6 +57,8 @@ pub mod cost {
     /// this only stops a refresh from crowding out the mail the user is
     /// waiting for.
     pub const CONNECTIONS: u32 = 5;
+    /// Adding or changing one contact, on the People API's budget too.
+    pub const CONTACT_WRITE: u32 = 5;
 }
 
 /// A Gmail client for one account.
@@ -439,6 +441,16 @@ impl GmailClient {
         .await
     }
 
+    /// How many conversations carry a label, across the whole mailbox.
+    pub async fn label_threads(&self, id: &str) -> Result<u64, GmailError> {
+        let totals: LabelTotals = self
+            .call(cost::LABELS, || {
+                self.http().get(self.url(&format!("labels/{id}")))
+            })
+            .await?;
+        Ok(totals.threads_total)
+    }
+
     /// Addresses the account can send from, including its display names.
     pub async fn send_as(&self) -> Result<Vec<SendAs>, GmailError> {
         let list: SendAsList = self
@@ -567,6 +579,72 @@ impl GmailClient {
             .await
             .map_err(|e| GmailError::Decode(e.to_string()))?;
         people::parse_connections(&body)
+    }
+
+    /// Adds a contact to the account's Google contacts. Gmail answers
+    /// [`GmailError::MissingScope`] until the account grants
+    /// [`CONTACTS_WRITE_SCOPE`].
+    ///
+    /// [`CONTACTS_WRITE_SCOPE`]: crate::people::CONTACTS_WRITE_SCOPE
+    pub async fn create_contact(&self, fields: &ContactFields) -> Result<Person, GmailError> {
+        let url = format!("{}/people:createContact", self.people_url);
+        let body = fields.body();
+        let reply = self
+            .send_request(cost::CONTACT_WRITE, || {
+                self.http()
+                    .post(&url)
+                    .query(&[("personFields", people::PERSON_FIELDS)])
+                    .json(&body)
+            })
+            .await?
+            .text()
+            .await
+            .map_err(|e| GmailError::Decode(e.to_string()))?;
+        Ok(people::parse_person(&reply)?.0)
+    }
+
+    /// Changes the fields `fields` names on the contact `resource`, such
+    /// as `people/c17`. Google refuses a change without the contact's
+    /// current etag, so this reads the contact first.
+    pub async fn update_contact(
+        &self,
+        resource: &str,
+        fields: &ContactFields,
+    ) -> Result<Person, GmailError> {
+        if !resource.starts_with("people/") || resource.contains("..") {
+            return Err(GmailError::NotFound);
+        }
+        let url = format!("{}/{resource}", self.people_url);
+        let current = self
+            .send_request(cost::CONNECTIONS, || {
+                self.http()
+                    .get(&url)
+                    .query(&[("personFields", "metadata")])
+            })
+            .await?
+            .text()
+            .await
+            .map_err(|e| GmailError::Decode(e.to_string()))?;
+        let (_, etag) = people::parse_person(&current)?;
+        let mut body = fields.body();
+        body["etag"] = json!(etag);
+        let mask = fields.mask();
+        let url = format!("{url}:updateContact");
+        let reply = self
+            .send_request(cost::CONTACT_WRITE, || {
+                self.http()
+                    .patch(&url)
+                    .query(&[
+                        ("updatePersonFields", mask.as_str()),
+                        ("personFields", people::PERSON_FIELDS),
+                    ])
+                    .json(&body)
+            })
+            .await?
+            .text()
+            .await
+            .map_err(|e| GmailError::Decode(e.to_string()))?;
+        Ok(people::parse_person(&reply)?.0)
     }
 
     /// The bytes of one contact photo. Google serves these from a plain
@@ -813,4 +891,13 @@ pub async fn authorize(
         email: profile.email_address,
         refresh_token: tokens.refresh_token,
     })
+}
+
+/// The counts `labels.get` gives with a label. Only the thread total is
+/// read.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LabelTotals {
+    #[serde(default)]
+    threads_total: u64,
 }

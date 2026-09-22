@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use mailrs_domain::{AccountId, EpochMillis};
-use mailrs_gmail::GmailError;
+use mailrs_gmail::{ContactFields, GmailError, Person};
 use mailrs_store::Db;
 use mailrs_store::address_book::{self, Contact};
 
@@ -148,6 +148,71 @@ impl<A: Accounts> ContactBook<A> {
             .write(move |c| address_book::clear(c, account_id))
             .await?;
         Ok(())
+    }
+
+    /// Adds a contact to the account's Google contacts. With `keep`, the
+    /// account's address book on this computer takes the new contact too,
+    /// so it shows before the next refresh; an account whose contacts are
+    /// off keeps nothing here.
+    pub async fn create(
+        &self,
+        account_id: AccountId,
+        fields: &ContactFields,
+        keep: bool,
+    ) -> Result<Permitted<Contact>, SyncError> {
+        let made = self.sync(account_id)?.create_contact(fields).await;
+        self.stored(account_id, made, keep).await
+    }
+
+    /// Changes the fields `fields` names on the contact `resource`, and
+    /// the stored copy with it when `keep` says the account's contacts
+    /// are on.
+    pub async fn update(
+        &self,
+        account_id: AccountId,
+        resource: &str,
+        fields: &ContactFields,
+        keep: bool,
+    ) -> Result<Permitted<Contact>, SyncError> {
+        let changed = self
+            .sync(account_id)?
+            .update_contact(resource, fields)
+            .await;
+        self.stored(account_id, changed, keep).await
+    }
+
+    /// The contact Google sent back, stored when `keep` says so. A missing
+    /// permission comes back as a value, the way the refresh reports it.
+    async fn stored(
+        &self,
+        account_id: AccountId,
+        person: Result<Person, SyncError>,
+        keep: bool,
+    ) -> Result<Permitted<Contact>, SyncError> {
+        let person = match person {
+            Ok(person) => person,
+            Err(SyncError::Gmail(GmailError::MissingScope)) => {
+                return Ok(Permitted::NeedsPermission);
+            }
+            Err(err) => return Err(err),
+        };
+        let contact = Contact {
+            account_id,
+            resource: person.resource,
+            name: person.name,
+            emails: person.emails,
+            organization: person.organization,
+            phone: person.phone,
+            photo_url: person.photo_url,
+            photo_file: None,
+        };
+        if keep {
+            let saved = contact.clone();
+            self.db
+                .write(move |c| address_book::save(c, &[saved]))
+                .await?;
+        }
+        Ok(Permitted::Done(contact))
     }
 
     /// The contact holding `email`, for a card.

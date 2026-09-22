@@ -557,6 +557,122 @@ async fn a_contact_photo_arrives_as_plain_bytes() {
     assert_eq!(photo, b"jpeg-bytes");
 }
 
+#[tokio::test]
+async fn a_label_says_how_many_conversations_carry_it() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("GET"))
+        .and(path(format!("{API}/labels/Label_7")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "id": "Label_7", "name": "Kites", "messagesTotal": 40, "threadsTotal": 31,
+        })))
+        .mount(&server)
+        .await;
+    assert_eq!(client(&server).label_threads("Label_7").await.unwrap(), 31);
+}
+
+#[tokio::test]
+async fn a_new_contact_posts_the_fields_it_names() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("POST"))
+        .and(path("/v1/people:createContact"))
+        .and(header("authorization", "Bearer at-1"))
+        .and(body_json(json!({
+            "names": [{"unstructuredName": "Priya Shah"}],
+            "emailAddresses": [{"value": "priya@example.org"}],
+            "organizations": [{"name": "Fernwood"}],
+        })))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "resourceName": "people/c9",
+            "etag": "%Ej4",
+            "names": [{"displayName": "Priya Shah"}],
+            "emailAddresses": [{"value": "priya@example.org"}],
+            "organizations": [{"name": "Fernwood"}],
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let made = client(&server)
+        .create_contact(&mailrs_gmail::ContactFields {
+            name: Some("Priya Shah".into()),
+            emails: Some(vec!["priya@example.org".into()]),
+            organization: Some("Fernwood".into()),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    assert_eq!(made.resource, "people/c9");
+    assert_eq!(made.organization.as_deref(), Some("Fernwood"));
+}
+
+/// Google refuses a change that does not carry the contact's etag, so the
+/// client reads it first and hands it back with the fields that change.
+#[tokio::test]
+async fn a_contact_change_hands_back_the_etag_and_names_its_fields() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("GET"))
+        .and(path("/v1/people/c9"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(json!({"resourceName": "people/c9", "etag": "%Ej4"})),
+        )
+        .mount(&server)
+        .await;
+    Mock::given(method("PATCH"))
+        .and(path("/v1/people/c9:updateContact"))
+        .and(query_param("updatePersonFields", "phoneNumbers"))
+        .and(body_json(json!({
+            "etag": "%Ej4",
+            "phoneNumbers": [{"value": "+351 21 000 0000"}],
+        })))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "resourceName": "people/c9",
+            "names": [{"displayName": "Priya Shah"}],
+            "emailAddresses": [{"value": "priya@example.org"}],
+            "phoneNumbers": [{"value": "+351 21 000 0000"}],
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let changed = client(&server)
+        .update_contact(
+            "people/c9",
+            &mailrs_gmail::ContactFields {
+                phones: Some(vec!["+351 21 000 0000".into()]),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(changed.phone.as_deref(), Some("+351 21 000 0000"));
+    assert_eq!(changed.emails, ["priya@example.org"]);
+}
+
+#[tokio::test]
+async fn writing_a_contact_without_the_permission_says_so() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("POST"))
+        .and(path("/v1/people:createContact"))
+        .respond_with(ResponseTemplate::new(403).set_body_json(json!({"error": {
+            "code": 403,
+            "status": "PERMISSION_DENIED",
+            "message": "Request had insufficient authentication scopes.",
+            "details": [{"reason": "ACCESS_TOKEN_SCOPE_INSUFFICIENT"}],
+        }})))
+        .mount(&server)
+        .await;
+    let refused = client(&server)
+        .create_contact(&mailrs_gmail::ContactFields {
+            name: Some("Priya".into()),
+            ..Default::default()
+        })
+        .await;
+    assert!(matches!(refused, Err(GmailError::MissingScope)), "{refused:?}");
+}
+
 /// Gmail answers the filter list of an account that has none with an empty
 /// body, not `{}`. The Rules dialog showed a decode error for it.
 #[tokio::test]

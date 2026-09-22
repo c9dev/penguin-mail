@@ -3,21 +3,15 @@
 //! for when the list shows messages rather than conversations.
 
 use std::rc::Rc;
-use std::sync::Arc;
 
 use adw::prelude::*;
 use gtk::glib;
-use mailrs_domain::AccountId;
+use mailrs_domain::Target;
 use mailrs_sync::export;
 
 use super::MainWindow;
-use crate::core::Sync;
 use crate::ui::conversation::ConversationView;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
-
-/// What one entry of the file is built from: the account the mail lives
-/// in, its thread, and the single message to take when a row names one.
-type Wanted = (AccountId, String, Option<String>);
 
 impl MainWindow {
     /// Writes the selected conversations to one mbox file, or the one
@@ -50,7 +44,11 @@ impl MainWindow {
         };
         let wanted = rows
             .iter()
-            .map(|row| (row.account_id, row.id.clone(), row.message_id.clone()))
+            .map(|row| Target {
+                account_id: row.account_id,
+                thread_id: row.id.clone(),
+                message_id: row.message_id.clone(),
+            })
             .collect();
         self.save_mbox(wanted, name);
     }
@@ -60,11 +58,11 @@ impl MainWindow {
         let open = view.read(|open| {
             let date = open.messages.last().map(|m| m.date).unwrap_or_default();
             (
-                (
-                    open.account_id,
-                    open.thread_id.clone(),
-                    open.only_message.clone(),
-                ),
+                Target {
+                    account_id: open.account_id,
+                    thread_id: open.thread_id.clone(),
+                    message_id: open.only_message.clone(),
+                },
                 export::file_name(&open.subject, date, "mbox"),
             )
         });
@@ -74,18 +72,19 @@ impl MainWindow {
         self.save_mbox(vec![wanted], name);
     }
 
-    /// Asks where the file goes, then fetches every conversation in
-    /// `wanted` and writes them into it one after another. The accounts
-    /// are looked up first, so a conversation from an account that is not
-    /// connected stops the export before a dialog opens.
-    fn save_mbox(self: &Rc<Self>, wanted: Vec<Wanted>, name: String) {
-        let mut jobs: Vec<(Arc<Sync>, String, Option<String>)> = Vec::new();
-        for (account_id, thread_id, message_id) in wanted {
-            let Some(sync) = self.core.account(account_id) else {
-                return self.toast(&gettext("That account is not connected"));
-            };
-            jobs.push((sync, thread_id, message_id));
+    /// Asks where the file goes, then writes every conversation in
+    /// `wanted` into it one after another, through
+    /// `MailActions::export_mbox`. The accounts are looked up first, so a
+    /// conversation from an account that is not connected stops the
+    /// export before a dialog opens.
+    fn save_mbox(self: &Rc<Self>, wanted: Vec<Target>, name: String) {
+        if wanted
+            .iter()
+            .any(|target| self.core.account(target.account_id).is_none())
+        {
+            return self.toast(&gettext("That account is not connected"));
         }
+        let actions = self.core.actions();
         let dialog = gtk::FileDialog::builder()
             .title(gettext("Export Mail"))
             .initial_name(&name)
@@ -100,10 +99,7 @@ impl MainWindow {
             let written = this
                 .core
                 .call(async move {
-                    let mut mbox = Vec::new();
-                    for (sync, thread_id, message_id) in jobs {
-                        mbox.extend(sync.export_mbox(&thread_id, message_id.as_deref()).await?);
-                    }
+                    let mbox = actions.export_mbox(&wanted).await?;
                     tokio::task::spawn_blocking(move || std::fs::write(&path, &mbox)).await??;
                     Ok::<(), anyhow::Error>(())
                 })

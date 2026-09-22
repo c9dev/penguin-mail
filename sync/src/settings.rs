@@ -1,5 +1,6 @@
 //! The Gmail settings of one account: the automatic reply, the filters
-//! behind Rules and Block Sender, and the Hide My Email addresses. The
+//! behind Rules and Block Sender, the labels, and the Hide My Email
+//! addresses. The
 //! dialogs and the assistant both change settings through this module, so
 //! only it knows that Gmail's automatic reply stops before the end it
 //! stores, which labels and filters a hidden address needs, and what Gmail
@@ -11,7 +12,7 @@ use chrono::{Local, TimeZone};
 use mailrs_domain::{
     AccountId, EpochMillis, Filter, FilterAction, FilterCriteria, Label, Vacation, system_label,
 };
-use mailrs_gmail::GmailError;
+use mailrs_gmail::{GmailError, LabelColor};
 use mailrs_store::Db;
 
 use crate::actions::label_id;
@@ -172,6 +173,45 @@ impl<A: Accounts> AccountSettings<A> {
         name: &str,
     ) -> Result<Permitted<Label>, SyncError> {
         permitted(self.sync(account_id)?.create_label(name).await)
+    }
+
+    /// Renames a label, and the labels nested under it along with it.
+    pub async fn rename_label(
+        &self,
+        account_id: AccountId,
+        id: &str,
+        name: &str,
+    ) -> Result<Permitted<()>, SyncError> {
+        permitted(self.sync(account_id)?.rename_label(id, name).await)
+    }
+
+    /// Gives a label one of Gmail's colours.
+    pub async fn recolor_label(
+        &self,
+        account_id: AccountId,
+        id: &str,
+        color: LabelColor,
+    ) -> Result<Permitted<()>, SyncError> {
+        permitted(self.sync(account_id)?.set_label_color(id, color).await)
+    }
+
+    /// How many conversations in the whole mailbox carry the label, for
+    /// the question before deleting it.
+    pub async fn label_threads(
+        &self,
+        account_id: AccountId,
+        id: &str,
+    ) -> Result<Permitted<u64>, SyncError> {
+        permitted(self.sync(account_id)?.label_threads(id).await)
+    }
+
+    /// Deletes a label. Its mail stays, without the label.
+    pub async fn delete_label(
+        &self,
+        account_id: AccountId,
+        id: &str,
+    ) -> Result<Permitted<()>, SyncError> {
+        permitted(self.sync(account_id)?.delete_label(id).await)
     }
 
     /// Makes a new hidden address of `account_email`, the address of

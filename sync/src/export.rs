@@ -8,8 +8,10 @@
 //! its own line endings, CRLF and all, go into the file as they arrived,
 //! and only the lines mbox itself adds end in a bare newline.
 
-use mailrs_domain::EpochMillis;
+use mailrs_domain::{EpochMillis, Target};
 use mailrs_gmail::address::parse_address_list;
+
+use crate::{Accounts, MailActions, SyncError};
 
 /// The sender an mbox separator names when the message has no usable
 /// `From` header. Mail systems have written this since Unix mail began.
@@ -18,6 +20,40 @@ const UNKNOWN_SENDER: &str = "MAILER-DAEMON";
 /// How many bytes of subject a file name may carry. Linux takes 255 bytes
 /// for one name; the rest leaves room for the date and the extension.
 const SUBJECT_BYTES: usize = 180;
+
+impl<A: Accounts> MailActions<A> {
+    /// The mail `targets` name as one mbox file, in the order given: each
+    /// conversation oldest message first, or the one message a target
+    /// names. The window's Export and the assistant both write this.
+    pub async fn export_mbox(&self, targets: &[Target]) -> Result<Vec<u8>, SyncError> {
+        let mut mbox = Vec::new();
+        for target in targets {
+            let sync = self
+                .accounts
+                .account(target.account_id)
+                .ok_or(SyncError::UnknownAccount(target.account_id))?;
+            mbox.extend(
+                sync.export_mbox(&target.thread_id, target.message_id.as_deref())
+                    .await?,
+            );
+        }
+        Ok(mbox)
+    }
+
+    /// One message as the RFC 822 bytes Gmail holds, the whole of an
+    /// `.eml` file.
+    pub async fn export_message(
+        &self,
+        account_id: mailrs_domain::AccountId,
+        message_id: &str,
+    ) -> Result<Vec<u8>, SyncError> {
+        let sync = self
+            .accounts
+            .account(account_id)
+            .ok_or(SyncError::UnknownAccount(account_id))?;
+        sync.raw_message(message_id).await
+    }
+}
 
 /// Adds `raw` to `out` as one mbox entry: a `From ` separator built from
 /// the message's own headers, the message with its `From ` lines quoted,

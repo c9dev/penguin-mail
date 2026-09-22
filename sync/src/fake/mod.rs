@@ -19,8 +19,8 @@ use mailrs_domain::{
     Address, EpochMillis, Filter, MessageBody, MessageMeta, Vacation, system_label,
 };
 use mailrs_gmail::{
-    AccountQuota, Answered, BATCH_LIMIT, Busy, CALENDAR_SCOPE, CONTACTS_SCOPE, ConnectionsPage,
-    DELETE_SCOPE, Event, EventFields, GmailError, Guest, HistoryChange, HistoryPage, LabelColor,
+    AccountQuota, Answered, BATCH_LIMIT, Busy, CALENDAR_SCOPE, CONTACTS_SCOPE,
+    CONTACTS_WRITE_SCOPE, ConnectionsPage, ContactFields, DELETE_SCOPE, Event, EventFields, GmailError, Guest, HistoryChange, HistoryPage, LabelColor,
     MessagePage, MessageRef, Person, Priority, Profile, QuotaLimiter, RemoteLabel, SETTINGS_SCOPE,
     SendAs, Series, cost, limiter,
 };
@@ -1171,6 +1171,74 @@ impl GmailApi for FakeGmail {
     async fn contact_photo(&self, url: &str) -> Result<Vec<u8>, GmailError> {
         self.with(|s| s.photos.get(url).cloned())
             .ok_or(GmailError::NotFound)
+    }
+
+    /// Counts the threads whose messages carry the label, as Gmail's
+    /// `threadsTotal` does.
+    async fn label_threads(&self, id: &str) -> Result<u64, GmailError> {
+        self.call("users.labels.get", cost::LABELS).await?;
+        self.with(|s| {
+            if !s.labels.iter().any(|l| l.id == id) {
+                return Err(GmailError::NotFound);
+            }
+            let threads: BTreeSet<&str> = s
+                .messages
+                .values()
+                .filter(|m| m.label_ids.iter().any(|l| l == id))
+                .map(|m| m.thread_id.as_str())
+                .collect();
+            Ok(threads.len() as u64)
+        })
+    }
+
+    async fn create_contact(&self, fields: &ContactFields) -> Result<Person, GmailError> {
+        self.call("people.createContact", cost::CONTACT_WRITE)
+            .await?;
+        self.needs(CONTACTS_WRITE_SCOPE)?;
+        self.with(|s| {
+            let mut person = Person {
+                resource: format!("people/c{}", s.contacts.len() + 1),
+                ..Person::default()
+            };
+            fill_person(&mut person, fields);
+            s.contacts.push(person.clone());
+            Ok(person)
+        })
+    }
+
+    async fn update_contact(
+        &self,
+        resource: &str,
+        fields: &ContactFields,
+    ) -> Result<Person, GmailError> {
+        self.call("people.updateContact", cost::CONTACT_WRITE)
+            .await?;
+        self.needs(CONTACTS_WRITE_SCOPE)?;
+        self.with(|s| {
+            let person = s
+                .contacts
+                .iter_mut()
+                .find(|p| p.resource == resource)
+                .ok_or(GmailError::NotFound)?;
+            fill_person(person, fields);
+            Ok(person.clone())
+        })
+    }
+}
+
+/// Writes the fields a contact change names over `person`, as Google does.
+fn fill_person(person: &mut Person, fields: &ContactFields) {
+    if let Some(name) = &fields.name {
+        person.name = Some(name.clone()).filter(|n| !n.is_empty());
+    }
+    if let Some(emails) = &fields.emails {
+        person.emails = emails.clone();
+    }
+    if let Some(phones) = &fields.phones {
+        person.phone = phones.first().cloned();
+    }
+    if let Some(organization) = &fields.organization {
+        person.organization = Some(organization.clone()).filter(|o| !o.is_empty());
     }
 }
 
