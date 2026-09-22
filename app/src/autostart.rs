@@ -92,16 +92,44 @@ pub fn set_enabled(path: &Path, exe: &Path, enabled: bool) -> std::io::Result<()
         format!(
             "[Desktop Entry]\nType=Application\nName=Penguin Mail\nComment=Keeps Gmail in sync from the system tray\n\
              Exec={} --background\nIcon=io.github.c9dev.PenguinMail\nNoDisplay=true\nX-GNOME-Autostart-enabled=true\n",
-            exe.display()
+            exec_argument(exe)
         ),
     )
+}
+
+/// `exe` as one argument of a desktop entry's Exec line. The Desktop Entry
+/// spec quotes an argument in double quotes with `"`, `` ` ``, `$` and `\`
+/// escaped by a backslash, then applies the string rule, which doubles
+/// every backslash again, and a literal `%` is written `%%`. Without the
+/// quotes a path with a space would start a program named by its first
+/// half.
+fn exec_argument(exe: &Path) -> String {
+    let mut quoted = String::from("\"");
+    for c in exe.to_string_lossy().chars() {
+        match c {
+            '"' | '`' | '$' | '\\' => {
+                quoted.push_str("\\\\");
+                if c == '\\' {
+                    quoted.push_str("\\\\");
+                } else {
+                    quoted.push(c);
+                }
+            }
+            '%' => quoted.push_str("%%"),
+            '\n' => quoted.push_str("\\n"),
+            '\t' => quoted.push_str("\\t"),
+            _ => quoted.push(c),
+        }
+    }
+    quoted.push('"');
+    quoted
 }
 
 #[cfg(test)]
 mod tests {
     use std::path::Path;
 
-    use super::{is_enabled, set_enabled};
+    use super::{exec_argument, is_enabled, set_enabled};
 
     #[test]
     fn the_login_item_toggles() {
@@ -116,10 +144,38 @@ mod tests {
         assert!(
             std::fs::read_to_string(&path)
                 .unwrap()
-                .contains("Exec=/opt/penguin-mail/bin/penguin-mail --background")
+                .contains("Exec=\"/opt/penguin-mail/bin/penguin-mail\" --background")
         );
         set_enabled(&path, Path::new("/x"), false).unwrap();
         assert!(!is_enabled(&path));
         set_enabled(&path, Path::new("/x"), false).unwrap();
+    }
+
+    #[test]
+    fn a_path_with_a_space_stays_one_argument() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("io.github.c9dev.PenguinMail.desktop");
+        set_enabled(
+            &path,
+            Path::new("/home/ann/Penguin Mail/penguin-mail"),
+            true,
+        )
+        .unwrap();
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert!(
+            text.contains("\nExec=\"/home/ann/Penguin Mail/penguin-mail\" --background\n"),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn the_desktop_entry_escapes_survive_both_rounds() {
+        // The spec's quoting rule escapes ", `, $ and \ with a backslash,
+        // then the string rule doubles every backslash, and % stands for
+        // itself only doubled.
+        assert_eq!(
+            exec_argument(Path::new(r#"/a/$b`c"d\e%f"#)),
+            r#""/a/\\$b\\`c\\"d\\\\e%%f""#
+        );
     }
 }
