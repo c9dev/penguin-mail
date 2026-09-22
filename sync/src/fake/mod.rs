@@ -84,6 +84,11 @@ pub struct FakeState {
     pub remote_writes: Vec<String>,
     /// Raw messages sent, with their thread ids.
     pub sent: Vec<(Vec<u8>, Option<String>)>,
+    /// Reads a sent message's bytes into the copy Gmail files under Sent.
+    /// The demo sets one, so what a person sends shows up in Sent and in
+    /// its conversation. Sync's tests leave it unset: the fake then keeps
+    /// no copy, and the mailbox holds only what a test put there.
+    pub sent_copy: Option<ReadSent>,
     /// Draft id to raw content.
     pub drafts: HashMap<String, Vec<u8>>,
     /// Message id backing each draft.
@@ -135,6 +140,21 @@ pub struct FakeState {
     /// The time `newer_than` and `older_than` count back from. `None`
     /// reads the clock; a test whose mail sits at fixed dates pins it.
     pub clock: Option<EpochMillis>,
+}
+
+/// Reads a sent message's bytes, or answers `None` to keep no copy.
+pub type ReadSent = Box<dyn Fn(&[u8]) -> Option<SentCopy> + Send>;
+
+/// A sent message as [`FakeState::sent_copy`] reads it. The fake fills in
+/// the id, the thread and the labels, as Gmail does.
+pub struct SentCopy {
+    pub meta: MessageMeta,
+    pub body: MessageBody,
+    /// The `In-Reply-To` and `References` ids, which put a reply sent
+    /// without a thread id into the conversation it answers.
+    pub references: Vec<String>,
+    /// Each attachment's bytes, by the attachment id `body` names.
+    pub files: Vec<(String, Vec<u8>)>,
 }
 
 /// Calls made and quota units spent, priced from Gmail's usage-limits
@@ -219,6 +239,7 @@ impl FakeGmail {
                 body_fetches: 0,
                 remote_writes: Vec::new(),
                 sent: Vec::new(),
+                sent_copy: None,
                 drafts: HashMap::new(),
                 draft_messages: HashMap::new(),
                 attachments: HashMap::new(),
@@ -455,6 +476,45 @@ impl FakeState {
         self.history.push((self.history_id, change));
     }
 
+    /// Files the copy of a sent message under Sent, recorded in history,
+    /// when the fake has a [`FakeState::sent_copy`] reader. Gmail puts the
+    /// copy in the thread it was sent into, or else in the thread of the
+    /// message it replies to, or else in a thread of its own.
+    fn file_sent(&mut self, id: &str, raw: &[u8], thread_id: Option<&str>) {
+        let Some(copy) = self.sent_copy.as_ref().and_then(|read| read(raw)) else {
+            return;
+        };
+        let SentCopy {
+            mut meta,
+            body,
+            references,
+            files,
+        } = copy;
+        for (attachment_id, bytes) in files {
+            self.attachments
+                .insert((id.to_string(), attachment_id), bytes);
+        }
+        let bare = |id: &str| id.trim_matches(['<', '>']).to_string();
+        let references: Vec<String> = references.iter().map(|r| bare(r)).collect();
+        let answered = self.messages.values().find_map(|m| {
+            let msgid = bare(m.rfc822_msgid.as_deref()?);
+            references.contains(&msgid).then(|| m.thread_id.clone())
+        });
+        meta.thread_id = thread_id
+            .map(str::to_string)
+            .or(answered)
+            .unwrap_or_else(|| id.to_string());
+        meta.id = id.to_string();
+        meta.label_ids = vec![system_label::SENT.into()];
+        let change = HistoryChange::MessageAdded {
+            id: meta.id.clone(),
+            thread_id: meta.thread_id.clone(),
+        };
+        self.bodies.insert(meta.id.clone(), body);
+        self.messages.insert(meta.id.clone(), meta);
+        self.record(change);
+    }
+
     /// Whether any message of the thread carries Gmail's mute label.
     fn thread_is_muted(&self, thread_id: &str) -> bool {
         self.messages
@@ -663,7 +723,9 @@ impl GmailApi for FakeGmail {
         self.call("users.messages.send", cost::SEND).await?;
         Ok(self.with(|s| {
             s.sent.push((raw.to_vec(), thread_id.map(str::to_string)));
-            format!("sent{}", s.sent.len())
+            let id = format!("sent{}", s.sent.len());
+            s.file_sent(&id, raw, thread_id);
+            id
         }))
     }
 
@@ -699,8 +761,10 @@ impl GmailApi for FakeGmail {
         self.with(|s| {
             let raw = s.drafts.remove(draft_id).ok_or(GmailError::NotFound)?;
             s.draft_messages.remove(draft_id);
+            let id = format!("sent{}", s.sent.len() + 1);
+            s.file_sent(&id, &raw, None);
             s.sent.push((raw, None));
-            Ok(format!("sent{}", s.sent.len()))
+            Ok(id)
         })
     }
 

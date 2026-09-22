@@ -32,6 +32,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - An action Gmail refuses part way, such as archiving a long conversation
   when the connection drops, leaves the messages Gmail did change as Gmail
   has them, and no longer undoes changes made in the browser meanwhile.
+- In demo mode, a message you send now shows up in Sent and in its
+  conversation.
 
 ## 0.1.4 (2026-09-22)
 
