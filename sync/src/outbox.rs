@@ -192,6 +192,29 @@ impl<A: Accounts> Outbox<A> {
             .await?)
     }
 
+    /// Records that the writer saved a draft again. A Send Later message
+    /// waiting on that draft keeps its hour and now names the draft's new
+    /// message and thread, so the list and a later cancel still find it.
+    /// A draft nothing waits on changes nothing here.
+    pub async fn draft_saved(
+        &self,
+        account_id: AccountId,
+        saved: SavedDraft,
+    ) -> Result<(), SyncError> {
+        self.db
+            .write(move |c| {
+                outbox::set_message(
+                    c,
+                    account_id,
+                    &saved.draft_id,
+                    &saved.message_id,
+                    &saved.thread_id,
+                )
+            })
+            .await?;
+        Ok(())
+    }
+
     /// Stops the Send Later messages the targets name and returns how many
     /// it stopped. Each Gmail draft stays in Drafts. A list row names a
     /// scheduled message by its Gmail thread, by its draft's message, or,

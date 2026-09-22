@@ -695,3 +695,45 @@ async fn a_reopened_draft_finds_the_hour_send_later_gave_it() {
     assert_eq!(found.map(|q| q.send_at), Some(at));
     assert_eq!(outbox.find_draft(h.account_id, "nope").await.unwrap(), None);
 }
+
+#[tokio::test]
+async fn a_scheduled_draft_saved_again_keeps_its_hour_under_its_new_message() {
+    let h = harness().await;
+    let outbox = queue(&h);
+    let mut later = message(h.account_id, "Monday");
+    later.send_at = now_millis() + 60_000;
+    let at = later.send_at;
+    outbox.schedule(later).await.unwrap();
+    let before = h.db.read(outbox::scheduled).await.unwrap().remove(0);
+    let draft_id = before.draft_id.clone().expect("Gmail holds its draft");
+
+    let saved = h
+        .sync
+        .save_draft(
+            b"Subject: Monday\r\n\r\nEdited".to_vec(),
+            None,
+            Some(draft_id),
+        )
+        .await
+        .unwrap();
+    assert_ne!(Some(&saved.message_id), before.message_id.as_ref());
+    outbox
+        .draft_saved(h.account_id, saved.clone())
+        .await
+        .unwrap();
+
+    let after = h.db.read(outbox::scheduled).await.unwrap();
+    assert_eq!(after.len(), 1);
+    assert_eq!(after[0].send_at, at, "the hour stands");
+    assert_eq!(after[0].message_id, Some(saved.message_id));
+    assert_eq!(after[0].thread_id, Some(saved.thread_id));
+
+    // A draft nothing waits on leaves the table alone.
+    let other = h
+        .sync
+        .save_draft(b"Subject: Other\r\n\r\nHi".to_vec(), None, None)
+        .await
+        .unwrap();
+    outbox.draft_saved(h.account_id, other).await.unwrap();
+    assert_eq!(h.db.read(outbox::scheduled).await.unwrap(), after);
+}

@@ -372,19 +372,6 @@ impl Core {
         self.call(async move { db.write(change).await }).await
     }
 
-    /// Runs a change on the writer thread without waiting; failures are logged.
-    pub fn spawn_write<F>(&self, change: F)
-    where
-        F: FnOnce(&rusqlite::Connection) -> mailrs_store::Result<()> + Send + 'static,
-    {
-        let db = self.db.clone();
-        self.spawn(async move {
-            if let Err(err) = db.write(change).await {
-                tracing::warn!(error = %err, "could not update the store");
-            }
-        });
-    }
-
     /// Runs `future` on the tokio runtime without waiting.
     pub fn spawn<F>(&self, future: F)
     where

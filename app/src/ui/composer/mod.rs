@@ -1305,17 +1305,12 @@ impl Composer {
                 .await
             {
                 Ok(saved) => {
-                    let (account_id, draft_id) = (draft.account_id, saved.draft_id.clone());
                     this.base.borrow_mut().draft_id = Some(saved.draft_id.clone());
-                    // A scheduled draft keeps its time; point it at the new message.
-                    this.core.spawn_write(move |c| {
-                        mailrs_store::outbox::set_message(
-                            c,
-                            account_id,
-                            &draft_id,
-                            &saved.message_id,
-                            &saved.thread_id,
-                        )
+                    let (outbox, account_id) = (this.core.outbox(), draft.account_id);
+                    this.core.spawn(async move {
+                        if let Err(err) = outbox.draft_saved(account_id, saved).await {
+                            tracing::warn!(error = %err, "could not update the store");
+                        }
                     });
                     this.dirty.set(false);
                     if then_close {
