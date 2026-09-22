@@ -34,6 +34,8 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **View**: the settings that change what a mailbox lists: conversation grouping, the inbox category on screen, whether Follow Up is on, the clock, and a row limit. `mailrs_sync::View`. _Avoid_: options, config, filter.
 
+**List feed**: what the thread list loads next, and which answers to that loading still count. It hands out the first page of the mailbox on screen, the next page once the reader scrolls to the end, and one refresh for a burst of change events, which re-reads the named threads, lists the mailbox again, or prunes a folder. `mailrs::ui::list_feed::ListFeed`. Every answer passes through it on its way to the window, and it drops the ones for a mailbox that has since left the screen. _Avoid_: loader, pager, generation.
+
 **Settings change**: one named change to the preferences, such as the text size, an account's signature, or a VIP. `mailrs::settings::Change`. Preferences, the keyboard shortcuts, and the assistant all make the same change the same way, so the same input lands the same way whichever one asks. _Avoid_: patch, setting update.
 
 **Effect**: the part of the window a settings change leaves stale: the list's shape, the sidebar's accounts, row colours, a smart mailbox's conditions, the VIP marks, Follow Up, the inbox categories, the assistant, the text size, or light and dark. `mailrs::settings::Effect`. Applying a change reports its effects, the window redoes one part per effect, and a change with no effects saves the file and stops. _Avoid_: signal, notification.

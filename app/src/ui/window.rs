@@ -23,6 +23,7 @@ use mailrs_sync::{
 
 use super::contact_card;
 use super::conversation::{Action, ConversationView};
+use super::list_feed::{Coalesce, ListFeed, Refresh, Splice, Ticket};
 use super::sidebar::Sidebar;
 use super::thread_list::{Picked, ThreadList};
 use super::{Mailbox, welcome};
@@ -117,16 +118,8 @@ pub struct MainWindow {
     mailbox: RefCell<Mailbox>,
     before_search: RefCell<Mailbox>,
     accounts: RefCell<Vec<Account>>,
-    refresh_queued: Cell<bool>,
-    /// A queued refresh that names no threads, so the list reloads whole.
-    refresh_all: Cell<bool>,
-    /// Threads a queued refresh names, to splice into the list in place.
-    refresh_threads: RefCell<Vec<(AccountId, String)>>,
-    list_generation: Cell<u64>,
-    /// The mailbox holds rows past the ones loaded.
-    more_rows: Cell<bool>,
-    /// A page of older rows is on its way.
-    loading_more: Cell<bool>,
+    /// What the thread list loads next, and which answers still count.
+    feed: RefCell<ListFeed<(AccountId, String, Reveal)>>,
     authorizing: Cell<bool>,
     labels: RefCell<HashMap<AccountId, Vec<Label>>>,
     assistant: Rc<super::assistant::AssistantPane>,
@@ -518,12 +511,7 @@ impl MainWindow {
                 mailbox: RefCell::new(Mailbox::Unified(system_label::INBOX)),
                 before_search: RefCell::new(Mailbox::Unified(system_label::INBOX)),
                 accounts: RefCell::new(Vec::new()),
-                refresh_queued: Cell::new(false),
-                refresh_all: Cell::new(false),
-                refresh_threads: RefCell::new(Vec::new()),
-                list_generation: Cell::new(0),
-                more_rows: Cell::new(false),
-                loading_more: Cell::new(false),
+                feed: RefCell::new(ListFeed::default()),
                 authorizing: Cell::new(false),
                 labels: RefCell::new(HashMap::new()),
                 assistant,
@@ -739,8 +727,8 @@ impl MainWindow {
                 thread_ids,
             } => {
                 let changed = thread_ids.iter().map(|id| (*account_id, id.clone()));
-                self.refresh_threads.borrow_mut().extend(changed);
-                self.queue(thread_ids.is_empty());
+                let coalesce = self.feed.borrow_mut().changed(changed.collect());
+                self.coalesce(coalesce);
             }
             ChangeEvent::NewMail { .. } => self.queue_refresh(),
             ChangeEvent::WriteFailed { message, .. } => self.toast(message),
@@ -753,27 +741,26 @@ impl MainWindow {
 
     /// Refreshes the counts and loads the whole list again.
     fn queue_refresh(self: &Rc<Self>) {
-        self.queue(true);
+        let coalesce = self.feed.borrow_mut().everything();
+        self.coalesce(coalesce);
     }
 
-    /// Coalesces bursts of change events into one refresh. With `all` the
-    /// list reloads; otherwise the named threads are re-read on their own,
-    /// which keeps a change event off the 10,000-row query.
-    fn queue(self: &Rc<Self>, all: bool) {
-        self.refresh_all.set(self.refresh_all.get() || all);
-        if self.refresh_queued.replace(true) {
+    /// Waits 150 ms so that a burst of change events costs one refresh.
+    /// The feed decides whether that refresh lists the mailbox again or
+    /// re-reads the named threads on their own, which keeps a change
+    /// event off the 10,000-row query.
+    fn coalesce(self: &Rc<Self>, coalesce: Coalesce) {
+        if coalesce == Coalesce::Joined {
             return;
         }
         let weak = Rc::downgrade(self);
         glib::timeout_add_local_once(std::time::Duration::from_millis(150), move || {
             let Some(win) = weak.upgrade() else { return };
-            win.refresh_queued.set(false);
-            let changed = std::mem::take(&mut *win.refresh_threads.borrow_mut());
+            let refresh = win.feed.borrow_mut().fire();
             win.refresh_counts();
-            if win.refresh_all.replace(false) || changed.is_empty() {
-                win.reload_list();
-            } else {
-                win.splice_changed(changed);
+            match refresh {
+                Refresh::Reload => win.reload_list(),
+                Refresh::Splice(ticket, changed) => win.splice_changed(ticket, changed),
             }
             win.refresh_open_thread();
         });
@@ -930,7 +917,8 @@ impl MainWindow {
         self.follow_outbox();
         self.follow_categories();
         self.follow_follow_ups();
-        self.reload_list();
+        let ticket = self.feed.borrow_mut().shown();
+        self.list_first_page(ticket);
     }
 
     /// Fetches a folder or a smart mailbox that lives only in Gmail again.
@@ -945,10 +933,14 @@ impl MainWindow {
 
     /// Loads the first page of the mailbox on screen.
     fn reload_list(self: &Rc<Self>) {
+        let ticket = self.feed.borrow_mut().reload();
+        self.list_first_page(ticket);
+    }
+
+    /// Lists the first page under `ticket`, which the feed dropped all
+    /// earlier requests for.
+    fn list_first_page(self: &Rc<Self>, ticket: Ticket) {
         let mailbox = self.mailbox.borrow().clone();
-        let generation = self.list_generation.get() + 1;
-        self.list_generation.set(generation);
-        self.loading_more.set(false);
         if mailbox.is_remote() {
             self.list.show_loading();
         }
@@ -960,12 +952,15 @@ impl MainWindow {
                 .core
                 .call(async move { lists.list(&mailbox, &scope, &view, 0).await })
                 .await;
-            if this.list_generation.get() != generation {
+            let Some(landed) = this.feed.borrow_mut().first_page(ticket, &loaded) else {
                 return;
-            }
+            };
             match loaded {
                 Ok(listing) => this.show_listing(listing),
                 Err(err) => this.toast(&load_failed(&err)),
+            }
+            if let Some((account_id, thread_id, then)) = landed.reveal {
+                this.select_revealed(account_id, thread_id, then);
             }
         });
     }
@@ -975,7 +970,6 @@ impl MainWindow {
         for notice in &listing.notices {
             self.toast(notice);
         }
-        self.more_rows.set(listing.more);
         let rows = listing.rows.into_iter().map(Rc::new).collect();
         self.list
             .set_rows(rows, &listing.empty.title, listing.empty.icon);
@@ -985,11 +979,10 @@ impl MainWindow {
 
     /// Loads the next page once the user scrolls near the end.
     fn load_more(self: &Rc<Self>) {
-        if !self.more_rows.get() || self.loading_more.replace(true) {
+        let Some(ticket) = self.feed.borrow_mut().scrolled_to_end() else {
             return;
-        }
+        };
         let mailbox = self.mailbox.borrow().clone();
-        let generation = self.list_generation.get();
         let (scope, view, from) = (self.scope(), self.view(), self.list.loaded());
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
@@ -998,13 +991,11 @@ impl MainWindow {
                 .core
                 .call(async move { lists.list(&mailbox, &scope, &view, from).await })
                 .await;
-            if this.list_generation.get() != generation {
+            if !this.feed.borrow_mut().next_page(ticket, &loaded) {
                 return;
             }
-            this.loading_more.set(false);
             match loaded {
                 Ok(listing) => {
-                    this.more_rows.set(listing.more);
                     this.list
                         .append(listing.rows.into_iter().map(Rc::new).collect());
                 }
@@ -1015,9 +1006,8 @@ impl MainWindow {
 
     /// Re-reads the threads a change event named and puts them back in the
     /// list in place, instead of listing the whole mailbox again.
-    fn splice_changed(self: &Rc<Self>, changed: Vec<(AccountId, String)>) {
+    fn splice_changed(self: &Rc<Self>, ticket: Ticket, changed: Vec<(AccountId, String)>) {
         let mailbox = self.mailbox.borrow().clone();
-        let generation = self.list_generation.get();
         let view = self.view();
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
@@ -1027,11 +1017,11 @@ impl MainWindow {
                 .call(async move { lists.changed(&mailbox, &named, &view).await })
                 .await
                 .unwrap_or(None);
-            if this.list_generation.get() != generation {
-                return;
-            }
-            match fresh {
-                Some(fresh) => {
+            let remote = this.mailbox.borrow().is_remote();
+            let splice = this.feed.borrow_mut().spliced(ticket, fresh, remote);
+            match splice {
+                Splice::Stale => {}
+                Splice::Put(fresh) => {
                     let title = this.mailbox.borrow().title();
                     this.list.replace_threads(&changed, fresh.rows);
                     this.follow_selection();
@@ -1041,14 +1031,14 @@ impl MainWindow {
                 // that changed elsewhere changes its rows. Drop the rows
                 // that left the folder and leave the rest alone, rather
                 // than paying for the whole search again.
-                None if this.mailbox.borrow().is_remote() => {
+                Splice::Prune => {
                     let targets = changed
                         .iter()
                         .map(|(account_id, thread_id)| Target::thread(*account_id, thread_id))
                         .collect::<Vec<_>>();
                     this.prune_folder(&targets);
                 }
-                None => this.reload_list(),
+                Splice::Reload => this.reload_list(),
             }
         });
     }
@@ -2665,16 +2655,24 @@ impl MainWindow {
             self.sidebar.select(&inbox);
             self.show_mailbox(inbox);
         }
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            // The list is still loading its rows; selecting one before they
-            // land finds nothing.
-            glib::timeout_future(std::time::Duration::from_millis(250)).await;
-            this.list.select(account_id, &thread_id, None);
-            if then == Reveal::Reply {
+        // Selecting a row before the list's rows land finds nothing, so
+        // the feed holds the thread until the first page is on screen.
+        let now = self.feed.borrow_mut().reveal((account_id, thread_id, then));
+        if let Some((account_id, thread_id, then)) = now {
+            self.select_revealed(account_id, thread_id, then);
+        }
+    }
+
+    /// Selects a thread [`MainWindow::reveal`] asked for, now that the
+    /// list holds its row, and answers it when `then` asks for that.
+    fn select_revealed(self: &Rc<Self>, account_id: AccountId, thread_id: String, then: Reveal) {
+        self.list.select(account_id, &thread_id, None);
+        if then == Reveal::Reply {
+            let this = Rc::clone(self);
+            glib::spawn_future_local(async move {
                 this.reply_when_open(account_id, &thread_id).await;
-            }
-        });
+            });
+        }
     }
 
     /// Answers a thread once the conversation has it, with its body rather

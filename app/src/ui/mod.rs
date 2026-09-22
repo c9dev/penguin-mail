@@ -15,6 +15,7 @@ pub mod conversation;
 pub mod find;
 pub mod hide_my_email;
 pub mod invitation;
+pub mod list_feed;
 pub mod moving;
 pub mod pgp;
 pub mod preferences;
