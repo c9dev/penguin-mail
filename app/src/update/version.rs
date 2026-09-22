@@ -63,8 +63,6 @@ pub enum Method {
     Deb,
     /// From a tarball or `scripts/install.sh`, into a prefix the person owns.
     Local { prefix: PathBuf },
-    /// An AppImage, which the new one replaces where it lies.
-    AppImage { file: PathBuf },
 }
 
 /// The two files an update downloads.
@@ -81,7 +79,6 @@ pub fn pick<'a>(release: &'a Release, method: &Method) -> Option<Download<'a>> {
     let wanted = match method {
         Method::Deb => format!("penguin-mail_{v}_amd64.deb"),
         Method::Local { .. } => format!("penguin-mail-{v}-x86_64.tar.gz"),
-        Method::AppImage { .. } => format!("penguin-mail-{v}-x86_64.AppImage"),
     };
     let find = |name: &str| release.assets.iter().find(|a| a.name == name);
     Some(Download {
@@ -152,24 +149,6 @@ mod tests {
         )
         .unwrap();
         assert_eq!(local.package.name, "penguin-mail-0.2.0-x86_64.tar.gz");
-    }
-
-    #[test]
-    fn an_appimage_fetches_the_new_appimage() {
-        let r = release(
-            "0.2.0",
-            &[
-                "penguin-mail_0.2.0_amd64.deb",
-                "penguin-mail-0.2.0-x86_64.AppImage",
-                "SHA256SUMS",
-            ],
-        );
-        let method = Method::AppImage {
-            file: "/home/a/Applications/penguin-mail.AppImage".into(),
-        };
-        let appimage = pick(&r, &method).unwrap();
-        assert_eq!(appimage.package.name, "penguin-mail-0.2.0-x86_64.AppImage");
-        assert_eq!(appimage.sums.name, "SHA256SUMS");
     }
 
     #[test]

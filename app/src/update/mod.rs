@@ -165,9 +165,7 @@ impl Updater {
             return None;
         }
         let exe = crate::exe::path().ok()?;
-        let appimage = std::env::var_os("APPIMAGE").map(PathBuf::from);
-        install::method_for(crate::packaging::BUILT_FOR, &exe, appimage.as_deref())
-            .map(Updater::new)
+        install::method_for(crate::packaging::BUILT_FOR, &exe).map(Updater::new)
     }
 
     pub fn new(method: Method) -> Updater {

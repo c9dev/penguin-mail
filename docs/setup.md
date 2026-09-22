@@ -134,28 +134,26 @@ under Audience, publish, and add the account again.
 ## Which package
 
 Every package is the same app, built with a cargo feature that says what
-kind it is (`packaging-flatpak`, `packaging-snap`, `packaging-appimage`, or
-none for the .deb, the rpm and the tarball). The feature decides where
+kind it is (`packaging-rpm`, `packaging-flatpak`, `packaging-snap`, or
+none for the .deb and the tarball). The feature decides where
 updates come from and whether skills run.
 
-| | .deb / rpm | Flatpak | Snap | AppImage |
-|---|---|---|---|---|
-| Updates | apt / dnf repository | Flathub | Snap Store | in the app |
-| GnuPG | system | runtime's `gpg`, on `~/.gnupg` | snap's `gpg`, on `~/.gnupg` | system |
-| Assistant skills | yes | no | no | yes |
-| Claude Code, MCP servers run as a command | yes | no | no | yes |
-| Tray icon | yes | yes | yes | yes |
-| Start at login | autostart file | Background portal | snapd autostart | autostart file |
+| | .deb / rpm | Flatpak | Snap |
+|---|---|---|---|
+| Updates | apt / dnf repository | Flathub | Snap Store |
+| GnuPG | system | runtime's `gpg`, on `~/.gnupg` | snap's `gpg`, on `~/.gnupg` |
+| Assistant skills | yes | no | no |
+| Claude Code, MCP servers run as a command | yes | no | no |
+| Tray icon | yes | yes | yes |
+| Start at login | autostart file | Background portal | snapd autostart |
 
-- **Updates.** A .deb, a tarball and an AppImage update themselves from
-  GitHub releases. The rpm leaves it to dnf. The Flatpak and the snap
+- **Updates.** A .deb and a tarball update themselves from GitHub
+  releases. The rpm leaves it to dnf. The Flatpak and the snap
   leave it to their store, and Preferences says which.
 - **GnuPG.** The Flatpak has two holes in its sandbox for signing and
   encryption: `~/.gnupg`, and the gpg-agent socket under
   `$XDG_RUNTIME_DIR/gnupg`, so your own agent and pinentry handle
   passphrases. The snap reaches `~/.gnupg` through a `personal-files` plug.
-  The AppImage bundles no GnuPG and uses `gpg` and `gpgsm` from your
-  distribution.
 - **Skills.** A skill's scripts run under bubblewrap, which cannot start
   inside Flatpak's or a strict snap's sandbox. Running them without one
   would hand a skill your mail and keys, so both packages turn skills off
@@ -164,11 +162,9 @@ updates come from and whether skills run.
   command, run as programs on your computer. The Flatpak and the snap
   cannot see those programs. A local model, the Anthropic API and MCP
   servers you reach by address work in every package.
-- **WebKit's sandbox.** WebKit draws HTML mail in helper processes of its
-  own, which it sandboxes with bubblewrap. The AppImage turns that off,
-  because the sandbox mounts your system's `/usr` and the helpers inside
-  the image would find none of their libraries there. Scripts stay off and
-  remote content stays blocked in every package.
+- **No AppImage.** WebKit draws HTML mail in helper processes it
+  sandboxes with bubblewrap, and that sandbox mounts your system's `/usr`,
+  where helpers bundled in an AppImage find none of their libraries.
 
 ## Where things live
 

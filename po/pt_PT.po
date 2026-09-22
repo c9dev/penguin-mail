@@ -1272,15 +1272,15 @@ msgstr "O modelo não devolveu nada para pôr na mensagem."
 msgid "The model could not translate this: {reason}"
 msgstr "O modelo não conseguiu traduzir isto: {reason}"
 
-#: app/src/packaging.rs:94
+#: app/src/packaging.rs:90
 msgid "Updates come from dnf"
 msgstr "As atualizações chegam pelo dnf"
 
-#: app/src/packaging.rs:95
+#: app/src/packaging.rs:91
 msgid "Updates come from Flathub"
 msgstr "As atualizações chegam pelo Flathub"
 
-#: app/src/packaging.rs:96
+#: app/src/packaging.rs:92
 msgid "Updates come from the Snap Store"
 msgstr "As atualizações chegam pela Snap Store"
 
@@ -2734,26 +2734,25 @@ msgstr "As competências estão desligadas nesta versão"
 #: app/src/ui/assistant_skills_prefs.rs:72
 msgid ""
 "Skill scripts run in a sandbox of their own, which cannot start inside the "
-"{sandbox} sandbox Penguin Mail runs in. The .deb, the rpm and the AppImage "
-"have skills."
+"{sandbox} sandbox Penguin Mail runs in. The .deb and the rpm have skills."
 msgstr ""
 "Os scripts das competências correm numa área isolada própria, que não "
 "consegue arrancar dentro da área isolada {sandbox} onde o Penguin Mail "
-"corre. O .deb, o rpm e o AppImage têm competências."
+"corre. O .deb e o rpm têm competências."
 
-#: app/src/ui/assistant_skills_prefs.rs:87
+#: app/src/ui/assistant_skills_prefs.rs:86
 msgid "{origin}: {description}"
 msgstr "{origin}: {description}"
 
-#: app/src/ui/assistant_skills_prefs.rs:129
+#: app/src/ui/assistant_skills_prefs.rs:128
 msgid "Use the skill {skill}"
 msgstr "Usar a competência {skill}"
 
-#: app/src/ui/assistant_skills_prefs.rs:142
+#: app/src/ui/assistant_skills_prefs.rs:141
 msgid "Allow Network"
 msgstr "Permitir Rede"
 
-#: app/src/ui/assistant_skills_prefs.rs:144
+#: app/src/ui/assistant_skills_prefs.rs:143
 msgid ""
 "Let this skill's scripts reach the internet. Without it they can only use "
 "what is on this computer."
@@ -5877,11 +5876,11 @@ msgstr "Mostrar o registo da atualização"
 msgid "Checking for Updates…"
 msgstr "A procurar atualizações…"
 
-#: app/src/update/mod.rs:115 app/src/update/mod.rs:207
+#: app/src/update/mod.rs:115 app/src/update/mod.rs:205
 msgid "Penguin Mail {version} is available"
 msgstr "O Penguin Mail {version} está disponível"
 
-#: app/src/update/mod.rs:118 app/src/update/mod.rs:213
+#: app/src/update/mod.rs:118 app/src/update/mod.rs:211
 msgid "Install"
 msgstr "Instalar"
 
@@ -5893,7 +5892,7 @@ msgstr "A instalar o Penguin Mail {version}"
 msgid "Restart to finish updating"
 msgstr "Reinicie para terminar a atualização"
 
-#: app/src/update/mod.rs:210
+#: app/src/update/mod.rs:208
 msgid "Install it now, or later from the tray."
 msgstr "Instale-a agora, ou mais tarde a partir da área de notificação."
 

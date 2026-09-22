@@ -185,17 +185,16 @@ uses a tool from outside the app, and it is off until you pick a model.
 
 Penguin Mail runs on Linux, x86_64. The .deb and the rpm need GTK 4.20,
 libadwaita 1.8 and WebKitGTK 6.0 from your distribution, as Ubuntu 26.04
-and Fedora 43 have; the Flatpak, the snap and the AppImage bring their
-own. The tray icon needs a StatusNotifier host, which Ubuntu's
+and Fedora 43 have; the Flatpak and the snap bring their own. The tray icon needs a StatusNotifier host, which Ubuntu's
 AppIndicator extension provides.
 
-| | .deb / rpm | Flatpak | Snap | AppImage |
-|---|---|---|---|---|
-| Updates | apt / dnf | Flathub | Snap Store | in the app |
-| GnuPG | the system's | the runtime's, on your `~/.gnupg` | the snap's, on your `~/.gnupg` | the system's |
-| Assistant skills | yes | no | no | yes |
-| Claude Code, and MCP servers you run as a command | yes | no | no | yes |
-| Tray icon | yes | yes | yes | yes |
+| | .deb / rpm | Flatpak | Snap |
+|---|---|---|---|
+| Updates | apt / dnf | Flathub | Snap Store |
+| GnuPG | the system's | the runtime's, on your `~/.gnupg` | the snap's, on your `~/.gnupg` |
+| Assistant skills | yes | no | no |
+| Claude Code, and MCP servers you run as a command | yes | no | no |
+| Tray icon | yes | yes | yes |
 
 Skills are off in the Flatpak and the snap because a skill's scripts run
 in a sandbox of their own, which cannot start inside the one the app runs
@@ -292,23 +291,6 @@ channel first. It is strictly confined and reaches `~/.gnupg` through a
 `personal-files` plug, which the store approves by hand, so signing and
 encryption use your own keys.
 
-### As an AppImage
-
-Download `penguin-mail-X.Y.Z-x86_64.AppImage` from the
-[latest release](https://github.com/c9dev/penguin-mail/releases/latest),
-make it executable and run it:
-
-```sh
-chmod +x penguin-mail-X.Y.Z-x86_64.AppImage
-./penguin-mail-X.Y.Z-x86_64.AppImage
-```
-
-It runs on distributions as new as Ubuntu 26.04 or Fedora 44, with
-nothing installed. Signing and encryption use your system's `gpg` and
-`gpgsm`. The AppImage runs WebKit without WebKit's own process sandbox,
-which cannot reach the libraries inside the image; mail still renders
-with scripts off and remote content blocked.
-
 ### From source
 
 You need Rust 1.98 and the development packages:
@@ -340,8 +322,6 @@ tray menu, and **Install** does the rest:
   would rather update that way.
 - **From the tarball or from source**, it downloads the new tarball and
   installs it into the same folder as before, with no password.
-- **As an AppImage**, it downloads the new AppImage and puts it in place of
-  the one you run, under the same name.
 - **From Flathub or the Snap Store**, the store installs new versions, and
   Penguin Mail offers no Install of its own. Preferences and the About
   window say which store it is.
@@ -483,8 +463,8 @@ To publish a version, `scripts/release.sh` bumps the version, opens the
 changelog draft in your editor, writes the store listings' release notes
 with `scripts/metainfo.sh`, runs the checks, then commits, tags and
 pushes. The tag starts the release workflow, which builds the `.deb`,
-tarball and zip on Ubuntu 26.04, the rpm on Fedora 43, and the AppImage,
-starts each of them on a hidden display, and publishes them with the
+tarball and zip on Ubuntu 26.04 and the rpm on Fedora 43, starts the rpm
+on a hidden display, and publishes them with the
 changelog. It also builds the snap and sends it to the Snap Store's edge
 channel once the `SNAPCRAFT_STORE_CREDENTIALS` secret exists. When it
 finishes, the Package repositories workflow rebuilds the apt and dnf

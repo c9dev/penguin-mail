@@ -11,16 +11,10 @@ pub fn path() -> io::Result<PathBuf> {
     std::env::current_exe().map(replaced)
 }
 
-/// The file a login item names and an update restarts into. An AppImage
-/// runs from a mount that disappears when it quits and still holds the old
-/// version after an update, so this is the AppImage file itself, which the
-/// AppImage runtime names in `$APPIMAGE`.
+/// The command that starts Penguin Mail again: what a restart runs and
+/// what the login item names. Every relaunch goes through here, so a
+/// package that starts the app some other way changes this one function.
 pub fn launcher() -> io::Result<PathBuf> {
-    if crate::packaging::BUILT_FOR == crate::packaging::Packaging::AppImage
-        && let Some(file) = std::env::var_os("APPIMAGE")
-    {
-        return Ok(PathBuf::from(file));
-    }
     path()
 }
 

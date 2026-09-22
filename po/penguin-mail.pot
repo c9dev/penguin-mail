@@ -1205,15 +1205,15 @@ msgstr ""
 msgid "The model could not translate this: {reason}"
 msgstr ""
 
-#: app/src/packaging.rs:94
+#: app/src/packaging.rs:90
 msgid "Updates come from dnf"
 msgstr ""
 
-#: app/src/packaging.rs:95
+#: app/src/packaging.rs:91
 msgid "Updates come from Flathub"
 msgstr ""
 
-#: app/src/packaging.rs:96
+#: app/src/packaging.rs:92
 msgid "Updates come from the Snap Store"
 msgstr ""
 
@@ -2605,23 +2605,22 @@ msgstr ""
 #: app/src/ui/assistant_skills_prefs.rs:72
 msgid ""
 "Skill scripts run in a sandbox of their own, which cannot start inside the "
-"{sandbox} sandbox Penguin Mail runs in. The .deb, the rpm and the AppImage "
-"have skills."
+"{sandbox} sandbox Penguin Mail runs in. The .deb and the rpm have skills."
 msgstr ""
 
-#: app/src/ui/assistant_skills_prefs.rs:87
+#: app/src/ui/assistant_skills_prefs.rs:86
 msgid "{origin}: {description}"
 msgstr ""
 
-#: app/src/ui/assistant_skills_prefs.rs:129
+#: app/src/ui/assistant_skills_prefs.rs:128
 msgid "Use the skill {skill}"
 msgstr ""
 
-#: app/src/ui/assistant_skills_prefs.rs:142
+#: app/src/ui/assistant_skills_prefs.rs:141
 msgid "Allow Network"
 msgstr ""
 
-#: app/src/ui/assistant_skills_prefs.rs:144
+#: app/src/ui/assistant_skills_prefs.rs:143
 msgid ""
 "Let this skill's scripts reach the internet. Without it they can only use "
 "what is on this computer."
@@ -5638,11 +5637,11 @@ msgstr ""
 msgid "Checking for Updates…"
 msgstr ""
 
-#: app/src/update/mod.rs:115 app/src/update/mod.rs:207
+#: app/src/update/mod.rs:115 app/src/update/mod.rs:205
 msgid "Penguin Mail {version} is available"
 msgstr ""
 
-#: app/src/update/mod.rs:118 app/src/update/mod.rs:213
+#: app/src/update/mod.rs:118 app/src/update/mod.rs:211
 msgid "Install"
 msgstr ""
 
@@ -5654,7 +5653,7 @@ msgstr ""
 msgid "Restart to finish updating"
 msgstr ""
 
-#: app/src/update/mod.rs:210
+#: app/src/update/mod.rs:208
 msgid "Install it now, or later from the tray."
 msgstr ""
 

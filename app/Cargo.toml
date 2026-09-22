@@ -63,4 +63,3 @@ wiremock.workspace = true
 packaging-rpm = []
 packaging-flatpak = []
 packaging-snap = []
-packaging-appimage = []

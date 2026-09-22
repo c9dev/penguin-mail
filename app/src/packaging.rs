@@ -1,15 +1,14 @@
 //! The kind of package this binary was built for, chosen at build time with
-//! a cargo feature: `packaging-rpm`, `packaging-flatpak`, `packaging-snap`
-//! or `packaging-appimage`, and none for the .deb, the tarball and a build
-//! from source. It decides who installs new versions and whether skill
+//! a cargo feature: `packaging-rpm`, `packaging-flatpak` or
+//! `packaging-snap`, and none for the .deb, the tarball and a build from
+//! source. It decides who installs new versions and whether skill
 //! scripts can run.
 
 use mailrs_domain::translate::gettext;
 
 const CHOSEN: usize = cfg!(feature = "packaging-rpm") as usize
     + cfg!(feature = "packaging-flatpak") as usize
-    + cfg!(feature = "packaging-snap") as usize
-    + cfg!(feature = "packaging-appimage") as usize;
+    + cfg!(feature = "packaging-snap") as usize;
 const _: () = assert!(
     CHOSEN <= 1,
     "a build is for one kind of package; pick one packaging-* feature"
@@ -22,7 +21,6 @@ pub enum Packaging {
     Rpm,
     Flatpak,
     Snap,
-    AppImage,
 }
 
 /// Who installs new versions of a package that does not update itself.
@@ -39,8 +37,6 @@ pub const BUILT_FOR: Packaging = if cfg!(feature = "packaging-rpm") {
     Packaging::Flatpak
 } else if cfg!(feature = "packaging-snap") {
     Packaging::Snap
-} else if cfg!(feature = "packaging-appimage") {
-    Packaging::AppImage
 } else {
     Packaging::Native
 };
@@ -56,7 +52,7 @@ struct Traits {
 impl Packaging {
     const fn traits(self) -> Traits {
         let (updated_by, sandbox) = match self {
-            Packaging::Native | Packaging::AppImage => (None, None),
+            Packaging::Native => (None, None),
             Packaging::Rpm => (Some(UpdatedBy::Dnf), None),
             Packaging::Flatpak => (Some(UpdatedBy::Flathub), Some("Flatpak")),
             Packaging::Snap => (Some(UpdatedBy::SnapStore), Some("Snap")),
@@ -107,7 +103,6 @@ mod tests {
         assert_eq!(Packaging::Rpm.updated_by(), Some(UpdatedBy::Dnf));
         assert_eq!(Packaging::Flatpak.updated_by(), Some(UpdatedBy::Flathub));
         assert_eq!(Packaging::Snap.updated_by(), Some(UpdatedBy::SnapStore));
-        assert_eq!(Packaging::AppImage.updated_by(), None);
         assert_eq!(Packaging::Native.updated_by(), None);
     }
 
@@ -115,7 +110,6 @@ mod tests {
     fn skills_run_only_outside_another_sandbox() {
         assert!(Packaging::Native.runs_skills());
         assert!(Packaging::Rpm.runs_skills());
-        assert!(Packaging::AppImage.runs_skills());
         assert!(!Packaging::Flatpak.runs_skills());
         assert!(!Packaging::Snap.runs_skills());
     }
@@ -125,8 +119,7 @@ mod tests {
         if !cfg!(any(
             feature = "packaging-rpm",
             feature = "packaging-flatpak",
-            feature = "packaging-snap",
-            feature = "packaging-appimage"
+            feature = "packaging-snap"
         )) {
             assert_eq!(BUILT_FOR, Packaging::Native);
         }

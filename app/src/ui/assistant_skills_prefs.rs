@@ -70,8 +70,7 @@ fn off_row(sandbox: &str) -> adw::ActionRow {
         .subtitle(glib::markup_escape_text(&fill(
             &gettext(
                 "Skill scripts run in a sandbox of their own, which cannot start inside the \
-                 {sandbox} sandbox Penguin Mail runs in. The .deb, the rpm and the AppImage \
-                 have skills.",
+                 {sandbox} sandbox Penguin Mail runs in. The .deb and the rpm have skills.",
             ),
             &[("sandbox", sandbox)],
         )))
