@@ -107,16 +107,21 @@ const MENU_SCRIPT: &str = r#"(function () {
     event.preventDefault();
     ask(article, event.clientX, event.clientY);
   }, true);
-  document.addEventListener('keydown', function (event) {
-    if (event.key !== 'ContextMenu' && !(event.key === 'F10' && event.shiftKey)) return;
+  window.mailrsMenuKey = function () {
     var article = messageAt(document.activeElement) ||
       document.querySelector('.message.expanded');
     if (!article) return;
-    event.preventDefault();
     var box = article.getBoundingClientRect();
     ask(article, box.left + 16, box.top + 16);
-  }, true);
+  };
 })()"#;
+
+/// Asks the page for the menu of the message holding the focus, as the Menu
+/// key or Shift+F10 does. The app sends the keys here instead of letting the
+/// page see them: WebKit keeps an empty text field inside the view, and GTK
+/// gives that field the same two keys for its Cut and Paste menu, which then
+/// opens in the window's corner and leaves no room for the message's own.
+const MENU_KEY_SCRIPT: &str = "window.mailrsMenuKey && window.mailrsMenuKey()";
 
 struct Buttons {
     archive: gtk::Button,
@@ -625,14 +630,27 @@ impl ConversationView {
             }
         });
         // Escape takes the bar down wherever the focus is in the
-        // conversation, and before the window makes Escape its own.
+        // conversation, and before the window makes Escape its own. The
+        // menu keys are caught here too, before WebKit's text field inside
+        // the view can answer them with a menu of its own.
         let keys = gtk::EventControllerKey::new();
         keys.set_propagation_phase(gtk::PropagationPhase::Capture);
         let weak = Rc::downgrade(&view);
-        keys.connect_key_pressed(move |_, key, _, _| {
+        keys.connect_key_pressed(move |_, key, _, state| {
             let Some(view) = weak.upgrade() else {
                 return glib::Propagation::Proceed;
             };
+            let menu_key = key == gdk::Key::Menu
+                || (key == gdk::Key::F10 && state.contains(gdk::ModifierType::SHIFT_MASK));
+            if menu_key
+                && view
+                    .webview
+                    .state_flags()
+                    .contains(gtk::StateFlags::FOCUS_WITHIN)
+            {
+                run_script(&view.webview, MENU_KEY_SCRIPT);
+                return glib::Propagation::Stop;
+            }
             if key != gdk::Key::Escape || !view.find.is_open() {
                 return glib::Propagation::Proceed;
             }

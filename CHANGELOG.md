@@ -5,6 +5,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Fixed
+
+- Shift+F10 and the Menu key open a message's own menu. Before, they
+  opened an empty Cut and Paste menu in the window's top corner.
+
 ## 0.1.6 (2026-09-22)
 
 ### Fixed
