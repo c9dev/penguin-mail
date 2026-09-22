@@ -279,7 +279,10 @@ fn a_reply_in_the_inbox_shows_its_thread_when_earlier_messages_are_in_the_trash(
     );
     assert_eq!(threads::count_threads(&conn, &inbox).unwrap(), 1);
     assert_eq!(
-        threads::label_counts(&conn).unwrap().account(a, "INBOX").threads,
+        threads::label_counts(&conn)
+            .unwrap()
+            .account(a, "INBOX")
+            .threads,
         1,
         "the sidebar count agrees with the list"
     );
