@@ -5,7 +5,7 @@ use mailrs_domain::Target;
 
 use super::fake::{
     ACCOUNT, ELSEWHERE, FakeWindow, Step, THREAD, body, invited, meta, opened_occurrence,
-    portuguese, row, with_picture,
+    portuguese, queued, row, with_picture,
 };
 use super::{Card, Event, Stale};
 use crate::protection::{Mark, Read, Tone};
@@ -453,4 +453,72 @@ fn an_opened_body_leaves_the_claim_and_the_pictures_alone() {
     let stale = Stale::after(Event::EngineOpened);
     assert!(stale.translation && stale.invitation);
     assert!(!stale.protection && !stale.thumbnails && !stale.unread);
+}
+
+/// The Outbox row for the fixture's queued message.
+fn queued_row() -> mailrs_domain::ThreadSummary {
+    row(&mailrs_sync::outbox_row(7))
+}
+
+#[tokio::test]
+async fn a_queued_message_shows_what_the_outbox_kept_without_asking_gmail() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        screen.queued.insert(7, queued(Some("No network")));
+    });
+    window.run().open(queued_row()).await;
+    assert!(window.took(Step::Queued));
+    for step in [
+        Step::Stored,
+        Step::Ensure,
+        Step::Bodies,
+        Step::Engines,
+        Step::Card,
+    ] {
+        assert!(!window.took(step), "{step:?} was taken");
+    }
+    let stuck = window.open(|open| open.queued.as_ref().map(|q| q.stuck));
+    assert_eq!(stuck, Some(Some(true)));
+    // Whatever card the thread before left comes down.
+    assert_eq!(window.0.borrow().invitations, [None]);
+}
+
+#[tokio::test]
+async fn a_queued_message_that_has_gone_leaves_the_pane_empty() {
+    let window = FakeWindow::new();
+    window.run().open(queued_row()).await;
+    assert!(window.took(Step::Clear));
+    assert!(!window.took(Step::Show));
+}
+
+#[tokio::test]
+async fn a_refresh_says_what_the_outbox_says_now() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        screen.queued.insert(7, queued(Some("No network")));
+    });
+    window.run().open(queued_row()).await;
+    window.with(|screen| {
+        screen.queued.insert(7, queued(Some("Gmail is busy")));
+    });
+    window.run().refresh().await;
+    assert!(!window.took(Step::Messages));
+    let line = window.open(|open| open.queued.clone().map(|q| q.line));
+    assert!(
+        line.flatten()
+            .is_some_and(|l| l.starts_with("Gmail is busy"))
+    );
+}
+
+#[tokio::test]
+async fn a_queued_message_that_went_out_while_on_screen_leaves_it() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        screen.queued.insert(7, queued(None));
+    });
+    window.run().open(queued_row()).await;
+    window.with(|screen| screen.queued.clear());
+    window.run().refresh().await;
+    assert!(window.took(Step::Clear));
+    assert!(window.open(|_| ()).is_none());
 }

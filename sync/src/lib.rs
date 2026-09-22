@@ -52,7 +52,7 @@ pub use hidden::HiddenAddress;
 pub use invitations::{Change, Invitations, Opened, Sent, Told};
 pub use mailbox::{
     Changed, Counts, Empty, Listing, Mailbox, Mailboxes, PAGE, Scope, View, outbox_id, outbox_row,
-    summarize_search,
+    summarize_search, waiting_line,
 };
 pub use outbox::{Drained, Outbox, Posted};
 pub use settings::{AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, Permitted};

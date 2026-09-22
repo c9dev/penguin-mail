@@ -21,6 +21,7 @@ pub mod moving;
 pub mod permission;
 pub mod pgp;
 pub mod preferences;
+pub mod queued;
 pub mod roving;
 pub mod rules;
 pub mod search_suggest;

@@ -15,7 +15,7 @@ use mailrs_domain::{
     Account, AccountId, AccountState, ChangeEvent, Label, MessageBody, Target, ThreadSummary,
     system_label,
 };
-use mailrs_sync::{History, Listing, MailAction, Permitted, Scope, TriageAction, View, outbox_id};
+use mailrs_sync::{History, Listing, MailAction, Permitted, Scope, TriageAction, View};
 
 use super::confirm::{Tone, confirm};
 use super::contact_card;
@@ -1081,10 +1081,8 @@ impl MainWindow {
 
     fn picked(self: &Rc<Self>, picked: Picked) {
         match picked {
-            // A message that never reached Gmail has no thread to open,
-            // and asking Gmail for one would be a call thrown away. Its
-            // row menu is what acts on it.
-            Picked::One(row) if outbox_id(&row.id).is_some() => self.conversation.leave(),
+            // A queued message has no Gmail thread; the thread run shows
+            // it from what the outbox kept.
             Picked::One(row) => self.open_thread(row),
             Picked::Many(rows) => {
                 self.conversation.show_many(

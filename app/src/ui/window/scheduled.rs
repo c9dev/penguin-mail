@@ -21,10 +21,12 @@ impl MainWindow {
         self.toasts.add_toast(toast);
     }
 
-    /// Refreshes counts, and the list when it shows one of the mailboxes
-    /// that read what is waiting.
+    /// Refreshes counts, the list when it shows one of the mailboxes that
+    /// read what is waiting, and a queued message on screen, which may have
+    /// gone out or failed again.
     pub(super) fn scheduled_changed(self: &Rc<Self>) {
         self.refresh_counts();
+        self.refresh_open_thread();
         if matches!(
             *self.mailbox.borrow(),
             Mailbox::Scheduled | Mailbox::Outbox | Mailbox::Reminders

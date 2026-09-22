@@ -19,10 +19,11 @@ use webkit::prelude::*;
 use super::find::FindBar;
 use super::invitation::{self, EventCard, Showing};
 use super::pgp::PgpCard;
+use super::queued::QueuedCard;
 use super::translation::TranslationCard;
 use super::{name, name_with_shortcut};
 use crate::compose::ReplyKind;
-use crate::open_thread::OpenThread;
+use crate::open_thread::{OpenThread, Unsent};
 use crate::protection::run::{Claimed, Installed};
 use crate::protection::{self};
 use crate::render::{BodyState, Conversation, MessageView, Theme, render};
@@ -107,6 +108,9 @@ pub struct ConversationView {
     /// The card between the event card and the message, shown when the
     /// message is in a language the interface is not in.
     pub translate: Rc<TranslationCard>,
+    /// The card at the top, shown for a queued message: when it goes, or
+    /// why it has not gone, and what the person can do about it.
+    queued: QueuedCard,
     /// Ctrl+F over the message. WebKit finds the text; the bar says where
     /// in the matches the reader is.
     find: Rc<FindBar>,
@@ -235,7 +239,9 @@ impl ConversationView {
             let on_action = Rc::clone(&on_action);
             TranslationCard::new(move || on_action(Action::Translate))
         };
+        let queued = QueuedCard::new();
         let web_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        web_box.append(&queued.widget);
         web_box.append(&list_banner);
         web_box.append(&banner);
         web_box.append(&seal.widget);
@@ -437,6 +443,7 @@ impl ConversationView {
             card,
             seal,
             translate,
+            queued,
             find,
             find_closed: RefCell::new(Vec::new()),
             list_banner,
@@ -711,6 +718,7 @@ impl ConversationView {
         self.show_invitation(None);
         self.seal.hide();
         self.translate.hide();
+        self.queued.hide();
         self.set_buttons_shown(true);
         let b = &self.buttons;
         for button in [&b.reply, &b.reply_all, &b.forward, &b.edit] {
@@ -765,6 +773,7 @@ impl ConversationView {
         self.show_invitation(None);
         self.seal.hide();
         self.translate.hide();
+        self.queued.hide();
     }
 
     /// Puts an invitation above the message, or takes the card away when
@@ -897,6 +906,13 @@ impl ConversationView {
     pub fn set_photos(&self, photos: HashMap<String, String>) {
         self.change(|open| open.photos = photos);
         self.render(false);
+    }
+
+    /// What the outbox now says about the queued message on screen. Only
+    /// the card changes; the message is the one the writer queued.
+    pub fn unsent_changed(&self, unsent: Unsent) {
+        self.change(|open| open.take_unsent(unsent));
+        self.render_buttons();
     }
 
     /// The colour this thread is flagged in. The page says nothing about
@@ -1103,6 +1119,15 @@ impl ConversationView {
     }
 
     fn update_buttons(&self, open: &OpenThread) {
+        // A queued message is not in Gmail yet, so the mail buttons have
+        // nothing to act on. The card above it carries what does.
+        if let Some(unsent) = &open.queued {
+            self.set_buttons_shown(false);
+            self.list_banner.set_revealed(false);
+            self.queued.show(unsent);
+            return;
+        }
+        self.queued.hide();
         self.refresh_remind_menu();
         self.set_buttons_shown(true);
         let draft = open.is_draft();

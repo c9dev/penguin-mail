@@ -18,6 +18,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - An encrypted message can carry a Bcc when it goes out with OpenPGP. The
   people in To and Cc cannot tell who got the blind copy. S/MIME cannot
   hide one, so the Encrypt button says why it stays off there.
+- A message waiting in the Outbox or in Send Later opens in the reading
+  pane, with why it has not gone or when it goes, and buttons to edit,
+  send or delete it.
 
 ### Improved
 

@@ -15,10 +15,11 @@ use mailrs_domain::invitation::Invitation;
 use mailrs_domain::{
     AccountId, Address, FlagColor, MessageBody, MessageMeta, Target, ThreadSummary, system_label,
 };
+use mailrs_store::outbox::Queued;
 use mailrs_sync::Opened;
 
 use super::{Answer, Card, Desk, Effects, Fetched, Stored, ThreadRun};
-use crate::open_thread::OpenThread;
+use crate::open_thread::{OpenThread, Unsent};
 use crate::protection::Read;
 use crate::translation::{self, Body, Language, Prose, Translation};
 use crate::ui::invitation::Showing;
@@ -62,6 +63,8 @@ pub enum Step {
     EngineAnswered,
     FlagColor,
     SetFlag,
+    Queued,
+    Unsent,
 }
 
 /// The window the run reads and writes.
@@ -86,6 +89,8 @@ pub struct Screen {
     /// The series lines put on the card.
     pub series_lines: Vec<String>,
     pub flag_color: Option<FlagColor>,
+    /// What the outbox holds, by row id.
+    pub queued: HashMap<i64, Queued>,
     pub translation: Result<Vec<Option<String>>, String>,
     /// The Mark as Read setting.
     pub delay: Option<u32>,
@@ -224,6 +229,22 @@ pub fn row(thread_id: &str) -> ThreadSummary {
     }
 }
 
+/// A message the outbox holds under row 7: to Ann, and stuck when
+/// `problem` says why.
+pub fn queued(problem: Option<&str>) -> Queued {
+    let draft = crate::open_thread::queued::draft_to(ACCOUNT, "ann@example.com", "See you.");
+    Queued {
+        id: 7,
+        account_id: ACCOUNT,
+        subject: draft.subject.clone(),
+        recipients: "ann@example.com".to_string(),
+        composer: serde_json::to_string(&draft).expect("a draft writes"),
+        problem: problem.map(str::to_string),
+        attempts: 1,
+        ..Queued::default()
+    }
+}
+
 /// The English interface.
 pub fn english() -> Language {
     translation::interface_language("", "en", &[]).expect("English is known")
@@ -251,6 +272,7 @@ impl FakeWindow {
             series: Ok(Some("Every Tuesday, 6 left".to_string())),
             series_lines: Vec::new(),
             flag_color: Some(FlagColor::Orange),
+            queued: HashMap::new(),
             translation: Ok(vec![Some("Hello Ana".to_string())]),
             delay: Some(2),
             interface: Some(english()),
@@ -551,6 +573,12 @@ impl Effects for FakeWindow {
         });
     }
 
+    fn queued(&self, id: i64) -> Answer<'_, Result<Option<Queued>, String>> {
+        self.reached(Step::Queued);
+        let found = self.with(|screen| screen.queued.get(&id).cloned());
+        Box::pin(async move { Ok(found) })
+    }
+
     fn sender_vip(&self, _vip: bool) {}
 
     fn messages_arrived(&self, fresh: Vec<MessageMeta>) -> Vec<String> {
@@ -642,6 +670,10 @@ impl Effects for FakeWindow {
 
     fn set_flag_color(&self, color: Option<FlagColor>) {
         self.change(Step::SetFlag, |open| open.flag_color = color);
+    }
+
+    fn unsent_changed(&self, unsent: Unsent) {
+        self.change(Step::Unsent, |open| open.take_unsent(unsent));
     }
 
     fn mark_read(&self, target: Target) {

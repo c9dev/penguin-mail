@@ -14,7 +14,10 @@ use crate::protection::run::{Claimed, Installed};
 use crate::protection::{self, Engine, Mark};
 use crate::translation::{Body, Language, Prose, Translation};
 
+pub mod queued;
 pub mod run;
+
+pub use queued::Unsent;
 
 /// Everything shown for one open thread.
 pub struct OpenThread {
@@ -59,6 +62,9 @@ pub struct OpenThread {
     /// further than this: a translation is text a model derived, and
     /// tomorrow's model would write it differently.
     pub translations: HashMap<String, Translation>,
+    /// Set when the pane shows a queued message rather than a Gmail
+    /// thread: what it says above the message, and which buttons.
+    pub queued: Option<Unsent>,
 }
 
 impl OpenThread {
@@ -102,6 +108,7 @@ impl OpenThread {
             pgp_asked: false,
             flag_color: None,
             translations: HashMap::new(),
+            queued: None,
         }
     }
 
@@ -137,7 +144,11 @@ impl OpenThread {
     }
 
     /// The message a reply answers: the newest one that is not a draft.
+    /// A queued message has not gone yet, so nobody can answer it.
     pub fn reply_target(&self) -> Option<&MessageMeta> {
+        if self.queued.is_some() {
+            return None;
+        }
         self.messages
             .iter()
             .rev()
@@ -461,6 +472,7 @@ mod tests {
             pgp_asked: false,
             flag_color: None,
             translations: HashMap::new(),
+            queued: None,
         }
     }
 

@@ -115,6 +115,7 @@ pub fn with_bodies(messages: Vec<(&str, Result<MessageBody, String>)>) -> OpenTh
         pgp_asked: false,
         flag_color: None,
         translations: HashMap::new(),
+        queued: None,
     }
 }
 

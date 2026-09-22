@@ -593,9 +593,92 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoGmail, S
                     .await?;
             }
         }
+        if index == 0 {
+            queue_samples(db, account_id, now).await?;
+        }
         gmail.insert(account_id, fake);
     }
     Ok(DemoGmail(gmail))
+}
+
+/// Puts two messages in the first account's outbox, so the Outbox and
+/// Send Later have something to show: one that could not reach Gmail and
+/// waits for its next try, and one Send Later holds until tomorrow
+/// morning. Neither ever reached Gmail, so each is named by its place in
+/// the outbox, as such a message is for real.
+async fn queue_samples(
+    db: &Db,
+    account_id: AccountId,
+    now: EpochMillis,
+) -> std::result::Result<(), SyncError> {
+    use crate::compose::{Draft, build_mime};
+    use mailrs_store::outbox::{self, Queued};
+
+    let letters = [
+        (
+            "Dinner on Friday?",
+            "Theo Brandt <theo.brandt@example.net>",
+            "Hi Theo,\n\nAre you free for dinner on Friday? The new place on Alder \
+             Street takes bookings for eight.\n\nDana",
+            Some("Could not reach Gmail"),
+            now + 20 * 60 * 1000,
+        ),
+        (
+            "Book club in October",
+            "Lena Novak <lena.novak@example.net>",
+            "Lena,\n\nOctober's book is The Overstory. We meet at mine on the 14th \
+             at seven.\n\nDana",
+            None,
+            tomorrow_at_eight(now),
+        ),
+    ];
+    for (subject, to, words, problem, send_at) in letters {
+        let mut draft = Draft::new(
+            account_id,
+            Address {
+                name: Some(DISPLAY_NAME.to_string()),
+                email: ACCOUNTS[0].email.to_string(),
+            },
+        );
+        draft.to = crate::compose::parse_recipients(to);
+        draft.subject = subject.to_string();
+        draft.markdown = words.to_string();
+        let raw = build_mime(&draft, now / 1000, "demo-queued@example.com").ok();
+        let queued = Queued {
+            account_id,
+            subject: subject.to_string(),
+            recipients: draft
+                .to
+                .iter()
+                .map(|a| a.display().to_string())
+                .collect::<Vec<_>>()
+                .join(", "),
+            send_at,
+            raw,
+            composer: serde_json::to_string(&draft).unwrap_or_default(),
+            attempts: u32::from(problem.is_some()) * 3,
+            problem: problem.map(str::to_string),
+            ..Queued::default()
+        };
+        db.write(move |c| outbox::put(c, &queued)).await?;
+    }
+    Ok(())
+}
+
+/// Eight tomorrow morning, which is when Send Later sends the sample.
+fn tomorrow_at_eight(now: EpochMillis) -> EpochMillis {
+    use chrono::{Days, Local, NaiveTime, TimeZone};
+    let today = Local
+        .timestamp_millis_opt(now)
+        .single()
+        .unwrap_or_else(Local::now)
+        .date_naive();
+    let eight = NaiveTime::from_hms_opt(8, 0, 0).unwrap_or_default();
+    let when = (today + Days::new(1)).and_time(eight);
+    Local
+        .from_local_datetime(&when)
+        .earliest()
+        .map_or(now + 86_400_000, |at| at.timestamp_millis())
 }
 
 /// The contacts the demo accounts have written down, with a photo each

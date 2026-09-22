@@ -2,6 +2,10 @@
 //! the window has open and [`Effects`] for the store, Gmail, and the named
 //! changes to the conversation view.
 //!
+//! A queued message has no Gmail thread behind it. Opening its row shows
+//! what the outbox kept, and refreshing reads the outbox again, since the
+//! message can go out or fail once more while it is on screen.
+//!
 //! Opening a thread shows the stored copy first, then asks Gmail for the
 //! whole thread and the bodies it lacks, marks it read when the setting
 //! says so, and fetches the pictures for the attachment rows. Refreshing
@@ -24,9 +28,10 @@ use std::rc::Rc;
 
 use mailrs_domain::invitation::{Invitation, Method};
 use mailrs_domain::{AccountId, FlagColor, MessageBody, MessageMeta, Target, ThreadSummary};
-use mailrs_sync::Opened;
+use mailrs_store::outbox::Queued;
+use mailrs_sync::{Opened, outbox_id};
 
-use super::OpenThread;
+use super::{OpenThread, Unsent};
 use crate::protection::Read;
 use crate::translation::{Language, Prose};
 use crate::ui::invitation::Showing;
@@ -167,6 +172,9 @@ pub trait Effects {
     ) -> Answer<'_, Result<Vec<Option<String>>, String>>;
     /// Waits this many seconds.
     fn sleep(&self, seconds: u32) -> Answer<'_, ()>;
+    /// The queued message the outbox holds under this row id, or `None`
+    /// once it has gone out or been deleted.
+    fn queued(&self, id: i64) -> Answer<'_, Result<Option<Queued>, String>>;
 
     /// Puts a thread on screen, in place of whatever was there.
     fn show(&self, thread: OpenThread);
@@ -202,6 +210,8 @@ pub trait Effects {
     /// a body.
     fn engine_answered(&self, message_id: String, read: Read) -> bool;
     fn set_flag_color(&self, color: Option<FlagColor>);
+    /// What the outbox now says about the queued message on screen.
+    fn unsent_changed(&self, unsent: Unsent);
     /// Marks the target read, as the reader would by hand.
     fn mark_read(&self, target: Target);
     /// Says something at the bottom of the window.
@@ -218,6 +228,8 @@ pub enum Event {
     /// The engine opened an encrypted message, whose body replaced the
     /// ciphertext.
     EngineOpened,
+    /// A queued message went on screen.
+    QueuedShown,
 }
 
 /// The parts of the window an event leaves stale. The page and the header
@@ -260,6 +272,13 @@ impl Stale {
                 invitation: true,
                 ..Stale::default()
             },
+            // The writer's own words need no translation, no engine and no
+            // mark, and they carry no invitation. Reading for one takes
+            // down the card the thread before left.
+            Event::QueuedShown => Stale {
+                invitation: true,
+                ..Stale::default()
+            },
         }
     }
 }
@@ -290,6 +309,9 @@ impl ThreadRun {
     /// Shows the thread `summary` names: the stored copy first, then the
     /// whole thread and its bodies.
     pub async fn open(&self, summary: ThreadSummary) {
+        if let Some(id) = outbox_id(&summary.id) {
+            return self.open_queued(id).await;
+        }
         let target = Target::from_row(&summary);
         let ticket = self.desk.start_loading();
         let stored = self
@@ -340,6 +362,9 @@ impl ThreadRun {
         let Some(wanted) = self.on_screen() else {
             return;
         };
+        if let Some(id) = outbox_id(&wanted.target().thread_id) {
+            return self.refresh_queued(&wanted, id).await;
+        }
         let target = wanted.target().clone();
         let Some(fresh) = wanted
             .ask(
@@ -364,6 +389,54 @@ impl ThreadRun {
                 wanted.on_screen(|effects| effects.render_buttons());
             }
             None => {}
+        }
+    }
+
+    /// Shows the queued message under outbox row `id`. The ticket works as
+    /// it does for a thread: a later click wins over this one.
+    async fn open_queued(&self, id: i64) {
+        let ticket = self.desk.start_loading();
+        let found = self.effects.queued(id).await;
+        if !self.desk.still_loading(ticket) {
+            return;
+        }
+        let queued = match found {
+            Ok(Some(queued)) => queued,
+            Ok(None) => return self.effects.clear(),
+            Err(err) => {
+                tracing::info!(error = %err, "could not read the queued message");
+                return self.effects.clear();
+            }
+        };
+        let unsent = Unsent::of(&queued, chrono::Local::now());
+        let me = self.desk.me(queued.account_id);
+        let thread = OpenThread::queued(&queued, unsent, me);
+        let wanted = self.wanted(thread.target());
+        self.effects.show(thread);
+        self.follow(&wanted, Event::QueuedShown).await;
+    }
+
+    /// Reads the queued message on screen again: it may have gone out,
+    /// been deleted, or failed once more with a new reason and a new time
+    /// for the next try.
+    async fn refresh_queued(&self, wanted: &Want<'_>, id: i64) {
+        let Some(found) = wanted
+            .ask(
+                |effects| effects.queued(id),
+                "could not read the queued message again",
+            )
+            .await
+        else {
+            return;
+        };
+        match found {
+            Some(queued) => {
+                let unsent = Unsent::of(&queued, chrono::Local::now());
+                wanted.on_screen(|effects| effects.unsent_changed(unsent));
+            }
+            None => {
+                wanted.on_screen(|effects| effects.clear());
+            }
         }
     }
 

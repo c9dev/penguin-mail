@@ -833,10 +833,7 @@ impl<A: Accounts> Mailboxes<A> {
                 message_id: item.message_id.clone(),
                 last_message_at: item.send_at,
                 subject: item.subject.clone(),
-                snippet: fill(
-                    &gettext("Sends {when}"),
-                    &[("when", &future_date(item.send_at, now))],
-                ),
+                snippet: waiting_line(item, now),
                 from: recipients_of(item),
                 message_count: 1,
                 ..ThreadSummary::default()
@@ -865,7 +862,7 @@ impl<A: Accounts> Mailboxes<A> {
                 id: outbox_row(item.id),
                 last_message_at: item.send_at,
                 subject: item.subject.clone(),
-                snippet: why_waiting(item, now),
+                snippet: waiting_line(item, now),
                 from: recipients_of(item),
                 message_count: 1,
                 ..ThreadSummary::default()
@@ -1032,15 +1029,22 @@ fn recipients_of(message: &outbox::Queued) -> String {
     )
 }
 
-/// What an Outbox row says under the subject: why the message has not gone,
-/// and when the next try is.
-fn why_waiting(message: &outbox::Queued, now: DateTime<Local>) -> String {
+/// What a queued message's row says under the subject, and what the
+/// conversation pane says above the message. A Send Later message says
+/// when it goes; one in the Outbox says why it has not gone and when the
+/// next try is.
+pub fn waiting_line(message: &outbox::Queued, now: DateTime<Local>) -> String {
+    let Some(problem) = message.problem.as_deref() else {
+        return fill(
+            &gettext("Sends {when}"),
+            &[("when", &future_date(message.send_at, now))],
+        );
+    };
     let unsent = gettext("Not sent");
-    let problem = message
-        .problem
-        .as_deref()
-        .unwrap_or(&unsent)
-        .trim_end_matches(['.', ' ']);
+    let problem = match problem.trim_end_matches(['.', ' ']) {
+        "" => unsent.as_str(),
+        said => said,
+    };
     match crate::backoff::retry_delay(message.attempts) {
         Some(_) => fill(
             &gettext("{problem}. Trying again {when}"),

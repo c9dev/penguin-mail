@@ -12,13 +12,14 @@ use std::rc::{Rc, Weak};
 use gtk::glib;
 use mailrs_domain::invitation::Invitation;
 use mailrs_domain::{AccountId, FlagColor, MessageBody, MessageMeta, Target, ThreadSummary};
+use mailrs_store::outbox::Queued;
 use mailrs_store::{messages, threads};
 use mailrs_sync::{History, MailAction, Opened, TriageAction, now_millis};
 
 use super::{BODY_FETCHES, MainWindow, read_cached_body};
 use crate::core::Core;
-use crate::open_thread::OpenThread;
 use crate::open_thread::run::{Answer, Card, Desk, Effects, Fetched, Stored, ThreadRun};
+use crate::open_thread::{OpenThread, Unsent};
 use crate::protection::Read;
 use crate::settings::MarkRead;
 use crate::translation::{self, Language, Prose, Translation};
@@ -382,6 +383,16 @@ impl Effects for Ports {
         Box::pin(glib::timeout_future_seconds(seconds))
     }
 
+    fn queued(&self, id: i64) -> Answer<'_, Result<Option<Queued>, String>> {
+        let outbox = self.core.outbox();
+        Box::pin(async move {
+            self.core
+                .call(async move { outbox.find(id).await })
+                .await
+                .map_err(|err| err.to_string())
+        })
+    }
+
     fn show(&self, thread: OpenThread) {
         self.view.show(thread, true);
     }
@@ -469,6 +480,10 @@ impl Effects for Ports {
 
     fn set_flag_color(&self, color: Option<FlagColor>) {
         self.view.set_flag_color(color);
+    }
+
+    fn unsent_changed(&self, unsent: Unsent) {
+        self.view.unsent_changed(unsent);
     }
 
     fn mark_read(&self, target: Target) {
