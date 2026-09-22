@@ -5,8 +5,8 @@
 
 use super::fake::{FakeAdviser, FakeBrowser};
 use super::{
-    Field, FieldKind, Outcome, PageError, PageForm, Pick, Plan, Step, Unsure, finish, pick,
-    prepare, valid, words,
+    Browser, Field, FieldKind, Outcome, PageError, PageForm, Pick, Plan, Step, Unsure, finish,
+    pick, prepare, valid, words,
 };
 
 /// The address the newsletter was sent to, and the only text any of
@@ -348,6 +348,47 @@ async fn a_page_that_will_not_load_goes_to_the_browser() {
         finish(&browser, &prepared).await,
         Outcome::OpenInBrowser(URL.to_string())
     );
+}
+
+/// Where the list after this one sent the view while the dialog was up.
+const NEXT: &str = "https://other.example/leave";
+
+fn holding_two(first: &str, second: &str) -> FakeBrowser {
+    let mut browser = browser(first);
+    let mut next = page(second);
+    next.url = NEXT.to_string();
+    browser.pages.insert(NEXT.to_string(), next);
+    browser
+}
+
+#[tokio::test]
+async fn a_page_the_next_list_pushed_aside_is_put_back_before_it_is_pressed() {
+    let browser = holding_two(ONE_BUTTON, PREFERENCES).answering("You're unsubscribed.");
+    let prepared = prepare(&browser, None, URL, ME).await;
+    // The batch reads every page before it asks, so the view stands on
+    // the last list's page by the time the person says yes.
+    prepare(&browser, None, NEXT, ME).await;
+    assert_eq!(browser.at(), NEXT);
+    assert_eq!(finish(&browser, &prepared).await, Outcome::Done);
+    assert_eq!(browser.at(), URL, "the list's own page is pressed");
+    assert_eq!(browser.submissions(), [plan(ONE_BUTTON)]);
+}
+
+#[tokio::test]
+async fn a_page_that_changed_while_it_waited_is_not_pressed() {
+    let mut browser = holding_two(ONE_BUTTON, PREFERENCES);
+    let prepared = prepare(&browser, None, URL, ME).await;
+    prepare(&browser, None, NEXT, ME).await;
+    // The sender rebuilt the page between the reading and the yes, so
+    // the ids in the plan now name other things.
+    let mut changed = page(TOPICS);
+    changed.url = URL.to_string();
+    browser.pages.insert(URL.to_string(), changed);
+    let Outcome::Failed(why) = finish(&browser, &prepared).await else {
+        panic!("a page that changed is not one to press blind");
+    };
+    assert!(why.contains("changed"), "{why}");
+    assert!(browser.submissions().is_empty());
 }
 
 #[tokio::test]

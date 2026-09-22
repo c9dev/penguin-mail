@@ -326,6 +326,13 @@ impl Browser for WebkitBrowser {
         })
     }
 
+    fn at(&self) -> String {
+        self.view
+            .uri()
+            .map(|uri| uri.to_string())
+            .unwrap_or_default()
+    }
+
     fn submit(&self, plan: &Plan, address: &str) -> Answer<'_, Result<PageForm, PageError>> {
         let script = orders(plan, address);
         Box::pin(async move {

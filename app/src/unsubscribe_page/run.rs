@@ -22,8 +22,13 @@ pub trait Browser {
     /// Loads `url` out of sight and reads the page it settles on.
     fn load(&self, url: &str) -> Answer<'_, Result<PageForm, PageError>>;
     /// Fills the fields, ticks the boxes, presses the button, and reads
-    /// back whatever the page says afterwards.
+    /// back whatever the page says afterwards. The page it acts on is
+    /// whichever one the view last loaded.
     fn submit(&self, plan: &Plan, address: &str) -> Answer<'_, Result<PageForm, PageError>>;
+    /// The page the view stands on. One view serves every list of a
+    /// batch, so the page a plan was read off is not always the one
+    /// still loaded when the person says yes.
+    fn at(&self) -> String;
 }
 
 /// The model that answers when the rules cannot. It sees the page as
@@ -117,11 +122,48 @@ pub async fn finish(browser: &dyn Browser, prepared: &Prepared) -> Outcome {
     match &prepared.step {
         Step::AlreadyOff => Outcome::Done,
         Step::Browser(url) => Outcome::OpenInBrowser(url.clone()),
-        Step::Submit(plan) => match browser.submit(plan, &prepared.address).await {
-            Ok(page) if rules::says_done(&page) => Outcome::Done,
-            Ok(_) => Outcome::Unclear,
-            Err(err) => Outcome::Failed(err.to_string()),
-        },
+        Step::Submit(plan) => {
+            if let Err(why) = standing_on(browser, prepared, plan).await {
+                return why;
+            }
+            match browser.submit(plan, &prepared.address).await {
+                Ok(page) if rules::says_done(&page) => Outcome::Done,
+                Ok(_) => Outcome::Unclear,
+                Err(err) => Outcome::Failed(err.to_string()),
+            }
+        }
+    }
+}
+
+/// Puts the view back on the page the plan was read off, when a later
+/// list's page has taken its place.
+///
+/// A plan names what to press by id, and the ids are the extraction
+/// script's own, counted through one page. On another page the same ids
+/// name other controls, so submitting without this would press whatever
+/// the list after this one happens to put there. The page is loaded
+/// again and has to press the same button under the same name as it did
+/// before the question; anything else is a page that changed while it
+/// waited, and nothing is pressed.
+async fn standing_on(
+    browser: &dyn Browser,
+    prepared: &Prepared,
+    plan: &Plan,
+) -> Result<(), Outcome> {
+    if browser.at() == prepared.url {
+        return Ok(());
+    }
+    let page = match browser.load(&prepared.url).await {
+        Ok(page) => page,
+        Err(err) => return Err(Outcome::Failed(err.to_string())),
+    };
+    let same = pressed(&page, &prepared.step) == prepared.button
+        && rules::valid(&page, plan, &prepared.address);
+    match same {
+        true => Ok(()),
+        false => Err(Outcome::Failed(
+            "the page changed while it was waiting to be asked".to_string(),
+        )),
     }
 }
 

@@ -22,6 +22,8 @@ pub struct FakeBrowser {
     pub typed: RefCell<Vec<String>>,
     /// What every call answers instead, once a test sets it.
     pub fail: Option<PageError>,
+    /// The page the view stands on, as the real one keeps it.
+    pub standing: RefCell<String>,
 }
 
 impl FakeBrowser {
@@ -37,6 +39,7 @@ impl FakeBrowser {
             submitted: RefCell::new(Vec::new()),
             typed: RefCell::new(Vec::new()),
             fail: None,
+            standing: RefCell::new(String::new()),
         }
     }
 
@@ -52,7 +55,12 @@ impl FakeBrowser {
 }
 
 impl Browser for FakeBrowser {
+    fn at(&self) -> String {
+        self.standing.borrow().clone()
+    }
+
     fn load(&self, url: &str) -> Answer<'_, Result<PageForm, PageError>> {
+        *self.standing.borrow_mut() = url.to_string();
         let answer = match &self.fail {
             Some(err) => Err(err.clone()),
             None => self

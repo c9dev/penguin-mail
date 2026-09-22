@@ -239,6 +239,7 @@ impl Effects for FakeEffects {
             submitted: RefCell::new(Vec::new()),
             typed: RefCell::new(Vec::new()),
             fail: None,
+            standing: RefCell::new(String::new()),
         });
         *self.browser.borrow_mut() = Some(Rc::clone(&browser));
         browser
