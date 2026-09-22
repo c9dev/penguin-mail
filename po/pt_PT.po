@@ -120,19 +120,24 @@ msgstr "Enviar “{subject}” para {recipients}?"
 msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr "Bloquear {address}? O correio futuro vai direto para o lixo."
 
-#: app/src/assistant/run.rs:1098
+#: app/src/assistant/run.rs:1094 app/src/assistant/run/calendar.rs:178
+#: app/src/assistant/run/calendar.rs:525
+msgid "%a %-d %b"
+msgstr "%a %-d %b"
+
+#: app/src/assistant/run.rs:1100
 msgid " from {first} to {last}"
 msgstr ", de {first} a {last}"
 
-#: app/src/assistant/run.rs:1101
+#: app/src/assistant/run.rs:1103
 msgid " until {last}"
 msgstr ", até {last}"
 
-#: app/src/assistant/run.rs:1102
+#: app/src/assistant/run.rs:1104
 msgid " from {first}"
 msgstr ", a partir de {first}"
 
-#: app/src/assistant/run.rs:1108
+#: app/src/assistant/run.rs:1110
 msgid ""
 "Turn on the automatic reply for {account}{dates}?\n"
 "\n"
@@ -144,19 +149,19 @@ msgstr ""
 "“{subject}”\n"
 "{body}"
 
-#: app/src/assistant/run.rs:1119
+#: app/src/assistant/run.rs:1121
 msgid "Turn off the automatic reply for {account}?"
 msgstr "Desligar a resposta automática de {account}?"
 
-#: app/src/assistant/run.rs:1201
+#: app/src/assistant/run.rs:1203
 msgid "Create a Gmail rule for {account}: {when} → {then}?"
 msgstr "Criar uma regra do Gmail para {account}: {when} → {then}?"
 
-#: app/src/assistant/run.rs:1241
+#: app/src/assistant/run.rs:1243
 msgid "Delete a Gmail rule from {account}?"
 msgstr "Eliminar uma regra do Gmail de {account}?"
 
-#: app/src/assistant/run.rs:1363
+#: app/src/assistant/run.rs:1365
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a Gmail rule for "
 "their future mail?"
@@ -164,64 +169,68 @@ msgstr ""
 "Mover o correio de {sender} para {category} em {account} e criar uma regra "
 "do Gmail para o correio futuro?"
 
-#: app/src/assistant/run/calendar.rs:191 app/src/assistant/run/calendar.rs:195
-#: app/src/assistant/run/calendar.rs:199
+#: app/src/assistant/run/calendar.rs:184 app/src/assistant/run/calendar.rs:529
+msgid "%a %-d %b %H:%M"
+msgstr "%a %-d %b %H:%M"
+
+#: app/src/assistant/run/calendar.rs:197 app/src/assistant/run/calendar.rs:201
+#: app/src/assistant/run/calendar.rs:205
 msgid "{first} to {last}"
 msgstr "{first} a {last}"
 
-#: app/src/assistant/run/calendar.rs:312
+#: app/src/assistant/run/calendar.rs:318
 msgid "Add “{title}” to the calendar for {account}, {when}?"
 msgstr "Adicionar “{title}” ao calendário de {account}, {when}?"
 
-#: app/src/assistant/run/calendar.rs:322
+#: app/src/assistant/run/calendar.rs:328
 msgid "Google sends an invitation to {guests}."
 msgstr "A Google envia um convite a {guests}."
 
-#: app/src/assistant/run/calendar.rs:369
+#: app/src/assistant/run/calendar.rs:375
 msgid "Title: {value}"
 msgstr "Título: {value}"
 
-#: app/src/assistant/run/calendar.rs:372
+#: app/src/assistant/run/calendar.rs:378
 msgid "Starts: {value}"
 msgstr "Começa: {value}"
 
-#: app/src/assistant/run/calendar.rs:375
+#: app/src/assistant/run/calendar.rs:381
 msgid "Ends: {value}"
 msgstr "Termina: {value}"
 
-#: app/src/assistant/run/calendar.rs:378
+#: app/src/assistant/run/calendar.rs:384
 msgid "Where: {value}"
 msgstr "Local: {value}"
 
-#: app/src/assistant/run/calendar.rs:381
+#: app/src/assistant/run/calendar.rs:387
 msgid "Guests: {value}"
 msgstr "Convidados: {value}"
 
-#: app/src/assistant/run/calendar.rs:385
+#: app/src/assistant/run/calendar.rs:391
 msgid "Description: {value}"
 msgstr "Descrição: {value}"
 
-#: app/src/assistant/run/calendar.rs:390
+#: app/src/assistant/run/calendar.rs:396
 msgid "Change “{title}” on the calendar for {account}? Its guests are told."
 msgstr ""
 "Alterar “{title}” no calendário de {account}? Os convidados são avisados."
 
-#: app/src/assistant/run/calendar.rs:394
+#: app/src/assistant/run/calendar.rs:400
 msgid "Change an event on the calendar for {account}? Its guests are told."
 msgstr ""
 "Alterar um evento no calendário de {account}? Os convidados são avisados."
 
-#: app/src/assistant/run/calendar.rs:416
+#: app/src/assistant/run/calendar.rs:422
 msgid "Delete “{title}” from the calendar for {account}? Its guests are told."
 msgstr ""
 "Eliminar “{title}” do calendário de {account}? Os convidados são avisados."
 
-#: app/src/assistant/run/calendar.rs:420
+#: app/src/assistant/run/calendar.rs:426
 msgid "Delete an event from the calendar for {account}? Its guests are told."
 msgstr ""
 "Eliminar um evento do calendário de {account}? Os convidados são avisados."
 
-#: app/src/assistant/run/calendar.rs:456
+#: app/src/assistant/run/calendar.rs:462
 msgid "Answer {answer} to “{title}”?"
 msgstr "Responder {answer} a “{title}”?"
 
@@ -566,23 +575,23 @@ msgstr ""
 
 #: app/src/format.rs:32
 msgid "%H:%M"
-msgstr ""
+msgstr "%H:%M"
 
-#: app/src/format.rs:33 app/src/format.rs:202
+#: app/src/format.rs:33 app/src/format.rs:213
 msgid "Yesterday"
 msgstr "Ontem"
 
-#: app/src/format.rs:34 app/src/format.rs:203
+#: app/src/format.rs:34 app/src/format.rs:214
 msgid "%A"
-msgstr ""
+msgstr "%A"
 
 #: app/src/format.rs:35
 msgid "%-d %b"
-msgstr ""
+msgstr "%-d %b"
 
 #: app/src/format.rs:36
 msgid "%Y-%m-%d"
-msgstr ""
+msgstr "%d/%m/%Y"
 
 #: app/src/format.rs:48
 msgid "Today at %H:%M"
@@ -592,135 +601,135 @@ msgstr "Hoje às %H:%M"
 msgid "Yesterday at %H:%M"
 msgstr "Ontem às %H:%M"
 
-#: app/src/format.rs:50 app/src/format.rs:73
+#: app/src/format.rs:50 app/src/format.rs:76
 msgid "%a %-d %b at %H:%M"
 msgstr "%a %-d %b às %H:%M"
 
 #: app/src/format.rs:51
 msgid "%-d %b %Y"
-msgstr ""
+msgstr "%-d %b %Y"
 
-#: app/src/format.rs:59
+#: app/src/format.rs:60
 msgid "%A, %-d %B %Y at %H:%M"
-msgstr "%A, %-d %B %Y às %H:%M"
+msgstr "%A, %-d de %B de %Y às %H:%M"
 
-#: app/src/format.rs:70
+#: app/src/format.rs:73
 msgid "today at %H:%M"
 msgstr "hoje às %H:%M"
 
-#: app/src/format.rs:71
+#: app/src/format.rs:74
 msgid "tomorrow at %H:%M"
 msgstr "amanhã às %H:%M"
 
-#: app/src/format.rs:72
+#: app/src/format.rs:75
 msgid "%A at %H:%M"
 msgstr "%A às %H:%M"
 
-#: app/src/format.rs:74
+#: app/src/format.rs:77
 msgid "%-d %b %Y at %H:%M"
 msgstr "%-d %b %Y às %H:%M"
 
-#: app/src/format.rs:84
+#: app/src/format.rs:87
 msgid "Send {when}"
 msgstr "Enviar {when}"
 
-#: app/src/format.rs:91
+#: app/src/format.rs:94
 msgid "In 1 Hour"
 msgstr "Dentro de 1 hora"
 
-#: app/src/format.rs:111
+#: app/src/format.rs:114
 msgid "Tonight at 21:00"
 msgstr "Hoje às 21:00"
 
-#: app/src/format.rs:115
+#: app/src/format.rs:118
 msgid "Tomorrow at 08:00"
 msgstr "Amanhã às 08:00"
 
-#: app/src/format.rs:122
+#: app/src/format.rs:125
 msgid "Monday at 08:00"
 msgstr "Segunda-feira às 08:00"
 
-#: app/src/format.rs:133
+#: app/src/format.rs:136
 msgid "{day} · All day"
 msgstr "{day} · Todo o dia"
 
-#: app/src/format.rs:137
+#: app/src/format.rs:140
 msgid "{first} to {last} · All day"
 msgstr "{first} a {last} · Todo o dia"
 
-#: app/src/format.rs:151
+#: app/src/format.rs:154
 msgid "{day} · {start}"
 msgstr "{day} · {start}"
 
-#: app/src/format.rs:156 app/src/format.rs:164
+#: app/src/format.rs:159 app/src/format.rs:171
 msgid "{day} · {start} to {end}"
 msgstr "{day} · {start} às {end}"
 
-#: app/src/format.rs:160
+#: app/src/format.rs:165
 msgid "%-d %b %H:%M"
-msgstr ""
+msgstr "%-d %b %H:%M"
 
-#: app/src/format.rs:182 app/src/format.rs:190
+#: app/src/format.rs:190 app/src/format.rs:199
 msgid "%-d %B"
-msgstr ""
+msgstr "%-d de %B"
 
-#: app/src/format.rs:192
+#: app/src/format.rs:202
 msgid "%-d %B %Y"
-msgstr ""
+msgstr "%-d de %B de %Y"
 
-#: app/src/format.rs:200
+#: app/src/format.rs:211
 msgid "Today"
 msgstr "Hoje"
 
-#: app/src/format.rs:201
+#: app/src/format.rs:212
 msgid "Tomorrow"
 msgstr "Amanhã"
 
-#: app/src/format.rs:204
+#: app/src/format.rs:215
 msgid "%A, %-d %B"
-msgstr ""
+msgstr "%A, %-d de %B"
 
-#: app/src/format.rs:205
+#: app/src/format.rs:216
 msgid "%A, %-d %B %Y"
-msgstr ""
+msgstr "%A, %-d de %B de %Y"
 
-#: app/src/format.rs:221
+#: app/src/format.rs:232
 msgid "{day} {time}"
 msgstr "{day} {time}"
 
-#: app/src/format.rs:295
+#: app/src/format.rs:308
 msgid "Blue"
 msgstr "Azul"
 
-#: app/src/format.rs:296
+#: app/src/format.rs:309
 msgid "Teal"
 msgstr "Turquesa"
 
-#: app/src/format.rs:297
+#: app/src/format.rs:310
 msgid "Green"
 msgstr "Verde"
 
-#: app/src/format.rs:298
+#: app/src/format.rs:311
 msgid "Yellow"
 msgstr "Amarelo"
 
-#: app/src/format.rs:299
+#: app/src/format.rs:312
 msgid "Orange"
 msgstr "Laranja"
 
-#: app/src/format.rs:300
+#: app/src/format.rs:313
 msgid "Red"
 msgstr "Vermelho"
 
-#: app/src/format.rs:301
+#: app/src/format.rs:314
 msgid "Pink"
 msgstr "Rosa"
 
-#: app/src/format.rs:302
+#: app/src/format.rs:315
 msgid "Purple"
 msgstr "Roxo"
 
-#: app/src/format.rs:303
+#: app/src/format.rs:316
 msgid "Slate"
 msgstr "Ardósia"
 
@@ -763,7 +772,7 @@ msgstr "Arquivar"
 msgid "Mark as Read"
 msgstr "Marcar como lida"
 
-#: app/src/notify.rs:51 app/src/ui/hide_my_email.rs:274
+#: app/src/notify.rs:51 app/src/ui/hide_my_email.rs:279
 #: app/src/ui/templates.rs:149 app/src/ui/thread_list.rs:611
 #: app/src/ui/window/arrange.rs:92 app/src/ui/window/organize.rs:165
 msgid "Delete"
@@ -1792,7 +1801,7 @@ msgstr "Entrada"
 msgid "Running"
 msgstr "Em curso"
 
-#: app/src/ui/assistant.rs:921 app/src/ui/hide_my_email.rs:445
+#: app/src/ui/assistant.rs:921 app/src/ui/hide_my_email.rs:450
 msgid "Done"
 msgstr "Concluído"
 
@@ -2954,7 +2963,7 @@ msgstr ""
 "saem do endereço principal."
 
 #: app/src/ui/hide_my_email.rs:64 app/src/ui/hide_my_email.rs:66
-#: app/src/ui/hide_my_email.rs:353
+#: app/src/ui/hide_my_email.rs:358
 msgid "Create Address"
 msgstr "Criar endereço"
 
@@ -2966,63 +2975,63 @@ msgstr "Ocultar o meu e-mail"
 msgid "Created {date}"
 msgstr "Criado em {date}"
 
-#: app/src/ui/hide_my_email.rs:150
+#: app/src/ui/hide_my_email.rs:155
 msgid "No addresses yet"
 msgstr "Ainda não há endereços"
 
-#: app/src/ui/hide_my_email.rs:151
+#: app/src/ui/hide_my_email.rs:156
 msgid "Create one with the + button."
 msgstr "Crie um com o botão +."
 
-#: app/src/ui/hide_my_email.rs:171
+#: app/src/ui/hide_my_email.rs:176
 msgid "Off: mail goes to the Trash"
 msgstr "Desligado: o correio vai para o lixo"
 
-#: app/src/ui/hide_my_email.rs:193
+#: app/src/ui/hide_my_email.rs:198
 msgid "Copy Address"
 msgstr "Copiar endereço"
 
-#: app/src/ui/hide_my_email.rs:194
+#: app/src/ui/hide_my_email.rs:199
 msgid "Copy {address}"
 msgstr "Copiar {address}"
 
-#: app/src/ui/hide_my_email.rs:201 app/src/ui/hide_my_email.rs:429
+#: app/src/ui/hide_my_email.rs:206 app/src/ui/hide_my_email.rs:434
 msgid "Address copied"
 msgstr "Endereço copiado"
 
-#: app/src/ui/hide_my_email.rs:209
+#: app/src/ui/hide_my_email.rs:214
 msgid "Receive Mail"
 msgstr "Receber correio"
 
-#: app/src/ui/hide_my_email.rs:214
+#: app/src/ui/hide_my_email.rs:219
 msgid "Receive mail at {address}"
 msgstr "Receber correio em {address}"
 
-#: app/src/ui/hide_my_email.rs:229
+#: app/src/ui/hide_my_email.rs:234
 msgid "Mail to this address reaches you again"
 msgstr "O correio para este endereço volta a chegar-lhe"
 
-#: app/src/ui/hide_my_email.rs:232
+#: app/src/ui/hide_my_email.rs:237
 msgid "Mail to this address now goes to the Trash"
 msgstr "O correio para este endereço passa a ir para o lixo"
 
-#: app/src/ui/hide_my_email.rs:236
+#: app/src/ui/hide_my_email.rs:241
 msgid "Could not change the address: {reason}"
 msgstr "Não foi possível alterar o endereço: {reason}"
 
-#: app/src/ui/hide_my_email.rs:247
+#: app/src/ui/hide_my_email.rs:252
 msgid "Delete Address"
 msgstr "Eliminar endereço"
 
-#: app/src/ui/hide_my_email.rs:249
+#: app/src/ui/hide_my_email.rs:254
 msgid "Delete {address}"
 msgstr "Eliminar {address}"
 
-#: app/src/ui/hide_my_email.rs:266
+#: app/src/ui/hide_my_email.rs:271
 msgid "Delete Address?"
 msgstr "Eliminar o endereço?"
 
-#: app/src/ui/hide_my_email.rs:269
+#: app/src/ui/hide_my_email.rs:274
 msgid ""
 "Mail sent to {address} arrives in your inbox again, without the Hide My "
 "Email label. To stop that mail, turn the address off instead."
@@ -3031,23 +3040,23 @@ msgstr ""
 "a etiqueta Ocultar o meu e-mail. Para travar esse correio, desligue antes o "
 "endereço."
 
-#: app/src/ui/hide_my_email.rs:283
+#: app/src/ui/hide_my_email.rs:288
 msgid "Address deleted"
 msgstr "Endereço eliminado"
 
-#: app/src/ui/hide_my_email.rs:285
+#: app/src/ui/hide_my_email.rs:290
 msgid "Could not delete the address: {reason}"
 msgstr "Não foi possível eliminar o endereço: {reason}"
 
-#: app/src/ui/hide_my_email.rs:295
+#: app/src/ui/hide_my_email.rs:300
 msgid "Allow Hide My Email"
 msgstr "Permitir Ocultar o meu e-mail"
 
-#: app/src/ui/hide_my_email.rs:315 app/src/ui/window.rs:2220
+#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2220
 msgid "Add an account first"
 msgstr "Adicione primeiro uma conta"
 
-#: app/src/ui/hide_my_email.rs:319
+#: app/src/ui/hide_my_email.rs:324
 msgid ""
 "You get a new address that ends in your own, such as "
 "name+kite.fern482@gmail.com. Give it to one site only."
@@ -3055,33 +3064,33 @@ msgstr ""
 "Recebe um endereço novo terminado no seu, como nome+kite.fern482@gmail.com. "
 "Dê-o a um site apenas."
 
-#: app/src/ui/hide_my_email.rs:325
+#: app/src/ui/hide_my_email.rs:330
 msgid "Account"
 msgstr "Conta"
 
-#: app/src/ui/hide_my_email.rs:336
+#: app/src/ui/hide_my_email.rs:341
 msgid "Where Did You Use It?"
 msgstr "Onde o usou?"
 
-#: app/src/ui/hide_my_email.rs:343 app/src/ui/rules.rs:307
+#: app/src/ui/hide_my_email.rs:348 app/src/ui/rules.rs:307
 #: app/src/ui/smart_editor.rs:146 app/src/ui/templates.rs:235
 #: app/src/ui/window/organize.rs:82 app/src/ui/window/organize.rs:312
 msgid "Create"
 msgstr "Criar"
 
-#: app/src/ui/hide_my_email.rs:381
+#: app/src/ui/hide_my_email.rs:386
 msgid "Could not create the address: {reason}"
 msgstr "Não foi possível criar o endereço: {reason}"
 
-#: app/src/ui/hide_my_email.rs:406
+#: app/src/ui/hide_my_email.rs:411
 msgid "Your New Address"
 msgstr "O seu novo endereço"
 
-#: app/src/ui/hide_my_email.rs:421
+#: app/src/ui/hide_my_email.rs:426
 msgid "Copy"
 msgstr "Copiar"
 
-#: app/src/ui/hide_my_email.rs:436
+#: app/src/ui/hide_my_email.rs:441
 msgid ""
 "It is on your clipboard. Mail sent to it gets the Hide My Email label in "
 "Gmail."
@@ -3089,7 +3098,7 @@ msgstr ""
 "Está na área de transferência. O correio enviado para ele recebe a etiqueta "
 "Ocultar o meu e-mail no Gmail."
 
-#: app/src/ui/hide_my_email.rs:460
+#: app/src/ui/hide_my_email.rs:465
 msgid "Address Created"
 msgstr "Endereço criado"
 
@@ -4141,6 +4150,10 @@ msgstr "Datas"
 #: app/src/ui/vacation.rs:240
 msgid "Only Reply to My Contacts"
 msgstr "Responder apenas aos meus contactos"
+
+#: app/src/ui/vacation.rs:332
+msgid "%a, %-d %b %Y"
+msgstr "%a, %-d %b %Y"
 
 #: app/src/ui/welcome.rs:11
 msgid ""

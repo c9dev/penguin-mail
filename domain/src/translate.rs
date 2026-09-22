@@ -7,8 +7,12 @@
 //! that other languages split in two, such as "Archive" the button and
 //! "Archive" the mailbox. A string with a value in it goes through [`fill`] rather
 //! than `format!`, because a translator has to be able to move the value
-//! to wherever the sentence wants it.
+//! to wherever the sentence wants it. A date's weekday and month names
+//! come from [`date_locale`], so they match the words around them.
 
+use std::cell::Cell;
+
+use chrono::Locale;
 pub use gettextrs::{gettext, ngettext, pgettext};
 
 /// The text domain, which is also the name of the `.mo` files.
@@ -65,9 +69,71 @@ pub fn with_reason(said: &str, reason: &impl std::fmt::Display, values: &[(&str,
     fill(said, &all)
 }
 
+thread_local! {
+    /// The locale the names in a date come from, looked up on first use.
+    static DATE_LOCALE: Cell<Option<Locale>> = const { Cell::new(None) };
+}
+
+/// The locale for the weekday and month names a date pattern's `%A`,
+/// `%a`, `%B` and `%b` stand for, to pass to chrono's `format_localized`.
+///
+/// It follows the catalogue gettext picked rather than `LC_TIME`. A
+/// person who chose English on a Portuguese desktop reads "Today at", and
+/// "Sep" belongs beside it, not "set".
+pub fn date_locale() -> Locale {
+    DATE_LOCALE.with(|cell| {
+        cell.get().unwrap_or_else(|| {
+            let locale = locale_named(&catalogue_language());
+            cell.set(Some(locale));
+            locale
+        })
+    })
+}
+
+/// Fixes the locale [`date_locale`] gives on this thread, as a test does
+/// to see a date in another language.
+pub fn set_date_locale(code: &str) {
+    DATE_LOCALE.with(|cell| cell.set(Some(locale_named(code))));
+}
+
+/// The `Language` field of the catalogue in use, such as `pt_PT`, or
+/// nothing when the interface is in the English of the source.
+fn catalogue_language() -> String {
+    // gettext answers the empty message id with the header of the
+    // catalogue it chose. The id goes in as a value rather than a literal
+    // so xgettext does not take it for a word to translate.
+    let header = gettext(String::new());
+    header
+        .lines()
+        .find_map(|line| line.strip_prefix("Language:"))
+        .map(|code| code.trim().to_string())
+        .unwrap_or_default()
+}
+
+/// The chrono locale for a language code. A bare language such as `de`
+/// takes the country of the same name, and a code chrono does not know
+/// writes English names.
+fn locale_named(code: &str) -> Locale {
+    let code = code.split(['.', '@']).next().unwrap_or_default();
+    Locale::try_from(code)
+        .or_else(|_| Locale::try_from(format!("{code}_{}", code.to_uppercase()).as_str()))
+        .unwrap_or(Locale::POSIX)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{fill, with_reason};
+    use chrono::Locale;
+
+    use super::{fill, locale_named, with_reason};
+
+    #[test]
+    fn a_language_code_finds_its_locale() {
+        assert_eq!(locale_named("pt_PT"), Locale::pt_PT);
+        assert_eq!(locale_named("pt_PT.UTF-8"), Locale::pt_PT);
+        assert_eq!(locale_named("de"), Locale::de_DE);
+        assert_eq!(locale_named(""), Locale::POSIX);
+        assert_eq!(locale_named("xx"), Locale::POSIX);
+    }
 
     #[test]
     fn the_error_goes_where_the_reason_is() {

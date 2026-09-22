@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use chrono::{DateTime, Local, TimeZone};
-use mailrs_domain::translate::{fill, fill_plural, gettext, pgettext};
+use mailrs_domain::translate::{date_locale, fill, fill_plural, gettext, pgettext};
 use mailrs_domain::{
     Account, AccountId, Category, EpochMillis, FlagColor, Folder, MessageMeta, SmartMailbox,
     ThreadSummary, system_label,
@@ -1078,8 +1078,7 @@ pub fn future_date(ts: EpochMillis, now: DateTime<Local>) -> String {
         return String::new();
     };
     // The patterns are translated whole, so a language that puts the
-    // time first can. `%A`, `%a` and `%b` come out of chrono in English
-    // whatever the locale says, which is a gap worth closing one day.
+    // time first can, and the names come in the interface's language.
     let pattern = match (when.date_naive() - now.date_naive()).num_days() {
         ..=0 => gettext("today at %H:%M"),
         1 => gettext("tomorrow at %H:%M"),
@@ -1087,7 +1086,7 @@ pub fn future_date(ts: EpochMillis, now: DateTime<Local>) -> String {
         _ if when.year() == now.year() => gettext("%a %-d %b at %H:%M"),
         _ => gettext("%-d %b %Y at %H:%M"),
     };
-    when.format(&pattern).to_string()
+    when.format_localized(&pattern, date_locale()).to_string()
 }
 
 /// Turns search hits into list rows, newest first: one per thread when

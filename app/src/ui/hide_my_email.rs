@@ -14,7 +14,7 @@ use crate::hide_my_email::HiddenAddress;
 use crate::permission::Permission;
 use crate::ui::confirm::{Tone, confirm};
 use crate::ui::permission;
-use mailrs_domain::translate::{fill, gettext, with_reason};
+use mailrs_domain::translate::{date_locale, fill, gettext, with_reason};
 
 /// What the list says a hidden address is for.
 fn about() -> String {
@@ -119,7 +119,12 @@ fn created_on(ts: mailrs_domain::EpochMillis) -> String {
         .map(|when| {
             fill(
                 &gettext("Created {date}"),
-                &[("date", &when.format(&gettext("%-d %b %Y")).to_string())],
+                &[(
+                    "date",
+                    &when
+                        .format_localized(&gettext("%-d %b %Y"), date_locale())
+                        .to_string(),
+                )],
             )
         })
         .unwrap_or_default()

@@ -174,10 +174,16 @@ fn event_time(moment: Moment, end: bool) -> Result<EventTime, String> {
 
 /// How a confirmation says when an event runs.
 fn when_text(start: Moment, end: Moment) -> String {
-    let day = |d: NaiveDate| d.format("%a %-d %b").to_string();
+    let day = |d: NaiveDate| {
+        d.format_localized(&gettext("%a %-d %b"), date_locale())
+            .to_string()
+    };
     let at = |t: EpochMillis| {
         crate::format::local(t)
-            .map(|t| t.format("%a %-d %b %H:%M").to_string())
+            .map(|t| {
+                t.format_localized(&gettext("%a %-d %b %H:%M"), date_locale())
+                    .to_string()
+            })
             .unwrap_or_default()
     };
     let hour = |t: EpochMillis| {
@@ -515,9 +521,14 @@ impl<A: Accounts> Tools<A> {
 /// A start or an end on its own, as a confirmation says it.
 fn moment_text(moment: Moment) -> String {
     match moment {
-        Moment::Day(day) => day.format("%a %-d %b").to_string(),
+        Moment::Day(day) => day
+            .format_localized(&gettext("%a %-d %b"), date_locale())
+            .to_string(),
         Moment::At(at) => crate::format::local(at)
-            .map(|t| t.format("%a %-d %b %H:%M").to_string())
+            .map(|t| {
+                t.format_localized(&gettext("%a %-d %b %H:%M"), date_locale())
+                    .to_string()
+            })
             .unwrap_or_default(),
     }
 }

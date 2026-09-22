@@ -1,13 +1,13 @@
 //! Text for the UI: dates, sizes, initials, and colours.
 //!
 //! A date pattern is translated whole, so a language that puts the time
-//! before the day can. The names chrono writes into `%A`, `%a`, `%b` and
-//! `%B` stay English whatever the locale says, which is a gap worth
-//! closing the day this reaches for a locale-aware formatter.
+//! before the day can. The weekday and month names that `%A`, `%a`, `%B`
+//! and `%b` stand for come in the language of the catalogue the interface
+//! reads its words from, so one date never mixes two languages.
 
 use chrono::{DateTime, Datelike, Local, NaiveDate, TimeZone, Timelike};
 use mailrs_domain::invitation::When;
-use mailrs_domain::translate::{fill, gettext};
+use mailrs_domain::translate::{date_locale, fill, gettext};
 use mailrs_domain::{AccountId, EpochMillis};
 
 /// Accent colours from the libadwaita palette.
@@ -35,7 +35,7 @@ pub fn relative_date(ts: EpochMillis, now: DateTime<Local>) -> String {
         _ if when.year() == now.year() => gettext("%-d %b"),
         _ => gettext("%Y-%m-%d"),
     };
-    when.format(&pattern).to_string()
+    when.format_localized(&pattern, date_locale()).to_string()
 }
 
 /// A date for message headers: "Today at 10:12", "Yesterday at 14:50",
@@ -50,13 +50,16 @@ pub fn header_date(ts: EpochMillis, now: DateTime<Local>) -> String {
         _ if when.year() == now.year() => gettext("%a %-d %b at %H:%M"),
         _ => gettext("%-d %b %Y"),
     };
-    when.format(&pattern).to_string()
+    when.format_localized(&pattern, date_locale()).to_string()
 }
 
 /// A long date for reply attributions and forwarded headers.
 pub fn full_date(ts: EpochMillis) -> String {
     local(ts)
-        .map(|when| when.format(&gettext("%A, %-d %B %Y at %H:%M")).to_string())
+        .map(|when| {
+            when.format_localized(&gettext("%A, %-d %B %Y at %H:%M"), date_locale())
+                .to_string()
+        })
         .unwrap_or_default()
 }
 
@@ -73,7 +76,7 @@ pub fn future_date(ts: EpochMillis, now: DateTime<Local>) -> String {
         _ if when.year() == now.year() => gettext("%a %-d %b at %H:%M"),
         _ => gettext("%-d %b %Y at %H:%M"),
     };
-    when.format(&pattern).to_string()
+    when.format_localized(&pattern, date_locale()).to_string()
 }
 
 /// Apple Mail's Send Later presets: tonight at 21:00 while there is time,
@@ -157,7 +160,11 @@ pub fn event_when(when: &When, now: DateTime<Local>) -> String {
                     &[
                         ("day", &day),
                         ("start", &from),
-                        ("end", &end.format(&gettext("%-d %b %H:%M")).to_string()),
+                        (
+                            "end",
+                            &end.format_localized(&gettext("%-d %b %H:%M"), date_locale())
+                                .to_string(),
+                        ),
                     ],
                 ),
                 Some(end) => fill(
@@ -179,7 +186,9 @@ fn span_start(first: NaiveDate, last: NaiveDate) -> String {
     if first.month() == last.month() && first.year() == last.year() {
         first.format("%-d").to_string()
     } else {
-        first.format(&gettext("%-d %B")).to_string()
+        first
+            .format_localized(&gettext("%-d %B"), date_locale())
+            .to_string()
     }
 }
 
@@ -187,9 +196,11 @@ fn span_start(first: NaiveDate, last: NaiveDate) -> String {
 /// in another one.
 fn span_end(last: NaiveDate, now: DateTime<Local>) -> String {
     if last.year() == now.year() {
-        last.format(&gettext("%-d %B")).to_string()
+        last.format_localized(&gettext("%-d %B"), date_locale())
+            .to_string()
     } else {
-        last.format(&gettext("%-d %B %Y")).to_string()
+        last.format_localized(&gettext("%-d %B %Y"), date_locale())
+            .to_string()
     }
 }
 
@@ -204,7 +215,7 @@ fn event_day(day: NaiveDate, now: DateTime<Local>) -> String {
         _ if day.year() == now.year() => gettext("%A, %-d %B"),
         _ => gettext("%A, %-d %B %Y"),
     };
-    day.format(&pattern).to_string()
+    day.format_localized(&pattern, date_locale()).to_string()
 }
 
 /// The start an event had before it moved, for the line that says so:
@@ -234,7 +245,9 @@ pub fn event_tile(when: &When) -> (String, String) {
         },
     };
     (
-        day.format("%b").to_string().to_uppercase(),
+        day.format_localized("%b", date_locale())
+            .to_string()
+            .to_uppercase(),
         day.format("%-d").to_string(),
     )
 }
@@ -375,6 +388,28 @@ mod tests {
             full_date(at(2026, 9, 3, 14, 32)),
             "Thursday, 3 September 2026 at 14:32"
         );
+    }
+
+    #[test]
+    fn portuguese_names_its_weekdays_and_months() {
+        // Each test runs on its own thread, which keeps the locale here.
+        mailrs_domain::translate::set_date_locale("pt_PT");
+        let now = Local.with_ymd_and_hms(2026, 9, 19, 15, 0, 0).unwrap();
+        assert_eq!(relative_date(at(2026, 9, 14, 12, 0), now), "segunda");
+        assert_eq!(relative_date(at(2026, 3, 3, 12, 0), now), "3 mar");
+        assert_eq!(
+            header_date(at(2026, 9, 11, 8, 50), now),
+            "sex 11 set at 08:50"
+        );
+        assert_eq!(
+            full_date(at(2026, 9, 3, 14, 32)),
+            "quinta, 3 setembro 2026 at 14:32"
+        );
+        let (month, _) = event_tile(&When::At {
+            starts_at: at_local(2026, 2, 9, 15, 0),
+            ends_at: None,
+        });
+        assert_eq!(month, "FEV");
     }
 
     #[test]

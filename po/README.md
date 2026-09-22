@@ -70,6 +70,8 @@ looks for it again when it reopens a saved draft. The `From:`, `Date:`,
 same way.
 
 A date pattern made only of `%` codes, such as `%-d %b`, is in the
-template so a language can reorder it. The weekday and month names inside
-one come out of chrono in English whatever the locale says; closing that
-needs a locale-aware formatter, which is work of its own.
+template so a language can reorder it or add words, as Portuguese does
+with `%-d de %B`. Leave the names to the codes: `%A`, `%a`, `%B` and `%b`
+come out in the language of your catalogue, taken from its `Language`
+header, whatever `LC_TIME` says. Check that header names your locale, such
+as `pt_PT`; a bare `de` gets the names of `de_DE`.

@@ -13,7 +13,7 @@ use mailrs_sync::{AutomaticReply, Permitted};
 use crate::core::Core;
 use crate::permission::Permission;
 use crate::ui::permission;
-use mailrs_domain::translate::{gettext, with_reason};
+use mailrs_domain::translate::{date_locale, gettext, with_reason};
 
 /// Shows the dialog for `account`. `grant` runs when Gmail says Penguin Mail lacks
 /// the settings permission, to send the user through consent again. `saved`
@@ -323,9 +323,15 @@ impl DateButton {
     }
 }
 
+/// The day on a date button. It goes through chrono rather than glib's
+/// own formatter, which takes its names from `LC_TIME` and could put
+/// Portuguese months in an English window.
 fn day_label(day: &glib::DateTime) -> String {
-    day.format("%a, %-d %b %Y")
-        .map(|s| s.to_string())
+    chrono::NaiveDate::from_ymd_opt(day.year(), day.month() as u32, day.day_of_month() as u32)
+        .map(|day| {
+            day.format_localized(&gettext("%a, %-d %b %Y"), date_locale())
+                .to_string()
+        })
         .unwrap_or_default()
 }
 

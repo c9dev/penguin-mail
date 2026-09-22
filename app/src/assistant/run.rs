@@ -36,7 +36,7 @@ use crate::settings::{
     Change, Choice, ColorScheme, MarkRead, RemoteImages, Setting, Settings, TextSize, UndoSend,
 };
 use crate::unsubscribe::Unsubscribe;
-use mailrs_domain::translate::{fill, fill_plural, gettext};
+use mailrs_domain::translate::{date_locale, fill, fill_plural, gettext};
 
 mod calendar;
 mod catalog;
@@ -1090,8 +1090,10 @@ impl<A: Accounts> Tools<A> {
         }
         let summary = if reply.enabled {
             let day = |t: Option<i64>| {
-                t.and_then(crate::format::local)
-                    .map(|d| d.format("%a %-d %b").to_string())
+                t.and_then(crate::format::local).map(|d| {
+                    d.format_localized(&gettext("%a %-d %b"), date_locale())
+                        .to_string()
+                })
             };
             let dates = match (day(reply.first_day), day(reply.last_day)) {
                 (Some(first), Some(last)) => fill(

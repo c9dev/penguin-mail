@@ -31,6 +31,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Dates name the weekday and month in the language the app speaks, so a
+  Portuguese window says "sex 11 set" instead of "Fri 11 Sep".
 - A conversation opened right after a sync shows its older replies too,
   not only the recent messages kept on this computer.
 - Declining a rule the assistant proposed no longer leaves its new label

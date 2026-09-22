@@ -10,7 +10,7 @@
 
 use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, TimeZone};
 
-use crate::translate::{fill, fill_plural, gettext};
+use crate::translate::{date_locale, fill, fill_plural, gettext};
 
 /// The rule in words, or `None` when it names no frequency this
 /// understands. `start_year` is the year the event starts in: an end date
@@ -285,14 +285,14 @@ fn day_of(until: &str) -> Option<NaiveDate> {
         .map(|naive| naive.date())
 }
 
-/// "30 June", with the year when the event does not start in it. The
-/// month's name comes out of chrono in English whatever the locale says,
-/// which is a gap worth closing the day this reaches for a locale-aware
-/// formatter.
+/// "30 June", with the year when the event does not start in it, and the
+/// month named in the interface's language.
 fn spell_day(day: NaiveDate, start_year: Option<i32>) -> String {
     if start_year == Some(day.year()) {
-        day.format(&gettext("%-d %B")).to_string()
+        day.format_localized(&gettext("%-d %B"), date_locale())
+            .to_string()
     } else {
-        day.format(&gettext("%-d %B %Y")).to_string()
+        day.format_localized(&gettext("%-d %B %Y"), date_locale())
+            .to_string()
     }
 }
