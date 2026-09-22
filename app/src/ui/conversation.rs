@@ -183,6 +183,12 @@ pub struct ConversationView {
     sender_menu: gio::Menu,
     /// The menu section holding Mute, whose wording follows the thread.
     mark_menu: gio::Menu,
+    /// The menu section holding Archive, Trash and Junk, whose wording
+    /// follows the mailbox.
+    filing_menu: gio::Menu,
+    /// Everything that can be done to the conversations on screen. More
+    /// Actions shows it, and so does a right click in the list.
+    thread_menu: gio::Menu,
     /// Remind Me times, recomputed whenever a conversation opens.
     remind: gio::Menu,
     buttons: Buttons,
@@ -381,10 +387,30 @@ impl ConversationView {
             },
         };
         let more = gio::Menu::new();
+        // Only the Outbox turns these three on, and GTK leaves an item whose
+        // action is off out of the menu rather than greying it.
+        let waiting = gio::Menu::new();
+        for (text, action) in [
+            (gettext("Edit…"), "win.outbox-edit"),
+            (gettext("Send Now"), "win.outbox-send"),
+            (gettext("Delete"), "win.outbox-delete"),
+        ] {
+            let item = gio::MenuItem::new(Some(&text), Some(action));
+            item.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
+            waiting.append_item(&item);
+        }
+        more.append_section(None, &waiting);
         let replies = gio::Menu::new();
+        replies.append(Some(&gettext("Reply")), Some("win.reply"));
         replies.append(Some(&gettext("Reply All")), Some("win.reply-all"));
         replies.append(Some(&gettext("Forward")), Some("win.forward"));
         more.append_section(None, &replies);
+        // set_folder words the last two for the mailbox on screen.
+        let filing = gio::Menu::new();
+        filing.append(Some(&gettext("Archive")), Some("win.archive"));
+        filing.append(Some(&gettext("Move to Trash")), Some("win.trash"));
+        filing.append(Some(&gettext("Junk")), Some("win.junk"));
+        more.append_section(None, &filing);
         let marks = gio::Menu::new();
         marks.append(Some(&gettext("Flag or Unflag")), Some("win.toggle-star"));
         marks.append(
@@ -392,17 +418,9 @@ impl ConversationView {
             Some("win.toggle-read"),
         );
         marks.append(Some(&gettext("Mute")), Some("win.mute"));
-        marks.append(Some(&gettext("Junk")), Some("win.junk"));
         marks.append(Some(&gettext("Labels…")), Some("win.label"));
         let remind_menu = gio::Menu::new();
         marks.append_submenu(Some(&gettext("Remind Me")), &remind_menu);
-        // Shown only in the Follow Up mailbox, where the action is enabled.
-        let dismiss = gio::MenuItem::new(
-            Some(&gettext("Dismiss Follow-Up")),
-            Some("win.dismiss-follow-up"),
-        );
-        dismiss.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
-        marks.append_item(&dismiss);
         more.append_section(None, &marks);
         let views = gio::Menu::new();
         views.append(
@@ -436,6 +454,8 @@ impl ConversationView {
         buttons.more.set_menu_model(Some(&more));
         let sender_menu = sender.clone();
         let mark_menu = marks.clone();
+        let filing_menu = filing.clone();
+        let thread_menu = more.clone();
         let remind = remind_menu.clone();
         let header = adw::HeaderBar::builder()
             .title_widget(&gtk::Label::new(None))
@@ -529,6 +549,8 @@ impl ConversationView {
             sanitized: RefCell::new(HashMap::new()),
             sender_menu,
             mark_menu,
+            filing_menu,
+            thread_menu,
             remind,
             buttons,
             menu: menu_popover,
@@ -797,21 +819,39 @@ impl ConversationView {
         self.buttons.junk.set_icon_name(junk_icon);
         self.buttons.junk.set_tooltip_text(Some(&junk_tip));
         name_with_shortcut(&self.buttons.junk, &junk_tip);
-        self.many_trash.set_label(&match folder {
+        let trash = match folder {
             Some(Folder::Trash) => gettext("Delete Forever"),
             _ => gettext("Move to Trash"),
-        });
-        self.many_junk.set_label(&match folder {
+        };
+        self.many_trash.set_label(&trash);
+        self.set_filing_word(1, &trash, "win.trash");
+        let junk = match folder {
             Some(Folder::Junk) => gettext("Not Junk"),
             _ => gettext("Junk"),
-        });
+        };
+        self.many_junk.set_label(&junk);
+        self.set_filing_word(2, &junk, "win.junk");
     }
 
-    /// Says what the trash button does in a mailbox where it does not
-    /// move mail to the Trash.
-    pub fn set_trash_tooltip(&self, tip: &str) {
+    /// Says what the trash button and its menu item do in a mailbox where
+    /// they do not move mail to the Trash. `tip` is the button's tooltip,
+    /// with its key.
+    pub fn set_trash_words(&self, word: &str, tip: &str) {
         self.buttons.trash.set_tooltip_text(Some(tip));
         name_with_shortcut(&self.buttons.trash, tip);
+        self.set_filing_word(1, word, "win.trash");
+    }
+
+    /// Words the item at `index` of the Archive, Trash and Junk section.
+    fn set_filing_word(&self, index: i32, word: &str, action: &str) {
+        self.filing_menu.remove(index);
+        self.filing_menu.insert(index, Some(word), Some(action));
+    }
+
+    /// Everything that can be done to the conversations on screen, for a
+    /// menu somewhere other than the header to show.
+    pub fn thread_menu(&self) -> gio::MenuModel {
+        self.thread_menu.clone().upcast()
     }
 
     pub fn showing_many(&self) -> bool {

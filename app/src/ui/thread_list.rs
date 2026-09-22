@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use adw::prelude::*;
-use gtk::{gdk, gio, glib};
+use gtk::{gdk, gio, glib, graphene};
 use mailrs_domain::{AccountId, ThreadSummary};
 
 use super::sidebar::DRAG_MAIL;
@@ -61,6 +61,9 @@ pub struct ThreadList {
     /// while contacts are off, and then rows show no face at all.
     photos: Rc<RefCell<HashMap<String, gdk::Texture>>>,
     muted: Cell<bool>,
+    /// The menu a right click on a row opens. It has no model until the
+    /// window hands over the conversation's own through `set_row_menu`.
+    row_popover: gtk::PopoverMenu,
 }
 
 impl ThreadList {
@@ -72,15 +75,19 @@ impl ThreadList {
         let selection = gtk::MultiSelection::new(Some(store.clone()));
         let show_accounts = Rc::new(Cell::new(true));
         let rows: Rc<RefCell<Vec<Row>>> = Rc::new(RefCell::new(Vec::new()));
+        let row_popover = gtk::PopoverMenu::from_model(None::<&gio::MenuModel>);
+        row_popover.set_has_arrow(false);
+        row_popover.set_halign(gtk::Align::Start);
         let dragged: Rc<RefCell<Vec<ThreadSummary>>> = Rc::new(RefCell::new(Vec::new()));
         let factory = gtk::SignalListItemFactory::new();
         let (all, drag_rows, picked) = (Rc::clone(&rows), Rc::clone(&dragged), selection.clone());
+        let menu = row_popover.clone();
         factory.connect_setup(move |_, item| {
             let item = item
                 .downcast_ref::<gtk::ListItem>()
                 .expect("list items are ListItems");
             let row = ThreadRow::default();
-            context_menu(&row, item, &picked);
+            context_menu(&row, item, &picked, &menu);
             // Dragging a selected row takes the whole selection along.
             let source = gtk::DragSource::new();
             source.set_actions(gdk::DragAction::MOVE);
@@ -164,6 +171,9 @@ impl ThreadList {
             .vexpand(true)
             .child(&view)
             .build();
+        row_popover.set_parent(&scroller);
+        let popover = row_popover.clone();
+        scroller.connect_destroy(move |_| popover.unparent());
         let empty = adw::StatusPage::builder()
             .icon_name("penguin-mail-inbox-symbolic")
             .title(gettext("No Mail"))
@@ -273,6 +283,7 @@ impl ThreadList {
             vips,
             photos,
             muted: Cell::new(false),
+            row_popover,
         });
         let weak = Rc::downgrade(&list);
         list.selection.connect_selection_changed(move |_, _, _| {
@@ -599,41 +610,48 @@ impl ThreadList {
     pub fn search_open(&self) -> bool {
         self.search_bar.is_search_mode()
     }
+
+    /// Makes `model` what a right click on a row offers. The conversation
+    /// view owns the menu and its wording, so a row menu and More Actions
+    /// never drift apart.
+    pub fn set_row_menu(&self, model: &gio::MenuModel) {
+        self.row_popover.set_menu_model(Some(model));
+    }
 }
 
-/// Puts a menu under the pointer on a right click or long press of `row`.
-/// A click outside the selection takes the row it landed on first, so the
-/// menu acts on what the pointer is over rather than on whatever was
-/// selected before.
-fn context_menu(row: &ThreadRow, item: &gtk::ListItem, selection: &gtk::MultiSelection) {
-    let menu = gio::Menu::new();
-    // Only the Outbox turns these three on, and GTK leaves an item whose
-    // action is off out of the menu rather than greying it.
-    let waiting = gio::Menu::new();
-    for (text, action) in [
-        (gettext("Edit…"), "win.outbox-edit"),
-        (gettext("Send Now"), "win.outbox-send"),
-        (gettext("Delete"), "win.outbox-delete"),
-    ] {
-        let item = gio::MenuItem::new(Some(&text), Some(action));
-        item.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
-        waiting.append_item(&item);
-    }
-    menu.append_section(None, &waiting);
-    menu.append(Some(&gettext("Export…")), Some("win.export"));
-    let popover = gtk::PopoverMenu::from_model(Some(&menu));
-    popover.set_has_arrow(false);
-    popover.set_halign(gtk::Align::Start);
-    popover.set_parent(row);
+/// Opens `popover` under the pointer on a right click or long press of
+/// `row`, or at the row's corner from the keyboard. A click outside the
+/// selection takes the row it landed on first, so the menu acts on what
+/// the pointer is over rather than on whatever was selected before.
+///
+/// The popover belongs to the list rather than to the row. Taking a new
+/// row opens its conversation, the list redraws, and a row can lose its
+/// place on screen while the menu is up, which would take a menu of its
+/// own down with it.
+fn context_menu(
+    row: &ThreadRow,
+    item: &gtk::ListItem,
+    selection: &gtk::MultiSelection,
+    popover: &gtk::PopoverMenu,
+) {
     let show: OpenMenu = {
         let (popover, item, selection) = (popover.clone(), item.clone(), selection.clone());
+        let row = row.downgrade();
         Rc::new(move |at: Option<(f64, f64)>| {
+            let (Some(row), Some(list)) = (row.upgrade(), popover.parent()) else {
+                return;
+            };
             let position = item.position();
             if position != gtk::INVALID_LIST_POSITION && !selection.is_selected(position) {
                 selection.select_item(position, true);
             }
-            let point = at.map(|(x, y)| gdk::Rectangle::new(x as i32, y as i32, 1, 1));
-            popover.set_pointing_to(point.as_ref());
+            let (x, y) = at.unwrap_or((16.0, 16.0));
+            let Some(point) = row.compute_point(&list, &graphene::Point::new(x as f32, y as f32))
+            else {
+                return;
+            };
+            let point = gdk::Rectangle::new(point.x() as i32, point.y() as i32, 1, 1);
+            popover.set_pointing_to(Some(&point));
             popover.popup();
         })
     };
@@ -648,7 +666,6 @@ fn context_menu(row: &ThreadRow, item: &gtk::ListItem, selection: &gtk::MultiSel
     press.connect_pressed(move |_, x, y| open(Some((x, y))));
     row.add_controller(press);
     row.set_menu(show);
-    row.connect_destroy(move |_| popover.unparent());
 }
 
 /// Menu and Shift+F10 on the list, for the row with the focus. The focus

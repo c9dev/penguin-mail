@@ -5,8 +5,16 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Improved
+
+- Right-clicking a conversation in the list offers everything the
+  conversation's More Actions menu does: reply, archive, trash, flag,
+  labels, mute, remind, print and the sender's options.
+
 ### Fixed
 
+- Right-clicking a conversation that was not selected yet opens its
+  menu. Before, the menu closed as the conversation opened.
 - The icons in the category switcher above the inbox sit in the middle
   of their highlight instead of leaving a gap on the right.
 - Shift+F10 and the Menu key open a message's own menu. Before, they

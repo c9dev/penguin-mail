@@ -372,6 +372,7 @@ impl MainWindow {
                     win.act(&view, action);
                 }
             });
+            list.set_row_menu(&conversation.thread_menu());
             let nav = adw::NavigationSplitView::builder()
                 .sidebar(&list.page)
                 .content(&conversation.page)

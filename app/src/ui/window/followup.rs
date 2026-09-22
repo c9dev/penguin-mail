@@ -126,8 +126,10 @@ impl MainWindow {
             action.set_enabled(mailbox == Mailbox::FollowUp);
         }
         if mailbox == Mailbox::FollowUp {
-            self.conversation
-                .set_trash_tooltip(&gettext("Dismiss Follow-Up (Delete)"));
+            self.conversation.set_trash_words(
+                &gettext("Dismiss Follow-Up"),
+                &gettext("Dismiss Follow-Up (Delete)"),
+            );
         }
     }
 
