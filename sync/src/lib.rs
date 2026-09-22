@@ -54,7 +54,7 @@ pub use mailbox::{
     Changed, Counts, Empty, Listing, Mailbox, Mailboxes, PAGE, Scope, View, outbox_id, outbox_row,
     summarize_search, waiting_line,
 };
-pub use outbox::{Drained, Outbox, Posted};
+pub use outbox::{Cancelled, Drained, Outbox, Posted};
 pub use settings::{AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, Permitted};
 pub use triage::TriageAction;
 pub use unsubscribe::{Leave, Unsubscribe};

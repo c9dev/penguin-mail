@@ -82,6 +82,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Send asks before the message goes out readable.
 - Edit on a draft brings back its Bcc, its files and the message it
   replies to, and so does a draft the assistant schedules with Send Later.
+- Cancel Send no longer tells you to look in Drafts for a message you
+  scheduled while offline. Gmail never had that one, and the toast now
+  says it is gone.
 
 ## 0.1.4 (2026-09-22)
 

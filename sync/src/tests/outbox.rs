@@ -8,7 +8,7 @@ use mailrs_store::{drafts, messages};
 
 use super::{Connected, Harness, harness};
 use crate::fake::meta;
-use crate::{Outbox, Posted, now_millis, outbox_row};
+use crate::{Cancelled, Outbox, Posted, now_millis, outbox_row};
 
 /// Puts a draft's message in the store, as history replay does once the
 /// draft reaches this computer. Nothing here reads thread rows, so the
@@ -661,7 +661,14 @@ async fn cancelling_send_later_stops_the_named_messages_and_keeps_their_drafts()
         Target::thread(h.account_id, monday.thread_id.clone().unwrap()),
         Target::thread(h.account_id, outbox_row(offline)),
     ];
-    assert_eq!(outbox.cancel_scheduled(&targets).await.unwrap(), 2);
+    assert_eq!(
+        outbox.cancel_scheduled(&targets).await.unwrap(),
+        Cancelled {
+            in_drafts: 1,
+            deleted: 1
+        },
+        "the one Gmail never saw has no draft to go back to"
+    );
     let left = h.db.read(outbox::scheduled).await.unwrap();
     assert_eq!(left.len(), 1);
     assert_eq!(left[0].subject, "Tuesday");
@@ -677,7 +684,13 @@ async fn cancelling_send_later_stops_the_named_messages_and_keeps_their_drafts()
         thread_id: "another thread".into(),
         message_id: tuesday.message_id.clone(),
     };
-    assert_eq!(outbox.cancel_scheduled(&[by_message]).await.unwrap(), 1);
+    assert_eq!(
+        outbox.cancel_scheduled(&[by_message]).await.unwrap(),
+        Cancelled {
+            in_drafts: 1,
+            deleted: 0
+        }
+    );
     assert!(h.db.read(outbox::scheduled).await.unwrap().is_empty());
 }
 

@@ -48,6 +48,16 @@ pub struct Drained {
     pub changed: bool,
 }
 
+/// What cancelling Send Later did with the messages it stopped.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Cancelled {
+    /// The messages Gmail already held as drafts, which stay in Drafts.
+    pub in_drafts: usize,
+    /// The messages scheduled while Gmail was out of reach. Their only
+    /// copy was the bytes waiting here, so cancelling deleted them.
+    pub deleted: usize,
+}
+
 /// Sends the messages waiting to go out. See the module docs.
 pub struct Outbox<A: Accounts> {
     accounts: Arc<A>,
@@ -215,24 +225,28 @@ impl<A: Accounts> Outbox<A> {
         Ok(())
     }
 
-    /// Stops the Send Later messages the targets name and returns how many
-    /// it stopped. Each Gmail draft stays in Drafts. A list row names a
-    /// scheduled message by its Gmail thread, by its draft's message, or,
-    /// for a message Gmail has never seen, by its own place in the table,
-    /// so a target matching any of the three stops it.
-    pub async fn cancel_scheduled(&self, targets: &[Target]) -> Result<usize, SyncError> {
+    /// Stops the Send Later messages the targets name and says what became
+    /// of them. Each Gmail draft stays in Drafts. A message scheduled while
+    /// Gmail was out of reach has no draft, so stopping it deletes it. A
+    /// list row names a scheduled message by its Gmail thread, by its
+    /// draft's message, or, for a message Gmail has never seen, by its own
+    /// place in the table, so a target matching any of the three stops it.
+    pub async fn cancel_scheduled(&self, targets: &[Target]) -> Result<Cancelled, SyncError> {
         let targets = targets.to_vec();
         Ok(self
             .db
             .write(move |c| {
-                let mut stopped = 0;
+                let mut cancelled = Cancelled::default();
                 for item in outbox::scheduled(c)? {
                     if targets.iter().any(|t| names(t, &item)) {
                         outbox::remove(c, item.id)?;
-                        stopped += 1;
+                        match item.draft_id {
+                            Some(_) => cancelled.in_drafts += 1,
+                            None => cancelled.deleted += 1,
+                        }
                     }
                 }
-                Ok(stopped)
+                Ok(cancelled)
             })
             .await?)
     }

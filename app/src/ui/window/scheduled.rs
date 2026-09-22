@@ -7,6 +7,7 @@ use gtk::glib;
 use super::{MainWindow, Target};
 use crate::ui::Mailbox;
 use mailrs_domain::translate::gettext;
+use mailrs_sync::Cancelled;
 
 impl MainWindow {
     /// Shows "Sending…" with an Undo button for `seconds`.
@@ -35,28 +36,55 @@ impl MainWindow {
         }
     }
 
-    /// Stops scheduled sends. The drafts stay in Gmail's Drafts.
+    /// Stops scheduled sends. The drafts stay in Gmail's Drafts, and a
+    /// message Gmail never had is gone.
     pub(super) fn cancel_scheduled(self: &Rc<Self>, targets: Vec<Target>) {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let count = targets.len();
             let outbox = this.core.outbox();
             let removed = this
                 .core
                 .call(async move { outbox.cancel_scheduled(&targets).await })
                 .await;
             match removed {
-                Ok(_) => {
+                Ok(cancelled) => {
                     this.conversation.leave();
                     this.scheduled_changed();
-                    this.toast(&if count == 1 {
-                        gettext("Won't be sent. The message is in Drafts.")
-                    } else {
-                        gettext("Won't be sent. The messages are in Drafts.")
-                    });
+                    this.toast(&cancelled_line(cancelled));
                 }
                 Err(err) => this.failed(&gettext("Could not cancel: {reason}"), &err),
             }
         });
+    }
+}
+
+/// What the toast says after Cancel Send. A message scheduled while Gmail
+/// was out of reach has no draft to fall back to, so the toast must not
+/// send the writer to Drafts to look for it.
+fn cancelled_line(cancelled: Cancelled) -> String {
+    match (cancelled.in_drafts, cancelled.deleted) {
+        (0, 1) => gettext("Won't be sent. Gmail never had a draft of it, so the message is gone."),
+        (0, _) => gettext("Won't be sent. Gmail never had drafts of them, so the messages are gone."),
+        (1, 0) => gettext("Won't be sent. The message is in Drafts."),
+        (_, 0) => gettext("Won't be sent. The messages are in Drafts."),
+        _ => gettext("Won't be sent. The messages Gmail had are in Drafts, and the others are gone."),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn line(in_drafts: usize, deleted: usize) -> String {
+        cancelled_line(Cancelled { in_drafts, deleted })
+    }
+
+    #[test]
+    fn cancel_send_sends_the_writer_to_drafts_only_for_what_gmail_holds() {
+        assert_eq!(line(1, 0), "Won't be sent. The message is in Drafts.");
+        assert_eq!(line(2, 0), "Won't be sent. The messages are in Drafts.");
+        assert!(!line(0, 1).contains("Drafts"), "{}", line(0, 1));
+        assert!(!line(0, 3).contains("Drafts"), "{}", line(0, 3));
+        assert!(line(1, 1).contains("others are gone"), "{}", line(1, 1));
     }
 }

@@ -4349,7 +4349,7 @@ msgstr ""
 msgid "Open Google Cloud"
 msgstr ""
 
-#: app/src/ui/window.rs:1448 app/src/ui/window/scheduled.rs:16
+#: app/src/ui/window.rs:1448 app/src/ui/window/scheduled.rs:17
 #: app/src/ui/window/shortcuts.rs:409
 msgid "Undo"
 msgstr ""
@@ -4845,20 +4845,34 @@ msgstr ""
 msgid "Back in the Inbox"
 msgstr ""
 
-#: app/src/ui/window/scheduled.rs:15
+#: app/src/ui/window/scheduled.rs:16
 msgid "Sending…"
 msgstr ""
 
-#: app/src/ui/window/scheduled.rs:53
+#: app/src/ui/window/scheduled.rs:55
+msgid "Could not cancel: {reason}"
+msgstr ""
+
+#: app/src/ui/window/scheduled.rs:66
+msgid "Won't be sent. Gmail never had a draft of it, so the message is gone."
+msgstr ""
+
+#: app/src/ui/window/scheduled.rs:67
+msgid ""
+"Won't be sent. Gmail never had drafts of them, so the messages are gone."
+msgstr ""
+
+#: app/src/ui/window/scheduled.rs:68
 msgid "Won't be sent. The message is in Drafts."
 msgstr ""
 
-#: app/src/ui/window/scheduled.rs:55
+#: app/src/ui/window/scheduled.rs:69
 msgid "Won't be sent. The messages are in Drafts."
 msgstr ""
 
-#: app/src/ui/window/scheduled.rs:58
-msgid "Could not cancel: {reason}"
+#: app/src/ui/window/scheduled.rs:70
+msgid ""
+"Won't be sent. The messages Gmail had are in Drafts, and the others are gone."
 msgstr ""
 
 #: app/src/ui/window/senders.rs:34
