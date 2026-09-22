@@ -10,7 +10,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::glib;
-use mailrs_domain::AccountId;
+use mailrs_domain::Target;
 use mailrs_store::image_senders;
 
 use super::MainWindow;
@@ -64,7 +64,7 @@ impl MainWindow {
         if images::allowed(&self.image_senders.borrow(), Some(&from)) {
             return;
         }
-        let Some(asked_on) = view.read(|o| (o.account_id, o.thread_id.clone())) else {
+        let Some(asked_on) = view.read(|o| o.target()) else {
             return;
         };
         let ask = fill(
@@ -97,7 +97,7 @@ impl MainWindow {
                 .and_then(|m| m.from.as_ref())
                 .map(|a| a.email.to_lowercase())
                 .unwrap_or_default();
-            ((open.account_id, open.thread_id.clone()), from)
+            (open.target(), from)
         }) else {
             return;
         };
@@ -146,7 +146,7 @@ impl MainWindow {
     pub(super) async fn allow_images_from(
         self: &Rc<Self>,
         view: &Rc<ConversationView>,
-        asked_on: (AccountId, String),
+        asked_on: Target,
         sender: String,
         whole_domain: bool,
     ) {
@@ -164,7 +164,7 @@ impl MainWindow {
                 *self.image_senders.borrow_mut() = list;
                 // Only on the thread the person agreed for: another one
                 // opened since then may be from someone else entirely.
-                if view.is_showing(asked_on.0, &asked_on.1) {
+                if view.is_showing(&asked_on) {
                     view.allow_images();
                 }
                 self.toast(&if whole_domain {

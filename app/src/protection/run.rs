@@ -11,31 +11,27 @@
 //! Two rules decide whether any of that reaches the window, and both are
 //! in the types rather than in a comment. The claim comes first:
 //! [`Desk::claim`] sets the thread's "ask each engine once" flag before
-//! anything is awaited, and it is the only way to reach [`Wanted`], which
-//! is the only way to reach the calls that await. Then every one of those
-//! calls answers through `Wanted`, which gives nothing back once the
-//! reader has opened another thread, so an answer nobody is waiting for
-//! cannot be written.
+//! anything is awaited, and the target it names is the only way to a
+//! [`Wanted`], which is the only way to reach the calls that await. Then
+//! every one of those calls answers through `Wanted`, which gives nothing
+//! back once the reader has opened another conversation, so an answer
+//! nobody is waiting for cannot be written.
 //!
 //! Nothing here touches GTK. The window is one adapter behind the ports
 //! and the tests are another.
 
-use std::future::Future;
-use std::pin::Pin;
 use std::rc::Rc;
 
-use mailrs_domain::{AccountId, MessageBody};
+use mailrs_domain::{AccountId, MessageBody, Target};
 
 use super::{Engine, Read};
+pub use crate::wanted::Answer;
+use crate::wanted::{Screen, Wanted};
 
 #[cfg(test)]
 mod fake;
 #[cfg(test)]
 mod tests;
-
-/// A future the GTK thread waits on. The ports run on that thread, so
-/// their answers need no `Send`.
-pub type Answer<'a, T> = Pin<Box<dyn Future<Output = T> + 'a>>;
 
 /// The engines this computer has. A message names its standard, and the
 /// engine that reads it may be the one this computer lacks.
@@ -59,23 +55,22 @@ impl Installed {
 /// run. Whoever holds one has already set that thread's "ask each engine
 /// once" flag, so nothing else can put a second pinentry up.
 pub struct Claimed {
-    pub account_id: AccountId,
-    pub thread_id: String,
+    /// The conversation on screen when the claim was made.
+    pub target: Target,
     pub message_id: String,
     pub opening: Engine,
     pub body: MessageBody,
 }
 
 /// What the run reads from the window. Every method answers from what the
-/// window already holds, so a test fills one in without a widget.
-pub trait Desk {
+/// window already holds, so a test fills one in without a widget. As a
+/// [`Screen`] it also says whether the claimed thread is still on screen.
+pub trait Desk: Screen {
     fn installed(&self) -> Installed;
     /// The protected message of the thread on screen, claimed for this
     /// run, leaving a message whose engine `installed` lacks unclaimed.
     /// Once per thread: a second call gives nothing back.
     fn claim(&self, installed: Installed) -> Option<Claimed>;
-    /// Whether that thread is still the one on screen.
-    fn is_showing(&self, account_id: AccountId, thread_id: &str) -> bool;
 }
 
 /// What the run asks the window to do. A test answers with what it likes
@@ -100,70 +95,6 @@ pub trait Effects {
     fn answered(&self, message_id: String, read: Read);
 }
 
-/// The thread an answer belongs to, and the only way to a call that takes
-/// time. Each one hands its answer back while that thread is the one on
-/// screen and gives nothing back otherwise, because the reader may have
-/// opened something else while gpg held a pinentry and an answer they are
-/// no longer waiting for has nowhere to go.
-pub struct Wanted<'a> {
-    desk: &'a dyn Desk,
-    effects: &'a dyn Effects,
-    account_id: AccountId,
-    thread_id: String,
-}
-
-impl<'a> Wanted<'a> {
-    fn new(desk: &'a dyn Desk, effects: &'a dyn Effects, claimed: &Claimed) -> Wanted<'a> {
-        Wanted {
-            desk,
-            effects,
-            account_id: claimed.account_id,
-            thread_id: claimed.thread_id.clone(),
-        }
-    }
-
-    async fn raw_message(&self, message_id: &str) -> Option<Vec<u8>> {
-        self.still(
-            self.effects
-                .raw_message(self.account_id, message_id.to_string()),
-            "could not fetch the message to check how it was signed",
-        )
-        .await
-    }
-
-    async fn ask(&self, opening: Engine, raw: Vec<u8>, body: MessageBody) -> Option<Read> {
-        self.still(
-            self.effects.ask(opening, raw, body),
-            "the engine could not be asked about this message",
-        )
-        .await
-    }
-
-    /// What was inside the encryption is what the reader wanted, and it
-    /// goes no further than this window: the store keeps the message as
-    /// Gmail holds it, ciphertext and all. `read` came through the awaits
-    /// above, so the thread was on screen a moment ago.
-    fn answered(&self, message_id: String, read: Read) {
-        self.effects.answered(message_id, read);
-    }
-
-    /// Waits for `answer` and gives it back while the thread is still on
-    /// screen. `None` is either the call failing, which `failed` says in
-    /// the log, or the reader moving on while it ran.
-    async fn still<T>(&self, answer: Answer<'_, Result<T, String>>, failed: &str) -> Option<T> {
-        let answer = match answer.await {
-            Ok(answer) => answer,
-            Err(err) => {
-                tracing::info!(error = %err, "{failed}");
-                return None;
-            }
-        };
-        self.desk
-            .is_showing(self.account_id, &self.thread_id)
-            .then_some(answer)
-    }
-}
-
 /// The two engines, and the one way to run the one a message needs.
 pub struct Engines {
     desk: Rc<dyn Desk>,
@@ -182,19 +113,36 @@ impl Engines {
         let Some(claimed) = self.desk.claim(self.desk.installed()) else {
             return;
         };
-        let wanted = Wanted::new(&*self.desk, &*self.effects, &claimed);
         let Claimed {
+            target,
             message_id,
             opening,
             body,
-            ..
         } = claimed;
-        let Some(raw) = wanted.raw_message(&message_id).await else {
+        let account_id = target.account_id;
+        let wanted = Wanted::new(&*self.desk as &dyn Screen, &*self.effects, target);
+        let fetching = message_id.clone();
+        let Some(raw) = wanted
+            .ask(
+                |effects| effects.raw_message(account_id, fetching),
+                "could not fetch the message to check how it was signed",
+            )
+            .await
+        else {
             return;
         };
-        let Some(read) = wanted.ask(opening, raw, body).await else {
+        let Some(read) = wanted
+            .ask(
+                |effects| effects.ask(opening, raw, body),
+                "the engine could not be asked about this message",
+            )
+            .await
+        else {
             return;
         };
-        wanted.answered(message_id, read);
+        // What was inside the encryption is what the reader wanted, and it
+        // goes no further than this window: the store keeps the message as
+        // Gmail holds it, ciphertext and all.
+        wanted.on_screen(|effects| effects.answered(message_id, read));
     }
 }

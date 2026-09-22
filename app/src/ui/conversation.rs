@@ -154,8 +154,7 @@ impl OpenThread {
         let body = self.bodies.get(&message_id)?.as_ref().ok()?.clone();
         self.pgp_asked = true;
         Some(Claimed {
-            account_id: self.account_id,
-            thread_id: self.thread_id.clone(),
+            target: self.target(),
             message_id,
             opening,
             body,
@@ -988,11 +987,7 @@ impl ConversationView {
 
     /// Whether `row` is what the view shows now.
     pub fn is_showing_row(&self, row: &mailrs_domain::ThreadSummary) -> bool {
-        self.open.borrow().as_ref().is_some_and(|o| {
-            o.account_id == row.account_id
-                && o.thread_id == row.id
-                && o.only_message == row.message_id
-        })
+        self.is_showing(&Target::from_row(row))
     }
 
     pub fn set_zoom(&self, zoom: f64) {
@@ -1013,11 +1008,13 @@ impl ConversationView {
         self.loading.get() == ticket
     }
 
-    pub fn is_showing(&self, account_id: AccountId, thread_id: &str) -> bool {
+    /// Whether `target` is what the view shows now: the same account and
+    /// thread, and the same one message when it shows one.
+    pub fn is_showing(&self, target: &Target) -> bool {
         self.open
             .borrow()
             .as_ref()
-            .is_some_and(|o| o.account_id == account_id && o.thread_id == thread_id)
+            .is_some_and(|o| o.target() == *target)
     }
 
     /// Reads the open thread. `None` means no conversation is on screen.

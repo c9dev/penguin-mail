@@ -49,9 +49,7 @@ type ToolResult = Result<Value, String>;
 /// An account a tool named, with the loop that syncs it.
 type Syncing<A> = (Account, Arc<AccountSync<<A as Accounts>::Api>>);
 
-/// A future the GTK thread waits on. The ports run on that thread, so their
-/// answers need no `Send`.
-pub type Answer<'a, T> = Pin<Box<dyn Future<Output = T> + 'a>>;
+pub use crate::wanted::Answer;
 
 /// The conversation the window shows, if any.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -92,14 +92,13 @@ impl MainWindow {
         // The thread the reader asked about. They may move on while the
         // model works, and the card on screen then belongs to another
         // thread, which this answer says nothing about.
-        let Some(asked_about) = view.read(|open| (open.account_id, open.thread_id.clone())) else {
+        let Some(asked_about) = view.read(|open| open.target()) else {
             return;
         };
         view.translate.working();
         let (this, view) = (Rc::clone(self), Rc::clone(view));
         glib::spawn_future_local(async move {
-            let (account_id, thread_id) = asked_about;
-            let still_open = || view.is_showing(account_id, &thread_id);
+            let still_open = || view.is_showing(&asked_about);
             let answer = this
                 .core
                 .call(async move {

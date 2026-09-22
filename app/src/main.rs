@@ -32,6 +32,7 @@ mod tray;
 mod ui;
 mod unsubscribe;
 mod update;
+mod wanted;
 
 use std::cell::RefCell;
 use std::rc::Rc;

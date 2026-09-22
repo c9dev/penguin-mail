@@ -1165,17 +1165,18 @@ impl MainWindow {
             this.refresh_invitation(&view).await;
             this.start_pgp(&view);
             this.refresh_translation(&view);
-            this.complete_thread(view, account_id, thread_id).await;
+            let target = Target {
+                account_id,
+                thread_id,
+                message_id: summary.message_id.clone(),
+            };
+            this.complete_thread(view, target).await;
         });
     }
 
     /// Fetches the whole thread and any missing bodies, then marks it read.
-    async fn complete_thread(
-        self: &Rc<Self>,
-        view: Rc<ConversationView>,
-        account_id: AccountId,
-        thread_id: String,
-    ) {
+    async fn complete_thread(self: &Rc<Self>, view: Rc<ConversationView>, target: Target) {
+        let (account_id, thread_id) = (target.account_id, target.thread_id.clone());
         let Some(sync) = self.core.account(account_id) else {
             return;
         };
@@ -1187,7 +1188,7 @@ impl MainWindow {
         {
             tracing::info!(error = %err, "showing the stored copy of the thread");
         }
-        if !view.is_showing(account_id, &thread_id) {
+        if !view.is_showing(&target) {
             return;
         }
         let key = thread_id.clone();
@@ -1215,7 +1216,7 @@ impl MainWindow {
                 .await
         };
         let images = self.inline_images(account_id, &sync, &loaded).await;
-        if !view.is_showing(account_id, &thread_id) {
+        if !view.is_showing(&target) {
             return;
         }
         view.bodies_arrived(loaded, images);
@@ -1226,7 +1227,7 @@ impl MainWindow {
         if unread {
             self.mark_read_later(&view, account_id, thread_id.clone());
         }
-        self.fill_in_thumbnails(&view, account_id, &sync, thread_id);
+        self.fill_in_thumbnails(&view, &sync, target);
     }
 
     /// Fetches the pictures for the attachment rows after the message is
@@ -1236,9 +1237,8 @@ impl MainWindow {
     fn fill_in_thumbnails(
         self: &Rc<Self>,
         view: &Rc<ConversationView>,
-        account_id: AccountId,
         sync: &std::sync::Arc<crate::core::Sync>,
-        thread_id: String,
+        target: Target,
     ) {
         // Every body the thread shows, not only the ones just fetched: a
         // message read before is already in the store, and its pictures
@@ -1268,8 +1268,8 @@ impl MainWindow {
         }
         let (this, view, sync) = (Rc::clone(self), Rc::clone(view), sync.clone());
         glib::spawn_future_local(async move {
-            let found = this.thumbnails(account_id, &sync, &loaded).await;
-            if found.is_empty() || !view.is_showing(account_id, &thread_id) {
+            let found = this.thumbnails(target.account_id, &sync, &loaded).await;
+            if found.is_empty() || !view.is_showing(&target) {
                 return;
             }
             view.thumbnails_arrived(found);
@@ -1369,12 +1369,10 @@ impl MainWindow {
     /// Picks up label changes and new messages in the open thread. Redraws
     /// only when the set of messages changed, so reading position survives.
     fn refresh_open_thread(self: &Rc<Self>) {
-        let Some((account_id, thread_id)) = self
-            .conversation
-            .read(|o| (o.account_id, o.thread_id.clone()))
-        else {
+        let Some(target) = self.conversation.read(|o| o.target()) else {
             return;
         };
+        let (account_id, thread_id) = (target.account_id, target.thread_id.clone());
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let key = thread_id.clone();
@@ -1385,7 +1383,7 @@ impl MainWindow {
             else {
                 return;
             };
-            if !this.conversation.is_showing(account_id, &thread_id) {
+            if !this.conversation.is_showing(&target) {
                 return;
             }
             let only = this.conversation.find(|o| o.only_message.clone());
@@ -1399,7 +1397,7 @@ impl MainWindow {
             }
             let changed = this.conversation.replace_messages(fresh);
             if changed {
-                this.complete_thread(Rc::clone(&this.conversation), account_id, thread_id)
+                this.complete_thread(Rc::clone(&this.conversation), target)
                     .await;
             } else {
                 this.conversation.render_buttons();

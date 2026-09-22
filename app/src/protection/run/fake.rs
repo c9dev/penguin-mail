@@ -10,9 +10,10 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use mailrs_domain::{AccountId, MessageBody, MessageMeta, Protection};
+use mailrs_domain::{AccountId, MessageBody, MessageMeta, Protection, Target};
 
 use super::{Answer, Claimed, Desk, Effects, Engines, Installed};
+use crate::wanted::Screen as OnScreen;
 use crate::protection::{Engine, Mark, Read, Tone};
 use crate::ui::conversation::OpenThread;
 
@@ -198,13 +199,15 @@ impl Desk for FakeWindow {
         self.reached(Step::Claim);
         self.with(|screen| screen.open.as_mut()?.take_protected(installed))
     }
+}
 
-    fn is_showing(&self, account_id: AccountId, thread_id: &str) -> bool {
+impl OnScreen for FakeWindow {
+    fn is_showing(&self, target: &Target) -> bool {
         self.with(|screen| {
             screen
                 .open
                 .as_ref()
-                .is_some_and(|open| open.account_id == account_id && open.thread_id == thread_id)
+                .is_some_and(|open| open.target() == *target)
         })
     }
 }

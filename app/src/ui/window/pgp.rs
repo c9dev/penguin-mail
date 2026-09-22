@@ -5,13 +5,14 @@
 use std::rc::{Rc, Weak};
 
 use gtk::glib;
-use mailrs_domain::{AccountId, MessageBody};
+use mailrs_domain::{AccountId, MessageBody, Target};
 
 use super::MainWindow;
 use crate::core::Core;
 use crate::protection::run::{Answer, Claimed, Desk, Effects, Engines, Installed};
 use crate::protection::{Engine, Read};
 use crate::ui::conversation::ConversationView;
+use crate::wanted::Screen;
 use crate::{pgp, smime};
 
 impl MainWindow {
@@ -53,9 +54,11 @@ impl Desk for Ports {
     fn claim(&self, installed: Installed) -> Option<Claimed> {
         self.view.take_protected(installed)
     }
+}
 
-    fn is_showing(&self, account_id: AccountId, thread_id: &str) -> bool {
-        self.view.is_showing(account_id, thread_id)
+impl Screen for Ports {
+    fn is_showing(&self, target: &Target) -> bool {
+        self.view.is_showing(target)
     }
 }
 

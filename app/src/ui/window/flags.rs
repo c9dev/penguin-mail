@@ -34,13 +34,12 @@ impl MainWindow {
     /// not carry the colour, so an undo needs this.
     pub(super) fn refresh_flag_color(self: &Rc<Self>) {
         for view in self.views() {
-            let Some((account_id, thread_id)) = view.read(|o| (o.account_id, o.thread_id.clone()))
-            else {
+            let Some(target) = view.read(|o| o.target()) else {
                 continue;
             };
             let this = Rc::clone(self);
             glib::spawn_future_local(async move {
-                let key = thread_id.clone();
+                let (account_id, key) = (target.account_id, target.thread_id.clone());
                 let Ok(summary) = this
                     .core
                     .read(move |c| threads::get_thread(c, account_id, &key))
@@ -48,7 +47,7 @@ impl MainWindow {
                 else {
                     return;
                 };
-                if view.is_showing(account_id, &thread_id) {
+                if view.is_showing(&target) {
                     view.set_flag_color(summary.and_then(|s| s.flag_color));
                 }
             });

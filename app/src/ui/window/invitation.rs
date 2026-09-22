@@ -38,18 +38,14 @@ impl MainWindow {
     pub(super) async fn refresh_invitation(self: &Rc<Self>, view: &Rc<ConversationView>) {
         let found = view.find(|open| {
             open.invitation().map(|(meta, ics)| {
-                (
-                    open.account_id,
-                    open.thread_id.clone(),
-                    meta.id.clone(),
-                    ics.to_string(),
-                )
+                (open.target(), meta.id.clone(), ics.to_string())
             })
         });
-        let Some((account_id, thread_id, message_id, ics)) = found else {
+        let Some((target, message_id, ics)) = found else {
             view.show_invitation(None);
             return;
         };
+        let account_id = target.account_id;
         let me = self.addresses_for(account_id);
         let invitations = self.core.invitations();
         let opened = self
@@ -62,7 +58,7 @@ impl MainWindow {
             .await;
         // The reader may have opened another thread while the store and
         // Google answered; this card belongs to the one they left.
-        if !view.is_showing(account_id, &thread_id) {
+        if !view.is_showing(&target) {
             return;
         }
         let showing = match opened {
