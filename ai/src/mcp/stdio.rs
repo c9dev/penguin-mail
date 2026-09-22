@@ -15,6 +15,10 @@ use tokio::task::JoinHandle;
 
 use super::Failure;
 
+/// How long a closing server has to finish what it was saying on stderr,
+/// so the error that follows can quote it.
+const LAST_WORDS: Duration = Duration::from_secs(5);
+
 /// How many of the server's last stderr lines an error quotes.
 const STDERR_KEPT: usize = 5;
 
@@ -268,8 +272,10 @@ async fn read_stdout(label: String, stdout: BufReader<tokio::process::ChildStdou
         }
     }
     // A server that exits says why on stderr, and the callers about to hear
-    // it is gone should hear why too.
-    let _ = tokio::time::timeout(Duration::from_secs(1), stderr_done).await;
+    // it is gone should hear why too. The wait is generous because it only
+    // delays an error: a second was short enough that a loaded machine
+    // reported the exit with nothing to explain it.
+    let _ = tokio::time::timeout(LAST_WORDS, stderr_done).await;
     closed.store(true, Ordering::SeqCst);
     // Dropping every waiting sender tells each caller the server is gone.
     pending
