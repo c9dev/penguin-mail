@@ -727,23 +727,22 @@ async fn delete_draft_asks_then_removes_it_from_gmail_and_the_list() {
 async fn deleting_a_draft_that_is_waiting_to_go_out_points_at_cancel_send() {
     let h = with_draft(&fern_swap()).await;
     // Send Later holds the Gmail draft this message goes out from.
-    h.db
-        .write(|c| {
-            mailrs_store::outbox::put(
-                c,
-                &mailrs_store::outbox::Queued {
-                    account_id: 1,
-                    draft_id: Some("r-1".into()),
-                    message_id: Some("d1".into()),
-                    thread_id: Some("t7".into()),
-                    subject: "Fern swap".into(),
-                    send_at: NOW + 60_000,
-                    ..Default::default()
-                },
-            )
-        })
-        .await
-        .expect("the row is stored");
+    h.db.write(|c| {
+        mailrs_store::outbox::put(
+            c,
+            &mailrs_store::outbox::Queued {
+                account_id: 1,
+                draft_id: Some("r-1".into()),
+                message_id: Some("d1".into()),
+                thread_id: Some("t7".into()),
+                subject: "Fern swap".into(),
+                send_at: NOW + 60_000,
+                ..Default::default()
+            },
+        )
+    })
+    .await
+    .expect("the row is stored");
 
     let refused = h
         .run("delete_draft", json!({"account": ME, "message_id": "d1"}))
