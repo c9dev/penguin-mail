@@ -5,6 +5,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+## 0.1.5 (2026-09-22)
+
 ### New
 
 - Penguin Mail has an apt repository. Add it once, or install the .deb,
