@@ -157,6 +157,56 @@ async fn send_later_takes_a_saved_draft_as_it_stands() {
 }
 
 #[tokio::test]
+async fn send_later_keeps_a_saved_drafts_blind_copy_and_files() {
+    let draft = labelled(
+        meta("d1", "t7", ME, "Fern swap", NOW),
+        &[system_label::DRAFT],
+    );
+    let h = Harness::with(vec![draft]).await;
+    let mut written = crate::compose::Draft::new(
+        1,
+        mailrs_domain::Address {
+            name: None,
+            email: ME.into(),
+        },
+    );
+    written.to = vec![mailrs_domain::Address {
+        name: None,
+        email: "ann@example.com".into(),
+    }];
+    written.bcc = vec![mailrs_domain::Address {
+        name: None,
+        email: "bo@example.com".into(),
+    }];
+    written.subject = "Fern swap".into();
+    written.markdown = "Swap on Sunday?".into();
+    written.in_reply_to = Some("<parent@example.com>".into());
+    written.attachments = vec![crate::compose::OutgoingAttachment {
+        filename: "ferns.txt".into(),
+        mime_type: "text/plain".into(),
+        data: b"Three ferns.".to_vec(),
+        content_id: None,
+    }];
+    let raw = crate::compose::build_mime(&written, 0, "<d1@example.com>").expect("a draft");
+    h.gmail.with(|i| {
+        i.raws.insert("d1".into(), raw.clone());
+        i.drafts.insert("r-1".into(), raw);
+        i.draft_messages.insert("r-1".into(), "d1".into());
+    });
+
+    h.ok(
+        "send_later",
+        json!({"draft": {"account": ME, "thread_id": "t7"}, "at": later()}),
+    )
+    .await;
+    let asked = h.asked();
+    let (draft, _) = &asked.scheduled[0];
+    assert_eq!(draft.bcc, written.bcc);
+    assert_eq!(draft.in_reply_to, written.in_reply_to);
+    assert_eq!(draft.attachments, written.attachments);
+}
+
+#[tokio::test]
 async fn send_later_leaves_an_encrypted_draft_to_the_composer() {
     let draft = labelled(
         meta("d1", "t7", ME, "Fern swap", NOW),
@@ -164,13 +214,11 @@ async fn send_later_leaves_an_encrypted_draft_to_the_composer() {
     );
     let h = Harness::with(vec![draft]).await;
     h.gmail.with(|i| {
-        i.bodies.insert(
+        i.raws.insert(
             "d1".into(),
-            MessageBody {
-                text: Some("Version: 1".into()),
-                protection: Some(mailrs_domain::Protection::Encrypted),
-                ..MessageBody::default()
-            },
+            b"Subject: Fern swap\r\nContent-Type: multipart/encrypted; \
+              protocol=\"application/pgp-encrypted\"; boundary=\"b\"\r\n\r\n--b--\r\n"
+                .to_vec(),
         );
         i.drafts.insert("r-1".into(), b"ciphertext".to_vec());
         i.draft_messages.insert("r-1".into(), "d1".into());

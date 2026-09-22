@@ -80,6 +80,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - An encrypted message you undo the send of, or that comes back from the
   Outbox, reopens with Encrypt on. If a recipient's key has gone missing,
   Send asks before the message goes out readable.
+- Edit on a draft brings back its Bcc, its files and the message it
+  replies to, and so does a draft the assistant schedules with Send Later.
 
 ## 0.1.4 (2026-09-22)
 

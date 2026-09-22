@@ -1090,8 +1090,22 @@ impl GmailApi for FakeGmail {
             let date = chrono::DateTime::from_timestamp_millis(meta.date)
                 .unwrap_or_default()
                 .to_rfc2822();
+            // A draft reopens from these bytes, so they carry the people.
+            let mut people = String::new();
+            for (header, list) in [("To", &meta.to), ("Cc", &meta.cc)] {
+                if !list.is_empty() {
+                    let named: Vec<String> = list
+                        .iter()
+                        .map(|a| match &a.name {
+                            Some(name) => format!("\"{name}\" <{}>", a.email),
+                            None => a.email.clone(),
+                        })
+                        .collect();
+                    people.push_str(&format!("{header}: {}\r\n", named.join(", ")));
+                }
+            }
             Ok(format!(
-                "From: {from}\r\nDate: {date}\r\nSubject: {}\r\nMessage-ID: {}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n{}\r\n",
+                "From: {from}\r\n{people}Date: {date}\r\nSubject: {}\r\nMessage-ID: {}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n{}\r\n",
                 meta.subject,
                 meta.rfc822_msgid.clone().unwrap_or_default(),
                 text.replace('\n', "\r\n")

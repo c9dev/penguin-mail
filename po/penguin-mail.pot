@@ -396,23 +396,23 @@ msgstr[1] ""
 msgid "Send “{subject}” to {recipients} {when}?"
 msgstr ""
 
-#: app/src/assistant/run/mail.rs:338
+#: app/src/assistant/run/mail.rs:331
 msgid "this list"
 msgstr ""
 
-#: app/src/assistant/run/mail.rs:342
+#: app/src/assistant/run/mail.rs:335
 msgid "Penguin Mail asks the sender to take you off the list."
 msgstr ""
 
-#: app/src/assistant/run/mail.rs:346
+#: app/src/assistant/run/mail.rs:339
 msgid "Penguin Mail sends the list an unsubscribe request from your account."
 msgstr ""
 
-#: app/src/assistant/run/mail.rs:350
+#: app/src/assistant/run/mail.rs:343
 msgid "The sender's unsubscribe page opens in your browser."
 msgstr ""
 
-#: app/src/assistant/run/mail.rs:354
+#: app/src/assistant/run/mail.rs:347
 msgid "Unsubscribe from {sender}?"
 msgstr ""
 
@@ -758,7 +758,7 @@ msgstr ""
 msgid "From {senders}"
 msgstr ""
 
-#: app/src/notify.rs:195 app/src/ui/window.rs:1874
+#: app/src/notify.rs:195 app/src/ui/window.rs:1857
 msgid "Open"
 msgstr ""
 
@@ -1005,22 +1005,18 @@ msgstr ""
 msgid "{names} and {last}"
 msgstr ""
 
-#: app/src/protection/draft.rs:100 app/src/ui/composer/mod.rs:1399
+#: app/src/protection/draft.rs:95 app/src/ui/composer/mod.rs:1399
 msgid "Draft not saved: {reason}"
 msgstr ""
 
-#: app/src/protection/draft.rs:128
+#: app/src/protection/draft.rs:123
 msgid ""
 "Draft not saved. An encrypted message waits in Drafts encrypted to your own "
 "key, and this computer holds no key or certificate for {address}."
 msgstr ""
 
-#: app/src/protection/draft.rs:155 app/src/ui/window.rs:1789
+#: app/src/protection/draft.rs:156 app/src/ui/window.rs:1775
 msgid "Could not open the draft: {reason}"
-msgstr ""
-
-#: app/src/protection/draft.rs:161
-msgid "It is encrypted in a way Penguin Mail does not read."
 msgstr ""
 
 #: app/src/render.rs:82
@@ -1567,7 +1563,7 @@ msgstr ""
 msgid "New Message"
 msgstr ""
 
-#: app/src/tray.rs:136 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2150
+#: app/src/tray.rs:136 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2133
 msgid "Check for Mail"
 msgstr ""
 
@@ -1585,7 +1581,7 @@ msgstr ""
 msgid "Check for Updates"
 msgstr ""
 
-#: app/src/tray.rs:152 app/src/ui/window.rs:2162
+#: app/src/tray.rs:152 app/src/ui/window.rs:2145
 #: app/src/ui/window/shortcuts.rs:495
 msgid "Quit"
 msgstr ""
@@ -1616,7 +1612,7 @@ msgstr ""
 msgid "License"
 msgstr ""
 
-#: app/src/ui/about.rs:162 app/src/ui/window.rs:2161
+#: app/src/ui/about.rs:162 app/src/ui/window.rs:2144
 msgid "About Penguin Mail"
 msgstr ""
 
@@ -1798,7 +1794,7 @@ msgid "Edit {server}"
 msgstr ""
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1512
-#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:1987
+#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:1970
 msgid "Remove"
 msgstr ""
 
@@ -2977,7 +2973,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2243
+#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2226
 msgid "Add an account first"
 msgstr ""
 
@@ -3788,7 +3784,7 @@ msgstr ""
 msgid "Rules…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2153
+#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2136
 msgid "Hide My Email…"
 msgstr ""
 
@@ -4109,7 +4105,7 @@ msgid ""
 "nobody else can reach your mail. Paste the client's ID and secret to begin."
 msgstr ""
 
-#: app/src/ui/welcome.rs:97 app/src/ui/window.rs:1946
+#: app/src/ui/welcome.rs:97 app/src/ui/window.rs:1929
 msgid "Sign In with Google"
 msgstr ""
 
@@ -4382,83 +4378,83 @@ msgstr ""
 msgid "Could not include {file}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:1850
+#: app/src/ui/window.rs:1833
 msgid "Downloading {file}…"
 msgstr ""
 
-#: app/src/ui/window.rs:1871 app/src/ui/window/attachments.rs:212
+#: app/src/ui/window.rs:1854 app/src/ui/window/attachments.rs:212
 #: app/src/ui/window/attachments.rs:378
 msgid "Saved {file} to Downloads"
 msgstr ""
 
-#: app/src/ui/window.rs:1889 app/src/ui/window/attachments.rs:217
+#: app/src/ui/window.rs:1872 app/src/ui/window/attachments.rs:217
 #: app/src/ui/window/attachments.rs:383
 msgid "Could not save {file}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:1905
+#: app/src/ui/window.rs:1888
 msgid "Could not save the settings: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:1928
+#: app/src/ui/window.rs:1911
 msgid "Waiting for Your Browser…"
 msgstr ""
 
-#: app/src/ui/window.rs:1930
+#: app/src/ui/window.rs:1913
 msgid "Continue in your browser"
 msgstr ""
 
-#: app/src/ui/window.rs:1936
+#: app/src/ui/window.rs:1919
 msgid "Added {account}. Downloading mail…"
 msgstr ""
 
-#: app/src/ui/window.rs:1980
+#: app/src/ui/window.rs:1963
 msgid "Remove {account}?"
 msgstr ""
 
-#: app/src/ui/window.rs:1984
+#: app/src/ui/window.rs:1967
 msgid ""
 "Its downloaded mail and saved sign-in are deleted from this computer. "
 "Nothing changes in Gmail."
 msgstr ""
 
-#: app/src/ui/window.rs:2000
+#: app/src/ui/window.rs:1983
 msgid "Removed {account}"
 msgstr ""
 
-#: app/src/ui/window.rs:2002
+#: app/src/ui/window.rs:1985
 msgid "Could not remove {account}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:2151
+#: app/src/ui/window.rs:2134
 msgid "Add Account…"
 msgstr ""
 
-#: app/src/ui/window.rs:2152
+#: app/src/ui/window.rs:2135
 msgid "New Smart Mailbox…"
 msgstr ""
 
-#: app/src/ui/window.rs:2159 app/src/ui/window/shortcuts.rs:472
+#: app/src/ui/window.rs:2142 app/src/ui/window/shortcuts.rs:472
 msgid "Preferences"
 msgstr ""
 
-#: app/src/ui/window.rs:2160
+#: app/src/ui/window.rs:2143
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: app/src/ui/window.rs:2168 app/src/ui/window.rs:2170
+#: app/src/ui/window.rs:2151 app/src/ui/window.rs:2153
 msgid "Main Menu"
 msgstr ""
 
-#: app/src/ui/window.rs:2434
+#: app/src/ui/window.rs:2417
 msgid "Open a message from the person first"
 msgstr ""
 
-#: app/src/ui/window.rs:2521
+#: app/src/ui/window.rs:2504
 msgid "Penguin Mail shows the new language after a restart"
 msgstr ""
 
-#: app/src/ui/window.rs:2523 app/src/update/mod.rs:128
+#: app/src/ui/window.rs:2506 app/src/update/mod.rs:128
 msgid "Restart"
 msgstr ""
 

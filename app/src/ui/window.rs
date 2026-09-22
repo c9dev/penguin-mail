@@ -1741,19 +1741,14 @@ impl MainWindow {
                 .rev()
                 .find(|m| m.has_label(system_label::DRAFT))?
                 .clone();
-            let body = match open.bodies.get(&draft.id) {
-                Some(Ok(body)) => Some(body.clone()),
-                _ => None,
-            };
             Some((
                 open.account_id,
                 open.thread_id.clone(),
                 open.messages.len() > 1,
                 draft,
-                body,
             ))
         });
-        let Some((account_id, thread_id, in_thread, message, body)) = found else {
+        let Some((account_id, thread_id, in_thread, message)) = found else {
             return;
         };
         let Some(sync) = self.core.account(account_id) else {
@@ -1769,36 +1764,24 @@ impl MainWindow {
                 .ok()
                 .flatten();
             let mut draft = app.blank_draft(account_id);
-            draft.to = message.to.clone();
-            draft.cc = message.cc.clone();
-            draft.subject = message.subject.clone();
-            // The view may already show what was inside an encrypted draft,
-            // but only the message as Gmail holds it says so, and only its
-            // bytes carry the Bcc and the files that were inside.
+            // Only the message as Gmail holds it carries the Bcc, the reply
+            // headers and the bytes of the files, readable or encrypted.
+            // Opening without them would save a draft that had lost them.
             let (s, m) = (sync.clone(), message.id.clone());
-            let stored = this.core.call(async move { s.body(&m).await }).await.ok();
-            if stored
-                .as_ref()
-                .is_some_and(crate::protection::draft::is_encrypted)
-            {
-                let (s, m) = (sync.clone(), message.id.clone());
-                let raw = match this.core.call(async move { s.raw_message(&m).await }).await {
-                    Ok(raw) => raw,
-                    Err(err) => {
-                        return this.toast(&with_reason(
-                            &gettext("Could not open the draft: {reason}"),
-                            &err,
-                            &[],
-                        ));
-                    }
-                };
-                if let Err(problem) =
-                    crate::protection::draft::opened(&this.core, raw, &mut draft).await
-                {
-                    return this.toast(&problem);
+            let raw = match this.core.call(async move { s.raw_message(&m).await }).await {
+                Ok(raw) => raw,
+                Err(err) => {
+                    return this.toast(&with_reason(
+                        &gettext("Could not open the draft: {reason}"),
+                        &err,
+                        &[],
+                    ));
                 }
-            } else if let Some(body) = &body {
-                draft.take_body(body);
+            };
+            if let Err(problem) =
+                crate::protection::draft::reopened(&this.core, raw, &mut draft).await
+            {
+                return this.toast(&problem);
             }
             draft.thread_id = in_thread.then_some(thread_id);
             if let Some(id) = draft_id.clone() {

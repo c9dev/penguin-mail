@@ -416,24 +416,24 @@ msgstr[1] ""
 msgid "Send “{subject}” to {recipients} {when}?"
 msgstr "Enviar “{subject}” para {recipients} {when}?"
 
-#: app/src/assistant/run/mail.rs:338
+#: app/src/assistant/run/mail.rs:331
 msgid "this list"
 msgstr "esta lista"
 
-#: app/src/assistant/run/mail.rs:342
+#: app/src/assistant/run/mail.rs:335
 msgid "Penguin Mail asks the sender to take you off the list."
 msgstr "O Penguin Mail pede ao remetente que o retire da lista."
 
-#: app/src/assistant/run/mail.rs:346
+#: app/src/assistant/run/mail.rs:339
 msgid "Penguin Mail sends the list an unsubscribe request from your account."
 msgstr ""
 "O Penguin Mail envia à lista um pedido de cancelamento a partir da sua conta."
 
-#: app/src/assistant/run/mail.rs:350
+#: app/src/assistant/run/mail.rs:343
 msgid "The sender's unsubscribe page opens in your browser."
 msgstr "A página de cancelamento do remetente abre no seu navegador."
 
-#: app/src/assistant/run/mail.rs:354
+#: app/src/assistant/run/mail.rs:347
 msgid "Unsubscribe from {sender}?"
 msgstr "Cancelar a subscrição de {sender}?"
 
@@ -800,7 +800,7 @@ msgstr "(sem assunto)"
 msgid "From {senders}"
 msgstr "De {senders}"
 
-#: app/src/notify.rs:195 app/src/ui/window.rs:1874
+#: app/src/notify.rs:195 app/src/ui/window.rs:1857
 msgid "Open"
 msgstr "Abrir"
 
@@ -1063,11 +1063,11 @@ msgstr "{names} ou {last}"
 msgid "{names} and {last}"
 msgstr "{names} e {last}"
 
-#: app/src/protection/draft.rs:100 app/src/ui/composer/mod.rs:1399
+#: app/src/protection/draft.rs:95 app/src/ui/composer/mod.rs:1399
 msgid "Draft not saved: {reason}"
 msgstr "Rascunho não guardado: {reason}"
 
-#: app/src/protection/draft.rs:128
+#: app/src/protection/draft.rs:123
 msgid ""
 "Draft not saved. An encrypted message waits in Drafts encrypted to your own "
 "key, and this computer holds no key or certificate for {address}."
@@ -1076,13 +1076,9 @@ msgstr ""
 "encriptada para a sua própria chave, e este computador não tem chave nem "
 "certificado para {address}."
 
-#: app/src/protection/draft.rs:155 app/src/ui/window.rs:1789
+#: app/src/protection/draft.rs:156 app/src/ui/window.rs:1775
 msgid "Could not open the draft: {reason}"
 msgstr "Não foi possível abrir o rascunho: {reason}"
-
-#: app/src/protection/draft.rs:161
-msgid "It is encrypted in a way Penguin Mail does not read."
-msgstr "Está encriptado de uma forma que o Penguin Mail não lê."
 
 #: app/src/render.rs:82
 msgid "{count} message"
@@ -1636,7 +1632,7 @@ msgstr "Abrir o Penguin Mail"
 msgid "New Message"
 msgstr "Nova mensagem"
 
-#: app/src/tray.rs:136 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2150
+#: app/src/tray.rs:136 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2133
 msgid "Check for Mail"
 msgstr "Procurar correio"
 
@@ -1654,7 +1650,7 @@ msgstr "Novidades da versão {version}"
 msgid "Check for Updates"
 msgstr "Procurar atualizações"
 
-#: app/src/tray.rs:152 app/src/ui/window.rs:2162
+#: app/src/tray.rs:152 app/src/ui/window.rs:2145
 #: app/src/ui/window/shortcuts.rs:495
 msgid "Quit"
 msgstr "Sair"
@@ -1687,7 +1683,7 @@ msgstr "Comunicar um problema"
 msgid "License"
 msgstr "Licença"
 
-#: app/src/ui/about.rs:162 app/src/ui/window.rs:2161
+#: app/src/ui/about.rs:162 app/src/ui/window.rs:2144
 msgid "About Penguin Mail"
 msgstr "Acerca do Penguin Mail"
 
@@ -1877,7 +1873,7 @@ msgid "Edit {server}"
 msgstr "Editar {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1512
-#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:1987
+#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:1970
 msgid "Remove"
 msgstr "Remover"
 
@@ -3103,7 +3099,7 @@ msgstr "Não foi possível eliminar o endereço: {reason}"
 msgid "Allow Hide My Email"
 msgstr "Permitir Ocultar o meu e-mail"
 
-#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2243
+#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2226
 msgid "Add an account first"
 msgstr "Adicione primeiro uma conta"
 
@@ -3939,7 +3935,7 @@ msgstr "Assinatura…"
 msgid "Rules…"
 msgstr "Regras…"
 
-#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2153
+#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2136
 msgid "Hide My Email…"
 msgstr "Ocultar o meu e-mail…"
 
@@ -4280,7 +4276,7 @@ msgstr ""
 "Cloud, para que mais ninguém chegue ao seu correio. Cole o ID e o segredo do "
 "cliente para começar."
 
-#: app/src/ui/welcome.rs:97 app/src/ui/window.rs:1946
+#: app/src/ui/welcome.rs:97 app/src/ui/window.rs:1929
 msgid "Sign In with Google"
 msgstr "Iniciar sessão com a Google"
 
@@ -4562,41 +4558,41 @@ msgstr "Esta conta ainda não tem etiquetas."
 msgid "Could not include {file}: {reason}"
 msgstr "Não foi possível incluir {file}: {reason}"
 
-#: app/src/ui/window.rs:1850
+#: app/src/ui/window.rs:1833
 msgid "Downloading {file}…"
 msgstr "A transferir {file}…"
 
-#: app/src/ui/window.rs:1871 app/src/ui/window/attachments.rs:212
+#: app/src/ui/window.rs:1854 app/src/ui/window/attachments.rs:212
 #: app/src/ui/window/attachments.rs:378
 msgid "Saved {file} to Downloads"
 msgstr "{file} guardado nas transferências"
 
-#: app/src/ui/window.rs:1889 app/src/ui/window/attachments.rs:217
+#: app/src/ui/window.rs:1872 app/src/ui/window/attachments.rs:217
 #: app/src/ui/window/attachments.rs:383
 msgid "Could not save {file}: {reason}"
 msgstr "Não foi possível guardar {file}: {reason}"
 
-#: app/src/ui/window.rs:1905
+#: app/src/ui/window.rs:1888
 msgid "Could not save the settings: {reason}"
 msgstr "Não foi possível guardar as definições: {reason}"
 
-#: app/src/ui/window.rs:1928
+#: app/src/ui/window.rs:1911
 msgid "Waiting for Your Browser…"
 msgstr "À espera do seu navegador…"
 
-#: app/src/ui/window.rs:1930
+#: app/src/ui/window.rs:1913
 msgid "Continue in your browser"
 msgstr "Continue no seu navegador"
 
-#: app/src/ui/window.rs:1936
+#: app/src/ui/window.rs:1919
 msgid "Added {account}. Downloading mail…"
 msgstr "{account} adicionada. A transferir correio…"
 
-#: app/src/ui/window.rs:1980
+#: app/src/ui/window.rs:1963
 msgid "Remove {account}?"
 msgstr "Remover {account}?"
 
-#: app/src/ui/window.rs:1984
+#: app/src/ui/window.rs:1967
 msgid ""
 "Its downloaded mail and saved sign-in are deleted from this computer. "
 "Nothing changes in Gmail."
@@ -4604,43 +4600,43 @@ msgstr ""
 "O correio transferido e a sessão guardada são eliminados deste computador. "
 "Nada muda no Gmail."
 
-#: app/src/ui/window.rs:2000
+#: app/src/ui/window.rs:1983
 msgid "Removed {account}"
 msgstr "{account} removida"
 
-#: app/src/ui/window.rs:2002
+#: app/src/ui/window.rs:1985
 msgid "Could not remove {account}: {reason}"
 msgstr "Não foi possível remover {account}: {reason}"
 
-#: app/src/ui/window.rs:2151
+#: app/src/ui/window.rs:2134
 msgid "Add Account…"
 msgstr "Adicionar conta…"
 
-#: app/src/ui/window.rs:2152
+#: app/src/ui/window.rs:2135
 msgid "New Smart Mailbox…"
 msgstr "Nova caixa inteligente…"
 
-#: app/src/ui/window.rs:2159 app/src/ui/window/shortcuts.rs:472
+#: app/src/ui/window.rs:2142 app/src/ui/window/shortcuts.rs:472
 msgid "Preferences"
 msgstr "Preferências"
 
-#: app/src/ui/window.rs:2160
+#: app/src/ui/window.rs:2143
 msgid "Keyboard Shortcuts"
 msgstr "Atalhos de teclado"
 
-#: app/src/ui/window.rs:2168 app/src/ui/window.rs:2170
+#: app/src/ui/window.rs:2151 app/src/ui/window.rs:2153
 msgid "Main Menu"
 msgstr "Menu principal"
 
-#: app/src/ui/window.rs:2434
+#: app/src/ui/window.rs:2417
 msgid "Open a message from the person first"
 msgstr "Abra primeiro uma mensagem dessa pessoa"
 
-#: app/src/ui/window.rs:2521
+#: app/src/ui/window.rs:2504
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "O Penguin Mail mostra o novo idioma depois de reiniciar"
 
-#: app/src/ui/window.rs:2523 app/src/update/mod.rs:128
+#: app/src/ui/window.rs:2506 app/src/update/mod.rs:128
 msgid "Restart"
 msgstr "Reiniciar"
 
@@ -5720,6 +5716,9 @@ msgstr "Marcar como spam"
 #: sync/src/triage.rs:102
 msgid "Mark as not junk"
 msgstr "Marcar como não sendo spam"
+
+#~ msgid "It is encrypted in a way Penguin Mail does not read."
+#~ msgstr "Está encriptado de uma forma que o Penguin Mail não lê."
 
 #~ msgid ""
 #~ "Penguin Mail needs permission to change Gmail settings for {account}. "

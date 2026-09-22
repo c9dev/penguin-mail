@@ -234,18 +234,14 @@ impl<A: Accounts> Tools<A> {
             .find(|m| m.has_label(system_label::DRAFT))
             .cloned()
             .ok_or("That conversation holds no draft.")?;
+        // Sending rebuilds the message from the draft as Gmail holds it,
+        // which is the only copy of its Bcc, its reply headers and its files.
         let (s, id) = (Arc::clone(&sync), message.id.clone());
-        let body = self.call(async move { s.body(&id).await }).await?;
-        // Sending rebuilds the message from what the tools hold. They hold
-        // ciphertext for an encrypted draft, and would send it on readable
-        // or garbled, so the writer sends that one from the composer.
-        if crate::protection::draft::is_encrypted(&body) {
+        let raw = self.call(async move { s.raw_message(&id).await }).await?;
+        // An encrypted draft opens only with the writer's passphrase, so
+        // the writer sends that one from the composer.
+        if crate::protection::draft::standard_of(&raw).is_some() {
             return Err("That draft is encrypted, and the assistant cannot open it. Ask the user to open it and choose Send Later in the composer.".into());
-        }
-        // Sending rebuilds the message from what the tools hold, and they
-        // hold no attachment bytes, so a draft with files would lose them.
-        if !body.attachments.is_empty() {
-            return Err("That draft has attachments, which the assistant cannot carry over. Ask the user to open it and choose Send Later in the composer.".into());
         }
         let id = message.id.clone();
         let draft_id = self
@@ -253,10 +249,7 @@ impl<A: Accounts> Tools<A> {
             .await?
             .ok_or("Gmail no longer holds that draft.")?;
         let mut draft = self.effects.new_draft(account.id)?;
-        draft.to = message.to.clone();
-        draft.cc = message.cc.clone();
-        draft.subject = message.subject.clone();
-        draft.take_body(&body);
+        crate::protection::draft::reopen_plain(&raw, &mut draft);
         draft.thread_id = (found.len() > 1).then_some(thread_id);
         draft.draft_id = Some(draft_id);
         Ok(draft)
