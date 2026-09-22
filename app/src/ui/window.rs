@@ -15,7 +15,6 @@ use mailrs_domain::{
     Account, AccountId, AccountState, ChangeEvent, Label, MessageBody, Target, ThreadSummary,
     system_label,
 };
-use mailrs_store::{accounts, labels};
 use mailrs_sync::{History, Listing, MailAction, Permitted, Scope, TriageAction, View, outbox_id};
 
 use super::confirm::{Tone, confirm};
@@ -120,11 +119,9 @@ pub struct MainWindow {
     first_account: gtk::Button,
     mailbox: RefCell<Mailbox>,
     before_search: RefCell<Mailbox>,
-    accounts: RefCell<Vec<Account>>,
     /// What the thread list loads next, and which answers still count.
     feed: RefCell<ListFeed<(AccountId, String, Reveal)>>,
     authorizing: Cell<bool>,
-    labels: RefCell<HashMap<AccountId, Vec<Label>>>,
     assistant: Rc<super::assistant::AssistantPane>,
     assistant_split: adw::OverlaySplitView,
     categories: categories::CategoryBar,
@@ -513,10 +510,8 @@ impl MainWindow {
                 first_account,
                 mailbox: RefCell::new(Mailbox::Unified(system_label::INBOX)),
                 before_search: RefCell::new(Mailbox::Unified(system_label::INBOX)),
-                accounts: RefCell::new(Vec::new()),
                 feed: RefCell::new(ListFeed::default()),
                 authorizing: Cell::new(false),
-                labels: RefCell::new(HashMap::new()),
                 assistant,
                 assistant_split,
                 categories: categories::CategoryBar::new(app.settings().default_category),
@@ -570,8 +565,7 @@ impl MainWindow {
                 return Vec::new();
             };
             let mut names: Vec<String> = win
-                .labels
-                .borrow()
+                .labels()
                 .values()
                 .flatten()
                 .filter(|l| l.kind == mailrs_domain::LabelKind::User)
@@ -596,9 +590,8 @@ impl MainWindow {
         window.list.banner.connect_button_clicked(move |_| {
             let Some(win) = weak.upgrade() else { return };
             let email = win
-                .accounts
-                .borrow()
-                .iter()
+                .accounts()
+                .into_iter()
                 .find(|a| a.state == AccountState::NeedsReauth)
                 .map(|a| a.email.clone());
             win.authorize(email);
@@ -728,20 +721,12 @@ impl MainWindow {
     /// lists the mailbox again. A remote mailbox lists through Gmail, so
     /// only a change that can alter its rows is worth that.
     fn refresh_accounts(self: &Rc<Self>, reload: Reload) {
+        let Some(app) = self.app.upgrade() else {
+            return;
+        };
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let loaded = this
-                .core
-                .read(|c| {
-                    let mut out: Vec<(Account, Vec<Label>)> = Vec::new();
-                    for account in accounts::list_accounts(c)? {
-                        let account_labels = labels::list_labels(c, account.id)?;
-                        out.push((account, account_labels));
-                    }
-                    Ok(out)
-                })
-                .await;
-            let data = match loaded {
+            let data = match app.reload_accounts().await {
                 Ok(data) => data,
                 Err(err) => {
                     return this.toast(&fill(
@@ -750,8 +735,6 @@ impl MainWindow {
                     ));
                 }
             };
-            *this.accounts.borrow_mut() = data.iter().map(|(a, _)| a.clone()).collect();
-            *this.labels.borrow_mut() = data.iter().map(|(a, l)| (a.id, l.clone())).collect();
             let page = if !this.core.has_config() {
                 "setup"
             } else if data.is_empty() {
@@ -796,9 +779,6 @@ impl MainWindow {
                 }
                 None => this.list.banner.set_revealed(false),
             }
-            if let Some(app) = this.app.upgrade() {
-                app.remember_accounts(&this.accounts.borrow());
-            }
             this.follow_categories();
             this.refresh_counts();
             if reload == Reload::Yes {
@@ -838,7 +818,7 @@ impl MainWindow {
 
     /// The accounts a listing may read, in sidebar order.
     fn scope(&self) -> Scope {
-        Scope::over(self.accounts.borrow().clone())
+        Scope::over(self.accounts())
     }
 
     /// The settings that change what a mailbox lists.
@@ -863,7 +843,7 @@ impl MainWindow {
         }
         *self.mailbox.borrow_mut() = mailbox.clone();
         self.list
-            .set_show_accounts(mailbox.account().is_none() && self.accounts.borrow().len() > 1);
+            .set_show_accounts(mailbox.account().is_none() && self.accounts().len() > 1);
         self.list.set_title(&mailbox.title(), "");
         self.list.unselect();
         self.conversation.leave();
@@ -1023,12 +1003,9 @@ impl MainWindow {
     // ---- Opening threads -------------------------------------------------
 
     fn addresses_for(&self, account_id: AccountId) -> Vec<String> {
-        self.accounts
-            .borrow()
-            .iter()
-            .filter(|a| a.id == account_id)
-            .map(|a| a.email.clone())
-            .collect()
+        self.account(account_id)
+            .map(|a| vec![a.email])
+            .unwrap_or_default()
     }
 
     fn open_thread(self: &Rc<Self>, summary: ThreadSummary) {
@@ -1235,18 +1212,17 @@ impl MainWindow {
     /// The account a new message comes from: the one set in Preferences,
     /// else the account in view, else the first.
     fn default_account(&self) -> Option<AccountId> {
-        let preferred = self.settings().default_account;
+        let (preferred, accounts) = (self.settings().default_account, self.accounts());
         preferred
             .and_then(|email| {
-                self.accounts
-                    .borrow()
+                accounts
                     .iter()
                     .find(|a| a.email.eq_ignore_ascii_case(&email))
                     .map(|a| a.id)
             })
             .or_else(|| self.conversation.read(|o| o.account_id))
             .or_else(|| self.mailbox.borrow().account())
-            .or_else(|| self.accounts.borrow().first().map(|a| a.id))
+            .or_else(|| accounts.first().map(|a| a.id))
     }
 
     /// Applies `action` to the targets and keeps an undo for it. Actions that
@@ -1534,16 +1510,10 @@ impl MainWindow {
             return popover;
         };
         let mut labels: Vec<Label> = self
-            .labels
-            .borrow()
-            .get(&account_id)
-            .map(|all| {
-                all.iter()
-                    .filter(|l| l.kind == mailrs_domain::LabelKind::User)
-                    .cloned()
-                    .collect()
-            })
-            .unwrap_or_default();
+            .labels_of(account_id)
+            .into_iter()
+            .filter(|l| l.kind == mailrs_domain::LabelKind::User)
+            .collect();
         labels.sort_by_key(|l| l.name.to_lowercase());
         let create = gtk::Button::builder()
             .child(
@@ -1950,12 +1920,30 @@ impl MainWindow {
         });
     }
 
+    /// The accounts, as the app holds them.
+    fn accounts(&self) -> Vec<Account> {
+        self.app
+            .upgrade()
+            .map(|app| app.accounts())
+            .unwrap_or_default()
+    }
+
     fn account(&self, account_id: AccountId) -> Option<Account> {
-        self.accounts
-            .borrow()
-            .iter()
-            .find(|a| a.id == account_id)
-            .cloned()
+        self.app.upgrade()?.account(account_id)
+    }
+
+    fn labels(&self) -> HashMap<AccountId, Vec<Label>> {
+        self.app
+            .upgrade()
+            .map(|app| app.labels())
+            .unwrap_or_default()
+    }
+
+    fn labels_of(&self, account_id: AccountId) -> Vec<Label> {
+        self.app
+            .upgrade()
+            .map(|app| app.labels_of(account_id))
+            .unwrap_or_default()
     }
 
     fn confirm_remove(self: &Rc<Self>, account: Account) {
@@ -2293,7 +2281,6 @@ impl MainWindow {
                 this.search(query);
             }
             if let Ok(thread_id) = std::env::var("MAILRS_DEMO_OPEN") {
-                let rows = this.accounts.borrow().clone();
                 let finder = Rc::clone(&this);
                 glib::spawn_future_local(async move {
                     let key = thread_id.clone();
@@ -2308,7 +2295,6 @@ impl MainWindow {
                         })
                         .await;
                     if let Ok(Some(account_id)) = found {
-                        let _ = rows;
                         finder.list.select(account_id, &thread_id, None);
                         let replier = Rc::clone(&finder);
                         glib::timeout_add_local_once(
@@ -2359,17 +2345,12 @@ impl MainWindow {
         let Some(app) = self.app.upgrade() else {
             return;
         };
-        let accounts = self.accounts.borrow().clone();
+        let accounts = app.accounts();
         super::preferences::present(&app, &accounts, &self.window, signature_of.as_deref());
     }
 
     fn show_rules(self: &Rc<Self>, account: Account) {
-        let labels = self
-            .labels
-            .borrow()
-            .get(&account.id)
-            .cloned()
-            .unwrap_or_default();
+        let labels = self.labels_of(account.id);
         let (grant, email) = (Rc::downgrade(self), account.email.clone());
         super::rules::present(&self.core, &account, labels, &self.window, move || {
             if let Some(win) = grant.upgrade() {
@@ -2383,7 +2364,7 @@ impl MainWindow {
         let Some(app) = self.app.upgrade() else {
             return;
         };
-        let accounts = self.accounts.borrow().clone();
+        let accounts = app.accounts();
         super::preferences::present_page(&app, &accounts, &self.window, page);
     }
 

@@ -49,11 +49,11 @@ impl Desk for Ports {
     }
 
     fn accounts(&self) -> Vec<Account> {
-        self.0.accounts.borrow().clone()
+        self.0.accounts()
     }
 
     fn labels(&self) -> HashMap<AccountId, Vec<Label>> {
-        self.0.labels.borrow().clone()
+        self.0.labels()
     }
 
     fn view(&self) -> View {

@@ -7,7 +7,7 @@
 use std::rc::Rc;
 
 use anyhow::{anyhow, bail};
-use mailrs_domain::{Account, AccountId};
+use mailrs_domain::AccountId;
 use mailrs_sync::Permitted;
 use mailrs_sync::hidden::{self, HiddenAddress};
 
@@ -15,11 +15,6 @@ use super::App;
 use crate::settings::Change;
 
 impl App {
-    /// The accounts Penguin Mail has, for the dialog's account picker.
-    pub fn accounts(&self) -> Vec<Account> {
-        self.accounts.borrow().clone()
-    }
-
     pub fn hidden_addresses(&self) -> Vec<HiddenAddress> {
         self.settings.borrow().hidden_addresses.clone()
     }

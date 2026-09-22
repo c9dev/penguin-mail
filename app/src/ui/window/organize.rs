@@ -236,12 +236,10 @@ impl MainWindow {
     }
 
     fn label_name(&self, account_id: AccountId, label_id: &str) -> Option<String> {
-        self.labels
-            .borrow()
-            .get(&account_id)?
-            .iter()
+        self.labels_of(account_id)
+            .into_iter()
             .find(|l| l.id == label_id && l.kind == LabelKind::User)
-            .map(|l| l.name.clone())
+            .map(|l| l.name)
     }
 }
 

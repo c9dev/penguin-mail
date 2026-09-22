@@ -11,8 +11,8 @@ use std::sync::{Arc, Mutex};
 use adw::prelude::*;
 use gtk::{gio, glib};
 use ksni::TrayMethods;
-use mailrs_domain::{Account, AccountId, Address, ChangeEvent, system_label};
-use mailrs_store::{messages, threads};
+use mailrs_domain::{Account, AccountId, Address, ChangeEvent, Label, system_label};
+use mailrs_store::{accounts, labels, messages, threads};
 use mailrs_sync::History;
 
 use crate::compose::Draft;
@@ -43,7 +43,11 @@ pub struct App {
     pub core: Rc<Core>,
     window: RefCell<Option<Rc<MainWindow>>>,
     filter: RefCell<Option<webkit::UserContentFilter>>,
+    /// The accounts in the store, in the order the store lists them, and
+    /// each one's labels. The window's sidebar, list and dialogs all read
+    /// this one copy.
     accounts: RefCell<Vec<Account>>,
+    labels: RefCell<HashMap<AccountId, Vec<Label>>>,
     names: RefCell<HashMap<AccountId, String>>,
     tray: Arc<Mutex<Option<ksni::Handle<MailTray>>>>,
     /// What somebody picked on a new-mail notification.
@@ -104,6 +108,7 @@ impl App {
             window: RefCell::new(None),
             filter: RefCell::new(None),
             accounts: RefCell::new(Vec::new()),
+            labels: RefCell::new(HashMap::new()),
             names: RefCell::new(HashMap::new()),
             tray: Arc::new(Mutex::new(None)),
             chosen,
@@ -515,9 +520,57 @@ impl App {
         }
     }
 
-    pub fn remember_accounts(self: &Rc<Self>, accounts: &[Account]) {
-        *self.accounts.borrow_mut() = accounts.to_vec();
-        for account in accounts {
+    /// Every account, in the order the store lists them.
+    pub fn accounts(&self) -> Vec<Account> {
+        self.accounts.borrow().clone()
+    }
+
+    pub fn account(&self, account_id: AccountId) -> Option<Account> {
+        self.accounts
+            .borrow()
+            .iter()
+            .find(|a| a.id == account_id)
+            .cloned()
+    }
+
+    /// Every account's labels.
+    pub fn labels(&self) -> HashMap<AccountId, Vec<Label>> {
+        self.labels.borrow().clone()
+    }
+
+    /// One account's labels, system labels included.
+    pub fn labels_of(&self, account_id: AccountId) -> Vec<Label> {
+        self.labels
+            .borrow()
+            .get(&account_id)
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    /// Reads the accounts and their labels from the store and keeps them.
+    /// Hands back each account with its labels, for the sidebar.
+    pub async fn reload_accounts(self: &Rc<Self>) -> anyhow::Result<Vec<(Account, Vec<Label>)>> {
+        let loaded = self
+            .core
+            .read(|c| {
+                let mut out: Vec<(Account, Vec<Label>)> = Vec::new();
+                for account in accounts::list_accounts(c)? {
+                    let account_labels = labels::list_labels(c, account.id)?;
+                    out.push((account, account_labels));
+                }
+                Ok(out)
+            })
+            .await?;
+        *self.accounts.borrow_mut() = loaded.iter().map(|(a, _)| a.clone()).collect();
+        *self.labels.borrow_mut() = loaded.iter().map(|(a, l)| (a.id, l.clone())).collect();
+        self.remember_accounts();
+        Ok(loaded)
+    }
+
+    /// Asks each new account for its display name and every account for
+    /// the addresses it sends as, and updates the tray.
+    fn remember_accounts(self: &Rc<Self>) {
+        for account in self.accounts.borrow().iter() {
             if self.names.borrow().contains_key(&account.id) {
                 continue;
             }
@@ -542,10 +595,9 @@ impl App {
     fn load_accounts(self: &Rc<Self>) {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            if let Ok(accounts) = this.core.read(mailrs_store::accounts::list_accounts).await {
-                // Give the engine a moment to connect before asking for display names.
-                glib::timeout_future(std::time::Duration::from_millis(500)).await;
-                this.remember_accounts(&accounts);
+            // Give the engine a moment to connect before asking for display names.
+            glib::timeout_future(std::time::Duration::from_millis(500)).await;
+            if let Ok(loaded) = this.reload_accounts().await {
                 // Contacts were one switch for every account before, which
                 // only ever asked the first account for its permission. This
                 // turns that into each account's own, once, and asks every
@@ -553,7 +605,7 @@ impl App {
                 // The fold reads every address book as an effect of the
                 // change, asking for the permission where it is missing.
                 if this.settings.borrow().contacts {
-                    let emails = accounts.iter().map(|a| a.email.clone()).collect();
+                    let emails = loaded.iter().map(|(a, _)| a.email.clone()).collect();
                     this.change_settings(Change::AllContacts(emails));
                 } else {
                     this.refresh_contacts(false);

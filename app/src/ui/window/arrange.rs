@@ -65,12 +65,7 @@ impl MainWindow {
                 .into_iter()
                 .find(|m| m.id == id)
         });
-        let accounts: Vec<String> = self
-            .accounts
-            .borrow()
-            .iter()
-            .map(|a| a.email.clone())
-            .collect();
+        let accounts: Vec<String> = self.accounts().into_iter().map(|a| a.email).collect();
         let weak = Rc::downgrade(self);
         super::super::smart_editor::present(&self.window, existing, accounts, move |mailbox| {
             let (Some(win), Some(app)) =
@@ -161,12 +156,7 @@ impl MainWindow {
     }
 
     pub(super) fn move_account(self: &Rc<Self>, account: Account, step: isize) {
-        let emails: Vec<String> = self
-            .accounts
-            .borrow()
-            .iter()
-            .map(|a| a.email.clone())
-            .collect();
+        let emails: Vec<String> = self.accounts().into_iter().map(|a| a.email).collect();
         if let Some(app) = self.app.upgrade() {
             app.change_settings(Change::MoveAccount {
                 emails,
