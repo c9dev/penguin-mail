@@ -205,14 +205,16 @@ fn render_body(html: &mut String, view: &MessageView) {
         }
         BodyState::Loaded(body) => {
             if let Some(source) = body.html.as_deref().filter(|h| !h.trim().is_empty()) {
+                let clean = match view.sanitized {
+                    Some(clean) => clean.to_string(),
+                    None => sanitize_html(source, view.inline_images),
+                };
                 let _ = write!(
                     html,
-                    "<div class=\"body html\"><template shadowrootmode=\"open\"><style>{HTML_BODY_CSS}</style>\
-                     <div class=\"root\">{}</div></template></div>",
-                    match view.sanitized {
-                        Some(clean) => clean.to_string(),
-                        None => sanitize_html(source, view.inline_images),
-                    }
+                    "<div class=\"body html{plain}\"><template shadowrootmode=\"open\"><style>{HTML_BODY_CSS}</style>\
+                     <div class=\"root\">{clean}</div></template></div>",
+                    clean = clean,
+                    plain = if paints_itself(&clean) { "" } else { " plain" },
                 );
             } else {
                 let _ = write!(
@@ -224,6 +226,18 @@ fn render_body(html: &mut String, view: &MessageView) {
             render_attachments(html, &view.meta.id, body, view.thumbnails);
         }
     }
+}
+
+/// Whether a message's HTML chooses its own colours. Mail that does is
+/// written for a white page: a newsletter's white boxes and dark text
+/// only read against it. Mail that does not, which is most of what a
+/// person writes, takes the window's own colours instead of sitting in a
+/// white slab in a dark window.
+fn paints_itself(html: &str) -> bool {
+    let lower = html.to_ascii_lowercase();
+    ["bgcolor=", "background", "color:", "color=", "<table"]
+        .iter()
+        .any(|mark| lower.contains(mark))
 }
 
 /// The recipients line, and under it everything the headers say about
@@ -556,13 +570,17 @@ pub fn escape(s: &str) -> String {
 /// Styles for an HTML body inside its shadow root. Most email HTML assumes
 /// dark text on white, so the body keeps that in both themes.
 const HTML_BODY_CSS: &str = ":host{all:initial;display:block;contain:content}\
+:host(.plain) .root{color:var(--fg)}:host(.plain) a{color:var(--accent)}\
 .root{font:14px/1.5 -apple-system,\"Adwaita Sans\",Cantarell,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif;\
 color:#1d1d20;overflow-wrap:anywhere;overflow-x:auto}\
 img{max-width:100% !important;height:auto !important}\
 table{max-width:100% !important}td,th{overflow-wrap:anywhere}a{color:#1c71d8}";
 
 fn page_css(theme: &Theme) -> String {
-    let (bg, fg, dim, card, line, hover) = if theme.dark {
+    // A message sits on a surface a step away from the page: lighter in a
+    // dark window, darker in a light one, so an open message reads as a
+    // sheet rather than as more page.
+    let (bg, fg, dim, card, line, hover, surface) = if theme.dark {
         (
             "#222226",
             "#ffffff",
@@ -570,6 +588,7 @@ fn page_css(theme: &Theme) -> String {
             "rgba(255,255,255,0.08)",
             "rgba(255,255,255,0.09)",
             "rgba(255,255,255,0.04)",
+            "#2b2b30",
         )
     } else {
         (
@@ -579,10 +598,11 @@ fn page_css(theme: &Theme) -> String {
             "rgba(0,0,6,0.05)",
             "rgba(0,0,6,0.08)",
             "rgba(0,0,6,0.03)",
+            "#f4f4f6",
         )
     };
     format!(
-        ":root{{color-scheme:{scheme};--bg:{bg};--fg:{fg};--dim:{dim};--card:{card};--line:{line};--hover:{hover};--accent:{accent}}}\
+        ":root{{color-scheme:{scheme};--bg:{bg};--fg:{fg};--dim:{dim};--card:{card};--line:{line};--hover:{hover};--surface:{surface};--accent:{accent}}}\
 html{{background:var(--bg)}}\
 body{{margin:0 auto;max-width:980px;padding:28px 36px 64px;color:var(--fg);\
 font:15px/1.5 \"Adwaita Sans\",Cantarell,system-ui,sans-serif;-webkit-font-smoothing:antialiased}}\
@@ -627,7 +647,10 @@ opacity 180ms cubic-bezier(0.23,1,0.32,1)}}\
 @media (prefers-reduced-motion:reduce){{.message.folding .fold,.message{{transition:none}}}}\
 .body{{margin:16px 0 4px 52px}}\
 .text{{white-space:pre-wrap;overflow-wrap:anywhere}}\
-.html{{background:#fff;border-radius:12px;padding:14px;border:1px solid var(--line);overflow:hidden;margin-left:0}}\
+.body.text,.body.status,.html{{background:var(--surface);border-radius:12px;padding:14px;\
+border:1px solid var(--line);overflow:hidden;margin-left:0}}\
+.html{{background:#fff}}\
+.html.plain{{background:var(--surface)}}\
 .status{{color:var(--dim);font-style:italic}}\
 blockquote.quote{{margin:6px 0;padding:0 0 0 12px;border-left:3px solid color-mix(in srgb,var(--accent) 45%,transparent);color:var(--dim)}}\
 .signature{{color:var(--dim)}}\
@@ -756,6 +779,47 @@ mod tests {
             }],
         );
         std::fs::write(path, html).expect("the page is written");
+    }
+
+    #[test]
+    fn mail_that_picks_no_colours_takes_the_window_s_own() {
+        let plain = meta("m1", "Kites", &[]);
+        let body = MessageBody {
+            html: Some("<div dir=\"ltr\">Hello,<br><br>Monday works.</div>".into()),
+            ..Default::default()
+        };
+        let images = HashMap::new();
+        let no_thumbs = HashMap::new();
+        let view = |body: &'static MessageBody, meta: &'static MessageMeta| MessageView {
+            meta,
+            body: BodyState::Loaded(body),
+            expanded: true,
+            inline_images: &images,
+            thumbnails: &no_thumbs,
+            sanitized: None,
+        };
+        let html = page(
+            "Kites",
+            vec![view(Box::leak(Box::new(body)), Box::leak(Box::new(plain)))],
+        );
+        assert!(html.contains("body html plain"), "{html}");
+
+        let painted = meta("m2", "Sale", &[]);
+        let loud = MessageBody {
+            html: Some("<table bgcolor=\"#ffffff\"><tr><td>Sale</td></tr></table>".into()),
+            ..Default::default()
+        };
+        let html = page(
+            "Sale",
+            vec![view(
+                Box::leak(Box::new(loud)),
+                Box::leak(Box::new(painted)),
+            )],
+        );
+        assert!(
+            html.contains("body html\""),
+            "a newsletter keeps its white page: {html}"
+        );
     }
 
     #[test]

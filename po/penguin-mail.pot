@@ -881,7 +881,7 @@ msgstr ""
 msgid "“{address}” is not an email address."
 msgstr ""
 
-#: app/src/compose.rs:689
+#: app/src/compose.rs:697
 msgid "On {date}, {sender} wrote:"
 msgstr ""
 
@@ -1424,94 +1424,94 @@ msgstr ""
 msgid "This message could not be loaded: {reason}"
 msgstr ""
 
-#: app/src/render.rs:237
+#: app/src/render.rs:251
 msgid "to {recipients}"
 msgstr ""
 
-#: app/src/render.rs:259
+#: app/src/render.rs:273
 msgid "from"
 msgstr ""
 
-#: app/src/render.rs:270
+#: app/src/render.rs:284
 msgid "to"
 msgstr ""
 
-#: app/src/render.rs:272
+#: app/src/render.rs:286
 msgid "cc"
 msgstr ""
 
-#: app/src/render.rs:274
+#: app/src/render.rs:288
 msgid "date"
 msgstr ""
 
-#: app/src/render.rs:275
+#: app/src/render.rs:289
 msgid "subject"
 msgstr ""
 
-#: app/src/render.rs:277
+#: app/src/render.rs:291
 msgid "mailed-by"
 msgstr ""
 
-#: app/src/render.rs:280
+#: app/src/render.rs:294
 msgid "signed-by"
 msgstr ""
 
-#: app/src/render.rs:284
+#: app/src/render.rs:298
 msgid "security"
 msgstr ""
 
-#: app/src/render.rs:286
+#: app/src/render.rs:300
 msgid "Standard encryption (TLS)"
 msgstr ""
 
-#: app/src/render.rs:291
+#: app/src/render.rs:305
 msgid "Not encrypted in transit"
 msgstr ""
 
-#: app/src/render.rs:328 app/src/ui/composer/mod.rs:1407
+#: app/src/render.rs:342 app/src/ui/composer/mod.rs:1407
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/render.rs:360
+#: app/src/render.rs:374
 msgid "Quick Look"
 msgstr ""
 
-#: app/src/render.rs:361 app/src/ui/window/attachments.rs:301
+#: app/src/render.rs:375 app/src/ui/window/attachments.rs:301
 #: app/src/ui/window/attachments.rs:307
 msgid "Save to Downloads"
 msgstr ""
 
-#: app/src/render.rs:363
+#: app/src/render.rs:377
 msgid "Open {file}, {size}"
 msgstr ""
 
-#: app/src/render.rs:370
+#: app/src/render.rs:384
 msgid "Save {file} to Downloads"
 msgstr ""
 
-#: app/src/render.rs:377
+#: app/src/render.rs:391
 msgid "Save All ({count})"
 msgid_plural "Save All ({count})"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/render.rs:388
+#: app/src/render.rs:402
 msgid "Save every attachment to a folder"
 msgstr ""
 
-#: app/src/render.rs:452
+#: app/src/render.rs:466
 msgid "undisclosed recipients"
 msgstr ""
 
-#: app/src/render.rs:455
+#: app/src/render.rs:469
 msgid "{named}, and {count} other"
 msgid_plural "{named}, and {count} others"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/render.rs:468
+#: app/src/render.rs:482
 msgid "me"
 msgstr ""
 

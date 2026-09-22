@@ -90,7 +90,9 @@ async fn ask(config: ProviderConfig, question: String) -> Option<Plan> {
 fn read_plan(reply: &str) -> Option<Plan> {
     let said: serde_json::Value = serde_json::from_str(reply.trim()).ok()?;
     let object = said.as_object()?;
-    if object.contains_key("unsure") || !object.contains_key("form") || !object.contains_key("press")
+    if object.contains_key("unsure")
+        || !object.contains_key("form")
+        || !object.contains_key("press")
     {
         return None;
     }

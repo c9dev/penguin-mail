@@ -5,6 +5,15 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Fixed
+
+- A message the assistant writes puts your signature under the words,
+  not above them, with a blank line before it.
+- A message that sets no colours of its own is drawn in the window's
+  colours instead of on a white sheet, which in a dark window meant a
+  bright slab. Mail that picks its own colours, such as a newsletter,
+  keeps its white page.
+
 ### Improved
 
 - A message in a conversation slides open and shut instead of appearing

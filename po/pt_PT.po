@@ -924,7 +924,7 @@ msgstr "Adicione pelo menos um destinatário."
 msgid "“{address}” is not an email address."
 msgstr "“{address}” não é um endereço de e-mail."
 
-#: app/src/compose.rs:689
+#: app/src/compose.rs:697
 msgid "On {date}, {sender} wrote:"
 msgstr "A {date}, {sender} escreveu:"
 
@@ -1499,94 +1499,94 @@ msgstr "A carregar…"
 msgid "This message could not be loaded: {reason}"
 msgstr "Não foi possível carregar esta mensagem: {reason}"
 
-#: app/src/render.rs:237
+#: app/src/render.rs:251
 msgid "to {recipients}"
 msgstr "para {recipients}"
 
-#: app/src/render.rs:259
+#: app/src/render.rs:273
 msgid "from"
 msgstr "de"
 
-#: app/src/render.rs:270
+#: app/src/render.rs:284
 msgid "to"
 msgstr "para"
 
-#: app/src/render.rs:272
+#: app/src/render.rs:286
 msgid "cc"
 msgstr "cc"
 
-#: app/src/render.rs:274
+#: app/src/render.rs:288
 msgid "date"
 msgstr "data"
 
-#: app/src/render.rs:275
+#: app/src/render.rs:289
 msgid "subject"
 msgstr "assunto"
 
-#: app/src/render.rs:277
+#: app/src/render.rs:291
 msgid "mailed-by"
 msgstr "enviada por"
 
-#: app/src/render.rs:280
+#: app/src/render.rs:294
 msgid "signed-by"
 msgstr "assinada por"
 
-#: app/src/render.rs:284
+#: app/src/render.rs:298
 msgid "security"
 msgstr "segurança"
 
-#: app/src/render.rs:286
+#: app/src/render.rs:300
 msgid "Standard encryption (TLS)"
 msgstr "Encriptação padrão (TLS)"
 
-#: app/src/render.rs:291
+#: app/src/render.rs:305
 msgid "Not encrypted in transit"
 msgstr "Sem encriptação em trânsito"
 
-#: app/src/render.rs:328 app/src/ui/composer/mod.rs:1407
+#: app/src/render.rs:342 app/src/ui/composer/mod.rs:1407
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} anexo"
 msgstr[1] "{count} anexos"
 
-#: app/src/render.rs:360
+#: app/src/render.rs:374
 msgid "Quick Look"
 msgstr "Vista rápida"
 
-#: app/src/render.rs:361 app/src/ui/window/attachments.rs:301
+#: app/src/render.rs:375 app/src/ui/window/attachments.rs:301
 #: app/src/ui/window/attachments.rs:307
 msgid "Save to Downloads"
 msgstr "Guardar nas transferências"
 
-#: app/src/render.rs:363
+#: app/src/render.rs:377
 msgid "Open {file}, {size}"
 msgstr "Abrir {file}, {size}"
 
-#: app/src/render.rs:370
+#: app/src/render.rs:384
 msgid "Save {file} to Downloads"
 msgstr "Guardar {file} nas transferências"
 
-#: app/src/render.rs:377
+#: app/src/render.rs:391
 msgid "Save All ({count})"
 msgid_plural "Save All ({count})"
 msgstr[0] "Guardar tudo ({count})"
 msgstr[1] "Guardar tudo ({count})"
 
-#: app/src/render.rs:388
+#: app/src/render.rs:402
 msgid "Save every attachment to a folder"
 msgstr "Guardar todos os anexos numa pasta"
 
-#: app/src/render.rs:452
+#: app/src/render.rs:466
 msgid "undisclosed recipients"
 msgstr "destinatários não revelados"
 
-#: app/src/render.rs:455
+#: app/src/render.rs:469
 msgid "{named}, and {count} other"
 msgid_plural "{named}, and {count} others"
 msgstr[0] "{named} e mais {count}"
 msgstr[1] "{named} e mais {count}"
 
-#: app/src/render.rs:468
+#: app/src/render.rs:482
 msgid "me"
 msgstr "eu"
 

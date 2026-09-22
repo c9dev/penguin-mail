@@ -667,14 +667,22 @@ fn references(original: &MessageMeta, thread: &[MessageMeta]) -> Vec<String> {
     ids
 }
 
-/// Puts `signature` below where the user writes: first in a new message,
-/// and above the quote in a reply.
+/// Puts `signature` below what is written and above the quote: at the top
+/// of an empty new message, under the words in a message that already has
+/// them, and before the quoted original in a reply.
 pub fn with_signature(markdown: &str, signature: &str) -> String {
     let signature = signature.trim_end();
     if signature.trim().is_empty() {
         return markdown.to_string();
     }
-    format!("\n\n-- \n{signature}{markdown}")
+    let at = quote_starts_at(markdown).unwrap_or(markdown.len());
+    let (written, quoted) = markdown.split_at(at);
+    let written = written.trim_end();
+    let block = signature_block(signature);
+    match quoted.is_empty() {
+        true => format!("{written}{block}"),
+        false => format!("{written}{block}\n\n{quoted}"),
+    }
 }
 
 /// The block [`with_signature`] adds, so it can be found again.
@@ -1858,11 +1866,21 @@ mod tests {
     }
 
     #[test]
-    fn signatures_sit_above_the_quote() {
+    fn signatures_sit_under_the_words_and_above_the_quote() {
         assert_eq!(with_signature("", "Dana\n"), "\n\n-- \nDana");
         assert_eq!(
             with_signature("\n\nOn Monday, Ann wrote:\n> hi", "Dana"),
             "\n\n-- \nDana\n\nOn Monday, Ann wrote:\n> hi"
+        );
+        // A message someone or something already wrote keeps its words
+        // first, which is where the assistant's drafts arrive.
+        assert_eq!(
+            with_signature("Hello,\n\nMonday works.", "Dana"),
+            "Hello,\n\nMonday works.\n\n-- \nDana"
+        );
+        assert_eq!(
+            with_signature("Monday works.\n\nOn Monday, Ann wrote:\n> hi", "Dana"),
+            "Monday works.\n\n-- \nDana\n\nOn Monday, Ann wrote:\n> hi"
         );
         assert_eq!(with_signature("body", "  "), "body");
     }
