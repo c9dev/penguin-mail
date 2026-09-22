@@ -1,25 +1,22 @@
 //! Sample mail for `penguin-mail --demo`: three accounts and a few weeks of
 //! conversations. Every address uses a reserved `.example` domain.
 //!
-//! Each account gets a `FakeGmail` holding this mail, and the same mail goes
-//! straight into a throwaway store so the demo opens on a full inbox instead
-//! of syncing one. From there the demo runs the same code as a real account.
+//! Each account gets a `FakeGmail` holding this mail, and sync's own first
+//! sync against it fills a throwaway store, so the demo opens on a full
+//! inbox that holds what a real account's store would. From there the demo
+//! runs the same code as a real account.
 
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use mailrs_domain::{
-    AccountId, AccountState, Address, Attachment, EpochMillis, Label, LabelKind, MessageBody,
-    MessageMeta, system_label,
+    AccountId, Address, Attachment, EpochMillis, MessageBody, MessageMeta, Provenance,
 };
 use mailrs_gmail::{LabelColor, RemoteLabel, SendAs};
-use mailrs_store::{Result, accounts, address_book, bodies, invitations, labels, messages};
-use mailrs_sync::fake::FakeGmail;
+use mailrs_store::{Db, Result, accounts, address_book, invitations};
+use mailrs_sync::fake::{FakeGmail, fill_store};
+use mailrs_sync::{AccountSync, SyncError};
 use rusqlite::Connection;
-
-/// The history cursor the demo starts on, in both the store and the fake, so
-/// the first sync finds nothing to replay.
-const HISTORY_ID: u64 = 1;
 
 /// The id of the draft behind the sample draft message, as Gmail would hold it.
 const DRAFT_ID: &str = "demo-draft";
@@ -31,14 +28,68 @@ const INVITE_UID: &str = "7f3k2q9demo1invite@google.com";
 /// of it, so opening the update says what changed.
 const MOVED_UID: &str = "2b8h5x0demo2moved@google.com";
 
-pub const ACCOUNTS: [&str; 3] = [
-    "dana.reyes@example.com",
-    "dana@fernwood.example",
-    "d.reyes@uni.example",
-];
 pub const DISPLAY_NAME: &str = "Dana Reyes";
 
+/// One demo account and what its Gmail holds beside the mail.
+struct SampleAccount {
+    email: &'static str,
+    /// User labels, each an id, a name, and the colour Gmail shows it in.
+    labels: &'static [(&'static str, &'static str, Option<&'static str>)],
+    /// Addresses the account sends as beyond its own, as a Gmail account
+    /// with verified aliases does.
+    aliases: &'static [Alias],
+}
+
+struct Alias {
+    email: &'static str,
+    name: &'static str,
+    signature: &'static str,
+    /// Whether the owner confirmed the address. One still waiting is left
+    /// out of the From row.
+    confirmed: bool,
+}
+
+const ACCOUNTS: [SampleAccount; 3] = [
+    SampleAccount {
+        email: "dana.reyes@example.com",
+        labels: &[],
+        aliases: &[],
+    },
+    SampleAccount {
+        email: "dana@fernwood.example",
+        labels: &[
+            ("Label_clients", "Clients", Some("#4a86e8")),
+            ("Label_clients_mf", "Clients/Maple & Finch", None),
+            ("Label_travel", "Travel", Some("#16a766")),
+        ],
+        // Two addresses, so the demo shows the From row doing its job.
+        aliases: &[
+            Alias {
+                email: "hello@fernwood.example",
+                name: "Fernwood Studio",
+                signature: "<p>Fernwood Studio<br>hello@fernwood.example</p>",
+                confirmed: true,
+            },
+            Alias {
+                email: "press@fernwood.example",
+                name: "Fernwood Press",
+                signature: "",
+                confirmed: false,
+            },
+        ],
+    },
+    SampleAccount {
+        email: "d.reyes@uni.example",
+        labels: &[],
+        aliases: &[],
+    },
+];
+
+/// The system labels every demo account lists.
+const SYSTEM_LABELS: [&str; 6] = ["INBOX", "SENT", "DRAFT", "STARRED", "UNREAD", "IMPORTANT"];
+
 struct Sample {
+    /// Whose mailbox holds it: an index into [`ACCOUNTS`].
     account: usize,
     thread: &'static str,
     id: &'static str,
@@ -50,7 +101,53 @@ struct Sample {
     text: &'static str,
     html: Option<&'static str>,
     attachments: &'static [(&'static str, &'static str, i64)],
+    /// The List-Unsubscribe header a mailing list puts on its mail.
+    unsubscribe: Option<&'static str>,
+    /// Whether the message reached this computer unencrypted, which the
+    /// details panel warns about.
+    in_the_clear: bool,
+    /// The calendar event the message carries.
+    invitation: Option<Invite>,
+    /// The id Gmail keeps the draft under, for a message that is a draft.
+    draft: Option<&'static str>,
 }
+
+/// A calendar invitation inside a sample.
+struct Invite {
+    uid: &'static str,
+    /// The iCalendar part, written around the time the demo starts.
+    ics: fn(EpochMillis) -> String,
+    /// The version of the meeting this one updates, which the demo has
+    /// already seen.
+    replaces: Option<Older>,
+}
+
+/// An earlier version of a meeting, remembered as if the demo had opened
+/// its invitation last week. The card then says the meeting moved, and
+/// from when.
+struct Older {
+    message_id: &'static str,
+    starts: fn(EpochMillis) -> chrono::DateTime<chrono::Local>,
+}
+
+/// What a sample is unless it says otherwise.
+const PLAIN: Sample = Sample {
+    account: 0,
+    thread: "",
+    id: "",
+    from: ME,
+    to: &[],
+    subject: "",
+    minutes_ago: 0,
+    labels: &[],
+    text: "",
+    html: None,
+    attachments: &[],
+    unsubscribe: None,
+    in_the_clear: false,
+    invitation: None,
+    draft: None,
+};
 
 const ME: (&str, &str) = ("", "");
 
@@ -69,8 +166,8 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 26 * HOUR,
             labels: &["INBOX"],
             text: "Hi both,\n\nI've put the Q4 roadmap draft in the shared folder. The big open question is whether the offline editor ships in October or slips to November.\n\nCould you each leave comments by Thursday? I'd like to walk the leadership team through it on Friday.\n\nThanks,\nPriya",
-            html: None,
             attachments: &[("q4-roadmap.pdf", "application/pdf", 1_842_000)],
+            ..PLAIN
         },
         Sample {
             account: 1,
@@ -82,8 +179,7 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 20 * HOUR,
             labels: &["INBOX"],
             text: "Left my comments. Short version: October is possible if we cut sync conflict resolution down to last-write-wins for the first release.\n\n> Could you each leave comments by Thursday?\n\nJonas",
-            html: None,
-            attachments: &[],
+            ..PLAIN
         },
         Sample {
             account: 1,
@@ -95,8 +191,7 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 38,
             labels: &["INBOX", "UNREAD", "IMPORTANT"],
             text: "Dana, can you sanity-check Jonas's estimate before Friday? If last-write-wins is acceptable to support, I'm happy to commit to October.\n\nOn Tue, Jonas Weber wrote:\n> October is possible if we cut sync conflict resolution down to\n> last-write-wins for the first release.\n\n-- \nPriya Raman\nHead of Product, Fernwood",
-            html: None,
-            attachments: &[],
+            ..PLAIN
         },
         Sample {
             account: 0,
@@ -108,8 +203,7 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 3 * HOUR,
             labels: &["INBOX"],
             text: "Weather looks perfect for Saturday. I was thinking the ridge loop from the north trailhead, about 14 km. Leave at 8, back by 3?\n\nTheo might join if he can get the car.",
-            html: None,
-            attachments: &[],
+            ..PLAIN
         },
         Sample {
             account: 0,
@@ -121,8 +215,7 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 2 * HOUR + 40,
             labels: &["SENT"],
             text: "Yes! Count me in. I'll bring lunch for three just in case.\n\n> Leave at 8, back by 3?\n\nPerfect.",
-            html: None,
-            attachments: &[],
+            ..PLAIN
         },
         Sample {
             account: 0,
@@ -134,8 +227,7 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 12,
             labels: &["INBOX", "UNREAD"],
             text: "Theo's in. Meet at mine at 7:45 and we'll drive up together. Bring layers, it'll be cold at the top.",
-            html: None,
-            attachments: &[],
+            ..PLAIN
         },
         Sample {
             account: 2,
@@ -147,8 +239,7 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 95,
             labels: &["INBOX", "UNREAD"],
             text: "Dear Dana,\n\nI've read chapter 3. The methodology section is much stronger than the last draft. Two things before you move on:\n\n1. The sampling rationale in 3.2 needs a sentence on why you excluded the pilot cohort.\n2. Figure 3.4 is doing a lot of work; consider splitting it into two panels.\n\nHappy to talk it through on Wednesday at 2pm if that suits.\n\nBest,\nKemi",
-            html: None,
-            attachments: &[],
+            ..PLAIN
         },
         Sample {
             account: 0,
@@ -163,7 +254,7 @@ fn samples() -> Vec<Sample> {
             html: Some(
                 r#"<table width="100%" cellpadding="0" cellspacing="0" style="font-family:Helvetica,Arial,sans-serif;background:#f4f1ec"><tr><td align="center" style="padding:28px 12px"><table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:14px"><tr><td style="padding:26px 32px 8px;font-size:13px;letter-spacing:.12em;color:#2f6b4f;font-weight:bold">JUNIPER BANK <img src="https://juniper.example/logo.png" width="18" height="18" alt=""></td></tr><tr><td style="padding:4px 32px 0;font-size:24px;font-weight:bold;color:#1d1d1f">Your September statement is ready</td></tr><tr><td style="padding:14px 32px;font-size:15px;line-height:1.55;color:#444">Hi Dana, your statement for the account ending 4821 is now available in online banking.</td></tr><tr><td style="padding:6px 32px 20px"><table width="100%" style="font-size:14px;color:#1d1d1f;border-top:1px solid #eee"><tr><td style="padding:10px 0">Opening balance</td><td align="right">$3,412.08</td></tr><tr><td style="padding:10px 0;border-top:1px solid #eee">Money in</td><td align="right" style="border-top:1px solid #eee;color:#2f6b4f">+$4,950.00</td></tr><tr><td style="padding:10px 0;border-top:1px solid #eee">Money out</td><td align="right" style="border-top:1px solid #eee">−$3,877.41</td></tr><tr><td style="padding:10px 0;border-top:1px solid #eee;font-weight:bold">Closing balance</td><td align="right" style="border-top:1px solid #eee;font-weight:bold">$4,484.67</td></tr></table></td></tr><tr><td style="padding:0 32px 30px"><a href="https://juniper.example/statements" style="display:inline-block;background:#2f6b4f;color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:bold;font-size:14px">View statement</a></td></tr></table><p style="font-size:12px;color:#8a8a8a;margin:18px 0 0">Juniper Bank will never ask for your password by email.</p></td></tr></table>"#,
             ),
-            attachments: &[],
+            ..PLAIN
         },
         Sample {
             account: 0,
@@ -175,11 +266,11 @@ fn samples() -> Vec<Sample> {
             minutes_ago: DAY + 3 * HOUR,
             labels: &["INBOX", "STARRED"],
             text: "Finally got these off the camera. The one of the dock at sunrise might be the best photo I've taken all year.\n\nFull album: https://photos.example.net/lake-2026",
-            html: None,
             attachments: &[
                 ("dock-sunrise.jpg", "image/jpeg", 2_480_000),
                 ("ridge.jpg", "image/jpeg", 3_120_000),
             ],
+            ..PLAIN
         },
         Sample {
             account: 1,
@@ -191,8 +282,7 @@ fn samples() -> Vec<Sample> {
             minutes_ago: DAY + 6 * HOUR,
             labels: &["INBOX"],
             text: "Notes from today's crit:\n\n- Onboarding: people missed the skip link. Make it a real button.\n- Settings: group the sync options under one heading.\n- Empty states: everyone loved the illustrations. Keep them.\n\nI'll turn these into tickets tomorrow.",
-            html: None,
-            attachments: &[],
+            ..PLAIN
         },
         Sample {
             account: 0,
@@ -207,7 +297,7 @@ fn samples() -> Vec<Sample> {
             html: Some(
                 r#"<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#222"><div style="font-size:20px;font-weight:bold;color:#d9480f">Packet Post</div><h2 style="margin:18px 0 6px;font-size:22px">Arriving today</h2><p style="font-size:15px;color:#444;margin:0 0 18px">Your parcel from Linden Books is out for delivery between <b>10:00 and 14:00</b>.</p><div style="background:#fff4e6;border-radius:10px;padding:14px 16px;font-size:14px">Tracking number <b>PP 4417 2290 118</b></div><p style="font-size:12px;color:#888;margin-top:22px">You're receiving this because you placed an order with a Packet Post partner.</p></div>"#,
             ),
-            attachments: &[],
+            ..PLAIN
         },
         Sample {
             account: 1,
@@ -219,12 +309,12 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 3 * DAY + 4 * HOUR,
             labels: &["INBOX", "STARRED", "Label_clients", "Label_clients_mf"],
             text: "Hi Dana,\n\nAttached is v3 with the changes from legal. The only substantive edit is the payment schedule in section 4, now net 30 instead of net 45.\n\nIf you're happy, I'll send it to Maple & Finch for signature on Monday.\n\nInês",
-            html: None,
             attachments: &[(
                 "fernwood-maple-finch-v3.docx",
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 86_400,
             )],
+            ..PLAIN
         },
         Sample {
             account: 0,
@@ -236,8 +326,7 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 4 * DAY + 5 * HOUR,
             labels: &["INBOX"],
             text: "Here it is, exactly how your grandmother wrote it down:\n\nArroz con pollo\n- 1 whole chicken, in pieces\n- 2 cups rice\n- 1 onion, 1 pepper, 3 cloves garlic\n- a pinch of saffron (don't skip it)\n\nBrown the chicken first. Be patient with it.\n\nCall me on Sunday!\nMamá",
-            html: None,
-            attachments: &[],
+            ..PLAIN
         },
         Sample {
             account: 2,
@@ -249,8 +338,7 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 6 * DAY + 2 * HOUR,
             labels: &["INBOX", "CATEGORY_UPDATES"],
             text: "Hello Dana,\n\nThese items are due on 24 September:\n\n- Research Design in Practice\n- Visualizing Data, 2nd ed.\n\nRenew online at https://library.uni.example/account\n\nUniversity Library",
-            html: None,
-            attachments: &[],
+            ..PLAIN
         },
         Sample {
             account: 1,
@@ -262,8 +350,7 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 12 * DAY,
             labels: &["Label_travel"],
             text: "Train tickets are booked for everyone. Hotel confirmation to follow.",
-            html: None,
-            attachments: &[],
+            ..PLAIN
         },
         Sample {
             account: 0,
@@ -275,8 +362,8 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 19 * DAY,
             labels: &["INBOX", "CATEGORY_UPDATES"],
             text: "Doors open at 19:30. Show this email at the entrance.",
-            html: None,
             attachments: &[("tickets.pdf", "application/pdf", 214_000)],
+            ..PLAIN
         },
         Sample {
             account: 1,
@@ -288,8 +375,8 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 30,
             labels: &["DRAFT"],
             text: "Priya,\n\nI went through Jonas's numbers. October holds **if** we",
-            html: None,
-            attachments: &[],
+            draft: Some(DRAFT_ID),
+            ..PLAIN
         },
         Sample {
             account: 1,
@@ -301,8 +388,8 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 5 * DAY + 3 * HOUR,
             labels: &["SENT"],
             text: "Hi Owen,\n\nAttached is invoice 2291 for the August work, due on the 30th. Could you confirm it reached the right person?\n\nThanks,\nDana",
-            html: None,
             attachments: &[("invoice-2291.pdf", "application/pdf", 96_000)],
+            ..PLAIN
         },
         Sample {
             account: 0,
@@ -314,8 +401,7 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 8 * DAY + 5 * HOUR,
             labels: &["SENT"],
             text: "Hello,\n\nMy lease ends on 31 October. Can I renew for another twelve months at the current rent? Happy to sign whenever the paperwork is ready.\n\nBest,\nDana Reyes",
-            html: None,
-            attachments: &[],
+            ..PLAIN
         },
         Sample {
             account: 0,
@@ -327,8 +413,11 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 7 * HOUR,
             labels: &["INBOX", "CATEGORY_PROMOTIONS"],
             text: "This week: five autumn loops under 15 km, a gear list for cold mornings, and where the larches turn first.",
-            html: None,
-            attachments: &[],
+            unsubscribe: Some(
+                "<mailto:leave@trailnotes.example?subject=unsubscribe>, <https://trailnotes.example/u/dana>",
+            ),
+            in_the_clear: true,
+            ..PLAIN
         },
         Sample {
             account: 0,
@@ -340,8 +429,7 @@ fn samples() -> Vec<Sample> {
             minutes_ago: DAY + 9 * HOUR,
             labels: &["INBOX", "UNREAD", "CATEGORY_PROMOTIONS"],
             text: "Planning a trip? Every travel guide is 20% off until Sunday night. Use code WANDER at checkout.",
-            html: None,
-            attachments: &[],
+            ..PLAIN
         },
         Sample {
             account: 0,
@@ -353,8 +441,7 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 9 * HOUR,
             labels: &["INBOX", "UNREAD", "CATEGORY_SOCIAL"],
             text: "Mara Okafor mentioned you: \"@dana this is the ridge we're doing on Saturday!\" Reply on Pinecone.",
-            html: None,
-            attachments: &[],
+            ..PLAIN
         },
         Sample {
             account: 2,
@@ -366,8 +453,7 @@ fn samples() -> Vec<Sample> {
             minutes_ago: DAY + 2 * HOUR,
             labels: &["INBOX", "CATEGORY_FORUMS"],
             text: "Thursday's seminar moves to room B214. Same time, 4pm. Coffee provided.",
-            html: None,
-            attachments: &[],
+            ..PLAIN
         },
         Sample {
             account: 1,
@@ -379,8 +465,13 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 4 * HOUR,
             labels: &["INBOX", "UNREAD"],
             text: "Walking through the offline editor design before we commit to a date. Agenda in the deck; bring questions about conflict resolution.\n\nPriya",
-            html: None,
             attachments: &[("invite.ics", "text/calendar", 1_284)],
+            invitation: Some(Invite {
+                uid: INVITE_UID,
+                ics: invitation_ics,
+                replaces: None,
+            }),
+            ..PLAIN
         },
         Sample {
             account: 1,
@@ -392,8 +483,16 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 2 * HOUR,
             labels: &["INBOX", "UNREAD"],
             text: "Moved this so the whole team can make it. Same room.\n\nJonas",
-            html: None,
             attachments: &[("invite.ics", "text/calendar", 892)],
+            invitation: Some(Invite {
+                uid: MOVED_UID,
+                ics: moved_ics,
+                replaces: Some(Older {
+                    message_id: "planning-0",
+                    starts: planning_was,
+                }),
+            }),
+            ..PLAIN
         },
         Sample {
             account: 2,
@@ -405,8 +504,7 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 3 * DAY,
             labels: &["MUTE"],
             text: "The two scopes in B110 move to B214 that week. Nobody needs to do anything.",
-            html: None,
-            attachments: &[],
+            ..PLAIN
         },
         Sample {
             account: 2,
@@ -418,8 +516,7 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 2 * DAY,
             labels: &["MUTE"],
             text: "Does that include the one nobody has booked since March?",
-            html: None,
-            attachments: &[],
+            ..PLAIN
         },
         Sample {
             account: 0,
@@ -431,8 +528,7 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 5 * HOUR,
             labels: &["SPAM", "UNREAD", "CATEGORY_PROMOTIONS"],
             text: "Claim your gift card today. Offer ends at midnight.",
-            html: None,
-            attachments: &[],
+            ..PLAIN
         },
         Sample {
             account: 0,
@@ -444,8 +540,7 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 2 * DAY,
             labels: &["TRASH", "CATEGORY_PROMOTIONS"],
             text: "Seats for Thursday's webinar are almost gone.",
-            html: None,
-            attachments: &[],
+            ..PLAIN
         },
     ]
 }
@@ -461,58 +556,36 @@ impl DemoGmail {
     }
 }
 
-/// Fills an empty store with the demo accounts and mail, and builds the
-/// Gmail behind them from the same samples.
-pub fn seed(conn: &Connection, now: EpochMillis) -> Result<DemoGmail> {
-    let mut account_ids = Vec::new();
+/// Adds the demo accounts to an empty store, puts the samples in each
+/// one's Gmail, and lets sync fill the store from there. Each body the
+/// store can hold is read once through sync's cache, so opening a sample
+/// asks Gmail nothing and the invitation cards have their events.
+pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoGmail, SyncError> {
+    let samples = samples();
     let mut gmail = HashMap::new();
-    for email in ACCOUNTS {
-        let id = accounts::insert_account(conn, email, now)?;
-        accounts::start_generation(conn, id, HISTORY_ID)?;
-        accounts::set_backfill(conn, id, None, true)?;
-        accounts::set_state(conn, id, AccountState::Ok)?;
-        let account_labels = account_labels(id, email);
-        labels::replace_labels(conn, id, &account_labels)?;
-        gmail.insert(id, Arc::new(gmail_for(email, &account_labels)));
-        account_ids.push(id);
+    for (index, account) in ACCOUNTS.iter().enumerate() {
+        let email = account.email;
+        let account_id = db
+            .write(move |c| accounts::insert_account(c, email, now))
+            .await?;
+        let fake = Arc::new(account.gmail());
+        let mine: Vec<&Sample> = samples.iter().filter(|s| s.account == index).collect();
+        for sample in &mine {
+            sample.put_in(&fake, account_id, now);
+        }
+        // Nobody listens yet: the window reads the store once it opens.
+        let (events, _) = async_channel::unbounded();
+        let sync = AccountSync::new(account_id, Arc::clone(&fake), db.clone(), events);
+        fill_store(&sync).await?;
+        for sample in &mine {
+            sync.body(sample.id).await?;
+            if let Some(older) = sample.remembered(now) {
+                db.write(move |c| invitations::remember(c, account_id, &older, now))
+                    .await?;
+            }
+        }
+        gmail.insert(account_id, fake);
     }
-    for sample in samples() {
-        let account_id = account_ids[sample.account];
-        let fake = &gmail[&account_id];
-        let meta = sample.meta(account_id, now);
-        let body = sample.body(now);
-        messages::upsert_message(conn, &meta, 2)?;
-        messages::refresh_thread(conn, account_id, sample.thread)?;
-        bodies::put_body(conn, account_id, sample.id, &body, now)?;
-        fake.with(|state| {
-            for attachment in &body.attachments {
-                let id = attachment.attachment_id.clone().unwrap_or_default();
-                state.attachments.insert(
-                    (meta.id.clone(), id.clone()),
-                    stand_in(&id, &attachment.mime_type),
-                );
-            }
-            if meta.has_label(system_label::DRAFT) {
-                state
-                    .drafts
-                    .insert(DRAFT_ID.into(), sample.text.as_bytes().to_vec());
-                state
-                    .draft_messages
-                    .insert(DRAFT_ID.into(), meta.id.clone());
-            }
-            if sample.id == "design-review-1" {
-                // Google puts an invitation on the guest's calendar as it
-                // arrives, so the demo has an event to answer.
-                state.calendar.insert(INVITE_UID.into(), None);
-            }
-            if sample.id == "planning-1" {
-                state.calendar.insert(MOVED_UID.into(), None);
-            }
-            state.bodies.insert(meta.id.clone(), body.clone());
-            state.messages.insert(meta.id.clone(), meta.clone());
-        });
-    }
-    remember_the_older_invitation(conn, account_ids[1], now)?;
     Ok(DemoGmail(gmail))
 }
 
@@ -645,117 +718,55 @@ fn portrait(color: (u8, u8, u8)) -> Vec<u8> {
         .unwrap_or_default()
 }
 
-/// Puts the version of the sprint planning meeting that came before the
-/// update in the inbox into the store, as if the demo had opened it last
-/// week. The card then says the meeting moved, and from when.
-fn remember_the_older_invitation(
-    conn: &Connection,
-    account_id: AccountId,
-    now: EpochMillis,
-) -> Result<()> {
-    let older = invitations::Saved {
-        uid: MOVED_UID.into(),
-        sequence: 0,
-        starts_at: Some(planning_was(now).timestamp_millis()),
-        all_day: false,
-        summary: "Sprint planning".into(),
-        cancelled: false,
-        answer: None,
-        message_id: "planning-0".into(),
-        news: None,
-        moved_from: None,
-    };
-    invitations::remember(conn, account_id, &older, now)
-}
-
-/// The labels one demo account has. Only the work account has user labels.
-fn account_labels(account_id: AccountId, email: &str) -> Vec<Label> {
-    let mut all: Vec<Label> = [
-        system_label::INBOX,
-        system_label::SENT,
-        system_label::DRAFT,
-        system_label::STARRED,
-        system_label::UNREAD,
-        system_label::IMPORTANT,
-    ]
-    .into_iter()
-    .map(|l| Label {
-        account_id,
-        id: l.into(),
-        name: l.into(),
-        kind: LabelKind::System,
-        color: None,
-    })
-    .collect();
-    if email == ACCOUNTS[1] {
-        for (label, name, color) in [
-            ("Label_clients", "Clients", Some("#4a86e8")),
-            ("Label_clients_mf", "Clients/Maple & Finch", None),
-            ("Label_travel", "Travel", Some("#16a766")),
-        ] {
-            all.push(Label {
-                account_id,
-                id: label.into(),
-                name: name.into(),
-                kind: LabelKind::User,
-                color: color.map(str::to_string),
-            });
-        }
+impl SampleAccount {
+    /// An empty in-memory Gmail for this account, with its identity, its
+    /// labels, and the addresses it sends as.
+    fn gmail(&self) -> FakeGmail {
+        let system = SYSTEM_LABELS.iter().map(|&id| RemoteLabel {
+            id: id.into(),
+            name: id.into(),
+            kind: Some("system".into()),
+            color: None,
+        });
+        let user = self.labels.iter().map(|&(id, name, color)| RemoteLabel {
+            id: id.into(),
+            name: name.into(),
+            kind: Some("user".into()),
+            color: color.map(|c| LabelColor {
+                background_color: c.into(),
+                text_color: "#ffffff".into(),
+            }),
+        });
+        let fake = FakeGmail::new();
+        fake.with(|state| {
+            state.email = self.email.into();
+            state.display_name = Some(DISPLAY_NAME.into());
+            state.signature = Some(format!("{DISPLAY_NAME}\nSent from Penguin Mail"));
+            state.send_as = self
+                .aliases
+                .iter()
+                .map(|alias| SendAs {
+                    send_as_email: alias.email.into(),
+                    display_name: alias.name.into(),
+                    is_default: false,
+                    is_primary: false,
+                    signature: alias.signature.into(),
+                    verification_status: Some(
+                        if alias.confirmed {
+                            "accepted"
+                        } else {
+                            "pending"
+                        }
+                        .into(),
+                    ),
+                })
+                .collect();
+            // The demo lists a mailbox in one page, as a Gmail search does.
+            state.page_size = 1000;
+            state.labels = system.chain(user).collect();
+        });
+        fake
     }
-    all
-}
-
-/// An empty in-memory Gmail for one demo account, with its identity, its
-/// labels, and a history cursor the store already holds.
-fn gmail_for(email: &str, account_labels: &[Label]) -> FakeGmail {
-    let fake = FakeGmail::new();
-    fake.with(|state| {
-        state.email = email.into();
-        state.display_name = Some(DISPLAY_NAME.into());
-        state.signature = Some(format!("{DISPLAY_NAME}\nSent from Penguin Mail"));
-        // The work account sends as two addresses, as a Gmail account with
-        // verified aliases does, so the demo shows the From row doing its job.
-        if email == ACCOUNTS[1] {
-            state.send_as = vec![
-                SendAs {
-                    send_as_email: "hello@fernwood.example".into(),
-                    display_name: "Fernwood Studio".into(),
-                    is_default: false,
-                    is_primary: false,
-                    signature: "<p>Fernwood Studio<br>hello@fernwood.example</p>".into(),
-                    verification_status: Some("accepted".into()),
-                },
-                // Still waiting on its owner to confirm it, so it is left out.
-                SendAs {
-                    send_as_email: "press@fernwood.example".into(),
-                    display_name: "Fernwood Press".into(),
-                    is_default: false,
-                    is_primary: false,
-                    signature: String::new(),
-                    verification_status: Some("pending".into()),
-                },
-            ];
-        }
-        state.history_id = HISTORY_ID;
-        // The demo lists a mailbox in one page, as a Gmail search does.
-        state.page_size = 1000;
-        state.labels = account_labels
-            .iter()
-            .map(|l| RemoteLabel {
-                id: l.id.clone(),
-                name: l.name.clone(),
-                kind: Some(match l.kind {
-                    LabelKind::System => "system".into(),
-                    LabelKind::User => "user".to_string(),
-                }),
-                color: l.color.as_ref().map(|c| LabelColor {
-                    background_color: c.clone(),
-                    text_color: "#ffffff".into(),
-                }),
-            })
-            .collect();
-    });
-    fake
 }
 
 /// What the demo hands back for an attachment, since the samples name files
@@ -804,10 +815,64 @@ fn rgba((r, g, b): (u8, u8, u8)) -> u32 {
 }
 
 impl Sample {
+    /// Puts the message in its account's Gmail as it sits there once
+    /// delivered, with the attachment bytes, the draft, and the calendar
+    /// event Google keeps beside it.
+    fn put_in(&self, fake: &FakeGmail, account_id: AccountId, now: EpochMillis) {
+        let meta = self.meta(account_id, now);
+        let body = self.body(now);
+        fake.with(|state| {
+            for attachment in &body.attachments {
+                let id = attachment.attachment_id.clone().unwrap_or_default();
+                state.attachments.insert(
+                    (meta.id.clone(), id.clone()),
+                    stand_in(&id, &attachment.mime_type),
+                );
+            }
+            if let Some(draft_id) = self.draft {
+                state
+                    .drafts
+                    .insert(draft_id.into(), self.text.as_bytes().to_vec());
+                state
+                    .draft_messages
+                    .insert(draft_id.into(), meta.id.clone());
+            }
+            if let Some(invite) = &self.invitation {
+                // Google puts an invitation on the guest's calendar as it
+                // arrives, so the demo has an event to answer.
+                state.calendar.insert(invite.uid.into(), None);
+            }
+            state.bodies.insert(meta.id.clone(), body);
+            state.messages.insert(meta.id.clone(), meta);
+        });
+    }
+
+    /// The older version of the meeting this sample moves, as the store
+    /// keeps an invitation it has seen.
+    fn remembered(&self, now: EpochMillis) -> Option<invitations::Saved> {
+        let invite = self.invitation.as_ref()?;
+        let older = invite.replaces.as_ref()?;
+        let summary = mailrs_domain::invitation::read(&(invite.ics)(now))
+            .map(|event| event.summary)
+            .unwrap_or_default();
+        Some(invitations::Saved {
+            uid: invite.uid.into(),
+            sequence: 0,
+            starts_at: Some((older.starts)(now).timestamp_millis()),
+            all_day: false,
+            summary,
+            cancelled: false,
+            answer: None,
+            message_id: older.message_id.into(),
+            news: None,
+            moved_from: None,
+        })
+    }
+
     fn meta(&self, account_id: AccountId, now: EpochMillis) -> MessageMeta {
         let me = Address {
             name: Some(DISPLAY_NAME.into()),
-            email: ACCOUNTS[self.account].into(),
+            email: ACCOUNTS[self.account].email.into(),
         };
         let address = |(name, email): (&str, &str)| {
             if email.is_empty() {
@@ -860,25 +925,14 @@ impl Sample {
                     content_id: None,
                 })
                 .collect(),
-            list_unsubscribe: (self.id == "news-1").then(|| {
-                "<mailto:leave@trailnotes.example?subject=unsubscribe>, <https://trailnotes.example/u/dana>"
-                    .to_string()
-            }),
-            one_click_unsubscribe: false,
-            calendar: match self.id {
-                "design-review-1" => Some(invitation_ics(now)),
-                "planning-1" => Some(moved_ics(now)),
-                _ => None,
-            },
-            protection: None,
-            // The demo's mail is well behaved, apart from the newsletter,
-            // which reaches this computer in the clear so the details
-            // panel has something to warn about.
-            provenance: mailrs_domain::Provenance {
+            list_unsubscribe: self.unsubscribe.map(str::to_string),
+            calendar: self.invitation.as_ref().map(|invite| (invite.ics)(now)),
+            provenance: Provenance {
                 mailed_by: Some(sender_domain(self.from.1)),
                 signed_by: Some(sender_domain(self.from.1)),
-                encrypted: Some(self.id != "news-1"),
+                encrypted: Some(!self.in_the_clear),
             },
+            ..MessageBody::default()
         }
     }
 }
@@ -921,7 +975,7 @@ fn invitation_ics(now: EpochMillis) -> String {
         "ORGANIZER;CN=Priya Raman:mailto:priya@fernwood.example".to_string(),
         format!(
             "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE;CN=Dana Reyes:mailto:{}",
-            ACCOUNTS[1]
+            ACCOUNTS[1].email
         ),
         "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;CN=Priya Raman:mailto:priya@fernwood.example".to_string(),
         "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=TENTATIVE;CN=Jonas Weber:mailto:jonas@fernwood.example".to_string(),
@@ -956,7 +1010,7 @@ fn moved_ics(now: EpochMillis) -> String {
         "ORGANIZER;CN=Jonas Weber:mailto:jonas@fernwood.example".to_string(),
         format!(
             "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE;CN=Dana Reyes:mailto:{}",
-            ACCOUNTS[1]
+            ACCOUNTS[1].email
         ),
         "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;CN=Jonas Weber:mailto:jonas@fernwood.example".to_string(),
         "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;CN=Priya Raman:mailto:priya@fernwood.example".to_string(),
@@ -1011,29 +1065,94 @@ fn next_weekday(
 
 #[cfg(test)]
 mod tests {
-    use mailrs_domain::Folder;
+    use mailrs_domain::{Folder, system_label};
+    use mailrs_store::bodies;
     use mailrs_store::threads::{self, ThreadFilter};
-    use mailrs_store::{bodies, open_in_memory};
-    use mailrs_sync::GmailApi;
+    use mailrs_sync::{GmailApi, now_millis};
 
     use super::*;
 
-    #[test]
-    fn the_demo_contacts_have_photos_and_rank_first() {
-        let conn = open_in_memory().unwrap();
-        seed(&conn, 1_700_000_000_000).unwrap();
-        let dir = tempfile::tempdir().unwrap();
-        seed_contacts(&conn, dir.path()).unwrap();
+    /// A demo store, its Gmail, and the time it was seeded at. The fake
+    /// searches by the clock, so the samples hang off the real time.
+    struct Demo {
+        db: Db,
+        gmail: DemoGmail,
+        now: EpochMillis,
+        _dir: tempfile::TempDir,
+    }
 
-        let mara = mailrs_store::address_book::find(&conn, "mara.okafor@example.org")
-            .unwrap()
-            .expect("Mara is in the demo address book");
+    async fn demo() -> Demo {
+        let dir = tempfile::tempdir().unwrap();
+        let db = Db::open(&dir.path().join("demo.db")).unwrap();
+        let now = now_millis();
+        let gmail = seed(&db, now).await.unwrap();
+        Demo {
+            db,
+            gmail,
+            now,
+            _dir: dir,
+        }
+    }
+
+    impl Demo {
+        async fn account(&self, index: usize) -> AccountId {
+            let email = ACCOUNTS[index].email;
+            self.db
+                .read(move |c| accounts::account_by_email(c, email))
+                .await
+                .unwrap()
+                .expect("the demo account is stored")
+                .id
+        }
+
+        async fn threads(&self, filter: ThreadFilter) -> Vec<mailrs_domain::ThreadSummary> {
+            self.db
+                .read(move |c| threads::list_threads(c, &filter, 0, 100))
+                .await
+                .unwrap()
+        }
+
+        /// Ids a search brings back from one account's demo Gmail.
+        async fn found(&self, account: AccountId, query: &str) -> Vec<String> {
+            self.gmail
+                .account(account)
+                .expect("the account has a mailbox")
+                .list_messages(query, None)
+                .await
+                .expect("the search runs")
+                .messages
+                .into_iter()
+                .map(|m| m.id)
+                .collect()
+        }
+    }
+
+    #[tokio::test]
+    async fn the_demo_contacts_have_photos_and_rank_first() {
+        let demo = demo().await;
+        let dir = tempfile::tempdir().unwrap();
+        let photos = dir.path().to_path_buf();
+        demo.db
+            .write(move |c| seed_contacts(c, &photos))
+            .await
+            .unwrap();
+
+        let (mara, suggestions) = demo
+            .db
+            .read(|c| {
+                Ok((
+                    address_book::find(c, "mara.okafor@example.org")?,
+                    mailrs_store::contacts::suggestions(c)?,
+                ))
+            })
+            .await
+            .unwrap();
+        let mara = mara.expect("Mara is in the demo address book");
         assert_eq!(mara.organization.as_deref(), Some("Ridgeline Trails"));
         let photo = dir.path().join(mara.photo_file.expect("Mara has a photo"));
         // A PNG, so the avatar can read it.
         assert_eq!(&std::fs::read(&photo).unwrap()[1..4], b"PNG");
 
-        let suggestions = mailrs_store::contacts::suggestions(&conn).unwrap();
         let known: Vec<&str> = suggestions
             .iter()
             .take_while(|s| s.known)
@@ -1043,12 +1162,14 @@ mod tests {
         assert!(known.contains(&"jonas@fernwood.example"));
     }
 
-    #[test]
-    fn two_sent_messages_wait_for_a_reply() {
-        let conn = open_in_memory().unwrap();
-        let now = 1_758_000_000_000;
-        seed(&conn, now).unwrap();
-        let waiting: Vec<String> = mailrs_store::follow_ups::waiting(&conn, now)
+    #[tokio::test]
+    async fn two_sent_messages_wait_for_a_reply() {
+        let demo = demo().await;
+        let now = demo.now;
+        let waiting: Vec<String> = demo
+            .db
+            .read(move |c| mailrs_store::follow_ups::waiting(c, now))
+            .await
             .unwrap()
             .into_iter()
             .map(|f| f.thread_id)
@@ -1069,17 +1190,17 @@ mod tests {
         }
     }
 
-    #[test]
-    fn the_invitations_land_in_the_demo_mailbox() {
-        let conn = open_in_memory().unwrap();
-        let now = 1_758_000_000_000;
-        seed(&conn, now).unwrap();
-        let work = accounts::account_by_email(&conn, ACCOUNTS[1])
-            .unwrap()
-            .unwrap()
-            .id;
+    #[tokio::test]
+    async fn the_invitations_land_in_the_demo_mailbox() {
+        let demo = demo().await;
+        let (work, now) = (demo.account(1).await, demo.now);
         for id in ["design-review-1", "planning-1"] {
-            let body = bodies::get_body(&conn, work, id, now).unwrap().unwrap();
+            let body = demo
+                .db
+                .read(move |c| bodies::peek_body(c, work, id))
+                .await
+                .unwrap()
+                .expect("sync cached the body");
             let ics = body.calendar.expect("the message carries an invitation");
             let invitation =
                 mailrs_domain::invitation::read(&ics).expect("the part holds an event");
@@ -1087,123 +1208,117 @@ mod tests {
             assert!(!invitation.guests.is_empty(), "{id}");
         }
         // The update in the inbox moves a meeting the demo already knows.
-        let held = mailrs_store::invitations::saved(&conn, work, MOVED_UID)
+        let held = demo
+            .db
+            .read(move |c| mailrs_store::invitations::saved(c, work, MOVED_UID))
+            .await
             .unwrap()
             .expect("the older version is remembered");
         assert_eq!(held.sequence, 0);
+        assert_eq!(held.summary, "Sprint planning");
         assert_eq!(held.starts_at, Some(planning_was(now).timestamp_millis()));
     }
 
-    #[test]
-    fn the_muted_mailbox_has_a_thread_the_inbox_never_sees() {
-        let conn = open_in_memory().unwrap();
-        seed(&conn, 1_758_000_000_000).unwrap();
-        let muted = threads::list_threads(&conn, &ThreadFilter::unified(system_label::MUTE), 0, 10)
-            .unwrap();
+    #[tokio::test]
+    async fn the_muted_mailbox_has_a_thread_the_inbox_never_sees() {
+        let demo = demo().await;
+        let muted = demo
+            .threads(ThreadFilter::unified(system_label::MUTE))
+            .await;
         assert_eq!(muted.len(), 1);
         assert_eq!(muted[0].id, "t-lab-move");
         assert!(muted[0].muted);
         assert_eq!(muted[0].message_count, 2);
-        let inbox = threads::list_threads(&conn, &ThreadFilter::unified("INBOX"), 0, 100).unwrap();
+        let inbox = demo.threads(ThreadFilter::unified("INBOX")).await;
         assert!(inbox.iter().all(|t| t.id != "t-lab-move"));
     }
 
-    #[test]
-    fn every_inbox_category_has_demo_mail() {
-        let conn = open_in_memory().unwrap();
-        seed(&conn, 1_758_000_000_000).unwrap();
+    #[tokio::test]
+    async fn every_inbox_category_has_demo_mail() {
+        let demo = demo().await;
         for labels in [
             &["CATEGORY_UPDATES"][..],
             &["CATEGORY_PROMOTIONS"],
             &["CATEGORY_SOCIAL", "CATEGORY_FORUMS"],
         ] {
             let filter = ThreadFilter::unified("INBOX").with_labels(labels, &[]);
-            assert!(
-                threads::count_threads(&conn, &filter).unwrap() >= 2,
-                "{labels:?}"
-            );
+            let count = demo
+                .db
+                .read(move |c| threads::count_threads(c, &filter))
+                .await
+                .unwrap();
+            assert!(count >= 2, "{labels:?}");
         }
     }
 
-    #[test]
-    fn the_demo_store_has_a_lively_unified_inbox() {
-        let conn = open_in_memory().unwrap();
-        seed(&conn, 1_758_000_000_000).unwrap();
+    #[tokio::test]
+    async fn the_demo_store_has_a_lively_unified_inbox() {
+        let demo = demo().await;
         let inbox = ThreadFilter::unified("INBOX");
-        let threads = threads::list_threads(&conn, &inbox, 0, 100).unwrap();
+        let threads = demo.threads(inbox.clone()).await;
         assert!(threads.len() >= 10, "{}", threads.len());
-        assert!(threads::unread_threads(&conn, &inbox).unwrap() >= 3);
+        let unread = demo
+            .db
+            .read(move |c| threads::unread_threads(c, &inbox))
+            .await
+            .unwrap();
+        assert!(unread >= 3);
         assert_eq!(threads[0].id, "t-hike");
         let accounts_seen: std::collections::HashSet<_> =
             threads.iter().map(|t| t.account_id).collect();
         assert_eq!(accounts_seen.len(), 3);
-        assert_eq!(
-            threads::list_threads(&conn, &ThreadFilter::unified("DRAFT"), 0, 10)
-                .unwrap()
-                .len(),
-            1
-        );
-        for sample in samples() {
-            let account = accounts::account_by_email(&conn, ACCOUNTS[sample.account])
-                .unwrap()
-                .unwrap();
-            assert!(
-                bodies::get_body(&conn, account.id, sample.id, 0)
-                    .unwrap()
-                    .is_some(),
-                "{}",
-                sample.id
-            );
-        }
+        assert_eq!(demo.threads(ThreadFilter::unified("DRAFT")).await.len(), 1);
     }
 
-    /// Ids a search brings back from one account's demo Gmail.
-    async fn found(gmail: &DemoGmail, account: AccountId, query: &str) -> Vec<String> {
-        gmail
-            .account(account)
-            .expect("the account has a mailbox")
-            .list_messages(query, None)
-            .await
-            .expect("the search runs")
-            .messages
-            .into_iter()
-            .map(|m| m.id)
-            .collect()
+    /// Sync stores every sample but the ones in Junk and Trash, which Gmail
+    /// leaves out of the window, and caches each stored body.
+    #[tokio::test]
+    async fn sync_stores_every_sample_outside_junk_and_trash() {
+        let demo = demo().await;
+        for sample in samples() {
+            let account = demo.account(sample.account).await;
+            let id = sample.id;
+            let (thread, body) = demo
+                .db
+                .read(move |c| {
+                    Ok((
+                        mailrs_store::messages::thread_id_of(c, account, id)?,
+                        bodies::peek_body(c, account, id)?,
+                    ))
+                })
+                .await
+                .unwrap();
+            let hidden = sample
+                .labels
+                .iter()
+                .any(|l| [system_label::SPAM, system_label::TRASH].contains(l));
+            assert_eq!(thread.is_some(), !hidden, "{id}");
+            assert_eq!(body.is_some(), !hidden, "{id}");
+        }
     }
 
     #[tokio::test]
     async fn the_folders_come_from_the_demo_gmail() {
-        let conn = open_in_memory().unwrap();
-        let gmail = seed(&conn, 1_758_000_000_000).unwrap();
-        let account = accounts::account_by_email(&conn, ACCOUNTS[0])
-            .unwrap()
-            .unwrap()
-            .id;
+        let demo = demo().await;
+        let account = demo.account(0).await;
+        assert_eq!(demo.found(account, Folder::Junk.query()).await, ["prize-1"]);
         assert_eq!(
-            found(&gmail, account, Folder::Junk.query()).await,
-            ["prize-1"]
-        );
-        assert_eq!(
-            found(&gmail, account, Folder::Trash.query()).await,
+            demo.found(account, Folder::Trash.query()).await,
             ["webinar-1"]
         );
-        let all = found(&gmail, account, Folder::AllMail.query()).await;
+        let all = demo.found(account, Folder::AllMail.query()).await;
         assert!(!all.contains(&"prize-1".to_string()));
         assert!(!all.contains(&"webinar-1".to_string()));
         assert!(all.contains(&"hike-1".to_string()));
         // What the search bar sends: plain words across sender and subject.
-        assert_eq!(found(&gmail, account, "sunrise").await, ["lake-1"]);
+        assert_eq!(demo.found(account, "sunrise").await, ["lake-1"]);
     }
 
     #[tokio::test]
     async fn attachments_and_the_sample_draft_come_from_the_demo_gmail() {
-        let conn = open_in_memory().unwrap();
-        let gmail = seed(&conn, 1_758_000_000_000).unwrap();
-        let work = accounts::account_by_email(&conn, ACCOUNTS[1])
-            .unwrap()
-            .unwrap()
-            .id;
-        let api = gmail.account(work).expect("the account has a mailbox");
+        let demo = demo().await;
+        let work = demo.account(1).await;
+        let api = demo.gmail.account(work).expect("the account has a mailbox");
         let listed = api.list_drafts().await.unwrap();
         assert_eq!(listed.len(), 1);
         assert_eq!(listed[0].draft_id, DRAFT_ID);
@@ -1213,9 +1328,24 @@ mod tests {
             .await
             .unwrap();
         assert!(String::from_utf8(file).unwrap().contains("stand-in file"));
-        assert_eq!(api.signature().await.unwrap().as_deref().map(str::len), {
-            let expect = format!("{DISPLAY_NAME}\nSent from Penguin Mail");
-            Some(expect.len())
-        });
+        assert_eq!(
+            api.signature().await.unwrap(),
+            Some(format!("{DISPLAY_NAME}\nSent from Penguin Mail"))
+        );
+        let from: Vec<String> = api
+            .send_as()
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|s| s.send_as_email)
+            .collect();
+        assert_eq!(
+            from,
+            [
+                ACCOUNTS[1].email,
+                "hello@fernwood.example",
+                "press@fernwood.example"
+            ]
+        );
     }
 }

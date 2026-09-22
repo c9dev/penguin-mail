@@ -151,7 +151,7 @@ impl Core {
             }
         };
         let demo_gmail = if demo {
-            let seeded = runtime.block_on(db.write(|c| demo::seed(c, now_millis())))?;
+            let seeded = runtime.block_on(demo::seed(&db, now_millis()))?;
             Some(Arc::new(seeded))
         } else {
             None
