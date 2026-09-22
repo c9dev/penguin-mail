@@ -1994,7 +1994,8 @@ impl MainWindow {
     // ---- Actions, menu, and keys -------------------------------------------
 
     fn install_actions(self: &Rc<Self>) {
-        self.install_outbox_actions();
+        let view = Rc::clone(&self.conversation);
+        self.install_outbox_actions(&self.actions, &view);
         self.install_main_actions();
         let remind_at = gio::SimpleAction::new("remind-at", Some(glib::VariantTy::INT64));
         let weak = Rc::downgrade(self);

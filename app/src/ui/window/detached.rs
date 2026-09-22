@@ -116,6 +116,7 @@ impl MainWindow {
     fn install_window_actions(self: &Rc<Self>, window: &adw::Window, view: &Rc<ConversationView>) {
         let group = gio::SimpleActionGroup::new();
         self.install_view_actions(&group, view);
+        self.install_outbox_actions(&group, view);
         window.insert_action_group("win", Some(&group));
         window.add_controller(super::shortcuts::conversation_chords());
     }

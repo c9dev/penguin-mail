@@ -2,9 +2,9 @@
 //! and when the next try is, with what the person can do about it. It
 //! takes the translation card's shape and sits at the top of the pane.
 //!
-//! The buttons fire the window's own actions, so they act on the row
-//! selected in the list as its menu does, and GTK greys one out wherever
-//! its action is off.
+//! The buttons fire the window's own actions, so they act on what the
+//! row menu acts on: the selected rows in the main window, or the message
+//! in a window of its own. GTK greys one out wherever its action is off.
 
 use adw::prelude::*;
 

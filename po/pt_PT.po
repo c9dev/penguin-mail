@@ -1636,7 +1636,7 @@ msgstr "Abrir o Penguin Mail"
 msgid "New Message"
 msgstr "Nova mensagem"
 
-#: app/src/tray.rs:136 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2133
+#: app/src/tray.rs:136 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2134
 msgid "Check for Mail"
 msgstr "Procurar correio"
 
@@ -1654,7 +1654,7 @@ msgstr "Novidades da versão {version}"
 msgid "Check for Updates"
 msgstr "Procurar atualizações"
 
-#: app/src/tray.rs:152 app/src/ui/window.rs:2145
+#: app/src/tray.rs:152 app/src/ui/window.rs:2146
 #: app/src/ui/window/shortcuts.rs:495
 msgid "Quit"
 msgstr "Sair"
@@ -1687,7 +1687,7 @@ msgstr "Comunicar um problema"
 msgid "License"
 msgstr "Licença"
 
-#: app/src/ui/about.rs:162 app/src/ui/window.rs:2144
+#: app/src/ui/about.rs:162 app/src/ui/window.rs:2145
 msgid "About Penguin Mail"
 msgstr "Acerca do Penguin Mail"
 
@@ -3103,7 +3103,7 @@ msgstr "Não foi possível eliminar o endereço: {reason}"
 msgid "Allow Hide My Email"
 msgstr "Permitir Ocultar o meu e-mail"
 
-#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2226
+#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2227
 msgid "Add an account first"
 msgstr "Adicione primeiro uma conta"
 
@@ -3939,7 +3939,7 @@ msgstr "Assinatura…"
 msgid "Rules…"
 msgstr "Regras…"
 
-#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2136
+#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2137
 msgid "Hide My Email…"
 msgstr "Ocultar o meu e-mail…"
 
@@ -4533,7 +4533,7 @@ msgstr ""
 msgid "Open Google Cloud"
 msgstr "Abrir o Google Cloud"
 
-#: app/src/ui/window.rs:1448 app/src/ui/window/scheduled.rs:17
+#: app/src/ui/window.rs:1448 app/src/ui/window/scheduled.rs:18
 #: app/src/ui/window/shortcuts.rs:409
 msgid "Undo"
 msgstr "Anular"
@@ -4612,35 +4612,35 @@ msgstr "{account} removida"
 msgid "Could not remove {account}: {reason}"
 msgstr "Não foi possível remover {account}: {reason}"
 
-#: app/src/ui/window.rs:2134
+#: app/src/ui/window.rs:2135
 msgid "Add Account…"
 msgstr "Adicionar conta…"
 
-#: app/src/ui/window.rs:2135
+#: app/src/ui/window.rs:2136
 msgid "New Smart Mailbox…"
 msgstr "Nova caixa inteligente…"
 
-#: app/src/ui/window.rs:2142 app/src/ui/window/shortcuts.rs:472
+#: app/src/ui/window.rs:2143 app/src/ui/window/shortcuts.rs:472
 msgid "Preferences"
 msgstr "Preferências"
 
-#: app/src/ui/window.rs:2143
+#: app/src/ui/window.rs:2144
 msgid "Keyboard Shortcuts"
 msgstr "Atalhos de teclado"
 
-#: app/src/ui/window.rs:2151 app/src/ui/window.rs:2153
+#: app/src/ui/window.rs:2152 app/src/ui/window.rs:2154
 msgid "Main Menu"
 msgstr "Menu principal"
 
-#: app/src/ui/window.rs:2417
+#: app/src/ui/window.rs:2418
 msgid "Open a message from the person first"
 msgstr "Abra primeiro uma mensagem dessa pessoa"
 
-#: app/src/ui/window.rs:2504
+#: app/src/ui/window.rs:2505
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "O Penguin Mail mostra o novo idioma depois de reiniciar"
 
-#: app/src/ui/window.rs:2506 app/src/update/mod.rs:128
+#: app/src/ui/window.rs:2507 app/src/update/mod.rs:128
 msgid "Restart"
 msgstr "Reiniciar"
 
@@ -4730,31 +4730,31 @@ msgstr ""
 msgid "Open a conversation first"
 msgstr "Abra primeiro uma conversa"
 
-#: app/src/ui/window/detached.rs:136 app/src/ui/window/export.rs:85
+#: app/src/ui/window/detached.rs:137 app/src/ui/window/export.rs:85
 #: app/src/ui/window/organize.rs:97 app/src/ui/window/organize.rs:145
 #: app/src/ui/window/organize.rs:174 app/src/ui/window/organize.rs:209
 #: app/src/ui/window/senders.rs:144
 msgid "That account is not connected"
 msgstr "Essa conta não está ligada"
 
-#: app/src/ui/window/detached.rs:146
+#: app/src/ui/window/detached.rs:147
 msgid "Could not load the source: {reason}"
 msgstr "Não foi possível carregar a origem: {reason}"
 
-#: app/src/ui/window/detached.rs:164 app/src/ui/window/detached.rs:170
-#: app/src/ui/window/detached.rs:182
+#: app/src/ui/window/detached.rs:165 app/src/ui/window/detached.rs:171
+#: app/src/ui/window/detached.rs:183
 msgid "Message Source"
 msgstr "Origem da mensagem"
 
-#: app/src/ui/window/detached.rs:166
+#: app/src/ui/window/detached.rs:167
 msgid "Save As…"
 msgstr "Guardar como…"
 
-#: app/src/ui/window/detached.rs:167
+#: app/src/ui/window/detached.rs:168
 msgid "Save as an .eml file"
 msgstr "Guardar como ficheiro .eml"
 
-#: app/src/ui/window/detached.rs:204
+#: app/src/ui/window/detached.rs:205
 msgid "Save Message"
 msgstr "Guardar mensagem"
 
@@ -4934,7 +4934,7 @@ msgstr "Resposta enviada por e-mail para {organizer}"
 msgid "Replied by email"
 msgstr "Resposta enviada por e-mail"
 
-#: app/src/ui/window/notice.rs:82 app/src/ui/window/outbox.rs:78
+#: app/src/ui/window/notice.rs:82 app/src/ui/window/outbox.rs:104
 msgid "Message sent"
 msgstr "Mensagem enviada"
 
@@ -5000,31 +5000,31 @@ msgstr "Não foi possível alterar a cor: {reason}"
 msgid "Only Where It Exists"
 msgstr "Só onde já existe"
 
-#: app/src/ui/window/outbox.rs:80
+#: app/src/ui/window/outbox.rs:106
 msgid "Still not sent. It stays in the Outbox."
 msgstr "Continua por enviar. Fica na caixa de saída."
 
-#: app/src/ui/window/outbox.rs:104
+#: app/src/ui/window/outbox.rs:130
 msgid "That message is no longer waiting."
 msgstr "Essa mensagem já não está à espera."
 
-#: app/src/ui/window/outbox.rs:108
+#: app/src/ui/window/outbox.rs:134
 msgid "Penguin Mail cannot reopen this message. Send it as it is."
 msgstr "O Penguin Mail não consegue reabrir esta mensagem. Envie-a como está."
 
-#: app/src/ui/window/outbox.rs:117
+#: app/src/ui/window/outbox.rs:143
 msgid "Could not open it: {reason}"
 msgstr "Não foi possível abri-la: {reason}"
 
-#: app/src/ui/window/outbox.rs:145
+#: app/src/ui/window/outbox.rs:171
 msgid "Could not delete: {reason}"
 msgstr "Não foi possível eliminar: {reason}"
 
-#: app/src/ui/window/outbox.rs:151
+#: app/src/ui/window/outbox.rs:177
 msgid "Deleted. It will not be sent."
 msgstr "Eliminada. Não será enviada."
 
-#: app/src/ui/window/outbox.rs:153
+#: app/src/ui/window/outbox.rs:179
 msgid "Deleted. They will not be sent."
 msgstr "Eliminadas. Não serão enviadas."
 
@@ -5044,36 +5044,36 @@ msgstr ""
 msgid "Back in the Inbox"
 msgstr "De volta à caixa de entrada"
 
-#: app/src/ui/window/scheduled.rs:16
+#: app/src/ui/window/scheduled.rs:17
 msgid "Sending…"
 msgstr "A enviar…"
 
-#: app/src/ui/window/scheduled.rs:55
+#: app/src/ui/window/scheduled.rs:60
 msgid "Could not cancel: {reason}"
 msgstr "Não foi possível cancelar: {reason}"
 
-#: app/src/ui/window/scheduled.rs:66
+#: app/src/ui/window/scheduled.rs:71
 msgid "Won't be sent. Gmail never had a draft of it, so the message is gone."
 msgstr ""
 "Não vai ser enviada. O Gmail nunca teve um rascunho dela, por isso a "
 "mensagem desapareceu."
 
-#: app/src/ui/window/scheduled.rs:67
+#: app/src/ui/window/scheduled.rs:72
 msgid ""
 "Won't be sent. Gmail never had drafts of them, so the messages are gone."
 msgstr ""
 "Não vão ser enviadas. O Gmail nunca teve rascunhos delas, por isso as "
 "mensagens desapareceram."
 
-#: app/src/ui/window/scheduled.rs:68
+#: app/src/ui/window/scheduled.rs:73
 msgid "Won't be sent. The message is in Drafts."
 msgstr "Não vai ser enviada. A mensagem está nos rascunhos."
 
-#: app/src/ui/window/scheduled.rs:69
+#: app/src/ui/window/scheduled.rs:74
 msgid "Won't be sent. The messages are in Drafts."
 msgstr "Não vão ser enviadas. As mensagens estão nos rascunhos."
 
-#: app/src/ui/window/scheduled.rs:70
+#: app/src/ui/window/scheduled.rs:75
 msgid ""
 "Won't be sent. The messages Gmail had are in Drafts, and the others are gone."
 msgstr ""

@@ -3,6 +3,10 @@
 //! Now skips the rest of its wait, and Delete drops it, as the Delete key
 //! does. The three actions are off everywhere else, which keeps them out
 //! of the row menu of ordinary mail.
+//!
+//! They act on what their view reaches, as the mail buttons do: the
+//! selected rows in the main window, and the one message in a window of
+//! its own opened from the Outbox.
 
 use std::rc::Rc;
 
@@ -13,35 +17,48 @@ use mailrs_sync::{Mailbox, Posted, outbox_id};
 use super::MainWindow;
 use crate::app::Signature;
 use crate::compose::Draft;
+use crate::ui::conversation::ConversationView;
 use mailrs_domain::translate::gettext;
 
 /// What one of the Outbox's actions runs.
-struct OutboxAction(fn(&Rc<MainWindow>));
+struct OutboxAction(fn(&Rc<MainWindow>, &Rc<ConversationView>));
+
+const NAMES: [&str; 3] = ["outbox-send", "outbox-edit", "outbox-delete"];
 
 impl MainWindow {
-    pub(super) fn install_outbox_actions(self: &Rc<Self>) {
+    /// Adds the Outbox's actions to `group`, acting on what `view`
+    /// reaches. The main window's start off and follow the mailbox on
+    /// screen through [`MainWindow::follow_outbox`]. A window of its own
+    /// keeps the mailbox it was opened from, so its actions are on for
+    /// good when that was the Outbox.
+    pub(super) fn install_outbox_actions(
+        self: &Rc<Self>,
+        group: &gio::SimpleActionGroup,
+        view: &Rc<ConversationView>,
+    ) {
         let each = [
-            ("outbox-send", OutboxAction(MainWindow::send_queued)),
-            ("outbox-edit", OutboxAction(MainWindow::edit_queued)),
-            ("outbox-delete", OutboxAction(MainWindow::drop_queued)),
+            OutboxAction(MainWindow::send_queued),
+            OutboxAction(MainWindow::edit_queued),
+            OutboxAction(MainWindow::drop_queued),
         ];
-        for (name, OutboxAction(run)) in each {
+        let on = view.detached() && self.mailbox_of(view) == Mailbox::Outbox;
+        for (name, OutboxAction(run)) in NAMES.into_iter().zip(each) {
             let action = gio::SimpleAction::new(name, None);
-            action.set_enabled(false);
-            let weak = Rc::downgrade(self);
+            action.set_enabled(on);
+            let (win, target) = (Rc::downgrade(self), Rc::downgrade(view));
             action.connect_activate(move |_, _| {
-                if let Some(win) = weak.upgrade() {
-                    run(&win);
+                if let (Some(win), Some(view)) = (win.upgrade(), target.upgrade()) {
+                    run(&win, &view);
                 }
             });
-            self.actions.add_action(&action);
+            group.add_action(&action);
         }
     }
 
     /// Turns the Outbox's own actions on while it is the mailbox on screen.
     pub(super) fn follow_outbox(self: &Rc<Self>) {
         let showing = *self.mailbox.borrow() == Mailbox::Outbox;
-        for name in ["outbox-send", "outbox-edit", "outbox-delete"] {
+        for name in NAMES {
             if let Some(action) = self.actions.lookup_action(name) {
                 action
                     .downcast_ref::<gio::SimpleAction>()
@@ -51,22 +68,31 @@ impl MainWindow {
         }
     }
 
-    /// The waiting messages the selected rows stand for.
-    fn queued_rows(&self) -> Vec<i64> {
-        self.list
-            .selected_rows()
+    /// The waiting messages an action on `view` reaches.
+    fn queued_in(&self, view: &ConversationView) -> Vec<i64> {
+        self.reach(view)
+            .targets
             .iter()
-            .filter_map(|row| outbox_id(&row.id))
+            .filter_map(|target| outbox_id(&target.thread_id))
             .collect()
     }
 
-    /// Sends the selected messages now rather than at the end of their wait.
-    fn send_queued(self: &Rc<Self>) {
-        let waiting = self.queued_rows();
+    /// Puts away what `view` showed once it has left the queue. A window
+    /// of its own has nothing else to show, so it closes.
+    pub(super) fn left_queue(&self, view: &ConversationView) {
+        match view.detached() {
+            true => view.close_detached(),
+            false => self.conversation.leave(),
+        }
+    }
+
+    /// Sends the waiting messages now rather than at the end of their wait.
+    fn send_queued(self: &Rc<Self>, view: &Rc<ConversationView>) {
+        let waiting = self.queued_in(view);
         if waiting.is_empty() {
             return;
         }
-        let this = Rc::clone(self);
+        let (this, view) = (Rc::clone(self), Rc::clone(view));
         glib::spawn_future_local(async move {
             for id in waiting {
                 let outbox = this.core.outbox();
@@ -85,18 +111,18 @@ impl MainWindow {
                     Err(err) => this.failed(&gettext("Not sent: {reason}"), &err),
                 }
             }
-            this.conversation.leave();
+            this.left_queue(&view);
             this.scheduled_changed();
         });
     }
 
-    /// Opens the selected message in a composer and takes it out of the
+    /// Opens the waiting message in a composer and takes it out of the
     /// outbox, so the writer decides again when it goes.
-    fn edit_queued(self: &Rc<Self>) {
-        let Some(id) = self.queued_rows().first().copied() else {
+    fn edit_queued(self: &Rc<Self>, view: &Rc<ConversationView>) {
+        let Some(id) = self.queued_in(view).first().copied() else {
             return;
         };
-        let this = Rc::clone(self);
+        let (this, view) = (Rc::clone(self), Rc::clone(view));
         glib::spawn_future_local(async move {
             let outbox = this.core.outbox();
             let found = this.core.call(async move { outbox.find(id).await }).await;
@@ -116,7 +142,7 @@ impl MainWindow {
             {
                 return this.failed(&gettext("Could not open it: {reason}"), &err);
             }
-            this.conversation.leave();
+            this.left_queue(&view);
             this.scheduled_changed();
             if let Some(app) = this.app.upgrade()
                 && let Some(composer) = app.open_composer(draft, Signature::AsWritten)
@@ -126,13 +152,13 @@ impl MainWindow {
         });
     }
 
-    /// Drops the selected messages. Nothing goes out and nothing is kept.
-    pub(super) fn drop_queued(self: &Rc<Self>) {
-        let waiting = self.queued_rows();
+    /// Drops the waiting messages. Nothing goes out and nothing is kept.
+    pub(super) fn drop_queued(self: &Rc<Self>, view: &Rc<ConversationView>) {
+        let waiting = self.queued_in(view);
         if waiting.is_empty() {
             return;
         }
-        let this = Rc::clone(self);
+        let (this, view) = (Rc::clone(self), Rc::clone(view));
         glib::spawn_future_local(async move {
             let count = waiting.len();
             for id in waiting {
@@ -145,7 +171,7 @@ impl MainWindow {
                     return this.failed(&gettext("Could not delete: {reason}"), &err);
                 }
             }
-            this.conversation.leave();
+            this.left_queue(&view);
             this.scheduled_changed();
             this.toast(&if count == 1 {
                 gettext("Deleted. It will not be sent.")

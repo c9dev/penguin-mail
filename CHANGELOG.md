@@ -87,6 +87,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   says it is gone.
 - A message waiting in Send Later shows the day it goes, such as
   "Tomorrow at 08:00", instead of "Today" for any day to come.
+- A waiting message opened in a window of its own has working Edit, Send
+  Now, Delete and Cancel Send buttons, and they act on that message
+  rather than on the row selected in the main window.
 - A template's `{{date}}` comes out in the language the app speaks, so a
   Portuguese window writes "22 de setembro de 2026".
 

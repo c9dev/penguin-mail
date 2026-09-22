@@ -6,6 +6,7 @@ use gtk::glib;
 
 use super::{MainWindow, Target};
 use crate::ui::Mailbox;
+use crate::ui::conversation::ConversationView;
 use mailrs_domain::translate::gettext;
 use mailrs_sync::Cancelled;
 
@@ -38,8 +39,12 @@ impl MainWindow {
 
     /// Stops scheduled sends. The drafts stay in Gmail's Drafts, and a
     /// message Gmail never had is gone.
-    pub(super) fn cancel_scheduled(self: &Rc<Self>, targets: Vec<Target>) {
-        let this = Rc::clone(self);
+    pub(super) fn cancel_scheduled(
+        self: &Rc<Self>,
+        view: &Rc<ConversationView>,
+        targets: Vec<Target>,
+    ) {
+        let (this, view) = (Rc::clone(self), Rc::clone(view));
         glib::spawn_future_local(async move {
             let outbox = this.core.outbox();
             let removed = this
@@ -48,7 +53,7 @@ impl MainWindow {
                 .await;
             match removed {
                 Ok(cancelled) => {
-                    this.conversation.leave();
+                    this.left_queue(&view);
                     this.scheduled_changed();
                     this.toast(&cancelled_line(cancelled));
                 }

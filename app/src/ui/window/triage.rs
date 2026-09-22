@@ -119,8 +119,8 @@ impl MainWindow {
                 self.flag_targets(targets, on.then(|| self.settings_with(|s| s.flag_color)))
             }
             Decision::DeleteForever => self.confirm_delete_forever(view, targets),
-            Decision::Cancel(Cancel::Scheduled) => self.cancel_scheduled(targets),
-            Decision::Cancel(Cancel::Queued) => self.drop_queued(),
+            Decision::Cancel(Cancel::Scheduled) => self.cancel_scheduled(view, targets),
+            Decision::Cancel(Cancel::Queued) => self.drop_queued(view),
             Decision::Cancel(Cancel::Reminder) => self.cancel_reminders(view, targets),
             Decision::Cancel(Cancel::FollowUp) => self.dismiss_follow_ups(view, targets),
         }
