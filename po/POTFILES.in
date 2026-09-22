@@ -21,6 +21,7 @@ app/src/format.rs
 app/src/main.rs
 app/src/notify.rs
 app/src/open_thread/run/translation.rs
+app/src/permission.rs
 app/src/pgp.rs
 app/src/protection.rs
 app/src/render.rs
@@ -48,6 +49,7 @@ app/src/ui/hide_my_email.rs
 app/src/ui/invitation.rs
 app/src/ui/mod.rs
 app/src/ui/moving.rs
+app/src/ui/permission.rs
 app/src/ui/pgp.rs
 app/src/ui/preferences.rs
 app/src/ui/rules.rs

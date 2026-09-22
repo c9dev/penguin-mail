@@ -10,7 +10,9 @@ use mailrs_domain::{Account, Filter, Label, LabelKind};
 use mailrs_sync::Permitted;
 
 use crate::core::Core;
+use crate::permission::Permission;
 use crate::rules::{RuleForm, describe_action, describe_criteria};
+use crate::ui::permission;
 use mailrs_domain::translate::{fill, gettext};
 
 struct Rules {
@@ -228,30 +230,18 @@ impl Rules {
     }
 
     fn ask_for_access(self: &Rc<Self>) {
-        let page = adw::StatusPage::builder()
-            .icon_name("mail-send-symbolic")
-            .title(gettext("Allow Rules"))
-            .description(fill(
-                &gettext(
-                    "Penguin Mail needs permission to change Gmail settings for \
-                     {account}. Google asks you to confirm in your browser.",
-                ),
-                &[("account", &self.account.email)],
-            ))
-            .build();
-        let button = gtk::Button::builder()
-            .label(gettext("Grant Access"))
-            .halign(gtk::Align::Center)
-            .css_classes(["pill", "suggested-action"])
-            .build();
         let weak = Rc::downgrade(self);
-        button.connect_clicked(move |_| {
-            if let Some(rules) = weak.upgrade() {
-                rules.dialog.close();
-                (rules.grant)();
-            }
-        });
-        page.set_child(Some(&button));
+        let page = permission::page(
+            &gettext("Allow Rules"),
+            Permission::Settings,
+            &self.account.email,
+            move || {
+                if let Some(rules) = weak.upgrade() {
+                    rules.dialog.close();
+                    (rules.grant)();
+                }
+            },
+        );
         self.replace_page("problem", &page);
     }
 

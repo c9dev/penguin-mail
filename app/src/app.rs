@@ -19,6 +19,7 @@ use crate::compose::Draft;
 use crate::compose::Identity;
 use crate::core::Core;
 use crate::notify;
+use crate::permission::{Occasion, Permission};
 use crate::settings::{Change, ColorScheme, Effect, Effects, Settings};
 use crate::tray::{MailTray, TrayCommand};
 use crate::ui::autocomplete::Contacts;
@@ -754,7 +755,11 @@ impl App {
                     // person grants the one they just switched on.
                     if let (true, Some(window)) = (ask, this.window()) {
                         for account_id in &refreshed.needs_permission {
-                            window.ask_for_contacts_access(*account_id);
+                            window.ask_permission(
+                                *account_id,
+                                Permission::Contacts,
+                                Occasion::Needed,
+                            );
                         }
                     }
                     if refreshed.contacts == 0 && refreshed.photos == 0 {

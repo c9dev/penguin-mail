@@ -7,30 +7,20 @@
 //! it went, since an answer Google filed shows up on the user's own
 //! calendar and one that left as mail does not.
 
-use std::cell::RefCell;
-use std::collections::HashSet;
 use std::rc::Rc;
 
-use adw::prelude::*;
 use gtk::{gio, glib};
 use mailrs_domain::invitation::{Answer, Invitation, Scope, When};
 use mailrs_domain::{AccountId, EpochMillis};
-use mailrs_gmail::CALENDAR_SCOPE;
 use mailrs_sync::{Told, now_millis};
 
 use super::MainWindow;
 use crate::goa;
+use crate::permission::{Occasion, Permission};
 use crate::settings::Change;
 use crate::ui::conversation::ConversationView;
 use crate::ui::invitation::{Action, Proposal};
 use mailrs_domain::translate::{fill, gettext};
-
-thread_local! {
-    /// The accounts this run has already offered the calendar permission.
-    /// An answer reaches the organizer by mail without it, so the offer
-    /// comes once and then stays out of the way.
-    static ASKED_FOR_CALENDAR: RefCell<HashSet<AccountId>> = RefCell::new(HashSet::new());
-}
 
 impl MainWindow {
     /// Offers to put this account in GNOME Online Accounts, where GNOME
@@ -131,8 +121,11 @@ impl MainWindow {
                             this.toast(&replied(answer, told));
                         }
                     }
+                    // The answer reached the organizer either way; the
+                    // permission is what puts the event on the user's own
+                    // calendar, so it comes as an offer.
                     if sent.needs_permission {
-                        this.offer_calendar_access(account_id);
+                        this.ask_permission(account_id, Permission::Calendar, Occasion::Offer);
                     }
                     if let Some(off) = &sent.api_off {
                         this.explain_api_off(&off.service, &off.enable_url);
@@ -219,75 +212,6 @@ impl MainWindow {
                     &gettext("Could not send your proposal: {reason}"),
                     &[("reason", &err.to_string())],
                 )),
-            }
-        });
-    }
-
-    /// Explains what the calendar permission adds, and offers to ask
-    /// Google for it. The answer has already reached the organizer either
-    /// way; the permission is what puts the event on the user's own
-    /// calendar. The offer comes once a run, so saying no ends it.
-    fn offer_calendar_access(self: &Rc<Self>, account_id: AccountId) {
-        let first = ASKED_FOR_CALENDAR.with(|asked| asked.borrow_mut().insert(account_id));
-        if !first {
-            return;
-        }
-        let Some(account) = self.account(account_id) else {
-            return;
-        };
-        let dialog = adw::AlertDialog::new(
-            Some(&gettext("Allow Penguin Mail to Use Your Calendar")),
-            Some(&fill(
-                &gettext(
-                    "Your reply went to the organizer as mail. With permission to change \
-                     events on the calendar for {account}, the meeting is marked on your \
-                     own calendar too. Google asks you to confirm in your browser.",
-                ),
-                &[("account", &account.email)],
-            )),
-        );
-        dialog.add_responses(&[
-            ("cancel", &gettext("Not Now")),
-            ("grant", &gettext("Grant Access")),
-        ]);
-        dialog.set_response_appearance("grant", adw::ResponseAppearance::Suggested);
-        dialog.set_close_response("cancel");
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            if dialog.choose_future(Some(&this.window)).await == "grant" {
-                this.authorize_with(Some(account.email), &[CALENDAR_SCOPE]);
-            }
-        });
-    }
-
-    /// Explains that the assistant's calendar tools need the calendar
-    /// permission, and offers to ask Google for it. Unlike the offer after
-    /// an answer, nothing has happened yet without it, so this asks every
-    /// time a tool finds it missing.
-    pub(super) fn ask_for_calendar_access(self: &Rc<Self>, account_id: AccountId) {
-        let Some(account) = self.account(account_id) else {
-            return;
-        };
-        let dialog = adw::AlertDialog::new(
-            Some(&gettext("Allow Penguin Mail to Use Your Calendar")),
-            Some(&fill(
-                &gettext(
-                    "The assistant needs permission to read and change events on the \
-                     calendar for {account}. Google asks you to confirm in your browser.",
-                ),
-                &[("account", &account.email)],
-            )),
-        );
-        dialog.add_responses(&[
-            ("cancel", &gettext("Not Now")),
-            ("grant", &gettext("Grant Access")),
-        ]);
-        dialog.set_response_appearance("grant", adw::ResponseAppearance::Suggested);
-        dialog.set_close_response("cancel");
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            if dialog.choose_future(Some(&this.window)).await == "grant" {
-                this.authorize_with(Some(account.email), &[CALENDAR_SCOPE]);
             }
         });
     }

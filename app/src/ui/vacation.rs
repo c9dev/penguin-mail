@@ -11,6 +11,8 @@ use mailrs_domain::Account;
 use mailrs_sync::{AutomaticReply, Permitted};
 
 use crate::core::Core;
+use crate::permission::Permission;
+use crate::ui::permission;
 use mailrs_domain::translate::{fill, gettext};
 
 /// Shows the dialog for `account`. `grant` runs when Gmail says Penguin Mail lacks
@@ -81,28 +83,16 @@ pub fn present(
         let reply = match loaded {
             Ok(Permitted::Done(reply)) => reply,
             Ok(Permitted::NeedsPermission) => {
-                let page = adw::StatusPage::builder()
-                    .icon_name("mail-send-symbolic")
-                    .title(gettext("Allow Automatic Replies"))
-                    .description(fill(
-                        &gettext(
-                            "Penguin Mail needs permission to change Gmail settings for \
-                             {account}. Google will ask you to confirm in your browser.",
-                        ),
-                        &[("account", &email)],
-                    ))
-                    .build();
-                let button = gtk::Button::builder()
-                    .label(gettext("Grant Access"))
-                    .halign(gtk::Align::Center)
-                    .css_classes(["pill", "suggested-action"])
-                    .build();
                 let closer = dialog.clone();
-                button.connect_clicked(move |_| {
-                    closer.close();
-                    grant();
-                });
-                page.set_child(Some(&button));
+                let page = permission::page(
+                    &gettext("Allow Automatic Replies"),
+                    Permission::Settings,
+                    &email,
+                    move || {
+                        closer.close();
+                        grant();
+                    },
+                );
                 stack.add_named(&page, Some("error"));
                 stack.set_visible_child_name("error");
                 return;

@@ -2,12 +2,12 @@
 
 use std::rc::Rc;
 
-use adw::prelude::*;
 use gtk::{gio, glib};
 use mailrs_sync::{History, Leave, MailAction, Permitted, TriageAction};
 
 use super::MainWindow;
 use crate::compose::Draft;
+use crate::permission::{Occasion, Permission};
 use crate::ui::confirm::{Tone, confirm};
 use crate::ui::conversation::ConversationView;
 use crate::unsubscribe::{Unsubscribe, choose};
@@ -170,41 +170,13 @@ impl MainWindow {
                         Some(fill(&gettext("Blocked {sender}"), &[("sender", &email)])),
                     );
                 }
-                Ok(Permitted::NeedsPermission) => this.ask_for_settings_access(account_id),
+                Ok(Permitted::NeedsPermission) => {
+                    this.ask_permission(account_id, Permission::Settings, Occasion::Needed)
+                }
                 Err(err) => this.toast(&fill(
                     &gettext("Could not block the sender: {reason}"),
                     &[("reason", &err.to_string())],
                 )),
-            }
-        });
-    }
-
-    /// Explains that Gmail settings need one more permission, and offers to
-    /// ask Google for it.
-    pub(super) fn ask_for_settings_access(self: &Rc<Self>, account_id: mailrs_domain::AccountId) {
-        let Some(account) = self.account(account_id) else {
-            return;
-        };
-        let dialog = adw::AlertDialog::new(
-            Some(&gettext("Allow Changes to Gmail Settings")),
-            Some(&fill(
-                &gettext(
-                    "Penguin Mail needs permission to change Gmail settings for {account}. \
-                     Google asks you to confirm in your browser.",
-                ),
-                &[("account", &account.email)],
-            )),
-        );
-        dialog.add_responses(&[
-            ("cancel", &gettext("Not Now")),
-            ("grant", &gettext("Grant Access")),
-        ]);
-        dialog.set_response_appearance("grant", adw::ResponseAppearance::Suggested);
-        dialog.set_close_response("cancel");
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            if dialog.choose_future(Some(&this.window)).await == "grant" {
-                this.authorize(Some(account.email));
             }
         });
     }

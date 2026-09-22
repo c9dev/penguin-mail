@@ -89,16 +89,9 @@ pub trait Desk {
     fn default_account(&self) -> Option<AccountId>;
 }
 
-/// A Google permission sign-in leaves out, which a tool can find missing.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Permission {
-    /// Reading and changing the account's Gmail settings.
-    Settings,
-    /// Reading and changing the events on the account's calendar.
-    Calendar,
-    /// Erasing mail for good.
-    Delete,
-}
+/// A Google permission a tool can find missing. The window asks for the
+/// same four, so the two share one type.
+pub use crate::permission::Permission;
 
 /// What the tools ask the window to do. A test records the calls instead.
 pub trait Effects {
@@ -197,6 +190,15 @@ fn flag(input: &Value, key: &str) -> Option<bool> {
 
 fn required(input: &Value, key: &str) -> Result<String, String> {
     text(input, key).ok_or_else(|| format!("`{key}` is missing"))
+}
+
+/// What the model hears after a tool asked the user for `permission`.
+fn asked_for(permission: Permission, account: &Account) -> String {
+    format!(
+        "Penguin Mail needs permission to {} for {}. The user was asked to grant it; try again once they have.",
+        permission.purpose(),
+        account.email
+    )
 }
 
 /// The category a tool names. The tools offer no "all", since the whole
@@ -479,10 +481,7 @@ impl<A: Accounts> Tools<A> {
     fn needs_permission(&self, account: &Account) -> String {
         self.effects
             .ask_permission(account.id, Permission::Settings);
-        format!(
-            "Penguin Mail needs permission to change Gmail settings for {}. The user was asked to grant it; try again once they have.",
-            account.email
-        )
+        asked_for(Permission::Settings, account)
     }
 
     /// Runs a call that needs a Google permission, and turns the two ways
@@ -500,15 +499,7 @@ impl<A: Accounts> Tools<A> {
             Ok(Permitted::Done(value)) => Ok(value),
             Ok(Permitted::NeedsPermission) => {
                 self.effects.ask_permission(account.id, permission);
-                let what = match permission {
-                    Permission::Settings => "change Gmail settings",
-                    Permission::Calendar => "use the calendar",
-                    Permission::Delete => "delete mail for good",
-                };
-                Err(format!(
-                    "Penguin Mail needs permission to {what} for {}. The user was asked to grant it; try again once they have.",
-                    account.email
-                ))
+                Err(asked_for(permission, account))
             }
             Err(SyncError::Gmail(GmailError::ApiDisabled {
                 service,

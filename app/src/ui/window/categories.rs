@@ -11,6 +11,7 @@ use mailrs_domain::{AccountId, Category};
 use mailrs_sync::{Categorized, Permitted};
 
 use super::MainWindow;
+use crate::permission::{Occasion, Permission};
 use crate::ui::Mailbox;
 use crate::ui::conversation::ConversationView;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
@@ -273,7 +274,7 @@ impl MainWindow {
                         &gettext("Moved mail from {sender} to {category}"),
                         &values,
                     ));
-                    this.ask_for_settings_access(account_id);
+                    this.ask_permission(account_id, Permission::Settings, Occasion::Needed);
                 }
                 Err(err) => this.toast(&fill(
                     &gettext(

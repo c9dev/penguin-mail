@@ -15,7 +15,6 @@ use mailrs_domain::{
     Account, AccountId, AccountState, ChangeEvent, Label, MessageBody, Target, ThreadSummary,
     system_label,
 };
-use mailrs_gmail::{CONTACTS_SCOPE, DELETE_SCOPE};
 use mailrs_store::{accounts, labels};
 use mailrs_sync::{History, Listing, MailAction, Permitted, Scope, TriageAction, View, outbox_id};
 
@@ -23,6 +22,7 @@ use super::confirm::{Tone, confirm};
 use super::contact_card;
 use super::conversation::{Action, ConversationView};
 use super::list_feed::{Coalesce, ListFeed, Refresh, Splice, Ticket};
+use super::permission;
 use super::sidebar::Sidebar;
 use super::thread_list::{Picked, ThreadList};
 use super::{Mailbox, welcome};
@@ -31,6 +31,7 @@ use crate::assistant::ToolRequest;
 use crate::compose::{self, Draft, OutgoingAttachment, ReplyKind};
 use crate::core::Core;
 use crate::open_thread::OpenThread;
+use crate::permission::{Occasion, Permission};
 use crate::settings::{Change, Effect, Effects, Settings};
 use aftermath::Cause;
 
@@ -1361,7 +1362,9 @@ impl MainWindow {
                 .await;
             let outcome = match erased {
                 Ok(Permitted::Done(outcome)) => outcome,
-                Ok(Permitted::NeedsPermission) => return this.ask_for_delete_access(account_id),
+                Ok(Permitted::NeedsPermission) => {
+                    return this.ask_permission(account_id, Permission::Delete, Occasion::Needed);
+                }
                 Err(err) => {
                     return this.toast(&fill(
                         &gettext("Could not delete the mail: {reason}"),
@@ -1393,36 +1396,32 @@ impl MainWindow {
         }
     }
 
-    /// Explains that reading contacts needs one more Google permission,
-    /// and offers to ask for it. Preferences reaches this through the app
-    /// the first time somebody turns contacts on.
-    pub fn ask_for_contacts_access(self: &Rc<Self>, account_id: AccountId) {
+    /// Explains what `permission` adds for the account and offers to ask
+    /// Google for it. Every `Permitted::NeedsPermission` answer the window
+    /// or the assistant gets comes here; `occasion` decides whether the
+    /// question comes each time or once a run.
+    pub fn ask_permission(
+        self: &Rc<Self>,
+        account_id: AccountId,
+        permission: Permission,
+        occasion: Occasion,
+    ) {
         let Some(account) = self.account(account_id) else {
             return;
         };
-        let dialog = adw::AlertDialog::new(
-            Some(&gettext("Allow Penguin Mail to Read Your Contacts")),
-            Some(&fill(
-                &gettext(
-                    "Reading the contacts of {account} needs one more permission. Google \
-                     asks you to confirm in your browser. Names and photos stay on this \
-                     computer.",
-                ),
-                &[("account", &account.email)],
-            )),
-        );
-        dialog.add_responses(&[
-            ("cancel", &gettext("Not Now")),
-            ("grant", &gettext("Grant Access")),
-        ]);
-        dialog.set_response_appearance("grant", adw::ResponseAppearance::Suggested);
-        dialog.set_close_response("cancel");
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            if dialog.choose_future(Some(&this.window)).await == "grant" {
-                this.authorize_with(Some(account.email), &[CONTACTS_SCOPE]);
+            let email = &account.email;
+            if permission::ask(&this.window, account_id, email, permission, occasion).await {
+                this.grant(account.email, permission);
             }
         });
+    }
+
+    /// Sends `email` through consent for `permission`, once the person has
+    /// chosen Grant Access.
+    fn grant(self: &Rc<Self>, email: String, permission: Permission) {
+        self.authorize_with(Some(email), permission.scopes());
     }
 
     /// Says an API is switched off in the Google Cloud project Penguin Mail
@@ -1464,36 +1463,6 @@ impl MainWindow {
         };
         self.list.set_photos(&app.photos());
         self.reopen_for_photos();
-    }
-
-    /// Explains that erasing mail needs one more Gmail permission, and
-    /// offers to ask Google for it.
-    fn ask_for_delete_access(self: &Rc<Self>, account_id: AccountId) {
-        let Some(account) = self.account(account_id) else {
-            return;
-        };
-        let dialog = adw::AlertDialog::new(
-            Some(&gettext("Allow Penguin Mail to Delete Mail")),
-            Some(&fill(
-                &gettext(
-                    "Deleting mail for good needs one more permission for {account}. \
-                     Google asks you to confirm in your browser.",
-                ),
-                &[("account", &account.email)],
-            )),
-        );
-        dialog.add_responses(&[
-            ("cancel", &gettext("Not Now")),
-            ("grant", &gettext("Grant Access")),
-        ]);
-        dialog.set_response_appearance("grant", adw::ResponseAppearance::Suggested);
-        dialog.set_close_response("cancel");
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            if dialog.choose_future(Some(&this.window)).await == "grant" {
-                this.authorize_with(Some(account.email), &[DELETE_SCOPE]);
-            }
-        });
     }
 
     /// Drops rows that no longer belong in the Gmail folder on screen. The
@@ -2449,7 +2418,7 @@ impl MainWindow {
         let (grant, email) = (Rc::downgrade(self), account.email.clone());
         super::rules::present(&self.core, &account, labels, &self.window, move || {
             if let Some(win) = grant.upgrade() {
-                win.authorize(Some(email.clone()));
+                win.grant(email.clone(), Permission::Settings);
             }
         });
     }
@@ -2472,7 +2441,7 @@ impl MainWindow {
             &self.window,
             move || {
                 if let Some(win) = grant.upgrade() {
-                    win.authorize(Some(email.clone()));
+                    win.grant(email.clone(), Permission::Settings);
                 }
             },
             move |text| {

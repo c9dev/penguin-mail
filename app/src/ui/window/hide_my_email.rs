@@ -6,6 +6,7 @@ use std::rc::Rc;
 use mailrs_domain::AccountId;
 
 use super::MainWindow;
+use crate::permission::Permission;
 
 impl MainWindow {
     /// Opens the Hide My Email dialog, with `account_id` chosen for new
@@ -17,7 +18,7 @@ impl MainWindow {
         let weak = Rc::downgrade(self);
         crate::ui::hide_my_email::present(&app, &self.window, account_id, move |email| {
             if let Some(win) = weak.upgrade() {
-                win.authorize(Some(email));
+                win.grant(email, Permission::Settings);
             }
         });
     }

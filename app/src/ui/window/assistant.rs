@@ -18,6 +18,7 @@ use crate::assistant::run::{
 use crate::compose::{Draft, SendWhen};
 use crate::core::RunningEngine;
 use crate::hide_my_email::HiddenAddress;
+use crate::permission::Occasion;
 use crate::settings::{Change, Settings};
 use crate::unsubscribe::Unsubscribe;
 
@@ -88,11 +89,8 @@ impl Effects for Ports {
     }
 
     fn ask_permission(&self, account_id: AccountId, permission: Permission) {
-        match permission {
-            Permission::Settings => self.0.ask_for_settings_access(account_id),
-            Permission::Calendar => self.0.ask_for_calendar_access(account_id),
-            Permission::Delete => self.0.ask_for_delete_access(account_id),
-        }
+        self.0
+            .ask_permission(account_id, permission, Occasion::Needed);
     }
 
     fn explain_api_off(&self, service: &str, enable_url: &str) {

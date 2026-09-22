@@ -11,7 +11,9 @@ use mailrs_sync::Permitted;
 
 use crate::app::App;
 use crate::hide_my_email::HiddenAddress;
+use crate::permission::Permission;
 use crate::ui::confirm::{Tone, confirm};
+use crate::ui::permission;
 use mailrs_domain::translate::{fill, gettext};
 
 /// What the list says a hidden address is for.
@@ -288,30 +290,18 @@ impl Dialog {
 
     fn ask_for_access(self: &Rc<Self>, account: &str) {
         self.nav.pop_to_page(&self.home);
-        let page = adw::StatusPage::builder()
-            .icon_name("mail-send-symbolic")
-            .title(gettext("Allow Hide My Email"))
-            .description(fill(
-                &gettext(
-                    "Penguin Mail needs permission to change Gmail settings for \
-                     {account}. Google asks you to confirm in your browser.",
-                ),
-                &[("account", account)],
-            ))
-            .build();
-        let button = gtk::Button::builder()
-            .label(gettext("Grant Access"))
-            .halign(gtk::Align::Center)
-            .css_classes(["pill", "suggested-action"])
-            .build();
-        let (weak, account) = (Rc::downgrade(self), account.to_string());
-        button.connect_clicked(move |_| {
-            if let Some(this) = weak.upgrade() {
-                this.dialog.close();
-                (this.grant)(account.clone());
-            }
-        });
-        page.set_child(Some(&button));
+        let (weak, email) = (Rc::downgrade(self), account.to_string());
+        let page = permission::page(
+            &gettext("Allow Hide My Email"),
+            Permission::Settings,
+            account,
+            move || {
+                if let Some(this) = weak.upgrade() {
+                    this.dialog.close();
+                    (this.grant)(email.clone());
+                }
+            },
+        );
         if let Some(old) = self.stack.child_by_name("access") {
             self.stack.remove(&old);
         }
