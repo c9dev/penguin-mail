@@ -16,13 +16,13 @@
 
 use std::sync::Arc;
 
-use mailrs_domain::EpochMillis;
+use mailrs_domain::{AccountId, EpochMillis, Target};
 use mailrs_gmail::GmailError;
 use mailrs_store::Db;
 use mailrs_store::outbox::{self, Queued};
 
 use crate::backoff::{MOST_TRIES, retry_delay};
-use crate::{Accounts, SavedDraft, SyncError, now_millis};
+use crate::{Accounts, SavedDraft, SyncError, now_millis, outbox_id};
 
 /// What became of a message handed to the outbox.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -178,6 +178,42 @@ impl<A: Accounts> Outbox<A> {
         Ok(self.db.read(move |c| outbox::find(c, id)).await?)
     }
 
+    /// The waiting message that sends the Gmail draft `draft_id`, which is
+    /// how a reopened draft finds the hour Send Later gave it.
+    pub async fn find_draft(
+        &self,
+        account_id: AccountId,
+        draft_id: &str,
+    ) -> Result<Option<Queued>, SyncError> {
+        let draft_id = draft_id.to_string();
+        Ok(self
+            .db
+            .read(move |c| outbox::find_draft(c, account_id, &draft_id))
+            .await?)
+    }
+
+    /// Stops the Send Later messages the targets name and returns how many
+    /// it stopped. Each Gmail draft stays in Drafts. A list row names a
+    /// scheduled message by its Gmail thread, by its draft's message, or,
+    /// for a message Gmail has never seen, by its own place in the table,
+    /// so a target matching any of the three stops it.
+    pub async fn cancel_scheduled(&self, targets: &[Target]) -> Result<usize, SyncError> {
+        let targets = targets.to_vec();
+        Ok(self
+            .db
+            .write(move |c| {
+                let mut stopped = 0;
+                for item in outbox::scheduled(c)? {
+                    if targets.iter().any(|t| names(t, &item)) {
+                        outbox::remove(c, item.id)?;
+                        stopped += 1;
+                    }
+                }
+                Ok(stopped)
+            })
+            .await?)
+    }
+
     /// One try at Gmail: from the bytes this computer holds, or from the
     /// Gmail draft when they are Gmail's. Sending bytes that came out of a
     /// draft deletes that draft, so Drafts is not left holding a copy of
@@ -242,4 +278,12 @@ impl<A: Accounts> Outbox<A> {
             .await?;
         Ok(message)
     }
+}
+
+/// Whether the list row `target` stands for the waiting message `item`.
+fn names(target: &Target, item: &Queued) -> bool {
+    target.account_id == item.account_id
+        && (outbox_id(&target.thread_id) == Some(item.id)
+            || item.thread_id.as_deref() == Some(target.thread_id.as_str())
+            || (item.message_id.is_some() && target.message_id == item.message_id))
 }

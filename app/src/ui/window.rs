@@ -1992,9 +1992,10 @@ impl MainWindow {
             }
             draft.thread_id = in_thread.then_some(thread_id);
             if let Some(id) = draft_id.clone() {
+                let outbox = this.core.outbox();
                 draft.send_at = this
                     .core
-                    .read(move |c| mailrs_store::outbox::find_draft(c, account_id, &id))
+                    .call(async move { outbox.find_draft(account_id, &id).await })
                     .await
                     .ok()
                     .flatten()

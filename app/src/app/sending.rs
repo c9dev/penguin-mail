@@ -10,7 +10,6 @@
 use std::rc::Rc;
 
 use gtk::glib;
-use mailrs_domain::system_label;
 use mailrs_store::outbox::Queued;
 use mailrs_sync::{Posted, now_millis};
 
@@ -320,48 +319,21 @@ impl App {
     /// Puts conversations whose reminder is due back in the inbox, unread,
     /// and announces them. Returns whether any came back.
     async fn return_reminders(self: &Rc<Self>) -> bool {
-        let due = self
+        let actions = self.core.actions();
+        let returned = match self
             .core
-            .read(|c| mailrs_store::reminders::due(c, now_millis()))
+            .call(async move { actions.return_due(now_millis()).await })
             .await
-            .unwrap_or_default();
-        let mut returned = false;
-        for item in due {
-            let Some(sync) = self.core.account(item.account_id) else {
-                continue;
-            };
-            let thread = item.thread_id.clone();
-            let back = mailrs_sync::TriageAction::Relabel {
-                add: vec![system_label::INBOX.into(), system_label::UNREAD.into()],
-                remove: vec![],
-            };
-            if let Err(err) = self
-                .core
-                .call(async move { sync.triage_thread(&thread, &back).await })
-                .await
-            {
-                tracing::warn!(error = %err, "a reminder could not return its conversation; will retry");
-                continue;
+        {
+            Ok(returned) => returned,
+            Err(err) => {
+                tracing::warn!(error = %err, "could not read the reminders that are due");
+                return false;
             }
-            let (account_id, thread) = (item.account_id, item.thread_id.clone());
-            let newest = self
-                .core
-                .write(move |c| {
-                    mailrs_store::reminders::remove(c, account_id, &thread)?;
-                    Ok(
-                        mailrs_store::messages::thread_messages(c, account_id, &thread)?
-                            .into_iter()
-                            .last(),
-                    )
-                })
-                .await
-                .ok()
-                .flatten();
-            returned = true;
-            let settings = self.settings();
-            if settings.notifications
-                && let Some(message) = newest
-            {
+        };
+        let settings = self.settings();
+        if settings.notifications {
+            for message in returned.iter().filter_map(|r| r.newest.clone()) {
                 crate::notify::announce(
                     vec![message],
                     settings.notification_previews,
@@ -370,7 +342,7 @@ impl App {
                 );
             }
         }
-        returned
+        !returned.is_empty()
     }
 
     /// Tells the window the Send Later and Outbox lists changed.

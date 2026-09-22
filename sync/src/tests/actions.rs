@@ -425,6 +425,76 @@ async fn remind_stores_the_subject_archives_and_undo_cancels_it() {
 }
 
 #[tokio::test]
+async fn a_reminder_that_comes_due_brings_its_conversation_back_unread() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
+    h.fake.seed(meta("b", "t2", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    let actions = actions(&h);
+    let now = now_millis();
+    let remind = |thread: &'static str, at| {
+        let actions = &actions;
+        let target = Target::thread(h.account_id, thread);
+        async move {
+            actions
+                .run(&[target], MailAction::Remind { at }, History::Record)
+                .await
+        }
+    };
+    remind("t1", now - 1000).await;
+    remind("t2", now + 86_400_000).await;
+    assert!(h.threads("INBOX").await.is_empty());
+
+    let returned = actions.return_due(now).await.unwrap();
+    assert_eq!(returned.len(), 1, "only the reminder that is due");
+    assert_eq!(returned[0].target, Target::thread(h.account_id, "t1"));
+    let newest = returned[0].newest.as_ref().expect("its newest message");
+    assert_eq!(newest.id, "a");
+    assert_eq!(h.threads("INBOX").await, ["t1"]);
+    assert!(h.labels_of("a").await.contains(&"UNREAD".to_string()));
+    let account_id = h.account_id;
+    let left = h.db.read(reminders::list).await.unwrap();
+    assert_eq!(left.len(), 1);
+    assert_eq!(
+        (left[0].account_id, left[0].thread_id.as_str()),
+        (account_id, "t2")
+    );
+
+    assert!(
+        actions.return_due(now).await.unwrap().is_empty(),
+        "a returned reminder is gone"
+    );
+}
+
+#[tokio::test]
+async fn a_reminder_gmail_refuses_waits_for_the_next_pass() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    let actions = actions(&h);
+    let now = now_millis();
+    let target = Target::thread(h.account_id, "t1");
+    actions
+        .run(
+            std::slice::from_ref(&target),
+            MailAction::Remind { at: now - 1000 },
+            History::Record,
+        )
+        .await;
+
+    h.fake.fail_next(GmailError::Http {
+        status: 400,
+        body: "no".into(),
+    });
+    assert!(actions.return_due(now).await.unwrap().is_empty());
+    assert!(h.threads("INBOX").await.is_empty(), "still archived");
+
+    let returned = actions.return_due(now).await.unwrap();
+    assert_eq!(returned.len(), 1, "the next pass brings it back");
+    assert_eq!(h.threads("INBOX").await, ["t1"]);
+}
+
+#[tokio::test]
 async fn muting_labels_the_thread_and_takes_it_out_of_the_inbox() {
     let h = harness().await;
     h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));

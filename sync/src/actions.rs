@@ -14,6 +14,10 @@ use mailrs_store::{Db, flags, labels, messages, threads};
 
 use crate::{AccountSync, GmailApi, Permitted, SyncEngine, SyncError, TriageAction};
 
+mod returning;
+
+pub use returning::Returned;
+
 /// Finds the sync handle of a connected account.
 pub trait Accounts: Send + Sync + 'static {
     type Api: GmailApi;

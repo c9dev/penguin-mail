@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use mailrs_domain::system_label;
+use mailrs_domain::{Target, system_label};
 use mailrs_gmail::GmailError;
 use mailrs_store::outbox::{self, Queued};
 use mailrs_store::{drafts, messages};
 
 use super::{Connected, Harness, harness};
 use crate::fake::meta;
-use crate::{Outbox, Posted, now_millis};
+use crate::{Outbox, Posted, now_millis, outbox_row};
 
 /// Puts a draft's message in the store, as history replay does once the
 /// draft reaches this computer. Nothing here reads thread rows, so the
@@ -633,4 +633,65 @@ async fn the_network_coming_back_brings_every_stuck_message_forward() {
     assert!(outbox.send_due(now_millis()).await.unwrap().sent.is_empty());
     outbox.try_now().await.unwrap();
     assert_eq!(outbox.send_due(now_millis()).await.unwrap().sent.len(), 1);
+}
+
+#[tokio::test]
+async fn cancelling_send_later_stops_the_named_messages_and_keeps_their_drafts() {
+    let h = harness().await;
+    let outbox = queue(&h);
+    let at = now_millis() + 24 * 60 * 60 * 1000;
+    let later = |subject: &str| {
+        let mut later = message(h.account_id, subject);
+        later.send_at = at;
+        later
+    };
+    outbox.schedule(later("Monday")).await.unwrap();
+    outbox.schedule(later("Tuesday")).await.unwrap();
+    h.fake.fail_next(GmailError::Network("offline".into()));
+    let Posted::Waiting(offline) = outbox.schedule(later("Wednesday")).await.unwrap() else {
+        panic!("Send Later keeps a message it could not hand to Gmail");
+    };
+    let rows = h.db.read(outbox::scheduled).await.unwrap();
+    let row = |subject: &str| rows.iter().find(|r| r.subject == subject).unwrap().clone();
+    let (monday, tuesday) = (row("Monday"), row("Tuesday"));
+
+    // The list names the first by its Gmail thread, and the one Gmail has
+    // never seen by its place in the table.
+    let targets = [
+        Target::thread(h.account_id, monday.thread_id.clone().unwrap()),
+        Target::thread(h.account_id, outbox_row(offline)),
+    ];
+    assert_eq!(outbox.cancel_scheduled(&targets).await.unwrap(), 2);
+    let left = h.db.read(outbox::scheduled).await.unwrap();
+    assert_eq!(left.len(), 1);
+    assert_eq!(left[0].subject, "Tuesday");
+    assert_eq!(
+        h.fake.with(|s| s.drafts.len()),
+        2,
+        "the Gmail drafts stay in Drafts"
+    );
+
+    // An open draft names its message rather than its thread.
+    let by_message = Target {
+        account_id: h.account_id,
+        thread_id: "another thread".into(),
+        message_id: tuesday.message_id.clone(),
+    };
+    assert_eq!(outbox.cancel_scheduled(&[by_message]).await.unwrap(), 1);
+    assert!(h.db.read(outbox::scheduled).await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn a_reopened_draft_finds_the_hour_send_later_gave_it() {
+    let h = harness().await;
+    let outbox = queue(&h);
+    let mut later = message(h.account_id, "Monday");
+    later.send_at = now_millis() + 60_000;
+    let at = later.send_at;
+    outbox.schedule(later).await.unwrap();
+    let draft_id = h.fake.with(|s| s.drafts.keys().next().unwrap().clone());
+
+    let found = outbox.find_draft(h.account_id, &draft_id).await.unwrap();
+    assert_eq!(found.map(|q| q.send_at), Some(at));
+    assert_eq!(outbox.find_draft(h.account_id, "nope").await.unwrap(), None);
 }
