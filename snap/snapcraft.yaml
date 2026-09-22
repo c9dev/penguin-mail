@@ -1,0 +1,130 @@
+# Penguin Mail as a strictly confined snap.
+#   snapcraft pack --use-lxd
+#
+# core26 is Ubuntu 26.04, the first base with GTK 4.20 and libadwaita 1.8.
+# Snapcraft's gnome extension does not support core26 yet, so this snap
+# carries GTK, libadwaita and WebKitGTK from the 26.04 archive itself and
+# sets up their paths in snap/local/launcher. Once the extension supports
+# core26, `extensions: [gnome]` can replace most of that.
+name: penguin-mail
+title: Penguin Mail
+base: core26
+adopt-info: penguin-mail
+license: GPL-3.0-or-later
+grade: stable
+confinement: strict
+platforms:
+  amd64:
+contact: https://github.com/c9dev/penguin-mail/issues
+issues: https://github.com/c9dev/penguin-mail/issues
+source-code: https://github.com/c9dev/penguin-mail
+website: https://github.com/c9dev/penguin-mail
+
+apps:
+  penguin-mail:
+    command: usr/bin/penguin-mail
+    command-chain: [bin/launcher]
+    extensions: [gpu]
+    desktop: usr/share/applications/io.github.c9dev.PenguinMail.desktop
+    common-id: io.github.c9dev.PenguinMail
+    # snapd starts the app at login when Preferences writes this file into
+    # the snap's own autostart folder.
+    autostart: io.github.c9dev.PenguinMail.desktop
+    slots: [dbus-penguin-mail]
+    plugs:
+      - network
+      - network-status
+      # The Google sign-in tokens and API keys live in the Secret Service.
+      - password-manager-service
+      - desktop
+      - desktop-legacy
+      - wayland
+      - x11
+      # The tray icon reaches the shell's StatusNotifier host through this.
+      - unity7
+      - browser-support
+      - home
+      - removable-media
+      - gnupg
+
+slots:
+  # The name that keeps the app to one copy and answers its D-Bus actions.
+  dbus-penguin-mail:
+    interface: dbus
+    bus: session
+    name: io.github.c9dev.PenguinMail
+
+plugs:
+  # OpenPGP and S/MIME run gpg and gpgsm on the person's own keyring. The
+  # store has to approve this plug by hand.
+  gnupg:
+    interface: personal-files
+    write:
+      - $HOME/.gnupg
+
+layout:
+  # WebKitGTK and gdk-pixbuf look for their helpers at paths fixed when
+  # Ubuntu built them. These put the snap's copies there.
+  /usr/lib/x86_64-linux-gnu/webkitgtk-6.0:
+    bind: $SNAP/usr/lib/x86_64-linux-gnu/webkitgtk-6.0
+  /usr/libexec/glycin-loaders:
+    bind: $SNAP/usr/libexec/glycin-loaders
+  /usr/share/glycin-loaders:
+    bind: $SNAP/usr/share/glycin-loaders
+
+parts:
+  launcher:
+    plugin: dump
+    source: snap/local
+    organize:
+      launcher: bin/launcher
+
+  penguin-mail:
+    plugin: nil
+    source: .
+    build-packages:
+      - ca-certificates
+      - curl
+      - gcc
+      - pkg-config
+      - libgtk-4-dev
+      - libadwaita-1-dev
+      - libwebkitgtk-6.0-dev
+      - libglib2.0-dev-bin
+      - gettext
+      - appstream
+      - shared-mime-info
+    stage-packages:
+      - libgtk-4-1
+      - libadwaita-1-0
+      - libwebkitgtk-6.0-4
+      - libjavascriptcoregtk-6.0-1
+      - glib-networking
+      - gsettings-desktop-schemas
+      - adwaita-icon-theme
+      - librsvg2-common
+      - glycin-loaders
+      - shared-mime-info
+      - gnupg
+      - gpgsm
+      - pinentry-gnome3
+    # The rust plugin builds one package, and the app needs the stage
+    # script's tree beside its binary, so the build runs the same steps
+    # as the other packages: rustup at Cargo.toml's version, cargo, then
+    # scripts/stage.sh.
+    override-build: |
+      rust=$(sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)
+      curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain "$rust"
+      "$HOME/.cargo/bin/cargo" build --release --locked -p mailrs -p mailrs-cli \
+          --features mailrs/packaging-snap
+      scripts/stage.sh "$CRAFT_PART_INSTALL/usr"
+      rm "$CRAFT_PART_INSTALL/usr/bin/penguin-mail-cli"
+      version=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
+      craftctl set version="$version"
+    parse-info: [usr/share/metainfo/io.github.c9dev.PenguinMail.metainfo.xml]
+    # Debian packages build these caches in their install scripts, which
+    # stage-packages never run.
+    override-prime: |
+      craftctl default
+      glib-compile-schemas usr/share/glib-2.0/schemas
+      update-mime-database usr/share/mime
