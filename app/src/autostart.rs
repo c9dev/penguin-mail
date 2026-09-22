@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-const FILE: &str = "dev.penguinmail.PenguinMail.desktop";
+const FILE: &str = "io.github.c9dev.PenguinMail.desktop";
 
 pub fn path() -> Option<PathBuf> {
     Some(dirs_config()?.join("autostart").join(FILE))
@@ -34,7 +34,7 @@ pub fn set_enabled(path: &Path, exe: &Path, enabled: bool) -> std::io::Result<()
         path,
         format!(
             "[Desktop Entry]\nType=Application\nName=Penguin Mail\nComment=Keeps Gmail in sync from the system tray\n\
-             Exec={} --background\nIcon=dev.penguinmail.PenguinMail\nNoDisplay=true\nX-GNOME-Autostart-enabled=true\n",
+             Exec={} --background\nIcon=io.github.c9dev.PenguinMail\nNoDisplay=true\nX-GNOME-Autostart-enabled=true\n",
             exe.display()
         ),
     )
@@ -52,7 +52,7 @@ mod tests {
         let path = dir
             .path()
             .join("autostart")
-            .join("dev.penguinmail.PenguinMail.desktop");
+            .join("io.github.c9dev.PenguinMail.desktop");
         assert!(!is_enabled(&path));
         set_enabled(&path, Path::new("/opt/penguin-mail/bin/penguin-mail"), true).unwrap();
         assert!(is_enabled(&path));

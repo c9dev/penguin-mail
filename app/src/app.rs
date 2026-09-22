@@ -770,7 +770,7 @@ impl App {
     }
 
     /// Application actions, also reachable over D-Bus, for example:
-    /// `gdbus call --session --dest dev.penguinmail.PenguinMail --object-path /dev/penguinmail/PenguinMail
+    /// `gdbus call --session --dest io.github.c9dev.PenguinMail --object-path /io/github/c9dev/PenguinMail
     /// --method org.gtk.Actions.Activate hide-window [] {}`
     fn install_actions(self: &Rc<Self>) {
         let add = |name: &str, run: AppAction| {

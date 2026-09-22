@@ -4,13 +4,13 @@ Name=Penguin Mail
 GenericName=Mail
 Comment=Read and write Gmail from all your accounts
 Exec=penguin-mail %u
-Icon=dev.penguinmail.PenguinMail
+Icon=io.github.c9dev.PenguinMail
 Terminal=false
 Categories=Network;Email;GTK;GNOME;
 Keywords=mail;email;gmail;inbox;
 MimeType=x-scheme-handler/mailto;
 StartupNotify=true
-StartupWMClass=dev.penguinmail.PenguinMail
+StartupWMClass=io.github.c9dev.PenguinMail
 Actions=compose;
 
 [Desktop Action compose]

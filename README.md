@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="app/data/icons/scalable/apps/dev.penguinmail.PenguinMail.svg" width="128" height="128" alt="">
+<img src="app/data/icons/scalable/apps/io.github.c9dev.PenguinMail.svg" width="128" height="128" alt="">
 
 # Penguin Mail
 
@@ -320,13 +320,13 @@ penguin-mail --version
 To make Penguin Mail open `mailto:` links:
 
 ```sh
-xdg-mime default dev.penguinmail.PenguinMail.desktop x-scheme-handler/mailto
+xdg-mime default io.github.c9dev.PenguinMail.desktop x-scheme-handler/mailto
 ```
 
 The running app answers D-Bus actions, for custom shortcuts:
 
 ```sh
-gdbus call --session --dest dev.penguinmail.PenguinMail --object-path /dev/penguinmail/PenguinMail \
+gdbus call --session --dest io.github.c9dev.PenguinMail --object-path /io/github/c9dev/PenguinMail \
     --method org.gtk.Actions.Activate show-window [] {}
 ```
 

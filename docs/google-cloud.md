@@ -53,4 +53,4 @@ on the consent screen, change the App name under Branding to `Penguin Mail`.
 ## Other icon sizes
 
 `png/` holds the icon at 16 to 1024 pixels, for anything else that asks.
-The source is `app/data/icons/scalable/apps/dev.penguinmail.PenguinMail.svg`.
+The source is `app/data/icons/scalable/apps/io.github.c9dev.PenguinMail.svg`.

@@ -41,7 +41,7 @@ while read -r file; do
 done <<< "$listed"
 # The desktop entry is not Rust at all.
 xgettext --from-code=UTF-8 -L Desktop \
-    -o "$work/2-desktop.pot" app/data/dev.penguinmail.PenguinMail.desktop
+    -o "$work/2-desktop.pot" app/data/io.github.c9dev.PenguinMail.desktop
 
 msgcat --use-first --sort-by-file -o "$work/joined.pot" "$work"/[12]-*.pot
 # msgcat needs a header on its inputs; ours replaces it, so drop theirs.

@@ -11,7 +11,7 @@ umask 022
 
 cd "$(dirname "$0")/.."
 dir=${1:?usage: scripts/stage.sh <dir>}
-id=dev.penguinmail.PenguinMail
+id=io.github.c9dev.PenguinMail
 bin=${CARGO_TARGET_DIR:-target}/release
 
 install -Dm755 "$bin/penguin-mail" "$dir/bin/penguin-mail"

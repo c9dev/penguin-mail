@@ -75,7 +75,7 @@ def penguins():
     desktop = Atspi.get_desktop(0)
     apps = [desktop.get_child_at_index(i) for i in range(desktop.get_child_count())]
     named = [(a, a.get_name() or "") for a in apps if a is not None]
-    return [a for a, name in named if name.startswith("dev.penguinmail")], [
+    return [a for a, name in named if name.startswith("io.github.c9dev")], [
         name for _, name in named
     ]
 

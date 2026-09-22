@@ -10,11 +10,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: app/data/dev.penguinmail.PenguinMail.desktop:5
+#: app/data/io.github.c9dev.PenguinMail.desktop:5
 msgid "Read and write Gmail from all your accounts"
 msgstr ""
 
-#: app/data/dev.penguinmail.PenguinMail.desktop:10
+#: app/data/io.github.c9dev.PenguinMail.desktop:10
 msgid "mail;email;gmail;inbox;"
 msgstr ""
 
@@ -1049,7 +1049,7 @@ msgstr ""
 msgid "Slate"
 msgstr ""
 
-#: app/src/main.rs:53
+#: app/src/main.rs:54
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]]\n"
 "\n"
@@ -1060,11 +1060,11 @@ msgid ""
 "  mailto:...     the same as --compose mailto:..."
 msgstr ""
 
-#: app/src/main.rs:113
+#: app/src/main.rs:114
 msgid "penguin-mail: unknown option {option}"
 msgstr ""
 
-#: app/src/main.rs:225
+#: app/src/main.rs:229
 msgid "Penguin Mail Could Not Start"
 msgstr ""
 

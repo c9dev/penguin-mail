@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Removes what install.sh added, and anything an older mailrs install left.
+# Removes what install.sh added, and what an install under an earlier name left.
 # Your mail cache, config, and keyring entries stay.
 set -euo pipefail
 
 prefix="${PREFIX:-$HOME/.local}"
-for id in dev.penguinmail.PenguinMail dev.mailrs.Mailrs; do
+for id in io.github.c9dev.PenguinMail dev.penguinmail.PenguinMail dev.mailrs.Mailrs; do
     rm -f "$prefix/share/applications/$id.desktop" \
         "$prefix/share/icons/hicolor/scalable/apps/$id.svg" \
         "$prefix/share/icons/hicolor/symbolic/apps/$id-symbolic.svg" \

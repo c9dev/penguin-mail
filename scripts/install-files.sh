@@ -7,8 +7,10 @@
 #   NO_AUTOSTART=1 ...   skips starting Penguin Mail at login
 #   PREFIX=/opt/penguin-mail ...   installs somewhere else
 #
-# Upgrading from mailrs removes its binaries, launcher, and icons, and carries
-# its login item over. The app moves its config and mail on first start.
+# Upgrading from an install under an earlier name (mailrs, or Penguin Mail
+# before it took the io.github.c9dev ID) removes the old launcher and icons
+# and carries the login item over. The app moves mailrs's config and mail on
+# first start.
 set -euo pipefail
 
 tree=${1:?usage: install-files.sh <tree>}
@@ -16,8 +18,8 @@ prefix="${PREFIX:-$HOME/.local}"
 apps="$prefix/share/applications"
 icons="$prefix/share/icons/hicolor"
 autostart="$HOME/.config/autostart"
-id=dev.penguinmail.PenguinMail
-old_id=dev.mailrs.Mailrs
+id=io.github.c9dev.PenguinMail
+old_ids=(dev.penguinmail.PenguinMail dev.mailrs.Mailrs)
 
 # A running copy keeps its old file open. Each binary lands beside the old
 # one and is renamed over it, so a copy that fails halfway leaves the old
@@ -40,14 +42,18 @@ sed "s|^Exec=penguin-mail|Exec=$prefix/bin/penguin-mail|" \
     "$tree/share/applications/$id.desktop" > "$apps/$id.desktop"
 chmod 644 "$apps/$id.desktop"
 
-rm -f "$prefix/bin/mailrs" "$prefix/bin/mailrs-cli" \
-    "$apps/$old_id.desktop" \
-    "$icons/scalable/apps/$old_id.svg" \
-    "$icons/symbolic/apps/$old_id-symbolic.svg"
+rm -f "$prefix/bin/mailrs" "$prefix/bin/mailrs-cli"
+for old_id in "${old_ids[@]}"; do
+    rm -f "$apps/$old_id.desktop" \
+        "$icons/scalable/apps/$old_id.svg" \
+        "$icons/symbolic/apps/$old_id-symbolic.svg"
+done
 
 # An existing login item is the user's choice, on or off: keep it. One left
-# by mailrs moves to the new name and starts the new binary.
-if [ -e "$autostart/$old_id.desktop" ]; then
+# under an earlier name moves to the new one and starts the new binary.
+carried=
+for old_id in "${old_ids[@]}"; do
+    [ -e "$autostart/$old_id.desktop" ] || continue
     if [ ! -e "$autostart/$id.desktop" ]; then
         sed -e "s|^Name=.*|Name=Penguin Mail|" \
             -e "s|^Exec=.*|Exec=$prefix/bin/penguin-mail --background|" \
@@ -55,7 +61,9 @@ if [ -e "$autostart/$old_id.desktop" ]; then
             "$autostart/$old_id.desktop" > "$autostart/$id.desktop"
     fi
     rm -f "$autostart/$old_id.desktop"
-elif [ "${NO_AUTOSTART:-}" != 1 ] && [ ! -e "$autostart/$id.desktop" ]; then
+    carried=1
+done
+if [ -z "$carried" ] && [ "${NO_AUTOSTART:-}" != 1 ] && [ ! -e "$autostart/$id.desktop" ]; then
     mkdir -p "$autostart"
     cat > "$autostart/$id.desktop" <<DESKTOP
 [Desktop Entry]

@@ -54,16 +54,28 @@ Description: Gmail client for GNOME
  Reads, sorts and sends mail for several Gmail accounts, keeps them in
  sync from the system tray, and signs and encrypts with OpenPGP or S/MIME.
 CONTROL
+# dpkg drops the files an earlier .deb shipped under the old app ID. The
+# rm catches the same names when something else left them, such as
+# install-files.sh run with PREFIX=/usr, so the menu shows one Penguin Mail.
 cat > "$root/DEBIAN/postinst" <<'POSTINST'
 #!/bin/sh
 set -e
 if [ "$1" = configure ]; then
+    rm -f /usr/share/applications/dev.penguinmail.PenguinMail.desktop \
+        /usr/share/icons/hicolor/scalable/apps/dev.penguinmail.PenguinMail.svg \
+        /usr/share/icons/hicolor/symbolic/apps/dev.penguinmail.PenguinMail-symbolic.svg
     update-desktop-database -q /usr/share/applications || true
     gtk-update-icon-cache -q -f -t /usr/share/icons/hicolor || true
 fi
 POSTINST
-cp "$root/DEBIAN/postinst" "$root/DEBIAN/postrm"
-sed -i 's/= configure/= remove/' "$root/DEBIAN/postrm"
+cat > "$root/DEBIAN/postrm" <<'POSTRM'
+#!/bin/sh
+set -e
+if [ "$1" = remove ]; then
+    update-desktop-database -q /usr/share/applications || true
+    gtk-update-icon-cache -q -f -t /usr/share/icons/hicolor || true
+fi
+POSTRM
 chmod 755 "$root/DEBIAN/postinst" "$root/DEBIAN/postrm"
 deb="penguin-mail_${version}_amd64.deb"
 dpkg-deb --root-owner-group -Zxz --build "$root" "$out/$deb" >/dev/null
