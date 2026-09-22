@@ -12,6 +12,7 @@ use mailrs_sync::Permitted;
 use mailrs_sync::hidden::{self, HiddenAddress};
 
 use super::App;
+use crate::settings::Change;
 
 impl App {
     /// The accounts Penguin Mail has, for the dialog's account picker.
@@ -49,8 +50,7 @@ impl App {
             })
             .await?;
         if let Permitted::Done(hidden) = &made {
-            let saved = hidden.clone();
-            self.update_settings(|s| s.hidden_addresses.push(saved));
+            self.change_settings(Change::SaveHiddenAddress(hidden.clone()));
         }
         Ok(made)
     }
@@ -74,15 +74,7 @@ impl App {
         let Permitted::Done(changed) = changed else {
             return Ok(Permitted::NeedsPermission);
         };
-        self.update_settings(|s| {
-            if let Some(kept) = s
-                .hidden_addresses
-                .iter_mut()
-                .find(|h| h.address == changed.address)
-            {
-                *kept = changed;
-            }
-        });
+        self.change_settings(Change::SaveHiddenAddress(changed));
         Ok(Permitted::Done(()))
     }
 
@@ -100,7 +92,7 @@ impl App {
             .call(async move { settings.delete_hidden_address(account_id, &hidden).await })
             .await?;
         if dropped == Permitted::Done(()) {
-            self.update_settings(|s| s.hidden_addresses.retain(|h| h.address != gone));
+            self.change_settings(Change::ForgetHiddenAddress(gone));
         }
         Ok(dropped)
     }

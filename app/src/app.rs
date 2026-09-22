@@ -187,19 +187,6 @@ impl App {
         self.commit_settings(&before, after, effects)
     }
 
-    /// Changes preferences, saves them, and applies them to open windows.
-    ///
-    /// Prefer [`App::change_settings`]. Only Hide My Email still writes
-    /// through this, until its writes get names of their own; it works out
-    /// their effects the same way.
-    pub fn update_settings(self: &Rc<Self>, change: impl FnOnce(&mut Settings)) -> Effects {
-        let before = self.settings();
-        let mut after = before.clone();
-        change(&mut after);
-        let effects = Effects::between(&before, &after);
-        self.commit_settings(&before, after, effects)
-    }
-
     /// Saves the new preferences and hands their effects to the window.
     fn commit_settings(
         self: &Rc<Self>,

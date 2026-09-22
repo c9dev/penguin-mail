@@ -7,6 +7,7 @@
 //! GTK, so the rules live under unit tests.
 
 use mailrs_domain::{Category, FlagColor, SmartMailbox};
+use mailrs_sync::HiddenAddress;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
@@ -90,6 +91,11 @@ pub enum Change {
         id: String,
         step: isize,
     },
+    /// Keeps a Hide My Email address, replacing the one with the same
+    /// address.
+    SaveHiddenAddress(HiddenAddress),
+    /// Forgets the Hide My Email address with this address.
+    ForgetHiddenAddress(String),
     /// Moves an account one place up or down among `emails`.
     MoveAccount {
         emails: Vec<String>,
@@ -273,6 +279,19 @@ impl Change {
                 }
             }
             Change::DeleteSmartMailbox(id) => settings.smart_mailboxes.retain(|m| m.id != id),
+            Change::SaveHiddenAddress(hidden) => {
+                match settings
+                    .hidden_addresses
+                    .iter_mut()
+                    .find(|h| h.address == hidden.address)
+                {
+                    Some(slot) => *slot = hidden,
+                    None => settings.hidden_addresses.push(hidden),
+                }
+            }
+            Change::ForgetHiddenAddress(address) => {
+                settings.hidden_addresses.retain(|h| h.address != address)
+            }
             Change::MoveSmartMailbox { id, step } => settings.move_smart(&id, step),
             Change::MoveAccount {
                 emails,
@@ -1046,6 +1065,32 @@ mod tests {
     }
 
     #[test]
+    fn hidden_addresses_are_kept_replaced_and_forgotten_quietly() {
+        let hidden = |address: &str, active: bool| HiddenAddress {
+            account: "dana@example.com".into(),
+            address: address.into(),
+            note: String::new(),
+            created: 1,
+            active,
+            label_filter: Some("f1".into()),
+            trash_filter: None,
+        };
+        let kite = "dana+kite.fern482@example.com";
+        let mut settings = Settings::default();
+        let saved = Change::SaveHiddenAddress(hidden(kite, true)).apply(&mut settings);
+        assert_eq!(saved, Effects::default(), "nothing on screen lists them");
+        Change::SaveHiddenAddress(hidden("dana+moss.olive017@example.com", true))
+            .apply(&mut settings);
+        // Saving an address again replaces it rather than adding a second.
+        Change::SaveHiddenAddress(hidden(kite, false)).apply(&mut settings);
+        assert_eq!(settings.hidden_addresses.len(), 2);
+        assert!(!settings.hidden_addresses[0].active);
+        Change::ForgetHiddenAddress(kite.into()).apply(&mut settings);
+        assert_eq!(settings.hidden_addresses.len(), 1);
+        assert_ne!(settings.hidden_addresses[0].address, kite);
+    }
+
+    #[test]
     fn account_changes_redraw_the_sidebar_and_the_rows() {
         let mut settings = Settings::default();
         let colored = Change::AccountColor {
@@ -1150,7 +1195,9 @@ mod tests {
         );
         // Nothing but the contact switches touches them.
         assert_eq!(
-            Change::Threading(false).apply(&mut settings).address_books(),
+            Change::Threading(false)
+                .apply(&mut settings)
+                .address_books(),
             &AddressBooks::default()
         );
     }
