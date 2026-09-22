@@ -217,7 +217,7 @@ impl Effects for Ports {
         Box::pin(async move {
             let sync = self.sync(account_id)?;
             self.core
-                .call(async move { sync.ensure_thread(&thread_id).await })
+                .call(async move { sync.open_thread(&thread_id).await })
                 .await
                 .map(|_| ())
                 .map_err(|err| err.to_string())

@@ -3,6 +3,7 @@
 
 mod history;
 mod labels;
+mod listed;
 mod outbox;
 pub use outbox::SendAsAddress;
 mod threads;
@@ -40,6 +41,9 @@ pub struct AccountSync<G> {
     /// thread within [`FRESH_FOR`] of it trusts the store and asks Gmail
     /// nothing.
     caught_up: Arc<Mutex<Option<Instant>>>,
+    /// Whole threads a Gmail search fetched, by thread id, kept so opening
+    /// one stores it without asking Gmail again.
+    listed: Mutex<std::collections::HashMap<String, listed::Listed>>,
 }
 
 /// How long a finished history replay speaks for the whole mailbox. The
@@ -64,6 +68,7 @@ impl<G: GmailApi> AccountSync<G> {
             wait_ceiling: crate::WAIT_CEILING,
             touched: Arc::default(),
             caught_up: Arc::default(),
+            listed: Mutex::default(),
         }
     }
 

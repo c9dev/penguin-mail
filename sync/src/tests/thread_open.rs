@@ -1,8 +1,12 @@
-use mailrs_domain::MessageBody;
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use mailrs_domain::{Account, AccountState, Folder, MessageBody};
 use mailrs_store::messages;
 
 use super::harness;
 use crate::fake::meta;
+use crate::mailbox::{Mailbox, Mailboxes, Scope, View};
 use crate::now_millis;
 
 const DAY: i64 = 24 * 60 * 60 * 1000;
@@ -149,4 +153,80 @@ async fn opening_a_thread_keeps_a_change_history_brought_while_gmail_answered() 
     let (opened, ()) = tokio::join!(opening, meanwhile);
     opened.unwrap();
     assert_eq!(h.labels_of("a").await, Vec::<String>::new());
+}
+
+/// Lists the Trash through `Mailboxes`, as the window does.
+async fn list_trash(h: &super::Harness) -> Vec<String> {
+    let connected = HashMap::from([(h.account_id, Arc::clone(&h.sync))]);
+    let lists = Mailboxes::new(Arc::new(super::Connected(connected)), h.db.clone());
+    let scope = Scope::over([Account {
+        id: h.account_id,
+        email: "me@example.com".into(),
+        state: AccountState::Ok,
+    }]);
+    let trash = Mailbox::Folder {
+        account_id: None,
+        folder: Folder::Trash,
+    };
+    lists
+        .list(&trash, &scope, &View::default(), 0)
+        .await
+        .expect("the Trash lists")
+        .rows
+        .into_iter()
+        .map(|r| r.id)
+        .collect()
+}
+
+/// An old conversation outside the window: two trashed messages and a
+/// third that the Trash does not list.
+async fn trashed_thread() -> super::Harness {
+    let h = harness().await;
+    let now = now_millis();
+    h.fake.seed(meta("recent", "t1", now, &["INBOX"]));
+    h.fake.seed(meta("first", "t9", now - 90 * DAY, &[]));
+    h.fake
+        .seed(meta("second", "t9", now - 89 * DAY, &["TRASH"]));
+    h.fake.seed(meta("third", "t9", now - 88 * DAY, &["TRASH"]));
+    h.bootstrap_all().await;
+    h.fake.with(|s| s.page_size = 1000);
+    h
+}
+
+#[tokio::test]
+async fn opening_a_thread_a_search_fetched_whole_asks_gmail_nothing() {
+    let h = trashed_thread().await;
+    h.sync.incremental().await.unwrap();
+    h.fake.reset_usage();
+
+    assert_eq!(list_trash(&h).await, ["t9"]);
+    let listed = h.fake.usage();
+    // Two hits in one thread cost one threads.get, no more than their two
+    // messages.get calls would.
+    assert_eq!(listed.calls_to("users.threads.get"), 1);
+    assert_eq!(listed.calls_to("users.messages.get"), 0);
+    assert!(h.thread("t9").await.is_none(), "listing stores nothing");
+    h.fake.reset_usage();
+
+    h.sync.open_thread("t9").await.unwrap();
+
+    assert_eq!(h.fake.usage().calls_to("users.threads.get"), 0);
+    assert_eq!(h.thread("t9").await.unwrap().message_count, 3);
+}
+
+#[tokio::test]
+async fn a_search_copy_that_history_moved_past_is_fetched_again() {
+    let h = trashed_thread().await;
+    h.sync.incremental().await.unwrap();
+    assert_eq!(list_trash(&h).await, ["t9"]);
+    // The first message is starred in the browser. The store lacks t9, so
+    // the replay moves the cursor past the change without storing it.
+    h.fake.remote_relabel("first", &["STARRED"], &[]);
+    h.sync.incremental().await.unwrap();
+    h.fake.reset_usage();
+
+    h.sync.open_thread("t9").await.unwrap();
+
+    assert_eq!(h.fake.usage().calls_to("users.threads.get"), 1);
+    assert_eq!(h.labels_of("first").await, ["STARRED"]);
 }

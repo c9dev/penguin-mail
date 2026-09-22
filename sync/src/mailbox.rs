@@ -14,6 +14,7 @@ use mailrs_domain::{
     Account, AccountId, Category, EpochMillis, FlagColor, Folder, MessageMeta, SmartMailbox,
     ThreadSummary, system_label,
 };
+use mailrs_gmail::MessageRef;
 use mailrs_store::threads::ThreadFilter;
 use mailrs_store::{Db, flags, follow_ups, outbox, reminders, threads};
 
@@ -374,7 +375,8 @@ struct RemoteListing {
 struct RemotePage {
     /// Whether the search has run for this account yet.
     listed: bool,
-    ids: Vec<String>,
+    /// The messages the search returned, with their threads.
+    ids: Vec<MessageRef>,
     metas: Vec<MessageMeta>,
     /// Ids whose metadata has been asked for, from the front of `ids`.
     fetched: usize,

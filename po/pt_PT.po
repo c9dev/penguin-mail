@@ -5417,136 +5417,136 @@ msgstr ""
 msgid "Could not undo: {reason}"
 msgstr "Não foi possível anular: {reason}"
 
-#: sync/src/mailbox.rs:89
+#: sync/src/mailbox.rs:90
 msgid "{color} Flag"
 msgstr "Marca: {color}"
 
-#: sync/src/mailbox.rs:150
+#: sync/src/mailbox.rs:151
 msgid "No Results"
 msgstr "Sem resultados"
 
-#: sync/src/mailbox.rs:153
+#: sync/src/mailbox.rs:154
 msgid "Nothing Scheduled"
 msgstr "Nada agendado"
 
-#: sync/src/mailbox.rs:156
+#: sync/src/mailbox.rs:157
 msgid "Outbox Is Empty"
 msgstr "A caixa de saída está vazia"
 
-#: sync/src/mailbox.rs:158
+#: sync/src/mailbox.rs:159
 msgid "No Reminders"
 msgstr "Sem lembretes"
 
-#: sync/src/mailbox.rs:160
+#: sync/src/mailbox.rs:161
 msgid "No Follow-Ups"
 msgstr "Sem seguimentos"
 
-#: sync/src/mailbox.rs:163
+#: sync/src/mailbox.rs:164
 msgid "No Flagged Mail"
 msgstr "Sem correio marcado"
 
-#: sync/src/mailbox.rs:165
+#: sync/src/mailbox.rs:166
 msgid "No Mail from VIPs"
 msgstr "Sem correio de VIP"
 
-#: sync/src/mailbox.rs:167
+#: sync/src/mailbox.rs:168
 msgid "No Matching Mail"
 msgstr "Sem correio correspondente"
 
-#: sync/src/mailbox.rs:172
+#: sync/src/mailbox.rs:173
 msgid "No Archived Mail"
 msgstr "Sem correio arquivado"
 
-#: sync/src/mailbox.rs:173
+#: sync/src/mailbox.rs:174
 msgid "No Junk"
 msgstr "Sem spam"
 
-#: sync/src/mailbox.rs:174
+#: sync/src/mailbox.rs:175
 msgid "Trash Is Empty"
 msgstr "O lixo está vazio"
 
-#: sync/src/mailbox.rs:180
+#: sync/src/mailbox.rs:181
 msgid "Inbox Zero"
 msgstr "Caixa de entrada vazia"
 
-#: sync/src/mailbox.rs:181
+#: sync/src/mailbox.rs:182
 msgid "No Starred Mail"
 msgstr "Sem correio marcado"
 
-#: sync/src/mailbox.rs:182
+#: sync/src/mailbox.rs:183
 msgid "No Sent Mail"
 msgstr "Sem correio enviado"
 
-#: sync/src/mailbox.rs:183
+#: sync/src/mailbox.rs:184
 msgid "No Drafts"
 msgstr "Sem rascunhos"
 
-#: sync/src/mailbox.rs:184
+#: sync/src/mailbox.rs:185
 msgid "No Muted Mail"
 msgstr "Sem correio silenciado"
 
-#: sync/src/mailbox.rs:228
+#: sync/src/mailbox.rs:229
 msgctxt "mailbox"
 msgid "Archive"
 msgstr "Arquivo"
 
-#: sync/src/mailbox.rs:230
+#: sync/src/mailbox.rs:231
 msgid "Trash"
 msgstr "Lixo"
 
-#: sync/src/mailbox.rs:231
+#: sync/src/mailbox.rs:232
 msgid "All Mail"
 msgstr "Todo o correio"
 
-#: sync/src/mailbox.rs:470
+#: sync/src/mailbox.rs:472
 msgid "This smart mailbox has no conditions"
 msgstr "Esta caixa inteligente não tem condições"
 
-#: sync/src/mailbox.rs:790
+#: sync/src/mailbox.rs:792
 msgid "Could not load mail for {account}: {reason}"
 msgstr "Não foi possível carregar o correio de {account}: {reason}"
 
-#: sync/src/mailbox.rs:835
+#: sync/src/mailbox.rs:837
 msgid "Sends {when}"
 msgstr "Envia {when}"
 
-#: sync/src/mailbox.rs:911
+#: sync/src/mailbox.rs:913
 msgid "Returns {when}"
 msgstr "Volta {when}"
 
-#: sync/src/mailbox.rs:954 sync/src/mailbox.rs:1025
+#: sync/src/mailbox.rs:956 sync/src/mailbox.rs:1027
 msgid "No recipients"
 msgstr "Sem destinatários"
 
-#: sync/src/mailbox.rs:957 sync/src/mailbox.rs:1028
+#: sync/src/mailbox.rs:959 sync/src/mailbox.rs:1030
 msgid "To {recipients}"
 msgstr "Para {recipients}"
 
-#: sync/src/mailbox.rs:990
+#: sync/src/mailbox.rs:992
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} por ler"
 msgstr[1] "{count} por ler"
 
-#: sync/src/mailbox.rs:1000
+#: sync/src/mailbox.rs:1002
 msgid "Sent yesterday, no reply yet"
 msgstr "Enviada ontem, ainda sem resposta"
 
-#: sync/src/mailbox.rs:1002
+#: sync/src/mailbox.rs:1004
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Enviada há {days} dia, ainda sem resposta"
 msgstr[1] "Enviada há {days} dias, ainda sem resposta"
 
-#: sync/src/mailbox.rs:1036
+#: sync/src/mailbox.rs:1038
 msgid "Not sent"
 msgstr "Não enviada"
 
-#: sync/src/mailbox.rs:1044
+#: sync/src/mailbox.rs:1046
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Nova tentativa {when}"
 
-#: sync/src/mailbox.rs:1051
+#: sync/src/mailbox.rs:1053
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. O Penguin Mail deixou de tentar"
 

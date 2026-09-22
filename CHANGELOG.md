@@ -16,6 +16,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   gets stuck there.
 - A new account finishes its first sync sooner: Penguin Mail fetches each
   conversation in one request instead of one request per message.
+- A conversation with several results in a search, the Trash or Junk opens
+  without waiting on Gmail again.
 
 ### Fixed
 

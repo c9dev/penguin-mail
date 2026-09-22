@@ -109,7 +109,7 @@ pub trait Effects {
         account_id: AccountId,
         thread_id: String,
     ) -> Answer<'_, Result<Stored, String>>;
-    /// Asks Gmail for the whole thread and stores it.
+    /// Stores the whole thread, from a search that fetched it or from Gmail.
     fn ensure_thread(
         &self,
         account_id: AccountId,
