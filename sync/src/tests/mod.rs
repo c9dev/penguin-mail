@@ -14,6 +14,7 @@ mod outbox;
 mod priority;
 mod quota;
 mod search;
+mod senders;
 mod settings;
 mod thread_open;
 mod triage;

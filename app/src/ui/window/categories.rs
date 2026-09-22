@@ -7,11 +7,10 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::glib;
-use mailrs_domain::{AccountId, Category, Filter, FilterAction, FilterCriteria, system_label};
-use mailrs_store::threads::{self, ThreadFilter};
-use mailrs_sync::{History, MailAction, Permitted, SyncError, TriageAction};
+use mailrs_domain::{AccountId, Category};
+use mailrs_sync::{Categorized, Permitted};
 
-use super::{MainWindow, Target};
+use super::MainWindow;
 use crate::ui::Mailbox;
 use crate::ui::conversation::ConversationView;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
@@ -239,45 +238,32 @@ impl MainWindow {
     ) {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let key = email.clone();
-            let mut ids: Vec<String> = this
+            let actions = this.core.actions();
+            let asked = email.clone();
+            let categorized = this
                 .core
-                .read(move |c| {
-                    let theirs = ThreadFilter::account(account_id, "").from_senders(vec![key]);
-                    Ok(threads::list_threads(c, &theirs, 0, 10_000)?
-                        .into_iter()
-                        .map(|t| t.id)
-                        .collect())
+                .call(async move {
+                    Ok::<_, std::convert::Infallible>(
+                        actions
+                            .categorize_sender(account_id, &asked, also.as_deref(), category)
+                            .await,
+                    )
                 })
-                .await
-                .unwrap_or_default();
-            if let Some(thread) = also
-                && !ids.contains(&thread)
-            {
-                ids.push(thread);
-            }
-            let targets: Vec<Target> = ids
-                .into_iter()
-                .map(|thread_id| Target {
-                    account_id,
-                    thread_id,
-                    message_id: None,
-                })
-                .collect();
-            let label = category.gmail_label();
-            let relabel = TriageAction::Relabel {
-                add: vec![label.into()],
-                remove: system_label::CATEGORIES
-                    .iter()
-                    .filter(|l| **l != label)
-                    .map(|l| l.to_string())
-                    .collect(),
+                .await;
+            let Categorized { moved, sorted } = match categorized {
+                Ok(categorized) => categorized,
+                Err(err) => return this.toast(&err.to_string()),
             };
-            // No undo: putting back the old labels would need each thread's own.
-            this.perform(targets, MailAction::Triage(relabel), History::Skip, None);
+            if let Some(error) = moved.first_error() {
+                this.toast(error);
+            }
+            // Moving mail between categories can add rows to a Gmail
+            // folder, and only a fresh search shows them.
+            this.core.forget_remote();
+            this.reload_folder();
             let name = category.name();
             let values = [("sender", who.as_str()), ("category", name.as_str())];
-            match this.sort_future_mail(account_id, &email, label).await {
+            match sorted {
                 Ok(Permitted::Done(())) => this.toast(&fill(
                     &gettext("Mail from {sender} now goes to {category}"),
                     &values,
@@ -298,58 +284,5 @@ impl MainWindow {
                 )),
             }
         });
-    }
-
-    /// Replaces any category filter for `email` with one that adds `label`.
-    async fn sort_future_mail(
-        self: &Rc<Self>,
-        account_id: AccountId,
-        email: &str,
-        label: &'static str,
-    ) -> anyhow::Result<Permitted<()>> {
-        if self.core.account(account_id).is_none() {
-            anyhow::bail!("that account is not connected");
-        }
-        let (settings, from) = (self.core.gmail_settings(), email.to_string());
-        self.core
-            .call(async move {
-                let Permitted::Done(rules) = settings.rules(account_id).await? else {
-                    return Ok(Permitted::NeedsPermission);
-                };
-                for old in rules {
-                    let sorts_sender = old
-                        .criteria
-                        .from
-                        .as_deref()
-                        .is_some_and(|f| f.eq_ignore_ascii_case(&from))
-                        && !old.action.add_label_ids.is_empty()
-                        && old
-                            .action
-                            .add_label_ids
-                            .iter()
-                            .all(|l| system_label::is_category(l));
-                    if let (true, Some(id)) = (sorts_sender, old.id.as_deref())
-                        && settings.delete_rule(account_id, id).await? == Permitted::NeedsPermission
-                    {
-                        return Ok(Permitted::NeedsPermission);
-                    }
-                }
-                let rule = Filter {
-                    id: None,
-                    criteria: FilterCriteria {
-                        from: Some(from),
-                        ..FilterCriteria::default()
-                    },
-                    action: FilterAction {
-                        add_label_ids: vec![label.into()],
-                        ..FilterAction::default()
-                    },
-                };
-                Ok::<_, SyncError>(match settings.add_rule(account_id, rule).await? {
-                    Permitted::Done(_) => Permitted::Done(()),
-                    Permitted::NeedsPermission => Permitted::NeedsPermission,
-                })
-            })
-            .await
     }
 }

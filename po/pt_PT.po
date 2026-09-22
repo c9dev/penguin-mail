@@ -4733,25 +4733,25 @@ msgstr "Abrir noutro programa"
 msgid "{file}, preview"
 msgstr "{file}, pré-visualização"
 
-#: app/src/ui/window/categories.rs:154
+#: app/src/ui/window/categories.rs:153
 msgid "{name}, {count} unread"
 msgid_plural "{name}, {count} unread"
 msgstr[0] "{name}, {count} por ler"
 msgstr[1] "{name}, {count} por ler"
 
-#: app/src/ui/window/categories.rs:240
+#: app/src/ui/window/categories.rs:239
 msgid "Open a message from the sender first"
 msgstr "Abra primeiro uma mensagem do remetente"
 
-#: app/src/ui/window/categories.rs:297
+#: app/src/ui/window/categories.rs:283
 msgid "Mail from {sender} now goes to {category}"
 msgstr "O correio de {sender} passa a ir para {category}"
 
-#: app/src/ui/window/categories.rs:302
+#: app/src/ui/window/categories.rs:288
 msgid "Moved mail from {sender} to {category}"
 msgstr "Correio de {sender} movido para {category}"
 
-#: app/src/ui/window/categories.rs:309
+#: app/src/ui/window/categories.rs:295
 msgid ""
 "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr ""
@@ -5407,24 +5407,24 @@ msgstr[1] "{count} segundos"
 msgid "a minute"
 msgstr "um minuto"
 
-#: sync/src/actions.rs:94
+#: sync/src/actions.rs:96
 msgid "Cancel Reminder"
 msgstr "Cancelar lembrete"
 
-#: sync/src/actions.rs:97
+#: sync/src/actions.rs:99
 msgid "Change labels"
 msgstr "Alterar etiquetas"
 
-#: sync/src/actions.rs:290
+#: sync/src/actions.rs:292
 msgid "Delete Forever failed: {reason}"
 msgstr "Eliminar definitivamente falhou: {reason}"
 
-#: sync/src/actions.rs:415
+#: sync/src/actions.rs:417
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr ""
 "Esta mensagem mudou de sítio entretanto, por isso Anular deixou-a onde está."
 
-#: sync/src/actions.rs:481
+#: sync/src/actions.rs:483
 msgid "Could not undo: {reason}"
 msgstr "Não foi possível anular: {reason}"
 

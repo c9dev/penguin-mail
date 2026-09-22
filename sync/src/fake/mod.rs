@@ -73,6 +73,9 @@ pub struct FakeState {
     pub send_as: Vec<SendAs>,
     pub vacation: Vacation,
     pub filters: Vec<Filter>,
+    /// Filters made so far. Gmail never hands a deleted filter's id to a
+    /// new one, so ids count up from this rather than from the list.
+    pub filters_made: usize,
     /// The account's contacts, in the order the People API would list
     /// them. A fake with none answers an empty address book.
     pub contacts: Vec<Person>,
@@ -196,6 +199,7 @@ impl FakeGmail {
                 send_as: Vec::new(),
                 vacation: Vacation::default(),
                 filters: Vec::new(),
+                filters_made: 0,
                 contacts: Vec::new(),
                 photos: HashMap::new(),
                 calendar: HashMap::new(),
@@ -880,8 +884,9 @@ impl GmailApi for FakeGmail {
             .await?;
         self.needs(SETTINGS_SCOPE)?;
         Ok(self.with(|s| {
+            s.filters_made += 1;
             let created = Filter {
-                id: Some(format!("filter{}", s.filters.len() + 1)),
+                id: Some(format!("filter{}", s.filters_made)),
                 ..filter.clone()
             };
             s.filters.push(created.clone());

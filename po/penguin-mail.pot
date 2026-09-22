@@ -4558,25 +4558,25 @@ msgstr ""
 msgid "{file}, preview"
 msgstr ""
 
-#: app/src/ui/window/categories.rs:154
+#: app/src/ui/window/categories.rs:153
 msgid "{name}, {count} unread"
 msgid_plural "{name}, {count} unread"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window/categories.rs:240
+#: app/src/ui/window/categories.rs:239
 msgid "Open a message from the sender first"
 msgstr ""
 
-#: app/src/ui/window/categories.rs:297
+#: app/src/ui/window/categories.rs:283
 msgid "Mail from {sender} now goes to {category}"
 msgstr ""
 
-#: app/src/ui/window/categories.rs:302
+#: app/src/ui/window/categories.rs:288
 msgid "Moved mail from {sender} to {category}"
 msgstr ""
 
-#: app/src/ui/window/categories.rs:309
+#: app/src/ui/window/categories.rs:295
 msgid ""
 "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr ""
@@ -5209,23 +5209,23 @@ msgstr[1] ""
 msgid "a minute"
 msgstr ""
 
-#: sync/src/actions.rs:94
+#: sync/src/actions.rs:96
 msgid "Cancel Reminder"
 msgstr ""
 
-#: sync/src/actions.rs:97
+#: sync/src/actions.rs:99
 msgid "Change labels"
 msgstr ""
 
-#: sync/src/actions.rs:290
+#: sync/src/actions.rs:292
 msgid "Delete Forever failed: {reason}"
 msgstr ""
 
-#: sync/src/actions.rs:415
+#: sync/src/actions.rs:417
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr ""
 
-#: sync/src/actions.rs:481
+#: sync/src/actions.rs:483
 msgid "Could not undo: {reason}"
 msgstr ""
 

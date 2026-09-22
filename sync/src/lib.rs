@@ -33,7 +33,9 @@ pub const WAIT_CEILING: std::time::Duration = std::time::Duration::from_secs(60)
 pub use account::{
     AccountSync, DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS, FETCH_CONCURRENCY, SendAsAddress,
 };
-pub use actions::{Accounts, Failure, History, MailAction, MailActions, Outcome, Returned, Undone};
+pub use actions::{
+    Accounts, Categorized, Failure, History, MailAction, MailActions, Outcome, Returned, Undone,
+};
 #[cfg(any(test, feature = "fake"))]
 pub use api::AnyGmail;
 pub use api::{AccountClient, DraftRef, GmailApi, LIST_PAGE_SIZE, SavedDraft};

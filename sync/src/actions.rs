@@ -14,8 +14,10 @@ use mailrs_store::{Db, flags, follow_ups, labels, messages, threads};
 
 use crate::{AccountSync, GmailApi, Permitted, SyncEngine, SyncError, TriageAction};
 
+mod categorize;
 mod returning;
 
+pub use categorize::Categorized;
 pub use returning::Returned;
 
 /// Finds the sync handle of a connected account.
