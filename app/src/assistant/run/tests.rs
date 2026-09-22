@@ -370,7 +370,11 @@ async fn labelling_across_accounts_asks_once_before_making_a_label() {
     assert_eq!(questions.len(), 1, "{questions:?}");
     assert!(questions[0].contains("“Kites”"), "{}", questions[0]);
     assert!(questions[0].contains(YOU), "names Sam: {}", questions[0]);
-    assert!(!questions[0].contains(ME), "Dana has Kites: {}", questions[0]);
+    assert!(
+        !questions[0].contains(ME),
+        "Dana has Kites: {}",
+        questions[0]
+    );
     assert!(second_has(&h, "Kites"));
     assert!(h.labels_of("m1").await.contains(&"Label_kites".to_string()));
     let (second, _) = h.second.clone().expect("two accounts");
@@ -647,6 +651,32 @@ async fn rules_are_made_listed_and_deleted() {
     assert_eq!(
         h.ok("list_rules", json!({"account": ME})).await,
         json!({"rules": []})
+    );
+}
+
+#[tokio::test]
+async fn a_declined_rule_leaves_no_new_label_behind() {
+    let h = harness().await;
+    h.effects.asked.borrow_mut().approves = false;
+
+    assert_eq!(
+        h.run(
+            "create_rule",
+            json!({"account": ME, "from": "shop@example.com", "label": "Receipts"}),
+        )
+        .await,
+        Err("The user declined.".into())
+    );
+    assert!(
+        !h.gmail
+            .with(|s| s.labels.iter().any(|l| l.name == "Receipts")),
+        "the label waits for a yes"
+    );
+    assert_eq!(
+        h.asked().questions,
+        [format!(
+            "Create a Gmail rule for {ME}: From shop@example.com → apply receipts?"
+        )]
     );
 }
 

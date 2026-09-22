@@ -696,7 +696,11 @@ async fn labelling_by_name_without_creating_skips_accounts_that_lack_the_label()
     assert_eq!(outcome.done, [mine]);
     assert_eq!(outcome.failed.len(), 1);
     assert_eq!(outcome.failed[0].target, theirs);
-    assert!(h.labels_of("a").await.contains(&"Label_receipts".to_string()));
+    assert!(
+        h.labels_of("a")
+            .await
+            .contains(&"Label_receipts".to_string())
+    );
     assert!(
         other_fake.with(|s| s.labels.iter().all(|l| l.name != "receipts")),
         "no label is made in the other account"

@@ -24,6 +24,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Declining a rule the assistant proposed no longer leaves its new label
+  behind in Gmail.
 - Mail archived in Gmail no longer stays in Penguin Mail's inbox when the
   app missed the change. It now checks its inbox against Gmail's when it
   starts and every hour after.

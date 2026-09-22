@@ -100,39 +100,39 @@ msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr ""
 "O Claude Code não está instalado. Instale-o, inicie sessão e tente de novo."
 
-#: app/src/assistant/run.rs:791
+#: app/src/assistant/run.rs:795
 msgid "Move {count} conversation to the Trash?"
 msgid_plural "Move {count} conversations to the Trash?"
 msgstr[0] "Mover {count} conversa para o lixo?"
 msgstr[1] "Mover {count} conversas para o lixo?"
 
-#: app/src/assistant/run.rs:882
+#: app/src/assistant/run.rs:886
 msgid ""
 "Don't Allow labels only the mail in accounts that have the label already."
 msgstr ""
 "Com «Não permitir», só o correio das contas que já têm a etiqueta a recebe."
 
-#: app/src/assistant/run.rs:924
+#: app/src/assistant/run.rs:928
 msgid "Send “{subject}” to {recipients}?"
 msgstr "Enviar “{subject}” para {recipients}?"
 
-#: app/src/assistant/run.rs:1014
+#: app/src/assistant/run.rs:1018
 msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr "Bloquear {address}? O correio futuro vai direto para o lixo."
 
-#: app/src/assistant/run.rs:1094
+#: app/src/assistant/run.rs:1098
 msgid " from {first} to {last}"
 msgstr ", de {first} a {last}"
 
-#: app/src/assistant/run.rs:1097
+#: app/src/assistant/run.rs:1101
 msgid " until {last}"
 msgstr ", até {last}"
 
-#: app/src/assistant/run.rs:1098
+#: app/src/assistant/run.rs:1102
 msgid " from {first}"
 msgstr ", a partir de {first}"
 
-#: app/src/assistant/run.rs:1104
+#: app/src/assistant/run.rs:1108
 msgid ""
 "Turn on the automatic reply for {account}{dates}?\n"
 "\n"
@@ -144,19 +144,19 @@ msgstr ""
 "“{subject}”\n"
 "{body}"
 
-#: app/src/assistant/run.rs:1115
+#: app/src/assistant/run.rs:1119
 msgid "Turn off the automatic reply for {account}?"
 msgstr "Desligar a resposta automática de {account}?"
 
-#: app/src/assistant/run.rs:1194
+#: app/src/assistant/run.rs:1201
 msgid "Create a Gmail rule for {account}: {when} → {then}?"
 msgstr "Criar uma regra do Gmail para {account}: {when} → {then}?"
 
-#: app/src/assistant/run.rs:1221
+#: app/src/assistant/run.rs:1241
 msgid "Delete a Gmail rule from {account}?"
 msgstr "Eliminar uma regra do Gmail de {account}?"
 
-#: app/src/assistant/run.rs:1343
+#: app/src/assistant/run.rs:1363
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a Gmail rule for "
 "their future mail?"

@@ -49,6 +49,10 @@ mod tests;
 use catalog::Plan;
 pub use catalog::{label, specs};
 
+/// The id a planned rule gives a label the account lacks, until the user
+/// approves and the label is made. Gmail ids never hold a space.
+const NEW_LABEL: &str = "new label";
+
 type ToolResult = Result<Value, String>;
 
 /// An account a tool named, with the loop that syncs it.
@@ -1161,18 +1165,17 @@ impl<A: Accounts> Tools<A> {
 
     async fn create_rule<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let (account, settings) = self.settings_for(&required(input, "account")?)?;
-        let label = match text(input, "label") {
-            Some(name) => {
-                let mail = Arc::clone(&self.modules.mail);
-                let (account_id, wanted) = (account.id, name.clone());
-                Some(
-                    self.call(async move { mail.label_id(account_id, &wanted, true).await })
-                        .await
-                        .map_err(|e| format!("Could not create the label {name}: {e}"))?,
-                )
-            }
-            None => None,
-        };
+        let labels = self.labels_of(account.id);
+        // A label the account lacks is made only once the user says yes, so
+        // a declined rule leaves nothing behind. Until then the rule names
+        // it by a stand-in id the question reads as the label's name.
+        let wanted = text(input, "label");
+        let existing = wanted.as_ref().and_then(|name| {
+            labels
+                .iter()
+                .find(|l| l.name.to_lowercase() == name.to_lowercase())
+                .map(|l| l.id.clone())
+        });
         let form = RuleForm {
             from: text(input, "from").unwrap_or_default(),
             to: text(input, "to").unwrap_or_default(),
@@ -1183,13 +1186,17 @@ impl<A: Accounts> Tools<A> {
             skip_inbox: flag(input, "skip_inbox").unwrap_or(false),
             mark_read: flag(input, "mark_read").unwrap_or(false),
             star: flag(input, "star").unwrap_or(false),
-            label,
+            label: wanted
+                .as_ref()
+                .map(|_| existing.clone().unwrap_or_else(|| NEW_LABEL.into())),
             never_spam: flag(input, "never_spam").unwrap_or(false),
             trash: flag(input, "delete").unwrap_or(false),
         };
-        let filter = form.filter().map_err(str::to_string)?;
-        let labels = self.labels_of(account.id);
-        let name = |id: &str| labels.iter().find(|l| l.id == id).map(|l| l.name.clone());
+        let mut filter = form.filter().map_err(str::to_string)?;
+        let name = |id: &str| match id {
+            NEW_LABEL => wanted.clone(),
+            id => labels.iter().find(|l| l.id == id).map(|l| l.name.clone()),
+        };
         let summary = fill(
             &gettext("Create a Gmail rule for {account}: {when} → {then}?"),
             &[
@@ -1203,6 +1210,19 @@ impl<A: Accounts> Tools<A> {
         );
         Ok(Plan::ask(summary, async move {
             let account_id = account.id;
+            if let (Some(name), None) = (wanted, existing) {
+                let mail = Arc::clone(&self.modules.mail);
+                let wanted = name.clone();
+                let id = self
+                    .call(async move { mail.label_id(account_id, &wanted, true).await })
+                    .await
+                    .map_err(|e| format!("Could not create the label {name}: {e}"))?;
+                for label in &mut filter.action.add_label_ids {
+                    if label == NEW_LABEL {
+                        *label = id.clone();
+                    }
+                }
+            }
             let added = self
                 .call(async move { settings.add_rule(account_id, filter).await })
                 .await;
