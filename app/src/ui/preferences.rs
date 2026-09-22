@@ -664,11 +664,11 @@ fn sync_page(app: &Rc<App>, pending: &Rc<RefCell<SyncConfig>>) -> adw::Preferenc
             app.settings().check_for_updates,
             Change::CheckForUpdates,
         ));
-    } else if let Some(store) = crate::packaging::BUILT_FOR.store() {
+    } else if let Some(updater) = crate::packaging::BUILT_FOR.updated_by() {
         startup.add(
             &adw::ActionRow::builder()
                 .title(gettext("Updates"))
-                .subtitle(store.updates_line())
+                .subtitle(updater.line())
                 .build(),
         );
     }

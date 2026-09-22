@@ -1,31 +1,34 @@
 #!/usr/bin/env bash
-# Packs a tree laid out by stage.sh into an rpm that installs under /usr,
-# for Fedora and the distributions built from it. Run it on the oldest
-# Fedora the rpm should install on, after building there: rpm reads the
-# libraries the binaries link against and requires each one, so they must
-# be Fedora's own.
+# Builds Penguin Mail for Fedora and packs it into an rpm that installs
+# under /usr. Run it on the oldest Fedora the rpm should install on: rpm
+# reads the libraries the binaries link against and requires each one, so
+# they must be Fedora's own.
 #
-#   scripts/package-rpm.sh <tree> <version> <out>
+#   scripts/package-rpm.sh <version> <out>
 #   RPM_SIGN_KEY=<fingerprint> ...   also signs the rpm with that key,
 #                                    which must be in gpg's keyring
 #
-# Besides the tree, the rpm carries the repository's public key and a
-# .repo file, so a person who installs it once gets later versions from
-# `dnf upgrade`, as the .deb does with apt.
+# The build turns on the packaging-rpm feature, so the app leaves updates
+# to dnf instead of offering to install a .deb. Besides the staged tree,
+# the rpm carries the repository's public key and a .repo file, so a
+# person who installs it once gets later versions from `dnf upgrade`, as
+# the .deb does with apt.
 set -euo pipefail
 # Packages must not inherit a group-writable umask from whoever builds them.
 umask 022
 
 cd "$(dirname "$0")/.."
-tree=${1:?usage: scripts/package-rpm.sh <tree> <version> <out>}
-version=${2:?usage: scripts/package-rpm.sh <tree> <version> <out>}
-out=${3:?usage: scripts/package-rpm.sh <tree> <version> <out>}
-tree=$(realpath "$tree")
+version=${1:?usage: scripts/package-rpm.sh <version> <out>}
+out=${2:?usage: scripts/package-rpm.sh <version> <out>}
 mkdir -p "$out"
 out=$(realpath "$out")
 here=$(pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
+
+cargo build --release --locked -p mailrs -p mailrs-cli --features mailrs/packaging-rpm
+tree="$work/tree"
+scripts/stage.sh "$tree"
 
 mkdir -p "$work/SPECS" "$work/RPMS" "$work/BUILD"
 cat > "$work/SPECS/penguin-mail.spec" <<SPEC

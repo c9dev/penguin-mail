@@ -1205,11 +1205,15 @@ msgstr ""
 msgid "The model could not translate this: {reason}"
 msgstr ""
 
-#: app/src/packaging.rs:75
+#: app/src/packaging.rs:94
+msgid "Updates come from dnf"
+msgstr ""
+
+#: app/src/packaging.rs:95
 msgid "Updates come from Flathub"
 msgstr ""
 
-#: app/src/packaging.rs:76
+#: app/src/packaging.rs:96
 msgid "Updates come from the Snap Store"
 msgstr ""
 
@@ -2048,8 +2052,8 @@ msgstr ""
 msgid "What's New in {version}"
 msgstr ""
 
-#: app/src/tray.rs:147 app/src/ui/about.rs:86 app/src/ui/about.rs:193
-#: app/src/ui/about.rs:201 app/src/ui/about.rs:208
+#: app/src/tray.rs:147 app/src/ui/about.rs:87 app/src/ui/about.rs:194
+#: app/src/ui/about.rs:202 app/src/ui/about.rs:209
 #: app/src/ui/preferences.rs:662 app/src/update/mod.rs:107
 msgid "Check for Updates"
 msgstr ""
@@ -2063,73 +2067,73 @@ msgstr ""
 msgid "Version {version}"
 msgstr ""
 
-#: app/src/ui/about.rs:76
+#: app/src/ui/about.rs:77
 msgid ""
 "A fast, private Gmail client for the GNOME desktop. Mail stays on your "
 "computer and your own Google Cloud project."
 msgstr ""
 
-#: app/src/ui/about.rs:141
+#: app/src/ui/about.rs:142
 msgid "What's New"
 msgstr ""
 
-#: app/src/ui/about.rs:145
+#: app/src/ui/about.rs:146
 msgid "Website"
 msgstr ""
 
-#: app/src/ui/about.rs:147
+#: app/src/ui/about.rs:148
 msgid "Report a Problem"
 msgstr ""
 
-#: app/src/ui/about.rs:152
+#: app/src/ui/about.rs:153
 msgid "License"
 msgstr ""
 
-#: app/src/ui/about.rs:169 app/src/ui/window.rs:2199
+#: app/src/ui/about.rs:170 app/src/ui/window.rs:2199
 msgid "About Penguin Mail"
 msgstr ""
 
-#: app/src/ui/about.rs:199
+#: app/src/ui/about.rs:200
 msgid "Checking…"
 msgstr ""
 
-#: app/src/ui/about.rs:205
+#: app/src/ui/about.rs:206
 msgid "Penguin Mail is up to date"
 msgstr ""
 
-#: app/src/ui/about.rs:213
+#: app/src/ui/about.rs:214
 msgid "Could not reach GitHub. Check your connection and try again."
 msgstr ""
 
-#: app/src/ui/about.rs:218
+#: app/src/ui/about.rs:219
 msgid "Install {version}"
 msgstr ""
 
-#: app/src/ui/about.rs:225
+#: app/src/ui/about.rs:226
 msgid "Version {version} is available"
 msgstr ""
 
-#: app/src/ui/about.rs:230
+#: app/src/ui/about.rs:231
 msgid "Installing…"
 msgstr ""
 
-#: app/src/ui/about.rs:235
+#: app/src/ui/about.rs:236
 msgid "Installing version {version}"
 msgstr ""
 
-#: app/src/ui/about.rs:240 app/src/update/mod.rs:103
+#: app/src/ui/about.rs:241 app/src/update/mod.rs:103
 msgid "Restart to Update"
 msgstr ""
 
-#: app/src/ui/about.rs:245
+#: app/src/ui/about.rs:246
 msgid "Version {version} is installed"
 msgstr ""
 
-#: app/src/ui/about.rs:250 app/src/update/mod.rs:136
+#: app/src/ui/about.rs:251 app/src/update/mod.rs:136
 msgid "Show Log"
 msgstr ""
 
-#: app/src/ui/about.rs:255 app/src/update/mod.rs:133
+#: app/src/ui/about.rs:256 app/src/update/mod.rs:133
 msgid "The update to {version} failed"
 msgstr ""
 
@@ -5634,11 +5638,11 @@ msgstr ""
 msgid "Checking for Updates…"
 msgstr ""
 
-#: app/src/update/mod.rs:115 app/src/update/mod.rs:213
+#: app/src/update/mod.rs:115 app/src/update/mod.rs:207
 msgid "Penguin Mail {version} is available"
 msgstr ""
 
-#: app/src/update/mod.rs:118 app/src/update/mod.rs:219
+#: app/src/update/mod.rs:118 app/src/update/mod.rs:213
 msgid "Install"
 msgstr ""
 
@@ -5650,7 +5654,7 @@ msgstr ""
 msgid "Restart to finish updating"
 msgstr ""
 
-#: app/src/update/mod.rs:216
+#: app/src/update/mod.rs:210
 msgid "Install it now, or later from the tray."
 msgstr ""
 

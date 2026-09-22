@@ -1,35 +1,41 @@
 //! The kind of package this binary was built for, chosen at build time with
-//! a cargo feature: `packaging-flatpak`, `packaging-snap` or
-//! `packaging-appimage`, and none for the .deb, the rpm, the tarball and a
-//! build from source. It decides where updates come from and whether skill
+//! a cargo feature: `packaging-rpm`, `packaging-flatpak`, `packaging-snap`
+//! or `packaging-appimage`, and none for the .deb, the tarball and a build
+//! from source. It decides who installs new versions and whether skill
 //! scripts can run.
 
 use mailrs_domain::translate::gettext;
 
-#[cfg(any(
-    all(feature = "packaging-flatpak", feature = "packaging-snap"),
-    all(feature = "packaging-flatpak", feature = "packaging-appimage"),
-    all(feature = "packaging-snap", feature = "packaging-appimage"),
-))]
-compile_error!("a build is for one kind of package; pick one packaging-* feature");
+const CHOSEN: usize = cfg!(feature = "packaging-rpm") as usize
+    + cfg!(feature = "packaging-flatpak") as usize
+    + cfg!(feature = "packaging-snap") as usize
+    + cfg!(feature = "packaging-appimage") as usize;
+const _: () = assert!(
+    CHOSEN <= 1,
+    "a build is for one kind of package; pick one packaging-* feature"
+);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Packaging {
-    /// The .deb, the rpm, the tarball, or `scripts/install.sh`.
+    /// The .deb, the tarball, or `scripts/install.sh`.
     Native,
+    Rpm,
     Flatpak,
     Snap,
     AppImage,
 }
 
-/// A software store that installs new versions itself.
+/// Who installs new versions of a package that does not update itself.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Store {
+pub enum UpdatedBy {
+    Dnf,
     Flathub,
-    Snap,
+    SnapStore,
 }
 
-pub const BUILT_FOR: Packaging = if cfg!(feature = "packaging-flatpak") {
+pub const BUILT_FOR: Packaging = if cfg!(feature = "packaging-rpm") {
+    Packaging::Rpm
+} else if cfg!(feature = "packaging-flatpak") {
     Packaging::Flatpak
 } else if cfg!(feature = "packaging-snap") {
     Packaging::Snap
@@ -39,14 +45,36 @@ pub const BUILT_FOR: Packaging = if cfg!(feature = "packaging-flatpak") {
     Packaging::Native
 };
 
+/// What sets one package apart, in one table so a new package kind is
+/// one row.
+struct Traits {
+    updated_by: Option<UpdatedBy>,
+    /// The sandbox the whole app runs in, by its product name.
+    sandbox: Option<&'static str>,
+}
+
 impl Packaging {
-    /// The store that updates this copy, when one does.
-    pub fn store(self) -> Option<Store> {
-        match self {
-            Packaging::Flatpak => Some(Store::Flathub),
-            Packaging::Snap => Some(Store::Snap),
-            Packaging::Native | Packaging::AppImage => None,
+    const fn traits(self) -> Traits {
+        let (updated_by, sandbox) = match self {
+            Packaging::Native | Packaging::AppImage => (None, None),
+            Packaging::Rpm => (Some(UpdatedBy::Dnf), None),
+            Packaging::Flatpak => (Some(UpdatedBy::Flathub), Some("Flatpak")),
+            Packaging::Snap => (Some(UpdatedBy::SnapStore), Some("Snap")),
+        };
+        Traits {
+            updated_by,
+            sandbox,
         }
+    }
+
+    /// Who installs new versions, when the app does not.
+    pub fn updated_by(self) -> Option<UpdatedBy> {
+        self.traits().updated_by
+    }
+
+    /// The sandbox Flatpak or a snap puts the whole app in.
+    pub fn sandbox_name(self) -> Option<&'static str> {
+        self.traits().sandbox
     }
 
     /// Skill scripts run under bubblewrap, which cannot start inside the
@@ -56,24 +84,16 @@ impl Packaging {
     pub fn runs_skills(self) -> bool {
         self.sandbox_name().is_none()
     }
-
-    /// The sandbox the whole app runs in, by its product name.
-    pub fn sandbox_name(self) -> Option<&'static str> {
-        match self {
-            Packaging::Flatpak => Some("Flatpak"),
-            Packaging::Snap => Some("Snap"),
-            Packaging::Native | Packaging::AppImage => None,
-        }
-    }
 }
 
-impl Store {
+impl UpdatedBy {
     /// The line Preferences and the About window show in place of the
     /// update controls.
-    pub fn updates_line(self) -> String {
+    pub fn line(self) -> String {
         match self {
-            Store::Flathub => gettext("Updates come from Flathub"),
-            Store::Snap => gettext("Updates come from the Snap Store"),
+            UpdatedBy::Dnf => gettext("Updates come from dnf"),
+            UpdatedBy::Flathub => gettext("Updates come from Flathub"),
+            UpdatedBy::SnapStore => gettext("Updates come from the Snap Store"),
         }
     }
 }
@@ -83,16 +103,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn only_the_store_packages_leave_updates_to_a_store() {
-        assert_eq!(Packaging::Flatpak.store(), Some(Store::Flathub));
-        assert_eq!(Packaging::Snap.store(), Some(Store::Snap));
-        assert_eq!(Packaging::AppImage.store(), None);
-        assert_eq!(Packaging::Native.store(), None);
+    fn the_rpm_and_the_store_packages_leave_updates_to_someone_else() {
+        assert_eq!(Packaging::Rpm.updated_by(), Some(UpdatedBy::Dnf));
+        assert_eq!(Packaging::Flatpak.updated_by(), Some(UpdatedBy::Flathub));
+        assert_eq!(Packaging::Snap.updated_by(), Some(UpdatedBy::SnapStore));
+        assert_eq!(Packaging::AppImage.updated_by(), None);
+        assert_eq!(Packaging::Native.updated_by(), None);
     }
 
     #[test]
     fn skills_run_only_outside_another_sandbox() {
         assert!(Packaging::Native.runs_skills());
+        assert!(Packaging::Rpm.runs_skills());
         assert!(Packaging::AppImage.runs_skills());
         assert!(!Packaging::Flatpak.runs_skills());
         assert!(!Packaging::Snap.runs_skills());
@@ -101,6 +123,7 @@ mod tests {
     #[test]
     fn a_plain_build_is_native() {
         if !cfg!(any(
+            feature = "packaging-rpm",
             feature = "packaging-flatpak",
             feature = "packaging-snap",
             feature = "packaging-appimage"
@@ -110,8 +133,9 @@ mod tests {
     }
 
     #[test]
-    fn each_store_names_itself() {
-        assert_eq!(Store::Flathub.updates_line(), "Updates come from Flathub");
-        assert_eq!(Store::Snap.updates_line(), "Updates come from the Snap Store");
+    fn each_updater_names_itself() {
+        assert_eq!(UpdatedBy::Dnf.line(), "Updates come from dnf");
+        assert_eq!(UpdatedBy::Flathub.line(), "Updates come from Flathub");
+        assert_eq!(UpdatedBy::SnapStore.line(), "Updates come from the Snap Store");
     }
 }

@@ -58,8 +58,9 @@ tempfile.workspace = true
 wiremock.workspace = true
 
 # The kind of package a build is for; see src/packaging.rs. A plain build
-# is the .deb, the rpm or the tarball.
+# is the .deb or the tarball.
 [features]
+packaging-rpm = []
 packaging-flatpak = []
 packaging-snap = []
 packaging-appimage = []

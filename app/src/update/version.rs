@@ -3,8 +3,6 @@
 use std::fmt;
 use std::path::PathBuf;
 
-use crate::packaging::Store;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Version {
     pub major: u64,
@@ -67,19 +65,6 @@ pub enum Method {
     Local { prefix: PathBuf },
     /// An AppImage, which the new one replaces where it lies.
     AppImage { file: PathBuf },
-    /// From Flathub or the Snap Store, which install new versions
-    /// themselves. The app offers none of its own.
-    Store(Store),
-}
-
-impl Method {
-    /// The store that updates this copy, when one does.
-    pub fn store(&self) -> Option<Store> {
-        match self {
-            Method::Store(store) => Some(*store),
-            _ => None,
-        }
-    }
 }
 
 /// The two files an update downloads.
@@ -90,15 +75,13 @@ pub struct Download<'a> {
 }
 
 /// The package this install method needs from a release, and the sums to
-/// check it by. A release missing either offers nothing, and so does a
-/// store, which brings the release itself.
+/// check it by. A release missing either offers nothing.
 pub fn pick<'a>(release: &'a Release, method: &Method) -> Option<Download<'a>> {
     let v = release.version;
     let wanted = match method {
         Method::Deb => format!("penguin-mail_{v}_amd64.deb"),
         Method::Local { .. } => format!("penguin-mail-{v}-x86_64.tar.gz"),
         Method::AppImage { .. } => format!("penguin-mail-{v}-x86_64.AppImage"),
-        Method::Store(_) => return None,
     };
     let find = |name: &str| release.assets.iter().find(|a| a.name == name);
     Some(Download {
@@ -187,25 +170,6 @@ mod tests {
         let appimage = pick(&r, &method).unwrap();
         assert_eq!(appimage.package.name, "penguin-mail-0.2.0-x86_64.AppImage");
         assert_eq!(appimage.sums.name, "SHA256SUMS");
-    }
-
-    #[test]
-    fn a_store_install_fetches_nothing_from_github() {
-        let r = release(
-            "0.2.0",
-            &[
-                "penguin-mail_0.2.0_amd64.deb",
-                "penguin-mail-0.2.0-x86_64.tar.gz",
-                "penguin-mail-0.2.0-x86_64.AppImage",
-                "SHA256SUMS",
-            ],
-        );
-        for store in [Store::Flathub, Store::Snap] {
-            let method = Method::Store(store);
-            assert!(pick(&r, &method).is_none(), "{store:?}");
-            assert_eq!(method.store(), Some(store));
-        }
-        assert_eq!(Method::Deb.store(), None);
     }
 
     #[test]

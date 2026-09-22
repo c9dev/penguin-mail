@@ -1,7 +1,7 @@
 //! Finding a newer release, installing it the way this copy was installed,
 //! and restarting into it. The app owns one [`Updater`] unless it runs as
-//! the demo or from a cargo build, which never update. A Flatpak or a snap
-//! has one that leaves everything to its store.
+//! the demo or from a cargo build, which never update, or comes as the rpm,
+//! a Flatpak or a snap, which dnf or a store updates.
 
 pub mod github;
 pub mod install;
@@ -155,8 +155,9 @@ pub struct Updater {
 }
 
 impl Updater {
-    /// An updater for the running binary, or none when this copy never
-    /// updates: the demo, and a cargo build. A demo pointed at a test
+    /// An updater for the running binary, or none when this copy does not
+    /// update itself: the demo, a cargo build, and the packages dnf or a
+    /// store updates (see `Packaging::updated_by`). A demo pointed at a test
     /// release server with PENGUIN_MAIL_RELEASES_URL gets one, so the update
     /// screens can be seen and tested without a real account.
     pub fn for_this_copy(demo: bool) -> Option<Updater> {
@@ -167,13 +168,6 @@ impl Updater {
         let appimage = std::env::var_os("APPIMAGE").map(PathBuf::from);
         install::method_for(crate::packaging::BUILT_FOR, &exe, appimage.as_deref())
             .map(Updater::new)
-    }
-
-    /// Whether this copy fetches and installs releases itself. A store
-    /// install has an updater that does nothing, so the window, the tray
-    /// and Preferences can ask one question.
-    pub fn updates_itself(&self) -> bool {
-        self.method.store().is_none()
     }
 
     pub fn new(method: Method) -> Updater {

@@ -8,22 +8,22 @@ use sha2::{Digest, Sha256};
 use super::version::{Method, Version};
 use crate::packaging::Packaging;
 
-/// How this copy updates. A Flatpak or a snap leaves it to its store. An
-/// AppImage replaces the file the AppImage runtime names in `$APPIMAGE`,
-/// passed here as `appimage`; without one it runs unpacked and cannot
-/// update. Otherwise the binary's path decides: under `/usr` it came from
-/// the .deb, inside a cargo `target` directory it is a build tree, which
-/// never updates, and anywhere else it came from a tarball or
-/// `scripts/install.sh`, into the prefix two levels above it.
+/// How this copy updates itself, or None when it does not. The rpm, a
+/// Flatpak and a snap leave it to dnf or their store. An AppImage replaces
+/// the file `crate::exe::appimage` found, passed here as `appimage`;
+/// without one it runs unpacked and cannot update. Otherwise the binary's
+/// path decides: under `/usr` it came from the .deb, inside a cargo
+/// `target` directory it is a build tree, which never updates, and
+/// anywhere else it came from a tarball or `scripts/install.sh`, into the
+/// prefix two levels above it.
 pub fn method_for(packaging: Packaging, exe: &Path, appimage: Option<&Path>) -> Option<Method> {
-    match packaging {
-        Packaging::Flatpak | Packaging::Snap => return packaging.store().map(Method::Store),
-        Packaging::AppImage => {
-            return appimage.map(|file| Method::AppImage {
-                file: file.to_path_buf(),
-            });
-        }
-        Packaging::Native => {}
+    if packaging.updated_by().is_some() {
+        return None;
+    }
+    if packaging == Packaging::AppImage {
+        return appimage.map(|file| Method::AppImage {
+            file: file.to_path_buf(),
+        });
     }
     if exe.starts_with("/usr") {
         return Some(Method::Deb);
@@ -94,7 +94,6 @@ pub async fn run(
     let out = std::fs::File::create(&log).map_err(|e| fail(e.to_string()))?;
     let output = || out.try_clone().map_err(|e| fail(e.to_string()));
     let mut command = match method {
-        Method::Store(_) => return Err(fail("a store installs this copy's updates".into())),
         Method::AppImage { file } => {
             return replace_appimage(package, file)
                 .map_err(|e| fail(format!("could not replace {}: {e}", file.display())));
@@ -171,8 +170,6 @@ fn replace_appimage(package: &Path, file: &Path) -> std::io::Result<()> {
 mod tests {
     use super::*;
 
-    use crate::packaging::Store;
-
     #[test]
     fn the_binary_path_says_how_this_copy_was_installed() {
         let native = |exe: &str| method_for(Packaging::Native, Path::new(exe), None);
@@ -187,10 +184,16 @@ mod tests {
     }
 
     #[test]
-    fn a_flatpak_or_a_snap_leaves_updates_to_its_store() {
+    fn a_package_something_else_updates_has_no_method() {
+        // The rpm installs under /usr as the .deb does, and dnf, not apt,
+        // brings its new versions.
+        assert_eq!(
+            method_for(Packaging::Rpm, Path::new("/usr/bin/penguin-mail"), None),
+            None
+        );
         assert_eq!(
             method_for(Packaging::Flatpak, Path::new("/app/bin/penguin-mail"), None),
-            Some(Method::Store(Store::Flathub))
+            None
         );
         assert_eq!(
             method_for(
@@ -198,7 +201,7 @@ mod tests {
                 Path::new("/snap/penguin-mail/12/usr/bin/penguin-mail"),
                 None
             ),
-            Some(Method::Store(Store::Snap))
+            None
         );
     }
 
@@ -253,23 +256,6 @@ mod tests {
             .await
             .unwrap_err();
         assert!(failed.reason.contains("could not replace"), "{}", failed.reason);
-    }
-
-    #[tokio::test]
-    async fn a_store_install_refuses_to_install_anything() {
-        let dir = tempfile::tempdir().unwrap();
-        let package = dir.path().join("anything");
-        std::fs::write(&package, "x").unwrap();
-        let method = Method::Store(Store::Flathub);
-        let failed = run(
-            &method,
-            Version::parse("9.9.9").unwrap(),
-            &package,
-            &dir.path().join("work"),
-        )
-        .await
-        .unwrap_err();
-        assert!(failed.reason.contains("store"), "{}", failed.reason);
     }
 
     #[test]

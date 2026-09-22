@@ -88,8 +88,6 @@ jobs:
       - name: Put cargo on PATH
         run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      - name: Build
-        run: cargo build --release -p mailrs -p mailrs-cli
       # The apt repository's key signs the rpm too. A release must go out
       # signed, since the .repo file it installs turns on gpgcheck; a trial
       # run without the secret builds an unsigned rpm and says so.
@@ -111,10 +109,8 @@ jobs:
           echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
           printf '%s\n' "$APT_SIGNING_KEY" | gpg --batch --import
           echo "RPM_SIGN_KEY=FE3C3B6E699AF939DC4670DCF3A853035C3E2B8E" >> "$GITHUB_ENV"
-      - name: Pack
-        run: |
-          scripts/stage.sh tree
-          scripts/package-rpm.sh tree "$VERSION" dist
+      - name: Build and pack
+        run: scripts/package-rpm.sh "$VERSION" dist
       # Installs the rpm the way a person would and starts it on a virtual
       # display, which catches a library the rpm forgot to require.
       - name: Install and start it

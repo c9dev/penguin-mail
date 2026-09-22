@@ -74,7 +74,7 @@ impl App {
     /// always runs and always answers; a timed one runs once a day at most
     /// and speaks only when there is something to install.
     pub(crate) fn check_for_updates(self: &Rc<Self>, asked: bool) {
-        let Some(updater) = self.updater.clone().filter(|u| u.updates_itself()) else {
+        let Some(updater) = self.updater.clone() else {
             return;
         };
         if matches!(updater.state(), State::Installing(_) | State::Installed(_)) {
@@ -285,9 +285,9 @@ impl App {
     }
 
     /// Whether this copy updates itself: not the demo, not a cargo build,
-    /// and not a Flatpak or a snap, whose store does it.
+    /// and not the rpm, a Flatpak or a snap, which dnf or a store updates.
     pub fn can_update(&self) -> bool {
-        self.updater.as_ref().is_some_and(|u| u.updates_itself())
+        self.updater.is_some()
     }
 
     pub(crate) fn open_release_notes(&self) {
