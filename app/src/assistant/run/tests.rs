@@ -91,6 +91,23 @@ async fn an_unknown_tool_says_so() {
     );
 }
 
+/// A tool the model is offered with no handler behind it would compile
+/// and fail at the first call, so every name in the table is tried here.
+/// The input is empty: this asks only that each one reaches its handler.
+#[tokio::test]
+async fn every_offered_tool_has_a_handler() {
+    let h = harness().await;
+    for spec in crate::assistant::tools::specs() {
+        let answer = h.run(&spec.name, json!({})).await;
+        assert_ne!(
+            answer,
+            Err(format!("There is no tool called {}.", spec.name)),
+            "{} is offered but nothing runs it",
+            spec.name
+        );
+    }
+}
+
 #[tokio::test]
 async fn get_context_reports_the_screen_the_accounts_and_the_labels() {
     let h = harness().await;
@@ -850,8 +867,10 @@ async fn set_signature_names_the_account() {
     );
 }
 
-/// The whole table in one pass: every tool the assistant offers answers,
-/// and none of them needs a window.
+/// Most of the table in one pass, each tool with an input it accepts, and
+/// none of them needing a window. The tools left out need fixtures of their
+/// own (attachments, events, invitations, the delete permission) and have
+/// tests in `tests/mail.rs` and `tests/calendar.rs`.
 #[tokio::test]
 async fn every_tool_answers_without_a_window() {
     let h = harness().await;
