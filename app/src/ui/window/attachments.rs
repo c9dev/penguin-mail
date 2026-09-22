@@ -16,7 +16,7 @@ use mailrs_domain::{AccountId, Attachment};
 
 use super::MainWindow;
 use crate::ui::conversation::ConversationView;
-use mailrs_domain::translate::{fill, fill_plural, gettext};
+use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 
 /// How large a picture may be before the row shows a paperclip instead.
 /// Past this the thumbnail costs more to fetch than it earns.
@@ -60,9 +60,10 @@ impl MainWindow {
                 .await;
             match fetched {
                 Ok(data) => this.show_attachment(&attachment, data),
-                Err(err) => this.toast(&fill(
+                Err(err) => this.toast(&with_reason(
                     &gettext("Could not open {file}: {reason}"),
-                    &[("file", &name), ("reason", &err.to_string())],
+                    &err,
+                    &[("file", &name)],
                 )),
             }
         });
@@ -212,9 +213,10 @@ impl MainWindow {
                     &[("file", &name)],
                 ));
             }
-            Err(err) => self.toast(&fill(
+            Err(err) => self.toast(&with_reason(
                 &gettext("Could not save {file}: {reason}"),
-                &[("file", &attachment.filename), ("reason", &err.to_string())],
+                &err,
+                &[("file", &attachment.filename)],
             )),
         }
     }
@@ -377,9 +379,10 @@ impl MainWindow {
                     &[("file", &shown)],
                 ));
             }
-            Err(err) => self.toast(&fill(
+            Err(err) => self.toast(&with_reason(
                 &gettext("Could not save {file}: {reason}"),
-                &[("file", &name), ("reason", &err.to_string())],
+                &err,
+                &[("file", &name)],
             )),
         }
     }

@@ -167,10 +167,7 @@ impl MainWindow {
                     )
                 });
             }
-            Err(err) => self.toast(&fill(
-                &gettext("Could not remember that sender: {reason}"),
-                &[("reason", &err.to_string())],
-            )),
+            Err(err) => self.failed(&gettext("Could not remember that sender: {reason}"), &err),
         }
     }
 }

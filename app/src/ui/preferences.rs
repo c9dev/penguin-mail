@@ -16,7 +16,7 @@ use crate::settings::{
     Change, Choice, Settings, cache_choices, nearest, poll_choices, window_choices,
 };
 use crate::ui::window::Notice;
-use mailrs_domain::translate::{fill, fill_plural, gettext};
+use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 
 /// Shows Preferences. With `signature_of`, opens on that account's signature.
 pub fn present(
@@ -357,10 +357,7 @@ fn writing_page(
                         "Gmail has no signature for this account",
                     ))),
                     Err(err) => {
-                        let said = fill(
-                            &gettext("Could not import: {reason}"),
-                            &[("reason", &err.to_string())],
-                        );
+                        let said = with_reason(&gettext("Could not import: {reason}"), &err, &[]);
                         toasts.add_toast(adw::Toast::new(&said));
                     }
                 }

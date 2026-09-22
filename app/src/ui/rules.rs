@@ -13,7 +13,7 @@ use crate::core::Core;
 use crate::permission::Permission;
 use crate::rules::{RuleForm, describe_action, describe_criteria};
 use crate::ui::permission;
-use mailrs_domain::translate::{fill, gettext};
+use mailrs_domain::translate::{fill, gettext, with_reason};
 
 struct Rules {
     core: Rc<Core>,
@@ -123,6 +123,12 @@ impl Rules {
         self.toasts.add_toast(adw::Toast::new(text));
     }
 
+    /// Toasts a failure. `said` is `gettext` of the sentence, with
+    /// `{reason}` where the error goes.
+    fn failed(&self, said: &str, err: &impl std::fmt::Display) {
+        self.toast(&with_reason(said, err, &[]));
+    }
+
     fn label_name(&self, id: &str) -> Option<String> {
         self.labels
             .iter()
@@ -212,10 +218,7 @@ impl Rules {
                     this.reload();
                 }
                 Ok(Permitted::NeedsPermission) => this.ask_for_access(),
-                Err(err) => this.toast(&fill(
-                    &gettext("Could not delete the rule: {reason}"),
-                    &[("reason", &err.to_string())],
-                )),
+                Err(err) => this.failed(&gettext("Could not delete the rule: {reason}"), &err),
             }
         });
     }
@@ -361,10 +364,7 @@ impl Rules {
                     }
                     Err(err) => {
                         button.set_sensitive(true);
-                        rules.toast(&fill(
-                            &gettext("Could not add the rule: {reason}"),
-                            &[("reason", &err.to_string())],
-                        ));
+                        rules.failed(&gettext("Could not add the rule: {reason}"), &err);
                     }
                 }
             });

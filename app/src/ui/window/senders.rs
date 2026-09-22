@@ -74,10 +74,7 @@ impl MainWindow {
                         &[("sender", &sender)],
                     ));
                 }
-                Err(err) => this.toast(&fill(
-                    &gettext("Could not unsubscribe: {reason}"),
-                    &[("reason", &err.to_string())],
-                )),
+                Err(err) => this.failed(&gettext("Could not unsubscribe: {reason}"), &err),
             }
         });
     }
@@ -168,10 +165,7 @@ impl MainWindow {
                 Ok(Permitted::NeedsPermission) => {
                     this.ask_permission(account_id, Permission::Settings, Occasion::Needed)
                 }
-                Err(err) => this.toast(&fill(
-                    &gettext("Could not block the sender: {reason}"),
-                    &[("reason", &err.to_string())],
-                )),
+                Err(err) => this.failed(&gettext("Could not block the sender: {reason}"), &err),
             }
         });
     }

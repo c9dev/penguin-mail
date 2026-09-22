@@ -33,7 +33,7 @@ use crate::protection::{self, Held, Standard};
 use crate::richtext::{Block, BlockKind, RichBody, Style};
 use crate::settings::ComposeFormat;
 use crate::templates::{self, Filling};
-use mailrs_domain::translate::{fill, fill_plural, gettext};
+use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 
 pub use crate::compose::Identity;
 
@@ -1180,6 +1180,12 @@ impl Composer {
             .add_toast(adw::Toast::builder().title(text).timeout(4).build());
     }
 
+    /// Toasts a failure. `said` is `gettext` of the sentence, with
+    /// `{reason}` where the error goes.
+    fn failed(&self, said: &str, err: &impl std::fmt::Display) {
+        self.toast(&with_reason(said, err, &[]));
+    }
+
     fn send(self: &Rc<Self>) {
         self.hand_over(SendWhen::Now);
     }
@@ -1198,10 +1204,7 @@ impl Composer {
             return;
         }
         if let Err(err) = build_mime(&draft, now_secs(), &new_message_id(&draft.from.email)) {
-            self.toast(&fill(
-                &gettext("Could not build the message: {reason}"),
-                &[("reason", &err.to_string())],
-            ));
+            self.failed(&gettext("Could not build the message: {reason}"), &err);
             return;
         }
         if let Some(promise) = self.unkept_promise(&draft) {
@@ -1290,10 +1293,7 @@ impl Composer {
         let raw = match build_mime(&draft, now_secs(), &new_message_id(&draft.from.email)) {
             Ok(raw) => raw,
             Err(err) => {
-                return self.toast(&fill(
-                    &gettext("Could not save: {reason}"),
-                    &[("reason", &err.to_string())],
-                ));
+                return self.failed(&gettext("Could not save: {reason}"), &err);
             }
         };
         let this = Rc::clone(self);
@@ -1326,10 +1326,7 @@ impl Composer {
                     }
                     this.core.poke(draft.account_id);
                 }
-                Err(err) => this.toast(&fill(
-                    &gettext("Draft not saved: {reason}"),
-                    &[("reason", &err.to_string())],
-                )),
+                Err(err) => this.failed(&gettext("Draft not saved: {reason}"), &err),
             }
         });
     }
@@ -2022,10 +2019,7 @@ impl Composer {
                     self.check_send();
                 }
             }
-            Err(err) => self.toast(&fill(
-                &gettext("Could not read the file: {reason}"),
-                &[("reason", &err.to_string())],
-            )),
+            Err(err) => self.failed(&gettext("Could not read the file: {reason}"), &err),
         }
     }
 
@@ -2250,10 +2244,7 @@ impl Composer {
                     this.toast(&gettext("Template saved"));
                     this.load_templates();
                 }
-                Err(err) => this.toast(&fill(
-                    &gettext("Template not saved: {reason}"),
-                    &[("reason", &err.to_string())],
-                )),
+                Err(err) => this.failed(&gettext("Template not saved: {reason}"), &err),
             }
         });
     }

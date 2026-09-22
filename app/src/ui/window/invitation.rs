@@ -51,10 +51,7 @@ impl MainWindow {
             app.change_settings(Change::OfferedToGnome(account.email));
         }
         if open && let Err(err) = goa::open_online_accounts() {
-            self.toast(&fill(
-                &gettext("Could not open Settings: {reason}"),
-                &[("reason", &err.to_string())],
-            ));
+            self.failed(&gettext("Could not open Settings: {reason}"), &err);
         }
     }
 
@@ -133,10 +130,7 @@ impl MainWindow {
                 }
                 Err(err) => {
                     view.card.set_answer(&uid, before);
-                    this.toast(&fill(
-                        &gettext("Could not send your reply: {reason}"),
-                        &[("reason", &err.to_string())],
-                    ));
+                    this.failed(&gettext("Could not send your reply: {reason}"), &err);
                 }
             }
         });
@@ -208,10 +202,7 @@ impl MainWindow {
                     );
                     this.toast(&gettext("New time proposed. The organizer decides."));
                 }
-                Err(err) => this.toast(&fill(
-                    &gettext("Could not send your proposal: {reason}"),
-                    &[("reason", &err.to_string())],
-                )),
+                Err(err) => this.failed(&gettext("Could not send your proposal: {reason}"), &err),
             }
         });
     }
@@ -232,10 +223,7 @@ impl MainWindow {
             .join("invitations");
         let path = dir.join(&name);
         if let Err(err) = std::fs::create_dir_all(&dir).and_then(|()| std::fs::write(&path, &ics)) {
-            return self.toast(&fill(
-                &gettext("Could not save the invitation: {reason}"),
-                &[("reason", &err.to_string())],
-            ));
+            return self.failed(&gettext("Could not save the invitation: {reason}"), &err);
         }
         let file = gio::File::for_path(&path);
         let this = Rc::clone(self);
@@ -244,10 +232,10 @@ impl MainWindow {
             gio::Cancellable::NONE,
             move |result| {
                 if let Err(err) = result {
-                    this.toast(&fill(
+                    this.failed(
                         &gettext("No app on this desktop opens invitations: {reason}"),
-                        &[("reason", &err.to_string())],
-                    ));
+                        &err,
+                    );
                 }
             },
         );

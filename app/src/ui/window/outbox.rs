@@ -13,7 +13,7 @@ use mailrs_sync::{Mailbox, Posted, outbox_id};
 use super::MainWindow;
 use crate::app::Signature;
 use crate::compose::Draft;
-use mailrs_domain::translate::{fill, gettext};
+use mailrs_domain::translate::gettext;
 
 /// What one of the Outbox's actions runs.
 struct OutboxAction(fn(&Rc<MainWindow>));
@@ -79,14 +79,10 @@ impl MainWindow {
                     Ok(Posted::Waiting(_)) => {
                         this.toast(&gettext("Still not sent. It stays in the Outbox."))
                     }
-                    Ok(Posted::Refused(problem)) => this.toast(&fill(
-                        &gettext("Not sent: {reason}"),
-                        &[("reason", &problem)],
-                    )),
-                    Err(err) => this.toast(&fill(
-                        &gettext("Not sent: {reason}"),
-                        &[("reason", &err.to_string())],
-                    )),
+                    Ok(Posted::Refused(problem)) => {
+                        this.failed(&gettext("Not sent: {reason}"), &problem)
+                    }
+                    Err(err) => this.failed(&gettext("Not sent: {reason}"), &err),
                 }
             }
             this.conversation.leave();
@@ -118,10 +114,7 @@ impl MainWindow {
                 .call(async move { outbox.drop_one(id).await })
                 .await
             {
-                return this.toast(&fill(
-                    &gettext("Could not open it: {reason}"),
-                    &[("reason", &err.to_string())],
-                ));
+                return this.failed(&gettext("Could not open it: {reason}"), &err);
             }
             this.conversation.leave();
             this.scheduled_changed();
@@ -149,10 +142,7 @@ impl MainWindow {
                     .call(async move { outbox.drop_one(id).await })
                     .await
                 {
-                    return this.toast(&fill(
-                        &gettext("Could not delete: {reason}"),
-                        &[("reason", &err.to_string())],
-                    ));
+                    return this.failed(&gettext("Could not delete: {reason}"), &err);
                 }
             }
             this.conversation.leave();

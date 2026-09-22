@@ -6,7 +6,7 @@ use gtk::glib;
 
 use super::{MainWindow, Target};
 use crate::ui::Mailbox;
-use mailrs_domain::translate::{fill, gettext};
+use mailrs_domain::translate::gettext;
 
 impl MainWindow {
     /// Shows "Sending…" with an Undo button for `seconds`.
@@ -53,10 +53,7 @@ impl MainWindow {
                         gettext("Won't be sent. The messages are in Drafts.")
                     });
                 }
-                Err(err) => this.toast(&fill(
-                    &gettext("Could not cancel: {reason}"),
-                    &[("reason", &err.to_string())],
-                )),
+                Err(err) => this.failed(&gettext("Could not cancel: {reason}"), &err),
             }
         });
     }

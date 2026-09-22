@@ -11,7 +11,7 @@ use mailrs_sync::Mailbox;
 
 use super::MainWindow;
 use crate::ui::conversation::ConversationView;
-use mailrs_domain::translate::{fill, gettext};
+use mailrs_domain::translate::gettext;
 
 impl MainWindow {
     /// Opens the conversation on screen in its own window.
@@ -143,10 +143,7 @@ impl MainWindow {
                 .await
             {
                 Ok(raw) => show_source(&this.window, &subject, raw),
-                Err(err) => this.toast(&fill(
-                    &gettext("Could not load the source: {reason}"),
-                    &[("reason", &err.to_string())],
-                )),
+                Err(err) => this.failed(&gettext("Could not load the source: {reason}"), &err),
             }
         });
     }

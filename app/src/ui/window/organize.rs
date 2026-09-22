@@ -105,10 +105,7 @@ impl MainWindow {
                     Some(then) => then(&this, label.id),
                     None => this.toast(&fill(&gettext("Created “{name}”"), &[("name", &name)])),
                 },
-                Err(err) => this.toast(&fill(
-                    &gettext("Could not create the label: {reason}"),
-                    &[("reason", &err.to_string())],
-                )),
+                Err(err) => this.failed(&gettext("Could not create the label: {reason}"), &err),
             }
         });
     }
@@ -152,10 +149,7 @@ impl MainWindow {
                 .call(async move { sync.rename_label(&label_id, &wanted).await })
                 .await
             {
-                this.toast(&fill(
-                    &gettext("Could not rename the label: {reason}"),
-                    &[("reason", &err.to_string())],
-                ));
+                this.failed(&gettext("Could not rename the label: {reason}"), &err);
             }
         });
     }
@@ -195,10 +189,7 @@ impl MainWindow {
                     }
                     this.toast(&fill(&gettext("Deleted “{name}”"), &[("name", &name)]));
                 }
-                Err(err) => this.toast(&fill(
-                    &gettext("Could not delete the label: {reason}"),
-                    &[("reason", &err.to_string())],
-                )),
+                Err(err) => this.failed(&gettext("Could not delete the label: {reason}"), &err),
             }
         });
     }
@@ -227,10 +218,7 @@ impl MainWindow {
                 .call(async move { sync.set_label_color(&label_id, color).await })
                 .await
             {
-                this.toast(&fill(
-                    &gettext("Could not change the colour: {reason}"),
-                    &[("reason", &err.to_string())],
-                ));
+                this.failed(&gettext("Could not change the colour: {reason}"), &err);
             }
         });
     }

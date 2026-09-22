@@ -10,7 +10,7 @@ use std::rc::{Rc, Weak};
 use adw::prelude::*;
 use base64::Engine;
 use gtk::{gio, glib};
-use mailrs_domain::translate::{fill, fill_plural, gettext};
+use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 use mailrs_domain::{
     Account, AccountId, AccountState, ChangeEvent, Label, MessageBody, Target, ThreadSummary,
     system_label,
@@ -210,10 +210,7 @@ fn vip_message(added: bool, who: &str) -> String {
 
 /// What a mailbox that would not load says.
 fn load_failed(err: &impl std::fmt::Display) -> String {
-    fill(
-        &gettext("Could not load mail: {reason}"),
-        &[("reason", &err.to_string())],
-    )
+    with_reason(&gettext("Could not load mail: {reason}"), err, &[])
 }
 
 /// The colour a flag toast names.
@@ -663,6 +660,12 @@ impl MainWindow {
         );
     }
 
+    /// Toasts a failure. `said` is `gettext` of the sentence, with
+    /// `{reason}` where the error goes.
+    fn failed(&self, said: &str, err: &impl std::fmt::Display) {
+        self.toast(&with_reason(said, err, &[]));
+    }
+
     // ---- Engine events -------------------------------------------------
 
     fn handle(self: &Rc<Self>, event: &ChangeEvent) {
@@ -728,10 +731,7 @@ impl MainWindow {
             let data = match app.reload_accounts().await {
                 Ok(data) => data,
                 Err(err) => {
-                    return this.toast(&fill(
-                        &gettext("Could not read accounts: {reason}"),
-                        &[("reason", &err.to_string())],
-                    ));
+                    return this.failed(&gettext("Could not read accounts: {reason}"), &err);
                 }
             };
             let page = if !this.core.has_config() {
@@ -1285,10 +1285,7 @@ impl MainWindow {
                     return this.ask_permission(account_id, Permission::Delete, Occasion::Needed);
                 }
                 Err(err) => {
-                    return this.toast(&fill(
-                        &gettext("Could not delete the mail: {reason}"),
-                        &[("reason", &err.to_string())],
-                    ));
+                    return this.failed(&gettext("Could not delete the mail: {reason}"), &err);
                 }
             };
             this.after_mail(Cause::Erased, &outcome, Some(&*view));
@@ -1703,9 +1700,10 @@ impl MainWindow {
                         mime_type: attachment.mime_type,
                         data,
                     }),
-                    Err(err) => this.toast(&fill(
+                    Err(err) => this.toast(&with_reason(
                         &gettext("Could not include {file}: {reason}"),
-                        &[("file", &attachment.filename), ("reason", &err.to_string())],
+                        &err,
+                        &[("file", &attachment.filename)],
                     )),
                 }
             }
@@ -1844,9 +1842,10 @@ impl MainWindow {
                     });
                     this.toasts.add_toast(toast);
                 }
-                Err(err) => this.toast(&fill(
+                Err(err) => this.toast(&with_reason(
                     &gettext("Could not save {file}: {reason}"),
-                    &[("file", &attachment.filename), ("reason", &err.to_string())],
+                    &err,
+                    &[("file", &attachment.filename)],
                 )),
             }
         });
@@ -1860,10 +1859,7 @@ impl MainWindow {
             .save_config(mailrs_sync::config::Config::new(client_id, client_secret))
         {
             Ok(()) => self.refresh_accounts(Reload::Yes),
-            Err(err) => self.toast(&fill(
-                &gettext("Could not save the settings: {reason}"),
-                &[("reason", &err.to_string())],
-            )),
+            Err(err) => self.failed(&gettext("Could not save the settings: {reason}"), &err),
         }
     }
 
@@ -1959,9 +1955,10 @@ impl MainWindow {
             let email = account.email.clone();
             match this.core.remove_account(account).await {
                 Ok(()) => this.toast(&fill(&gettext("Removed {account}"), &[("account", &email)])),
-                Err(err) => this.toast(&fill(
+                Err(err) => this.toast(&with_reason(
                     &gettext("Could not remove {account}: {reason}"),
-                    &[("account", &email), ("reason", &err.to_string())],
+                    &err,
+                    &[("account", &email)],
                 )),
             }
             this.refresh_accounts(Reload::Yes);

@@ -13,7 +13,7 @@ use mailrs_sync::{AutomaticReply, Permitted};
 use crate::core::Core;
 use crate::permission::Permission;
 use crate::ui::permission;
-use mailrs_domain::translate::{fill, gettext};
+use mailrs_domain::translate::{gettext, with_reason};
 
 /// Shows the dialog for `account`. `grant` runs when Gmail says Penguin Mail lacks
 /// the settings permission, to send the user through consent again. `saved`
@@ -141,10 +141,7 @@ pub fn present(
                     }
                     Err(err) => {
                         button.set_sensitive(true);
-                        let said = fill(
-                            &gettext("Could not save: {reason}"),
-                            &[("reason", &err.to_string())],
-                        );
+                        let said = with_reason(&gettext("Could not save: {reason}"), &err, &[]);
                         toasts.add_toast(adw::Toast::new(&said));
                     }
                 }

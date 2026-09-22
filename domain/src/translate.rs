@@ -50,9 +50,44 @@ pub fn fill_plural(one: &str, many: &str, count: usize, values: &[(&str, &str)])
     fill(&ngettext(one, many, count as u32), values)
 }
 
+/// `said` with the error in place of `{reason}` and every other `{name}`
+/// filled from `values`, for sentences such as "Could not save {file}:
+/// {reason}". The caller passes `gettext` of the literal, so xgettext still
+/// finds the msgid where the sentence is used.
+///
+/// One pass fills every name, so a file called `{reason}.pdf` keeps its
+/// name rather than taking the error's text.
+pub fn with_reason(said: &str, reason: &impl std::fmt::Display, values: &[(&str, &str)]) -> String {
+    let reason = reason.to_string();
+    let mut all = Vec::with_capacity(values.len() + 1);
+    all.extend_from_slice(values);
+    all.push(("reason", reason.as_str()));
+    fill(said, &all)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::fill;
+    use super::{fill, with_reason};
+
+    #[test]
+    fn the_error_goes_where_the_reason_is() {
+        assert_eq!(
+            with_reason("Could not save: {reason}", &"disk full", &[]),
+            "Could not save: disk full"
+        );
+    }
+
+    #[test]
+    fn other_names_fill_in_the_same_pass_as_the_reason() {
+        assert_eq!(
+            with_reason(
+                "Could not open {file}: {reason}",
+                &"gone",
+                &[("file", "{reason}.pdf")]
+            ),
+            "Could not open {reason}.pdf: gone"
+        );
+    }
 
     #[test]
     fn values_land_where_their_names_are() {

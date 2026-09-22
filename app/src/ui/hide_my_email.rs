@@ -14,7 +14,7 @@ use crate::hide_my_email::HiddenAddress;
 use crate::permission::Permission;
 use crate::ui::confirm::{Tone, confirm};
 use crate::ui::permission;
-use mailrs_domain::translate::{fill, gettext};
+use mailrs_domain::translate::{fill, gettext, with_reason};
 
 /// What the list says a hidden address is for.
 fn about() -> String {
@@ -136,8 +136,8 @@ impl Dialog {
 
     /// Handles a failed Gmail call with a toast naming what it was doing.
     /// `said` is the whole sentence, with `{reason}` where the error goes.
-    fn failed(&self, err: &anyhow::Error, said: &str) {
-        self.toast(&fill(said, &[("reason", &err.to_string())]));
+    fn failed(&self, said: &str, err: &anyhow::Error) {
+        self.toast(&with_reason(said, err, &[]));
     }
 
     fn reload(self: &Rc<Self>) {
@@ -233,7 +233,7 @@ impl Dialog {
                     }
                     Ok(Permitted::NeedsPermission) => this.ask_for_access(&account),
                     Err(err) => {
-                        this.failed(&err, &gettext("Could not change the address: {reason}"))
+                        this.failed(&gettext("Could not change the address: {reason}"), &err)
                     }
                 }
                 this.reload();
@@ -282,7 +282,7 @@ impl Dialog {
             match this.app.delete_hidden_address(&address).await {
                 Ok(Permitted::Done(())) => this.toast(&gettext("Address deleted")),
                 Ok(Permitted::NeedsPermission) => this.ask_for_access(&account),
-                Err(err) => this.failed(&err, &gettext("Could not delete the address: {reason}")),
+                Err(err) => this.failed(&gettext("Could not delete the address: {reason}"), &err),
             }
             this.reload();
         });
@@ -378,7 +378,7 @@ impl Dialog {
                     }
                     Err(err) => {
                         button.set_sensitive(true);
-                        this.failed(&err, &gettext("Could not create the address: {reason}"));
+                        this.failed(&gettext("Could not create the address: {reason}"), &err);
                     }
                 }
             });

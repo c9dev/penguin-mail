@@ -110,10 +110,7 @@ impl MainWindow {
                 .await;
             match written {
                 Ok(()) => this.toast(&fill(&gettext("Saved {file}"), &[("file", &name)])),
-                Err(err) => this.toast(&fill(
-                    &gettext("Could not export the mail: {reason}"),
-                    &[("reason", &err.to_string())],
-                )),
+                Err(err) => this.failed(&gettext("Could not export the mail: {reason}"), &err),
             }
         });
     }

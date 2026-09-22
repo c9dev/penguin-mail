@@ -14,7 +14,7 @@ use super::MainWindow;
 use crate::permission::{Occasion, Permission};
 use crate::ui::Mailbox;
 use crate::ui::conversation::ConversationView;
-use mailrs_domain::translate::{fill, fill_plural, gettext};
+use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 
 fn icon(category: Category) -> &'static str {
     match category {
@@ -276,12 +276,13 @@ impl MainWindow {
                     ));
                     this.ask_permission(account_id, Permission::Settings, Occasion::Needed);
                 }
-                Err(err) => this.toast(&fill(
+                Err(err) => this.toast(&with_reason(
                     &gettext(
                         "Moved mail from {sender} to {category}, but could not sort new \
                          mail: {reason}",
                     ),
-                    &[values[0], values[1], ("reason", &err.to_string())],
+                    &err,
+                    &values,
                 )),
             }
         });
