@@ -30,6 +30,7 @@ app/src/rules.rs
 app/src/search.rs
 app/src/settings/mod.rs
 app/src/smime.rs
+app/src/templates.rs
 app/src/translation.rs
 app/src/tray.rs
 app/src/ui/about.rs

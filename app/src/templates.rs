@@ -8,6 +8,7 @@
 
 use chrono::{DateTime, Local};
 use mailrs_domain::Address;
+use mailrs_domain::translate::{date_locale, gettext};
 
 use crate::richtext::{Block, RichBody, Span};
 
@@ -20,9 +21,12 @@ pub struct Filling {
     pub date: String,
 }
 
-/// The day `{{date}}` becomes: "9 June 2025".
+/// The day `{{date}}` becomes: "9 June 2025", or "9 de junho de 2025"
+/// in a Portuguese window. The writer writes a template in the language
+/// they read, so the date follows the interface like every other date.
 pub fn today(now: DateTime<Local>) -> String {
-    now.format("%-d %B %Y").to_string()
+    now.format_localized(&gettext("%-d %B %Y"), date_locale())
+        .to_string()
 }
 
 /// Fills every placeholder in `text`. A name that stands for nothing stays
@@ -98,6 +102,16 @@ mod tests {
             subject: "Lunch plans".into(),
             date: "9 June 2025".into(),
         }
+    }
+
+    #[test]
+    fn the_date_speaks_the_language_of_the_interface() {
+        use chrono::TimeZone;
+        let now = Local.with_ymd_and_hms(2025, 6, 9, 12, 0, 0).unwrap();
+        assert_eq!(today(now), "9 June 2025");
+        // Each test runs on its own thread, which keeps the locale here.
+        mailrs_domain::translate::set_date_locale("pt_PT");
+        assert_eq!(today(now), "9 junho 2025");
     }
 
     #[test]
