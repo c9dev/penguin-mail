@@ -232,13 +232,7 @@ impl MainWindow {
         category: Category,
     ) {
         let found = view.find(|open| {
-            let me = open.me.clone();
-            let sender = open
-                .messages
-                .iter()
-                .rev()
-                .filter_map(|m| m.from.clone())
-                .find(|a| !me.iter().any(|mine| mine.eq_ignore_ascii_case(&a.email)))?;
+            let sender = open.other_sender()?.clone();
             let who = sender.display().to_string();
             Some((open.account_id, sender.email, who, open.thread_id.clone()))
         });

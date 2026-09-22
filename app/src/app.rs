@@ -829,10 +829,7 @@ impl App {
                 }
             }),
         );
-        add(
-            "compose",
-            Box::new(|app| app.compose_to("")),
-        );
+        add("compose", Box::new(|app| app.compose_to("")));
         add("check", Box::new(|app| app.core.poke_all()));
         let compose_to = gio::SimpleAction::new("compose-to", Some(glib::VariantTy::STRING));
         let weak = Rc::downgrade(self);

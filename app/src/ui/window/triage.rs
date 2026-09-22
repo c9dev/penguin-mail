@@ -13,8 +13,9 @@ use mailrs_domain::{Folder, ThreadSummary};
 use mailrs_sync::{History, MailAction, TriageAction};
 
 use super::MainWindow;
+use crate::open_thread::OpenThread;
 use crate::ui::Mailbox;
-use crate::ui::conversation::{Action, ConversationView, OpenThread};
+use crate::ui::conversation::{Action, ConversationView};
 
 /// What a mail button does, once the mailbox and the targets' own marks
 /// are known.

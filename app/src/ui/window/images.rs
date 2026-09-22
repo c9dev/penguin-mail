@@ -15,6 +15,7 @@ use mailrs_store::image_senders;
 
 use super::MainWindow;
 use crate::images;
+use crate::open_thread::OpenThread;
 use crate::settings::RemoteImages;
 use crate::ui::conversation::ConversationView;
 use mailrs_domain::translate::{fill, gettext};
@@ -52,15 +53,9 @@ impl MainWindow {
     /// stays in the More menu for anyone who lets the toast go.
     pub(super) fn load_images_once(self: &Rc<Self>, view: &Rc<ConversationView>) {
         view.allow_images();
-        let from = view
-            .find(|open| {
-                open.messages
-                    .last()
-                    .and_then(|m| m.from.as_ref())
-                    .map(|a| a.email.to_lowercase())
-            })
-            .filter(|a| !a.trim().is_empty());
-        let Some(from) = from else { return };
+        let Some(from) = view.find(OpenThread::newest_sender) else {
+            return;
+        };
         if images::allowed(&self.image_senders.borrow(), Some(&from)) {
             return;
         }
@@ -90,21 +85,13 @@ impl MainWindow {
     /// Asks whether to allow this sender or their whole domain, then
     /// records the answer and redraws the conversation without the banner.
     pub(super) fn always_load_images(self: &Rc<Self>, view: &Rc<ConversationView>) {
-        let Some((asked_on, from)) = view.read(|open| {
-            let from = open
-                .messages
-                .last()
-                .and_then(|m| m.from.as_ref())
-                .map(|a| a.email.to_lowercase())
-                .unwrap_or_default();
-            (open.target(), from)
-        }) else {
+        let Some((asked_on, from)) = view.read(|open| (open.target(), open.newest_sender())) else {
             return;
         };
-        if from.trim().is_empty() {
+        let Some(from) = from else {
             self.toast(&gettext("This message has no sender to remember."));
             return;
-        }
+        };
         let dialog = adw::AlertDialog::builder()
             .heading(gettext("Always Load Images?"))
             .body(gettext(
@@ -137,7 +124,8 @@ impl MainWindow {
                 },
                 _ => return,
             };
-            this.allow_images_from(&view, asked_on, sender, whole_domain).await;
+            this.allow_images_from(&view, asked_on, sender, whole_domain)
+                .await;
         });
     }
 

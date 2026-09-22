@@ -109,7 +109,10 @@ impl MainWindow {
             .borrow()
             .iter()
             .find(|(held, _)| held.upgrade().is_some_and(|held| Rc::ptr_eq(&held, view)))
-            .map_or_else(|| self.mailbox.borrow().clone(), |(_, mailbox)| mailbox.clone())
+            .map_or_else(
+                || self.mailbox.borrow().clone(),
+                |(_, mailbox)| mailbox.clone(),
+            )
     }
 
     /// The `win.*` actions a separate window's menus and keys use.

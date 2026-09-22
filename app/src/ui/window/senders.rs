@@ -6,7 +6,7 @@ use adw::prelude::*;
 use gtk::{gio, glib};
 use mailrs_sync::{History, MailAction, Permitted, TriageAction};
 
-use super::{MainWindow, Target};
+use super::MainWindow;
 use crate::compose::Draft;
 use crate::ui::conversation::ConversationView;
 use crate::unsubscribe::{Unsubscribe, choose};
@@ -132,25 +132,11 @@ impl MainWindow {
     }
 
     pub(super) fn block_sender_from(self: &Rc<Self>, view: Rc<ConversationView>) {
-        let found = view.find(|open| {
-            let me = open.me.clone();
-            let sender = open
-                .messages
-                .iter()
-                .rev()
-                .filter_map(|m| m.from.clone())
-                .find(|a| !me.iter().any(|mine| mine.eq_ignore_ascii_case(&a.email)))?;
-            let target = Target {
-                account_id: open.account_id,
-                thread_id: open.thread_id.clone(),
-                message_id: open.only_message.clone(),
-            };
-            Some((open.account_id, sender, target))
-        });
-        let Some((account_id, sender, target)) = found else {
+        let found = view.find(|open| Some((open.other_sender()?.clone(), open.target())));
+        let Some((sender, target)) = found else {
             return self.toast(&gettext("Open a message from the sender to block"));
         };
-        let email = sender.email.clone();
+        let (account_id, email) = (target.account_id, sender.email.clone());
         let dialog = adw::AlertDialog::new(
             Some(&fill(
                 &gettext("Block {sender}?"),

@@ -17,6 +17,7 @@ mod images;
 mod language;
 mod logging;
 mod notify;
+mod open_thread;
 mod pgp;
 mod protection;
 mod render;

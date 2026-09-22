@@ -6,16 +6,14 @@
 //! Finding text is WebKit's own, through [`FindBar`].
 
 use std::cell::{Cell, RefCell};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gdk, gio, glib};
 use mailrs_domain::translate::{fill, fill_plural, gettext};
-use mailrs_domain::{
-    AccountId, Category, FlagColor, Folder, MessageBody, MessageMeta, Target, system_label,
-};
+use mailrs_domain::{Category, FlagColor, Folder, MessageBody, MessageMeta, Target};
 use webkit::prelude::*;
 
 use super::find::FindBar;
@@ -24,204 +22,12 @@ use super::pgp::PgpCard;
 use super::translation::TranslationCard;
 use super::{name, name_with_shortcut};
 use crate::compose::ReplyKind;
+use crate::open_thread::OpenThread;
 use crate::protection::run::{Claimed, Installed};
-use crate::protection::{self, Engine, Mark};
+use crate::protection::{self};
 use crate::render::{BodyState, Conversation, MessageView, Theme, render};
 use crate::sanitize::sanitize_html;
 use crate::translation::{Body, Prose, Translation};
-
-/// Everything shown for one open thread.
-pub struct OpenThread {
-    pub account_id: AccountId,
-    pub thread_id: String,
-    pub subject: String,
-    pub messages: Vec<MessageMeta>,
-    /// Missing entries are still loading; `Err` holds why a body failed.
-    pub bodies: HashMap<String, Result<MessageBody, String>>,
-    pub expanded: HashSet<String>,
-    pub images_allowed: bool,
-    /// Set when the view shows one message of the thread, not all of it.
-    pub only_message: Option<String>,
-    pub me: Vec<String>,
-    /// Inline images per message: `Content-ID` to `data:` URI.
-    pub inline_images: HashMap<String, HashMap<String, String>>,
-    /// Pictures for the attachment rows: Gmail's attachment id to a small
-    /// `data:` URI. Shared across the thread, since an id is unique.
-    pub thumbnails: HashMap<String, String>,
-    /// Files that came out of an encrypted message, by message id, in the
-    /// order that message's attachment list gives them. Gmail holds the
-    /// ciphertext, so these bytes are the only copy and they live no
-    /// longer than this window.
-    pub opened_files: HashMap<String, Vec<Vec<u8>>>,
-    /// Contact photos by lower-case sender address, as `data:` URIs. A
-    /// sender with none keeps the initials avatar.
-    pub photos: HashMap<String, String>,
-    /// Set once the user unsubscribed from this thread's list.
-    pub unsubscribed: bool,
-    /// What the engine made of the protected message in this thread, once
-    /// it has run. It stays here so redrawing the thread never asks again,
-    /// and so the card survives the body being replaced by the one that
-    /// was inside the encryption.
-    pub pgp: Option<Mark>,
-    /// Set as soon as an engine is asked about this thread. Either one may
-    /// hold a pinentry in front of the person for as long as they take,
-    /// and asking twice would put up two of them.
-    pub pgp_asked: bool,
-    /// The flag colour chosen here, when the thread is flagged.
-    pub flag_color: Option<FlagColor>,
-    /// Messages translated in this window, by message id. They go no
-    /// further than this: a translation is text a model derived, and
-    /// tomorrow's model would write it differently.
-    pub translations: HashMap<String, Translation>,
-}
-
-impl OpenThread {
-    pub fn is_draft(&self) -> bool {
-        self.messages
-            .last()
-            .is_some_and(|m| m.has_label(system_label::DRAFT))
-    }
-
-    pub fn starred(&self) -> bool {
-        self.messages
-            .iter()
-            .any(|m| m.has_label(system_label::STARRED))
-    }
-
-    pub fn unread(&self) -> bool {
-        self.messages.iter().any(|m| m.is_unread())
-    }
-
-    pub fn muted(&self) -> bool {
-        self.messages
-            .iter()
-            .any(|m| m.has_label(system_label::MUTE))
-    }
-
-    /// What a mail action on this conversation applies to.
-    pub fn target(&self) -> Target {
-        Target {
-            account_id: self.account_id,
-            thread_id: self.thread_id.clone(),
-            message_id: self.only_message.clone(),
-        }
-    }
-
-    /// The message a reply answers: the newest one that is not a draft.
-    pub fn reply_target(&self) -> Option<&MessageMeta> {
-        self.messages
-            .iter()
-            .rev()
-            .find(|m| !m.has_label(system_label::DRAFT))
-    }
-
-    /// The newest message that carries an invitation, with the
-    /// `text/calendar` part it arrived in.
-    pub fn invitation(&self) -> Option<(&MessageMeta, &str)> {
-        self.messages.iter().rev().find_map(|meta| {
-            let body = self.bodies.get(&meta.id)?.as_ref().ok()?;
-            Some((meta, body.calendar.as_deref()?))
-        })
-    }
-
-    /// The newest message that arrived signed or encrypted, with the
-    /// engine call it needs. A thread holds one such message far more
-    /// often than two, and the newest is the one being read.
-    pub fn protected(&self) -> Option<(&MessageMeta, Engine)> {
-        self.messages.iter().rev().find_map(|meta| {
-            let body = self.bodies.get(&meta.id)?.as_ref().ok()?;
-            Some((meta, protection::engine(body)?))
-        })
-    }
-
-    /// That message, claimed for one engine run, with what the engine
-    /// needs to read it. `installed` says which engines this computer has,
-    /// so a message whose engine is missing is left unclaimed for the day
-    /// it turns up. Once per thread: a second call gives nothing back,
-    /// because either engine may hold a pinentry in front of the person
-    /// for as long as they take and asking twice would put up two of them.
-    pub fn take_protected(&mut self, installed: Installed) -> Option<Claimed> {
-        if self.pgp_asked {
-            return None;
-        }
-        let (message_id, opening) = {
-            let (meta, opening) = self.protected()?;
-            (meta.id.clone(), opening)
-        };
-        if !installed.runs(opening) {
-            return None;
-        }
-        let body = self.bodies.get(&message_id)?.as_ref().ok()?.clone();
-        self.pgp_asked = true;
-        Some(Claimed {
-            target: self.target(),
-            message_id,
-            opening,
-            body,
-        })
-    }
-
-    /// The `List-Unsubscribe` header of the newest message, when it has one.
-    pub fn list_unsubscribe(&self) -> Option<(&MessageMeta, &MessageBody)> {
-        let target = self.reply_target()?;
-        let body = self.bodies.get(&target.id)?.as_ref().ok()?;
-        body.list_unsubscribe.is_some().then_some((target, body))
-    }
-
-    /// Takes in the thread's messages as the store now has them, and
-    /// answers with the ids whose bodies are still missing. A message that
-    /// was not here before and arrived unread opens, since the reader has
-    /// not seen it; one they closed themselves stays closed. A thread
-    /// showing one message keeps only that one, and an empty answer from
-    /// the store leaves the list alone.
-    fn take_messages(&mut self, fresh: &[MessageMeta]) -> Vec<String> {
-        let fresh: Vec<MessageMeta> = fresh
-            .iter()
-            .filter(|m| self.only_message.as_ref().is_none_or(|id| &m.id == id))
-            .cloned()
-            .collect();
-        for meta in &fresh {
-            if !self.messages.iter().any(|m| m.id == meta.id) && meta.is_unread() {
-                self.expanded.insert(meta.id.clone());
-            }
-        }
-        if !fresh.is_empty() {
-            self.messages = fresh;
-        }
-        self.messages
-            .iter()
-            .filter(|m| !self.bodies.contains_key(&m.id))
-            .map(|m| m.id.clone())
-            .collect()
-    }
-
-    /// Replaces the messages and answers whether their ids differ from the
-    /// ones that were here, in that order.
-    fn replace_messages(&mut self, fresh: Vec<MessageMeta>) -> bool {
-        let same = self
-            .messages
-            .iter()
-            .map(|m| &m.id)
-            .eq(fresh.iter().map(|m| &m.id));
-        self.messages = fresh;
-        !same
-    }
-
-    fn has_remote_images(&self) -> bool {
-        self.bodies
-            .values()
-            .filter_map(|b| b.as_ref().ok())
-            .filter_map(|b| b.html.as_deref())
-            .any(|html| {
-                let lower = html.to_ascii_lowercase();
-                lower.contains("src=\"http")
-                    || lower.contains("src='http")
-                    || lower.contains("url(http")
-                    || lower.contains("url('http")
-                    || lower.contains("url(\"http")
-            })
-    }
-}
 
 pub enum Action {
     /// The event card asked for something: an answer, or a hand-off to the
@@ -1575,114 +1381,8 @@ fn network_session() -> webkit::NetworkSession {
 
 #[cfg(test)]
 mod tests {
-    use super::{OpenThread, body_mark};
-    use mailrs_domain::{MessageMeta, system_label};
-    use std::collections::{HashMap, HashSet};
-
-    /// One message of a thread. `unread` puts Gmail's own label on it.
-    fn message(id: &str, unread: bool) -> MessageMeta {
-        MessageMeta {
-            account_id: 1,
-            id: id.to_string(),
-            thread_id: "t1".to_string(),
-            rfc822_msgid: None,
-            from: None,
-            to: Vec::new(),
-            cc: Vec::new(),
-            subject: "Lunch".to_string(),
-            date: 0,
-            snippet: String::new(),
-            size: 0,
-            has_attachments: false,
-            label_ids: match unread {
-                true => vec![system_label::UNREAD.to_string()],
-                false => Vec::new(),
-            },
-        }
-    }
-
-    /// A thread with these messages on screen and nothing else filled in.
-    fn thread(messages: Vec<MessageMeta>) -> OpenThread {
-        OpenThread {
-            account_id: 1,
-            thread_id: "t1".to_string(),
-            subject: "Lunch".to_string(),
-            messages,
-            bodies: HashMap::new(),
-            expanded: HashSet::new(),
-            images_allowed: false,
-            only_message: None,
-            me: Vec::new(),
-            inline_images: HashMap::new(),
-            thumbnails: HashMap::new(),
-            opened_files: HashMap::new(),
-            photos: HashMap::new(),
-            unsubscribed: false,
-            pgp: None,
-            pgp_asked: false,
-            flag_color: None,
-            translations: HashMap::new(),
-        }
-    }
-
-    #[test]
-    fn a_message_that_arrives_unread_opens() {
-        let mut open = thread(vec![message("m1", false)]);
-        open.take_messages(&[message("m1", false), message("m2", true)]);
-        assert!(open.expanded.contains("m2"));
-    }
-
-    #[test]
-    fn a_message_that_arrives_read_stays_closed() {
-        let mut open = thread(vec![message("m1", false)]);
-        open.take_messages(&[message("m1", false), message("m2", false)]);
-        assert!(open.expanded.is_empty());
-    }
-
-    #[test]
-    fn a_message_the_reader_closed_does_not_open_again() {
-        let mut open = thread(vec![message("m1", true)]);
-        open.take_messages(&[message("m1", true)]);
-        assert!(open.expanded.is_empty());
-    }
-
-    #[test]
-    fn a_thread_showing_one_message_keeps_only_that_one() {
-        let mut open = thread(vec![message("m2", false)]);
-        open.only_message = Some("m2".to_string());
-        open.take_messages(&[message("m1", true), message("m2", false)]);
-        let ids: Vec<&str> = open.messages.iter().map(|m| m.id.as_str()).collect();
-        assert_eq!(ids, ["m2"]);
-    }
-
-    #[test]
-    fn the_messages_with_no_body_yet_are_the_ones_asked_for() {
-        let mut open = thread(Vec::new());
-        open.bodies
-            .insert("m1".to_string(), Err("gone".to_string()));
-        let missing = open.take_messages(&[message("m1", false), message("m2", false)]);
-        assert_eq!(missing, ["m2"]);
-    }
-
-    #[test]
-    fn an_empty_answer_from_the_store_leaves_the_messages_alone() {
-        let mut open = thread(vec![message("m1", false)]);
-        open.take_messages(&[]);
-        let ids: Vec<&str> = open.messages.iter().map(|m| m.id.as_str()).collect();
-        assert_eq!(ids, ["m1"]);
-    }
-
-    #[test]
-    fn the_same_ids_in_the_same_order_are_not_a_change() {
-        let mut open = thread(vec![message("m1", false), message("m2", false)]);
-        assert!(!open.replace_messages(vec![message("m1", true), message("m2", false)]));
-    }
-
-    #[test]
-    fn a_message_the_thread_did_not_have_is_a_change() {
-        let mut open = thread(vec![message("m1", false)]);
-        assert!(open.replace_messages(vec![message("m1", false), message("m2", false)]));
-    }
+    use super::body_mark;
+    use std::collections::HashMap;
 
     fn images(entries: &[(&str, &str)]) -> HashMap<String, String> {
         entries

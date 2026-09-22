@@ -22,7 +22,7 @@ use mailrs_sync::{
 };
 
 use super::contact_card;
-use super::conversation::{Action, ConversationView, OpenThread};
+use super::conversation::{Action, ConversationView};
 use super::sidebar::Sidebar;
 use super::thread_list::{Picked, ThreadList};
 use super::{Mailbox, welcome};
@@ -30,6 +30,7 @@ use crate::app::App;
 use crate::assistant::ToolRequest;
 use crate::compose::{self, Draft, OutgoingAttachment, ReplyKind};
 use crate::core::Core;
+use crate::open_thread::OpenThread;
 use crate::settings::{Change, Effect, Effects, MarkRead, Settings};
 
 mod arrange;
@@ -1773,15 +1774,9 @@ impl MainWindow {
             return;
         };
         for view in self.views() {
-            let senders = view.read(|open| {
-                open.messages
-                    .iter()
-                    .filter_map(|m| m.from.as_ref())
-                    .map(|a| a.email.clone())
-                    .collect::<Vec<_>>()
-            });
+            let senders = view.read(OpenThread::senders);
             if let Some(senders) = senders {
-                view.set_photos(app.sender_photos(senders.into_iter()));
+                view.set_photos(app.sender_photos(senders.into_iter().filter(|s| !s.is_empty())));
             }
         }
     }
@@ -1931,11 +1926,7 @@ impl MainWindow {
             }
             this.list
                 .retain(|row| !gone.contains(&Target::from_row(row)));
-            if this.conversation.read(|o| {
-                gone.iter()
-                    .any(|t| t.account_id == o.account_id && t.thread_id == o.thread_id)
-            }) == Some(true)
-            {
+            if this.conversation.read(|o| o.among(&gone)) == Some(true) {
                 this.conversation.clear();
             }
         });
@@ -1997,13 +1988,7 @@ impl MainWindow {
         match action {
             MailAction::Flag(color) => {
                 for view in self.views() {
-                    let flagged = view.read(|o| {
-                        outcome
-                            .done
-                            .iter()
-                            .any(|t| t.account_id == o.account_id && t.thread_id == o.thread_id)
-                    });
-                    if flagged == Some(true) {
+                    if view.read(|o| o.among(&outcome.done)) == Some(true) {
                         view.set_flag_color(*color);
                     }
                 }
@@ -2964,11 +2949,7 @@ impl MainWindow {
             let quotable = self
                 .conversation
                 .read(|open| {
-                    open.account_id == account_id
-                        && open.thread_id == thread_id
-                        && open
-                            .reply_target()
-                            .is_some_and(|m| open.bodies.contains_key(&m.id))
+                    open.account_id == account_id && open.thread_id == thread_id && open.quotable()
                 })
                 .unwrap_or(false);
             if quotable || std::time::Instant::now() >= deadline {
@@ -3117,14 +3098,7 @@ impl MainWindow {
 
     /// Adds the open conversation's sender to the VIPs, or takes them off.
     fn toggle_vip(self: &Rc<Self>) {
-        let me = self.conversation.read(|o| o.me.clone()).unwrap_or_default();
-        let sender = self.conversation.find(|o| {
-            o.messages
-                .iter()
-                .rev()
-                .filter_map(|m| m.from.clone())
-                .find(|a| !me.iter().any(|mine| mine.eq_ignore_ascii_case(&a.email)))
-        });
+        let sender = self.conversation.find(|o| o.other_sender().cloned());
         let (Some(sender), Some(app)) = (sender, self.app.upgrade()) else {
             return self.toast(&gettext("Open a message from the person first"));
         };
@@ -3371,15 +3345,8 @@ fn default_expanded(messages: &[MessageMeta]) -> HashSet<String> {
 
 /// Whether the newest sender in `view` who is not the user is a VIP.
 fn sender_is_vip(view: &ConversationView, settings: &Settings) -> bool {
-    view.read(|o| {
-        o.messages
-            .iter()
-            .rev()
-            .filter_map(|m| m.from.as_ref())
-            .find(|a| !o.me.iter().any(|mine| mine.eq_ignore_ascii_case(&a.email)))
-            .is_some_and(|a| settings.is_vip(&a.email))
-    })
-    .unwrap_or(false)
+    view.read(|o| o.other_sender().is_some_and(|a| settings.is_vip(&a.email)))
+        .unwrap_or(false)
 }
 
 /// `dir/name`, or `dir/name (2).ext` and so on when that exists.

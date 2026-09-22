@@ -13,9 +13,9 @@ use std::rc::Rc;
 use mailrs_domain::{AccountId, MessageBody, MessageMeta, Protection, Target};
 
 use super::{Answer, Claimed, Desk, Effects, Engines, Installed};
-use crate::wanted::Screen as OnScreen;
+use crate::open_thread::OpenThread;
 use crate::protection::{Engine, Mark, Read, Tone};
-use crate::ui::conversation::OpenThread;
+use crate::wanted::Screen as OnScreen;
 
 /// The account and thread every fixture belongs to.
 pub const ACCOUNT: AccountId = 1;

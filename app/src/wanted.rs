@@ -136,7 +136,10 @@ mod tests {
             })
             .await;
         assert_eq!(said, None);
-        assert_eq!(wanted.on_screen(|window| window.changed.borrow_mut().push("x")), None);
+        assert_eq!(
+            wanted.on_screen(|window| window.changed.borrow_mut().push("x")),
+            None
+        );
         assert!(window.changed.borrow().is_empty());
     }
 

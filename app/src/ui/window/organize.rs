@@ -41,11 +41,7 @@ impl MainWindow {
             }
         };
         let targets: Vec<Target> = rows.iter().map(Target::from_row).collect();
-        let open_moved = self.conversation.read(|o| {
-            targets
-                .iter()
-                .any(|t| t.account_id == o.account_id && t.thread_id == o.thread_id)
-        }) == Some(true);
+        let open_moved = self.conversation.read(|o| o.among(&targets)) == Some(true);
         if open_moved && !matches!(action, TriageAction::Star) {
             self.conversation.clear();
             self.list.unselect();

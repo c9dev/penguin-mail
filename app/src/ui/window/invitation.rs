@@ -37,9 +37,8 @@ impl MainWindow {
     /// card, or takes the card away when the message carries none.
     pub(super) async fn refresh_invitation(self: &Rc<Self>, view: &Rc<ConversationView>) {
         let found = view.find(|open| {
-            open.invitation().map(|(meta, ics)| {
-                (open.target(), meta.id.clone(), ics.to_string())
-            })
+            open.invitation()
+                .map(|(meta, ics)| (open.target(), meta.id.clone(), ics.to_string()))
         });
         let Some((target, message_id, ics)) = found else {
             view.show_invitation(None);
