@@ -34,6 +34,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   has them, and no longer undoes changes made in the browser meanwhile.
 - In demo mode, a message you send now shows up in Sent and in its
   conversation.
+- The inbox category switcher fits a narrow list without scrolling
+  sideways: when the chosen category's name has no room, it shows icons
+  alone.
 
 ## 0.1.4 (2026-09-22)
 

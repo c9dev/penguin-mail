@@ -16,6 +16,10 @@ use crate::ui::Mailbox;
 use crate::ui::conversation::ConversationView;
 use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 
+mod strip;
+
+use strip::CategoryStrip;
+
 fn icon(category: Category) -> &'static str {
     match category {
         Category::All => "penguin-mail-inbox-symbolic",
@@ -39,11 +43,12 @@ fn slider(child: &impl IsA<gtk::Widget>) -> gtk::Revealer {
 }
 
 /// The switcher above an inbox's thread list. Only the chosen category
-/// shows its name; the others show an icon and their unread count.
+/// shows its name, and only while it fits; the others show an icon and
+/// their unread count.
 pub(super) struct CategoryBar {
     bar: gtk::Box,
     group: adw::ToggleGroup,
-    names: HashMap<Category, gtk::Revealer>,
+    strip: CategoryStrip,
     counts: HashMap<Category, gtk::Label>,
     pub(super) chosen: Cell<Category>,
 }
@@ -53,10 +58,9 @@ impl CategoryBar {
     pub(super) fn new(chosen: Category) -> CategoryBar {
         let group = adw::ToggleGroup::builder()
             .homogeneous(false)
-            .halign(gtk::Align::Center)
             .css_classes(["category-bar", "round"])
             .build();
-        let (mut names, mut counts) = (HashMap::new(), HashMap::new());
+        let (mut names, mut counts) = (Vec::new(), HashMap::new());
         for category in Category::ALL {
             // No spacing: the name carries its own margin, so a closed name
             // leaves no gap behind.
@@ -91,7 +95,7 @@ impl CategoryBar {
                     .child(&content)
                     .build(),
             );
-            names.insert(category, name);
+            names.push(name);
             counts.insert(category, count);
         }
         let bar = gtk::Box::builder()
@@ -101,22 +105,14 @@ impl CategoryBar {
             .margin_end(8)
             .visible(false)
             .build();
-        // A window too narrow for all five scrolls the switcher sideways rather
-        // than cutting a category off.
-        bar.append(
-            &gtk::ScrolledWindow::builder()
-                .child(&group)
-                .hscrollbar_policy(gtk::PolicyType::Automatic)
-                .vscrollbar_policy(gtk::PolicyType::Never)
-                .propagate_natural_width(true)
-                .hexpand(true)
-                .build(),
-        );
+        let strip = CategoryStrip::new(&group, names);
+        strip.set_hexpand(true);
+        bar.append(&strip);
         group.set_active_name(Some(chosen.key()));
         let this = CategoryBar {
             bar,
             group,
-            names,
+            strip,
             counts,
             chosen: Cell::new(chosen),
         };
@@ -125,8 +121,9 @@ impl CategoryBar {
     }
 
     fn show_names(&self) {
-        for (category, name) in &self.names {
-            name.set_reveal_child(*category == self.chosen.get());
+        let chosen = self.chosen.get();
+        if let Some(index) = Category::ALL.iter().position(|&c| c == chosen) {
+            self.strip.choose(index);
         }
     }
 
