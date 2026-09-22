@@ -1,3 +1,14 @@
+/* Movement. A pointer landing on a row, and a row becoming the selected
+   one, fade rather than snap: short enough to keep the list feeling
+   direct, long enough that the eye follows what changed. GTK drops every
+   transition when the desktop turns animations off. */
+.navigation-sidebar > row,
+.thread-list > row,
+.mailbox-row .count,
+row.account-heading { transition: background-color 120ms ease, color 120ms ease; }
+.navigation-sidebar > row:selected,
+.thread-list > row:selected { transition-duration: 90ms; }
+
 /* Thread list */
 .thread-list > row { padding: 0; }
 .thread-row { padding: 9px 12px 10px 6px; }
@@ -207,7 +218,7 @@ flowboxchild:focus-visible > .recipient-chip {
 .category-bar > separator { background: none; }
 .category-bar .category-name { margin-left: 5px; margin-right: 2px; }
 /* The chosen category leads; the rest sit back a little. */
-.category-bar > toggle image { opacity: 0.75; transition: opacity 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+.category-bar > toggle image { opacity: 0.75; transition: opacity 160ms cubic-bezier(0.23, 1, 0.32, 1); }
 .category-bar > toggle:checked image, .category-bar > toggle:hover image { opacity: 1; }
 /* The unread count rides the icon's top right corner. */
 .category-bar .category-count {
@@ -219,7 +230,7 @@ flowboxchild:focus-visible > .recipient-chip {
   font-feature-settings: "tnum";
   color: var(--accent-fg-color);
   background: var(--accent-bg-color);
-  transition: opacity 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: opacity 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 .category-bar .category-count.no-mail { opacity: 0; }
 

@@ -22,6 +22,7 @@ use super::pgp::PgpCard;
 use super::queued::QueuedCard;
 use super::translation::TranslationCard;
 use super::{name, name_with_shortcut};
+use crate::render::FOLD_MS;
 use crate::compose::ReplyKind;
 use crate::open_thread::{OpenThread, Unsent};
 use crate::protection::run::{Claimed, Installed};
@@ -1290,6 +1291,12 @@ impl ConversationView {
     /// Opens or closes one message in the page itself. Redrawing would do
     /// it too, and would throw away the find highlight and the place the
     /// reader had scrolled to.
+    /// Opens or closes one message, growing or shrinking its fold on the
+    /// way. The height comes from the page, since only the page knows how
+    /// tall the body turned out, and it is put back to the stylesheet's
+    /// own value once the movement ends, so a picture that loads later
+    /// still makes the message taller. A second click lands mid-movement
+    /// and the transition turns around from where it is.
     fn show_message(&self, id: &str, expanded: bool) {
         let id = script_safe(id);
         let (add, remove) = match expanded {
@@ -1299,7 +1306,27 @@ impl ConversationView {
         run_script(
             &self.webview,
             &format!(
-                "(function(){{var m=document.getElementById('m-{id}');if(m){{m.classList.add('{add}');m.classList.remove('{remove}');}}}})()"
+                "(function(){{\
+                   var m=document.getElementById('m-{id}');if(!m)return;\
+                   var f=m.querySelector('.fold');\
+                   var still=window.matchMedia('(prefers-reduced-motion: reduce)').matches;\
+                   if(!f||still){{m.classList.add('{add}');m.classList.remove('{remove}');return;}}\
+                   var from=f.getBoundingClientRect().height;\
+                   f.style.maxHeight=from+'px';\
+                   f.style.opacity=window.getComputedStyle(f).opacity;\
+                   m.classList.add('{add}');m.classList.remove('{remove}');\
+                   void f.offsetHeight;\
+                   m.classList.add('folding');\
+                   f.style.maxHeight={open}?f.scrollHeight+'px':'0px';\
+                   f.style.opacity={open}?'1':'0';\
+                   window.clearTimeout(f.pmSettle);\
+                   f.pmSettle=window.setTimeout(function(){{\
+                     m.classList.remove('folding');\
+                     f.style.maxHeight='';f.style.opacity='';\
+                   }},{settle});\
+                 }})()",
+                open = expanded,
+                settle = FOLD_MS + 40,
             ),
         );
     }

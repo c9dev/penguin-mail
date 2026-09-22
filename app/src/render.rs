@@ -11,6 +11,10 @@ use crate::format::{color_for, full_date, header_date, human_size, initials};
 use crate::sanitize::sanitize_html;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
+/// How long a message's fold takes to open or close. The stylesheet and
+/// the script that drives it both read this, so they cannot drift apart.
+pub const FOLD_MS: u32 = 240;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Theme {
     pub dark: bool,
@@ -174,8 +178,13 @@ fn render_message(
         "<span class=\"line snippet\">{}</span></div>",
         escape(&meta.snippet)
     );
+    // The body and its files live in one fold, which is what the expand
+    // animation grows and shrinks. A collapsed message keeps them in the
+    // page at zero height rather than dropping them, so the two states
+    // have something to move between.
+    html.push_str("<div class=\"fold\"><div class=\"folded\">");
     render_body(html, view);
-    html.push_str("</article>");
+    html.push_str("</div></div></article>");
 }
 
 fn render_body(html: &mut String, view: &MessageView) {
@@ -607,8 +616,15 @@ table.details th{{text-align:right;font-weight:normal;color:var(--dim);padding:1
 vertical-align:top;white-space:nowrap}}\
 table.details td{{text-align:left;color:var(--fg);padding:1px 0;word-break:break-word}}\
 table.details .warn{{color:#c0392b}}\
-.collapsed .body,.collapsed .attachments,.collapsed .to,.collapsed .address,.expanded .snippet{{display:none}}\
+.collapsed .to,.collapsed .address,.expanded .snippet{{display:none}}\
 .collapsed .toggle{{cursor:pointer}}\
+.fold{{overflow:hidden}}\
+.collapsed .fold{{max-height:0;opacity:0}}\
+.message.folding .fold{{transition:max-height {fold}ms cubic-bezier(0.23,1,0.32,1),\
+opacity 180ms cubic-bezier(0.23,1,0.32,1)}}\
+.message{{transition:background-color 120ms ease}}\
+.attachment,.attachment .get{{transition:background-color 120ms ease,opacity 120ms ease}}\
+@media (prefers-reduced-motion:reduce){{.message.folding .fold,.message{{transition:none}}}}\
 .body{{margin:16px 0 4px 52px}}\
 .text{{white-space:pre-wrap;overflow-wrap:anywhere}}\
 .html{{background:#fff;border-radius:12px;padding:14px;border:1px solid var(--line);overflow:hidden;margin-left:0}}\
@@ -632,6 +648,7 @@ color:inherit;text-decoration:none;min-width:0}}\
 .clip{{width:16px;height:16px;flex:none;background:var(--dim);-webkit-mask:url(\"{CLIP}\") center/contain no-repeat}}\
 @media (max-width:560px){{body{{padding:18px 14px 40px}}.body,.attachments{{margin-left:0}}.thread h1{{font-size:21px}}\
 .address{{display:none}}.message{{padding:12px 8px;margin:0 -8px}}}}",
+        fold = FOLD_MS,
         scheme = if theme.dark { "dark" } else { "light" },
         accent = theme.accent,
     )
@@ -710,6 +727,35 @@ mod tests {
             },
             &theme(),
         )
+    }
+
+    /// Writes a page with one long collapsed message to `PM_DUMP_PAGE`,
+    /// for a by-hand check of the fold in a real engine. Does nothing
+    /// without that variable.
+    #[test]
+    fn dump_a_page_for_the_animation_check() {
+        let Ok(path) = std::env::var("PM_DUMP_PAGE") else {
+            return;
+        };
+        let one = meta("m1", "Kites", &[]);
+        let body = MessageBody {
+            text: Some("line\n".repeat(40)),
+            ..Default::default()
+        };
+        let images = HashMap::new();
+        let no_thumbs = HashMap::new();
+        let html = page(
+            "Kites",
+            vec![MessageView {
+                meta: &one,
+                body: BodyState::Loaded(&body),
+                expanded: false,
+                inline_images: &images,
+                thumbnails: &no_thumbs,
+                sanitized: None,
+            }],
+        );
+        std::fs::write(path, html).expect("the page is written");
     }
 
     #[test]
@@ -808,8 +854,13 @@ mod tests {
         );
         assert!(html.contains("message collapsed\" id=\"m-m1\""));
         assert!(
-            html.contains(".collapsed .body"),
-            "collapsed bodies are hidden by the stylesheet"
+            html.contains(".collapsed .fold{max-height:0;opacity:0}"),
+            "a collapsed message keeps its fold at no height"
+        );
+        assert_eq!(
+            html.matches("<div class=\"fold\">").count(),
+            2,
+            "each message's body sits in a fold the animation can move"
         );
         assert!(html.contains("snippet of m1") && html.contains("snippet of m2"));
         assert_eq!(

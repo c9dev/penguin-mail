@@ -5,6 +5,13 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Improved
+
+- A message in a conversation slides open and shut instead of appearing
+  all at once, and mailbox rows, conversation rows and attachments fade
+  under the pointer. Turning off animations in the desktop settings turns
+  all of it off.
+
 ### New
 
 - The assistant can send a message waiting in Send Later or the Outbox
