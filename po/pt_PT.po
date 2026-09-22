@@ -1570,7 +1570,7 @@ msgid_plural "{count} unread messages"
 msgstr[0] "{count} mensagem por ler"
 msgstr[1] "{count} mensagens por ler"
 
-#: app/src/tray.rs:37 app/src/ui/sidebar.rs:515
+#: app/src/tray.rs:37 app/src/ui/sidebar.rs:525
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] "{account}, {count} mensagem por ler"
@@ -1590,7 +1590,7 @@ msgstr "Abrir o Penguin Mail"
 msgid "New Message"
 msgstr "Nova mensagem"
 
-#: app/src/tray.rs:136 app/src/ui/sidebar.rs:723 app/src/ui/window.rs:2127
+#: app/src/tray.rs:136 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2127
 msgid "Check for Mail"
 msgstr "Procurar correio"
 
@@ -2249,7 +2249,7 @@ msgid "Choose a Time…"
 msgstr "Escolher uma hora…"
 
 #: app/src/ui/composer/mod.rs:210 app/src/ui/composer/mod.rs:1276
-#: app/src/ui/sidebar.rs:253
+#: app/src/ui/sidebar.rs:263
 msgid "Send Later"
 msgstr "Enviar mais tarde"
 
@@ -2607,7 +2607,7 @@ msgstr "Outro e-mail"
 msgid "Phone"
 msgstr "Telefone"
 
-#: app/src/ui/contact_card.rs:156 app/src/ui/sidebar.rs:221
+#: app/src/ui/contact_card.rs:156 app/src/ui/sidebar.rs:231
 msgid "Remove from VIPs"
 msgstr "Remover dos VIP"
 
@@ -2792,7 +2792,7 @@ msgstr "Marcar como lida ou não lida"
 msgid "Labels…"
 msgstr "Etiquetas…"
 
-#: app/src/ui/conversation.rs:317 app/src/ui/sidebar.rs:259
+#: app/src/ui/conversation.rs:317 app/src/ui/sidebar.rs:269
 #: app/src/ui/window/reminders.rs:36 app/src/ui/window/reminders.rs:41
 msgid "Remind Me"
 msgstr "Lembrar-me"
@@ -3229,7 +3229,7 @@ msgstr "Esta reunião foi cancelada"
 msgid "Gray"
 msgstr "Cinzento"
 
-#: app/src/ui/mod.rs:152 app/src/ui/sidebar.rs:464
+#: app/src/ui/mod.rs:152 app/src/ui/sidebar.rs:474
 msgid "Inbox"
 msgstr "Caixa de entrada"
 
@@ -3760,115 +3760,115 @@ msgstr "Caixas de correio"
 msgid "Add Account"
 msgstr "Adicionar conta"
 
-#: app/src/ui/sidebar.rs:211 app/src/ui/sidebar.rs:213
+#: app/src/ui/sidebar.rs:221 app/src/ui/sidebar.rs:223
 msgid "VIPs"
 msgstr "VIP"
 
-#: app/src/ui/sidebar.rs:247
+#: app/src/ui/sidebar.rs:257
 msgid "Outbox"
 msgstr "Caixa de saída"
 
-#: app/src/ui/sidebar.rs:265
+#: app/src/ui/sidebar.rs:275
 msgid "Follow Up"
 msgstr "Seguimento"
 
-#: app/src/ui/sidebar.rs:278
+#: app/src/ui/sidebar.rs:288
 msgid "Smart Mailboxes"
 msgstr "Caixas inteligentes"
 
-#: app/src/ui/sidebar.rs:289 app/src/ui/smart_editor.rs:43
+#: app/src/ui/sidebar.rs:299 app/src/ui/smart_editor.rs:43
 msgid "Accounts"
 msgstr "Contas"
 
-#: app/src/ui/sidebar.rs:471 app/src/ui/sidebar.rs:779
+#: app/src/ui/sidebar.rs:481 app/src/ui/sidebar.rs:789
 msgid "Show or hide this account's mailboxes"
 msgstr "Mostrar ou esconder as caixas desta conta"
 
-#: app/src/ui/sidebar.rs:493
+#: app/src/ui/sidebar.rs:503
 msgid "{mailbox}, {count} unread message"
 msgid_plural "{mailbox}, {count} unread messages"
 msgstr[0] "{mailbox}, {count} mensagem por ler"
 msgstr[1] "{mailbox}, {count} mensagens por ler"
 
-#: app/src/ui/sidebar.rs:499
+#: app/src/ui/sidebar.rs:509
 msgid "{mailbox}, {count} message"
 msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}, {count} mensagem"
 msgstr[1] "{mailbox}, {count} mensagens"
 
-#: app/src/ui/sidebar.rs:563 app/src/ui/thread_list.rs:609
+#: app/src/ui/sidebar.rs:573 app/src/ui/thread_list.rs:609
 msgid "Edit…"
 msgstr "Editar…"
 
-#: app/src/ui/sidebar.rs:565 app/src/ui/sidebar.rs:746
+#: app/src/ui/sidebar.rs:575 app/src/ui/sidebar.rs:756
 msgid "Move Up"
 msgstr "Mover para cima"
 
-#: app/src/ui/sidebar.rs:566 app/src/ui/sidebar.rs:747
+#: app/src/ui/sidebar.rs:576 app/src/ui/sidebar.rs:757
 msgid "Move Down"
 msgstr "Mover para baixo"
 
-#: app/src/ui/sidebar.rs:569 app/src/ui/sidebar.rs:627
+#: app/src/ui/sidebar.rs:579 app/src/ui/sidebar.rs:637
 msgid "Delete…"
 msgstr "Eliminar…"
 
-#: app/src/ui/sidebar.rs:616 app/src/ui/sidebar.rs:735
+#: app/src/ui/sidebar.rs:626 app/src/ui/sidebar.rs:745
 msgid "Rename…"
 msgstr "Mudar o nome…"
 
-#: app/src/ui/sidebar.rs:626 app/src/ui/sidebar.rs:745
+#: app/src/ui/sidebar.rs:636 app/src/ui/sidebar.rs:755
 msgid "Color"
 msgstr "Cor"
 
-#: app/src/ui/sidebar.rs:687
+#: app/src/ui/sidebar.rs:697
 msgid "Sign in again to keep syncing"
 msgstr "Inicie sessão de novo para continuar a sincronizar"
 
-#: app/src/ui/sidebar.rs:689
+#: app/src/ui/sidebar.rs:699
 msgid "Offline"
 msgstr "Sem ligação"
 
-#: app/src/ui/sidebar.rs:692
+#: app/src/ui/sidebar.rs:702
 msgid "Gmail is not responding; retrying"
 msgstr "O Gmail não responde; a tentar de novo"
 
-#: app/src/ui/sidebar.rs:695
+#: app/src/ui/sidebar.rs:705
 msgid "Downloading mail"
 msgstr "A transferir correio"
 
-#: app/src/ui/sidebar.rs:725
+#: app/src/ui/sidebar.rs:735
 msgid "Automatic Reply…"
 msgstr "Resposta automática…"
 
-#: app/src/ui/sidebar.rs:726
+#: app/src/ui/sidebar.rs:736
 msgid "Signature…"
 msgstr "Assinatura…"
 
-#: app/src/ui/sidebar.rs:727
+#: app/src/ui/sidebar.rs:737
 msgid "Rules…"
 msgstr "Regras…"
 
-#: app/src/ui/sidebar.rs:729 app/src/ui/window.rs:2130
+#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2130
 msgid "Hide My Email…"
 msgstr "Ocultar o meu e-mail…"
 
-#: app/src/ui/sidebar.rs:732 app/src/ui/window.rs:1527
+#: app/src/ui/sidebar.rs:742 app/src/ui/window.rs:1527
 msgid "New Label…"
 msgstr "Nova etiqueta…"
 
-#: app/src/ui/sidebar.rs:750
+#: app/src/ui/sidebar.rs:760
 msgid "Sign In Again…"
 msgstr "Iniciar sessão de novo…"
 
-#: app/src/ui/sidebar.rs:753
+#: app/src/ui/sidebar.rs:763
 msgid "Remove Account…"
 msgstr "Remover conta…"
 
-#: app/src/ui/sidebar.rs:760
+#: app/src/ui/sidebar.rs:770
 msgid "Account options"
 msgstr "Opções da conta"
 
-#: app/src/ui/sidebar.rs:765
+#: app/src/ui/sidebar.rs:775
 msgid "Options for {account}"
 msgstr "Opções de {account}"
 

@@ -16,6 +16,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+- With several accounts open in the sidebar, each account's heading has
+  space above it, so you can tell where one account ends.
 - The Outbox stays in the sidebar, so you can check it before a message
   gets stuck there.
 - A new account finishes its first sync sooner: Penguin Mail fetches each

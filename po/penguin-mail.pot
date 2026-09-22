@@ -1506,7 +1506,7 @@ msgid_plural "{count} unread messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/tray.rs:37 app/src/ui/sidebar.rs:515
+#: app/src/tray.rs:37 app/src/ui/sidebar.rs:525
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] ""
@@ -1526,7 +1526,7 @@ msgstr ""
 msgid "New Message"
 msgstr ""
 
-#: app/src/tray.rs:136 app/src/ui/sidebar.rs:723 app/src/ui/window.rs:2127
+#: app/src/tray.rs:136 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2127
 msgid "Check for Mail"
 msgstr ""
 
@@ -2149,7 +2149,7 @@ msgid "Choose a Time…"
 msgstr ""
 
 #: app/src/ui/composer/mod.rs:210 app/src/ui/composer/mod.rs:1276
-#: app/src/ui/sidebar.rs:253
+#: app/src/ui/sidebar.rs:263
 msgid "Send Later"
 msgstr ""
 
@@ -2504,7 +2504,7 @@ msgstr ""
 msgid "Phone"
 msgstr ""
 
-#: app/src/ui/contact_card.rs:156 app/src/ui/sidebar.rs:221
+#: app/src/ui/contact_card.rs:156 app/src/ui/sidebar.rs:231
 msgid "Remove from VIPs"
 msgstr ""
 
@@ -2680,7 +2680,7 @@ msgstr ""
 msgid "Labels…"
 msgstr ""
 
-#: app/src/ui/conversation.rs:317 app/src/ui/sidebar.rs:259
+#: app/src/ui/conversation.rs:317 app/src/ui/sidebar.rs:269
 #: app/src/ui/window/reminders.rs:36 app/src/ui/window/reminders.rs:41
 msgid "Remind Me"
 msgstr ""
@@ -3103,7 +3103,7 @@ msgstr ""
 msgid "Gray"
 msgstr ""
 
-#: app/src/ui/mod.rs:152 app/src/ui/sidebar.rs:464
+#: app/src/ui/mod.rs:152 app/src/ui/sidebar.rs:474
 msgid "Inbox"
 msgstr ""
 
@@ -3615,115 +3615,115 @@ msgstr ""
 msgid "Add Account"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:211 app/src/ui/sidebar.rs:213
+#: app/src/ui/sidebar.rs:221 app/src/ui/sidebar.rs:223
 msgid "VIPs"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:247
+#: app/src/ui/sidebar.rs:257
 msgid "Outbox"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:265
+#: app/src/ui/sidebar.rs:275
 msgid "Follow Up"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:278
+#: app/src/ui/sidebar.rs:288
 msgid "Smart Mailboxes"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:289 app/src/ui/smart_editor.rs:43
+#: app/src/ui/sidebar.rs:299 app/src/ui/smart_editor.rs:43
 msgid "Accounts"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:471 app/src/ui/sidebar.rs:779
+#: app/src/ui/sidebar.rs:481 app/src/ui/sidebar.rs:789
 msgid "Show or hide this account's mailboxes"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:493
+#: app/src/ui/sidebar.rs:503
 msgid "{mailbox}, {count} unread message"
 msgid_plural "{mailbox}, {count} unread messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/sidebar.rs:499
+#: app/src/ui/sidebar.rs:509
 msgid "{mailbox}, {count} message"
 msgid_plural "{mailbox}, {count} messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/sidebar.rs:563 app/src/ui/thread_list.rs:609
+#: app/src/ui/sidebar.rs:573 app/src/ui/thread_list.rs:609
 msgid "Edit…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:565 app/src/ui/sidebar.rs:746
+#: app/src/ui/sidebar.rs:575 app/src/ui/sidebar.rs:756
 msgid "Move Up"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:566 app/src/ui/sidebar.rs:747
+#: app/src/ui/sidebar.rs:576 app/src/ui/sidebar.rs:757
 msgid "Move Down"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:569 app/src/ui/sidebar.rs:627
+#: app/src/ui/sidebar.rs:579 app/src/ui/sidebar.rs:637
 msgid "Delete…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:616 app/src/ui/sidebar.rs:735
+#: app/src/ui/sidebar.rs:626 app/src/ui/sidebar.rs:745
 msgid "Rename…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:626 app/src/ui/sidebar.rs:745
+#: app/src/ui/sidebar.rs:636 app/src/ui/sidebar.rs:755
 msgid "Color"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:687
+#: app/src/ui/sidebar.rs:697
 msgid "Sign in again to keep syncing"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:689
+#: app/src/ui/sidebar.rs:699
 msgid "Offline"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:692
+#: app/src/ui/sidebar.rs:702
 msgid "Gmail is not responding; retrying"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:695
+#: app/src/ui/sidebar.rs:705
 msgid "Downloading mail"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:725
+#: app/src/ui/sidebar.rs:735
 msgid "Automatic Reply…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:726
+#: app/src/ui/sidebar.rs:736
 msgid "Signature…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:727
+#: app/src/ui/sidebar.rs:737
 msgid "Rules…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:729 app/src/ui/window.rs:2130
+#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2130
 msgid "Hide My Email…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:732 app/src/ui/window.rs:1527
+#: app/src/ui/sidebar.rs:742 app/src/ui/window.rs:1527
 msgid "New Label…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:750
+#: app/src/ui/sidebar.rs:760
 msgid "Sign In Again…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:753
+#: app/src/ui/sidebar.rs:763
 msgid "Remove Account…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:760
+#: app/src/ui/sidebar.rs:770
 msgid "Account options"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:765
+#: app/src/ui/sidebar.rs:775
 msgid "Options for {account}"
 msgstr ""
 

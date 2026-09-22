@@ -168,8 +168,18 @@ impl Sidebar {
     /// Shows or hides each account's rows. The selected row always stays visible.
     fn apply_expansion(&self) {
         let selected = self.list.selected_row();
+        // An open account's mailboxes run straight into the next heading,
+        // so that heading gets space above it. Closed accounts stay flush,
+        // on the same pitch as the mailboxes.
+        let mut after_open = false;
         for heading in self.headings.borrow().iter() {
             let open = self.is_expanded(heading.account_id);
+            if after_open {
+                heading.row.add_css_class("after-open");
+            } else {
+                heading.row.remove_css_class("after-open");
+            }
+            after_open = open;
             heading.chevron.set_icon_name(Some(if open {
                 "pan-down-symbolic"
             } else {

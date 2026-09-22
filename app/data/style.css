@@ -28,6 +28,9 @@
    from the unified mailboxes, so the rows themselves need no margin, and
    padding here would sit under the hover highlight anyway. */
 .sidebar-heading { padding: 0 6px 0 4px; }
+/* Except after an open account, whose mailboxes would otherwise run into
+   the next account's heading. The margin sits outside the hover highlight. */
+row.account-heading.after-open { margin-top: 12px; }
 .sidebar-heading label.heading { font-size: 0.8em; opacity: 0.6; }
 .sidebar-heading .email { font-size: 0.86em; font-weight: 700; }
 .sidebar-heading button { min-height: 22px; min-width: 22px; padding: 2px; }
