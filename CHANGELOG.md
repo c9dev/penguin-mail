@@ -27,7 +27,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - Unsubscribe fills in and sends a newsletter's own unsubscribe page,
   after you confirm what it will press. A page it cannot read still opens
-  in your browser.
+  in your browser, and a newsletter that hides its way out in a link at
+  the foot of the message now has an Unsubscribe button too.
 - Right-click a message inside an open conversation for a menu that acts
   on that message alone: reply to it, archive it, trash it, mark it,
   flag it in a colour, label it, export it, or copy its sender's address.

@@ -881,7 +881,14 @@ impl<A: Accounts> Tools<A> {
                 "labels": meta.label_ids,
                 "text": body_text,
                 "invitation": body.as_ref().is_some_and(|b| b.calendar.is_some()),
-                "unsubscribe": body.as_ref().is_some_and(|b| b.list_unsubscribe.is_some()),
+                "unsubscribe": body.as_ref().is_some_and(|b| {
+                    crate::unsubscribe::choose_with_body(
+                        b.list_unsubscribe.as_deref(),
+                        b.one_click_unsubscribe,
+                        b.html.as_deref(),
+                    )
+                    .is_some()
+                }),
                 "attachments": body
                     .map(|b| b.attachments.iter().map(|a| a.filename.clone()).collect::<Vec<_>>())
                     .unwrap_or_default(),

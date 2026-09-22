@@ -251,11 +251,19 @@ impl OpenThread {
             .is_some_and(|m| self.bodies.contains_key(&m.id))
     }
 
-    /// The `List-Unsubscribe` header of the newest message, when it has one.
+    /// The newest message and its body, when that message offers a way
+    /// off the list: a `List-Unsubscribe` header, or a link in the body
+    /// that reads as leaving. The second is why the whole body comes
+    /// back rather than the header alone.
     pub fn list_unsubscribe(&self) -> Option<(&MessageMeta, &MessageBody)> {
         let target = self.reply_target()?;
         let body = self.bodies.get(&target.id)?.as_ref().ok()?;
-        body.list_unsubscribe.is_some().then_some((target, body))
+        crate::unsubscribe::choose_with_body(
+            body.list_unsubscribe.as_deref(),
+            body.one_click_unsubscribe,
+            body.html.as_deref(),
+        )
+        .map(|_| (target, body))
     }
 
     /// Takes in the thread's messages as the store now has them, and

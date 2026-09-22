@@ -98,39 +98,39 @@ msgstr ""
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr ""
 
-#: app/src/assistant/run.rs:908
+#: app/src/assistant/run.rs:915
 msgid "Move {count} conversation to the Trash?"
 msgid_plural "Move {count} conversations to the Trash?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/assistant/run.rs:999
+#: app/src/assistant/run.rs:1006
 msgid ""
 "Don't Allow labels only the mail in accounts that have the label already."
 msgstr ""
 
-#: app/src/assistant/run.rs:1031
+#: app/src/assistant/run.rs:1038
 msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr ""
 
-#: app/src/assistant/run.rs:1107 app/src/assistant/run/calendar.rs:178
+#: app/src/assistant/run.rs:1114 app/src/assistant/run/calendar.rs:178
 #: app/src/assistant/run/calendar.rs:525
 msgid "%a %-d %b"
 msgstr ""
 
-#: app/src/assistant/run.rs:1113
+#: app/src/assistant/run.rs:1120
 msgid " from {first} to {last}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1116
+#: app/src/assistant/run.rs:1123
 msgid " until {last}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1117
+#: app/src/assistant/run.rs:1124
 msgid " from {first}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1123
+#: app/src/assistant/run.rs:1130
 msgid ""
 "Turn on the automatic reply for {account}{dates}?\n"
 "\n"
@@ -138,19 +138,19 @@ msgid ""
 "{body}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1134
+#: app/src/assistant/run.rs:1141
 msgid "Turn off the automatic reply for {account}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1216
+#: app/src/assistant/run.rs:1223
 msgid "Create a Gmail rule for {account}: {when} → {then}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1256
+#: app/src/assistant/run.rs:1263
 msgid "Delete a Gmail rule from {account}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1378
+#: app/src/assistant/run.rs:1385
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a Gmail rule for "
 "their future mail?"
