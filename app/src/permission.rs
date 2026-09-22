@@ -11,7 +11,9 @@ use std::collections::HashSet;
 
 use mailrs_domain::AccountId;
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_gmail::{CALENDAR_SCOPE, CONTACTS_SCOPE, DELETE_SCOPE, SETTINGS_SCOPE};
+use mailrs_gmail::{
+    CALENDAR_SCOPE, CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE, DELETE_SCOPE, SETTINGS_SCOPE,
+};
 
 /// A Google permission sign-in leaves out, or one a caller can find
 /// missing. CONTEXT.md describes each.
@@ -23,6 +25,8 @@ pub enum Permission {
     Delete,
     /// Reading the account's Google contacts.
     Contacts,
+    /// Adding and changing the account's Google contacts.
+    ChangeContacts,
     /// Reading and changing the events on the account's calendar.
     Calendar,
 }
@@ -50,10 +54,11 @@ pub struct Wording {
 
 impl Permission {
     #[cfg(test)]
-    pub const ALL: [Permission; 4] = [
+    pub const ALL: [Permission; 5] = [
         Permission::Settings,
         Permission::Delete,
         Permission::Contacts,
+        Permission::ChangeContacts,
         Permission::Calendar,
     ];
 
@@ -65,6 +70,7 @@ impl Permission {
             Permission::Settings => &[SETTINGS_SCOPE],
             Permission::Delete => &[DELETE_SCOPE],
             Permission::Contacts => &[CONTACTS_SCOPE],
+            Permission::ChangeContacts => &[CONTACTS_WRITE_SCOPE],
             Permission::Calendar => &[CALENDAR_SCOPE],
         }
     }
@@ -77,6 +83,7 @@ impl Permission {
             Permission::Settings => "change Gmail settings",
             Permission::Delete => "delete mail for good",
             Permission::Contacts => "read contacts",
+            Permission::ChangeContacts => "add and change contacts",
             Permission::Calendar => "use the calendar",
         }
     }
@@ -106,6 +113,13 @@ impl Permission {
                     "Reading the contacts of {account} needs one more permission. Google \
                      asks you to confirm in your browser. Names and photos stay on this \
                      computer.",
+                ),
+            ),
+            (Permission::ChangeContacts, _) => (
+                gettext("Allow Penguin Mail to Change Your Contacts"),
+                gettext(
+                    "The assistant needs permission to add and change the contacts of \
+                     {account}. Google asks you to confirm in your browser.",
                 ),
             ),
             (Permission::Calendar, Occasion::Needed) => (

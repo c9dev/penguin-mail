@@ -12,6 +12,16 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - The assistant lists your reminders and can move or cancel one.
 - The assistant can unmute mail, read your muted mail and smart
   mailboxes, and undo your last change, as Ctrl+Z does.
+- The assistant can rename, recolour and delete labels, change and delete
+  smart mailboxes, and save and delete templates. Before deleting a label
+  it tells you how many conversations carry it.
+- The assistant can add people to your Google contacts and change the ones
+  there, after asking.
+- The assistant can let a sender's remote images load, or stop them, and
+  tell you whose images load now.
+- The assistant can export conversations as an mbox file, or one message
+  as an .eml file, to your Downloads folder or a place you name. It never
+  replaces a file without saying so first.
 
 ### Fixed
 

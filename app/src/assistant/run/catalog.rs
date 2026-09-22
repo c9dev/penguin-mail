@@ -15,6 +15,7 @@ use mailrs_domain::translate::gettext;
 use mailrs_domain::{Category, FlagColor};
 use serde_json::{Value, json};
 
+use super::manage::COLOR_KEYS;
 use super::{Answer, MailboxName, Organize, ToolResult, Tools};
 use crate::core::RunningEngine;
 use mailrs_sync::Accounts;
@@ -401,6 +402,184 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
             input: || json!({"account": account("The account."), "name": {"type": "string"}}),
             required: &["account", "name"],
             run: Run::Now(|t, input| Box::pin(t.create_label(input))),
+        },
+        MailTool {
+            name: "rename_label",
+            label: || gettext("Renaming a label"),
+            description: "Renames a Gmail label. Labels nested under it move along. The user approves it first.",
+            input: || {
+                json!({
+                    "account": account("The account."),
+                    "label": {"type": "string", "description": "The label's name now."},
+                    "new_name": {"type": "string", "description": "Use a slash to nest it: \"Work/Clients\"."}
+                })
+            },
+            required: &["account", "label", "new_name"],
+            run: Run::AsksFirst(|t, input| Box::pin(t.rename_label(input))),
+        },
+        MailTool {
+            name: "recolor_label",
+            label: || gettext("Colouring a label"),
+            description: "Gives a Gmail label one of the colours of Gmail's palette. The user approves it first.",
+            input: || {
+                json!({
+                    "account": account("The account."),
+                    "label": {"type": "string", "description": "The label's name."},
+                    "color": {"type": "string", "enum": COLOR_KEYS}
+                })
+            },
+            required: &["account", "label", "color"],
+            run: Run::AsksFirst(|t, input| Box::pin(t.recolor_label(input))),
+        },
+        MailTool {
+            name: "delete_label",
+            label: || gettext("Deleting a label"),
+            description: "Deletes a Gmail label. Its mail stays in Gmail without it, and labels nested under it stay. The user sees how many conversations carry it and approves it first.",
+            input: || json!({"account": account("The account."), "label": {"type": "string", "description": "The label's name."}}),
+            required: &["account", "label"],
+            run: Run::AsksFirst(|t, input| Box::pin(t.delete_label(input))),
+        },
+        MailTool {
+            name: "list_smart_mailboxes",
+            label: || gettext("Reading smart mailboxes"),
+            description: "Lists the smart mailboxes with their ids, conditions, and the Gmail search each one runs.",
+            input: || json!({}),
+            required: &[],
+            run: Run::Now(|t, _| Box::pin(ready(Ok(t.list_smart_mailboxes())))),
+        },
+        MailTool {
+            name: "update_smart_mailbox",
+            label: || gettext("Changing a smart mailbox"),
+            description: "Changes a smart mailbox by its name or id. Only the fields given change; conditions replaces the whole list.",
+            input: || {
+                json!({
+                    "mailbox": {"type": "string", "description": "The smart mailbox's name or id, as list_smart_mailboxes gave it."},
+                    "name": {"type": "string", "description": "A new name."},
+                    "account": account("Limit it to this account."),
+                    "all_accounts": {"type": "boolean", "description": "True makes it list mail from every account."},
+                    "match_all": {"type": "boolean", "description": "True: every condition must hold. False: any."},
+                    "conditions": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "field": {"type": "string", "enum": fields()},
+                                "value": {"type": "string"}
+                            },
+                            "required": ["field"],
+                            "additionalProperties": false
+                        }
+                    }
+                })
+            },
+            required: &["mailbox"],
+            run: Run::Now(|t, input| Box::pin(ready(t.update_smart_mailbox(input)))),
+        },
+        MailTool {
+            name: "delete_smart_mailbox",
+            label: || gettext("Deleting a smart mailbox"),
+            description: "Deletes a smart mailbox by its name or id. The mail it lists stays where it is. The user approves it first.",
+            input: || json!({"mailbox": {"type": "string", "description": "The smart mailbox's name or id."}}),
+            required: &["mailbox"],
+            run: Run::AsksFirst(|t, input| Box::pin(t.delete_smart_mailbox(input))),
+        },
+        MailTool {
+            name: "save_template",
+            label: || gettext("Saving a template"),
+            description: "Saves a template the composer can insert. A template with the same name is replaced, and the user is told so. Placeholders such as {{first_name}} fill in when it is used. The user approves it first.",
+            input: || {
+                json!({
+                    "name": {"type": "string"},
+                    "body": {"type": "string", "description": "The template in Markdown."},
+                    "subject": {"type": "string", "description": "The subject a message takes when it has none."}
+                })
+            },
+            required: &["name", "body"],
+            run: Run::AsksFirst(|t, input| Box::pin(t.save_template(input))),
+        },
+        MailTool {
+            name: "delete_template",
+            label: || gettext("Deleting a template"),
+            description: "Deletes a saved template by name. The user approves it first.",
+            input: || json!({"name": {"type": "string"}}),
+            required: &["name"],
+            run: Run::AsksFirst(|t, input| Box::pin(t.delete_template(input))),
+        },
+        MailTool {
+            name: "create_contact",
+            label: || gettext("Adding a contact"),
+            description: "Adds a person to an account's Google Contacts. Give a name or an address at least. The user approves it first.",
+            input: || {
+                json!({
+                    "account": account("The account whose contacts get the person. Defaults to the default account."),
+                    "name": {"type": "string"},
+                    "emails": {"type": "array", "items": {"type": "string"}},
+                    "phones": {"type": "array", "items": {"type": "string"}},
+                    "organization": {"type": "string"}
+                })
+            },
+            required: &[],
+            run: Run::AsksFirst(|t, input| Box::pin(t.create_contact(input))),
+        },
+        MailTool {
+            name: "update_contact",
+            label: || gettext("Changing a contact"),
+            description: "Changes a person in an account's Google Contacts. Only the fields given change; emails and phones replace the whole list, and an empty string clears a field. The user approves it first.",
+            input: || {
+                json!({
+                    "contact": {"type": "string", "description": "The id find_contact gave, or one of the contact's addresses."},
+                    "account": account("The account the contact belongs to. Defaults to the default account."),
+                    "name": {"type": "string"},
+                    "emails": {"type": "array", "items": {"type": "string"}},
+                    "phones": {"type": "array", "items": {"type": "string"}},
+                    "organization": {"type": "string"}
+                })
+            },
+            required: &["contact"],
+            run: Run::AsksFirst(|t, input| Box::pin(t.update_contact(input))),
+        },
+        MailTool {
+            name: "list_image_senders",
+            label: || gettext("Reading who may load images"),
+            description: "Lists the senders and domains whose remote images load without asking, and the app's remote images setting.",
+            input: || json!({}),
+            required: &[],
+            run: Run::Now(|t, _| Box::pin(t.list_image_senders())),
+        },
+        MailTool {
+            name: "allow_images",
+            label: || gettext("Allowing remote images"),
+            description: "Lets a sender's mail load remote images from now on, or everyone's at a domain. A remote image tells the sender when the mail was opened. The user approves it first.",
+            input: || {
+                json!({
+                    "sender": {"type": "string", "description": "An address, or a domain such as example.com."},
+                    "whole_domain": {"type": "boolean", "description": "True allows everyone at the address's domain. A bare domain always means everyone there."}
+                })
+            },
+            required: &["sender"],
+            run: Run::AsksFirst(|t, input| Box::pin(t.allow_images(input))),
+        },
+        MailTool {
+            name: "forget_image_sender",
+            label: || gettext("Blocking remote images"),
+            description: "Takes a sender or domain off the list whose remote images load, so their mail asks again. The user approves it first.",
+            input: || json!({"sender": {"type": "string", "description": "The address or domain as list_image_senders gave it."}}),
+            required: &["sender"],
+            run: Run::AsksFirst(|t, input| Box::pin(t.forget_image_sender(input))),
+        },
+        MailTool {
+            name: "export_mail",
+            label: || gettext("Exporting mail"),
+            description: "Saves mail to a file: conversations as one mbox file, which other mail programs import, or one message as an .eml file. The file goes in the Downloads folder unless the user names a place. The user approves it first, and hears when a file would be replaced.",
+            input: || {
+                json!({
+                    "targets": targets(),
+                    "format": {"type": "string", "enum": ["mbox", "eml"], "description": "Defaults to mbox. eml takes one target with its message_id."},
+                    "path": {"type": "string", "description": "A folder or file the user named. Relative paths count from Downloads; ~ is the home folder."}
+                })
+            },
+            required: &["targets"],
+            run: Run::AsksFirst(|t, input| Box::pin(t.export_mail(input))),
         },
         MailTool {
             name: "get_settings",

@@ -20,8 +20,8 @@ use mailrs_gmail::RemoteLabel;
 use mailrs_store::{Db, accounts, messages};
 use mailrs_sync::fake::{FakeGmail, fill_store};
 use mailrs_sync::{
-    AccountSettings, AccountSync, Accounts, Calendar, Categorized, Invitations, Leave, MailAction,
-    MailActions, Mailboxes, Outcome, Permitted, View, hidden,
+    AccountSettings, AccountSync, Accounts, Calendar, Categorized, ContactBook, Invitations, Leave,
+    MailAction, MailActions, Mailboxes, Outcome, Permitted, View, hidden,
 };
 use serde_json::Value;
 use tokio::task::JoinHandle;
@@ -64,6 +64,9 @@ pub struct Screen {
     pub view: View,
     pub on_screen: OnScreen,
     pub default_account: Option<AccountId>,
+    /// The folder `export_mail` writes to when the user names none, a
+    /// fresh one inside the test's temp dir.
+    pub downloads: std::path::PathBuf,
 }
 
 pub struct FakeDesk(pub RefCell<Screen>);
@@ -91,6 +94,10 @@ impl Desk for FakeDesk {
 
     fn default_account(&self) -> Option<AccountId> {
         self.0.borrow().default_account
+    }
+
+    fn downloads(&self) -> std::path::PathBuf {
+        self.0.borrow().downloads.clone()
     }
 }
 
@@ -123,6 +130,8 @@ pub struct Asked {
     pub queue_changed: usize,
     /// What each undo put back.
     pub undone: Vec<Outcome>,
+    /// How often a tool told the window to read the image senders again.
+    pub image_senders_changed: usize,
     /// Categorize Sender runs in the background, as the window runs it.
     /// `Harness::categorized` waits for these.
     sorting: Vec<JoinHandle<Categorized>>,
@@ -317,6 +326,10 @@ impl Effects for FakeEffects {
     fn undone(&self, outcome: &Outcome) {
         self.asked.borrow_mut().undone.push(outcome.clone());
     }
+
+    fn image_senders_changed(&self) {
+        self.asked.borrow_mut().image_senders_changed += 1;
+    }
 }
 
 /// Runs the modules' futures on the test's own tokio runtime.
@@ -480,6 +493,11 @@ impl Harness {
             gmail: Arc::clone(&settings),
             calendar: Arc::new(Calendar::new(Arc::clone(&connected))),
             invitations: Arc::new(Invitations::new(Arc::clone(&connected), db.clone())),
+            contacts: Arc::new(ContactBook::new(
+                Arc::clone(&connected),
+                db.clone(),
+                dir.path().join("photos"),
+            )),
             accounts: connected,
             db: db.clone(),
         };
@@ -490,6 +508,11 @@ impl Harness {
             view: View::default(),
             on_screen: OnScreen::default(),
             default_account: Some(account_id),
+            downloads: {
+                let downloads = dir.path().join("Downloads");
+                std::fs::create_dir(&downloads).expect("a downloads folder");
+                downloads
+            },
         })));
         let effects = Rc::new(FakeEffects {
             asked: RefCell::new(Asked {

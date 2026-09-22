@@ -617,9 +617,7 @@ impl GmailClient {
         let url = format!("{}/{resource}", self.people_url);
         let current = self
             .send_request(cost::CONNECTIONS, || {
-                self.http()
-                    .get(&url)
-                    .query(&[("personFields", "metadata")])
+                self.http().get(&url).query(&[("personFields", "metadata")])
             })
             .await?
             .text()

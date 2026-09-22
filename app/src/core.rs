@@ -427,6 +427,7 @@ impl Core {
             gmail: Arc::clone(&self.gmail_settings),
             calendar: Arc::new(mailrs_sync::Calendar::new(Arc::clone(&self.engine))),
             invitations: Arc::clone(&self.invitations),
+            contacts: Arc::clone(&self.contacts),
             accounts: Arc::clone(&self.engine),
             db: self.db.clone(),
         }

@@ -94,43 +94,43 @@ msgstr ""
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr ""
 
-#: app/src/assistant/run.rs:853
+#: app/src/assistant/run.rs:862
 msgid "Move {count} conversation to the Trash?"
 msgid_plural "Move {count} conversations to the Trash?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/assistant/run.rs:944
+#: app/src/assistant/run.rs:953
 msgid ""
 "Don't Allow labels only the mail in accounts that have the label already."
 msgstr ""
 
-#: app/src/assistant/run.rs:986
+#: app/src/assistant/run.rs:995
 msgid "Send “{subject}” to {recipients}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1076
+#: app/src/assistant/run.rs:1085
 msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr ""
 
-#: app/src/assistant/run.rs:1152 app/src/assistant/run/calendar.rs:178
+#: app/src/assistant/run.rs:1161 app/src/assistant/run/calendar.rs:178
 #: app/src/assistant/run/calendar.rs:525
 msgid "%a %-d %b"
 msgstr ""
 
-#: app/src/assistant/run.rs:1158
+#: app/src/assistant/run.rs:1167
 msgid " from {first} to {last}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1161
+#: app/src/assistant/run.rs:1170
 msgid " until {last}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1162
+#: app/src/assistant/run.rs:1171
 msgid " from {first}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1168
+#: app/src/assistant/run.rs:1177
 msgid ""
 "Turn on the automatic reply for {account}{dates}?\n"
 "\n"
@@ -138,19 +138,19 @@ msgid ""
 "{body}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1179
+#: app/src/assistant/run.rs:1188
 msgid "Turn off the automatic reply for {account}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1261
+#: app/src/assistant/run.rs:1270
 msgid "Create a Gmail rule for {account}: {when} → {then}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1301
+#: app/src/assistant/run.rs:1310
 msgid "Delete a Gmail rule from {account}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1423
+#: app/src/assistant/run.rs:1432
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a Gmail rule for "
 "their future mail?"
@@ -217,239 +217,389 @@ msgstr ""
 msgid "Answer {answer} to “{title}”?"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:210
+#: app/src/assistant/run/catalog.rs:211
 msgid "Looking at the screen"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:218
+#: app/src/assistant/run/catalog.rs:219
 msgid "Reading a mailbox"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:236
+#: app/src/assistant/run/catalog.rs:237
 msgid "Searching mail"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:250
+#: app/src/assistant/run/catalog.rs:251
 msgid "Reading a conversation"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:263
+#: app/src/assistant/run/catalog.rs:264
 msgid "Organizing mail"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:277
+#: app/src/assistant/run/catalog.rs:278
 msgid "Changing labels"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:291
+#: app/src/assistant/run/catalog.rs:292
 msgid "Setting reminders"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:304
+#: app/src/assistant/run/catalog.rs:305
 msgid "Writing a draft"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:312
+#: app/src/assistant/run/catalog.rs:313
 msgid "Sending mail"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:320
+#: app/src/assistant/run/catalog.rs:321
 msgid "Blocking a sender"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:333
+#: app/src/assistant/run/catalog.rs:334
 msgid "Checking the automatic reply"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:341
+#: app/src/assistant/run/catalog.rs:342
 msgid "Setting the automatic reply"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:359
+#: app/src/assistant/run/catalog.rs:360
 msgid "Reading rules"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:367
+#: app/src/assistant/run/catalog.rs:368
 msgid "Creating a rule"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:391
+#: app/src/assistant/run/catalog.rs:392
 msgid "Deleting a rule"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:399
+#: app/src/assistant/run/catalog.rs:400
 msgid "Creating a label"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:407
-msgid "Reading settings"
+#: app/src/assistant/run/catalog.rs:408
+msgid "Renaming a label"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:415
-msgid "Changing a setting"
-msgstr ""
-
-#: app/src/assistant/run/catalog.rs:428
-msgid "Setting a signature"
+#: app/src/assistant/run/catalog.rs:422
+msgid "Colouring a label"
 msgstr ""
 
 #: app/src/assistant/run/catalog.rs:436
+msgid "Deleting a label"
+msgstr ""
+
+#: app/src/assistant/run/catalog.rs:444
+msgid "Reading smart mailboxes"
+msgstr ""
+
+#: app/src/assistant/run/catalog.rs:452
+msgid "Changing a smart mailbox"
+msgstr ""
+
+#: app/src/assistant/run/catalog.rs:480
+msgid "Deleting a smart mailbox"
+msgstr ""
+
+#: app/src/assistant/run/catalog.rs:488
+msgid "Saving a template"
+msgstr ""
+
+#: app/src/assistant/run/catalog.rs:502
+msgid "Deleting a template"
+msgstr ""
+
+#: app/src/assistant/run/catalog.rs:510
+msgid "Adding a contact"
+msgstr ""
+
+#: app/src/assistant/run/catalog.rs:526
+msgid "Changing a contact"
+msgstr ""
+
+#: app/src/assistant/run/catalog.rs:543
+msgid "Reading who may load images"
+msgstr ""
+
+#: app/src/assistant/run/catalog.rs:551
+msgid "Allowing remote images"
+msgstr ""
+
+#: app/src/assistant/run/catalog.rs:564
+msgid "Blocking remote images"
+msgstr ""
+
+#: app/src/assistant/run/catalog.rs:572
+msgid "Exporting mail"
+msgstr ""
+
+#: app/src/assistant/run/catalog.rs:586
+msgid "Reading settings"
+msgstr ""
+
+#: app/src/assistant/run/catalog.rs:594
+msgid "Changing a setting"
+msgstr ""
+
+#: app/src/assistant/run/catalog.rs:607
+msgid "Setting a signature"
+msgstr ""
+
+#: app/src/assistant/run/catalog.rs:615
 msgid "Updating VIPs"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:450
+#: app/src/assistant/run/catalog.rs:629
 msgid "Creating a smart mailbox"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:476
+#: app/src/assistant/run/catalog.rs:655
 msgid "Sorting a sender"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:491
+#: app/src/assistant/run/catalog.rs:670
 msgid "Dismissing a follow-up"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:499
+#: app/src/assistant/run/catalog.rs:678
 msgid "Reading hidden addresses"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:507
+#: app/src/assistant/run/catalog.rs:686
 msgid "Making a hidden address"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:520
+#: app/src/assistant/run/catalog.rs:699
 msgid "Changing a hidden address"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:528
+#: app/src/assistant/run/catalog.rs:707
 msgid "Opening a conversation"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:536
+#: app/src/assistant/run/catalog.rs:715
 msgid "Muting conversations"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:549
+#: app/src/assistant/run/catalog.rs:728
 msgid "Deleting mail forever"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:557
+#: app/src/assistant/run/catalog.rs:736
 msgid "Scheduling a message"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:579
+#: app/src/assistant/run/catalog.rs:758
 msgid "Sending a waiting message"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:587
+#: app/src/assistant/run/catalog.rs:766
 msgid "Cancelling a scheduled message"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:595
+#: app/src/assistant/run/catalog.rs:774
 msgid "Deleting from the Outbox"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:603
+#: app/src/assistant/run/catalog.rs:782
 msgid "Changing when a message goes"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:616
+#: app/src/assistant/run/catalog.rs:795
 msgid "Reading reminders"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:624
+#: app/src/assistant/run/catalog.rs:803
 msgid "Cancelling a reminder"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:632
+#: app/src/assistant/run/catalog.rs:811
 msgid "Changing a reminder"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:645
+#: app/src/assistant/run/catalog.rs:824
 msgid "Unmuting conversations"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:653
+#: app/src/assistant/run/catalog.rs:832
 msgid "Undoing the last change"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:661
+#: app/src/assistant/run/catalog.rs:840
 msgid "Reading templates"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:669
+#: app/src/assistant/run/catalog.rs:848
 msgid "Writing from a template"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:684
+#: app/src/assistant/run/catalog.rs:863
 msgid "Unsubscribing"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:692
+#: app/src/assistant/run/catalog.rs:871
 msgid "Reading an attachment"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:706
+#: app/src/assistant/run/catalog.rs:885
 msgid "Looking up a contact"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:714
+#: app/src/assistant/run/catalog.rs:893
 msgid "Reading the calendar"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:728
+#: app/src/assistant/run/catalog.rs:907
 msgid "Finding free time"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:746
+#: app/src/assistant/run/catalog.rs:925
 msgid "Adding an event"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:764
+#: app/src/assistant/run/catalog.rs:943
 msgid "Changing an event"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:784
+#: app/src/assistant/run/catalog.rs:963
 msgid "Deleting an event"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:798
+#: app/src/assistant/run/catalog.rs:977
 msgid "Answering an invitation"
 msgstr ""
 
-#: app/src/assistant/run/catalog.rs:844 app/src/assistant/turn.rs:287
+#: app/src/assistant/run/catalog.rs:1023 app/src/assistant/turn.rs:287
 msgid "Working"
 msgstr ""
 
-#: app/src/assistant/run/mail.rs:163
+#: app/src/assistant/run/mail.rs:164
 msgid "Delete {count} conversation forever? Gmail cannot bring it back."
 msgid_plural ""
 "Delete {count} conversations forever? Gmail cannot bring them back."
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/assistant/run/mail.rs:207
+#: app/src/assistant/run/mail.rs:208
 msgid "Send “{subject}” to {recipients} {when}?"
 msgstr ""
 
-#: app/src/assistant/run/mail.rs:331
+#: app/src/assistant/run/mail.rs:332
 msgid "this list"
 msgstr ""
 
-#: app/src/assistant/run/mail.rs:335
+#: app/src/assistant/run/mail.rs:336
 msgid "Penguin Mail asks the sender to take you off the list."
 msgstr ""
 
-#: app/src/assistant/run/mail.rs:339
+#: app/src/assistant/run/mail.rs:340
 msgid "Penguin Mail sends the list an unsubscribe request from your account."
 msgstr ""
 
-#: app/src/assistant/run/mail.rs:343
+#: app/src/assistant/run/mail.rs:344
 msgid "The sender's unsubscribe page opens in your browser."
 msgstr ""
 
-#: app/src/assistant/run/mail.rs:347
+#: app/src/assistant/run/mail.rs:348
 msgid "Unsubscribe from {sender}?"
+msgstr ""
+
+#: app/src/assistant/run/manage.rs:126
+msgid "Name: {name}"
+msgstr ""
+
+#: app/src/assistant/run/manage.rs:130
+msgid "Addresses: {addresses}"
+msgstr ""
+
+#: app/src/assistant/run/manage.rs:136
+msgid "Phones: {phones}"
+msgstr ""
+
+#: app/src/assistant/run/manage.rs:142
+msgid "Organisation: {organisation}"
+msgstr ""
+
+#: app/src/assistant/run/manage.rs:231
+msgid ""
+"Rename the label “{label}” in {account} to “{name}”? Labels nested under it "
+"move along."
+msgstr ""
+
+#: app/src/assistant/run/manage.rs:260
+msgid "Colour the label “{label}” in {account} {color}?"
+msgstr ""
+
+#: app/src/assistant/run/manage.rs:294
+msgid ""
+"Delete the label “{label}” from {account}? {count} conversation carries it. "
+"The mail stays in Gmail, without the label."
+msgid_plural ""
+"Delete the label “{label}” from {account}? {count} conversations carry it. "
+"The mail stays in Gmail, without the label."
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/assistant/run/manage.rs:336
+msgid "Delete the smart mailbox “{name}”? The mail it lists stays where it is."
+msgstr ""
+
+#: app/src/assistant/run/manage.rs:397
+msgid "Replace the template “{name}” with this one? The saved one is lost."
+msgstr ""
+
+#: app/src/assistant/run/manage.rs:401
+msgid "Save a template called “{name}”?"
+msgstr ""
+
+#: app/src/assistant/run/manage.rs:439
+msgid "Delete the template “{name}”?"
+msgstr ""
+
+#: app/src/assistant/run/manage.rs:467
+msgid "Add {contact} to the Google contacts of {account}?"
+msgstr ""
+
+#: app/src/assistant/run/manage.rs:518
+msgid "Change {contact} in the Google contacts of {account}?"
+msgstr ""
+
+#: app/src/assistant/run/manage.rs:565
+msgid "Always load images from anyone at {domain}?"
+msgstr ""
+
+#: app/src/assistant/run/manage.rs:569
+msgid "Always load images from {sender}?"
+msgstr ""
+
+#: app/src/assistant/run/manage.rs:575
+msgid "Loading a remote image tells the sender when you opened their mail."
+msgstr ""
+
+#: app/src/assistant/run/manage.rs:600
+msgid "Stop loading images from {sender}?"
+msgstr ""
+
+#: app/src/assistant/run/manage.rs:635
+msgid "Export {what} to {file}?"
+msgstr ""
+
+#: app/src/assistant/run/manage.rs:641
+msgid "A file with that name is there already, and exporting replaces it."
+msgstr ""
+
+#: app/src/assistant/run/manage.rs:688
+msgid "{count} conversation"
+msgid_plural "{count} conversations"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/assistant/run/manage.rs:720
+msgid "the message “{subject}”"
 msgstr ""
 
 #: app/src/assistant/run/queue.rs:17
@@ -633,15 +783,15 @@ msgstr ""
 msgid "On {date}, {sender} wrote:"
 msgstr ""
 
-#: app/src/core.rs:499
+#: app/src/core.rs:500
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 
-#: app/src/core.rs:516
+#: app/src/core.rs:517
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 
-#: app/src/core.rs:524
+#: app/src/core.rs:525
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 
@@ -875,47 +1025,57 @@ msgstr ""
 msgid "The model could not translate this: {reason}"
 msgstr ""
 
-#: app/src/permission.rs:90
+#: app/src/permission.rs:97
 msgid "Allow Changes to Gmail Settings"
 msgstr ""
 
-#: app/src/permission.rs:92
+#: app/src/permission.rs:99
 msgid ""
 "Penguin Mail needs permission to change Gmail settings for {account}. Google "
 "asks you to confirm in your browser."
 msgstr ""
 
-#: app/src/permission.rs:97
+#: app/src/permission.rs:104
 msgid "Allow Penguin Mail to Delete Mail"
 msgstr ""
 
-#: app/src/permission.rs:99
+#: app/src/permission.rs:106
 msgid ""
 "Deleting mail for good needs one more permission for {account}. Google asks "
 "you to confirm in your browser."
 msgstr ""
 
-#: app/src/permission.rs:104
+#: app/src/permission.rs:111
 msgid "Allow Penguin Mail to Read Your Contacts"
 msgstr ""
 
-#: app/src/permission.rs:106
+#: app/src/permission.rs:113
 msgid ""
 "Reading the contacts of {account} needs one more permission. Google asks you "
 "to confirm in your browser. Names and photos stay on this computer."
 msgstr ""
 
-#: app/src/permission.rs:112 app/src/permission.rs:119
+#: app/src/permission.rs:119
+msgid "Allow Penguin Mail to Change Your Contacts"
+msgstr ""
+
+#: app/src/permission.rs:121
+msgid ""
+"The assistant needs permission to add and change the contacts of {account}. "
+"Google asks you to confirm in your browser."
+msgstr ""
+
+#: app/src/permission.rs:126 app/src/permission.rs:133
 msgid "Allow Penguin Mail to Use Your Calendar"
 msgstr ""
 
-#: app/src/permission.rs:114
+#: app/src/permission.rs:128
 msgid ""
 "The assistant needs permission to read and change events on the calendar for "
 "{account}. Google asks you to confirm in your browser."
 msgstr ""
 
-#: app/src/permission.rs:121
+#: app/src/permission.rs:135
 msgid ""
 "Your reply went to the organizer as mail. With permission to change events "
 "on the calendar for {account}, the meeting is marked on your own calendar "
@@ -4640,7 +4800,7 @@ msgid ""
 "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr ""
 
-#: app/src/ui/window/detached.rs:28 app/src/ui/window/export.rs:72
+#: app/src/ui/window/detached.rs:28 app/src/ui/window/export.rs:70
 msgid "Open a conversation first"
 msgstr ""
 
@@ -4672,25 +4832,19 @@ msgstr ""
 msgid "Save Message"
 msgstr ""
 
-#: app/src/ui/window/export.rs:43
-msgid "{count} conversation"
-msgid_plural "{count} conversations"
-msgstr[0] ""
-msgstr[1] ""
-
-#: app/src/ui/window/export.rs:90
+#: app/src/ui/window/export.rs:89
 msgid "Export Mail"
 msgstr ""
 
-#: app/src/ui/window/export.rs:99
+#: app/src/ui/window/export.rs:98
 msgid "Exporting…"
 msgstr ""
 
-#: app/src/ui/window/export.rs:112
+#: app/src/ui/window/export.rs:108
 msgid "Saved {file}"
 msgstr ""
 
-#: app/src/ui/window/export.rs:113
+#: app/src/ui/window/export.rs:109
 msgid "Could not export the mail: {reason}"
 msgstr ""
 
@@ -4712,10 +4866,6 @@ msgstr[1] ""
 msgid "Dismiss Follow-Up (Delete)"
 msgstr ""
 
-#: app/src/ui/window/images.rs:66
-msgid "Always load images from {sender}?"
-msgstr ""
-
 #: app/src/ui/window/images.rs:71
 msgid "Always"
 msgstr ""
@@ -4726,10 +4876,6 @@ msgstr ""
 
 #: app/src/ui/window/images.rs:96
 msgid "Always Load Images?"
-msgstr ""
-
-#: app/src/ui/window/images.rs:98
-msgid "Loading a remote image tells the sender when you opened their mail."
 msgstr ""
 
 #: app/src/ui/window/images.rs:104

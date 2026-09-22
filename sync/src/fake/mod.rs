@@ -20,9 +20,9 @@ use mailrs_domain::{
 };
 use mailrs_gmail::{
     AccountQuota, Answered, BATCH_LIMIT, Busy, CALENDAR_SCOPE, CONTACTS_SCOPE,
-    CONTACTS_WRITE_SCOPE, ConnectionsPage, ContactFields, DELETE_SCOPE, Event, EventFields, GmailError, Guest, HistoryChange, HistoryPage, LabelColor,
-    MessagePage, MessageRef, Person, Priority, Profile, QuotaLimiter, RemoteLabel, SETTINGS_SCOPE,
-    SendAs, Series, cost, limiter,
+    CONTACTS_WRITE_SCOPE, ConnectionsPage, ContactFields, DELETE_SCOPE, Event, EventFields,
+    GmailError, Guest, HistoryChange, HistoryPage, LabelColor, MessagePage, MessageRef, Person,
+    Priority, Profile, QuotaLimiter, RemoteLabel, SETTINGS_SCOPE, SendAs, Series, cost, limiter,
 };
 
 use crate::api::{DraftRef, GmailApi, SavedDraft};

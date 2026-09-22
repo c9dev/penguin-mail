@@ -18,13 +18,15 @@ Penguin Mail asks for two permissions:
 - `gmail.settings.basic`, to read and change your automatic reply, your
   signature, and your Gmail filters, when you change them in Penguin Mail.
 
-Three more permissions are asked for only when you first use the feature
+Four more permissions are asked for only when you first use the feature
 that needs them, and never at sign-in:
 
 - `https://mail.google.com/`, when you first choose Delete Forever in the
   Trash, which erases mail permanently.
 - `contacts.readonly`, when you turn on contacts in Preferences, to show
   your contacts' names and photos and suggest recipients.
+- `contacts`, when you first ask the assistant to add or change a
+  contact, to write that contact to Google Contacts.
 - `calendar.events`, when you first answer a meeting invitation, to record
   your answer in Google Calendar.
 

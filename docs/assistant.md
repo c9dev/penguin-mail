@@ -21,6 +21,10 @@ assistant on the right. Ask it about your mail in plain words:
 - "What's stuck in the Outbox, and why?"
 - "Push my reminder about the kite order to Friday."
 - "Undo that."
+- "Rename my Receipts label to Money/Receipts and make it green."
+- "Add Priya Shah, priya@fernwood.example, to my contacts."
+- "Always load images from Trail Notes."
+- "Save this thread as an mbox in my Documents folder."
 
 It reads mail with the same tools you use: it lists mailboxes, searches
 Gmail, and reads conversations. It looks people up in your address book,
@@ -36,6 +40,18 @@ send, which puts the message back in Drafts, give it a new time, or
 delete a stuck message from the Outbox. It lists your reminders, moves
 one to a new time, or cancels it and puts the conversation back in the
 inbox. It lists muted mail and your smart mailboxes, and unmutes.
+
+It looks after what you keep, too: it renames, recolours and deletes
+labels, changes and deletes smart mailboxes, saves and deletes templates,
+adds and changes Google contacts, and keeps the list of senders whose
+remote images load. Adding or changing a contact needs one more Google
+permission, which Penguin Mail asks for the first time.
+
+It exports mail as a file: conversations as one mbox file, which other
+mail programs import, or one message as an .eml file. The file goes in
+your Downloads folder unless you name another place. A file already in
+Downloads keeps its name and the new one gets a number; a file you named
+is replaced only after the question says so.
 
 It reads an attachment as text when the file is plain text, a web page or
 a PDF. PDFs need `pdftotext`, which the `poppler-utils` package installs;
@@ -237,7 +253,14 @@ By default, the assistant asks you before it:
 - takes back your last change,
 - unsubscribes you from a list,
 - adds, changes or deletes a calendar event,
-- answers an invitation.
+- answers an invitation,
+- renames, recolours or deletes a label, and says how many conversations
+  carry a label it would delete,
+- deletes a smart mailbox,
+- saves a template, saying when it replaces one, or deletes one,
+- adds or changes a Google contact,
+- lets a sender's images load, or stops them,
+- writes mail to a file, naming the file.
 
 Deleting forever needs one more Google permission, which Penguin Mail
 asks for the first time, as the Delete Forever button does.

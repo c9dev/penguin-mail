@@ -14,6 +14,7 @@ use mailrs_sync::hidden;
 
 mod calendar;
 mod mail;
+mod manage;
 mod queue;
 
 const DAY: i64 = 24 * 60 * 60 * 1000;
@@ -984,7 +985,8 @@ async fn set_signature_names_the_account() {
 /// An input each tool accepts in the fixture mailbox, or `None` for a tool
 /// that needs fixtures of its own (attachments, events, invitations, the
 /// delete permission) or an earlier call's answer. Those have tests in
-/// `tests/mail.rs`, `tests/calendar.rs` and the end of the table test.
+/// `tests/mail.rs`, `tests/calendar.rs`, `tests/manage.rs` and the end of
+/// the table test.
 fn sample(name: &str, later: &str) -> Option<Value> {
     Some(match name {
         "get_context" | "get_settings" | "list_hidden_addresses" | "list_templates" => json!({}),
@@ -1002,6 +1004,14 @@ fn sample(name: &str, later: &str) -> Option<Value> {
         "set_automatic_reply" => json!({"account": ME, "enabled": false}),
         "create_rule" => json!({"account": ME, "from": "ann@example.com", "mark_read": true}),
         "create_label" => json!({"account": ME, "name": "Boats"}),
+        "rename_label" => json!({"account": ME, "label": "Kites", "new_name": "Kite flying"}),
+        "recolor_label" => json!({"account": ME, "label": "Kites", "color": "green"}),
+        "delete_label" => json!({"account": ME, "label": "Kites"}),
+        "list_smart_mailboxes" | "list_image_senders" => json!({}),
+        "save_template" => json!({"name": "Thanks", "body": "Thank you."}),
+        "create_contact" => json!({"name": "Priya Shah", "emails": ["priya@example.org"]}),
+        "allow_images" => json!({"sender": "ann@example.com"}),
+        "export_mail" => json!({"targets": [target("t1")]}),
         "change_setting" => json!({"name": "threading", "value": false}),
         "set_signature" => json!({"account": ME, "text": "Dana"}),
         "vip" => json!({"email": "theo@example.com", "name": "Theo"}),
@@ -1026,7 +1036,12 @@ fn sample(name: &str, later: &str) -> Option<Value> {
         | "create_event"
         | "update_event"
         | "delete_event"
-        | "answer_invitation" => return None,
+        | "answer_invitation"
+        | "update_smart_mailbox"
+        | "delete_smart_mailbox"
+        | "delete_template"
+        | "update_contact"
+        | "forget_image_sender" => return None,
         "list_reminders" => json!({}),
         "unmute" => json!({"targets": [target("t3")]}),
         // These need a queued message, a reminder, or an action to undo,

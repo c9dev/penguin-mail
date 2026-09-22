@@ -670,7 +670,10 @@ async fn writing_a_contact_without_the_permission_says_so() {
             ..Default::default()
         })
         .await;
-    assert!(matches!(refused, Err(GmailError::MissingScope)), "{refused:?}");
+    assert!(
+        matches!(refused, Err(GmailError::MissingScope)),
+        "{refused:?}"
+    );
 }
 
 /// Gmail answers the filter list of an account that has none with an empty

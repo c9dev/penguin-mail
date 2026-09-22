@@ -3,6 +3,7 @@
 //! state and carries out the effects it asks for, on the GTK thread.
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::rc::Rc;
 
 use mailrs_ai::ToolOutcome;
@@ -78,6 +79,11 @@ impl Desk for Ports {
     fn default_account(&self) -> Option<AccountId> {
         let app = self.0.app.upgrade()?;
         app.default_account(self.0.account_in_view())
+    }
+
+    fn downloads(&self) -> PathBuf {
+        gtk::glib::user_special_dir(gtk::glib::UserDirectory::Downloads)
+            .unwrap_or_else(gtk::glib::home_dir)
     }
 }
 
@@ -208,5 +214,9 @@ impl Effects for Ports {
 
     fn undone(&self, outcome: &Outcome) {
         self.0.after_mail(Cause::Undid, outcome, None);
+    }
+
+    fn image_senders_changed(&self) {
+        self.0.reload_image_senders();
     }
 }

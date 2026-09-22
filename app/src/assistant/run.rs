@@ -43,6 +43,7 @@ mod catalog;
 #[cfg(test)]
 mod fake;
 mod mail;
+mod manage;
 mod queue;
 #[cfg(test)]
 mod tests;
@@ -92,6 +93,9 @@ pub trait Desk {
     /// The account a new message comes from: the one set in Preferences,
     /// else the account in view, else the first.
     fn default_account(&self) -> Option<AccountId>;
+    /// Where `export_mail` saves a file the user named no place for: the
+    /// XDG download directory.
+    fn downloads(&self) -> std::path::PathBuf;
 }
 
 /// A Google permission a tool can find missing. The window asks for the
@@ -162,6 +166,10 @@ pub trait Effects {
     fn queue_changed(&self);
     /// Redraws what an undo put back.
     fn undone(&self, outcome: &Outcome);
+
+    /// Reads the senders allowed to load remote images again, after a
+    /// tool changed the list the window keeps a copy of.
+    fn image_senders_changed(&self);
 }
 
 /// Hands a future to the sync runtime. The GTK thread has no tokio reactor
@@ -171,14 +179,15 @@ pub trait Background {
 }
 
 /// The modules a tool call works through: mail actions, mailbox listing,
-/// Gmail settings, the calendar, the invitations in mail, the accounts
-/// that sync, and the store.
+/// Gmail settings, the calendar, the invitations in mail, the address
+/// books, the accounts that sync, and the store.
 pub struct Modules<A: Accounts> {
     pub mail: Arc<MailActions<A>>,
     pub lists: Arc<Mailboxes<A>>,
     pub gmail: Arc<AccountSettings<A>>,
     pub calendar: Arc<Calendar<A>>,
     pub invitations: Arc<Invitations<A>>,
+    pub contacts: Arc<mailrs_sync::ContactBook<A>>,
     pub accounts: Arc<A>,
     pub db: Db,
 }

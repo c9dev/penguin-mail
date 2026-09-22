@@ -119,6 +119,7 @@ impl<A: Accounts> Tools<A> {
             .take(MOST_PEOPLE)
             .map(|contact| {
                 json!({
+                    "id": contact.resource,
                     "name": contact.name,
                     "emails": contact.emails,
                     "organization": contact.organization,
