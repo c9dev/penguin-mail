@@ -117,6 +117,12 @@ pub struct Asked {
     pub left: Vec<(AccountId, Leave)>,
     pub mail_changed: Vec<(MailAction, Outcome)>,
     pub relisted: usize,
+    /// Messages whose only copy was opened in a composer, marked unsaved.
+    pub reopened: Vec<Draft>,
+    /// How often the queue's lists were asked to read again.
+    pub queue_changed: usize,
+    /// What each undo put back.
+    pub undone: Vec<Outcome>,
     /// Categorize Sender runs in the background, as the window runs it.
     /// `Harness::categorized` waits for these.
     sorting: Vec<JoinHandle<Categorized>>,
@@ -297,6 +303,19 @@ impl Effects for FakeEffects {
             self.change_settings(Change::SaveHiddenAddress(changed))?;
             Ok(Permitted::Done(()))
         })
+    }
+
+    fn reopen_unsent(&self, draft: Draft) -> Result<(), String> {
+        self.asked.borrow_mut().reopened.push(draft);
+        Ok(())
+    }
+
+    fn queue_changed(&self) {
+        self.asked.borrow_mut().queue_changed += 1;
+    }
+
+    fn undone(&self, outcome: &Outcome) {
+        self.asked.borrow_mut().undone.push(outcome.clone());
     }
 }
 

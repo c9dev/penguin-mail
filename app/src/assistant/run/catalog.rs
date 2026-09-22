@@ -216,12 +216,13 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "list_mail",
             label: || gettext("Reading a mailbox"),
-            description: "Lists conversations in a mailbox, newest first. Inbox, flagged, sent, drafts, VIPs, and labels read the mail kept on this computer (the last few weeks plus everything in the inbox); archive, junk, trash, and all_mail ask Gmail. archive is received mail taken out of the inbox.",
+            description: "Lists conversations in a mailbox, newest first. Inbox, flagged, sent, drafts, VIPs, muted, and labels read the mail kept on this computer (the last few weeks plus everything in the inbox); archive, junk, trash, all_mail, and smart mailboxes ask Gmail. archive is received mail taken out of the inbox. send_later, outbox, and reminders list what waits, soonest first: each row says why it waits and when it goes or returns, and its account, thread_id, and message_id are the target send_now, cancel_send, delete_queued, reschedule, cancel_reminder, and change_reminder take.",
             input: || {
                 json!({
                     "mailbox": {"type": "string", "enum": MailboxName::ALL.map(MailboxName::key), "description": "follow_up lists sent mail that has waited 3 to 30 days for a reply."},
                     "category": {"type": "string", "enum": categories(), "description": "Narrow the inbox to one of Gmail's categories."},
                     "label": {"type": "string", "description": "The label's name, when mailbox is \"label\"."},
+                    "name": {"type": "string", "description": "The smart mailbox's name, when mailbox is \"smart\"."},
                     "account": account("Limit to one account. All accounts when left out."),
                     "unread_only": {"type": "boolean"},
                     "limit": {"type": "integer", "minimum": 1, "maximum": 200, "description": "Defaults to 30."}
@@ -260,7 +261,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "organize",
             label: || gettext("Organizing mail"),
-            description: "Archives, trashes, marks, or flags conversations. Reversible; the user can press Ctrl+Z to undo the last change.",
+            description: "Archives, trashes, marks, or flags conversations, and takes those back: unflag takes off the flag and its star, move_to_inbox brings mail back out of the Trash, and not_junk takes mail out of Junk into the inbox. Reversible; the user can press Ctrl+Z, or you can call undo, to take back the last change.",
             input: || {
                 json!({
                     "targets": targets(),
@@ -572,6 +573,88 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
             },
             required: &["at"],
             run: Run::AsksFirst(|t, input| Box::pin(t.send_later(input))),
+        },
+        MailTool {
+            name: "send_now",
+            label: || gettext("Sending a waiting message"),
+            description: "Sends messages from Send Later or the Outbox now, rather than at their time or next try. Give the rows list_mail returned for mailbox send_later or outbox. The user approves it first.",
+            input: || json!({"targets": targets()}),
+            required: &["targets"],
+            run: Run::AsksFirst(|t, input| Box::pin(t.send_now(input))),
+        },
+        MailTool {
+            name: "cancel_send",
+            label: || gettext("Cancelling a scheduled message"),
+            description: "Stops messages in Send Later from going out. Each goes back to Gmail's Drafts; one Gmail cannot take right now opens in a composer for the user to save. The user approves it first.",
+            input: || json!({"targets": targets()}),
+            required: &["targets"],
+            run: Run::AsksFirst(|t, input| Box::pin(t.cancel_send(input))),
+        },
+        MailTool {
+            name: "delete_queued",
+            label: || gettext("Deleting from the Outbox"),
+            description: "Deletes messages from the Outbox, so they are never sent and nothing is kept. For Send Later, use cancel_send. The user approves it first.",
+            input: || json!({"targets": targets()}),
+            required: &["targets"],
+            run: Run::AsksFirst(|t, input| Box::pin(t.delete_queued(input))),
+        },
+        MailTool {
+            name: "reschedule",
+            label: || gettext("Changing when a message goes"),
+            description: "Gives messages in Send Later a new time to go out. The user approves it first.",
+            input: || {
+                json!({
+                    "targets": targets(),
+                    "at": {"type": "string", "description": "The new time, local, as YYYY-MM-DDTHH:MM."}
+                })
+            },
+            required: &["targets", "at"],
+            run: Run::AsksFirst(|t, input| Box::pin(t.reschedule(input))),
+        },
+        MailTool {
+            name: "list_reminders",
+            label: || gettext("Reading reminders"),
+            description: "Lists the conversations set aside with remind_me or Remind Me, soonest first, with when each comes back to the inbox.",
+            input: || json!({}),
+            required: &[],
+            run: Run::Now(|t, _| Box::pin(t.list_reminders())),
+        },
+        MailTool {
+            name: "cancel_reminder",
+            label: || gettext("Cancelling a reminder"),
+            description: "Drops the reminders on conversations and puts them back in the inbox now. The user approves it first.",
+            input: || json!({"targets": targets()}),
+            required: &["targets"],
+            run: Run::AsksFirst(|t, input| Box::pin(t.cancel_reminder(input))),
+        },
+        MailTool {
+            name: "change_reminder",
+            label: || gettext("Changing a reminder"),
+            description: "Moves the reminders on conversations to a new local time. The user approves it first.",
+            input: || {
+                json!({
+                    "targets": targets(),
+                    "at": {"type": "string", "description": "The new time, local, as YYYY-MM-DDTHH:MM."}
+                })
+            },
+            required: &["targets", "at"],
+            run: Run::AsksFirst(|t, input| Box::pin(t.change_reminder(input))),
+        },
+        MailTool {
+            name: "unmute",
+            label: || gettext("Unmuting conversations"),
+            description: "Unmutes conversations and puts them back in the inbox, so their replies arrive there again. list_mail with mailbox muted finds them. Reversible with Ctrl+Z.",
+            input: || json!({"targets": targets()}),
+            required: &["targets"],
+            run: Run::Now(|t, input| Box::pin(t.unmute(input))),
+        },
+        MailTool {
+            name: "undo",
+            label: || gettext("Undoing the last change"),
+            description: "Takes back the newest mail change on the undo stack, as Ctrl+Z does, whether you or the user made it: an archive, trash, flag, label, mute, or reminder. Each call takes back one, newest first. The user approves it first.",
+            input: || json!({}),
+            required: &[],
+            run: Run::AsksFirst(|t, input| Box::pin(t.undo(input))),
         },
         MailTool {
             name: "list_templates",

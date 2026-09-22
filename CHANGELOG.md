@@ -5,6 +5,14 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### New
+
+- The assistant can send a message waiting in Send Later or the Outbox
+  now, cancel it, give it a new time, or delete it from the Outbox.
+- The assistant lists your reminders and can move or cancel one.
+- The assistant can unmute mail, read your muted mail and smart
+  mailboxes, and undo your last change, as Ctrl+Z does.
+
 ### Fixed
 
 - Cancel Send keeps a message you scheduled while offline. It goes to

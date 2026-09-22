@@ -79,13 +79,9 @@ impl MainWindow {
         let Ok(draft) = serde_json::from_str::<Draft>(&message.composer) else {
             return false;
         };
-        let Some(app) = self.app.upgrade() else {
+        if !self.open_unsent(draft) {
             return false;
-        };
-        let Some(composer) = app.open_composer(draft, Signature::AsWritten) else {
-            return false;
-        };
-        composer.mark_unsaved();
+        }
         let (outbox, id) = (self.core.outbox(), message.id);
         if let Err(err) = self
             .core
@@ -94,6 +90,21 @@ impl MainWindow {
         {
             tracing::warn!(error = %err, "could not drop a cancelled message after reopening it");
         }
+        true
+    }
+
+    /// Opens a composer on a message whose only copy this computer holds,
+    /// marked unsaved, so closing it asks before the message is lost. The
+    /// window's Cancel Send and Edit and the assistant's cancel_send all
+    /// reopen a queued message this way. False when the app is closing.
+    pub(super) fn open_unsent(&self, draft: Draft) -> bool {
+        let Some(app) = self.app.upgrade() else {
+            return false;
+        };
+        let Some(composer) = app.open_composer(draft, Signature::AsWritten) else {
+            return false;
+        };
+        composer.mark_unsaved();
         true
     }
 }

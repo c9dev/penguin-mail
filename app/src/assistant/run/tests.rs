@@ -14,6 +14,7 @@ use mailrs_sync::hidden;
 
 mod calendar;
 mod mail;
+mod queue;
 
 const DAY: i64 = 24 * 60 * 60 * 1000;
 
@@ -157,8 +158,8 @@ async fn list_mail_reads_a_mailbox_and_narrows_to_a_category() {
     assert_eq!(thread_ids(&unread), ["t1"]);
 
     assert_eq!(
-        h.run("list_mail", json!({"mailbox": "outbox"})).await,
-        Err("Unknown mailbox outbox.".into())
+        h.run("list_mail", json!({"mailbox": "boathouse"})).await,
+        Err("Unknown mailbox boathouse.".into())
     );
     assert_eq!(
         h.run("list_mail", json!({})).await,
@@ -1026,6 +1027,12 @@ fn sample(name: &str, later: &str) -> Option<Value> {
         | "update_event"
         | "delete_event"
         | "answer_invitation" => return None,
+        "list_reminders" => json!({}),
+        "unmute" => json!({"targets": [target("t3")]}),
+        // These need a queued message, a reminder, or an action to undo,
+        // which tests/queue.rs sets up.
+        "send_now" | "cancel_send" | "delete_queued" | "reschedule" | "cancel_reminder"
+        | "change_reminder" | "undo" => return None,
         other => panic!("{other} has no sample input; add one to `sample`"),
     })
 }

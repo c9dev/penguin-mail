@@ -12,6 +12,7 @@ use mailrs_sync::{MailAction, Outcome, Permitted, View};
 use serde_json::Value;
 
 use super::MainWindow;
+use super::aftermath::Cause;
 use crate::app::Signature;
 use crate::assistant::run::{
     Answer, Background, Desk, Effects, OnScreen, OpenConversation, Permission, Tools,
@@ -192,5 +193,20 @@ impl Effects for Ports {
                 .await
                 .map_err(|e| e.to_string())
         })
+    }
+
+    fn reopen_unsent(&self, draft: Draft) -> Result<(), String> {
+        match self.0.open_unsent(draft) {
+            true => Ok(()),
+            false => Err(closing()),
+        }
+    }
+
+    fn queue_changed(&self) {
+        self.0.scheduled_changed();
+    }
+
+    fn undone(&self, outcome: &Outcome) {
+        self.0.after_mail(Cause::Undid, outcome, None);
     }
 }

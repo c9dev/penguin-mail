@@ -43,6 +43,7 @@ mod catalog;
 #[cfg(test)]
 mod fake;
 mod mail;
+mod queue;
 #[cfg(test)]
 mod tests;
 
@@ -150,6 +151,17 @@ pub trait Effects {
         address: String,
         active: bool,
     ) -> Answer<'_, Result<Permitted<()>, String>>;
+
+    // ---- What waits: Send Later, the Outbox, and Undo --------------------
+
+    /// Opens a composer on a message whose only copy Penguin Mail holds,
+    /// marked unsaved, so closing it asks before the message is lost.
+    fn reopen_unsent(&self, draft: Draft) -> Result<(), String>;
+    /// Counts, the Send Later and Outbox lists, and a queued message on
+    /// screen again, after a queued message went, moved, or left.
+    fn queue_changed(&self);
+    /// Redraws what an undo put back.
+    fn undone(&self, outcome: &Outcome);
 }
 
 /// Hands a future to the sync runtime. The GTK thread has no tokio reactor
@@ -231,10 +243,19 @@ enum MailboxName {
     AllMail,
     /// The label `list_mail` names in its `label` field.
     Label,
+    /// Messages that could not go out and wait to be tried again.
+    Outbox,
+    /// Messages waiting for the hour Send Later gave them.
+    SendLater,
+    /// Conversations set aside with Remind Me.
+    Reminders,
+    Muted,
+    /// The saved smart mailbox `list_mail` names in its `name` field.
+    Smart,
 }
 
 impl MailboxName {
-    const ALL: [MailboxName; 11] = [
+    const ALL: [MailboxName; 16] = [
         MailboxName::Inbox,
         MailboxName::Flagged,
         MailboxName::Sent,
@@ -246,6 +267,11 @@ impl MailboxName {
         MailboxName::Trash,
         MailboxName::AllMail,
         MailboxName::Label,
+        MailboxName::Outbox,
+        MailboxName::SendLater,
+        MailboxName::Reminders,
+        MailboxName::Muted,
+        MailboxName::Smart,
     ];
 
     fn key(self) -> &'static str {
@@ -261,7 +287,21 @@ impl MailboxName {
             MailboxName::Trash => "trash",
             MailboxName::AllMail => "all_mail",
             MailboxName::Label => "label",
+            MailboxName::Outbox => "outbox",
+            MailboxName::SendLater => "send_later",
+            MailboxName::Reminders => "reminders",
+            MailboxName::Muted => "muted",
+            MailboxName::Smart => "smart",
         }
+    }
+
+    /// Whether the mailbox lists what waits for a time, soonest first,
+    /// rather than mail, newest first.
+    fn waits(self) -> bool {
+        matches!(
+            self,
+            MailboxName::Outbox | MailboxName::SendLater | MailboxName::Reminders
+        )
     }
 
     fn named(key: &str) -> Option<MailboxName> {
@@ -618,7 +658,8 @@ impl<A: Accounts> Tools<A> {
             Some(key) => Some(named_category(&key)?),
             None => None,
         };
-        let mailboxes = self.named_mailboxes(&name, text(input, "label"), scope.as_ref())?;
+        let mailboxes = self.named_mailboxes(&name, input, scope.as_ref())?;
+        let waits = MailboxName::named(&name).is_some_and(MailboxName::waits);
         // Unread mail is picked out of the rows, so ask for extra.
         let view = View {
             category,
@@ -629,14 +670,26 @@ impl<A: Accounts> Tools<A> {
         for mailbox in mailboxes {
             rows.extend(self.rows_of(mailbox, view.clone()).await?);
         }
-        rows.sort_by_key(|r| std::cmp::Reverse(r.last_message_at));
+        // The mailboxes of what waits span every account, so one account
+        // named narrows them here.
+        if let Some(account) = &scope {
+            rows.retain(|r| r.account_id == account.id);
+        }
+        match waits {
+            true => rows.sort_by_key(|r| r.last_message_at),
+            false => rows.sort_by_key(|r| std::cmp::Reverse(r.last_message_at)),
+        }
         if unread_only {
             rows.retain(|r| r.unread);
         }
         rows.truncate(limit);
+        let json = |r: &ThreadSummary| match waits {
+            true => self.waiting_json(&name, r),
+            false => self.row_json(r),
+        };
         Ok(json!({
             "count": rows.len(),
-            "conversations": rows.iter().map(|r| self.row_json(r)).collect::<Vec<_>>(),
+            "conversations": rows.iter().map(json).collect::<Vec<_>>(),
         }))
     }
 
@@ -645,7 +698,7 @@ impl<A: Accounts> Tools<A> {
     fn named_mailboxes(
         &self,
         name: &str,
-        label: Option<String>,
+        input: &Value,
         scope: Option<&Account>,
     ) -> Result<Vec<Mailbox>, String> {
         let at = |label: &'static str| match scope {
@@ -675,8 +728,13 @@ impl<A: Accounts> Tools<A> {
                 emails: self.desk.settings().vips.keys().cloned().collect(),
                 name: "VIPs".into(),
             }],
+            MailboxName::Outbox => vec![Mailbox::Outbox],
+            MailboxName::SendLater => vec![Mailbox::Scheduled],
+            MailboxName::Reminders => vec![Mailbox::Reminders],
+            MailboxName::Muted => vec![at(system_label::MUTE)],
+            MailboxName::Smart => vec![self.smart_named(&required(input, "name")?)?],
             MailboxName::Label => {
-                let wanted = label.ok_or("`label` is missing")?;
+                let wanted = text(input, "label").ok_or("`label` is missing")?;
                 let labels = self.desk.labels();
                 let found: Vec<Mailbox> = labels
                     .iter()

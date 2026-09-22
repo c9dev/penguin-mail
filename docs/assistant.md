@@ -17,12 +17,25 @@ assistant on the right. Ask it about your mail in plain words:
 - "Unsubscribe me from Trail Notes."
 - "What does the PDF Priya sent say about the deadline?"
 - "What is Mara's address at Fernwood?"
+- "Send the message to the landlord now instead of tomorrow."
+- "What's stuck in the Outbox, and why?"
+- "Push my reminder about the kite order to Friday."
+- "Undo that."
 
 It reads mail with the same tools you use: it lists mailboxes, searches
 Gmail, and reads conversations. It looks people up in your address book,
 by name, address or organisation, and gets back their addresses, phone
 number and organisation. It acts through the app too, so Ctrl+Z
-undoes what it archived, trashed, flagged, muted, or marked.
+undoes what it archived, trashed, flagged, muted, or marked. It can also
+take a change back itself, yours or its own, from the same undo stack
+Ctrl+Z reads, one change at a time, newest first.
+
+It reads Send Later and the Outbox as their lists show them: why each
+message waits and when it goes. It can send one now, cancel a scheduled
+send, which puts the message back in Drafts, give it a new time, or
+delete a stuck message from the Outbox. It lists your reminders, moves
+one to a new time, or cancels it and puts the conversation back in the
+inbox. It lists muted mail and your smart mailboxes, and unmutes.
 
 It reads an attachment as text when the file is plain text, a web page or
 a PDF. PDFs need `pdftotext`, which the `poppler-utils` package installs;
@@ -218,6 +231,10 @@ By default, the assistant asks you before it:
   (say no, and it labels only the mail in accounts that have the label),
 - moves more than 25 conversations to the Trash,
 - deletes mail forever,
+- sends a waiting message now, cancels a scheduled send, gives one a new
+  time, or deletes one from the Outbox,
+- cancels a reminder or moves it to a new time,
+- takes back your last change,
 - unsubscribes you from a list,
 - adds, changes or deletes a calendar event,
 - answers an invitation.
