@@ -18,6 +18,8 @@ use mailrs_sync::fake::{FakeGmail, SentCopy, fill_store};
 use mailrs_sync::{AccountSync, SyncError};
 use rusqlite::Connection;
 
+mod pages;
+
 /// The id of the draft behind the sample draft message, as Gmail would hold it.
 const DRAFT_ID: &str = "demo-draft";
 
@@ -101,8 +103,13 @@ struct Sample {
     text: &'static str,
     html: Option<&'static str>,
     attachments: &'static [(&'static str, &'static str, i64)],
-    /// The List-Unsubscribe header a mailing list puts on its mail.
+    /// The `List-Unsubscribe` header a mailing list puts on its mail.
+    /// `{pages}` in it stands for the demo's own page server, which
+    /// picks its port when the demo opens.
     unsubscribe: Option<&'static str>,
+    /// Whether the sender promised RFC 8058 one-click, which is the
+    /// `List-Unsubscribe-Post` header beside the one above.
+    one_click: bool,
     /// Whether the message reached this computer unencrypted, which the
     /// details panel warns about.
     in_the_clear: bool,
@@ -150,6 +157,7 @@ const PLAIN: Sample = Sample {
     html: None,
     attachments: &[],
     unsubscribe: None,
+    one_click: false,
     in_the_clear: false,
     invitation: None,
     draft: None,
@@ -419,8 +427,10 @@ fn samples() -> Vec<Sample> {
             minutes_ago: 7 * HOUR,
             labels: &["INBOX", "CATEGORY_PROMOTIONS"],
             text: "This week: five autumn loops under 15 km, a gear list for cold mornings, and where the larches turn first.",
+            // A page that asks which address to take off the list, and a
+            // mail request the page comes before.
             unsubscribe: Some(
-                "<mailto:leave@trailnotes.example?subject=unsubscribe>, <https://trailnotes.example/u/dana>",
+                "<mailto:leave@trailnotes.example?subject=unsubscribe>, <{pages}/trail-notes>",
             ),
             in_the_clear: true,
             ..PLAIN
@@ -435,6 +445,62 @@ fn samples() -> Vec<Sample> {
             minutes_ago: DAY + 9 * HOUR,
             labels: &["INBOX", "UNREAD", "CATEGORY_PROMOTIONS"],
             text: "Planning a trip? Every travel guide is 20% off until Sunday night. Use code WANDER at checkout.",
+            // A page with one button on it, which is the shape most
+            // senders use.
+            unsubscribe: Some("<{pages}/linden-books>"),
+            ..PLAIN
+        },
+        Sample {
+            account: 0,
+            thread: "t-recipes",
+            id: "recipes-1",
+            from: ("Cedar Kitchen", "recipes@cedarkitchen.example"),
+            to: &[ME],
+            subject: "Three things to do with a glut of tomatoes",
+            minutes_ago: 2 * DAY + 4 * HOUR,
+            labels: &["INBOX", "CATEGORY_PROMOTIONS"],
+            text: "Roast them slow, char them under the grill, or leave them overnight in salt and oil. Recipes for all three, plus what to do with the last of the basil.",
+            // A sender who keeps the promise RFC 8058 asks for, so one
+            // request is the whole of it and no page is loaded.
+            unsubscribe: Some(
+                "<mailto:leave@cedarkitchen.example?subject=unsubscribe>, <https://cedarkitchen.example/u/dana>",
+            ),
+            one_click: true,
+            ..PLAIN
+        },
+        Sample {
+            account: 0,
+            thread: "t-beacon",
+            id: "beacon-1",
+            from: ("Beacon Outdoors", "news@beaconoutdoors.example"),
+            to: &[ME],
+            subject: "New winter jackets, and a weekend on the ridge",
+            minutes_ago: 3 * DAY + 6 * HOUR,
+            labels: &["INBOX", "CATEGORY_PROMOTIONS"],
+            text: "The winter range is in, and there are eight places left on the guided ridge weekend in November.",
+            // A preferences centre with a box that means all of it.
+            unsubscribe: Some("<{pages}/beacon-outdoors>"),
+            ..PLAIN
+        },
+        Sample {
+            account: 0,
+            thread: "t-arts",
+            id: "arts-1",
+            from: ("Harbour City Arts", "list@harbourarts.example"),
+            to: &[ME],
+            subject: "What's on this month: October",
+            minutes_ago: 4 * DAY + HOUR,
+            labels: &["INBOX", "CATEGORY_PROMOTIONS"],
+            text: "Autumn season tickets are on sale, the print studio reopens on the 12th, and there are two late-night concerts at the docks.",
+            // No header at all: the only way out is the link in the
+            // footer, and it leads to a list of topics, which is the one
+            // page the rules leave to the person.
+            html: Some(
+                "<p>Autumn season tickets are on sale, the print studio reopens on the 12th, \
+                 and there are two late-night concerts at the docks.</p>\
+                 <hr><p style=\"font-size:small;color:#77767b\">You are reading this because \
+                 you asked us to. <a href=\"{pages}/harbour-arts\">Manage preferences</a>.</p>",
+            ),
             ..PLAIN
         },
         Sample {
@@ -459,6 +525,9 @@ fn samples() -> Vec<Sample> {
             minutes_ago: DAY + 2 * HOUR,
             labels: &["INBOX", "CATEGORY_FORUMS"],
             text: "Thursday's seminar moves to room B214. Same time, 4pm. Coffee provided.",
+            // A list run by mailing-list software, which takes a
+            // request by mail and offers nothing else.
+            unsubscribe: Some("<mailto:grad-seminar-leave@uni.example?subject=unsubscribe>"),
             ..PLAIN
         },
         Sample {
@@ -964,6 +1033,12 @@ impl Sample {
         })
     }
 
+    /// The sample's `List-Unsubscribe` header, with the demo's page
+    /// server put in where it says `{pages}`.
+    fn header(&self) -> Option<String> {
+        self.unsubscribe.map(at_pages)
+    }
+
     fn meta(&self, account_id: AccountId, now: EpochMillis) -> MessageMeta {
         let me = Address {
             name: Some(DISPLAY_NAME.into()),
@@ -1000,15 +1075,17 @@ impl Sample {
             size: self.text.len() as i64,
             has_attachments: !self.attachments.is_empty(),
             label_ids: self.labels.iter().map(|l| l.to_string()).collect(),
-            list_unsubscribe: self.unsubscribe.map(str::to_string),
-            one_click: false,
+            list_unsubscribe: self.header(),
+            one_click: self.one_click,
         }
     }
 
     fn body(&self, now: EpochMillis) -> MessageBody {
         MessageBody {
             text: Some(self.text.into()),
-            html: self.html.map(str::to_string),
+            // A newsletter's own footer link points at the demo's pages
+            // the same way a header does.
+            html: self.html.map(at_pages),
             attachments: self
                 .attachments
                 .iter()
@@ -1022,7 +1099,8 @@ impl Sample {
                     content_id: None,
                 })
                 .collect(),
-            list_unsubscribe: self.unsubscribe.map(str::to_string),
+            list_unsubscribe: self.header(),
+            one_click_unsubscribe: self.one_click,
             calendar: self.invitation.as_ref().map(|invite| (invite.ics)(now)),
             provenance: Provenance {
                 mailed_by: Some(sender_domain(self.from.1)),
@@ -1132,6 +1210,16 @@ fn sent_copy(raw: &[u8], account_id: AccountId) -> Option<SentCopy> {
         references,
         files,
     })
+}
+
+/// `text` with `{pages}` replaced by the address the demo serves its
+/// unsubscribe pages at. A sample cannot hold that address: the port is
+/// picked when the demo opens.
+fn at_pages(text: &str) -> String {
+    match text.contains("{pages}") {
+        true => text.replace("{pages}", pages::base()),
+        false => text.to_string(),
+    }
 }
 
 /// The domain a demo sender writes from.
