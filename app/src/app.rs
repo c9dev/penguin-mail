@@ -23,7 +23,7 @@ use crate::settings::{Change, ColorScheme, Effect, Effects, Settings};
 use crate::tray::{MailTray, TrayCommand};
 use crate::ui::autocomplete::Contacts;
 use crate::ui::composer::spell;
-use crate::ui::window::{MainWindow, Reveal};
+use crate::ui::window::{MainWindow, Notice, Reveal};
 
 const BLOCK_REMOTE_RULES: &str = r#"[
   {"trigger": {"url-filter": "^https?:"}, "action": {"type": "block"}},
@@ -219,10 +219,8 @@ impl App {
         if effects.has(Effect::Theme) {
             self.apply_style();
         }
-        if !effects.is_empty()
-            && let Some(window) = self.window()
-        {
-            window.settings_changed(effects);
+        if !effects.is_empty() {
+            self.tell_window(Notice::SettingsChanged(effects));
         }
         let books = effects.address_books();
         // Reading is when Google asks for the permission, so the account
@@ -262,7 +260,7 @@ impl App {
         }
         let window = MainWindow::new(self);
         if let Some(updater) = &self.updater {
-            window.show_update(&updater.state());
+            window.notice(Notice::Update(&updater.state()));
         }
         *self.window.borrow_mut() = Some(Rc::clone(&window));
         self.window_opened();
@@ -330,6 +328,13 @@ impl App {
 
     pub(crate) fn window(&self) -> Option<Rc<MainWindow>> {
         self.window.borrow().clone()
+    }
+
+    /// Passes news to the window, when one is open.
+    pub(crate) fn tell_window(&self, notice: Notice<'_>) {
+        if let Some(window) = self.window() {
+            window.notice(notice);
+        }
     }
 
     pub fn filter(&self) -> Option<webkit::UserContentFilter> {
@@ -606,9 +611,7 @@ impl App {
                 })
                 .collect();
             *this.contacts.borrow_mut() = Rc::new(found);
-            if let Some(window) = this.window() {
-                window.contacts_loaded();
-            }
+            this.tell_window(Notice::ContactsLoaded);
         });
     }
 
@@ -734,10 +737,11 @@ impl App {
                     // A People API switched off in the Google Cloud project
                     // refuses before Google can ask for the permission, so
                     // the person has to hear what to turn on.
-                    if let (true, Some(window), Some((service, url))) =
-                        (ask, this.window(), api_off(&err))
-                    {
-                        window.explain_api_off(&service, &url);
+                    if let (true, Some((service, url))) = (ask, api_off(&err)) {
+                        this.tell_window(Notice::ApiOff {
+                            service: &service,
+                            enable_url: &url,
+                        });
                     }
                     tracing::warn!(error = %err, "could not read the address book");
                 }
@@ -838,9 +842,7 @@ impl App {
             {
                 Ok(filter) => {
                     *this.filter.borrow_mut() = Some(filter.clone());
-                    if let Some(window) = this.window() {
-                        window.install_filter(filter);
-                    }
+                    this.tell_window(Notice::FilterReady(filter));
                 }
                 Err(err) => {
                     tracing::error!(error = %err, "could not compile the remote content filter; the page policy still blocks remote loads")
@@ -853,9 +855,7 @@ impl App {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             while let Ok(event) = this.core.events.recv().await {
-                if let Some(window) = this.window() {
-                    window.handle(&event);
-                }
+                this.tell_window(Notice::Engine(&event));
                 match &event {
                     ChangeEvent::NewMail {
                         account_id,
@@ -922,9 +922,10 @@ impl App {
             .core
             .act(vec![target], action.clone(), History::Record)
             .await;
-        if let Some(window) = self.window() {
-            window.mail_changed(&action, &outcome);
-        }
+        self.tell_window(Notice::MailChanged {
+            action: &action,
+            outcome: &outcome,
+        });
         if let Some(error) = outcome.first_error() {
             tracing::warn!(
                 error,

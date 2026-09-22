@@ -31,7 +31,7 @@ use crate::compose::{self, OutgoingAttachment, ReplyKind};
 use crate::core::Core;
 use crate::open_thread::OpenThread;
 use crate::permission::{Occasion, Permission};
-use crate::settings::{Change, Effect, Effects, Settings};
+use crate::settings::{Change, Effect, Settings};
 use aftermath::Cause;
 
 mod aftermath;
@@ -46,6 +46,7 @@ mod followup;
 mod hide_my_email;
 mod images;
 mod invitation;
+mod notice;
 mod organize;
 mod outbox;
 mod pgp;
@@ -57,6 +58,8 @@ mod shortcuts;
 mod thread;
 mod translation;
 mod triage;
+
+pub use notice::Notice;
 
 /// Largest inline image embedded into a page.
 const INLINE_IMAGE_LIMIT: usize = 5 * 1024 * 1024;
@@ -621,14 +624,10 @@ impl MainWindow {
         self.window.is_active() && self.window.is_visible()
     }
 
-    pub fn install_filter(&self, filter: webkit::UserContentFilter) {
-        self.conversation.set_filter(filter);
-    }
-
     /// Shows where an update stands, or hides the banner when nothing does.
     /// Each state's button runs an app action, so the banner needs no
     /// callbacks of its own.
-    pub fn show_update(&self, state: &crate::update::State) {
+    fn show_update(&self, state: &crate::update::State) {
         if let Some(about) = self.about.borrow().as_ref() {
             about.show_update(state);
         }
@@ -666,7 +665,7 @@ impl MainWindow {
 
     // ---- Engine events -------------------------------------------------
 
-    pub fn handle(self: &Rc<Self>, event: &ChangeEvent) {
+    fn handle(self: &Rc<Self>, event: &ChangeEvent) {
         match event {
             // An account going offline and back changes the banner and the
             // sidebar, not the rows. Listing again would cost a Gmail
@@ -1348,7 +1347,7 @@ impl MainWindow {
     /// Says an API is switched off in the Google Cloud project Penguin Mail
     /// signs in with. No permission fixes that, so this offers the page in
     /// Google Cloud that turns it on.
-    pub fn explain_api_off(self: &Rc<Self>, service: &str, enable_url: &str) {
+    pub(super) fn explain_api_off(self: &Rc<Self>, service: &str, enable_url: &str) {
         let question = confirm(
             &fill(&gettext("Turn On the {service}"), &[("service", service)]),
             &fill(
@@ -1378,7 +1377,7 @@ impl MainWindow {
 
     /// Hands the list the contact photos that are now on disk, so rows
     /// show faces instead of initials.
-    pub fn contacts_loaded(self: &Rc<Self>) {
+    fn contacts_loaded(self: &Rc<Self>) {
         let Some(app) = self.app.upgrade() else {
             return;
         };
@@ -2400,12 +2399,6 @@ impl MainWindow {
     /// Brings what is on screen back in line after a settings change.
     /// `Effects` comes in the order the window wants: the accounts first,
     /// because the rows and the smart mailbox on screen read what it sets.
-    pub fn settings_changed(self: &Rc<Self>, effects: &Effects) {
-        for effect in effects.iter() {
-            self.apply_effect(effect);
-        }
-    }
-
     fn apply_effect(self: &Rc<Self>, effect: Effect) {
         let settings = self.settings();
         match effect {
@@ -2473,10 +2466,6 @@ impl MainWindow {
         }
     }
 
-    pub fn toast_sent(&self) {
-        self.toast(&gettext("Message sent"));
-    }
-
     /// Says that the new language waits for a restart, and offers one.
     /// Nothing on screen changes until then, so the toast stays up and is
     /// plain about it.
@@ -2517,15 +2506,6 @@ impl MainWindow {
         });
         about.dialog.present(Some(&self.window));
         self.about.replace(Some(about));
-    }
-
-    /// The answer to a check the person asked for, when nothing is waiting
-    /// to install. The About window shows it under its button, so a toast
-    /// would only repeat it.
-    pub fn answer_update_check(&self, text: &str) {
-        if self.about.borrow().is_none() {
-            self.toast(text);
-        }
     }
 }
 

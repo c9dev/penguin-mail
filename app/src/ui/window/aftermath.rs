@@ -208,7 +208,7 @@ impl MainWindow {
 
     /// Redraws what a mail action from the assistant or a notification
     /// changed.
-    pub fn mail_changed(self: &Rc<Self>, action: &MailAction, outcome: &Outcome) {
+    pub(super) fn mail_changed(self: &Rc<Self>, action: &MailAction, outcome: &Outcome) {
         self.after_mail(Cause::Did(action, History::Record), outcome, None);
     }
 

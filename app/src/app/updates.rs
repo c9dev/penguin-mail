@@ -12,6 +12,7 @@ use mailrs_domain::translate::{fill, gettext};
 
 use super::App;
 use crate::settings::Change;
+use crate::ui::window::Notice;
 use crate::update::{self, Blockers, Restart, State, github, install, version};
 
 /// The first timed check waits for the app to settle after it starts.
@@ -278,7 +279,7 @@ impl App {
     /// in a notification when they asked from the tray with no window.
     fn answer_update_check(&self, text: String) {
         match self.window() {
-            Some(window) => window.answer_update_check(&text),
+            Some(window) => window.notice(Notice::UpdateChecked(text)),
             None => update::tell(text),
         }
     }
@@ -299,9 +300,7 @@ impl App {
             return;
         };
         updater.set(state.clone());
-        if let Some(window) = self.window() {
-            window.show_update(&state);
-        }
+        self.tell_window(Notice::Update(&state));
         let label = match &state {
             State::Available(release) => Some(release.version.to_string()),
             _ => None,

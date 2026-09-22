@@ -38,7 +38,7 @@ impl MainWindow {
 
     /// Reads the list in from the store. Called at startup and after every
     /// change, so the copy held here is the one the store holds.
-    pub fn reload_image_senders(self: &Rc<Self>) {
+    pub(super) fn reload_image_senders(self: &Rc<Self>) {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             if let Ok(list) = this.core.read(image_senders::list).await {

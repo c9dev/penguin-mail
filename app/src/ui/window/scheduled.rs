@@ -10,7 +10,7 @@ use mailrs_domain::translate::{fill, gettext};
 
 impl MainWindow {
     /// Shows "Sending…" with an Undo button for `seconds`.
-    pub fn offer_undo_send(&self, seconds: u32, on_undo: impl Fn() + 'static) {
+    pub(super) fn offer_undo_send(&self, seconds: u32, on_undo: impl Fn() + 'static) {
         let toast = adw::Toast::builder()
             .title(gettext("Sending…"))
             .button_label(gettext("Undo"))
@@ -21,13 +21,9 @@ impl MainWindow {
         self.toasts.add_toast(toast);
     }
 
-    pub fn toast_text(&self, text: &str) {
-        self.toast(text);
-    }
-
     /// Refreshes counts, and the list when it shows one of the mailboxes
     /// that read what is waiting.
-    pub fn scheduled_changed(self: &Rc<Self>) {
+    pub(super) fn scheduled_changed(self: &Rc<Self>) {
         self.refresh_counts();
         if matches!(
             *self.mailbox.borrow(),

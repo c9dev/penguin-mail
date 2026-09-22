@@ -19,6 +19,7 @@ use crate::compose::{
 };
 use crate::format::future_date;
 use crate::protection::Standard;
+use crate::ui::window::Notice;
 use mailrs_domain::translate::{fill, gettext};
 
 /// How often the scheduler looks for messages that are due.
@@ -43,13 +44,16 @@ impl App {
                         let cancelled = Rc::new(std::cell::Cell::new(false));
                         let (flag, app, undone) =
                             (Rc::clone(&cancelled), Rc::clone(self), draft.clone());
-                        window.offer_undo_send(delay, move || {
-                            flag.set(true);
-                            if let Some(composer) =
-                                app.open_composer(undone.clone(), Signature::AsWritten)
-                            {
-                                composer.mark_unsaved();
-                            }
+                        window.notice(Notice::UndoSend {
+                            seconds: delay,
+                            undo: Box::new(move || {
+                                flag.set(true);
+                                if let Some(composer) =
+                                    app.open_composer(undone.clone(), Signature::AsWritten)
+                                {
+                                    composer.mark_unsaved();
+                                }
+                            }),
                         });
                         let app = Rc::clone(self);
                         // Nothing reaches the outbox until the delay runs
@@ -163,17 +167,15 @@ impl App {
                     this.contacts_stale.set(true);
                     this.core.poke(draft.account_id);
                     this.scheduled_changed();
-                    if announce && let Some(window) = this.window() {
-                        window.toast_sent();
+                    if announce {
+                        this.tell_window(Notice::Sent);
                     }
                 }
                 Ok(Posted::Waiting(_)) => {
                     this.scheduled_changed();
-                    if let Some(window) = this.window() {
-                        window.toast_text(&gettext(
-                            "Waiting in the Outbox. It goes out as soon as it can.",
-                        ));
-                    }
+                    this.tell_window(Notice::Toast(gettext(
+                        "Waiting in the Outbox. It goes out as soon as it can.",
+                    )));
                 }
                 Ok(Posted::Refused(problem)) => this.reopen(
                     draft,
@@ -217,12 +219,10 @@ impl App {
                 Ok(_) => {
                     this.core.poke(draft.account_id);
                     this.scheduled_changed();
-                    if let Some(window) = this.window() {
-                        window.toast_text(&fill(
-                            &gettext("Will send {when}"),
-                            &[("when", &future_date(at, chrono::Local::now()))],
-                        ));
-                    }
+                    this.tell_window(Notice::Toast(fill(
+                        &gettext("Will send {when}"),
+                        &[("when", &future_date(at, chrono::Local::now()))],
+                    )));
                 }
                 Err(err) => this.reopen(
                     draft,
@@ -274,19 +274,17 @@ impl App {
                     for message in &drained.sent {
                         this.core.poke(message.account_id);
                     }
-                    if let Some(window) = this.window() {
-                        for message in &drained.sent {
-                            window.toast_text(&fill(
-                                &gettext("Sent {message}"),
-                                &[("message", &named(&message.subject))],
-                            ));
-                        }
-                        for message in &drained.stuck {
-                            window.toast_text(&fill(
-                                &gettext("Still in the Outbox: {message}"),
-                                &[("message", &named(&message.subject))],
-                            ));
-                        }
+                    for message in &drained.sent {
+                        this.tell_window(Notice::Toast(fill(
+                            &gettext("Sent {message}"),
+                            &[("message", &named(&message.subject))],
+                        )));
+                    }
+                    for message in &drained.stuck {
+                        this.tell_window(Notice::Toast(fill(
+                            &gettext("Still in the Outbox: {message}"),
+                            &[("message", &named(&message.subject))],
+                        )));
                     }
                     drained.changed
                 }
@@ -348,10 +346,8 @@ impl App {
     }
 
     /// Tells the window the Send Later and Outbox lists changed.
-    pub fn scheduled_changed(&self) {
-        if let Some(window) = self.window() {
-            window.scheduled_changed();
-        }
+    fn scheduled_changed(&self) {
+        self.tell_window(Notice::OutboxChanged);
     }
 }
 

@@ -15,6 +15,7 @@ use crate::language;
 use crate::settings::{
     Change, Choice, Settings, cache_choices, nearest, poll_choices, window_choices,
 };
+use crate::ui::window::Notice;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 /// Shows Preferences. With `signature_of`, opens on that account's signature.
@@ -735,9 +736,7 @@ fn allowed_image_senders(app: &Rc<App>) -> adw::ExpanderRow {
                     {
                         listed.remove(&removed);
                         // The window keeps its own copy of the list.
-                        if let Some(window) = app.window() {
-                            window.reload_image_senders();
-                        }
+                        app.tell_window(Notice::ImageSendersChanged);
                     }
                 });
             });
