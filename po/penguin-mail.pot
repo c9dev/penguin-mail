@@ -1757,7 +1757,7 @@ msgid "Edit {server}"
 msgstr ""
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1445
-#: app/src/ui/composer/recipients.rs:208 app/src/ui/window.rs:1964
+#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:1964
 msgid "Remove"
 msgstr ""
 
@@ -2472,16 +2472,20 @@ msgstr ""
 msgid "Template not saved: {reason}"
 msgstr ""
 
-#: app/src/ui/composer/recipients.rs:39
+#: app/src/ui/composer/recipients.rs:47
 msgid "{name}, {address}"
 msgstr ""
 
-#: app/src/ui/composer/recipients.rs:46
+#: app/src/ui/composer/recipients.rs:54
 msgid "{recipient}, not an address"
 msgstr ""
 
-#: app/src/ui/composer/recipients.rs:213
+#: app/src/ui/composer/recipients.rs:309
 msgid "Remove {recipient}"
+msgstr ""
+
+#: app/src/ui/composer/recipients.rs:323
+msgid "Press Delete to remove"
 msgstr ""
 
 #: app/src/ui/composer/spell.rs:506

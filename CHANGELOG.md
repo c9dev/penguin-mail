@@ -53,6 +53,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - The composer's formatting bar is one Tab stop: the arrow keys move between its buttons, and a screen reader hears it as a toolbar.
 - Ctrl+Shift+P inserts an image in the composer, and the Keyboard Shortcuts window lists it.
+- You can reach any recipient in an address field from the keyboard: Left from the start of the field steps onto the addresses, and Delete removes the one you are on.
 
 ## 0.1.4 (2026-09-22)
 

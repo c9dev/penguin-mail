@@ -112,6 +112,12 @@ row.account-heading.after-open { margin-top: 12px; }
 }
 .recipient-chip.invalid { background: alpha(@error_color, 0.18); color: var(--error-color); }
 .recipient-chip button { min-height: 20px; min-width: 20px; padding: 0; opacity: 0.7; }
+/* A chip the arrow keys reached. The flow box child around it is square
+   and has no room of its own, so the ring goes on the pill. */
+flowboxchild:focus-visible > .recipient-chip {
+  outline: 2px solid var(--accent-color); outline-offset: -2px;
+  background: alpha(currentColor, 0.16);
+}
 .recipient-entry { padding-left: 2px; }
 
 /* The formatting bar: one group of buttons per kind of formatting. */

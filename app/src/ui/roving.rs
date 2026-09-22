@@ -1,7 +1,8 @@
 //! Roving focus: a row of controls that is one stop on the Tab chain, with
 //! the arrow keys moving between its members. The formatting bar works
 //! this way, so a writer tabbing from the Subject to the body passes the
-//! bar once rather than eleven times.
+//! bar once rather than eleven times. A recipient field's chips take the
+//! same keys through [`target`] and stay off the Tab chain altogether.
 //!
 //! Only the member that last held the focus can take it from Tab; the
 //! others stay out of the chain until an arrow key reaches them.

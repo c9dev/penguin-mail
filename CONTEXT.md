@@ -101,7 +101,9 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Recipient suggestion**: one row of what the composer offers while an address is typed, and what search offers for a name. `mailrs_store::contacts::Suggestion` merges the address books with the correspondents: a contact comes first whatever the mail says, and mail orders the contacts among themselves. _Avoid_: completion, autocomplete entry.
 
-**Roving focus**: a row of controls that is one stop on the Tab chain, with the arrow keys moving between its members and Tab returning to the one last used. The formatting bar works this way. `mailrs::ui::roving`. _Avoid_: focus group, tab group.
+**Recipient chip**: one address in a composer address field, drawn as a pill with a close button. The chips stay out of the Tab chain; Left from the start of the entry reaches them. `mailrs::ui::composer::recipients`. _Avoid_: tag, token, bubble.
+
+**Roving focus**: a row of controls that is one stop on the Tab chain, with the arrow keys moving between its members and Tab returning to the one last used. The formatting bar works this way; the recipient chips take the same arrow keys and never join the Tab chain. `mailrs::ui::roving`. _Avoid_: focus group, tab group.
 
 **Contacts permission**: the Google access an account grants once so Penguin Mail may read its contacts. Sign-in leaves it out, and the window asks for it the first time somebody turns contacts on, so an account that never does is never asked. Without it every `ContactBook` call answers `Permitted::NeedsPermission`, as the settings calls do. _Avoid_: scope, consent.
 

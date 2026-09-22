@@ -1,17 +1,23 @@
 //! An address field that holds its recipients as chips. What the writer
 //! types becomes a chip on Enter, a comma, or as soon as focus leaves, so
 //! a long list stays readable and a wrong address stands out in red.
+//!
+//! The chips are reachable from the keyboard without joining the Tab
+//! chain: Left at the start of the entry steps onto the last chip, the
+//! arrows move along them, and Delete or Backspace takes the one with the
+//! focus away. See `roving` for the same idea on the formatting bar.
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
 use adw::prelude::*;
-use gtk::{gdk, glib};
+use gtk::{gdk, gio, glib};
 use mailrs_domain::Address;
 
 use crate::compose::{is_address, parse_recipients};
 use crate::ui::autocomplete::{self, Contacts};
-use crate::ui::name;
+use crate::ui::roving::{self, Move};
+use crate::ui::{describe, name};
 use mailrs_domain::translate::{fill, gettext};
 
 pub struct Recipients {
@@ -22,6 +28,8 @@ pub struct Recipients {
     holder: gtk::FlowBoxChild,
     placeholder: String,
     addresses: RefCell<Vec<Address>>,
+    /// One slot per address, in the same order, rebuilt with them.
+    chips: RefCell<Vec<gtk::FlowBoxChild>>,
     changed: RefCell<Option<Box<dyn Fn()>>>,
     /// Where Tab and Shift+Tab go from here. The field holds the focus
     /// itself, so it has to hand it on.
@@ -46,6 +54,18 @@ fn chip_name(shown: &str, email: &str, valid: bool) -> String {
             &gettext("{recipient}, not an address"),
             &[("recipient", &full)],
         ),
+    }
+}
+
+/// Which chip takes the focus once chip `index` of `before` is gone:
+/// `None` means the entry. Backspace moves back to the chip before it and
+/// Delete on to the one after, the way the two keys move through text.
+fn after_removal(index: usize, before: usize, backspace: bool) -> Option<usize> {
+    let left = before.saturating_sub(1);
+    match (left, backspace) {
+        (0, _) => None,
+        (_, true) => Some(index.saturating_sub(1)),
+        (_, false) => (index < left).then_some(index),
     }
 }
 
@@ -82,6 +102,7 @@ impl Recipients {
             holder,
             placeholder: placeholder.to_string(),
             addresses: RefCell::new(addresses.to_vec()),
+            chips: RefCell::new(Vec::new()),
             changed: RefCell::new(None),
             next: RefCell::new(None),
             previous: RefCell::new(None),
@@ -160,6 +181,80 @@ impl Recipients {
         self.announce();
     }
 
+    /// Removes chip `index`. When it held the focus, the focus moves to
+    /// its neighbour rather than falling out of the window.
+    fn take_away(self: &Rc<Self>, index: usize, backspace: bool) {
+        let count = self.chips.borrow().len();
+        let focused = self.focused_chip();
+        self.remove(index);
+        // Every chip is built again, so whichever one held the focus, the
+        // focus is put back by position.
+        if let Some(at) = focused {
+            self.focus_chip(match at.cmp(&index) {
+                std::cmp::Ordering::Less => Some(at),
+                std::cmp::Ordering::Equal => after_removal(index, count, backspace),
+                std::cmp::Ordering::Greater => Some(at - 1),
+            });
+        }
+    }
+
+    /// Puts the focus on chip `index`, or in the entry at its start when
+    /// there is no such chip.
+    fn focus_chip(&self, index: Option<usize>) {
+        let chip = index.and_then(|i| self.chips.borrow().get(i).cloned());
+        match chip {
+            Some(chip) => {
+                chip.set_focusable(true);
+                chip.grab_focus();
+            }
+            None => {
+                self.entry.grab_focus();
+                self.entry.set_position(0);
+            }
+        }
+    }
+
+    /// The chip holding the focus, if one does.
+    fn focused_chip(&self) -> Option<usize> {
+        self.chips.borrow().iter().position(|chip| chip.has_focus())
+    }
+
+    /// What a key does on a chip with the focus.
+    fn chip_key(self: &Rc<Self>, index: usize, key: gdk::Key) -> glib::Propagation {
+        let count = self.chips.borrow().len();
+        let rtl = self.field.direction() == gtk::TextDirection::Rtl;
+        if let Some(go) = Move::from_key(key, rtl) {
+            // The entry is the last stop on the row, after every chip.
+            if let Some(to) = roving::target(index, count + 1, go, |_| true) {
+                self.focus_chip((to < count).then_some(to));
+            }
+            return glib::Propagation::Stop;
+        }
+        match key {
+            gdk::Key::Delete | gdk::Key::KP_Delete | gdk::Key::BackSpace => {
+                self.take_away(index, key == gdk::Key::BackSpace);
+                glib::Propagation::Stop
+            }
+            gdk::Key::Tab | gdk::Key::ISO_Left_Tab => self.tab(key == gdk::Key::Tab),
+            _ => glib::Propagation::Proceed,
+        }
+    }
+
+    /// Hands the focus on to the field before or after this one.
+    fn tab(&self, forward: bool) -> glib::Propagation {
+        let step = match forward {
+            true => self.next.borrow(),
+            false => self.previous.borrow(),
+        };
+        match step.as_ref() {
+            Some(go) => {
+                go();
+                glib::Propagation::Stop
+            }
+            None => glib::Propagation::Proceed,
+        }
+    }
+
     fn rebuild(self: &Rc<Self>) {
         // The placeholder only has to say what the row is for while it is
         // empty; chips say it afterwards.
@@ -179,6 +274,7 @@ impl Recipients {
             self.field.remove(&self.holder);
         }
         self.field.remove_all();
+        let mut chips = Vec::new();
         for (index, address) in self.addresses.borrow().iter().enumerate() {
             let valid = is_address(&address.email);
             let chip = gtk::Box::builder()
@@ -212,24 +308,58 @@ impl Recipients {
                 &remove,
                 &fill(&gettext("Remove {recipient}"), &[("recipient", &label)]),
             );
-            let weak = Rc::downgrade(self);
-            remove.connect_clicked(move |_| {
-                if let Some(field) = weak.upgrade() {
-                    field.remove(index);
-                }
-            });
+            remove.set_action_name(Some("recipient.remove"));
             chip.append(&remove);
+            // Out of the Tab chain until an arrow key reaches it, and back
+            // out once the focus moves on, so Tab still takes one press
+            // to cross the field.
             let holder = gtk::FlowBoxChild::builder()
                 .child(&chip)
                 .focusable(false)
                 .build();
-            name(&holder, &chip_name(&label, &address.email, valid));
+            describe(
+                &holder,
+                &chip_name(&label, &address.email, valid),
+                &gettext("Press Delete to remove"),
+            );
+            let leave = gtk::EventControllerFocus::new();
+            leave.connect_leave(|focus| {
+                if let Some(chip) = focus.widget() {
+                    chip.set_focusable(false);
+                }
+            });
+            holder.add_controller(leave);
+            // The chip carries its own Remove action, which a screen
+            // reader offers on the chip itself, and the button runs it.
+            let actions = gio::SimpleActionGroup::new();
+            let action = gio::SimpleAction::new("remove", None);
+            let weak = Rc::downgrade(self);
+            action.connect_activate(move |_, _| {
+                if let Some(field) = weak.upgrade() {
+                    field.take_away(index, false);
+                }
+            });
+            actions.add_action(&action);
+            holder.insert_action_group("recipient", Some(&actions));
             self.field.append(&holder);
+            chips.push(holder);
         }
+        *self.chips.borrow_mut() = chips;
         self.field.append(&self.holder);
         if typing {
             self.entry.grab_focus();
         }
+    }
+
+    /// Whether `key`, pressed in the entry, moves the focus back onto the
+    /// chips: the key toward the start of the line, with the cursor already
+    /// there and nothing selected.
+    fn leaves_for_chips(&self, key: gdk::Key) -> bool {
+        let rtl = self.entry.direction() == gtk::TextDirection::Rtl;
+        Move::from_key(key, rtl) == Some(Move::Back)
+            && self.entry.position() == 0
+            && self.entry.selection_bounds().is_none()
+            && !self.chips.borrow().is_empty()
     }
 
     fn wire(self: &Rc<Self>) {
@@ -270,23 +400,39 @@ impl Recipients {
                 }
                 gdk::Key::Tab | gdk::Key::ISO_Left_Tab => {
                     field.commit();
-                    let step = if key == gdk::Key::Tab {
-                        field.next.borrow()
-                    } else {
-                        field.previous.borrow()
-                    };
-                    match step.as_ref() {
-                        Some(go) => {
-                            go();
-                            glib::Propagation::Stop
-                        }
-                        None => glib::Propagation::Proceed,
-                    }
+                    field.tab(key == gdk::Key::Tab)
+                }
+                _ if field.leaves_for_chips(key) => {
+                    // What is typed becomes a chip first, so the chip the
+                    // focus lands on is the one just written.
+                    field.commit();
+                    let last = field.chips.borrow().len().checked_sub(1);
+                    field.focus_chip(last);
+                    glib::Propagation::Stop
                 }
                 _ => glib::Propagation::Proceed,
             }
         });
         self.entry.add_controller(keys);
+
+        // Keys on a chip. The flow box sees them before the chip does, and
+        // lets every key through that lands anywhere else.
+        let keys = gtk::EventControllerKey::new();
+        keys.set_propagation_phase(gtk::PropagationPhase::Capture);
+        let weak = Rc::downgrade(self);
+        keys.connect_key_pressed(move |_, key, _, modifiers| {
+            let Some(field) = weak.upgrade() else {
+                return glib::Propagation::Proceed;
+            };
+            let Some(index) = field.focused_chip() else {
+                return glib::Propagation::Proceed;
+            };
+            if modifiers.intersects(gdk::ModifierType::CONTROL_MASK | gdk::ModifierType::ALT_MASK) {
+                return glib::Propagation::Proceed;
+            }
+            field.chip_key(index, key)
+        });
+        self.field.add_controller(keys);
 
         let focus = gtk::EventControllerFocus::new();
         let weak = Rc::downgrade(self);
@@ -316,7 +462,7 @@ impl Recipients {
 
 #[cfg(test)]
 mod tests {
-    use super::chip_name;
+    use super::{after_removal, chip_name};
 
     #[test]
     fn a_chip_says_the_address_behind_the_name_it_shows() {
@@ -328,6 +474,23 @@ mod tests {
             chip_name("bo@example.com", "bo@example.com", true),
             "bo@example.com"
         );
+    }
+
+    #[test]
+    fn backspace_moves_back_a_chip_and_delete_moves_on() {
+        // Removing the third of five chips.
+        assert_eq!(after_removal(2, 5, true), Some(1));
+        assert_eq!(after_removal(2, 5, false), Some(2));
+    }
+
+    #[test]
+    fn removing_at_either_end_stays_on_the_chips_while_there_are_any() {
+        assert_eq!(after_removal(0, 3, true), Some(0));
+        assert_eq!(after_removal(2, 3, true), Some(1));
+        // Delete on the last chip has nothing after it but the entry.
+        assert_eq!(after_removal(2, 3, false), None);
+        assert_eq!(after_removal(0, 1, true), None);
+        assert_eq!(after_removal(0, 1, false), None);
     }
 
     #[test]

@@ -1831,7 +1831,7 @@ msgid "Edit {server}"
 msgstr "Editar {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1445
-#: app/src/ui/composer/recipients.rs:208 app/src/ui/window.rs:1964
+#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:1964
 msgid "Remove"
 msgstr "Remover"
 
@@ -2575,17 +2575,21 @@ msgstr "Modelo guardado"
 msgid "Template not saved: {reason}"
 msgstr "Modelo não guardado: {reason}"
 
-#: app/src/ui/composer/recipients.rs:39
+#: app/src/ui/composer/recipients.rs:47
 msgid "{name}, {address}"
 msgstr "{name}, {address}"
 
-#: app/src/ui/composer/recipients.rs:46
+#: app/src/ui/composer/recipients.rs:54
 msgid "{recipient}, not an address"
 msgstr "{recipient}, não é um endereço"
 
-#: app/src/ui/composer/recipients.rs:213
+#: app/src/ui/composer/recipients.rs:309
 msgid "Remove {recipient}"
 msgstr "Remover {recipient}"
+
+#: app/src/ui/composer/recipients.rs:323
+msgid "Press Delete to remove"
+msgstr "Prima Delete para remover"
 
 #: app/src/ui/composer/spell.rs:506
 msgid "No Suggestions"
@@ -5633,9 +5637,6 @@ msgstr "Marcar como spam"
 #: sync/src/triage.rs:102
 msgid "Mark as not junk"
 msgstr "Marcar como não sendo spam"
-
-#~ msgid "Press Delete to remove"
-#~ msgstr "Prima Delete para remover"
 
 #~ msgid ""
 #~ "Penguin Mail needs permission to change Gmail settings for {account}. "

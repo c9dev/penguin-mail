@@ -50,6 +50,17 @@ Every formatting button has a shortcut as well, Insert Image included
 (Ctrl+Shift+P). The headings and block styles have none and are reached
 through More Formatting, the last button on the bar.
 
+The chips in an address field stay out of the Tab chain too, so crossing
+a field takes one press. Left at the start of the entry steps onto the
+last chip, Left and Right move between chips, and Right from the last one
+goes back to the entry; Home and End go to the first chip and to the
+entry. Delete or Backspace removes the chip with the focus. Backspace
+moves the focus to the chip before it and Delete to the one after, and
+the focus goes back to the entry once no chip is left. Each chip reads as
+its name and address with "Press Delete to remove" after it, and carries
+a `recipient.remove` action a screen reader can run; its close button
+runs the same action.
+
 ## Checking it
 
 ```
@@ -64,8 +75,8 @@ open it, then run the script.
 
 ## What the keyboard cannot reach
 
-None of these is cheap to close without moving the window around, so they
-are written down rather than patched over.
+This one is not cheap to close without moving the window around, so it
+is written down rather than patched over.
 
 - **Export, and the Outbox row actions.** `Export…`, `Edit…`, `Send Now`
   and `Delete` live in the thread row's context menu, which opens on a
@@ -73,6 +84,3 @@ are written down rather than patched over.
   the list item the focus lands on, so a key controller on the row never
   sees the key. Reaching them from the keyboard means the list view
   handling Menu and Shift+F10 itself and opening the focused row's menu.
-- **A recipient chip in the middle of a field.** Backspace in an empty
-  entry deletes the last chip, and the chips themselves are not
-  focusable, so removing any other one needs the mouse.
