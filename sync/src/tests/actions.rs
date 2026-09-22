@@ -50,10 +50,13 @@ async fn archive_then_undo_puts_the_thread_back() {
         .await;
     assert_eq!(outcome.done, std::slice::from_ref(&target));
     assert!(h.threads("INBOX").await.is_empty());
+    assert_eq!(actions.newest(), Some(ARCHIVE), "looking leaves it there");
+    assert_eq!(actions.newest(), Some(ARCHIVE));
 
     let undone = actions.undo().await.expect("an undo");
     assert_eq!(undone.outcome.done, [target]);
     assert_eq!(h.threads("INBOX").await, ["t1"]);
+    assert_eq!(actions.newest(), None);
     assert!(actions.undo().await.is_none(), "undo works once");
 }
 

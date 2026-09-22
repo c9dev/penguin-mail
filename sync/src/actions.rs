@@ -409,6 +409,12 @@ impl<A: Accounts> MailActions<A> {
         Ok(())
     }
 
+    /// The action the next undo reverses, left on the stack. `None` when
+    /// the stack is empty.
+    pub fn newest(&self) -> Option<MailAction> {
+        self.lock().back().map(|undo| undo.action.clone())
+    }
+
     /// Reverses the action on top of the stack and takes it off, leaving
     /// the one before it for the next undo. `None` when the stack is
     /// empty. A target that has left the folder the action put it in is

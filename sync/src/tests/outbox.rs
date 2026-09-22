@@ -780,3 +780,66 @@ async fn a_scheduled_draft_saved_again_keeps_its_hour_under_its_new_message() {
     outbox.draft_saved(h.account_id, other).await.unwrap();
     assert_eq!(h.db.read(outbox::scheduled).await.unwrap(), after);
 }
+
+/// A list row finds its message in either mailbox: a Send Later row by its
+/// Gmail thread, an Outbox row by its place in the table.
+#[tokio::test]
+async fn a_row_names_its_waiting_message_in_send_later_and_the_outbox() {
+    let h = harness().await;
+    let outbox = queue(&h);
+    let mut later = message(h.account_id, "Monday");
+    later.send_at = now_millis() + 24 * 60 * 60 * 1000;
+    outbox.schedule(later).await.unwrap();
+    let mut stuck = message(h.account_id, "Stuck");
+    stuck.problem = Some("Gmail said no".into());
+    let stuck = h.db.write(move |c| outbox::put(c, &stuck)).await.unwrap();
+    let monday = h.db.read(outbox::scheduled).await.unwrap()[0].clone();
+
+    let named = outbox
+        .named(&[
+            Target::thread(h.account_id, monday.thread_id.clone().unwrap()),
+            Target::thread(h.account_id, outbox_row(stuck)),
+            Target::thread(h.account_id, "someone else's thread"),
+        ])
+        .await
+        .unwrap();
+    let subjects: Vec<&str> = named.iter().map(|m| m.subject.as_str()).collect();
+    assert_eq!(subjects.len(), 2);
+    assert!(subjects.contains(&"Monday") && subjects.contains(&"Stuck"));
+}
+
+/// A new hour for Send Later changes only the hour. A message in the
+/// Outbox keeps the time of its next try.
+#[tokio::test]
+async fn reschedule_moves_a_send_later_message_and_leaves_the_outbox_alone() {
+    let h = harness().await;
+    let outbox = queue(&h);
+    let day = 24 * 60 * 60 * 1000;
+    let mut later = message(h.account_id, "Monday");
+    later.send_at = now_millis() + day;
+    let Posted::Waiting(id) = outbox.schedule(later).await.unwrap() else {
+        panic!("Send Later keeps the message");
+    };
+    let at = now_millis() + 2 * day;
+    let moved = outbox.reschedule(id, at).await.unwrap().expect("it moves");
+    assert_eq!(moved.send_at, at);
+    let stored =
+        h.db.read(move |c| outbox::find(c, id))
+            .await
+            .unwrap()
+            .unwrap();
+    assert_eq!(stored, moved);
+
+    let mut stuck = message(h.account_id, "Stuck");
+    stuck.problem = Some("Gmail said no".into());
+    let before = stuck.send_at;
+    let stuck = h.db.write(move |c| outbox::put(c, &stuck)).await.unwrap();
+    assert_eq!(outbox.reschedule(stuck, at).await.unwrap(), None);
+    let kept =
+        h.db.read(move |c| outbox::find(c, stuck))
+            .await
+            .unwrap()
+            .unwrap();
+    assert_eq!(kept.send_at, before);
+    assert_eq!(outbox.reschedule(9999, at).await.unwrap(), None);
+}

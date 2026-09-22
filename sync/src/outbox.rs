@@ -235,18 +235,9 @@ impl<A: Accounts> Outbox<A> {
     /// draft's message, or, for a message Gmail has never seen, by its own
     /// place in the table, so a target matching any of the three stops it.
     pub async fn cancel_scheduled(&self, targets: &[Target]) -> Result<Cancelled, SyncError> {
-        let targets = targets.to_vec();
-        let named: Vec<Queued> = self
-            .db
-            .read(move |c| {
-                Ok(outbox::scheduled(c)?
-                    .into_iter()
-                    .filter(|item| targets.iter().any(|t| names(t, item)))
-                    .collect())
-            })
-            .await?;
+        let named = self.named(targets).await?;
         let mut cancelled = Cancelled::default();
-        for item in named {
+        for item in named.into_iter().filter(|item| item.problem.is_none()) {
             // A message Gmail never had goes to Drafts now, so cancelling
             // does not throw away the only copy.
             if item.draft_id.is_none()
@@ -261,6 +252,40 @@ impl<A: Accounts> Outbox<A> {
             cancelled.in_drafts += 1;
         }
         Ok(cancelled)
+    }
+
+    /// The waiting messages, in Send Later and the Outbox alike, that the
+    /// list rows `targets` stand for, soonest first. A row names one the
+    /// way [`Outbox::cancel_scheduled`] describes.
+    pub async fn named(&self, targets: &[Target]) -> Result<Vec<Queued>, SyncError> {
+        let targets = targets.to_vec();
+        Ok(self
+            .db
+            .read(move |c| {
+                Ok(outbox::list(c)?
+                    .into_iter()
+                    .filter(|item| targets.iter().any(|t| names(t, item)))
+                    .collect())
+            })
+            .await?)
+    }
+
+    /// Moves a Send Later message to the hour `at`. Gmail holds only the
+    /// draft, so the new hour lives here alone. `None` when the message
+    /// has gone, or has hit a problem and waits in the Outbox, where the
+    /// hour is the next try and not the writer's to choose.
+    pub async fn reschedule(&self, id: i64, at: EpochMillis) -> Result<Option<Queued>, SyncError> {
+        Ok(self
+            .db
+            .write(move |c| {
+                let Some(mut message) = outbox::find(c, id)?.filter(|m| m.problem.is_none()) else {
+                    return Ok(None);
+                };
+                message.send_at = at;
+                outbox::put(c, &message)?;
+                Ok(Some(message))
+            })
+            .await?)
     }
 
     /// One try at Gmail: from the bytes this computer holds, or from the
