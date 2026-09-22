@@ -26,6 +26,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - With several accounts open in the sidebar, each account's heading has
   space above it, so you can tell where one account ends.
+- Menu or Shift+F10 opens the menu of the conversation in focus, so Export
+  and the Outbox's Edit, Send Now and Delete work from the keyboard.
 - The Outbox stays in the sidebar, so you can check it before a message
   gets stuck there.
 - A new account finishes its first sync sooner: Penguin Mail fetches each

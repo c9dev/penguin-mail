@@ -1,4 +1,5 @@
-use std::cell::OnceCell;
+use std::cell::{OnceCell, RefCell};
+use std::rc::Rc;
 
 use adw::prelude::*;
 use chrono::Local;
@@ -26,6 +27,9 @@ mod imp {
         pub subject: OnceCell<gtk::Label>,
         pub count: OnceCell<gtk::Label>,
         pub snippet: OnceCell<gtk::Label>,
+        /// Opens the row's menu: at a point for a click, over the whole
+        /// row for a key.
+        pub menu: RefCell<Option<super::OpenMenu>>,
     }
 
     #[glib::object_subclass]
@@ -203,6 +207,10 @@ fn flag_class(color: FlagColor) -> &'static str {
     FLAG_CLASSES[FlagColor::ALL.iter().position(|c| *c == color).unwrap_or(0)]
 }
 
+/// What opens a row's menu, at the point a click landed on, or over the
+/// whole row for `None`.
+pub type OpenMenu = Rc<dyn Fn(Option<(f64, f64)>)>;
+
 /// What a row shows where a face goes: nothing while contacts are off,
 /// the contact's photo, or their initials.
 pub enum Avatar<'a> {
@@ -212,6 +220,17 @@ pub enum Avatar<'a> {
 }
 
 impl ThreadRow {
+    /// Gives the row its menu, which the list opens from the keyboard.
+    pub fn set_menu(&self, open: OpenMenu) {
+        self.imp().menu.replace(Some(open));
+    }
+
+    /// Opens the row's menu over the row, and says whether it has one.
+    pub fn open_menu(&self) -> bool {
+        let open = self.imp().menu.borrow().clone();
+        open.map(|open| open(None)).is_some()
+    }
+
     pub fn bind(&self, thread: &ThreadSummary, show_account: bool, vip: bool, avatar: Avatar) {
         let imp = self.imp();
         let face = imp.avatar.get().expect("avatar exists");

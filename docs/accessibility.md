@@ -60,6 +60,19 @@ the focus goes back to the entry once no chip is left. Each chip reads as
 its name and address with "Press Delete to remove" after it, and carries
 a `recipient.remove` action a screen reader can run; its close button
 runs the same action.
+## Menus
+
+A thread row's menu holds `Export…`, and in the Outbox `Edit…`, `Send
+Now` and `Delete`. A right-click or a long press opens it, and so do Menu
+and Shift+F10 on the row with the focus. The focus sits on the list item
+GTK wraps each row in, and the row is a child of that item, so a key
+controller on the row would never see the key: the list view takes both
+keys itself and opens the menu of the row in focus, over the row. The
+Keyboard Shortcuts dialog lists them.
+
+A queued message opens in the conversation pane like any other, with a
+card above it that says when it goes or why it has not gone, with
+buttons that act on it.
 
 ## Checking it
 
@@ -84,3 +97,17 @@ is written down rather than patched over.
   the list item the focus lands on, so a key controller on the row never
   sees the key. Reaching them from the keyboard means the list view
   handling Menu and Shift+F10 itself and opening the focused row's menu.
+- **The composer's formatting buttons.** Bold, italic, strikethrough,
+  code, link, the two lists and quote stay off the focus chain, since
+  putting eleven buttons between the fields and the body would cost every
+  writer eleven presses. Each of them has a shortcut, so the action is
+  reachable; the button is not. A toolbar that is one tab stop with the
+  arrow keys moving inside it is the shape this wants.
+- **Insert Image.** It sits on that bar and has no shortcut, so it is the
+  one formatting action a keyboard cannot start. More Formatting, beside
+  it, does take the focus, which is how the headings and block styles
+  behind it are reached.
+- **A recipient chip in the middle of a field.** Backspace in an empty
+  entry takes the last chip back into it for correction, and the chips
+  themselves are not focusable, so removing any other one needs the
+  mouse.

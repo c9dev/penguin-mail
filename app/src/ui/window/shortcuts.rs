@@ -19,6 +19,7 @@ use mailrs_domain::translate::gettext;
 use super::MainWindow;
 use crate::compose::ReplyKind;
 use crate::ui::conversation::{Action, ConversationView};
+use crate::ui::thread_list::MENU_KEYS;
 
 /// Where a key works.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -32,6 +33,9 @@ pub(super) enum Place {
     /// The composer, which installs its keys itself. The table lists them
     /// only so the dialog can show them.
     Composer,
+    /// The thread list, which installs its keys itself, for the same
+    /// reason: they open the menu of the row with the focus.
+    List,
 }
 
 impl Place {
@@ -115,6 +119,11 @@ const fn letter(trigger: &'static str, action: &'static str) -> Key {
 /// A key the composer installs itself.
 const fn composer(trigger: &'static str) -> Key {
     key(trigger, "", Place::Composer)
+}
+
+/// A key the thread list installs itself.
+const fn list(trigger: &'static str) -> Key {
+    key(trigger, "", Place::List)
 }
 
 impl Key {
@@ -303,6 +312,11 @@ pub(super) static SHORTCUTS: &[Shortcut] = &[
             main("<Control>minus", "win.zoom-out"),
             main("<Control>equal", "win.zoom-in").hidden(),
         ],
+    },
+    Shortcut {
+        section: Section::Reading,
+        description: || gettext("Open the menu of the conversation in focus"),
+        keys: &[list(MENU_KEYS[0]), list(MENU_KEYS[1])],
     },
     Shortcut {
         section: Section::Reading,
@@ -686,7 +700,12 @@ impl MainWindow {
 mod tests {
     use super::*;
 
-    const PLACES: [Place; 3] = [Place::Main, Place::Conversation, Place::Composer];
+    const PLACES: [Place; 4] = [
+        Place::Main,
+        Place::Conversation,
+        Place::Composer,
+        Place::List,
+    ];
 
     /// The main window's actions that take an argument, which
     /// `install_actions` adds by hand.
@@ -748,10 +767,19 @@ mod tests {
             if key.place.reaches(Place::Conversation) {
                 assert!(known(&view), "no conversation action for {}", key.trigger);
             }
-            if key.place == Place::Composer {
+            if matches!(key.place, Place::Composer | Place::List) {
                 assert!(key.action.is_empty() && !key.letter);
             }
         }
+    }
+
+    #[test]
+    fn the_dialog_lists_the_keys_the_thread_list_opens_a_menu_with() {
+        let listed: Vec<&str> = keys()
+            .filter(|k| k.place == Place::List)
+            .map(|k| k.trigger)
+            .collect();
+        assert_eq!(listed, MENU_KEYS);
     }
 
     #[test]

@@ -11,9 +11,13 @@ use gtk::{gdk, gio, glib};
 use mailrs_domain::{AccountId, ThreadSummary};
 
 use super::sidebar::DRAG_MAIL;
-use super::thread_row::{Avatar, ThreadRow};
+use super::thread_row::{Avatar, OpenMenu, ThreadRow};
 use crate::diff::splice;
 use mailrs_domain::translate::gettext;
+
+/// The keys that open the menu of the row with the focus, in GTK's
+/// accelerator syntax. The Keyboard Shortcuts dialog lists these.
+pub const MENU_KEYS: [&str; 2] = ["Menu", "<Shift>F10"];
 
 /// What is selected in the list.
 pub enum Picked {
@@ -154,6 +158,7 @@ impl ThreadList {
             .css_classes(["navigation-sidebar", "thread-list"])
             .single_click_activate(false)
             .build();
+        view.add_controller(menu_keys());
         let scroller = gtk::ScrolledWindow::builder()
             .hscrollbar_policy(gtk::PolicyType::Never)
             .vexpand(true)
@@ -620,27 +625,53 @@ fn context_menu(row: &ThreadRow, item: &gtk::ListItem, selection: &gtk::MultiSel
     popover.set_has_arrow(false);
     popover.set_halign(gtk::Align::Start);
     popover.set_parent(row);
-    let show = {
+    let show: OpenMenu = {
         let (popover, item, selection) = (popover.clone(), item.clone(), selection.clone());
-        move |x: f64, y: f64| {
+        Rc::new(move |at: Option<(f64, f64)>| {
             let position = item.position();
             if position != gtk::INVALID_LIST_POSITION && !selection.is_selected(position) {
                 selection.select_item(position, true);
             }
-            popover.set_pointing_to(Some(&gdk::Rectangle::new(x as i32, y as i32, 1, 1)));
+            let point = at.map(|(x, y)| gdk::Rectangle::new(x as i32, y as i32, 1, 1));
+            popover.set_pointing_to(point.as_ref());
             popover.popup();
-        }
+        })
     };
     let click = gtk::GestureClick::builder()
         .button(gdk::BUTTON_SECONDARY)
         .build();
-    let open = show.clone();
-    click.connect_pressed(move |_, _, x, y| open(x, y));
+    let open = Rc::clone(&show);
+    click.connect_pressed(move |_, _, x, y| open(Some((x, y))));
     row.add_controller(click);
     let press = gtk::GestureLongPress::new();
-    press.connect_pressed(move |_, x, y| show(x, y));
+    let open = Rc::clone(&show);
+    press.connect_pressed(move |_, x, y| open(Some((x, y))));
     row.add_controller(press);
+    row.set_menu(show);
     row.connect_destroy(move |_| popover.unparent());
+}
+
+/// Menu and Shift+F10 on the list, for the row with the focus. The focus
+/// sits on the list item GTK wraps each row in, and the row is a child of
+/// that item, so a key controller on the row would never see the key.
+fn menu_keys() -> gtk::ShortcutController {
+    let controller = gtk::ShortcutController::new();
+    for keys in MENU_KEYS {
+        let trigger = gtk::ShortcutTrigger::parse_string(keys);
+        let action = gtk::CallbackAction::new(|list, _| {
+            let opened = list
+                .focus_child()
+                .and_then(|item| item.first_child())
+                .and_downcast::<ThreadRow>()
+                .is_some_and(|row| row.open_menu());
+            match opened {
+                true => glib::Propagation::Stop,
+                false => glib::Propagation::Proceed,
+            }
+        });
+        controller.add_shortcut(gtk::Shortcut::new(trigger, Some(action)));
+    }
+    controller
 }
 
 /// Where a row sorts in the list: newest first, ties broken as the store
