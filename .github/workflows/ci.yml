@@ -40,5 +40,12 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Translation template is current
         run: scripts/update-po.sh --check
+      # --no-net skips fetching the screenshots, which live on main: a
+      # branch that adds one would fail here until it merged.
+      - name: Store listing and desktop entry are valid
+        run: |
+          appstreamcli validate --strict --no-net app/data/io.github.c9dev.PenguinMail.metainfo.xml
+          desktop-file-validate app/data/io.github.c9dev.PenguinMail.desktop
+          scripts/metainfo.sh --check
       - name: Every control has an accessible name
         run: scripts/a11y-names.sh

@@ -18,6 +18,91 @@ msgstr ""
 msgid "mail;email;gmail;inbox;"
 msgstr ""
 
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:15
+msgid ""
+"Penguin Mail keeps several Gmail accounts in sync from the system tray, "
+"shows them in one inbox or one at a time, and keeps your mail on your own "
+"computer. It talks to Google through an OAuth client you own, so no other "
+"server sees your mail."
+msgstr ""
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:22
+msgid "One inbox for every account, with Gmail's categories, labels and search"
+msgstr ""
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:23
+msgid ""
+"A composer that shows formatting as you write, with Undo Send and Send Later"
+msgstr ""
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:24
+msgid "Flags in seven colors, VIPs, smart mailboxes and reminders"
+msgstr ""
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:25
+msgid ""
+"Gmail's rules, automatic replies and plus addresses, changed from the app"
+msgstr ""
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:26
+msgid "OpenPGP and S/MIME signing and encryption through your own GnuPG"
+msgstr ""
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:27
+msgid "Remote images blocked until you ask for them"
+msgstr ""
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:28
+msgid ""
+"An assistant that runs on a local model or on Claude, off until you pick one"
+msgstr ""
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:30
+msgid ""
+"You need an OAuth client from a Google Cloud project of your own. Creating "
+"one takes about ten minutes, and the first screen explains how."
+msgstr ""
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:47
+msgid "gmail"
+msgstr ""
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:48
+msgid "email"
+msgstr ""
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:49
+msgid "mail"
+msgstr ""
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:50
+msgid "inbox"
+msgstr ""
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:79
+msgid "The inbox, with a conversation open"
+msgstr ""
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:83
+msgid "An HTML message in dark mode"
+msgstr ""
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:87
+msgid "Replying in the composer"
+msgstr ""
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:91
+msgid "Three conversations selected, with the actions for all of them"
+msgstr ""
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:95
+msgid "The assistant listing mail that waits on a reply"
+msgstr ""
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:99
+msgid "The layout on a narrow screen"
+msgstr ""
+
 #: app/src/app/sending.rs:30
 msgid "That account is not connected. Check its status in the sidebar."
 msgstr ""

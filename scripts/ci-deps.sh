@@ -11,7 +11,7 @@ apt-get update
 apt-get install -y --no-install-recommends \
     build-essential ca-certificates curl git pkg-config \
     libgtk-4-dev libadwaita-1-dev libwebkitgtk-6.0-dev libglib2.0-dev-bin \
-    gettext dpkg-dev file zip \
+    gettext dpkg-dev file zip appstream desktop-file-utils \
     gnupg gpgsm \
     xvfb dbus-daemon at-spi2-core python3-gi gir1.2-atspi-2.0
 

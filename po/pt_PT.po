@@ -23,6 +23,106 @@ msgstr "Leia e escreva no Gmail a partir de todas as suas contas"
 msgid "mail;email;gmail;inbox;"
 msgstr "correio;email;e-mail;gmail;caixa de entrada;"
 
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:15
+msgid ""
+"Penguin Mail keeps several Gmail accounts in sync from the system tray, "
+"shows them in one inbox or one at a time, and keeps your mail on your own "
+"computer. It talks to Google through an OAuth client you own, so no other "
+"server sees your mail."
+msgstr ""
+"O Penguin Mail mantém várias contas do Gmail sincronizadas a partir da área "
+"de notificação, mostra-as numa só caixa de entrada ou uma de cada vez, e "
+"guarda o seu correio no seu próprio computador. Fala com a Google através "
+"de um cliente OAuth que é seu, por isso nenhum outro servidor vê o seu "
+"correio."
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:22
+msgid "One inbox for every account, with Gmail's categories, labels and search"
+msgstr ""
+"Uma caixa de entrada para todas as contas, com as categorias, etiquetas e "
+"pesquisa do Gmail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:23
+msgid ""
+"A composer that shows formatting as you write, with Undo Send and Send Later"
+msgstr ""
+"Uma janela de escrita que mostra a formatação enquanto escreve, com Anular "
+"o envio e Enviar mais tarde"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:24
+msgid "Flags in seven colors, VIPs, smart mailboxes and reminders"
+msgstr "Marcas em sete cores, VIP, caixas inteligentes e lembretes"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:25
+msgid ""
+"Gmail's rules, automatic replies and plus addresses, changed from the app"
+msgstr ""
+"As regras, respostas automáticas e endereços com + do Gmail, alterados a "
+"partir da aplicação"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:26
+msgid "OpenPGP and S/MIME signing and encryption through your own GnuPG"
+msgstr "Assinatura e cifra OpenPGP e S/MIME através do seu próprio GnuPG"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:27
+msgid "Remote images blocked until you ask for them"
+msgstr "Imagens remotas bloqueadas até as pedir"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:28
+msgid ""
+"An assistant that runs on a local model or on Claude, off until you pick one"
+msgstr ""
+"Um assistente que corre num modelo local ou no Claude, desligado até "
+"escolher um"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:30
+msgid ""
+"You need an OAuth client from a Google Cloud project of your own. Creating "
+"one takes about ten minutes, and the first screen explains how."
+msgstr ""
+"Precisa de um cliente OAuth de um projeto Google Cloud seu. Criá-lo demora "
+"cerca de dez minutos, e o primeiro ecrã explica como."
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:47
+msgid "gmail"
+msgstr "gmail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:48
+msgid "email"
+msgstr "e-mail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:49
+msgid "mail"
+msgstr "correio"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:50
+msgid "inbox"
+msgstr "caixa de entrada"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:79
+msgid "The inbox, with a conversation open"
+msgstr "A caixa de entrada, com uma conversa aberta"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:83
+msgid "An HTML message in dark mode"
+msgstr "Uma mensagem HTML no modo escuro"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:87
+msgid "Replying in the composer"
+msgstr "A responder na janela de escrita"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:91
+msgid "Three conversations selected, with the actions for all of them"
+msgstr "Três conversas selecionadas, com as ações para todas"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:95
+msgid "The assistant listing mail that waits on a reply"
+msgstr "O assistente a listar o correio que aguarda resposta"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:99
+msgid "The layout on a narrow screen"
+msgstr "A disposição num ecrã estreito"
+
 #: app/src/app/sending.rs:30
 msgid "That account is not connected. Check its status in the sidebar."
 msgstr "Essa conta não está ligada. Veja o estado dela na barra lateral."
