@@ -6,9 +6,8 @@ use mailrs_domain::EpochMillis;
 use mailrs_gmail::GmailError;
 
 use super::{Connected, Harness, harness};
-use crate::settings::{
-    AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, HiddenFilters, Permitted,
-};
+use crate::hidden;
+use crate::settings::{AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, Permitted};
 
 fn settings(h: &Harness) -> AccountSettings<Connected> {
     let connected = HashMap::from([(h.account_id, Arc::clone(&h.sync))]);
@@ -151,12 +150,18 @@ async fn a_hidden_address_gets_the_label_and_its_filter() {
     let h = harness().await;
     let settings = settings(&h);
 
-    let filters = settings
-        .hide_address(h.account_id, "dana+kite.fern482@example.com")
+    let made = settings
+        .create_hidden_address(h.account_id, "dana@example.com", " shop.example ", &[])
         .await
         .unwrap()
         .done()
         .unwrap();
+    assert!(made.address.starts_with("dana+"), "{}", made.address);
+    assert!(made.address.ends_with("@example.com"), "{}", made.address);
+    assert!(hidden::is_alias(&made.address));
+    assert_eq!(made.account, "dana@example.com");
+    assert_eq!(made.note, "shop.example");
+    assert!(made.active);
     let label = h
         .fake
         .with(|s| {
@@ -169,18 +174,23 @@ async fn a_hidden_address_gets_the_label_and_its_filter() {
 
     let rules = settings.rules(h.account_id).await.unwrap().done().unwrap();
     assert_eq!(rules.len(), 1);
-    assert_eq!(rules[0].id, filters.label);
-    assert_eq!(
-        rules[0].criteria.to.as_deref(),
-        Some("dana+kite.fern482@example.com")
-    );
+    assert_eq!(rules[0].id, made.label_filter);
+    assert_eq!(rules[0].criteria.to.as_deref(), Some(made.address.as_str()));
     assert_eq!(rules[0].action.add_label_ids, [label.id]);
-    assert_eq!(filters.trash, None);
+    assert_eq!(made.trash_filter, None);
 
-    settings
-        .hide_address(h.account_id, "dana+moss.olive017@example.com")
+    let second = settings
+        .create_hidden_address(
+            h.account_id,
+            "dana@example.com",
+            "",
+            std::slice::from_ref(&made),
+        )
         .await
+        .unwrap()
+        .done()
         .unwrap();
+    assert_ne!(second.address, made.address);
     let named = h.fake.with(|s| {
         s.labels
             .iter()
@@ -188,37 +198,45 @@ async fn a_hidden_address_gets_the_label_and_its_filter() {
             .count()
     });
     assert_eq!(named, 1, "the second address reuses the label");
+    assert_eq!(
+        hidden::find(&[made.clone(), second], &made.address.to_uppercase()),
+        Some(&made),
+        "an address is found whatever its case"
+    );
 }
 
 #[tokio::test]
 async fn turning_a_hidden_address_off_and_on_moves_its_mail() {
     let h = harness().await;
     let settings = settings(&h);
-    let address = "dana+kite.fern482@example.com";
     let made = settings
-        .hide_address(h.account_id, address)
+        .create_hidden_address(h.account_id, "dana@example.com", "", &[])
         .await
         .unwrap()
         .done()
         .unwrap();
 
     let off = settings
-        .set_address_active(h.account_id, address, false, &made)
+        .set_hidden_address_active(h.account_id, &made, false)
         .await
         .unwrap()
         .done()
         .unwrap();
-    assert_eq!(off.label, made.label, "mail keeps its label");
-    let trash = off.trash.clone().expect("a rule that trashes its mail");
+    assert!(!off.active);
+    assert_eq!(off.label_filter, made.label_filter, "mail keeps its label");
+    let trash = off
+        .trash_filter
+        .clone()
+        .expect("a rule that trashes its mail");
     let rules = settings.rules(h.account_id).await.unwrap().done().unwrap();
     let trashing = rules.iter().find(|r| r.id.as_deref() == Some(&trash));
     let trashing = trashing.expect("the trash rule");
-    assert_eq!(trashing.criteria.to.as_deref(), Some(address));
+    assert_eq!(trashing.criteria.to.as_deref(), Some(made.address.as_str()));
     assert_eq!(trashing.action.add_label_ids, ["TRASH"]);
     assert_eq!(trashing.action.remove_label_ids, ["INBOX"]);
 
     let on = settings
-        .set_address_active(h.account_id, address, true, &off)
+        .set_hidden_address_active(h.account_id, &off, true)
         .await
         .unwrap()
         .done()
@@ -228,24 +246,33 @@ async fn turning_a_hidden_address_off_and_on_moves_its_mail() {
         settings.rules(h.account_id).await.unwrap().done().unwrap(),
         rules
             .iter()
-            .filter(|r| r.id != off.trash)
+            .filter(|r| r.id != off.trash_filter)
             .cloned()
             .collect::<Vec<_>>()
     );
 
-    settings.unhide_address(h.account_id, &on).await.unwrap();
+    settings
+        .delete_hidden_address(h.account_id, &off)
+        .await
+        .unwrap();
     assert_eq!(
         settings.rules(h.account_id).await.unwrap().done().unwrap(),
         [],
         "deleting the address leaves no rules"
     );
+}
+
+#[tokio::test]
+async fn a_hidden_address_waits_on_the_settings_permission() {
+    let h = harness().await;
+    let settings = settings(&h);
+    h.fake.withhold(mailrs_gmail::SETTINGS_SCOPE);
     assert_eq!(
         settings
-            .set_address_active(h.account_id, address, true, &HiddenFilters::default())
+            .create_hidden_address(h.account_id, "dana@example.com", "", &[])
             .await
-            .unwrap()
-            .done()
             .unwrap(),
-        HiddenFilters::default()
+        Permitted::NeedsPermission
     );
+    assert!(h.fake.with(|s| s.filters.is_empty()));
 }

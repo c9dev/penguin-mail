@@ -176,8 +176,8 @@ impl Effects for Ports {
         note: String,
     ) -> Answer<'_, Result<Permitted<HiddenAddress>, String>> {
         Box::pin(async move {
-            self.0
-                .create_hidden_address(account_id, &note)
+            let app = self.0.app.upgrade().ok_or_else(closing)?;
+            app.create_hidden_address(account_id, &note)
                 .await
                 .map_err(|e| e.to_string())
         })
@@ -189,8 +189,8 @@ impl Effects for Ports {
         active: bool,
     ) -> Answer<'_, Result<Permitted<()>, String>> {
         Box::pin(async move {
-            self.0
-                .set_hidden_address_active(&address, active)
+            let app = self.0.app.upgrade().ok_or_else(closing)?;
+            app.set_hidden_address_active(&address, active)
                 .await
                 .map_err(|e| e.to_string())
         })

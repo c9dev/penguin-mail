@@ -31,6 +31,7 @@ const BLOCK_REMOTE_RULES: &str = r#"[
   {"trigger": {"url-filter": "^ftp:"}, "action": {"type": "block"}}
 ]"#;
 
+mod hidden;
 mod sending;
 mod updates;
 

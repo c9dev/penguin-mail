@@ -11,6 +11,7 @@ pub mod contacts;
 mod engine;
 mod error;
 pub mod export;
+pub mod hidden;
 pub mod invitations;
 pub mod mailbox;
 pub mod outbox;
@@ -46,15 +47,14 @@ pub use connect::connect_account;
 pub use contacts::{Card, ContactBook, Refreshed};
 pub use engine::{EngineConfig, SyncEngine};
 pub use error::SyncError;
+pub use hidden::HiddenAddress;
 pub use invitations::{Change, Invitations, Opened, Sent, Told};
 pub use mailbox::{
     Changed, Counts, Empty, Listing, Mailbox, Mailboxes, PAGE, Scope, View, outbox_id, outbox_row,
     summarize_search,
 };
 pub use outbox::{Drained, Outbox, Posted};
-pub use settings::{
-    AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, HiddenFilters, Permitted,
-};
+pub use settings::{AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, Permitted};
 pub use triage::TriageAction;
 pub use unsubscribe::{Leave, Unsubscribe};
 

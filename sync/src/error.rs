@@ -14,6 +14,8 @@ pub enum SyncError {
     NoLabel(String),
     #[error("could not write the message: {0}")]
     Mime(String),
+    #[error("{0} is not an email address")]
+    NotAnAddress(String),
 }
 
 impl SyncError {
@@ -37,6 +39,7 @@ impl SyncError {
             // The bytes could not be written at all, so the same draft
             // would fail the same way on every try.
             SyncError::Mime(_) => false,
+            SyncError::NotAnAddress(_) => false,
         }
     }
 }

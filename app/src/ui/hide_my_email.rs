@@ -1,5 +1,5 @@
 //! The Hide My Email dialog: the plus addresses made so far, with a page to
-//! make a new one. The work happens in `MainWindow`'s Hide My Email methods.
+//! make a new one. The work happens in the app's Hide My Email methods.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -9,7 +9,7 @@ use gtk::glib;
 use mailrs_domain::{Account, AccountId};
 use mailrs_sync::Permitted;
 
-use super::window::MainWindow;
+use crate::app::App;
 use crate::hide_my_email::HiddenAddress;
 use mailrs_domain::translate::{fill, gettext};
 
@@ -24,7 +24,7 @@ fn about() -> String {
 }
 
 struct Dialog {
-    win: Rc<MainWindow>,
+    app: Rc<App>,
     accounts: Vec<Account>,
     /// The account new addresses belong to unless the user picks another.
     preselect: Option<AccountId>,
@@ -42,7 +42,8 @@ struct Dialog {
 /// Shows the Hide My Email addresses. `grant` runs with an account address
 /// when Gmail wants the settings permission first.
 pub fn present(
-    win: &Rc<MainWindow>,
+    app: &Rc<App>,
+    parent: &impl IsA<gtk::Widget>,
     preselect: Option<AccountId>,
     grant: impl Fn(String) + 'static,
 ) {
@@ -80,8 +81,8 @@ pub fn present(
         .child(&toasts)
         .build();
     let this = Rc::new(Dialog {
-        win: Rc::clone(win),
-        accounts: win.accounts(),
+        app: Rc::clone(app),
+        accounts: app.accounts(),
         preselect,
         nav,
         home,
@@ -103,9 +104,9 @@ pub fn present(
     dialog.connect_closed(move |_| {
         keep.borrow_mut().take();
     });
-    dialog.present(Some(&win.window));
+    dialog.present(Some(parent));
     this.reload();
-    if this.win.hidden_addresses().is_empty() {
+    if this.app.hidden_addresses().is_empty() {
         this.show_form();
     }
 }
@@ -140,7 +141,7 @@ impl Dialog {
         for row in self.shown.borrow_mut().drain(..) {
             self.list.remove(&row);
         }
-        let addresses = self.win.hidden_addresses();
+        let addresses = self.app.hidden_addresses();
         if addresses.is_empty() {
             let row = adw::ActionRow::builder()
                 .title(gettext("No addresses yet"))
@@ -220,7 +221,7 @@ impl Dialog {
             switch.set_sensitive(false);
             let (address, account) = (address.clone(), account.clone());
             glib::spawn_future_local(async move {
-                match this.win.set_hidden_address_active(&address, active).await {
+                match this.app.set_hidden_address_active(&address, active).await {
                     Ok(Permitted::Done(())) if active => {
                         this.toast(&gettext("Mail to this address reaches you again"))
                     }
@@ -279,7 +280,7 @@ impl Dialog {
             if alert.choose_future(Some(&this.dialog)).await != "delete" {
                 return;
             }
-            match this.win.delete_hidden_address(&address).await {
+            match this.app.delete_hidden_address(&address).await {
                 Ok(Permitted::Done(())) => this.toast(&gettext("Address deleted")),
                 Ok(Permitted::NeedsPermission) => this.ask_for_access(&account),
                 Err(err) => this.failed(&err, &gettext("Could not delete the address: {reason}")),
@@ -379,7 +380,7 @@ impl Dialog {
             button.set_sensitive(false);
             let button = button.clone();
             glib::spawn_future_local(async move {
-                match this.win.create_hidden_address(chosen.id, &text).await {
+                match this.app.create_hidden_address(chosen.id, &text).await {
                     Ok(Permitted::Done(hidden)) => {
                         this.reload();
                         this.show_created(&hidden);

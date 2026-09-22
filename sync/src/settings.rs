@@ -15,7 +15,8 @@ use mailrs_gmail::GmailError;
 use mailrs_store::Db;
 
 use crate::actions::label_id;
-use crate::{AccountSync, Accounts, SyncError};
+use crate::hidden::{self, HiddenAddress};
+use crate::{AccountSync, Accounts, SyncError, now_millis};
 
 /// The user label that mail to a hidden address gets.
 pub const HIDE_MY_EMAIL_LABEL: &str = "Hide My Email";
@@ -90,15 +91,6 @@ impl AutomaticReply {
             end: self.last_day.map(|last| midnight(last) + DAY),
         }
     }
-}
-
-/// The Gmail filters behind one hidden address.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct HiddenFilters {
-    /// Gives mail to the address the Hide My Email label.
-    pub label: Option<String>,
-    /// Sends mail to the address to the Trash while the address is off.
-    pub trash: Option<String>,
 }
 
 pub struct AccountSettings<A: Accounts> {
@@ -182,13 +174,20 @@ impl<A: Accounts> AccountSettings<A> {
         permitted(self.sync(account_id)?.create_label(name).await)
     }
 
-    /// Makes `address` a hidden address: mail to it gets the Hide My Email
-    /// label, which this creates when the account lacks it.
-    pub async fn hide_address(
+    /// Makes a new hidden address of `account_email`, the address of
+    /// `account_id`, that none of `taken` uses. Mail to it gets the Hide
+    /// My Email label, which this creates when the account lacks it. The
+    /// caller keeps what comes back.
+    pub async fn create_hidden_address(
         &self,
         account_id: AccountId,
-        address: &str,
-    ) -> Result<Permitted<HiddenFilters>, SyncError> {
+        account_email: &str,
+        note: &str,
+        taken: &[HiddenAddress],
+    ) -> Result<Permitted<HiddenAddress>, SyncError> {
+        let address = hidden::fresh(account_email, taken)
+            .map_err(|_| SyncError::NotAnAddress(account_email.to_string()))?;
+        let sync = self.sync(account_id)?;
         let label = done!(
             label_id(
                 self.accounts.as_ref(),
@@ -199,51 +198,55 @@ impl<A: Accounts> AccountSettings<A> {
             )
             .await
         );
-        let created = done!(
-            self.sync(account_id)?
-                .create_filter(labels(address, &label))
-                .await
-        );
-        Ok(Permitted::Done(HiddenFilters {
-            label: created.id,
-            trash: None,
+        let created = done!(sync.create_filter(labels(&address, &label)).await);
+        Ok(Permitted::Done(HiddenAddress {
+            account: account_email.to_string(),
+            address,
+            note: note.trim().to_string(),
+            created: now_millis(),
+            active: true,
+            label_filter: created.id,
+            trash_filter: None,
         }))
     }
 
     /// Turns a hidden address on or off. Off adds the filter that trashes
-    /// its mail; on drops that filter again. The filters that come back
-    /// replace the ones passed in.
-    pub async fn set_address_active(
+    /// its mail; on drops that filter again. The caller keeps the address
+    /// that comes back in place of `hidden`.
+    pub async fn set_hidden_address_active(
         &self,
         account_id: AccountId,
-        address: &str,
+        hidden: &HiddenAddress,
         active: bool,
-        filters: &HiddenFilters,
-    ) -> Result<Permitted<HiddenFilters>, SyncError> {
+    ) -> Result<Permitted<HiddenAddress>, SyncError> {
         let sync = self.sync(account_id)?;
-        let trash = match (active, filters.trash.clone()) {
+        let trash_filter = match (active, hidden.trash_filter.clone()) {
             (true, Some(id)) => {
                 done!(sync.delete_filter(&id).await);
                 None
             }
-            (false, None) => done!(sync.create_filter(trashes(address)).await).id,
+            (false, None) => done!(sync.create_filter(trashes(&hidden.address)).await).id,
             (_, current) => current,
         };
-        Ok(Permitted::Done(HiddenFilters {
-            label: filters.label.clone(),
-            trash,
+        Ok(Permitted::Done(HiddenAddress {
+            active,
+            trash_filter,
+            ..hidden.clone()
         }))
     }
 
     /// Drops a hidden address's filters. Mail to it then arrives like any
-    /// other mail.
-    pub async fn unhide_address(
+    /// other mail, and the caller forgets the address.
+    pub async fn delete_hidden_address(
         &self,
         account_id: AccountId,
-        filters: &HiddenFilters,
+        hidden: &HiddenAddress,
     ) -> Result<Permitted<()>, SyncError> {
         let sync = self.sync(account_id)?;
-        for id in [&filters.label, &filters.trash].into_iter().flatten() {
+        for id in [&hidden.label_filter, &hidden.trash_filter]
+            .into_iter()
+            .flatten()
+        {
             done!(sync.delete_filter(id).await);
         }
         Ok(Permitted::Done(()))
