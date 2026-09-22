@@ -63,6 +63,38 @@ async fn backfill_finishes_the_window_then_stops() {
     assert!(!h.sync.backfill_step().await.unwrap());
 }
 
+/// The demo and the assistant's tests start on this. It has to store
+/// the window across every page and leave out what sync never stores.
+#[tokio::test]
+async fn fill_store_leaves_a_finished_first_sync() {
+    let h = harness().await;
+    let now = now_millis();
+    for (i, id) in ["a", "b", "c"].into_iter().enumerate() {
+        h.fake.seed(meta(
+            id,
+            &format!("t{id}"),
+            now - i as i64 * 1000,
+            &["INBOX"],
+        ));
+    }
+    h.fake.seed(meta("spam", "tspam", now, &["SPAM", "INBOX"]));
+    h.fake.seed(meta("old", "told", now - 40 * DAY, &[]));
+    crate::fake::fill_store(&h.sync).await.unwrap();
+
+    assert_eq!(h.threads("INBOX").await, ["ta", "tb", "tc"]);
+    assert!(
+        h.thread("tspam").await.is_none(),
+        "Gmail hides spam from the window"
+    );
+    assert!(
+        h.thread("told").await.is_none(),
+        "archived mail past the window stays out"
+    );
+    let cursor = h.cursor().await;
+    assert!(cursor.backfill_done);
+    assert_eq!(cursor.history_id, Some(100));
+}
+
 #[tokio::test]
 async fn a_rejected_page_token_restarts_the_listing() {
     let h = harness().await;

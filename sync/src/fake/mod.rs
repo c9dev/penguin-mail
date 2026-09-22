@@ -4,11 +4,13 @@
 //!
 //! Callers change the mailbox directly through [`FakeGmail::with`]. The
 //! changes Gmail would record in history are recorded here too, so a sync
-//! replays them.
+//! replays them. [`fill_store`] gives a new account the store its first
+//! sync against this mailbox would leave, for callers that want mail on
+//! screen before the engine starts.
 
 mod query;
 
-use std::collections::{BTreeMap, HashMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -17,12 +19,14 @@ use mailrs_domain::{
     Address, EpochMillis, Filter, MessageBody, MessageMeta, Vacation, system_label,
 };
 use mailrs_gmail::{
-    AccountQuota, Answered, BATCH_LIMIT, Busy, ConnectionsPage, Event, EventFields, GmailError,
-    Guest, HistoryChange, HistoryPage, LabelColor, MessagePage, MessageRef, Person, Priority,
-    Profile, QuotaLimiter, RemoteLabel, SendAs, cost, limiter,
+    AccountQuota, Answered, BATCH_LIMIT, Busy, CALENDAR_SCOPE, CONTACTS_SCOPE, ConnectionsPage,
+    DELETE_SCOPE, Event, EventFields, GmailError, Guest, HistoryChange, HistoryPage, LabelColor,
+    MessagePage, MessageRef, Person, Priority, Profile, QuotaLimiter, RemoteLabel, SETTINGS_SCOPE,
+    SendAs, cost, limiter,
 };
 
 use crate::api::{DraftRef, GmailApi, SavedDraft};
+use crate::{AccountSync, SyncError};
 use query::Query;
 
 pub struct FakeGmail {
@@ -89,6 +93,17 @@ pub struct FakeState {
     /// the calls an invitation makes.
     pub events: Vec<Event>,
     next_event: u32,
+    /// The OAuth scopes the account has not granted. A call that needs one
+    /// answers `MissingScope`, as Google does until the user says yes.
+    /// Change it through [`FakeGmail::withhold`] and [`FakeGmail::grant`].
+    pub withheld: BTreeSet<&'static str>,
+    /// The page that turns the Calendar API on, set to play a Google Cloud
+    /// project that has it switched off. Every calendar call then answers
+    /// `ApiDisabled` whatever the account granted.
+    pub calendar_off: Option<String>,
+    /// The time `newer_than` and `older_than` count back from. `None`
+    /// reads the clock; a test whose mail sits at fixed dates pins it.
+    pub clock: Option<EpochMillis>,
 }
 
 /// Calls made and quota units spent, priced from Gmail's usage-limits
@@ -188,6 +203,9 @@ impl FakeGmail {
                 answered_occurrences: Vec::new(),
                 events: Vec::new(),
                 next_event: 0,
+                withheld: BTreeSet::new(),
+                calendar_off: None,
+                clock: None,
             }),
         }
     }
@@ -291,6 +309,37 @@ impl FakeGmail {
         self.with(|s| s.failures.push_back(err));
     }
 
+    /// Takes back one of the account's OAuth scopes, such as
+    /// `mailrs_gmail::SETTINGS_SCOPE`. Calls that need it fail until
+    /// [`FakeGmail::grant`] hands it over.
+    pub fn withhold(&self, scope: &'static str) {
+        self.with(|s| s.withheld.insert(scope));
+    }
+
+    pub fn grant(&self, scope: &'static str) {
+        self.with(|s| s.withheld.remove(scope));
+    }
+
+    /// Google's answer to a call that needs `scope`.
+    fn needs(&self, scope: &'static str) -> Result<(), GmailError> {
+        match self.with(|s| s.withheld.contains(scope)) {
+            true => Err(GmailError::MissingScope),
+            false => Ok(()),
+        }
+    }
+
+    /// Google's answer to a calendar call: the Calendar API switched off in
+    /// the project, the calendar scope not granted yet, or yes.
+    fn calendar_open(&self) -> Result<(), GmailError> {
+        if let Some(url) = self.with(|s| s.calendar_off.clone()) {
+            return Err(GmailError::ApiDisabled {
+                service: "Google Calendar API".into(),
+                enable_url: url,
+            });
+        }
+        self.needs(CALENDAR_SCOPE)
+    }
+
     /// Waits for budget, charges one call to the meter, and hands back the
     /// failure a test queued for it, if any. Every API method starts here,
     /// so the usage counts what the real client would have spent.
@@ -352,7 +401,7 @@ impl FakeState {
     /// The ids a search returns, newest first.
     fn search(&self, query: &str) -> Vec<String> {
         let query = Query::parse(query);
-        let now = crate::now_millis();
+        let now = self.clock.unwrap_or_else(crate::now_millis);
         let mut hits: Vec<&MessageMeta> = self
             .messages
             .values()
@@ -535,6 +584,7 @@ impl GmailApi for FakeGmail {
     async fn delete_messages(&self, ids: &[String]) -> Result<(), GmailError> {
         self.call("users.messages.batchDelete", cost::BATCH_DELETE)
             .await?;
+        self.needs(DELETE_SCOPE)?;
         self.with(|s| s.remote_writes.push(format!("delete {}", ids.join(","))));
         for id in ids {
             self.remote_delete(id);
@@ -663,12 +713,14 @@ impl GmailApi for FakeGmail {
     async fn vacation(&self) -> Result<Vacation, GmailError> {
         self.call("users.settings.getVacation", cost::SETTINGS)
             .await?;
+        self.needs(SETTINGS_SCOPE)?;
         Ok(self.with(|s| s.vacation.clone()))
     }
 
     async fn set_vacation(&self, vacation: &Vacation) -> Result<(), GmailError> {
         self.call("users.settings.updateVacation", cost::SETTINGS)
             .await?;
+        self.needs(SETTINGS_SCOPE)?;
         self.with(|s| s.vacation = vacation.clone());
         Ok(())
     }
@@ -683,6 +735,7 @@ impl GmailApi for FakeGmail {
         // The Calendar API spends none of the Gmail budget, so this call
         // is priced at nothing and only the failure queue applies.
         self.call("calendar.events.patch", 0).await?;
+        self.calendar_open()?;
         Ok(self.with(|s| {
             s.answered_occurrences.push(occurrence);
             match s.calendar.get_mut(ical_uid) {
@@ -701,6 +754,7 @@ impl GmailApi for FakeGmail {
         to: EpochMillis,
     ) -> Result<Vec<Busy>, GmailError> {
         self.call("calendar.events.list", 0).await?;
+        self.calendar_open()?;
         Ok(self.with(|s| {
             s.busy
                 .iter()
@@ -719,6 +773,7 @@ impl GmailApi for FakeGmail {
         to: EpochMillis,
     ) -> Result<Vec<Event>, GmailError> {
         self.call("calendar.events.list", 0).await?;
+        self.calendar_open()?;
         let mut events: Vec<Event> = self.with(|s| {
             s.events
                 .iter()
@@ -735,6 +790,7 @@ impl GmailApi for FakeGmail {
 
     async fn create_event(&self, fields: &EventFields) -> Result<Event, GmailError> {
         self.call("calendar.events.insert", 0).await?;
+        self.calendar_open()?;
         Ok(self.with(|s| {
             s.next_event += 1;
             let mut event = Event {
@@ -751,6 +807,7 @@ impl GmailApi for FakeGmail {
 
     async fn update_event(&self, id: &str, fields: &EventFields) -> Result<Event, GmailError> {
         self.call("calendar.events.patch", 0).await?;
+        self.calendar_open()?;
         self.with(|s| {
             let event = s.events.iter_mut().find(|e| e.id == id)?;
             apply(event, fields);
@@ -761,6 +818,7 @@ impl GmailApi for FakeGmail {
 
     async fn delete_event(&self, id: &str) -> Result<(), GmailError> {
         self.call("calendar.events.delete", 0).await?;
+        self.calendar_open()?;
         self.with(|s| {
             let before = s.events.len();
             s.events.retain(|e| e.id != id);
@@ -813,12 +871,14 @@ impl GmailApi for FakeGmail {
     async fn filters(&self) -> Result<Vec<Filter>, GmailError> {
         self.call("users.settings.filters.list", cost::SETTINGS)
             .await?;
+        self.needs(SETTINGS_SCOPE)?;
         Ok(self.with(|s| s.filters.clone()))
     }
 
     async fn create_filter(&self, filter: &Filter) -> Result<Filter, GmailError> {
         self.call("users.settings.filters.create", cost::SETTINGS)
             .await?;
+        self.needs(SETTINGS_SCOPE)?;
         Ok(self.with(|s| {
             let created = Filter {
                 id: Some(format!("filter{}", s.filters.len() + 1)),
@@ -832,6 +892,7 @@ impl GmailApi for FakeGmail {
     async fn delete_filter(&self, id: &str) -> Result<(), GmailError> {
         self.call("users.settings.filters.delete", cost::SETTINGS)
             .await?;
+        self.needs(SETTINGS_SCOPE)?;
         self.with(|s| {
             let before = s.filters.len();
             s.filters.retain(|f| f.id.as_deref() != Some(id));
@@ -899,6 +960,7 @@ impl GmailApi for FakeGmail {
     ) -> Result<ConnectionsPage, GmailError> {
         self.call("people.connections.list", cost::CONNECTIONS)
             .await?;
+        self.needs(CONTACTS_SCOPE)?;
         if let Some(token) = sync_token {
             return Ok(ConnectionsPage {
                 next_sync_token: Some(token.to_string()),
@@ -929,6 +991,18 @@ impl GmailApi for FakeGmail {
         self.with(|s| s.photos.get(url).cloned())
             .ok_or(GmailError::NotFound)
     }
+}
+
+/// Leaves `sync`'s store as a new account's first sync against this
+/// mailbox would: the labels, the history cursor, and every message in the
+/// window, stored by sync's own bootstrap and backfill. The engine runs the
+/// same steps a tick at a time; this runs them back to back, so the demo
+/// and the assistant's tests start on a full store that cannot disagree
+/// with what sync would have written.
+pub async fn fill_store(sync: &AccountSync<FakeGmail>) -> Result<(), SyncError> {
+    sync.bootstrap().await?;
+    while sync.backfill_step().await? {}
+    Ok(())
 }
 
 /// Writes what `fields` sets onto `event`, as Google's patch does. A guest
