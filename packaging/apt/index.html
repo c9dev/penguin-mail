@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Penguin Mail apt repository</title>
+<style>
+  :root { color-scheme: light dark; --fg: #1d1d1d; --bg: #fafafa; --code: #ececec; }
+  @media (prefers-color-scheme: dark) { :root { --fg: #e8e8e8; --bg: #1e1e1e; --code: #2d2d2d; } }
+  body { font: 16px/1.5 system-ui, sans-serif; color: var(--fg); background: var(--bg);
+         max-width: 44rem; margin: 3rem auto; padding: 0 16px; }
+  pre { background: var(--code); padding: 12px 14px; border-radius: 8px; overflow-x: auto; }
+  code { font: 0.9em ui-monospace, monospace; }
+</style>
+</head>
+<body>
+<h1>Penguin Mail apt repository</h1>
+<p>Penguin Mail is a Gmail client for GNOME. This repository holds its
+Ubuntu packages for amd64, signed with the key below.</p>
+
+<h2>Add it</h2>
+<pre><code>sudo curl -fsSLo /usr/share/keyrings/penguin-mail-archive-keyring.gpg \
+  https://c9dev.github.io/penguin-mail/penguin-mail-archive-keyring.gpg
+sudo curl -fsSLo /etc/apt/sources.list.d/penguin-mail.sources \
+  https://c9dev.github.io/penguin-mail/penguin-mail.sources
+sudo apt update &amp;&amp; sudo apt install penguin-mail</code></pre>
+<p>Installing the <code>.deb</code> from the
+<a href="https://github.com/c9dev/penguin-mail/releases">releases page</a>
+adds these two files for you, so <code>sudo apt upgrade</code> brings each
+new version after that.</p>
+
+<h2>The signing key</h2>
+<p><a href="penguin-mail-archive-keyring.asc">penguin-mail-archive-keyring.asc</a>,
+fingerprint <code>FE3C 3B6E 699A F939 DC46 70DC F3A8 5303 5C3E 2B8E</code>.</p>
+</body>
+</html>

@@ -7,6 +7,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Penguin Mail has an apt repository. Add it once, or install the .deb,
+  and `sudo apt upgrade` brings each new version.
 - An Archive mailbox lists the mail you took out of the inbox, across all
   accounts and under each one. Drag mail onto it to archive it.
 - You can label mail from several accounts at once by picking a label name.

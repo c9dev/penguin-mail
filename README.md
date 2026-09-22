@@ -180,7 +180,24 @@ Penguin Mail runs on Ubuntu 26.04, or any distribution with GTK 4.20,
 libadwaita 1.8 and WebKitGTK 6.0. The tray icon needs a StatusNotifier host,
 which Ubuntu's AppIndicator extension provides.
 
-### From a release (recommended)
+### With apt (recommended)
+
+Penguin Mail has its own apt repository. Add its key and entry, then
+install:
+
+```sh
+sudo curl -fsSLo /usr/share/keyrings/penguin-mail-archive-keyring.gpg \
+  https://c9dev.github.io/penguin-mail/penguin-mail-archive-keyring.gpg
+sudo curl -fsSLo /etc/apt/sources.list.d/penguin-mail.sources \
+  https://c9dev.github.io/penguin-mail/penguin-mail.sources
+sudo apt update && sudo apt install penguin-mail
+```
+
+`sudo apt upgrade` then brings each new version with the rest of the
+system. The key's fingerprint is
+`FE3C 3B6E 699A F939 DC46 70DC F3A8 5303 5C3E 2B8E`.
+
+### From a release
 
 Download the `.deb` from the
 [latest release](https://github.com/c9dev/penguin-mail/releases/latest) and
@@ -190,7 +207,8 @@ install it, replacing `X.Y.Z` with the version:
 sudo apt install ./penguin-mail_X.Y.Z_amd64.deb
 ```
 
-apt pulls in the libraries it needs.
+apt pulls in the libraries it needs. The `.deb` also adds the apt
+repository above, so later versions arrive with `sudo apt upgrade`.
 
 ### Without root
 
@@ -231,8 +249,10 @@ An installed Penguin Mail checks GitHub for a new release once a day. When
 one is out, it says so in a notification, a banner across the window, and the
 tray menu, and **Install** does the rest:
 
-- **From the .deb**, it downloads the new `.deb` and installs it with apt.
-  GNOME asks for your password, because apt changes files under `/usr`.
+- **From the .deb or the apt repository**, it downloads the new `.deb` and
+  installs it with apt. GNOME asks for your password, because apt changes
+  files under `/usr`. `sudo apt upgrade` installs the same version, if you
+  would rather update that way.
 - **From the tarball or from source**, it downloads the new tarball and
   installs it into the same folder as before, with no password.
 
@@ -371,7 +391,11 @@ failure. [AGENTS.md](AGENTS.md) has the conventions and the testing traps.
 To publish a version, `scripts/release.sh` bumps the version, opens the
 changelog draft in your editor, runs the checks, then commits, tags and
 pushes. The tag starts the release workflow, which builds the `.deb`,
-tarball and zip and publishes them with the changelog.
+tarball and zip and publishes them with the changelog. When it finishes, the
+apt workflow rebuilds the repository on GitHub Pages from the five newest
+releases with `scripts/apt-repo.sh`, signed with the key in the
+`APT_SIGNING_KEY` secret. Run it from the Actions tab to publish again
+without a release.
 
 ## Contributing
 

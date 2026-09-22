@@ -24,13 +24,21 @@ trap 'rm -rf "$work"' EXIT
 root="$work/deb"
 mkdir -p "$root/usr" "$root/DEBIAN"
 cp -r "$tree/." "$root/usr/"
+# The apt repository's key and entry, so a person who installs this .deb
+# once gets later versions from `apt upgrade`. The entry sits under /etc,
+# so it is a conffile: dpkg keeps it if the person edits or removes it.
+install -Dm644 "packaging/apt/penguin-mail-archive-keyring.gpg" \
+    "$root/usr/share/keyrings/penguin-mail-archive-keyring.gpg"
+install -Dm644 "packaging/apt/penguin-mail.sources" \
+    "$root/etc/apt/sources.list.d/penguin-mail.sources"
+echo /etc/apt/sources.list.d/penguin-mail.sources > "$root/DEBIAN/conffiles"
 mkdir -p "$work/shlibs/debian"
 printf 'Source: penguin-mail\n\nPackage: penguin-mail\nArchitecture: amd64\n' \
     > "$work/shlibs/debian/control"
 depends=$(cd "$work/shlibs" && dpkg-shlibdeps -O \
     "$root/usr/bin/penguin-mail" "$root/usr/bin/penguin-mail-cli" \
     | sed -n 's/^shlibs:Depends=//p')
-size=$(du -sk "$root/usr" | cut -f1)
+size=$(du -sk --exclude=DEBIAN "$root" | cut -f1)
 cat > "$root/DEBIAN/control" <<CONTROL
 Package: penguin-mail
 Version: $version

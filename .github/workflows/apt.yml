@@ -1,0 +1,70 @@
+name: Apt repository
+
+# Rebuilds the apt repository on GitHub Pages from the newest releases.
+# It runs after each tagged release, and by hand from the Actions tab to
+# publish again without a new release.
+on:
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apt-repository
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build the repository
+    # A trial run of Release from the Actions tab publishes nothing, so it
+    # has nothing to add here either.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Download the newest packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # The five newest releases: enough for a person to step back one
+        # version with apt, and a site well inside Pages' size limit.
+        run: |
+          mkdir debs
+          gh release list --exclude-drafts --exclude-pre-releases --limit 5 \
+              --json tagName --jq '.[].tagName' |
+          while read -r tag; do
+              gh release download "$tag" --pattern '*.deb' --dir debs
+          done
+          ls -l debs
+      - name: Import the signing key
+        env:
+          APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
+        run: |
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
+          mkdir -m 700 "$GNUPGHOME"
+          echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
+          printf '%s\n' "$APT_SIGNING_KEY" | gpg --batch --import
+      - name: Build and sign
+        run: scripts/apt-repo.sh debs site
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  deploy:
+    name: Publish on Pages
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
