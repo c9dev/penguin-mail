@@ -132,9 +132,53 @@ jobs:
           path: dist/*.rpm
           if-no-files-found: error
 
+  appimage:
+    name: Build the AppImage
+    needs: build
+    runs-on: ubuntu-latest
+    # An AppImage runs on the glibc it was built against and newer ones.
+    # Ubuntu 26.04 is the oldest release carrying GTK 4.20, libadwaita 1.8
+    # and WebKitGTK 6.0 to build against, so it sets that floor.
+    container: ubuntu:26.04
+    timeout-minutes: 90
+    env:
+      CARGO_TERM_COLOR: always
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - name: Install git
+        run: apt-get update && apt-get install -y --no-install-recommends git ca-certificates
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install build dependencies
+        run: |
+          scripts/ci-deps.sh
+          apt-get install -y --no-install-recommends patchelf libglib2.0-bin \
+              libgdk-pixbuf2.0-bin librsvg2-common glib-networking adwaita-icon-theme \
+              ibus-gtk4
+      - name: Put cargo on PATH
+        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Build
+        run: cargo build --release -p mailrs -p mailrs-cli --features mailrs/packaging-appimage
+      - name: Pack
+        run: |
+          scripts/stage.sh tree
+          scripts/package-appimage.sh tree "$VERSION" dist
+      # A container has no FUSE, so the AppImage unpacks itself and runs.
+      - name: Start it
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: scripts/smoke-start.sh "dist/penguin-mail-$VERSION-x86_64.AppImage"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: penguin-mail-${{ needs.build.outputs.version }}-appimage
+          path: |
+            dist/*.AppImage
+            dist/*.zsync
+          if-no-files-found: error
+
   publish:
     name: Publish the release
-    needs: [build, rpm]
+    needs: [build, rpm, appimage]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     permissions:
@@ -151,7 +195,7 @@ jobs:
         run: |
           cd dist
           rm -f SHA256SUMS
-          sha256sum *.deb *.rpm *.tar.gz *.zip > SHA256SUMS
+          sha256sum *.deb *.rpm *.AppImage *.tar.gz *.zip > SHA256SUMS
           cat SHA256SUMS
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
@@ -162,6 +206,8 @@ jobs:
           files: |
             dist/*.deb
             dist/*.rpm
+            dist/*.AppImage
+            dist/*.AppImage.zsync
             dist/*.tar.gz
             dist/*.zip
             dist/SHA256SUMS

@@ -9,6 +9,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - Penguin Mail comes as an rpm for Fedora, with a dnf repository of its
   own, so `sudo dnf upgrade` brings each new version.
+- Penguin Mail comes as an AppImage too: one file that runs on any
+  distribution as new as Ubuntu 26.04, with nothing to install. It
+  updates itself by replacing that file.
 - In the Flatpak and the snap, Preferences says that the store brings
   updates, and why skills are off there: their scripts need a sandbox of
   their own, which cannot start inside the one the app runs in.

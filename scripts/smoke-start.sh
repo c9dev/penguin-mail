@@ -23,6 +23,11 @@ for _ in $(seq 50); do
     sleep 0.1
 done
 
+# Run from a desktop session, GTK would pick the session's Wayland display
+# over the hidden one, and with no WAYLAND_DISPLAY at all it tries
+# wayland-0. A name nothing listens on sends it to X11.
+export WAYLAND_DISPLAY=penguin-mail-smoke-none
+export GDK_BACKEND=x11
 status=0
 DISPLAY=$display timeout 15 dbus-run-session -- "$@" --demo >"$log" 2>&1 || status=$?
 # timeout answers 124 when it had to stop the app, which is the pass.
