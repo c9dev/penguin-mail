@@ -120,6 +120,9 @@ pub fn model_for(ai: &AiSettings, feature: Feature) -> Result<ProviderConfig, St
             Feature::Translation => {
                 gettext("Translation has no model. Choose one in Preferences, on the AI page.")
             }
+            Feature::Unsubscribe => {
+                gettext("Unsubscribing has no model. Choose one in Preferences, on the AI page.")
+            }
         }),
         AiProvider::Local => {
             if model.is_empty() {

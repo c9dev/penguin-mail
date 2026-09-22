@@ -29,6 +29,7 @@
 
 use serde::{Deserialize, Serialize};
 
+mod adviser;
 mod rules;
 mod run;
 pub mod words;
@@ -38,6 +39,8 @@ pub mod fake;
 #[cfg(test)]
 mod tests;
 
+#[allow(unused_imports)]
+pub use adviser::{ModelAdviser, model_adviser};
 #[allow(unused_imports)]
 pub use rules::{pick, says_done, valid};
 #[allow(unused_imports)]

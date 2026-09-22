@@ -168,16 +168,22 @@ impl Choice for AiProvider {
 pub enum Feature {
     Assistant,
     Translation,
+    Unsubscribe,
 }
 
 impl Feature {
     /// In the order the AI page lists them.
-    pub const ALL: [Feature; 2] = [Feature::Assistant, Feature::Translation];
+    pub const ALL: [Feature; 3] = [
+        Feature::Assistant,
+        Feature::Translation,
+        Feature::Unsubscribe,
+    ];
 
     pub fn label(self) -> String {
         match self {
             Feature::Assistant => gettext("Assistant"),
             Feature::Translation => gettext("Translation"),
+            Feature::Unsubscribe => gettext("Unsubscribing"),
         }
     }
 
@@ -185,6 +191,9 @@ impl Feature {
         match self {
             Feature::Assistant => gettext("Answers questions and acts on your mail"),
             Feature::Translation => gettext("Translates a message when you ask"),
+            Feature::Unsubscribe => {
+                gettext("Reads a newsletter's unsubscribe page when the rules cannot")
+            }
         }
     }
 
@@ -961,10 +970,10 @@ mod tests {
         // stops compiling when a feature is added, until it is listed.
         for feature in Feature::ALL {
             match feature {
-                Feature::Assistant | Feature::Translation => {}
+                Feature::Assistant | Feature::Translation | Feature::Unsubscribe => {}
             }
         }
-        assert_eq!(Feature::ALL.len(), 2);
+        assert_eq!(Feature::ALL.len(), 3);
         for feature in Feature::ALL {
             assert!(!feature.label().is_empty());
             assert!(!feature.description().is_empty());
