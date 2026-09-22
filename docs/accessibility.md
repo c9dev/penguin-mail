@@ -88,26 +88,7 @@ open it, then run the script.
 
 ## What the keyboard cannot reach
 
-This one is not cheap to close without moving the window around, so it
-is written down rather than patched over.
-
-- **Export, and the Outbox row actions.** `Export…`, `Edit…`, `Send Now`
-  and `Delete` live in the thread row's context menu, which opens on a
-  right-click or a long press. The row that holds the menu is a child of
-  the list item the focus lands on, so a key controller on the row never
-  sees the key. Reaching them from the keyboard means the list view
-  handling Menu and Shift+F10 itself and opening the focused row's menu.
-- **The composer's formatting buttons.** Bold, italic, strikethrough,
-  code, link, the two lists and quote stay off the focus chain, since
-  putting eleven buttons between the fields and the body would cost every
-  writer eleven presses. Each of them has a shortcut, so the action is
-  reachable; the button is not. A toolbar that is one tab stop with the
-  arrow keys moving inside it is the shape this wants.
-- **Insert Image.** It sits on that bar and has no shortcut, so it is the
-  one formatting action a keyboard cannot start. More Formatting, beside
-  it, does take the focus, which is how the headings and block styles
-  behind it are reached.
-- **A recipient chip in the middle of a field.** Backspace in an empty
-  entry takes the last chip back into it for correction, and the chips
-  themselves are not focusable, so removing any other one needs the
-  mouse.
+Nothing known. The last four gaps closed in September 2026: the row
+menus open with Menu or Shift+F10, the formatting bar is one tab stop,
+Insert Image has Ctrl+Shift+P, and the arrow keys reach every recipient
+chip. Write a new gap down here when you find one, with why it was left.
