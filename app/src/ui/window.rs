@@ -25,9 +25,9 @@ use super::permission;
 use super::sidebar::Sidebar;
 use super::thread_list::{Picked, ThreadList};
 use super::{Mailbox, welcome};
-use crate::app::App;
+use crate::app::{App, Signature};
 use crate::assistant::ToolRequest;
-use crate::compose::{self, Draft, OutgoingAttachment, ReplyKind};
+use crate::compose::{self, OutgoingAttachment, ReplyKind};
 use crate::core::Core;
 use crate::open_thread::OpenThread;
 use crate::permission::{Occasion, Permission};
@@ -1123,11 +1123,8 @@ impl MainWindow {
                 self.save_all_attachments_from(view, message_id)
             }
             Action::Mailto(address) => {
-                let account_id = self.default_account();
-                if let (Some(account_id), Some(app)) = (account_id, self.app.upgrade()) {
-                    let mut draft = Draft::new(account_id, app.identity(account_id));
-                    draft.to = compose::parse_recipients(&address);
-                    app.compose(app.signed(draft));
+                if let Some(app) = self.app.upgrade() {
+                    app.new_message(self.account_in_view(), &address);
                 }
             }
             Action::ShowContact(address) => self.show_contact_from(view, address),
@@ -1209,20 +1206,13 @@ impl MainWindow {
         });
     }
 
-    /// The account a new message comes from: the one set in Preferences,
-    /// else the account in view, else the first.
-    fn default_account(&self) -> Option<AccountId> {
-        let (preferred, accounts) = (self.settings().default_account, self.accounts());
-        preferred
-            .and_then(|email| {
-                accounts
-                    .iter()
-                    .find(|a| a.email.eq_ignore_ascii_case(&email))
-                    .map(|a| a.id)
-            })
-            .or_else(|| self.conversation.read(|o| o.account_id))
+    /// The account the reader is looking at: the open conversation's, else
+    /// the mailbox's. A new message comes from it unless Preferences names
+    /// another.
+    fn account_in_view(&self) -> Option<AccountId> {
+        self.conversation
+            .read(|o| o.account_id)
             .or_else(|| self.mailbox.borrow().account())
-            .or_else(|| accounts.first().map(|a| a.id))
     }
 
     /// Applies `action` to the targets and keeps an undo for it. Actions that
@@ -1673,7 +1663,7 @@ impl MainWindow {
         // Every address the account sends as, so the reply comes from the
         // one the message was written to.
         let mine = app.my_addresses(account_id);
-        let mut draft = app.signed(compose::respond(
+        let mut draft = compose::respond(
             kind,
             account_id,
             &mine,
@@ -1681,9 +1671,9 @@ impl MainWindow {
             &text,
             html.as_deref(),
             &thread,
-        ));
+        );
         if attachments.is_empty() {
-            app.compose(draft);
+            app.open_composer(draft, Signature::Add);
             return;
         }
         let Some(sync) = self.core.account(account_id) else {
@@ -1721,7 +1711,7 @@ impl MainWindow {
                     )),
                 }
             }
-            app.compose(draft);
+            app.open_composer(draft, Signature::Add);
         });
     }
 
@@ -1764,7 +1754,7 @@ impl MainWindow {
                 .await
                 .ok()
                 .flatten();
-            let mut draft = Draft::new(account_id, app.identity(account_id));
+            let mut draft = app.blank_draft(account_id);
             draft.to = message.to.clone();
             draft.cc = message.cc.clone();
             draft.subject = message.subject.clone();
@@ -1783,7 +1773,8 @@ impl MainWindow {
                     .map(|s| s.send_at);
             }
             draft.draft_id = draft_id;
-            app.compose(draft);
+            // The composer that saved it signed it then.
+            app.open_composer(draft, Signature::AsWritten);
         });
     }
 
@@ -2206,10 +2197,13 @@ impl MainWindow {
     }
 
     fn compose_new(self: &Rc<Self>) {
-        let (Some(app), Some(account_id)) = (self.app.upgrade(), self.default_account()) else {
-            return self.toast(&gettext("Add an account first"));
-        };
-        app.compose(app.signed(Draft::new(account_id, app.identity(account_id))));
+        let wrote = self
+            .app
+            .upgrade()
+            .is_some_and(|app| app.new_message(self.account_in_view(), ""));
+        if !wrote {
+            self.toast(&gettext("Add an account first"));
+        }
     }
 
     /// Opens a thread from outside the window, such as a notification, and

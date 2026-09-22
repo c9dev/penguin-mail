@@ -6,7 +6,6 @@ use gtk::{gio, glib};
 use mailrs_sync::{History, Leave, MailAction, Permitted, TriageAction};
 
 use super::MainWindow;
-use crate::compose::Draft;
 use crate::permission::{Occasion, Permission};
 use crate::ui::confirm::{Tone, confirm};
 use crate::ui::conversation::ConversationView;
@@ -105,11 +104,7 @@ impl MainWindow {
                     .app
                     .upgrade()
                     .ok_or_else(|| gettext("The app is closing."))?;
-                let mut draft = Draft::new(account_id, app.identity(account_id));
-                draft.to = crate::compose::parse_recipients(&to);
-                draft.subject = subject;
-                draft.markdown = body;
-                app.send_immediately(draft);
+                app.send_request(account_id, &to, subject, body);
                 Ok(())
             }
             Leave::Open(url) => {

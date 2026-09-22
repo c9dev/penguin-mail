@@ -13,7 +13,7 @@ use gtk::glib;
 use mailrs_store::outbox::Queued;
 use mailrs_sync::{Posted, now_millis};
 
-use super::App;
+use super::{App, Signature};
 use crate::compose::{
     Draft, SendWhen, build_body_part, build_mime, build_protected, new_message_id,
 };
@@ -30,9 +30,9 @@ fn not_connected() -> String {
 }
 
 impl App {
-    /// Sends what a composer handed over: now, after the Undo delay, or at
-    /// a scheduled time.
-    pub fn send(self: &Rc<Self>, draft: Draft, when: SendWhen) {
+    /// Sends `draft`: now, after the Undo delay, or at a scheduled time.
+    pub fn send(self: &Rc<Self>, draft: Draft, when: SendWhen, signature: Signature) {
+        let draft = self.signed_when(draft, signature);
         match when {
             SendWhen::At(at) => self.schedule(draft, at),
             SendWhen::Now => {
@@ -45,7 +45,9 @@ impl App {
                             (Rc::clone(&cancelled), Rc::clone(self), draft.clone());
                         window.offer_undo_send(delay, move || {
                             flag.set(true);
-                            if let Some(composer) = app.compose(undone.clone()) {
+                            if let Some(composer) =
+                                app.open_composer(undone.clone(), Signature::AsWritten)
+                            {
                                 composer.mark_unsaved();
                             }
                         });
@@ -69,7 +71,7 @@ impl App {
 
     /// Sends without the Undo delay, for messages the user never wrote,
     /// such as an unsubscribe request.
-    pub fn send_immediately(self: &Rc<Self>, draft: Draft) {
+    pub(super) fn send_immediately(self: &Rc<Self>, draft: Draft) {
         self.send_now(draft, false);
     }
 
@@ -235,7 +237,7 @@ impl App {
 
     /// Opens the composer again with a message that could not go out.
     fn reopen(self: &Rc<Self>, draft: Draft, problem: &str) {
-        if let Some(composer) = self.compose(draft) {
+        if let Some(composer) = self.open_composer(draft, Signature::AsWritten) {
             composer.mark_unsaved();
             composer.toast(problem);
         }

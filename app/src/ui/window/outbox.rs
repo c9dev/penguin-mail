@@ -11,6 +11,7 @@ use gtk::{gio, glib};
 use mailrs_sync::{Mailbox, Posted, outbox_id};
 
 use super::MainWindow;
+use crate::app::Signature;
 use crate::compose::Draft;
 use mailrs_domain::translate::{fill, gettext};
 
@@ -125,7 +126,7 @@ impl MainWindow {
             this.conversation.leave();
             this.scheduled_changed();
             if let Some(app) = this.app.upgrade()
-                && let Some(composer) = app.compose(draft)
+                && let Some(composer) = app.open_composer(draft, Signature::AsWritten)
             {
                 composer.mark_unsaved();
             }

@@ -15,7 +15,6 @@ use mailrs_domain::{Account, AccountId, Address, ChangeEvent, Label, system_labe
 use mailrs_store::{accounts, labels, messages, threads};
 use mailrs_sync::History;
 
-use crate::compose::Draft;
 use crate::compose::Identity;
 use crate::core::Core;
 use crate::notify;
@@ -23,7 +22,7 @@ use crate::permission::{Occasion, Permission};
 use crate::settings::{Change, ColorScheme, Effect, Effects, Settings};
 use crate::tray::{MailTray, TrayCommand};
 use crate::ui::autocomplete::Contacts;
-use crate::ui::composer::{Composer, Remembered, Writing, spell};
+use crate::ui::composer::spell;
 use crate::ui::window::{MainWindow, Reveal};
 
 const BLOCK_REMOTE_RULES: &str = r#"[
@@ -32,8 +31,11 @@ const BLOCK_REMOTE_RULES: &str = r#"[
   {"trigger": {"url-filter": "^ftp:"}, "action": {"type": "block"}}
 ]"#;
 
+mod composing;
 mod hidden;
 mod sending;
+
+pub use composing::Signature;
 mod updates;
 
 type AppAction = Box<dyn Fn(&Rc<App>)>;
@@ -245,43 +247,6 @@ impl App {
         });
     }
 
-    /// `draft` with the signature of the address it comes from. Gmail keeps
-    /// one per send-as address, so a reply from an alias is signed as that
-    /// alias.
-    pub fn signed(&self, mut draft: Draft) -> Draft {
-        let account = self.account_email(draft.account_id);
-        let settings = self.settings.borrow();
-        draft.markdown = crate::compose::with_signature(
-            &draft.markdown,
-            settings.signature_for(&account, &draft.from.email),
-        );
-        draft
-    }
-
-    /// Opens a composer, addressed to `to` unless it is empty.
-    pub fn compose_to(self: &Rc<Self>, to: &str) {
-        let preferred = self.settings.borrow().default_account.clone();
-        let first = {
-            let accounts = self.accounts.borrow();
-            preferred
-                .and_then(|email| {
-                    accounts
-                        .iter()
-                        .find(|a| a.email.eq_ignore_ascii_case(&email))
-                        .map(|a| a.id)
-                })
-                .or_else(|| accounts.first().map(|a| a.id))
-        };
-        let Some(account_id) = first else {
-            self.show_window();
-            return;
-        };
-        let mut draft = Draft::new(account_id, self.identity(account_id));
-        draft.to = crate::compose::parse_recipients(to);
-        let draft = self.signed(draft);
-        self.compose(draft);
-    }
-
     pub fn show_window(self: &Rc<Self>) -> Rc<MainWindow> {
         crate::ensure_gtk();
         self.apply_style();
@@ -382,7 +347,7 @@ impl App {
     }
 
     /// The address and display name mail from this account is sent as.
-    pub fn identity(&self, account_id: AccountId) -> Address {
+    fn identity(&self, account_id: AccountId) -> Address {
         Address {
             name: self.names.borrow().get(&account_id).cloned(),
             email: self.account_email(account_id),
@@ -612,66 +577,6 @@ impl App {
                 }
             }
         });
-    }
-
-    pub fn compose(self: &Rc<Self>, draft: Draft) -> Option<Rc<Composer>> {
-        crate::ensure_gtk();
-        self.apply_style();
-        let identities = self.identities();
-        if identities.is_empty() {
-            return None;
-        }
-        self.reload_contacts();
-        let writing = Writing {
-            identities,
-            last_used: self
-                .settings
-                .borrow()
-                .last_sender
-                .iter()
-                .map(|(account, email)| (account.clone(), email.clone()))
-                .collect(),
-            dictionaries: self.dictionaries(draft.account_id),
-            remember: {
-                let app = Rc::downgrade(self);
-                Rc::new(move |learned| {
-                    let Some(app) = app.upgrade() else { return };
-                    app.change_settings(match learned {
-                        Remembered::SentFrom { account, email } => {
-                            Change::LastSender { account, email }
-                        }
-                        Remembered::Word(word) => Change::KeepWord(word),
-                    });
-                })
-            },
-            check_attachments: self.settings.borrow().check_attachments,
-            sign_by_default: self.settings.borrow().sign_by_default,
-            encrypt_when_possible: self.settings.borrow().encrypt_when_possible,
-        };
-        let this = Rc::downgrade(self);
-        let format = self.settings.borrow().compose_format;
-        let composer = Composer::open(
-            Rc::clone(&self.core),
-            writing,
-            Rc::clone(&self.contacts),
-            draft,
-            format,
-            move |draft, when| {
-                if let Some(app) = this.upgrade() {
-                    app.send(draft, when);
-                }
-            },
-        );
-        self.window_opened();
-        let keep = Rc::clone(&composer);
-        let app = Rc::downgrade(self);
-        composer_window(&composer).connect_destroy(move |_| {
-            let _ = &keep;
-            if let Some(app) = app.upgrade() {
-                app.window_closed();
-            }
-        });
-        Some(composer)
     }
 
     /// Known correspondents, shared with composers and search.
@@ -1188,8 +1093,4 @@ fn api_off(err: &anyhow::Error) -> Option<(String, String)> {
         } => Some((service.clone(), enable_url.clone())),
         _ => None,
     }
-}
-
-fn composer_window(composer: &Rc<Composer>) -> adw::Window {
-    composer.window()
 }

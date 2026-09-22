@@ -12,6 +12,7 @@ use mailrs_sync::{MailAction, Outcome, Permitted, View};
 use serde_json::Value;
 
 use super::MainWindow;
+use crate::app::Signature;
 use crate::assistant::run::{
     Answer, Background, Desk, Effects, OnScreen, OpenConversation, Permission, Tools,
 };
@@ -74,7 +75,8 @@ impl Desk for Ports {
     }
 
     fn default_account(&self) -> Option<AccountId> {
-        self.0.default_account()
+        let app = self.0.app.upgrade()?;
+        app.default_account(self.0.account_in_view())
     }
 }
 
@@ -99,11 +101,11 @@ impl Effects for Ports {
 
     fn send_later(&self, draft: Draft, at: EpochMillis) -> Result<(), String> {
         let app = self.0.app.upgrade().ok_or_else(closing)?;
-        let draft = match draft.draft_id {
-            Some(_) => draft,
-            None => app.signed(draft),
+        let signature = match draft.draft_id {
+            Some(_) => Signature::AsWritten,
+            None => Signature::Add,
         };
-        app.send(draft, SendWhen::At(at));
+        app.send(draft, SendWhen::At(at), signature);
         Ok(())
     }
 
@@ -123,18 +125,18 @@ impl Effects for Ports {
 
     fn new_draft(&self, account_id: AccountId) -> Result<Draft, String> {
         let app = self.0.app.upgrade().ok_or_else(closing)?;
-        Ok(Draft::new(account_id, app.identity(account_id)))
+        Ok(app.blank_draft(account_id))
     }
 
     fn compose(&self, draft: Draft) -> Result<(), String> {
         let app = self.0.app.upgrade().ok_or_else(closing)?;
-        app.compose(app.signed(draft));
+        app.open_composer(draft, Signature::Add);
         Ok(())
     }
 
     fn send(&self, draft: Draft) -> Result<(), String> {
         let app = self.0.app.upgrade().ok_or_else(closing)?;
-        app.send(app.signed(draft), SendWhen::Now);
+        app.send(draft, SendWhen::Now, Signature::Add);
         Ok(())
     }
 
