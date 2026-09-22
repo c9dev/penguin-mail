@@ -6,7 +6,7 @@ use mailrs_domain::{Category, FlagColor, MessageBody, MessageMeta, Vacation, sys
 use mailrs_sync::{MailAction, Permitted, TriageAction};
 use serde_json::{Value, json};
 
-use super::fake::{Harness, ME, labelled, meta};
+use super::fake::{Harness, ME, NOW, labelled, meta};
 use super::{OpenConversation, Permission};
 use crate::hide_my_email::HiddenAddress;
 use crate::settings::{Change, TextSize};
@@ -15,9 +15,6 @@ mod calendar;
 mod mail;
 
 const DAY: i64 = 24 * 60 * 60 * 1000;
-
-/// A fixed clock the fixtures hang off: 2026-01-02 at noon UTC.
-const NOW: i64 = 1_767_355_200_000;
 
 /// Three inbox conversations: one unread from Theo, a promotion, and a
 /// two-message thread from Ann.
@@ -283,7 +280,10 @@ async fn organize_archives_and_reports_what_changed() {
         json!({"done": 1, "undo": "The user can press Ctrl+Z to undo this."})
     );
     assert!(!h.labels_of("m1").await.contains(&"INBOX".to_string()));
-    assert_eq!(h.gmail.with(|i| i.writes.clone()), ["modify m1 + -INBOX"]);
+    assert_eq!(
+        h.gmail.with(|s| s.remote_writes.clone()),
+        ["modify m1 + -INBOX"]
+    );
     let asked = h.asked();
     assert_eq!(asked.mail_changed.len(), 1, "the window redraws once");
     assert_eq!(
@@ -535,7 +535,7 @@ async fn the_automatic_reply_reads_back_what_it_stored() {
 #[tokio::test]
 async fn gmail_settings_ask_for_the_permission_instead_of_failing() {
     let h = harness().await;
-    h.gmail.with(|i| i.settings_allowed = false);
+    h.gmail.withhold(mailrs_gmail::SETTINGS_SCOPE);
 
     let answer = h.run("get_automatic_reply", json!({"account": ME})).await;
     assert_eq!(
@@ -804,7 +804,7 @@ async fn create_label_makes_one_in_gmail() {
         .ok("create_label", json!({"account": ME, "name": "Boats"}))
         .await;
     assert_eq!(made, json!({"account": ME, "created": "Boats"}));
-    assert!(h.gmail.with(|i| i.labels.iter().any(|l| l.name == "Boats")));
+    assert!(h.gmail.with(|s| s.labels.iter().any(|l| l.name == "Boats")));
 }
 
 #[tokio::test]
@@ -821,7 +821,7 @@ async fn block_sender_asks_then_files_a_rule() {
         h.asked().questions,
         ["Block shop@example.com? Their future mail goes straight to the Trash."]
     );
-    assert_eq!(h.gmail.with(|i| i.filters.len()), 1);
+    assert_eq!(h.gmail.with(|s| s.filters.len()), 1);
 }
 
 #[tokio::test]

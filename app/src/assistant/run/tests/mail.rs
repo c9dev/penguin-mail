@@ -3,11 +3,11 @@
 use chrono::{Duration, Local};
 use mailrs_domain::{Attachment, MessageBody, system_label};
 use mailrs_store::{address_book, templates};
-use mailrs_sync::{DraftRef, MailAction};
+use mailrs_sync::MailAction;
 use serde_json::json;
 
 use super::super::Permission;
-use super::super::fake::{Harness, ME, labelled, meta};
+use super::super::fake::{Harness, ME, NOW, labelled, meta};
 use super::super::mail::{Kind, kind_of, pdf_text};
 use super::{harness, mail, target};
 use crate::unsubscribe::Unsubscribe;
@@ -51,14 +51,17 @@ async fn delete_forever_asks_then_erases() {
         h.asked().questions,
         ["Delete 1 conversation forever? Gmail cannot bring it back."]
     );
-    assert!(h.gmail.with(|i| i.writes.iter().any(|w| w == "erase m2")));
+    assert!(
+        h.gmail
+            .with(|s| s.remote_writes.iter().any(|w| w == "delete m2"))
+    );
     assert_eq!(h.asked().relisted, 1, "the list drops the erased rows");
 }
 
 #[tokio::test]
 async fn delete_forever_asks_for_the_permission_it_lacks() {
     let h = harness().await;
-    h.gmail.with(|i| i.delete_allowed = false);
+    h.gmail.withhold(mailrs_gmail::DELETE_SCOPE);
     let answer = h
         .run("delete_forever", json!({"targets": [target("t2")]}))
         .await;
@@ -75,7 +78,7 @@ async fn delete_forever_asks_for_the_permission_it_lacks() {
     );
 
     h.effects.0.borrow_mut().approves = false;
-    h.gmail.with(|i| i.delete_allowed = true);
+    h.gmail.grant(mailrs_gmail::DELETE_SCOPE);
     assert_eq!(
         h.run("delete_forever", json!({"targets": [target("t2")]}))
             .await,
@@ -83,7 +86,7 @@ async fn delete_forever_asks_for_the_permission_it_lacks() {
     );
     assert!(
         !h.gmail
-            .with(|i| i.writes.iter().any(|w| w.starts_with("erase")))
+            .with(|s| s.remote_writes.iter().any(|w| w.starts_with("delete")))
     );
 }
 
@@ -125,7 +128,7 @@ async fn send_later_schedules_a_new_message_once_the_user_agrees() {
 #[tokio::test]
 async fn send_later_takes_a_saved_draft_as_it_stands() {
     let draft = labelled(
-        meta("d1", "t7", ME, "Fern swap", 1_767_355_200_000),
+        meta("d1", "t7", ME, "Fern swap", NOW),
         &[system_label::DRAFT],
     );
     let h = Harness::with(vec![draft]).await;
@@ -137,10 +140,8 @@ async fn send_later_takes_a_saved_draft_as_it_stands() {
                 ..MessageBody::default()
             },
         );
-        i.drafts = vec![DraftRef {
-            draft_id: "r-1".into(),
-            message_id: "d1".into(),
-        }];
+        i.drafts.insert("r-1".into(), b"Swap on Sunday?".to_vec());
+        i.draft_messages.insert("r-1".into(), "d1".into());
     });
 
     h.ok(
@@ -238,7 +239,7 @@ async fn unsubscribe_uses_the_link_the_list_gave() {
     );
 }
 
-/// The message `m1`, carrying `files`, each with bytes in the fake Gmail.
+/// The message `m1`, carrying `files`, each with bytes in the in-memory Gmail.
 async fn with_files(files: &[(&str, &str, &[u8])]) -> Harness {
     let h = Harness::with(mail()).await;
     h.gmail.with(|i| {

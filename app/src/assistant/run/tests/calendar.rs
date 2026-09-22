@@ -1,11 +1,11 @@
-//! The calendar tools, against the fake Gmail's calendar.
+//! The calendar tools, against the in-memory Gmail's calendar.
 
 use chrono::{Datelike, Duration, Local, NaiveDate, Weekday};
 use mailrs_domain::MessageBody;
 use serde_json::{Value, json};
 
 use super::super::Permission;
-use super::super::fake::{Harness, ME, meta};
+use super::super::fake::{Harness, ME, NOW, meta};
 use super::harness;
 
 /// A Monday a few weeks ahead, so every time the tests use lies in the
@@ -236,7 +236,7 @@ async fn an_event_changes_and_goes_once_the_user_agrees() {
 #[tokio::test]
 async fn a_missing_calendar_permission_is_asked_for() {
     let h = harness().await;
-    h.gmail.with(|i| i.calendar_allowed = false);
+    h.gmail.withhold(mailrs_gmail::CALENDAR_SCOPE);
     let day = monday().format("%Y-%m-%d").to_string();
 
     let answer = h.run("list_events", json!({"from": day, "to": day})).await;
@@ -312,7 +312,7 @@ async fn an_invitation_is_answered_after_asking() {
         "t9",
         "priya@example.com",
         "Invitation: Roadmap review",
-        1_767_355_200_000,
+        NOW,
     )])
     .await;
     h.gmail.with(|i| {
