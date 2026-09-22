@@ -6,12 +6,25 @@ use std::process::Stdio;
 use sha2::{Digest, Sha256};
 
 use super::version::{Method, Version};
+use crate::packaging::Packaging;
 
-/// A binary under `/usr` came from the .deb. One inside a cargo `target`
-/// directory is a build tree, which never updates. Anything else was
-/// installed from a tarball or `scripts/install.sh`, into the prefix two
-/// levels above it.
-pub fn method_for(exe: &Path) -> Option<Method> {
+/// How this copy updates. A Flatpak or a snap leaves it to its store. An
+/// AppImage replaces the file the AppImage runtime names in `$APPIMAGE`,
+/// passed here as `appimage`; without one it runs unpacked and cannot
+/// update. Otherwise the binary's path decides: under `/usr` it came from
+/// the .deb, inside a cargo `target` directory it is a build tree, which
+/// never updates, and anywhere else it came from a tarball or
+/// `scripts/install.sh`, into the prefix two levels above it.
+pub fn method_for(packaging: Packaging, exe: &Path, appimage: Option<&Path>) -> Option<Method> {
+    match packaging {
+        Packaging::Flatpak | Packaging::Snap => return packaging.store().map(Method::Store),
+        Packaging::AppImage => {
+            return appimage.map(|file| Method::AppImage {
+                file: file.to_path_buf(),
+            });
+        }
+        Packaging::Native => {}
+    }
     if exe.starts_with("/usr") {
         return Some(Method::Deb);
     }
@@ -65,7 +78,7 @@ const PKEXEC_REFUSED: [i32; 2] = [126, 127];
 /// Installs `package` over this copy, writing everything the installer says
 /// to `install.log` in `work`. A .deb goes through apt as root. A tarball
 /// unpacks into `work` and runs its own `install-files.sh`, which leaves the
-/// person's login item as it is.
+/// person's login item as it is. An AppImage replaces the running file.
 pub async fn run(
     method: &Method,
     version: Version,
@@ -81,6 +94,11 @@ pub async fn run(
     let out = std::fs::File::create(&log).map_err(|e| fail(e.to_string()))?;
     let output = || out.try_clone().map_err(|e| fail(e.to_string()));
     let mut command = match method {
+        Method::Store(_) => return Err(fail("a store installs this copy's updates".into())),
+        Method::AppImage { file } => {
+            return replace_appimage(package, file)
+                .map_err(|e| fail(format!("could not replace {}: {e}", file.display())));
+        }
         Method::Deb => {
             let mut apt = tokio::process::Command::new("pkexec");
             apt.args(["apt-get", "install", "-y"]).arg(package);
@@ -126,26 +144,132 @@ pub async fn run(
     }
 }
 
+/// Puts the new AppImage where the running one lies, under the same name,
+/// so a launcher or login item pointing at it starts the new version. It
+/// lands beside the old file first and is renamed over it, so a copy that
+/// fails halfway leaves the old AppImage whole. The running copy keeps the
+/// old file open and goes on working until it restarts.
+fn replace_appimage(package: &Path, file: &Path) -> std::io::Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    let name = file
+        .file_name()
+        .ok_or_else(|| std::io::Error::other("the AppImage path has no file name"))?;
+    let mut staged_name = std::ffi::OsString::from(".");
+    staged_name.push(name);
+    staged_name.push(".new");
+    let staged = file.with_file_name(staged_name);
+    let placed = std::fs::copy(package, &staged)
+        .and_then(|_| std::fs::set_permissions(&staged, std::fs::Permissions::from_mode(0o755)))
+        .and_then(|()| std::fs::rename(&staged, file));
+    if placed.is_err() {
+        let _ = std::fs::remove_file(&staged);
+    }
+    placed
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    use crate::packaging::Store;
+
     #[test]
     fn the_binary_path_says_how_this_copy_was_installed() {
+        let native = |exe: &str| method_for(Packaging::Native, Path::new(exe), None);
+        assert_eq!(native("/usr/bin/penguin-mail"), Some(Method::Deb));
         assert_eq!(
-            method_for(Path::new("/usr/bin/penguin-mail")),
-            Some(Method::Deb)
-        );
-        assert_eq!(
-            method_for(Path::new("/home/ann/.local/bin/penguin-mail")),
+            native("/home/ann/.local/bin/penguin-mail"),
             Some(Method::Local {
                 prefix: "/home/ann/.local".into()
             })
         );
+        assert_eq!(native("/home/ann/mail/target/release/penguin-mail"), None);
+    }
+
+    #[test]
+    fn a_flatpak_or_a_snap_leaves_updates_to_its_store() {
         assert_eq!(
-            method_for(Path::new("/home/ann/mail/target/release/penguin-mail")),
-            None
+            method_for(Packaging::Flatpak, Path::new("/app/bin/penguin-mail"), None),
+            Some(Method::Store(Store::Flathub))
         );
+        assert_eq!(
+            method_for(
+                Packaging::Snap,
+                Path::new("/snap/penguin-mail/12/usr/bin/penguin-mail"),
+                None
+            ),
+            Some(Method::Store(Store::Snap))
+        );
+    }
+
+    #[test]
+    fn an_appimage_updates_the_file_it_runs_from() {
+        let mounted = Path::new("/tmp/.mount_penguiXYZ/usr/bin/penguin-mail");
+        let file = Path::new("/home/ann/Applications/penguin-mail.AppImage");
+        assert_eq!(
+            method_for(Packaging::AppImage, mounted, Some(file)),
+            Some(Method::AppImage {
+                file: file.to_path_buf()
+            })
+        );
+        // Unpacked with --appimage-extract, there is no file to replace.
+        assert_eq!(method_for(Packaging::AppImage, mounted, None), None);
+    }
+
+    #[tokio::test]
+    async fn a_new_appimage_takes_the_old_ones_place_and_name() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("Penguin Mail.AppImage");
+        std::fs::write(&file, "old").unwrap();
+        let package = dir.path().join("penguin-mail-9.9.9-x86_64.AppImage");
+        std::fs::write(&package, "new").unwrap();
+        let method = Method::AppImage { file: file.clone() };
+        let work = dir.path().join("work");
+        run(&method, Version::parse("9.9.9").unwrap(), &package, &work)
+            .await
+            .unwrap();
+        assert_eq!(std::fs::read_to_string(&file).unwrap(), "new");
+        use std::os::unix::fs::PermissionsExt;
+        let mode = std::fs::metadata(&file).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o755);
+        let left: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .map(|e| e.unwrap().file_name().into_string().unwrap())
+            .filter(|name| name.ends_with(".new"))
+            .collect();
+        assert!(left.is_empty(), "{left:?}");
+    }
+
+    #[tokio::test]
+    async fn an_appimage_in_a_folder_it_cannot_write_keeps_the_old_one() {
+        let dir = tempfile::tempdir().unwrap();
+        let package = dir.path().join("new.AppImage");
+        std::fs::write(&package, "new").unwrap();
+        let method = Method::AppImage {
+            file: dir.path().join("missing-folder").join("penguin-mail.AppImage"),
+        };
+        let work = dir.path().join("work");
+        let failed = run(&method, Version::parse("9.9.9").unwrap(), &package, &work)
+            .await
+            .unwrap_err();
+        assert!(failed.reason.contains("could not replace"), "{}", failed.reason);
+    }
+
+    #[tokio::test]
+    async fn a_store_install_refuses_to_install_anything() {
+        let dir = tempfile::tempdir().unwrap();
+        let package = dir.path().join("anything");
+        std::fs::write(&package, "x").unwrap();
+        let method = Method::Store(Store::Flathub);
+        let failed = run(
+            &method,
+            Version::parse("9.9.9").unwrap(),
+            &package,
+            &dir.path().join("work"),
+        )
+        .await
+        .unwrap_err();
+        assert!(failed.reason.contains("store"), "{}", failed.reason);
     }
 
     #[test]

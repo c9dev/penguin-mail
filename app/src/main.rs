@@ -19,6 +19,7 @@ mod logging;
 mod notify;
 mod old_id;
 mod open_thread;
+mod packaging;
 mod permission;
 mod pgp;
 mod protection;

@@ -20,12 +20,14 @@ app/src/assistant/sources/skills/sandbox.rs
 app/src/assistant/sources/skills/shell.rs
 app/src/assistant/sources/web.rs
 app/src/assistant/turn.rs
+app/src/autostart.rs
 app/src/compose.rs
 app/src/core.rs
 app/src/format.rs
 app/src/main.rs
 app/src/notify.rs
 app/src/open_thread/run/translation.rs
+app/src/packaging.rs
 app/src/permission.rs
 app/src/pgp.rs
 app/src/protection.rs

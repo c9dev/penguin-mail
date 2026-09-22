@@ -56,3 +56,10 @@ webkit.workspace = true
 mail-parser.workspace = true
 tempfile.workspace = true
 wiremock.workspace = true
+
+# The kind of package a build is for; see src/packaging.rs. A plain build
+# is the .deb, the rpm or the tarball.
+[features]
+packaging-flatpak = []
+packaging-snap = []
+packaging-appimage = []

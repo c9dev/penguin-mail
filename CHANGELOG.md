@@ -5,6 +5,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### New
+
+- In the Flatpak and the snap, Preferences says that the store brings
+  updates, and why skills are off there: their scripts need a sandbox of
+  their own, which cannot start inside the one the app runs in.
+
 ## 0.1.6 (2026-09-22)
 
 ### Fixed

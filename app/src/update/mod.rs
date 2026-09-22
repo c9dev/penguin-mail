@@ -1,6 +1,7 @@
 //! Finding a newer release, installing it the way this copy was installed,
 //! and restarting into it. The app owns one [`Updater`] unless it runs as
-//! the demo or from a cargo build, which never update.
+//! the demo or from a cargo build, which never update. A Flatpak or a snap
+//! has one that leaves everything to its store.
 
 pub mod github;
 pub mod install;
@@ -163,7 +164,16 @@ impl Updater {
             return None;
         }
         let exe = crate::exe::path().ok()?;
-        install::method_for(&exe).map(Updater::new)
+        let appimage = std::env::var_os("APPIMAGE").map(PathBuf::from);
+        install::method_for(crate::packaging::BUILT_FOR, &exe, appimage.as_deref())
+            .map(Updater::new)
+    }
+
+    /// Whether this copy fetches and installs releases itself. A store
+    /// install has an updater that does nothing, so the window, the tray
+    /// and Preferences can ask one question.
+    pub fn updates_itself(&self) -> bool {
+        self.method.store().is_none()
     }
 
     pub fn new(method: Method) -> Updater {
