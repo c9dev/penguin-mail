@@ -483,8 +483,8 @@ impl<A: Accounts> Mailboxes<A> {
     }
 
     /// Counts for every sidebar mailbox, plus the categories of the inbox
-    /// on screen. Two grouped queries cover the labels and the flags, so
-    /// this costs a handful of queries rather than one per mailbox.
+    /// on screen. Grouped queries cover the labels, the flags and the VIPs,
+    /// so this costs a handful of queries rather than one per mailbox.
     pub async fn counts(
         &self,
         sidebar: &[Mailbox],
@@ -512,6 +512,15 @@ impl<A: Accounts> Mailboxes<A> {
                 let scheduled = outbox::scheduled(c)?.len() as i64;
                 let stuck = outbox::stuck(c)?.len() as i64;
                 let reminders = reminders::list(c)?.len() as i64;
+                let vips: Vec<String> = sidebar
+                    .iter()
+                    .filter_map(|m| match m {
+                        Mailbox::Vips { emails, .. } => Some(emails.iter().cloned()),
+                        _ => None,
+                    })
+                    .flatten()
+                    .collect();
+                let from_vips = threads::sender_counts(c, &vips)?;
                 let mut mailboxes = HashMap::new();
                 mailboxes.insert(Mailbox::FollowUp, waiting);
                 mailboxes.insert(Mailbox::Scheduled, scheduled);
@@ -540,12 +549,7 @@ impl<A: Accounts> Mailboxes<A> {
                             }
                         }
                         Mailbox::Flag(color) => flagged.get(color).copied().unwrap_or(0),
-                        // VIP mail is found by sender, which no grouped
-                        // query covers; there are only a few of these.
-                        Mailbox::Vips { .. } => match mailbox.filter() {
-                            Some(filter) => threads::unread_threads(c, &filter)?,
-                            None => continue,
-                        },
+                        Mailbox::Vips { emails, .. } => from_vips.unread(emails),
                         _ => continue,
                     };
                     mailboxes.insert(mailbox, count);

@@ -1,6 +1,6 @@
 //! Thread queries. `messages::refresh_thread` maintains the rows.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use mailrs_domain::system_label::{SPAM, STARRED, TRASH};
 use mailrs_domain::{AccountId, Category, FlagColor, ThreadSummary};
@@ -491,6 +491,63 @@ pub fn label_counts(conn: &Connection) -> Result<LabelCounts> {
     Ok(LabelCounts {
         counts: rows.collect::<rusqlite::Result<_>>()?,
     })
+}
+
+/// Which unread threads have mail from which senders, for the VIP counts.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SenderCounts {
+    /// Each unread thread, by account and id, with the lowercased senders
+    /// of its messages among the ones asked about.
+    threads: HashMap<(AccountId, String), HashSet<String>>,
+}
+
+impl SenderCounts {
+    /// `unread_threads` for `ThreadFilter::unified("").from_senders(senders)`.
+    /// A thread with mail from two of `senders` counts once.
+    pub fn unread(&self, senders: &[String]) -> i64 {
+        let wanted: HashSet<String> = senders.iter().map(|s| s.to_lowercase()).collect();
+        self.threads
+            .values()
+            .filter(|from| !from.is_disjoint(&wanted))
+            .count() as i64
+    }
+}
+
+/// The unread threads with mail from any of `senders`, and who sent it, in
+/// one query. The sidebar shows a VIP row for everyone and one per person,
+/// and a query per row walked every thread once for each.
+pub fn sender_counts(conn: &Connection, senders: &[String]) -> Result<SenderCounts> {
+    let mut senders: Vec<String> = senders.iter().map(|s| s.to_lowercase()).collect();
+    senders.sort();
+    senders.dedup();
+    if senders.is_empty() {
+        return Ok(SenderCounts::default());
+    }
+    // The inner query is the one `unread_threads` runs for every sender at
+    // once, so a thread counts here exactly when it counts there.
+    let inner = ThreadFilter::unified("")
+        .from_senders(senders.clone())
+        .query(Rows::Threads, "SELECT t.account_id, t.id");
+    let mut sql = Sql::default();
+    sql.push("SELECT DISTINCT x.account_id, x.thread_id, lower(x.from_addr) FROM (")
+        .push(&inner.text)
+        .push(
+            " AND t.unread = 1) v JOIN messages x ON x.account_id = v.account_id \
+               AND x.thread_id = v.id WHERE lower(x.from_addr) IN (",
+        );
+    sql.params.extend(inner.params);
+    sql.bind_list(&senders).push(")");
+    let mut stmt = conn.prepare_cached(&sql.text)?;
+    let mut rows = stmt.query(params_from_iter(&sql.params))?;
+    let mut counts = SenderCounts::default();
+    while let Some(row) = rows.next()? {
+        counts
+            .threads
+            .entry((row.get(0)?, row.get(1)?))
+            .or_default()
+            .insert(row.get(2)?);
+    }
+    Ok(counts)
 }
 
 /// `unread_threads` for `filter` narrowed to each category, in one query.

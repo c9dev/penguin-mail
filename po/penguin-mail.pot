@@ -5305,51 +5305,51 @@ msgstr ""
 msgid "This smart mailbox has no conditions"
 msgstr ""
 
-#: sync/src/mailbox.rs:786
+#: sync/src/mailbox.rs:790
 msgid "Could not load mail for {account}: {reason}"
 msgstr ""
 
-#: sync/src/mailbox.rs:831
+#: sync/src/mailbox.rs:835
 msgid "Sends {when}"
 msgstr ""
 
-#: sync/src/mailbox.rs:907
+#: sync/src/mailbox.rs:911
 msgid "Returns {when}"
 msgstr ""
 
-#: sync/src/mailbox.rs:950 sync/src/mailbox.rs:1021
+#: sync/src/mailbox.rs:954 sync/src/mailbox.rs:1025
 msgid "No recipients"
 msgstr ""
 
-#: sync/src/mailbox.rs:953 sync/src/mailbox.rs:1024
+#: sync/src/mailbox.rs:957 sync/src/mailbox.rs:1028
 msgid "To {recipients}"
 msgstr ""
 
-#: sync/src/mailbox.rs:986
+#: sync/src/mailbox.rs:990
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] ""
 msgstr[1] ""
 
-#: sync/src/mailbox.rs:996
+#: sync/src/mailbox.rs:1000
 msgid "Sent yesterday, no reply yet"
 msgstr ""
 
-#: sync/src/mailbox.rs:998
+#: sync/src/mailbox.rs:1002
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] ""
 msgstr[1] ""
 
-#: sync/src/mailbox.rs:1032
+#: sync/src/mailbox.rs:1036
 msgid "Not sent"
 msgstr ""
 
-#: sync/src/mailbox.rs:1040
+#: sync/src/mailbox.rs:1044
 msgid "{problem}. Trying again {when}"
 msgstr ""
 
-#: sync/src/mailbox.rs:1047
+#: sync/src/mailbox.rs:1051
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr ""
 
