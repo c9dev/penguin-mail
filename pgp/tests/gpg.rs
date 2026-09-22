@@ -8,7 +8,7 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 
 use mailrs_pgp::inline::{Armor, armor};
-use mailrs_pgp::{Pgp, Verdict};
+use mailrs_pgp::{Pgp, Readers, Verdict};
 
 /// A GnuPG home under a temp directory, with one key in it.
 struct Home {
@@ -412,7 +412,7 @@ fn a_part_encrypted_here_opens_here_with_its_signature() {
         .pgp
         .encrypt(
             part,
-            std::slice::from_ref(&home.address),
+            &Readers::named([home.address.clone()]),
             Some(&home.address),
         )
         .expect("an encrypted body");
@@ -436,7 +436,7 @@ fn encrypting_without_a_sender_key_leaves_the_message_unsigned() {
     let part = b"Content-Type: text/plain\r\n\r\nNo name on this.\r\n";
     let body = home
         .pgp
-        .encrypt(part, std::slice::from_ref(&home.address), None)
+        .encrypt(part, &Readers::named([home.address.clone()]), None)
         .expect("an encrypted body");
 
     let opened = home
@@ -456,7 +456,7 @@ fn encrypting_to_somebody_with_no_key_names_them() {
         .pgp
         .encrypt(
             b"Content-Type: text/plain\r\n\r\nHello.\r\n",
-            &["stranger@example.test".to_string()],
+            &Readers::named(["stranger@example.test"]),
             Some(&home.address),
         )
         .expect_err("no key for the stranger");
@@ -552,6 +552,122 @@ fn a_body_with_no_armor_in_it_is_not_opened() {
     assert!(
         matches!(err, mailrs_pgp::PgpError::NotPgp),
         "expected NotPgp, got {err}"
+    );
+}
+
+/// The armored public key of `home`'s own key, for another home to import.
+fn public_key(home: &Home) -> Vec<u8> {
+    let out = Command::new(home.pgp.program())
+        .args(["--batch", "--no-tty", "--homedir"])
+        .arg(home.dir.path())
+        .args(["--armor", "--export", &home.address])
+        .output()
+        .expect("gpg runs");
+    assert!(out.status.success(), "gpg could not export a key");
+    out.stdout
+}
+
+fn import(home: &Home, key: &[u8]) {
+    let mut child = Command::new(home.pgp.program())
+        .args(["--batch", "--no-tty", "--homedir"])
+        .arg(home.dir.path())
+        .arg("--import")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .expect("gpg runs");
+    std::io::Write::write_all(&mut child.stdin.take().expect("stdin"), key).expect("write");
+    assert!(
+        child.wait().expect("gpg ends").success(),
+        "gpg could not import a key"
+    );
+}
+
+/// The long key ids of the subkeys `home` encrypts to, as
+/// `--list-packets` prints them.
+fn encryption_key_ids(home: &Home) -> Vec<String> {
+    let out = Command::new(home.pgp.program())
+        .args(["--batch", "--no-tty", "--homedir"])
+        .arg(home.dir.path())
+        .args(["--with-colons", "--list-keys", &home.address])
+        .output()
+        .expect("gpg runs");
+    String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .filter(|line| line.starts_with("sub:"))
+        .filter(|line| {
+            line.split(':')
+                .nth(11)
+                .is_some_and(|abilities| abilities.contains('e'))
+        })
+        .filter_map(|line| line.split(':').nth(4).map(str::to_string))
+        .collect()
+}
+
+/// What `gpg --list-packets` makes of `ciphertext`, run in `home`, in
+/// capitals so key ids compare whichever case gpg prints them in.
+fn packets(home: &Home, ciphertext: &[u8]) -> String {
+    let file = home.dir.path().join("listed");
+    std::fs::write(&file, ciphertext).expect("write");
+    let out = Command::new(home.pgp.program())
+        .args(["--batch", "--no-tty", "--homedir"])
+        .arg(home.dir.path())
+        .args(["--list-only", "--list-packets"])
+        .arg(&file)
+        .output()
+        .expect("gpg runs");
+    String::from_utf8_lossy(&out.stdout).to_uppercase()
+}
+
+#[test]
+fn a_blind_copy_opens_for_its_reader_and_leaves_their_key_out_of_the_message() {
+    let Some(ada) = Home::new("Ada Lovelace", "ada@example.test") else {
+        return;
+    };
+    let Some(bo) = Home::new("Bo Peep", "bo@example.test") else {
+        return;
+    };
+    let Some(cy) = Home::new("Cy Young", "cy@example.test") else {
+        return;
+    };
+    import(&ada, &public_key(&bo));
+    import(&ada, &public_key(&cy));
+    let part = b"Content-Type: text/plain\r\n\r\nBo must not know you read this.\r\n";
+    let readers = Readers {
+        named: vec![bo.address.clone(), ada.address.clone()],
+        hidden: vec![cy.address.clone()],
+    };
+
+    let body = ada
+        .pgp
+        .encrypt(part, &readers, Some(&ada.address))
+        .expect("an encrypted body");
+    let ciphertext = body_of(&parts(&body)[1]);
+
+    // The blind copy's reader opens it with nothing but their own key.
+    let opened = cy.pgp.decrypt(&ciphertext).expect("cy reads it");
+    assert_eq!(opened.part, part);
+    let opened = bo.pgp.decrypt(&ciphertext).expect("bo reads it");
+    assert_eq!(opened.part, part);
+
+    // What Bo can learn of who else holds a key to it: himself, Ada, and a
+    // reader with a key id of zero.
+    let listed = packets(&bo, &ciphertext);
+    for key in encryption_key_ids(&bo)
+        .iter()
+        .chain(&encryption_key_ids(&ada))
+    {
+        assert!(listed.contains(key.as_str()), "{key} missing from\n{listed}");
+    }
+    let hidden = encryption_key_ids(&cy);
+    assert!(!hidden.is_empty(), "cy has a key to encrypt to");
+    for key in &hidden {
+        assert!(!listed.contains(key.as_str()), "{key} named in\n{listed}");
+    }
+    assert!(
+        listed.contains("KEYID 0000000000000000"),
+        "the hidden reader is there without a name\n{listed}"
     );
 }
 

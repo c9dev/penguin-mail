@@ -20,3 +20,4 @@ pub use inline::{Armor, Opened};
 pub use keys::{Key, Recipient};
 pub use read::Decrypted;
 pub use status::{Signature, Trust, Verdict};
+pub use write::Readers;

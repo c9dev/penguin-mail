@@ -91,8 +91,19 @@ a body, without the message's own `From`, `To` or `Subject`. Hand that over:
 
 ```rust
 let body = pgp.sign(&part, "ada@example.com")?;
-let body = pgp.encrypt(&part, &to, Some("ada@example.com"))?;
+let readers = Readers {
+    named: vec!["bo@example.com".into(), "ada@example.com".into()],
+    hidden: vec!["cy@example.com".into()],
+};
+let body = pgp.encrypt(&part, &readers, Some("ada@example.com"))?;
 ```
+
+`named` is To, Cc and the sender, whose own copy in Sent stays readable only
+if they are on the list. `hidden` is Bcc. gpg writes a key id for each named
+reader into the message, where anyone who receives it can list them with
+`gpg --list-packets`. A hidden reader gets a key id of zero, so the others
+learn that someone else can open the message and not who; the hidden reader's
+gpg tries each of its secret keys until one fits.
 
 Both give back a whole entity: a `Content-Type` header naming the boundary, a
 blank line, then the parts. Put that header on the message being sent and use
@@ -119,8 +130,8 @@ calls without asking:
   anybody holds, and a batch run cannot ask. `keys_for` reports the trust so
   the caller can put it in front of the person; refusing to send is the wrong
   place to raise it.
-- `encrypt` adds the sender to the recipients, so their own copy of the
-  message stays readable.
+- `encrypt` adds nobody on its own. Signing as the sender does not make the
+  sender a reader; the caller names them in `Readers`.
 - The `micalg` parameter names the digest gpg reported signing with. A digest
   this crate has no name for leaves the parameter out rather than putting the
   wrong one in.

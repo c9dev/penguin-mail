@@ -26,23 +26,28 @@ impl Pgp {
         Ok(mime::multipart_signed(&signed, &run.out, micalg(&run)))
     }
 
-    /// Encrypts `part` to every address in `to`, and gives back the whole
-    /// `multipart/encrypted` entity.
+    /// Encrypts `part` so that everyone in `readers` can open it, and gives
+    /// back the whole `multipart/encrypted` entity.
     ///
-    /// `from` signs the message from inside the encryption, which is the
-    /// only place a signature on encrypted mail means anything, and puts the
-    /// sender among the recipients so their own copy stays readable. Passing
-    /// `None` encrypts without signing, for a sender who holds no key of
-    /// their own.
+    /// gpg writes the key id of every named reader into the message, where
+    /// anyone who receives it can list them. A hidden reader goes in with a
+    /// key id of zero (`--hidden-recipient`), so the others see that
+    /// somebody else can open it and not who. That is what a blind copy
+    /// needs.
     ///
-    /// Every address in `to` needs a key gpg can use. [`Pgp::keys_for`]
+    /// `sign_as` signs the message from inside the encryption, which is the
+    /// only place a signature on encrypted mail means anything. Signing adds
+    /// nobody to `readers`: a sender who wants to read their own copy in
+    /// Sent names themselves there.
+    ///
+    /// Every address in `readers` needs a key gpg can use. [`Pgp::keys_for`]
     /// answers that before the message is written, which is a kinder moment
     /// to find out than this one.
     pub fn encrypt(
         &self,
         part: &[u8],
-        to: &[String],
-        from: Option<&str>,
+        readers: &Readers,
+        sign_as: Option<&str>,
     ) -> Result<Vec<u8>, PgpError> {
         let inside = mime::canonical(part);
         let run = self.run(&inside, |command| {
@@ -52,11 +57,13 @@ impl Pgp {
             // cannot ask. The trust that gpg reports belongs in front of the
             // person through `keys_for`, not in a refusal to send.
             command.args(["--trust-model", "always"]);
-            for address in to {
+            for address in &readers.named {
                 command.arg("--recipient").arg(user_id(address));
             }
-            if let Some(from) = from {
-                command.arg("--recipient").arg(user_id(from));
+            for address in &readers.hidden {
+                command.arg("--hidden-recipient").arg(user_id(address));
+            }
+            if let Some(from) = sign_as {
                 command.args(["--sign", "--local-user"]).arg(user_id(from));
             }
         })?;
@@ -64,6 +71,25 @@ impl Pgp {
             return Err(run.failure());
         }
         Ok(mime::multipart_encrypted(&run.out))
+    }
+}
+
+/// Who can open a message [`Pgp::encrypt`] writes.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Readers {
+    /// Addresses whose key ids go into the message for every reader to see.
+    pub named: Vec<String>,
+    /// Addresses whose key ids stay out of it, for a blind copy.
+    pub hidden: Vec<String>,
+}
+
+impl Readers {
+    /// Readers who are all named, as on a message with no blind copy.
+    pub fn named<S: Into<String>>(addresses: impl IntoIterator<Item = S>) -> Readers {
+        Readers {
+            named: addresses.into_iter().map(Into::into).collect(),
+            hidden: Vec::new(),
+        }
     }
 }
 

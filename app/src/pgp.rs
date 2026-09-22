@@ -113,9 +113,8 @@ pub fn version(pgp: &Pgp) -> Option<String> {
 }
 
 /// Why this draft cannot be encrypted under OpenPGP, for the Encrypt
-/// button to say. `None` means every recipient has a key. What a blind
-/// copy does to encryption is the same under either standard, so
-/// `protection::encrypting` answers that before either of these runs.
+/// button to say. `None` means every recipient has a key, a blind copy's
+/// included: gpg leaves that one's key id out of the message.
 pub fn cannot_encrypt(held: &[Recipient]) -> Option<String> {
     if held.is_empty() {
         return Some(gettext("Add a recipient whose key gpg holds."));
@@ -623,7 +622,7 @@ mod tests {
             .pgp
             .encrypt(
                 part,
-                std::slice::from_ref(&home.address),
+                &mailrs_pgp::Readers::named([home.address.clone()]),
                 Some(&home.address),
             )
             .expect("an encrypted body");
@@ -682,7 +681,7 @@ mod tests {
             .pgp
             .encrypt(
                 &part,
-                std::slice::from_ref(&home.address),
+                &mailrs_pgp::Readers::named([home.address.clone()]),
                 Some(&home.address),
             )
             .expect("an encrypted body");
@@ -712,7 +711,7 @@ mod tests {
             home.pgp
                 .encrypt(
                     b"Meet at six.\r\n",
-                    std::slice::from_ref(&home.address),
+                    &mailrs_pgp::Readers::named([home.address.clone()]),
                     Some(&home.address),
                 )
                 .expect("an encrypted body"),

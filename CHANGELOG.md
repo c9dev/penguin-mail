@@ -15,6 +15,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - An invitation to one meeting of a repeating series now says how the
   series runs, such as "Every Wednesday, 6 left", read from your Google
   Calendar.
+- An encrypted message can carry a Bcc when it goes out with OpenPGP. The
+  people in To and Cc cannot tell who got the blind copy. S/MIME cannot
+  hide one, so the Encrypt button says why it stays off there.
 
 ### Improved
 
@@ -62,6 +65,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - The composer's formatting bar is one Tab stop: the arrow keys move between its buttons, and a screen reader hears it as a toolbar.
 - Ctrl+Shift+P inserts an image in the composer, and the Keyboard Shortcuts window lists it.
 - You can reach any recipient in an address field from the keyboard: Left from the start of the field steps onto the addresses, and Delete removes the one you are on.
+- An encrypted message you send without signing it stays readable in your
+  Sent folder.
 
 ## 0.1.4 (2026-09-22)
 

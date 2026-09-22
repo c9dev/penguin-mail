@@ -26,43 +26,43 @@ msgstr ""
 msgid "Could not build the message: {reason}"
 msgstr ""
 
-#: app/src/app/sending.rs:140
+#: app/src/app/sending.rs:107 app/src/app/sending.rs:159
 msgid "Not encrypted, so not sent: {reason}"
 msgstr ""
 
-#: app/src/app/sending.rs:141
+#: app/src/app/sending.rs:160
 msgid "Not signed, so not sent: {reason}"
 msgstr ""
 
-#: app/src/app/sending.rs:177
+#: app/src/app/sending.rs:196
 msgid "Waiting in the Outbox. It goes out as soon as it can."
 msgstr ""
 
-#: app/src/app/sending.rs:182 app/src/app/sending.rs:187
+#: app/src/app/sending.rs:201 app/src/app/sending.rs:206
 msgid "Not sent: {reason}"
 msgstr ""
 
-#: app/src/app/sending.rs:217 app/src/app/sending.rs:230
+#: app/src/app/sending.rs:236 app/src/app/sending.rs:249
 msgid "Not scheduled: {reason}"
 msgstr ""
 
-#: app/src/app/sending.rs:223
+#: app/src/app/sending.rs:242
 msgid "Will send {when}"
 msgstr ""
 
-#: app/src/app/sending.rs:279
+#: app/src/app/sending.rs:298
 msgid "Sent {message}"
 msgstr ""
 
-#: app/src/app/sending.rs:285
+#: app/src/app/sending.rs:304
 msgid "Still in the Outbox: {message}"
 msgstr ""
 
-#: app/src/app/sending.rs:380
+#: app/src/app/sending.rs:399
 msgid "your message"
 msgstr ""
 
-#: app/src/app/sending.rs:382
+#: app/src/app/sending.rs:401
 msgid "“{subject}”"
 msgstr ""
 
@@ -817,177 +817,191 @@ msgid ""
 "too. Google asks you to confirm in your browser."
 msgstr ""
 
-#: app/src/pgp.rs:121
+#: app/src/pgp.rs:120
 msgid "Add a recipient whose key gpg holds."
 msgstr ""
 
-#: app/src/pgp.rs:130
+#: app/src/pgp.rs:129
 msgid "gpg holds no key for {addresses}."
 msgstr ""
 
-#: app/src/pgp.rs:147
+#: app/src/pgp.rs:146
 msgid "gpg holds no key for any of the addresses you send from."
 msgstr ""
 
-#: app/src/pgp.rs:149
+#: app/src/pgp.rs:148
 msgid "gpg holds a key for {addresses}."
 msgstr ""
 
-#: app/src/pgp.rs:153
+#: app/src/pgp.rs:152
 msgid "gpg holds a key for {addresses}, and none for {without}."
 msgstr ""
 
-#: app/src/pgp.rs:170 app/src/smime.rs:199
+#: app/src/pgp.rs:169 app/src/smime.rs:199
 msgid "Signed by {signer}"
 msgstr ""
 
-#: app/src/pgp.rs:179 app/src/smime.rs:207
+#: app/src/pgp.rs:178 app/src/smime.rs:207
 msgid "This message changed after it was signed"
 msgstr ""
 
-#: app/src/pgp.rs:181 app/src/smime.rs:209
+#: app/src/pgp.rs:180 app/src/smime.rs:209
 msgid "The signature of {signer} does not match what arrived."
 msgstr ""
 
-#: app/src/pgp.rs:188
+#: app/src/pgp.rs:187
 msgid "Signed by {signer}, whose key has expired"
 msgstr ""
 
-#: app/src/pgp.rs:192
+#: app/src/pgp.rs:191
 msgid "The text is as it was written, and the key behind it ran out."
 msgstr ""
 
-#: app/src/pgp.rs:198
+#: app/src/pgp.rs:197
 msgid "Signed by {signer}, who took this key back"
 msgstr ""
 
-#: app/src/pgp.rs:202
+#: app/src/pgp.rs:201
 msgid "The owner revoked it, so it says nothing about who wrote this."
 msgstr ""
 
-#: app/src/pgp.rs:208 app/src/smime.rs:236
+#: app/src/pgp.rs:207 app/src/smime.rs:236
 msgid "Signed by {signer}, and the signature has run out"
 msgstr ""
 
-#: app/src/pgp.rs:212 app/src/smime.rs:240
+#: app/src/pgp.rs:211 app/src/smime.rs:240
 msgid "It carried a date to stop being good on, and that date has passed."
 msgstr ""
 
-#: app/src/pgp.rs:217
+#: app/src/pgp.rs:216
 msgid "Signed by a key this computer does not hold"
 msgstr ""
 
-#: app/src/pgp.rs:219
+#: app/src/pgp.rs:218
 msgid "Nothing here can check it. Ask gpg for key {key}."
 msgstr ""
 
-#: app/src/pgp.rs:225
+#: app/src/pgp.rs:224
 msgid "it names"
 msgstr ""
 
-#: app/src/pgp.rs:231
+#: app/src/pgp.rs:230
 msgid "gpg could not check this signature"
 msgstr ""
 
-#: app/src/pgp.rs:254
+#: app/src/pgp.rs:253
 msgid "This message is encrypted to a key you do not hold"
 msgstr ""
 
-#: app/src/pgp.rs:256
+#: app/src/pgp.rs:255
 msgid "Whoever sent it used a key gpg has no secret half of."
 msgstr ""
 
-#: app/src/pgp.rs:262
+#: app/src/pgp.rs:261
 msgid "gpg could not open this message"
 msgstr ""
 
-#: app/src/pgp.rs:273
+#: app/src/pgp.rs:272
 msgid "This message says it is OpenPGP and is not"
 msgstr ""
 
-#: app/src/pgp.rs:275 app/src/smime.rs:297
+#: app/src/pgp.rs:274 app/src/smime.rs:297
 msgid "Its parts are not where a signed or encrypted message keeps them."
 msgstr ""
 
-#: app/src/pgp.rs:286
+#: app/src/pgp.rs:285
 msgid "This is one of your own keys."
 msgstr ""
 
-#: app/src/pgp.rs:287
+#: app/src/pgp.rs:286
 msgid "You have vouched for this key."
 msgstr ""
 
-#: app/src/pgp.rs:288
+#: app/src/pgp.rs:287
 msgid "People you trust have vouched for this key."
 msgstr ""
 
-#: app/src/pgp.rs:289
+#: app/src/pgp.rs:288
 msgid "Nobody has vouched for this key, so it names no one."
 msgstr ""
 
-#: app/src/pgp.rs:290
+#: app/src/pgp.rs:289
 msgid "You marked this key as one not to trust."
 msgstr ""
 
-#: app/src/pgp.rs:299
+#: app/src/pgp.rs:298
 msgid "key {key}"
 msgstr ""
 
-#: app/src/pgp.rs:300
+#: app/src/pgp.rs:299
 msgid "a key gpg would not name"
 msgstr ""
 
-#: app/src/protection.rs:141
+#: app/src/protection.rs:105
+msgid "{smime} {pgp}"
+msgstr ""
+
+#: app/src/protection.rs:118
+msgid "This computer has nothing to encrypt with."
+msgstr ""
+
+#: app/src/protection.rs:125
+msgid ""
+"S/MIME names every recipient inside an encrypted message, so a blind copy "
+"would not stay blind."
+msgstr ""
+
+#: app/src/protection.rs:228
 msgid "Encrypt this message to the recipients' keys"
 msgstr ""
 
-#: app/src/protection.rs:142
+#: app/src/protection.rs:229
 msgid "Encrypt this message to the recipients' certificates"
 msgstr ""
 
-#: app/src/protection.rs:168
+#: app/src/protection.rs:255
 msgid "gpg holds no key and gpgsm no certificate for {addresses}."
 msgstr ""
 
-#: app/src/protection.rs:176
+#: app/src/protection.rs:263
 msgid "A message goes out under one standard or the other. {pgp} {smime}"
 msgstr ""
 
-#: app/src/protection.rs:224
+#: app/src/protection.rs:311
 msgid "Encrypted, and signed by {signer}"
 msgstr ""
 
-#: app/src/protection.rs:230
+#: app/src/protection.rs:317
 msgid "Encrypted. {what}"
 msgstr ""
 
-#: app/src/protection.rs:234
+#: app/src/protection.rs:321
 msgid "This message arrived encrypted"
 msgstr ""
 
-#: app/src/protection.rs:236
+#: app/src/protection.rs:323
 msgid "Nobody signed it, so it says nothing about who sent it."
 msgstr ""
 
-#: app/src/protection.rs:244
+#: app/src/protection.rs:331
 msgid "{detail} {files}"
 msgstr ""
 
-#: app/src/protection.rs:259
+#: app/src/protection.rs:346
 msgid "It carries a file, kept in this window only."
 msgstr ""
 
-#: app/src/protection.rs:261
+#: app/src/protection.rs:348
 msgid "It carries {count} file, kept in this window only."
 msgid_plural "It carries {count} files, kept in this window only."
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/protection.rs:330
+#: app/src/protection.rs:417
 msgid "{names} or {last}"
 msgstr ""
 
-#: app/src/protection.rs:342
+#: app/src/protection.rs:429
 msgid "{names} and {last}"
 msgstr ""
 

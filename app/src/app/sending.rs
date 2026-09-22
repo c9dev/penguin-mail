@@ -18,7 +18,7 @@ use crate::compose::{
     Draft, SendWhen, build_body_part, build_mime, build_protected, new_message_id,
 };
 use crate::format::future_date;
-use crate::protection::Standard;
+use crate::protection::{self, Addressees, Standard};
 use crate::ui::window::Notice;
 use mailrs_domain::translate::{fill, gettext};
 
@@ -98,37 +98,56 @@ impl App {
         }
         let part = build_body_part(draft).map_err(|err| built(&err))?;
         let from = draft.from.email.clone();
-        let to: Vec<String> = draft
-            .to
-            .iter()
-            .chain(&draft.cc)
-            .chain(&draft.bcc)
-            .map(|address| address.email.clone())
-            .collect();
+        let addressees = Addressees::of(draft);
         let (sign, encrypt) = (draft.sign, draft.encrypt);
+        if encrypt && draft.standard == Standard::Smime && addressees.has_blind_copy() {
+            // The composer never offers this, but a draft that comes back
+            // from the outbox was chosen before anyone checked.
+            return Err(fill(
+                &gettext("Not encrypted, so not sent: {reason}"),
+                &[("reason", &protection::smime_names_everyone())],
+            ));
+        }
         let entity = match draft.standard {
             Standard::Pgp => {
                 self.core
                     .gpg(move |pgp| {
-                        if encrypt {
-                            // A signature goes inside the encryption, which
-                            // is the only place one on encrypted mail means
-                            // anything.
-                            pgp.encrypt(&part, &to, sign.then_some(from.as_str()))
-                        } else {
-                            pgp.sign(&part, &from)
+                        if !encrypt {
+                            return pgp.sign(&part, &from);
                         }
+                        // The sender reads their own copy in Sent only if
+                        // gpg encrypts to them as well, which it can when
+                        // it holds a key of theirs.
+                        let own = pgp
+                            .keys_for(std::slice::from_ref(&from))?
+                            .iter()
+                            .any(|held| held.key.is_some());
+                        // A signature goes inside the encryption, which
+                        // is the only place one on encrypted mail means
+                        // anything.
+                        pgp.encrypt(
+                            &part,
+                            &addressees.readers(own),
+                            sign.then_some(from.as_str()),
+                        )
                     })
                     .await
             }
             Standard::Smime => {
                 self.core
                     .gpgsm(move |smime| {
-                        if encrypt {
-                            smime.encrypt(&part, &to, sign.then_some(from.as_str()))
-                        } else {
-                            smime.sign(&part, &from)
+                        if !encrypt {
+                            return smime.sign(&part, &from);
                         }
+                        let own = smime
+                            .certificates_for(std::slice::from_ref(&from))?
+                            .iter()
+                            .any(|held| held.certificate.is_some());
+                        smime.encrypt(
+                            &part,
+                            &addressees.certificates(own),
+                            sign.then_some(from.as_str()),
+                        )
                     })
                     .await
             }

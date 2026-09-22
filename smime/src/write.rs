@@ -32,11 +32,14 @@ impl Smime {
     /// Encrypts `part` to every address in `to`, and gives back the whole
     /// `application/pkcs7-mime` entity.
     ///
-    /// `from` signs the message first, so the signature travels inside the
-    /// envelope, which is the only place one on encrypted mail means
-    /// anything, and puts the sender among the recipients so their own copy
-    /// stays readable. Passing `None` encrypts without signing, for a
-    /// sender who holds no certificate of their own.
+    /// `sign_as` signs the message first, so the signature travels inside
+    /// the envelope, which is the only place one on encrypted mail means
+    /// anything. Signing adds nobody to `to`: a sender who wants to read
+    /// their own copy in Sent puts themselves there. Passing `None`
+    /// encrypts without signing.
+    ///
+    /// The envelope names every recipient by certificate, and CMS has no
+    /// way to leave one out, so nothing here can carry a blind copy.
     ///
     /// Every address in `to` needs a certificate gpgsm can use.
     /// [`Smime::certificates_for`] answers that before the message is
@@ -45,12 +48,12 @@ impl Smime {
         &self,
         part: &[u8],
         to: &[String],
-        from: Option<&str>,
+        sign_as: Option<&str>,
     ) -> Result<Vec<u8>, SmimeError> {
         // gpgsm signs or encrypts in one run, never both, which is also
         // what RFC 8551 describes: the signed entity is the thing that gets
         // enveloped.
-        let inside = match from {
+        let inside = match sign_as {
             Some(from) => self.sign(part, from)?,
             None => mailrs_pgp::mime::canonical(part),
         };
@@ -63,9 +66,6 @@ impl Smime {
             command.arg("--always-trust");
             for address in to {
                 command.arg("--recipient").arg(user_id(address));
-            }
-            if let Some(from) = from {
-                command.arg("--recipient").arg(user_id(from));
             }
         })?;
         if !run.ok {

@@ -103,6 +103,12 @@ let body = smime.sign(&part, "ada@example.com")?;
 let body = smime.encrypt(&part, &to, Some("ada@example.com"))?;
 ```
 
+`to` is everyone who can open the message, the sender included when they
+want to read their own copy in Sent. CMS names every one of them inside
+the envelope by issuer and serial number, and has no way to leave one out,
+so a blind copy cannot stay blind under S/MIME. A caller with a Bcc to
+encrypt uses OpenPGP, whose hidden recipients can.
+
 Both give back a whole entity: the headers that describe it, a blank line,
 then the body. Put those headers on the message being sent and use the rest
 as its body.
@@ -130,8 +136,8 @@ person who gets the message sees a warning rather than a message.
   trusts, and a batch run cannot ask. `certificates_for` reports what is
   held so the caller can put it in front of the person; refusing to send is
   the wrong place to raise it.
-- `encrypt` adds the sender to the recipients, so their own copy of the
-  message stays readable.
+- `encrypt` adds nobody on its own. Signing as the sender does not make
+  the sender a recipient; the caller puts them in `to`.
 - The `micalg` parameter names the digest gpgsm reported signing with,
   under the name RFC 8551 gives it. A digest this crate has no name for
   leaves the parameter out rather than putting the wrong one in.
