@@ -20,6 +20,33 @@ fn hidden_from(label_id: &str) -> Vec<&'static str> {
     HIDDEN.into_iter().filter(|l| *l != label_id).collect()
 }
 
+/// How a listing reaches its rows.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Walk {
+    /// Through the label index, then sorted: reads every row of the label.
+    Label,
+    /// Through the rows newest first, stopping at a full page: reads about
+    /// as many rows as the page needs, divided by the label's share.
+    Date,
+}
+
+/// Picks the cheaper walk for a page that ends `wanted` rows in, when the
+/// label holds `label_rows` of `all_rows`. Walking by date reads about
+/// `wanted * all_rows / label_rows` rows and walking by label reads
+/// `label_rows`, so the date wins once `label_rows²` passes
+/// `wanted * all_rows`. An inbox that holds most of the mail walks by date;
+/// a label of a few hundred threads among thousands walks its own rows.
+fn walk_for(label_rows: i64, all_rows: i64, wanted: i64) -> Walk {
+    if label_rows <= 0 {
+        return Walk::Label;
+    }
+    let (label_rows, all_rows, wanted) = (label_rows as i128, all_rows as i128, wanted as i128);
+    match wanted * all_rows < label_rows * label_rows {
+        true => Walk::Date,
+        false => Walk::Label,
+    }
+}
+
 /// Which threads a list shows: one label, across all accounts or one,
 /// optionally narrowed to a flag colour or to some senders.
 ///
@@ -147,6 +174,24 @@ impl Rows {
         sql.push(")");
     }
 
+    /// The index that holds the rows in the order a list shows them.
+    fn order_index(self) -> &'static str {
+        match self {
+            Rows::Threads => "threads_by_order",
+            Rows::Messages => "messages_by_order",
+        }
+    }
+
+    /// Appends the order a list shows, newest first with ties broken on
+    /// account and id so pages never overlap, and the page's bounds.
+    fn order(self, sql: &mut Sql, offset: i64, limit: i64) {
+        let order = match self {
+            Rows::Threads => " ORDER BY t.last_message_at DESC, t.account_id, t.id LIMIT ",
+            Rows::Messages => " ORDER BY m.date DESC, m.account_id, m.id LIMIT ",
+        };
+        sql.push(order).bind(limit).push(" OFFSET ").bind(offset);
+    }
+
     /// The column that holds the row's thread id.
     fn thread_key(self) -> &'static str {
         match self {
@@ -207,25 +252,46 @@ impl ThreadFilter {
 
     /// Appends the `FROM … WHERE …` part of a query over `rows`.
     ///
-    /// A label view starts from the label index and joins the rows it names,
-    /// so it reads only that label's rows. `CROSS JOIN` fixes that order,
-    /// since SQLite would otherwise walk every row newest first and probe
-    /// the label for each. Only "any mail" walks every row.
-    fn rows_matching(&self, rows: Rows, sql: &mut Sql) {
+    /// Walking by label starts from the label index and joins the rows it
+    /// names, so it reads only that label's rows. `CROSS JOIN` fixes that
+    /// order, since SQLite would otherwise walk every row newest first and
+    /// probe the label for each. Walking by date does exactly that, on
+    /// purpose, through the order index; see [`walk_for`] for which wins.
+    fn rows_matching(&self, rows: Rows, sql: &mut Sql, walk: Walk) {
         let row = rows.alias();
         let (labels, key) = rows.labels();
         let table = match rows {
             Rows::Threads => "threads",
             Rows::Messages => "messages",
         };
-        if self.label_id.is_empty() {
-            sql.push(&format!("FROM {table} {row} WHERE "));
+        let from = match walk {
+            Walk::Label => format!("FROM {table} {row}"),
+            Walk::Date => format!("FROM {table} {row} INDEXED BY {}", rows.order_index()),
+        };
+        if self.label_id.is_empty() || walk == Walk::Date {
+            sql.push(&from).push(" WHERE ");
+            if !self.label_id.is_empty() {
+                sql.push(&format!(
+                    "EXISTS (SELECT 1 FROM {labels} d WHERE d.account_id = {row}.account_id \
+                     AND d.{key} = {row}.id AND d.label_id = "
+                ))
+                .bind(self.label_id.clone())
+                .push(") AND ");
+            }
             if let Some(account) = self.account_id {
                 sql.push(&format!("{row}.account_id = "))
                     .bind(account)
                     .push(" AND ");
             }
-            rows.not_hidden(sql, "", &HIDDEN);
+            let hidden = match self.label_id.is_empty() {
+                true => HIDDEN.to_vec(),
+                false => hidden_from(&self.label_id),
+            };
+            if hidden.is_empty() {
+                sql.push("1");
+            } else {
+                rows.not_hidden(sql, &self.label_id, &hidden);
+            }
         } else {
             sql.push(&format!(
                 "FROM {labels} d CROSS JOIN {table} {row} \
@@ -285,10 +351,43 @@ impl ThreadFilter {
     }
 
     fn query(&self, rows: Rows, select: &str) -> Sql {
+        self.query_walking(rows, select, Walk::Label)
+    }
+
+    fn query_walking(&self, rows: Rows, select: &str, walk: Walk) -> Sql {
         let mut sql = Sql::default();
         sql.push(select).push(" ");
-        self.rows_matching(rows, &mut sql);
+        self.rows_matching(rows, &mut sql, walk);
         sql
+    }
+
+    /// The cheaper walk for a page of `rows` that ends `wanted` rows in.
+    /// Two counts on indexes answer it, which costs far less than the
+    /// sort it can save.
+    fn walk(&self, conn: &Connection, rows: Rows, wanted: i64) -> Result<Walk> {
+        if self.label_id.is_empty() {
+            return Ok(Walk::Date);
+        }
+        let (labels, _) = rows.labels();
+        let table = match rows {
+            Rows::Threads => "threads",
+            Rows::Messages => "messages",
+        };
+        let mut label_rows = Sql::default();
+        label_rows
+            .push(&format!("SELECT count(*) FROM {labels} WHERE label_id = "))
+            .bind(self.label_id.clone());
+        let mut all_rows = Sql::default();
+        all_rows.push(&format!("SELECT count(*) FROM {table}"));
+        if let Some(account) = self.account_id {
+            label_rows.push(" AND account_id = ").bind(account);
+            all_rows.push(" WHERE account_id = ").bind(account);
+        }
+        Ok(walk_for(
+            count(conn, &label_rows)?,
+            count(conn, &all_rows)?,
+            wanted,
+        ))
     }
 }
 
@@ -352,11 +451,19 @@ pub fn list_threads(
     offset: i64,
     limit: i64,
 ) -> Result<Vec<ThreadSummary>> {
-    let mut sql = filter.query(Rows::Threads, &format!("SELECT {COLUMNS}"));
-    sql.push(" ORDER BY t.last_message_at DESC, t.account_id, t.id LIMIT ")
-        .bind(limit)
-        .push(" OFFSET ")
-        .bind(offset);
+    let walk = filter.walk(conn, Rows::Threads, offset + limit)?;
+    threads_walking(conn, filter, offset, limit, walk)
+}
+
+fn threads_walking(
+    conn: &Connection,
+    filter: &ThreadFilter,
+    offset: i64,
+    limit: i64,
+    walk: Walk,
+) -> Result<Vec<ThreadSummary>> {
+    let mut sql = filter.query_walking(Rows::Threads, &format!("SELECT {COLUMNS}"), walk);
+    Rows::Threads.order(&mut sql, offset, limit);
     let mut stmt = conn.prepare_cached(&sql.text)?;
     let rows = stmt.query_map(params_from_iter(&sql.params), to_summary)?;
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
@@ -405,11 +512,19 @@ pub fn list_messages(
     offset: i64,
     limit: i64,
 ) -> Result<Vec<ThreadSummary>> {
-    let mut sql = filter.query(Rows::Messages, &format!("SELECT {MESSAGE_COLUMNS}"));
-    sql.push(" ORDER BY m.date DESC, m.account_id, m.id LIMIT ")
-        .bind(limit)
-        .push(" OFFSET ")
-        .bind(offset);
+    let walk = filter.walk(conn, Rows::Messages, offset + limit)?;
+    messages_walking(conn, filter, offset, limit, walk)
+}
+
+fn messages_walking(
+    conn: &Connection,
+    filter: &ThreadFilter,
+    offset: i64,
+    limit: i64,
+    walk: Walk,
+) -> Result<Vec<ThreadSummary>> {
+    let mut sql = filter.query_walking(Rows::Messages, &format!("SELECT {MESSAGE_COLUMNS}"), walk);
+    Rows::Messages.order(&mut sql, offset, limit);
     let mut stmt = conn.prepare_cached(&sql.text)?;
     let rows = stmt.query_map(params_from_iter(&sql.params), to_message_row)?;
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
@@ -597,7 +712,7 @@ fn category_unread(
         no_labels: Vec::new(),
         ..filter.clone()
     };
-    base.rows_matching(rows, &mut sql);
+    base.rows_matching(rows, &mut sql, Walk::Label);
     sql.push(match rows {
         Rows::Threads => " AND t.unread = 1",
         Rows::Messages => MESSAGE_UNREAD,
@@ -610,4 +725,156 @@ fn category_unread(
                     .collect::<rusqlite::Result<Vec<i64>>>()
             })?;
     Ok(Category::ALL.into_iter().zip(counts).collect())
+}
+
+#[cfg(test)]
+mod walk_tests {
+    use mailrs_domain::{Address, MessageMeta};
+
+    use super::*;
+    use crate::{accounts, messages, open_in_memory};
+
+    fn message(account_id: AccountId, id: &str, thread: &str, date: i64, labels: &[&str]) -> MessageMeta {
+        MessageMeta {
+            account_id,
+            id: id.into(),
+            thread_id: thread.into(),
+            rfc822_msgid: Some(format!("<{id}@example.com>")),
+            from: Some(Address {
+                name: None,
+                email: format!("sender{}@example.com", date % 3),
+            }),
+            to: vec![],
+            cc: vec![],
+            subject: format!("Subject {id}"),
+            date,
+            snippet: String::new(),
+            size: 100,
+            has_attachments: false,
+            label_ids: labels.iter().map(|l| l.to_string()).collect(),
+            list_unsubscribe: None,
+            one_click: false,
+        }
+    }
+
+    /// Sixty threads over two accounts: most in the inbox, some trashed or
+    /// spam, some in a category, a few under a sparse user label, some
+    /// sharing a date so the tie-breakers matter, and threads whose first
+    /// message is trashed while the reply stays in the inbox.
+    fn mailbox() -> (Connection, AccountId, AccountId) {
+        let conn = open_in_memory().unwrap();
+        let a = accounts::insert_account(&conn, "a@example.com", 0).unwrap();
+        let b = accounts::insert_account(&conn, "b@example.com", 0).unwrap();
+        let mut all = Vec::new();
+        for i in 0..60i64 {
+            let account = if i % 2 == 0 { a } else { b };
+            let thread = format!("t{i}");
+            let date = 1000 + (i / 3) * 10;
+            let mut labels = vec![];
+            if i % 10 != 9 {
+                labels.push("INBOX");
+            }
+            match i % 7 {
+                1 => labels.push("CATEGORY_UPDATES"),
+                2 => labels.push("CATEGORY_PROMOTIONS"),
+                3 => labels.push("CATEGORY_SOCIAL"),
+                _ => {}
+            }
+            if i % 11 == 0 {
+                labels.push("TRASH");
+            }
+            if i % 13 == 0 {
+                labels.push("SPAM");
+            }
+            if i % 8 == 0 {
+                labels.push("Label_1");
+            }
+            if i % 5 == 0 {
+                labels.push("UNREAD");
+                labels.push("STARRED");
+            }
+            all.push(message(account, &format!("m{i}"), &thread, date, &labels));
+            if i % 6 == 0 {
+                all.push(message(account, &format!("r{i}"), &thread, date + 1, &["INBOX", "TRASH"]));
+            }
+        }
+        for m in &all {
+            messages::upsert_message(&conn, m, 1).unwrap();
+        }
+        for m in &all {
+            messages::refresh_thread(&conn, m.account_id, &m.thread_id).unwrap();
+        }
+        (conn, a, b)
+    }
+
+    fn filters(a: AccountId) -> Vec<ThreadFilter> {
+        let (_, not_primary) = Category::Primary.labels();
+        vec![
+            ThreadFilter::unified("INBOX"),
+            ThreadFilter::account(a, "INBOX"),
+            ThreadFilter::unified("INBOX").with_labels(&[], not_primary),
+            ThreadFilter::unified("INBOX").with_labels(&["CATEGORY_SOCIAL"], &[]),
+            ThreadFilter::unified("Label_1"),
+            ThreadFilter::unified("TRASH"),
+            ThreadFilter::unified("INBOX").with_flag(FlagColor::Red),
+            ThreadFilter::unified("INBOX").from_senders(vec!["sender1@example.com".into()]),
+            ThreadFilter::unified(""),
+        ]
+    }
+
+    fn keys(rows: Vec<ThreadSummary>) -> Vec<(AccountId, String, Option<String>)> {
+        rows.into_iter().map(|r| (r.account_id, r.id, r.message_id)).collect()
+    }
+
+    #[test]
+    fn walking_by_date_lists_what_walking_by_label_lists() {
+        let (conn, a, _) = mailbox();
+        for filter in filters(a) {
+            for (offset, limit) in [(0, 7), (7, 7), (0, 100)] {
+                let by_label = threads_walking(&conn, &filter, offset, limit, Walk::Label).unwrap();
+                let by_date = threads_walking(&conn, &filter, offset, limit, Walk::Date).unwrap();
+                assert_eq!(keys(by_label), keys(by_date), "threads, {filter:?} {offset}+{limit}");
+                let by_label = messages_walking(&conn, &filter, offset, limit, Walk::Label).unwrap();
+                let by_date = messages_walking(&conn, &filter, offset, limit, Walk::Date).unwrap();
+                assert_eq!(keys(by_label), keys(by_date), "messages, {filter:?} {offset}+{limit}");
+            }
+        }
+    }
+
+    #[test]
+    fn a_label_holding_most_mail_is_walked_by_date() {
+        assert_eq!(walk_for(14_800, 15_300, 101), Walk::Date);
+    }
+
+    #[test]
+    fn a_small_label_is_walked_through_its_own_rows() {
+        assert_eq!(walk_for(500, 15_300, 101), Walk::Label);
+    }
+
+    #[test]
+    fn an_empty_label_is_walked_through_its_own_rows() {
+        assert_eq!(walk_for(0, 15_300, 101), Walk::Label);
+    }
+
+    #[test]
+    fn the_date_walk_reads_the_order_index_and_sorts_nothing() {
+        let (conn, _, _) = mailbox();
+        let filter = ThreadFilter::unified("INBOX");
+        for (rows, select) in [
+            (Rows::Threads, format!("SELECT {COLUMNS}")),
+            (Rows::Messages, format!("SELECT {MESSAGE_COLUMNS}")),
+        ] {
+            let mut sql = filter.query_walking(rows, &select, Walk::Date);
+            rows.order(&mut sql, 0, 10);
+            let plan: Vec<String> = conn
+                .prepare(&format!("EXPLAIN QUERY PLAN {}", sql.text))
+                .unwrap()
+                .query_map(params_from_iter(&sql.params), |r| r.get::<_, String>(3))
+                .unwrap()
+                .map(|r| r.unwrap())
+                .collect();
+            assert!(plan.iter().any(|p| p.contains("_by_order")), "{plan:?}");
+            assert!(!plan.iter().any(|p| p.contains("TEMP B-TREE")), "{plan:?}");
+        }
+    }
 }

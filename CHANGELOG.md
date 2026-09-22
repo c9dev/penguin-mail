@@ -7,6 +7,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+- A big inbox lists faster. Opening the inbox or one of its categories
+  reads about a page of mail instead of sorting all of it first, which on
+  an inbox of 15,000 conversations took the wait from 25 to 45 ms down to
+  1 to 13 ms.
 - Switching between All, Primary, Updates, Promotions and Social answers
   at once: the switcher takes its new shape on the next frame and only
   the category's name fades in, where it used to slide for a fifth of a

@@ -329,6 +329,15 @@ DELETE FROM attachments
     WHERE content_id IS NOT NULL AND attachment_id IS NULL
       AND (mime_type LIKE 'text/plain%' OR mime_type LIKE 'text/html%');
 "#,
+    // Indexes in the exact order a list is shown, tie-breakers included,
+    // so a list of a label that holds most of the mail can walk rows
+    // newest first and stop at a full page instead of sorting them all.
+    // The recency index covered the date alone; this one replaces it.
+    r#"
+DROP INDEX IF EXISTS threads_by_recency;
+CREATE INDEX IF NOT EXISTS threads_by_order ON threads(last_message_at DESC, account_id, id);
+CREATE INDEX IF NOT EXISTS messages_by_order ON messages(date DESC, account_id, id);
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,
