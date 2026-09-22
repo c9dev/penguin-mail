@@ -12,6 +12,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Marking a conversation read or unread shows in its own window, whether
+  you did it there or in the main window.
 - A conversation you clicked just before switching inbox categories no
   longer opens in the new category.
 - The Keyboard Shortcuts window lists Ctrl+J, which shows or hides the

@@ -49,10 +49,14 @@ impl MainWindow {
         glib::spawn_future_local(async move { run.open(summary).await });
     }
 
-    /// Picks up label changes and new messages in the main window's thread.
+    /// Picks up label changes and new messages in every conversation on
+    /// screen, the ones in windows of their own among them. Each keeps
+    /// its own thread, so a flag or a read mark set in one shows in all.
     pub(super) fn refresh_open_thread(self: &Rc<Self>) {
-        let run = self.thread_run(&self.conversation);
-        glib::spawn_future_local(async move { run.refresh().await });
+        for view in self.views() {
+            let run = self.thread_run(&view);
+            glib::spawn_future_local(async move { run.refresh().await });
+        }
     }
 
     /// Reads the flag colour of every conversation on screen again, the
