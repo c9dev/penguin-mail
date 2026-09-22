@@ -573,167 +573,167 @@ msgstr ""
 "Iniciou sessão como {account}. Escolha {wanted} para voltar a ligar essa "
 "conta."
 
-#: app/src/format.rs:32
+#: app/src/format.rs:35
 msgid "%H:%M"
 msgstr "%H:%M"
 
-#: app/src/format.rs:33 app/src/format.rs:218
+#: app/src/format.rs:36 app/src/format.rs:222
 msgid "Yesterday"
 msgstr "Ontem"
 
-#: app/src/format.rs:34 app/src/format.rs:219
-msgid "%A"
-msgstr "%A"
-
-#: app/src/format.rs:35
-msgid "%-d %b"
-msgstr "%-d %b"
-
-#: app/src/format.rs:36
-msgid "%Y-%m-%d"
-msgstr "%d/%m/%Y"
-
-#: app/src/format.rs:51
-msgid "Today at %H:%M"
-msgstr "Hoje às %H:%M"
-
-#: app/src/format.rs:52
-msgid "Yesterday at %H:%M"
-msgstr "Ontem às %H:%M"
-
-#: app/src/format.rs:53
-msgid "Tomorrow at %H:%M"
-msgstr "Amanhã às %H:%M"
-
-#: app/src/format.rs:54 app/src/format.rs:81
-msgid "%a %-d %b at %H:%M"
-msgstr "%a %-d %b às %H:%M"
-
-#: app/src/format.rs:55 app/src/format.rs:82
-msgid "%-d %b %Y at %H:%M"
-msgstr "%-d %b %Y às %H:%M"
-
-#: app/src/format.rs:56
-msgid "%-d %b %Y"
-msgstr "%-d %b %Y"
-
-#: app/src/format.rs:65
-msgid "%A, %-d %B %Y at %H:%M"
-msgstr "%A, %-d %B %Y às %H:%M"
-
-#: app/src/format.rs:78
-msgid "today at %H:%M"
-msgstr "hoje às %H:%M"
-
-#: app/src/format.rs:79
-msgid "tomorrow at %H:%M"
-msgstr "amanhã às %H:%M"
-
-#: app/src/format.rs:80
-msgid "%A at %H:%M"
-msgstr "%A às %H:%M"
-
-#: app/src/format.rs:92
-msgid "Send {when}"
-msgstr "Enviar {when}"
-
-#: app/src/format.rs:99
-msgid "In 1 Hour"
-msgstr "Dentro de 1 hora"
-
-#: app/src/format.rs:119
-msgid "Tonight at 21:00"
-msgstr "Hoje às 21:00"
-
-#: app/src/format.rs:123
-msgid "Tomorrow at 08:00"
-msgstr "Amanhã às 08:00"
-
-#: app/src/format.rs:130
-msgid "Monday at 08:00"
-msgstr "Segunda-feira às 08:00"
-
-#: app/src/format.rs:141
-msgid "{day} · All day"
-msgstr "{day} · Todo o dia"
-
-#: app/src/format.rs:145
-msgid "{first} to {last} · All day"
-msgstr "{first} a {last} · Todo o dia"
-
-#: app/src/format.rs:159
-msgid "{day} · {start}"
-msgstr "{day} · {start}"
-
-#: app/src/format.rs:164 app/src/format.rs:176
-msgid "{day} · {start} to {end}"
-msgstr "{day} · {start} às {end}"
-
-#: app/src/format.rs:170
-msgid "%-d %b %H:%M"
-msgstr "%-d %b %H:%M"
-
-#: app/src/format.rs:195 app/src/format.rs:204
-msgid "%-d %B"
-msgstr "%-d de %B"
-
-#: app/src/format.rs:207
-msgid "%-d %B %Y"
-msgstr "%-d de %B de %Y"
-
-#: app/src/format.rs:216
-msgid "Today"
-msgstr "Hoje"
-
-#: app/src/format.rs:217
+#: app/src/format.rs:37 app/src/format.rs:221
 msgid "Tomorrow"
 msgstr "Amanhã"
 
+#: app/src/format.rs:38 app/src/format.rs:223
+msgid "%A"
+msgstr "%A"
+
+#: app/src/format.rs:39
+msgid "%-d %b"
+msgstr "%-d %b"
+
+#: app/src/format.rs:40
+msgid "%Y-%m-%d"
+msgstr "%d/%m/%Y"
+
+#: app/src/format.rs:55
+msgid "Today at %H:%M"
+msgstr "Hoje às %H:%M"
+
+#: app/src/format.rs:56
+msgid "Yesterday at %H:%M"
+msgstr "Ontem às %H:%M"
+
+#: app/src/format.rs:57
+msgid "Tomorrow at %H:%M"
+msgstr "Amanhã às %H:%M"
+
+#: app/src/format.rs:58 app/src/format.rs:85
+msgid "%a %-d %b at %H:%M"
+msgstr "%a %-d %b às %H:%M"
+
+#: app/src/format.rs:59 app/src/format.rs:86
+msgid "%-d %b %Y at %H:%M"
+msgstr "%-d %b %Y às %H:%M"
+
+#: app/src/format.rs:60
+msgid "%-d %b %Y"
+msgstr "%-d %b %Y"
+
+#: app/src/format.rs:69
+msgid "%A, %-d %B %Y at %H:%M"
+msgstr "%A, %-d %B %Y às %H:%M"
+
+#: app/src/format.rs:82
+msgid "today at %H:%M"
+msgstr "hoje às %H:%M"
+
+#: app/src/format.rs:83
+msgid "tomorrow at %H:%M"
+msgstr "amanhã às %H:%M"
+
+#: app/src/format.rs:84
+msgid "%A at %H:%M"
+msgstr "%A às %H:%M"
+
+#: app/src/format.rs:96
+msgid "Send {when}"
+msgstr "Enviar {when}"
+
+#: app/src/format.rs:103
+msgid "In 1 Hour"
+msgstr "Dentro de 1 hora"
+
+#: app/src/format.rs:123
+msgid "Tonight at 21:00"
+msgstr "Hoje às 21:00"
+
+#: app/src/format.rs:127
+msgid "Tomorrow at 08:00"
+msgstr "Amanhã às 08:00"
+
+#: app/src/format.rs:134
+msgid "Monday at 08:00"
+msgstr "Segunda-feira às 08:00"
+
+#: app/src/format.rs:145
+msgid "{day} · All day"
+msgstr "{day} · Todo o dia"
+
+#: app/src/format.rs:149
+msgid "{first} to {last} · All day"
+msgstr "{first} a {last} · Todo o dia"
+
+#: app/src/format.rs:163
+msgid "{day} · {start}"
+msgstr "{day} · {start}"
+
+#: app/src/format.rs:168 app/src/format.rs:180
+msgid "{day} · {start} to {end}"
+msgstr "{day} · {start} às {end}"
+
+#: app/src/format.rs:174
+msgid "%-d %b %H:%M"
+msgstr "%-d %b %H:%M"
+
+#: app/src/format.rs:199 app/src/format.rs:208
+msgid "%-d %B"
+msgstr "%-d de %B"
+
+#: app/src/format.rs:211
+msgid "%-d %B %Y"
+msgstr "%-d de %B de %Y"
+
 #: app/src/format.rs:220
+msgid "Today"
+msgstr "Hoje"
+
+#: app/src/format.rs:224
 msgid "%A, %-d %B"
 msgstr "%A, %-d de %B"
 
-#: app/src/format.rs:221
+#: app/src/format.rs:225
 msgid "%A, %-d %B %Y"
 msgstr "%A, %-d de %B de %Y"
 
-#: app/src/format.rs:237
+#: app/src/format.rs:241
 msgid "{day} {time}"
 msgstr "{day} {time}"
 
-#: app/src/format.rs:313
+#: app/src/format.rs:317
 msgid "Blue"
 msgstr "Azul"
 
-#: app/src/format.rs:314
+#: app/src/format.rs:318
 msgid "Teal"
 msgstr "Turquesa"
 
-#: app/src/format.rs:315
+#: app/src/format.rs:319
 msgid "Green"
 msgstr "Verde"
 
-#: app/src/format.rs:316
+#: app/src/format.rs:320
 msgid "Yellow"
 msgstr "Amarelo"
 
-#: app/src/format.rs:317
+#: app/src/format.rs:321
 msgid "Orange"
 msgstr "Laranja"
 
-#: app/src/format.rs:318
+#: app/src/format.rs:322
 msgid "Red"
 msgstr "Vermelho"
 
-#: app/src/format.rs:319
+#: app/src/format.rs:323
 msgid "Pink"
 msgstr "Rosa"
 
-#: app/src/format.rs:320
+#: app/src/format.rs:324
 msgid "Purple"
 msgstr "Roxo"
 
-#: app/src/format.rs:321
+#: app/src/format.rs:325
 msgid "Slate"
 msgstr "Ardósia"
 

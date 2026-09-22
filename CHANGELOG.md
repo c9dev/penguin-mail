@@ -92,6 +92,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   rather than on the row selected in the main window.
 - A template's `{{date}}` comes out in the language the app speaks, so a
   Portuguese window writes "22 de setembro de 2026".
+- A Send Later message due tomorrow or later in the week says so in the
+  list, not only the hour it goes out.
 
 ## 0.1.4 (2026-09-22)
 

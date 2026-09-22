@@ -22,16 +22,20 @@ pub fn local(ts: EpochMillis) -> Option<DateTime<Local>> {
 
 /// A short date for list rows: the time today, then "Yesterday", then the
 /// weekday for the past week, then day and month, then the full date for
-/// earlier years.
+/// earlier years. A date still to come goes the same way forwards, from
+/// "Tomorrow" to the weekday for the coming week.
 pub fn relative_date(ts: EpochMillis, now: DateTime<Local>) -> String {
     let Some(when) = local(ts) else {
         return String::new();
     };
     let days = (now.date_naive() - when.date_naive()).num_days();
+    // A Send Later row carries a date still to come, which reads forwards
+    // the way the past reads backwards.
     let pattern = match days {
-        ..=0 => gettext("%H:%M"),
+        0 => gettext("%H:%M"),
         1 => return gettext("Yesterday"),
-        2..=6 => gettext("%A"),
+        -1 => return gettext("Tomorrow"),
+        2..=6 | -6..=-2 => gettext("%A"),
         _ if when.year() == now.year() => gettext("%-d %b"),
         _ => gettext("%Y-%m-%d"),
     };
@@ -369,7 +373,10 @@ mod tests {
         assert_eq!(relative_date(at(2026, 9, 14, 12, 0), now), "Monday");
         assert_eq!(relative_date(at(2026, 3, 3, 12, 0), now), "3 Mar");
         assert_eq!(relative_date(at(2024, 9, 3, 12, 0), now), "2024-09-03");
-        assert_eq!(relative_date(at(2026, 9, 18, 8, 0), now), "08:00");
+        assert_eq!(relative_date(at(2026, 9, 17, 21, 0), now), "21:00");
+        assert_eq!(relative_date(at(2026, 9, 18, 8, 0), now), "Tomorrow");
+        assert_eq!(relative_date(at(2026, 9, 21, 8, 0), now), "Monday");
+        assert_eq!(relative_date(at(2026, 11, 3, 8, 0), now), "3 Nov");
     }
 
     #[test]
