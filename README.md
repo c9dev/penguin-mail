@@ -471,8 +471,14 @@ finishes, the Package repositories workflow rebuilds the apt and dnf
 repositories on GitHub Pages from the five newest releases with
 `scripts/apt-repo.sh` and `scripts/rpm-repo.sh`, signed with the key in
 the `APT_SIGNING_KEY` secret. Run it from the Actions tab to publish again
-without a release. The Flatpak on Flathub builds from its own repository;
-`scripts/flatpak-sources.sh --flathub` writes what goes there.
+without a release.
+
+Flathub builds the Flatpak from its own repository,
+flathub/io.github.c9dev.PenguinMail, and nothing updates it on its own.
+After each release, run `scripts/flatpak-sources.sh --flathub vX.Y.Z
+<dir>`, copy the manifest, `cargo-sources.json` and `flathub.json` it
+writes into a checkout of that repository, and open a pull request there.
+`release.sh` prints the same reminder when it finishes.
 
 ## Contributing
 

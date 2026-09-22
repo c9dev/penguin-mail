@@ -109,3 +109,8 @@ git tag -a "v$version" -F <(scripts/changelog.sh section "$version")
 git push -q origin main "v$version"
 echo "Pushed v$version. GitHub builds and publishes it:"
 echo "  https://github.com/c9dev/penguin-mail/actions/workflows/release.yml"
+echo
+echo "Flathub builds from its own repository, so update it by hand:"
+echo "  scripts/flatpak-sources.sh --flathub v$version <dir>"
+echo "then copy the three files into a checkout of"
+echo "https://github.com/flathub/io.github.c9dev.PenguinMail and open a pull request."

@@ -55,9 +55,11 @@ case $mode in
     mkdir -p "$out"
     generate "$work/Cargo.lock" "$out/cargo-sources.json"
     cp "$flatpak/flathub.json" "$out/"
-    # The checkout source becomes the tag on GitHub. The external data
-    # checker Flathub runs reads x-checker-data and opens a pull request
-    # when a newer tag appears.
+    # The checkout source becomes the tag on GitHub. There is no
+    # x-checker-data: Flathub's checker would move the tag and commit but
+    # not cargo-sources.json, and a release that changed Cargo.lock would
+    # then fail to build. Each release runs this script and opens the pull
+    # request by hand instead.
     python3 - "$manifest" "$out/io.github.c9dev.PenguinMail.yml" "$tag" "$commit" <<'PY'
 import sys
 
@@ -69,9 +71,6 @@ git = (
     "        url: https://github.com/c9dev/penguin-mail.git\n"
     f"        tag: {tag}\n"
     f"        commit: {commit}\n"
-    "        x-checker-data:\n"
-    "          type: git\n"
-    "          tag-pattern: ^v([\\d.]+)$\n"
 )
 header_end = text.index("id: ")
 header = (
