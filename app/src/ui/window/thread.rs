@@ -318,6 +318,24 @@ impl Effects for Ports {
         })
     }
 
+    fn series(
+        &self,
+        account_id: AccountId,
+        invitation: Invitation,
+    ) -> Answer<'_, Result<Option<String>, String>> {
+        let invitations = self.core.invitations();
+        Box::pin(async move {
+            self.core
+                .call(async move {
+                    invitations
+                        .series(account_id, &invitation, now_millis())
+                        .await
+                })
+                .await
+                .map_err(|err| err.to_string())
+        })
+    }
+
     fn flag_color(
         &self,
         account_id: AccountId,
@@ -402,6 +420,10 @@ impl Effects for Ports {
 
     fn clashes(&self, uid: String, busy: Vec<String>) {
         self.view.card.set_busy(&uid, &busy);
+    }
+
+    fn series_known(&self, uid: String, line: String) {
+        self.view.card.set_series(&uid, line);
     }
 
     fn start_engines(&self) {

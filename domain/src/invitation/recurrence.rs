@@ -81,6 +81,47 @@ pub(crate) fn in_words(rule: &str, start_year: Option<i32>) -> Option<String> {
     Some(words)
 }
 
+/// How the rest of a series runs, in words, for a card about one of its
+/// occurrences: "Every Tuesday, 6 left", "Every Monday until 3 March",
+/// "Every week, no end date". `left` is how many occurrences are still to
+/// come, which the calendar counts for a rule with a `COUNT`; without it
+/// such a rule says how many there are in all, as [`in_words`] does.
+pub(crate) fn series_in_words(
+    rule: &str,
+    left: Option<u32>,
+    start_year: Option<i32>,
+) -> Option<String> {
+    let parts = parts(rule);
+    if part(&parts, "UNTIL").is_some() {
+        return in_words(rule, start_year);
+    }
+    if part(&parts, "COUNT").is_none() {
+        let every = in_words(rule, start_year)?;
+        return Some(fill(&gettext("{every}, no end date"), &[("every", &every)]));
+    }
+    let Some(left) = left else {
+        return in_words(rule, start_year);
+    };
+    let open: Vec<&str> = rule
+        .split(';')
+        .filter(|pair| {
+            !pair
+                .split_once('=')
+                .is_some_and(|(key, _)| key.trim().eq_ignore_ascii_case("COUNT"))
+        })
+        .collect();
+    let every = in_words(&open.join(";"), start_year)?;
+    Some(match left {
+        0 => fill(&gettext("{every}, none left"), &[("every", &every)]),
+        left => fill_plural(
+            "{every}, {count} left",
+            "{every}, {count} left",
+            left as usize,
+            &[("every", &every), ("count", &left.to_string())],
+        ),
+    })
+}
+
 /// A `DURATION` such as `PT1H30M` or `P2D`. Weeks and days count as fixed
 /// lengths, which is what every invitation means by them.
 pub(crate) fn duration(text: &str) -> Option<Duration> {

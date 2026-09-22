@@ -6,7 +6,7 @@ use mailrs_gmail::body::extract_body;
 use mailrs_gmail::convert::message_meta;
 use mailrs_gmail::{
     AccountQuota, Answered, Busy, ConnectionsPage, Event, EventFields, GmailClient, GmailError,
-    HistoryPage, LabelColor, MessagePage, Profile, RemoteLabel, SendAs, html_to_text,
+    HistoryPage, LabelColor, MessagePage, Profile, RemoteLabel, SendAs, Series, html_to_text,
 };
 
 /// Page size for window listings.
@@ -210,6 +210,17 @@ pub trait GmailApi: Send + Sync + 'static {
         from: EpochMillis,
         to: EpochMillis,
     ) -> impl Future<Output = Result<Vec<Busy>, GmailError>> + Send;
+
+    /// How the repeating event `ical_uid` names repeats, with the
+    /// occurrences still to come from `from` counted when its rule stops
+    /// after a number of them. `None` when the calendar holds no such
+    /// event or it does not repeat. Answers `GmailError::MissingScope`
+    /// until the account grants the calendar permission.
+    fn series(
+        &self,
+        ical_uid: &str,
+        from: EpochMillis,
+    ) -> impl Future<Output = Result<Option<Series>, GmailError>> + Send;
 
     /// Every event on the account's primary calendar that overlaps `from`
     /// to `to`, in the order they start. Answers `GmailError::MissingScope`
@@ -420,6 +431,14 @@ impl GmailApi for AnyGmail {
         to: EpochMillis,
     ) -> Result<Vec<Busy>, GmailError> {
         forward!(self, busy_between(from, to))
+    }
+
+    async fn series(
+        &self,
+        ical_uid: &str,
+        from: EpochMillis,
+    ) -> Result<Option<Series>, GmailError> {
+        forward!(self, series(ical_uid, from))
     }
 
     async fn events_between(
@@ -665,6 +684,17 @@ impl GmailApi for AccountClient {
             return Ok(Vec::new());
         };
         self.client.busy_between(&from, &to).await
+    }
+
+    async fn series(
+        &self,
+        ical_uid: &str,
+        from: EpochMillis,
+    ) -> Result<Option<Series>, GmailError> {
+        let Some(from) = rfc3339(from) else {
+            return Ok(None);
+        };
+        self.client.series(ical_uid, &from).await
     }
 
     async fn events_between(

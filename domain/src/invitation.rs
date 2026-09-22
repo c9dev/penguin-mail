@@ -209,6 +209,15 @@ impl Invitation {
         self.method == Method::Cancel
     }
 
+    /// How the series this occurrence belongs to runs, in words, from the
+    /// rule the calendar holds for it and the occurrences it counts still
+    /// to come. An invitation to one occurrence carries no rule of its
+    /// own, so the card asks the calendar and says this instead. `None`
+    /// for a rule this cannot put in words.
+    pub fn series_in_words(&self, rule: &str, left: Option<u32>) -> Option<String> {
+        recurrence::series_in_words(rule, left, start_year(&self.when))
+    }
+
     /// The guest whose address is one of `me`, if the invitation lists one.
     pub fn me<'a>(&'a self, me: &[String]) -> Option<&'a Guest> {
         self.guests.iter().find(|g| {

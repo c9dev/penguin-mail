@@ -50,6 +50,8 @@ pub enum Step {
     OfferGnome,
     Busy,
     Clashes,
+    Series,
+    SeriesKnown,
     Engines,
     Card,
     Sleep,
@@ -79,6 +81,10 @@ pub struct Screen {
     pub thumbnails: HashMap<String, String>,
     pub invitation: Result<Option<Opened>, String>,
     pub busy: Result<Vec<String>, String>,
+    /// What the calendar says about the series, in words.
+    pub series: Result<Option<String>, String>,
+    /// The series lines put on the card.
+    pub series_lines: Vec<String>,
     pub flag_color: Option<FlagColor>,
     pub translation: Result<Vec<Option<String>>, String>,
     /// The Mark as Read setting.
@@ -181,6 +187,17 @@ pub fn opened_invitation() -> Opened {
     }
 }
 
+/// What reading an invitation to one Tuesday of a weekly event gives
+/// back. It carries no rule of its own.
+pub fn opened_occurrence() -> Opened {
+    let ics = ics().replace("SEQUENCE:0", "SEQUENCE:0\r\nRECURRENCE-ID:20300310T090000Z");
+    Opened {
+        invitation: mailrs_domain::invitation::read(&ics).expect("the fixture reads"),
+        change: None,
+        answer: None,
+    }
+}
+
 /// A body with a picture attached, which wants a thumbnail.
 pub fn with_picture() -> MessageBody {
     MessageBody {
@@ -231,6 +248,8 @@ impl FakeWindow {
             thumbnails: HashMap::from([("a1".to_string(), "data:image/png;base64,".to_string())]),
             invitation: Ok(Some(opened_invitation())),
             busy: Ok(vec!["Design crit".to_string()]),
+            series: Ok(Some("Every Tuesday, 6 left".to_string())),
+            series_lines: Vec::new(),
             flag_color: Some(FlagColor::Orange),
             translation: Ok(vec![Some("Hello Ana".to_string())]),
             delay: Some(2),
@@ -485,6 +504,16 @@ impl Effects for FakeWindow {
         Box::pin(async move { busy })
     }
 
+    fn series(
+        &self,
+        _account_id: AccountId,
+        _invitation: Invitation,
+    ) -> Answer<'_, Result<Option<String>, String>> {
+        self.reached(Step::Series);
+        let series = self.with(|screen| screen.series.clone());
+        Box::pin(async move { series })
+    }
+
     fn flag_color(
         &self,
         _account_id: AccountId,
@@ -564,6 +593,11 @@ impl Effects for FakeWindow {
 
     fn clashes(&self, _uid: String, _busy: Vec<String>) {
         self.reached(Step::Clashes);
+    }
+
+    fn series_known(&self, _uid: String, line: String) {
+        self.reached(Step::SeriesKnown);
+        self.with(|screen| screen.series_lines.push(line));
     }
 
     fn start_engines(&self) {

@@ -3,7 +3,9 @@
 //! checks what went out.
 
 use mailrs_domain::invitation::Answer;
-use mailrs_gmail::{Answered, EventFields, EventTime, GmailClient, GmailError, OAuthClient};
+use mailrs_gmail::{
+    Answered, EventFields, EventTime, GmailClient, GmailError, OAuthClient, Series,
+};
 use serde_json::{Value, json};
 use wiremock::matchers::{body_json, method, path, query_param};
 use wiremock::{Mock, MockServer, Request, ResponseTemplate};
@@ -490,4 +492,99 @@ async fn a_calendar_api_switched_off_says_where_to_turn_it_on() {
         ),
         "{listed:?}"
     );
+}
+
+#[tokio::test]
+async fn a_series_found_by_one_occurrence_counts_what_is_left_of_it() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    mount_search(
+        &server,
+        json!({"items": [{"id": "ev-1_20260310T090000Z", "recurringEventId": EVENT}]}),
+    )
+    .await;
+    Mock::given(method("GET"))
+        .and(path(format!("{CALENDAR}/calendars/primary/events/{EVENT}")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "id": EVENT,
+            "recurrence": ["EXDATE:20260317T090000Z", "RRULE:FREQ=WEEKLY;BYDAY=TU;COUNT=10"]
+        })))
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path(format!(
+            "{CALENDAR}/calendars/primary/events/{EVENT}/instances"
+        )))
+        .and(query_param("pageToken", "p2"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"items": [{"id": "c"}]})))
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path(format!(
+            "{CALENDAR}/calendars/primary/events/{EVENT}/instances"
+        )))
+        .and(query_param("timeMin", "2026-03-01T00:00:00+00:00"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "items": [{"id": "a"}, {"id": "b"}],
+            "nextPageToken": "p2"
+        })))
+        .up_to_n_times(1)
+        .mount(&server)
+        .await;
+
+    let series = client(&server)
+        .series(UID, "2026-03-01T00:00:00+00:00")
+        .await
+        .unwrap();
+    assert_eq!(
+        series,
+        Some(Series {
+            rule: "FREQ=WEEKLY;BYDAY=TU;COUNT=10".into(),
+            left: Some(3),
+        })
+    );
+}
+
+#[tokio::test]
+async fn a_series_with_an_end_date_counts_nothing() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    mount_search(
+        &server,
+        json!({"items": [{"id": EVENT, "recurrence": ["RRULE:FREQ=DAILY;UNTIL=20260331"]}]}),
+    )
+    .await;
+    Mock::given(method("GET"))
+        .and(path(format!(
+            "{CALENDAR}/calendars/primary/events/{EVENT}/instances"
+        )))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"items": []})))
+        .expect(0)
+        .mount(&server)
+        .await;
+
+    let series = client(&server)
+        .series(UID, "2026-03-01T00:00:00+00:00")
+        .await
+        .unwrap();
+    assert_eq!(
+        series,
+        Some(Series {
+            rule: "FREQ=DAILY;UNTIL=20260331".into(),
+            left: None,
+        })
+    );
+}
+
+#[tokio::test]
+async fn an_event_that_does_not_repeat_has_no_series() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    mount_search(&server, found()).await;
+
+    let series = client(&server)
+        .series(UID, "2026-03-01T00:00:00+00:00")
+        .await
+        .unwrap();
+    assert_eq!(series, None);
 }

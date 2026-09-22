@@ -47,6 +47,19 @@ pub struct Busy {
     pub summary: String,
 }
 
+/// How a repeating event on the calendar repeats.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Series {
+    /// The series' rule without its `RRULE:` prefix, such as
+    /// `FREQ=WEEKLY;BYDAY=MO;COUNT=10`.
+    pub rule: String,
+    /// How many occurrences are still to come, counted from the instant
+    /// the caller named. Only a rule that stops after a number of
+    /// occurrences has one; a rule with an end date or none counts
+    /// nothing.
+    pub left: Option<u32>,
+}
+
 #[derive(Deserialize)]
 struct EventList {
     #[serde(default)]
@@ -282,6 +295,71 @@ impl GmailClient {
             .map(str::to_string))
     }
 
+    /// How the repeating event `ical_uid` names repeats, as the calendar
+    /// holds it. An invitation to one occurrence carries no rule of its
+    /// own, so this is the only place the rest of the series shows up.
+    /// `None` means the calendar has no such event or it does not repeat.
+    ///
+    /// One call finds the event, and a second reads the series when the
+    /// search turned up an occurrence of it. A rule that stops after a
+    /// number of occurrences costs one more: Google counts the ones still
+    /// to come from `from`, an RFC 3339 timestamp, which saves this crate
+    /// from expanding the rule itself.
+    pub async fn series(&self, ical_uid: &str, from: &str) -> Result<Option<Series>, GmailError> {
+        let events = format!("{}/calendars/primary/events", self.calendar_base_url);
+        let list: EventList = self
+            .call_at(&events, |url| {
+                self.http()
+                    .get(url)
+                    .query(&[("iCalUID", ical_uid), ("maxResults", "1")])
+            })
+            .await?;
+        let Some(mut event) = list.items.into_iter().next() else {
+            return Ok(None);
+        };
+        if let Some(parent) = event.get("recurringEventId").and_then(Value::as_str) {
+            let url = format!("{events}/{parent}");
+            event = self.call_at(&url, |url| self.http().get(url)).await?;
+        }
+        let Some(rule) = rule_of(&event) else {
+            return Ok(None);
+        };
+        let counted = rule
+            .split(';')
+            .any(|part| part.trim().to_ascii_uppercase().starts_with("COUNT="));
+        let id = event.get("id").and_then(Value::as_str);
+        let left = match (counted, id) {
+            (true, Some(id)) => Some(self.instances_from(&format!("{events}/{id}"), from).await?),
+            _ => None,
+        };
+        Ok(Some(Series { rule, left }))
+    }
+
+    /// How many occurrences of the series at `url` start at or after
+    /// `from`, over as many pages as that takes.
+    async fn instances_from(&self, url: &str, from: &str) -> Result<u32, GmailError> {
+        let url = format!("{url}/instances");
+        let mut count = 0;
+        let mut page: Option<String> = None;
+        loop {
+            let list: EventList = self
+                .call_at(&url, |url| {
+                    let mut query = vec![("timeMin", from), ("maxResults", "250")];
+                    if let Some(token) = &page {
+                        query.push(("pageToken", token));
+                    }
+                    self.http().get(url).query(&query)
+                })
+                .await?;
+            count += list.items.len();
+            match list.next_page_token {
+                Some(token) if count < MOST_EVENTS => page = Some(token),
+                _ => break,
+            }
+        }
+        Ok(count as u32)
+    }
+
     /// What the account's primary calendar holds between `from` and `to`,
     /// both RFC 3339 timestamps. One call, and only the events that would
     /// keep the user from another meeting: an event they declined, one
@@ -392,6 +470,22 @@ impl GmailClient {
         })
         .await
     }
+}
+
+/// The `RRULE` in an event's `recurrence` list, without its prefix. The
+/// list also holds `EXDATE` and `RDATE` lines, which say nothing about how
+/// the series runs on.
+fn rule_of(event: &Value) -> Option<String> {
+    event
+        .get("recurrence")?
+        .as_array()?
+        .iter()
+        .filter_map(Value::as_str)
+        .find_map(|line| {
+            let (name, rule) = line.split_once(':')?;
+            name.eq_ignore_ascii_case("RRULE")
+                .then(|| rule.trim().to_string())
+        })
 }
 
 /// The event as the tools read it, from Google's JSON.

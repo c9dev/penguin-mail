@@ -313,6 +313,16 @@ impl<G: GmailApi> AccountSync<G> {
         Ok(self.api.busy_between(from, to).await?)
     }
 
+    /// How the repeating event `ical_uid` names repeats, as the calendar
+    /// holds it, with what is left of it from `from`.
+    pub async fn series(
+        &self,
+        ical_uid: &str,
+        from: EpochMillis,
+    ) -> Result<Option<mailrs_gmail::Series>, SyncError> {
+        Ok(self.api.series(ical_uid, from).await?)
+    }
+
     /// Every event on the account's primary calendar between `from` and
     /// `to`.
     pub async fn events_between(

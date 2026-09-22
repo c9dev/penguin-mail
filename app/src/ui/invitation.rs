@@ -409,6 +409,21 @@ impl EventCard {
         }
     }
 
+    /// Says how the series runs, in the line a repeating invitation's rule
+    /// fills. An invitation to one occurrence has no rule of its own, so
+    /// the line comes from the calendar after the card is up.
+    /// The line goes into the invitation the card holds as well, so a
+    /// redraw after an answer keeps it.
+    pub fn set_series(&self, uid: &str, line: String) {
+        if !self.shows(uid) {
+            return;
+        }
+        if let Some(showing) = self.showing.borrow_mut().as_mut() {
+            showing.invitation.repeats = Some(line.clone());
+        }
+        set_line(&self.repeats, Some(line));
+    }
+
     /// Puts up the offer to add this account to GNOME Online Accounts.
     pub fn offer_gnome(&self) {
         self.gnome.set_visible(true);

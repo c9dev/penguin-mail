@@ -690,3 +690,79 @@ async fn a_proposal_asks_the_organizer_for_another_time() {
     // A proposal settles nothing, so no calendar hears about it.
     assert!(h.fake.with(|s| s.answered_occurrences.is_empty()));
 }
+
+#[tokio::test]
+async fn one_occurrence_says_how_many_of_its_series_are_left() {
+    let h = harness().await;
+    let invitations = invitations(&h);
+    let week = 7 * 86_400_000;
+    h.fake.with(|s| {
+        let starts = (0..10).map(|n| OCCURRENCE + n * week).collect();
+        s.series
+            .insert(UID.into(), ("FREQ=WEEKLY;BYDAY=TU;COUNT=10".into(), starts));
+    });
+    let invitation = read(&one_of_a_series());
+
+    // Asked a moment after the fourth Tuesday, six are still to come.
+    let now = OCCURRENCE + 3 * week + 1;
+    assert_eq!(
+        invitations
+            .series(h.account_id, &invitation, now)
+            .await
+            .unwrap()
+            .as_deref(),
+        Some("Every Tuesday, 6 left")
+    );
+}
+
+#[tokio::test]
+async fn a_series_the_calendar_cannot_give_leaves_the_card_alone() {
+    let h = harness().await;
+    let invitations = invitations(&h);
+    let invitation = read(&one_of_a_series());
+
+    // Not on the calendar.
+    assert_eq!(
+        invitations
+            .series(h.account_id, &invitation, OCCURRENCE)
+            .await
+            .unwrap(),
+        None
+    );
+    // On it, but the account never granted the calendar.
+    h.fake.with(|s| {
+        s.series
+            .insert(UID.into(), ("FREQ=WEEKLY".into(), vec![OCCURRENCE]))
+    });
+    h.fake.fail_next(GmailError::MissingScope);
+    assert_eq!(
+        invitations
+            .series(h.account_id, &invitation, OCCURRENCE)
+            .await
+            .unwrap(),
+        None
+    );
+    // Readable, and open-ended.
+    assert_eq!(
+        invitations
+            .series(h.account_id, &invitation, OCCURRENCE)
+            .await
+            .unwrap()
+            .as_deref(),
+        Some("Every week, no end date")
+    );
+}
+
+#[tokio::test]
+async fn an_invitation_to_a_whole_event_asks_the_calendar_nothing() {
+    let h = harness().await;
+    let invitations = invitations(&h);
+    assert_eq!(
+        invitations
+            .series(h.account_id, &read(&at_ten()), OCCURRENCE)
+            .await
+            .unwrap(),
+        None
+    );
+    assert_eq!(h.fake.with(|s| s.usage.calls_to("calendar.events.list")), 0);
+}

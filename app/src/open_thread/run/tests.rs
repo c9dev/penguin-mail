@@ -4,8 +4,8 @@
 use mailrs_domain::Target;
 
 use super::fake::{
-    ACCOUNT, ELSEWHERE, FakeWindow, Step, THREAD, body, invited, meta, portuguese, row,
-    with_picture,
+    ACCOUNT, ELSEWHERE, FakeWindow, Step, THREAD, body, invited, meta, opened_occurrence,
+    portuguese, row, with_picture,
 };
 use super::{Card, Event, Stale};
 use crate::protection::{Mark, Read, Tone};
@@ -181,6 +181,49 @@ async fn an_invitation_read_for_a_thread_the_reader_left_goes_nowhere() {
     let screen = window.0.borrow();
     assert!(screen.invitations.iter().all(Option::is_none));
     assert!(!screen.steps.contains(&Step::Busy));
+}
+
+#[tokio::test]
+async fn an_invitation_to_one_occurrence_says_how_the_series_runs() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| screen.invitation = Ok(Some(opened_occurrence())));
+    window.run().open(row(THREAD)).await;
+    assert_eq!(window.0.borrow().series_lines, ["Every Tuesday, 6 left"]);
+}
+
+#[tokio::test]
+async fn an_invitation_to_a_whole_event_asks_for_no_series() {
+    let window = FakeWindow::with_body(invited());
+    window.run().open(row(THREAD)).await;
+    assert!(!window.took(Step::Series));
+}
+
+#[tokio::test]
+async fn a_series_the_calendar_cannot_give_leaves_the_card_as_it_was() {
+    for series in [Ok(None), Err("offline".to_string())] {
+        let window = FakeWindow::with_body(invited());
+        window.with(|screen| {
+            screen.invitation = Ok(Some(opened_occurrence()));
+            screen.series = series;
+        });
+        window.run().open(row(THREAD)).await;
+        assert!(window.took(Step::Series));
+        assert!(!window.took(Step::SeriesKnown));
+        // The clashes still go on the card.
+        assert!(window.took(Step::Clashes));
+    }
+}
+
+#[tokio::test]
+async fn a_series_for_a_thread_the_reader_left_goes_nowhere() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| {
+        screen.invitation = Ok(Some(opened_occurrence()));
+        screen.moves_on = Some(Step::Series);
+    });
+    window.run().open(row(THREAD)).await;
+    assert!(window.took(Step::Series));
+    assert!(!window.took(Step::SeriesKnown));
 }
 
 #[tokio::test]

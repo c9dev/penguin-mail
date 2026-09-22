@@ -143,6 +143,13 @@ pub trait Effects {
         account_id: AccountId,
         invitation: Invitation,
     ) -> Answer<'_, Result<Vec<String>, String>>;
+    /// How the series behind an invitation to one occurrence runs, in
+    /// words, from the calendar. `None` when the calendar cannot say.
+    fn series(
+        &self,
+        account_id: AccountId,
+        invitation: Invitation,
+    ) -> Answer<'_, Result<Option<String>, String>>;
     /// The flag colour the store holds for the thread.
     fn flag_color(
         &self,
@@ -179,6 +186,8 @@ pub trait Effects {
     fn offer_gnome(&self, account_id: AccountId);
     /// Puts what else the user has on during the event on the card.
     fn clashes(&self, uid: String, busy: Vec<String>);
+    /// Puts how the series runs on the card, under the time.
+    fn series_known(&self, uid: String, line: String);
     /// Starts the engine run for a signed or encrypted message.
     fn start_engines(&self);
     fn translation_card(&self, card: Card);
@@ -520,6 +529,18 @@ impl ThreadRun {
             }
         };
         wanted.on_screen(|effects| effects.show_invitation(showing.clone()));
+        if let Some(showing) = showing.as_ref().filter(|s| one_of_a_series(s)) {
+            let (uid, invitation) = (showing.invitation.uid.clone(), showing.invitation.clone());
+            if let Some(Some(line)) = wanted
+                .ask(
+                    |effects| effects.series(account_id, invitation),
+                    "could not read the series",
+                )
+                .await
+            {
+                wanted.on_screen(|effects| effects.series_known(uid, line));
+            }
+        }
         let Some(showing) = showing.filter(waiting_on_an_answer) else {
             return;
         };
@@ -535,6 +556,16 @@ impl ThreadRun {
             wanted.on_screen(|effects| effects.clashes(uid, busy));
         }
     }
+}
+
+/// Whether the invitation asks about one occurrence of a series that is
+/// still on. That card offers to answer for the occurrence or the series,
+/// and carries no rule to say what the series is, so the calendar is
+/// asked.
+fn one_of_a_series(showing: &Showing) -> bool {
+    showing.invitation.occurrence.is_some()
+        && showing.invitation.method == Method::Request
+        && !showing.invitation.cancelled()
 }
 
 /// Whether the invitation still waits on the user: a request they have not

@@ -295,6 +295,37 @@ fn recurrence_words_cover_the_rules_organizers_send() {
 }
 
 #[test]
+fn a_series_says_how_much_of_it_is_left() {
+    let say = |rule: &str, left| recurrence::series_in_words(rule, left, Some(2026));
+    assert_eq!(
+        say("FREQ=WEEKLY;BYDAY=TU;COUNT=10", Some(6)).as_deref(),
+        Some("Every Tuesday, 6 left")
+    );
+    assert_eq!(
+        say("FREQ=WEEKLY;COUNT=10", Some(1)).as_deref(),
+        Some("Every week, 1 left")
+    );
+    assert_eq!(
+        say("FREQ=WEEKLY;COUNT=10", Some(0)).as_deref(),
+        Some("Every week, none left")
+    );
+    // The calendar did not count, so the line says how many in all.
+    assert_eq!(
+        say("FREQ=DAILY;COUNT=5", None).as_deref(),
+        Some("Every day, 5 times")
+    );
+    assert_eq!(
+        say("FREQ=WEEKLY;BYDAY=MO;UNTIL=20260303T090000Z", None).as_deref(),
+        Some("Every Monday until 3 March")
+    );
+    assert_eq!(
+        say("FREQ=WEEKLY", None).as_deref(),
+        Some("Every week, no end date")
+    );
+    assert_eq!(say("FREQ=FORTNIGHTLY;COUNT=3", Some(2)), None);
+}
+
+#[test]
 fn durations_read_as_lengths() {
     assert_eq!(recurrence::duration("PT1H30M"), Some(Duration::minutes(90)));
     assert_eq!(recurrence::duration("P1D"), Some(Duration::days(1)));

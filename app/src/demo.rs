@@ -120,7 +120,13 @@ struct Invite {
     /// The version of the meeting this one updates, which the demo has
     /// already seen.
     replaces: Option<Older>,
+    /// The series the meeting belongs to, as the calendar holds it: its
+    /// rule and when each occurrence starts.
+    series: Option<fn(EpochMillis) -> Series>,
 }
+
+/// A series' rule, and when each of its occurrences starts.
+type Series = (String, Vec<EpochMillis>);
 
 /// An earlier version of a meeting, remembered as if the demo had opened
 /// its invitation last week. The card then says the meeting moved, and
@@ -470,6 +476,7 @@ fn samples() -> Vec<Sample> {
                 uid: INVITE_UID,
                 ics: invitation_ics,
                 replaces: None,
+                series: None,
             }),
             ..PLAIN
         },
@@ -491,6 +498,7 @@ fn samples() -> Vec<Sample> {
                     message_id: "planning-0",
                     starts: planning_was,
                 }),
+                series: Some(planning_series),
             }),
             ..PLAIN
         },
@@ -842,6 +850,9 @@ impl Sample {
                 // Google puts an invitation on the guest's calendar as it
                 // arrives, so the demo has an event to answer.
                 state.calendar.insert(invite.uid.into(), None);
+                if let Some(series) = invite.series {
+                    state.series.insert(invite.uid.into(), series(now));
+                }
             }
             state.bodies.insert(meta.id.clone(), body);
             state.messages.insert(meta.id.clone(), meta);
@@ -1099,6 +1110,12 @@ fn moved_ics(now: EpochMillis) -> String {
         "BEGIN:VEVENT".to_string(),
         format!("UID:{MOVED_UID}"),
         "SEQUENCE:1".to_string(),
+        // One Wednesday of a weekly series moves to Thursday, so the card
+        // asks whether an answer covers this one or all of them.
+        format!(
+            "RECURRENCE-ID:{}",
+            stamp(planning_was(now).with_timezone(&chrono::Utc))
+        ),
         "STATUS:CONFIRMED".to_string(),
         "SUMMARY:Sprint planning".to_string(),
         "LOCATION:Meeting Room 1\\, Fernwood HQ".to_string(),
@@ -1131,6 +1148,17 @@ fn planning_is(now: EpochMillis) -> chrono::DateTime<chrono::Local> {
 }
 
 /// The next `weekday` after `now`, at `hour` local.
+/// Sprint planning runs on Wednesdays for eight weeks, two of them gone,
+/// so the moved one has six of the series left from it.
+fn planning_series(now: EpochMillis) -> Series {
+    let week = chrono::Duration::weeks(1);
+    let first = planning_was(now) - week * 2;
+    let starts = (0..8)
+        .map(|n| (first + week * n).timestamp_millis())
+        .collect();
+    ("FREQ=WEEKLY;BYDAY=WE;COUNT=8".to_string(), starts)
+}
+
 fn weekday_at(
     now: EpochMillis,
     weekday: chrono::Weekday,

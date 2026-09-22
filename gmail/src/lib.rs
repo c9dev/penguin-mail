@@ -14,7 +14,7 @@ pub mod provenance;
 mod token_store;
 
 pub use calendar::{
-    Answered, Busy, CALENDAR_API_BASE, CALENDAR_SCOPE, Event, EventFields, EventTime, Guest,
+    Answered, Busy, CALENDAR_API_BASE, CALENDAR_SCOPE, Event, EventFields, EventTime, Guest, Series,
 };
 pub use client::{
     Authorized, BATCH_LIMIT, GMAIL_API_BASE, GmailClient, authorize, cost, one_click_unsubscribe,

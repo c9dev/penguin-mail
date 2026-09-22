@@ -2995,107 +2995,107 @@ msgstr ""
 msgid "Invitation"
 msgstr ""
 
-#: app/src/ui/invitation.rs:446
+#: app/src/ui/invitation.rs:461
 msgid "Untitled event"
 msgstr ""
 
-#: app/src/ui/invitation.rs:520
+#: app/src/ui/invitation.rs:535
 msgid "Pick a Time…"
 msgstr ""
 
-#: app/src/ui/invitation.rs:561
+#: app/src/ui/invitation.rs:576
 msgid "No reply yet"
 msgstr ""
 
-#: app/src/ui/invitation.rs:590
+#: app/src/ui/invitation.rs:605
 msgid "Half an Hour Later"
 msgstr ""
 
-#: app/src/ui/invitation.rs:593
+#: app/src/ui/invitation.rs:608
 msgid "An Hour Later"
 msgstr ""
 
-#: app/src/ui/invitation.rs:595
+#: app/src/ui/invitation.rs:610
 msgid "Same Time Tomorrow"
 msgstr ""
 
-#: app/src/ui/invitation.rs:599
+#: app/src/ui/invitation.rs:614
 msgid "Same Time Next Week"
 msgstr ""
 
-#: app/src/ui/invitation.rs:614
+#: app/src/ui/invitation.rs:629
 msgid "You have {event} then"
 msgstr ""
 
-#: app/src/ui/invitation.rs:616
+#: app/src/ui/invitation.rs:631
 msgid "You have {event} and {other} then"
 msgstr ""
 
-#: app/src/ui/invitation.rs:620
+#: app/src/ui/invitation.rs:635
 msgid "You have {event} and {count} more then"
 msgid_plural "You have {event} and {count} more then"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/invitation.rs:634
+#: app/src/ui/invitation.rs:649
 msgid "Reply to the invitation from {organizer}"
 msgstr ""
 
-#: app/src/ui/invitation.rs:637
+#: app/src/ui/invitation.rs:652
 msgid "Invitation from {organizer}"
 msgstr ""
 
-#: app/src/ui/invitation.rs:657
+#: app/src/ui/invitation.rs:672
 msgid "You"
 msgstr ""
 
-#: app/src/ui/invitation.rs:683
+#: app/src/ui/invitation.rs:698
 msgid "{count} yes"
 msgid_plural "{count} yes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/invitation.rs:691
+#: app/src/ui/invitation.rs:706
 msgid "{count} no"
 msgid_plural "{count} no"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/invitation.rs:699
+#: app/src/ui/invitation.rs:714
 msgid "{count} maybe"
 msgid_plural "{count} maybe"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/invitation.rs:707
+#: app/src/ui/invitation.rs:722
 msgid "{count} awaiting"
 msgid_plural "{count} awaiting"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/invitation.rs:715
+#: app/src/ui/invitation.rs:730
 msgid "{count} guest"
 msgid_plural "{count} guests"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/invitation.rs:721
+#: app/src/ui/invitation.rs:736
 msgid "{guests} · {answers}"
 msgstr ""
 
-#: app/src/ui/invitation.rs:731
+#: app/src/ui/invitation.rs:746
 msgid "This meeting moved from {when}"
 msgstr ""
 
-#: app/src/ui/invitation.rs:734
+#: app/src/ui/invitation.rs:749
 msgid "The organizer changed this meeting"
 msgstr ""
 
-#: app/src/ui/invitation.rs:735
+#: app/src/ui/invitation.rs:750
 msgid "The organizer canceled this meeting"
 msgstr ""
 
-#: app/src/ui/invitation.rs:736
+#: app/src/ui/invitation.rs:751
 msgid "This meeting is canceled"
 msgstr ""
 
@@ -4431,25 +4431,25 @@ msgstr ""
 msgid "{file}, preview"
 msgstr ""
 
-#: app/src/ui/window/categories.rs:154
+#: app/src/ui/window/categories.rs:151
 msgid "{name}, {count} unread"
 msgid_plural "{name}, {count} unread"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window/categories.rs:225
+#: app/src/ui/window/categories.rs:222
 msgid "Open a message from the sender first"
 msgstr ""
 
-#: app/src/ui/window/categories.rs:269
+#: app/src/ui/window/categories.rs:266
 msgid "Mail from {sender} now goes to {category}"
 msgstr ""
 
-#: app/src/ui/window/categories.rs:274
+#: app/src/ui/window/categories.rs:271
 msgid "Moved mail from {sender} to {category}"
 msgstr ""
 
-#: app/src/ui/window/categories.rs:281
+#: app/src/ui/window/categories.rs:278
 msgid ""
 "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr ""
@@ -5058,84 +5058,98 @@ msgstr[1] ""
 msgid "{every}, {repeats}"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:155
+#: domain/src/invitation/recurrence.rs:100
+msgid "{every}, no end date"
+msgstr ""
+
+#: domain/src/invitation/recurrence.rs:115
+msgid "{every}, none left"
+msgstr ""
+
+#: domain/src/invitation/recurrence.rs:117
+msgid "{every}, {count} left"
+msgid_plural "{every}, {count} left"
+msgstr[0] ""
+msgstr[1] ""
+
+#: domain/src/invitation/recurrence.rs:196
 msgid "{days} and {last}"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:163
+#: domain/src/invitation/recurrence.rs:204
 msgid "Monday"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:164
+#: domain/src/invitation/recurrence.rs:205
 msgid "Tuesday"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:165
+#: domain/src/invitation/recurrence.rs:206
 msgid "Wednesday"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:166
+#: domain/src/invitation/recurrence.rs:207
 msgid "Thursday"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:167
+#: domain/src/invitation/recurrence.rs:208
 msgid "Friday"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:168
+#: domain/src/invitation/recurrence.rs:209
 msgid "Saturday"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:169
+#: domain/src/invitation/recurrence.rs:210
 msgid "Sunday"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:179
+#: domain/src/invitation/recurrence.rs:220
 msgid "the last day"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:188
+#: domain/src/invitation/recurrence.rs:229
 msgid "the last {weekday}"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:190
+#: domain/src/invitation/recurrence.rs:231
 msgid "the {nth} {weekday}"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:199
+#: domain/src/invitation/recurrence.rs:240
 msgid "first"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:200
+#: domain/src/invitation/recurrence.rs:241
 msgid "second"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:201
+#: domain/src/invitation/recurrence.rs:242
 msgid "third"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:202
+#: domain/src/invitation/recurrence.rs:243
 msgid "fourth"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:203
+#: domain/src/invitation/recurrence.rs:244
 msgid "fifth"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:216
-#: domain/src/invitation/recurrence.rs:220
+#: domain/src/invitation/recurrence.rs:257
+#: domain/src/invitation/recurrence.rs:261
 msgid "the {day}th"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:217
+#: domain/src/invitation/recurrence.rs:258
 msgid "the {day}st"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:218
+#: domain/src/invitation/recurrence.rs:259
 msgid "the {day}nd"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:219
+#: domain/src/invitation/recurrence.rs:260
 msgid "the {day}rd"
 msgstr ""
 

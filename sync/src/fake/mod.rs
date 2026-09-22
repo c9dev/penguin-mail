@@ -22,7 +22,7 @@ use mailrs_gmail::{
     AccountQuota, Answered, BATCH_LIMIT, Busy, CALENDAR_SCOPE, CONTACTS_SCOPE, ConnectionsPage,
     DELETE_SCOPE, Event, EventFields, GmailError, Guest, HistoryChange, HistoryPage, LabelColor,
     MessagePage, MessageRef, Person, Priority, Profile, QuotaLimiter, RemoteLabel, SETTINGS_SCOPE,
-    SendAs, cost, limiter,
+    SendAs, Series, cost, limiter,
 };
 
 use crate::api::{DraftRef, GmailApi, SavedDraft};
@@ -121,6 +121,9 @@ pub struct FakeState {
     /// What the account already has on, as a start, an end and a title.
     /// An invitation for a time one of these covers clashes with it.
     pub busy: Vec<(EpochMillis, EpochMillis, String)>,
+    /// The repeating events on the calendar, by their iCalendar UID: the
+    /// rule without its `RRULE:` prefix, and when each occurrence starts.
+    pub series: HashMap<String, (String, Vec<EpochMillis>)>,
     /// The occurrence each answer named, oldest first, and `None` for an
     /// answer that covered the whole series.
     pub answered_occurrences: Vec<Option<EpochMillis>>,
@@ -255,6 +258,7 @@ impl FakeGmail {
                 photos: HashMap::new(),
                 calendar: HashMap::new(),
                 busy: Vec::new(),
+                series: HashMap::new(),
                 answered_occurrences: Vec::new(),
                 events: Vec::new(),
                 next_event: 0,
@@ -895,6 +899,25 @@ impl GmailApi for FakeGmail {
                     summary: summary.clone(),
                 })
                 .collect()
+        }))
+    }
+
+    /// Counts the occurrences left only for a rule with a `COUNT`, as the
+    /// real client does, so a test sees the same answer Google would give.
+    async fn series(
+        &self,
+        ical_uid: &str,
+        from: EpochMillis,
+    ) -> Result<Option<Series>, GmailError> {
+        self.call("calendar.events.list", 0).await?;
+        self.calendar_open()?;
+        Ok(self.with(|s| {
+            let (rule, starts) = s.series.get(ical_uid)?;
+            let counted = rule.to_ascii_uppercase().contains("COUNT=");
+            Some(Series {
+                rule: rule.clone(),
+                left: counted.then(|| starts.iter().filter(|&&at| at >= from).count() as u32),
+            })
         }))
     }
 

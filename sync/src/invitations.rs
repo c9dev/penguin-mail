@@ -169,6 +169,33 @@ impl<A: Accounts> Invitations<A> {
         Ok(busy)
     }
 
+    /// How the series behind an invitation to one of its occurrences runs,
+    /// in words: "Every Tuesday, 6 left". The invitation carries no rule of
+    /// its own, so this asks the calendar, at background priority as
+    /// [`Self::busy`] does. `None` leaves the card as it was: for an
+    /// invitation to a whole event, for a series the calendar does not
+    /// hold, and when the calendar cannot be read for want of the
+    /// permission or of the API.
+    pub async fn series(
+        &self,
+        account_id: AccountId,
+        invitation: &Invitation,
+        now: EpochMillis,
+    ) -> Result<Option<String>, SyncError> {
+        if invitation.occurrence.is_none() || invitation.uid.trim().is_empty() {
+            return Ok(None);
+        }
+        let sync = self.sync(account_id)?;
+        let series = match limiter::background(sync.series(&invitation.uid, now)).await {
+            Ok(series) => series,
+            Err(SyncError::Gmail(GmailError::MissingScope | GmailError::ApiDisabled { .. })) => {
+                None
+            }
+            Err(err) => return Err(err),
+        };
+        Ok(series.and_then(|series| invitation.series_in_words(&series.rule, series.left)))
+    }
+
     /// What the last look said, when it was about this same invitation.
     fn remembered(&self, account_id: AccountId, uid: &str) -> Option<Vec<String>> {
         let asked = self.asked.lock().expect("invitations poisoned");

@@ -10,6 +10,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - An Archive mailbox lists the mail you took out of the inbox, across all
   accounts and under each one. Drag mail onto it to archive it.
 - You can label mail from several accounts at once by picking a label name.
+- An invitation to one meeting of a repeating series now says how the
+  series runs, such as "Every Wednesday, 6 left", read from your Google
+  Calendar.
 
 ### Improved
 
