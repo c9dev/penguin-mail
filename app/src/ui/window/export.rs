@@ -20,13 +20,16 @@ use mailrs_domain::translate::{fill, fill_plural, gettext};
 type Wanted = (AccountId, String, Option<String>);
 
 impl MainWindow {
-    /// Writes the selected conversations to one mbox file, or the open
-    /// conversation when nothing is selected.
-    pub(super) fn export(self: &Rc<Self>) {
-        let rows = self.list.selected_rows();
+    /// Writes the selected conversations to one mbox file, or the one
+    /// `view` shows when nothing is selected. A separate window has no list
+    /// of its own, so it writes its conversation.
+    pub(super) fn export(self: &Rc<Self>, view: &ConversationView) {
+        let rows = match view.detached() {
+            true => Vec::new(),
+            false => self.list.selected_rows(),
+        };
         if rows.is_empty() {
-            let view = Rc::clone(&self.conversation);
-            return self.export_conversation(&view);
+            return self.export_conversation(view);
         }
         let newest = rows
             .iter()
@@ -52,9 +55,8 @@ impl MainWindow {
         self.save_mbox(wanted, name);
     }
 
-    /// Writes the conversation `view` shows. A separate window has no list
-    /// of its own, so its menu comes here.
-    pub(super) fn export_conversation(self: &Rc<Self>, view: &ConversationView) {
+    /// Writes the conversation `view` shows.
+    fn export_conversation(self: &Rc<Self>, view: &ConversationView) {
         let open = view.read(|open| {
             let date = open.messages.last().map(|m| m.date).unwrap_or_default();
             (

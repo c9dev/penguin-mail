@@ -12,7 +12,7 @@ use mailrs_domain::translate::{fill, gettext};
 impl MainWindow {
     /// Archives the targets and brings them back to the inbox at `at`.
     pub(super) fn remind(self: &Rc<Self>, at: i64) {
-        let targets = self.targets();
+        let targets = self.reach(&self.conversation).targets;
         if targets.is_empty() {
             return;
         }

@@ -13,12 +13,9 @@ use crate::unsubscribe::{Unsubscribe, choose};
 use mailrs_domain::translate::{fill, gettext};
 
 impl MainWindow {
-    /// Unsubscribes from the open thread's mailing list, after asking.
-    pub(super) fn unsubscribe(self: &Rc<Self>) {
-        self.unsubscribe_from(Rc::clone(&self.conversation));
-    }
-
-    pub(super) fn unsubscribe_from(self: &Rc<Self>, view: Rc<ConversationView>) {
+    /// Unsubscribes from the mailing list of the thread `view` shows,
+    /// after asking.
+    pub(super) fn unsubscribe(self: &Rc<Self>, view: Rc<ConversationView>) {
         let found = view.find(|open| {
             let (meta, body) = open.list_unsubscribe()?;
             let header = body.list_unsubscribe.clone()?;
@@ -125,13 +122,9 @@ impl MainWindow {
         }
     }
 
-    /// Sends future mail from the open thread's sender to the Trash with a
-    /// Gmail filter, and moves this thread there too.
-    pub(super) fn block_sender(self: &Rc<Self>) {
-        self.block_sender_from(Rc::clone(&self.conversation));
-    }
-
-    pub(super) fn block_sender_from(self: &Rc<Self>, view: Rc<ConversationView>) {
+    /// Sends future mail from the sender of the thread `view` shows to the
+    /// Trash with a Gmail filter, and moves this thread there too.
+    pub(super) fn block_sender(self: &Rc<Self>, view: Rc<ConversationView>) {
         let found = view.find(|open| Some((open.other_sender()?.clone(), open.target())));
         let Some((sender, target)) = found else {
             return self.toast(&gettext("Open a message from the sender to block"));

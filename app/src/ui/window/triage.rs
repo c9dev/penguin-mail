@@ -13,6 +13,7 @@ use mailrs_domain::{Folder, ThreadSummary};
 use mailrs_sync::{History, MailAction, TriageAction};
 
 use super::MainWindow;
+use super::reach::Reach;
 use crate::open_thread::OpenThread;
 use crate::ui::Mailbox;
 use crate::ui::conversation::{Action, ConversationView};
@@ -95,18 +96,22 @@ pub(super) fn decide(action: &Action, mailbox: &Mailbox, marks: Marks) -> Option
 
 impl MainWindow {
     /// Runs what a mail button comes to on what `view` covers.
-    pub(super) fn organize_from(self: &Rc<Self>, view: &Rc<ConversationView>, action: &Action) {
-        let mailbox = self.mailbox_of(view);
-        let Some(decision) = decide(action, &mailbox, self.target_marks_from(view)) else {
+    pub(super) fn organize(self: &Rc<Self>, view: &Rc<ConversationView>, action: &Action) {
+        let Reach {
+            targets,
+            marks,
+            mailbox,
+            ..
+        } = self.reach(view);
+        let Some(decision) = decide(action, &mailbox, marks) else {
             return;
         };
-        let targets = self.targets_from(view);
         if targets.is_empty() {
             return;
         }
         match decision {
             Decision::Triage(action) => {
-                self.follow_out_from(view, &action);
+                self.follow_out(view, &action);
                 self.perform(targets, MailAction::Triage(action), History::Record, None);
             }
             Decision::Flag(on) => {

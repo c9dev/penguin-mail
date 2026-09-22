@@ -11,7 +11,7 @@ use crate::settings::Change;
 impl MainWindow {
     /// Flags the targets with `color`, or takes the flag off with `None`.
     pub(super) fn flag(self: &Rc<Self>, color: Option<FlagColor>) {
-        let targets = self.targets();
+        let targets = self.reach(&self.conversation).targets;
         self.flag_targets(targets, color);
     }
 

@@ -92,7 +92,7 @@ impl MainWindow {
         let weak = Rc::downgrade(self);
         dismiss.connect_activate(move |_, _| {
             if let Some(win) = weak.upgrade() {
-                win.dismiss_follow_ups(win.targets());
+                win.dismiss_follow_ups(win.reach(&win.conversation).targets);
             }
         });
         self.actions.add_action(&dismiss);

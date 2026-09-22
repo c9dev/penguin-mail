@@ -16,6 +16,8 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Target**: what a mail action applies to: a thread, or one message of it when the list shows messages instead of conversations. `mailrs_domain::Target`. _Avoid_: selection, item.
 
+**Reach**: what a button or key pressed in one conversation view acts on: its targets, what they carry (unread, flagged, muted), and the mailbox they were picked from. In the main window several selected rows win over the open conversation; a conversation in a window of its own reaches only itself, in the mailbox it was opened from. `ui::window::reach::Reach`, built by `MainWindow::reach(view)`. _Avoid_: scope, selection.
+
 **Mail action**: a change a person or the assistant makes to targets, such as archive, flag in a colour, remind at a time, or label by name. `mailrs_sync::MailActions` runs each one for the window and the assistant alike, carries on past a failed target, and reports each failure in its `Outcome`. _Avoid_: command, operation.
 
 **Muted**: a thread carrying Gmail's `MUTE` label. Gmail's own filters archive whatever arrives on such a thread, so a reply lands outside the inbox without the app doing anything; muting is therefore the label plus one archive, and unmuting drops the label and puts the thread back. `mailrs_sync::TriageAction::Mute`, behind `MailAction::Mute`. The Muted mailbox lists these threads and a row marks them. _Avoid_: ignore, silence, snooze.

@@ -12,6 +12,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- A conversation in its own window decides whether Archive, Delete or Mute
+  close it by the mailbox you opened it from, not the one the main window
+  has moved on to.
 - A conversation whose first messages you deleted shows in the inbox again
   when a reply arrives, as it does in Gmail.
 - A conversation you clicked just before switching mailboxes no longer opens

@@ -43,7 +43,7 @@ impl MainWindow {
             let (Some(win), Some(view)) = (win.upgrade(), slot.borrow().upgrade()) else {
                 return;
             };
-            win.act_from(&view, action);
+            win.act(&view, action);
         });
         *holder.borrow_mut() = Rc::downgrade(&view);
         view.set_detached();
@@ -104,11 +104,14 @@ impl MainWindow {
     /// The mailbox `view`'s conversation was opened from: the main
     /// window's for its own view, and the one each separate window was
     /// opened from for the rest.
-    pub(super) fn mailbox_of(&self, view: &Rc<ConversationView>) -> Mailbox {
+    pub(super) fn mailbox_of(&self, view: &ConversationView) -> Mailbox {
         self.detached
             .borrow()
             .iter()
-            .find(|(held, _)| held.upgrade().is_some_and(|held| Rc::ptr_eq(&held, view)))
+            .find(|(held, _)| {
+                held.upgrade()
+                    .is_some_and(|held| std::ptr::eq(&*held, view))
+            })
             .map_or_else(
                 || self.mailbox.borrow().clone(),
                 |(_, mailbox)| mailbox.clone(),
@@ -139,22 +142,19 @@ impl MainWindow {
             ("toggle-read", || Action::ToggleRead),
         ];
         for (name, make) in entries {
-            add(name, Box::new(move |win, view| win.act_from(view, make())));
+            add(name, Box::new(move |win, view| win.act(view, make())));
         }
         add("find", Box::new(|_, view| view.open_find()));
         add("print", Box::new(|_, view| view.print()));
         add("view-source", Box::new(|win, view| win.view_source(view)));
-        add(
-            "export",
-            Box::new(|win, view| win.export_conversation(view)),
-        );
+        add("export", Box::new(|win, view| win.export(view)));
         add(
             "unsubscribe",
-            Box::new(|win, view| win.unsubscribe_from(Rc::clone(view))),
+            Box::new(|win, view| win.unsubscribe(Rc::clone(view))),
         );
         add(
             "block-sender",
-            Box::new(|win, view| win.block_sender_from(Rc::clone(view))),
+            Box::new(|win, view| win.block_sender(Rc::clone(view))),
         );
         add(
             "always-load-images",
