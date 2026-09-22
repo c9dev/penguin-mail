@@ -636,65 +636,20 @@ impl MainWindow {
     /// Each state's button runs an app action, so the banner needs no
     /// callbacks of its own.
     pub fn show_update(&self, state: &crate::update::State) {
-        use crate::update::State;
-        let banner = &self.update_banner;
         if let Some(about) = self.about.borrow().as_ref() {
             about.show_update(state);
         }
-        let (entry, action) = match state {
-            State::Available(release) => (
-                fill(
-                    &gettext("Install Update {version}"),
-                    &[("version", &release.version.to_string())],
-                ),
-                Some("app.install-update"),
-            ),
-            State::Installing(_) => (gettext("Installing Update…"), None),
-            State::Installed(_) => (gettext("Restart to Update"), Some("app.restart-for-update")),
-            State::Failed { .. } => (gettext("Show Update Log"), Some("app.update-log")),
-            State::Checking => (gettext("Checking for Updates…"), None),
-            State::Idle | State::Current | State::Unreachable => {
-                (gettext("Check for Updates"), Some("app.check-for-updates"))
-            }
-        };
+        let shown = crate::update::shown(state);
         self.update_menu.remove_all();
-        // An entry with no action shows greyed out, which is right while a
-        // check or an install is running.
-        self.update_menu.append(Some(&entry), action);
-        let (title, button) = match state {
-            // These answer a check; the About window and a toast say so.
-            State::Idle | State::Checking | State::Current | State::Unreachable => {
-                banner.set_revealed(false);
-                return;
-            }
-            State::Available(release) => (
-                fill(
-                    &gettext("Penguin Mail {version} is available"),
-                    &[("version", &release.version.to_string())],
-                ),
-                Some((gettext("Install"), "app.install-update")),
-            ),
-            State::Installing(version) => (
-                fill(
-                    &gettext("Installing Penguin Mail {version}"),
-                    &[("version", &version.to_string())],
-                ),
-                None,
-            ),
-            State::Installed(_) => (
-                gettext("Restart to finish updating"),
-                Some((gettext("Restart"), "app.restart-for-update")),
-            ),
-            State::Failed { version, .. } => (
-                fill(
-                    &gettext("The update to {version} failed"),
-                    &[("version", &version.to_string())],
-                ),
-                Some((gettext("Show Log"), "app.update-log")),
-            ),
+        self.update_menu
+            .append(Some(&shown.menu.label), shown.menu.action);
+        let banner = &self.update_banner;
+        let Some(news) = shown.banner else {
+            banner.set_revealed(false);
+            return;
         };
-        banner.set_title(&title);
-        match button {
+        banner.set_title(&news.title);
+        match news.button {
             Some((label, action)) => {
                 banner.set_button_label(Some(&label));
                 banner.set_action_name(Some(action));

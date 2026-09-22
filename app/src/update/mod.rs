@@ -63,6 +63,81 @@ pub fn when_to_restart(blockers: Blockers) -> Restart {
     }
 }
 
+/// What the window shows for an update: the main menu's entry, and the
+/// banner above the panes when there is news. Each button runs an app
+/// action, so the window needs no callbacks of its own.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Shown {
+    pub menu: MenuEntry,
+    pub banner: Option<Banner>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MenuEntry {
+    pub label: String,
+    /// None greys the entry out, which is right while a check or an
+    /// install is running.
+    pub action: Option<&'static str>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Banner {
+    pub title: String,
+    /// The button's label and the app action it runs.
+    pub button: Option<(String, &'static str)>,
+}
+
+/// How the window shows `state`.
+pub fn shown(state: &State) -> Shown {
+    let entry = |label: String, action| MenuEntry { label, action };
+    let menu = match state {
+        State::Available(release) => entry(
+            fill(
+                &gettext("Install Update {version}"),
+                &[("version", &release.version.to_string())],
+            ),
+            Some("app.install-update"),
+        ),
+        State::Installing(_) => entry(gettext("Installing Update…"), None),
+        State::Installed(_) => entry(gettext("Restart to Update"), Some("app.restart-for-update")),
+        State::Failed { .. } => entry(gettext("Show Update Log"), Some("app.update-log")),
+        State::Checking => entry(gettext("Checking for Updates…"), None),
+        State::Idle | State::Current | State::Unreachable => {
+            entry(gettext("Check for Updates"), Some("app.check-for-updates"))
+        }
+    };
+    let banner = match state {
+        // These answer a check; the About window and a toast say so.
+        State::Idle | State::Checking | State::Current | State::Unreachable => None,
+        State::Available(release) => Some(Banner {
+            title: fill(
+                &gettext("Penguin Mail {version} is available"),
+                &[("version", &release.version.to_string())],
+            ),
+            button: Some((gettext("Install"), "app.install-update")),
+        }),
+        State::Installing(version) => Some(Banner {
+            title: fill(
+                &gettext("Installing Penguin Mail {version}"),
+                &[("version", &version.to_string())],
+            ),
+            button: None,
+        }),
+        State::Installed(_) => Some(Banner {
+            title: gettext("Restart to finish updating"),
+            button: Some((gettext("Restart"), "app.restart-for-update")),
+        }),
+        State::Failed { version, .. } => Some(Banner {
+            title: fill(
+                &gettext("The update to {version} failed"),
+                &[("version", &version.to_string())],
+            ),
+            button: Some((gettext("Show Log"), "app.update-log")),
+        }),
+    };
+    Shown { menu, banner }
+}
+
 const DAY: i64 = 86_400;
 
 /// Whether a timed check should run. The app restarts itself whenever its
@@ -174,6 +249,71 @@ mod tests {
         assert_eq!(when_to_restart(b(true, false, false)), Restart::Later);
         assert_eq!(when_to_restart(b(false, true, false)), Restart::Later);
         assert_eq!(when_to_restart(b(true, true, true)), Restart::Ask);
+    }
+
+    fn version(text: &str) -> Version {
+        Version::parse(text).unwrap()
+    }
+
+    #[test]
+    fn a_release_on_offer_shows_in_the_menu_and_the_banner() {
+        let release = Release {
+            version: version("0.2.0"),
+            page: String::new(),
+            assets: Vec::new(),
+        };
+        let shown = shown(&State::Available(release));
+        assert_eq!(shown.menu.label, "Install Update 0.2.0");
+        assert_eq!(shown.menu.action, Some("app.install-update"));
+        let banner = shown.banner.expect("a banner");
+        assert_eq!(banner.title, "Penguin Mail 0.2.0 is available");
+        assert_eq!(
+            banner.button,
+            Some(("Install".to_string(), "app.install-update"))
+        );
+    }
+
+    #[test]
+    fn an_answered_check_leaves_the_banner_down_and_offers_another() {
+        for state in [State::Idle, State::Current, State::Unreachable] {
+            let shown = shown(&state);
+            assert_eq!(shown.banner, None, "{state:?}");
+            assert_eq!(shown.menu.label, "Check for Updates");
+            assert_eq!(shown.menu.action, Some("app.check-for-updates"));
+        }
+    }
+
+    #[test]
+    fn running_work_greys_the_menu_entry_out() {
+        let checking = shown(&State::Checking);
+        assert_eq!(checking.menu.action, None);
+        assert_eq!(checking.banner, None);
+        let installing = shown(&State::Installing(version("0.2.0")));
+        assert_eq!(installing.menu.action, None);
+        let banner = installing.banner.expect("a banner");
+        assert_eq!(banner.title, "Installing Penguin Mail 0.2.0");
+        assert_eq!(banner.button, None);
+    }
+
+    #[test]
+    fn an_installed_update_offers_a_restart_and_a_failed_one_its_log() {
+        let installed = shown(&State::Installed(version("0.2.0")));
+        assert_eq!(installed.menu.action, Some("app.restart-for-update"));
+        assert_eq!(
+            installed.banner.and_then(|b| b.button),
+            Some(("Restart".to_string(), "app.restart-for-update"))
+        );
+        let failed = shown(&State::Failed {
+            version: version("0.2.0"),
+            log: PathBuf::from("/tmp/install.log"),
+        });
+        assert_eq!(failed.menu.label, "Show Update Log");
+        let banner = failed.banner.expect("a banner");
+        assert_eq!(banner.title, "The update to 0.2.0 failed");
+        assert_eq!(
+            banner.button,
+            Some(("Show Log".to_string(), "app.update-log"))
+        );
     }
 
     #[test]
