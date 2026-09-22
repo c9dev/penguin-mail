@@ -188,8 +188,9 @@ impl App {
 
     /// Changes preferences, saves them, and applies them to open windows.
     ///
-    /// Prefer [`App::change_settings`]. This takes the changes that have no
-    /// name yet, and works out their effects the same way.
+    /// Prefer [`App::change_settings`]. Only Hide My Email still writes
+    /// through this, until its writes get names of their own; it works out
+    /// their effects the same way.
     pub fn update_settings(self: &Rc<Self>, change: impl FnOnce(&mut Settings)) -> Effects {
         let before = self.settings();
         let mut after = before.clone();

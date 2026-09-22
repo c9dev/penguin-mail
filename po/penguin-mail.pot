@@ -66,11 +66,11 @@ msgstr ""
 msgid "“{subject}”"
 msgstr ""
 
-#: app/src/app/updates.rs:124
+#: app/src/app/updates.rs:125
 msgid "Penguin Mail {version} is up to date"
 msgstr ""
 
-#: app/src/app/updates.rs:134
+#: app/src/app/updates.rs:135
 msgid "Could not reach GitHub to check for updates"
 msgstr ""
 

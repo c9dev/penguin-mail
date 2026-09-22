@@ -11,6 +11,7 @@ use gtk::{gio, glib};
 use mailrs_domain::translate::{fill, gettext};
 
 use super::App;
+use crate::settings::Change;
 use crate::update::{self, Blockers, Restart, State, github, install, version};
 
 /// The first timed check waits for the app to settle after it starts.
@@ -83,7 +84,7 @@ impl App {
         if !asked && !(settings.check_for_updates && update::due(settings.last_update_check, now)) {
             return;
         }
-        self.update_settings(|s| s.last_update_check = Some(now));
+        self.change_settings(Change::UpdateChecked(now));
         let before = updater.state();
         if asked {
             self.set_update_state(State::Checking);
@@ -105,7 +106,7 @@ impl App {
                     let shown = release.version.to_string();
                     let new = this.settings().announced_update.as_deref() != Some(shown.as_str());
                     if new || asked {
-                        this.update_settings(|s| s.announced_update = Some(shown));
+                        this.change_settings(Change::UpdateAnnounced(shown));
                         let (install, clicked) = async_channel::bounded(1);
                         update::announce(release.version, install);
                         let app = Rc::clone(&this);

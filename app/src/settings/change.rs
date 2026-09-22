@@ -44,6 +44,10 @@ pub enum Change {
     DefaultCategory(Category),
     SuggestFollowUps(bool),
     CheckForUpdates(bool),
+    /// The updater asked GitHub at this time, in Unix seconds.
+    UpdateChecked(i64),
+    /// The release version the updater last put a notification up for.
+    UpdateAnnounced(String),
     /// What a new message starts as.
     ComposeFormat(ComposeFormat),
     /// Ask before a message that promises a file goes without one.
@@ -217,6 +221,8 @@ impl Change {
             Change::DefaultCategory(category) => settings.default_category = category,
             Change::SuggestFollowUps(on) => settings.suggest_follow_ups = on,
             Change::CheckForUpdates(on) => settings.check_for_updates = on,
+            Change::UpdateChecked(at) => settings.last_update_check = Some(at),
+            Change::UpdateAnnounced(version) => settings.announced_update = Some(version),
             Change::ComposeFormat(format) => settings.compose_format = format,
             Change::CheckAttachments(on) => settings.check_attachments = on,
             Change::SignByDefault(on) => settings.sign_by_default = on,
@@ -818,6 +824,8 @@ mod tests {
                 text: "Ann".into(),
             },
             Change::AssistantDetailsExpanded(true),
+            Change::UpdateChecked(1_700_000_000),
+            Change::UpdateAnnounced("0.2.0".into()),
             Change::SkillEnabled {
                 id: "claude-code/pdf".into(),
                 on: true,

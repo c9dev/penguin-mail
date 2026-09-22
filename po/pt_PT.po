@@ -71,11 +71,11 @@ msgstr "a sua mensagem"
 msgid "“{subject}”"
 msgstr "“{subject}”"
 
-#: app/src/app/updates.rs:124
+#: app/src/app/updates.rs:125
 msgid "Penguin Mail {version} is up to date"
 msgstr "O Penguin Mail {version} está atualizado"
 
-#: app/src/app/updates.rs:134
+#: app/src/app/updates.rs:135
 msgid "Could not reach GitHub to check for updates"
 msgstr "Não foi possível contactar o GitHub para procurar atualizações"
 
