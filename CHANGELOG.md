@@ -12,6 +12,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- The Keyboard Shortcuts window lists Ctrl+J, which shows or hides the
+  assistant.
 - A conversation in its own window decides whether Archive, Delete or Mute
   close it by the mailbox you opened it from, not the one the main window
   has moved on to.

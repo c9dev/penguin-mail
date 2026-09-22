@@ -10,15 +10,8 @@ use mailrs_domain::{Folder, ThreadSummary};
 use mailrs_sync::Mailbox;
 
 use super::MainWindow;
-use crate::compose::ReplyKind;
-use crate::ui::conversation::{Action, ConversationView};
-use mailrs_domain::Category;
+use crate::ui::conversation::ConversationView;
 use mailrs_domain::translate::{fill, gettext};
-
-/// A window action, given the main window and the conversation's view.
-type ViewAction = Box<dyn Fn(&Rc<MainWindow>, &Rc<ConversationView>)>;
-/// Builds the conversation action a menu entry stands for.
-type MakeAction = fn() -> Action;
 
 impl MainWindow {
     /// Opens the conversation on screen in its own window.
@@ -118,85 +111,13 @@ impl MainWindow {
             )
     }
 
-    /// The `win.*` actions a separate window's menus and keys use.
+    /// The `win.*` actions a separate window's menus and keys use, and
+    /// its keys.
     fn install_window_actions(self: &Rc<Self>, window: &adw::Window, view: &Rc<ConversationView>) {
         let group = gio::SimpleActionGroup::new();
-        let add = |name: &str, run: ViewAction| {
-            let action = gio::SimpleAction::new(name, None);
-            let (win, view) = (Rc::downgrade(self), Rc::downgrade(view));
-            action.connect_activate(move |_, _| {
-                if let (Some(win), Some(view)) = (win.upgrade(), view.upgrade()) {
-                    run(&win, &view);
-                }
-            });
-            group.add_action(&action);
-        };
-        let entries: [(&str, MakeAction); 8] = [
-            ("reply", || Action::Reply(ReplyKind::Reply)),
-            ("reply-all", || Action::Reply(ReplyKind::ReplyAll)),
-            ("forward", || Action::Reply(ReplyKind::Forward)),
-            ("archive", || Action::Archive),
-            ("trash", || Action::Trash),
-            ("junk", || Action::Junk),
-            ("toggle-star", || Action::ToggleStar),
-            ("toggle-read", || Action::ToggleRead),
-        ];
-        for (name, make) in entries {
-            add(name, Box::new(move |win, view| win.act(view, make())));
-        }
-        add("find", Box::new(|_, view| view.open_find()));
-        add("print", Box::new(|_, view| view.print()));
-        add("view-source", Box::new(|win, view| win.view_source(view)));
-        add("export", Box::new(|win, view| win.export(view)));
-        add(
-            "unsubscribe",
-            Box::new(|win, view| win.unsubscribe(Rc::clone(view))),
-        );
-        add(
-            "block-sender",
-            Box::new(|win, view| win.block_sender(Rc::clone(view))),
-        );
-        add(
-            "always-load-images",
-            Box::new(|win, view| win.always_load_images(&Rc::clone(view))),
-        );
-        let categorize = gio::SimpleAction::new("categorize-sender", Some(glib::VariantTy::STRING));
-        let (win, target) = (Rc::downgrade(self), Rc::downgrade(view));
-        categorize.connect_activate(move |_, parameter| {
-            let category = parameter
-                .and_then(|p| p.get::<String>())
-                .and_then(|k| Category::from_key(&k));
-            if let (Some(win), Some(view), Some(category)) =
-                (win.upgrade(), target.upgrade(), category)
-            {
-                win.categorize_sender_from(view, category);
-            }
-        });
-        group.add_action(&categorize);
+        self.install_view_actions(&group, view);
         window.insert_action_group("win", Some(&group));
-
-        let shortcuts = gtk::ShortcutController::new();
-        for (trigger, action) in [
-            ("<Control>r", "win.reply"),
-            ("<Control><Shift>r", "win.reply-all"),
-            ("<Control><Shift>f", "win.forward"),
-            ("<Control><Alt>a", "win.archive"),
-            ("Delete", "win.trash"),
-            ("<Control><Shift>j", "win.junk"),
-            ("<Control><Shift>l", "win.toggle-star"),
-            ("<Control><Shift>u", "win.toggle-read"),
-            ("<Control>f", "win.find"),
-            ("<Control>p", "win.print"),
-            ("<Control><Alt>u", "win.view-source"),
-            ("<Control>w", "window.close"),
-            ("Escape", "window.close"),
-        ] {
-            shortcuts.add_shortcut(gtk::Shortcut::new(
-                gtk::ShortcutTrigger::parse_string(trigger),
-                Some(gtk::NamedAction::new(action)),
-            ));
-        }
-        window.add_controller(shortcuts);
+        window.add_controller(super::shortcuts::conversation_chords());
     }
 
     /// Shows the newest message in `view` as it arrived, headers and all.

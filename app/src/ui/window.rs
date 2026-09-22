@@ -9,7 +9,7 @@ use std::rc::{Rc, Weak};
 
 use adw::prelude::*;
 use base64::Engine;
-use gtk::{gdk, gio, glib};
+use gtk::{gio, glib};
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{
     Account, AccountId, AccountState, ChangeEvent, Folder, Label, MessageBody, Target,
@@ -52,6 +52,7 @@ mod reach;
 mod reminders;
 mod scheduled;
 mod senders;
+mod shortcuts;
 mod thread;
 mod translation;
 mod triage;
@@ -92,7 +93,6 @@ pub enum Reveal {
     Reply,
 }
 
-type WindowAction = Box<dyn Fn(&Rc<MainWindow>)>;
 type AccountAction = Box<dyn Fn(&Rc<MainWindow>, Account)>;
 
 pub struct MainWindow {
@@ -2186,75 +2186,8 @@ impl MainWindow {
     // ---- Actions, menu, and keys -------------------------------------------
 
     fn install_actions(self: &Rc<Self>) {
-        let add = |name: &str, run: WindowAction| {
-            let action = gio::SimpleAction::new(name, None);
-            let weak = Rc::downgrade(self);
-            action.connect_activate(move |_, _| {
-                if let Some(win) = weak.upgrade() {
-                    run(&win);
-                }
-            });
-            self.actions.add_action(&action);
-        };
         self.install_outbox_actions();
-        add("compose", Box::new(|win| win.compose_new()));
-        add("search", Box::new(|win| win.list.open_search()));
-        add("find", Box::new(|win| win.find()));
-        add(
-            "hide-my-email",
-            Box::new(|win| win.show_hide_my_email(None)),
-        );
-        add(
-            "check",
-            Box::new(|win| {
-                win.core.poke_all();
-                win.reload_folder();
-                win.toast(&gettext("Checking for mail"));
-            }),
-        );
-        add("add-account", Box::new(|win| win.authorize(None)));
-        add("shortcuts", Box::new(|win| win.show_shortcuts()));
-        add(
-            "reply",
-            Box::new(|win| win.reply(&win.conversation, ReplyKind::Reply)),
-        );
-        add(
-            "reply-all",
-            Box::new(|win| win.reply(&win.conversation, ReplyKind::ReplyAll)),
-        );
-        add(
-            "forward",
-            Box::new(|win| win.reply(&win.conversation, ReplyKind::Forward)),
-        );
-        add(
-            "archive",
-            Box::new(|win| win.act(&win.conversation, Action::Archive)),
-        );
-        add(
-            "trash",
-            Box::new(|win| win.act(&win.conversation, Action::Trash)),
-        );
-        add(
-            "junk",
-            Box::new(|win| win.act(&win.conversation, Action::Junk)),
-        );
-        add("mute", Box::new(|win| win.toggle_mute()));
-        add(
-            "label",
-            Box::new(|win| win.conversation.label_button.popup()),
-        );
-        add("undo", Box::new(|win| win.undo()));
-        add(
-            "assistant",
-            Box::new(|win| {
-                let show = !win.assistant_split.shows_sidebar();
-                win.assistant_split.set_show_sidebar(show);
-                if show {
-                    win.assistant.focus();
-                }
-            }),
-        );
-        add("remind-custom", Box::new(|win| win.remind_custom()));
+        self.install_main_actions();
         let remind_at = gio::SimpleAction::new("remind-at", Some(glib::VariantTy::INT64));
         let weak = Rc::downgrade(self);
         remind_at.connect_activate(move |_, parameter| {
@@ -2275,36 +2208,6 @@ impl MainWindow {
             win.flag(name.parse().ok());
         });
         self.actions.add_action(&flag_color);
-        add(
-            "unsubscribe",
-            Box::new(|win| win.unsubscribe(Rc::clone(&win.conversation))),
-        );
-        add("toggle-vip", Box::new(|win| win.toggle_vip()));
-        add("print", Box::new(|win| win.conversation.print()));
-        add(
-            "view-source",
-            Box::new(|win| {
-                let view = Rc::clone(&win.conversation);
-                win.view_source(&view);
-            }),
-        );
-        add("export", Box::new(|win| win.export(&win.conversation)));
-        add("open-window", Box::new(|win| win.open_current_in_window()));
-        add(
-            "block-sender",
-            Box::new(|win| win.block_sender(Rc::clone(&win.conversation))),
-        );
-        add(
-            "always-load-images",
-            Box::new(|win| {
-                let view = Rc::clone(&win.conversation);
-                win.always_load_images(&view)
-            }),
-        );
-        add("select-all", Box::new(|win| win.list.select_all()));
-        add("zoom-in", Box::new(|win| win.change_text_size(1)));
-        add("zoom-out", Box::new(|win| win.change_text_size(-1)));
-        add("zoom-reset", Box::new(|win| win.change_text_size(0)));
         let go = gio::SimpleAction::new("go-mailbox", Some(glib::VariantTy::INT32));
         let weak = Rc::downgrade(self);
         go.connect_activate(move |_, parameter| {
@@ -2315,24 +2218,6 @@ impl MainWindow {
             }
         });
         self.actions.add_action(&go);
-        add(
-            "toggle-star",
-            Box::new(|win| win.act(&win.conversation, Action::ToggleStar)),
-        );
-        add(
-            "toggle-read",
-            Box::new(|win| win.act(&win.conversation, Action::ToggleRead)),
-        );
-        add("about", Box::new(|win| win.show_about()));
-        add("preferences", Box::new(|win| win.show_preferences()));
-        add(
-            "quit",
-            Box::new(|win| {
-                if let Some(app) = win.app.upgrade() {
-                    app.quit();
-                }
-            }),
-        );
 
         let with_account = |name: &str, run: AccountAction| {
             let action = gio::SimpleAction::new(name, Some(glib::VariantTy::INT64));
@@ -2420,59 +2305,7 @@ impl MainWindow {
             Box::new(|win, account| win.confirm_remove(account)),
         );
 
-        let shortcuts = gtk::ShortcutController::new();
-        shortcuts.set_scope(gtk::ShortcutScope::Global);
-        // Apple Mail's shortcuts, with Command as Control.
-        for (trigger, action) in [
-            ("<Control>n", "win.compose"),
-            ("<Control>f", "win.find"),
-            ("<Control><Alt>f", "win.search"),
-            ("F5", "win.check"),
-            ("<Control><Shift>n", "win.check"),
-            ("<Control>r", "win.reply"),
-            ("<Control><Shift>r", "win.reply-all"),
-            ("<Control><Shift>f", "win.forward"),
-            ("<Control><Alt>a", "win.archive"),
-            ("<Control><Shift>u", "win.toggle-read"),
-            ("<Control><Shift>l", "win.toggle-star"),
-            ("<Control><Shift>j", "win.junk"),
-            ("<Control><Alt>m", "win.label"),
-            ("<Control>plus", "win.zoom-in"),
-            ("<Control>equal", "win.zoom-in"),
-            ("<Control>minus", "win.zoom-out"),
-            ("<Control>0", "win.zoom-reset"),
-            ("<Control>question", "win.shortcuts"),
-            ("<Control>comma", "win.preferences"),
-            ("<Control>q", "win.quit"),
-            ("<Control>p", "win.print"),
-            ("<Control><Alt>u", "win.view-source"),
-            ("<Control>o", "win.open-window"),
-            ("<Control>j", "win.assistant"),
-            ("<Control>w", "window.close"),
-        ] {
-            shortcuts.add_shortcut(gtk::Shortcut::new(
-                gtk::ShortcutTrigger::parse_string(trigger),
-                Some(gtk::NamedAction::new(action)),
-            ));
-        }
-        // Apple Mail's Option-Command-1 to 7 pick a flag colour.
-        for (index, color) in mailrs_domain::FlagColor::ALL.iter().enumerate() {
-            let shortcut = gtk::Shortcut::new(
-                gtk::ShortcutTrigger::parse_string(&format!("<Control><Alt>{}", index + 1)),
-                Some(gtk::NamedAction::new("win.flag-color")),
-            );
-            shortcut.set_arguments(Some(&color.as_str().to_variant()));
-            shortcuts.add_shortcut(shortcut);
-        }
-        for position in 1..=9i32 {
-            let shortcut = gtk::Shortcut::new(
-                gtk::ShortcutTrigger::parse_string(&format!("<Control>{position}")),
-                Some(gtk::NamedAction::new("win.go-mailbox")),
-            );
-            shortcut.set_arguments(Some(&position.to_variant()));
-            shortcuts.add_shortcut(shortcut);
-        }
-        self.window.add_controller(shortcuts);
+        self.window.add_controller(shortcuts::main_chords());
 
         let weak = Rc::downgrade(self);
         self.window.connect_close_request(move |_| {
@@ -2517,76 +2350,45 @@ impl MainWindow {
         let keys = gtk::EventControllerKey::new();
         keys.set_propagation_phase(gtk::PropagationPhase::Capture);
         let weak = Rc::downgrade(self);
-        keys.connect_key_pressed(move |_, key, _, modifiers| {
-            let Some(win) = weak.upgrade() else {
-                return glib::Propagation::Proceed;
-            };
-            if win.typing() || win.stack.visible_child_name().as_deref() != Some("mail") {
-                return glib::Propagation::Proceed;
-            }
-            let others = gdk::ModifierType::ALT_MASK | gdk::ModifierType::SUPER_MASK;
-            if modifiers.contains(gdk::ModifierType::CONTROL_MASK) {
-                if modifiers.intersects(others | gdk::ModifierType::SHIFT_MASK)
-                    || win.reading_text()
-                {
-                    return glib::Propagation::Proceed;
-                }
-                match key {
-                    gdk::Key::a => win.list.select_all(),
-                    gdk::Key::z => win.undo(),
-                    _ => return glib::Propagation::Proceed,
-                }
-                return glib::Propagation::Stop;
-            }
-            if modifiers.intersects(others) {
-                return glib::Propagation::Proceed;
-            }
-            match key {
-                gdk::Key::Delete | gdk::Key::BackSpace | gdk::Key::KP_Delete => {
-                    win.act(&win.conversation, Action::Trash);
-                    return glib::Propagation::Stop;
-                }
-                gdk::Key::Escape => {
-                    if win.list.selected_rows().len() > 1 {
-                        win.list.unselect();
-                        win.conversation.clear();
-                    } else if win.list.search_open() {
-                        win.list.close_search();
-                    } else {
-                        return glib::Propagation::Proceed;
-                    }
-                    return glib::Propagation::Stop;
-                }
-                _ => {}
-            }
-            match key.to_unicode() {
-                Some('j') => win.list.step(1),
-                Some('k') => win.list.step(-1),
-                Some('e') => win.act(&win.conversation, Action::Archive),
-                Some('#') => win.act(&win.conversation, Action::Trash),
-                Some('s') => win.act(&win.conversation, Action::ToggleStar),
-                Some('M') => win.toggle_mute(),
-                Some('u') => win.act(&win.conversation, Action::ToggleRead),
-                Some('r') => win.reply(&win.conversation, ReplyKind::Reply),
-                Some('a') => win.reply(&win.conversation, ReplyKind::ReplyAll),
-                Some('l') => win.conversation.label_button.popup(),
-                Some('f') => win.reply(&win.conversation, ReplyKind::Forward),
-                Some('c') => win.compose_new(),
-                Some('/') => win.list.open_search(),
-                _ => return glib::Propagation::Proceed,
-            }
-            glib::Propagation::Stop
+        keys.connect_key_pressed(move |_, key, _, modifiers| match weak.upgrade() {
+            Some(win) => win.letter_pressed(key, modifiers),
+            None => glib::Propagation::Proceed,
         });
         self.window.add_controller(keys);
     }
 
     /// Ctrl+F: find inside the message when the reader is in it, and
     /// search the mailbox everywhere else. The two share the key and
-    /// never the focus.
-    fn find(self: &Rc<Self>) {
-        match self.conversation.has_focus() {
-            true => self.conversation.open_find(),
+    /// never the focus. A separate window has no mailbox to search.
+    fn find(self: &Rc<Self>, view: &ConversationView) {
+        match view.detached() || view.has_focus() {
+            true => view.open_find(),
             false => self.list.open_search(),
+        }
+    }
+
+    /// Whether Escape has a selection of several rows or a search to close.
+    fn has_selection_to_clear(&self) -> bool {
+        self.list.selected_rows().len() > 1 || self.list.search_open()
+    }
+
+    /// Escape: drops a selection of several rows, or else closes the search.
+    fn clear_selection(&self) {
+        if self.list.selected_rows().len() > 1 {
+            self.list.unselect();
+            self.conversation.clear();
+        } else if self.list.search_open() {
+            self.list.close_search();
+        }
+    }
+
+    /// Shows the assistant beside the mail and puts the cursor in it, or
+    /// hides it again.
+    fn toggle_assistant(&self) {
+        let show = !self.assistant_split.shows_sidebar();
+        self.assistant_split.set_show_sidebar(show);
+        if show {
+            self.assistant.focus();
         }
     }
 
@@ -2913,78 +2715,7 @@ impl MainWindow {
     }
 
     fn show_shortcuts(&self) {
-        let dialog = adw::ShortcutsDialog::new();
-        // Only the left column is words; the accelerators are key names
-        // GTK parses and must stay as they are.
-        let groups: [(String, Vec<(String, &str)>); 4] = [
-            (
-                gettext("Reading"),
-                vec![
-                    (gettext("Next or previous conversation"), "j k"),
-                    (gettext("Open mailbox 1 to 9"), "<Control>1...<Control>9"),
-                    (gettext("Search"), "slash <Control><Alt>f"),
-                    (gettext("Find in the conversation"), "<Control>f"),
-                    (gettext("Get new mail"), "<Control><Shift>n F5"),
-                    (gettext("Select all"), "<Control>a"),
-                    (gettext("Clear the selection"), "Escape"),
-                    (
-                        gettext("Bigger or smaller text"),
-                        "<Control>plus <Control>minus",
-                    ),
-                    (gettext("Open in a new window"), "<Control>o"),
-                    (gettext("Print"), "<Control>p"),
-                    (gettext("View source"), "<Control><Alt>u"),
-                    (gettext("Normal text size"), "<Control>0"),
-                ],
-            ),
-            (
-                gettext("Organizing"),
-                vec![
-                    (gettext("Archive"), "<Control><Alt>a e"),
-                    (gettext("Move to trash"), "Delete numbersign"),
-                    (gettext("Junk"), "<Control><Shift>j"),
-                    (gettext("Flag or unflag"), "<Control><Shift>l s"),
-                    (gettext("Flag colors"), "<Control><Alt>1...<Control><Alt>7"),
-                    (gettext("Mark read or unread"), "<Control><Shift>u u"),
-                    (gettext("Mute or unmute"), "<Shift>m"),
-                    (gettext("Labels"), "<Control><Alt>m l"),
-                    (gettext("Undo"), "<Control>z"),
-                ],
-            ),
-            (
-                gettext("Writing"),
-                vec![
-                    (gettext("New message"), "<Control>n c"),
-                    (gettext("Reply"), "<Control>r r"),
-                    (gettext("Reply all"), "<Control><Shift>r a"),
-                    (gettext("Forward"), "<Control><Shift>f f"),
-                    (gettext("Send"), "<Control><Shift>d <Control>Return"),
-                    (gettext("Attach files"), "<Control><Shift>a"),
-                    (
-                        gettext("Bold, italic, link"),
-                        "<Control>b <Control>i <Control>k",
-                    ),
-                    (gettext("Save draft"), "<Control>s"),
-                ],
-            ),
-            (
-                gettext("General"),
-                vec![
-                    (gettext("Preferences"), "<Control>comma"),
-                    (gettext("Keyboard shortcuts"), "<Control>question"),
-                    (gettext("Close window"), "<Control>w"),
-                    (gettext("Quit"), "<Control>q"),
-                ],
-            ),
-        ];
-        for (title, items) in groups {
-            let section = adw::ShortcutsSection::new(Some(&title));
-            for (label, accel) in items {
-                section.add(adw::ShortcutsItem::new(&label, accel));
-            }
-            dialog.add(section);
-        }
-        dialog.present(Some(&self.window));
+        shortcuts::dialog().present(Some(&self.window));
     }
 
     fn show_about(self: &Rc<Self>) {

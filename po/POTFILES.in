@@ -74,6 +74,7 @@ app/src/ui/window/outbox.rs
 app/src/ui/window/reminders.rs
 app/src/ui/window/scheduled.rs
 app/src/ui/window/senders.rs
+app/src/ui/window/shortcuts.rs
 app/src/update/mod.rs
 domain/src/category.rs
 domain/src/invitation.rs

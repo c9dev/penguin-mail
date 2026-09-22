@@ -188,21 +188,6 @@ impl MainWindow {
                 win.conversation.clear();
                 win.reload_list();
             });
-        let categorize =
-            gtk::gio::SimpleAction::new("categorize-sender", Some(glib::VariantTy::STRING));
-        let weak = Rc::downgrade(self);
-        categorize.connect_activate(move |_, parameter| {
-            let (Some(win), Some(category)) = (
-                weak.upgrade(),
-                parameter
-                    .and_then(|p| p.get::<String>())
-                    .and_then(|k| Category::from_key(&k)),
-            ) else {
-                return;
-            };
-            win.categorize_sender_from(Rc::clone(&win.conversation), category);
-        });
-        self.actions.add_action(&categorize);
     }
 
     /// Whether `mailbox` splits into categories on screen.
