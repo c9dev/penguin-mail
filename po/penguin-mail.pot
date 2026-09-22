@@ -706,7 +706,7 @@ msgid "Penguin Mail Could Not Start"
 msgstr ""
 
 #: app/src/notify.rs:49 app/src/ui/conversation.rs:191
-#: app/src/ui/window.rs:2976
+#: app/src/ui/window.rs:2979
 msgid "Archive"
 msgstr ""
 
@@ -722,7 +722,7 @@ msgstr ""
 msgid "Delete"
 msgstr ""
 
-#: app/src/notify.rs:52 app/src/ui/window.rs:2991
+#: app/src/notify.rs:52 app/src/ui/window.rs:2994
 msgid "Reply"
 msgstr ""
 
@@ -732,7 +732,7 @@ msgid_plural "{count} new messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/notify.rs:127 app/src/ui/window.rs:2990
+#: app/src/notify.rs:127 app/src/ui/window.rs:2993
 msgid "New message"
 msgstr ""
 
@@ -744,7 +744,7 @@ msgstr ""
 msgid "From {senders}"
 msgstr ""
 
-#: app/src/notify.rs:195 app/src/ui/window.rs:2125
+#: app/src/notify.rs:195 app/src/ui/window.rs:2128
 msgid "Open"
 msgstr ""
 
@@ -1474,7 +1474,7 @@ msgstr ""
 msgid "New Message"
 msgstr ""
 
-#: app/src/tray.rs:136 app/src/ui/sidebar.rs:727 app/src/ui/window.rs:2525
+#: app/src/tray.rs:136 app/src/ui/sidebar.rs:727 app/src/ui/window.rs:2528
 msgid "Check for Mail"
 msgstr ""
 
@@ -1492,7 +1492,7 @@ msgstr ""
 msgid "Check for Updates"
 msgstr ""
 
-#: app/src/tray.rs:152 app/src/ui/window.rs:2537 app/src/ui/window.rs:3009
+#: app/src/tray.rs:152 app/src/ui/window.rs:2540 app/src/ui/window.rs:3012
 msgid "Quit"
 msgstr ""
 
@@ -1522,7 +1522,7 @@ msgstr ""
 msgid "License"
 msgstr ""
 
-#: app/src/ui/about.rs:162 app/src/ui/window.rs:2536
+#: app/src/ui/about.rs:162 app/src/ui/window.rs:2539
 msgid "About Penguin Mail"
 msgstr ""
 
@@ -1606,7 +1606,7 @@ msgstr ""
 
 #: app/src/ui/assistant.rs:156 app/src/ui/assistant.rs:160
 #: app/src/ui/assistant.rs:441 app/src/ui/composer/mod.rs:206
-#: app/src/ui/window.rs:2994
+#: app/src/ui/window.rs:2997
 msgid "Send"
 msgstr ""
 
@@ -1704,7 +1704,7 @@ msgid "Edit {server}"
 msgstr ""
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1445
-#: app/src/ui/composer/recipients.rs:208 app/src/ui/window.rs:2225
+#: app/src/ui/composer/recipients.rs:208 app/src/ui/window.rs:2228
 msgid "Remove"
 msgstr ""
 
@@ -1789,8 +1789,8 @@ msgstr ""
 #: app/src/ui/composer/mod.rs:1763 app/src/ui/composer/mod.rs:2228
 #: app/src/ui/hide_my_email.rs:272 app/src/ui/smart_editor.rs:150
 #: app/src/ui/templates.rs:153 app/src/ui/templates.rs:245
-#: app/src/ui/vacation.rs:43 app/src/ui/when.rs:52 app/src/ui/window.rs:1428
-#: app/src/ui/window.rs:2224 app/src/ui/window/arrange.rs:104
+#: app/src/ui/vacation.rs:43 app/src/ui/when.rs:52 app/src/ui/window.rs:1431
+#: app/src/ui/window.rs:2227 app/src/ui/window/arrange.rs:104
 #: app/src/ui/window/arrange.rs:149 app/src/ui/window/images.rs:101
 #: app/src/ui/window/organize.rs:80 app/src/ui/window/organize.rs:131
 #: app/src/ui/window/organize.rs:174 app/src/ui/window/senders.rs:61
@@ -2095,7 +2095,7 @@ msgstr ""
 msgid "Brave Search API Key"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:198 app/src/ui/conversation.rs:1086
+#: app/src/ui/composer/mod.rs:198 app/src/ui/conversation.rs:1092
 msgid "Choose a Time…"
 msgstr ""
 
@@ -2546,7 +2546,7 @@ msgid "Mute"
 msgstr ""
 
 #: app/src/ui/conversation.rs:195 app/src/ui/conversation.rs:314
-#: app/src/ui/conversation.rs:650 app/src/ui/window.rs:2978
+#: app/src/ui/conversation.rs:650 app/src/ui/window.rs:2981
 msgid "Junk"
 msgstr ""
 
@@ -2579,7 +2579,7 @@ msgid "Mark as Unread (Ctrl+Shift+U)"
 msgstr ""
 
 #: app/src/ui/conversation.rs:274 app/src/ui/conversation.rs:278
-#: app/src/ui/conversation.rs:1120
+#: app/src/ui/conversation.rs:1126
 msgid "Flag (Ctrl+Shift+L)"
 msgstr ""
 
@@ -2611,7 +2611,7 @@ msgstr ""
 msgid "Reply All"
 msgstr ""
 
-#: app/src/ui/conversation.rs:305 app/src/ui/window.rs:2993
+#: app/src/ui/conversation.rs:305 app/src/ui/window.rs:2996
 msgid "Forward"
 msgstr ""
 
@@ -2692,7 +2692,7 @@ msgstr ""
 msgid "Not Junk (Ctrl+Shift+J)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:645 app/src/ui/window.rs:1429
+#: app/src/ui/conversation.rs:645 app/src/ui/window.rs:1432
 msgid "Delete Forever"
 msgstr ""
 
@@ -2720,23 +2720,23 @@ msgid_plural "{count} Messages Selected"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/conversation.rs:1119
+#: app/src/ui/conversation.rs:1125
 msgid "Unflag (Ctrl+Shift+L)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1132
+#: app/src/ui/conversation.rs:1138
 msgid "Mark as Read (U)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1133
+#: app/src/ui/conversation.rs:1139
 msgid "Mark as Unread (U)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1273
+#: app/src/ui/conversation.rs:1279
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1290
+#: app/src/ui/conversation.rs:1296
 msgid "Clear Flag"
 msgstr ""
 
@@ -2750,7 +2750,7 @@ msgid_plural "{position} of {total} matches"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/find.rs:128 app/src/ui/find.rs:143 app/src/ui/window.rs:2959
+#: app/src/ui/find.rs:128 app/src/ui/find.rs:143 app/src/ui/window.rs:2962
 msgid "Find in the conversation"
 msgstr ""
 
@@ -2865,12 +2865,12 @@ msgid ""
 msgstr ""
 
 #: app/src/ui/hide_my_email.rs:305 app/src/ui/rules.rs:243
-#: app/src/ui/vacation.rs:96 app/src/ui/window.rs:1530
-#: app/src/ui/window.rs:1607 app/src/ui/window/senders.rs:210
+#: app/src/ui/vacation.rs:96 app/src/ui/window.rs:1533
+#: app/src/ui/window.rs:1610 app/src/ui/window/senders.rs:210
 msgid "Grant Access"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:327 app/src/ui/window.rs:2645
+#: app/src/ui/hide_my_email.rs:327 app/src/ui/window.rs:2648
 msgid "Add an account first"
 msgstr ""
 
@@ -2950,8 +2950,8 @@ msgstr ""
 msgid "Open Settings"
 msgstr ""
 
-#: app/src/ui/invitation.rs:276 app/src/ui/window.rs:1529
-#: app/src/ui/window.rs:1561 app/src/ui/window.rs:1606
+#: app/src/ui/invitation.rs:276 app/src/ui/window.rs:1532
+#: app/src/ui/window.rs:1564 app/src/ui/window.rs:1609
 #: app/src/ui/window/senders.rs:209
 msgid "Not Now"
 msgstr ""
@@ -3120,11 +3120,11 @@ msgstr ""
 msgid "Not checked"
 msgstr ""
 
-#: app/src/ui/preferences.rs:64 app/src/ui/window.rs:3004
+#: app/src/ui/preferences.rs:64 app/src/ui/window.rs:3007
 msgid "General"
 msgstr ""
 
-#: app/src/ui/preferences.rs:69 app/src/ui/window.rs:2954
+#: app/src/ui/preferences.rs:69 app/src/ui/window.rs:2957
 msgid "Reading"
 msgstr ""
 
@@ -3213,7 +3213,7 @@ msgstr ""
 msgid "What a notification offers besides opening the conversation"
 msgstr ""
 
-#: app/src/ui/preferences.rs:211 app/src/ui/window.rs:2988
+#: app/src/ui/preferences.rs:211 app/src/ui/window.rs:2991
 msgid "Writing"
 msgstr ""
 
@@ -3664,11 +3664,11 @@ msgstr ""
 msgid "Rules…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2528
+#: app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2531
 msgid "Hide My Email…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:736 app/src/ui/window.rs:1800
+#: app/src/ui/sidebar.rs:736 app/src/ui/window.rs:1803
 msgid "New Label…"
 msgstr ""
 
@@ -3991,7 +3991,7 @@ msgid ""
 "nobody else can reach your mail. Paste the client's ID and secret to begin."
 msgstr ""
 
-#: app/src/ui/welcome.rs:97 app/src/ui/window.rs:2199
+#: app/src/ui/welcome.rs:97 app/src/ui/window.rs:2202
 msgid "Sign In with Google"
 msgstr ""
 
@@ -4214,7 +4214,7 @@ msgstr ""
 msgid "Restart to finish updating"
 msgstr ""
 
-#: app/src/ui/window.rs:683 app/src/ui/window.rs:2936
+#: app/src/ui/window.rs:683 app/src/ui/window.rs:2939
 msgid "Restart"
 msgstr ""
 
@@ -4230,259 +4230,259 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-#: app/src/ui/window.rs:1059 app/src/ui/window.rs:2958
+#: app/src/ui/window.rs:1062 app/src/ui/window.rs:2961
 msgid "Search"
 msgstr ""
 
-#: app/src/ui/window.rs:1423
+#: app/src/ui/window.rs:1426
 msgid "Gmail deletes it from every device and cannot bring it back."
 msgstr ""
 
-#: app/src/ui/window.rs:1424
+#: app/src/ui/window.rs:1427
 msgid "Gmail deletes them from every device and cannot bring them back."
 msgstr ""
 
-#: app/src/ui/window.rs:1463
+#: app/src/ui/window.rs:1466
 msgid "Could not delete the mail: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:1518
+#: app/src/ui/window.rs:1521
 msgid "Allow Penguin Mail to Read Your Contacts"
 msgstr ""
 
-#: app/src/ui/window.rs:1521
+#: app/src/ui/window.rs:1524
 msgid ""
 "Reading the contacts of {account} needs one more permission. Google asks you "
 "to confirm in your browser. Names and photos stay on this computer."
 msgstr ""
 
-#: app/src/ui/window.rs:1548
+#: app/src/ui/window.rs:1551
 msgid "Turn On the {service}"
 msgstr ""
 
-#: app/src/ui/window.rs:1553
+#: app/src/ui/window.rs:1556
 msgid ""
 "The Google Cloud project Penguin Mail signs in with has the {service} "
 "switched off, so Google refuses before it can ask for your permission. Turn "
 "it on, wait a minute, and try again."
 msgstr ""
 
-#: app/src/ui/window.rs:1562
+#: app/src/ui/window.rs:1565
 msgid "Open Google Cloud"
 msgstr ""
 
-#: app/src/ui/window.rs:1596
+#: app/src/ui/window.rs:1599
 msgid "Allow Penguin Mail to Delete Mail"
 msgstr ""
 
-#: app/src/ui/window.rs:1599
+#: app/src/ui/window.rs:1602
 msgid ""
 "Deleting mail for good needs one more permission for {account}. Google asks "
 "you to confirm in your browser."
 msgstr ""
 
-#: app/src/ui/window.rs:1694 app/src/ui/window.rs:2984
+#: app/src/ui/window.rs:1697 app/src/ui/window.rs:2987
 #: app/src/ui/window/followup.rs:184 app/src/ui/window/scheduled.rs:18
 msgid "Undo"
 msgstr ""
 
-#: app/src/ui/window.rs:1735
+#: app/src/ui/window.rs:1738
 msgid "Nothing to undo"
 msgstr ""
 
-#: app/src/ui/window.rs:1752
+#: app/src/ui/window.rs:1755
 msgid "{action} undone"
 msgstr ""
 
-#: app/src/ui/window.rs:1778
+#: app/src/ui/window.rs:1781
 msgid "Open or select mail to label it."
 msgstr ""
 
-#: app/src/ui/window.rs:1780
+#: app/src/ui/window.rs:1783
 msgid "Select mail from one account to label it."
 msgstr ""
 
-#: app/src/ui/window.rs:1820
+#: app/src/ui/window.rs:1823
 msgid "This account has no labels yet."
 msgstr ""
 
-#: app/src/ui/window.rs:2001
+#: app/src/ui/window.rs:2004
 msgid "Could not include {file}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:2101
+#: app/src/ui/window.rs:2104
 msgid "Downloading {file}…"
 msgstr ""
 
-#: app/src/ui/window.rs:2122 app/src/ui/window/attachments.rs:211
+#: app/src/ui/window.rs:2125 app/src/ui/window/attachments.rs:211
 #: app/src/ui/window/attachments.rs:376
 msgid "Saved {file} to Downloads"
 msgstr ""
 
-#: app/src/ui/window.rs:2140 app/src/ui/window/attachments.rs:216
+#: app/src/ui/window.rs:2143 app/src/ui/window/attachments.rs:216
 #: app/src/ui/window/attachments.rs:381
 msgid "Could not save {file}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:2156
+#: app/src/ui/window.rs:2159
 msgid "Could not save the settings: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:2181
+#: app/src/ui/window.rs:2184
 msgid "Waiting for Your Browser…"
 msgstr ""
 
-#: app/src/ui/window.rs:2183
+#: app/src/ui/window.rs:2186
 msgid "Continue in your browser"
 msgstr ""
 
-#: app/src/ui/window.rs:2189
+#: app/src/ui/window.rs:2192
 msgid "Added {account}. Downloading mail…"
 msgstr ""
 
-#: app/src/ui/window.rs:2215
+#: app/src/ui/window.rs:2218
 msgid "Remove {account}?"
 msgstr ""
 
-#: app/src/ui/window.rs:2219
+#: app/src/ui/window.rs:2222
 msgid ""
 "Its downloaded mail and saved sign-in are deleted from this computer. "
 "Nothing changes in Gmail."
 msgstr ""
 
-#: app/src/ui/window.rs:2239
+#: app/src/ui/window.rs:2242
 msgid "Removed {account}"
 msgstr ""
 
-#: app/src/ui/window.rs:2241
+#: app/src/ui/window.rs:2244
 msgid "Could not remove {account}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:2275
+#: app/src/ui/window.rs:2278
 msgid "Checking for mail"
 msgstr ""
 
-#: app/src/ui/window.rs:2526
+#: app/src/ui/window.rs:2529
 msgid "Add Account…"
 msgstr ""
 
-#: app/src/ui/window.rs:2527
+#: app/src/ui/window.rs:2530
 msgid "New Smart Mailbox…"
 msgstr ""
 
-#: app/src/ui/window.rs:2534 app/src/ui/window.rs:3006
+#: app/src/ui/window.rs:2537 app/src/ui/window.rs:3009
 msgid "Preferences"
 msgstr ""
 
-#: app/src/ui/window.rs:2535
+#: app/src/ui/window.rs:2538
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: app/src/ui/window.rs:2543 app/src/ui/window.rs:2545
+#: app/src/ui/window.rs:2546 app/src/ui/window.rs:2548
 msgid "Main Menu"
 msgstr ""
 
-#: app/src/ui/window.rs:2837
+#: app/src/ui/window.rs:2840
 msgid "Open a message from the person first"
 msgstr ""
 
-#: app/src/ui/window.rs:2925 app/src/ui/window/outbox.rs:77
+#: app/src/ui/window.rs:2928 app/src/ui/window/outbox.rs:77
 msgid "Message sent"
 msgstr ""
 
-#: app/src/ui/window.rs:2934
+#: app/src/ui/window.rs:2937
 msgid "Penguin Mail shows the new language after a restart"
 msgstr ""
 
-#: app/src/ui/window.rs:2956
+#: app/src/ui/window.rs:2959
 msgid "Next or previous conversation"
 msgstr ""
 
-#: app/src/ui/window.rs:2957
+#: app/src/ui/window.rs:2960
 msgid "Open mailbox 1 to 9"
 msgstr ""
 
-#: app/src/ui/window.rs:2960
+#: app/src/ui/window.rs:2963
 msgid "Get new mail"
 msgstr ""
 
-#: app/src/ui/window.rs:2961
+#: app/src/ui/window.rs:2964
 msgid "Select all"
 msgstr ""
 
-#: app/src/ui/window.rs:2962
+#: app/src/ui/window.rs:2965
 msgid "Clear the selection"
 msgstr ""
 
-#: app/src/ui/window.rs:2964
+#: app/src/ui/window.rs:2967
 msgid "Bigger or smaller text"
 msgstr ""
 
-#: app/src/ui/window.rs:2967
+#: app/src/ui/window.rs:2970
 msgid "Open in a new window"
 msgstr ""
 
-#: app/src/ui/window.rs:2968
+#: app/src/ui/window.rs:2971
 msgid "Print"
 msgstr ""
 
-#: app/src/ui/window.rs:2969
+#: app/src/ui/window.rs:2972
 msgid "View source"
 msgstr ""
 
-#: app/src/ui/window.rs:2970
+#: app/src/ui/window.rs:2973
 msgid "Normal text size"
 msgstr ""
 
-#: app/src/ui/window.rs:2974
+#: app/src/ui/window.rs:2977
 msgid "Organizing"
 msgstr ""
 
-#: app/src/ui/window.rs:2977
+#: app/src/ui/window.rs:2980
 msgid "Move to trash"
 msgstr ""
 
-#: app/src/ui/window.rs:2979
+#: app/src/ui/window.rs:2982
 msgid "Flag or unflag"
 msgstr ""
 
-#: app/src/ui/window.rs:2980
+#: app/src/ui/window.rs:2983
 msgid "Flag colors"
 msgstr ""
 
-#: app/src/ui/window.rs:2981
+#: app/src/ui/window.rs:2984
 msgid "Mark read or unread"
 msgstr ""
 
-#: app/src/ui/window.rs:2982
+#: app/src/ui/window.rs:2985
 msgid "Mute or unmute"
 msgstr ""
 
-#: app/src/ui/window.rs:2983
+#: app/src/ui/window.rs:2986
 msgid "Labels"
 msgstr ""
 
-#: app/src/ui/window.rs:2992
+#: app/src/ui/window.rs:2995
 msgid "Reply all"
 msgstr ""
 
-#: app/src/ui/window.rs:2995
+#: app/src/ui/window.rs:2998
 msgid "Attach files"
 msgstr ""
 
-#: app/src/ui/window.rs:2997
+#: app/src/ui/window.rs:3000
 msgid "Bold, italic, link"
 msgstr ""
 
-#: app/src/ui/window.rs:3000
+#: app/src/ui/window.rs:3003
 msgid "Save draft"
 msgstr ""
 
-#: app/src/ui/window.rs:3007
+#: app/src/ui/window.rs:3010
 msgid "Keyboard shortcuts"
 msgstr ""
 
-#: app/src/ui/window.rs:3008
+#: app/src/ui/window.rs:3011
 msgid "Close window"
 msgstr ""
 

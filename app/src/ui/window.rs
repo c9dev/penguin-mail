@@ -908,6 +908,9 @@ impl MainWindow {
             .set_show_accounts(mailbox.account().is_none() && self.accounts.borrow().len() > 1);
         self.list.set_title(&mailbox.title(), "");
         self.list.unselect();
+        // A thread clicked in the mailbox before would otherwise land in
+        // this one once its store read answers.
+        self.conversation.stop_loading();
         self.conversation.clear();
         self.nav.set_show_content(false);
         if self.split.is_collapsed() {

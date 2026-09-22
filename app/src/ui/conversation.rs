@@ -814,6 +814,12 @@ impl ConversationView {
         self.loading.get() == ticket
     }
 
+    /// Drops the thread on its way into this view, so a store read that
+    /// answers after the reader left its mailbox shows nothing.
+    pub fn stop_loading(&self) {
+        self.loading.set(self.loading.get() + 1);
+    }
+
     /// Whether `target` is what the view shows now: the same account and
     /// thread, and the same one message when it shows one.
     pub fn is_showing(&self, target: &Target) -> bool {

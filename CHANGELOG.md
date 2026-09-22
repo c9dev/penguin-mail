@@ -14,6 +14,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - A conversation whose first messages you deleted shows in the inbox again
   when a reply arrives, as it does in Gmail.
+- A conversation you clicked just before switching mailboxes no longer opens
+  in the new mailbox and gets marked read there.
 - "Always load images from" a sender works again, and so does removing a
   sender from that list in Preferences.
 - New Message from the dock or the app menu starts from your default
