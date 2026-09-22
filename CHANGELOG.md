@@ -5,6 +5,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+## 0.1.6 (2026-09-22)
+
 ### Fixed
 
 - A message the assistant writes puts your signature under the words,

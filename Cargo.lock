@@ -1975,7 +1975,7 @@ dependencies = [
 
 [[package]]
 name = "mailrs"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "ammonia",
  "anyhow",
@@ -2017,7 +2017,7 @@ dependencies = [
 
 [[package]]
 name = "mailrs-ai"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-channel",
  "base64 0.23.1",
@@ -2034,7 +2034,7 @@ dependencies = [
 
 [[package]]
 name = "mailrs-cli"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -2050,7 +2050,7 @@ dependencies = [
 
 [[package]]
 name = "mailrs-domain"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "chrono",
  "chrono-tz",
@@ -2061,7 +2061,7 @@ dependencies = [
 
 [[package]]
 name = "mailrs-gmail"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "base64 0.23.1",
  "encoding_rs",
@@ -2081,7 +2081,7 @@ dependencies = [
 
 [[package]]
 name = "mailrs-pgp"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "mail-builder",
  "rand",
@@ -2091,7 +2091,7 @@ dependencies = [
 
 [[package]]
 name = "mailrs-smime"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "mail-builder",
  "mailrs-pgp",
@@ -2102,7 +2102,7 @@ dependencies = [
 
 [[package]]
 name = "mailrs-store"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "mailrs-domain",
  "rusqlite",
@@ -2114,7 +2114,7 @@ dependencies = [
 
 [[package]]
 name = "mailrs-sync"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-channel",
  "base64 0.23.1",
