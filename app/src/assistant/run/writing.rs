@@ -845,6 +845,21 @@ impl<A: Accounts> Tools<A> {
         let (account, sync) = self.sync_for(&required(input, "account")?)?;
         let message_id = required(input, "message_id")?;
         let stored = self.stored_draft(account.id, &message_id).await?;
+        // A scheduled message holds its Gmail draft. Deleting the draft
+        // here would leave the outbox row pointing at nothing.
+        let waiting = Target {
+            account_id: account.id,
+            thread_id: stored.thread_id.clone(),
+            message_id: Some(message_id.clone()),
+        };
+        let outbox = self.outbox();
+        if !self
+            .call(async move { outbox.named(&[waiting]).await })
+            .await?
+            .is_empty()
+        {
+            return Err("That draft is waiting to go out. cancel_send stops it first.".into());
+        }
         let question = fill(
             &gettext("Delete the draft “{subject}”? Gmail cannot bring it back."),
             &[("subject", &subject_of(&stored.subject))],

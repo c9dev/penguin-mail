@@ -730,7 +730,7 @@ msgstr "Cópia oculta para {recipients}"
 msgid "Forwards “{subject}” from {sender}"
 msgstr "Reencaminha “{subject}” de {sender}"
 
-#: app/src/assistant/run/writing.rs:267 app/src/assistant/run/writing.rs:903
+#: app/src/assistant/run/writing.rs:267 app/src/assistant/run/writing.rs:918
 msgid "Attached: {files}"
 msgstr "Em anexo: {files}"
 
@@ -752,51 +752,51 @@ msgstr "Enviar “{subject}” para {recipients}?"
 msgid "Change the draft “{subject}”?"
 msgstr "Alterar o rascunho “{subject}”?"
 
-#: app/src/assistant/run/writing.rs:849
+#: app/src/assistant/run/writing.rs:864
 msgid "Delete the draft “{subject}”? Gmail cannot bring it back."
 msgstr "Eliminar o rascunho “{subject}”? O Gmail não o consegue recuperar."
 
-#: app/src/assistant/run/writing.rs:871
+#: app/src/assistant/run/writing.rs:886
 msgid "nobody"
 msgstr "ninguém"
 
-#: app/src/assistant/run/writing.rs:877
+#: app/src/assistant/run/writing.rs:892
 msgid "To: {recipients}"
 msgstr "Para: {recipients}"
 
-#: app/src/assistant/run/writing.rs:880
+#: app/src/assistant/run/writing.rs:895
 msgid "Cc: {recipients}"
 msgstr "Cc: {recipients}"
 
-#: app/src/assistant/run/writing.rs:883
+#: app/src/assistant/run/writing.rs:898
 msgid "Bcc: {recipients}"
 msgstr "Bcc: {recipients}"
 
-#: app/src/assistant/run/writing.rs:887
+#: app/src/assistant/run/writing.rs:902
 msgid "Subject: {subject}"
 msgstr "Assunto: {subject}"
 
-#: app/src/assistant/run/writing.rs:892
+#: app/src/assistant/run/writing.rs:907
 msgid "New text in place of the old"
 msgstr "Texto novo em vez do antigo"
 
-#: app/src/assistant/run/writing.rs:896
+#: app/src/assistant/run/writing.rs:911
 msgid "Takes out: {files}"
 msgstr "Retira: {files}"
 
-#: app/src/assistant/run/writing.rs:911
+#: app/src/assistant/run/writing.rs:926
 msgid "Goes out encrypted"
 msgstr "Sai encriptada"
 
-#: app/src/assistant/run/writing.rs:912
+#: app/src/assistant/run/writing.rs:927
 msgid "Goes out unencrypted"
 msgstr "Sai sem encriptação"
 
-#: app/src/assistant/run/writing.rs:916
+#: app/src/assistant/run/writing.rs:931
 msgid "Goes out signed"
 msgstr "Sai assinada"
 
-#: app/src/assistant/run/writing.rs:917
+#: app/src/assistant/run/writing.rs:932
 msgid "Goes out unsigned"
 msgstr "Sai sem assinatura"
 
@@ -1163,7 +1163,7 @@ msgstr "Nova mensagem"
 msgid "From {senders}"
 msgstr "De {senders}"
 
-#: app/src/notify.rs:195 app/src/ui/window.rs:1848
+#: app/src/notify.rs:195 app/src/ui/window.rs:1861
 msgid "Open"
 msgstr "Abrir"
 
@@ -1459,7 +1459,7 @@ msgstr "Essa conta não está ligada."
 msgid "Could not save: {reason}"
 msgstr "Não foi possível guardar: {reason}"
 
-#: app/src/protection/draft.rs:200 app/src/ui/window.rs:1766
+#: app/src/protection/draft.rs:200 app/src/ui/window.rs:1779
 msgid "Could not open the draft: {reason}"
 msgstr "Não foi possível abrir o rascunho: {reason}"
 
@@ -2015,7 +2015,7 @@ msgstr "Abrir o Penguin Mail"
 msgid "New Message"
 msgstr "Nova mensagem"
 
-#: app/src/tray.rs:136 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2125
+#: app/src/tray.rs:136 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2138
 msgid "Check for Mail"
 msgstr "Procurar correio"
 
@@ -2033,7 +2033,7 @@ msgstr "Novidades da versão {version}"
 msgid "Check for Updates"
 msgstr "Procurar atualizações"
 
-#: app/src/tray.rs:152 app/src/ui/window.rs:2137
+#: app/src/tray.rs:152 app/src/ui/window.rs:2150
 #: app/src/ui/window/shortcuts.rs:495
 msgid "Quit"
 msgstr "Sair"
@@ -2066,7 +2066,7 @@ msgstr "Comunicar um problema"
 msgid "License"
 msgstr "Licença"
 
-#: app/src/ui/about.rs:162 app/src/ui/window.rs:2136
+#: app/src/ui/about.rs:162 app/src/ui/window.rs:2149
 msgid "About Penguin Mail"
 msgstr "Acerca do Penguin Mail"
 
@@ -2256,7 +2256,7 @@ msgid "Edit {server}"
 msgstr "Editar {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1443
-#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:1961
+#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:1974
 msgid "Remove"
 msgstr "Remover"
 
@@ -3300,7 +3300,7 @@ msgstr "Eliminar definitivamente (Delete)"
 msgid "Not Junk (Ctrl+Shift+J)"
 msgstr "Não é spam (Ctrl+Shift+J)"
 
-#: app/src/ui/conversation.rs:652 app/src/ui/window.rs:1265
+#: app/src/ui/conversation.rs:652 app/src/ui/window.rs:1278
 msgid "Delete Forever"
 msgstr "Eliminar definitivamente"
 
@@ -3474,7 +3474,7 @@ msgstr "Não foi possível eliminar o endereço: {reason}"
 msgid "Allow Hide My Email"
 msgstr "Permitir Ocultar o meu e-mail"
 
-#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2218
+#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2231
 msgid "Add an account first"
 msgstr "Adicione primeiro uma conta"
 
@@ -4310,11 +4310,11 @@ msgstr "Assinatura…"
 msgid "Rules…"
 msgstr "Regras…"
 
-#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2128
+#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2141
 msgid "Hide My Email…"
 msgstr "Ocultar o meu e-mail…"
 
-#: app/src/ui/sidebar.rs:742 app/src/ui/window.rs:1525
+#: app/src/ui/sidebar.rs:742 app/src/ui/window.rs:1538
 msgid "New Label…"
 msgstr "Nova etiqueta…"
 
@@ -4651,7 +4651,7 @@ msgstr ""
 "Cloud, para que mais ninguém chegue ao seu correio. Cole o ID e o segredo do "
 "cliente para começar."
 
-#: app/src/ui/welcome.rs:97 app/src/ui/window.rs:1920
+#: app/src/ui/welcome.rs:97 app/src/ui/window.rs:1933
 msgid "Sign In with Google"
 msgstr "Iniciar sessão com a Google"
 
@@ -4859,38 +4859,38 @@ msgstr "Penguin Mail (demonstração)"
 msgid "Could not read accounts: {reason}"
 msgstr "Não foi possível ler as contas: {reason}"
 
-#: app/src/ui/window.rs:785
+#: app/src/ui/window.rs:798
 msgid "Sign in again to keep {account} syncing"
 msgstr "Inicie sessão de novo para {account} continuar a sincronizar"
 
-#: app/src/ui/window.rs:788
+#: app/src/ui/window.rs:801
 msgid "Sign In"
 msgstr "Iniciar sessão"
 
-#: app/src/ui/window.rs:1007 app/src/ui/window/shortcuts.rs:278
+#: app/src/ui/window.rs:1020 app/src/ui/window/shortcuts.rs:278
 msgid "Search"
 msgstr "Pesquisa"
 
-#: app/src/ui/window.rs:1262
+#: app/src/ui/window.rs:1275
 msgid "Gmail deletes it from every device and cannot bring it back."
 msgstr ""
 "O Gmail elimina-a de todos os dispositivos e não a consegue trazer de volta."
 
-#: app/src/ui/window.rs:1263
+#: app/src/ui/window.rs:1276
 msgid "Gmail deletes them from every device and cannot bring them back."
 msgstr ""
 "O Gmail elimina-as de todos os dispositivos e não as consegue trazer de "
 "volta."
 
-#: app/src/ui/window.rs:1298
+#: app/src/ui/window.rs:1311
 msgid "Could not delete the mail: {reason}"
 msgstr "Não foi possível eliminar o correio: {reason}"
 
-#: app/src/ui/window.rs:1358
+#: app/src/ui/window.rs:1371
 msgid "Turn On the {service}"
 msgstr "Ligar a {service}"
 
-#: app/src/ui/window.rs:1361
+#: app/src/ui/window.rs:1374
 msgid ""
 "The Google Cloud project Penguin Mail signs in with has the {service} "
 "switched off, so Google refuses before it can ask for your permission. Turn "
@@ -4900,74 +4900,74 @@ msgstr ""
 "{service} desligada, por isso a Google recusa antes de poder pedir a sua "
 "autorização. Ligue-a, espere um minuto e tente de novo."
 
-#: app/src/ui/window.rs:1367
+#: app/src/ui/window.rs:1380
 msgid "Open Google Cloud"
 msgstr "Abrir o Google Cloud"
 
-#: app/src/ui/window.rs:1448 app/src/ui/window/scheduled.rs:21
+#: app/src/ui/window.rs:1461 app/src/ui/window/scheduled.rs:21
 #: app/src/ui/window/shortcuts.rs:409
 msgid "Undo"
 msgstr "Anular"
 
-#: app/src/ui/window.rs:1469
+#: app/src/ui/window.rs:1482
 msgid "Nothing to undo"
 msgstr "Nada para anular"
 
-#: app/src/ui/window.rs:1475
+#: app/src/ui/window.rs:1488
 msgid "{action} undone"
 msgstr "Anulado: {action}"
 
-#: app/src/ui/window.rs:1501
+#: app/src/ui/window.rs:1514
 msgid "Open or select mail to label it."
 msgstr "Abra ou selecione correio para o etiquetar."
 
-#: app/src/ui/window.rs:1510
+#: app/src/ui/window.rs:1523
 msgid "Select mail from one account to label it."
 msgstr "Selecione correio de uma só conta para o etiquetar."
 
-#: app/src/ui/window.rs:1545
+#: app/src/ui/window.rs:1558
 msgid "This account has no labels yet."
 msgstr "Esta conta ainda não tem etiquetas."
 
-#: app/src/ui/window.rs:1713
+#: app/src/ui/window.rs:1726
 msgid "Could not include {file}: {reason}"
 msgstr "Não foi possível incluir {file}: {reason}"
 
-#: app/src/ui/window.rs:1824
+#: app/src/ui/window.rs:1837
 msgid "Downloading {file}…"
 msgstr "A transferir {file}…"
 
-#: app/src/ui/window.rs:1845 app/src/ui/window/attachments.rs:212
+#: app/src/ui/window.rs:1858 app/src/ui/window/attachments.rs:212
 #: app/src/ui/window/attachments.rs:378
 msgid "Saved {file} to Downloads"
 msgstr "{file} guardado nas transferências"
 
-#: app/src/ui/window.rs:1863 app/src/ui/window/attachments.rs:217
+#: app/src/ui/window.rs:1876 app/src/ui/window/attachments.rs:217
 #: app/src/ui/window/attachments.rs:383
 msgid "Could not save {file}: {reason}"
 msgstr "Não foi possível guardar {file}: {reason}"
 
-#: app/src/ui/window.rs:1879
+#: app/src/ui/window.rs:1892
 msgid "Could not save the settings: {reason}"
 msgstr "Não foi possível guardar as definições: {reason}"
 
-#: app/src/ui/window.rs:1902
+#: app/src/ui/window.rs:1915
 msgid "Waiting for Your Browser…"
 msgstr "À espera do seu navegador…"
 
-#: app/src/ui/window.rs:1904
+#: app/src/ui/window.rs:1917
 msgid "Continue in your browser"
 msgstr "Continue no seu navegador"
 
-#: app/src/ui/window.rs:1910
+#: app/src/ui/window.rs:1923
 msgid "Added {account}. Downloading mail…"
 msgstr "{account} adicionada. A transferir correio…"
 
-#: app/src/ui/window.rs:1954
+#: app/src/ui/window.rs:1967
 msgid "Remove {account}?"
 msgstr "Remover {account}?"
 
-#: app/src/ui/window.rs:1958
+#: app/src/ui/window.rs:1971
 msgid ""
 "Its downloaded mail and saved sign-in are deleted from this computer. "
 "Nothing changes in Gmail."
@@ -4975,43 +4975,43 @@ msgstr ""
 "O correio transferido e a sessão guardada são eliminados deste computador. "
 "Nada muda no Gmail."
 
-#: app/src/ui/window.rs:1974
+#: app/src/ui/window.rs:1987
 msgid "Removed {account}"
 msgstr "{account} removida"
 
-#: app/src/ui/window.rs:1976
+#: app/src/ui/window.rs:1989
 msgid "Could not remove {account}: {reason}"
 msgstr "Não foi possível remover {account}: {reason}"
 
-#: app/src/ui/window.rs:2126
+#: app/src/ui/window.rs:2139
 msgid "Add Account…"
 msgstr "Adicionar conta…"
 
-#: app/src/ui/window.rs:2127
+#: app/src/ui/window.rs:2140
 msgid "New Smart Mailbox…"
 msgstr "Nova caixa inteligente…"
 
-#: app/src/ui/window.rs:2134 app/src/ui/window/shortcuts.rs:472
+#: app/src/ui/window.rs:2147 app/src/ui/window/shortcuts.rs:472
 msgid "Preferences"
 msgstr "Preferências"
 
-#: app/src/ui/window.rs:2135
+#: app/src/ui/window.rs:2148
 msgid "Keyboard Shortcuts"
 msgstr "Atalhos de teclado"
 
-#: app/src/ui/window.rs:2143 app/src/ui/window.rs:2145
+#: app/src/ui/window.rs:2156 app/src/ui/window.rs:2158
 msgid "Main Menu"
 msgstr "Menu principal"
 
-#: app/src/ui/window.rs:2409
+#: app/src/ui/window.rs:2422
 msgid "Open a message from the person first"
 msgstr "Abra primeiro uma mensagem dessa pessoa"
 
-#: app/src/ui/window.rs:2496
+#: app/src/ui/window.rs:2509
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "O Penguin Mail mostra o novo idioma depois de reiniciar"
 
-#: app/src/ui/window.rs:2498 app/src/update/mod.rs:128
+#: app/src/ui/window.rs:2511 app/src/update/mod.rs:128
 msgid "Restart"
 msgstr "Reiniciar"
 

@@ -755,9 +755,19 @@ impl MainWindow {
             };
             this.stack.set_visible_child_name(page);
             let mailbox = this.mailbox.borrow().clone();
+            // A label deleted elsewhere, by the assistant or in the
+            // browser, leaves the window on a mailbox that is no longer
+            // there, so the inbox takes over as it does for a signed-out
+            // account.
             let still_exists = match &mailbox {
-                Mailbox::Label { account_id, .. }
-                | Mailbox::Folder {
+                Mailbox::Label {
+                    account_id,
+                    label_id,
+                    ..
+                } => data.iter().any(|(a, labels)| {
+                    a.id == *account_id && labels.iter().any(|l| l.id == *label_id)
+                }),
+                Mailbox::Folder {
                     account_id: Some(account_id),
                     ..
                 } => data.iter().any(|(a, _)| a.id == *account_id),
@@ -771,6 +781,9 @@ impl MainWindow {
             this.list.set_vips(settings.vips.keys().cloned().collect());
             if !matches!(mailbox, Mailbox::Search { .. }) {
                 this.sidebar.rebuild(&data, &extras, &this.mailbox.borrow());
+            }
+            if !still_exists {
+                this.show_mailbox(Mailbox::Unified(system_label::INBOX));
             }
             this.list
                 .set_show_accounts(this.mailbox.borrow().account().is_none() && data.len() > 1);
