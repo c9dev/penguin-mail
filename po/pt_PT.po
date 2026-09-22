@@ -2736,8 +2736,6 @@ msgid "Add a recipient this computer can encrypt to."
 msgstr "Adicione um destinatário para quem este computador saiba encriptar."
 
 #: app/src/ui/composer/mod.rs:290 app/src/ui/composer/mod.rs:294
-#, fuzzy
-#| msgid "Signing and Encryption"
 msgid "Signing and encryption"
 msgstr "Assinatura e encriptação"
 
@@ -2821,28 +2819,20 @@ msgid "No account to send from."
 msgstr "Não há conta de onde enviar."
 
 #: app/src/ui/composer/mod.rs:1104
-#, fuzzy
-#| msgid "Signed and encrypted with {standard}"
 msgid "Signed and encrypted"
-msgstr "Assinada e encriptada com {standard}"
+msgstr "Assinada e encriptada"
 
 #: app/src/ui/composer/mod.rs:1105
-#, fuzzy
-#| msgid "Sign"
 msgid "Signed"
-msgstr "Assinar"
+msgstr "Assinada"
 
 #: app/src/ui/composer/mod.rs:1106
-#, fuzzy
-#| msgid "Encrypt"
 msgid "Encrypted"
-msgstr "Encriptar"
+msgstr "Encriptada"
 
 #: app/src/ui/composer/mod.rs:1107
-#, fuzzy
-#| msgid "Goes out encrypted"
 msgid "Not signed or encrypted"
-msgstr "Sai encriptada"
+msgstr "Sem assinatura nem encriptação"
 
 #: app/src/ui/composer/mod.rs:1236
 msgid "Choose a time in the future"
