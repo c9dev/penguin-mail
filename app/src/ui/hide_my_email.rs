@@ -11,6 +11,7 @@ use mailrs_sync::Permitted;
 
 use crate::app::App;
 use crate::hide_my_email::HiddenAddress;
+use crate::ui::confirm::{Tone, confirm};
 use mailrs_domain::translate::{fill, gettext};
 
 /// What the list says a hidden address is for.
@@ -259,25 +260,21 @@ impl Dialog {
     }
 
     fn confirm_delete(self: &Rc<Self>, address: String, account: String) {
-        let alert = adw::AlertDialog::new(
-            Some(&gettext("Delete Address?")),
-            Some(&fill(
+        let question = confirm(
+            &gettext("Delete Address?"),
+            &fill(
                 &gettext(
                     "Mail sent to {address} arrives in your inbox again, without the \
                      Hide My Email label. To stop that mail, turn the address off instead.",
                 ),
                 &[("address", &address)],
-            )),
+            ),
+            &gettext("Delete"),
+            Tone::Destructive,
         );
-        alert.add_responses(&[
-            ("cancel", &gettext("Cancel")),
-            ("delete", &gettext("Delete")),
-        ]);
-        alert.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
-        alert.set_close_response("cancel");
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            if alert.choose_future(Some(&this.dialog)).await != "delete" {
+            if !question.ask(&this.dialog).await {
                 return;
             }
             match this.app.delete_hidden_address(&address).await {

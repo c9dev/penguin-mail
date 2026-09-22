@@ -39,6 +39,7 @@ app/src/ui/assistant_web_prefs.rs
 app/src/ui/composer/mod.rs
 app/src/ui/composer/recipients.rs
 app/src/ui/composer/spell.rs
+app/src/ui/confirm.rs
 app/src/ui/contact_card.rs
 app/src/ui/contacts_prefs.rs
 app/src/ui/conversation.rs

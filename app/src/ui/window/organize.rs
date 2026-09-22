@@ -9,6 +9,7 @@ use mailrs_sync::{History, MailAction, TriageAction};
 
 use super::{MainWindow, Target};
 use crate::ui::Mailbox;
+use crate::ui::confirm::{Tone, confirm};
 use crate::ui::moving::move_action;
 use mailrs_domain::translate::{fill, gettext};
 
@@ -163,21 +164,15 @@ impl MainWindow {
         let Some(name) = self.label_name(account_id, &label_id) else {
             return;
         };
-        let dialog = adw::AlertDialog::new(
-            Some(&fill(&gettext("Delete “{name}”?"), &[("name", &name)])),
-            Some(&gettext(
-                "Its mail stays in Gmail, without the label. Nested labels stay too.",
-            )),
+        let question = confirm(
+            &fill(&gettext("Delete “{name}”?"), &[("name", &name)]),
+            &gettext("Its mail stays in Gmail, without the label. Nested labels stay too."),
+            &gettext("Delete"),
+            Tone::Destructive,
         );
-        dialog.add_responses(&[
-            ("cancel", &gettext("Cancel")),
-            ("delete", &gettext("Delete")),
-        ]);
-        dialog.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
-        dialog.set_close_response("cancel");
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            if dialog.choose_future(Some(&this.window)).await != "delete" {
+            if !question.ask(&this.window).await {
                 return;
             }
             let Some(sync) = this.core.account(account_id) else {

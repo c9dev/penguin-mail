@@ -19,6 +19,7 @@ use mailrs_gmail::{CONTACTS_SCOPE, DELETE_SCOPE};
 use mailrs_store::{accounts, labels};
 use mailrs_sync::{History, Listing, MailAction, Permitted, Scope, TriageAction, View, outbox_id};
 
+use super::confirm::{Tone, confirm};
 use super::contact_card;
 use super::conversation::{Action, ConversationView};
 use super::list_feed::{Coalesce, ListFeed, Refresh, Splice, Ticket};
@@ -1325,19 +1326,15 @@ impl MainWindow {
     /// Undo follows.
     fn confirm_delete_forever(self: &Rc<Self>, view: &Rc<ConversationView>, targets: Vec<Target>) {
         let threaded = self.settings().threading;
-        let dialog = adw::AlertDialog::new(
-            Some(&delete_forever_heading(targets.len(), threaded)),
-            Some(&match targets.len() {
+        let question = confirm(
+            &delete_forever_heading(targets.len(), threaded),
+            &match targets.len() {
                 1 => gettext("Gmail deletes it from every device and cannot bring it back."),
                 _ => gettext("Gmail deletes them from every device and cannot bring them back."),
-            }),
+            },
+            &gettext("Delete Forever"),
+            Tone::Destructive,
         );
-        dialog.add_responses(&[
-            ("cancel", &gettext("Cancel")),
-            ("delete", &gettext("Delete Forever")),
-        ]);
-        dialog.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
-        dialog.set_close_response("cancel");
         // The question belongs over the window it was asked in, which for
         // a detached conversation is not the main one.
         let parent = view
@@ -1345,7 +1342,7 @@ impl MainWindow {
             .unwrap_or_else(|| self.window.clone().upcast());
         let (this, view) = (Rc::clone(self), Rc::clone(view));
         glib::spawn_future_local(async move {
-            if dialog.choose_future(Some(&parent)).await == "delete" {
+            if question.ask(&parent).await {
                 this.delete_forever(&view, targets);
             }
         });
@@ -1432,30 +1429,24 @@ impl MainWindow {
     /// signs in with. No permission fixes that, so this offers the page in
     /// Google Cloud that turns it on.
     pub fn explain_api_off(self: &Rc<Self>, service: &str, enable_url: &str) {
-        let dialog = adw::AlertDialog::new(
-            Some(&fill(
-                &gettext("Turn On the {service}"),
-                &[("service", service)],
-            )),
-            Some(&fill(
+        let question = confirm(
+            &fill(&gettext("Turn On the {service}"), &[("service", service)]),
+            &fill(
                 &gettext(
                     "The Google Cloud project Penguin Mail signs in with has the {service} \
                      switched off, so Google refuses before it can ask for your permission. \
                      Turn it on, wait a minute, and try again.",
                 ),
                 &[("service", service)],
-            )),
-        );
-        dialog.add_responses(&[
-            ("cancel", &gettext("Not Now")),
-            ("open", &gettext("Open Google Cloud")),
-        ]);
-        dialog.set_response_appearance("open", adw::ResponseAppearance::Suggested);
-        dialog.set_close_response("cancel");
+            ),
+            &gettext("Open Google Cloud"),
+            Tone::Suggested,
+        )
+        .not_now();
         let this = Rc::clone(self);
         let url = enable_url.to_string();
         glib::spawn_future_local(async move {
-            if dialog.choose_future(Some(&this.window)).await == "open" {
+            if question.ask(&this.window).await {
                 gtk::UriLauncher::new(&url).launch(
                     Some(&this.window),
                     gio::Cancellable::NONE,
@@ -2044,25 +2035,21 @@ impl MainWindow {
     }
 
     fn confirm_remove(self: &Rc<Self>, account: Account) {
-        let dialog = adw::AlertDialog::new(
-            Some(&fill(
+        let question = confirm(
+            &fill(
                 &gettext("Remove {account}?"),
                 &[("account", &account.email)],
-            )),
-            Some(&gettext(
+            ),
+            &gettext(
                 "Its downloaded mail and saved sign-in are deleted from this computer. \
                  Nothing changes in Gmail.",
-            )),
+            ),
+            &gettext("Remove"),
+            Tone::Destructive,
         );
-        dialog.add_responses(&[
-            ("cancel", &gettext("Cancel")),
-            ("remove", &gettext("Remove")),
-        ]);
-        dialog.set_response_appearance("remove", adw::ResponseAppearance::Destructive);
-        dialog.set_close_response("cancel");
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            if dialog.choose_future(Some(&this.window)).await != "remove" {
+            if !question.ask(&this.window).await {
                 return;
             }
             if this.conversation.read(|o| o.account_id) == Some(account.id) {

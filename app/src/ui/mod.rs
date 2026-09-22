@@ -9,6 +9,7 @@ pub mod assistant_skills_prefs;
 pub mod assistant_web_prefs;
 pub mod autocomplete;
 pub mod composer;
+pub mod confirm;
 pub mod contact_card;
 pub mod contacts_prefs;
 pub mod conversation;

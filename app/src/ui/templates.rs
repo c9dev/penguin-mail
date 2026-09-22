@@ -11,6 +11,7 @@ use gtk::glib;
 use mailrs_store::templates::Template;
 
 use crate::app::App;
+use crate::ui::confirm::{Tone, confirm};
 use mailrs_domain::translate::{fill, gettext};
 
 /// The rows on show, so a change can take them off again.
@@ -142,19 +143,12 @@ fn confirm_delete(
     group: &adw::PreferencesGroup,
     rows: &Rows,
 ) {
-    let dialog = adw::AlertDialog::new(
-        Some(&fill(
-            &gettext("Delete {name}?"),
-            &[("name", &template.name)],
-        )),
-        Some(&gettext("This computer keeps the only copy.")),
+    let question = confirm(
+        &fill(&gettext("Delete {name}?"), &[("name", &template.name)]),
+        &gettext("This computer keeps the only copy."),
+        &gettext("Delete"),
+        Tone::Destructive,
     );
-    dialog.add_responses(&[
-        ("cancel", &gettext("Cancel")),
-        ("delete", &gettext("Delete")),
-    ]);
-    dialog.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
-    dialog.set_close_response("cancel");
     let (this, parent, group, rows) = (
         Rc::clone(app),
         parent.as_ref().clone(),
@@ -162,7 +156,7 @@ fn confirm_delete(
         Rc::clone(rows),
     );
     glib::spawn_future_local(async move {
-        if dialog.choose_future(Some(&parent)).await != "delete" {
+        if !question.ask(&parent).await {
             return;
         }
         let id = template.id;

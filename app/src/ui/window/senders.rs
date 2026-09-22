@@ -8,6 +8,7 @@ use mailrs_sync::{History, Leave, MailAction, Permitted, TriageAction};
 
 use super::MainWindow;
 use crate::compose::Draft;
+use crate::ui::confirm::{Tone, confirm};
 use crate::ui::conversation::ConversationView;
 use crate::unsubscribe::{Unsubscribe, choose};
 use mailrs_domain::translate::{fill, gettext};
@@ -47,23 +48,19 @@ impl MainWindow {
             }
             Unsubscribe::Page(_) => gettext("The sender's unsubscribe page opens in your browser."),
         };
-        let dialog = adw::AlertDialog::new(
-            Some(&fill(
+        let question = confirm(
+            &fill(
                 &gettext("Unsubscribe from {sender}?"),
                 &[("sender", &sender)],
-            )),
-            Some(&body),
-        );
-        dialog.add_responses(&[
-            ("cancel", &gettext("Cancel")),
-            ("unsubscribe", &gettext("Unsubscribe")),
-        ]);
-        dialog.set_response_appearance("unsubscribe", adw::ResponseAppearance::Suggested);
-        dialog.set_default_response(Some("unsubscribe"));
-        dialog.set_close_response("cancel");
+            ),
+            &body,
+            &gettext("Unsubscribe"),
+            Tone::Suggested,
+        )
+        .by_default();
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            if dialog.choose_future(Some(&this.window)).await != "unsubscribe" {
+            if !question.ask(&this.window).await {
                 return;
             }
             match this.leave_list(asked_on.account_id, method).await {
@@ -134,25 +131,21 @@ impl MainWindow {
             return self.toast(&gettext("Open a message from the sender to block"));
         };
         let (account_id, email) = (target.account_id, sender.email.clone());
-        let dialog = adw::AlertDialog::new(
-            Some(&fill(
-                &gettext("Block {sender}?"),
-                &[("sender", sender.display())],
-            )),
-            Some(&fill(
+        let question = confirm(
+            &fill(&gettext("Block {sender}?"), &[("sender", sender.display())]),
+            &fill(
                 &gettext(
                     "New mail from {email} goes straight to the Trash. This conversation \
                      moves there now. Remove the rule under Rules to unblock.",
                 ),
                 &[("email", &email)],
-            )),
+            ),
+            &gettext("Block"),
+            Tone::Destructive,
         );
-        dialog.add_responses(&[("cancel", &gettext("Cancel")), ("block", &gettext("Block"))]);
-        dialog.set_response_appearance("block", adw::ResponseAppearance::Destructive);
-        dialog.set_close_response("cancel");
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            if dialog.choose_future(Some(&this.window)).await != "block" {
+            if !question.ask(&this.window).await {
                 return;
             }
             if this.core.account(account_id).is_none() {

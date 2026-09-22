@@ -10,6 +10,7 @@ use mailrs_domain::{Account, AccountId, Label, system_label};
 use super::MainWindow;
 use crate::settings::{Change, Settings};
 use crate::ui::Mailbox;
+use crate::ui::confirm::{Tone, confirm};
 use crate::ui::sidebar::Extras;
 use mailrs_domain::translate::{fill, gettext};
 
@@ -94,21 +95,15 @@ impl MainWindow {
         else {
             return;
         };
-        let dialog = adw::AlertDialog::new(
-            Some(&fill(&gettext("Delete “{name}”?"), &[("name", &name)])),
-            Some(&gettext(
-                "Only the smart mailbox goes. The mail it shows stays where it is.",
-            )),
+        let question = confirm(
+            &fill(&gettext("Delete “{name}”?"), &[("name", &name)]),
+            &gettext("Only the smart mailbox goes. The mail it shows stays where it is."),
+            &gettext("Delete"),
+            Tone::Destructive,
         );
-        dialog.add_responses(&[
-            ("cancel", &gettext("Cancel")),
-            ("delete", &gettext("Delete")),
-        ]);
-        dialog.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
-        dialog.set_close_response("cancel");
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            if dialog.choose_future(Some(&this.window)).await != "delete" {
+            if !question.ask(&this.window).await {
                 return;
             }
             if let Some(app) = this.app.upgrade() {
