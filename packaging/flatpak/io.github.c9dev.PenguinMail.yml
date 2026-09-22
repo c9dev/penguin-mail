@@ -1,0 +1,57 @@
+# Builds Penguin Mail as a Flatpak from this checkout:
+#   flatpak-builder --user --install --force-clean build-dir \
+#       packaging/flatpak/io.github.c9dev.PenguinMail.yml
+# Flathub builds from a released tag instead; scripts/flatpak-sources.sh
+# --flathub writes that copy of this file. Flathub allows no network during
+# a build, so cargo reads every crate from cargo-sources.json, which the
+# same script writes from Cargo.lock.
+id: io.github.c9dev.PenguinMail
+runtime: org.gnome.Platform
+# GNOME 50 has GTK 4.22, past the 4.20 the app needs, libadwaita 1.8 or
+# newer, and WebKitGTK 6.0.
+runtime-version: '50'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: penguin-mail
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # The Google sign-in tokens and API keys live in the Secret Service.
+  - --talk-name=org.freedesktop.secrets
+  # The tray icon.
+  - --talk-name=org.kde.StatusNotifierWatcher
+  # New-mail notifications with their Archive, Mark as Read, Delete and
+  # Reply buttons, which the notification portal cannot carry.
+  - --talk-name=org.freedesktop.Notifications
+  # Saved attachments and exports land in Downloads; everything else goes
+  # through the file chooser portal.
+  - --filesystem=xdg-download
+  # OpenPGP and S/MIME run the runtime's gpg and gpgsm on the person's own
+  # keyring, and reach their gpg-agent through its socket so the desktop's
+  # pinentry asks for passphrases. This is the one hole in the sandbox.
+  - --filesystem=~/.gnupg
+  - --filesystem=xdg-run/gnupg:ro
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  env:
+    CARGO_HOME: /run/build/penguin-mail/cargo
+    CARGO_NET_OFFLINE: 'true'
+modules:
+  - name: penguin-mail
+    buildsystem: simple
+    build-commands:
+      - cargo --offline build --release --locked -p mailrs -p mailrs-cli
+        --features mailrs/packaging-flatpak
+      - scripts/stage.sh /app
+    sources:
+      - cargo-sources.json
+      - type: dir
+        path: ../..
+        skip:
+          - target
+          - build-dir
+          - .flatpak-builder

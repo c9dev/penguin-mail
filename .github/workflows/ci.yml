@@ -49,3 +49,30 @@ jobs:
           scripts/metainfo.sh --check
       - name: Every control has an accessible name
         run: scripts/a11y-names.sh
+
+  flatpak:
+    name: Flatpak builds and starts
+    runs-on: ubuntu-latest
+    # Flathub's own image, with flatpak-builder and the GNOME 50 SDK the
+    # manifest names. flatpak-builder needs the privileges to make its own
+    # sandbox inside the container.
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-50
+      options: --privileged
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The build runs offline from packaging/flatpak/cargo-sources.json, so
+      # a Cargo.lock change without scripts/flatpak-sources.sh fails here.
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@79327416609af08178ad73b352877e51450790b3 # v6.8
+        with:
+          bundle: penguin-mail.flatpak
+          manifest-path: packaging/flatpak/io.github.c9dev.PenguinMail.yml
+          cache-key: flatpak-builder-${{ hashFiles('Cargo.lock') }}
+      # Starting the app with the manifest's permissions catches one it
+      # needs and lacks before Flathub's reviewers or a user do.
+      - name: Start it
+        run: |
+          command -v Xvfb dbus-run-session || dnf install -y xorg-x11-server-Xvfb dbus-tools
+          scripts/smoke-start.sh flatpak-builder --run flatpak_app \
+              packaging/flatpak/io.github.c9dev.PenguinMail.yml penguin-mail
