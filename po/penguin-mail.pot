@@ -514,15 +514,15 @@ msgstr ""
 msgid "On {date}, {sender} wrote:"
 msgstr ""
 
-#: app/src/core.rs:512
+#: app/src/core.rs:499
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 
-#: app/src/core.rs:529
+#: app/src/core.rs:516
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 
-#: app/src/core.rs:537
+#: app/src/core.rs:524
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 
@@ -1051,7 +1051,7 @@ msgstr ""
 msgid "Not encrypted in transit"
 msgstr ""
 
-#: app/src/render.rs:319 app/src/ui/composer/mod.rs:1406
+#: app/src/render.rs:319 app/src/ui/composer/mod.rs:1401
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] ""
@@ -1751,7 +1751,7 @@ msgstr ""
 msgid "Edit {server}"
 msgstr ""
 
-#: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1442
+#: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1437
 #: app/src/ui/composer/recipients.rs:208 app/src/ui/window.rs:1944
 msgid "Remove"
 msgstr ""
@@ -1789,7 +1789,7 @@ msgid ""
 "in front for the environment. A URL reaches a server over HTTP."
 msgstr ""
 
-#: app/src/ui/assistant_mcp_prefs.rs:254 app/src/ui/composer/mod.rs:2217
+#: app/src/ui/assistant_mcp_prefs.rs:254 app/src/ui/composer/mod.rs:2212
 #: app/src/ui/smart_editor.rs:37 app/src/ui/templates.rs:190
 msgid "Name"
 msgstr ""
@@ -1823,7 +1823,7 @@ msgstr ""
 msgid "Test"
 msgstr ""
 
-#: app/src/ui/assistant_mcp_prefs.rs:341 app/src/ui/composer/mod.rs:2222
+#: app/src/ui/assistant_mcp_prefs.rs:341 app/src/ui/composer/mod.rs:2217
 #: app/src/ui/smart_editor.rs:144 app/src/ui/templates.rs:233
 #: app/src/ui/vacation.rs:41 app/src/ui/window/arrange.rs:132
 msgid "Save"
@@ -1833,8 +1833,8 @@ msgstr ""
 msgid "Add"
 msgstr ""
 
-#: app/src/ui/assistant_mcp_prefs.rs:347 app/src/ui/composer/mod.rs:1343
-#: app/src/ui/composer/mod.rs:1760 app/src/ui/composer/mod.rs:2222
+#: app/src/ui/assistant_mcp_prefs.rs:347 app/src/ui/composer/mod.rs:1338
+#: app/src/ui/composer/mod.rs:1755 app/src/ui/composer/mod.rs:2217
 #: app/src/ui/confirm.rs:29 app/src/ui/smart_editor.rs:150
 #: app/src/ui/templates.rs:239 app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
 #: app/src/ui/window/arrange.rs:132 app/src/ui/window/images.rs:101
@@ -2295,167 +2295,167 @@ msgstr ""
 msgid "Could not save: {reason}"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1325
+#: app/src/ui/composer/mod.rs:1320
 msgid "Draft saved"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1329
+#: app/src/ui/composer/mod.rs:1324
 msgid "Draft not saved: {reason}"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1336
+#: app/src/ui/composer/mod.rs:1331
 msgid "Save as Draft?"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1338
+#: app/src/ui/composer/mod.rs:1333
 msgid "The draft is kept in Gmail, so you can finish it later on any device."
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1342
+#: app/src/ui/composer/mod.rs:1337
 msgid "Discard"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1344
+#: app/src/ui/composer/mod.rs:1339
 msgid "Save Draft"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1365
+#: app/src/ui/composer/mod.rs:1360
 msgid "Attach Files"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1401
+#: app/src/ui/composer/mod.rs:1396
 msgid "{files}  ·  {size}"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1446
+#: app/src/ui/composer/mod.rs:1441
 msgid "Remove {file}"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1482
+#: app/src/ui/composer/mod.rs:1477
 msgid "Bold (Ctrl+B)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1483
+#: app/src/ui/composer/mod.rs:1478
 msgid "Italic (Ctrl+I)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1486
+#: app/src/ui/composer/mod.rs:1481
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1489
+#: app/src/ui/composer/mod.rs:1484
 msgid "Code (Ctrl+E)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1526
+#: app/src/ui/composer/mod.rs:1521
 msgid "Link (Ctrl+K)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1536
+#: app/src/ui/composer/mod.rs:1531
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1541
+#: app/src/ui/composer/mod.rs:1536
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1546
+#: app/src/ui/composer/mod.rs:1541
 msgid "Quote (Ctrl+Shift+9)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1560 app/src/ui/composer/mod.rs:1979
+#: app/src/ui/composer/mod.rs:1555 app/src/ui/composer/mod.rs:1974
 msgid "Insert Image"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1570
+#: app/src/ui/composer/mod.rs:1565
 msgid "Paragraph"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1571
+#: app/src/ui/composer/mod.rs:1566
 msgid "Heading 1"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1572
+#: app/src/ui/composer/mod.rs:1567
 msgid "Heading 2"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1573
+#: app/src/ui/composer/mod.rs:1568
 msgid "Heading 3"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1574
+#: app/src/ui/composer/mod.rs:1569
 msgid "Code Block"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1583
+#: app/src/ui/composer/mod.rs:1578
 msgid "Format Markdown"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1587
+#: app/src/ui/composer/mod.rs:1582
 msgid "Clear Formatting"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1593
+#: app/src/ui/composer/mod.rs:1588
 msgid "Edit as Markdown"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1603 app/src/ui/composer/mod.rs:1607
+#: app/src/ui/composer/mod.rs:1598 app/src/ui/composer/mod.rs:1602
 msgid "More Formatting"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1743
+#: app/src/ui/composer/mod.rs:1738
 msgid "Add a Link"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1749
+#: app/src/ui/composer/mod.rs:1744
 msgid "Text"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1761
+#: app/src/ui/composer/mod.rs:1756
 msgid "Add Link"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1831
+#: app/src/ui/composer/mod.rs:1826
 msgid "Markdown formatted"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1849
+#: app/src/ui/composer/mod.rs:1844
 msgid "Editing as Markdown"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1974
+#: app/src/ui/composer/mod.rs:1969
 msgid "Images"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2022
+#: app/src/ui/composer/mod.rs:2017
 msgid "Could not read the file: {reason}"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2108
+#: app/src/ui/composer/mod.rs:2103
 msgid "Could not paste the image"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2153
+#: app/src/ui/composer/mod.rs:2148
 msgid "No Templates Yet"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2211
+#: app/src/ui/composer/mod.rs:2206
 msgid "Save as Template"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2213
+#: app/src/ui/composer/mod.rs:2208
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2236 app/src/ui/templates.rs:280
+#: app/src/ui/composer/mod.rs:2231 app/src/ui/templates.rs:280
 msgid "Give the template a name"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2244
+#: app/src/ui/composer/mod.rs:2239
 msgid "Template saved"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2247
+#: app/src/ui/composer/mod.rs:2242
 msgid "Template not saved: {reason}"
 msgstr ""
 
