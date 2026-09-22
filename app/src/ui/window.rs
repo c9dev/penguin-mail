@@ -1765,21 +1765,23 @@ impl MainWindow {
         });
     }
 
-    /// Reloads the photos the open conversation shows and draws it again.
+    /// Reloads the photos every open conversation shows and draws each again.
     fn reopen_for_photos(self: &Rc<Self>) {
         let Some(app) = self.app.upgrade() else {
             return;
         };
-        let senders = self.conversation.read(|open| {
-            open.messages
-                .iter()
-                .filter_map(|m| m.from.as_ref())
-                .map(|a| a.email.clone())
-                .collect::<Vec<_>>()
-        });
-        let Some(senders) = senders else { return };
-        let photos = app.sender_photos(senders.into_iter());
-        self.conversation.set_photos(photos);
+        for view in self.views() {
+            let senders = view.read(|open| {
+                open.messages
+                    .iter()
+                    .filter_map(|m| m.from.as_ref())
+                    .map(|a| a.email.clone())
+                    .collect::<Vec<_>>()
+            });
+            if let Some(senders) = senders {
+                view.set_photos(app.sender_photos(senders.into_iter()));
+            }
+        }
     }
 
     /// Explains that reading contacts needs one more Google permission,
@@ -3175,8 +3177,9 @@ impl MainWindow {
                 }
             }
             Effect::Vips => {
-                let vip = sender_is_vip(&self.conversation, &settings);
-                self.conversation.set_sender_vip(vip);
+                for view in self.views() {
+                    view.set_sender_vip(sender_is_vip(&view, &settings));
+                }
             }
             Effect::FollowUps => {
                 if !settings.suggest_follow_ups && *self.mailbox.borrow() == Mailbox::FollowUp {
@@ -3191,7 +3194,11 @@ impl MainWindow {
                 self.reload_list();
             }
             Effect::Assistant => self.assistant.refresh(),
-            Effect::TextSize => self.conversation.set_zoom(settings.text_size.zoom()),
+            Effect::TextSize => {
+                for view in self.views() {
+                    view.set_zoom(settings.text_size.zoom());
+                }
+            }
             Effect::Contacts => {
                 if let Some(app) = self.app.upgrade() {
                     self.list.set_photos(&app.photos());

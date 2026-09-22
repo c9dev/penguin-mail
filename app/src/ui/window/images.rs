@@ -145,7 +145,7 @@ impl MainWindow {
         let saved = sender.clone();
         let written = self
             .core
-            .read(move |c| {
+            .write(move |c| {
                 image_senders::allow(c, &saved, whole_domain, now)?;
                 image_senders::list(c)
             })

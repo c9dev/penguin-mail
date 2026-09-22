@@ -831,12 +831,7 @@ impl App {
         );
         add(
             "compose",
-            Box::new(|app| {
-                let first = app.accounts.borrow().first().map(|a| a.id);
-                if let Some(account_id) = first {
-                    app.compose(Draft::new(account_id, app.identity(account_id)));
-                }
-            }),
+            Box::new(|app| app.compose_to("")),
         );
         add("check", Box::new(|app| app.core.poke_all()));
         let compose_to = gio::SimpleAction::new("compose-to", Some(glib::VariantTy::STRING));

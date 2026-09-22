@@ -729,7 +729,7 @@ fn allowed_image_senders(app: &Rc<App>) -> adw::ExpanderRow {
                     let gone = sender.clone();
                     if app
                         .core
-                        .read(move |c| mailrs_store::image_senders::forget(c, &gone))
+                        .write(move |c| mailrs_store::image_senders::forget(c, &gone))
                         .await
                         .is_ok()
                     {

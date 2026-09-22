@@ -10,6 +10,15 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Penguin Mail masks email addresses in its log, so the system journal no
   longer holds the addresses of your accounts or the people you write to.
 
+### Fixed
+
+- "Always load images from" a sender works again, and so does removing a
+  sender from that list in Preferences.
+- New Message from the dock or the app menu starts from your default
+  account and adds your signature.
+- Conversations open in their own windows follow changes to the text size,
+  VIPs and contact photos.
+
 ## 0.1.3 (2026-09-21)
 
 ### New
