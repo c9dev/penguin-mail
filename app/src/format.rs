@@ -39,15 +39,20 @@ pub fn relative_date(ts: EpochMillis, now: DateTime<Local>) -> String {
 }
 
 /// A date for message headers: "Today at 10:12", "Yesterday at 14:50",
-/// "Fri 18 Sep at 08:50", or "3 Sep 2024" for earlier years.
+/// "Fri 18 Sep at 08:50", or "3 Sep 2024" for earlier years. A queued
+/// message carries a date still to come: "Tomorrow at 08:00", "Tue 22 Sep
+/// at 08:00", or "4 Jan 2027 at 08:00", which keeps its hour because the
+/// hour is when the message goes.
 pub fn header_date(ts: EpochMillis, now: DateTime<Local>) -> String {
     let Some(when) = local(ts) else {
         return String::new();
     };
     let pattern = match (now.date_naive() - when.date_naive()).num_days() {
-        ..=0 => gettext("Today at %H:%M"),
+        0 => gettext("Today at %H:%M"),
         1 => gettext("Yesterday at %H:%M"),
+        -1 => gettext("Tomorrow at %H:%M"),
         _ if when.year() == now.year() => gettext("%a %-d %b at %H:%M"),
+        ..0 => gettext("%-d %b %Y at %H:%M"),
         _ => gettext("%-d %b %Y"),
     };
     when.format_localized(&pattern, date_locale()).to_string()
@@ -380,6 +385,25 @@ mod tests {
             "Fri 11 Sep at 08:50"
         );
         assert_eq!(header_date(at(2024, 9, 3, 8, 50), now), "3 Sep 2024");
+    }
+
+    #[test]
+    fn a_header_date_still_to_come_says_when() {
+        // A queued message carries the hour it goes out.
+        let now = Local.with_ymd_and_hms(2026, 9, 19, 15, 0, 0).unwrap();
+        assert_eq!(header_date(at(2026, 9, 19, 21, 0), now), "Today at 21:00");
+        assert_eq!(
+            header_date(at(2026, 9, 20, 8, 0), now),
+            "Tomorrow at 08:00"
+        );
+        assert_eq!(
+            header_date(at(2026, 9, 22, 8, 0), now),
+            "Tue 22 Sep at 08:00"
+        );
+        assert_eq!(
+            header_date(at(2027, 1, 4, 8, 0), now),
+            "4 Jan 2027 at 08:00"
+        );
     }
 
     #[test]

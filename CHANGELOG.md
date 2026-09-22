@@ -85,6 +85,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Cancel Send no longer tells you to look in Drafts for a message you
   scheduled while offline. Gmail never had that one, and the toast now
   says it is gone.
+- A message waiting in Send Later shows the day it goes, such as
+  "Tomorrow at 08:00", instead of "Today" for any day to come.
 
 ## 0.1.4 (2026-09-22)
 
