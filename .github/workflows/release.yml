@@ -88,34 +88,36 @@ jobs:
       - name: Put cargo on PATH
         run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      # The apt repository's key signs the rpm too. A release must go out
-      # signed, since the .repo file it installs turns on gpgcheck; a trial
-      # run without the secret builds an unsigned rpm and says so.
-      - name: Import the signing key
+      # The apt repository's key signs the rpm too. A pushed release must
+      # go out signed, since the .repo file it installs turns on gpgcheck;
+      # a trial run without the secret builds an unsigned rpm and says so.
+      # The private key lives in a keyring of its own for this step only
+      # and is gone before the next step starts the app.
+      - name: Build, pack and sign
         env:
           APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
-          REF_TYPE: ${{ github.ref_type }}
+          EVENT: ${{ github.event_name }}
         run: |
           if [ -z "$APT_SIGNING_KEY" ]; then
-            if [ "$REF_TYPE" = tag ]; then
+            if [ "$EVENT" = push ]; then
               echo "::error::APT_SIGNING_KEY is not set, and a released rpm must be signed"
               exit 1
             fi
             echo "::warning::APT_SIGNING_KEY is not set; the rpm is unsigned"
+            scripts/package-rpm.sh "$VERSION" dist
             exit 0
           fi
-          export GNUPGHOME="$RUNNER_TEMP/gnupg"
-          mkdir -m 700 "$GNUPGHOME"
-          echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
-          printf '%s\n' "$APT_SIGNING_KEY" | gpg --batch --import
-          echo "RPM_SIGN_KEY=FE3C3B6E699AF939DC4670DCF3A853035C3E2B8E" >> "$GITHUB_ENV"
-      - name: Build and pack
-        run: scripts/package-rpm.sh "$VERSION" dist
+          signing=$(mktemp -d)
+          trap 'gpgconf --homedir "$signing" --kill all; rm -rf "$signing"' EXIT
+          printf '%s\n' "$APT_SIGNING_KEY" | GNUPGHOME=$signing gpg --batch --import
+          GNUPGHOME=$signing RPM_SIGN_KEY=FE3C3B6E699AF939DC4670DCF3A853035C3E2B8E \
+              scripts/package-rpm.sh "$VERSION" dist
+          echo "RPM_SIGNED=1" >> "$GITHUB_ENV"
       # Installs the rpm the way a person would and starts it on a virtual
       # display, which catches a library the rpm forgot to require.
       - name: Install and start it
         run: |
-          if [ -n "${RPM_SIGN_KEY:-}" ]; then
+          if [ "${RPM_SIGNED:-}" = 1 ]; then
             rpm --import packaging/apt/penguin-mail-archive-keyring.asc
             rpm -K "dist/penguin-mail-$VERSION-1.x86_64.rpm"
           fi
@@ -133,9 +135,6 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    env:
-      # Set once the snap name is registered; see the last step.
-      SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # Builds in an LXD container, from snap/snapcraft.yaml.
@@ -153,21 +152,13 @@ jobs:
           name: snap-${{ needs.build.outputs.version }}
           path: ${{ steps.snapcraft.outputs.snap }}
           if-no-files-found: error
-      # Every tag goes to the edge channel; stable is a promotion by hand
-      # in the Snap Store until the snap has proven itself. Without the
-      # credential, which exists only once the owner has registered the
-      # name, the snap is built and tested and goes nowhere.
-      - name: Publish to edge
-        if: github.ref_type == 'tag' && env.SNAPCRAFT_STORE_CREDENTIALS != ''
-        uses: snapcore/action-publish@214b86e5ca036ead1668c79afb81e550e6c54d40 # v1.2.0
-        with:
-          snap: ${{ steps.snapcraft.outputs.snap }}
-          release: edge
 
   publish:
     name: Publish the release
     needs: [build, rpm]
-    if: github.ref_type == 'tag'
+    # Only a pushed tag publishes. A trial run from the Actions tab builds
+    # everything and publishes nothing, whichever ref it ran on.
+    if: github.event_name == 'push' && github.ref_type == 'tag'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -197,3 +188,32 @@ jobs:
             dist/*.tar.gz
             dist/*.zip
             dist/SHA256SUMS
+
+  # Every release goes to the snap's edge channel once the GitHub release
+  # is out, so edge never carries a version whose other packages failed.
+  # Stable is a promotion by hand in the Snap Store until the snap has
+  # proven itself. Without the credential, which exists only once the
+  # owner has registered the name, the snap is built and tested and goes
+  # nowhere.
+  snap-edge:
+    name: Publish the snap to edge
+    needs: [build, snap, publish]
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    env:
+      SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        if: env.SNAPCRAFT_STORE_CREDENTIALS != ''
+        with:
+          name: snap-${{ needs.build.outputs.version }}
+          path: snap-file
+      - name: Find the snap
+        if: env.SNAPCRAFT_STORE_CREDENTIALS != ''
+        id: file
+        run: echo "snap=$(ls snap-file/*.snap)" >> "$GITHUB_OUTPUT"
+      - uses: snapcore/action-publish@214b86e5ca036ead1668c79afb81e550e6c54d40 # v1.2.0
+        if: env.SNAPCRAFT_STORE_CREDENTIALS != ''
+        with:
+          snap: ${{ steps.file.outputs.snap }}
+          release: edge

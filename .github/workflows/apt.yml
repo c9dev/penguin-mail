@@ -34,14 +34,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         # The five newest releases: enough for a person to step back one
         # version with apt or dnf, and a site well inside Pages' size limit.
-        # Releases from before the rpm have none, which is fine.
+        # Releases from before the rpm have none, which is fine; a download
+        # that fails stops the job.
         run: |
+          set -euo pipefail
           mkdir debs rpms
-          gh release list --exclude-drafts --exclude-pre-releases --limit 5 \
-              --json tagName --jq '.[].tagName' |
-          while read -r tag; do
+          tags=$(gh release list --exclude-drafts --exclude-pre-releases --limit 5 \
+              --json tagName --jq '.[].tagName')
+          for tag in $tags; do
               gh release download "$tag" --pattern '*.deb' --dir debs
-              gh release download "$tag" --pattern '*.rpm' --dir rpms || true
+              assets=$(gh release view "$tag" --json assets --jq '.assets[].name')
+              if grep -q '\.rpm$' <<<"$assets"; then
+                  gh release download "$tag" --pattern '*.rpm' --dir rpms
+              else
+                  echo "$tag has no rpm"
+              fi
           done
           ls -l debs rpms
       - name: Install createrepo_c
