@@ -256,6 +256,41 @@ fn spam_leaves_a_label_list_and_a_flagged_list() {
     );
 }
 
+/// Gmail keeps a conversation in the inbox while one of its messages
+/// outside the Trash is there, so deleting the start of a thread does not
+/// hide the reply that arrived after it.
+#[test]
+fn a_reply_in_the_inbox_shows_its_thread_when_earlier_messages_are_in_the_trash() {
+    let (conn, a) = common::db();
+    store(
+        &conn,
+        &[
+            meta(a, "r1", "tr", 100, &["TRASH"]),
+            meta(a, "r2", "tr", 200, &["TRASH"]),
+            meta(a, "r3", "tr", 300, &["INBOX", "UNREAD"]),
+            meta(a, "g1", "tg", 150, &["INBOX", "TRASH"]),
+        ],
+    );
+    let inbox = ThreadFilter::account(a, "INBOX");
+    assert_eq!(
+        ids(threads::list_threads(&conn, &inbox, 0, 10).unwrap()),
+        ["tr"],
+        "a thread whose only inbox message is trashed stays out"
+    );
+    assert_eq!(threads::count_threads(&conn, &inbox).unwrap(), 1);
+    assert_eq!(
+        threads::label_counts(&conn).unwrap().account(a, "INBOX").threads,
+        1,
+        "the sidebar count agrees with the list"
+    );
+    let any = ThreadFilter::account(a, "");
+    assert_eq!(
+        ids(threads::list_threads(&conn, &any, 0, 10).unwrap()),
+        ["tr"],
+        "any mail shows a thread with one message outside the Trash"
+    );
+}
+
 #[test]
 fn a_muted_thread_says_so_in_its_row() {
     let (conn, a) = common::db();

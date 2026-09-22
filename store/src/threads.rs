@@ -111,6 +111,42 @@ impl Rows {
         .push("))");
     }
 
+    /// Appends the condition that the row is not hidden by one of
+    /// `hidden`. A message row is hidden when it carries one. A thread row
+    /// is hidden only when every message in it that carries `label` (any
+    /// message, for an empty label) carries one too: Gmail keeps a
+    /// conversation in the inbox while one of its messages outside the
+    /// Trash is there, so trashing the start of a thread leaves the reply.
+    /// The thread's own labels answer the common case, a thread with no
+    /// hidden label at all, without looking at its messages.
+    fn not_hidden(self, sql: &mut Sql, label: &str, hidden: &[&str]) {
+        sql.push("(NOT ");
+        self.has_any(sql, hidden);
+        if let Rows::Threads = self {
+            sql.push(
+                " OR EXISTS (SELECT 1 FROM messages x \
+                 WHERE x.account_id = t.account_id AND x.thread_id = t.id",
+            );
+            if !label.is_empty() {
+                sql.push(
+                    " AND EXISTS (SELECT 1 FROM message_labels k \
+                     WHERE k.account_id = x.account_id AND k.message_id = x.id \
+                     AND k.label_id = ",
+                )
+                .bind(label.to_string())
+                .push(")");
+            }
+            sql.push(
+                " AND NOT EXISTS (SELECT 1 FROM message_labels h \
+                 WHERE h.account_id = x.account_id AND h.message_id = x.id \
+                 AND h.label_id IN (",
+            )
+            .bind_list(hidden)
+            .push(")))");
+        }
+        sql.push(")");
+    }
+
     /// The column that holds the row's thread id.
     fn thread_key(self) -> &'static str {
         match self {
@@ -189,8 +225,7 @@ impl ThreadFilter {
                     .bind(account)
                     .push(" AND ");
             }
-            sql.push("NOT ");
-            rows.has_any(sql, &HIDDEN);
+            rows.not_hidden(sql, "", &HIDDEN);
         } else {
             sql.push(&format!(
                 "FROM {labels} d CROSS JOIN {table} {row} \
@@ -202,8 +237,8 @@ impl ThreadFilter {
             }
             let hidden = hidden_from(&self.label_id);
             if !hidden.is_empty() {
-                sql.push(" AND NOT ");
-                rows.has_any(sql, &hidden);
+                sql.push(" AND ");
+                rows.not_hidden(sql, &self.label_id, &hidden);
             }
         }
         if !self.thread_ids.is_empty() {
@@ -433,9 +468,15 @@ pub fn label_counts(conn: &Connection) -> Result<LabelCounts> {
     let mut stmt = conn.prepare_cached(&format!(
         "SELECT d.account_id, d.label_id, COUNT(*), SUM(t.unread) FROM thread_labels d \
          CROSS JOIN threads t ON t.account_id = d.account_id AND t.id = d.thread_id \
-         WHERE NOT EXISTS (SELECT 1 FROM thread_labels h WHERE h.account_id = d.account_id \
+         WHERE (NOT EXISTS (SELECT 1 FROM thread_labels h WHERE h.account_id = d.account_id \
              AND h.thread_id = d.thread_id AND h.label_id IN ('{TRASH}', '{SPAM}') \
              AND h.label_id <> d.label_id) \
+           OR EXISTS (SELECT 1 FROM messages x JOIN message_labels k \
+             ON k.account_id = x.account_id AND k.message_id = x.id AND k.label_id = d.label_id \
+             WHERE x.account_id = d.account_id AND x.thread_id = d.thread_id \
+             AND NOT EXISTS (SELECT 1 FROM message_labels h WHERE h.account_id = x.account_id \
+               AND h.message_id = x.id AND h.label_id IN ('{TRASH}', '{SPAM}') \
+               AND h.label_id <> d.label_id))) \
          GROUP BY d.label_id, d.account_id"
     ))?;
     let rows = stmt.query_map([], |row| {
