@@ -1606,7 +1606,7 @@ msgid "Ask Penguin Mail…"
 msgstr ""
 
 #: app/src/ui/assistant.rs:156 app/src/ui/assistant.rs:160
-#: app/src/ui/assistant.rs:441 app/src/ui/composer/mod.rs:206
+#: app/src/ui/assistant.rs:437 app/src/ui/composer/mod.rs:206
 #: app/src/ui/window/shortcuts.rs:429
 msgid "Send"
 msgstr ""
@@ -1629,51 +1629,51 @@ msgid ""
 "or your Claude subscription."
 msgstr ""
 
-#: app/src/ui/assistant.rs:440
+#: app/src/ui/assistant.rs:436
 msgid "Stop"
 msgstr ""
 
-#: app/src/ui/assistant.rs:545
+#: app/src/ui/assistant.rs:541
 msgid "Don't Allow"
 msgstr ""
 
-#: app/src/ui/assistant.rs:547
+#: app/src/ui/assistant.rs:543
 msgid "Allow"
 msgstr ""
 
-#: app/src/ui/assistant.rs:551
+#: app/src/ui/assistant.rs:547
 msgid "Always Allow"
 msgstr ""
 
-#: app/src/ui/assistant.rs:587
+#: app/src/ui/assistant.rs:583
 msgid "Allowed"
 msgstr ""
 
-#: app/src/ui/assistant.rs:588
+#: app/src/ui/assistant.rs:584
 msgid "Always allowed"
 msgstr ""
 
-#: app/src/ui/assistant.rs:589
+#: app/src/ui/assistant.rs:585
 msgid "Not allowed"
 msgstr ""
 
-#: app/src/ui/assistant.rs:829
+#: app/src/ui/assistant.rs:825
 msgid "Result"
 msgstr ""
 
-#: app/src/ui/assistant.rs:837
+#: app/src/ui/assistant.rs:833
 msgid "Input"
 msgstr ""
 
-#: app/src/ui/assistant.rs:915
+#: app/src/ui/assistant.rs:911
 msgid "Running"
 msgstr ""
 
-#: app/src/ui/assistant.rs:916 app/src/ui/hide_my_email.rs:457
+#: app/src/ui/assistant.rs:912 app/src/ui/hide_my_email.rs:457
 msgid "Done"
 msgstr ""
 
-#: app/src/ui/assistant.rs:917
+#: app/src/ui/assistant.rs:913
 msgid "Failed"
 msgstr ""
 

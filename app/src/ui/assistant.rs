@@ -288,20 +288,16 @@ impl AssistantPane {
         pane
     }
 
-    /// Shows setup or the chat, and the model in the title.
+    /// Shows setup or the chat, and the model in the title. It reads the
+    /// connection and its model and nothing else, which is what
+    /// `Effect::Assistant` watches for.
     pub fn refresh(&self) {
         let ai = (self.settings)().ai;
+        let model = ai.model_on(ai.provider);
         let subtitle = match ai.provider {
-            AiProvider::Off => String::new(),
-            AiProvider::Local => ai.local_model.clone(),
-            AiProvider::Anthropic => ai.anthropic_model.clone(),
-            AiProvider::ClaudeCode => {
-                if ai.claude_model.is_empty() {
-                    "Claude".to_string()
-                } else {
-                    format!("Claude {}", ai.claude_model)
-                }
-            }
+            AiProvider::ClaudeCode if model.is_empty() => "Claude".to_string(),
+            AiProvider::ClaudeCode => format!("Claude {model}"),
+            _ => model.to_string(),
         };
         self.title.set_subtitle(&subtitle);
         self.stack

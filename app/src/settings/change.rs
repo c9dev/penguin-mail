@@ -506,8 +506,8 @@ pub enum Effect {
     FollowUps,
     /// Whether the inbox splits into categories.
     Categories,
-    /// A connection, or the model an AI feature uses. The assistant pane
-    /// shows its model, so it reads the settings again.
+    /// The assistant's connection or its model, which the assistant pane
+    /// shows in its title.
     Assistant,
     /// How large the conversation's text is.
     TextSize,
@@ -720,7 +720,12 @@ impl Effects {
                     *inbox_categories != before.inbox_categories
                         || *default_category != before.default_category
                 }
-                Effect::Assistant => *ai != before.ai,
+                // The pane shows the connection and its model. The rest of
+                // `ai` is read as a turn starts or a feature runs.
+                Effect::Assistant => {
+                    (ai.provider, ai.model_on(ai.provider))
+                        != (before.ai.provider, before.ai.model_on(before.ai.provider))
+                }
                 Effect::TextSize => *text_size != before.text_size,
                 Effect::Contacts => {
                     *contacts != before.contacts || *contact_accounts != before.contact_accounts
@@ -750,7 +755,8 @@ mod tests {
     fn web_search_picks_an_engine_and_keeps_its_address_tidy() {
         let mut settings = Settings::default();
         let changed = Change::Ai(AiChange::WebSearch(WebSearch::Searxng)).apply(&mut settings);
-        assert!(changed.has(Effect::Assistant));
+        // The next turn reads the engine, and the pane has nothing to redraw.
+        assert!(changed.is_empty());
         Change::Ai(AiChange::SearxngUrl(" http://searx.lan:8080/ ".into())).apply(&mut settings);
         assert_eq!(settings.ai.web_search, WebSearch::Searxng);
         assert_eq!(settings.ai.searxng_url, "http://searx.lan:8080");
@@ -817,12 +823,16 @@ mod tests {
         assert_eq!(settings.ai.local_model, "qwen");
         assert!(settings.ai.uses.is_empty());
 
-        choose(
+        let translation = choose(
             Feature::Translation,
             AiProvider::Anthropic,
             "claude-haiku-4-5",
         )
         .apply(&mut settings);
+        assert!(
+            translation.is_empty(),
+            "the pane shows the assistant's model only"
+        );
         assert_eq!(
             settings.ai.resolved(Feature::Translation),
             (AiProvider::Anthropic, "claude-haiku-4-5".to_string())
@@ -1029,7 +1039,7 @@ mod tests {
         after.vips.insert("bo@example.com".into(), "Bo".into());
         after.suggest_follow_ups = !before.suggest_follow_ups;
         after.inbox_categories = !before.inbox_categories;
-        after.ai.local_model = "qwen".into();
+        after.ai.provider = AiProvider::Local;
         after.text_size = TextSize::Small;
         after.contact_accounts = vec!["ann@example.com".into()];
         after.color_scheme = ColorScheme::Dark;
@@ -1187,7 +1197,13 @@ mod tests {
             },
             Change::SuggestFollowUps(false),
             Change::InboxCategories(false),
-            Change::Ai(AiChange::ConfirmActions(false)),
+            Change::Ai(AiChange::Use {
+                feature: Feature::Assistant,
+                choice: Use::Model {
+                    connection: AiProvider::Local,
+                    model: "qwen".into(),
+                },
+            }),
             Change::StepTextSize(1),
             Change::AccountContacts {
                 email: "ann@example.com".into(),
