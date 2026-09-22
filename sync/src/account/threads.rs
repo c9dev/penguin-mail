@@ -10,11 +10,20 @@ use mailrs_store::{accounts, bodies, messages};
 use super::AccountSync;
 use crate::{GmailApi, SyncError, now_millis};
 
+/// Fetches of one thread before an answer history keeps overtaking is
+/// written anyway, adding only what the store lacks.
+const FETCH_TRIES: u32 = 3;
+
+/// What one fetch of a thread did.
+enum Fetched {
+    Written {
+        changed: bool,
+    },
+    /// A history replay moved the cursor while Gmail answered.
+    Overtaken,
+}
+
 impl<G: GmailApi> AccountSync<G> {
-    /// Fetches every message of a thread, including ones older than the
-    /// window. Deletes the thread locally when Gmail no longer has it.
-    /// Announces the thread only when its stored messages or labels changed,
-    /// since each announcement makes the UI reload its lists and counts.
     /// Whether the store already holds this thread and history has spoken
     /// for the mailbox since. Gmail sends every change through history, so
     /// a recent replay means the stored copy matches, and opening the
@@ -36,41 +45,89 @@ impl<G: GmailApi> AccountSync<G> {
         Ok(!stored.is_empty())
     }
 
+    /// Fetches every message of a thread, including ones older than the
+    /// window. Deletes the thread locally when Gmail no longer has it.
+    /// Announces the thread only when its stored messages or labels changed,
+    /// since each announcement makes the UI reload its lists and counts.
+    ///
+    /// A history replay can finish while Gmail's answer is on its way. The
+    /// answer may then be older than what the replay stored, and the replay
+    /// has moved the cursor past the change, so no later history would put
+    /// it right. When the cursor moved, the thread is fetched again; after
+    /// [`FETCH_TRIES`] the answer only adds messages the store lacks.
     pub async fn ensure_thread(&self, thread_id: &str) -> Result<(), SyncError> {
-        let account_id = self.account_id;
         if self.stored_and_current(thread_id).await? {
             return Ok(());
         }
+        for attempt in 1..=FETCH_TRIES {
+            let last = attempt == FETCH_TRIES;
+            match self.fetch_thread(thread_id, last).await? {
+                Fetched::Written { changed } => {
+                    if changed {
+                        self.emit_threads(BTreeSet::from([thread_id.to_string()]));
+                    }
+                    return Ok(());
+                }
+                Fetched::Overtaken => {
+                    tracing::debug!(
+                        account = self.account_id,
+                        attempt,
+                        "history moved while a thread was fetched; fetching it again"
+                    );
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// One fetch of a thread and its write to the store. With `last`, an
+    /// answer overtaken by history still adds the messages the store does
+    /// not hold, and leaves the stored ones as history left them.
+    async fn fetch_thread(&self, thread_id: &str, last: bool) -> Result<Fetched, SyncError> {
+        let account_id = self.account_id;
+        let asked_at = self
+            .db
+            .read(move |c| Ok(accounts::sync_cursor(c, account_id)?.history_id))
+            .await?;
         let fetched = match self.api.thread_metadata(thread_id).await {
             Ok(metas) => Some(metas),
             Err(GmailError::NotFound) => None,
             Err(err) => return Err(err.into()),
         };
         let thread = thread_id.to_string();
-        let changed = self
-            .db
+        self.db
             .write(move |c| {
+                let cursor = accounts::sync_cursor(c, account_id)?;
+                let overtaken = cursor.history_id != asked_at;
+                if overtaken && !last {
+                    return Ok(Fetched::Overtaken);
+                }
                 let before = messages::thread_messages(c, account_id, &thread)?;
                 match fetched {
                     Some(metas) => {
-                        let generation = accounts::sync_cursor(c, account_id)?.sync_gen;
                         for meta in &metas {
-                            messages::upsert_message(c, meta, generation)?;
+                            if overtaken && before.iter().any(|m| m.id == meta.id) {
+                                continue;
+                            }
+                            messages::upsert_message(c, meta, cursor.sync_gen)?;
                         }
                         messages::refresh_thread(c, account_id, &thread)?;
-                        Ok(messages::thread_messages(c, account_id, &thread)? != before)
+                        let changed = messages::thread_messages(c, account_id, &thread)? != before;
+                        Ok(Fetched::Written { changed })
                     }
+                    // History deletes what Gmail deleted before the cursor,
+                    // so an overtaken "not found" leaves the store alone.
+                    None if overtaken => Ok(Fetched::Written { changed: false }),
                     None => {
                         messages::delete_thread(c, account_id, &thread)?;
-                        Ok(!before.is_empty())
+                        Ok(Fetched::Written {
+                            changed: !before.is_empty(),
+                        })
                     }
                 }
             })
-            .await?;
-        if changed {
-            self.emit_threads(BTreeSet::from([thread_id.to_string()]));
-        }
-        Ok(())
+            .await
+            .map_err(Into::into)
     }
 
     /// A message body from the cache, or from Gmail on a miss. Bodies of

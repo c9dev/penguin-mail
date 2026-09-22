@@ -130,3 +130,23 @@ async fn opening_a_thread_right_after_history_asks_gmail_nothing() {
         "the open should trust the store and fetch nothing"
     );
 }
+
+#[tokio::test]
+async fn opening_a_thread_keeps_a_change_history_brought_while_gmail_answered() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    let mut held = h.fake.hold("users.threads.get");
+    let opening = h.sync.ensure_thread("t1");
+    // Gmail read the thread with the message still in the inbox, then the
+    // message was archived and a replay stored that before the answer came.
+    let meanwhile = async {
+        held.entered().await;
+        h.fake.remote_relabel("a", &[], &["INBOX"]);
+        h.sync.incremental().await.unwrap();
+        held.release();
+    };
+    let (opened, ()) = tokio::join!(opening, meanwhile);
+    opened.unwrap();
+    assert_eq!(h.labels_of("a").await, Vec::<String>::new());
+}

@@ -39,6 +39,30 @@ pub struct FakeGmail {
     limit: Option<QuotaLimiter>,
 }
 
+/// A call held open by [`FakeGmail::hold`], seen from the fake's side.
+struct Hold {
+    entered: tokio::sync::oneshot::Sender<()>,
+    release: tokio::sync::oneshot::Receiver<()>,
+}
+
+/// A call held open by [`FakeGmail::hold`], seen from the test's side.
+pub struct Held {
+    entered: tokio::sync::oneshot::Receiver<()>,
+    release: tokio::sync::oneshot::Sender<()>,
+}
+
+impl Held {
+    /// Resolves once the held call is waiting.
+    pub async fn entered(&mut self) {
+        let _ = (&mut self.entered).await;
+    }
+
+    /// Lets the held call answer.
+    pub fn release(self) {
+        let _ = self.release.send(());
+    }
+}
+
 pub struct FakeState {
     pub email: String,
     pub history_id: u64,
@@ -52,6 +76,8 @@ pub struct FakeState {
     pub page_size: usize,
     /// Errors returned by the next calls, one per call.
     pub failures: VecDeque<GmailError>,
+    /// Calls a test holds open, by method, until it lets them answer.
+    held: HashMap<&'static str, Hold>,
     /// What the calls so far would have cost against the real API.
     pub usage: Usage,
     pub body_fetches: usize,
@@ -188,6 +214,7 @@ impl FakeGmail {
                 bodies: HashMap::new(),
                 page_size: 2,
                 failures: VecDeque::new(),
+                held: HashMap::new(),
                 usage: Usage::default(),
                 body_fetches: 0,
                 remote_writes: Vec::new(),
@@ -316,6 +343,35 @@ impl FakeGmail {
         self.with(|s| s.failures.push_back(err));
     }
 
+    /// Holds the next call to `method`, such as `"users.threads.get"`,
+    /// before it answers. A test uses this to change the mailbox while the
+    /// app waits on Gmail: [`Held::entered`] resolves once the call is
+    /// waiting, and [`Held::release`] lets it go on. A call that reads the
+    /// mailbox before it waits answers with what it read, as a slow reply
+    /// from Gmail would.
+    pub fn hold(&self, method: &'static str) -> Held {
+        let (entered_tx, entered) = tokio::sync::oneshot::channel();
+        let (release, release_rx) = tokio::sync::oneshot::channel();
+        self.with(|s| {
+            s.held.insert(
+                method,
+                Hold {
+                    entered: entered_tx,
+                    release: release_rx,
+                },
+            )
+        });
+        Held { entered, release }
+    }
+
+    /// Waits out a hold a test put on `method`, if there is one.
+    async fn wait_if_held(&self, method: &'static str) {
+        if let Some(hold) = self.with(|s| s.held.remove(method)) {
+            let _ = hold.entered.send(());
+            let _ = hold.release.await;
+        }
+    }
+
     /// Takes back one of the account's OAuth scopes, such as
     /// `mailrs_gmail::SETTINGS_SCOPE`. Calls that need it fail until
     /// [`FakeGmail::grant`] hands it over.
@@ -351,6 +407,7 @@ impl FakeGmail {
     /// failure a test queued for it, if any. Every API method starts here,
     /// so the usage counts what the real client would have spent.
     async fn call(&self, method: &'static str, units: u32) -> Result<(), GmailError> {
+        self.wait_if_held(method).await;
         let mut waited = Duration::ZERO;
         if let Some(quota) = &self.quota {
             let priority = limiter::priority();
@@ -473,8 +530,9 @@ impl GmailApi for FakeGmail {
     }
 
     async fn thread_metadata(&self, thread_id: &str) -> Result<Vec<MessageMeta>, GmailError> {
-        self.call("users.threads.get", cost::THREAD).await?;
-        self.with(|s| {
+        // Read before the call so a held call answers with the thread as it
+        // was when the app asked, as a slow reply from Gmail does.
+        let answer = self.with(|s| {
             let mut metas: Vec<MessageMeta> = s
                 .messages
                 .values()
@@ -486,7 +544,9 @@ impl GmailApi for FakeGmail {
             }
             metas.sort_by_key(|m| m.date);
             Ok(metas)
-        })
+        });
+        self.call("users.threads.get", cost::THREAD).await?;
+        answer
     }
 
     async fn message_body(&self, id: &str) -> Result<MessageBody, GmailError> {
