@@ -3010,7 +3010,7 @@ msgstr ""
 msgid "This message is from a mailing list"
 msgstr ""
 
-#: app/src/ui/conversation.rs:184 app/src/ui/window/senders.rs:56
+#: app/src/ui/conversation.rs:184 app/src/ui/window/senders.rs:58
 msgid "Unsubscribe"
 msgstr ""
 
@@ -4905,7 +4905,7 @@ msgstr ""
 #: app/src/ui/window/detached.rs:137 app/src/ui/window/export.rs:85
 #: app/src/ui/window/organize.rs:97 app/src/ui/window/organize.rs:145
 #: app/src/ui/window/organize.rs:174 app/src/ui/window/organize.rs:209
-#: app/src/ui/window/senders.rs:144
+#: app/src/ui/window/senders.rs:146
 msgid "That account is not connected"
 msgstr ""
 
@@ -5241,41 +5241,41 @@ msgstr ""
 msgid "This message's unsubscribe link is not one Penguin Mail can use"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:73
+#: app/src/ui/window/senders.rs:75
 msgid "Unsubscribed from {sender}"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:77
+#: app/src/ui/window/senders.rs:79
 msgid "Could not unsubscribe: {reason}"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:103
+#: app/src/ui/window/senders.rs:105
 msgid "The app is closing."
 msgstr ""
 
-#: app/src/ui/window/senders.rs:123
+#: app/src/ui/window/senders.rs:125
 msgid "Open a message from the sender to block"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:127
+#: app/src/ui/window/senders.rs:129
 msgid "Block {sender}?"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:130
+#: app/src/ui/window/senders.rs:132
 msgid ""
 "New mail from {email} goes straight to the Trash. This conversation moves "
 "there now. Remove the rule under Rules to unblock."
 msgstr ""
 
-#: app/src/ui/window/senders.rs:135
+#: app/src/ui/window/senders.rs:137
 msgid "Block"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:162
+#: app/src/ui/window/senders.rs:164
 msgid "Blocked {sender}"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:168
+#: app/src/ui/window/senders.rs:170
 msgid "Could not block the sender: {reason}"
 msgstr ""
 

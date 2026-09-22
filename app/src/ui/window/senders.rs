@@ -45,7 +45,9 @@ impl MainWindow {
             Unsubscribe::Email { .. } => {
                 gettext("Penguin Mail sends the list an unsubscribe request from your account.")
             }
-            Unsubscribe::Page(_) => gettext("The sender's unsubscribe page opens in your browser."),
+            Unsubscribe::Page(_) | Unsubscribe::BodyLink(_) => {
+                gettext("The sender's unsubscribe page opens in your browser.")
+            }
         };
         let question = confirm(
             &fill(

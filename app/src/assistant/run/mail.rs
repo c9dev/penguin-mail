@@ -365,7 +365,7 @@ impl<A: Accounts> Tools<A> {
                 "email",
                 gettext("Penguin Mail sends the list an unsubscribe request from your account."),
             ),
-            Unsubscribe::Page(_) => (
+            Unsubscribe::Page(_) | Unsubscribe::BodyLink(_) => (
                 "page",
                 gettext("The sender's unsubscribe page opens in your browser."),
             ),
