@@ -7,6 +7,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+- Switching between All, Primary, Updates, Promotions and Social answers
+  at once: the switcher takes its new shape on the next frame and only
+  the category's name fades in, where it used to slide for a fifth of a
+  second while every icon drifted sideways.
 - Right-clicking a conversation in the list offers everything the
   conversation's More Actions menu does: reply, archive, trash, flag,
   labels, mute, remind, print and the sender's options.

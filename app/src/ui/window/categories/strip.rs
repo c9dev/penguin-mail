@@ -17,7 +17,7 @@ mod imp {
     #[derive(Default)]
     pub struct CategoryStrip {
         pub group: RefCell<Option<adw::ToggleGroup>>,
-        /// Each category's sliding name, in toggle order.
+        /// Each category's name, in toggle order.
         pub names: RefCell<Vec<gtk::Revealer>>,
         /// The name of the chosen category, an index into `names`.
         pub chosen: Cell<usize>,
@@ -36,8 +36,8 @@ mod imp {
         fn constructed(&self) {
             self.parent_constructed();
             self.roomy.set(true);
-            // While a name slides shut after the row got narrower, the
-            // group is wider than its place for a few frames. Clip it
+            // After the row gets narrower the name closes on the next idle,
+            // so the group is wider than its place for one frame. Clip it
             // rather than draw over the list's edges.
             self.obj().set_overflow(gtk::Overflow::Hidden);
         }
@@ -92,9 +92,9 @@ mod imp {
 
     impl CategoryStrip {
         /// The width the row needs with icons alone, and with the chosen
-        /// name beside its icon as well. A name part way through its
-        /// slide counts as closed, so the answer holds still while the
-        /// names move.
+        /// name beside its icon as well. The chosen name is measured on its
+        /// own, open or not, so the answer does not change with whichever
+        /// name happens to be showing.
         fn widths(&self, group: &adw::ToggleGroup, for_size: i32) -> (i32, i32) {
             let horizontal = gtk::Orientation::Horizontal;
             let (_, natural, _, _) = group.measure(horizontal, for_size);
@@ -109,14 +109,34 @@ mod imp {
         }
 
         /// Opens the chosen category's name when the row has room for it
-        /// and closes every other.
+        /// and closes every other. A name that was closed fades in.
         pub fn show_names(&self) {
             let (chosen, roomy) = (self.chosen.get(), self.roomy.get());
             for (index, name) in self.names.borrow().iter().enumerate() {
-                name.set_reveal_child(roomy && index == chosen);
+                let open = roomy && index == chosen;
+                if open
+                    && !name.reveals_child()
+                    && let Some(label) = name.child()
+                {
+                    fade_in(&label);
+                }
+                name.set_reveal_child(open);
             }
         }
     }
+}
+
+/// How long a category's name takes to fade in, in milliseconds.
+const FADE_MS: u32 = 150;
+
+/// Fades `label` in from nothing. libadwaita jumps an animation to its end
+/// when the desktop has animations turned off, and keeps it alive while it
+/// plays, so nothing here holds on to it.
+fn fade_in(label: &gtk::Widget) {
+    let target = adw::PropertyAnimationTarget::new(label, "opacity");
+    let fade = adw::TimedAnimation::new(label, 0.0, 1.0, FADE_MS, target);
+    fade.set_easing(adw::Easing::EaseOutCubic);
+    fade.play();
 }
 
 glib::wrapper! {

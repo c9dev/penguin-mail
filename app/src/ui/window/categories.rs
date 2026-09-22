@@ -30,14 +30,18 @@ fn icon(category: Category) -> &'static str {
     }
 }
 
-/// How long the name and the unread count take to slide open, in milliseconds.
-const SLIDE_MS: u32 = 200;
-
-/// Wraps `child` in a revealer that opens it left to right.
+/// Wraps `child` in a revealer that shows or hides it at once. The name
+/// used to slide open over 200 ms, and every icon drifted sideways while
+/// the strip re-centred after the click, so the switch seemed to trail
+/// the pointer. The strip now takes its new shape on the next frame and
+/// only the name fades in; see `CategoryStrip::show_names`.
 fn slider(child: &impl IsA<gtk::Widget>) -> gtk::Revealer {
     gtk::Revealer::builder()
+        // A slide of no length rather than no transition: a revealer with
+        // no transition keeps its child's full width while hidden, and
+        // only a slide scales the width down to nothing.
         .transition_type(gtk::RevealerTransitionType::SlideLeft)
-        .transition_duration(SLIDE_MS)
+        .transition_duration(0)
         .child(child)
         .build()
 }
@@ -88,8 +92,8 @@ impl CategoryBar {
             group.add(
                 adw::Toggle::builder()
                     .name(category.key())
-                    // The child is an icon, a badge and a name that slides
-                    // shut; the label is what the toggle says out loud.
+                    // The child is an icon, a badge and a name that comes
+                    // and goes; the label is what the toggle says out loud.
                     .label(category.name())
                     .tooltip(category.name())
                     .child(&content)

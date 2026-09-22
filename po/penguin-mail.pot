@@ -4986,25 +4986,25 @@ msgstr ""
 msgid "{file}, preview"
 msgstr ""
 
-#: app/src/ui/window/categories.rs:151
+#: app/src/ui/window/categories.rs:155
 msgid "{name}, {count} unread"
 msgid_plural "{name}, {count} unread"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window/categories.rs:222
+#: app/src/ui/window/categories.rs:226
 msgid "Open a message from the sender first"
 msgstr ""
 
-#: app/src/ui/window/categories.rs:266
+#: app/src/ui/window/categories.rs:270
 msgid "Mail from {sender} now goes to {category}"
 msgstr ""
 
-#: app/src/ui/window/categories.rs:271
+#: app/src/ui/window/categories.rs:275
 msgid "Moved mail from {sender} to {category}"
 msgstr ""
 
-#: app/src/ui/window/categories.rs:278
+#: app/src/ui/window/categories.rs:282
 msgid ""
 "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr ""
