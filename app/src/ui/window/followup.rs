@@ -116,7 +116,7 @@ impl MainWindow {
             mailbox == Mailbox::Unified(system_label::INBOX)
                 && count > 0
                 && !banner.closed.get()
-                && self.settings().suggest_follow_ups,
+                && self.settings_with(|s| s.suggest_follow_ups),
         );
         if let Some(action) = self
             .actions

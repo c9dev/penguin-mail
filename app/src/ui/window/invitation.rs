@@ -31,11 +31,11 @@ impl MainWindow {
         let Some(account) = self.account(account_id) else {
             return;
         };
-        let asked = self
-            .settings()
-            .offered_to_gnome
-            .iter()
-            .any(|email| email.eq_ignore_ascii_case(&account.email));
+        let asked = self.settings_with(|s| {
+            s.offered_to_gnome
+                .iter()
+                .any(|email| email.eq_ignore_ascii_case(&account.email))
+        });
         if !asked && goa::worth_offering(&account.email) {
             view.card.offer_gnome();
         }

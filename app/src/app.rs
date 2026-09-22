@@ -187,6 +187,12 @@ impl App {
         self.settings.borrow().clone()
     }
 
+    /// What `read` makes of the preferences, without copying them all.
+    /// `read` must not change the settings.
+    pub fn settings_with<R>(&self, read: impl FnOnce(&Settings) -> R) -> R {
+        read(&self.settings.borrow())
+    }
+
     /// Makes a named change, saves it, and applies its effects on screen.
     pub fn change_settings(self: &Rc<Self>, change: Change) -> Effects {
         let before = self.settings();

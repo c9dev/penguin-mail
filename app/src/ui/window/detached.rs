@@ -50,7 +50,7 @@ impl MainWindow {
         if let Some(filter) = self.app.upgrade().and_then(|app| app.filter()) {
             view.set_filter(filter);
         }
-        view.set_zoom(self.settings().text_size.zoom());
+        view.set_zoom(self.settings_with(|s| s.text_size.zoom()));
         let window = adw::Window::builder()
             .title(if summary.subject.is_empty() {
                 gettext("Conversation")

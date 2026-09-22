@@ -116,7 +116,7 @@ impl MainWindow {
                 self.perform(targets, action, History::Record, None);
             }
             Decision::Flag(on) => {
-                self.flag_targets(targets, on.then(|| self.settings().flag_color))
+                self.flag_targets(targets, on.then(|| self.settings_with(|s| s.flag_color)))
             }
             Decision::DeleteForever => self.confirm_delete_forever(view, targets),
             Decision::Cancel(Cancel::Scheduled) => self.cancel_scheduled(targets),

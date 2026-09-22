@@ -26,7 +26,7 @@ impl MainWindow {
     /// the whole conversation: one unknown sender in a thread would
     /// otherwise load on the strength of the others.
     pub(super) fn images_allowed_for(&self, senders: &[String]) -> bool {
-        if self.settings().remote_images == RemoteImages::Always {
+        if self.settings_with(|s| s.remote_images == RemoteImages::Always) {
             return true;
         }
         let list = self.image_senders.borrow();

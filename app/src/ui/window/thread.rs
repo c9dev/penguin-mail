@@ -134,11 +134,11 @@ impl Desk for Ports {
 
     fn is_vip(&self, email: &str) -> bool {
         self.window()
-            .is_some_and(|window| window.settings().is_vip(email))
+            .is_some_and(|window| window.settings_with(|s| s.is_vip(email)))
     }
 
     fn mark_read_delay(&self) -> Option<u32> {
-        match self.window()?.settings().mark_read {
+        match self.window()?.settings_with(|s| s.mark_read) {
             MarkRead::Immediately => Some(0),
             MarkRead::AfterDelay => Some(2),
             MarkRead::Manually => None,
@@ -182,7 +182,7 @@ impl Desk for Ports {
         let window = self
             .window()
             .ok_or_else(|| "the window has closed".to_string())?;
-        translation::destination(&window.settings().ai).map(|(_, goes)| goes)
+        window.settings_with(|s| translation::destination(&s.ai).map(|(_, goes)| goes))
     }
 }
 
@@ -341,7 +341,7 @@ impl Effects for Ports {
             let window = self
                 .window()
                 .ok_or_else(|| "the window has closed".to_string())?;
-            let (config, _) = translation::destination(&window.settings().ai)?;
+            let (config, _) = window.settings_with(|s| translation::destination(&s.ai))?;
             self.core
                 .call(async move {
                     let pieces: Vec<&str> = pieces.iter().map(String::as_str).collect();

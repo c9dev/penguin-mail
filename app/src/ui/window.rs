@@ -517,7 +517,7 @@ impl MainWindow {
                 authorizing: Cell::new(false),
                 assistant,
                 assistant_split,
-                categories: categories::CategoryBar::new(app.settings().default_category),
+                categories: categories::CategoryBar::new(app.settings_with(|s| s.default_category)),
                 follow_up: followup::FollowUpBanner::new(),
                 inline_cache: RefCell::new(HashMap::new()),
                 thumbnail_cache: RefCell::new(HashMap::new()),
@@ -610,7 +610,7 @@ impl MainWindow {
         }
         window
             .conversation
-            .set_zoom(app.settings().text_size.zoom());
+            .set_zoom(app.settings_with(|s| s.text_size.zoom()));
         window.refresh_accounts(Reload::Yes);
         window.reload_image_senders();
         window
@@ -822,8 +822,7 @@ impl MainWindow {
 
     /// The settings that change what a mailbox lists.
     fn view(&self) -> View {
-        let settings = self.settings();
-        View {
+        self.settings_with(|settings| View {
             threading: settings.threading,
             category: settings
                 .inbox_categories
@@ -831,7 +830,7 @@ impl MainWindow {
             follow_ups: settings.suggest_follow_ups,
             now: chrono::Utc::now().timestamp_millis(),
             limit: None,
-        }
+        })
     }
 
     fn show_mailbox(self: &Rc<Self>, mailbox: Mailbox) {
@@ -1078,7 +1077,7 @@ impl MainWindow {
             Picked::Many(rows) => {
                 self.conversation.show_many(
                     rows.len(),
-                    self.settings().threading,
+                    self.settings_with(|s| s.threading),
                     rows.iter().any(|r| r.unread),
                     rows.iter().all(|r| r.starred),
                     rows.iter().all(|r| r.muted),
@@ -1160,7 +1159,7 @@ impl MainWindow {
             let Some(app) = this.app.upgrade() else {
                 return;
             };
-            let vip = app.settings().is_vip(&address);
+            let vip = app.settings_with(|s| s.is_vip(&address));
             let person = match card {
                 Some(card) => contact_card::Person {
                     name: card.contact.display().to_string(),
@@ -1195,7 +1194,7 @@ impl MainWindow {
                         email: address.clone(),
                         name: display.clone(),
                     });
-                    let added = app.settings().is_vip(&address);
+                    let added = app.settings_with(|s| s.is_vip(&address));
                     window.toast(&vip_message(added, &display));
                 }
                 contact_card::Choice::AllMail => {
@@ -1246,7 +1245,7 @@ impl MainWindow {
     /// Asks before erasing, because Gmail cannot bring the mail back and no
     /// Undo follows.
     fn confirm_delete_forever(self: &Rc<Self>, view: &Rc<ConversationView>, targets: Vec<Target>) {
-        let threaded = self.settings().threading;
+        let threaded = self.settings_with(|s| s.threading);
         let question = confirm(
             &delete_forever_heading(targets.len(), threaded),
             &match targets.len() {
@@ -1298,7 +1297,7 @@ impl MainWindow {
             }
             this.toast(&deleted_forever_message(
                 outcome.done.len(),
-                this.settings().threading,
+                this.settings_with(|s| s.threading),
             ));
         });
     }
@@ -1434,8 +1433,8 @@ impl MainWindow {
                 return;
             }
             let count = outcome.done.len();
-            if let Some(done) =
-                message.or_else(|| done_message(&action, count, this.settings().threading))
+            if let Some(done) = message
+                .or_else(|| done_message(&action, count, this.settings_with(|s| s.threading)))
             {
                 let toast = adw::Toast::builder()
                     .title(done)
@@ -2323,10 +2322,17 @@ impl MainWindow {
     }
 
     fn settings(&self) -> Settings {
-        self.app
-            .upgrade()
-            .map(|app| app.settings())
-            .unwrap_or_default()
+        self.settings_with(Settings::clone)
+    }
+
+    /// What `read` makes of the preferences. Most callers want one field,
+    /// and a list load asks several times, so this spares a copy of them
+    /// all.
+    fn settings_with<R>(&self, read: impl FnOnce(&Settings) -> R) -> R {
+        match self.app.upgrade() {
+            Some(app) => app.settings_with(read),
+            None => read(&Settings::default()),
+        }
     }
 
     fn show_preferences(self: &Rc<Self>) {
@@ -2392,7 +2398,7 @@ impl MainWindow {
             email: sender.email.clone(),
             name,
         });
-        let added = app.settings().is_vip(&sender.email);
+        let added = app.settings_with(|s| s.is_vip(&sender.email));
         self.toast(&vip_message(added, sender.display()));
     }
 

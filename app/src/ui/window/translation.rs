@@ -15,7 +15,7 @@ impl MainWindow {
             .map(|language| language.code)
             .collect();
         translation::interface_language(
-            &self.settings().language,
+            &self.settings_with(|s| s.language.clone()),
             &spell::locale_language(),
             &installed,
         )

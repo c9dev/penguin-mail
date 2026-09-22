@@ -60,10 +60,7 @@ impl MainWindow {
 
     pub(super) fn edit_smart(self: &Rc<Self>, id: Option<String>) {
         let existing = id.and_then(|id| {
-            self.settings()
-                .smart_mailboxes
-                .into_iter()
-                .find(|m| m.id == id)
+            self.settings_with(|s| s.smart_mailboxes.iter().find(|m| m.id == id).cloned())
         });
         let accounts: Vec<String> = self.accounts().into_iter().map(|a| a.email).collect();
         let weak = Rc::downgrade(self);
@@ -81,13 +78,12 @@ impl MainWindow {
     }
 
     pub(super) fn delete_smart(self: &Rc<Self>, id: String) {
-        let Some(name) = self
-            .settings()
-            .smart_mailboxes
-            .iter()
-            .find(|m| m.id == id)
-            .map(|m| m.name.clone())
-        else {
+        let Some(name) = self.settings_with(|s| {
+            s.smart_mailboxes
+                .iter()
+                .find(|m| m.id == id)
+                .map(|m| m.name.clone())
+        }) else {
             return;
         };
         let question = confirm(
@@ -112,10 +108,7 @@ impl MainWindow {
 
     pub(super) fn rename_account(self: &Rc<Self>, account: Account) {
         let current = self
-            .settings()
-            .account_names
-            .get(&account.email)
-            .cloned()
+            .settings_with(|s| s.account_names.get(&account.email).cloned())
             .unwrap_or_default();
         let entry = gtk::Entry::builder()
             .text(&current)

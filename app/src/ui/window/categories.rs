@@ -192,7 +192,7 @@ impl MainWindow {
 
     /// Whether `mailbox` splits into categories on screen.
     fn shows_categories(&self, mailbox: &Mailbox) -> bool {
-        self.settings().inbox_categories && mailbox.takes_categories()
+        self.settings_with(|s| s.inbox_categories) && mailbox.takes_categories()
     }
 
     /// Shows the switcher when the list holds an inbox, and hides it elsewhere.
