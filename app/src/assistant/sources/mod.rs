@@ -1,12 +1,12 @@
-//! Tool sources beyond the mail tools, and the [`Toolbox`] that puts them
-//! in front of the model together.
+//! Where the assistant's tools come from, and the [`Toolbox`] that puts
+//! them in front of the model together.
 //!
-//! The mail tools run on the GTK thread through [`Host`], because they read
-//! the window. A source here needs no window: web search, MCP servers,
-//! skills and the shell each live in a module of their own and run on the
-//! async runtime. Every provider reaches them through the one toolbox, and
-//! Claude Code through the bridge in front of it, so the asking below holds
-//! whichever model runs.
+//! The mail tools are one source, [`Host`], whose calls run on the GTK
+//! thread because they read the window. The sources here need no window:
+//! web search, MCP servers, skills and the shell each live in a module of
+//! their own and run on the async runtime. Every provider reaches them
+//! through the one toolbox, and Claude Code through the bridge in front of
+//! it, so the asking below holds whichever model runs.
 
 pub mod mcp;
 pub mod web;
@@ -83,9 +83,9 @@ pub fn system_prompt(base: &str, sources: &[Arc<dyn Source>]) -> String {
     prompt
 }
 
-/// Everything the model can call: the mail tools and every source.
+/// Everything the model can call: the mail tools and every other source.
 pub struct Toolbox {
-    mail: Host,
+    /// The mail tools first, then the rest in the order the settings give.
     sources: Vec<Arc<dyn Source>>,
     approvals: async_channel::Sender<ApprovalRequest>,
     /// Keys the person answered Always for, including ones answered during
@@ -101,8 +101,9 @@ impl Toolbox {
         allowed: impl IntoIterator<Item = String>,
     ) -> Toolbox {
         Toolbox {
-            mail,
-            sources,
+            sources: std::iter::once(Arc::new(mail) as Arc<dyn Source>)
+                .chain(sources)
+                .collect(),
             approvals,
             allowed: Arc::new(Mutex::new(allowed.into_iter().collect())),
         }
@@ -118,11 +119,10 @@ impl Toolbox {
 
 impl ToolHost for Toolbox {
     fn specs(&self) -> Vec<ToolSpec> {
-        let mut specs = self.mail.specs();
-        for source in &self.sources {
-            specs.extend(source.specs());
-        }
-        specs
+        self.sources
+            .iter()
+            .flat_map(|source| source.specs())
+            .collect()
     }
 
     fn prepare(&self) -> BoxFuture<()> {
@@ -134,7 +134,8 @@ impl ToolHost for Toolbox {
 
     fn call(&self, name: String, input: Value) -> BoxFuture<ToolOutcome> {
         let Some(source) = self.owner(&name) else {
-            return self.mail.call(name, input);
+            let missing = format!("There is no tool called {name}.");
+            return Box::pin(async move { ToolOutcome::Err(missing) });
         };
         let question = source.ask(&name, &input);
         let key = format!("{}/{name}", source.id());

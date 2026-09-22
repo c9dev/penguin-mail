@@ -114,6 +114,15 @@ async fn every_source_is_offered_and_each_call_reaches_its_owner() {
 }
 
 #[tokio::test]
+async fn a_tool_no_source_offers_says_so() {
+    let (toolbox, _asked) = toolbox(&[]);
+    assert_eq!(
+        toolbox.call("fly_a_kite".into(), json!({})).await,
+        ToolOutcome::Err("There is no tool called fly_a_kite.".into())
+    );
+}
+
+#[tokio::test]
 async fn a_refused_call_does_not_run() {
     let (toolbox, asked) = toolbox(&[]);
     let count = answer(asked, Verdict::Deny);
