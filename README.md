@@ -188,13 +188,13 @@ libadwaita 1.8 and WebKitGTK 6.0 from your distribution, as Ubuntu 26.04
 and Fedora 43 have; the Flatpak and the snap bring their own. The tray icon needs a StatusNotifier host, which Ubuntu's
 AppIndicator extension provides.
 
-| | .deb / rpm | Flatpak | Snap |
-|---|---|---|---|
-| Updates | apt / dnf | Flathub | Snap Store |
-| GnuPG | the system's | the runtime's, on your `~/.gnupg` | the snap's, on your `~/.gnupg` |
-| Assistant skills | yes | no | no |
-| Claude Code, and MCP servers you run as a command | yes | no | no |
-| Tray icon | yes | yes | yes |
+| | .deb | rpm | Flatpak | Snap |
+|---|---|---|---|---|
+| Updates | Install in the app, or `apt upgrade` | `dnf upgrade` | Flathub | Snap Store |
+| GnuPG | the system's | the system's | the runtime's, on your `~/.gnupg` | the snap's, on your `~/.gnupg` |
+| Assistant skills | yes | yes | no | no |
+| Claude Code, and MCP servers you run as a command | yes | yes | no | no |
+| Tray icon | yes | yes | yes | yes |
 
 Skills are off in the Flatpak and the snap because a skill's scripts run
 in a sandbox of their own, which cannot start inside the one the app runs
@@ -312,9 +312,10 @@ that, **Sign In with Google** adds each account.
 
 ### Updates
 
-An installed Penguin Mail checks GitHub for a new release once a day. When
-one is out, it says so in a notification, a banner across the window, and the
-tray menu, and **Install** does the rest:
+A Penguin Mail installed from the .deb, the tarball or source checks GitHub
+for a new release once a day. When one is out, it says so in a
+notification, a banner across the window, and the tray menu, and
+**Install** does the rest:
 
 - **From the .deb or the apt repository**, it downloads the new `.deb` and
   installs it with apt. GNOME asks for your password, because apt changes
@@ -322,9 +323,6 @@ tray menu, and **Install** does the rest:
   would rather update that way.
 - **From the tarball or from source**, it downloads the new tarball and
   installs it into the same folder as before, with no password.
-- **From Flathub or the Snap Store**, the store installs new versions, and
-  Penguin Mail offers no Install of its own. Preferences and the About
-  window say which store it is.
 
 Every download is checked against the release's `SHA256SUMS` first. Once
 the new version is in, Penguin Mail restarts into it. With a message open in
@@ -334,6 +332,10 @@ only when you save it.
 **Check for Updates** in the tray menu checks at once. To stop the daily
 check, turn off **Check for Updates** under Preferences, Startup. A copy run
 with `cargo run` or as the demo never checks.
+
+The rpm leaves updates to dnf, and the Flatpak and the snap to Flathub and
+the Snap Store. Those copies never check GitHub and offer no Install of
+their own; Preferences and the About window say who brings updates.
 
 To update by hand, download the new release and install it the same way as
 the first time. For a copy built from source, pull and run

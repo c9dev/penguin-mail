@@ -14,7 +14,12 @@ sdk: org.gnome.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.rust-stable
 command: penguin-mail
+# Past the window and the network, the sandbox lets the app reach three
+# D-Bus services (the Secret Service, the tray's watcher, notifications)
+# and three places on disk (Downloads, ~/.gnupg, and gpg-agent's socket
+# folder). Each is explained where it is granted.
 finish-args:
+  # Gmail, Google Calendar and People, and the assistant's model.
   - --share=network
   - --share=ipc
   - --socket=wayland
@@ -31,9 +36,12 @@ finish-args:
   # through the file chooser portal.
   - --filesystem=xdg-download
   # OpenPGP and S/MIME run the runtime's gpg and gpgsm on the person's own
-  # keyring, and reach their gpg-agent through its socket so the desktop's
-  # pinentry asks for passphrases. This is the one hole in the sandbox.
+  # keyring in ~/.gnupg, read and written, since importing a key or
+  # trusting one writes there.
   - --filesystem=~/.gnupg
+  # gpg-agent's socket folder, read-only, so gpg reaches the person's own
+  # agent and the desktop's pinentry asks for passphrases, instead of
+  # starting a second agent inside the sandbox.
   - --filesystem=xdg-run/gnupg:ro
 build-options:
   append-path: /usr/lib/sdk/rust-stable/bin

@@ -138,22 +138,27 @@ kind it is (`packaging-rpm`, `packaging-flatpak`, `packaging-snap`, or
 none for the .deb and the tarball). The feature decides where
 updates come from and whether skills run.
 
-| | .deb / rpm | Flatpak | Snap |
-|---|---|---|---|
-| Updates | apt / dnf repository | Flathub | Snap Store |
-| GnuPG | system | runtime's `gpg`, on `~/.gnupg` | snap's `gpg`, on `~/.gnupg` |
-| Assistant skills | yes | no | no |
-| Claude Code, MCP servers run as a command | yes | no | no |
-| Tray icon | yes | yes | yes |
-| Start at login | autostart file | Background portal | snapd autostart |
+| | .deb | rpm | Flatpak | Snap |
+|---|---|---|---|---|
+| Updates | Install in the app, or the apt repository | the dnf repository | Flathub | Snap Store |
+| GnuPG | system | system | runtime's `gpg`, on `~/.gnupg` | snap's `gpg`, on `~/.gnupg` |
+| Assistant skills | yes | yes | no | no |
+| Claude Code, MCP servers run as a command | yes | yes | no | no |
+| Tray icon | yes | yes | yes | yes |
+| Start at login | autostart file | autostart file | Background portal | snapd autostart |
 
-- **Updates.** A .deb and a tarball update themselves from GitHub
-  releases. The rpm leaves it to dnf. The Flatpak and the snap
-  leave it to their store, and Preferences says which.
-- **GnuPG.** The Flatpak has two holes in its sandbox for signing and
-  encryption: `~/.gnupg`, and the gpg-agent socket under
-  `$XDG_RUNTIME_DIR/gnupg`, so your own agent and pinentry handle
-  passphrases. The snap reaches `~/.gnupg` through a `personal-files` plug.
+- **Updates.** The .deb checks GitHub once a day and offers Install,
+  which downloads the new .deb and installs it through apt; `apt upgrade`
+  brings the same version from the apt repository. The tarball updates
+  itself the same way, into its own folder. The rpm leaves updates to
+  dnf, and the Flatpak and the snap to their store; Preferences and the
+  About window say which.
+- **GnuPG.** The Flatpak reaches two places for signing and encryption:
+  `~/.gnupg`, read and written, and the gpg-agent socket folder under
+  `$XDG_RUNTIME_DIR/gnupg`, read-only, so your own agent and pinentry
+  handle passphrases. It also talks to the Secret Service, the tray and
+  the notification daemon, and writes to Downloads; the manifest says why
+  for each. The snap reaches `~/.gnupg` through a `personal-files` plug.
 - **Skills.** A skill's scripts run under bubblewrap, which cannot start
   inside Flatpak's or a strict snap's sandbox. Running them without one
   would hand a skill your mail and keys, so both packages turn skills off
