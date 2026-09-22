@@ -118,21 +118,35 @@ async fn reading_a_cached_body_records_the_read() {
 }
 
 #[tokio::test]
-async fn opening_a_thread_right_after_history_asks_gmail_nothing() {
+async fn opening_a_thread_fetched_whole_right_after_history_asks_gmail_nothing() {
     let h = harness().await;
     let now = now_millis();
     h.fake.seed(meta("recent", "t1", now, &["INBOX"]));
     h.bootstrap_all().await;
+    h.sync.ensure_thread("t1").await.unwrap();
     // A history replay with nothing to report speaks for the whole mailbox.
     h.sync.incremental().await.unwrap();
-    // Gmail gains a message that history has not announced yet.
-    h.fake.seed(meta("older", "t1", now - 60 * DAY, &[]));
+    h.fake.reset_usage();
     h.sync.ensure_thread("t1").await.unwrap();
     assert_eq!(
-        h.thread("t1").await.unwrap().message_count,
-        1,
+        h.fake.usage().by_method.get("users.threads.get"),
+        None,
         "the open should trust the store and fetch nothing"
     );
+}
+
+#[tokio::test]
+async fn a_thread_the_window_holds_in_part_is_fetched_whole_on_opening() {
+    let h = harness().await;
+    let now = now_millis();
+    h.fake.seed(meta("recent", "t1", now, &["INBOX"]));
+    h.fake.seed(meta("older", "t1", now - 60 * DAY, &[]));
+    h.bootstrap_all().await;
+    h.sync.incremental().await.unwrap();
+    // The window stored only the recent message. A fresh replay says the
+    // stored messages are current, not that the thread is all there.
+    h.sync.ensure_thread("t1").await.unwrap();
+    assert_eq!(h.thread("t1").await.unwrap().message_count, 2);
 }
 
 #[tokio::test]

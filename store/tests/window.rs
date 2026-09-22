@@ -68,3 +68,20 @@ fn sweeping_removes_messages_from_older_generations() {
     );
     assert!(threads::get_thread(&conn, id, "t2").unwrap().is_none());
 }
+
+#[test]
+fn a_thread_the_sweep_trimmed_is_no_longer_whole() {
+    let (conn, id) = db();
+    messages::upsert_message(&conn, &meta(id, "old", "t1", 100, &[]), 1).unwrap();
+    messages::upsert_message(&conn, &meta(id, "new", "t1", 200, &["INBOX"]), 2).unwrap();
+    messages::refresh_thread(&conn, id, "t1").unwrap();
+    messages::mark_whole(&conn, id, "t1").unwrap();
+    assert!(messages::is_whole(&conn, id, "t1").unwrap());
+    // Refreshing the summary row keeps the mark.
+    messages::refresh_thread(&conn, id, "t1").unwrap();
+    assert!(messages::is_whole(&conn, id, "t1").unwrap());
+
+    window::sweep_stale(&conn, id, 2).unwrap();
+    assert!(!messages::is_whole(&conn, id, "t1").unwrap());
+    assert!(!messages::is_whole(&conn, id, "unknown").unwrap());
+}

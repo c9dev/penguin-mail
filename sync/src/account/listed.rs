@@ -143,6 +143,7 @@ impl<G: GmailApi> AccountSync<G> {
                         messages::upsert_message(c, meta, cursor.sync_gen)?;
                     }
                     messages::refresh_thread(c, account_id, &thread)?;
+                    messages::mark_whole(c, account_id, &thread)?;
                     Ok(true)
                 })
                 .await?;

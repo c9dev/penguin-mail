@@ -297,6 +297,25 @@ pub(crate) const NEWEST_FLAG_COLOR: &str = "SELECT f.color FROM messages m \
      CROSS JOIN flags f ON f.account_id = m.account_id AND f.message_id = m.id \
      WHERE m.account_id = ?1 AND m.thread_id = ?2 ORDER BY m.date DESC, m.id DESC LIMIT 1";
 
+/// Notes that the store holds every message Gmail has in the thread, as a
+/// fetch of the whole thread leaves it. History keeps it that way: it
+/// stores each message added later and drops each one deleted.
+pub fn mark_whole(conn: &Connection, account_id: AccountId, thread_id: &str) -> Result<()> {
+    conn.prepare_cached("UPDATE threads SET whole = 1 WHERE account_id = ?1 AND id = ?2")?
+        .execute(params![account_id, thread_id])?;
+    Ok(())
+}
+
+/// Whether the store holds the thread, all of it: false for a thread the
+/// store lacks or holds only the window's part of.
+pub fn is_whole(conn: &Connection, account_id: AccountId, thread_id: &str) -> Result<bool> {
+    Ok(conn
+        .prepare_cached("SELECT whole FROM threads WHERE account_id = ?1 AND id = ?2")?
+        .query_row(params![account_id, thread_id], |row| row.get(0))
+        .optional()?
+        .unwrap_or(false))
+}
+
 /// Recomputes a thread's summary row and label set from its messages, and
 /// deletes the thread when no messages remain.
 ///

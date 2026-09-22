@@ -27,6 +27,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- A conversation opened right after a sync shows its older replies too,
+  not only the recent messages kept on this computer.
 - Declining a rule the assistant proposed no longer leaves its new label
   behind in Gmail.
 - Mail archived in Gmail no longer stays in Penguin Mail's inbox when the

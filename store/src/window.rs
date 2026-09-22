@@ -47,6 +47,12 @@ pub fn sweep_stale(
         params![account_id, generation],
     )?;
     for thread in &threads {
+        // The sweep drops messages a new bootstrap did not reach, which
+        // Gmail may still have, so the thread is no longer known whole.
+        conn.execute(
+            "UPDATE threads SET whole = 0 WHERE account_id = ?1 AND id = ?2",
+            params![account_id, thread],
+        )?;
         refresh_thread(conn, account_id, thread)?;
     }
     Ok(threads)

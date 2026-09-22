@@ -297,6 +297,12 @@ CREATE TABLE drafts (
 );
 CREATE UNIQUE INDEX drafts_by_draft ON drafts(account_id, draft_id);
 "#,
+    // Whether the store holds every message of a thread. The window keeps
+    // messages by date, so a thread in it can lack its older replies, and
+    // opening one may trust the store only once a fetch brought it whole.
+    r#"
+ALTER TABLE threads ADD COLUMN whole INTEGER NOT NULL DEFAULT 0;
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,

@@ -24,10 +24,12 @@ enum Fetched {
 }
 
 impl<G: GmailApi> AccountSync<G> {
-    /// Whether the store already holds this thread and history has spoken
-    /// for the mailbox since. Gmail sends every change through history, so
-    /// a recent replay means the stored copy matches, and opening the
-    /// thread needs no round trip.
+    /// Whether the store already holds all of this thread and history has
+    /// spoken for the mailbox since. Gmail sends every change through
+    /// history, so a recent replay means the stored copy matches, and
+    /// opening the thread needs no round trip. A thread the window holds
+    /// only in part does not count: history speaks for the messages the
+    /// store has, not for older ones it never fetched.
     async fn stored_and_current(&self, thread_id: &str) -> Result<bool, SyncError> {
         let fresh = self
             .caught_up
@@ -38,11 +40,10 @@ impl<G: GmailApi> AccountSync<G> {
             return Ok(false);
         }
         let (account_id, thread) = (self.account_id, thread_id.to_string());
-        let stored = self
+        Ok(self
             .db
-            .read(move |c| messages::thread_messages(c, account_id, &thread))
-            .await?;
-        Ok(!stored.is_empty())
+            .read(move |c| messages::is_whole(c, account_id, &thread))
+            .await?)
     }
 
     /// Fetches every message of a thread, including ones older than the
@@ -112,6 +113,7 @@ impl<G: GmailApi> AccountSync<G> {
                             messages::upsert_message(c, meta, cursor.sync_gen)?;
                         }
                         messages::refresh_thread(c, account_id, &thread)?;
+                        messages::mark_whole(c, account_id, &thread)?;
                         let changed = messages::thread_messages(c, account_id, &thread)? != before;
                         Ok(Fetched::Written { changed })
                     }

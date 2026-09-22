@@ -145,6 +145,19 @@ fn version_fourteen(path: &std::path::Path) {
             protection           TEXT,
             PRIMARY KEY (account_id, message_id)
         );
+        CREATE TABLE threads (
+            account_id      INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            id              TEXT NOT NULL,
+            last_message_at INTEGER NOT NULL,
+            subject         TEXT NOT NULL,
+            snippet         TEXT NOT NULL,
+            from_display    TEXT NOT NULL,
+            message_count   INTEGER NOT NULL,
+            unread          INTEGER NOT NULL,
+            starred         INTEGER NOT NULL,
+            has_attachments INTEGER NOT NULL,
+            PRIMARY KEY (account_id, id)
+        );
         INSERT INTO accounts (id, email, added_at) VALUES (1, 'me@example.com', 0);
         INSERT INTO scheduled VALUES (1, 'r1', 'm1', 't1', 'Monday', 'Ann', 5000);
         PRAGMA user_version = 14;",
