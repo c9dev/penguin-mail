@@ -111,8 +111,9 @@ impl MainWindow {
         }
         match decision {
             Decision::Triage(action) => {
+                let action = MailAction::Triage(action);
                 self.follow_out(view, &action);
-                self.perform(targets, MailAction::Triage(action), History::Record, None);
+                self.perform(targets, action, History::Record, None);
             }
             Decision::Flag(on) => {
                 self.flag_targets(targets, on.then(|| self.settings().flag_color))
@@ -120,8 +121,8 @@ impl MainWindow {
             Decision::DeleteForever => self.confirm_delete_forever(view, targets),
             Decision::Cancel(Cancel::Scheduled) => self.cancel_scheduled(targets),
             Decision::Cancel(Cancel::Queued) => self.drop_queued(),
-            Decision::Cancel(Cancel::Reminder) => self.cancel_reminders(targets),
-            Decision::Cancel(Cancel::FollowUp) => self.dismiss_follow_ups(targets),
+            Decision::Cancel(Cancel::Reminder) => self.cancel_reminders(view, targets),
+            Decision::Cancel(Cancel::FollowUp) => self.dismiss_follow_ups(view, targets),
         }
     }
 }

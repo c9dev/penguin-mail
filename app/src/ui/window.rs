@@ -12,14 +12,12 @@ use base64::Engine;
 use gtk::{gio, glib};
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{
-    Account, AccountId, AccountState, ChangeEvent, Folder, Label, MessageBody, Target,
-    ThreadSummary, system_label,
+    Account, AccountId, AccountState, ChangeEvent, Label, MessageBody, Target, ThreadSummary,
+    system_label,
 };
 use mailrs_gmail::{CONTACTS_SCOPE, DELETE_SCOPE};
 use mailrs_store::{accounts, labels};
-use mailrs_sync::{
-    History, Listing, MailAction, Outcome, Permitted, Scope, TriageAction, View, outbox_id,
-};
+use mailrs_sync::{History, Listing, MailAction, Permitted, Scope, TriageAction, View, outbox_id};
 
 use super::contact_card;
 use super::conversation::{Action, ConversationView};
@@ -33,7 +31,9 @@ use crate::compose::{self, Draft, OutgoingAttachment, ReplyKind};
 use crate::core::Core;
 use crate::open_thread::OpenThread;
 use crate::settings::{Change, Effect, Effects, Settings};
+use aftermath::Cause;
 
+mod aftermath;
 mod arrange;
 mod assistant;
 mod attachments;
@@ -188,21 +188,6 @@ fn deleted_forever_message(count: usize, threaded: bool) -> String {
     }
 }
 
-/// Whether `action` takes the targets out of `mailbox`'s list.
-fn leaves_list(mailbox: &Mailbox, action: &TriageAction) -> bool {
-    let folder = mailbox.folder();
-    match action {
-        TriageAction::Archive => folder != Some(Folder::AllMail),
-        TriageAction::Trash => folder != Some(Folder::Trash),
-        TriageAction::Junk => folder != Some(Folder::Junk),
-        TriageAction::Untrash => folder == Some(Folder::Trash),
-        TriageAction::NotJunk => folder == Some(Folder::Junk),
-        TriageAction::Mute => folder != Some(Folder::AllMail) && !lists_muted(mailbox),
-        TriageAction::Unmute => lists_muted(mailbox),
-        _ => false,
-    }
-}
-
 /// What a row of the label popover says. The tick beside the name is the
 /// only sign that a label is already on the mail, so the name carries it.
 fn label_row_name(label: &str, applied: bool) -> String {
@@ -210,15 +195,6 @@ fn label_row_name(label: &str, applied: bool) -> String {
     match applied {
         true => fill(&gettext("{label}, on this mail"), &[("label", &shown)]),
         false => shown,
-    }
-}
-
-/// Whether `mailbox` is the Muted list, unified or for one account.
-fn lists_muted(mailbox: &Mailbox) -> bool {
-    match mailbox {
-        Mailbox::Unified(label) => *label == system_label::MUTE,
-        Mailbox::Label { label_id, .. } => label_id == system_label::MUTE,
-        _ => false,
     }
 }
 
@@ -1324,8 +1300,9 @@ impl MainWindow {
         if targets.is_empty() {
             return;
         }
+        let action = MailAction::Triage(action);
         self.follow_out(&view, &action);
-        self.perform(targets, MailAction::Triage(action), History::Record, None);
+        self.perform(targets, action, History::Record, None);
     }
 
     /// Mutes the targets, or unmutes them when they are muted already.
@@ -1337,42 +1314,11 @@ impl MainWindow {
         if reach.targets.is_empty() {
             return;
         }
-        let muted = !reach.muted;
-        self.follow_out(
-            &view,
-            &if muted {
-                TriageAction::Mute
-            } else {
-                TriageAction::Unmute
-            },
-        );
-        self.perform(
-            reach.targets,
-            MailAction::Mute { muted },
-            History::Record,
-            None,
-        );
-    }
-
-    /// Moves on once `action` takes the targets out of the mailbox on
-    /// screen: the main window goes to the next row, and a conversation in
-    /// a window of its own has nowhere to go, so the window closes.
-    fn follow_out(self: &Rc<Self>, view: &ConversationView, action: &TriageAction) {
-        if !leaves_list(&self.mailbox_of(view), action) {
-            return;
-        }
-        if view.detached() {
-            return view.close_detached();
-        }
-        let next = self.list.neighbour_of_selected();
-        self.conversation.clear();
-        self.list.unselect();
-        match next {
-            Some(next) => self
-                .list
-                .select(next.account_id, &next.id, next.message_id.as_deref()),
-            None => self.nav.set_show_content(false),
-        }
+        let action = MailAction::Mute {
+            muted: !reach.muted,
+        };
+        self.follow_out(&view, &action);
+        self.perform(reach.targets, action, History::Record, None);
     }
 
     /// Asks before erasing, because Gmail cannot bring the mail back and no
@@ -1409,7 +1355,6 @@ impl MainWindow {
     /// Undo, and a missing permission leaves every row where it is.
     fn delete_forever(self: &Rc<Self>, view: &Rc<ConversationView>, targets: Vec<Target>) {
         let account_id = targets[0].account_id;
-        let next = self.list.neighbour_of_selected();
         let (this, view) = (Rc::clone(self), Rc::clone(view));
         glib::spawn_future_local(async move {
             let actions = this.core.actions();
@@ -1427,25 +1372,7 @@ impl MainWindow {
                     ));
                 }
             };
-            if !outcome.done.is_empty() {
-                let kept = |row: &ThreadSummary| !outcome.done.contains(&Target::from_row(row));
-                if view.detached() {
-                    this.list.retain(kept);
-                    view.close_detached();
-                } else {
-                    this.conversation.clear();
-                    this.list.unselect();
-                    this.list.retain(kept);
-                    match next {
-                        Some(next) => {
-                            this.list
-                                .select(next.account_id, &next.id, next.message_id.as_deref())
-                        }
-                        None => this.nav.set_show_content(false),
-                    }
-                }
-                this.queue_refresh();
-            }
+            this.after_mail(Cause::Erased, &outcome, Some(&*view));
             if let Some(error) = outcome.first_error() {
                 return this.toast(error);
             }
@@ -1619,18 +1546,13 @@ impl MainWindow {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let outcome = this.core.act(targets, action.clone(), history).await;
-            this.show_changes(&action, &outcome);
+            this.after_mail(Cause::Did(&action, history), &outcome, None);
             if let Some(error) = outcome.first_error() {
                 return this.toast(error);
             }
             if history == History::Skip {
-                // Putting mail back can add rows to a Gmail folder, and
-                // only a fresh search shows them.
-                this.core.forget_remote();
-                this.reload_folder();
                 return;
             }
-            this.prune_folder(&outcome.done);
             let count = outcome.done.len();
             if let Some(done) =
                 message.or_else(|| done_message(&action, count, this.settings().threading))
@@ -1651,27 +1573,6 @@ impl MainWindow {
         });
     }
 
-    /// Updates what the store's change events do not cover: flag colours
-    /// and the Remind Me list.
-    fn show_changes(self: &Rc<Self>, action: &MailAction, outcome: &Outcome) {
-        if outcome.done.is_empty() {
-            return;
-        }
-        match action {
-            MailAction::Flag(color) => {
-                for view in self.views() {
-                    if view.read(|o| o.among(&outcome.done)) == Some(true) {
-                        view.set_flag_color(*color);
-                    }
-                }
-                self.queue_refresh();
-            }
-            MailAction::Remind { .. } | MailAction::CancelReminder => self.reminders_changed(),
-            MailAction::DismissFollowUp => self.follow_ups_changed(),
-            MailAction::Triage(_) | MailAction::Label { .. } | MailAction::Mute { .. } => {}
-        }
-    }
-
     /// Reverses the organizing action on top of the undo stack, whether
     /// the window or the assistant took it. The one before it is left for
     /// the next press.
@@ -1681,18 +1582,7 @@ impl MainWindow {
             let Some(undone) = this.core.undo().await else {
                 return this.toast(&gettext("Nothing to undo"));
             };
-            // Undo can put rows back into a Gmail folder, which only a
-            // fresh search shows. The store's own change events cover
-            // every other mailbox, so one reload is enough either way.
-            if this.mailbox.borrow().is_remote() {
-                this.core.forget_remote();
-                this.reload_folder();
-                this.refresh_counts();
-            } else {
-                this.queue_refresh();
-            }
-            this.refresh_flag_color();
-            this.reminders_changed();
+            this.after_mail(Cause::Undid, &undone.outcome, None);
             match undone.outcome.first_error() {
                 Some(error) => this.toast(error),
                 None => this.toast(&fill(
@@ -2803,35 +2693,6 @@ fn unique_path(dir: &std::path::Path, name: &str) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn the_muted_list_is_the_one_named_by_the_mute_label() {
-        assert!(lists_muted(&Mailbox::Unified(system_label::MUTE)));
-        assert!(lists_muted(&Mailbox::Label {
-            account_id: 1,
-            label_id: system_label::MUTE.into(),
-            name: "Muted".into(),
-        }));
-        assert!(!lists_muted(&Mailbox::Unified(system_label::INBOX)));
-        assert!(!lists_muted(&Mailbox::Reminders));
-    }
-
-    #[test]
-    fn mail_leaves_a_list_only_when_the_action_takes_it_out_of_that_mailbox() {
-        let inbox = Mailbox::Unified(system_label::INBOX);
-        let all_mail = Mailbox::Folder {
-            account_id: None,
-            folder: Folder::AllMail,
-        };
-        assert!(leaves_list(&inbox, &TriageAction::Archive));
-        assert!(!leaves_list(&all_mail, &TriageAction::Archive));
-        assert!(leaves_list(&all_mail, &TriageAction::Trash));
-        assert!(!leaves_list(&all_mail, &TriageAction::Mute));
-        assert!(leaves_list(
-            &Mailbox::Unified(system_label::MUTE),
-            &TriageAction::Unmute
-        ));
-    }
 
     #[test]
     fn a_mute_toast_counts_the_conversations_it_covers() {

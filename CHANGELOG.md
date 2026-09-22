@@ -9,6 +9,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - Penguin Mail masks email addresses in its log, so the system journal no
   longer holds the addresses of your accounts or the people you write to.
+- Cancel Reminder and dragging the open conversation onto a mailbox open
+  the next conversation, as Archive does.
 
 ### Fixed
 
@@ -16,6 +18,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   you did it there or in the main window.
 - A conversation you clicked just before switching inbox categories no
   longer opens in the new category.
+- Delete Forever no longer closes a conversation you opened while Gmail was
+  still deleting.
 - The Keyboard Shortcuts window lists Ctrl+J, which shows or hides the
   assistant.
 - A conversation in its own window decides whether Archive, Delete or Mute

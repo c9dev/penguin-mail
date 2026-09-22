@@ -11,6 +11,7 @@ use mailrs_sync::{History, MailAction};
 
 use super::{MainWindow, Target};
 use crate::ui::Mailbox;
+use crate::ui::conversation::ConversationView;
 use mailrs_domain::translate::{fill_plural, gettext};
 
 /// "2 sent messages have had no reply" with Review and close buttons.
@@ -92,7 +93,8 @@ impl MainWindow {
         let weak = Rc::downgrade(self);
         dismiss.connect_activate(move |_, _| {
             if let Some(win) = weak.upgrade() {
-                win.dismiss_follow_ups(win.reach(&win.conversation).targets);
+                let view = Rc::clone(&win.conversation);
+                win.dismiss_follow_ups(&view, win.reach(&view).targets);
             }
         });
         self.actions.add_action(&dismiss);
@@ -135,26 +137,19 @@ impl MainWindow {
         self.follow_follow_ups();
     }
 
-    /// Stops suggesting the targets. The mail itself stays where it is.
-    pub(super) fn dismiss_follow_ups(self: &Rc<Self>, targets: Vec<Target>) {
+    /// Stops suggesting the targets, which `view` reached. The mail itself
+    /// stays where it is.
+    pub(super) fn dismiss_follow_ups(
+        self: &Rc<Self>,
+        view: &ConversationView,
+        targets: Vec<Target>,
+    ) {
         if targets.is_empty() {
             return;
         }
-        let next = self.list.neighbour_of_selected();
-        self.conversation.clear();
-        self.list.unselect();
-        self.list.retain(|row| {
-            !targets
-                .iter()
-                .any(|t| t.account_id == row.account_id && t.thread_id == row.id)
-        });
-        match next {
-            Some(next) => self
-                .list
-                .select(next.account_id, &next.id, next.message_id.as_deref()),
-            None => self.nav.set_show_content(false),
-        }
-        self.perform(targets, MailAction::DismissFollowUp, History::Record, None);
+        let action = MailAction::DismissFollowUp;
+        self.follow_out(view, &action);
+        self.perform(targets, action, History::Record, None);
     }
 
     /// Refreshes counts, and the list when it shows Follow Up.

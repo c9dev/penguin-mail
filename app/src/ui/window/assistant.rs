@@ -149,9 +149,7 @@ impl Effects for Ports {
     }
 
     fn mail_changed(&self, action: &MailAction, outcome: &Outcome) {
-        self.0.show_changes(action, outcome);
-        self.0.prune_folder(&outcome.done);
-        self.0.queue_refresh();
+        self.0.mail_changed(action, outcome);
     }
 
     fn relist(&self) {

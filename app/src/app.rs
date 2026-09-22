@@ -956,7 +956,13 @@ impl App {
                 .reveal(account_id, thread_id, Reveal::Reply);
             return;
         };
-        let outcome = self.core.act(vec![target], action, History::Record).await;
+        let outcome = self
+            .core
+            .act(vec![target], action.clone(), History::Record)
+            .await;
+        if let Some(window) = self.window() {
+            window.mail_changed(&action, &outcome);
+        }
         if let Some(error) = outcome.first_error() {
             tracing::warn!(
                 error,

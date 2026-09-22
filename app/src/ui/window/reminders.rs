@@ -7,6 +7,7 @@ use mailrs_sync::{History, MailAction};
 
 use super::{MainWindow, Target};
 use crate::format::future_date;
+use crate::ui::conversation::ConversationView;
 use mailrs_domain::translate::{fill, gettext};
 
 impl MainWindow {
@@ -17,16 +18,11 @@ impl MainWindow {
             return;
         }
         let when = future_date(at, chrono::Local::now());
-        let next = self.list.neighbour_of_selected();
-        self.conversation.clear();
-        self.list.unselect();
-        if let Some(next) = next {
-            self.list
-                .select(next.account_id, &next.id, next.message_id.as_deref());
-        }
+        let action = MailAction::Remind { at };
+        self.follow_out(&self.conversation, &action);
         self.perform(
             targets,
-            MailAction::Remind { at },
+            action,
             History::Record,
             Some(fill(&gettext("Will remind you {when}"), &[("when", &when)])),
         );
@@ -51,13 +47,15 @@ impl MainWindow {
         });
     }
 
-    /// Cancels reminders and puts the conversations back in the inbox now.
-    pub(super) fn cancel_reminders(self: &Rc<Self>, targets: Vec<Target>) {
+    /// Cancels reminders on the targets, which `view` reached, and puts
+    /// the conversations back in the inbox now.
+    pub(super) fn cancel_reminders(self: &Rc<Self>, view: &ConversationView, targets: Vec<Target>) {
         if targets.is_empty() {
             return;
         }
-        self.conversation.clear();
-        self.perform(targets, MailAction::CancelReminder, History::Skip, None);
+        let action = MailAction::CancelReminder;
+        self.follow_out(view, &action);
+        self.perform(targets, action, History::Skip, None);
         self.toast(&gettext("Back in the Inbox"));
     }
 
