@@ -1,9 +1,11 @@
 //! Sending, drafts, search, attachments, and identity: calls the UI makes on
 //! demand rather than as part of the sync loop.
 
+use std::collections::BTreeSet;
+
 use mailrs_domain::{EpochMillis, Filter, MessageMeta, Vacation};
 use mailrs_gmail::{GmailError, MessageRef, SendAs, html_to_text};
-use mailrs_store::drafts;
+use mailrs_store::{drafts, messages};
 
 use super::AccountSync;
 use crate::{GmailApi, SavedDraft, SyncError};
@@ -90,6 +92,30 @@ impl<G: GmailApi> AccountSync<G> {
         }
         self.forget_draft(draft_id).await;
         Ok(())
+    }
+
+    /// Deletes the draft whose message is `message_id`, from Gmail and then
+    /// from the store, so the Drafts mailbox drops it now rather than at
+    /// the next history pass. Gmail deletes a draft for good, with no copy
+    /// in the Trash. Returns false when Gmail holds no such draft.
+    pub async fn discard_draft(&self, message_id: &str) -> Result<bool, SyncError> {
+        let Some(draft_id) = self.draft_id_for(message_id).await? else {
+            return Ok(false);
+        };
+        self.delete_draft(&draft_id).await?;
+        let (account_id, id) = (self.account_id, message_id.to_string());
+        let thread = self
+            .db
+            .write(move |c| {
+                let thread = messages::delete_message(c, account_id, &id)?;
+                if let Some(thread) = &thread {
+                    messages::refresh_thread(c, account_id, thread)?;
+                }
+                Ok(thread)
+            })
+            .await?;
+        self.emit_threads(thread.into_iter().collect::<BTreeSet<_>>());
+        Ok(true)
     }
 
     /// The draft backed by `message_id`, for reopening a draft in the

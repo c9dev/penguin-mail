@@ -27,7 +27,7 @@ use super::thread_list::{Picked, ThreadList};
 use super::{Mailbox, welcome};
 use crate::app::{App, Signature};
 use crate::assistant::ToolRequest;
-use crate::compose::{self, OutgoingAttachment, ReplyKind};
+use crate::compose::{self, ReplyKind};
 use crate::core::Core;
 use crate::open_thread::OpenThread;
 use crate::permission::{Occasion, Permission};
@@ -1704,20 +1704,11 @@ impl MainWindow {
                     .call(async move { s.attachment(&m, &attachment_id).await })
                     .await
                 {
-                    Ok(data) => draft.attachments.push(OutgoingAttachment {
-                        // An image the forwarded HTML shows keeps its id,
-                        // so the `cid:` in that HTML still finds it. One
-                        // the HTML never names travels as a file, which is
-                        // how it arrived.
-                        content_id: attachment.content_id.filter(|cid| {
-                            forwarded_html
-                                .as_deref()
-                                .is_some_and(|html| compose::refers_to_cid(html, cid))
-                        }),
-                        filename: attachment.filename,
-                        mime_type: attachment.mime_type,
+                    Ok(data) => draft.attachments.push(compose::forwarded_file(
+                        attachment,
                         data,
-                    }),
+                        forwarded_html.as_deref(),
+                    )),
                     Err(err) => this.toast(&with_reason(
                         &gettext("Could not include {file}: {reason}"),
                         &err,

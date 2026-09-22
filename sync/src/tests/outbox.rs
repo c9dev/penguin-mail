@@ -234,6 +234,33 @@ async fn a_draft_that_leaves_gmail_takes_its_pair_with_it() {
 }
 
 #[tokio::test]
+async fn a_discarded_draft_leaves_gmail_and_the_store() {
+    let h = harness().await;
+    let saved = h
+        .sync
+        .save_draft(b"never mind".to_vec(), None, None)
+        .await
+        .unwrap();
+    store_draft_message(&h, &saved.message_id).await;
+
+    assert!(h.sync.discard_draft(&saved.message_id).await.unwrap());
+    assert!(h.fake.with(|s| s.drafts.is_empty()), "Gmail holds no draft");
+    let (account_id, id) = (h.account_id, saved.message_id.clone());
+    let stored = h
+        .db
+        .read(move |c| messages::thread_id_of(c, account_id, &id))
+        .await
+        .unwrap();
+    assert_eq!(stored, None, "the Drafts mailbox drops it at once");
+    assert_eq!(stored_pair(&h, &saved.message_id).await, None);
+
+    assert!(
+        !h.sync.discard_draft(&saved.message_id).await.unwrap(),
+        "a draft already gone is nothing to discard"
+    );
+}
+
+#[tokio::test]
 async fn sending_from_a_draft_takes_its_pair_with_it() {
     let h = harness().await;
     let saved = h

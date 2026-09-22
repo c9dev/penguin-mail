@@ -312,6 +312,25 @@ pub fn refers_to_cid(html: &str, cid: &str) -> bool {
     })
 }
 
+/// A file of the message a forward carries, with the bytes fetched for it.
+/// An image the forwarded HTML shows keeps its id, so the `cid:` in that
+/// HTML still finds it. One the HTML never names travels as a file, which
+/// is how it arrived.
+pub fn forwarded_file(
+    found: mailrs_domain::Attachment,
+    data: Vec<u8>,
+    forwarded_html: Option<&str>,
+) -> OutgoingAttachment {
+    OutgoingAttachment {
+        content_id: found
+            .content_id
+            .filter(|cid| forwarded_html.is_some_and(|html| refers_to_cid(html, cid))),
+        filename: found.filename,
+        mime_type: found.mime_type,
+        data,
+    }
+}
+
 /// Plain text ready to render as Markdown: every character that Markdown
 /// reads as syntax is escaped, so a line of dashes stays a line of dashes
 /// and `*` keeps its asterisks.

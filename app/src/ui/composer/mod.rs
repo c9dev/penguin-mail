@@ -1051,7 +1051,7 @@ impl Composer {
         *self.asked_keys.borrow_mut() = asked.clone();
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let held = this.held(&asked.addresses).await;
+            let held = protection::held(&this.core, &asked.addresses).await;
             // The recipients moved on while the engines were answering.
             if *this.asked_keys.borrow() != asked {
                 return;
@@ -1066,35 +1066,6 @@ impl Composer {
             addresses: self.recipient_addresses(),
             blind: !self.bcc.is_empty(),
         }
-    }
-
-    /// What each engine holds for `addresses`. An engine this computer
-    /// does not have is asked nothing, and one that would not answer is
-    /// left out the same way, since a question nobody answered is not a
-    /// missing key.
-    async fn held(&self, addresses: &[String]) -> Held {
-        let mut held = Held::default();
-        if self.core.has_gpg() {
-            let wanted = addresses.to_vec();
-            match self.core.gpg(move |pgp| pgp.keys_for(&wanted)).await {
-                Ok(keys) => held.pgp = Some(keys),
-                Err(err) => tracing::info!(error = %err, "could not ask gpg about the addresses"),
-            }
-        }
-        if self.core.has_gpgsm() {
-            let wanted = addresses.to_vec();
-            match self
-                .core
-                .gpgsm(move |smime| smime.certificates_for(&wanted))
-                .await
-            {
-                Ok(certificates) => held.smime = Some(certificates),
-                Err(err) => {
-                    tracing::info!(error = %err, "could not ask gpgsm about the addresses")
-                }
-            }
-        }
-        held
     }
 
     /// Offers encryption when one of the standards can do it, and says
@@ -1125,22 +1096,11 @@ impl Composer {
         let Some(identity) = self.identity() else {
             return;
         };
-        let from = vec![identity.address.email.to_lowercase()];
+        let from = identity.address.email.clone();
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let mut held = this.held(&from).await;
-            // Signing needs a secret key. Only gpgsm is asked for one
-            // outright: gpg lists a key of the person's own whichever half
-            // the question was about.
-            if this.core.has_gpgsm() {
-                let wanted = from.clone();
-                held.smime = this
-                    .core
-                    .gpgsm(move |smime| smime.signing_certificates(&wanted))
-                    .await
-                    .ok();
-            }
-            this.signing_with.set(protection::signing(&held));
+            let standard = protection::signing_for(&this.core, &from).await;
+            this.signing_with.set(standard);
         });
     }
 
@@ -1345,10 +1305,6 @@ impl Composer {
     /// went out. `protection::draft` says how, and how it comes back.
     fn save_draft(self: &Rc<Self>, then_close: bool) {
         let Some(draft) = self.collect() else { return };
-        let Some(account) = self.core.account(draft.account_id) else {
-            return self.toast(&gettext("That account is not connected."));
-        };
-        let (date, message_id) = (now_secs(), new_message_id(&draft.from.email));
         let secret = self.secret.get() || draft.encrypt;
         // The recipients choose the standard of an encrypted message, and
         // the writer's own holdings that of one they cannot encrypt yet.
@@ -1358,33 +1314,9 @@ impl Composer {
         };
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let raw = match secret {
-                true => {
-                    let mut kept = draft.clone();
-                    kept.encrypt = true;
-                    protection::draft::sealed(&this.core, &kept, standard, date, &message_id).await
-                }
-                false => build_mime(&draft, date, &message_id)
-                    .map_err(|err| fill(&gettext("Could not save: {reason}"), &[("reason", &err)])),
-            };
-            let raw = match raw {
-                Ok(raw) => raw,
-                Err(problem) => return this.toast(&problem),
-            };
-            let (thread, draft_id) = (draft.thread_id.clone(), draft.draft_id.clone());
-            match this
-                .core
-                .call(async move { account.save_draft(raw, thread, draft_id).await })
-                .await
-            {
+            match protection::draft::save(&this.core, &draft, secret, standard).await {
                 Ok(saved) => {
-                    this.base.borrow_mut().draft_id = Some(saved.draft_id.clone());
-                    let (outbox, account_id) = (this.core.outbox(), draft.account_id);
-                    this.core.spawn(async move {
-                        if let Err(err) = outbox.draft_saved(account_id, saved).await {
-                            tracing::warn!(error = %err, "could not update the store");
-                        }
-                    });
+                    this.base.borrow_mut().draft_id = Some(saved.draft_id);
                     this.dirty.set(false);
                     if then_close {
                         this.closing.set(true);
@@ -1394,9 +1326,8 @@ impl Composer {
                     } else {
                         this.toast(&gettext("Draft saved"));
                     }
-                    this.core.poke(draft.account_id);
                 }
-                Err(err) => this.failed(&gettext("Draft not saved: {reason}"), &err),
+                Err(problem) => this.toast(&problem),
             }
         });
     }

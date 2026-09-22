@@ -19,10 +19,11 @@
 //! opens either kind.
 
 use mail_parser::MessageParser;
-use mailrs_domain::translate::{fill, gettext};
+use mailrs_domain::translate::{fill, gettext, with_reason};
 use mailrs_domain::{Address, MessageBody};
 use mailrs_pgp::{Pgp, PgpError, Readers};
 use mailrs_smime::{Smime, SmimeError};
+use mailrs_sync::{SavedDraft, now_millis};
 
 use super::{Read, Standard, find, param, unfolded};
 use crate::compose::{self, Draft, OutgoingAttachment};
@@ -125,6 +126,46 @@ pub async fn sealed(
         ),
         &[("address", &draft.from.email)],
     ))
+}
+
+/// Saves `draft` into Gmail's Drafts and gives back where Gmail keeps it.
+/// With `secret`, the body goes in encrypted to the writer, trying
+/// `standard` first, as [`sealed`] says; otherwise it goes in readable.
+/// The composer's Save Draft and the assistant's edit of a draft both come
+/// through here. The error is what to tell the writer.
+pub async fn save(
+    core: &Core,
+    draft: &Draft,
+    secret: bool,
+    standard: Standard,
+) -> Result<SavedDraft, String> {
+    let Some(account) = core.account(draft.account_id) else {
+        return Err(gettext("That account is not connected."));
+    };
+    let (date, message_id) = (now_millis() / 1000, compose::new_message_id(&draft.from.email));
+    let raw = match secret {
+        true => {
+            let mut kept = draft.clone();
+            kept.encrypt = true;
+            sealed(core, &kept, standard, date, &message_id).await?
+        }
+        false => compose::build_mime(draft, date, &message_id)
+            .map_err(|err| fill(&gettext("Could not save: {reason}"), &[("reason", &err)]))?,
+    };
+    let (thread, draft_id) = (draft.thread_id.clone(), draft.draft_id.clone());
+    let saved = core
+        .call(async move { account.save_draft(raw, thread, draft_id).await })
+        .await
+        .map_err(|err| with_reason(&gettext("Draft not saved: {reason}"), &err, &[]))?;
+    // A Send Later message waiting on this draft now names its new message.
+    let (outbox, account_id, kept) = (core.outbox(), draft.account_id, saved.clone());
+    core.spawn(async move {
+        if let Err(err) = outbox.draft_saved(account_id, kept).await {
+            tracing::warn!(error = %err, "could not update the store");
+        }
+    });
+    core.poke(draft.account_id);
+    Ok(saved)
 }
 
 /// Which engine opens `raw`, going by the wrapper around its body.
