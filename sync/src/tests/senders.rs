@@ -1,4 +1,5 @@
-//! What the app does about one sender: Categorize Sender.
+//! What the app does about one sender: Categorize Sender, and leaving
+//! their mailing list.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -6,10 +7,62 @@ use std::sync::Arc;
 use mailrs_domain::{
     Address, Category, Filter, FilterAction, FilterCriteria, MessageMeta, system_label,
 };
+use mailrs_gmail::GmailError;
 
 use super::{Connected, Harness, harness};
 use crate::fake::meta;
-use crate::{MailActions, Permitted, now_millis};
+use crate::unsubscribe::choose;
+use crate::{Leave, MailActions, Permitted, SyncError, Unsubscribe, now_millis};
+
+#[tokio::test]
+async fn a_one_click_list_hears_from_the_app_at_once() {
+    let h = harness().await;
+    let url = "https://news.example/u/1";
+    let how = choose(&format!("<{url}>"), true).unwrap();
+
+    let left = actions(&h).unsubscribe(h.account_id, how).await.unwrap();
+    assert_eq!(left, Leave::Done);
+    assert_eq!(h.fake.with(|s| s.unsubscribed.clone()), [url]);
+}
+
+#[tokio::test]
+async fn a_one_click_list_that_refuses_says_so() {
+    let h = harness().await;
+    h.fake.fail_next(GmailError::Http {
+        status: 500,
+        body: String::new(),
+    });
+    let how = Unsubscribe::OneClick("https://news.example/u/1".into());
+
+    let err = actions(&h).unsubscribe(h.account_id, how.clone()).await;
+    assert!(err.is_err());
+    assert!(h.fake.with(|s| s.unsubscribed.is_empty()));
+    let nobody = actions(&h).unsubscribe(99, how).await;
+    assert!(matches!(nobody, Err(SyncError::UnknownAccount(99))));
+}
+
+#[tokio::test]
+async fn a_request_by_mail_or_a_page_is_left_to_the_app() {
+    let h = harness().await;
+    let by_mail = choose("<mailto:leave@news.example?subject=Remove%20me>", true).unwrap();
+    let left = actions(&h)
+        .unsubscribe(h.account_id, by_mail)
+        .await
+        .unwrap();
+    assert_eq!(
+        left,
+        Leave::Send {
+            to: "leave@news.example".into(),
+            subject: "Remove me".into(),
+            body: "unsubscribe".into(),
+        }
+    );
+
+    let page = choose("<http://news.example/u>", true).unwrap();
+    let left = actions(&h).unsubscribe(h.account_id, page).await.unwrap();
+    assert_eq!(left, Leave::Open("http://news.example/u".into()));
+    assert!(h.fake.with(|s| s.unsubscribed.is_empty()), "nothing posted");
+}
 
 fn actions(h: &Harness) -> MailActions<Connected> {
     let connected = HashMap::from([(h.account_id, Arc::clone(&h.sync))]);

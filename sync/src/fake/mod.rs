@@ -76,6 +76,8 @@ pub struct FakeState {
     /// Filters made so far. Gmail never hands a deleted filter's id to a
     /// new one, so ids count up from this rather than from the list.
     pub filters_made: usize,
+    /// The one-click unsubscribe URLs posted to, oldest first.
+    pub unsubscribed: Vec<String>,
     /// The account's contacts, in the order the People API would list
     /// them. A fake with none answers an empty address book.
     pub contacts: Vec<Person>,
@@ -200,6 +202,7 @@ impl FakeGmail {
                 vacation: Vacation::default(),
                 filters: Vec::new(),
                 filters_made: 0,
+                unsubscribed: Vec::new(),
                 contacts: Vec::new(),
                 photos: HashMap::new(),
                 calendar: HashMap::new(),
@@ -892,6 +895,18 @@ impl GmailApi for FakeGmail {
             s.filters.push(created.clone());
             created
         }))
+    }
+
+    async fn one_click_unsubscribe(&self, url: &str) -> Result<(), GmailError> {
+        // The list's server is not Gmail, so nothing counts against the
+        // quota, but a test can still make the post fail.
+        self.with(|s| match s.failures.pop_front() {
+            Some(err) => Err(err),
+            None => {
+                s.unsubscribed.push(url.to_string());
+                Ok(())
+            }
+        })
     }
 
     async fn delete_filter(&self, id: &str) -> Result<(), GmailError> {

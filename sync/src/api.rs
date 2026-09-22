@@ -135,6 +135,15 @@ pub trait GmailApi: Send + Sync + 'static {
 
     fn delete_filter(&self, id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
 
+    /// Asks a mailing list to take the account off it, with the RFC 8058
+    /// one-click POST to `url`. The request goes to the list's own server
+    /// rather than to Gmail. It sits here so a fake can stand in for it,
+    /// and so the demo never posts to an address in its sample mail.
+    fn one_click_unsubscribe(
+        &self,
+        url: &str,
+    ) -> impl Future<Output = Result<(), GmailError>> + Send;
+
     fn create_label(
         &self,
         name: &str,
@@ -355,6 +364,9 @@ impl GmailApi for AnyGmail {
     }
     async fn delete_filter(&self, id: &str) -> Result<(), GmailError> {
         forward!(self, delete_filter(id))
+    }
+    async fn one_click_unsubscribe(&self, url: &str) -> Result<(), GmailError> {
+        forward!(self, one_click_unsubscribe(url))
     }
     async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {
         forward!(self, create_label(name))
@@ -700,6 +712,10 @@ impl GmailApi for AccountClient {
 
     async fn delete_filter(&self, id: &str) -> Result<(), GmailError> {
         self.client.delete_filter(id).await
+    }
+
+    async fn one_click_unsubscribe(&self, url: &str) -> Result<(), GmailError> {
+        mailrs_gmail::one_click_unsubscribe(url).await
     }
 
     async fn raw_message(&self, id: &str) -> Result<Vec<u8>, GmailError> {

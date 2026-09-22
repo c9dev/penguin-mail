@@ -202,8 +202,8 @@ pub struct Undone {
 }
 
 pub struct MailActions<A: Accounts> {
-    accounts: Arc<A>,
-    db: Db,
+    pub(crate) accounts: Arc<A>,
+    pub(crate) db: Db,
     /// The recorded actions, oldest first. Undo takes from the end.
     stack: Mutex<VecDeque<Undo>>,
 }

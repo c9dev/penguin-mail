@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gio, glib};
-use mailrs_sync::{History, MailAction, Permitted, TriageAction};
+use mailrs_sync::{History, Leave, MailAction, Permitted, TriageAction};
 
 use super::MainWindow;
 use crate::compose::Draft;
@@ -86,20 +86,24 @@ impl MainWindow {
         });
     }
 
-    /// Leaves a mailing list the way `how` says, from the account. The
-    /// Unsubscribe button and the assistant both end here.
+    /// Leaves a mailing list the way `how` says, from the account, and
+    /// does what `mailrs_sync` leaves to the app: sending the request or
+    /// opening the page. The Unsubscribe button and the assistant both end
+    /// here.
     pub(super) async fn leave_list(
         self: &Rc<Self>,
         account_id: mailrs_domain::AccountId,
         how: Unsubscribe,
     ) -> Result<(), String> {
-        match how {
-            Unsubscribe::OneClick(url) => self
-                .core
-                .call(async move { mailrs_gmail::one_click_unsubscribe(&url).await })
-                .await
-                .map_err(|e| e.to_string()),
-            Unsubscribe::Email { to, subject, body } => {
+        let actions = self.core.actions();
+        let leave = self
+            .core
+            .call(async move { actions.unsubscribe(account_id, how).await })
+            .await
+            .map_err(|e| e.to_string())?;
+        match leave {
+            Leave::Done => Ok(()),
+            Leave::Send { to, subject, body } => {
                 let app = self
                     .app
                     .upgrade()
@@ -111,7 +115,7 @@ impl MainWindow {
                 app.send_immediately(draft);
                 Ok(())
             }
-            Unsubscribe::Page(url) => {
+            Leave::Open(url) => {
                 gtk::UriLauncher::new(&url).launch(
                     Some(&self.window),
                     gio::Cancellable::NONE,

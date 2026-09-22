@@ -283,6 +283,11 @@ impl<G: GmailApi> AccountSync<G> {
         }
     }
 
+    /// Posts RFC 8058's one-click request to a mailing list's `url`.
+    pub async fn one_click_unsubscribe(&self, url: &str) -> Result<(), SyncError> {
+        Ok(self.api.one_click_unsubscribe(url).await?)
+    }
+
     pub async fn vacation(&self) -> Result<Vacation, SyncError> {
         Ok(self.api.vacation().await?)
     }

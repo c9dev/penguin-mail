@@ -16,6 +16,7 @@ pub mod mailbox;
 pub mod outbox;
 mod settings;
 mod triage;
+pub mod unsubscribe;
 
 /// An in-memory Gmail. Sync's own tests always have it; anyone else asks
 /// for the `fake` feature, as `penguin-mail` does for `--demo`.
@@ -55,6 +56,7 @@ pub use settings::{
     AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, HiddenFilters, Permitted,
 };
 pub use triage::TriageAction;
+pub use unsubscribe::{Leave, Unsubscribe};
 
 use mailrs_domain::EpochMillis;
 

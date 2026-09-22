@@ -1870,7 +1870,7 @@ msgstr "Adicionar"
 #: app/src/ui/window/arrange.rs:149 app/src/ui/window/images.rs:101
 #: app/src/ui/window/organize.rs:80 app/src/ui/window/organize.rs:131
 #: app/src/ui/window/organize.rs:174 app/src/ui/window/senders.rs:61
-#: app/src/ui/window/senders.rs:153
+#: app/src/ui/window/senders.rs:157
 msgid "Cancel"
 msgstr "Cancelar"
 
@@ -2977,7 +2977,7 @@ msgid "Allow Hide My Email"
 msgstr "Permitir Ocultar o meu e-mail"
 
 #: app/src/ui/hide_my_email.rs:298 app/src/ui/rules.rs:236
-#: app/src/ui/window/senders.rs:202
+#: app/src/ui/window/senders.rs:206
 msgid ""
 "Penguin Mail needs permission to change Gmail settings for {account}. Google "
 "asks you to confirm in your browser."
@@ -2987,7 +2987,7 @@ msgstr ""
 
 #: app/src/ui/hide_my_email.rs:305 app/src/ui/rules.rs:243
 #: app/src/ui/vacation.rs:96 app/src/ui/window.rs:1548
-#: app/src/ui/window.rs:1625 app/src/ui/window/senders.rs:210
+#: app/src/ui/window.rs:1625 app/src/ui/window/senders.rs:214
 msgid "Grant Access"
 msgstr "Conceder acesso"
 
@@ -3079,7 +3079,7 @@ msgstr "Abrir as Definições"
 
 #: app/src/ui/invitation.rs:276 app/src/ui/window.rs:1547
 #: app/src/ui/window.rs:1579 app/src/ui/window.rs:1624
-#: app/src/ui/window/senders.rs:209
+#: app/src/ui/window/senders.rs:213
 msgid "Not Now"
 msgstr "Agora não"
 
@@ -4765,7 +4765,7 @@ msgstr "Abra primeiro uma conversa"
 #: app/src/ui/window/detached.rs:215 app/src/ui/window/export.rs:83
 #: app/src/ui/window/organize.rs:96 app/src/ui/window/organize.rs:147
 #: app/src/ui/window/organize.rs:185 app/src/ui/window/organize.rs:223
-#: app/src/ui/window/senders.rs:162
+#: app/src/ui/window/senders.rs:166
 msgid "That account is not connected"
 msgstr "Essa conta não está ligada"
 
@@ -5124,19 +5124,19 @@ msgstr "Subscrição de {sender} cancelada"
 msgid "Could not unsubscribe: {reason}"
 msgstr "Não foi possível cancelar a subscrição: {reason}"
 
-#: app/src/ui/window/senders.rs:109
+#: app/src/ui/window/senders.rs:113
 msgid "The app is closing."
 msgstr "A aplicação está a fechar."
 
-#: app/src/ui/window/senders.rs:137
+#: app/src/ui/window/senders.rs:141
 msgid "Open a message from the sender to block"
 msgstr "Abra uma mensagem do remetente a bloquear"
 
-#: app/src/ui/window/senders.rs:142
+#: app/src/ui/window/senders.rs:146
 msgid "Block {sender}?"
 msgstr "Bloquear {sender}?"
 
-#: app/src/ui/window/senders.rs:147
+#: app/src/ui/window/senders.rs:151
 msgid ""
 "New mail from {email} goes straight to the Trash. This conversation moves "
 "there now. Remove the rule under Rules to unblock."
@@ -5144,19 +5144,19 @@ msgstr ""
 "O correio novo de {email} vai direto para o lixo. Esta conversa muda para lá "
 "agora. Remova a regra em Regras para desbloquear."
 
-#: app/src/ui/window/senders.rs:153
+#: app/src/ui/window/senders.rs:157
 msgid "Block"
 msgstr "Bloquear"
 
-#: app/src/ui/window/senders.rs:180
+#: app/src/ui/window/senders.rs:184
 msgid "Blocked {sender}"
 msgstr "{sender} bloqueado"
 
-#: app/src/ui/window/senders.rs:185
+#: app/src/ui/window/senders.rs:189
 msgid "Could not block the sender: {reason}"
 msgstr "Não foi possível bloquear o remetente: {reason}"
 
-#: app/src/ui/window/senders.rs:199
+#: app/src/ui/window/senders.rs:203
 msgid "Allow Changes to Gmail Settings"
 msgstr "Permitir alterações às definições do Gmail"
 
