@@ -2266,7 +2266,7 @@ msgstr ""
 #: app/src/ui/composer/mod.rs:1396 app/src/ui/composer/mod.rs:1815
 #: app/src/ui/composer/mod.rs:2277 app/src/ui/confirm.rs:29
 #: app/src/ui/smart_editor.rs:150 app/src/ui/templates.rs:239
-#: app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
+#: app/src/ui/unsubscribe.rs:95 app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
 #: app/src/ui/window/arrange.rs:132 app/src/ui/window/images.rs:101
 #: app/src/ui/window/organize.rs:81 app/src/ui/window/organize.rs:129
 msgid "Cancel"
@@ -3046,7 +3046,7 @@ msgstr ""
 msgid "This message is from a mailing list"
 msgstr ""
 
-#: app/src/ui/conversation.rs:184 app/src/ui/window/senders.rs:58
+#: app/src/ui/conversation.rs:184 app/src/ui/unsubscribe.rs:96
 msgid "Unsubscribe"
 msgstr ""
 
@@ -3560,31 +3560,31 @@ msgstr ""
 msgid "This meeting is canceled"
 msgstr ""
 
-#: app/src/ui/mod.rs:140
+#: app/src/ui/mod.rs:141
 msgid "Gray"
 msgstr ""
 
-#: app/src/ui/mod.rs:154 app/src/ui/sidebar.rs:474
+#: app/src/ui/mod.rs:155 app/src/ui/sidebar.rs:474
 msgid "Inbox"
 msgstr ""
 
-#: app/src/ui/mod.rs:155
+#: app/src/ui/mod.rs:156
 msgid "Flagged"
 msgstr ""
 
-#: app/src/ui/mod.rs:156
+#: app/src/ui/mod.rs:157
 msgid "Sent"
 msgstr ""
 
-#: app/src/ui/mod.rs:157
+#: app/src/ui/mod.rs:158
 msgid "Drafts"
 msgstr ""
 
-#: app/src/ui/mod.rs:158 app/src/ui/thread_row.rs:82 app/src/ui/window.rs:240
+#: app/src/ui/mod.rs:159 app/src/ui/thread_row.rs:82 app/src/ui/window.rs:240
 msgid "Muted"
 msgstr ""
 
-#: app/src/ui/mod.rs:159 app/src/ui/thread_list.rs:250
+#: app/src/ui/mod.rs:160 app/src/ui/thread_list.rs:250
 msgid "Mail"
 msgstr ""
 
@@ -4400,6 +4400,86 @@ msgstr ""
 msgid "Show Translation"
 msgstr ""
 
+#: app/src/ui/unsubscribe.rs:169
+msgid "Unsubscribe from {count} list?"
+msgid_plural "Unsubscribe from {count} lists?"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/ui/unsubscribe.rs:184
+msgid "Loading a page tells the sender you acted, as opening it yourself does."
+msgstr ""
+
+#: app/src/ui/unsubscribe.rs:190
+msgid "Reading the page…"
+msgstr ""
+
+#: app/src/ui/unsubscribe.rs:191
+msgid "ask the sender to take you off the list"
+msgstr ""
+
+#: app/src/ui/unsubscribe.rs:193
+msgid "send a request from {address}"
+msgstr ""
+
+#: app/src/ui/unsubscribe.rs:205
+msgid "nothing: the page says you are off the list already"
+msgstr ""
+
+#: app/src/ui/unsubscribe.rs:206
+msgid "open the page in the browser"
+msgstr ""
+
+#: app/src/ui/unsubscribe.rs:219
+msgid "press “{button}” on {site} with {address}, all emails"
+msgstr ""
+
+#: app/src/ui/unsubscribe.rs:223
+msgid "press “{button}” on {site} with {address}"
+msgstr ""
+
+#: app/src/ui/unsubscribe.rs:226
+msgid "press “{button}” on {site}, all emails"
+msgstr ""
+
+#: app/src/ui/unsubscribe.rs:227
+msgid "press “{button}” on {site}"
+msgstr ""
+
+#: app/src/ui/unsubscribe.rs:237
+msgid "Unsubscribed from {sender}"
+msgstr ""
+
+#: app/src/ui/unsubscribe.rs:238
+msgid "Sent, but the page did not say it worked"
+msgstr ""
+
+#: app/src/ui/unsubscribe.rs:239
+msgid "The page needs you to finish it"
+msgstr ""
+
+#: app/src/ui/unsubscribe.rs:241
+msgid "Could not unsubscribe from {sender}: {reason}"
+msgstr ""
+
+#: app/src/ui/unsubscribe.rs:253
+msgid "Unsubscribed from {count} list"
+msgid_plural "Unsubscribed from {count} lists"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/ui/unsubscribe.rs:259
+msgid "{count} list needs you"
+msgid_plural "{count} lists need you"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/ui/unsubscribe.rs:265
+msgid "Unsubscribed from {done}. {count} needs you"
+msgid_plural "Unsubscribed from {done}. {count} need you"
+msgstr[0] ""
+msgstr[1] ""
+
 #: app/src/ui/vacation.rs:58
 msgid "Automatic Reply"
 msgstr ""
@@ -4941,7 +5021,7 @@ msgstr ""
 #: app/src/ui/window/detached.rs:137 app/src/ui/window/export.rs:85
 #: app/src/ui/window/organize.rs:97 app/src/ui/window/organize.rs:145
 #: app/src/ui/window/organize.rs:174 app/src/ui/window/organize.rs:209
-#: app/src/ui/window/senders.rs:146
+#: app/src/ui/window/senders.rs:229
 msgid "That account is not connected"
 msgstr ""
 
@@ -5269,49 +5349,45 @@ msgid ""
 "open for you to save."
 msgstr ""
 
-#: app/src/ui/window/senders.rs:34
+#: app/src/ui/window/senders.rs:52
 msgid "This message has no unsubscribe link"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:38
+#: app/src/ui/window/senders.rs:56
 msgid "This message's unsubscribe link is not one Penguin Mail can use"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:75
-msgid "Unsubscribed from {sender}"
+#: app/src/ui/window/senders.rs:153
+msgid "Open Page"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:79
-msgid "Could not unsubscribe: {reason}"
-msgstr ""
-
-#: app/src/ui/window/senders.rs:105
+#: app/src/ui/window/senders.rs:192
 msgid "The app is closing."
 msgstr ""
 
-#: app/src/ui/window/senders.rs:125
+#: app/src/ui/window/senders.rs:208
 msgid "Open a message from the sender to block"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:129
+#: app/src/ui/window/senders.rs:212
 msgid "Block {sender}?"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:132
+#: app/src/ui/window/senders.rs:215
 msgid ""
 "New mail from {email} goes straight to the Trash. This conversation moves "
 "there now. Remove the rule under Rules to unblock."
 msgstr ""
 
-#: app/src/ui/window/senders.rs:137
+#: app/src/ui/window/senders.rs:220
 msgid "Block"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:164
+#: app/src/ui/window/senders.rs:247
 msgid "Blocked {sender}"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:170
+#: app/src/ui/window/senders.rs:253
 msgid "Could not block the sender: {reason}"
 msgstr ""
 

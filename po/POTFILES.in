@@ -65,6 +65,7 @@ app/src/ui/templates.rs
 app/src/ui/thread_list.rs
 app/src/ui/thread_row.rs
 app/src/ui/translation.rs
+app/src/ui/unsubscribe.rs
 app/src/ui/vacation.rs
 app/src/ui/welcome.rs
 app/src/ui/when.rs

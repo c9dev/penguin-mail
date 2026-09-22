@@ -53,12 +53,6 @@ impl Confirm {
         self
     }
 
-    /// Makes Enter press the verb.
-    pub fn by_default(self) -> Self {
-        self.dialog.set_default_response(Some(GO));
-        self
-    }
-
     /// Shows the question over `parent`. True when the person chose the
     /// verb.
     pub async fn ask(self, parent: &impl IsA<gtk::Widget>) -> bool {

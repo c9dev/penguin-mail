@@ -25,6 +25,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Unsubscribe fills in and sends a newsletter's own unsubscribe page,
+  after you confirm what it will press. A page it cannot read still opens
+  in your browser.
 - The assistant can send a message waiting in Send Later or the Outbox
   now, cancel it, give it a new time, or delete it from the Outbox.
 - The assistant lists your reminders and can move or cancel one.

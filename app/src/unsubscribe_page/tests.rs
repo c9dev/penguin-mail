@@ -259,6 +259,15 @@ async fn a_page_the_rules_read_is_submitted_once_the_person_says_yes() {
 }
 
 #[tokio::test]
+async fn what_the_button_says_comes_back_for_the_confirmation_to_name() {
+    let prepared = prepare(&browser(ONE_BUTTON), None, URL, ME).await;
+    assert_eq!(prepared.button, "Unsubscribe");
+    // A page nobody can press has no button to name.
+    let prepared = prepare(&browser(TOPICS), None, URL, ME).await;
+    assert!(prepared.button.is_empty());
+}
+
+#[tokio::test]
 async fn a_page_that_says_nothing_after_the_form_went_in_is_unclear() {
     let browser = browser(ONE_BUTTON);
     let prepared = prepare(&browser, None, URL, ME).await;

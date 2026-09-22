@@ -22,11 +22,6 @@
 //! the assistant's answer, and whoever shows it writes it out through
 //! `translate`.
 
-// The window, the assistant and the WebKit adapter reach this module in
-// the steps that follow; until they do, the compiler sees its types and
-// its re-exports as unused.
-#![allow(dead_code)]
-
 use serde::{Deserialize, Serialize};
 
 mod adviser;
@@ -40,14 +35,15 @@ pub mod fake;
 #[cfg(test)]
 mod tests;
 
-#[allow(unused_imports)]
-pub use adviser::{ModelAdviser, model_adviser};
-#[allow(unused_imports)]
-pub use rules::{pick, says_done, valid};
-#[allow(unused_imports)]
+pub use adviser::model_adviser;
 pub use run::{Adviser, Answer, Browser, Prepared, Step, finish, prepare};
-#[allow(unused_imports)]
 pub use self::webkit::WebkitBrowser;
+// The run is what the window and the assistant use, and the rules under
+// it answer to nobody else. The tests reach past the run on purpose: the
+// GTK one puts a real page through the extraction script and then asks
+// the rules what they make of it.
+#[cfg(test)]
+pub use rules::{pick, says_done, valid};
 
 /// A page as the extraction script reports it. Every id in it is the
 /// script's own, unique across the page, and a [`Plan`] names nothing

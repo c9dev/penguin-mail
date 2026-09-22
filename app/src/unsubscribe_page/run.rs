@@ -39,6 +39,9 @@ pub struct Prepared {
     /// The address the newsletter was sent to, and the only text that
     /// will be typed into the page.
     pub address: String,
+    /// What the button about to be pressed says, so the confirmation can
+    /// name it. Empty when nothing will be pressed.
+    pub button: String,
     pub step: Step,
 }
 
@@ -68,6 +71,7 @@ pub async fn prepare(
             return Prepared {
                 url: url.to_string(),
                 address: address.to_string(),
+                button: String::new(),
                 step: Step::Browser(url.to_string()),
             };
         }
@@ -82,10 +86,27 @@ pub async fn prepare(
         },
     };
     Prepared {
-        url: page.url,
         address: address.to_string(),
+        button: pressed(&page, &step),
+        url: page.url,
         step,
     }
+}
+
+/// What the button the plan presses says. A page whose ids the plan does
+/// not hold cannot happen, since every plan has been through
+/// [`rules::valid`] or was written from this page, but an empty label
+/// leaves the confirmation naming the site rather than guessing.
+fn pressed(page: &PageForm, step: &Step) -> String {
+    let Step::Submit(plan) = step else {
+        return String::new();
+    };
+    page.forms
+        .iter()
+        .find(|form| form.id == plan.form)
+        .and_then(|form| form.buttons.iter().find(|button| button.id == plan.press))
+        .map(|button| button.label.clone())
+        .unwrap_or_default()
 }
 
 /// Submits what [`prepare`] worked out and says how it ended. The page

@@ -2364,7 +2364,7 @@ msgstr "Adicionar"
 #: app/src/ui/composer/mod.rs:1396 app/src/ui/composer/mod.rs:1815
 #: app/src/ui/composer/mod.rs:2277 app/src/ui/confirm.rs:29
 #: app/src/ui/smart_editor.rs:150 app/src/ui/templates.rs:239
-#: app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
+#: app/src/ui/unsubscribe.rs:95 app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
 #: app/src/ui/window/arrange.rs:132 app/src/ui/window/images.rs:101
 #: app/src/ui/window/organize.rs:81 app/src/ui/window/organize.rs:129
 msgid "Cancel"
@@ -3190,7 +3190,7 @@ msgstr "Carregar imagens"
 msgid "This message is from a mailing list"
 msgstr "Esta mensagem vem de uma lista de distribuição"
 
-#: app/src/ui/conversation.rs:184 app/src/ui/window/senders.rs:58
+#: app/src/ui/conversation.rs:184 app/src/ui/unsubscribe.rs:96
 msgid "Unsubscribe"
 msgstr "Cancelar subscrição"
 
@@ -3718,31 +3718,31 @@ msgstr "O organizador cancelou esta reunião"
 msgid "This meeting is canceled"
 msgstr "Esta reunião foi cancelada"
 
-#: app/src/ui/mod.rs:140
+#: app/src/ui/mod.rs:141
 msgid "Gray"
 msgstr "Cinzento"
 
-#: app/src/ui/mod.rs:154 app/src/ui/sidebar.rs:474
+#: app/src/ui/mod.rs:155 app/src/ui/sidebar.rs:474
 msgid "Inbox"
 msgstr "Caixa de entrada"
 
-#: app/src/ui/mod.rs:155
+#: app/src/ui/mod.rs:156
 msgid "Flagged"
 msgstr "Marcadas"
 
-#: app/src/ui/mod.rs:156
+#: app/src/ui/mod.rs:157
 msgid "Sent"
 msgstr "Enviadas"
 
-#: app/src/ui/mod.rs:157
+#: app/src/ui/mod.rs:158
 msgid "Drafts"
 msgstr "Rascunhos"
 
-#: app/src/ui/mod.rs:158 app/src/ui/thread_row.rs:82 app/src/ui/window.rs:240
+#: app/src/ui/mod.rs:159 app/src/ui/thread_row.rs:82 app/src/ui/window.rs:240
 msgid "Muted"
 msgstr "Silenciadas"
 
-#: app/src/ui/mod.rs:159 app/src/ui/thread_list.rs:250
+#: app/src/ui/mod.rs:160 app/src/ui/thread_list.rs:250
 msgid "Mail"
 msgstr "Correio"
 
@@ -4582,6 +4582,87 @@ msgstr "Mostrar o original"
 msgid "Show Translation"
 msgstr "Mostrar a tradução"
 
+#: app/src/ui/unsubscribe.rs:169
+msgid "Unsubscribe from {count} list?"
+msgid_plural "Unsubscribe from {count} lists?"
+msgstr[0] "Cancelar a subscrição de {count} lista?"
+msgstr[1] "Cancelar a subscrição de {count} listas?"
+
+#: app/src/ui/unsubscribe.rs:184
+msgid "Loading a page tells the sender you acted, as opening it yourself does."
+msgstr ""
+"Carregar uma página diz ao remetente que agiu, tal como abri-la você mesmo."
+
+#: app/src/ui/unsubscribe.rs:190
+msgid "Reading the page…"
+msgstr "A ler a página…"
+
+#: app/src/ui/unsubscribe.rs:191
+msgid "ask the sender to take you off the list"
+msgstr "pedir ao remetente que o retire da lista"
+
+#: app/src/ui/unsubscribe.rs:193
+msgid "send a request from {address}"
+msgstr "enviar um pedido de {address}"
+
+#: app/src/ui/unsubscribe.rs:205
+msgid "nothing: the page says you are off the list already"
+msgstr "nada: a página diz que já não está na lista"
+
+#: app/src/ui/unsubscribe.rs:206
+msgid "open the page in the browser"
+msgstr "abrir a página no navegador"
+
+#: app/src/ui/unsubscribe.rs:219
+msgid "press “{button}” on {site} with {address}, all emails"
+msgstr "carregar em “{button}” em {site} com {address}, todos os emails"
+
+#: app/src/ui/unsubscribe.rs:223
+msgid "press “{button}” on {site} with {address}"
+msgstr "carregar em “{button}” em {site} com {address}"
+
+#: app/src/ui/unsubscribe.rs:226
+msgid "press “{button}” on {site}, all emails"
+msgstr "carregar em “{button}” em {site}, todos os emails"
+
+#: app/src/ui/unsubscribe.rs:227
+msgid "press “{button}” on {site}"
+msgstr "carregar em “{button}” em {site}"
+
+#: app/src/ui/unsubscribe.rs:237
+msgid "Unsubscribed from {sender}"
+msgstr "Subscrição de {sender} cancelada"
+
+#: app/src/ui/unsubscribe.rs:238
+msgid "Sent, but the page did not say it worked"
+msgstr "Enviado, mas a página não disse que resultou"
+
+#: app/src/ui/unsubscribe.rs:239
+msgid "The page needs you to finish it"
+msgstr "A página precisa de si para terminar"
+
+#: app/src/ui/unsubscribe.rs:241
+msgid "Could not unsubscribe from {sender}: {reason}"
+msgstr "Não foi possível cancelar a subscrição de {sender}: {reason}"
+
+#: app/src/ui/unsubscribe.rs:253
+msgid "Unsubscribed from {count} list"
+msgid_plural "Unsubscribed from {count} lists"
+msgstr[0] "Subscrição de {count} lista cancelada"
+msgstr[1] "Subscrições de {count} listas canceladas"
+
+#: app/src/ui/unsubscribe.rs:259
+msgid "{count} list needs you"
+msgid_plural "{count} lists need you"
+msgstr[0] "{count} lista precisa de si"
+msgstr[1] "{count} listas precisam de si"
+
+#: app/src/ui/unsubscribe.rs:265
+msgid "Unsubscribed from {done}. {count} needs you"
+msgid_plural "Unsubscribed from {done}. {count} need you"
+msgstr[0] "{done} canceladas. {count} precisa de si"
+msgstr[1] "{done} canceladas. {count} precisam de si"
+
 #: app/src/ui/vacation.rs:58
 msgid "Automatic Reply"
 msgstr "Resposta automática"
@@ -5154,7 +5235,7 @@ msgstr "Abra primeiro uma conversa"
 #: app/src/ui/window/detached.rs:137 app/src/ui/window/export.rs:85
 #: app/src/ui/window/organize.rs:97 app/src/ui/window/organize.rs:145
 #: app/src/ui/window/organize.rs:174 app/src/ui/window/organize.rs:209
-#: app/src/ui/window/senders.rs:146
+#: app/src/ui/window/senders.rs:229
 msgid "That account is not connected"
 msgstr "Essa conta não está ligada"
 
@@ -5497,37 +5578,33 @@ msgstr ""
 "Não vão ser enviadas. Algumas estão nos rascunhos, e as que o Gmail não "
 "aceitou ficaram abertas para as guardar."
 
-#: app/src/ui/window/senders.rs:34
+#: app/src/ui/window/senders.rs:52
 msgid "This message has no unsubscribe link"
 msgstr "Esta mensagem não tem ligação para cancelar a subscrição"
 
-#: app/src/ui/window/senders.rs:38
+#: app/src/ui/window/senders.rs:56
 msgid "This message's unsubscribe link is not one Penguin Mail can use"
 msgstr ""
 "A ligação de cancelamento desta mensagem não é uma que o Penguin Mail possa "
 "usar"
 
-#: app/src/ui/window/senders.rs:75
-msgid "Unsubscribed from {sender}"
-msgstr "Subscrição de {sender} cancelada"
+#: app/src/ui/window/senders.rs:153
+msgid "Open Page"
+msgstr "Abrir Página"
 
-#: app/src/ui/window/senders.rs:79
-msgid "Could not unsubscribe: {reason}"
-msgstr "Não foi possível cancelar a subscrição: {reason}"
-
-#: app/src/ui/window/senders.rs:105
+#: app/src/ui/window/senders.rs:192
 msgid "The app is closing."
 msgstr "A aplicação está a fechar."
 
-#: app/src/ui/window/senders.rs:125
+#: app/src/ui/window/senders.rs:208
 msgid "Open a message from the sender to block"
 msgstr "Abra uma mensagem do remetente a bloquear"
 
-#: app/src/ui/window/senders.rs:129
+#: app/src/ui/window/senders.rs:212
 msgid "Block {sender}?"
 msgstr "Bloquear {sender}?"
 
-#: app/src/ui/window/senders.rs:132
+#: app/src/ui/window/senders.rs:215
 msgid ""
 "New mail from {email} goes straight to the Trash. This conversation moves "
 "there now. Remove the rule under Rules to unblock."
@@ -5535,15 +5612,15 @@ msgstr ""
 "O correio novo de {email} vai direto para o lixo. Esta conversa muda para lá "
 "agora. Remova a regra em Regras para desbloquear."
 
-#: app/src/ui/window/senders.rs:137
+#: app/src/ui/window/senders.rs:220
 msgid "Block"
 msgstr "Bloquear"
 
-#: app/src/ui/window/senders.rs:164
+#: app/src/ui/window/senders.rs:247
 msgid "Blocked {sender}"
 msgstr "{sender} bloqueado"
 
-#: app/src/ui/window/senders.rs:170
+#: app/src/ui/window/senders.rs:253
 msgid "Could not block the sender: {reason}"
 msgstr "Não foi possível bloquear o remetente: {reason}"
 
@@ -6157,6 +6234,9 @@ msgstr "Marcar como spam"
 #: sync/src/triage.rs:102
 msgid "Mark as not junk"
 msgstr "Marcar como não sendo spam"
+
+#~ msgid "Could not unsubscribe: {reason}"
+#~ msgstr "Não foi possível cancelar a subscrição: {reason}"
 
 #~ msgid "It is encrypted in a way Penguin Mail does not read."
 #~ msgstr "Está encriptado de uma forma que o Penguin Mail não lê."

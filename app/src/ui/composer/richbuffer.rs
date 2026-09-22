@@ -521,7 +521,10 @@ mod tests {
     fn an_unsubscribe_page_reads_back_as_its_fixture() {
         use crate::unsubscribe_page::{Browser, PageForm, Pick, WebkitBrowser, pick, says_done};
 
-        const DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/src/unsubscribe_page/fixtures/");
+        const DIR: &str = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/unsubscribe_page/fixtures/"
+        );
         let pages = [
             (
                 "one_button",
