@@ -32,6 +32,34 @@ install -Dm644 "packaging/apt/penguin-mail-archive-keyring.gpg" \
 install -Dm644 "packaging/apt/penguin-mail.sources" \
     "$root/etc/apt/sources.list.d/penguin-mail.sources"
 echo /etc/apt/sources.list.d/penguin-mail.sources > "$root/DEBIAN/conffiles"
+# A binary package's control file has no License field. Debian keeps the
+# licence in the copyright file under /usr/share/doc instead, and lintian
+# and the package managers look for it there.
+install -d "$root/usr/share/doc/penguin-mail"
+cat > "$root/usr/share/doc/penguin-mail/copyright" <<COPYRIGHT
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Penguin Mail
+Upstream-Contact: https://github.com/c9dev/penguin-mail/issues
+Source: https://github.com/c9dev/penguin-mail
+
+Files: *
+Copyright: 2026 The Penguin Mail authors
+License: GPL-3.0+
+
+License: GPL-3.0+
+ This program is free software: you can redistribute it and/or modify it
+ under the terms of the GNU General Public License as published by the Free
+ Software Foundation, either version 3 of the License, or (at your option)
+ any later version.
+ .
+ This program is distributed in the hope that it will be useful, but WITHOUT
+ ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ more details.
+ .
+ On Debian systems, the full text of the GNU General Public License version
+ 3 can be found in /usr/share/common-licenses/GPL-3.
+COPYRIGHT
 mkdir -p "$work/shlibs/debian"
 printf 'Source: penguin-mail\n\nPackage: penguin-mail\nArchitecture: amd64\n' \
     > "$work/shlibs/debian/control"
