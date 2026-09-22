@@ -20,6 +20,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Mail archived in Gmail no longer stays in Penguin Mail's inbox when the
   app missed the change. It now checks its inbox against Gmail's when it
   starts and every hour after.
+- An action Gmail refuses part way, such as archiving a long conversation
+  when the connection drops, leaves the messages Gmail did change as Gmail
+  has them, and no longer undoes changes made in the browser meanwhile.
 
 ## 0.1.4 (2026-09-22)
 

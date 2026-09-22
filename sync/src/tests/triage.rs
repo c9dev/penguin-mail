@@ -48,6 +48,53 @@ async fn a_refused_write_restores_the_thread() {
 }
 
 #[tokio::test]
+async fn a_write_that_fails_part_way_keeps_what_gmail_took() {
+    let h = harness().await;
+    let now = now_millis();
+    h.fake.seed(meta("a", "t1", now - 1000, &["INBOX"]));
+    h.fake.seed(meta("b", "t1", now, &["INBOX"]));
+    h.bootstrap_all().await;
+    let mut first = h.fake.hold("users.messages.modify");
+    let archiving = h.sync.triage_thread("t1", &TriageAction::Archive);
+    // Gmail archives the first message and refuses the second.
+    let refusing = async {
+        first.entered().await;
+        let mut second = h.fake.hold("users.messages.modify");
+        first.release();
+        second.entered().await;
+        h.fake.fail_next(GmailError::NeedsReauth);
+        second.release();
+    };
+    let (archived, ()) = tokio::join!(archiving, refusing);
+    assert!(archived.is_err());
+    assert!(!h.fake.with(|s| s.messages["a"].has_label("INBOX")));
+    assert_eq!(h.labels_of("a").await, Vec::<String>::new());
+    assert_eq!(h.labels_of("b").await, ["INBOX"]);
+}
+
+#[tokio::test]
+async fn a_failed_write_undoes_only_its_own_change() {
+    let h = harness().await;
+    h.fake
+        .seed(meta("a", "t1", now_millis(), &["INBOX", "UNREAD"]));
+    h.bootstrap_all().await;
+    let mut held = h.fake.hold("users.messages.modify");
+    let reading = h.sync.triage_thread("t1", &TriageAction::MarkRead);
+    // While the write waits, the message is archived elsewhere and a
+    // replay stores that. Then Gmail refuses the write.
+    let meanwhile = async {
+        held.entered().await;
+        h.fake.remote_relabel("a", &[], &["INBOX"]);
+        h.sync.incremental().await.unwrap();
+        h.fake.fail_next(GmailError::NeedsReauth);
+        held.release();
+    };
+    let (read, ()) = tokio::join!(reading, meanwhile);
+    assert!(read.is_err());
+    assert_eq!(h.labels_of("a").await, ["UNREAD"]);
+}
+
+#[tokio::test]
 async fn transient_failures_are_retried() {
     let h = harness().await;
     h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));

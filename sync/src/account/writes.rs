@@ -112,10 +112,13 @@ impl<G: GmailApi> AccountSync<G> {
     /// instead of a call each. Trashing 200 conversations costs 50 quota
     /// units this way against 2000 one at a time.
     ///
-    /// The whole set succeeds or fails together, since Gmail answers the
-    /// batch once. On a refusal the store goes back to its earlier labels,
-    /// a `WriteFailed` event says so, and the caller reports the failure
-    /// against each target it handed in.
+    /// On a refusal the messages Gmail did not take lose this action's
+    /// change again, a `WriteFailed` event says so, and the caller reports
+    /// the failure against each target it handed in. Messages Gmail took
+    /// keep it, since Gmail has them that way. The undo reverses only this
+    /// action's labels rather than restoring a copy taken before it: a
+    /// replay during the retries may have stored newer changes, such as an
+    /// archive made in the browser, and history will not send them again.
     pub async fn triage_all(
         &self,
         targets: &[Target],
@@ -164,17 +167,27 @@ impl<G: GmailApi> AccountSync<G> {
             conversations: threads.len(),
         };
         let mut budget = Budget::new(self.retry_max, self.wait_ceiling);
+        let mut taken = BTreeSet::new();
         if let Err(err) = self
-            .write_labels(&mut budget, &ids, &writing, &add, &remove)
+            .write_labels(&mut budget, &ids, &writing, &add, &remove, &mut taken)
             .await
         {
             let rolled_back = threads.clone();
             self.db
                 .write(move |c| {
-                    for (id, labels) in &snapshot {
-                        if messages::thread_id_of(c, account_id, id)?.is_some() {
-                            messages::set_labels(c, account_id, id, labels)?;
-                        }
+                    for (id, before) in snapshot.iter().filter(|(id, _)| !taken.contains(id)) {
+                        let added: Vec<String> = add
+                            .iter()
+                            .filter(|l| !before.contains(l))
+                            .cloned()
+                            .collect();
+                        let removed: Vec<String> = remove
+                            .iter()
+                            .filter(|l| before.contains(l))
+                            .cloned()
+                            .collect();
+                        messages::remove_labels(c, account_id, id, &added)?;
+                        messages::add_labels(c, account_id, id, &removed)?;
                     }
                     for thread in &rolled_back {
                         messages::refresh_thread(c, account_id, thread)?;
@@ -221,7 +234,9 @@ impl<G: GmailApi> AccountSync<G> {
     /// rejects outright falls back to single calls, so one id it dislikes
     /// does not sink the whole selection. The waiting belongs to the action,
     /// not to each message, so a rate-limited archive of twenty threads
-    /// waits its minute over rather than twenty minutes.
+    /// waits its minute over rather than twenty minutes. `taken` collects
+    /// the messages Gmail accepted, so a failure part way can tell them
+    /// from the rest.
     async fn write_labels(
         &self,
         budget: &mut Budget,
@@ -229,16 +244,18 @@ impl<G: GmailApi> AccountSync<G> {
         writing: &Writing<'_>,
         add: &[String],
         remove: &[String],
+        taken: &mut BTreeSet<String>,
     ) -> Result<(), GmailError> {
         if ids.len() < BATCH_FROM {
             for id in ids {
                 self.write_one(budget, id, writing, add, remove).await?;
+                taken.insert(id.clone());
             }
             return Ok(());
         }
         for chunk in ids.chunks(BATCH_LIMIT) {
             match self.write_batch(budget, chunk, writing, add, remove).await {
-                Ok(()) => {}
+                Ok(()) => taken.extend(chunk.iter().cloned()),
                 Err(err) if refuses_batch(&err) => {
                     tracing::warn!(
                         account = self.account_id,
@@ -247,6 +264,7 @@ impl<G: GmailApi> AccountSync<G> {
                     );
                     for id in chunk {
                         self.write_one(budget, id, writing, add, remove).await?;
+                        taken.insert(id.clone());
                     }
                 }
                 Err(err) => return Err(err),
