@@ -139,7 +139,7 @@ impl<G: GmailApi> AccountSync<G> {
 
     /// Metadata for `ids`, with bounded concurrency. Messages deleted since
     /// they were listed are skipped.
-    async fn fetch_metadata(&self, ids: &[String]) -> Result<Vec<MessageMeta>, SyncError> {
+    pub async fn fetch_metadata(&self, ids: &[String]) -> Result<Vec<MessageMeta>, SyncError> {
         let results: Vec<Result<MessageMeta, GmailError>> = futures::stream::iter(ids.to_vec())
             .map(|id| {
                 let api = Arc::clone(&self.api);

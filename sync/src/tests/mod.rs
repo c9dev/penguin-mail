@@ -10,6 +10,7 @@ mod incremental;
 mod invitations;
 mod labels;
 mod mailbox;
+mod newsletters;
 mod outbox;
 mod priority;
 mod quota;

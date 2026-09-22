@@ -215,6 +215,15 @@ pub struct MessageMeta {
     pub size: i64,
     pub has_attachments: bool,
     pub label_ids: Vec<String>,
+    /// The `List-Unsubscribe` header as it arrived, angle brackets and
+    /// all. Every metadata fetch asks for it, so the newsletters list
+    /// answers without fetching a single body.
+    #[serde(default)]
+    pub list_unsubscribe: Option<String>,
+    /// The sender promised RFC 8058 one-click through
+    /// `List-Unsubscribe-Post`.
+    #[serde(default)]
+    pub one_click: bool,
 }
 
 impl MessageMeta {

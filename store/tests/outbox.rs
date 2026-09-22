@@ -131,6 +131,23 @@ fn version_fourteen(path: &std::path::Path) {
             send_at    INTEGER NOT NULL,
             PRIMARY KEY (account_id, draft_id)
         );
+        CREATE TABLE messages (
+            account_id      INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            id              TEXT NOT NULL,
+            thread_id       TEXT NOT NULL,
+            rfc822_msgid    TEXT,
+            from_name       TEXT,
+            from_addr       TEXT,
+            to_addrs        TEXT NOT NULL,
+            cc_addrs        TEXT NOT NULL,
+            subject         TEXT NOT NULL,
+            date            INTEGER NOT NULL,
+            snippet         TEXT NOT NULL,
+            size            INTEGER NOT NULL,
+            has_attachments INTEGER NOT NULL,
+            sync_gen        INTEGER NOT NULL,
+            PRIMARY KEY (account_id, id)
+        );
         CREATE TABLE bodies (
             account_id           INTEGER NOT NULL,
             message_id           TEXT NOT NULL,

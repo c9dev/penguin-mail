@@ -86,6 +86,41 @@ fn metadata_converts_to_domain() {
     assert_eq!(meta.date, 1_700_000_000_000);
     assert!(meta.has_attachments);
     assert!(meta.is_unread());
+    assert_eq!(meta.list_unsubscribe, None, "no header, no list");
+    assert!(!meta.one_click);
+}
+
+#[test]
+fn the_unsubscribe_headers_come_through_metadata() {
+    let message = |headers: &str| -> Message {
+        serde_json::from_str(&format!(
+            r#"{{"id":"m1","threadId":"t1","payload":{{"headers":[{headers}]}}}}"#
+        ))
+        .unwrap()
+    };
+    let promised = message_meta(
+        &message(
+            r#"{"name":"List-Unsubscribe","value":"  <https://news.example/u/1>  "},
+               {"name":"List-Unsubscribe-Post","value":"List-Unsubscribe=One-Click"}"#,
+        ),
+        1,
+    );
+    assert_eq!(
+        promised.list_unsubscribe.as_deref(),
+        Some("<https://news.example/u/1>"),
+        "the header arrives trimmed"
+    );
+    assert!(promised.one_click);
+
+    let page = message_meta(
+        &message(r#"{"name":"List-Unsubscribe","value":"<https://news.example/u/2>"}"#),
+        1,
+    );
+    assert_eq!(
+        page.list_unsubscribe.as_deref(),
+        Some("<https://news.example/u/2>")
+    );
+    assert!(!page.one_click, "no Post header is no one-click promise");
 }
 
 #[test]

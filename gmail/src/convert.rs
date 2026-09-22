@@ -107,6 +107,8 @@ pub fn message_meta(msg: &Message, account_id: AccountId) -> MessageMeta {
             .as_ref()
             .is_some_and(|p| p.mime_type.eq_ignore_ascii_case("multipart/mixed")),
         label_ids: msg.label_ids.clone(),
+        list_unsubscribe: header(msg, "List-Unsubscribe").map(|v| v.trim().to_string()),
+        one_click: header(msg, "List-Unsubscribe-Post").is_some_and(|v| v.contains("One-Click")),
     }
 }
 

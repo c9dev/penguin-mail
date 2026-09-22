@@ -303,6 +303,17 @@ CREATE UNIQUE INDEX drafts_by_draft ON drafts(account_id, draft_id);
     r#"
 ALTER TABLE threads ADD COLUMN whole INTEGER NOT NULL DEFAULT 0;
 "#,
+    // What a message's `List-Unsubscribe` and `List-Unsubscribe-Post`
+    // headers said. The same two live on `bodies`, but a body arrives only
+    // when someone opens the message, and the newsletters list has to
+    // answer for hundreds of senders at once. Every metadata fetch now
+    // carries them, so mail synced from here on answers for free. Mail
+    // stored before this keeps `list_unsubscribe` empty, and
+    // `mailrs_sync::Newsletters::list` fills those in.
+    r#"
+ALTER TABLE messages ADD COLUMN list_unsubscribe TEXT;
+ALTER TABLE messages ADD COLUMN one_click INTEGER NOT NULL DEFAULT 0;
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,

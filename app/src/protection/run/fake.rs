@@ -72,6 +72,8 @@ pub fn meta(id: &str) -> MessageMeta {
         size: 0,
         has_attachments: false,
         label_ids: Vec::new(),
+        list_unsubscribe: None,
+        one_click: false,
     }
 }
 

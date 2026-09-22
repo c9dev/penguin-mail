@@ -201,6 +201,8 @@ pub fn meta(id: &str, thread: &str, date: EpochMillis, labels: &[&str]) -> Messa
         size: 100,
         has_attachments: false,
         label_ids: labels.iter().map(|l| l.to_string()).collect(),
+        list_unsubscribe: None,
+        one_click: false,
     }
 }
 

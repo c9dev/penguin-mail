@@ -15,13 +15,15 @@ pub fn upsert_message(conn: &Connection, m: &MessageMeta, sync_gen: i64) -> Resu
     let cc = serde_json::to_string(&m.cc).unwrap_or_else(|_| "[]".into());
     conn.execute(
         "INSERT INTO messages (account_id, id, thread_id, rfc822_msgid, from_name, from_addr, to_addrs, \
-         cc_addrs, subject, date, snippet, size, has_attachments, sync_gen) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14) \
+         cc_addrs, subject, date, snippet, size, has_attachments, list_unsubscribe, one_click, sync_gen) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16) \
          ON CONFLICT (account_id, id) DO UPDATE SET thread_id = excluded.thread_id, \
          rfc822_msgid = excluded.rfc822_msgid, from_name = excluded.from_name, \
          from_addr = excluded.from_addr, to_addrs = excluded.to_addrs, cc_addrs = excluded.cc_addrs, \
          subject = excluded.subject, date = excluded.date, snippet = excluded.snippet, \
-         size = excluded.size, has_attachments = excluded.has_attachments, sync_gen = excluded.sync_gen",
+         size = excluded.size, has_attachments = excluded.has_attachments, \
+         list_unsubscribe = excluded.list_unsubscribe, one_click = excluded.one_click, \
+         sync_gen = excluded.sync_gen",
         params![
             m.account_id,
             m.id,
@@ -36,10 +38,31 @@ pub fn upsert_message(conn: &Connection, m: &MessageMeta, sync_gen: i64) -> Resu
             m.snippet,
             m.size,
             m.has_attachments,
+            m.list_unsubscribe,
+            m.one_click,
             sync_gen,
         ],
     )?;
     set_labels(conn, m.account_id, &m.id, &m.label_ids)
+}
+
+/// Records what a later metadata fetch found in one message's unsubscribe
+/// headers. Mail stored before those headers joined the metadata fetch has
+/// nothing in these columns, and this is how it is filled in without
+/// rewriting the rest of the row.
+pub fn set_unsubscribe(
+    conn: &Connection,
+    account_id: AccountId,
+    message_id: &str,
+    header: Option<&str>,
+    one_click: bool,
+) -> Result<()> {
+    conn.execute(
+        "UPDATE messages SET list_unsubscribe = ?3, one_click = ?4 \
+         WHERE account_id = ?1 AND id = ?2",
+        params![account_id, message_id, header, one_click],
+    )?;
+    Ok(())
 }
 
 /// Replaces a stored message's labels.
@@ -195,6 +218,8 @@ struct MessageRow {
     snippet: String,
     size: i64,
     has_attachments: bool,
+    list_unsubscribe: Option<String>,
+    one_click: bool,
 }
 
 /// A thread's stored messages, oldest first.
@@ -205,8 +230,8 @@ pub fn thread_messages(
 ) -> Result<Vec<MessageMeta>> {
     let mut stmt = conn.prepare_cached(
         "SELECT id, thread_id, rfc822_msgid, from_name, from_addr, to_addrs, cc_addrs, subject, date, \
-         snippet, size, has_attachments FROM messages WHERE account_id = ?1 AND thread_id = ?2 \
-         ORDER BY date ASC, id",
+         snippet, size, has_attachments, list_unsubscribe, one_click FROM messages \
+         WHERE account_id = ?1 AND thread_id = ?2 ORDER BY date ASC, id",
     )?;
     let rows = stmt
         .query_map(params![account_id, thread_id], message_row)?
@@ -230,6 +255,8 @@ fn message_row(row: &rusqlite::Row) -> rusqlite::Result<MessageRow> {
         snippet: row.get(9)?,
         size: row.get(10)?,
         has_attachments: row.get(11)?,
+        list_unsubscribe: row.get(12)?,
+        one_click: row.get(13)?,
     })
 }
 
@@ -251,6 +278,8 @@ fn message_meta(conn: &Connection, account_id: AccountId, r: MessageRow) -> Resu
         snippet: r.snippet,
         size: r.size,
         has_attachments: r.has_attachments,
+        list_unsubscribe: r.list_unsubscribe,
+        one_click: r.one_click,
     })
 }
 
@@ -267,8 +296,8 @@ pub fn by_ids(
         let holes: Vec<String> = (2..chunk.len() + 2).map(|n| format!("?{n}")).collect();
         let sql = format!(
             "SELECT id, thread_id, rfc822_msgid, from_name, from_addr, to_addrs, cc_addrs, \
-             subject, date, snippet, size, has_attachments FROM messages \
-             WHERE account_id = ?1 AND id IN ({}) ORDER BY date ASC, id",
+             subject, date, snippet, size, has_attachments, list_unsubscribe, one_click \
+             FROM messages WHERE account_id = ?1 AND id IN ({}) ORDER BY date ASC, id",
             holes.join(",")
         );
         let mut params: Vec<&dyn rusqlite::ToSql> = vec![&account_id];

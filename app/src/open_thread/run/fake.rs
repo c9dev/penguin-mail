@@ -137,6 +137,8 @@ pub fn meta(id: &str, unread: bool) -> MessageMeta {
             true => vec![system_label::UNREAD.to_string()],
             false => Vec::new(),
         },
+        list_unsubscribe: None,
+        one_click: false,
     }
 }
 

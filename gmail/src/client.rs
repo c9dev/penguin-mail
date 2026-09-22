@@ -24,7 +24,18 @@ use crate::people::{self, ConnectionsPage, ContactFields, Person};
 
 pub const GMAIL_API_BASE: &str = "https://gmail.googleapis.com/gmail/v1/users/me";
 
-const METADATA_HEADERS: [&str; 5] = ["From", "To", "Cc", "Subject", "Message-ID"];
+/// The headers a `format=metadata` fetch asks for. The two unsubscribe
+/// headers ride along with the rest: they cost nothing extra and they let
+/// the newsletters list read a sender's way out without fetching bodies.
+const METADATA_HEADERS: [&str; 7] = [
+    "From",
+    "To",
+    "Cc",
+    "Subject",
+    "Message-ID",
+    "List-Unsubscribe",
+    "List-Unsubscribe-Post",
+];
 
 /// Message ids Gmail takes in one `batchModify` or `batchDelete` call.
 pub const BATCH_LIMIT: usize = 1000;

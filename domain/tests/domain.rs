@@ -49,6 +49,8 @@ fn unread_follows_the_unread_label() {
         size: 0,
         has_attachments: false,
         label_ids: vec!["INBOX".into()],
+        list_unsubscribe: None,
+        one_click: false,
     };
     assert!(!meta.is_unread());
     assert!(meta.has_label("INBOX"));

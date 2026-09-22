@@ -1000,6 +1000,8 @@ impl Sample {
             size: self.text.len() as i64,
             has_attachments: !self.attachments.is_empty(),
             label_ids: self.labels.iter().map(|l| l.to_string()).collect(),
+            list_unsubscribe: self.unsubscribe.map(str::to_string),
+            one_click: false,
         }
     }
 
@@ -1114,6 +1116,9 @@ fn sent_copy(raw: &[u8], account_id: AccountId) -> Option<SentCopy> {
         size: raw.len() as i64,
         has_attachments: !attachments.is_empty(),
         label_ids: Vec::new(),
+        // A message the demo sent itself belongs to no mailing list.
+        list_unsubscribe: None,
+        one_click: false,
     };
     let body = MessageBody {
         text,

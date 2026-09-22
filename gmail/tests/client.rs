@@ -190,6 +190,48 @@ async fn message_and_thread_fetches_request_the_right_formats() {
 }
 
 #[tokio::test]
+async fn a_metadata_fetch_asks_for_the_unsubscribe_headers() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("GET"))
+        .and(path(format!("{API}/messages/m1")))
+        .and(query_param("format", "metadata"))
+        .and(query_param("metadataHeaders", "List-Unsubscribe"))
+        .and(query_param("metadataHeaders", "List-Unsubscribe-Post"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "id": "m1",
+            "threadId": "t1",
+            "payload": {"headers": [
+                {"name": "List-Unsubscribe", "value": "<https://news.example/u/1>"},
+                {"name": "List-Unsubscribe-Post", "value": "List-Unsubscribe=One-Click"},
+            ]},
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path(format!("{API}/threads/t1")))
+        .and(query_param("metadataHeaders", "List-Unsubscribe"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"id": "t1", "messages": []})))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let client = client(&server);
+    let message = client.message_metadata("m1").await.unwrap();
+    let headers = &message.payload.unwrap().headers;
+    assert_eq!(headers.len(), 2, "both headers came back: {headers:?}");
+    assert!(
+        client
+            .thread_metadata("t1")
+            .await
+            .unwrap()
+            .messages
+            .is_empty()
+    );
+}
+
+#[tokio::test]
 async fn history_is_converted_to_changes() {
     let server = MockServer::start().await;
     mount_token(&server, 1).await;

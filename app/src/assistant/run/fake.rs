@@ -475,6 +475,8 @@ pub fn meta(id: &str, thread: &str, from: &str, subject: &str, at: EpochMillis) 
         size: 100,
         has_attachments: false,
         label_ids: vec![],
+        list_unsubscribe: None,
+        one_click: false,
     }
 }
 

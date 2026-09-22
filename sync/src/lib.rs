@@ -14,6 +14,7 @@ pub mod export;
 pub mod hidden;
 pub mod invitations;
 pub mod mailbox;
+pub mod newsletters;
 pub mod outbox;
 mod settings;
 mod triage;
@@ -54,6 +55,7 @@ pub use mailbox::{
     Changed, Counts, Empty, Listing, Mailbox, Mailboxes, PAGE, Scope, View, outbox_id, outbox_row,
     summarize_search, waiting_line,
 };
+pub use newsletters::Newsletters;
 pub use outbox::{Cancelled, Drained, Outbox, Posted};
 pub use settings::{AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, Permitted};
 pub use triage::TriageAction;

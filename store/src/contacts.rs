@@ -245,6 +245,8 @@ mod tests {
             size: 10,
             has_attachments: false,
             label_ids: vec![label.into()],
+            list_unsubscribe: None,
+            one_click: false,
         }
     }
 

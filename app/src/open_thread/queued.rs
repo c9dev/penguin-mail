@@ -115,6 +115,8 @@ fn meta_of(
         size: 0,
         has_attachments: !body.attachments.is_empty(),
         label_ids: Vec::new(),
+        list_unsubscribe: None,
+        one_click: false,
     }
 }
 

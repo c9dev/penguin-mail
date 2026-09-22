@@ -14,6 +14,7 @@ pub mod image_senders;
 pub mod invitations;
 pub mod labels;
 pub mod messages;
+pub mod newsletters;
 pub mod outbox;
 pub mod reminders;
 mod schema;
