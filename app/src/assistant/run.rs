@@ -24,8 +24,8 @@ use mailrs_gmail::GmailError;
 use mailrs_store::{Db, messages};
 use mailrs_sync::{
     AccountSettings, AccountSync, Accounts, AutomaticReply, Calendar, Failure, History,
-    Invitations, MailAction, MailActions, Mailbox, Mailboxes, Outcome, Permitted, Scope, SyncError,
-    TriageAction, View,
+    Invitations, MailAction, MailActions, Mailbox, Mailboxes, NewLabels, Outcome, Permitted, Scope,
+    SyncError, TriageAction, View,
 };
 use serde_json::{Value, json};
 
@@ -820,6 +820,9 @@ impl<A: Accounts> Tools<A> {
         outcome
     }
 
+    /// Labels by name. A label an account lacks waits for the user's word,
+    /// asked once for the whole call while Ask Before Acting is on. A "no"
+    /// labels only the mail in accounts that hold the names already.
     async fn label(&self, input: &Value) -> ToolResult {
         let targets = self.parse_targets(input)?;
         let names = |key: &str| -> Vec<String> {
@@ -833,11 +836,53 @@ impl<A: Accounts> Tools<A> {
                 })
                 .unwrap_or_default()
         };
+        let (add, remove) = (names("add"), names("remove"));
+        let plan = NewLabels::plan(&targets, &add, &remove, |account_id| {
+            self.labels_of(account_id)
+                .into_iter()
+                .map(|l| l.name)
+                .collect()
+        });
+        let kept = plan.kept(&targets);
+        let create = plan.is_empty()
+            || !self.desk.settings().ai.confirm_actions
+            || self
+                .effects
+                .confirm(self.new_labels_question(&plan, !kept.is_empty()))
+                .await;
+        let targets = if create { targets } else { kept };
+        if targets.is_empty() {
+            return Err("The user declined.".into());
+        }
         let action = MailAction::Label {
-            add: names("add"),
-            remove: names("remove"),
+            add,
+            remove,
+            create,
         };
-        report(&self.act(targets, action).await)
+        let mut result = report(&self.act(targets, action).await)?;
+        if !create {
+            result["declined"] = json!(
+                "The user declined new labels, so mail in accounts without them was left alone."
+            );
+        }
+        Ok(result)
+    }
+
+    /// The question before labelling makes new labels. `partly` says a "no"
+    /// still labels the mail in accounts that have the names.
+    fn new_labels_question(&self, plan: &NewLabels, partly: bool) -> String {
+        let mut question = format!(
+            "{} {}",
+            plan.heading(),
+            plan.who(|account_id| self.email_of(account_id))
+        );
+        if partly {
+            question.push(' ');
+            question.push_str(&gettext(
+                "Don't Allow labels only the mail in accounts that have the label already.",
+            ));
+        }
+        question
     }
 
     async fn create_label(&self, input: &Value) -> ToolResult {

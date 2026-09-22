@@ -35,6 +35,9 @@ use crate::unsubscribe::Unsubscribe;
 /// The address every fixture account belongs to.
 pub const ME: &str = "dana@example.com";
 
+/// The address of the second account `Harness::with_second` connects.
+pub const YOU: &str = "sam@example.com";
+
 /// The clock the fixture mailbox searches by, 2026-01-02 at noon UTC. The
 /// fixture mail sits a few days before it, inside the window a first sync
 /// stores.
@@ -315,6 +318,8 @@ pub struct Harness {
     pub desk: Rc<FakeDesk>,
     pub effects: Rc<FakeEffects>,
     pub account_id: AccountId,
+    /// The second account and its Gmail, when the test connected one.
+    pub second: Option<(AccountId, Arc<FakeGmail>)>,
     /// Held so the engine's change events have somewhere to go.
     _heard: async_channel::Receiver<ChangeEvent>,
     _dir: tempfile::TempDir,
@@ -357,6 +362,16 @@ impl Harness {
     /// A Gmail holding `mail`, and a store filled from it by a first sync,
     /// with one account connected.
     pub async fn with(mail: Vec<MessageMeta>) -> Harness {
+        Harness::connect(mail, None).await
+    }
+
+    /// As [`Harness::with`], plus a second account, [`YOU`], whose Gmail
+    /// holds `second` and no labels of its own.
+    pub async fn with_second(mail: Vec<MessageMeta>, second: Vec<MessageMeta>) -> Harness {
+        Harness::connect(mail, Some(second)).await
+    }
+
+    async fn connect(mail: Vec<MessageMeta>, second: Option<Vec<MessageMeta>>) -> Harness {
         let dir = tempfile::tempdir().expect("a temp dir");
         let db = Db::open(&dir.path().join("mail.db")).expect("an empty store");
         let account_id = db
@@ -393,10 +408,51 @@ impl Harness {
             account_id,
             Arc::clone(&gmail),
             db.clone(),
-            events,
+            events.clone(),
         ));
         fill_store(&sync).await.expect("the first sync runs");
-        let connected = Arc::new(Connected(HashMap::from([(account_id, sync)])));
+        let mut syncing = HashMap::from([(account_id, sync)]);
+        let mut listed = vec![Account {
+            id: account_id,
+            email: ME.into(),
+            state: AccountState::Ok,
+        }];
+        let mut labels = HashMap::from([(account_id, known)]);
+        let mut other = None;
+        if let Some(second) = second {
+            let id = db
+                .write(|c| accounts::insert_account(c, YOU, 0))
+                .await
+                .expect("the second account goes in");
+            let gmail = Arc::new(FakeGmail::new());
+            gmail.with(|s| {
+                s.email = YOU.into();
+                s.clock = Some(NOW);
+                s.page_size = 1000;
+            });
+            for message in second {
+                gmail.seed(MessageMeta {
+                    account_id: id,
+                    ..message
+                });
+            }
+            let sync = Arc::new(AccountSync::new(
+                id,
+                Arc::clone(&gmail),
+                db.clone(),
+                events.clone(),
+            ));
+            fill_store(&sync).await.expect("the second sync runs");
+            syncing.insert(id, sync);
+            listed.push(Account {
+                id,
+                email: YOU.into(),
+                state: AccountState::Ok,
+            });
+            labels.insert(id, vec![]);
+            other = Some((id, gmail));
+        }
+        let connected = Arc::new(Connected(syncing));
         let mail = Arc::new(MailActions::new(Arc::clone(&connected), db.clone()));
         let settings = Arc::new(AccountSettings::new(Arc::clone(&connected), db.clone()));
         let modules = Modules {
@@ -410,12 +466,8 @@ impl Harness {
         };
         let desk = Rc::new(FakeDesk(RefCell::new(Screen {
             settings: Settings::default(),
-            accounts: vec![Account {
-                id: account_id,
-                email: ME.into(),
-                state: AccountState::Ok,
-            }],
-            labels: HashMap::from([(account_id, known)]),
+            accounts: listed,
+            labels,
             view: View::default(),
             on_screen: OnScreen::default(),
             default_account: Some(account_id),
@@ -442,6 +494,7 @@ impl Harness {
             desk,
             effects,
             account_id,
+            second: other,
             _heard: heard,
             _dir: dir,
         }
@@ -479,7 +532,12 @@ impl Harness {
 
     /// The labels on a stored message.
     pub async fn labels_of(&self, id: &str) -> Vec<String> {
-        let (account_id, id) = (self.account_id, id.to_string());
+        self.labels_in(self.account_id, id).await
+    }
+
+    /// The labels on a stored message of `account_id`.
+    pub async fn labels_in(&self, account_id: AccountId, id: &str) -> Vec<String> {
+        let id = id.to_string();
         self.db
             .read(move |c| messages::labels_of(c, account_id, &id))
             .await

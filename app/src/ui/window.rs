@@ -1470,7 +1470,8 @@ impl MainWindow {
     }
 
     /// Labels of the targets' account, checked when the one open
-    /// conversation already has them.
+    /// conversation already has them. Mail from several accounts gets
+    /// every label name those accounts hold.
     fn label_popover(self: &Rc<Self>) -> gtk::Popover {
         let popover = gtk::Popover::new();
         let targets = self.reach(&self.conversation).targets;
@@ -1486,12 +1487,19 @@ impl MainWindow {
                 .margin_end(12)
                 .build()
         };
+        if targets.is_empty() {
+            popover.set_child(Some(&message(&gettext("Open or select mail to label it."))));
+            return popover;
+        }
         let Some(&account_id) = accounts.iter().next().filter(|_| accounts.len() == 1) else {
-            popover.set_child(Some(&message(&if targets.is_empty() {
-                gettext("Open or select mail to label it.")
-            } else {
-                gettext("Select mail from one account to label it.")
-            })));
+            // Mail from several accounts takes labels by name, since each
+            // account has its own label behind a name.
+            match self.labels_by_name(&accounts, &popover) {
+                Some(list) => popover.set_child(Some(&list)),
+                None => popover.set_child(Some(&message(&gettext(
+                    "Select mail from one account to label it.",
+                )))),
+            }
             return popover;
         };
         let mut labels: Vec<Label> = self

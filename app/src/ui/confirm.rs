@@ -47,6 +47,12 @@ impl Confirm {
         self
     }
 
+    /// Names the way out, for a question whose "no" still does something.
+    pub fn declining(self, label: &str) -> Self {
+        self.dialog.set_response_label("cancel", label);
+        self
+    }
+
     /// Makes Enter press the verb.
     pub fn by_default(self) -> Self {
         self.dialog.set_default_response(Some(GO));

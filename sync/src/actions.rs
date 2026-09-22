@@ -15,9 +15,11 @@ use mailrs_store::{Db, flags, follow_ups, labels, messages, threads};
 use crate::{AccountSync, GmailApi, Permitted, SyncEngine, SyncError, TriageAction};
 
 mod categorize;
+mod labelling;
 mod returning;
 
 pub use categorize::Categorized;
+pub use labelling::NewLabels;
 pub use returning::Returned;
 
 /// The folders Undo places mail in, most specific first. Archive is left
@@ -79,10 +81,13 @@ pub enum MailAction {
     /// with `false` unmutes them and puts them back in the inbox.
     Mute { muted: bool },
     /// Adds and removes labels by name. Adding a name the account lacks
-    /// creates that label; removing one it lacks fails.
+    /// creates that label when `create` holds and skips the name when it
+    /// does not; removing one it lacks fails. Ask with [`NewLabels`] before
+    /// setting `create`, since a new label shows up in Gmail everywhere.
     Label {
         add: Vec<String>,
         remove: Vec<String>,
+        create: bool,
     },
     /// Takes the targets out of Follow Up until the person writes in them
     /// again. Only this computer knows about Follow Up, so Gmail hears
@@ -635,7 +640,7 @@ impl<A: Accounts> MailActions<A> {
         action: &MailAction,
     ) -> Vec<Result<Option<TriageAction>, String>> {
         let every = |triage: TriageAction| vec![Ok(Some(triage)); targets.len()];
-        let (add, remove) = match action {
+        let (add, remove, create) = match action {
             MailAction::Triage(triage) => return every(triage.clone()),
             MailAction::Flag(Some(_)) => return every(TriageAction::Star),
             MailAction::Flag(None) => return every(TriageAction::Unstar),
@@ -649,7 +654,11 @@ impl<A: Accounts> MailActions<A> {
                 });
             }
             MailAction::DismissFollowUp => return vec![Ok(None); targets.len()],
-            MailAction::Label { add, remove } => (add, remove),
+            MailAction::Label {
+                add,
+                remove,
+                create,
+            } => (add, remove, *create),
         };
         let mut per_account: BTreeMap<AccountId, Result<Option<TriageAction>, String>> =
             BTreeMap::new();
@@ -657,7 +666,7 @@ impl<A: Accounts> MailActions<A> {
             if per_account.contains_key(&target.account_id) {
                 continue;
             }
-            let relabel = self.relabel(target.account_id, add, remove).await;
+            let relabel = self.relabel(target.account_id, add, remove, create).await;
             per_account.insert(target.account_id, relabel.map(Some));
         }
         targets
@@ -671,14 +680,16 @@ impl<A: Accounts> MailActions<A> {
         account_id: AccountId,
         add: &[String],
         remove: &[String],
+        create: bool,
     ) -> Result<TriageAction, String> {
         let mut ids = (Vec::new(), Vec::new());
+        let mut skipped = None;
         for name in add {
-            let id = self
-                .label_id(account_id, name, true)
-                .await
-                .map_err(|e| format!("Could not create the label {name}: {e}"))?;
-            ids.0.push(id);
+            match self.label_id(account_id, name, create).await {
+                Ok(id) => ids.0.push(id),
+                Err(SyncError::NoLabel(_)) => skipped = Some(name),
+                Err(e) => return Err(format!("Could not create the label {name}: {e}")),
+            }
         }
         for name in remove {
             let id = self
@@ -686,6 +697,11 @@ impl<A: Accounts> MailActions<A> {
                 .await
                 .map_err(|e| e.to_string())?;
             ids.1.push(id);
+        }
+        // Without new labels, an account that holds none of the names has
+        // nothing to change, and its mail did not get what was asked.
+        if let (Some(name), true, true) = (skipped, ids.0.is_empty(), ids.1.is_empty()) {
+            return Err(format!("This account has no label called {name}."));
         }
         Ok(TriageAction::Relabel {
             add: ids.0,

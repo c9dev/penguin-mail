@@ -615,6 +615,7 @@ async fn labelling_by_name_creates_a_missing_label() {
     let receipts = MailAction::Label {
         add: vec!["Receipts".into()],
         remove: vec![],
+        create: true,
     };
     let actions = actions(&h);
 
@@ -642,6 +643,64 @@ async fn labelling_by_name_creates_a_missing_label() {
         .fake
         .with(|s| s.labels.iter().filter(|l| l.name == "Receipts").count());
     assert_eq!(named, 1, "the second run finds the label by name");
+}
+
+/// Declining new labels labels the mail in accounts that have the name and
+/// leaves an account without it untouched, with no label made there.
+#[tokio::test]
+async fn labelling_by_name_without_creating_skips_accounts_that_lack_the_label() {
+    let h = harness().await;
+    h.fake.with(|s| {
+        s.labels.push(mailrs_gmail::RemoteLabel {
+            id: "Label_receipts".into(),
+            name: "Receipts".into(),
+            kind: Some("user".into()),
+            color: None,
+        })
+    });
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    let other_id =
+        h.db.write(|c| accounts::insert_account(c, "you@example.com", 0))
+            .await
+            .unwrap();
+    let other_fake = Arc::new(FakeGmail::new());
+    other_fake.seed(mailrs_domain::MessageMeta {
+        account_id: other_id,
+        ..meta("x", "t2", now_millis(), &["INBOX"])
+    });
+    let (sender, _events) = async_channel::unbounded();
+    let other = Arc::new(AccountSync::new(
+        other_id,
+        Arc::clone(&other_fake),
+        h.db.clone(),
+        sender,
+    ));
+    other.bootstrap().await.unwrap();
+    let (mine, theirs) = (
+        Target::thread(h.account_id, "t1"),
+        Target::thread(other_id, "t2"),
+    );
+
+    let outcome = actions_over(&h, [other])
+        .run(
+            &[mine.clone(), theirs.clone()],
+            MailAction::Label {
+                add: vec!["receipts".into()],
+                remove: vec![],
+                create: false,
+            },
+            History::Record,
+        )
+        .await;
+    assert_eq!(outcome.done, [mine]);
+    assert_eq!(outcome.failed.len(), 1);
+    assert_eq!(outcome.failed[0].target, theirs);
+    assert!(h.labels_of("a").await.contains(&"Label_receipts".to_string()));
+    assert!(
+        other_fake.with(|s| s.labels.iter().all(|l| l.name != "receipts")),
+        "no label is made in the other account"
+    );
 }
 
 /// Whether the fake still holds a message.

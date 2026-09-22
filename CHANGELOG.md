@@ -9,6 +9,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - An Archive mailbox lists the mail you took out of the inbox, across all
   accounts and under each one. Drag mail onto it to archive it.
+- You can label mail from several accounts at once by picking a label name.
 
 ### Improved
 
@@ -18,6 +19,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   conversation in one request instead of one request per message.
 - A conversation with several results in a search, the Trash or Junk opens
   without waiting on Gmail again.
+- Labelling mail by name asks before it creates the label in an account
+  that lacks it. Say no, and only mail in accounts with the label gets it.
 
 ### Fixed
 

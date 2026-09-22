@@ -19,7 +19,9 @@ assistant on the right. Ask it about your mail in plain words:
 - "What is Mara's address at Fernwood?"
 
 It reads mail with the same tools you use: it lists mailboxes, searches
-Gmail, and reads conversations. It acts through the app too, so Ctrl+Z
+Gmail, and reads conversations. It looks people up in your address book,
+by name, address or organisation, and gets back their addresses, phone
+number and organisation. It acts through the app too, so Ctrl+Z
 undoes what it archived, trashed, flagged, muted, or marked.
 
 It reads an attachment as text when the file is plain text, a web page or
@@ -212,6 +214,8 @@ By default, the assistant asks you before it:
 - turns an automatic reply on or off,
 - creates or deletes a Gmail filter,
 - blocks a sender or sorts one into a category,
+- creates a label that an account lacks, when it labels mail by name
+  (say no, and it labels only the mail in accounts that have the label),
 - moves more than 25 conversations to the Trash,
 - deletes mail forever,
 - unsubscribes you from a list,

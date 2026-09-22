@@ -1,11 +1,12 @@
 //! Moving mail by drag and drop, and creating, renaming, and deleting labels.
 
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::glib;
 use mailrs_domain::{AccountId, LabelKind, system_label};
-use mailrs_sync::{History, MailAction, TriageAction};
+use mailrs_sync::{History, MailAction, NewLabels, TriageAction};
 
 use super::{MainWindow, Target};
 use crate::ui::Mailbox;
@@ -220,6 +221,104 @@ impl MainWindow {
             {
                 this.failed(&gettext("Could not change the colour: {reason}"), &err);
             }
+        });
+    }
+
+    /// The label menu for mail from several accounts: every user label
+    /// name any of them holds, once each. `None` when none holds a label.
+    pub(super) fn labels_by_name(
+        self: &Rc<Self>,
+        accounts: &HashSet<AccountId>,
+        popover: &gtk::Popover,
+    ) -> Option<gtk::Widget> {
+        let mut names: Vec<String> = Vec::new();
+        for account_id in accounts {
+            for label in self.labels_of(*account_id) {
+                if label.kind == LabelKind::User
+                    && !names.iter().any(|n| n.eq_ignore_ascii_case(&label.name))
+                {
+                    names.push(label.name);
+                }
+            }
+        }
+        if names.is_empty() {
+            return None;
+        }
+        names.sort_by_key(|n| n.to_lowercase());
+        let list = gtk::ListBox::builder()
+            .css_classes(["navigation-sidebar"])
+            .selection_mode(gtk::SelectionMode::None)
+            .build();
+        for name in &names {
+            let shown = gtk::Label::builder()
+                .label(name.replace('/', " › "))
+                .xalign(0.0)
+                .build();
+            let row = gtk::ListBoxRow::builder()
+                .child(&shown)
+                .activatable(true)
+                .build();
+            crate::ui::name(&row, &super::label_row_name(name, false));
+            list.append(&row);
+        }
+        let (weak, pop) = (Rc::downgrade(self), popover.clone());
+        list.connect_row_activated(move |_, row| {
+            let (Some(win), Some(name)) = (weak.upgrade(), names.get(row.index() as usize)) else {
+                return;
+            };
+            pop.popdown();
+            win.label_by_name(name.clone());
+        });
+        let scroller = gtk::ScrolledWindow::builder()
+            .child(&list)
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .propagate_natural_height(true)
+            .max_content_height(360)
+            .min_content_width(220)
+            .build();
+        Some(scroller.upcast())
+    }
+
+    /// Adds the label called `name` to the targets. An account without a
+    /// label by that name gets one only if the person says so; otherwise
+    /// only the mail in accounts that hold the name gets it.
+    fn label_by_name(self: &Rc<Self>, name: String) {
+        let targets = self.reach(&self.conversation).targets;
+        if targets.is_empty() {
+            return;
+        }
+        let add = vec![name];
+        let plan = NewLabels::plan(&targets, &add, &[], |account_id| {
+            self.labels_of(account_id)
+                .into_iter()
+                .map(|l| l.name)
+                .collect()
+        });
+        let label = move |create: bool| MailAction::Label {
+            add: add.clone(),
+            remove: vec![],
+            create,
+        };
+        if plan.is_empty() {
+            return self.perform(targets, label(true), History::Record, None);
+        }
+        let kept = plan.kept(&targets);
+        let emails: HashMap<AccountId, String> = self
+            .accounts()
+            .into_iter()
+            .map(|a| (a.id, a.email))
+            .collect();
+        let who = plan.who(|id| emails.get(&id).cloned().unwrap_or_default());
+        let mut question = confirm(&plan.heading(), &who, &gettext("Create"), Tone::Suggested);
+        if !kept.is_empty() {
+            question = question.declining(&gettext("Only Where It Exists"));
+        }
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let create = question.ask(&this.window).await;
+            let targets = if create { targets } else { kept };
+            let action = label(create);
+            this.perform(targets, action, History::Record, None);
         });
     }
 

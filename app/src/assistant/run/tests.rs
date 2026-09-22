@@ -7,7 +7,7 @@ use mailrs_sync::{MailAction, Outcome, Permitted, TriageAction};
 use serde_json::{Value, json};
 
 use super::catalog::{Run, catalog};
-use super::fake::{Connected, Harness, ME, NOW, labelled, meta};
+use super::fake::{Connected, Harness, ME, NOW, YOU, labelled, meta};
 use super::{OpenConversation, Permission};
 use crate::settings::{Change, TextSize};
 use mailrs_sync::hidden;
@@ -335,6 +335,85 @@ async fn label_adds_and_removes_by_name() {
     )
     .await;
     assert!(!h.labels_of("m1").await.contains(&"Label_kites".to_string()));
+    assert!(h.asked().questions.is_empty(), "no label was made");
+}
+
+/// Dana's account has Kites; Sam's, the second, has no labels. Each holds
+/// one inbox conversation.
+async fn two_accounts() -> Harness {
+    let theirs = labelled(
+        meta("s1", "u1", "kim@example.com", "Kite club", NOW - DAY),
+        &[system_label::INBOX],
+    );
+    Harness::with_second(mail(), vec![theirs]).await
+}
+
+/// One conversation in each account.
+fn both() -> Value {
+    json!([target("t1"), {"account": YOU, "thread_id": "u1"}])
+}
+
+/// Whether Sam's Gmail has a label by that name.
+fn second_has(h: &Harness, name: &str) -> bool {
+    let (_, gmail) = h.second.as_ref().expect("two accounts");
+    gmail.with(|s| s.labels.iter().any(|l| l.name == name))
+}
+
+#[tokio::test]
+async fn labelling_across_accounts_asks_once_before_making_a_label() {
+    let h = two_accounts().await;
+    let done = h
+        .ok("label", json!({"targets": both(), "add": ["Kites"]}))
+        .await;
+    assert_eq!(done["done"], 2);
+    let questions = h.asked().questions.clone();
+    assert_eq!(questions.len(), 1, "{questions:?}");
+    assert!(questions[0].contains("“Kites”"), "{}", questions[0]);
+    assert!(questions[0].contains(YOU), "names Sam: {}", questions[0]);
+    assert!(!questions[0].contains(ME), "Dana has Kites: {}", questions[0]);
+    assert!(second_has(&h, "Kites"));
+    assert!(h.labels_of("m1").await.contains(&"Label_kites".to_string()));
+    let (second, _) = h.second.clone().expect("two accounts");
+    let theirs = h.labels_in(second, "s1").await;
+    assert!(
+        theirs.iter().any(|l| l != system_label::INBOX),
+        "Sam's mail carries the new label: {theirs:?}"
+    );
+}
+
+#[tokio::test]
+async fn declining_a_new_label_labels_only_where_it_exists() {
+    let h = two_accounts().await;
+    h.effects.asked.borrow_mut().approves = false;
+    let done = h
+        .ok("label", json!({"targets": both(), "add": ["Kites"]}))
+        .await;
+    assert_eq!(done["done"], 1);
+    assert!(done["declined"].is_string(), "the model hears why: {done}");
+    assert!(h.labels_of("m1").await.contains(&"Label_kites".to_string()));
+    assert!(!second_has(&h, "Kites"), "Sam's account gets no new label");
+    let (second, _) = h.second.clone().expect("two accounts");
+    assert_eq!(h.labels_in(second, "s1").await, [system_label::INBOX]);
+
+    assert_eq!(
+        h.run("label", json!({"targets": both(), "add": ["Boats"]}))
+            .await,
+        Err("The user declined.".into()),
+        "no account has Boats, so a no leaves nothing to label"
+    );
+}
+
+#[tokio::test]
+async fn without_ask_before_acting_a_missing_label_is_made() {
+    let h = two_accounts().await;
+    h.desk.0.borrow_mut().settings.ai.confirm_actions = false;
+    h.effects.asked.borrow_mut().approves = false;
+    let done = h
+        .ok("label", json!({"targets": both(), "add": ["Kites"]}))
+        .await;
+    assert_eq!(done["done"], 2);
+    assert!(h.asked().questions.is_empty());
+    assert!(second_has(&h, "Kites"));
 }
 
 #[tokio::test]

@@ -36,7 +36,8 @@ pub use account::{
     AccountSync, DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS, FETCH_CONCURRENCY, SendAsAddress,
 };
 pub use actions::{
-    Accounts, Categorized, Failure, History, MailAction, MailActions, Outcome, Returned, Undone,
+    Accounts, Categorized, Failure, History, MailAction, MailActions, NewLabels, Outcome, Returned,
+    Undone,
 };
 #[cfg(any(test, feature = "fake"))]
 pub use api::AnyGmail;
