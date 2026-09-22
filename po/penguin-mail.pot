@@ -1599,8 +1599,8 @@ msgstr ""
 msgid "In {label}"
 msgstr ""
 
-#: app/src/settings/mod.rs:156 app/src/settings/mod.rs:328
-#: app/src/settings/mod.rs:602 app/src/ui/assistant_mcp_prefs.rs:184
+#: app/src/settings/mod.rs:156 app/src/settings/mod.rs:331
+#: app/src/settings/mod.rs:605 app/src/ui/assistant_mcp_prefs.rs:184
 msgid "Off"
 msgstr ""
 
@@ -1624,143 +1624,151 @@ msgstr ""
 msgid "Translation"
 msgstr ""
 
-#: app/src/settings/mod.rs:192
-msgid "Answers questions and acts on your mail"
-msgstr ""
-
-#: app/src/settings/mod.rs:193
-msgid "Translates a message when you ask"
+#. The assistant's running label says "Unsubscribing" too, and
+#. means the act rather than the feature, which Portuguese
+#. words differently.
+#: app/src/settings/mod.rs:189
+msgctxt "ai feature"
+msgid "Unsubscribing"
 msgstr ""
 
 #: app/src/settings/mod.rs:195
+msgid "Answers questions and acts on your mail"
+msgstr ""
+
+#: app/src/settings/mod.rs:196
+msgid "Translates a message when you ask"
+msgstr ""
+
+#: app/src/settings/mod.rs:198
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr ""
 
-#: app/src/settings/mod.rs:233
+#: app/src/settings/mod.rs:236
 msgid "Same as the Assistant"
 msgstr ""
 
-#: app/src/settings/mod.rs:329
+#: app/src/settings/mod.rs:332
 msgid "Claude's own only"
 msgstr ""
 
-#: app/src/settings/mod.rs:330
+#: app/src/settings/mod.rs:333
 msgid "Brave Search"
 msgstr ""
 
-#: app/src/settings/mod.rs:331
+#: app/src/settings/mod.rs:334
 msgid "SearXNG"
 msgstr ""
 
-#: app/src/settings/mod.rs:461
+#: app/src/settings/mod.rs:464
 msgid "Rich text"
 msgstr ""
 
-#: app/src/settings/mod.rs:462
+#: app/src/settings/mod.rs:465
 msgid "Markdown"
 msgstr ""
 
-#: app/src/settings/mod.rs:509
+#: app/src/settings/mod.rs:512
 msgid "When opened"
 msgstr ""
 
-#: app/src/settings/mod.rs:510
+#: app/src/settings/mod.rs:513
 msgid "After 2 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:511
+#: app/src/settings/mod.rs:514
 msgid "Only when I choose"
 msgstr ""
 
-#: app/src/settings/mod.rs:527
+#: app/src/settings/mod.rs:530
 msgid "Ask each time"
 msgstr ""
 
-#: app/src/settings/mod.rs:528
+#: app/src/settings/mod.rs:531
 msgid "Always load"
 msgstr ""
 
-#: app/src/settings/mod.rs:562
+#: app/src/settings/mod.rs:565
 msgid "Small"
 msgstr ""
 
-#: app/src/settings/mod.rs:563
+#: app/src/settings/mod.rs:566
 msgid "Default"
 msgstr ""
 
-#: app/src/settings/mod.rs:564
+#: app/src/settings/mod.rs:567
 msgid "Large"
 msgstr ""
 
-#: app/src/settings/mod.rs:565
+#: app/src/settings/mod.rs:568
 msgid "Larger"
 msgstr ""
 
-#: app/src/settings/mod.rs:603
+#: app/src/settings/mod.rs:606
 msgid "5 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:604
+#: app/src/settings/mod.rs:607
 msgid "10 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:605
+#: app/src/settings/mod.rs:608
 msgid "20 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:606
+#: app/src/settings/mod.rs:609
 msgid "30 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:623
+#: app/src/settings/mod.rs:626
 msgid "Follow system"
 msgstr ""
 
-#: app/src/settings/mod.rs:624
+#: app/src/settings/mod.rs:627
 msgid "Light"
 msgstr ""
 
-#: app/src/settings/mod.rs:625
+#: app/src/settings/mod.rs:628
 msgid "Dark"
 msgstr ""
 
-#: app/src/settings/mod.rs:635
+#: app/src/settings/mod.rs:638
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/settings/mod.rs:643
+#: app/src/settings/mod.rs:646
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/settings/mod.rs:660
+#: app/src/settings/mod.rs:663
 msgid "2 weeks"
 msgstr ""
 
-#: app/src/settings/mod.rs:661
+#: app/src/settings/mod.rs:664
 msgid "30 days"
 msgstr ""
 
-#: app/src/settings/mod.rs:662
+#: app/src/settings/mod.rs:665
 msgid "90 days"
 msgstr ""
 
-#: app/src/settings/mod.rs:663
+#: app/src/settings/mod.rs:666
 msgid "1 year"
 msgstr ""
 
-#: app/src/settings/mod.rs:670
+#: app/src/settings/mod.rs:673
 msgid "256 MB"
 msgstr ""
 
-#: app/src/settings/mod.rs:671
+#: app/src/settings/mod.rs:674
 msgid "1 GB"
 msgstr ""
 
-#: app/src/settings/mod.rs:672
+#: app/src/settings/mod.rs:675
 msgid "4 GB"
 msgstr ""
 

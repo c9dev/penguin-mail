@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use mailrs_domain::Category;
-use mailrs_domain::translate::{fill_plural, gettext};
+use mailrs_domain::translate::{fill_plural, gettext, pgettext};
 use serde::{Deserialize, Serialize};
 
 mod change;
@@ -183,7 +183,10 @@ impl Feature {
         match self {
             Feature::Assistant => gettext("Assistant"),
             Feature::Translation => gettext("Translation"),
-            Feature::Unsubscribe => gettext("Unsubscribing"),
+            // The assistant's running label says "Unsubscribing" too, and
+            // means the act rather than the feature, which Portuguese
+            // words differently.
+            Feature::Unsubscribe => pgettext("ai feature", "Unsubscribing"),
         }
     }
 
