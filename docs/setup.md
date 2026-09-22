@@ -131,6 +131,45 @@ state `ok`. An account that reports `needs_reauth` without you revoking
 it means the project is probably still in Testing: check the publishing status
 under Audience, publish, and add the account again.
 
+## Which package
+
+Every package is the same app, built with a cargo feature that says what
+kind it is (`packaging-flatpak`, `packaging-snap`, `packaging-appimage`, or
+none for the .deb, the rpm and the tarball). The feature decides where
+updates come from and whether skills run.
+
+| | .deb / rpm | Flatpak | Snap | AppImage |
+|---|---|---|---|---|
+| Updates | apt / dnf repository | Flathub | Snap Store | in the app |
+| GnuPG | system | runtime's `gpg`, on `~/.gnupg` | snap's `gpg`, on `~/.gnupg` | system |
+| Assistant skills | yes | no | no | yes |
+| Claude Code, MCP servers run as a command | yes | no | no | yes |
+| Tray icon | yes | yes | yes | yes |
+| Start at login | autostart file | Background portal | snapd autostart | autostart file |
+
+- **Updates.** A .deb, a tarball and an AppImage update themselves from
+  GitHub releases. The rpm leaves it to dnf. The Flatpak and the snap
+  leave it to their store, and Preferences says which.
+- **GnuPG.** The Flatpak has two holes in its sandbox for signing and
+  encryption: `~/.gnupg`, and the gpg-agent socket under
+  `$XDG_RUNTIME_DIR/gnupg`, so your own agent and pinentry handle
+  passphrases. The snap reaches `~/.gnupg` through a `personal-files` plug.
+  The AppImage bundles no GnuPG and uses `gpg` and `gpgsm` from your
+  distribution.
+- **Skills.** A skill's scripts run under bubblewrap, which cannot start
+  inside Flatpak's or a strict snap's sandbox. Running them without one
+  would hand a skill your mail and keys, so both packages turn skills off
+  and say so under Preferences, AI, Skills.
+- **Programs on your system.** Claude Code, and an MCP server you add as a
+  command, run as programs on your computer. The Flatpak and the snap
+  cannot see those programs. A local model, the Anthropic API and MCP
+  servers you reach by address work in every package.
+- **WebKit's sandbox.** WebKit draws HTML mail in helper processes of its
+  own, which it sandboxes with bubblewrap. The AppImage turns that off,
+  because the sandbox mounts your system's `/usr` and the helpers inside
+  the image would find none of their libraries there. Scripts stay off and
+  remote content stays blocked in every package.
+
 ## Where things live
 
 | What | Where | Override |
@@ -141,6 +180,14 @@ under Audience, publish, and add the account again.
 
 The keyring service keeps the app's old name, mailrs, so accounts added
 before the rename stay signed in.
+
+The Flatpak keeps its config and mail under
+`~/.var/app/io.github.c9dev.PenguinMail/`, in `config/penguin-mail` and
+`data/penguin-mail`, and the snap under `~/snap/penguin-mail/current/`, in
+`.config/penguin-mail` and `.local/share/penguin-mail`. Moving from the
+.deb to one of them starts with an empty store; copy `config.toml` across
+to skip the welcome screen, then add each account again, since the list
+of accounts lives in the store.
 
 `penguin-mail-cli account remove you@gmail.com` deletes an account's local mail and
 its keyring entry. To revoke access on Google's side as well, use
