@@ -82,16 +82,24 @@ a good icon look broken.
   `sync`, called by both the window and the assistant. A window that
   starts doing its own Gmail work is drifting.
 - **Late answers.** Any `await` in the UI can finish after the reader
-  has moved to another thread. Before touching the conversation view
-  after an await, check `ConversationView::is_showing(account_id,
-  thread_id)` for the thread you started on. `app/src/protection/run.rs`
-  has the rule behind ports (`Desk`, `Effects`, `Wanted::still`) with
-  tests over a fake window; seven older call sites still check by hand
-  (listed in the backlog).
+  has moved to another conversation. A run that talks to the window
+  holds a `Wanted` (`app/src/wanted.rs`) for the `Target` it started on
+  and reaches its effect port only through it: `wait` and `ask` drop an
+  answer once that target has left the screen, and `on_screen` makes a
+  change only while it is there. The thread run
+  (`app/src/open_thread/run.rs`) and the engine run
+  (`app/src/protection/run.rs`) work this way, each with a fake window
+  and tests. New work on the open thread belongs in the thread run as a
+  step; decide what it leaves stale in `Stale::after`. Window code that
+  awaits outside a run, such as a dialog, keeps the target it started
+  from and checks `ConversationView::is_showing(&target)` before
+  touching the view.
 - **The open thread changes through named methods** on
   `ConversationView` (`bodies_arrived`, `translated`, `engine_answered`,
   and so on), and is read through `read` and `find`. Add a named change
-  rather than reaching into `OpenThread`.
+  rather than reaching into `OpenThread`, and put its data half on
+  `OpenThread` (`take_bodies`, `take_engine_answer`), so the thread
+  run's fake changes the thread the way the view does.
 - **Architecture vocabulary** is the `codebase-design` skill's: module,
   interface, depth, seam, adapter, leverage, locality. A seam gets
   introduced when a second adapter exists, not before.
