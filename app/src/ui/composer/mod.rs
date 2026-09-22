@@ -130,6 +130,11 @@ pub struct Composer {
     /// "Encrypt when I can" leaves it alone.
     encrypt_chosen: Cell<bool>,
     encrypt_when_possible: bool,
+    /// Whether the writer means this message to go out encrypted. It
+    /// outlasts the toggle going off because a recipient has no key, and
+    /// only the writer turning Encrypt off clears it. A draft saves
+    /// encrypted while it is set, and a send with Encrypt off asks first.
+    secret: Cell<bool>,
     /// The formatting bar's toggles, each with the tag it stands for.
     toggles: RefCell<Vec<(gtk::ToggleButton, &'static str)>>,
     identities: Vec<Identity>,
@@ -236,7 +241,7 @@ impl Composer {
         let sign = gtk::ToggleButton::builder()
             .label(gettext("Sign"))
             .tooltip_text(gettext("Sign this message with your own key"))
-            .active(has_engine && sign_by_default)
+            .active(has_engine && (sign_by_default || draft.sign))
             .build();
         let encrypt = gtk::ToggleButton::builder()
             .label(gettext("Encrypt"))
@@ -435,7 +440,10 @@ impl Composer {
             key_check: Cell::new(0),
             filling_keys: Cell::new(false),
             encrypt_chosen: Cell::new(false),
-            encrypt_when_possible: has_engine && encrypt_when_possible,
+            // A draft that went out encrypted, or waited in Drafts that way,
+            // turns Encrypt back on as soon as the keys allow.
+            encrypt_when_possible: has_engine && (encrypt_when_possible || draft.encrypt),
+            secret: Cell::new(has_engine && draft.encrypt),
             toggles: RefCell::new(Vec::new()),
             identities,
             showing: Cell::new(selected),
@@ -623,10 +631,15 @@ impl Composer {
             }
         });
         let weak = Rc::downgrade(self);
-        self.encrypt.connect_toggled(move |_| {
+        self.encrypt.connect_toggled(move |toggle| {
             let Some(c) = weak.upgrade() else { return };
             if !c.filling_keys.get() {
                 c.encrypt_chosen.set(true);
+            }
+            if toggle.is_active() {
+                c.secret.set(true);
+            } else if !c.filling_keys.get() {
+                c.secret.set(false);
             }
             c.dirty.set(true);
         });
@@ -1215,6 +1228,10 @@ impl Composer {
             self.failed(&gettext("Could not build the message: {reason}"), &err);
             return;
         }
+        if self.secret.get() && !draft.encrypt {
+            self.ask_about_encryption(when);
+            return;
+        }
         if let Some(promise) = self.unkept_promise(&draft) {
             self.ask_about_attachment(&promise, when);
             return;
@@ -1275,6 +1292,35 @@ impl Composer {
         });
     }
 
+    /// Asks before a message the writer meant to encrypt goes out readable,
+    /// which happens when a recipient's key went missing after Encrypt was
+    /// on. Send Readable clears the wish and sends; closing the dialog
+    /// leaves the message open.
+    fn ask_about_encryption(self: &Rc<Self>, when: SendWhen) {
+        let reason = self.encrypt.tooltip_text().unwrap_or_default();
+        let dialog = adw::AlertDialog::new(
+            Some(&gettext("Send Without Encryption?")),
+            Some(&fill(
+                &gettext("This message was to go out encrypted, and it cannot be. {reason}"),
+                &[("reason", &reason)],
+            )),
+        );
+        dialog.add_responses(&[
+            ("cancel", &gettext("Cancel")),
+            ("send", &gettext("Send Readable")),
+        ]);
+        dialog.set_response_appearance("send", adw::ResponseAppearance::Destructive);
+        dialog.set_default_response(Some("cancel"));
+        dialog.set_close_response("cancel");
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            if dialog.choose_future(Some(&this.window)).await == "send" {
+                this.secret.set(false);
+                this.hand_over(when);
+            }
+        });
+    }
+
     /// Asks for a date and time, then schedules the message.
     fn choose_send_time(self: &Rc<Self>) {
         let this = Rc::clone(self);
@@ -1293,19 +1339,38 @@ impl Composer {
     }
 
     /// Saves to Gmail drafts. With `then_close`, closes the window afterwards.
+    ///
+    /// A message the writer means to encrypt goes into Drafts encrypted to
+    /// their own key, since Gmail would otherwise hold it readable until it
+    /// went out. `protection::draft` says how, and how it comes back.
     fn save_draft(self: &Rc<Self>, then_close: bool) {
         let Some(draft) = self.collect() else { return };
         let Some(account) = self.core.account(draft.account_id) else {
             return self.toast(&gettext("That account is not connected."));
         };
-        let raw = match build_mime(&draft, now_secs(), &new_message_id(&draft.from.email)) {
-            Ok(raw) => raw,
-            Err(err) => {
-                return self.failed(&gettext("Could not save: {reason}"), &err);
-            }
+        let (date, message_id) = (now_secs(), new_message_id(&draft.from.email));
+        let secret = self.secret.get() || draft.encrypt;
+        // The recipients choose the standard of an encrypted message, and
+        // the writer's own holdings that of one they cannot encrypt yet.
+        let standard = match draft.encrypt {
+            true => draft.standard,
+            false => self.signing_with.get(),
         };
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
+            let raw = match secret {
+                true => {
+                    let mut kept = draft.clone();
+                    kept.encrypt = true;
+                    protection::draft::sealed(&this.core, &kept, standard, date, &message_id).await
+                }
+                false => build_mime(&draft, date, &message_id)
+                    .map_err(|err| fill(&gettext("Could not save: {reason}"), &[("reason", &err)])),
+            };
+            let raw = match raw {
+                Ok(raw) => raw,
+                Err(problem) => return this.toast(&problem),
+            };
             let (thread, draft_id) = (draft.thread_id.clone(), draft.draft_id.clone());
             match this
                 .core
@@ -1324,6 +1389,8 @@ impl Composer {
                     if then_close {
                         this.closing.set(true);
                         this.window.close();
+                    } else if secret {
+                        this.toast(&gettext("Draft saved, encrypted to your own key"));
                     } else {
                         this.toast(&gettext("Draft saved"));
                     }

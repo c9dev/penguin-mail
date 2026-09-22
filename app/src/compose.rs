@@ -11,6 +11,7 @@
 use mail_builder::MessageBuilder;
 use mail_builder::headers::address::Address as MimeAddress;
 use mail_builder::headers::content_type::ContentType;
+use mail_builder::headers::raw::Raw;
 use mail_builder::mime::MimePart;
 use mailrs_domain::{AccountId, Address, EpochMillis, MessageBody, MessageMeta};
 use mailrs_gmail::address::parse_address_list_keeping_invalid;
@@ -951,6 +952,23 @@ pub fn build_protected(
     entity: Vec<u8>,
 ) -> Result<Vec<u8>, String> {
     envelope(draft, date_secs, message_id)
+        .body(MimePart::raw(entity))
+        .write_to_vec()
+        .map_err(|e| e.to_string())
+}
+
+/// A draft for Gmail to keep while its message is meant to go out
+/// encrypted: what [`build_protected`] writes, plus the header `mark`,
+/// which tells the composer that reopens it what to switch back on.
+pub fn build_protected_draft(
+    draft: &Draft,
+    date_secs: i64,
+    message_id: &str,
+    entity: Vec<u8>,
+    mark: (&'static str, &'static str),
+) -> Result<Vec<u8>, String> {
+    envelope(draft, date_secs, message_id)
+        .header(mark.0, Raw::new(mark.1))
         .body(MimePart::raw(entity))
         .write_to_vec()
         .map_err(|e| e.to_string())

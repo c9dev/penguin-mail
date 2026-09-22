@@ -658,7 +658,10 @@ fn a_blind_copy_opens_for_its_reader_and_leaves_their_key_out_of_the_message() {
         .iter()
         .chain(&encryption_key_ids(&ada))
     {
-        assert!(listed.contains(key.as_str()), "{key} missing from\n{listed}");
+        assert!(
+            listed.contains(key.as_str()),
+            "{key} missing from\n{listed}"
+        );
     }
     let hidden = encryption_key_ids(&cy);
     assert!(!hidden.is_empty(), "cy has a key to encrypt to");

@@ -712,6 +712,41 @@ mod tests {
     }
 
     #[test]
+    fn an_encrypted_draft_reopens_out_of_its_envelope() {
+        use crate::protection::{Standard, draft};
+
+        let Some(home) = Home::new() else { return };
+        let me = mailrs_domain::Address {
+            name: Some("Ada Lovelace".into()),
+            email: home.address.clone(),
+        };
+        let mut written = crate::compose::Draft::new(1, me.clone());
+        written.to = vec![me];
+        written.subject = "Six".into();
+        written.markdown = "Meet at six.".into();
+        written.encrypt = true;
+        written.standard = Standard::Smime;
+        let part = crate::compose::build_body_part(&written).expect("a body part");
+        let entity = draft::for_writer_smime(&home.smime, &part, &home.address)
+            .expect("gpgsm answers")
+            .expect("gpgsm holds the writer's own certificate");
+        let raw =
+            draft::build(&written, 1_757_000_000, "<id@example.test>", entity).expect("a draft");
+        assert!(!String::from_utf8_lossy(&raw).contains("Meet at six"));
+        assert_eq!(draft::standard_of(&raw), Some(Standard::Smime));
+
+        let read = read(&home.smime, Opening::Decrypt, &raw);
+        let mut reopened = crate::compose::Draft::new(1, written.from.clone());
+        draft::reopen(&raw, Standard::Smime, read, &mut reopened).expect("it opens");
+
+        assert_eq!(reopened.to, written.to);
+        assert_eq!(reopened.markdown.trim(), "Meet at six.");
+        assert!(reopened.encrypt);
+        assert!(!reopened.sign, "the header says it was not to be signed");
+        assert_eq!(reopened.standard, Standard::Smime);
+    }
+
+    #[test]
     fn a_message_that_says_it_is_smime_and_is_not_says_so() {
         let Some(home) = Home::new() else { return };
         let raw = home.message(b"Content-Type: multipart/signed\r\n\r\nMeet at six.\r\n");

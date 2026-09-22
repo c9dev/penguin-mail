@@ -703,6 +703,91 @@ mod tests {
     }
 
     #[test]
+    fn an_encrypted_draft_waits_in_gmail_unreadable_and_reopens_as_written() {
+        use crate::compose::OutgoingAttachment;
+        use crate::protection::{Standard, draft};
+
+        let Some(home) = Home::new() else { return };
+        let mut written = draft_to(&home);
+        written.cc = vec![mailrs_domain::Address {
+            name: Some("Bo Peep".into()),
+            email: "bo@example.test".into(),
+        }];
+        written.bcc = vec![mailrs_domain::Address {
+            name: None,
+            email: "cy@example.test".into(),
+        }];
+        written.in_reply_to = Some("<parent@example.test>".into());
+        written.references = vec!["<root@example.test>".into(), "<parent@example.test>".into()];
+        written.sign = true;
+        written.encrypt = true;
+        written.attachments = vec![OutgoingAttachment {
+            filename: "plan.txt".into(),
+            mime_type: "text/plain".into(),
+            data: b"Under the mat.".to_vec(),
+            content_id: None,
+        }];
+        let part = crate::compose::build_body_part(&written).expect("a body part");
+        let entity = draft::for_writer_pgp(&home.pgp, &part, &home.address)
+            .expect("gpg answers")
+            .expect("gpg holds the writer's own key");
+        let raw =
+            draft::build(&written, 1_757_000_000, "<id@example.test>", entity).expect("a draft");
+
+        // What Gmail holds: the headers, and none of the words or files.
+        let held = String::from_utf8_lossy(&raw);
+        assert!(!held.contains("Meet at six"), "{held}");
+        assert!(!held.contains("plan.txt"), "{held}");
+        assert!(
+            held.contains("X-Penguin-Mail-Draft: encrypt; sign\r\n"),
+            "{held}"
+        );
+        assert_eq!(draft::standard_of(&raw), Some(Standard::Pgp));
+
+        let read = read(&home.pgp, Opening::Decrypt, &raw, &MessageBody::default());
+        let mut reopened = crate::compose::Draft::new(1, written.from.clone());
+        draft::reopen(&raw, Standard::Pgp, read, &mut reopened).expect("it opens");
+
+        assert_eq!(reopened.to, written.to);
+        assert_eq!(reopened.cc, written.cc);
+        assert_eq!(
+            reopened.bcc, written.bcc,
+            "the blind copy survives the trip"
+        );
+        assert_eq!(reopened.subject, "Six");
+        assert_eq!(reopened.markdown.trim(), "Meet at six.");
+        assert_eq!(reopened.in_reply_to, written.in_reply_to);
+        assert_eq!(reopened.references, written.references);
+        assert_eq!(reopened.attachments, written.attachments);
+        assert!(reopened.encrypt && reopened.sign);
+        assert_eq!(reopened.standard, Standard::Pgp);
+
+        // Sending it goes through the same engine as any other message.
+        let part = crate::compose::build_body_part(&reopened).expect("a body part");
+        let readers = crate::protection::Addressees::of(&reopened).readers(true);
+        assert_eq!(readers.hidden, vec!["cy@example.test".to_string()]);
+        home.pgp
+            .encrypt(
+                &part,
+                &mailrs_pgp::Readers::named([home.address.clone()]),
+                Some(&home.address),
+            )
+            .expect("the reopened draft encrypts again");
+    }
+
+    #[test]
+    fn a_writer_with_no_key_of_their_own_gets_no_encrypted_draft() {
+        let Some(home) = Home::new() else { return };
+        let sealed = crate::protection::draft::for_writer_pgp(
+            &home.pgp,
+            b"Content-Type: text/plain\r\n\r\nHi\r\n",
+            "nobody@example.test",
+        )
+        .expect("gpg answers");
+        assert!(sealed.is_none());
+    }
+
+    #[test]
     fn armor_in_the_text_opens_with_its_signature() {
         let Some(home) = Home::new() else { return };
         // What a mail client that writes inline PGP sends: the armor in the

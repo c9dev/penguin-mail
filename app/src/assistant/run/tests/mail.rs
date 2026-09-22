@@ -157,6 +157,38 @@ async fn send_later_takes_a_saved_draft_as_it_stands() {
 }
 
 #[tokio::test]
+async fn send_later_leaves_an_encrypted_draft_to_the_composer() {
+    let draft = labelled(
+        meta("d1", "t7", ME, "Fern swap", NOW),
+        &[system_label::DRAFT],
+    );
+    let h = Harness::with(vec![draft]).await;
+    h.gmail.with(|i| {
+        i.bodies.insert(
+            "d1".into(),
+            MessageBody {
+                text: Some("Version: 1".into()),
+                protection: Some(mailrs_domain::Protection::Encrypted),
+                ..MessageBody::default()
+            },
+        );
+        i.drafts.insert("r-1".into(), b"ciphertext".to_vec());
+        i.draft_messages.insert("r-1".into(), "d1".into());
+    });
+
+    let refused = h
+        .run(
+            "send_later",
+            json!({"draft": {"account": ME, "thread_id": "t7"}, "at": later()}),
+        )
+        .await
+        .expect_err("the assistant cannot read it");
+
+    assert!(refused.contains("encrypted"), "{refused}");
+    assert!(h.asked().scheduled.is_empty());
+}
+
+#[tokio::test]
 async fn a_template_fills_its_placeholders_in_a_composer() {
     let h = harness().await;
     h.db.write(|c| {

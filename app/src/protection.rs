@@ -8,6 +8,7 @@
 //! chain reaches no root this computer trusts is [`Tone::Unchecked`]. Each
 //! adapter says which it takes, and why, in its own `UNVOUCHED`.
 
+pub mod draft;
 pub mod run;
 
 use mail_parser::{MessageParser, MimeHeaders};
@@ -625,7 +626,10 @@ mod tests {
             smime: Some(vec![certificate("ada@example.test", true)]),
         };
         let problem = encrypting(&smime_only, true).expect_err("S/MIME would name the Bcc");
-        assert!(problem.starts_with("S/MIME names every recipient"), "{problem}");
+        assert!(
+            problem.starts_with("S/MIME names every recipient"),
+            "{problem}"
+        );
         assert!(
             problem.ends_with("gpg holds no key for ada@example.test."),
             "and says what OpenPGP lacks: {problem}"

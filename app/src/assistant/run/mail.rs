@@ -236,6 +236,12 @@ impl<A: Accounts> Tools<A> {
             .ok_or("That conversation holds no draft.")?;
         let (s, id) = (Arc::clone(&sync), message.id.clone());
         let body = self.call(async move { s.body(&id).await }).await?;
+        // Sending rebuilds the message from what the tools hold. They hold
+        // ciphertext for an encrypted draft, and would send it on readable
+        // or garbled, so the writer sends that one from the composer.
+        if crate::protection::draft::is_encrypted(&body) {
+            return Err("That draft is encrypted, and the assistant cannot open it. Ask the user to open it and choose Send Later in the composer.".into());
+        }
         // Sending rebuilds the message from what the tools hold, and they
         // hold no attachment bytes, so a draft with files would lose them.
         if !body.attachments.is_empty() {

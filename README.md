@@ -104,8 +104,10 @@ Gmail runs all four, so they work with your computer off.
   The composer has one Sign and one Encrypt for both standards and offers
   Encrypt once every recipient has a key. A Bcc stays blind under OpenPGP,
   which leaves that reader's key out of the message; S/MIME cannot, so a
-  message with a Bcc is not encrypted under it. Penguin Mail holds no key
-  and asks for no passphrase: gpg, gpgsm and their pinentry do.
+  message with a Bcc is not encrypted under it. A draft of an encrypted
+  message waits in Gmail encrypted to your own key, and opens again in the
+  composer with Encrypt on. Penguin Mail holds no key and asks for no
+  passphrase: gpg, gpgsm and their pinentry do.
 - **Remote content blocked twice**, by a WebKit content filter and by the
   page's own Content-Security-Policy, with JavaScript off. Loading images is
   a choice per conversation, or per sender.

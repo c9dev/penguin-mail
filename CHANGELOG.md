@@ -67,6 +67,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - You can reach any recipient in an address field from the keyboard: Left from the start of the field steps onto the addresses, and Delete removes the one you are on.
 - An encrypted message you send without signing it stays readable in your
   Sent folder.
+- A draft of an encrypted message no longer waits in Gmail as readable
+  text. Penguin Mail saves it encrypted to your own key, and Edit opens it
+  with its Bcc, its files and Encrypt on again.
+- An encrypted message you undo the send of, or that comes back from the
+  Outbox, reopens with Encrypt on. If a recipient's key has gone missing,
+  Send asks before the message goes out readable.
 
 ## 0.1.4 (2026-09-22)
 

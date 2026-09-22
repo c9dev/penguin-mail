@@ -24,6 +24,7 @@ app/src/open_thread/run/translation.rs
 app/src/permission.rs
 app/src/pgp.rs
 app/src/protection.rs
+app/src/protection/draft.rs
 app/src/render.rs
 app/src/rules.rs
 app/src/search.rs

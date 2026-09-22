@@ -1774,7 +1774,32 @@ impl MainWindow {
             draft.to = message.to.clone();
             draft.cc = message.cc.clone();
             draft.subject = message.subject.clone();
-            if let Some(body) = &body {
+            // The view may already show what was inside an encrypted draft,
+            // but only the message as Gmail holds it says so, and only its
+            // bytes carry the Bcc and the files that were inside.
+            let (s, m) = (sync.clone(), message.id.clone());
+            let stored = this.core.call(async move { s.body(&m).await }).await.ok();
+            if stored
+                .as_ref()
+                .is_some_and(crate::protection::draft::is_encrypted)
+            {
+                let (s, m) = (sync.clone(), message.id.clone());
+                let raw = match this.core.call(async move { s.raw_message(&m).await }).await {
+                    Ok(raw) => raw,
+                    Err(err) => {
+                        return this.toast(&with_reason(
+                            &gettext("Could not open the draft: {reason}"),
+                            &err,
+                            &[],
+                        ));
+                    }
+                };
+                if let Err(problem) =
+                    crate::protection::draft::opened(&this.core, raw, &mut draft).await
+                {
+                    return this.toast(&problem);
+                }
+            } else if let Some(body) = &body {
                 draft.take_body(body);
             }
             draft.thread_id = in_thread.then_some(thread_id);
