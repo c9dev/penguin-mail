@@ -1,7 +1,9 @@
 //! Penguin Mail with no window: a store, sync's in-memory Gmail behind the
 //! modules, and fake adapters in front of both ports. Building one costs a
 //! tempdir and a tokio runtime, so the whole tool loop runs under
-//! `cargo test`.
+//! `cargo test`. Where the window hands an effect to a sync module, as with
+//! Categorize Sender, unsubscribing and Hide My Email, the fake calls the
+//! same module, so the tests see what Gmail and the store end up holding.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -18,10 +20,11 @@ use mailrs_gmail::RemoteLabel;
 use mailrs_store::{Db, accounts, messages};
 use mailrs_sync::fake::{FakeGmail, fill_store};
 use mailrs_sync::{
-    AccountSettings, AccountSync, Accounts, Calendar, Invitations, MailAction, MailActions,
-    Mailboxes, Outcome, Permitted, View,
+    AccountSettings, AccountSync, Accounts, Calendar, Categorized, Invitations, Leave, MailAction,
+    MailActions, Mailboxes, Outcome, Permitted, View, hidden,
 };
 use serde_json::Value;
+use tokio::task::JoinHandle;
 
 use super::{Answer, Background, Desk, Effects, Modules, OnScreen, Permission, Tools};
 use crate::compose::Draft;
@@ -106,42 +109,63 @@ pub struct Asked {
     pub api_off: Vec<(String, String)>,
     /// Messages handed to Send Later, with their times.
     pub scheduled: Vec<(Draft, EpochMillis)>,
-    pub unsubscribed: Vec<(AccountId, Unsubscribe)>,
+    /// What leaving a list left for the window: a request to send from the
+    /// account, or a page to open in the browser.
+    pub left: Vec<(AccountId, Leave)>,
     pub mail_changed: Vec<(MailAction, Outcome)>,
     pub relisted: usize,
-    pub categorized: Vec<(AccountId, String, String, Category)>,
-    /// Hide My Email: what the next call gives back, then what was asked.
-    pub hidden: Option<Permitted<HiddenAddress>>,
-    pub hide_asked: Vec<(AccountId, String)>,
-    pub activated: Vec<(String, bool)>,
+    /// Categorize Sender runs in the background, as the window runs it.
+    /// `Harness::categorized` waits for these.
+    sorting: Vec<JoinHandle<Categorized>>,
 }
 
-pub struct FakeEffects(pub RefCell<Asked>);
+/// The window's effects. The ones the window hands to sync go to the same
+/// modules the tools use, and settings changes land on the fake desk, as
+/// the app's settings reach the window.
+pub struct FakeEffects {
+    pub asked: RefCell<Asked>,
+    desk: Rc<FakeDesk>,
+    mail: Arc<MailActions<Connected>>,
+    gmail: Arc<AccountSettings<Connected>>,
+}
+
+impl FakeEffects {
+    /// The connected account with this address, as the app finds the
+    /// owner of a Hide My Email address.
+    fn account_of(&self, email: &str) -> Result<AccountId, String> {
+        self.desk
+            .accounts()
+            .iter()
+            .find(|a| a.email.eq_ignore_ascii_case(email))
+            .map(|a| a.id)
+            .ok_or_else(|| format!("{email} is not connected"))
+    }
+}
 
 impl Effects for FakeEffects {
     fn confirm(&self, question: String) -> Answer<'_, bool> {
-        let mut asked = self.0.borrow_mut();
+        let mut asked = self.asked.borrow_mut();
         asked.questions.push(question);
         let answer = asked.approves;
         Box::pin(async move { answer })
     }
 
     fn ask_permission(&self, account_id: AccountId, permission: Permission) {
-        self.0
+        self.asked
             .borrow_mut()
             .permission_asked
             .push((account_id, permission));
     }
 
     fn explain_api_off(&self, service: &str, enable_url: &str) {
-        self.0
+        self.asked
             .borrow_mut()
             .api_off
             .push((service.to_string(), enable_url.to_string()));
     }
 
     fn send_later(&self, draft: Draft, at: EpochMillis) -> Result<(), String> {
-        self.0.borrow_mut().scheduled.push((draft, at));
+        self.asked.borrow_mut().scheduled.push((draft, at));
         Ok(())
     }
 
@@ -150,12 +174,22 @@ impl Effects for FakeEffects {
         account_id: AccountId,
         how: Unsubscribe,
     ) -> Answer<'_, Result<(), String>> {
-        self.0.borrow_mut().unsubscribed.push((account_id, how));
-        Box::pin(async move { Ok(()) })
+        Box::pin(async move {
+            let leave = self
+                .mail
+                .unsubscribe(account_id, how)
+                .await
+                .map_err(|e| e.to_string())?;
+            if leave != Leave::Done {
+                self.asked.borrow_mut().left.push((account_id, leave));
+            }
+            Ok(())
+        })
     }
 
     fn change_settings(&self, change: Change) -> Result<(), String> {
-        self.0.borrow_mut().changes.push(change);
+        self.asked.borrow_mut().changes.push(change.clone());
+        change.apply_to(&mut self.desk.0.borrow_mut().settings);
         Ok(())
     }
 
@@ -170,45 +204,47 @@ impl Effects for FakeEffects {
     }
 
     fn compose(&self, draft: Draft) -> Result<(), String> {
-        self.0.borrow_mut().composed.push(draft);
+        self.asked.borrow_mut().composed.push(draft);
         Ok(())
     }
 
     fn send(&self, draft: Draft) -> Result<(), String> {
-        self.0.borrow_mut().sent.push(draft);
+        self.asked.borrow_mut().sent.push(draft);
         Ok(())
     }
 
     fn show_thread(&self, summary: ThreadSummary) {
-        self.0.borrow_mut().opened.push(summary);
+        self.asked.borrow_mut().opened.push(summary);
     }
 
     fn copy(&self, text: &str) {
-        self.0.borrow_mut().copied.push(text.to_string());
+        self.asked.borrow_mut().copied.push(text.to_string());
     }
 
     fn mail_changed(&self, action: &MailAction, outcome: &Outcome) {
-        self.0
+        self.asked
             .borrow_mut()
             .mail_changed
             .push((action.clone(), outcome.clone()));
     }
 
     fn relist(&self) {
-        self.0.borrow_mut().relisted += 1;
+        self.asked.borrow_mut().relisted += 1;
     }
 
     fn categorize_sender(
         &self,
         account_id: AccountId,
         email: String,
-        who: String,
+        _who: String,
         category: Category,
     ) {
-        self.0
-            .borrow_mut()
-            .categorized
-            .push((account_id, email, who, category));
+        let mail = Arc::clone(&self.mail);
+        let sorting = tokio::spawn(async move {
+            mail.categorize_sender(account_id, &email, None, category)
+                .await
+        });
+        self.asked.borrow_mut().sorting.push(sorting);
     }
 
     fn hide_address(
@@ -216,12 +252,24 @@ impl Effects for FakeEffects {
         account_id: AccountId,
         note: String,
     ) -> Answer<'_, Result<Permitted<HiddenAddress>, String>> {
-        let made = {
-            let mut asked = self.0.borrow_mut();
-            asked.hide_asked.push((account_id, note));
-            asked.hidden.clone()
-        };
-        Box::pin(async move { made.ok_or_else(|| "no alias to hand out".to_string()) })
+        Box::pin(async move {
+            let account = self
+                .desk
+                .accounts()
+                .into_iter()
+                .find(|a| a.id == account_id)
+                .ok_or("that account is not connected")?;
+            let taken = self.desk.settings().hidden_addresses;
+            let made = self
+                .gmail
+                .create_hidden_address(account_id, &account.email, &note, &taken)
+                .await
+                .map_err(|e| e.to_string())?;
+            if let Permitted::Done(hidden) = &made {
+                self.change_settings(Change::SaveHiddenAddress(hidden.clone()))?;
+            }
+            Ok(made)
+        })
     }
 
     fn set_address_active(
@@ -229,8 +277,23 @@ impl Effects for FakeEffects {
         address: String,
         active: bool,
     ) -> Answer<'_, Result<Permitted<()>, String>> {
-        self.0.borrow_mut().activated.push((address, active));
-        Box::pin(async move { Ok(Permitted::Done(())) })
+        Box::pin(async move {
+            let kept = self.desk.settings().hidden_addresses;
+            let hidden = hidden::find(&kept, &address)
+                .cloned()
+                .ok_or_else(|| format!("{address} is not a Hide My Email address"))?;
+            let account_id = self.account_of(&hidden.account)?;
+            let changed = self
+                .gmail
+                .set_hidden_address_active(account_id, &hidden, active)
+                .await
+                .map_err(|e| e.to_string())?;
+            let Permitted::Done(changed) = changed else {
+                return Ok(Permitted::NeedsPermission);
+            };
+            self.change_settings(Change::SaveHiddenAddress(changed))?;
+            Ok(Permitted::Done(()))
+        })
     }
 }
 
@@ -334,10 +397,12 @@ impl Harness {
         ));
         fill_store(&sync).await.expect("the first sync runs");
         let connected = Arc::new(Connected(HashMap::from([(account_id, sync)])));
+        let mail = Arc::new(MailActions::new(Arc::clone(&connected), db.clone()));
+        let settings = Arc::new(AccountSettings::new(Arc::clone(&connected), db.clone()));
         let modules = Modules {
-            mail: Arc::new(MailActions::new(Arc::clone(&connected), db.clone())),
+            mail: Arc::clone(&mail),
             lists: Arc::new(Mailboxes::new(Arc::clone(&connected), db.clone())),
-            gmail: Arc::new(AccountSettings::new(Arc::clone(&connected), db.clone())),
+            gmail: Arc::clone(&settings),
             calendar: Arc::new(Calendar::new(Arc::clone(&connected))),
             invitations: Arc::new(Invitations::new(Arc::clone(&connected), db.clone())),
             accounts: connected,
@@ -355,10 +420,15 @@ impl Harness {
             on_screen: OnScreen::default(),
             default_account: Some(account_id),
         })));
-        let effects = Rc::new(FakeEffects(RefCell::new(Asked {
-            approves: true,
-            ..Asked::default()
-        })));
+        let effects = Rc::new(FakeEffects {
+            asked: RefCell::new(Asked {
+                approves: true,
+                ..Asked::default()
+            }),
+            desk: Rc::clone(&desk),
+            mail,
+            gmail: settings,
+        });
         let tools = Tools::new(
             modules,
             Rc::new(Runtime),
@@ -393,7 +463,18 @@ impl Harness {
     }
 
     pub fn asked(&self) -> std::cell::Ref<'_, Asked> {
-        self.effects.0.borrow()
+        self.effects.asked.borrow()
+    }
+
+    /// Waits for every Categorize Sender the tools started, and gives back
+    /// what each did.
+    pub async fn categorized(&self) -> Vec<Categorized> {
+        let sorting = std::mem::take(&mut self.effects.asked.borrow_mut().sorting);
+        let mut done = Vec::new();
+        for task in sorting {
+            done.push(task.await.expect("Categorize Sender finishes"));
+        }
+        done
     }
 
     /// The labels on a stored message.

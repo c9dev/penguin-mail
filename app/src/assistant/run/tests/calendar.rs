@@ -210,7 +210,7 @@ async fn an_event_changes_and_goes_once_the_user_agrees() {
         Err("Say what to change: a title, a time, a place, guests or a description.".into())
     );
 
-    h.effects.0.borrow_mut().approves = false;
+    h.effects.asked.borrow_mut().approves = false;
     assert_eq!(
         h.run("delete_event", json!({"id": id, "title": "Kite day"}))
             .await,
@@ -218,7 +218,7 @@ async fn an_event_changes_and_goes_once_the_user_agrees() {
     );
     assert_eq!(h.gmail.with(|i| i.events.len()), 1, "a no keeps the event");
 
-    h.effects.0.borrow_mut().approves = true;
+    h.effects.asked.borrow_mut().approves = true;
     assert_eq!(
         h.ok("delete_event", json!({"id": id, "title": "Kite day"}))
             .await,

@@ -2,15 +2,15 @@
 //! does and checks the JSON that goes back, plus what the ports were asked
 //! to do.
 
-use mailrs_domain::{Category, FlagColor, MessageBody, MessageMeta, Vacation, system_label};
+use mailrs_domain::{FlagColor, MessageBody, MessageMeta, Vacation, system_label};
 use mailrs_sync::{MailAction, Outcome, Permitted, TriageAction};
 use serde_json::{Value, json};
 
 use super::catalog::{Run, catalog};
 use super::fake::{Connected, Harness, ME, NOW, labelled, meta};
 use super::{OpenConversation, Permission};
-use crate::hide_my_email::HiddenAddress;
 use crate::settings::{Change, TextSize};
+use mailrs_sync::hidden;
 
 mod calendar;
 mod mail;
@@ -434,7 +434,7 @@ async fn send_email_goes_out_once_the_user_approves() {
 #[tokio::test]
 async fn a_declined_send_reports_the_decline_and_changes_nothing() {
     let h = harness().await;
-    h.effects.0.borrow_mut().approves = false;
+    h.effects.asked.borrow_mut().approves = false;
 
     assert_eq!(
         h.run(
@@ -465,7 +465,7 @@ async fn send_email_checks_the_recipients_before_asking() {
 async fn approval_is_skipped_when_the_user_turned_it_off() {
     let h = harness().await;
     h.desk.0.borrow_mut().settings.ai.confirm_actions = false;
-    h.effects.0.borrow_mut().approves = false;
+    h.effects.asked.borrow_mut().approves = false;
 
     let sent = h
         .ok(
@@ -635,40 +635,51 @@ async fn vip_adds_and_removes_an_address() {
 }
 
 #[tokio::test]
-async fn categorize_sender_asks_first_then_hands_the_move_to_the_window() {
+async fn categorize_sender_asks_then_moves_their_mail_and_sorts_the_rest() {
     let h = harness().await;
     let done = h
         .ok(
             "categorize_sender",
-            json!({"account": ME, "email": "shop@example.com", "name": "The Kite Shop", "category": "promotions"}),
+            json!({"account": ME, "email": "shop@example.com", "name": "The Kite Shop", "category": "social"}),
         )
         .await;
     assert_eq!(
         done,
-        json!({"sender": "shop@example.com", "category": "promotions"})
+        json!({"sender": "shop@example.com", "category": "social"})
     );
-    let asked = h.asked();
     assert_eq!(
-        asked.questions,
+        h.asked().questions,
         [format!(
-            "Move mail from The Kite Shop to Promotions in {ME}, and add a Gmail rule for their future mail?"
+            "Move mail from The Kite Shop to Social in {ME}, and add a Gmail rule for their future mail?"
         )]
     );
+    let categorized = h.categorized().await;
+    assert_eq!(categorized.len(), 1);
     assert_eq!(
-        asked.categorized,
-        [(
-            h.account_id,
-            "shop@example.com".to_string(),
-            "The Kite Shop".to_string(),
-            Category::Promotions,
-        )]
+        categorized[0].sorted.as_ref().ok(),
+        Some(&Permitted::Done(()))
+    );
+
+    let labels = h.labels_of("m2").await;
+    assert!(labels.iter().any(|l| l == system_label::CATEGORY_SOCIAL));
+    assert!(
+        !labels
+            .iter()
+            .any(|l| l == system_label::CATEGORY_PROMOTIONS)
+    );
+    let rules = h.gmail.with(|s| s.filters.clone());
+    assert_eq!(rules.len(), 1);
+    assert_eq!(rules[0].criteria.from.as_deref(), Some("shop@example.com"));
+    assert_eq!(
+        rules[0].action.add_label_ids,
+        [system_label::CATEGORY_SOCIAL]
     );
 }
 
 #[tokio::test]
 async fn a_declined_categorize_changes_nothing() {
     let h = harness().await;
-    h.effects.0.borrow_mut().approves = false;
+    h.effects.asked.borrow_mut().approves = false;
     assert_eq!(
         h.run(
             "categorize_sender",
@@ -677,7 +688,14 @@ async fn a_declined_categorize_changes_nothing() {
         .await,
         Err("The user declined.".into())
     );
-    assert!(h.asked().categorized.is_empty());
+    assert!(h.categorized().await.is_empty());
+    assert!(
+        h.labels_of("m2")
+            .await
+            .iter()
+            .any(|l| l == system_label::CATEGORY_PROMOTIONS)
+    );
+    assert!(h.gmail.with(|s| s.filters.is_empty()));
 }
 
 #[tokio::test]
@@ -736,50 +754,42 @@ async fn open_conversation_shows_the_thread() {
 #[tokio::test]
 async fn hide_my_email_makes_an_address_and_copies_it() {
     let h = harness().await;
-    let alias = HiddenAddress {
-        account: ME.into(),
-        address: "dana+kite.fern482@example.com".into(),
-        note: "kite shop".into(),
-        created: NOW,
-        active: true,
-        label_filter: Some("filter1".into()),
-        trash_filter: None,
-    };
-    h.effects.0.borrow_mut().hidden = Some(Permitted::Done(alias.clone()));
-
     let made = h
         .ok(
             "create_hidden_address",
             json!({"account": ME, "note": "kite shop"}),
         )
         .await;
-    assert_eq!(
-        made,
-        json!({"address": "dana+kite.fern482@example.com", "copied": true})
-    );
-    assert_eq!(h.asked().copied, ["dana+kite.fern482@example.com"]);
-    assert_eq!(
-        h.asked().hide_asked,
-        [(h.account_id, "kite shop".to_string())]
+    assert_eq!(made["copied"], true);
+    let address = made["address"].as_str().expect("an address").to_string();
+    assert!(hidden::is_alias(&address), "{address}");
+    assert_eq!(h.asked().copied, [address.as_str()]);
+    let filters = h.gmail.with(|s| s.filters.clone());
+    assert_eq!(filters.len(), 1, "one filter labels the alias's mail");
+    assert!(
+        filters[0].criteria.to.as_deref() == Some(address.as_str()),
+        "{filters:?}"
     );
 
-    h.desk.0.borrow_mut().settings.hidden_addresses = vec![alias.clone()];
     let listed = h.ok("list_hidden_addresses", json!({})).await;
-    assert_eq!(listed["addresses"][0]["address"], alias.address.as_str());
+    assert_eq!(listed["addresses"][0]["address"], address.as_str());
     assert_eq!(listed["addresses"][0]["note"], "kite shop");
     assert_eq!(listed["addresses"][0]["active"], true);
 
     let turned_off = h
         .ok(
             "set_hidden_address",
-            json!({"address": alias.address, "active": false}),
+            json!({"address": address, "active": false}),
         )
         .await;
+    assert_eq!(turned_off, json!({"address": address, "active": false}));
     assert_eq!(
-        turned_off,
-        json!({"address": alias.address, "active": false})
+        h.gmail.with(|s| s.filters.len()),
+        2,
+        "a second filter sends the alias's mail to the Trash"
     );
-    assert_eq!(h.asked().activated, [(alias.address.clone(), false)]);
+    let kept = h.desk.0.borrow().settings.hidden_addresses.clone();
+    assert!(kept[0].trash_filter.is_some() && !kept[0].active);
 
     assert_eq!(
         h.run(
@@ -960,7 +970,7 @@ async fn every_tool_answers_without_a_window() {
             .await
             .is_ok()
     );
-    h.effects.0.borrow_mut().hidden = Some(Permitted::NeedsPermission);
+    h.gmail.withhold(mailrs_gmail::SETTINGS_SCOPE);
     assert!(
         h.run("create_hidden_address", json!({"account": ME}))
             .await
@@ -974,7 +984,7 @@ async fn every_tool_answers_without_a_window() {
 #[tokio::test]
 async fn a_declined_question_changes_nothing() {
     let h = with_a_reply_to_change().await;
-    h.effects.0.borrow_mut().approves = false;
+    h.effects.asked.borrow_mut().approves = false;
     let later = later();
     let rules = h.ok("list_rules", json!({"account": ME})).await;
     let reply = h.ok("get_automatic_reply", json!({"account": ME})).await;
@@ -992,8 +1002,9 @@ async fn a_declined_question_changes_nothing() {
         let asked = h.asked();
         assert!(!asked.questions.is_empty(), "the samples include questions");
         assert!(asked.sent.is_empty() && asked.scheduled.is_empty());
-        assert!(asked.changes.is_empty() && asked.categorized.is_empty());
+        assert!(asked.changes.is_empty() && asked.left.is_empty());
     }
+    assert!(h.categorized().await.is_empty());
     assert_eq!(h.ok("list_rules", json!({"account": ME})).await, rules);
     assert_eq!(
         h.ok("get_automatic_reply", json!({"account": ME})).await,

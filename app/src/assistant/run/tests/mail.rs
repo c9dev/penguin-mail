@@ -3,14 +3,13 @@
 use chrono::{Duration, Local};
 use mailrs_domain::{Attachment, MessageBody, system_label};
 use mailrs_store::{address_book, templates};
-use mailrs_sync::MailAction;
+use mailrs_sync::{Leave, MailAction};
 use serde_json::json;
 
 use super::super::Permission;
 use super::super::fake::{Harness, ME, NOW, labelled, meta};
 use super::super::mail::{Kind, kind_of, pdf_text};
 use super::{harness, mail, target};
-use crate::unsubscribe::Unsubscribe;
 
 fn later() -> String {
     (Local::now() + Duration::days(1))
@@ -77,7 +76,7 @@ async fn delete_forever_asks_for_the_permission_it_lacks() {
         [(h.account_id, Permission::Delete)]
     );
 
-    h.effects.0.borrow_mut().approves = false;
+    h.effects.asked.borrow_mut().approves = false;
     h.gmail.grant(mailrs_gmail::DELETE_SCOPE);
     assert_eq!(
         h.run("delete_forever", json!({"targets": [target("t2")]}))
@@ -221,15 +220,16 @@ async fn unsubscribe_uses_the_link_the_list_gave() {
         ]
     );
     assert_eq!(
-        h.asked().unsubscribed,
+        h.asked().left,
         [(
             h.account_id,
-            Unsubscribe::Email {
+            Leave::Send {
                 to: "leave@shop.example".into(),
                 subject: "bye".into(),
                 body: "unsubscribe".into(),
             }
-        )]
+        )],
+        "the window sends the request from the account"
     );
 
     assert_eq!(
@@ -237,6 +237,30 @@ async fn unsubscribe_uses_the_link_the_list_gave() {
             .await,
         Err("That conversation has no unsubscribe link.".into())
     );
+}
+
+#[tokio::test]
+async fn a_one_click_list_hears_from_gmail_at_once() {
+    let h = harness().await;
+    h.gmail.with(|i| {
+        i.bodies.insert(
+            "m2".into(),
+            MessageBody {
+                list_unsubscribe: Some("<https://shop.example/leave>".into()),
+                one_click_unsubscribe: true,
+                ..MessageBody::default()
+            },
+        );
+    });
+    let done = h
+        .ok("unsubscribe", json!({"account": ME, "thread_id": "t2"}))
+        .await;
+    assert_eq!(done, json!({"unsubscribed": "shop", "how": "one_click"}));
+    assert_eq!(
+        h.gmail.with(|s| s.unsubscribed.clone()),
+        ["https://shop.example/leave"]
+    );
+    assert!(h.asked().left.is_empty(), "nothing is left for the window");
 }
 
 /// The message `m1`, carrying `files`, each with bytes in the in-memory Gmail.
