@@ -5,13 +5,13 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use adw::prelude::*;
-use gtk::{gio, glib};
+use gtk::gio;
 use mailrs_domain::system_label;
-use mailrs_store::follow_ups;
+use mailrs_sync::{History, MailAction};
 
 use super::{MainWindow, Target};
 use crate::ui::Mailbox;
-use mailrs_domain::translate::{fill, fill_plural, gettext};
+use mailrs_domain::translate::{fill_plural, gettext};
 
 /// "2 sent messages have had no reply" with Review and close buttons.
 /// Closing it hides it until the app quits.
@@ -154,70 +154,11 @@ impl MainWindow {
                 .select(next.account_id, &next.id, next.message_id.as_deref()),
             None => self.nav.set_show_content(false),
         }
-        let now = chrono::Utc::now().timestamp_millis();
-        let (gone, count) = (targets.clone(), targets.len());
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            let saved = this
-                .core
-                .write(move |c| {
-                    for target in &gone {
-                        follow_ups::dismiss(c, target.account_id, &target.thread_id, now)?;
-                    }
-                    Ok(())
-                })
-                .await;
-            if let Err(err) = saved {
-                return this.toast(&fill(
-                    &gettext("Could not dismiss: {reason}"),
-                    &[("reason", &err.to_string())],
-                ));
-            }
-            this.follow_ups_changed();
-            let toast = adw::Toast::builder()
-                .title(fill_plural(
-                    "Dismissed {count} follow-up",
-                    "Dismissed {count} follow-ups",
-                    count,
-                    &[("count", &count.to_string())],
-                ))
-                .button_label(gettext("Undo"))
-                .timeout(5)
-                .build();
-            let weak = Rc::downgrade(&this);
-            toast.connect_button_clicked(move |_| {
-                if let Some(win) = weak.upgrade() {
-                    win.restore_follow_ups(targets.clone());
-                }
-            });
-            this.toasts.add_toast(toast);
-        });
-    }
-
-    fn restore_follow_ups(self: &Rc<Self>, targets: Vec<Target>) {
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            let restored = this
-                .core
-                .write(move |c| {
-                    for target in &targets {
-                        follow_ups::restore(c, target.account_id, &target.thread_id)?;
-                    }
-                    Ok(())
-                })
-                .await;
-            match restored {
-                Ok(()) => this.follow_ups_changed(),
-                Err(err) => this.toast(&fill(
-                    &gettext("Could not undo: {reason}"),
-                    &[("reason", &err.to_string())],
-                )),
-            }
-        });
+        self.perform(targets, MailAction::DismissFollowUp, History::Record, None);
     }
 
     /// Refreshes counts, and the list when it shows Follow Up.
-    fn follow_ups_changed(self: &Rc<Self>) {
+    pub(super) fn follow_ups_changed(self: &Rc<Self>) {
         self.refresh_counts();
         if *self.mailbox.borrow() == Mailbox::FollowUp {
             self.reload_list();

@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use mailrs_domain::{FlagColor, Target};
 use mailrs_gmail::GmailError;
-use mailrs_store::{accounts, flags, labels, reminders};
+use mailrs_store::{accounts, flags, follow_ups, labels, reminders};
 
 use super::{Connected, Harness, harness};
 use crate::actions::DEPTH;
@@ -422,6 +422,53 @@ async fn remind_stores_the_subject_archives_and_undo_cancels_it() {
     actions.undo().await.unwrap();
     assert_eq!(reminder().await, None);
     assert_eq!(h.threads("INBOX").await, ["t1"]);
+}
+
+/// Dismissing a follow-up goes on the same stack as archiving, so Ctrl+Z
+/// after a dismissal brings the follow-up back rather than reaching past
+/// it to the archive before.
+#[tokio::test]
+async fn a_dismissed_follow_up_comes_back_on_undo_in_turn() {
+    let h = harness().await;
+    let sent = now_millis() - 5 * 24 * 60 * 60 * 1000;
+    h.fake.seed(meta("s", "t1", sent, &["SENT"]));
+    h.fake.seed(meta("a", "t2", sent, &["INBOX"]));
+    h.bootstrap_all().await;
+    let actions = actions(&h);
+    let waiting = || async {
+        let now = now_millis();
+        h.db.read(move |c| follow_ups::waiting(c, now))
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|f| f.thread_id)
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(waiting().await, ["t1"]);
+
+    let archived = Target::thread(h.account_id, "t2");
+    actions.run(&[archived], ARCHIVE, History::Record).await;
+    h.fake.reset_usage();
+    let dismissed = Target::thread(h.account_id, "t1");
+    let outcome = actions
+        .run(
+            std::slice::from_ref(&dismissed),
+            MailAction::DismissFollowUp,
+            History::Record,
+        )
+        .await;
+    assert_eq!(outcome.done, std::slice::from_ref(&dismissed));
+    assert!(waiting().await.is_empty());
+    assert_eq!(h.fake.usage().calls, 0, "Gmail knows nothing of Follow Up");
+
+    let undone = actions.undo().await.expect("an undo");
+    assert_eq!(undone.action, MailAction::DismissFollowUp);
+    assert_eq!(undone.outcome.done, [dismissed]);
+    assert_eq!(waiting().await, ["t1"]);
+    assert!(h.threads("INBOX").await.is_empty(), "the archive stands");
+
+    actions.undo().await.expect("the archive before it");
+    assert_eq!(h.threads("INBOX").await, ["t2"]);
 }
 
 #[tokio::test]

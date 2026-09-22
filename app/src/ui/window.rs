@@ -291,6 +291,14 @@ fn done_message(action: &MailAction, count: usize, threaded: bool) -> Option<Str
             });
         }
         MailAction::Remind { .. } | MailAction::CancelReminder => return None,
+        MailAction::DismissFollowUp => {
+            return Some(fill_plural(
+                "Dismissed {count} follow-up",
+                "Dismissed {count} follow-ups",
+                count,
+                &values,
+            ));
+        }
     };
     let many = count > 1;
     Some(match (action, many, threaded) {
@@ -1662,6 +1670,7 @@ impl MainWindow {
                 self.queue_refresh();
             }
             MailAction::Remind { .. } | MailAction::CancelReminder => self.reminders_changed(),
+            MailAction::DismissFollowUp => self.follow_ups_changed(),
             MailAction::Triage(_) | MailAction::Label { .. } | MailAction::Mute { .. } => {}
         }
     }

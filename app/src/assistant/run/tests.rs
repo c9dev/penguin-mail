@@ -3,7 +3,7 @@
 //! to do.
 
 use mailrs_domain::{Category, FlagColor, MessageBody, MessageMeta, Vacation, system_label};
-use mailrs_sync::{MailAction, Permitted, TriageAction};
+use mailrs_sync::{MailAction, Outcome, Permitted, TriageAction};
 use serde_json::{Value, json};
 
 use super::catalog::{Run, catalog};
@@ -690,7 +690,17 @@ async fn dismiss_follow_up_takes_the_thread_off_the_list() {
         )
         .await;
     assert_eq!(done, json!({"dismissed": "t1"}));
-    assert_eq!(h.asked().relisted, 1, "the window lists the mailbox again");
+    assert_eq!(
+        h.asked().mail_changed,
+        [(
+            MailAction::DismissFollowUp,
+            Outcome {
+                done: vec![mailrs_domain::Target::thread(h.account_id, "t1")],
+                failed: vec![],
+            }
+        )],
+        "the window redraws what the action changed"
+    );
 
     let account_id = h.account_id;
     let stored: i64 = h

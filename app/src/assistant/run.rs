@@ -1318,15 +1318,11 @@ impl<A: Accounts> Tools<A> {
     async fn dismiss_follow_up(&self, input: &Value) -> ToolResult {
         let account = self.account_named(&required(input, "account")?)?;
         let thread_id = required(input, "thread_id")?;
-        let now = Local::now().timestamp_millis();
-        let key = thread_id.clone();
-        let db = self.modules.db.clone();
-        self.call(async move {
-            db.write(move |c| mailrs_store::follow_ups::dismiss(c, account.id, &key, now))
-                .await
-        })
-        .await?;
-        self.effects.relist();
+        let target = Target::thread(account.id, &thread_id);
+        let outcome = self.act(vec![target], MailAction::DismissFollowUp).await;
+        if let Some(error) = outcome.first_error() {
+            return Err(error.to_string());
+        }
         Ok(json!({"dismissed": thread_id}))
     }
 
