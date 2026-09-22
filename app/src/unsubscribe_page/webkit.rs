@@ -34,9 +34,15 @@ const SETTLE: Duration = Duration::from_millis(500);
 /// How long a press has to take the page somewhere. Past this the page
 /// answered where it stands, which is as common as posting a form.
 const AFTER: Duration = Duration::from_secs(5);
+/// How often a page that has been pressed and gone nowhere yet is
+/// looked at again.
+const GLANCE: Duration = Duration::from_millis(200);
 
 const EXTRACT: &str = include_str!("extract.js");
 const SUBMIT: &str = include_str!("submit.js");
+/// How much visible text the page holds. A page that answered where it
+/// stands holds a different amount from the page that was pressed.
+const LENGTH: &str = "String(document.body ? document.body.innerText.length : 0)";
 
 pub struct WebkitBrowser {
     view: webkit::WebView,
@@ -216,12 +222,44 @@ impl WebkitBrowser {
         hear
     }
 
-    /// Whether the page set off somewhere within `limit`.
-    async fn going(&self, hear: oneshot::Receiver<()>, limit: Duration) -> bool {
-        matches!(
-            select(hear, glib::timeout_future(limit)).await,
-            Either::Left((Ok(()), _))
-        )
+    /// Whether the press took the page somewhere, waited out in slices
+    /// rather than in one go.
+    ///
+    /// A page that answers where it stands never sets off at all, and
+    /// waiting [`AFTER`] out for it would put five seconds between the
+    /// person's yes and the answer. Such a page says it has answered by
+    /// holding a different amount of text from the page that was
+    /// pressed, so the run glances at the text between slices and stops
+    /// as soon as it changes. A navigation still wins: it is looked for
+    /// first, and a page being replaced changes its text too.
+    async fn went(&self, mut hear: oneshot::Receiver<()>, before: usize) -> bool {
+        let mut left = AFTER;
+        loop {
+            match hear.try_recv() {
+                Ok(Some(())) => return true,
+                // Nobody is left to say the page set off.
+                Err(_) => return false,
+                Ok(None) => {}
+            }
+            // A page mid-navigation may answer nothing at all, and that
+            // is not an answer where it stands.
+            if let Some(now) = self.length().await
+                && now != before
+            {
+                return false;
+            }
+            let Some(rest) = left.checked_sub(GLANCE) else {
+                return false;
+            };
+            left = rest;
+            glib::timeout_future(GLANCE).await;
+        }
+    }
+
+    /// How much visible text the page holds, or nothing when it would
+    /// not say.
+    async fn length(&self) -> Option<usize> {
+        self.run(LENGTH).await.ok()?.trim().parse().ok()
     }
 
     /// Waits for the page to stop loading, for at most `limit`.
@@ -261,9 +299,10 @@ impl WebkitBrowser {
         answer: Result<String, PageError>,
         started: oneshot::Receiver<()>,
         landed: oneshot::Receiver<Result<(), String>>,
+        before: usize,
     ) -> Result<PageForm, PageError> {
         held(&answer?)?;
-        if self.going(started, AFTER).await {
+        if self.went(started, before).await {
             // The press took the page somewhere, and where it lands has
             // the same twenty seconds the first page had.
             self.arrive(landed, LIMIT).await?;
@@ -291,11 +330,14 @@ impl Browser for WebkitBrowser {
         let script = orders(plan, address);
         Box::pin(async move {
             let script = script?;
+            // Read before the press, so that a page which answers where
+            // it stands can be told from one still thinking about it.
+            let before = self.length().await.unwrap_or_default();
             let started = self.watch_start();
             let landed = self.watch();
             self.state.pressing.set(true);
             let answer = self.run(&script).await;
-            let page = self.pressed(answer, started, landed).await;
+            let page = self.pressed(answer, started, landed, before).await;
             self.state.pressing.set(false);
             page
         })
