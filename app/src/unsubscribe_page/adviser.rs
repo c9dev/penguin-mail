@@ -14,6 +14,7 @@
 //! with the page opening in the person's own browser.
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use mailrs_ai::{AgentEvent, Conversation, NoTools, ProviderConfig};
 
@@ -30,11 +31,15 @@ const INSTRUCTION: &str = "You pick what to press on a newsletter's unsubscribe 
 /// The Unsubscribing feature's model, asked one page at a time.
 pub struct ModelAdviser {
     config: ProviderConfig,
+    /// Where the asking runs. A page is read from the GTK loop, and some
+    /// providers need the tokio runtime around them: Claude Code, for one,
+    /// opens the socket its tools are served on.
+    runtime: tokio::runtime::Handle,
 }
 
 impl ModelAdviser {
-    pub fn new(config: ProviderConfig) -> ModelAdviser {
-        ModelAdviser { config }
+    pub fn new(config: ProviderConfig, runtime: tokio::runtime::Handle) -> ModelAdviser {
+        ModelAdviser { config, runtime }
     }
 }
 
@@ -43,9 +48,9 @@ impl ModelAdviser {
 /// [`crate::unsubscribe_page::prepare`], so a feature turned off in
 /// Preferences means an unreadable page goes to the browser without a
 /// model ever being asked.
-pub fn model_adviser(ai: &AiSettings) -> Option<ModelAdviser> {
+pub fn model_adviser(ai: &AiSettings, runtime: tokio::runtime::Handle) -> Option<ModelAdviser> {
     match assistant::model_for(ai, Feature::Unsubscribe) {
-        Ok(config) => Some(ModelAdviser::new(config)),
+        Ok(config) => Some(ModelAdviser::new(config, runtime)),
         Err(why) => {
             tracing::debug!(reason = %why, "no model reads unsubscribe pages");
             None
@@ -55,9 +60,11 @@ pub fn model_adviser(ai: &AiSettings) -> Option<ModelAdviser> {
 
 impl Adviser for ModelAdviser {
     fn advise(&self, form: &PageForm, address: &str) -> Answer<'_, Option<Plan>> {
-        let config = self.config.clone();
         let question = question(form, address);
-        Box::pin(async move { ask(config, question).await })
+        let asking = self.runtime.spawn(ask(self.config.clone(), question));
+        // A task that died answers nothing, which sends the page to the
+        // browser rather than leaving the dialog reading it for ever.
+        Box::pin(async move { asking.await.ok().flatten() })
     }
 }
 
@@ -69,16 +76,25 @@ fn question(form: &PageForm, address: &str) -> String {
     format!("The newsletter was sent to {address}.\n\nThe page:\n{page}")
 }
 
+/// How long the model has to answer before the page goes to the browser.
+/// The person is looking at a spinner the whole time.
+const PATIENCE: Duration = Duration::from_secs(60);
+
 async fn ask(config: ProviderConfig, question: String) -> Option<Plan> {
     let mut chat = Conversation::new(config, INSTRUCTION.to_string());
     // Nobody watches this go by, and the agent loop carries on past a
     // channel with no reader.
     let (events, watching) = async_channel::unbounded::<AgentEvent>();
     drop(watching);
-    match chat.send(question, Arc::new(NoTools), events).await {
-        Ok(reply) => read_plan(&reply),
-        Err(err) => {
+    let asking = chat.send(question, Arc::new(NoTools), events);
+    match tokio::time::timeout(PATIENCE, asking).await {
+        Ok(Ok(reply)) => read_plan(&reply),
+        Ok(Err(err)) => {
             tracing::info!(error = %err, "the model could not be asked about an unsubscribe page");
+            None
+        }
+        Err(_) => {
+            tracing::info!("the model took too long over an unsubscribe page");
             None
         }
     }
@@ -138,11 +154,32 @@ mod tests {
             base_url: format!("{}/v1", server.uri()),
             api_key: None,
             model: "qwen3".into(),
-        })
+        }, tokio::runtime::Handle::current())
     }
 
     fn topics() -> PageForm {
         serde_json::from_str(TOPICS).expect("the fixture is a PageForm")
+    }
+
+    /// A page is read from the GTK loop, which is no tokio runtime. Asked
+    /// from there, the model used to panic for want of one and leave the
+    /// dialog reading the page for ever.
+    #[test]
+    fn the_model_is_asked_from_outside_the_runtime() {
+        let runtime = tokio::runtime::Runtime::new().expect("a runtime");
+        let server = runtime.block_on(model_saying(
+            r#"{"form":0,"fill":[],"tick":[],"press":4}"#,
+        ));
+        let adviser = ModelAdviser::new(
+            ProviderConfig::OpenAiCompatible {
+                base_url: format!("{}/v1", server.uri()),
+                api_key: None,
+                model: "qwen3".into(),
+            },
+            runtime.handle().clone(),
+        );
+        let plan = futures::executor::block_on(adviser.advise(&topics(), ME));
+        assert_eq!(plan.map(|p| p.press), Some(4));
     }
 
     #[tokio::test]
@@ -198,8 +235,9 @@ mod tests {
         assert!(matches!(prepared.step, Step::Browser(_)));
     }
 
-    #[test]
-    fn the_feature_with_no_model_asks_nobody() {
-        assert!(model_adviser(&AiSettings::default()).is_none());
+    #[tokio::test]
+    async fn the_feature_with_no_model_asks_nobody() {
+        let runtime = tokio::runtime::Handle::current();
+        assert!(model_adviser(&AiSettings::default(), runtime).is_none());
     }
 }

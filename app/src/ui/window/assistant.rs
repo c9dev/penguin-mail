@@ -26,7 +26,7 @@ use crate::protection::{self, Held, Standard};
 use crate::settings::{Change, Settings};
 use crate::ui::unsubscribe::{self, ListLine, Way};
 use crate::unsubscribe::Unsubscribe;
-use crate::unsubscribe_page::{Browser, WebkitBrowser};
+use crate::unsubscribe_page::{Adviser, Browser, WebkitBrowser, model_adviser};
 
 impl MainWindow {
     /// Runs one tool call from the assistant.
@@ -129,6 +129,11 @@ impl Effects for Ports {
 
     fn page_browser(&self) -> Rc<dyn Browser> {
         Rc::new(WebkitBrowser::new())
+    }
+
+    fn page_adviser(&self) -> Option<Box<dyn Adviser>> {
+        let ai = self.0.settings_with(|s| s.ai.clone());
+        model_adviser(&ai, self.0.core.runtime()).map(|a| Box::new(a) as Box<dyn Adviser>)
     }
 
     fn confirm_unsubscribe(

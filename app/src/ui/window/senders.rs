@@ -86,7 +86,8 @@ impl MainWindow {
                 let senders = self.settings_with(|s| s.senders(&account));
                 let mine: Vec<String> = senders.into_iter().map(|a| a.email).collect();
                 let address = unsubscribe::sent_to(&sent_to, &mine, &account);
-                let adviser = model_adviser(&self.settings_with(|s| s.ai.clone()));
+                let ai = self.settings_with(|s| s.ai.clone());
+                let adviser = model_adviser(&ai, self.core.runtime());
                 glib::spawn_future_local(async move {
                     let adviser = adviser.as_ref().map(|a| a as &dyn Adviser);
                     let prepared = prepare(&*browser, adviser, &url, &address).await;

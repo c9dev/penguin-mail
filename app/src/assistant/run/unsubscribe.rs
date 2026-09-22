@@ -23,7 +23,7 @@ use super::*;
 use crate::ui::unsubscribe::{ListLine, Way, sent_to};
 use crate::unsubscribe::{Unsubscribe, choose_with_body};
 use crate::unsubscribe_page::{
-    Adviser, Browser, Outcome as PageOutcome, Prepared, finish, model_adviser, prepare,
+    Browser, Outcome as PageOutcome, Prepared, finish, prepare,
 };
 
 /// The most lists one call may leave. Twenty pages already take minutes,
@@ -197,11 +197,11 @@ impl<A: Accounts> Tools<A> {
         // page loading, which is a second sender told that the person
         // acted before they have said yes to anything.
         let browser = (!pages.is_empty()).then(|| self.effects.page_browser());
-        let adviser = model_adviser(&self.desk.settings().ai);
+        let adviser = self.effects.page_adviser();
         let (tell, hear) = async_channel::bounded(1);
         let reading = async {
             if let Some(browser) = &browser {
-                let adviser = adviser.as_ref().map(|a| a as &dyn Adviser);
+                let adviser = adviser.as_deref();
                 for (line, url, address) in pages {
                     let prepared = prepare(&**browser, adviser, &url, &address).await;
                     if tell.send((line, Way::Page(prepared))).await.is_err() {

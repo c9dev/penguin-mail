@@ -13,6 +13,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Unsubscribing no longer sits on "Reading the page…" for ever when
+  the page needs the AI model and the model is Claude Code.
 - Right-clicking a conversation that was not selected yet opens its
   menu. Before, the menu closed as the conversation opened.
 - The icons in the category switcher above the inbox sit in the middle

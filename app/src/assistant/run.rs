@@ -40,7 +40,7 @@ use crate::settings::{
 };
 use crate::ui::unsubscribe::{ListLine, Way};
 use crate::unsubscribe::Unsubscribe;
-use crate::unsubscribe_page::Browser;
+use crate::unsubscribe_page::{Adviser, Browser};
 use mailrs_domain::translate::{date_locale, fill, fill_plural, gettext};
 
 mod calendar;
@@ -138,6 +138,9 @@ pub trait Effects {
     /// The hidden view one run loads its pages in, one page at a time.
     /// It is dropped when the run ends.
     fn page_browser(&self) -> Rc<dyn Browser>;
+    /// The model a page the rules cannot read is shown to, or nothing
+    /// when the Unsubscribing feature has none.
+    fn page_adviser(&self) -> Option<Box<dyn Adviser>>;
     /// Asks about leaving `lines`, filling each page line in as
     /// `updates` says what that page turned out to hold. Answers the
     /// ticked lines with the way each settled on, or nothing when the

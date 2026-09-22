@@ -279,6 +279,11 @@ impl Core {
         });
     }
 
+    /// The tokio runtime, for a port that has to start its own work there.
+    pub fn runtime(&self) -> tokio::runtime::Handle {
+        self.runtime.handle().clone()
+    }
+
     /// Runs `future` on the tokio runtime and waits for it from the GTK loop.
     pub async fn call<T, E, F>(&self, future: F) -> Result<T>
     where

@@ -37,7 +37,7 @@ use crate::settings::{Change, Settings};
 use crate::ui::unsubscribe::{ListLine, Way, line_text};
 use crate::unsubscribe::Unsubscribe;
 use crate::unsubscribe_page::fake::FakeBrowser;
-use crate::unsubscribe_page::{Browser, PageForm, Plan};
+use crate::unsubscribe_page::{Adviser, Browser, PageForm, Plan};
 
 /// The address every fixture account belongs to.
 pub const ME: &str = "dana@example.com";
@@ -230,6 +230,10 @@ impl Effects for FakeEffects {
             }
             Ok(())
         })
+    }
+
+    fn page_adviser(&self) -> Option<Box<dyn Adviser>> {
+        None
     }
 
     fn page_browser(&self) -> Rc<dyn Browser> {
