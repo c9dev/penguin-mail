@@ -935,12 +935,48 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
             run: Run::Now(|t, input| Box::pin(t.insert_template(input))),
         },
         MailTool {
+            name: "list_newsletters",
+            label: || gettext("Finding your newsletters"),
+            description: "Lists the senders whose mail reads as a newsletter over the last 90 days, newest first, with how many messages each sent, how their list lets go (way_out), and the conversation to unsubscribe through. Use it before unsubscribe, so \"the Figma one\" becomes an account and a thread_id.",
+            input: || {
+                json!({
+                    "account": account("The account. Defaults to every connected account."),
+                    "query": {"type": "string", "description": "Words to narrow the list by, matched against the sender's name and address."}
+                })
+            },
+            required: &[],
+            run: Run::Now(|t, input| Box::pin(t.list_newsletters(input))),
+        },
+        MailTool {
             name: "unsubscribe",
             label: || gettext("Unsubscribing"),
-            description: "Leaves the mailing list a conversation came from, using its List-Unsubscribe link: a one-click request, an email to the list, or the sender's page opened in the browser. The user approves it first.",
-            input: || json!({"account": account("The account."), "thread_id": {"type": "string"}}),
-            required: &["account", "thread_id"],
-            run: Run::AsksFirst(|t, input| Box::pin(t.unsubscribe(input))),
+            description: "Leaves the mailing lists 1 to 20 conversations came from, as list_newsletters gives them: a one-click request, an email to the list, or the sender's own unsubscribe page, which Penguin Mail loads out of sight, fills in and submits. It opens one dialog naming every list and what will be pressed, and does nothing the user does not tick there. A page takes up to 45 seconds, so a long list can take minutes; wait for the answer rather than calling again. Each list comes back as done, unclear (submitted, page said nothing), failed with a reason, opened (the page needed the user and opened in their browser), or declined.",
+            input: || {
+                json!({
+                    "conversations": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 20,
+                        "description": "The conversations whose lists to leave, one a list.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "account": account("The account's email address."),
+                                "thread_id": {"type": "string"}
+                            },
+                            "required": ["account", "thread_id"],
+                            "additionalProperties": false
+                        }
+                    }
+                })
+            },
+            required: &["conversations"],
+            // The dialog this tool opens names every list, the button it
+            // will press and the address it will type, and nothing runs
+            // until the user ticks and confirms there. That answer is the
+            // approval, so the pane's card would ask the same question
+            // twice and in vaguer words.
+            run: Run::Now(|t, input| Box::pin(t.unsubscribe(input))),
         },
         MailTool {
             name: "read_attachment",

@@ -5,7 +5,9 @@
 //! window to do.
 //!
 //! Nothing here touches GTK. The window is one adapter behind the ports and
-//! the tests are another, so the whole tool loop runs headless.
+//! the tests are another, so the whole tool loop runs headless. The two
+//! types the unsubscribe dialog is asked with are plain data the ui module
+//! happens to declare, and no widget comes with them.
 
 use std::collections::HashMap;
 use std::future::Future;
@@ -36,7 +38,9 @@ use crate::rules::{RuleForm, describe_action, describe_criteria};
 use crate::settings::{
     Change, Choice, ColorScheme, MarkRead, RemoteImages, Setting, Settings, TextSize, UndoSend,
 };
+use crate::ui::unsubscribe::{ListLine, Way};
 use crate::unsubscribe::Unsubscribe;
+use crate::unsubscribe_page::Browser;
 use mailrs_domain::translate::{date_locale, fill, fill_plural, gettext};
 
 mod calendar;
@@ -48,6 +52,7 @@ mod manage;
 mod queue;
 #[cfg(test)]
 mod tests;
+mod unsubscribe;
 mod writing;
 
 use catalog::Plan;
@@ -123,6 +128,26 @@ pub trait Effects {
         account_id: AccountId,
         how: Unsubscribe,
     ) -> Answer<'_, Result<(), String>>;
+
+    // ---- Leaving lists that only a page will take ------------------------
+    // Leaving several lists at once needs two things of the window: the
+    // hidden view a page loads in, and the one dialog that asks about
+    // every list. The dialog's own words are the window's, so these two
+    // hand its types straight through rather than building it here.
+
+    /// The hidden view one run loads its pages in, one page at a time.
+    /// It is dropped when the run ends.
+    fn page_browser(&self) -> Rc<dyn Browser>;
+    /// Asks about leaving `lines`, filling each page line in as
+    /// `updates` says what that page turned out to hold. Answers the
+    /// ticked lines with the way each settled on, or nothing when the
+    /// person said no.
+    fn confirm_unsubscribe(
+        &self,
+        lines: Vec<ListLine>,
+        updates: async_channel::Receiver<(usize, Way)>,
+    ) -> Answer<'_, Option<Vec<(usize, Way)>>>;
+
     fn change_settings(&self, change: Change) -> Result<(), String>;
     /// A blank message from the account, carrying its identity.
     fn new_draft(&self, account_id: AccountId) -> Result<Draft, String>;

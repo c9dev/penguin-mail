@@ -15,6 +15,7 @@ assistant on the right. Ask it about your mail in plain words:
 - "Send my draft to the landlord tomorrow at 8."
 - "Reply to Theo with my Thanks template."
 - "Unsubscribe me from Trail Notes."
+- "Which newsletters do I get? Leave the three I never read."
 - "What does the PDF Priya sent say about the deadline?"
 - "What is Mara's address at Fernwood?"
 - "Send the message to the landlord now instead of tomorrow."
@@ -56,6 +57,17 @@ is replaced only after the question says so.
 It reads an attachment as text when the file is plain text, a web page or
 a PDF. PDFs need `pdftotext`, which the `poppler-utils` package installs;
 other files, such as pictures, it can name but not read.
+
+It lists the newsletters you have had in the last three months, with how
+many messages each sender wrote and how their list lets go, so "the Figma
+one" is enough to name. It leaves up to twenty of them in one go. A list
+that only lets go through its own page has that page loaded out of sight,
+filled in and pressed, the way the Unsubscribe button does it, and one
+dialog names every list, the button it will press and the address it will
+type. A list you untick there is left alone. One page takes up to 45
+seconds, so twenty of them can take minutes. Each list comes back as
+done, sent but unconfirmed, failed, opened in your browser for you to
+finish, or declined.
 
 ## Writing and drafts
 
@@ -283,7 +295,9 @@ By default, the assistant asks you before it:
   time, or deletes one from the Outbox,
 - cancels a reminder or moves it to a new time,
 - takes back your last change,
-- unsubscribes you from a list,
+- unsubscribes you from lists, which it asks about in a dialog of its
+  own, whatever Ask Before Acting says, since loading a sender's page is
+  something you cannot take back,
 - adds, changes or deletes a calendar event,
 - answers an invitation,
 - renames, recolours or deletes a label, and says how many conversations

@@ -3,7 +3,7 @@
 use chrono::{Duration, Local};
 use mailrs_domain::{Attachment, MessageBody, system_label};
 use mailrs_store::{address_book, templates};
-use mailrs_sync::{Leave, MailAction};
+use mailrs_sync::MailAction;
 use serde_json::json;
 
 use super::super::Permission;
@@ -275,72 +275,6 @@ async fn a_template_fills_its_placeholders_in_a_composer() {
         h.run("insert_template", json!({"template": "Sorry"})).await,
         Err("There is no template called Sorry.".into())
     );
-}
-
-#[tokio::test]
-async fn unsubscribe_uses_the_link_the_list_gave() {
-    let h = harness().await;
-    h.gmail.with(|i| {
-        i.bodies.insert(
-            "m2".into(),
-            MessageBody {
-                list_unsubscribe: Some("<mailto:leave@shop.example?subject=bye>".into()),
-                ..MessageBody::default()
-            },
-        );
-    });
-    let done = h
-        .ok("unsubscribe", json!({"account": ME, "thread_id": "t2"}))
-        .await;
-    assert_eq!(done, json!({"unsubscribed": "shop", "how": "email"}));
-    assert_eq!(
-        h.asked().questions,
-        [
-            "Unsubscribe from shop?\n\nPenguin Mail sends the list an unsubscribe request from your account."
-        ]
-    );
-    assert_eq!(
-        h.asked().left,
-        [(
-            h.account_id,
-            Leave::Send {
-                to: "leave@shop.example".into(),
-                subject: "bye".into(),
-                body: "unsubscribe".into(),
-            }
-        )],
-        "the window sends the request from the account"
-    );
-
-    assert_eq!(
-        h.run("unsubscribe", json!({"account": ME, "thread_id": "t1"}))
-            .await,
-        Err("That conversation has no unsubscribe link.".into())
-    );
-}
-
-#[tokio::test]
-async fn a_one_click_list_hears_from_gmail_at_once() {
-    let h = harness().await;
-    h.gmail.with(|i| {
-        i.bodies.insert(
-            "m2".into(),
-            MessageBody {
-                list_unsubscribe: Some("<https://shop.example/leave>".into()),
-                one_click_unsubscribe: true,
-                ..MessageBody::default()
-            },
-        );
-    });
-    let done = h
-        .ok("unsubscribe", json!({"account": ME, "thread_id": "t2"}))
-        .await;
-    assert_eq!(done, json!({"unsubscribed": "shop", "how": "one_click"}));
-    assert_eq!(
-        h.gmail.with(|s| s.unsubscribed.clone()),
-        ["https://shop.example/leave"]
-    );
-    assert!(h.asked().left.is_empty(), "nothing is left for the window");
 }
 
 /// The message `m1`, carrying `files`, each with bytes in the in-memory Gmail.

@@ -24,7 +24,9 @@ use crate::hide_my_email::HiddenAddress;
 use crate::permission::Occasion;
 use crate::protection::{self, Held, Standard};
 use crate::settings::{Change, Settings};
+use crate::ui::unsubscribe::{self, ListLine, Way};
 use crate::unsubscribe::Unsubscribe;
+use crate::unsubscribe_page::{Browser, WebkitBrowser};
 
 impl MainWindow {
     /// Runs one tool call from the assistant.
@@ -123,6 +125,18 @@ impl Effects for Ports {
         how: Unsubscribe,
     ) -> Answer<'_, Result<(), String>> {
         Box::pin(async move { self.0.leave_list(account_id, how).await })
+    }
+
+    fn page_browser(&self) -> Rc<dyn Browser> {
+        Rc::new(WebkitBrowser::new())
+    }
+
+    fn confirm_unsubscribe(
+        &self,
+        lines: Vec<ListLine>,
+        updates: async_channel::Receiver<(usize, Way)>,
+    ) -> Answer<'_, Option<Vec<(usize, Way)>>> {
+        Box::pin(unsubscribe::confirm(&self.0.window, lines, updates))
     }
 
     fn change_settings(&self, change: Change) -> Result<(), String> {

@@ -34,7 +34,10 @@ use crate::compose::{self, Draft};
 use crate::hide_my_email::HiddenAddress;
 use crate::protection::{self, Held, Standard};
 use crate::settings::{Change, Settings};
+use crate::ui::unsubscribe::{ListLine, Way, line_text};
 use crate::unsubscribe::Unsubscribe;
+use crate::unsubscribe_page::fake::FakeBrowser;
+use crate::unsubscribe_page::{Browser, PageForm, Plan};
 
 /// The address every fixture account belongs to.
 pub const ME: &str = "dana@example.com";
@@ -126,6 +129,14 @@ pub struct Asked {
     /// What leaving a list left for the window: a request to send from the
     /// account, or a page to open in the browser.
     pub left: Vec<(AccountId, Leave)>,
+    /// What each unsubscribe dialog was asked about: one string per
+    /// line, the list's name and the words under it once its page had
+    /// settled.
+    pub lists_asked: Vec<Vec<String>>,
+    /// Whether the person ticks every line and presses Unsubscribe. The
+    /// dialog is that tool's only question, so this stands apart from
+    /// `approves`, which answers the pane's card.
+    pub approves_lists: bool,
     pub mail_changed: Vec<(MailAction, Outcome)>,
     pub relisted: usize,
     /// Messages whose only copy was opened in a composer, marked unsaved.
@@ -151,6 +162,12 @@ pub struct Asked {
 /// the app's settings reach the window.
 pub struct FakeEffects {
     pub asked: RefCell<Asked>,
+    /// The pages the hidden view serves, and the page a submission lands
+    /// on. A test fills these in before the call; the run takes one
+    /// browser built from them, which stays here to be read afterwards.
+    pub pages: RefCell<HashMap<String, PageForm>>,
+    pub after: RefCell<PageForm>,
+    pub browser: RefCell<Option<Rc<FakeBrowser>>>,
     desk: Rc<FakeDesk>,
     mail: Arc<MailActions<Connected>>,
     gmail: Arc<AccountSettings<Connected>>,
@@ -212,6 +229,53 @@ impl Effects for FakeEffects {
                 self.asked.borrow_mut().left.push((account_id, leave));
             }
             Ok(())
+        })
+    }
+
+    fn page_browser(&self) -> Rc<dyn Browser> {
+        let browser = Rc::new(FakeBrowser {
+            pages: self.pages.borrow().clone(),
+            after: self.after.borrow().clone(),
+            submitted: RefCell::new(Vec::new()),
+            typed: RefCell::new(Vec::new()),
+            fail: None,
+        });
+        *self.browser.borrow_mut() = Some(Rc::clone(&browser));
+        browser
+    }
+
+    fn confirm_unsubscribe(
+        &self,
+        lines: Vec<ListLine>,
+        updates: async_channel::Receiver<(usize, Way)>,
+    ) -> Answer<'_, Option<Vec<(usize, Way)>>> {
+        Box::pin(async move {
+            let mut names: Vec<String> = Vec::with_capacity(lines.len());
+            let mut ways: Vec<Way> = Vec::with_capacity(lines.len());
+            for line in lines {
+                names.push(line.name);
+                ways.push(line.way);
+            }
+            // The dialog cannot be answered while a line is still being
+            // read, so this waits for the same thing. A run that
+            // submitted before a page settled fails a test here rather
+            // than passing quietly.
+            while let Ok((at, way)) = updates.recv().await {
+                if let Some(held) = ways.get_mut(at) {
+                    *held = way;
+                }
+            }
+            let mut asked = self.asked.borrow_mut();
+            asked.lists_asked.push(
+                names
+                    .iter()
+                    .zip(&ways)
+                    .map(|(name, way)| format!("{name}: {}", line_text(way)))
+                    .collect(),
+            );
+            asked
+                .approves_lists
+                .then(|| ways.into_iter().enumerate().collect())
         })
     }
 
@@ -615,8 +679,15 @@ impl Harness {
         let effects = Rc::new(FakeEffects {
             asked: RefCell::new(Asked {
                 approves: true,
+                approves_lists: true,
                 ..Asked::default()
             }),
+            pages: RefCell::new(HashMap::new()),
+            after: RefCell::new(PageForm {
+                text: "Thanks!".to_string(),
+                ..PageForm::default()
+            }),
+            browser: RefCell::new(None),
             desk: Rc::clone(&desk),
             mail,
             gmail: settings,
@@ -669,6 +740,38 @@ impl Harness {
             done.push(task.await.expect("Categorize Sender finishes"));
         }
         done
+    }
+
+    // ---- The hidden view the unsubscribe tool loads pages in -----------
+
+    /// Serves `page` at `url`, the way a sender's unsubscribe page
+    /// answers.
+    pub fn serve(&self, url: &str, page: PageForm) {
+        self.effects
+            .pages
+            .borrow_mut()
+            .insert(url.to_string(), page);
+    }
+
+    /// What the page a submission lands on says.
+    pub fn after_submitting(&self, text: &str) {
+        self.effects.after.borrow_mut().text = text.to_string();
+    }
+
+    /// Every plan the run submitted, oldest first, and the addresses it
+    /// typed. Empty until a tool has asked for a browser.
+    pub fn submissions(&self) -> Vec<Plan> {
+        match &*self.effects.browser.borrow() {
+            Some(browser) => browser.submissions(),
+            None => Vec::new(),
+        }
+    }
+
+    pub fn typed(&self) -> Vec<String> {
+        match &*self.effects.browser.borrow() {
+            Some(browser) => browser.typed.borrow().clone(),
+            None => Vec::new(),
+        }
     }
 
     /// The labels on a stored message.

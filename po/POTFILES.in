@@ -11,6 +11,7 @@ app/src/assistant/run/catalog.rs
 app/src/assistant/run/mail.rs
 app/src/assistant/run/manage.rs
 app/src/assistant/run/queue.rs
+app/src/assistant/run/unsubscribe.rs
 app/src/assistant/run/writing.rs
 app/src/assistant/sources/mcp/mod.rs
 app/src/assistant/sources/skills/mod.rs

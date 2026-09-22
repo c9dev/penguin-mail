@@ -1,18 +1,16 @@
 //! The mail tools that came after the first set: muting, erasing, Send
-//! Later, templates, unsubscribing, reading an attachment, and finding a
-//! person in the address book. Each one goes through the module the window
-//! uses for the same thing, so the assistant cannot do what the user
-//! could not.
+//! Later, templates, reading an attachment, and finding a person in the
+//! address book. Each one goes through the module the window uses for the
+//! same thing, so the assistant cannot do what the user could not.
+//! Leaving a mailing list is next door, in [`super::unsubscribe`].
 
 use std::time::Duration;
 
-use mailrs_domain::MessageBody;
 use mailrs_store::{address_book, contacts, templates};
 use tokio::io::AsyncWriteExt;
 
 use super::*;
 use crate::templates::{Filling, expand, today};
-use crate::unsubscribe::choose;
 
 /// The most text an attachment gives the model, in characters.
 const MOST_ATTACHMENT_CHARS: usize = 20_000;
@@ -117,18 +115,6 @@ pub(super) fn named_attachment<'a>(
                 names.join(", ")
             ),
         }
-    })
-}
-
-/// The unsubscribe links of the newest message in the thread that has
-/// any, with the message they came from.
-fn newest_with_list(
-    found: &[(mailrs_domain::MessageMeta, Option<MessageBody>)],
-) -> Option<(&mailrs_domain::MessageMeta, &MessageBody)> {
-    found.iter().rev().find_map(|(meta, body)| {
-        let body = body.as_ref()?;
-        body.list_unsubscribe.as_ref()?;
-        Some((meta, body))
     })
 }
 
@@ -321,68 +307,6 @@ impl<A: Accounts> Tools<A> {
             "opened": "A composer window shows the message for the user to review.",
             "subject": subject,
             "body": body,
-        }))
-    }
-
-    pub(super) async fn unsubscribe<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
-        let (account, sync) = self.sync_for(&required(input, "account")?)?;
-        let thread_id = required(input, "thread_id")?;
-        let (s, t) = (Arc::clone(&sync), thread_id.clone());
-        if let Err(err) = self.call(async move { s.ensure_thread(&t).await }).await {
-            tracing::info!(error = %err, "reading the stored copy of the thread");
-        }
-        let key = thread_id.clone();
-        let metas = self
-            .read(move |c| messages::thread_messages(c, account.id, &key))
-            .await?;
-        if metas.is_empty() {
-            return Err("That conversation was not found.".into());
-        }
-        let mut found = Vec::new();
-        for meta in metas {
-            let (s, id) = (Arc::clone(&sync), meta.id.clone());
-            let body = self.call(async move { s.body(&id).await }).await.ok();
-            found.push((meta, body));
-        }
-        let (meta, body) =
-            newest_with_list(&found).ok_or("That conversation has no unsubscribe link.")?;
-        let how = body
-            .list_unsubscribe
-            .as_deref()
-            .and_then(|header| choose(header, body.one_click_unsubscribe))
-            .ok_or("That conversation's unsubscribe link is not one Penguin Mail can use.")?;
-        let sender = meta
-            .from
-            .as_ref()
-            .map(|a| a.display().to_string())
-            .unwrap_or_else(|| gettext("this list"));
-        let (kind, way) = match &how {
-            Unsubscribe::OneClick(_) => (
-                "one_click",
-                gettext("Penguin Mail asks the sender to take you off the list."),
-            ),
-            Unsubscribe::Email { .. } => (
-                "email",
-                gettext("Penguin Mail sends the list an unsubscribe request from your account."),
-            ),
-            Unsubscribe::Page(_) | Unsubscribe::BodyLink(_) => (
-                "page",
-                gettext("The sender's unsubscribe page opens in your browser."),
-            ),
-        };
-        let question = fill(
-            &gettext("Unsubscribe from {sender}?"),
-            &[("sender", &sender)],
-        );
-        Ok(Plan::ask(format!("{question}\n\n{way}"), async move {
-            self.effects.unsubscribe(account.id, how).await?;
-            let mut result = json!({"unsubscribed": sender, "how": kind});
-            if kind == "page" {
-                result["note"] = json!(
-                    "The sender's unsubscribe page opened in the user's browser. They finish there."
-                );
-            }
-            Ok(result)
         }))
     }
 

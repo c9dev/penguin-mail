@@ -34,6 +34,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Archiving one message of five leaves the other four in the inbox, and
   Ctrl+Z takes it back. The Menu key and Shift+F10 open the same menu for
   the message you are on.
+- Ask the assistant to unsubscribe you from several newsletters at once.
+  It lists the ones you get first, and asks about all of them together.
 - The assistant can send a message waiting in Send Later or the Outbox
   now, cancel it, give it a new time, or delete it from the Outbox.
 - The assistant lists your reminders and can move or cancel one.
