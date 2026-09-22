@@ -119,3 +119,111 @@ async fn a_gmail_failure_leaves_the_cursor_alone() {
     h.sync.incremental().await.unwrap();
     assert_eq!(h.threads("INBOX").await, ["ta"]);
 }
+
+/// A message whose stored copy missed an archive: Gmail took it out of the
+/// inbox, but no history after the cursor mentions it, as when a write of
+/// older labels landed after the replay that carried the change.
+async fn archived_behind_the_cursor() -> super::Harness {
+    let h = harness().await;
+    let now = now_millis();
+    h.fake.seed(meta("kept", "tkept", now, &["INBOX"]));
+    h.fake
+        .seed(meta("stale", "tstale", now - 1000, &["INBOX", "IMPORTANT"]));
+    h.bootstrap_all().await;
+    h.fake.with(|s| {
+        let stale = s.messages.get_mut("stale").expect("seeded");
+        stale.label_ids.retain(|l| l != "INBOX");
+    });
+    h.sync.incremental().await.unwrap();
+    h
+}
+
+#[tokio::test]
+async fn history_alone_leaves_a_missed_archive_in_the_inbox() {
+    let h = archived_behind_the_cursor().await;
+    assert_eq!(h.threads("INBOX").await, ["tkept", "tstale"]);
+}
+
+#[tokio::test]
+async fn reconciling_the_inbox_takes_out_mail_gmail_archived() {
+    let h = archived_behind_the_cursor().await;
+    h.drain();
+    h.sync.reconcile_inbox().await.unwrap();
+    assert_eq!(h.threads("INBOX").await, ["tkept"]);
+    assert_eq!(h.labels_of("stale").await, ["IMPORTANT"]);
+    assert!(h.drain().contains(&ChangeEvent::ThreadsChanged {
+        account_id: 1,
+        thread_ids: vec!["tstale".into()]
+    }));
+}
+
+#[tokio::test]
+async fn reconciling_the_inbox_brings_back_mail_it_missed() {
+    let h = harness().await;
+    let now = now_millis();
+    h.fake.seed(meta("kept", "tkept", now, &["INBOX"]));
+    h.fake
+        .seed(meta("filed", "tfiled", now - 1000, &["Label_1"]));
+    h.bootstrap_all().await;
+    h.fake.with(|s| {
+        let filed = s.messages.get_mut("filed").expect("seeded");
+        filed.label_ids.push("INBOX".into());
+    });
+    h.sync.reconcile_inbox().await.unwrap();
+    assert_eq!(h.threads("INBOX").await, ["tkept", "tfiled"]);
+}
+
+#[tokio::test]
+async fn reconciling_leaves_mail_that_just_arrived_to_history() {
+    let h = harness().await;
+    h.bootstrap_all().await;
+    h.fake
+        .deliver(meta("new", "tnew", now_millis(), &["INBOX", "UNREAD"]));
+    h.sync.reconcile_inbox().await.unwrap();
+    assert!(h.thread("tnew").await.is_none());
+    h.sync.incremental().await.unwrap();
+    assert!(h.drain().contains(&ChangeEvent::NewMail {
+        account_id: 1,
+        message_ids: vec!["new".into()]
+    }));
+}
+
+#[tokio::test]
+async fn reconciling_the_inbox_drops_mail_gmail_no_longer_has() {
+    let h = harness().await;
+    h.fake.seed(meta("gone", "tgone", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    h.fake.remote_delete_silently("gone");
+    h.sync.reconcile_inbox().await.unwrap();
+    assert!(h.thread("tgone").await.is_none());
+}
+
+#[tokio::test]
+async fn a_matching_inbox_is_left_alone() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "ta", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    h.fake.reset_usage();
+    h.sync.reconcile_inbox().await.unwrap();
+    assert_eq!(h.fake.usage().calls_to("users.messages.get"), 0);
+    assert!(h.drain().is_empty());
+}
+
+#[tokio::test]
+async fn reconciling_waits_for_the_window_to_finish_loading() {
+    let h = harness().await;
+    let now = now_millis();
+    for i in 0..3 {
+        h.fake.seed(meta(
+            &format!("m{i}"),
+            &format!("t{i}"),
+            now - i,
+            &["INBOX"],
+        ));
+    }
+    h.sync.bootstrap().await.unwrap();
+    assert!(!h.cursor().await.backfill_done);
+    h.fake.reset_usage();
+    h.sync.reconcile_inbox().await.unwrap();
+    assert_eq!(h.fake.usage().calls, 0);
+}

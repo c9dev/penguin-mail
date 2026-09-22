@@ -255,8 +255,9 @@ async fn run_account<G: GmailApi>(
     }
 }
 
-/// One pass: poll history when due, prune when due, then load one backfill
-/// page. Returns true when more backfill pages remain.
+/// One pass: poll history when due, prune and check the inbox against
+/// Gmail's when due, then load one backfill page. Returns true when more
+/// backfill pages remain.
 async fn tick<G: GmailApi>(
     sync: &AccountSync<G>,
     next_poll: &mut Instant,
@@ -270,6 +271,7 @@ async fn tick<G: GmailApi>(
     }
     if Instant::now() >= *next_prune {
         sync.prune(now_millis()).await?;
+        sync.reconcile_inbox().await?;
         *next_prune = Instant::now() + PRUNE_INTERVAL;
     }
     sync.backfill_step().await

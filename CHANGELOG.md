@@ -15,6 +15,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - The Outbox stays in the sidebar, so you can check it before a message
   gets stuck there.
 
+### Fixed
+
+- Mail archived in Gmail no longer stays in Penguin Mail's inbox when the
+  app missed the change. It now checks its inbox against Gmail's when it
+  starts and every hour after.
+
 ## 0.1.4 (2026-09-22)
 
 ### Improved

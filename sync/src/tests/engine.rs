@@ -4,15 +4,16 @@ use std::time::Duration;
 use async_channel::Receiver;
 use mailrs_domain::{AccountState, ChangeEvent};
 use mailrs_gmail::GmailError;
-use mailrs_store::{Db, accounts};
+use mailrs_store::{Db, accounts, messages};
 
-use crate::fake::{FakeGmail, meta};
-use crate::{EngineConfig, SyncEngine, now_millis};
+use crate::fake::{FakeGmail, fill_store, meta};
+use crate::{AccountSync, EngineConfig, SyncEngine, now_millis};
 
 struct Setup {
     engine: SyncEngine<FakeGmail>,
     events: Receiver<ChangeEvent>,
     fake: Arc<FakeGmail>,
+    db: Db,
     _dir: tempfile::TempDir,
 }
 
@@ -27,11 +28,12 @@ async fn setup() -> Setup {
         max_backoff: Duration::from_millis(20),
         ..EngineConfig::default()
     };
-    let (engine, events) = SyncEngine::new(db, config);
+    let (engine, events) = SyncEngine::new(db.clone(), config);
     Setup {
         engine,
         events,
         fake: Arc::new(FakeGmail::new()),
+        db,
         _dir: dir,
     }
 }
@@ -68,6 +70,29 @@ async fn the_engine_bootstraps_and_polls_when_poked() {
     assert!(s.engine.is_running(1));
     assert!(s.engine.account(1).is_ok());
     assert!(s.engine.account(2).is_err());
+}
+
+#[tokio::test]
+async fn the_engine_corrects_a_stale_inbox_when_it_starts() {
+    let s = setup().await;
+    s.fake.seed(meta("stale", "ts", now_millis(), &["INBOX"]));
+    let (sender, _receiver) = async_channel::unbounded();
+    let earlier = AccountSync::new(1, Arc::clone(&s.fake), s.db.clone(), sender);
+    fill_store(&earlier).await.unwrap();
+    // Gmail archives it, and the store never hears.
+    s.fake
+        .with(|f| f.messages.get_mut("stale").unwrap().label_ids.clear());
+    s.engine.start_account(1, Arc::clone(&s.fake));
+    wait_for(
+        &s.events,
+        |e| matches!(e, ChangeEvent::ThreadsChanged { thread_ids, .. } if thread_ids == &["ts"]),
+    )
+    .await;
+    let labels =
+        s.db.read(|c| messages::labels_of(c, 1, "stale"))
+            .await
+            .unwrap();
+    assert!(labels.is_empty());
 }
 
 #[tokio::test]

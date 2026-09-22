@@ -1,8 +1,11 @@
-//! Bootstrap, backfill, and pruning: the processes that load and trim the window.
+//! Bootstrap, backfill, pruning, and the inbox check: the processes that
+//! load the window, trim it, and keep it in step with Gmail.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashSet};
 
-use mailrs_domain::{AccountId, AccountState, ChangeEvent, EpochMillis, Label, LabelKind};
+use mailrs_domain::{
+    AccountId, AccountState, ChangeEvent, EpochMillis, Label, LabelKind, system_label,
+};
 use mailrs_gmail::{GmailError, RemoteLabel};
 use mailrs_store::{accounts, labels, messages, window};
 
@@ -10,6 +13,9 @@ use super::AccountSync;
 use crate::{GmailApi, SyncError};
 
 const DAY_MILLIS: i64 = 24 * 60 * 60 * 1000;
+
+/// Gmail search for every message in the inbox, whatever its age.
+const INBOX_QUERY: &str = "in:inbox";
 
 impl<G: GmailApi> AccountSync<G> {
     /// Gmail search for the window: recent mail plus everything in INBOX.
@@ -79,6 +85,86 @@ impl<G: GmailApi> AccountSync<G> {
             .write(move |c| window::prune_window(c, account_id, cutoff))
             .await?;
         self.emit_threads(pruned.into_iter().collect());
+        Ok(())
+    }
+
+    /// Makes the stored inbox match Gmail's. History replay applies each
+    /// change once, so a message whose labels were written from an older
+    /// copy after the replay that carried a change stays wrong for good:
+    /// no later history mentions it. This lists Gmail's inbox, compares it
+    /// with the messages the store has in INBOX, and fetches the stored
+    /// ones that differ. It waits until the window has loaded, when the two
+    /// should agree.
+    ///
+    /// A message Gmail has in the inbox and the store lacks altogether is
+    /// most likely one that arrived during the listing. It is left to the
+    /// next replay, which stores it and announces it as new mail.
+    ///
+    /// The engine runs it between replays, so the cursor cannot move while
+    /// it works: anything Gmail changes after the fetch has a history id
+    /// past the cursor and reaches the store through the next replay.
+    pub async fn reconcile_inbox(&self) -> Result<(), SyncError> {
+        let account_id = self.account_id;
+        let cursor = self
+            .db
+            .read(move |c| accounts::sync_cursor(c, account_id))
+            .await?;
+        if !cursor.backfill_done || cursor.history_id.is_none() {
+            return Ok(());
+        }
+        let mut remote = HashSet::new();
+        let mut page_token: Option<String> = None;
+        loop {
+            let page = self
+                .api
+                .list_messages(INBOX_QUERY, page_token.as_deref())
+                .await?;
+            remote.extend(page.messages.into_iter().map(|m| m.id));
+            match page.next_page_token {
+                Some(token) => page_token = Some(token),
+                None => break,
+            }
+        }
+        let mut differ: Vec<String> = self
+            .db
+            .read(move |c| {
+                let local = messages::labelled(c, account_id, system_label::INBOX)?;
+                let only_remote: Vec<String> = remote.difference(&local).cloned().collect();
+                let stored = messages::existing_ids(c, account_id, &only_remote)?;
+                Ok(local.difference(&remote).cloned().chain(stored).collect())
+            })
+            .await?;
+        if differ.is_empty() {
+            return Ok(());
+        }
+        differ.sort();
+        tracing::info!(
+            account = account_id,
+            messages = ?differ,
+            "the stored inbox differs from Gmail's; fetching those messages again"
+        );
+        let metas = self.fetch_metadata(&differ).await?;
+        let generation = cursor.sync_gen;
+        let touched = self
+            .db
+            .write(move |c| {
+                let mut touched = BTreeSet::new();
+                for meta in &metas {
+                    messages::upsert_message(c, meta, generation)?;
+                    touched.insert(meta.thread_id.clone());
+                }
+                // Gmail answered "not found" for the rest.
+                let fetched: HashSet<&str> = metas.iter().map(|m| m.id.as_str()).collect();
+                for id in differ.iter().filter(|id| !fetched.contains(id.as_str())) {
+                    touched.extend(messages::delete_message(c, account_id, id)?);
+                }
+                for thread_id in &touched {
+                    messages::refresh_thread(c, account_id, thread_id)?;
+                }
+                Ok(touched)
+            })
+            .await?;
+        self.emit_threads(touched);
         Ok(())
     }
 

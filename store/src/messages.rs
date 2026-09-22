@@ -158,6 +158,15 @@ pub fn labels_of(
     Ok(rows.collect::<rusqlite::Result<Vec<String>>>()?)
 }
 
+/// The ids of the stored messages that carry `label`.
+pub fn labelled(conn: &Connection, account_id: AccountId, label: &str) -> Result<HashSet<String>> {
+    let mut stmt = conn.prepare_cached(
+        "SELECT message_id FROM message_labels WHERE account_id = ?1 AND label_id = ?2",
+    )?;
+    let rows = stmt.query_map(params![account_id, label], |row| row.get(0))?;
+    Ok(rows.collect::<rusqlite::Result<HashSet<String>>>()?)
+}
+
 /// The subset of `ids` that is stored.
 pub fn existing_ids(
     conn: &Connection,
