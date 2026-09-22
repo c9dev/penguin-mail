@@ -243,8 +243,17 @@ impl AssistantPane {
             }
         });
         for text in suggestions() {
-            let button = gtk::Button::builder()
+            // A suggestion wraps rather than setting the pane's minimum
+            // width: the longest one, in Portuguese, is wider than the
+            // narrowest window the app allows.
+            let label = gtk::Label::builder()
                 .label(&text)
+                .wrap(true)
+                .wrap_mode(gtk::pango::WrapMode::WordChar)
+                .xalign(0.0)
+                .build();
+            let button = gtk::Button::builder()
+                .child(&label)
                 .css_classes(["flat", "assistant-suggestion"])
                 .halign(gtk::Align::Start)
                 .build();

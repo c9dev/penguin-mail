@@ -42,6 +42,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - The inbox category switcher fits a narrow list without scrolling
   sideways: when the chosen category's name has no room, it shows icons
   alone.
+- The assistant no longer loses its right edge in a window about 1000
+  pixels wide, or in a narrow window with the app in Portuguese. In a
+  window narrower than 1100 pixels it opens over the mail.
 
 ## 0.1.4 (2026-09-22)
 

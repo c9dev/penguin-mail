@@ -467,6 +467,17 @@ impl MainWindow {
                 .height_request(480)
                 .content(&toasts)
                 .build();
+            // The assistant sits beside the mail only while the window has
+            // room for both: the mailboxes, the list and the conversation
+            // need about 720sp between them, and the assistant 320sp. Below
+            // that it slides over the mail instead. Beside the mail in a
+            // narrower window, libadwaita cuts off the right edge of the
+            // open assistant, and squeezes the closed one below its minimum
+            // width.
+            let wide = adw::Breakpoint::new(
+                adw::BreakpointCondition::parse("max-width: 1100sp").expect("valid breakpoint"),
+            );
+            wide.add_setter(&assistant_split, "collapsed", Some(&true.to_value()));
             let medium = adw::Breakpoint::new(
                 adw::BreakpointCondition::parse("max-width: 960sp").expect("valid breakpoint"),
             );
@@ -483,6 +494,7 @@ impl MainWindow {
             let (on, off) = (Rc::clone(&conversation), Rc::clone(&conversation));
             narrow.connect_apply(move |_| on.set_compact(true));
             narrow.connect_unapply(move |_| off.set_compact(false));
+            window.add_breakpoint(wide);
             window.add_breakpoint(medium);
             window.add_breakpoint(narrow);
 
