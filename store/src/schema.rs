@@ -314,6 +314,21 @@ ALTER TABLE threads ADD COLUMN whole INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE messages ADD COLUMN list_unsubscribe TEXT;
 ALTER TABLE messages ADD COLUMN one_click INTEGER NOT NULL DEFAULT 0;
 "#,
+    // Bodies read while a Content-ID alone made a part an attachment.
+    // LinkedIn gives its text and its HTML one each and no name, so those
+    // messages were stored with no body and the two halves filed as
+    // attachments. Dropping the cached body makes the next open fetch it
+    // again and read it the way it is read now.
+    r#"
+DELETE FROM bodies WHERE (account_id, message_id) IN (
+    SELECT account_id, message_id FROM attachments
+    WHERE content_id IS NOT NULL AND attachment_id IS NULL
+      AND (mime_type LIKE 'text/plain%' OR mime_type LIKE 'text/html%')
+);
+DELETE FROM attachments
+    WHERE content_id IS NOT NULL AND attachment_id IS NULL
+      AND (mime_type LIKE 'text/plain%' OR mime_type LIKE 'text/html%');
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,

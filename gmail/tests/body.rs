@@ -335,3 +335,40 @@ fn a_signed_message_somebody_forwarded_is_not_this_message() {
     }));
     assert_eq!(extract_body(&payload).protection, None);
 }
+
+/// LinkedIn gives the text and the HTML of its mail a Content-ID each and
+/// no name. They are the message, not files beside it.
+#[test]
+fn text_parts_with_a_content_id_and_no_name_are_the_body() {
+    let payload = part(json!({
+        "mimeType": "multipart/alternative",
+        "parts": [
+            {"partId": "0", "mimeType": "text/plain",
+             "headers": [{"name": "Content-ID", "value": "<text-body>"}],
+             "body": {"data": b64(b"You have new invitations")}},
+            {"partId": "1", "mimeType": "text/html",
+             "headers": [{"name": "Content-ID", "value": "<html-body>"}],
+             "body": {"data": b64(b"<p>You have new invitations</p>")}}
+        ]
+    }));
+    let body = extract_body(&payload);
+    assert_eq!(body.html.as_deref(), Some("<p>You have new invitations</p>"));
+    assert_eq!(body.text.as_deref(), Some("You have new invitations"));
+    assert!(body.attachments.is_empty());
+}
+
+#[test]
+fn a_named_text_file_with_a_content_id_stays_an_attachment() {
+    let payload = part(json!({
+        "mimeType": "multipart/mixed",
+        "parts": [
+            {"partId": "0", "mimeType": "text/plain", "body": {"data": b64(b"Notes attached")}},
+            {"partId": "1", "mimeType": "text/plain", "filename": "notes.txt",
+             "headers": [{"name": "Content-ID", "value": "<notes>"}],
+             "body": {"data": b64(b"the notes")}}
+        ]
+    }));
+    let body = extract_body(&payload);
+    assert_eq!(body.text.as_deref(), Some("Notes attached"));
+    assert_eq!(body.attachments.len(), 1);
+}

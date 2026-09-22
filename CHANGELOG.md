@@ -13,6 +13,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- LinkedIn's mail, and any other mail that labels its text the same way,
+  shows its message again instead of an empty box and two attachments
+  called text-text-body.txt and text-html-body.html.
 - Naming a label Important, Starred, Inbox or another name Gmail keeps for
   itself now says why it cannot be used, instead of failing with Gmail's
   "Invalid label name".

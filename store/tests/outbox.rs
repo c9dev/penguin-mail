@@ -162,6 +162,17 @@ fn version_fourteen(path: &std::path::Path) {
             protection           TEXT,
             PRIMARY KEY (account_id, message_id)
         );
+        CREATE TABLE attachments (
+            account_id    INTEGER NOT NULL,
+            message_id    TEXT NOT NULL,
+            part_id       TEXT NOT NULL,
+            filename      TEXT NOT NULL,
+            mime_type     TEXT NOT NULL,
+            size          INTEGER NOT NULL,
+            attachment_id TEXT,
+            content_id    TEXT,
+            PRIMARY KEY (account_id, message_id, part_id)
+        );
         CREATE TABLE threads (
             account_id      INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
             id              TEXT NOT NULL,

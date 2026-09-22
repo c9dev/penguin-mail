@@ -60,11 +60,14 @@ fn walk(part: &MessagePart, body: &mut MessageBody) {
 }
 
 /// Whether the reader has to fetch this part on its own. A filename says
-/// so outright. So does a `Content-ID`, which an image the HTML shows
-/// carries and a filename often does not: `mail_builder` wrote one that
-/// way until we made it name its parts, and Apple Mail and Outlook still
-/// do. A part Gmail hands back with an `attachmentId` and no text is one
-/// more, which is how a nameless PDF still reaches the attachment list.
+/// so outright. So does a `Content-ID` on anything but the message's own
+/// text, which an image the HTML shows carries and a filename often does
+/// not: `mail_builder` wrote one that way until we made it name its
+/// parts, and Apple Mail and Outlook still do. On a nameless text or HTML
+/// part a `Content-ID` means nothing of the kind: LinkedIn labels the two
+/// halves of every message that way. A part Gmail hands back with an
+/// `attachmentId` and no text is one more attachment, which is how a
+/// nameless PDF still reaches the attachment list.
 fn is_attachment(part: &MessagePart) -> bool {
     if part
         .mime_type
@@ -73,7 +76,9 @@ fn is_attachment(part: &MessagePart) -> bool {
     {
         return false;
     }
-    if !part.filename.is_empty() || find_header(part, "Content-ID").is_some() {
+    if !part.filename.is_empty()
+        || (find_header(part, "Content-ID").is_some() && !is_text(part))
+    {
         return true;
     }
     let disposition = find_header(part, "Content-Disposition")
