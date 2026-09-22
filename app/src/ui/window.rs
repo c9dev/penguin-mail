@@ -141,10 +141,10 @@ pub struct MainWindow {
     /// Senders whose remote images may load. Read from the store once and
     /// kept here, since every thread that opens asks about it.
     image_senders: RefCell<Vec<mailrs_store::image_senders::ImageSender>>,
-    /// The conversations in windows of their own, so a flag colour or an
-    /// undo reaches them too. An entry that no longer upgrades is a window
-    /// somebody closed.
-    detached: RefCell<Vec<Weak<ConversationView>>>,
+    /// The conversations in windows of their own, each with the mailbox it
+    /// was opened from, so a flag colour or an undo reaches them too. An
+    /// entry that no longer upgrades is a window somebody closed.
+    detached: RefCell<Vec<(Weak<ConversationView>, Mailbox)>>,
 }
 
 /// The heading on the Delete Forever dialog, which names how much goes.
@@ -1096,6 +1096,7 @@ impl MainWindow {
         let only = summary.message_id.clone();
         let images_allowed = self.images_allowed_for(std::slice::from_ref(&summary.from_email));
         let me = self.addresses_for(account_id);
+        let ticket = view.start_loading();
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let key = thread_id.clone();
@@ -1112,6 +1113,9 @@ impl MainWindow {
                     Ok((found, cached))
                 })
                 .await;
+            if !view.still_loading(ticket) {
+                return;
+            }
             let (mut found, cached) = local.unwrap_or_default();
             if let Some(id) = &only {
                 found.retain(|m| &m.id == id);

@@ -2,7 +2,7 @@
 //! happens to a protected message; this file is the adapter that gives it
 //! the thread on screen and makes the calls it asks for, on the GTK thread.
 
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 
 use gtk::glib;
 use mailrs_domain::{AccountId, MessageBody};
@@ -27,6 +27,7 @@ impl MainWindow {
     /// The engines, with this window behind both ports.
     fn engines(self: &Rc<Self>, view: &Rc<ConversationView>) -> Engines {
         let ports = Rc::new(Ports {
+            window: Rc::downgrade(self),
             core: Rc::clone(&self.core),
             view: Rc::clone(view),
         });
@@ -36,6 +37,7 @@ impl MainWindow {
 
 /// The window as the engine run sees it.
 struct Ports {
+    window: Weak<MainWindow>,
     core: Rc<Core>,
     view: Rc<ConversationView>,
 }
@@ -99,6 +101,17 @@ impl Effects for Ports {
     }
 
     fn answered(&self, message_id: String, read: Read) {
-        self.view.engine_answered(message_id, read);
+        if !self.view.engine_answered(message_id, read) {
+            return;
+        }
+        // The event card and the translation card were read off the
+        // ciphertext; the opened body may carry an invitation or be in
+        // another language.
+        let Some(window) = self.window.upgrade() else {
+            return;
+        };
+        let view = Rc::clone(&self.view);
+        window.refresh_translation(&view);
+        glib::spawn_future_local(async move { window.refresh_invitation(&view).await });
     }
 }

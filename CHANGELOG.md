@@ -18,6 +18,14 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   account and adds your signature.
 - Conversations open in their own windows follow changes to the text size,
   VIPs and contact photos.
+- An encrypted message shows its invitation and offers translation once
+  it is decrypted.
+- Allowing images, an invitation card and the unsubscribed note stay on the
+  conversation they belong to when you open another one while they load.
+  Clicking two conversations quickly no longer shows the first one.
+- Trash in a conversation open in its own window moves it to the Trash or
+  deletes it forever depending on where that conversation was opened from,
+  not on the mailbox the main window shows now.
 
 ## 0.1.3 (2026-09-21)
 

@@ -95,7 +95,7 @@ pub(super) fn decide(action: &Action, mailbox: &Mailbox, marks: Marks) -> Option
 impl MainWindow {
     /// Runs what a mail button comes to on what `view` covers.
     pub(super) fn organize_from(self: &Rc<Self>, view: &Rc<ConversationView>, action: &Action) {
-        let mailbox = self.mailbox.borrow().clone();
+        let mailbox = self.mailbox_of(view);
         let Some(decision) = decide(action, &mailbox, self.target_marks_from(view)) else {
             return;
         };

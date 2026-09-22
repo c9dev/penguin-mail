@@ -7,6 +7,7 @@ use std::rc::{Rc, Weak};
 use adw::prelude::*;
 use gtk::{gio, glib};
 use mailrs_domain::{Folder, ThreadSummary};
+use mailrs_sync::Mailbox;
 
 use super::MainWindow;
 use crate::compose::ReplyKind;
@@ -46,8 +47,13 @@ impl MainWindow {
         });
         *holder.borrow_mut() = Rc::downgrade(&view);
         view.set_detached();
-        self.detached.borrow_mut().push(Rc::downgrade(&view));
-        view.set_folder(self.mailbox.borrow().folder());
+        // The window keeps the mailbox it was opened from, so its buttons
+        // and what they do stay put when the main window moves on.
+        let mailbox = self.mailbox.borrow().clone();
+        view.set_folder(mailbox.folder());
+        self.detached
+            .borrow_mut()
+            .push((Rc::downgrade(&view), mailbox));
         if let Some(filter) = self.app.upgrade().and_then(|app| app.filter()) {
             view.set_filter(filter);
         }
@@ -78,7 +84,7 @@ impl MainWindow {
         let mut views = vec![Rc::clone(&self.conversation)];
         self.detached
             .borrow_mut()
-            .retain(|held| match held.upgrade() {
+            .retain(|(held, _)| match held.upgrade() {
                 Some(view) => {
                     views.push(view);
                     true
@@ -88,12 +94,22 @@ impl MainWindow {
         views
     }
 
-    /// Tells every conversation on screen which folder its mail is in, so
-    /// the trash and junk buttons say what they do.
+    /// Tells the main window's conversation which folder its mail is in,
+    /// so the trash and junk buttons say what they do. A conversation in a
+    /// window of its own keeps the folder it was opened from.
     pub(super) fn set_folder(self: &Rc<Self>, folder: Option<Folder>) {
-        for view in self.views() {
-            view.set_folder(folder);
-        }
+        self.conversation.set_folder(folder);
+    }
+
+    /// The mailbox `view`'s conversation was opened from: the main
+    /// window's for its own view, and the one each separate window was
+    /// opened from for the rest.
+    pub(super) fn mailbox_of(&self, view: &Rc<ConversationView>) -> Mailbox {
+        self.detached
+            .borrow()
+            .iter()
+            .find(|(held, _)| held.upgrade().is_some_and(|held| Rc::ptr_eq(&held, view)))
+            .map_or_else(|| self.mailbox.borrow().clone(), |(_, mailbox)| mailbox.clone())
     }
 
     /// The `win.*` actions a separate window's menus and keys use.

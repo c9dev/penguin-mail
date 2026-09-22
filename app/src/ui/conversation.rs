@@ -320,6 +320,9 @@ pub struct ConversationView {
     buttons: Buttons,
     filter: RefCell<Option<webkit::UserContentFilter>>,
     open: RefCell<Option<OpenThread>>,
+    /// Counts the threads asked for, so a store read that answers after a
+    /// later click can tell it lost.
+    loading: Cell<u64>,
     scroll_to: RefCell<Option<String>>,
     compact: Cell<bool>,
     detached: Cell<bool>,
@@ -639,6 +642,7 @@ impl ConversationView {
             buttons,
             filter: RefCell::new(None),
             open: RefCell::new(None),
+            loading: Cell::new(0),
             scroll_to: RefCell::new(None),
             compact: Cell::new(false),
             detached: Cell::new(false),
@@ -995,6 +999,20 @@ impl ConversationView {
         self.webview.set_zoom_level(zoom);
     }
 
+    /// Starts loading a thread into this view and returns its ticket. Two
+    /// quick clicks can have their store reads answer out of order; only
+    /// the thread holding the latest ticket may be shown.
+    pub fn start_loading(&self) -> u64 {
+        let ticket = self.loading.get() + 1;
+        self.loading.set(ticket);
+        ticket
+    }
+
+    /// Whether `ticket` is still the latest thread asked for.
+    pub fn still_loading(&self, ticket: u64) -> bool {
+        self.loading.get() == ticket
+    }
+
     pub fn is_showing(&self, account_id: AccountId, thread_id: &str) -> bool {
         self.open
             .borrow()
@@ -1097,18 +1115,25 @@ impl ConversationView {
     /// when it opened one, the body and the files that were inside. Those
     /// go no further than this window, since Gmail holds the ciphertext
     /// and nothing else. The message on screen may now be the opened one,
-    /// so the thread is drawn again.
-    pub fn engine_answered(&self, message_id: String, read: protection::Read) {
-        self.change(|open| {
-            open.pgp = Some(read.mark);
-            if let Some(body) = read.body {
+    /// so the thread is drawn again. Returns whether the engine opened a
+    /// body, since whatever was read from the ciphertext, such as an
+    /// invitation or the language, has to be read again from it.
+    pub fn engine_answered(&self, message_id: String, read: protection::Read) -> bool {
+        let opened = self
+            .change(|open| {
+                open.pgp = Some(read.mark);
+                let Some(body) = read.body else {
+                    return false;
+                };
                 if !read.files.is_empty() {
                     open.opened_files.insert(message_id.clone(), read.files);
                 }
                 open.bodies.insert(message_id, Ok(body));
-            }
-        });
+                true
+            })
+            .unwrap_or(false);
         self.render(false);
+        opened
     }
 
     /// One message's translation, the card that says where it came from,

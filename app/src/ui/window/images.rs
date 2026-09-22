@@ -10,6 +10,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::glib;
+use mailrs_domain::AccountId;
 use mailrs_store::image_senders;
 
 use super::MainWindow;
@@ -63,6 +64,9 @@ impl MainWindow {
         if images::allowed(&self.image_senders.borrow(), Some(&from)) {
             return;
         }
+        let Some(asked_on) = view.read(|o| (o.account_id, o.thread_id.clone())) else {
+            return;
+        };
         let ask = fill(
             &gettext("Always load images from {sender}?"),
             &[("sender", &from)],
@@ -75,8 +79,9 @@ impl MainWindow {
         let (this, view) = (Rc::clone(self), Rc::clone(view));
         toast.connect_button_clicked(move |_| {
             let (this, view, from) = (Rc::clone(&this), Rc::clone(&view), from.clone());
+            let asked_on = asked_on.clone();
             glib::spawn_future_local(async move {
-                this.allow_images_from(&view, from, false).await;
+                this.allow_images_from(&view, asked_on, from, false).await;
             });
         });
         self.toasts.add_toast(toast);
@@ -85,12 +90,14 @@ impl MainWindow {
     /// Asks whether to allow this sender or their whole domain, then
     /// records the answer and redraws the conversation without the banner.
     pub(super) fn always_load_images(self: &Rc<Self>, view: &Rc<ConversationView>) {
-        let Some(from) = view.read(|open| {
-            open.messages
+        let Some((asked_on, from)) = view.read(|open| {
+            let from = open
+                .messages
                 .last()
                 .and_then(|m| m.from.as_ref())
                 .map(|a| a.email.to_lowercase())
-                .unwrap_or_default()
+                .unwrap_or_default();
+            ((open.account_id, open.thread_id.clone()), from)
         }) else {
             return;
         };
@@ -130,14 +137,16 @@ impl MainWindow {
                 },
                 _ => return,
             };
-            this.allow_images_from(&view, sender, whole_domain).await;
+            this.allow_images_from(&view, asked_on, sender, whole_domain).await;
         });
     }
 
-    /// Records one sender and shows the conversation with its images.
+    /// Records one sender and shows the conversation with its images, if
+    /// the thread the person was asked about, `asked_on`, is still open.
     pub(super) async fn allow_images_from(
         self: &Rc<Self>,
         view: &Rc<ConversationView>,
+        asked_on: (AccountId, String),
         sender: String,
         whole_domain: bool,
     ) {
@@ -153,7 +162,11 @@ impl MainWindow {
         match written {
             Ok(list) => {
                 *self.image_senders.borrow_mut() = list;
-                view.allow_images();
+                // Only on the thread the person agreed for: another one
+                // opened since then may be from someone else entirely.
+                if view.is_showing(asked_on.0, &asked_on.1) {
+                    view.allow_images();
+                }
                 self.toast(&if whole_domain {
                     fill(
                         &gettext("Images from anyone at {domain} will load from now on"),

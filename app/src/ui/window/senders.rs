@@ -29,11 +29,12 @@ impl MainWindow {
                 .unwrap_or_else(|| gettext("this list"));
             Some((
                 open.account_id,
+                open.thread_id.clone(),
                 sender,
                 choose(&header, body.one_click_unsubscribe),
             ))
         });
-        let Some((account_id, sender, method)) = found else {
+        let Some((account_id, thread_id, sender, method)) = found else {
             return self.toast(&gettext("This message has no unsubscribe link"));
         };
         let Some(method) = method else {
@@ -71,7 +72,11 @@ impl MainWindow {
             }
             match this.leave_list(account_id, method).await {
                 Ok(()) => {
-                    view.mark_unsubscribed();
+                    // The request can take a while; mark only the thread it
+                    // came from, if that is still the one on screen.
+                    if view.is_showing(account_id, &thread_id) {
+                        view.mark_unsubscribed();
+                    }
                     this.toast(&fill(
                         &gettext("Unsubscribed from {sender}"),
                         &[("sender", &sender)],
