@@ -49,6 +49,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - The assistant no longer loses its right edge in a window about 1000
   pixels wide, or in a narrow window with the app in Portuguese. In a
   window narrower than 1100 pixels it opens over the mail.
+### Improved
+
+- The composer's formatting bar is one Tab stop: the arrow keys move between its buttons, and a screen reader hears it as a toolbar.
+- Ctrl+Shift+P inserts an image in the composer, and the Keyboard Shortcuts window lists it.
 
 ## 0.1.4 (2026-09-22)
 

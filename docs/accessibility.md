@@ -38,6 +38,18 @@ described keeps their words; one nobody described is given an empty
 description in `sanitize.rs`, so a reader passes over it rather than
 spelling a kilobyte of base64 out.
 
+## The composer from the keyboard
+
+Tab goes From, To, Cc and Bcc while they show, Subject, the formatting
+bar, then the body. The bar is one stop: it has the toolbar role, and
+Left, Right, Home and End move between its buttons while Tab leaves it.
+Tab comes back to the button you left it on. `ui::roving` holds this, and
+a click on a button leaves the focus in the text.
+
+Every formatting button has a shortcut as well, Insert Image included
+(Ctrl+Shift+P). The headings and block styles have none and are reached
+through More Formatting, the last button on the bar.
+
 ## Checking it
 
 ```
@@ -61,17 +73,6 @@ are written down rather than patched over.
   the list item the focus lands on, so a key controller on the row never
   sees the key. Reaching them from the keyboard means the list view
   handling Menu and Shift+F10 itself and opening the focused row's menu.
-- **The composer's formatting buttons.** Bold, italic, strikethrough,
-  code, link, the two lists and quote stay off the focus chain, since
-  putting eleven buttons between the fields and the body would cost every
-  writer eleven presses. Each of them has a shortcut, so the action is
-  reachable; the button is not. A toolbar that is one tab stop with the
-  arrow keys moving inside it is the shape this wants.
-- **Insert Image.** It sits on that bar and has no shortcut, so it is the
-  one formatting action a keyboard cannot start. More Formatting, beside
-  it, does take the focus, which is how the headings and block styles
-  behind it are reached.
 - **A recipient chip in the middle of a field.** Backspace in an empty
-  entry takes the last chip back into it for correction, and the chips
-  themselves are not focusable, so removing any other one needs the
-  mouse.
+  entry deletes the last chip, and the chips themselves are not
+  focusable, so removing any other one needs the mouse.

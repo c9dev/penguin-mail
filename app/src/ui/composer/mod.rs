@@ -21,7 +21,7 @@ use webkit::prelude::*;
 
 use self::recipients::Recipients;
 use super::autocomplete::Contacts;
-use super::{labelled_by, name, name_with_shortcut};
+use super::{labelled_by, name, name_with_shortcut, roving};
 use crate::attachcheck::{self, Promise};
 use crate::compose::{
     Draft, LinePrefix, OutgoingAttachment, SendWhen, build_mime, format_recipients, is_address,
@@ -369,7 +369,10 @@ impl Composer {
             .css_classes(["attachment-row"])
             .visible(false)
             .build();
+        // One stop on the Tab chain between the fields and the body; the
+        // arrow keys move along it. See `roving::toolbar`.
         let format_bar = gtk::Box::builder()
+            .accessible_role(gtk::AccessibleRole::Toolbar)
             .spacing(2)
             .margin_start(10)
             .margin_end(10)
@@ -377,6 +380,10 @@ impl Composer {
             .margin_bottom(4)
             .css_classes(["format-bar"])
             .build();
+        format_bar.update_property(&[
+            gtk::accessible::Property::Label(&gettext("Formatting")),
+            gtk::accessible::Property::Orientation(gtk::Orientation::Horizontal),
+        ]);
         let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
         content.append(&fields);
         content.append(&format_bar);
@@ -727,6 +734,7 @@ impl Composer {
         add("<Control>Return", Box::new(|c| c.send()));
         add("<Control><Shift>d", Box::new(|c| c.send()));
         add("<Control><Shift>a", Box::new(|c| c.pick_files()));
+        add("<Control><Shift>p", Box::new(|c| c.pick_images()));
         add("<Control>s", Box::new(|c| c.save_draft(false)));
         add("Escape", Box::new(|c| c.window.close()));
         self.window.add_controller(shortcuts);
@@ -1456,6 +1464,7 @@ impl Composer {
 
 impl Composer {
     fn fill_format_bar(self: &Rc<Self>, bar: &gtk::Box) {
+        let members: RefCell<Vec<gtk::Widget>> = RefCell::new(Vec::new());
         let group = || {
             let group = gtk::Box::builder()
                 .spacing(1)
@@ -1487,7 +1496,6 @@ impl Composer {
                 .child(&label(markup))
                 .tooltip_text(&tip)
                 .css_classes(["flat"])
-                .can_focus(false)
                 .build();
             // The letter on the button is markup, which reads out as the
             // bare letter; the name says what the letter stands for.
@@ -1499,6 +1507,7 @@ impl Composer {
                 }
             });
             styles.append(&button);
+            members.borrow_mut().push(button.clone().upcast());
             self.toggles.borrow_mut().push((button, tag));
         }
 
@@ -1508,10 +1517,10 @@ impl Composer {
                 .icon_name(icon)
                 .tooltip_text(&tip)
                 .css_classes(["flat"])
-                .can_focus(false)
                 .build();
             name_with_shortcut(&button, &tip);
             bar.append(&button);
+            members.borrow_mut().push(button.clone().upcast());
             button
         };
         let weak = Rc::downgrade(self);
@@ -1552,13 +1561,16 @@ impl Composer {
 
         let extras = group();
         let weak = Rc::downgrade(self);
-        button(&extras, "image-x-generic-symbolic", gettext("Insert Image")).connect_clicked(
-            move |_| {
-                if let Some(c) = weak.upgrade() {
-                    c.pick_images();
-                }
-            },
-        );
+        button(
+            &extras,
+            "image-x-generic-symbolic",
+            gettext("Insert Image (Ctrl+Shift+P)"),
+        )
+        .connect_clicked(move |_| {
+            if let Some(c) = weak.upgrade() {
+                c.pick_images();
+            }
+        });
         let menu = gio::Menu::new();
         let paragraph = gio::Menu::new();
         for (label, kind) in [
@@ -1589,10 +1601,6 @@ impl Composer {
             Some("composer.edit-markdown"),
         );
         menu.append_section(None, &switch);
-        // The rest of the bar stays off the focus chain, since every
-        // button on it has a shortcut of its own. This one takes the
-        // focus, because the headings and the block styles behind it have
-        // none and the menu is the only way to reach them.
         let more = gtk::MenuButton::builder()
             .icon_name("view-more-symbolic")
             .tooltip_text(gettext("More Formatting"))
@@ -1601,6 +1609,8 @@ impl Composer {
             .build();
         name(&more, &gettext("More Formatting"));
         extras.append(&more);
+        members.borrow_mut().push(more.upcast());
+        roving::toolbar(bar, members.take());
         self.follow_cursor();
     }
 

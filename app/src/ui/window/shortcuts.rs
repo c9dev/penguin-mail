@@ -436,6 +436,11 @@ pub(super) static SHORTCUTS: &[Shortcut] = &[
     },
     Shortcut {
         section: Section::Writing,
+        description: || gettext("Insert image"),
+        keys: &[composer("<Control><Shift>p")],
+    },
+    Shortcut {
+        section: Section::Writing,
         description: || gettext("Bold, italic, link"),
         keys: &[
             composer("<Control>b"),
