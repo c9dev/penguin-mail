@@ -11,9 +11,8 @@ use crate::format::{color_for, full_date, header_date, human_size, initials};
 use crate::sanitize::sanitize_html;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
-/// How long a message's fold takes to open or close. The stylesheet and
-/// the script that drives it both read this, so they cannot drift apart.
-pub const FOLD_MS: u32 = 240;
+/// How long a message's fold takes to open or close.
+const FOLD_MS: u32 = 240;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Theme {
@@ -169,7 +168,7 @@ fn render_message(
     }
     let _ = write!(
         html,
-        "</span><span class=\"date\">{}</span>",
+        "</span><span class=\"date\">{}</span><span class=\"chev\" aria-hidden=\"true\"></span>",
         escape(&header_date(meta.date, chrono::Local::now())),
     );
     render_details(html, meta, me, view);
@@ -608,9 +607,16 @@ body{{margin:0 auto;max-width:980px;padding:28px 36px 64px;color:var(--fg);\
 font:15px/1.5 \"Adwaita Sans\",Cantarell,system-ui,sans-serif;-webkit-font-smoothing:antialiased}}\
 .thread h1{{font-size:24px;line-height:1.25;font-weight:750;letter-spacing:-0.01em;margin:0}}\
 .thread p{{margin:4px 0 18px;color:var(--dim);font-size:13px}}\
-.message{{border-top:1px solid var(--line);padding:14px 10px;margin:0 -10px;border-radius:12px}}\
+.message{{border-top:1px solid var(--line);padding:16px 12px 18px;margin:0 -12px;border-radius:12px}}\
 .message.collapsed:hover{{background:var(--hover)}}\
-.header{{position:relative;display:grid;grid-template-columns:40px minmax(0,1fr) auto;column-gap:12px;align-items:center;color:inherit}}\
+.header{{position:relative;display:grid;grid-template-columns:40px minmax(0,1fr) auto auto;\
+column-gap:12px;align-items:center;color:inherit}}\
+.chev{{width:16px;height:16px;justify-self:end;background:var(--dim);opacity:0;\
+-webkit-mask:url(\"{CHEV}\") center/14px no-repeat;\
+transition:transform 200ms cubic-bezier(0.23,1,0.32,1),opacity 120ms ease}}\
+.message:hover .chev,.expanded .chev,.toggle:focus-visible~.chev{{opacity:.7}}\
+.expanded .chev{{transform:rotate(180deg)}}\
+.toggle:focus-visible{{outline:2px solid var(--accent);outline-offset:-3px;border-radius:12px}}\
 .toggle{{position:absolute;inset:0}}\
 .avatar{{position:relative;grid-row:span 2;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;\
 justify-content:center;overflow:hidden;color:#fff;font-weight:700;font-size:15px;letter-spacing:0.02em;text-decoration:none}}\
@@ -638,14 +644,15 @@ table.details td{{text-align:left;color:var(--fg);padding:1px 0;word-break:break
 table.details .warn{{color:#c0392b}}\
 .collapsed .to,.collapsed .address,.expanded .snippet{{display:none}}\
 .collapsed .toggle{{cursor:pointer}}\
-.fold{{overflow:hidden}}\
-.collapsed .fold{{max-height:0;opacity:0}}\
-.message.folding .fold{{transition:max-height {fold}ms cubic-bezier(0.23,1,0.32,1),\
+.fold{{display:grid;grid-template-rows:1fr;\
+transition:grid-template-rows {fold}ms cubic-bezier(0.23,1,0.32,1),\
 opacity 180ms cubic-bezier(0.23,1,0.32,1)}}\
+.folded{{overflow:hidden;min-height:0}}\
+.collapsed .fold{{grid-template-rows:0fr;opacity:0}}\
 .message{{transition:background-color 120ms ease}}\
 .attachment,.attachment .get{{transition:background-color 120ms ease,opacity 120ms ease}}\
-@media (prefers-reduced-motion:reduce){{.message.folding .fold,.message{{transition:none}}}}\
-.body{{margin:16px 0 4px 52px}}\
+@media (prefers-reduced-motion:reduce){{.fold,.message{{transition:none}}}}\
+.body{{margin:14px 0 2px 52px}}\
 .text{{white-space:pre-wrap;overflow-wrap:anywhere}}\
 .body.text,.body.status,.html{{background:var(--surface);border-radius:12px;padding:14px;\
 border:1px solid var(--line);overflow:hidden;margin-left:0}}\
@@ -670,7 +677,7 @@ color:inherit;text-decoration:none;min-width:0}}\
 .thumb{{width:32px;height:32px;flex:none;border-radius:5px;object-fit:cover;background:var(--card)}}\
 .clip{{width:16px;height:16px;flex:none;background:var(--dim);-webkit-mask:url(\"{CLIP}\") center/contain no-repeat}}\
 @media (max-width:560px){{body{{padding:18px 14px 40px}}.body,.attachments{{margin-left:0}}.thread h1{{font-size:21px}}\
-.address{{display:none}}.message{{padding:12px 8px;margin:0 -8px}}}}",
+.address{{display:none}}.message{{padding:14px 8px 16px;margin:0 -8px}}.chev{{display:none}}}}",
         fold = FOLD_MS,
         scheme = if theme.dark { "dark" } else { "light" },
         accent = theme.accent,
@@ -679,6 +686,10 @@ color:inherit;text-decoration:none;min-width:0}}\
 
 const CLIP: &str = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'>\
 <path fill='black' d='M10.5 2A3.5 3.5 0 0 0 7 5.5v5a1.5 1.5 0 0 0 3 0V6h-1v4.5a.5.5 0 0 1-1 0v-5a2.5 2.5 0 0 1 5 0v6a3.5 3.5 0 0 1-7 0V5H5v6.5a4.5 4.5 0 0 0 9 0v-6A3.5 3.5 0 0 0 10.5 2z'/></svg>";
+
+/// The chevron beside a message's date, which says the header opens it.
+const CHEV: &str = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'>\
+<path fill='black' d='M8 10.9 3.3 6.2l1-1L8 8.9l3.7-3.7 1 1z'/></svg>";
 
 const DOWN: &str = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'>\
 <path fill='black' d='M7.5 1.5h1v8.3l3-3 .7.7-4.2 4.2-4.2-4.2.7-.7 3 3V1.5zM3 13h10v1H3z'/></svg>";
@@ -918,7 +929,7 @@ mod tests {
         );
         assert!(html.contains("message collapsed\" id=\"m-m1\""));
         assert!(
-            html.contains(".collapsed .fold{max-height:0;opacity:0}"),
+            html.contains(".collapsed .fold{grid-template-rows:0fr;opacity:0}"),
             "a collapsed message keeps its fold at no height"
         );
         assert_eq!(
