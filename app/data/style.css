@@ -217,7 +217,9 @@ flowboxchild:focus-visible > .recipient-chip {
 .assistant-confirm label { font-weight: 600; }
 
 /* Inbox categories: the switcher above an inbox's thread list. */
-.category-bar > toggle { min-width: 34px; min-height: 30px; padding-left: 5px; padding-right: 5px; }
+/* min-width counts the content alone, so 24px is the icon's box and the
+   padding brings the toggle to 34px with the icon centred. */
+.category-bar > toggle { min-width: 24px; min-height: 30px; padding-left: 5px; padding-right: 5px; }
 /* The switcher reads as one strip, so drop the dividers between the icons. */
 .category-bar > separator { background: none; }
 .category-bar .category-name { margin-left: 5px; margin-right: 2px; }

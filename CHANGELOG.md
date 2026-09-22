@@ -7,6 +7,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- The icons in the category switcher above the inbox sit in the middle
+  of their highlight instead of leaving a gap on the right.
 - Shift+F10 and the Menu key open a message's own menu. Before, they
   opened an empty Cut and Paste menu in the window's top corner.
 
