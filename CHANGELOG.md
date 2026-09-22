@@ -16,6 +16,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+- The composer's header has room for its title again: Sign and Encrypt
+  sit behind one button that says what the message goes out as.
 - A message in a conversation slides open and shut instead of appearing
   all at once, and mailbox rows, conversation rows and attachments fade
   under the pointer. Turning off animations in the desktop settings turns

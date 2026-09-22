@@ -112,6 +112,9 @@ pub struct Composer {
     /// not the writer's problem.
     sign: gtk::ToggleButton,
     encrypt: gtk::ToggleButton,
+    /// The header button the two above hang from. Its icon and its name
+    /// say what is on, since the toggles themselves are behind it.
+    protection: gtk::MenuButton,
     /// The addresses the key check last asked about, so a writer typing an
     /// address does not start an engine for every letter.
     asked_keys: RefCell<Asked>,
@@ -261,12 +264,34 @@ impl Composer {
             let tip = button.tooltip_text().unwrap_or_default();
             name_with_shortcut(button, &tip);
         }
-        let protection = gtk::Box::builder()
-            .css_classes(["linked"])
+        // Sign and Encrypt used to stand in the header as two labelled
+        // toggles, which took more of the bar than the rest of the
+        // buttons together and pushed the title off centre. They live in
+        // a popover now; the button they hang from says what is on.
+        let choices = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(6)
+            .margin_top(8)
+            .margin_bottom(8)
+            .margin_start(8)
+            .margin_end(8)
+            .build();
+        sign.add_css_class("flat");
+        encrypt.add_css_class("flat");
+        for toggle in [&sign, &encrypt] {
+            toggle.set_halign(gtk::Align::Fill);
+            if let Some(label) = toggle.child().and_downcast::<gtk::Label>() {
+                label.set_xalign(0.0);
+            }
+            choices.append(toggle);
+        }
+        let protection = gtk::MenuButton::builder()
+            .icon_name("security-medium-symbolic")
+            .tooltip_text(gettext("Signing and encryption"))
+            .popover(&gtk::Popover::builder().child(&choices).build())
             .visible(has_engine)
             .build();
-        protection.append(&sign);
-        protection.append(&encrypt);
+        name_with_shortcut(protection.upcast_ref::<gtk::Widget>(), &gettext("Signing and encryption"));
         let header = adw::HeaderBar::builder().title_widget(&title).build();
         header.pack_end(&send);
         header.pack_end(&preview_toggle);
@@ -435,6 +460,7 @@ impl Composer {
             send,
             sign,
             encrypt,
+            protection,
             asked_keys: RefCell::new(Asked::default()),
             encrypting_with: Cell::new(Standard::default()),
             signing_with: Cell::new(Standard::default()),
@@ -629,6 +655,7 @@ impl Composer {
         self.sign.connect_toggled(move |_| {
             if let Some(c) = weak.upgrade() {
                 c.dirty.set(true);
+                c.show_protection();
             }
         });
         let weak = Rc::downgrade(self);
@@ -642,6 +669,7 @@ impl Composer {
                 c.secret.set(toggle.is_active());
             }
             c.dirty.set(true);
+            c.show_protection();
         });
 
         let actions = gio::SimpleActionGroup::new();
@@ -1068,6 +1096,29 @@ impl Composer {
         }
     }
 
+    /// Says on the header button what the message goes out as, since the
+    /// two toggles that decide it sit behind that button.
+    fn show_protection(&self) {
+        let (sign, encrypt) = (self.sign.is_active(), self.encrypt.is_active());
+        let said = match (sign, encrypt) {
+            (true, true) => gettext("Signed and encrypted"),
+            (true, false) => gettext("Signed"),
+            (false, true) => gettext("Encrypted"),
+            (false, false) => gettext("Not signed or encrypted"),
+        };
+        self.protection.set_icon_name(match (sign, encrypt) {
+            (_, true) => "channel-secure-symbolic",
+            (true, false) => "security-high-symbolic",
+            (false, false) => "security-medium-symbolic",
+        });
+        match sign || encrypt {
+            true => self.protection.add_css_class("protected"),
+            false => self.protection.remove_css_class("protected"),
+        }
+        self.protection.set_tooltip_text(Some(&said));
+        super::name(self.protection.upcast_ref::<gtk::Widget>(), &said);
+    }
+
     /// Offers encryption when one of the standards can do it, and says
     /// what is in the way when neither can.
     fn show_keys(&self, held: &Held, blind: bool) {
@@ -1087,6 +1138,7 @@ impl Composer {
             self.encrypt.set_active(true);
         }
         self.filling_keys.set(false);
+        self.show_protection();
     }
 
     /// Asks both engines what they hold for the address this message goes

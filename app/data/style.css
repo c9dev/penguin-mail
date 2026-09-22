@@ -1,3 +1,7 @@
+/* The composer's signing button, when the message goes out signed or
+   encrypted. Its icon carries the accent so the state reads at a glance. */
+.protected image { color: var(--accent-color); }
+
 /* Movement. A pointer landing on a row, and a row becoming the selected
    one, fade rather than snap: short enough to keep the list feeling
    direct, long enough that the eye follows what changed. GTK drops every
