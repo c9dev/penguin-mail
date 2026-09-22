@@ -282,7 +282,7 @@ impl<A: Accounts> Tools<A> {
         }))
     }
 
-    pub(super) async fn create_event(&self, input: &Value) -> ToolResult {
+    pub(super) async fn create_event<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let account = self.account_or_default(input)?;
         let title = required(input, "title")?;
         let start = moment(&required(input, "start")?)?;
@@ -323,18 +323,19 @@ impl<A: Accounts> Tools<A> {
                 &[("guests", &invited.join(", "))],
             ));
         }
-        self.approve(&question).await?;
-        let calendar = Arc::clone(&self.modules.calendar);
-        let account_id = account.id;
-        let made = self
-            .permitted(&account, Permission::Calendar, async move {
-                calendar.create(account_id, &fields).await
-            })
-            .await?;
-        Ok(json!({"account": account.email, "created": event_json(&made)}))
+        Ok(Plan::ask(question, async move {
+            let calendar = Arc::clone(&self.modules.calendar);
+            let account_id = account.id;
+            let made = self
+                .permitted(&account, Permission::Calendar, async move {
+                    calendar.create(account_id, &fields).await
+                })
+                .await?;
+            Ok(json!({"account": account.email, "created": event_json(&made)}))
+        }))
     }
 
-    pub(super) async fn update_event(&self, input: &Value) -> ToolResult {
+    pub(super) async fn update_event<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let account = self.account_or_default(input)?;
         let id = required(input, "id")?;
         let moment_of = |key: &str| -> Result<Option<Moment>, String> {
@@ -394,19 +395,20 @@ impl<A: Accounts> Tools<A> {
                 &[("account", &account.email)],
             ),
         };
-        self.approve(&format!("{question}\n\n{}", changes.join("\n")))
-            .await?;
-        let calendar = Arc::clone(&self.modules.calendar);
-        let account_id = account.id;
-        let changed = self
-            .permitted(&account, Permission::Calendar, async move {
-                calendar.update(account_id, &id, &fields).await
-            })
-            .await?;
-        Ok(json!({"account": account.email, "updated": event_json(&changed)}))
+        let question = format!("{question}\n\n{}", changes.join("\n"));
+        Ok(Plan::ask(question, async move {
+            let calendar = Arc::clone(&self.modules.calendar);
+            let account_id = account.id;
+            let changed = self
+                .permitted(&account, Permission::Calendar, async move {
+                    calendar.update(account_id, &id, &fields).await
+                })
+                .await?;
+            Ok(json!({"account": account.email, "updated": event_json(&changed)}))
+        }))
     }
 
-    pub(super) async fn delete_event(&self, input: &Value) -> ToolResult {
+    pub(super) async fn delete_event<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let account = self.account_or_default(input)?;
         let id = required(input, "id")?;
         let question = match text(input, "title") {
@@ -419,25 +421,28 @@ impl<A: Accounts> Tools<A> {
                 &[("account", &account.email)],
             ),
         };
-        self.approve(&question).await?;
-        let calendar = Arc::clone(&self.modules.calendar);
-        let (account_id, gone) = (account.id, id.clone());
-        self.permitted(&account, Permission::Calendar, async move {
-            calendar.delete(account_id, &gone).await
-        })
-        .await?;
-        Ok(json!({"account": account.email, "deleted": id}))
+        Ok(Plan::ask(question, async move {
+            let calendar = Arc::clone(&self.modules.calendar);
+            let (account_id, gone) = (account.id, id.clone());
+            self.permitted(&account, Permission::Calendar, async move {
+                calendar.delete(account_id, &gone).await
+            })
+            .await?;
+            Ok(json!({"account": account.email, "deleted": id}))
+        }))
     }
 
-    pub(super) async fn answer_invitation(&self, input: &Value) -> ToolResult {
+    pub(super) async fn answer_invitation<'a>(
+        &'a self,
+        input: &'a Value,
+    ) -> Result<Plan<'a>, String> {
         let (account, sync) = self.sync_for(&required(input, "account")?)?;
         let message_id = required(input, "message_id")?;
-        let (answer, said) = match required(input, "answer")?.to_lowercase().as_str() {
-            "yes" => (Answer::Yes, gettext("Yes")),
-            "no" => (Answer::No, gettext("No")),
-            "maybe" => (Answer::Maybe, gettext("Maybe")),
-            other => return Err(format!("Unknown answer {other}; use yes, no or maybe.")),
-        };
+        let key = required(input, "answer")?.to_lowercase();
+        let answer = Answer::ALL
+            .into_iter()
+            .find(|a| a.as_str() == key)
+            .ok_or_else(|| format!("Unknown answer {key}; use yes, no or maybe."))?;
         // The question names the event, so the body is read before asking.
         // Answering reads it again from the cache.
         let id = message_id.clone();
@@ -447,11 +452,18 @@ impl<A: Accounts> Tools<A> {
             .as_deref()
             .and_then(mailrs_domain::invitation::read)
             .ok_or("That message holds no invitation.")?;
-        self.approve(&fill(
+        let question = fill(
             &gettext("Answer {answer} to “{title}”?"),
-            &[("answer", &said), ("title", &invitation.summary)],
+            &[("answer", &answer.label()), ("title", &invitation.summary)],
+        );
+        Ok(Plan::ask(
+            question,
+            self.answer(account, message_id, answer),
         ))
-        .await?;
+    }
+
+    /// Sends the answer the person allowed, and says where it went.
+    async fn answer(&self, account: Account, message_id: String, answer: Answer) -> ToolResult {
         let invitations = Arc::clone(&self.modules.invitations);
         let (account_id, me) = (account.id, account.email.clone());
         let now = Local::now().timestamp_millis();
@@ -479,7 +491,7 @@ impl<A: Accounts> Tools<A> {
         };
         let mut result = json!({
             "event": invitation.summary,
-            "answer": required(input, "answer")?.to_lowercase(),
+            "answer": answer.as_str(),
             "went": went,
         });
         if sent.needs_permission {

@@ -149,7 +149,7 @@ impl<A: Accounts> Tools<A> {
         report(&self.act(targets, MailAction::Mute { muted }).await)
     }
 
-    pub(super) async fn delete_forever(&self, input: &Value) -> ToolResult {
+    pub(super) async fn delete_forever<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let targets = self.parse_targets(input)?;
         let first = targets.first().ok_or("`targets` is empty")?.account_id;
         let account = self
@@ -159,13 +159,16 @@ impl<A: Accounts> Tools<A> {
             .find(|a| a.id == first)
             .ok_or("That account is gone.")?;
         let count = targets.len();
-        self.approve(&fill_plural(
+        let question = fill_plural(
             "Delete {count} conversation forever? Gmail cannot bring it back.",
             "Delete {count} conversations forever? Gmail cannot bring them back.",
             count,
             &[("count", &count.to_string())],
-        ))
-        .await?;
+        );
+        Ok(Plan::ask(question, self.erase(account, targets)))
+    }
+
+    async fn erase(&self, account: Account, targets: Vec<Target>) -> ToolResult {
         let mail = Arc::clone(&self.modules.mail);
         let outcome = self
             .permitted(&account, Permission::Delete, async move {
@@ -190,7 +193,7 @@ impl<A: Accounts> Tools<A> {
         Ok(result)
     }
 
-    pub(super) async fn send_later(&self, input: &Value) -> ToolResult {
+    pub(super) async fn send_later<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let at = future_instant(&required(input, "at")?)?;
         let draft = match input.get("draft").filter(|v| v.is_object()) {
             Some(saved) => self.saved_draft(saved).await?,
@@ -200,19 +203,20 @@ impl<A: Accounts> Tools<A> {
             return Err(problem);
         }
         let when = crate::format::future_date(at, Local::now());
-        self.approve(&fill(
+        let question = fill(
             &gettext("Send “{subject}” to {recipients} {when}?"),
             &[
                 ("subject", &draft.subject),
                 ("recipients", &compose::format_recipients(&draft.to)),
                 ("when", &when),
             ],
-        ))
-        .await?;
-        self.effects.send_later(draft, at)?;
-        Ok(json!({
-            "scheduled": local_text(at),
-            "where": "It waits in the Send Later mailbox, where the user can change or cancel it.",
+        );
+        Ok(Plan::ask(question, async move {
+            self.effects.send_later(draft, at)?;
+            Ok(json!({
+                "scheduled": local_text(at),
+                "where": "It waits in the Send Later mailbox, where the user can change or cancel it.",
+            }))
         }))
     }
 
@@ -294,7 +298,7 @@ impl<A: Accounts> Tools<A> {
         }))
     }
 
-    pub(super) async fn unsubscribe(&self, input: &Value) -> ToolResult {
+    pub(super) async fn unsubscribe<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let (account, sync) = self.sync_for(&required(input, "account")?)?;
         let thread_id = required(input, "thread_id")?;
         let (s, t) = (Arc::clone(&sync), thread_id.clone());
@@ -344,15 +348,16 @@ impl<A: Accounts> Tools<A> {
             &gettext("Unsubscribe from {sender}?"),
             &[("sender", &sender)],
         );
-        self.approve(&format!("{question}\n\n{way}")).await?;
-        self.effects.unsubscribe(account.id, how).await?;
-        let mut result = json!({"unsubscribed": sender, "how": kind});
-        if kind == "page" {
-            result["note"] = json!(
-                "The sender's unsubscribe page opened in the user's browser. They finish there."
-            );
-        }
-        Ok(result)
+        Ok(Plan::ask(format!("{question}\n\n{way}"), async move {
+            self.effects.unsubscribe(account.id, how).await?;
+            let mut result = json!({"unsubscribed": sender, "how": kind});
+            if kind == "page" {
+                result["note"] = json!(
+                    "The sender's unsubscribe page opened in the user's browser. They finish there."
+                );
+            }
+            Ok(result)
+        }))
     }
 
     pub(super) async fn read_attachment(&self, input: &Value) -> ToolResult {

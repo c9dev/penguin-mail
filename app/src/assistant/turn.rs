@@ -271,53 +271,16 @@ pub fn thinking_title(took: Option<Duration>) -> String {
 }
 
 /// What the pane calls a tool. The name on the left is the tool's own,
-/// which the model knows and nobody reads.
+/// which the model knows and nobody reads. The mail tools carry their
+/// labels in their catalog; the rest belong to the other sources.
 pub fn tool_label(name: &str) -> String {
+    if let Some(label) = super::run::label(name) {
+        return label;
+    }
     match name {
-        "get_context" => gettext("Looking at the screen"),
-        "list_mail" => gettext("Reading a mailbox"),
-        "search_mail" => gettext("Searching mail"),
-        "read_conversation" => gettext("Reading a conversation"),
-        "organize" => gettext("Organizing mail"),
-        "label" => gettext("Changing labels"),
-        "remind_me" => gettext("Setting reminders"),
-        "draft_email" => gettext("Writing a draft"),
-        "send_email" => gettext("Sending mail"),
-        "block_sender" => gettext("Blocking a sender"),
-        "get_automatic_reply" => gettext("Checking the automatic reply"),
-        "set_automatic_reply" => gettext("Setting the automatic reply"),
-        "list_rules" => gettext("Reading rules"),
-        "create_rule" => gettext("Creating a rule"),
-        "delete_rule" => gettext("Deleting a rule"),
-        "create_label" => gettext("Creating a label"),
-        "get_settings" => gettext("Reading settings"),
-        "change_setting" => gettext("Changing a setting"),
-        "set_signature" => gettext("Setting a signature"),
-        "vip" => gettext("Updating VIPs"),
-        "create_smart_mailbox" => gettext("Creating a smart mailbox"),
-        "open_conversation" => gettext("Opening a conversation"),
-        "categorize_sender" => gettext("Sorting a sender"),
-        "dismiss_follow_up" => gettext("Dismissing a follow-up"),
-        "list_hidden_addresses" => gettext("Reading hidden addresses"),
-        "create_hidden_address" => gettext("Making a hidden address"),
-        "set_hidden_address" => gettext("Changing a hidden address"),
         // The app's own web tools, Anthropic's, and Claude Code's.
         "web_search" | "WebSearch" => gettext("Searching the web"),
         "fetch_page" | "web_fetch" | "WebFetch" => gettext("Reading a web page"),
-        "mute" => gettext("Muting conversations"),
-        "delete_forever" => gettext("Deleting mail forever"),
-        "send_later" => gettext("Scheduling a message"),
-        "list_templates" => gettext("Reading templates"),
-        "insert_template" => gettext("Writing from a template"),
-        "unsubscribe" => gettext("Unsubscribing"),
-        "read_attachment" => gettext("Reading an attachment"),
-        "find_contact" => gettext("Looking up a contact"),
-        "list_events" => gettext("Reading the calendar"),
-        "find_free_time" => gettext("Finding free time"),
-        "create_event" => gettext("Adding an event"),
-        "update_event" => gettext("Changing an event"),
-        "delete_event" => gettext("Deleting an event"),
-        "answer_invitation" => gettext("Answering an invitation"),
         "use_skill" => gettext("Reading a skill"),
         "read_skill_file" => gettext("Reading a skill's file"),
         "run_command" => gettext("Running a command in the sandbox"),

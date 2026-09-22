@@ -7,6 +7,7 @@ app/src/app/updates.rs
 app/src/assistant/mod.rs
 app/src/assistant/run.rs
 app/src/assistant/run/calendar.rs
+app/src/assistant/run/catalog.rs
 app/src/assistant/run/mail.rs
 app/src/assistant/sources/mcp/mod.rs
 app/src/assistant/sources/skills/mod.rs

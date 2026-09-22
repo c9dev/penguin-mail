@@ -379,7 +379,7 @@ impl AssistantPane {
         *self.stop.borrow_mut() = Some(stop);
         let web = settings.ai.web_search != crate::settings::WebSearch::Off;
         let host = Arc::new(Toolbox::new(
-            Host::new(assistant::tools::specs(), self.requests.clone()),
+            Host::new(assistant::run::specs(), self.requests.clone()),
             chat_sources,
             self.approvals.clone(),
             settings.assistant_allowed_tools,

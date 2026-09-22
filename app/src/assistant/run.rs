@@ -1,7 +1,8 @@
-//! What the assistant's tools do. A call arrives by name with its JSON
-//! input, and [`Tools::run`] answers it from the mail modules plus two
-//! ports: [`Desk`] for what the window has on screen, and [`Effects`] for
-//! what a tool asks the window to do.
+//! What the assistant's mail tools do. A call arrives by name with its JSON
+//! input, [`Tools::run`] finds the tool in the catalog, and the tool's
+//! handler answers from the mail modules plus two ports: [`Desk`] for what
+//! the window has on screen, and [`Effects`] for what a tool asks the
+//! window to do.
 //!
 //! Nothing here touches GTK. The window is one adapter behind the ports and
 //! the tests are another, so the whole tool loop runs headless.
@@ -38,11 +39,15 @@ use crate::unsubscribe::Unsubscribe;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 mod calendar;
+mod catalog;
 #[cfg(test)]
 mod fake;
 mod mail;
 #[cfg(test)]
 mod tests;
+
+use catalog::Plan;
+pub use catalog::{label, specs};
 
 type ToolResult = Result<Value, String>;
 
@@ -202,6 +207,120 @@ fn named_category(key: &str) -> Result<Category, String> {
         .ok_or_else(|| format!("Unknown category {key}."))
 }
 
+/// A mailbox `list_mail` names. Its keys make the schema's enum, so the
+/// model is offered the names this parser takes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MailboxName {
+    Inbox,
+    Flagged,
+    Sent,
+    Drafts,
+    Vips,
+    /// Sent mail that has waited 3 to 30 days for a reply.
+    FollowUp,
+    Junk,
+    Trash,
+    AllMail,
+    /// The label `list_mail` names in its `label` field.
+    Label,
+}
+
+impl MailboxName {
+    const ALL: [MailboxName; 10] = [
+        MailboxName::Inbox,
+        MailboxName::Flagged,
+        MailboxName::Sent,
+        MailboxName::Drafts,
+        MailboxName::Vips,
+        MailboxName::FollowUp,
+        MailboxName::Junk,
+        MailboxName::Trash,
+        MailboxName::AllMail,
+        MailboxName::Label,
+    ];
+
+    fn key(self) -> &'static str {
+        match self {
+            MailboxName::Inbox => "inbox",
+            MailboxName::Flagged => "flagged",
+            MailboxName::Sent => "sent",
+            MailboxName::Drafts => "drafts",
+            MailboxName::Vips => "vips",
+            MailboxName::FollowUp => "follow_up",
+            MailboxName::Junk => "junk",
+            MailboxName::Trash => "trash",
+            MailboxName::AllMail => "all_mail",
+            MailboxName::Label => "label",
+        }
+    }
+
+    fn named(key: &str) -> Option<MailboxName> {
+        MailboxName::ALL.into_iter().find(|m| m.key() == key)
+    }
+}
+
+/// What `organize` does to conversations. Its keys make the schema's enum.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Organize {
+    Archive,
+    Trash,
+    Junk,
+    NotJunk,
+    MoveToInbox,
+    MarkRead,
+    MarkUnread,
+    Flag,
+    Unflag,
+}
+
+impl Organize {
+    const ALL: [Organize; 9] = [
+        Organize::Archive,
+        Organize::Trash,
+        Organize::Junk,
+        Organize::NotJunk,
+        Organize::MoveToInbox,
+        Organize::MarkRead,
+        Organize::MarkUnread,
+        Organize::Flag,
+        Organize::Unflag,
+    ];
+
+    fn key(self) -> &'static str {
+        match self {
+            Organize::Archive => "archive",
+            Organize::Trash => "trash",
+            Organize::Junk => "junk",
+            Organize::NotJunk => "not_junk",
+            Organize::MoveToInbox => "move_to_inbox",
+            Organize::MarkRead => "mark_read",
+            Organize::MarkUnread => "mark_unread",
+            Organize::Flag => "flag",
+            Organize::Unflag => "unflag",
+        }
+    }
+
+    fn named(key: &str) -> Option<Organize> {
+        Organize::ALL.into_iter().find(|o| o.key() == key)
+    }
+
+    /// The mail action, flagging in `color`.
+    fn action(self, color: FlagColor) -> MailAction {
+        let triage = MailAction::Triage;
+        match self {
+            Organize::Archive => triage(TriageAction::Archive),
+            Organize::Trash => triage(TriageAction::Trash),
+            Organize::Junk => triage(TriageAction::Junk),
+            Organize::NotJunk => triage(TriageAction::NotJunk),
+            Organize::MoveToInbox => triage(TriageAction::Untrash),
+            Organize::MarkRead => triage(TriageAction::MarkRead),
+            Organize::MarkUnread => triage(TriageAction::MarkUnread),
+            Organize::Flag => MailAction::Flag(Some(color)),
+            Organize::Unflag => MailAction::Flag(None),
+        }
+    }
+}
+
 /// Every choice of a setting, in the shape the settings file uses.
 fn choices<T: Choice + serde::Serialize>() -> Vec<Value> {
     T::ALL
@@ -227,49 +346,9 @@ impl<A: Accounts> Tools<A> {
 
     /// Runs one tool call from the assistant.
     pub async fn run(&self, name: &str, input: Value) -> ToolOutcome {
-        let result = match name {
-            "get_context" => self.context(),
-            "list_mail" => self.list(&input).await,
-            "search_mail" => self.search(&input).await,
-            "read_conversation" => self.read_thread(&input).await,
-            "organize" => self.organize(&input).await,
-            "label" => self.label(&input).await,
-            "remind_me" => self.remind(&input).await,
-            "draft_email" => self.message(&input, false).await,
-            "send_email" => self.message(&input, true).await,
-            "block_sender" => self.block(&input).await,
-            "get_automatic_reply" => self.get_vacation(&input).await,
-            "set_automatic_reply" => self.set_vacation(&input).await,
-            "list_rules" => self.list_rules(&input).await,
-            "create_rule" => self.create_rule(&input).await,
-            "delete_rule" => self.delete_rule(&input).await,
-            "create_label" => self.create_label(&input).await,
-            "get_settings" => Ok(self.settings_json()),
-            "change_setting" => self.change_setting(&input),
-            "set_signature" => self.signature(&input),
-            "vip" => self.vip(&input),
-            "create_smart_mailbox" => self.smart(&input),
-            "open_conversation" => self.open(&input),
-            "categorize_sender" => self.categorize(&input).await,
-            "dismiss_follow_up" => self.dismiss_follow_up(&input).await,
-            "list_hidden_addresses" => Ok(self.hidden_list()),
-            "create_hidden_address" => self.hidden_create(&input).await,
-            "set_hidden_address" => self.hidden_set(&input).await,
-            "list_events" => self.list_events(&input).await,
-            "find_free_time" => self.find_free_time(&input).await,
-            "create_event" => self.create_event(&input).await,
-            "update_event" => self.update_event(&input).await,
-            "delete_event" => self.delete_event(&input).await,
-            "answer_invitation" => self.answer_invitation(&input).await,
-            "find_contact" => self.find_contact(&input).await,
-            "mute" => self.mute(&input).await,
-            "delete_forever" => self.delete_forever(&input).await,
-            "send_later" => self.send_later(&input).await,
-            "list_templates" => self.list_templates().await,
-            "insert_template" => self.insert_template(&input).await,
-            "unsubscribe" => self.unsubscribe(&input).await,
-            "read_attachment" => self.read_attachment(&input).await,
-            other => Err(format!("There is no tool called {other}.")),
+        let result = match catalog::find::<A>(name) {
+            Some(tool) => tool.run(self, &input).await,
+            None => Err(format!("There is no tool called {name}.")),
         };
         match result {
             Ok(value) => ToolOutcome::Ok(value),
@@ -394,16 +473,6 @@ impl<A: Accounts> Tools<A> {
             "has_attachments": row.has_attachments,
             "snippet": row.snippet,
         })
-    }
-
-    /// Asks the user when the assistant settings want approval.
-    async fn approve(&self, what: &str) -> Result<(), String> {
-        if !self.desk.settings().ai.confirm_actions || self.effects.confirm(what.to_string()).await
-        {
-            Ok(())
-        } else {
-            Err("The user declined.".into())
-        }
     }
 
     /// Asks the user for the Gmail settings permission, and says so.
@@ -592,20 +661,21 @@ impl<A: Accounts> Tools<A> {
             account_id: scope.map(|a| a.id),
             folder,
         };
-        Ok(match name {
-            "inbox" => vec![at(system_label::INBOX)],
-            "flagged" => vec![at(system_label::STARRED)],
-            "sent" => vec![at(system_label::SENT)],
-            "drafts" => vec![at(system_label::DRAFT)],
-            "follow_up" => vec![Mailbox::FollowUp],
-            "junk" => vec![folder(Folder::Junk)],
-            "trash" => vec![folder(Folder::Trash)],
-            "all_mail" => vec![folder(Folder::AllMail)],
-            "vips" => vec![Mailbox::Vips {
+        let named = MailboxName::named(name).ok_or_else(|| format!("Unknown mailbox {name}."))?;
+        Ok(match named {
+            MailboxName::Inbox => vec![at(system_label::INBOX)],
+            MailboxName::Flagged => vec![at(system_label::STARRED)],
+            MailboxName::Sent => vec![at(system_label::SENT)],
+            MailboxName::Drafts => vec![at(system_label::DRAFT)],
+            MailboxName::FollowUp => vec![Mailbox::FollowUp],
+            MailboxName::Junk => vec![folder(Folder::Junk)],
+            MailboxName::Trash => vec![folder(Folder::Trash)],
+            MailboxName::AllMail => vec![folder(Folder::AllMail)],
+            MailboxName::Vips => vec![Mailbox::Vips {
                 emails: self.desk.settings().vips.keys().cloned().collect(),
                 name: "VIPs".into(),
             }],
-            "label" => {
+            MailboxName::Label => {
                 let wanted = label.ok_or("`label` is missing")?;
                 let labels = self.desk.labels();
                 let found: Vec<Mailbox> = labels
@@ -627,7 +697,6 @@ impl<A: Accounts> Tools<A> {
                 }
                 found
             }
-            other => return Err(format!("Unknown mailbox {other}.")),
         })
     }
 
@@ -710,34 +779,28 @@ impl<A: Accounts> Tools<A> {
 
     // ---- Organizing ------------------------------------------------------
 
-    async fn organize(&self, input: &Value) -> ToolResult {
+    /// Asks only before trashing more than 25 conversations. Ctrl+Z undoes
+    /// the rest, and a handful in the Trash is easy to see and fetch back.
+    async fn organize<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let targets = self.parse_targets(input)?;
-        let action = required(input, "action")?;
+        let key = required(input, "action")?;
+        let organize = Organize::named(&key).ok_or_else(|| format!("Unknown action {key}."))?;
         let color: Option<FlagColor> = text(input, "color").and_then(|c| c.parse().ok());
-        let triage = MailAction::Triage;
-        let action = match action.as_str() {
-            "archive" => triage(TriageAction::Archive),
-            "trash" => triage(TriageAction::Trash),
-            "junk" => triage(TriageAction::Junk),
-            "not_junk" => triage(TriageAction::NotJunk),
-            "move_to_inbox" => triage(TriageAction::Untrash),
-            "mark_read" => triage(TriageAction::MarkRead),
-            "mark_unread" => triage(TriageAction::MarkUnread),
-            "flag" => MailAction::Flag(Some(color.unwrap_or(self.desk.settings().flag_color))),
-            "unflag" => MailAction::Flag(None),
-            other => return Err(format!("Unknown action {other}.")),
-        };
-        if action == triage(TriageAction::Trash) && targets.len() > 25 {
-            let count = targets.len();
-            self.approve(&fill_plural(
-                "Move {count} conversation to the Trash?",
-                "Move {count} conversations to the Trash?",
-                count,
-                &[("count", &count.to_string())],
-            ))
-            .await?;
+        let action = organize.action(color.unwrap_or_else(|| self.desk.settings().flag_color));
+        let count = targets.len();
+        let change = async move { report(&self.act(targets, action).await) };
+        if organize == Organize::Trash && count > 25 {
+            return Ok(Plan::ask(
+                fill_plural(
+                    "Move {count} conversation to the Trash?",
+                    "Move {count} conversations to the Trash?",
+                    count,
+                    &[("count", &count.to_string())],
+                ),
+                change,
+            ));
         }
-        report(&self.act(targets, action).await)
+        Ok(Plan::without_asking(change))
     }
 
     /// Runs a mail action that Ctrl+Z can undo, then updates the window.
@@ -803,27 +866,28 @@ impl<A: Accounts> Tools<A> {
 
     // ---- Writing ---------------------------------------------------------
 
-    /// Opens a draft, or sends after the user approves.
-    async fn message(&self, input: &Value, send: bool) -> ToolResult {
+    /// Opens a composer on the message for the user to review.
+    async fn draft(&self, input: &Value) -> ToolResult {
         let draft = self.draft_from(input).await?;
-        if !send {
-            self.effects.compose(draft)?;
-            return Ok(
-                json!({"opened": "A composer window shows the draft for the user to review."}),
-            );
-        }
+        self.effects.compose(draft)?;
+        Ok(json!({"opened": "A composer window shows the draft for the user to review."}))
+    }
+
+    async fn send<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
+        let draft = self.draft_from(input).await?;
         if let Some(problem) = draft.problem() {
             return Err(problem);
         }
         let to = compose::format_recipients(&draft.to);
-        self.approve(&fill(
+        let question = fill(
             &gettext("Send “{subject}” to {recipients}?"),
             &[("subject", &draft.subject), ("recipients", &to)],
-        ))
-        .await?;
-        let delay = self.desk.settings().undo_send.seconds();
-        self.effects.send(draft)?;
-        Ok(json!({"sent": true, "undo_seconds": delay}))
+        );
+        Ok(Plan::ask(question, async move {
+            let delay = self.desk.settings().undo_send.seconds();
+            self.effects.send(draft)?;
+            Ok(json!({"sent": true, "undo_seconds": delay}))
+        }))
     }
 
     /// The message the fields `message_fields` describes, threaded into
@@ -902,24 +966,25 @@ impl<A: Accounts> Tools<A> {
 
     // ---- Gmail settings --------------------------------------------------
 
-    async fn block(&self, input: &Value) -> ToolResult {
+    async fn block<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let (account, settings) = self.settings_for(&required(input, "account")?)?;
         let email = required(input, "email")?;
-        self.approve(&fill(
+        let question = fill(
             &gettext("Block {address}? Their future mail goes straight to the Trash."),
             &[("address", &email)],
-        ))
-        .await?;
-        let blocked = {
-            let (email, account_id) = (email.clone(), account.id);
-            self.call(async move { settings.block_sender(account_id, &email).await })
-                .await
-        };
-        match blocked {
-            Ok(Permitted::Done(_)) => Ok(json!({"blocked": email})),
-            Ok(Permitted::NeedsPermission) => Err(self.needs_permission(&account)),
-            Err(err) => Err(err),
-        }
+        );
+        Ok(Plan::ask(question, async move {
+            let blocked = {
+                let (email, account_id) = (email.clone(), account.id);
+                self.call(async move { settings.block_sender(account_id, &email).await })
+                    .await
+            };
+            match blocked {
+                Ok(Permitted::Done(_)) => Ok(json!({"blocked": email})),
+                Ok(Permitted::NeedsPermission) => Err(self.needs_permission(&account)),
+                Err(err) => Err(err),
+            }
+        }))
     }
 
     async fn get_vacation(&self, input: &Value) -> ToolResult {
@@ -935,7 +1000,9 @@ impl<A: Accounts> Tools<A> {
         }
     }
 
-    async fn set_vacation(&self, input: &Value) -> ToolResult {
+    /// Reads the reply Gmail holds first, so the question shows the reply
+    /// as it will stand once the call's fields are laid over it.
+    async fn set_vacation<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let (account, settings) = self.settings_for(&required(input, "account")?)?;
         let account_id = account.id;
         let loaded = {
@@ -1008,16 +1075,17 @@ impl<A: Accounts> Tools<A> {
                 &[("account", &account.email)],
             )
         };
-        self.approve(&summary).await?;
-        let saved = reply.clone();
-        let stored = self
-            .call(async move { settings.set_automatic_reply(account_id, &saved).await })
-            .await;
-        match stored {
-            Ok(Permitted::Done(())) => Ok(reply_json(&reply)),
-            Ok(Permitted::NeedsPermission) => Err(self.needs_permission(&account)),
-            Err(err) => Err(err),
-        }
+        Ok(Plan::ask(summary, async move {
+            let saved = reply.clone();
+            let stored = self
+                .call(async move { settings.set_automatic_reply(account_id, &saved).await })
+                .await;
+            match stored {
+                Ok(Permitted::Done(())) => Ok(reply_json(&reply)),
+                Ok(Permitted::NeedsPermission) => Err(self.needs_permission(&account)),
+                Err(err) => Err(err),
+            }
+        }))
     }
 
     async fn list_rules(&self, input: &Value) -> ToolResult {
@@ -1050,7 +1118,7 @@ impl<A: Accounts> Tools<A> {
             .unwrap_or_default()
     }
 
-    async fn create_rule(&self, input: &Value) -> ToolResult {
+    async fn create_rule<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let (account, settings) = self.settings_for(&required(input, "account")?)?;
         let label = match text(input, "label") {
             Some(name) => {
@@ -1092,35 +1160,37 @@ impl<A: Accounts> Tools<A> {
                 ),
             ],
         );
-        self.approve(&summary).await?;
-        let account_id = account.id;
-        let added = self
-            .call(async move { settings.add_rule(account_id, filter).await })
-            .await;
-        match added {
-            Ok(Permitted::Done(created)) => Ok(json!({"created": created.id})),
-            Ok(Permitted::NeedsPermission) => Err(self.needs_permission(&account)),
-            Err(err) => Err(err),
-        }
+        Ok(Plan::ask(summary, async move {
+            let account_id = account.id;
+            let added = self
+                .call(async move { settings.add_rule(account_id, filter).await })
+                .await;
+            match added {
+                Ok(Permitted::Done(created)) => Ok(json!({"created": created.id})),
+                Ok(Permitted::NeedsPermission) => Err(self.needs_permission(&account)),
+                Err(err) => Err(err),
+            }
+        }))
     }
 
-    async fn delete_rule(&self, input: &Value) -> ToolResult {
+    async fn delete_rule<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let (account, settings) = self.settings_for(&required(input, "account")?)?;
         let id = required(input, "id")?;
-        self.approve(&fill(
+        let question = fill(
             &gettext("Delete a Gmail rule from {account}?"),
             &[("account", &account.email)],
-        ))
-        .await?;
-        let account_id = account.id;
-        let deleted = self
-            .call(async move { settings.delete_rule(account_id, &id).await })
-            .await;
-        match deleted {
-            Ok(Permitted::Done(())) => Ok(json!({"deleted": true})),
-            Ok(Permitted::NeedsPermission) => Err(self.needs_permission(&account)),
-            Err(err) => Err(err),
-        }
+        );
+        Ok(Plan::ask(question, async move {
+            let account_id = account.id;
+            let deleted = self
+                .call(async move { settings.delete_rule(account_id, &id).await })
+                .await;
+            match deleted {
+                Ok(Permitted::Done(())) => Ok(json!({"deleted": true})),
+                Ok(Permitted::NeedsPermission) => Err(self.needs_permission(&account)),
+                Err(err) => Err(err),
+            }
+        }))
     }
 
     // ---- App settings ----------------------------------------------------
@@ -1221,13 +1291,13 @@ impl<A: Accounts> Tools<A> {
 
     // ---- Senders, follow-ups, and hidden addresses ------------------------
 
-    async fn categorize(&self, input: &Value) -> ToolResult {
+    async fn categorize<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let account = self.account_named(&required(input, "account")?)?;
         let email = required(input, "email")?;
         let key = required(input, "category")?;
         let category = named_category(&key)?;
         let who = text(input, "name").unwrap_or_else(|| email.clone());
-        self.approve(&fill(
+        let question = fill(
             &gettext(
                 "Move mail from {sender} to {category} in {account}, and add a Gmail \
                  rule for their future mail?",
@@ -1237,11 +1307,12 @@ impl<A: Accounts> Tools<A> {
                 ("category", &category.name()),
                 ("account", &account.email),
             ],
-        ))
-        .await?;
-        self.effects
-            .categorize_sender(account.id, email.clone(), who, category);
-        Ok(json!({"sender": email, "category": key}))
+        );
+        Ok(Plan::ask(question, async move {
+            self.effects
+                .categorize_sender(account.id, email.clone(), who, category);
+            Ok(json!({"sender": email, "category": key}))
+        }))
     }
 
     async fn dismiss_follow_up(&self, input: &Value) -> ToolResult {

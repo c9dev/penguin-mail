@@ -6,7 +6,8 @@ use mailrs_domain::{Category, FlagColor, MessageBody, MessageMeta, Vacation, sys
 use mailrs_sync::{MailAction, Permitted, TriageAction};
 use serde_json::{Value, json};
 
-use super::fake::{Harness, ME, NOW, labelled, meta};
+use super::catalog::{Run, catalog};
+use super::fake::{Connected, Harness, ME, NOW, labelled, meta};
 use super::{OpenConversation, Permission};
 use crate::hide_my_email::HiddenAddress;
 use crate::settings::{Change, TextSize};
@@ -86,23 +87,6 @@ async fn an_unknown_tool_says_so() {
         h.run("fly_a_kite", json!({})).await,
         Err("There is no tool called fly_a_kite.".into())
     );
-}
-
-/// A tool the model is offered with no handler behind it would compile
-/// and fail at the first call, so every name in the table is tried here.
-/// The input is empty: this asks only that each one reaches its handler.
-#[tokio::test]
-async fn every_offered_tool_has_a_handler() {
-    let h = harness().await;
-    for spec in crate::assistant::tools::specs() {
-        let answer = h.run(&spec.name, json!({})).await;
-        assert_ne!(
-            answer,
-            Err(format!("There is no tool called {}.", spec.name)),
-            "{} is offered but nothing runs it",
-            spec.name
-        );
-    }
 }
 
 #[tokio::test]
@@ -867,12 +851,63 @@ async fn set_signature_names_the_account() {
     );
 }
 
-/// Most of the table in one pass, each tool with an input it accepts, and
-/// none of them needing a window. The tools left out need fixtures of their
-/// own (attachments, events, invitations, the delete permission) and have
-/// tests in `tests/mail.rs` and `tests/calendar.rs`.
-#[tokio::test]
-async fn every_tool_answers_without_a_window() {
+/// An input each tool accepts in the fixture mailbox, or `None` for a tool
+/// that needs fixtures of its own (attachments, events, invitations, the
+/// delete permission) or an earlier call's answer. Those have tests in
+/// `tests/mail.rs`, `tests/calendar.rs` and the end of the table test.
+fn sample(name: &str, later: &str) -> Option<Value> {
+    Some(match name {
+        "get_context" | "get_settings" | "list_hidden_addresses" | "list_templates" => json!({}),
+        "list_mail" => json!({"mailbox": "inbox"}),
+        "search_mail" => json!({"query": "kite"}),
+        "read_conversation" | "open_conversation" | "dismiss_follow_up" => {
+            json!({"account": ME, "thread_id": "t1"})
+        }
+        "organize" => json!({"targets": [target("t2")], "action": "mark_read"}),
+        "label" => json!({"targets": [target("t2")], "add": ["Kites"]}),
+        "remind_me" => json!({"targets": [target("t2")], "at": later}),
+        "draft_email" | "send_email" => json!({"to": ["ann@example.com"], "body": "Hi"}),
+        "block_sender" => json!({"account": ME, "email": "spam@example.com"}),
+        "get_automatic_reply" | "list_rules" => json!({"account": ME}),
+        "set_automatic_reply" => json!({"account": ME, "enabled": false}),
+        "create_rule" => json!({"account": ME, "from": "ann@example.com", "mark_read": true}),
+        "create_label" => json!({"account": ME, "name": "Boats"}),
+        "change_setting" => json!({"name": "threading", "value": false}),
+        "set_signature" => json!({"account": ME, "text": "Dana"}),
+        "vip" => json!({"email": "theo@example.com", "name": "Theo"}),
+        "create_smart_mailbox" => {
+            json!({"name": "Ann", "conditions": [{"field": "from", "value": "ann"}]})
+        }
+        "categorize_sender" => {
+            json!({"account": ME, "email": "shop@example.com", "category": "promotions"})
+        }
+        "mute" => json!({"targets": [target("t3")]}),
+        "find_contact" => json!({"query": "ann"}),
+        "send_later" => json!({"to": ["ann@example.com"], "body": "Hi", "at": later}),
+        "list_events" => json!({"from": "2030-03-11", "to": "2030-03-12"}),
+        "find_free_time" => json!({"from": "2030-03-11", "to": "2030-03-12", "minutes": 30}),
+        "delete_rule"
+        | "create_hidden_address"
+        | "set_hidden_address"
+        | "delete_forever"
+        | "insert_template"
+        | "unsubscribe"
+        | "read_attachment"
+        | "create_event"
+        | "update_event"
+        | "delete_event"
+        | "answer_invitation" => return None,
+        other => panic!("{other} has no sample input; add one to `sample`"),
+    })
+}
+
+fn later() -> String {
+    (chrono::Local::now() + chrono::Duration::days(1))
+        .format("%Y-%m-%dT%H:%M")
+        .to_string()
+}
+
+async fn with_a_reply_to_change() -> Harness {
     let h = harness().await;
     h.gmail.with(|i| {
         i.vacation = Vacation {
@@ -880,94 +915,30 @@ async fn every_tool_answers_without_a_window() {
             ..Vacation::default()
         }
     });
-    let later = (chrono::Local::now() + chrono::Duration::days(1))
-        .format("%Y-%m-%dT%H:%M")
-        .to_string();
-    h.effects.0.borrow_mut().hidden = Some(Permitted::NeedsPermission);
+    h
+}
 
-    let calls: Vec<(&str, Value)> = vec![
-        ("get_context", json!({})),
-        ("list_mail", json!({"mailbox": "inbox"})),
-        ("search_mail", json!({"query": "kite"})),
-        (
-            "read_conversation",
-            json!({"account": ME, "thread_id": "t1"}),
-        ),
-        (
-            "organize",
-            json!({"targets": [target("t2")], "action": "mark_read"}),
-        ),
-        (
-            "label",
-            json!({"targets": [target("t2")], "add": ["Kites"]}),
-        ),
-        ("remind_me", json!({"targets": [target("t2")], "at": later})),
-        (
-            "draft_email",
-            json!({"to": ["ann@example.com"], "body": "Hi"}),
-        ),
-        (
-            "send_email",
-            json!({"to": ["ann@example.com"], "body": "Hi"}),
-        ),
-        (
-            "block_sender",
-            json!({"account": ME, "email": "spam@example.com"}),
-        ),
-        ("get_automatic_reply", json!({"account": ME})),
-        (
-            "set_automatic_reply",
-            json!({"account": ME, "enabled": false}),
-        ),
-        ("list_rules", json!({"account": ME})),
-        (
-            "create_rule",
-            json!({"account": ME, "from": "ann@example.com", "mark_read": true}),
-        ),
-        ("create_label", json!({"account": ME, "name": "Boats"})),
-        ("get_settings", json!({})),
-        (
-            "change_setting",
-            json!({"name": "threading", "value": false}),
-        ),
-        ("set_signature", json!({"account": ME, "text": "Dana"})),
-        ("vip", json!({"email": "theo@example.com", "name": "Theo"})),
-        (
-            "create_smart_mailbox",
-            json!({"name": "Ann", "conditions": [{"field": "from", "value": "ann"}]}),
-        ),
-        (
-            "open_conversation",
-            json!({"account": ME, "thread_id": "t1"}),
-        ),
-        (
-            "categorize_sender",
-            json!({"account": ME, "email": "shop@example.com", "category": "promotions"}),
-        ),
-        (
-            "dismiss_follow_up",
-            json!({"account": ME, "thread_id": "t1"}),
-        ),
-        ("list_hidden_addresses", json!({})),
-        ("mute", json!({"targets": [target("t3")]})),
-        ("list_templates", json!({})),
-        ("find_contact", json!({"query": "ann"})),
-        (
-            "send_later",
-            json!({"to": ["ann@example.com"], "body": "Hi", "at": later}),
-        ),
-        (
-            "list_events",
-            json!({"from": "2030-03-11", "to": "2030-03-12"}),
-        ),
-        (
-            "find_free_time",
-            json!({"from": "2030-03-11", "to": "2030-03-12", "minutes": 30}),
-        ),
-    ];
-    for (name, input) in calls {
-        let answer = h.run(name, input).await;
-        assert!(answer.is_ok(), "{name} answered {answer:?}");
+/// Every tool in the catalog with an input it accepts, none of them needing
+/// a window. A tool that runs at once must not ask on the way.
+#[tokio::test]
+async fn every_tool_answers_without_a_window() {
+    let h = with_a_reply_to_change().await;
+    let later = later();
+    for tool in catalog::<Connected>() {
+        let Some(input) = sample(tool.name, &later) else {
+            continue;
+        };
+        let asked_before = h.asked().questions.len();
+        let answer = h.run(tool.name, input).await;
+        assert!(answer.is_ok(), "{} answered {answer:?}", tool.name);
+        if matches!(tool.run, Run::Now(_)) {
+            assert_eq!(
+                h.asked().questions.len(),
+                asked_before,
+                "{} runs at once but asked first",
+                tool.name
+            );
+        }
     }
 
     // The two left over need an earlier call's output, and one of them
@@ -979,9 +950,43 @@ async fn every_tool_answers_without_a_window() {
             .await
             .is_ok()
     );
+    h.effects.0.borrow_mut().hidden = Some(Permitted::NeedsPermission);
     assert!(
         h.run("create_hidden_address", json!({"account": ME}))
             .await
             .is_err_and(|e| e.contains("needs permission"))
+    );
+}
+
+/// A tool that asks first and hears Don't Allow makes no change: nothing
+/// sent, scheduled, saved or sorted, and Gmail's rules and automatic reply
+/// stay as they were.
+#[tokio::test]
+async fn a_declined_question_changes_nothing() {
+    let h = with_a_reply_to_change().await;
+    h.effects.0.borrow_mut().approves = false;
+    let later = later();
+    let rules = h.ok("list_rules", json!({"account": ME})).await;
+    let reply = h.ok("get_automatic_reply", json!({"account": ME})).await;
+    for tool in catalog::<Connected>() {
+        let (Run::AsksFirst(_), Some(input)) = (&tool.run, sample(tool.name, &later)) else {
+            continue;
+        };
+        let asked_before = h.asked().questions.len();
+        let answer = h.run(tool.name, input).await;
+        if h.asked().questions.len() > asked_before {
+            assert_eq!(answer, Err("The user declined.".into()), "{}", tool.name);
+        }
+    }
+    {
+        let asked = h.asked();
+        assert!(!asked.questions.is_empty(), "the samples include questions");
+        assert!(asked.sent.is_empty() && asked.scheduled.is_empty());
+        assert!(asked.changes.is_empty() && asked.categorized.is_empty());
+    }
+    assert_eq!(h.ok("list_rules", json!({"account": ME})).await, rules);
+    assert_eq!(
+        h.ok("get_automatic_reply", json!({"account": ME})).await,
+        reply
     );
 }
