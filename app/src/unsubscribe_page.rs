@@ -35,9 +35,9 @@ pub mod fake;
 #[cfg(test)]
 mod tests;
 
+pub use self::webkit::WebkitBrowser;
 pub use adviser::model_adviser;
 pub use run::{Adviser, Answer, Browser, Prepared, Step, finish, prepare};
-pub use self::webkit::WebkitBrowser;
 // The run is what the window and the assistant use, and the rules under
 // it answer to nobody else. The tests reach past the run on purpose: the
 // GTK one puts a real page through the extraction script and then asks

@@ -291,7 +291,10 @@ impl Composer {
             .popover(&gtk::Popover::builder().child(&choices).build())
             .visible(has_engine)
             .build();
-        name_with_shortcut(protection.upcast_ref::<gtk::Widget>(), &gettext("Signing and encryption"));
+        name_with_shortcut(
+            protection.upcast_ref::<gtk::Widget>(),
+            &gettext("Signing and encryption"),
+        );
         let header = adw::HeaderBar::builder().title_widget(&title).build();
         header.pack_end(&send);
         header.pack_end(&preview_toggle);

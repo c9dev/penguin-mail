@@ -385,6 +385,8 @@ mod tests {
             size: 0,
             has_attachments: false,
             label_ids: labels.iter().map(|l| l.to_string()).collect(),
+            list_unsubscribe: None,
+            one_click: false,
         }
     }
 
