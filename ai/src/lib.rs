@@ -53,6 +53,21 @@ pub trait ToolHost: Send + Sync + 'static {
     }
 }
 
+/// A host with nothing to call, for the features that are words in and
+/// words out. A translation and an unsubscribe page both want an answer
+/// and nothing else, and neither should be able to reach the mailbox.
+pub struct NoTools;
+
+impl ToolHost for NoTools {
+    fn specs(&self) -> Vec<ToolSpec> {
+        Vec::new()
+    }
+
+    fn call(&self, name: String, _input: serde_json::Value) -> BoxFuture<ToolOutcome> {
+        Box::pin(async move { ToolOutcome::Err(format!("there is no tool called {name}")) })
+    }
+}
+
 /// Where the model runs. Chosen in Preferences.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "kebab-case")]

@@ -15,9 +15,7 @@
 
 use std::sync::Arc;
 
-use mailrs_ai::{
-    AgentEvent, BoxFuture, Conversation, ProviderConfig, ToolHost, ToolOutcome, ToolSpec,
-};
+use mailrs_ai::{AgentEvent, Conversation, NoTools, ProviderConfig};
 use mailrs_domain::MessageBody;
 
 use crate::assistant;
@@ -894,20 +892,6 @@ pub async fn ask(
         .await
         .map_err(|err| err.to_string())?;
     Ok(read_reply(&reply, pieces.len()))
-}
-
-/// The model gets no tools here. A translation is words in and words out,
-/// and nothing it says should reach the mailbox.
-struct NoTools;
-
-impl ToolHost for NoTools {
-    fn specs(&self) -> Vec<ToolSpec> {
-        Vec::new()
-    }
-
-    fn call(&self, name: String, _input: serde_json::Value) -> BoxFuture<ToolOutcome> {
-        Box::pin(async move { ToolOutcome::Err(format!("there is no tool called {name}")) })
-    }
 }
 
 #[cfg(test)]
