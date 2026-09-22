@@ -8,7 +8,7 @@ use mailrs_domain::Account;
 use mailrs_domain::translate::gettext;
 
 use crate::app::App;
-use crate::settings::Settings;
+use crate::settings::{Change, Settings};
 
 pub fn page(app: &Rc<App>, settings: &Settings, accounts: &[Account]) -> adw::PreferencesPage {
     let page = adw::PreferencesPage::builder()
@@ -51,7 +51,10 @@ fn contacts(app: &Rc<App>, settings: &Settings, accounts: &[Account]) -> adw::Pr
         let email = account.email.clone();
         row.connect_active_notify(move |row| {
             if let Some(app) = weak.upgrade() {
-                app.set_account_contacts(&email, row.is_active());
+                app.change_settings(Change::AccountContacts {
+                    email: email.clone(),
+                    on: row.is_active(),
+                });
             }
         });
         group.add(&row);

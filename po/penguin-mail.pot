@@ -2489,11 +2489,11 @@ msgstr ""
 msgid "Google asks your permission the first time"
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:67
+#: app/src/ui/contacts_prefs.rs:70
 msgid "Calendar"
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:69
+#: app/src/ui/contacts_prefs.rs:72
 msgid ""
 "Answering a meeting invitation records your answer in that account's Google "
 "Calendar, and Google asks your permission the first time. To see the "
@@ -2501,19 +2501,19 @@ msgid ""
 "Accounts."
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:82
+#: app/src/ui/contacts_prefs.rs:85
 msgid "In GNOME Online Accounts"
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:84
+#: app/src/ui/contacts_prefs.rs:87
 msgid "Not in GNOME Online Accounts"
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:86
+#: app/src/ui/contacts_prefs.rs:89
 msgid "Add…"
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:92
+#: app/src/ui/contacts_prefs.rs:95
 msgid "Add {account} to GNOME Online Accounts"
 msgstr ""
 

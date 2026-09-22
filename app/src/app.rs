@@ -213,15 +213,30 @@ impl App {
             tracing::warn!(error = %err, "could not save preferences");
         }
         *self.settings.borrow_mut() = after;
+        self.apply_effects(&effects);
+        effects
+    }
+
+    /// Carries out what a saved change leaves to do: the app's own part
+    /// here, and the window's part in [`MainWindow::settings_changed`].
+    fn apply_effects(self: &Rc<Self>, effects: &Effects) {
         if effects.has(Effect::Theme) {
             self.apply_style();
         }
         if !effects.is_empty()
             && let Some(window) = self.window()
         {
-            window.settings_changed(&effects);
+            window.settings_changed(effects);
         }
-        effects
+        let books = effects.address_books();
+        // Reading is when Google asks for the permission, so the account
+        // just switched on gets its dialog.
+        if books.read {
+            self.refresh_contacts(true);
+        }
+        for email in &books.forget {
+            self.forget_contacts(email);
+        }
     }
 
     /// Follows the light or dark choice. Needs GTK, so it waits for a window.
@@ -546,12 +561,14 @@ impl App {
                 // only ever asked the first account for its permission. This
                 // turns that into each account's own, once, and asks every
                 // account that still lacks it.
-                let folding = this.settings.borrow().contacts;
-                if folding {
+                // The fold reads every address book as an effect of the
+                // change, asking for the permission where it is missing.
+                if this.settings.borrow().contacts {
                     let emails = accounts.iter().map(|a| a.email.clone()).collect();
                     this.change_settings(Change::AllContacts(emails));
+                } else {
+                    this.refresh_contacts(false);
                 }
-                this.refresh_contacts(folding);
             }
         });
     }
@@ -688,19 +705,9 @@ impl App {
         found
     }
 
-    /// Turns one account's contacts on or off. Turning them on reads its
-    /// address book, which is when Google asks for the permission; turning
-    /// them off deletes that account's contacts and photos from this
-    /// computer and leaves the other accounts' alone.
-    pub fn set_account_contacts(self: &Rc<Self>, email: &str, on: bool) {
-        self.change_settings(Change::AccountContacts {
-            email: email.to_string(),
-            on,
-        });
-        if on {
-            self.refresh_contacts(true);
-            return;
-        }
+    /// Deletes one account's contacts and photos from this computer and
+    /// leaves the other accounts' alone. Turning its contacts off does this.
+    fn forget_contacts(self: &Rc<Self>, email: &str) {
         let Some(account_id) = self
             .accounts
             .borrow()

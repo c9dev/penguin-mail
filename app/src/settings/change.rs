@@ -541,22 +541,66 @@ impl Effect {
     ];
 }
 
-/// The effects of one change, each at most once, in [`Effect::ALL`] order.
+/// The effects of one change: what the window redraws, each at most once
+/// and in [`Effect::ALL`] order, and what the app does to the address books
+/// on this computer.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct Effects(Vec<Effect>);
+pub struct Effects {
+    shown: Vec<Effect>,
+    address_books: AddressBooks,
+}
+
+/// What a change to the contact switches asks of the address books kept on
+/// this computer. It follows from the settings alone, so Preferences, the
+/// startup fold of the old switch, and any later caller of
+/// [`Change::AccountContacts`] read and forget the same way.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AddressBooks {
+    /// An account started reading its contacts: read the address books now,
+    /// and ask Google for access where an account lacks it.
+    pub read: bool,
+    /// The accounts, by lower-case address, that stopped reading contacts.
+    /// Their stored contacts and photos go.
+    pub forget: Vec<String>,
+}
+
+impl AddressBooks {
+    fn between(before: &Settings, after: &Settings) -> AddressBooks {
+        let started = after
+            .contact_accounts
+            .iter()
+            .any(|email| !before.contact_accounts.contains(email));
+        // The fold turns the old switch off as it turns each account on, and
+        // it read every account's book even when the list already held them.
+        let folded = before.contacts && !after.contacts;
+        AddressBooks {
+            read: started || folded,
+            forget: before
+                .contact_accounts
+                .iter()
+                .filter(|email| !after.contact_accounts.contains(email))
+                .cloned()
+                .collect(),
+        }
+    }
+}
 
 impl Effects {
     /// Nothing on screen has to change.
     pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
+        self.shown.is_empty()
     }
 
     pub fn has(&self, effect: Effect) -> bool {
-        self.0.contains(&effect)
+        self.shown.contains(&effect)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = Effect> + '_ {
-        self.0.iter().copied()
+        self.shown.iter().copied()
+    }
+
+    pub fn address_books(&self) -> &AddressBooks {
+        &self.address_books
     }
 
     /// What changed between two sets of preferences.
@@ -655,7 +699,7 @@ impl Effects {
         let colors_changed = *account_colors != before.account_colors;
         let vips_changed = *vips != before.vips;
         // Walking Effect::ALL keeps the order the window relies on.
-        let effects = Effect::ALL
+        let shown = Effect::ALL
             .into_iter()
             .filter(|effect| match effect {
                 Effect::ListShape => *threading != before.threading,
@@ -685,7 +729,10 @@ impl Effects {
                 Effect::Language => *language != before.language,
             })
             .collect();
-        Effects(effects)
+        Effects {
+            shown,
+            address_books: AddressBooks::between(before, after),
+        }
     }
 }
 
@@ -1016,6 +1063,42 @@ mod tests {
     }
 
     #[test]
+    fn switching_contacts_reads_or_forgets_that_accounts_book() {
+        let mut settings = Settings::default();
+        let on = |email: &str, on| Change::AccountContacts {
+            email: email.into(),
+            on,
+        };
+        let started = on("Ann@Example.com", true).apply(&mut settings);
+        assert_eq!(
+            started.address_books(),
+            &AddressBooks {
+                read: true,
+                forget: vec![],
+            }
+        );
+        on("bo@example.com", true).apply(&mut settings);
+        let stopped = on("ANN@example.com", false).apply(&mut settings);
+        assert_eq!(
+            stopped.address_books(),
+            &AddressBooks {
+                read: false,
+                forget: vec!["ann@example.com".into()],
+            }
+        );
+        // A switch that is already where it goes asks nothing of the books.
+        assert_eq!(
+            on("bo@example.com", true).apply(&mut settings),
+            Effects::default()
+        );
+        // Nothing but the contact switches touches them.
+        assert_eq!(
+            Change::Threading(false).apply(&mut settings).address_books(),
+            &AddressBooks::default()
+        );
+    }
+
+    #[test]
     fn a_skill_keeps_an_entry_only_while_a_switch_is_on() {
         let mut settings = Settings::default();
         let id = "penguin-mail/receipts".to_string();
@@ -1053,17 +1136,35 @@ mod tests {
             contacts: true,
             ..Settings::default()
         };
-        Change::AllContacts(emails()).apply(&mut settings);
+        let folded = Change::AllContacts(emails()).apply(&mut settings);
         assert!(!settings.contacts);
         assert_eq!(settings.contact_accounts, emails());
+        assert!(folded.address_books().read, "the fold reads every book");
         // Off afterwards stays off: the fold does not run twice.
         Change::AccountContacts {
             email: "bo@example.com".into(),
             on: false,
         }
         .apply(&mut settings);
-        Change::AllContacts(emails()).apply(&mut settings);
+        assert!(
+            Change::AllContacts(emails())
+                .apply(&mut settings)
+                .address_books()
+                .forget
+                .is_empty()
+        );
         assert!(!settings.reads_contacts("bo@example.com"));
+    }
+
+    #[test]
+    fn the_fold_reads_the_books_even_when_the_list_holds_every_account() {
+        let mut settings = Settings {
+            contacts: true,
+            contact_accounts: vec!["ann@example.com".into()],
+            ..Settings::default()
+        };
+        let folded = Change::AllContacts(vec!["ann@example.com".into()]).apply(&mut settings);
+        assert!(folded.address_books().read);
     }
 
     #[test]

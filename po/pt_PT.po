@@ -2584,11 +2584,11 @@ msgstr "Ainda não há contas"
 msgid "Google asks your permission the first time"
 msgstr "A Google pede-lhe permissão da primeira vez"
 
-#: app/src/ui/contacts_prefs.rs:67
+#: app/src/ui/contacts_prefs.rs:70
 msgid "Calendar"
 msgstr "Calendário"
 
-#: app/src/ui/contacts_prefs.rs:69
+#: app/src/ui/contacts_prefs.rs:72
 msgid ""
 "Answering a meeting invitation records your answer in that account's Google "
 "Calendar, and Google asks your permission the first time. To see the "
@@ -2600,19 +2600,19 @@ msgstr ""
 "as reuniões no Calendário do GNOME e no relógio, adicione a conta às contas "
 "online do GNOME."
 
-#: app/src/ui/contacts_prefs.rs:82
+#: app/src/ui/contacts_prefs.rs:85
 msgid "In GNOME Online Accounts"
 msgstr "Nas contas online do GNOME"
 
-#: app/src/ui/contacts_prefs.rs:84
+#: app/src/ui/contacts_prefs.rs:87
 msgid "Not in GNOME Online Accounts"
 msgstr "Fora das contas online do GNOME"
 
-#: app/src/ui/contacts_prefs.rs:86
+#: app/src/ui/contacts_prefs.rs:89
 msgid "Add…"
 msgstr "Adicionar…"
 
-#: app/src/ui/contacts_prefs.rs:92
+#: app/src/ui/contacts_prefs.rs:95
 msgid "Add {account} to GNOME Online Accounts"
 msgstr "Adicionar {account} às contas online do GNOME"
 
