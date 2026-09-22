@@ -130,10 +130,11 @@ pub struct Composer {
     /// "Encrypt when I can" leaves it alone.
     encrypt_chosen: Cell<bool>,
     encrypt_when_possible: bool,
-    /// Whether the writer means this message to go out encrypted. It
-    /// outlasts the toggle going off because a recipient has no key, and
-    /// only the writer turning Encrypt off clears it. A draft saves
-    /// encrypted while it is set, and a send with Encrypt off asks first.
+    /// Whether the writer means this message to go out encrypted: they
+    /// turned Encrypt on, or the draft arrived encrypted. It outlasts the
+    /// toggle going off because a recipient has no key, and only the writer
+    /// turning Encrypt off clears it. A draft saves encrypted while it is
+    /// set, and a send with Encrypt off asks first.
     secret: Cell<bool>,
     /// The formatting bar's toggles, each with the tag it stands for.
     toggles: RefCell<Vec<(gtk::ToggleButton, &'static str)>>,
@@ -633,13 +634,12 @@ impl Composer {
         let weak = Rc::downgrade(self);
         self.encrypt.connect_toggled(move |toggle| {
             let Some(c) = weak.upgrade() else { return };
+            // Only the writer's own click changes what they want. "Encrypt
+            // when I can" turning it on is a chance taken, not a wish, and
+            // a missing key turning it off changes nothing they asked for.
             if !c.filling_keys.get() {
                 c.encrypt_chosen.set(true);
-            }
-            if toggle.is_active() {
-                c.secret.set(true);
-            } else if !c.filling_keys.get() {
-                c.secret.set(false);
+                c.secret.set(toggle.is_active());
             }
             c.dirty.set(true);
         });
