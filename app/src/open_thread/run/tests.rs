@@ -1,0 +1,373 @@
+//! The thread run, headless. Each test drives `ThreadRun` the way the
+//! window does and checks what the ports were asked for.
+
+use mailrs_domain::Target;
+
+use super::fake::{
+    ACCOUNT, ELSEWHERE, FakeWindow, Step, THREAD, body, invited, meta, portuguese, row,
+    with_picture,
+};
+use super::{Card, Event, Stale};
+use crate::protection::{Mark, Read, Tone};
+
+fn target(message_id: Option<&str>) -> Target {
+    Target {
+        account_id: ACCOUNT,
+        thread_id: THREAD.to_string(),
+        message_id: message_id.map(str::to_string),
+    }
+}
+
+/// What an engine says about a message it opened: the mark, and the body
+/// that was inside.
+fn opened(inside: mailrs_domain::MessageBody) -> Read {
+    Read {
+        mark: Mark {
+            title: "Encrypted for you".to_string(),
+            detail: None,
+            tone: Tone::Good,
+        },
+        body: Some(inside),
+        files: Vec::new(),
+    }
+}
+
+#[tokio::test]
+async fn opening_shows_the_stored_copy_then_the_bodies_gmail_sent() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    let steps = window.steps();
+    let at = |step| steps.iter().position(|s| *s == step).expect("step taken");
+    assert!(at(Step::Stored) < at(Step::Show));
+    assert!(at(Step::Show) < at(Step::Ensure));
+    assert!(at(Step::Ensure) < at(Step::Bodies));
+    assert!(at(Step::Bodies) < at(Step::BodiesArrived));
+    let text = window
+        .open(|open| open.bodies["m1"].clone().ok()?.text)
+        .flatten();
+    assert_eq!(text.as_deref(), Some("Hello"));
+}
+
+#[tokio::test]
+async fn two_quick_opens_show_only_the_later_one() {
+    let window = FakeWindow::new();
+    let (release, held) = futures::channel::oneshot::channel();
+    window.with(|screen| {
+        screen.holds.insert(THREAD.to_string(), held);
+        let later = screen.stored[THREAD].clone();
+        screen.stored.insert(ELSEWHERE.to_string(), later);
+    });
+    let (first, second) = (window.run(), window.run());
+    futures::join!(first.open(row(THREAD)), async {
+        second.open(row(ELSEWHERE)).await;
+        let _ = release.send(());
+    });
+    assert_eq!(window.0.borrow().shown, [ELSEWHERE]);
+}
+
+#[tokio::test]
+async fn a_reader_who_moves_on_while_gmail_fetches_the_thread_gets_no_bodies() {
+    let window = FakeWindow::new();
+    window.with(|screen| screen.moves_on = Some(Step::Ensure));
+    window.run().open(row(THREAD)).await;
+    assert!(!window.took(Step::Messages));
+    assert!(!window.took(Step::BodiesArrived));
+}
+
+#[tokio::test]
+async fn a_reader_who_moves_on_while_the_bodies_load_gets_none_of_them() {
+    let window = FakeWindow::new();
+    window.with(|screen| screen.moves_on = Some(Step::Bodies));
+    window.run().open(row(THREAD)).await;
+    assert!(!window.took(Step::BodiesArrived));
+    assert!(!window.took(Step::MarkRead));
+}
+
+#[tokio::test]
+async fn the_messages_of_a_thread_the_reader_left_stay_out_of_the_next() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        screen.moves_on = Some(Step::Messages);
+        screen.messages.push(meta("m2", true));
+    });
+    window.run().open(row(THREAD)).await;
+    assert!(!window.took(Step::MessagesArrived));
+    assert_eq!(window.open(|open| open.messages.len()), Some(1));
+}
+
+#[tokio::test]
+async fn pictures_arrive_on_the_attachment_rows() {
+    let window = FakeWindow::with_body(with_picture());
+    window.run().open(row(THREAD)).await;
+    assert!(window.took(Step::ThumbnailsArrived));
+    assert_eq!(window.open(|open| open.thumbnails.len()), Some(1));
+}
+
+#[tokio::test]
+async fn pictures_for_a_thread_the_reader_left_go_nowhere() {
+    let window = FakeWindow::with_body(with_picture());
+    window.with(|screen| screen.moves_on = Some(Step::Thumbnails));
+    window.run().open(row(THREAD)).await;
+    assert!(window.took(Step::Thumbnails));
+    assert!(!window.took(Step::ThumbnailsArrived));
+}
+
+#[tokio::test]
+async fn an_unread_thread_is_marked_read_after_the_delay() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    assert_eq!(window.0.borrow().marked, [target(None)]);
+}
+
+#[tokio::test]
+async fn a_thread_left_during_the_delay_stays_unread() {
+    let window = FakeWindow::new();
+    window.with(|screen| screen.moves_on = Some(Step::Sleep));
+    window.run().open(row(THREAD)).await;
+    assert!(window.took(Step::Sleep));
+    assert!(window.0.borrow().marked.is_empty());
+}
+
+/// The same thread is not the same conversation once the reader goes from
+/// one message of it to all of it: only what they were reading is marked.
+#[tokio::test]
+async fn mark_read_later_marks_only_the_conversation_still_open() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        screen.moves_on = Some(Step::Sleep);
+        screen.moving = |open| open.only_message = None;
+    });
+    let mut one = row(THREAD);
+    one.message_id = Some("m1".to_string());
+    window.run().open(one).await;
+    assert!(window.0.borrow().marked.is_empty());
+}
+
+#[tokio::test]
+async fn a_reader_who_marks_mail_by_hand_is_left_to_it() {
+    let window = FakeWindow::new();
+    window.with(|screen| screen.delay = None);
+    window.run().open(row(THREAD)).await;
+    assert!(!window.took(Step::Sleep));
+    assert!(window.0.borrow().marked.is_empty());
+}
+
+#[tokio::test]
+async fn a_thread_already_read_is_not_marked_again() {
+    let window = FakeWindow::new();
+    window.with(|screen| screen.messages = vec![meta("m1", false)]);
+    window.run().open(row(THREAD)).await;
+    assert!(!window.took(Step::Sleep));
+}
+
+#[tokio::test]
+async fn an_invitation_goes_on_the_card_with_what_else_is_on() {
+    let window = FakeWindow::with_body(invited());
+    window.run().open(row(THREAD)).await;
+    let screen = window.0.borrow();
+    assert_eq!(
+        screen.invitations.last(),
+        Some(&Some("kites@example.com".to_string()))
+    );
+    assert!(screen.steps.contains(&Step::OfferGnome));
+    assert!(screen.steps.contains(&Step::Clashes));
+}
+
+#[tokio::test]
+async fn an_invitation_read_for_a_thread_the_reader_left_goes_nowhere() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| screen.moves_on = Some(Step::OpenInvitation));
+    window.run().open(row(THREAD)).await;
+    let screen = window.0.borrow();
+    assert!(screen.invitations.iter().all(Option::is_none));
+    assert!(!screen.steps.contains(&Step::Busy));
+}
+
+#[tokio::test]
+async fn clashes_for_a_thread_the_reader_left_go_nowhere() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| screen.moves_on = Some(Step::Busy));
+    window.run().open(row(THREAD)).await;
+    assert!(window.took(Step::Busy));
+    assert!(!window.took(Step::Clashes));
+}
+
+#[tokio::test]
+async fn a_decrypted_body_reads_the_invitation_and_the_language_again() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    window.with(|screen| screen.steps.clear());
+    window
+        .run()
+        .engine_answered(target(None), "m1".to_string(), opened(invited()))
+        .await;
+    let steps = window.steps();
+    assert!(steps.contains(&Step::Card));
+    assert!(steps.contains(&Step::OpenInvitation));
+    // The claim is made; asking the engine again would do nothing.
+    assert!(!steps.contains(&Step::Engines));
+    assert!(window.open(|open| open.pgp.is_some()).unwrap_or(false));
+}
+
+#[tokio::test]
+async fn a_signature_alone_changes_nothing_else() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    window.with(|screen| screen.steps.clear());
+    let mut read = opened(body("unused"));
+    read.body = None;
+    window
+        .run()
+        .engine_answered(target(None), "m1".to_string(), read)
+        .await;
+    assert_eq!(window.steps(), [Step::EngineAnswered]);
+}
+
+#[tokio::test]
+async fn an_engine_answer_for_a_thread_the_reader_left_goes_nowhere() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    window.with(|screen| {
+        screen.steps.clear();
+        if let Some(open) = screen.open.as_mut() {
+            open.thread_id = ELSEWHERE.to_string();
+        }
+    });
+    window
+        .run()
+        .engine_answered(target(None), "m1".to_string(), opened(invited()))
+        .await;
+    assert!(window.steps().is_empty());
+}
+
+#[tokio::test]
+async fn a_refresh_with_the_same_messages_redraws_only_the_buttons() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    window.with(|screen| screen.steps.clear());
+    window.run().refresh().await;
+    assert_eq!(
+        window.steps(),
+        [Step::Messages, Step::Replace, Step::Buttons]
+    );
+}
+
+#[tokio::test]
+async fn a_refresh_that_finds_a_new_message_fetches_its_body() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    window.with(|screen| {
+        screen.steps.clear();
+        screen.messages.push(meta("m2", true));
+        screen
+            .gmail
+            .insert("m2".to_string(), body("Tomorrow, then"));
+    });
+    window.run().refresh().await;
+    assert!(window.took(Step::BodiesArrived));
+    assert_eq!(window.open(|open| open.bodies.len()), Some(2));
+}
+
+#[tokio::test]
+async fn a_refresh_that_finds_the_thread_gone_clears_the_view() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    window.with(|screen| screen.messages.clear());
+    window.run().refresh().await;
+    assert!(window.open(|_| ()).is_none());
+}
+
+#[tokio::test]
+async fn a_flag_colour_read_for_a_thread_the_reader_left_goes_nowhere() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    window.with(|screen| screen.moves_on = Some(Step::FlagColor));
+    window.run().refresh_flag_color().await;
+    assert!(!window.took(Step::SetFlag));
+}
+
+#[tokio::test]
+async fn a_message_in_another_language_gets_the_offer() {
+    let window = FakeWindow::with_body(portuguese());
+    window.run().open(row(THREAD)).await;
+    let last = window.0.borrow().cards.last().cloned();
+    assert!(
+        matches!(last, Some(Card::Offered { from: Some(from), .. }) if from.code == "pt"),
+        "{last:?}"
+    );
+}
+
+#[tokio::test]
+async fn a_message_in_the_interface_language_gets_no_card() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    assert_eq!(window.0.borrow().cards.last(), Some(&Card::Hidden));
+}
+
+#[tokio::test]
+async fn translating_puts_the_translation_on_screen_and_turning_takes_it_off() {
+    let window = FakeWindow::with_body(portuguese());
+    window.run().open(row(THREAD)).await;
+    window.run().translate().await;
+    assert!(window.took(Step::Translated));
+    let shown = || window.open(|open| open.translations["m1"].shown);
+    assert_eq!(shown(), Some(true));
+    window.with(|screen| screen.steps.clear());
+    window.run().translate().await;
+    assert_eq!(shown(), Some(false));
+    window.run().translate().await;
+    assert_eq!(shown(), Some(true));
+    // Turning costs no second request.
+    assert_eq!(window.steps(), [Step::Turn, Step::Turn]);
+}
+
+#[tokio::test]
+async fn a_translation_that_failed_says_so_on_the_card_and_in_a_toast() {
+    let window = FakeWindow::with_body(portuguese());
+    window.with(|screen| screen.translation = Err("offline".to_string()));
+    window.run().open(row(THREAD)).await;
+    window.run().translate().await;
+    let screen = window.0.borrow();
+    assert!(matches!(screen.cards.last(), Some(Card::Problem(_))));
+    assert_eq!(screen.toasts.len(), 1);
+}
+
+#[tokio::test]
+async fn a_translation_for_a_thread_the_reader_left_is_only_toasted_when_it_fails() {
+    let window = FakeWindow::with_body(portuguese());
+    window.with(|screen| {
+        screen.translation = Err("offline".to_string());
+        screen.moves_on = Some(Step::Translate);
+    });
+    window.run().open(row(THREAD)).await;
+    window.run().translate().await;
+    let screen = window.0.borrow();
+    assert_eq!(screen.cards.last(), Some(&Card::Working));
+    assert_eq!(screen.toasts.len(), 1);
+}
+
+#[tokio::test]
+async fn a_translation_for_a_thread_the_reader_left_goes_nowhere() {
+    let window = FakeWindow::with_body(portuguese());
+    window.with(|screen| screen.moves_on = Some(Step::Translate));
+    window.run().open(row(THREAD)).await;
+    window.run().translate().await;
+    assert!(!window.took(Step::Translated));
+}
+
+#[tokio::test]
+async fn nowhere_to_send_the_words_is_said_before_anything_goes() {
+    let window = FakeWindow::with_body(portuguese());
+    window.with(|screen| screen.destination = Err("Pick a model first".to_string()));
+    window.run().open(row(THREAD)).await;
+    window.run().translate().await;
+    assert!(!window.took(Step::Translate));
+    assert_eq!(window.0.borrow().toasts, ["Pick a model first"]);
+}
+
+#[test]
+fn an_opened_body_leaves_the_claim_and_the_pictures_alone() {
+    let stale = Stale::after(Event::EngineOpened);
+    assert!(stale.translation && stale.invitation);
+    assert!(!stale.protection && !stale.thumbnails && !stale.unread);
+}

@@ -12,11 +12,11 @@ use base64::Engine;
 use gtk::{gdk, gio, glib};
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{
-    Account, AccountId, AccountState, ChangeEvent, Folder, Label, MessageBody, MessageMeta, Target,
+    Account, AccountId, AccountState, ChangeEvent, Folder, Label, MessageBody, Target,
     ThreadSummary, system_label,
 };
 use mailrs_gmail::{CONTACTS_SCOPE, DELETE_SCOPE};
-use mailrs_store::{accounts, labels, messages};
+use mailrs_store::{accounts, labels};
 use mailrs_sync::{
     History, Listing, MailAction, Outcome, Permitted, Scope, TriageAction, View, outbox_id,
 };
@@ -31,7 +31,7 @@ use crate::assistant::ToolRequest;
 use crate::compose::{self, Draft, OutgoingAttachment, ReplyKind};
 use crate::core::Core;
 use crate::open_thread::OpenThread;
-use crate::settings::{Change, Effect, Effects, MarkRead, Settings};
+use crate::settings::{Change, Effect, Effects, Settings};
 
 mod arrange;
 mod assistant;
@@ -50,6 +50,7 @@ mod pgp;
 mod reminders;
 mod scheduled;
 mod senders;
+mod thread;
 mod translation;
 mod triage;
 
@@ -58,7 +59,7 @@ const INLINE_IMAGE_LIMIT: usize = 5 * 1024 * 1024;
 
 /// Bodies fetched at once when a thread opens. Each one is a 5-unit Gmail
 /// call and an account may spend 250 units a second.
-const BODY_FETCHES: usize = 10;
+pub(super) const BODY_FETCHES: usize = 10;
 
 /// Inline images kept in memory, so reopening a conversation does not
 /// download the same pictures again.
@@ -1090,234 +1091,8 @@ impl MainWindow {
         self.load_into(Rc::clone(&self.conversation), summary);
     }
 
-    /// Shows the thread `summary` names in `view`: the stored copy first,
-    /// then the whole thread and its bodies.
-    pub(super) fn load_into(self: &Rc<Self>, view: Rc<ConversationView>, summary: ThreadSummary) {
-        let (account_id, thread_id) = (summary.account_id, summary.id.clone());
-        let only = summary.message_id.clone();
-        let images_allowed = self.images_allowed_for(std::slice::from_ref(&summary.from_email));
-        let me = self.addresses_for(account_id);
-        let ticket = view.start_loading();
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            let key = thread_id.clone();
-            let local = this
-                .core
-                .read(move |c| {
-                    let found = messages::thread_messages(c, account_id, &key)?;
-                    let mut cached = HashMap::new();
-                    for meta in &found {
-                        if let Some(body) = read_cached_body(c, account_id, &meta.id)? {
-                            cached.insert(meta.id.clone(), body);
-                        }
-                    }
-                    Ok((found, cached))
-                })
-                .await;
-            if !view.still_loading(ticket) {
-                return;
-            }
-            let (mut found, cached) = local.unwrap_or_default();
-            if let Some(id) = &only {
-                found.retain(|m| &m.id == id);
-            }
-            let expanded = default_expanded(&found);
-            let photos = this.app.upgrade().map_or_else(HashMap::new, |app| {
-                app.sender_photos(
-                    found
-                        .iter()
-                        .filter_map(|m| m.from.as_ref())
-                        .map(|a| a.email.clone()),
-                )
-            });
-            let senders: Vec<String> = found
-                .iter()
-                .map(|m| m.from.as_ref().map(|a| a.email.clone()).unwrap_or_default())
-                .collect();
-            let images_allowed = images_allowed || this.images_allowed_for(&senders);
-            let thread = OpenThread {
-                account_id,
-                thread_id: thread_id.clone(),
-                subject: found
-                    .first()
-                    .map(|m| m.subject.clone())
-                    .unwrap_or(summary.subject.clone()),
-                messages: found,
-                bodies: cached
-                    .into_iter()
-                    .map(|(id, body)| (id, Ok(body)))
-                    .collect(),
-                expanded,
-                images_allowed,
-                only_message: only,
-                me,
-                inline_images: HashMap::new(),
-                thumbnails: HashMap::new(),
-                opened_files: HashMap::new(),
-                photos,
-                unsubscribed: false,
-                pgp: None,
-                pgp_asked: false,
-                flag_color: summary.flag_color,
-                translations: HashMap::new(),
-            };
-            view.show(thread, true);
-            view.set_sender_vip(sender_is_vip(&view, &this.settings()));
-            this.refresh_invitation(&view).await;
-            this.start_pgp(&view);
-            this.refresh_translation(&view);
-            let target = Target {
-                account_id,
-                thread_id,
-                message_id: summary.message_id.clone(),
-            };
-            this.complete_thread(view, target).await;
-        });
-    }
-
-    /// Fetches the whole thread and any missing bodies, then marks it read.
-    async fn complete_thread(self: &Rc<Self>, view: Rc<ConversationView>, target: Target) {
-        let (account_id, thread_id) = (target.account_id, target.thread_id.clone());
-        let Some(sync) = self.core.account(account_id) else {
-            return;
-        };
-        let (s, t) = (sync.clone(), thread_id.clone());
-        if let Err(err) = self
-            .core
-            .call(async move { s.ensure_thread(&t).await })
-            .await
-        {
-            tracing::info!(error = %err, "showing the stored copy of the thread");
-        }
-        if !view.is_showing(&target) {
-            return;
-        }
-        let key = thread_id.clone();
-        let fresh = self
-            .core
-            .read(move |c| messages::thread_messages(c, account_id, &key))
-            .await
-            .unwrap_or_default();
-        let missing = view.messages_arrived(&fresh);
-        let fetches = missing.into_iter().map(|id| {
-            let (core, sync) = (Rc::clone(&self.core), sync.clone());
-            async move {
-                let key = id.clone();
-                let result = core.call(async move { sync.body(&key).await }).await;
-                (id, result.map_err(|e| e.to_string()))
-            }
-        });
-        // A long thread would otherwise fire one Gmail call per message at
-        // once, and 30 of them at 5 units each is most of a second's budget.
-        let loaded: Vec<(String, Result<MessageBody, String>)> = {
-            use futures::StreamExt;
-            futures::stream::iter(fetches)
-                .buffered(BODY_FETCHES)
-                .collect()
-                .await
-        };
-        let images = self.inline_images(account_id, &sync, &loaded).await;
-        if !view.is_showing(&target) {
-            return;
-        }
-        view.bodies_arrived(loaded, images);
-        let unread = view.read(|open| open.unread()).unwrap_or(false);
-        self.refresh_invitation(&view).await;
-        self.start_pgp(&view);
-        self.refresh_translation(&view);
-        if unread {
-            self.mark_read_later(&view, account_id, thread_id.clone());
-        }
-        self.fill_in_thumbnails(&view, &sync, target);
-    }
-
-    /// Fetches the pictures for the attachment rows after the message is
-    /// already on screen, and redraws when they arrive. Reading the mail
-    /// never waits on them, and they come out of the background share of
-    /// the account's quota, behind whatever the user asks for next.
-    fn fill_in_thumbnails(
-        self: &Rc<Self>,
-        view: &Rc<ConversationView>,
-        sync: &std::sync::Arc<crate::core::Sync>,
-        target: Target,
-    ) {
-        // Every body the thread shows, not only the ones just fetched: a
-        // message read before is already in the store, and its pictures
-        // are just as worth showing.
-        let loaded: Vec<(String, Result<MessageBody, String>)> = view
-            .read(|open| {
-                open.bodies
-                    .iter()
-                    .filter(|(_, body)| {
-                        body.as_ref().is_ok_and(|body| {
-                            body.attachments.iter().any(|a| {
-                                a.attachment_id.is_some()
-                                    && a.mime_type.starts_with("image/")
-                                    && !open.thumbnails.contains_key(
-                                        a.attachment_id.as_deref().unwrap_or_default(),
-                                    )
-                                    && !crate::render::shown_in_body(a, body)
-                            })
-                        })
-                    })
-                    .map(|(id, body)| (id.clone(), body.clone()))
-                    .collect()
-            })
-            .unwrap_or_default();
-        if loaded.is_empty() {
-            return;
-        }
-        let (this, view, sync) = (Rc::clone(self), Rc::clone(view), sync.clone());
-        glib::spawn_future_local(async move {
-            let found = this.thumbnails(target.account_id, &sync, &loaded).await;
-            if found.is_empty() || !view.is_showing(&target) {
-                return;
-            }
-            view.thumbnails_arrived(found);
-        });
-    }
-
-    /// Marks the open thread or message read, when the setting says so.
-    fn mark_read_later(
-        self: &Rc<Self>,
-        view: &Rc<ConversationView>,
-        account_id: AccountId,
-        thread_id: String,
-    ) {
-        let delay = match self.settings().mark_read {
-            MarkRead::Immediately => 0,
-            MarkRead::AfterDelay => 2,
-            MarkRead::Manually => return,
-        };
-        let only = view.find(|o| o.only_message.clone());
-        let (weak, view) = (Rc::downgrade(self), Rc::downgrade(view));
-        glib::timeout_add_seconds_local_once(delay, move || {
-            let (Some(win), Some(view)) = (weak.upgrade(), view.upgrade()) else {
-                return;
-            };
-            let still_open = view
-                .read(|o| {
-                    o.account_id == account_id && o.thread_id == thread_id && o.only_message == only
-                })
-                .unwrap_or(false);
-            if still_open {
-                let target = Target {
-                    account_id,
-                    thread_id,
-                    message_id: only,
-                };
-                win.perform(
-                    vec![target],
-                    MailAction::Triage(TriageAction::MarkRead),
-                    History::Skip,
-                    None,
-                );
-            }
-        });
-    }
-
     /// Downloads `cid:` images that HTML bodies reference, as `data:` URIs.
-    async fn inline_images(
+    pub(super) async fn inline_images(
         &self,
         account_id: AccountId,
         sync: &std::sync::Arc<crate::core::Sync>,
@@ -1365,45 +1140,6 @@ impl MainWindow {
             out.insert(message_id.clone(), images);
         }
         out
-    }
-
-    /// Picks up label changes and new messages in the open thread. Redraws
-    /// only when the set of messages changed, so reading position survives.
-    fn refresh_open_thread(self: &Rc<Self>) {
-        let Some(target) = self.conversation.read(|o| o.target()) else {
-            return;
-        };
-        let (account_id, thread_id) = (target.account_id, target.thread_id.clone());
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            let key = thread_id.clone();
-            let Ok(fresh) = this
-                .core
-                .read(move |c| messages::thread_messages(c, account_id, &key))
-                .await
-            else {
-                return;
-            };
-            if !this.conversation.is_showing(&target) {
-                return;
-            }
-            let only = this.conversation.find(|o| o.only_message.clone());
-            let fresh: Vec<MessageMeta> = fresh
-                .into_iter()
-                .filter(|m| only.as_ref().is_none_or(|id| &m.id == id))
-                .collect();
-            if fresh.is_empty() {
-                this.conversation.clear();
-                return;
-            }
-            let changed = this.conversation.replace_messages(fresh);
-            if changed {
-                this.complete_thread(Rc::clone(&this.conversation), target)
-                    .await;
-            } else {
-                this.conversation.render_buttons();
-            }
-        });
     }
 
     // ---- Actions on the selection or the open conversation -----------------
@@ -3314,7 +3050,7 @@ impl MainWindow {
     }
 }
 
-fn read_cached_body(
+pub(super) fn read_cached_body(
     c: &rusqlite::Connection,
     account_id: AccountId,
     message_id: &str,
@@ -3328,19 +3064,6 @@ fn read_cached_body(
     // gap for good. A message with a body that truly says nothing about
     // its origins is rare, and pays that fetch once as well.
     Ok(body.filter(|body| !body.provenance.is_empty()))
-}
-
-/// Unread messages and the newest message start expanded.
-fn default_expanded(messages: &[MessageMeta]) -> HashSet<String> {
-    let mut expanded: HashSet<String> = messages
-        .iter()
-        .filter(|m| m.is_unread())
-        .map(|m| m.id.clone())
-        .collect();
-    if let Some(last) = messages.last() {
-        expanded.insert(last.id.clone());
-    }
-    expanded
 }
 
 /// Whether the newest sender in `view` who is not the user is a VIP.

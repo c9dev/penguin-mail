@@ -46,6 +46,11 @@ impl<'a, E: ?Sized> Wanted<'a, E> {
         }
     }
 
+    /// The conversation this run started on.
+    pub fn target(&self) -> &Target {
+        &self.target
+    }
+
     /// Whether that conversation is still the one on screen.
     pub fn is_wanted(&self) -> bool {
         self.screen.is_showing(&self.target)
@@ -55,6 +60,13 @@ impl<'a, E: ?Sized> Wanted<'a, E> {
     /// what it said. `None` means the reader has moved on and nothing ran.
     pub fn on_screen<R>(&self, change: impl FnOnce(&'a E) -> R) -> Option<R> {
         self.is_wanted().then(|| change(self.effects))
+    }
+
+    /// Runs `call` whatever is on screen. For what belongs to the window
+    /// rather than the conversation, such as a toast, and for a call whose
+    /// failure the reader hears about wherever they are.
+    pub fn anyway<R>(&self, call: impl FnOnce(&'a E) -> R) -> R {
+        call(self.effects)
     }
 
     /// Waits for `call` and gives its answer back while the conversation

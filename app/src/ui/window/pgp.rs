@@ -1,18 +1,18 @@
 //! The window behind the engine run. `crate::protection::run` decides what
 //! happens to a protected message; this file is the adapter that gives it
 //! the thread on screen and makes the calls it asks for, on the GTK thread.
+//! The [`Ports`] are the thread run's, from `thread.rs`.
 
-use std::rc::{Rc, Weak};
+use std::rc::Rc;
 
 use gtk::glib;
 use mailrs_domain::{AccountId, MessageBody, Target};
 
 use super::MainWindow;
-use crate::core::Core;
+use super::thread::Ports;
 use crate::protection::run::{Answer, Claimed, Desk, Effects, Engines, Installed};
 use crate::protection::{Engine, Read};
 use crate::ui::conversation::ConversationView;
-use crate::wanted::Screen;
 use crate::{pgp, smime};
 
 impl MainWindow {
@@ -27,20 +27,9 @@ impl MainWindow {
 
     /// The engines, with this window behind both ports.
     fn engines(self: &Rc<Self>, view: &Rc<ConversationView>) -> Engines {
-        let ports = Rc::new(Ports {
-            window: Rc::downgrade(self),
-            core: Rc::clone(&self.core),
-            view: Rc::clone(view),
-        });
+        let ports = self.ports(view);
         Engines::new(Rc::clone(&ports) as Rc<dyn Desk>, ports as Rc<dyn Effects>)
     }
-}
-
-/// The window as the engine run sees it.
-struct Ports {
-    window: Weak<MainWindow>,
-    core: Rc<Core>,
-    view: Rc<ConversationView>,
 }
 
 impl Desk for Ports {
@@ -53,12 +42,6 @@ impl Desk for Ports {
 
     fn claim(&self, installed: Installed) -> Option<Claimed> {
         self.view.take_protected(installed)
-    }
-}
-
-impl Screen for Ports {
-    fn is_showing(&self, target: &Target) -> bool {
-        self.view.is_showing(target)
     }
 }
 
@@ -103,18 +86,15 @@ impl Effects for Ports {
         })
     }
 
-    fn answered(&self, message_id: String, read: Read) {
-        if !self.view.engine_answered(message_id, read) {
-            return;
-        }
-        // The event card and the translation card were read off the
-        // ciphertext; the opened body may carry an invitation or be in
-        // another language.
+    /// Hands what the engine said to the thread run, which decides what
+    /// else an opened body leaves stale.
+    fn answered(&self, target: Target, message_id: String, read: Read) {
         let Some(window) = self.window.upgrade() else {
             return;
         };
-        let view = Rc::clone(&self.view);
-        window.refresh_translation(&view);
-        glib::spawn_future_local(async move { window.refresh_invitation(&view).await });
+        let run = window.thread_run(&self.view);
+        glib::spawn_future_local(
+            async move { run.engine_answered(target, message_id, read).await },
+        );
     }
 }

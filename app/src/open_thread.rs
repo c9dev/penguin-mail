@@ -12,7 +12,9 @@ use mailrs_domain::{
 
 use crate::protection::run::{Claimed, Installed};
 use crate::protection::{self, Engine, Mark};
-use crate::translation::Translation;
+use crate::translation::{Language, Translation};
+
+pub mod run;
 
 /// Everything shown for one open thread.
 pub struct OpenThread {
@@ -60,6 +62,49 @@ pub struct OpenThread {
 }
 
 impl OpenThread {
+    /// A thread as the store first shows it: `messages` oldest first and
+    /// the bodies already fetched. Unread messages and the newest one
+    /// start open; nothing has been allowed, claimed or translated yet.
+    pub fn new(
+        target: &Target,
+        subject: String,
+        messages: Vec<MessageMeta>,
+        bodies: HashMap<String, MessageBody>,
+        me: Vec<String>,
+    ) -> OpenThread {
+        let mut expanded: HashSet<String> = messages
+            .iter()
+            .filter(|m| m.is_unread())
+            .map(|m| m.id.clone())
+            .collect();
+        if let Some(last) = messages.last() {
+            expanded.insert(last.id.clone());
+        }
+        OpenThread {
+            account_id: target.account_id,
+            thread_id: target.thread_id.clone(),
+            subject,
+            messages,
+            bodies: bodies
+                .into_iter()
+                .map(|(id, body)| (id, Ok(body)))
+                .collect(),
+            expanded,
+            images_allowed: false,
+            only_message: target.message_id.clone(),
+            me,
+            inline_images: HashMap::new(),
+            thumbnails: HashMap::new(),
+            opened_files: HashMap::new(),
+            photos: HashMap::new(),
+            unsubscribed: false,
+            pgp: None,
+            pgp_asked: false,
+            flag_color: None,
+            translations: HashMap::new(),
+        }
+    }
+
     pub fn is_draft(&self) -> bool {
         self.messages
             .last()
@@ -239,6 +284,80 @@ impl OpenThread {
             .eq(fresh.iter().map(|m| &m.id));
         self.messages = fresh;
         !same
+    }
+
+    /// Bodies and the inline images that go in them, as Gmail sent them.
+    pub fn take_bodies(
+        &mut self,
+        bodies: Vec<(String, Result<MessageBody, String>)>,
+        images: HashMap<String, HashMap<String, String>>,
+    ) {
+        self.bodies.extend(bodies);
+        self.inline_images.extend(images);
+    }
+
+    /// What the engine made of the protected message: the mark for the
+    /// card, and, when it opened one, the body and the files that were
+    /// inside. Answers whether it opened a body.
+    pub fn take_engine_answer(&mut self, message_id: String, read: protection::Read) -> bool {
+        self.pgp = Some(read.mark);
+        let Some(body) = read.body else {
+            return false;
+        };
+        if !read.files.is_empty() {
+            self.opened_files.insert(message_id.clone(), read.files);
+        }
+        self.bodies.insert(message_id, Ok(body));
+        true
+    }
+
+    /// What the translation card says about a message translated here:
+    /// the language it came from, whether it was cut short, and whether
+    /// the page shows the translation.
+    pub fn translation_of(&self, message_id: &str) -> Option<(Option<Language>, bool, bool)> {
+        self.translations
+            .get(message_id)
+            .map(|said| (said.from, said.cut, said.shown))
+    }
+
+    /// Turns a translated message over, and answers with what the card
+    /// should now say. `None` when the message has no translation.
+    pub fn turn_translation(&mut self, message_id: &str) -> Option<(Option<Language>, bool, bool)> {
+        let said = self.translations.get_mut(message_id)?;
+        said.shown = !said.shown;
+        Some((said.from, said.cut, said.shown))
+    }
+
+    /// A message's body as it arrived, with its inline images, which is
+    /// what a translation is built from.
+    pub fn arrived(&self, message_id: &str) -> Option<(MessageBody, HashMap<String, String>)> {
+        let body = self.bodies.get(message_id)?.as_ref().ok()?.clone();
+        let images = self
+            .inline_images
+            .get(message_id)
+            .cloned()
+            .unwrap_or_default();
+        Some((body, images))
+    }
+
+    /// The bodies with a picture attached that has no thumbnail yet. Every
+    /// body counts, not only the ones just fetched: a message read before
+    /// is already in the store, and its pictures are as worth showing.
+    pub fn wanting_thumbnails(&self) -> Vec<(String, MessageBody)> {
+        self.bodies
+            .iter()
+            .filter_map(|(id, body)| Some((id, body.as_ref().ok()?)))
+            .filter(|(_, body)| {
+                body.attachments.iter().any(|a| {
+                    a.attachment_id
+                        .as_deref()
+                        .is_some_and(|id| !self.thumbnails.contains_key(id))
+                        && a.mime_type.starts_with("image/")
+                        && !crate::render::shown_in_body(a, body)
+                })
+            })
+            .map(|(id, body)| (id.clone(), body.clone()))
+            .collect()
     }
 
     pub fn has_remote_images(&self) -> bool {

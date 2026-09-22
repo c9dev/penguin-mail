@@ -19,6 +19,7 @@ app/src/core.rs
 app/src/format.rs
 app/src/main.rs
 app/src/notify.rs
+app/src/open_thread/run/translation.rs
 app/src/pgp.rs
 app/src/protection.rs
 app/src/render.rs
@@ -72,7 +73,6 @@ app/src/ui/window/outbox.rs
 app/src/ui/window/reminders.rs
 app/src/ui/window/scheduled.rs
 app/src/ui/window/senders.rs
-app/src/ui/window/translation.rs
 app/src/update/mod.rs
 domain/src/category.rs
 domain/src/invitation.rs

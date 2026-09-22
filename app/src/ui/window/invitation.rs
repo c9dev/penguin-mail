@@ -13,7 +13,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gio, glib};
-use mailrs_domain::invitation::{Answer, Invitation, Method, Scope, When};
+use mailrs_domain::invitation::{Answer, Invitation, Scope, When};
 use mailrs_domain::{AccountId, EpochMillis};
 use mailrs_gmail::CALENDAR_SCOPE;
 use mailrs_sync::{Told, now_millis};
@@ -22,7 +22,7 @@ use super::MainWindow;
 use crate::goa;
 use crate::settings::Change;
 use crate::ui::conversation::ConversationView;
-use crate::ui::invitation::{Action, Proposal, Showing};
+use crate::ui::invitation::{Action, Proposal};
 use mailrs_domain::translate::{fill, gettext};
 
 thread_local! {
@@ -33,58 +33,11 @@ thread_local! {
 }
 
 impl MainWindow {
-    /// Reads the invitation in the message `view` shows and puts it on the
-    /// card, or takes the card away when the message carries none.
-    pub(super) async fn refresh_invitation(self: &Rc<Self>, view: &Rc<ConversationView>) {
-        let found = view.find(|open| {
-            open.invitation()
-                .map(|(meta, ics)| (open.target(), meta.id.clone(), ics.to_string()))
-        });
-        let Some((target, message_id, ics)) = found else {
-            view.show_invitation(None);
-            return;
-        };
-        let account_id = target.account_id;
-        let me = self.addresses_for(account_id);
-        let invitations = self.core.invitations();
-        let opened = self
-            .core
-            .call(async move {
-                invitations
-                    .open(account_id, &message_id, &ics, now_millis())
-                    .await
-            })
-            .await;
-        // The reader may have opened another thread while the store and
-        // Google answered; this card belongs to the one they left.
-        if !view.is_showing(&target) {
-            return;
-        }
-        let showing = match opened {
-            Ok(Some(opened)) => Some(Showing {
-                invitation: opened.invitation,
-                change: opened.change,
-                answer: opened.answer,
-                me,
-            }),
-            Ok(None) => None,
-            Err(err) => {
-                tracing::info!(error = %err, "could not read the invitation");
-                None
-            }
-        };
-        view.show_invitation(showing.clone());
-        if let Some(showing) = showing.filter(waiting_on_an_answer) {
-            self.offer_gnome(view, account_id);
-            self.show_clashes(view, account_id, showing.invitation);
-        }
-    }
-
     /// Offers to put this account in GNOME Online Accounts, where GNOME
     /// Calendar and the shell clock can see its meetings. The offer goes
     /// up once an account: the answer is remembered whichever way it
     /// goes, and an account GNOME already has is never asked about.
-    fn offer_gnome(self: &Rc<Self>, view: &Rc<ConversationView>, account_id: AccountId) {
+    pub(super) fn offer_gnome(self: &Rc<Self>, view: &Rc<ConversationView>, account_id: AccountId) {
         let Some(account) = self.account(account_id) else {
             return;
         };
@@ -113,31 +66,6 @@ impl MainWindow {
                 &[("reason", &err.to_string())],
             ));
         }
-    }
-
-    /// Asks the calendar what else the user has on while the event runs,
-    /// and puts it on the card. Only for an invitation still waiting on an
-    /// answer: a meeting the user has already answered is one they have
-    /// thought about.
-    fn show_clashes(
-        self: &Rc<Self>,
-        view: &Rc<ConversationView>,
-        account_id: AccountId,
-        invitation: Invitation,
-    ) {
-        let invitations = self.core.invitations();
-        let (this, view) = (Rc::clone(self), Rc::clone(view));
-        glib::spawn_future_local(async move {
-            let uid = invitation.uid.clone();
-            let busy = this
-                .core
-                .call(async move { invitations.busy(account_id, &invitation).await })
-                .await;
-            match busy {
-                Ok(busy) => view.card.set_busy(&uid, &busy),
-                Err(err) => tracing::info!(error = %err, "could not read the calendar"),
-            }
-        });
     }
 
     /// The event card's buttons, for the main window and a conversation in
@@ -418,15 +346,6 @@ fn moved(invitation: &Invitation, starts_at: EpochMillis) -> Option<When> {
         starts_at,
         ends_at: Some(starts_at + length),
     })
-}
-
-/// Whether the card is asking the user a question they have not answered.
-/// A cancellation, somebody else's reply and a meeting already answered
-/// are none of them worth reading the calendar for.
-fn waiting_on_an_answer(showing: &Showing) -> bool {
-    showing.answer.is_none()
-        && showing.invitation.method == Method::Request
-        && !showing.invitation.cancelled()
 }
 
 /// The toast an answer leaves: the answer the user gave, and that the

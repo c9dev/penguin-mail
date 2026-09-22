@@ -866,10 +866,7 @@ impl ConversationView {
         bodies: Vec<(String, Result<MessageBody, String>)>,
         images: HashMap<String, HashMap<String, String>>,
     ) {
-        self.change(|open| {
-            open.bodies.extend(bodies);
-            open.inline_images.extend(images);
-        });
+        self.change(|open| open.take_bodies(bodies, images));
         self.render(false);
     }
 
@@ -923,17 +920,7 @@ impl ConversationView {
     /// invitation or the language, has to be read again from it.
     pub fn engine_answered(&self, message_id: String, read: protection::Read) -> bool {
         let opened = self
-            .change(|open| {
-                open.pgp = Some(read.mark);
-                let Some(body) = read.body else {
-                    return false;
-                };
-                if !read.files.is_empty() {
-                    open.opened_files.insert(message_id.clone(), read.files);
-                }
-                open.bodies.insert(message_id, Ok(body));
-                true
-            })
+            .change(|open| open.take_engine_answer(message_id, read))
             .unwrap_or(false);
         self.render(false);
         opened
@@ -958,12 +945,7 @@ impl ConversationView {
     /// `false` when the message has no translation to turn.
     pub fn turn_translation(&self, message_id: &str) -> bool {
         let turned = self
-            .change(|open| {
-                open.translations.get_mut(message_id).map(|said| {
-                    said.shown = !said.shown;
-                    (said.from, said.cut, said.shown)
-                })
-            })
+            .change(|open| open.turn_translation(message_id))
             .flatten();
         let Some((from, cut, shown)) = turned else {
             return false;

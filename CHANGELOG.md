@@ -23,6 +23,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Allowing images, an invitation card and the unsubscribed note stay on the
   conversation they belong to when you open another one while they load.
   Clicking two conversations quickly no longer shows the first one.
+- Opening another conversation while one is still loading no longer adds
+  the first one's newest messages to it.
 - Trash in a conversation open in its own window moves it to the Trash or
   deletes it forever depending on where that conversation was opened from,
   not on the mailbox the main window shows now.

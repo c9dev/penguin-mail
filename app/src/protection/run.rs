@@ -91,8 +91,9 @@ pub trait Effects {
         raw: Vec<u8>,
         body: MessageBody,
     ) -> Answer<'_, Result<Read, String>>;
-    /// Puts what the engine said above the message.
-    fn answered(&self, message_id: String, read: Read);
+    /// Puts what the engine said above the message in `target`, the
+    /// conversation the claim was made on.
+    fn answered(&self, target: Target, message_id: String, read: Read);
 }
 
 /// The two engines, and the one way to run the one a message needs.
@@ -143,6 +144,7 @@ impl Engines {
         // What was inside the encryption is what the reader wanted, and it
         // goes no further than this window: the store keeps the message as
         // Gmail holds it, ciphertext and all.
-        wanted.on_screen(|effects| effects.answered(message_id, read));
+        let target = wanted.target().clone();
+        wanted.on_screen(|effects| effects.answered(target, message_id, read));
     }
 }

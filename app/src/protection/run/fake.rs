@@ -245,7 +245,7 @@ impl Effects for FakeWindow {
         })
     }
 
-    fn answered(&self, message_id: String, read: Read) {
+    fn answered(&self, _target: Target, message_id: String, read: Read) {
         self.reached(Step::Answered);
         self.with(|screen| screen.answers.push((message_id, read)));
     }
