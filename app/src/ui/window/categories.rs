@@ -184,7 +184,7 @@ impl MainWindow {
                 }
                 win.categories.show_names();
                 win.list.unselect();
-                win.conversation.clear();
+                win.conversation.leave();
                 win.reload_list();
             });
     }

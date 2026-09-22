@@ -12,6 +12,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- A conversation you clicked just before switching inbox categories no
+  longer opens in the new category.
 - The Keyboard Shortcuts window lists Ctrl+J, which shows or hides the
   assistant.
 - A conversation in its own window decides whether Archive, Delete or Mute

@@ -933,10 +933,7 @@ impl MainWindow {
             .set_show_accounts(mailbox.account().is_none() && self.accounts.borrow().len() > 1);
         self.list.set_title(&mailbox.title(), "");
         self.list.unselect();
-        // A thread clicked in the mailbox before would otherwise land in
-        // this one once its store read answers.
-        self.conversation.stop_loading();
-        self.conversation.clear();
+        self.conversation.leave();
         self.nav.set_show_content(false);
         if self.split.is_collapsed() {
             self.split.set_show_sidebar(false);
@@ -1085,7 +1082,7 @@ impl MainWindow {
         self.follow_categories();
         self.follow_follow_ups();
         self.list.set_title(&gettext("Search"), &query);
-        self.conversation.clear();
+        self.conversation.leave();
         self.set_folder(None);
         self.reload_list();
     }
@@ -1167,7 +1164,7 @@ impl MainWindow {
             // A message that never reached Gmail has no thread to open,
             // and asking Gmail for one would be a call thrown away. Its
             // row menu is what acts on it.
-            Picked::One(row) if outbox_id(&row.id).is_some() => self.conversation.clear(),
+            Picked::One(row) if outbox_id(&row.id).is_some() => self.conversation.leave(),
             Picked::One(row) => self.open_thread(row),
             Picked::Many(rows) => {
                 self.conversation.show_many(
@@ -1178,7 +1175,7 @@ impl MainWindow {
                     rows.iter().all(|r| r.muted),
                 );
             }
-            Picked::None => self.conversation.clear(),
+            Picked::None => self.conversation.leave(),
         }
     }
 
@@ -2179,7 +2176,7 @@ impl MainWindow {
                 return;
             }
             if this.conversation.read(|o| o.account_id) == Some(account.id) {
-                this.conversation.clear();
+                this.conversation.leave();
             }
             let email = account.email.clone();
             match this.core.remove_account(account).await {
@@ -2386,7 +2383,7 @@ impl MainWindow {
     fn clear_selection(&self) {
         if self.list.selected_rows().len() > 1 {
             self.list.unselect();
-            self.conversation.clear();
+            self.conversation.leave();
         } else if self.list.search_open() {
             self.list.close_search();
         }
@@ -2637,7 +2634,7 @@ impl MainWindow {
         let settings = self.settings();
         match effect {
             Effect::ListShape => {
-                self.conversation.clear();
+                self.conversation.leave();
                 self.list.unselect();
                 let mailbox = self.mailbox.borrow().clone();
                 match mailbox {

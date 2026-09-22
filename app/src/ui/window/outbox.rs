@@ -88,7 +88,7 @@ impl MainWindow {
                     )),
                 }
             }
-            this.conversation.clear();
+            this.conversation.leave();
             this.scheduled_changed();
         });
     }
@@ -122,7 +122,7 @@ impl MainWindow {
                     &[("reason", &err.to_string())],
                 ));
             }
-            this.conversation.clear();
+            this.conversation.leave();
             this.scheduled_changed();
             if let Some(app) = this.app.upgrade()
                 && let Some(composer) = app.compose(draft)
@@ -154,7 +154,7 @@ impl MainWindow {
                     ));
                 }
             }
-            this.conversation.clear();
+            this.conversation.leave();
             this.scheduled_changed();
             this.toast(&if count == 1 {
                 gettext("Deleted. It will not be sent.")

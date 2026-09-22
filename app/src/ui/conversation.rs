@@ -746,6 +746,15 @@ impl ConversationView {
             .is_some_and(|focus| focus.is_ancestor(self.page.upcast_ref::<gtk::Widget>()))
     }
 
+    /// Clears the view and drops the thread on its way into it. Use this
+    /// when the reader leaves the mail on screen for other mail, such as
+    /// another mailbox or category: a thread clicked just before would
+    /// otherwise land there once its store read answers.
+    pub fn leave(&self) {
+        self.stop_loading();
+        self.clear();
+    }
+
     pub fn clear(&self) {
         self.find.close();
         *self.open.borrow_mut() = None;

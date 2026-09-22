@@ -49,7 +49,7 @@ impl MainWindow {
                 .await;
             match removed {
                 Ok(_) => {
-                    this.conversation.clear();
+                    this.conversation.leave();
                     this.scheduled_changed();
                     this.toast(&if count == 1 {
                         gettext("Won't be sent. The message is in Drafts.")
