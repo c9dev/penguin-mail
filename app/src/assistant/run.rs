@@ -741,7 +741,9 @@ impl<A: Accounts> Tools<A> {
             MailboxName::SendLater => vec![Mailbox::Scheduled],
             MailboxName::Reminders => vec![Mailbox::Reminders],
             MailboxName::Muted => vec![at(system_label::MUTE)],
-            MailboxName::Smart => vec![self.smart_named(&required(input, "name")?)?],
+            MailboxName::Smart => {
+                vec![Mailbox::Smart(self.smart_named(&required(input, "name")?)?)]
+            }
             MailboxName::Label => {
                 let wanted = text(input, "label").ok_or("`label` is missing")?;
                 let labels = self.desk.labels();

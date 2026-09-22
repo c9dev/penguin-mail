@@ -94,43 +94,43 @@ msgstr ""
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr ""
 
-#: app/src/assistant/run.rs:862
+#: app/src/assistant/run.rs:864
 msgid "Move {count} conversation to the Trash?"
 msgid_plural "Move {count} conversations to the Trash?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/assistant/run.rs:953
+#: app/src/assistant/run.rs:955
 msgid ""
 "Don't Allow labels only the mail in accounts that have the label already."
 msgstr ""
 
-#: app/src/assistant/run.rs:995
+#: app/src/assistant/run.rs:997
 msgid "Send “{subject}” to {recipients}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1085
+#: app/src/assistant/run.rs:1087
 msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr ""
 
-#: app/src/assistant/run.rs:1161 app/src/assistant/run/calendar.rs:178
+#: app/src/assistant/run.rs:1163 app/src/assistant/run/calendar.rs:178
 #: app/src/assistant/run/calendar.rs:525
 msgid "%a %-d %b"
 msgstr ""
 
-#: app/src/assistant/run.rs:1167
+#: app/src/assistant/run.rs:1169
 msgid " from {first} to {last}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1170
+#: app/src/assistant/run.rs:1172
 msgid " until {last}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1171
+#: app/src/assistant/run.rs:1173
 msgid " from {first}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1177
+#: app/src/assistant/run.rs:1179
 msgid ""
 "Turn on the automatic reply for {account}{dates}?\n"
 "\n"
@@ -138,19 +138,19 @@ msgid ""
 "{body}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1188
+#: app/src/assistant/run.rs:1190
 msgid "Turn off the automatic reply for {account}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1270
+#: app/src/assistant/run.rs:1272
 msgid "Create a Gmail rule for {account}: {when} → {then}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1310
+#: app/src/assistant/run.rs:1312
 msgid "Delete a Gmail rule from {account}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1432
+#: app/src/assistant/run.rs:1434
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a Gmail rule for "
 "their future mail?"
@@ -544,61 +544,61 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/assistant/run/manage.rs:336
+#: app/src/assistant/run/manage.rs:346
 msgid "Delete the smart mailbox “{name}”? The mail it lists stays where it is."
 msgstr ""
 
-#: app/src/assistant/run/manage.rs:397
+#: app/src/assistant/run/manage.rs:407
 msgid "Replace the template “{name}” with this one? The saved one is lost."
 msgstr ""
 
-#: app/src/assistant/run/manage.rs:401
+#: app/src/assistant/run/manage.rs:411
 msgid "Save a template called “{name}”?"
 msgstr ""
 
-#: app/src/assistant/run/manage.rs:439
+#: app/src/assistant/run/manage.rs:449
 msgid "Delete the template “{name}”?"
 msgstr ""
 
-#: app/src/assistant/run/manage.rs:467
+#: app/src/assistant/run/manage.rs:477
 msgid "Add {contact} to the Google contacts of {account}?"
 msgstr ""
 
-#: app/src/assistant/run/manage.rs:518
+#: app/src/assistant/run/manage.rs:528
 msgid "Change {contact} in the Google contacts of {account}?"
 msgstr ""
 
-#: app/src/assistant/run/manage.rs:565
+#: app/src/assistant/run/manage.rs:575
 msgid "Always load images from anyone at {domain}?"
 msgstr ""
 
-#: app/src/assistant/run/manage.rs:569
+#: app/src/assistant/run/manage.rs:579
 msgid "Always load images from {sender}?"
 msgstr ""
 
-#: app/src/assistant/run/manage.rs:575
+#: app/src/assistant/run/manage.rs:585
 msgid "Loading a remote image tells the sender when you opened their mail."
 msgstr ""
 
-#: app/src/assistant/run/manage.rs:600
+#: app/src/assistant/run/manage.rs:610
 msgid "Stop loading images from {sender}?"
 msgstr ""
 
-#: app/src/assistant/run/manage.rs:635
+#: app/src/assistant/run/manage.rs:645
 msgid "Export {what} to {file}?"
 msgstr ""
 
-#: app/src/assistant/run/manage.rs:641
+#: app/src/assistant/run/manage.rs:651
 msgid "A file with that name is there already, and exporting replaces it."
 msgstr ""
 
-#: app/src/assistant/run/manage.rs:688
+#: app/src/assistant/run/manage.rs:698
 msgid "{count} conversation"
 msgid_plural "{count} conversations"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/assistant/run/manage.rs:720
+#: app/src/assistant/run/manage.rs:730
 msgid "the message “{subject}”"
 msgstr ""
 
@@ -606,68 +606,68 @@ msgstr ""
 msgid "(no subject)"
 msgstr ""
 
-#: app/src/assistant/run/queue.rs:110
+#: app/src/assistant/run/queue.rs:91
 msgid "Send “{subject}” now?"
 msgstr ""
 
-#: app/src/assistant/run/queue.rs:113
+#: app/src/assistant/run/queue.rs:94
 msgid "Send {count} waiting message now?"
 msgid_plural "Send {count} waiting messages now?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/assistant/run/queue.rs:165
+#: app/src/assistant/run/queue.rs:146
 msgid "Cancel sending “{subject}”? It goes back to Drafts."
 msgstr ""
 
-#: app/src/assistant/run/queue.rs:171
+#: app/src/assistant/run/queue.rs:152
 msgid "Cancel {count} scheduled message? It goes back to Drafts."
 msgid_plural "Cancel {count} scheduled messages? They go back to Drafts."
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/assistant/run/queue.rs:242
+#: app/src/assistant/run/queue.rs:223
 msgid "Delete “{subject}” from the Outbox? It will not be sent."
 msgstr ""
 
-#: app/src/assistant/run/queue.rs:248
+#: app/src/assistant/run/queue.rs:229
 msgid "Delete {count} message from the Outbox? It will not be sent."
 msgid_plural "Delete {count} messages from the Outbox? They will not be sent."
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/assistant/run/queue.rs:280
+#: app/src/assistant/run/queue.rs:261
 msgid "Send “{subject}” {when} instead?"
 msgstr ""
 
-#: app/src/assistant/run/queue.rs:286
+#: app/src/assistant/run/queue.rs:267
 msgid "Send {count} scheduled message {when} instead?"
 msgid_plural "Send {count} scheduled messages {when} instead?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/assistant/run/queue.rs:364
+#: app/src/assistant/run/queue.rs:345
 msgid "Cancel the reminder on “{subject}” and put it back in the Inbox?"
 msgstr ""
 
-#: app/src/assistant/run/queue.rs:370
+#: app/src/assistant/run/queue.rs:351
 msgid "Cancel {count} reminder and put its conversation back in the Inbox?"
 msgid_plural ""
 "Cancel {count} reminders and put their conversations back in the Inbox?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/assistant/run/queue.rs:404
+#: app/src/assistant/run/queue.rs:385
 msgid "Bring “{subject}” back {when} instead?"
 msgstr ""
 
-#: app/src/assistant/run/queue.rs:410
+#: app/src/assistant/run/queue.rs:391
 msgid "Bring {count} conversation back {when} instead?"
 msgid_plural "Bring {count} conversations back {when} instead?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/assistant/run/queue.rs:441
+#: app/src/assistant/run/queue.rs:422
 msgid "Undo “{action}”?"
 msgstr ""
 

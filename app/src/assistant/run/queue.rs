@@ -69,25 +69,6 @@ impl<A: Accounts> Tools<A> {
         json
     }
 
-    /// The saved smart mailbox called `name`.
-    pub(super) fn smart_named(&self, name: &str) -> Result<Mailbox, String> {
-        let saved = self.desk.settings().smart_mailboxes;
-        if let Some(found) = saved
-            .iter()
-            .find(|m| m.name.trim().eq_ignore_ascii_case(name))
-        {
-            return Ok(Mailbox::Smart(found.clone()));
-        }
-        let names: Vec<&str> = saved.iter().map(|m| m.name.as_str()).collect();
-        Err(match names.is_empty() {
-            true => "There are no smart mailboxes.".into(),
-            false => format!(
-                "There is no smart mailbox called {name}. There are: {}.",
-                names.join(", ")
-            ),
-        })
-    }
-
     // ---- Send Later and the Outbox ---------------------------------------
 
     /// The waiting messages the call's targets name, in either mailbox.

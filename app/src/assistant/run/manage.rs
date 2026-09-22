@@ -317,14 +317,24 @@ impl<A: Accounts> Tools<A> {
         json!({"smart_mailboxes": all.iter().map(smart_json).collect::<Vec<_>>()})
     }
 
-    /// The smart mailbox a call names, by id or by name.
-    fn smart_named(&self, wanted: &str) -> Result<SmartMailbox, String> {
-        self.desk
-            .settings()
-            .smart_mailboxes
-            .into_iter()
+    /// The smart mailbox a call names, by id or by name. The error lists
+    /// the names there are, so the model can try again.
+    pub(super) fn smart_named(&self, wanted: &str) -> Result<SmartMailbox, String> {
+        let saved = self.desk.settings().smart_mailboxes;
+        if let Some(found) = saved
+            .iter()
             .find(|m| m.id == wanted || m.name.trim().eq_ignore_ascii_case(wanted))
-            .ok_or_else(|| format!("There is no smart mailbox called {wanted}."))
+        {
+            return Ok(found.clone());
+        }
+        let names: Vec<&str> = saved.iter().map(|m| m.name.as_str()).collect();
+        Err(match names.is_empty() {
+            true => "There are no smart mailboxes.".into(),
+            false => format!(
+                "There is no smart mailbox called {wanted}. There are: {}.",
+                names.join(", ")
+            ),
+        })
     }
 
     pub(super) async fn delete_smart_mailbox<'a>(
