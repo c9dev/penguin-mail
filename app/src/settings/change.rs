@@ -395,96 +395,143 @@ fn set_skill(settings: &mut Settings, id: String, skill: super::SkillSettings) {
     }
 }
 
-/// A preference the assistant may read and change by name. The assistant's
-/// own settings are left out on purpose, and so is anything it would need a
-/// shape more complicated than one JSON value to set.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Setting {
-    Threading,
-    MarkRead,
-    RemoteImages,
-    TextSize,
-    ColorScheme,
-    Notifications,
-    NotificationPreviews,
-    NotifyVipsOnly,
-    UndoSend,
-    DefaultAccount,
-    ComposeFormat,
+/// Declares [`Setting`] from a table of every field of [`Settings`]: the
+/// ones the assistant may set by name, each beside the [`Change`] variant of
+/// the same name that takes its one value, and the ones held back. The field
+/// is the key in `settings.toml` and the name the tool takes. The table has
+/// to name every field once, so a new preference does not compile until
+/// someone puts it on one side.
+macro_rules! settable {
+    (
+        may_set { $($setting:ident => $field:ident,)* }
+        held_back { $($held:ident,)* }
+    ) => {
+        /// A preference the assistant may read and change by name. The
+        /// assistant's own settings are left out on purpose, and so is
+        /// anything it would need a shape more complicated than one JSON
+        /// value to set.
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        pub enum Setting {
+            $($setting,)*
+        }
+
+        impl Setting {
+            /// In the order the assistant sees them.
+            pub const ALL: [Setting; [$(stringify!($setting)),*].len()] =
+                [$(Setting::$setting),*];
+
+            /// The key in `settings.toml`, which is the name the tool takes too.
+            pub fn name(self) -> &'static str {
+                match self {
+                    $(Setting::$setting => stringify!($field),)*
+                }
+            }
+
+            /// What this setting is now, in the JSON the tool reports.
+            pub fn value(self, settings: &Settings) -> Value {
+                match self {
+                    $(Setting::$setting => json!(settings.$field),)*
+                }
+            }
+
+            /// Reads the tool's JSON into a change, or says what is wrong
+            /// with it.
+            pub fn change(self, value: &Value) -> Result<Change, String> {
+                fn read<T: DeserializeOwned>(value: &Value) -> Result<T, String> {
+                    serde_json::from_value(value.clone()).map_err(|err| err.to_string())
+                }
+                Ok(match self {
+                    $(Setting::$setting => Change::$setting(read(value)?),)*
+                })
+            }
+        }
+
+        // Never called. Building a `Settings` names every field, so a new
+        // one fails to compile, as a missing field, until it is listed.
+        const _: fn(Settings) -> Settings = |settings| Settings {
+            $($field: settings.$field,)*
+            $($held: settings.$held,)*
+        };
+    };
+}
+
+settable! {
+    may_set {
+        Threading => threading,
+        MarkRead => mark_read,
+        RemoteImages => remote_images,
+        TextSize => text_size,
+        ColorScheme => color_scheme,
+        Notifications => notifications,
+        NotificationPreviews => notification_previews,
+        NotifyVipsOnly => notify_vips_only,
+        UndoSend => undo_send,
+        DefaultAccount => default_account,
+        ComposeFormat => compose_format,
+    }
+    held_back {
+        account_colors,
+        account_names,
+        account_order,
+        ai,
+        // The updater's own record of what it announced.
+        announced_update,
+        // How the assistant's pane lays out its own turns belongs with the
+        // rest of its settings, on the AI page.
+        assistant_allowed_tools,
+        assistant_details_expanded,
+        // Skills and whether their scripts reach the network are for the
+        // person to turn on, never the model.
+        assistant_skills,
+        // The composer reads this as a message goes out, so the assistant
+        // has no business turning the warning off.
+        check_attachments,
+        // Whether the app asks GitHub for new releases is the person's
+        // call, made in Preferences.
+        check_for_updates,
+        // Reading contacts asks Google for access of its own, so it stays a
+        // choice the person makes in Preferences.
+        contact_accounts,
+        contacts,
+        // How the inbox is arranged, and which slice of it opens first, is
+        // the person's own view of their mail. It sits beside
+        // inbox_categories for the same reason.
+        default_category,
+        // Whether mail goes out signed or encrypted is the person's to
+        // decide, not something the assistant flips.
+        encrypt_when_possible,
+        flag_color,
+        hidden_addresses,
+        inbox_categories,
+        // A new language only arrives with a restart, and the assistant can
+        // neither restart the app nor ask for one, so it would change a
+        // preference with nothing to show.
+        language,
+        last_sender,
+        last_update_check,
+        // Each server runs commands or reaches a service of the person's
+        // choosing, so only Preferences adds one.
+        mcp_servers,
+        // Which buttons a notification carries is a list, and a setting the
+        // assistant changes by name holds one value.
+        notification_buttons,
+        // Whether an account has been offered to GNOME is the card's own
+        // memory of asking, not a preference.
+        offered_to_gnome,
+        send_as,
+        sign_by_default,
+        signatures,
+        smart_mailboxes,
+        spell_languages,
+        spell_words,
+        suggest_follow_ups,
+        vips,
+    }
 }
 
 impl Setting {
-    /// In the order the assistant sees them.
-    pub const ALL: [Setting; 11] = [
-        Setting::Threading,
-        Setting::MarkRead,
-        Setting::RemoteImages,
-        Setting::TextSize,
-        Setting::ColorScheme,
-        Setting::Notifications,
-        Setting::NotificationPreviews,
-        Setting::NotifyVipsOnly,
-        Setting::UndoSend,
-        Setting::DefaultAccount,
-        Setting::ComposeFormat,
-    ];
-
-    /// The key in `settings.toml`, which is the name the tool takes too.
-    pub fn name(self) -> &'static str {
-        match self {
-            Setting::Threading => "threading",
-            Setting::MarkRead => "mark_read",
-            Setting::RemoteImages => "remote_images",
-            Setting::TextSize => "text_size",
-            Setting::ColorScheme => "color_scheme",
-            Setting::Notifications => "notifications",
-            Setting::NotificationPreviews => "notification_previews",
-            Setting::NotifyVipsOnly => "notify_vips_only",
-            Setting::UndoSend => "undo_send",
-            Setting::DefaultAccount => "default_account",
-            Setting::ComposeFormat => "compose_format",
-        }
-    }
-
     pub fn named(name: &str) -> Option<Setting> {
         Setting::ALL.into_iter().find(|s| s.name() == name)
-    }
-
-    /// What this setting is now, in the JSON the tool reports.
-    pub fn value(self, settings: &Settings) -> Value {
-        match self {
-            Setting::Threading => json!(settings.threading),
-            Setting::MarkRead => json!(settings.mark_read),
-            Setting::RemoteImages => json!(settings.remote_images),
-            Setting::TextSize => json!(settings.text_size),
-            Setting::ColorScheme => json!(settings.color_scheme),
-            Setting::Notifications => json!(settings.notifications),
-            Setting::NotificationPreviews => json!(settings.notification_previews),
-            Setting::NotifyVipsOnly => json!(settings.notify_vips_only),
-            Setting::UndoSend => json!(settings.undo_send),
-            Setting::DefaultAccount => json!(settings.default_account),
-            Setting::ComposeFormat => json!(settings.compose_format),
-        }
-    }
-
-    /// Reads the tool's JSON into a change, or says what is wrong with it.
-    pub fn change(self, value: &Value) -> Result<Change, String> {
-        fn read<T: DeserializeOwned>(value: &Value) -> Result<T, String> {
-            serde_json::from_value(value.clone()).map_err(|err| err.to_string())
-        }
-        Ok(match self {
-            Setting::Threading => Change::Threading(read(value)?),
-            Setting::MarkRead => Change::MarkRead(read(value)?),
-            Setting::RemoteImages => Change::RemoteImages(read(value)?),
-            Setting::TextSize => Change::TextSize(read(value)?),
-            Setting::ColorScheme => Change::ColorScheme(read(value)?),
-            Setting::Notifications => Change::Notifications(read(value)?),
-            Setting::NotificationPreviews => Change::NotificationPreviews(read(value)?),
-            Setting::NotifyVipsOnly => Change::NotifyVipsOnly(read(value)?),
-            Setting::UndoSend => Change::UndoSend(read(value)?),
-            Setting::DefaultAccount => Change::DefaultAccount(read(value)?),
-            Setting::ComposeFormat => Change::ComposeFormat(read(value)?),
-        })
     }
 }
 
@@ -1225,88 +1272,14 @@ mod tests {
     }
 
     #[test]
-    fn settable_names_match_the_settings_file() {
+    fn settable_names_are_keys_of_the_settings_file() {
+        // The names come from the field names, so this catches a serde
+        // rename that would make the tool's name and the file's key differ.
         let file = serde_json::to_value(Settings::default()).expect("settings serialise");
-        let keys: Vec<&str> = file
-            .as_object()
-            .expect("an object")
-            .keys()
-            .map(String::as_str)
-            .collect();
-        let settable: Vec<&str> = Setting::ALL.iter().map(|s| s.name()).collect();
-        for name in &settable {
-            assert!(keys.contains(name), "{name} is not a field of Settings");
+        let keys = file.as_object().expect("an object");
+        for setting in Setting::ALL {
+            assert!(keys.contains_key(setting.name()), "{}", setting.name());
         }
-        // The rest are the ones the assistant cannot set by name. A new
-        // preference lands here and fails until someone decides which side
-        // it belongs on.
-        let mut rest: Vec<&str> = keys
-            .iter()
-            .filter(|k| !settable.contains(k))
-            .copied()
-            .collect();
-        rest.sort_unstable();
-        assert_eq!(
-            rest,
-            [
-                "account_colors",
-                "account_names",
-                "account_order",
-                "ai",
-                // The updater's own record of what it announced.
-                "announced_update",
-                // How the assistant's pane lays out its own turns belongs
-                // with the rest of its settings, on the AI page.
-                "assistant_allowed_tools",
-                "assistant_details_expanded",
-                // Skills and whether their scripts reach the network are
-                // for the person to turn on, never the model.
-                "assistant_skills",
-                // The composer reads this as a message goes out, so the
-                // assistant has no business turning the warning off.
-                "check_attachments",
-                // Whether the app asks GitHub for new releases is the
-                // person's call, made in Preferences.
-                "check_for_updates",
-                // Reading contacts asks Google for access of its own, so
-                // it stays a choice the person makes in Preferences.
-                "contact_accounts",
-                "contacts",
-                // How the inbox is arranged, and which slice of it opens
-                // first, is the person's own view of their mail. It sits
-                // beside inbox_categories for the same reason.
-                "default_category",
-                // Whether mail goes out signed or encrypted is the
-                // person's to decide, not something the assistant flips.
-                "encrypt_when_possible",
-                "flag_color",
-                "hidden_addresses",
-                "inbox_categories",
-                // A new language only arrives with a restart, and the
-                // assistant can neither restart the app nor ask for one,
-                // so it would change a preference with nothing to show.
-                "language",
-                "last_sender",
-                "last_update_check",
-                // Each server runs commands or reaches a service of the
-                // person's choosing, so only Preferences adds one.
-                "mcp_servers",
-                // Which buttons a notification carries is a list, and a
-                // setting the assistant changes by name holds one value.
-                "notification_buttons",
-                // Whether an account has been offered to GNOME is the
-                // card's own memory of asking, not a preference.
-                "offered_to_gnome",
-                "send_as",
-                "sign_by_default",
-                "signatures",
-                "smart_mailboxes",
-                "spell_languages",
-                "spell_words",
-                "suggest_follow_ups",
-                "vips",
-            ]
-        );
     }
 
     #[test]
