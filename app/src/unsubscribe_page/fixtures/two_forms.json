@@ -1,0 +1,19 @@
+{
+  "url": "https://news.shop.example/unsubscribe?u=9f2",
+  "title": "Shop News",
+  "text": "Shop News\nSearch the archive, or leave the list.",
+  "forms": [
+    {
+      "id": 0,
+      "fields": [{ "id": 1, "kind": "text", "label": "Search the archive" }],
+      "buttons": [{ "id": 2, "label": "Search" }]
+    },
+    {
+      "id": 3,
+      "fields": [{ "id": 4, "kind": "hidden", "value": "9f2" }],
+      "buttons": [{ "id": 5, "label": "Unsubscribe" }]
+    }
+  ],
+  "captcha": false,
+  "password": false
+}

@@ -1,0 +1,17 @@
+{
+  "url": "https://lists.example.com/leave",
+  "title": "Leave Example Weekly",
+  "text": "Leave Example Weekly\nType the address you receive this newsletter at and confirm.",
+  "forms": [
+    {
+      "id": 0,
+      "fields": [
+        { "id": 1, "kind": "email", "label": "Email address", "required": true },
+        { "id": 2, "kind": "hidden", "value": "c41f", "required": true }
+      ],
+      "buttons": [{ "id": 3, "label": "Confirm" }]
+    }
+  ],
+  "captcha": false,
+  "password": false
+}

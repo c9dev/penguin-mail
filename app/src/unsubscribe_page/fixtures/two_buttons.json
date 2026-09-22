@@ -1,0 +1,17 @@
+{
+  "url": "https://news.shop.example/choose",
+  "title": "Before you go",
+  "text": "Before you go\nWould you rather hear from us less often?",
+  "forms": [
+    {
+      "id": 0,
+      "fields": [],
+      "buttons": [
+        { "id": 1, "label": "Unsubscribe from all emails" },
+        { "id": 2, "label": "Unsubscribe from this newsletter" }
+      ]
+    }
+  ],
+  "captcha": false,
+  "password": false
+}

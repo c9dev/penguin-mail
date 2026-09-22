@@ -1,0 +1,14 @@
+{
+  "url": "https://lists.example.com/leave?t=8",
+  "title": "Unsubscribe",
+  "text": "Unsubscribe\nProve you are not a robot, then press Unsubscribe.",
+  "forms": [
+    {
+      "id": 0,
+      "fields": [{ "id": 1, "kind": "email", "label": "Email address", "required": true }],
+      "buttons": [{ "id": 2, "label": "Unsubscribe" }]
+    }
+  ],
+  "captcha": true,
+  "password": false
+}

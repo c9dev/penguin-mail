@@ -1,0 +1,18 @@
+{
+  "url": "https://preferences.forum.example/p/12",
+  "title": "Email preferences",
+  "text": "Email preferences\nChoose what you want to hear about.",
+  "forms": [
+    {
+      "id": 0,
+      "fields": [
+        { "id": 1, "kind": "checkbox", "label": "Product updates", "checked": true },
+        { "id": 2, "kind": "checkbox", "label": "Weekly deals", "checked": true },
+        { "id": 3, "kind": "checkbox", "label": "Event invitations", "checked": true }
+      ],
+      "buttons": [{ "id": 4, "label": "Save preferences" }]
+    }
+  ],
+  "captcha": false,
+  "password": false
+}

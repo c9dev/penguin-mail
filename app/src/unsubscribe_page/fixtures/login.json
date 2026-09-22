@@ -1,0 +1,17 @@
+{
+  "url": "https://account.example.com/signin?next=/email",
+  "title": "Sign in to manage your email",
+  "text": "Sign in to manage your email\nSign in to change what we send you.",
+  "forms": [
+    {
+      "id": 0,
+      "fields": [
+        { "id": 1, "kind": "email", "label": "Email address", "required": true },
+        { "id": 2, "kind": "password", "label": "Password", "required": true }
+      ],
+      "buttons": [{ "id": 3, "label": "Sign in" }]
+    }
+  ],
+  "captcha": false,
+  "password": true
+}

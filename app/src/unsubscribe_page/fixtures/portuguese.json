@@ -1,0 +1,17 @@
+{
+  "url": "https://boletim.exemplo.pt/sair",
+  "title": "Cancelar subscrição",
+  "text": "Cancelar subscrição\nIndique o endereço onde recebe o nosso boletim.",
+  "forms": [
+    {
+      "id": 0,
+      "fields": [
+        { "id": 1, "kind": "text", "label": "Endereço de email", "required": true },
+        { "id": 2, "kind": "checkbox", "label": "Cancelar todas as subscrições" }
+      ],
+      "buttons": [{ "id": 3, "label": "Confirmar" }]
+    }
+  ],
+  "captcha": false,
+  "password": false
+}

@@ -33,6 +33,7 @@ mod translation;
 mod tray;
 mod ui;
 mod unsubscribe;
+mod unsubscribe_page;
 mod update;
 mod wanted;
 

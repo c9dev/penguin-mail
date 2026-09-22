@@ -1,0 +1,14 @@
+{
+  "url": "https://news.shop.example/unsubscribe?u=9f2",
+  "title": "Unsubscribe from Shop News",
+  "text": "Unsubscribe from Shop News\nPress the button below and we will stop sending you this newsletter.",
+  "forms": [
+    {
+      "id": 0,
+      "fields": [{ "id": 1, "kind": "hidden", "value": "9f2", "required": true }],
+      "buttons": [{ "id": 2, "label": "Unsubscribe" }]
+    }
+  ],
+  "captcha": false,
+  "password": false
+}
