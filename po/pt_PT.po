@@ -2273,7 +2273,7 @@ msgstr "Abrir o Penguin Mail"
 msgid "New Message"
 msgstr "Nova mensagem"
 
-#: app/src/tray.rs:159 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2185
+#: app/src/tray.rs:159 app/src/ui/sidebar.rs:740 app/src/ui/window.rs:2185
 msgid "Check for Mail"
 msgstr "Procurar correio"
 
@@ -4527,7 +4527,7 @@ msgstr "Caixas inteligentes"
 msgid "Accounts"
 msgstr "Contas"
 
-#: app/src/ui/sidebar.rs:481 app/src/ui/sidebar.rs:789
+#: app/src/ui/sidebar.rs:481 app/src/ui/sidebar.rs:796
 msgid "Show or hide this account's mailboxes"
 msgstr "Mostrar ou esconder as caixas desta conta"
 
@@ -4543,11 +4543,11 @@ msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}, {count} mensagem"
 msgstr[1] "{mailbox}, {count} mensagens"
 
-#: app/src/ui/sidebar.rs:575 app/src/ui/sidebar.rs:756
+#: app/src/ui/sidebar.rs:575 app/src/ui/sidebar.rs:763
 msgid "Move Up"
 msgstr "Mover para cima"
 
-#: app/src/ui/sidebar.rs:576 app/src/ui/sidebar.rs:757
+#: app/src/ui/sidebar.rs:576 app/src/ui/sidebar.rs:764
 msgid "Move Down"
 msgstr "Mover para baixo"
 
@@ -4555,11 +4555,11 @@ msgstr "Mover para baixo"
 msgid "Delete…"
 msgstr "Eliminar…"
 
-#: app/src/ui/sidebar.rs:626 app/src/ui/sidebar.rs:745
+#: app/src/ui/sidebar.rs:626 app/src/ui/sidebar.rs:752
 msgid "Rename…"
 msgstr "Mudar o nome…"
 
-#: app/src/ui/sidebar.rs:636 app/src/ui/sidebar.rs:755
+#: app/src/ui/sidebar.rs:636 app/src/ui/sidebar.rs:762
 msgid "Color"
 msgstr "Cor"
 
@@ -4579,39 +4579,43 @@ msgstr "O Gmail não responde; a tentar de novo"
 msgid "Downloading mail"
 msgstr "A transferir correio"
 
-#: app/src/ui/sidebar.rs:735
+#: app/src/ui/sidebar.rs:709
+msgid "Syncing stopped after an error; restart Penguin Mail to try again"
+msgstr "A sincronização parou depois de um erro; reinicie o Penguin Mail para tentar de novo"
+
+#: app/src/ui/sidebar.rs:742
 msgid "Automatic Reply…"
 msgstr "Resposta automática…"
 
-#: app/src/ui/sidebar.rs:736
+#: app/src/ui/sidebar.rs:743
 msgid "Signature…"
 msgstr "Assinatura…"
 
-#: app/src/ui/sidebar.rs:737
+#: app/src/ui/sidebar.rs:744
 msgid "Rules…"
 msgstr "Regras…"
 
-#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2188
+#: app/src/ui/sidebar.rs:746 app/src/ui/window.rs:2188
 msgid "Hide My Email…"
 msgstr "Ocultar o meu e-mail…"
 
-#: app/src/ui/sidebar.rs:742 app/src/ui/window.rs:1571
+#: app/src/ui/sidebar.rs:749 app/src/ui/window.rs:1571
 msgid "New Label…"
 msgstr "Nova etiqueta…"
 
-#: app/src/ui/sidebar.rs:760
+#: app/src/ui/sidebar.rs:767
 msgid "Sign In Again…"
 msgstr "Iniciar sessão de novo…"
 
-#: app/src/ui/sidebar.rs:763
+#: app/src/ui/sidebar.rs:770
 msgid "Remove Account…"
 msgstr "Remover conta…"
 
-#: app/src/ui/sidebar.rs:770
+#: app/src/ui/sidebar.rs:777
 msgid "Account options"
 msgstr "Opções da conta"
 
-#: app/src/ui/sidebar.rs:775
+#: app/src/ui/sidebar.rs:782
 msgid "Options for {account}"
 msgstr "Opções de {account}"
 

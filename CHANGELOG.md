@@ -15,6 +15,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - An S/MIME message whose certificate could not be checked for revocation
   is checked again when you open it next, so the card no longer says "could
   not check" until you restart.
+- An account whose syncing crashes starts again after half a minute. If it
+  crashes a second time, the sidebar marks the account instead of leaving
+  it silent with no new mail.
 
 ## 0.2.0 (2026-09-23)
 

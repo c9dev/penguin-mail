@@ -26,6 +26,7 @@ async fn setup() -> Setup {
     let config = EngineConfig {
         poll_interval: Duration::from_secs(60),
         max_backoff: Duration::from_millis(20),
+        restart_after: Duration::from_millis(20),
         ..EngineConfig::default()
     };
     let (engine, events) = SyncEngine::new(db.clone(), config);
@@ -132,4 +133,33 @@ async fn stopping_an_account_ends_its_loop() {
     s.engine.stop_account(1);
     assert!(!s.engine.is_running(1));
     assert!(s.engine.account(1).is_err());
+}
+
+/// The bug this pins: a panic ended the account's task, nothing watched
+/// it, and the account stopped syncing with the sidebar still saying all
+/// was well.
+#[tokio::test]
+async fn a_loop_that_crashes_starts_again_after_a_pause() {
+    let s = setup().await;
+    s.fake.panic_next(1);
+    s.engine.start_account(1, AccountServices::fake(Arc::clone(&s.fake)));
+    wait_for(&s.events, reached(AccountState::Ok)).await;
+    assert!(s.engine.is_running(1));
+}
+
+#[tokio::test]
+async fn a_loop_that_crashes_twice_stops_and_says_so() {
+    let s = setup().await;
+    s.fake.panic_next(2);
+    s.engine.start_account(1, AccountServices::fake(Arc::clone(&s.fake)));
+    wait_for(&s.events, reached(AccountState::Stopped)).await;
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while s.engine.is_running(1) {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .expect("the account loop kept running");
+    let all = s.db.read(accounts::list_accounts).await.unwrap();
+    assert_eq!(all[0].state, AccountState::Stopped);
 }

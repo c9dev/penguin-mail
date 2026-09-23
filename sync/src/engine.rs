@@ -1,9 +1,11 @@
 //! Runs one sync loop per account and reports changes on a channel.
 
 use std::collections::HashMap;
+use std::panic::AssertUnwindSafe;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
+use futures::FutureExt;
 use mailrs_domain::{AccountId, AccountState, ChangeEvent};
 use mailrs_store::Db;
 use tokio::sync::Notify;
@@ -35,6 +37,8 @@ pub struct EngineConfig {
     pub backfill_pause: Duration,
     /// The gap while the user is already waiting on Gmail.
     pub backfill_busy_pause: Duration,
+    /// How long a crashed account loop waits before its one restart.
+    pub restart_after: Duration,
 }
 
 impl Default for EngineConfig {
@@ -46,6 +50,7 @@ impl Default for EngineConfig {
             body_cache_bytes: DEFAULT_BODY_CACHE_BYTES,
             backfill_pause: Duration::from_millis(500),
             backfill_busy_pause: Duration::from_secs(5),
+            restart_after: Duration::from_secs(30),
         }
     }
 }
@@ -85,7 +90,7 @@ impl SyncEngine {
                 .with_limits(self.config.window_days, self.config.body_cache_bytes),
         );
         let poke = Arc::new(Notify::new());
-        let task = tokio::spawn(run_account(
+        let task = tokio::spawn(supervise(
             Arc::clone(&sync),
             Arc::clone(&poke),
             self.config.clone(),
@@ -168,6 +173,35 @@ fn classify(err: &SyncError) -> Failure {
             state: AccountState::BackingOff,
             retry_after: None,
         },
+    }
+}
+
+/// Runs the account's loop, and runs it again once, after a pause, if it
+/// panics. A second panic stops the account and records it as stopped, so
+/// the sidebar says so instead of the account going quiet.
+async fn supervise(sync: Arc<AccountSync>, poke: Arc<Notify>, config: EngineConfig) {
+    let mut crashed = false;
+    loop {
+        let run = run_account(Arc::clone(&sync), Arc::clone(&poke), config.clone());
+        if AssertUnwindSafe(run).catch_unwind().await.is_ok() {
+            // The loop ends by itself only when Google rejects the refresh
+            // token, and it has recorded that already.
+            return;
+        }
+        if crashed {
+            tracing::error!(
+                account = sync.account_id(),
+                "the sync loop crashed again; stopping the account"
+            );
+            report(&sync, AccountState::Stopped).await;
+            return;
+        }
+        crashed = true;
+        tracing::error!(
+            account = sync.account_id(),
+            "the sync loop crashed; starting it again"
+        );
+        tokio::time::sleep(config.restart_after).await;
     }
 }
 

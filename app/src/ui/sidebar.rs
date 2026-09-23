@@ -704,6 +704,10 @@ fn heading(account: &Account, name: Option<&String>) -> (gtk::ListBoxRow, gtk::I
         AccountState::Bootstrapping => {
             Some(("mail-send-receive-symbolic", gettext("Downloading mail")))
         }
+        AccountState::Stopped => Some((
+            "dialog-warning-symbolic",
+            gettext("Syncing stopped after an error; restart Penguin Mail to try again"),
+        )),
         AccountState::Ok => None,
     };
     let count = gtk::Label::builder()
@@ -717,7 +721,10 @@ fn heading(account: &Account, name: Option<&String>) -> (gtk::ListBoxRow, gtk::I
             .tooltip_text(&tip)
             .build();
         super::name(&image, &tip);
-        if account.state == AccountState::NeedsReauth {
+        if matches!(
+            account.state,
+            AccountState::NeedsReauth | AccountState::Stopped
+        ) {
             image.add_css_class("warning");
         } else {
             image.add_css_class("dim-label");

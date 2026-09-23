@@ -2147,7 +2147,7 @@ msgstr ""
 msgid "New Message"
 msgstr ""
 
-#: app/src/tray.rs:159 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2185
+#: app/src/tray.rs:159 app/src/ui/sidebar.rs:740 app/src/ui/window.rs:2185
 msgid "Check for Mail"
 msgstr ""
 
@@ -4316,7 +4316,7 @@ msgstr ""
 msgid "Accounts"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:481 app/src/ui/sidebar.rs:789
+#: app/src/ui/sidebar.rs:481 app/src/ui/sidebar.rs:796
 msgid "Show or hide this account's mailboxes"
 msgstr ""
 
@@ -4332,11 +4332,11 @@ msgid_plural "{mailbox}, {count} messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/sidebar.rs:575 app/src/ui/sidebar.rs:756
+#: app/src/ui/sidebar.rs:575 app/src/ui/sidebar.rs:763
 msgid "Move Up"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:576 app/src/ui/sidebar.rs:757
+#: app/src/ui/sidebar.rs:576 app/src/ui/sidebar.rs:764
 msgid "Move Down"
 msgstr ""
 
@@ -4344,11 +4344,11 @@ msgstr ""
 msgid "Delete…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:626 app/src/ui/sidebar.rs:745
+#: app/src/ui/sidebar.rs:626 app/src/ui/sidebar.rs:752
 msgid "Rename…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:636 app/src/ui/sidebar.rs:755
+#: app/src/ui/sidebar.rs:636 app/src/ui/sidebar.rs:762
 msgid "Color"
 msgstr ""
 
@@ -4368,39 +4368,43 @@ msgstr ""
 msgid "Downloading mail"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:735
+#: app/src/ui/sidebar.rs:709
+msgid "Syncing stopped after an error; restart Penguin Mail to try again"
+msgstr ""
+
+#: app/src/ui/sidebar.rs:742
 msgid "Automatic Reply…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:736
+#: app/src/ui/sidebar.rs:743
 msgid "Signature…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:737
+#: app/src/ui/sidebar.rs:744
 msgid "Rules…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2188
+#: app/src/ui/sidebar.rs:746 app/src/ui/window.rs:2188
 msgid "Hide My Email…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:742 app/src/ui/window.rs:1571
+#: app/src/ui/sidebar.rs:749 app/src/ui/window.rs:1571
 msgid "New Label…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:760
+#: app/src/ui/sidebar.rs:767
 msgid "Sign In Again…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:763
+#: app/src/ui/sidebar.rs:770
 msgid "Remove Account…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:770
+#: app/src/ui/sidebar.rs:777
 msgid "Account options"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:775
+#: app/src/ui/sidebar.rs:782
 msgid "Options for {account}"
 msgstr ""
 

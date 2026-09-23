@@ -51,15 +51,19 @@ pub enum AccountState {
     NeedsReauth,
     BackingOff,
     Offline,
+    /// The account's sync loop crashed twice in a row, and the engine gave
+    /// up on it until the app starts again.
+    Stopped,
 }
 
 impl AccountState {
-    pub const ALL: [AccountState; 5] = [
+    pub const ALL: [AccountState; 6] = [
         AccountState::Ok,
         AccountState::Bootstrapping,
         AccountState::NeedsReauth,
         AccountState::BackingOff,
         AccountState::Offline,
+        AccountState::Stopped,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -69,6 +73,7 @@ impl AccountState {
             AccountState::NeedsReauth => "needs_reauth",
             AccountState::BackingOff => "backing_off",
             AccountState::Offline => "offline",
+            AccountState::Stopped => "stopped",
         }
     }
 }

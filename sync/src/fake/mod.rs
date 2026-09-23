@@ -82,6 +82,9 @@ pub struct FakeState {
     pub page_size: usize,
     /// Errors returned by the next calls, one per call.
     pub failures: VecDeque<GmailError>,
+    /// How many of the next calls panic, as a bug in the code reading
+    /// Gmail's answer would.
+    pub panics: usize,
     /// Errors returned by the next sends after Gmail has sent the message,
     /// one per send, as when the connection drops before the answer comes
     /// back.
@@ -247,6 +250,7 @@ impl FakeGmail {
                 bodies: HashMap::new(),
                 page_size: 2,
                 failures: VecDeque::new(),
+                panics: 0,
                 lost: VecDeque::new(),
                 held: HashMap::new(),
                 usage: Usage::default(),
@@ -384,6 +388,11 @@ impl FakeGmail {
         self.with(|s| s.failures.push_back(err));
     }
 
+    /// Makes the next `count` calls panic.
+    pub fn panic_next(&self, count: usize) {
+        self.with(|s| s.panics += count);
+    }
+
     /// Holds the next call to `method`, such as `"users.threads.get"`,
     /// before it answers. A test uses this to change the mailbox while the
     /// app waits on Gmail: [`Held::entered`] resolves once the call is
@@ -449,6 +458,14 @@ impl FakeGmail {
     /// so the usage counts what the real client would have spent.
     async fn call(&self, method: &'static str, units: u32) -> Result<(), GmailError> {
         self.wait_if_held(method).await;
+        // The panic comes after the lock is let go, so the fake keeps
+        // answering the calls that follow.
+        let panics = self.with(|s| {
+            let panics = s.panics > 0;
+            s.panics = s.panics.saturating_sub(1);
+            panics
+        });
+        assert!(!panics, "the fake Gmail panicked on {method}, as a test asked");
         let mut waited = Duration::ZERO;
         if let Some(quota) = &self.quota {
             let priority = limiter::priority();
