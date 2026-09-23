@@ -56,6 +56,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - After the assistant unsubscribes you from a list, the open conversation
   stops offering Unsubscribe, as it does when you press the button
   yourself.
+- Unsubscribe finds a button that shows only a picture, or a Submit button
+  with no words on it, where it used to send you to the browser.
 
 ## 0.2.0 (2026-09-23)
 

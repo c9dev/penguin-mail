@@ -1,0 +1,19 @@
+{
+  "url": "https://news.shop.example/subscription?u=c41",
+  "title": "Your subscription",
+  "text": "Your subscription",
+  "forms": [
+    {
+      "id": 0,
+      "fields": [{ "id": 1, "kind": "text", "label": "Search" }],
+      "buttons": [{ "id": 2, "label": "Submit" }]
+    },
+    {
+      "id": 3,
+      "fields": [{ "id": 4, "kind": "hidden", "value": "c41" }],
+      "buttons": [{ "id": 5, "label": "Unsubscribe" }]
+    }
+  ],
+  "captcha": false,
+  "password": false
+}

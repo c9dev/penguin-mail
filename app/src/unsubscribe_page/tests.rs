@@ -24,6 +24,8 @@ const ALREADY_OFF: &str = include_str!("fixtures/already_off.json");
 const PORTUGUESE: &str = include_str!("fixtures/portuguese.json");
 const TWO_FORMS: &str = include_str!("fixtures/two_forms.json");
 const REASONS: &str = include_str!("fixtures/reasons.json");
+const ICON_BUTTON: &str = include_str!("fixtures/icon_button.json");
+const LINK_ONLY: &str = include_str!("fixtures/link_only.json");
 
 fn page(fixture: &str) -> PageForm {
     serde_json::from_str(fixture).expect("the fixture is a PageForm")
@@ -68,6 +70,26 @@ fn the_box_that_means_every_list_gets_ticked() {
     assert_eq!(plan.tick, [4], "only the box that means all of them");
     assert_eq!(plan.fill, [(1, ME.to_string())]);
     assert_eq!(plan.press, 5);
+}
+
+#[test]
+fn a_picture_button_is_pressed_by_its_alt_text_and_not_the_search() {
+    let plan = plan(ICON_BUTTON);
+    assert_eq!(plan.form, 3, "the search form's Submit is left alone");
+    assert_eq!(plan.press, 5);
+}
+
+#[test]
+fn a_page_that_is_one_link_gets_the_link_pressed() {
+    assert_eq!(
+        plan(LINK_ONLY),
+        Plan {
+            form: 0,
+            fill: Vec::new(),
+            tick: Vec::new(),
+            press: 1,
+        }
+    );
 }
 
 #[test]
@@ -288,6 +310,8 @@ fn the_rules_own_plans_pass_their_own_check() {
         PORTUGUESE,
         TWO_FORMS,
         REASONS,
+        ICON_BUTTON,
+        LINK_ONLY,
     ] {
         let page = page(fixture);
         assert!(valid(&page, &plan_of(&page), ME), "{}", page.url);

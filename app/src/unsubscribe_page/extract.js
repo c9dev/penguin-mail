@@ -154,10 +154,28 @@
     return "";
   };
 
+  // The ids aria-labelledby names, read as one line.
+  const named = (element) =>
+    (element.getAttribute("aria-labelledby") || "")
+      .split(/\s+/)
+      .map((id) => id && document.getElementById(id))
+      .filter((node) => node)
+      .map((node) => node.textContent)
+      .join(" ")
+      .trim();
+
+  // What a person reads on a button: its accessible name, its text, the
+  // value or tooltip it carries, and last the alt text or name of a
+  // picture inside it, which is all an icon button has. A submit input
+  // with no value shows the browser's own "Submit".
   const labelOfButton = (element) => {
     const aria = element.getAttribute("aria-label");
     if (aria && aria.trim()) {
       return cut(aria, LABEL);
+    }
+    const byId = named(element);
+    if (byId) {
+      return cut(byId, LABEL);
     }
     const text = (element.textContent || "").trim();
     if (text) {
@@ -168,6 +186,20 @@
       if (said && said.trim()) {
         return cut(said, LABEL);
       }
+    }
+    for (const inside of element.querySelectorAll("img[alt], [aria-label], [title]")) {
+      const said =
+        inside.getAttribute("alt") ||
+        inside.getAttribute("aria-label") ||
+        inside.getAttribute("title");
+      if (said && said.trim()) {
+        return cut(said, LABEL);
+      }
+    }
+    const tag = element.tagName.toLowerCase();
+    const type = (element.getAttribute("type") || "").toLowerCase();
+    if (tag === "input" && type === "submit") {
+      return "Submit";
     }
     return "";
   };

@@ -1,0 +1,14 @@
+{
+  "url": "https://news.shop.example/manage?u=77a",
+  "title": "Manage your subscription",
+  "text": "Manage your subscription\nSorry to see you go.\nUnsubscribe Privacy policy",
+  "forms": [
+    {
+      "id": 0,
+      "fields": [],
+      "buttons": [{ "id": 1, "label": "Unsubscribe" }]
+    }
+  ],
+  "captcha": false,
+  "password": false
+}

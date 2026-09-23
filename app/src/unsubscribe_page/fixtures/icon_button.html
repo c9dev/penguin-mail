@@ -1,0 +1,24 @@
+<!doctype html>
+<!--
+  Two buttons with no words of their own. The search form's submit button
+  has no value, so the browser draws "Submit" on it, and the unsubscribe
+  button is a picture whose alt text is the only thing that names it. The
+  matching icon_button.json is what extract.js reads off this page.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Your subscription</title>
+  </head>
+  <body>
+    <form method="get" action="/search">
+      <input type="search" name="q" placeholder="Search" />
+      <input type="submit" />
+    </form>
+    <h1>Your subscription</h1>
+    <form method="post" action="/leave">
+      <input type="hidden" name="token" value="c41" />
+      <button type="submit"><img src="leave.png" alt="Unsubscribe" /></button>
+    </form>
+  </body>
+</html>

@@ -610,6 +610,14 @@ mod tests {
                 "reasons",
                 include_str!("../../unsubscribe_page/fixtures/reasons.json"),
             ),
+            (
+                "icon_button",
+                include_str!("../../unsubscribe_page/fixtures/icon_button.json"),
+            ),
+            (
+                "link_only",
+                include_str!("../../unsubscribe_page/fixtures/link_only.json"),
+            ),
         ];
         let browser = WebkitBrowser::new();
         for (name, written) in pages {
@@ -660,6 +668,20 @@ mod tests {
         let after = glib::MainContext::default()
             .block_on(browser.submit(&plan, ME))
             .expect("asks_first takes the plan");
+        assert!(says_done(&after), "{}", after.text);
+
+        // A page with no form, only a link that reads as leaving. The
+        // link is pressed once and the page it leads to is read.
+        let read = glib::MainContext::default()
+            .block_on(browser.load(&format!("file://{DIR}link_only.html")))
+            .expect("link_only loads");
+        let Pick::Submit(plan) = pick(&read, ME) else {
+            panic!("the rules gave up on link_only: {read:?}");
+        };
+        let after = glib::MainContext::default()
+            .block_on(browser.submit(&plan, ME))
+            .expect("link_only takes the plan");
+        assert!(after.url.ends_with("link_only_done.html"), "{}", after.url);
         assert!(says_done(&after), "{}", after.text);
     }
 
