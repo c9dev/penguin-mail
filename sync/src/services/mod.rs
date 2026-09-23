@@ -8,12 +8,15 @@
 //! once the store holds them. Its errors and its pacing are neutral
 //! already.
 
+mod any;
 mod google;
 mod pacing;
 
+pub use any::{AnyAutoReply, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules};
 pub use google::Google;
 pub use pacing::{Priority, background, priority};
 
+use std::sync::Arc;
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
@@ -24,7 +27,9 @@ use mailrs_gmail::{
 };
 
 use crate::BackendError;
-use crate::api::{DraftRef, SavedDraft};
+use crate::api::{AccountClient, DraftRef, SavedDraft};
+#[cfg(any(test, feature = "fake"))]
+use crate::fake::FakeGmail;
 
 /// One address an account may send mail as: its own, or an alias whose
 /// owner has confirmed it. The server keeps a display name and a signature
@@ -52,6 +57,54 @@ pub struct MailCapabilities {
     pub categories: bool,
     /// Mail can be erased for good, not only moved to the Trash.
     pub delete_forever: bool,
+}
+
+/// The services one account is served by. A provider that lacks one leaves
+/// its field `None`, and the module that needs it answers
+/// `BackendError::Unsupported`.
+#[derive(Clone)]
+pub struct AccountServices {
+    pub mail: AnyMail,
+    pub calendar: Option<AnyCalendar>,
+    pub contacts: Option<AnyContacts>,
+    pub rules: AnyRules,
+    pub auto_reply: Option<AnyAutoReply>,
+    pub identities: AnyIdentities,
+}
+
+impl AccountServices {
+    /// A Google account: every service, all over the one client, which
+    /// spends one quota bucket for all of them.
+    pub fn google(client: AccountClient) -> Self {
+        let google = Google::new(Arc::new(client));
+        AccountServices {
+            mail: AnyMail::Google(google.clone()),
+            calendar: Some(AnyCalendar::Google(google.clone())),
+            contacts: Some(AnyContacts::Google(google.clone())),
+            rules: AnyRules::Google(google.clone()),
+            auto_reply: Some(AnyAutoReply::Google(google.clone())),
+            identities: AnyIdentities::Google(google),
+        }
+    }
+
+    /// The in-memory Gmail, for tests and the demo, through the same
+    /// adapter a real account uses.
+    #[cfg(any(test, feature = "fake"))]
+    pub fn fake(gmail: Arc<FakeGmail>) -> Self {
+        let google = Google::new(gmail);
+        AccountServices {
+            mail: AnyMail::Fake(google.clone()),
+            calendar: Some(AnyCalendar::Fake(google.clone())),
+            contacts: Some(AnyContacts::Fake(google.clone())),
+            rules: AnyRules::Fake(google.clone()),
+            auto_reply: Some(AnyAutoReply::Fake(google.clone())),
+            identities: AnyIdentities::Fake(google),
+        }
+    }
+
+    pub fn capabilities(&self) -> MailCapabilities {
+        self.mail.capabilities()
+    }
 }
 
 /// Listing, reading, changing and sending mail.
@@ -313,4 +366,50 @@ pub trait IdentityService: Send + Sync + 'static {
     /// with its display name and signature. An address the server would
     /// refuse to send from is left out.
     fn identities(&self) -> impl Future<Output = Result<Vec<SendAsAddress>, BackendError>> + Send;
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use mailrs_domain::Filter;
+
+    use super::*;
+    use crate::fake::FakeGmail;
+
+    #[test]
+    fn a_google_account_has_every_service() {
+        let services = AccountServices::fake(Arc::new(FakeGmail::new()));
+        assert!(services.calendar.is_some());
+        assert!(services.contacts.is_some());
+        assert!(services.auto_reply.is_some());
+        assert_eq!(
+            services.capabilities(),
+            MailCapabilities {
+                labels: true,
+                server_threads: true,
+                files_sent_mail: true,
+                categories: true,
+                delete_forever: true,
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn every_service_reaches_the_one_mailbox() {
+        let gmail = Arc::new(FakeGmail::new());
+        let services = AccountServices::fake(Arc::clone(&gmail));
+        services
+            .rules
+            .create_filter(&Filter::block("pest@example.com"))
+            .await
+            .unwrap();
+        assert_eq!(gmail.with(|s| s.filters.len()), 1);
+        let labels = services.mail.labels().await.unwrap();
+        assert!(labels.iter().any(|l| l.id == "INBOX"));
+        let identities = services.identities.identities().await.unwrap();
+        assert_eq!(identities[0].email, "me@example.com");
+        let calendar = services.calendar.as_ref().expect("Gmail has a calendar");
+        assert!(calendar.events_between(0, 1).await.unwrap().is_empty());
+    }
 }

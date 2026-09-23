@@ -63,6 +63,7 @@ pub use newsletters::Newsletters;
 pub use one_click::OneClick;
 pub use outbox::{Cancelled, Drained, Outbox, Posted};
 pub use services::{
+    AccountServices, AnyAutoReply, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules,
     AutoReplyService, CalendarService, ContactsService, Google, IdentityService, MailBackend,
     MailCapabilities, Priority, RulesService, SendAsAddress, background,
 };
