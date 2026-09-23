@@ -70,9 +70,12 @@ jobs:
           manifest-path: packaging/flatpak/io.github.c9dev.PenguinMail.yml
           cache-key: flatpak-builder-${{ hashFiles('Cargo.lock') }}
       # Starting the app with the manifest's permissions catches one it
-      # needs and lacks before Flathub's reviewers or a user do.
+      # needs and lacks before Flathub's reviewers or a user do. The
+      # container has no FUSE, so the run skips rofiles-fuse as the build
+      # step above does; without the flag flatpak-builder tries to start it
+      # through a host portal the container lacks.
       - name: Start it
         run: |
           command -v Xvfb dbus-run-session || dnf install -y xorg-x11-server-Xvfb dbus-tools
-          scripts/smoke-start.sh flatpak-builder --run flatpak_app \
+          scripts/smoke-start.sh flatpak-builder --disable-rofiles-fuse --run flatpak_app \
               packaging/flatpak/io.github.c9dev.PenguinMail.yml penguin-mail
