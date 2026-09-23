@@ -377,7 +377,7 @@ impl ThreadList {
     /// Updates the list with one splice, keeping the selected rows selected
     /// when they are still present.
     pub fn set_rows(&self, rows: Vec<Row>, empty_title: &str, empty_icon: &str) {
-        let keys: Vec<Key> = self.selected_rows().iter().map(key).collect();
+        let keys = self.selected_keys();
         self.muted.set(true);
         let old = self.rows.replace(rows);
         {
@@ -455,7 +455,7 @@ impl ThreadList {
     }
 
     fn replace_all(&self, rows: &[Row]) {
-        let keys: Vec<Key> = self.selected_rows().iter().map(key).collect();
+        let keys = self.selected_keys();
         self.muted.set(true);
         let objects: Vec<glib::BoxedAnyObject> = rows
             .iter()
@@ -466,22 +466,43 @@ impl ThreadList {
         self.muted.set(false);
     }
 
-    /// Selects exactly the rows whose keys are in `keys`.
-    fn reselect(&self, keys: &[Key]) {
-        self.selection.unselect_all();
+    /// The keys of the selected rows.
+    fn selected_keys(&self) -> HashSet<Key> {
         let rows = self.rows.borrow();
-        for (position, row) in rows.iter().enumerate() {
-            if keys.contains(&key(row)) {
-                self.selection.select_item(position as u32, false);
-            }
+        self.positions()
+            .into_iter()
+            .filter_map(|p| rows.get(p).map(|row| key(row)))
+            .collect()
+    }
+
+    /// Selects exactly the rows whose keys are in `keys`, in one change to
+    /// the selection rather than one per row.
+    fn reselect(&self, keys: &HashSet<Key>) {
+        let rows = self.rows.borrow();
+        let selected = gtk::Bitset::new_empty();
+        for position in positions_of(&rows, keys) {
+            selected.add(position);
+        }
+        let every = gtk::Bitset::new_range(0, rows.len() as u32);
+        self.selection.set_selection(&selected, &every);
+    }
+
+    /// The selected positions, in order, read off the selection itself
+    /// rather than asked of every row.
+    fn positions(&self) -> Vec<usize> {
+        let selected = self.selection.selection();
+        match gtk::BitsetIter::init_first(&selected) {
+            Some((rest, first)) => std::iter::once(first)
+                .chain(rest)
+                .map(|p| p as usize)
+                .collect(),
+            None => Vec::new(),
         }
     }
 
-    fn positions(&self) -> Vec<usize> {
-        (0..self.store.n_items())
-            .filter(|i| self.selection.is_selected(*i))
-            .map(|i| i as usize)
-            .collect()
+    /// How many rows are selected.
+    pub fn selected_count(&self) -> usize {
+        self.selection.selection().size() as usize
     }
 
     pub fn picked(&self) -> Picked {
@@ -548,17 +569,17 @@ impl ThreadList {
     /// The row to open once the selected rows leave the list: the first
     /// unselected row after them, else the last one before them.
     pub fn neighbour_of_selected(&self) -> Option<ThreadSummary> {
-        let rows = self.rows.borrow();
-        let positions = self.positions();
-        let (Some(&first), Some(&last)) = (positions.first(), positions.last()) else {
+        let selected = self.selection.selection();
+        if selected.is_empty() {
             return None;
-        };
-        rows.iter()
-            .enumerate()
-            .skip(last + 1)
-            .find(|(p, _)| !positions.contains(p))
-            .or_else(|| rows.iter().enumerate().take(first).next_back())
-            .map(|(_, row)| (**row).clone())
+        }
+        let rows = self.rows.borrow();
+        let at = neighbour(
+            rows.len(),
+            selected.minimum() as usize,
+            selected.maximum() as usize,
+        )?;
+        rows.get(at).map(|row| (**row).clone())
     }
 
     /// Keeps only the rows `keep` accepts, leaving the rest selected as they were.
@@ -691,8 +712,77 @@ fn menu_keys() -> gtk::ShortcutController {
     controller
 }
 
+/// The positions of the rows whose keys are in `keys`, in order.
+fn positions_of(rows: &[Row], keys: &HashSet<Key>) -> Vec<u32> {
+    if keys.is_empty() {
+        return Vec::new();
+    }
+    // Borrowed keys, so a row is looked up without copying its ids.
+    let wanted: HashSet<(AccountId, &str, Option<&str>)> = keys
+        .iter()
+        .map(|(account_id, id, message_id)| (*account_id, id.as_str(), message_id.as_deref()))
+        .collect();
+    rows.iter()
+        .enumerate()
+        .filter(|(_, row)| {
+            wanted.contains(&(row.account_id, row.id.as_str(), row.message_id.as_deref()))
+        })
+        .map(|(p, _)| p as u32)
+        .collect()
+}
+
+/// The row to open once the rows from `first` to `last` leave a list of
+/// `len`: the one after the last, else the one before the first.
+fn neighbour(len: usize, first: usize, last: usize) -> Option<usize> {
+    if last + 1 < len {
+        Some(last + 1)
+    } else {
+        first.checked_sub(1)
+    }
+}
+
 /// Where a row sorts in the list: newest first, ties broken as the store
 /// breaks them.
 fn order(row: &ThreadSummary) -> (i64, i64, &str) {
     (row.last_message_at, -row.account_id, row.id.as_str())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn row(id: &str) -> Row {
+        Rc::new(ThreadSummary {
+            account_id: 1,
+            id: id.into(),
+            ..ThreadSummary::default()
+        })
+    }
+
+    #[test]
+    fn a_selection_finds_its_rows_again_after_the_list_changes() {
+        let rows: Vec<Row> = ["a", "b", "c", "d"].into_iter().map(row).collect();
+        let keys: HashSet<Key> = [key(&rows[3]), key(&rows[1]), (1, "gone".into(), None)]
+            .into_iter()
+            .collect();
+        assert_eq!(positions_of(&rows, &keys), [1, 3]);
+        assert!(positions_of(&rows, &HashSet::new()).is_empty());
+    }
+
+    #[test]
+    fn fifteen_thousand_selected_rows_come_back_in_one_pass() {
+        let rows: Vec<Row> = (0..15_000).map(|n| row(&format!("t{n}"))).collect();
+        let keys: HashSet<Key> = rows[200..].iter().map(|r| key(r)).collect();
+        let found = positions_of(&rows, &keys);
+        assert_eq!(found.len(), 14_800);
+        assert_eq!(found.first(), Some(&200));
+    }
+
+    #[test]
+    fn the_next_row_opens_after_the_selection_or_else_the_one_before() {
+        assert_eq!(neighbour(5, 1, 2), Some(3));
+        assert_eq!(neighbour(5, 3, 4), Some(2));
+        assert_eq!(neighbour(5, 0, 4), None);
+        assert_eq!(neighbour(1, 0, 0), None);
+    }
 }

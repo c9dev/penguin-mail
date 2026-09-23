@@ -11,6 +11,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   window: pictures arrive several at a time, and the small pictures on
   attachment rows are made away from the window, where ten large photos
   used to hold it up for about a second and a half.
+- A list with thousands of conversations selected keeps up: new mail,
+  Escape and moving on after an action no longer look at every row
+  against every selected one, which with 14,800 selected took 167 ms.
 - Penguin Mail keeps at most 48 MB of pictures from mail it has shown,
   where it could hold 430 MB before.
 

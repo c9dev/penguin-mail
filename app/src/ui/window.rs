@@ -2178,12 +2178,12 @@ impl MainWindow {
 
     /// Whether Escape has a selection of several rows or a search to close.
     fn has_selection_to_clear(&self) -> bool {
-        self.list.selected_rows().len() > 1 || self.list.search_open()
+        self.list.selected_count() > 1 || self.list.search_open()
     }
 
     /// Escape: drops a selection of several rows, or else closes the search.
     fn clear_selection(&self) {
-        if self.list.selected_rows().len() > 1 {
+        if self.list.selected_count() > 1 {
             self.list.unselect();
             self.conversation.leave();
         } else if self.list.search_open() {
