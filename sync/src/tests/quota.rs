@@ -544,3 +544,41 @@ async fn the_inbox_check_lists_five_hundred_ids_a_call() {
     assert_eq!(usage.calls_to("users.messages.list"), 3);
     assert_eq!(usage.units, 15);
 }
+
+/// History names each new message with its thread, so replies arriving
+/// three to a conversation come in one `threads.get` per conversation.
+#[tokio::test]
+async fn history_fetches_new_replies_a_conversation_at_a_time() {
+    let h = harness().await;
+    let all = synced(&h.db, 1, 10, 1).await;
+    first_sync(&all).await;
+    let now = now_millis();
+    for thread in 0..10 {
+        for reply in 0..3 {
+            all[0].fake.deliver(MessageMeta {
+                account_id: all[0].id,
+                ..meta(
+                    &format!("a0t{thread}r{reply}"),
+                    &format!("a0t{thread}"),
+                    now + reply,
+                    &["INBOX", "UNREAD"],
+                )
+            });
+        }
+    }
+    reset(&all);
+
+    all[0].sync.incremental().await.unwrap();
+
+    let usage = total(&all);
+    report("history with 30 replies in 10 conversations", &usage);
+    // A message at a time this was 30 calls and 150 units.
+    assert_eq!(usage.calls_to("users.messages.get"), 0);
+    assert_eq!(usage.calls_to("users.threads.get"), 10);
+    let stored = h
+        .db
+        .read(|c| Ok(c.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get::<_, i64>(0))?))
+        .await
+        .unwrap();
+    assert_eq!(stored, 40, "every reply is stored, and nothing else");
+}

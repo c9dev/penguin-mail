@@ -7,6 +7,7 @@ use mailrs_gmail::{GmailError, HistoryChange};
 use mailrs_store::{accounts, labels, messages};
 
 use super::AccountSync;
+use super::fetch::Want;
 use super::labels::is_user_label;
 use crate::{GmailApi, SyncError};
 
@@ -136,37 +137,44 @@ impl<G: GmailApi> AccountSync<G> {
         changes: &[HistoryChange],
     ) -> Result<HashMap<String, MessageMeta>, SyncError> {
         let account_id = self.account_id;
-        let mut wanted: Vec<String> = changes
+        // History names each message's thread, so several new messages of
+        // one conversation share a `threads.get`.
+        let want = |id: &String, thread_id: &String| Want {
+            id: id.clone(),
+            thread_id: Some(thread_id.clone()),
+        };
+        let mut wanted: Vec<Want> = changes
             .iter()
             .filter_map(|change| match change {
-                HistoryChange::MessageAdded { id, .. } => Some(id.clone()),
+                HistoryChange::MessageAdded { id, thread_id } => Some(want(id, thread_id)),
                 _ => None,
             })
             .collect();
-        let into_inbox: Vec<String> = changes
+        let into_inbox: Vec<Want> = changes
             .iter()
             .filter_map(|change| match change {
-                HistoryChange::LabelsAdded { id, label_ids, .. }
-                    if label_ids.iter().any(|l| l == system_label::INBOX) =>
-                {
-                    Some(id.clone())
+                HistoryChange::LabelsAdded {
+                    id,
+                    thread_id,
+                    label_ids,
+                } if label_ids.iter().any(|l| l == system_label::INBOX) => {
+                    Some(want(id, thread_id))
                 }
                 _ => None,
             })
             .collect();
         if !into_inbox.is_empty() {
-            let candidates = into_inbox.clone();
+            let candidates: Vec<String> = into_inbox.iter().map(|w| w.id.clone()).collect();
             let known = self
                 .db
                 .read(move |c| messages::existing_ids(c, account_id, &candidates))
                 .await?;
-            wanted.extend(into_inbox.into_iter().filter(|id| !known.contains(id)));
+            wanted.extend(into_inbox.into_iter().filter(|w| !known.contains(&w.id)));
         }
-        wanted.sort();
-        wanted.dedup();
         Ok(self
-            .fetch_metadata(&wanted)
+            .fetch(wanted)
             .await?
+            .metas
             .into_iter()
             .map(|m| (m.id.clone(), m))
             .collect())
