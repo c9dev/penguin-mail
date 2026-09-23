@@ -173,8 +173,10 @@ impl std::fmt::Display for PageError {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Outcome {
     Done,
-    /// The form went in and the page said nothing either way.
-    Unclear,
+    /// The form went in and the page said nothing either way. The
+    /// address is where the press left the page, so whoever wants to see
+    /// what it said opens its answer rather than the form again.
+    Unclear(String),
     Failed(String),
     /// Nobody but the person can finish this one. The address is the
     /// page to open for them.

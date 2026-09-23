@@ -107,24 +107,20 @@ impl MainWindow {
             let Some((_, way)) = ticked.into_iter().next() else {
                 return;
             };
-            let (outcome, page) = match way {
+            let outcome = match way {
                 Way::Page(prepared) => match &browser {
-                    Some(browser) => (
-                        finish(&**browser, &prepared).await,
-                        Some(prepared.url.clone()),
-                    ),
+                    Some(browser) => finish(&**browser, &prepared).await,
                     None => return,
                 },
                 // Unsubscribe is insensitive while a line still reads, so
                 // nothing unread reaches here.
                 Way::Reading => return,
-                Way::OneClick | Way::Mail { .. } => (
+                Way::OneClick | Way::Mail { .. } => {
                     match this.leave_list(asked_on.account_id, method).await {
                         Ok(()) => Outcome::Done,
                         Err(err) => Outcome::Failed(err),
-                    },
-                    None,
-                ),
+                    }
+                }
             };
             // The person said yes to this page, so opening it is the rest
             // of what they asked for, not something to offer in a toast.
@@ -137,10 +133,11 @@ impl MainWindow {
                 view.mark_unsubscribed();
             }
             let said = summary(&[(sender, outcome.clone())]);
-            match (outcome, page) {
+            match outcome {
                 // The form went in and the page said nothing either way.
-                // Whoever wants to know can look at what it did say.
-                (Outcome::Unclear, Some(url)) => this.toast_opening(&said, &url),
+                // Whoever wants to know can look at what it did say,
+                // which is the page the press left, not the form.
+                Outcome::Unclear(url) => this.toast_opening(&said, &url),
                 _ => this.toast(&said),
             }
         });

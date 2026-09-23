@@ -128,7 +128,8 @@ pub async fn finish(browser: &dyn Browser, prepared: &Prepared) -> Outcome {
             }
             match browser.submit(plan, &prepared.address).await {
                 Ok(page) if rules::says_done(&page) => Outcome::Done,
-                Ok(_) => Outcome::Unclear,
+                Ok(page) if page.url.is_empty() => Outcome::Unclear(prepared.url.clone()),
+                Ok(page) => Outcome::Unclear(page.url),
                 Err(err) => Outcome::Failed(err.to_string()),
             }
         }

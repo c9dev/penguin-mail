@@ -408,11 +408,10 @@ impl<A: Accounts> Tools<A> {
     ) -> Ended {
         match finish(browser, prepared).await {
             PageOutcome::Done => ("done", None),
-            PageOutcome::Unclear => (
+            PageOutcome::Unclear(url) => (
                 "unclear",
                 Some(format!(
-                    "The form went in and {} did not say whether it worked.",
-                    prepared.url
+                    "The form went in and {url} did not say whether it worked."
                 )),
             ),
             PageOutcome::Failed(why) => ("failed", Some(why)),

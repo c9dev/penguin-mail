@@ -235,7 +235,7 @@ pub fn summary(outcomes: &[(String, Outcome)]) -> String {
     if let [(name, only)] = outcomes {
         return match only {
             Outcome::Done => fill(&gettext("Unsubscribed from {sender}"), &[("sender", name)]),
-            Outcome::Unclear => gettext("Sent, but the page did not say it worked"),
+            Outcome::Unclear(_) => gettext("Sent, but the page did not say it worked"),
             Outcome::OpenInBrowser(_) => gettext("The page needs you to finish it"),
             Outcome::Failed(why) => fill(
                 &gettext("Could not unsubscribe from {sender}: {reason}"),
@@ -439,7 +439,10 @@ mod tests {
             "Unsubscribed from 2. 1 needs you"
         );
         assert_eq!(
-            summary(&[left.clone(), ("Old Forum".to_string(), Outcome::Unclear)]),
+            summary(&[
+                left.clone(),
+                ("Old Forum".to_string(), Outcome::Unclear(String::new()))
+            ]),
             "2 lists need you"
         );
     }
@@ -455,7 +458,7 @@ mod tests {
             "Could not unsubscribe from Trail Notes: the page took longer than 20 seconds"
         );
         assert_eq!(
-            summary(&[(name, Outcome::Unclear)]),
+            summary(&[(name, Outcome::Unclear(String::new()))]),
             "Sent, but the page did not say it worked"
         );
     }

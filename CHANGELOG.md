@@ -41,6 +41,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   unsubscribe.
 - A page that answers Unsubscribe with the one word "Unsubscribed" now
   counts as done, where Penguin Mail said it could not tell.
+- Open Page, after "Sent, but the page did not say it worked", opens the
+  page the unsubscribe form led to, not the form you already sent.
 
 ## 0.2.0 (2026-09-23)
 

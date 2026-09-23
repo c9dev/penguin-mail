@@ -329,7 +329,21 @@ async fn what_the_button_says_comes_back_for_the_confirmation_to_name() {
 async fn a_page_that_says_nothing_after_the_form_went_in_is_unclear() {
     let browser = browser(ONE_BUTTON);
     let prepared = prepare(&browser, None, URL, ME).await;
-    assert_eq!(finish(&browser, &prepared).await, Outcome::Unclear);
+    assert_eq!(
+        finish(&browser, &prepared).await,
+        Outcome::Unclear(URL.to_string())
+    );
+}
+
+#[tokio::test]
+async fn an_unclear_page_is_named_by_where_the_press_took_it() {
+    let mut browser = browser(ONE_BUTTON);
+    browser.after.url = "https://news.shop.example/unsubscribe/sent".to_string();
+    let prepared = prepare(&browser, None, URL, ME).await;
+    assert_eq!(
+        finish(&browser, &prepared).await,
+        Outcome::Unclear("https://news.shop.example/unsubscribe/sent".to_string())
+    );
 }
 
 #[tokio::test]
