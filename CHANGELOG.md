@@ -16,6 +16,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - A Flag mailbox's count includes a starred conversation with one of its
   messages in the Trash, as the mailbox's list already did.
+- Reading mail in one account no longer pushes another account's messages
+  out of the offline cache. The Message Cache size applies to each account.
 
 ## 0.1.7 (2026-09-23)
 

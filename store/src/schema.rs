@@ -340,9 +340,13 @@ CREATE INDEX IF NOT EXISTS messages_by_order ON messages(date DESC, account_id, 
 "#,
     // Mail from given people, for the VIP mailboxes and their counts,
     // found without reading every message. The thread id makes the index
-    // enough to say which threads they wrote in.
+    // enough to say which threads they wrote in. Eviction holds each
+    // account to its own cap, so the index it totals and ranks bodies by
+    // leads with the account.
     r#"
 CREATE INDEX IF NOT EXISTS messages_by_sender ON messages(lower(from_addr), account_id, thread_id);
+DROP INDEX IF EXISTS bodies_by_access;
+CREATE INDEX IF NOT EXISTS bodies_by_account_access ON bodies(account_id, accessed_at DESC, message_id, size);
 "#,
 ];
 

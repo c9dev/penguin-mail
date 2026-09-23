@@ -155,7 +155,7 @@ impl<G: GmailApi> AccountSync<G> {
             .write(move |c| {
                 if messages::thread_id_of(c, account_id, &key)?.is_some() {
                     bodies::put_body(c, account_id, &key, &stored, now)?;
-                    bodies::evict_bodies(c, cap)?;
+                    bodies::evict_bodies(c, account_id, cap)?;
                 }
                 Ok(())
             })
