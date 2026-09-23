@@ -133,3 +133,18 @@ fn signing_in_again_moves_an_account_to_the_built_in_client() {
         SignInClient::BuiltIn
     );
 }
+
+#[test]
+fn a_new_account_is_served_by_gmail() {
+    let conn = open_in_memory().unwrap();
+    let id = accounts::insert_account(&conn, "me@example.com", 0).unwrap();
+    let listed = accounts::list_accounts(&conn).unwrap();
+    assert_eq!(listed[0].provider, mailrs_domain::Provider::Gmail);
+    let found = accounts::account_by_email(&conn, "me@example.com")
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        (found.id, found.provider),
+        (id, mailrs_domain::Provider::Gmail)
+    );
+}

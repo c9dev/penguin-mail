@@ -1,6 +1,6 @@
 //! Accounts and their sync cursors.
 
-use mailrs_domain::{Account, AccountId, AccountState, EpochMillis, SignInClient};
+use mailrs_domain::{Account, AccountId, AccountState, EpochMillis, Provider, SignInClient};
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::{Result, StoreError};
@@ -30,24 +30,26 @@ pub fn insert_account(conn: &Connection, email: &str, now: EpochMillis) -> Resul
 }
 
 pub fn list_accounts(conn: &Connection) -> Result<Vec<Account>> {
-    let mut stmt = conn.prepare("SELECT id, email, state FROM accounts ORDER BY id")?;
-    let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?;
+    let mut stmt = conn.prepare("SELECT id, email, state, provider FROM accounts ORDER BY id")?;
+    let rows = stmt.query_map([], |row| {
+        Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+    })?;
     rows.map(|row| {
-        let (id, email, state) = row?;
-        to_account(id, email, state)
+        let (id, email, state, provider) = row?;
+        to_account(id, email, state, provider)
     })
     .collect()
 }
 
 pub fn account_by_email(conn: &Connection, email: &str) -> Result<Option<Account>> {
-    let row: Option<(AccountId, String, String)> = conn
+    let row: Option<(AccountId, String, String, String)> = conn
         .query_row(
-            "SELECT id, email, state FROM accounts WHERE email = ?1",
+            "SELECT id, email, state, provider FROM accounts WHERE email = ?1",
             params![email],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
         )
         .optional()?;
-    row.map(|(id, email, state)| to_account(id, email, state))
+    row.map(|(id, email, state, provider)| to_account(id, email, state, provider))
         .transpose()
 }
 
@@ -155,12 +157,23 @@ pub fn start_generation(conn: &Connection, id: AccountId, history_id: u64) -> Re
     )?)
 }
 
-fn to_account(id: AccountId, email: String, state: String) -> Result<Account> {
+fn to_account(id: AccountId, email: String, state: String, provider: String) -> Result<Account> {
     let state = state
         .parse::<AccountState>()
         .map_err(|_| StoreError::Corrupt {
             column: "accounts.state",
             value: state.clone(),
         })?;
-    Ok(Account { id, email, state })
+    let provider = provider
+        .parse::<Provider>()
+        .map_err(|_| StoreError::Corrupt {
+            column: "accounts.provider",
+            value: provider.clone(),
+        })?;
+    Ok(Account {
+        id,
+        email,
+        state,
+        provider,
+    })
 }

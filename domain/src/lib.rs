@@ -89,6 +89,10 @@ pub struct Account {
     pub id: AccountId,
     pub email: String,
     pub state: AccountState,
+    /// Who serves the account's mail. An account saved before providers
+    /// existed was a Gmail account.
+    #[serde(default)]
+    pub provider: Provider,
 }
 
 /// Which Google client an account signed in with. A refresh token only

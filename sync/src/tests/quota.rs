@@ -241,6 +241,7 @@ fn scope(all: &[Synced]) -> Scope {
         id: m.id,
         email: format!("user{}@example.com", m.id),
         state: AccountState::Ok,
+        provider: mailrs_domain::Provider::Gmail,
     }))
 }
 

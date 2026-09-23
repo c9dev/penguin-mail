@@ -11,7 +11,7 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use anyhow::{Context, Result, anyhow, bail};
-use mailrs_domain::{Account, AccountId, AccountState, ChangeEvent, Target};
+use mailrs_domain::{Account, AccountId, AccountState, ChangeEvent, Provider, Target};
 use mailrs_gmail::{
     GMAIL_API_BASE, KeyringTokenStore, OAuthClient, TokenStore, authorize, built_in_client,
 };
@@ -677,10 +677,15 @@ async fn connect(
             .ok_or_else(|| anyhow!("the demo has no mailbox for {}", account.email))?;
         return Ok(AccountServices::fake(mailbox));
     }
-    let oauth = oauth.ok_or_else(|| anyhow!("Penguin Mail has no OAuth client configured yet"))?;
-    Ok(AccountServices::google(
-        connect_account(oauth, tokens, account).await?,
-    ))
+    match account.provider {
+        Provider::Gmail => {
+            let oauth =
+                oauth.ok_or_else(|| anyhow!("Penguin Mail has no OAuth client configured yet"))?;
+            Ok(AccountServices::google(
+                connect_account(oauth, tokens, account).await?,
+            ))
+        }
+    }
 }
 
 #[cfg(test)]
