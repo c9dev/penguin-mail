@@ -7,6 +7,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Reply on a new-mail notification answers that mail, and no longer the
+  conversation you opened while it was still loading.
 - The toast after moving mail to a label with an ampersand in its name,
   such as R&D, names the label again instead of showing nothing.
 

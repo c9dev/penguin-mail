@@ -53,6 +53,7 @@ mod outbox;
 mod pgp;
 mod reach;
 mod reminders;
+mod reveal;
 mod scheduled;
 mod senders;
 mod shortcuts;
@@ -73,12 +74,6 @@ pub(super) const BODY_FETCHES: usize = 10;
 /// download the same pictures again.
 const INLINE_IMAGE_CACHE: usize = 64;
 
-/// How long a reply from a notification waits for the thread and its body
-/// to arrive before it quotes the snippet instead.
-const REVEAL_WAIT: std::time::Duration = std::time::Duration::from_secs(5);
-
-/// How often that wait looks at the conversation.
-const REVEAL_STEP: std::time::Duration = std::time::Duration::from_millis(100);
 
 /// Whether a refresh should list the mailbox again. Listing a folder or a
 /// search means a Gmail search for every account on screen, so the window
@@ -2320,20 +2315,8 @@ impl MainWindow {
     /// Answers a thread once the conversation has it, with its body rather
     /// than its snippet where the wait is long enough for Gmail to answer.
     async fn reply_when_open(self: &Rc<Self>, account_id: AccountId, thread_id: &str) {
-        let deadline = std::time::Instant::now() + REVEAL_WAIT;
-        loop {
-            let quotable = self
-                .conversation
-                .read(|open| {
-                    open.account_id == account_id && open.thread_id == thread_id && open.quotable()
-                })
-                .unwrap_or(false);
-            if quotable || std::time::Instant::now() >= deadline {
-                break;
-            }
-            glib::timeout_future(REVEAL_STEP).await;
-        }
-        self.reply(&self.conversation, ReplyKind::Reply);
+        let waiting = Replying(Rc::clone(self));
+        reveal::reply_when_open(&waiting, account_id, thread_id, reveal::REVEAL_WAIT).await;
     }
 
     /// Screenshot hooks, honoured only in demo mode: `MAILRS_DEMO_OPEN`
@@ -2603,6 +2586,37 @@ impl MainWindow {
         });
         about.dialog.present(Some(&self.window));
         self.about.replace(Some(about));
+    }
+}
+
+/// The main window as a reply from a notification waits on it.
+struct Replying(Rc<MainWindow>);
+
+impl crate::wanted::Screen for Replying {
+    fn is_showing(&self, target: &Target) -> bool {
+        self.0.conversation.is_showing(target)
+    }
+}
+
+impl reveal::Waiting for Replying {
+    fn target(&self) -> Option<Target> {
+        self.0.conversation.read(OpenThread::target)
+    }
+
+    fn quotable(&self) -> bool {
+        self.0.conversation.read(OpenThread::quotable).unwrap_or(false)
+    }
+
+    fn sleep(&self, step: std::time::Duration) -> crate::wanted::Answer<'_, ()> {
+        Box::pin(glib::timeout_future(step))
+    }
+
+    fn reply(&self) {
+        self.0.reply(&self.0.conversation, ReplyKind::Reply);
+    }
+
+    fn toast(&self, text: String) {
+        self.0.toast(&text);
     }
 }
 
