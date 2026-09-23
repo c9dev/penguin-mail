@@ -5,6 +5,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Fixed
+
+- The toast after moving mail to a label with an ampersand in its name,
+  such as R&D, names the label again instead of showing nothing.
+
 ## 0.1.7 (2026-09-23)
 
 ### New

@@ -214,6 +214,12 @@ fn load_failed(err: &impl std::fmt::Display) -> String {
     with_reason(&gettext("Could not load mail: {reason}"), err, &[])
 }
 
+/// A toast's title as Pango markup. A toast reads its title as markup, so
+/// a label called "R&D" would otherwise show nothing at all.
+fn toast_title(text: &str) -> glib::GString {
+    glib::markup_escape_text(text)
+}
+
 /// The colour a flag toast names.
 fn flagged_message(color: mailrs_domain::FlagColor) -> String {
     use mailrs_domain::FlagColor;
@@ -668,7 +674,7 @@ impl MainWindow {
     fn toast(&self, text: &str) {
         self.toasts.add_toast(
             adw::Toast::builder()
-                .title(glib::markup_escape_text(text))
+                .title(toast_title(text))
                 .timeout(4)
                 .build(),
         );
@@ -1470,7 +1476,7 @@ impl MainWindow {
                 .or_else(|| done_message(&action, count, this.settings_with(|s| s.threading)))
             {
                 let toast = adw::Toast::builder()
-                    .title(done)
+                    .title(toast_title(&done))
                     .button_label(gettext("Undo"))
                     .timeout(5)
                     .build();
@@ -1908,7 +1914,7 @@ impl MainWindow {
                     let saved_to_downloads =
                         fill(&gettext("Saved {file} to Downloads"), &[("file", &name)]);
                     let toast = adw::Toast::builder()
-                        .title(glib::markup_escape_text(&saved_to_downloads))
+                        .title(toast_title(&saved_to_downloads))
                         .button_label(gettext("Open"))
                         .timeout(6)
                         .build();
@@ -2658,6 +2664,12 @@ mod tests {
         assert_eq!(toast(true, 3).as_deref(), Some("Muted 3 conversations"));
         assert_eq!(toast(false, 1).as_deref(), Some("Unmuted"));
         assert_eq!(toast(false, 2).as_deref(), Some("Unmuted 2 conversations"));
+    }
+
+    #[test]
+    fn a_toast_shows_an_ampersand_in_a_label_name_as_written() {
+        assert_eq!(toast_title("Moved to R&D"), "Moved to R&amp;D");
+        assert_eq!(toast_title("Archived"), "Archived");
     }
 
     #[test]
