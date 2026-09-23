@@ -331,14 +331,30 @@ impl Editor {
             .selection_bounds()
             .unwrap_or_else(|| (buffer.start_iter(), buffer.end_iter()));
         let (first, last) = (start.line(), end.line());
+        // Marks hold the range while the markers before it go.
+        let held = (
+            buffer.create_mark(None, &start, true),
+            buffer.create_mark(None, &end, false),
+        );
         self.busy.set(true);
         buffer.begin_user_action();
-        buffer.remove_all_tags(&start, &end);
+        // The markers go first, while their tag still says which characters
+        // they are. Taking the tags off first left "• " and "1. " behind as
+        // words the writer had never typed.
         for line in first..=last {
             richbuffer::set_kind(buffer, line, BlockKind::Paragraph);
         }
+        let (start, end) = (buffer.iter_at_mark(&held.0), buffer.iter_at_mark(&held.1));
+        buffer.remove_all_tags(&start, &end);
+        // The sweep took the paragraph tag as well, which the lines keep.
+        for line in first..=last {
+            richbuffer::set_kind(buffer, line, BlockKind::Paragraph);
+        }
+        richbuffer::renumber(buffer);
         buffer.end_user_action();
         self.busy.set(false);
+        buffer.delete_mark(&held.0);
+        buffer.delete_mark(&held.1);
     }
 
     /// Enter inside a list or quote: another item, or out of the list when
@@ -658,9 +674,10 @@ pub(super) mod checks {
         enter_carries_a_list_on_and_leaves_it_on_an_empty_item();
         a_link_goes_where_the_held_words_were();
         the_body_moves_to_markdown_and_back();
+        clearing_formatting_takes_the_list_markers_too();
     }
 
-    fn editor(markdown: &str) -> (gtk::TextView, Rc<Editor>) {
+    fn opened(markdown: &str) -> (gtk::TextView, Rc<Editor>) {
         let view = gtk::TextView::new();
         let editor = Editor::new(&view, ComposeFormat::Rich);
         editor.fill(markdown, None, &[]);
@@ -679,7 +696,7 @@ pub(super) mod checks {
     }
 
     fn a_style_goes_on_the_selection_and_comes_off_again() {
-        let (_view, editor) = editor("plain words");
+        let (_view, editor) = opened("plain words");
         select(&editor, 6, 11);
         editor.toggle("bold");
         assert_eq!(editor.markdown(), "plain **words**");
@@ -689,7 +706,7 @@ pub(super) mod checks {
     }
 
     fn a_style_chosen_at_the_cursor_goes_on_what_is_typed() {
-        let (_view, editor) = editor("plain");
+        let (_view, editor) = opened("plain");
         cursor_at(&editor, 5);
         editor.toggle("italic");
         assert!(editor.style_here().italic);
@@ -698,7 +715,7 @@ pub(super) mod checks {
     }
 
     fn lines_become_lists_and_headings() {
-        let (_view, editor) = editor("one\ntwo\nthree");
+        let (_view, editor) = opened("one\ntwo\nthree");
         select(&editor, 0, 9);
         editor.list(BlockKind::Numbered);
         assert_eq!(editor.rich().to_plain(), "1. one\n2. two\n3. three");
@@ -721,7 +738,7 @@ pub(super) mod checks {
     }
 
     fn enter_carries_a_list_on_and_leaves_it_on_an_empty_item() {
-        let (_view, editor) = editor("- soup");
+        let (_view, editor) = opened("- soup");
         let end = editor.buffer.end_iter();
         editor.buffer.place_cursor(&end);
         assert!(editor.enter());
@@ -736,16 +753,12 @@ pub(super) mod checks {
             [BlockKind::Bullet, BlockKind::Bullet, BlockKind::Paragraph]
         );
         // A plain line leaves Enter to the text view.
-        let (_view, editor) = editor_plain();
+        let (_view, editor) = opened("just words");
         assert!(!editor.enter());
     }
 
-    fn editor_plain() -> (gtk::TextView, Rc<Editor>) {
-        editor("just words")
-    }
-
     fn a_link_goes_where_the_held_words_were() {
-        let (_view, editor) = editor("see the menu today");
+        let (_view, editor) = opened("see the menu today");
         select(&editor, 4, 12);
         let held = editor.start_link().expect("rich text holds the words");
         assert_eq!(held.text, "the menu");
@@ -758,7 +771,7 @@ pub(super) mod checks {
     }
 
     fn the_body_moves_to_markdown_and_back() {
-        let (_view, editor) = editor("Hi **Ann**\n\n- soup\n- salad\n\n> quoted");
+        let (_view, editor) = opened("Hi **Ann**\n\n- soup\n- salad\n\n> quoted");
         let rich = editor.rich();
         editor.switch_format(ComposeFormat::Markdown, &[]);
         assert_eq!(editor.format(), ComposeFormat::Markdown);
@@ -769,5 +782,24 @@ pub(super) mod checks {
         editor.switch_format(ComposeFormat::Rich, &[]);
         assert_eq!(editor.rich(), rich);
         assert_eq!(editor.written().rich, Some(rich));
+    }
+
+    fn clearing_formatting_takes_the_list_markers_too() {
+        let (_view, editor) = opened("- **one**\n- two\n\n1. first\n2. second");
+        editor.clear();
+        assert_eq!(editor.rich().to_plain(), "one\ntwo\n\nfirst\nsecond");
+        assert!(
+            editor
+                .rich()
+                .blocks
+                .iter()
+                .all(|b| b.kind == BlockKind::Paragraph
+                    && b.spans.iter().all(|s| s.style == Style::default()))
+        );
+        // Part of a list: the numbers after it count again from one.
+        let (_view, editor) = opened("1. one\n2. two\n3. three");
+        select(&editor, 3, 5);
+        editor.clear();
+        assert_eq!(editor.rich().to_plain(), "one\n1. two\n2. three");
     }
 }
