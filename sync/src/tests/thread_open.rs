@@ -95,6 +95,31 @@ async fn opening_an_unchanged_thread_announces_nothing() {
 }
 
 #[tokio::test]
+async fn opening_a_thread_announces_a_label_change_but_not_a_new_label_order() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["UNREAD", "INBOX"]));
+    h.bootstrap_all().await;
+    h.sync.ensure_thread("t1").await.unwrap();
+    h.drain();
+
+    // Gmail lists the same labels in another order: nothing changed.
+    let relabel = |labels: &[&str]| {
+        h.fake.with(|s| {
+            s.messages.get_mut("a").unwrap().label_ids =
+                labels.iter().map(ToString::to_string).collect();
+        });
+    };
+    relabel(&["INBOX", "UNREAD", "INBOX"]);
+    h.sync.ensure_thread("t1").await.unwrap();
+    assert!(h.drain().is_empty());
+
+    relabel(&["INBOX"]);
+    h.sync.ensure_thread("t1").await.unwrap();
+    assert_eq!(h.drain().len(), 1);
+    assert_eq!(h.labels_of("a").await, ["INBOX"]);
+}
+
+#[tokio::test]
 async fn reading_a_cached_body_records_the_read() {
     let h = harness().await;
     h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
