@@ -7,13 +7,14 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::sync::{Arc, Mutex};
 
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{AccountId, EpochMillis, FlagColor, Folder, Target, system_label};
+use mailrs_domain::{AccountId, Applied, EpochMillis, FlagColor, Folder, Target, system_label};
 use mailrs_store::reminders::{self, Reminder};
 use mailrs_store::{Db, flags, follow_ups, labels, messages, threads};
 
+use crate::ops::undo_ops;
 use crate::{
-    AccountServices, AccountSync, BackendError, OneClick, Permitted, Relabelled, SyncEngine,
-    SyncError, TriageAction,
+    AccountServices, AccountSync, BackendError, MailOp, OneClick, Permitted, SyncEngine, SyncError,
+    TriageAction,
 };
 
 mod categorize;
@@ -172,11 +173,11 @@ struct Undo {
 /// One target the action changed, and how to take that change back.
 struct Reversal {
     target: Target,
-    /// What the action did to each of the target's messages. Undo takes
-    /// off what went on and puts back what came off, message by message,
-    /// so a message the action found already read or already archived is
-    /// left as it was.
-    changes: Vec<Relabelled>,
+    /// What the action gained and lost on each of the target's messages.
+    /// Undo puts back what went and takes off what came, message by
+    /// message, so a message the action found already read or already
+    /// archived is left as it was.
+    changes: Vec<Applied>,
     /// The folder the action left the target in, which `record` reads
     /// once the action has run. A target somewhere else by the time Undo
     /// comes round is one the world moved under, and Undo leaves it
@@ -382,8 +383,8 @@ impl<A: Accounts> MailActions<A> {
         &self,
         targets: &[Target],
         resolved: &[Result<Option<TriageAction>, String>],
-    ) -> Vec<Result<Vec<Relabelled>, String>> {
-        let mut results: Vec<Result<Vec<Relabelled>, String>> = vec![Ok(Vec::new()); targets.len()];
+    ) -> Vec<Result<Vec<Applied>, String>> {
+        let mut results: Vec<Result<Vec<Applied>, String>> = vec![Ok(Vec::new()); targets.len()];
         for (triage, members) in group_by_account(targets, resolved) {
             let batch: Vec<Target> = members.iter().map(|i| targets[*i].clone()).collect();
             let done = match self.sync(batch[0].account_id) {
@@ -560,12 +561,12 @@ impl<A: Accounts> MailActions<A> {
     }
 
     /// Takes back each message's own change in as few calls as the changes
-    /// allow: the messages of one account that need the same labels put
-    /// back and taken off share one `triage_all`, which sends a
-    /// `batchModify` once there are enough of them. A target fails when a
-    /// group holding one of its messages fails.
+    /// allow: the messages of one account whose change reverses the same
+    /// way share one `change_all`, which the backend sends as one batch
+    /// once there are enough of them. A target fails when a group holding
+    /// one of its messages fails.
     async fn reverse(&self, reversals: &[&Reversal]) -> Vec<Result<(), String>> {
-        type Key = (AccountId, Vec<String>, Vec<String>);
+        type Key = (AccountId, Vec<MailOp>);
         let mut groups: BTreeMap<Key, (Vec<Target>, BTreeSet<usize>)> = BTreeMap::new();
         let mut seen: BTreeSet<(AccountId, &str)> = BTreeSet::new();
         for (index, reversal) in reversals.iter().enumerate() {
@@ -574,8 +575,7 @@ impl<A: Accounts> MailActions<A> {
                 if !seen.insert((account_id, change.message_id.as_str())) {
                     continue;
                 }
-                let key = (account_id, change.removed.clone(), change.added.clone());
-                let (messages, owners) = groups.entry(key).or_default();
+                let (messages, owners) = groups.entry((account_id, undo_ops(change))).or_default();
                 messages.push(Target {
                     account_id,
                     thread_id: change.thread_id.clone(),
@@ -585,10 +585,12 @@ impl<A: Accounts> MailActions<A> {
             }
         }
         let mut results: Vec<Result<(), String>> = vec![Ok(()); reversals.len()];
-        for ((account_id, add, remove), (messages, owners)) in groups {
-            let back = TriageAction::Relabel { add, remove };
+        for ((account_id, ops), (messages, owners)) in groups {
             let done = match self.sync(account_id) {
-                Ok(sync) => sync.triage_all(&messages, &back).await.map(drop),
+                Ok(sync) => sync
+                    .change_all(&messages, &ops, &gettext("Change labels"))
+                    .await
+                    .map(drop),
                 Err(err) => Err(err),
             };
             if let Err(err) = done {
@@ -881,7 +883,7 @@ impl<A: Accounts> MailActions<A> {
 }
 
 /// Whether `change` fell on a message `target` names.
-fn covers(target: &Target, change: &Relabelled) -> bool {
+fn covers(target: &Target, change: &Applied) -> bool {
     target.thread_id == change.thread_id
         && target
             .message_id

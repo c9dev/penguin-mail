@@ -20,16 +20,16 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
-use mailrs_domain::{EpochMillis, Filter, MessageBody, MessageMeta, Vacation};
+use mailrs_domain::{EpochMillis, Filter, MessageBody, MessageMeta, Role, Vacation};
 use mailrs_gmail::{
     Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, HistoryPage, LabelColor,
     MessagePage, Person, Profile, RemoteLabel, Series,
 };
 
-use crate::BackendError;
 use crate::api::{AccountClient, DraftRef, SavedDraft};
 #[cfg(any(test, feature = "fake"))]
 use crate::fake::FakeGmail;
+use crate::{BackendError, MailOp};
 
 /// One address an account may send mail as: its own, or an alias whose
 /// owner has confirmed it. The server keeps a display name and a signature
@@ -57,6 +57,17 @@ pub struct MailCapabilities {
     pub categories: bool,
     /// Mail can be erased for good, not only moved to the Trash.
     pub delete_forever: bool,
+    /// The most messages one write may name.
+    pub batch_limit: usize,
+}
+
+/// How far a write got before the server refused the rest: the first
+/// `taken` messages went through. The caller waits, if the error is
+/// worth waiting out, and sends the rest.
+#[derive(Debug, Clone)]
+pub struct Unapplied {
+    pub taken: usize,
+    pub error: BackendError,
 }
 
 /// The services one account is served by. A provider that lacks one leaves
@@ -167,28 +178,18 @@ pub trait MailBackend: Send + Sync + 'static {
         page_token: Option<&str>,
     ) -> impl Future<Output = Result<HistoryPage, BackendError>> + Send;
 
-    fn modify_labels(
-        &self,
-        id: &str,
-        add: &[String],
-        remove: &[String],
-    ) -> impl Future<Output = Result<(), BackendError>> + Send;
+    /// The server's id for its mailbox with `role`, where it has one.
+    fn mailbox_for(&self, role: Role) -> Option<String>;
 
-    /// One label change over many messages in a single call, at most
-    /// [`mailrs_gmail::BATCH_LIMIT`] ids; the caller splits longer lists.
-    fn batch_modify(
+    /// Applies `ops` to `messages`, in order. On a refusal it says how
+    /// many messages from the front went through. `MailOp::Destroy`
+    /// comes alone and answers `BackendError::NeedsPermission` until the
+    /// account grants the delete permission.
+    fn apply(
         &self,
-        ids: &[String],
-        add: &[String],
-        remove: &[String],
-    ) -> impl Future<Output = Result<(), BackendError>> + Send;
-
-    /// Erases messages for good. Answers `BackendError::NeedsPermission`
-    /// until the account grants the delete permission.
-    fn delete_messages(
-        &self,
-        ids: &[String],
-    ) -> impl Future<Output = Result<(), BackendError>> + Send;
+        messages: &[String],
+        ops: &[MailOp],
+    ) -> impl Future<Output = Result<(), Unapplied>> + Send;
 
     /// Sends raw RFC 822 bytes. Returns the new message id.
     fn send(
@@ -391,6 +392,7 @@ mod tests {
                 files_sent_mail: true,
                 categories: true,
                 delete_forever: true,
+                batch_limit: 1000,
             }
         );
     }

@@ -4,11 +4,13 @@
 //! errors here, and Gmail's quota and pacing show nowhere else in the
 //! services.
 
+mod writes;
+
 use std::sync::Arc;
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
-use mailrs_domain::{EpochMillis, Filter, MessageBody, MessageMeta, Vacation};
+use mailrs_domain::{EpochMillis, Filter, MessageBody, MessageMeta, Role, Vacation, gmail};
 use mailrs_gmail::{
     Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, GmailError, HistoryPage,
     LabelColor, MessagePage, Person, Profile, RemoteLabel, SendAs, Series, html_to_text, limiter,
@@ -16,10 +18,10 @@ use mailrs_gmail::{
 
 use super::{
     AutoReplyService, CalendarService, ContactsService, IdentityService, MailBackend,
-    MailCapabilities, Priority, RulesService, SendAsAddress, priority,
+    MailCapabilities, Priority, RulesService, SendAsAddress, Unapplied, priority,
 };
-use crate::BackendError;
 use crate::api::{DraftRef, GmailApi, SavedDraft};
+use crate::{BackendError, MailOp};
 
 /// A Google account's services, all over the one client `G`, which spends
 /// one quota bucket for all of them.
@@ -61,7 +63,16 @@ impl<G: GmailApi> MailBackend for Google<G> {
             files_sent_mail: true,
             categories: true,
             delete_forever: true,
+            batch_limit: mailrs_gmail::BATCH_LIMIT,
         }
+    }
+
+    fn mailbox_for(&self, role: Role) -> Option<String> {
+        gmail::label_of_role(role).map(str::to_string)
+    }
+
+    async fn apply(&self, messages: &[String], ops: &[MailOp]) -> Result<(), Unapplied> {
+        self.write(messages, ops).await
     }
 
     fn person_waiting(&self) -> bool {
@@ -134,28 +145,6 @@ impl<G: GmailApi> MailBackend for Google<G> {
             Err(GmailError::NotFound) => Err(BackendError::StateLost),
             Err(err) => Err(err.into()),
         }
-    }
-
-    async fn modify_labels(
-        &self,
-        id: &str,
-        add: &[String],
-        remove: &[String],
-    ) -> Result<(), BackendError> {
-        Ok(paced(self.gmail.modify_labels(id, add, remove)).await?)
-    }
-
-    async fn batch_modify(
-        &self,
-        ids: &[String],
-        add: &[String],
-        remove: &[String],
-    ) -> Result<(), BackendError> {
-        Ok(paced(self.gmail.batch_modify(ids, add, remove)).await?)
-    }
-
-    async fn delete_messages(&self, ids: &[String]) -> Result<(), BackendError> {
-        Ok(paced(self.gmail.delete_messages(ids)).await?)
     }
 
     async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, BackendError> {
@@ -426,6 +415,7 @@ mod tests {
                 files_sent_mail: true,
                 categories: true,
                 delete_forever: true,
+                batch_limit: 1000,
             }
         );
     }

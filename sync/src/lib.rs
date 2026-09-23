@@ -17,6 +17,7 @@ pub mod lock;
 pub mod mailbox;
 pub mod newsletters;
 mod one_click;
+mod ops;
 pub mod outbox;
 pub mod sign_in;
 pub mod services;
@@ -38,7 +39,7 @@ mod tests;
 pub const WAIT_CEILING: std::time::Duration = std::time::Duration::from_secs(60);
 
 pub use account::{
-    AccountSync, DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS, FETCH_CONCURRENCY, Relabelled,
+    AccountSync, DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS, FETCH_CONCURRENCY,
 };
 pub use actions::{
     Accounts, Categorized, Failure, History, MailAction, MailActions, NewLabels, Outcome, Returned,
@@ -59,11 +60,12 @@ pub use mailbox::{
 };
 pub use newsletters::Newsletters;
 pub use one_click::OneClick;
+pub use ops::MailOp;
 pub use outbox::{Cancelled, Drained, Outbox, Posted};
 pub use services::{
     AccountServices, AnyAutoReply, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules,
     AutoReplyService, CalendarService, ContactsService, Google, IdentityService, MailBackend,
-    MailCapabilities, Priority, RulesService, SendAsAddress, background,
+    MailCapabilities, Priority, RulesService, SendAsAddress, Unapplied, background,
 };
 pub use settings::{AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, Permitted};
 pub use triage::TriageAction;

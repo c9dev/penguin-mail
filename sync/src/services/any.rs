@@ -7,7 +7,7 @@
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
-use mailrs_domain::{EpochMillis, Filter, MessageBody, MessageMeta, Vacation};
+use mailrs_domain::{EpochMillis, Filter, MessageBody, MessageMeta, Role, Vacation};
 use mailrs_gmail::{
     Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, HistoryPage, LabelColor,
     MessagePage, Person, Profile, RemoteLabel, Series,
@@ -15,12 +15,12 @@ use mailrs_gmail::{
 
 use super::{
     AutoReplyService, CalendarService, ContactsService, Google, IdentityService, MailBackend,
-    MailCapabilities, RulesService, SendAsAddress,
+    MailCapabilities, RulesService, SendAsAddress, Unapplied,
 };
-use crate::BackendError;
 use crate::api::{AccountClient, DraftRef, SavedDraft};
 #[cfg(any(test, feature = "fake"))]
 use crate::fake::FakeGmail;
+use crate::{BackendError, MailOp};
 
 /// Awaits `$method` on whichever adapter `$self`, an `$enum`, holds.
 macro_rules! forward {
@@ -90,6 +90,18 @@ impl MailBackend for AnyMail {
         }
     }
 
+    fn mailbox_for(&self, role: Role) -> Option<String> {
+        match self {
+            AnyMail::Google(adapter) => adapter.mailbox_for(role),
+            #[cfg(any(test, feature = "fake"))]
+            AnyMail::Fake(adapter) => adapter.mailbox_for(role),
+        }
+    }
+
+    async fn apply(&self, messages: &[String], ops: &[MailOp]) -> Result<(), Unapplied> {
+        forward!(AnyMail, self, apply(messages, ops))
+    }
+
     fn person_waiting(&self) -> bool {
         match self {
             AnyMail::Google(adapter) => adapter.person_waiting(),
@@ -151,28 +163,6 @@ impl MailBackend for AnyMail {
         page_token: Option<&str>,
     ) -> Result<HistoryPage, BackendError> {
         forward!(AnyMail, self, history(start_history_id, page_token))
-    }
-
-    async fn modify_labels(
-        &self,
-        id: &str,
-        add: &[String],
-        remove: &[String],
-    ) -> Result<(), BackendError> {
-        forward!(AnyMail, self, modify_labels(id, add, remove))
-    }
-
-    async fn batch_modify(
-        &self,
-        ids: &[String],
-        add: &[String],
-        remove: &[String],
-    ) -> Result<(), BackendError> {
-        forward!(AnyMail, self, batch_modify(ids, add, remove))
-    }
-
-    async fn delete_messages(&self, ids: &[String]) -> Result<(), BackendError> {
-        forward!(AnyMail, self, delete_messages(ids))
     }
 
     async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, BackendError> {

@@ -1037,7 +1037,9 @@ msgstr ""
 
 #: app/src/core.rs:176
 msgid "Penguin Mail could not update its mail store, and kept the old one."
-msgstr "O Penguin Mail não conseguiu atualizar o arquivo de correio e manteve o anterior."
+msgstr ""
+"O Penguin Mail não conseguiu atualizar o arquivo de correio e manteve o "
+"anterior."
 
 #: app/src/core.rs:573
 msgid "Demo mode cannot add real accounts."
@@ -6223,11 +6225,11 @@ msgstr "Está por ler"
 msgid "Is flagged"
 msgstr "Está marcada"
 
-#: sync/src/account/writes.rs:555
+#: sync/src/account/writes.rs:473
 msgid "Gmail is busy. Still working on {conversations}."
 msgstr "O Gmail está ocupado. Ainda a trabalhar em {conversations}."
 
-#: sync/src/account/writes.rs:570
+#: sync/src/account/writes.rs:488
 msgid ""
 "Gmail is busy, so {action} did not go through for {conversations}. Try again "
 "in a moment."
@@ -6235,7 +6237,7 @@ msgstr ""
 "O Gmail está ocupado, por isso {action} não chegou a acontecer em "
 "{conversations}. Tente de novo daqui a pouco."
 
-#: sync/src/account/writes.rs:579
+#: sync/src/account/writes.rs:497
 msgid ""
 "Gmail stayed busy for {waited}, so {action} did not go through for "
 "{conversations}."
@@ -6243,38 +6245,38 @@ msgstr ""
 "O Gmail esteve ocupado durante {waited}, por isso {action} não chegou a "
 "acontecer em {conversations}."
 
-#: sync/src/account/writes.rs:586
+#: sync/src/account/writes.rs:504
 msgid "{action} failed: {reason}"
 msgstr "{action} falhou: {reason}"
 
-#: sync/src/account/writes.rs:607
+#: sync/src/account/writes.rs:522
 msgid "a moment"
 msgstr "um momento"
 
-#: sync/src/account/writes.rs:609
+#: sync/src/account/writes.rs:524
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] "{count} segundo"
 msgstr[1] "{count} segundos"
 
-#: sync/src/account/writes.rs:614
+#: sync/src/account/writes.rs:529
 msgid "a minute"
 msgstr "um minuto"
 
-#: sync/src/actions.rs:114
+#: sync/src/actions.rs:115 sync/src/actions.rs:591
 msgid "Change labels"
 msgstr "Alterar etiquetas"
 
-#: sync/src/actions.rs:313
+#: sync/src/actions.rs:314
 msgid "Delete Forever failed: {reason}"
 msgstr "Eliminar definitivamente falhou: {reason}"
 
-#: sync/src/actions.rs:483
+#: sync/src/actions.rs:484
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr ""
 "Esta mensagem mudou de sítio entretanto, por isso Anular deixou-a onde está."
 
-#: sync/src/actions.rs:544 sync/src/actions.rs:596
+#: sync/src/actions.rs:545 sync/src/actions.rs:598
 msgid "Could not undo: {reason}"
 msgstr "Não foi possível anular: {reason}"
 
@@ -6427,39 +6429,39 @@ msgstr "{problem}. Nova tentativa {when}"
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. O Penguin Mail deixou de tentar"
 
-#: sync/src/triage.rs:63
+#: sync/src/triage.rs:41
 msgid "Mark read"
 msgstr "Marcar como lida"
 
-#: sync/src/triage.rs:64
+#: sync/src/triage.rs:42
 msgid "Mark unread"
 msgstr "Marcar como não lida"
 
-#: sync/src/triage.rs:65
+#: sync/src/triage.rs:43
 msgid "Star"
 msgstr "Marcar com estrela"
 
-#: sync/src/triage.rs:66
+#: sync/src/triage.rs:44
 msgid "Unstar"
 msgstr "Retirar a estrela"
 
-#: sync/src/triage.rs:68
+#: sync/src/triage.rs:46
 msgid "Add label {label}"
 msgstr "Adicionar a etiqueta {label}"
 
-#: sync/src/triage.rs:71
+#: sync/src/triage.rs:49
 msgid "Remove label {label}"
 msgstr "Remover a etiqueta {label}"
 
-#: sync/src/triage.rs:74
+#: sync/src/triage.rs:52
 msgid "Move out of trash"
 msgstr "Tirar do lixo"
 
-#: sync/src/triage.rs:75
+#: sync/src/triage.rs:53
 msgid "Mark as junk"
 msgstr "Marcar como spam"
 
-#: sync/src/triage.rs:76
+#: sync/src/triage.rs:54
 msgid "Mark as not junk"
 msgstr "Marcar como não sendo spam"
 

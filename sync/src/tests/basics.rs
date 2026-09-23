@@ -40,9 +40,27 @@ fn backoff_jitter_stays_within_twenty_percent() {
 }
 
 #[test]
-fn triage_actions_parse_and_map_to_labels() {
+fn triage_actions_parse_and_map_to_operations() {
     let archive: TriageAction = "archive".parse().unwrap();
-    assert_eq!(archive.label_delta(), (vec![], vec!["INBOX".to_string()]));
+    let gmail = crate::Google::new(std::sync::Arc::new(crate::fake::FakeGmail::new()));
+    let roles: crate::ops::Roles = mailrs_domain::gmail::ROLES
+        .iter()
+        .map(|(label, role)| (*role, label.to_string()))
+        .collect();
+    let ops = |action: &TriageAction| {
+        crate::ops::ops_for(action, &crate::MailBackend::capabilities(&gmail), &roles).unwrap()
+    };
+    assert_eq!(
+        ops(&archive),
+        [crate::MailOp::RemoveFromMailbox("INBOX".into())]
+    );
+    assert_eq!(
+        ops(&TriageAction::Trash),
+        [
+            crate::MailOp::AddToMailbox("TRASH".into()),
+            crate::MailOp::RemoveFromMailbox("INBOX".into()),
+        ]
+    );
     assert_eq!(
         "label:Label_1".parse::<TriageAction>().unwrap(),
         TriageAction::AddLabel("Label_1".into())
@@ -50,10 +68,6 @@ fn triage_actions_parse_and_map_to_labels() {
     assert_eq!(
         "unlabel:Label_1".parse::<TriageAction>().unwrap(),
         TriageAction::RemoveLabel("Label_1".into())
-    );
-    assert_eq!(
-        TriageAction::Trash.label_delta(),
-        (vec!["TRASH".to_string()], vec!["INBOX".to_string()])
     );
     assert_eq!(TriageAction::MarkRead.describe(), "Mark read");
     assert!("explode".parse::<TriageAction>().is_err());
