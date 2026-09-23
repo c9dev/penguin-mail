@@ -1,8 +1,9 @@
 # What to enter in Google Cloud
 
-Values for each field of the Google Auth Platform pages, in the order
-[docs/setup.md](setup.md) visits them. Anything marked optional can stay
-empty for personal use.
+Values for each field of the Google Auth Platform pages, for a copy you
+build with a Google client of your own, as
+[docs/setup.md](setup.md#building-your-own-copy) describes. Anything marked
+optional can stay empty for personal use.
 
 ## Branding
 
@@ -45,7 +46,9 @@ click through Google's "unverified app" notice once per account.
 | Application type | Desktop app |
 | Name | `Penguin Mail` |
 
-Copy the client ID and secret into Penguin Mail's welcome screen.
+Put the client ID and secret in `packaging/secrets.env` as
+`PENGUIN_MAIL_GOOGLE_CLIENT_ID` and `PENGUIN_MAIL_GOOGLE_CLIENT_SECRET`, then
+run `scripts/install.sh`.
 
 An existing project set up as mailrs keeps working. To show the new name
 on the consent screen, change the App name under Branding to `Penguin Mail`.
