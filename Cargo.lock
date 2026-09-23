@@ -2122,6 +2122,7 @@ dependencies = [
  "dirs",
  "futures",
  "mail-builder",
+ "mail-parser",
  "mailrs-domain",
  "mailrs-gmail",
  "mailrs-store",

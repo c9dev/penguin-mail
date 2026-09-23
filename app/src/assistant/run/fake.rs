@@ -528,6 +528,7 @@ impl Harness {
         for message in mail {
             gmail.seed(message);
         }
+        gmail.keep_sent_copies(account_id);
         let (events, heard) = async_channel::unbounded();
         let sync = Arc::new(AccountSync::new(
             account_id,
