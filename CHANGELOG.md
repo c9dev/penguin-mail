@@ -10,6 +10,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - A signed message shows only what its signature covers. A part somebody
   added beside the signed one, or text written around a signed block, no
   longer appears under "Signed by".
+- An S/MIME message encrypts only to certificates you trust. Opening a
+  stranger's signed message used to store their certificate, and the next
+  message to the address it named could go to them.
 
 ## 0.1.7 (2026-09-23)
 

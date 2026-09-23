@@ -1402,8 +1402,9 @@ msgid "Encrypt this message to the recipients' certificates"
 msgstr "Encriptar esta mensagem para os certificados dos destinatários"
 
 #: app/src/protection.rs:304
-msgid "gpg holds no key and gpgsm no certificate for {addresses}."
-msgstr "O gpg não tem chave nem o gpgsm certificado para {addresses}."
+msgid "gpg holds no key and gpgsm no trusted certificate for {addresses}."
+msgstr ""
+"O gpg não tem chave nem o gpgsm certificado de confiança para {addresses}."
 
 #: app/src/protection.rs:312
 msgid "A message goes out under one standard or the other. {pgp} {smime}"
@@ -2023,23 +2024,28 @@ msgstr "1 GB"
 msgid "4 GB"
 msgstr "4 GB"
 
-#: app/src/smime.rs:83
-msgid "Add a recipient whose certificate gpgsm holds."
-msgstr "Adicione um destinatário de quem o gpgsm tenha o certificado."
+#: app/src/smime.rs:86
+msgid "Add a recipient whose certificate gpgsm trusts."
+msgstr ""
+"Adicione um destinatário cujo certificado o gpgsm considere de confiança."
 
-#: app/src/smime.rs:92
-msgid "gpgsm holds no certificate for {addresses}."
-msgstr "O gpgsm não tem certificado para {addresses}."
+#: app/src/smime.rs:96
+msgid ""
+"gpgsm holds no trusted certificate for {addresses}. A certificate that only "
+"arrived in mail does not count."
+msgstr ""
+"O gpgsm não tem certificado de confiança para {addresses}. Um certificado "
+"que só chegou por correio não conta."
 
-#: app/src/smime.rs:110
+#: app/src/smime.rs:116
 msgid "gpgsm holds no certificate for any of the addresses you send from."
 msgstr "O gpgsm não tem certificado para nenhum dos endereços de onde envia."
 
-#: app/src/smime.rs:112
+#: app/src/smime.rs:118
 msgid "gpgsm holds a certificate for {addresses}."
 msgstr "O gpgsm tem certificado para {addresses}."
 
-#: app/src/smime.rs:116
+#: app/src/smime.rs:122
 msgid "gpgsm holds a certificate for {addresses}, and none for {without}."
 msgstr "O gpgsm tem certificado para {addresses} e nenhum para {without}."
 

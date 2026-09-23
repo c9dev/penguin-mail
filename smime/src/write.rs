@@ -41,15 +41,26 @@ impl Smime {
     /// The envelope names every recipient by certificate, and CMS has no
     /// way to leave one out, so nothing here can carry a blind copy.
     ///
-    /// Every address in `to` needs a certificate gpgsm can use.
-    /// [`Smime::certificates_for`] answers that before the message is
-    /// written, which is a kinder moment to find out than this one.
+    /// Every address in `to` needs a certificate whose chain this computer
+    /// trusts, and the message goes to that certificate by its
+    /// fingerprint. A certificate that only arrived in somebody's mail
+    /// never counts; [`crate::certificates::Job::Encrypt`] says why.
+    /// [`Smime::certificates_for`] answers the same question before the
+    /// message is written, which is a kinder moment to find out than this
+    /// one.
     pub fn encrypt(
         &self,
         part: &[u8],
         to: &[String],
         sign_as: Option<&str>,
     ) -> Result<Vec<u8>, SmimeError> {
+        let mut fingerprints = Vec::new();
+        for recipient in self.certificates_for(to)? {
+            match recipient.certificate {
+                Some(certificate) => fingerprints.push(certificate.fingerprint),
+                None => return Err(SmimeError::NoCertificateFor(recipient.address)),
+            }
+        }
         // gpgsm signs or encrypts in one run, never both, which is also
         // what RFC 8551 describes: the signed entity is the thing that gets
         // enveloped.
@@ -57,15 +68,15 @@ impl Smime {
             Some(from) => self.sign(part, from)?,
             None => mailrs_pgp::mime::canonical(part),
         };
-        let run = self.run(&inside, |command| {
+        // No `--always-trust`: gpgsm checks each chain again, revocation
+        // included, and refuses a recipient whose chain fails. Naming the
+        // certificate by fingerprint keeps gpgsm from choosing between two
+        // that carry the same address. Encrypting needs nobody's secret
+        // key, so nothing here may ask the person for anything.
+        let run = self.read_only(&inside, |command| {
             command.arg("--encrypt");
-            // gpgsm otherwise refuses to encrypt to a certificate whose
-            // chain reaches no root this computer trusts, and a batch run
-            // cannot ask. How far a chain reaches belongs in front of the
-            // person, not in a refusal to send.
-            command.arg("--always-trust");
-            for address in to {
-                command.arg("--recipient").arg(user_id(address));
+            for fingerprint in &fingerprints {
+                command.arg("--recipient").arg(fingerprint);
             }
         })?;
         if !run.ok {

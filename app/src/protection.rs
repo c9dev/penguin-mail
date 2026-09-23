@@ -301,7 +301,7 @@ fn neither(
         .collect();
     if !unreachable.is_empty() {
         return fill(
-            &gettext("gpg holds no key and gpgsm no certificate for {addresses}."),
+            &gettext("gpg holds no key and gpgsm no trusted certificate for {addresses}."),
             &[("addresses", &listed(&unreachable))],
         );
     }
@@ -1010,7 +1010,7 @@ mod tests {
         };
         assert_eq!(
             encrypting(&held, false),
-            Err("gpg holds no key and gpgsm no certificate for bo@example.test.".into())
+            Err("gpg holds no key and gpgsm no trusted certificate for bo@example.test.".into())
         );
     }
 
@@ -1042,7 +1042,11 @@ mod tests {
         };
         assert_eq!(
             encrypting(&smime_alone, false),
-            Err("gpgsm holds no certificate for bo@example.test.".into())
+            Err(
+                "gpgsm holds no trusted certificate for bo@example.test. A certificate that only \
+             arrived in mail does not count."
+                    .into()
+            )
         );
         let pgp_alone = Held {
             pgp: Some(vec![key("bo@example.test", false)]),

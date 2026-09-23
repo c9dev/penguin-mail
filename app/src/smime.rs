@@ -77,10 +77,13 @@ pub fn version(smime: &Smime) -> Option<String> {
 }
 
 /// Why this draft cannot be encrypted under S/MIME, for the Encrypt button
-/// to say. `None` means every recipient has a certificate.
+/// to say. `None` means every recipient has a certificate this computer
+/// trusts. One that only arrived in somebody's mail is not one of them, so
+/// the words say so rather than leave the writer wondering why the
+/// certificate they can see in the keybox does not count.
 pub fn cannot_encrypt(held: &[Recipient]) -> Option<String> {
     if held.is_empty() {
-        return Some(gettext("Add a recipient whose certificate gpgsm holds."));
+        return Some(gettext("Add a recipient whose certificate gpgsm trusts."));
     }
     let missing: Vec<&str> = held
         .iter()
@@ -89,7 +92,10 @@ pub fn cannot_encrypt(held: &[Recipient]) -> Option<String> {
         .collect();
     (!missing.is_empty()).then(|| {
         fill(
-            &gettext("gpgsm holds no certificate for {addresses}."),
+            &gettext(
+                "gpgsm holds no trusted certificate for {addresses}. A certificate that only \
+                 arrived in mail does not count.",
+            ),
             &[("addresses", &protection::listed(&missing))],
         )
     })
