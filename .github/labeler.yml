@@ -1,5 +1,5 @@
 # Labels a pull request by the parts of the code it touches. The crate map
-# is in README.md under "How it is built".
+# is in CONTRIBUTING.md under "How it is built".
 
 ui:
   - changed-files:

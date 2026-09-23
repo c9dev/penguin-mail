@@ -11,9 +11,8 @@ A Gmail client for the GNOME desktop, written in Rust.
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
 [![Rust 1.98](https://img.shields.io/badge/rust-1.98-orange?logo=rust)](https://www.rust-lang.org)
 [![GTK 4 and libadwaita 1.8](https://img.shields.io/badge/GTK_4-libadwaita_1.8-4a86cf?logo=gnome)](https://gnome.pages.gitlab.gnome.org/libadwaita/)
-[![Ubuntu 26.04](https://img.shields.io/badge/Ubuntu-26.04-e95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 
-[Install](#install) · [Features](#features) · [Screenshots](#screenshots) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
+[Watch the tour](https://github.com/c9dev/penguin-mail/releases/download/v0.2.0/penguin-mail-tour.mp4) · [Install](#install) · [Features](#features) · [Screenshots](#screenshots) · [Changelog](CHANGELOG.md)
 
 </div>
 
@@ -22,7 +21,7 @@ shows them in one inbox or one at a time, and keeps your mail on your own
 computer. It talks to Google directly, signed in with your Google account,
 so no other server sees your mail.
 
-![The inbox, with a conversation open](docs/screenshots/inbox.png)
+[![A two-minute tour of Penguin Mail: play the video](docs/screenshots/tour.png)](https://github.com/c9dev/penguin-mail/releases/download/v0.2.0/penguin-mail-tour.mp4)
 
 ## Features
 
@@ -155,6 +154,8 @@ uses a tool from outside the app, and it is off until you pick a model.
 
 ## Screenshots
 
+![The inbox, with a conversation open](docs/screenshots/inbox.png)
+
 | Dark | Writing | Narrow |
 |---|---|---|
 | ![Dark mode with an HTML email](docs/screenshots/dark.png) | ![Replying in the composer](docs/screenshots/composer.png) | ![The phone-width layout](docs/screenshots/phone.png) |
@@ -179,30 +180,27 @@ uses a tool from outside the app, and it is off until you pick a model.
 |---|---|
 | ![Hide My Email, with one address and its switch](docs/screenshots/hide-my-email.png) | ![Preferences](docs/screenshots/preferences.png) |
 
-`scripts/screenshots.sh` retakes all of them from the demo, and
-`scripts/demo-video.sh` records the demo video: a tour of the demo accounts in
-a headless GNOME Shell, with captions.
-
 ## Install
 
 Penguin Mail runs on Linux, x86_64. The .deb and the rpm need GTK 4.20,
 libadwaita 1.8 and WebKitGTK 6.0 from your distribution, as Ubuntu 26.04
-and Fedora 43 have; the Flatpak and the snap bring their own. The tray icon needs a StatusNotifier host, which Ubuntu's
+and Fedora 43 have; the snap brings its own. Penguin Mail is not on
+Flathub yet. The tray icon needs a StatusNotifier host, which Ubuntu's
 AppIndicator extension provides.
 
-| | .deb | rpm | Flatpak | Snap |
-|---|---|---|---|---|
-| Updates | Install in the app, or `apt upgrade` | `dnf upgrade` | Flathub | Snap Store |
-| GnuPG | the system's | the system's | the runtime's, on your `~/.gnupg` | the snap's, on your `~/.gnupg` |
-| Assistant skills | yes | yes | no | no |
-| Claude Code, and MCP servers you run as a command | yes | yes | no | no |
-| Tray icon | yes | yes | yes | yes |
+| | .deb | rpm | Snap |
+|---|---|---|---|
+| Updates | Install in the app, or `apt upgrade` | `dnf upgrade` | Snap Store |
+| GnuPG | the system's | the system's | the snap's, on your `~/.gnupg` |
+| Assistant skills | yes | yes | no |
+| Claude Code, and MCP servers you run as a command | yes | yes | no |
+| Tray icon | yes | yes | yes |
 
-Skills are off in the Flatpak and the snap because a skill's scripts run
-in a sandbox of their own, which cannot start inside the one the app runs
-in. That sandbox also keeps the app from starting programs installed on
-your system, such as Claude Code. [docs/setup.md](docs/setup.md#which-package) has the
-details.
+Skills are off in the snap because a skill's scripts run in a sandbox of
+their own, which cannot start inside the one the snap runs in. That
+sandbox also keeps the app from starting programs installed on your
+system, such as Claude Code. [docs/setup.md](docs/setup.md#which-package)
+has the details.
 
 ### With apt (recommended on Ubuntu)
 
@@ -270,49 +268,21 @@ dnf asks you to accept the key the first time. `sudo dnf upgrade` brings
 each new version, and the `.rpm` on the releases page adds the repository
 too.
 
-### From Flathub
-
-```sh
-flatpak install flathub io.github.c9dev.PenguinMail
-```
-
-Penguin Mail is waiting for Flathub's review. Until it is listed, build
-the same Flatpak from this repository:
-
-```sh
-flatpak-builder --user --install --force-clean build-dir \
-  packaging/flatpak/io.github.c9dev.PenguinMail.yml
-```
-
-The Flatpak reads and writes `~/.gnupg` and reaches your gpg-agent, so
-signing and encryption use your own keys. Everything else stays inside the
-sandbox. Its mail and settings live under
-`~/.var/app/io.github.c9dev.PenguinMail`, apart from a .deb install's.
-
 ### From the Snap Store
 
 ```sh
 sudo snap install penguin-mail --edge
 ```
 
-The snap is on its way to the Snap Store, and new versions reach its edge
-channel first. It is strictly confined and reaches `~/.gnupg` through a
-`personal-files` plug, which the store approves by hand, so signing and
-encryption use your own keys.
+The snap waits for the Snap Store to approve its access to `~/.gnupg` and
+to the keyring, and the command above finds it once the store has. New
+versions reach the edge channel first. The snap is strictly confined, and
+signing and encryption use your own keys.
 
 ### From source
 
-You need Rust 1.98 and the development packages:
-
-```sh
-sudo apt install libgtk-4-dev libadwaita-1-dev libwebkitgtk-6.0-dev libglib2.0-dev-bin gettext
-scripts/install.sh
-```
-
-This builds and installs into `~/.local`. `scripts/uninstall.sh` removes it
-again and leaves your mail and settings alone. A copy built from source signs
-in to Google only with a Google client compiled in;
-[docs/setup.md](docs/setup.md#building-your-own-copy) says how to give it one.
+[CONTRIBUTING.md](CONTRIBUTING.md#building-from-source) has the steps, and
+how to build the Flatpak yourself.
 
 ### First run
 
@@ -351,9 +321,9 @@ only when you save it.
 check, turn off **Check for Updates** under Preferences, Startup. A copy run
 with `cargo run` or as the demo never checks.
 
-The rpm leaves updates to dnf, and the Flatpak and the snap to Flathub and
-the Snap Store. Those copies never check GitHub and offer no Install of
-their own; Preferences and the About window say who brings updates.
+The rpm leaves updates to dnf, and the snap to the Snap Store. Those
+copies never check GitHub and offer no Install of their own; Preferences
+and the About window say who brings updates.
 
 To update by hand, download the new release and install it the same way as
 the first time. For a copy built from source, pull and run
@@ -433,89 +403,13 @@ The actions are `show-window`, `hide-window`, `compose`, `check` and `quit`.
 
 The full policy is in [docs/privacy-policy.md](docs/privacy-policy.md).
 
-## How it is built
+## Help and feedback
 
-```
-domain/   shared types, Gmail's label names, categories
-gmail/    Gmail REST client, OAuth, quota limiter
-store/    SQLite schema and queries
-sync/     one sync loop per account: bootstrap, history replay, backfill,
-          mail actions, mailbox listing, and each account's Gmail settings
-pgp/      OpenPGP mail through the person's own gpg
-smime/    S/MIME mail through their gpgsm
-ai/       model providers, tool calls, the Claude Code bridge
-cli/      penguin-mail-cli
-app/      the GTK 4 and libadwaita app
-```
-
-Windows and dialogs stay thin. Archiving, flagging, listing a mailbox and
-changing an automatic reply each live in one module in `sync`, which the
-window and the assistant both call, so the two cannot drift apart. Those
-modules take an account lookup and the store, so their tests run against an
-in-memory database and a fake Gmail with no window on screen. The terms the
-code uses are defined in [CONTEXT.md](CONTEXT.md).
-
-Sync follows Gmail's history API, polling every 30 seconds per account, so a
-change made on your phone shows up within half a minute. When history runs
-out, the account re-lists its mail and removes anything deleted in the gap.
-
-## Development
-
-```sh
-cargo run -p mailrs -- --demo                         # the UI with sample data
-cargo test --workspace                                # no network
-cargo clippy --workspace --all-targets -- -D warnings
-scripts/update-po.sh --check                          # translation template current
-scripts/a11y-names.sh                                 # every control has a name
-```
-
-Release builds mask email addresses in the log, as `d…@example.com`.
-Debug builds keep them whole, and `PENGUIN_MAIL_LOG_DETAILS=1` does the
-same for an installed copy while you look into a problem.
-
-CI runs those four checks on every push, in an Ubuntu 26.04 container set up
-by `scripts/ci-deps.sh`, validates the AppStream metainfo and the desktop
-entry, and builds and starts the Flatpak. The OpenPGP and S/MIME tests build a throwaway
-GnuPG keyring and skip when `gpg` or `gpgsm` is missing.
-`PENGUIN_MAIL_REQUIRE_CRYPTO=1`, which CI sets, turns that skip into a
-failure. [AGENTS.md](AGENTS.md) has the conventions and the testing traps.
-
-To publish a version, `scripts/release.sh` bumps the version, opens the
-changelog draft in your editor, writes the store listings' release notes
-with `scripts/metainfo.sh`, runs the checks, then commits, tags and
-pushes. If the push fails, it takes the tag back off and keeps the
-release commit, and running it again pushes that commit. The tag starts
-the release workflow, which builds the `.deb`, tarball and zip on Ubuntu
-26.04 and the rpm on Fedora 43, starts the rpm on a hidden display, and
-publishes them with the changelog once CI has passed on the tagged
-commit. The release's `SHA256SUMS` goes out signed as `SHA256SUMS.asc`,
-with the same `APT_SIGNING_KEY` as the repositories. The workflow also
-builds the snap and sends it to the Snap Store's edge channel once the
-`SNAPCRAFT_STORE_CREDENTIALS` secret exists. Every package gets the Google
-client from the `PENGUIN_MAIL_GOOGLE_CLIENT_ID` and
-`PENGUIN_MAIL_GOOGLE_CLIENT_SECRET` secrets; for the snap, the workflow
-writes them into `snap/snapcraft.yaml` before it builds. When it finishes, the Package repositories workflow rebuilds the apt and dnf
-repositories on GitHub Pages from the five newest releases with
-`scripts/apt-repo.sh` and `scripts/rpm-repo.sh`, signed with the key in
-the `APT_SIGNING_KEY` secret. Run it from the Actions tab to publish again
-without a release.
-
-Flathub builds the Flatpak from its own repository,
-flathub/io.github.c9dev.PenguinMail, and nothing updates it on its own.
-After each release, run `scripts/flatpak-sources.sh --flathub vX.Y.Z
-<dir>`, copy the manifest, `cargo-sources.json` and `flathub.json` it
-writes into a checkout of that repository, and open a pull request there.
-The script writes the Google client into that manifest from
-`packaging/secrets.env`, and stops if the file is missing.
-`release.sh` prints the same reminder when it finishes.
-
-## Contributing
-
-Bug reports and ideas are welcome in
-[Issues](https://github.com/c9dev/penguin-mail/issues). Pull requests are
-open to collaborators only. [CONTRIBUTING.md](CONTRIBUTING.md) says what a
-useful report holds, and [SECURITY.md](SECURITY.md) says where to send a
-vulnerability.
+Questions, bug reports and ideas are welcome in
+[Issues](https://github.com/c9dev/penguin-mail/issues).
+[CONTRIBUTING.md](CONTRIBUTING.md) says what a useful report holds, and how
+the code is built and tested. [SECURITY.md](SECURITY.md) says where to send
+a vulnerability.
 
 ## License
 

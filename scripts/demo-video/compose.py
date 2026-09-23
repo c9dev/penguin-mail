@@ -4,7 +4,9 @@
 
 Reads OUT_DIR/raw.mkv and OUT_DIR/marks.json, which tour.py wrote, and
 writes OUT_DIR/penguin-mail.mp4 and OUT_DIR/penguin-mail.webm: an opening
-card, the tour with a caption over each scene, and a closing card. The
+card, the tour with a caption over each scene, and a closing card. It also
+writes OUT_DIR/poster.png, a frame of the tour with a play button, for the
+README to link to the video with. The
 cards and captions are SVG drawn in the app icon's colours, turned into
 images with rsvg-convert, so they use the same fonts as the desktop.
 """
@@ -121,6 +123,38 @@ def caption(index, title, detail):
     )
 
 
+def poster(raw, at, minutes):
+    """A frame of the tour at `at` seconds, dimmed a little, with a play
+    button and the video's length over it."""
+    frame = os.path.join(ART, "frame.png")
+    subprocess.run(
+        ["ffmpeg", "-v", "error", "-y", "-ss", "%.3f" % at, "-i", raw, "-frames:v", "1", frame],
+        check=True,
+    )
+    button = render(
+        "play",
+        """<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080">
+  <defs><filter id="lift" x="-50%%" y="-50%%" width="200%%" height="200%%">
+    <feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="#000" flood-opacity="0.45"/></filter></defs>
+  <rect width="1920" height="1080" fill="#1d2021" fill-opacity="0.28"/>
+  <g filter="url(#lift)">
+    <circle cx="960" cy="500" r="96" fill="#fe8019"/>
+    <path d="M928 446 L1010 500 L928 554 Z" fill="#fbf1c7"/>
+    <rect x="700" y="630" width="520" height="76" rx="38" fill="#1d2021" fill-opacity="0.92"/>
+  </g>
+  <text x="960" y="680" text-anchor="middle" %s font-size="34" font-weight="700" fill="#fbf1c7">Watch the tour · %d min</text>
+</svg>"""
+        % (FONT, minutes),
+    )
+    target = os.path.join(OUT, "poster.png")
+    subprocess.run(
+        ["ffmpeg", "-v", "error", "-y", "-i", frame, "-i", button, "-filter_complex",
+         "[0][1]overlay,scale=1280:720", "-frames:v", "1", target],
+        check=True,
+    )
+    return target
+
+
 def duration(path):
     return float(
         subprocess.run(
@@ -182,7 +216,14 @@ def main():
          "-row-mt", "1", "-deadline", "good", "-cpu-used", "2", webm],
         check=True,
     )
-    print("wrote", mp4, "and", webm)
+    # The assistant's answer, just before the next scene starts, shows
+    # the most of what the app does in one frame.
+    answer = next(
+        (marks[i + 1]["at"] - 2.6 for i, m in enumerate(marks[:-1]) if m["caption"].startswith("An assistant")),
+        marks[len(marks) // 2]["at"],
+    )
+    minutes = round((OPENING + length + CLOSING - 2 * FADE) / 60)
+    print("wrote", mp4, webm, "and", poster(raw, answer, max(1, minutes)))
 
 
 main()
