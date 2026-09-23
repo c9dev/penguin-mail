@@ -14,11 +14,18 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - A list with thousands of conversations selected keeps up: new mail,
   Escape and moving on after an action no longer look at every row
   against every selected one, which with 14,800 selected took 167 ms.
+- A change to an account or a label counts unread mail once rather than
+  twice, and a burst of changes rereads only the open conversations it
+  touched.
 - Penguin Mail keeps at most 48 MB of pictures from mail it has shown,
   where it could hold 430 MB before.
 
 ### Fixed
 
+- Starting a search drops the rows selected before it, so the buttons act
+  on the results, and the Outbox's own buttons switch off.
+- A new account colour reaches every row in the list. The list could
+  redraw before the colour had been read.
 - Opening an attachment no longer leaves a copy behind for good. The copy
   only you can read goes when its preview closes, or the next time Penguin
   Mail starts, and a copy of a file from encrypted mail goes when the

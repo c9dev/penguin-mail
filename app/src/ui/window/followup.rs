@@ -103,7 +103,7 @@ impl MainWindow {
     /// Shows the banner over All Inboxes while replies are overdue, and
     /// offers Dismiss Follow-Up only inside the Follow Up mailbox.
     pub(super) fn follow_follow_ups(&self) {
-        let mailbox = self.mailbox.borrow().clone();
+        let mailbox = self.shown();
         let banner = &self.follow_up;
         let count = banner.waiting.get();
         banner.title.set_label(&fill_plural(
@@ -157,7 +157,7 @@ impl MainWindow {
     /// Refreshes counts, and the list when it shows Follow Up.
     pub(super) fn follow_ups_changed(self: &Rc<Self>) {
         self.refresh_counts();
-        if *self.mailbox.borrow() == Mailbox::FollowUp {
+        if self.shown() == Mailbox::FollowUp {
             self.reload_list();
         }
     }

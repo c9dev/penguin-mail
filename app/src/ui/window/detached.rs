@@ -42,7 +42,7 @@ impl MainWindow {
         view.set_detached();
         // The window keeps the mailbox it was opened from, so its buttons
         // and what they do stay put when the main window moves on.
-        let mailbox = self.mailbox.borrow().clone();
+        let mailbox = self.shown();
         view.set_folder(mailbox.folder());
         self.detached
             .borrow_mut()
@@ -106,7 +106,7 @@ impl MainWindow {
                     .is_some_and(|held| std::ptr::eq(&*held, view))
             })
             .map_or_else(
-                || self.mailbox.borrow().clone(),
+                || self.shown(),
                 |(_, mailbox)| mailbox.clone(),
             )
     }

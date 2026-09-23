@@ -105,6 +105,7 @@ impl Recent {
     }
 
     /// Bytes kept now.
+    #[cfg(test)]
     pub(super) fn used(&self) -> usize {
         self.used
     }

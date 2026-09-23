@@ -1,7 +1,6 @@
 //! The category switcher above an inbox and the Categorize Sender action.
 //! `mailrs_domain::Category` holds which Gmail labels each category means.
 
-use std::cell::Cell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -54,7 +53,6 @@ pub(super) struct CategoryBar {
     group: adw::ToggleGroup,
     strip: CategoryStrip,
     counts: HashMap<Category, gtk::Label>,
-    pub(super) chosen: Cell<Category>,
 }
 
 impl CategoryBar {
@@ -118,14 +116,13 @@ impl CategoryBar {
             group,
             strip,
             counts,
-            chosen: Cell::new(chosen),
         };
-        this.show_names();
+        this.show_names(chosen);
         this
     }
 
-    fn show_names(&self) {
-        let chosen = self.chosen.get();
+    /// Opens the name of `chosen` and closes the others.
+    pub(super) fn show_names(&self, chosen: Category) {
         if let Some(index) = Category::ALL.iter().position(|&c| c == chosen) {
             self.strip.choose(index);
         }
@@ -181,13 +178,7 @@ impl MainWindow {
                 else {
                     return;
                 };
-                if win.categories.chosen.replace(category) == category {
-                    return;
-                }
-                win.categories.show_names();
-                win.list.unselect();
-                win.conversation.leave();
-                win.reload_list();
+                win.change_screen(|screen| screen.choose_category(category));
             });
     }
 
@@ -198,7 +189,7 @@ impl MainWindow {
 
     /// Shows the switcher when the list holds an inbox, and hides it elsewhere.
     pub(super) fn follow_categories(self: &Rc<Self>) {
-        let shown = self.shows_categories(&self.mailbox.borrow());
+        let shown = self.shows_categories(&self.shown());
         self.categories.bar.set_visible(shown);
         if shown {
             self.refresh_counts();

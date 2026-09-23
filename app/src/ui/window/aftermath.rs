@@ -222,7 +222,7 @@ impl MainWindow {
         outcome: &Outcome,
         view: Option<&ConversationView>,
     ) {
-        let after = Aftermath::of(cause, &self.mailbox.borrow().clone(), outcome);
+        let after = Aftermath::of(cause, &self.shown(), outcome);
         let done = &outcome.done;
         if after.move_on
             && let Some(view) = view

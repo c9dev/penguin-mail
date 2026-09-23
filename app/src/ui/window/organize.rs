@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::glib;
-use mailrs_domain::{AccountId, LabelKind, system_label};
+use mailrs_domain::{AccountId, LabelKind};
 use mailrs_sync::{History, MailAction, NewLabels, TriageAction};
 
 use super::{MainWindow, Target};
@@ -34,7 +34,7 @@ impl MainWindow {
             self.flag_targets(rows.iter().map(Target::from_row).collect(), Some(color));
             return true;
         }
-        let from = self.mailbox.borrow().clone();
+        let from = self.shown();
         let action = match move_action(&from, &mailbox) {
             Ok(action) => action,
             Err(reason) => {
@@ -173,21 +173,14 @@ impl MainWindow {
             let Some(sync) = this.core.account(account_id) else {
                 return this.toast(&gettext("That account is not connected"));
             };
-            let showing = matches!(
-                &*this.mailbox.borrow(),
-                Mailbox::Label { account_id: a, label_id: l, .. } if *a == account_id && *l == label_id
-            );
+            let deleted = label_id.clone();
             match this
                 .core
-                .call(async move { sync.delete_label(&label_id).await })
+                .call(async move { sync.delete_label(&deleted).await })
                 .await
             {
                 Ok(()) => {
-                    if showing {
-                        let inbox = Mailbox::Unified(system_label::INBOX);
-                        this.sidebar.select(&inbox);
-                        this.show_mailbox(inbox);
-                    }
+                    this.change_screen(|screen| screen.label_deleted(account_id, &label_id));
                     this.toast(&fill(&gettext("Deleted “{name}”"), &[("name", &name)]));
                 }
                 Err(err) => this.failed(&gettext("Could not delete the label: {reason}"), &err),

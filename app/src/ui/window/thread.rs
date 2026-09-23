@@ -56,7 +56,16 @@ impl MainWindow {
     /// screen, the ones in windows of their own among them. Each keeps
     /// its own thread, so a flag or a read mark set in one shows in all.
     pub(super) fn refresh_open_thread(self: &Rc<Self>) {
+        self.refresh_open_threads(|_, _| true);
+    }
+
+    /// Does the same for the conversations whose account and thread
+    /// `named` accepts, and leaves the rest alone.
+    pub(super) fn refresh_open_threads(self: &Rc<Self>, named: impl Fn(AccountId, &str) -> bool) {
         for view in self.views() {
+            if view.read(|open| named(open.account_id, &open.thread_id)) != Some(true) {
+                continue;
+            }
             let run = self.thread_run(&view);
             glib::spawn_future_local(async move { run.refresh().await });
         }
