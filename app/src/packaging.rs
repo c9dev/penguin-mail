@@ -128,6 +128,9 @@ mod tests {
     fn each_updater_names_itself() {
         assert_eq!(UpdatedBy::Dnf.line(), "Updates come from dnf");
         assert_eq!(UpdatedBy::Flathub.line(), "Updates come from Flathub");
-        assert_eq!(UpdatedBy::SnapStore.line(), "Updates come from the Snap Store");
+        assert_eq!(
+            UpdatedBy::SnapStore.line(),
+            "Updates come from the Snap Store"
+        );
     }
 }

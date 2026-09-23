@@ -9,8 +9,10 @@ use mailrs_domain::translate::{fill_plural, gettext, pgettext};
 use serde::{Deserialize, Serialize};
 
 mod change;
+mod file;
 
 pub use change::{AiChange, Change, Effect, Effects, Setting};
+pub use file::{Opened, Saver};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -698,7 +700,9 @@ impl Settings {
         self.assistant_skills.get(id).copied().unwrap_or_default()
     }
 
-    /// Reads the file, falling back to defaults when it is missing or invalid.
+    /// Reads the file, falling back to defaults when it is missing or
+    /// invalid, and leaves the file as it is. The app opens it with
+    /// [`Settings::open`] instead, which keeps a broken file safe.
     pub fn load(path: &Path) -> Settings {
         match std::fs::read_to_string(path) {
             Ok(text) => toml::from_str(&text).unwrap_or_else(|err| {
@@ -709,12 +713,17 @@ impl Settings {
         }
     }
 
+    /// Reads the file for the app: a file that does not parse moves aside
+    /// so the next save cannot overwrite it, and the answer says where.
+    pub fn open(path: &Path) -> Opened {
+        file::open(path)
+    }
+
+    /// Writes the file whole or not at all. The app saves through a
+    /// [`Saver`], which calls this off the main thread.
     pub fn save(&self, path: &Path) -> std::io::Result<()> {
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
         let text = toml::to_string(self).map_err(std::io::Error::other)?;
-        std::fs::write(path, text)
+        file::write_atomic(path, &text)
     }
 
     /// `$MAILRS_SETTINGS`, else next to `config.toml`.

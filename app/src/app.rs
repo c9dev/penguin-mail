@@ -11,6 +11,7 @@ use std::sync::{Arc, Mutex};
 use adw::prelude::*;
 use gtk::{gio, glib};
 use ksni::TrayMethods;
+use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{Account, AccountId, Address, ChangeEvent, Label, system_label};
 use mailrs_store::{accounts, labels, messages, threads};
 use mailrs_sync::History;
@@ -63,7 +64,11 @@ pub struct App {
     pending_compose: RefCell<Option<String>>,
     tray_started: Cell<bool>,
     settings: RefCell<Settings>,
-    settings_path: std::path::PathBuf,
+    /// Writes each saved change off the main thread.
+    settings_saver: crate::settings::Saver,
+    /// Where an unreadable settings file went, until the first window says
+    /// so.
+    settings_broken: RefCell<Option<PathBuf>>,
     /// People for recipient suggestions: the accounts' contacts, then the
     /// addresses mail turned up. Loading them reads every message, so the
     /// list reloads only after new mail arrives.
@@ -104,6 +109,7 @@ impl App {
         } else {
             Settings::default_path()
         };
+        let opened = Settings::open(&settings_path);
         let app = Rc::new(App {
             gio: gio_app.clone(),
             core,
@@ -124,9 +130,10 @@ impl App {
                 // The demo's contacts are already in its throwaway store,
                 // so the switch shows what the mail on screen is using.
                 contacts: core_demo,
-                ..Settings::load(&settings_path)
+                ..opened.settings
             }),
-            settings_path,
+            settings_saver: crate::settings::Saver::new(settings_path),
+            settings_broken: RefCell::new(opened.broken),
             contacts: Rc::new(RefCell::new(Rc::new(Vec::new()))),
             contacts_stale: Cell::new(true),
             photos: RefCell::new(HashMap::new()),
@@ -211,9 +218,7 @@ impl App {
         if after == *before {
             return Effects::default();
         }
-        if let Err(err) = after.save(&self.settings_path) {
-            tracing::warn!(error = %err, "could not save preferences");
-        }
+        self.settings_saver.save(&after);
         *self.settings.borrow_mut() = after;
         self.apply_effects(&effects);
         effects
@@ -272,7 +277,34 @@ impl App {
         self.window_opened();
         window.present();
         window.run_demo_script();
+        if let Some(aside) = self.settings_broken.borrow_mut().take() {
+            let name = aside
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            window.notice(Notice::Toast(fill(
+                &gettext(
+                    "Your preferences could not be read, so Penguin Mail started from the defaults. The old file is kept as {file}.",
+                ),
+                &[("file", &name)],
+            )));
+        }
         window
+    }
+
+    /// What has to happen before this process ends or turns into another
+    /// one: the MCP servers it started stop, since nothing else would stop
+    /// a stdio server, and the last saved preferences reach the disk.
+    pub(crate) fn before_leaving(&self) {
+        crate::assistant::sources::mcp::registry().stop_all();
+        self.settings_saver.flush();
+    }
+
+    /// Replaces this process with `command`, as the idle restart and an
+    /// update do, and says why when that fails.
+    pub(crate) fn exec_into(&self, mut command: std::process::Command) -> std::io::Error {
+        self.before_leaving();
+        command.exec()
     }
 
     pub fn forget_window(self: &Rc<Self>, window: &Rc<MainWindow>) {
@@ -327,7 +359,9 @@ impl App {
                 return;
             };
             tracing::info!("no window for a while; restarting in the background to return memory");
-            let err = std::process::Command::new(exe).arg("--background").exec();
+            let mut command = std::process::Command::new(exe);
+            command.arg("--background");
+            let err = app.exec_into(command);
             tracing::warn!(error = %err, "could not restart in the background; staying as is");
         });
     }

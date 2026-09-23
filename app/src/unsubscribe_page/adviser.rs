@@ -150,11 +150,14 @@ mod tests {
     }
 
     fn adviser(server: &MockServer) -> ModelAdviser {
-        ModelAdviser::new(ProviderConfig::OpenAiCompatible {
-            base_url: format!("{}/v1", server.uri()),
-            api_key: None,
-            model: "qwen3".into(),
-        }, tokio::runtime::Handle::current())
+        ModelAdviser::new(
+            ProviderConfig::OpenAiCompatible {
+                base_url: format!("{}/v1", server.uri()),
+                api_key: None,
+                model: "qwen3".into(),
+            },
+            tokio::runtime::Handle::current(),
+        )
     }
 
     fn topics() -> PageForm {
@@ -167,9 +170,7 @@ mod tests {
     #[test]
     fn the_model_is_asked_from_outside_the_runtime() {
         let runtime = tokio::runtime::Runtime::new().expect("a runtime");
-        let server = runtime.block_on(model_saying(
-            r#"{"form":0,"fill":[],"tick":[],"press":4}"#,
-        ));
+        let server = runtime.block_on(model_saying(r#"{"form":0,"fill":[],"tick":[],"press":4}"#));
         let adviser = ModelAdviser::new(
             ProviderConfig::OpenAiCompatible {
                 base_url: format!("{}/v1", server.uri()),

@@ -144,14 +144,24 @@ mod tests {
         let config = tempfile::tempdir().unwrap();
         let folder = config.path().join("autostart");
         std::fs::create_dir_all(&folder).unwrap();
-        std::fs::write(folder.join("dev.penguinmail.PenguinMail.desktop"), LOGIN_ITEM).unwrap();
+        std::fs::write(
+            folder.join("dev.penguinmail.PenguinMail.desktop"),
+            LOGIN_ITEM,
+        )
+        .unwrap();
         run(config.path(), &installed());
         assert!(!folder.join("dev.penguinmail.PenguinMail.desktop").exists());
         let moved =
             std::fs::read_to_string(folder.join("io.github.c9dev.PenguinMail.desktop")).unwrap();
-        assert!(moved.contains("Icon=io.github.c9dev.PenguinMail\n"), "{moved}");
+        assert!(
+            moved.contains("Icon=io.github.c9dev.PenguinMail\n"),
+            "{moved}"
+        );
         assert!(moved.contains("X-GNOME-Autostart-enabled=false"), "{moved}");
-        assert!(moved.contains("Exec=/usr/bin/penguin-mail --background"), "{moved}");
+        assert!(
+            moved.contains("Exec=/usr/bin/penguin-mail --background"),
+            "{moved}"
+        );
     }
 
     #[test]
@@ -159,7 +169,11 @@ mod tests {
         let config = tempfile::tempdir().unwrap();
         let folder = config.path().join("autostart");
         std::fs::create_dir_all(&folder).unwrap();
-        std::fs::write(folder.join("dev.penguinmail.PenguinMail.desktop"), LOGIN_ITEM).unwrap();
+        std::fs::write(
+            folder.join("dev.penguinmail.PenguinMail.desktop"),
+            LOGIN_ITEM,
+        )
+        .unwrap();
         std::fs::write(folder.join("io.github.c9dev.PenguinMail.desktop"), "new").unwrap();
         run(config.path(), &installed());
         assert!(!folder.join("dev.penguinmail.PenguinMail.desktop").exists());
@@ -204,9 +218,14 @@ mod tests {
         let config = tempfile::tempdir().unwrap();
         let folder = config.path().join("autostart");
         std::fs::create_dir_all(&folder).unwrap();
-        std::fs::write(folder.join("dev.penguinmail.PenguinMail.desktop"), LOGIN_ITEM).unwrap();
+        std::fs::write(
+            folder.join("dev.penguinmail.PenguinMail.desktop"),
+            LOGIN_ITEM,
+        )
+        .unwrap();
         let list = config.path().join("mimeapps.list");
-        let text = "[Default Applications]\nx-scheme-handler/mailto=dev.penguinmail.PenguinMail.desktop\n";
+        let text =
+            "[Default Applications]\nx-scheme-handler/mailto=dev.penguinmail.PenguinMail.desktop\n";
         std::fs::write(&list, text).unwrap();
         // A build tree: the data folders hold no io.github.c9dev.PenguinMail.desktop.
         let empty = tempfile::tempdir().unwrap();

@@ -73,11 +73,6 @@ fn main() -> glib::ExitCode {
             }),
         )
         .init();
-    // The language is the one preference read before the window exists,
-    // because every word after this point has to come out in it. A demo
-    // keeps its own throwaway preferences, but not this one: it is the
-    // person's own copy of the app they are looking at.
-    language::bind(&Settings::load(&Settings::default_path()).language);
     let args: Vec<String> = std::env::args().collect();
     // Claude Code starts this binary as the assistant's MCP server. It only
     // relays tool calls to the running window, so it needs no GTK.
@@ -100,6 +95,13 @@ fn main() -> glib::ExitCode {
             }
         };
     }
+    // The language is the one preference read before the window exists,
+    // because every word after this point has to come out in it. A demo
+    // keeps its own throwaway preferences, but not this one: it is the
+    // person's own copy of the app they are looking at. The bridge above
+    // runs on every one of Claude Code's turns and says nothing a person
+    // reads, so it starts without reading the preferences at all.
+    language::bind(&Settings::load(&Settings::default_path()).language);
     if args.iter().any(|a| a == "--help" || a == "-h") {
         println!("{}", usage());
         return glib::ExitCode::SUCCESS;
@@ -155,6 +157,7 @@ fn main() -> glib::ExitCode {
     }
     let state: Rc<RefCell<Option<Rc<app::App>>>> = Rc::new(RefCell::new(None));
     let started = Rc::clone(&state);
+    let finished = Rc::clone(&state);
     gio_app.connect_startup(move |gio_app| {
         gio::resources_register_include!("penguin-mail.gresource")
             .expect("the resources are built into the binary");
@@ -174,7 +177,10 @@ fn main() -> glib::ExitCode {
     let code = gio_app.run_with_args(&args[..1]);
     // The MCP servers live in a static, which nothing drops, and a stdio
     // server would outlive the app without this.
-    assistant::sources::mcp::registry().stop_all();
+    match finished.borrow().as_ref() {
+        Some(app) => app.before_leaving(),
+        None => assistant::sources::mcp::registry().stop_all(),
+    }
     code
 }
 

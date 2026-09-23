@@ -103,6 +103,12 @@ msgstr ""
 msgid "The layout on a narrow screen"
 msgstr ""
 
+#: app/src/app.rs:287
+msgid ""
+"Your preferences could not be read, so Penguin Mail started from the "
+"defaults. The old file is kept as {file}."
+msgstr ""
+
 #: app/src/app/sending.rs:30
 msgid "That account is not connected. Check its status in the sidebar."
 msgstr ""
@@ -151,11 +157,11 @@ msgstr ""
 msgid "“{subject}”"
 msgstr ""
 
-#: app/src/app/updates.rs:126
+#: app/src/app/updates.rs:125
 msgid "Penguin Mail {version} is up to date"
 msgstr ""
 
-#: app/src/app/updates.rs:136
+#: app/src/app/updates.rs:135
 msgid "Could not reach GitHub to check for updates"
 msgstr ""
 
@@ -752,7 +758,7 @@ msgstr[1] ""
 msgid "Undo “{action}”?"
 msgstr ""
 
-#: app/src/assistant/run/unsubscribe.rs:336
+#: app/src/assistant/run/unsubscribe.rs:334
 msgid "this list"
 msgstr ""
 
@@ -1149,11 +1155,11 @@ msgid ""
 "  mailto:...     the same as --compose mailto:..."
 msgstr ""
 
-#: app/src/main.rs:115
+#: app/src/main.rs:117
 msgid "penguin-mail: unknown option {option}"
 msgstr ""
 
-#: app/src/main.rs:230
+#: app/src/main.rs:236
 msgid "Penguin Mail Could Not Start"
 msgstr ""
 
@@ -1691,176 +1697,176 @@ msgstr ""
 msgid "In {label}"
 msgstr ""
 
-#: app/src/settings/mod.rs:156 app/src/settings/mod.rs:331
-#: app/src/settings/mod.rs:605 app/src/ui/assistant_mcp_prefs.rs:184
+#: app/src/settings/mod.rs:158 app/src/settings/mod.rs:333
+#: app/src/settings/mod.rs:607 app/src/ui/assistant_mcp_prefs.rs:184
 msgid "Off"
 msgstr ""
 
-#: app/src/settings/mod.rs:157
+#: app/src/settings/mod.rs:159
 msgid "Local server"
 msgstr ""
 
-#: app/src/settings/mod.rs:158
+#: app/src/settings/mod.rs:160
 msgid "Anthropic API"
 msgstr ""
 
-#: app/src/settings/mod.rs:159
+#: app/src/settings/mod.rs:161
 msgid "Claude subscription"
 msgstr ""
 
-#: app/src/settings/mod.rs:184 app/src/ui/assistant.rs:99
+#: app/src/settings/mod.rs:186 app/src/ui/assistant.rs:99
 msgid "Assistant"
 msgstr ""
 
-#: app/src/settings/mod.rs:185
+#: app/src/settings/mod.rs:187
 msgid "Translation"
 msgstr ""
 
 #. The assistant's running label says "Unsubscribing" too, and
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:189
+#: app/src/settings/mod.rs:191
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr ""
 
-#: app/src/settings/mod.rs:195
+#: app/src/settings/mod.rs:197
 msgid "Answers questions and acts on your mail"
 msgstr ""
 
-#: app/src/settings/mod.rs:196
+#: app/src/settings/mod.rs:198
 msgid "Translates a message when you ask"
 msgstr ""
 
-#: app/src/settings/mod.rs:198
+#: app/src/settings/mod.rs:200
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr ""
 
-#: app/src/settings/mod.rs:236
+#: app/src/settings/mod.rs:238
 msgid "Same as the Assistant"
 msgstr ""
 
-#: app/src/settings/mod.rs:332
+#: app/src/settings/mod.rs:334
 msgid "Claude's own only"
 msgstr ""
 
-#: app/src/settings/mod.rs:333
+#: app/src/settings/mod.rs:335
 msgid "Brave Search"
 msgstr ""
 
-#: app/src/settings/mod.rs:334
+#: app/src/settings/mod.rs:336
 msgid "SearXNG"
 msgstr ""
 
-#: app/src/settings/mod.rs:464
+#: app/src/settings/mod.rs:466
 msgid "Rich text"
 msgstr ""
 
-#: app/src/settings/mod.rs:465
+#: app/src/settings/mod.rs:467
 msgid "Markdown"
 msgstr ""
 
-#: app/src/settings/mod.rs:512
+#: app/src/settings/mod.rs:514
 msgid "When opened"
 msgstr ""
 
-#: app/src/settings/mod.rs:513
+#: app/src/settings/mod.rs:515
 msgid "After 2 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:514
+#: app/src/settings/mod.rs:516
 msgid "Only when I choose"
 msgstr ""
 
-#: app/src/settings/mod.rs:530
+#: app/src/settings/mod.rs:532
 msgid "Ask each time"
 msgstr ""
 
-#: app/src/settings/mod.rs:531
+#: app/src/settings/mod.rs:533
 msgid "Always load"
 msgstr ""
 
-#: app/src/settings/mod.rs:565
+#: app/src/settings/mod.rs:567
 msgid "Small"
 msgstr ""
 
-#: app/src/settings/mod.rs:566
+#: app/src/settings/mod.rs:568
 msgid "Default"
 msgstr ""
 
-#: app/src/settings/mod.rs:567
+#: app/src/settings/mod.rs:569
 msgid "Large"
 msgstr ""
 
-#: app/src/settings/mod.rs:568
+#: app/src/settings/mod.rs:570
 msgid "Larger"
 msgstr ""
 
-#: app/src/settings/mod.rs:606
+#: app/src/settings/mod.rs:608
 msgid "5 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:607
+#: app/src/settings/mod.rs:609
 msgid "10 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:608
+#: app/src/settings/mod.rs:610
 msgid "20 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:609
+#: app/src/settings/mod.rs:611
 msgid "30 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:626
+#: app/src/settings/mod.rs:628
 msgid "Follow system"
 msgstr ""
 
-#: app/src/settings/mod.rs:627
+#: app/src/settings/mod.rs:629
 msgid "Light"
 msgstr ""
 
-#: app/src/settings/mod.rs:628
+#: app/src/settings/mod.rs:630
 msgid "Dark"
 msgstr ""
 
-#: app/src/settings/mod.rs:638
+#: app/src/settings/mod.rs:640
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/settings/mod.rs:646
+#: app/src/settings/mod.rs:648
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/settings/mod.rs:663
+#: app/src/settings/mod.rs:665
 msgid "2 weeks"
 msgstr ""
 
-#: app/src/settings/mod.rs:664
+#: app/src/settings/mod.rs:666
 msgid "30 days"
 msgstr ""
 
-#: app/src/settings/mod.rs:665
+#: app/src/settings/mod.rs:667
 msgid "90 days"
 msgstr ""
 
-#: app/src/settings/mod.rs:666
+#: app/src/settings/mod.rs:668
 msgid "1 year"
 msgstr ""
 
-#: app/src/settings/mod.rs:673
+#: app/src/settings/mod.rs:675
 msgid "256 MB"
 msgstr ""
 
-#: app/src/settings/mod.rs:674
+#: app/src/settings/mod.rs:676
 msgid "1 GB"
 msgstr ""
 
-#: app/src/settings/mod.rs:675
+#: app/src/settings/mod.rs:677
 msgid "4 GB"
 msgstr ""
 

@@ -13,6 +13,13 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Your preferences survive a damaged settings file. Penguin Mail used to
+  start from the defaults and save over the file; it now keeps the old
+  file beside the new one and tells you its name. A save also replaces
+  the file in one step, so a crash in the middle cannot empty it.
+- MCP servers the assistant started stop when Penguin Mail restarts
+  itself to free memory or to install an update, where they used to keep
+  running with nothing talking to them.
 - A chat with the assistant keeps working after you press Stop, and after
   it reads one very long conversation. Either could leave every later
   question failing until you started a new chat.

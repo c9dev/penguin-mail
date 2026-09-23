@@ -22,9 +22,7 @@ use mailrs_sync::Newsletters;
 use super::*;
 use crate::ui::unsubscribe::{ListLine, Way, sent_to};
 use crate::unsubscribe::{Unsubscribe, choose_with_body};
-use crate::unsubscribe_page::{
-    Browser, Outcome as PageOutcome, Prepared, finish, prepare,
-};
+use crate::unsubscribe_page::{Browser, Outcome as PageOutcome, Prepared, finish, prepare};
 
 /// The most lists one call may leave. Twenty pages already take minutes,
 /// and a dialog longer than that is one nobody reads before pressing.
