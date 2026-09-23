@@ -36,6 +36,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Unsubscribe finishes pages that ask why you are leaving. Penguin Mail
   ticks the box saying you no longer want the mail, and never one that
   reports the sender for spam or fraud.
+- Unsubscribe no longer ticks a box such as "Send me all emails" on a
+  preferences page. It ticks an "all" box only when the box says to
+  unsubscribe.
 
 ## 0.2.0 (2026-09-23)
 

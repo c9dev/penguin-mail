@@ -199,9 +199,12 @@ pub fn presses(text: &str) -> bool {
         .any(|words| reads_as(text, words.leave) || reads_as(text, words.confirm))
 }
 
-/// A checkbox or radio that reads as every list at once.
+/// A checkbox or radio that reads as leaving every list at once,
+/// "Unsubscribe from all emails". On a preferences page "all" alone can
+/// mean the opposite, as in "Send me all emails", so the label has to
+/// read as leaving too.
 pub fn means_all(text: &str) -> bool {
-    LANGUAGES.iter().any(|words| reads_as(text, words.all))
+    leaves(text) && LANGUAGES.iter().any(|words| reads_as(text, words.all))
 }
 
 /// A box that gives a reason for leaving, or reports the sender.

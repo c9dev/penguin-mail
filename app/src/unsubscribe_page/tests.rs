@@ -71,6 +71,13 @@ fn the_box_that_means_every_list_gets_ticked() {
 }
 
 #[test]
+fn a_box_asking_for_all_the_mail_is_not_the_box_that_means_leaving() {
+    let mut page = page(PREFERENCES);
+    page.forms[0].fields[3].label = "Send me all emails".to_string();
+    assert_eq!(pick(&page, ME), Pick::Unsure(Unsure::Ambiguous));
+}
+
+#[test]
 fn a_form_asking_why_gets_the_plain_reason_and_its_one_button() {
     assert_eq!(
         plan(REASONS),
