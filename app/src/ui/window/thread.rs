@@ -441,11 +441,11 @@ impl Effects for Ports {
     }
 
     fn clashes(&self, uid: String, busy: Vec<String>) {
-        self.view.card.set_busy(&uid, &busy);
+        self.view.clashes(&uid, &busy);
     }
 
     fn series_known(&self, uid: String, line: String) {
-        self.view.card.set_series(&uid, line);
+        self.view.series_known(&uid, line);
     }
 
     fn start_engines(&self) {
