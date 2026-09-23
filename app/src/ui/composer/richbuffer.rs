@@ -508,6 +508,7 @@ mod tests {
         a_line_changes_kind_and_the_numbers_follow();
         typing_after_styled_words_carries_the_style_on();
         an_inserted_body_lands_at_the_cursor();
+        super::super::editor::checks::run();
         // The extraction script needs a real engine to run in, and this
         // is the one test binary that starts one.
         an_unsubscribe_page_reads_back_as_its_fixture();
