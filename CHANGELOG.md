@@ -7,6 +7,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+- A conversation you read before opens with one page load instead of two,
+  so it is ready in about half the time.
 - Before installing an update, Penguin Mail checks that the release is
   signed with its own key, and refuses one that is unsigned or signed by
   anyone else.

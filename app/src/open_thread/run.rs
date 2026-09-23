@@ -225,6 +225,9 @@ pub enum Event {
     Shown,
     /// Gmail's bodies arrived.
     BodiesArrived,
+    /// Gmail's copy of the thread arrived, and the store already held a
+    /// body for every message in it.
+    NothingMissing,
     /// The engine opened an encrypted message, whose body replaced the
     /// ciphertext.
     EngineOpened,
@@ -264,6 +267,14 @@ impl Stale {
                 invitation: true,
                 thumbnails: true,
                 unread: true,
+            },
+            // The stored copy brought the bodies, and what they carry was
+            // brought up to date when it went on screen. The pictures and
+            // the read mark wait on the whole thread.
+            Event::NothingMissing => Stale {
+                thumbnails: true,
+                unread: true,
+                ..Stale::default()
             },
             // The claim was made for the message the engine opened, and
             // its files came out whole, with nothing to fetch.
@@ -490,6 +501,13 @@ impl ThreadRun {
         let Some(missing) = wanted.on_screen(|effects| effects.messages_arrived(fresh)) else {
             return;
         };
+        // A thread read before has every body in the store. Asking Gmail
+        // for none of them and drawing the page again would cost a whole
+        // reload and put the reader back at the top.
+        if missing.is_empty() {
+            self.follow(wanted, Event::NothingMissing).await;
+            return;
+        }
         let Some(fetched) = wanted
             .wait(|effects| effects.bodies(account_id, missing))
             .await

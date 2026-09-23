@@ -49,6 +49,24 @@ async fn opening_shows_the_stored_copy_then_the_bodies_gmail_sent() {
     assert_eq!(text.as_deref(), Some("Hello"));
 }
 
+/// The store already held every body, so Gmail has nothing to add and the
+/// page stays as the stored copy drew it. The pictures and the read mark
+/// still come.
+#[tokio::test]
+async fn a_thread_whose_bodies_the_store_held_fetches_none() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        if let Some(stored) = screen.stored.get_mut(THREAD) {
+            stored.bodies.insert("m1".to_string(), with_picture());
+        }
+    });
+    window.run().open(row(THREAD)).await;
+    assert!(!window.took(Step::Bodies));
+    assert!(!window.took(Step::BodiesArrived));
+    assert!(window.took(Step::ThumbnailsArrived));
+    assert_eq!(window.0.borrow().marked, [target(None)]);
+}
+
 #[tokio::test]
 async fn two_quick_opens_show_only_the_later_one() {
     let window = FakeWindow::new();

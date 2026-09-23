@@ -1090,11 +1090,22 @@ impl ConversationView {
 
     /// The thread's messages as the store now has them. One that arrived
     /// unread opens, since the reader has not seen it. Gives back the ids
-    /// whose bodies are still missing. Nothing is redrawn: those bodies
-    /// are what the caller fetches next, and they bring a redraw with them.
+    /// whose bodies are still missing. With some missing nothing is
+    /// redrawn: those bodies are what the caller fetches next, and they
+    /// bring a redraw with them. With none missing the page is drawn again
+    /// only when a message it shows changed.
     pub fn messages_arrived(&self, fresh: &[MessageMeta]) -> Vec<String> {
-        self.change(|open| open.take_messages(fresh))
-            .unwrap_or_default()
+        let Some((missing, changed)) = self.change(|open| {
+            let before = open.messages.clone();
+            let missing = open.take_messages(fresh);
+            (missing, open.messages != before)
+        }) else {
+            return Vec::new();
+        };
+        if missing.is_empty() && changed {
+            self.render(false);
+        }
+        missing
     }
 
     /// Replaces the messages after the store changed under the thread, and
