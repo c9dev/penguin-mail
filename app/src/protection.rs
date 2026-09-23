@@ -41,6 +41,11 @@ pub struct Read {
     /// ciphertext, and a reply that quoted it in the clear would hand them
     /// the plaintext.
     pub sealed: bool,
+    /// Whether gpgsm could not say if a certificate behind a signature was
+    /// revoked. It asks the certificate authority, which may be out of
+    /// reach now and back in reach a minute later, so the next open asks
+    /// again rather than repeat this answer.
+    pub revocation_unchecked: bool,
 }
 
 /// What the card says about a message, and how loudly.
@@ -472,6 +477,7 @@ pub fn read(
                 body: None,
                 files: Vec::new(),
                 sealed: false,
+                revocation_unchecked: false,
             };
         }
     };
@@ -506,11 +512,20 @@ pub fn read(
             from,
         ),
     };
+    let revocation_unchecked = found.signatures.iter().any(|signed| {
+        signed.vouched == Vouched::RevocationUnknown
+            || signed
+                .signer
+                .addresses
+                .iter()
+                .any(|named| named.vouched == Vouched::RevocationUnknown)
+    });
     Read {
         mark,
         body: Some(body),
         files,
         sealed: found.encrypted,
+        revocation_unchecked,
     }
 }
 

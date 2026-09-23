@@ -12,6 +12,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Always Allow on a skill's command allows that one command. It used
   to let the skill run any command without asking, and Penguin Mail
   forgets any Always Allow saved that way.
+- An S/MIME message whose certificate could not be checked for revocation
+  is checked again when you open it next, so the card no longer says "could
+  not check" until you restart.
 
 ## 0.2.0 (2026-09-23)
 

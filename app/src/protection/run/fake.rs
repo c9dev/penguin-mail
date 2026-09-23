@@ -129,6 +129,7 @@ pub fn signed() -> Read {
         body: Some(body(None)),
         files: Vec::new(),
         sealed: false,
+        revocation_unchecked: false,
     }
 }
 

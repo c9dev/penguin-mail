@@ -4,7 +4,8 @@
 use mailrs_domain::Protection;
 
 use super::Installed;
-use super::fake::{ELSEWHERE, FakeWindow, Step, body, opened, thread, with_bodies};
+use super::fake::{ELSEWHERE, FakeWindow, Step, body, opened, signed, thread, with_bodies};
+use crate::protection::Read;
 
 #[tokio::test]
 async fn a_signed_message_gets_what_the_engine_said() {
@@ -87,6 +88,31 @@ async fn a_changed_keyring_checks_the_signature_again() {
             .keyring
             .map(|then| then + std::time::Duration::from_secs(1));
     });
+    window.engines().run().await;
+    assert_eq!(
+        window
+            .steps()
+            .iter()
+            .filter(|step| **step == Step::Ask)
+            .count(),
+        2
+    );
+}
+
+/// The bug this pins: gpgsm could not reach the certificate authority, the
+/// card said so, and the answer stayed until the app restarted, long after
+/// the network came back.
+#[tokio::test]
+async fn a_revocation_nobody_could_check_is_checked_again_on_the_next_open() {
+    let window = FakeWindow::showing(thread(Some(Protection::SmimeSigned)));
+    window.with(|screen| {
+        screen.read = Ok(Read {
+            revocation_unchecked: true,
+            ..signed()
+        })
+    });
+    window.engines().run().await;
+    window.with(|screen| screen.open = Some(thread(Some(Protection::SmimeSigned))));
     window.engines().run().await;
     assert_eq!(
         window

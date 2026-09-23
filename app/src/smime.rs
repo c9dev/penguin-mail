@@ -557,6 +557,26 @@ mod tests {
         assert_eq!(inside.tone, Tone::Unchecked);
     }
 
+    /// The window keeps an answer for the rest of the run, and this one can
+    /// change once the authority is back in reach, so it says so.
+    #[test]
+    fn a_revocation_nobody_could_check_is_marked_as_one_to_ask_again() {
+        let answer = |chain| {
+            protection::read(
+                Standard::Smime,
+                Ok(Found {
+                    encrypted: false,
+                    signatures: vec![signed(&signature(Verdict::Good, chain))],
+                    part: Part::Text("Meet at six.".into()),
+                }),
+                &MessageBody::default(),
+                Some("ada@example.test"),
+            )
+        };
+        assert!(answer(Chain::RevocationUnknown).revocation_unchecked);
+        assert!(!answer(Chain::Trusted).revocation_unchecked);
+    }
+
     /// gpgsm reports a certificate its authority's CRL lists as a good
     /// signature beside `TRUST_NEVER 94`, so the chain says untrusted as
     /// well. The revocation is what the card names.

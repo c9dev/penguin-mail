@@ -610,6 +610,7 @@ mod tests {
                 body: Some(signed),
                 files: vec![vec![1]],
                 sealed: false,
+                revocation_unchecked: false,
             },
         );
         let pictures = &open.inline_images["m1"];
@@ -640,6 +641,7 @@ mod tests {
             }),
             files: Vec::new(),
             sealed,
+            revocation_unchecked: false,
         }
     }
 

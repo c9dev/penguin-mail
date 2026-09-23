@@ -34,13 +34,14 @@ impl Verdicts {
 
     /// Keeps `read` for `message_id`, unless the message arrived encrypted,
     /// the engine gave no answer about it (a failure can pass, and asking
-    /// again is how to find out), or there is no keyring time to check it
-    /// against later.
+    /// again is how to find out), nobody could check a certificate's
+    /// revocation (the authority may answer next time), or there is no
+    /// keyring time to check it against later.
     pub fn keep(&mut self, message_id: String, keyring: Option<SystemTime>, read: &Read) {
         let Some(keyring) = keyring else {
             return;
         };
-        if read.sealed || read.body.is_none() {
+        if read.sealed || read.body.is_none() || read.revocation_unchecked {
             return;
         }
         if self.kept.len() >= KEPT {
@@ -67,6 +68,7 @@ mod tests {
             body: Some(mailrs_domain::MessageBody::default()),
             files: Vec::new(),
             sealed,
+            revocation_unchecked: false,
         }
     }
 
@@ -102,6 +104,18 @@ mod tests {
             ..read(false)
         };
         verdicts.keep("m1".into(), Some(then), &refused);
+        assert!(verdicts.get("m1", Some(then)).is_none());
+    }
+
+    #[test]
+    fn a_revocation_nobody_could_check_is_not_kept() {
+        let mut verdicts = Verdicts::default();
+        let then = SystemTime::UNIX_EPOCH;
+        let unchecked = Read {
+            revocation_unchecked: true,
+            ..read(false)
+        };
+        verdicts.keep("m1".into(), Some(then), &unchecked);
         assert!(verdicts.get("m1", Some(then)).is_none());
     }
 
