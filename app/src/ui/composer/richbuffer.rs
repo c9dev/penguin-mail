@@ -575,6 +575,7 @@ mod tests {
         an_inserted_body_lands_at_the_cursor();
         a_picture_reads_back_where_it_sits();
         super::super::editor::checks::run();
+        super::super::spell::checks::run();
         // The extraction script needs a real engine to run in, and this
         // is the one test binary that starts one.
         an_unsubscribe_page_reads_back_as_its_fixture();

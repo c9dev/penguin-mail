@@ -9,8 +9,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - Typing in a long quoted reply keeps up: each key used to restyle the
   whole message, several milliseconds on a reply of 5,000 lines, and now
-  touches only the line you are on. Saving or sending that reply reads
-  it in about 13 ms instead of 280.
+  touches only the line you are on. The spell check that runs when you
+  pause looks at the lines you changed rather than all of them, and
+  saving or sending that reply reads it in about 13 ms instead of 280.
 - A message with big attachments leaves the composer sooner: it is built
   once rather than twice, and Undo Send no longer copies every file it
   carries.

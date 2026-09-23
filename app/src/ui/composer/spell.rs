@@ -246,15 +246,56 @@ fn is_prose(iter: &gtk::TextIter) -> bool {
     })
 }
 
-/// Every stretch of prose in `buffer`, as the pair of iters around it.
+/// The text of `line`, without its line break.
+fn line_text(buffer: &gtk::TextBuffer, line: i32) -> String {
+    let Some(start) = buffer.iter_at_line(line) else {
+        return String::new();
+    };
+    let mut end = start;
+    if !end.ends_line() {
+        end.forward_to_line_end();
+    }
+    buffer.text(&start, &end, false).to_string()
+}
+
+/// Whether `line` sits inside a fenced code block, counting the fences
+/// above it. GTK's own search finds the fences, which is much quicker
+/// than reading every line above.
+fn fenced_before(buffer: &gtk::TextBuffer, line: i32) -> bool {
+    let Some(limit) = buffer.iter_at_line(line) else {
+        return false;
+    };
+    let mut fences: Vec<i32> = Vec::new();
+    for mark in ["```", "~~~"] {
+        let mut from = buffer.start_iter();
+        while let Some((start, end)) =
+            from.forward_search(mark, gtk::TextSearchFlags::TEXT_ONLY, Some(&limit))
+        {
+            if is_fence(&line_text(buffer, start.line())) {
+                fences.push(start.line());
+            }
+            from = end;
+        }
+    }
+    fences.sort_unstable();
+    fences.dedup();
+    fences.len() % 2 == 1
+}
+
+/// Every stretch of prose on the lines from `first` to `last`, as the
+/// pair of iters around it.
 ///
 /// One walk covers both ways of writing: the line kinds rule out quotes and
 /// code blocks, the tags rule out list markers, inline code and pictures,
 /// and what is left is what a dictionary should see.
-fn prose_runs(buffer: &gtk::TextBuffer) -> Vec<(gtk::TextIter, gtk::TextIter)> {
+fn prose_runs(
+    buffer: &gtk::TextBuffer,
+    first: i32,
+    last: i32,
+) -> Vec<(gtk::TextIter, gtk::TextIter)> {
     let mut runs = Vec::new();
-    let mut fenced = false;
-    for line in 0..buffer.line_count() {
+    let mut fenced = first > 0 && fenced_before(buffer, first);
+    for line in first..=last {
         let Some(start) = buffer.iter_at_line(line) else {
             continue;
         };
@@ -351,6 +392,13 @@ pub struct SpellCheck {
     /// Told about every word Add to Dictionary keeps, so Preferences can
     /// save it.
     on_learn: Box<dyn Fn(&str)>,
+    /// The first and last line edited since the last check. The last is
+    /// the end of the buffer when a fence came or went, since that changes
+    /// what counts as code on every line below it.
+    pending: Cell<Option<(i32, i32)>>,
+    /// Lines the last check looked at, for the checks below.
+    #[cfg(test)]
+    looked_at: Cell<usize>,
 }
 
 impl SpellCheck {
@@ -381,16 +429,79 @@ impl SpellCheck {
             at: Cell::new((0, 0)),
             generation: Cell::new(0),
             on_learn: Box::new(on_learn),
+            pending: Cell::new(None),
+            #[cfg(test)]
+            looked_at: Cell::new(0),
         });
-        let weak = Rc::downgrade(&spell);
+        spell.follow_edits(&buffer);
+        spell.wire_menu();
+        spell.recheck();
+        Some(spell)
+    }
+
+    /// Notes the lines each edit touches, and checks them once the typing
+    /// settles. The handlers run before the edit lands, which is the only
+    /// time a fence about to be broken can still be seen.
+    fn follow_edits(self: &Rc<Self>, buffer: &gtk::TextBuffer) {
+        let weak = Rc::downgrade(self);
+        buffer.connect_insert_text(move |buffer, at, text| {
+            let Some(spell) = weak.upgrade() else { return };
+            let line = at.line();
+            let breaks = text.matches('\n').count() as i32;
+            match is_fence(&line_text(buffer, line)) {
+                true => spell.touch(line, i32::MAX),
+                false => spell.touch(line, line + breaks),
+            }
+        });
+        let weak = Rc::downgrade(self);
+        buffer.connect_delete_range(move |buffer, start, end| {
+            let Some(spell) = weak.upgrade() else { return };
+            let gone = buffer.text(start, end, true);
+            let fence = gone.contains("```")
+                || gone.contains("~~~")
+                || is_fence(&line_text(buffer, start.line()))
+                || is_fence(&line_text(buffer, end.line()));
+            match fence {
+                true => spell.touch(start.line(), i32::MAX),
+                false => spell.touch(start.line(), start.line()),
+            }
+        });
+        // A line that becomes a quote or code changes without a character
+        // changing, so the tags that say so count as edits too.
+        for remove in [false, true] {
+            let weak = Rc::downgrade(self);
+            let follow = move |_: &gtk::TextBuffer,
+                               tag: &gtk::TextTag,
+                               start: &gtk::TextIter,
+                               end: &gtk::TextIter| {
+                let Some(spell) = weak.upgrade() else { return };
+                if matches!(
+                    tag.name().as_deref(),
+                    Some("quote" | "code-block" | "code" | richbuffer::MARKER)
+                ) {
+                    spell.touch(start.line(), end.line());
+                    spell.recheck_soon();
+                }
+            };
+            match remove {
+                false => buffer.connect_apply_tag(follow),
+                true => buffer.connect_remove_tag(follow),
+            };
+        }
+        let weak = Rc::downgrade(self);
         buffer.connect_changed(move |_| {
             if let Some(spell) = weak.upgrade() {
                 spell.recheck_soon();
             }
         });
-        spell.wire_menu();
-        spell.recheck();
-        Some(spell)
+    }
+
+    fn touch(&self, first: i32, last: i32) {
+        let touched = match self.pending.get() {
+            Some((from, to)) => (from.min(first), to.max(last)),
+            None => (first, last),
+        };
+        self.pending.set(Some(touched));
     }
 
     /// Checks the buffer once the typing settles, so a fast typist is not
@@ -405,31 +516,66 @@ impl SpellCheck {
                 if let Some(spell) = weak.upgrade()
                     && spell.generation.get() == generation
                 {
-                    spell.recheck();
+                    spell.settle();
                 }
             },
         );
     }
 
+    /// Checks the lines edited since the last check. Walking the whole
+    /// buffer after every pause took 180 ms on a long reply.
+    fn settle(&self) {
+        let Some((first, last)) = self.pending.take() else {
+            return;
+        };
+        let _looked = self.recheck_lines(first, last);
+        #[cfg(test)]
+        self.looked_at.set(_looked);
+    }
+
     /// Marks every misspelling in the buffer and clears the rest.
     pub fn recheck(&self) {
+        self.recheck_lines(0, i32::MAX);
+    }
+
+    /// Marks the misspellings on the lines from `first` to `last` and
+    /// clears the rest of theirs. Returns how many lines it looked at.
+    fn recheck_lines(&self, first: i32, last: i32) -> usize {
         let buffer = self.view.buffer();
-        buffer.remove_tag_by_name(TAG, &buffer.start_iter(), &buffer.end_iter());
-        for (start, end, _) in self.misspellings() {
+        let count = buffer.line_count();
+        let first = first.clamp(0, count - 1);
+        let mut last = last.clamp(first, count - 1);
+        // A fence among them decides what is code on every line below.
+        if (first..=last).any(|line| is_fence(&line_text(&buffer, line))) {
+            last = count - 1;
+        }
+        let start = buffer
+            .iter_at_line(first)
+            .unwrap_or_else(|| buffer.end_iter());
+        let mut end = buffer
+            .iter_at_line(last)
+            .unwrap_or_else(|| buffer.end_iter());
+        if !end.ends_line() {
+            end.forward_to_line_end();
+        }
+        buffer.remove_tag_by_name(TAG, &start, &end);
+        for (start, end, _) in self.misspellings(first, last) {
             let (from, to) = (buffer.iter_at_offset(start), buffer.iter_at_offset(end));
             buffer.apply_tag_by_name(TAG, &from, &to);
         }
+        (last - first + 1) as usize
     }
 
-    /// Every misspelling in the buffer, as character offsets and the word.
+    /// Every misspelling on the lines from `first` to `last`, as character
+    /// offsets and the word.
     ///
     /// Character offsets, not bytes, because that is what a
     /// [`gtk::TextBuffer`] counts in, and an accented letter would otherwise
     /// shift every squiggle after it.
-    fn misspellings(&self) -> Vec<(i32, i32, String)> {
+    fn misspellings(&self, first: i32, last: i32) -> Vec<(i32, i32, String)> {
         let buffer = self.view.buffer();
         let mut found = Vec::new();
-        for (from, to) in prose_runs(&buffer) {
+        for (from, to) in prose_runs(&buffer, first, last) {
             let text = buffer.text(&from, &to, false).to_string();
             for (at, word) in words_in(&text) {
                 if self.dictionaries.accepts(word) {
@@ -445,7 +591,8 @@ impl SpellCheck {
     /// The misspelled word at `offset`. A click just after the last letter
     /// counts, the way it does when you double-click a word.
     fn word_at(&self, offset: i32) -> Option<(i32, i32, String)> {
-        self.misspellings()
+        let line = self.view.buffer().iter_at_offset(offset).line();
+        self.misspellings(line, line)
             .into_iter()
             .find(|(start, end, _)| (*start..=*end).contains(&offset))
     }
@@ -669,5 +816,85 @@ mod tests {
         assert!(!dictionaries.accepts("wibble"));
         dictionaries.ignore("wibble");
         assert!(dictionaries.accepts("Wibble"));
+    }
+}
+
+/// The spell check's checks. They run from the one GTK test in
+/// `richbuffer`, because GTK belongs to the thread that starts it.
+#[cfg(test)]
+pub(super) mod checks {
+    use super::*;
+
+    pub fn run() {
+        a_pause_rechecks_the_lines_that_changed();
+    }
+
+    /// A dictionary of a few words, so the check runs on any machine.
+    fn dictionaries() -> Rc<Dictionaries> {
+        let dictionary =
+            spellbook::Dictionary::new("SET UTF-8\n", "6\nhello\nworld\nline\ncode\nfine\nplan\n")
+                .expect("the dictionary parses");
+        Rc::new(Dictionaries {
+            loaded: vec![dictionary],
+            known: RefCell::new(HashSet::new()),
+            ignored: RefCell::new(HashSet::new()),
+        })
+    }
+
+    fn marked(buffer: &gtk::TextBuffer, line: i32) -> bool {
+        let tag = buffer.tag_table().lookup(TAG).expect("the tag is there");
+        let start = buffer.iter_at_line(line).expect("the line is there");
+        let mut iter = start;
+        while iter.line() == line && !iter.is_end() {
+            if iter.has_tag(&tag) {
+                return true;
+            }
+            iter.forward_char();
+        }
+        false
+    }
+
+    fn a_pause_rechecks_the_lines_that_changed() {
+        let view = gtk::TextView::new();
+        let buffer = view.buffer();
+        richbuffer::install(&buffer);
+        let mut text = String::from("hello world\n");
+        for _ in 0..2000 {
+            text.push_str("fine line\n");
+        }
+        text.push_str("wrold");
+        buffer.set_text(&text);
+        let spell = SpellCheck::attach(&view, dictionaries(), |_| {}).expect("a dictionary");
+        assert!(
+            marked(&buffer, 2001),
+            "the whole buffer is checked at first"
+        );
+
+        let mut at = buffer.iter_at_offset(5);
+        buffer.insert(&mut at, " helo");
+        spell.settle();
+        assert!(marked(&buffer, 0), "the new misspelling is marked");
+        assert!(marked(&buffer, 2001), "the one far away is still marked");
+        assert!(
+            spell.looked_at.get() < 5,
+            "one word looked at {} lines",
+            spell.looked_at.get()
+        );
+
+        // A fence opens a code block that runs to the end, so every line
+        // after it changes, and they are all looked at.
+        let mut at = buffer.iter_at_line(1).unwrap();
+        buffer.insert(&mut at, "```\n");
+        spell.settle();
+        assert!(!marked(&buffer, 2002), "code is not prose");
+        assert!(marked(&buffer, 0));
+        // And a fence taken away gives the lines back.
+        let (mut from, mut to) = (
+            buffer.iter_at_line(1).unwrap(),
+            buffer.iter_at_line(2).unwrap(),
+        );
+        buffer.delete(&mut from, &mut to);
+        spell.settle();
+        assert!(marked(&buffer, 2001));
     }
 }
