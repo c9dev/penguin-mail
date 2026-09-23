@@ -128,6 +128,12 @@ impl OAuthClient {
         }
     }
 
+    /// The client ID, which Google shows on its consent screen and which
+    /// is no secret. Tests use it to tell two clients apart.
+    pub fn id(&self) -> &str {
+        &self.client_id
+    }
+
     /// `email`'s bucket in this OAuth client's quota pool.
     pub fn account_quota(&self, email: &str) -> std::sync::Arc<crate::limiter::AccountQuota> {
         self.quota.account(email)

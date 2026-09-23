@@ -7,7 +7,7 @@ use std::process::{Command as Process, Stdio};
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result, anyhow, bail};
 use clap::{Parser, Subcommand};
 use mailrs_domain::{Account, AccountId, ChangeEvent, EpochMillis, system_label};
 use mailrs_gmail::{GMAIL_API_BASE, KeyringTokenStore, OAuthClient, TokenStore, authorize};
@@ -144,8 +144,12 @@ fn load_config() -> Result<Config> {
     Config::load(&path).with_context(|| "docs/setup.md explains how to create the config file")
 }
 
-fn oauth(config: &Config) -> OAuthClient {
-    OAuthClient::new(&config.oauth.client_id, &config.oauth.client_secret)
+fn oauth(config: &Config) -> Result<OAuthClient> {
+    let own = config
+        .oauth
+        .as_ref()
+        .ok_or_else(|| anyhow!("config.toml has no [oauth] section"))?;
+    Ok(OAuthClient::new(&own.client_id, &own.client_secret))
 }
 
 fn token_store() -> Arc<dyn TokenStore> {
@@ -153,7 +157,7 @@ fn token_store() -> Arc<dyn TokenStore> {
 }
 
 async fn add_account(db: &Db, config: &Config) -> Result<()> {
-    let oauth = oauth(config);
+    let oauth = oauth(config)?;
     let flow = authorize(&oauth, GMAIL_API_BASE, &[], |url| {
         println!(
             "Opening your browser for Google's consent screen. If it does not open, visit:\n\n{url}\n"
@@ -218,7 +222,7 @@ async fn run_sync(db: &Db, config: &Config) -> Result<()> {
     let (engine, events) = SyncEngine::<AccountClient>::new(db.clone(), config.engine_config());
     let tokens = token_store();
     for account in &all {
-        match connect_account(oauth(config), Arc::clone(&tokens), account).await {
+        match connect_account(oauth(config)?, Arc::clone(&tokens), account).await {
             Ok(client) => engine.start_account(account.id, Arc::new(client)),
             Err(err) => eprintln!("{}: {err}", account.email),
         }
@@ -506,7 +510,7 @@ async fn triage(
 /// A one-off sync handle for commands that do not run the engine.
 async fn account_sync(db: &Db, config: &Config, email: &str) -> Result<AccountSync<AccountClient>> {
     let account = find_account(db, email).await?;
-    let client = connect_account(oauth(config), token_store(), &account).await?;
+    let client = connect_account(oauth(config)?, token_store(), &account).await?;
     let (events, _) = async_channel::unbounded();
     let engine = config.engine_config();
     Ok(

@@ -1924,10 +1924,14 @@ impl MainWindow {
     // ---- Accounts ----------------------------------------------------------
 
     fn save_config(self: &Rc<Self>, client_id: String, client_secret: String) {
-        match self
-            .core
-            .save_config(mailrs_sync::config::Config::new(client_id, client_secret))
-        {
+        let config = mailrs_sync::config::Config {
+            oauth: Some(mailrs_sync::config::OAuthConfig {
+                client_id,
+                client_secret,
+            }),
+            ..mailrs_sync::config::Config::default()
+        };
+        match self.core.save_config(config) {
             Ok(()) => self.refresh_accounts(Reload::Yes),
             Err(err) => self.failed(&gettext("Could not save the settings: {reason}"), &err),
         }

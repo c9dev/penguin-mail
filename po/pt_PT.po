@@ -1030,15 +1030,15 @@ msgstr "Escolha uma hora no futuro"
 msgid "On {date}, {sender} wrote:"
 msgstr "A {date}, {sender} escreveu:"
 
-#: app/src/core.rs:508
+#: app/src/core.rs:509
 msgid "Demo mode cannot add real accounts."
 msgstr "O modo de demonstração não adiciona contas reais."
 
-#: app/src/core.rs:525
+#: app/src/core.rs:526
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Desistiu de esperar pelo navegador ao fim de cinco minutos."
 
-#: app/src/core.rs:533
+#: app/src/core.rs:534
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 "Iniciou sessão como {account}. Escolha {wanted} para voltar a ligar essa "
@@ -2152,7 +2152,7 @@ msgstr "Abrir o Penguin Mail"
 msgid "New Message"
 msgstr "Nova mensagem"
 
-#: app/src/tray.rs:159 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2179
+#: app/src/tray.rs:159 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2183
 msgid "Check for Mail"
 msgstr "Procurar correio"
 
@@ -2170,7 +2170,7 @@ msgstr "Novidades da versão {version}"
 msgid "Check for Updates"
 msgstr "Procurar atualizações"
 
-#: app/src/tray.rs:175 app/src/ui/window.rs:2191
+#: app/src/tray.rs:175 app/src/ui/window.rs:2195
 #: app/src/ui/window/shortcuts.rs:508
 msgid "Quit"
 msgstr "Sair"
@@ -2203,7 +2203,7 @@ msgstr "Comunicar um problema"
 msgid "License"
 msgstr "Licença"
 
-#: app/src/ui/about.rs:170 app/src/ui/window.rs:2190
+#: app/src/ui/about.rs:170 app/src/ui/window.rs:2194
 msgid "About Penguin Mail"
 msgstr "Acerca do Penguin Mail"
 
@@ -2393,7 +2393,7 @@ msgid "Edit {server}"
 msgstr "Editar {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1411
-#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:2014
+#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:2018
 msgid "Remove"
 msgstr "Remover"
 
@@ -3649,7 +3649,7 @@ msgstr "Não foi possível eliminar o endereço: {reason}"
 msgid "Allow Hide My Email"
 msgstr "Permitir Ocultar o meu e-mail"
 
-#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2272
+#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2276
 msgid "Add an account first"
 msgstr "Adicione primeiro uma conta"
 
@@ -4474,7 +4474,7 @@ msgstr "Assinatura…"
 msgid "Rules…"
 msgstr "Regras…"
 
-#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2182
+#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2186
 msgid "Hide My Email…"
 msgstr "Ocultar o meu e-mail…"
 
@@ -4900,7 +4900,7 @@ msgstr ""
 "Cloud, para que mais ninguém chegue ao seu correio. Cole o ID e o segredo do "
 "cliente para começar."
 
-#: app/src/ui/welcome.rs:97 app/src/ui/window.rs:1973
+#: app/src/ui/welcome.rs:97 app/src/ui/window.rs:1977
 msgid "Sign In with Google"
 msgstr "Iniciar sessão com a Google"
 
@@ -5161,27 +5161,27 @@ msgstr "{file} guardado nas transferências"
 msgid "Could not save {file}: {reason}"
 msgstr "Não foi possível guardar {file}: {reason}"
 
-#: app/src/ui/window.rs:1932
+#: app/src/ui/window.rs:1936
 msgid "Could not save the settings: {reason}"
 msgstr "Não foi possível guardar as definições: {reason}"
 
-#: app/src/ui/window.rs:1955
+#: app/src/ui/window.rs:1959
 msgid "Waiting for Your Browser…"
 msgstr "À espera do seu navegador…"
 
-#: app/src/ui/window.rs:1957
+#: app/src/ui/window.rs:1961
 msgid "Continue in your browser"
 msgstr "Continue no seu navegador"
 
-#: app/src/ui/window.rs:1963
+#: app/src/ui/window.rs:1967
 msgid "Added {account}. Downloading mail…"
 msgstr "{account} adicionada. A transferir correio…"
 
-#: app/src/ui/window.rs:2007
+#: app/src/ui/window.rs:2011
 msgid "Remove {account}?"
 msgstr "Remover {account}?"
 
-#: app/src/ui/window.rs:2011
+#: app/src/ui/window.rs:2015
 msgid ""
 "Its downloaded mail and saved sign-in are deleted from this computer. "
 "Nothing changes in Gmail."
@@ -5189,43 +5189,43 @@ msgstr ""
 "O correio transferido e a sessão guardada são eliminados deste computador. "
 "Nada muda no Gmail."
 
-#: app/src/ui/window.rs:2027
+#: app/src/ui/window.rs:2031
 msgid "Removed {account}"
 msgstr "{account} removida"
 
-#: app/src/ui/window.rs:2029
+#: app/src/ui/window.rs:2033
 msgid "Could not remove {account}: {reason}"
 msgstr "Não foi possível remover {account}: {reason}"
 
-#: app/src/ui/window.rs:2180
+#: app/src/ui/window.rs:2184
 msgid "Add Account…"
 msgstr "Adicionar conta…"
 
-#: app/src/ui/window.rs:2181
+#: app/src/ui/window.rs:2185
 msgid "New Smart Mailbox…"
 msgstr "Nova caixa inteligente…"
 
-#: app/src/ui/window.rs:2188 app/src/ui/window/shortcuts.rs:485
+#: app/src/ui/window.rs:2192 app/src/ui/window/shortcuts.rs:485
 msgid "Preferences"
 msgstr "Preferências"
 
-#: app/src/ui/window.rs:2189
+#: app/src/ui/window.rs:2193
 msgid "Keyboard Shortcuts"
 msgstr "Atalhos de teclado"
 
-#: app/src/ui/window.rs:2197 app/src/ui/window.rs:2199
+#: app/src/ui/window.rs:2201 app/src/ui/window.rs:2203
 msgid "Main Menu"
 msgstr "Menu principal"
 
-#: app/src/ui/window.rs:2452
+#: app/src/ui/window.rs:2456
 msgid "Open a message from the person first"
 msgstr "Abra primeiro uma mensagem dessa pessoa"
 
-#: app/src/ui/window.rs:2523
+#: app/src/ui/window.rs:2527
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "O Penguin Mail mostra o novo idioma depois de reiniciar"
 
-#: app/src/ui/window.rs:2525 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:2529 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Reiniciar"
 

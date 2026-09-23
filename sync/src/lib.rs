@@ -16,6 +16,7 @@ pub mod invitations;
 pub mod mailbox;
 pub mod newsletters;
 pub mod outbox;
+pub mod sign_in;
 mod settings;
 mod triage;
 pub mod unsubscribe;

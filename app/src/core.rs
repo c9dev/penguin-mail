@@ -143,7 +143,7 @@ impl Core {
         }
         let db = Db::open(&db_path)?;
         let config = if demo {
-            Some(Config::new("demo", "demo"))
+            Some(Config::default())
         } else {
             match Config::load(&config_path()?) {
                 Ok(config) => Some(config),
@@ -244,10 +244,11 @@ impl Core {
         let config = config
             .as_ref()
             .ok_or_else(|| anyhow!("Penguin Mail has no OAuth client configured yet"))?;
-        Ok(OAuthClient::new(
-            &config.oauth.client_id,
-            &config.oauth.client_secret,
-        ))
+        let own = config
+            .oauth
+            .as_ref()
+            .ok_or_else(|| anyhow!("Penguin Mail has no OAuth client configured yet"))?;
+        Ok(OAuthClient::new(&own.client_id, &own.client_secret))
     }
 
     fn start_engine(&self) {

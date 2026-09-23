@@ -35,9 +35,12 @@ impl ConfigError {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Config {
-    pub oauth: OAuthConfig,
+    /// The Google client a person pasted into the old setup page. Only
+    /// accounts that signed in through it read it; see `sign_in`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub oauth: Option<OAuthConfig>,
     #[serde(default, skip_serializing_if = "SyncConfig::is_default")]
     pub sync: SyncConfig,
 }
@@ -65,16 +68,6 @@ impl SyncConfig {
 }
 
 impl Config {
-    pub fn new(client_id: impl Into<String>, client_secret: impl Into<String>) -> Self {
-        Config {
-            oauth: OAuthConfig {
-                client_id: client_id.into(),
-                client_secret: client_secret.into(),
-            },
-            sync: SyncConfig::default(),
-        }
-    }
-
     pub fn parse(text: &str) -> Result<Config, String> {
         toml::from_str(text).map_err(|e| e.to_string())
     }
@@ -90,7 +83,8 @@ impl Config {
         })
     }
 
-    /// Writes the file readable only by its owner, since it holds the client secret.
+    /// Writes the file readable only by its owner, since it can hold the
+    /// client secret of an own client.
     pub fn save(&self, path: &Path) -> Result<(), ConfigError> {
         let write_error = |source| ConfigError::Write {
             path: path.to_path_buf(),
@@ -210,7 +204,7 @@ mod tests {
     use std::os::unix::fs::PermissionsExt;
     use std::time::Duration;
 
-    use super::{Config, move_old_dir};
+    use super::{Config, OAuthConfig, move_old_dir};
 
     #[test]
     fn a_private_folder_is_the_owners_alone_whether_new_or_old() {
@@ -231,7 +225,6 @@ mod tests {
     fn a_minimal_config_uses_the_engine_defaults() {
         let config =
             Config::parse("[oauth]\nclient_id = \"id\"\nclient_secret = \"secret\"\n").unwrap();
-        assert_eq!(config.oauth.client_id, "id");
         let engine = config.engine_config();
         assert_eq!(engine.poll_interval, Duration::from_secs(30));
         assert_eq!(engine.window_days, 30);
@@ -250,15 +243,36 @@ mod tests {
     }
 
     #[test]
-    fn the_oauth_section_is_required() {
-        assert!(Config::parse("[sync]\npoll_seconds = 10\n").is_err());
+    fn a_config_with_no_oauth_section_loads() {
+        let config = Config::parse("[sync]\npoll_seconds = 30\n").unwrap();
+        assert!(config.oauth.is_none());
+        assert_eq!(config.sync.poll_seconds, Some(30));
+    }
+
+    #[test]
+    fn a_config_from_the_setup_page_still_loads() {
+        let text = "[oauth]\nclient_id = \"id\"\nclient_secret = \"secret\"\n";
+        let config = Config::parse(text).unwrap();
+        assert_eq!(config.oauth.map(|o| o.client_id), Some("id".to_string()));
+    }
+
+    #[test]
+    fn a_default_config_writes_no_oauth_section() {
+        let text = toml::to_string(&Config::default()).unwrap();
+        assert!(!text.contains("oauth"));
     }
 
     #[test]
     fn saved_configs_load_back_and_stay_private() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("nested").join("config.toml");
-        let config = Config::new("id.apps.googleusercontent.com", "GOCSPX-secret");
+        let config = Config {
+            oauth: Some(OAuthConfig {
+                client_id: "id.apps.googleusercontent.com".into(),
+                client_secret: "GOCSPX-secret".into(),
+            }),
+            ..Config::default()
+        };
         config.save(&path).unwrap();
         assert_eq!(Config::load(&path).unwrap(), config);
         let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
