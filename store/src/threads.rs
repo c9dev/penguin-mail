@@ -109,6 +109,26 @@ impl Sql {
     }
 }
 
+/// Which rows of a list a page holds.
+#[derive(Clone, Copy)]
+enum Page<'a> {
+    /// `limit` rows after the first `offset`.
+    Offset(i64, i64),
+    /// `limit` rows after this row of the previous page, or from the top.
+    After(Option<&'a ThreadSummary>, i64),
+}
+
+impl Page<'_> {
+    /// How far into the list the page ends, counted from where the
+    /// query starts reading.
+    fn end(self) -> i64 {
+        match self {
+            Page::Offset(offset, limit) => offset + limit,
+            Page::After(_, limit) => limit,
+        }
+    }
+}
+
 /// What a query lists: thread rows, or single messages.
 #[derive(Clone, Copy)]
 enum Rows {
@@ -199,12 +219,41 @@ impl Rows {
 
     /// Appends the order a list shows, newest first with ties broken on
     /// account and id so pages never overlap, and the page's bounds.
-    fn order(self, sql: &mut Sql, offset: i64, limit: i64) {
-        let order = match self {
-            Rows::Threads => " ORDER BY t.last_message_at DESC, t.account_id, t.id LIMIT ",
-            Rows::Messages => " ORDER BY m.date DESC, m.account_id, m.id LIMIT ",
+    fn order(self, sql: &mut Sql, page: Page) {
+        let (date, row) = match self {
+            Rows::Threads => ("t.last_message_at", "t"),
+            Rows::Messages => ("m.date", "m"),
         };
-        sql.push(order).bind(limit).push(" OFFSET ").bind(offset);
+        let (offset, limit) = match page {
+            Page::Offset(offset, limit) => (offset, limit),
+            Page::After(None, limit) => (0, limit),
+            Page::After(Some(last), limit) => {
+                let id = match self {
+                    Rows::Threads => &last.id,
+                    Rows::Messages => last.message_id.as_ref().unwrap_or(&last.id),
+                };
+                // The first bound on its own lets a walk by date seek
+                // straight to the page instead of reading its way there.
+                sql.push(&format!(" AND {date} <= "))
+                    .bind(last.last_message_at)
+                    .push(&format!(" AND ({date} < "))
+                    .bind(last.last_message_at)
+                    .push(&format!(" OR {row}.account_id > "))
+                    .bind(last.account_id)
+                    .push(&format!(" OR ({row}.account_id = "))
+                    .bind(last.account_id)
+                    .push(&format!(" AND {row}.id > "))
+                    .bind(id.clone())
+                    .push("))");
+                (0, limit)
+            }
+        };
+        sql.push(&format!(
+            " ORDER BY {date} DESC, {row}.account_id, {row}.id LIMIT "
+        ))
+        .bind(limit)
+        .push(" OFFSET ")
+        .bind(offset);
     }
 
     /// The column that holds the row's thread id.
@@ -607,25 +656,50 @@ pub fn get_thread(
 }
 
 /// Newest first. Ties break on account and thread id so pages never overlap.
+/// A page deep in the list reads every row before it; `list_threads_after`
+/// does not.
 pub fn list_threads(
     conn: &Connection,
     filter: &ThreadFilter,
     offset: i64,
     limit: i64,
 ) -> Result<Vec<ThreadSummary>> {
-    let walk = filter.walk(conn, Rows::Threads, offset + limit)?;
-    threads_walking(conn, filter, offset, limit, walk)
+    let page = Page::Offset(offset, limit);
+    threads_walking(
+        conn,
+        filter,
+        page,
+        filter.walk(conn, Rows::Threads, page.end())?,
+    )
+}
+
+/// The `limit` threads that follow `last`, the final row of the page
+/// before, in the order `list_threads` gives; the first page when `last`
+/// is `None`. The page starts where `last` sits in the order, so it costs
+/// the same however deep it is.
+pub fn list_threads_after(
+    conn: &Connection,
+    filter: &ThreadFilter,
+    last: Option<&ThreadSummary>,
+    limit: i64,
+) -> Result<Vec<ThreadSummary>> {
+    let page = Page::After(last, limit);
+    threads_walking(
+        conn,
+        filter,
+        page,
+        filter.walk(conn, Rows::Threads, page.end())?,
+    )
 }
 
 fn threads_walking(
     conn: &Connection,
     filter: &ThreadFilter,
-    offset: i64,
-    limit: i64,
+    page: Page,
     walk: Walk,
 ) -> Result<Vec<ThreadSummary>> {
     let mut sql = filter.query_walking(Rows::Threads, &format!("SELECT {COLUMNS}"), &walk);
-    Rows::Threads.order(&mut sql, offset, limit);
+    Rows::Threads.order(&mut sql, page);
     let mut stmt = conn.prepare_cached(&sql.text)?;
     let rows = stmt.query_map(params_from_iter(&sql.params), to_summary)?;
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
@@ -677,19 +751,40 @@ pub fn list_messages(
     offset: i64,
     limit: i64,
 ) -> Result<Vec<ThreadSummary>> {
-    let walk = filter.walk(conn, Rows::Messages, offset + limit)?;
-    messages_walking(conn, filter, offset, limit, walk)
+    let page = Page::Offset(offset, limit);
+    messages_walking(
+        conn,
+        filter,
+        page,
+        filter.walk(conn, Rows::Messages, page.end())?,
+    )
+}
+
+/// `list_threads_after` for single messages: the `limit` messages that
+/// follow the message row `last`.
+pub fn list_messages_after(
+    conn: &Connection,
+    filter: &ThreadFilter,
+    last: Option<&ThreadSummary>,
+    limit: i64,
+) -> Result<Vec<ThreadSummary>> {
+    let page = Page::After(last, limit);
+    messages_walking(
+        conn,
+        filter,
+        page,
+        filter.walk(conn, Rows::Messages, page.end())?,
+    )
 }
 
 fn messages_walking(
     conn: &Connection,
     filter: &ThreadFilter,
-    offset: i64,
-    limit: i64,
+    page: Page,
     walk: Walk,
 ) -> Result<Vec<ThreadSummary>> {
     let mut sql = filter.query_walking(Rows::Messages, &format!("SELECT {MESSAGE_COLUMNS}"), &walk);
-    Rows::Messages.order(&mut sql, offset, limit);
+    Rows::Messages.order(&mut sql, page);
     let mut stmt = conn.prepare_cached(&sql.text)?;
     let rows = stmt.query_map(params_from_iter(&sql.params), to_message_row)?;
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
@@ -1040,28 +1135,84 @@ mod walk_tests {
             .collect()
     }
 
+    fn walking(
+        conn: &Connection,
+        filter: &ThreadFilter,
+        rows: Rows,
+        page: Page,
+        walk: Walk,
+    ) -> Vec<ThreadSummary> {
+        match rows {
+            Rows::Threads => threads_walking(conn, filter, page, walk),
+            Rows::Messages => messages_walking(conn, filter, page, walk),
+        }
+        .unwrap()
+    }
+
     #[test]
     fn every_walk_lists_the_same_rows() {
         let (conn, a, _) = mailbox();
         for filter in filters(a) {
             for (offset, limit) in [(0, 7), (7, 7), (0, 100)] {
-                let threads =
-                    keys(threads_walking(&conn, &filter, offset, limit, Walk::Scan).unwrap());
-                let messages =
-                    keys(messages_walking(&conn, &filter, offset, limit, Walk::Scan).unwrap());
+                let threads = keys(
+                    threads_walking(&conn, &filter, Page::Offset(offset, limit), Walk::Scan)
+                        .unwrap(),
+                );
+                let messages = keys(
+                    messages_walking(&conn, &filter, Page::Offset(offset, limit), Walk::Scan)
+                        .unwrap(),
+                );
                 for walk in filter.every_walk(false) {
-                    let by_walk = threads_walking(&conn, &filter, offset, limit, walk.clone());
+                    let by_walk =
+                        threads_walking(&conn, &filter, Page::Offset(offset, limit), walk.clone());
                     assert_eq!(
                         keys(by_walk.unwrap()),
                         threads,
                         "threads, {filter:?} {walk:?}"
                     );
-                    let by_walk = messages_walking(&conn, &filter, offset, limit, walk.clone());
+                    let by_walk =
+                        messages_walking(&conn, &filter, Page::Offset(offset, limit), walk.clone());
                     assert_eq!(
                         keys(by_walk.unwrap()),
                         messages,
                         "messages, {filter:?} {walk:?}"
                     );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn paging_past_the_last_row_lists_what_paging_by_offset_lists() {
+        let (conn, a, _) = mailbox();
+        for filter in filters(a) {
+            for rows in [Rows::Threads, Rows::Messages] {
+                let whole = keys(walking(
+                    &conn,
+                    &filter,
+                    rows,
+                    Page::Offset(0, 1000),
+                    Walk::Scan,
+                ));
+                for walk in filter.every_walk(false) {
+                    let mut paged = Vec::new();
+                    let mut last: Option<ThreadSummary> = None;
+                    loop {
+                        let page = walking(
+                            &conn,
+                            &filter,
+                            rows,
+                            Page::After(last.as_ref(), 7),
+                            walk.clone(),
+                        );
+                        let done = page.len() < 7;
+                        last = page.last().cloned();
+                        paged.extend(keys(page));
+                        if done {
+                            break;
+                        }
+                    }
+                    assert_eq!(paged, whole, "{filter:?} {walk:?}");
                 }
             }
         }
@@ -1159,7 +1310,7 @@ mod walk_tests {
             (Rows::Messages, format!("SELECT {MESSAGE_COLUMNS}")),
         ] {
             let mut sql = filter.query_walking(rows, &select, &Walk::Date);
-            rows.order(&mut sql, 0, 10);
+            rows.order(&mut sql, Page::Offset(0, 10));
             let plan: Vec<String> = conn
                 .prepare(&format!("EXPLAIN QUERY PLAN {}", sql.text))
                 .unwrap()

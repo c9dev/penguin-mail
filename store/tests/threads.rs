@@ -79,6 +79,42 @@ fn paging_walks_the_list_without_gaps() {
 }
 
 #[test]
+fn paging_past_the_last_row_walks_the_list_without_gaps() {
+    let (conn, _, _) = two_accounts();
+    let inbox = ThreadFilter::unified("INBOX");
+    let mut seen = Vec::new();
+    let mut last = None;
+    for _ in 0..3 {
+        let page = threads::list_threads_after(&conn, &inbox, last.as_ref(), 1).unwrap();
+        last = page.last().cloned();
+        seen.extend(ids(page));
+    }
+    assert_eq!(seen, ["tb1", "ta2", "ta1"]);
+    assert!(
+        threads::list_threads_after(&conn, &inbox, last.as_ref(), 1)
+            .unwrap()
+            .is_empty()
+    );
+    let mut messages = Vec::new();
+    let mut last = None;
+    loop {
+        let page = threads::list_messages_after(&conn, &inbox, last.as_ref(), 2).unwrap();
+        last = page.last().cloned();
+        let done = page.len() < 2;
+        messages.extend(page.into_iter().map(|row| row.message_id.unwrap()));
+        if done {
+            break;
+        }
+    }
+    let by_offset: Vec<String> = threads::list_messages(&conn, &inbox, 0, 100)
+        .unwrap()
+        .into_iter()
+        .map(|row| row.message_id.unwrap())
+        .collect();
+    assert_eq!(messages, by_offset);
+}
+
+#[test]
 fn a_thread_carries_every_label_of_its_messages() {
     let conn = open_in_memory().unwrap();
     let id = accounts::insert_account(&conn, "me@example.com", 0).unwrap();
