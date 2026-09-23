@@ -111,6 +111,7 @@ pub fn with_bodies(messages: Vec<(&str, Result<MessageBody, String>)>) -> OpenTh
         inline_images: HashMap::new(),
         thumbnails: HashMap::new(),
         opened_files: HashMap::new(),
+        sealed: HashSet::new(),
         photos: HashMap::new(),
         unsubscribed: false,
         pgp: None,
@@ -131,6 +132,7 @@ pub fn signed() -> Read {
         },
         body: None,
         files: Vec::new(),
+        sealed: false,
     }
 }
 
@@ -139,6 +141,7 @@ pub fn signed() -> Read {
 pub fn opened() -> Read {
     Read {
         body: Some(body(None)),
+        sealed: true,
         ..signed()
     }
 }

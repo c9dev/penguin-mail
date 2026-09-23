@@ -19,6 +19,21 @@ pub mod run;
 
 pub use queued::Unsent;
 
+/// What a reply or a forward starts from, read off the open thread.
+pub struct Answering {
+    pub account_id: AccountId,
+    pub target: MessageMeta,
+    /// The words to quote.
+    pub text: String,
+    pub html: Option<String>,
+    pub thread: Vec<MessageMeta>,
+    pub attachments: Vec<mailrs_domain::Attachment>,
+    /// Whether the message arrived encrypted, which makes the new message
+    /// start with Encrypt on. The composer then asks before it sends the
+    /// quote in the clear to somebody it cannot encrypt to.
+    pub secret: bool,
+}
+
 /// Everything shown for one open thread.
 pub struct OpenThread {
     pub account_id: AccountId,
@@ -42,6 +57,9 @@ pub struct OpenThread {
     /// For an encrypted message Gmail holds only the ciphertext, so these
     /// bytes are the only copy, and they live no longer than this window.
     pub opened_files: HashMap<String, Vec<Vec<u8>>>,
+    /// The messages that arrived encrypted and were opened here. A reply
+    /// to one starts encrypted.
+    pub sealed: HashSet<String>,
     /// Contact photos by lower-case sender address, as `data:` URIs. A
     /// sender with none keeps the initials avatar.
     pub photos: HashMap<String, String>,
@@ -102,6 +120,7 @@ impl OpenThread {
             inline_images: HashMap::new(),
             thumbnails: HashMap::new(),
             opened_files: HashMap::new(),
+            sealed: HashSet::new(),
             photos: HashMap::new(),
             unsubscribed: false,
             pgp: None,
@@ -153,6 +172,37 @@ impl OpenThread {
             .iter()
             .rev()
             .find(|m| !m.has_label(system_label::DRAFT))
+    }
+
+    /// What a reply to or a forward of one message starts from: `only`, or
+    /// the message a reply answers when it names none. `None` when there
+    /// is no such message.
+    pub fn answering(&self, only: Option<&str>, forward: bool) -> Option<Answering> {
+        let target = match only {
+            Some(id) => self.messages.iter().find(|m| m.id == id)?.clone(),
+            None => self.reply_target()?.clone(),
+        };
+        let body = self
+            .bodies
+            .get(&target.id)
+            .and_then(|body| body.as_ref().ok());
+        Some(Answering {
+            account_id: self.account_id,
+            text: match body {
+                Some(body) => crate::compose::body_text(body),
+                None => target.snippet.clone(),
+            },
+            // A forward keeps the original's HTML and its files, so what
+            // goes out is the message that arrived.
+            html: body.filter(|_| forward).and_then(|body| body.html.clone()),
+            attachments: body
+                .filter(|_| forward)
+                .map(|body| body.attachments.clone())
+                .unwrap_or_default(),
+            secret: self.sealed.contains(&target.id),
+            thread: self.messages.clone(),
+            target,
+        })
     }
 
     /// The newest message that carries an invitation, with the
@@ -326,6 +376,9 @@ impl OpenThread {
         let Some(body) = read.body else {
             return false;
         };
+        if read.sealed {
+            self.sealed.insert(message_id.clone());
+        }
         self.bodies.insert(message_id.clone(), Ok(body));
         let pictures = queued::pictures(self, &message_id, &read.files);
         self.inline_images.insert(message_id.clone(), pictures);
@@ -481,6 +534,7 @@ mod tests {
             inline_images: HashMap::new(),
             thumbnails: HashMap::new(),
             opened_files: HashMap::new(),
+            sealed: HashSet::new(),
             photos: HashMap::new(),
             unsubscribed: false,
             pgp: None,
@@ -530,11 +584,59 @@ mod tests {
                 },
                 body: Some(signed),
                 files: vec![vec![1]],
+                sealed: false,
             },
         );
         let pictures = &open.inline_images["m1"];
         assert_eq!(pictures.len(), 1, "{pictures:?}");
         assert_eq!(pictures["logo"], "data:image/png;base64,AQ==");
+    }
+
+    /// What an engine gives back for a message it opened out of its
+    /// encryption, or checked in the clear.
+    fn engine_read(text: &str, sealed: bool) -> crate::protection::Read {
+        crate::protection::Read {
+            mark: crate::protection::Mark {
+                title: "Encrypted".to_string(),
+                detail: None,
+                tone: crate::protection::Tone::Unchecked,
+            },
+            body: Some(mailrs_domain::MessageBody {
+                text: Some(text.to_string()),
+                ..mailrs_domain::MessageBody::default()
+            }),
+            files: Vec::new(),
+            sealed,
+        }
+    }
+
+    /// The oracle this pins: a stranger puts somebody else's ciphertext in
+    /// a message, the window opens it without asking, and a reply quotes
+    /// the plaintext back to the stranger in the clear.
+    #[test]
+    fn a_reply_to_a_message_that_arrived_encrypted_starts_encrypted() {
+        let mut open = thread(vec![message("m1", false)]);
+        open.take_engine_answer(
+            "m1".to_string(),
+            engine_read("The key is under the mat.", true),
+        );
+
+        let answering = open.answering(None, false).expect("something to answer");
+        assert!(answering.secret);
+        assert_eq!(answering.text, "The key is under the mat.");
+        assert!(
+            open.answering(Some("m1"), true)
+                .is_some_and(|forward| forward.secret)
+        );
+    }
+
+    #[test]
+    fn a_reply_to_a_message_in_the_clear_starts_as_the_writer_left_it() {
+        let mut open = thread(vec![message("m1", false)]);
+        open.take_engine_answer("m1".to_string(), engine_read("Meet at six.", false));
+
+        let answering = open.answering(None, false).expect("something to answer");
+        assert!(!answering.secret);
     }
 
     #[test]

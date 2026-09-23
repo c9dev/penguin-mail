@@ -33,6 +33,12 @@ pub struct Read {
     /// an encrypted one is ciphertext; these bytes are what the window
     /// saves and opens.
     pub files: Vec<Vec<u8>>,
+    /// Whether the message arrived encrypted and the engine opened it. A
+    /// reply to one starts encrypted: the engine opens whatever armor
+    /// turns up in a message, so a stranger can mail in somebody else's
+    /// ciphertext, and a reply that quoted it in the clear would hand them
+    /// the plaintext.
+    pub sealed: bool,
 }
 
 /// What the card says about a message, and how loudly.
@@ -458,6 +464,7 @@ pub fn read(
                 mark: refused(standard, &refusal),
                 body: None,
                 files: Vec::new(),
+                sealed: false,
             };
         }
     };
@@ -496,6 +503,7 @@ pub fn read(
         mark,
         body: Some(body),
         files,
+        sealed: found.encrypted,
     }
 }
 

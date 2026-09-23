@@ -29,6 +29,7 @@ fn opened(inside: mailrs_domain::MessageBody) -> Read {
         },
         body: Some(inside),
         files: Vec::new(),
+        sealed: true,
     }
 }
 

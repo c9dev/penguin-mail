@@ -16,6 +16,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - "Signed by" turns green only when you trust the key and it belongs to
   the address the message is from. A key nobody vouched for, or one that
   names somebody else, now says so on the card.
+- Replying to or forwarding a message that arrived encrypted starts with
+  Encrypt on, and asks before the quoted words go out readable.
 
 ## 0.1.7 (2026-09-23)
 

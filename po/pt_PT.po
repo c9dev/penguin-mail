@@ -1262,7 +1262,7 @@ msgstr "Nova mensagem"
 msgid "From {senders}"
 msgstr "De {senders}"
 
-#: app/src/notify.rs:195 app/src/ui/window.rs:1912
+#: app/src/notify.rs:195 app/src/ui/window.rs:1896
 msgid "Open"
 msgstr "Abrir"
 
@@ -1377,15 +1377,15 @@ msgstr "O gpg tem chave para {addresses}."
 msgid "gpg holds a key for {addresses}, and none for {without}."
 msgstr "O gpg tem chave para {addresses} e nenhuma para {without}."
 
-#: app/src/protection.rs:110
+#: app/src/protection.rs:116
 msgid "{smime} {pgp}"
 msgstr "{smime} {pgp}"
 
-#: app/src/protection.rs:123
+#: app/src/protection.rs:129
 msgid "This computer has nothing to encrypt with."
 msgstr "Este computador não tem com que encriptar."
 
-#: app/src/protection.rs:130
+#: app/src/protection.rs:136
 msgid ""
 "S/MIME names every recipient inside an encrypted message, so a blind copy "
 "would not stay blind."
@@ -1393,30 +1393,31 @@ msgstr ""
 "O S/MIME indica todos os destinatários dentro de uma mensagem encriptada, "
 "pelo que uma cópia oculta deixaria de ser oculta."
 
-#: app/src/protection.rs:277
+#: app/src/protection.rs:283
 msgid "Encrypt this message to the recipients' keys"
 msgstr "Encriptar esta mensagem para as chaves dos destinatários"
 
-#: app/src/protection.rs:278
+#: app/src/protection.rs:284
 msgid "Encrypt this message to the recipients' certificates"
 msgstr "Encriptar esta mensagem para os certificados dos destinatários"
 
-#: app/src/protection.rs:304
+#: app/src/protection.rs:310
 msgid "gpg holds no key and gpgsm no trusted certificate for {addresses}."
 msgstr ""
 "O gpg não tem chave nem o gpgsm certificado de confiança para {addresses}."
 
-#: app/src/protection.rs:312
+#: app/src/protection.rs:318
 msgid "A message goes out under one standard or the other. {pgp} {smime}"
 msgstr "Uma mensagem sai por uma norma ou pela outra. {pgp} {smime}"
 
-#: app/src/protection.rs:532
+#: app/src/protection.rs:540
 msgid ""
 "This key does not name {sender}, the address the message says it is from."
 msgstr ""
-"Esta chave não identifica {sender}, o endereço de onde a mensagem diz que vem."
+"Esta chave não identifica {sender}, o endereço de onde a mensagem diz que "
+"vem."
 
-#: app/src/protection.rs:536
+#: app/src/protection.rs:544
 msgid ""
 "This certificate does not name {sender}, the address the message says it is "
 "from."
@@ -1424,78 +1425,78 @@ msgstr ""
 "Este certificado não identifica {sender}, o endereço de onde a mensagem diz "
 "que vem."
 
-#: app/src/protection.rs:545
+#: app/src/protection.rs:553
 msgid "Signed by {signer}"
 msgstr "Assinada por {signer}"
 
-#: app/src/protection.rs:551
+#: app/src/protection.rs:559
 msgid "This message changed after it was signed"
 msgstr "Esta mensagem mudou depois de ter sido assinada"
 
-#: app/src/protection.rs:553
+#: app/src/protection.rs:561
 msgid "The signature of {signer} does not match what arrived."
 msgstr "A assinatura de {signer} não corresponde ao que chegou."
 
-#: app/src/protection.rs:560
+#: app/src/protection.rs:568
 msgid "Signed by {signer}, whose key has expired"
 msgstr "Assinada por {signer}, cuja chave expirou"
 
-#: app/src/protection.rs:564
+#: app/src/protection.rs:572
 msgid "The text is as it was written, and the key behind it ran out."
 msgstr "O texto está como foi escrito e a chave por trás dele expirou."
 
-#: app/src/protection.rs:570
+#: app/src/protection.rs:578
 msgid "Signed by {signer}, whose certificate has run out"
 msgstr "Assinada por {signer}, cujo certificado expirou"
 
-#: app/src/protection.rs:574
+#: app/src/protection.rs:582
 msgid ""
 "The text is as it was written, and the certificate behind it has expired."
 msgstr "O texto está como foi escrito e o certificado por trás dele expirou."
 
-#: app/src/protection.rs:580
+#: app/src/protection.rs:588
 msgid "Signed by {signer}, who took this key back"
 msgstr "Assinada por {signer}, que revogou esta chave"
 
-#: app/src/protection.rs:584
+#: app/src/protection.rs:592
 msgid "The owner revoked it, so it says nothing about who wrote this."
 msgstr "O dono revogou-a, por isso não diz nada sobre quem escreveu isto."
 
-#: app/src/protection.rs:590
+#: app/src/protection.rs:598
 msgid "Signed by {signer}, whose certificate was taken back"
 msgstr "Assinada por {signer}, cujo certificado foi revogado"
 
-#: app/src/protection.rs:594
+#: app/src/protection.rs:602
 msgid "Whoever issued it revoked it, so it says nothing about who wrote this."
 msgstr ""
 "Quem o emitiu revogou-o, por isso não diz nada sobre quem escreveu isto."
 
-#: app/src/protection.rs:600
+#: app/src/protection.rs:608
 msgid "Signed by {signer}, and the signature has run out"
 msgstr "Assinada por {signer}, e a assinatura expirou"
 
-#: app/src/protection.rs:604
+#: app/src/protection.rs:612
 msgid "It carried a date to stop being good on, and that date has passed."
 msgstr ""
 "Levava uma data a partir da qual deixava de valer, e essa data já passou."
 
-#: app/src/protection.rs:609
+#: app/src/protection.rs:617
 msgid "Signed by a key this computer does not hold"
 msgstr "Assinada por uma chave que este computador não tem"
 
-#: app/src/protection.rs:611
+#: app/src/protection.rs:619
 msgid "Nothing here can check it. Ask gpg for key {key}."
 msgstr "Nada aqui a consegue verificar. Peça ao gpg a chave {key}."
 
-#: app/src/protection.rs:618
+#: app/src/protection.rs:626
 msgid "it names"
 msgstr "que indica"
 
-#: app/src/protection.rs:624
+#: app/src/protection.rs:632
 msgid "Signed by a certificate this computer does not hold"
 msgstr "Assinada por um certificado que este computador não tem"
 
-#: app/src/protection.rs:626
+#: app/src/protection.rs:634
 msgid ""
 "The message carried none either, so there is nothing here to check it "
 "against."
@@ -1503,133 +1504,133 @@ msgstr ""
 "A mensagem também não o trazia, por isso não há aqui nada com que a "
 "verificar."
 
-#: app/src/protection.rs:632
+#: app/src/protection.rs:640
 msgid "gpg could not check this signature"
 msgstr "O gpg não conseguiu verificar esta assinatura"
 
-#: app/src/protection.rs:637
+#: app/src/protection.rs:645
 msgid "gpgsm could not check this signature"
 msgstr "O gpgsm não conseguiu verificar esta assinatura"
 
-#: app/src/protection.rs:660
+#: app/src/protection.rs:668
 msgid "Encrypted, and signed by {signer}"
 msgstr "Encriptada e assinada por {signer}"
 
-#: app/src/protection.rs:669
+#: app/src/protection.rs:677
 msgid "Encrypted. {what}"
 msgstr "Encriptada. {what}"
 
-#: app/src/protection.rs:675
+#: app/src/protection.rs:683
 msgid "This message arrived encrypted"
 msgstr "Esta mensagem chegou encriptada"
 
-#: app/src/protection.rs:677
+#: app/src/protection.rs:685
 msgid "Nobody signed it, so it says nothing about who sent it."
 msgstr "Ninguém a assinou, por isso não diz nada sobre quem a enviou."
 
-#: app/src/protection.rs:685
+#: app/src/protection.rs:693
 msgid "{detail} {files}"
 msgstr "{detail} {files}"
 
-#: app/src/protection.rs:699
+#: app/src/protection.rs:707
 msgid "This message is encrypted to a key you do not hold"
 msgstr "Esta mensagem está encriptada para uma chave que não tem"
 
-#: app/src/protection.rs:701
+#: app/src/protection.rs:709
 msgid "Whoever sent it used a key gpg has no secret half of."
 msgstr "Quem a enviou usou uma chave de que o gpg não tem a metade secreta."
 
-#: app/src/protection.rs:706
+#: app/src/protection.rs:714
 msgid "This message is encrypted to a certificate you do not hold"
 msgstr "Esta mensagem está encriptada para um certificado que não tem"
 
-#: app/src/protection.rs:708
+#: app/src/protection.rs:716
 msgid "Whoever sent it used a certificate gpgsm has no secret key for."
 msgstr ""
 "Quem a enviou usou um certificado de que o gpgsm não tem a chave secreta."
 
-#: app/src/protection.rs:714
+#: app/src/protection.rs:722
 msgid "This message says it is OpenPGP and is not"
 msgstr "Esta mensagem diz ser OpenPGP e não é"
 
-#: app/src/protection.rs:715
+#: app/src/protection.rs:723
 msgid "This message says it is S/MIME and is not"
 msgstr "Esta mensagem diz ser S/MIME e não é"
 
-#: app/src/protection.rs:718
+#: app/src/protection.rs:726
 msgid "Its parts are not where a signed or encrypted message keeps them."
 msgstr ""
 "As partes dela não estão onde uma mensagem assinada ou encriptada as guarda."
 
-#: app/src/protection.rs:724
+#: app/src/protection.rs:732
 msgid "gpg could not open this message"
 msgstr "O gpg não conseguiu abrir esta mensagem"
 
-#: app/src/protection.rs:725
+#: app/src/protection.rs:733
 msgid "gpgsm could not open this message"
 msgstr "O gpgsm não conseguiu abrir esta mensagem"
 
-#: app/src/protection.rs:738
+#: app/src/protection.rs:746
 msgid "You marked this key as one not to trust."
 msgstr "Marcou esta chave como não fiável."
 
-#: app/src/protection.rs:739
+#: app/src/protection.rs:747
 msgid "This is one of your own keys."
 msgstr "Esta é uma das suas chaves."
 
-#: app/src/protection.rs:740
+#: app/src/protection.rs:748
 msgid "You have vouched for this key."
 msgstr "Confirmou esta chave."
 
-#: app/src/protection.rs:741
+#: app/src/protection.rs:749
 msgid "People you trust have vouched for this key."
 msgstr "Pessoas em quem confia confirmaram esta chave."
 
-#: app/src/protection.rs:743
+#: app/src/protection.rs:751
 msgid "Nobody has vouched for this key, so it names no one."
 msgstr "Ninguém confirmou esta chave, por isso não identifica ninguém."
 
-#: app/src/protection.rs:746
+#: app/src/protection.rs:754
 msgid "Its certificate leads back to an authority you trust."
 msgstr "O certificado dela remete para uma autoridade em que confia."
 
-#: app/src/protection.rs:749
+#: app/src/protection.rs:757
 msgid "Its certificate leads back to nobody you trust, so it names no one."
 msgstr ""
 "O certificado dela não remete para ninguém em quem confie, por isso não "
 "identifica ninguém."
 
-#: app/src/protection.rs:752
+#: app/src/protection.rs:760
 msgid "Nothing here says who that certificate belongs to."
 msgstr "Nada aqui diz a quem pertence esse certificado."
 
-#: app/src/protection.rs:788
+#: app/src/protection.rs:796
 msgid "key {key}"
 msgstr "chave {key}"
 
-#: app/src/protection.rs:791
+#: app/src/protection.rs:799
 msgid "a key gpg would not name"
 msgstr "uma chave que o gpg não identificou"
 
-#: app/src/protection.rs:792
+#: app/src/protection.rs:800
 msgid "a certificate gpgsm would not name"
 msgstr "um certificado que o gpgsm não identificou"
 
-#: app/src/protection.rs:803
+#: app/src/protection.rs:811
 msgid "It carries a file, kept in this window only."
 msgstr "Leva um ficheiro, guardado apenas nesta janela."
 
-#: app/src/protection.rs:805
+#: app/src/protection.rs:813
 msgid "It carries {count} file, kept in this window only."
 msgid_plural "It carries {count} files, kept in this window only."
 msgstr[0] "Leva {count} ficheiro, guardado apenas nesta janela."
 msgstr[1] "Leva {count} ficheiros, guardados apenas nesta janela."
 
-#: app/src/protection.rs:891
+#: app/src/protection.rs:899
 msgid "{names} or {last}"
 msgstr "{names} ou {last}"
 
-#: app/src/protection.rs:903
+#: app/src/protection.rs:911
 msgid "{names} and {last}"
 msgstr "{names} e {last}"
 
@@ -1654,7 +1655,7 @@ msgstr "Essa conta não está ligada."
 msgid "Could not save: {reason}"
 msgstr "Não foi possível guardar: {reason}"
 
-#: app/src/protection/draft.rs:200 app/src/ui/window.rs:1830
+#: app/src/protection/draft.rs:200 app/src/ui/window.rs:1814
 msgid "Could not open the draft: {reason}"
 msgstr "Não foi possível abrir o rascunho: {reason}"
 
@@ -2160,7 +2161,7 @@ msgstr "Abrir o Penguin Mail"
 msgid "New Message"
 msgstr "Nova mensagem"
 
-#: app/src/tray.rs:136 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2189
+#: app/src/tray.rs:136 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2173
 msgid "Check for Mail"
 msgstr "Procurar correio"
 
@@ -2178,7 +2179,7 @@ msgstr "Novidades da versão {version}"
 msgid "Check for Updates"
 msgstr "Procurar atualizações"
 
-#: app/src/tray.rs:152 app/src/ui/window.rs:2201
+#: app/src/tray.rs:152 app/src/ui/window.rs:2185
 #: app/src/ui/window/shortcuts.rs:508
 msgid "Quit"
 msgstr "Sair"
@@ -2211,7 +2212,7 @@ msgstr "Comunicar um problema"
 msgid "License"
 msgstr "Licença"
 
-#: app/src/ui/about.rs:170 app/src/ui/window.rs:2200
+#: app/src/ui/about.rs:170 app/src/ui/window.rs:2184
 msgid "About Penguin Mail"
 msgstr "Acerca do Penguin Mail"
 
@@ -2401,7 +2402,7 @@ msgid "Edit {server}"
 msgstr "Editar {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1498
-#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:2025
+#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:2009
 msgid "Remove"
 msgstr "Remover"
 
@@ -3661,7 +3662,7 @@ msgstr "Não foi possível eliminar o endereço: {reason}"
 msgid "Allow Hide My Email"
 msgstr "Permitir Ocultar o meu e-mail"
 
-#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2282
+#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2266
 msgid "Add an account first"
 msgstr "Adicione primeiro uma conta"
 
@@ -4488,7 +4489,7 @@ msgstr "Assinatura…"
 msgid "Rules…"
 msgstr "Regras…"
 
-#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2192
+#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2176
 msgid "Hide My Email…"
 msgstr "Ocultar o meu e-mail…"
 
@@ -4914,7 +4915,7 @@ msgstr ""
 "Cloud, para que mais ninguém chegue ao seu correio. Cole o ID e o segredo do "
 "cliente para começar."
 
-#: app/src/ui/welcome.rs:97 app/src/ui/window.rs:1984
+#: app/src/ui/welcome.rs:97 app/src/ui/window.rs:1968
 msgid "Sign In with Google"
 msgstr "Iniciar sessão com a Google"
 
@@ -5192,45 +5193,45 @@ msgstr "Selecione correio de uma só conta para o etiquetar."
 msgid "This account has no labels yet."
 msgstr "Esta conta ainda não tem etiquetas."
 
-#: app/src/ui/window.rs:1777
+#: app/src/ui/window.rs:1761
 msgid "Could not include {file}: {reason}"
 msgstr "Não foi possível incluir {file}: {reason}"
 
-#: app/src/ui/window.rs:1888
+#: app/src/ui/window.rs:1872
 msgid "Downloading {file}…"
 msgstr "A transferir {file}…"
 
-#: app/src/ui/window.rs:1909 app/src/ui/window/attachments.rs:212
+#: app/src/ui/window.rs:1893 app/src/ui/window/attachments.rs:212
 #: app/src/ui/window/attachments.rs:378
 msgid "Saved {file} to Downloads"
 msgstr "{file} guardado nas transferências"
 
-#: app/src/ui/window.rs:1927 app/src/ui/window/attachments.rs:217
+#: app/src/ui/window.rs:1911 app/src/ui/window/attachments.rs:217
 #: app/src/ui/window/attachments.rs:383
 msgid "Could not save {file}: {reason}"
 msgstr "Não foi possível guardar {file}: {reason}"
 
-#: app/src/ui/window.rs:1943
+#: app/src/ui/window.rs:1927
 msgid "Could not save the settings: {reason}"
 msgstr "Não foi possível guardar as definições: {reason}"
 
-#: app/src/ui/window.rs:1966
+#: app/src/ui/window.rs:1950
 msgid "Waiting for Your Browser…"
 msgstr "À espera do seu navegador…"
 
-#: app/src/ui/window.rs:1968
+#: app/src/ui/window.rs:1952
 msgid "Continue in your browser"
 msgstr "Continue no seu navegador"
 
-#: app/src/ui/window.rs:1974
+#: app/src/ui/window.rs:1958
 msgid "Added {account}. Downloading mail…"
 msgstr "{account} adicionada. A transferir correio…"
 
-#: app/src/ui/window.rs:2018
+#: app/src/ui/window.rs:2002
 msgid "Remove {account}?"
 msgstr "Remover {account}?"
 
-#: app/src/ui/window.rs:2022
+#: app/src/ui/window.rs:2006
 msgid ""
 "Its downloaded mail and saved sign-in are deleted from this computer. "
 "Nothing changes in Gmail."
@@ -5238,43 +5239,43 @@ msgstr ""
 "O correio transferido e a sessão guardada são eliminados deste computador. "
 "Nada muda no Gmail."
 
-#: app/src/ui/window.rs:2038
+#: app/src/ui/window.rs:2022
 msgid "Removed {account}"
 msgstr "{account} removida"
 
-#: app/src/ui/window.rs:2040
+#: app/src/ui/window.rs:2024
 msgid "Could not remove {account}: {reason}"
 msgstr "Não foi possível remover {account}: {reason}"
 
-#: app/src/ui/window.rs:2190
+#: app/src/ui/window.rs:2174
 msgid "Add Account…"
 msgstr "Adicionar conta…"
 
-#: app/src/ui/window.rs:2191
+#: app/src/ui/window.rs:2175
 msgid "New Smart Mailbox…"
 msgstr "Nova caixa inteligente…"
 
-#: app/src/ui/window.rs:2198 app/src/ui/window/shortcuts.rs:485
+#: app/src/ui/window.rs:2182 app/src/ui/window/shortcuts.rs:485
 msgid "Preferences"
 msgstr "Preferências"
 
-#: app/src/ui/window.rs:2199
+#: app/src/ui/window.rs:2183
 msgid "Keyboard Shortcuts"
 msgstr "Atalhos de teclado"
 
-#: app/src/ui/window.rs:2207 app/src/ui/window.rs:2209
+#: app/src/ui/window.rs:2191 app/src/ui/window.rs:2193
 msgid "Main Menu"
 msgstr "Menu principal"
 
-#: app/src/ui/window.rs:2479
+#: app/src/ui/window.rs:2463
 msgid "Open a message from the person first"
 msgstr "Abra primeiro uma mensagem dessa pessoa"
 
-#: app/src/ui/window.rs:2566
+#: app/src/ui/window.rs:2550
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "O Penguin Mail mostra o novo idioma depois de reiniciar"
 
-#: app/src/ui/window.rs:2568 app/src/update/mod.rs:129
+#: app/src/ui/window.rs:2552 app/src/update/mod.rs:129
 msgid "Restart"
 msgstr "Reiniciar"
 

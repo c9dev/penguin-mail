@@ -1705,37 +1705,19 @@ impl MainWindow {
         let Some(app) = self.app.upgrade() else {
             return;
         };
-        let prepared = view.find(|open| {
-            let target = match only {
-                Some(id) => open.messages.iter().find(|m| m.id == id)?.clone(),
-                None => open.reply_target()?.clone(),
-            };
-            let text = match open.bodies.get(&target.id) {
-                Some(Ok(body)) => compose::body_text(body),
-                _ => target.snippet.clone(),
-            };
-            // A forward keeps the original's HTML and its inline images,
-            // so what goes out is the message that arrived.
-            let html = match open.bodies.get(&target.id) {
-                Some(Ok(body)) if kind == ReplyKind::Forward => body.html.clone(),
-                _ => None,
-            };
-            let attachments = match open.bodies.get(&target.id) {
-                Some(Ok(body)) if kind == ReplyKind::Forward => body.attachments.clone(),
-                _ => Vec::new(),
-            };
-            Some((
-                open.account_id,
-                target,
-                text,
-                html,
-                open.messages.clone(),
-                attachments,
-            ))
-        });
-        let Some((account_id, target, text, html, thread, attachments)) = prepared else {
+        let Some(answering) = view.find(|open| open.answering(only, kind == ReplyKind::Forward))
+        else {
             return;
         };
+        let crate::open_thread::Answering {
+            account_id,
+            target,
+            text,
+            html,
+            thread,
+            attachments,
+            secret,
+        } = answering;
         let forwarded_html = html.clone();
         // Every address the account sends as, so the reply comes from the
         // one the message was written to.
@@ -1749,6 +1731,8 @@ impl MainWindow {
             html.as_deref(),
             &thread,
         );
+        // A message that arrived encrypted is answered encrypted.
+        draft.encrypt |= secret;
         if attachments.is_empty() {
             app.open_composer(draft, Signature::Add);
             return;
