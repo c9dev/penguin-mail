@@ -16,9 +16,9 @@ pub fn first_account_page(on_add: impl Fn() + 'static) -> (gtk::Widget, gtk::But
         .icon_name("io.github.c9dev.PenguinMail")
         .title(gettext("Add Your First Account"))
         .description(gettext(
-            "Your browser opens Google's sign-in page. Google warns that it hasn't \
-             verified Penguin Mail, because the app is yours alone: choose Advanced, \
-             then continue.",
+            "Your browser opens Google's sign-in page. Until Google finishes \
+             checking Penguin Mail, it warns that it has not verified the app: \
+             choose Advanced, then continue.",
         ))
         .child(&add)
         .vexpand(true)

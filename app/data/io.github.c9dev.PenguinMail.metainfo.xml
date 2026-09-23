@@ -15,8 +15,8 @@
     <p>
       Penguin Mail keeps several Gmail accounts in sync from the system tray,
       shows them in one inbox or one at a time, and keeps your mail on your own
-      computer. It talks to Google through an OAuth client you own, so no other
-      server sees your mail.
+      computer. It talks to Google directly, so no other server sees your
+      mail.
     </p>
     <ul>
       <li>One inbox for every account, with Gmail's categories, labels and search</li>
@@ -28,8 +28,7 @@
       <li>An assistant that runs on a local model or on Claude, off until you pick one</li>
     </ul>
     <p>
-      You need an OAuth client from a Google Cloud project of your own. Creating
-      one takes about ten minutes, and the first screen explains how.
+      Adding a Gmail account takes one sign-in with Google in your browser.
     </p>
   </description>
 

@@ -27,13 +27,12 @@ msgstr "correio;email;e-mail;gmail;caixa de entrada;"
 msgid ""
 "Penguin Mail keeps several Gmail accounts in sync from the system tray, "
 "shows them in one inbox or one at a time, and keeps your mail on your own "
-"computer. It talks to Google through an OAuth client you own, so no other "
-"server sees your mail."
+"computer. It talks to Google directly, so no other server sees your mail."
 msgstr ""
 "O Penguin Mail mantém várias contas do Gmail sincronizadas a partir da área "
 "de notificação, mostra-as numa só caixa de entrada ou uma de cada vez, e "
-"guarda o seu correio no seu próprio computador. Fala com a Google através de "
-"um cliente OAuth que é seu, por isso nenhum outro servidor vê o seu correio."
+"guarda o seu correio no seu próprio computador. Fala diretamente com a "
+"Google, por isso nenhum outro servidor vê o seu correio."
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:22
 msgid "One inbox for every account, with Gmail's categories, labels and search"
@@ -75,50 +74,48 @@ msgstr ""
 "escolher um"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:30
-msgid ""
-"You need an OAuth client from a Google Cloud project of your own. Creating "
-"one takes about ten minutes, and the first screen explains how."
+msgid "Adding a Gmail account takes one sign-in with Google in your browser."
 msgstr ""
-"Precisa de um cliente OAuth de um projeto Google Cloud seu. Criá-lo demora "
-"cerca de dez minutos, e o primeiro ecrã explica como."
+"Adicionar uma conta do Gmail pede um só início de sessão com a Google no "
+"navegador."
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:47
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:46
 msgid "gmail"
 msgstr "gmail"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:48
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:47
 msgid "email"
 msgstr "e-mail"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:49
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:48
 msgid "mail"
 msgstr "correio"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:50
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:49
 msgid "inbox"
 msgstr "caixa de entrada"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:79
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:78
 msgid "The inbox, with a conversation open"
 msgstr "A caixa de entrada, com uma conversa aberta"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:83
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:82
 msgid "An HTML message in dark mode"
 msgstr "Uma mensagem HTML no modo escuro"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:87
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:86
 msgid "Replying in the composer"
 msgstr "A responder na janela de escrita"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:91
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:90
 msgid "Three conversations selected, with the actions for all of them"
 msgstr "Três conversas selecionadas, com as ações para todas"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:95
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:94
 msgid "The assistant listing mail that waits on a reply"
 msgstr "O assistente a listar o correio que aguarda resposta"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:99
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:98
 msgid "The layout on a narrow screen"
 msgstr "A disposição num ecrã estreito"
 
@@ -4859,13 +4856,13 @@ msgstr "Adicione a sua primeira conta"
 
 #: app/src/ui/welcome.rs:19
 msgid ""
-"Your browser opens Google's sign-in page. Google warns that it hasn't "
-"verified Penguin Mail, because the app is yours alone: choose Advanced, then "
-"continue."
+"Your browser opens Google's sign-in page. Until Google finishes checking "
+"Penguin Mail, it warns that it has not verified the app: choose Advanced, "
+"then continue."
 msgstr ""
-"O navegador abre a página de início de sessão da Google. A Google avisa que "
-"não verificou o Penguin Mail, porque a aplicação é só sua: escolha Advanced "
-"e continue."
+"O navegador abre a página de início de sessão da Google. Enquanto a Google "
+"não terminar de verificar o Penguin Mail, avisa que não verificou a "
+"aplicação: escolha Avançadas e depois continue."
 
 #: app/src/ui/window.rs:151
 msgid "Deleted forever"
@@ -6370,6 +6367,13 @@ msgstr "Marcar como spam"
 #: sync/src/triage.rs:76
 msgid "Mark as not junk"
 msgstr "Marcar como não sendo spam"
+
+#~ msgid ""
+#~ "You need an OAuth client from a Google Cloud project of your own. "
+#~ "Creating one takes about ten minutes, and the first screen explains how."
+#~ msgstr ""
+#~ "Precisa de um cliente OAuth de um projeto Google Cloud seu. Criá-lo "
+#~ "demora cerca de dez minutos, e o primeiro ecrã explica como."
 
 #~ msgid ""
 #~ "1. At console.cloud.google.com, create a project and enable the Gmail "
