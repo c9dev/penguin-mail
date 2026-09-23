@@ -13,6 +13,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   attachment rows, a decrypted message and a translation now appear in
   place, so you keep your place in a long conversation instead of landing
   back at the top.
+- A conversation shows its text before the pictures inside its messages,
+  which fill in as they arrive. Eight large pictures used to make a 3 MB
+  conversation a 12 MB page for WebKit to read.
 - Opening a long conversation no longer holds up the window while its mail
   is cleaned for display: forty newsletters took the window 50 ms, and that
   work now happens on another thread.
@@ -58,6 +61,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Pictures inside a message show when you open a conversation you read
+  before. They used to appear only the first time.
 - The Load Images bar no longer offers to load a picture the sender hid
   in a comment, which the message never shows.
 - Installed from the tarball into a folder with a space in its path,

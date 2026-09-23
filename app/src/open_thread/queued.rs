@@ -10,7 +10,7 @@ use mailrs_domain::{MessageBody, MessageMeta, Target};
 use mailrs_store::outbox::Queued;
 use mailrs_sync::{outbox_row, waiting_line};
 
-use super::OpenThread;
+use super::{InlineImage, OpenThread};
 use crate::compose::{self, Draft};
 use crate::protection::opened_body;
 
@@ -53,9 +53,8 @@ impl OpenThread {
             me,
         );
         thread.expanded = HashSet::from([id.clone()]);
-        thread
-            .inline_images
-            .insert(id.clone(), pictures(&thread, &id, &files).into());
+        let pictures = pictures(&thread, &id, &files);
+        thread.inline_images.insert(id.clone(), pictures);
         if !files.is_empty() {
             thread.opened_files.insert(id, files);
         }
@@ -128,14 +127,13 @@ fn written_at(queued: &Queued) -> Option<mailrs_domain::EpochMillis> {
     Some(parsed.date()?.to_timestamp() * 1000)
 }
 
-/// The pictures the text shows by `cid:`, as `data:` URIs, from the
-/// files the message carries.
+/// The pictures the text shows by `cid:`, from the files the message
+/// carries.
 pub(super) fn pictures(
     thread: &OpenThread,
     id: &str,
     files: &[Vec<u8>],
-) -> HashMap<String, String> {
-    use base64::Engine;
+) -> HashMap<String, InlineImage> {
     let Some(Ok(body)) = thread.bodies.get(id) else {
         return HashMap::new();
     };
@@ -145,11 +143,11 @@ pub(super) fn pictures(
         .filter(|(file, _)| file.mime_type.starts_with("image/"))
         .filter_map(|(file, bytes)| {
             let cid = file.content_id.as_deref()?.trim_matches(['<', '>']);
-            let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
-            Some((
-                cid.to_string(),
-                format!("data:{};base64,{encoded}", file.mime_type),
-            ))
+            let picture = InlineImage {
+                mime: file.mime_type.clone(),
+                bytes: bytes.as_slice().into(),
+            };
+            Some((cid.to_string(), picture))
         })
         .collect()
 }
@@ -263,7 +261,7 @@ mod tests {
         let open = shown(&queued(&draft, None));
         let id = &open.messages[0].id;
         assert_eq!(open.opened_files[id].len(), 2);
-        assert!(open.inline_images[id]["kite1"].starts_with("data:image/png;base64,"));
+        assert_eq!(open.inline_images[id]["kite1"].mime, "image/png");
     }
 
     #[test]

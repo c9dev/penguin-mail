@@ -5,7 +5,6 @@
 //! widget.
 
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
 
 use mailrs_domain::{
     AccountId, Address, FlagColor, MessageBody, MessageMeta, Target, system_label,
@@ -15,18 +14,16 @@ use crate::protection::run::{Claimed, Installed};
 use crate::protection::{self, Engine, Mark};
 use crate::translation::{Body, Language, Prose, Translation};
 
+pub mod inline;
 mod page;
 pub mod queued;
 pub mod run;
 
+pub use inline::{InlineImage, Served};
 #[cfg(test)]
 pub use page::Document;
 pub use page::{Article, Cleaned, Page, ToClean};
 pub use queued::Unsent;
-
-/// One message's inline images: `Content-ID` to `data:` URI. Shared rather
-/// than copied, since one picture can be megabytes.
-pub type InlineImages = Arc<HashMap<String, String>>;
 
 /// What a reply or a forward starts from, read off the open thread.
 pub struct Answering {
@@ -56,8 +53,12 @@ pub struct OpenThread {
     /// Set when the view shows one message of the thread, not all of it.
     pub only_message: Option<String>,
     pub me: Vec<String>,
-    /// Inline images per message.
-    pub inline_images: HashMap<String, InlineImages>,
+    /// The pictures each message names by `cid:`, by content id, once they
+    /// have arrived. A message missing here is still waiting for them.
+    pub inline_images: HashMap<String, HashMap<String, InlineImage>>,
+    /// How many times a message's pictures were replaced, which goes into
+    /// the address the page asks for each by. See [`inline`].
+    image_versions: HashMap<String, u32>,
     /// Pictures for the attachment rows: Gmail's attachment id to a small
     /// `data:` URI. Shared across the thread, since an id is unique.
     pub thumbnails: HashMap<String, String>,
@@ -131,6 +132,7 @@ impl OpenThread {
             only_message: target.message_id.clone(),
             me,
             inline_images: HashMap::new(),
+            image_versions: HashMap::new(),
             thumbnails: HashMap::new(),
             opened_files: HashMap::new(),
             sealed: HashSet::new(),
@@ -389,16 +391,14 @@ impl OpenThread {
         !same
     }
 
-    /// Bodies and the inline images that go in them, as Gmail sent them,
-    /// with the HTML already cleaned away from the GTK thread.
+    /// Bodies as Gmail sent them, with the HTML already cleaned away from
+    /// the GTK thread. The pictures they name come later.
     pub fn take_bodies(
         &mut self,
         bodies: Vec<(String, Result<MessageBody, String>)>,
-        images: HashMap<String, InlineImages>,
         cleaned: HashMap<String, Cleaned>,
     ) {
         self.bodies.extend(bodies);
-        self.inline_images.extend(images);
         self.take_cleaned(cleaned);
     }
 
@@ -418,8 +418,7 @@ impl OpenThread {
         }
         self.bodies.insert(message_id.clone(), Ok(body));
         let pictures = queued::pictures(self, &message_id, &read.files);
-        self.inline_images
-            .insert(message_id.clone(), Arc::new(pictures));
+        self.replace_images(&message_id, pictures);
         if !read.files.is_empty() {
             self.opened_files.insert(message_id, read.files);
         }
@@ -479,16 +478,11 @@ impl OpenThread {
         out
     }
 
-    /// A message's body as it arrived, with its inline images, which is
-    /// what a translation is built from.
-    pub fn arrived(&self, message_id: &str) -> Option<(MessageBody, InlineImages)> {
+    /// A message's body as it arrived, which is what a translation is
+    /// built from, with the start of the address of each picture it names.
+    pub fn arrived(&self, message_id: &str) -> Option<(MessageBody, String)> {
         let body = self.bodies.get(message_id)?.as_ref().ok()?.clone();
-        let images = self
-            .inline_images
-            .get(message_id)
-            .cloned()
-            .unwrap_or_default();
-        Some((body, images))
+        Some((body, self.picture_prefix(message_id)))
     }
 
     /// The bodies with a picture attached that has no thumbnail yet. Every
@@ -555,6 +549,7 @@ mod tests {
             only_message: None,
             me: Vec::new(),
             inline_images: HashMap::new(),
+            image_versions: HashMap::new(),
             thumbnails: HashMap::new(),
             opened_files: HashMap::new(),
             sealed: HashSet::new(),
@@ -580,13 +575,18 @@ mod tests {
             .insert("m1".to_string(), Ok(MessageBody::default()));
         // What Gmail fetched for the message as it arrived, including a
         // picture from a part nobody signed.
-        open.inline_images.insert(
+        let stranger = crate::open_thread::InlineImage {
+            mime: "image/png".to_string(),
+            bytes: vec![0].into(),
+        };
+        open.take_images(HashMap::from([(
             "m1".to_string(),
-            std::sync::Arc::new(HashMap::from([(
-                "stranger".to_string(),
-                "data:image/png;base64,AA".to_string(),
-            )])),
-        );
+            HashMap::from([("stranger".to_string(), stranger)]),
+        )]));
+        assert!(matches!(
+            open.picture("m1", 0, "stranger"),
+            crate::open_thread::Served::Ready(_)
+        ));
         let signed = MessageBody {
             html: Some("<img src=\"cid:logo\">".to_string()),
             attachments: vec![Attachment {
@@ -613,9 +613,16 @@ mod tests {
             },
         );
         let pictures = &open.inline_images["m1"];
-        let pictures: &HashMap<String, String> = pictures;
         assert_eq!(pictures.len(), 1, "{pictures:?}");
-        assert_eq!(pictures["logo"], "data:image/png;base64,AQ==");
+        assert_eq!(*pictures["logo"].bytes, [1]);
+        assert_eq!(pictures["logo"].mime, "image/png");
+        // The page's old address for the stranger reaches nothing now, and
+        // the logo comes under a new one.
+        use crate::open_thread::Served;
+        assert_eq!(open.picture("m1", 0, "stranger"), Served::Gone);
+        assert_eq!(open.picture("m1", 0, "logo"), Served::Gone);
+        assert!(matches!(open.picture("m1", 1, "logo"), Served::Ready(_)));
+        assert_eq!(open.picture_prefix("m1"), "mailrs-cid:1/m1/1/");
     }
 
     /// What an engine gives back for a message it opened out of its

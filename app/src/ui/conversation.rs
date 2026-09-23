@@ -8,6 +8,12 @@
 //! [`PATCH_SCRIPT`], which replaces the articles a change touched. Finding
 //! text is WebKit's own, through [`FindBar`].
 //!
+//! The pictures an HTML body names by `cid:` never enter the page. It asks
+//! for each at an address of the `mailrs-cid` scheme, which every view in
+//! the process answers through one handler, from its own open thread. A
+//! request that comes before the pictures arrive waits for them, so the
+//! text goes on screen first and the pictures fill in where they belong.
+//!
 //! The open thread decides what the page needs, in `OpenThread::page`:
 //! the whole document, or new HTML for some of its articles. A whole
 //! document goes to `load_html`. A patch waits until the latest document
@@ -32,8 +38,9 @@ use super::queued::QueuedCard;
 use super::translation::TranslationCard;
 use super::{name, name_with_shortcut};
 use crate::compose::ReplyKind;
-use crate::open_thread::run::Fetched;
-use crate::open_thread::{Article, OpenThread, Page, Unsent};
+use crate::open_thread::inline::{self, Address};
+use crate::open_thread::run::{Fetched, InlinePictures};
+use crate::open_thread::{Article, OpenThread, Page, Served, Unsent};
 use crate::protection::run::{Claimed, Installed};
 use crate::protection::{self};
 use crate::render::Theme;
@@ -253,6 +260,8 @@ pub struct ConversationView {
     ready: Cell<u64>,
     /// Articles waiting for the latest page to be parsed.
     waiting: RefCell<Vec<Article>>,
+    /// The page's requests for pictures that have not arrived yet.
+    held: RefCell<Vec<(Address, webkit::URISchemeRequest)>>,
     compact: Cell<bool>,
     detached: Cell<bool>,
     /// This view, for the answers WebKit gives later.
@@ -614,12 +623,19 @@ impl ConversationView {
             loads: Cell::new(0),
             ready: Cell::new(0),
             waiting: RefCell::new(Vec::new()),
+            held: RefCell::new(Vec::new()),
             compact: Cell::new(false),
             detached: Cell::new(false),
             this: this.clone(),
         });
 
         view.set_buttons_shown(false);
+        VIEWS.with(|views| {
+            let mut views = views.borrow_mut();
+            views.retain(|view| view.strong_count() > 0);
+            views.push(Rc::downgrade(&view));
+        });
+        serve_pictures();
         // A popover parented on a widget has to let go of it before the
         // widget goes, or GTK finalizes a widget that still has a parent.
         let weak = Rc::downgrade(&view);
@@ -959,6 +975,7 @@ impl ConversationView {
         });
         self.find.close();
         *self.open.borrow_mut() = None;
+        self.refuse_held();
         let values = [("count", count.to_string())];
         let values: Vec<(&str, &str)> = values.iter().map(|(k, v)| (*k, v.as_str())).collect();
         self.many.set_title(&match threaded {
@@ -1029,6 +1046,7 @@ impl ConversationView {
     pub fn clear(&self) {
         self.find.close();
         *self.open.borrow_mut() = None;
+        self.refuse_held();
         self.stack.set_visible_child_name("empty");
         self.set_buttons_shown(false);
         self.banner.set_revealed(false);
@@ -1066,7 +1084,11 @@ impl ConversationView {
 
     /// The answer the card shows for the invitation `uid`: the one that
     /// went, or the one from before an answer that did not.
-    pub fn invitation_answered(&self, uid: &str, answer: Option<mailrs_domain::invitation::Answer>) {
+    pub fn invitation_answered(
+        &self,
+        uid: &str,
+        answer: Option<mailrs_domain::invitation::Answer>,
+    ) {
         self.card.set_answer(uid, answer);
     }
 
@@ -1170,8 +1192,16 @@ impl ConversationView {
     /// from Gmail with their HTML cleaned, and the redraw that puts them on
     /// screen.
     pub fn bodies_arrived(&self, fetched: Fetched) {
-        self.change(|open| open.take_bodies(fetched.bodies, fetched.images, fetched.cleaned));
+        self.change(|open| open.take_bodies(fetched.bodies, fetched.cleaned));
         self.render(false);
+    }
+
+    /// The pictures the bodies name, which the page has been waiting for.
+    /// They change no article: the requests waiting for them are answered,
+    /// and WebKit draws each where it belongs.
+    pub fn images_arrived(&self, found: InlinePictures) {
+        self.change(|open| open.take_images(found));
+        self.release_held();
     }
 
     /// The pictures for the attachment rows, and the redraw that shows
@@ -1234,6 +1264,9 @@ impl ConversationView {
         let opened = self
             .change(|open| open.take_engine_answer(message_id, read))
             .unwrap_or(false);
+        // The opened body's pictures come under new addresses, and a request
+        // for one of the old ones reaches nothing now.
+        self.release_held();
         self.render(false);
         opened
     }
@@ -1275,6 +1308,8 @@ impl ConversationView {
         // The card belongs to the thread that is leaving.
         self.translate.hide();
         *self.open.borrow_mut() = Some(thread);
+        // What the page before asked for belongs to the thread before.
+        self.refuse_held();
         self.stack.set_visible_child_name("thread");
         self.render(scroll);
     }
@@ -1376,8 +1411,12 @@ impl ConversationView {
         let script = [PATCH_SCRIPT[0], &json, PATCH_SCRIPT[1]].concat();
         let load = self.loads.get();
         let this = self.this.clone();
-        self.webview
-            .evaluate_javascript(&script, None, None, gio::Cancellable::NONE, move |done| {
+        self.webview.evaluate_javascript(
+            &script,
+            None,
+            None,
+            gio::Cancellable::NONE,
+            move |done| {
                 let Some(view) = this.upgrade() else { return };
                 let whole = match done {
                     Ok(value) => value.to_str() == "whole",
@@ -1391,10 +1430,54 @@ impl ConversationView {
                     view.change(OpenThread::page_lost);
                     view.render(false);
                 }
-            });
+            },
+        );
         // The find bar's highlights in the other articles stay. The count
         // may have changed with the words.
         self.find.recount();
+    }
+
+    /// Answers the page's request for an inline picture, or holds it until
+    /// the thread's pictures arrive. A request for another account, or for
+    /// a message or version no longer on screen, reaches nothing.
+    fn serve(&self, request: &webkit::URISchemeRequest) {
+        let Some(address) = request.uri().and_then(|uri| Address::parse(&uri)) else {
+            return refuse(request);
+        };
+        match self.served(&address) {
+            Served::Waiting => self.held.borrow_mut().push((address, request.clone())),
+            served => answer(request, served),
+        }
+    }
+
+    fn served(&self, address: &Address) -> Served {
+        self.find(|open| {
+            (open.account_id == address.account_id)
+                .then(|| open.picture(&address.message_id, address.version, &address.cid))
+        })
+        .unwrap_or(Served::Gone)
+    }
+
+    /// Answers the requests that were waiting, now that the thread holds
+    /// more, and keeps the ones still waiting.
+    fn release_held(&self) {
+        let held = self.held.take();
+        let mut waiting = Vec::new();
+        for (address, request) in held {
+            match self.served(&address) {
+                Served::Waiting => waiting.push((address, request)),
+                served => answer(&request, served),
+            }
+        }
+        self.held.borrow_mut().extend(waiting);
+    }
+
+    /// Turns away every request still waiting, when the thread they asked
+    /// about leaves the view.
+    fn refuse_held(&self) {
+        for (_, request) in self.held.take() {
+            refuse(&request);
+        }
     }
 
     /// Updates the header buttons after label changes, without redrawing.
@@ -1658,6 +1741,56 @@ fn color_index(color: FlagColor) -> usize {
     FlagColor::ALL.iter().position(|c| *c == color).unwrap_or(0)
 }
 
+thread_local! {
+    /// The views alive on this thread, so the one handler WebKit takes for
+    /// a scheme can find the view a request came from.
+    static VIEWS: RefCell<Vec<Weak<ConversationView>>> = const { RefCell::new(Vec::new()) };
+}
+
+/// Registers the `mailrs-cid` scheme with WebKit, once: a second handler
+/// for the same scheme is refused.
+fn serve_pictures() {
+    thread_local! {
+        static REGISTERED: Cell<bool> = const { Cell::new(false) };
+    }
+    if REGISTERED.replace(true) {
+        return;
+    }
+    let Some(context) = webkit::WebContext::default() else {
+        return;
+    };
+    context.register_uri_scheme(inline::SCHEME, |request| {
+        let asking = request.web_view();
+        let view = VIEWS.with(|views| {
+            views
+                .borrow()
+                .iter()
+                .filter_map(Weak::upgrade)
+                .find(|view| asking.as_ref() == Some(&view.webview))
+        });
+        match view {
+            Some(view) => view.serve(request),
+            None => refuse(request),
+        }
+    });
+}
+
+/// Gives the page a picture, or says there is none.
+fn answer(request: &webkit::URISchemeRequest, served: Served) {
+    let Served::Ready(picture) = served else {
+        return refuse(request);
+    };
+    let bytes = glib::Bytes::from_owned(picture.bytes);
+    let length = i64::try_from(bytes.len()).unwrap_or(-1);
+    let stream = gio::MemoryInputStream::from_bytes(&bytes);
+    request.finish(&stream, length, Some(&picture.mime));
+}
+
+fn refuse(request: &webkit::URISchemeRequest) {
+    let mut error = glib::Error::new(gio::IOErrorEnum::NotFound, "no such picture");
+    request.finish_error(&mut error);
+}
+
 fn run_script(webview: &webkit::WebView, script: &str) {
     webview.evaluate_javascript(script, None, None, gio::Cancellable::NONE, |_| {});
 }
@@ -1678,4 +1811,3 @@ fn network_session() -> webkit::NetworkSession {
     }
     SESSION.with(|s| s.clone())
 }
-

@@ -478,7 +478,7 @@ fn html_text(html: &str) -> String {
         Some(at) => &html[at..],
         None => html,
     };
-    let clean = crate::sanitize::sanitize_html(body, &Default::default());
+    let clean = crate::sanitize::sanitize_html(body, None);
     crate::compose::html_to_text(&clean)
 }
 

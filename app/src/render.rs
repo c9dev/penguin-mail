@@ -113,7 +113,7 @@ pub fn head(conversation: &Head, theme: &Theme) -> String {
     let _ = write!(
         html,
         "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'none'; \
-         style-src 'unsafe-inline'{remote}; img-src data:{remote}; font-src data:{remote}\">"
+         style-src 'unsafe-inline'{remote}; img-src data: mailrs-cid:{remote}; font-src data:{remote}\">"
     );
     let _ = write!(html, "<style>{}</style></head><body>", page_css(theme));
     let subject = if conversation.subject.trim().is_empty() {
@@ -1356,7 +1356,7 @@ mod tests {
             &theme(),
         );
         assert!(
-            blocked.contains("img-src data:;") && blocked.contains("script-src 'none'"),
+            blocked.contains("img-src data: mailrs-cid:;") && blocked.contains("script-src 'none'"),
             "{blocked}"
         );
         let allowed = render(
@@ -1369,7 +1369,7 @@ mod tests {
             },
             &theme(),
         );
-        assert!(allowed.contains("img-src data: https: http:"));
+        assert!(allowed.contains("img-src data: mailrs-cid: https: http:"));
     }
 
     #[test]

@@ -19,8 +19,10 @@ use mailrs_sync::{History, MailAction, Opened, TriageAction, now_millis};
 use super::pictures::Pictures;
 use super::{BODY_FETCHES, MainWindow, read_cached_body};
 use crate::core::Core;
-use crate::open_thread::run::{Answer, Card, Desk, Effects, Fetched, Stored, ThreadRun};
-use crate::open_thread::{Cleaned, InlineImages, OpenThread, ToClean, Unsent};
+use crate::open_thread::run::{
+    Answer, Card, Desk, Effects, Fetched, InlinePictures, Stored, ThreadRun,
+};
+use crate::open_thread::{Cleaned, OpenThread, ToClean, Unsent};
 use crate::protection::Read;
 use crate::settings::MarkRead;
 use crate::translation::{self, Language, Prose, Translation};
@@ -191,6 +193,12 @@ impl Desk for Ports {
             .unwrap_or_default()
     }
 
+    fn wanting_images(&self) -> Vec<(String, MessageBody)> {
+        self.view
+            .read(OpenThread::wanting_images)
+            .unwrap_or_default()
+    }
+
     fn prose(&self) -> Option<(String, Prose)> {
         self.view.find(OpenThread::prose)
     }
@@ -205,7 +213,7 @@ impl Desk for Ports {
         self.view.find(|open| open.translation_of(message_id))
     }
 
-    fn arrived(&self, message_id: &str) -> Option<(MessageBody, InlineImages)> {
+    fn arrived(&self, message_id: &str) -> Option<(MessageBody, String)> {
         self.view.find(|open| open.arrived(message_id))
     }
 
@@ -246,8 +254,7 @@ impl Effects for Ports {
                 })
                 .await
                 .map_err(|err| err.to_string())?;
-            // The stored copy has no inline images: those come with a fetch.
-            let html = ToClean::of(&stored.bodies, &HashMap::new());
+            let html = ToClean::of(account_id, &stored.bodies);
             stored.cleaned = self.clean_away(html).await;
             Ok(stored)
         })
@@ -304,21 +311,27 @@ impl Effects for Ports {
                     .collect()
                     .await
             };
-            let images: HashMap<String, InlineImages> = self
-                .pictures
-                .inline(account_id, &sync, &bodies)
-                .await
-                .into_iter()
-                .map(|(id, pictures)| (id, pictures.into()))
-                .collect();
             let arrived = bodies
                 .iter()
                 .filter_map(|(id, body)| Some((id, body.as_ref().ok()?)));
-            let cleaned = self.clean_away(ToClean::of(arrived, &images)).await;
-            Fetched {
-                bodies,
-                images,
-                cleaned,
+            let cleaned = self.clean_away(ToClean::of(account_id, arrived)).await;
+            Fetched { bodies, cleaned }
+        })
+    }
+
+    fn inline_images(
+        &self,
+        account_id: AccountId,
+        bodies: Vec<(String, MessageBody)>,
+    ) -> Answer<'_, InlinePictures> {
+        Box::pin(async move {
+            match self.sync(account_id) {
+                Ok(sync) => self.pictures.inline(account_id, &sync, &bodies).await,
+                // Nothing will come, so the page may stop waiting.
+                Err(_) => bodies
+                    .into_iter()
+                    .map(|(id, _)| (id, HashMap::new()))
+                    .collect(),
             }
         })
     }
@@ -459,6 +472,10 @@ impl Effects for Ports {
 
     fn thumbnails_arrived(&self, found: HashMap<String, String>) {
         self.view.thumbnails_arrived(found);
+    }
+
+    fn images_arrived(&self, found: InlinePictures) {
+        self.view.images_arrived(found);
     }
 
     fn render_buttons(&self) {

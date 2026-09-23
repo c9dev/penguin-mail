@@ -5,9 +5,10 @@ use mailrs_domain::Target;
 
 use super::fake::{
     ACCOUNT, ELSEWHERE, FakeWindow, Step, THREAD, body, html_body, invited, meta,
-    opened_occurrence, portuguese, queued, row, with_picture,
+    opened_occurrence, portuguese, queued, row, with_inline_picture, with_picture,
 };
 use super::{Card, Event, Stale};
+use crate::open_thread::Served;
 use crate::protection::{Mark, Read, Tone};
 
 fn target(message_id: Option<&str>) -> Target {
@@ -594,8 +595,15 @@ async fn pictures_on_the_attachment_rows_patch_their_article() {
     let window = FakeWindow::with_body(with_picture());
     window.run().open(row(THREAD)).await;
     assert_eq!(loads(&window), 1);
-    assert_eq!(patches(&window).last().cloned(), Some(vec!["m1".to_string()]));
-    assert!(page(&window).contains("<img class=\"thumb\""), "{}", page(&window));
+    assert_eq!(
+        patches(&window).last().cloned(),
+        Some(vec!["m1".to_string()])
+    );
+    assert!(
+        page(&window).contains("<img class=\"thumb\""),
+        "{}",
+        page(&window)
+    );
 }
 
 #[tokio::test]
@@ -607,13 +615,19 @@ async fn an_engine_answer_patches_its_message_alone() {
         if let Some(stored) = screen.stored.get_mut(THREAD) {
             stored.messages = messages;
         }
-        screen.gmail.insert("m2".to_string(), body("-----BEGIN PGP"));
+        screen
+            .gmail
+            .insert("m2".to_string(), body("-----BEGIN PGP"));
     });
     window.run().open(row(THREAD)).await;
     let before = patches(&window).len();
     window
         .run()
-        .engine_answered(target(None), "m2".to_string(), opened(body("The key is under the mat.")))
+        .engine_answered(
+            target(None),
+            "m2".to_string(),
+            opened(body("The key is under the mat.")),
+        )
         .await;
     assert_eq!(loads(&window), 1);
     assert_eq!(patches(&window)[before..], [["m2"]]);
@@ -629,6 +643,66 @@ async fn a_translation_patches_its_message_and_so_does_turning_it() {
     window.run().translate().await;
     assert_eq!(loads(&window), 1);
     assert_eq!(patches(&window)[before..], [["m1"], ["m1"]]);
+}
+
+/// The text goes on screen first. The pictures it names by `cid:` come
+/// after, served to the page from the thread itself, so their arrival
+/// changes no article and loads nothing again.
+#[tokio::test]
+async fn inline_pictures_arrive_after_the_text_and_change_no_article() {
+    let window = FakeWindow::with_body(with_inline_picture());
+    window.run().open(row(THREAD)).await;
+    let steps = window.steps();
+    let at = |step| steps.iter().position(|s| *s == step).expect("step taken");
+    assert!(at(Step::BodiesArrived) < at(Step::Images));
+    assert!(at(Step::Images) < at(Step::ImagesArrived));
+    assert_eq!(loads(&window), 1);
+    assert_eq!(
+        patches(&window),
+        [["m1"]],
+        "the body, and nothing for the picture"
+    );
+    assert!(
+        page(&window).contains("src=\"mailrs-cid:1/m1/0/logo@kites\""),
+        "{}",
+        page(&window)
+    );
+    let served = window.open(|open| open.picture("m1", 0, "logo@kites"));
+    assert!(matches!(served, Some(Served::Ready(picture)) if *picture.bytes == [1, 2, 3]));
+}
+
+/// A thread read before comes out of the store whole, and its pictures
+/// were never part of it.
+#[tokio::test]
+async fn a_stored_thread_fetches_its_inline_pictures_too() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        if let Some(stored) = screen.stored.get_mut(THREAD) {
+            stored
+                .bodies
+                .insert("m1".to_string(), with_inline_picture());
+        }
+    });
+    window.run().open(row(THREAD)).await;
+    assert!(!window.took(Step::Bodies));
+    assert!(window.took(Step::ImagesArrived));
+}
+
+#[tokio::test]
+async fn inline_pictures_for_a_thread_the_reader_left_go_nowhere() {
+    let window = FakeWindow::with_body(with_inline_picture());
+    window.with(|screen| screen.moves_on = Some(Step::Images));
+    window.run().open(row(THREAD)).await;
+    assert!(window.took(Step::Images));
+    assert!(!window.took(Step::ImagesArrived));
+}
+
+/// A body with no picture to name asks for none.
+#[tokio::test]
+async fn a_body_that_names_no_picture_fetches_none() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    assert!(!window.took(Step::Images));
 }
 
 /// A new message changes the count in the head and the list of articles,

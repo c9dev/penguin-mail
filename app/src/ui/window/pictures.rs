@@ -5,10 +5,12 @@
 //! Gmail charges 5 units for each attachment and a conversation is often
 //! opened again, so [`Pictures`] keeps what it fetched, the most recently
 //! used first, up to a number of bytes rather than a number of pictures:
-//! one inline photo can be 7 MB as a `data:` URI and a row's picture a
-//! few kilobytes. It fetches what it lacks a few at a time, and encodes
-//! and shrinks each picture on a worker thread, since a 24 megapixel JPEG
-//! takes the GTK thread 130 to 175 ms to decode.
+//! one inline photo can be 5 MB and a row's picture a few kilobytes. An
+//! inline picture is kept as the bytes Gmail sent, shared with the open
+//! thread that serves them to the page, and a row's picture as a small
+//! PNG `data:` URI. It fetches what it lacks a few at a time, and shrinks
+//! each row's picture on a worker thread, since a 24 megapixel JPEG takes
+//! the GTK thread 130 to 175 ms to decode.
 //!
 //! The thread run's ports call it; nothing here draws.
 
@@ -22,8 +24,10 @@ use futures::future::LocalBoxFuture;
 use mailrs_domain::{AccountId, MessageBody};
 
 use crate::core::{Core, Sync};
+use crate::open_thread::InlineImage;
+use crate::open_thread::run::InlinePictures as Found;
 
-/// Largest inline image embedded into a page.
+/// Largest inline image a page shows.
 const INLINE_LIMIT: i64 = 5 * 1024 * 1024;
 
 /// How large a picture may be before the row shows a paperclip instead.
@@ -38,7 +42,7 @@ const THUMBNAIL_EDGE: i32 = 64;
 /// of the same thread may be arriving beside them.
 const FETCHES: usize = 6;
 
-/// Bytes of inline images kept: about seven of the largest, or hundreds
+/// Bytes of inline images kept: about nine of the largest, or hundreds
 /// of the logos most mail carries.
 const INLINE_BYTES: usize = 48 * 1024 * 1024;
 
@@ -48,19 +52,36 @@ const THUMBNAIL_BYTES: usize = 4 * 1024 * 1024;
 /// A picture by account, message and Gmail's attachment id.
 pub(super) type Key = (AccountId, String, String);
 
+/// Something [`Recent`] keeps, and how many bytes it holds.
+pub(super) trait Weighed: Clone {
+    fn weight(&self) -> usize;
+}
+
+impl Weighed for String {
+    fn weight(&self) -> usize {
+        self.len()
+    }
+}
+
+impl Weighed for InlineImage {
+    fn weight(&self) -> usize {
+        self.bytes.len()
+    }
+}
+
 /// Pictures kept by how recently they were used, up to `limit` bytes.
 #[derive(Debug)]
-pub(super) struct Recent {
+pub(super) struct Recent<V = String> {
     limit: usize,
     used: usize,
     clock: u64,
-    held: HashMap<Key, (String, u64)>,
+    held: HashMap<Key, (V, u64)>,
     /// The keys by when they were last used, oldest first.
     order: BTreeMap<u64, Key>,
 }
 
-impl Recent {
-    pub(super) fn new(limit: usize) -> Recent {
+impl<V: Weighed> Recent<V> {
+    pub(super) fn new(limit: usize) -> Recent<V> {
         Recent {
             limit,
             used: 0,
@@ -71,7 +92,7 @@ impl Recent {
     }
 
     /// The picture under `key`, which now counts as the most recent.
-    pub(super) fn get(&mut self, key: &Key) -> Option<String> {
+    pub(super) fn get(&mut self, key: &Key) -> Option<V> {
         self.clock += 1;
         let (value, used_at) = self.held.get_mut(key)?;
         self.order.remove(used_at);
@@ -82,24 +103,24 @@ impl Recent {
 
     /// Keeps `value` under `key`, letting the least recent pictures go
     /// until it fits. A picture larger than the whole limit is not kept.
-    pub(super) fn put(&mut self, key: Key, value: String) {
+    pub(super) fn put(&mut self, key: Key, value: V) {
         if let Some((old, used_at)) = self.held.remove(&key) {
-            self.used -= old.len();
+            self.used -= old.weight();
             self.order.remove(&used_at);
         }
-        if value.len() > self.limit {
+        if value.weight() > self.limit {
             return;
         }
-        while self.used + value.len() > self.limit {
+        while self.used + value.weight() > self.limit {
             let Some((_, oldest)) = self.order.pop_first() else {
                 break;
             };
             if let Some((gone, _)) = self.held.remove(&oldest) {
-                self.used -= gone.len();
+                self.used -= gone.weight();
             }
         }
         self.clock += 1;
-        self.used += value.len();
+        self.used += value.weight();
         self.order.insert(self.clock, key.clone());
         self.held.insert(key, (value, self.clock));
     }
@@ -121,11 +142,10 @@ pub(super) struct Picture {
     pub cid: Option<String>,
 }
 
-/// The inline images the HTML bodies name, small enough to embed.
-pub(super) fn inline_wanted(bodies: &[(String, Result<MessageBody, String>)]) -> Vec<Picture> {
+/// The inline images the HTML bodies name, small enough to show.
+pub(super) fn inline_wanted(bodies: &[(String, MessageBody)]) -> Vec<Picture> {
     let mut wanted = Vec::new();
     for (message_id, body) in bodies {
-        let Ok(body) = body else { continue };
         if !body.html.as_deref().is_some_and(|h| h.contains("cid:")) {
             continue;
         }
@@ -178,12 +198,12 @@ pub(super) fn thumbnails_wanted(bodies: &[(String, MessageBody)]) -> Vec<Picture
 /// Answers each picture from `recent`, and the rest from `fetch`, a few at
 /// a time. What `fetch` makes is kept for next time; a picture it could
 /// not make is left out.
-pub(super) async fn gather<'a>(
-    recent: &RefCell<Recent>,
+pub(super) async fn gather<'a, V: Weighed>(
+    recent: &RefCell<Recent<V>>,
     account_id: AccountId,
     wanted: Vec<Picture>,
-    fetch: impl Fn(Picture) -> LocalBoxFuture<'a, Option<String>>,
-) -> Vec<(Picture, String)> {
+    fetch: impl Fn(Picture) -> LocalBoxFuture<'a, Option<V>>,
+) -> Vec<(Picture, V)> {
     let key = |p: &Picture| (account_id, p.message_id.clone(), p.attachment_id.clone());
     let mut found = Vec::new();
     let mut missing: Vec<Picture> = Vec::new();
@@ -195,7 +215,7 @@ pub(super) async fn gather<'a>(
             None => missing.push(picture),
         }
     }
-    let fetched: Vec<(Picture, Option<String>)> = futures::stream::iter(missing)
+    let fetched: Vec<(Picture, Option<V>)> = futures::stream::iter(missing)
         .map(|picture| {
             let made = fetch(picture.clone());
             async move { (picture, made.await) }
@@ -215,7 +235,7 @@ pub(super) async fn gather<'a>(
 /// What the window keeps of the pictures it fetched.
 pub(super) struct Pictures {
     core: Rc<Core>,
-    inline: RefCell<Recent>,
+    inline: RefCell<Recent<InlineImage>>,
     thumbnails: RefCell<Recent>,
 }
 
@@ -228,45 +248,42 @@ impl Pictures {
         }
     }
 
-    /// The `cid:` images the bodies name, as `data:` URIs by message and
-    /// then by content id. A body that names none is left out.
+    /// The `cid:` images the bodies name, by message and then by content
+    /// id. Every body asked about is in the answer, with nothing for one
+    /// whose pictures would not come, so the page stops waiting for them.
     pub(super) async fn inline(
         &self,
         account_id: AccountId,
         sync: &Arc<Sync>,
-        bodies: &[(String, Result<MessageBody, String>)],
-    ) -> HashMap<String, HashMap<String, String>> {
-        let mut out: HashMap<String, HashMap<String, String>> = bodies
+        bodies: &[(String, MessageBody)],
+    ) -> Found {
+        let mut out: Found = bodies
             .iter()
-            .filter(|(_, body)| {
-                body.as_ref()
-                    .is_ok_and(|b| b.html.as_deref().is_some_and(|h| h.contains("cid:")))
-            })
             .map(|(id, _)| (id.clone(), HashMap::new()))
             .collect();
-        let fetch = |picture: Picture| -> LocalBoxFuture<'static, Option<String>> {
+        let fetch = |picture: Picture| -> LocalBoxFuture<'static, Option<InlineImage>> {
             let (core, sync) = (Rc::clone(&self.core), Arc::clone(sync));
             Box::pin(async move {
-                let made = core
+                let mime = picture.mime_type.clone();
+                let bytes = core
                     .call(async move {
-                        let bytes = sync
-                            .attachment(&picture.message_id, &picture.attachment_id)
-                            .await?;
-                        let mime = picture.mime_type;
-                        Ok::<_, anyhow::Error>(
-                            tokio::task::spawn_blocking(move || data_uri(&mime, &bytes)).await?,
-                        )
+                        sync.attachment(&picture.message_id, &picture.attachment_id)
+                            .await
                     })
-                    .await;
-                made.ok()
+                    .await
+                    .ok()?;
+                Some(InlineImage {
+                    mime,
+                    bytes: bytes.into(),
+                })
             })
         };
         let found = gather(&self.inline, account_id, inline_wanted(bodies), fetch).await;
-        for (picture, uri) in found {
+        for (picture, image) in found {
             if let Some(cid) = picture.cid {
                 out.entry(picture.message_id)
                     .or_default()
-                    .insert(cid, uri);
+                    .insert(cid, image);
             }
         }
         out
@@ -352,7 +369,7 @@ mod tests {
 
     #[test]
     fn the_least_recent_picture_goes_first_once_the_bytes_run_out() {
-        let mut recent = Recent::new(10);
+        let mut recent: Recent = Recent::new(10);
         recent.put(key(1), "aaaa".into());
         recent.put(key(2), "bbbb".into());
         // Using the first makes the second the oldest.
@@ -365,16 +382,20 @@ mod tests {
 
     #[test]
     fn a_picture_larger_than_the_whole_cache_is_not_kept() {
-        let mut recent = Recent::new(4);
+        let mut recent: Recent = Recent::new(4);
         recent.put(key(1), "ab".into());
         recent.put(key(2), "abcdefgh".into());
         assert_eq!(recent.get(&key(2)), None);
-        assert_eq!(recent.get(&key(1)).as_deref(), Some("ab"), "nothing made room");
+        assert_eq!(
+            recent.get(&key(1)).as_deref(),
+            Some("ab"),
+            "nothing made room"
+        );
     }
 
     #[test]
     fn keeping_a_picture_again_replaces_its_bytes() {
-        let mut recent = Recent::new(100);
+        let mut recent: Recent = Recent::new(100);
         recent.put(key(1), "abc".into());
         recent.put(key(1), "abcdef".into());
         assert_eq!(recent.used(), 6);
@@ -384,7 +405,10 @@ mod tests {
     #[test]
     fn many_large_images_stay_under_the_byte_limit() {
         let mut recent = Recent::new(INLINE_BYTES);
-        let large = "x".repeat(6_700_000);
+        let large = InlineImage {
+            mime: "image/jpeg".to_string(),
+            bytes: vec![0; 5_000_000].into(),
+        };
         for n in 0..64 {
             recent.put(key(n), large.clone());
         }
@@ -416,20 +440,19 @@ mod tests {
         let bodies = vec![
             (
                 "m1".to_string(),
-                Ok(body(
+                body(
                     Some(r#"<img src="cid:logo">"#),
                     vec![
                         image("a1", Some("logo"), 1_000),
                         image("a2", None, 1_000),
                         image("a3", Some("huge"), INLINE_LIMIT + 1),
                     ],
-                )),
+                ),
             ),
             (
                 "m2".to_string(),
-                Ok(body(Some("<p>no pictures</p>"), vec![image("a4", Some("x"), 10)])),
+                body(Some("<p>no pictures</p>"), vec![image("a4", Some("x"), 10)]),
             ),
-            ("m3".to_string(), Err("offline".to_string())),
         ];
         let wanted = inline_wanted(&bodies);
         assert_eq!(wanted.len(), 1);
@@ -472,7 +495,7 @@ mod tests {
 
     #[tokio::test]
     async fn pictures_arrive_several_at_a_time_and_the_cache_answers_next_time() {
-        let recent = RefCell::new(Recent::new(1_000));
+        let recent: RefCell<Recent> = RefCell::new(Recent::new(1_000));
         let seen = Rc::new(Seen::default());
         let fetch = |p: Picture| -> LocalBoxFuture<'static, Option<String>> {
             let seen = Rc::clone(&seen);
@@ -497,7 +520,7 @@ mod tests {
 
     #[tokio::test]
     async fn a_picture_that_would_not_come_is_left_out_and_asked_for_again() {
-        let recent = RefCell::new(Recent::new(1_000));
+        let recent: RefCell<Recent> = RefCell::new(Recent::new(1_000));
         let seen = Rc::new(Seen::default());
         let fetch = |_: Picture| -> LocalBoxFuture<'static, Option<String>> {
             let seen = Rc::clone(&seen);
@@ -506,8 +529,16 @@ mod tests {
                 None
             })
         };
-        assert!(gather(&recent, 1, vec![picture(1)], &fetch).await.is_empty());
-        assert!(gather(&recent, 1, vec![picture(1)], &fetch).await.is_empty());
+        assert!(
+            gather(&recent, 1, vec![picture(1)], &fetch)
+                .await
+                .is_empty()
+        );
+        assert!(
+            gather(&recent, 1, vec![picture(1)], &fetch)
+                .await
+                .is_empty()
+        );
         assert_eq!(seen.calls.get(), 2);
     }
 }

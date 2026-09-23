@@ -11,8 +11,7 @@
 //! leaves the light ones, which is what the sender designed for.
 
 use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
+use std::collections::HashSet;
 
 use ammonia::{Builder, UrlRelative};
 
@@ -38,12 +37,11 @@ const LAYOUT_ATTRIBUTES: [&str; 17] = [
     "nowrap",
 ];
 
-/// Sanitizes `html`. `inline_images` maps a `Content-ID` (without angle
-/// brackets) to a `data:` URI; `cid:` image sources become those URIs, and
-/// images whose content is unknown lose their source. The map is shared
-/// rather than copied, since one picture can be megabytes of `data:` URI.
-pub fn sanitize_html(html: &str, inline_images: &Arc<HashMap<String, String>>) -> String {
-    let images = Arc::clone(inline_images);
+/// Sanitizes `html`. A `cid:` image source becomes `pictures` followed by
+/// the escaped `Content-ID`, the address the conversation view serves that
+/// picture at; with no `pictures` it loses its source.
+pub fn sanitize_html(html: &str, pictures: Option<&str>) -> String {
+    let pictures = pictures.map(str::to_string);
     let mut builder = Builder::default();
     builder
         .add_tags(&EXTRA_TAGS)
@@ -54,7 +52,7 @@ pub fn sanitize_html(html: &str, inline_images: &Arc<HashMap<String, String>>) -
         .link_rel(Some("noopener noreferrer"))
         .strip_comments(true)
         .attribute_filter(move |element, attribute, value| {
-            filter_url(&images, element, attribute, value)
+            filter_url(pictures.as_deref(), element, attribute, value)
         });
     name_images(&drop_dark_rules(&builder.clean(html).to_string()))
 }
@@ -209,7 +207,7 @@ fn strip_color_scheme(css: &str) -> String {
 }
 
 fn filter_url<'u>(
-    images: &HashMap<String, String>,
+    pictures: Option<&str>,
     element: &str,
     attribute: &str,
     value: &'u str,
@@ -220,9 +218,9 @@ fn filter_url<'u>(
     let lower = value.trim_start().to_ascii_lowercase();
     if let Some(cid) = lower.strip_prefix("cid:") {
         let key = &value.trim_start()[value.trim_start().len() - cid.len()..];
-        return (element == "img")
-            .then(|| images.get(key).cloned().map(Cow::Owned))
-            .flatten();
+        let pictures = pictures.filter(|_| element == "img" && !key.is_empty())?;
+        let address = format!("{pictures}{}", crate::open_thread::inline::escape(key));
+        return Some(Cow::Owned(address));
     }
     if lower.starts_with("data:") {
         return (element == "img" && lower.starts_with("data:image/"))
@@ -236,7 +234,7 @@ mod dark_tests {
     use super::sanitize_html;
 
     fn clean(html: &str) -> String {
-        sanitize_html(html, &Default::default())
+        sanitize_html(html, None)
     }
 
     #[test]
@@ -323,13 +321,10 @@ mod dark_tests {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-    use std::sync::Arc;
-
     use super::sanitize_html;
 
     fn clean(html: &str) -> String {
-        sanitize_html(html, &Default::default()).to_lowercase()
+        sanitize_html(html, None).to_lowercase()
     }
 
     #[test]
@@ -417,17 +412,24 @@ mod tests {
     }
 
     #[test]
-    fn inline_images_become_data_uris() {
-        let images = Arc::new(HashMap::from([(
-            "logo@x".to_string(),
-            "data:image/png;base64,AAAA".to_string(),
-        )]));
+    fn inline_images_point_at_the_view_s_own_scheme() {
         let out = sanitize_html(
-            r#"<img src="cid:logo@x"><img src="cid:missing@x">"#,
-            &images,
+            r#"<img src="cid:logo@x"><img src=" CID:part 2"><a href="cid:logo@x">x</a>"#,
+            Some("mailrs-cid:1/m1/0/"),
         );
-        assert!(out.contains(r#"src="data:image/png;base64,AAAA""#), "{out}");
-        assert!(!out.contains("missing"), "{out}");
+        assert!(out.contains(r#"src="mailrs-cid:1/m1/0/logo@x""#), "{out}");
+        assert!(out.contains(r#"src="mailrs-cid:1/m1/0/part%202""#), "{out}");
+        assert!(!out.contains("href"), "only a picture is served: {out}");
+        let none = sanitize_html(r#"<img src="cid:logo@x">"#, None);
+        assert!(!none.contains("cid"), "{none}");
+    }
+
+    /// Mail cannot name the view's scheme itself: only a `cid:` source
+    /// becomes one of its addresses.
+    #[test]
+    fn mail_cannot_reach_the_view_s_scheme_by_itself() {
+        let out = clean(r#"<img src="mailrs-cid:1/m2/0/secret"><a href="mailrs:toggle/m1">x</a>"#);
+        assert!(!out.contains("mailrs"), "{out}");
     }
 
     #[test]

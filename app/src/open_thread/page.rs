@@ -17,16 +17,16 @@
 use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
 
-use mailrs_domain::{MessageBody, MessageMeta};
+use mailrs_domain::{AccountId, MessageBody, MessageMeta};
 
-use super::{InlineImages, OpenThread};
+use super::{OpenThread, inline};
 use crate::render::{self, BodyState, Head, MessageView, Sanitized, TAIL, Theme};
 use crate::sanitize::sanitize_html;
 use crate::translation::{Body, Prose};
 
-/// A message body after cleaning, with a mark of the HTML and the inline
-/// images it was made from, and what two scans of the cleaned HTML found.
-/// A different mark means the body needs cleaning again. The scans each
+/// A message body after cleaning, with a mark of the HTML and the picture
+/// addresses it was made with, and what two scans of the cleaned HTML
+/// found. A different mark means the body needs cleaning again. The scans each
 /// read the whole body in lower case, so they run once, with the
 /// cleaning, rather than on every draw.
 #[derive(Debug, Clone)]
@@ -41,18 +41,19 @@ pub struct Cleaned {
 }
 
 impl Cleaned {
-    /// Cleans `html` with the pictures it names. Slow on a long message.
-    pub fn new(html: &str, images: &InlineImages) -> Cleaned {
-        clean(html, images)
+    /// Cleans `html`, pointing each picture it names by `cid:` at an
+    /// address that starts with `pictures`. Slow on a long message.
+    pub fn new(html: &str, pictures: &str) -> Cleaned {
+        clean(html, pictures)
     }
 }
 
-/// Cleans the HTML of one body with the pictures it names.
-fn clean(source: &str, images: &InlineImages) -> Cleaned {
-    let html = sanitize_html(source, images);
+/// Cleans the HTML of one body, pointing its pictures at `pictures`.
+fn clean(source: &str, pictures: &str) -> Cleaned {
+    let html = sanitize_html(source, Some(pictures));
     let lower = html.to_ascii_lowercase();
     Cleaned {
-        mark: body_mark(source, images),
+        mark: body_mark(source, pictures),
         remote: loads_remote(&lower),
         paints: paints_itself(&lower),
         html,
@@ -61,9 +62,15 @@ fn clean(source: &str, images: &InlineImages) -> Cleaned {
 
 /// Whether lower-case HTML loads a picture or a background from the web.
 fn loads_remote(lower: &str) -> bool {
-    ["src=\"http", "src='http", "url(http", "url('http", "url(\"http"]
-        .iter()
-        .any(|mark| lower.contains(mark))
+    [
+        "src=\"http",
+        "src='http",
+        "url(http",
+        "url('http",
+        "url(\"http",
+    ]
+    .iter()
+    .any(|mark| lower.contains(mark))
 }
 
 /// Whether lower-case HTML chooses its own colours. Mail that does is
@@ -77,26 +84,27 @@ fn paints_itself(lower: &str) -> bool {
         .any(|mark| lower.contains(mark))
 }
 
-/// HTML bodies waiting to be cleaned, each with the pictures it names. A
-/// long newsletter takes milliseconds, and a thread of forty of them took
-/// the GTK thread 50 ms in a release build, so the thread run's ports
-/// gather them here, clean them on a worker thread, and hand the result to
-/// [`OpenThread::take_cleaned`].
+/// HTML bodies waiting to be cleaned, each with the start of its picture
+/// addresses. A long newsletter takes milliseconds, and a thread of forty
+/// of them took the GTK thread 50 ms in a release build, so the thread
+/// run's ports gather them here, clean them on a worker thread, and hand
+/// the result to [`OpenThread::take_cleaned`].
 #[derive(Debug, Default)]
-pub struct ToClean(Vec<(String, String, InlineImages)>);
+pub struct ToClean(Vec<(String, String, String)>);
 
 impl ToClean {
-    /// The bodies among these with HTML to draw.
+    /// The bodies among these with HTML to draw, as the account's store or
+    /// Gmail sent them, which is the first version of each.
     pub fn of<'a>(
+        account_id: AccountId,
         bodies: impl IntoIterator<Item = (&'a String, &'a MessageBody)>,
-        images: &HashMap<String, InlineImages>,
     ) -> ToClean {
         ToClean(
             bodies
                 .into_iter()
                 .filter_map(|(id, body)| {
                     let html = html_of(body)?.to_string();
-                    Some((id.clone(), html, images.get(id).cloned().unwrap_or_default()))
+                    Some((id.clone(), html, inline::prefix(account_id, id, 0)))
                 })
                 .collect(),
         )
@@ -110,8 +118,8 @@ impl ToClean {
     pub fn clean(self) -> HashMap<String, Cleaned> {
         self.0
             .into_iter()
-            .map(|(id, html, images)| {
-                let cleaned = clean(&html, &images);
+            .map(|(id, html, pictures)| {
+                let cleaned = clean(&html, &pictures);
                 (id, cleaned)
             })
             .collect()
@@ -120,8 +128,9 @@ impl ToClean {
 
 impl OpenThread {
     /// Keeps cleaned copies made somewhere else, each only while it was
-    /// made from the body and the pictures the thread holds now. Anything
-    /// left without one is cleaned when the page is next drawn.
+    /// made from the body and the version of its pictures the thread holds
+    /// now. Anything left without one is cleaned when the page is next
+    /// drawn.
     pub fn take_cleaned(&mut self, cleaned: HashMap<String, Cleaned>) {
         for (id, copy) in cleaned {
             if self.mark_of(&id) == Some(copy.mark) {
@@ -130,14 +139,10 @@ impl OpenThread {
         }
     }
 
-    fn images_of(&self, id: &str) -> InlineImages {
-        self.inline_images.get(id).cloned().unwrap_or_default()
-    }
-
     /// The mark a cleaned copy of this message's body would carry now.
     fn mark_of(&self, id: &str) -> Option<u64> {
         let body = self.bodies.get(id)?.as_ref().ok()?;
-        Some(body_mark(html_of(body)?, &self.images_of(id)))
+        Some(body_mark(html_of(body)?, &self.picture_prefix(id)))
     }
 
     /// What the page on screen needs for the thread as it stands, in
@@ -156,7 +161,11 @@ impl OpenThread {
             },
             theme,
         );
-        let articles: Vec<Article> = self.messages.iter().map(|meta| self.article(meta)).collect();
+        let articles: Vec<Article> = self
+            .messages
+            .iter()
+            .map(|meta| self.article(meta))
+            .collect();
         let now = Drawn {
             head: hash(&head),
             articles: articles
@@ -306,11 +315,12 @@ impl OpenThread {
             })
             .map(|meta| meta.id.clone())
             .collect();
-        let bodies = stale.iter().filter_map(|id| {
-            let body = self.bodies.get(id)?.as_ref().ok()?;
-            Some((id, body))
+        let bodies = stale.into_iter().filter_map(|id| {
+            let html = html_of(self.bodies.get(&id)?.as_ref().ok()?)?.to_string();
+            let pictures = self.picture_prefix(&id);
+            Some((id, html, pictures))
         });
-        let cleaned = ToClean::of(bodies, &self.inline_images).clean();
+        let cleaned = ToClean(bodies.collect()).clean();
         self.cleaned.extend(cleaned);
     }
 }
@@ -406,25 +416,17 @@ fn html_of(body: &MessageBody) -> Option<&str> {
     body.html.as_deref().filter(|h| !h.trim().is_empty())
 }
 
-/// One number standing for the HTML and the inline images a cleaned body
-/// was made from, so the cleaned copy is thrown away as soon as either
-/// changes. It reads the whole body rather than its length, because two
-/// bodies of the same length are still two bodies: opening an encrypted
-/// message puts a different body under the same message id, and the
-/// reader would otherwise go on looking at the cleaned ciphertext.
-fn body_mark(html: &str, images: &HashMap<String, String>) -> u64 {
+/// One number standing for the HTML a cleaned body was made from and the
+/// start of the addresses it gives its pictures, so the cleaned copy is
+/// thrown away as soon as either changes. It reads the whole body rather
+/// than its length, because two bodies of the same length are still two
+/// bodies: opening an encrypted message puts a different body under the
+/// same message id, and the reader would otherwise go on looking at the
+/// cleaned ciphertext.
+fn body_mark(html: &str, pictures: &str) -> u64 {
     let mut whole = DefaultHasher::new();
     html.hash(&mut whole);
-    // A HashMap hands its entries back in whatever order it likes, so each
-    // one is hashed on its own and the results mixed with xor, which
-    // answers the same whichever order they come in.
-    let mixed = images.iter().fold(0, |mixed, (cid, uri)| {
-        let mut each = DefaultHasher::new();
-        cid.hash(&mut each);
-        uri.hash(&mut each);
-        mixed ^ each.finish()
-    });
-    mixed.hash(&mut whole);
+    pictures.hash(&mut whole);
     whole.finish()
 }
 
@@ -484,7 +486,7 @@ mod tests {
         let mut open = thread("<p>Kites</p>");
         open.page(&theme());
         open.images_allowed = true;
-        assert!(whole(open.page(&theme())).contains("img-src data: https: http:"));
+        assert!(whole(open.page(&theme())).contains("img-src data: mailrs-cid: https: http:"));
     }
 
     #[test]
@@ -544,7 +546,10 @@ mod tests {
         };
         document.patch(std::slice::from_ref(&fresh));
         let html = document.html(" data-load=\"2\"");
-        assert!(html.starts_with("<!doctype html><html data-load=\"2\""), "{html}");
+        assert!(
+            html.starts_with("<!doctype html><html data-load=\"2\""),
+            "{html}"
+        );
         assert!(html.contains("Kites, again") && !html.contains("<p>Kites</p>"));
     }
 
@@ -585,7 +590,7 @@ mod tests {
     #[test]
     fn a_body_cleaned_elsewhere_is_not_cleaned_again() {
         let mut open = thread("<p>Kites</p>");
-        let mut made = clean("<p>Kites</p>", &Default::default());
+        let mut made = clean("<p>Kites</p>", "mailrs-cid:1/m1/0/");
         made.html = "<p>Cleaned elsewhere</p>".to_string();
         open.take_cleaned(HashMap::from([("m1".to_string(), made)]));
         assert!(whole(open.page(&theme())).contains("<p>Cleaned elsewhere</p>"));
@@ -598,7 +603,7 @@ mod tests {
         let mut open = thread("<p>Kites</p>");
         let stale = Cleaned {
             html: "<p>Ciphertext</p>".to_string(),
-            ..clean("<p>Ciphertext</p>", &Default::default())
+            ..clean("<p>Ciphertext</p>", "mailrs-cid:1/m1/0/")
         };
         open.take_cleaned(HashMap::from([("m1".to_string(), stale)]));
         let page = whole(open.page(&theme()));
@@ -610,7 +615,7 @@ mod tests {
     #[test]
     fn the_page_trusts_what_cleaning_found() {
         let mut open = thread("<p>Kites</p>");
-        let mut made = clean("<p>Kites</p>", &Default::default());
+        let mut made = clean("<p>Kites</p>", "mailrs-cid:1/m1/0/");
         assert!(!made.paints && !made.remote);
         made.paints = true;
         open.take_cleaned(HashMap::from([("m1".to_string(), made)]));
@@ -620,10 +625,10 @@ mod tests {
 
     #[test]
     fn a_newsletter_paints_itself_and_a_note_does_not() {
-        let note = clean("<div dir=\"ltr\">Monday works.</div>", &Default::default());
+        let note = clean("<div dir=\"ltr\">Monday works.</div>", "mailrs-cid:1/m1/0/");
         let sale = clean(
             "<table bgcolor=\"#ffffff\"><tr><td>Sale</td></tr></table>",
-            &Default::default(),
+            "mailrs-cid:1/m1/0/",
         );
         assert!(!note.paints && sale.paints);
     }
@@ -634,83 +639,59 @@ mod tests {
     fn remote_images_are_looked_for_in_what_the_page_draws() {
         let hidden = clean(
             "<p>Hi</p><!-- <img src=\"https://tracker.example/p.gif\"> -->",
-            &Default::default(),
+            "mailrs-cid:1/m1/0/",
         );
         assert!(!hidden.remote);
         for shown in [
             "<img src='https://news.example/a.png'>",
             "<div style=\"background:url(https://news.example/b.png)\">x</div>",
         ] {
-            assert!(clean(shown, &Default::default()).remote, "{shown}");
+            assert!(clean(shown, "mailrs-cid:1/m1/0/").remote, "{shown}");
         }
         let mut open = thread("<p>Hi</p><!-- <img src=\"https://tracker.example/p.gif\"> -->");
         open.page(&theme());
         assert!(!open.has_remote_images());
     }
 
-    fn images(entries: &[(&str, &str)]) -> HashMap<String, String> {
-        entries
-            .iter()
-            .map(|(cid, uri)| (cid.to_string(), uri.to_string()))
-            .collect()
-    }
-
     #[test]
     fn a_body_that_did_not_change_keeps_its_cleaned_copy() {
-        let pictures = images(&[("cid1", "data:image/png;base64,AAAA")]);
+        let pictures = "mailrs-cid:1/m1/0/";
         assert_eq!(
-            body_mark("<p>Hello</p>", &pictures),
-            body_mark("<p>Hello</p>", &pictures)
+            body_mark("<p>Hello</p>", pictures),
+            body_mark("<p>Hello</p>", pictures)
         );
     }
 
     #[test]
     fn two_bodies_of_the_same_length_are_two_bodies() {
-        let pictures = images(&[("cid1", "data:image/png;base64,AAAA")]);
+        let pictures = "mailrs-cid:1/m1/0/";
         assert_ne!(
-            body_mark("<p>Hello</p>", &pictures),
-            body_mark("<p>Howdy</p>", &pictures)
+            body_mark("<p>Hello</p>", pictures),
+            body_mark("<p>Howdy</p>", pictures)
+        );
+    }
+
+    /// The engine's pictures come under a new version, and the page must
+    /// ask for them by their new addresses.
+    #[test]
+    fn new_picture_addresses_make_a_new_body() {
+        assert_ne!(
+            body_mark("<img src=\"cid:logo\">", "mailrs-cid:1/m1/0/"),
+            body_mark("<img src=\"cid:logo\">", "mailrs-cid:1/m1/1/")
         );
     }
 
     #[test]
-    fn an_image_that_changed_is_a_new_body() {
-        assert_ne!(
-            body_mark(
-                "<p>Hello</p>",
-                &images(&[("cid1", "data:image/png;base64,AAAA")])
-            ),
-            body_mark(
-                "<p>Hello</p>",
-                &images(&[("cid1", "data:image/png;base64,BBBB")])
-            )
+    fn a_picture_in_the_page_is_asked_for_at_its_address() {
+        let mut open = thread("<p>Logo</p><img src=\"cid:logo@kites\">");
+        let page = whole(open.page(&theme()));
+        assert!(
+            page.contains("src=\"mailrs-cid:1/m1/0/logo@kites\""),
+            "{page}"
         );
-        assert_ne!(
-            body_mark(
-                "<p>Hello</p>",
-                &images(&[("cid1", "data:image/png;base64,AAAA")])
-            ),
-            body_mark(
-                "<p>Hello</p>",
-                &images(&[("cid2", "data:image/png;base64,AAAA")])
-            )
-        );
-        assert_ne!(
-            body_mark("<p>Hello</p>", &images(&[])),
-            body_mark(
-                "<p>Hello</p>",
-                &images(&[("cid1", "data:image/png;base64,AAAA")])
-            )
-        );
-    }
-
-    #[test]
-    fn the_order_the_images_arrived_in_says_nothing() {
-        let one = images(&[("cid1", "first"), ("cid2", "second")]);
-        let other = images(&[("cid2", "second"), ("cid1", "first")]);
-        assert_eq!(
-            body_mark("<p>Hello</p>", &one),
-            body_mark("<p>Hello</p>", &other)
+        assert!(
+            page.contains("img-src data: mailrs-cid:;"),
+            "the page's policy lets it ask: {page}"
         );
     }
 }

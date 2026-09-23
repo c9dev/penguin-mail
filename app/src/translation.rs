@@ -1277,7 +1277,7 @@ mod tests {
             "[[1]] Good morning\n[[2]] See you <b>soon</b>",
             pieces.len(),
         );
-        let clean = crate::sanitize::sanitize_html(&prose.rebuild(&said), &Default::default());
+        let clean = crate::sanitize::sanitize_html(&prose.rebuild(&said), None);
         assert_eq!(
             clean,
             "<p>Good morning</p><p>See you &lt;b&gt;soon&lt;/b&gt;</p>"

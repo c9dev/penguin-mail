@@ -20,8 +20,8 @@ use mailrs_domain::{
 use mailrs_store::outbox::Queued;
 use mailrs_sync::Opened;
 
-use super::{Answer, Card, Desk, Effects, Fetched, Stored, ThreadRun};
-use crate::open_thread::{Document, InlineImages, OpenThread, Page, ToClean, Unsent};
+use super::{Answer, Card, Desk, Effects, Fetched, InlinePictures, Stored, ThreadRun};
+use crate::open_thread::{Document, InlineImage, OpenThread, Page, ToClean, Unsent};
 use crate::protection::Read;
 use crate::render::Theme;
 use crate::translation::{self, Language, Prose, Translation};
@@ -44,6 +44,8 @@ pub enum Step {
     MessagesArrived,
     Bodies,
     BodiesArrived,
+    Images,
+    ImagesArrived,
     Replace,
     Buttons,
     Clear,
@@ -84,6 +86,8 @@ pub struct Screen {
     pub messages: Vec<MessageMeta>,
     /// What Gmail hands back, by message id.
     pub gmail: HashMap<String, MessageBody>,
+    /// The pictures Gmail has for each message's `cid:` names.
+    pub pictures: InlinePictures,
     pub thumbnails: HashMap<String, String>,
     pub invitation: Result<Option<Opened>, String>,
     pub busy: Result<Vec<String>, String>,
@@ -222,6 +226,21 @@ pub fn opened_occurrence() -> Opened {
     }
 }
 
+/// A body whose HTML shows a picture by `cid:`.
+pub fn with_inline_picture() -> MessageBody {
+    MessageBody {
+        attachments: vec![mailrs_domain::Attachment {
+            part_id: "2".to_string(),
+            filename: "logo.png".to_string(),
+            mime_type: "image/png".to_string(),
+            size: 3,
+            attachment_id: Some("a9".to_string()),
+            content_id: Some("logo@kites".to_string()),
+        }],
+        ..html_body("<p>Our logo</p><img src=\"cid:logo@kites\">")
+    }
+}
+
 /// A body with a picture attached, which wants a thumbnail.
 pub fn with_picture() -> MessageBody {
     MessageBody {
@@ -286,6 +305,16 @@ impl FakeWindow {
             holds: HashMap::new(),
             messages: vec![meta("m1", true)],
             gmail: HashMap::from([("m1".to_string(), body("Hello"))]),
+            pictures: HashMap::from([(
+                "m1".to_string(),
+                HashMap::from([(
+                    "logo@kites".to_string(),
+                    InlineImage {
+                        mime: "image/png".to_string(),
+                        bytes: vec![1, 2, 3].into(),
+                    },
+                )]),
+            )]),
             thumbnails: HashMap::from([("a1".to_string(), "data:image/png;base64,".to_string())]),
             invitation: Ok(Some(opened_invitation())),
             busy: Ok(vec!["Design crit".to_string()]),
@@ -376,21 +405,23 @@ impl FakeWindow {
             dark: false,
             accent: "#3584e4".to_string(),
         };
-        self.with(|screen| match screen.open.as_mut().map(|open| open.page(&theme)) {
-            Some(Page::Whole(document)) => {
-                screen.loads.push(document.html(""));
-                screen.document = Some(document);
-            }
-            Some(Page::Patch(patch)) if !patch.is_empty() => {
-                screen
-                    .patches
-                    .push(patch.iter().map(|a| a.message_id.clone()).collect());
-                if let Some(document) = screen.document.as_mut() {
-                    document.patch(&patch);
+        self.with(
+            |screen| match screen.open.as_mut().map(|open| open.page(&theme)) {
+                Some(Page::Whole(document)) => {
+                    screen.loads.push(document.html(""));
+                    screen.document = Some(document);
                 }
-            }
-            _ => {}
-        });
+                Some(Page::Patch(patch)) if !patch.is_empty() => {
+                    screen
+                        .patches
+                        .push(patch.iter().map(|a| a.message_id.clone()).collect());
+                    if let Some(document) = screen.document.as_mut() {
+                        document.patch(&patch);
+                    }
+                }
+                _ => {}
+            },
+        );
     }
 
     /// The page on screen now, as HTML.
@@ -463,6 +494,10 @@ impl Desk for FakeWindow {
         self.read(OpenThread::wanting_thumbnails)
     }
 
+    fn wanting_images(&self) -> Vec<(String, MessageBody)> {
+        self.read(OpenThread::wanting_images)
+    }
+
     fn prose(&self) -> Option<(String, Prose)> {
         self.open(OpenThread::prose).flatten()
     }
@@ -475,7 +510,7 @@ impl Desk for FakeWindow {
         self.open(|open| open.translation_of(message_id)).flatten()
     }
 
-    fn arrived(&self, message_id: &str) -> Option<(MessageBody, InlineImages)> {
+    fn arrived(&self, message_id: &str) -> Option<(MessageBody, String)> {
         self.open(|open| open.arrived(message_id)).flatten()
     }
 
@@ -540,18 +575,29 @@ impl Effects for FakeWindow {
                 .collect()
         });
         // The window cleans on a worker thread; here it is done at once.
-        let images = HashMap::new();
         let arrived = bodies
             .iter()
             .filter_map(|(id, body)| Some((id, body.as_ref().ok()?)));
-        let cleaned = ToClean::of(arrived, &images).clean();
-        Box::pin(async move {
-            Fetched {
-                bodies,
-                images,
-                cleaned,
-            }
-        })
+        let cleaned = ToClean::of(ACCOUNT, arrived).clean();
+        Box::pin(async move { Fetched { bodies, cleaned } })
+    }
+
+    fn inline_images(
+        &self,
+        _account_id: AccountId,
+        bodies: Vec<(String, MessageBody)>,
+    ) -> Answer<'_, InlinePictures> {
+        self.reached(Step::Images);
+        let found = self.with(|screen| {
+            bodies
+                .into_iter()
+                .map(|(id, _)| {
+                    let pictures = screen.pictures.get(&id).cloned().unwrap_or_default();
+                    (id, pictures)
+                })
+                .collect()
+        });
+        Box::pin(async move { found })
     }
 
     fn thumbnails(
@@ -651,8 +697,13 @@ impl Effects for FakeWindow {
 
     fn bodies_arrived(&self, fetched: Fetched) {
         self.change(Step::BodiesArrived, |open| {
-            open.take_bodies(fetched.bodies, fetched.images, fetched.cleaned)
+            open.take_bodies(fetched.bodies, fetched.cleaned)
         });
+        self.draw();
+    }
+
+    fn images_arrived(&self, found: InlinePictures) {
+        self.change(Step::ImagesArrived, |open| open.take_images(found));
         self.draw();
     }
 
