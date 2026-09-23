@@ -60,7 +60,9 @@ pub struct Settings {
     /// than folded to one line each.
     pub assistant_details_expanded: bool,
     /// Tools from outside sources the person answered Always Allow for, as
-    /// `source/tool`, such as `mcp:github/github__list_issues`.
+    /// `source/tool`, such as `mcp:github/github__list_issues`. A skill's
+    /// command is kept whole, as `shell:skill/command`.
+    #[serde(deserialize_with = "allowed_tools")]
     pub assistant_allowed_tools: Vec<String>,
     /// What the person turned on for each skill, keyed by skill id such as
     /// `claude-code/pdf`. A skill with no entry is off.
@@ -696,6 +698,15 @@ pub fn nearest<T: Copy + Into<i64>>(choices: &[(T, String)], value: T) -> u32 {
 /// A day, in the milliseconds the settings keep times in.
 pub const DAY_MILLIS: i64 = 24 * 60 * 60 * 1000;
 
+/// Reads the Always Allow answers and drops `shell/run_command`. Earlier
+/// versions stored that one key for every command a skill could run, while
+/// the assistant promises to ask about each command.
+fn allowed_tools<'de, D: serde::Deserializer<'de>>(read: D) -> Result<Vec<String>, D::Error> {
+    let mut keys = Vec::<String>::deserialize(read)?;
+    keys.retain(|key| key != "shell/run_command");
+    Ok(keys)
+}
+
 impl Settings {
     /// Whether Penguin Mail reads this account's Google contacts.
     pub fn reads_contacts(&self, email: &str) -> bool {
@@ -950,6 +961,25 @@ mod tests {
         assert!(!partial.threading);
         assert_eq!(partial.mark_read, MarkRead::AfterDelay);
         assert!(partial.notifications, "missing keys take their defaults");
+    }
+
+    #[test]
+    fn an_always_answer_for_every_skill_command_is_dropped_on_reading() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.toml");
+        std::fs::write(
+            &path,
+            "assistant_allowed_tools = [\"shell/run_command\", \"mcp:files/files__read\"]\n",
+        )
+        .unwrap();
+        assert_eq!(
+            Settings::load(&path).assistant_allowed_tools,
+            ["mcp:files/files__read"]
+        );
+        assert_eq!(
+            Settings::open(&path).settings.assistant_allowed_tools,
+            ["mcp:files/files__read"]
+        );
     }
 
     #[test]

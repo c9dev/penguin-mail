@@ -354,7 +354,10 @@ and reads the rest only when a request calls for it.
 
 A skill with scripts (a `scripts/` folder, or files such as `.py` and
 `.sh`) can run commands. The assistant asks before each one and shows you
-the exact command. The command runs in a sandbox made with
+the exact command. **Always Allow** covers that exact command in that
+skill, and any other command asks again. The **Always Allowed** list on
+the AI page shows each allowed command and takes it back. The command
+runs in a sandbox made with
 [bubblewrap](https://github.com/containers/bubblewrap), which must be
 installed (`sudo apt install bubblewrap`). Inside the sandbox, the command:
 

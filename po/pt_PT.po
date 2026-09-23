@@ -925,28 +925,29 @@ msgstr ""
 "Os scripts das competências não podem ser executados: o bubblewrap não "
 "conseguiu criar uma área isolada ({reason})."
 
-#: app/src/assistant/sources/skills/shell.rs:178
+#: app/src/assistant/sources/skills/shell.rs:179
 msgid "It can reach the internet."
 msgstr "Pode aceder à Internet."
 
-#: app/src/assistant/sources/skills/shell.rs:180
+#: app/src/assistant/sources/skills/shell.rs:181
 msgid "It cannot reach the internet."
 msgstr "Não pode aceder à Internet."
 
-#: app/src/assistant/sources/skills/shell.rs:184
+#: app/src/assistant/sources/skills/shell.rs:185
 msgid ""
 "Run this command for the skill {skill}?\n"
 "\n"
 "{command}\n"
 "\n"
-"It runs in a sandbox with no access to your mail or home folder. {network}"
+"It runs in a sandbox with no access to your mail or home folder. {network} "
+"Always Allow covers this exact command only."
 msgstr ""
 "Executar este comando para a competência {skill}?\n"
 "\n"
 "{command}\n"
 "\n"
 "Corre numa área isolada, sem acesso ao seu correio nem à sua pasta pessoal. "
-"{network}"
+"{network} Permitir sempre aplica-se só a este comando, tal como está."
 
 #: app/src/assistant/sources/web.rs:60
 msgid "Add a Brave Search API key."
@@ -1946,178 +1947,178 @@ msgstr "Para {person}"
 msgid "In {label}"
 msgstr "Em {label}"
 
-#: app/src/settings/mod.rs:162 app/src/settings/mod.rs:337
-#: app/src/settings/mod.rs:612 app/src/ui/assistant_mcp_prefs.rs:184
+#: app/src/settings/mod.rs:164 app/src/settings/mod.rs:339
+#: app/src/settings/mod.rs:614 app/src/ui/assistant_mcp_prefs.rs:184
 msgid "Off"
 msgstr "Desligado"
 
-#: app/src/settings/mod.rs:163
+#: app/src/settings/mod.rs:165
 msgid "Local server"
 msgstr "Servidor local"
 
-#: app/src/settings/mod.rs:164
+#: app/src/settings/mod.rs:166
 msgid "Anthropic API"
 msgstr "API da Anthropic"
 
-#: app/src/settings/mod.rs:165
+#: app/src/settings/mod.rs:167
 msgid "Claude subscription"
 msgstr "Subscrição do Claude"
 
-#: app/src/settings/mod.rs:190 app/src/ui/assistant.rs:99
+#: app/src/settings/mod.rs:192 app/src/ui/assistant.rs:99
 msgid "Assistant"
 msgstr "Assistente"
 
-#: app/src/settings/mod.rs:191
+#: app/src/settings/mod.rs:193
 msgid "Translation"
 msgstr "Tradução"
 
 #. The assistant's running label says "Unsubscribing" too, and
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:195
+#: app/src/settings/mod.rs:197
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr "Cancelar subscrições"
 
-#: app/src/settings/mod.rs:201
+#: app/src/settings/mod.rs:203
 msgid "Answers questions and acts on your mail"
 msgstr "Responde a perguntas e trata do seu correio"
 
-#: app/src/settings/mod.rs:202
+#: app/src/settings/mod.rs:204
 msgid "Translates a message when you ask"
 msgstr "Traduz uma mensagem quando o pede"
 
-#: app/src/settings/mod.rs:204
+#: app/src/settings/mod.rs:206
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr ""
 "Lê a página de cancelamento de subscrição de uma newsletter quando as regras "
 "não chegam"
 
-#: app/src/settings/mod.rs:242
+#: app/src/settings/mod.rs:244
 msgid "Same as the Assistant"
 msgstr "O mesmo do assistente"
 
-#: app/src/settings/mod.rs:338
+#: app/src/settings/mod.rs:340
 msgid "Claude's own only"
 msgstr "Apenas a do próprio Claude"
 
-#: app/src/settings/mod.rs:339
+#: app/src/settings/mod.rs:341
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:340
+#: app/src/settings/mod.rs:342
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:471
+#: app/src/settings/mod.rs:473
 msgid "Rich text"
 msgstr "Texto formatado"
 
-#: app/src/settings/mod.rs:472
+#: app/src/settings/mod.rs:474
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:519
+#: app/src/settings/mod.rs:521
 msgid "When opened"
 msgstr "Ao abrir"
 
-#: app/src/settings/mod.rs:520
+#: app/src/settings/mod.rs:522
 msgid "After 2 seconds"
 msgstr "Ao fim de 2 segundos"
 
-#: app/src/settings/mod.rs:521
+#: app/src/settings/mod.rs:523
 msgid "Only when I choose"
 msgstr "Apenas quando eu escolher"
 
-#: app/src/settings/mod.rs:537
+#: app/src/settings/mod.rs:539
 msgid "Ask each time"
 msgstr "Perguntar de cada vez"
 
-#: app/src/settings/mod.rs:538
+#: app/src/settings/mod.rs:540
 msgid "Always load"
 msgstr "Carregar sempre"
 
-#: app/src/settings/mod.rs:572
+#: app/src/settings/mod.rs:574
 msgid "Small"
 msgstr "Pequeno"
 
-#: app/src/settings/mod.rs:573
+#: app/src/settings/mod.rs:575
 msgid "Default"
 msgstr "Predefinido"
 
-#: app/src/settings/mod.rs:574
+#: app/src/settings/mod.rs:576
 msgid "Large"
 msgstr "Grande"
 
-#: app/src/settings/mod.rs:575
+#: app/src/settings/mod.rs:577
 msgid "Larger"
 msgstr "Maior"
 
-#: app/src/settings/mod.rs:613
+#: app/src/settings/mod.rs:615
 msgid "5 seconds"
 msgstr "5 segundos"
 
-#: app/src/settings/mod.rs:614
+#: app/src/settings/mod.rs:616
 msgid "10 seconds"
 msgstr "10 segundos"
 
-#: app/src/settings/mod.rs:615
+#: app/src/settings/mod.rs:617
 msgid "20 seconds"
 msgstr "20 segundos"
 
-#: app/src/settings/mod.rs:616
+#: app/src/settings/mod.rs:618
 msgid "30 seconds"
 msgstr "30 segundos"
 
-#: app/src/settings/mod.rs:633
+#: app/src/settings/mod.rs:635
 msgid "Follow system"
 msgstr "Seguir o sistema"
 
-#: app/src/settings/mod.rs:634
+#: app/src/settings/mod.rs:636
 msgid "Light"
 msgstr "Claro"
 
-#: app/src/settings/mod.rs:635
+#: app/src/settings/mod.rs:637
 msgid "Dark"
 msgstr "Escuro"
 
-#: app/src/settings/mod.rs:645
+#: app/src/settings/mod.rs:647
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "A cada segundo"
 msgstr[1] "A cada {count} segundos"
 
-#: app/src/settings/mod.rs:653
+#: app/src/settings/mod.rs:655
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "A cada minuto"
 msgstr[1] "A cada {count} minutos"
 
-#: app/src/settings/mod.rs:670
+#: app/src/settings/mod.rs:672
 msgid "2 weeks"
 msgstr "2 semanas"
 
-#: app/src/settings/mod.rs:671
+#: app/src/settings/mod.rs:673
 msgid "30 days"
 msgstr "30 dias"
 
-#: app/src/settings/mod.rs:672
+#: app/src/settings/mod.rs:674
 msgid "90 days"
 msgstr "90 dias"
 
-#: app/src/settings/mod.rs:673
+#: app/src/settings/mod.rs:675
 msgid "1 year"
 msgstr "1 ano"
 
-#: app/src/settings/mod.rs:680
+#: app/src/settings/mod.rs:682
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:681
+#: app/src/settings/mod.rs:683
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:682
+#: app/src/settings/mod.rs:684
 msgid "4 GB"
 msgstr "4 GB"
 

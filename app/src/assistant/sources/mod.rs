@@ -26,7 +26,8 @@ pub mod skills;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Verdict {
     Once,
-    /// Allow this call and every later one to the same tool.
+    /// Allow this call and every later one with the same key: the same
+    /// tool, or for a skill's command, the same command line.
     Always,
     Deny,
 }
@@ -35,7 +36,7 @@ pub enum Verdict {
 pub struct ApprovalRequest {
     /// What the pane shows: which tool, from where, with what.
     pub question: String,
-    /// `source/tool`, the key an Always answer is stored under.
+    /// The key an Always answer is stored under, from [`Source::key`].
     pub key: String,
     pub reply: async_channel::Sender<Verdict>,
 }
@@ -50,6 +51,12 @@ pub trait Source: Send + Sync {
     /// The question to ask before running this call, or `None` when it
     /// runs without asking.
     fn ask(&self, name: &str, input: &Value) -> Option<String>;
+    /// What an Always answer to this call covers, as `source/tool`. A
+    /// source whose calls differ in what they do, such as the shell, puts
+    /// the input in the key, so Always covers only a call like this one.
+    fn key(&self, name: &str, _input: &Value) -> String {
+        format!("{}/{name}", self.id())
+    }
     fn call(&self, name: String, input: Value) -> BoxFuture<ToolOutcome>;
     /// Gets the tools ready before a turn lists them, such as starting a
     /// server. Most sources have nothing to wait for.
@@ -138,7 +145,7 @@ impl ToolHost for Toolbox {
             return Box::pin(async move { ToolOutcome::Err(missing) });
         };
         let question = source.ask(&name, &input);
-        let key = format!("{}/{name}", source.id());
+        let key = source.key(&name, &input);
         let approvals = self.approvals.clone();
         let allowed = Arc::clone(&self.allowed);
         Box::pin(async move {

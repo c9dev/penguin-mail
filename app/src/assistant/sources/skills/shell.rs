@@ -2,7 +2,8 @@
 //! carries scripts, inside the sandbox in [`super::sandbox`].
 //!
 //! Every call asks the person first and shows the exact command, unless
-//! they answered Always Allow for `shell/run_command`. A conversation gets
+//! they answered Always Allow for that same command line in that same
+//! skill. A different command asks again. A conversation gets
 //! one scratch folder, so a script can leave a file for the next command
 //! to read; the folder goes when the conversation does.
 
@@ -181,7 +182,7 @@ impl Source for Shell {
         };
         Some(fill(
             &gettext(
-                "Run this command for the skill {skill}?\n\n{command}\n\nIt runs in a sandbox with no access to your mail or home folder. {network}",
+                "Run this command for the skill {skill}?\n\n{command}\n\nIt runs in a sandbox with no access to your mail or home folder. {network} Always Allow covers this exact command only.",
             ),
             &[
                 ("skill", &runnable.skill.name),
@@ -189,6 +190,19 @@ impl Source for Shell {
                 ("network", &network),
             ],
         ))
+    }
+
+    /// One command line in one skill, as `shell:skill/command`. A key per
+    /// tool would let one Always answer run anything the model writes next.
+    fn key(&self, name: &str, input: &Value) -> String {
+        match self.runnable(&text_field(input, "skill")) {
+            Some(runnable) => format!(
+                "shell:{}/{}",
+                runnable.skill.name,
+                text_field(input, "command")
+            ),
+            None => format!("{}/{name}", self.id()),
+        }
     }
 
     fn call(&self, _name: String, input: Value) -> BoxFuture<ToolOutcome> {

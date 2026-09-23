@@ -500,3 +500,88 @@ fn network_only_brings_the_files_a_lookup_needs() {
         assert!(off.contains(&flag.to_string()), "{flag}");
     }
 }
+
+/// A toolbox over one shell with the skill `s`, and the keys of the
+/// questions it asks, each answered with `verdict`. The shell's sandbox
+/// program does not exist, so no command runs.
+fn shell_toolbox(
+    allowed: &[&str],
+    verdict: crate::assistant::sources::Verdict,
+) -> (
+    crate::assistant::sources::Toolbox,
+    std::sync::Arc<std::sync::Mutex<Vec<String>>>,
+    tempfile::TempDir,
+) {
+    use crate::assistant::sources::{ApprovalRequest, Toolbox};
+    let dir = tempfile::tempdir().expect("tempdir");
+    let skill = skill_at(dir.path(), "s", true);
+    let shell = Shell::with(
+        PathBuf::from("/nonexistent/bwrap"),
+        vec![Runnable {
+            skill,
+            network: false,
+        }],
+        dir.path().join("work"),
+        Limits::DEFAULT,
+    );
+    let (requests, _received) = async_channel::unbounded();
+    let (approvals, asked) = async_channel::unbounded::<ApprovalRequest>();
+    let keys = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let seen = std::sync::Arc::clone(&keys);
+    tokio::spawn(async move {
+        while let Ok(request) = asked.recv().await {
+            seen.lock().expect("lock").push(request.key.clone());
+            let _ = request.reply.send(verdict).await;
+        }
+    });
+    let toolbox = Toolbox::new(
+        crate::assistant::Host::new(Vec::new(), requests),
+        vec![std::sync::Arc::new(shell)],
+        approvals,
+        allowed.iter().map(|k| k.to_string()),
+    );
+    (toolbox, keys, dir)
+}
+
+#[tokio::test]
+async fn always_allowing_one_command_leaves_other_commands_asking() {
+    use crate::assistant::sources::Verdict;
+    use mailrs_ai::ToolHost;
+    let (toolbox, keys, _dir) = shell_toolbox(&[], Verdict::Always);
+    let run = |command: &str| {
+        toolbox.call(
+            "run_command".into(),
+            json!({"skill": "s", "command": command}),
+        )
+    };
+    run("scripts/total.sh").await;
+    run("scripts/total.sh").await;
+    assert_eq!(
+        keys.lock().expect("lock").len(),
+        1,
+        "the same command asks once"
+    );
+    run("rm -rf /work").await;
+    assert_eq!(
+        keys.lock().expect("lock").len(),
+        2,
+        "another command asks again"
+    );
+    let keys = keys.lock().expect("lock").clone();
+    assert_ne!(keys[0], keys[1]);
+}
+
+#[tokio::test]
+async fn an_always_answer_from_before_the_fix_allows_no_command() {
+    use crate::assistant::sources::Verdict;
+    use mailrs_ai::ToolHost;
+    let (toolbox, keys, _dir) = shell_toolbox(&["shell/run_command"], Verdict::Deny);
+    let outcome = toolbox
+        .call(
+            "run_command".into(),
+            json!({"skill": "s", "command": "scripts/total.sh"}),
+        )
+        .await;
+    assert_eq!(outcome, ToolOutcome::Err("The user declined.".into()));
+    assert_eq!(keys.lock().expect("lock").len(), 1);
+}
