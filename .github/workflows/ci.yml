@@ -33,7 +33,11 @@ jobs:
         run: scripts/ci-deps.sh
       - name: Put cargo on PATH
         run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      # The release workflow's build starts from this cache, so both jobs
+      # name it the same.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: ubuntu-26.04
       # update-po.sh reads the Rust sources with xtr. The cache restored
       # above keeps ~/.cargo/bin, so cargo install usually finds it there
       # and has nothing to build.
