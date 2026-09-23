@@ -8,8 +8,7 @@ use mailrs_store::messages::Change;
 use mailrs_store::{accounts, labels, messages};
 
 use super::AccountSync;
-use super::fetch::Want;
-use crate::{BackendError, MailBackend, RemoteChange, SyncError, SyncState};
+use crate::{BackendError, MailBackend, RemoteChange, SyncError, SyncState, Want};
 
 impl AccountSync {
     /// Applies every change since the stored sync state in one transaction,

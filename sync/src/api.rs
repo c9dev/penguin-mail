@@ -10,15 +10,6 @@ use mailrs_gmail::{
     GmailError, HistoryPage, LabelColor, MessagePage, Person, Profile, RemoteLabel, SendAs, Series,
 };
 
-/// Page size for window listings, whose every id costs a metadata fetch
-/// after it. A page of 100 is about two and a half seconds of an
-/// account's budget, which is what paces backfill.
-pub const LIST_PAGE_SIZE: u32 = 100;
-
-/// Page size for a listing that needs only ids, such as the inbox check.
-/// Gmail's most, for the same 5 units a call as a page of 100.
-pub const ID_PAGE_SIZE: u32 = 500;
-
 /// Gmail operations for one account.
 pub trait GmailApi: Send + Sync + 'static {
     /// The budget this account's calls come out of, where there is one.
@@ -92,10 +83,6 @@ pub trait GmailApi: Send + Sync + 'static {
         add: &[String],
         remove: &[String],
     ) -> impl Future<Output = Result<(), GmailError>> + Send;
-
-    fn trash(&self, id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
-
-    fn untrash(&self, id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
 
     /// Erases messages for good. Gmail cannot bring them back, and it
     /// answers `GmailError::MissingScope` until the account grants the
@@ -323,7 +310,7 @@ impl GmailApi for AccountClient {
         page_size: u32,
     ) -> Result<MessagePage, GmailError> {
         self.client
-            .list_messages(query, page_token, page_size.clamp(1, ID_PAGE_SIZE))
+            .list_messages(query, page_token, page_size.clamp(1, crate::ID_PAGE_SIZE))
             .await
     }
 
@@ -339,7 +326,7 @@ impl GmailApi for AccountClient {
                 label_id,
                 query,
                 page_token,
-                page_size.clamp(1, ID_PAGE_SIZE),
+                page_size.clamp(1, crate::ID_PAGE_SIZE),
             )
             .await
     }
@@ -395,14 +382,6 @@ impl GmailApi for AccountClient {
         remove: &[String],
     ) -> Result<(), GmailError> {
         self.client.batch_modify(ids, add, remove).await
-    }
-
-    async fn trash(&self, id: &str) -> Result<(), GmailError> {
-        self.client.trash(id).await
-    }
-
-    async fn untrash(&self, id: &str) -> Result<(), GmailError> {
-        self.client.untrash(id).await
     }
 
     async fn delete_messages(&self, ids: &[String]) -> Result<(), GmailError> {

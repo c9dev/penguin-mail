@@ -11,13 +11,11 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::time::{Duration, Instant};
 
 use mailrs_domain::MessageMeta;
-use mailrs_gmail::MessageRef;
 use mailrs_store::messages::Change;
 use mailrs_store::{accounts, messages};
 
 use super::AccountSync;
-use super::fetch::Want;
-use crate::{MailBackend, SyncError};
+use crate::{MailBackend, RemoteRef, SearchQuery, SyncError, Want};
 
 /// How long a fetched thread is kept for opening. Only memory depends on
 /// it: whether a kept thread may still be stored is the history cursor's
@@ -46,16 +44,12 @@ impl AccountSync {
     /// only as it shows rows. The hits are kept per thread for
     /// [`KEPT_FOR`], so Delete Forever on a listed row knows its messages
     /// without asking Gmail.
-    pub async fn search_ids(
-        &self,
-        query: &str,
-        limit: usize,
-    ) -> Result<Vec<MessageRef>, SyncError> {
-        let size = u32::try_from(limit)
-            .unwrap_or(u32::MAX)
-            .min(crate::ID_PAGE_SIZE);
-        let page = self.services.mail.list_messages(query, None, size).await?;
-        let found: Vec<MessageRef> = page.messages.into_iter().take(limit).collect();
+    pub async fn search_ids(&self, query: &str, limit: usize) -> Result<Vec<RemoteRef>, SyncError> {
+        let found = self
+            .services
+            .mail
+            .search(&SearchQuery::Native(query.to_string()), limit)
+            .await?;
         let mut by_thread: BTreeMap<&str, BTreeSet<String>> = BTreeMap::new();
         for hit in &found {
             by_thread
@@ -113,7 +107,7 @@ impl AccountSync {
     /// Two or more hits in one thread the store lacks come from one
     /// `threads.get`, which is kept for opening; each other hit costs a
     /// `messages.get`. Messages Gmail no longer has are left out.
-    pub async fn metadata_of(&self, refs: &[MessageRef]) -> Result<Vec<MessageMeta>, SyncError> {
+    pub async fn metadata_of(&self, refs: &[RemoteRef]) -> Result<Vec<MessageMeta>, SyncError> {
         let account_id = self.account_id;
         let wanted: Vec<String> = refs.iter().map(|r| r.id.clone()).collect();
         let mut metas = self

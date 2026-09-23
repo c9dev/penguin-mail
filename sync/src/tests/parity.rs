@@ -164,6 +164,26 @@ async fn a_search_reaches_gmail_as_typed() {
     assert_eq!(ids, ["old"]);
 }
 
+/// A page token Gmail no longer takes is the server losing its place in
+/// the listing, and backfill lists the window again from the top.
+#[tokio::test]
+async fn a_backfill_page_token_gmail_refuses_starts_the_window_again() {
+    let h = harness().await;
+    let now = now_millis();
+    for (i, id) in ["a", "b", "c"].into_iter().enumerate() {
+        h.fake.seed(meta(id, &format!("t{id}"), now - i as i64 * 1000, &["INBOX"]));
+    }
+    h.sync.bootstrap().await.unwrap();
+    assert!(h.cursor().await.backfill_cursor.is_some());
+    h.fake.fail_next(mailrs_gmail::GmailError::Http { status: 400, body: String::new() });
+
+    assert!(h.sync.backfill_step().await.unwrap(), "pages remain");
+
+    let cursor = h.cursor().await;
+    assert_eq!(cursor.backfill_cursor, None);
+    assert!(!cursor.backfill_done);
+}
+
 /// Every mark Gmail keeps as a label reaches the store when it changes
 /// on the web: the inbox, Important, a person's label, a category, the
 /// star, unread and mute, on and then off again.

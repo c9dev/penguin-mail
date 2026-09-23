@@ -6035,136 +6035,136 @@ msgstr[1] ""
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr ""
 
-#: sync/src/mailbox.rs:91
+#: sync/src/mailbox.rs:90
 msgid "{color} Flag"
 msgstr ""
 
-#: sync/src/mailbox.rs:152
+#: sync/src/mailbox.rs:151
 msgid "No Results"
 msgstr ""
 
-#: sync/src/mailbox.rs:155
+#: sync/src/mailbox.rs:154
 msgid "Nothing Scheduled"
 msgstr ""
 
-#: sync/src/mailbox.rs:158
+#: sync/src/mailbox.rs:157
 msgid "Outbox Is Empty"
 msgstr ""
 
-#: sync/src/mailbox.rs:160
+#: sync/src/mailbox.rs:159
 msgid "No Reminders"
 msgstr ""
 
-#: sync/src/mailbox.rs:162
+#: sync/src/mailbox.rs:161
 msgid "No Follow-Ups"
 msgstr ""
 
-#: sync/src/mailbox.rs:165
+#: sync/src/mailbox.rs:164
 msgid "No Flagged Mail"
 msgstr ""
 
-#: sync/src/mailbox.rs:167
+#: sync/src/mailbox.rs:166
 msgid "No Mail from VIPs"
 msgstr ""
 
-#: sync/src/mailbox.rs:169
+#: sync/src/mailbox.rs:168
 msgid "No Matching Mail"
 msgstr ""
 
-#: sync/src/mailbox.rs:174
+#: sync/src/mailbox.rs:173
 msgid "No Archived Mail"
 msgstr ""
 
-#: sync/src/mailbox.rs:175
+#: sync/src/mailbox.rs:174
 msgid "No Junk"
 msgstr ""
 
-#: sync/src/mailbox.rs:176
+#: sync/src/mailbox.rs:175
 msgid "Trash Is Empty"
 msgstr ""
 
-#: sync/src/mailbox.rs:182
+#: sync/src/mailbox.rs:181
 msgid "Inbox Zero"
 msgstr ""
 
-#: sync/src/mailbox.rs:183
+#: sync/src/mailbox.rs:182
 msgid "No Starred Mail"
 msgstr ""
 
-#: sync/src/mailbox.rs:184
+#: sync/src/mailbox.rs:183
 msgid "No Sent Mail"
 msgstr ""
 
-#: sync/src/mailbox.rs:185
+#: sync/src/mailbox.rs:184
 msgid "No Drafts"
 msgstr ""
 
-#: sync/src/mailbox.rs:186
+#: sync/src/mailbox.rs:185
 msgid "No Muted Mail"
 msgstr ""
 
-#: sync/src/mailbox.rs:230
+#: sync/src/mailbox.rs:229
 msgctxt "mailbox"
 msgid "Archive"
 msgstr ""
 
-#: sync/src/mailbox.rs:232
+#: sync/src/mailbox.rs:231
 msgid "Trash"
 msgstr ""
 
-#: sync/src/mailbox.rs:233
+#: sync/src/mailbox.rs:232
 msgid "All Mail"
 msgstr ""
 
-#: sync/src/mailbox.rs:501
+#: sync/src/mailbox.rs:500
 msgid "This smart mailbox has no conditions"
 msgstr ""
 
-#: sync/src/mailbox.rs:822
+#: sync/src/mailbox.rs:821
 msgid "Could not load mail for {account}: {reason}"
 msgstr ""
 
-#: sync/src/mailbox.rs:940
+#: sync/src/mailbox.rs:939
 msgid "Returns {when}"
 msgstr ""
 
-#: sync/src/mailbox.rs:983 sync/src/mailbox.rs:1054
+#: sync/src/mailbox.rs:982 sync/src/mailbox.rs:1053
 msgid "No recipients"
 msgstr ""
 
-#: sync/src/mailbox.rs:986 sync/src/mailbox.rs:1057
+#: sync/src/mailbox.rs:985 sync/src/mailbox.rs:1056
 msgid "To {recipients}"
 msgstr ""
 
-#: sync/src/mailbox.rs:1019
+#: sync/src/mailbox.rs:1018
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] ""
 msgstr[1] ""
 
-#: sync/src/mailbox.rs:1029
+#: sync/src/mailbox.rs:1028
 msgid "Sent yesterday, no reply yet"
 msgstr ""
 
-#: sync/src/mailbox.rs:1031
+#: sync/src/mailbox.rs:1030
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] ""
 msgstr[1] ""
 
-#: sync/src/mailbox.rs:1069
+#: sync/src/mailbox.rs:1068
 msgid "Sends {when}"
 msgstr ""
 
-#: sync/src/mailbox.rs:1073
+#: sync/src/mailbox.rs:1072
 msgid "Not sent"
 msgstr ""
 
-#: sync/src/mailbox.rs:1080
+#: sync/src/mailbox.rs:1079
 msgid "{problem}. Trying again {when}"
 msgstr ""
 
-#: sync/src/mailbox.rs:1087
+#: sync/src/mailbox.rs:1086
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr ""
 

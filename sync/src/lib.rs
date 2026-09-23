@@ -45,7 +45,7 @@ pub use actions::{
     Accounts, Categorized, Failure, History, MailAction, MailActions, NewLabels, Outcome, Returned,
     Undone,
 };
-pub use api::{AccountClient, DraftRef, GmailApi, ID_PAGE_SIZE, LIST_PAGE_SIZE, SavedDraft};
+pub use api::{AccountClient, DraftRef, GmailApi, SavedDraft};
 pub use backoff::{MOST_TRIES, backoff_delay, poll_offset, retry_delay, with_jitter};
 pub use calendar::Calendar;
 pub use connect::connect_account;
@@ -63,7 +63,8 @@ pub use one_click::OneClick;
 pub use ops::MailOp;
 pub use outbox::{Cancelled, Drained, Outbox, Posted};
 pub use services::{
-    AccountServices, AnyAutoReply, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules,
+    AccountServices, AnyAutoReply, Backfill, Found, ID_PAGE_SIZE, LIST_PAGE_SIZE, RawMessage,
+    RemoteRef, SearchQuery, Want, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules,
     AutoReplyService, CalendarService, ContactsService, Google, IdentityService, MailBackend,
     MailCapabilities, Priority, RemoteChange, RulesService, SendAsAddress, SyncState, Unapplied,
     Changes, background,

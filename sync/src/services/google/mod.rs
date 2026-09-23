@@ -5,6 +5,7 @@
 //! services.
 
 mod changes;
+mod fetch;
 mod writes;
 
 use std::sync::Arc;
@@ -12,20 +13,29 @@ use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::{
-    EpochMillis, Filter, MailboxKind, MessageBody, MessageMeta, RemoteMailbox, Role, Vacation,
-    gmail,
+    EpochMillis, Filter, MailboxKind, MessageBody, RemoteMailbox, Role, Vacation, gmail,
 };
 use mailrs_gmail::{
-    Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, MessagePage,
+    Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, GmailError, LabelColor,
     Person, RemoteLabel, SendAs, Series, html_to_text, limiter,
 };
 
 use super::{
-    AutoReplyService, CalendarService, Changes, ContactsService, IdentityService, MailBackend,
-    MailCapabilities, Priority, RulesService, SendAsAddress, SyncState, Unapplied, priority,
+    AutoReplyService, Backfill, CalendarService, Changes, ContactsService, Found, IdentityService,
+    MailBackend, MailCapabilities, Priority, RawMessage, RemoteRef, RulesService, SearchQuery,
+    SendAsAddress, SyncState, Unapplied, Want, priority,
 };
 use crate::api::{DraftRef, GmailApi, SavedDraft};
 use crate::{BackendError, MailOp};
+
+/// Page size for window listings, whose every id costs a metadata fetch
+/// after it. A page of 100 is about two and a half seconds of an
+/// account's budget, which is what paces backfill.
+pub const LIST_PAGE_SIZE: u32 = 100;
+
+/// Page size for a listing that needs only ids, such as the inbox check.
+/// Gmail's most, for the same 5 units a call as a page of 100.
+pub const ID_PAGE_SIZE: u32 = 500;
 
 /// A Google account's services, all over the one client `G`, which spends
 /// one quota bucket for all of them.
@@ -93,35 +103,86 @@ impl<G: GmailApi> MailBackend for Google<G> {
         tokio::time::sleep(wait).await;
     }
 
-    async fn list_messages(
-        &self,
-        query: &str,
-        page_token: Option<&str>,
-        page_size: u32,
-    ) -> Result<MessagePage, BackendError> {
-        Ok(paced(self.gmail.list_messages(query, page_token, page_size)).await?)
-    }
-
-    async fn list_labelled(
-        &self,
-        label_id: &str,
-        query: &str,
-        page_token: Option<&str>,
-        page_size: u32,
-    ) -> Result<MessagePage, BackendError> {
-        Ok(paced(
+    async fn backfill(&self, days: i64, cursor: Option<&str>) -> Result<Backfill, BackendError> {
+        match paced(
             self.gmail
-                .list_labelled(label_id, query, page_token, page_size),
+                .list_messages(&fetch::window_query(days), cursor, LIST_PAGE_SIZE),
         )
-        .await?)
+        .await
+        {
+            Ok(page) => Ok(Backfill {
+                refs: page.messages.into_iter().map(RemoteRef::from).collect(),
+                next: page.next_page_token,
+            }),
+            // Gmail answers 400 for a page token it no longer takes.
+            Err(GmailError::Http { status: 400, .. }) if cursor.is_some() => {
+                Err(BackendError::StateLost)
+            }
+            Err(err) => Err(err.into()),
+        }
     }
 
-    async fn message_metadata(&self, id: &str) -> Result<MessageMeta, BackendError> {
-        Ok(paced(self.gmail.message_metadata(id)).await?)
+    async fn window_ids(
+        &self,
+        days: i64,
+        mailbox: Option<&str>,
+    ) -> Result<Vec<RemoteRef>, BackendError> {
+        self.every_id(mailbox, &fetch::window_query(days)).await
     }
 
-    async fn thread_metadata(&self, thread_id: &str) -> Result<Vec<MessageMeta>, BackendError> {
-        Ok(paced(self.gmail.thread_metadata(thread_id)).await?)
+    async fn inbox_ids(&self) -> Result<Vec<RemoteRef>, BackendError> {
+        self.every_id(None, "in:inbox").await
+    }
+
+    async fn search(
+        &self,
+        query: &SearchQuery,
+        limit: usize,
+    ) -> Result<Vec<RemoteRef>, BackendError> {
+        let SearchQuery::Native(text) = query;
+        // One call of 5 units whatever the count, up to Gmail's page of 500.
+        let size = u32::try_from(limit).unwrap_or(u32::MAX).min(ID_PAGE_SIZE);
+        let page = paced(self.gmail.list_messages(text, None, size)).await?;
+        Ok(page
+            .messages
+            .into_iter()
+            .take(limit)
+            .map(RemoteRef::from)
+            .collect())
+    }
+
+    async fn find_sent(&self, message_id: &str) -> Result<Option<String>, BackendError> {
+        // A draft carries the same header as the message it becomes, so
+        // the search asks for sent mail alone.
+        let query = format!("in:sent rfc822msgid:{message_id}");
+        let page = paced(self.gmail.list_messages(&query, None, 1)).await?;
+        Ok(page.messages.into_iter().next().map(|m| m.id))
+    }
+
+    async fn fetch(&self, wants: Vec<Want>) -> Result<Found, BackendError> {
+        self.fetch_planned(wants).await
+    }
+
+    async fn fetch_whole(&self, threads: Vec<String>) -> Result<Found, BackendError> {
+        self.fetch_threads(threads).await
+    }
+
+    async fn fetch_raw(&self, ids: &[String]) -> Result<Vec<RawMessage>, BackendError> {
+        let mut raws = Vec::with_capacity(ids.len());
+        for id in ids {
+            let bytes = paced(self.gmail.raw_message(id)).await?;
+            raws.push(RawMessage {
+                id: id.clone(),
+                bytes,
+            });
+        }
+        Ok(raws)
+    }
+
+    /// Gmail files a copy of what it sends under Sent itself, so nothing
+    /// asks it to file one.
+    async fn append(&self, _raw: &[u8], _mailbox: &str) -> Result<String, BackendError> {
+        Err(BackendError::Unsupported)
     }
 
     async fn message_body(&self, id: &str) -> Result<MessageBody, BackendError> {
@@ -159,10 +220,6 @@ impl<G: GmailApi> MailBackend for Google<G> {
         attachment_id: &str,
     ) -> Result<Vec<u8>, BackendError> {
         Ok(paced(self.gmail.attachment(message_id, attachment_id)).await?)
-    }
-
-    async fn raw_message(&self, id: &str) -> Result<Vec<u8>, BackendError> {
-        Ok(paced(self.gmail.raw_message(id)).await?)
     }
 
     fn made_by_person(&self, id: &str) -> bool {
@@ -372,10 +429,11 @@ mod tests {
     #[tokio::test]
     async fn a_missing_message_is_only_missing() {
         let (_, google) = google();
-        assert!(matches!(
-            google.message_metadata("gone").await,
-            Err(BackendError::NotFound)
-        ));
+        let found = google
+            .fetch(vec![crate::Want::message("gone")])
+            .await
+            .unwrap();
+        assert_eq!(found.gone, ["gone"]);
     }
 
     #[tokio::test]

@@ -761,23 +761,6 @@ impl GmailApi for FakeGmail {
         Ok(())
     }
 
-    async fn trash(&self, id: &str) -> Result<(), GmailError> {
-        self.call("users.messages.trash", cost::TRASH).await?;
-        self.with(|s| s.remote_writes.push(format!("trash {id}")));
-        self.remote_relabel(id, &["TRASH"], &["INBOX"]);
-        Ok(())
-    }
-
-    /// Gmail takes the trash label off and nothing else: a message that
-    /// was in the inbox before stays out of it until something puts the
-    /// inbox label back.
-    async fn untrash(&self, id: &str) -> Result<(), GmailError> {
-        self.call("users.messages.untrash", cost::TRASH).await?;
-        self.with(|s| s.remote_writes.push(format!("untrash {id}")));
-        self.remote_relabel(id, &[], &["TRASH"]);
-        Ok(())
-    }
-
     async fn delete_messages(&self, ids: &[String]) -> Result<(), GmailError> {
         self.call("users.messages.batchDelete", cost::BATCH_DELETE)
             .await?;

@@ -40,9 +40,7 @@ impl AccountSync {
         let Some(id) = message_id_header(raw) else {
             return Ok(None);
         };
-        let query = format!("in:sent rfc822msgid:{id}");
-        let page = self.services.mail.list_messages(&query, None, 1).await?;
-        Ok(page.messages.into_iter().next().map(|m| m.id))
+        Ok(self.services.mail.find_sent(&id).await?)
     }
 
     /// Saves a draft in Gmail, replacing `draft_id` when given. If that
@@ -191,7 +189,12 @@ impl AccountSync {
     /// The message as it arrived, for View Source and for saving one
     /// message as an `.eml` file.
     pub async fn raw_message(&self, id: &str) -> Result<Vec<u8>, SyncError> {
-        Ok(self.services.mail.raw_message(id).await?)
+        let raw = self.services.mail.fetch_raw(&[id.to_string()]).await?;
+        Ok(raw
+            .into_iter()
+            .next()
+            .map(|r| r.bytes)
+            .ok_or(BackendError::NotFound)?)
     }
 
     /// A conversation as an mbox file, oldest message first, or the one
@@ -206,18 +209,26 @@ impl AccountSync {
     ) -> Result<Vec<u8>, SyncError> {
         let ids: Vec<String> = match message_id {
             Some(id) => vec![id.to_string()],
-            None => self
-                .services
-                .mail
-                .thread_metadata(thread_id)
-                .await?
-                .into_iter()
-                .map(|meta| meta.id)
-                .collect(),
+            None => {
+                let found = self
+                    .services
+                    .mail
+                    .fetch_whole(vec![thread_id.to_string()])
+                    .await?;
+                if !found.gone_threads.is_empty() {
+                    return Err(BackendError::NotFound.into());
+                }
+                found
+                    .whole
+                    .into_iter()
+                    .flatten()
+                    .map(|meta| meta.id)
+                    .collect()
+            }
         };
         let mut mbox = Vec::new();
-        for id in ids {
-            crate::export::append(&mut mbox, &self.services.mail.raw_message(&id).await?);
+        for raw in self.services.mail.fetch_raw(&ids).await? {
+            crate::export::append(&mut mbox, &raw.bytes);
         }
         Ok(mbox)
     }

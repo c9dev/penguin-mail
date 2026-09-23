@@ -7,15 +7,15 @@
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
-use mailrs_domain::{EpochMillis, Filter, MessageBody, MessageMeta, RemoteMailbox, Role, Vacation};
+use mailrs_domain::{EpochMillis, Filter, MessageBody, RemoteMailbox, Role, Vacation};
 use mailrs_gmail::{
-    Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, MessagePage,
-    Person, Series,
+    Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, Person, Series,
 };
 
 use super::{
-    AutoReplyService, CalendarService, Changes, ContactsService, Google, IdentityService,
-    MailBackend, MailCapabilities, RulesService, SendAsAddress, SyncState, Unapplied,
+    AutoReplyService, Backfill, CalendarService, Changes, ContactsService, Found, Google,
+    IdentityService, MailBackend, MailCapabilities, RawMessage, RemoteRef, RulesService,
+    SearchQuery, SendAsAddress, SyncState, Unapplied, Want,
 };
 use crate::api::{AccountClient, DraftRef, SavedDraft};
 #[cfg(any(test, feature = "fake"))]
@@ -114,35 +114,48 @@ impl MailBackend for AnyMail {
         forward!(AnyMail, self, stand_by(wait))
     }
 
-    async fn list_messages(
+    async fn backfill(&self, days: i64, cursor: Option<&str>) -> Result<Backfill, BackendError> {
+        forward!(AnyMail, self, backfill(days, cursor))
+    }
+
+    async fn window_ids(
         &self,
-        query: &str,
-        page_token: Option<&str>,
-        page_size: u32,
-    ) -> Result<MessagePage, BackendError> {
-        forward!(AnyMail, self, list_messages(query, page_token, page_size))
+        days: i64,
+        mailbox: Option<&str>,
+    ) -> Result<Vec<RemoteRef>, BackendError> {
+        forward!(AnyMail, self, window_ids(days, mailbox))
     }
 
-    async fn list_labelled(
+    async fn inbox_ids(&self) -> Result<Vec<RemoteRef>, BackendError> {
+        forward!(AnyMail, self, inbox_ids())
+    }
+
+    async fn search(
         &self,
-        label_id: &str,
-        query: &str,
-        page_token: Option<&str>,
-        page_size: u32,
-    ) -> Result<MessagePage, BackendError> {
-        forward!(
-            AnyMail,
-            self,
-            list_labelled(label_id, query, page_token, page_size)
-        )
+        query: &SearchQuery,
+        limit: usize,
+    ) -> Result<Vec<RemoteRef>, BackendError> {
+        forward!(AnyMail, self, search(query, limit))
     }
 
-    async fn message_metadata(&self, id: &str) -> Result<MessageMeta, BackendError> {
-        forward!(AnyMail, self, message_metadata(id))
+    async fn find_sent(&self, message_id: &str) -> Result<Option<String>, BackendError> {
+        forward!(AnyMail, self, find_sent(message_id))
     }
 
-    async fn thread_metadata(&self, thread_id: &str) -> Result<Vec<MessageMeta>, BackendError> {
-        forward!(AnyMail, self, thread_metadata(thread_id))
+    async fn fetch(&self, wants: Vec<Want>) -> Result<Found, BackendError> {
+        forward!(AnyMail, self, fetch(wants))
+    }
+
+    async fn fetch_whole(&self, threads: Vec<String>) -> Result<Found, BackendError> {
+        forward!(AnyMail, self, fetch_whole(threads))
+    }
+
+    async fn fetch_raw(&self, ids: &[String]) -> Result<Vec<RawMessage>, BackendError> {
+        forward!(AnyMail, self, fetch_raw(ids))
+    }
+
+    async fn append(&self, raw: &[u8], mailbox: &str) -> Result<String, BackendError> {
+        forward!(AnyMail, self, append(raw, mailbox))
     }
 
     async fn message_body(&self, id: &str) -> Result<MessageBody, BackendError> {
@@ -180,10 +193,6 @@ impl MailBackend for AnyMail {
         attachment_id: &str,
     ) -> Result<Vec<u8>, BackendError> {
         forward!(AnyMail, self, attachment(message_id, attachment_id))
-    }
-
-    async fn raw_message(&self, id: &str) -> Result<Vec<u8>, BackendError> {
-        forward!(AnyMail, self, raw_message(id))
     }
 
     fn made_by_person(&self, id: &str) -> bool {

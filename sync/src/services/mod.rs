@@ -3,17 +3,18 @@
 //! calendar over CalDAV. Each kind is a trait here. A provider's adapter
 //! implements the kinds it offers; [`Google`] is the only adapter so far.
 //!
-//! The mail trait still speaks some of Gmail's shapes: listings take a
-//! Gmail search, and drafts go by Gmail's draft id. Its feed of changes,
-//! its server mailboxes, its operations, its errors and its pacing are
-//! neutral.
+//! The mail trait still speaks a few of Gmail's shapes: drafts go by
+//! Gmail's draft id, a search reaches the server in Gmail's syntax, and
+//! mailbox colours come from Gmail's palette. Its feed of changes, its
+//! listings and fetches, its server mailboxes, its operations, its errors
+//! and its pacing are neutral.
 
 mod any;
 mod google;
 mod pacing;
 
 pub use any::{AnyAutoReply, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules};
-pub use google::Google;
+pub use google::{Google, ID_PAGE_SIZE, LIST_PAGE_SIZE};
 pub use pacing::{Priority, background, priority};
 
 use std::sync::Arc;
@@ -24,8 +25,7 @@ use mailrs_domain::{
     EpochMillis, Filter, Membership, MessageBody, MessageMeta, RemoteMailbox, Role, Vacation,
 };
 use mailrs_gmail::{
-    Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, MessagePage,
-    Person, Series,
+    Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, Person, Series,
 };
 
 use crate::api::{AccountClient, DraftRef, SavedDraft};
@@ -117,6 +117,80 @@ pub enum RemoteChange {
         id: String,
         memberships: Vec<Membership>,
     },
+}
+
+/// What the server calls one message, with its thread, as a listing or a
+/// search hands it over. For Gmail the id is the store's own.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RemoteRef {
+    pub id: String,
+    pub thread_id: String,
+}
+
+/// One message whose metadata a caller wants, with its thread when the
+/// caller knows it. Only a known thread lets a fetch share one call
+/// between messages.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Want {
+    pub id: String,
+    pub thread_id: Option<String>,
+}
+
+impl Want {
+    /// A message whose thread the caller does not know.
+    pub fn message(id: impl Into<String>) -> Want {
+        Want {
+            id: id.into(),
+            thread_id: None,
+        }
+    }
+}
+
+impl From<RemoteRef> for Want {
+    fn from(listed: RemoteRef) -> Want {
+        Want {
+            id: listed.id,
+            thread_id: Some(listed.thread_id),
+        }
+    }
+}
+
+/// What a metadata fetch brought back.
+#[derive(Debug, Default)]
+pub struct Found {
+    /// The wanted messages the server still has, in no particular order.
+    pub metas: Vec<MessageMeta>,
+    /// The wanted messages the server no longer has.
+    pub gone: Vec<String>,
+    /// Every message of each thread fetched along the way, including ones
+    /// nobody wanted, for a caller that keeps whole threads.
+    pub whole: Vec<Vec<MessageMeta>>,
+    /// Threads asked for whole that the server no longer has.
+    pub gone_threads: Vec<String>,
+}
+
+/// One page of the sync window.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Backfill {
+    pub refs: Vec<RemoteRef>,
+    /// The cursor for the next page; `None` after the last.
+    pub next: Option<String>,
+}
+
+/// A message as it arrived, in RFC 822 form.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RawMessage {
+    pub id: String,
+    pub bytes: Vec<u8>,
+}
+
+/// A search, as the person wrote it. A backend that speaks the syntax
+/// takes the text as typed, which is how every Gmail operator keeps
+/// working. A neutral query tree arrives with the first provider that
+/// lacks Gmail's syntax.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SearchQuery {
+    Native(String),
 }
 
 /// The services one account is served by. A provider that lacks one leaves
@@ -222,34 +296,64 @@ pub trait MailBackend: Send + Sync + 'static {
     /// the part this computer keeps.
     fn mailbox_threads(&self, id: &str) -> impl Future<Output = Result<u64, BackendError>> + Send;
 
-    /// One page of a search, at most `page_size` ids long.
-    fn list_messages(
+    /// One page of the sync window, newest first: the last `days` days of
+    /// mail and everything in the inbox. `cursor` is the page before's
+    /// `next`. Answers `BackendError::StateLost` when the server no longer
+    /// takes that cursor, and the caller lists the window from the top.
+    fn backfill(
         &self,
-        query: &str,
-        page_token: Option<&str>,
-        page_size: u32,
-    ) -> impl Future<Output = Result<MessagePage, BackendError>> + Send;
+        days: i64,
+        cursor: Option<&str>,
+    ) -> impl Future<Output = Result<Backfill, BackendError>> + Send;
 
-    /// One page of the messages `query` matches that carry `label_id`.
-    /// Compares label membership with the store without fetching metadata.
-    fn list_labelled(
+    /// Every message in the sync window, or the ones of it in `mailbox`,
+    /// ids only.
+    fn window_ids(
         &self,
-        label_id: &str,
-        query: &str,
-        page_token: Option<&str>,
-        page_size: u32,
-    ) -> impl Future<Output = Result<MessagePage, BackendError>> + Send;
+        days: i64,
+        mailbox: Option<&str>,
+    ) -> impl Future<Output = Result<Vec<RemoteRef>, BackendError>> + Send;
 
-    fn message_metadata(
-        &self,
-        id: &str,
-    ) -> impl Future<Output = Result<MessageMeta, BackendError>> + Send;
+    /// Every message in the inbox, whatever its age, ids only.
+    fn inbox_ids(&self) -> impl Future<Output = Result<Vec<RemoteRef>, BackendError>> + Send;
 
-    /// Every message in the thread, oldest first.
-    fn thread_metadata(
+    /// At most `limit` messages `query` matches, newest first.
+    fn search(
         &self,
-        thread_id: &str,
-    ) -> impl Future<Output = Result<Vec<MessageMeta>, BackendError>> + Send;
+        query: &SearchQuery,
+        limit: usize,
+    ) -> impl Future<Output = Result<Vec<RemoteRef>, BackendError>> + Send;
+
+    /// The sent message carrying the `Message-ID` header `message_id`, when
+    /// the server holds one.
+    fn find_sent(
+        &self,
+        message_id: &str,
+    ) -> impl Future<Output = Result<Option<String>, BackendError>> + Send;
+
+    /// Metadata for `wants` at the least cost the server allows. A message
+    /// the server no longer has comes back among the gone, not as an error.
+    fn fetch(&self, wants: Vec<Want>) -> impl Future<Output = Result<Found, BackendError>> + Send;
+
+    /// Every message of each thread.
+    fn fetch_whole(
+        &self,
+        threads: Vec<String>,
+    ) -> impl Future<Output = Result<Found, BackendError>> + Send;
+
+    /// The messages as they arrived, by the server's ids, in order.
+    fn fetch_raw(
+        &self,
+        ids: &[String],
+    ) -> impl Future<Output = Result<Vec<RawMessage>, BackendError>> + Send;
+
+    /// Files a copy of `raw` in `mailbox`, for a server that does not file
+    /// what it sends. Returns the copy's id.
+    fn append(
+        &self,
+        raw: &[u8],
+        mailbox: &str,
+    ) -> impl Future<Output = Result<String, BackendError>> + Send;
 
     fn message_body(
         &self,
@@ -301,9 +405,6 @@ pub trait MailBackend: Send + Sync + 'static {
         message_id: &str,
         attachment_id: &str,
     ) -> impl Future<Output = Result<Vec<u8>, BackendError>> + Send;
-
-    /// The message as it arrived, in RFC 822 form.
-    fn raw_message(&self, id: &str) -> impl Future<Output = Result<Vec<u8>, BackendError>> + Send;
 }
 
 /// The account's calendar. Every call answers

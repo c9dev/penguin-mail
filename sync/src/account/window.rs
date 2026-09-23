@@ -3,26 +3,17 @@
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 
-use mailrs_domain::{AccountState, ChangeEvent, EpochMillis, MessageMeta, system_label};
-use mailrs_gmail::{GmailError, MessageRef};
+use mailrs_domain::{AccountState, ChangeEvent, EpochMillis, MessageMeta, Role};
 use mailrs_store::messages::Change;
 use mailrs_store::{accounts, mailboxes, messages, window};
 
 use super::AccountSync;
-use super::fetch::{Want, store_fetched};
-use crate::{BackendError, ID_PAGE_SIZE, LIST_PAGE_SIZE, MailBackend, SyncError};
+use super::fetch::store_fetched;
+use crate::{BackendError, MailBackend, SyncError, Want};
 
 const DAY_MILLIS: i64 = 24 * 60 * 60 * 1000;
 
-/// Gmail search for every message in the inbox, whatever its age.
-const INBOX_QUERY: &str = "in:inbox";
-
 impl AccountSync {
-    /// Gmail search for the window: recent mail plus everything in INBOX.
-    pub fn window_query(&self) -> String {
-        format!("{{newer_than:{}d in:inbox}}", self.window_days)
-    }
-
     /// Starts a new sync generation. Records the history cursor before
     /// listing anything, replaces the labels, and loads the first window
     /// page. `backfill_step` loads the rest.
@@ -79,11 +70,18 @@ impl AccountSync {
             .await?;
         self.emit(ChangeEvent::LabelsChanged { account_id });
 
-        let query = self.window_query();
-        let listed = self.list_ids(None, &query).await?;
+        let listed = self
+            .services
+            .mail
+            .window_ids(self.window_days, None)
+            .await?;
         let mut members: HashMap<String, HashSet<String>> = HashMap::new();
         for label in &label_ids {
-            let carrying = self.list_ids(Some(label), &query).await?;
+            let carrying = self
+                .services
+                .mail
+                .window_ids(self.window_days, Some(label))
+                .await?;
             members.insert(label.clone(), carrying.into_iter().map(|m| m.id).collect());
         }
         let ids: Vec<String> = listed.iter().map(|m| m.id.clone()).collect();
@@ -148,33 +146,6 @@ impl AccountSync {
         self.set_state(AccountState::Ok).await
     }
 
-    /// Every id `query` lists, narrowed to one label when `label` names
-    /// one, at 500 a page.
-    async fn list_ids(
-        &self,
-        label: Option<&str>,
-        query: &str,
-    ) -> Result<Vec<MessageRef>, SyncError> {
-        let mut found = Vec::new();
-        let mut page_token: Option<String> = None;
-        loop {
-            let token = page_token.as_deref();
-            let page = match label {
-                Some(label) => {
-                    self.services.mail
-                        .list_labelled(label, query, token, ID_PAGE_SIZE)
-                        .await?
-                }
-                None => self.services.mail.list_messages(query, token, ID_PAGE_SIZE).await?,
-            };
-            found.extend(page.messages);
-            match page.next_page_token {
-                Some(token) => page_token = Some(token),
-                None => return Ok(found),
-            }
-        }
-    }
-
     /// Loads the next window page. Returns true while pages remain.
     pub async fn backfill_step(&self) -> Result<bool, SyncError> {
         let account_id = self.account_id;
@@ -190,12 +161,12 @@ impl AccountSync {
             .await
         {
             Ok(next) => Ok(next.is_some()),
-            Err(SyncError::Backend(BackendError::Gmail(GmailError::Http { status: 400, .. })))
+            Err(SyncError::Backend(BackendError::StateLost))
                 if cursor.backfill_cursor.is_some() =>
             {
                 tracing::warn!(
                     account = account_id,
-                    "Gmail rejected the saved page token; listing the window again"
+                    "the server no longer takes the saved page token; listing the window again"
                 );
                 self.db
                     .write(move |c| accounts::set_backfill(c, account_id, None, false))
@@ -242,8 +213,13 @@ impl AccountSync {
         if !cursor.backfill_done || cursor.state.is_none() {
             return Ok(());
         }
+        let Some(inbox) = self.services.mail.mailbox_for(Role::Inbox) else {
+            return Ok(());
+        };
         let remote: HashSet<String> = self
-            .list_ids(None, INBOX_QUERY)
+            .services
+            .mail
+            .inbox_ids()
             .await?
             .into_iter()
             .map(|m| m.id)
@@ -253,7 +229,7 @@ impl AccountSync {
         let mut differ: Vec<Want> = self
             .db
             .read(move |c| {
-                let local = messages::labelled(c, account_id, system_label::INBOX)?;
+                let local = messages::labelled(c, account_id, &inbox)?;
                 let only_remote: Vec<String> = remote.difference(&local).cloned().collect();
                 let stored = messages::existing_ids(c, account_id, &only_remote)?;
                 let mut differ = Vec::new();
@@ -293,13 +269,13 @@ impl AccountSync {
         let page = self
             .services
             .mail
-            .list_messages(&self.window_query(), page_token.as_deref(), LIST_PAGE_SIZE)
+            .backfill(self.window_days, page_token.as_deref())
             .await?;
         // A listed message deleted since is left out; the sweep and
         // history take care of what the store had of it.
-        let wants = page.messages.into_iter().map(Want::from).collect();
+        let wants = page.refs.into_iter().map(Want::from).collect();
         let metas = self.fetch(wants).await?.metas;
-        let next = page.next_page_token;
+        let next = page.next;
         let account_id = self.account_id;
         let stored_next = next.clone();
         let touched = self
