@@ -48,6 +48,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Opening a signed conversation again shows its card at once, without
   fetching the message from Gmail or starting gpg, until your keyring
   changes.
+- The window keeps responding while Save to Downloads or Save All writes
+  a large file from an encrypted message or a preview.
 
 ### Fixed
 

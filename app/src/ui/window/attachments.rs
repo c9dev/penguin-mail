@@ -7,7 +7,8 @@
 //! the desktop keeps for it. Either way the file exists on disk by then,
 //! which is what lets it be dragged out into a folder.
 
-use std::path::PathBuf;
+use std::io;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -121,10 +122,14 @@ impl MainWindow {
             // above would otherwise have shifted it.
             for (index, attachment) in files {
                 if let Some(data) = held.get(index).cloned() {
-                    let path = super::unique_path(&folder, &attachment.filename);
-                    match std::fs::write(&path, data) {
-                        Ok(()) => saved += 1,
-                        Err(_) => failed.push(attachment.filename),
+                    let (folder, name) = (folder.clone(), attachment.filename.clone());
+                    let written = gio::spawn_blocking(move || {
+                        save_under_free_name(&folder, &name, |path| std::fs::write(path, data))
+                    })
+                    .await;
+                    match written {
+                        Ok(Ok(_)) => saved += 1,
+                        _ => failed.push(attachment.filename),
                     }
                     continue;
                 }
@@ -182,7 +187,7 @@ impl MainWindow {
     ) -> bool {
         match opened_file(view, message_id, index) {
             Some(data) => {
-                self.save_opened_file(attachment, &data);
+                self.save_opened_file(attachment, data);
                 true
             }
             None => false,
@@ -190,27 +195,47 @@ impl MainWindow {
     }
 
     /// Writes a file that came out of an encrypted message to Downloads.
-    fn save_opened_file(self: &Rc<Self>, attachment: &Attachment, data: &[u8]) {
+    fn save_opened_file(self: &Rc<Self>, attachment: &Attachment, data: Vec<u8>) {
+        self.save_to_downloads(attachment.filename.clone(), move |path| {
+            std::fs::write(path, data)
+        });
+    }
+
+    /// Puts a file into Downloads under a free name and says how it went.
+    /// `write` makes the file at the path it is given. It runs on a worker
+    /// thread, since a large file or a slow disk would otherwise freeze the
+    /// window while it writes.
+    fn save_to_downloads(
+        self: &Rc<Self>,
+        name: String,
+        write: impl FnOnce(&Path) -> io::Result<()> + Send + 'static,
+    ) {
         let downloads =
             glib::user_special_dir(glib::UserDirectory::Downloads).unwrap_or_else(glib::home_dir);
-        let path = super::unique_path(&downloads, &attachment.filename);
-        match std::fs::write(&path, data) {
-            Ok(()) => {
-                let name = path
-                    .file_name()
-                    .map(|n| n.to_string_lossy().into_owned())
-                    .unwrap_or_else(|| attachment.filename.clone());
-                self.toast(&fill(
-                    &gettext("Saved {file} to Downloads"),
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let wanted = name.clone();
+            let saved = gio::spawn_blocking(move || save_under_free_name(&downloads, &wanted, write))
+                .await
+                .unwrap_or_else(|panic| std::panic::resume_unwind(panic));
+            match saved {
+                Ok(path) => {
+                    let shown = path
+                        .file_name()
+                        .map(|n| n.to_string_lossy().into_owned())
+                        .unwrap_or(name);
+                    this.toast(&fill(
+                        &gettext("Saved {file} to Downloads"),
+                        &[("file", &shown)],
+                    ));
+                }
+                Err(err) => this.toast(&with_reason(
+                    &gettext("Could not save {file}: {reason}"),
+                    &err,
                     &[("file", &name)],
-                ));
+                )),
             }
-            Err(err) => self.toast(&with_reason(
-                &gettext("Could not save {file}: {reason}"),
-                &err,
-                &[("file", &attachment.filename)],
-            )),
-        }
+        });
     }
 
     /// The attachment a row stands for, with the account it belongs to.
@@ -360,33 +385,29 @@ impl MainWindow {
     }
 
     /// Copies a previewed file into Downloads under a free name.
-    fn copy_into_downloads(self: &Rc<Self>, source: &PathBuf) {
-        let downloads =
-            glib::user_special_dir(glib::UserDirectory::Downloads).unwrap_or_else(glib::home_dir);
+    fn copy_into_downloads(self: &Rc<Self>, source: &Path) {
         let name = source
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_else(|| "attachment".into());
-        let target = super::unique_path(&downloads, &name);
-        match std::fs::copy(source, &target) {
-            Ok(_) => {
-                let shown = target
-                    .file_name()
-                    .map(|n| n.to_string_lossy().into_owned())
-                    .unwrap_or(name);
-                self.toast(&fill(
-                    &gettext("Saved {file} to Downloads"),
-                    &[("file", &shown)],
-                ));
-            }
-            Err(err) => self.toast(&with_reason(
-                &gettext("Could not save {file}: {reason}"),
-                &err,
-                &[("file", &name)],
-            )),
-        }
+        let source = source.to_path_buf();
+        self.save_to_downloads(name, move |target| {
+            std::fs::copy(&source, target).map(drop)
+        });
     }
+}
 
+/// Writes a file into `folder` under `name`, or `name (2)` and so on when
+/// that is taken, and returns where it went. It touches the disk, so the
+/// window calls it on a worker thread.
+fn save_under_free_name(
+    folder: &Path,
+    name: &str,
+    write: impl FnOnce(&Path) -> io::Result<()>,
+) -> io::Result<PathBuf> {
+    let path = super::unique_path(folder, name);
+    write(&path)?;
+    Ok(path)
 }
 
 /// The bytes of one file that came out of an encrypted message, when the
@@ -414,6 +435,23 @@ fn fit(width: i32, height: i32) -> (i32, i32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn saving_a_file_twice_keeps_both_copies() {
+        let folder = tempfile::tempdir().unwrap();
+        let write = |text: &'static str| {
+            save_under_free_name(folder.path(), "note.txt", move |path| {
+                std::fs::write(path, text)
+            })
+            .unwrap()
+        };
+        let first = write("one");
+        let second = write("two");
+        assert_eq!(first, folder.path().join("note.txt"));
+        assert_eq!(second, folder.path().join("note (2).txt"));
+        assert_eq!(std::fs::read_to_string(first).unwrap(), "one");
+        assert_eq!(std::fs::read_to_string(second).unwrap(), "two");
+    }
 
     #[test]
     fn a_preview_window_holds_the_picture_without_covering_the_screen() {

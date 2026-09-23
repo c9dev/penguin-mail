@@ -1213,7 +1213,7 @@ msgstr "Roxo"
 msgid "Slate"
 msgstr "Ardósia"
 
-#: app/src/main.rs:55
+#: app/src/main.rs:54
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]]\n"
 "\n"
@@ -1233,11 +1233,11 @@ msgstr ""
 "  --compose      abre uma mensagem nova, para ENDEREÇO quando indicado\n"
 "  mailto:...     o mesmo que --compose mailto:..."
 
-#: app/src/main.rs:117
+#: app/src/main.rs:116
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: opção desconhecida {option}"
 
-#: app/src/main.rs:236
+#: app/src/main.rs:235
 msgid "Penguin Mail Could Not Start"
 msgstr "O Penguin Mail não conseguiu arrancar"
 
@@ -1795,8 +1795,8 @@ msgstr[1] "{count} anexos"
 msgid "Quick Look"
 msgstr "Vista rápida"
 
-#: app/src/render.rs:374 app/src/ui/window/attachments.rs:293
-#: app/src/ui/window/attachments.rs:299
+#: app/src/render.rs:374 app/src/ui/window/attachments.rs:318
+#: app/src/ui/window/attachments.rs:324
 msgid "Save to Downloads"
 msgstr "Guardar nas transferências"
 
@@ -5182,13 +5182,11 @@ msgstr "Não foi possível incluir {file}: {reason}"
 msgid "Downloading {file}…"
 msgstr "A transferir {file}…"
 
-#: app/src/ui/window.rs:1876 app/src/ui/window/attachments.rs:204
-#: app/src/ui/window/attachments.rs:378
+#: app/src/ui/window.rs:1876 app/src/ui/window/attachments.rs:228
 msgid "Saved {file} to Downloads"
 msgstr "{file} guardado nas transferências"
 
-#: app/src/ui/window.rs:1894 app/src/ui/window/attachments.rs:209
-#: app/src/ui/window/attachments.rs:383
+#: app/src/ui/window.rs:1894 app/src/ui/window/attachments.rs:233
 msgid "Could not save {file}: {reason}"
 msgstr "Não foi possível guardar {file}: {reason}"
 
@@ -5285,39 +5283,39 @@ msgstr ""
 "A barra lateral mostra o nome em vez do endereço. Deixe vazio para ficar o "
 "endereço."
 
-#: app/src/ui/window/attachments.rs:56
+#: app/src/ui/window/attachments.rs:57
 msgid "Could not open {file}: {reason}"
 msgstr "Não foi possível abrir {file}: {reason}"
 
-#: app/src/ui/window/attachments.rs:101
+#: app/src/ui/window/attachments.rs:102
 msgid "Save Attachments"
 msgstr "Guardar anexos"
 
-#: app/src/ui/window/attachments.rs:112
+#: app/src/ui/window/attachments.rs:113
 msgid "Saving {count} attachment…"
 msgid_plural "Saving {count} attachments…"
 msgstr[0] "A guardar {count} anexo…"
 msgstr[1] "A guardar {count} anexos…"
 
-#: app/src/ui/window/attachments.rs:156
+#: app/src/ui/window/attachments.rs:161
 msgid "Saved {count} attachment to {folder}"
 msgid_plural "Saved {count} attachments to {folder}"
 msgstr[0] "{count} anexo guardado em {folder}"
 msgstr[1] "{count} anexos guardados em {folder}"
 
-#: app/src/ui/window/attachments.rs:163
+#: app/src/ui/window/attachments.rs:168
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr "{count} guardados em {folder}. Não foi possível guardar {files}"
 
-#: app/src/ui/window/attachments.rs:253
+#: app/src/ui/window/attachments.rs:278
 msgid "Could not open {file}"
 msgstr "Não foi possível abrir {file}"
 
-#: app/src/ui/window/attachments.rs:297 app/src/ui/window/attachments.rs:300
+#: app/src/ui/window/attachments.rs:322 app/src/ui/window/attachments.rs:325
 msgid "Open in Another Program"
 msgstr "Abrir noutro programa"
 
-#: app/src/ui/window/attachments.rs:304
+#: app/src/ui/window/attachments.rs:329
 msgid "{file}, preview"
 msgstr "{file}, pré-visualização"
 
