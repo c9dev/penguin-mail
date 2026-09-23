@@ -36,7 +36,7 @@ pub fn present(
     if signature_of.is_some() {
         dialog.set_visible_page(&writing);
     }
-    let pending = Rc::new(RefCell::new(app.core.sync_config().unwrap_or_default()));
+    let pending = Rc::new(RefCell::new(app.core.sync_config()));
     dialog.add(&sync_page(app, &pending));
     dialog.add(&super::assistant_prefs::page(app, &dialog));
     let weak = Rc::downgrade(app);

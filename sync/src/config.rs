@@ -1,5 +1,5 @@
 //! `config.toml` and the directories Penguin Mail uses. Both binaries read
-//! it; the app's welcome page also writes it.
+//! it; the app writes it when the sync settings change.
 
 use std::io::Write;
 use std::os::unix::fs::OpenOptionsExt;
