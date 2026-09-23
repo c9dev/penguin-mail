@@ -10,7 +10,9 @@ use std::time::Duration;
 use anyhow::{Context, Result, anyhow, bail};
 use clap::{Parser, Subcommand};
 use mailrs_domain::{Account, AccountId, ChangeEvent, EpochMillis, system_label};
-use mailrs_gmail::{GMAIL_API_BASE, KeyringTokenStore, OAuthClient, TokenStore, authorize};
+use mailrs_gmail::{
+    GMAIL_API_BASE, KeyringTokenStore, OAuthClient, TokenStore, authorize, built_in_client,
+};
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{Db, accounts, messages};
 use mailrs_sync::{
@@ -18,6 +20,7 @@ use mailrs_sync::{
 };
 
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs, secure_dirs};
+use mailrs_sync::sign_in::{account_client, signed_in};
 
 /// How long `account add` waits for the browser.
 const CONSENT_TIMEOUT: Duration = Duration::from_secs(300);
@@ -100,7 +103,7 @@ async fn main() -> Result<()> {
     std::fs::create_dir_all(&dir).with_context(|| format!("could not create {}", dir.display()))?;
     let db = Db::open(&dir.join("mailrs.db"))?;
     match cli.command {
-        Command::Account(AccountCommand::Add) => add_account(&db, &load_config()?).await,
+        Command::Account(AccountCommand::Add) => add_account(&db).await,
         Command::Account(AccountCommand::List) => list_accounts(&db).await,
         Command::Account(AccountCommand::Remove { email }) => remove_account(&db, &email).await,
         Command::Sync => run_sync(&db, &load_config()?).await,
@@ -139,25 +142,39 @@ async fn main() -> Result<()> {
     }
 }
 
+/// `config.toml`, or the defaults when there is none. The file holds the
+/// sync settings and, for accounts added through the old setup page, their
+/// own Google client; a copy that never had one needs no file.
 fn load_config() -> Result<Config> {
     let path = config_path()?;
-    Config::load(&path).with_context(|| "docs/setup.md explains how to create the config file")
+    match Config::load(&path) {
+        Ok(config) => Ok(config),
+        Err(err) if err.is_missing() => Ok(Config::default()),
+        Err(err) => Err(err.into()),
+    }
 }
 
-fn oauth(config: &Config) -> Result<OAuthClient> {
-    let own = config
-        .oauth
-        .as_ref()
-        .ok_or_else(|| anyhow!("config.toml has no [oauth] section"))?;
-    Ok(OAuthClient::new(&own.client_id, &own.client_secret))
+/// The client `account` signs in with, or an error that says what to do.
+/// An account left with none is marked as needing a new sign-in.
+async fn oauth_for(db: &Db, config: &Config, account: &Account) -> Result<OAuthClient> {
+    account_client(db, config, built_in_client(), account)
+        .await?
+        .ok_or_else(|| {
+            anyhow!(
+                "{} needs to sign in again: run `penguin-mail-cli account add`",
+                account.email
+            )
+        })
 }
 
 fn token_store() -> Arc<dyn TokenStore> {
     Arc::new(KeyringTokenStore::new())
 }
 
-async fn add_account(db: &Db, config: &Config) -> Result<()> {
-    let oauth = oauth(config)?;
+async fn add_account(db: &Db) -> Result<()> {
+    // Every sign-in, first or again, goes through the build's client.
+    let oauth = built_in_client()
+        .ok_or_else(|| anyhow!("This copy of Penguin Mail was built without Google sign-in."))?;
     let flow = authorize(&oauth, GMAIL_API_BASE, &[], |url| {
         println!(
             "Opening your browser for Google's consent screen. If it does not open, visit:\n\n{url}\n"
@@ -174,13 +191,10 @@ async fn add_account(db: &Db, config: &Config) -> Result<()> {
     let tokens = token_store();
     let (email, refresh) = (authorized.email.clone(), authorized.refresh_token.clone());
     tokio::task::spawn_blocking(move || tokens.save(&email, &refresh)).await??;
-    let email = authorized.email.clone();
-    let id = db
-        .write(move |c| accounts::insert_account(c, &email, now_millis()))
-        .await?;
+    let account = signed_in(db, &authorized.email, now_millis()).await?;
     println!(
-        "Added {} as account {id}. Run `penguin-mail-cli sync` to download mail.",
-        authorized.email
+        "Added {} as account {}. Run `penguin-mail-cli sync` to download mail.",
+        account.email, account.id
     );
     Ok(())
 }
@@ -222,7 +236,14 @@ async fn run_sync(db: &Db, config: &Config) -> Result<()> {
     let (engine, events) = SyncEngine::<AccountClient>::new(db.clone(), config.engine_config());
     let tokens = token_store();
     for account in &all {
-        match connect_account(oauth(config)?, Arc::clone(&tokens), account).await {
+        let oauth = match oauth_for(db, config, account).await {
+            Ok(oauth) => oauth,
+            Err(err) => {
+                eprintln!("{err}");
+                continue;
+            }
+        };
+        match connect_account(oauth, Arc::clone(&tokens), account).await {
             Ok(client) => engine.start_account(account.id, Arc::new(client)),
             Err(err) => eprintln!("{}: {err}", account.email),
         }
@@ -510,7 +531,8 @@ async fn triage(
 /// A one-off sync handle for commands that do not run the engine.
 async fn account_sync(db: &Db, config: &Config, email: &str) -> Result<AccountSync<AccountClient>> {
     let account = find_account(db, email).await?;
-    let client = connect_account(oauth(config)?, token_store(), &account).await?;
+    let oauth = oauth_for(db, config, &account).await?;
+    let client = connect_account(oauth, token_store(), &account).await?;
     let (events, _) = async_channel::unbounded();
     let engine = config.engine_config();
     Ok(
