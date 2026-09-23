@@ -66,7 +66,7 @@ pub struct Settings {
     /// `claude-code/pdf`. A skill with no entry is off.
     pub assistant_skills: BTreeMap<String, SkillSettings>,
     /// Plus addresses made with Hide My Email, oldest first.
-    pub hidden_addresses: Vec<crate::hide_my_email::HiddenAddress>,
+    pub hidden_addresses: Vec<mailrs_sync::hidden::HiddenAddress>,
     /// Split inboxes into Primary, Updates, Promotions, and Social, from
     /// Gmail's category labels.
     pub inbox_categories: bool,
@@ -1135,7 +1135,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("settings.toml");
         let settings = Settings {
-            hidden_addresses: vec![crate::hide_my_email::HiddenAddress {
+            hidden_addresses: vec![mailrs_sync::hidden::HiddenAddress {
                 account: "dana@gmail.com".into(),
                 address: "dana+kite.fern482@gmail.com".into(),
                 note: "Bike shop".into(),
