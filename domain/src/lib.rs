@@ -9,6 +9,8 @@ use crate::translate::gettext;
 
 mod category;
 mod folder;
+pub mod gmail;
+pub mod mailbox;
 pub mod invitation;
 pub mod smart;
 pub mod system_label;
@@ -17,6 +19,9 @@ pub mod translate;
 
 pub use category::Category;
 pub use folder::Folder;
+pub use mailbox::{
+    Applied, MailboxKind, Membership, Memberships, Provider, RemoteMailbox, Role,
+};
 pub use invitation::Invitation;
 pub use smart::SmartMailbox;
 pub use target::Target;
