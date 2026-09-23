@@ -7,7 +7,8 @@
 //! settings calls do, and the caller asks the user for it. A Google Cloud
 //! project with the Calendar API switched off answers
 //! `GmailError::ApiDisabled` inside `SyncError::Backend` instead, since no
-//! permission would help there.
+//! permission would help there. An account whose provider has no calendar
+//! answers `BackendError::Unsupported`.
 
 use std::sync::Arc;
 
@@ -15,7 +16,7 @@ use chrono::{DateTime, NaiveDate};
 use mailrs_domain::{AccountId, EpochMillis};
 use mailrs_gmail::{Event, EventFields, EventTime};
 
-use crate::{AccountSync, Accounts, BackendError, Permitted, SyncError};
+use crate::{Accounts, AnyCalendar, BackendError, CalendarService, Permitted, SyncError};
 
 pub struct Calendar<A: Accounts> {
     accounts: Arc<A>,
@@ -33,8 +34,7 @@ impl<A: Accounts> Calendar<A> {
         from: EpochMillis,
         to: EpochMillis,
     ) -> Result<Permitted<Vec<Event>>, SyncError> {
-        let sync = self.sync(account_id)?;
-        permitted(sync.events_between(from, to).await)
+        permitted(self.calendar(account_id)?.events_between(from, to).await)
     }
 
     /// The stretches of at least `length` inside `windows` that no busy
@@ -72,8 +72,7 @@ impl<A: Accounts> Calendar<A> {
         account_id: AccountId,
         fields: &EventFields,
     ) -> Result<Permitted<Event>, SyncError> {
-        let sync = self.sync(account_id)?;
-        permitted(sync.create_event(fields).await)
+        permitted(self.calendar(account_id)?.create_event(fields).await)
     }
 
     /// Changes what `fields` sets on event `id` and tells its guests.
@@ -83,8 +82,7 @@ impl<A: Accounts> Calendar<A> {
         id: &str,
         fields: &EventFields,
     ) -> Result<Permitted<Event>, SyncError> {
-        let sync = self.sync(account_id)?;
-        permitted(sync.update_event(id, fields).await)
+        permitted(self.calendar(account_id)?.update_event(id, fields).await)
     }
 
     /// Takes event `id` off the calendar and tells its guests.
@@ -93,24 +91,25 @@ impl<A: Accounts> Calendar<A> {
         account_id: AccountId,
         id: &str,
     ) -> Result<Permitted<()>, SyncError> {
-        let sync = self.sync(account_id)?;
-        permitted(sync.delete_event(id).await)
+        permitted(self.calendar(account_id)?.delete_event(id).await)
     }
 
-    fn sync(&self, account_id: AccountId) -> Result<Arc<AccountSync>, SyncError> {
+    fn calendar(&self, account_id: AccountId) -> Result<AnyCalendar, SyncError> {
         self.accounts
-            .account(account_id)
-            .ok_or(SyncError::UnknownAccount(account_id))
+            .services(account_id)
+            .ok_or(SyncError::UnknownAccount(account_id))?
+            .calendar
+            .ok_or(SyncError::Backend(BackendError::Unsupported))
     }
 }
 
 /// A calendar answer with the missing permission turned into a value the
 /// caller matches on.
-fn permitted<T>(answer: Result<T, SyncError>) -> Result<Permitted<T>, SyncError> {
+fn permitted<T>(answer: Result<T, BackendError>) -> Result<Permitted<T>, SyncError> {
     match answer {
         Ok(value) => Ok(Permitted::Done(value)),
-        Err(SyncError::Backend(BackendError::NeedsPermission)) => Ok(Permitted::NeedsPermission),
-        Err(err) => Err(err),
+        Err(BackendError::NeedsPermission) => Ok(Permitted::NeedsPermission),
+        Err(err) => Err(err.into()),
     }
 }
 

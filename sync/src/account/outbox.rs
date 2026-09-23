@@ -1,17 +1,12 @@
-//! Sending, drafts, search, attachments, and identity: calls the UI makes on
-//! demand rather than as part of the sync loop.
+//! Sending, drafts, search, attachments and exports: mail calls the UI makes
+//! on demand rather than as part of the sync loop.
 
 use std::collections::BTreeSet;
 
-use mailrs_domain::{EpochMillis, Filter, Vacation};
 use mailrs_store::{drafts, messages};
 
 use super::AccountSync;
-use crate::{
-    AnyAutoReply, AnyCalendar, AnyContacts, AutoReplyService, BackendError, CalendarService,
-    ContactsService, IdentityService, MailBackend, RulesService, SavedDraft, SendAsAddress,
-    SyncError,
-};
+use crate::{BackendError, MailBackend, SavedDraft, SyncError};
 
 impl AccountSync {
     /// Sends raw RFC 822 bytes, then deletes `draft_id` if the message came
@@ -197,32 +192,6 @@ impl AccountSync {
         Ok(self.services.mail.attachment(message_id, attachment_id).await?)
     }
 
-    /// The name the account's server puts on its outgoing mail, if one
-    /// is set.
-    pub async fn display_name(&self) -> Result<Option<String>, SyncError> {
-        let identities = self.services.identities.identities().await?;
-        Ok(identities
-            .into_iter()
-            .find(|address| address.default)
-            .and_then(|address| address.name))
-    }
-
-    /// Every address this account may send mail from, its own included,
-    /// with the display name and signature the server keeps for each.
-    pub async fn send_as(&self) -> Result<Vec<SendAsAddress>, SyncError> {
-        Ok(self.services.identities.identities().await?)
-    }
-
-    /// The signature of the default address, as plain text.
-    pub async fn gmail_signature(&self) -> Result<Option<String>, SyncError> {
-        let identities = self.services.identities.identities().await?;
-        Ok(identities
-            .into_iter()
-            .find(|address| address.default)
-            .map(|address| address.signature)
-            .filter(|text| !text.is_empty()))
-    }
-
     /// The message as it arrived, for View Source and for saving one
     /// message as an `.eml` file.
     pub async fn raw_message(&self, id: &str) -> Result<Vec<u8>, SyncError> {
@@ -257,144 +226,6 @@ impl AccountSync {
         Ok(mbox)
     }
 
-    pub async fn filters(&self) -> Result<Vec<Filter>, SyncError> {
-        Ok(self.services.rules.filters().await?)
-    }
-
-    pub async fn create_filter(&self, filter: Filter) -> Result<Filter, SyncError> {
-        Ok(self.services.rules.create_filter(&filter).await?)
-    }
-
-    pub async fn delete_filter(&self, id: &str) -> Result<(), SyncError> {
-        match self.services.rules.delete_filter(id).await {
-            Ok(()) | Err(BackendError::NotFound) => Ok(()),
-            Err(err) => Err(err.into()),
-        }
-    }
-
-    pub async fn vacation(&self) -> Result<Vacation, SyncError> {
-        Ok(self.auto_reply()?.vacation().await?)
-    }
-
-    pub async fn set_vacation(&self, vacation: Vacation) -> Result<(), SyncError> {
-        Ok(self.auto_reply()?.set_vacation(&vacation).await?)
-    }
-
-    /// One page of the account's contacts. See `ContactBook`.
-    pub async fn connections(
-        &self,
-        page_token: Option<&str>,
-        sync_token: Option<&str>,
-    ) -> Result<mailrs_gmail::ConnectionsPage, SyncError> {
-        Ok(self.contacts()?.connections(page_token, sync_token).await?)
-    }
-
-    /// The bytes of one contact photo.
-    pub async fn contact_photo(&self, url: &str) -> Result<Vec<u8>, SyncError> {
-        Ok(self.contacts()?.contact_photo(url).await?)
-    }
-
-    /// Adds a contact to the account's contacts.
-    pub async fn create_contact(
-        &self,
-        fields: &mailrs_gmail::ContactFields,
-    ) -> Result<mailrs_gmail::Person, SyncError> {
-        Ok(self.contacts()?.create_contact(fields).await?)
-    }
-
-    /// Changes the fields `fields` names on the contact `resource`.
-    pub async fn update_contact(
-        &self,
-        resource: &str,
-        fields: &mailrs_gmail::ContactFields,
-    ) -> Result<mailrs_gmail::Person, SyncError> {
-        Ok(self.contacts()?.update_contact(resource, fields).await?)
-    }
-
-    /// Answers an invitation through the account's calendar as `me`.
-    /// `occurrence` names one occurrence of a repeating event; `None`
-    /// answers the series.
-    pub async fn answer_invitation(
-        &self,
-        ical_uid: &str,
-        me: &str,
-        answer: mailrs_domain::invitation::Answer,
-        occurrence: Option<EpochMillis>,
-    ) -> Result<mailrs_gmail::Answered, SyncError> {
-        Ok(self
-            .calendar()?
-            .answer_invitation(ical_uid, me, answer, occurrence)
-            .await?)
-    }
-
-    /// What the account's calendar already holds between `from` and `to`.
-    pub async fn busy_between(
-        &self,
-        from: EpochMillis,
-        to: EpochMillis,
-    ) -> Result<Vec<mailrs_gmail::Busy>, SyncError> {
-        Ok(self.calendar()?.busy_between(from, to).await?)
-    }
-
-    /// How the repeating event `ical_uid` names repeats, as the calendar
-    /// holds it, with what is left of it from `from`.
-    pub async fn series(
-        &self,
-        ical_uid: &str,
-        from: EpochMillis,
-    ) -> Result<Option<mailrs_gmail::Series>, SyncError> {
-        Ok(self.calendar()?.series(ical_uid, from).await?)
-    }
-
-    /// Every event on the account's primary calendar between `from` and
-    /// `to`.
-    pub async fn events_between(
-        &self,
-        from: EpochMillis,
-        to: EpochMillis,
-    ) -> Result<Vec<mailrs_gmail::Event>, SyncError> {
-        Ok(self.calendar()?.events_between(from, to).await?)
-    }
-
-    pub async fn create_event(
-        &self,
-        fields: &mailrs_gmail::EventFields,
-    ) -> Result<mailrs_gmail::Event, SyncError> {
-        Ok(self.calendar()?.create_event(fields).await?)
-    }
-
-    pub async fn update_event(
-        &self,
-        id: &str,
-        fields: &mailrs_gmail::EventFields,
-    ) -> Result<mailrs_gmail::Event, SyncError> {
-        Ok(self.calendar()?.update_event(id, fields).await?)
-    }
-
-    pub async fn delete_event(&self, id: &str) -> Result<(), SyncError> {
-        Ok(self.calendar()?.delete_event(id).await?)
-    }
-
-    fn calendar(&self) -> Result<&AnyCalendar, BackendError> {
-        self.services
-            .calendar
-            .as_ref()
-            .ok_or(BackendError::Unsupported)
-    }
-
-    fn contacts(&self) -> Result<&AnyContacts, BackendError> {
-        self.services
-            .contacts
-            .as_ref()
-            .ok_or(BackendError::Unsupported)
-    }
-
-    fn auto_reply(&self) -> Result<&AnyAutoReply, BackendError> {
-        self.services
-            .auto_reply
-            .as_ref()
-            .ok_or(BackendError::Unsupported)
-    }
 }
 
 /// The `Message-ID` header of RFC 822 bytes, without its angle brackets.

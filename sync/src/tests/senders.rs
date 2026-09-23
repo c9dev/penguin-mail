@@ -11,7 +11,9 @@ use mailrs_domain::{
 use super::{Connected, Harness, harness};
 use crate::fake::meta;
 use crate::unsubscribe::choose;
-use crate::{Leave, MailActions, OneClick, Permitted, SyncError, Unsubscribe, now_millis};
+use crate::{
+    Leave, MailActions, OneClick, Permitted, RulesService, SyncError, Unsubscribe, now_millis,
+};
 
 #[tokio::test]
 async fn a_one_click_list_hears_from_the_app_at_once() {
@@ -104,11 +106,12 @@ async fn categorizing_a_sender_moves_their_mail_and_replaces_their_rule() {
     h.fake
         .seed(from("ann@example.com", "c", "t3", "CATEGORY_UPDATES"));
     h.bootstrap_all().await;
-    h.sync
-        .create_filter(sorts("SHOP@example.com", "CATEGORY_SOCIAL"))
+    let rules = h.sync.services().rules.clone();
+    rules
+        .create_filter(&sorts("SHOP@example.com", "CATEGORY_SOCIAL"))
         .await
         .unwrap();
-    let blocked = h.sync.create_filter(Filter::block(shop)).await.unwrap();
+    let blocked = rules.create_filter(&Filter::block(shop)).await.unwrap();
 
     let done = actions(&h)
         .categorize_sender(h.account_id, shop, None, Category::Promotions)

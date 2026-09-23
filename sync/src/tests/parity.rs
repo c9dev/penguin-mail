@@ -26,6 +26,11 @@ fn book(h: &Harness, dir: &tempfile::TempDir) -> ContactBook<Connected> {
     )
 }
 
+fn settings(h: &Harness) -> crate::AccountSettings<Connected> {
+    let connected = HashMap::from([(h.account_id, Arc::clone(&h.sync))]);
+    crate::AccountSettings::new(Arc::new(Connected(connected)), h.db.clone())
+}
+
 fn alias(email: &str, name: &str, signature: &str, status: &str) -> SendAs {
     SendAs {
         send_as_email: email.into(),
@@ -115,7 +120,7 @@ async fn send_as_lists_confirmed_addresses_with_their_names_and_signatures() {
         s.send_as
             .push(alias("old@fernwood.example", "Old", "", "pending"));
     });
-    let addresses = h.sync.send_as().await.unwrap();
+    let addresses = settings(&h).send_as(h.account_id).await.unwrap();
     assert_eq!(
         addresses,
         vec![

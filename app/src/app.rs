@@ -512,12 +512,16 @@ impl App {
             if !self.settings_with(|s| s.send_as_due(&account.email, now)) {
                 continue;
             }
-            let Some(sync) = self.core.account(account.id) else {
+            if self.core.account(account.id).is_none() {
                 continue;
-            };
+            }
+            let settings = self.core.gmail_settings();
             let (this, email, id) = (Rc::clone(self), account.email.clone(), account.id);
             glib::spawn_future_local(async move {
-                let Ok(addresses) = this.core.call(async move { sync.send_as().await }).await
+                let Ok(addresses) = this
+                    .core
+                    .call(async move { settings.send_as(id).await })
+                    .await
                 else {
                     return;
                 };
@@ -627,14 +631,15 @@ impl App {
                 self.names.borrow_mut().insert(account.id, name);
                 continue;
             }
-            let Some(sync) = self.core.account(account.id) else {
+            if self.core.account(account.id).is_none() {
                 continue;
-            };
+            }
+            let settings = self.core.gmail_settings();
             let (this, id) = (Rc::clone(self), account.id);
             glib::spawn_future_local(async move {
                 if let Ok(Some(name)) = this
                     .core
-                    .call(async move { sync.display_name().await })
+                    .call(async move { settings.display_name(id).await })
                     .await
                 {
                     this.names.borrow_mut().insert(id, name);

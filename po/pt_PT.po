@@ -2264,7 +2264,7 @@ msgstr "Novidades da versão {version}"
 
 #: app/src/tray.rs:170 app/src/ui/about.rs:87 app/src/ui/about.rs:194
 #: app/src/ui/about.rs:202 app/src/ui/about.rs:209
-#: app/src/ui/preferences.rs:662 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:663 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Procurar atualizações"
 
@@ -4171,23 +4171,23 @@ msgstr "Importar do Gmail"
 msgid "This account is not syncing yet"
 msgstr "Esta conta ainda não está a sincronizar"
 
-#: app/src/ui/preferences.rs:353
+#: app/src/ui/preferences.rs:354
 msgid "Imported the signature from Gmail"
 msgstr "Assinatura importada do Gmail"
 
-#: app/src/ui/preferences.rs:357
+#: app/src/ui/preferences.rs:358
 msgid "Gmail has no signature for this account"
 msgstr "O Gmail não tem assinatura para esta conta"
 
-#: app/src/ui/preferences.rs:360
+#: app/src/ui/preferences.rs:361
 msgid "Could not import: {reason}"
 msgstr "Não foi possível importar: {reason}"
 
-#: app/src/ui/preferences.rs:406
+#: app/src/ui/preferences.rs:407
 msgid "Signing and Encryption"
 msgstr "Assinatura e encriptação"
 
-#: app/src/ui/preferences.rs:408
+#: app/src/ui/preferences.rs:409
 msgid ""
 "Penguin Mail signs and encrypts through GnuPG, which holds your keys and "
 "asks for your passphrase itself."
@@ -4195,47 +4195,47 @@ msgstr ""
 "O Penguin Mail assina e encripta através do GnuPG, que guarda as suas chaves "
 "e pede a frase-passe por si."
 
-#: app/src/ui/preferences.rs:413
+#: app/src/ui/preferences.rs:414
 msgid "Your OpenPGP Keys"
 msgstr "As suas chaves OpenPGP"
 
-#: app/src/ui/preferences.rs:414
+#: app/src/ui/preferences.rs:415
 msgid "Asking gpg…"
 msgstr "A perguntar ao gpg…"
 
-#: app/src/ui/preferences.rs:418
+#: app/src/ui/preferences.rs:419
 msgid "Your S/MIME Certificates"
 msgstr "Os seus certificados S/MIME"
 
-#: app/src/ui/preferences.rs:419
+#: app/src/ui/preferences.rs:420
 msgid "Asking gpgsm…"
 msgstr "A perguntar ao gpgsm…"
 
-#: app/src/ui/preferences.rs:426
+#: app/src/ui/preferences.rs:427
 msgid "Sign My Messages by Default"
 msgstr "Assinar as minhas mensagens por predefinição"
 
-#: app/src/ui/preferences.rs:427
+#: app/src/ui/preferences.rs:428
 msgid "New messages open with Sign turned on"
 msgstr "As mensagens novas abrem com Assinar ligado"
 
-#: app/src/ui/preferences.rs:433
+#: app/src/ui/preferences.rs:434
 msgid "Encrypt When I Can"
 msgstr "Encriptar sempre que puder"
 
-#: app/src/ui/preferences.rs:435
+#: app/src/ui/preferences.rs:436
 msgid "Turn Encrypt on as soon as every recipient has a key or a certificate"
 msgstr "Ligar Encriptar assim que cada destinatário tiver chave ou certificado"
 
-#: app/src/ui/preferences.rs:458
+#: app/src/ui/preferences.rs:459
 msgid "gpg could not be asked: {reason}"
 msgstr "Não foi possível perguntar ao gpg: {reason}"
 
-#: app/src/ui/preferences.rs:477
+#: app/src/ui/preferences.rs:478
 msgid "gpgsm could not be asked: {reason}"
 msgstr "Não foi possível perguntar ao gpgsm: {reason}"
 
-#: app/src/ui/preferences.rs:486
+#: app/src/ui/preferences.rs:487
 msgid ""
 "Penguin Mail signs and encrypts through {programs}, which holds your keys "
 "and asks for your passphrase itself."
@@ -4243,11 +4243,11 @@ msgstr ""
 "O Penguin Mail assina e encripta através do {programs}, que guarda as suas "
 "chaves e pede a frase-passe por si."
 
-#: app/src/ui/preferences.rs:517
+#: app/src/ui/preferences.rs:518
 msgid "Spelling"
 msgstr "Ortografia"
 
-#: app/src/ui/preferences.rs:520
+#: app/src/ui/preferences.rs:521
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
@@ -4257,115 +4257,115 @@ msgstr ""
 "a ortografia. Instale um dicionário Hunspell, como o hunspell-pt-pt ou o "
 "hunspell-en-us, e reabra o editor."
 
-#: app/src/ui/preferences.rs:526
+#: app/src/ui/preferences.rs:527
 msgid "Dictionaries found: {languages}."
 msgstr "Dicionários encontrados: {languages}."
 
-#: app/src/ui/preferences.rs:539
+#: app/src/ui/preferences.rs:540
 msgid "Follow the System Language ({language})"
 msgstr "Seguir o idioma do sistema ({language})"
 
-#: app/src/ui/preferences.rs:566
+#: app/src/ui/preferences.rs:567
 msgid "Check Spelling In"
 msgstr "Verificar a ortografia em"
 
-#: app/src/ui/preferences.rs:590
+#: app/src/ui/preferences.rs:591
 msgid "Sync"
 msgstr "Sincronização"
 
-#: app/src/ui/preferences.rs:596
+#: app/src/ui/preferences.rs:597
 msgid "Checking"
 msgstr "Verificação"
 
-#: app/src/ui/preferences.rs:602
+#: app/src/ui/preferences.rs:603
 msgid "Check for New Mail"
 msgstr "Procurar correio novo"
 
-#: app/src/ui/preferences.rs:611
+#: app/src/ui/preferences.rs:612
 msgid "Storage"
 msgstr "Armazenamento"
 
-#: app/src/ui/preferences.rs:616
+#: app/src/ui/preferences.rs:617
 msgid "Keep Mail on This Computer For"
 msgstr "Guardar o correio neste computador por"
 
-#: app/src/ui/preferences.rs:618
+#: app/src/ui/preferences.rs:619
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr ""
 "Tudo o que está na caixa de entrada também fica, e o correio mais antigo "
 "continua pesquisável"
 
-#: app/src/ui/preferences.rs:627
+#: app/src/ui/preferences.rs:628
 msgid "Message Cache"
 msgstr "Cache de mensagens"
 
-#: app/src/ui/preferences.rs:629
+#: app/src/ui/preferences.rs:630
 msgid "Bodies of mail you have read, kept for opening offline"
 msgstr "O corpo do correio que já leu, guardado para abrir sem ligação"
 
-#: app/src/ui/preferences.rs:638
+#: app/src/ui/preferences.rs:639
 msgid "Startup"
 msgstr "Arranque"
 
-#: app/src/ui/preferences.rs:641
+#: app/src/ui/preferences.rs:642
 msgid "Start in the Tray at Login"
 msgstr "Arrancar na área de notificação ao iniciar sessão"
 
-#: app/src/ui/preferences.rs:655
+#: app/src/ui/preferences.rs:656
 msgid "Not available in demo mode"
 msgstr "Indisponível no modo de demonstração"
 
-#: app/src/ui/preferences.rs:663
+#: app/src/ui/preferences.rs:664
 msgid "Look for a new release once a day"
 msgstr "Procurar uma versão nova uma vez por dia"
 
-#: app/src/ui/preferences.rs:670
+#: app/src/ui/preferences.rs:671
 msgid "Updates"
 msgstr "Atualizações"
 
-#: app/src/ui/preferences.rs:684
+#: app/src/ui/preferences.rs:685
 msgid "Senders Who May Load Images"
 msgstr "Remetentes que podem carregar imagens"
 
-#: app/src/ui/preferences.rs:685 app/src/ui/preferences.rs:693
+#: app/src/ui/preferences.rs:686 app/src/ui/preferences.rs:694
 msgid "Nobody yet"
 msgstr "Ainda ninguém"
 
-#: app/src/ui/preferences.rs:695
+#: app/src/ui/preferences.rs:696
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} remetente"
 msgstr[1] "{count} remetentes"
 
-#: app/src/ui/preferences.rs:705
+#: app/src/ui/preferences.rs:706
 msgid "Anyone at this domain"
 msgstr "Qualquer pessoa deste domínio"
 
-#: app/src/ui/preferences.rs:707
+#: app/src/ui/preferences.rs:708
 msgid "This address"
 msgstr "Este endereço"
 
-#: app/src/ui/preferences.rs:712
+#: app/src/ui/preferences.rs:713
 msgid "Stop Loading Images from This Sender"
 msgstr "Deixar de carregar imagens deste remetente"
 
-#: app/src/ui/preferences.rs:719
+#: app/src/ui/preferences.rs:720
 msgid "Stop loading images from {sender}"
 msgstr "Deixar de carregar imagens de {sender}"
 
-#: app/src/ui/preferences.rs:794
+#: app/src/ui/preferences.rs:795
 msgid "Follow System"
 msgstr "Seguir o sistema"
 
-#: app/src/ui/preferences.rs:798
+#: app/src/ui/preferences.rs:799
 msgid "Language"
 msgstr "Idioma"
 
-#: app/src/ui/preferences.rs:799
+#: app/src/ui/preferences.rs:800
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "O Penguin Mail mostra o novo idioma depois de reiniciar"
 
-#: app/src/ui/preferences.rs:871
+#: app/src/ui/preferences.rs:872
 msgid "No signature"
 msgstr "Sem assinatura"
 
@@ -6257,20 +6257,20 @@ msgstr[1] "{count} segundos"
 msgid "a minute"
 msgstr "um minuto"
 
-#: sync/src/actions.rs:106
+#: sync/src/actions.rs:114
 msgid "Change labels"
 msgstr "Alterar etiquetas"
 
-#: sync/src/actions.rs:305
+#: sync/src/actions.rs:313
 msgid "Delete Forever failed: {reason}"
 msgstr "Eliminar definitivamente falhou: {reason}"
 
-#: sync/src/actions.rs:475
+#: sync/src/actions.rs:483
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr ""
 "Esta mensagem mudou de sítio entretanto, por isso Anular deixou-a onde está."
 
-#: sync/src/actions.rs:536 sync/src/actions.rs:588
+#: sync/src/actions.rs:544 sync/src/actions.rs:596
 msgid "Could not undo: {reason}"
 msgstr "Não foi possível anular: {reason}"
 

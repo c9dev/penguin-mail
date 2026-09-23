@@ -8,7 +8,10 @@ use mailrs_store::{drafts, messages};
 
 use super::{Connected, Harness, harness};
 use crate::fake::meta;
-use crate::{AccountServices, Cancelled, Outbox, Posted, now_millis, outbox_row};
+use crate::{
+    AccountServices, AutoReplyService, BackendError, Cancelled, Outbox, Permitted, Posted,
+    now_millis, outbox_row,
+};
 
 /// Puts a draft's message in the store, as history replay does once the
 /// draft reaches this computer. Nothing here reads thread rows, so the
@@ -301,7 +304,14 @@ async fn attachments_and_identity_come_from_gmail() {
         h.sync.attachment("m1", "zz").await,
         Err(crate::SyncError::Backend(crate::BackendError::NotFound))
     ));
-    assert_eq!(h.sync.display_name().await.unwrap().as_deref(), Some("Me"));
+    assert_eq!(
+        settings(&h)
+            .display_name(h.account_id)
+            .await
+            .unwrap()
+            .as_deref(),
+        Some("Me")
+    );
 }
 
 #[tokio::test]
@@ -309,10 +319,16 @@ async fn the_automatic_reply_and_signature_pass_through() {
     let h = harness().await;
     h.fake.with(|s| s.signature = Some("Me\nExample Co".into()));
     assert_eq!(
-        h.sync.gmail_signature().await.unwrap().as_deref(),
+        settings(&h).signature(h.account_id).await.unwrap().as_deref(),
         Some("Me\nExample Co")
     );
-    assert!(!h.sync.vacation().await.unwrap().enabled);
+    let auto_reply = h
+        .sync
+        .services()
+        .auto_reply
+        .clone()
+        .expect("Gmail has an automatic reply");
+    assert!(!auto_reply.vacation().await.unwrap().enabled);
     let away = mailrs_domain::Vacation {
         enabled: true,
         subject: "Away".into(),
@@ -320,13 +336,13 @@ async fn the_automatic_reply_and_signature_pass_through() {
         start: Some(1_700_000_000_000),
         ..Default::default()
     };
-    h.sync.set_vacation(away.clone()).await.unwrap();
-    assert_eq!(h.sync.vacation().await.unwrap(), away);
+    auto_reply.set_vacation(&away).await.unwrap();
+    assert_eq!(auto_reply.vacation().await.unwrap(), away);
     h.fake
         .with(|s| s.failures.push_back(GmailError::MissingScope));
     assert!(matches!(
-        h.sync.vacation().await,
-        Err(crate::SyncError::Backend(crate::BackendError::NeedsPermission))
+        auto_reply.vacation().await,
+        Err(BackendError::NeedsPermission)
     ));
 }
 
@@ -347,20 +363,35 @@ async fn a_scheduled_draft_sends_once() {
 #[tokio::test]
 async fn filters_pass_through_and_a_gone_filter_deletes_quietly() {
     let h = harness().await;
-    let created = h
-        .sync
-        .create_filter(mailrs_domain::Filter::block("pest@example.com"))
+    let settings = settings(&h);
+    let created = settings
+        .add_rule(h.account_id, mailrs_domain::Filter::block("pest@example.com"))
         .await
-        .unwrap();
-    let listed = h.sync.filters().await.unwrap();
-    assert_eq!(listed, vec![created.clone()]);
+        .unwrap()
+        .done()
+        .expect("the fake grants every permission");
+    assert_eq!(
+        settings.rules(h.account_id).await.unwrap().done(),
+        Some(vec![created.clone()])
+    );
     let id = created.id.unwrap();
-    h.sync.delete_filter(&id).await.unwrap();
-    h.sync.delete_filter(&id).await.unwrap();
-    assert!(h.sync.filters().await.unwrap().is_empty());
+    assert_eq!(
+        settings.delete_rule(h.account_id, &id).await.unwrap(),
+        Permitted::Done(())
+    );
+    assert_eq!(
+        settings.delete_rule(h.account_id, &id).await.unwrap(),
+        Permitted::Done(())
+    );
+    assert_eq!(settings.rules(h.account_id).await.unwrap().done(), Some(vec![]));
 }
 
 // ---- The outbox: what waits here, and what goes to the person ------------
+
+fn settings(h: &Harness) -> crate::AccountSettings<Connected> {
+    let connected = HashMap::from([(h.account_id, Arc::clone(&h.sync))]);
+    crate::AccountSettings::new(Arc::new(Connected(connected)), h.db.clone())
+}
 
 fn queue(h: &super::Harness) -> Outbox<Connected> {
     let connected = HashMap::from([(h.account_id, Arc::clone(&h.sync))]);

@@ -335,16 +335,17 @@ fn writing_page(
         );
         import.connect_clicked(move |button| {
             let Some(app) = weak.upgrade() else { return };
-            let Some(sync) = app.core.account(account_id) else {
+            if app.core.account(account_id).is_none() {
                 toasts.add_toast(adw::Toast::new(&gettext("This account is not syncing yet")));
                 return;
-            };
+            }
+            let settings = app.core.gmail_settings();
             button.set_sensitive(false);
             let (button, target, toasts) = (button.clone(), target.clone(), toasts.clone());
             glib::spawn_future_local(async move {
                 match app
                     .core
-                    .call(async move { sync.gmail_signature().await })
+                    .call(async move { settings.signature(account_id).await })
                     .await
                 {
                     Ok(Some(signature)) => {

@@ -12,7 +12,8 @@ use mailrs_store::reminders::{self, Reminder};
 use mailrs_store::{Db, flags, follow_ups, labels, messages, threads};
 
 use crate::{
-    AccountSync, BackendError, OneClick, Permitted, Relabelled, SyncEngine, SyncError, TriageAction,
+    AccountServices, AccountSync, BackendError, OneClick, Permitted, Relabelled, SyncEngine,
+    SyncError, TriageAction,
 };
 
 mod categorize;
@@ -32,6 +33,13 @@ const PLACES: [Folder; 3] = [Folder::Junk, Folder::Trash, Folder::AllMail];
 pub trait Accounts: Send + Sync + 'static {
     /// `None` when the account is not syncing.
     fn account(&self, account_id: AccountId) -> Option<Arc<AccountSync>>;
+
+    /// The services the account is served by, `None` when it is not
+    /// syncing. A module that needs a calendar, contacts or rules takes
+    /// its own from here rather than asking `AccountSync`, which syncs mail.
+    fn services(&self, account_id: AccountId) -> Option<AccountServices> {
+        self.account(account_id).map(|sync| sync.services().clone())
+    }
 }
 
 impl Accounts for SyncEngine {

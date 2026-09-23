@@ -25,7 +25,7 @@ use mailrs_domain::{AccountId, Address, EpochMillis};
 use mailrs_gmail::{Answered, GmailError, limiter};
 use mailrs_store::{Db, invitations as store};
 
-use crate::{AccountSync, Accounts, BackendError, SyncError};
+use crate::{AccountSync, Accounts, BackendError, CalendarService, SyncError};
 
 /// What a message does to an event the user already has. `None` alongside
 /// it means the message is the first word on this event, or an older
@@ -147,14 +147,18 @@ impl<A: Accounts> Invitations<A> {
             return Ok(held);
         }
         let sync = self.sync(account_id)?;
+        // Without a calendar there is nothing to clash with.
+        let Some(calendar) = sync.services().calendar.as_ref() else {
+            return Ok(Vec::new());
+        };
         let ends_at = ends_at.unwrap_or(starts_at + ASSUMED_LENGTH);
-        let busy = match limiter::background(sync.busy_between(starts_at, ends_at)).await {
+        let busy = match limiter::background(calendar.busy_between(starts_at, ends_at)).await {
             Ok(busy) => busy,
             // Without the permission there is nothing to say, and the user
             // is answering an invitation rather than asking about their
             // calendar. The empty answer is remembered like any other.
-            Err(SyncError::Backend(BackendError::NeedsPermission)) => Vec::new(),
-            Err(err) => return Err(err),
+            Err(BackendError::NeedsPermission) => Vec::new(),
+            Err(err) => return Err(err.into()),
         };
         let busy: Vec<String> = busy
             .into_iter()
@@ -186,12 +190,16 @@ impl<A: Accounts> Invitations<A> {
             return Ok(None);
         }
         let sync = self.sync(account_id)?;
-        let series = match limiter::background(sync.series(&invitation.uid, now)).await {
+        let Some(calendar) = sync.services().calendar.as_ref() else {
+            return Ok(None);
+        };
+        let series = match limiter::background(calendar.series(&invitation.uid, now)).await {
             Ok(series) => series,
-            Err(SyncError::Backend(BackendError::NeedsPermission | BackendError::Gmail(GmailError::ApiDisabled { .. }))) => {
-                None
-            }
-            Err(err) => return Err(err),
+            Err(
+                BackendError::NeedsPermission
+                | BackendError::Gmail(GmailError::ApiDisabled { .. }),
+            ) => None,
+            Err(err) => return Err(err.into()),
         };
         Ok(series.and_then(|series| invitation.series_in_words(&series.rule, series.left)))
     }
@@ -286,8 +294,10 @@ impl<A: Accounts> Invitations<A> {
             (Scope::Occurrence, Some(occurrence)) => occurrence.at.map(Some),
             _ => Some(None),
         };
-        if let Some(occurrence) = google {
-            match sync
+        // An account whose provider has no calendar answers by mail, as
+        // it does when the calendar does not hold the event.
+        if let (Some(occurrence), Some(calendar)) = (google, sync.services().calendar.as_ref()) {
+            match calendar
                 .answer_invitation(&invitation.uid, &me.email, answer, occurrence)
                 .await
             {
@@ -296,17 +306,17 @@ impl<A: Accounts> Invitations<A> {
                 // The answer still has to reach the organizer, so it goes
                 // by mail and the caller offers to ask for the permission,
                 // which keeps the user's own calendar in step from here on.
-                Err(SyncError::Backend(BackendError::NeedsPermission)) => sent.needs_permission = true,
-                Err(SyncError::Backend(BackendError::Gmail(GmailError::ApiDisabled {
+                Err(BackendError::NeedsPermission) => sent.needs_permission = true,
+                Err(BackendError::Gmail(GmailError::ApiDisabled {
                     service,
                     enable_url,
-                }))) => {
+                })) => {
                     sent.api_off = Some(ApiOff {
                         service,
                         enable_url,
                     })
                 }
-                Err(err) => return Err(err),
+                Err(err) => return Err(err.into()),
             }
         }
         if sent.told == Told::Nobody {
