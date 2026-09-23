@@ -109,7 +109,8 @@ pub fn set_checked_at(conn: &Connection, id: AccountId, at: EpochMillis) -> Resu
 
 pub fn sync_cursor(conn: &Connection, id: AccountId) -> Result<SyncCursor> {
     Ok(conn.query_row(
-        "SELECT history_id, backfill_cursor, backfill_done, sync_gen FROM accounts WHERE id = ?1",
+        "SELECT json_extract(sync_state, '$.history_id'), backfill_cursor, backfill_done, sync_gen \
+         FROM accounts WHERE id = ?1",
         params![id],
         |row| {
             Ok(SyncCursor {
@@ -124,7 +125,7 @@ pub fn sync_cursor(conn: &Connection, id: AccountId) -> Result<SyncCursor> {
 
 pub fn set_history_id(conn: &Connection, id: AccountId, history_id: u64) -> Result<()> {
     conn.execute(
-        "UPDATE accounts SET history_id = ?2 WHERE id = ?1",
+        "UPDATE accounts SET sync_state = json_object('history_id', ?2) WHERE id = ?1",
         params![id, history_id as i64],
     )?;
     Ok(())
@@ -147,8 +148,8 @@ pub fn set_backfill(
 /// cursor, and returns the new generation number.
 pub fn start_generation(conn: &Connection, id: AccountId, history_id: u64) -> Result<i64> {
     Ok(conn.query_row(
-        "UPDATE accounts SET history_id = ?2, backfill_cursor = NULL, backfill_done = 0, \
-         sync_gen = sync_gen + 1 WHERE id = ?1 RETURNING sync_gen",
+        "UPDATE accounts SET sync_state = json_object('history_id', ?2), backfill_cursor = NULL, \
+         backfill_done = 0, sync_gen = sync_gen + 1 WHERE id = ?1 RETURNING sync_gen",
         params![id, history_id as i64],
         |row| row.get(0),
     )?)

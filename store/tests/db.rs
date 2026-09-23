@@ -161,7 +161,10 @@ fn a_store_opened_again_has_statistics_to_plan_with() {
     let conn = open_connection(&path).unwrap();
     let tables = analyzed(&conn);
     assert!(tables.contains(&"messages".to_string()), "{tables:?}");
-    assert!(tables.contains(&"thread_labels".to_string()), "{tables:?}");
+    assert!(
+        tables.contains(&"thread_mailboxes".to_string()),
+        "{tables:?}"
+    );
 }
 
 #[test]

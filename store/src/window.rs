@@ -16,8 +16,9 @@ pub fn prune_window(
     let ids: Vec<String> = {
         let mut stmt = conn.prepare(
             "SELECT t.id FROM threads t WHERE t.account_id = ?1 AND t.last_message_at < ?2 \
-             AND NOT EXISTS (SELECT 1 FROM thread_labels tl WHERE tl.account_id = t.account_id \
-             AND tl.thread_id = t.id AND tl.label_id = 'INBOX') ORDER BY t.id",
+             AND NOT EXISTS (SELECT 1 FROM thread_mailboxes tl WHERE tl.account_id = t.account_id \
+             AND tl.thread_id = t.id AND tl.mailbox IN (SELECT key FROM mailboxes \
+             WHERE account_id = ?1 AND role = 'inbox')) ORDER BY t.id",
         )?;
         stmt.query_map(params![account_id, cutoff], |row| row.get(0))?
             .collect::<rusqlite::Result<_>>()?

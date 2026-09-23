@@ -7,10 +7,10 @@ fn migrations_run_once_and_record_the_version() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("mail.db");
     let conn = open_connection(&path).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 25);
+    assert_eq!(schema_version(&conn).unwrap(), 26);
     drop(conn);
     let conn = open_connection(&path).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 25);
+    assert_eq!(schema_version(&conn).unwrap(), 26);
 }
 
 #[test]
@@ -119,27 +119,14 @@ fn a_new_account_signs_in_with_the_built_in_client() {
 }
 
 #[test]
-fn an_account_from_before_the_migration_keeps_its_own_client() {
-    let dir = tempfile::tempdir().unwrap();
-    let path = dir.path().join("mail.db");
-    let conn = open_connection(&path).unwrap();
-    let id = accounts::insert_account(&conn, "me@example.com", 0).unwrap();
-    conn.execute_batch("ALTER TABLE accounts DROP COLUMN oauth_client")
-        .unwrap();
-    let before = schema_version(&conn).unwrap() - 1;
-    conn.pragma_update(None, "user_version", before).unwrap();
-    drop(conn);
-
-    let conn = open_connection(&path).unwrap();
-    assert_eq!(accounts::sign_in_client(&conn, id).unwrap(), SignInClient::Own);
-}
-
-#[test]
 fn signing_in_again_moves_an_account_to_the_built_in_client() {
     let conn = open_in_memory().unwrap();
     let id = accounts::insert_account(&conn, "me@example.com", 0).unwrap();
     accounts::set_sign_in_client(&conn, id, SignInClient::Own).unwrap();
-    assert_eq!(accounts::sign_in_client(&conn, id).unwrap(), SignInClient::Own);
+    assert_eq!(
+        accounts::sign_in_client(&conn, id).unwrap(),
+        SignInClient::Own
+    );
     accounts::set_sign_in_client(&conn, id, SignInClient::BuiltIn).unwrap();
     assert_eq!(
         accounts::sign_in_client(&conn, id).unwrap(),

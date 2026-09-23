@@ -371,6 +371,9 @@ CREATE TABLE IF NOT EXISTS outbox_claims (
 ALTER TABLE accounts ADD COLUMN oauth_client TEXT NOT NULL DEFAULT 'built_in';
 UPDATE accounts SET oauth_client = 'own';
 "#,
+    // Labels become server mailboxes with integer keys, keywords and
+    // categories; history_id moves into sync_state. See the file.
+    include_str!("schema/26-mailboxes.sql"),
 ];
 
 /// How long the copy taken before a migration stays once the store has

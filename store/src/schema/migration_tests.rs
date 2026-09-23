@@ -330,3 +330,73 @@ fn copies_go_once_they_are_a_week_old() {
     assert!(new.exists(), "a copy younger than a week stays");
     assert!(other.exists(), "only the store's own copies go");
 }
+
+#[test]
+fn migration_26_is_the_one_these_tests_run() {
+    assert_eq!(MIGRATIONS.len(), 26);
+    assert_eq!(MIGRATIONS[25], TO_MAILBOXES);
+}
+
+/// Migration 25 gave every account a sign-in client, and an account that
+/// was already there came through the setup page with a client of its own.
+#[test]
+fn an_account_from_before_the_migration_keeps_its_own_client() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..24]).unwrap();
+    let id = crate::accounts::insert_account(&conn, "me@example.com", 0).unwrap();
+    drop(conn);
+
+    let conn = open_with(&path, MIGRATIONS).unwrap();
+    assert_eq!(
+        crate::accounts::sign_in_client(&conn, id).unwrap(),
+        mailrs_domain::SignInClient::Own
+    );
+}
+
+/// Bodies read before LinkedIn's text parts counted as the body are empty,
+/// with the two halves filed as attachments. Migration 20 drops them so
+/// the next open fetches them again; any other body stays.
+#[test]
+fn a_body_read_as_two_text_attachments_is_fetched_again() {
+    use mailrs_domain::{Attachment, MessageBody};
+
+    use crate::bodies;
+
+    let part = |id: &str, mime: &str, content_id: &str| Attachment {
+        part_id: id.into(),
+        filename: format!("text-{content_id}.txt"),
+        mime_type: mime.into(),
+        size: 10,
+        attachment_id: None,
+        content_id: Some(content_id.into()),
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..19]).unwrap();
+    conn.execute_batch(
+        "INSERT INTO accounts (id, email, added_at) VALUES (1, 'me@example.com', 0);
+         INSERT INTO messages (account_id, id, thread_id, to_addrs, cc_addrs, subject, date, snippet, size, has_attachments, sync_gen) VALUES
+             (1, 'li', 't1', '[]', '[]', 'LinkedIn', 1, '', 1, 0, 1),
+             (1, 'ok', 't2', '[]', '[]', 'Fine', 2, '', 1, 0, 1);",
+    )
+    .unwrap();
+    let empty = MessageBody {
+        attachments: vec![
+            part("0", "text/plain", "text-body"),
+            part("1", "text/html", "html-body"),
+        ],
+        ..MessageBody::default()
+    };
+    let fine = MessageBody {
+        text: Some("fine".into()),
+        ..MessageBody::default()
+    };
+    bodies::put_body(&conn, 1, "li", &empty, 1).unwrap();
+    bodies::put_body(&conn, 1, "ok", &fine, 1).unwrap();
+    drop(conn);
+
+    let conn = open_with(&path, MIGRATIONS).unwrap();
+    assert!(bodies::get_body(&conn, 1, "li", 2).unwrap().is_none());
+    assert!(bodies::get_body(&conn, 1, "ok", 2).unwrap().is_some());
+}

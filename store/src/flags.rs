@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use mailrs_domain::system_label::{SPAM, STARRED, TRASH};
+use mailrs_domain::mailbox::keyword::FLAGGED;
 use mailrs_domain::{AccountId, FlagColor};
 use rusqlite::{Connection, params};
 
@@ -85,20 +85,16 @@ pub fn counts(conn: &Connection) -> Result<HashMap<FlagColor, i64>> {
 /// `ThreadFilter::unified("").with_flag(color)`, in one query. A thread
 /// counts under every colour one of its starred messages has, so these can
 /// add up to more than `counts`. Like the list, it keeps a thread with
-/// trashed or spam mail while one of its messages is outside both.
+/// trashed or spam mail while one of its messages is outside both, which
+/// `threads.listed` says.
 pub fn mailbox_counts(conn: &Connection) -> Result<HashMap<FlagColor, i64>> {
     let mut stmt = conn.prepare_cached(&format!(
         "SELECT color, COUNT(*) FROM (SELECT DISTINCT x.account_id, x.thread_id, \
-             COALESCE(f.color, 'red') AS color FROM message_labels s \
+             COALESCE(f.color, 'red') AS color FROM message_keywords s \
          CROSS JOIN messages x ON x.account_id = s.account_id AND x.id = s.message_id \
+         CROSS JOIN threads t ON t.account_id = x.account_id AND t.id = x.thread_id \
          LEFT JOIN flags f ON f.account_id = x.account_id AND f.message_id = x.id \
-         WHERE s.label_id = '{STARRED}' AND (NOT EXISTS (SELECT 1 FROM thread_labels l \
-             WHERE l.account_id = x.account_id AND l.thread_id = x.thread_id \
-             AND l.label_id IN ('{TRASH}', '{SPAM}')) \
-           OR EXISTS (SELECT 1 FROM messages y WHERE y.account_id = x.account_id \
-             AND y.thread_id = x.thread_id AND NOT EXISTS (SELECT 1 FROM message_labels h \
-               WHERE h.account_id = y.account_id AND h.message_id = y.id \
-               AND h.label_id IN ('{TRASH}', '{SPAM}'))))) \
+         WHERE s.keyword = '{FLAGGED}' AND t.listed = 1) \
          GROUP BY color"
     ))?;
     collect(stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?)

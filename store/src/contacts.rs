@@ -130,8 +130,9 @@ pub fn list_correspondents(conn: &Connection) -> Result<Vec<Correspondent>> {
         "SELECT m.from_name, m.from_addr, \
          CASE WHEN s.message_id IS NULL THEN NULL ELSE m.to_addrs END, \
          CASE WHEN s.message_id IS NULL THEN NULL ELSE m.cc_addrs END, m.date \
-         FROM messages m LEFT JOIN message_labels s \
-         ON s.account_id = m.account_id AND s.message_id = m.id AND s.label_id = 'SENT'",
+         FROM messages m LEFT JOIN message_mailboxes s \
+         ON s.account_id = m.account_id AND s.message_id = m.id \
+         AND s.mailbox IN (SELECT key FROM mailboxes WHERE role = 'sent')",
     )?;
     let rows = stmt.query_map([], |row| {
         Ok((

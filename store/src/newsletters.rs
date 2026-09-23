@@ -46,9 +46,9 @@ pub fn list(conn: &Connection, account_id: AccountId, since: EpochMillis) -> Res
          FROM messages m \
          WHERE m.account_id = ?1 AND m.date >= ?2 AND m.from_addr IS NOT NULL AND m.from_addr <> '' \
          AND (m.list_unsubscribe IS NOT NULL OR EXISTS ( \
-             SELECT 1 FROM message_labels ml \
-             WHERE ml.account_id = m.account_id AND ml.message_id = m.id \
-             AND ml.label_id IN (?3, ?4, ?5))) \
+             SELECT 1 FROM message_categories c \
+             WHERE c.account_id = m.account_id AND c.message_id = m.id \
+             AND c.category IN (?3, ?4, ?5))) \
          ORDER BY m.date DESC, m.id DESC",
     )?;
     let rows = stmt.query_map(

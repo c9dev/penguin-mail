@@ -1,40 +1,57 @@
-use mailrs_domain::{AccountId, Label, LabelKind};
+//! The label list, read from the server mailboxes. Until the store's
+//! interface stops naming mail by Gmail label, a label is a server
+//! mailbox the server listed, and its kind is system for Gmail's own and
+//! user for a person's.
+
+use mailrs_domain::{AccountId, Label, LabelKind, MailboxKind, gmail};
 use rusqlite::{Connection, params};
 
 use crate::{Result, StoreError};
 
-/// Replaces every label of the account.
-pub fn replace_labels(conn: &Connection, account_id: AccountId, labels: &[Label]) -> Result<()> {
-    conn.execute(
-        "DELETE FROM labels WHERE account_id = ?1",
-        params![account_id],
-    )?;
-    let mut insert = conn.prepare_cached(
-        "INSERT INTO labels (account_id, id, name, kind, color) VALUES (?1, ?2, ?3, ?4, ?5)",
-    )?;
-    for label in labels {
-        insert.execute(params![
-            account_id,
-            label.id,
-            label.name,
-            label.kind.as_str(),
-            label.color
-        ])?;
+fn stored_kind(kind: LabelKind) -> &'static str {
+    match kind {
+        LabelKind::System => MailboxKind::System.as_str(),
+        LabelKind::User => MailboxKind::Label.as_str(),
     }
+}
+
+/// Replaces every label of the account. A label the listing left out
+/// goes, unless mail still carries it, in which case it stays as an
+/// unlisted mailbox so the mail keeps its key.
+pub fn replace_labels(conn: &Connection, account_id: AccountId, labels: &[Label]) -> Result<()> {
+    for label in labels {
+        upsert_label(conn, label)?;
+    }
+    let listed: Vec<&str> = labels.iter().map(|l| l.id.as_str()).collect();
+    let listed = serde_json::to_string(&listed).unwrap_or_else(|_| "[]".into());
+    conn.execute(
+        "UPDATE mailboxes SET named = 0 WHERE account_id = ?1 \
+         AND id NOT IN (SELECT value FROM json_each(?2)) \
+         AND EXISTS (SELECT 1 FROM message_mailboxes l WHERE l.mailbox = mailboxes.key)",
+        params![account_id, listed],
+    )?;
+    conn.execute(
+        "DELETE FROM mailboxes WHERE account_id = ?1 \
+         AND id NOT IN (SELECT value FROM json_each(?2)) \
+         AND NOT EXISTS (SELECT 1 FROM message_mailboxes l WHERE l.mailbox = mailboxes.key)",
+        params![account_id, listed],
+    )?;
     Ok(())
 }
 
-/// Adds a label or updates its name.
+/// Adds a label or updates its name, kind and colour, and marks it listed.
 pub fn upsert_label(conn: &Connection, label: &Label) -> Result<()> {
     conn.execute(
-        "INSERT INTO labels (account_id, id, name, kind, color) VALUES (?1, ?2, ?3, ?4, ?5) \
-         ON CONFLICT (account_id, id) DO UPDATE SET name = excluded.name, kind = excluded.kind, \
-         color = excluded.color",
+        "INSERT INTO mailboxes (account_id, id, name, role, kind, color, named) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1) \
+         ON CONFLICT (account_id, id) DO UPDATE SET name = excluded.name, role = excluded.role, \
+         kind = excluded.kind, color = excluded.color, named = 1",
         params![
             label.account_id,
             label.id,
             label.name,
-            label.kind.as_str(),
+            gmail::role_of(&label.id).map(|r| r.as_str()),
+            stored_kind(label.kind),
             label.color
         ],
     )?;
@@ -45,26 +62,26 @@ pub fn upsert_label(conn: &Connection, label: &Label) -> Result<()> {
 /// threads that carried it.
 pub fn delete_label(conn: &Connection, account_id: AccountId, id: &str) -> Result<Vec<String>> {
     let threads: Vec<String> = conn
-        .prepare("SELECT thread_id FROM thread_labels WHERE account_id = ?1 AND label_id = ?2")?
+        .prepare(
+            "SELECT t.thread_id FROM thread_mailboxes t JOIN mailboxes b ON b.key = t.mailbox \
+             WHERE b.account_id = ?1 AND b.id = ?2",
+        )?
         .query_map(params![account_id, id], |row| row.get(0))?
         .collect::<rusqlite::Result<_>>()?;
-    for table in ["message_labels", "thread_labels"] {
-        conn.execute(
-            &format!("DELETE FROM {table} WHERE account_id = ?1 AND label_id = ?2"),
-            params![account_id, id],
-        )?;
-    }
+    // Deleting the mailbox takes its message and thread rows with it.
     conn.execute(
-        "DELETE FROM labels WHERE account_id = ?1 AND id = ?2",
+        "DELETE FROM mailboxes WHERE account_id = ?1 AND id = ?2",
         params![account_id, id],
     )?;
     Ok(threads)
 }
 
-/// System labels first, then user labels, each by name.
+/// System labels first, then user labels, each by name. Only mailboxes a
+/// listing named count.
 pub fn list_labels(conn: &Connection, account_id: AccountId) -> Result<Vec<Label>> {
     let mut stmt = conn.prepare(
-        "SELECT id, name, kind, color FROM labels WHERE account_id = ?1 ORDER BY kind = 'user', name",
+        "SELECT id, name, kind, color FROM mailboxes WHERE account_id = ?1 AND named = 1 \
+         ORDER BY kind <> 'system', name",
     )?;
     let rows = stmt.query_map(params![account_id], |row| {
         Ok((
@@ -76,10 +93,16 @@ pub fn list_labels(conn: &Connection, account_id: AccountId) -> Result<Vec<Label
     })?;
     rows.map(|row| {
         let (id, name, kind, color) = row?;
-        let kind = kind.parse::<LabelKind>().map_err(|_| StoreError::Corrupt {
-            column: "labels.kind",
-            value: kind.clone(),
-        })?;
+        let kind = match kind.parse::<MailboxKind>() {
+            Ok(MailboxKind::System) => LabelKind::System,
+            Ok(MailboxKind::Label | MailboxKind::Folder) => LabelKind::User,
+            Err(_) => {
+                return Err(StoreError::Corrupt {
+                    column: "mailboxes.kind",
+                    value: kind,
+                });
+            }
+        };
         Ok(Label {
             account_id,
             id,

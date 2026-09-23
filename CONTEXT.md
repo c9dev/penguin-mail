@@ -4,7 +4,7 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 ## Glossary
 
-**System label**: a label Gmail defines, with the same id in every account, such as `INBOX`, `SPAM`, `UNREAD`, and the category labels. Code names them through `mailrs_domain::system_label`. _Avoid_: built-in label, Gmail folder.
+**System label**: a label Gmail defines, with the same id in every account, such as `INBOX`, `SPAM`, `UNREAD`, and the category labels. Code names them through `mailrs_domain::system_label`. The store keeps them as server mailboxes with roles, as keywords or as categories through `mailrs_domain::gmail`, and still answers by label id until the words move to roles and keywords. _Avoid_: built-in label, Gmail folder.
 
 **User label**: a label the account owner made, with an id like `Label_12` that only that account knows. _Avoid_: custom label, tag.
 
@@ -101,7 +101,7 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Background work**: a Gmail call nobody is waiting on: backfill, history polling, pruning, the inbox check. The sync engine runs its whole tick as background work, which leaves 100 of the account's 250 unit burst for the user and stands aside while a foreground call waits. `mailrs_sync::Priority::Background`, which the Google adapter passes on to Gmail's pacing. _Avoid_: sync work, low priority.
 
-**Whole thread**: a thread the store holds every message of, as a fetch of the thread leaves it. The window keeps messages by date, so a thread in it can lack its older replies; opening a thread trusts the store without asking Gmail only when the thread is whole and a history replay ran in the last 75 seconds. History keeps a whole thread whole, and a new bootstrap's sweep clears the mark on the threads it trims. `threads.whole`, set by `messages::mark_whole`. _Avoid_: complete thread, full thread.
+**Whole thread**: a thread the store holds every message of, as a fetch of the thread leaves it. The window keeps messages by date, so a thread in it can lack its older replies; opening a thread trusts the store without asking Gmail only when the thread is whole and a history replay ran in the last 75 seconds. History keeps a whole thread whole, and a new bootstrap's sweep clears the mark on the threads it trims. `threads.whole`, set by the change set's `MarkWhole`. _Avoid_: complete thread, full thread.
 
 **Inbox check**: the sync engine's comparison of the store's inbox with Gmail's, once when an account starts and then every hour with pruning. It lists Gmail's inbox, and for each stored message whose `INBOX` label disagrees it fetches the message again or, when Gmail no longer has it, deletes it. History replay applies each change once, so this is what corrects a message some older write left wrong. `AccountSync::reconcile_inbox`. It waits for the window to finish loading and leaves mail the store has never seen to history, which announces new mail. _Avoid_: full sync, resync, refresh.
 
@@ -249,3 +249,5 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 **Membership**: one thing a message is in or carries: a server mailbox, a keyword or a category. `mailrs_domain::Membership`; everything one message holds is `Memberships`. `mailrs_domain::gmail` turns Gmail's labels into memberships and back. _Avoid_: label (outside Gmail), placement.
 
 **Change set**: the one way stored mail changes: a list of changes (store a message, keep it under a new sync generation, add it to or take it out of a server mailbox, set a keyword or a category, delete a message or a thread, mark a thread whole) applied in one call inside the caller's transaction. It refreshes every thread row the changes touched and reports what each membership change did to each message, which is what Undo reverses. `mailrs_store::messages::apply`, taking `Change`s and answering `Touched`. _Avoid_: update, patch (which is the conversation page's word), batch.
+
+**Listed**: whether a list shows a thread, kept on the thread's rows rather than worked out per query. A thread is listed in a server mailbox while one of its messages there sits outside the Trash and Spam (the mailbox itself aside, so the Trash lists trashed mail), and listed at all while any message of it sits outside both. `thread_mailboxes.listed`, `thread_categories.listed` and `threads.listed`, derived by the change set. The counts read the same rows, so a count and its list agree. _Avoid_: visible, hidden (for the column).
