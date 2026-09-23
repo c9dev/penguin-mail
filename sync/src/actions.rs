@@ -272,26 +272,57 @@ impl<A: Accounts> MailActions<A> {
     /// user first. `Permitted::NeedsPermission` means the account has not
     /// granted the delete permission and nothing changed.
     pub async fn erase(&self, targets: &[Target]) -> Result<Permitted<Outcome>, SyncError> {
-        let mut outcome = Outcome::default();
+        let failed = |err: &SyncError| {
+            fill(
+                &gettext("Delete Forever failed: {reason}"),
+                &[("reason", &err.to_string())],
+            )
+        };
+        let mut results: Vec<Option<Result<(), String>>> = vec![None; targets.len()];
+        let mut accounts: Vec<AccountId> = Vec::new();
         for target in targets {
-            let erased = self
-                .sync(target.account_id)?
-                .erase(&target.thread_id, target.message_id.as_deref())
-                .await;
-            match erased {
-                Ok(()) => outcome.done.push(target.clone()),
-                // Gmail refuses before it erases anything, so a refusal on
-                // the first target leaves every target as it was.
-                Err(SyncError::Gmail(GmailError::MissingScope)) if outcome.done.is_empty() => {
-                    return Ok(Permitted::NeedsPermission);
+            if !accounts.contains(&target.account_id) {
+                accounts.push(target.account_id);
+            }
+        }
+        // One call per account, so its messages share batches.
+        for account_id in accounts {
+            let members: Vec<usize> = (0..targets.len())
+                .filter(|i| targets[*i].account_id == account_id)
+                .collect();
+            let batch: Vec<Target> = members.iter().map(|i| targets[*i].clone()).collect();
+            let erased = match self.sync(account_id)?.erase_all(&batch).await {
+                Ok(erased) => erased,
+                Err(err) => {
+                    let error = failed(&err);
+                    for index in members {
+                        results[index] = Some(Err(error.clone()));
+                    }
+                    continue;
                 }
-                Err(err) => outcome.failed.push(Failure {
+            };
+            // Gmail refuses before it erases anything, so a refusal in the
+            // first account to answer leaves every target as it was.
+            let nothing_yet = results.iter().flatten().all(|r| r.is_err());
+            let refused = erased
+                .iter()
+                .all(|r| matches!(r, Err(SyncError::Gmail(GmailError::MissingScope))));
+            if nothing_yet && refused {
+                return Ok(Permitted::NeedsPermission);
+            }
+            for (index, result) in members.into_iter().zip(erased) {
+                results[index] = Some(result.map_err(|err| failed(&err)));
+            }
+        }
+        let mut outcome = Outcome::default();
+        for (target, result) in targets.iter().zip(results) {
+            match result {
+                Some(Ok(())) => outcome.done.push(target.clone()),
+                Some(Err(error)) => outcome.failed.push(Failure {
                     target: target.clone(),
-                    error: fill(
-                        &gettext("Delete Forever failed: {reason}"),
-                        &[("reason", &err.to_string())],
-                    ),
+                    error,
                 }),
+                None => {}
             }
         }
         // Undo cannot bring erased mail back, so the stack lets go of the

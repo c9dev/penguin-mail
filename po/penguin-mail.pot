@@ -5885,37 +5885,37 @@ msgstr ""
 msgid "Is flagged"
 msgstr ""
 
-#: sync/src/account/writes.rs:466
+#: sync/src/account/writes.rs:557
 msgid "Gmail is busy. Still working on {conversations}."
 msgstr ""
 
-#: sync/src/account/writes.rs:481
+#: sync/src/account/writes.rs:572
 msgid ""
 "Gmail is busy, so {action} did not go through for {conversations}. Try again "
 "in a moment."
 msgstr ""
 
-#: sync/src/account/writes.rs:490
+#: sync/src/account/writes.rs:581
 msgid ""
 "Gmail stayed busy for {waited}, so {action} did not go through for "
 "{conversations}."
 msgstr ""
 
-#: sync/src/account/writes.rs:497
+#: sync/src/account/writes.rs:588
 msgid "{action} failed: {reason}"
 msgstr ""
 
-#: sync/src/account/writes.rs:518
+#: sync/src/account/writes.rs:609
 msgid "a moment"
 msgstr ""
 
-#: sync/src/account/writes.rs:520
+#: sync/src/account/writes.rs:611
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] ""
 msgstr[1] ""
 
-#: sync/src/account/writes.rs:525
+#: sync/src/account/writes.rs:616
 msgid "a minute"
 msgstr ""
 
@@ -5927,15 +5927,15 @@ msgstr ""
 msgid "Change labels"
 msgstr ""
 
-#: sync/src/actions.rs:291
+#: sync/src/actions.rs:277
 msgid "Delete Forever failed: {reason}"
 msgstr ""
 
-#: sync/src/actions.rs:431
+#: sync/src/actions.rs:462
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr ""
 
-#: sync/src/actions.rs:492 sync/src/actions.rs:544
+#: sync/src/actions.rs:523 sync/src/actions.rs:575
 msgid "Could not undo: {reason}"
 msgstr ""
 

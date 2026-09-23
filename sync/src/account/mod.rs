@@ -45,6 +45,9 @@ pub struct AccountSync<G> {
     /// Whole threads a Gmail search fetched, by thread id, kept so opening
     /// one stores it without asking Gmail again.
     listed: Mutex<std::collections::HashMap<String, listed::Listed>>,
+    /// The messages each thread had among a search's hits, kept so Delete
+    /// Forever on a row the store lacks knows what to erase.
+    hits: Mutex<std::collections::HashMap<String, listed::Hits>>,
 }
 
 /// How long a finished history replay speaks for the whole mailbox. The
@@ -70,6 +73,7 @@ impl<G: GmailApi> AccountSync<G> {
             touched: Arc::default(),
             caught_up: Arc::default(),
             listed: Mutex::default(),
+            hits: Mutex::default(),
         }
     }
 

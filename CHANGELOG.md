@@ -5,6 +5,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Improved
+
+- Delete Forever on a Trash full of conversations goes out as one request
+  per thousand messages. Erasing 200 conversations used to make 400
+  requests and use up Gmail's allowance for about a minute.
+
 ### Fixed
 
 - Undo puts back only what the action changed. Undoing Trash on an archived

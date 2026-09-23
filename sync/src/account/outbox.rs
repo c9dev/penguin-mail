@@ -4,7 +4,7 @@
 use std::collections::BTreeSet;
 
 use mailrs_domain::{EpochMillis, Filter, MessageMeta, Vacation};
-use mailrs_gmail::{GmailError, MessageRef, SendAs, html_to_text};
+use mailrs_gmail::{GmailError, SendAs, html_to_text};
 use mailrs_store::{drafts, messages};
 
 use super::AccountSync;
@@ -203,18 +203,6 @@ impl<G: GmailApi> AccountSync<G> {
     pub async fn search(&self, query: &str, limit: usize) -> Result<Vec<MessageMeta>, SyncError> {
         let found = self.search_ids(query, limit).await?;
         self.metadata_of(&found).await
-    }
-
-    /// The messages a Gmail search returns, by id and thread, newest
-    /// first, at most `limit` of them. One call of 5 quota units, whatever the count, so a caller
-    /// takes the ids first and pays for metadata only as it shows rows.
-    pub async fn search_ids(
-        &self,
-        query: &str,
-        limit: usize,
-    ) -> Result<Vec<MessageRef>, SyncError> {
-        let page = self.api.list_messages(query, None).await?;
-        Ok(page.messages.into_iter().take(limit).collect())
     }
 
     pub async fn attachment(

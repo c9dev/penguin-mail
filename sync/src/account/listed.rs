@@ -7,7 +7,7 @@
 //! more than their `messages.get` calls, and it answers for every message
 //! of the thread. Those threads are kept here until the reader opens one.
 
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -33,7 +33,78 @@ pub(super) struct Listed {
     metas: Vec<MessageMeta>,
 }
 
+/// The messages one thread had among a search's hits.
+pub(super) struct Hits {
+    at: Instant,
+    ids: BTreeSet<String>,
+}
+
 impl<G: GmailApi> AccountSync<G> {
+    /// The messages a Gmail search returns, by id and thread, newest
+    /// first, at most `limit` of them. One call of 5 quota units, whatever
+    /// the count, so a caller takes the ids first and pays for metadata
+    /// only as it shows rows. The hits are kept per thread for
+    /// [`KEPT_FOR`], so Delete Forever on a listed row knows its messages
+    /// without asking Gmail.
+    pub async fn search_ids(
+        &self,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<MessageRef>, SyncError> {
+        let page = self.api.list_messages(query, None).await?;
+        let found: Vec<MessageRef> = page.messages.into_iter().take(limit).collect();
+        let mut by_thread: BTreeMap<&str, BTreeSet<String>> = BTreeMap::new();
+        for hit in &found {
+            by_thread
+                .entry(hit.thread_id.as_str())
+                .or_default()
+                .insert(hit.id.clone());
+        }
+        let mut kept = self.hits.lock().expect("search hits poisoned");
+        kept.retain(|_, hits| hits.at.elapsed() < KEPT_FOR);
+        for (thread, ids) in by_thread {
+            kept.insert(
+                thread.to_string(),
+                Hits {
+                    at: Instant::now(),
+                    ids,
+                },
+            );
+        }
+        Ok(found)
+    }
+
+    /// The messages of `thread_id` a recent search saw, without asking
+    /// Gmail: every message of it when the search fetched it whole,
+    /// otherwise the hits it listed. `None` when no search named it.
+    pub(super) fn listed_ids(&self, thread_id: &str) -> Option<BTreeSet<String>> {
+        let whole = self
+            .listed
+            .lock()
+            .expect("listed threads poisoned")
+            .get(thread_id)
+            .filter(|listed| listed.at.elapsed() < KEPT_FOR)
+            .map(|listed| listed.metas.iter().map(|m| m.id.clone()).collect());
+        whole.or_else(|| {
+            self.hits
+                .lock()
+                .expect("search hits poisoned")
+                .get(thread_id)
+                .filter(|hits| hits.at.elapsed() < KEPT_FOR)
+                .map(|hits| hits.ids.clone())
+        })
+    }
+
+    /// Lets go of what searches kept about threads that are gone.
+    pub(super) fn forget_listed(&self, threads: &BTreeSet<String>) {
+        let mut listed = self.listed.lock().expect("listed threads poisoned");
+        let mut hits = self.hits.lock().expect("search hits poisoned");
+        for thread in threads {
+            listed.remove(thread);
+            hits.remove(thread);
+        }
+    }
+
     /// Metadata for the messages a search listed, newest first. The store
     /// answers for the messages it already holds, which costs nothing.
     /// Two or more hits in one thread the store lacks come from one

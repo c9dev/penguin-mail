@@ -426,3 +426,101 @@ async fn a_first_sync_of_a_busy_mailbox_spends_by_conversation() {
     assert_eq!(usage.calls, 126);
     assert_eq!(usage.units, 1 + 1 + 3 * 5 + 60 * 5 + 61 * 10);
 }
+
+/// Trash older than the window, which the store never holds: `count`
+/// conversations of one message each, then `pairs` of two.
+fn old_trash(mailbox: &Synced, count: usize, pairs: usize) -> Vec<Target> {
+    let long_ago = now_millis() - 200 * 86_400_000;
+    let mut targets = Vec::new();
+    for thread in 0..count + pairs {
+        let size = if thread < count { 1 } else { 2 };
+        let thread_id = format!("trash{thread}");
+        for message in 0..size {
+            mailbox.fake.seed(MessageMeta {
+                account_id: mailbox.id,
+                ..meta(
+                    &format!("trash{thread}m{message}"),
+                    &thread_id,
+                    long_ago + thread as i64 * 1000 + message as i64,
+                    &["TRASH"],
+                )
+            });
+        }
+        targets.push(Target::thread(mailbox.id, thread_id));
+    }
+    targets
+}
+
+#[tokio::test]
+async fn deleting_two_hundred_conversations_forever_takes_one_call() {
+    let h = harness().await;
+    let all = synced(&h.db, 1, 1, 1).await;
+    let targets = old_trash(&all[0], 180, 20);
+    first_sync(&all).await;
+    all[0].fake.with(|s| s.page_size = 500);
+    let trash = Mailbox::Folder {
+        account_id: Some(all[0].id),
+        folder: Folder::Trash,
+    };
+    let view = View {
+        limit: Some(250),
+        ..View::default()
+    };
+    // The reader has the Trash open, which listed every row.
+    lists_over(&all, &h.db)
+        .list(&trash, &scope(&all), &view, 0)
+        .await
+        .unwrap();
+    reset(&all);
+
+    let erased = actions(&all, &h.db).erase(&targets).await.unwrap();
+
+    let outcome = erased.done().expect("the permission is there");
+    assert_eq!(outcome.done.len(), 200);
+    assert!(outcome.failed.is_empty(), "{:?}", outcome.failed);
+    let usage = total(&all);
+    report("delete forever 200 conversations, 1 account", &usage);
+    // One `threads.get` and one `batchDelete` per conversation cost 400
+    // calls and 12,000 units. The listing already named every message.
+    assert_eq!(usage.calls_to("users.messages.batchDelete"), 1);
+    assert_eq!(usage.calls, 1);
+    assert_eq!(usage.units, 50);
+    assert!(
+        all[0]
+            .fake
+            .with(|s| s.messages.keys().all(|id| !id.starts_with("trash")))
+    );
+}
+
+#[tokio::test]
+async fn deleting_forever_what_nobody_listed_asks_for_each_conversation_once() {
+    let h = harness().await;
+    let all = synced(&h.db, 1, 1, 1).await;
+    let targets = old_trash(&all[0], 3, 0);
+    first_sync(&all).await;
+    reset(&all);
+
+    let erased = actions(&all, &h.db).erase(&targets).await.unwrap();
+
+    assert_eq!(erased.done().map(|o| o.done.len()), Some(3));
+    let usage = total(&all);
+    assert_eq!(usage.calls_to("users.threads.get"), 3);
+    assert_eq!(usage.calls_to("users.messages.batchDelete"), 1);
+}
+
+#[tokio::test]
+async fn deleting_more_than_a_thousand_messages_forever_splits_the_batch() {
+    let h = harness().await;
+    let all = synced(&h.db, 1, 1100, 1).await;
+    all[0].fake.with(|s| s.page_size = 2000);
+    first_sync(&all).await;
+    reset(&all);
+    let targets = everything(&all, 1100);
+
+    let erased = actions(&all, &h.db).erase(&targets).await.unwrap();
+
+    assert_eq!(erased.done().map(|o| o.done.len()), Some(1100));
+    let usage = total(&all);
+    assert_eq!(usage.calls_to("users.messages.batchDelete"), 2);
+    assert_eq!(usage.calls, 2);
+}
