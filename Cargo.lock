@@ -2006,6 +2006,7 @@ dependencies = [
  "sha2",
  "spellbook",
  "tempfile",
+ "thiserror",
  "tokio",
  "toml",
  "tracing",

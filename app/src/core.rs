@@ -17,7 +17,7 @@ use mailrs_gmail::{
 };
 use mailrs_pgp::{Pgp, PgpError};
 use mailrs_smime::{Smime, SmimeError};
-use mailrs_store::{Db, accounts};
+use mailrs_store::{Db, StoreError, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::lock::{LockError, SyncLock};
 use mailrs_sync::sign_in::{account_client, signed_in};
@@ -30,6 +30,15 @@ use mailrs_sync::{
 use crate::assistant::run::{Background, Modules};
 use crate::demo::{self, DemoGmail};
 use mailrs_domain::translate::{fill, gettext};
+
+/// The store could not be updated to this version, and the copy taken
+/// before the attempt was put back. Startup shows this with a way to
+/// report it, since only a fixed release can open the store again.
+#[derive(Debug, thiserror::Error)]
+#[error("{message}")]
+pub struct StoreNotUpdated {
+    pub message: String,
+}
 
 pub type Engine = SyncEngine;
 pub type Sync = AccountSync;
@@ -158,7 +167,19 @@ impl Core {
         if demo {
             let _ = std::fs::remove_file(&db_path);
         }
-        let db = Db::open(&db_path)?;
+        let db = match Db::open(&db_path) {
+            Ok(db) => db,
+            Err(err @ StoreError::Migration { .. }) => {
+                tracing::error!(error = %err, "the mail store could not be updated");
+                return Err(StoreNotUpdated {
+                    message: gettext(
+                        "Penguin Mail could not update its mail store, and kept the old one.",
+                    ),
+                }
+                .into());
+            }
+            Err(err) => return Err(err.into()),
+        };
         // A first run has no config file and needs none: new accounts sign
         // in with the client the build carries.
         let config = if demo {

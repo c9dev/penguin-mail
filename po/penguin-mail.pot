@@ -969,27 +969,31 @@ msgstr ""
 msgid "On {date}, {sender} wrote:"
 msgstr ""
 
-#: app/src/core.rs:152
+#: app/src/core.rs:161
 msgid ""
 "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your "
 "mail. Stop it, then open Penguin Mail again."
 msgstr ""
 
-#: app/src/core.rs:552
+#: app/src/core.rs:176
+msgid "Penguin Mail could not update its mail store, and kept the old one."
+msgstr ""
+
+#: app/src/core.rs:573
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 
-#: app/src/core.rs:556
+#: app/src/core.rs:577
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
 msgstr ""
 
-#: app/src/core.rs:574
+#: app/src/core.rs:595
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 
-#: app/src/core.rs:582
+#: app/src/core.rs:603
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 
@@ -1172,8 +1176,12 @@ msgstr ""
 msgid "penguin-mail: unknown option {option}"
 msgstr ""
 
-#: app/src/main.rs:235
+#: app/src/main.rs:239
 msgid "Penguin Mail Could Not Start"
+msgstr ""
+
+#: app/src/main.rs:244 app/src/ui/about.rs:148
+msgid "Report a Problem"
 msgstr ""
 
 #: app/src/notify.rs:49 app/src/ui/conversation.rs:336
@@ -2169,10 +2177,6 @@ msgstr ""
 
 #: app/src/ui/about.rs:146
 msgid "Website"
-msgstr ""
-
-#: app/src/ui/about.rs:148
-msgid "Report a Problem"
 msgstr ""
 
 #: app/src/ui/about.rs:153

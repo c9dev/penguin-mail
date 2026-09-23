@@ -165,7 +165,10 @@ fn main() -> glib::ExitCode {
                 *started.borrow_mut() =
                     Some(app::App::new(gio_app, core, background, compose.clone()))
             }
-            Err(err) => show_fatal(gio_app, &format!("{err:#}")),
+            Err(err) => {
+                let report = err.downcast_ref::<core::StoreNotUpdated>().is_some();
+                show_fatal(gio_app, &format!("{err:#}"), report)
+            }
         }
     });
     gio_app.connect_activate(move |_| {
@@ -226,8 +229,9 @@ pub fn ensure_gtk() {
     gtk::Window::set_default_icon_name(APP_ID);
 }
 
-/// A window that explains why Penguin Mail could not start.
-fn show_fatal(gio_app: &gio::Application, message: &str) {
+/// A window that explains why Penguin Mail could not start. With `report`,
+/// it links to the page where a problem is reported.
+fn show_fatal(gio_app: &gio::Application, message: &str, report: bool) {
     ensure_gtk();
     let hold = gio_app.hold();
     let page = adw::StatusPage::builder()
@@ -235,6 +239,14 @@ fn show_fatal(gio_app: &gio::Application, message: &str) {
         .title(gettext("Penguin Mail Could Not Start"))
         .description(glib::markup_escape_text(message).as_str())
         .build();
+    if report {
+        let link = gtk::LinkButton::builder()
+            .label(gettext("Report a Problem"))
+            .uri(format!("{}/issues/new/choose", ui::about::REPOSITORY))
+            .halign(gtk::Align::Center)
+            .build();
+        page.set_child(Some(&link));
+    }
     let toolbar = adw::ToolbarView::new();
     toolbar.add_top_bar(&adw::HeaderBar::new());
     toolbar.set_content(Some(&page));
