@@ -10,11 +10,14 @@
 #   scripts/release.sh major        0.1.0 -> 1.0.0
 #   scripts/release.sh 0.1.0        exactly this version, even the current one
 #   scripts/release.sh --dry-run    everything up to the commit, then put it all back
+#
+# A push that fails leaves the commit "Release X.Y.Z" on main without a
+# tag. Running the script again finds that commit and retries the push.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-bump=patch
+bump="patch"
 dry=
 for arg in "$@"; do
     case $arg in
@@ -33,6 +36,44 @@ git fetch -q origin main --tags
 [ -z "$(git log --oneline HEAD..origin/main)" ] || fail "origin/main has commits this branch lacks; pull first"
 
 current=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
+
+# Tags the release commit at HEAD and pushes it with main. --atomic moves
+# both refs or neither, and a failed push takes the local tag off again,
+# so the next run finds the commit untagged and resumes from here.
+push_release() {
+    local version=$1
+    git tag -a "v$version" -F <(scripts/changelog.sh section "$version")
+    if ! git push -q --atomic origin main "v$version"; then
+        git tag -d "v$version" >/dev/null
+        fail "the push to origin failed, so nothing was published. main keeps the commit \"Release $version\" and v$version is not tagged; run scripts/release.sh again to retry the push."
+    fi
+    echo "Pushed v$version. GitHub builds and publishes it:"
+    echo "  https://github.com/c9dev/penguin-mail/actions/workflows/release.yml"
+    echo
+    echo "Flathub builds from its own repository, so update it by hand:"
+    echo "  scripts/flatpak-sources.sh --flathub v$version <dir>"
+    echo "then copy the three files into a checkout of"
+    echo "https://github.com/flathub/io.github.c9dev.PenguinMail and open a pull request."
+}
+
+# A commit "Release X.Y.Z" that origin lacks is a release an earlier run
+# made and could not push. Push that one instead of starting another.
+if [ "$(git log -1 --format=%s)" = "Release $current" ] && ! git merge-base --is-ancestor HEAD origin/main; then
+    if git ls-remote --exit-code -q --tags origin "refs/tags/v$current" >/dev/null; then
+        fail "origin has v$current but not the commit \"Release $current\"; push main by hand"
+    fi
+    if [ -n "$dry" ]; then
+        echo "Would push the commit \"Release $current\" and tag v$current."
+        exit 0
+    fi
+    # Before failed pushes took their tag back, one could be left here.
+    if git rev-parse -q --verify "refs/tags/v$current" >/dev/null; then
+        git tag -d "v$current" >/dev/null
+    fi
+    echo "Release $current is committed but was never pushed. Pushing it now."
+    push_release "$current"
+    exit 0
+fi
 IFS=. read -r major minor patch <<<"$current"
 case $bump in
 patch) version="$major.$minor.$((patch + 1))" ;;
@@ -105,12 +146,4 @@ fi
 git add Cargo.toml Cargo.lock CHANGELOG.md po "$metainfo"
 git commit -q -m "Release $version"
 trap - EXIT
-git tag -a "v$version" -F <(scripts/changelog.sh section "$version")
-git push -q origin main "v$version"
-echo "Pushed v$version. GitHub builds and publishes it:"
-echo "  https://github.com/c9dev/penguin-mail/actions/workflows/release.yml"
-echo
-echo "Flathub builds from its own repository, so update it by hand:"
-echo "  scripts/flatpak-sources.sh --flathub v$version <dir>"
-echo "then copy the three files into a checkout of"
-echo "https://github.com/flathub/io.github.c9dev.PenguinMail and open a pull request."
+push_release "$version"

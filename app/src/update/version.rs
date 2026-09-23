@@ -65,15 +65,19 @@ pub enum Method {
     Local { prefix: PathBuf },
 }
 
-/// The two files an update downloads.
+/// The files an update downloads.
 #[derive(Debug)]
 pub struct Download<'a> {
     pub package: &'a Asset,
     pub sums: &'a Asset,
+    /// The project key's signature over the sums. The install refuses a
+    /// release without one, and says so.
+    pub signature: Option<&'a Asset>,
 }
 
-/// The package this install method needs from a release, and the sums to
-/// check it by. A release missing either offers nothing.
+/// The package this install method needs from a release, the sums to check
+/// it by, and their signature. A release missing the package or the sums
+/// offers nothing.
 pub fn pick<'a>(release: &'a Release, method: &Method) -> Option<Download<'a>> {
     let v = release.version;
     let wanted = match method {
@@ -84,6 +88,7 @@ pub fn pick<'a>(release: &'a Release, method: &Method) -> Option<Download<'a>> {
     Some(Download {
         package: find(&wanted)?,
         sums: find("SHA256SUMS")?,
+        signature: find("SHA256SUMS.asc"),
     })
 }
 
@@ -149,6 +154,27 @@ mod tests {
         )
         .unwrap();
         assert_eq!(local.package.name, "penguin-mail-0.2.0-x86_64.tar.gz");
+    }
+
+    #[test]
+    fn the_signature_comes_with_the_sums_when_the_release_has_one() {
+        let signed = release(
+            "0.2.0",
+            &[
+                "penguin-mail_0.2.0_amd64.deb",
+                "SHA256SUMS",
+                "SHA256SUMS.asc",
+            ],
+        );
+        let files = pick(&signed, &Method::Deb).unwrap();
+        assert_eq!(
+            files.signature.map(|a| a.name.as_str()),
+            Some("SHA256SUMS.asc")
+        );
+        // An unsigned release is still picked, so the install can say why
+        // it refuses it.
+        let unsigned = release("0.2.0", &["penguin-mail_0.2.0_amd64.deb", "SHA256SUMS"]);
+        assert!(pick(&unsigned, &Method::Deb).unwrap().signature.is_none());
     }
 
     #[test]

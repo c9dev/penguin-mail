@@ -11,24 +11,14 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    name: Build the packages
+  version:
+    name: Read the version
     runs-on: ubuntu-latest
-    container: ubuntu:26.04
-    timeout-minutes: 90
-    env:
-      CARGO_TERM_COLOR: always
-      PENGUIN_MAIL_REQUIRE_CRYPTO: "1"
+    timeout-minutes: 5
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - name: Install git
-        run: apt-get update && apt-get install -y --no-install-recommends git ca-certificates
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Install build dependencies
-        run: scripts/ci-deps.sh
-      - name: Put cargo on PATH
-        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
       - name: Read the version
         id: version
         env:
@@ -41,35 +31,89 @@ jobs:
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  # The packages build from a commit main's CI has already tested, since
+  # scripts/release.sh tags only on main and runs the gate first. Rather
+  # than test it a second time, this job waits for CI's verdict on the same
+  # commit while the packages build, and nothing publishes without a pass.
+  # CI starts from the same push as the tag, so its run may still be going.
+  # A later push to main cancels it, which counts as no pass: re-run CI on
+  # the commit, then this workflow's failed jobs.
+  ci:
+    name: CI passed on this commit
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    permissions:
+      actions: read
+    steps:
+      - name: Wait for CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          for _ in $(seq 140); do
+            # A failed call is asked again on the next round.
+            states=$(gh api "repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$SHA&per_page=50" \
+                --jq '.workflow_runs[] | "\(.status) \(.conclusion)"') || states=
+            if grep -qx 'completed success' <<<"$states"; then
+              echo "CI passed on $SHA."
+              exit 0
+            fi
+            if [ -n "$states" ] && ! grep -qv '^completed ' <<<"$states"; then
+              echo "::error::CI did not pass on $SHA: $(sort -u <<<"$states" | paste -sd, -)"
+              exit 1
+            fi
+            sleep 30
+          done
+          echo "::error::CI on $SHA had not finished after 70 minutes"
+          exit 1
+
+  build:
+    name: Build the packages
+    needs: version
+    runs-on: ubuntu-latest
+    container: ubuntu:26.04
+    timeout-minutes: 90
+    env:
+      # The same as CI's gate. rust-cache puts CARGO_ variables into its
+      # key, so a different value here would miss CI's cache.
+      CARGO_TERM_COLOR: always
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - name: Install git
+        run: apt-get update && apt-get install -y --no-install-recommends git ca-certificates
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install build dependencies
+        run: scripts/ci-deps.sh
+      - name: Put cargo on PATH
+        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      # Starts from the cache CI's gate saved on main: the crates it
+      # downloaded and whatever of its build a release build can use. Only
+      # the same tag could read a tag's own cache, so this job saves none.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      - name: Tests
-        run: cargo test --workspace
-      - name: Clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
-      - name: Translation template is current
-        run: scripts/update-po.sh --check
+        with:
+          shared-key: ubuntu-26.04
+          save-if: false
       - name: Build
         run: cargo build --release -p mailrs -p mailrs-cli
       - name: Pack
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
         run: |
           scripts/stage.sh tree
           scripts/package.sh tree "$VERSION" dist
       - name: Take out the changelog section
         if: github.ref_type == 'tag'
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
         run: scripts/changelog.sh section "$VERSION" > dist/notes.md
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: penguin-mail-${{ steps.version.outputs.version }}
+          name: penguin-mail-${{ needs.version.outputs.version }}
           path: dist/
           if-no-files-found: error
 
   rpm:
     name: Build the rpm
-    needs: build
+    needs: version
     runs-on: ubuntu-latest
     # The oldest Fedora with GTK 4.20 and libadwaita 1.8. rpm requires the
     # libraries the binaries link against, so an rpm built here installs on
@@ -78,7 +122,7 @@ jobs:
     timeout-minutes: 90
     env:
       CARGO_TERM_COLOR: always
-      VERSION: ${{ needs.build.outputs.version }}
+      VERSION: ${{ needs.version.outputs.version }}
     steps:
       - name: Install git
         run: dnf install -y git
@@ -87,7 +131,12 @@ jobs:
         run: scripts/ci-deps.sh
       - name: Put cargo on PATH
         run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      # Nothing on main builds on Fedora, so only a trial run from main
+      # saves this cache where a later tag can read it.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: fedora-43
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       # The apt repository's key signs the rpm too. A pushed release must
       # go out signed, since the .repo file it installs turns on gpgcheck;
       # a trial run without the secret builds an unsigned rpm and says so.
@@ -126,13 +175,13 @@ jobs:
           scripts/smoke-start.sh /usr/bin/penguin-mail
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: penguin-mail-${{ needs.build.outputs.version }}-rpm
+          name: penguin-mail-${{ needs.version.outputs.version }}-rpm
           path: dist/*.rpm
           if-no-files-found: error
 
   snap:
     name: Build the snap
-    needs: build
+    needs: version
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -140,22 +189,27 @@ jobs:
       # Builds in an LXD container, from snap/snapcraft.yaml.
       - uses: snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79 # v1.3.0
         id: snapcraft
+      # snap run puts the app in a systemd scope so snapd can track it.
+      # The runner user has no systemd user instance, so as that user snap
+      # run stops with "cannot track application process". As root, snapd
+      # falls back to the system's systemd, and the confined app starts the
+      # same way.
       - name: Install and start it
         env:
           SNAP_FILE: ${{ steps.snapcraft.outputs.snap }}
         run: |
           sudo snap install core26 mesa-2604
           sudo snap install --dangerous "$SNAP_FILE"
-          scripts/smoke-start.sh snap run penguin-mail
+          sudo scripts/smoke-start.sh snap run penguin-mail
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: snap-${{ needs.build.outputs.version }}
+          name: snap-${{ needs.version.outputs.version }}
           path: ${{ steps.snapcraft.outputs.snap }}
           if-no-files-found: error
 
   publish:
     name: Publish the release
-    needs: [build, rpm]
+    needs: [version, ci, build, rpm]
     # Only a pushed tag publishes. A trial run from the Actions tab builds
     # everything and publishes nothing, whichever ref it ran on.
     if: github.event_name == 'push' && github.ref_type == 'tag'
@@ -163,22 +217,46 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Only the public key, to check the signature below against the key
+      # the app has compiled in.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: packaging/apt
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          pattern: penguin-mail-${{ needs.build.outputs.version }}*
+          pattern: penguin-mail-${{ needs.version.outputs.version }}*
           merge-multiple: true
           path: dist
       # Each package comes from its own job, so the sums are written once
-      # every file is in one place. The updater checks its download here.
-      - name: Write the checksums
+      # every file is in one place. The updater checks its download against
+      # them, and trusts them only with a good signature from the apt
+      # repository's key, which it has compiled in; it refuses a release
+      # without one. The private key lives in a keyring of its own for this
+      # step only, as in the rpm job.
+      - name: Write and sign the checksums
+        env:
+          APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
         run: |
+          if [ -z "$APT_SIGNING_KEY" ]; then
+            echo "::error::APT_SIGNING_KEY is not set, and the updater refuses unsigned checksums"
+            exit 1
+          fi
           cd dist
-          rm -f SHA256SUMS
-          sha256sum *.deb *.rpm *.tar.gz *.zip > SHA256SUMS
+          rm -f SHA256SUMS SHA256SUMS.asc
+          sha256sum -- *.deb *.rpm *.tar.gz *.zip > SHA256SUMS
           cat SHA256SUMS
+          signing=$(mktemp -d)
+          trap 'gpgconf --homedir "$signing" --kill all; rm -rf "$signing"' EXIT
+          printf '%s\n' "$APT_SIGNING_KEY" | GNUPGHOME=$signing gpg --batch --import
+          GNUPGHOME=$signing gpg --batch --yes --pinentry-mode loopback --passphrase '' \
+              --local-user FE3C3B6E699AF939DC4670DCF3A853035C3E2B8E \
+              --armor --detach-sign --output SHA256SUMS.asc SHA256SUMS
+          gpgv --homedir "$signing" \
+              --keyring "$GITHUB_WORKSPACE/packaging/apt/penguin-mail-archive-keyring.gpg" \
+              SHA256SUMS.asc SHA256SUMS
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
-          name: Penguin Mail ${{ needs.build.outputs.version }}
+          name: Penguin Mail ${{ needs.version.outputs.version }}
           body_path: dist/notes.md
           make_latest: "true"
           fail_on_unmatched_files: true
@@ -188,6 +266,7 @@ jobs:
             dist/*.tar.gz
             dist/*.zip
             dist/SHA256SUMS
+            dist/SHA256SUMS.asc
 
   # Every release goes to the snap's edge channel once the GitHub release
   # is out, so edge never carries a version whose other packages failed.
@@ -197,7 +276,7 @@ jobs:
   # nowhere.
   snap-edge:
     name: Publish the snap to edge
-    needs: [build, snap, publish]
+    needs: [version, snap, publish]
     if: github.event_name == 'push' && github.ref_type == 'tag'
     runs-on: ubuntu-latest
     env:
@@ -206,7 +285,7 @@ jobs:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         if: env.SNAPCRAFT_STORE_CREDENTIALS != ''
         with:
-          name: snap-${{ needs.build.outputs.version }}
+          name: snap-${{ needs.version.outputs.version }}
           path: snap-file
       - name: Find the snap
         if: env.SNAPCRAFT_STORE_CREDENTIALS != ''

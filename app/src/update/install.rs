@@ -242,6 +242,110 @@ mod tests {
         assert!(log.contains("autostart=1"), "{log}");
     }
 
+    /// Runs the real `scripts/install-files.sh` into `prefix` with `home` as
+    /// HOME, from a tree holding the files it copies.
+    fn install_files(dir: &Path, prefix: &Path, home: &Path) {
+        let tree = dir.join("tree");
+        std::fs::create_dir_all(tree.join("bin")).unwrap();
+        for name in ["penguin-mail", "penguin-mail-cli"] {
+            std::fs::write(tree.join("bin").join(name), "#!/bin/sh\n").unwrap();
+        }
+        std::fs::create_dir_all(tree.join("share/icons/hicolor")).unwrap();
+        std::fs::create_dir_all(tree.join("share/applications")).unwrap();
+        std::fs::copy(
+            concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/data/io.github.c9dev.PenguinMail.desktop"
+            ),
+            tree.join("share/applications/io.github.c9dev.PenguinMail.desktop"),
+        )
+        .unwrap();
+        let output = std::process::Command::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../scripts/install-files.sh"
+        ))
+        .arg(&tree)
+        .env("PREFIX", prefix)
+        .env("HOME", home)
+        .env_remove("NO_AUTOSTART")
+        .output()
+        .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    /// The program an Exec line starts, read the way GLib launches a
+    /// desktop entry: the key file's string rule, `%%` as a field code,
+    /// then the shell's quoting.
+    fn program(entry: &Path) -> String {
+        let file = gtk::glib::KeyFile::new();
+        file.load_from_file(entry, gtk::glib::KeyFileFlags::NONE)
+            .unwrap();
+        let exec = file.string("Desktop Entry", "Exec").unwrap();
+        let argv = gtk::glib::shell_parse_argv(exec.replace("%%", "%")).unwrap();
+        argv[0].to_str().unwrap().to_string()
+    }
+
+    #[test]
+    fn the_install_script_quotes_a_prefix_with_a_space() {
+        let dir = tempfile::tempdir().unwrap();
+        let prefix = dir.path().join(r#"Penguin Mail $HOME `x` "y" \z 100%"#);
+        let home = dir.path().join("home");
+        install_files(dir.path(), &prefix, &home);
+
+        let exe = prefix.join("bin/penguin-mail");
+        let quoted = crate::autostart::exec_argument(&exe);
+        let launcher = prefix.join("share/applications/io.github.c9dev.PenguinMail.desktop");
+        let text = std::fs::read_to_string(&launcher).unwrap();
+        assert!(text.contains(&format!("\nExec={quoted} %u\n")), "{text}");
+        assert!(
+            text.contains(&format!("\nExec={quoted} --compose\n")),
+            "{text}"
+        );
+        assert_eq!(program(&launcher), exe.to_str().unwrap());
+
+        let login = home.join(".config/autostart/io.github.c9dev.PenguinMail.desktop");
+        let text = std::fs::read_to_string(&login).unwrap();
+        assert!(
+            text.contains(&format!("\nExec={quoted} --background\n")),
+            "{text}"
+        );
+        assert_eq!(program(&login), exe.to_str().unwrap());
+    }
+
+    #[test]
+    fn a_login_item_carried_from_an_old_name_quotes_the_prefix_too() {
+        let dir = tempfile::tempdir().unwrap();
+        let prefix = dir.path().join("Penguin Mail");
+        let home = dir.path().join("home");
+        let autostart = home.join(".config/autostart");
+        std::fs::create_dir_all(&autostart).unwrap();
+        std::fs::write(
+            autostart.join("dev.mailrs.Mailrs.desktop"),
+            "[Desktop Entry]\nType=Application\nName=mailrs\n\
+             Exec=/old/bin/mailrs --background\nIcon=dev.mailrs.Mailrs\n\
+             X-GNOME-Autostart-enabled=false\n",
+        )
+        .unwrap();
+        install_files(dir.path(), &prefix, &home);
+
+        let exe = prefix.join("bin/penguin-mail");
+        let login = autostart.join("io.github.c9dev.PenguinMail.desktop");
+        let text = std::fs::read_to_string(&login).unwrap();
+        let quoted = crate::autostart::exec_argument(&exe);
+        assert!(
+            text.contains(&format!("\nExec={quoted} --background\n")),
+            "{text}"
+        );
+        // The person had turned it off, and it stays off.
+        assert!(text.contains("X-GNOME-Autostart-enabled=false"), "{text}");
+        assert_eq!(program(&login), exe.to_str().unwrap());
+        assert!(!autostart.join("dev.mailrs.Mailrs.desktop").exists());
+    }
+
     #[tokio::test]
     async fn a_package_that_will_not_unpack_reports_its_log() {
         let dir = tempfile::tempdir().unwrap();

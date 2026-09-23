@@ -21,6 +21,25 @@ autostart="$HOME/.config/autostart"
 id=io.github.c9dev.PenguinMail
 old_ids=(dev.penguinmail.PenguinMail dev.mailrs.Mailrs)
 
+# $1 as one argument of a desktop entry's Exec line, as exec_argument in
+# app/src/autostart.rs writes it. The Desktop Entry spec quotes an argument
+# in double quotes with ", `, $ and \ escaped by a backslash, then applies
+# the string rule, which doubles every backslash again, and a literal % is
+# written %%. Without the quotes a prefix with a space would start a
+# program named by its first half.
+exec_argument() {
+    local s=$1
+    s=${s//\\/\\\\\\\\}
+    s=${s//\"/\\\\\"}
+    s=${s//\`/\\\\\`}
+    s=${s//\$/\\\\\$}
+    s=${s//%/%%}
+    s=${s//$'\n'/\\n}
+    s=${s//$'\t'/\\t}
+    printf '"%s"' "$s"
+}
+exec=$(exec_argument "$prefix/bin/penguin-mail")
+
 # A running copy keeps its old file open. Each binary lands beside the old
 # one and is renamed over it, so a copy that fails halfway leaves the old
 # binary whole, and the running copy restarts into the new one.
@@ -38,8 +57,12 @@ fi
 mkdir -p "$apps"
 # The staged entry runs penguin-mail from PATH, and ~/.local/bin is not on
 # the PATH a desktop session starts with. Name the installed file instead.
-sed "s|^Exec=penguin-mail|Exec=$prefix/bin/penguin-mail|" \
-    "$tree/share/applications/$id.desktop" > "$apps/$id.desktop"
+# awk takes the quoted path from the environment, which leaves its
+# backslashes alone where sed or awk -v would read them as escapes.
+EXEC=$exec awk '
+    index($0, "Exec=penguin-mail") == 1 { $0 = "Exec=" ENVIRON["EXEC"] substr($0, 18) }
+    { print }
+' "$tree/share/applications/$id.desktop" > "$apps/$id.desktop"
 chmod 644 "$apps/$id.desktop"
 
 rm -f "$prefix/bin/mailrs" "$prefix/bin/mailrs-cli"
@@ -55,10 +78,12 @@ carried=
 for old_id in "${old_ids[@]}"; do
     [ -e "$autostart/$old_id.desktop" ] || continue
     if [ ! -e "$autostart/$id.desktop" ]; then
-        sed -e "s|^Name=.*|Name=Penguin Mail|" \
-            -e "s|^Exec=.*|Exec=$prefix/bin/penguin-mail --background|" \
-            -e "s|^Icon=.*|Icon=$id|" \
-            "$autostart/$old_id.desktop" > "$autostart/$id.desktop"
+        EXEC=$exec ID=$id awk '
+            /^Name=/ { $0 = "Name=Penguin Mail" }
+            /^Exec=/ { $0 = "Exec=" ENVIRON["EXEC"] " --background" }
+            /^Icon=/ { $0 = "Icon=" ENVIRON["ID"] }
+            { print }
+        ' "$autostart/$old_id.desktop" > "$autostart/$id.desktop"
     fi
     rm -f "$autostart/$old_id.desktop"
     carried=1
@@ -70,7 +95,7 @@ if [ -z "$carried" ] && [ "${NO_AUTOSTART:-}" != 1 ] && [ ! -e "$autostart/$id.d
 Type=Application
 Name=Penguin Mail
 Comment=Keeps Gmail in sync from the system tray
-Exec=$prefix/bin/penguin-mail --background
+Exec=$exec --background
 Icon=$id
 NoDisplay=true
 X-GNOME-Autostart-enabled=true
