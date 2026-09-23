@@ -11,12 +11,15 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use anyhow::{Context, Result, anyhow, bail};
-use mailrs_domain::{Account, AccountId, ChangeEvent, Target};
-use mailrs_gmail::{GMAIL_API_BASE, KeyringTokenStore, OAuthClient, TokenStore, authorize};
+use mailrs_domain::{Account, AccountId, AccountState, ChangeEvent, Target};
+use mailrs_gmail::{
+    GMAIL_API_BASE, KeyringTokenStore, OAuthClient, TokenStore, authorize, built_in_client,
+};
 use mailrs_pgp::{Pgp, PgpError};
 use mailrs_smime::{Smime, SmimeError};
 use mailrs_store::{Db, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
+use mailrs_sync::sign_in::{account_client, signed_in};
 use mailrs_sync::{
     AccountSettings, AccountSync, Accounts, AnyGmail, ContactBook, Failure, History, Invitations,
     MailAction, MailActions, Mailboxes, Outbox, Outcome, SyncEngine, Undone, connect_account,
@@ -90,7 +93,9 @@ pub struct Core {
     invitations: Arc<Events>,
     calendar: Arc<mailrs_sync::Calendar<RunningEngine>>,
     outbox: Arc<Waiting>,
-    config: RefCell<Option<Config>>,
+    /// The sync settings and, for accounts added through the old setup
+    /// page, their own Google client.
+    config: RefCell<Config>,
     /// The person's own gpg, found once at startup. With none, every
     /// OpenPGP control stays out of the window rather than failing later.
     pgp: Option<Pgp>,
@@ -123,7 +128,7 @@ impl Drop for InFlight {
 }
 
 impl Core {
-    /// Opens the store and, when a config exists, starts syncing every account.
+    /// Opens the store and starts syncing every account.
     pub fn open(demo: bool) -> Result<Rc<Core>> {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
@@ -145,12 +150,14 @@ impl Core {
             let _ = std::fs::remove_file(&db_path);
         }
         let db = Db::open(&db_path)?;
+        // A first run has no config file and needs none: new accounts sign
+        // in with the client the build carries.
         let config = if demo {
-            Some(Config::new("demo", "demo"))
+            Config::default()
         } else {
             match Config::load(&config_path()?) {
-                Ok(config) => Some(config),
-                Err(err) if err.is_missing() => None,
+                Ok(config) => config,
+                Err(err) if err.is_missing() => Config::default(),
                 Err(err) => return Err(err.into()),
             }
         };
@@ -196,27 +203,20 @@ impl Core {
             events,
             in_flight: Arc::new(AtomicUsize::new(0)),
         });
-        if core.has_config() {
-            core.start_engine();
-        }
+        core.start_engine();
         Ok(core)
     }
 
-    pub fn has_config(&self) -> bool {
-        self.config.borrow().is_some()
-    }
-
-    /// Writes `config.toml` and starts syncing.
-    pub fn save_config(&self, config: Config) -> Result<()> {
-        config.save(&config_path()?)?;
-        *self.config.borrow_mut() = Some(config);
-        self.start_engine();
-        Ok(())
+    /// Whether this copy was built with the Google client that every
+    /// sign-in goes through. A copy built from source without the release
+    /// values has none and cannot add a Google account.
+    pub fn built_with_google_sign_in(&self) -> bool {
+        built_in_client().is_some()
     }
 
     /// The sync section of `config.toml`.
-    pub fn sync_config(&self) -> Option<mailrs_sync::config::SyncConfig> {
-        self.config.borrow().as_ref().map(|c| c.sync.clone())
+    pub fn sync_config(&self) -> mailrs_sync::config::SyncConfig {
+        self.config.borrow().sync.clone()
     }
 
     /// Saves new sync settings and restarts every account's loop with them.
@@ -224,9 +224,6 @@ impl Core {
     pub fn update_sync(&self, sync: mailrs_sync::config::SyncConfig) -> Result<()> {
         let updated = {
             let mut config = self.config.borrow_mut();
-            let Some(config) = config.as_mut() else {
-                return Ok(());
-            };
             if config.sync == sync {
                 return Ok(());
             }
@@ -243,21 +240,8 @@ impl Core {
         Ok(())
     }
 
-    fn oauth(&self) -> Result<OAuthClient> {
-        let config = self.config.borrow();
-        let config = config
-            .as_ref()
-            .ok_or_else(|| anyhow!("Penguin Mail has no OAuth client configured yet"))?;
-        Ok(OAuthClient::new(
-            &config.oauth.client_id,
-            &config.oauth.client_secret,
-        ))
-    }
-
     fn start_engine(&self) {
-        let Some(config) = self.config.borrow().clone() else {
-            return;
-        };
+        let config = self.config.borrow().clone();
         let (engine, engine_events) = SyncEngine::new(self.db.clone(), config.engine_config());
         let engine = Arc::new(engine);
         self.engine.replace(Some(Arc::clone(&engine)));
@@ -269,16 +253,40 @@ impl Core {
                 }
             }
         });
-        let (db, tokens, demo, oauth) = (
+        let (db, tokens, demo, events) = (
             self.db.clone(),
             Arc::clone(&self.tokens),
             self.demo_gmail.clone(),
-            self.oauth().ok(),
+            self.events_tx.clone(),
         );
         self.runtime.spawn(async move {
             let Ok(all) = db.read(accounts::list_accounts).await else { return };
             for account in all {
-                match connect(demo.as_deref(), oauth.clone(), Arc::clone(&tokens), &account).await {
+                // The demo's accounts talk to the sample mailbox and need
+                // no Google client.
+                let oauth = if demo.is_some() {
+                    None
+                } else {
+                    match account_client(&db, &config, built_in_client(), &account).await {
+                        Ok(Some(oauth)) => Some(oauth),
+                        // The store now says the account needs a new
+                        // sign-in; the sidebar hears it here, since the
+                        // engine never runs the account to report it.
+                        Ok(None) => {
+                            tracing::warn!(account = %account.email, "no Google client for this account");
+                            let state = AccountState::NeedsReauth;
+                            let _ = events
+                                .send(ChangeEvent::AccountStateChanged { account_id: account.id, state })
+                                .await;
+                            continue;
+                        }
+                        Err(err) => {
+                            tracing::warn!(account = %account.email, error = %err, "could not read the account's Google client");
+                            continue;
+                        }
+                    }
+                };
+                match connect(demo.as_deref(), oauth, Arc::clone(&tokens), &account).await {
                     Ok(api) => engine.start_account(account.id, Arc::new(api)),
                     Err(err) => tracing::warn!(account = %account.email, error = %err, "could not start syncing"),
                 }
@@ -516,6 +524,8 @@ impl Core {
     /// `expected` is set, the user must pick that account. `extra` names
     /// permissions to ask for beyond the ones sign-in always requests, such
     /// as `DELETE_SCOPE`; an account that already granted them keeps them.
+    /// Every sign-in, first or again, goes through the build's client and
+    /// records it for the account.
     pub async fn authorize_account(
         &self,
         urls: async_channel::Sender<String>,
@@ -525,7 +535,12 @@ impl Core {
         if self.demo {
             bail!(gettext("Demo mode cannot add real accounts."));
         }
-        let oauth = self.oauth()?;
+        let oauth = built_in_client().ok_or_else(|| {
+            anyhow!(gettext(
+                "This copy of Penguin Mail was built without Google sign-in. \
+                 Get a release from github.com/c9dev/penguin-mail/releases."
+            ))
+        })?;
         let engine = self
             .engine
             .current()
@@ -557,16 +572,7 @@ impl Core {
             let (email, refresh) = (authorized.email.clone(), authorized.refresh_token.clone());
             let store = Arc::clone(&tokens);
             tokio::task::spawn_blocking(move || store.save(&email, &refresh)).await??;
-            let email = authorized.email.clone();
-            let id = db
-                .write(move |c| accounts::insert_account(c, &email, now_millis()))
-                .await?;
-            let account = db
-                .read(accounts::list_accounts)
-                .await?
-                .into_iter()
-                .find(|a| a.id == id)
-                .ok_or_else(|| anyhow!("the new account disappeared"))?;
+            let account = signed_in(&db, &authorized.email, now_millis()).await?;
             let api = connect(None, Some(oauth), tokens, &account).await?;
             engine.start_account(account.id, Arc::new(api));
             Ok::<_, anyhow::Error>(account)

@@ -19,8 +19,8 @@ A Gmail client for the GNOME desktop, written in Rust.
 
 Penguin Mail keeps several Gmail accounts in sync from the system tray,
 shows them in one inbox or one at a time, and keeps your mail on your own
-computer. It talks to Google through an OAuth client you own, so no other
-server sees your mail.
+computer. It talks to Google directly, signed in with your Google account,
+so no other server sees your mail.
 
 ![The inbox, with a conversation open](docs/screenshots/inbox.png)
 
@@ -308,14 +308,19 @@ scripts/install.sh
 ```
 
 This builds and installs into `~/.local`. `scripts/uninstall.sh` removes it
-again and leaves your mail and settings alone.
+again and leaves your mail and settings alone. A copy built from source signs
+in to Google only with a Google client compiled in;
+[docs/setup.md](docs/setup.md#building-your-own-copy) says how to give it one.
 
 ### First run
 
-The first screen asks for a Google OAuth client ID and secret, which you
-create once in your own Google Cloud project.
-[docs/setup.md](docs/setup.md) walks through it in about ten minutes. After
-that, **Sign In with Google** adds each account.
+The first screen signs you in with Google. **Sign In with Google** opens
+Google's sign-in page in your browser, and **Add Account** in the sidebar adds
+each account after that.
+
+Until Google finishes verifying Penguin Mail, that page warns that Google has
+not verified the app. The warning means Google has not yet reviewed the app's
+request for Gmail access; choose **Advanced**, then continue.
 
 ### Updates
 
@@ -413,9 +418,10 @@ The actions are `show-window`, `hide-window`, `compose`, `check` and `quit`.
 
 ## Privacy
 
-- Penguin Mail talks only to Google's Gmail API, through an OAuth client you
-  own.
-- Refresh tokens live in the GNOME keyring. The config file holds only the
+- Penguin Mail talks to Google's APIs straight from your computer. No
+  Penguin Mail server sits in between.
+- Refresh tokens live in the GNOME keyring. The config file holds sync
+  settings and, for accounts added through the old setup page, their Google
   client ID and secret, readable by you alone.
 - Mail is cached in `~/.local/share/penguin-mail`: the last 30 days plus
   everything in your inbox. Opening an older thread fetches it on demand.

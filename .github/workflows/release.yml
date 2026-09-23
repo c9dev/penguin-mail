@@ -96,7 +96,14 @@ jobs:
         with:
           shared-key: ubuntu-26.04
           save-if: false
+      # The project's Google and Microsoft clients go into the binaries at
+      # compile time. A run without the secrets builds a copy that cannot
+      # add a Google account, and says so when someone tries.
       - name: Build
+        env:
+          PENGUIN_MAIL_GOOGLE_CLIENT_ID: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_ID }}
+          PENGUIN_MAIL_GOOGLE_CLIENT_SECRET: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_SECRET }}
+          PENGUIN_MAIL_MICROSOFT_CLIENT_ID: ${{ secrets.PENGUIN_MAIL_MICROSOFT_CLIENT_ID }}
         run: cargo build --release -p mailrs -p mailrs-cli
       - name: Pack
         run: |
@@ -146,6 +153,9 @@ jobs:
         env:
           APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
           EVENT: ${{ github.event_name }}
+          PENGUIN_MAIL_GOOGLE_CLIENT_ID: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_ID }}
+          PENGUIN_MAIL_GOOGLE_CLIENT_SECRET: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_SECRET }}
+          PENGUIN_MAIL_MICROSOFT_CLIENT_ID: ${{ secrets.PENGUIN_MAIL_MICROSOFT_CLIENT_ID }}
         run: |
           if [ -z "$APT_SIGNING_KEY" ]; then
             if [ "$EVENT" = push ]; then

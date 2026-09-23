@@ -82,6 +82,16 @@ parts:
   penguin-mail:
     plugin: nil
     source: .
+    build-environment:
+      # Google documents that a desktop app's client secret cannot be
+      # kept confidential and is not treated as a secret, so the values
+      # sit in this public recipe; the snap builds in its own container
+      # and cannot read GitHub's secrets.
+      # Empty until the project's Google client exists. A build with
+      # empty values says it cannot sign in to Google, where a stand-in
+      # value would send people to a sign-in Google refuses.
+      - PENGUIN_MAIL_GOOGLE_CLIENT_ID: ""
+      - PENGUIN_MAIL_GOOGLE_CLIENT_SECRET: ""
     build-packages:
       - ca-certificates
       - curl

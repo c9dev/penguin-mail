@@ -187,6 +187,9 @@ fn load_failed(err: &impl std::fmt::Display) -> String {
     with_reason(&gettext("Could not load mail: {reason}"), err, &[])
 }
 
+/// Where release builds, which carry the Google client, are published.
+const RELEASES: &str = "https://github.com/c9dev/penguin-mail/releases";
+
 /// A toast's title as Pango markup. A toast reads its title as markup, so
 /// a label called "R&D" would otherwise show nothing at all.
 fn toast_title(text: &str) -> glib::GString {
@@ -377,12 +380,6 @@ impl MainWindow {
                 .build();
 
             let w = weak.clone();
-            let setup = welcome::setup_page(move |id, secret| {
-                if let Some(win) = w.upgrade() {
-                    win.save_config(id, secret);
-                }
-            });
-            let w = weak.clone();
             let (first_page, first_account) = welcome::first_account_page(move || {
                 if let Some(win) = w.upgrade() {
                     win.authorize(None);
@@ -425,7 +422,6 @@ impl MainWindow {
                 .transition_type(gtk::StackTransitionType::Crossfade)
                 .build();
             stack.add_named(&assistant_split, Some("mail"));
-            stack.add_named(&setup, Some("setup"));
             stack.add_named(&first_page, Some("first-account"));
             // An update's banner spans the whole window, above the panes,
             // since it is about the app and not the mail on screen.
@@ -738,9 +734,7 @@ impl MainWindow {
                 return self.failed(&gettext("Could not read accounts: {reason}"), &err);
             }
         };
-        let page = if !self.core.has_config() {
-            "setup"
-        } else if data.is_empty() {
+        let page = if data.is_empty() {
             "first-account"
         } else {
             "mail"
@@ -1907,16 +1901,6 @@ impl MainWindow {
 
     // ---- Accounts ----------------------------------------------------------
 
-    fn save_config(self: &Rc<Self>, client_id: String, client_secret: String) {
-        match self
-            .core
-            .save_config(mailrs_sync::config::Config::new(client_id, client_secret))
-        {
-            Ok(()) => self.refresh_accounts(Reload::Yes),
-            Err(err) => self.failed(&gettext("Could not save the settings: {reason}"), &err),
-        }
-    }
-
     fn authorize(self: &Rc<Self>, expected: Option<String>) {
         self.authorize_with(expected, &[]);
     }
@@ -1924,6 +1908,11 @@ impl MainWindow {
     /// Runs the consent flow, asking Google for `extra` permissions on top
     /// of the ones sign-in always requests.
     fn authorize_with(self: &Rc<Self>, expected: Option<String>, extra: &'static [&'static str]) {
+        // Without the build's Google client the browser would open for
+        // nothing, so say why at once. The demo goes on to its own message.
+        if !self.core.demo && !self.core.built_with_google_sign_in() {
+            return self.no_google_sign_in();
+        }
         if self.authorizing.replace(true) {
             return;
         }
@@ -1957,6 +1946,23 @@ impl MainWindow {
                 .set_label(&gettext("Sign In with Google"));
             this.sidebar.add_account.set_sensitive(true);
         });
+    }
+
+    /// Says that this copy cannot sign in to Google, with a button to the
+    /// releases, whose builds can.
+    fn no_google_sign_in(&self) {
+        let toast = adw::Toast::builder()
+            .title(toast_title(&gettext(
+                "This copy of Penguin Mail was built without Google sign-in.",
+            )))
+            .button_label(gettext("Get a Release"))
+            .timeout(10)
+            .build();
+        let window = self.window.clone();
+        toast.connect_button_clicked(move |_| {
+            gtk::UriLauncher::new(RELEASES).launch(Some(&window), gio::Cancellable::NONE, |_| {});
+        });
+        self.toasts.add_toast(toast);
     }
 
     /// The accounts, as the app holds them.

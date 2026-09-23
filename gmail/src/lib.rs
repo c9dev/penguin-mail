@@ -29,7 +29,8 @@ pub use model::{
 };
 pub use oauth::{
     AccessToken, DELETE_SCOPE, GMAIL_SCOPE, LoopbackListener, OAuthClient, Pkce, SETTINGS_SCOPE,
-    Tokens, parse_redirect, random_token,
+    Tokens, built_in_client, built_in_microsoft_client_id, client_from, parse_redirect,
+    random_token,
 };
 pub use people::{CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE, ConnectionsPage, ContactFields, Person};
 pub use token_store::{KeyringTokenStore, MemoryTokenStore, TokenStore};

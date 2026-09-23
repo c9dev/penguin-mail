@@ -7,6 +7,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+- Adding a Gmail account opens Google's sign-in straight away. You no
+  longer create a Google Cloud project first.
 - Before installing an update, Penguin Mail checks that the release is
   signed with its own key, and refuses one that is unsigned or signed by
   anyone else.

@@ -22,8 +22,7 @@ msgstr ""
 msgid ""
 "Penguin Mail keeps several Gmail accounts in sync from the system tray, "
 "shows them in one inbox or one at a time, and keeps your mail on your own "
-"computer. It talks to Google through an OAuth client you own, so no other "
-"server sees your mail."
+"computer. It talks to Google directly, so no other server sees your mail."
 msgstr ""
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:22
@@ -58,48 +57,46 @@ msgid ""
 msgstr ""
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:30
-msgid ""
-"You need an OAuth client from a Google Cloud project of your own. Creating "
-"one takes about ten minutes, and the first screen explains how."
+msgid "Adding a Gmail account takes one sign-in with Google in your browser."
 msgstr ""
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:47
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:46
 msgid "gmail"
 msgstr ""
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:48
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:47
 msgid "email"
 msgstr ""
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:49
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:48
 msgid "mail"
 msgstr ""
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:50
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:49
 msgid "inbox"
 msgstr ""
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:79
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:78
 msgid "The inbox, with a conversation open"
 msgstr ""
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:83
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:82
 msgid "An HTML message in dark mode"
 msgstr ""
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:87
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:86
 msgid "Replying in the composer"
 msgstr ""
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:91
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:90
 msgid "Three conversations selected, with the actions for all of them"
 msgstr ""
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:95
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:94
 msgid "The assistant listing mail that waits on a reply"
 msgstr ""
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:99
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:98
 msgid "The layout on a narrow screen"
 msgstr ""
 
@@ -972,15 +969,21 @@ msgstr ""
 msgid "On {date}, {sender} wrote:"
 msgstr ""
 
-#: app/src/core.rs:526
+#: app/src/core.rs:536
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 
-#: app/src/core.rs:543
+#: app/src/core.rs:540
+msgid ""
+"This copy of Penguin Mail was built without Google sign-in. Get a release "
+"from github.com/c9dev/penguin-mail/releases."
+msgstr ""
+
+#: app/src/core.rs:558
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 
-#: app/src/core.rs:551
+#: app/src/core.rs:566
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 
@@ -1205,7 +1208,7 @@ msgstr ""
 msgid "From {senders}"
 msgstr ""
 
-#: app/src/notify.rs:195 app/src/ui/window.rs:1885
+#: app/src/notify.rs:195 app/src/ui/window.rs:1879
 msgid "Open"
 msgstr ""
 
@@ -1598,7 +1601,7 @@ msgstr ""
 msgid "Could not save: {reason}"
 msgstr ""
 
-#: app/src/protection/draft.rs:200 app/src/ui/window.rs:1803
+#: app/src/protection/draft.rs:200 app/src/ui/window.rs:1797
 msgid "Could not open the draft: {reason}"
 msgstr ""
 
@@ -2121,7 +2124,7 @@ msgstr ""
 msgid "New Message"
 msgstr ""
 
-#: app/src/tray.rs:159 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2163
+#: app/src/tray.rs:159 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2169
 msgid "Check for Mail"
 msgstr ""
 
@@ -2139,7 +2142,7 @@ msgstr ""
 msgid "Check for Updates"
 msgstr ""
 
-#: app/src/tray.rs:175 app/src/ui/window.rs:2175
+#: app/src/tray.rs:175 app/src/ui/window.rs:2181
 #: app/src/ui/window/shortcuts.rs:508
 msgid "Quit"
 msgstr ""
@@ -2170,7 +2173,7 @@ msgstr ""
 msgid "License"
 msgstr ""
 
-#: app/src/ui/about.rs:170 app/src/ui/window.rs:2174
+#: app/src/ui/about.rs:170 app/src/ui/window.rs:2180
 msgid "About Penguin Mail"
 msgstr ""
 
@@ -2352,7 +2355,7 @@ msgid "Edit {server}"
 msgstr ""
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1411
-#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:1998
+#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:2004
 msgid "Remove"
 msgstr ""
 
@@ -3558,7 +3561,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2256
+#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2262
 msgid "Add an account first"
 msgstr ""
 
@@ -3766,7 +3769,7 @@ msgstr ""
 msgid "Drafts"
 msgstr ""
 
-#: app/src/ui/mod.rs:159 app/src/ui/thread_row.rs:82 app/src/ui/window.rs:220
+#: app/src/ui/mod.rs:159 app/src/ui/thread_row.rs:82 app/src/ui/window.rs:223
 msgid "Muted"
 msgstr ""
 
@@ -4358,11 +4361,11 @@ msgstr ""
 msgid "Rules…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2166
+#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2172
 msgid "Hide My Email…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:742 app/src/ui/window.rs:1564
+#: app/src/ui/sidebar.rs:742 app/src/ui/window.rs:1558
 msgid "New Label…"
 msgstr ""
 
@@ -4716,66 +4719,19 @@ msgstr ""
 msgid "%a, %-d %b %Y"
 msgstr ""
 
-#: app/src/ui/welcome.rs:11
-msgid ""
-"1. At console.cloud.google.com, create a project and enable the Gmail API.\n"
-"\n"
-"2. Under Google Auth Platform, choose External, add the scope gmail.modify, "
-"and click Publish app. Leaving it in Testing signs you out every 7 days.\n"
-"\n"
-"3. Create an OAuth client of type Desktop app and paste its ID and secret "
-"here.\n"
-"\n"
-"The full walkthrough is in docs/setup.md."
-msgstr ""
-
-#: app/src/ui/welcome.rs:22
-msgid "Client ID"
-msgstr ""
-
-#: app/src/ui/welcome.rs:24
-msgid "Client Secret"
-msgstr ""
-
-#: app/src/ui/welcome.rs:30
-msgid "Continue"
-msgstr ""
-
-#: app/src/ui/welcome.rs:36
-msgid "How do I get these?"
-msgstr ""
-
-#: app/src/ui/welcome.rs:63
-msgid "Create Your OAuth Client"
-msgstr ""
-
-#: app/src/ui/welcome.rs:64
-msgid "Got It"
-msgstr ""
-
-#: app/src/ui/welcome.rs:77
-msgid "Welcome to Penguin Mail"
-msgstr ""
-
-#: app/src/ui/welcome.rs:79
-msgid ""
-"Penguin Mail reads Gmail through your own Google Cloud OAuth client, so "
-"nobody else can reach your mail. Paste the client's ID and secret to begin."
-msgstr ""
-
-#: app/src/ui/welcome.rs:97 app/src/ui/window.rs:1957
+#: app/src/ui/welcome.rs:10 app/src/ui/window.rs:1946
 msgid "Sign In with Google"
 msgstr ""
 
-#: app/src/ui/welcome.rs:104
+#: app/src/ui/welcome.rs:17
 msgid "Add Your First Account"
 msgstr ""
 
-#: app/src/ui/welcome.rs:106
+#: app/src/ui/welcome.rs:19
 msgid ""
-"Your browser opens Google's sign-in page. Google warns that it hasn't "
-"verified Penguin Mail, because the app is yours alone: choose Advanced, then "
-"continue."
+"Your browser opens Google's sign-in page. Until Google finishes checking "
+"Penguin Mail, it warns that it has not verified the app: choose Advanced, "
+"then continue."
 msgstr ""
 
 #: app/src/ui/window.rs:151
@@ -4810,277 +4766,281 @@ msgstr ""
 msgid "Could not load mail: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:200
+#: app/src/ui/window.rs:203
 msgid "Flagged red"
 msgstr ""
 
-#: app/src/ui/window.rs:201
+#: app/src/ui/window.rs:204
 msgid "Flagged orange"
 msgstr ""
 
-#: app/src/ui/window.rs:202
+#: app/src/ui/window.rs:205
 msgid "Flagged yellow"
 msgstr ""
 
-#: app/src/ui/window.rs:203
+#: app/src/ui/window.rs:206
 msgid "Flagged green"
 msgstr ""
 
-#: app/src/ui/window.rs:204
+#: app/src/ui/window.rs:207
 msgid "Flagged blue"
 msgstr ""
 
-#: app/src/ui/window.rs:205
+#: app/src/ui/window.rs:208
 msgid "Flagged purple"
 msgstr ""
 
-#: app/src/ui/window.rs:206
+#: app/src/ui/window.rs:209
 msgid "Flagged gray"
 msgstr ""
 
-#: app/src/ui/window.rs:217 app/src/ui/window.rs:315
+#: app/src/ui/window.rs:220 app/src/ui/window.rs:318
 msgid "Labels changed"
 msgstr ""
 
-#: app/src/ui/window.rs:221
+#: app/src/ui/window.rs:224
 msgid "Unmuted"
 msgstr ""
 
-#: app/src/ui/window.rs:223
+#: app/src/ui/window.rs:226
 msgid "Muted {count} conversation"
 msgid_plural "Muted {count} conversations"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:229
+#: app/src/ui/window.rs:232
 msgid "Muted {count} message"
 msgid_plural "Muted {count} messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:235
+#: app/src/ui/window.rs:238
 msgid "Unmuted {count} conversation"
 msgid_plural "Unmuted {count} conversations"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:241
+#: app/src/ui/window.rs:244
 msgid "Unmuted {count} message"
 msgid_plural "Unmuted {count} messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:251
+#: app/src/ui/window.rs:254
 msgid "Dismissed {count} follow-up"
 msgid_plural "Dismissed {count} follow-ups"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:260
+#: app/src/ui/window.rs:263
 msgid "Archived"
 msgstr ""
 
-#: app/src/ui/window.rs:262
+#: app/src/ui/window.rs:265
 msgid "Archived {count} conversation"
 msgid_plural "Archived {count} conversations"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:268
+#: app/src/ui/window.rs:271
 msgid "Archived {count} message"
 msgid_plural "Archived {count} messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:273
+#: app/src/ui/window.rs:276
 msgid "Moved to Trash"
 msgstr ""
 
-#: app/src/ui/window.rs:275
+#: app/src/ui/window.rs:278
 msgid "Moved {count} conversation to Trash"
 msgid_plural "Moved {count} conversations to Trash"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:281
+#: app/src/ui/window.rs:284
 msgid "Moved {count} message to Trash"
 msgid_plural "Moved {count} messages to Trash"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:286
+#: app/src/ui/window.rs:289
 msgid "Marked as junk"
 msgstr ""
 
-#: app/src/ui/window.rs:288
+#: app/src/ui/window.rs:291
 msgid "Marked {count} conversation as junk"
 msgid_plural "Marked {count} conversations as junk"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:294
+#: app/src/ui/window.rs:297
 msgid "Marked {count} message as junk"
 msgid_plural "Marked {count} messages as junk"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:299
+#: app/src/ui/window.rs:302
 msgid "Moved to the Inbox"
 msgstr ""
 
-#: app/src/ui/window.rs:301
+#: app/src/ui/window.rs:304
 msgid "Moved {count} conversation to the Inbox"
 msgid_plural "Moved {count} conversations to the Inbox"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:307
+#: app/src/ui/window.rs:310
 msgid "Moved {count} message to the Inbox"
 msgid_plural "Moved {count} messages to the Inbox"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:441
+#: app/src/ui/window.rs:437
 msgid "Penguin Mail (Demo)"
 msgstr ""
 
-#: app/src/ui/window.rs:738
+#: app/src/ui/window.rs:734
 msgid "Could not read accounts: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:784
+#: app/src/ui/window.rs:778
 msgid "Sign in again to keep {account} syncing"
 msgstr ""
 
-#: app/src/ui/window.rs:787
+#: app/src/ui/window.rs:781
 msgid "Sign In"
 msgstr ""
 
-#: app/src/ui/window.rs:1313
+#: app/src/ui/window.rs:1307
 msgid "Could not delete the mail: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:1373
+#: app/src/ui/window.rs:1367
 msgid "Turn On the {service}"
 msgstr ""
 
-#: app/src/ui/window.rs:1376
+#: app/src/ui/window.rs:1370
 msgid ""
 "The Google Cloud project Penguin Mail signs in with has the {service} "
 "switched off, so Google refuses before it can ask for your permission. Turn "
 "it on, wait a minute, and try again."
 msgstr ""
 
-#: app/src/ui/window.rs:1382
+#: app/src/ui/window.rs:1376
 msgid "Open Google Cloud"
 msgstr ""
 
-#: app/src/ui/window.rs:1463 app/src/ui/window/scheduled.rs:21
+#: app/src/ui/window.rs:1457 app/src/ui/window/scheduled.rs:21
 #: app/src/ui/window/shortcuts.rs:422
 msgid "Undo"
 msgstr ""
 
-#: app/src/ui/window.rs:1484
+#: app/src/ui/window.rs:1478
 msgid "Nothing to undo"
 msgstr ""
 
-#: app/src/ui/window.rs:1490
+#: app/src/ui/window.rs:1484
 msgid "{action} undone"
 msgstr ""
 
-#: app/src/ui/window.rs:1540
+#: app/src/ui/window.rs:1534
 msgid "Open or select mail to label it."
 msgstr ""
 
-#: app/src/ui/window.rs:1549
+#: app/src/ui/window.rs:1543
 msgid "Select mail from one account to label it."
 msgstr ""
 
-#: app/src/ui/window.rs:1592
+#: app/src/ui/window.rs:1586
 msgid "This account has no labels yet."
 msgstr ""
 
-#: app/src/ui/window.rs:1750
+#: app/src/ui/window.rs:1744
 msgid "Could not include {file}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:1861
+#: app/src/ui/window.rs:1855
 msgid "Downloading {file}…"
 msgstr ""
 
-#: app/src/ui/window.rs:1882 app/src/ui/window/attachments.rs:204
+#: app/src/ui/window.rs:1876 app/src/ui/window/attachments.rs:204
 #: app/src/ui/window/attachments.rs:378
 msgid "Saved {file} to Downloads"
 msgstr ""
 
-#: app/src/ui/window.rs:1900 app/src/ui/window/attachments.rs:209
+#: app/src/ui/window.rs:1894 app/src/ui/window/attachments.rs:209
 #: app/src/ui/window/attachments.rs:383
 msgid "Could not save {file}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:1916
-msgid "Could not save the settings: {reason}"
-msgstr ""
-
-#: app/src/ui/window.rs:1939
+#: app/src/ui/window.rs:1928
 msgid "Waiting for Your Browser…"
 msgstr ""
 
-#: app/src/ui/window.rs:1941
+#: app/src/ui/window.rs:1930
 msgid "Continue in your browser"
 msgstr ""
 
-#: app/src/ui/window.rs:1947
+#: app/src/ui/window.rs:1936
 msgid "Added {account}. Downloading mail…"
 msgstr ""
 
-#: app/src/ui/window.rs:1991
+#: app/src/ui/window.rs:1956
+msgid "This copy of Penguin Mail was built without Google sign-in."
+msgstr ""
+
+#: app/src/ui/window.rs:1958
+msgid "Get a Release"
+msgstr ""
+
+#: app/src/ui/window.rs:1997
 msgid "Remove {account}?"
 msgstr ""
 
-#: app/src/ui/window.rs:1995
+#: app/src/ui/window.rs:2001
 msgid ""
 "Its downloaded mail and saved sign-in are deleted from this computer. "
 "Nothing changes in Gmail."
 msgstr ""
 
-#: app/src/ui/window.rs:2011
+#: app/src/ui/window.rs:2017
 msgid "Removed {account}"
 msgstr ""
 
-#: app/src/ui/window.rs:2013
+#: app/src/ui/window.rs:2019
 msgid "Could not remove {account}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:2164
+#: app/src/ui/window.rs:2170
 msgid "Add Account…"
 msgstr ""
 
-#: app/src/ui/window.rs:2165
+#: app/src/ui/window.rs:2171
 msgid "New Smart Mailbox…"
 msgstr ""
 
-#: app/src/ui/window.rs:2172 app/src/ui/window/shortcuts.rs:485
+#: app/src/ui/window.rs:2178 app/src/ui/window/shortcuts.rs:485
 msgid "Preferences"
 msgstr ""
 
-#: app/src/ui/window.rs:2173
+#: app/src/ui/window.rs:2179
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: app/src/ui/window.rs:2181 app/src/ui/window.rs:2183
+#: app/src/ui/window.rs:2187 app/src/ui/window.rs:2189
 msgid "Main Menu"
 msgstr ""
 
-#: app/src/ui/window.rs:2436
+#: app/src/ui/window.rs:2442
 msgid "Open a message from the person first"
 msgstr ""
 
-#: app/src/ui/window.rs:2507
+#: app/src/ui/window.rs:2513
 msgid "Penguin Mail shows the new language after a restart"
 msgstr ""
 
-#: app/src/ui/window.rs:2509 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:2515 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr ""
 
