@@ -8,6 +8,15 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# The project's Google and Microsoft clients, for the owner's own builds.
+# The file is gitignored; without it the build cannot add Google accounts.
+if [ -f packaging/secrets.env ]; then
+    set -a
+    # shellcheck source=/dev/null
+    . packaging/secrets.env
+    set +a
+fi
+
 cargo build --release -p mailrs -p mailrs-cli
 
 tree=$(mktemp -d)

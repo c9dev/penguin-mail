@@ -51,6 +51,14 @@ build-options:
 modules:
   - name: penguin-mail
     buildsystem: simple
+    build-options:
+      env:
+        # Google documents that a desktop app's client secret cannot be
+        # kept confidential and is not treated as a secret, so the values
+        # sit in this public manifest; Flathub builds from source and
+        # cannot read GitHub's secrets.
+        PENGUIN_MAIL_GOOGLE_CLIENT_ID: "<the owner fills this in>"
+        PENGUIN_MAIL_GOOGLE_CLIENT_SECRET: "<the owner fills this in>"
     build-commands:
       - cargo --offline build --release --locked -p mailrs -p mailrs-cli
         --features mailrs/packaging-flatpak
