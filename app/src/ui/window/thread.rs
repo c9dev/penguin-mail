@@ -16,6 +16,7 @@ use mailrs_store::outbox::Queued;
 use mailrs_store::{messages, threads};
 use mailrs_sync::{History, MailAction, Opened, TriageAction, now_millis};
 
+use super::pictures::Pictures;
 use super::{BODY_FETCHES, MainWindow, read_cached_body};
 use crate::core::Core;
 use crate::open_thread::run::{Answer, Card, Desk, Effects, Fetched, Stored, ThreadRun};
@@ -40,6 +41,7 @@ impl MainWindow {
             window: Rc::downgrade(self),
             core: Rc::clone(&self.core),
             view: Rc::clone(view),
+            pictures: Rc::clone(&self.pictures),
         })
     }
 
@@ -82,6 +84,7 @@ pub(super) struct Ports {
     pub(super) window: Weak<MainWindow>,
     pub(super) core: Rc<Core>,
     pub(super) view: Rc<ConversationView>,
+    pub(super) pictures: Rc<Pictures>,
 }
 
 impl Ports {
@@ -267,10 +270,7 @@ impl Effects for Ports {
                     .collect()
                     .await
             };
-            let images = match self.window() {
-                Some(window) => window.inline_images(account_id, &sync, &bodies).await,
-                None => HashMap::new(),
-            };
+            let images = self.pictures.inline(account_id, &sync, &bodies).await;
             Fetched { bodies, images }
         })
     }
@@ -281,14 +281,10 @@ impl Effects for Ports {
         bodies: Vec<(String, MessageBody)>,
     ) -> Answer<'_, HashMap<String, String>> {
         Box::pin(async move {
-            let (Some(window), Ok(sync)) = (self.window(), self.sync(account_id)) else {
+            let Ok(sync) = self.sync(account_id) else {
                 return HashMap::new();
             };
-            let loaded: Vec<(String, Result<MessageBody, String>)> = bodies
-                .into_iter()
-                .map(|(id, body)| (id, Ok(body)))
-                .collect();
-            window.thumbnails(account_id, &sync, &loaded).await
+            self.pictures.thumbnails(account_id, &sync, &bodies).await
         })
     }
 

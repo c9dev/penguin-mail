@@ -18,14 +18,6 @@ use super::MainWindow;
 use crate::ui::conversation::ConversationView;
 use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 
-/// How large a picture may be before the row shows a paperclip instead.
-/// Past this the thumbnail costs more to fetch than it earns.
-const THUMBNAIL_LIMIT: i64 = 8 * 1024 * 1024;
-
-/// How wide the picture on a row is drawn, in pixels of the stored copy.
-/// Twice the 32 the page shows, so it stays sharp on a HiDPI screen.
-const THUMBNAIL_EDGE: i32 = 64;
-
 impl MainWindow {
     /// Opens one attachment. A picture appears in a window; everything
     /// else opens in the program the desktop keeps for its type.
@@ -395,84 +387,12 @@ impl MainWindow {
         }
     }
 
-    /// Fetches a small picture for each image attachment the rows list, so
-    /// a row shows what it holds. Gmail charges for each one, so this asks
-    /// only for pictures under the limit, skips what the cache already
-    /// has, and runs in the background where the user's own calls come
-    /// first.
-    pub(super) async fn thumbnails(
-        &self,
-        account_id: AccountId,
-        sync: &std::sync::Arc<crate::core::Sync>,
-        loaded: &[(String, Result<mailrs_domain::MessageBody, String>)],
-    ) -> std::collections::HashMap<String, String> {
-        let mut out = std::collections::HashMap::new();
-        for (message_id, body) in loaded {
-            let Ok(body) = body else { continue };
-            for attachment in &body.attachments {
-                let Some(attachment_id) = attachment.attachment_id.clone() else {
-                    continue;
-                };
-                if !attachment.mime_type.starts_with("image/")
-                    || attachment.size > THUMBNAIL_LIMIT
-                    || crate::render::shown_in_body(attachment, body)
-                    || out.contains_key(&attachment_id)
-                {
-                    continue;
-                }
-                let key = (account_id, message_id.clone(), attachment_id.clone());
-                if let Some(held) = self.thumbnail_cache.borrow().get(&key) {
-                    out.insert(attachment_id, held.clone());
-                    continue;
-                }
-                let (s, m, a) = (sync.clone(), message_id.clone(), attachment_id.clone());
-                let Ok(data) = self
-                    .core
-                    .call(mailrs_gmail::limiter::background(async move {
-                        s.attachment(&m, &a).await
-                    }))
-                    .await
-                else {
-                    continue;
-                };
-                let Some(uri) = shrink(&data) else { continue };
-                let mut cache = self.thumbnail_cache.borrow_mut();
-                if cache.len() >= THUMBNAIL_CACHE {
-                    cache.clear();
-                }
-                cache.insert(key, uri.clone());
-                out.insert(attachment_id, uri);
-            }
-        }
-        out
-    }
 }
 
 /// The bytes of one file that came out of an encrypted message, when the
 /// open thread holds them.
 fn opened_file(view: &ConversationView, message_id: &str, index: usize) -> Option<Vec<u8>> {
     view.find(|open| open.opened_files.get(message_id)?.get(index).cloned())
-}
-
-/// How many thumbnails to hold before starting over.
-const THUMBNAIL_CACHE: usize = 200;
-
-/// A picture small enough to sit in the page, as a PNG `data:` URI.
-/// Returns None when the bytes are not a picture this machine can read.
-fn shrink(data: &[u8]) -> Option<String> {
-    let stream = gio::MemoryInputStream::from_bytes(&glib::Bytes::from(data));
-    let pixbuf = gtk::gdk_pixbuf::Pixbuf::from_stream_at_scale(
-        &stream,
-        THUMBNAIL_EDGE,
-        THUMBNAIL_EDGE,
-        true,
-        gio::Cancellable::NONE,
-    )
-    .ok()?;
-    let bytes = pixbuf.save_to_bufferv("png", &[]).ok()?;
-    let encoded =
-        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, bytes.as_slice());
-    Some(format!("data:image/png;base64,{encoded}"))
 }
 
 /// A window size that holds the picture without covering the screen.

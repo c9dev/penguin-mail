@@ -8,7 +8,6 @@ use std::path::PathBuf;
 use std::rc::{Rc, Weak};
 
 use adw::prelude::*;
-use base64::Engine;
 use gtk::{gio, glib};
 use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 use mailrs_domain::{
@@ -51,6 +50,7 @@ mod notice;
 mod organize;
 mod outbox;
 mod pgp;
+mod pictures;
 mod previews;
 mod reach;
 mod reminders;
@@ -64,17 +64,9 @@ mod triage;
 
 pub use notice::Notice;
 
-/// Largest inline image embedded into a page.
-const INLINE_IMAGE_LIMIT: usize = 5 * 1024 * 1024;
-
 /// Bodies fetched at once when a thread opens. Each one is a 5-unit Gmail
 /// call and an account may spend 250 units a second.
 pub(super) const BODY_FETCHES: usize = 10;
-
-/// Inline images kept in memory, so reopening a conversation does not
-/// download the same pictures again.
-const INLINE_IMAGE_CACHE: usize = 64;
-
 
 /// Whether a refresh should list the mailbox again. Listing a folder or a
 /// search means a Gmail search for every account on screen, so the window
@@ -126,13 +118,9 @@ pub struct MainWindow {
     assistant_split: adw::OverlaySplitView,
     categories: categories::CategoryBar,
     follow_up: followup::FollowUpBanner,
-    /// Inline images already downloaded, by account, message and
-    /// attachment id. Gmail charges 5 units for each one and a
-    /// conversation is often reopened.
-    inline_cache: RefCell<HashMap<(AccountId, String, String), String>>,
-    /// Pictures for the attachment rows, held the same way and for the
-    /// same reason.
-    thumbnail_cache: RefCell<HashMap<(AccountId, String, String), String>>,
+    /// The inline images and the attachment rows' pictures already
+    /// fetched.
+    pictures: Rc<pictures::Pictures>,
     /// Senders whose remote images may load. Read from the store once and
     /// kept here, since every thread that opens asks about it.
     image_senders: RefCell<Vec<mailrs_store::image_senders::ImageSender>>,
@@ -534,8 +522,7 @@ impl MainWindow {
                 assistant_split,
                 categories: categories::CategoryBar::new(app.settings_with(|s| s.default_category)),
                 follow_up: followup::FollowUpBanner::new(),
-                inline_cache: RefCell::new(HashMap::new()),
-                thumbnail_cache: RefCell::new(HashMap::new()),
+                pictures: Rc::new(pictures::Pictures::new(Rc::clone(&app.core))),
                 image_senders: RefCell::new(Vec::new()),
                 detached: RefCell::new(Vec::new()),
                 previews: previews::Previews::default(),
@@ -1047,57 +1034,6 @@ impl MainWindow {
             return;
         }
         self.load_into(Rc::clone(&self.conversation), summary);
-    }
-
-    /// Downloads `cid:` images that HTML bodies reference, as `data:` URIs.
-    pub(super) async fn inline_images(
-        &self,
-        account_id: AccountId,
-        sync: &std::sync::Arc<crate::core::Sync>,
-        loaded: &[(String, Result<MessageBody, String>)],
-    ) -> HashMap<String, HashMap<String, String>> {
-        let mut out = HashMap::new();
-        for (message_id, body) in loaded {
-            let Ok(body) = body else { continue };
-            if !body.html.as_deref().is_some_and(|h| h.contains("cid:")) {
-                continue;
-            }
-            let mut images = HashMap::new();
-            for attachment in &body.attachments {
-                let (Some(cid), Some(attachment_id)) =
-                    (&attachment.content_id, &attachment.attachment_id)
-                else {
-                    continue;
-                };
-                if !attachment.mime_type.starts_with("image/")
-                    || attachment.size as usize > INLINE_IMAGE_LIMIT
-                {
-                    continue;
-                }
-                let key = (account_id, message_id.clone(), attachment_id.clone());
-                if let Some(held) = self.inline_cache.borrow().get(&key) {
-                    images.insert(cid.clone(), held.clone());
-                    continue;
-                }
-                let (s, m, a) = (sync.clone(), message_id.clone(), attachment_id.clone());
-                if let Ok(bytes) = self
-                    .core
-                    .call(async move { s.attachment(&m, &a).await })
-                    .await
-                {
-                    let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
-                    let url = format!("data:{};base64,{encoded}", attachment.mime_type);
-                    let mut cache = self.inline_cache.borrow_mut();
-                    if cache.len() >= INLINE_IMAGE_CACHE {
-                        cache.clear();
-                    }
-                    cache.insert(key, url.clone());
-                    images.insert(cid.clone(), url);
-                }
-            }
-            out.insert(message_id.clone(), images);
-        }
-        out
     }
 
     // ---- Actions on the selection or the open conversation -----------------

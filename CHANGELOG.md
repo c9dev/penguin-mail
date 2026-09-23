@@ -5,6 +5,15 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Improved
+
+- A conversation with many pictures opens faster and never stalls the
+  window: pictures arrive several at a time, and the small pictures on
+  attachment rows are made away from the window, where ten large photos
+  used to hold it up for about a second and a half.
+- Penguin Mail keeps at most 48 MB of pictures from mail it has shown,
+  where it could hold 430 MB before.
+
 ### Fixed
 
 - Opening an attachment no longer leaves a copy behind for good. The copy
