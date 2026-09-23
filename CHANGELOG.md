@@ -5,6 +5,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Fixed
+
+- Installed from the tarball into a folder with a space in its path,
+  Penguin Mail starts from the app grid and at login, where the launcher
+  used to run nothing.
+
 ## 0.1.7 (2026-09-23)
 
 ### New

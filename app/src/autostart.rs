@@ -103,7 +103,7 @@ pub fn set_enabled(path: &Path, exe: &Path, enabled: bool) -> std::io::Result<()
 /// every backslash again, and a literal `%` is written `%%`. Without the
 /// quotes a path with a space would start a program named by its first
 /// half.
-fn exec_argument(exe: &Path) -> String {
+pub(crate) fn exec_argument(exe: &Path) -> String {
     let mut quoted = String::from("\"");
     for c in exe.to_string_lossy().chars() {
         match c {
