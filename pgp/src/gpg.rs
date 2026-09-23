@@ -56,6 +56,16 @@ impl Pgp {
     }
 }
 
+/// What every run that reads a message adds. The person's gpg.conf may
+/// say `auto-key-retrieve`, and then a signature from a key gpg lacks sends
+/// it to a key server or to the sender's own domain for one: a read
+/// receipt, sent the moment the message opens. `auto-key-import` would put
+/// a key that travelled inside the signature into the keyring, where the
+/// composer would offer it for encryption. Opening a message does neither.
+pub(crate) fn reading(command: &mut Command) {
+    command.args(["--no-auto-key-retrieve", "--no-auto-key-import"]);
+}
+
 /// What to report when gpg would not do what it was asked. The status
 /// lines name the reason; the exit code on its own never does.
 pub(crate) fn failure(run: &Run) -> PgpError {

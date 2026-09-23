@@ -348,10 +348,11 @@ pub(crate) fn wrapper_parts(raw: &[u8]) -> Option<(&[u8], &[u8])> {
 pub struct Found {
     /// Whether the message arrived encrypted and the engine opened it.
     pub encrypted: bool,
-    /// The signature over `part`. On an encrypted message only one that
-    /// travelled inside the encryption counts, since anyone can wrap
-    /// somebody else's ciphertext in a signature of their own.
-    pub signature: Option<Signed>,
+    /// The signatures over `part`, in the order the engine reported them.
+    /// On an encrypted message only ones that travelled inside the
+    /// encryption count, since anyone can wrap somebody else's ciphertext
+    /// in a signature of their own.
+    pub signatures: Vec<Signed>,
     /// What the engine checked or opened. The window draws this and
     /// nothing else, so a part the signature does not cover never appears
     /// under the signer's name.
@@ -484,9 +485,9 @@ pub fn read(
     body.one_click_unsubscribe = arrived.one_click_unsubscribe;
     body.provenance = arrived.provenance.clone();
     body.protection = arrived.protection;
-    let mark = match (&found.signature, found.encrypted) {
+    let mark = match (chosen(&found.signatures, from), found.encrypted) {
         (Some(signed), false) => signed_mark(standard, signed, from),
-        (signature, true) => encrypted_mark(standard, signature.as_ref(), from, files.len()),
+        (signature, true) => encrypted_mark(standard, signature, from, files.len()),
         // An engine that neither opened nor checked anything has nothing
         // to vouch for, which is what an unchecked signature says.
         (None, false) => signed_mark(
@@ -505,6 +506,24 @@ pub fn read(
         files,
         sealed: found.encrypted,
     }
+}
+
+/// The one signature of several the card speaks for. One that does not
+/// match wins, since it means the text is not what that signer signed;
+/// then a good one from the sender; then any good one; then the first.
+fn chosen<'a>(signatures: &'a [Signed], from: Option<&str>) -> Option<&'a Signed> {
+    let good = |signed: &&Signed| signed.verdict == Verdict::Good;
+    signatures
+        .iter()
+        .find(|signed| signed.verdict == Verdict::Bad)
+        .or_else(|| {
+            signatures
+                .iter()
+                .filter(good)
+                .find(|signed| sender(&signed.signer, from).is_some())
+        })
+        .or_else(|| signatures.iter().find(good))
+        .or_else(|| signatures.first())
 }
 
 /// What the card says about a signature over a message that arrived in
@@ -1306,7 +1325,7 @@ mod tests {
     ) -> Mark {
         let found = Found {
             encrypted: false,
-            signature: Some(Signed {
+            signatures: vec![Signed {
                 verdict: Verdict::Good,
                 signer: Signer {
                     name: Some("Ada Lovelace".into()),
@@ -1320,10 +1339,65 @@ mod tests {
                     key: None,
                 },
                 vouched,
-            }),
+            }],
             part: Part::Text("Meet at six.".into()),
         };
         read(standard, Ok(found), &MessageBody::default(), Some(from)).mark
+    }
+
+    fn signed_by(verdict: Verdict, address: &str) -> Signed {
+        Signed {
+            verdict,
+            signer: Signer {
+                name: None,
+                addresses: vec![Named {
+                    address: address.into(),
+                    vouched: Vouched::Yes,
+                }],
+                key: None,
+            },
+            vouched: Vouched::Yes,
+        }
+    }
+
+    fn several(signatures: Vec<Signed>, from: &str) -> Mark {
+        let found = Found {
+            encrypted: false,
+            signatures,
+            part: Part::Text("Meet at six.".into()),
+        };
+        read(
+            Standard::Pgp,
+            Ok(found),
+            &MessageBody::default(),
+            Some(from),
+        )
+        .mark
+    }
+
+    #[test]
+    fn one_signature_that_does_not_match_is_what_the_card_says() {
+        let mark = several(
+            vec![
+                signed_by(Verdict::Good, "ada@example.test"),
+                signed_by(Verdict::Bad, "bo@example.test"),
+            ],
+            "ada@example.test",
+        );
+        assert_eq!(mark.tone, Tone::Bad, "{mark:?}");
+    }
+
+    #[test]
+    fn of_several_good_signatures_the_senders_is_the_one_named() {
+        let mark = several(
+            vec![
+                signed_by(Verdict::Good, "mallory@example.test"),
+                signed_by(Verdict::Good, "ada@example.test"),
+            ],
+            "ada@example.test",
+        );
+        assert_eq!(mark.title, "Signed by ada@example.test");
+        assert_eq!(mark.tone, Tone::Good);
     }
 
     #[test]

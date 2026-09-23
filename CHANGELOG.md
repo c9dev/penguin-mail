@@ -18,6 +18,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   names somebody else, now says so on the card.
 - Replying to or forwarding a message that arrived encrypted starts with
   Encrypt on, and asks before the quoted words go out readable.
+- Opening a signed OpenPGP message never fetches the signer's key from the
+  network, even when gpg.conf asks for that, so the sender cannot learn
+  when you read it.
 
 ## 0.1.7 (2026-09-23)
 

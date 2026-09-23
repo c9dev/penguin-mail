@@ -65,7 +65,7 @@ pub fn open(pgp: &Pgp, opening: Opening, raw: &[u8], body: &MessageBody) -> Resu
             let found = pgp.verify(part, signature).map_err(refusal)?;
             Ok(Found {
                 encrypted: false,
-                signature: Some(signed(&found)),
+                signatures: found.iter().map(signed).collect(),
                 part: Part::Entity(part.to_vec()),
             })
         }
@@ -74,7 +74,7 @@ pub fn open(pgp: &Pgp, opening: Opening, raw: &[u8], body: &MessageBody) -> Resu
             let opened = pgp.decrypt(ciphertext).map_err(refusal)?;
             Ok(Found {
                 encrypted: true,
-                signature: opened.signature.as_ref().map(signed),
+                signatures: opened.signatures.iter().map(signed).collect(),
                 part: Part::Entity(opened.part),
             })
         }
@@ -85,7 +85,7 @@ pub fn open(pgp: &Pgp, opening: Opening, raw: &[u8], body: &MessageBody) -> Resu
                 // Clearsigned text carries a signature and was never
                 // encrypted; armor that opened without one was.
                 encrypted: !matches!(inline::armor(text), Some(inline::Armor::Clearsigned)),
-                signature: opened.signature.as_ref().map(signed),
+                signatures: opened.signatures.iter().map(signed).collect(),
                 // The armor said nothing about a character set, so these
                 // bytes are read the way a body with no charset is.
                 part: Part::Text(decode_charset(&opened.text, None)),
@@ -422,7 +422,7 @@ mod tests {
             Standard::Pgp,
             Ok(Found {
                 encrypted: false,
-                signature: Some(signed(signature)),
+                signatures: vec![signed(signature)],
                 part: Part::Text("Meet at six.".into()),
             }),
             &MessageBody::default(),
@@ -438,7 +438,7 @@ mod tests {
             Standard::Pgp,
             Ok(Found {
                 encrypted: true,
-                signature: signature.map(signed),
+                signatures: signature.map(signed).into_iter().collect(),
                 part: Part::Text("Meet at six.".into()),
             }),
             &MessageBody::default(),

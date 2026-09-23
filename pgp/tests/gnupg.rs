@@ -90,3 +90,35 @@ fn every_signature_the_lines_describe_comes_back() {
     );
     assert_eq!(found[1].trust, None, "the trust line was about the first");
 }
+
+/// The person's gpg.conf can say `auto-key-retrieve`, and then checking a
+/// signature from a key gpg lacks asks a key server or the sender's own
+/// domain for it: a read receipt, sent the moment the message opens. A key
+/// that arrives inside a signature (`auto-key-import`) would land in the
+/// keyring the same way, where encryption could pick it up.
+#[test]
+fn reading_a_message_never_goes_looking_for_a_key() {
+    let dir = tempfile::tempdir().expect("a temp directory");
+    let asked = dir.path().join("asked");
+    let path = dir.path().join("gpg");
+    std::fs::write(
+        &path,
+        format!("#!/bin/sh\necho \"$@\" >> {}\n", asked.to_string_lossy()),
+    )
+    .expect("write");
+    permit_run(&path);
+    let pgp = mailrs_pgp::Pgp::find_on(&dir.path().to_string_lossy()).expect("found");
+
+    let _ = pgp.verify(b"Meet at six.", b"signature");
+    let _ = pgp.decrypt(b"ciphertext");
+    let _ =
+        pgp.open_inline("-----BEGIN PGP SIGNED MESSAGE-----\nHi\n-----END PGP SIGNATURE-----\n");
+
+    let asked = std::fs::read_to_string(asked).expect("gpg ran");
+    let runs: Vec<&str> = asked.lines().collect();
+    assert_eq!(runs.len(), 3, "{asked}");
+    for run in runs {
+        assert!(run.contains("--no-auto-key-retrieve"), "{run}");
+        assert!(run.contains("--no-auto-key-import"), "{run}");
+    }
+}

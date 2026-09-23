@@ -1326,215 +1326,215 @@ msgstr ""
 msgid "A message goes out under one standard or the other. {pgp} {smime}"
 msgstr ""
 
-#: app/src/protection.rs:540
+#: app/src/protection.rs:559
 msgid ""
 "This key does not name {sender}, the address the message says it is from."
 msgstr ""
 
-#: app/src/protection.rs:544
+#: app/src/protection.rs:563
 msgid ""
 "This certificate does not name {sender}, the address the message says it is "
 "from."
 msgstr ""
 
-#: app/src/protection.rs:553
+#: app/src/protection.rs:572
 msgid "Signed by {signer}"
 msgstr ""
 
-#: app/src/protection.rs:559
+#: app/src/protection.rs:578
 msgid "This message changed after it was signed"
 msgstr ""
 
-#: app/src/protection.rs:561
+#: app/src/protection.rs:580
 msgid "The signature of {signer} does not match what arrived."
 msgstr ""
 
-#: app/src/protection.rs:568
+#: app/src/protection.rs:587
 msgid "Signed by {signer}, whose key has expired"
 msgstr ""
 
-#: app/src/protection.rs:572
+#: app/src/protection.rs:591
 msgid "The text is as it was written, and the key behind it ran out."
 msgstr ""
 
-#: app/src/protection.rs:578
+#: app/src/protection.rs:597
 msgid "Signed by {signer}, whose certificate has run out"
 msgstr ""
 
-#: app/src/protection.rs:582
+#: app/src/protection.rs:601
 msgid ""
 "The text is as it was written, and the certificate behind it has expired."
 msgstr ""
 
-#: app/src/protection.rs:588
+#: app/src/protection.rs:607
 msgid "Signed by {signer}, who took this key back"
 msgstr ""
 
-#: app/src/protection.rs:592
+#: app/src/protection.rs:611
 msgid "The owner revoked it, so it says nothing about who wrote this."
 msgstr ""
 
-#: app/src/protection.rs:598
+#: app/src/protection.rs:617
 msgid "Signed by {signer}, whose certificate was taken back"
 msgstr ""
 
-#: app/src/protection.rs:602
+#: app/src/protection.rs:621
 msgid "Whoever issued it revoked it, so it says nothing about who wrote this."
 msgstr ""
 
-#: app/src/protection.rs:608
+#: app/src/protection.rs:627
 msgid "Signed by {signer}, and the signature has run out"
 msgstr ""
 
-#: app/src/protection.rs:612
+#: app/src/protection.rs:631
 msgid "It carried a date to stop being good on, and that date has passed."
 msgstr ""
 
-#: app/src/protection.rs:617
+#: app/src/protection.rs:636
 msgid "Signed by a key this computer does not hold"
 msgstr ""
 
-#: app/src/protection.rs:619
+#: app/src/protection.rs:638
 msgid "Nothing here can check it. Ask gpg for key {key}."
 msgstr ""
 
-#: app/src/protection.rs:626
+#: app/src/protection.rs:645
 msgid "it names"
 msgstr ""
 
-#: app/src/protection.rs:632
+#: app/src/protection.rs:651
 msgid "Signed by a certificate this computer does not hold"
 msgstr ""
 
-#: app/src/protection.rs:634
+#: app/src/protection.rs:653
 msgid ""
 "The message carried none either, so there is nothing here to check it "
 "against."
 msgstr ""
 
-#: app/src/protection.rs:640
+#: app/src/protection.rs:659
 msgid "gpg could not check this signature"
 msgstr ""
 
-#: app/src/protection.rs:645
+#: app/src/protection.rs:664
 msgid "gpgsm could not check this signature"
 msgstr ""
 
-#: app/src/protection.rs:668
+#: app/src/protection.rs:687
 msgid "Encrypted, and signed by {signer}"
 msgstr ""
 
-#: app/src/protection.rs:677
+#: app/src/protection.rs:696
 msgid "Encrypted. {what}"
 msgstr ""
 
-#: app/src/protection.rs:683
+#: app/src/protection.rs:702
 msgid "This message arrived encrypted"
 msgstr ""
 
-#: app/src/protection.rs:685
+#: app/src/protection.rs:704
 msgid "Nobody signed it, so it says nothing about who sent it."
 msgstr ""
 
-#: app/src/protection.rs:693
+#: app/src/protection.rs:712
 msgid "{detail} {files}"
 msgstr ""
 
-#: app/src/protection.rs:707
+#: app/src/protection.rs:726
 msgid "This message is encrypted to a key you do not hold"
 msgstr ""
 
-#: app/src/protection.rs:709
+#: app/src/protection.rs:728
 msgid "Whoever sent it used a key gpg has no secret half of."
 msgstr ""
 
-#: app/src/protection.rs:714
+#: app/src/protection.rs:733
 msgid "This message is encrypted to a certificate you do not hold"
 msgstr ""
 
-#: app/src/protection.rs:716
+#: app/src/protection.rs:735
 msgid "Whoever sent it used a certificate gpgsm has no secret key for."
 msgstr ""
 
-#: app/src/protection.rs:722
+#: app/src/protection.rs:741
 msgid "This message says it is OpenPGP and is not"
 msgstr ""
 
-#: app/src/protection.rs:723
+#: app/src/protection.rs:742
 msgid "This message says it is S/MIME and is not"
 msgstr ""
 
-#: app/src/protection.rs:726
+#: app/src/protection.rs:745
 msgid "Its parts are not where a signed or encrypted message keeps them."
 msgstr ""
 
-#: app/src/protection.rs:732
+#: app/src/protection.rs:751
 msgid "gpg could not open this message"
 msgstr ""
 
-#: app/src/protection.rs:733
+#: app/src/protection.rs:752
 msgid "gpgsm could not open this message"
 msgstr ""
 
-#: app/src/protection.rs:746
+#: app/src/protection.rs:765
 msgid "You marked this key as one not to trust."
 msgstr ""
 
-#: app/src/protection.rs:747
+#: app/src/protection.rs:766
 msgid "This is one of your own keys."
 msgstr ""
 
-#: app/src/protection.rs:748
+#: app/src/protection.rs:767
 msgid "You have vouched for this key."
 msgstr ""
 
-#: app/src/protection.rs:749
+#: app/src/protection.rs:768
 msgid "People you trust have vouched for this key."
 msgstr ""
 
-#: app/src/protection.rs:751
+#: app/src/protection.rs:770
 msgid "Nobody has vouched for this key, so it names no one."
 msgstr ""
 
-#: app/src/protection.rs:754
+#: app/src/protection.rs:773
 msgid "Its certificate leads back to an authority you trust."
 msgstr ""
 
-#: app/src/protection.rs:757
+#: app/src/protection.rs:776
 msgid "Its certificate leads back to nobody you trust, so it names no one."
 msgstr ""
 
-#: app/src/protection.rs:760
+#: app/src/protection.rs:779
 msgid "Nothing here says who that certificate belongs to."
 msgstr ""
 
-#: app/src/protection.rs:796
+#: app/src/protection.rs:815
 msgid "key {key}"
 msgstr ""
 
-#: app/src/protection.rs:799
+#: app/src/protection.rs:818
 msgid "a key gpg would not name"
 msgstr ""
 
-#: app/src/protection.rs:800
+#: app/src/protection.rs:819
 msgid "a certificate gpgsm would not name"
 msgstr ""
 
-#: app/src/protection.rs:811
+#: app/src/protection.rs:830
 msgid "It carries a file, kept in this window only."
 msgstr ""
 
-#: app/src/protection.rs:813
+#: app/src/protection.rs:832
 msgid "It carries {count} file, kept in this window only."
 msgid_plural "It carries {count} files, kept in this window only."
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/protection.rs:899
+#: app/src/protection.rs:918
 msgid "{names} or {last}"
 msgstr ""
 
-#: app/src/protection.rs:911
+#: app/src/protection.rs:930
 msgid "{names} and {last}"
 msgstr ""
 

@@ -4,7 +4,7 @@ use std::io::Write;
 
 use crate::error::PgpError;
 use crate::gnupg::Pinentry;
-use crate::gpg::{Pgp, failure};
+use crate::gpg::{Pgp, failure, reading};
 use crate::status::{self, Signature};
 
 /// What was inside a `multipart/encrypted` message.
@@ -13,10 +13,11 @@ pub struct Decrypted {
     /// The MIME entity the encryption held, headers and all. It is a message
     /// part in its own right, so the caller parses it as it would any other.
     pub part: Vec<u8>,
-    /// The signature the sender put inside the encryption, when there was
-    /// one. A signature that travels inside is the only kind worth trusting
-    /// on an encrypted message, since anyone can wrap a new outer one.
-    pub signature: Option<Signature>,
+    /// The signatures the sender put inside the encryption, when there
+    /// were any. A signature that travels inside is the only kind worth
+    /// trusting on an encrypted message, since anyone can wrap a new outer
+    /// one.
+    pub signatures: Vec<Signature>,
 }
 
 impl Pgp {
@@ -31,17 +32,22 @@ impl Pgp {
     ///
     /// A signature that does not match, or one from a key this computer does
     /// not hold, is an answer rather than an error: the [`Signature`] says
-    /// which it was.
-    pub fn verify(&self, signed_part: &[u8], signature: &[u8]) -> Result<Signature, PgpError> {
+    /// which it was. One detached signature can carry several, and every
+    /// one comes back, in order.
+    pub fn verify(&self, signed_part: &[u8], signature: &[u8]) -> Result<Vec<Signature>, PgpError> {
         // gpg reads a detached signature from a file, so it needs one.
         let mut file = tempfile::NamedTempFile::new().map_err(temp)?;
         file.write_all(signature).map_err(temp)?;
         file.flush().map_err(temp)?;
         let run = self.run(signed_part, Pinentry::Never, |command| {
+            reading(command);
             command.arg("--verify").arg(file.path()).arg("-");
         })?;
-        let found = status::signature(&run.status).ok_or_else(|| failure(&run))?;
-        Ok(self.named(found))
+        let found = status::signatures(&run.status);
+        if found.is_empty() {
+            return Err(failure(&run));
+        }
+        Ok(found.into_iter().map(|found| self.named(found)).collect())
     }
 
     /// Opens the ciphertext of an RFC 3156 `multipart/encrypted` message:
@@ -53,6 +59,7 @@ impl Pgp {
         // The one read here that needs the person's own secret key, and
         // gpg-agent asks for the passphrase that unlocks it.
         let run = self.run(encrypted_part, Pinentry::MayAsk, |command| {
+            reading(command);
             command.arg("--decrypt");
         })?;
         if !run.ok && !run.says("DECRYPTION_OKAY") {
@@ -60,7 +67,10 @@ impl Pgp {
         }
         Ok(Decrypted {
             part: run.out,
-            signature: status::signature(&run.status).map(|found| self.named(found)),
+            signatures: status::signatures(&run.status)
+                .into_iter()
+                .map(|found| self.named(found))
+                .collect(),
         })
     }
 }

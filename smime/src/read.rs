@@ -42,6 +42,10 @@ impl Smime {
         let mut file = tempfile::NamedTempFile::new().map_err(temp)?;
         file.write_all(signature).map_err(temp)?;
         file.flush().map_err(temp)?;
+        // gpgsm fetches no certificate over the network unless the
+        // person's gpgsm.conf says `auto-issuer-key-retrieve`, and it has no
+        // option to say otherwise here. gpg's equivalent is switched off on
+        // every read in `mailrs_pgp`.
         let run = self.run(signed_part, Pinentry::Never, |command| {
             command
                 .arg("--assume-base64")

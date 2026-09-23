@@ -52,7 +52,7 @@ pub fn open(smime: &Smime, opening: Opening, raw: &[u8]) -> Result<Found, Refusa
             let found = smime.verify(part, signature).map_err(refusal)?;
             Ok(Found {
                 encrypted: false,
-                signature: Some(signed(&found)),
+                signatures: vec![signed(&found)],
                 part: Part::Entity(part.to_vec()),
             })
         }
@@ -61,7 +61,7 @@ pub fn open(smime: &Smime, opening: Opening, raw: &[u8]) -> Result<Found, Refusa
             let opened = smime.open_signed(blob).map_err(refusal)?;
             Ok(Found {
                 encrypted: false,
-                signature: Some(signed(&opened.signature)),
+                signatures: vec![signed(&opened.signature)],
                 part: Part::Entity(opened.part),
             })
         }
@@ -162,7 +162,7 @@ fn opened(smime: &Smime, part: &[u8]) -> Found {
     };
     Found {
         encrypted: true,
-        signature: signature.as_ref().map(signed),
+        signatures: signature.as_ref().map(signed).into_iter().collect(),
         part: Part::Entity(part),
     }
 }
@@ -271,7 +271,7 @@ mod tests {
             Standard::Smime,
             Ok(Found {
                 encrypted: false,
-                signature: Some(signed(signature)),
+                signatures: vec![signed(signature)],
                 part: Part::Text("Meet at six.".into()),
             }),
             &MessageBody::default(),
@@ -287,7 +287,7 @@ mod tests {
             Standard::Smime,
             Ok(Found {
                 encrypted: true,
-                signature: signature.map(signed),
+                signatures: signature.map(signed).into_iter().collect(),
                 part: Part::Text("Meet at six.".into()),
             }),
             &MessageBody::default(),
