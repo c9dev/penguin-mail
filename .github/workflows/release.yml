@@ -196,6 +196,28 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The snap builds inside its own container, where these secrets do
+      # not reach, so they go into the recipe it builds from. The recipe
+      # in the repository keeps empty values. A run without the secrets,
+      # such as one from a fork, leaves them empty, and that snap says it
+      # cannot sign in to Google.
+      - name: Put the Google client into the recipe
+        env:
+          PENGUIN_MAIL_GOOGLE_CLIENT_ID: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_ID }}
+          PENGUIN_MAIL_GOOGLE_CLIENT_SECRET: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_SECRET }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          path = "snap/snapcraft.yaml"
+          recipe = open(path).read()
+          for name in ("PENGUIN_MAIL_GOOGLE_CLIENT_ID", "PENGUIN_MAIL_GOOGLE_CLIENT_SECRET"):
+              empty = f'{name}: ""'
+              if recipe.count(empty) != 1:
+                  raise SystemExit(f"snap/snapcraft.yaml has no single empty {name}")
+              # A JSON string is a YAML double-quoted string too.
+              recipe = recipe.replace(empty, f"{name}: {json.dumps(os.environ[name])}")
+          open(path, "w").write(recipe)
+          PY
       # Builds in an LXD container, from snap/snapcraft.yaml.
       - uses: snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79 # v1.3.0
         id: snapcraft

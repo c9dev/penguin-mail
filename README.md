@@ -489,7 +489,10 @@ publishes them with the changelog once CI has passed on the tagged
 commit. The release's `SHA256SUMS` goes out signed as `SHA256SUMS.asc`,
 with the same `APT_SIGNING_KEY` as the repositories. The workflow also
 builds the snap and sends it to the Snap Store's edge channel once the
-`SNAPCRAFT_STORE_CREDENTIALS` secret exists. When it finishes, the Package repositories workflow rebuilds the apt and dnf
+`SNAPCRAFT_STORE_CREDENTIALS` secret exists. Every package gets the Google
+client from the `PENGUIN_MAIL_GOOGLE_CLIENT_ID` and
+`PENGUIN_MAIL_GOOGLE_CLIENT_SECRET` secrets; for the snap, the workflow
+writes them into `snap/snapcraft.yaml` before it builds. When it finishes, the Package repositories workflow rebuilds the apt and dnf
 repositories on GitHub Pages from the five newest releases with
 `scripts/apt-repo.sh` and `scripts/rpm-repo.sh`, signed with the key in
 the `APT_SIGNING_KEY` secret. Run it from the Actions tab to publish again
