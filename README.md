@@ -12,7 +12,7 @@ A Gmail client for the GNOME desktop, written in Rust.
 [![Rust 1.98](https://img.shields.io/badge/rust-1.98-orange?logo=rust)](https://www.rust-lang.org)
 [![GTK 4 and libadwaita 1.8](https://img.shields.io/badge/GTK_4-libadwaita_1.8-4a86cf?logo=gnome)](https://gnome.pages.gitlab.gnome.org/libadwaita/)
 
-[Watch the tour](https://github.com/c9dev/penguin-mail/releases/download/v0.2.0/penguin-mail-tour.mp4) · [Install](#install) · [Features](#features) · [Screenshots](#screenshots) · [Changelog](CHANGELOG.md)
+[Watch the tour](https://youtu.be/0PyJCsw1FSE) · [Install](#install) · [Features](#features) · [Screenshots](#screenshots) · [Changelog](CHANGELOG.md)
 
 </div>
 
@@ -21,7 +21,7 @@ shows them in one inbox or one at a time, and keeps your mail on your own
 computer. It talks to Google directly, signed in with your Google account,
 so no other server sees your mail.
 
-[![A two-minute tour of Penguin Mail: play the video](docs/screenshots/tour.png)](https://github.com/c9dev/penguin-mail/releases/download/v0.2.0/penguin-mail-tour.mp4)
+[![A two-minute tour of Penguin Mail: play the video](docs/screenshots/tour.png)](https://youtu.be/0PyJCsw1FSE)
 
 ## Features
 
