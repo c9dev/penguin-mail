@@ -158,11 +158,17 @@ impl App {
             app.watch_for_tray_host();
         }
         let weak = Rc::downgrade(&app);
-        gio::NetworkMonitor::default().connect_network_available_notify(move |monitor| {
-            if monitor.is_network_available()
-                && let Some(app) = weak.upgrade()
-            {
-                app.core.poke_all();
+        let monitor = gio::NetworkMonitor::default();
+        app.core.set_network(monitor.is_network_available());
+        monitor.connect_network_available_notify(move |monitor| {
+            let Some(app) = weak.upgrade() else { return };
+            let available = monitor.is_network_available();
+            // The engine pauses or wakes each account's loop itself.
+            app.core.set_network(available);
+            if available {
+                // The folder on screen may have changed on Gmail while
+                // the network was gone.
+                app.core.forget_remote();
                 // Whatever is waiting in the outbox has a widening
                 // interval to sit out; the network coming back is better
                 // news than any of it.

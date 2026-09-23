@@ -119,7 +119,7 @@ msgstr "O assistente a listar o correio que aguarda resposta"
 msgid "The layout on a narrow screen"
 msgstr "A disposição num ecrã estreito"
 
-#: app/src/app.rs:294
+#: app/src/app.rs:300
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -1028,7 +1028,7 @@ msgstr "Escolha uma hora no futuro"
 msgid "On {date}, {sender} wrote:"
 msgstr "A {date}, {sender} escreveu:"
 
-#: app/src/core.rs:161
+#: app/src/core.rs:165
 msgid ""
 "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your "
 "mail. Stop it, then open Penguin Mail again."
@@ -1036,17 +1036,17 @@ msgstr ""
 "Outra cópia do Penguin Mail, ou o penguin-mail-cli sync, está a sincronizar "
 "o seu correio. Pare esse processo e volte a abrir o Penguin Mail."
 
-#: app/src/core.rs:176
+#: app/src/core.rs:180
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr ""
 "O Penguin Mail não conseguiu atualizar o arquivo de correio e manteve o "
 "anterior."
 
-#: app/src/core.rs:573
+#: app/src/core.rs:592
 msgid "Demo mode cannot add real accounts."
 msgstr "O modo de demonstração não adiciona contas reais."
 
-#: app/src/core.rs:577
+#: app/src/core.rs:596
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -1054,11 +1054,11 @@ msgstr ""
 "Esta cópia do Penguin Mail foi compilada sem início de sessão Google. "
 "Obtenha uma versão em github.com/c9dev/penguin-mail/releases."
 
-#: app/src/core.rs:595
+#: app/src/core.rs:614
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Desistiu de esperar pelo navegador ao fim de cinco minutos."
 
-#: app/src/core.rs:603
+#: app/src/core.rs:622
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 "Iniciou sessão como {account}. Escolha {wanted} para voltar a ligar essa "
@@ -4581,7 +4581,9 @@ msgstr "A transferir correio"
 
 #: app/src/ui/sidebar.rs:709
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
-msgstr "A sincronização parou depois de um erro; reinicie o Penguin Mail para tentar de novo"
+msgstr ""
+"A sincronização parou depois de um erro; reinicie o Penguin Mail para tentar "
+"de novo"
 
 #: app/src/ui/sidebar.rs:742
 msgid "Automatic Reply…"

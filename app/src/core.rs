@@ -2,7 +2,7 @@
 //! tokio runtime runs the engine and every database and network call. The
 //! UI hands futures to `Core::call` and awaits the result on the main loop.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::future::Future;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -112,6 +112,10 @@ pub struct Core {
     events_tx: async_channel::Sender<ChangeEvent>,
     pub events: async_channel::Receiver<ChangeEvent>,
     in_flight: Arc<AtomicUsize>,
+    /// Whether the computer has a network, as the network monitor last
+    /// said. A new engine, after a change to the sync settings, starts
+    /// from this rather than from the engine's own guess.
+    network: Cell<bool>,
     /// Keeps `penguin-mail-cli sync` off this store while the app runs.
     /// Changing the sync settings restarts the engine in this process, so
     /// the lock stays with the core rather than with one engine.
@@ -238,6 +242,7 @@ impl Core {
             events_tx,
             events,
             in_flight: Arc::new(AtomicUsize::new(0)),
+            network: Cell::new(true),
             _sync_lock: sync_lock,
         });
         core.start_engine();
@@ -281,6 +286,7 @@ impl Core {
         let config = self.config.borrow().clone();
         let (engine, engine_events) = SyncEngine::new(self.db.clone(), config.engine_config());
         let engine = Arc::new(engine);
+        engine.set_network(self.network.get());
         self.engine.replace(Some(Arc::clone(&engine)));
         let forward = self.events_tx.clone();
         self.runtime.spawn(async move {
@@ -547,6 +553,19 @@ impl Core {
         self.forget_remote();
         if let Some(engine) = self.engine.current() {
             engine.poke_all();
+        }
+    }
+
+    /// Tells sync whether the computer has a network, so the accounts wait
+    /// while it is gone and check for mail as soon as it returns. The
+    /// demo's accounts read a sample mailbox and ignore the network.
+    pub fn set_network(&self, available: bool) {
+        if self.demo {
+            return;
+        }
+        self.network.set(available);
+        if let Some(engine) = self.engine.current() {
+            engine.set_network(available);
         }
     }
 

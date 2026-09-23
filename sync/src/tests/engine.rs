@@ -163,3 +163,38 @@ async fn a_loop_that_crashes_twice_stops_and_says_so() {
     let all = s.db.read(accounts::list_accounts).await.unwrap();
     assert_eq!(all[0].state, AccountState::Stopped);
 }
+
+/// The bug this pins: with the network gone, each loop kept asking Gmail,
+/// failed, and backed off, over and over, until it came back.
+#[tokio::test]
+async fn a_loop_waits_for_the_network_without_asking_gmail() {
+    let s = setup().await;
+    s.engine.set_network(false);
+    s.engine.start_account(1, AccountServices::fake(Arc::clone(&s.fake)));
+    wait_for(&s.events, reached(AccountState::Offline)).await;
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    assert_eq!(s.fake.with(|f| f.usage.calls), 0);
+    s.engine.set_network(true);
+    wait_for(&s.events, reached(AccountState::Ok)).await;
+}
+
+#[tokio::test]
+async fn losing_the_network_marks_a_waiting_account_offline_at_once() {
+    let s = setup().await;
+    s.engine.start_account(1, AccountServices::fake(Arc::clone(&s.fake)));
+    wait_for(&s.events, reached(AccountState::Ok)).await;
+    s.engine.set_network(false);
+    wait_for(&s.events, reached(AccountState::Offline)).await;
+}
+
+/// The network monitor can be wrong, so Check for Mail still asks Gmail
+/// while it says the network is gone.
+#[tokio::test]
+async fn a_check_asks_gmail_while_the_network_seems_gone() {
+    let s = setup().await;
+    s.engine.set_network(false);
+    s.engine.start_account(1, AccountServices::fake(Arc::clone(&s.fake)));
+    wait_for(&s.events, reached(AccountState::Offline)).await;
+    s.engine.poke(1);
+    wait_for(&s.events, reached(AccountState::Ok)).await;
+}

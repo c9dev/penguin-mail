@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::panic::AssertUnwindSafe;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
@@ -60,6 +61,9 @@ pub struct SyncEngine {
     config: EngineConfig,
     events: async_channel::Sender<ChangeEvent>,
     running: Mutex<HashMap<AccountId, Running>>,
+    /// Whether the computer has a network, as the app last heard it. Every
+    /// account's loop reads the same flag.
+    network: Arc<AtomicBool>,
 }
 
 struct Running {
@@ -77,6 +81,7 @@ impl SyncEngine {
                 config,
                 events,
                 running: Mutex::new(HashMap::new()),
+                network: Arc::new(AtomicBool::new(true)),
             },
             receiver,
         )
@@ -93,6 +98,7 @@ impl SyncEngine {
         let task = tokio::spawn(supervise(
             Arc::clone(&sync),
             Arc::clone(&poke),
+            Arc::clone(&self.network),
             self.config.clone(),
         ));
         if let Some(previous) = self.lock().insert(account_id, Running { sync, poke, task }) {
@@ -116,6 +122,17 @@ impl SyncEngine {
     pub fn poke_all(&self) {
         for running in self.lock().values() {
             running.poke.notify_one();
+        }
+    }
+
+    /// Tells the loops whether the computer has a network. Without one a
+    /// loop waits instead of asking Gmail and backing off again and again;
+    /// a poke still sends it to Gmail once, since the app's view of the
+    /// network can be wrong. Each change wakes the loops, so one that goes
+    /// offline says so at once and one that comes back asks Gmail at once.
+    pub fn set_network(&self, available: bool) {
+        if self.network.swap(available, Ordering::SeqCst) != available {
+            self.poke_all();
         }
     }
 
@@ -179,10 +196,20 @@ fn classify(err: &SyncError) -> Failure {
 /// Runs the account's loop, and runs it again once, after a pause, if it
 /// panics. A second panic stops the account and records it as stopped, so
 /// the sidebar says so instead of the account going quiet.
-async fn supervise(sync: Arc<AccountSync>, poke: Arc<Notify>, config: EngineConfig) {
+async fn supervise(
+    sync: Arc<AccountSync>,
+    poke: Arc<Notify>,
+    network: Arc<AtomicBool>,
+    config: EngineConfig,
+) {
     let mut crashed = false;
     loop {
-        let run = run_account(Arc::clone(&sync), Arc::clone(&poke), config.clone());
+        let run = run_account(
+            Arc::clone(&sync),
+            Arc::clone(&poke),
+            Arc::clone(&network),
+            config.clone(),
+        );
         if AssertUnwindSafe(run).catch_unwind().await.is_ok() {
             // The loop ends by itself only when Google rejects the refresh
             // token, and it has recorded that already.
@@ -208,6 +235,7 @@ async fn supervise(sync: Arc<AccountSync>, poke: Arc<Notify>, config: EngineConf
 async fn run_account(
     sync: Arc<AccountSync>,
     poke: Arc<Notify>,
+    network: Arc<AtomicBool>,
     config: EngineConfig,
 ) {
     let mut reported: Option<AccountState> = None;
@@ -221,6 +249,16 @@ async fn run_account(
     // cycle from its second poll on.
     let mut stagger = poll_offset(sync.account_id(), config.poll_interval);
     loop {
+        if !network.load(Ordering::SeqCst) {
+            if reported != Some(AccountState::Offline) {
+                reported = Some(AccountState::Offline);
+                report(&sync, AccountState::Offline).await;
+            }
+            // The network coming back pokes every loop, and so does Check
+            // for Mail.
+            poke.notified().await;
+            next_poll = Instant::now();
+        }
         // Everything this loop asks Gmail for is background work, so it
         // waits behind whatever the user is doing and leaves the account
         // budget the user's next action needs.
