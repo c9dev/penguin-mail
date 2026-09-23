@@ -24,10 +24,10 @@ use self::editor::Editor;
 use self::recipients::Recipients;
 use super::autocomplete::Contacts;
 use super::{labelled_by, name, name_with_shortcut, roving};
-use crate::attachcheck::{self, Promise};
+use crate::attachcheck::Promise;
 use crate::compose::{
-    Draft, OutgoingAttachment, SendWhen, build_mime, format_recipients, is_address,
-    new_message_id, opening_identity, restyle_signature,
+    Asking, Draft, Gate, OutgoingAttachment, SendWhen, build_mime, format_recipients, gate,
+    is_address, new_message_id, opening_identity, restyle_signature,
 };
 use crate::core::Core;
 use crate::format::{future_date, human_size, send_later_presets};
@@ -524,8 +524,11 @@ impl Composer {
     /// Puts the draft's body in the buffer, styled or as Markdown.
     fn fill_body(&self) {
         let base = self.base.borrow();
-        self.editor
-            .fill(&base.markdown, base.rich.as_ref(), &self.attachments.borrow());
+        self.editor.fill(
+            &base.markdown,
+            base.rich.as_ref(),
+            &self.attachments.borrow(),
+        );
     }
 
     fn wire(self: &Rc<Self>, attach: &gtk::Button, preview_toggle: &gtk::ToggleButton) {
@@ -1146,29 +1149,43 @@ impl Composer {
         self.hand_over(SendWhen::Now);
     }
 
-    /// Passes the finished message on for sending and closes.
+    /// Walks the message through the send gate, asking the writer what
+    /// the gate wants asked, and passes it on for sending once nothing
+    /// stands in the way.
     fn hand_over(self: &Rc<Self>, when: SendWhen) {
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move { this.pass_gate(when).await });
+    }
+
+    async fn pass_gate(self: &Rc<Self>, when: SendWhen) {
+        // The dialogs are modal, so the draft read here is the one that
+        // goes, however many questions come first.
         let Some(draft) = self.collect() else { return };
-        if let Some(problem) = draft.problem() {
-            self.toast(&problem);
-            return;
+        loop {
+            let asking = Asking {
+                secret: self.secret.get(),
+                attachments: self.check_attachments && !self.asked.get(),
+            };
+            match gate(&draft, when, mailrs_sync::now_millis(), asking) {
+                Gate::Refuse(problem) => return self.toast(&problem),
+                Gate::ConfirmReadable => match self.confirm_readable().await {
+                    true => self.secret.set(false),
+                    false => return,
+                },
+                Gate::ConfirmNoFile(promise) => match self.confirm_no_file(&promise).await {
+                    Some(true) => self.asked.set(true),
+                    Some(false) => return self.pick_files(),
+                    None => return,
+                },
+                Gate::Send => return self.send_off(draft, when),
+            }
         }
-        if let SendWhen::At(at) = when
-            && at <= mailrs_sync::now_millis()
-        {
-            self.toast(&gettext("Choose a time in the future"));
-            return;
-        }
+    }
+
+    /// Builds the message and passes it on, then closes.
+    fn send_off(self: &Rc<Self>, draft: Draft, when: SendWhen) {
         if let Err(err) = build_mime(&draft, now_secs(), &new_message_id(&draft.from.email)) {
             self.failed(&gettext("Could not build the message: {reason}"), &err);
-            return;
-        }
-        if self.secret.get() && !draft.encrypt {
-            self.ask_about_encryption(when);
-            return;
-        }
-        if let Some(promise) = self.unkept_promise(&draft) {
-            self.ask_about_attachment(&promise, when);
             return;
         }
         if let Some(identity) = self.identity() {
@@ -1182,25 +1199,10 @@ impl Composer {
         (self.on_send)(draft, when);
     }
 
-    /// The file this message promises and does not carry. An image pasted
-    /// into the text keeps a promise of something to look at, since it
-    /// arrives with the message either way, but not a promise of a file:
-    /// only an attachment comes out of the reader's mail as one.
-    fn unkept_promise(&self, draft: &Draft) -> Option<Promise> {
-        if !self.check_attachments || self.asked.get() {
-            return None;
-        }
-        let promise = attachcheck::promised(&draft.subject, &draft.markdown)?;
-        let files = draft.attachments.iter().any(|a| a.content_id.is_none());
-        let images = draft.attachments.iter().any(|a| a.content_id.is_some());
-        let kept = files || (images && !promise.names_a_file);
-        (!kept).then_some(promise)
-    }
-
-    /// Asks before a message that promises a file goes without one. Send
-    /// Anyway sends it as it stands, Add Attachment opens the file picker
-    /// and leaves the message open, and closing the dialog does neither.
-    fn ask_about_attachment(self: &Rc<Self>, promise: &Promise, when: SendWhen) {
+    /// Asks before a message that promises a file goes without one. True
+    /// for Send Anyway, false for Add Attachment, and nothing when the
+    /// dialog closes.
+    async fn confirm_no_file(&self, promise: &Promise) -> Option<bool> {
         let dialog = adw::AlertDialog::new(
             Some(&gettext("Attachment Missing?")),
             Some(&fill(
@@ -1214,24 +1216,18 @@ impl Composer {
         ]);
         dialog.set_response_appearance("send", adw::ResponseAppearance::Suggested);
         dialog.set_default_response(Some("attach"));
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            match dialog.choose_future(Some(&this.window)).await.as_str() {
-                "send" => {
-                    this.asked.set(true);
-                    this.hand_over(when);
-                }
-                "attach" => this.pick_files(),
-                _ => {}
-            }
-        });
+        match dialog.choose_future(Some(&self.window)).await.as_str() {
+            "send" => Some(true),
+            "attach" => Some(false),
+            _ => None,
+        }
     }
 
     /// Asks before a message the writer meant to encrypt goes out readable,
     /// which happens when a recipient's key went missing after Encrypt was
-    /// on. Send Readable clears the wish and sends; closing the dialog
-    /// leaves the message open.
-    fn ask_about_encryption(self: &Rc<Self>, when: SendWhen) {
+    /// on. True for Send Readable; closing the dialog leaves the message
+    /// open.
+    async fn confirm_readable(&self) -> bool {
         let reason = self.encrypt.tooltip_text().unwrap_or_default();
         let dialog = adw::AlertDialog::new(
             Some(&gettext("Send Without Encryption?")),
@@ -1247,13 +1243,7 @@ impl Composer {
         dialog.set_response_appearance("send", adw::ResponseAppearance::Destructive);
         dialog.set_default_response(Some("cancel"));
         dialog.set_close_response("cancel");
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            if dialog.choose_future(Some(&this.window)).await == "send" {
-                this.secret.set(false);
-                this.hand_over(when);
-            }
-        });
+        dialog.choose_future(Some(&self.window)).await == "send"
     }
 
     /// Asks for a date and time, then schedules the message.

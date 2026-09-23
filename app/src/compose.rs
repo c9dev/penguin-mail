@@ -19,6 +19,7 @@ use mailrs_gmail::convert::unescape_snippet;
 use pulldown_cmark::{Event, Options, Parser, html};
 use serde::{Deserialize, Serialize};
 
+use crate::attachcheck::{self, Promise};
 use crate::format::full_date;
 use crate::protection::Standard;
 use crate::richtext::{self, RichBody};
@@ -514,6 +515,73 @@ impl Draft {
                 .and_then(|f| f.html.as_deref())
                 .is_some_and(|html| refers_to_cid(html, cid))
     }
+}
+
+/// What the composer does next with a message the writer asked to send.
+/// [`gate`] decides.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Gate {
+    /// It cannot go, and this says why.
+    Refuse(String),
+    /// The writer meant it to go out encrypted and it cannot be: ask
+    /// before it goes out readable.
+    ConfirmReadable,
+    /// It promises a file it does not carry: ask before it goes without.
+    ConfirmNoFile(Promise),
+    /// Nothing stands in the way.
+    Send,
+}
+
+/// What the gate needs to know beyond the draft.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Asking {
+    /// The writer means the message to go out encrypted, whether or not
+    /// Encrypt is still on. Send Readable clears it.
+    pub secret: bool,
+    /// A promised file is worth asking about: the preference is on, and
+    /// Send Anyway has not already answered for this message.
+    pub attachments: bool,
+}
+
+/// The next thing between `draft` and sending it.
+///
+/// The order is the one a person wants to hear it in. What stops the
+/// message outright comes first, since no answer to a question fixes a
+/// missing recipient. Encryption comes before the attachment, because a
+/// message about to go out readable matters more than a forgotten file,
+/// and the file question only makes sense about a message that will go.
+/// The composer asks, records the answer in `asking`, and calls this
+/// again until it says [`Gate::Send`] or the writer stops.
+pub fn gate(draft: &Draft, when: SendWhen, now: EpochMillis, asking: Asking) -> Gate {
+    if let Some(problem) = draft.problem() {
+        return Gate::Refuse(problem);
+    }
+    if let SendWhen::At(at) = when
+        && at <= now
+    {
+        return Gate::Refuse(gettext("Choose a time in the future"));
+    }
+    if asking.secret && !draft.encrypt {
+        return Gate::ConfirmReadable;
+    }
+    if asking.attachments
+        && let Some(promise) = unkept_promise(draft)
+    {
+        return Gate::ConfirmNoFile(promise);
+    }
+    Gate::Send
+}
+
+/// The file `draft` promises and does not carry. An image pasted into the
+/// text keeps a promise of something to look at, since it arrives with
+/// the message either way, but not a promise of a file: only an
+/// attachment comes out of the reader's mail as one.
+fn unkept_promise(draft: &Draft) -> Option<Promise> {
+    let promise = attachcheck::promised(&draft.subject, &draft.markdown)?;
+    let files = draft.attachments.iter().any(|a| a.content_id.is_none());
+    let images = draft.attachments.iter().any(|a| a.content_id.is_some());
+    let kept = files || (images && !promise.names_a_file);
+    (!kept).then_some(promise)
 }
 
 /// Whether this reads as an address the message can go to.
@@ -2019,5 +2087,106 @@ mod tests {
         assert!(raw.ends_with(entity), "{raw}");
         // The one Content-Type on the message is the engine's own.
         assert_eq!(raw.matches("Content-Type: multipart/signed").count(), 1);
+    }
+
+    /// A draft that could go: one recipient, a body promising a file.
+    fn ready() -> Draft {
+        let mut draft = Draft::new(1, me());
+        draft.to = vec![addr(None, "ann@example.com")];
+        draft.subject = "Menu".into();
+        draft.markdown = "Please find the attached file.".into();
+        draft
+    }
+
+    const NOW: EpochMillis = 1_757_000_000_000;
+
+    fn asking(secret: bool, attachments: bool) -> Asking {
+        Asking {
+            secret,
+            attachments,
+        }
+    }
+
+    #[test]
+    fn a_message_that_cannot_go_is_refused_before_anything_is_asked() {
+        let mut draft = ready();
+        draft.to.clear();
+        assert_eq!(
+            gate(&draft, SendWhen::Now, NOW, asking(true, true)),
+            Gate::Refuse(gettext("Add at least one recipient."))
+        );
+        // A time already gone counts the same, and only for Send Later.
+        let past = SendWhen::At(NOW - 1);
+        assert_eq!(
+            gate(&ready(), past, NOW, asking(true, true)),
+            Gate::Refuse(gettext("Choose a time in the future"))
+        );
+        assert_ne!(
+            gate(
+                &ready(),
+                SendWhen::At(NOW + 60_000),
+                NOW,
+                asking(false, false)
+            ),
+            gate(&ready(), past, NOW, asking(false, false))
+        );
+    }
+
+    #[test]
+    fn going_out_readable_is_asked_about_before_the_missing_file() {
+        let draft = ready();
+        assert_eq!(
+            gate(&draft, SendWhen::Now, NOW, asking(true, true)),
+            Gate::ConfirmReadable
+        );
+        // Send Readable clears the wish, and the file is next.
+        let Gate::ConfirmNoFile(promise) = gate(&draft, SendWhen::Now, NOW, asking(false, true))
+        else {
+            panic!("the promise should be asked about");
+        };
+        assert_eq!(promise.sentence, "Please find the attached file.");
+        // Send Anyway answers that, and nothing is left to ask.
+        assert_eq!(
+            gate(&draft, SendWhen::Now, NOW, asking(false, false)),
+            Gate::Send
+        );
+    }
+
+    #[test]
+    fn a_message_going_out_encrypted_is_not_asked_about() {
+        let mut draft = ready();
+        draft.encrypt = true;
+        draft.attachments.push(OutgoingAttachment {
+            filename: "menu.pdf".into(),
+            mime_type: "application/pdf".into(),
+            data: b"%PDF".to_vec(),
+            content_id: None,
+        });
+        assert_eq!(
+            gate(&draft, SendWhen::Now, NOW, asking(true, true)),
+            Gate::Send
+        );
+    }
+
+    #[test]
+    fn a_pasted_picture_keeps_a_promise_of_something_to_look_at() {
+        let mut draft = ready();
+        draft.markdown = "See attached, the sea was warm.".into();
+        draft.attachments.push(OutgoingAttachment {
+            filename: "photo.png".into(),
+            mime_type: "image/png".into(),
+            data: vec![0x89],
+            content_id: Some("photo@mailrs".into()),
+        });
+        assert_eq!(
+            gate(&draft, SendWhen::Now, NOW, asking(false, true)),
+            Gate::Send
+        );
+        // A picture is not the file a message says it attaches.
+        draft.markdown = "Please find the attached file.".into();
+        assert!(matches!(
+            gate(&draft, SendWhen::Now, NOW, asking(false, true)),
+            Gate::ConfirmNoFile(_)
+        ));
     }
 }
