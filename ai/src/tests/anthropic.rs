@@ -188,7 +188,7 @@ async fn runs_tools_and_echoes_thinking_back_unchanged() {
     let first: Value = requests[0].body_json().unwrap();
     assert_eq!(first["max_tokens"], json!(64000));
     assert_eq!(first["stream"], json!(true));
-    assert_eq!(first["system"], json!("You sort mail."));
+    assert_eq!(first["system"][0]["text"], json!("You sort mail."));
     assert_eq!(
         first["thinking"],
         json!({"type": "adaptive", "display": "summarized"})
@@ -271,7 +271,9 @@ async fn refusal_is_an_error_and_leaves_history_clean() {
     let second: Value = requests[1].body_json().unwrap();
     assert_eq!(
         second["messages"],
-        json!([{"role": "user", "content": "Hi"}])
+        json!([{"role": "user", "content": [
+            {"type": "text", "text": "Hi", "cache_control": {"type": "ephemeral"}}
+        ]}])
     );
 }
 
@@ -460,6 +462,168 @@ async fn a_chat_that_does_not_ask_sends_no_thinking_field() {
     assert!(body.get("thinking").is_none());
     // Web search is off unless asked for, so only the host's tools go out.
     assert_eq!(body["tools"].as_array().map(Vec::len), Some(2));
+}
+
+/// A reply that asks for `read_thread` once.
+fn read_thread_call() -> ResponseTemplate {
+    let mut events = vec![
+        message_start(),
+        start(
+            0,
+            json!({"type": "tool_use", "id": "toolu_read", "name": "read_thread", "input": {}}),
+        ),
+        stop(0),
+    ];
+    events.extend(message_end("tool_use"));
+    sse(&events)
+}
+
+fn messages_of(request: &wiremock::Request) -> Vec<Value> {
+    let body: Value = request.body_json().unwrap();
+    body["messages"].as_array().unwrap().clone()
+}
+
+#[tokio::test]
+async fn a_huge_turn_leaves_room_for_the_next_question() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/messages"))
+        .respond_with(Sequence::new(vec![
+            read_thread_call(),
+            text_reply("A long thread."),
+            text_reply("Hello."),
+        ]))
+        .mount(&server)
+        .await;
+    let host = Arc::new(super::OneTool {
+        answer: Some("body ".repeat(100_000)),
+    });
+    let (tx, _rx) = async_channel::unbounded();
+    let mut chat = chat(&server);
+    chat.send("Read it".into(), host.clone(), &tx)
+        .await
+        .unwrap();
+    assert_eq!(chat.send("Hi".into(), host, &tx).await.unwrap(), "Hello.");
+
+    let requests = server.received_requests().await.unwrap();
+    let last = messages_of(&requests[2]);
+    super::no_orphans(&last);
+    assert_eq!(last.len(), 1, "{last:?}");
+    assert_eq!(last[0]["content"][0]["text"], json!("Hi"));
+}
+
+#[tokio::test]
+async fn stop_in_the_middle_of_a_turn_leaves_a_chat_that_still_works() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/messages"))
+        .respond_with(Sequence::new(vec![
+            text_reply("Morning."),
+            read_thread_call(),
+            text_reply("Hello."),
+        ]))
+        .mount(&server)
+        .await;
+    let (tx, _rx) = async_channel::unbounded();
+    let mut chat = chat(&server);
+    let answers = Arc::new(super::OneTool {
+        answer: Some("ok".into()),
+    });
+    chat.send("Morning".into(), answers.clone(), &tx)
+        .await
+        .unwrap();
+    // The tool waits for ever, as one waiting on the person does, and Stop
+    // drops the turn there.
+    let waits = Arc::new(super::OneTool { answer: None });
+    let stopped = tokio::time::timeout(
+        std::time::Duration::from_millis(200),
+        chat.send("Read it".into(), waits, &tx),
+    )
+    .await;
+    assert!(stopped.is_err(), "the turn should still be waiting");
+
+    assert_eq!(
+        chat.send("Hi".into(), answers, &tx).await.unwrap(),
+        "Hello."
+    );
+    let requests = server.received_requests().await.unwrap();
+    let last = messages_of(&requests[2]);
+    super::no_orphans(&last);
+    let said: Vec<&Value> = last.iter().map(|m| &m["role"]).collect();
+    assert_eq!(said, [&json!("user"), &json!("assistant"), &json!("user")]);
+    assert_eq!(last[2]["content"][0]["text"], json!("Hi"));
+}
+
+#[tokio::test]
+async fn caches_the_tools_the_system_prompt_and_the_chat_so_far() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/messages"))
+        .respond_with(Sequence::new(vec![read_thread_call(), text_reply("Read.")]))
+        .mount(&server)
+        .await;
+    let (tx, _rx) = async_channel::unbounded();
+    let mut chat = chat(&server);
+    let host = Arc::new(super::OneTool {
+        answer: Some("ok".into()),
+    });
+    chat.send("Read it".into(), host, &tx).await.unwrap();
+
+    let ephemeral = json!({"type": "ephemeral"});
+    let requests = server.received_requests().await.unwrap();
+    let first: Value = requests[0].body_json().unwrap();
+    // The system prompt's breakpoint covers the tools before it.
+    assert_eq!(
+        first["system"],
+        json!([{"type": "text", "text": "You sort mail.", "cache_control": ephemeral}])
+    );
+    assert!(first["tools"][0].get("cache_control").is_none());
+    assert_eq!(
+        first["messages"],
+        json!([{"role": "user", "content": [
+            {"type": "text", "text": "Read it", "cache_control": ephemeral}
+        ]}])
+    );
+
+    // The next round moves the breakpoint to the tool results and sends
+    // the question as it was, which is what the cache matches on.
+    let second = messages_of(&requests[1]);
+    assert_eq!(second[0], json!({"role": "user", "content": "Read it"}));
+    assert_eq!(second[2]["content"][0]["cache_control"], ephemeral);
+    let marks = second
+        .iter()
+        .flat_map(|m| m["content"].as_array().cloned().unwrap_or_default())
+        .filter(|b| b.get("cache_control").is_some())
+        .count();
+    assert_eq!(marks, 1);
+}
+
+#[tokio::test]
+async fn with_no_system_prompt_the_last_tool_carries_the_breakpoint() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/messages"))
+        .respond_with(text_reply("Olá."))
+        .mount(&server)
+        .await;
+    let mut chat = AnthropicChat::new(
+        server.uri(),
+        "sk-ant-test".into(),
+        "claude-opus-5".into(),
+        String::new(),
+    );
+    let (tx, _rx) = async_channel::unbounded();
+    chat.send("Hi".into(), Arc::new(FakeHost::default()), &tx)
+        .await
+        .unwrap();
+    let requests = server.received_requests().await.unwrap();
+    let body: Value = requests[0].body_json().unwrap();
+    assert!(body.get("system").is_none());
+    assert!(body["tools"][0].get("cache_control").is_none());
+    assert_eq!(
+        body["tools"][1]["cache_control"],
+        json!({"type": "ephemeral"})
+    );
 }
 
 /// A turn that searched and tried a fetch, in the shape Anthropic's docs

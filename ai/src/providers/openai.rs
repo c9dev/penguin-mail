@@ -11,6 +11,7 @@ use super::{
     MAX_ROUNDS, emit, error_text, http_client, network, outcome_text, parse_tool_input,
     refuse_tool, run_tool, too_many_rounds,
 };
+use crate::history::History;
 use crate::sse::SseReader;
 use crate::{AgentEvent, AiError, Model, ModelList, ToolHost, ToolOutcome, ToolSpec};
 
@@ -24,7 +25,7 @@ pub(crate) struct OpenAiChat {
     api_key: Option<String>,
     model: String,
     system_prompt: String,
-    history: Vec<Value>,
+    history: History,
     /// Set once the server rejects `tools`; later requests leave them out.
     tools_off: bool,
     client: reqwest::Client,
@@ -59,7 +60,7 @@ impl OpenAiChat {
             api_key: api_key.filter(|k| !k.is_empty()),
             model,
             system_prompt,
-            history: Vec::new(),
+            history: History::default(),
             tools_off: false,
             client: http_client(),
         }
@@ -71,12 +72,11 @@ impl OpenAiChat {
         host: Arc<dyn ToolHost>,
         events: &async_channel::Sender<AgentEvent>,
     ) -> Result<String, AiError> {
-        crate::history::trim(&mut self.history, crate::history::BUDGET);
-        let saved = self.history.len();
-        self.history.push(json!({"role": "user", "content": text}));
+        self.history.begin(json!({"role": "user", "content": text}));
         let result = self.run(&host, events).await;
-        if result.is_err() {
-            self.history.truncate(saved);
+        match result {
+            Ok(_) => self.history.commit(),
+            Err(_) => self.history.rollback(),
         }
         result
     }
@@ -152,7 +152,7 @@ impl OpenAiChat {
         specs: &[ToolSpec],
         with_tools: bool,
     ) -> Result<reqwest::Response, AiError> {
-        let mut messages = Vec::with_capacity(self.history.len() + 1);
+        let mut messages = Vec::new();
         let system = match (self.system_prompt.is_empty(), self.tools_off) {
             (true, false) => None,
             (true, true) => Some(NO_TOOLS_NOTE.to_string()),
@@ -162,7 +162,7 @@ impl OpenAiChat {
         if let Some(system) = system {
             messages.push(json!({"role": "system", "content": system}));
         }
-        messages.extend(self.history.iter().cloned());
+        messages.extend(self.history.messages());
         let mut body = json!({
             "model": self.model,
             "stream": true,

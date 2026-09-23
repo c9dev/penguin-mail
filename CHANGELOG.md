@@ -5,6 +5,18 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Improved
+
+- The assistant on the Anthropic API costs less per question. Each request
+  used to send its tools and instructions, about 12,000 tokens, at full
+  price; now the API reads them and the chat so far from its cache.
+
+### Fixed
+
+- A chat with the assistant keeps working after you press Stop, and after
+  it reads one very long conversation. Either could leave every later
+  question failing until you started a new chat.
+
 ## 0.1.7 (2026-09-23)
 
 ### New

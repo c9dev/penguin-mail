@@ -101,3 +101,63 @@ pub(crate) fn drain(events: &async_channel::Receiver<AgentEvent>) -> Vec<AgentEv
     }
     all
 }
+
+/// One tool, `read_thread`, that answers with `answer`, or never answers
+/// when it is `None`, the way a tool waiting on the person does while they
+/// press Stop.
+pub(crate) struct OneTool {
+    pub answer: Option<String>,
+}
+
+impl ToolHost for OneTool {
+    fn specs(&self) -> Vec<ToolSpec> {
+        vec![ToolSpec {
+            name: "read_thread".into(),
+            description: "Reads a thread.".into(),
+            input_schema: json!({"type": "object", "properties": {}}),
+        }]
+    }
+
+    fn call(&self, _name: String, _input: Value) -> BoxFuture<ToolOutcome> {
+        let answer = self.answer.clone();
+        Box::pin(async move {
+            match answer {
+                Some(text) => ToolOutcome::Ok(Value::String(text)),
+                None => std::future::pending().await,
+            }
+        })
+    }
+}
+
+/// Checks a request's messages, in either API's shape: the chat opens
+/// with a question, and every tool result answers a call before it.
+pub(crate) fn no_orphans(messages: &[Value]) {
+    let first = messages
+        .iter()
+        .find(|m| m["role"] != "system")
+        .expect("a request with no messages");
+    assert_eq!(first["role"], "user", "{first}");
+    let question = match &first["content"] {
+        Value::Array(blocks) => blocks.iter().all(|b| b["type"] == "text"),
+        _ => true,
+    };
+    assert!(question, "the chat opens with {first}");
+    let mut asked = Vec::new();
+    for message in messages {
+        for call in message["tool_calls"].as_array().into_iter().flatten() {
+            asked.push(call["id"].clone());
+        }
+        if message["role"] == "tool" {
+            assert!(asked.contains(&message["tool_call_id"]), "orphan {message}");
+        }
+        for block in message["content"].as_array().into_iter().flatten() {
+            match block["type"].as_str() {
+                Some("tool_use") => asked.push(block["id"].clone()),
+                Some("tool_result") => {
+                    assert!(asked.contains(&block["tool_use_id"]), "orphan {block}")
+                }
+                _ => {}
+            }
+        }
+    }
+}
