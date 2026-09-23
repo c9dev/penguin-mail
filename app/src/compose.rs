@@ -15,10 +15,10 @@ use mail_builder::headers::raw::Raw;
 use mail_builder::mime::MimePart;
 use mailrs_domain::{AccountId, Address, EpochMillis, MessageBody, MessageMeta};
 use mailrs_gmail::address::parse_address_list_keeping_invalid;
-use mailrs_gmail::convert::unescape_snippet;
 use pulldown_cmark::{Event, Options, Parser, html};
 use serde::{Deserialize, Serialize};
 
+use crate::attachcheck::{self, Promise};
 use crate::format::full_date;
 use crate::protection::Standard;
 use crate::richtext::{self, RichBody};
@@ -263,15 +263,83 @@ impl Forwarded {
 /// Splits a saved draft's HTML at the forwarded message, if it holds one.
 /// Returns what the writer wrote and the forwarded block as it stands.
 fn split_forwarded_html(html: &str) -> (String, Option<String>) {
-    let mark = format!("class=\"{FORWARD_MARK}\"");
-    let Some(at) = html.find(&mark) else {
-        return (html.to_string(), None);
-    };
-    // Back up to the `<div` the attribute belongs to.
-    let Some(open) = html[..at].rfind('<') else {
-        return (html.to_string(), None);
-    };
-    (html[..open].to_string(), Some(html[open..].to_string()))
+    match forward_starts_at(html) {
+        Some(at) => (html[..at].to_string(), Some(html[at..].to_string())),
+        None => (html.to_string(), None),
+    }
+}
+
+/// Where the tag that opens the forwarded block starts: the first start
+/// tag whose class names [`FORWARD_MARK`].
+///
+/// The forwarded block has to come back byte for byte, so this needs the
+/// offset in `html`, which the tokenizer does not give. It reads the tags
+/// itself, stepping over quoted attribute values, comments and the text
+/// of scripts and styles, so a `<` or `>` inside any of them cannot move
+/// the cut, and the marker's name in the text is not taken for the tag.
+fn forward_starts_at(html: &str) -> Option<usize> {
+    let mut at = 0;
+    while let Some(offset) = html[at..].find('<') {
+        let start = at + offset;
+        let rest = &html[start..];
+        if let Some(comment) = rest.strip_prefix("<!--") {
+            at = start + 4 + comment.find("-->").map_or(comment.len(), |end| end + 3);
+            continue;
+        }
+        if !rest[1..].starts_with(|c: char| c.is_ascii_alphabetic()) {
+            at = start + 1;
+            continue;
+        }
+        let end = start + tag_length(rest);
+        let tag = &html[start..end];
+        let name: String = tag[1..]
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric())
+            .collect::<String>()
+            .to_ascii_lowercase();
+        if tag.contains(FORWARD_MARK) && has_class(tag, FORWARD_MARK) {
+            return Some(start);
+        }
+        at = end;
+        // A script's or a style's text is not markup.
+        if matches!(name.as_str(), "script" | "style") {
+            let close = format!("</{name}");
+            at = html[at..]
+                .to_ascii_lowercase()
+                .find(&close)
+                .map_or(html.len(), |found| at + found);
+        }
+    }
+    None
+}
+
+/// How long the tag at the start of `rest` is, up to and including the
+/// `>` that closes it outside any quotes.
+fn tag_length(rest: &str) -> usize {
+    let mut quote: Option<char> = None;
+    for (index, character) in rest.char_indices().skip(1) {
+        match (quote, character) {
+            (Some(open), c) if c == open => quote = None,
+            (Some(_), _) => {}
+            (None, '"' | '\'') => quote = Some(character),
+            (None, '>') => return index + 1,
+            (None, _) => {}
+        }
+    }
+    rest.len()
+}
+
+/// Whether the one tag in `tag` has `class` among its classes.
+fn has_class(tag: &str, class: &str) -> bool {
+    let mut found = false;
+    mailrs_gmail::html::walk(tag, |piece| {
+        if let mailrs_gmail::html::Piece::Tag(tag) = piece
+            && let Some(classes) = tag.attribute("class")
+        {
+            found |= classes.split_whitespace().any(|c| c == class);
+        }
+    });
+    found
 }
 
 /// The same for the text part, which marks the forward with the line
@@ -300,16 +368,28 @@ fn header_of(text: &str, name: &str) -> String {
         .to_string()
 }
 
-/// Whether `html` points at the inline image `cid`. The whole id has to
+/// Whether `html` points at the inline image `cid` from one of its tags,
+/// such as an image's `src` or a cell's `background`. The whole id has to
 /// match, because `cid:logo` and `cid:logo2` name two different images.
+/// Text that mentions the id, and a comment, point at nothing.
 pub fn refers_to_cid(html: &str, cid: &str) -> bool {
     let needle = format!("cid:{cid}");
-    html.match_indices(&needle).any(|(at, _)| {
-        html[at + needle.len()..]
-            .chars()
-            .next()
-            .is_none_or(|c| !c.is_ascii_alphanumeric() && !matches!(c, '-' | '_' | '.' | '@' | '+'))
-    })
+    let names = |value: &str| {
+        value.match_indices(&needle).any(|(at, _)| {
+            value[at + needle.len()..].chars().next().is_none_or(|c| {
+                !c.is_ascii_alphanumeric() && !matches!(c, '-' | '_' | '.' | '@' | '+')
+            })
+        })
+    };
+    let mut found = false;
+    mailrs_gmail::html::walk(html, |piece| {
+        if let mailrs_gmail::html::Piece::Tag(tag) = piece
+            && !found
+        {
+            found = tag.values().any(names);
+        }
+    });
+    found
 }
 
 /// A file of the message a forward carries, with the bytes fetched for it.
@@ -514,6 +594,73 @@ impl Draft {
                 .and_then(|f| f.html.as_deref())
                 .is_some_and(|html| refers_to_cid(html, cid))
     }
+}
+
+/// What the composer does next with a message the writer asked to send.
+/// [`gate`] decides.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Gate {
+    /// It cannot go, and this says why.
+    Refuse(String),
+    /// The writer meant it to go out encrypted and it cannot be: ask
+    /// before it goes out readable.
+    ConfirmReadable,
+    /// It promises a file it does not carry: ask before it goes without.
+    ConfirmNoFile(Promise),
+    /// Nothing stands in the way.
+    Send,
+}
+
+/// What the gate needs to know beyond the draft.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Asking {
+    /// The writer means the message to go out encrypted, whether or not
+    /// Encrypt is still on. Send Readable clears it.
+    pub secret: bool,
+    /// A promised file is worth asking about: the preference is on, and
+    /// Send Anyway has not already answered for this message.
+    pub attachments: bool,
+}
+
+/// The next thing between `draft` and sending it.
+///
+/// The order is the one a person wants to hear it in. What stops the
+/// message outright comes first, since no answer to a question fixes a
+/// missing recipient. Encryption comes before the attachment, because a
+/// message about to go out readable matters more than a forgotten file,
+/// and the file question only makes sense about a message that will go.
+/// The composer asks, records the answer in `asking`, and calls this
+/// again until it says [`Gate::Send`] or the writer stops.
+pub fn gate(draft: &Draft, when: SendWhen, now: EpochMillis, asking: Asking) -> Gate {
+    if let Some(problem) = draft.problem() {
+        return Gate::Refuse(problem);
+    }
+    if let SendWhen::At(at) = when
+        && at <= now
+    {
+        return Gate::Refuse(gettext("Choose a time in the future"));
+    }
+    if asking.secret && !draft.encrypt {
+        return Gate::ConfirmReadable;
+    }
+    if asking.attachments
+        && let Some(promise) = unkept_promise(draft)
+    {
+        return Gate::ConfirmNoFile(promise);
+    }
+    Gate::Send
+}
+
+/// The file `draft` promises and does not carry. An image pasted into the
+/// text keeps a promise of something to look at, since it arrives with
+/// the message either way, but not a promise of a file: only an
+/// attachment comes out of the reader's mail as one.
+fn unkept_promise(draft: &Draft) -> Option<Promise> {
+    let promise = attachcheck::promised(&draft.subject, &draft.markdown)?;
+    let files = draft.attachments.iter().any(|a| a.content_id.is_none());
+    let images = draft.attachments.iter().any(|a| a.content_id.is_some());
+    let kept = files || (images && !promise.names_a_file);
+    (!kept).then_some(promise)
 }
 
 /// Whether this reads as an address the message can go to.
@@ -790,6 +937,54 @@ pub fn restyle_signature(markdown: &str, old: &str, new: &str) -> String {
     format!("{typed}{block}{gap}{tail}")
 }
 
+/// Lines to put in place of others: `removed` lines from `first` on go,
+/// and `lines` take their place.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LineChange {
+    pub first: usize,
+    pub removed: usize,
+    pub lines: Vec<String>,
+}
+
+/// The lines [`restyle_signature`] would change in a body read as
+/// `lines`, when it would change any.
+///
+/// The composer's buffer holds the body line by line, and writing the
+/// whole of it again to swap a signature would move the cursor and cost
+/// the writer their Undo. `lines` only needs to reach the first quoted
+/// line, since the signature sits above the quote.
+pub fn signature_change(lines: &[String], old: &str, new: &str) -> Option<LineChange> {
+    let text = lines.join("\n");
+    let swapped = restyle_signature(&text, old, new);
+    if swapped == text {
+        return None;
+    }
+    let after: Vec<&str> = swapped.split('\n').collect();
+    let first = lines
+        .iter()
+        .zip(&after)
+        .take_while(|(a, b)| a == *b)
+        .count();
+    // The lines kept at the end, counted without reaching back into the
+    // ones kept at the start.
+    let room = lines.len().min(after.len()) - first;
+    let kept = lines
+        .iter()
+        .rev()
+        .zip(after.iter().rev())
+        .take(room)
+        .take_while(|(a, b)| a == *b)
+        .count();
+    Some(LineChange {
+        first,
+        removed: lines.len() - first - kept,
+        lines: after[first..after.len() - kept]
+            .iter()
+            .map(|line| line.to_string())
+            .collect(),
+    })
+}
+
 /// A message body as plain text, for quoting and for reopening drafts.
 pub fn body_text(body: &MessageBody) -> String {
     match (&body.text, &body.html) {
@@ -799,78 +994,9 @@ pub fn body_text(body: &MessageBody) -> String {
     }
 }
 
-/// Rough HTML to text: drops styles, scripts, and the head, turns block
-/// ends into line breaks, and strips the remaining tags.
-pub fn html_to_text(html: &str) -> String {
-    const BLOCKS: [&str; 13] = [
-        "p",
-        "div",
-        "tr",
-        "li",
-        "h1",
-        "h2",
-        "h3",
-        "h4",
-        "h5",
-        "h6",
-        "blockquote",
-        "table",
-        "ul",
-    ];
-    // ASCII lowercasing keeps byte offsets, so indexes into `lower` fit `html`.
-    let lower = html.to_ascii_lowercase();
-    let mut text = String::with_capacity(html.len() / 2);
-    let mut i = 0;
-    while i < html.len() {
-        let Some(offset) = html[i..].find('<') else {
-            text.push_str(&html[i..]);
-            break;
-        };
-        text.push_str(&html[i..i + offset]);
-        let start = i + offset;
-        let end = html[start..]
-            .find('>')
-            .map_or(html.len(), |e| start + e + 1);
-        let closing = lower[start..].starts_with("</");
-        let name: String = lower[start + 1..end]
-            .trim_start_matches('/')
-            .chars()
-            .take_while(char::is_ascii_alphanumeric)
-            .collect();
-        if !closing && matches!(name.as_str(), "style" | "script" | "head" | "title") {
-            let close = lower[end..]
-                .find(&format!("</{name}"))
-                .map_or(html.len(), |c| end + c);
-            i = html[close..]
-                .find('>')
-                .map_or(html.len(), |e| close + e + 1);
-            continue;
-        }
-        if name == "br" || (closing && BLOCKS.contains(&name.as_str())) {
-            text.push('\n');
-        }
-        i = end;
-    }
-    let decoded = unescape_snippet(&text);
-    let mut out = String::new();
-    let mut blank = 0;
-    for line in decoded
-        .lines()
-        .map(|l| l.split_whitespace().collect::<Vec<_>>().join(" "))
-    {
-        if line.is_empty() {
-            blank += 1;
-            if blank > 1 || out.is_empty() {
-                continue;
-            }
-        } else {
-            blank = 0;
-        }
-        out.push_str(&line);
-        out.push('\n');
-    }
-    out.trim_end().to_string()
-}
+/// HTML as the plain text a reader takes in. The gmail crate holds the
+/// one implementation, which the signatures and automatic replies use too.
+pub use mailrs_gmail::html_to_text;
 
 /// Markdown to email HTML. A single line break stays a line break, as it
 /// would in any other mail client, and styles are inline because many mail
@@ -939,6 +1065,26 @@ fn bare_id(id: &str) -> String {
         .trim_start_matches('<')
         .trim_end_matches('>')
         .to_string()
+}
+
+/// A message the composer built on its way out. The app sends these
+/// bytes rather than building the message a second time.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Built {
+    /// The whole message, for one that is neither signed nor encrypted.
+    Message(Vec<u8>),
+    /// The body an engine signs or encrypts, for one that is. The engine
+    /// may ask for a passphrase, so its work waits for the app.
+    Body(Vec<u8>),
+}
+
+/// Builds as much of `draft` as can be built before it leaves the
+/// composer: all of it, or the body an engine will sign or encrypt.
+pub fn build(draft: &Draft, date_secs: i64, message_id: &str) -> Result<Built, String> {
+    match draft.sign || draft.encrypt {
+        true => build_body_part(draft).map(Built::Body),
+        false => build_mime(draft, date_secs, message_id).map(Built::Message),
+    }
 }
 
 /// The RFC 822 bytes for `draft`.
@@ -1319,6 +1465,59 @@ mod tests {
             Some(&sales()),
             "an alias copied in is still the address to answer from"
         );
+    }
+
+    fn lines(text: &str) -> Vec<String> {
+        text.split('\n').map(String::from).collect()
+    }
+
+    /// `lines` with `change` made to them.
+    fn changed(mut lines: Vec<String>, change: LineChange) -> String {
+        lines.splice(change.first..change.first + change.removed, change.lines);
+        lines.join("\n")
+    }
+
+    #[test]
+    fn a_signature_swap_touches_only_the_signature_lines() {
+        let body = "Hi Ann,\n\nMonday works.\n\n-- \nDana\n\nOn Monday, Ann wrote:\n> hi";
+        let change = signature_change(&lines(body), "Dana", "Dana Reyes\nSales").unwrap();
+        assert_eq!(
+            change,
+            LineChange {
+                first: 5,
+                removed: 1,
+                lines: vec!["Dana Reyes".into(), "Sales".into()],
+            }
+        );
+        assert_eq!(
+            changed(lines(body), change),
+            restyle_signature(body, "Dana", "Dana Reyes\nSales")
+        );
+    }
+
+    #[test]
+    fn a_signature_comes_and_goes_as_whole_lines() {
+        for (body, old, new) in [
+            ("Hi\n\nOn Monday, Ann wrote:\n> hi", "", "Dana"),
+            ("Hi\n\n-- \nDana\n\nOn Monday, Ann wrote:\n> hi", "Dana", ""),
+            ("Hi", "", "Dana"),
+            ("Hi\n\n-- \nDana", "Dana", ""),
+            // The rich buffer loses the space after the dashes.
+            ("Hi\n\n--\nDana", "Dana", "Sales"),
+        ] {
+            let change = signature_change(&lines(body), old, new).unwrap();
+            assert_eq!(
+                changed(lines(body), change),
+                restyle_signature(body, old, new),
+                "{body:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn an_edited_signature_is_left_alone() {
+        let body = "Hi\n\n-- \nDana, who rewrote this";
+        assert_eq!(signature_change(&lines(body), "Dana", "Sales"), None);
     }
 
     #[test]
@@ -1739,12 +1938,47 @@ mod tests {
     }
 
     #[test]
+    fn a_greater_than_sign_in_an_attribute_stays_out_of_the_quote() {
+        let text = html_to_text(r#"<p title="a > b">Hello</p><p>there</p>"#);
+        assert_eq!(text, "Hello\n\nthere");
+    }
+
+    #[test]
+    fn a_forward_is_found_by_its_tag_not_by_a_stray_angle_bracket() {
+        let mine = r#"<p title="x<y">Mine</p>"#;
+        let theirs = r#"<div title="a > b" class="mailrs-forwarded"><p>Theirs</p></div>"#;
+        let (written, forwarded) = split_forwarded_html(&format!("{mine}{theirs}"));
+        assert_eq!(written, mine);
+        assert_eq!(forwarded.as_deref(), Some(theirs));
+        // The marker's name said in the text, or in a comment, is no forward.
+        for html in [
+            r#"<p>class="mailrs-forwarded"</p>"#,
+            r#"<!-- <div class="mailrs-forwarded"> --><p>hi</p>"#,
+        ] {
+            assert_eq!(
+                split_forwarded_html(html),
+                (html.to_string(), None),
+                "{html}"
+            );
+        }
+    }
+
+    #[test]
+    fn only_a_tag_refers_to_an_inline_image() {
+        assert!(refers_to_cid(r#"<img alt="a > b" src="cid:logo">"#, "logo"));
+        assert!(!refers_to_cid(r#"<img src="cid:logo2">"#, "logo"));
+        // Words about the image, and markup nobody will render, are not it.
+        assert!(!refers_to_cid("<p>see cid:logo above</p>", "logo"));
+        assert!(!refers_to_cid(r#"<!-- <img src="cid:logo"> -->"#, "logo"));
+    }
+
+    #[test]
     fn html_bodies_become_readable_text() {
         let text = html_to_text(
             "<html><head><style>p{color:red}</style></head><body><p>Hello&nbsp;there</p><div>Line <b>two</b><br>three</div>\
              <script>x()</script><p></p><p>&amp; four</p></body></html>",
         );
-        assert_eq!(text, "Hello there\nLine two\nthree\n\n& four");
+        assert_eq!(text, "Hello there\n\nLine two\nthree\n\n& four");
     }
 
     #[test]
@@ -2019,5 +2253,128 @@ mod tests {
         assert!(raw.ends_with(entity), "{raw}");
         // The one Content-Type on the message is the engine's own.
         assert_eq!(raw.matches("Content-Type: multipart/signed").count(), 1);
+    }
+
+    /// A draft that could go: one recipient, a body promising a file.
+    fn ready() -> Draft {
+        let mut draft = Draft::new(1, me());
+        draft.to = vec![addr(None, "ann@example.com")];
+        draft.subject = "Menu".into();
+        draft.markdown = "Please find the attached file.".into();
+        draft
+    }
+
+    const NOW: EpochMillis = 1_757_000_000_000;
+
+    fn asking(secret: bool, attachments: bool) -> Asking {
+        Asking {
+            secret,
+            attachments,
+        }
+    }
+
+    #[test]
+    fn a_message_that_cannot_go_is_refused_before_anything_is_asked() {
+        let mut draft = ready();
+        draft.to.clear();
+        assert_eq!(
+            gate(&draft, SendWhen::Now, NOW, asking(true, true)),
+            Gate::Refuse(gettext("Add at least one recipient."))
+        );
+        // A time already gone counts the same, and only for Send Later.
+        let past = SendWhen::At(NOW - 1);
+        assert_eq!(
+            gate(&ready(), past, NOW, asking(true, true)),
+            Gate::Refuse(gettext("Choose a time in the future"))
+        );
+        assert_ne!(
+            gate(
+                &ready(),
+                SendWhen::At(NOW + 60_000),
+                NOW,
+                asking(false, false)
+            ),
+            gate(&ready(), past, NOW, asking(false, false))
+        );
+    }
+
+    #[test]
+    fn going_out_readable_is_asked_about_before_the_missing_file() {
+        let draft = ready();
+        assert_eq!(
+            gate(&draft, SendWhen::Now, NOW, asking(true, true)),
+            Gate::ConfirmReadable
+        );
+        // Send Readable clears the wish, and the file is next.
+        let Gate::ConfirmNoFile(promise) = gate(&draft, SendWhen::Now, NOW, asking(false, true))
+        else {
+            panic!("the promise should be asked about");
+        };
+        assert_eq!(promise.sentence, "Please find the attached file.");
+        // Send Anyway answers that, and nothing is left to ask.
+        assert_eq!(
+            gate(&draft, SendWhen::Now, NOW, asking(false, false)),
+            Gate::Send
+        );
+    }
+
+    #[test]
+    fn a_message_going_out_encrypted_is_not_asked_about() {
+        let mut draft = ready();
+        draft.encrypt = true;
+        draft.attachments.push(OutgoingAttachment {
+            filename: "menu.pdf".into(),
+            mime_type: "application/pdf".into(),
+            data: b"%PDF".to_vec(),
+            content_id: None,
+        });
+        assert_eq!(
+            gate(&draft, SendWhen::Now, NOW, asking(true, true)),
+            Gate::Send
+        );
+    }
+
+    #[test]
+    fn a_pasted_picture_keeps_a_promise_of_something_to_look_at() {
+        let mut draft = ready();
+        draft.markdown = "See attached, the sea was warm.".into();
+        draft.attachments.push(OutgoingAttachment {
+            filename: "photo.png".into(),
+            mime_type: "image/png".into(),
+            data: vec![0x89],
+            content_id: Some("photo@mailrs".into()),
+        });
+        assert_eq!(
+            gate(&draft, SendWhen::Now, NOW, asking(false, true)),
+            Gate::Send
+        );
+        // A picture is not the file a message says it attaches.
+        draft.markdown = "Please find the attached file.".into();
+        assert!(matches!(
+            gate(&draft, SendWhen::Now, NOW, asking(false, true)),
+            Gate::ConfirmNoFile(_)
+        ));
+    }
+
+    #[test]
+    fn a_plain_message_is_built_whole_and_a_protected_one_up_to_its_body() {
+        let mut draft = Draft::new(1, me());
+        draft.to = vec![addr(None, "ann@example.com")];
+        draft.subject = "Lunch".into();
+        draft.markdown = "Meet at six.".into();
+        let Ok(Built::Message(raw)) = build(&draft, 1_757_000_000, "id@example.com") else {
+            panic!("a plain message goes out whole");
+        };
+        let raw = String::from_utf8(raw).unwrap();
+        assert!(raw.contains("Subject: Lunch\r\n"), "{raw}");
+        assert!(raw.contains("Meet at six."), "{raw}");
+
+        draft.sign = true;
+        let Ok(Built::Body(part)) = build(&draft, 1_757_000_000, "id@example.com") else {
+            panic!("a signed message leaves its body for the engine");
+        };
+        let part = String::from_utf8(part).unwrap();
+        assert!(!part.contains("Subject:"), "{part}");
+        assert!(part.contains("Meet at six."), "{part}");
     }
 }

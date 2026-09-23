@@ -158,63 +158,6 @@ fn decode_entity(entity: &str) -> Option<char> {
     }
 }
 
-/// Plain text from the small HTML Gmail stores for signatures and automatic
-/// replies: block tags and `<br>` become line breaks, other tags go.
-pub fn html_to_text(html: &str) -> String {
-    let mut out = String::new();
-    let mut rest = html;
-    while let Some(open) = rest.find('<') {
-        out.push_str(&decode_entities(&rest[..open]));
-        let Some(close) = rest[open..].find('>') else {
-            rest = "";
-            break;
-        };
-        let tag = rest[open + 1..open + close].trim().to_ascii_lowercase();
-        rest = &rest[open + close + 1..];
-        let closing = tag.starts_with('/');
-        let name: String = tag
-            .trim_start_matches('/')
-            .chars()
-            .take_while(|c| c.is_ascii_alphanumeric())
-            .collect();
-        match name.as_str() {
-            "br" => out.push('\n'),
-            "p" if closing => end_line(&mut out, 2),
-            "div" | "p" | "li" | "tr" | "ul" | "ol" | "table" | "blockquote" | "h1" | "h2"
-            | "h3" | "h4" | "h5" | "h6" => end_line(&mut out, 1),
-            _ => {}
-        }
-    }
-    out.push_str(&decode_entities(rest));
-    let lines: Vec<&str> = out.lines().map(str::trim_end).collect();
-    let mut text = lines.join("\n");
-    while text.contains("\n\n\n") {
-        text = text.replace("\n\n\n", "\n\n");
-    }
-    text.trim().to_string()
-}
-
-/// Ends the current line so `out` finishes with `breaks` line breaks.
-fn end_line(out: &mut String, breaks: usize) {
-    if out.is_empty() {
-        return;
-    }
-    let have = out.len() - out.trim_end_matches('\n').len();
-    for _ in have..breaks {
-        out.push('\n');
-    }
-}
-
-fn decode_entities(text: &str) -> String {
-    text.replace("&nbsp;", " ")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&#39;", "'")
-        .replace("&#x27;", "'")
-        .replace("&amp;", "&")
-}
-
 /// Escaped HTML with a `<br>` for each line break.
 pub fn text_to_html(text: &str) -> String {
     text.replace('&', "&amp;")
@@ -227,18 +170,6 @@ pub fn text_to_html(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn gmail_html_turns_into_lines() {
-        assert_eq!(
-            html_to_text(
-                r#"<div dir="ltr">Ann Lee<div>Maple &amp; Finch</div><div><br></div></div>"#
-            ),
-            "Ann Lee\nMaple & Finch"
-        );
-        assert_eq!(html_to_text("<p>One</p><p>Two</p>"), "One\n\nTwo");
-        assert_eq!(html_to_text("plain"), "plain");
-    }
 
     #[test]
     fn text_becomes_escaped_html() {

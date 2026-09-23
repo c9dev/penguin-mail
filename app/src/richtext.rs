@@ -8,7 +8,7 @@
 //! beside it, and the Markdown a writer can switch to all come from one
 //! place and are covered by unit tests.
 
-use mailrs_gmail::convert::unescape_snippet;
+use mailrs_gmail::html::{self, Piece, Tag as HtmlTag};
 use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use serde::{Deserialize, Serialize};
 
@@ -279,44 +279,10 @@ impl RichBody {
     /// know becomes plain text rather than disappearing.
     pub fn from_html(html: &str) -> RichBody {
         let mut builder = HtmlBuilder::default();
-        // ASCII lowercasing keeps byte offsets, so indexes into `lower`
-        // fit `html`.
-        let lower = html.to_ascii_lowercase();
-        let mut i = 0;
-        while i < html.len() {
-            let Some(offset) = html[i..].find('<') else {
-                builder.text(&html[i..]);
-                break;
-            };
-            builder.text(&html[i..i + offset]);
-            let start = i + offset;
-            let Some(length) = html[start..].find('>') else {
-                // A `<` with nothing closing it is text, not a tag.
-                builder.text(&html[start..]);
-                break;
-            };
-            let end = start + length + 1;
-            let inside = &lower[start + 1..end - 1];
-            let closing = inside.starts_with('/');
-            let name: String = inside
-                .trim_start_matches('/')
-                .chars()
-                .take_while(|c| c.is_ascii_alphanumeric())
-                .collect();
-            if name.is_empty() {
-                // A comment, or a `<` the writer meant as a `<`. Reading
-                // on from the next character finds the tags after it.
-                if inside.starts_with('!') {
-                    i = end;
-                } else {
-                    builder.text("<");
-                    i = start + 1;
-                }
-                continue;
-            }
-            builder.tag(&name, closing, &html[start + 1..end - 1]);
-            i = end;
-        }
+        html::walk(html, |piece| match piece {
+            Piece::Text(text) => builder.text(text),
+            Piece::Tag(tag) => builder.tag(&tag),
+        });
         builder.finish()
     }
 }
@@ -633,35 +599,12 @@ fn heading_level(name: &str) -> Option<u8> {
     }
 }
 
-/// The value `wanted` has in a tag's text, quoted or bare.
-fn attribute(tag: &str, wanted: &str) -> Option<String> {
-    let lower = tag.to_ascii_lowercase();
-    let mut from = 0;
-    while let Some(offset) = lower[from..].find(wanted) {
-        let at = from + offset;
-        from = at + wanted.len();
-        // Inside a longer name, such as `data-src`, it is a different word.
-        if lower[..at]
-            .chars()
-            .last()
-            .is_some_and(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
-        {
-            continue;
-        }
-        let Some(rest) = tag[from..].trim_start().strip_prefix('=') else {
-            continue;
-        };
-        let rest = rest.trim_start();
-        let value = match rest.chars().next() {
-            Some(quote @ ('"' | '\'')) => {
-                let rest = &rest[1..];
-                &rest[..rest.find(quote).unwrap_or(rest.len())]
-            }
-            _ => &rest[..rest.find(char::is_whitespace).unwrap_or(rest.len())],
-        };
-        return Some(unescape_snippet(value));
-    }
-    None
+/// The value of `wanted` on `tag`, when it has one worth reading.
+fn attribute(tag: &HtmlTag<'_>, wanted: &str) -> Option<String> {
+    tag.attribute(wanted)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(String::from)
 }
 
 /// One more level deep, or one less.
@@ -758,11 +701,11 @@ impl HtmlBuilder {
         self.body.blocks.push(Block::default());
     }
 
-    fn text(&mut self, raw: &str) {
-        if self.hidden.is_some() || raw.is_empty() {
+    /// Takes a run of text, its references already decoded.
+    fn text(&mut self, decoded: &str) {
+        if self.hidden.is_some() || decoded.is_empty() {
             return;
         }
-        let decoded = unescape_snippet(raw);
         if self.pre > 0 {
             let mut lines = decoded.split('\n').peekable();
             while let Some(line) = lines.next() {
@@ -807,7 +750,8 @@ impl HtmlBuilder {
         }
     }
 
-    fn tag(&mut self, name: &str, closing: bool, tag: &str) {
+    fn tag(&mut self, tag: &HtmlTag<'_>) {
+        let (name, closing) = (tag.name, tag.closing);
         if let Some(hidden) = self.hidden.clone() {
             if closing && hidden == name {
                 self.hidden = None;
@@ -1174,6 +1118,20 @@ mod tests {
         assert!(plain.contains("a < b & c"), "{plain}");
         assert!(!plain.contains("color:red"), "{plain}");
         assert!(!plain.contains("alert"), "{plain}");
+    }
+
+    #[test]
+    fn a_greater_than_sign_in_an_attribute_ends_no_tag() {
+        let body = RichBody::from_html(
+            r#"<p title="a > b">Hi <a href="https://e.com/?q=1>2" title='x>y'>there</a></p>"#,
+        );
+        assert_eq!(body.to_plain(), "Hi there <https://e.com/?q=1>2>");
+        assert_eq!(
+            body.blocks[0].spans[1].link.as_deref(),
+            Some("https://e.com/?q=1>2")
+        );
+        // A reference is decoded once, not twice.
+        assert_eq!(RichBody::from_html("<p>&amp;lt;</p>").to_plain(), "&lt;");
     }
 
     #[test]

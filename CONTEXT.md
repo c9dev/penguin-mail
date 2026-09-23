@@ -91,6 +91,8 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Rich body**: the composer's message while it is being written as rich text: lines with a kind, each carrying runs of styled words. `mailrs::richtext::RichBody`. It becomes the HTML part of the message, the plain text part beside it, and the Markdown a writer who prefers marks sees, and it reads Markdown back in, which is how a reply's quote and the assistant's drafts arrive. _Avoid_: document, rich text, formatted body.
 
+**Send gate**: what stands between a finished message and sending it, one check at a time: a message that cannot go is refused, then a message meant to go out encrypted that cannot be is asked about, then a promised file that is missing. `mailrs::compose::gate` names the next step, and the composer asks what it says to ask until it says send. _Avoid_: send checks, validation, preflight.
+
 **Foreground work**: a Gmail call the user is waiting on: a mail action, opening a thread, listing a folder, and whatever the assistant runs on their behalf. It takes the account's quota ahead of background work and waits out a rate limit rather than failing. `mailrs_gmail::Priority::Foreground`, which is what a call is unless some caller wrapped it in `limiter::background`. _Avoid_: user action (too narrow, the assistant counts too), interactive.
 
 **Background work**: a Gmail call nobody is waiting on: backfill, history polling, pruning, the inbox check. The sync engine runs its whole tick as background work, which leaves 100 of the account's 250 unit burst for the user and stands aside while a foreground call waits. `mailrs_gmail::Priority::Background`. _Avoid_: sync work, low priority.

@@ -33,6 +33,9 @@ futures = "0.3.34"
 # app and the desktop read the same catalogues.
 gettext-rs = { version = "0.8.0", features = ["gettext-system"] }
 gtk = { package = "gtk4", version = "0.11.4", features = ["v4_20"] }
+# The tokenizer behind the sanitizer, which reads mail HTML without a
+# browser; ammonia already brings it.
+html5ever = "0.40.1"
 icalendar = "0.17.13"
 keyring = "4.2.0"
 ksni = "0.3.6"

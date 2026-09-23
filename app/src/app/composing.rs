@@ -117,11 +117,12 @@ impl App {
             Rc::clone(&self.contacts),
             draft,
             format,
-            move |draft, when| {
+            move |draft, built, when| {
                 // The composer opened on a signed draft, and what the
-                // person kept of that signature is theirs to keep.
+                // person kept of that signature is theirs to keep, so the
+                // bytes it built are the ones that go.
                 if let Some(app) = this.upgrade() {
-                    app.send(draft, when, Signature::AsWritten);
+                    app.send_built(draft, built, when);
                 }
             },
         );

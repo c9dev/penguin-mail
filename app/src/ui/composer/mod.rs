@@ -7,6 +7,7 @@
 //! source, as it always did, and Format Markdown moves a body from one to
 //! the other.
 
+mod editor;
 mod recipients;
 mod richbuffer;
 pub mod spell;
@@ -19,18 +20,19 @@ use gtk::{gdk, gio, glib};
 use mailrs_store::templates::Template;
 use webkit::prelude::*;
 
+use self::editor::Editor;
 use self::recipients::Recipients;
 use super::autocomplete::Contacts;
 use super::{labelled_by, name, name_with_shortcut, roving};
-use crate::attachcheck::{self, Promise};
+use crate::attachcheck::Promise;
 use crate::compose::{
-    Draft, LinePrefix, OutgoingAttachment, SendWhen, build_mime, format_recipients, is_address,
-    markdown_to_html, new_message_id, opening_identity, restyle_signature, toggle_prefix,
+    Asking, Built, Draft, Gate, OutgoingAttachment, SendWhen, build, format_recipients, gate,
+    is_address, new_message_id, opening_identity,
 };
 use crate::core::Core;
 use crate::format::{future_date, human_size, send_later_presets};
 use crate::protection::{self, Held, Standard};
-use crate::richtext::{Block, BlockKind, RichBody, Style};
+use crate::richtext::{BlockKind, RichBody};
 use crate::settings::ComposeFormat;
 use crate::templates::{self, Filling};
 use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
@@ -99,6 +101,8 @@ pub struct Composer {
     more_button: gtk::ToggleButton,
     subject: gtk::Entry,
     body: gtk::TextView,
+    /// The body's buffer and every edit made to it.
+    editor: Rc<Editor>,
     stack: gtk::Stack,
     preview: webkit::WebView,
     /// The attachment rows and the box that holds them.
@@ -152,14 +156,6 @@ pub struct Composer {
     remember: Rc<dyn Fn(Remembered)>,
     base: RefCell<Draft>,
     attachments: RefCell<Vec<OutgoingAttachment>>,
-    anchors: RefCell<richbuffer::Anchors>,
-    format: Cell<ComposeFormat>,
-    /// The style the next typed character takes, and where it applies.
-    typing: RefCell<Option<(i32, Style, Option<String>)>>,
-    /// Text just inserted, waiting for its style: offset and length.
-    inserted: RefCell<Vec<(i32, i32)>>,
-    /// True while the composer edits the buffer itself.
-    busy: Cell<bool>,
     /// Whether a message that promises a file is worth asking about.
     check_attachments: bool,
     /// Set once Send Anyway answered the missing attachment dialog, so the
@@ -167,21 +163,22 @@ pub struct Composer {
     asked: Cell<bool>,
     dirty: Cell<bool>,
     closing: Cell<bool>,
-    on_send: Box<dyn Fn(Draft, SendWhen)>,
+    on_send: Box<dyn Fn(Draft, Built, SendWhen)>,
 }
 
 impl Composer {
     /// Opens a composer for `draft`. `writing` carries every address the
     /// accounts send as; the From row starts on the one the draft names.
     /// `format` is what a message starts as. `on_send` receives the
-    /// finished message; the composer closes itself.
+    /// finished message and what the composer built of it; the composer
+    /// closes itself.
     pub fn open(
         core: Rc<Core>,
         writing: Writing,
         contacts: Contacts,
         draft: Draft,
         format: ComposeFormat,
-        on_send: impl Fn(Draft, SendWhen) + 'static,
+        on_send: impl Fn(Draft, Built, SendWhen) + 'static,
     ) -> Rc<Composer> {
         let Writing {
             identities,
@@ -371,7 +368,7 @@ impl Composer {
             .vexpand(true)
             .build();
         name(&body, &gettext("Message"));
-        richbuffer::install(&body.buffer());
+        let editor = Editor::new(&body, format);
         let settings = webkit::Settings::new();
         settings.set_enable_javascript(false);
         let preview = webkit::WebView::builder().settings(&settings).build();
@@ -437,7 +434,10 @@ impl Composer {
             .content(&toasts)
             .build();
 
-        let attachments = draft.attachments.clone();
+        // The composer keeps the files in a list of its own, so the draft
+        // it started from holds none for every save to copy.
+        let mut draft = draft;
+        let attachments = std::mem::take(&mut draft.attachments);
         let composer = Rc::new(Composer {
             core,
             window,
@@ -456,6 +456,7 @@ impl Composer {
             more_button,
             subject,
             body,
+            editor,
             stack,
             preview,
             files,
@@ -483,11 +484,6 @@ impl Composer {
             remember,
             base: RefCell::new(draft),
             attachments: RefCell::new(attachments),
-            anchors: RefCell::new(Vec::new()),
-            format: Cell::new(format),
-            typing: RefCell::new(None),
-            inserted: RefCell::new(Vec::new()),
-            busy: Cell::new(false),
             check_attachments,
             asked: Cell::new(false),
             dirty: Cell::new(false),
@@ -529,44 +525,17 @@ impl Composer {
         self.window.clone()
     }
 
-    /// Puts the draft's body in the buffer, styled or as Markdown.
-    fn fill_body(self: &Rc<Self>) {
-        let markdown = self.base.borrow().markdown.clone();
-        self.busy.set(true);
-        match self.format.get() {
-            ComposeFormat::Rich => {
-                // A reopened draft brings its styling with it; everything
-                // else arrives as Markdown.
-                let body = match self.base.borrow().rich.clone() {
-                    Some(rich) => rich,
-                    None => {
-                        let mut body = RichBody::from_markdown(&markdown);
-                        // A reply and a forward start with blank lines to
-                        // write on, which Markdown drops and the writer
-                        // wants back.
-                        let room = markdown.chars().take_while(|c| *c == '\n').count().min(2);
-                        for _ in 0..room {
-                            body.blocks.insert(0, Block::default());
-                        }
-                        body
-                    }
-                };
-                richbuffer::write(
-                    &self.body,
-                    &body,
-                    &self.attachments.borrow(),
-                    &mut self.anchors.borrow_mut(),
-                );
-            }
-            ComposeFormat::Markdown => {
-                self.body.buffer().set_text(&markdown);
-                style_quotes(&self.body.buffer());
-            }
-        }
-        self.body
-            .buffer()
-            .place_cursor(&self.body.buffer().start_iter());
-        self.busy.set(false);
+    /// Puts the draft's body in the buffer, styled or as Markdown. The
+    /// editor holds the body from here on, so the draft the composer
+    /// started from lets go of its copy rather than carry it into every
+    /// save.
+    fn fill_body(&self) {
+        let (markdown, rich) = {
+            let mut base = self.base.borrow_mut();
+            (std::mem::take(&mut base.markdown), base.rich.take())
+        };
+        self.editor
+            .fill(&markdown, rich.as_ref(), &self.attachments.borrow());
     }
 
     fn wire(self: &Rc<Self>, attach: &gtk::Button, preview_toggle: &gtk::ToggleButton) {
@@ -613,26 +582,14 @@ impl Composer {
             );
         }
 
-        // Typed text takes the style it follows, and the kind of its line.
-        let weak = Rc::downgrade(self);
-        self.body.buffer().connect_insert_text(move |_, at, text| {
-            if let Some(c) = weak.upgrade() {
-                let length = text.chars().count() as i32;
-                c.inserted.borrow_mut().push((at.offset(), length));
-            }
-        });
+        // The editor connected first, so it has styled what was typed by
+        // the time these run.
         let mark = mark_dirty.clone();
-        let weak = Rc::downgrade(self);
-        self.body.buffer().connect_changed(move |buffer| {
-            if let Some(c) = weak.upgrade() {
-                c.after_edit(buffer);
-            }
-            mark();
-        });
+        self.body.buffer().connect_changed(move |_| mark());
         let weak = Rc::downgrade(self);
         self.body.buffer().connect_cursor_position_notify(move |_| {
             if let Some(c) = weak.upgrade() {
-                c.follow_cursor();
+                c.refresh_toggles();
             }
         });
 
@@ -829,11 +786,12 @@ impl Composer {
             };
             if !matches!(key, gdk::Key::Return | gdk::Key::KP_Enter)
                 || modifiers.contains(gdk::ModifierType::CONTROL_MASK)
-                || c.format.get() != ComposeFormat::Rich
+                || !c.editor.enter()
             {
                 return glib::Propagation::Proceed;
             }
-            c.new_line()
+            c.dirty.set(true);
+            glib::Propagation::Stop
         });
         self.body.add_controller(keys);
 
@@ -881,31 +839,9 @@ impl Composer {
         }
     }
 
-    /// The body as Markdown, whichever way it is being written.
-    fn markdown(&self) -> String {
-        match self.format.get() {
-            ComposeFormat::Rich => self.rich().to_markdown(),
-            ComposeFormat::Markdown => self.source(),
-        }
-    }
-
-    /// The text in the buffer, markers and all.
-    fn source(&self) -> String {
-        let buffer = self.body.buffer();
-        buffer
-            .text(&buffer.start_iter(), &buffer.end_iter(), false)
-            .to_string()
-    }
-
-    fn rich(&self) -> RichBody {
-        richbuffer::read(&self.body.buffer(), &self.anchors.borrow())
-    }
-
+    /// The body as HTML, with the message it forwards under it.
     fn html(&self) -> String {
-        let mut html = match self.format.get() {
-            ComposeFormat::Rich => self.rich().to_html(),
-            ComposeFormat::Markdown => markdown_to_html(&self.source()),
-        };
+        let mut html = self.editor.html();
         if let Some(forwarded) = &self.base.borrow().forwarded {
             html.push_str(&forwarded.to_html());
         }
@@ -913,13 +849,9 @@ impl Composer {
     }
 
     fn is_blank(&self) -> bool {
-        let empty = match self.format.get() {
-            ComposeFormat::Rich => self.rich().is_empty(),
-            ComposeFormat::Markdown => self.source().trim().is_empty(),
-        };
         self.to.is_empty()
             && self.subject.text().trim().is_empty()
-            && empty
+            && self.editor.is_empty()
             && self.attachments.borrow().is_empty()
             && self.base.borrow().forwarded.is_none()
     }
@@ -995,17 +927,9 @@ impl Composer {
         if old.signature == new.signature {
             return;
         }
-        let markdown = self.markdown();
-        let swapped = restyle_signature(&markdown, &old.signature, &new.signature);
-        if swapped == markdown {
-            return;
+        if self.editor.swap_signature(&old.signature, &new.signature) {
+            self.check_send();
         }
-        self.base.borrow_mut().markdown = swapped;
-        // The buffer holds the styling, so the body is written out again
-        // from the swapped Markdown rather than patched in place.
-        self.base.borrow_mut().rich = None;
-        self.fill_body();
-        self.check_send();
     }
 
     /// Underlines misspellings as the writer types, when a dictionary is
@@ -1189,11 +1113,9 @@ impl Composer {
         draft.cc = self.cc.addresses();
         draft.bcc = self.bcc.addresses();
         draft.subject = self.subject.text().trim().to_string();
-        draft.markdown = self.markdown();
-        draft.rich = match self.format.get() {
-            ComposeFormat::Rich => Some(self.rich()),
-            ComposeFormat::Markdown => None,
-        };
+        let written = self.editor.written();
+        draft.markdown = written.markdown;
+        draft.rich = written.rich;
         draft.attachments = self.attachments.borrow().clone();
         draft.sign = self.sign.is_active();
         draft.encrypt = self.encrypt.is_active() && self.encrypt.is_sensitive();
@@ -1226,31 +1148,49 @@ impl Composer {
         self.hand_over(SendWhen::Now);
     }
 
-    /// Passes the finished message on for sending and closes.
+    /// Walks the message through the send gate, asking the writer what
+    /// the gate wants asked, and passes it on for sending once nothing
+    /// stands in the way.
     fn hand_over(self: &Rc<Self>, when: SendWhen) {
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move { this.pass_gate(when).await });
+    }
+
+    async fn pass_gate(self: &Rc<Self>, when: SendWhen) {
+        // The dialogs are modal, so the draft read here is the one that
+        // goes, however many questions come first.
         let Some(draft) = self.collect() else { return };
-        if let Some(problem) = draft.problem() {
-            self.toast(&problem);
-            return;
+        loop {
+            let asking = Asking {
+                secret: self.secret.get(),
+                attachments: self.check_attachments && !self.asked.get(),
+            };
+            match gate(&draft, when, mailrs_sync::now_millis(), asking) {
+                Gate::Refuse(problem) => return self.toast(&problem),
+                Gate::ConfirmReadable => match self.confirm_readable().await {
+                    true => self.secret.set(false),
+                    false => return,
+                },
+                Gate::ConfirmNoFile(promise) => match self.confirm_no_file(&promise).await {
+                    Some(true) => self.asked.set(true),
+                    Some(false) => return self.pick_files(),
+                    None => return,
+                },
+                Gate::Send => return self.send_off(draft, when),
+            }
         }
-        if let SendWhen::At(at) = when
-            && at <= mailrs_sync::now_millis()
-        {
-            self.toast(&gettext("Choose a time in the future"));
-            return;
-        }
-        if let Err(err) = build_mime(&draft, now_secs(), &new_message_id(&draft.from.email)) {
-            self.failed(&gettext("Could not build the message: {reason}"), &err);
-            return;
-        }
-        if self.secret.get() && !draft.encrypt {
-            self.ask_about_encryption(when);
-            return;
-        }
-        if let Some(promise) = self.unkept_promise(&draft) {
-            self.ask_about_attachment(&promise, when);
-            return;
-        }
+    }
+
+    /// Builds the message and passes it on, then closes. The bytes go
+    /// with it, so the app does not build the same message again.
+    fn send_off(self: &Rc<Self>, draft: Draft, when: SendWhen) {
+        let built = match build(&draft, now_secs(), &new_message_id(&draft.from.email)) {
+            Ok(built) => built,
+            Err(err) => {
+                self.failed(&gettext("Could not build the message: {reason}"), &err);
+                return;
+            }
+        };
         if let Some(identity) = self.identity() {
             (self.remember)(Remembered::SentFrom {
                 account: identity.account_email.clone(),
@@ -1259,28 +1199,13 @@ impl Composer {
         }
         self.closing.set(true);
         self.window.close();
-        (self.on_send)(draft, when);
+        (self.on_send)(draft, built, when);
     }
 
-    /// The file this message promises and does not carry. An image pasted
-    /// into the text keeps a promise of something to look at, since it
-    /// arrives with the message either way, but not a promise of a file:
-    /// only an attachment comes out of the reader's mail as one.
-    fn unkept_promise(&self, draft: &Draft) -> Option<Promise> {
-        if !self.check_attachments || self.asked.get() {
-            return None;
-        }
-        let promise = attachcheck::promised(&draft.subject, &draft.markdown)?;
-        let files = draft.attachments.iter().any(|a| a.content_id.is_none());
-        let images = draft.attachments.iter().any(|a| a.content_id.is_some());
-        let kept = files || (images && !promise.names_a_file);
-        (!kept).then_some(promise)
-    }
-
-    /// Asks before a message that promises a file goes without one. Send
-    /// Anyway sends it as it stands, Add Attachment opens the file picker
-    /// and leaves the message open, and closing the dialog does neither.
-    fn ask_about_attachment(self: &Rc<Self>, promise: &Promise, when: SendWhen) {
+    /// Asks before a message that promises a file goes without one. True
+    /// for Send Anyway, false for Add Attachment, and nothing when the
+    /// dialog closes.
+    async fn confirm_no_file(&self, promise: &Promise) -> Option<bool> {
         let dialog = adw::AlertDialog::new(
             Some(&gettext("Attachment Missing?")),
             Some(&fill(
@@ -1294,24 +1219,18 @@ impl Composer {
         ]);
         dialog.set_response_appearance("send", adw::ResponseAppearance::Suggested);
         dialog.set_default_response(Some("attach"));
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            match dialog.choose_future(Some(&this.window)).await.as_str() {
-                "send" => {
-                    this.asked.set(true);
-                    this.hand_over(when);
-                }
-                "attach" => this.pick_files(),
-                _ => {}
-            }
-        });
+        match dialog.choose_future(Some(&self.window)).await.as_str() {
+            "send" => Some(true),
+            "attach" => Some(false),
+            _ => None,
+        }
     }
 
     /// Asks before a message the writer meant to encrypt goes out readable,
     /// which happens when a recipient's key went missing after Encrypt was
-    /// on. Send Readable clears the wish and sends; closing the dialog
-    /// leaves the message open.
-    fn ask_about_encryption(self: &Rc<Self>, when: SendWhen) {
+    /// on. True for Send Readable; closing the dialog leaves the message
+    /// open.
+    async fn confirm_readable(&self) -> bool {
         let reason = self.encrypt.tooltip_text().unwrap_or_default();
         let dialog = adw::AlertDialog::new(
             Some(&gettext("Send Without Encryption?")),
@@ -1327,13 +1246,7 @@ impl Composer {
         dialog.set_response_appearance("send", adw::ResponseAppearance::Destructive);
         dialog.set_default_response(Some("cancel"));
         dialog.set_close_response("cancel");
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            if dialog.choose_future(Some(&this.window)).await == "send" {
-                this.secret.set(false);
-                this.hand_over(when);
-            }
-        });
+        dialog.choose_future(Some(&self.window)).await == "send"
     }
 
     /// Asks for a date and time, then schedules the message.
@@ -1664,140 +1577,38 @@ impl Composer {
         extras.append(&more);
         members.borrow_mut().push(more.upcast());
         roving::toolbar(bar, members.take());
-        self.follow_cursor();
+        self.refresh_toggles();
     }
 
     /// Turns a style on or off: over the selection, or for what comes next.
     fn style(self: &Rc<Self>, tag: &'static str) {
-        let buffer = self.body.buffer();
-        if self.format.get() == ComposeFormat::Markdown {
-            let (before, after) = match tag {
-                "bold" => ("**", "**"),
-                "italic" => ("*", "*"),
-                "strike" => ("~~", "~~"),
-                _ => ("`", "`"),
-            };
-            wrap_selection(&buffer, before, after);
-            self.body.grab_focus();
-            self.follow_cursor();
-            return;
-        }
-        self.busy.set(true);
-        if let Some((start, end)) = buffer.selection_bounds() {
-            let on = !whole_selection_has(&buffer, tag);
-            if on {
-                buffer.apply_tag_by_name(tag, &start, &end);
-            } else {
-                buffer.remove_tag_by_name(tag, &start, &end);
-            }
-        } else {
-            let cursor = buffer.iter_at_mark(&buffer.get_insert());
-            let (mut style, link) = self.next_style(&cursor);
-            let on = !richbuffer::has(style, tag);
-            match tag {
-                "bold" => style.bold = on,
-                "italic" => style.italic = on,
-                "strike" => style.strike = on,
-                _ => style.code = on,
-            }
-            *self.typing.borrow_mut() = Some((cursor.offset(), style, link));
-        }
-        self.busy.set(false);
+        self.editor.toggle(tag);
         self.body.grab_focus();
         self.refresh_toggles();
     }
 
-    /// The style typing at `at` would take, pending toggles included.
-    fn next_style(&self, at: &gtk::TextIter) -> (Style, Option<String>) {
-        if let Some((offset, style, link)) = self.typing.borrow().as_ref()
-            && *offset == at.offset()
-        {
-            return (*style, link.clone());
-        }
-        richbuffer::style_before(at)
-    }
-
     /// Makes the lines the cursor touches a list, a quote, or plain again.
     fn list(self: &Rc<Self>, kind: BlockKind) {
-        if self.format.get() == ComposeFormat::Markdown {
-            let prefix = match kind {
-                BlockKind::Numbered => LinePrefix::Numbered,
-                BlockKind::Quote => LinePrefix::Quote,
-                _ => LinePrefix::Bullet,
-            };
-            prefix_lines(&self.body.buffer(), prefix);
-            self.body.grab_focus();
-            return;
-        }
-        self.set_block_lines(kind, true);
+        self.editor.list(kind);
+        self.dirty.set(true);
+        self.body.grab_focus();
     }
 
     /// The menu's paragraph kinds, which do not toggle back off.
     fn set_block(self: &Rc<Self>, kind: BlockKind) {
-        if self.format.get() == ComposeFormat::Markdown {
-            let marks = match kind {
-                BlockKind::Heading(level) => "#".repeat(level as usize) + " ",
-                BlockKind::Code => "    ".to_string(),
-                _ => String::new(),
-            };
-            let buffer = self.body.buffer();
-            let line = buffer.iter_at_mark(&buffer.get_insert()).line();
-            let mut at = buffer
-                .iter_at_line(line)
-                .unwrap_or_else(|| buffer.end_iter());
-            buffer.insert(&mut at, &marks);
-            self.body.grab_focus();
-            return;
-        }
-        self.set_block_lines(kind, false);
-    }
-
-    fn set_block_lines(self: &Rc<Self>, kind: BlockKind, toggles: bool) {
-        let buffer = self.body.buffer();
-        let (first, last) = match buffer.selection_bounds() {
-            Some((start, end)) => (start.line(), end.line()),
-            None => {
-                let cursor = buffer.iter_at_mark(&buffer.get_insert()).line();
-                (cursor, cursor)
-            }
-        };
-        let same = (first..=last).all(|line| richbuffer::kind_at(&buffer, line) == kind);
-        let wanted = if toggles && same {
-            BlockKind::Paragraph
-        } else {
-            kind
-        };
-        self.busy.set(true);
-        buffer.begin_user_action();
-        for line in first..=last {
-            richbuffer::set_kind(&buffer, line, wanted);
-        }
-        richbuffer::renumber(&buffer);
-        buffer.end_user_action();
-        self.busy.set(false);
+        self.editor.set_block(kind);
         self.dirty.set(true);
         self.body.grab_focus();
     }
 
     /// Asks for an address and links the selected words to it.
     fn link(self: &Rc<Self>) {
-        let buffer = self.body.buffer();
-        if self.format.get() == ComposeFormat::Markdown {
-            wrap_selection(&buffer, "[", "]()");
+        // The dialog takes the focus, so the editor holds the words being
+        // linked with marks, which survive the wait and any edit under them.
+        let Some(held) = self.editor.start_link() else {
             self.body.grab_focus();
             return;
-        }
-        // The dialog takes the focus, so hold the words being linked with
-        // marks, which survive the wait and any edit under them.
-        let (start, end) = buffer.selection_bounds().unwrap_or_else(|| {
-            let cursor = buffer.iter_at_mark(&buffer.get_insert());
-            (cursor, cursor)
-        });
-        let selected = buffer.text(&start, &end, false).to_string();
-        let held = (
-            buffer.create_mark(None, &start, true),
-            buffer.create_mark(None, &end, false),
-        );
+        };
         let dialog = adw::AlertDialog::new(Some(&gettext("Add a Link")), None);
         let fields = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
@@ -1805,7 +1616,7 @@ impl Composer {
             .build();
         let text = gtk::Entry::builder()
             .placeholder_text(gettext("Text"))
-            .text(&selected)
+            .text(&held.text)
             .build();
         let url = gtk::Entry::builder()
             .placeholder_text("https://example.com")
@@ -1826,9 +1637,7 @@ impl Composer {
             let chosen = dialog.choose_future(Some(&this.window)).await;
             let address = url.text().trim().to_string();
             if chosen.as_str() != "add" || address.is_empty() {
-                let buffer = this.body.buffer();
-                buffer.delete_mark(&held.0);
-                buffer.delete_mark(&held.1);
+                this.editor.drop_link(held);
                 return;
             }
             let address = match address.contains(':') || address.starts_with("//") {
@@ -1842,48 +1651,16 @@ impl Composer {
             } else {
                 shown
             };
-            this.insert_link(&shown, &address, held);
+            this.editor.link(held, &shown, &address);
+            this.dirty.set(true);
+            this.body.grab_focus();
         });
-    }
-
-    /// Puts `text`, linked to `url`, between the marks that held the words.
-    fn insert_link(self: &Rc<Self>, text: &str, url: &str, held: (gtk::TextMark, gtk::TextMark)) {
-        let buffer = self.body.buffer();
-        let tag = richbuffer::link_tag(&buffer, url);
-        self.busy.set(true);
-        buffer.begin_user_action();
-        let (mut start, mut end) = (buffer.iter_at_mark(&held.0), buffer.iter_at_mark(&held.1));
-        let kind = richbuffer::block_tag(richbuffer::kind_at(&buffer, start.line()));
-        buffer.delete(&mut start, &mut end);
-        let offset = start.offset();
-        buffer.insert(&mut start, text);
-        let (from, to) = (
-            buffer.iter_at_offset(offset),
-            buffer.iter_at_offset(offset + text.chars().count() as i32),
-        );
-        buffer.apply_tag(&tag, &from, &to);
-        buffer.apply_tag_by_name(kind, &from, &to);
-        buffer.place_cursor(&to);
-        buffer.delete_mark(&held.0);
-        buffer.delete_mark(&held.1);
-        buffer.end_user_action();
-        self.busy.set(false);
-        self.dirty.set(true);
-        self.body.grab_focus();
     }
 
     /// Reads the Markdown in the body and styles it, marks gone.
     fn format_markdown(self: &Rc<Self>) {
-        let body = RichBody::from_markdown(&self.source());
-        self.format.set(ComposeFormat::Rich);
-        self.busy.set(true);
-        richbuffer::write(
-            &self.body,
-            &body,
-            &self.attachments.borrow(),
-            &mut self.anchors.borrow_mut(),
-        );
-        self.busy.set(false);
+        self.editor
+            .switch_format(ComposeFormat::Rich, &self.attachments.borrow());
         self.dirty.set(true);
         self.refresh_toggles();
         self.toast(&gettext("Markdown formatted"));
@@ -1891,17 +1668,11 @@ impl Composer {
 
     /// Switches between the two ways of writing, keeping the body.
     fn edit_as_markdown(self: &Rc<Self>) {
-        if self.format.get() == ComposeFormat::Markdown {
+        if self.editor.format() == ComposeFormat::Markdown {
             return self.format_markdown();
         }
-        let markdown = self.rich().to_markdown();
-        self.format.set(ComposeFormat::Markdown);
-        self.busy.set(true);
-        self.anchors.borrow_mut().clear();
-        let buffer = self.body.buffer();
-        buffer.set_text(&markdown);
-        style_quotes(&buffer);
-        self.busy.set(false);
+        self.editor
+            .switch_format(ComposeFormat::Markdown, &self.attachments.borrow());
         self.dirty.set(true);
         self.refresh_toggles();
         self.toast(&gettext("Editing as Markdown"));
@@ -1909,118 +1680,19 @@ impl Composer {
 
     /// Takes every style off the selection, or off the whole body.
     fn clear_format(self: &Rc<Self>) {
-        if self.format.get() == ComposeFormat::Markdown {
+        if self.editor.format() == ComposeFormat::Markdown {
             return;
         }
-        let buffer = self.body.buffer();
-        let (start, end) = buffer
-            .selection_bounds()
-            .unwrap_or_else(|| (buffer.start_iter(), buffer.end_iter()));
-        let (first, last) = (start.line(), end.line());
-        self.busy.set(true);
-        buffer.begin_user_action();
-        buffer.remove_all_tags(&start, &end);
-        for line in first..=last {
-            richbuffer::set_kind(&buffer, line, BlockKind::Paragraph);
-        }
-        buffer.end_user_action();
-        self.busy.set(false);
+        self.editor.clear();
         self.dirty.set(true);
         self.refresh_toggles();
-    }
-
-    /// Styles text as it is typed and keeps list numbers in order.
-    fn after_edit(self: &Rc<Self>, buffer: &gtk::TextBuffer) {
-        let ranges: Vec<(i32, i32)> = self.inserted.borrow_mut().drain(..).collect();
-        if self.busy.get() {
-            return;
-        }
-        if self.format.get() == ComposeFormat::Markdown {
-            self.busy.set(true);
-            style_quotes(buffer);
-            self.busy.set(false);
-            return;
-        }
-        self.busy.set(true);
-        for (offset, length) in ranges {
-            let (from, to) = (
-                buffer.iter_at_offset(offset),
-                buffer.iter_at_offset(offset + length),
-            );
-            let (style, link) = self.next_style(&from);
-            for tag in richbuffer::STYLES {
-                if richbuffer::has(style, tag) {
-                    buffer.apply_tag_by_name(tag, &from, &to);
-                } else {
-                    buffer.remove_tag_by_name(tag, &from, &to);
-                }
-            }
-            if let Some(url) = &link {
-                buffer.apply_tag(&richbuffer::link_tag(buffer, url), &from, &to);
-            }
-            // The line keeps its kind, so typing at its end stays in it.
-            let kind = richbuffer::kind_at(buffer, from.line());
-            buffer.apply_tag_by_name(richbuffer::block_tag(kind), &from, &to);
-            *self.typing.borrow_mut() = Some((to.offset(), style, link));
-        }
-        richbuffer::renumber(buffer);
-        self.busy.set(false);
-    }
-
-    /// Enter inside a list or quote: another item, or out of the list.
-    fn new_line(self: &Rc<Self>) -> glib::Propagation {
-        let buffer = self.body.buffer();
-        let cursor = buffer.iter_at_mark(&buffer.get_insert());
-        let line = cursor.line();
-        let kind = richbuffer::kind_at(&buffer, line);
-        if matches!(kind, BlockKind::Paragraph | BlockKind::Heading(_)) {
-            return glib::Propagation::Proceed;
-        }
-        self.busy.set(true);
-        buffer.begin_user_action();
-        if richbuffer::is_empty_line(&buffer, line) {
-            richbuffer::set_kind(&buffer, line, BlockKind::Paragraph);
-        } else {
-            let mut at = buffer.iter_at_mark(&buffer.get_insert());
-            buffer.insert(&mut at, "\n");
-            let line = buffer.iter_at_mark(&buffer.get_insert()).line();
-            richbuffer::set_kind(&buffer, line, kind);
-            let end = richbuffer::text_start(&buffer, line);
-            buffer.place_cursor(&end);
-        }
-        richbuffer::renumber(&buffer);
-        buffer.end_user_action();
-        self.busy.set(false);
-        self.dirty.set(true);
-        glib::Propagation::Stop
     }
 
     /// Keeps the formatting bar showing what the cursor sits in.
-    fn follow_cursor(self: &Rc<Self>) {
-        let buffer = self.body.buffer();
-        let cursor = buffer.iter_at_mark(&buffer.get_insert());
-        let stale = self
-            .typing
-            .borrow()
-            .as_ref()
-            .is_some_and(|(offset, _, _)| *offset != cursor.offset());
-        if stale {
-            *self.typing.borrow_mut() = None;
-        }
-        self.refresh_toggles();
-    }
-
-    fn refresh_toggles(self: &Rc<Self>) {
-        let rich = self.format.get() == ComposeFormat::Rich;
-        let buffer = self.body.buffer();
-        let cursor = buffer.iter_at_mark(&buffer.get_insert());
-        let style = match (rich, buffer.selection_bounds()) {
-            (false, _) => Style::default(),
-            (true, Some((start, _))) => richbuffer::style_at(&start).0,
-            (true, None) => self.next_style(&cursor).0,
-        };
+    fn refresh_toggles(&self) {
+        let style = self.editor.style_here();
         for (button, tag) in self.toggles.borrow().iter() {
-            let wanted = rich && richbuffer::has(style, tag);
+            let wanted = richbuffer::has(style, tag);
             if button.is_active() != wanted {
                 button.set_active(wanted);
             }
@@ -2085,28 +1757,7 @@ impl Composer {
     /// the body is Markdown.
     fn add_inline_image(self: &Rc<Self>, filename: String, mime_type: String, data: Vec<u8>) {
         let cid = format!("{}@mailrs", mailrs_gmail::random_token(9));
-        let buffer = self.body.buffer();
-        self.busy.set(true);
-        match self.format.get() {
-            ComposeFormat::Rich => {
-                let mut at = buffer.iter_at_mark(&buffer.get_insert());
-                richbuffer::insert_image(
-                    &self.body,
-                    &mut at,
-                    &cid,
-                    &data,
-                    &mut self.anchors.borrow_mut(),
-                );
-            }
-            ComposeFormat::Markdown => {
-                let alt: String = filename
-                    .chars()
-                    .filter(|c| !matches!(c, '[' | ']'))
-                    .collect();
-                buffer.insert_at_cursor(&format!("![{alt}](cid:{cid})"));
-            }
-        }
-        self.busy.set(false);
+        self.editor.insert_image(&cid, &filename, &data);
         self.attachments.borrow_mut().push(OutgoingAttachment {
             filename,
             mime_type,
@@ -2242,15 +1893,7 @@ impl Composer {
             filling.subject = self.subject.text().trim().to_string();
         }
         let body = templates::fill(&RichBody::from_markdown(&template.markdown), &filling);
-        let buffer = self.body.buffer();
-        self.busy.set(true);
-        buffer.begin_user_action();
-        match self.format.get() {
-            ComposeFormat::Rich => richbuffer::insert(&buffer, &body),
-            ComposeFormat::Markdown => buffer.insert_at_cursor(&body.to_markdown()),
-        }
-        buffer.end_user_action();
-        self.busy.set(false);
+        self.editor.insert_body(&body);
         self.dirty.set(true);
         self.body.grab_focus();
     }
@@ -2263,7 +1906,7 @@ impl Composer {
             id: 0,
             name: String::new(),
             subject: self.subject.text().trim().to_string(),
-            markdown: self.markdown(),
+            markdown: self.editor.markdown(),
         };
         let dialog = adw::AlertDialog::new(
             Some(&gettext("Save as Template")),
@@ -2305,106 +1948,6 @@ impl Composer {
                 Err(err) => this.failed(&gettext("Template not saved: {reason}"), &err),
             }
         });
-    }
-}
-
-/// Whether every character of the selection carries `tag`.
-fn whole_selection_has(buffer: &gtk::TextBuffer, tag: &str) -> bool {
-    let Some((start, end)) = buffer.selection_bounds() else {
-        return false;
-    };
-    let Some(tag) = buffer.tag_table().lookup(tag) else {
-        return false;
-    };
-    let mut iter = start;
-    while iter < end {
-        if !iter.has_tag(&tag) {
-            return false;
-        }
-        iter.forward_char();
-    }
-    true
-}
-
-/// Adds or removes a list or quote prefix on every line the selection
-/// touches, then selects the changed lines.
-fn prefix_lines(buffer: &gtk::TextBuffer, prefix: LinePrefix) {
-    let (mut start, mut end) = buffer.selection_bounds().unwrap_or_else(|| {
-        let cursor = buffer.iter_at_mark(&buffer.get_insert());
-        (cursor, cursor)
-    });
-    start.set_line_offset(0);
-    if !end.ends_line() {
-        end.forward_to_line_end();
-    }
-    let text = buffer.text(&start, &end, false).to_string();
-    let changed = toggle_prefix(&text, prefix);
-    buffer.begin_user_action();
-    let offset = start.offset();
-    buffer.delete(&mut start, &mut end);
-    buffer.insert(&mut start, &changed);
-    let first = buffer.iter_at_offset(offset);
-    let last = buffer.iter_at_offset(offset + changed.chars().count() as i32);
-    buffer.select_range(&first, &last);
-    buffer.end_user_action();
-}
-
-/// Puts Markdown markers around the selection, or around the cursor when
-/// nothing is selected. A link leaves the cursor between its parentheses.
-/// Pressed again right before the closing marker, moves past it.
-fn wrap_selection(buffer: &gtk::TextBuffer, before: &str, after: &str) {
-    let (mut start, mut end) = buffer.selection_bounds().unwrap_or_else(|| {
-        let cursor = buffer.iter_at_mark(&buffer.get_insert());
-        (cursor, cursor)
-    });
-    let selected = start != end;
-    // Pressed again inside empty markers: step out, or into a link's URL.
-    if !selected {
-        let mut ahead = start;
-        ahead.forward_chars(after.chars().count() as i32);
-        if buffer.text(&start, &ahead, false) == after {
-            let step = if after == "]()" {
-                2
-            } else {
-                after.len() as i32
-            };
-            buffer.place_cursor(&buffer.iter_at_offset(start.offset() + step));
-            return;
-        }
-    }
-    let text = buffer.text(&start, &end, false).to_string();
-    buffer.begin_user_action();
-    buffer.delete(&mut start, &mut end);
-    let offset = start.offset();
-    buffer.insert(&mut start, &format!("{before}{text}{after}"));
-    let cursor = match (selected, after) {
-        (true, "]()") => offset + (before.len() + text.chars().count() + 2) as i32,
-        (true, _) => offset + (before.len() + text.chars().count() + after.len()) as i32,
-        (false, _) => offset + before.len() as i32,
-    };
-    buffer.place_cursor(&buffer.iter_at_offset(cursor));
-    buffer.end_user_action();
-}
-
-/// Dims lines that start with `>`, so quoted text reads as quoted while
-/// the body is Markdown.
-fn style_quotes(buffer: &gtk::TextBuffer) {
-    buffer.remove_tag_by_name("quote", &buffer.start_iter(), &buffer.end_iter());
-    for line in 0..buffer.line_count() {
-        let Some(start) = buffer.iter_at_line(line) else {
-            continue;
-        };
-        let mut end = start;
-        if !end.ends_line() {
-            end.forward_to_line_end();
-        }
-        if buffer
-            .text(&start, &end, false)
-            .trim_start()
-            .starts_with('>')
-        {
-            buffer.apply_tag_by_name("quote", &start, &end);
-        }
     }
 }
 

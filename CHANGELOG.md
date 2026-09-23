@@ -35,6 +35,14 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Catching up after the computer was off for a week or more fetches only
   the mail that changed meanwhile, instead of every message again, so the
   account is ready sooner and leaves Gmail's allowance to you.
+- Typing in a long quoted reply keeps up: each key used to restyle the
+  whole message, several milliseconds on a reply of 5,000 lines, and now
+  touches only the line you are on. The spell check that runs when you
+  pause looks at the lines you changed rather than all of them, and
+  saving or sending that reply reads it in about 13 ms instead of 280.
+- A message with big attachments leaves the composer sooner: it is built
+  once rather than twice, and Undo Send no longer copies every file it
+  carries.
 
 ### Fixed
 
@@ -89,6 +97,14 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   through sending them again, instead of leaving it empty or half full.
 - Moving a few conversations out of the Trash puts them back in the inbox
   at Gmail too, as moving ten or more already did.
+- Quoting, forwarding or reopening HTML mail with a ">" inside a tag's
+  attribute, such as a link's title, no longer spills the rest of that
+  tag into the text, and paragraphs quote with a blank line between them.
+- Choosing another From address swaps the signature and nothing else: the
+  cursor stays where you were typing, and Undo still reaches what you
+  wrote before.
+- Clear Formatting takes the bullets and numbers off a list along with its
+  styles, where it used to leave "•" and "1." behind as typed text.
 
 ## 0.1.7 (2026-09-23)
 

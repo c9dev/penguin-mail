@@ -12,8 +12,9 @@ use serde_json::json;
 use tokio::sync::Mutex;
 
 use crate::GmailError;
+use crate::convert::text_to_html;
 use crate::convert::{HistoryPage, history_page};
-use crate::convert::{html_to_text, text_to_html};
+use crate::html::html_to_text;
 use crate::limiter::{self, AccountQuota};
 use crate::model::{
     AttachmentBody, Draft, DraftList, HistoryList, LabelColor, LabelList, Message, MessagePage,

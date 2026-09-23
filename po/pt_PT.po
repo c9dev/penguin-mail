@@ -130,51 +130,51 @@ msgstr ""
 "Não foi possível ler as suas preferências, por isso o Penguin Mail começou "
 "com as predefinições. O ficheiro antigo ficou guardado como {file}."
 
-#: app/src/app/sending.rs:30
+#: app/src/app/sending.rs:29
 msgid "That account is not connected. Check its status in the sidebar."
 msgstr "Essa conta não está ligada. Veja o estado dela na barra lateral."
 
-#: app/src/app/sending.rs:92
+#: app/src/app/sending.rs:106
 msgid "Could not build the message: {reason}"
 msgstr "Não foi possível montar a mensagem: {reason}"
 
-#: app/src/app/sending.rs:107 app/src/app/sending.rs:159
+#: app/src/app/sending.rs:121 app/src/app/sending.rs:173
 msgid "Not encrypted, so not sent: {reason}"
 msgstr "Não foi encriptada, por isso não foi enviada: {reason}"
 
-#: app/src/app/sending.rs:160
+#: app/src/app/sending.rs:174
 msgid "Not signed, so not sent: {reason}"
 msgstr "Não foi assinada, por isso não foi enviada: {reason}"
 
-#: app/src/app/sending.rs:196
+#: app/src/app/sending.rs:210
 msgid "Waiting in the Outbox. It goes out as soon as it can."
 msgstr "À espera na caixa de saída. Sai assim que for possível."
 
-#: app/src/app/sending.rs:201 app/src/app/sending.rs:206
+#: app/src/app/sending.rs:215 app/src/app/sending.rs:220
 msgid "Not sent: {reason}"
 msgstr "Não enviada: {reason}"
 
-#: app/src/app/sending.rs:236 app/src/app/sending.rs:249
+#: app/src/app/sending.rs:250 app/src/app/sending.rs:263
 msgid "Not scheduled: {reason}"
 msgstr "Não agendada: {reason}"
 
-#: app/src/app/sending.rs:242
+#: app/src/app/sending.rs:256
 msgid "Will send {when}"
 msgstr "Envia {when}"
 
-#: app/src/app/sending.rs:298
+#: app/src/app/sending.rs:312
 msgid "Sent {message}"
 msgstr "{message} enviada"
 
-#: app/src/app/sending.rs:304
+#: app/src/app/sending.rs:318
 msgid "Still in the Outbox: {message}"
 msgstr "Continua na caixa de saída: {message}"
 
-#: app/src/app/sending.rs:399
+#: app/src/app/sending.rs:427
 msgid "your message"
 msgstr "a sua mensagem"
 
-#: app/src/app/sending.rs:401
+#: app/src/app/sending.rs:429
 msgid "“{subject}”"
 msgstr "“{subject}”"
 
@@ -1014,15 +1014,19 @@ msgstr "A correr um comando na área isolada"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "O Penguin Mail continua a sincronizar sem nenhuma janela aberta"
 
-#: app/src/compose.rs:443
+#: app/src/compose.rs:523 app/src/compose.rs:2282
 msgid "Add at least one recipient."
 msgstr "Adicione pelo menos um destinatário."
 
-#: app/src/compose.rs:452
+#: app/src/compose.rs:532
 msgid "“{address}” is not an email address."
 msgstr "“{address}” não é um endereço de e-mail."
 
-#: app/src/compose.rs:697
+#: app/src/compose.rs:641 app/src/compose.rs:2288
+msgid "Choose a time in the future"
+msgstr "Escolha uma hora no futuro"
+
+#: app/src/compose.rs:844
 msgid "On {date}, {sender} wrote:"
 msgstr "A {date}, {sender} escreveu:"
 
@@ -1656,7 +1660,7 @@ msgstr "Encriptação padrão (TLS)"
 msgid "Not encrypted in transit"
 msgstr "Sem encriptação em trânsito"
 
-#: app/src/render.rs:341 app/src/ui/composer/mod.rs:1462
+#: app/src/render.rs:341 app/src/ui/composer/mod.rs:1375
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} anexo"
@@ -2142,8 +2146,8 @@ msgstr "Penguin Mail: {summary}"
 msgid "Open Penguin Mail"
 msgstr "Abrir o Penguin Mail"
 
-#: app/src/tray.rs:158 app/src/ui/composer/mod.rs:198
-#: app/src/ui/composer/mod.rs:436 app/src/ui/composer/mod.rs:1025
+#: app/src/tray.rs:158 app/src/ui/composer/mod.rs:195
+#: app/src/ui/composer/mod.rs:433 app/src/ui/composer/mod.rs:949
 #: app/src/ui/contact_card.rs:146
 msgid "New Message"
 msgstr "Nova mensagem"
@@ -2285,7 +2289,7 @@ msgid "Ask Penguin Mail…"
 msgstr "Pergunte ao Penguin Mail…"
 
 #: app/src/ui/assistant.rs:156 app/src/ui/assistant.rs:160
-#: app/src/ui/assistant.rs:446 app/src/ui/composer/mod.rs:215
+#: app/src/ui/assistant.rs:446 app/src/ui/composer/mod.rs:212
 #: app/src/ui/window/shortcuts.rs:456
 msgid "Send"
 msgstr "Enviar"
@@ -2388,7 +2392,7 @@ msgstr "Editar"
 msgid "Edit {server}"
 msgstr "Editar {server}"
 
-#: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1498
+#: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1411
 #: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:2014
 msgid "Remove"
 msgstr "Remover"
@@ -2429,7 +2433,7 @@ msgstr ""
 "em npx -y @modelcontextprotocol/server-filesystem ~/Documents. Ponha "
 "NOME=valor à frente para o ambiente. Um URL chega a um servidor por HTTP."
 
-#: app/src/ui/assistant_mcp_prefs.rs:254 app/src/ui/composer/mod.rs:2275
+#: app/src/ui/assistant_mcp_prefs.rs:254 app/src/ui/composer/mod.rs:1918
 #: app/src/ui/smart_editor.rs:37 app/src/ui/templates.rs:190
 msgid "Name"
 msgstr "Nome"
@@ -2463,7 +2467,7 @@ msgstr "Testar o servidor"
 msgid "Test"
 msgstr "Testar"
 
-#: app/src/ui/assistant_mcp_prefs.rs:341 app/src/ui/composer/mod.rs:2280
+#: app/src/ui/assistant_mcp_prefs.rs:341 app/src/ui/composer/mod.rs:1923
 #: app/src/ui/smart_editor.rs:144 app/src/ui/templates.rs:233
 #: app/src/ui/vacation.rs:41 app/src/ui/window/arrange.rs:132
 msgid "Save"
@@ -2473,9 +2477,9 @@ msgstr "Guardar"
 msgid "Add"
 msgstr "Adicionar"
 
-#: app/src/ui/assistant_mcp_prefs.rs:347 app/src/ui/composer/mod.rs:1324
-#: app/src/ui/composer/mod.rs:1399 app/src/ui/composer/mod.rs:1818
-#: app/src/ui/composer/mod.rs:2280 app/src/ui/confirm.rs:29
+#: app/src/ui/assistant_mcp_prefs.rs:347 app/src/ui/composer/mod.rs:1243
+#: app/src/ui/composer/mod.rs:1312 app/src/ui/composer/mod.rs:1629
+#: app/src/ui/composer/mod.rs:1923 app/src/ui/confirm.rs:29
 #: app/src/ui/smart_editor.rs:150 app/src/ui/templates.rs:239
 #: app/src/ui/unsubscribe.rs:95 app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
 #: app/src/ui/window/arrange.rs:132 app/src/ui/window/images.rs:101
@@ -2816,359 +2820,355 @@ msgstr "Chave de API do Brave Search (guardada)"
 msgid "Brave Search API Key"
 msgstr "Chave de API do Brave Search"
 
-#: app/src/ui/composer/mod.rs:207 app/src/ui/conversation.rs:1339
+#: app/src/ui/composer/mod.rs:204 app/src/ui/conversation.rs:1339
 msgid "Choose a Time…"
 msgstr "Escolher uma hora…"
 
-#: app/src/ui/composer/mod.rs:219 app/src/ui/composer/mod.rs:1345
+#: app/src/ui/composer/mod.rs:216 app/src/ui/composer/mod.rs:1258
 #: app/src/ui/sidebar.rs:263
 msgid "Send Later"
 msgstr "Enviar mais tarde"
 
-#: app/src/ui/composer/mod.rs:221 app/src/ui/composer/mod.rs:1054
+#: app/src/ui/composer/mod.rs:218 app/src/ui/composer/mod.rs:978
 msgid "Send (Ctrl+Enter)"
 msgstr "Enviar (Ctrl+Enter)"
 
-#: app/src/ui/composer/mod.rs:225
+#: app/src/ui/composer/mod.rs:222
 msgid "Attach Files (Ctrl+Shift+A)"
 msgstr "Anexar ficheiros (Ctrl+Shift+A)"
 
-#: app/src/ui/composer/mod.rs:229
+#: app/src/ui/composer/mod.rs:226
 msgid "Preview"
 msgstr "Pré-visualizar"
 
-#: app/src/ui/composer/mod.rs:236
+#: app/src/ui/composer/mod.rs:233
 msgid "Save as Template…"
 msgstr "Guardar como modelo…"
 
-#: app/src/ui/composer/mod.rs:242 app/src/ui/templates.rs:23
+#: app/src/ui/composer/mod.rs:239 app/src/ui/templates.rs:23
 msgid "Templates"
 msgstr "Modelos"
 
-#: app/src/ui/composer/mod.rs:246
+#: app/src/ui/composer/mod.rs:243
 msgid "Sign"
 msgstr "Assinar"
 
-#: app/src/ui/composer/mod.rs:247
+#: app/src/ui/composer/mod.rs:244
 msgid "Sign this message with your own key"
 msgstr "Assinar esta mensagem com a sua própria chave"
 
-#: app/src/ui/composer/mod.rs:251
+#: app/src/ui/composer/mod.rs:248
 msgid "Encrypt"
 msgstr "Encriptar"
 
-#: app/src/ui/composer/mod.rs:252
+#: app/src/ui/composer/mod.rs:249
 msgid "Add a recipient this computer can encrypt to."
 msgstr "Adicione um destinatário para quem este computador saiba encriptar."
 
-#: app/src/ui/composer/mod.rs:290 app/src/ui/composer/mod.rs:296
+#: app/src/ui/composer/mod.rs:287 app/src/ui/composer/mod.rs:293
 msgid "Signing and encryption"
 msgstr "Assinatura e encriptação"
 
-#: app/src/ui/composer/mod.rs:317
+#: app/src/ui/composer/mod.rs:314
 msgid "Recipients"
 msgstr "Destinatários"
 
-#: app/src/ui/composer/mod.rs:318
+#: app/src/ui/composer/mod.rs:315
 msgid "Carbon copy"
 msgstr "Cópia"
 
-#: app/src/ui/composer/mod.rs:319
+#: app/src/ui/composer/mod.rs:316
 msgid "Blind carbon copy"
 msgstr "Cópia oculta"
 
-#: app/src/ui/composer/mod.rs:321 app/src/ui/composer/mod.rs:360
+#: app/src/ui/composer/mod.rs:318 app/src/ui/composer/mod.rs:357
 #: app/src/ui/rules.rs:266 app/src/ui/templates.rs:192
 #: app/src/ui/vacation.rs:213
 msgid "Subject"
 msgstr "Assunto"
 
-#: app/src/ui/composer/mod.rs:328
+#: app/src/ui/composer/mod.rs:325
 msgid "Cc/Bcc"
 msgstr "Cc/Bcc"
 
-#: app/src/ui/composer/mod.rs:329 app/src/ui/composer/mod.rs:877
+#: app/src/ui/composer/mod.rs:326 app/src/ui/composer/mod.rs:835
 msgid "Show Cc and Bcc"
 msgstr "Mostrar Cc e Bcc"
 
-#: app/src/ui/composer/mod.rs:339 app/src/ui/rules.rs:264
+#: app/src/ui/composer/mod.rs:336 app/src/ui/rules.rs:264
 msgid "From"
 msgstr "De"
 
-#: app/src/ui/composer/mod.rs:344 app/src/ui/rules.rs:265
+#: app/src/ui/composer/mod.rs:341 app/src/ui/rules.rs:265
 msgid "To"
 msgstr "Para"
 
-#: app/src/ui/composer/mod.rs:348
+#: app/src/ui/composer/mod.rs:345
 msgid "Cc"
 msgstr "Cc"
 
-#: app/src/ui/composer/mod.rs:350
+#: app/src/ui/composer/mod.rs:347
 msgid "Bcc"
 msgstr "Bcc"
 
-#: app/src/ui/composer/mod.rs:373 app/src/ui/vacation.rs:224
+#: app/src/ui/composer/mod.rs:370 app/src/ui/vacation.rs:224
 #: app/src/ui/vacation.rs:233
 msgid "Message"
 msgstr "Mensagem"
 
-#: app/src/ui/composer/mod.rs:418
+#: app/src/ui/composer/mod.rs:415
 msgid "Formatting"
 msgstr "Formatação"
 
-#: app/src/ui/composer/mod.rs:875
+#: app/src/ui/composer/mod.rs:833
 msgid "Hide Cc and Bcc"
 msgstr "Ocultar Cc e Bcc"
 
-#: app/src/ui/composer/mod.rs:937
+#: app/src/ui/composer/mod.rs:869
 msgid "a message"
 msgstr "uma mensagem"
 
-#: app/src/ui/composer/mod.rs:942
+#: app/src/ui/composer/mod.rs:874
 msgid "Forwarding {sender}"
 msgstr "A reencaminhar {sender}"
 
-#: app/src/ui/composer/mod.rs:944
+#: app/src/ui/composer/mod.rs:876
 msgid "Forwarding “{subject}” from {sender}"
 msgstr "A reencaminhar “{subject}” de {sender}"
 
-#: app/src/ui/composer/mod.rs:967 app/src/ui/composer/mod.rs:970
+#: app/src/ui/composer/mod.rs:899 app/src/ui/composer/mod.rs:902
 msgid "Do Not Forward the Original"
 msgstr "Não reencaminhar o original"
 
-#: app/src/ui/composer/mod.rs:1033
+#: app/src/ui/composer/mod.rs:957
 msgid "Scheduled to send {when}"
 msgstr "Agendada para enviar {when}"
 
-#: app/src/ui/composer/mod.rs:1044
+#: app/src/ui/composer/mod.rs:968
 msgid "No account to send from."
 msgstr "Não há conta de onde enviar."
 
-#: app/src/ui/composer/mod.rs:1107
+#: app/src/ui/composer/mod.rs:1031
 msgid "Signed and encrypted"
 msgstr "Assinada e encriptada"
 
-#: app/src/ui/composer/mod.rs:1108
+#: app/src/ui/composer/mod.rs:1032
 msgid "Signed"
 msgstr "Assinada"
 
-#: app/src/ui/composer/mod.rs:1109
+#: app/src/ui/composer/mod.rs:1033
 msgid "Encrypted"
 msgstr "Encriptada"
 
-#: app/src/ui/composer/mod.rs:1110
+#: app/src/ui/composer/mod.rs:1034
 msgid "Not signed or encrypted"
 msgstr "Sem assinatura nem encriptação"
 
-#: app/src/ui/composer/mod.rs:1239
-msgid "Choose a time in the future"
-msgstr "Escolha uma hora no futuro"
-
-#: app/src/ui/composer/mod.rs:1285
+#: app/src/ui/composer/mod.rs:1210
 msgid "Attachment Missing?"
 msgstr "Falta um anexo?"
 
-#: app/src/ui/composer/mod.rs:1287
+#: app/src/ui/composer/mod.rs:1212
 msgid "The message says “{sentence}” and carries no file."
 msgstr "A mensagem diz “{sentence}” e não leva nenhum ficheiro."
 
-#: app/src/ui/composer/mod.rs:1292
+#: app/src/ui/composer/mod.rs:1217
 msgid "Add Attachment"
 msgstr "Adicionar anexo"
 
-#: app/src/ui/composer/mod.rs:1293
+#: app/src/ui/composer/mod.rs:1218
 msgid "Send Anyway"
 msgstr "Enviar mesmo assim"
 
-#: app/src/ui/composer/mod.rs:1317
+#: app/src/ui/composer/mod.rs:1236
 msgid "Send Without Encryption?"
 msgstr "Enviar sem encriptação?"
 
-#: app/src/ui/composer/mod.rs:1319
+#: app/src/ui/composer/mod.rs:1238
 msgid "This message was to go out encrypted, and it cannot be. {reason}"
 msgstr ""
 "Esta mensagem devia sair encriptada e não é possível encriptá-la. {reason}"
 
-#: app/src/ui/composer/mod.rs:1325
+#: app/src/ui/composer/mod.rs:1244
 msgid "Send Readable"
 msgstr "Enviar legível"
 
-#: app/src/ui/composer/mod.rs:1346
+#: app/src/ui/composer/mod.rs:1259
 msgid "Penguin Mail sends it at this time while it runs, even in the tray."
 msgstr ""
 "O Penguin Mail envia-a a esta hora enquanto estiver a correr, mesmo na área "
 "de notificação."
 
-#: app/src/ui/composer/mod.rs:1347
+#: app/src/ui/composer/mod.rs:1260
 msgid "Schedule"
 msgstr "Agendar"
 
-#: app/src/ui/composer/mod.rs:1380
+#: app/src/ui/composer/mod.rs:1293
 msgid "Draft saved, encrypted to your own key"
 msgstr "Rascunho guardado, encriptado para a sua própria chave"
 
-#: app/src/ui/composer/mod.rs:1382
+#: app/src/ui/composer/mod.rs:1295
 msgid "Draft saved"
 msgstr "Rascunho guardado"
 
-#: app/src/ui/composer/mod.rs:1392
+#: app/src/ui/composer/mod.rs:1305
 msgid "Save as Draft?"
 msgstr "Guardar como rascunho?"
 
-#: app/src/ui/composer/mod.rs:1394
+#: app/src/ui/composer/mod.rs:1307
 msgid "The draft is kept in Gmail, so you can finish it later on any device."
 msgstr ""
 "O rascunho fica no Gmail, para o terminar mais tarde em qualquer dispositivo."
 
-#: app/src/ui/composer/mod.rs:1398
+#: app/src/ui/composer/mod.rs:1311
 msgid "Discard"
 msgstr "Descartar"
 
-#: app/src/ui/composer/mod.rs:1400
+#: app/src/ui/composer/mod.rs:1313
 msgid "Save Draft"
 msgstr "Guardar rascunho"
 
-#: app/src/ui/composer/mod.rs:1421
+#: app/src/ui/composer/mod.rs:1334
 msgid "Attach Files"
 msgstr "Anexar ficheiros"
 
-#: app/src/ui/composer/mod.rs:1457
+#: app/src/ui/composer/mod.rs:1370
 msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
-#: app/src/ui/composer/mod.rs:1502
+#: app/src/ui/composer/mod.rs:1415
 msgid "Remove {file}"
 msgstr "Remover {file}"
 
-#: app/src/ui/composer/mod.rs:1539
+#: app/src/ui/composer/mod.rs:1452
 msgid "Bold (Ctrl+B)"
 msgstr "Negrito (Ctrl+B)"
 
-#: app/src/ui/composer/mod.rs:1540
+#: app/src/ui/composer/mod.rs:1453
 msgid "Italic (Ctrl+I)"
 msgstr "Itálico (Ctrl+I)"
 
-#: app/src/ui/composer/mod.rs:1543
+#: app/src/ui/composer/mod.rs:1456
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr "Rasurado (Ctrl+Shift+X)"
 
-#: app/src/ui/composer/mod.rs:1546
+#: app/src/ui/composer/mod.rs:1459
 msgid "Code (Ctrl+E)"
 msgstr "Código (Ctrl+E)"
 
-#: app/src/ui/composer/mod.rs:1583
+#: app/src/ui/composer/mod.rs:1496
 msgid "Link (Ctrl+K)"
 msgstr "Ligação (Ctrl+K)"
 
-#: app/src/ui/composer/mod.rs:1593
+#: app/src/ui/composer/mod.rs:1506
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr "Lista com marcas (Ctrl+Shift+8)"
 
-#: app/src/ui/composer/mod.rs:1598
+#: app/src/ui/composer/mod.rs:1511
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr "Lista numerada (Ctrl+Shift+7)"
 
-#: app/src/ui/composer/mod.rs:1603
+#: app/src/ui/composer/mod.rs:1516
 msgid "Quote (Ctrl+Shift+9)"
 msgstr "Citação (Ctrl+Shift+9)"
 
-#: app/src/ui/composer/mod.rs:1620
+#: app/src/ui/composer/mod.rs:1533
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr "Inserir imagem (Ctrl+Shift+P)"
 
-#: app/src/ui/composer/mod.rs:1630
+#: app/src/ui/composer/mod.rs:1543
 msgid "Paragraph"
 msgstr "Parágrafo"
 
-#: app/src/ui/composer/mod.rs:1631
+#: app/src/ui/composer/mod.rs:1544
 msgid "Heading 1"
 msgstr "Título 1"
 
-#: app/src/ui/composer/mod.rs:1632
+#: app/src/ui/composer/mod.rs:1545
 msgid "Heading 2"
 msgstr "Título 2"
 
-#: app/src/ui/composer/mod.rs:1633
+#: app/src/ui/composer/mod.rs:1546
 msgid "Heading 3"
 msgstr "Título 3"
 
-#: app/src/ui/composer/mod.rs:1634
+#: app/src/ui/composer/mod.rs:1547
 msgid "Code Block"
 msgstr "Bloco de código"
 
-#: app/src/ui/composer/mod.rs:1643
+#: app/src/ui/composer/mod.rs:1556
 msgid "Format Markdown"
 msgstr "Formatar Markdown"
 
-#: app/src/ui/composer/mod.rs:1647
+#: app/src/ui/composer/mod.rs:1560
 msgid "Clear Formatting"
 msgstr "Limpar formatação"
 
-#: app/src/ui/composer/mod.rs:1653
+#: app/src/ui/composer/mod.rs:1566
 msgid "Edit as Markdown"
 msgstr "Editar como Markdown"
 
-#: app/src/ui/composer/mod.rs:1659 app/src/ui/composer/mod.rs:1663
+#: app/src/ui/composer/mod.rs:1572 app/src/ui/composer/mod.rs:1576
 msgid "More Formatting"
 msgstr "Mais formatação"
 
-#: app/src/ui/composer/mod.rs:1801
+#: app/src/ui/composer/mod.rs:1612
 msgid "Add a Link"
 msgstr "Adicionar uma ligação"
 
-#: app/src/ui/composer/mod.rs:1807
+#: app/src/ui/composer/mod.rs:1618
 msgid "Text"
 msgstr "Texto"
 
-#: app/src/ui/composer/mod.rs:1819
+#: app/src/ui/composer/mod.rs:1630
 msgid "Add Link"
 msgstr "Adicionar ligação"
 
-#: app/src/ui/composer/mod.rs:1889
+#: app/src/ui/composer/mod.rs:1666
 msgid "Markdown formatted"
 msgstr "Markdown formatado"
 
-#: app/src/ui/composer/mod.rs:1907
+#: app/src/ui/composer/mod.rs:1678
 msgid "Editing as Markdown"
 msgstr "A editar como Markdown"
 
-#: app/src/ui/composer/mod.rs:2032
+#: app/src/ui/composer/mod.rs:1704
 msgid "Images"
 msgstr "Imagens"
 
-#: app/src/ui/composer/mod.rs:2037
+#: app/src/ui/composer/mod.rs:1709
 msgid "Insert Image"
 msgstr "Inserir imagem"
 
-#: app/src/ui/composer/mod.rs:2080
+#: app/src/ui/composer/mod.rs:1752
 msgid "Could not read the file: {reason}"
 msgstr "Não foi possível ler o ficheiro: {reason}"
 
-#: app/src/ui/composer/mod.rs:2166
+#: app/src/ui/composer/mod.rs:1817
 msgid "Could not paste the image"
 msgstr "Não foi possível colar a imagem"
 
-#: app/src/ui/composer/mod.rs:2211
+#: app/src/ui/composer/mod.rs:1862
 msgid "No Templates Yet"
 msgstr "Ainda não há modelos"
 
-#: app/src/ui/composer/mod.rs:2269
+#: app/src/ui/composer/mod.rs:1912
 msgid "Save as Template"
 msgstr "Guardar como modelo"
 
-#: app/src/ui/composer/mod.rs:2271
+#: app/src/ui/composer/mod.rs:1914
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr "Os marcadores como {{first_name}} são preenchidos sempre que o usa."
 
-#: app/src/ui/composer/mod.rs:2294 app/src/ui/templates.rs:280
+#: app/src/ui/composer/mod.rs:1937 app/src/ui/templates.rs:280
 msgid "Give the template a name"
 msgstr "Dê um nome ao modelo"
 
-#: app/src/ui/composer/mod.rs:2302
+#: app/src/ui/composer/mod.rs:1945
 msgid "Template saved"
 msgstr "Modelo guardado"
 
-#: app/src/ui/composer/mod.rs:2305
+#: app/src/ui/composer/mod.rs:1948
 msgid "Template not saved: {reason}"
 msgstr "Modelo não guardado: {reason}"
 
@@ -3188,15 +3188,15 @@ msgstr "Remover {recipient}"
 msgid "Press Delete to remove"
 msgstr "Prima Delete para remover"
 
-#: app/src/ui/composer/spell.rs:506
+#: app/src/ui/composer/spell.rs:653
 msgid "No Suggestions"
 msgstr "Sem sugestões"
 
-#: app/src/ui/composer/spell.rs:518
+#: app/src/ui/composer/spell.rs:665
 msgid "Add to Dictionary"
 msgstr "Adicionar ao dicionário"
 
-#: app/src/ui/composer/spell.rs:519
+#: app/src/ui/composer/spell.rs:666
 msgid "Ignore"
 msgstr "Ignorar"
 
