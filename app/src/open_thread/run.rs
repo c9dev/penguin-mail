@@ -7,8 +7,9 @@
 //! message can go out or fail once more while it is on screen.
 //!
 //! Opening a thread shows the stored copy first, then asks Gmail for the
-//! whole thread and the bodies it lacks, marks it read when the setting
-//! says so, and fetches the pictures for the attachment rows. Refreshing
+//! whole thread and the bodies it lacks, fetches the pictures the bodies
+//! name by `cid:` once their text is on screen, marks it read when the
+//! setting says so, and fetches the pictures for the attachment rows. Refreshing
 //! picks up what the store changed under it. Around each of those sit the
 //! cards: the invitation, the translation offer, and the engine run for a
 //! signed or encrypted message. After each event the run decides which of
@@ -31,7 +32,7 @@ use mailrs_domain::{AccountId, FlagColor, MessageBody, MessageMeta, Target, Thre
 use mailrs_store::outbox::Queued;
 use mailrs_sync::{Opened, outbox_id};
 
-use super::{OpenThread, Unsent};
+use super::{Cleaned, InlineImage, OpenThread, Unsent};
 use crate::protection::Read;
 use crate::translation::{Language, Prose};
 use crate::ui::invitation::Showing;
@@ -47,19 +48,26 @@ mod translation;
 pub use translation::Card;
 
 /// What the store holds for a thread: its messages, oldest first, and the
-/// bodies already fetched, by message id.
+/// bodies already fetched, by message id, with their HTML cleaned.
 #[derive(Debug, Clone, Default)]
 pub struct Stored {
     pub messages: Vec<MessageMeta>,
     pub bodies: HashMap<String, MessageBody>,
+    /// The cleaned HTML of those bodies. Cleaning forty newsletters takes
+    /// tens of milliseconds, which the effect spends on a worker thread
+    /// rather than the GTK one. A body left out is cleaned when drawn.
+    pub cleaned: HashMap<String, Cleaned>,
 }
 
-/// Bodies as Gmail sent them, and the inline images that go in them.
+/// Bodies as Gmail sent them, and their HTML cleaned on a worker thread.
 #[derive(Debug, Clone, Default)]
 pub struct Fetched {
     pub bodies: Vec<(String, Result<MessageBody, String>)>,
-    pub images: HashMap<String, HashMap<String, String>>,
+    pub cleaned: HashMap<String, Cleaned>,
 }
+
+/// Inline pictures by message id, then by content id.
+pub type InlinePictures = HashMap<String, HashMap<String, InlineImage>>;
 
 /// What the run reads from the window. Every method answers from what the
 /// window already holds, so a test fills one in without a widget. As a
@@ -89,6 +97,9 @@ pub trait Desk: Screen {
     fn invitation(&self) -> Option<(String, String)>;
     /// Bodies on screen with a picture attached that has no thumbnail.
     fn wanting_thumbnails(&self) -> Vec<(String, MessageBody)>;
+    /// Bodies on screen that name a picture by `cid:` whose pictures have
+    /// not arrived.
+    fn wanting_images(&self) -> Vec<(String, MessageBody)>;
     /// The message a translation applies to, with the prose the page
     /// draws for it.
     fn prose(&self) -> Option<(String, Prose)>;
@@ -98,8 +109,9 @@ pub trait Desk: Screen {
     /// What the card says about a message translated here: the language
     /// it came from, whether it was cut short, and whether it is shown.
     fn translation_of(&self, message_id: &str) -> Option<(Option<Language>, bool, bool)>;
-    /// A message's body as it arrived, with its inline images.
-    fn arrived(&self, message_id: &str) -> Option<(MessageBody, HashMap<String, String>)>;
+    /// A message's body as it arrived, with the start of the address of
+    /// each picture it names.
+    fn arrived(&self, message_id: &str) -> Option<(MessageBody, String)>;
     /// The language the interface is in, when this app can count its
     /// words. `None` leaves every message alone.
     fn interface_language(&self) -> Option<Language>;
@@ -129,8 +141,16 @@ pub trait Effects {
         account_id: AccountId,
         thread_id: String,
     ) -> Answer<'_, Result<Vec<MessageMeta>, String>>;
-    /// Fetches these bodies and the inline images they reference.
+    /// Fetches these bodies.
     fn bodies(&self, account_id: AccountId, message_ids: Vec<String>) -> Answer<'_, Fetched>;
+    /// The pictures these bodies name by `cid:`, by message and content
+    /// id. Every body asked about is in the answer, with nothing for one
+    /// whose pictures would not come.
+    fn inline_images(
+        &self,
+        account_id: AccountId,
+        bodies: Vec<(String, MessageBody)>,
+    ) -> Answer<'_, InlinePictures>;
     /// Small pictures for the attachment rows of these bodies, by Gmail's
     /// attachment id, from the background share of the quota.
     fn thumbnails(
@@ -186,6 +206,8 @@ pub trait Effects {
     /// Replaces the messages; answers whether the ids changed.
     fn replace_messages(&self, fresh: Vec<MessageMeta>) -> bool;
     fn bodies_arrived(&self, fetched: Fetched);
+    /// The pictures the bodies name, which the page has been waiting for.
+    fn images_arrived(&self, found: InlinePictures);
     fn thumbnails_arrived(&self, found: HashMap<String, String>);
     /// Draws the header buttons again, for a change the page does not show.
     fn render_buttons(&self);
@@ -225,6 +247,9 @@ pub enum Event {
     Shown,
     /// Gmail's bodies arrived.
     BodiesArrived,
+    /// Gmail's copy of the thread arrived, and the store already held a
+    /// body for every message in it.
+    NothingMissing,
     /// The engine opened an encrypted message, whose body replaced the
     /// ciphertext.
     EngineOpened,
@@ -243,6 +268,8 @@ pub struct Stale {
     pub protection: bool,
     /// The event card, read from the body's calendar part.
     pub invitation: bool,
+    /// The pictures the bodies name by `cid:`.
+    pub images: bool,
     /// The pictures on the attachment rows.
     pub thumbnails: bool,
     /// The unread mark, which the reader has now seen.
@@ -252,21 +279,34 @@ pub struct Stale {
 impl Stale {
     pub fn after(event: Event) -> Stale {
         match event {
+            // The store keeps bodies and no pictures, so a thread read
+            // before asks for them as it goes on screen.
             Event::Shown => Stale {
                 translation: true,
                 protection: true,
                 invitation: true,
+                images: true,
                 ..Stale::default()
             },
             Event::BodiesArrived => Stale {
                 translation: true,
                 protection: true,
                 invitation: true,
+                images: true,
                 thumbnails: true,
                 unread: true,
             },
+            // The stored copy brought the bodies, and what they carry was
+            // brought up to date when it went on screen. The pictures and
+            // the read mark wait on the whole thread.
+            Event::NothingMissing => Stale {
+                thumbnails: true,
+                unread: true,
+                ..Stale::default()
+            },
             // The claim was made for the message the engine opened, and
-            // its files came out whole, with nothing to fetch.
+            // its files and the pictures among them came out whole, with
+            // nothing to fetch.
             Event::EngineOpened => Stale {
                 translation: true,
                 invitation: true,
@@ -324,6 +364,7 @@ impl ThreadRun {
         let Stored {
             mut messages,
             bodies,
+            cleaned,
         } = stored.unwrap_or_else(|err| {
             tracing::info!(error = %err, "could not read the stored thread");
             Stored::default()
@@ -336,6 +377,7 @@ impl ThreadRun {
             .map_or_else(|| summary.subject.clone(), |m| m.subject.clone());
         let me = self.desk.me(target.account_id);
         let mut thread = OpenThread::new(&target, subject, messages, bodies, me);
+        thread.take_cleaned(cleaned);
         let senders = thread.senders();
         let named: Vec<String> = senders.iter().filter(|s| !s.is_empty()).cloned().collect();
         thread.images_allowed = self
@@ -490,6 +532,13 @@ impl ThreadRun {
         let Some(missing) = wanted.on_screen(|effects| effects.messages_arrived(fresh)) else {
             return;
         };
+        // A thread read before has every body in the store. Asking Gmail
+        // for none of them and drawing the page again would cost a whole
+        // reload and put the reader back at the top.
+        if missing.is_empty() {
+            self.follow(wanted, Event::NothingMissing).await;
+            return;
+        }
         let Some(fetched) = wanted
             .wait(|effects| effects.bodies(account_id, missing))
             .await
@@ -522,6 +571,11 @@ impl ThreadRun {
                 }
             },
             async {
+                if stale.images {
+                    self.images(wanted).await;
+                }
+            },
+            async {
                 if stale.thumbnails {
                     self.thumbnails(wanted).await;
                 }
@@ -545,6 +599,24 @@ impl ThreadRun {
         }
         let target = wanted.target().clone();
         wanted.on_screen(|effects| effects.mark_read(target));
+    }
+
+    /// Fetches the pictures the bodies name by `cid:`. Their text is on
+    /// screen already, and the page waits for these in place.
+    async fn images(&self, wanted: &Want<'_>) {
+        let Some(bodies) = wanted.on_screen(|_| self.desk.wanting_images()) else {
+            return;
+        };
+        if bodies.is_empty() {
+            return;
+        }
+        let account_id = wanted.target().account_id;
+        if let Some(found) = wanted
+            .wait(|effects| effects.inline_images(account_id, bodies))
+            .await
+        {
+            wanted.on_screen(|effects| effects.images_arrived(found));
+        }
     }
 
     /// Fetches the pictures for the attachment rows. The message is

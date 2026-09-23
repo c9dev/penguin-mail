@@ -2,19 +2,33 @@
 //!
 //! Page JavaScript is off (`enable-javascript-markup` is false), so email
 //! cannot run scripts. The app still runs a few tiny scripts of its own
-//! through the WebKit API: collapsing a message, scrolling to one, and
+//! through the WebKit API: collapsing a message, scrolling to one,
 //! [`MENU_SCRIPT`], which asks for the menu of the message under the
-//! pointer. Finding text is WebKit's own, through [`FindBar`].
+//! pointer, [`READY_SCRIPT`], which says the page is parsed, and
+//! [`PATCH_SCRIPT`], which replaces the articles a change touched. Finding
+//! text is WebKit's own, through [`FindBar`].
+//!
+//! The pictures an HTML body names by `cid:` never enter the page. It asks
+//! for each at an address of the `mailrs-cid` scheme, which every view in
+//! the process answers through one handler, from its own open thread. A
+//! request that comes before the pictures arrive waits for them, so the
+//! text goes on screen first and the pictures fill in where they belong.
+//!
+//! The open thread decides what the page needs, in `OpenThread::page`:
+//! the whole document, or new HTML for some of its articles. A whole
+//! document goes to `load_html`. A patch waits until the latest document
+//! is parsed, since a script run before then reaches the page that was
+//! there before it, and then replaces the articles in place, which keeps
+//! the reader where they were.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
-use std::hash::{DefaultHasher, Hash, Hasher};
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 
 use adw::prelude::*;
 use gtk::{gdk, gio, glib};
 use mailrs_domain::translate::{fill, fill_plural, gettext};
-use mailrs_domain::{Category, FlagColor, Folder, MessageBody, MessageMeta, Target};
+use mailrs_domain::{Category, FlagColor, Folder, MessageMeta, Target};
 use webkit::prelude::*;
 
 use super::find::FindBar;
@@ -24,12 +38,13 @@ use super::queued::QueuedCard;
 use super::translation::TranslationCard;
 use super::{name, name_with_shortcut};
 use crate::compose::ReplyKind;
-use crate::open_thread::{OpenThread, Unsent};
+use crate::open_thread::inline::{self, Address};
+use crate::open_thread::run::{Fetched, InlinePictures};
+use crate::open_thread::{Article, OpenThread, Page, Served, Unsent};
 use crate::protection::run::{Claimed, Installed};
 use crate::protection::{self};
-use crate::render::{BodyState, Conversation, MessageView, Theme, render};
-use crate::sanitize::sanitize_html;
-use crate::translation::{Body, Prose, Translation};
+use crate::render::{FOLD_MS, Theme};
+use crate::translation::Translation;
 
 pub enum Action {
     /// The event card asked for something: an answer, or a hand-off to the
@@ -116,6 +131,44 @@ const MENU_SCRIPT: &str = r#"(function () {
   };
 })()"#;
 
+/// Tells the view the page is parsed, with the number of the load it came
+/// from, so a patch meant for it is not run against the page before. It
+/// runs when the document is parsed, before its pictures arrive.
+const READY_SCRIPT: &str = "window.webkit.messageHandlers.mailrsReady.postMessage(\
+     document.documentElement.getAttribute('data-load') || '')";
+
+/// Replaces articles, each by the `id` of its message, with new HTML that
+/// holds its body in a declarative shadow root. Only `setHTMLUnsafe` reads
+/// those roots out of a string, so a WebKit without it answers `whole` and
+/// the view loads the page instead. The first article still on screen
+/// keeps its place, since WebKit does no scroll anchoring of its own and
+/// an article above the reader that grew would push them down.
+const PATCH_SCRIPT: [&str; 2] = [
+    r#"(function (patches) {
+  var holder = document.createElement('template');
+  if (typeof holder.setHTMLUnsafe !== 'function') return 'whole';
+  var anchor = null;
+  var messages = document.querySelectorAll('article.message');
+  for (var i = 0; i < messages.length; i++) {
+    if (messages[i].getBoundingClientRect().bottom > 0) { anchor = messages[i].id; break; }
+  }
+  var before = anchor ? document.getElementById(anchor).getBoundingClientRect().top : 0;
+  var missed = 0;
+  patches.forEach(function (patch) {
+    var old = document.getElementById('m-' + patch[0]);
+    holder.setHTMLUnsafe(patch[1]);
+    var fresh = holder.content.firstElementChild;
+    if (old && fresh) old.replaceWith(fresh); else missed++;
+  });
+  if (anchor) {
+    var now = document.getElementById(anchor);
+    if (now) window.scrollBy(0, now.getBoundingClientRect().top - before);
+  }
+  return missed ? 'whole' : 'done';
+})("#,
+    ")",
+];
+
 /// Asks the page for the menu of the message holding the focus, as the Menu
 /// key or Shift+F10 does. The app sends the keys here instead of letting the
 /// page see them: WebKit keeps an empty text field inside the view, and GTK
@@ -134,14 +187,6 @@ struct Buttons {
     forward: gtk::Button,
     edit: gtk::Button,
     more: gtk::MenuButton,
-}
-
-/// A message body after cleaning, with a mark of the HTML and the inline
-/// images it was made from. A different mark means the body needs
-/// cleaning again.
-struct CleanBody {
-    mark: u64,
-    html: String,
 }
 
 pub struct ConversationView {
@@ -176,8 +221,6 @@ pub struct ConversationView {
     /// The messages the find bar opened, kept so they close again when it
     /// goes away.
     find_closed: RefCell<Vec<String>>,
-    /// Cleaned HTML per message. A thread renders at least twice per open.
-    sanitized: RefCell<HashMap<String, CleanBody>>,
     list_banner: adw::Banner,
     /// The menu section whose first item adds or removes the sender as a VIP.
     sender_menu: gio::Menu,
@@ -207,21 +250,38 @@ pub struct ConversationView {
     /// later click can tell it lost.
     loading: Cell<u64>,
     scroll_to: RefCell<Option<String>>,
+    /// The message the page scrolled to once parsed. Pictures arriving
+    /// later can push it down, so it is scrolled to again when the load
+    /// finishes, unless the reader has moved.
+    scrolled: RefCell<Option<String>>,
+    /// The number of the latest whole page given to WebKit.
+    loads: Cell<u64>,
+    /// The number of the latest page WebKit has parsed.
+    ready: Cell<u64>,
+    /// Articles waiting for the latest page to be parsed.
+    waiting: RefCell<Vec<Article>>,
+    /// The page's requests for pictures that have not arrived yet.
+    held: RefCell<Vec<(Address, webkit::URISchemeRequest)>>,
     compact: Cell<bool>,
     detached: Cell<bool>,
+    /// This view, for the answers WebKit gives later.
+    this: Weak<ConversationView>,
 }
 
 impl ConversationView {
     pub fn new(on_action: impl Fn(Action) + 'static) -> Rc<ConversationView> {
         let on_action: Rc<dyn Fn(Action)> = Rc::new(on_action);
         let content = webkit::UserContentManager::new();
-        content.add_script(&webkit::UserScript::new(
-            MENU_SCRIPT,
-            webkit::UserContentInjectedFrames::TopFrame,
-            webkit::UserScriptInjectionTime::End,
-            &[],
-            &[],
-        ));
+        for script in [MENU_SCRIPT, READY_SCRIPT] {
+            content.add_script(&webkit::UserScript::new(
+                script,
+                webkit::UserContentInjectedFrames::TopFrame,
+                webkit::UserScriptInjectionTime::End,
+                &[],
+                &[],
+            ));
+        }
+        content.register_script_message_handler("mailrsReady", None);
         let settings = webkit::Settings::new();
         settings.set_enable_javascript(true);
         settings.set_enable_javascript_markup(false);
@@ -526,7 +586,7 @@ impl ConversationView {
             list_banner.connect_button_clicked(move |_| on_action(Action::Unsubscribe));
         }
 
-        let view = Rc::new(ConversationView {
+        let view = Rc::new_cyclic(|this| ConversationView {
             page,
             label_button,
             many,
@@ -546,7 +606,6 @@ impl ConversationView {
             find,
             find_closed: RefCell::new(Vec::new()),
             list_banner,
-            sanitized: RefCell::new(HashMap::new()),
             sender_menu,
             mark_menu,
             filing_menu,
@@ -560,11 +619,23 @@ impl ConversationView {
             open: RefCell::new(None),
             loading: Cell::new(0),
             scroll_to: RefCell::new(None),
+            scrolled: RefCell::new(None),
+            loads: Cell::new(0),
+            ready: Cell::new(0),
+            waiting: RefCell::new(Vec::new()),
+            held: RefCell::new(Vec::new()),
             compact: Cell::new(false),
             detached: Cell::new(false),
+            this: this.clone(),
         });
 
         view.set_buttons_shown(false);
+        VIEWS.with(|views| {
+            let mut views = views.borrow_mut();
+            views.retain(|view| view.strong_count() > 0);
+            views.push(Rc::downgrade(&view));
+        });
+        serve_pictures();
         // A popover parented on a widget has to let go of it before the
         // widget goes, or GTK finalizes a widget that still has a parent.
         let weak = Rc::downgrade(&view);
@@ -604,20 +675,38 @@ impl ConversationView {
                 true
             });
         let weak = Rc::downgrade(&view);
+        view.content
+            .connect_script_message_received(Some("mailrsReady"), move |_, value| {
+                if let (Some(view), Ok(load)) = (weak.upgrade(), value.to_str().parse()) {
+                    view.page_ready(load);
+                }
+            });
+        let weak = Rc::downgrade(&view);
         view.webview.connect_load_changed(move |webview, event| {
             if event != webkit::LoadEvent::Finished {
                 return;
             }
             let Some(view) = weak.upgrade() else { return };
-            if let Some(id) = view.scroll_to.take() {
+            // The pictures above the message have come in by now and may
+            // have pushed it down. A reader who scrolled meanwhile stays.
+            if let Some(id) = view.scrolled.take() {
                 run_script(
                     webview,
                     &format!(
-                        "document.getElementById('m-{id}')?.scrollIntoView({{block:'start'}})"
+                        "(function(){{var m=document.getElementById('m-{id}');\
+                         if(m&&window.mailrsAt===window.scrollY){{m.scrollIntoView({{block:'start'}});\
+                         window.mailrsAt=window.scrollY;}}}})()"
                     ),
                 );
             }
-            view.find.refresh();
+        });
+        let weak = Rc::downgrade(&view);
+        view.webview.connect_web_process_terminated(move |_, _| {
+            // Whatever the page held went with the process, so the next
+            // change draws the whole page rather than patching nothing.
+            if let Some(view) = weak.upgrade() {
+                view.change(OpenThread::page_lost);
+            }
         });
         view.webview.connect_context_menu(|_, menu, _| {
             use webkit::ContextMenuAction as Item;
@@ -886,6 +975,7 @@ impl ConversationView {
         });
         self.find.close();
         *self.open.borrow_mut() = None;
+        self.refuse_held();
         let values = [("count", count.to_string())];
         let values: Vec<(&str, &str)> = values.iter().map(|(k, v)| (*k, v.as_str())).collect();
         self.many.set_title(&match threaded {
@@ -956,6 +1046,7 @@ impl ConversationView {
     pub fn clear(&self) {
         self.find.close();
         *self.open.borrow_mut() = None;
+        self.refuse_held();
         self.stack.set_visible_child_name("empty");
         self.set_buttons_shown(false);
         self.banner.set_revealed(false);
@@ -993,7 +1084,11 @@ impl ConversationView {
 
     /// The answer the card shows for the invitation `uid`: the one that
     /// went, or the one from before an answer that did not.
-    pub fn invitation_answered(&self, uid: &str, answer: Option<mailrs_domain::invitation::Answer>) {
+    pub fn invitation_answered(
+        &self,
+        uid: &str,
+        answer: Option<mailrs_domain::invitation::Answer>,
+    ) {
         self.card.set_answer(uid, answer);
     }
 
@@ -1010,25 +1105,6 @@ impl ConversationView {
     /// Reads what the card shows. `None` means no invitation is on screen.
     pub fn with_invitation<R>(&self, f: impl FnOnce(&Showing) -> R) -> Option<R> {
         self.card.with_showing(f)
-    }
-
-    /// The message a translation applies to, with the prose the page
-    /// draws for it: the newest open message whose body has arrived. The
-    /// HTML is the cleaned copy, so the words come out of the markup the
-    /// reader is actually looking at.
-    pub fn open_prose(&self) -> Option<(String, Prose)> {
-        let open = self.open.borrow();
-        let open = open.as_ref()?;
-        let meta = open.messages.iter().rev().find(|meta| {
-            open.expanded.contains(&meta.id) && open.bodies.get(&meta.id).is_some_and(Result::is_ok)
-        })?;
-        let body = open.bodies.get(&meta.id)?.as_ref().ok()?;
-        let clean = self.sanitized.borrow();
-        let prose = match clean.get(&meta.id) {
-            Some(cleaned) => Prose::read(Body::Html(&cleaned.html)),
-            None => Prose::read(Body::Text(body.text.as_deref().unwrap_or(""))),
-        };
-        Some((meta.id.clone(), prose))
     }
 
     /// Whether `row` is what the view shows now.
@@ -1090,11 +1166,18 @@ impl ConversationView {
 
     /// The thread's messages as the store now has them. One that arrived
     /// unread opens, since the reader has not seen it. Gives back the ids
-    /// whose bodies are still missing. Nothing is redrawn: those bodies
-    /// are what the caller fetches next, and they bring a redraw with them.
+    /// whose bodies are still missing. With some missing nothing is
+    /// redrawn: those bodies are what the caller fetches next, and they
+    /// bring a redraw with them. With none missing the page takes whatever
+    /// changed, which is often nothing at all.
     pub fn messages_arrived(&self, fresh: &[MessageMeta]) -> Vec<String> {
-        self.change(|open| open.take_messages(fresh))
-            .unwrap_or_default()
+        let Some(missing) = self.change(|open| open.take_messages(fresh)) else {
+            return Vec::new();
+        };
+        if missing.is_empty() {
+            self.render(false);
+        }
+        missing
     }
 
     /// Replaces the messages after the store changed under the thread, and
@@ -1105,15 +1188,19 @@ impl ConversationView {
             .unwrap_or(false)
     }
 
-    /// Bodies and the inline images that go in them, as they come back
-    /// from Gmail, and the redraw that puts them on screen.
-    pub fn bodies_arrived(
-        &self,
-        bodies: Vec<(String, Result<MessageBody, String>)>,
-        images: HashMap<String, HashMap<String, String>>,
-    ) {
-        self.change(|open| open.take_bodies(bodies, images));
+    /// Bodies as they come back from Gmail with their HTML cleaned, and the
+    /// redraw that puts them on screen. The pictures they name come later.
+    pub fn bodies_arrived(&self, fetched: Fetched) {
+        self.change(|open| open.take_bodies(fetched.bodies, fetched.cleaned));
         self.render(false);
+    }
+
+    /// The pictures the bodies name, which the page has been waiting for.
+    /// They change no article: the requests waiting for them are answered,
+    /// and WebKit draws each where it belongs.
+    pub fn images_arrived(&self, found: InlinePictures) {
+        self.change(|open| open.take_images(found));
+        self.release_held();
     }
 
     /// The pictures for the attachment rows, and the redraw that shows
@@ -1176,6 +1263,9 @@ impl ConversationView {
         let opened = self
             .change(|open| open.take_engine_answer(message_id, read))
             .unwrap_or(false);
+        // The opened body's pictures come under new addresses, and a request
+        // for one of the old ones reaches nothing now.
+        self.release_held();
         self.render(false);
         opened
     }
@@ -1217,14 +1307,18 @@ impl ConversationView {
         // The card belongs to the thread that is leaving.
         self.translate.hide();
         *self.open.borrow_mut() = Some(thread);
+        // What the page before asked for belongs to the thread before.
+        self.refuse_held();
         self.stack.set_visible_child_name("thread");
         self.render(scroll);
     }
 
-    /// Redraws the open thread, for example after its bodies arrive.
+    /// Brings the page up to date with the open thread, for example after
+    /// its bodies arrive: a whole load when the open thread asks for one,
+    /// and otherwise the articles that changed, in place.
     pub fn render(&self, scroll: bool) {
-        let open = self.open.borrow();
-        let Some(open) = open.as_ref() else { return };
+        let mut open = self.open.borrow_mut();
+        let Some(open) = open.as_mut() else { return };
         let manager = &self.content;
         manager.remove_all_filters();
         if !open.images_allowed
@@ -1237,79 +1331,36 @@ impl ConversationView {
             dark: style.is_dark(),
             accent: style.accent_color_rgba().to_str().to_string(),
         };
-        let empty = HashMap::new();
-        let mut clean = self.sanitized.borrow_mut();
-        clean.retain(|id, _| open.bodies.contains_key(id));
-        for meta in &open.messages {
-            let Some(Ok(body)) = open.bodies.get(&meta.id) else {
-                continue;
-            };
-            let Some(html) = body.html.as_deref().filter(|h| !h.trim().is_empty()) else {
-                continue;
-            };
-            let images = open.inline_images.get(&meta.id).unwrap_or(&empty);
-            let mark = body_mark(html, images);
-            if clean.get(&meta.id).is_none_or(|seen| seen.mark != mark) {
-                let body = CleanBody {
-                    mark,
-                    html: sanitize_html(html, images),
-                };
-                clean.insert(meta.id.clone(), body);
-            }
-        }
-        let views: Vec<MessageView> = open
-            .messages
-            .iter()
-            .map(|meta| {
-                // A message showing its translation draws the translated
-                // body and the translated HTML. What arrived stays where
-                // it was, for the way back.
-                let showing = open
-                    .translations
-                    .get(&meta.id)
-                    .filter(|translation| translation.shown);
-                MessageView {
-                    meta,
-                    body: match (showing, open.bodies.get(&meta.id)) {
-                        (Some(translation), _) => BodyState::Loaded(&translation.body),
-                        (None, None) => BodyState::Loading,
-                        (None, Some(Ok(body))) => BodyState::Loaded(body),
-                        (None, Some(Err(reason))) => BodyState::Failed(reason),
-                    },
-                    expanded: open.expanded.contains(&meta.id),
-                    inline_images: open.inline_images.get(&meta.id).unwrap_or(&empty),
-                    thumbnails: &open.thumbnails,
-                    sanitized: match showing {
-                        Some(translation) => translation.clean.as_deref(),
-                        None => clean.get(&meta.id).map(|body| body.html.as_str()),
-                    },
-                }
-            })
-            .collect();
-        let html = render(
-            &Conversation {
-                subject: &open.subject,
-                messages: views,
-                me: &open.me,
-                photos: &open.photos,
-                allow_remote: open.images_allowed,
-            },
-            &theme,
-        );
+        let page = open.page(&theme);
         let background = if theme.dark {
             gdk::RGBA::new(0.133, 0.133, 0.149, 1.0)
         } else {
             gdk::RGBA::WHITE
         };
         self.webview.set_background_color(&background);
-        if scroll && open.messages.len() > 2 {
-            *self.scroll_to.borrow_mut() = open
-                .messages
-                .iter()
-                .find(|m| open.expanded.contains(&m.id))
-                .map(|m| script_safe(&m.id));
+        match page {
+            Page::Whole(document) => {
+                if scroll && open.messages.len() > 2 {
+                    *self.scroll_to.borrow_mut() = open
+                        .messages
+                        .iter()
+                        .find(|m| open.expanded.contains(&m.id))
+                        .map(|m| script_safe(&m.id));
+                }
+                // The new page holds everything a waiting patch would put
+                // in it.
+                self.waiting.borrow_mut().clear();
+                let load = self.loads.get() + 1;
+                self.loads.set(load);
+                let html = document.html(&format!(" data-load=\"{load}\""));
+                self.webview.load_html(&html, None);
+            }
+            Page::Patch(patch) if patch.is_empty() => {}
+            Page::Patch(patch) => match self.ready.get() == self.loads.get() {
+                true => self.patch(patch),
+                false => self.waiting.borrow_mut().extend(patch),
+            },
         }
-        self.webview.load_html(&html, None);
         match open.card() {
             Some(mark) => self.seal.show(mark),
             None => self.seal.hide(),
@@ -1317,6 +1368,115 @@ impl ConversationView {
         self.banner
             .set_revealed(!open.images_allowed && open.has_remote_images());
         self.update_buttons(open);
+    }
+
+    /// The page from load number `load` is parsed. What waited for it goes
+    /// in now, then the view scrolls to the message it was asked to and
+    /// finds again what the find bar holds. A page an older load parsed is
+    /// on its way out, so nothing waits on it.
+    fn page_ready(&self, load: u64) {
+        if load != self.loads.get() {
+            return;
+        }
+        self.ready.set(load);
+        let waiting = self.waiting.take();
+        if !waiting.is_empty() {
+            self.patch(waiting);
+        }
+        if let Some(id) = self.scroll_to.take() {
+            run_script(
+                &self.webview,
+                &format!(
+                    "(function(){{var m=document.getElementById('m-{id}');\
+                     if(m){{m.scrollIntoView({{block:'start'}});window.mailrsAt=window.scrollY;}}}})()"
+                ),
+            );
+            *self.scrolled.borrow_mut() = Some(id);
+        }
+        self.find.refresh();
+    }
+
+    /// Puts each article in place of the one with the same message id, on
+    /// the page that is parsed now. A page that cannot take it, or that
+    /// lacks one of them, is loaded whole instead.
+    fn patch(&self, patch: Vec<Article>) {
+        let pairs: Vec<(&str, &str)> = patch
+            .iter()
+            .map(|article| (article.message_id.as_str(), article.html.as_str()))
+            .collect();
+        let Ok(json) = serde_json::to_string(&pairs) else {
+            return;
+        };
+        let script = [PATCH_SCRIPT[0], &json, PATCH_SCRIPT[1]].concat();
+        let load = self.loads.get();
+        let this = self.this.clone();
+        self.webview.evaluate_javascript(
+            &script,
+            None,
+            None,
+            gio::Cancellable::NONE,
+            move |done| {
+                let Some(view) = this.upgrade() else { return };
+                let whole = match done {
+                    Ok(value) => value.to_str() == "whole",
+                    Err(err) => {
+                        tracing::warn!(error = %err, "could not patch the conversation");
+                        true
+                    }
+                };
+                // A later load already holds everything this carried.
+                if whole && load == view.loads.get() {
+                    view.change(OpenThread::page_lost);
+                    view.render(false);
+                }
+            },
+        );
+        // The find bar's highlights in the other articles stay. The count
+        // may have changed with the words.
+        self.find.recount();
+    }
+
+    /// Answers the page's request for an inline picture, or holds it until
+    /// the thread's pictures arrive. A request for another account, or for
+    /// a message or version no longer on screen, reaches nothing.
+    fn serve(&self, request: &webkit::URISchemeRequest) {
+        let Some(address) = request.uri().and_then(|uri| Address::parse(&uri)) else {
+            return refuse(request);
+        };
+        match self.served(&address) {
+            Served::Waiting => self.held.borrow_mut().push((address, request.clone())),
+            served => answer(request, served),
+        }
+    }
+
+    fn served(&self, address: &Address) -> Served {
+        self.find(|open| {
+            (open.account_id == address.account_id)
+                .then(|| open.picture(&address.message_id, address.version, &address.cid))
+        })
+        .unwrap_or(Served::Gone)
+    }
+
+    /// Answers the requests that were waiting, now that the thread holds
+    /// more, and keeps the ones still waiting.
+    fn release_held(&self) {
+        let held = self.held.take();
+        let mut waiting = Vec::new();
+        for (address, request) in held {
+            match self.served(&address) {
+                Served::Waiting => waiting.push((address, request)),
+                served => answer(&request, served),
+            }
+        }
+        self.held.borrow_mut().extend(waiting);
+    }
+
+    /// Turns away every request still waiting, when the thread they asked
+    /// about leaves the view.
+    fn refuse_held(&self) {
+        for (_, request) in self.held.take() {
+            refuse(&request);
+        }
     }
 
     /// Updates the header buttons after label changes, without redrawing.
@@ -1477,13 +1637,7 @@ impl ConversationView {
     }
 
     fn toggle(&self, id: &str) {
-        let expanded = self.change(|open| {
-            if !open.expanded.remove(id) {
-                open.expanded.insert(id.to_string());
-            }
-            open.expanded.contains(id)
-        });
-        if let Some(expanded) = expanded {
+        if let Some(expanded) = self.change(|open| open.toggle(id)) {
             self.show_message(id, expanded);
         }
     }
@@ -1493,16 +1647,7 @@ impl ConversationView {
     /// a closed message's body, and WebKit finds nothing in it.
     fn open_every_message(&self) -> Vec<String> {
         let closed = self
-            .change(|open| {
-                let closed: Vec<String> = open
-                    .messages
-                    .iter()
-                    .map(|m| m.id.clone())
-                    .filter(|id| !open.expanded.contains(id))
-                    .collect();
-                open.expanded.extend(closed.iter().cloned());
-                closed
-            })
+            .change(OpenThread::open_every_message)
             .unwrap_or_default();
         for id in &closed {
             self.show_message(id, true);
@@ -1512,11 +1657,7 @@ impl ConversationView {
 
     /// Closes the messages the find bar opened.
     fn close_messages(&self, ids: &[String]) {
-        self.change(|open| {
-            for id in ids {
-                open.expanded.remove(id);
-            }
-        });
+        self.change(|open| open.close_messages(ids));
         for id in ids {
             self.show_message(id, false);
         }
@@ -1524,25 +1665,44 @@ impl ConversationView {
 
     /// Opens or closes one message in the page itself. Redrawing would do
     /// it too, and would throw away the find highlight and the place the
-    /// reader had scrolled to.
-    /// Opens or closes one message. The page's own stylesheet grows and
-    /// shrinks the fold: its row goes from no height to the content's,
-    /// which needs no measuring here and follows a body that grows later,
-    /// as a picture loading does. A second click turns the movement
-    /// around from wherever it had reached.
+    /// reader had scrolled to. The page's own stylesheet grows and shrinks
+    /// the fold: its row goes from no height to the content's, which needs
+    /// no measuring here and follows a body that grows later, as a picture
+    /// loading does. A second click turns the movement around from
+    /// wherever it had reached.
+    ///
+    /// A closed message is shut once the fold has stopped moving, which
+    /// takes its body out of layout. Shutting it at once would leave the
+    /// fold no height to close from.
     fn show_message(&self, id: &str, expanded: bool) {
         let id = script_safe(id);
         let (add, remove) = match expanded {
-            true => ("expanded", "collapsed"),
-            false => ("collapsed", "expanded"),
+            true => ("expanded", "'collapsed','shut'"),
+            false => ("collapsed", "'expanded'"),
         };
         run_script(
             &self.webview,
             &format!(
                 "(function(){{var m=document.getElementById('m-{id}');\
-                   if(m){{m.classList.add('{add}');m.classList.remove('{remove}');}}}})()"
+                   if(m){{m.classList.add('{add}');m.classList.remove({remove});}}}})()"
             ),
         );
+        if expanded {
+            return;
+        }
+        let webview = self.webview.downgrade();
+        let settled = std::time::Duration::from_millis(u64::from(FOLD_MS) + 40);
+        glib::timeout_add_local_once(settled, move || {
+            if let Some(webview) = webview.upgrade() {
+                run_script(
+                    &webview,
+                    &format!(
+                        "(function(){{var m=document.getElementById('m-{id}');\
+                         if(m&&m.classList.contains('collapsed'))m.classList.add('shut');}})()"
+                    ),
+                );
+            }
+        });
     }
 }
 
@@ -1599,30 +1759,58 @@ fn color_index(color: FlagColor) -> usize {
     FlagColor::ALL.iter().position(|c| *c == color).unwrap_or(0)
 }
 
-fn run_script(webview: &webkit::WebView, script: &str) {
-    webview.evaluate_javascript(script, None, None, gio::Cancellable::NONE, |_| {});
+thread_local! {
+    /// The views alive on this thread, so the one handler WebKit takes for
+    /// a scheme can find the view a request came from.
+    static VIEWS: RefCell<Vec<Weak<ConversationView>>> = const { RefCell::new(Vec::new()) };
 }
 
-/// One number standing for the HTML and the inline images a cleaned body
-/// was made from, so the cleaned copy is thrown away as soon as either
-/// changes. It reads the whole body rather than its length, because two
-/// bodies of the same length are still two bodies: opening an encrypted
-/// message puts a different body under the same message id, and the
-/// reader would otherwise go on looking at the cleaned ciphertext.
-fn body_mark(html: &str, images: &HashMap<String, String>) -> u64 {
-    let mut whole = DefaultHasher::new();
-    html.hash(&mut whole);
-    // A HashMap hands its entries back in whatever order it likes, so each
-    // one is hashed on its own and the results mixed with xor, which
-    // answers the same whichever order they come in.
-    let mixed = images.iter().fold(0, |mixed, (cid, uri)| {
-        let mut each = DefaultHasher::new();
-        cid.hash(&mut each);
-        uri.hash(&mut each);
-        mixed ^ each.finish()
+/// Registers the `mailrs-cid` scheme with WebKit, once: a second handler
+/// for the same scheme is refused.
+fn serve_pictures() {
+    thread_local! {
+        static REGISTERED: Cell<bool> = const { Cell::new(false) };
+    }
+    if REGISTERED.replace(true) {
+        return;
+    }
+    let Some(context) = webkit::WebContext::default() else {
+        return;
+    };
+    context.register_uri_scheme(inline::SCHEME, |request| {
+        let asking = request.web_view();
+        let view = VIEWS.with(|views| {
+            views
+                .borrow()
+                .iter()
+                .filter_map(Weak::upgrade)
+                .find(|view| asking.as_ref() == Some(&view.webview))
+        });
+        match view {
+            Some(view) => view.serve(request),
+            None => refuse(request),
+        }
     });
-    mixed.hash(&mut whole);
-    whole.finish()
+}
+
+/// Gives the page a picture, or says there is none.
+fn answer(request: &webkit::URISchemeRequest, served: Served) {
+    let Served::Ready(picture) = served else {
+        return refuse(request);
+    };
+    let bytes = glib::Bytes::from_owned(picture.bytes);
+    let length = i64::try_from(bytes.len()).unwrap_or(-1);
+    let stream = gio::MemoryInputStream::from_bytes(&bytes);
+    request.finish(&stream, length, Some(&picture.mime));
+}
+
+fn refuse(request: &webkit::URISchemeRequest) {
+    let mut error = glib::Error::new(gio::IOErrorEnum::NotFound, "no such picture");
+    request.finish_error(&mut error);
+}
+
+fn run_script(webview: &webkit::WebView, script: &str) {
+    webview.evaluate_javascript(script, None, None, gio::Cancellable::NONE, |_| {});
 }
 
 /// Keeps only characters that are safe inside a quoted script string.
@@ -1640,76 +1828,4 @@ fn network_session() -> webkit::NetworkSession {
         static SESSION: webkit::NetworkSession = webkit::NetworkSession::new_ephemeral();
     }
     SESSION.with(|s| s.clone())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::body_mark;
-    use std::collections::HashMap;
-
-    fn images(entries: &[(&str, &str)]) -> HashMap<String, String> {
-        entries
-            .iter()
-            .map(|(cid, uri)| (cid.to_string(), uri.to_string()))
-            .collect()
-    }
-
-    #[test]
-    fn a_body_that_did_not_change_keeps_its_cleaned_copy() {
-        let pictures = images(&[("cid1", "data:image/png;base64,AAAA")]);
-        assert_eq!(
-            body_mark("<p>Hello</p>", &pictures),
-            body_mark("<p>Hello</p>", &pictures)
-        );
-    }
-
-    #[test]
-    fn two_bodies_of_the_same_length_are_two_bodies() {
-        let pictures = images(&[("cid1", "data:image/png;base64,AAAA")]);
-        assert_ne!(
-            body_mark("<p>Hello</p>", &pictures),
-            body_mark("<p>Howdy</p>", &pictures)
-        );
-    }
-
-    #[test]
-    fn an_image_that_changed_is_a_new_body() {
-        assert_ne!(
-            body_mark(
-                "<p>Hello</p>",
-                &images(&[("cid1", "data:image/png;base64,AAAA")])
-            ),
-            body_mark(
-                "<p>Hello</p>",
-                &images(&[("cid1", "data:image/png;base64,BBBB")])
-            )
-        );
-        assert_ne!(
-            body_mark(
-                "<p>Hello</p>",
-                &images(&[("cid1", "data:image/png;base64,AAAA")])
-            ),
-            body_mark(
-                "<p>Hello</p>",
-                &images(&[("cid2", "data:image/png;base64,AAAA")])
-            )
-        );
-        assert_ne!(
-            body_mark("<p>Hello</p>", &images(&[])),
-            body_mark(
-                "<p>Hello</p>",
-                &images(&[("cid1", "data:image/png;base64,AAAA")])
-            )
-        );
-    }
-
-    #[test]
-    fn the_order_the_images_arrived_in_says_nothing() {
-        let one = images(&[("cid1", "first"), ("cid2", "second")]);
-        let other = images(&[("cid2", "second"), ("cid1", "first")]);
-        assert_eq!(
-            body_mark("<p>Hello</p>", &one),
-            body_mark("<p>Hello</p>", &other)
-        );
-    }
 }

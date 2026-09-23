@@ -821,7 +821,7 @@ pub struct Translation {
     pub body: MessageBody,
     /// The translated HTML after cleaning, which is what the page draws.
     /// `None` for a message with no HTML part.
-    pub clean: Option<String>,
+    pub clean: Option<crate::open_thread::Cleaned>,
     /// Set when the message was too long and only its start was
     /// translated.
     pub cut: bool,
@@ -896,7 +896,6 @@ pub async fn ask(
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
 
     use super::*;
     use crate::settings::AiProvider;
@@ -1278,7 +1277,7 @@ mod tests {
             "[[1]] Good morning\n[[2]] See you <b>soon</b>",
             pieces.len(),
         );
-        let clean = crate::sanitize::sanitize_html(&prose.rebuild(&said), &HashMap::new());
+        let clean = crate::sanitize::sanitize_html(&prose.rebuild(&said), None);
         assert_eq!(
             clean,
             "<p>Good morning</p><p>See you &lt;b&gt;soon&lt;/b&gt;</p>"

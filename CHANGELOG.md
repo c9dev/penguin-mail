@@ -50,6 +50,19 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   changes.
 - The window keeps responding while Save to Downloads or Save All writes
   a large file from an encrypted message or a preview.
+- A conversation you read before opens in about 0.2 seconds where a
+  thread of forty newsletters took 1.4: the page loads once instead of
+  twice, and the messages you have not opened are no longer laid out.
+- A message still loading when a conversation opens, the pictures on
+  attachment rows, a decrypted message and a translation now appear in
+  place, so you keep your place in a long conversation instead of landing
+  back at the top.
+- A conversation shows its text before the pictures inside its messages,
+  which fill in as they arrive. Eight large pictures used to make a 3 MB
+  conversation a 12 MB page for WebKit to read.
+- Opening a long conversation no longer holds up the window while its mail
+  is cleaned for display: forty newsletters took the window 50 ms, and that
+  work now happens on another thread.
 
 ### Fixed
 
@@ -138,6 +151,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   newest, so an older encrypted reply no longer stays unreadable.
 - What gpg and gpgsm say when they fail now shows in the language the
   window is in, on the card and in the composer.
+- Pictures inside a message show when you open a conversation you read
+  before. They used to appear only the first time.
+- The Load Images bar no longer offers to load a picture the sender hid
+  in a comment, which the message never shows.
 
 ## 0.1.7 (2026-09-23)
 

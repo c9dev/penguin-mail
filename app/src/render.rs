@@ -8,11 +8,10 @@ use std::fmt::Write;
 use mailrs_domain::{Address, MessageBody, MessageMeta, Provenance};
 
 use crate::format::{color_for, full_date, header_date, human_size, initials};
-use crate::sanitize::sanitize_html;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 /// How long a message's fold takes to open or close.
-const FOLD_MS: u32 = 240;
+pub const FOLD_MS: u32 = 240;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Theme {
@@ -31,17 +30,35 @@ pub struct MessageView<'a> {
     pub meta: &'a MessageMeta,
     pub body: BodyState<'a>,
     pub expanded: bool,
-    /// `Content-ID` to `data:` URI for this message's inline images.
-    pub inline_images: &'a HashMap<String, String>,
     /// Gmail's attachment id to a small `data:` URI, for the picture on an
     /// attachment row. A row without one falls back to the paperclip.
     pub thumbnails: &'a HashMap<String, String>,
-    /// The body's HTML, already cleaned. Cleaning a long message costs
-    /// milliseconds, so the view keeps the result and passes it back here.
-    /// `None` cleans the body now.
-    pub sanitized: Option<&'a str>,
+    /// The body's HTML, already cleaned, or `None` for a body drawn from
+    /// its text. Cleaning a long message costs milliseconds, so whoever
+    /// builds the page keeps the result and passes it in here.
+    pub sanitized: Option<Sanitized<'a>>,
 }
 
+/// A body's cleaned HTML, and whether it chooses its own colours. Mail
+/// that does is written for a white page and keeps one; mail that does not
+/// takes the window's colours.
+#[derive(Debug, Clone, Copy)]
+pub struct Sanitized<'a> {
+    pub html: &'a str,
+    pub paints: bool,
+}
+
+/// What the top of the page says about the thread as a whole.
+pub struct Head<'a> {
+    pub subject: &'a str,
+    /// How many messages the thread has.
+    pub count: usize,
+    /// Whether remote images and styles may load.
+    pub allow_remote: bool,
+}
+
+/// A whole thread, for the tests that read one page at once.
+#[cfg(test)]
 pub struct Conversation<'a> {
     pub subject: &'a str,
     pub messages: Vec<MessageView<'a>>,
@@ -54,7 +71,31 @@ pub struct Conversation<'a> {
     pub allow_remote: bool,
 }
 
+/// The whole page: the head, one article per message, and the end.
+#[cfg(test)]
 pub fn render(conversation: &Conversation, theme: &Theme) -> String {
+    let mut html = head(
+        &Head {
+            subject: conversation.subject,
+            count: conversation.messages.len(),
+            allow_remote: conversation.allow_remote,
+        },
+        theme,
+    );
+    for view in &conversation.messages {
+        html.push_str(&article(view, conversation.me, conversation.photos));
+    }
+    html.push_str(TAIL);
+    html
+}
+
+/// What closes the page after the last article.
+pub const TAIL: &str = "</body></html>";
+
+/// Everything before the first message: the document's head with its
+/// policy and stylesheet, and the thread's subject and count. A page is
+/// patched one article at a time only while this stays the same.
+pub fn head(conversation: &Head, theme: &Theme) -> String {
     let mut html = String::with_capacity(16 * 1024);
     html.push_str("<!doctype html><html");
     // Without this a screen reader reads the page in whatever voice it
@@ -72,7 +113,7 @@ pub fn render(conversation: &Conversation, theme: &Theme) -> String {
     let _ = write!(
         html,
         "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'none'; \
-         style-src 'unsafe-inline'{remote}; img-src data:{remote}; font-src data:{remote}\">"
+         style-src 'unsafe-inline'{remote}; img-src data: mailrs-cid:{remote}; font-src data:{remote}\">"
     );
     let _ = write!(html, "<style>{}</style></head><body>", page_css(theme));
     let subject = if conversation.subject.trim().is_empty() {
@@ -80,7 +121,7 @@ pub fn render(conversation: &Conversation, theme: &Theme) -> String {
     } else {
         conversation.subject.to_string()
     };
-    let count = conversation.messages.len();
+    let count = conversation.count;
     let many = fill_plural(
         "{count} message",
         "{count} messages",
@@ -93,10 +134,14 @@ pub fn render(conversation: &Conversation, theme: &Theme) -> String {
         escape(&subject),
         escape(&many),
     );
-    for view in &conversation.messages {
-        render_message(&mut html, view, conversation.me, conversation.photos);
-    }
-    html.push_str("</body></html>");
+    html
+}
+
+/// One message's `<article>`, whole, as a patch puts it in place of the
+/// one before.
+pub fn article(view: &MessageView, me: &[String], photos: &HashMap<String, String>) -> String {
+    let mut html = String::new();
+    render_message(&mut html, view, me, photos);
     html
 }
 
@@ -107,10 +152,15 @@ fn render_message(
     photos: &HashMap<String, String>,
 ) {
     let meta = view.meta;
+    // A closed message is also shut, which keeps its body out of layout: a
+    // forty message newsletter thread with one message open finished
+    // loading in 180 ms instead of 710. The view shuts a message it closes
+    // only once the fold has finished moving, since a shut body has no
+    // height to animate from.
     let state = if view.expanded {
         "expanded"
     } else {
-        "collapsed"
+        "collapsed shut"
     };
     let unread = if meta.is_unread() { " unread" } else { "" };
     let (name, address) = match &meta.from {
@@ -203,17 +253,13 @@ fn render_body(html: &mut String, view: &MessageView) {
             let _ = write!(html, "<div class=\"body status\">{}</div>", escape(&said));
         }
         BodyState::Loaded(body) => {
-            if let Some(source) = body.html.as_deref().filter(|h| !h.trim().is_empty()) {
-                let clean = match view.sanitized {
-                    Some(clean) => clean.to_string(),
-                    None => sanitize_html(source, view.inline_images),
-                };
+            if let Some(clean) = view.sanitized {
                 let _ = write!(
                     html,
                     "<div class=\"body html{plain}\"><template shadowrootmode=\"open\"><style>{HTML_BODY_CSS}</style>\
-                     <div class=\"root\">{clean}</div></template></div>",
-                    clean = clean,
-                    plain = if paints_itself(&clean) { "" } else { " plain" },
+                     <div class=\"root\">{html}</div></template></div>",
+                    html = clean.html,
+                    plain = if clean.paints { "" } else { " plain" },
                 );
             } else {
                 let _ = write!(
@@ -225,18 +271,6 @@ fn render_body(html: &mut String, view: &MessageView) {
             render_attachments(html, &view.meta.id, body, view.thumbnails);
         }
     }
-}
-
-/// Whether a message's HTML chooses its own colours. Mail that does is
-/// written for a white page: a newsletter's white boxes and dark text
-/// only read against it. Mail that does not, which is most of what a
-/// person writes, takes the window's own colours instead of sitting in a
-/// white slab in a dark window.
-fn paints_itself(html: &str) -> bool {
-    let lower = html.to_ascii_lowercase();
-    ["bgcolor=", "background", "color:", "color=", "<table"]
-        .iter()
-        .any(|mark| lower.contains(mark))
 }
 
 /// The recipients line, and under it everything the headers say about
@@ -649,6 +683,7 @@ transition:grid-template-rows {fold}ms cubic-bezier(0.23,1,0.32,1),\
 opacity 180ms cubic-bezier(0.23,1,0.32,1)}}\
 .folded{{overflow:hidden;min-height:0}}\
 .collapsed .fold{{grid-template-rows:0fr;opacity:0}}\
+.shut .folded{{content-visibility:hidden}}\
 .message{{transition:background-color 120ms ease}}\
 .attachment,.attachment .get{{transition:background-color 120ms ease,opacity 120ms ease}}\
 @media (prefers-reduced-motion:reduce){{.fold,.message{{transition:none}}}}\
@@ -776,7 +811,6 @@ mod tests {
             text: Some("line\n".repeat(40)),
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let html = page(
             "Kites",
@@ -784,7 +818,6 @@ mod tests {
                 meta: &one,
                 body: BodyState::Loaded(&body),
                 expanded: false,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],
@@ -799,19 +832,22 @@ mod tests {
             html: Some("<div dir=\"ltr\">Hello,<br><br>Monday works.</div>".into()),
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
-        let view = |body: &'static MessageBody, meta: &'static MessageMeta| MessageView {
+        let view = |body: &'static MessageBody, meta: &'static MessageMeta, paints| MessageView {
             meta,
             body: BodyState::Loaded(body),
             expanded: true,
-            inline_images: &images,
             thumbnails: &no_thumbs,
-            sanitized: None,
+            // Both fixtures are already clean.
+            sanitized: body.html.as_deref().map(|html| Sanitized { html, paints }),
         };
         let html = page(
             "Kites",
-            vec![view(Box::leak(Box::new(body)), Box::leak(Box::new(plain)))],
+            vec![view(
+                Box::leak(Box::new(body)),
+                Box::leak(Box::new(plain)),
+                false,
+            )],
         );
         assert!(html.contains("body html plain"), "{html}");
 
@@ -825,6 +861,7 @@ mod tests {
             vec![view(
                 Box::leak(Box::new(loud)),
                 Box::leak(Box::new(painted)),
+                true,
             )],
         );
         assert!(
@@ -840,7 +877,6 @@ mod tests {
             text: Some("hi".into()),
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let html = page(
             "<script>alert(1)</script>",
@@ -848,7 +884,6 @@ mod tests {
                 meta: &evil,
                 body: BodyState::Loaded(&body),
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],
@@ -864,13 +899,11 @@ mod tests {
     fn a_contact_photo_replaces_the_initials() {
         let from_ann = meta("m1", "Ann Lee", &[]);
         let body = MessageBody::default();
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let view = || MessageView {
             meta: &from_ann,
             body: BodyState::Loaded(&body),
             expanded: false,
-            inline_images: &images,
             thumbnails: &no_thumbs,
             sanitized: None,
         };
@@ -904,7 +937,6 @@ mod tests {
             text: Some("the body".into()),
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let html = page(
             "Hello",
@@ -913,7 +945,6 @@ mod tests {
                     meta: &first,
                     body: BodyState::Loaded(&body),
                     expanded: false,
-                    inline_images: &images,
                     thumbnails: &no_thumbs,
                     sanitized: None,
                 },
@@ -921,13 +952,16 @@ mod tests {
                     meta: &second,
                     body: BodyState::Loaded(&body),
                     expanded: true,
-                    inline_images: &images,
                     thumbnails: &no_thumbs,
                     sanitized: None,
                 },
             ],
         );
-        assert!(html.contains("message collapsed\" id=\"m-m1\""));
+        assert!(html.contains("message collapsed shut\" id=\"m-m1\""));
+        assert!(
+            html.contains(".shut .folded{content-visibility:hidden}"),
+            "a message closed since the page loaded is not laid out"
+        );
         assert!(
             html.contains(".collapsed .fold{grid-template-rows:0fr;opacity:0}"),
             "a collapsed message keeps its fold at no height"
@@ -953,13 +987,12 @@ mod tests {
     }
 
     #[test]
-    fn html_bodies_are_sanitized_inside_a_shadow_root() {
+    fn an_html_body_sits_inside_a_shadow_root() {
         let m = meta("m1", "Ann", &[]);
         let body = MessageBody {
             html: Some("<p>Hi</p><script>bad()</script>".into()),
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let html = page(
             "x",
@@ -967,15 +1000,17 @@ mod tests {
                 meta: &m,
                 body: BodyState::Loaded(&body),
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
-                sanitized: None,
+                sanitized: Some(Sanitized {
+                    html: "<p>Hi</p>",
+                    paints: false,
+                }),
             }],
         );
         assert!(html.contains("<template shadowrootmode=\"open\">"));
         assert!(
-            html.contains("<p>Hi</p>") && !html.contains("bad()"),
-            "{html}"
+            html.contains("<div class=\"root\"><p>Hi</p></div>") && !html.contains("bad()"),
+            "the page draws the cleaned copy it was given: {html}"
         );
     }
 
@@ -1003,7 +1038,6 @@ mod tests {
             ],
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let html = page(
             "x",
@@ -1011,7 +1045,6 @@ mod tests {
                 meta: &m,
                 body: BodyState::Loaded(&body),
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],
@@ -1042,7 +1075,6 @@ mod tests {
             ],
             ..Default::default()
         };
-        let images = HashMap::new();
         let mut no_thumbs = HashMap::new();
         no_thumbs.insert(
             "att-1".to_string(),
@@ -1054,7 +1086,6 @@ mod tests {
                 meta: &m,
                 body: BodyState::Loaded(&body),
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],
@@ -1092,7 +1123,6 @@ mod tests {
     #[test]
     fn a_sender_is_the_heading_under_the_subject() {
         let m = meta("m1", "Ann", &[]);
-        let images = HashMap::new();
         let thumbs = HashMap::new();
         let html = page(
             "Rent",
@@ -1100,7 +1130,6 @@ mod tests {
                 meta: &m,
                 body: BodyState::Loading,
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &thumbs,
                 sanitized: None,
             }],
@@ -1131,7 +1160,6 @@ mod tests {
             }],
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let html = page(
             "x",
@@ -1139,7 +1167,6 @@ mod tests {
                 meta: &m,
                 body: BodyState::Loaded(&body),
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],
@@ -1159,7 +1186,6 @@ mod tests {
             },
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let html = page(
             "x",
@@ -1167,7 +1193,6 @@ mod tests {
                 meta: &m,
                 body: BodyState::Loaded(&body),
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],
@@ -1188,7 +1213,6 @@ mod tests {
             text: Some("Hello".into()),
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let html = page(
             "x",
@@ -1196,7 +1220,6 @@ mod tests {
                 meta: &m,
                 body: BodyState::Loaded(&body),
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],
@@ -1221,7 +1244,6 @@ mod tests {
             },
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let html = page(
             "x",
@@ -1229,7 +1251,6 @@ mod tests {
                 meta: &m,
                 body: BodyState::Loaded(&body),
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],
@@ -1253,7 +1274,6 @@ mod tests {
             }],
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let html = page(
             "x",
@@ -1261,7 +1281,6 @@ mod tests {
                 meta: &m,
                 body: BodyState::Loaded(&body),
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],
@@ -1272,7 +1291,6 @@ mod tests {
     #[test]
     fn loading_and_failure_states_render() {
         let m = meta("m1", "Ann", &[]);
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let loading = page(
             "x",
@@ -1280,7 +1298,6 @@ mod tests {
                 meta: &m,
                 body: BodyState::Loading,
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],
@@ -1292,7 +1309,6 @@ mod tests {
                 meta: &m,
                 body: BodyState::Failed("offline <now>"),
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],
@@ -1350,7 +1366,7 @@ mod tests {
             &theme(),
         );
         assert!(
-            blocked.contains("img-src data:;") && blocked.contains("script-src 'none'"),
+            blocked.contains("img-src data: mailrs-cid:;") && blocked.contains("script-src 'none'"),
             "{blocked}"
         );
         let allowed = render(
@@ -1363,7 +1379,7 @@ mod tests {
             },
             &theme(),
         );
-        assert!(allowed.contains("img-src data: https: http:"));
+        assert!(allowed.contains("img-src data: mailrs-cid: https: http:"));
     }
 
     #[test]

@@ -19,8 +19,10 @@ use mailrs_sync::{History, MailAction, Opened, TriageAction, now_millis};
 use super::pictures::Pictures;
 use super::{BODY_FETCHES, MainWindow, read_cached_body};
 use crate::core::Core;
-use crate::open_thread::run::{Answer, Card, Desk, Effects, Fetched, Stored, ThreadRun};
-use crate::open_thread::{OpenThread, Unsent};
+use crate::open_thread::run::{
+    Answer, Card, Desk, Effects, Fetched, InlinePictures, Stored, ThreadRun,
+};
+use crate::open_thread::{Cleaned, OpenThread, ToClean, Unsent};
 use crate::protection::Read;
 use crate::settings::MarkRead;
 use crate::translation::{self, Language, Prose, Translation};
@@ -106,6 +108,22 @@ impl Ports {
             .account(account_id)
             .ok_or_else(|| "the account has stopped syncing".to_string())
     }
+
+    /// Cleans the bodies' HTML on a worker thread. Forty newsletters take
+    /// the GTK thread tens of milliseconds, during which the window would
+    /// not draw. A body this fails to clean is cleaned when drawn.
+    async fn clean_away(&self, bodies: ToClean) -> HashMap<String, Cleaned> {
+        if bodies.is_empty() {
+            return HashMap::new();
+        }
+        self.core
+            .call(async move { tokio::task::spawn_blocking(move || bodies.clean()).await })
+            .await
+            .unwrap_or_else(|err| {
+                tracing::warn!(error = %err, "could not clean the bodies away from the window");
+                HashMap::new()
+            })
+    }
 }
 
 impl Screen for Ports {
@@ -175,8 +193,14 @@ impl Desk for Ports {
             .unwrap_or_default()
     }
 
+    fn wanting_images(&self) -> Vec<(String, MessageBody)> {
+        self.view
+            .read(OpenThread::wanting_images)
+            .unwrap_or_default()
+    }
+
     fn prose(&self) -> Option<(String, Prose)> {
-        self.view.open_prose()
+        self.view.find(OpenThread::prose)
     }
 
     fn same_writer(&self, message_id: &str) -> String {
@@ -189,7 +213,7 @@ impl Desk for Ports {
         self.view.find(|open| open.translation_of(message_id))
     }
 
-    fn arrived(&self, message_id: &str) -> Option<(MessageBody, HashMap<String, String>)> {
+    fn arrived(&self, message_id: &str) -> Option<(MessageBody, String)> {
         self.view.find(|open| open.arrived(message_id))
     }
 
@@ -212,7 +236,8 @@ impl Effects for Ports {
         thread_id: String,
     ) -> Answer<'_, Result<Stored, String>> {
         Box::pin(async move {
-            self.core
+            let mut stored = self
+                .core
                 .read(move |c| {
                     let messages = messages::thread_messages(c, account_id, &thread_id)?;
                     let mut bodies = HashMap::new();
@@ -221,10 +246,17 @@ impl Effects for Ports {
                             bodies.insert(meta.id.clone(), body);
                         }
                     }
-                    Ok(Stored { messages, bodies })
+                    Ok(Stored {
+                        messages,
+                        bodies,
+                        cleaned: HashMap::new(),
+                    })
                 })
                 .await
-                .map_err(|err| err.to_string())
+                .map_err(|err| err.to_string())?;
+            let html = ToClean::of(account_id, &stored.bodies);
+            stored.cleaned = self.clean_away(html).await;
+            Ok(stored)
         })
     }
 
@@ -279,8 +311,28 @@ impl Effects for Ports {
                     .collect()
                     .await
             };
-            let images = self.pictures.inline(account_id, &sync, &bodies).await;
-            Fetched { bodies, images }
+            let arrived = bodies
+                .iter()
+                .filter_map(|(id, body)| Some((id, body.as_ref().ok()?)));
+            let cleaned = self.clean_away(ToClean::of(account_id, arrived)).await;
+            Fetched { bodies, cleaned }
+        })
+    }
+
+    fn inline_images(
+        &self,
+        account_id: AccountId,
+        bodies: Vec<(String, MessageBody)>,
+    ) -> Answer<'_, InlinePictures> {
+        Box::pin(async move {
+            match self.sync(account_id) {
+                Ok(sync) => self.pictures.inline(account_id, &sync, &bodies).await,
+                // Nothing will come, so the page may stop waiting.
+                Err(_) => bodies
+                    .into_iter()
+                    .map(|(id, _)| (id, HashMap::new()))
+                    .collect(),
+            }
         })
     }
 
@@ -415,11 +467,15 @@ impl Effects for Ports {
     }
 
     fn bodies_arrived(&self, fetched: Fetched) {
-        self.view.bodies_arrived(fetched.bodies, fetched.images);
+        self.view.bodies_arrived(fetched);
     }
 
     fn thumbnails_arrived(&self, found: HashMap<String, String>) {
         self.view.thumbnails_arrived(found);
+    }
+
+    fn images_arrived(&self, found: InlinePictures) {
+        self.view.images_arrived(found);
     }
 
     fn render_buttons(&self) {

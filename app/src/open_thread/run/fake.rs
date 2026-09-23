@@ -3,8 +3,10 @@
 //! of what the run asked for, in order.
 //!
 //! The named changes go through the same [`OpenThread`] methods the
-//! conversation view uses, so the thread under test changes the way the
-//! one on screen does. Nothing here starts a widget or talks to Gmail.
+//! conversation view uses, and a change the view redraws for draws the
+//! page through the same [`OpenThread::page`], so the thread under test
+//! changes and reads the way the one on screen does. Nothing here starts a
+//! widget or talks to Gmail.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -18,10 +20,11 @@ use mailrs_domain::{
 use mailrs_store::outbox::Queued;
 use mailrs_sync::Opened;
 
-use super::{Answer, Card, Desk, Effects, Fetched, Stored, ThreadRun};
-use crate::open_thread::{OpenThread, Unsent};
+use super::{Answer, Card, Desk, Effects, Fetched, InlinePictures, Stored, ThreadRun};
+use crate::open_thread::{Document, InlineImage, OpenThread, Page, ToClean, Unsent};
 use crate::protection::Read;
-use crate::translation::{self, Body, Language, Prose, Translation};
+use crate::render::Theme;
+use crate::translation::{self, Language, Prose, Translation};
 use crate::ui::invitation::Showing;
 use crate::wanted::Screen as OnScreen;
 
@@ -41,6 +44,8 @@ pub enum Step {
     MessagesArrived,
     Bodies,
     BodiesArrived,
+    Images,
+    ImagesArrived,
     Replace,
     Buttons,
     Clear,
@@ -81,6 +86,8 @@ pub struct Screen {
     pub messages: Vec<MessageMeta>,
     /// What Gmail hands back, by message id.
     pub gmail: HashMap<String, MessageBody>,
+    /// The pictures Gmail has for each message's `cid:` names.
+    pub pictures: InlinePictures,
     pub thumbnails: HashMap<String, String>,
     pub invitation: Result<Option<Opened>, String>,
     pub busy: Result<Vec<String>, String>,
@@ -111,6 +118,12 @@ pub struct Screen {
     pub invitations: Vec<Option<String>>,
     pub marked: Vec<Target>,
     pub toasts: Vec<String>,
+    /// Every whole page the window loaded, oldest first.
+    pub loads: Vec<String>,
+    /// The messages each patch replaced, oldest first.
+    pub patches: Vec<Vec<String>>,
+    /// The page on screen, with every patch applied.
+    pub document: Option<Document>,
 }
 
 pub struct FakeWindow(pub RefCell<Screen>);
@@ -146,6 +159,14 @@ pub fn meta(id: &str, unread: bool) -> MessageMeta {
 pub fn body(text: &str) -> MessageBody {
     MessageBody {
         text: Some(text.to_string()),
+        ..MessageBody::default()
+    }
+}
+
+/// A body with an HTML part and no text part.
+pub fn html_body(html: &str) -> MessageBody {
+    MessageBody {
+        html: Some(html.to_string()),
         ..MessageBody::default()
     }
 }
@@ -205,6 +226,21 @@ pub fn opened_occurrence() -> Opened {
     }
 }
 
+/// A body whose HTML shows a picture by `cid:`.
+pub fn with_inline_picture() -> MessageBody {
+    MessageBody {
+        attachments: vec![mailrs_domain::Attachment {
+            part_id: "2".to_string(),
+            filename: "logo.png".to_string(),
+            mime_type: "image/png".to_string(),
+            size: 3,
+            attachment_id: Some("a9".to_string()),
+            content_id: Some("logo@kites".to_string()),
+        }],
+        ..html_body("<p>Our logo</p><img src=\"cid:logo@kites\">")
+    }
+}
+
 /// A body with a picture attached, which wants a thumbnail.
 pub fn with_picture() -> MessageBody {
     MessageBody {
@@ -260,6 +296,7 @@ impl FakeWindow {
         let stored = Stored {
             messages: vec![meta("m1", true)],
             bodies: HashMap::new(),
+            cleaned: HashMap::new(),
         };
         Rc::new(FakeWindow(RefCell::new(Screen {
             open: None,
@@ -268,6 +305,16 @@ impl FakeWindow {
             holds: HashMap::new(),
             messages: vec![meta("m1", true)],
             gmail: HashMap::from([("m1".to_string(), body("Hello"))]),
+            pictures: HashMap::from([(
+                "m1".to_string(),
+                HashMap::from([(
+                    "logo@kites".to_string(),
+                    InlineImage {
+                        mime: "image/png".to_string(),
+                        bytes: vec![1, 2, 3].into(),
+                    },
+                )]),
+            )]),
             thumbnails: HashMap::from([("a1".to_string(), "data:image/png;base64,".to_string())]),
             invitation: Ok(Some(opened_invitation())),
             busy: Ok(vec!["Design crit".to_string()]),
@@ -287,6 +334,9 @@ impl FakeWindow {
             invitations: Vec::new(),
             marked: Vec::new(),
             toasts: Vec::new(),
+            loads: Vec::new(),
+            patches: Vec::new(),
+            document: None,
         })))
     }
 
@@ -345,6 +395,44 @@ impl FakeWindow {
 
     fn read<R: Default>(&self, read: impl FnOnce(&OpenThread) -> R) -> R {
         self.open(read).unwrap_or_default()
+    }
+
+    /// Draws the thread on screen, as the view does after a change it
+    /// redraws for: a whole page loads, and a patch replaces articles in
+    /// the one loaded before.
+    fn draw(&self) {
+        let theme = Theme {
+            dark: false,
+            accent: "#3584e4".to_string(),
+        };
+        self.with(
+            |screen| match screen.open.as_mut().map(|open| open.page(&theme)) {
+                Some(Page::Whole(document)) => {
+                    screen.loads.push(document.html(""));
+                    screen.document = Some(document);
+                }
+                Some(Page::Patch(patch)) if !patch.is_empty() => {
+                    screen
+                        .patches
+                        .push(patch.iter().map(|a| a.message_id.clone()).collect());
+                    if let Some(document) = screen.document.as_mut() {
+                        document.patch(&patch);
+                    }
+                }
+                _ => {}
+            },
+        );
+    }
+
+    /// The page on screen now, as HTML.
+    pub fn page(&self) -> String {
+        self.with(|screen| {
+            screen
+                .document
+                .as_ref()
+                .map(|document| document.html(""))
+                .unwrap_or_default()
+        })
     }
 }
 
@@ -406,19 +494,12 @@ impl Desk for FakeWindow {
         self.read(OpenThread::wanting_thumbnails)
     }
 
-    /// The newest open message's text. The window reads the cleaned HTML;
-    /// the fixtures have none.
+    fn wanting_images(&self) -> Vec<(String, MessageBody)> {
+        self.read(OpenThread::wanting_images)
+    }
+
     fn prose(&self) -> Option<(String, Prose)> {
-        self.open(|open| {
-            let meta = open.messages.iter().rev().find(|meta| {
-                open.expanded.contains(&meta.id)
-                    && open.bodies.get(&meta.id).is_some_and(Result::is_ok)
-            })?;
-            let body = open.bodies.get(&meta.id)?.as_ref().ok()?;
-            let text = body.text.as_deref().unwrap_or("");
-            Some((meta.id.clone(), Prose::read(Body::Text(text))))
-        })
-        .flatten()
+        self.open(OpenThread::prose).flatten()
     }
 
     fn same_writer(&self, message_id: &str) -> String {
@@ -429,7 +510,7 @@ impl Desk for FakeWindow {
         self.open(|open| open.translation_of(message_id)).flatten()
     }
 
-    fn arrived(&self, message_id: &str) -> Option<(MessageBody, HashMap<String, String>)> {
+    fn arrived(&self, message_id: &str) -> Option<(MessageBody, String)> {
         self.open(|open| open.arrived(message_id)).flatten()
     }
 
@@ -484,7 +565,7 @@ impl Effects for FakeWindow {
 
     fn bodies(&self, _account_id: AccountId, message_ids: Vec<String>) -> Answer<'_, Fetched> {
         self.reached(Step::Bodies);
-        let bodies = self.with(|screen| {
+        let bodies: Vec<(String, Result<MessageBody, String>)> = self.with(|screen| {
             message_ids
                 .into_iter()
                 .map(|id| {
@@ -493,12 +574,30 @@ impl Effects for FakeWindow {
                 })
                 .collect()
         });
-        Box::pin(async move {
-            Fetched {
-                bodies,
-                images: HashMap::new(),
-            }
-        })
+        // The window cleans on a worker thread; here it is done at once.
+        let arrived = bodies
+            .iter()
+            .filter_map(|(id, body)| Some((id, body.as_ref().ok()?)));
+        let cleaned = ToClean::of(ACCOUNT, arrived).clean();
+        Box::pin(async move { Fetched { bodies, cleaned } })
+    }
+
+    fn inline_images(
+        &self,
+        _account_id: AccountId,
+        bodies: Vec<(String, MessageBody)>,
+    ) -> Answer<'_, InlinePictures> {
+        self.reached(Step::Images);
+        let found = self.with(|screen| {
+            bodies
+                .into_iter()
+                .map(|(id, _)| {
+                    let pictures = screen.pictures.get(&id).cloned().unwrap_or_default();
+                    (id, pictures)
+                })
+                .collect()
+        });
+        Box::pin(async move { found })
     }
 
     fn thumbnails(
@@ -573,6 +672,7 @@ impl Effects for FakeWindow {
             screen.shown.push(thread.thread_id.clone());
             screen.open = Some(thread);
         });
+        self.draw();
     }
 
     fn queued(&self, id: i64) -> Answer<'_, Result<Option<Queued>, String>> {
@@ -584,7 +684,11 @@ impl Effects for FakeWindow {
     fn sender_vip(&self, _vip: bool) {}
 
     fn messages_arrived(&self, fresh: Vec<MessageMeta>) -> Vec<String> {
-        self.change(Step::MessagesArrived, |open| open.take_messages(&fresh))
+        let missing = self.change(Step::MessagesArrived, |open| open.take_messages(&fresh));
+        if missing.is_empty() {
+            self.draw();
+        }
+        missing
     }
 
     fn replace_messages(&self, fresh: Vec<MessageMeta>) -> bool {
@@ -593,14 +697,21 @@ impl Effects for FakeWindow {
 
     fn bodies_arrived(&self, fetched: Fetched) {
         self.change(Step::BodiesArrived, |open| {
-            open.take_bodies(fetched.bodies, fetched.images)
+            open.take_bodies(fetched.bodies, fetched.cleaned)
         });
+        self.draw();
+    }
+
+    fn images_arrived(&self, found: InlinePictures) {
+        self.change(Step::ImagesArrived, |open| open.take_images(found));
+        self.draw();
     }
 
     fn thumbnails_arrived(&self, found: HashMap<String, String>) {
         self.change(Step::ThumbnailsArrived, |open| {
             open.thumbnails.extend(found)
         });
+        self.draw();
     }
 
     fn render_buttons(&self) {
@@ -653,6 +764,7 @@ impl Effects for FakeWindow {
             open.translations.insert(message_id, translation);
         });
         self.with(|screen| screen.cards.push(card));
+        self.draw();
     }
 
     fn turn_translation(&self, message_id: &str) -> bool {
@@ -661,13 +773,16 @@ impl Effects for FakeWindow {
             return false;
         };
         self.with(|screen| screen.cards.push(Card::Done { from, cut, shown }));
+        self.draw();
         true
     }
 
     fn engine_answered(&self, message_id: String, read: Read) -> bool {
-        self.change(Step::EngineAnswered, |open| {
+        let opened = self.change(Step::EngineAnswered, |open| {
             open.take_engine_answer(message_id, read)
-        })
+        });
+        self.draw();
+        opened
     }
 
     fn set_flag_color(&self, color: Option<FlagColor>) {

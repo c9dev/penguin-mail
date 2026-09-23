@@ -4,10 +4,11 @@
 use mailrs_domain::Target;
 
 use super::fake::{
-    ACCOUNT, ELSEWHERE, FakeWindow, Step, THREAD, body, invited, meta, opened_occurrence,
-    portuguese, queued, row, with_picture,
+    ACCOUNT, ELSEWHERE, FakeWindow, Step, THREAD, body, html_body, invited, meta,
+    opened_occurrence, portuguese, queued, row, with_inline_picture, with_picture,
 };
 use super::{Card, Event, Stale};
+use crate::open_thread::Served;
 use crate::protection::{Mark, Read, Tone};
 
 fn target(message_id: Option<&str>) -> Target {
@@ -47,6 +48,24 @@ async fn opening_shows_the_stored_copy_then_the_bodies_gmail_sent() {
         .open(|open| open.bodies["m1"].clone().ok()?.text)
         .flatten();
     assert_eq!(text.as_deref(), Some("Hello"));
+}
+
+/// The store already held every body, so Gmail has nothing to add and the
+/// page stays as the stored copy drew it. The pictures and the read mark
+/// still come.
+#[tokio::test]
+async fn a_thread_whose_bodies_the_store_held_fetches_none() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        if let Some(stored) = screen.stored.get_mut(THREAD) {
+            stored.bodies.insert("m1".to_string(), with_picture());
+        }
+    });
+    window.run().open(row(THREAD)).await;
+    assert!(!window.took(Step::Bodies));
+    assert!(!window.took(Step::BodiesArrived));
+    assert!(window.took(Step::ThumbnailsArrived));
+    assert_eq!(window.0.borrow().marked, [target(None)]);
 }
 
 #[tokio::test]
@@ -522,4 +541,235 @@ async fn a_queued_message_that_went_out_while_on_screen_leaves_it() {
     window.run().refresh().await;
     assert!(window.took(Step::Clear));
     assert!(window.open(|_| ()).is_none());
+}
+
+/// The page on screen, with every patch applied.
+fn page(window: &FakeWindow) -> String {
+    window.page()
+}
+
+/// How many times the page was loaded whole.
+fn loads(window: &FakeWindow) -> usize {
+    window.0.borrow().loads.len()
+}
+
+fn patches(window: &FakeWindow) -> Vec<Vec<String>> {
+    window.0.borrow().patches.clone()
+}
+
+#[tokio::test]
+async fn the_stored_copy_says_a_body_is_loading_until_gmail_sends_it() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    let first = window.0.borrow().loads.first().cloned().unwrap_or_default();
+    assert!(first.contains("Loading…"));
+    assert!(page(&window).contains("Hello"));
+    assert!(!page(&window).contains("Loading…"));
+}
+
+/// The body replaces the article that said it was loading; the page is
+/// not loaded a second time, so the reader keeps their place.
+#[tokio::test]
+async fn bodies_from_gmail_patch_the_articles_that_waited_for_them() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        let messages = vec![meta("m1", false), meta("m2", true)];
+        screen.messages = messages.clone();
+        if let Some(stored) = screen.stored.get_mut(THREAD) {
+            stored.messages = messages;
+            stored.bodies.insert("m1".to_string(), body("Kites at ten"));
+        }
+        screen
+            .gmail
+            .insert("m2".to_string(), body("Tomorrow, then"));
+    });
+    window.run().open(row(THREAD)).await;
+    assert_eq!(loads(&window), 1);
+    assert_eq!(patches(&window), [["m2"]]);
+    let drawn = page(&window);
+    assert!(drawn.contains("Kites at ten") && drawn.contains("Tomorrow, then"));
+}
+
+#[tokio::test]
+async fn pictures_on_the_attachment_rows_patch_their_article() {
+    let window = FakeWindow::with_body(with_picture());
+    window.run().open(row(THREAD)).await;
+    assert_eq!(loads(&window), 1);
+    assert_eq!(
+        patches(&window).last().cloned(),
+        Some(vec!["m1".to_string()])
+    );
+    assert!(
+        page(&window).contains("<img class=\"thumb\""),
+        "{}",
+        page(&window)
+    );
+}
+
+#[tokio::test]
+async fn an_engine_answer_patches_its_message_alone() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        let messages = vec![meta("m1", false), meta("m2", false)];
+        screen.messages = messages.clone();
+        if let Some(stored) = screen.stored.get_mut(THREAD) {
+            stored.messages = messages;
+        }
+        screen
+            .gmail
+            .insert("m2".to_string(), body("-----BEGIN PGP"));
+    });
+    window.run().open(row(THREAD)).await;
+    let before = patches(&window).len();
+    window
+        .run()
+        .engine_answered(
+            target(None),
+            "m2".to_string(),
+            opened(body("The key is under the mat.")),
+        )
+        .await;
+    assert_eq!(loads(&window), 1);
+    assert_eq!(patches(&window)[before..], [["m2"]]);
+    assert!(page(&window).contains("The key is under the mat."));
+}
+
+#[tokio::test]
+async fn a_translation_patches_its_message_and_so_does_turning_it() {
+    let window = FakeWindow::with_body(portuguese());
+    window.run().open(row(THREAD)).await;
+    let before = patches(&window).len();
+    window.run().translate().await;
+    window.run().translate().await;
+    assert_eq!(loads(&window), 1);
+    assert_eq!(patches(&window)[before..], [["m1"], ["m1"]]);
+}
+
+/// The text goes on screen first. The pictures it names by `cid:` come
+/// after, served to the page from the thread itself, so their arrival
+/// changes no article and loads nothing again.
+#[tokio::test]
+async fn inline_pictures_arrive_after_the_text_and_change_no_article() {
+    let window = FakeWindow::with_body(with_inline_picture());
+    window.run().open(row(THREAD)).await;
+    let steps = window.steps();
+    let at = |step| steps.iter().position(|s| *s == step).expect("step taken");
+    assert!(at(Step::BodiesArrived) < at(Step::Images));
+    assert!(at(Step::Images) < at(Step::ImagesArrived));
+    assert_eq!(loads(&window), 1);
+    assert_eq!(
+        patches(&window),
+        [["m1"]],
+        "the body, and nothing for the picture"
+    );
+    assert!(
+        page(&window).contains("src=\"mailrs-cid:1/m1/0/logo@kites\""),
+        "{}",
+        page(&window)
+    );
+    let served = window.open(|open| open.picture("m1", 0, "logo@kites"));
+    assert!(matches!(served, Some(Served::Ready(picture)) if *picture.bytes == [1, 2, 3]));
+}
+
+/// A thread read before comes out of the store whole, and its pictures
+/// were never part of it.
+#[tokio::test]
+async fn a_stored_thread_fetches_its_inline_pictures_too() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        if let Some(stored) = screen.stored.get_mut(THREAD) {
+            stored
+                .bodies
+                .insert("m1".to_string(), with_inline_picture());
+        }
+    });
+    window.run().open(row(THREAD)).await;
+    assert!(!window.took(Step::Bodies));
+    assert!(window.took(Step::ImagesArrived));
+}
+
+#[tokio::test]
+async fn inline_pictures_for_a_thread_the_reader_left_go_nowhere() {
+    let window = FakeWindow::with_body(with_inline_picture());
+    window.with(|screen| screen.moves_on = Some(Step::Images));
+    window.run().open(row(THREAD)).await;
+    assert!(window.took(Step::Images));
+    assert!(!window.took(Step::ImagesArrived));
+}
+
+/// A body with no picture to name asks for none.
+#[tokio::test]
+async fn a_body_that_names_no_picture_fetches_none() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    assert!(!window.took(Step::Images));
+}
+
+/// A new message changes the count in the head and the list of articles,
+/// which only a whole page can show.
+#[tokio::test]
+async fn a_message_new_to_the_thread_loads_the_page_again() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    assert_eq!(loads(&window), 1);
+    window.with(|screen| {
+        screen.messages.push(meta("m2", true));
+        screen
+            .gmail
+            .insert("m2".to_string(), body("Tomorrow, then"));
+    });
+    window.run().refresh().await;
+    assert_eq!(loads(&window), 2);
+    assert!(page(&window).contains("2 messages"));
+}
+
+#[tokio::test]
+async fn a_body_gmail_could_not_send_says_why() {
+    let window = FakeWindow::new();
+    window.with(|screen| screen.gmail.clear());
+    window.run().open(row(THREAD)).await;
+    assert!(
+        page(&window).contains("This message could not be loaded: gone"),
+        "{}",
+        page(&window)
+    );
+}
+
+#[tokio::test]
+async fn an_html_body_is_drawn_cleaned() {
+    let window = FakeWindow::with_body(html_body(
+        "<p>Hi Ann</p><script>steal()</script><img src=\"x\" onerror=\"steal()\">",
+    ));
+    window.run().open(row(THREAD)).await;
+    let drawn = page(&window);
+    assert!(drawn.contains("<p>Hi Ann</p>"), "{drawn}");
+    assert!(!drawn.contains("steal()"), "{drawn}");
+}
+
+#[tokio::test]
+async fn a_shown_translation_is_what_the_page_draws() {
+    let window = FakeWindow::with_body(portuguese());
+    window.run().open(row(THREAD)).await;
+    assert!(page(&window).contains("Olá Ana"));
+    window.run().translate().await;
+    assert!(page(&window).contains("Hello Ana"), "{}", page(&window));
+    assert!(!page(&window).contains("Olá Ana"));
+    // Turning back draws what arrived.
+    window.run().translate().await;
+    assert!(page(&window).contains("Olá Ana"));
+}
+
+#[tokio::test]
+async fn the_words_of_an_html_message_come_from_its_cleaned_body() {
+    let window = FakeWindow::with_body(html_body(
+        "<p>Olá Ana, a reunião de amanhã fica para as dez horas. Não te esqueças de \
+         trazer os documentos que eu te pedi, para podermos ver tudo com calma \
+         antes de falar com o banco. Um abraço e até amanhã.</p>",
+    ));
+    window.run().open(row(THREAD)).await;
+    let last = window.0.borrow().cards.last().cloned();
+    assert!(
+        matches!(last, Some(Card::Offered { from: Some(from), .. }) if from.code == "pt"),
+        "{last:?}"
+    );
 }

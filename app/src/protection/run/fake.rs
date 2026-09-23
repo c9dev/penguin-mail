@@ -99,31 +99,22 @@ pub fn thread(protection: Option<Protection>) -> OpenThread {
 
 /// A thread whose messages have those bodies, oldest first.
 pub fn with_bodies(messages: Vec<(&str, Result<MessageBody, String>)>) -> OpenThread {
-    OpenThread {
-        account_id: ACCOUNT,
-        thread_id: THREAD.to_string(),
-        subject: "Kite plans".to_string(),
-        messages: messages.iter().map(|(id, _)| meta(id)).collect(),
-        bodies: messages
-            .into_iter()
-            .map(|(id, body)| (id.to_string(), body))
-            .collect(),
-        expanded: HashSet::new(),
-        images_allowed: false,
-        only_message: None,
-        me: Vec::new(),
-        inline_images: HashMap::new(),
-        thumbnails: HashMap::new(),
-        opened_files: HashMap::new(),
-        sealed: HashSet::new(),
-        photos: HashMap::new(),
-        unsubscribed: false,
-        marks: HashMap::new(),
-        asked: HashSet::new(),
-        flag_color: None,
-        translations: HashMap::new(),
-        queued: None,
-    }
+    let target = Target::thread(ACCOUNT, THREAD);
+    let metas = messages.iter().map(|(id, _)| meta(id)).collect();
+    let mut open = OpenThread::new(
+        &target,
+        "Kite plans".to_string(),
+        metas,
+        HashMap::new(),
+        Vec::new(),
+    );
+    open.bodies = messages
+        .into_iter()
+        .map(|(id, body)| (id.to_string(), body))
+        .collect();
+    // Nothing starts open here: the engine run reads every message.
+    open.expanded = HashSet::new();
+    open
 }
 
 /// What a good signature looks like coming back from an engine: the mark,

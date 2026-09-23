@@ -12,7 +12,7 @@
 use mailrs_domain::translate::{fill, gettext};
 
 use super::ThreadRun;
-use crate::sanitize::sanitize_html;
+use crate::open_thread::Cleaned;
 use crate::translation::{self, Language, Prose, Reading, Translation};
 
 /// What the translation card shows.
@@ -107,7 +107,7 @@ impl ThreadRun {
             .collect();
         // The translation is built on the body as it is now, which is the
         // body the prose came from.
-        let Some((arrived, images)) = self.desk.arrived(&message_id) else {
+        let Some((arrived, pictures)) = self.desk.arrived(&message_id) else {
             return;
         };
         wanted.on_screen(|effects| effects.translation_card(Card::Working));
@@ -140,7 +140,7 @@ impl ThreadRun {
         // Model output is cleaned like any other mail HTML before it
         // reaches the page.
         let clean = match body.html.as_deref().is_some_and(|h| !h.trim().is_empty()) {
-            true => Some(sanitize_html(&rebuilt, &images)),
+            true => Some(Cleaned::new(&rebuilt, &pictures)),
             false => {
                 body.text = Some(rebuilt);
                 None
