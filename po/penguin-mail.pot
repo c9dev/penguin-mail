@@ -755,7 +755,7 @@ msgstr[1] ""
 msgid "Undo “{action}”?"
 msgstr ""
 
-#: app/src/assistant/run/unsubscribe.rs:337
+#: app/src/assistant/run/unsubscribe.rs:373
 msgid "this list"
 msgstr ""
 
@@ -5150,7 +5150,7 @@ msgstr ""
 #: app/src/ui/window/detached.rs:130 app/src/ui/window/export.rs:75
 #: app/src/ui/window/export.rs:138 app/src/ui/window/organize.rs:69
 #: app/src/ui/window/organize.rs:117 app/src/ui/window/organize.rs:146
-#: app/src/ui/window/organize.rs:174 app/src/ui/window/senders.rs:261
+#: app/src/ui/window/organize.rs:174 app/src/ui/window/senders.rs:291
 msgid "That account is not connected"
 msgstr ""
 
@@ -5550,51 +5550,51 @@ msgid ""
 "open for you to save."
 msgstr ""
 
-#: app/src/ui/window/senders.rs:60
+#: app/src/ui/window/senders.rs:67
 msgid "This message has no unsubscribe link"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:64
+#: app/src/ui/window/senders.rs:71
 msgid "This message's unsubscribe link is not one Penguin Mail can use"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:137
+#: app/src/ui/window/senders.rs:149
 msgid ""
 "The request to leave {sender} waits in the Outbox. It goes out as soon as it "
 "can."
 msgstr ""
 
-#: app/src/ui/window/senders.rs:185
+#: app/src/ui/window/senders.rs:215
 msgid "Open Page"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:222
+#: app/src/ui/window/senders.rs:252
 msgid "The app is closing."
 msgstr ""
 
-#: app/src/ui/window/senders.rs:240
+#: app/src/ui/window/senders.rs:270
 msgid "Open a message from the sender to block"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:244
+#: app/src/ui/window/senders.rs:274
 msgid "Block {sender}?"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:247
+#: app/src/ui/window/senders.rs:277
 msgid ""
 "New mail from {email} goes straight to the Trash. This conversation moves "
 "there now. Remove the rule under Rules to unblock."
 msgstr ""
 
-#: app/src/ui/window/senders.rs:252
+#: app/src/ui/window/senders.rs:282
 msgid "Block"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:279
+#: app/src/ui/window/senders.rs:309
 msgid "Blocked {sender}"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:285
+#: app/src/ui/window/senders.rs:315
 msgid "Could not block the sender: {reason}"
 msgstr ""
 

@@ -57,6 +57,9 @@ pub struct Stored {
     /// tens of milliseconds, which the effect spends on a worker thread
     /// rather than the GTK one. A body left out is cleaned when drawn.
     pub cleaned: HashMap<String, Cleaned>,
+    /// The person left the list the newest message's sender writes from,
+    /// so the thread has no Unsubscribe to offer.
+    pub left: bool,
 }
 
 /// Bodies as Gmail sent them, and their HTML cleaned on a worker thread.
@@ -365,6 +368,7 @@ impl ThreadRun {
             mut messages,
             bodies,
             cleaned,
+            left,
         } = stored.unwrap_or_else(|err| {
             tracing::info!(error = %err, "could not read the stored thread");
             Stored::default()
@@ -378,6 +382,7 @@ impl ThreadRun {
         let me = self.desk.me(target.account_id);
         let mut thread = OpenThread::new(&target, subject, messages, bodies, me);
         thread.take_cleaned(cleaned);
+        thread.unsubscribed = left;
         let senders = thread.senders();
         let named: Vec<String> = senders.iter().filter(|s| !s.is_empty()).cloned().collect();
         thread.images_allowed = self

@@ -51,6 +51,20 @@ async fn opening_shows_the_stored_copy_then_the_bodies_gmail_sent() {
     assert_eq!(text.as_deref(), Some("Hello"));
 }
 
+/// The person left this sender's list before, so the thread opens with no
+/// Unsubscribe banner to offer.
+#[tokio::test]
+async fn a_thread_from_a_list_already_left_opens_unsubscribed() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        if let Some(stored) = screen.stored.get_mut(THREAD) {
+            stored.left = true;
+        }
+    });
+    window.run().open(row(THREAD)).await;
+    assert_eq!(window.open(|open| open.unsubscribed), Some(true));
+}
+
 /// The store already held every body, so Gmail has nothing to add and the
 /// page stays as the stored copy drew it. The pictures and the read mark
 /// still come.

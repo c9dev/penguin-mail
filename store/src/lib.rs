@@ -21,6 +21,7 @@ pub mod reminders;
 mod schema;
 pub mod templates;
 pub mod threads;
+pub mod unsubscribes;
 pub mod window;
 
 pub use db::Db;

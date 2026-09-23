@@ -3,6 +3,7 @@
 use std::rc::Rc;
 
 use gtk::{gio, glib};
+use mailrs_store::unsubscribes::How;
 use mailrs_sync::{History, Leave, MailAction, Permitted, TriageAction};
 
 use super::MainWindow;
@@ -39,6 +40,11 @@ impl MainWindow {
                 .as_ref()
                 .map(|a| a.display().to_string())
                 .unwrap_or_else(|| gettext("this list"));
+            let email = meta
+                .from
+                .as_ref()
+                .map(|a| a.email.clone())
+                .unwrap_or_default();
             let sent_to = meta
                 .to
                 .iter()
@@ -48,6 +54,7 @@ impl MainWindow {
             Some((
                 open.target(),
                 sender,
+                email,
                 choose_with_body(
                     body.list_unsubscribe.as_deref(),
                     body.one_click_unsubscribe,
@@ -56,7 +63,7 @@ impl MainWindow {
                 sent_to,
             ))
         });
-        let Some((asked_on, sender, method, sent_to)) = found else {
+        let Some((asked_on, sender, email, method, sent_to)) = found else {
             return self.toast(&gettext("This message has no unsubscribe link"));
         };
         let Some(method) = method else {
@@ -84,6 +91,11 @@ impl MainWindow {
             Unsubscribe::Page(url) | Unsubscribe::BodyLink(url) => {
                 (Way::Reading, Some(url.clone()))
             }
+        };
+        let how = match &method {
+            Unsubscribe::OneClick(_) => How::OneClick,
+            Unsubscribe::Email { .. } => How::Email,
+            Unsubscribe::Page(_) | Unsubscribe::BodyLink(_) => How::Page,
         };
         let lines = vec![ListLine {
             name: sender.clone(),
@@ -149,6 +161,7 @@ impl MainWindow {
             }
             if outcome == Outcome::Done {
                 this.left_list(asked_on.account_id, &asked_on.thread_id);
+                this.keep_left(asked_on.account_id, email, how).await;
             }
             let said = summary(&[(sender, outcome.clone())]);
             match outcome {
@@ -174,6 +187,23 @@ impl MainWindow {
             if showing {
                 view.mark_unsubscribed();
             }
+        }
+    }
+
+    /// Keeps that the person left the list `sender` writes from, so its
+    /// conversations stop offering Unsubscribe. The list let go either
+    /// way, so a store that would not take the note goes to the log.
+    async fn keep_left(&self, account_id: mailrs_domain::AccountId, sender: String, how: How) {
+        if sender.is_empty() {
+            return;
+        }
+        let actions = self.core.actions();
+        let kept = self
+            .core
+            .call(async move { actions.left(account_id, &sender, how).await })
+            .await;
+        if let Err(err) = kept {
+            tracing::warn!(error = %err, "could not keep the list the person left");
         }
     }
 

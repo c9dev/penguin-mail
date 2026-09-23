@@ -7,6 +7,7 @@ use std::sync::Arc;
 use mailrs_domain::{
     Address, Category, Filter, FilterAction, FilterCriteria, MessageMeta, system_label,
 };
+use mailrs_store::unsubscribes::{self, How};
 
 use super::{Connected, Harness, harness};
 use crate::fake::meta;
@@ -63,6 +64,23 @@ async fn a_request_by_mail_or_a_page_is_left_to_the_app() {
     let left = actions(&h).unsubscribe(h.account_id, page).await.unwrap();
     assert_eq!(left, Leave::Open("http://news.example/u".into()));
     assert!(h.one_click.posted().is_empty(), "nothing posted");
+}
+
+#[tokio::test]
+async fn a_list_left_is_kept_for_its_sender() {
+    let h = harness().await;
+    actions(&h)
+        .left(h.account_id, "News@Trail.example", How::OneClick)
+        .await
+        .unwrap();
+
+    let id = h.account_id;
+    let left = h
+        .db
+        .read(move |c| unsubscribes::left(c, id, "news@trail.example"))
+        .await
+        .unwrap();
+    assert_eq!(left.map(|l| l.how), Some(How::OneClick));
 }
 
 fn actions(h: &Harness) -> MailActions<Connected> {

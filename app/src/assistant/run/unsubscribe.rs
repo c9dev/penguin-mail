@@ -17,6 +17,7 @@
 use futures::future::{Either, select};
 use mailrs_store::bodies;
 use mailrs_store::newsletters::Sender;
+use mailrs_store::unsubscribes::{self, How, Left};
 use mailrs_sync::{Leave, Newsletters};
 
 use super::*;
@@ -39,6 +40,8 @@ struct Leaving {
     /// The sender as a person reads it, which is what the dialog and the
     /// answer both call this list.
     name: String,
+    /// The sender's address, which is what a list left is kept under.
+    email: String,
     state: State,
 }
 
@@ -114,9 +117,26 @@ impl<A: Accounts> Tools<A> {
         found.sort_by_key(|(_, sender)| std::cmp::Reverse(sender.last));
         let cut = found.len().saturating_sub(MOST_SENDERS);
         let mut newsletters = Vec::with_capacity(found.len().min(MOST_SENDERS));
+        let mut left: HashMap<AccountId, HashMap<String, Left>> = HashMap::new();
         for (account, sender) in found.into_iter().take(MOST_SENDERS) {
             let way = self.way_out(account.id, &sender).await;
-            newsletters.push(json!({
+            if !left.contains_key(&account.id) {
+                let id = account.id;
+                let all = self.read(move |c| unsubscribes::all(c, id)).await?;
+                left.insert(id, all);
+            }
+            let gone = left
+                .get(&account.id)
+                .and_then(|all| all.get(&sender.email))
+                .map(|gone| {
+                    json!({
+                        "how": gone.how.as_str(),
+                        "when": crate::format::local(gone.at)
+                            .map(|at| at.format("%Y-%m-%d %H:%M").to_string())
+                            .unwrap_or_default(),
+                    })
+                });
+            let mut row = json!({
                 "name": sender.name,
                 "email": sender.email,
                 "messages": sender.messages,
@@ -126,7 +146,13 @@ impl<A: Accounts> Tools<A> {
                 "way_out": way_out_key(way.as_ref()),
                 "account": account.email,
                 "thread_id": sender.thread_id,
-            }));
+            });
+            // Mail can still arrive from a list after the person left it,
+            // so the sender stays listed and says when it was left.
+            if let Some(gone) = gone {
+                row["left"] = gone;
+            }
+            newsletters.push(row);
         }
         let mut result = json!({"newsletters": newsletters});
         if cut > 0 {
@@ -233,6 +259,11 @@ impl<A: Accounts> Tools<A> {
                 continue;
             };
             let list = &lists[at];
+            let how = match &way {
+                Way::OneClick => How::OneClick,
+                Way::Mail { .. } => How::Email,
+                Way::Reading | Way::Page(_) => How::Page,
+            };
             let outcome = match way {
                 // Unsubscribe stays insensitive while a line is still
                 // being read, so a ticked line has settled. A page that
@@ -247,7 +278,7 @@ impl<A: Accounts> Tools<A> {
                 },
             };
             if outcome.0 == "done" {
-                self.effects.left_list(list.account.id, &list.thread_id);
+                self.left(list, how).await;
             }
             ended.insert(at, outcome);
         }
@@ -288,25 +319,30 @@ impl<A: Accounts> Tools<A> {
     /// One conversation as the run needs it: who the list is, and the
     /// way out of it.
     async fn leaving(&self, account: Account, thread_id: String) -> Leaving {
-        let (name, state) = match self.sender_and_way(&account, &thread_id).await {
-            Ok((name, Some((how, address)))) => (name, State::Ready { how, address }),
-            Ok((name, None)) => (
+        let (name, email, state) = match self.sender_and_way(&account, &thread_id).await {
+            Ok((name, email, Some((how, address)))) => {
+                (name, email, State::Ready { how, address })
+            }
+            Ok((name, email, None)) => (
                 name,
+                email,
                 State::Failed(
                     "That conversation has no unsubscribe link Penguin Mail can use.".into(),
                 ),
             ),
-            Err(why) => (thread_id.clone(), State::Failed(why)),
+            Err(why) => (thread_id.clone(), String::new(), State::Failed(why)),
         };
         Leaving {
             account,
             thread_id,
             name,
+            email,
             state,
         }
     }
 
-    /// Who wrote the conversation, and how their list lets go. The
+    /// Who wrote the conversation, by name and address, and how their
+    /// list lets go. The
     /// stored headers answer for mail synced since Penguin Mail started
     /// keeping them, so only a conversation they say nothing about costs
     /// a body, which is also the one place a link in the body can be
@@ -315,7 +351,7 @@ impl<A: Accounts> Tools<A> {
         &self,
         account: &Account,
         thread_id: &str,
-    ) -> Result<(String, Option<(Unsubscribe, String)>), String> {
+    ) -> Result<(String, String, Option<(Unsubscribe, String)>), String> {
         let sync = self
             .modules
             .accounts
@@ -335,6 +371,11 @@ impl<A: Accounts> Tools<A> {
             .as_ref()
             .map(|a| a.display().to_string())
             .unwrap_or_else(|| gettext("this list"));
+        let email = newest
+            .from
+            .as_ref()
+            .map(|a| a.email.to_lowercase())
+            .unwrap_or_default();
         let to_and_cc: Vec<String> = newest
             .to
             .iter()
@@ -352,7 +393,7 @@ impl<A: Accounts> Tools<A> {
             choose_with_body(meta.list_unsubscribe.as_deref(), meta.one_click, None)
         });
         if let Some(how) = stored {
-            return Ok((name, Some((how, address))));
+            return Ok((name, email, Some((how, address))));
         }
         for meta in metas.iter().rev() {
             let (s, id) = (Arc::clone(&sync), meta.id.clone());
@@ -365,10 +406,31 @@ impl<A: Accounts> Tools<A> {
                 body.html.as_deref(),
             );
             if let Some(how) = found {
-                return Ok((name, Some((how, address))));
+                return Ok((name, email, Some((how, address))));
             }
         }
-        Ok((name, None))
+        Ok((name, email, None))
+    }
+
+    /// Keeps that the person left `list`, and takes its Unsubscribe
+    /// banner down. The list let go either way, so a store that would not
+    /// take the note goes to the log rather than into the answer.
+    async fn left(&self, list: &Leaving, how: How) {
+        self.effects.left_list(list.account.id, &list.thread_id);
+        if list.email.is_empty() {
+            return;
+        }
+        let (mail, account_id, email) = (
+            Arc::clone(&self.modules.mail),
+            list.account.id,
+            list.email.clone(),
+        );
+        let kept = self
+            .call(async move { mail.left(account_id, &email, how).await })
+            .await;
+        if let Err(err) = kept {
+            tracing::warn!(error = %err, "could not keep the list the person left");
+        }
     }
 
     /// Leaves a list the way that needs no page: the one-click request,

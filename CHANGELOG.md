@@ -10,6 +10,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Penguin Mail speaks British English as well as American. Pick English
   (United Kingdom) under Language in Preferences, or leave it following a
   desktop set to British English.
+- Penguin Mail remembers the lists you unsubscribed from. Mail that still
+  arrives from one no longer offers Unsubscribe, and you can ask the
+  assistant whether and when you left a list.
 
 ### Fixed
 

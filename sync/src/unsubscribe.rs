@@ -6,6 +6,7 @@
 
 use mailrs_domain::AccountId;
 use mailrs_gmail::html_to_text;
+use mailrs_store::unsubscribes::{self, How};
 
 use crate::{Accounts, MailActions, SyncError};
 
@@ -231,6 +232,24 @@ impl<A: Accounts> MailActions<A> {
             Unsubscribe::Email { to, subject, body } => Ok(Leave::Send { to, subject, body }),
             Unsubscribe::Page(url) | Unsubscribe::BodyLink(url) => Ok(Leave::Open(url)),
         }
+    }
+
+    /// Notes that the person left the list `sender` writes from, once the
+    /// list has let go. The window and the assistant both call this, so
+    /// a conversation from that sender stops offering Unsubscribe and the
+    /// assistant can say when the list was left.
+    pub async fn left(
+        &self,
+        account_id: AccountId,
+        sender: &str,
+        how: How,
+    ) -> Result<(), SyncError> {
+        let sender = sender.to_string();
+        let at = crate::now_millis();
+        self.db
+            .write(move |c| unsubscribes::record(c, account_id, &sender, how, at))
+            .await?;
+        Ok(())
     }
 }
 

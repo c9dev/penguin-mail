@@ -937,7 +937,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "list_newsletters",
             label: || gettext("Finding your newsletters"),
-            description: "Lists the senders whose mail reads as a newsletter over the last 90 days, newest first, with how many messages each sent, how their list lets go (way_out), and the conversation to unsubscribe through. Use it before unsubscribe, so \"the Figma one\" becomes an account and a thread_id.",
+            description: "Lists the senders whose mail reads as a newsletter over the last 90 days, newest first, with how many messages each sent, how their list lets go (way_out), and the conversation to unsubscribe through. A sender the user already left carries left, with how and when, which answers \"have I left this list?\". Use it before unsubscribe, so \"the Figma one\" becomes an account and a thread_id.",
             input: || {
                 json!({
                     "account": account("The account. Defaults to every connected account."),

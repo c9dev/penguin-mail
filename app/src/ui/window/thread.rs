@@ -13,7 +13,7 @@ use gtk::glib;
 use mailrs_domain::invitation::Invitation;
 use mailrs_domain::{AccountId, FlagColor, MessageBody, MessageMeta, Target, ThreadSummary};
 use mailrs_store::outbox::Queued;
-use mailrs_store::{messages, threads};
+use mailrs_store::{messages, threads, unsubscribes};
 use mailrs_sync::{History, MailAction, Opened, TriageAction, now_millis};
 
 use super::pictures::Pictures;
@@ -246,10 +246,18 @@ impl Effects for Ports {
                             bodies.insert(meta.id.clone(), body);
                         }
                     }
+                    // The banner offers to leave the newest message's
+                    // list, so that sender is the one to look up.
+                    let sender = messages.iter().rev().find_map(|m| m.from.as_ref());
+                    let left = match sender {
+                        Some(from) => unsubscribes::left(c, account_id, &from.email)?.is_some(),
+                        None => false,
+                    };
                     Ok(Stored {
                         messages,
                         bodies,
                         cleaned: HashMap::new(),
+                        left,
                     })
                 })
                 .await

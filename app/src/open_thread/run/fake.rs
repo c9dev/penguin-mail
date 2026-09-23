@@ -297,6 +297,7 @@ impl FakeWindow {
             messages: vec![meta("m1", true)],
             bodies: HashMap::new(),
             cleaned: HashMap::new(),
+            left: false,
         };
         Rc::new(FakeWindow(RefCell::new(Screen {
             open: None,

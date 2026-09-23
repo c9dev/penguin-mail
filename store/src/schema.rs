@@ -408,6 +408,19 @@ DELETE FROM bodies WHERE calendar IS NULL AND EXISTS (
            OR lower(a.filename) LIKE '%.ics')
 );
 "#,
+    // The lists the person left, by the sender's lower-case address, so
+    // a conversation from a list already left stops offering Unsubscribe
+    // and the assistant can say when and how they left it. `how` is
+    // `one_click`, `page` or `email`.
+    r#"
+CREATE TABLE unsubscribes (
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    sender     TEXT NOT NULL,
+    how        TEXT NOT NULL,
+    left_at    INTEGER NOT NULL,
+    PRIMARY KEY (account_id, sender)
+);
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

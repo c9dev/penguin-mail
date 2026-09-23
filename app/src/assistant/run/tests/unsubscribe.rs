@@ -295,6 +295,31 @@ async fn a_conversation_with_no_way_out_says_so_and_stops_nothing_else() {
 }
 
 #[tokio::test]
+async fn the_newsletters_list_says_which_lists_were_left_and_how() {
+    let h = with_three().await;
+    h.effects.asked.borrow_mut().request_answer = Some(Err("Gmail refused it".to_string()));
+    h.ok(
+        "unsubscribe",
+        json!({"conversations": [
+            conversation("tn1"),
+            conversation("tn2"),
+            conversation("tn3"),
+        ]}),
+    )
+    .await;
+
+    let listed = h.ok("list_newsletters", json!({})).await;
+    let lists = listed["newsletters"].as_array().expect("newsletters");
+    let left: Vec<&Value> = lists.iter().map(|l| &l["left"]["how"]).collect();
+    assert_eq!(
+        left,
+        [&json!("one_click"), &json!("page"), &Value::Null],
+        "the forum's request never went out, so it was not left"
+    );
+    assert!(lists[0]["left"]["when"].is_string(), "{listed}");
+}
+
+#[tokio::test]
 async fn a_list_left_takes_its_banner_down_and_one_refused_keeps_it() {
     let h = with_three().await;
     h.effects.asked.borrow_mut().request_answer = Some(Err("Gmail refused it".to_string()));
