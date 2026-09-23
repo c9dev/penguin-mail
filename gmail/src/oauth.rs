@@ -70,7 +70,7 @@ pub fn random_token(bytes: usize) -> String {
     URL_SAFE_NO_PAD.encode(buf)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct OAuthClient {
     http: reqwest::Client,
     client_id: String,
@@ -80,6 +80,18 @@ pub struct OAuthClient {
     /// Google counts quota against the OAuth client, so every account
     /// signed in through this one draws on the same pool. Clones share it.
     quota: std::sync::Arc<crate::limiter::QuotaPool>,
+}
+
+// Written out so the secret never reaches a log line through `{:?}`. The
+// build's client comes from the release environment, and its values stay
+// out of logs and error messages.
+impl std::fmt::Debug for OAuthClient {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OAuthClient")
+            .field("auth_url", &self.auth_url)
+            .field("token_url", &self.token_url)
+            .finish_non_exhaustive()
+    }
 }
 
 #[derive(Deserialize)]
@@ -226,6 +238,36 @@ impl OAuthClient {
     }
 }
 
+/// The Google client a build signs in with, from two values. Either one
+/// missing or blank means the build has none: GitHub passes a secret it
+/// does not hold as an empty string, and a pull request from a fork gets
+/// no secrets at all.
+pub fn client_from(id: Option<&str>, secret: Option<&str>) -> Option<OAuthClient> {
+    let id = id.map(str::trim).filter(|v| !v.is_empty())?;
+    let secret = secret.map(str::trim).filter(|v| !v.is_empty())?;
+    Some(OAuthClient::new(id, secret))
+}
+
+/// The project's own Google client, compiled in from
+/// `PENGUIN_MAIL_GOOGLE_CLIENT_ID` and `PENGUIN_MAIL_GOOGLE_CLIENT_SECRET`.
+/// Cargo rebuilds this crate when either changes. Google treats a desktop
+/// client's secret as public, but the values still stay out of logs.
+pub fn built_in_client() -> Option<OAuthClient> {
+    client_from(
+        option_env!("PENGUIN_MAIL_GOOGLE_CLIENT_ID"),
+        option_env!("PENGUIN_MAIL_GOOGLE_CLIENT_SECRET"),
+    )
+}
+
+/// The project's Microsoft client ID, from
+/// `PENGUIN_MAIL_MICROSOFT_CLIENT_ID`. A desktop sign-in with Microsoft
+/// needs no secret. Nothing reads it until Microsoft accounts arrive.
+pub fn built_in_microsoft_client_id() -> Option<&'static str> {
+    option_env!("PENGUIN_MAIL_MICROSOFT_CLIENT_ID")
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+}
+
 /// Receives Google's redirect on 127.0.0.1 during consent.
 pub struct LoopbackListener {
     listener: TcpListener,
@@ -298,4 +340,41 @@ pub fn parse_redirect(request: &str, expected_state: &str) -> Option<Result<Stri
         )));
     }
     Some(Ok(code.clone()))
+}
+
+#[cfg(test)]
+mod build_client_tests {
+    use super::*;
+
+    #[test]
+    fn a_build_with_no_values_has_no_client() {
+        assert!(client_from(None, None).is_none());
+    }
+
+    #[test]
+    fn empty_values_count_as_none() {
+        assert!(client_from(Some(""), Some("")).is_none());
+    }
+
+    #[test]
+    fn an_id_without_a_secret_is_no_client() {
+        assert!(client_from(Some("id.apps.googleusercontent.com"), Some(" ")).is_none());
+    }
+
+    #[test]
+    fn both_values_make_a_client() {
+        let client = client_from(Some("id.apps.googleusercontent.com"), Some("GOCSPX-x"));
+        assert_eq!(
+            client.map(|c| c.client_id),
+            Some("id.apps.googleusercontent.com".to_string())
+        );
+    }
+
+    #[test]
+    fn debug_output_leaves_out_the_values() {
+        let client = OAuthClient::new("id.apps.googleusercontent.com", "GOCSPX-x");
+        let shown = format!("{client:?}");
+        assert!(!shown.contains("GOCSPX-x"));
+        assert!(!shown.contains("id.apps.googleusercontent.com"));
+    }
 }
