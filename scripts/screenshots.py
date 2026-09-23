@@ -377,13 +377,13 @@ def preferences():
 
 
 def welcome():
-    # Without --demo and with nothing configured, the app opens on the
-    # page that asks for a Google OAuth client. The sandboxed home holds
-    # no account, so nothing reaches Google.
+    # Without --demo and with no account, the app opens on the page that
+    # adds the first one. The sandboxed home holds no account, and nothing
+    # presses the button, so nothing reaches Google.
     run = launch(args=())
     window = window_titled("Penguin Mail")
     resize(window, 1320, 840)
-    find(name="Continue", patience=60)
+    find(name="Sign In with Google", patience=60)
     settle(3)
     capture(window, "welcome")
     return run
