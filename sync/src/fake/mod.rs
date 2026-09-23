@@ -565,6 +565,25 @@ impl FakeState {
         self.record(change);
     }
 
+    /// Takes a draft's current message out of the mailbox, recorded in
+    /// history, as saving over the draft, sending it or deleting it does.
+    fn drop_draft_message(&mut self, draft_id: &str) {
+        let Some(message_id) = self.draft_messages.remove(draft_id) else {
+            return;
+        };
+        if let Some(gone) = self.messages.remove(&message_id) {
+            self.record(HistoryChange::MessageDeleted {
+                id: message_id,
+                thread_id: gone.thread_id,
+            });
+        }
+    }
+
+    /// The time a new message is dated: the pinned clock, else now.
+    fn now(&self) -> EpochMillis {
+        self.clock.unwrap_or_else(crate::now_millis)
+    }
+
     /// Whether any message of the thread carries Gmail's mute label.
     fn thread_is_muted(&self, thread_id: &str) -> bool {
         self.messages
@@ -741,10 +760,13 @@ impl GmailApi for FakeGmail {
         Ok(())
     }
 
+    /// Gmail takes the trash label off and nothing else: a message that
+    /// was in the inbox before stays out of it until something puts the
+    /// inbox label back.
     async fn untrash(&self, id: &str) -> Result<(), GmailError> {
         self.call("users.messages.untrash", cost::TRASH).await?;
         self.with(|s| s.remote_writes.push(format!("untrash {id}")));
-        self.remote_relabel(id, &["INBOX"], &["TRASH"]);
+        self.remote_relabel(id, &[], &["TRASH"]);
         Ok(())
     }
 
@@ -773,7 +795,7 @@ impl GmailApi for FakeGmail {
         &self,
         draft_id: Option<&str>,
         raw: &[u8],
-        _thread_id: Option<&str>,
+        thread_id: Option<&str>,
     ) -> Result<SavedDraft, GmailError> {
         match draft_id {
             Some(_) => self.call("users.drafts.update", cost::DRAFT_UPDATE).await?,
@@ -785,11 +807,26 @@ impl GmailApi for FakeGmail {
                 Some(id) => id.to_string(),
                 None => format!("draft{}", s.drafts.len() + 1),
             };
-            let message_id = format!("{id}-m{}", raw.len());
+            // Each save gives the draft a new message, which history
+            // records as the old one leaving and the new one arriving.
+            s.drop_draft_message(&id);
+            let message_id = format!("{id}-m{}", s.history_id + 1);
+            let thread_id = thread_id.map_or_else(|| format!("{id}-t"), str::to_string);
+            let mut draft = meta(&message_id, &thread_id, s.now(), &[system_label::DRAFT]);
+            draft.from = Some(Address {
+                name: s.display_name.clone(),
+                email: s.email.clone(),
+            });
+            draft.subject = header(raw, "Subject").unwrap_or_default();
+            s.messages.insert(message_id.clone(), draft);
+            s.record(HistoryChange::MessageAdded {
+                id: message_id.clone(),
+                thread_id: thread_id.clone(),
+            });
             s.drafts.insert(id.clone(), raw.to_vec());
             s.draft_messages.insert(id.clone(), message_id.clone());
             Ok(SavedDraft {
-                thread_id: format!("{id}-t"),
+                thread_id,
                 draft_id: id,
                 message_id,
             })
@@ -800,7 +837,7 @@ impl GmailApi for FakeGmail {
         self.call("users.drafts.send", cost::SEND).await?;
         self.with(|s| {
             let raw = s.drafts.remove(draft_id).ok_or(GmailError::NotFound)?;
-            s.draft_messages.remove(draft_id);
+            s.drop_draft_message(draft_id);
             let id = format!("sent{}", s.sent.len() + 1);
             s.file_sent(&id, &raw, None);
             s.sent.push((raw, None));
@@ -811,7 +848,7 @@ impl GmailApi for FakeGmail {
     async fn delete_draft(&self, draft_id: &str) -> Result<(), GmailError> {
         self.call("users.drafts.delete", cost::DRAFT_DELETE).await?;
         self.with(|s| {
-            s.draft_messages.remove(draft_id);
+            s.drop_draft_message(draft_id);
             s.drafts
                 .remove(draft_id)
                 .map(|_| ())
@@ -1326,4 +1363,17 @@ fn apply(event: &mut Event, fields: &EventFields) {
             })
             .collect();
     }
+}
+
+/// The first header called `name` in RFC 822 bytes, unfolded no further
+/// than the fake needs.
+fn header(raw: &[u8], name: &str) -> Option<String> {
+    let text = String::from_utf8_lossy(raw);
+    let head = text.split("\r\n\r\n").next().unwrap_or_default();
+    head.lines().find_map(|line| {
+        let (key, value) = line.split_once(':')?;
+        key.trim()
+            .eq_ignore_ascii_case(name)
+            .then(|| value.trim().to_string())
+    })
 }

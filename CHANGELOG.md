@@ -28,6 +28,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   added.
 - Your contacts stay in the address book when Google stops part way
   through sending them again, instead of leaving it empty or half full.
+- Moving a few conversations out of the Trash puts them back in the inbox
+  at Gmail too, as moving ten or more already did.
 
 ## 0.1.7 (2026-09-23)
 

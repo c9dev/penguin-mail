@@ -989,3 +989,47 @@ async fn a_send_that_never_arrived_goes_out_on_the_retry() {
     assert_eq!(drained.sent.len(), 1);
     assert_eq!(h.fake.with(|s| s.sent.len()), 1);
 }
+
+/// Gmail records a draft in history like any message: saving one adds it,
+/// saving it again replaces its message, and deleting it takes it away.
+#[tokio::test]
+async fn drafts_reach_the_store_through_history() {
+    let h = harness().await;
+    h.bootstrap_all().await;
+    let stored = |id: String| {
+        let (db, account_id) = (h.db.clone(), h.account_id);
+        async move {
+            db.read(move |c| messages::labels_of(c, account_id, &id))
+                .await
+                .unwrap()
+        }
+    };
+
+    let first = h
+        .sync
+        .save_draft(b"Subject: Plans\r\n\r\nfirst".to_vec(), None, None)
+        .await
+        .unwrap();
+    h.sync.incremental().await.unwrap();
+    assert_eq!(stored(first.message_id.clone()).await, ["DRAFT"]);
+
+    let second = h
+        .sync
+        .save_draft(
+            b"Subject: Plans\r\n\r\nsecond take".to_vec(),
+            None,
+            Some(first.draft_id.clone()),
+        )
+        .await
+        .unwrap();
+    h.sync.incremental().await.unwrap();
+    assert!(
+        stored(first.message_id.clone()).await.is_empty(),
+        "replaced"
+    );
+    assert_eq!(stored(second.message_id.clone()).await, ["DRAFT"]);
+
+    h.sync.delete_draft(&second.draft_id).await.unwrap();
+    h.sync.incremental().await.unwrap();
+    assert!(stored(second.message_id).await.is_empty(), "deleted");
+}

@@ -354,9 +354,14 @@ async fn organize_takes_mail_out_of_the_trash_with_move_to_inbox() {
         json!({"targets": [target("t2")], "action": "move_to_inbox"}),
     )
     .await;
+    assert!(h.gmail.with(|s| {
+        s.remote_writes
+            .iter()
+            .any(|w| w == "modify m2 +INBOX -TRASH")
+    }));
     assert!(
         h.gmail
-            .with(|s| s.remote_writes.iter().any(|w| w == "untrash m2"))
+            .with(|s| s.messages["m2"].has_label(system_label::INBOX))
     );
     let labels = h.labels_of("m2").await;
     assert!(labels.contains(&system_label::INBOX.to_string()));

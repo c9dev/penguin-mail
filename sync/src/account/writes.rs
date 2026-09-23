@@ -379,11 +379,11 @@ impl<G: GmailApi> AccountSync<G> {
         remove: &[String],
     ) -> Result<(), GmailError> {
         loop {
-            let done = match writing.action {
-                TriageAction::Trash => self.api.trash(message_id).await,
-                TriageAction::Untrash => self.api.untrash(message_id).await,
-                _ => self.api.modify_labels(message_id, add, remove).await,
-            };
+            // The same labels a batch sends, rather than `messages.trash`
+            // and `untrash`: untrash takes the trash label off and puts
+            // nothing back, which would leave a few messages out of the
+            // inbox that a batch of many would have returned to it.
+            let done = self.api.modify_labels(message_id, add, remove).await;
             match done {
                 Err(err) => match budget.wait(&err) {
                     Some(delay) => self.hold_on(budget, delay, writing).await,
