@@ -503,15 +503,19 @@ impl App {
         cache.get_or_insert_with(spell::installed_languages).clone()
     }
 
-    /// Asks Gmail which addresses each account may send as and keeps the
-    /// answer. Composers open on what was stored last time, so this never
-    /// holds a window up.
-    fn refresh_send_as(self: &Rc<Self>) {
-        for account in self.accounts.borrow().iter() {
+    /// Asks Gmail which addresses each of `accounts` may send as and keeps
+    /// the answer, skipping an account asked within the day. Composers
+    /// open on what was stored last time, so this never holds a window up.
+    fn refresh_send_as(self: &Rc<Self>, accounts: &[Account]) {
+        let now = mailrs_sync::now_millis();
+        for account in accounts {
+            if !self.settings_with(|s| s.send_as_due(&account.email, now)) {
+                continue;
+            }
             let Some(sync) = self.core.account(account.id) else {
                 continue;
             };
-            let (this, email) = (Rc::clone(self), account.email.clone());
+            let (this, email, id) = (Rc::clone(self), account.email.clone(), account.id);
             glib::spawn_future_local(async move {
                 let Ok(addresses) = this.core.call(async move { sync.send_as().await }).await
                 else {
@@ -530,9 +534,13 @@ impl App {
                     return;
                 }
                 this.change_settings(Change::SendAsAddresses {
-                    account: email,
+                    account: email.clone(),
                     addresses,
+                    at: mailrs_sync::now_millis(),
                 });
+                if let Some(name) = this.settings_with(|s| s.display_name(&email)) {
+                    this.names.borrow_mut().insert(id, name);
+                }
             });
         }
     }
@@ -578,17 +586,31 @@ impl App {
                 Ok(out)
             })
             .await?;
+        let known: Vec<AccountId> = self.accounts.borrow().iter().map(|a| a.id).collect();
         *self.accounts.borrow_mut() = loaded.iter().map(|(a, _)| a.clone()).collect();
         *self.labels.borrow_mut() = loaded.iter().map(|(a, l)| (a.id, l.clone())).collect();
-        self.remember_accounts();
+        // A settings change that touches the accounts reloads them too, and
+        // only an account this run has not seen needs Gmail asked about it.
+        let arrived: Vec<Account> = loaded
+            .iter()
+            .map(|(a, _)| a.clone())
+            .filter(|a| !known.contains(&a.id))
+            .collect();
+        self.remember_accounts(&arrived);
         Ok(loaded)
     }
 
-    /// Asks each new account for its display name and every account for
-    /// the addresses it sends as, and updates the tray.
-    fn remember_accounts(self: &Rc<Self>) {
-        for account in self.accounts.borrow().iter() {
+    /// Finds a display name and the send-as addresses for each account
+    /// that just arrived, and updates the tray. The name comes from the
+    /// send-as addresses Preferences keeps when they hold one, so a restart
+    /// asks Gmail only for what it has never told this computer.
+    fn remember_accounts(self: &Rc<Self>, arrived: &[Account]) {
+        for account in arrived {
             if self.names.borrow().contains_key(&account.id) {
+                continue;
+            }
+            if let Some(name) = self.settings_with(|s| s.display_name(&account.email)) {
+                self.names.borrow_mut().insert(account.id, name);
                 continue;
             }
             let Some(sync) = self.core.account(account.id) else {
@@ -605,7 +627,7 @@ impl App {
                 }
             });
         }
-        self.refresh_send_as();
+        self.refresh_send_as(arrived);
         self.update_tray();
     }
 

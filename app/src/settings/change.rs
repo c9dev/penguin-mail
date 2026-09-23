@@ -116,6 +116,8 @@ pub enum Change {
     SendAsAddresses {
         account: String,
         addresses: Vec<crate::compose::SendAsAddress>,
+        /// When Gmail answered, in milliseconds since the epoch.
+        at: i64,
     },
     /// The send-as address an account just sent from.
     LastSender {
@@ -311,8 +313,14 @@ impl Change {
             Change::AccountColor { email, index } => {
                 settings.account_colors.insert(email, index);
             }
-            Change::SendAsAddresses { account, addresses } => {
-                settings.send_as.insert(account.to_lowercase(), addresses);
+            Change::SendAsAddresses {
+                account,
+                addresses,
+                at,
+            } => {
+                let key = account.to_lowercase();
+                settings.send_as_checked.insert(key.clone(), at);
+                settings.send_as.insert(key, addresses);
             }
             Change::LastSender { account, email } => {
                 settings.last_sender.insert(account.to_lowercase(), email);
@@ -538,6 +546,8 @@ settable! {
         // memory of asking, not a preference.
         offered_to_gnome,
         send_as,
+        // When Gmail last answered is the app's own bookkeeping.
+        send_as_checked,
         sign_by_default,
         signatures,
         smart_mailboxes,
@@ -707,6 +717,7 @@ impl Effects {
             spell_words,
             last_sender,
             send_as,
+            send_as_checked,
             compose_format,
             check_attachments,
             sign_by_default,
@@ -739,6 +750,7 @@ impl Effects {
             spell_words,
             last_sender,
             send_as,
+            send_as_checked,
             compose_format,
             check_attachments,
             sign_by_default,
