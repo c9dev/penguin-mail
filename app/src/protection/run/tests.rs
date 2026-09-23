@@ -58,6 +58,65 @@ async fn every_protected_message_in_the_thread_is_opened_newest_first() {
 }
 
 #[tokio::test]
+async fn a_signed_message_opened_again_is_not_checked_again() {
+    let window = FakeWindow::showing(thread(Some(Protection::Signed)));
+    window.engines().run().await;
+    window.with(|screen| screen.open = Some(thread(Some(Protection::Signed))));
+    window.engines().run().await;
+    assert_eq!(
+        window.steps(),
+        [
+            Step::Claim,
+            Step::Fetch,
+            Step::Ask,
+            Step::Answered,
+            Step::Claim,
+            Step::Answered
+        ]
+    );
+    assert_eq!(window.0.borrow().answers[1].1.mark.title, "Signed by Ann");
+}
+
+#[tokio::test]
+async fn a_changed_keyring_checks_the_signature_again() {
+    let window = FakeWindow::showing(thread(Some(Protection::Signed)));
+    window.engines().run().await;
+    window.with(|screen| {
+        screen.open = Some(thread(Some(Protection::Signed)));
+        screen.keyring = screen
+            .keyring
+            .map(|then| then + std::time::Duration::from_secs(1));
+    });
+    window.engines().run().await;
+    assert_eq!(
+        window
+            .steps()
+            .iter()
+            .filter(|step| **step == Step::Ask)
+            .count(),
+        2
+    );
+}
+
+#[tokio::test]
+async fn an_encrypted_message_opened_again_is_opened_again() {
+    let window = FakeWindow::showing(thread(Some(Protection::Encrypted)));
+    window.with(|screen| screen.read = Ok(opened()));
+    window.engines().run().await;
+    window.with(|screen| screen.open = Some(thread(Some(Protection::Encrypted))));
+    window.engines().run().await;
+    assert_eq!(
+        window
+            .steps()
+            .iter()
+            .filter(|step| **step == Step::Ask)
+            .count(),
+        2,
+        "what came out of the encryption is kept nowhere"
+    );
+}
+
+#[tokio::test]
 async fn a_message_in_the_clear_is_never_claimed() {
     let window = FakeWindow::showing(thread(None));
     window.engines().run().await;

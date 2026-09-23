@@ -40,6 +40,12 @@ impl Pgp {
         }
     }
 
+    /// When the keyring or the trust database last changed; see
+    /// [`Program::keyring_stamp`].
+    pub fn keyring_stamp(&self) -> Option<std::time::SystemTime> {
+        self.program.keyring_stamp()
+    }
+
     /// Runs gpg with `input` on its stdin; see [`Program::run`].
     pub(crate) fn run(
         &self,

@@ -44,6 +44,12 @@ impl Smime {
         }
     }
 
+    /// When the keybox or the trust list last changed; see
+    /// [`mailrs_pgp::gnupg::Program::keyring_stamp`].
+    pub fn keyring_stamp(&self) -> Option<std::time::SystemTime> {
+        self.program.keyring_stamp()
+    }
+
     /// Runs gpgsm with `input` on its stdin; see
     /// [`mailrs_pgp::gnupg::Program::run`].
     ///

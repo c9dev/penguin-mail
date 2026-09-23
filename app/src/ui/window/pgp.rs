@@ -86,6 +86,19 @@ impl Effects for Ports {
         })
     }
 
+    fn remembered(&self, opening: Engine, message_id: &str) -> Option<Read> {
+        let keyring = self.core.keyring_stamp(opening);
+        self.core.verdicts.borrow().get(message_id, keyring)
+    }
+
+    fn remember(&self, opening: Engine, message_id: String, read: &Read) {
+        let keyring = self.core.keyring_stamp(opening);
+        self.core
+            .verdicts
+            .borrow_mut()
+            .keep(message_id, keyring, read);
+    }
+
     /// Hands what the engine said to the thread run, which decides what
     /// else an opened body leaves stale.
     fn answered(&self, target: Target, message_id: String, read: Read) {

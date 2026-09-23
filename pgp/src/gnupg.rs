@@ -59,6 +59,30 @@ impl Program {
         self
     }
 
+    /// When the keys, the certificates or the trust in them last changed:
+    /// the newest change time among the files GnuPG keeps them in, in the
+    /// home this program runs against. `None` when none of them exists.
+    /// An answer about a signature holds only while this stays the same.
+    pub fn keyring_stamp(&self) -> Option<std::time::SystemTime> {
+        let home = match &self.home {
+            Some(home) => home.clone(),
+            None => match std::env::var_os("GNUPGHOME") {
+                Some(home) => PathBuf::from(home),
+                None => PathBuf::from(std::env::var_os("HOME")?).join(".gnupg"),
+            },
+        };
+        [
+            "pubring.kbx",
+            "pubring.gpg",
+            "trustdb.gpg",
+            "trustlist.txt",
+            "public-keys.d/pubring.db",
+        ]
+        .iter()
+        .filter_map(|file| std::fs::metadata(home.join(file)).ok()?.modified().ok())
+        .max()
+    }
+
     /// Runs the program with `input` on its stdin. `args` adds what the one
     /// call needs; the flags every call wants are already set, and
     /// `pinentry` says whether this run may ask the person anything.

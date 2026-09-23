@@ -10,6 +10,7 @@
 //! whichever shape of message it was.
 
 pub mod draft;
+pub mod remembered;
 pub mod run;
 
 use mail_parser::{MessageParser, MimeHeaders};

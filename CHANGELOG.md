@@ -5,6 +5,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Improved
+
+- Opening a signed conversation again shows its card at once, without
+  fetching the message from Gmail or starting gpg, until your keyring
+  changes.
+
 ### Fixed
 
 - A signed message shows only what its signature covers. A part somebody
