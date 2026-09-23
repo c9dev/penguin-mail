@@ -42,6 +42,8 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Install xtr
+        run: cargo install --locked xtr --version 0.1.11
       - name: Tests
         run: cargo test --workspace
       - name: Clippy

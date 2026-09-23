@@ -34,6 +34,11 @@ jobs:
       - name: Put cargo on PATH
         run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      # update-po.sh reads the Rust sources with xtr. The cache restored
+      # above keeps ~/.cargo/bin, so cargo install usually finds it there
+      # and has nothing to build.
+      - name: Install xtr
+        run: cargo install --locked xtr --version 0.1.11
       - name: Tests
         run: cargo test --workspace
       - name: Clippy

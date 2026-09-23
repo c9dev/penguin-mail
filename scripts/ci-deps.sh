@@ -2,7 +2,8 @@
 # Installs what building, testing and packaging Penguin Mail needs on a bare
 # Ubuntu 26.04 or Fedora, such as the containers the GitHub workflows run
 # in. Run as root. Rust comes from rustup at the version Cargo.toml asks
-# for.
+# for. xtr, which scripts/update-po.sh needs, is left to the workflow: it
+# installs xtr after restoring the cargo cache, which usually holds it.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -28,8 +29,33 @@ else
     exit 1
 fi
 
+# rustup-init comes from a fixed release, checked against the sums written
+# here. A new rustup changes nothing until someone updates both, and a file
+# that does not match stops the build before it runs.
+rustup_version=1.29.1
+case $(uname -m) in
+x86_64)
+    target=x86_64-unknown-linux-gnu
+    rustup_sum=dda7234360b7f578ca8b0ddcb80145646fa61a67c1720a5abc7051b35c9fcb71
+    ;;
+aarch64)
+    target=aarch64-unknown-linux-gnu
+    rustup_sum=15f6e4ce9f583b929c996c91562bad6d4454f3281de858b02cdfdef615fac433
+    ;;
+*)
+    echo "ci-deps.sh has no rustup-init sum for $(uname -m)" >&2
+    exit 1
+    ;;
+esac
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+curl -sSfL --retry 3 -o "$work/rustup-init" \
+    "https://static.rust-lang.org/rustup/archive/$rustup_version/$target/rustup-init"
+if ! echo "$rustup_sum  $work/rustup-init" | sha256sum -c --quiet -; then
+    echo "rustup-init $rustup_version for $target does not match its sum" >&2
+    exit 1
+fi
+chmod +x "$work/rustup-init"
 rust=$(sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)
-curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal \
+"$work/rustup-init" -y --no-modify-path --profile minimal \
     --default-toolchain "$rust" --component clippy
-# update-po.sh reads the Rust sources with xtr.
-"$HOME/.cargo/bin/cargo" install --locked xtr --version 0.1.11
