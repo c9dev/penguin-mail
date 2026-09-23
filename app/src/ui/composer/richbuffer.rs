@@ -255,12 +255,32 @@ pub fn set_kind(buffer: &gtk::TextBuffer, line: i32, kind: BlockKind) {
     }
 }
 
-/// Counts the numbered lists again, so they read 1, 2, 3 after an edit.
-pub fn renumber(buffer: &gtk::TextBuffer) {
+/// Counts the numbered list again after an edit to lines `first` to
+/// `last`, so it reads 1, 2, 3. Returns how many lines it looked at.
+///
+/// Only the list the edit touched can have changed, so the count starts
+/// where that list starts and stops where it ends. Walking the whole
+/// buffer on every keystroke cost milliseconds in a long reply.
+pub fn renumber(buffer: &gtk::TextBuffer, first: i32, last: i32) -> usize {
+    let count = buffer.line_count();
+    let last = last.min(count - 1);
+    let mut line = first.clamp(0, count - 1);
+    let mut looked = 0;
+    while line > 0 && kind_at(buffer, line - 1) == BlockKind::Numbered {
+        line -= 1;
+        looked += 1;
+    }
     let mut number = 0;
-    for line in 0..buffer.line_count() {
+    while line < count {
+        looked += 1;
         if kind_at(buffer, line) != BlockKind::Numbered {
+            // Past the edit, a line out of the list ends the work: any
+            // list after it starts at one of its own accord.
+            if line >= last {
+                break;
+            }
             number = 0;
+            line += 1;
             continue;
         }
         number += 1;
@@ -270,6 +290,7 @@ pub fn renumber(buffer: &gtk::TextBuffer) {
         let marker = text_start(buffer, line);
         let wanted = format!("{number}. ");
         if buffer.text(&start, &marker, false) == wanted {
+            line += 1;
             continue;
         }
         let (mut from, mut to) = (start, marker);
@@ -278,12 +299,18 @@ pub fn renumber(buffer: &gtk::TextBuffer) {
             .iter_at_line(line)
             .unwrap_or_else(|| buffer.end_iter());
         buffer.insert_with_tags_by_name(&mut at, &wanted, &[MARKER, "numbered"]);
+        line += 1;
     }
+    looked
 }
 
 /// The whole buffer as a rich body.
+///
+/// It reads a run of characters at a time, from one tag toggle to the
+/// next, since every character in a run carries the same tags. Asking each
+/// character for its tags took a fifth of a second on a long reply.
 pub fn read(buffer: &gtk::TextBuffer, anchors: &Anchors) -> RichBody {
-    let mut blocks = Vec::new();
+    let mut blocks = Vec::with_capacity(buffer.line_count().max(0) as usize);
     for line in 0..buffer.line_count() {
         let Some((start, end)) = line_bounds(buffer, line) else {
             continue;
@@ -292,39 +319,61 @@ pub fn read(buffer: &gtk::TextBuffer, anchors: &Anchors) -> RichBody {
         let mut spans: Vec<Span> = Vec::new();
         let mut iter = start;
         while iter < end {
+            let mut next = iter;
+            if !next.forward_to_tag_toggle(None::<&gtk::TextTag>) || next > end {
+                next = end;
+            }
             if iter
                 .tags()
                 .iter()
                 .any(|t| t.name().as_deref() == Some(MARKER))
             {
-                iter.forward_char();
-                continue;
-            }
-            if let Some(anchor) = iter.child_anchor() {
-                if let Some((_, cid)) = anchors.iter().find(|(a, _)| *a == anchor) {
-                    spans.push(Span::image("image", format!("cid:{cid}")));
-                }
-                iter.forward_char();
+                iter = next;
                 continue;
             }
             let (style, link) = style_at(&iter);
-            let character = iter.char();
-            match spans.last_mut() {
-                Some(last) if last.style == style && last.link == link && last.image.is_none() => {
-                    last.text.push(character)
+            // The slice keeps a placeholder where a picture sits, which
+            // the plain text leaves out.
+            let text = buffer.slice(&iter, &next, true);
+            let mut from = 0;
+            for (at, (index, character)) in text.char_indices().enumerate() {
+                if character != '\u{fffc}' {
+                    continue;
                 }
-                _ => spans.push(Span {
-                    text: character.to_string(),
-                    style,
-                    link,
-                    image: None,
-                }),
+                push_text(&mut spans, &text[from..index], style, &link);
+                from = index + character.len_utf8();
+                let placed = buffer.iter_at_offset(iter.offset() + at as i32);
+                if let Some(anchor) = placed.child_anchor()
+                    && let Some((_, cid)) = anchors.iter().find(|(a, _)| *a == anchor)
+                {
+                    spans.push(Span::image("image", format!("cid:{cid}")));
+                }
             }
-            iter.forward_char();
+            push_text(&mut spans, &text[from..], style, &link);
+            iter = next;
         }
         blocks.push(Block { kind, spans });
     }
     RichBody { blocks }
+}
+
+/// Adds `text` to the end of `spans`, joining the last span when it has
+/// the same look.
+fn push_text(spans: &mut Vec<Span>, text: &str, style: Style, link: &Option<String>) {
+    if text.is_empty() {
+        return;
+    }
+    match spans.last_mut() {
+        Some(last) if last.style == style && last.link == *link && last.image.is_none() => {
+            last.text.push_str(text)
+        }
+        _ => spans.push(Span {
+            text: text.to_string(),
+            style,
+            link: link.clone(),
+            image: None,
+        }),
+    }
 }
 
 /// Fills the view with `body`, drawing every style and showing every
@@ -428,10 +477,14 @@ pub fn insert(buffer: &gtk::TextBuffer, body: &RichBody) {
     }
     // The mark holds the end while the markers go in and move it along.
     let end = buffer.create_mark(None, &at, false);
+    let (first, last) = (
+        lines.first().map_or(0, |l| l.0),
+        lines.last().map_or(0, |l| l.0),
+    );
     for (line, kind) in lines.into_iter().skip(1) {
         set_kind(buffer, line, kind);
     }
-    renumber(buffer);
+    renumber(buffer, first, last);
     buffer.place_cursor(&buffer.iter_at_mark(&end));
     buffer.delete_mark(&end);
 }
@@ -520,6 +573,7 @@ mod tests {
         a_line_changes_kind_and_the_numbers_follow();
         typing_after_styled_words_carries_the_style_on();
         an_inserted_body_lands_at_the_cursor();
+        a_picture_reads_back_where_it_sits();
         super::super::editor::checks::run();
         // The extraction script needs a real engine to run in, and this
         // is the one test binary that starts one.
@@ -641,7 +695,7 @@ mod tests {
             "1. one\n2. two\n3. three"
         );
         set_kind(&buffer, 0, BlockKind::Quote);
-        renumber(&buffer);
+        renumber(&buffer, 0, 0);
         assert_eq!(
             read(&buffer, &anchors).to_plain(),
             "> one\n1. two\n2. three"
@@ -665,6 +719,31 @@ mod tests {
         // The cursor follows the text in, ready for the next word.
         let cursor = buffer.iter_at_mark(&buffer.get_insert());
         assert_eq!(kind_at(&buffer, cursor.line()), BlockKind::Bullet);
+    }
+
+    fn a_picture_reads_back_where_it_sits() {
+        let (view, buffer, mut anchors) = buffer();
+        let pixel = gdk::MemoryTexture::new(
+            1,
+            1,
+            gdk::MemoryFormat::R8g8b8a8,
+            &glib::Bytes::from(&[255u8, 0, 0, 255][..]),
+            4,
+        );
+        let attachment = OutgoingAttachment {
+            filename: "dot.png".into(),
+            mime_type: "image/png".into(),
+            data: pixel.save_to_png_bytes().to_vec(),
+            content_id: Some("dot@mailrs".into()),
+        };
+        let mut body = RichBody::from_markdown("Look **here** and there");
+        body.blocks[0]
+            .spans
+            .insert(2, Span::image("image", "cid:dot@mailrs"));
+        write(&view, &body, &[attachment], &mut anchors);
+        assert_eq!(anchors.len(), 1);
+        let read_back = read(&buffer, &anchors);
+        assert_eq!(read_back, body, "{}", read_back.to_markdown());
     }
 
     fn typing_after_styled_words_carries_the_style_on() {

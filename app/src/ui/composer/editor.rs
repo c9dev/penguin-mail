@@ -48,6 +48,15 @@ pub struct Editor {
     /// True while the editor changes the buffer itself, so its own edits
     /// are not styled as typing.
     busy: Cell<bool>,
+    /// The first and last line an edit touched since the buffer last
+    /// settled, so the upkeep after it looks at those and no others.
+    touched: Cell<Option<(i32, i32)>>,
+    /// Lines the per-keystroke upkeep looked at, for the checks.
+    #[cfg(test)]
+    looked_at: Cell<usize>,
+    /// Times the styled body was read out of the buffer.
+    #[cfg(test)]
+    reads: Cell<usize>,
 }
 
 impl Editor {
@@ -63,6 +72,11 @@ impl Editor {
             typing: RefCell::new(None),
             inserted: RefCell::new(Vec::new()),
             busy: Cell::new(false),
+            touched: Cell::new(None),
+            #[cfg(test)]
+            looked_at: Cell::new(0),
+            #[cfg(test)]
+            reads: Cell::new(0),
         });
         editor.wire();
         editor
@@ -76,6 +90,15 @@ impl Editor {
             if let Some(editor) = weak.upgrade() {
                 let length = text.chars().count() as i32;
                 editor.inserted.borrow_mut().push((at.offset(), length));
+                let breaks = text.matches('\n').count() as i32;
+                editor.touch(at.line(), at.line() + breaks);
+            }
+        });
+        // The line a deletion joins up is the one left to look at.
+        let weak = Rc::downgrade(self);
+        self.buffer.connect_delete_range(move |_, start, _| {
+            if let Some(editor) = weak.upgrade() {
+                editor.touch(start.line(), start.line());
             }
         });
         let weak = Rc::downgrade(self);
@@ -90,6 +113,14 @@ impl Editor {
                 editor.cursor_moved();
             }
         });
+    }
+
+    fn touch(&self, first: i32, last: i32) {
+        let touched = match self.touched.get() {
+            Some((from, to)) => (from.min(first), to.max(last)),
+            None => (first, last),
+        };
+        self.touched.set(Some(touched));
     }
 
     pub fn format(&self) -> ComposeFormat {
@@ -134,7 +165,7 @@ impl Editor {
             ComposeFormat::Markdown => {
                 self.anchors.borrow_mut().clear();
                 self.buffer.set_text(markdown);
-                style_quotes(&self.buffer);
+                style_quotes(&self.buffer, 0, self.buffer.line_count());
             }
         }
         self.buffer.place_cursor(&self.buffer.start_iter());
@@ -253,7 +284,7 @@ impl Editor {
         for line in first..=last {
             richbuffer::set_kind(buffer, line, wanted);
         }
-        richbuffer::renumber(buffer);
+        richbuffer::renumber(buffer, first, last);
         buffer.end_user_action();
         self.busy.set(false);
     }
@@ -352,7 +383,7 @@ impl Editor {
         for line in first..=last {
             richbuffer::set_kind(buffer, line, BlockKind::Paragraph);
         }
-        richbuffer::renumber(buffer);
+        richbuffer::renumber(buffer, first, last);
         buffer.end_user_action();
         self.busy.set(false);
         buffer.delete_mark(&held.0);
@@ -384,7 +415,7 @@ impl Editor {
             let end = richbuffer::text_start(buffer, line);
             buffer.place_cursor(&end);
         }
-        richbuffer::renumber(buffer);
+        richbuffer::renumber(buffer, line - 1, line + 1);
         buffer.end_user_action();
         self.busy.set(false);
         true
@@ -417,7 +448,7 @@ impl Editor {
                 self.busy.set(true);
                 self.anchors.borrow_mut().clear();
                 self.buffer.set_text(&markdown);
-                style_quotes(&self.buffer);
+                style_quotes(&self.buffer, 0, self.buffer.line_count());
                 self.busy.set(false);
             }
         }
@@ -553,7 +584,8 @@ impl Editor {
             buffer.insert(&mut at, "\n");
         }
         if self.format.get() == ComposeFormat::Markdown {
-            style_quotes(buffer);
+            let first = change.first as i32;
+            style_quotes(buffer, first, first + change.lines.len() as i32);
         }
         buffer.end_user_action();
         self.busy.set(false);
@@ -568,6 +600,8 @@ impl Editor {
 
     /// The styled body. Only rich text has one to read.
     pub fn rich(&self) -> RichBody {
+        #[cfg(test)]
+        self.reads.set(self.reads.get() + 1);
         richbuffer::read(&self.buffer, &self.anchors.borrow())
     }
 
@@ -580,12 +614,20 @@ impl Editor {
     }
 
     /// The body in both forms a draft keeps.
+    /// The body in both forms a draft keeps, read out of the buffer once:
+    /// a long reply takes a fifth of a second to read.
     pub fn written(&self) -> Written {
-        Written {
-            markdown: self.markdown(),
-            rich: match self.format.get() {
-                ComposeFormat::Rich => Some(self.rich()),
-                ComposeFormat::Markdown => None,
+        match self.format.get() {
+            ComposeFormat::Rich => {
+                let rich = self.rich();
+                Written {
+                    markdown: rich.to_markdown(),
+                    rich: Some(rich),
+                }
+            }
+            ComposeFormat::Markdown => Written {
+                markdown: self.source(),
+                rich: None,
             },
         }
     }
@@ -609,13 +651,19 @@ impl Editor {
     /// Styles text as it is typed and keeps list numbers in order.
     fn after_edit(&self) {
         let ranges: Vec<(i32, i32)> = self.inserted.borrow_mut().drain(..).collect();
+        let touched = self.touched.take();
         if self.busy.get() {
             return;
         }
+        let Some((first, last)) = touched else {
+            return;
+        };
         let buffer = &self.buffer;
         if self.format.get() == ComposeFormat::Markdown {
             self.busy.set(true);
-            style_quotes(buffer);
+            let _looked = style_quotes(buffer, first, last);
+            #[cfg(test)]
+            self.looked_at.set(self.looked_at.get() + _looked);
             self.busy.set(false);
             return;
         }
@@ -641,7 +689,9 @@ impl Editor {
             buffer.apply_tag_by_name(richbuffer::block_tag(kind), &from, &to);
             *self.typing.borrow_mut() = Some((to.offset(), style, link));
         }
-        richbuffer::renumber(buffer);
+        let _looked = richbuffer::renumber(buffer, first, last);
+        #[cfg(test)]
+        self.looked_at.set(self.looked_at.get() + _looked);
         self.busy.set(false);
     }
 
@@ -748,18 +798,20 @@ fn wrap_selection(buffer: &gtk::TextBuffer, before: &str, after: &str) {
     buffer.end_user_action();
 }
 
-/// Dims lines that start with `>`, so quoted text reads as quoted while
-/// the body is Markdown.
-fn style_quotes(buffer: &gtk::TextBuffer) {
-    buffer.remove_tag_by_name("quote", &buffer.start_iter(), &buffer.end_iter());
-    for line in 0..buffer.line_count() {
+/// Dims the lines from `first` to `last` that start with `>`, so quoted
+/// text reads as quoted while the body is Markdown. A line's look depends
+/// on nothing but its own text, so an edit needs only its own lines done.
+/// Returns how many lines it looked at.
+fn style_quotes(buffer: &gtk::TextBuffer, first: i32, last: i32) -> usize {
+    let last = last.min(buffer.line_count() - 1);
+    let mut looked = 0;
+    for line in first.max(0)..=last {
         let Some(start) = buffer.iter_at_line(line) else {
             continue;
         };
-        let mut end = start;
-        if !end.ends_line() {
-            end.forward_to_line_end();
-        }
+        looked += 1;
+        let end = line_end(buffer, line);
+        buffer.remove_tag_by_name("quote", &start, &end);
         if buffer
             .text(&start, &end, false)
             .trim_start()
@@ -768,6 +820,7 @@ fn style_quotes(buffer: &gtk::TextBuffer) {
             buffer.apply_tag_by_name("quote", &start, &end);
         }
     }
+    looked
 }
 
 /// The editor's checks. They run from the one GTK test in `richbuffer`,
@@ -787,6 +840,58 @@ pub(super) mod checks {
         the_body_moves_to_markdown_and_back();
         clearing_formatting_takes_the_list_markers_too();
         a_new_signature_leaves_the_cursor_and_undo_alone();
+        a_keystroke_looks_at_its_own_lines_only();
+        the_body_is_read_once_for_a_draft();
+    }
+
+    /// A long quoted reply: a line to write on, and 3,000 quoted lines.
+    fn long_reply() -> String {
+        let mut body = String::from("Hi Ann,\n\nOn Monday, Ann wrote:\n");
+        for n in 0..3000 {
+            body.push_str(&format!("> line {n}\n"));
+        }
+        body
+    }
+
+    fn a_keystroke_looks_at_its_own_lines_only() {
+        for format in [ComposeFormat::Rich, ComposeFormat::Markdown] {
+            let view = gtk::TextView::new();
+            let editor = Editor::new(&view, format);
+            editor.fill(&long_reply(), None, &[]);
+            cursor_at(&editor, 3);
+            editor.looked_at.set(0);
+            editor.buffer.insert_at_cursor("x");
+            assert!(
+                editor.looked_at.get() < 5,
+                "{format:?} looked at {} lines for one letter",
+                editor.looked_at.get()
+            );
+        }
+        // Lines still read as quoted and lists still count after edits.
+        let (_view, editor) = opened("1. one\n2. two\n3. three\n\nafter");
+        // Past the marker and the first letter.
+        cursor_at(&editor, 4);
+        editor.enter();
+        editor.buffer.insert_at_cursor("half");
+        assert_eq!(
+            editor.rich().to_plain(),
+            "1. o\n2. halfne\n3. two\n4. three\n\nafter"
+        );
+        let view = gtk::TextView::new();
+        let editor = Editor::new(&view, ComposeFormat::Markdown);
+        editor.fill("plain\nwords", None, &[]);
+        cursor_at(&editor, 6);
+        editor.buffer.insert_at_cursor("> ");
+        assert_eq!(richbuffer::kind_at(&editor.buffer, 1), BlockKind::Quote);
+        assert_eq!(richbuffer::kind_at(&editor.buffer, 0), BlockKind::Paragraph);
+    }
+
+    fn the_body_is_read_once_for_a_draft() {
+        let (_view, editor) = opened(&long_reply());
+        editor.reads.set(0);
+        let written = editor.written();
+        assert_eq!(editor.reads.get(), 1);
+        assert_eq!(written.markdown, written.rich.unwrap().to_markdown());
     }
 
     fn opened(markdown: &str) -> (gtk::TextView, Rc<Editor>) {
