@@ -1027,7 +1027,7 @@ msgstr "Escolha uma hora no futuro"
 msgid "On {date}, {sender} wrote:"
 msgstr "A {date}, {sender} escreveu:"
 
-#: app/src/core.rs:152
+#: app/src/core.rs:161
 msgid ""
 "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your "
 "mail. Stop it, then open Penguin Mail again."
@@ -1035,11 +1035,17 @@ msgstr ""
 "Outra cópia do Penguin Mail, ou o penguin-mail-cli sync, está a sincronizar "
 "o seu correio. Pare esse processo e volte a abrir o Penguin Mail."
 
-#: app/src/core.rs:552
+#: app/src/core.rs:176
+msgid "Penguin Mail could not update its mail store, and kept the old one."
+msgstr ""
+"O Penguin Mail não conseguiu atualizar o arquivo de correio e manteve o "
+"anterior."
+
+#: app/src/core.rs:573
 msgid "Demo mode cannot add real accounts."
 msgstr "O modo de demonstração não adiciona contas reais."
 
-#: app/src/core.rs:556
+#: app/src/core.rs:577
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -1047,11 +1053,11 @@ msgstr ""
 "Esta cópia do Penguin Mail foi compilada sem início de sessão Google. "
 "Obtenha uma versão em github.com/c9dev/penguin-mail/releases."
 
-#: app/src/core.rs:574
+#: app/src/core.rs:595
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Desistiu de esperar pelo navegador ao fim de cinco minutos."
 
-#: app/src/core.rs:582
+#: app/src/core.rs:603
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 "Iniciou sessão como {account}. Escolha {wanted} para voltar a ligar essa "
@@ -1245,9 +1251,13 @@ msgstr ""
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: opção desconhecida {option}"
 
-#: app/src/main.rs:235
+#: app/src/main.rs:239
 msgid "Penguin Mail Could Not Start"
 msgstr "O Penguin Mail não conseguiu arrancar"
+
+#: app/src/main.rs:244 app/src/ui/about.rs:148
+msgid "Report a Problem"
+msgstr "Comunicar um problema"
 
 #: app/src/notify.rs:49 app/src/ui/conversation.rs:336
 #: app/src/ui/conversation.rs:470 app/src/ui/window/message_menu.rs:118
@@ -2296,10 +2306,6 @@ msgstr "Novidades"
 #: app/src/ui/about.rs:146
 msgid "Website"
 msgstr "Página web"
-
-#: app/src/ui/about.rs:148
-msgid "Report a Problem"
-msgstr "Comunicar um problema"
 
 #: app/src/ui/about.rs:153
 msgid "License"
@@ -6223,11 +6229,11 @@ msgstr "Está por ler"
 msgid "Is flagged"
 msgstr "Está marcada"
 
-#: sync/src/account/writes.rs:556
+#: sync/src/account/writes.rs:473
 msgid "Gmail is busy. Still working on {conversations}."
 msgstr "O Gmail está ocupado. Ainda a trabalhar em {conversations}."
 
-#: sync/src/account/writes.rs:571
+#: sync/src/account/writes.rs:488
 msgid ""
 "Gmail is busy, so {action} did not go through for {conversations}. Try again "
 "in a moment."
@@ -6235,7 +6241,7 @@ msgstr ""
 "O Gmail está ocupado, por isso {action} não chegou a acontecer em "
 "{conversations}. Tente de novo daqui a pouco."
 
-#: sync/src/account/writes.rs:580
+#: sync/src/account/writes.rs:497
 msgid ""
 "Gmail stayed busy for {waited}, so {action} did not go through for "
 "{conversations}."
@@ -6243,38 +6249,38 @@ msgstr ""
 "O Gmail esteve ocupado durante {waited}, por isso {action} não chegou a "
 "acontecer em {conversations}."
 
-#: sync/src/account/writes.rs:587
+#: sync/src/account/writes.rs:504
 msgid "{action} failed: {reason}"
 msgstr "{action} falhou: {reason}"
 
-#: sync/src/account/writes.rs:608
+#: sync/src/account/writes.rs:522
 msgid "a moment"
 msgstr "um momento"
 
-#: sync/src/account/writes.rs:610
+#: sync/src/account/writes.rs:524
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] "{count} segundo"
 msgstr[1] "{count} segundos"
 
-#: sync/src/account/writes.rs:615
+#: sync/src/account/writes.rs:529
 msgid "a minute"
 msgstr "um minuto"
 
-#: sync/src/actions.rs:114
+#: sync/src/actions.rs:115 sync/src/actions.rs:591
 msgid "Change labels"
 msgstr "Alterar etiquetas"
 
-#: sync/src/actions.rs:313
+#: sync/src/actions.rs:314
 msgid "Delete Forever failed: {reason}"
 msgstr "Eliminar definitivamente falhou: {reason}"
 
-#: sync/src/actions.rs:483
+#: sync/src/actions.rs:484
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr ""
 "Esta mensagem mudou de sítio entretanto, por isso Anular deixou-a onde está."
 
-#: sync/src/actions.rs:544 sync/src/actions.rs:596
+#: sync/src/actions.rs:545 sync/src/actions.rs:598
 msgid "Could not undo: {reason}"
 msgstr "Não foi possível anular: {reason}"
 
@@ -6294,172 +6300,172 @@ msgstr[1] "Etiquetas novas em: {accounts}."
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr "O Gmail reserva “{name}” para uma etiqueta sua. Escolha outro nome."
 
-#: sync/src/mailbox.rs:91
+#: sync/src/mailbox.rs:90
 msgid "{color} Flag"
 msgstr "Marca: {color}"
 
-#: sync/src/mailbox.rs:152
+#: sync/src/mailbox.rs:151
 msgid "No Results"
 msgstr "Sem resultados"
 
-#: sync/src/mailbox.rs:155
+#: sync/src/mailbox.rs:154
 msgid "Nothing Scheduled"
 msgstr "Nada agendado"
 
-#: sync/src/mailbox.rs:158
+#: sync/src/mailbox.rs:157
 msgid "Outbox Is Empty"
 msgstr "A caixa de saída está vazia"
 
-#: sync/src/mailbox.rs:160
+#: sync/src/mailbox.rs:159
 msgid "No Reminders"
 msgstr "Sem lembretes"
 
-#: sync/src/mailbox.rs:162
+#: sync/src/mailbox.rs:161
 msgid "No Follow-Ups"
 msgstr "Sem seguimentos"
 
-#: sync/src/mailbox.rs:165
+#: sync/src/mailbox.rs:164
 msgid "No Flagged Mail"
 msgstr "Sem correio marcado"
 
-#: sync/src/mailbox.rs:167
+#: sync/src/mailbox.rs:166
 msgid "No Mail from VIPs"
 msgstr "Sem correio de VIP"
 
-#: sync/src/mailbox.rs:169
+#: sync/src/mailbox.rs:168
 msgid "No Matching Mail"
 msgstr "Sem correio correspondente"
 
-#: sync/src/mailbox.rs:174
+#: sync/src/mailbox.rs:173
 msgid "No Archived Mail"
 msgstr "Sem correio arquivado"
 
-#: sync/src/mailbox.rs:175
+#: sync/src/mailbox.rs:174
 msgid "No Junk"
 msgstr "Sem spam"
 
-#: sync/src/mailbox.rs:176
+#: sync/src/mailbox.rs:175
 msgid "Trash Is Empty"
 msgstr "O lixo está vazio"
 
-#: sync/src/mailbox.rs:182
+#: sync/src/mailbox.rs:181
 msgid "Inbox Zero"
 msgstr "Caixa de entrada vazia"
 
-#: sync/src/mailbox.rs:183
+#: sync/src/mailbox.rs:182
 msgid "No Starred Mail"
 msgstr "Sem correio marcado"
 
-#: sync/src/mailbox.rs:184
+#: sync/src/mailbox.rs:183
 msgid "No Sent Mail"
 msgstr "Sem correio enviado"
 
-#: sync/src/mailbox.rs:185
+#: sync/src/mailbox.rs:184
 msgid "No Drafts"
 msgstr "Sem rascunhos"
 
-#: sync/src/mailbox.rs:186
+#: sync/src/mailbox.rs:185
 msgid "No Muted Mail"
 msgstr "Sem correio silenciado"
 
-#: sync/src/mailbox.rs:230
+#: sync/src/mailbox.rs:229
 msgctxt "mailbox"
 msgid "Archive"
 msgstr "Arquivo"
 
-#: sync/src/mailbox.rs:232
+#: sync/src/mailbox.rs:231
 msgid "Trash"
 msgstr "Lixo"
 
-#: sync/src/mailbox.rs:233
+#: sync/src/mailbox.rs:232
 msgid "All Mail"
 msgstr "Todo o correio"
 
-#: sync/src/mailbox.rs:501
+#: sync/src/mailbox.rs:500
 msgid "This smart mailbox has no conditions"
 msgstr "Esta caixa inteligente não tem condições"
 
-#: sync/src/mailbox.rs:822
+#: sync/src/mailbox.rs:821
 msgid "Could not load mail for {account}: {reason}"
 msgstr "Não foi possível carregar o correio de {account}: {reason}"
 
-#: sync/src/mailbox.rs:940
+#: sync/src/mailbox.rs:939
 msgid "Returns {when}"
 msgstr "Volta {when}"
 
-#: sync/src/mailbox.rs:983 sync/src/mailbox.rs:1054
+#: sync/src/mailbox.rs:982 sync/src/mailbox.rs:1053
 msgid "No recipients"
 msgstr "Sem destinatários"
 
-#: sync/src/mailbox.rs:986 sync/src/mailbox.rs:1057
+#: sync/src/mailbox.rs:985 sync/src/mailbox.rs:1056
 msgid "To {recipients}"
 msgstr "Para {recipients}"
 
-#: sync/src/mailbox.rs:1019
+#: sync/src/mailbox.rs:1018
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} por ler"
 msgstr[1] "{count} por ler"
 
-#: sync/src/mailbox.rs:1029
+#: sync/src/mailbox.rs:1028
 msgid "Sent yesterday, no reply yet"
 msgstr "Enviada ontem, ainda sem resposta"
 
-#: sync/src/mailbox.rs:1031
+#: sync/src/mailbox.rs:1030
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Enviada há {days} dia, ainda sem resposta"
 msgstr[1] "Enviada há {days} dias, ainda sem resposta"
 
-#: sync/src/mailbox.rs:1069
+#: sync/src/mailbox.rs:1068
 msgid "Sends {when}"
 msgstr "Envia {when}"
 
-#: sync/src/mailbox.rs:1073
+#: sync/src/mailbox.rs:1072
 msgid "Not sent"
 msgstr "Não enviada"
 
-#: sync/src/mailbox.rs:1080
+#: sync/src/mailbox.rs:1079
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Nova tentativa {when}"
 
-#: sync/src/mailbox.rs:1087
+#: sync/src/mailbox.rs:1086
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. O Penguin Mail deixou de tentar"
 
-#: sync/src/triage.rs:63
+#: sync/src/triage.rs:41
 msgid "Mark read"
 msgstr "Marcar como lida"
 
-#: sync/src/triage.rs:64
+#: sync/src/triage.rs:42
 msgid "Mark unread"
 msgstr "Marcar como não lida"
 
-#: sync/src/triage.rs:65
+#: sync/src/triage.rs:43
 msgid "Star"
 msgstr "Marcar com estrela"
 
-#: sync/src/triage.rs:66
+#: sync/src/triage.rs:44
 msgid "Unstar"
 msgstr "Retirar a estrela"
 
-#: sync/src/triage.rs:68
+#: sync/src/triage.rs:46
 msgid "Add label {label}"
 msgstr "Adicionar a etiqueta {label}"
 
-#: sync/src/triage.rs:71
+#: sync/src/triage.rs:49
 msgid "Remove label {label}"
 msgstr "Remover a etiqueta {label}"
 
-#: sync/src/triage.rs:74
+#: sync/src/triage.rs:52
 msgid "Move out of trash"
 msgstr "Tirar do lixo"
 
-#: sync/src/triage.rs:75
+#: sync/src/triage.rs:53
 msgid "Mark as junk"
 msgstr "Marcar como spam"
 
-#: sync/src/triage.rs:76
+#: sync/src/triage.rs:54
 msgid "Mark as not junk"
 msgstr "Marcar como não sendo spam"
 

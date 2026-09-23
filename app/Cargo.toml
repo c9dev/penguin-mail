@@ -23,6 +23,7 @@ mailrs-smime.workspace = true
 adw.workspace = true
 ammonia.workspace = true
 anyhow.workspace = true
+thiserror.workspace = true
 reqwest.workspace = true
 sha2.workspace = true
 async-channel.workspace = true

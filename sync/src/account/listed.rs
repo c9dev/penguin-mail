@@ -11,12 +11,11 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::time::{Duration, Instant};
 
 use mailrs_domain::MessageMeta;
-use mailrs_gmail::MessageRef;
+use mailrs_store::messages::Change;
 use mailrs_store::{accounts, messages};
 
 use super::AccountSync;
-use super::fetch::Want;
-use crate::{MailBackend, SyncError};
+use crate::{MailBackend, RemoteRef, SearchQuery, SyncError, Want};
 
 /// How long a fetched thread is kept for opening. Only memory depends on
 /// it: whether a kept thread may still be stored is the history cursor's
@@ -26,9 +25,9 @@ const KEPT_FOR: Duration = Duration::from_secs(10 * 60);
 /// A whole thread a search fetched.
 pub(super) struct Listed {
     at: Instant,
-    /// The history cursor before Gmail was asked. While the cursor stays
+    /// The sync state before the server was asked. While the state stays
     /// there, no replay has passed over a change the thread missed.
-    history_id: Option<u64>,
+    state: Option<String>,
     metas: Vec<MessageMeta>,
 }
 
@@ -45,16 +44,12 @@ impl AccountSync {
     /// only as it shows rows. The hits are kept per thread for
     /// [`KEPT_FOR`], so Delete Forever on a listed row knows its messages
     /// without asking Gmail.
-    pub async fn search_ids(
-        &self,
-        query: &str,
-        limit: usize,
-    ) -> Result<Vec<MessageRef>, SyncError> {
-        let size = u32::try_from(limit)
-            .unwrap_or(u32::MAX)
-            .min(crate::ID_PAGE_SIZE);
-        let page = self.services.mail.list_messages(query, None, size).await?;
-        let found: Vec<MessageRef> = page.messages.into_iter().take(limit).collect();
+    pub async fn search_ids(&self, query: &str, limit: usize) -> Result<Vec<RemoteRef>, SyncError> {
+        let found = self
+            .services
+            .mail
+            .search(&SearchQuery::Native(query.to_string()), limit)
+            .await?;
         let mut by_thread: BTreeMap<&str, BTreeSet<String>> = BTreeMap::new();
         for hit in &found {
             by_thread
@@ -112,7 +107,7 @@ impl AccountSync {
     /// Two or more hits in one thread the store lacks come from one
     /// `threads.get`, which is kept for opening; each other hit costs a
     /// `messages.get`. Messages Gmail no longer has are left out.
-    pub async fn metadata_of(&self, refs: &[MessageRef]) -> Result<Vec<MessageMeta>, SyncError> {
+    pub async fn metadata_of(&self, refs: &[RemoteRef]) -> Result<Vec<MessageMeta>, SyncError> {
         let account_id = self.account_id;
         let wanted: Vec<String> = refs.iter().map(|r| r.id.clone()).collect();
         let mut metas = self
@@ -135,7 +130,7 @@ impl AccountSync {
                     first.thread_id.clone(),
                     Listed {
                         at: Instant::now(),
-                        history_id: fetched.asked_at,
+                        state: fetched.asked_at.clone(),
                         metas: whole,
                     },
                 );
@@ -167,17 +162,24 @@ impl AccountSync {
                 .db
                 .write(move |c| {
                     let cursor = accounts::sync_cursor(c, account_id)?;
-                    if cursor.history_id.is_none()
-                        || cursor.history_id != listed.history_id
+                    if cursor.state.is_none()
+                        || cursor.state != listed.state
                         || !messages::thread_messages(c, account_id, &thread)?.is_empty()
                     {
                         return Ok(false);
                     }
-                    for meta in &listed.metas {
-                        messages::upsert_message(c, meta, cursor.sync_gen)?;
-                    }
-                    messages::refresh_thread(c, account_id, &thread)?;
-                    messages::mark_whole(c, account_id, &thread)?;
+                    let mut changes: Vec<Change> = listed
+                        .metas
+                        .iter()
+                        .map(|meta| Change::Upsert {
+                            meta: Box::new(meta.clone()),
+                            generation: cursor.sync_gen,
+                        })
+                        .collect();
+                    changes.push(Change::MarkWhole {
+                        thread_id: thread.clone(),
+                    });
+                    messages::apply(c, account_id, &changes)?;
                     Ok(true)
                 })
                 .await?;

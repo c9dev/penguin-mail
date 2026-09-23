@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use mailrs_domain::system_label;
 use mailrs_domain::translate::{fill, gettext};
 
 /// A label change the user asked for on a whole thread. Ordered, so a bulk
@@ -26,8 +25,8 @@ pub enum TriageAction {
     Mute,
     /// Takes the mute label off and puts the thread back in the inbox.
     Unmute,
-    /// Any label change, such as the one Undo sends to put back what an
-    /// action changed.
+    /// Any label change, such as putting a conversation back in the inbox
+    /// when its reminder comes due.
     Relabel {
         add: Vec<String>,
         remove: Vec<String>,
@@ -35,27 +34,6 @@ pub enum TriageAction {
 }
 
 impl TriageAction {
-    /// Labels to add and to remove on each message.
-    pub fn label_delta(&self) -> (Vec<String>, Vec<String>) {
-        let one = |label: &str| vec![label.to_string()];
-        match self {
-            TriageAction::Archive => (vec![], one(system_label::INBOX)),
-            TriageAction::MarkRead => (vec![], one(system_label::UNREAD)),
-            TriageAction::MarkUnread => (one(system_label::UNREAD), vec![]),
-            TriageAction::Star => (one(system_label::STARRED), vec![]),
-            TriageAction::Unstar => (vec![], one(system_label::STARRED)),
-            TriageAction::AddLabel(label) => (vec![label.clone()], vec![]),
-            TriageAction::RemoveLabel(label) => (vec![], vec![label.clone()]),
-            TriageAction::Trash => (one(system_label::TRASH), one(system_label::INBOX)),
-            TriageAction::Untrash => (one(system_label::INBOX), one(system_label::TRASH)),
-            TriageAction::Junk => (one(system_label::SPAM), one(system_label::INBOX)),
-            TriageAction::NotJunk => (one(system_label::INBOX), one(system_label::SPAM)),
-            TriageAction::Mute => (one(system_label::MUTE), one(system_label::INBOX)),
-            TriageAction::Unmute => (one(system_label::INBOX), one(system_label::MUTE)),
-            TriageAction::Relabel { add, remove } => (add.clone(), remove.clone()),
-        }
-    }
-
     /// The action in words, for a toast the person reads.
     pub fn describe(&self) -> String {
         match self {

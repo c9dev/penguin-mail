@@ -22,7 +22,7 @@ async fn bootstrap_records_the_cursor_labels_and_first_page() {
     h.sync.bootstrap().await.unwrap();
 
     let cursor = h.cursor().await;
-    assert_eq!(cursor.history_id, Some(100));
+    assert_eq!(h.history_id().await, Some(100));
     assert_eq!(cursor.backfill_cursor.as_deref(), Some("2"));
     assert!(!cursor.backfill_done);
     assert_eq!(h.threads("INBOX").await, ["ta", "tb"]);
@@ -92,7 +92,7 @@ async fn fill_store_leaves_a_finished_first_sync() {
     );
     let cursor = h.cursor().await;
     assert!(cursor.backfill_done);
-    assert_eq!(cursor.history_id, Some(100));
+    assert_eq!(h.history_id().await, Some(100));
 }
 
 /// Two listed replies come in one `threads.get`, which also returns the

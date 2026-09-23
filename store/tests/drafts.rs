@@ -1,6 +1,7 @@
 mod common;
 
 use common::{db, meta, store};
+use mailrs_store::messages::Change;
 use mailrs_store::{drafts, messages};
 
 #[test]
@@ -30,13 +31,16 @@ fn a_message_that_stopped_being_a_draft_answers_nothing() {
     store(&conn, &[meta(id, "m1", "t1", 100, &["DRAFT"])]);
     drafts::remember(&conn, id, "d1", "m1").unwrap();
     // Sending the draft elsewhere takes the label off during history replay.
-    messages::remove_labels(&conn, id, "m1", &["DRAFT".to_string()]).unwrap();
+    messages::apply(&conn, id, &[Change::label("m1", "DRAFT", false)]).unwrap();
     assert_eq!(drafts::draft_of(&conn, id, "m1").unwrap(), None);
 
     store(&conn, &[meta(id, "m2", "t2", 200, &["DRAFT"])]);
     drafts::remember(&conn, id, "d2", "m2").unwrap();
     // Deleting it elsewhere takes the message.
-    messages::delete_message(&conn, id, "m2").unwrap();
+    let delete = Change::Delete {
+        message_id: "m2".into(),
+    };
+    messages::apply(&conn, id, &[delete]).unwrap();
     assert_eq!(drafts::draft_of(&conn, id, "m2").unwrap(), None);
 }
 

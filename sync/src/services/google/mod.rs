@@ -4,22 +4,39 @@
 //! errors here, and Gmail's quota and pacing show nowhere else in the
 //! services.
 
+mod changes;
+mod fetch;
+mod writes;
+
 use std::sync::Arc;
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
-use mailrs_domain::{EpochMillis, Filter, MessageBody, MessageMeta, Vacation};
+use mailrs_domain::mailbox::keyword;
+use mailrs_domain::{
+    EpochMillis, Filter, MailboxKind, MessageBody, RemoteMailbox, Role, Vacation, gmail,
+};
 use mailrs_gmail::{
-    Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, GmailError, HistoryPage,
-    LabelColor, MessagePage, Person, Profile, RemoteLabel, SendAs, Series, html_to_text, limiter,
+    Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, GmailError, LabelColor,
+    Person, RemoteLabel, SendAs, Series, html_to_text, limiter,
 };
 
 use super::{
-    AutoReplyService, CalendarService, ContactsService, IdentityService, MailBackend,
-    MailCapabilities, Priority, RulesService, SendAsAddress, priority,
+    AutoReplyService, Backfill, CalendarService, Changes, ContactsService, Found, IdentityService,
+    MailBackend, MailCapabilities, Priority, RawMessage, RemoteRef, RulesService, SearchQuery,
+    SendAsAddress, SyncState, Unapplied, Want, priority,
 };
-use crate::BackendError;
 use crate::api::{DraftRef, GmailApi, SavedDraft};
+use crate::{BackendError, MailOp};
+
+/// Page size for window listings, whose every id costs a metadata fetch
+/// after it. A page of 100 is about two and a half seconds of an
+/// account's budget, which is what paces backfill.
+pub const LIST_PAGE_SIZE: u32 = 100;
+
+/// Page size for a listing that needs only ids, such as the inbox check.
+/// Gmail's most, for the same 5 units a call as a page of 100.
+pub const ID_PAGE_SIZE: u32 = 500;
 
 /// A Google account's services, all over the one client `G`, which spends
 /// one quota bucket for all of them.
@@ -61,7 +78,19 @@ impl<G: GmailApi> MailBackend for Google<G> {
             files_sent_mail: true,
             categories: true,
             delete_forever: true,
+            // Gmail keeps these three as its UNREAD, STARRED and MUTE labels.
+            keywords: &[keyword::SEEN, keyword::FLAGGED, keyword::MUTED],
+            native_search: true,
+            batch_limit: mailrs_gmail::BATCH_LIMIT,
         }
+    }
+
+    fn mailbox_for(&self, role: Role) -> Option<String> {
+        gmail::label_of_role(role).map(str::to_string)
+    }
+
+    async fn apply(&self, messages: &[String], ops: &[MailOp]) -> Result<(), Unapplied> {
+        self.write(messages, ops).await
     }
 
     fn person_waiting(&self) -> bool {
@@ -78,84 +107,90 @@ impl<G: GmailApi> MailBackend for Google<G> {
         tokio::time::sleep(wait).await;
     }
 
-    async fn profile(&self) -> Result<Profile, BackendError> {
-        Ok(paced(self.gmail.profile()).await?)
-    }
-
-    async fn labels(&self) -> Result<Vec<RemoteLabel>, BackendError> {
-        Ok(paced(self.gmail.labels()).await?)
-    }
-
-    async fn list_messages(
-        &self,
-        query: &str,
-        page_token: Option<&str>,
-        page_size: u32,
-    ) -> Result<MessagePage, BackendError> {
-        Ok(paced(self.gmail.list_messages(query, page_token, page_size)).await?)
-    }
-
-    async fn list_labelled(
-        &self,
-        label_id: &str,
-        query: &str,
-        page_token: Option<&str>,
-        page_size: u32,
-    ) -> Result<MessagePage, BackendError> {
-        Ok(paced(
+    async fn backfill(&self, days: i64, cursor: Option<&str>) -> Result<Backfill, BackendError> {
+        match paced(
             self.gmail
-                .list_labelled(label_id, query, page_token, page_size),
+                .list_messages(&fetch::window_query(days), cursor, LIST_PAGE_SIZE),
         )
-        .await?)
-    }
-
-    async fn message_metadata(&self, id: &str) -> Result<MessageMeta, BackendError> {
-        Ok(paced(self.gmail.message_metadata(id)).await?)
-    }
-
-    async fn thread_metadata(&self, thread_id: &str) -> Result<Vec<MessageMeta>, BackendError> {
-        Ok(paced(self.gmail.thread_metadata(thread_id)).await?)
-    }
-
-    async fn message_body(&self, id: &str) -> Result<MessageBody, BackendError> {
-        Ok(paced(self.gmail.message_body(id)).await?)
-    }
-
-    async fn history(
-        &self,
-        start_history_id: u64,
-        page_token: Option<&str>,
-    ) -> Result<HistoryPage, BackendError> {
-        match paced(self.gmail.history(start_history_id, page_token)).await {
-            Ok(page) => Ok(page),
-            // `history.list` answers 404 for a start older than the
-            // history Gmail keeps; it has nothing else to miss. Anywhere
-            // else a 404 is a message or a label that is gone.
-            Err(GmailError::NotFound) => Err(BackendError::StateLost),
+        .await
+        {
+            Ok(page) => Ok(Backfill {
+                refs: page.messages.into_iter().map(RemoteRef::from).collect(),
+                next: page.next_page_token,
+            }),
+            // Gmail answers 400 for a page token it no longer takes.
+            Err(GmailError::Http { status: 400, .. }) if cursor.is_some() => {
+                Err(BackendError::StateLost)
+            }
             Err(err) => Err(err.into()),
         }
     }
 
-    async fn modify_labels(
+    async fn window_ids(
         &self,
-        id: &str,
-        add: &[String],
-        remove: &[String],
-    ) -> Result<(), BackendError> {
-        Ok(paced(self.gmail.modify_labels(id, add, remove)).await?)
+        days: i64,
+        mailbox: Option<&str>,
+    ) -> Result<Vec<RemoteRef>, BackendError> {
+        self.every_id(mailbox, &fetch::window_query(days)).await
     }
 
-    async fn batch_modify(
-        &self,
-        ids: &[String],
-        add: &[String],
-        remove: &[String],
-    ) -> Result<(), BackendError> {
-        Ok(paced(self.gmail.batch_modify(ids, add, remove)).await?)
+    async fn inbox_ids(&self) -> Result<Vec<RemoteRef>, BackendError> {
+        self.every_id(None, "in:inbox").await
     }
 
-    async fn delete_messages(&self, ids: &[String]) -> Result<(), BackendError> {
-        Ok(paced(self.gmail.delete_messages(ids)).await?)
+    async fn search(
+        &self,
+        query: &SearchQuery,
+        limit: usize,
+    ) -> Result<Vec<RemoteRef>, BackendError> {
+        let SearchQuery::Native(text) = query;
+        // One call of 5 units whatever the count, up to Gmail's page of 500.
+        let size = u32::try_from(limit).unwrap_or(u32::MAX).min(ID_PAGE_SIZE);
+        let page = paced(self.gmail.list_messages(text, None, size)).await?;
+        Ok(page
+            .messages
+            .into_iter()
+            .take(limit)
+            .map(RemoteRef::from)
+            .collect())
+    }
+
+    async fn find_sent(&self, message_id: &str) -> Result<Option<String>, BackendError> {
+        // A draft carries the same header as the message it becomes, so
+        // the search asks for sent mail alone.
+        let query = format!("in:sent rfc822msgid:{message_id}");
+        let page = paced(self.gmail.list_messages(&query, None, 1)).await?;
+        Ok(page.messages.into_iter().next().map(|m| m.id))
+    }
+
+    async fn fetch(&self, wants: Vec<Want>) -> Result<Found, BackendError> {
+        self.fetch_planned(wants).await
+    }
+
+    async fn fetch_whole(&self, threads: Vec<String>) -> Result<Found, BackendError> {
+        self.fetch_threads(threads).await
+    }
+
+    async fn fetch_raw(&self, ids: &[String]) -> Result<Vec<RawMessage>, BackendError> {
+        let mut raws = Vec::with_capacity(ids.len());
+        for id in ids {
+            let bytes = paced(self.gmail.raw_message(id)).await?;
+            raws.push(RawMessage {
+                id: id.clone(),
+                bytes,
+            });
+        }
+        Ok(raws)
+    }
+
+    /// Gmail files a copy of what it sends under Sent itself, so nothing
+    /// asks it to file one.
+    async fn append(&self, _raw: &[u8], _mailbox: &str) -> Result<String, BackendError> {
+        Err(BackendError::Unsupported)
+    }
+
+    async fn message_body(&self, id: &str) -> Result<MessageBody, BackendError> {
+        Ok(paced(self.gmail.message_body(id)).await?)
     }
 
     async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, BackendError> {
@@ -191,32 +226,67 @@ impl<G: GmailApi> MailBackend for Google<G> {
         Ok(paced(self.gmail.attachment(message_id, attachment_id)).await?)
     }
 
-    async fn raw_message(&self, id: &str) -> Result<Vec<u8>, BackendError> {
-        Ok(paced(self.gmail.raw_message(id)).await?)
+    fn made_by_person(&self, id: &str) -> bool {
+        gmail::kind_of(id) == MailboxKind::Label
     }
 
-    async fn create_label(&self, name: &str) -> Result<RemoteLabel, BackendError> {
-        Ok(paced(self.gmail.create_label(name)).await?)
+    async fn mailboxes(&self) -> Result<Vec<RemoteMailbox>, BackendError> {
+        Ok(paced(self.gmail.labels())
+            .await?
+            .into_iter()
+            .map(remote_mailbox)
+            .collect())
     }
 
-    async fn rename_label(&self, id: &str, name: &str) -> Result<RemoteLabel, BackendError> {
-        Ok(paced(self.gmail.rename_label(id, name)).await?)
+    async fn changes(&self, since: Option<&SyncState>) -> Result<Changes, BackendError> {
+        self.history_changes(since).await
     }
 
-    async fn delete_label(&self, id: &str) -> Result<(), BackendError> {
+    async fn create_mailbox(&self, name: &str) -> Result<RemoteMailbox, BackendError> {
+        Ok(remote_mailbox(paced(self.gmail.create_label(name)).await?))
+    }
+
+    async fn rename_mailbox(&self, id: &str, name: &str) -> Result<RemoteMailbox, BackendError> {
+        Ok(remote_mailbox(
+            paced(self.gmail.rename_label(id, name)).await?,
+        ))
+    }
+
+    async fn delete_mailbox(&self, id: &str) -> Result<(), BackendError> {
         Ok(paced(self.gmail.delete_label(id)).await?)
     }
 
-    async fn set_label_color(
+    async fn set_mailbox_color(
         &self,
         id: &str,
         color: &LabelColor,
-    ) -> Result<RemoteLabel, BackendError> {
-        Ok(paced(self.gmail.set_label_color(id, color)).await?)
+    ) -> Result<RemoteMailbox, BackendError> {
+        Ok(remote_mailbox(
+            paced(self.gmail.set_label_color(id, color)).await?,
+        ))
     }
 
-    async fn label_threads(&self, id: &str) -> Result<u64, BackendError> {
+    async fn mailbox_threads(&self, id: &str) -> Result<u64, BackendError> {
         Ok(paced(self.gmail.label_threads(id)).await?)
+    }
+}
+
+/// A Gmail label as a server mailbox. Gmail lists its keyword and category
+/// labels too (`STARRED`, `UNREAD`, `CATEGORY_SOCIAL`); they arrive as
+/// system mailboxes without a role, which the store keeps for the label
+/// list and never files mail under. Gmail's choice to hide a label from
+/// its own list is not read yet, so `hidden` is false.
+fn remote_mailbox(label: RemoteLabel) -> RemoteMailbox {
+    RemoteMailbox {
+        role: gmail::role_of(&label.id),
+        kind: match label.kind.as_deref() {
+            Some("system") => MailboxKind::System,
+            _ => MailboxKind::Label,
+        },
+        color: label.color.map(|c| c.background_color),
+        hidden: false,
+        id: label.id,
+        name: label.name,
     }
 }
 
@@ -361,23 +431,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_history_cursor_gmail_no_longer_keeps_is_a_lost_place() {
-        let (gmail, google) = google();
-        let start = gmail.with(|s| s.history_id);
-        gmail.expire_history();
-        assert!(matches!(
-            google.history(start, None).await,
-            Err(BackendError::StateLost)
-        ));
-    }
-
-    #[tokio::test]
     async fn a_missing_message_is_only_missing() {
         let (_, google) = google();
-        assert!(matches!(
-            google.message_metadata("gone").await,
-            Err(BackendError::NotFound)
-        ));
+        let found = google
+            .fetch(vec![crate::Want::message("gone")])
+            .await
+            .unwrap();
+        assert_eq!(found.gone, ["gone"]);
     }
 
     #[tokio::test]
@@ -426,6 +486,9 @@ mod tests {
                 files_sent_mail: true,
                 categories: true,
                 delete_forever: true,
+                keywords: &["$seen", "$flagged", "$muted"],
+                native_search: true,
+                batch_limit: 1000,
             }
         );
     }

@@ -12,6 +12,7 @@ async fn connecting_needs_a_stored_refresh_token() {
         id: 1,
         email: "me@example.com".into(),
         state: AccountState::Ok,
+        provider: mailrs_domain::Provider::Gmail,
     };
     let oauth = OAuthClient::new("cid", "secret");
     assert!(matches!(

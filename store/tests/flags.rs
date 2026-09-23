@@ -2,6 +2,7 @@ mod common;
 
 use common::{db, meta, mixed_mail, store};
 use mailrs_domain::FlagColor;
+use mailrs_store::messages::Change;
 use mailrs_store::threads::{self, ThreadFilter, list_messages, list_threads};
 use mailrs_store::{flags, messages};
 
@@ -56,8 +57,7 @@ fn senders_and_any_label_leave_out_trash() {
     // `meta` sends message "a" from a@example.com.
     let vip = ThreadFilter::unified("").from_senders(vec!["A@Example.com".into()]);
     assert_eq!(ids(list_threads(&conn, &vip, 0, 10).unwrap()), ["t1"]);
-    messages::add_labels(&conn, id, "a", &["TRASH".to_string()]).unwrap();
-    messages::refresh_thread(&conn, id, "t1").unwrap();
+    messages::apply(&conn, id, &[Change::label("a", "TRASH", true)]).unwrap();
     assert!(list_threads(&conn, &vip, 0, 10).unwrap().is_empty());
 }
 

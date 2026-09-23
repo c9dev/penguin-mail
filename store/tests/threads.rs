@@ -2,6 +2,7 @@ mod common;
 
 use common::{meta, mixed_mail, store};
 use mailrs_domain::{AccountId, ThreadSummary};
+use mailrs_store::messages::Change;
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{accounts, messages, open_in_memory};
 use rusqlite::Connection;
@@ -228,8 +229,7 @@ fn trashing_sent_mail_takes_it_out_of_the_sent_list_and_its_count() {
     assert_eq!(threads::count_threads(&conn, &sent).unwrap(), 2);
 
     // The Delete key moves the newer one to the Trash, as Gmail does.
-    messages::add_labels(&conn, a, "s2", &["TRASH".to_string()]).unwrap();
-    messages::refresh_thread(&conn, a, "ts2").unwrap();
+    messages::apply(&conn, a, &[Change::label("s2", "TRASH", true)]).unwrap();
 
     assert_eq!(
         ids(threads::list_threads(&conn, &sent, 0, 10).unwrap()),

@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use mailrs_domain::{Target, system_label};
 use mailrs_gmail::GmailError;
+use mailrs_store::messages::Change;
 use mailrs_store::outbox::{self, Queued};
 use mailrs_store::{drafts, messages};
 
@@ -14,11 +15,15 @@ use crate::{
 };
 
 /// Puts a draft's message in the store, as history replay does once the
-/// draft reaches this computer. Nothing here reads thread rows, so the
-/// thread is left unrefreshed.
+/// draft reaches this computer.
 async fn store_draft_message(h: &Harness, message_id: &str) {
     let message = meta(message_id, "t1", 1, &[system_label::DRAFT]);
-    h.db.write(move |c| messages::upsert_message(c, &message, 1))
+    let account_id = message.account_id;
+    let upsert = Change::Upsert {
+        meta: Box::new(message),
+        generation: 1,
+    };
+    h.db.write(move |c| messages::apply(c, account_id, &[upsert]).map(drop))
         .await
         .unwrap();
 }
@@ -167,13 +172,8 @@ async fn a_draft_sent_elsewhere_stops_answering_for_its_message() {
     });
     let (account_id, message_id) = (h.account_id, saved.message_id.clone());
     h.db.write(move |c| {
-        messages::remove_labels(
-            c,
-            account_id,
-            &message_id,
-            &[system_label::DRAFT.to_string()],
-        )
-        .map(|_| ())
+        let change = Change::label(&message_id, system_label::DRAFT, false);
+        messages::apply(c, account_id, &[change]).map(drop)
     })
     .await
     .unwrap();
@@ -199,9 +199,12 @@ async fn a_draft_edited_elsewhere_answers_for_its_new_message_alone() {
     });
     store_draft_message(&h, &moved).await;
     let (account_id, gone) = (h.account_id, saved.message_id.clone());
-    h.db.write(move |c| messages::delete_message(c, account_id, &gone).map(|_| ()))
-        .await
-        .unwrap();
+    h.db.write(move |c| {
+        let delete = Change::Delete { message_id: gone };
+        messages::apply(c, account_id, &[delete]).map(drop)
+    })
+    .await
+    .unwrap();
 
     assert_eq!(h.sync.draft_id_for(&saved.message_id).await.unwrap(), None);
     h.fake.reset_usage();

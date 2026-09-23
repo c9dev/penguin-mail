@@ -1,11 +1,12 @@
 //! Connection setup and migrations, tracked with `PRAGMA user_version`.
 
-use std::path::Path;
-use std::time::Duration;
+use std::io;
+use std::path::{Path, PathBuf};
+use std::time::{Duration, SystemTime};
 
 use rusqlite::Connection;
 
-use crate::Result;
+use crate::{Result, StoreError};
 
 const MIGRATIONS: &[&str] = &[
     r#"
@@ -370,22 +371,124 @@ CREATE TABLE IF NOT EXISTS outbox_claims (
 ALTER TABLE accounts ADD COLUMN oauth_client TEXT NOT NULL DEFAULT 'built_in';
 UPDATE accounts SET oauth_client = 'own';
 "#,
+    // Labels become server mailboxes with integer keys, keywords and
+    // categories; history_id moves into sync_state. See the file.
+    include_str!("schema/26-mailboxes.sql"),
 ];
+
+/// How long the copy taken before a migration stays once the store has
+/// opened on the new version.
+const KEEP_COPY_FOR: Duration = Duration::from_secs(7 * 24 * 60 * 60);
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,
 /// applies pending migrations, and brings the planner's statistics up to
-/// date.
+/// date. Before migrating a store that holds mail it copies it next to
+/// itself, and puts the copy back if the migration fails.
 pub fn open_connection(path: &Path) -> Result<Connection> {
+    open_with(path, MIGRATIONS)
+}
+
+/// `open_connection` up to the end of `migrations`, so a test can hand it
+/// one that fails.
+fn open_with(path: &Path, migrations: &[&str]) -> Result<Connection> {
     let mut conn = Connection::open(path)?;
     configure(&conn)?;
     conn.pragma_update_and_check(None, "journal_mode", "WAL", |row| row.get::<_, String>(0))?;
-    migrate(&mut conn)?;
+    let current = usize::try_from(schema_version(&conn)?).unwrap_or(0);
+    if current == 0 || current >= migrations.len() {
+        // A new store has nothing to lose, and one already up to date
+        // has nothing to migrate.
+        migrate(&mut conn, migrations)?;
+        forget_old_copies(path, SystemTime::now());
+    } else {
+        let copy = copy_path(path, migrations.len());
+        safety_copy(&conn, &copy)?;
+        if let Err(err) = migrate(&mut conn, migrations) {
+            drop(conn);
+            let reason = match restore(path, &copy) {
+                Ok(()) => err.to_string(),
+                Err(restore) => format!("{err}; putting the copy back failed too: {restore}"),
+            };
+            return Err(StoreError::Migration {
+                version: migrations.len(),
+                kept: copy,
+                reason,
+            });
+        }
+    }
     // 0x10000 looks at every table rather than the ones this connection
     // has queried, which on opening is none; 0x02 analyzes the ones whose
     // statistics are missing or stale. SQLite caps each analysis, so this
     // costs milliseconds and does nothing once the statistics are current.
     conn.execute_batch("PRAGMA optimize=0x10002")?;
     Ok(conn)
+}
+
+/// Where the copy taken before migrating to `version` goes: beside the
+/// store, as `mailrs.db.before-26`.
+fn copy_path(path: &Path, version: usize) -> PathBuf {
+    let mut name = path.file_name().unwrap_or_default().to_os_string();
+    name.push(format!(".before-{version}"));
+    path.with_file_name(name)
+}
+
+/// Copies the store into `copy` as one file, write-ahead log included. A
+/// copy an earlier failed attempt left is the same store, since that
+/// attempt put it back, so it is replaced.
+fn safety_copy(conn: &Connection, copy: &Path) -> Result<()> {
+    let target = copy
+        .to_str()
+        .ok_or_else(|| StoreError::SafetyCopy(format!("{} is not UTF-8", copy.display())))?;
+    remove_if_present(copy).map_err(|err| StoreError::SafetyCopy(err.to_string()))?;
+    conn.execute("VACUUM INTO ?1", [target])
+        .map_err(|err| StoreError::SafetyCopy(err.to_string()))?;
+    Ok(())
+}
+
+/// Puts `copy` back over the store. The write-ahead log and its index
+/// belong to the store the failed migration left, so they go first.
+fn restore(path: &Path, copy: &Path) -> io::Result<()> {
+    for suffix in ["-wal", "-shm"] {
+        let mut side = path.as_os_str().to_os_string();
+        side.push(suffix);
+        remove_if_present(Path::new(&side))?;
+    }
+    std::fs::copy(copy, path).map(drop)
+}
+
+fn remove_if_present(path: &Path) -> io::Result<()> {
+    match std::fs::remove_file(path) {
+        Err(err) if err.kind() != io::ErrorKind::NotFound => Err(err),
+        _ => Ok(()),
+    }
+}
+
+/// Removes the copies taken before earlier migrations once they are a
+/// week old, since the store has opened on the new version at every start
+/// since. A copy that cannot be read or removed stays, which costs disk
+/// space and nothing else.
+fn forget_old_copies(path: &Path, now: SystemTime) {
+    let (Some(dir), Some(name)) = (path.parent(), path.file_name()) else {
+        return;
+    };
+    let prefix = format!("{}.before-", name.to_string_lossy());
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        if !entry.file_name().to_string_lossy().starts_with(&prefix) {
+            continue;
+        }
+        let aged = entry
+            .metadata()
+            .and_then(|m| m.modified())
+            .ok()
+            .and_then(|at| now.duration_since(at).ok())
+            .is_some_and(|age| age > KEEP_COPY_FOR);
+        if aged {
+            let _ = std::fs::remove_file(entry.path());
+        }
+    }
 }
 
 /// Refreshes the planner's statistics for the tables this connection has
@@ -399,7 +502,7 @@ pub(crate) fn optimize(conn: &Connection) -> Result<()> {
 pub fn open_in_memory() -> Result<Connection> {
     let mut conn = Connection::open_in_memory()?;
     configure(&conn)?;
-    migrate(&mut conn)?;
+    migrate(&mut conn, MIGRATIONS)?;
     Ok(conn)
 }
 
@@ -422,9 +525,9 @@ pub(crate) fn configure(conn: &Connection) -> Result<()> {
     Ok(())
 }
 
-fn migrate(conn: &mut Connection) -> Result<()> {
+fn migrate(conn: &mut Connection, migrations: &[&str]) -> Result<()> {
     let current = usize::try_from(schema_version(conn)?).unwrap_or(0);
-    for (index, sql) in MIGRATIONS.iter().enumerate().skip(current) {
+    for (index, sql) in migrations.iter().enumerate().skip(current) {
         let tx = conn.transaction()?;
         tx.execute_batch(sql)?;
         tx.pragma_update(None, "user_version", (index + 1) as i64)?;
@@ -432,3 +535,6 @@ fn migrate(conn: &mut Connection) -> Result<()> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod migration_tests;

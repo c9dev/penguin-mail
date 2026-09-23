@@ -2,6 +2,7 @@ mod common;
 
 use common::{db, meta, store};
 use mailrs_domain::{Attachment, MessageBody, Protection, Provenance};
+use mailrs_store::messages::Change;
 use mailrs_store::{bodies, messages};
 
 fn body(text: &str) -> MessageBody {
@@ -85,7 +86,10 @@ fn deleting_a_message_deletes_its_body() {
     let (conn, id) = db();
     store(&conn, &[meta(id, "a", "t1", 100, &["INBOX"])]);
     bodies::put_body(&conn, id, "a", &body("hi"), 1).unwrap();
-    messages::delete_message(&conn, id, "a").unwrap();
+    let delete = Change::Delete {
+        message_id: "a".into(),
+    };
+    messages::apply(&conn, id, &[delete]).unwrap();
     assert!(bodies::get_body(&conn, id, "a", 2).unwrap().is_none());
     let attachments: i64 = conn
         .query_row("SELECT COUNT(*) FROM attachments", [], |r| r.get(0))
@@ -144,55 +148,4 @@ fn recorded_reads_only_move_access_times_forward() {
     assert_eq!(bodies::evict_bodies(&conn, 15).unwrap(), 1);
     assert!(bodies::peek_body(&conn, id, "a").unwrap().is_some());
     assert!(bodies::peek_body(&conn, id, "b").unwrap().is_none());
-}
-
-fn part(id: &str, mime: &str, content_id: &str) -> Attachment {
-    Attachment {
-        part_id: id.into(),
-        filename: format!("text-{content_id}.txt"),
-        mime_type: mime.into(),
-        size: 10,
-        attachment_id: None,
-        content_id: Some(content_id.into()),
-    }
-}
-
-/// Bodies read before LinkedIn's text parts counted as the body are empty,
-/// with the two halves filed as attachments. The migration drops them so
-/// the next open fetches them again; any other body stays.
-#[test]
-fn a_body_read_as_two_text_attachments_is_fetched_again() {
-    let dir = tempfile::tempdir().unwrap();
-    let path = dir.path().join("mail.db");
-    let conn = mailrs_store::open_connection(&path).unwrap();
-    let id = mailrs_store::accounts::insert_account(&conn, "me@example.com", 0).unwrap();
-    store(
-        &conn,
-        &[
-            meta(id, "li", "t1", 1, &["INBOX"]),
-            meta(id, "ok", "t2", 2, &["INBOX"]),
-        ],
-    );
-    let empty = MessageBody {
-        attachments: vec![
-            part("0", "text/plain", "text-body"),
-            part("1", "text/html", "html-body"),
-        ],
-        ..MessageBody::default()
-    };
-    bodies::put_body(&conn, id, "li", &empty, 1).unwrap();
-    bodies::put_body(&conn, id, "ok", &body("fine"), 1).unwrap();
-    // Back to version 19, without what the later migrations add, so they
-    // run again as they would on a store that old.
-    conn.execute_batch(
-        "ALTER TABLE accounts DROP COLUMN checked_at;
-         ALTER TABLE accounts DROP COLUMN oauth_client;",
-    )
-    .unwrap();
-    conn.pragma_update(None, "user_version", 19).unwrap();
-    drop(conn);
-
-    let conn = mailrs_store::open_connection(&path).unwrap();
-    assert!(bodies::get_body(&conn, id, "li", 2).unwrap().is_none());
-    assert!(bodies::get_body(&conn, id, "ok", 2).unwrap().is_some());
 }

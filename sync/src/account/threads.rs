@@ -4,6 +4,7 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use mailrs_domain::{MessageBody, MessageMeta};
+use mailrs_store::messages::Change;
 use mailrs_store::{accounts, bodies, messages};
 
 use super::AccountSync;
@@ -110,23 +111,32 @@ impl AccountSync {
                 match found {
                     Some(metas) => {
                         let mut changed = false;
+                        let mut changes = Vec::new();
                         for meta in &metas {
                             let stored = before.iter().find(|m| m.id == meta.id);
                             if overtaken && stored.is_some() {
                                 continue;
                             }
                             changed |= stored.is_none_or(|stored| differs(stored, meta));
-                            messages::upsert_message(c, meta, cursor.sync_gen)?;
+                            changes.push(Change::Upsert {
+                                meta: Box::new(meta.clone()),
+                                generation: cursor.sync_gen,
+                            });
                         }
-                        messages::refresh_thread(c, account_id, &thread)?;
-                        messages::mark_whole(c, account_id, &thread)?;
+                        changes.push(Change::MarkWhole {
+                            thread_id: thread.clone(),
+                        });
+                        messages::apply(c, account_id, &changes)?;
                         Ok(Written::Stored { changed })
                     }
                     // History deletes what Gmail deleted before the cursor,
                     // so an overtaken "not found" leaves the store alone.
                     None if overtaken => Ok(Written::Stored { changed: false }),
                     None => {
-                        messages::delete_thread(c, account_id, &thread)?;
+                        let delete = Change::DeleteThread {
+                            thread_id: thread.clone(),
+                        };
+                        messages::apply(c, account_id, &[delete])?;
                         Ok(Written::Stored {
                             changed: !before.is_empty(),
                         })

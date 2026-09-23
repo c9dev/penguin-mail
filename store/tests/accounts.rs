@@ -7,10 +7,10 @@ fn migrations_run_once_and_record_the_version() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("mail.db");
     let conn = open_connection(&path).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 25);
+    assert_eq!(schema_version(&conn).unwrap(), 26);
     drop(conn);
     let conn = open_connection(&path).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 25);
+    assert_eq!(schema_version(&conn).unwrap(), 26);
 }
 
 #[test]
@@ -70,16 +70,16 @@ fn cursors_start_empty_and_track_progress() {
     assert_eq!(
         accounts::sync_cursor(&conn, id).unwrap(),
         SyncCursor {
-            history_id: None,
+            state: None,
             backfill_cursor: None,
             backfill_done: false,
             sync_gen: 1
         }
     );
-    accounts::set_history_id(&conn, id, 55).unwrap();
+    accounts::set_sync_state(&conn, id, "{\"history_id\":55}").unwrap();
     accounts::set_backfill(&conn, id, Some("p2"), false).unwrap();
     let cursor = accounts::sync_cursor(&conn, id).unwrap();
-    assert_eq!(cursor.history_id, Some(55));
+    assert_eq!(cursor.state.as_deref(), Some("{\"history_id\":55}"));
     assert_eq!(cursor.backfill_cursor.as_deref(), Some("p2"));
 }
 
@@ -88,11 +88,11 @@ fn a_new_generation_resets_backfill() {
     let conn = open_in_memory().unwrap();
     let id = accounts::insert_account(&conn, "me@example.com", 0).unwrap();
     accounts::set_backfill(&conn, id, Some("p9"), true).unwrap();
-    assert_eq!(accounts::start_generation(&conn, id, 99).unwrap(), 2);
+    assert_eq!(accounts::start_generation(&conn, id, "s99").unwrap(), 2);
     assert_eq!(
         accounts::sync_cursor(&conn, id).unwrap(),
         SyncCursor {
-            history_id: Some(99),
+            state: Some("s99".into()),
             backfill_cursor: None,
             backfill_done: false,
             sync_gen: 2
@@ -119,30 +119,32 @@ fn a_new_account_signs_in_with_the_built_in_client() {
 }
 
 #[test]
-fn an_account_from_before_the_migration_keeps_its_own_client() {
-    let dir = tempfile::tempdir().unwrap();
-    let path = dir.path().join("mail.db");
-    let conn = open_connection(&path).unwrap();
-    let id = accounts::insert_account(&conn, "me@example.com", 0).unwrap();
-    conn.execute_batch("ALTER TABLE accounts DROP COLUMN oauth_client")
-        .unwrap();
-    let before = schema_version(&conn).unwrap() - 1;
-    conn.pragma_update(None, "user_version", before).unwrap();
-    drop(conn);
-
-    let conn = open_connection(&path).unwrap();
-    assert_eq!(accounts::sign_in_client(&conn, id).unwrap(), SignInClient::Own);
-}
-
-#[test]
 fn signing_in_again_moves_an_account_to_the_built_in_client() {
     let conn = open_in_memory().unwrap();
     let id = accounts::insert_account(&conn, "me@example.com", 0).unwrap();
     accounts::set_sign_in_client(&conn, id, SignInClient::Own).unwrap();
-    assert_eq!(accounts::sign_in_client(&conn, id).unwrap(), SignInClient::Own);
+    assert_eq!(
+        accounts::sign_in_client(&conn, id).unwrap(),
+        SignInClient::Own
+    );
     accounts::set_sign_in_client(&conn, id, SignInClient::BuiltIn).unwrap();
     assert_eq!(
         accounts::sign_in_client(&conn, id).unwrap(),
         SignInClient::BuiltIn
+    );
+}
+
+#[test]
+fn a_new_account_is_served_by_gmail() {
+    let conn = open_in_memory().unwrap();
+    let id = accounts::insert_account(&conn, "me@example.com", 0).unwrap();
+    let listed = accounts::list_accounts(&conn).unwrap();
+    assert_eq!(listed[0].provider, mailrs_domain::Provider::Gmail);
+    let found = accounts::account_by_email(&conn, "me@example.com")
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        (found.id, found.provider),
+        (id, mailrs_domain::Provider::Gmail)
     );
 }

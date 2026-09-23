@@ -186,6 +186,28 @@ fn version_fourteen(path: &std::path::Path) {
             has_attachments INTEGER NOT NULL,
             PRIMARY KEY (account_id, id)
         );
+        CREATE TABLE labels (
+            account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            id         TEXT NOT NULL,
+            name       TEXT NOT NULL,
+            kind       TEXT NOT NULL,
+            color      TEXT,
+            PRIMARY KEY (account_id, id)
+        );
+        CREATE TABLE message_labels (
+            account_id INTEGER NOT NULL,
+            message_id TEXT NOT NULL,
+            label_id   TEXT NOT NULL,
+            PRIMARY KEY (account_id, message_id, label_id),
+            FOREIGN KEY (account_id, message_id) REFERENCES messages(account_id, id) ON DELETE CASCADE
+        );
+        CREATE TABLE thread_labels (
+            account_id INTEGER NOT NULL,
+            thread_id  TEXT NOT NULL,
+            label_id   TEXT NOT NULL,
+            PRIMARY KEY (account_id, thread_id, label_id),
+            FOREIGN KEY (account_id, thread_id) REFERENCES threads(account_id, id) ON DELETE CASCADE
+        );
         INSERT INTO accounts (id, email, added_at) VALUES (1, 'me@example.com', 0);
         INSERT INTO scheduled VALUES (1, 'r1', 'm1', 't1', 'Monday', 'Ann', 5000);
         PRAGMA user_version = 14;",

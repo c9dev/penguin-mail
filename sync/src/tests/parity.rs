@@ -163,3 +163,86 @@ async fn a_search_reaches_gmail_as_typed() {
     let ids: Vec<&str> = found.iter().map(|m| m.id.as_str()).collect();
     assert_eq!(ids, ["old"]);
 }
+
+/// A page token Gmail no longer takes is the server losing its place in
+/// the listing, and backfill lists the window again from the top.
+#[tokio::test]
+async fn a_backfill_page_token_gmail_refuses_starts_the_window_again() {
+    let h = harness().await;
+    let now = now_millis();
+    for (i, id) in ["a", "b", "c"].into_iter().enumerate() {
+        h.fake.seed(meta(id, &format!("t{id}"), now - i as i64 * 1000, &["INBOX"]));
+    }
+    h.sync.bootstrap().await.unwrap();
+    assert!(h.cursor().await.backfill_cursor.is_some());
+    h.fake.fail_next(mailrs_gmail::GmailError::Http { status: 400, body: String::new() });
+
+    assert!(h.sync.backfill_step().await.unwrap(), "pages remain");
+
+    let cursor = h.cursor().await;
+    assert_eq!(cursor.backfill_cursor, None);
+    assert!(!cursor.backfill_done);
+}
+
+/// Every mark Gmail keeps as a label reaches the store when it changes
+/// on the web: the inbox, Important, a person's label, a category, the
+/// star, unread and mute, on and then off again.
+#[tokio::test]
+async fn every_label_changed_on_the_web_reaches_the_store() {
+    let h = harness().await;
+    h.fake.seed(meta(
+        "a",
+        "t1",
+        now_millis(),
+        &["INBOX", "UNREAD", "CATEGORY_UPDATES"],
+    ));
+    h.bootstrap_all().await;
+
+    h.fake.remote_relabel(
+        "a",
+        &["IMPORTANT", "Label_1", "STARRED", "MUTE", "CATEGORY_SOCIAL"],
+        &["UNREAD", "CATEGORY_UPDATES", "INBOX"],
+    );
+    h.sync.incremental().await.unwrap();
+    assert_eq!(
+        h.labels_of("a").await,
+        ["CATEGORY_SOCIAL", "IMPORTANT", "Label_1", "MUTE", "STARRED"]
+    );
+    let thread = h.thread("t1").await.unwrap();
+    assert!(!thread.unread && thread.starred && thread.muted);
+    assert_eq!(h.threads("MUTE").await, ["t1"]);
+    assert!(h.threads("INBOX").await.is_empty());
+
+    h.fake
+        .remote_relabel("a", &["UNREAD", "INBOX"], &["STARRED", "MUTE", "IMPORTANT"]);
+    h.sync.incremental().await.unwrap();
+    assert_eq!(
+        h.labels_of("a").await,
+        ["CATEGORY_SOCIAL", "INBOX", "Label_1", "UNREAD"]
+    );
+    let thread = h.thread("t1").await.unwrap();
+    assert!(thread.unread && !thread.starred && !thread.muted);
+    assert_eq!(h.threads("INBOX").await, ["t1"]);
+}
+
+/// A star and a read made while history was out of reach still arrive:
+/// the relisting compares every label Gmail lists, and Gmail lists the
+/// star and unread among them.
+#[tokio::test]
+async fn relisting_after_lost_history_catches_a_star_and_a_read() {
+    let h = harness().await;
+    h.fake
+        .seed(meta("a", "t1", now_millis(), &["INBOX", "UNREAD"]));
+    h.bootstrap_all().await;
+    h.fake.with(|s| {
+        let a = s.messages.get_mut("a").expect("seeded");
+        a.label_ids = vec!["INBOX".into(), "STARRED".into()];
+    });
+    h.fake.expire_history();
+
+    h.sync.incremental().await.unwrap();
+
+    assert_eq!(h.labels_of("a").await, ["INBOX", "STARRED"]);
+    let thread = h.thread("t1").await.unwrap();
+    assert!(thread.starred && !thread.unread);
+}

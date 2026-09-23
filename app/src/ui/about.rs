@@ -10,7 +10,7 @@ use mailrs_domain::translate::{fill, gettext};
 
 use crate::update::State;
 
-const REPOSITORY: &str = "https://github.com/c9dev/penguin-mail";
+pub(crate) const REPOSITORY: &str = "https://github.com/c9dev/penguin-mail";
 
 pub struct About {
     pub dialog: adw::Dialog,

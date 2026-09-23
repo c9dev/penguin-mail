@@ -9,7 +9,6 @@ mod outbox;
 mod threads;
 mod window;
 mod writes;
-pub use writes::Relabelled;
 
 use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex};
@@ -165,7 +164,7 @@ impl AccountSync {
     /// `messages.get` each. Messages deleted since they were listed are
     /// skipped.
     pub async fn fetch_metadata(&self, ids: &[String]) -> Result<Vec<MessageMeta>, SyncError> {
-        let wants = ids.iter().map(fetch::Want::message).collect();
+        let wants = ids.iter().map(crate::Want::message).collect();
         Ok(self.fetch(wants).await?.metas)
     }
 }

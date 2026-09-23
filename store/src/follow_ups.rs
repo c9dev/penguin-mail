@@ -59,14 +59,15 @@ pub fn waiting_count(conn: &Connection, now: EpochMillis) -> Result<i64> {
 /// `?1` and `?2`, in no order.
 const WAITING: &str = "SELECT m.account_id, m.thread_id, m.id, m.subject, m.to_addrs, m.date FROM messages m \
          WHERE m.date BETWEEN ?1 AND ?2 \
-         AND EXISTS (SELECT 1 FROM message_labels s WHERE s.account_id = m.account_id \
-             AND s.message_id = m.id AND s.label_id = 'SENT') \
+         AND EXISTS (SELECT 1 FROM message_mailboxes s CROSS JOIN mailboxes b ON b.key = s.mailbox \
+             WHERE s.account_id = m.account_id AND s.message_id = m.id AND b.role = 'sent') \
          AND NOT EXISTS (SELECT 1 FROM messages n WHERE n.account_id = m.account_id \
              AND n.thread_id = m.thread_id AND (n.date > m.date OR (n.date = m.date AND n.id > m.id)) \
-             AND NOT EXISTS (SELECT 1 FROM message_labels d WHERE d.account_id = n.account_id \
-                 AND d.message_id = n.id AND d.label_id = 'DRAFT')) \
-         AND NOT EXISTS (SELECT 1 FROM thread_labels t WHERE t.account_id = m.account_id \
-             AND t.thread_id = m.thread_id AND t.label_id IN ('TRASH', 'SPAM')) \
+             AND NOT EXISTS (SELECT 1 FROM message_mailboxes d CROSS JOIN mailboxes b ON b.key = d.mailbox \
+                 WHERE d.account_id = n.account_id AND d.message_id = n.id AND b.role = 'drafts')) \
+         AND NOT EXISTS (SELECT 1 FROM thread_mailboxes t CROSS JOIN mailboxes b ON b.key = t.mailbox \
+             WHERE t.account_id = m.account_id AND t.thread_id = m.thread_id \
+             AND b.role IN ('trash', 'junk')) \
          AND NOT EXISTS (SELECT 1 FROM follow_up_dismissals f WHERE f.account_id = m.account_id \
              AND f.thread_id = m.thread_id AND f.dismissed_at >= m.date)";
 

@@ -13,6 +13,7 @@ pub mod follow_ups;
 pub mod image_senders;
 pub mod invitations;
 pub mod labels;
+pub mod mailboxes;
 pub mod messages;
 pub mod newsletters;
 pub mod outbox;

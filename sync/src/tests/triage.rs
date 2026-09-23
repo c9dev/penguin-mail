@@ -276,11 +276,11 @@ async fn one_message_can_be_triaged_alone() {
         .unwrap();
     assert_eq!(
         changed,
-        [crate::Relabelled {
+        [mailrs_domain::Applied {
             thread_id: "t1".into(),
             message_id: "b".into(),
-            added: vec![],
-            removed: vec!["UNREAD".into()],
+            gained: vec![mailrs_domain::Membership::Keyword("$seen".into())],
+            lost: vec![],
         }]
     );
     assert_eq!(h.labels_of("a").await, ["INBOX", "UNREAD"]);

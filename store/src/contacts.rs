@@ -130,8 +130,9 @@ pub fn list_correspondents(conn: &Connection) -> Result<Vec<Correspondent>> {
         "SELECT m.from_name, m.from_addr, \
          CASE WHEN s.message_id IS NULL THEN NULL ELSE m.to_addrs END, \
          CASE WHEN s.message_id IS NULL THEN NULL ELSE m.cc_addrs END, m.date \
-         FROM messages m LEFT JOIN message_labels s \
-         ON s.account_id = m.account_id AND s.message_id = m.id AND s.label_id = 'SENT'",
+         FROM messages m LEFT JOIN message_mailboxes s \
+         ON s.account_id = m.account_id AND s.message_id = m.id \
+         AND s.mailbox IN (SELECT key FROM mailboxes WHERE role = 'sent')",
     )?;
     let rows = stmt.query_map([], |row| {
         Ok((
@@ -258,16 +259,19 @@ mod tests {
         let id = accounts::insert_account(&conn, "dana@example.com", 0).unwrap();
         // Ten messages from Theo, none from Mara, who is a contact.
         for n in 0..10 {
-            messages::upsert_message(
+            messages::apply(
                 &conn,
-                &message(
-                    id,
-                    &format!("m{n}"),
-                    ("Theo Lang", "theo@example.org"),
-                    &[("Dana", "dana@example.com")],
-                    system_label::INBOX,
-                ),
-                1,
+                id,
+                &[messages::Change::Upsert {
+                    meta: Box::new(message(
+                        id,
+                        &format!("m{n}"),
+                        ("Theo Lang", "theo@example.org"),
+                        &[("Dana", "dana@example.com")],
+                        system_label::INBOX,
+                    )),
+                    generation: 1,
+                }],
             )
             .unwrap();
         }
@@ -299,28 +303,34 @@ mod tests {
     fn mail_orders_the_contacts_and_google_names_them() {
         let conn = open_in_memory().unwrap();
         let id = accounts::insert_account(&conn, "dana@example.com", 0).unwrap();
-        messages::upsert_message(
+        messages::apply(
             &conn,
-            &message(
-                id,
-                "m1",
-                ("Dana", "dana@example.com"),
-                &[("t", "theo@example.org")],
-                system_label::SENT,
-            ),
-            1,
+            id,
+            &[messages::Change::Upsert {
+                meta: Box::new(message(
+                    id,
+                    "m1",
+                    ("Dana", "dana@example.com"),
+                    &[("t", "theo@example.org")],
+                    system_label::SENT,
+                )),
+                generation: 1,
+            }],
         )
         .unwrap();
-        messages::upsert_message(
+        messages::apply(
             &conn,
-            &message(
-                id,
-                "m2",
-                ("M. O.", "mara@example.org"),
-                &[("Dana", "dana@example.com")],
-                system_label::INBOX,
-            ),
-            1,
+            id,
+            &[messages::Change::Upsert {
+                meta: Box::new(message(
+                    id,
+                    "m2",
+                    ("M. O.", "mara@example.org"),
+                    &[("Dana", "dana@example.com")],
+                    system_label::INBOX,
+                )),
+                generation: 1,
+            }],
         )
         .unwrap();
         let contact = |resource: &str, name: &str, email: &str| address_book::Contact {

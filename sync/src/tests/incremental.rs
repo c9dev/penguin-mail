@@ -17,7 +17,7 @@ async fn new_inbox_mail_is_stored_and_announced() {
         .deliver(meta("new", "tnew", now, &["INBOX", "UNREAD"]));
     h.sync.incremental().await.unwrap();
     assert_eq!(h.threads("INBOX").await, ["tnew", "told"]);
-    assert_eq!(h.cursor().await.history_id, Some(101));
+    assert_eq!(h.history_id().await, Some(101));
     assert!(h.drain().contains(&ChangeEvent::NewMail {
         account_id: 1,
         message_ids: vec!["new".into()]
@@ -80,7 +80,7 @@ async fn every_history_page_is_applied() {
     }
     h.sync.incremental().await.unwrap();
     assert_eq!(h.threads("INBOX").await.len(), 5);
-    assert_eq!(h.cursor().await.history_id, Some(105));
+    assert_eq!(h.history_id().await, Some(105));
 }
 
 #[tokio::test]
@@ -96,7 +96,7 @@ async fn expired_history_bootstraps_again_and_sweeps_stale_mail() {
     h.sync.incremental().await.unwrap();
     assert_eq!(h.threads("INBOX").await, ["tkeep"]);
     let cursor = h.cursor().await;
-    assert_eq!(cursor.history_id, Some(101));
+    assert_eq!(h.history_id().await, Some(101));
     assert!(cursor.backfill_done);
 }
 
@@ -115,7 +115,7 @@ async fn a_gmail_failure_leaves_the_cursor_alone() {
     h.fake.deliver(meta("a", "ta", now_millis(), &["INBOX"]));
     h.fake.fail_next(GmailError::Network("down".into()));
     assert!(h.sync.incremental().await.is_err());
-    assert_eq!(h.cursor().await.history_id, Some(100));
+    assert_eq!(h.history_id().await, Some(100));
     h.sync.incremental().await.unwrap();
     assert_eq!(h.threads("INBOX").await, ["ta"]);
 }

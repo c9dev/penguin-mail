@@ -1,8 +1,7 @@
 //! Sending, drafts, search, attachments and exports: mail calls the UI makes
 //! on demand rather than as part of the sync loop.
 
-use std::collections::BTreeSet;
-
+use mailrs_store::messages::Change;
 use mailrs_store::{drafts, messages};
 
 use super::AccountSync;
@@ -41,9 +40,7 @@ impl AccountSync {
         let Some(id) = message_id_header(raw) else {
             return Ok(None);
         };
-        let query = format!("in:sent rfc822msgid:{id}");
-        let page = self.services.mail.list_messages(&query, None, 1).await?;
-        Ok(page.messages.into_iter().next().map(|m| m.id))
+        Ok(self.services.mail.find_sent(&id).await?)
     }
 
     /// Saves a draft in Gmail, replacing `draft_id` when given. If that
@@ -106,17 +103,14 @@ impl AccountSync {
         };
         self.delete_draft(&draft_id).await?;
         let (account_id, id) = (self.account_id, message_id.to_string());
-        let thread = self
+        let threads = self
             .db
             .write(move |c| {
-                let thread = messages::delete_message(c, account_id, &id)?;
-                if let Some(thread) = &thread {
-                    messages::refresh_thread(c, account_id, thread)?;
-                }
-                Ok(thread)
+                let delete = Change::Delete { message_id: id };
+                Ok(messages::apply(c, account_id, &[delete])?.threads)
             })
             .await?;
-        self.emit_threads(thread.into_iter().collect::<BTreeSet<_>>());
+        self.emit_threads(threads);
         Ok(true)
     }
 
@@ -195,7 +189,12 @@ impl AccountSync {
     /// The message as it arrived, for View Source and for saving one
     /// message as an `.eml` file.
     pub async fn raw_message(&self, id: &str) -> Result<Vec<u8>, SyncError> {
-        Ok(self.services.mail.raw_message(id).await?)
+        let raw = self.services.mail.fetch_raw(&[id.to_string()]).await?;
+        Ok(raw
+            .into_iter()
+            .next()
+            .map(|r| r.bytes)
+            .ok_or(BackendError::NotFound)?)
     }
 
     /// A conversation as an mbox file, oldest message first, or the one
@@ -210,18 +209,26 @@ impl AccountSync {
     ) -> Result<Vec<u8>, SyncError> {
         let ids: Vec<String> = match message_id {
             Some(id) => vec![id.to_string()],
-            None => self
-                .services
-                .mail
-                .thread_metadata(thread_id)
-                .await?
-                .into_iter()
-                .map(|meta| meta.id)
-                .collect(),
+            None => {
+                let found = self
+                    .services
+                    .mail
+                    .fetch_whole(vec![thread_id.to_string()])
+                    .await?;
+                if !found.gone_threads.is_empty() {
+                    return Err(BackendError::NotFound.into());
+                }
+                found
+                    .whole
+                    .into_iter()
+                    .flatten()
+                    .map(|meta| meta.id)
+                    .collect()
+            }
         };
         let mut mbox = Vec::new();
-        for id in ids {
-            crate::export::append(&mut mbox, &self.services.mail.raw_message(&id).await?);
+        for raw in self.services.mail.fetch_raw(&ids).await? {
+            crate::export::append(&mut mbox, &raw.bytes);
         }
         Ok(mbox)
     }

@@ -7,20 +7,20 @@
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
-use mailrs_domain::{EpochMillis, Filter, MessageBody, MessageMeta, Vacation};
+use mailrs_domain::{EpochMillis, Filter, MessageBody, RemoteMailbox, Role, Vacation};
 use mailrs_gmail::{
-    Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, HistoryPage, LabelColor,
-    MessagePage, Person, Profile, RemoteLabel, Series,
+    Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, Person, Series,
 };
 
 use super::{
-    AutoReplyService, CalendarService, ContactsService, Google, IdentityService, MailBackend,
-    MailCapabilities, RulesService, SendAsAddress,
+    AutoReplyService, Backfill, CalendarService, Changes, ContactsService, Found, Google,
+    IdentityService, MailBackend, MailCapabilities, RawMessage, RemoteRef, RulesService,
+    SearchQuery, SendAsAddress, SyncState, Unapplied, Want,
 };
-use crate::BackendError;
 use crate::api::{AccountClient, DraftRef, SavedDraft};
 #[cfg(any(test, feature = "fake"))]
 use crate::fake::FakeGmail;
+use crate::{BackendError, MailOp};
 
 /// Awaits `$method` on whichever adapter `$self`, an `$enum`, holds.
 macro_rules! forward {
@@ -90,6 +90,18 @@ impl MailBackend for AnyMail {
         }
     }
 
+    fn mailbox_for(&self, role: Role) -> Option<String> {
+        match self {
+            AnyMail::Google(adapter) => adapter.mailbox_for(role),
+            #[cfg(any(test, feature = "fake"))]
+            AnyMail::Fake(adapter) => adapter.mailbox_for(role),
+        }
+    }
+
+    async fn apply(&self, messages: &[String], ops: &[MailOp]) -> Result<(), Unapplied> {
+        forward!(AnyMail, self, apply(messages, ops))
+    }
+
     fn person_waiting(&self) -> bool {
         match self {
             AnyMail::Google(adapter) => adapter.person_waiting(),
@@ -102,77 +114,52 @@ impl MailBackend for AnyMail {
         forward!(AnyMail, self, stand_by(wait))
     }
 
-    async fn profile(&self) -> Result<Profile, BackendError> {
-        forward!(AnyMail, self, profile())
+    async fn backfill(&self, days: i64, cursor: Option<&str>) -> Result<Backfill, BackendError> {
+        forward!(AnyMail, self, backfill(days, cursor))
     }
 
-    async fn labels(&self) -> Result<Vec<RemoteLabel>, BackendError> {
-        forward!(AnyMail, self, labels())
-    }
-
-    async fn list_messages(
+    async fn window_ids(
         &self,
-        query: &str,
-        page_token: Option<&str>,
-        page_size: u32,
-    ) -> Result<MessagePage, BackendError> {
-        forward!(AnyMail, self, list_messages(query, page_token, page_size))
+        days: i64,
+        mailbox: Option<&str>,
+    ) -> Result<Vec<RemoteRef>, BackendError> {
+        forward!(AnyMail, self, window_ids(days, mailbox))
     }
 
-    async fn list_labelled(
+    async fn inbox_ids(&self) -> Result<Vec<RemoteRef>, BackendError> {
+        forward!(AnyMail, self, inbox_ids())
+    }
+
+    async fn search(
         &self,
-        label_id: &str,
-        query: &str,
-        page_token: Option<&str>,
-        page_size: u32,
-    ) -> Result<MessagePage, BackendError> {
-        forward!(
-            AnyMail,
-            self,
-            list_labelled(label_id, query, page_token, page_size)
-        )
+        query: &SearchQuery,
+        limit: usize,
+    ) -> Result<Vec<RemoteRef>, BackendError> {
+        forward!(AnyMail, self, search(query, limit))
     }
 
-    async fn message_metadata(&self, id: &str) -> Result<MessageMeta, BackendError> {
-        forward!(AnyMail, self, message_metadata(id))
+    async fn find_sent(&self, message_id: &str) -> Result<Option<String>, BackendError> {
+        forward!(AnyMail, self, find_sent(message_id))
     }
 
-    async fn thread_metadata(&self, thread_id: &str) -> Result<Vec<MessageMeta>, BackendError> {
-        forward!(AnyMail, self, thread_metadata(thread_id))
+    async fn fetch(&self, wants: Vec<Want>) -> Result<Found, BackendError> {
+        forward!(AnyMail, self, fetch(wants))
+    }
+
+    async fn fetch_whole(&self, threads: Vec<String>) -> Result<Found, BackendError> {
+        forward!(AnyMail, self, fetch_whole(threads))
+    }
+
+    async fn fetch_raw(&self, ids: &[String]) -> Result<Vec<RawMessage>, BackendError> {
+        forward!(AnyMail, self, fetch_raw(ids))
+    }
+
+    async fn append(&self, raw: &[u8], mailbox: &str) -> Result<String, BackendError> {
+        forward!(AnyMail, self, append(raw, mailbox))
     }
 
     async fn message_body(&self, id: &str) -> Result<MessageBody, BackendError> {
         forward!(AnyMail, self, message_body(id))
-    }
-
-    async fn history(
-        &self,
-        start_history_id: u64,
-        page_token: Option<&str>,
-    ) -> Result<HistoryPage, BackendError> {
-        forward!(AnyMail, self, history(start_history_id, page_token))
-    }
-
-    async fn modify_labels(
-        &self,
-        id: &str,
-        add: &[String],
-        remove: &[String],
-    ) -> Result<(), BackendError> {
-        forward!(AnyMail, self, modify_labels(id, add, remove))
-    }
-
-    async fn batch_modify(
-        &self,
-        ids: &[String],
-        add: &[String],
-        remove: &[String],
-    ) -> Result<(), BackendError> {
-        forward!(AnyMail, self, batch_modify(ids, add, remove))
-    }
-
-    async fn delete_messages(&self, ids: &[String]) -> Result<(), BackendError> {
-        forward!(AnyMail, self, delete_messages(ids))
     }
 
     async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, BackendError> {
@@ -208,32 +195,44 @@ impl MailBackend for AnyMail {
         forward!(AnyMail, self, attachment(message_id, attachment_id))
     }
 
-    async fn raw_message(&self, id: &str) -> Result<Vec<u8>, BackendError> {
-        forward!(AnyMail, self, raw_message(id))
+    fn made_by_person(&self, id: &str) -> bool {
+        match self {
+            AnyMail::Google(adapter) => adapter.made_by_person(id),
+            #[cfg(any(test, feature = "fake"))]
+            AnyMail::Fake(adapter) => adapter.made_by_person(id),
+        }
     }
 
-    async fn create_label(&self, name: &str) -> Result<RemoteLabel, BackendError> {
-        forward!(AnyMail, self, create_label(name))
+    async fn mailboxes(&self) -> Result<Vec<RemoteMailbox>, BackendError> {
+        forward!(AnyMail, self, mailboxes())
     }
 
-    async fn rename_label(&self, id: &str, name: &str) -> Result<RemoteLabel, BackendError> {
-        forward!(AnyMail, self, rename_label(id, name))
+    async fn changes(&self, since: Option<&SyncState>) -> Result<Changes, BackendError> {
+        forward!(AnyMail, self, changes(since))
     }
 
-    async fn delete_label(&self, id: &str) -> Result<(), BackendError> {
-        forward!(AnyMail, self, delete_label(id))
+    async fn create_mailbox(&self, name: &str) -> Result<RemoteMailbox, BackendError> {
+        forward!(AnyMail, self, create_mailbox(name))
     }
 
-    async fn set_label_color(
+    async fn rename_mailbox(&self, id: &str, name: &str) -> Result<RemoteMailbox, BackendError> {
+        forward!(AnyMail, self, rename_mailbox(id, name))
+    }
+
+    async fn delete_mailbox(&self, id: &str) -> Result<(), BackendError> {
+        forward!(AnyMail, self, delete_mailbox(id))
+    }
+
+    async fn set_mailbox_color(
         &self,
         id: &str,
         color: &LabelColor,
-    ) -> Result<RemoteLabel, BackendError> {
-        forward!(AnyMail, self, set_label_color(id, color))
+    ) -> Result<RemoteMailbox, BackendError> {
+        forward!(AnyMail, self, set_mailbox_color(id, color))
     }
 
-    async fn label_threads(&self, id: &str) -> Result<u64, BackendError> {
-        forward!(AnyMail, self, label_threads(id))
+    async fn mailbox_threads(&self, id: &str) -> Result<u64, BackendError> {
+        forward!(AnyMail, self, mailbox_threads(id))
     }
 }
 

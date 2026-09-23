@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use anyhow::{Context, Result, anyhow, bail};
 use clap::{Parser, Subcommand};
-use mailrs_domain::{Account, AccountId, ChangeEvent, EpochMillis, system_label};
+use mailrs_domain::{Account, AccountId, ChangeEvent, EpochMillis, Provider, system_label};
 use mailrs_gmail::{
     GMAIL_API_BASE, KeyringTokenStore, OAuthClient, TokenStore, authorize, built_in_client,
 };
@@ -255,8 +255,13 @@ async fn run_sync(db: &Db, dir: &Path, config: &Config) -> Result<()> {
                 continue;
             }
         };
-        match connect_account(oauth, Arc::clone(&tokens), account).await {
-            Ok(client) => engine.start_account(account.id, AccountServices::google(client)),
+        let connected = match account.provider {
+            Provider::Gmail => connect_account(oauth, Arc::clone(&tokens), account)
+                .await
+                .map(AccountServices::google),
+        };
+        match connected {
+            Ok(services) => engine.start_account(account.id, services),
             Err(err) => eprintln!("{}: {err}", account.email),
         }
     }
@@ -544,11 +549,15 @@ async fn triage(
 async fn account_sync(db: &Db, config: &Config, email: &str) -> Result<AccountSync> {
     let account = find_account(db, email).await?;
     let oauth = oauth_for(db, config, &account).await?;
-    let client = connect_account(oauth, token_store(), &account).await?;
+    let services = match account.provider {
+        Provider::Gmail => {
+            AccountServices::google(connect_account(oauth, token_store(), &account).await?)
+        }
+    };
     let (events, _) = async_channel::unbounded();
     let engine = config.engine_config();
     Ok(
-        AccountSync::new(account.id, AccountServices::google(client), db.clone(), events)
+        AccountSync::new(account.id, services, db.clone(), events)
             .with_limits(engine.window_days, engine.body_cache_bytes),
     )
 }

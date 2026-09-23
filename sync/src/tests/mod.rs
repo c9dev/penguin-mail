@@ -143,6 +143,15 @@ impl Harness {
             .unwrap()
     }
 
+    /// The history id the Google adapter keeps in the account's sync state.
+    pub async fn history_id(&self) -> Option<u64> {
+        let state = self.cursor().await.state?;
+        serde_json::from_str::<serde_json::Value>(&state)
+            .ok()?
+            .get("history_id")?
+            .as_u64()
+    }
+
     /// When a cached body was last read.
     pub async fn accessed_at(&self, message_id: &str) -> i64 {
         let (account_id, message_id) = (self.account_id, message_id.to_string());

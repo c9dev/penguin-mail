@@ -8,12 +8,11 @@
 //! elsewhere gives it a new message and leaves the old id naming text
 //! nobody holds; sending or deleting one leaves it naming nothing at all.
 //! So [`draft_of`] answers only while the store still shows that message
-//! carrying the DRAFT label. History replay is what keeps that answer
+//! filed under Drafts. History replay is what keeps that answer
 //! honest: it takes the label off a draft that was sent and the message
 //! off one that was deleted.
 
 use mailrs_domain::AccountId;
-use mailrs_domain::system_label::DRAFT;
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::Result;
@@ -75,11 +74,12 @@ pub fn draft_of(
     message_id: &str,
 ) -> Result<Option<String>> {
     let mut stmt = conn.prepare_cached(
-        "SELECT d.draft_id FROM drafts d JOIN message_labels l \
+        "SELECT d.draft_id FROM drafts d JOIN message_mailboxes l \
          ON l.account_id = d.account_id AND l.message_id = d.message_id \
-         WHERE d.account_id = ?1 AND d.message_id = ?2 AND l.label_id = ?3",
+         WHERE d.account_id = ?1 AND d.message_id = ?2 \
+         AND l.mailbox IN (SELECT key FROM mailboxes WHERE account_id = ?1 AND role = 'drafts')",
     )?;
     Ok(stmt
-        .query_row(params![account_id, message_id, DRAFT], |row| row.get(0))
+        .query_row(params![account_id, message_id], |row| row.get(0))
         .optional()?)
 }

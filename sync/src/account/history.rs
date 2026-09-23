@@ -1,122 +1,138 @@
-//! Incremental sync: replays Gmail history since the stored cursor.
+//! Incremental sync: applies what the server changed since the stored sync
+//! state.
 
 use std::collections::{BTreeSet, HashMap};
 
-use mailrs_domain::{ChangeEvent, MessageMeta, system_label};
-use mailrs_gmail::HistoryChange;
+use mailrs_domain::{ChangeEvent, Membership, MessageMeta, Role, system_label};
+use mailrs_store::messages::Change;
 use mailrs_store::{accounts, labels, messages};
 
 use super::AccountSync;
-use super::fetch::Want;
-use super::labels::is_user_label;
-use crate::{BackendError, MailBackend, SyncError};
+use crate::{BackendError, MailBackend, RemoteChange, SyncError, SyncState, Want};
 
 impl AccountSync {
-    /// Replays history since the stored cursor in one transaction, then moves
-    /// the cursor. Bootstraps instead when there is no cursor yet or when
-    /// Gmail no longer keeps history that old.
+    /// Applies every change since the stored sync state in one transaction,
+    /// then stores the new state. Bootstraps instead when there is no state
+    /// yet, and lists the mail again when the server has lost its place.
     pub async fn incremental(&self) -> Result<(), SyncError> {
         let account_id = self.account_id;
         let cursor = self
             .db
             .read(move |c| accounts::sync_cursor(c, account_id))
             .await?;
-        let Some(start) = cursor.history_id else {
+        let Some(since) = cursor.state.map(SyncState::new) else {
             return self.bootstrap().await;
         };
-
-        let mut changes = Vec::new();
-        let mut latest;
-        let mut page_token: Option<String> = None;
-        loop {
-            let page = match self.services.mail.history(start, page_token.as_deref()).await {
-                Ok(page) => page,
-                Err(BackendError::StateLost) => {
-                    tracing::info!(
-                        account = account_id,
-                        "history cursor expired; listing the mail again"
-                    );
-                    return self.rebootstrap().await;
-                }
-                Err(err) => return Err(err.into()),
-            };
-            changes.extend(page.changes);
-            latest = page.history_id;
-            match page.next_page_token {
-                Some(token) => page_token = Some(token),
-                None => break,
+        let found = match self.services.mail.changes(Some(&since)).await {
+            Ok(found) => found,
+            Err(BackendError::StateLost) => {
+                tracing::info!(
+                    account = account_id,
+                    "the server lost its place; listing the mail again"
+                );
+                return self.rebootstrap().await;
             }
-        }
-        if changes.is_empty() && latest == start {
+            Err(err) => return Err(err.into()),
+        };
+        if found.changes.is_empty() && found.state == since {
             self.mark_caught_up();
             return Ok(());
         }
 
-        let fetched = self.fetch_for_history(&changes).await?;
-        let named: BTreeSet<String> = changes
+        let fetched = self.fetch_for_history(&found.changes).await?;
+        let mail = &self.services.mail;
+        let named_mailboxes: BTreeSet<String> = found
+            .changes
             .iter()
             .filter_map(|change| match change {
-                HistoryChange::LabelsAdded { label_ids, .. } => Some(label_ids.clone()),
+                RemoteChange::Gained { memberships, .. } => Some(memberships),
                 _ => None,
             })
             .flatten()
+            .filter_map(|m| match m {
+                Membership::Mailbox(id) => Some(id.clone()),
+                _ => None,
+            })
             .chain(fetched.values().flat_map(|m| m.label_ids.clone()))
-            .filter(|id| is_user_label(id))
+            .filter(|id| mail.made_by_person(id))
             .collect();
         let generation = cursor.sync_gen;
-        let (touched, new_mail, unknown_label) = self
+        let (changes, state) = (found.changes, found.state);
+        let (touched, new_mail, unknown_mailbox) = self
             .db
             .write(move |c| {
-                let mut touched = BTreeSet::new();
+                // Whether each message the changes name was stored before
+                // this replay, read once, since the change set applies the
+                // whole batch in one call.
+                let named: Vec<String> = changes
+                    .iter()
+                    .filter_map(|change| match change {
+                        RemoteChange::Added { id, .. } | RemoteChange::Gained { id, .. } => {
+                            Some(id.clone())
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                let stored = messages::existing_ids(c, account_id, &named)?;
+                let mut batch = Vec::new();
                 let mut new_mail = Vec::new();
                 for change in &changes {
                     match change {
-                        HistoryChange::MessageAdded { id, .. } => {
+                        RemoteChange::Added { id, .. } => {
                             if let Some(meta) = fetched.get(id) {
-                                let existed = messages::thread_id_of(c, account_id, id)?.is_some();
-                                messages::upsert_message(c, meta, generation)?;
-                                touched.insert(meta.thread_id.clone());
-                                if !existed && is_new_inbox_mail(meta) {
+                                if !stored.contains(id)
+                                    && is_new_inbox_mail(meta)
+                                    && !new_mail.contains(id)
+                                {
                                     new_mail.push(id.clone());
                                 }
+                                batch.push(Change::Upsert {
+                                    meta: Box::new(meta.clone()),
+                                    generation,
+                                });
                             }
                         }
-                        HistoryChange::MessageDeleted { id, .. } => {
-                            touched.extend(messages::delete_message(c, account_id, id)?);
+                        RemoteChange::Deleted { id } => {
+                            batch.push(Change::Delete {
+                                message_id: id.clone(),
+                            });
                         }
-                        HistoryChange::LabelsAdded { id, label_ids, .. } => {
-                            match messages::add_labels(c, account_id, id, label_ids)? {
-                                Some(thread_id) => {
-                                    touched.insert(thread_id);
-                                }
-                                None => {
-                                    if let Some(meta) = fetched.get(id) {
-                                        messages::upsert_message(c, meta, generation)?;
-                                        touched.insert(meta.thread_id.clone());
-                                    }
-                                }
+                        RemoteChange::Gained {
+                            id, memberships, ..
+                        } if stored.contains(id) => {
+                            batch.extend(
+                                memberships.iter().map(|m| Change::of(id, m.clone(), true)),
+                            );
+                        }
+                        RemoteChange::Gained { id, .. } => {
+                            if let Some(meta) = fetched.get(id) {
+                                batch.push(Change::Upsert {
+                                    meta: Box::new(meta.clone()),
+                                    generation,
+                                });
                             }
                         }
-                        HistoryChange::LabelsRemoved { id, label_ids, .. } => {
-                            touched.extend(messages::remove_labels(c, account_id, id, label_ids)?);
+                        RemoteChange::Lost { id, memberships } => {
+                            batch.extend(
+                                memberships.iter().map(|m| Change::of(id, m.clone(), false)),
+                            );
                         }
                     }
                 }
-                for thread_id in &touched {
-                    messages::refresh_thread(c, account_id, thread_id)?;
-                }
-                accounts::set_history_id(c, account_id, latest)?;
+                let touched = messages::apply(c, account_id, &batch)?.threads;
+                accounts::set_sync_state(c, account_id, state.as_str())?;
                 let known: BTreeSet<String> = labels::list_labels(c, account_id)?
                     .into_iter()
                     .map(|l| l.id)
                     .collect();
-                let unknown = named.iter().any(|id| !known.contains(id));
+                let unknown = named_mailboxes.iter().any(|id| !known.contains(id));
                 Ok((touched, new_mail, unknown))
             })
             .await?;
-        // A label the store has never seen was made elsewhere since the
-        // labels were last listed, so the sidebar lacks it.
-        if unknown_label {
+        // A mailbox a person made that the store has never listed was made
+        // elsewhere since the mailboxes were last listed, so the sidebar
+        // lacks it.
+        if unknown_mailbox {
             self.refresh_labels().await?;
         }
         self.mark_caught_up();
@@ -130,15 +146,20 @@ impl AccountSync {
         Ok(())
     }
 
-    /// Metadata for messages the history adds, plus messages that moved into
-    /// INBOX from outside the window.
+    /// Metadata for the messages the changes add, plus messages that moved
+    /// into the inbox from outside the window.
     async fn fetch_for_history(
         &self,
-        changes: &[HistoryChange],
+        changes: &[RemoteChange],
     ) -> Result<HashMap<String, MessageMeta>, SyncError> {
         let account_id = self.account_id;
-        // History names each message's thread, so several new messages of
-        // one conversation share a `threads.get`.
+        let inbox = self
+            .services
+            .mail
+            .mailbox_for(Role::Inbox)
+            .map(Membership::Mailbox);
+        // Each change names the message's thread, so several new messages
+        // of one conversation share a thread fetch.
         let want = |id: &String, thread_id: &String| Want {
             id: id.clone(),
             thread_id: Some(thread_id.clone()),
@@ -146,18 +167,21 @@ impl AccountSync {
         let mut wanted: Vec<Want> = changes
             .iter()
             .filter_map(|change| match change {
-                HistoryChange::MessageAdded { id, thread_id } => Some(want(id, thread_id)),
+                RemoteChange::Added { id, thread_id } => Some(want(id, thread_id)),
                 _ => None,
             })
             .collect();
         let into_inbox: Vec<Want> = changes
             .iter()
             .filter_map(|change| match change {
-                HistoryChange::LabelsAdded {
+                RemoteChange::Gained {
                     id,
                     thread_id,
-                    label_ids,
-                } if label_ids.iter().any(|l| l == system_label::INBOX) => {
+                    memberships,
+                } if inbox
+                    .as_ref()
+                    .is_some_and(|inbox| memberships.contains(inbox)) =>
+                {
                     Some(want(id, thread_id))
                 }
                 _ => None,
