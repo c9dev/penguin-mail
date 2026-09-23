@@ -43,7 +43,7 @@ use crate::open_thread::run::{Fetched, InlinePictures};
 use crate::open_thread::{Article, OpenThread, Page, Served, Unsent};
 use crate::protection::run::{Claimed, Installed};
 use crate::protection::{self};
-use crate::render::Theme;
+use crate::render::{FOLD_MS, Theme};
 use crate::translation::Translation;
 
 pub enum Action {
@@ -1666,25 +1666,44 @@ impl ConversationView {
 
     /// Opens or closes one message in the page itself. Redrawing would do
     /// it too, and would throw away the find highlight and the place the
-    /// reader had scrolled to.
-    /// Opens or closes one message. The page's own stylesheet grows and
-    /// shrinks the fold: its row goes from no height to the content's,
-    /// which needs no measuring here and follows a body that grows later,
-    /// as a picture loading does. A second click turns the movement
-    /// around from wherever it had reached.
+    /// reader had scrolled to. The page's own stylesheet grows and shrinks
+    /// the fold: its row goes from no height to the content's, which needs
+    /// no measuring here and follows a body that grows later, as a picture
+    /// loading does. A second click turns the movement around from
+    /// wherever it had reached.
+    ///
+    /// A closed message is shut once the fold has stopped moving, which
+    /// takes its body out of layout. Shutting it at once would leave the
+    /// fold no height to close from.
     fn show_message(&self, id: &str, expanded: bool) {
         let id = script_safe(id);
         let (add, remove) = match expanded {
-            true => ("expanded", "collapsed"),
-            false => ("collapsed", "expanded"),
+            true => ("expanded", "'collapsed','shut'"),
+            false => ("collapsed", "'expanded'"),
         };
         run_script(
             &self.webview,
             &format!(
                 "(function(){{var m=document.getElementById('m-{id}');\
-                   if(m){{m.classList.add('{add}');m.classList.remove('{remove}');}}}})()"
+                   if(m){{m.classList.add('{add}');m.classList.remove({remove});}}}})()"
             ),
         );
+        if expanded {
+            return;
+        }
+        let webview = self.webview.downgrade();
+        let settled = std::time::Duration::from_millis(u64::from(FOLD_MS) + 40);
+        glib::timeout_add_local_once(settled, move || {
+            if let Some(webview) = webview.upgrade() {
+                run_script(
+                    &webview,
+                    &format!(
+                        "(function(){{var m=document.getElementById('m-{id}');\
+                         if(m&&m.classList.contains('collapsed'))m.classList.add('shut');}})()"
+                    ),
+                );
+            }
+        });
     }
 }
 
