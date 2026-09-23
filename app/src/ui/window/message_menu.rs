@@ -19,10 +19,11 @@ use adw::prelude::*;
 use gtk::gio;
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{FlagColor, Folder, Target, system_label};
-use mailrs_sync::{History, MailAction};
 
 use super::MainWindow;
-use super::triage::{Decision, Marks, decide};
+use super::press::{Button, Press, Scope};
+use super::reach::Reach;
+use super::triage::Marks;
 use crate::open_thread::OpenThread;
 use crate::ui::Mailbox;
 use crate::ui::conversation::{Action, ConversationView};
@@ -271,37 +272,8 @@ impl MainWindow {
         action: &Action,
         message_id: &str,
     ) {
-        let Some(message) = view.find(|open| message_of(open, message_id)) else {
-            return;
-        };
-        let marks = Marks {
-            unread: message.unread,
-            flagged: message.flagged,
-        };
-        let Some(decision) = decide(action, &self.mailbox_of(view), marks) else {
-            return;
-        };
-        let Some(target) = self.message_target(view, message_id) else {
-            return;
-        };
-        match decision {
-            Decision::Triage(triage) => {
-                let action = MailAction::Triage(triage);
-                // A thread of one message leaves the mailbox with that
-                // message. A longer one stays, and so does the reader.
-                if message.alone {
-                    self.follow_out(view, &action);
-                }
-                self.perform(vec![target], action, History::Record, None);
-            }
-            Decision::Flag(on) => self.flag_targets(
-                vec![target],
-                on.then(|| self.settings_with(|s| s.flag_color)),
-            ),
-            Decision::DeleteForever => self.confirm_delete_forever(view, vec![target]),
-            // Delete calls nothing off from a message menu: the item that
-            // would do it is left out of the menu.
-            Decision::Cancel(_) => {}
+        if let Some(button) = Button::of(action) {
+            self.press_message(view, message_id, Press::Button(button));
         }
     }
 
@@ -312,9 +284,32 @@ impl MainWindow {
         message_id: &str,
         color: Option<FlagColor>,
     ) {
-        if let Some(target) = self.message_target(view, message_id) {
-            self.flag_targets(vec![target], color);
-        }
+        self.press_message(view, message_id, Press::Flag(color));
+    }
+
+    /// Carries out `press` on one message of `view`. A thread of one
+    /// message leaves the mailbox with that message; a longer one stays,
+    /// and so does the reader.
+    fn press_message(self: &Rc<Self>, view: &Rc<ConversationView>, message_id: &str, press: Press) {
+        let Some(message) = view.find(|open| message_of(open, message_id)) else {
+            return;
+        };
+        let Some(target) = self.message_target(view, message_id) else {
+            return;
+        };
+        let reach = Reach {
+            targets: vec![target],
+            marks: Marks {
+                unread: message.unread,
+                flagged: message.flagged,
+            },
+            muted: false,
+            mailbox: self.mailbox_of(view),
+        };
+        let scope = Scope::Message {
+            alone: message.alone,
+        };
+        self.press_on(view, reach, scope, press);
     }
 
     /// Opens the label list over one message, which adds and removes that

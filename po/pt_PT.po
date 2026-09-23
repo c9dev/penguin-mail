@@ -6371,6 +6371,18 @@ msgstr "Marcar como não sendo spam"
 msgid "Could not open the conversation to reply to it"
 msgstr "Não foi possível abrir a conversa para lhe responder"
 
+msgid "Cancel Send (Delete)"
+msgstr "Cancelar envio (Delete)"
+
+msgid "Delete from Outbox"
+msgstr "Eliminar da caixa de saída"
+
+msgid "Delete from Outbox (Delete)"
+msgstr "Eliminar da caixa de saída (Delete)"
+
+msgid "Cancel Reminder (Delete)"
+msgstr "Cancelar lembrete (Delete)"
+
 #~ msgid "Penguin Mail asks the sender to take you off the list."
 #~ msgstr "O Penguin Mail pede ao remetente que o retire da lista."
 

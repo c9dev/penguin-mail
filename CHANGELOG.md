@@ -22,6 +22,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- In Send Later, the Outbox and Remind Me, the Delete button and its menu
+  item say what they do there, Cancel Send, Delete from Outbox and Cancel
+  Reminder, where they said Move to Trash.
+- Dragging mail from Sent or Flagged onto a label keeps it open, since it
+  stays in that list. Moving mail out of the label on screen, by dragging
+  it to another label or to All Mail, opens the next conversation.
 - Starting a search drops the rows selected before it, so the buttons act
   on the results, and the Outbox's own buttons switch off.
 - A new account colour reaches every row in the list. The list could

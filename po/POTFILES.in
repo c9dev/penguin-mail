@@ -85,8 +85,10 @@ app/src/ui/window/images.rs
 app/src/ui/window/invitation.rs
 app/src/ui/window/message_menu.rs
 app/src/ui/window/notice.rs
+app/src/ui/window/on_screen.rs
 app/src/ui/window/organize.rs
 app/src/ui/window/outbox.rs
+app/src/ui/window/press.rs
 app/src/ui/window/reminders.rs
 app/src/ui/window/reveal.rs
 app/src/ui/window/scheduled.rs

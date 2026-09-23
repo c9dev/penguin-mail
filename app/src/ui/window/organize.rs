@@ -6,12 +6,13 @@ use std::rc::Rc;
 use adw::prelude::*;
 use gtk::glib;
 use mailrs_domain::{AccountId, LabelKind};
-use mailrs_sync::{History, MailAction, NewLabels, TriageAction};
+use mailrs_sync::{History, MailAction, NewLabels};
 
 use super::{MainWindow, Target};
 use crate::ui::Mailbox;
 use crate::ui::confirm::{Tone, confirm};
-use crate::ui::moving::move_action;
+use super::press::{Press, Scope};
+use super::reach::Reach;
 use mailrs_domain::translate::{fill, gettext};
 
 /// What to do with a label once it exists, given its id.
@@ -24,45 +25,16 @@ impl MainWindow {
         if rows.is_empty() {
             return false;
         }
-        if let Mailbox::Label { account_id, .. } = &mailbox
-            && rows.iter().any(|r| r.account_id != *account_id)
-        {
-            self.toast(&gettext("Drop mail on its own account's mailboxes"));
-            return false;
-        }
-        if let Mailbox::Flag(color) = mailbox {
-            self.flag_targets(rows.iter().map(Target::from_row).collect(), Some(color));
-            return true;
-        }
-        let from = self.shown();
-        let action = match move_action(&from, &mailbox) {
-            Ok(action) => action,
-            Err(reason) => {
-                self.toast(&reason);
-                return false;
-            }
-        };
         let targets: Vec<Target> = rows.iter().map(Target::from_row).collect();
-        let open_moved = self.conversation.read(|o| o.among(&targets)) == Some(true);
-        if open_moved && !matches!(action, TriageAction::Star) {
-            self.move_on(&self.conversation);
-        }
-        let message = match action {
-            TriageAction::AddLabel(_)
-            | TriageAction::RemoveLabel(_)
-            | TriageAction::Relabel { .. } => Some(fill(
-                &gettext("Moved to {mailbox}"),
-                &[("mailbox", &mailbox.title())],
-            )),
-            _ => None,
-        };
-        self.perform(
+        let open = self.conversation.read(|o| o.among(&targets)) == Some(true);
+        let reach = Reach {
             targets,
-            MailAction::Triage(action),
-            History::Record,
-            message,
-        );
-        true
+            marks: Default::default(),
+            muted: false,
+            mailbox: self.shown(),
+        };
+        let view = Rc::clone(&self.conversation);
+        self.press_on(&view, reach, Scope::Carried { open }, Press::Drop(mailbox))
     }
 
     /// Asks for a name and creates a label in `account_id`. With `then`,

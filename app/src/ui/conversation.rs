@@ -837,6 +837,7 @@ impl ConversationView {
     /// they do not move mail to the Trash. `tip` is the button's tooltip,
     /// with its key.
     pub fn set_trash_words(&self, word: &str, tip: &str) {
+        self.many_trash.set_label(word);
         self.buttons.trash.set_tooltip_text(Some(tip));
         name_with_shortcut(&self.buttons.trash, tip);
         self.set_filing_word(1, word, "win.trash");

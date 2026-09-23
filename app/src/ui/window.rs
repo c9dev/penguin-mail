@@ -35,6 +35,8 @@ use aftermath::Cause;
 use futures::FutureExt;
 use futures::future::{LocalBoxFuture, Shared};
 use on_screen::{OnScreen, Redraw};
+use press::{Press, PressEffects, Pressed, Question};
+use reach::Reach;
 
 mod aftermath;
 mod arrange;
@@ -55,6 +57,7 @@ mod organize;
 mod outbox;
 mod pgp;
 mod pictures;
+mod press;
 mod previews;
 mod reach;
 mod reminders;
@@ -138,30 +141,6 @@ pub struct MainWindow {
     detached: RefCell<Vec<(Weak<ConversationView>, Mailbox)>>,
     /// The scratch copies of attachments this window opened.
     previews: previews::Previews,
-}
-
-/// The heading on the Delete Forever dialog, which names how much goes.
-/// Every count writes its own sentence: a language decides for itself
-/// where the number goes and which form the noun takes beside it.
-fn delete_forever_heading(count: usize, threaded: bool) -> String {
-    let number = count.to_string();
-    let values = [("count", number.as_str())];
-    match (threaded, count) {
-        (true, 1) => gettext("Delete This Conversation Forever?"),
-        (true, _) => fill_plural(
-            "Delete {count} Conversation Forever?",
-            "Delete {count} Conversations Forever?",
-            count,
-            &values,
-        ),
-        (false, 1) => gettext("Delete This Message Forever?"),
-        (false, _) => fill_plural(
-            "Delete {count} Message Forever?",
-            "Delete {count} Messages Forever?",
-            count,
-            &values,
-        ),
-    }
 }
 
 /// The toast after erasing.
@@ -624,7 +603,8 @@ impl MainWindow {
         window.reload_image_senders();
         // Copies another program opened in an earlier run have had their
         // chance; nothing else deletes them.
-        let _ = gio::spawn_blocking(|| previews::sweep(&previews::folder()));
+        // The handle is dropped; the sweep runs on to the end regardless.
+        drop(gio::spawn_blocking(|| previews::sweep(&previews::folder())));
         window
     }
 
@@ -928,7 +908,7 @@ impl MainWindow {
             let mailbox = self.shown();
             self.list
                 .set_show_accounts(mailbox.account().is_none() && self.accounts().len() > 1);
-            self.set_folder(mailbox.folder());
+            self.word_buttons(&self.conversation, &mailbox);
             self.follow_outbox();
             self.follow_categories();
             self.follow_follow_ups();
@@ -1125,7 +1105,11 @@ impl MainWindow {
             | Action::Trash
             | Action::Junk
             | Action::ToggleStar
-            | Action::ToggleRead => self.organize(view, &action),
+            | Action::ToggleRead => {
+                if let Some(button) = press::Button::of(&action) {
+                    self.press(view, Press::Button(button));
+                }
+            }
             Action::Unsubscribe => self.unsubscribe(Rc::clone(view)),
             Action::LoadImages => self.load_images_once(view),
             Action::SaveAttachment { message_id, index } => {
@@ -1233,25 +1217,63 @@ impl MainWindow {
             .or_else(|| self.shown().account())
     }
 
-    /// Applies a label change to `targets` and keeps an undo for it.
-    /// `follow` is the conversation to move on from once the change takes
-    /// its mail out of the mailbox on screen, as Apple Mail does. A change
-    /// to one message of a longer thread passes none: the thread stays
-    /// where it is, and so does the reader.
-    pub(super) fn triage_targets(
+    /// Carries out what `press` comes to on what `view` reaches.
+    pub(in crate::ui::window) fn press(self: &Rc<Self>, view: &Rc<ConversationView>, press: Press) {
+        let reach = self.reach(view);
+        self.press_on(view, reach, press::Scope::Shown, press);
+    }
+
+    /// Carries out what `press` comes to on `reach`, made in `view`, and
+    /// says whether it does anything. Everything but a question before
+    /// erasing happens before this returns, so the next row is open by
+    /// the time the press's handler is done.
+    pub(in crate::ui::window) fn press_on(
+        self: &Rc<Self>,
+        view: &Rc<ConversationView>,
+        reach: Reach,
+        scope: press::Scope,
+        press: Press,
+    ) -> bool {
+        let plan = press::plan(Pressed {
+            press,
+            reach,
+            scope,
+            flag_color: self.settings_with(|s| s.flag_color),
+            threaded: self.settings_with(|s| s.threading),
+        });
+        let taken = plan.taken();
+        let pressing = Pressing {
+            window: Rc::clone(self),
+            view: Rc::clone(view),
+        };
+        let mut run = Box::pin(async move { press::carry_out(plan, &pressing).await });
+        if (&mut run).now_or_never().is_none() {
+            glib::spawn_future_local(run);
+        }
+        taken
+    }
+
+    /// Adds or removes a label from the label list. `follow` is the
+    /// conversation the list was opened over; a list opened over one
+    /// message passes none, and the reader stays where they are.
+    pub(super) fn press_label(
         self: &Rc<Self>,
         targets: Vec<Target>,
         action: TriageAction,
         follow: Option<&Rc<ConversationView>>,
     ) {
-        if targets.is_empty() {
-            return;
-        }
-        let action = MailAction::Triage(action);
-        if let Some(view) = follow {
-            self.follow_out(view, &action);
-        }
-        self.perform(targets, action, History::Record, None);
+        let view = follow.map_or_else(|| Rc::clone(&self.conversation), Rc::clone);
+        let reach = Reach {
+            targets,
+            marks: Default::default(),
+            muted: false,
+            mailbox: self.mailbox_of(&view),
+        };
+        let scope = match follow {
+            Some(_) => press::Scope::Shown,
+            None => press::Scope::Carried { open: false },
+        };
+        self.press_on(&view, reach, scope, Press::Label(action));
     }
 
     /// Mutes the targets, or unmutes them when they are muted already.
@@ -1259,41 +1281,16 @@ impl MainWindow {
     /// so muting here is the label and one archive.
     fn toggle_mute(self: &Rc<Self>) {
         let view = Rc::clone(&self.conversation);
-        let reach = self.reach(&view);
-        if reach.targets.is_empty() {
-            return;
-        }
-        let action = MailAction::Mute {
-            muted: !reach.muted,
-        };
-        self.follow_out(&view, &action);
-        self.perform(reach.targets, action, History::Record, None);
+        self.press(&view, Press::Mute);
     }
 
-    /// Asks before erasing, because Gmail cannot bring the mail back and no
-    /// Undo follows.
-    fn confirm_delete_forever(self: &Rc<Self>, view: &Rc<ConversationView>, targets: Vec<Target>) {
-        let threaded = self.settings_with(|s| s.threading);
-        let question = confirm(
-            &delete_forever_heading(targets.len(), threaded),
-            &match targets.len() {
-                1 => gettext("Gmail deletes it from every device and cannot bring it back."),
-                _ => gettext("Gmail deletes them from every device and cannot bring them back."),
-            },
-            &gettext("Delete Forever"),
-            Tone::Destructive,
-        );
-        // The question belongs over the window it was asked in, which for
-        // a detached conversation is not the main one.
-        let parent = view
-            .window()
-            .unwrap_or_else(|| self.window.clone().upcast());
-        let (this, view) = (Rc::clone(self), Rc::clone(view));
-        glib::spawn_future_local(async move {
-            if question.ask(&parent).await {
-                this.delete_forever(&view, targets);
-            }
-        });
+    /// Words the trash button of `view` for `mailbox`: the folder's own
+    /// words, or what Delete calls off in a mailbox of queued mail.
+    pub(super) fn word_buttons(&self, view: &ConversationView, mailbox: &Mailbox) {
+        view.set_folder(mailbox.folder());
+        if let Some((word, tip)) = press::trash_words(mailbox) {
+            view.set_trash_words(&word, &tip);
+        }
     }
 
     /// Erases the targets. Nothing reverses this, so the toast offers no
@@ -1580,7 +1577,7 @@ impl MainWindow {
                     win.new_label(
                         account_id,
                         Some(Box::new(move |win, label_id| {
-                            win.triage_targets(
+                            win.press_label(
                                 targets.clone(),
                                 TriageAction::AddLabel(label_id),
                                 follow.as_ref(),
@@ -1635,7 +1632,7 @@ impl MainWindow {
                 return;
             };
             pop.popdown();
-            win.triage_targets(
+            win.press_label(
                 targets.clone(),
                 if applied.contains(&label.id) {
                     TriageAction::RemoveLabel(label.id.clone())
@@ -2557,6 +2554,61 @@ impl MainWindow {
         });
         about.dialog.present(Some(&self.window));
         self.about.replace(Some(about));
+    }
+}
+
+/// The main window and one conversation view, as a press changes them.
+struct Pressing {
+    window: Rc<MainWindow>,
+    view: Rc<ConversationView>,
+}
+
+impl PressEffects for Pressing {
+    fn move_on(&self) {
+        self.window.move_on(&self.view);
+    }
+
+    fn confirm(&self, question: Question) -> crate::wanted::Answer<'_, bool> {
+        let asked = confirm(
+            &question.heading,
+            &question.body,
+            &question.verb,
+            Tone::Destructive,
+        );
+        // The question belongs over the window it was asked in, which for
+        // a detached conversation is not the main one.
+        let parent = self
+            .view
+            .window()
+            .unwrap_or_else(|| self.window.window.clone().upcast());
+        Box::pin(async move { asked.ask(&parent).await })
+    }
+
+    fn act(&self, targets: Vec<Target>, action: MailAction, history: History, words: Option<String>) {
+        // A colour picked here becomes the one the flag button uses next.
+        if let MailAction::Flag(Some(color)) = action
+            && let Some(app) = self.window.app.upgrade()
+        {
+            app.change_settings(Change::FlagColor(color));
+        }
+        self.window.perform(targets, action, history, words);
+    }
+
+    fn erase(&self, targets: Vec<Target>) {
+        self.window.delete_forever(&self.view, targets);
+    }
+
+    fn cancel(&self, cancel: triage::Cancel, targets: Vec<Target>) {
+        match cancel {
+            triage::Cancel::Scheduled => self.window.cancel_scheduled(&self.view, targets),
+            triage::Cancel::Queued => self.window.drop_queued(&self.view),
+            // The plan runs these two as mail actions.
+            triage::Cancel::Reminder | triage::Cancel::FollowUp => {}
+        }
+    }
+
+    fn toast(&self, text: String) {
+        self.window.toast(&text);
     }
 }
 

@@ -7,11 +7,10 @@ use std::rc::Rc;
 use adw::prelude::*;
 use gtk::gio;
 use mailrs_domain::system_label;
-use mailrs_sync::{History, MailAction};
 
-use super::{MainWindow, Target};
+use super::MainWindow;
+use super::press::Press;
 use crate::ui::Mailbox;
-use crate::ui::conversation::ConversationView;
 use mailrs_domain::translate::{fill_plural, gettext};
 
 /// "2 sent messages have had no reply" with Review and close buttons.
@@ -94,7 +93,7 @@ impl MainWindow {
         dismiss.connect_activate(move |_, _| {
             if let Some(win) = weak.upgrade() {
                 let view = Rc::clone(&win.conversation);
-                win.dismiss_follow_ups(&view, win.reach(&view).targets);
+                win.press(&view, Press::DismissFollowUp);
             }
         });
         self.actions.add_action(&dismiss);
@@ -125,33 +124,12 @@ impl MainWindow {
         {
             action.set_enabled(mailbox == Mailbox::FollowUp);
         }
-        if mailbox == Mailbox::FollowUp {
-            self.conversation.set_trash_words(
-                &gettext("Dismiss Follow-Up"),
-                &gettext("Dismiss Follow-Up (Delete)"),
-            );
-        }
     }
 
     /// Records how many conversations wait on a reply, from the sidebar counts.
     pub(super) fn set_follow_up_count(&self, count: usize) {
         self.follow_up.waiting.set(count);
         self.follow_follow_ups();
-    }
-
-    /// Stops suggesting the targets, which `view` reached. The mail itself
-    /// stays where it is.
-    pub(super) fn dismiss_follow_ups(
-        self: &Rc<Self>,
-        view: &ConversationView,
-        targets: Vec<Target>,
-    ) {
-        if targets.is_empty() {
-            return;
-        }
-        let action = MailAction::DismissFollowUp;
-        self.follow_out(view, &action);
-        self.perform(targets, action, History::Record, None);
     }
 
     /// Refreshes counts, and the list when it shows Follow Up.
