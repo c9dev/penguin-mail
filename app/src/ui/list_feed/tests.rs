@@ -212,3 +212,15 @@ fn reveal_waits_for_the_first_mailbox_the_window_lists() {
         })
     );
 }
+
+#[test]
+fn a_splice_rereads_only_the_open_conversations_the_events_named() {
+    let (mut feed, _) = listed();
+    feed.changed(vec![named("a")]);
+    let refresh = feed.fire();
+    assert!(refresh.names(1, "a"));
+    assert!(!refresh.names(1, "b"));
+    assert!(!refresh.names(2, "a"));
+    feed.everything();
+    assert!(feed.fire().names(2, "anything"), "a reload covers them all");
+}

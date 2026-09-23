@@ -837,6 +837,7 @@ impl ConversationView {
     /// they do not move mail to the Trash. `tip` is the button's tooltip,
     /// with its key.
     pub fn set_trash_words(&self, word: &str, tip: &str) {
+        self.many_trash.set_label(word);
         self.buttons.trash.set_tooltip_text(Some(tip));
         name_with_shortcut(&self.buttons.trash, tip);
         self.set_filing_word(1, word, "win.trash");
@@ -972,6 +973,38 @@ impl ConversationView {
             Some(showing) => self.card.show(showing),
             None => self.card.hide(),
         }
+    }
+
+    /// What else the user has on while the event on the card runs. The
+    /// card keeps it only while it still shows the invitation `uid` names.
+    pub fn clashes(&self, uid: &str, busy: &[String]) {
+        self.card.set_busy(uid, busy);
+    }
+
+    /// How the series behind the invitation `uid` runs, in words.
+    pub fn series_known(&self, uid: &str, line: String) {
+        self.card.set_series(uid, line);
+    }
+
+    /// Offers to add the account to GNOME Online Accounts on the card.
+    pub fn offer_gnome(&self) {
+        self.card.offer_gnome();
+    }
+
+    /// The answer the card shows for the invitation `uid`: the one that
+    /// went, or the one from before an answer that did not.
+    pub fn invitation_answered(&self, uid: &str, answer: Option<mailrs_domain::invitation::Answer>) {
+        self.card.set_answer(uid, answer);
+    }
+
+    /// Where the last answer or proposal for the invitation `uid` went.
+    pub fn invitation_went(&self, uid: &str, went: Option<String>) {
+        self.card.set_went(uid, went);
+    }
+
+    /// Whether an answer on the card covers one occurrence or the series.
+    pub fn invitation_scope(&self) -> mailrs_domain::invitation::Scope {
+        self.card.scope()
     }
 
     /// Reads what the card shows. `None` means no invitation is on screen.

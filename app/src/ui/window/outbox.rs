@@ -56,7 +56,7 @@ impl MainWindow {
 
     /// Turns the Outbox's own actions on while it is the mailbox on screen.
     pub(super) fn follow_outbox(self: &Rc<Self>) {
-        let showing = *self.mailbox.borrow() == Mailbox::Outbox;
+        let showing = self.shown() == Mailbox::Outbox;
         for name in NAMES {
             if let Some(action) = self.actions.lookup_action(name) {
                 action

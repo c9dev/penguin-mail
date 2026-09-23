@@ -18,14 +18,6 @@ use super::MainWindow;
 use crate::ui::conversation::ConversationView;
 use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 
-/// How large a picture may be before the row shows a paperclip instead.
-/// Past this the thumbnail costs more to fetch than it earns.
-const THUMBNAIL_LIMIT: i64 = 8 * 1024 * 1024;
-
-/// How wide the picture on a row is drawn, in pixels of the stored copy.
-/// Twice the 32 the page shows, so it stays sharp on a HiDPI screen.
-const THUMBNAIL_EDGE: i32 = 64;
-
 impl MainWindow {
     /// Opens one attachment. A picture appears in a window; everything
     /// else opens in the program the desktop keeps for its type.
@@ -42,7 +34,7 @@ impl MainWindow {
         // the ciphertext, so there is nothing to fetch and nothing to wait
         // for.
         if let Some(data) = opened_file(view, &message_id, index) {
-            self.show_attachment(&attachment, data);
+            self.show_attachment(attachment, data, true);
             return;
         }
         let (Some(sync), Some(attachment_id)) = (
@@ -59,7 +51,7 @@ impl MainWindow {
                 .call(async move { sync.attachment(&message_id, &attachment_id).await })
                 .await;
             match fetched {
-                Ok(data) => this.show_attachment(&attachment, data),
+                Ok(data) => this.show_attachment(attachment, data, false),
                 Err(err) => this.toast(&with_reason(
                     &gettext("Could not open {file}: {reason}"),
                     &err,
@@ -234,44 +226,44 @@ impl MainWindow {
         })
     }
 
-    /// Puts `data` on disk under the app's cache, so the desktop and a
-    /// drag out of the window both have a real file to work with.
-    fn scratch_copy(&self, attachment: &Attachment, data: &[u8]) -> Option<PathBuf> {
-        let dir = glib::user_cache_dir().join("penguin-mail").join("previews");
-        std::fs::create_dir_all(&dir).ok()?;
-        let path = super::unique_path(&dir, &attachment.filename);
-        std::fs::write(&path, data).ok()?;
-        Some(path)
-    }
-
     /// Shows an attachment the app can draw, and hands the rest to the
-    /// desktop.
-    fn show_attachment(self: &Rc<Self>, attachment: &Attachment, data: Vec<u8>) {
-        let Some(path) = self.scratch_copy(attachment, &data) else {
-            self.toast(&fill(
-                &gettext("Could not open {file}"),
-                &[("file", &attachment.filename)],
-            ));
-            return;
-        };
-        let file = gio::File::for_path(&path);
-        if !attachment.mime_type.starts_with("image/") {
-            gtk::FileLauncher::new(Some(&file)).launch(
-                Some(&self.window),
-                gio::Cancellable::NONE,
-                |_| {},
-            );
-            return;
-        }
-        let Ok(texture) = gdk::Texture::from_bytes(&glib::Bytes::from_owned(data)) else {
-            gtk::FileLauncher::new(Some(&file)).launch(
-                Some(&self.window),
-                gio::Cancellable::NONE,
-                |_| {},
-            );
-            return;
-        };
-        self.quick_look(attachment, texture, path);
+    /// desktop. Either way the bytes go to a scratch copy first, so the
+    /// desktop and a drag out of the window both have a real file to work
+    /// with. Writing the copy and decoding a photo can take a good part of
+    /// a second, so both happen off the GTK thread. `decrypted` marks a
+    /// file out of an encrypted message, whose copy goes when the window
+    /// closes.
+    fn show_attachment(self: &Rc<Self>, attachment: Attachment, data: Vec<u8>, decrypted: bool) {
+        let (name, picture) = (
+            attachment.filename.clone(),
+            attachment.mime_type.starts_with("image/"),
+        );
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let made = gio::spawn_blocking(move || {
+                let path = super::previews::write(&super::previews::folder(), &name, &data)?;
+                let texture = picture
+                    .then(|| gdk::Texture::from_bytes(&glib::Bytes::from_owned(data)).ok())
+                    .flatten();
+                Ok::<_, std::io::Error>((path, texture))
+            })
+            .await;
+            let Ok(Ok((path, texture))) = made else {
+                return this.toast(&fill(
+                    &gettext("Could not open {file}"),
+                    &[("file", &attachment.filename)],
+                ));
+            };
+            this.previews.kept(path.clone(), decrypted);
+            match texture {
+                Some(texture) => this.quick_look(&attachment, texture, path),
+                None => gtk::FileLauncher::new(Some(&gio::File::for_path(&path))).launch(
+                    Some(&this.window),
+                    gio::Cancellable::NONE,
+                    |_| {},
+                ),
+            }
+        });
     }
 
     /// A window on one picture, with the file behind it: Save puts it in
@@ -345,6 +337,14 @@ impl MainWindow {
             );
         });
 
+        // The copy goes with the window. Save to Downloads made its own.
+        let (gone, weak) = (path.clone(), Rc::downgrade(self));
+        window.connect_destroy(move |_| {
+            if let Some(win) = weak.upgrade() {
+                win.previews.forget(&gone);
+            }
+        });
+
         // Escape closes it, the way every other quick view does.
         let keys = gtk::EventControllerKey::new();
         let closing = window.clone();
@@ -387,84 +387,12 @@ impl MainWindow {
         }
     }
 
-    /// Fetches a small picture for each image attachment the rows list, so
-    /// a row shows what it holds. Gmail charges for each one, so this asks
-    /// only for pictures under the limit, skips what the cache already
-    /// has, and runs in the background where the user's own calls come
-    /// first.
-    pub(super) async fn thumbnails(
-        &self,
-        account_id: AccountId,
-        sync: &std::sync::Arc<crate::core::Sync>,
-        loaded: &[(String, Result<mailrs_domain::MessageBody, String>)],
-    ) -> std::collections::HashMap<String, String> {
-        let mut out = std::collections::HashMap::new();
-        for (message_id, body) in loaded {
-            let Ok(body) = body else { continue };
-            for attachment in &body.attachments {
-                let Some(attachment_id) = attachment.attachment_id.clone() else {
-                    continue;
-                };
-                if !attachment.mime_type.starts_with("image/")
-                    || attachment.size > THUMBNAIL_LIMIT
-                    || crate::render::shown_in_body(attachment, body)
-                    || out.contains_key(&attachment_id)
-                {
-                    continue;
-                }
-                let key = (account_id, message_id.clone(), attachment_id.clone());
-                if let Some(held) = self.thumbnail_cache.borrow().get(&key) {
-                    out.insert(attachment_id, held.clone());
-                    continue;
-                }
-                let (s, m, a) = (sync.clone(), message_id.clone(), attachment_id.clone());
-                let Ok(data) = self
-                    .core
-                    .call(mailrs_gmail::limiter::background(async move {
-                        s.attachment(&m, &a).await
-                    }))
-                    .await
-                else {
-                    continue;
-                };
-                let Some(uri) = shrink(&data) else { continue };
-                let mut cache = self.thumbnail_cache.borrow_mut();
-                if cache.len() >= THUMBNAIL_CACHE {
-                    cache.clear();
-                }
-                cache.insert(key, uri.clone());
-                out.insert(attachment_id, uri);
-            }
-        }
-        out
-    }
 }
 
 /// The bytes of one file that came out of an encrypted message, when the
 /// open thread holds them.
 fn opened_file(view: &ConversationView, message_id: &str, index: usize) -> Option<Vec<u8>> {
     view.find(|open| open.opened_files.get(message_id)?.get(index).cloned())
-}
-
-/// How many thumbnails to hold before starting over.
-const THUMBNAIL_CACHE: usize = 200;
-
-/// A picture small enough to sit in the page, as a PNG `data:` URI.
-/// Returns None when the bytes are not a picture this machine can read.
-fn shrink(data: &[u8]) -> Option<String> {
-    let stream = gio::MemoryInputStream::from_bytes(&glib::Bytes::from(data));
-    let pixbuf = gtk::gdk_pixbuf::Pixbuf::from_stream_at_scale(
-        &stream,
-        THUMBNAIL_EDGE,
-        THUMBNAIL_EDGE,
-        true,
-        gio::Cancellable::NONE,
-    )
-    .ok()?;
-    let bytes = pixbuf.save_to_bufferv("png", &[]).ok()?;
-    let encoded =
-        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, bytes.as_slice());
-    Some(format!("data:image/png;base64,{encoded}"))
 }
 
 /// A window size that holds the picture without covering the screen.

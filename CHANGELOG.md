@@ -14,6 +14,18 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   15,000 conversations, and unread counts for the inbox, its categories and
   VIPs take under a millisecond where they took 6 to 29.
 - The sidebar works out every mailbox's count in 6 ms instead of 55.
+- A conversation with many pictures opens faster and never stalls the
+  window: pictures arrive several at a time, and the small pictures on
+  attachment rows are made away from the window, where ten large photos
+  used to hold it up for about a second and a half.
+- A list with thousands of conversations selected keeps up: new mail,
+  Escape and moving on after an action no longer look at every row
+  against every selected one, which with 14,800 selected took 167 ms.
+- A change to an account or a label counts unread mail once rather than
+  twice, and a burst of changes rereads only the open conversations it
+  touched.
+- Penguin Mail keeps at most 48 MB of pictures from mail it has shown,
+  where it could hold 430 MB before.
 
 ### Fixed
 
@@ -22,6 +34,25 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   used to run nothing.
 - A Flag mailbox's count includes a starred conversation with one of its
   messages in the Trash, as the mailbox's list already did.
+- In Send Later, the Outbox and Remind Me, the Delete button and its menu
+  item say what they do there, Cancel Send, Delete from Outbox and Cancel
+  Reminder, where they said Move to Trash.
+- Dragging mail from Sent or Flagged onto a label keeps it open, since it
+  stays in that list. Moving mail out of the label on screen, by dragging
+  it to another label or to All Mail, opens the next conversation.
+- Starting a search drops the rows selected before it, so the buttons act
+  on the results, and the Outbox's own buttons switch off.
+- A new account colour reaches every row in the list. The list could
+  redraw before the colour had been read.
+- Opening an attachment no longer leaves a copy behind for good. The copy
+  only you can read goes when its preview closes, or the next time Penguin
+  Mail starts, and a copy of a file from encrypted mail goes when the
+  window closes.
+- Opening a large photo no longer holds up the window while it loads.
+- Reply on a new-mail notification answers that mail, and no longer the
+  conversation you opened while it was still loading.
+- The toast after moving mail to a label with an ampersand in its name,
+  such as R&D, names the label again instead of showing nothing.
 
 ## 0.1.7 (2026-09-23)
 

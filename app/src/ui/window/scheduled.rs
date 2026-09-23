@@ -33,7 +33,7 @@ impl MainWindow {
         self.refresh_counts();
         self.refresh_open_thread();
         if matches!(
-            *self.mailbox.borrow(),
+            self.shown(),
             Mailbox::Scheduled | Mailbox::Outbox | Mailbox::Reminders
         ) {
             self.reload_list();

@@ -147,7 +147,24 @@ pub(super) fn leaves(action: &MailAction, mailbox: &Mailbox) -> bool {
 /// Whether `action` takes the targets out of `mailbox`'s list.
 fn leaves_list(mailbox: &Mailbox, action: &TriageAction) -> bool {
     let folder = mailbox.folder();
+    let listed = listed_label(mailbox);
+    // A label change leaves the list that shows the label it takes away,
+    // and the Archive once it puts the mail back in the inbox. Sent,
+    // Starred and a search keep listing mail that only gained a label.
+    let adds = |label: &str| {
+        (folder == Some(Folder::Archive) && label == system_label::INBOX)
+            || (label == system_label::TRASH && folder != Some(Folder::Trash))
+            || (label == system_label::SPAM && folder != Some(Folder::Junk))
+    };
+    let removes = |label: &str| listed == Some(label);
     match action {
+        TriageAction::AddLabel(label) => adds(label),
+        TriageAction::RemoveLabel(label) => removes(label),
+        TriageAction::Relabel { add, remove } => {
+            add.iter().any(|l| adds(l))
+                || remove.iter().any(|l| removes(l) && !add.contains(l))
+        }
+        TriageAction::Unstar => removes(system_label::STARRED),
         TriageAction::Archive => !matches!(folder, Some(Folder::AllMail | Folder::Archive)),
         TriageAction::Trash => folder != Some(Folder::Trash),
         TriageAction::Junk => folder != Some(Folder::Junk),
@@ -158,6 +175,24 @@ fn leaves_list(mailbox: &Mailbox, action: &TriageAction) -> bool {
         }
         TriageAction::Unmute => lists_muted(mailbox),
         _ => false,
+    }
+}
+
+/// The label a mailbox lists, when it lists one: the label itself, or
+/// what the Trash and Junk folders stand for.
+fn listed_label(mailbox: &Mailbox) -> Option<&str> {
+    match mailbox {
+        Mailbox::Unified(label) => Some(label),
+        Mailbox::Label { label_id, .. } => Some(label_id),
+        Mailbox::Folder {
+            folder: Folder::Trash,
+            ..
+        } => Some(system_label::TRASH),
+        Mailbox::Folder {
+            folder: Folder::Junk,
+            ..
+        } => Some(system_label::SPAM),
+        _ => None,
     }
 }
 
@@ -179,15 +214,6 @@ fn covers(target: &Target, row: &ThreadSummary) -> bool {
 }
 
 impl MainWindow {
-    /// Moves on from `view` once `action` takes its mail out of the
-    /// mailbox it was opened from. Callers run this before the action, so
-    /// the next row opens without waiting on Gmail.
-    pub(super) fn follow_out(self: &Rc<Self>, view: &ConversationView, action: &MailAction) {
-        if leaves(action, &self.mailbox_of(view)) {
-            self.move_on(view);
-        }
-    }
-
     /// Steps past the mail `view` shows. The main window opens the row
     /// after the selection, or the one before when nothing follows, and
     /// hides the conversation pane when the list has no other row. A
@@ -222,7 +248,7 @@ impl MainWindow {
         outcome: &Outcome,
         view: Option<&ConversationView>,
     ) {
-        let after = Aftermath::of(cause, &self.mailbox.borrow().clone(), outcome);
+        let after = Aftermath::of(cause, &self.shown(), outcome);
         let done = &outcome.done;
         if after.move_on
             && let Some(view) = view
@@ -415,6 +441,42 @@ mod tests {
             &Mailbox::Unified(system_label::MUTE)
         ));
         assert!(!leaves(&MailAction::Flag(None), &inbox()));
+    }
+
+    #[test]
+    fn a_label_change_leaves_only_the_list_of_the_label_it_takes_away() {
+        let triage = |action| MailAction::Triage(action);
+        let work = Mailbox::Label {
+            account_id: 1,
+            label_id: "Work".into(),
+            name: "Work".into(),
+        };
+        let relabel = |add: &[&str], remove: &[&str]| {
+            triage(TriageAction::Relabel {
+                add: add.iter().map(|l| l.to_string()).collect(),
+                remove: remove.iter().map(|l| l.to_string()).collect(),
+            })
+        };
+        // Filed from Work into Travel: gone from Work.
+        assert!(leaves(&relabel(&["Travel"], &["Work"]), &work));
+        assert!(leaves(&relabel(&["Travel"], &["INBOX"]), &inbox()));
+        assert!(!leaves(&relabel(&["Travel"], &["Work"]), &inbox()));
+        // Out of Work into All Mail.
+        assert!(leaves(&triage(TriageAction::RemoveLabel("Work".into())), &work));
+        assert!(!leaves(&triage(TriageAction::RemoveLabel("Work".into())), &inbox()));
+        // Sent and Starred keep mail that only gained a label.
+        let sent = Mailbox::Unified(system_label::SENT);
+        assert!(!leaves(&triage(TriageAction::AddLabel("Travel".into())), &sent));
+        assert!(!leaves(&triage(TriageAction::AddLabel("INBOX".into())), &sent));
+        // Back into the inbox from the Archive, and out of Junk.
+        let archive = folder(Folder::Archive);
+        assert!(leaves(&triage(TriageAction::AddLabel("INBOX".into())), &archive));
+        assert!(leaves(&relabel(&[], &["SPAM"]), &folder(Folder::Junk)));
+        assert!(!leaves(&triage(TriageAction::Star), &inbox()));
+        assert!(leaves(
+            &triage(TriageAction::Unstar),
+            &Mailbox::Unified(system_label::STARRED)
+        ));
     }
 
     #[test]

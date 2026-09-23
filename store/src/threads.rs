@@ -666,6 +666,16 @@ pub fn get_thread(
         .optional()?)
 }
 
+/// The account holding the thread `thread_id`, for a caller that knows
+/// only Gmail's id. Two accounts can in principle share one; the first
+/// added wins.
+pub fn account_of(conn: &Connection, thread_id: &str) -> Result<Option<AccountId>> {
+    Ok(conn
+        .prepare_cached("SELECT account_id FROM threads WHERE id = ?1 ORDER BY account_id LIMIT 1")?
+        .query_row([thread_id], |row| row.get(0))
+        .optional()?)
+}
+
 /// Newest first. Ties break on account and thread id so pages never overlap.
 /// A page deep in the list reads every row before it; `list_threads_after`
 /// does not.
@@ -1158,6 +1168,14 @@ mod walk_tests {
             Rows::Messages => messages_walking(conn, filter, page, walk),
         }
         .unwrap()
+    }
+
+    #[test]
+    fn a_thread_id_finds_the_account_that_holds_it() {
+        let (conn, a, b) = mailbox();
+        assert_eq!(account_of(&conn, "t0").unwrap(), Some(a));
+        assert_eq!(account_of(&conn, "t1").unwrap(), Some(b));
+        assert_eq!(account_of(&conn, "nowhere").unwrap(), None);
     }
 
     #[test]

@@ -42,6 +42,19 @@ pub enum Refresh {
     Splice(Ticket, Vec<Named>),
 }
 
+impl Refresh {
+    /// Whether the refresh covers the thread `thread_id` of `account_id`:
+    /// a reload covers every thread, a splice the ones the events named.
+    pub fn names(&self, account_id: AccountId, thread_id: &str) -> bool {
+        match self {
+            Refresh::Reload => true,
+            Refresh::Splice(_, named) => named
+                .iter()
+                .any(|(account, id)| *account == account_id && id == thread_id),
+        }
+    }
+}
+
 /// What to do with the rows a splice re-read.
 #[derive(Debug, PartialEq, Eq)]
 pub enum Splice<T> {

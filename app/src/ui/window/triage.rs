@@ -7,16 +7,12 @@
 //! own, with no widget in sight, so the main window and a conversation in
 //! a window of its own read one table rather than two.
 
-use std::rc::Rc;
-
 use mailrs_domain::{Folder, ThreadSummary};
-use mailrs_sync::{History, MailAction, TriageAction};
+use mailrs_sync::TriageAction;
 
-use super::MainWindow;
-use super::reach::Reach;
 use crate::open_thread::OpenThread;
 use crate::ui::Mailbox;
-use crate::ui::conversation::{Action, ConversationView};
+use crate::ui::conversation::Action;
 
 /// What a mail button does, once the mailbox and the targets' own marks
 /// are known.
@@ -91,39 +87,6 @@ pub(super) fn decide(action: &Action, mailbox: &Mailbox, marks: Marks) -> Option
             TriageAction::MarkUnread
         })),
         _ => None,
-    }
-}
-
-impl MainWindow {
-    /// Runs what a mail button comes to on what `view` covers.
-    pub(super) fn organize(self: &Rc<Self>, view: &Rc<ConversationView>, action: &Action) {
-        let Reach {
-            targets,
-            marks,
-            mailbox,
-            ..
-        } = self.reach(view);
-        let Some(decision) = decide(action, &mailbox, marks) else {
-            return;
-        };
-        if targets.is_empty() {
-            return;
-        }
-        match decision {
-            Decision::Triage(action) => {
-                let action = MailAction::Triage(action);
-                self.follow_out(view, &action);
-                self.perform(targets, action, History::Record, None);
-            }
-            Decision::Flag(on) => {
-                self.flag_targets(targets, on.then(|| self.settings_with(|s| s.flag_color)))
-            }
-            Decision::DeleteForever => self.confirm_delete_forever(view, targets),
-            Decision::Cancel(Cancel::Scheduled) => self.cancel_scheduled(view, targets),
-            Decision::Cancel(Cancel::Queued) => self.drop_queued(view),
-            Decision::Cancel(Cancel::Reminder) => self.cancel_reminders(view, targets),
-            Decision::Cancel(Cancel::FollowUp) => self.dismiss_follow_ups(view, targets),
-        }
     }
 }
 

@@ -16,6 +16,7 @@ use mailrs_store::outbox::Queued;
 use mailrs_store::{messages, threads};
 use mailrs_sync::{History, MailAction, Opened, TriageAction, now_millis};
 
+use super::pictures::Pictures;
 use super::{BODY_FETCHES, MainWindow, read_cached_body};
 use crate::core::Core;
 use crate::open_thread::run::{Answer, Card, Desk, Effects, Fetched, Stored, ThreadRun};
@@ -40,6 +41,7 @@ impl MainWindow {
             window: Rc::downgrade(self),
             core: Rc::clone(&self.core),
             view: Rc::clone(view),
+            pictures: Rc::clone(&self.pictures),
         })
     }
 
@@ -54,7 +56,16 @@ impl MainWindow {
     /// screen, the ones in windows of their own among them. Each keeps
     /// its own thread, so a flag or a read mark set in one shows in all.
     pub(super) fn refresh_open_thread(self: &Rc<Self>) {
+        self.refresh_open_threads(|_, _| true);
+    }
+
+    /// Does the same for the conversations whose account and thread
+    /// `named` accepts, and leaves the rest alone.
+    pub(super) fn refresh_open_threads(self: &Rc<Self>, named: impl Fn(AccountId, &str) -> bool) {
         for view in self.views() {
+            if view.read(|open| named(open.account_id, &open.thread_id)) != Some(true) {
+                continue;
+            }
             let run = self.thread_run(&view);
             glib::spawn_future_local(async move { run.refresh().await });
         }
@@ -82,6 +93,7 @@ pub(super) struct Ports {
     pub(super) window: Weak<MainWindow>,
     pub(super) core: Rc<Core>,
     pub(super) view: Rc<ConversationView>,
+    pub(super) pictures: Rc<Pictures>,
 }
 
 impl Ports {
@@ -267,10 +279,7 @@ impl Effects for Ports {
                     .collect()
                     .await
             };
-            let images = match self.window() {
-                Some(window) => window.inline_images(account_id, &sync, &bodies).await,
-                None => HashMap::new(),
-            };
+            let images = self.pictures.inline(account_id, &sync, &bodies).await;
             Fetched { bodies, images }
         })
     }
@@ -281,14 +290,10 @@ impl Effects for Ports {
         bodies: Vec<(String, MessageBody)>,
     ) -> Answer<'_, HashMap<String, String>> {
         Box::pin(async move {
-            let (Some(window), Ok(sync)) = (self.window(), self.sync(account_id)) else {
+            let Ok(sync) = self.sync(account_id) else {
                 return HashMap::new();
             };
-            let loaded: Vec<(String, Result<MessageBody, String>)> = bodies
-                .into_iter()
-                .map(|(id, body)| (id, Ok(body)))
-                .collect();
-            window.thumbnails(account_id, &sync, &loaded).await
+            self.pictures.thumbnails(account_id, &sync, &bodies).await
         })
     }
 
@@ -436,11 +441,11 @@ impl Effects for Ports {
     }
 
     fn clashes(&self, uid: String, busy: Vec<String>) {
-        self.view.card.set_busy(&uid, &busy);
+        self.view.clashes(&uid, &busy);
     }
 
     fn series_known(&self, uid: String, line: String) {
-        self.view.card.set_series(&uid, line);
+        self.view.series_known(&uid, line);
     }
 
     fn start_engines(&self) {

@@ -68,7 +68,7 @@ impl Desk for Ports {
 
     fn on_screen(&self) -> OnScreen {
         OnScreen {
-            mailbox: self.0.mailbox.borrow().title(),
+            mailbox: self.0.shown().title(),
             open: self.0.conversation.read(|o| OpenConversation {
                 account_id: o.account_id,
                 thread_id: o.thread_id.clone(),

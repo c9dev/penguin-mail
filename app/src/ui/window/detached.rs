@@ -6,7 +6,7 @@ use std::rc::{Rc, Weak};
 
 use adw::prelude::*;
 use gtk::{gio, glib};
-use mailrs_domain::{Folder, ThreadSummary};
+use mailrs_domain::ThreadSummary;
 use mailrs_sync::Mailbox;
 
 use super::MainWindow;
@@ -42,8 +42,8 @@ impl MainWindow {
         view.set_detached();
         // The window keeps the mailbox it was opened from, so its buttons
         // and what they do stay put when the main window moves on.
-        let mailbox = self.mailbox.borrow().clone();
-        view.set_folder(mailbox.folder());
+        let mailbox = self.shown();
+        self.word_buttons(&view, &mailbox);
         self.detached
             .borrow_mut()
             .push((Rc::downgrade(&view), mailbox));
@@ -87,13 +87,6 @@ impl MainWindow {
         views
     }
 
-    /// Tells the main window's conversation which folder its mail is in,
-    /// so the trash and junk buttons say what they do. A conversation in a
-    /// window of its own keeps the folder it was opened from.
-    pub(super) fn set_folder(self: &Rc<Self>, folder: Option<Folder>) {
-        self.conversation.set_folder(folder);
-    }
-
     /// The mailbox `view`'s conversation was opened from: the main
     /// window's for its own view, and the one each separate window was
     /// opened from for the rest.
@@ -106,7 +99,7 @@ impl MainWindow {
                     .is_some_and(|held| std::ptr::eq(&*held, view))
             })
             .map_or_else(
-                || self.mailbox.borrow().clone(),
+                || self.shown(),
                 |(_, mailbox)| mailbox.clone(),
             )
     }

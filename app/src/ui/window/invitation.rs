@@ -37,7 +37,7 @@ impl MainWindow {
                 .any(|email| email.eq_ignore_ascii_case(&account.email))
         });
         if !asked && goa::worth_offering(&account.email) {
-            view.card.offer_gnome();
+            view.offer_gnome();
         }
     }
 
@@ -105,16 +105,15 @@ impl MainWindow {
                 Ok(sent) => {
                     match sent.told {
                         Told::Nobody => {
-                            view.card.set_answer(&uid, before);
+                            view.invitation_answered(&uid, before);
                             this.toast(&gettext(
                                 "This invitation names no organizer, so there is nobody \
                                  to reply to",
                             ));
                         }
                         told => {
-                            view.card.set_answer(&uid, Some(answer));
-                            view.card
-                                .set_went(&uid, Some(went(told, organizer.as_deref())));
+                            view.invitation_answered(&uid, Some(answer));
+                            view.invitation_went(&uid, Some(went(told, organizer.as_deref())));
                             this.toast(&replied(answer, told));
                         }
                     }
@@ -129,7 +128,7 @@ impl MainWindow {
                     }
                 }
                 Err(err) => {
-                    view.card.set_answer(&uid, before);
+                    view.invitation_answered(&uid, before);
                     this.failed(&gettext("Could not send your reply: {reason}"), &err);
                 }
             }
@@ -146,7 +145,7 @@ impl MainWindow {
         let (Some(account_id), Some((invitation, Some(me)))) = (account_id, found) else {
             return;
         };
-        let scope = view.card.scope();
+        let scope = view.invitation_scope();
         let uid = invitation.uid.clone();
         let organizer = invitation
             .organizer
@@ -190,7 +189,7 @@ impl MainWindow {
                     "This invitation names no organizer, so there is nobody to ask",
                 )),
                 Ok(_) => {
-                    view.card.set_went(
+                    view.invitation_went(
                         &uid,
                         Some(match &organizer {
                             Some(organizer) => fill(
