@@ -109,6 +109,25 @@ fn flag_mailbox_counts_match_the_query_per_colour() {
     assert_eq!(counts.get(&FlagColor::Red), None);
 }
 
+/// Trashing one message of a starred thread leaves the thread in the Flag
+/// mailbox while a message outside the Trash remains, and its count agrees.
+#[test]
+fn a_flag_count_keeps_a_thread_whose_other_message_is_trashed() {
+    let (conn, a, _) = mixed_mail();
+    store(
+        &conn,
+        &[
+            meta(a, "s1", "ts", 910, &["INBOX", "STARRED"]),
+            meta(a, "s2", "ts", 920, &["INBOX", "TRASH"]),
+            meta(a, "g1", "tg", 930, &["STARRED", "TRASH"]),
+        ],
+    );
+    let counts = flags::mailbox_counts(&conn).unwrap();
+    let filter = ThreadFilter::unified("").with_flag(FlagColor::Red);
+    assert_eq!(threads::count_threads(&conn, &filter).unwrap(), 2);
+    assert_eq!(counts.get(&FlagColor::Red), Some(&2));
+}
+
 #[test]
 fn category_counts_match_the_query_per_category() {
     let (conn, a, _) = mixed_mail();

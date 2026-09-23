@@ -12,6 +12,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   VIPs take under a millisecond where they took 6 to 29.
 - The sidebar works out every mailbox's count in 6 ms instead of 55.
 
+### Fixed
+
+- A Flag mailbox's count includes a starred conversation with one of its
+  messages in the Trash, as the mailbox's list already did.
+
 ## 0.1.7 (2026-09-23)
 
 ### New
