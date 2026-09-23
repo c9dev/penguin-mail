@@ -3,7 +3,6 @@
 //! and one that wants a mail.
 
 use mailrs_domain::{Address, EpochMillis, MessageMeta, system_label};
-use mailrs_sync::Leave;
 use serde_json::{Value, json};
 
 use super::super::fake::{Harness, ME, labelled, meta};
@@ -178,14 +177,12 @@ async fn three_lists_leave_in_one_call_once_the_dialog_says_yes() {
         "the one-click list hears from Gmail"
     );
     assert_eq!(
-        h.asked().left,
+        h.asked().requests,
         [(
             h.account_id,
-            Leave::Send {
-                to: "leave@forum.example".into(),
-                subject: "bye".into(),
-                body: "unsubscribe".into(),
-            }
+            "leave@forum.example".to_string(),
+            "bye".to_string(),
+            "unsubscribe".to_string(),
         )],
         "the window sends the forum's request from the account"
     );
@@ -234,7 +231,7 @@ async fn a_refused_dialog_leaves_every_list_alone() {
     assert_eq!(said, ["declined", "declined", "declined"]);
     assert!(h.submissions().is_empty(), "the page was read, not pressed");
     assert!(h.gmail.with(|s| s.unsubscribed.is_empty()));
-    assert!(h.asked().left.is_empty(), "no request went out");
+    assert!(h.asked().requests.is_empty(), "no request went out");
     assert_eq!(
         h.asked().lists_asked.len(),
         1,

@@ -11,6 +11,7 @@ use std::sync::{Arc, Mutex};
 use adw::prelude::*;
 use gtk::{gio, glib};
 use ksni::TrayMethods;
+use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{Account, AccountId, Address, ChangeEvent, Label, system_label};
 use mailrs_store::{accounts, labels, messages, threads};
 use mailrs_sync::History;
@@ -33,6 +34,7 @@ const BLOCK_REMOTE_RULES: &str = r#"[
 
 mod composing;
 mod hidden;
+mod photos;
 mod sending;
 
 pub use composing::Signature;
@@ -62,8 +64,14 @@ pub struct App {
     /// A message requested on the command line, opened on first activation.
     pending_compose: RefCell<Option<String>>,
     tray_started: Cell<bool>,
+    /// Holds the tray's recount while a burst of changes goes by.
+    tray_recount: crate::tray::Burst,
     settings: RefCell<Settings>,
-    settings_path: std::path::PathBuf,
+    /// Writes each saved change off the main thread.
+    settings_saver: crate::settings::Saver,
+    /// Where an unreadable settings file went, until the first window says
+    /// so.
+    settings_broken: RefCell<Option<PathBuf>>,
     /// People for recipient suggestions: the accounts' contacts, then the
     /// addresses mail turned up. Loading them reads every message, so the
     /// list reloads only after new mail arrives.
@@ -72,6 +80,8 @@ pub struct App {
     /// Contact photos on disk, by lower-case address. Rows and the open
     /// conversation read it; it is filled whenever the suggestions load.
     photos: RefCell<HashMap<String, PathBuf>>,
+    /// The photos open conversations asked for, read into `data:` URIs.
+    photo_data: RefCell<photos::PhotoCache>,
     /// Messages waiting out the Undo Send delay.
     pending_sends: Cell<usize>,
     /// Hunspell dictionaries already read, by the languages they cover.
@@ -104,6 +114,7 @@ impl App {
         } else {
             Settings::default_path()
         };
+        let opened = Settings::open(&settings_path);
         let app = Rc::new(App {
             gio: gio_app.clone(),
             core,
@@ -120,16 +131,19 @@ impl App {
             shed_generation: Cell::new(0),
             pending_compose: RefCell::new(compose),
             tray_started: Cell::new(false),
+            tray_recount: crate::tray::Burst::default(),
             settings: RefCell::new(Settings {
                 // The demo's contacts are already in its throwaway store,
                 // so the switch shows what the mail on screen is using.
                 contacts: core_demo,
-                ..Settings::load(&settings_path)
+                ..opened.settings
             }),
-            settings_path,
+            settings_saver: crate::settings::Saver::new(settings_path),
+            settings_broken: RefCell::new(opened.broken),
             contacts: Rc::new(RefCell::new(Rc::new(Vec::new()))),
             contacts_stale: Cell::new(true),
             photos: RefCell::new(HashMap::new()),
+            photo_data: RefCell::new(photos::PhotoCache::default()),
             pending_sends: Cell::new(0),
             dictionaries: RefCell::new(HashMap::new()),
             installed_dictionaries: RefCell::new(None),
@@ -211,9 +225,7 @@ impl App {
         if after == *before {
             return Effects::default();
         }
-        if let Err(err) = after.save(&self.settings_path) {
-            tracing::warn!(error = %err, "could not save preferences");
-        }
+        self.settings_saver.save(&after);
         *self.settings.borrow_mut() = after;
         self.apply_effects(&effects);
         effects
@@ -272,7 +284,34 @@ impl App {
         self.window_opened();
         window.present();
         window.run_demo_script();
+        if let Some(aside) = self.settings_broken.borrow_mut().take() {
+            let name = aside
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            window.notice(Notice::Toast(fill(
+                &gettext(
+                    "Your preferences could not be read, so Penguin Mail started from the defaults. The old file is kept as {file}.",
+                ),
+                &[("file", &name)],
+            )));
+        }
         window
+    }
+
+    /// What has to happen before this process ends or turns into another
+    /// one: the MCP servers it started stop, since nothing else would stop
+    /// a stdio server, and the last saved preferences reach the disk.
+    pub(crate) fn before_leaving(&self) {
+        crate::assistant::sources::mcp::registry().stop_all();
+        self.settings_saver.flush();
+    }
+
+    /// Replaces this process with `command`, as the idle restart and an
+    /// update do, and says why when that fails.
+    pub(crate) fn exec_into(&self, mut command: std::process::Command) -> std::io::Error {
+        self.before_leaving();
+        command.exec()
     }
 
     pub fn forget_window(self: &Rc<Self>, window: &Rc<MainWindow>) {
@@ -327,7 +366,9 @@ impl App {
                 return;
             };
             tracing::info!("no window for a while; restarting in the background to return memory");
-            let err = std::process::Command::new(exe).arg("--background").exec();
+            let mut command = std::process::Command::new(exe);
+            command.arg("--background");
+            let err = app.exec_into(command);
             tracing::warn!(error = %err, "could not restart in the background; staying as is");
         });
     }
@@ -462,15 +503,19 @@ impl App {
         cache.get_or_insert_with(spell::installed_languages).clone()
     }
 
-    /// Asks Gmail which addresses each account may send as and keeps the
-    /// answer. Composers open on what was stored last time, so this never
-    /// holds a window up.
-    fn refresh_send_as(self: &Rc<Self>) {
-        for account in self.accounts.borrow().iter() {
+    /// Asks Gmail which addresses each of `accounts` may send as and keeps
+    /// the answer, skipping an account asked within the day. Composers
+    /// open on what was stored last time, so this never holds a window up.
+    fn refresh_send_as(self: &Rc<Self>, accounts: &[Account]) {
+        let now = mailrs_sync::now_millis();
+        for account in accounts {
+            if !self.settings_with(|s| s.send_as_due(&account.email, now)) {
+                continue;
+            }
             let Some(sync) = self.core.account(account.id) else {
                 continue;
             };
-            let (this, email) = (Rc::clone(self), account.email.clone());
+            let (this, email, id) = (Rc::clone(self), account.email.clone(), account.id);
             glib::spawn_future_local(async move {
                 let Ok(addresses) = this.core.call(async move { sync.send_as().await }).await
                 else {
@@ -489,9 +534,13 @@ impl App {
                     return;
                 }
                 this.change_settings(Change::SendAsAddresses {
-                    account: email,
+                    account: email.clone(),
                     addresses,
+                    at: mailrs_sync::now_millis(),
                 });
+                if let Some(name) = this.settings_with(|s| s.display_name(&email)) {
+                    this.names.borrow_mut().insert(id, name);
+                }
             });
         }
     }
@@ -537,17 +586,31 @@ impl App {
                 Ok(out)
             })
             .await?;
+        let known: Vec<AccountId> = self.accounts.borrow().iter().map(|a| a.id).collect();
         *self.accounts.borrow_mut() = loaded.iter().map(|(a, _)| a.clone()).collect();
         *self.labels.borrow_mut() = loaded.iter().map(|(a, l)| (a.id, l.clone())).collect();
-        self.remember_accounts();
+        // A settings change that touches the accounts reloads them too, and
+        // only an account this run has not seen needs Gmail asked about it.
+        let arrived: Vec<Account> = loaded
+            .iter()
+            .map(|(a, _)| a.clone())
+            .filter(|a| !known.contains(&a.id))
+            .collect();
+        self.remember_accounts(&arrived);
         Ok(loaded)
     }
 
-    /// Asks each new account for its display name and every account for
-    /// the addresses it sends as, and updates the tray.
-    fn remember_accounts(self: &Rc<Self>) {
-        for account in self.accounts.borrow().iter() {
+    /// Finds a display name and the send-as addresses for each account
+    /// that just arrived, and updates the tray. The name comes from the
+    /// send-as addresses Preferences keeps when they hold one, so a restart
+    /// asks Gmail only for what it has never told this computer.
+    fn remember_accounts(self: &Rc<Self>, arrived: &[Account]) {
+        for account in arrived {
             if self.names.borrow().contains_key(&account.id) {
+                continue;
+            }
+            if let Some(name) = self.settings_with(|s| s.display_name(&account.email)) {
+                self.names.borrow_mut().insert(account.id, name);
                 continue;
             }
             let Some(sync) = self.core.account(account.id) else {
@@ -564,7 +627,7 @@ impl App {
                 }
             });
         }
-        self.refresh_send_as();
+        self.refresh_send_as(arrived);
         self.update_tray();
     }
 
@@ -609,13 +672,15 @@ impl App {
                 Err(err) => return tracing::warn!(error = %err, "could not load contacts"),
             };
             let dir = this.core.contacts().photo_dir().to_path_buf();
-            *this.photos.borrow_mut() = found
+            let files: Vec<(String, String)> = found
                 .iter()
-                .filter_map(|person| {
-                    let file = dir.join(person.photo_file.as_ref()?);
-                    file.exists().then(|| (person.email.to_lowercase(), file))
-                })
+                .filter_map(|p| Some((p.email.clone(), p.photo_file.clone()?)))
                 .collect();
+            let on_disk = gio::spawn_blocking(move || photos::on_disk(dir, files))
+                .await
+                .unwrap_or_default();
+            *this.photos.borrow_mut() = on_disk;
+            this.photo_data.borrow_mut().clear();
             *this.contacts.borrow_mut() = Rc::new(found);
             this.tell_window(Notice::ContactsLoaded);
         });
@@ -636,28 +701,31 @@ impl App {
 
     /// The contact photos of `addresses`, as `data:` URIs by lower-case
     /// address. The conversation page loads nothing from disk or the
-    /// network, so a photo travels inline or not at all.
+    /// network, so a photo travels inline or not at all. A photo not read
+    /// yet is read off the main thread, and the open conversations are
+    /// drawn again once it arrives.
     pub fn sender_photos(
-        &self,
+        self: &Rc<Self>,
         addresses: impl Iterator<Item = String>,
     ) -> HashMap<String, String> {
-        use base64::Engine;
-        let mut found = HashMap::new();
-        for address in addresses {
-            let key = address.trim().to_lowercase();
-            if key.is_empty() || found.contains_key(&key) {
-                continue;
-            }
-            let Some(path) = self.photo(&key) else {
-                continue;
-            };
-            let Ok(bytes) = std::fs::read(&path) else {
-                continue;
-            };
-            let data = base64::engine::general_purpose::STANDARD.encode(&bytes);
-            found.insert(key, format!("data:image/jpeg;base64,{data}"));
+        let lookup = self
+            .photo_data
+            .borrow_mut()
+            .lookup(addresses, |key| self.photo(key));
+        if !lookup.to_read.is_empty() {
+            let (this, files) = (Rc::clone(self), lookup.to_read);
+            glib::spawn_future_local(async move {
+                let Ok(read) = gio::spawn_blocking(move || photos::read(files)).await else {
+                    return;
+                };
+                let any = read.iter().any(|(_, data)| data.is_some());
+                this.photo_data.borrow_mut().store(read);
+                if any {
+                    this.tell_window(Notice::ContactsLoaded);
+                }
+            });
         }
-        found
+        lookup.found
     }
 
     /// Deletes one account's contacts and photos from this computer and
@@ -683,6 +751,7 @@ impl App {
                 tracing::warn!(error = %err, "could not delete the stored contacts");
             }
             this.photos.borrow_mut().clear();
+            this.photo_data.borrow_mut().clear();
             this.contacts_stale.set(true);
             this.reload_contacts();
         });
@@ -1051,7 +1120,21 @@ impl App {
         });
     }
 
+    /// Counts each account's unread mail for the tray, once per burst of
+    /// changes rather than once per change.
     fn update_tray(self: &Rc<Self>) {
+        let shown = self.tray.lock().expect("tray slot poisoned").is_some();
+        if !shown || !self.tray_recount.claim() {
+            return;
+        }
+        let this = Rc::clone(self);
+        glib::timeout_add_local_once(crate::tray::RECOUNT_AFTER, move || {
+            this.tray_recount.start();
+            this.count_for_tray();
+        });
+    }
+
+    fn count_for_tray(self: &Rc<Self>) {
         let Some(handle) = self.tray.lock().expect("tray slot poisoned").clone() else {
             return;
         };

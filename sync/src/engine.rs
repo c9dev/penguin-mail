@@ -175,7 +175,9 @@ async fn run_account<G: GmailApi>(
     let mut reported: Option<AccountState> = None;
     let mut failures: u32 = 0;
     let mut next_poll = Instant::now();
-    let mut next_prune = Instant::now();
+    // A restart within the hour picks up where the last run's hour left
+    // off, rather than listing Gmail's inbox again straight away.
+    let mut next_prune = Instant::now() + until_check(sync.checked_at().await, now_millis());
     // Six accounts start together but should not ask for their history on
     // the same second afterwards, so each one takes its own place in the
     // cycle from its second poll on.
@@ -273,12 +275,50 @@ async fn tick<G: GmailApi>(
         sync.prune(now_millis()).await?;
         sync.reconcile_inbox().await?;
         *next_prune = Instant::now() + PRUNE_INTERVAL;
+        sync.set_checked_at(now_millis()).await?;
     }
     sync.backfill_step().await
+}
+
+/// How long to wait before the first prune and inbox check, given when
+/// the last one ran: nothing when it never ran or ran an hour ago, else
+/// the rest of that hour.
+fn until_check(
+    last: Option<mailrs_domain::EpochMillis>,
+    now: mailrs_domain::EpochMillis,
+) -> Duration {
+    let Some(last) = last else {
+        return Duration::ZERO;
+    };
+    let since = now.saturating_sub(last);
+    if since < 0 {
+        return Duration::ZERO;
+    }
+    PRUNE_INTERVAL.saturating_sub(Duration::from_millis(since as u64))
 }
 
 async fn report<G: GmailApi>(sync: &AccountSync<G>, state: AccountState) {
     if let Err(err) = sync.set_state(state).await {
         tracing::error!(account = sync.account_id(), error = %err, "could not record the account state");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const HOUR: i64 = 60 * 60 * 1000;
+
+    #[test]
+    fn a_recent_check_waits_out_the_rest_of_its_hour() {
+        let now = 10 * HOUR;
+        assert_eq!(until_check(None, now), Duration::ZERO);
+        assert_eq!(until_check(Some(now - 2 * HOUR), now), Duration::ZERO);
+        assert_eq!(
+            until_check(Some(now - HOUR / 4), now),
+            Duration::from_secs(45 * 60)
+        );
+        // A clock that went backwards checks now rather than waiting.
+        assert_eq!(until_check(Some(now + HOUR), now), Duration::ZERO);
     }
 }

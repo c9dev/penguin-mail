@@ -3,6 +3,7 @@
 # from what it found.
 app/data/io.github.c9dev.PenguinMail.desktop
 app/data/io.github.c9dev.PenguinMail.metainfo.xml
+app/src/app.rs
 app/src/app/sending.rs
 app/src/app/updates.rs
 app/src/assistant/mod.rs

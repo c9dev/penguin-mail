@@ -9,8 +9,10 @@ use mailrs_domain::translate::{fill_plural, gettext, pgettext};
 use serde::{Deserialize, Serialize};
 
 mod change;
+mod file;
 
 pub use change::{AiChange, Change, Effect, Effects, Setting};
+pub use file::{Opened, Saver};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -87,6 +89,10 @@ pub struct Settings {
     /// without waiting on the network; the app refreshes it in the
     /// background.
     pub send_as: BTreeMap<String, Vec<crate::compose::SendAsAddress>>,
+    /// When Gmail last reported each account's send-as addresses, in
+    /// milliseconds since the epoch, keyed as `send_as` is. The app asks
+    /// again once a day, so a restart does not cost a call per account.
+    pub send_as_checked: BTreeMap<String, i64>,
     /// What a new message starts as: styled text, or Markdown source.
     pub compose_format: ComposeFormat,
     /// Ask before sending a message that promises a file and carries none.
@@ -433,6 +439,7 @@ impl Default for Settings {
             spell_words: Vec::new(),
             last_sender: BTreeMap::new(),
             send_as: BTreeMap::new(),
+            send_as_checked: BTreeMap::new(),
             compose_format: ComposeFormat::Rich,
             check_attachments: true,
             sign_by_default: false,
@@ -686,6 +693,9 @@ pub fn nearest<T: Copy + Into<i64>>(choices: &[(T, String)], value: T) -> u32 {
         .map_or(0, |(i, _)| i as u32)
 }
 
+/// A day, in the milliseconds the settings keep times in.
+pub const DAY_MILLIS: i64 = 24 * 60 * 60 * 1000;
+
 impl Settings {
     /// Whether Penguin Mail reads this account's Google contacts.
     pub fn reads_contacts(&self, email: &str) -> bool {
@@ -698,7 +708,9 @@ impl Settings {
         self.assistant_skills.get(id).copied().unwrap_or_default()
     }
 
-    /// Reads the file, falling back to defaults when it is missing or invalid.
+    /// Reads the file, falling back to defaults when it is missing or
+    /// invalid, and leaves the file as it is. The app opens it with
+    /// [`Settings::open`] instead, which keeps a broken file safe.
     pub fn load(path: &Path) -> Settings {
         match std::fs::read_to_string(path) {
             Ok(text) => toml::from_str(&text).unwrap_or_else(|err| {
@@ -709,12 +721,17 @@ impl Settings {
         }
     }
 
+    /// Reads the file for the app: a file that does not parse moves aside
+    /// so the next save cannot overwrite it, and the answer says where.
+    pub fn open(path: &Path) -> Opened {
+        file::open(path)
+    }
+
+    /// Writes the file whole or not at all. The app saves through a
+    /// [`Saver`], which calls this off the main thread.
     pub fn save(&self, path: &Path) -> std::io::Result<()> {
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
         let text = toml::to_string(self).map_err(std::io::Error::other)?;
-        std::fs::write(path, text)
+        file::write_atomic(path, &text)
     }
 
     /// `$MAILRS_SETTINGS`, else next to `config.toml`.
@@ -820,6 +837,26 @@ impl Settings {
             .flatten()
             .find(|a| a.email.eq_ignore_ascii_case(email))
             .map_or("", |a| a.signature.as_str())
+    }
+
+    /// Whether the account's send-as addresses are a day old or were
+    /// never read.
+    pub fn send_as_due(&self, account: &str, now: i64) -> bool {
+        self.send_as_checked
+            .get(&account.to_lowercase())
+            .is_none_or(|at| now.saturating_sub(*at) >= DAY_MILLIS || *at > now)
+    }
+
+    /// The name the account sends as from its own address, as Gmail last
+    /// reported it. The app shows this without asking Gmail at start.
+    pub fn display_name(&self, account: &str) -> Option<String> {
+        self.send_as
+            .get(&account.to_lowercase())?
+            .iter()
+            .find(|a| a.email.eq_ignore_ascii_case(account))?
+            .name
+            .clone()
+            .filter(|n| !n.trim().is_empty())
     }
 
     /// Every address `account` may send from, its own address first when
@@ -1000,6 +1037,31 @@ mod tests {
             let current = Settings::default().ai.use_for(feature);
             assert!(choices.iter().any(|c| c.same_choice(&current)));
         }
+    }
+
+    #[test]
+    fn send_as_is_asked_again_only_once_a_day() {
+        let mut settings = Settings::default();
+        let now = 100 * DAY_MILLIS;
+        assert!(settings.send_as_due("Me@example.com", now));
+        Change::SendAsAddresses {
+            account: "Me@example.com".into(),
+            addresses: vec![crate::compose::SendAsAddress {
+                email: "me@example.com".into(),
+                name: Some("Dana Reis".into()),
+                default: true,
+                ..Default::default()
+            }],
+            at: now - DAY_MILLIS / 2,
+        }
+        .apply_to(&mut settings);
+        assert!(!settings.send_as_due("me@example.com", now));
+        assert!(settings.send_as_due("me@example.com", now + DAY_MILLIS));
+        assert_eq!(
+            settings.display_name("ME@example.com").as_deref(),
+            Some("Dana Reis")
+        );
+        assert_eq!(settings.display_name("you@example.com"), None);
     }
 
     #[test]

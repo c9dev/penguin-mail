@@ -9,6 +9,7 @@ use super::{
     MAX_ROUNDS, emit, error_text, finish_tool, http_client, network, outcome_text, refuse_tool,
     run_tool, too_many_rounds, truncate,
 };
+use crate::history::History;
 use crate::sse::SseReader;
 use crate::{AgentEvent, AiError, Model, ModelList, ToolHost, ToolOutcome, ToolSpec};
 
@@ -50,7 +51,7 @@ pub(crate) struct AnthropicChat {
     api_key: String,
     model: String,
     system_prompt: String,
-    history: Vec<Value>,
+    history: History,
     client: reqwest::Client,
     /// Ask the model to think, when it can.
     pub(crate) think: bool,
@@ -84,7 +85,7 @@ impl AnthropicChat {
             api_key,
             model,
             system_prompt,
-            history: Vec::new(),
+            history: History::default(),
             client: http_client(),
             think: false,
             web: false,
@@ -97,12 +98,11 @@ impl AnthropicChat {
         host: Arc<dyn ToolHost>,
         events: &async_channel::Sender<AgentEvent>,
     ) -> Result<String, AiError> {
-        crate::history::trim(&mut self.history, crate::history::BUDGET);
-        let saved = self.history.len();
-        self.history.push(json!({"role": "user", "content": text}));
+        self.history.begin(json!({"role": "user", "content": text}));
         let result = self.run(&host, events).await;
-        if result.is_err() {
-            self.history.truncate(saved);
+        match result {
+            Ok(_) => self.history.commit(),
+            Err(_) => self.history.rollback(),
         }
         result
     }
@@ -154,11 +154,8 @@ impl AnthropicChat {
             "model": self.model,
             "max_tokens": MAX_TOKENS,
             "stream": true,
-            "messages": self.history,
+            "messages": messages(&self.history),
         });
-        if !self.system_prompt.is_empty() {
-            body["system"] = json!(self.system_prompt);
-        }
         if self.think
             && let Some(thinking) = thinking_request(&self.model)
         {
@@ -176,6 +173,18 @@ impl AnthropicChat {
             .collect();
         if self.web {
             tools.extend(web_tools());
+        }
+        // Tools render before the system prompt, so one breakpoint at the
+        // end of whichever comes last caches both: 68 tools are about 12,000
+        // tokens that every round would otherwise send at full price.
+        if !self.system_prompt.is_empty() {
+            body["system"] = json!([{
+                "type": "text",
+                "text": self.system_prompt,
+                "cache_control": ephemeral(),
+            }]);
+        } else if let Some(last) = tools.last_mut() {
+            last["cache_control"] = ephemeral();
         }
         if !tools.is_empty() {
             body["tools"] = json!(tools);
@@ -195,6 +204,33 @@ impl AnthropicChat {
         }
         read_stream(SseReader::new(response), events).await
     }
+}
+
+/// A cache breakpoint with the default five minutes: the rounds of one
+/// turn follow each other within seconds, and a question asked more than
+/// five minutes after the last would pay double to keep an hour's entry.
+fn ephemeral() -> Value {
+    json!({"type": "ephemeral"})
+}
+
+/// The chat as the request sends it, with a cache breakpoint on the last
+/// block of the message the history names. The next round sends all of
+/// this again and reads it from the cache. The history itself never holds
+/// a breakpoint, since the next round moves it and the bytes before the
+/// new one have to match the ones the cache holds.
+fn messages(history: &History) -> Vec<Value> {
+    let mut messages = history.messages();
+    if let Some(at) = history.cache_point()
+        && let Some(message) = messages.get_mut(at)
+    {
+        if let Value::String(text) = &message["content"] {
+            message["content"] = json!([{"type": "text", "text": text}]);
+        }
+        if let Some(block) = message["content"].as_array_mut().and_then(|b| b.last_mut()) {
+            block["cache_control"] = ephemeral();
+        }
+    }
+    messages
 }
 
 async fn status_error(response: reqwest::Response) -> AiError {

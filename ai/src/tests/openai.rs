@@ -233,6 +233,81 @@ async fn other_client_errors_do_not_retry_and_leave_history_clean() {
     assert!(second.get("tools").is_some());
 }
 
+fn read_thread_call() -> ResponseTemplate {
+    stream(&[delta(json!({"tool_calls": [
+        {"index": 0, "id": "call_read", "function": {"name": "read_thread", "arguments": "{}"}},
+    ]}))])
+}
+
+fn local_chat(server: &MockServer) -> OpenAiChat {
+    OpenAiChat::new(
+        &format!("{}/v1", server.uri()),
+        None,
+        "m".into(),
+        String::new(),
+    )
+}
+
+#[tokio::test]
+async fn a_huge_turn_leaves_room_for_the_next_question() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/chat/completions"))
+        .respond_with(Sequence::new(vec![
+            read_thread_call(),
+            stream(&[delta(json!({"content": "A long thread."}))]),
+            stream(&[delta(json!({"content": "Hello."}))]),
+        ]))
+        .mount(&server)
+        .await;
+    let host = Arc::new(super::OneTool {
+        answer: Some("body ".repeat(100_000)),
+    });
+    let (tx, _rx) = async_channel::unbounded();
+    let mut chat = local_chat(&server);
+    chat.send("Read it".into(), host.clone(), &tx)
+        .await
+        .unwrap();
+    assert_eq!(chat.send("Hi".into(), host, &tx).await.unwrap(), "Hello.");
+
+    let requests = server.received_requests().await.unwrap();
+    let last: Value = requests[2].body_json().unwrap();
+    let messages = last["messages"].as_array().unwrap();
+    super::no_orphans(messages);
+    assert_eq!(messages, &[json!({"role": "user", "content": "Hi"})]);
+}
+
+#[tokio::test]
+async fn stop_in_the_middle_of_a_turn_leaves_a_chat_that_still_works() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/chat/completions"))
+        .respond_with(Sequence::new(vec![
+            read_thread_call(),
+            stream(&[delta(json!({"content": "Hello."}))]),
+        ]))
+        .mount(&server)
+        .await;
+    let (tx, _rx) = async_channel::unbounded();
+    let mut chat = local_chat(&server);
+    let stopped = tokio::time::timeout(
+        std::time::Duration::from_millis(200),
+        chat.send(
+            "Read it".into(),
+            Arc::new(super::OneTool { answer: None }),
+            &tx,
+        ),
+    )
+    .await;
+    assert!(stopped.is_err(), "the turn should still be waiting");
+    let host = Arc::new(FakeHost::default());
+    assert_eq!(chat.send("Hi".into(), host, &tx).await.unwrap(), "Hello.");
+
+    let requests = server.received_requests().await.unwrap();
+    let last: Value = requests[1].body_json().unwrap();
+    assert_eq!(last["messages"], json!([{"role": "user", "content": "Hi"}]));
+}
+
 #[tokio::test]
 async fn lists_models_from_the_models_endpoint() {
     let server = MockServer::start().await;

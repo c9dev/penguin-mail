@@ -7,10 +7,24 @@ fn migrations_run_once_and_record_the_version() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("mail.db");
     let conn = open_connection(&path).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 22);
+    assert_eq!(schema_version(&conn).unwrap(), 23);
     drop(conn);
     let conn = open_connection(&path).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 22);
+    assert_eq!(schema_version(&conn).unwrap(), 23);
+}
+
+#[test]
+fn the_last_inbox_check_is_kept_per_account() {
+    let conn = open_in_memory().unwrap();
+    let a = accounts::insert_account(&conn, "a@example.com", 0).unwrap();
+    let b = accounts::insert_account(&conn, "b@example.com", 0).unwrap();
+    assert_eq!(accounts::checked_at(&conn, a).unwrap(), None);
+    accounts::set_checked_at(&conn, a, 1_700_000_000_000).unwrap();
+    assert_eq!(
+        accounts::checked_at(&conn, a).unwrap(),
+        Some(1_700_000_000_000)
+    );
+    assert_eq!(accounts::checked_at(&conn, b).unwrap(), None);
 }
 
 #[test]

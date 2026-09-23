@@ -65,6 +65,26 @@ pub fn set_state(conn: &Connection, id: AccountId, state: AccountState) -> Resul
     Ok(())
 }
 
+/// When the account's inbox was last checked against Gmail's, if ever.
+pub fn checked_at(conn: &Connection, id: AccountId) -> Result<Option<EpochMillis>> {
+    Ok(conn
+        .query_row(
+            "SELECT checked_at FROM accounts WHERE id = ?1",
+            params![id],
+            |row| row.get::<_, Option<EpochMillis>>(0),
+        )
+        .optional()?
+        .flatten())
+}
+
+pub fn set_checked_at(conn: &Connection, id: AccountId, at: EpochMillis) -> Result<()> {
+    conn.execute(
+        "UPDATE accounts SET checked_at = ?2 WHERE id = ?1",
+        params![id, at],
+    )?;
+    Ok(())
+}
+
 pub fn sync_cursor(conn: &Connection, id: AccountId) -> Result<SyncCursor> {
     Ok(conn.query_row(
         "SELECT history_id, backfill_cursor, backfill_done, sync_gen FROM accounts WHERE id = ?1",

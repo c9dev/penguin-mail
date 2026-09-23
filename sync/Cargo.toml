@@ -9,7 +9,7 @@ rust-version.workspace = true
 [features]
 # Ships `fake::FakeGmail`, the in-memory Gmail, to other crates. Sync's own
 # tests always have it; `penguin-mail` turns it on for `--demo`.
-fake = []
+fake = ["dep:mail-parser"]
 
 [dependencies]
 mailrs-domain.workspace = true
@@ -20,6 +20,8 @@ chrono.workspace = true
 dirs.workspace = true
 futures.workspace = true
 mail-builder.workspace = true
+# Reads what the fake sends into its Sent copy; only the fake needs it.
+mail-parser = { workspace = true, optional = true }
 rand.workspace = true
 serde.workspace = true
 thiserror.workspace = true
@@ -29,6 +31,7 @@ tracing.workspace = true
 
 [dev-dependencies]
 base64.workspace = true
+mail-parser.workspace = true
 tempfile.workspace = true
 # `start_paused` lets a test watch a retry wait out Gmail's Retry-After
 # without waiting itself.

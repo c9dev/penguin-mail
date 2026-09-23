@@ -2,7 +2,6 @@
 //! The decisions live in `crate::update`; this is where they meet the
 //! window, the tray, and the clock.
 
-use std::os::unix::process::CommandExt;
 use std::rc::Rc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -283,7 +282,7 @@ impl App {
                     command.arg("--background");
                 }
                 tracing::info!("restarting into the update");
-                let err = command.exec();
+                let err = self.exec_into(command);
                 tracing::warn!(error = %err, "could not restart into the update");
             }
         }

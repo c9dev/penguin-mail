@@ -103,6 +103,12 @@ msgstr ""
 msgid "The layout on a narrow screen"
 msgstr ""
 
+#: app/src/app.rs:294
+msgid ""
+"Your preferences could not be read, so Penguin Mail started from the "
+"defaults. The old file is kept as {file}."
+msgstr ""
+
 #: app/src/app/sending.rs:30
 msgid "That account is not connected. Check its status in the sidebar."
 msgstr ""
@@ -151,11 +157,11 @@ msgstr ""
 msgid "“{subject}”"
 msgstr ""
 
-#: app/src/app/updates.rs:126
+#: app/src/app/updates.rs:125
 msgid "Penguin Mail {version} is up to date"
 msgstr ""
 
-#: app/src/app/updates.rs:136
+#: app/src/app/updates.rs:135
 msgid "Could not reach GitHub to check for updates"
 msgstr ""
 
@@ -183,39 +189,39 @@ msgstr ""
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr ""
 
-#: app/src/assistant/run.rs:918
+#: app/src/assistant/run.rs:904
 msgid "Move {count} conversation to the Trash?"
 msgid_plural "Move {count} conversations to the Trash?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/assistant/run.rs:1009
+#: app/src/assistant/run.rs:995
 msgid ""
 "Don't Allow labels only the mail in accounts that have the label already."
 msgstr ""
 
-#: app/src/assistant/run.rs:1041
+#: app/src/assistant/run.rs:1027
 msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr ""
 
-#: app/src/assistant/run.rs:1117 app/src/assistant/run/calendar.rs:178
+#: app/src/assistant/run.rs:1103 app/src/assistant/run/calendar.rs:178
 #: app/src/assistant/run/calendar.rs:525
 msgid "%a %-d %b"
 msgstr ""
 
-#: app/src/assistant/run.rs:1123
+#: app/src/assistant/run.rs:1109
 msgid " from {first} to {last}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1126
+#: app/src/assistant/run.rs:1112
 msgid " until {last}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1127
+#: app/src/assistant/run.rs:1113
 msgid " from {first}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1133
+#: app/src/assistant/run.rs:1119
 msgid ""
 "Turn on the automatic reply for {account}{dates}?\n"
 "\n"
@@ -223,19 +229,19 @@ msgid ""
 "{body}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1144
+#: app/src/assistant/run.rs:1130
 msgid "Turn off the automatic reply for {account}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1226
+#: app/src/assistant/run.rs:1212
 msgid "Create a Gmail rule for {account}: {when} → {then}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1266
+#: app/src/assistant/run.rs:1252
 msgid "Delete a Gmail rule from {account}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1388
+#: app/src/assistant/run.rs:1374
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a Gmail rule for "
 "their future mail?"
@@ -752,7 +758,7 @@ msgstr[1] ""
 msgid "Undo “{action}”?"
 msgstr ""
 
-#: app/src/assistant/run/unsubscribe.rs:336
+#: app/src/assistant/run/unsubscribe.rs:334
 msgid "this list"
 msgstr ""
 
@@ -962,15 +968,15 @@ msgstr ""
 msgid "On {date}, {sender} wrote:"
 msgstr ""
 
-#: app/src/core.rs:505
+#: app/src/core.rs:508
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 
-#: app/src/core.rs:522
+#: app/src/core.rs:525
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 
-#: app/src/core.rs:530
+#: app/src/core.rs:533
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 
@@ -1149,11 +1155,11 @@ msgid ""
 "  mailto:...     the same as --compose mailto:..."
 msgstr ""
 
-#: app/src/main.rs:115
+#: app/src/main.rs:117
 msgid "penguin-mail: unknown option {option}"
 msgstr ""
 
-#: app/src/main.rs:230
+#: app/src/main.rs:236
 msgid "Penguin Mail Could Not Start"
 msgstr ""
 
@@ -1691,176 +1697,176 @@ msgstr ""
 msgid "In {label}"
 msgstr ""
 
-#: app/src/settings/mod.rs:156 app/src/settings/mod.rs:331
-#: app/src/settings/mod.rs:605 app/src/ui/assistant_mcp_prefs.rs:184
+#: app/src/settings/mod.rs:162 app/src/settings/mod.rs:337
+#: app/src/settings/mod.rs:612 app/src/ui/assistant_mcp_prefs.rs:184
 msgid "Off"
 msgstr ""
 
-#: app/src/settings/mod.rs:157
+#: app/src/settings/mod.rs:163
 msgid "Local server"
 msgstr ""
 
-#: app/src/settings/mod.rs:158
+#: app/src/settings/mod.rs:164
 msgid "Anthropic API"
 msgstr ""
 
-#: app/src/settings/mod.rs:159
+#: app/src/settings/mod.rs:165
 msgid "Claude subscription"
 msgstr ""
 
-#: app/src/settings/mod.rs:184 app/src/ui/assistant.rs:99
+#: app/src/settings/mod.rs:190 app/src/ui/assistant.rs:99
 msgid "Assistant"
 msgstr ""
 
-#: app/src/settings/mod.rs:185
+#: app/src/settings/mod.rs:191
 msgid "Translation"
 msgstr ""
 
 #. The assistant's running label says "Unsubscribing" too, and
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:189
+#: app/src/settings/mod.rs:195
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr ""
 
-#: app/src/settings/mod.rs:195
+#: app/src/settings/mod.rs:201
 msgid "Answers questions and acts on your mail"
 msgstr ""
 
-#: app/src/settings/mod.rs:196
+#: app/src/settings/mod.rs:202
 msgid "Translates a message when you ask"
 msgstr ""
 
-#: app/src/settings/mod.rs:198
+#: app/src/settings/mod.rs:204
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr ""
 
-#: app/src/settings/mod.rs:236
+#: app/src/settings/mod.rs:242
 msgid "Same as the Assistant"
 msgstr ""
 
-#: app/src/settings/mod.rs:332
+#: app/src/settings/mod.rs:338
 msgid "Claude's own only"
 msgstr ""
 
-#: app/src/settings/mod.rs:333
+#: app/src/settings/mod.rs:339
 msgid "Brave Search"
 msgstr ""
 
-#: app/src/settings/mod.rs:334
+#: app/src/settings/mod.rs:340
 msgid "SearXNG"
 msgstr ""
 
-#: app/src/settings/mod.rs:464
+#: app/src/settings/mod.rs:471
 msgid "Rich text"
 msgstr ""
 
-#: app/src/settings/mod.rs:465
+#: app/src/settings/mod.rs:472
 msgid "Markdown"
 msgstr ""
 
-#: app/src/settings/mod.rs:512
+#: app/src/settings/mod.rs:519
 msgid "When opened"
 msgstr ""
 
-#: app/src/settings/mod.rs:513
+#: app/src/settings/mod.rs:520
 msgid "After 2 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:514
+#: app/src/settings/mod.rs:521
 msgid "Only when I choose"
 msgstr ""
 
-#: app/src/settings/mod.rs:530
+#: app/src/settings/mod.rs:537
 msgid "Ask each time"
 msgstr ""
 
-#: app/src/settings/mod.rs:531
+#: app/src/settings/mod.rs:538
 msgid "Always load"
 msgstr ""
 
-#: app/src/settings/mod.rs:565
+#: app/src/settings/mod.rs:572
 msgid "Small"
 msgstr ""
 
-#: app/src/settings/mod.rs:566
+#: app/src/settings/mod.rs:573
 msgid "Default"
 msgstr ""
 
-#: app/src/settings/mod.rs:567
+#: app/src/settings/mod.rs:574
 msgid "Large"
 msgstr ""
 
-#: app/src/settings/mod.rs:568
+#: app/src/settings/mod.rs:575
 msgid "Larger"
 msgstr ""
 
-#: app/src/settings/mod.rs:606
+#: app/src/settings/mod.rs:613
 msgid "5 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:607
+#: app/src/settings/mod.rs:614
 msgid "10 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:608
+#: app/src/settings/mod.rs:615
 msgid "20 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:609
+#: app/src/settings/mod.rs:616
 msgid "30 seconds"
 msgstr ""
 
-#: app/src/settings/mod.rs:626
+#: app/src/settings/mod.rs:633
 msgid "Follow system"
 msgstr ""
 
-#: app/src/settings/mod.rs:627
+#: app/src/settings/mod.rs:634
 msgid "Light"
 msgstr ""
 
-#: app/src/settings/mod.rs:628
+#: app/src/settings/mod.rs:635
 msgid "Dark"
 msgstr ""
 
-#: app/src/settings/mod.rs:638
+#: app/src/settings/mod.rs:645
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/settings/mod.rs:646
+#: app/src/settings/mod.rs:653
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/settings/mod.rs:663
+#: app/src/settings/mod.rs:670
 msgid "2 weeks"
 msgstr ""
 
-#: app/src/settings/mod.rs:664
+#: app/src/settings/mod.rs:671
 msgid "30 days"
 msgstr ""
 
-#: app/src/settings/mod.rs:665
+#: app/src/settings/mod.rs:672
 msgid "90 days"
 msgstr ""
 
-#: app/src/settings/mod.rs:666
+#: app/src/settings/mod.rs:673
 msgid "1 year"
 msgstr ""
 
-#: app/src/settings/mod.rs:673
+#: app/src/settings/mod.rs:680
 msgid "256 MB"
 msgstr ""
 
-#: app/src/settings/mod.rs:674
+#: app/src/settings/mod.rs:681
 msgid "1 GB"
 msgstr ""
 
-#: app/src/settings/mod.rs:675
+#: app/src/settings/mod.rs:682
 msgid "4 GB"
 msgstr ""
 
@@ -2012,55 +2018,55 @@ msgid ""
 "The message goes to Anthropic, for Claude to read through your subscription."
 msgstr ""
 
-#: app/src/tray.rs:21
+#: app/src/tray.rs:44
 msgid "No unread mail"
 msgstr ""
 
-#: app/src/tray.rs:23
+#: app/src/tray.rs:46
 msgid "{count} unread message"
 msgid_plural "{count} unread messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/tray.rs:37 app/src/ui/sidebar.rs:525
+#: app/src/tray.rs:60 app/src/ui/sidebar.rs:525
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/tray.rs:73 app/src/tray.rs:90
+#: app/src/tray.rs:96 app/src/tray.rs:113
 msgid "Penguin Mail: {summary}"
 msgstr ""
 
-#: app/src/tray.rs:134
+#: app/src/tray.rs:157
 msgid "Open Penguin Mail"
 msgstr ""
 
-#: app/src/tray.rs:135 app/src/ui/composer/mod.rs:198
+#: app/src/tray.rs:158 app/src/ui/composer/mod.rs:198
 #: app/src/ui/composer/mod.rs:436 app/src/ui/composer/mod.rs:1025
 #: app/src/ui/contact_card.rs:146
 msgid "New Message"
 msgstr ""
 
-#: app/src/tray.rs:136 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2179
+#: app/src/tray.rs:159 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2179
 msgid "Check for Mail"
 msgstr ""
 
-#: app/src/tray.rs:140 app/src/update/mod.rs:98
+#: app/src/tray.rs:163 app/src/update/mod.rs:98
 msgid "Install Update {version}"
 msgstr ""
 
-#: app/src/tray.rs:143
+#: app/src/tray.rs:166
 msgid "What's New in {version}"
 msgstr ""
 
-#: app/src/tray.rs:147 app/src/ui/about.rs:87 app/src/ui/about.rs:194
+#: app/src/tray.rs:170 app/src/ui/about.rs:87 app/src/ui/about.rs:194
 #: app/src/ui/about.rs:202 app/src/ui/about.rs:209
 #: app/src/ui/preferences.rs:662 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr ""
 
-#: app/src/tray.rs:152 app/src/ui/window.rs:2191
+#: app/src/tray.rs:175 app/src/ui/window.rs:2191
 #: app/src/ui/window/shortcuts.rs:508
 msgid "Quit"
 msgstr ""

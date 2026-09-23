@@ -17,14 +17,12 @@
 use futures::future::{Either, select};
 use mailrs_store::bodies;
 use mailrs_store::newsletters::Sender;
-use mailrs_sync::Newsletters;
+use mailrs_sync::{Leave, Newsletters};
 
 use super::*;
 use crate::ui::unsubscribe::{ListLine, Way, sent_to};
 use crate::unsubscribe::{Unsubscribe, choose_with_body};
-use crate::unsubscribe_page::{
-    Browser, Outcome as PageOutcome, Prepared, finish, prepare,
-};
+use crate::unsubscribe_page::{Browser, Outcome as PageOutcome, Prepared, finish, prepare};
 
 /// The most lists one call may leave. Twenty pages already take minutes,
 /// and a dialog longer than that is one nobody reads before pressing.
@@ -376,7 +374,23 @@ impl<A: Accounts> Tools<A> {
         let State::Ready { how, .. } = &list.state else {
             return ("failed", Some("That list has no way out.".into()));
         };
-        match self.effects.unsubscribe(list.account.id, how.clone()).await {
+        let (mail, account_id, how) =
+            (Arc::clone(&self.modules.mail), list.account.id, how.clone());
+        let leave = self
+            .call(async move { mail.unsubscribe(account_id, how).await })
+            .await;
+        let left = match leave {
+            Ok(Leave::Done) => Ok(()),
+            Ok(Leave::Send { to, subject, body }) => {
+                self.effects.send_request(account_id, to, subject, body)
+            }
+            Ok(Leave::Open(url)) => {
+                self.effects.open_page(&url);
+                Ok(())
+            }
+            Err(why) => Err(why),
+        };
+        match left {
             Ok(()) => ("done", None),
             Err(why) => ("failed", Some(why)),
         }
@@ -388,7 +402,7 @@ impl<A: Accounts> Tools<A> {
     /// same effect the other two ways go through.
     async fn finish_page(
         &self,
-        list: &Leaving,
+        _list: &Leaving,
         browser: &dyn Browser,
         prepared: &Prepared,
     ) -> Ended {
@@ -403,19 +417,13 @@ impl<A: Accounts> Tools<A> {
             ),
             PageOutcome::Failed(why) => ("failed", Some(why)),
             PageOutcome::OpenInBrowser(url) => {
-                let opening = self
-                    .effects
-                    .unsubscribe(list.account.id, Unsubscribe::Page(url.clone()))
-                    .await;
-                match opening {
-                    Ok(()) => (
-                        "opened",
-                        Some(format!(
-                            "Penguin Mail could not read {url}, so it opened in the user's browser for them to finish."
-                        )),
-                    ),
-                    Err(why) => ("failed", Some(why)),
-                }
+                self.effects.open_page(&url);
+                (
+                    "opened",
+                    Some(format!(
+                        "Penguin Mail could not read {url}, so it opened in the user's browser for them to finish."
+                    )),
+                )
             }
         }
     }

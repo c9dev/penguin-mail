@@ -123,6 +123,26 @@ impl<G: GmailApi> AccountSync<G> {
         Ok(())
     }
 
+    /// When the engine last pruned this account and checked its inbox.
+    pub async fn checked_at(&self) -> Option<EpochMillis> {
+        let account_id = self.account_id;
+        self.db
+            .read(move |c| accounts::checked_at(c, account_id))
+            .await
+            .unwrap_or_else(|err| {
+                tracing::warn!(account = account_id, error = %err, "could not read the last inbox check");
+                None
+            })
+    }
+
+    pub async fn set_checked_at(&self, at: EpochMillis) -> Result<(), SyncError> {
+        let account_id = self.account_id;
+        self.db
+            .write(move |c| accounts::set_checked_at(c, account_id, at))
+            .await?;
+        Ok(())
+    }
+
     fn emit(&self, event: ChangeEvent) {
         // The channel is unbounded, so this only fails when nobody listens.
         let _ = self.events.try_send(event);

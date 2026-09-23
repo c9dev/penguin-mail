@@ -9,6 +9,9 @@
 //! screen before the engine starts.
 
 mod query;
+mod sent;
+
+pub use sent::read_sent;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::sync::Mutex;
@@ -273,6 +276,12 @@ impl FakeGmail {
 
     pub fn with<R>(&self, f: impl FnOnce(&mut FakeState) -> R) -> R {
         f(&mut self.state.lock().expect("fake state poisoned"))
+    }
+
+    /// Files a copy of each message sent under Sent, as Gmail does, for the
+    /// account the store knows this mailbox as.
+    pub fn keep_sent_copies(&self, account_id: mailrs_domain::AccountId) {
+        self.with(|s| s.sent_copy = Some(Box::new(move |raw| read_sent(raw, account_id))));
     }
 
     /// A message that already exists. No history. Whether a listing returns

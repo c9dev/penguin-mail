@@ -135,6 +135,13 @@ async fn send_now_asks_then_sends_a_scheduled_message() {
     assert_eq!(h.gmail.with(|s| s.sent.len()), 1, "the draft went out");
     assert!(waiting(&h).await.is_empty());
     assert_eq!(h.asked().queue_changed, 1);
+    // Gmail files a copy under Sent, which the model can then find.
+    let filed = h.gmail.with(|s| {
+        s.messages
+            .values()
+            .any(|m| m.subject == "Monday" && m.label_ids.iter().any(|l| l == "SENT"))
+    });
+    assert!(filed, "the sent message is in Sent");
 }
 
 #[tokio::test]

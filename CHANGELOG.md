@@ -26,6 +26,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   touched.
 - Penguin Mail keeps at most 48 MB of pictures from mail it has shown,
   where it could hold 430 MB before.
+- The assistant on the Anthropic API costs less per question. Each request
+  used to send its tools and instructions, about 12,000 tokens, at full
+  price; now the API reads them and the chat so far from its cache.
 
 ### Fixed
 
@@ -53,6 +56,19 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   conversation you opened while it was still loading.
 - The toast after moving mail to a label with an ampersand in its name,
   such as R&D, names the label again instead of showing nothing.
+- Your preferences survive a damaged settings file. Penguin Mail used to
+  start from the defaults and save over the file; it now keeps the old
+  file beside the new one and tells you its name. A save also replaces
+  the file in one step, so a crash in the middle cannot empty it.
+- MCP servers the assistant started stop when Penguin Mail restarts
+  itself to free memory or to install an update, where they used to keep
+  running with nothing talking to them.
+- The assistant reports sorting a sender into a category once their mail
+  has moved, where it used to say so before anything happened, and it
+  says when the rule for their future mail still needs a permission.
+- A chat with the assistant keeps working after you press Stop, and after
+  it reads one very long conversation. Either could leave every later
+  question failing until you started a new chat.
 
 ## 0.1.7 (2026-09-23)
 
