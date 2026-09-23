@@ -54,6 +54,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- The Load Images bar no longer offers to load a picture the sender hid
+  in a comment, which the message never shows.
 - Installed from the tarball into a folder with a space in its path,
   Penguin Mail starts from the app grid and at login, where the launcher
   used to run nothing.

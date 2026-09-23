@@ -36,7 +36,16 @@ pub struct MessageView<'a> {
     /// The body's HTML, already cleaned, or `None` for a body drawn from
     /// its text. Cleaning a long message costs milliseconds, so whoever
     /// builds the page keeps the result and passes it in here.
-    pub sanitized: Option<&'a str>,
+    pub sanitized: Option<Sanitized<'a>>,
+}
+
+/// A body's cleaned HTML, and whether it chooses its own colours. Mail
+/// that does is written for a white page and keeps one; mail that does not
+/// takes the window's colours.
+#[derive(Debug, Clone, Copy)]
+pub struct Sanitized<'a> {
+    pub html: &'a str,
+    pub paints: bool,
 }
 
 pub struct Conversation<'a> {
@@ -204,8 +213,9 @@ fn render_body(html: &mut String, view: &MessageView) {
                 let _ = write!(
                     html,
                     "<div class=\"body html{plain}\"><template shadowrootmode=\"open\"><style>{HTML_BODY_CSS}</style>\
-                     <div class=\"root\">{clean}</div></template></div>",
-                    plain = if paints_itself(clean) { "" } else { " plain" },
+                     <div class=\"root\">{html}</div></template></div>",
+                    html = clean.html,
+                    plain = if clean.paints { "" } else { " plain" },
                 );
             } else {
                 let _ = write!(
@@ -217,18 +227,6 @@ fn render_body(html: &mut String, view: &MessageView) {
             render_attachments(html, &view.meta.id, body, view.thumbnails);
         }
     }
-}
-
-/// Whether a message's HTML chooses its own colours. Mail that does is
-/// written for a white page: a newsletter's white boxes and dark text
-/// only read against it. Mail that does not, which is most of what a
-/// person writes, takes the window's own colours instead of sitting in a
-/// white slab in a dark window.
-fn paints_itself(html: &str) -> bool {
-    let lower = html.to_ascii_lowercase();
-    ["bgcolor=", "background", "color:", "color=", "<table"]
-        .iter()
-        .any(|mark| lower.contains(mark))
 }
 
 /// The recipients line, and under it everything the headers say about
@@ -790,17 +788,21 @@ mod tests {
             ..Default::default()
         };
         let no_thumbs = HashMap::new();
-        let view = |body: &'static MessageBody, meta: &'static MessageMeta| MessageView {
+        let view = |body: &'static MessageBody, meta: &'static MessageMeta, paints| MessageView {
             meta,
             body: BodyState::Loaded(body),
             expanded: true,
             thumbnails: &no_thumbs,
             // Both fixtures are already clean.
-            sanitized: body.html.as_deref(),
+            sanitized: body.html.as_deref().map(|html| Sanitized { html, paints }),
         };
         let html = page(
             "Kites",
-            vec![view(Box::leak(Box::new(body)), Box::leak(Box::new(plain)))],
+            vec![view(
+                Box::leak(Box::new(body)),
+                Box::leak(Box::new(plain)),
+                false,
+            )],
         );
         assert!(html.contains("body html plain"), "{html}");
 
@@ -814,6 +816,7 @@ mod tests {
             vec![view(
                 Box::leak(Box::new(loud)),
                 Box::leak(Box::new(painted)),
+                true,
             )],
         );
         assert!(
@@ -949,7 +952,10 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 thumbnails: &no_thumbs,
-                sanitized: Some("<p>Hi</p>"),
+                sanitized: Some(Sanitized {
+                    html: "<p>Hi</p>",
+                    paints: false,
+                }),
             }],
         );
         assert!(html.contains("<template shadowrootmode=\"open\">"));

@@ -821,7 +821,7 @@ pub struct Translation {
     pub body: MessageBody,
     /// The translated HTML after cleaning, which is what the page draws.
     /// `None` for a message with no HTML part.
-    pub clean: Option<String>,
+    pub clean: Option<crate::open_thread::Cleaned>,
     /// Set when the message was too long and only its start was
     /// translated.
     pub cut: bool,

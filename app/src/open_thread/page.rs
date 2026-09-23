@@ -13,25 +13,61 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use mailrs_domain::MessageBody;
 
 use super::{InlineImages, OpenThread};
-use crate::render::{BodyState, Conversation, MessageView, Theme, render};
+use crate::render::{BodyState, Conversation, MessageView, Sanitized, Theme, render};
 use crate::sanitize::sanitize_html;
 use crate::translation::{Body, Prose};
 
 /// A message body after cleaning, with a mark of the HTML and the inline
-/// images it was made from. A different mark means the body needs
-/// cleaning again.
+/// images it was made from, and what two scans of the cleaned HTML found.
+/// A different mark means the body needs cleaning again. The scans each
+/// read the whole body in lower case, so they run once, with the
+/// cleaning, rather than on every draw.
 #[derive(Debug, Clone)]
 pub struct Cleaned {
     mark: u64,
     html: String,
+    /// Whether it loads anything from the web, which is what the Load
+    /// Images banner offers.
+    remote: bool,
+    /// Whether it chooses its own colours, and so keeps its white page.
+    paints: bool,
+}
+
+impl Cleaned {
+    /// Cleans `html` with the pictures it names. Slow on a long message.
+    pub fn new(html: &str, images: &InlineImages) -> Cleaned {
+        clean(html, images)
+    }
 }
 
 /// Cleans the HTML of one body with the pictures it names.
-fn clean(html: &str, images: &InlineImages) -> Cleaned {
+fn clean(source: &str, images: &InlineImages) -> Cleaned {
+    let html = sanitize_html(source, images);
+    let lower = html.to_ascii_lowercase();
     Cleaned {
-        mark: body_mark(html, images),
-        html: sanitize_html(html, images),
+        mark: body_mark(source, images),
+        remote: loads_remote(&lower),
+        paints: paints_itself(&lower),
+        html,
     }
+}
+
+/// Whether lower-case HTML loads a picture or a background from the web.
+fn loads_remote(lower: &str) -> bool {
+    ["src=\"http", "src='http", "url(http", "url('http", "url(\"http"]
+        .iter()
+        .any(|mark| lower.contains(mark))
+}
+
+/// Whether lower-case HTML chooses its own colours. Mail that does is
+/// written for a white page: a newsletter's white boxes and dark text only
+/// read against it. Mail that does not, which is most of what a person
+/// writes, takes the window's own colours instead of sitting in a white
+/// slab in a dark window.
+fn paints_itself(lower: &str) -> bool {
+    ["bgcolor=", "background", "color:", "color=", "<table"]
+        .iter()
+        .any(|mark| lower.contains(mark))
 }
 
 /// HTML bodies waiting to be cleaned, each with the pictures it names. A
@@ -124,9 +160,13 @@ impl OpenThread {
                     expanded: self.expanded.contains(&meta.id),
                     thumbnails: &self.thumbnails,
                     sanitized: match showing {
-                        Some(translation) => translation.clean.as_deref(),
-                        None => self.cleaned.get(&meta.id).map(|body| body.html.as_str()),
-                    },
+                        Some(translation) => translation.clean.as_ref(),
+                        None => self.cleaned.get(&meta.id),
+                    }
+                    .map(|cleaned| Sanitized {
+                        html: &cleaned.html,
+                        paints: cleaned.paints,
+                    }),
                 }
             })
             .collect();
@@ -156,6 +196,11 @@ impl OpenThread {
             None => Prose::read(Body::Text(body.text.as_deref().unwrap_or(""))),
         };
         Some((meta.id.clone(), prose))
+    }
+
+    /// Whether a body the page drew loads anything from the web.
+    pub fn has_remote_images(&self) -> bool {
+        self.cleaned.values().any(|cleaned| cleaned.remote)
     }
 
     /// Cleans every HTML body whose cleaned copy is missing or was made
@@ -278,6 +323,49 @@ mod tests {
         open.take_cleaned(HashMap::from([("m1".to_string(), stale)]));
         let page = open.page(&theme());
         assert!(page.contains("<p>Kites</p>") && !page.contains("Ciphertext"));
+    }
+
+    /// What the scans find is kept with the cleaned copy: a cleaned copy
+    /// that says so draws on its own white page, whatever its words.
+    #[test]
+    fn the_page_trusts_what_cleaning_found() {
+        let mut open = thread("<p>Kites</p>");
+        let mut made = clean("<p>Kites</p>", &Default::default());
+        assert!(!made.paints && !made.remote);
+        made.paints = true;
+        open.take_cleaned(HashMap::from([("m1".to_string(), made)]));
+        let page = open.page(&theme());
+        assert!(page.contains("body html\""), "{page}");
+    }
+
+    #[test]
+    fn a_newsletter_paints_itself_and_a_note_does_not() {
+        let note = clean("<div dir=\"ltr\">Monday works.</div>", &Default::default());
+        let sale = clean(
+            "<table bgcolor=\"#ffffff\"><tr><td>Sale</td></tr></table>",
+            &Default::default(),
+        );
+        assert!(!note.paints && sale.paints);
+    }
+
+    /// A remote picture a sender left inside a comment never reaches the
+    /// page, so it is no reason to offer Load Images.
+    #[test]
+    fn remote_images_are_looked_for_in_what_the_page_draws() {
+        let hidden = clean(
+            "<p>Hi</p><!-- <img src=\"https://tracker.example/p.gif\"> -->",
+            &Default::default(),
+        );
+        assert!(!hidden.remote);
+        for shown in [
+            "<img src='https://news.example/a.png'>",
+            "<div style=\"background:url(https://news.example/b.png)\">x</div>",
+        ] {
+            assert!(clean(shown, &Default::default()).remote, "{shown}");
+        }
+        let mut open = thread("<p>Hi</p><!-- <img src=\"https://tracker.example/p.gif\"> -->");
+        open.page(&theme());
+        assert!(!open.has_remote_images());
     }
 
     fn images(entries: &[(&str, &str)]) -> HashMap<String, String> {

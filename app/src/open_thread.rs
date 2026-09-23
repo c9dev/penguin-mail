@@ -505,21 +505,6 @@ impl OpenThread {
             .map(|(id, body)| (id.clone(), body.clone()))
             .collect()
     }
-
-    pub fn has_remote_images(&self) -> bool {
-        self.bodies
-            .values()
-            .filter_map(|b| b.as_ref().ok())
-            .filter_map(|b| b.html.as_deref())
-            .any(|html| {
-                let lower = html.to_ascii_lowercase();
-                lower.contains("src=\"http")
-                    || lower.contains("src='http")
-                    || lower.contains("url(http")
-                    || lower.contains("url('http")
-                    || lower.contains("url(\"http")
-            })
-    }
 }
 
 #[cfg(test)]
