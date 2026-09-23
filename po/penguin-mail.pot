@@ -969,27 +969,27 @@ msgstr ""
 msgid "On {date}, {sender} wrote:"
 msgstr ""
 
-#: app/src/core.rs:159
+#: app/src/core.rs:152
 msgid ""
 "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your "
 "mail. Stop it, then open Penguin Mail again."
 msgstr ""
 
-#: app/src/core.rs:559
+#: app/src/core.rs:552
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 
-#: app/src/core.rs:563
+#: app/src/core.rs:556
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
 msgstr ""
 
-#: app/src/core.rs:581
+#: app/src/core.rs:574
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 
-#: app/src/core.rs:589
+#: app/src/core.rs:582
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 
@@ -5965,53 +5965,53 @@ msgstr ""
 msgid "Is flagged"
 msgstr ""
 
-#: sync/src/account/writes.rs:557
+#: sync/src/account/writes.rs:556
 msgid "Gmail is busy. Still working on {conversations}."
 msgstr ""
 
-#: sync/src/account/writes.rs:572
+#: sync/src/account/writes.rs:571
 msgid ""
 "Gmail is busy, so {action} did not go through for {conversations}. Try again "
 "in a moment."
 msgstr ""
 
-#: sync/src/account/writes.rs:581
+#: sync/src/account/writes.rs:580
 msgid ""
 "Gmail stayed busy for {waited}, so {action} did not go through for "
 "{conversations}."
 msgstr ""
 
-#: sync/src/account/writes.rs:588
+#: sync/src/account/writes.rs:587
 msgid "{action} failed: {reason}"
 msgstr ""
 
-#: sync/src/account/writes.rs:609
+#: sync/src/account/writes.rs:608
 msgid "a moment"
 msgstr ""
 
-#: sync/src/account/writes.rs:611
+#: sync/src/account/writes.rs:610
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] ""
 msgstr[1] ""
 
-#: sync/src/account/writes.rs:616
+#: sync/src/account/writes.rs:615
 msgid "a minute"
 msgstr ""
 
-#: sync/src/actions.rs:111
+#: sync/src/actions.rs:106
 msgid "Change labels"
 msgstr ""
 
-#: sync/src/actions.rs:310
+#: sync/src/actions.rs:305
 msgid "Delete Forever failed: {reason}"
 msgstr ""
 
-#: sync/src/actions.rs:480
+#: sync/src/actions.rs:475
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr ""
 
-#: sync/src/actions.rs:541 sync/src/actions.rs:593
+#: sync/src/actions.rs:536 sync/src/actions.rs:588
 msgid "Could not undo: {reason}"
 msgstr ""
 

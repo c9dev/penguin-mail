@@ -292,7 +292,7 @@ impl<A: Accounts> AccountSettings<A> {
         Ok(Permitted::Done(()))
     }
 
-    fn sync(&self, account_id: AccountId) -> Result<Arc<AccountSync<A::Api>>, SyncError> {
+    fn sync(&self, account_id: AccountId) -> Result<Arc<AccountSync>, SyncError> {
         self.accounts
             .account(account_id)
             .ok_or(SyncError::UnknownAccount(account_id))

@@ -13,16 +13,14 @@
 //! writes the answer into the store.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
-use std::sync::Arc;
-
 use futures::StreamExt;
 use mailrs_domain::{AccountId, MessageMeta};
-use mailrs_gmail::{GmailError, MessageRef, cost};
+use mailrs_gmail::{MessageRef, cost};
 use mailrs_store::{accounts, messages};
 use rusqlite::Connection;
 
 use super::{AccountSync, FETCH_CONCURRENCY};
-use crate::{GmailApi, SyncError};
+use crate::{BackendError, MailBackend, SyncError};
 
 /// One message to fetch, with its thread when the caller knows it. Only a
 /// known thread lets the fetch share a `threads.get` between messages.
@@ -81,7 +79,7 @@ enum Call {
     },
 }
 
-impl<G: GmailApi> AccountSync<G> {
+impl AccountSync {
     /// Metadata for `wants` at the least cost. See the module docs.
     pub(super) async fn fetch(&self, wants: Vec<Want>) -> Result<Fetched, SyncError> {
         self.run_calls(plan(wants)).await
@@ -105,14 +103,14 @@ impl<G: GmailApi> AccountSync<G> {
             .db
             .read(move |c| Ok(accounts::sync_cursor(c, account_id)?.history_id))
             .await?;
-        let answers: Vec<(Call, Result<Vec<MessageMeta>, GmailError>)> =
+        let answers: Vec<(Call, Result<Vec<MessageMeta>, BackendError>)> =
             futures::stream::iter(calls)
                 .map(|call| {
-                    let api = Arc::clone(&self.api);
+                    let mail = self.services.mail.clone();
                     async move {
                         let answer = match &call {
-                            Call::Message(id) => api.message_metadata(id).await.map(|m| vec![m]),
-                            Call::Thread { thread_id, .. } => api.thread_metadata(thread_id).await,
+                            Call::Message(id) => mail.message_metadata(id).await.map(|m| vec![m]),
+                            Call::Thread { thread_id, .. } => mail.thread_metadata(thread_id).await,
                         };
                         (call, answer)
                     }
@@ -127,7 +125,7 @@ impl<G: GmailApi> AccountSync<G> {
         for (call, answer) in answers {
             match (call, answer) {
                 (Call::Message(_), Ok(metas)) => fetched.metas.extend(metas),
-                (Call::Message(id), Err(GmailError::NotFound)) => fetched.gone.push(id),
+                (Call::Message(id), Err(BackendError::NotFound)) => fetched.gone.push(id),
                 (Call::Thread { ids: None, .. }, Ok(all)) => {
                     fetched.metas.extend(all.iter().cloned());
                     fetched.whole.push(all);
@@ -149,9 +147,9 @@ impl<G: GmailApi> AccountSync<G> {
                         thread_id,
                         ids: None,
                     },
-                    Err(GmailError::NotFound),
+                    Err(BackendError::NotFound),
                 ) => fetched.gone_threads.push(thread_id),
-                (Call::Thread { ids: Some(ids), .. }, Err(GmailError::NotFound)) => {
+                (Call::Thread { ids: Some(ids), .. }, Err(BackendError::NotFound)) => {
                     fetched.gone.extend(ids)
                 }
                 (_, Err(err)) => return Err(err.into()),

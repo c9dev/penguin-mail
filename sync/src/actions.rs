@@ -12,8 +12,7 @@ use mailrs_store::reminders::{self, Reminder};
 use mailrs_store::{Db, flags, follow_ups, labels, messages, threads};
 
 use crate::{
-    AccountSync, BackendError, GmailApi, OneClick, Permitted, Relabelled, SyncEngine, SyncError,
-    TriageAction,
+    AccountSync, BackendError, OneClick, Permitted, Relabelled, SyncEngine, SyncError, TriageAction,
 };
 
 mod categorize;
@@ -31,16 +30,12 @@ const PLACES: [Folder; 3] = [Folder::Junk, Folder::Trash, Folder::AllMail];
 
 /// Finds the sync handle of a connected account.
 pub trait Accounts: Send + Sync + 'static {
-    type Api: GmailApi;
-
     /// `None` when the account is not syncing.
-    fn account(&self, account_id: AccountId) -> Option<Arc<AccountSync<Self::Api>>>;
+    fn account(&self, account_id: AccountId) -> Option<Arc<AccountSync>>;
 }
 
-impl<G: GmailApi> Accounts for SyncEngine<G> {
-    type Api = G;
-
-    fn account(&self, account_id: AccountId) -> Option<Arc<AccountSync<G>>> {
+impl Accounts for SyncEngine {
+    fn account(&self, account_id: AccountId) -> Option<Arc<AccountSync>> {
         SyncEngine::account(self, account_id).ok()
     }
 }
@@ -866,7 +861,7 @@ impl<A: Accounts> MailActions<A> {
             .await?)
     }
 
-    fn sync(&self, account_id: AccountId) -> Result<Arc<AccountSync<A::Api>>, SyncError> {
+    fn sync(&self, account_id: AccountId) -> Result<Arc<AccountSync>, SyncError> {
         self.accounts
             .account(account_id)
             .ok_or(SyncError::UnknownAccount(account_id))

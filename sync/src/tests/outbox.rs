@@ -8,7 +8,7 @@ use mailrs_store::{drafts, messages};
 
 use super::{Connected, Harness, harness};
 use crate::fake::meta;
-use crate::{Cancelled, Outbox, Posted, now_millis, outbox_row};
+use crate::{AccountServices, Cancelled, Outbox, Posted, now_millis, outbox_row};
 
 /// Puts a draft's message in the store, as history replay does once the
 /// draft reaches this computer. Nothing here reads thread rows, so the
@@ -616,7 +616,7 @@ async fn a_message_queued_before_a_restart_goes_out_after_one() {
     let outbox_over = |db: &mailrs_store::Db| {
         let sync = Arc::new(crate::AccountSync::new(
             1,
-            Arc::clone(&fake),
+            AccountServices::fake(Arc::clone(&fake)),
             db.clone(),
             sender.clone(),
         ));

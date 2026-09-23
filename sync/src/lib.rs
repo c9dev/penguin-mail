@@ -44,8 +44,6 @@ pub use actions::{
     Accounts, Categorized, Failure, History, MailAction, MailActions, NewLabels, Outcome, Returned,
     Undone,
 };
-#[cfg(any(test, feature = "fake"))]
-pub use api::AnyGmail;
 pub use api::{AccountClient, DraftRef, GmailApi, ID_PAGE_SIZE, LIST_PAGE_SIZE, SavedDraft};
 pub use backoff::{MOST_TRIES, backoff_delay, poll_offset, retry_delay, with_jitter};
 pub use calendar::Calendar;

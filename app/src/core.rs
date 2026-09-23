@@ -22,8 +22,8 @@ use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::lock::{LockError, SyncLock};
 use mailrs_sync::sign_in::{account_client, signed_in};
 use mailrs_sync::{
-    AccountSettings, AccountSync, Accounts, AnyGmail, ContactBook, Failure, History, Invitations,
-    MailAction, MailActions, Mailboxes, OneClick, Outbox, Outcome, SyncEngine, Undone,
+    AccountServices, AccountSettings, AccountSync, Accounts, ContactBook, Failure, History,
+    Invitations, MailAction, MailActions, Mailboxes, OneClick, Outbox, Outcome, SyncEngine, Undone,
     connect_account, now_millis,
 };
 
@@ -31,13 +31,8 @@ use crate::assistant::run::{Background, Modules};
 use crate::demo::{self, DemoGmail};
 use mailrs_domain::translate::{fill, gettext};
 
-/// Gmail for real accounts, or the in-memory stand-in for demo mode.
-/// `mailrs_sync::AnyGmail` holds both, since `GmailApi`'s `impl Future`
-/// returns rule out one `dyn` object for the two.
-pub type Api = AnyGmail;
-
-pub type Engine = SyncEngine<Api>;
-pub type Sync = AccountSync<Api>;
+pub type Engine = SyncEngine;
+pub type Sync = AccountSync;
 pub type Actions = MailActions<RunningEngine>;
 /// Reads mailboxes for the window and the assistant alike.
 pub type Lists = Mailboxes<RunningEngine>;
@@ -73,8 +68,6 @@ impl RunningEngine {
 }
 
 impl Accounts for RunningEngine {
-    type Api = Api;
-
     fn account(&self, account_id: AccountId) -> Option<Arc<Sync>> {
         self.current()?.account(account_id).ok()
     }
@@ -310,7 +303,7 @@ impl Core {
                     }
                 };
                 match connect(demo.as_deref(), oauth, Arc::clone(&tokens), &account).await {
-                    Ok(api) => engine.start_account(account.id, Arc::new(api)),
+                    Ok(services) => engine.start_account(account.id, services),
                     Err(err) => tracing::warn!(account = %account.email, error = %err, "could not start syncing"),
                 }
             }
@@ -596,8 +589,8 @@ impl Core {
             let store = Arc::clone(&tokens);
             tokio::task::spawn_blocking(move || store.save(&email, &refresh)).await??;
             let account = signed_in(&db, &authorized.email, now_millis()).await?;
-            let api = connect(None, Some(oauth), tokens, &account).await?;
-            engine.start_account(account.id, Arc::new(api));
+            let services = connect(None, Some(oauth), tokens, &account).await?;
+            engine.start_account(account.id, services);
             Ok::<_, anyhow::Error>(account)
         })
         .await
@@ -649,24 +642,24 @@ fn contact_photo_dir(demo: bool, data_dir: &std::path::Path) -> PathBuf {
         .join("contact-photos")
 }
 
-/// Gmail for one account: the sample mailbox in demo mode, or the real
-/// client signed in with the account's refresh token.
+/// The services for one account: the sample mailbox in demo mode, or
+/// Google signed in with the account's refresh token.
 async fn connect(
     demo: Option<&DemoGmail>,
     oauth: Option<OAuthClient>,
     tokens: Arc<dyn TokenStore>,
     account: &Account,
-) -> Result<Api> {
+) -> Result<AccountServices> {
     if let Some(demo) = demo {
         let mailbox = demo
             .account(account.id)
             .ok_or_else(|| anyhow!("the demo has no mailbox for {}", account.email))?;
-        return Ok(Api::Fake(mailbox));
+        return Ok(AccountServices::fake(mailbox));
     }
     let oauth = oauth.ok_or_else(|| anyhow!("Penguin Mail has no OAuth client configured yet"))?;
-    Ok(Api::Real(Box::new(
+    Ok(AccountServices::google(
         connect_account(oauth, tokens, account).await?,
-    )))
+    ))
 }
 
 #[cfg(test)]

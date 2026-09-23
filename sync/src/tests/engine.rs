@@ -7,10 +7,10 @@ use mailrs_gmail::GmailError;
 use mailrs_store::{Db, accounts, messages};
 
 use crate::fake::{FakeGmail, fill_store, meta};
-use crate::{AccountSync, EngineConfig, SyncEngine, now_millis};
+use crate::{AccountServices, AccountSync, EngineConfig, SyncEngine, now_millis};
 
 struct Setup {
-    engine: SyncEngine<FakeGmail>,
+    engine: SyncEngine,
     events: Receiver<ChangeEvent>,
     fake: Arc<FakeGmail>,
     db: Db,
@@ -61,7 +61,7 @@ fn reached(wanted: AccountState) -> impl Fn(&ChangeEvent) -> bool {
 #[tokio::test]
 async fn the_engine_bootstraps_and_polls_when_poked() {
     let s = setup().await;
-    s.engine.start_account(1, Arc::clone(&s.fake));
+    s.engine.start_account(1, AccountServices::fake(Arc::clone(&s.fake)));
     wait_for(&s.events, reached(AccountState::Ok)).await;
     s.fake
         .deliver(meta("n", "tn", now_millis(), &["INBOX", "UNREAD"]));
@@ -77,12 +77,17 @@ async fn the_engine_corrects_a_stale_inbox_when_it_starts() {
     let s = setup().await;
     s.fake.seed(meta("stale", "ts", now_millis(), &["INBOX"]));
     let (sender, _receiver) = async_channel::unbounded();
-    let earlier = AccountSync::new(1, Arc::clone(&s.fake), s.db.clone(), sender);
+    let earlier = AccountSync::new(
+        1,
+        AccountServices::fake(Arc::clone(&s.fake)),
+        s.db.clone(),
+        sender,
+    );
     fill_store(&earlier).await.unwrap();
     // Gmail archives it, and the store never hears.
     s.fake
         .with(|f| f.messages.get_mut("stale").unwrap().label_ids.clear());
-    s.engine.start_account(1, Arc::clone(&s.fake));
+    s.engine.start_account(1, AccountServices::fake(Arc::clone(&s.fake)));
     wait_for(
         &s.events,
         |e| matches!(e, ChangeEvent::ThreadsChanged { thread_ids, .. } if thread_ids == &["ts"]),
@@ -99,7 +104,7 @@ async fn the_engine_corrects_a_stale_inbox_when_it_starts() {
 async fn a_rejected_refresh_token_stops_the_account() {
     let s = setup().await;
     s.fake.fail_next(GmailError::NeedsReauth);
-    s.engine.start_account(1, Arc::clone(&s.fake));
+    s.engine.start_account(1, AccountServices::fake(Arc::clone(&s.fake)));
     wait_for(&s.events, reached(AccountState::NeedsReauth)).await;
     tokio::time::timeout(Duration::from_secs(5), async {
         while s.engine.is_running(1) {
@@ -114,7 +119,7 @@ async fn a_rejected_refresh_token_stops_the_account() {
 async fn a_network_failure_goes_offline_then_recovers() {
     let s = setup().await;
     s.fake.fail_next(GmailError::Network("down".into()));
-    s.engine.start_account(1, Arc::clone(&s.fake));
+    s.engine.start_account(1, AccountServices::fake(Arc::clone(&s.fake)));
     wait_for(&s.events, reached(AccountState::Offline)).await;
     wait_for(&s.events, reached(AccountState::Ok)).await;
 }
@@ -122,7 +127,7 @@ async fn a_network_failure_goes_offline_then_recovers() {
 #[tokio::test]
 async fn stopping_an_account_ends_its_loop() {
     let s = setup().await;
-    s.engine.start_account(1, Arc::clone(&s.fake));
+    s.engine.start_account(1, AccountServices::fake(Arc::clone(&s.fake)));
     wait_for(&s.events, reached(AccountState::Ok)).await;
     s.engine.stop_account(1);
     assert!(!s.engine.is_running(1));

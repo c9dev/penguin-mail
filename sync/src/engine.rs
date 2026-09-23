@@ -12,7 +12,8 @@ use tokio::time::Instant;
 
 use crate::account::{DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS};
 use crate::{
-    AccountSync, BackendError, GmailApi, SyncError, backoff_delay, now_millis, poll_offset, with_jitter,
+    AccountServices, AccountSync, BackendError, SyncError, backoff_delay, now_millis, poll_offset,
+    with_jitter,
 };
 
 /// How often an account prunes, checks its inbox against Gmail's, and lists
@@ -49,20 +50,20 @@ impl Default for EngineConfig {
     }
 }
 
-pub struct SyncEngine<G: GmailApi> {
+pub struct SyncEngine {
     db: Db,
     config: EngineConfig,
     events: async_channel::Sender<ChangeEvent>,
-    running: Mutex<HashMap<AccountId, Running<G>>>,
+    running: Mutex<HashMap<AccountId, Running>>,
 }
 
-struct Running<G> {
-    sync: Arc<AccountSync<G>>,
+struct Running {
+    sync: Arc<AccountSync>,
     poke: Arc<Notify>,
     task: JoinHandle<()>,
 }
 
-impl<G: GmailApi> SyncEngine<G> {
+impl SyncEngine {
     pub fn new(db: Db, config: EngineConfig) -> (Self, async_channel::Receiver<ChangeEvent>) {
         let (events, receiver) = async_channel::unbounded();
         (
@@ -78,9 +79,9 @@ impl<G: GmailApi> SyncEngine<G> {
 
     /// Starts the account's loop, replacing one that is already running.
     /// Call it from inside a tokio runtime.
-    pub fn start_account(&self, account_id: AccountId, api: Arc<G>) {
+    pub fn start_account(&self, account_id: AccountId, services: AccountServices) {
         let sync = Arc::new(
-            AccountSync::new(account_id, api, self.db.clone(), self.events.clone())
+            AccountSync::new(account_id, services, self.db.clone(), self.events.clone())
                 .with_limits(self.config.window_days, self.config.body_cache_bytes),
         );
         let poke = Arc::new(Notify::new());
@@ -120,7 +121,7 @@ impl<G: GmailApi> SyncEngine<G> {
     }
 
     /// The account's sync handle, for opening threads, loading bodies, and triage.
-    pub fn account(&self, account_id: AccountId) -> Result<Arc<AccountSync<G>>, SyncError> {
+    pub fn account(&self, account_id: AccountId) -> Result<Arc<AccountSync>, SyncError> {
         self.lock()
             .get(&account_id)
             .map(|r| Arc::clone(&r.sync))
@@ -133,12 +134,12 @@ impl<G: GmailApi> SyncEngine<G> {
         }
     }
 
-    fn lock(&self) -> MutexGuard<'_, HashMap<AccountId, Running<G>>> {
+    fn lock(&self) -> MutexGuard<'_, HashMap<AccountId, Running>> {
         self.running.lock().expect("engine lock poisoned")
     }
 }
 
-impl<G: GmailApi> Drop for SyncEngine<G> {
+impl Drop for SyncEngine {
     fn drop(&mut self) {
         self.shutdown();
     }
@@ -170,8 +171,8 @@ fn classify(err: &SyncError) -> Failure {
     }
 }
 
-async fn run_account<G: GmailApi>(
-    sync: Arc<AccountSync<G>>,
+async fn run_account(
+    sync: Arc<AccountSync>,
     poke: Arc<Notify>,
     config: EngineConfig,
 ) {
@@ -263,8 +264,8 @@ async fn run_account<G: GmailApi>(
 /// One pass: poll history when due, prune, check the inbox against
 /// Gmail's and list the labels when due, then load one backfill page. Returns true when more
 /// backfill pages remain.
-async fn tick<G: GmailApi>(
-    sync: &AccountSync<G>,
+async fn tick(
+    sync: &AccountSync,
     next_poll: &mut Instant,
     next_prune: &mut Instant,
     stagger: &mut Duration,
@@ -301,7 +302,7 @@ fn until_check(
     PRUNE_INTERVAL.saturating_sub(Duration::from_millis(since as u64))
 }
 
-async fn report<G: GmailApi>(sync: &AccountSync<G>, state: AccountState) {
+async fn report(sync: &AccountSync, state: AccountState) {
     if let Err(err) = sync.set_state(state).await {
         tracing::error!(account = sync.account_id(), error = %err, "could not record the account state");
     }

@@ -404,7 +404,7 @@ impl<A: Accounts> Invitations<A> {
     /// organizer has nobody to send it to, and says so.
     async fn mail_reply(
         &self,
-        sync: &AccountSync<A::Api>,
+        sync: &AccountSync,
         invitation: &Invitation,
         me: &Address,
         answer: Answer,
@@ -428,7 +428,7 @@ impl<A: Accounts> Invitations<A> {
         Ok(Told::Organizer)
     }
 
-    fn sync(&self, account_id: AccountId) -> Result<Arc<AccountSync<A::Api>>, SyncError> {
+    fn sync(&self, account_id: AccountId) -> Result<Arc<AccountSync>, SyncError> {
         self.accounts
             .account(account_id)
             .ok_or(SyncError::UnknownAccount(account_id))

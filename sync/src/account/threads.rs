@@ -8,7 +8,7 @@ use mailrs_store::{accounts, bodies, messages};
 
 use super::AccountSync;
 use super::fetch::overtaken;
-use crate::{GmailApi, SyncError, now_millis};
+use crate::{MailBackend, SyncError, now_millis};
 
 /// Fetches of one thread before an answer history keeps overtaking is
 /// written anyway, adding only what the store lacks.
@@ -33,7 +33,7 @@ fn differs(stored: &MessageMeta, meta: &MessageMeta) -> bool {
     *stored != written
 }
 
-impl<G: GmailApi> AccountSync<G> {
+impl AccountSync {
     /// Whether the store already holds all of this thread and history has
     /// spoken for the mailbox since. Gmail sends every change through
     /// history, so a recent replay means the stored copy matches, and
@@ -154,7 +154,7 @@ impl<G: GmailApi> AccountSync<G> {
             self.touch_body(message_id, now);
             return Ok(body);
         }
-        let body = self.api.message_body(message_id).await?;
+        let body = self.services.mail.message_body(message_id).await?;
         let size =
             body.html.as_ref().map_or(0, String::len) + body.text.as_ref().map_or(0, String::len);
         let sweep = self.due_for_eviction(size as i64);

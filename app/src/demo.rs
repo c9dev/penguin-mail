@@ -15,7 +15,7 @@ use mailrs_domain::{
 use mailrs_gmail::{LabelColor, RemoteLabel, SendAs};
 use mailrs_store::{Db, Result, accounts, address_book, invitations};
 use mailrs_sync::fake::{FakeGmail, fill_store};
-use mailrs_sync::{AccountSync, SyncError};
+use mailrs_sync::{AccountServices, AccountSync, SyncError};
 use rusqlite::Connection;
 
 mod pages;
@@ -653,7 +653,12 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoGmail, S
         }
         // Nobody listens yet: the window reads the store once it opens.
         let (events, _) = async_channel::unbounded();
-        let sync = AccountSync::new(account_id, Arc::clone(&fake), db.clone(), events);
+        let sync = AccountSync::new(
+            account_id,
+            AccountServices::fake(Arc::clone(&fake)),
+            db.clone(),
+            events,
+        );
         fill_store(&sync).await?;
         for sample in &mine {
             sync.body(sample.id).await?;
@@ -1270,7 +1275,7 @@ mod tests {
     use mailrs_domain::{Folder, system_label};
     use mailrs_store::bodies;
     use mailrs_store::threads::{self, ThreadFilter};
-    use mailrs_sync::{GmailApi, now_millis};
+    use mailrs_sync::{AccountServices, GmailApi, IdentityService, now_millis};
 
     use super::*;
 
@@ -1385,7 +1390,12 @@ mod tests {
         let work = demo.account(1).await;
         let fake = demo.gmail.account(work).unwrap();
         let (events, _) = async_channel::unbounded();
-        let sync = AccountSync::new(work, Arc::clone(&fake), demo.db.clone(), events);
+        let sync = AccountSync::new(
+            work,
+            AccountServices::fake(Arc::clone(&fake)),
+            demo.db.clone(),
+            events,
+        );
         let raw = "From: Dana Reyes <dana@fernwood.example>\r\n\
             To: Priya Raman <priya@fernwood.example>\r\n\
             Subject: Re: Q4 roadmap review\r\n\
@@ -1559,8 +1569,17 @@ mod tests {
             .await
             .unwrap();
         assert!(String::from_utf8(file).unwrap().contains("stand-in file"));
+        let identities = AccountServices::fake(Arc::clone(&api))
+            .identities
+            .identities()
+            .await
+            .unwrap();
+        let signature = identities
+            .iter()
+            .find(|address| address.default)
+            .map(|address| address.signature.clone());
         assert_eq!(
-            api.signature().await.unwrap(),
+            signature,
             Some(format!("{DISPLAY_NAME}\nSent from Penguin Mail"))
         );
         let from: Vec<String> = api

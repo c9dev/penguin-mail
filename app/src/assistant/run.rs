@@ -63,7 +63,7 @@ const NEW_LABEL: &str = "new label";
 type ToolResult = Result<Value, String>;
 
 /// An account a tool named, with the loop that syncs it.
-type Syncing<A> = (Account, Arc<AccountSync<<A as Accounts>::Api>>);
+type Syncing = (Account, Arc<AccountSync>);
 
 pub use crate::wanted::Answer;
 
@@ -501,7 +501,7 @@ impl<A: Accounts> Tools<A> {
             .ok_or_else(|| format!("There is no account {email}."))
     }
 
-    fn sync_for(&self, email: &str) -> Result<Syncing<A>, String> {
+    fn sync_for(&self, email: &str) -> Result<Syncing, String> {
         let account = self.account_named(email)?;
         let sync = self
             .modules

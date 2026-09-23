@@ -899,12 +899,6 @@ impl GmailApi for FakeGmail {
         }))
     }
 
-    async fn display_name(&self) -> Result<Option<String>, GmailError> {
-        self.call("users.settings.sendAs.list", cost::SEND_AS)
-            .await?;
-        Ok(self.with(|s| s.display_name.clone()))
-    }
-
     async fn attachment(
         &self,
         message_id: &str,
@@ -918,12 +912,6 @@ impl GmailApi for FakeGmail {
                 .cloned()
                 .ok_or(GmailError::NotFound)
         })
-    }
-
-    async fn signature(&self) -> Result<Option<String>, GmailError> {
-        self.call("users.settings.sendAs.list", cost::SEND_AS)
-            .await?;
-        Ok(self.with(|s| s.signature.clone()))
     }
 
     async fn vacation(&self) -> Result<Vacation, GmailError> {
@@ -1330,7 +1318,7 @@ fn signature_html(text: &str) -> String {
 /// same steps a tick at a time; this runs them back to back, so the demo
 /// and the assistant's tests start on a full store that cannot disagree
 /// with what sync would have written.
-pub async fn fill_store(sync: &AccountSync<FakeGmail>) -> Result<(), SyncError> {
+pub async fn fill_store(sync: &AccountSync) -> Result<(), SyncError> {
     sync.bootstrap().await?;
     while sync.backfill_step().await? {}
     Ok(())

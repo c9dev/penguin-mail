@@ -235,7 +235,7 @@ impl<A: Accounts> ContactBook<A> {
     /// replaces what is stored; one with a token brings only the changes.
     async fn read_pages(
         &self,
-        sync: &AccountSync<A::Api>,
+        sync: &AccountSync,
         account_id: AccountId,
         sync_token: Option<String>,
     ) -> Result<Permitted<Refreshed>, SyncError> {
@@ -334,7 +334,7 @@ impl<A: Accounts> ContactBook<A> {
     /// one: the contact still has a name to show.
     async fn fetch_photos(
         &self,
-        sync: &AccountSync<A::Api>,
+        sync: &AccountSync,
         account_id: AccountId,
     ) -> Result<usize, SyncError> {
         let wanted = self
@@ -372,7 +372,7 @@ impl<A: Accounts> ContactBook<A> {
         Ok(fetched)
     }
 
-    fn sync(&self, account_id: AccountId) -> Result<Arc<AccountSync<A::Api>>, SyncError> {
+    fn sync(&self, account_id: AccountId) -> Result<Arc<AccountSync>, SyncError> {
         self.accounts
             .account(account_id)
             .ok_or(SyncError::UnknownAccount(account_id))

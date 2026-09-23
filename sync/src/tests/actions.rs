@@ -10,7 +10,8 @@ use super::{Connected, Harness, harness};
 use crate::actions::DEPTH;
 use crate::fake::{FakeGmail, meta};
 use crate::{
-    AccountSync, History, MailAction, MailActions, Outcome, Permitted, TriageAction, now_millis,
+    AccountServices, AccountSync, History, MailAction, MailActions, Outcome, Permitted,
+    TriageAction, now_millis,
 };
 
 fn actions(h: &Harness) -> MailActions<Connected> {
@@ -19,7 +20,7 @@ fn actions(h: &Harness) -> MailActions<Connected> {
 
 fn actions_over(
     h: &Harness,
-    more: impl IntoIterator<Item = Arc<AccountSync<FakeGmail>>>,
+    more: impl IntoIterator<Item = Arc<AccountSync>>,
 ) -> MailActions<Connected> {
     let mut connected = HashMap::from([(h.account_id, Arc::clone(&h.sync))]);
     for sync in more {
@@ -214,8 +215,13 @@ async fn a_signed_out_account_takes_its_undos_with_it() {
     other_fake.with(|s| s.page_size = 1000);
     let (sender, _events) = async_channel::unbounded();
     let other = Arc::new(
-        AccountSync::new(other_id, Arc::clone(&other_fake), h.db.clone(), sender)
-            .with_retry_max(Duration::from_millis(10)),
+        AccountSync::new(
+            other_id,
+            AccountServices::fake(Arc::clone(&other_fake)),
+            h.db.clone(),
+            sender,
+        )
+        .with_retry_max(Duration::from_millis(10)),
     );
     other.bootstrap().await.unwrap();
     let actions = actions_over(&h, [other]);
@@ -307,8 +313,13 @@ async fn a_failing_account_does_not_stop_the_others() {
     other_fake.with(|s| s.page_size = 1000);
     let (sender, _events) = async_channel::unbounded();
     let other = Arc::new(
-        AccountSync::new(other_id, Arc::clone(&other_fake), h.db.clone(), sender)
-            .with_retry_max(Duration::from_millis(10)),
+        AccountSync::new(
+            other_id,
+            AccountServices::fake(Arc::clone(&other_fake)),
+            h.db.clone(),
+            sender,
+        )
+        .with_retry_max(Duration::from_millis(10)),
     );
     other.bootstrap().await.unwrap();
     other_fake.fail_next(GmailError::NeedsReauth);
@@ -349,9 +360,14 @@ async fn an_account_that_waits_out_its_ceiling_reports_what_it_left() {
     busy_fake.with(|s| s.page_size = 1000);
     let (sender, events) = async_channel::unbounded();
     let busy = Arc::new(
-        AccountSync::new(busy_id, Arc::clone(&busy_fake), h.db.clone(), sender)
-            .with_retry_max(Duration::from_millis(10))
-            .with_wait_ceiling(Duration::from_millis(60)),
+        AccountSync::new(
+            busy_id,
+            AccountServices::fake(Arc::clone(&busy_fake)),
+            h.db.clone(),
+            sender,
+        )
+        .with_retry_max(Duration::from_millis(10))
+        .with_wait_ceiling(Duration::from_millis(60)),
     );
     busy.bootstrap().await.unwrap();
     // Gmail says it is busy for longer than the action may wait.
@@ -708,7 +724,7 @@ async fn labelling_by_name_without_creating_skips_accounts_that_lack_the_label()
     let (sender, _events) = async_channel::unbounded();
     let other = Arc::new(AccountSync::new(
         other_id,
-        Arc::clone(&other_fake),
+        AccountServices::fake(Arc::clone(&other_fake)),
         h.db.clone(),
         sender,
     ));
