@@ -600,11 +600,10 @@ impl<A: Accounts> Mailboxes<A> {
                     let mut rows = Vec::new();
                     for (account_id, thread_ids) in per_account {
                         let limit = thread_ids.len() as i64;
-                        let narrowed = ThreadFilter {
-                            account_id: Some(account_id),
-                            ..filter.clone()
-                        }
-                        .with_threads(thread_ids);
+                        let narrowed = filter
+                            .clone()
+                            .in_account(account_id)
+                            .with_threads(thread_ids);
                         rows.extend(if threading {
                             threads::list_threads(c, &narrowed, 0, limit)?
                         } else {

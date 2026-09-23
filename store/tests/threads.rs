@@ -63,6 +63,17 @@ fn account_views_only_show_their_account() {
 }
 
 #[test]
+fn a_unified_filter_narrows_to_one_account() {
+    let (conn, a, _) = two_accounts();
+    let narrowed = ThreadFilter::unified("INBOX").in_account(a);
+    assert_eq!(narrowed, ThreadFilter::account(a, "INBOX"));
+    assert_eq!(
+        ids(threads::list_threads(&conn, &narrowed, 0, 10).unwrap()),
+        ["ta2", "ta1"]
+    );
+}
+
+#[test]
 fn paging_walks_the_list_without_gaps() {
     let (conn, _, _) = two_accounts();
     let inbox = ThreadFilter::unified("INBOX");

@@ -59,23 +59,28 @@ fn date_wins(start_rows: i64, all_rows: i64, wanted: i64) -> bool {
 ///
 /// Whichever label it names, the list leaves out mail in the Trash and
 /// Spam, as Gmail's own Sent and label views do.
+///
+/// A filter starts from [`ThreadFilter::unified`] or
+/// [`ThreadFilter::account`] and narrows through the `with_` methods. The
+/// fields stay private so the store can choose how to reach the rows they
+/// describe without callers building filters it has not planned for.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ThreadFilter {
-    pub account_id: Option<AccountId>,
+    account_id: Option<AccountId>,
     /// Empty means any mail with a label or without one.
-    pub label_id: String,
+    label_id: String,
     /// Only mail starred with this colour. Starred mail without a colour
     /// counts as red.
-    pub flag: Option<FlagColor>,
+    flag: Option<FlagColor>,
     /// Only threads with a message from one of these addresses.
-    pub senders: Vec<String>,
+    senders: Vec<String>,
     /// Only threads with at least one of these labels, such as Gmail's
     /// `CATEGORY_SOCIAL` and `CATEGORY_FORUMS`. Empty means no condition.
-    pub any_labels: Vec<String>,
+    any_labels: Vec<String>,
     /// Only threads with none of these labels.
-    pub no_labels: Vec<String>,
+    no_labels: Vec<String>,
     /// Only these threads, by id. Empty means every thread.
-    pub thread_ids: Vec<String>,
+    thread_ids: Vec<String>,
 }
 
 /// SQL text with anonymous `?` placeholders, and their values in order.
@@ -288,6 +293,12 @@ impl ThreadFilter {
             label_id: label_id.into(),
             ..ThreadFilter::default()
         }
+    }
+
+    /// Narrows the list to one account's mail.
+    pub fn in_account(mut self, account_id: AccountId) -> Self {
+        self.account_id = Some(account_id);
+        self
     }
 
     pub fn with_flag(mut self, flag: FlagColor) -> Self {
