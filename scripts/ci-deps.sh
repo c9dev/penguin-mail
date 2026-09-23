@@ -22,7 +22,7 @@ elif command -v dnf >/dev/null; then
         gtk4-devel libadwaita-devel webkitgtk6.0-devel glib2-devel \
         gettext rpm-build rpm-sign appstream desktop-file-utils \
         gnupg2 gnupg2-smime \
-        xorg-x11-server-Xvfb dbus-tools
+        xorg-x11-server-Xvfb dbus-daemon
 else
     echo "ci-deps.sh knows apt and dnf only" >&2
     exit 1
