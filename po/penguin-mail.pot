@@ -1205,15 +1205,15 @@ msgstr ""
 msgid "The model could not translate this: {reason}"
 msgstr ""
 
-#: app/src/packaging.rs:90
+#: app/src/packaging.rs:89
 msgid "Updates come from dnf"
 msgstr ""
 
-#: app/src/packaging.rs:91
+#: app/src/packaging.rs:90
 msgid "Updates come from Flathub"
 msgstr ""
 
-#: app/src/packaging.rs:92
+#: app/src/packaging.rs:91
 msgid "Updates come from the Snap Store"
 msgstr ""
 
