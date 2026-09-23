@@ -12,8 +12,8 @@ use tokio::time::Instant;
 
 use crate::account::{DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS};
 use crate::{
-    AccountServices, AccountSync, BackendError, SyncError, backoff_delay, now_millis, poll_offset,
-    with_jitter,
+    AccountServices, AccountSync, BackendError, SyncError, backoff_delay, background, now_millis,
+    poll_offset, with_jitter,
 };
 
 /// How often an account prunes, checks its inbox against Gmail's, and lists
@@ -190,7 +190,7 @@ async fn run_account(
         // Everything this loop asks Gmail for is background work, so it
         // waits behind whatever the user is doing and leaves the account
         // budget the user's next action needs.
-        match mailrs_gmail::limiter::background(tick(
+        match background(tick(
             &sync,
             &mut next_poll,
             &mut next_prune,

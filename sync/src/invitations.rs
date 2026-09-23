@@ -22,7 +22,7 @@ use std::sync::{Arc, Mutex};
 
 use mailrs_domain::invitation::{self, Answer, Invitation, Method, Scope, When};
 use mailrs_domain::{AccountId, Address, EpochMillis};
-use mailrs_gmail::{Answered, GmailError, limiter};
+use mailrs_gmail::{Answered, GmailError};
 use mailrs_store::{Db, invitations as store};
 
 use crate::{AccountSync, Accounts, BackendError, CalendarService, SyncError};
@@ -152,7 +152,7 @@ impl<A: Accounts> Invitations<A> {
             return Ok(Vec::new());
         };
         let ends_at = ends_at.unwrap_or(starts_at + ASSUMED_LENGTH);
-        let busy = match limiter::background(calendar.busy_between(starts_at, ends_at)).await {
+        let busy = match crate::background(calendar.busy_between(starts_at, ends_at)).await {
             Ok(busy) => busy,
             // Without the permission there is nothing to say, and the user
             // is answering an invitation rather than asking about their
@@ -193,7 +193,7 @@ impl<A: Accounts> Invitations<A> {
         let Some(calendar) = sync.services().calendar.as_ref() else {
             return Ok(None);
         };
-        let series = match limiter::background(calendar.series(&invitation.uid, now)).await {
+        let series = match crate::background(calendar.series(&invitation.uid, now)).await {
             Ok(series) => series,
             Err(
                 BackendError::NeedsPermission

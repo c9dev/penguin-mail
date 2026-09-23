@@ -10,7 +10,6 @@
 use std::sync::Arc;
 
 use mailrs_domain::{AccountId, EpochMillis};
-use mailrs_gmail::limiter;
 use mailrs_store::Db;
 use mailrs_store::messages;
 use mailrs_store::newsletters::{self, Sender};
@@ -64,7 +63,7 @@ impl<A: Accounts> Newsletters<A> {
             .accounts
             .account(account_id)
             .ok_or(SyncError::UnknownAccount(account_id))?;
-        let fetched = match limiter::background(sync.fetch_metadata(&wanted)).await {
+        let fetched = match crate::background(sync.fetch_metadata(&wanted)).await {
             Ok(fetched) => fetched,
             Err(err) => {
                 tracing::debug!(account = account_id, error = %err, "could not look up newsletter headers");
