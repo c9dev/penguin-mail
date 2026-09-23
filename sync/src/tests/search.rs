@@ -33,7 +33,7 @@ async fn mailbox() -> FakeGmail {
 }
 
 async fn found(fake: &FakeGmail, query: &str) -> Vec<String> {
-    fake.list_messages(query, None)
+    fake.list_messages(query, None, 500)
         .await
         .expect("the search runs")
         .messages
@@ -95,11 +95,11 @@ async fn a_term_names_a_field_a_label_a_size_or_an_age() {
 async fn a_listing_pages_the_newest_first() {
     let fake = mailbox().await;
     fake.with(|s| s.page_size = 2);
-    let first = fake.list_messages("", None).await.unwrap();
+    let first = fake.list_messages("", None, 500).await.unwrap();
     let ids: Vec<&str> = first.messages.iter().map(|m| m.id.as_str()).collect();
     assert_eq!(ids, ["inbox", "archived"]);
     let second = fake
-        .list_messages("", first.next_page_token.as_deref())
+        .list_messages("", first.next_page_token.as_deref(), 500)
         .await
         .unwrap();
     assert_eq!(second.messages.len(), 1);

@@ -57,7 +57,7 @@ impl<G: GmailApi> AccountSync<G> {
             return Ok(None);
         };
         let query = format!("in:sent rfc822msgid:{id}");
-        let page = self.api.list_messages(&query, None).await?;
+        let page = self.api.list_messages(&query, None, 1).await?;
         Ok(page.messages.into_iter().next().map(|m| m.id))
     }
 

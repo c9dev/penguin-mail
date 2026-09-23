@@ -72,7 +72,8 @@ pub struct FakeState {
     pub messages: HashMap<String, MessageMeta>,
     pub history: Vec<(u64, HistoryChange)>,
     pub bodies: HashMap<String, MessageBody>,
-    /// Page size for both listings and history.
+    /// The most a page of a listing or of history holds. A listing gives
+    /// back as many as it asked for up to this, as Gmail gives up to 500.
     pub page_size: usize,
     /// Errors returned by the next calls, one per call.
     pub failures: VecDeque<GmailError>,
@@ -569,6 +570,7 @@ impl GmailApi for FakeGmail {
         &self,
         query: &str,
         page_token: Option<&str>,
+        page_size: u32,
     ) -> Result<MessagePage, GmailError> {
         self.call("users.messages.list", cost::LIST).await?;
         let start = match page_token {
@@ -580,7 +582,8 @@ impl GmailApi for FakeGmail {
         };
         Ok(self.with(|s| {
             let found = s.search(query);
-            let end = (start + s.page_size).min(found.len());
+            let size = s.page_size.min(page_size.max(1) as usize);
+            let end = (start + size).min(found.len());
             let messages = found[start.min(end)..end]
                 .iter()
                 .map(|id| MessageRef {

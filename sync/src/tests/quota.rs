@@ -524,3 +524,23 @@ async fn deleting_more_than_a_thousand_messages_forever_splits_the_batch() {
     assert_eq!(usage.calls_to("users.messages.batchDelete"), 2);
     assert_eq!(usage.calls, 2);
 }
+
+/// The inbox check needs Gmail's ids and nothing else, so it asks for 500
+/// a page, Gmail's most, for the same 5 units a call as 100.
+#[tokio::test]
+async fn the_inbox_check_lists_five_hundred_ids_a_call() {
+    let h = harness().await;
+    let all = synced(&h.db, 1, 1200, 1).await;
+    // The fake answers each listing with as many ids as it asked for.
+    all[0].fake.with(|s| s.page_size = 10_000);
+    first_sync(&all).await;
+    reset(&all);
+
+    all[0].sync.reconcile_inbox().await.unwrap();
+
+    let usage = total(&all);
+    report("inbox check, 1,200 messages", &usage);
+    // At 100 a page this was 12 calls and 60 units.
+    assert_eq!(usage.calls_to("users.messages.list"), 3);
+    assert_eq!(usage.units, 15);
+}

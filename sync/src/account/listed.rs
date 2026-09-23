@@ -51,7 +51,10 @@ impl<G: GmailApi> AccountSync<G> {
         query: &str,
         limit: usize,
     ) -> Result<Vec<MessageRef>, SyncError> {
-        let page = self.api.list_messages(query, None).await?;
+        let size = u32::try_from(limit)
+            .unwrap_or(u32::MAX)
+            .min(crate::ID_PAGE_SIZE);
+        let page = self.api.list_messages(query, None, size).await?;
         let found: Vec<MessageRef> = page.messages.into_iter().take(limit).collect();
         let mut by_thread: BTreeMap<&str, BTreeSet<String>> = BTreeMap::new();
         for hit in &found {

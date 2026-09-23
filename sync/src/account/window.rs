@@ -11,7 +11,7 @@ use mailrs_store::{accounts, labels, messages, window};
 
 use super::labels::domain_labels;
 use super::{AccountSync, FETCH_CONCURRENCY};
-use crate::{GmailApi, SyncError};
+use crate::{GmailApi, ID_PAGE_SIZE, LIST_PAGE_SIZE, SyncError};
 
 const DAY_MILLIS: i64 = 24 * 60 * 60 * 1000;
 
@@ -118,7 +118,7 @@ impl<G: GmailApi> AccountSync<G> {
         loop {
             let page = self
                 .api
-                .list_messages(INBOX_QUERY, page_token.as_deref())
+                .list_messages(INBOX_QUERY, page_token.as_deref(), ID_PAGE_SIZE)
                 .await?;
             remote.extend(page.messages.into_iter().map(|m| m.id));
             match page.next_page_token {
@@ -178,7 +178,7 @@ impl<G: GmailApi> AccountSync<G> {
     ) -> Result<Option<String>, SyncError> {
         let page = self
             .api
-            .list_messages(&self.window_query(), page_token.as_deref())
+            .list_messages(&self.window_query(), page_token.as_deref(), LIST_PAGE_SIZE)
             .await?;
         let metas = self.fetch_listed(page.messages).await?;
         let next = page.next_page_token;
