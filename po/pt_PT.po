@@ -6174,12 +6174,12 @@ msgstr "Alterar etiquetas"
 msgid "Delete Forever failed: {reason}"
 msgstr "Eliminar definitivamente falhou: {reason}"
 
-#: sync/src/actions.rs:432
+#: sync/src/actions.rs:431
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr ""
 "Esta mensagem mudou de sítio entretanto, por isso Anular deixou-a onde está."
 
-#: sync/src/actions.rs:493 sync/src/actions.rs:545
+#: sync/src/actions.rs:492 sync/src/actions.rs:544
 msgid "Could not undo: {reason}"
 msgstr "Não foi possível anular: {reason}"
 

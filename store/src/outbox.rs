@@ -63,7 +63,8 @@ fn to_queued(row: &Row<'_>) -> rusqlite::Result<Queued> {
 
 /// Stores a message: as a new row, or over the row it already has, which
 /// is the one its id names or the one holding the same Gmail draft. Gives
-/// back the row's id.
+/// back the row's id. Writing over a row lets go of any claim on it, since
+/// the caller that claimed it is done with it.
 pub fn put(conn: &Connection, message: &Queued) -> Result<i64> {
     let already = match (message.id, &message.draft_id) {
         (id, _) if id > 0 => Some(id),
@@ -90,6 +91,7 @@ pub fn put(conn: &Connection, message: &Queued) -> Result<i64> {
             ],
         )?;
         if changed > 0 {
+            release(conn, id)?;
             return Ok(id);
         }
     }
@@ -213,6 +215,36 @@ pub fn try_now(conn: &Connection, now: EpochMillis) -> Result<()> {
         "UPDATE outbox SET send_at = ?1 WHERE problem IS NOT NULL AND send_at > ?1",
         params![now],
     )?;
+    Ok(())
+}
+
+/// Takes the message `id` for sending at `now` and gives it back, or
+/// `None` when it has gone or another caller claimed it after
+/// `lapsed_before`. One statement checks and sets the claim, so of two
+/// callers only one gets the row.
+pub fn claim(
+    conn: &Connection,
+    id: i64,
+    now: EpochMillis,
+    lapsed_before: EpochMillis,
+) -> Result<Option<Queued>> {
+    let taken = conn.execute(
+        "INSERT INTO outbox_claims (id, claimed_at) \
+         SELECT ?1, ?2 WHERE EXISTS (SELECT 1 FROM outbox WHERE id = ?1) \
+         ON CONFLICT (id) DO UPDATE SET claimed_at = excluded.claimed_at \
+         WHERE outbox_claims.claimed_at < ?3",
+        params![id, now, lapsed_before],
+    )?;
+    match taken {
+        0 => Ok(None),
+        _ => find(conn, id),
+    }
+}
+
+/// Lets go of a claim without changing the message, for a caller that
+/// took it and then did not try.
+pub fn release(conn: &Connection, id: i64) -> Result<()> {
+    conn.execute("DELETE FROM outbox_claims WHERE id = ?1", params![id])?;
     Ok(())
 }
 

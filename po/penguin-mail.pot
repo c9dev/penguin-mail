@@ -5931,11 +5931,11 @@ msgstr ""
 msgid "Delete Forever failed: {reason}"
 msgstr ""
 
-#: sync/src/actions.rs:432
+#: sync/src/actions.rs:431
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr ""
 
-#: sync/src/actions.rs:493 sync/src/actions.rs:545
+#: sync/src/actions.rs:492 sync/src/actions.rs:544
 msgid "Could not undo: {reason}"
 msgstr ""
 

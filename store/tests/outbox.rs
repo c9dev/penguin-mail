@@ -227,3 +227,29 @@ fn a_queued_message_is_still_there_after_a_restart() {
     assert_eq!(found.composer, r#"{"subject":"Hello"}"#);
     assert_eq!(found.problem.as_deref(), Some("No network"));
 }
+
+#[test]
+fn a_message_can_be_claimed_once_until_the_claim_lapses_or_goes() {
+    let (conn, id) = db();
+    let row = outbox::put(&conn, &held(id, "One", 100)).unwrap();
+
+    assert!(outbox::claim(&conn, row, 1_000, 0).unwrap().is_some());
+    assert!(
+        outbox::claim(&conn, row, 1_001, 0).unwrap().is_none(),
+        "a second caller finds it taken"
+    );
+    assert!(
+        outbox::claim(&conn, row, 5_000, 2_000).unwrap().is_some(),
+        "a claim older than the cutoff has lapsed"
+    );
+
+    outbox::release(&conn, row).unwrap();
+    let mut back = outbox::claim(&conn, row, 6_000, 0).unwrap().unwrap();
+    back.attempts += 1;
+    outbox::put(&conn, &back).unwrap();
+    assert!(
+        outbox::claim(&conn, row, 6_001, 0).unwrap().is_some(),
+        "writing the row back lets go of it"
+    );
+    assert!(outbox::claim(&conn, 999, 7_000, 0).unwrap().is_none());
+}

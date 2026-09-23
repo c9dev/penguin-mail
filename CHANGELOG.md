@@ -10,6 +10,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Undo puts back only what the action changed. Undoing Trash on an archived
   conversation leaves it archived instead of moving it to the inbox, and
   undoing Mark as Read leaves the messages you had already read as read.
+- A message in the Outbox goes out once, even when you press Send Now while
+  the outbox is already sending it, or the connection drops just after
+  Gmail took it.
 
 ## 0.1.7 (2026-09-23)
 
