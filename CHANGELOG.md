@@ -81,7 +81,6 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   their button, and a page that says you were
   "successfully removed" now counts as done instead of opening in your
   browser.
-
 - Scrolling down a long mailbox while mail arrives or leaves shows each
   conversation once. The next page could repeat a conversation or skip
   one.
