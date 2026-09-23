@@ -77,7 +77,37 @@ pub fn pick(page: &PageForm, address: &str) -> Pick {
 /// Whether the page says the address is off the list. The title counts,
 /// because many of these pages put the whole answer in it.
 pub fn says_done(page: &PageForm) -> bool {
-    words::already_off(&page.text) || words::already_off(&page.title)
+    words::already_off(&page.text)
+        || words::already_off(&page.title)
+        || titled_off(&page.title)
+        || page
+            .text
+            .lines()
+            .any(|line| words::off_alone(line) && !names_a_control(page, line))
+}
+
+/// Whether the title, or one of the parts a site joins into it, says
+/// "Unsubscribed" and nothing else, as in "Unsubscribed | Shop News".
+fn titled_off(title: &str) -> bool {
+    title
+        .split(['|', '–', '—', '·', ':'])
+        .flat_map(|part| part.split(" - "))
+        .any(words::off_alone)
+}
+
+/// Whether `line` is the label of a box or button on the page. A
+/// preferences page lists "Subscribed" and "Unsubscribed" as the two
+/// choices of each topic, and those lines say nothing about the address.
+fn names_a_control(page: &PageForm, line: &str) -> bool {
+    page.forms.iter().any(|form| {
+        form.fields
+            .iter()
+            .any(|field| words::same(&field.label, line))
+            || form
+                .buttons
+                .iter()
+                .any(|button| words::same(&button.label, line))
+    })
 }
 
 /// Whether a plan names only what the page holds and types only the

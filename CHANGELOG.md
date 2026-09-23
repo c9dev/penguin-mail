@@ -39,6 +39,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Unsubscribe no longer ticks a box such as "Send me all emails" on a
   preferences page. It ticks an "all" box only when the box says to
   unsubscribe.
+- A page that answers Unsubscribe with the one word "Unsubscribed" now
+  counts as done, where Penguin Mail said it could not tell.
 
 ## 0.2.0 (2026-09-23)
 

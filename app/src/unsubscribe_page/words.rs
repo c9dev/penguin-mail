@@ -20,6 +20,10 @@ pub struct Words {
     pub all: &'static [&'static str],
     /// Text that reads as the address being off the list already.
     pub done: &'static [&'static str],
+    /// The same said in one word, "Unsubscribed". It counts only as a
+    /// title or a line of its own, since inside a sentence it is as
+    /// likely to ask what to unsubscribe from.
+    pub done_alone: &'static [&'static str],
     /// A checkbox or radio that gives a reason for leaving, on a form
     /// that asks why before it lets go.
     pub reason: &'static [&'static str],
@@ -101,6 +105,7 @@ pub const EN: Words = Words {
     ],
     other: &["other", "other reason"],
     report: &["spam", "fraud", "fraudulent", "phishing", "abuse"],
+    done_alone: &["unsubscribed", "opted out"],
     email_label: &["email", "e mail"],
 };
 
@@ -145,6 +150,7 @@ pub const PT: Words = Words {
     unwanted: &["não quero receber", "já não tenho interesse"],
     other: &["outro", "outra razão", "outro motivo"],
     report: &["spam", "fraude", "fraudulento", "fraudulenta", "denunciar"],
+    done_alone: &["cancelado", "cancelada"],
     email_label: &[
         "endereço de email",
         "endereço de correio",
@@ -232,6 +238,25 @@ pub fn reports(text: &str) -> bool {
 /// Text that reads as the address being off the list already.
 pub fn already_off(text: &str) -> bool {
     LANGUAGES.iter().any(|words| reads_as(text, words.done))
+}
+
+/// Whether `text` says nothing but that the address is off the list, as
+/// a title or a heading does: "Unsubscribed!", or "Successfully
+/// unsubscribed".
+pub fn off_alone(text: &str) -> bool {
+    let said = without(&fold(text));
+    LANGUAGES.iter().any(|words| {
+        words
+            .done_alone
+            .iter()
+            .any(|entry| fold(entry) == said)
+    })
+}
+
+/// Whether two labels say the same once folded, so "Unsubscribed" on a
+/// line of the page is known to be the name of a radio beside it.
+pub fn same(one: &str, other: &str) -> bool {
+    fold(one) == fold(other)
 }
 
 /// A field label that asks for an email address.

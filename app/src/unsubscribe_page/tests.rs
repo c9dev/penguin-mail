@@ -6,7 +6,7 @@
 use super::fake::{FakeAdviser, FakeBrowser};
 use super::{
     Browser, Field, FieldKind, Outcome, PageError, PageForm, Pick, Plan, Step, Unsure, finish,
-    pick, prepare, valid, words,
+    pick, prepare, says_done, valid, words,
 };
 
 /// The address the newsletter was sent to, and the only text any of
@@ -488,6 +488,55 @@ fn a_page_that_only_mentions_removal_does_not_read_as_done() {
     ] {
         assert!(!words::already_off(said), "{said}");
     }
+}
+
+/// A page with nothing on it but `title` and `text`.
+fn saying(title: &str, text: &str) -> PageForm {
+    PageForm {
+        title: title.to_string(),
+        text: text.to_string(),
+        ..PageForm::default()
+    }
+}
+
+#[test]
+fn a_page_titled_unsubscribed_reads_as_done() {
+    assert!(says_done(&saying("Unsubscribed", "")));
+    assert!(says_done(&saying("Unsubscribed | Shop News", "")));
+}
+
+#[test]
+fn a_line_of_its_own_saying_unsubscribed_reads_as_done() {
+    assert!(says_done(&saying(
+        "Shop News",
+        "Shop News\nUnsubscribed!\nSorry to see you go."
+    )));
+}
+
+#[test]
+fn unsubscribed_inside_a_sentence_does_not_read_as_done() {
+    assert!(!says_done(&saying(
+        "Email preferences",
+        "Choose what to be unsubscribed from"
+    )));
+}
+
+#[test]
+fn unsubscribed_as_the_name_of_a_choice_does_not_read_as_done() {
+    let mut page = saying("Email preferences", "Weekly deals\nSubscribed\nUnsubscribed");
+    page.forms.push(super::Form {
+        id: 0,
+        fields: vec![Field {
+            id: 1,
+            kind: FieldKind::Radio {
+                group: "deals".to_string(),
+            },
+            label: "Unsubscribed".to_string(),
+            ..Field::default()
+        }],
+        buttons: Vec::new(),
+    });
+    assert!(!says_done(&page));
 }
 
 #[test]
