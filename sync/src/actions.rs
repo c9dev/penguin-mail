@@ -248,12 +248,40 @@ impl<A: Accounts> MailActions<A> {
         // which gives a reminder its subject.
         let triaged = self.triage_grouped(targets, &resolved).await;
 
+        let mut results: Vec<Result<(), String>> = Vec::with_capacity(targets.len());
         for (index, target) in targets.iter().enumerate() {
-            let step = resolved[index].clone();
-            let done = self
-                .after_triage(target, &action, step, &triaged[index], &mut undo)
-                .await;
-            match done {
+            let checked = resolved[index].clone().and_then(|triage| {
+                let changes = triaged[index].clone()?;
+                if triage.is_some() {
+                    undo.relabel.push(Reversal {
+                        target: target.clone(),
+                        changes,
+                        folder: None,
+                    });
+                }
+                Ok(())
+            });
+            results.push(checked);
+        }
+        // What this computer keeps for the targets, such as a flag colour
+        // or a reminder, goes in one write for the whole selection.
+        let ready: Vec<Target> = targets
+            .iter()
+            .zip(&results)
+            .filter(|(_, r)| r.is_ok())
+            .map(|(t, _)| t.clone())
+            .collect();
+        if let Err(err) = self.keep_locally(ready, &action, &mut undo).await {
+            let error = fill(
+                &gettext("{action} failed: {reason}"),
+                &[("action", &action.describe()), ("reason", &err.to_string())],
+            );
+            for result in results.iter_mut().filter(|r| r.is_ok()) {
+                *result = Err(error.clone());
+            }
+        }
+        for (target, result) in targets.iter().zip(results) {
+            match result {
                 Ok(()) => outcome.done.push(target.clone()),
                 Err(error) => outcome.failed.push(Failure {
                     target: target.clone(),
@@ -381,58 +409,43 @@ impl<A: Accounts> MailActions<A> {
 
     /// The per-target work that follows the label change: the reminder or
     /// the flag colour, and the note Undo needs.
-    async fn after_triage(
+    /// The part of an action only this computer keeps, for every target
+    /// the label change took: the reminder, the flag colour, or the Follow
+    /// Up dismissal. One transaction covers the whole selection, and what
+    /// it replaced goes into `undo`.
+    async fn keep_locally(
         &self,
-        target: &Target,
+        targets: Vec<Target>,
         action: &MailAction,
-        step: Result<Option<TriageAction>, String>,
-        triaged: &Result<Vec<Relabelled>, String>,
         undo: &mut Undo,
-    ) -> Result<(), String> {
-        let triage = step?;
-        let described = triage
-            .as_ref()
-            .map_or_else(|| action.describe(), TriageAction::describe);
-        let failed = |err: &SyncError| {
-            fill(
-                &gettext("{action} failed: {reason}"),
-                &[("action", &described), ("reason", &err.to_string())],
-            )
-        };
-        let changes = triaged.clone()?;
-        if triage.is_some() {
-            undo.relabel.push(Reversal {
-                target: target.clone(),
-                changes,
-                folder: None,
-            });
+    ) -> Result<(), SyncError> {
+        if targets.is_empty() {
+            return Ok(());
         }
         match action {
             MailAction::Remind { at } => {
-                let earlier = self
-                    .set_reminder(target, Some(*at))
-                    .await
-                    .map_err(|e| failed(&e))?;
-                undo.reminders.push((target.clone(), earlier));
+                undo.reminders
+                    .extend(self.set_reminders(targets, Some(*at)).await?);
             }
             MailAction::CancelReminder => {
-                let earlier = self
-                    .set_reminder(target, None)
-                    .await
-                    .map_err(|e| failed(&e))?;
-                undo.reminders.push((target.clone(), earlier));
+                undo.reminders
+                    .extend(self.set_reminders(targets, None).await?);
             }
             MailAction::Flag(color) => {
-                let before = self.color(target, *color).await.map_err(|e| failed(&e))?;
-                let account_id = target.account_id;
-                undo.colors
-                    .extend(before.into_iter().map(|(id, c)| (account_id, id, c)));
+                undo.colors.extend(self.color(targets, *color).await?);
             }
             MailAction::DismissFollowUp => {
-                self.dismiss_follow_up(target)
-                    .await
-                    .map_err(|e| failed(&e))?;
-                undo.follow_ups.push(target.clone());
+                let now = crate::now_millis();
+                let dismissed = targets.clone();
+                self.db
+                    .write(move |c| {
+                        for target in &dismissed {
+                            follow_ups::dismiss(c, target.account_id, &target.thread_id, now)?;
+                        }
+                        Ok(())
+                    })
+                    .await?;
+                undo.follow_ups.extend(targets);
             }
             MailAction::Triage(_) | MailAction::Label { .. } | MailAction::Mute { .. } => {}
         }
@@ -784,65 +797,65 @@ impl<A: Accounts> MailActions<A> {
         })
     }
 
-    /// Sets the target's reminder to `at`, or removes it with `None`, and
-    /// returns the reminder it had. The subject comes from the store.
-    async fn set_reminder(
+    /// Sets each target's reminder to `at`, or removes it with `None`, and
+    /// returns the reminder each had. The subject comes from the store.
+    async fn set_reminders(
         &self,
-        target: &Target,
+        targets: Vec<Target>,
         at: Option<EpochMillis>,
-    ) -> Result<Option<Reminder>, SyncError> {
-        let target = target.clone();
+    ) -> Result<Vec<(Target, Option<Reminder>)>, SyncError> {
         Ok(self
             .db
             .write(move |c| {
-                let earlier = reminders::get(c, target.account_id, &target.thread_id)?;
-                match at {
-                    Some(at) => {
-                        let subject = threads::get_thread(c, target.account_id, &target.thread_id)?
-                            .map(|t| t.subject)
-                            .unwrap_or_default();
-                        reminders::set(
-                            c,
-                            &Reminder {
-                                account_id: target.account_id,
-                                thread_id: target.thread_id.clone(),
-                                subject,
-                                remind_at: at,
-                            },
-                        )?;
+                let mut earlier = Vec::with_capacity(targets.len());
+                for target in targets {
+                    let (account_id, thread) = (target.account_id, &target.thread_id);
+                    let before = reminders::get(c, account_id, thread)?;
+                    match at {
+                        Some(at) => {
+                            let subject = threads::get_thread(c, account_id, thread)?
+                                .map(|t| t.subject)
+                                .unwrap_or_default();
+                            reminders::set(
+                                c,
+                                &Reminder {
+                                    account_id,
+                                    thread_id: thread.clone(),
+                                    subject,
+                                    remind_at: at,
+                                },
+                            )?;
+                        }
+                        None => reminders::remove(c, account_id, thread)?,
                     }
-                    None => reminders::remove(c, target.account_id, &target.thread_id)?,
+                    earlier.push((target, before));
                 }
                 Ok(earlier)
             })
             .await?)
     }
 
-    /// Stops Follow Up suggesting the target's thread until the person
-    /// sends something newer in it.
-    async fn dismiss_follow_up(&self, target: &Target) -> Result<(), SyncError> {
-        let (account_id, thread) = (target.account_id, target.thread_id.clone());
-        let now = crate::now_millis();
-        self.db
-            .write(move |c| follow_ups::dismiss(c, account_id, &thread, now))
-            .await?;
-        Ok(())
-    }
-
-    /// Colours the target's flag and returns each message's earlier colour.
+    /// Colours each target's flag and returns every message's earlier
+    /// colour: account, message, colour.
     async fn color(
         &self,
-        target: &Target,
+        targets: Vec<Target>,
         color: Option<FlagColor>,
-    ) -> Result<Vec<(String, Option<FlagColor>)>, SyncError> {
-        let target = target.clone();
+    ) -> Result<Vec<(AccountId, String, Option<FlagColor>)>, SyncError> {
         Ok(self
             .db
             .write(move |c| {
-                let (account_id, thread) = (target.account_id, &target.thread_id);
-                let only = target.message_id.as_deref();
-                let before = flags::colors(c, account_id, thread, only)?;
-                flags::set_color(c, account_id, thread, only, color)?;
+                let mut before = Vec::new();
+                for target in &targets {
+                    let (account_id, thread) = (target.account_id, &target.thread_id);
+                    let only = target.message_id.as_deref();
+                    before.extend(
+                        flags::colors(c, account_id, thread, only)?
+                            .into_iter()
+                            .map(|(id, colour)| (account_id, id, colour)),
+                    );
+                    flags::set_color(c, account_id, thread, only, color)?;
+                }
                 Ok(before)
             })
             .await?)
