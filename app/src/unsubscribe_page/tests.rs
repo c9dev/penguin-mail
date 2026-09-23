@@ -360,6 +360,19 @@ async fn a_page_that_says_nothing_after_the_form_went_in_is_unclear() {
 }
 
 #[tokio::test]
+async fn a_page_that_answers_a_moment_after_the_press_is_read_again() {
+    let mut browser = browser(ONE_BUTTON).answering("Sending your request…");
+    browser.later = Some(PageForm {
+        url: URL.to_string(),
+        text: "You have been unsubscribed.".to_string(),
+        ..PageForm::default()
+    });
+    let prepared = prepare(&browser, None, URL, ME).await;
+    assert_eq!(finish(&browser, &prepared).await, Outcome::Done);
+    assert_eq!(browser.submissions().len(), 1, "read again, not pressed again");
+}
+
+#[tokio::test]
 async fn an_unclear_page_is_named_by_where_the_press_took_it() {
     let mut browser = browser(ONE_BUTTON);
     browser.after.url = "https://news.shop.example/unsubscribe/sent".to_string();

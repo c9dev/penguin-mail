@@ -5704,11 +5704,11 @@ msgstr ""
 msgid "the page changed while it was waiting to be asked"
 msgstr ""
 
-#: app/src/unsubscribe_page/webkit.rs:300
+#: app/src/unsubscribe_page/webkit.rs:304
 msgid "the view went away"
 msgstr ""
 
-#: app/src/unsubscribe_page/webkit.rs:393
+#: app/src/unsubscribe_page/webkit.rs:404
 msgid "the plan would type something other than the address"
 msgstr ""
 

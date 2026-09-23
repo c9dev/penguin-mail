@@ -25,6 +25,10 @@ pub trait Browser {
     /// back whatever the page says afterwards. The page it acts on is
     /// whichever one the view last loaded.
     fn submit(&self, plan: &Plan, address: &str) -> Answer<'_, Result<PageForm, PageError>>;
+    /// Reads the page the view stands on once more, after a short wait.
+    /// Some pages show "Sending…" when pressed and put their answer in
+    /// the same page a moment later, with no navigation to wait for.
+    fn reread(&self) -> Answer<'_, Result<PageForm, PageError>>;
     /// The page the view stands on. One view serves every list of a
     /// batch, so the page a plan was read off is not always the one
     /// still loaded when the person says yes.
@@ -115,9 +119,11 @@ fn pressed(page: &PageForm, step: &Step) -> String {
 }
 
 /// Submits what [`prepare`] worked out and says how it ended. The page
-/// after the submission has to say the person is off the list; a page
-/// that says nothing leaves the outcome [`Outcome::Unclear`], because
-/// the form went in and only the sender knows what it did.
+/// after the submission has to say the person is off the list. One that
+/// says nothing is read once more after a moment, since some pages put
+/// their answer in place a little after the press; a page still silent
+/// then leaves the outcome [`Outcome::Unclear`], because the form went
+/// in and only the sender knows what it did.
 pub async fn finish(browser: &dyn Browser, prepared: &Prepared) -> Outcome {
     match &prepared.step {
         Step::AlreadyOff => Outcome::Done,
@@ -126,11 +132,21 @@ pub async fn finish(browser: &dyn Browser, prepared: &Prepared) -> Outcome {
             if let Err(why) = standing_on(browser, prepared, plan).await {
                 return why;
             }
-            match browser.submit(plan, &prepared.address).await {
-                Ok(page) if rules::says_done(&page) => Outcome::Done,
-                Ok(page) if page.url.is_empty() => Outcome::Unclear(prepared.url.clone()),
-                Ok(page) => Outcome::Unclear(page.url),
-                Err(err) => Outcome::Failed(err.to_string()),
+            let page = match browser.submit(plan, &prepared.address).await {
+                Ok(page) if rules::says_done(&page) => return Outcome::Done,
+                Ok(page) => page,
+                Err(err) => return Outcome::Failed(err.to_string()),
+            };
+            // The form went in whatever this read says, so a page that
+            // will not be read again is unclear rather than failed.
+            let page = match browser.reread().await {
+                Ok(again) if rules::says_done(&again) => return Outcome::Done,
+                Ok(again) if !again.url.is_empty() => again,
+                _ => page,
+            };
+            match page.url.is_empty() {
+                true => Outcome::Unclear(prepared.url.clone()),
+                false => Outcome::Unclear(page.url),
             }
         }
     }

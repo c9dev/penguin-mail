@@ -58,6 +58,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   yourself.
 - Unsubscribe finds a button that shows only a picture, or a Submit button
   with no words on it, where it used to send you to the browser.
+- An unsubscribe page that answers a moment after the press, without
+  leaving the page, now counts as done instead of "did not say it worked".
 
 ## 0.2.0 (2026-09-23)
 

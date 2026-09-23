@@ -1,0 +1,31 @@
+<!doctype html>
+<!--
+  A page that answers where it stands, but late: pressing the button shows
+  "Sending your request…" at once, as a page waiting on its server does,
+  and the answer takes its place a second later. The first read after the
+  press finds nothing done, so the run has to read the page again.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Leave the Example list</title>
+  </head>
+  <body>
+    <h1>Leave the Example list</h1>
+    <form id="leave" method="post" action="/leave">
+      <input type="hidden" name="token" value="e5" />
+      <button type="submit">Unsubscribe</button>
+    </form>
+    <p id="said"></p>
+    <script>
+      document.getElementById("leave").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const said = document.getElementById("said");
+        said.textContent = "Sending your request…";
+        setTimeout(() => {
+          said.textContent = "You have been unsubscribed.";
+        }, 1000);
+      });
+    </script>
+  </body>
+</html>

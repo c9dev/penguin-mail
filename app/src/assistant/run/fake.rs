@@ -239,6 +239,7 @@ impl Effects for FakeEffects {
         let browser = Rc::new(FakeBrowser {
             pages: self.pages.borrow().clone(),
             after: self.after.borrow().clone(),
+            later: None,
             submitted: RefCell::new(Vec::new()),
             typed: RefCell::new(Vec::new()),
             fail: None,

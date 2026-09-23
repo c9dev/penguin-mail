@@ -16,6 +16,9 @@ pub struct FakeBrowser {
     pub pages: HashMap<String, PageForm>,
     /// The page a submission lands on.
     pub after: PageForm,
+    /// What that page says when it is read again a moment later, for a
+    /// page that answers after the press. Unset, it says the same.
+    pub later: Option<PageForm>,
     /// Every plan submitted, oldest first.
     pub submitted: RefCell<Vec<Plan>>,
     /// The address each submission was told to type.
@@ -36,6 +39,7 @@ impl FakeBrowser {
                 text: "Thanks!".to_string(),
                 ..PageForm::default()
             },
+            later: None,
             submitted: RefCell::new(Vec::new()),
             typed: RefCell::new(Vec::new()),
             fail: None,
@@ -78,6 +82,14 @@ impl Browser for FakeBrowser {
         let answer = match &self.fail {
             Some(err) => Err(err.clone()),
             None => Ok(self.after.clone()),
+        };
+        Box::pin(async move { answer })
+    }
+
+    fn reread(&self) -> Answer<'_, Result<PageForm, PageError>> {
+        let answer = match &self.fail {
+            Some(err) => Err(err.clone()),
+            None => Ok(self.later.clone().unwrap_or_else(|| self.after.clone())),
         };
         Box::pin(async move { answer })
     }

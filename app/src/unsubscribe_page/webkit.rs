@@ -35,6 +35,10 @@ const SETTLE: Duration = Duration::from_millis(500);
 /// How long a press has to take the page somewhere. Past this the page
 /// answered where it stands, which is as common as posting a form.
 const AFTER: Duration = Duration::from_secs(5);
+/// How long a page that said nothing after the press gets before it is
+/// read once more. A page that fetches its answer may still show
+/// "Sending…" when the first read comes.
+const AGAIN: Duration = Duration::from_millis(1500);
 /// How often a page that has been pressed and gone nowhere yet is
 /// looked at again.
 const GLANCE: Duration = Duration::from_millis(200);
@@ -363,6 +367,13 @@ impl Browser for WebkitBrowser {
             .uri()
             .map(|uri| uri.to_string())
             .unwrap_or_default()
+    }
+
+    fn reread(&self) -> Answer<'_, Result<PageForm, PageError>> {
+        Box::pin(async move {
+            glib::timeout_future(AGAIN).await;
+            self.read().await
+        })
     }
 
     fn submit(&self, plan: &Plan, address: &str) -> Answer<'_, Result<PageForm, PageError>> {

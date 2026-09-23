@@ -587,7 +587,9 @@ mod tests {
     /// to the script that stops matching them shows up here rather than
     /// on somebody's newsletter.
     fn an_unsubscribe_page_reads_back_as_its_fixture() {
-        use crate::unsubscribe_page::{Browser, PageForm, Pick, WebkitBrowser, pick, says_done};
+        use crate::unsubscribe_page::{
+            Browser, Outcome, PageForm, Pick, WebkitBrowser, finish, pick, prepare, says_done,
+        };
 
         const DIR: &str = concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -683,6 +685,16 @@ mod tests {
             .expect("link_only takes the plan");
         assert!(after.url.ends_with("link_only_done.html"), "{}", after.url);
         assert!(says_done(&after), "{}", after.text);
+
+        // A page whose answer arrives a second after the press, in the
+        // same page. The run reads it again rather than calling it
+        // unclear.
+        let url = format!("file://{DIR}late_answer.html");
+        let ended = glib::MainContext::default().block_on(async {
+            let prepared = prepare(&browser, None, &url, ME).await;
+            finish(&browser, &prepared).await
+        });
+        assert_eq!(ended, Outcome::Done);
     }
 
     fn buffer() -> (gtk::TextView, gtk::TextBuffer, Anchors) {
