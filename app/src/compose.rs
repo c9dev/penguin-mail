@@ -858,6 +858,54 @@ pub fn restyle_signature(markdown: &str, old: &str, new: &str) -> String {
     format!("{typed}{block}{gap}{tail}")
 }
 
+/// Lines to put in place of others: `removed` lines from `first` on go,
+/// and `lines` take their place.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LineChange {
+    pub first: usize,
+    pub removed: usize,
+    pub lines: Vec<String>,
+}
+
+/// The lines [`restyle_signature`] would change in a body read as
+/// `lines`, when it would change any.
+///
+/// The composer's buffer holds the body line by line, and writing the
+/// whole of it again to swap a signature would move the cursor and cost
+/// the writer their Undo. `lines` only needs to reach the first quoted
+/// line, since the signature sits above the quote.
+pub fn signature_change(lines: &[String], old: &str, new: &str) -> Option<LineChange> {
+    let text = lines.join("\n");
+    let swapped = restyle_signature(&text, old, new);
+    if swapped == text {
+        return None;
+    }
+    let after: Vec<&str> = swapped.split('\n').collect();
+    let first = lines
+        .iter()
+        .zip(&after)
+        .take_while(|(a, b)| a == *b)
+        .count();
+    // The lines kept at the end, counted without reaching back into the
+    // ones kept at the start.
+    let room = lines.len().min(after.len()) - first;
+    let kept = lines
+        .iter()
+        .rev()
+        .zip(after.iter().rev())
+        .take(room)
+        .take_while(|(a, b)| a == *b)
+        .count();
+    Some(LineChange {
+        first,
+        removed: lines.len() - first - kept,
+        lines: after[first..after.len() - kept]
+            .iter()
+            .map(|line| line.to_string())
+            .collect(),
+    })
+}
+
 /// A message body as plain text, for quoting and for reopening drafts.
 pub fn body_text(body: &MessageBody) -> String {
     match (&body.text, &body.html) {
@@ -1387,6 +1435,59 @@ mod tests {
             Some(&sales()),
             "an alias copied in is still the address to answer from"
         );
+    }
+
+    fn lines(text: &str) -> Vec<String> {
+        text.split('\n').map(String::from).collect()
+    }
+
+    /// `lines` with `change` made to them.
+    fn changed(mut lines: Vec<String>, change: LineChange) -> String {
+        lines.splice(change.first..change.first + change.removed, change.lines);
+        lines.join("\n")
+    }
+
+    #[test]
+    fn a_signature_swap_touches_only_the_signature_lines() {
+        let body = "Hi Ann,\n\nMonday works.\n\n-- \nDana\n\nOn Monday, Ann wrote:\n> hi";
+        let change = signature_change(&lines(body), "Dana", "Dana Reyes\nSales").unwrap();
+        assert_eq!(
+            change,
+            LineChange {
+                first: 5,
+                removed: 1,
+                lines: vec!["Dana Reyes".into(), "Sales".into()],
+            }
+        );
+        assert_eq!(
+            changed(lines(body), change),
+            restyle_signature(body, "Dana", "Dana Reyes\nSales")
+        );
+    }
+
+    #[test]
+    fn a_signature_comes_and_goes_as_whole_lines() {
+        for (body, old, new) in [
+            ("Hi\n\nOn Monday, Ann wrote:\n> hi", "", "Dana"),
+            ("Hi\n\n-- \nDana\n\nOn Monday, Ann wrote:\n> hi", "Dana", ""),
+            ("Hi", "", "Dana"),
+            ("Hi\n\n-- \nDana", "Dana", ""),
+            // The rich buffer loses the space after the dashes.
+            ("Hi\n\n--\nDana", "Dana", "Sales"),
+        ] {
+            let change = signature_change(&lines(body), old, new).unwrap();
+            assert_eq!(
+                changed(lines(body), change),
+                restyle_signature(body, old, new),
+                "{body:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn an_edited_signature_is_left_alone() {
+        let body = "Hi\n\n-- \nDana, who rewrote this";
+        assert_eq!(signature_change(&lines(body), "Dana", "Sales"), None);
     }
 
     #[test]

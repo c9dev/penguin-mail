@@ -27,7 +27,7 @@ use super::{labelled_by, name, name_with_shortcut, roving};
 use crate::attachcheck::Promise;
 use crate::compose::{
     Asking, Draft, Gate, OutgoingAttachment, SendWhen, build_mime, format_recipients, gate,
-    is_address, new_message_id, opening_identity, restyle_signature,
+    is_address, new_message_id, opening_identity,
 };
 use crate::core::Core;
 use crate::format::{future_date, human_size, send_later_presets};
@@ -920,17 +920,9 @@ impl Composer {
         if old.signature == new.signature {
             return;
         }
-        let markdown = self.editor.markdown();
-        let swapped = restyle_signature(&markdown, &old.signature, &new.signature);
-        if swapped == markdown {
-            return;
+        if self.editor.swap_signature(&old.signature, &new.signature) {
+            self.check_send();
         }
-        self.base.borrow_mut().markdown = swapped;
-        // The buffer holds the styling, so the body is written out again
-        // from the swapped Markdown rather than patched in place.
-        self.base.borrow_mut().rich = None;
-        self.fill_body();
-        self.check_send();
     }
 
     /// Underlines misspellings as the writer types, when a dictionary is

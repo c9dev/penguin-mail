@@ -7,6 +7,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Choosing another From address swaps the signature and nothing else: the
+  cursor stays where you were typing, and Undo still reaches what you
+  wrote before.
 - Clear Formatting takes the bullets and numbers off a list along with its
   styles, where it used to leave "•" and "1." behind as typed text.
 

@@ -424,26 +424,7 @@ pub fn insert(buffer: &gtk::TextBuffer, body: &RichBody) {
         }
         let kind = if index == 0 { here } else { block.kind };
         lines.push((at.line(), kind));
-        for span in &block.spans {
-            if span.image.is_some() {
-                continue;
-            }
-            let mut names: Vec<&str> = vec![block_tag(kind)];
-            for name in STYLES {
-                if has(span.style, name) {
-                    names.push(name);
-                }
-            }
-            let link = span
-                .link
-                .as_ref()
-                .and_then(|url| link_tag(buffer, url).name())
-                .map(|name| name.to_string());
-            if let Some(name) = &link {
-                names.push(name);
-            }
-            buffer.insert_with_tags_by_name(&mut at, &span.text, &names);
-        }
+        insert_spans(buffer, &mut at, &block.spans, kind);
     }
     // The mark holds the end while the markers go in and move it along.
     let end = buffer.create_mark(None, &at, false);
@@ -453,6 +434,37 @@ pub fn insert(buffer: &gtk::TextBuffer, body: &RichBody) {
     renumber(buffer);
     buffer.place_cursor(&buffer.iter_at_mark(&end));
     buffer.delete_mark(&end);
+}
+
+/// Puts `spans` in at `at`, styled and tagged as a line of `kind`, and
+/// leaves `at` after them. Pictures are left out, since a span carries no
+/// bytes to draw one from.
+pub fn insert_spans(
+    buffer: &gtk::TextBuffer,
+    at: &mut gtk::TextIter,
+    spans: &[Span],
+    kind: BlockKind,
+) {
+    for span in spans {
+        if span.image.is_some() {
+            continue;
+        }
+        let mut names: Vec<&str> = vec![block_tag(kind)];
+        for name in STYLES {
+            if has(span.style, name) {
+                names.push(name);
+            }
+        }
+        let link = span
+            .link
+            .as_ref()
+            .and_then(|url| link_tag(buffer, url).name())
+            .map(|name| name.to_string());
+        if let Some(name) = &link {
+            names.push(name);
+        }
+        buffer.insert_with_tags_by_name(at, &span.text, &names);
+    }
 }
 
 /// Puts the picture in `data` at `at`, held by an anchor the reader maps

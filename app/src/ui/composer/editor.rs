@@ -14,7 +14,9 @@ use std::rc::Rc;
 use gtk::prelude::*;
 
 use super::richbuffer::{self, Anchors};
-use crate::compose::{LinePrefix, OutgoingAttachment, markdown_to_html, toggle_prefix};
+use crate::compose::{
+    LineChange, LinePrefix, OutgoingAttachment, markdown_to_html, signature_change, toggle_prefix,
+};
 use crate::richtext::{Block, BlockKind, RichBody, Style};
 use crate::settings::ComposeFormat;
 
@@ -460,6 +462,103 @@ impl Editor {
         self.busy.set(false);
     }
 
+    /// Puts the signature of `new` in place of `old`'s, when the one under
+    /// the writer's words is still `old` as it was left. Only those lines
+    /// change, so the cursor stays where it was and Undo still reaches
+    /// everything typed before. False when nothing changed.
+    pub fn swap_signature(&self, old: &str, new: &str) -> bool {
+        let Some(change) = signature_change(&self.lines_to_quote(), old, new) else {
+            return false;
+        };
+        self.replace_lines(&change);
+        true
+    }
+
+    /// The lines of the body as text, down to the first quoted one. A
+    /// quoted line in rich text has no `>` of its own, so it gets one here
+    /// for [`signature_change`] to recognise it by.
+    fn lines_to_quote(&self) -> Vec<String> {
+        let buffer = &self.buffer;
+        let rich = self.format.get() == ComposeFormat::Rich;
+        let mut lines = Vec::new();
+        for line in 0..buffer.line_count() {
+            let start = match rich {
+                true => richbuffer::text_start(buffer, line),
+                false => buffer
+                    .iter_at_line(line)
+                    .unwrap_or_else(|| buffer.end_iter()),
+            };
+            let text = buffer
+                .text(&start, &line_end(buffer, line), false)
+                .to_string();
+            let quoted = match rich {
+                true => richbuffer::kind_at(buffer, line) == BlockKind::Quote,
+                false => text.trim_start().starts_with('>'),
+            };
+            match rich && quoted {
+                true => lines.push(format!("> {text}")),
+                false => lines.push(text),
+            }
+            if quoted {
+                break;
+            }
+        }
+        lines
+    }
+
+    /// Makes `change` to the buffer's lines as one step of Undo. In rich
+    /// text each new line is read as Markdown, the way the signature first
+    /// arrived, and becomes a paragraph.
+    fn replace_lines(&self, change: &LineChange) {
+        let buffer = &self.buffer;
+        let count = buffer.line_count() as usize;
+        let line_start = |line: usize| {
+            buffer
+                .iter_at_line(line as i32)
+                .unwrap_or_else(|| buffer.end_iter())
+        };
+        let past = change.first + change.removed;
+        // Removed lines that end the body leave no line after them to hold
+        // the break, so the one before theirs goes instead.
+        let to_end = past >= count;
+        let mut start = line_start(change.first);
+        let mut end = match to_end {
+            true => buffer.end_iter(),
+            false => line_start(past),
+        };
+        if to_end && change.lines.is_empty() && change.first > 0 {
+            start.backward_char();
+        }
+        self.busy.set(true);
+        buffer.begin_user_action();
+        buffer.delete(&mut start, &mut end);
+        let mut at = start;
+        if change.first >= count && !change.lines.is_empty() {
+            buffer.insert(&mut at, "\n");
+        }
+        for (index, line) in change.lines.iter().enumerate() {
+            if index > 0 {
+                buffer.insert(&mut at, "\n");
+            }
+            match self.format.get() {
+                ComposeFormat::Rich => {
+                    let body = RichBody::from_markdown(line);
+                    let spans = body.blocks.first().map_or(&[][..], |b| &b.spans[..]);
+                    richbuffer::insert_spans(buffer, &mut at, spans, BlockKind::Paragraph);
+                }
+                ComposeFormat::Markdown => buffer.insert(&mut at, line),
+            }
+        }
+        if !to_end && !change.lines.is_empty() {
+            buffer.insert(&mut at, "\n");
+        }
+        if self.format.get() == ComposeFormat::Markdown {
+            style_quotes(buffer);
+        }
+        buffer.end_user_action();
+        self.busy.set(false);
+    }
+
     /// The text in the buffer, markers and all.
     pub fn source(&self) -> String {
         self.buffer
@@ -558,6 +657,17 @@ impl Editor {
             *self.typing.borrow_mut() = None;
         }
     }
+}
+
+/// Where `line` ends, before its line break.
+fn line_end(buffer: &gtk::TextBuffer, line: i32) -> gtk::TextIter {
+    let mut end = buffer
+        .iter_at_line(line)
+        .unwrap_or_else(|| buffer.end_iter());
+    if !end.ends_line() {
+        end.forward_to_line_end();
+    }
+    end
 }
 
 /// Whether every character of the selection carries `tag`.
@@ -666,6 +776,7 @@ fn style_quotes(buffer: &gtk::TextBuffer) {
 #[cfg(test)]
 pub(super) mod checks {
     use super::*;
+    use crate::compose::restyle_signature;
 
     pub fn run() {
         a_style_goes_on_the_selection_and_comes_off_again();
@@ -675,6 +786,7 @@ pub(super) mod checks {
         a_link_goes_where_the_held_words_were();
         the_body_moves_to_markdown_and_back();
         clearing_formatting_takes_the_list_markers_too();
+        a_new_signature_leaves_the_cursor_and_undo_alone();
     }
 
     fn opened(markdown: &str) -> (gtk::TextView, Rc<Editor>) {
@@ -801,5 +913,34 @@ pub(super) mod checks {
         select(&editor, 3, 5);
         editor.clear();
         assert_eq!(editor.rich().to_plain(), "one\n1. two\n2. three");
+    }
+
+    fn a_new_signature_leaves_the_cursor_and_undo_alone() {
+        const BODY: &str = "Hi Ann,\n\n-- \nDana\n\nOn Monday, Ann wrote:\n> hi";
+        for format in [ComposeFormat::Rich, ComposeFormat::Markdown] {
+            let view = gtk::TextView::new();
+            let editor = Editor::new(&view, format);
+            editor.fill(BODY, None, &[]);
+            cursor_at(&editor, 6);
+            editor.buffer.begin_user_action();
+            editor.buffer.insert_at_cursor("!");
+            editor.buffer.end_user_action();
+            let before = editor.markdown();
+            let wanted = restyle_signature(&before, "Dana", "Dana Reyes\nSales");
+
+            assert!(editor.swap_signature("Dana", "Dana Reyes\nSales"));
+            match format {
+                ComposeFormat::Markdown => assert_eq!(editor.markdown(), wanted),
+                ComposeFormat::Rich => assert_eq!(
+                    editor.rich().to_plain(),
+                    RichBody::from_markdown(&wanted).to_plain()
+                ),
+            }
+            let cursor = editor.buffer.iter_at_mark(&editor.buffer.get_insert());
+            assert_eq!(cursor.offset(), 7, "{format:?}");
+            assert!(editor.buffer.can_undo(), "{format:?}");
+            // A signature the writer rewrote stays as they wrote it.
+            assert!(!editor.swap_signature("Dana", "Sales"), "{format:?}");
+        }
     }
 }
