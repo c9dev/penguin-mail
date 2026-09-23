@@ -50,6 +50,16 @@ here vouches for the name on the certificate. `found.subject` and
 `found.email` are who that certificate says the signer is. Draw the first
 part as the message.
 
+gpgsm asks dirmngr whether each certificate below the root was revoked,
+and dirmngr asks the certificate authority's server. `verify` gives that
+ten seconds (`with_revocation_wait` changes it), then kills the run and
+checks again with `--disable-crl-checks`. When the chain holds without the
+revocation check and failed or ran out of time with it,
+`Chain::RevocationUnknown` says so: the signature is checked, the chain
+reaches a trusted root, and nobody could say whether the certificate was
+revoked. Show that as unchecked, not as good. A certificate the CRL lists
+comes back as `Verdict::RevokedCertificate`.
+
 **`application/pkcs7-mime`, `smime-type=signed-data`.** The same signature,
 with the message inside the blob rather than beside it. Outlook sends this
 unless somebody told it not to, and a client that does not know the shape
@@ -152,3 +162,10 @@ temp directory, generate a key and a self-signed certificate in it, mark
 that certificate as a root to trust, and run real signatures through it.
 They touch no keybox of the person running them, and they say so and stop
 when this computer has no gpgsm.
+
+`tests/revocation.rs` makes a certificate authority and a certificate it
+issued, whose CRL distribution point is a port the test holds: silent,
+refusing, or serving a CRL that openssl signs with the authority's key.
+Those tests start a dirmngr for their home and stop it when they finish.
+Without openssl, the CRL tests skip, or fail under
+`PENGUIN_MAIL_REQUIRE_CRYPTO`.

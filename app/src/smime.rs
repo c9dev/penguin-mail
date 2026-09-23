@@ -231,6 +231,7 @@ fn chain(chain: Chain) -> Vouched {
     match chain {
         Chain::Trusted => Vouched::Yes,
         Chain::Untrusted => Vouched::Nobody,
+        Chain::RevocationUnknown => Vouched::RevocationUnknown,
         Chain::Unknown => Vouched::Unsaid,
     }
 }
@@ -530,6 +531,30 @@ mod tests {
             "{mark:?}"
         );
         assert_eq!(mark.tone, Tone::Unchecked);
+    }
+
+    /// The owner's rule: an S/MIME signature whose revocation nobody could
+    /// check still opens, with the signer named, and the card says what was
+    /// left unchecked in the neutral tone rather than in green.
+    #[test]
+    fn a_revocation_nobody_could_check_leaves_the_card_neutral() {
+        let mark = mark(&signature(Verdict::Good, Chain::RevocationUnknown));
+        assert_eq!(mark.title, "Signed by Ada Lovelace <ada@example.test>");
+        assert_eq!(
+            mark.detail.as_deref(),
+            Some(
+                "Its certificate leads back to an authority you trust, but this computer \
+                 could not check whether it was revoked."
+            )
+        );
+        assert_eq!(mark.tone, Tone::Unchecked);
+
+        let inside = enveloped(Some(&signature(Verdict::Good, Chain::RevocationUnknown)));
+        assert_eq!(
+            inside.title,
+            "Encrypted, and signed by Ada Lovelace <ada@example.test>"
+        );
+        assert_eq!(inside.tone, Tone::Unchecked);
     }
 
     /// gpgsm reports a certificate its authority's CRL lists as a good

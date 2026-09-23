@@ -63,6 +63,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Opening a long conversation no longer holds up the window while its mail
   is cleaned for display: forty newsletters took the window 50 ms, and that
   work now happens on another thread.
+- S/MIME signed mail opens quickly even offline. Penguin Mail waits at most
+  ten seconds for the certificate authority, and when it could not check
+  whether the certificate was revoked, the card says so instead of showing
+  green.
 
 ### Fixed
 

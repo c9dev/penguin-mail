@@ -71,6 +71,12 @@ pub enum Chain {
     /// It did not: an issuer is missing, the root is one nobody here has
     /// vouched for, or a certificate along the way was revoked.
     Untrusted,
+    /// It reached a root in the person's own trust list, and nothing could
+    /// say whether a certificate along the way was revoked: dirmngr could
+    /// not fetch the CRL, could not be reached, or did not answer in time.
+    /// The status lines alone never say this. [`crate::Smime::verify`]
+    /// finds it by asking gpgsm a second time with CRL checks off.
+    RevocationUnknown,
     /// gpgsm said nothing about the chain.
     Unknown,
 }
