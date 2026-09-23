@@ -13,7 +13,7 @@ use std::rc::Rc;
 use adw::prelude::*;
 use gtk::{gdk, gio, glib};
 use mailrs_domain::translate::{fill, fill_plural, gettext};
-use mailrs_domain::{Category, FlagColor, Folder, MessageBody, MessageMeta, Target};
+use mailrs_domain::{Category, FlagColor, Folder, MessageMeta, Target};
 use webkit::prelude::*;
 
 use super::find::FindBar;
@@ -23,6 +23,7 @@ use super::queued::QueuedCard;
 use super::translation::TranslationCard;
 use super::{name, name_with_shortcut};
 use crate::compose::ReplyKind;
+use crate::open_thread::run::Fetched;
 use crate::open_thread::{OpenThread, Unsent};
 use crate::protection::run::{Claimed, Installed};
 use crate::protection::{self};
@@ -1085,13 +1086,10 @@ impl ConversationView {
     }
 
     /// Bodies and the inline images that go in them, as they come back
-    /// from Gmail, and the redraw that puts them on screen.
-    pub fn bodies_arrived(
-        &self,
-        bodies: Vec<(String, Result<MessageBody, String>)>,
-        images: HashMap<String, HashMap<String, String>>,
-    ) {
-        self.change(|open| open.take_bodies(bodies, images));
+    /// from Gmail with their HTML cleaned, and the redraw that puts them on
+    /// screen.
+    pub fn bodies_arrived(&self, fetched: Fetched) {
+        self.change(|open| open.take_bodies(fetched.bodies, fetched.images, fetched.cleaned));
         self.render(false);
     }
 

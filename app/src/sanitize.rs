@@ -12,6 +12,7 @@
 
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use ammonia::{Builder, UrlRelative};
 
@@ -39,9 +40,10 @@ const LAYOUT_ATTRIBUTES: [&str; 17] = [
 
 /// Sanitizes `html`. `inline_images` maps a `Content-ID` (without angle
 /// brackets) to a `data:` URI; `cid:` image sources become those URIs, and
-/// images whose content is unknown lose their source.
-pub fn sanitize_html(html: &str, inline_images: &HashMap<String, String>) -> String {
-    let images = inline_images.clone();
+/// images whose content is unknown lose their source. The map is shared
+/// rather than copied, since one picture can be megabytes of `data:` URI.
+pub fn sanitize_html(html: &str, inline_images: &Arc<HashMap<String, String>>) -> String {
+    let images = Arc::clone(inline_images);
     let mut builder = Builder::default();
     builder
         .add_tags(&EXTRA_TAGS)
@@ -231,12 +233,10 @@ fn filter_url<'u>(
 
 #[cfg(test)]
 mod dark_tests {
-    use std::collections::HashMap;
-
     use super::sanitize_html;
 
     fn clean(html: &str) -> String {
-        sanitize_html(html, &HashMap::new())
+        sanitize_html(html, &Default::default())
     }
 
     #[test]
@@ -324,11 +324,12 @@ mod dark_tests {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
+    use std::sync::Arc;
 
     use super::sanitize_html;
 
     fn clean(html: &str) -> String {
-        sanitize_html(html, &HashMap::new()).to_lowercase()
+        sanitize_html(html, &Default::default()).to_lowercase()
     }
 
     #[test]
@@ -417,10 +418,10 @@ mod tests {
 
     #[test]
     fn inline_images_become_data_uris() {
-        let images = HashMap::from([(
+        let images = Arc::new(HashMap::from([(
             "logo@x".to_string(),
             "data:image/png;base64,AAAA".to_string(),
-        )]);
+        )]));
         let out = sanitize_html(
             r#"<img src="cid:logo@x"><img src="cid:missing@x">"#,
             &images,

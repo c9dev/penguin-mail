@@ -12,7 +12,7 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 
 use mailrs_domain::MessageBody;
 
-use super::OpenThread;
+use super::{InlineImages, OpenThread};
 use crate::render::{BodyState, Conversation, MessageView, Theme, render};
 use crate::sanitize::sanitize_html;
 use crate::translation::{Body, Prose};
@@ -21,18 +21,87 @@ use crate::translation::{Body, Prose};
 /// images it was made from. A different mark means the body needs
 /// cleaning again.
 #[derive(Debug, Clone)]
-pub(super) struct Cleaned {
+pub struct Cleaned {
     mark: u64,
     html: String,
 }
 
+/// Cleans the HTML of one body with the pictures it names.
+fn clean(html: &str, images: &InlineImages) -> Cleaned {
+    Cleaned {
+        mark: body_mark(html, images),
+        html: sanitize_html(html, images),
+    }
+}
+
+/// HTML bodies waiting to be cleaned, each with the pictures it names. A
+/// long newsletter takes milliseconds, and a thread of forty of them took
+/// the GTK thread 50 ms in a release build, so the thread run's ports
+/// gather them here, clean them on a worker thread, and hand the result to
+/// [`OpenThread::take_cleaned`].
+#[derive(Debug, Default)]
+pub struct ToClean(Vec<(String, String, InlineImages)>);
+
+impl ToClean {
+    /// The bodies among these with HTML to draw.
+    pub fn of<'a>(
+        bodies: impl IntoIterator<Item = (&'a String, &'a MessageBody)>,
+        images: &HashMap<String, InlineImages>,
+    ) -> ToClean {
+        ToClean(
+            bodies
+                .into_iter()
+                .filter_map(|(id, body)| {
+                    let html = html_of(body)?.to_string();
+                    Some((id.clone(), html, images.get(id).cloned().unwrap_or_default()))
+                })
+                .collect(),
+        )
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Cleans them all. Slow, so not on the GTK thread.
+    pub fn clean(self) -> HashMap<String, Cleaned> {
+        self.0
+            .into_iter()
+            .map(|(id, html, images)| {
+                let cleaned = clean(&html, &images);
+                (id, cleaned)
+            })
+            .collect()
+    }
+}
+
 impl OpenThread {
+    /// Keeps cleaned copies made somewhere else, each only while it was
+    /// made from the body and the pictures the thread holds now. Anything
+    /// left without one is cleaned when the page is next drawn.
+    pub fn take_cleaned(&mut self, cleaned: HashMap<String, Cleaned>) {
+        for (id, copy) in cleaned {
+            if self.mark_of(&id) == Some(copy.mark) {
+                self.cleaned.insert(id, copy);
+            }
+        }
+    }
+
+    fn images_of(&self, id: &str) -> InlineImages {
+        self.inline_images.get(id).cloned().unwrap_or_default()
+    }
+
+    /// The mark a cleaned copy of this message's body would carry now.
+    fn mark_of(&self, id: &str) -> Option<u64> {
+        let body = self.bodies.get(id)?.as_ref().ok()?;
+        Some(body_mark(html_of(body)?, &self.images_of(id)))
+    }
+
     /// The whole document for the thread as it stands, in `theme`.
     /// Cleaning a long body costs milliseconds, so each cleaned copy is
     /// kept until its body or its pictures change.
     pub fn page(&mut self, theme: &Theme) -> String {
         self.clean_bodies();
-        let empty = HashMap::new();
         let views: Vec<MessageView> = self
             .messages
             .iter()
@@ -53,7 +122,6 @@ impl OpenThread {
                         (None, Some(Err(reason))) => BodyState::Failed(reason),
                     },
                     expanded: self.expanded.contains(&meta.id),
-                    inline_images: self.inline_images.get(&meta.id).unwrap_or(&empty),
                     thumbnails: &self.thumbnails,
                     sanitized: match showing {
                         Some(translation) => translation.clean.as_deref(),
@@ -93,30 +161,23 @@ impl OpenThread {
     /// Cleans every HTML body whose cleaned copy is missing or was made
     /// from something else, and forgets the copies of bodies that left.
     fn clean_bodies(&mut self) {
-        let empty = HashMap::new();
         let bodies = &self.bodies;
         self.cleaned.retain(|id, _| bodies.contains_key(id));
-        for meta in &self.messages {
-            let Some(Ok(body)) = self.bodies.get(&meta.id) else {
-                continue;
-            };
-            let Some(html) = html_of(body) else {
-                continue;
-            };
-            let images = self.inline_images.get(&meta.id).unwrap_or(&empty);
-            let mark = body_mark(html, images);
-            if self
-                .cleaned
-                .get(&meta.id)
-                .is_none_or(|seen| seen.mark != mark)
-            {
-                let cleaned = Cleaned {
-                    mark,
-                    html: sanitize_html(html, images),
-                };
-                self.cleaned.insert(meta.id.clone(), cleaned);
-            }
-        }
+        let stale: Vec<String> = self
+            .messages
+            .iter()
+            .filter(|meta| {
+                let now = self.mark_of(&meta.id);
+                now.is_some() && self.cleaned.get(&meta.id).map(|seen| seen.mark) != now
+            })
+            .map(|meta| meta.id.clone())
+            .collect();
+        let bodies = stale.iter().filter_map(|id| {
+            let body = self.bodies.get(id)?.as_ref().ok()?;
+            Some((id, body))
+        });
+        let cleaned = ToClean::of(bodies, &self.inline_images).clean();
+        self.cleaned.extend(cleaned);
     }
 }
 
@@ -149,8 +210,75 @@ fn body_mark(html: &str, images: &HashMap<String, String>) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use super::body_mark;
+    use super::{Cleaned, body_mark, clean};
+    use crate::open_thread::OpenThread;
+    use crate::render::Theme;
+    use mailrs_domain::{MessageBody, MessageMeta, Target};
     use std::collections::HashMap;
+
+    fn theme() -> Theme {
+        Theme {
+            dark: false,
+            accent: "#3584e4".to_string(),
+        }
+    }
+
+    /// A thread of one open message whose body is this HTML.
+    fn thread(html: &str) -> OpenThread {
+        let meta = MessageMeta {
+            account_id: 1,
+            id: "m1".to_string(),
+            thread_id: "t1".to_string(),
+            rfc822_msgid: None,
+            from: None,
+            to: Vec::new(),
+            cc: Vec::new(),
+            subject: "Kites".to_string(),
+            date: 0,
+            snippet: String::new(),
+            size: 0,
+            has_attachments: false,
+            label_ids: Vec::new(),
+            list_unsubscribe: None,
+            one_click: false,
+        };
+        let body = MessageBody {
+            html: Some(html.to_string()),
+            ..MessageBody::default()
+        };
+        OpenThread::new(
+            &Target::thread(1, "t1"),
+            "Kites".to_string(),
+            vec![meta],
+            HashMap::from([("m1".to_string(), body)]),
+            Vec::new(),
+        )
+    }
+
+    /// A cleaned copy made elsewhere from this body is drawn as it is:
+    /// the page does not clean the body a second time.
+    #[test]
+    fn a_body_cleaned_elsewhere_is_not_cleaned_again() {
+        let mut open = thread("<p>Kites</p>");
+        let mut made = clean("<p>Kites</p>", &Default::default());
+        made.html = "<p>Cleaned elsewhere</p>".to_string();
+        open.take_cleaned(HashMap::from([("m1".to_string(), made)]));
+        assert!(open.page(&theme()).contains("<p>Cleaned elsewhere</p>"));
+    }
+
+    /// Opening an encrypted message puts a new body under the same id; a
+    /// copy cleaned from the old one must not stand in for it.
+    #[test]
+    fn a_copy_cleaned_from_another_body_is_turned_away() {
+        let mut open = thread("<p>Kites</p>");
+        let stale = Cleaned {
+            html: "<p>Ciphertext</p>".to_string(),
+            ..clean("<p>Ciphertext</p>", &Default::default())
+        };
+        open.take_cleaned(HashMap::from([("m1".to_string(), stale)]));
+        let page = open.page(&theme());
+        assert!(page.contains("<p>Kites</p>") && !page.contains("Ciphertext"));
+    }
 
     fn images(entries: &[(&str, &str)]) -> HashMap<String, String> {
         entries

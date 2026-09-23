@@ -9,6 +9,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - A conversation you read before opens with one page load instead of two,
   so it is ready in about half the time.
+- Opening a long conversation no longer holds up the window while its mail
+  is cleaned for display: forty newsletters took the window 50 ms, and that
+  work now happens on another thread.
 - Before installing an update, Penguin Mail checks that the release is
   signed with its own key, and refuses one that is unsigned or signed by
   anyone else.

@@ -31,7 +31,7 @@ use mailrs_domain::{AccountId, FlagColor, MessageBody, MessageMeta, Target, Thre
 use mailrs_store::outbox::Queued;
 use mailrs_sync::{Opened, outbox_id};
 
-use super::{OpenThread, Unsent};
+use super::{Cleaned, InlineImages, OpenThread, Unsent};
 use crate::protection::Read;
 use crate::translation::{Language, Prose};
 use crate::ui::invitation::Showing;
@@ -47,18 +47,24 @@ mod translation;
 pub use translation::Card;
 
 /// What the store holds for a thread: its messages, oldest first, and the
-/// bodies already fetched, by message id.
+/// bodies already fetched, by message id, with their HTML cleaned.
 #[derive(Debug, Clone, Default)]
 pub struct Stored {
     pub messages: Vec<MessageMeta>,
     pub bodies: HashMap<String, MessageBody>,
+    /// The cleaned HTML of those bodies. Cleaning forty newsletters takes
+    /// tens of milliseconds, which the effect spends on a worker thread
+    /// rather than the GTK one. A body left out is cleaned when drawn.
+    pub cleaned: HashMap<String, Cleaned>,
 }
 
-/// Bodies as Gmail sent them, and the inline images that go in them.
+/// Bodies as Gmail sent them, the inline images that go in them, and
+/// their HTML cleaned on a worker thread.
 #[derive(Debug, Clone, Default)]
 pub struct Fetched {
     pub bodies: Vec<(String, Result<MessageBody, String>)>,
-    pub images: HashMap<String, HashMap<String, String>>,
+    pub images: HashMap<String, InlineImages>,
+    pub cleaned: HashMap<String, Cleaned>,
 }
 
 /// What the run reads from the window. Every method answers from what the
@@ -99,7 +105,7 @@ pub trait Desk: Screen {
     /// it came from, whether it was cut short, and whether it is shown.
     fn translation_of(&self, message_id: &str) -> Option<(Option<Language>, bool, bool)>;
     /// A message's body as it arrived, with its inline images.
-    fn arrived(&self, message_id: &str) -> Option<(MessageBody, HashMap<String, String>)>;
+    fn arrived(&self, message_id: &str) -> Option<(MessageBody, InlineImages)>;
     /// The language the interface is in, when this app can count its
     /// words. `None` leaves every message alone.
     fn interface_language(&self) -> Option<Language>;
@@ -335,6 +341,7 @@ impl ThreadRun {
         let Stored {
             mut messages,
             bodies,
+            cleaned,
         } = stored.unwrap_or_else(|err| {
             tracing::info!(error = %err, "could not read the stored thread");
             Stored::default()
@@ -347,6 +354,7 @@ impl ThreadRun {
             .map_or_else(|| summary.subject.clone(), |m| m.subject.clone());
         let me = self.desk.me(target.account_id);
         let mut thread = OpenThread::new(&target, subject, messages, bodies, me);
+        thread.take_cleaned(cleaned);
         let senders = thread.senders();
         let named: Vec<String> = senders.iter().filter(|s| !s.is_empty()).cloned().collect();
         thread.images_allowed = self

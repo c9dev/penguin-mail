@@ -10,7 +10,6 @@
 //! Both tools only read, so neither asks the person first. What they bring
 //! back is written by strangers, and the result says so to the model.
 
-use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -479,7 +478,7 @@ fn html_text(html: &str) -> String {
         Some(at) => &html[at..],
         None => html,
     };
-    let clean = crate::sanitize::sanitize_html(body, &HashMap::new());
+    let clean = crate::sanitize::sanitize_html(body, &Default::default());
     crate::compose::html_to_text(&clean)
 }
 

@@ -20,7 +20,7 @@ use super::pictures::Pictures;
 use super::{BODY_FETCHES, MainWindow, read_cached_body};
 use crate::core::Core;
 use crate::open_thread::run::{Answer, Card, Desk, Effects, Fetched, Stored, ThreadRun};
-use crate::open_thread::{OpenThread, Unsent};
+use crate::open_thread::{Cleaned, InlineImages, OpenThread, ToClean, Unsent};
 use crate::protection::Read;
 use crate::settings::MarkRead;
 use crate::translation::{self, Language, Prose, Translation};
@@ -106,6 +106,22 @@ impl Ports {
             .account(account_id)
             .ok_or_else(|| "the account has stopped syncing".to_string())
     }
+
+    /// Cleans the bodies' HTML on a worker thread. Forty newsletters take
+    /// the GTK thread tens of milliseconds, during which the window would
+    /// not draw. A body this fails to clean is cleaned when drawn.
+    async fn clean_away(&self, bodies: ToClean) -> HashMap<String, Cleaned> {
+        if bodies.is_empty() {
+            return HashMap::new();
+        }
+        self.core
+            .call(async move { tokio::task::spawn_blocking(move || bodies.clean()).await })
+            .await
+            .unwrap_or_else(|err| {
+                tracing::warn!(error = %err, "could not clean the bodies away from the window");
+                HashMap::new()
+            })
+    }
 }
 
 impl Screen for Ports {
@@ -189,7 +205,7 @@ impl Desk for Ports {
         self.view.find(|open| open.translation_of(message_id))
     }
 
-    fn arrived(&self, message_id: &str) -> Option<(MessageBody, HashMap<String, String>)> {
+    fn arrived(&self, message_id: &str) -> Option<(MessageBody, InlineImages)> {
         self.view.find(|open| open.arrived(message_id))
     }
 
@@ -212,7 +228,8 @@ impl Effects for Ports {
         thread_id: String,
     ) -> Answer<'_, Result<Stored, String>> {
         Box::pin(async move {
-            self.core
+            let mut stored = self
+                .core
                 .read(move |c| {
                     let messages = messages::thread_messages(c, account_id, &thread_id)?;
                     let mut bodies = HashMap::new();
@@ -221,10 +238,18 @@ impl Effects for Ports {
                             bodies.insert(meta.id.clone(), body);
                         }
                     }
-                    Ok(Stored { messages, bodies })
+                    Ok(Stored {
+                        messages,
+                        bodies,
+                        cleaned: HashMap::new(),
+                    })
                 })
                 .await
-                .map_err(|err| err.to_string())
+                .map_err(|err| err.to_string())?;
+            // The stored copy has no inline images: those come with a fetch.
+            let html = ToClean::of(&stored.bodies, &HashMap::new());
+            stored.cleaned = self.clean_away(html).await;
+            Ok(stored)
         })
     }
 
@@ -279,8 +304,22 @@ impl Effects for Ports {
                     .collect()
                     .await
             };
-            let images = self.pictures.inline(account_id, &sync, &bodies).await;
-            Fetched { bodies, images }
+            let images: HashMap<String, InlineImages> = self
+                .pictures
+                .inline(account_id, &sync, &bodies)
+                .await
+                .into_iter()
+                .map(|(id, pictures)| (id, pictures.into()))
+                .collect();
+            let arrived = bodies
+                .iter()
+                .filter_map(|(id, body)| Some((id, body.as_ref().ok()?)));
+            let cleaned = self.clean_away(ToClean::of(arrived, &images)).await;
+            Fetched {
+                bodies,
+                images,
+                cleaned,
+            }
         })
     }
 
@@ -415,7 +454,7 @@ impl Effects for Ports {
     }
 
     fn bodies_arrived(&self, fetched: Fetched) {
-        self.view.bodies_arrived(fetched.bodies, fetched.images);
+        self.view.bodies_arrived(fetched);
     }
 
     fn thumbnails_arrived(&self, found: HashMap<String, String>) {

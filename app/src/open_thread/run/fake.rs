@@ -21,7 +21,7 @@ use mailrs_store::outbox::Queued;
 use mailrs_sync::Opened;
 
 use super::{Answer, Card, Desk, Effects, Fetched, Stored, ThreadRun};
-use crate::open_thread::{OpenThread, Unsent};
+use crate::open_thread::{InlineImages, OpenThread, ToClean, Unsent};
 use crate::protection::Read;
 use crate::render::Theme;
 use crate::translation::{self, Language, Prose, Translation};
@@ -273,6 +273,7 @@ impl FakeWindow {
         let stored = Stored {
             messages: vec![meta("m1", true)],
             bodies: HashMap::new(),
+            cleaned: HashMap::new(),
         };
         Rc::new(FakeWindow(RefCell::new(Screen {
             open: None,
@@ -446,7 +447,7 @@ impl Desk for FakeWindow {
         self.open(|open| open.translation_of(message_id)).flatten()
     }
 
-    fn arrived(&self, message_id: &str) -> Option<(MessageBody, HashMap<String, String>)> {
+    fn arrived(&self, message_id: &str) -> Option<(MessageBody, InlineImages)> {
         self.open(|open| open.arrived(message_id)).flatten()
     }
 
@@ -501,7 +502,7 @@ impl Effects for FakeWindow {
 
     fn bodies(&self, _account_id: AccountId, message_ids: Vec<String>) -> Answer<'_, Fetched> {
         self.reached(Step::Bodies);
-        let bodies = self.with(|screen| {
+        let bodies: Vec<(String, Result<MessageBody, String>)> = self.with(|screen| {
             message_ids
                 .into_iter()
                 .map(|id| {
@@ -510,10 +511,17 @@ impl Effects for FakeWindow {
                 })
                 .collect()
         });
+        // The window cleans on a worker thread; here it is done at once.
+        let images = HashMap::new();
+        let arrived = bodies
+            .iter()
+            .filter_map(|(id, body)| Some((id, body.as_ref().ok()?)));
+        let cleaned = ToClean::of(arrived, &images).clean();
         Box::pin(async move {
             Fetched {
                 bodies,
-                images: HashMap::new(),
+                images,
+                cleaned,
             }
         })
     }
@@ -619,7 +627,7 @@ impl Effects for FakeWindow {
 
     fn bodies_arrived(&self, fetched: Fetched) {
         self.change(Step::BodiesArrived, |open| {
-            open.take_bodies(fetched.bodies, fetched.images)
+            open.take_bodies(fetched.bodies, fetched.images, fetched.cleaned)
         });
         self.draw();
     }

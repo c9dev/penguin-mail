@@ -55,7 +55,7 @@ impl OpenThread {
         thread.expanded = HashSet::from([id.clone()]);
         thread
             .inline_images
-            .insert(id.clone(), pictures(&thread, &id, &files));
+            .insert(id.clone(), pictures(&thread, &id, &files).into());
         if !files.is_empty() {
             thread.opened_files.insert(id, files);
         }

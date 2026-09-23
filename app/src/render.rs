@@ -8,7 +8,6 @@ use std::fmt::Write;
 use mailrs_domain::{Address, MessageBody, MessageMeta, Provenance};
 
 use crate::format::{color_for, full_date, header_date, human_size, initials};
-use crate::sanitize::sanitize_html;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 /// How long a message's fold takes to open or close.
@@ -31,14 +30,12 @@ pub struct MessageView<'a> {
     pub meta: &'a MessageMeta,
     pub body: BodyState<'a>,
     pub expanded: bool,
-    /// `Content-ID` to `data:` URI for this message's inline images.
-    pub inline_images: &'a HashMap<String, String>,
     /// Gmail's attachment id to a small `data:` URI, for the picture on an
     /// attachment row. A row without one falls back to the paperclip.
     pub thumbnails: &'a HashMap<String, String>,
-    /// The body's HTML, already cleaned. Cleaning a long message costs
-    /// milliseconds, so the view keeps the result and passes it back here.
-    /// `None` cleans the body now.
+    /// The body's HTML, already cleaned, or `None` for a body drawn from
+    /// its text. Cleaning a long message costs milliseconds, so whoever
+    /// builds the page keeps the result and passes it in here.
     pub sanitized: Option<&'a str>,
 }
 
@@ -203,17 +200,12 @@ fn render_body(html: &mut String, view: &MessageView) {
             let _ = write!(html, "<div class=\"body status\">{}</div>", escape(&said));
         }
         BodyState::Loaded(body) => {
-            if let Some(source) = body.html.as_deref().filter(|h| !h.trim().is_empty()) {
-                let clean = match view.sanitized {
-                    Some(clean) => clean.to_string(),
-                    None => sanitize_html(source, view.inline_images),
-                };
+            if let Some(clean) = view.sanitized {
                 let _ = write!(
                     html,
                     "<div class=\"body html{plain}\"><template shadowrootmode=\"open\"><style>{HTML_BODY_CSS}</style>\
                      <div class=\"root\">{clean}</div></template></div>",
-                    clean = clean,
-                    plain = if paints_itself(&clean) { "" } else { " plain" },
+                    plain = if paints_itself(clean) { "" } else { " plain" },
                 );
             } else {
                 let _ = write!(
@@ -776,7 +768,6 @@ mod tests {
             text: Some("line\n".repeat(40)),
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let html = page(
             "Kites",
@@ -784,7 +775,6 @@ mod tests {
                 meta: &one,
                 body: BodyState::Loaded(&body),
                 expanded: false,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],
@@ -799,15 +789,14 @@ mod tests {
             html: Some("<div dir=\"ltr\">Hello,<br><br>Monday works.</div>".into()),
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let view = |body: &'static MessageBody, meta: &'static MessageMeta| MessageView {
             meta,
             body: BodyState::Loaded(body),
             expanded: true,
-            inline_images: &images,
             thumbnails: &no_thumbs,
-            sanitized: None,
+            // Both fixtures are already clean.
+            sanitized: body.html.as_deref(),
         };
         let html = page(
             "Kites",
@@ -840,7 +829,6 @@ mod tests {
             text: Some("hi".into()),
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let html = page(
             "<script>alert(1)</script>",
@@ -848,7 +836,6 @@ mod tests {
                 meta: &evil,
                 body: BodyState::Loaded(&body),
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],
@@ -864,13 +851,11 @@ mod tests {
     fn a_contact_photo_replaces_the_initials() {
         let from_ann = meta("m1", "Ann Lee", &[]);
         let body = MessageBody::default();
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let view = || MessageView {
             meta: &from_ann,
             body: BodyState::Loaded(&body),
             expanded: false,
-            inline_images: &images,
             thumbnails: &no_thumbs,
             sanitized: None,
         };
@@ -904,7 +889,6 @@ mod tests {
             text: Some("the body".into()),
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let html = page(
             "Hello",
@@ -913,7 +897,6 @@ mod tests {
                     meta: &first,
                     body: BodyState::Loaded(&body),
                     expanded: false,
-                    inline_images: &images,
                     thumbnails: &no_thumbs,
                     sanitized: None,
                 },
@@ -921,7 +904,6 @@ mod tests {
                     meta: &second,
                     body: BodyState::Loaded(&body),
                     expanded: true,
-                    inline_images: &images,
                     thumbnails: &no_thumbs,
                     sanitized: None,
                 },
@@ -953,13 +935,12 @@ mod tests {
     }
 
     #[test]
-    fn html_bodies_are_sanitized_inside_a_shadow_root() {
+    fn an_html_body_sits_inside_a_shadow_root() {
         let m = meta("m1", "Ann", &[]);
         let body = MessageBody {
             html: Some("<p>Hi</p><script>bad()</script>".into()),
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let html = page(
             "x",
@@ -967,15 +948,14 @@ mod tests {
                 meta: &m,
                 body: BodyState::Loaded(&body),
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
-                sanitized: None,
+                sanitized: Some("<p>Hi</p>"),
             }],
         );
         assert!(html.contains("<template shadowrootmode=\"open\">"));
         assert!(
-            html.contains("<p>Hi</p>") && !html.contains("bad()"),
-            "{html}"
+            html.contains("<div class=\"root\"><p>Hi</p></div>") && !html.contains("bad()"),
+            "the page draws the cleaned copy it was given: {html}"
         );
     }
 
@@ -1003,7 +983,6 @@ mod tests {
             ],
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let html = page(
             "x",
@@ -1011,7 +990,6 @@ mod tests {
                 meta: &m,
                 body: BodyState::Loaded(&body),
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],
@@ -1042,7 +1020,6 @@ mod tests {
             ],
             ..Default::default()
         };
-        let images = HashMap::new();
         let mut no_thumbs = HashMap::new();
         no_thumbs.insert(
             "att-1".to_string(),
@@ -1054,7 +1031,6 @@ mod tests {
                 meta: &m,
                 body: BodyState::Loaded(&body),
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],
@@ -1092,7 +1068,6 @@ mod tests {
     #[test]
     fn a_sender_is_the_heading_under_the_subject() {
         let m = meta("m1", "Ann", &[]);
-        let images = HashMap::new();
         let thumbs = HashMap::new();
         let html = page(
             "Rent",
@@ -1100,7 +1075,6 @@ mod tests {
                 meta: &m,
                 body: BodyState::Loading,
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &thumbs,
                 sanitized: None,
             }],
@@ -1131,7 +1105,6 @@ mod tests {
             }],
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let html = page(
             "x",
@@ -1139,7 +1112,6 @@ mod tests {
                 meta: &m,
                 body: BodyState::Loaded(&body),
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],
@@ -1159,7 +1131,6 @@ mod tests {
             },
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let html = page(
             "x",
@@ -1167,7 +1138,6 @@ mod tests {
                 meta: &m,
                 body: BodyState::Loaded(&body),
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],
@@ -1188,7 +1158,6 @@ mod tests {
             text: Some("Hello".into()),
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let html = page(
             "x",
@@ -1196,7 +1165,6 @@ mod tests {
                 meta: &m,
                 body: BodyState::Loaded(&body),
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],
@@ -1221,7 +1189,6 @@ mod tests {
             },
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let html = page(
             "x",
@@ -1229,7 +1196,6 @@ mod tests {
                 meta: &m,
                 body: BodyState::Loaded(&body),
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],
@@ -1253,7 +1219,6 @@ mod tests {
             }],
             ..Default::default()
         };
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let html = page(
             "x",
@@ -1261,7 +1226,6 @@ mod tests {
                 meta: &m,
                 body: BodyState::Loaded(&body),
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],
@@ -1272,7 +1236,6 @@ mod tests {
     #[test]
     fn loading_and_failure_states_render() {
         let m = meta("m1", "Ann", &[]);
-        let images = HashMap::new();
         let no_thumbs = HashMap::new();
         let loading = page(
             "x",
@@ -1280,7 +1243,6 @@ mod tests {
                 meta: &m,
                 body: BodyState::Loading,
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],
@@ -1292,7 +1254,6 @@ mod tests {
                 meta: &m,
                 body: BodyState::Failed("offline <now>"),
                 expanded: true,
-                inline_images: &images,
                 thumbnails: &no_thumbs,
                 sanitized: None,
             }],

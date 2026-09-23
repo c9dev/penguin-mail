@@ -5,6 +5,7 @@
 //! widget.
 
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use mailrs_domain::{
     AccountId, Address, FlagColor, MessageBody, MessageMeta, Target, system_label,
@@ -18,7 +19,12 @@ mod page;
 pub mod queued;
 pub mod run;
 
+pub use page::{Cleaned, ToClean};
 pub use queued::Unsent;
+
+/// One message's inline images: `Content-ID` to `data:` URI. Shared rather
+/// than copied, since one picture can be megabytes.
+pub type InlineImages = Arc<HashMap<String, String>>;
 
 /// What a reply or a forward starts from, read off the open thread.
 pub struct Answering {
@@ -48,8 +54,8 @@ pub struct OpenThread {
     /// Set when the view shows one message of the thread, not all of it.
     pub only_message: Option<String>,
     pub me: Vec<String>,
-    /// Inline images per message: `Content-ID` to `data:` URI.
-    pub inline_images: HashMap<String, HashMap<String, String>>,
+    /// Inline images per message.
+    pub inline_images: HashMap<String, InlineImages>,
     /// Pictures for the attachment rows: Gmail's attachment id to a small
     /// `data:` URI. Shared across the thread, since an id is unique.
     pub thumbnails: HashMap<String, String>,
@@ -378,14 +384,17 @@ impl OpenThread {
         !same
     }
 
-    /// Bodies and the inline images that go in them, as Gmail sent them.
+    /// Bodies and the inline images that go in them, as Gmail sent them,
+    /// with the HTML already cleaned away from the GTK thread.
     pub fn take_bodies(
         &mut self,
         bodies: Vec<(String, Result<MessageBody, String>)>,
-        images: HashMap<String, HashMap<String, String>>,
+        images: HashMap<String, InlineImages>,
+        cleaned: HashMap<String, Cleaned>,
     ) {
         self.bodies.extend(bodies);
         self.inline_images.extend(images);
+        self.take_cleaned(cleaned);
     }
 
     /// What the engine made of the protected message: the mark for the
@@ -404,7 +413,8 @@ impl OpenThread {
         }
         self.bodies.insert(message_id.clone(), Ok(body));
         let pictures = queued::pictures(self, &message_id, &read.files);
-        self.inline_images.insert(message_id.clone(), pictures);
+        self.inline_images
+            .insert(message_id.clone(), Arc::new(pictures));
         if !read.files.is_empty() {
             self.opened_files.insert(message_id, read.files);
         }
@@ -466,7 +476,7 @@ impl OpenThread {
 
     /// A message's body as it arrived, with its inline images, which is
     /// what a translation is built from.
-    pub fn arrived(&self, message_id: &str) -> Option<(MessageBody, HashMap<String, String>)> {
+    pub fn arrived(&self, message_id: &str) -> Option<(MessageBody, InlineImages)> {
         let body = self.bodies.get(message_id)?.as_ref().ok()?.clone();
         let images = self
             .inline_images
@@ -581,10 +591,10 @@ mod tests {
         // picture from a part nobody signed.
         open.inline_images.insert(
             "m1".to_string(),
-            HashMap::from([(
+            std::sync::Arc::new(HashMap::from([(
                 "stranger".to_string(),
                 "data:image/png;base64,AA".to_string(),
-            )]),
+            )])),
         );
         let signed = MessageBody {
             html: Some("<img src=\"cid:logo\">".to_string()),
@@ -612,6 +622,7 @@ mod tests {
             },
         );
         let pictures = &open.inline_images["m1"];
+        let pictures: &HashMap<String, String> = pictures;
         assert_eq!(pictures.len(), 1, "{pictures:?}");
         assert_eq!(pictures["logo"], "data:image/png;base64,AQ==");
     }
