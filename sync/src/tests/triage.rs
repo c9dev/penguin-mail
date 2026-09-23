@@ -207,8 +207,42 @@ async fn a_rate_limit_that_outlasts_the_ceiling_reports_plainly() {
     assert_eq!(h.threads("INBOX").await, ["t1"], "the thread comes back");
 }
 
+/// A few messages go to Gmail a call each and many in one batch. Either
+/// way Gmail must end up with the labels the store shows, so taking mail
+/// out of the trash puts it back in the inbox whatever the count.
 #[tokio::test]
-async fn trash_uses_the_trash_call() {
+async fn a_few_messages_and_many_leave_the_trash_the_same_way() {
+    for count in [3, 12] {
+        let h = harness().await;
+        let old = now_millis() - 90 * 86_400_000;
+        let targets: Vec<mailrs_domain::Target> = (0..count)
+            .map(|i| {
+                let (id, thread) = (format!("m{i}"), format!("t{i}"));
+                h.fake.seed(meta(&id, &thread, old, &["TRASH"]));
+                mailrs_domain::Target::thread(h.account_id, thread)
+            })
+            .collect();
+        h.bootstrap_all().await;
+
+        h.sync
+            .triage_all(&targets, &TriageAction::Untrash)
+            .await
+            .unwrap();
+
+        for i in 0..count {
+            let id = format!("m{i}");
+            assert_eq!(h.labels_of(&id).await, ["INBOX"], "{count}: the store");
+            assert_eq!(
+                h.fake.with(|s| s.messages[&id].label_ids.clone()),
+                ["INBOX"],
+                "{count}: Gmail"
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn trash_sends_its_labels_as_a_batch_would() {
     let h = harness().await;
     h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
     h.bootstrap_all().await;
@@ -216,7 +250,10 @@ async fn trash_uses_the_trash_call() {
         .triage_thread("t1", &TriageAction::Trash)
         .await
         .unwrap();
-    assert_eq!(h.fake.with(|s| s.remote_writes.clone()), ["trash a"]);
+    assert_eq!(
+        h.fake.with(|s| s.remote_writes.clone()),
+        ["modify a +TRASH -INBOX"]
+    );
     assert_eq!(h.labels_of("a").await, ["TRASH"]);
 }
 
@@ -228,10 +265,24 @@ async fn one_message_can_be_triaged_alone() {
         .seed(meta("a", "t1", now - 1000, &["INBOX", "UNREAD"]));
     h.fake.seed(meta("b", "t1", now, &["INBOX", "UNREAD"]));
     h.bootstrap_all().await;
-    h.sync
-        .triage_message("t1", "b", &TriageAction::MarkRead)
+    let target = mailrs_domain::Target {
+        message_id: Some("b".into()),
+        ..mailrs_domain::Target::thread(h.account_id, "t1")
+    };
+    let changed = h
+        .sync
+        .triage_all(&[target], &TriageAction::MarkRead)
         .await
         .unwrap();
+    assert_eq!(
+        changed,
+        [crate::Relabelled {
+            thread_id: "t1".into(),
+            message_id: "b".into(),
+            added: vec![],
+            removed: vec!["UNREAD".into()],
+        }]
+    );
     assert_eq!(h.labels_of("a").await, ["INBOX", "UNREAD"]);
     assert_eq!(h.labels_of("b").await, ["INBOX"]);
     assert_eq!(
@@ -242,63 +293,6 @@ async fn one_message_can_be_triaged_alone() {
         h.thread("t1").await.unwrap().unread,
         "the thread still has an unread message"
     );
-}
-
-#[tokio::test]
-async fn trash_and_junk_can_be_undone() {
-    let h = harness().await;
-    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
-    h.bootstrap_all().await;
-    h.sync
-        .triage_thread("t1", &TriageAction::Trash)
-        .await
-        .unwrap();
-    h.sync
-        .triage_thread("t1", &TriageAction::Trash.inverse())
-        .await
-        .unwrap();
-    assert_eq!(h.labels_of("a").await, ["INBOX"]);
-    h.sync
-        .triage_thread("t1", &TriageAction::Junk)
-        .await
-        .unwrap();
-    assert_eq!(h.labels_of("a").await, ["SPAM"]);
-    h.sync
-        .triage_thread("t1", &TriageAction::Junk.inverse())
-        .await
-        .unwrap();
-    assert_eq!(h.labels_of("a").await, ["INBOX"]);
-    assert_eq!(
-        h.fake.with(|s| s.remote_writes.clone()),
-        [
-            "trash a",
-            "untrash a",
-            "modify a +SPAM -INBOX",
-            "modify a +INBOX -SPAM"
-        ]
-    );
-}
-
-#[test]
-fn every_action_has_an_inverse_that_restores_labels() {
-    let actions = [
-        TriageAction::Archive,
-        TriageAction::MarkRead,
-        TriageAction::Star,
-        TriageAction::AddLabel("L".into()),
-        TriageAction::Trash,
-        TriageAction::Junk,
-        TriageAction::NotJunk,
-        TriageAction::Relabel {
-            add: vec!["A".into()],
-            remove: vec!["B".into()],
-        },
-    ];
-    for action in actions {
-        let (add, remove) = action.label_delta();
-        let (back_add, back_remove) = action.inverse().label_delta();
-        assert_eq!((add, remove), (back_remove, back_add), "{action:?}");
-    }
 }
 
 #[tokio::test]
@@ -316,5 +310,8 @@ async fn triage_fetches_a_thread_it_has_not_stored() {
         .await
         .unwrap();
     assert_eq!(h.labels_of("old").await, ["INBOX"]);
-    assert_eq!(h.fake.with(|s| s.remote_writes.clone()), ["untrash old"]);
+    assert_eq!(
+        h.fake.with(|s| s.remote_writes.clone()),
+        ["modify old +INBOX -TRASH"]
+    );
 }

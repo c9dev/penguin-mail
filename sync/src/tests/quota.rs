@@ -332,7 +332,8 @@ async fn a_search_reuses_the_metadata_the_store_holds() {
     reset(&all);
 
     // Every hit is inbox mail the first sync already stored.
-    let found = all[0].sync.search("in:inbox", 25).await.unwrap();
+    let ids = all[0].sync.search_ids("in:inbox", 25).await.unwrap();
+    let found = all[0].sync.metadata_of(&ids).await.unwrap();
 
     assert_eq!(found.len(), 25);
     let usage = total(&all);
@@ -425,4 +426,235 @@ async fn a_first_sync_of_a_busy_mailbox_spends_by_conversation() {
     assert_eq!(usage.calls_to("users.threads.get"), 61);
     assert_eq!(usage.calls, 126);
     assert_eq!(usage.units, 1 + 1 + 3 * 5 + 60 * 5 + 61 * 10);
+}
+
+/// Trash older than the window, which the store never holds: `count`
+/// conversations of one message each, then `pairs` of two.
+fn old_trash(mailbox: &Synced, count: usize, pairs: usize) -> Vec<Target> {
+    let long_ago = now_millis() - 200 * 86_400_000;
+    let mut targets = Vec::new();
+    for thread in 0..count + pairs {
+        let size = if thread < count { 1 } else { 2 };
+        let thread_id = format!("trash{thread}");
+        for message in 0..size {
+            mailbox.fake.seed(MessageMeta {
+                account_id: mailbox.id,
+                ..meta(
+                    &format!("trash{thread}m{message}"),
+                    &thread_id,
+                    long_ago + thread as i64 * 1000 + message as i64,
+                    &["TRASH"],
+                )
+            });
+        }
+        targets.push(Target::thread(mailbox.id, thread_id));
+    }
+    targets
+}
+
+#[tokio::test]
+async fn deleting_two_hundred_conversations_forever_takes_one_call() {
+    let h = harness().await;
+    let all = synced(&h.db, 1, 1, 1).await;
+    let targets = old_trash(&all[0], 180, 20);
+    first_sync(&all).await;
+    all[0].fake.with(|s| s.page_size = 500);
+    let trash = Mailbox::Folder {
+        account_id: Some(all[0].id),
+        folder: Folder::Trash,
+    };
+    let view = View {
+        limit: Some(250),
+        ..View::default()
+    };
+    // The reader has the Trash open, which listed every row.
+    lists_over(&all, &h.db)
+        .list(&trash, &scope(&all), &view, 0)
+        .await
+        .unwrap();
+    reset(&all);
+
+    let erased = actions(&all, &h.db).erase(&targets).await.unwrap();
+
+    let outcome = erased.done().expect("the permission is there");
+    assert_eq!(outcome.done.len(), 200);
+    assert!(outcome.failed.is_empty(), "{:?}", outcome.failed);
+    let usage = total(&all);
+    report("delete forever 200 conversations, 1 account", &usage);
+    // One `threads.get` and one `batchDelete` per conversation cost 400
+    // calls and 12,000 units. The listing already named every message.
+    assert_eq!(usage.calls_to("users.messages.batchDelete"), 1);
+    assert_eq!(usage.calls, 1);
+    assert_eq!(usage.units, 50);
+    assert!(
+        all[0]
+            .fake
+            .with(|s| s.messages.keys().all(|id| !id.starts_with("trash")))
+    );
+}
+
+#[tokio::test]
+async fn deleting_forever_what_nobody_listed_asks_for_each_conversation_once() {
+    let h = harness().await;
+    let all = synced(&h.db, 1, 1, 1).await;
+    let targets = old_trash(&all[0], 3, 0);
+    first_sync(&all).await;
+    reset(&all);
+
+    let erased = actions(&all, &h.db).erase(&targets).await.unwrap();
+
+    assert_eq!(erased.done().map(|o| o.done.len()), Some(3));
+    let usage = total(&all);
+    assert_eq!(usage.calls_to("users.threads.get"), 3);
+    assert_eq!(usage.calls_to("users.messages.batchDelete"), 1);
+}
+
+#[tokio::test]
+async fn deleting_more_than_a_thousand_messages_forever_splits_the_batch() {
+    let h = harness().await;
+    let all = synced(&h.db, 1, 1100, 1).await;
+    all[0].fake.with(|s| s.page_size = 2000);
+    first_sync(&all).await;
+    reset(&all);
+    let targets = everything(&all, 1100);
+
+    let erased = actions(&all, &h.db).erase(&targets).await.unwrap();
+
+    assert_eq!(erased.done().map(|o| o.done.len()), Some(1100));
+    let usage = total(&all);
+    assert_eq!(usage.calls_to("users.messages.batchDelete"), 2);
+    assert_eq!(usage.calls, 2);
+}
+
+/// The inbox check needs Gmail's ids and nothing else, so it asks for 500
+/// a page, Gmail's most, for the same 5 units a call as 100.
+#[tokio::test]
+async fn the_inbox_check_lists_five_hundred_ids_a_call() {
+    let h = harness().await;
+    let all = synced(&h.db, 1, 1200, 1).await;
+    // The fake answers each listing with as many ids as it asked for.
+    all[0].fake.with(|s| s.page_size = 10_000);
+    first_sync(&all).await;
+    reset(&all);
+
+    all[0].sync.reconcile_inbox().await.unwrap();
+
+    let usage = total(&all);
+    report("inbox check, 1,200 messages", &usage);
+    // At 100 a page this was 12 calls and 60 units.
+    assert_eq!(usage.calls_to("users.messages.list"), 3);
+    assert_eq!(usage.units, 15);
+}
+
+/// History names each new message with its thread, so replies arriving
+/// three to a conversation come in one `threads.get` per conversation.
+#[tokio::test]
+async fn history_fetches_new_replies_a_conversation_at_a_time() {
+    let h = harness().await;
+    let all = synced(&h.db, 1, 10, 1).await;
+    first_sync(&all).await;
+    let now = now_millis();
+    for thread in 0..10 {
+        for reply in 0..3 {
+            all[0].fake.deliver(MessageMeta {
+                account_id: all[0].id,
+                ..meta(
+                    &format!("a0t{thread}r{reply}"),
+                    &format!("a0t{thread}"),
+                    now + reply,
+                    &["INBOX", "UNREAD"],
+                )
+            });
+        }
+    }
+    reset(&all);
+
+    all[0].sync.incremental().await.unwrap();
+
+    let usage = total(&all);
+    report("history with 30 replies in 10 conversations", &usage);
+    // A message at a time this was 30 calls and 150 units.
+    assert_eq!(usage.calls_to("users.messages.get"), 0);
+    assert_eq!(usage.calls_to("users.threads.get"), 10);
+    let stored = h
+        .db
+        .read(|c| Ok(c.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get::<_, i64>(0))?))
+        .await
+        .unwrap();
+    assert_eq!(stored, 40, "every reply is stored, and nothing else");
+}
+
+/// Messages stored for the account.
+async fn stored_count(db: &Db) -> i64 {
+    db.read(|c| Ok(c.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get::<_, i64>(0))?))
+        .await
+        .unwrap()
+}
+
+/// History that has aged out makes the account list its mail again. What
+/// the store already holds with the same labels costs nothing to fetch.
+#[tokio::test]
+async fn listing_again_after_history_expires_fetches_nothing_that_stayed() {
+    let h = harness().await;
+    let all = vec![realistic(&h.db).await];
+    first_sync(&all).await;
+    all[0].fake.expire_history();
+    all[0].fake.with(|s| s.page_size = 500);
+    reset(&all);
+
+    all[0].sync.incremental().await.unwrap();
+
+    let usage = total(&all);
+    report(
+        "listing again after history expired, nothing changed",
+        &usage,
+    );
+    // Listing and fetching the window again cost 929 units.
+    assert_eq!(usage.calls_to("users.messages.get"), 0);
+    assert_eq!(usage.calls_to("users.threads.get"), 0);
+    // History 2, profile 1, labels 1, the window at 500 a page, and one
+    // listing per label for the fake's four.
+    assert_eq!(usage.units, 2 + 1 + 1 + 5 + 4 * 5);
+    assert_eq!(stored_count(&h.db).await, 300);
+    assert!(
+        all[0].sync.incremental().await.is_ok(),
+        "the new cursor works"
+    );
+}
+
+/// What did change while history was out of reach comes in, and only
+/// that: a message read on the phone, one that arrived, one deleted.
+#[tokio::test]
+async fn listing_again_fetches_what_moved_arrived_or_went() {
+    let h = harness().await;
+    let all = vec![realistic(&h.db).await];
+    first_sync(&all).await;
+    let fake = &all[0].fake;
+    fake.remote_relabel("t0m0", &["UNREAD"], &[]);
+    fake.seed(MessageMeta {
+        account_id: all[0].id,
+        ..meta("new", "tnew", now_millis(), &["INBOX"])
+    });
+    fake.remote_delete_silently("t1m0");
+    fake.expire_history();
+    fake.with(|s| s.page_size = 500);
+    reset(&all);
+
+    all[0].sync.incremental().await.unwrap();
+
+    let usage = total(&all);
+    report("listing again after history expired, three changes", &usage);
+    assert_eq!(usage.calls_to("users.messages.get"), 2);
+    assert_eq!(usage.calls_to("users.threads.get"), 0);
+    assert_eq!(stored_count(&h.db).await, 300);
+    let (account_id, ids) = (all[0].id, vec!["t0m0".to_string(), "new".to_string()]);
+    let labels: Vec<Vec<String>> =
+        h.db.read(move |c| {
+            ids.iter()
+                .map(|id| mailrs_store::messages::labels_of(c, account_id, id))
+                .collect()
+        })
+        .await
+        .unwrap();
+    assert_eq!(labels, [vec!["INBOX", "UNREAD"], vec!["INBOX"]]);
 }

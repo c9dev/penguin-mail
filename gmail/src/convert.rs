@@ -27,17 +27,6 @@ pub enum HistoryChange {
     },
 }
 
-impl HistoryChange {
-    pub fn message_id(&self) -> &str {
-        match self {
-            HistoryChange::MessageAdded { id, .. }
-            | HistoryChange::MessageDeleted { id, .. }
-            | HistoryChange::LabelsAdded { id, .. }
-            | HistoryChange::LabelsRemoved { id, .. } => id,
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HistoryPage {
     pub changes: Vec<HistoryChange>,

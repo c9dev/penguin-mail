@@ -350,6 +350,18 @@ CREATE INDEX IF NOT EXISTS messages_by_sender ON messages(lower(from_addr), acco
     r#"
 ALTER TABLE accounts ADD COLUMN checked_at INTEGER;
 "#,
+    // When a caller took a waiting message to send it. The Outbox window
+    // and the pass that sends what is due can reach the same message
+    // together, and whoever writes the row first is the one that sends
+    // it. A claim older than a few minutes belongs to a run that died
+    // mid-send. A table of its own rather than a column, so running this
+    // again over a database that has it changes nothing.
+    r#"
+CREATE TABLE IF NOT EXISTS outbox_claims (
+    id         INTEGER PRIMARY KEY REFERENCES outbox(id) ON DELETE CASCADE,
+    claimed_at INTEGER NOT NULL
+);
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,

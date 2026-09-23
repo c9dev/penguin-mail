@@ -824,3 +824,74 @@ async fn erasing_one_message_leaves_the_rest_of_its_thread_consistent() {
         "the thread lost the sent label with its only sent message"
     );
 }
+
+/// Transactions committed to the harness's database so far, counted from
+/// the commit frames in its write-ahead log. The log only grows in a test
+/// this small, so the count only goes up.
+fn commits(h: &Harness) -> usize {
+    let wal = std::fs::read(h._dir.path().join("mail.db-wal")).unwrap_or_default();
+    if wal.len() < 32 {
+        return 0;
+    }
+    let word = |at: usize| u32::from_be_bytes([wal[at], wal[at + 1], wal[at + 2], wal[at + 3]]);
+    let page = word(8) as usize;
+    let salt = (word(16), word(20));
+    let mut count = 0;
+    let mut at = 32;
+    while at + 24 + page <= wal.len() {
+        if (word(at + 8), word(at + 12)) == salt && word(at + 4) != 0 {
+            count += 1;
+        }
+        at += 24 + page;
+    }
+    count
+}
+
+/// Flag, Remind and Dismiss Follow-Up write the store once for the whole
+/// selection, not once per conversation.
+#[tokio::test]
+async fn a_flag_or_reminder_on_many_conversations_writes_the_store_once() {
+    let h = harness().await;
+    let now = now_millis();
+    let targets: Vec<Target> = (0..10)
+        .map(|i| {
+            h.fake.seed(meta(
+                &format!("m{i}"),
+                &format!("t{i}"),
+                now + i,
+                &["INBOX"],
+            ));
+            Target::thread(h.account_id, format!("t{i}"))
+        })
+        .collect();
+    h.bootstrap_all().await;
+    let actions = actions(&h);
+
+    for action in [
+        MailAction::Flag(Some(FlagColor::Red)),
+        MailAction::Remind {
+            at: now + 86_400_000,
+        },
+        MailAction::DismissFollowUp,
+    ] {
+        let before = commits(&h);
+        let outcome = actions.run(&targets, action.clone(), History::Record).await;
+        assert_eq!(outcome.done.len(), 10, "{action:?}");
+        let label_change = usize::from(!matches!(action, MailAction::DismissFollowUp));
+        assert_eq!(
+            commits(&h) - before,
+            label_change + 1,
+            "{action:?}: the label change, then one write for the rest"
+        );
+    }
+    assert_eq!(
+        colors(&h, "t3").await,
+        [("m3".into(), Some(FlagColor::Red))]
+    );
+
+    actions.undo().await.unwrap();
+    actions.undo().await.unwrap();
+    actions.undo().await.unwrap();
+    assert_eq!(colors(&h, "t3").await, [("m3".into(), None)]);
+    assert_eq!(h.threads("INBOX").await.len(), 10);
+}

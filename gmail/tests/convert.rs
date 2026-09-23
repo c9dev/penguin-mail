@@ -169,7 +169,6 @@ fn history_flattens_in_order() {
             },
         ]
     );
-    assert_eq!(page.changes[3].message_id(), "b");
 }
 
 #[test]

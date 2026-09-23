@@ -26,7 +26,8 @@ pub enum TriageAction {
     Mute,
     /// Takes the mute label off and puts the thread back in the inbox.
     Unmute,
-    /// Any label change; the undo of most other actions.
+    /// Any label change, such as the one Undo sends to put back what an
+    /// action changed.
     Relabel {
         add: Vec<String>,
         remove: Vec<String>,
@@ -52,33 +53,6 @@ impl TriageAction {
             TriageAction::Mute => (one(system_label::MUTE), one(system_label::INBOX)),
             TriageAction::Unmute => (one(system_label::INBOX), one(system_label::MUTE)),
             TriageAction::Relabel { add, remove } => (add.clone(), remove.clone()),
-        }
-    }
-
-    /// The action that undoes this one.
-    pub fn inverse(&self) -> TriageAction {
-        let relabel = |add: &[&str], remove: &[&str]| TriageAction::Relabel {
-            add: add.iter().map(|l| l.to_string()).collect(),
-            remove: remove.iter().map(|l| l.to_string()).collect(),
-        };
-        match self {
-            TriageAction::Archive => relabel(&[system_label::INBOX], &[]),
-            TriageAction::MarkRead => TriageAction::MarkUnread,
-            TriageAction::MarkUnread => TriageAction::MarkRead,
-            TriageAction::Star => TriageAction::Unstar,
-            TriageAction::Unstar => TriageAction::Star,
-            TriageAction::AddLabel(label) => TriageAction::RemoveLabel(label.clone()),
-            TriageAction::RemoveLabel(label) => TriageAction::AddLabel(label.clone()),
-            TriageAction::Trash => TriageAction::Untrash,
-            TriageAction::Untrash => TriageAction::Trash,
-            TriageAction::Junk => TriageAction::NotJunk,
-            TriageAction::NotJunk => TriageAction::Junk,
-            TriageAction::Mute => TriageAction::Unmute,
-            TriageAction::Unmute => TriageAction::Mute,
-            TriageAction::Relabel { add, remove } => TriageAction::Relabel {
-                add: remove.clone(),
-                remove: add.clone(),
-            },
         }
     }
 

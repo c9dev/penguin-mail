@@ -34,7 +34,8 @@ mod tests;
 pub const WAIT_CEILING: std::time::Duration = std::time::Duration::from_secs(60);
 
 pub use account::{
-    AccountSync, DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS, FETCH_CONCURRENCY, SendAsAddress,
+    AccountSync, DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS, FETCH_CONCURRENCY, Relabelled,
+    SendAsAddress,
 };
 pub use actions::{
     Accounts, Categorized, Failure, History, MailAction, MailActions, NewLabels, Outcome, Returned,
@@ -42,7 +43,7 @@ pub use actions::{
 };
 #[cfg(any(test, feature = "fake"))]
 pub use api::AnyGmail;
-pub use api::{AccountClient, DraftRef, GmailApi, LIST_PAGE_SIZE, SavedDraft};
+pub use api::{AccountClient, DraftRef, GmailApi, ID_PAGE_SIZE, LIST_PAGE_SIZE, SavedDraft};
 pub use backoff::{MOST_TRIES, backoff_delay, poll_offset, retry_delay, with_jitter};
 pub use calendar::Calendar;
 pub use connect::connect_account;

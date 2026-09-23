@@ -24,6 +24,10 @@ use mailrs_store::outbox::{self, Queued};
 use crate::backoff::{MOST_TRIES, retry_delay};
 use crate::{Accounts, SavedDraft, SyncError, now_millis, outbox_id};
 
+/// How long a claim on a waiting message holds. A send that takes longer
+/// than this belongs to a run that died, and the message is free again.
+const CLAIM_LASTS: EpochMillis = 10 * 60 * 1000;
+
 /// What became of a message handed to the outbox.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Posted {
@@ -75,7 +79,12 @@ impl<A: Accounts> Outbox<A> {
     /// Sends `message` now, and keeps it for later when the reason it would
     /// not go is one that passes. The bytes travel in `message.raw`, so a
     /// message that never reaches Gmail is still whole on this computer.
+    /// A message already waiting that another caller is sending right now
+    /// answers `Waiting` and is left to that caller.
     pub async fn post(&self, mut message: Queued) -> Result<Posted, SyncError> {
+        if message.id > 0 && self.claim(message.id).await?.is_none() {
+            return Ok(Posted::Waiting(message.id));
+        }
         match self.attempt(&message).await {
             Ok(sent) => {
                 self.forget(&message).await?;
@@ -83,7 +92,10 @@ impl<A: Accounts> Outbox<A> {
             }
             // An account that is not connected has told us nothing about
             // the message, so a message already waiting waits on as it is.
-            Err(SyncError::UnknownAccount(_)) if message.id > 0 => Ok(Posted::Waiting(message.id)),
+            Err(SyncError::UnknownAccount(_)) if message.id > 0 => {
+                self.release(message.id).await?;
+                Ok(Posted::Waiting(message.id))
+            }
             Err(err) if err.worth_retrying() => {
                 message.attempts += 1;
                 Ok(Posted::Waiting(self.keep(message, &err).await?.id))
@@ -126,11 +138,21 @@ impl<A: Accounts> Outbox<A> {
     }
 
     /// Tries every message whose time has come, soonest first. One the
-    /// outbox has given up on is left alone until the person asks for it.
+    /// outbox has given up on is left alone until the person asks for it,
+    /// and one another caller is sending is left to that caller.
     pub async fn send_due(&self, now: EpochMillis) -> Result<Drained, SyncError> {
         let mut drained = Drained::default();
-        for mut message in self.db.read(move |c| outbox::due(c, now)).await? {
-            if retry_delay(message.attempts).is_none() {
+        for due in self.db.read(move |c| outbox::due(c, now)).await? {
+            if retry_delay(due.attempts).is_none() {
+                continue;
+            }
+            // The row as it stands once claimed, which another caller may
+            // have sent, dropped or moved since the list was read.
+            let Some(mut message) = self.claim(due.id).await? else {
+                continue;
+            };
+            if message.send_at > now || retry_delay(message.attempts).is_none() {
+                self.release(message.id).await?;
                 continue;
             }
             match self.attempt(&message).await {
@@ -140,6 +162,7 @@ impl<A: Accounts> Outbox<A> {
                 // again.
                 Err(SyncError::UnknownAccount(account_id)) => {
                     tracing::debug!(account = account_id, "not connected yet; the outbox waits");
+                    self.release(message.id).await?;
                     continue;
                 }
                 Ok(_) => {
@@ -288,10 +311,30 @@ impl<A: Accounts> Outbox<A> {
             .await?)
     }
 
+    /// Takes the waiting message `id` for this caller, or `None` when it
+    /// has gone or another caller is sending it.
+    async fn claim(&self, id: i64) -> Result<Option<Queued>, SyncError> {
+        let now = now_millis();
+        Ok(self
+            .db
+            .write(move |c| outbox::claim(c, id, now, now - CLAIM_LASTS))
+            .await?)
+    }
+
+    async fn release(&self, id: i64) -> Result<(), SyncError> {
+        self.db.write(move |c| outbox::release(c, id)).await?;
+        Ok(())
+    }
+
     /// One try at Gmail: from the bytes this computer holds, or from the
     /// Gmail draft when they are Gmail's. Sending bytes that came out of a
     /// draft deletes that draft, so Drafts is not left holding a copy of
     /// what just went out.
+    ///
+    /// A message tried before may have reached Gmail on a try whose answer
+    /// was lost, so its bytes are looked for in Sent first. A draft needs
+    /// no such look: Gmail deletes a draft it sends, and sending one that
+    /// has gone answers that it is gone, which counts as sent.
     async fn attempt(&self, message: &Queued) -> Result<String, SyncError> {
         let sync = self
             .accounts
@@ -299,6 +342,20 @@ impl<A: Accounts> Outbox<A> {
             .ok_or(SyncError::UnknownAccount(message.account_id))?;
         match (&message.raw, &message.draft_id) {
             (Some(raw), draft_id) => {
+                if message.attempts > 0
+                    && let Some(sent) = sync.sent_copy(raw).await?
+                {
+                    tracing::info!(
+                        account = message.account_id,
+                        "a message tried before is already in Sent; not sending it again"
+                    );
+                    if let Some(draft_id) = draft_id
+                        && let Err(err) = sync.delete_draft(draft_id).await
+                    {
+                        tracing::warn!(error = %err, "sent, but could not delete the draft");
+                    }
+                    return Ok(sent);
+                }
                 sync.send(raw.clone(), message.thread_id.clone(), draft_id.clone())
                     .await
             }

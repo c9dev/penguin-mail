@@ -7,16 +7,15 @@
 //! more than their `messages.get` calls, and it answers for every message
 //! of the thread. Those threads are kept here until the reader opens one.
 
-use std::collections::{BTreeSet, HashMap, HashSet};
-use std::sync::Arc;
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::time::{Duration, Instant};
 
-use futures::StreamExt;
 use mailrs_domain::MessageMeta;
-use mailrs_gmail::{GmailError, MessageRef};
+use mailrs_gmail::MessageRef;
 use mailrs_store::{accounts, messages};
 
-use super::{AccountSync, FETCH_CONCURRENCY};
+use super::AccountSync;
+use super::fetch::Want;
 use crate::{GmailApi, SyncError};
 
 /// How long a fetched thread is kept for opening. Only memory depends on
@@ -33,7 +32,81 @@ pub(super) struct Listed {
     metas: Vec<MessageMeta>,
 }
 
+/// The messages one thread had among a search's hits.
+pub(super) struct Hits {
+    at: Instant,
+    ids: BTreeSet<String>,
+}
+
 impl<G: GmailApi> AccountSync<G> {
+    /// The messages a Gmail search returns, by id and thread, newest
+    /// first, at most `limit` of them. One call of 5 quota units, whatever
+    /// the count, so a caller takes the ids first and pays for metadata
+    /// only as it shows rows. The hits are kept per thread for
+    /// [`KEPT_FOR`], so Delete Forever on a listed row knows its messages
+    /// without asking Gmail.
+    pub async fn search_ids(
+        &self,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<MessageRef>, SyncError> {
+        let size = u32::try_from(limit)
+            .unwrap_or(u32::MAX)
+            .min(crate::ID_PAGE_SIZE);
+        let page = self.api.list_messages(query, None, size).await?;
+        let found: Vec<MessageRef> = page.messages.into_iter().take(limit).collect();
+        let mut by_thread: BTreeMap<&str, BTreeSet<String>> = BTreeMap::new();
+        for hit in &found {
+            by_thread
+                .entry(hit.thread_id.as_str())
+                .or_default()
+                .insert(hit.id.clone());
+        }
+        let mut kept = self.hits.lock().expect("search hits poisoned");
+        kept.retain(|_, hits| hits.at.elapsed() < KEPT_FOR);
+        for (thread, ids) in by_thread {
+            kept.insert(
+                thread.to_string(),
+                Hits {
+                    at: Instant::now(),
+                    ids,
+                },
+            );
+        }
+        Ok(found)
+    }
+
+    /// The messages of `thread_id` a recent search saw, without asking
+    /// Gmail: every message of it when the search fetched it whole,
+    /// otherwise the hits it listed. `None` when no search named it.
+    pub(super) fn listed_ids(&self, thread_id: &str) -> Option<BTreeSet<String>> {
+        let whole = self
+            .listed
+            .lock()
+            .expect("listed threads poisoned")
+            .get(thread_id)
+            .filter(|listed| listed.at.elapsed() < KEPT_FOR)
+            .map(|listed| listed.metas.iter().map(|m| m.id.clone()).collect());
+        whole.or_else(|| {
+            self.hits
+                .lock()
+                .expect("search hits poisoned")
+                .get(thread_id)
+                .filter(|hits| hits.at.elapsed() < KEPT_FOR)
+                .map(|hits| hits.ids.clone())
+        })
+    }
+
+    /// Lets go of what searches kept about threads that are gone.
+    pub(super) fn forget_listed(&self, threads: &BTreeSet<String>) {
+        let mut listed = self.listed.lock().expect("listed threads poisoned");
+        let mut hits = self.hits.lock().expect("search hits poisoned");
+        for thread in threads {
+            listed.remove(thread);
+            hits.remove(thread);
+        }
+    }
+
     /// Metadata for the messages a search listed, newest first. The store
     /// answers for the messages it already holds, which costs nothing.
     /// Two or more hits in one thread the store lacks come from one
@@ -47,70 +120,31 @@ impl<G: GmailApi> AccountSync<G> {
             .read(move |c| messages::by_ids(c, account_id, &wanted))
             .await?;
         let held: HashSet<String> = metas.iter().map(|m| m.id.clone()).collect();
-        let mut by_thread: HashMap<&str, Vec<&str>> = HashMap::new();
-        for r in refs.iter().filter(|r| !held.contains(&r.id)) {
-            by_thread.entry(&r.thread_id).or_default().push(&r.id);
-        }
-        let (shared, alone): (Vec<_>, Vec<_>) =
-            by_thread.into_iter().partition(|(_, ids)| ids.len() > 1);
-        if !shared.is_empty() {
-            let threads: Vec<String> = shared.iter().map(|(t, _)| t.to_string()).collect();
-            let hits: HashSet<&str> = shared.iter().flat_map(|(_, ids)| ids.clone()).collect();
-            for thread in self.fetch_whole_threads(threads).await? {
-                metas.extend(thread.into_iter().filter(|m| hits.contains(m.id.as_str())));
-            }
-        }
-        let singles: Vec<String> = alone
-            .into_iter()
-            .flat_map(|(_, ids)| ids.into_iter().map(str::to_string))
+        let wants: Vec<Want> = refs
+            .iter()
+            .filter(|r| !held.contains(&r.id))
+            .cloned()
+            .map(Want::from)
             .collect();
-        metas.extend(self.fetch_metadata(&singles).await?);
-        metas.sort_by(|a, b| b.date.cmp(&a.date).then_with(|| a.id.cmp(&b.id)));
-        Ok(metas)
-    }
-
-    /// Fetches whole threads and keeps each one for opening. Threads Gmail
-    /// no longer has are left out.
-    async fn fetch_whole_threads(
-        &self,
-        threads: Vec<String>,
-    ) -> Result<Vec<Vec<MessageMeta>>, SyncError> {
-        let account_id = self.account_id;
-        let history_id = self
-            .db
-            .read(move |c| Ok(accounts::sync_cursor(c, account_id)?.history_id))
-            .await?;
-        let results: Vec<Result<Vec<MessageMeta>, GmailError>> = futures::stream::iter(threads)
-            .map(|thread| {
-                let api = Arc::clone(&self.api);
-                async move { api.thread_metadata(&thread).await }
-            })
-            .buffer_unordered(FETCH_CONCURRENCY)
-            .collect()
-            .await;
-        let mut fetched = Vec::with_capacity(results.len());
-        for result in results {
-            match result {
-                Ok(metas) => fetched.push(metas),
-                Err(GmailError::NotFound) => {}
-                Err(err) => return Err(err.into()),
-            }
-        }
+        let fetched = self.fetch(wants).await?;
         let mut kept = self.listed.lock().expect("listed threads poisoned");
         kept.retain(|_, listed| listed.at.elapsed() < KEPT_FOR);
-        for metas in &fetched {
-            if let Some(first) = metas.first() {
+        for whole in fetched.whole {
+            if let Some(first) = whole.first() {
                 kept.insert(
                     first.thread_id.clone(),
                     Listed {
                         at: Instant::now(),
-                        history_id,
-                        metas: metas.clone(),
+                        history_id: fetched.asked_at,
+                        metas: whole,
                     },
                 );
             }
         }
-        Ok(fetched)
+        drop(kept);
+        metas.extend(fetched.metas);
+        metas.sort_by(|a, b| b.date.cmp(&a.date).then_with(|| a.id.cmp(&b.id)));
+        Ok(metas)
     }
 
     /// Opens a thread: stores the copy a search fetched whole, when it is

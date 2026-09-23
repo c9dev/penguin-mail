@@ -40,6 +40,8 @@ enum Term {
     From(String),
     To(String),
     Subject(String),
+    /// A `Message-ID` header, without its angle brackets.
+    MessageId(String),
     NewerThanDays(i64),
     OlderThanDays(i64),
     LargerThan(i64),
@@ -127,6 +129,10 @@ impl Term {
                 .is_some_and(|a| addresses(std::slice::from_ref(a), text)),
             Term::To(text) => addresses(&meta.to, text) || addresses(&meta.cc, text),
             Term::Subject(text) => contains(&meta.subject, text),
+            Term::MessageId(id) => meta
+                .rfc822_msgid
+                .as_deref()
+                .is_some_and(|m| m.trim_matches(['<', '>']).eq_ignore_ascii_case(id)),
             Term::NewerThanDays(days) => meta.date >= now - days * DAY_MILLIS,
             Term::OlderThanDays(days) => meta.date < now - days * DAY_MILLIS,
             Term::LargerThan(bytes) => meta.size > *bytes,
@@ -245,6 +251,7 @@ fn term(text: &str) -> Option<(bool, Term)> {
         "from" => Term::From(lower),
         "to" | "cc" | "bcc" => Term::To(lower),
         "subject" => Term::Subject(lower),
+        "rfc822msgid" => Term::MessageId(lower.trim_matches(['<', '>']).to_string()),
         "newer_than" => Term::NewerThanDays(days(&lower)?),
         "older_than" => Term::OlderThanDays(days(&lower)?),
         "larger" | "size" => Term::LargerThan(bytes(&lower)?),

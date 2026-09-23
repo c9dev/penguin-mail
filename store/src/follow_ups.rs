@@ -40,8 +40,24 @@ fn to_follow_up(row: &Row<'_>) -> rusqlite::Result<FollowUp> {
 /// `MIN_WAIT` and `MAX_WAIT` ago. Threads in Trash or Spam stay out, and so
 /// do threads dismissed after that message went out.
 pub fn waiting(conn: &Connection, now: EpochMillis) -> Result<Vec<FollowUp>> {
-    let mut stmt = conn.prepare_cached(
-        "SELECT m.account_id, m.thread_id, m.id, m.subject, m.to_addrs, m.date FROM messages m \
+    let mut stmt = conn.prepare_cached(&format!(
+        "{WAITING} ORDER BY m.date DESC, m.account_id, m.thread_id"
+    ))?;
+    let rows = stmt.query_map(params![now - MAX_WAIT, now - MIN_WAIT], to_follow_up)?;
+    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
+/// How many conversations [`waiting`] would list, counted without reading
+/// them, for the sidebar.
+pub fn waiting_count(conn: &Connection, now: EpochMillis) -> Result<i64> {
+    Ok(conn
+        .prepare_cached(&format!("SELECT COUNT(*) FROM ({WAITING})"))?
+        .query_row(params![now - MAX_WAIT, now - MIN_WAIT], |row| row.get(0))?)
+}
+
+/// The sent messages waiting on a reply between the two instants bound as
+/// `?1` and `?2`, in no order.
+const WAITING: &str = "SELECT m.account_id, m.thread_id, m.id, m.subject, m.to_addrs, m.date FROM messages m \
          WHERE m.date BETWEEN ?1 AND ?2 \
          AND EXISTS (SELECT 1 FROM message_labels s WHERE s.account_id = m.account_id \
              AND s.message_id = m.id AND s.label_id = 'SENT') \
@@ -52,12 +68,7 @@ pub fn waiting(conn: &Connection, now: EpochMillis) -> Result<Vec<FollowUp>> {
          AND NOT EXISTS (SELECT 1 FROM thread_labels t WHERE t.account_id = m.account_id \
              AND t.thread_id = m.thread_id AND t.label_id IN ('TRASH', 'SPAM')) \
          AND NOT EXISTS (SELECT 1 FROM follow_up_dismissals f WHERE f.account_id = m.account_id \
-             AND f.thread_id = m.thread_id AND f.dismissed_at >= m.date) \
-         ORDER BY m.date DESC, m.account_id, m.thread_id",
-    )?;
-    let rows = stmt.query_map(params![now - MAX_WAIT, now - MIN_WAIT], to_follow_up)?;
-    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
-}
+             AND f.thread_id = m.thread_id AND f.dismissed_at >= m.date)";
 
 /// Stops suggesting a thread until the user sends something newer in it.
 pub fn dismiss(

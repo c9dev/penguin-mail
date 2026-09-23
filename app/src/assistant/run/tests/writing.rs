@@ -638,15 +638,21 @@ async fn an_encrypted_draft_is_changed_and_saved_encrypted_again() {
     // point the stored draft message at what Gmail now holds.
     use super::super::Effects;
     sealed.draft_id = Some("r-1".into());
+    let known = h.gmail.with(|i| i.messages.get("d1").cloned());
     h.effects
         .save_draft(sealed)
         .await
         .expect("the fake engine seals it");
     let raw = gmail_draft(&h);
     assert_eq!(protection::draft::standard_of(&raw), Some(Standard::Pgp));
+    // Saving gave the draft a new message, as Gmail does; put it back
+    // under the id the store knows, holding the sealed bytes.
     h.gmail.with(|i| {
+        let fresh = i.draft_messages.insert("r-1".into(), "d1".into());
+        i.messages.retain(|id, _| Some(id) != fresh.as_ref());
+        i.messages
+            .extend(known.map(|meta| ("d1".to_string(), meta)));
         i.raws.insert("d1".into(), raw);
-        i.draft_messages.insert("r-1".into(), "d1".into());
     });
 
     h.ok(

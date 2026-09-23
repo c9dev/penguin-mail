@@ -32,77 +32,154 @@ impl<G: GmailApi> AccountSync<G> {
     ) -> Result<(), SyncError> {
         self.triage_all(&[Target::thread(self.account_id, thread_id)], action)
             .await
+            .map(drop)
     }
 
-    /// Applies `action` to one message of a thread, as the list does when
-    /// conversation grouping is off.
-    pub async fn triage_message(
+    /// Erases the targets from Gmail and then from the store, and answers
+    /// for each target in the order given. Gmail goes first because nothing
+    /// can undo this: when it refuses, such as when the account has not
+    /// granted the delete permission, the store keeps every row it had.
+    ///
+    /// The messages come from the store, or for a thread it lacks, from the
+    /// Trash listing that showed the row; only a thread neither knows costs
+    /// a `threads.get`. They then go out in one `batchDelete` per thousand,
+    /// so erasing 200 listed conversations is one call of 50 units rather
+    /// than 400 calls and 12,000 units. A target whose messages sat in a
+    /// batch Gmail refused fails with that batch's error. An error in
+    /// working out what to erase fails the whole call before Gmail is
+    /// asked anything.
+    pub async fn erase_all(
         &self,
-        thread_id: &str,
-        message_id: &str,
-        action: &TriageAction,
-    ) -> Result<(), SyncError> {
-        let target = Target {
-            message_id: Some(message_id.to_string()),
-            ..Target::thread(self.account_id, thread_id)
-        };
-        self.triage_all(&[target], action).await
-    }
-
-    /// Erases a thread, or one message of it, from Gmail and then from the
-    /// store. Gmail goes first because nothing can undo this: when it
-    /// refuses, such as when the account has not granted the delete
-    /// permission, the store keeps every row it had.
-    pub async fn erase(&self, thread_id: &str, only: Option<&str>) -> Result<(), SyncError> {
-        let account_id = self.account_id;
-        let ids = self.message_ids(thread_id, only).await?;
-        if ids.is_empty() {
-            // The Trash list comes from a Gmail search, so the store may
-            // not hold the thread yet.
-            self.ensure_thread(thread_id).await?;
-        }
-        let ids = match ids.is_empty() {
-            true => self.message_ids(thread_id, only).await?,
-            false => ids,
-        };
-        if ids.is_empty() {
-            return Err(SyncError::Gmail(GmailError::NotFound));
-        }
-        self.api.delete_messages(&ids).await?;
-        let thread = thread_id.to_string();
-        self.db
-            .write(move |c| {
-                for id in &ids {
-                    messages::delete_message(c, account_id, id)?;
+        targets: &[Target],
+    ) -> Result<Vec<Result<(), SyncError>>, SyncError> {
+        let ids = self.erasable(targets).await?;
+        let mut all: Vec<String> = ids.iter().flatten().cloned().collect();
+        all.sort();
+        all.dedup();
+        let mut refused: BTreeMap<String, GmailError> = BTreeMap::new();
+        for chunk in all.chunks(BATCH_LIMIT) {
+            if let Err(err) = self.api.delete_messages(chunk).await {
+                // Gmail refuses a missing permission before it erases
+                // anything, so no later batch would fare better.
+                let stop = matches!(err, GmailError::MissingScope);
+                refused.extend(chunk.iter().map(|id| (id.clone(), err.clone())));
+                if stop {
+                    for id in &all {
+                        refused
+                            .entry(id.clone())
+                            .or_insert(GmailError::MissingScope);
+                    }
+                    break;
                 }
-                messages::refresh_thread(c, account_id, &thread)?;
-                // Nothing is left to remind anybody about.
-                if threads::get_thread(c, account_id, &thread)?.is_none() {
-                    reminders::remove(c, account_id, &thread)?;
-                }
-                Ok(())
+            }
+        }
+        let erased: Vec<String> = all
+            .iter()
+            .filter(|id| !refused.contains_key(*id))
+            .cloned()
+            .collect();
+        if !erased.is_empty() {
+            let touched: BTreeSet<String> = targets
+                .iter()
+                .zip(&ids)
+                .filter(|(_, ids)| ids.iter().any(|id| !refused.contains_key(id)))
+                .map(|(t, _)| t.thread_id.clone())
+                .collect();
+            let (account_id, threads) = (self.account_id, touched.clone());
+            let stored = self
+                .db
+                .write(move |c| {
+                    for id in &erased {
+                        messages::delete_message(c, account_id, id)?;
+                    }
+                    for thread in &threads {
+                        messages::refresh_thread(c, account_id, thread)?;
+                        // Nothing is left to remind anybody about.
+                        if threads::get_thread(c, account_id, thread)?.is_none() {
+                            reminders::remove(c, account_id, thread)?;
+                        }
+                    }
+                    Ok(())
+                })
+                .await;
+            self.forget_listed(&touched);
+            if let Err(err) = stored {
+                // Gmail has erased them, and the next history replay
+                // takes them out of the store.
+                tracing::warn!(error = %err, "erased at Gmail, but the store kept its copy");
+            }
+            self.emit_threads(touched);
+        }
+        Ok(ids
+            .iter()
+            .map(|ids| match ids.iter().find_map(|id| refused.get(id)) {
+                _ if ids.is_empty() => Err(SyncError::Gmail(GmailError::NotFound)),
+                Some(err) => Err(SyncError::Gmail(err.clone())),
+                None => Ok(()),
             })
-            .await?;
-        self.emit_threads(BTreeSet::from([thread_id.to_string()]));
-        Ok(())
+            .collect())
     }
 
-    /// The ids of the messages a target names, in the store.
-    async fn message_ids(
+    /// The ids each target names: from the store, else from what a search
+    /// listed, else from Gmail, one `threads.get` per thread nothing here
+    /// knows. An empty list means Gmail no longer has the thread.
+    async fn erasable(&self, targets: &[Target]) -> Result<Vec<Vec<String>>, SyncError> {
+        let wanted: Vec<(String, Option<String>)> = targets
+            .iter()
+            .map(|t| (t.thread_id.clone(), t.message_id.clone()))
+            .collect();
+        let mut ids = self.stored_ids(wanted.clone()).await?;
+        let mut unknown: BTreeSet<String> = BTreeSet::new();
+        for ((thread, only), found) in wanted.iter().zip(ids.iter_mut()) {
+            if !found.is_empty() {
+                continue;
+            }
+            match self.listed_ids(thread) {
+                Some(listed) => found.extend(
+                    listed
+                        .into_iter()
+                        .filter(|id| only.as_ref().is_none_or(|o| o == id)),
+                ),
+                None => {
+                    unknown.insert(thread.clone());
+                }
+            }
+        }
+        if unknown.is_empty() {
+            return Ok(ids);
+        }
+        // Neither the store nor a listing knows these threads, so fetch
+        // them whole into the store and read them from there.
+        self.ensure_threads(&unknown).await?;
+        let again = self.stored_ids(wanted.clone()).await?;
+        for (((thread, _), found), fetched) in wanted.iter().zip(ids.iter_mut()).zip(again) {
+            if unknown.contains(thread) {
+                *found = fetched;
+            }
+        }
+        Ok(ids)
+    }
+
+    /// The stored ids of each thread, or of the one message named with it.
+    async fn stored_ids(
         &self,
-        thread_id: &str,
-        only: Option<&str>,
-    ) -> Result<Vec<String>, SyncError> {
-        let (account_id, thread) = (self.account_id, thread_id.to_string());
-        let only = only.map(str::to_string);
+        wanted: Vec<(String, Option<String>)>,
+    ) -> Result<Vec<Vec<String>>, SyncError> {
+        let account_id = self.account_id;
         Ok(self
             .db
             .read(move |c| {
-                Ok(messages::thread_messages(c, account_id, &thread)?
-                    .into_iter()
-                    .filter(|m| only.as_ref().is_none_or(|id| &m.id == id))
-                    .map(|m| m.id)
-                    .collect())
+                let mut ids = Vec::with_capacity(wanted.len());
+                for (thread, only) in &wanted {
+                    ids.push(
+                        messages::thread_messages(c, account_id, thread)?
+                            .into_iter()
+                            .filter(|m| only.as_ref().is_none_or(|id| &m.id == id))
+                            .map(|m| m.id)
+                            .collect::<Vec<String>>(),
+                    );
+                }
+                Ok(ids)
             })
             .await?)
     }
@@ -115,17 +192,21 @@ impl<G: GmailApi> AccountSync<G> {
     /// On a refusal the messages Gmail did not take lose this action's
     /// change again, a `WriteFailed` event says so, and the caller reports
     /// the failure against each target it handed in. Messages Gmail took
-    /// keep it, since Gmail has them that way. The undo reverses only this
-    /// action's labels rather than restoring a copy taken before it: a
+    /// keep it, since Gmail has them that way. The rollback reverses only
+    /// this action's labels rather than restoring a copy taken before it: a
     /// replay during the retries may have stored newer changes, such as an
     /// archive made in the browser, and history will not send them again.
+    ///
+    /// On success it returns what the action changed on each message, which
+    /// is what Undo reverses: a message that already had a label the action
+    /// adds, or lacked one it removes, changed less than the action names.
     pub async fn triage_all(
         &self,
         targets: &[Target],
         action: &TriageAction,
-    ) -> Result<(), SyncError> {
+    ) -> Result<Vec<Relabelled>, SyncError> {
         if targets.is_empty() {
-            return Ok(());
+            return Ok(Vec::new());
         }
         let account_id = self.account_id;
         let wanted = messages_wanted(targets);
@@ -136,19 +217,19 @@ impl<G: GmailApi> AccountSync<G> {
         self.ensure_threads(&threads).await?;
 
         let (add, remove) = action.label_delta();
-        let snapshot: Vec<(String, Vec<String>)> = {
+        let snapshot: Vec<(String, String, Vec<String>)> = {
             let (wanted, add, remove) = (wanted.clone(), add.clone(), remove.clone());
             self.db
                 .write(move |c| {
-                    let mut before: Vec<(String, Vec<String>)> = Vec::new();
+                    let mut before: Vec<(String, String, Vec<String>)> = Vec::new();
                     for (thread, only) in &wanted {
                         for message in messages::thread_messages(c, account_id, thread)? {
                             if only.as_ref().is_none_or(|ids| ids.contains(&message.id)) {
-                                before.push((message.id, message.label_ids));
+                                before.push((thread.clone(), message.id, message.label_ids));
                             }
                         }
                     }
-                    for (id, _) in &before {
+                    for (_, id, _) in &before {
                         messages::add_labels(c, account_id, id, &add)?;
                         messages::remove_labels(c, account_id, id, &remove)?;
                     }
@@ -161,7 +242,7 @@ impl<G: GmailApi> AccountSync<G> {
         };
         self.emit_threads(threads.clone());
 
-        let ids: Vec<String> = snapshot.iter().map(|(id, _)| id.clone()).collect();
+        let ids: Vec<String> = snapshot.iter().map(|(_, id, _)| id.clone()).collect();
         let writing = Writing {
             action,
             conversations: threads.len(),
@@ -175,19 +256,13 @@ impl<G: GmailApi> AccountSync<G> {
             let rolled_back = threads.clone();
             self.db
                 .write(move |c| {
-                    for (id, before) in snapshot.iter().filter(|(id, _)| !taken.contains(id)) {
-                        let added: Vec<String> = add
-                            .iter()
-                            .filter(|l| !before.contains(l))
-                            .cloned()
-                            .collect();
-                        let removed: Vec<String> = remove
-                            .iter()
-                            .filter(|l| before.contains(l))
-                            .cloned()
-                            .collect();
-                        messages::remove_labels(c, account_id, id, &added)?;
-                        messages::add_labels(c, account_id, id, &removed)?;
+                    for (thread, id, before) in &snapshot {
+                        if taken.contains(id) {
+                            continue;
+                        }
+                        let change = Relabelled::from_labels(thread, id, before, &add, &remove);
+                        messages::remove_labels(c, account_id, id, &change.added)?;
+                        messages::add_labels(c, account_id, id, &change.removed)?;
                     }
                     for thread in &rolled_back {
                         messages::refresh_thread(c, account_id, thread)?;
@@ -202,7 +277,10 @@ impl<G: GmailApi> AccountSync<G> {
             });
             return Err(err.into());
         }
-        Ok(())
+        Ok(snapshot
+            .iter()
+            .map(|(thread, id, before)| Relabelled::from_labels(thread, id, before, &add, &remove))
+            .collect())
     }
 
     /// Fetches the threads the store does not hold yet, several at a time.
@@ -301,11 +379,11 @@ impl<G: GmailApi> AccountSync<G> {
         remove: &[String],
     ) -> Result<(), GmailError> {
         loop {
-            let done = match writing.action {
-                TriageAction::Trash => self.api.trash(message_id).await,
-                TriageAction::Untrash => self.api.untrash(message_id).await,
-                _ => self.api.modify_labels(message_id, add, remove).await,
-            };
+            // The same labels a batch sends, rather than `messages.trash`
+            // and `untrash`: untrash takes the trash label off and puts
+            // nothing back, which would leave a few messages out of the
+            // inbox that a batch of many would have returned to it.
+            let done = self.api.modify_labels(message_id, add, remove).await;
             match done {
                 Err(err) => match budget.wait(&err) {
                     Some(delay) => self.hold_on(budget, delay, writing).await,
@@ -329,6 +407,50 @@ impl<G: GmailApi> AccountSync<G> {
         }
         let _waiting = self.waiting();
         tokio::time::sleep(delay).await;
+    }
+}
+
+/// What a label change did to one message: the labels it put on that the
+/// message lacked, and the ones it took off that the message had. Undo
+/// reverses exactly this, so a message that was already read stays read
+/// when marking its thread read is undone.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Relabelled {
+    pub thread_id: String,
+    pub message_id: String,
+    pub added: Vec<String>,
+    pub removed: Vec<String>,
+}
+
+impl Relabelled {
+    /// The change `add` and `remove` make to a message that carried
+    /// `before`.
+    fn from_labels(
+        thread_id: &str,
+        message_id: &str,
+        before: &[String],
+        add: &[String],
+        remove: &[String],
+    ) -> Relabelled {
+        Relabelled {
+            thread_id: thread_id.to_string(),
+            message_id: message_id.to_string(),
+            added: add
+                .iter()
+                .filter(|l| !before.contains(l))
+                .cloned()
+                .collect(),
+            removed: remove
+                .iter()
+                .filter(|l| before.contains(l))
+                .cloned()
+                .collect(),
+        }
+    }
+
+    /// Whether the message came out as it went in.
+    pub fn is_empty(&self) -> bool {
+        self.added.is_empty() && self.removed.is_empty()
     }
 }
 

@@ -3,8 +3,8 @@
 
 use std::collections::BTreeSet;
 
-use mailrs_domain::{EpochMillis, Filter, MessageMeta, Vacation};
-use mailrs_gmail::{GmailError, MessageRef, SendAs, html_to_text};
+use mailrs_domain::{EpochMillis, Filter, Vacation};
+use mailrs_gmail::{GmailError, SendAs, html_to_text};
 use mailrs_store::{drafts, messages};
 
 use super::AccountSync;
@@ -43,6 +43,22 @@ impl<G: GmailApi> AccountSync<G> {
             self.forget_draft(&draft_id).await;
         }
         Ok(message_id)
+    }
+
+    /// The id of the sent message carrying the same `Message-ID` header as
+    /// `raw`, when Gmail holds one. A send whose answer never came back
+    /// may still have gone out, and this is how a retry finds out before
+    /// sending the message a second time. One search, 5 quota units. A
+    /// draft carries the same header as the message it becomes, so the
+    /// search asks for sent mail alone. Bytes without the header answer
+    /// `None`.
+    pub async fn sent_copy(&self, raw: &[u8]) -> Result<Option<String>, SyncError> {
+        let Some(id) = message_id_header(raw) else {
+            return Ok(None);
+        };
+        let query = format!("in:sent rfc822msgid:{id}");
+        let page = self.api.list_messages(&query, None, 1).await?;
+        Ok(page.messages.into_iter().next().map(|m| m.id))
     }
 
     /// Saves a draft in Gmail, replacing `draft_id` when given. If that
@@ -180,25 +196,6 @@ impl<G: GmailApi> AccountSync<G> {
         if let Err(err) = outcome {
             tracing::warn!(account = self.account_id, error = %err, "could not store which draft holds which message");
         }
-    }
-
-    /// Runs a Gmail search and returns up to `limit` messages, newest first.
-    /// Results are not stored; opening one stores its thread.
-    pub async fn search(&self, query: &str, limit: usize) -> Result<Vec<MessageMeta>, SyncError> {
-        let found = self.search_ids(query, limit).await?;
-        self.metadata_of(&found).await
-    }
-
-    /// The messages a Gmail search returns, by id and thread, newest
-    /// first, at most `limit` of them. One call of 5 quota units, whatever the count, so a caller
-    /// takes the ids first and pays for metadata only as it shows rows.
-    pub async fn search_ids(
-        &self,
-        query: &str,
-        limit: usize,
-    ) -> Result<Vec<MessageRef>, SyncError> {
-        let page = self.api.list_messages(query, None).await?;
-        Ok(page.messages.into_iter().take(limit).collect())
     }
 
     pub async fn attachment(
@@ -393,5 +390,44 @@ impl<G: GmailApi> AccountSync<G> {
 
     pub async fn delete_event(&self, id: &str) -> Result<(), SyncError> {
         Ok(self.api.delete_event(id).await?)
+    }
+}
+
+/// The `Message-ID` header of RFC 822 bytes, without its angle brackets.
+/// Only the header block is read, and a header folded onto the next line
+/// is unfolded first.
+fn message_id_header(raw: &[u8]) -> Option<String> {
+    let text = String::from_utf8_lossy(raw);
+    let head = text
+        .split("\r\n\r\n")
+        .next()
+        .and_then(|h| h.split("\n\n").next())
+        .unwrap_or_default();
+    let mut unfolded: Vec<String> = Vec::new();
+    for line in head.lines() {
+        match (line.starts_with([' ', '\t']), unfolded.last_mut()) {
+            (true, Some(previous)) => previous.push_str(line),
+            _ => unfolded.push(line.to_string()),
+        }
+    }
+    unfolded.iter().find_map(|line| {
+        let (name, value) = line.split_once(':')?;
+        let id = value.trim().trim_matches(['<', '>']).trim();
+        (name.trim().eq_ignore_ascii_case("message-id") && !id.is_empty()).then(|| id.to_string())
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::message_id_header;
+
+    #[test]
+    fn the_message_id_comes_from_the_header_block_alone() {
+        let raw = b"Subject: Hi\r\nMessage-Id:\r\n <a1@example.com>\r\n\r\nMessage-ID: <body@x>";
+        assert_eq!(message_id_header(raw).as_deref(), Some("a1@example.com"));
+        assert_eq!(
+            message_id_header(b"Subject: Hi\r\n\r\nMessage-ID: <x@y>"),
+            None
+        );
     }
 }

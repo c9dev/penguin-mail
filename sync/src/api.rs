@@ -10,8 +10,14 @@ use mailrs_gmail::{
     html_to_text,
 };
 
-/// Page size for window listings.
+/// Page size for window listings, whose every id costs a metadata fetch
+/// after it. A page of 100 is about two and a half seconds of an
+/// account's budget, which is what paces backfill.
 pub const LIST_PAGE_SIZE: u32 = 100;
+
+/// Page size for a listing that needs only ids, such as the inbox check.
+/// Gmail's most, for the same 5 units a call as a page of 100.
+pub const ID_PAGE_SIZE: u32 = 500;
 
 /// Gmail operations for one account.
 pub trait GmailApi: Send + Sync + 'static {
@@ -27,10 +33,24 @@ pub trait GmailApi: Send + Sync + 'static {
 
     fn labels(&self) -> impl Future<Output = Result<Vec<RemoteLabel>, GmailError>> + Send;
 
+    /// One page of a search, at most `page_size` ids long. Gmail caps a
+    /// page at 500 and charges 5 units whatever its length.
     fn list_messages(
         &self,
         query: &str,
         page_token: Option<&str>,
+        page_size: u32,
+    ) -> impl Future<Output = Result<MessagePage, GmailError>> + Send;
+
+    /// One page of the messages `query` matches that carry `label_id`,
+    /// the label named by id. Compares label membership with the store
+    /// without fetching metadata, at 5 units a page.
+    fn list_labelled(
+        &self,
+        label_id: &str,
+        query: &str,
+        page_token: Option<&str>,
+        page_size: u32,
     ) -> impl Future<Output = Result<MessagePage, GmailError>> + Send;
 
     fn message_metadata(
@@ -306,8 +326,18 @@ impl GmailApi for AnyGmail {
         &self,
         query: &str,
         page_token: Option<&str>,
+        page_size: u32,
     ) -> Result<MessagePage, GmailError> {
-        forward!(self, list_messages(query, page_token))
+        forward!(self, list_messages(query, page_token, page_size))
+    }
+    async fn list_labelled(
+        &self,
+        label_id: &str,
+        query: &str,
+        page_token: Option<&str>,
+        page_size: u32,
+    ) -> Result<MessagePage, GmailError> {
+        forward!(self, list_labelled(label_id, query, page_token, page_size))
     }
     async fn message_metadata(&self, id: &str) -> Result<MessageMeta, GmailError> {
         forward!(self, message_metadata(id))
@@ -541,9 +571,27 @@ impl GmailApi for AccountClient {
         &self,
         query: &str,
         page_token: Option<&str>,
+        page_size: u32,
     ) -> Result<MessagePage, GmailError> {
         self.client
-            .list_messages(query, page_token, LIST_PAGE_SIZE)
+            .list_messages(query, page_token, page_size.clamp(1, ID_PAGE_SIZE))
+            .await
+    }
+
+    async fn list_labelled(
+        &self,
+        label_id: &str,
+        query: &str,
+        page_token: Option<&str>,
+        page_size: u32,
+    ) -> Result<MessagePage, GmailError> {
+        self.client
+            .list_labelled(
+                label_id,
+                query,
+                page_token,
+                page_size.clamp(1, ID_PAGE_SIZE),
+            )
             .await
     }
 

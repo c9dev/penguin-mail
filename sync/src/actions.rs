@@ -3,7 +3,7 @@
 //! assistant both call this module, so the two cannot drift apart. It keeps
 //! the undo stack and reports what happened instead of showing anything.
 
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::sync::{Arc, Mutex};
 
 use mailrs_domain::translate::{fill, gettext};
@@ -12,7 +12,7 @@ use mailrs_gmail::GmailError;
 use mailrs_store::reminders::{self, Reminder};
 use mailrs_store::{Db, flags, follow_ups, labels, messages, threads};
 
-use crate::{AccountSync, GmailApi, Permitted, SyncEngine, SyncError, TriageAction};
+use crate::{AccountSync, GmailApi, Permitted, Relabelled, SyncEngine, SyncError, TriageAction};
 
 mod categorize;
 mod labelling;
@@ -167,12 +167,16 @@ struct Undo {
 /// One target the action changed, and how to take that change back.
 struct Reversal {
     target: Target,
-    inverse: TriageAction,
+    /// What the action did to each of the target's messages. Undo takes
+    /// off what went on and puts back what came off, message by message,
+    /// so a message the action found already read or already archived is
+    /// left as it was.
+    changes: Vec<Relabelled>,
     /// The folder the action left the target in, which `record` reads
     /// once the action has run. A target somewhere else by the time Undo
     /// comes round is one the world moved under, and Undo leaves it
     /// where it is. `None` when the store held no message of it to place,
-    /// and Undo then reverses it as it always did.
+    /// and Undo then reverses it without checking.
     folder: Option<Folder>,
 }
 
@@ -240,31 +244,44 @@ impl<A: Accounts> MailActions<A> {
             follow_ups: Vec::new(),
         };
         let resolved = self.resolve(targets, &action).await;
-        // A new colour on a flagged thread keeps its star on undo. Read
-        // that before the star lands, not after.
-        let mut recolor: Vec<Result<bool, SyncError>> = targets.iter().map(|_| Ok(false)).collect();
-        if matches!(action, MailAction::Flag(Some(_))) {
-            for (target, flagged) in targets.iter().zip(&mut recolor) {
-                *flagged = self.starred(target).await;
-            }
-        }
         // The label change goes first: it fetches threads the store lacks,
         // which gives a reminder its subject.
         let triaged = self.triage_grouped(targets, &resolved).await;
 
+        let mut results: Vec<Result<(), String>> = Vec::with_capacity(targets.len());
         for (index, target) in targets.iter().enumerate() {
-            let step = resolved[index].clone();
-            let done = self
-                .after_triage(
-                    target,
-                    &action,
-                    step,
-                    &triaged[index],
-                    &recolor[index],
-                    &mut undo,
-                )
-                .await;
-            match done {
+            let checked = resolved[index].clone().and_then(|triage| {
+                let changes = triaged[index].clone()?;
+                if triage.is_some() {
+                    undo.relabel.push(Reversal {
+                        target: target.clone(),
+                        changes,
+                        folder: None,
+                    });
+                }
+                Ok(())
+            });
+            results.push(checked);
+        }
+        // What this computer keeps for the targets, such as a flag colour
+        // or a reminder, goes in one write for the whole selection.
+        let ready: Vec<Target> = targets
+            .iter()
+            .zip(&results)
+            .filter(|(_, r)| r.is_ok())
+            .map(|(t, _)| t.clone())
+            .collect();
+        if let Err(err) = self.keep_locally(ready, &action, &mut undo).await {
+            let error = fill(
+                &gettext("{action} failed: {reason}"),
+                &[("action", &action.describe()), ("reason", &err.to_string())],
+            );
+            for result in results.iter_mut().filter(|r| r.is_ok()) {
+                *result = Err(error.clone());
+            }
+        }
+        for (target, result) in targets.iter().zip(results) {
+            match result {
                 Ok(()) => outcome.done.push(target.clone()),
                 Err(error) => outcome.failed.push(Failure {
                     target: target.clone(),
@@ -283,26 +300,57 @@ impl<A: Accounts> MailActions<A> {
     /// user first. `Permitted::NeedsPermission` means the account has not
     /// granted the delete permission and nothing changed.
     pub async fn erase(&self, targets: &[Target]) -> Result<Permitted<Outcome>, SyncError> {
-        let mut outcome = Outcome::default();
+        let failed = |err: &SyncError| {
+            fill(
+                &gettext("Delete Forever failed: {reason}"),
+                &[("reason", &err.to_string())],
+            )
+        };
+        let mut results: Vec<Option<Result<(), String>>> = vec![None; targets.len()];
+        let mut accounts: Vec<AccountId> = Vec::new();
         for target in targets {
-            let erased = self
-                .sync(target.account_id)?
-                .erase(&target.thread_id, target.message_id.as_deref())
-                .await;
-            match erased {
-                Ok(()) => outcome.done.push(target.clone()),
-                // Gmail refuses before it erases anything, so a refusal on
-                // the first target leaves every target as it was.
-                Err(SyncError::Gmail(GmailError::MissingScope)) if outcome.done.is_empty() => {
-                    return Ok(Permitted::NeedsPermission);
+            if !accounts.contains(&target.account_id) {
+                accounts.push(target.account_id);
+            }
+        }
+        // One call per account, so its messages share batches.
+        for account_id in accounts {
+            let members: Vec<usize> = (0..targets.len())
+                .filter(|i| targets[*i].account_id == account_id)
+                .collect();
+            let batch: Vec<Target> = members.iter().map(|i| targets[*i].clone()).collect();
+            let erased = match self.sync(account_id)?.erase_all(&batch).await {
+                Ok(erased) => erased,
+                Err(err) => {
+                    let error = failed(&err);
+                    for index in members {
+                        results[index] = Some(Err(error.clone()));
+                    }
+                    continue;
                 }
-                Err(err) => outcome.failed.push(Failure {
+            };
+            // Gmail refuses before it erases anything, so a refusal in the
+            // first account to answer leaves every target as it was.
+            let nothing_yet = results.iter().flatten().all(|r| r.is_err());
+            let refused = erased
+                .iter()
+                .all(|r| matches!(r, Err(SyncError::Gmail(GmailError::MissingScope))));
+            if nothing_yet && refused {
+                return Ok(Permitted::NeedsPermission);
+            }
+            for (index, result) in members.into_iter().zip(erased) {
+                results[index] = Some(result.map_err(|err| failed(&err)));
+            }
+        }
+        let mut outcome = Outcome::default();
+        for (target, result) in targets.iter().zip(results) {
+            match result {
+                Some(Ok(())) => outcome.done.push(target.clone()),
+                Some(Err(error)) => outcome.failed.push(Failure {
                     target: target.clone(),
-                    error: fill(
-                        &gettext("Delete Forever failed: {reason}"),
-                        &[("reason", &err.to_string())],
-                    ),
+                    error,
                 }),
+                None => {}
             }
         }
         // Undo cannot bring erased mail back, so the stack lets go of the
@@ -319,28 +367,40 @@ impl<A: Accounts> MailActions<A> {
     }
 
     /// Applies each target's label change, one Gmail call per account
-    /// rather than one per target, and gives the results back in the order
-    /// the targets came in. Targets an account refuses fail together; the
-    /// other accounts still go through.
+    /// rather than one per target, and gives back what changed on each
+    /// target's messages in the order the targets came in. Targets an
+    /// account refuses fail together; the other accounts still go through.
     async fn triage_grouped(
         &self,
         targets: &[Target],
         resolved: &[Result<Option<TriageAction>, String>],
-    ) -> Vec<Result<(), String>> {
-        let mut results: Vec<Result<(), String>> = vec![Ok(()); targets.len()];
+    ) -> Vec<Result<Vec<Relabelled>, String>> {
+        let mut results: Vec<Result<Vec<Relabelled>, String>> = vec![Ok(Vec::new()); targets.len()];
         for (triage, members) in group_by_account(targets, resolved) {
             let batch: Vec<Target> = members.iter().map(|i| targets[*i].clone()).collect();
             let done = match self.sync(batch[0].account_id) {
                 Ok(sync) => sync.triage_all(&batch, &triage).await,
                 Err(err) => Err(err),
             };
-            if let Err(err) = done {
-                let message = fill(
-                    &gettext("{action} failed: {reason}"),
-                    &[("action", &triage.describe()), ("reason", &err.to_string())],
-                );
-                for index in members {
-                    results[index] = Err(message.clone());
+            match done {
+                Ok(changes) => {
+                    for index in members {
+                        let target = &targets[index];
+                        results[index] = Ok(changes
+                            .iter()
+                            .filter(|c| covers(target, c))
+                            .cloned()
+                            .collect());
+                    }
+                }
+                Err(err) => {
+                    let message = fill(
+                        &gettext("{action} failed: {reason}"),
+                        &[("action", &triage.describe()), ("reason", &err.to_string())],
+                    );
+                    for index in members {
+                        results[index] = Err(message.clone());
+                    }
                 }
             }
         }
@@ -349,60 +409,43 @@ impl<A: Accounts> MailActions<A> {
 
     /// The per-target work that follows the label change: the reminder or
     /// the flag colour, and the note Undo needs.
-    async fn after_triage(
+    /// The part of an action only this computer keeps, for every target
+    /// the label change took: the reminder, the flag colour, or the Follow
+    /// Up dismissal. One transaction covers the whole selection, and what
+    /// it replaced goes into `undo`.
+    async fn keep_locally(
         &self,
-        target: &Target,
+        targets: Vec<Target>,
         action: &MailAction,
-        step: Result<Option<TriageAction>, String>,
-        triaged: &Result<(), String>,
-        recolor: &Result<bool, SyncError>,
         undo: &mut Undo,
-    ) -> Result<(), String> {
-        let triage = step?;
-        let described = triage
-            .as_ref()
-            .map_or_else(|| action.describe(), TriageAction::describe);
-        let failed = |err: &SyncError| {
-            fill(
-                &gettext("{action} failed: {reason}"),
-                &[("action", &described), ("reason", &err.to_string())],
-            )
-        };
-        let recolor = *recolor.as_ref().map_err(failed)?;
-        triaged.clone()?;
-        if let (Some(triage), false) = (triage, recolor) {
-            undo.relabel.push(Reversal {
-                target: target.clone(),
-                inverse: triage.inverse(),
-                folder: None,
-            });
+    ) -> Result<(), SyncError> {
+        if targets.is_empty() {
+            return Ok(());
         }
         match action {
             MailAction::Remind { at } => {
-                let earlier = self
-                    .set_reminder(target, Some(*at))
-                    .await
-                    .map_err(|e| failed(&e))?;
-                undo.reminders.push((target.clone(), earlier));
+                undo.reminders
+                    .extend(self.set_reminders(targets, Some(*at)).await?);
             }
             MailAction::CancelReminder => {
-                let earlier = self
-                    .set_reminder(target, None)
-                    .await
-                    .map_err(|e| failed(&e))?;
-                undo.reminders.push((target.clone(), earlier));
+                undo.reminders
+                    .extend(self.set_reminders(targets, None).await?);
             }
             MailAction::Flag(color) => {
-                let before = self.color(target, *color).await.map_err(|e| failed(&e))?;
-                let account_id = target.account_id;
-                undo.colors
-                    .extend(before.into_iter().map(|(id, c)| (account_id, id, c)));
+                undo.colors.extend(self.color(targets, *color).await?);
             }
             MailAction::DismissFollowUp => {
-                self.dismiss_follow_up(target)
-                    .await
-                    .map_err(|e| failed(&e))?;
-                undo.follow_ups.push(target.clone());
+                let now = crate::now_millis();
+                let dismissed = targets.clone();
+                self.db
+                    .write(move |c| {
+                        for target in &dismissed {
+                            follow_ups::dismiss(c, target.account_id, &target.thread_id, now)?;
+                        }
+                        Ok(())
+                    })
+                    .await?;
+                undo.follow_ups.extend(targets);
             }
             MailAction::Triage(_) | MailAction::Label { .. } | MailAction::Mute { .. } => {}
         }
@@ -423,8 +466,7 @@ impl<A: Accounts> MailActions<A> {
     pub async fn undo(&self) -> Option<Undone> {
         let undo = self.lock().pop_back()?;
         let mut outcome = Outcome::default();
-        let mut targets = Vec::new();
-        let mut inverses = Vec::new();
+        let mut reversing = Vec::new();
         let mut left_alone = Vec::new();
         for (reversal, moved) in undo.relabel.iter().zip(self.moved(&undo.relabel).await) {
             if moved {
@@ -435,18 +477,13 @@ impl<A: Accounts> MailActions<A> {
                 left_alone.push(reversal.target.clone());
                 continue;
             }
-            targets.push(reversal.target.clone());
-            inverses.push(Ok(Some(reversal.inverse.clone())));
+            reversing.push(reversal);
         }
-        // Reversing a bulk action goes back in as few calls as it went out.
-        for (target, done) in targets
-            .iter()
-            .zip(self.triage_grouped(&targets, &inverses).await)
-        {
+        for (reversal, done) in reversing.iter().zip(self.reverse(&reversing).await) {
             match done {
-                Ok(()) => outcome.done.push(target.clone()),
+                Ok(()) => outcome.done.push(reversal.target.clone()),
                 Err(error) => outcome.failed.push(Failure {
-                    target: target.clone(),
+                    target: reversal.target.clone(),
                     error,
                 }),
             }
@@ -512,6 +549,51 @@ impl<A: Accounts> MailActions<A> {
             action: undo.action,
             outcome,
         })
+    }
+
+    /// Takes back each message's own change in as few calls as the changes
+    /// allow: the messages of one account that need the same labels put
+    /// back and taken off share one `triage_all`, which sends a
+    /// `batchModify` once there are enough of them. A target fails when a
+    /// group holding one of its messages fails.
+    async fn reverse(&self, reversals: &[&Reversal]) -> Vec<Result<(), String>> {
+        type Key = (AccountId, Vec<String>, Vec<String>);
+        let mut groups: BTreeMap<Key, (Vec<Target>, BTreeSet<usize>)> = BTreeMap::new();
+        let mut seen: BTreeSet<(AccountId, &str)> = BTreeSet::new();
+        for (index, reversal) in reversals.iter().enumerate() {
+            let account_id = reversal.target.account_id;
+            for change in reversal.changes.iter().filter(|c| !c.is_empty()) {
+                if !seen.insert((account_id, change.message_id.as_str())) {
+                    continue;
+                }
+                let key = (account_id, change.removed.clone(), change.added.clone());
+                let (messages, owners) = groups.entry(key).or_default();
+                messages.push(Target {
+                    account_id,
+                    thread_id: change.thread_id.clone(),
+                    message_id: Some(change.message_id.clone()),
+                });
+                owners.insert(index);
+            }
+        }
+        let mut results: Vec<Result<(), String>> = vec![Ok(()); reversals.len()];
+        for ((account_id, add, remove), (messages, owners)) in groups {
+            let back = TriageAction::Relabel { add, remove };
+            let done = match self.sync(account_id) {
+                Ok(sync) => sync.triage_all(&messages, &back).await.map(drop),
+                Err(err) => Err(err),
+            };
+            if let Err(err) = done {
+                let error = fill(
+                    &gettext("Could not undo: {reason}"),
+                    &[("reason", &err.to_string())],
+                );
+                for index in owners {
+                    results[index] = Err(error.clone());
+                }
+            }
+        }
+        results
     }
 
     /// Drops everything the stack holds about `account_id`, and the
@@ -715,82 +797,65 @@ impl<A: Accounts> MailActions<A> {
         })
     }
 
-    /// Whether every message the target names is starred. False when the
-    /// store holds none of them.
-    async fn starred(&self, target: &Target) -> Result<bool, SyncError> {
-        let target = target.clone();
-        Ok(self
-            .db
-            .read(move |c| {
-                let held: Vec<_> =
-                    messages::thread_messages(c, target.account_id, &target.thread_id)?
-                        .into_iter()
-                        .filter(|m| target.message_id.as_ref().is_none_or(|id| &m.id == id))
-                        .collect();
-                Ok(!held.is_empty() && held.iter().all(|m| m.has_label(system_label::STARRED)))
-            })
-            .await?)
-    }
-
-    /// Sets the target's reminder to `at`, or removes it with `None`, and
-    /// returns the reminder it had. The subject comes from the store.
-    async fn set_reminder(
+    /// Sets each target's reminder to `at`, or removes it with `None`, and
+    /// returns the reminder each had. The subject comes from the store.
+    async fn set_reminders(
         &self,
-        target: &Target,
+        targets: Vec<Target>,
         at: Option<EpochMillis>,
-    ) -> Result<Option<Reminder>, SyncError> {
-        let target = target.clone();
+    ) -> Result<Vec<(Target, Option<Reminder>)>, SyncError> {
         Ok(self
             .db
             .write(move |c| {
-                let earlier = reminders::get(c, target.account_id, &target.thread_id)?;
-                match at {
-                    Some(at) => {
-                        let subject = threads::get_thread(c, target.account_id, &target.thread_id)?
-                            .map(|t| t.subject)
-                            .unwrap_or_default();
-                        reminders::set(
-                            c,
-                            &Reminder {
-                                account_id: target.account_id,
-                                thread_id: target.thread_id.clone(),
-                                subject,
-                                remind_at: at,
-                            },
-                        )?;
+                let mut earlier = Vec::with_capacity(targets.len());
+                for target in targets {
+                    let (account_id, thread) = (target.account_id, &target.thread_id);
+                    let before = reminders::get(c, account_id, thread)?;
+                    match at {
+                        Some(at) => {
+                            let subject = threads::get_thread(c, account_id, thread)?
+                                .map(|t| t.subject)
+                                .unwrap_or_default();
+                            reminders::set(
+                                c,
+                                &Reminder {
+                                    account_id,
+                                    thread_id: thread.clone(),
+                                    subject,
+                                    remind_at: at,
+                                },
+                            )?;
+                        }
+                        None => reminders::remove(c, account_id, thread)?,
                     }
-                    None => reminders::remove(c, target.account_id, &target.thread_id)?,
+                    earlier.push((target, before));
                 }
                 Ok(earlier)
             })
             .await?)
     }
 
-    /// Stops Follow Up suggesting the target's thread until the person
-    /// sends something newer in it.
-    async fn dismiss_follow_up(&self, target: &Target) -> Result<(), SyncError> {
-        let (account_id, thread) = (target.account_id, target.thread_id.clone());
-        let now = crate::now_millis();
-        self.db
-            .write(move |c| follow_ups::dismiss(c, account_id, &thread, now))
-            .await?;
-        Ok(())
-    }
-
-    /// Colours the target's flag and returns each message's earlier colour.
+    /// Colours each target's flag and returns every message's earlier
+    /// colour: account, message, colour.
     async fn color(
         &self,
-        target: &Target,
+        targets: Vec<Target>,
         color: Option<FlagColor>,
-    ) -> Result<Vec<(String, Option<FlagColor>)>, SyncError> {
-        let target = target.clone();
+    ) -> Result<Vec<(AccountId, String, Option<FlagColor>)>, SyncError> {
         Ok(self
             .db
             .write(move |c| {
-                let (account_id, thread) = (target.account_id, &target.thread_id);
-                let only = target.message_id.as_deref();
-                let before = flags::colors(c, account_id, thread, only)?;
-                flags::set_color(c, account_id, thread, only, color)?;
+                let mut before = Vec::new();
+                for target in &targets {
+                    let (account_id, thread) = (target.account_id, &target.thread_id);
+                    let only = target.message_id.as_deref();
+                    before.extend(
+                        flags::colors(c, account_id, thread, only)?
+                            .into_iter()
+                            .map(|(id, colour)| (account_id, id, colour)),
+                    );
+                    flags::set_color(c, account_id, thread, only, color)?;
+                }
                 Ok(before)
             })
             .await?)
@@ -805,6 +870,15 @@ impl<A: Accounts> MailActions<A> {
     fn lock(&self) -> std::sync::MutexGuard<'_, VecDeque<Undo>> {
         self.stack.lock().expect("undo lock poisoned")
     }
+}
+
+/// Whether `change` fell on a message `target` names.
+fn covers(target: &Target, change: &Relabelled) -> bool {
+    target.thread_id == change.thread_id
+        && target
+            .message_id
+            .as_ref()
+            .is_none_or(|id| *id == change.message_id)
 }
 
 /// Whether two targets name the same thread, whichever messages of it

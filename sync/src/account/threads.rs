@@ -4,10 +4,10 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use mailrs_domain::MessageBody;
-use mailrs_gmail::GmailError;
 use mailrs_store::{accounts, bodies, messages};
 
 use super::AccountSync;
+use super::fetch::overtaken;
 use crate::{GmailApi, SyncError, now_millis};
 
 /// Fetches of one thread before an answer history keeps overtaking is
@@ -15,8 +15,8 @@ use crate::{GmailApi, SyncError, now_millis};
 const FETCH_TRIES: u32 = 3;
 
 /// What one fetch of a thread did.
-enum Fetched {
-    Written {
+enum Written {
+    Stored {
         changed: bool,
     },
     /// A history replay moved the cursor while Gmail answered.
@@ -63,13 +63,13 @@ impl<G: GmailApi> AccountSync<G> {
         for attempt in 1..=FETCH_TRIES {
             let last = attempt == FETCH_TRIES;
             match self.fetch_thread(thread_id, last).await? {
-                Fetched::Written { changed } => {
+                Written::Stored { changed } => {
                     if changed {
                         self.emit_threads(BTreeSet::from([thread_id.to_string()]));
                     }
                     return Ok(());
                 }
-                Fetched::Overtaken => {
+                Written::Overtaken => {
                     tracing::debug!(
                         account = self.account_id,
                         attempt,
@@ -84,27 +84,20 @@ impl<G: GmailApi> AccountSync<G> {
     /// One fetch of a thread and its write to the store. With `last`, an
     /// answer overtaken by history still adds the messages the store does
     /// not hold, and leaves the stored ones as history left them.
-    async fn fetch_thread(&self, thread_id: &str, last: bool) -> Result<Fetched, SyncError> {
+    async fn fetch_thread(&self, thread_id: &str, last: bool) -> Result<Written, SyncError> {
         let account_id = self.account_id;
-        let asked_at = self
-            .db
-            .read(move |c| Ok(accounts::sync_cursor(c, account_id)?.history_id))
-            .await?;
-        let fetched = match self.api.thread_metadata(thread_id).await {
-            Ok(metas) => Some(metas),
-            Err(GmailError::NotFound) => None,
-            Err(err) => return Err(err.into()),
-        };
+        let mut answer = self.fetch_whole(vec![thread_id.to_string()]).await?;
+        let found = answer.whole.pop();
         let thread = thread_id.to_string();
         self.db
             .write(move |c| {
                 let cursor = accounts::sync_cursor(c, account_id)?;
-                let overtaken = cursor.history_id != asked_at;
+                let overtaken = overtaken(c, account_id, &answer)?;
                 if overtaken && !last {
-                    return Ok(Fetched::Overtaken);
+                    return Ok(Written::Overtaken);
                 }
                 let before = messages::thread_messages(c, account_id, &thread)?;
-                match fetched {
+                match found {
                     Some(metas) => {
                         for meta in &metas {
                             if overtaken && before.iter().any(|m| m.id == meta.id) {
@@ -115,14 +108,14 @@ impl<G: GmailApi> AccountSync<G> {
                         messages::refresh_thread(c, account_id, &thread)?;
                         messages::mark_whole(c, account_id, &thread)?;
                         let changed = messages::thread_messages(c, account_id, &thread)? != before;
-                        Ok(Fetched::Written { changed })
+                        Ok(Written::Stored { changed })
                     }
                     // History deletes what Gmail deleted before the cursor,
                     // so an overtaken "not found" leaves the store alone.
-                    None if overtaken => Ok(Fetched::Written { changed: false }),
+                    None if overtaken => Ok(Written::Stored { changed: false }),
                     None => {
                         messages::delete_thread(c, account_id, &thread)?;
-                        Ok(Fetched::Written {
+                        Ok(Written::Stored {
                             changed: !before.is_empty(),
                         })
                     }
@@ -150,17 +143,39 @@ impl<G: GmailApi> AccountSync<G> {
             return Ok(body);
         }
         let body = self.api.message_body(message_id).await?;
+        let size =
+            body.html.as_ref().map_or(0, String::len) + body.text.as_ref().map_or(0, String::len);
+        let sweep = self.due_for_eviction(size as i64);
         let (key, stored, cap) = (message_id.to_string(), body.clone(), self.body_cache_bytes);
         self.db
             .write(move |c| {
                 if messages::thread_id_of(c, account_id, &key)?.is_some() {
                     bodies::put_body(c, account_id, &key, &stored, now)?;
-                    bodies::evict_bodies(c, cap)?;
+                    if sweep {
+                        bodies::evict_bodies(c, cap)?;
+                    }
                 }
                 Ok(())
             })
             .await?;
         Ok(body)
+    }
+
+    /// Whether storing `size` more bytes of body calls for an eviction
+    /// pass. Each pass sums every stored body, so it runs on the first
+    /// body stored and then once every sixty-fourth of the cache written
+    /// since, which lets the cache run over its cap by that much per
+    /// account at most.
+    fn due_for_eviction(&self, size: i64) -> bool {
+        let mut unswept = self.unswept.lock().expect("unswept bytes poisoned");
+        let written = unswept.map_or(i64::MAX, |bytes| bytes.saturating_add(size));
+        if written >= (self.body_cache_bytes / 64).max(1) {
+            *unswept = Some(0);
+            true
+        } else {
+            *unswept = Some(written);
+            false
+        }
     }
 
     /// Records a cache hit. Hits that arrive before the writer gets to the

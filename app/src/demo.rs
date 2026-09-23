@@ -1319,7 +1319,7 @@ mod tests {
             self.gmail
                 .account(account)
                 .expect("the account has a mailbox")
-                .list_messages(query, None)
+                .list_messages(query, None, mailrs_sync::ID_PAGE_SIZE)
                 .await
                 .expect("the search runs")
                 .messages

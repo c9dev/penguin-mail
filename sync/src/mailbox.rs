@@ -507,13 +507,12 @@ impl<A: Accounts> Mailboxes<A> {
                 let labels = threads::label_counts(c)?;
                 let flagged = flags::mailbox_counts(c)?;
                 let waiting = if follow_ups {
-                    follow_ups::waiting(c, now)?.len() as i64
+                    follow_ups::waiting_count(c, now)?
                 } else {
                     0
                 };
-                let scheduled = outbox::scheduled(c)?.len() as i64;
-                let stuck = outbox::stuck(c)?.len() as i64;
-                let reminders = reminders::list(c)?.len() as i64;
+                let (scheduled, stuck) = outbox::counts(c)?;
+                let reminders = reminders::count(c)?;
                 let vips: Vec<String> = sidebar
                     .iter()
                     .filter_map(|m| match m {

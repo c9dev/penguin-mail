@@ -1,6 +1,7 @@
 //! Sync for one account: window loading, history replay, thread and body
 //! fetches, and triage. Each file adds methods to `AccountSync`.
 
+mod fetch;
 mod history;
 mod labels;
 mod listed;
@@ -9,14 +10,13 @@ pub use outbox::SendAsAddress;
 mod threads;
 mod window;
 mod writes;
+pub use writes::Relabelled;
 
 use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use futures::StreamExt;
 use mailrs_domain::{AccountId, AccountState, ChangeEvent, EpochMillis, MessageMeta};
-use mailrs_gmail::GmailError;
 use mailrs_store::{Db, accounts};
 
 use crate::{GmailApi, SyncError};
@@ -37,6 +37,9 @@ pub struct AccountSync<G> {
     wait_ceiling: Duration,
     /// Cached bodies read since the last write of their access times.
     touched: Arc<Mutex<Vec<(String, EpochMillis)>>>,
+    /// Body bytes stored since the last eviction pass, `None` before the
+    /// first one.
+    unswept: Mutex<Option<i64>>,
     /// When the last history replay left the store up to date. Opening a
     /// thread within [`FRESH_FOR`] of it trusts the store and asks Gmail
     /// nothing.
@@ -44,6 +47,9 @@ pub struct AccountSync<G> {
     /// Whole threads a Gmail search fetched, by thread id, kept so opening
     /// one stores it without asking Gmail again.
     listed: Mutex<std::collections::HashMap<String, listed::Listed>>,
+    /// The messages each thread had among a search's hits, kept so Delete
+    /// Forever on a row the store lacks knows what to erase.
+    hits: Mutex<std::collections::HashMap<String, listed::Hits>>,
 }
 
 /// How long a finished history replay speaks for the whole mailbox. The
@@ -67,8 +73,10 @@ impl<G: GmailApi> AccountSync<G> {
             retry_max: Duration::from_secs(8),
             wait_ceiling: crate::WAIT_CEILING,
             touched: Arc::default(),
+            unswept: Mutex::default(),
             caught_up: Arc::default(),
             listed: Mutex::default(),
+            hits: Mutex::default(),
         }
     }
 
@@ -157,25 +165,11 @@ impl<G: GmailApi> AccountSync<G> {
         }
     }
 
-    /// Metadata for `ids`, with bounded concurrency. Messages deleted since
-    /// they were listed are skipped.
+    /// Metadata for `ids`, whose threads the caller does not know, a
+    /// `messages.get` each. Messages deleted since they were listed are
+    /// skipped.
     pub async fn fetch_metadata(&self, ids: &[String]) -> Result<Vec<MessageMeta>, SyncError> {
-        let results: Vec<Result<MessageMeta, GmailError>> = futures::stream::iter(ids.to_vec())
-            .map(|id| {
-                let api = Arc::clone(&self.api);
-                async move { api.message_metadata(&id).await }
-            })
-            .buffer_unordered(FETCH_CONCURRENCY)
-            .collect()
-            .await;
-        let mut metas = Vec::with_capacity(results.len());
-        for result in results {
-            match result {
-                Ok(meta) => metas.push(meta),
-                Err(GmailError::NotFound) => {}
-                Err(err) => return Err(err.into()),
-            }
-        }
-        Ok(metas)
+        let wants = ids.iter().map(fetch::Want::message).collect();
+        Ok(self.fetch(wants).await?.metas)
     }
 }

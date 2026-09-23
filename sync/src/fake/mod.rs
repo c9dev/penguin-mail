@@ -75,10 +75,15 @@ pub struct FakeState {
     pub messages: HashMap<String, MessageMeta>,
     pub history: Vec<(u64, HistoryChange)>,
     pub bodies: HashMap<String, MessageBody>,
-    /// Page size for both listings and history.
+    /// The most a page of a listing or of history holds. A listing gives
+    /// back as many as it asked for up to this, as Gmail gives up to 500.
     pub page_size: usize,
     /// Errors returned by the next calls, one per call.
     pub failures: VecDeque<GmailError>,
+    /// Errors returned by the next sends after Gmail has sent the message,
+    /// one per send, as when the connection drops before the answer comes
+    /// back.
+    pub lost: VecDeque<GmailError>,
     /// Calls a test holds open, by method, until it lets them answer.
     held: HashMap<&'static str, Hold>,
     /// What the calls so far would have cost against the real API.
@@ -242,6 +247,7 @@ impl FakeGmail {
                 bodies: HashMap::new(),
                 page_size: 2,
                 failures: VecDeque::new(),
+                lost: VecDeque::new(),
                 held: HashMap::new(),
                 usage: Usage::default(),
                 body_fetches: 0,
@@ -474,6 +480,44 @@ impl FakeGmail {
         })
     }
 
+    /// One page of a search, narrowed to a label by id when one is named,
+    /// as `messages.list` with `labelIds` is.
+    async fn listing(
+        &self,
+        label_id: Option<&str>,
+        query: &str,
+        page_token: Option<&str>,
+        page_size: u32,
+    ) -> Result<MessagePage, GmailError> {
+        self.call("users.messages.list", cost::LIST).await?;
+        let start = match page_token {
+            None => 0,
+            Some(token) => token.parse::<usize>().map_err(|_| GmailError::Http {
+                status: 400,
+                body: "Invalid pageToken".into(),
+            })?,
+        };
+        Ok(self.with(|s| {
+            let mut found = s.search(query);
+            if let Some(label_id) = label_id {
+                found.retain(|id| s.messages[id].has_label(label_id));
+            }
+            let size = s.page_size.min(page_size.max(1) as usize);
+            let end = (start + size).min(found.len());
+            let messages = found[start.min(end)..end]
+                .iter()
+                .map(|id| MessageRef {
+                    id: id.clone(),
+                    thread_id: s.messages[id].thread_id.clone(),
+                })
+                .collect();
+            MessagePage {
+                messages,
+                next_page_token: (end < found.len()).then(|| end.to_string()),
+            }
+        }))
+    }
+
     /// Calls and units since the last reset.
     pub fn usage(&self) -> Usage {
         self.with(|s| s.usage.clone())
@@ -530,6 +574,25 @@ impl FakeState {
         self.record(change);
     }
 
+    /// Takes a draft's current message out of the mailbox, recorded in
+    /// history, as saving over the draft, sending it or deleting it does.
+    fn drop_draft_message(&mut self, draft_id: &str) {
+        let Some(message_id) = self.draft_messages.remove(draft_id) else {
+            return;
+        };
+        if let Some(gone) = self.messages.remove(&message_id) {
+            self.record(HistoryChange::MessageDeleted {
+                id: message_id,
+                thread_id: gone.thread_id,
+            });
+        }
+    }
+
+    /// The time a new message is dated: the pinned clock, else now.
+    fn now(&self) -> EpochMillis {
+        self.clock.unwrap_or_else(crate::now_millis)
+    }
+
     /// Whether any message of the thread carries Gmail's mute label.
     fn thread_is_muted(&self, thread_id: &str) -> bool {
         self.messages
@@ -573,30 +636,20 @@ impl GmailApi for FakeGmail {
         &self,
         query: &str,
         page_token: Option<&str>,
+        page_size: u32,
     ) -> Result<MessagePage, GmailError> {
-        self.call("users.messages.list", cost::LIST).await?;
-        let start = match page_token {
-            None => 0,
-            Some(token) => token.parse::<usize>().map_err(|_| GmailError::Http {
-                status: 400,
-                body: "Invalid pageToken".into(),
-            })?,
-        };
-        Ok(self.with(|s| {
-            let found = s.search(query);
-            let end = (start + s.page_size).min(found.len());
-            let messages = found[start.min(end)..end]
-                .iter()
-                .map(|id| MessageRef {
-                    id: id.clone(),
-                    thread_id: s.messages[id].thread_id.clone(),
-                })
-                .collect();
-            MessagePage {
-                messages,
-                next_page_token: (end < found.len()).then(|| end.to_string()),
-            }
-        }))
+        self.listing(None, query, page_token, page_size).await
+    }
+
+    async fn list_labelled(
+        &self,
+        label_id: &str,
+        query: &str,
+        page_token: Option<&str>,
+        page_size: u32,
+    ) -> Result<MessagePage, GmailError> {
+        self.listing(Some(label_id), query, page_token, page_size)
+            .await
     }
 
     async fn message_metadata(&self, id: &str) -> Result<MessageMeta, GmailError> {
@@ -716,10 +769,13 @@ impl GmailApi for FakeGmail {
         Ok(())
     }
 
+    /// Gmail takes the trash label off and nothing else: a message that
+    /// was in the inbox before stays out of it until something puts the
+    /// inbox label back.
     async fn untrash(&self, id: &str) -> Result<(), GmailError> {
         self.call("users.messages.untrash", cost::TRASH).await?;
         self.with(|s| s.remote_writes.push(format!("untrash {id}")));
-        self.remote_relabel(id, &["INBOX"], &["TRASH"]);
+        self.remote_relabel(id, &[], &["TRASH"]);
         Ok(())
     }
 
@@ -736,19 +792,19 @@ impl GmailApi for FakeGmail {
 
     async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, GmailError> {
         self.call("users.messages.send", cost::SEND).await?;
-        Ok(self.with(|s| {
+        self.with(|s| {
             s.sent.push((raw.to_vec(), thread_id.map(str::to_string)));
             let id = format!("sent{}", s.sent.len());
             s.file_sent(&id, raw, thread_id);
-            id
-        }))
+            s.lost.pop_front().map_or(Ok(id), Err)
+        })
     }
 
     async fn save_draft(
         &self,
         draft_id: Option<&str>,
         raw: &[u8],
-        _thread_id: Option<&str>,
+        thread_id: Option<&str>,
     ) -> Result<SavedDraft, GmailError> {
         match draft_id {
             Some(_) => self.call("users.drafts.update", cost::DRAFT_UPDATE).await?,
@@ -760,11 +816,26 @@ impl GmailApi for FakeGmail {
                 Some(id) => id.to_string(),
                 None => format!("draft{}", s.drafts.len() + 1),
             };
-            let message_id = format!("{id}-m{}", raw.len());
+            // Each save gives the draft a new message, which history
+            // records as the old one leaving and the new one arriving.
+            s.drop_draft_message(&id);
+            let message_id = format!("{id}-m{}", s.history_id + 1);
+            let thread_id = thread_id.map_or_else(|| format!("{id}-t"), str::to_string);
+            let mut draft = meta(&message_id, &thread_id, s.now(), &[system_label::DRAFT]);
+            draft.from = Some(Address {
+                name: s.display_name.clone(),
+                email: s.email.clone(),
+            });
+            draft.subject = header(raw, "Subject").unwrap_or_default();
+            s.messages.insert(message_id.clone(), draft);
+            s.record(HistoryChange::MessageAdded {
+                id: message_id.clone(),
+                thread_id: thread_id.clone(),
+            });
             s.drafts.insert(id.clone(), raw.to_vec());
             s.draft_messages.insert(id.clone(), message_id.clone());
             Ok(SavedDraft {
-                thread_id: format!("{id}-t"),
+                thread_id,
                 draft_id: id,
                 message_id,
             })
@@ -775,18 +846,18 @@ impl GmailApi for FakeGmail {
         self.call("users.drafts.send", cost::SEND).await?;
         self.with(|s| {
             let raw = s.drafts.remove(draft_id).ok_or(GmailError::NotFound)?;
-            s.draft_messages.remove(draft_id);
+            s.drop_draft_message(draft_id);
             let id = format!("sent{}", s.sent.len() + 1);
             s.file_sent(&id, &raw, None);
             s.sent.push((raw, None));
-            Ok(id)
+            s.lost.pop_front().map_or(Ok(id), Err)
         })
     }
 
     async fn delete_draft(&self, draft_id: &str) -> Result<(), GmailError> {
         self.call("users.drafts.delete", cost::DRAFT_DELETE).await?;
         self.with(|s| {
-            s.draft_messages.remove(draft_id);
+            s.drop_draft_message(draft_id);
             s.drafts
                 .remove(draft_id)
                 .map(|_| ())
@@ -1301,4 +1372,17 @@ fn apply(event: &mut Event, fields: &EventFields) {
             })
             .collect();
     }
+}
+
+/// The first header called `name` in RFC 822 bytes, unfolded no further
+/// than the fake needs.
+fn header(raw: &[u8], name: &str) -> Option<String> {
+    let text = String::from_utf8_lossy(raw);
+    let head = text.split("\r\n\r\n").next().unwrap_or_default();
+    head.lines().find_map(|line| {
+        let (key, value) = line.split_once(':')?;
+        key.trim()
+            .eq_ignore_ascii_case(name)
+            .then(|| value.trim().to_string())
+    })
 }

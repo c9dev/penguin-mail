@@ -60,6 +60,11 @@ pub fn list(conn: &Connection) -> Result<Vec<Reminder>> {
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
 }
 
+/// How many reminders are set, for the sidebar.
+pub fn count(conn: &Connection) -> Result<i64> {
+    Ok(conn.query_row("SELECT COUNT(*) FROM reminders", [], |row| row.get(0))?)
+}
+
 /// Reminders whose time has come by `now`.
 pub fn due(conn: &Connection, now: EpochMillis) -> Result<Vec<Reminder>> {
     Ok(list(conn)?

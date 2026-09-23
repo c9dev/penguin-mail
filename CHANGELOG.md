@@ -29,6 +29,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - The assistant on the Anthropic API costs less per question. Each request
   used to send its tools and instructions, about 12,000 tokens, at full
   price; now the API reads them and the chat so far from its cache.
+- Delete Forever on a Trash full of conversations goes out as one request
+  per thousand messages. Erasing 200 conversations used to make 400
+  requests and use up Gmail's allowance for about a minute.
+- Catching up after the computer was off for a week or more fetches only
+  the mail that changed meanwhile, instead of every message again, so the
+  account is ready sooner and leaves Gmail's allowance to you.
 
 ### Fixed
 
@@ -69,6 +75,20 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - A chat with the assistant keeps working after you press Stop, and after
   it reads one very long conversation. Either could leave every later
   question failing until you started a new chat.
+- Undo puts back only what the action changed. Undoing Trash on an archived
+  conversation leaves it archived instead of moving it to the inbox, and
+  undoing Mark as Read leaves the messages you had already read as read.
+- A message in the Outbox goes out once, even when you press Send Now while
+  the outbox is already sending it, or the connection drops just after
+  Gmail took it.
+- Labels made, renamed, recoloured or deleted in Gmail on the web reach the
+  sidebar within the hour, and at once when mail arrives carrying a new
+  one. Before, the sidebar only learned of them when the account was
+  added.
+- Your contacts stay in the address book when Google stops part way
+  through sending them again, instead of leaving it empty or half full.
+- Moving a few conversations out of the Trash puts them back in the inbox
+  at Gmail too, as moving ten or more already did.
 
 ## 0.1.7 (2026-09-23)
 

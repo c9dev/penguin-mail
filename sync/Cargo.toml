@@ -23,6 +23,7 @@ mail-builder.workspace = true
 # Reads what the fake sends into its Sent copy; only the fake needs it.
 mail-parser = { workspace = true, optional = true }
 rand.workspace = true
+rusqlite.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 tokio.workspace = true

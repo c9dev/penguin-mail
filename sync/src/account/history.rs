@@ -4,9 +4,11 @@ use std::collections::{BTreeSet, HashMap};
 
 use mailrs_domain::{ChangeEvent, MessageMeta, system_label};
 use mailrs_gmail::{GmailError, HistoryChange};
-use mailrs_store::{accounts, messages};
+use mailrs_store::{accounts, labels, messages};
 
 use super::AccountSync;
+use super::fetch::Want;
+use super::labels::is_user_label;
 use crate::{GmailApi, SyncError};
 
 impl<G: GmailApi> AccountSync<G> {
@@ -32,9 +34,9 @@ impl<G: GmailApi> AccountSync<G> {
                 Err(GmailError::NotFound) => {
                     tracing::info!(
                         account = account_id,
-                        "history cursor expired; bootstrapping again"
+                        "history cursor expired; listing the mail again"
                     );
-                    return self.bootstrap().await;
+                    return self.rebootstrap().await;
                 }
                 Err(err) => return Err(err.into()),
             };
@@ -51,8 +53,18 @@ impl<G: GmailApi> AccountSync<G> {
         }
 
         let fetched = self.fetch_for_history(&changes).await?;
+        let named: BTreeSet<String> = changes
+            .iter()
+            .filter_map(|change| match change {
+                HistoryChange::LabelsAdded { label_ids, .. } => Some(label_ids.clone()),
+                _ => None,
+            })
+            .flatten()
+            .chain(fetched.values().flat_map(|m| m.label_ids.clone()))
+            .filter(|id| is_user_label(id))
+            .collect();
         let generation = cursor.sync_gen;
-        let (touched, new_mail) = self
+        let (touched, new_mail, unknown_label) = self
             .db
             .write(move |c| {
                 let mut touched = BTreeSet::new();
@@ -94,9 +106,19 @@ impl<G: GmailApi> AccountSync<G> {
                     messages::refresh_thread(c, account_id, thread_id)?;
                 }
                 accounts::set_history_id(c, account_id, latest)?;
-                Ok((touched, new_mail))
+                let known: BTreeSet<String> = labels::list_labels(c, account_id)?
+                    .into_iter()
+                    .map(|l| l.id)
+                    .collect();
+                let unknown = named.iter().any(|id| !known.contains(id));
+                Ok((touched, new_mail, unknown))
             })
             .await?;
+        // A label the store has never seen was made elsewhere since the
+        // labels were last listed, so the sidebar lacks it.
+        if unknown_label {
+            self.refresh_labels().await?;
+        }
         self.mark_caught_up();
         self.emit_threads(touched);
         if !new_mail.is_empty() {
@@ -115,37 +137,44 @@ impl<G: GmailApi> AccountSync<G> {
         changes: &[HistoryChange],
     ) -> Result<HashMap<String, MessageMeta>, SyncError> {
         let account_id = self.account_id;
-        let mut wanted: Vec<String> = changes
+        // History names each message's thread, so several new messages of
+        // one conversation share a `threads.get`.
+        let want = |id: &String, thread_id: &String| Want {
+            id: id.clone(),
+            thread_id: Some(thread_id.clone()),
+        };
+        let mut wanted: Vec<Want> = changes
             .iter()
             .filter_map(|change| match change {
-                HistoryChange::MessageAdded { id, .. } => Some(id.clone()),
+                HistoryChange::MessageAdded { id, thread_id } => Some(want(id, thread_id)),
                 _ => None,
             })
             .collect();
-        let into_inbox: Vec<String> = changes
+        let into_inbox: Vec<Want> = changes
             .iter()
             .filter_map(|change| match change {
-                HistoryChange::LabelsAdded { id, label_ids, .. }
-                    if label_ids.iter().any(|l| l == system_label::INBOX) =>
-                {
-                    Some(id.clone())
+                HistoryChange::LabelsAdded {
+                    id,
+                    thread_id,
+                    label_ids,
+                } if label_ids.iter().any(|l| l == system_label::INBOX) => {
+                    Some(want(id, thread_id))
                 }
                 _ => None,
             })
             .collect();
         if !into_inbox.is_empty() {
-            let candidates = into_inbox.clone();
+            let candidates: Vec<String> = into_inbox.iter().map(|w| w.id.clone()).collect();
             let known = self
                 .db
                 .read(move |c| messages::existing_ids(c, account_id, &candidates))
                 .await?;
-            wanted.extend(into_inbox.into_iter().filter(|id| !known.contains(id)));
+            wanted.extend(into_inbox.into_iter().filter(|w| !known.contains(&w.id)));
         }
-        wanted.sort();
-        wanted.dedup();
         Ok(self
-            .fetch_metadata(&wanted)
+            .fetch(wanted)
             .await?
+            .metas
             .into_iter()
             .map(|m| (m.id.clone(), m))
             .collect())

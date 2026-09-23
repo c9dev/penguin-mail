@@ -282,7 +282,8 @@ async fn search_returns_newest_first_without_storing() {
     h.fake.seed(meta("old", "t1", now - 5000, &["INBOX"]));
     h.fake.seed(meta("new", "t2", now, &["INBOX"]));
     h.fake.seed(meta("mid", "t3", now - 1000, &[]));
-    let found = h.sync.search("snippet", 2).await.unwrap();
+    let ids = h.sync.search_ids("snippet", 2).await.unwrap();
+    let found = h.sync.metadata_of(&ids).await.unwrap();
     let ids: Vec<&str> = found.iter().map(|m| m.id.as_str()).collect();
     assert_eq!(ids, ["new", "mid"]);
     assert!(h.threads("INBOX").await.is_empty());
@@ -868,4 +869,167 @@ async fn reschedule_moves_a_send_later_message_and_leaves_the_outbox_alone() {
             .unwrap();
     assert_eq!(kept.send_at, before);
     assert_eq!(outbox.reschedule(9999, at).await.unwrap(), None);
+}
+
+// ---- Sending once: two callers, and an answer lost on the way back -------
+
+/// The Outbox window's Send Now and the minute pass can reach the same
+/// message together. Only the first one to claim it sends it.
+#[tokio::test]
+async fn a_message_sent_by_hand_while_the_pass_sends_it_goes_out_once() {
+    let h = harness().await;
+    let mut waiting = message(h.account_id, "Report");
+    waiting.problem = Some("Network error".into());
+    waiting.attempts = 1;
+    let id = h.db.write(move |c| outbox::put(c, &waiting)).await.unwrap();
+    let outbox = queue(&h);
+    let mut held = h.fake.hold("users.messages.send");
+
+    let passing = outbox.send_due(now_millis());
+    let by_hand = async {
+        held.entered().await;
+        let posted = outbox.send_one(id).await.unwrap();
+        held.release();
+        posted
+    };
+    let (drained, posted) = tokio::join!(passing, by_hand);
+
+    assert_eq!(drained.unwrap().sent.len(), 1);
+    assert_eq!(posted, Posted::Waiting(id), "the pass has it in hand");
+    assert_eq!(h.fake.with(|s| s.sent.len()), 1, "Gmail got it once");
+    assert!(h.db.read(outbox::list).await.unwrap().is_empty());
+}
+
+/// A message whose claim outlived a crash is not stuck for good: the
+/// claim lapses and the next pass sends it.
+#[tokio::test]
+async fn a_claim_left_by_a_crash_lapses() {
+    let h = harness().await;
+    let mut waiting = message(h.account_id, "Report");
+    waiting.problem = Some("Network error".into());
+    waiting.attempts = 1;
+    let id = h.db.write(move |c| outbox::put(c, &waiting)).await.unwrap();
+    let long_ago = now_millis() - 60 * 60 * 1000;
+    h.db.write(move |c| outbox::claim(c, id, long_ago, long_ago - 1).map(drop))
+        .await
+        .unwrap();
+
+    let drained = queue(&h).send_due(now_millis()).await.unwrap();
+    assert_eq!(drained.sent.len(), 1);
+}
+
+/// Files a sent message under Sent with the `Message-ID` its bytes carry,
+/// as Gmail does.
+fn keep_sent_copies(h: &Harness) {
+    h.fake.with(|s| {
+        s.sent_copy = Some(Box::new(|raw: &[u8]| {
+            let text = String::from_utf8_lossy(raw);
+            let msgid = text
+                .lines()
+                .find_map(|l| l.strip_prefix("Message-ID: "))
+                .map(str::to_string);
+            Some(crate::fake::SentCopy {
+                meta: mailrs_domain::MessageMeta {
+                    rfc822_msgid: msgid,
+                    ..meta("copy", "copy", now_millis(), &[])
+                },
+                body: Default::default(),
+                references: vec![],
+                files: vec![],
+            })
+        }))
+    });
+}
+
+/// Gmail took the message and the connection dropped before its answer
+/// came back. The next try finds the message in Sent and does not send it
+/// a second time.
+#[tokio::test]
+async fn a_send_whose_answer_was_lost_is_not_sent_again() {
+    let h = harness().await;
+    keep_sent_copies(&h);
+    let mut report = message(h.account_id, "Report");
+    report.raw = Some(b"Message-ID: <r1@example.com>\r\nSubject: Report\r\n\r\nhello".to_vec());
+    h.fake
+        .with(|s| s.lost.push_back(GmailError::Network("reset".into())));
+
+    let posted = queue(&h).post(report).await.unwrap();
+    assert!(matches!(posted, Posted::Waiting(_)), "got {posted:?}");
+    assert_eq!(h.fake.with(|s| s.sent.len()), 1, "Gmail has it already");
+
+    h.db.write(move |c| outbox::try_now(c, now_millis()))
+        .await
+        .unwrap();
+    let drained = queue(&h).send_due(now_millis()).await.unwrap();
+    assert_eq!(drained.sent.len(), 1, "the outbox counts it as sent");
+    assert_eq!(
+        h.fake.with(|s| s.sent.len()),
+        1,
+        "and did not send it again"
+    );
+    assert!(h.db.read(outbox::list).await.unwrap().is_empty());
+}
+
+/// A try that never reached Gmail leaves nothing in Sent, so the retry
+/// sends the message.
+#[tokio::test]
+async fn a_send_that_never_arrived_goes_out_on_the_retry() {
+    let h = harness().await;
+    keep_sent_copies(&h);
+    let mut report = message(h.account_id, "Report");
+    report.raw = Some(b"Message-ID: <r2@example.com>\r\nSubject: Report\r\n\r\nhello".to_vec());
+    h.fake.fail_next(GmailError::Network("offline".into()));
+
+    queue(&h).post(report).await.unwrap();
+    h.db.write(move |c| outbox::try_now(c, now_millis()))
+        .await
+        .unwrap();
+    let drained = queue(&h).send_due(now_millis()).await.unwrap();
+
+    assert_eq!(drained.sent.len(), 1);
+    assert_eq!(h.fake.with(|s| s.sent.len()), 1);
+}
+
+/// Gmail records a draft in history like any message: saving one adds it,
+/// saving it again replaces its message, and deleting it takes it away.
+#[tokio::test]
+async fn drafts_reach_the_store_through_history() {
+    let h = harness().await;
+    h.bootstrap_all().await;
+    let stored = |id: String| {
+        let (db, account_id) = (h.db.clone(), h.account_id);
+        async move {
+            db.read(move |c| messages::labels_of(c, account_id, &id))
+                .await
+                .unwrap()
+        }
+    };
+
+    let first = h
+        .sync
+        .save_draft(b"Subject: Plans\r\n\r\nfirst".to_vec(), None, None)
+        .await
+        .unwrap();
+    h.sync.incremental().await.unwrap();
+    assert_eq!(stored(first.message_id.clone()).await, ["DRAFT"]);
+
+    let second = h
+        .sync
+        .save_draft(
+            b"Subject: Plans\r\n\r\nsecond take".to_vec(),
+            None,
+            Some(first.draft_id.clone()),
+        )
+        .await
+        .unwrap();
+    h.sync.incremental().await.unwrap();
+    assert!(
+        stored(first.message_id.clone()).await.is_empty(),
+        "replaced"
+    );
+    assert_eq!(stored(second.message_id.clone()).await, ["DRAFT"]);
+
+    h.sync.delete_draft(&second.draft_id).await.unwrap();
+    h.sync.incremental().await.unwrap();
+    assert!(stored(second.message_id).await.is_empty(), "deleted");
 }
