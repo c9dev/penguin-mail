@@ -362,6 +362,14 @@ CREATE TABLE IF NOT EXISTS outbox_claims (
     claimed_at INTEGER NOT NULL
 );
 "#,
+    // Which Google client each account signed in with. A new account signs
+    // in with the client compiled into the build, so that is the default;
+    // every account already here came through the setup page, where the
+    // person pasted a client of their own.
+    r#"
+ALTER TABLE accounts ADD COLUMN oauth_client TEXT NOT NULL DEFAULT 'built_in';
+UPDATE accounts SET oauth_client = 'own';
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,

@@ -184,8 +184,11 @@ fn a_body_read_as_two_text_attachments_is_fetched_again() {
     bodies::put_body(&conn, id, "ok", &body("fine"), 1).unwrap();
     // Back to version 19, without what the later migrations add, so they
     // run again as they would on a store that old.
-    conn.execute_batch("ALTER TABLE accounts DROP COLUMN checked_at")
-        .unwrap();
+    conn.execute_batch(
+        "ALTER TABLE accounts DROP COLUMN checked_at;
+         ALTER TABLE accounts DROP COLUMN oauth_client;",
+    )
+    .unwrap();
     conn.pragma_update(None, "user_version", 19).unwrap();
     drop(conn);
 

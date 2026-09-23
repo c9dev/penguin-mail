@@ -1,6 +1,6 @@
 //! Accounts and their sync cursors.
 
-use mailrs_domain::{Account, AccountId, AccountState, EpochMillis};
+use mailrs_domain::{Account, AccountId, AccountState, EpochMillis, SignInClient};
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::{Result, StoreError};
@@ -61,6 +61,28 @@ pub fn set_state(conn: &Connection, id: AccountId, state: AccountState) -> Resul
     conn.execute(
         "UPDATE accounts SET state = ?2 WHERE id = ?1",
         params![id, state.as_str()],
+    )?;
+    Ok(())
+}
+
+/// The Google client `id` signs in with.
+pub fn sign_in_client(conn: &Connection, id: AccountId) -> Result<SignInClient> {
+    let value: String = conn.query_row(
+        "SELECT oauth_client FROM accounts WHERE id = ?1",
+        params![id],
+        |row| row.get(0),
+    )?;
+    value.parse().map_err(|_| StoreError::Corrupt {
+        column: "accounts.oauth_client",
+        value: value.clone(),
+    })
+}
+
+/// Records that `id` signed in with `client`.
+pub fn set_sign_in_client(conn: &Connection, id: AccountId, client: SignInClient) -> Result<()> {
+    conn.execute(
+        "UPDATE accounts SET oauth_client = ?2 WHERE id = ?1",
+        params![id, client.as_str()],
     )?;
     Ok(())
 }

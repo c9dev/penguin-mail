@@ -60,6 +60,10 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Hidden address**: one plus address from Hide My Email, such as `dana+kite.fern482@gmail.com`, with the rules behind it. One rule gives its mail the Hide My Email label; a second trashes that mail while the address is off. `mailrs_sync::HiddenAddress` holds the address, its note and the two rule ids; `AccountSettings` makes one and changes it, and the app keeps the list in its settings file. _Avoid_: masked address, burner.
 
+**Built-in client**: the Google OAuth client compiled into a release build from `PENGUIN_MAIL_GOOGLE_CLIENT_ID` and `PENGUIN_MAIL_GOOGLE_CLIENT_SECRET`. Every new sign-in uses it. `mailrs_gmail::built_in_client`, recorded as `SignInClient::BuiltIn`. _Avoid_: app key, default client.
+
+**Own client**: a Google OAuth client a person made in their own Google Cloud project and pasted into the old setup page, kept in `config.toml`. Accounts added that way keep it until they sign in again. `SignInClient::Own`. _Avoid_: custom client, user client.
+
 **Settings permission**: the Gmail access an account grants once so Penguin Mail may read and change its account settings. Without it every `AccountSettings` call answers `Permitted::NeedsPermission`, and the caller offers Grant Access rather than showing an error. _Avoid_: scope, consent.
 
 **Delete permission**: the Gmail access an account grants so Penguin Mail may erase mail. Sign-in never asks for it; the window asks the first time somebody chooses Delete Forever in the Trash or the assistant's `delete_forever` finds it missing, and until then `MailActions::erase` answers `Permitted::NeedsPermission` and changes nothing. _Avoid_: scope, full access.

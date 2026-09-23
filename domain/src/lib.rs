@@ -86,6 +86,39 @@ pub struct Account {
     pub state: AccountState,
 }
 
+/// Which Google client an account signed in with. A refresh token only
+/// works with the client that issued it, so an account keeps the one it
+/// signed in through until it signs in again.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SignInClient {
+    /// A client the person made in their own Google Cloud project and
+    /// pasted into the old setup page, kept in `config.toml`.
+    Own,
+    /// The project's client, compiled into the build.
+    BuiltIn,
+}
+
+impl SignInClient {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            SignInClient::Own => "own",
+            SignInClient::BuiltIn => "built_in",
+        }
+    }
+}
+
+impl FromStr for SignInClient {
+    type Err = UnknownVariant;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "own" => Ok(SignInClient::Own),
+            "built_in" => Ok(SignInClient::BuiltIn),
+            other => Err(UnknownVariant(other.to_string())),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum LabelKind {
     System,
