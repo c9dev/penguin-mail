@@ -66,71 +66,25 @@ pub enum Trust {
     Ultimate,
 }
 
-/// The signature the status lines describe, or `None` when they describe none.
+/// The first signature the status lines describe, or `None` when they
+/// describe none.
 pub fn signature<S: AsRef<str>>(status: &[S]) -> Option<Signature> {
-    let mut found: Option<Signature> = None;
-    for line in status {
-        let (keyword, rest) = split(line.as_ref());
-        let verdict = match keyword {
-            "GOODSIG" => Verdict::Good,
-            "BADSIG" => Verdict::Bad,
-            "EXPKEYSIG" => Verdict::ExpiredKey,
-            "REVKEYSIG" => Verdict::RevokedKey,
-            "EXPSIG" => Verdict::Expired,
-            // `ERRSIG <keyid> <algo> <hash> <class> <time> <rc>`, where 9
-            // means gpg has no key for the signer.
-            "ERRSIG" => match rest.split_whitespace().nth(5) {
-                Some("9") => Verdict::NoKey,
-                _ => Verdict::Unchecked,
-            },
-            // gpg says this beside `ERRSIG 9`, and on its own when it read a
-            // signature it could not even look a key up for.
-            "NO_PUBKEY" => Verdict::NoKey,
-            "VALIDSIG" => {
-                if let Some(found) = &mut found {
-                    found.fingerprint = rest.split_whitespace().next().map(str::to_string);
-                }
-                continue;
-            }
-            "TRUST_UNDEFINED" | "TRUST_NEVER" | "TRUST_MARGINAL" | "TRUST_FULLY"
-            | "TRUST_ULTIMATE" => {
-                if let Some(found) = &mut found {
-                    found.trust = trust(keyword);
-                }
-                continue;
-            }
-            _ => continue,
-        };
-        // `GOODSIG <long key id> <user id>`; ERRSIG carries no user id.
-        let (key_id, signer) = match rest.split_once(' ') {
-            Some((key_id, signer)) => (key_id, Some(signer.trim().to_string())),
-            None => (rest, None),
-        };
-        found = Some(Signature {
-            verdict,
-            signer: signer.filter(|_| verdict != Verdict::NoKey && verdict != Verdict::Unchecked),
-            fingerprint: None,
-            key_id: (!key_id.is_empty()).then(|| key_id.to_string()),
-            trust: Trust::Unknown,
+    signatures(status).into_iter().next()
+}
+
+/// Every signature the status lines describe, in order. A detached
+/// signature can carry several, and a reader who saw only one of them
+/// could miss the one that does not match.
+pub fn signatures<S: AsRef<str>>(status: &[S]) -> Vec<Signature> {
+    crate::gnupg::seen(status)
+        .into_iter()
+        .map(|seen| Signature {
+            verdict: seen.verdict,
+            signer: seen.name,
+            fingerprint: seen.fingerprint,
+            key_id: seen.id,
+            trust: seen.trust.unwrap_or(Trust::Unknown),
             user_ids: Vec::new(),
-        });
-    }
-    found
-}
-
-fn trust(keyword: &str) -> Trust {
-    match keyword {
-        "TRUST_NEVER" => Trust::Never,
-        "TRUST_MARGINAL" => Trust::Marginal,
-        "TRUST_FULLY" => Trust::Full,
-        "TRUST_ULTIMATE" => Trust::Ultimate,
-        _ => Trust::Unknown,
-    }
-}
-
-fn split(line: &str) -> (&str, &str) {
-    match line.split_once(' ') {
-        Some((keyword, rest)) => (keyword, rest.trim_start()),
-        None => (line, ""),
-    }
+        })
+        .collect()
 }

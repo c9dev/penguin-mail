@@ -5,7 +5,9 @@
 //! person.
 
 use crate::error::SmimeError;
-use crate::gpgsm::{Smime, user_id};
+use mailrs_pgp::gnupg::{Pinentry, user_id};
+
+use crate::gpgsm::Smime;
 
 /// One address a message is going to, and what gpgsm holds for it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -84,7 +86,7 @@ impl Smime {
     /// The addresses on the certificate with this fingerprint, for a
     /// signature that names one.
     pub(crate) fn addresses_of(&self, fingerprint: &str) -> Vec<String> {
-        let Ok(run) = self.read_only(&[], |command| {
+        let Ok(run) = self.run(&[], Pinentry::Never, |command| {
             command.args(["--with-colons", "--list-keys", "--", fingerprint]);
         }) else {
             return Vec::new();
@@ -100,7 +102,7 @@ impl Smime {
     /// each chain as it lists, with dirmngr left out so nothing goes to the
     /// network, and marks the ones that reach a trusted root.
     fn listing(&self, wanted: &[String], job: Job) -> Result<String, SmimeError> {
-        let run = self.read_only(&[], |command| {
+        let run = self.run(&[], Pinentry::Never, |command| {
             command.arg("--with-colons");
             match job {
                 Job::Encrypt => {

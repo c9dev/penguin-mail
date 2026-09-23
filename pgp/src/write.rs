@@ -1,7 +1,8 @@
 //! Making the bodies of mail that goes out signed or encrypted.
 
 use crate::error::PgpError;
-use crate::gpg::{Pgp, Run, user_id};
+use crate::gnupg::{Pinentry, Run, user_id};
+use crate::gpg::{Pgp, failure};
 use crate::mime;
 
 impl Pgp {
@@ -15,13 +16,13 @@ impl Pgp {
     /// the body as well, so the two cannot drift apart.
     pub fn sign(&self, part: &[u8], from: &str) -> Result<Vec<u8>, PgpError> {
         let signed = signable(part);
-        let run = self.run(&signed, |command| {
+        let run = self.run(&signed, Pinentry::MayAsk, |command| {
             command
                 .args(["--armor", "--detach-sign", "--local-user"])
                 .arg(user_id(from));
         })?;
         if !run.ok {
-            return Err(run.failure());
+            return Err(failure(&run));
         }
         Ok(mime::multipart_signed(&signed, &run.out, micalg(&run)))
     }
@@ -50,7 +51,12 @@ impl Pgp {
         sign_as: Option<&str>,
     ) -> Result<Vec<u8>, PgpError> {
         let inside = mime::canonical(part);
-        let run = self.run(&inside, |command| {
+        // Encrypting needs no secret key; signing inside it does.
+        let pinentry = match sign_as {
+            Some(_) => Pinentry::MayAsk,
+            None => Pinentry::Never,
+        };
+        let run = self.run(&inside, pinentry, |command| {
             command.args(["--armor", "--encrypt"]);
             // gpg otherwise refuses to encrypt to a key its owner has not
             // signed, which is most keys anybody holds, and a batch run
@@ -68,7 +74,7 @@ impl Pgp {
             }
         })?;
         if !run.ok {
-            return Err(run.failure());
+            return Err(failure(&run));
         }
         Ok(mime::multipart_encrypted(&run.out))
     }

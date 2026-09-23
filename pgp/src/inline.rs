@@ -6,7 +6,8 @@
 //! shows people a screen of base64.
 
 use crate::error::PgpError;
-use crate::gpg::Pgp;
+use crate::gnupg::Pinentry;
+use crate::gpg::{Pgp, failure};
 use crate::status::{self, Signature};
 
 const MESSAGE: &str = "-----BEGIN PGP MESSAGE-----";
@@ -66,12 +67,13 @@ impl Pgp {
     /// the text still comes back with the verdict beside it.
     pub fn open_inline(&self, body: &str) -> Result<Opened, PgpError> {
         let (_, block) = block(body).ok_or(PgpError::NotPgp)?;
-        let run = self.run(block.as_bytes(), |command| {
+        // Armor may be encrypted, which needs the person's secret key.
+        let run = self.run(block.as_bytes(), Pinentry::MayAsk, |command| {
             command.arg("--decrypt");
         })?;
         let signature = status::signature(&run.status).map(|found| self.named(found));
         if !run.ok && signature.is_none() && !run.says("DECRYPTION_OKAY") {
-            return Err(run.failure());
+            return Err(failure(&run));
         }
         Ok(Opened {
             text: run.out,

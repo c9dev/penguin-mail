@@ -4,7 +4,8 @@
 //! not move between releases, rather than in the table it draws for a person.
 
 use crate::error::PgpError;
-use crate::gpg::{Pgp, user_id};
+use crate::gnupg::{Pinentry, user_id};
+use crate::gpg::Pgp;
 use crate::status::{Signature, Trust};
 
 /// One address a message is going to, and what gpg holds for it.
@@ -47,7 +48,7 @@ impl Pgp {
         let Some(fingerprint) = signature.fingerprint.clone() else {
             return signature;
         };
-        if let Ok(run) = self.run(&[], |command| {
+        if let Ok(run) = self.run(&[], Pinentry::Never, |command| {
             command
                 .args(["--with-colons", "--list-keys", "--"])
                 .arg(fingerprint);
@@ -68,7 +69,7 @@ impl Pgp {
         addresses
             .iter()
             .map(|address| {
-                let run = self.run(&[], |command| {
+                let run = self.run(&[], Pinentry::Never, |command| {
                     command
                         .args(["--with-colons", "--list-keys", "--"])
                         .arg(user_id(address));

@@ -3,7 +3,8 @@
 use std::io::Write;
 
 use crate::error::PgpError;
-use crate::gpg::Pgp;
+use crate::gnupg::Pinentry;
+use crate::gpg::{Pgp, failure};
 use crate::status::{self, Signature};
 
 /// What was inside a `multipart/encrypted` message.
@@ -36,10 +37,10 @@ impl Pgp {
         let mut file = tempfile::NamedTempFile::new().map_err(temp)?;
         file.write_all(signature).map_err(temp)?;
         file.flush().map_err(temp)?;
-        let run = self.run(signed_part, |command| {
+        let run = self.run(signed_part, Pinentry::Never, |command| {
             command.arg("--verify").arg(file.path()).arg("-");
         })?;
-        let found = status::signature(&run.status).ok_or_else(|| run.failure())?;
+        let found = status::signature(&run.status).ok_or_else(|| failure(&run))?;
         Ok(self.named(found))
     }
 
@@ -49,11 +50,13 @@ impl Pgp {
     /// The other part, the `application/pgp-encrypted` one, carries nothing
     /// but `Version: 1`, so there is nothing here to pass it to.
     pub fn decrypt(&self, encrypted_part: &[u8]) -> Result<Decrypted, PgpError> {
-        let run = self.run(encrypted_part, |command| {
+        // The one read here that needs the person's own secret key, and
+        // gpg-agent asks for the passphrase that unlocks it.
+        let run = self.run(encrypted_part, Pinentry::MayAsk, |command| {
             command.arg("--decrypt");
         })?;
         if !run.ok && !run.says("DECRYPTION_OKAY") {
-            return Err(run.failure());
+            return Err(failure(&run));
         }
         Ok(Decrypted {
             part: run.out,

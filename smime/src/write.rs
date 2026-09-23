@@ -1,7 +1,9 @@
 //! Making the bodies of mail that goes out signed or enveloped.
 
 use crate::error::SmimeError;
-use crate::gpgsm::{Run, Smime, user_id};
+use mailrs_pgp::gnupg::{Pinentry, Run, user_id};
+
+use crate::gpgsm::{Smime, failure};
 use crate::mime;
 
 impl Smime {
@@ -18,13 +20,13 @@ impl Smime {
     /// nothing about S/MIME still sees the message.
     pub fn sign(&self, part: &[u8], from: &str) -> Result<Vec<u8>, SmimeError> {
         let signed = signable(part);
-        let run = self.run(&signed, |command| {
+        let run = self.run(&signed, Pinentry::MayAsk, |command| {
             command
                 .args(["--detach-sign", "--local-user"])
                 .arg(user_id(from));
         })?;
         if !run.ok {
-            return Err(run.failure());
+            return Err(failure(&run));
         }
         Ok(mime::multipart_signed(&signed, &run.out, micalg(&run)))
     }
@@ -73,14 +75,14 @@ impl Smime {
         // certificate by fingerprint keeps gpgsm from choosing between two
         // that carry the same address. Encrypting needs nobody's secret
         // key, so nothing here may ask the person for anything.
-        let run = self.read_only(&inside, |command| {
+        let run = self.run(&inside, Pinentry::Never, |command| {
             command.arg("--encrypt");
             for fingerprint in &fingerprints {
                 command.arg("--recipient").arg(fingerprint);
             }
         })?;
         if !run.ok {
-            return Err(run.failure());
+            return Err(failure(&run));
         }
         Ok(mime::enveloped(&run.out))
     }

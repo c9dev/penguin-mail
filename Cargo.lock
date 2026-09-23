@@ -2083,6 +2083,7 @@ dependencies = [
 name = "mailrs-pgp"
 version = "0.1.7"
 dependencies = [
+ "libc",
  "mail-builder",
  "rand",
  "tempfile",

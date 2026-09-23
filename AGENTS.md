@@ -53,9 +53,10 @@ Installing for the owner: `NO_AUTOSTART=1 scripts/install.sh`.
   `gpgsm` is missing. `PENGUIN_MAIL_REQUIRE_CRYPTO=1` turns the skip into
   a failure. Fixtures write `pinentry-program /bin/false` into
   `gpg-agent.conf`; keep that in any new fixture, or each run puts a
-  trust dialog on the owner's screen. In product code, every read-only
-  `gpgsm` call goes through `read_only()` (`--pinentry-mode error`) for
-  the same reason; only decryption may ask for a passphrase.
+  trust dialog on the owner's screen. In product code, every `gpg` and
+  `gpgsm` run goes through `mailrs_pgp::gnupg::Program::run`, which takes
+  `Pinentry::Never` (`--pinentry-mode error`) or `Pinentry::MayAsk`; only
+  decrypting and signing may ask for a passphrase.
 - **Sandbox tests** for skill scripts run real `bwrap` and skip when it
   is missing or cannot start, as in an unprivileged container.
   `PENGUIN_MAIL_REQUIRE_SANDBOX=1` turns the skip into a failure.

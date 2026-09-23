@@ -3,9 +3,11 @@
 //!
 //! Every call runs the `gpg` binary, so the keys, the agent, the pinentry
 //! and the trust database belong to the person rather than to this crate.
+//! [`gnupg`] is how both this crate and `mailrs_smime` run their program.
 //! `README.md` says in which order a mail client calls all this.
 
 mod error;
+pub mod gnupg;
 mod gpg;
 pub mod inline;
 pub mod keys;
