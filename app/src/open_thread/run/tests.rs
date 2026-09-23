@@ -4,8 +4,8 @@
 use mailrs_domain::Target;
 
 use super::fake::{
-    ACCOUNT, ELSEWHERE, FakeWindow, Step, THREAD, body, invited, meta, opened_occurrence,
-    portuguese, queued, row, with_picture,
+    ACCOUNT, ELSEWHERE, FakeWindow, Step, THREAD, body, html_body, invited, meta,
+    opened_occurrence, portuguese, queued, row, with_picture,
 };
 use super::{Card, Event, Stale};
 use crate::protection::{Mark, Read, Tone};
@@ -540,4 +540,70 @@ async fn a_queued_message_that_went_out_while_on_screen_leaves_it() {
     window.run().refresh().await;
     assert!(window.took(Step::Clear));
     assert!(window.open(|_| ()).is_none());
+}
+
+/// The page the window loaded last.
+fn page(window: &FakeWindow) -> String {
+    window.0.borrow().pages.last().cloned().unwrap_or_default()
+}
+
+#[tokio::test]
+async fn the_stored_copy_says_a_body_is_loading_until_gmail_sends_it() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    let pages = window.0.borrow().pages.clone();
+    assert!(pages.first().is_some_and(|p| p.contains("Loading…")));
+    assert!(page(&window).contains("Hello"));
+    assert!(!page(&window).contains("Loading…"));
+}
+
+#[tokio::test]
+async fn a_body_gmail_could_not_send_says_why() {
+    let window = FakeWindow::new();
+    window.with(|screen| screen.gmail.clear());
+    window.run().open(row(THREAD)).await;
+    assert!(
+        page(&window).contains("This message could not be loaded: gone"),
+        "{}",
+        page(&window)
+    );
+}
+
+#[tokio::test]
+async fn an_html_body_is_drawn_cleaned() {
+    let window = FakeWindow::with_body(html_body(
+        "<p>Hi Ann</p><script>steal()</script><img src=\"x\" onerror=\"steal()\">",
+    ));
+    window.run().open(row(THREAD)).await;
+    let drawn = page(&window);
+    assert!(drawn.contains("<p>Hi Ann</p>"), "{drawn}");
+    assert!(!drawn.contains("steal()"), "{drawn}");
+}
+
+#[tokio::test]
+async fn a_shown_translation_is_what_the_page_draws() {
+    let window = FakeWindow::with_body(portuguese());
+    window.run().open(row(THREAD)).await;
+    assert!(page(&window).contains("Olá Ana"));
+    window.run().translate().await;
+    assert!(page(&window).contains("Hello Ana"), "{}", page(&window));
+    assert!(!page(&window).contains("Olá Ana"));
+    // Turning back draws what arrived.
+    window.run().translate().await;
+    assert!(page(&window).contains("Olá Ana"));
+}
+
+#[tokio::test]
+async fn the_words_of_an_html_message_come_from_its_cleaned_body() {
+    let window = FakeWindow::with_body(html_body(
+        "<p>Olá Ana, a reunião de amanhã fica para as dez horas. Não te esqueças de \
+         trazer os documentos que eu te pedi, para podermos ver tudo com calma \
+         antes de falar com o banco. Um abraço e até amanhã.</p>",
+    ));
+    window.run().open(row(THREAD)).await;
+    let last = window.0.borrow().cards.last().cloned();
+    assert!(
+        matches!(last, Some(Card::Offered { from: Some(from), .. }) if from.code == "pt"),
+        "{last:?}"
+    );
 }

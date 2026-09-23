@@ -176,7 +176,7 @@ impl Desk for Ports {
     }
 
     fn prose(&self) -> Option<(String, Prose)> {
-        self.view.open_prose()
+        self.view.find(OpenThread::prose)
     }
 
     fn same_writer(&self, message_id: &str) -> String {

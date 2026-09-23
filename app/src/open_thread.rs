@@ -14,6 +14,7 @@ use crate::protection::run::{Claimed, Installed};
 use crate::protection::{self, Engine, Mark};
 use crate::translation::{Body, Language, Prose, Translation};
 
+mod page;
 pub mod queued;
 pub mod run;
 
@@ -83,6 +84,8 @@ pub struct OpenThread {
     /// Set when the pane shows a queued message rather than a Gmail
     /// thread: what it says above the message, and which buttons.
     pub queued: Option<Unsent>,
+    /// The cleaned HTML of each body the page draws, by message id.
+    cleaned: HashMap<String, page::Cleaned>,
 }
 
 impl OpenThread {
@@ -128,6 +131,7 @@ impl OpenThread {
             flag_color: None,
             translations: HashMap::new(),
             queued: None,
+            cleaned: HashMap::new(),
         }
     }
 
@@ -561,6 +565,7 @@ mod tests {
             flag_color: None,
             translations: HashMap::new(),
             queued: None,
+            cleaned: HashMap::new(),
         }
     }
 

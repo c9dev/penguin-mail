@@ -8,7 +8,6 @@
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
-use std::hash::{DefaultHasher, Hash, Hasher};
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -27,9 +26,8 @@ use crate::compose::ReplyKind;
 use crate::open_thread::{OpenThread, Unsent};
 use crate::protection::run::{Claimed, Installed};
 use crate::protection::{self};
-use crate::render::{BodyState, Conversation, MessageView, Theme, render};
-use crate::sanitize::sanitize_html;
-use crate::translation::{Body, Prose, Translation};
+use crate::render::Theme;
+use crate::translation::Translation;
 
 pub enum Action {
     /// The event card asked for something: an answer, or a hand-off to the
@@ -136,14 +134,6 @@ struct Buttons {
     more: gtk::MenuButton,
 }
 
-/// A message body after cleaning, with a mark of the HTML and the inline
-/// images it was made from. A different mark means the body needs
-/// cleaning again.
-struct CleanBody {
-    mark: u64,
-    html: String,
-}
-
 pub struct ConversationView {
     pub page: adw::NavigationPage,
     /// Applies or removes labels; the window fills its popover.
@@ -176,8 +166,6 @@ pub struct ConversationView {
     /// The messages the find bar opened, kept so they close again when it
     /// goes away.
     find_closed: RefCell<Vec<String>>,
-    /// Cleaned HTML per message. A thread renders at least twice per open.
-    sanitized: RefCell<HashMap<String, CleanBody>>,
     list_banner: adw::Banner,
     /// The menu section whose first item adds or removes the sender as a VIP.
     sender_menu: gio::Menu,
@@ -546,7 +534,6 @@ impl ConversationView {
             find,
             find_closed: RefCell::new(Vec::new()),
             list_banner,
-            sanitized: RefCell::new(HashMap::new()),
             sender_menu,
             mark_menu,
             filing_menu,
@@ -1012,25 +999,6 @@ impl ConversationView {
         self.card.with_showing(f)
     }
 
-    /// The message a translation applies to, with the prose the page
-    /// draws for it: the newest open message whose body has arrived. The
-    /// HTML is the cleaned copy, so the words come out of the markup the
-    /// reader is actually looking at.
-    pub fn open_prose(&self) -> Option<(String, Prose)> {
-        let open = self.open.borrow();
-        let open = open.as_ref()?;
-        let meta = open.messages.iter().rev().find(|meta| {
-            open.expanded.contains(&meta.id) && open.bodies.get(&meta.id).is_some_and(Result::is_ok)
-        })?;
-        let body = open.bodies.get(&meta.id)?.as_ref().ok()?;
-        let clean = self.sanitized.borrow();
-        let prose = match clean.get(&meta.id) {
-            Some(cleaned) => Prose::read(Body::Html(&cleaned.html)),
-            None => Prose::read(Body::Text(body.text.as_deref().unwrap_or(""))),
-        };
-        Some((meta.id.clone(), prose))
-    }
-
     /// Whether `row` is what the view shows now.
     pub fn is_showing_row(&self, row: &mailrs_domain::ThreadSummary) -> bool {
         self.is_showing(&Target::from_row(row))
@@ -1234,8 +1202,8 @@ impl ConversationView {
 
     /// Redraws the open thread, for example after its bodies arrive.
     pub fn render(&self, scroll: bool) {
-        let open = self.open.borrow();
-        let Some(open) = open.as_ref() else { return };
+        let mut open = self.open.borrow_mut();
+        let Some(open) = open.as_mut() else { return };
         let manager = &self.content;
         manager.remove_all_filters();
         if !open.images_allowed
@@ -1248,65 +1216,7 @@ impl ConversationView {
             dark: style.is_dark(),
             accent: style.accent_color_rgba().to_str().to_string(),
         };
-        let empty = HashMap::new();
-        let mut clean = self.sanitized.borrow_mut();
-        clean.retain(|id, _| open.bodies.contains_key(id));
-        for meta in &open.messages {
-            let Some(Ok(body)) = open.bodies.get(&meta.id) else {
-                continue;
-            };
-            let Some(html) = body.html.as_deref().filter(|h| !h.trim().is_empty()) else {
-                continue;
-            };
-            let images = open.inline_images.get(&meta.id).unwrap_or(&empty);
-            let mark = body_mark(html, images);
-            if clean.get(&meta.id).is_none_or(|seen| seen.mark != mark) {
-                let body = CleanBody {
-                    mark,
-                    html: sanitize_html(html, images),
-                };
-                clean.insert(meta.id.clone(), body);
-            }
-        }
-        let views: Vec<MessageView> = open
-            .messages
-            .iter()
-            .map(|meta| {
-                // A message showing its translation draws the translated
-                // body and the translated HTML. What arrived stays where
-                // it was, for the way back.
-                let showing = open
-                    .translations
-                    .get(&meta.id)
-                    .filter(|translation| translation.shown);
-                MessageView {
-                    meta,
-                    body: match (showing, open.bodies.get(&meta.id)) {
-                        (Some(translation), _) => BodyState::Loaded(&translation.body),
-                        (None, None) => BodyState::Loading,
-                        (None, Some(Ok(body))) => BodyState::Loaded(body),
-                        (None, Some(Err(reason))) => BodyState::Failed(reason),
-                    },
-                    expanded: open.expanded.contains(&meta.id),
-                    inline_images: open.inline_images.get(&meta.id).unwrap_or(&empty),
-                    thumbnails: &open.thumbnails,
-                    sanitized: match showing {
-                        Some(translation) => translation.clean.as_deref(),
-                        None => clean.get(&meta.id).map(|body| body.html.as_str()),
-                    },
-                }
-            })
-            .collect();
-        let html = render(
-            &Conversation {
-                subject: &open.subject,
-                messages: views,
-                me: &open.me,
-                photos: &open.photos,
-                allow_remote: open.images_allowed,
-            },
-            &theme,
-        );
+        let html = open.page(&theme);
         let background = if theme.dark {
             gdk::RGBA::new(0.133, 0.133, 0.149, 1.0)
         } else {
@@ -1614,28 +1524,6 @@ fn run_script(webview: &webkit::WebView, script: &str) {
     webview.evaluate_javascript(script, None, None, gio::Cancellable::NONE, |_| {});
 }
 
-/// One number standing for the HTML and the inline images a cleaned body
-/// was made from, so the cleaned copy is thrown away as soon as either
-/// changes. It reads the whole body rather than its length, because two
-/// bodies of the same length are still two bodies: opening an encrypted
-/// message puts a different body under the same message id, and the
-/// reader would otherwise go on looking at the cleaned ciphertext.
-fn body_mark(html: &str, images: &HashMap<String, String>) -> u64 {
-    let mut whole = DefaultHasher::new();
-    html.hash(&mut whole);
-    // A HashMap hands its entries back in whatever order it likes, so each
-    // one is hashed on its own and the results mixed with xor, which
-    // answers the same whichever order they come in.
-    let mixed = images.iter().fold(0, |mixed, (cid, uri)| {
-        let mut each = DefaultHasher::new();
-        cid.hash(&mut each);
-        uri.hash(&mut each);
-        mixed ^ each.finish()
-    });
-    mixed.hash(&mut whole);
-    whole.finish()
-}
-
 /// Keeps only characters that are safe inside a quoted script string.
 fn script_safe(id: &str) -> String {
     id.chars()
@@ -1651,76 +1539,4 @@ fn network_session() -> webkit::NetworkSession {
         static SESSION: webkit::NetworkSession = webkit::NetworkSession::new_ephemeral();
     }
     SESSION.with(|s| s.clone())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::body_mark;
-    use std::collections::HashMap;
-
-    fn images(entries: &[(&str, &str)]) -> HashMap<String, String> {
-        entries
-            .iter()
-            .map(|(cid, uri)| (cid.to_string(), uri.to_string()))
-            .collect()
-    }
-
-    #[test]
-    fn a_body_that_did_not_change_keeps_its_cleaned_copy() {
-        let pictures = images(&[("cid1", "data:image/png;base64,AAAA")]);
-        assert_eq!(
-            body_mark("<p>Hello</p>", &pictures),
-            body_mark("<p>Hello</p>", &pictures)
-        );
-    }
-
-    #[test]
-    fn two_bodies_of_the_same_length_are_two_bodies() {
-        let pictures = images(&[("cid1", "data:image/png;base64,AAAA")]);
-        assert_ne!(
-            body_mark("<p>Hello</p>", &pictures),
-            body_mark("<p>Howdy</p>", &pictures)
-        );
-    }
-
-    #[test]
-    fn an_image_that_changed_is_a_new_body() {
-        assert_ne!(
-            body_mark(
-                "<p>Hello</p>",
-                &images(&[("cid1", "data:image/png;base64,AAAA")])
-            ),
-            body_mark(
-                "<p>Hello</p>",
-                &images(&[("cid1", "data:image/png;base64,BBBB")])
-            )
-        );
-        assert_ne!(
-            body_mark(
-                "<p>Hello</p>",
-                &images(&[("cid1", "data:image/png;base64,AAAA")])
-            ),
-            body_mark(
-                "<p>Hello</p>",
-                &images(&[("cid2", "data:image/png;base64,AAAA")])
-            )
-        );
-        assert_ne!(
-            body_mark("<p>Hello</p>", &images(&[])),
-            body_mark(
-                "<p>Hello</p>",
-                &images(&[("cid1", "data:image/png;base64,AAAA")])
-            )
-        );
-    }
-
-    #[test]
-    fn the_order_the_images_arrived_in_says_nothing() {
-        let one = images(&[("cid1", "first"), ("cid2", "second")]);
-        let other = images(&[("cid2", "second"), ("cid1", "first")]);
-        assert_eq!(
-            body_mark("<p>Hello</p>", &one),
-            body_mark("<p>Hello</p>", &other)
-        );
-    }
 }

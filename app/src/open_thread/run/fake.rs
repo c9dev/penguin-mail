@@ -3,8 +3,10 @@
 //! of what the run asked for, in order.
 //!
 //! The named changes go through the same [`OpenThread`] methods the
-//! conversation view uses, so the thread under test changes the way the
-//! one on screen does. Nothing here starts a widget or talks to Gmail.
+//! conversation view uses, and a change the view redraws for draws the
+//! page through the same [`OpenThread::page`], so the thread under test
+//! changes and reads the way the one on screen does. Nothing here starts a
+//! widget or talks to Gmail.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -21,7 +23,8 @@ use mailrs_sync::Opened;
 use super::{Answer, Card, Desk, Effects, Fetched, Stored, ThreadRun};
 use crate::open_thread::{OpenThread, Unsent};
 use crate::protection::Read;
-use crate::translation::{self, Body, Language, Prose, Translation};
+use crate::render::Theme;
+use crate::translation::{self, Language, Prose, Translation};
 use crate::ui::invitation::Showing;
 use crate::wanted::Screen as OnScreen;
 
@@ -111,6 +114,8 @@ pub struct Screen {
     pub invitations: Vec<Option<String>>,
     pub marked: Vec<Target>,
     pub toasts: Vec<String>,
+    /// Every page the window loaded, oldest first.
+    pub pages: Vec<String>,
 }
 
 pub struct FakeWindow(pub RefCell<Screen>);
@@ -146,6 +151,14 @@ pub fn meta(id: &str, unread: bool) -> MessageMeta {
 pub fn body(text: &str) -> MessageBody {
     MessageBody {
         text: Some(text.to_string()),
+        ..MessageBody::default()
+    }
+}
+
+/// A body with an HTML part and no text part.
+pub fn html_body(html: &str) -> MessageBody {
+    MessageBody {
+        html: Some(html.to_string()),
         ..MessageBody::default()
     }
 }
@@ -287,6 +300,7 @@ impl FakeWindow {
             invitations: Vec::new(),
             marked: Vec::new(),
             toasts: Vec::new(),
+            pages: Vec::new(),
         })))
     }
 
@@ -345,6 +359,20 @@ impl FakeWindow {
 
     fn read<R: Default>(&self, read: impl FnOnce(&OpenThread) -> R) -> R {
         self.open(read).unwrap_or_default()
+    }
+
+    /// Draws the thread on screen, as the view does after a change it
+    /// redraws for.
+    fn draw(&self) {
+        let theme = Theme {
+            dark: false,
+            accent: "#3584e4".to_string(),
+        };
+        self.with(|screen| {
+            if let Some(page) = screen.open.as_mut().map(|open| open.page(&theme)) {
+                screen.pages.push(page);
+            }
+        });
     }
 }
 
@@ -406,19 +434,8 @@ impl Desk for FakeWindow {
         self.read(OpenThread::wanting_thumbnails)
     }
 
-    /// The newest open message's text. The window reads the cleaned HTML;
-    /// the fixtures have none.
     fn prose(&self) -> Option<(String, Prose)> {
-        self.open(|open| {
-            let meta = open.messages.iter().rev().find(|meta| {
-                open.expanded.contains(&meta.id)
-                    && open.bodies.get(&meta.id).is_some_and(Result::is_ok)
-            })?;
-            let body = open.bodies.get(&meta.id)?.as_ref().ok()?;
-            let text = body.text.as_deref().unwrap_or("");
-            Some((meta.id.clone(), Prose::read(Body::Text(text))))
-        })
-        .flatten()
+        self.open(OpenThread::prose).flatten()
     }
 
     fn same_writer(&self, message_id: &str) -> String {
@@ -573,6 +590,7 @@ impl Effects for FakeWindow {
             screen.shown.push(thread.thread_id.clone());
             screen.open = Some(thread);
         });
+        self.draw();
     }
 
     fn queued(&self, id: i64) -> Answer<'_, Result<Option<Queued>, String>> {
@@ -584,7 +602,15 @@ impl Effects for FakeWindow {
     fn sender_vip(&self, _vip: bool) {}
 
     fn messages_arrived(&self, fresh: Vec<MessageMeta>) -> Vec<String> {
-        self.change(Step::MessagesArrived, |open| open.take_messages(&fresh))
+        let (missing, changed) = self.change(Step::MessagesArrived, |open| {
+            let before = open.messages.clone();
+            let missing = open.take_messages(&fresh);
+            (missing, open.messages != before)
+        });
+        if missing.is_empty() && changed {
+            self.draw();
+        }
+        missing
     }
 
     fn replace_messages(&self, fresh: Vec<MessageMeta>) -> bool {
@@ -595,12 +621,14 @@ impl Effects for FakeWindow {
         self.change(Step::BodiesArrived, |open| {
             open.take_bodies(fetched.bodies, fetched.images)
         });
+        self.draw();
     }
 
     fn thumbnails_arrived(&self, found: HashMap<String, String>) {
         self.change(Step::ThumbnailsArrived, |open| {
             open.thumbnails.extend(found)
         });
+        self.draw();
     }
 
     fn render_buttons(&self) {
@@ -653,6 +681,7 @@ impl Effects for FakeWindow {
             open.translations.insert(message_id, translation);
         });
         self.with(|screen| screen.cards.push(card));
+        self.draw();
     }
 
     fn turn_translation(&self, message_id: &str) -> bool {
@@ -661,13 +690,16 @@ impl Effects for FakeWindow {
             return false;
         };
         self.with(|screen| screen.cards.push(Card::Done { from, cut, shown }));
+        self.draw();
         true
     }
 
     fn engine_answered(&self, message_id: String, read: Read) -> bool {
-        self.change(Step::EngineAnswered, |open| {
+        let opened = self.change(Step::EngineAnswered, |open| {
             open.take_engine_answer(message_id, read)
-        })
+        });
+        self.draw();
+        opened
     }
 
     fn set_flag_color(&self, color: Option<FlagColor>) {
