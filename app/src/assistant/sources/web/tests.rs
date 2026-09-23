@@ -159,7 +159,7 @@ async fn a_page_becomes_labelled_text_without_its_scripts() {
     assert!(text.contains("Title: Ferry & times\n"), "{text}");
     assert!(text.contains(&format!("Address: {url}\n")), "{text}");
     assert!(
-        text.contains("Timetable\nBoats leave every 20 minutes."),
+        text.contains("Timetable\n\nBoats leave every 20 minutes."),
         "{text}"
     );
     assert!(!text.contains("steal"), "{text}");

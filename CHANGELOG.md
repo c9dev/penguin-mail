@@ -18,6 +18,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Quoting, forwarding or reopening HTML mail with a ">" inside a tag's
+  attribute, such as a link's title, no longer spills the rest of that
+  tag into the text, and paragraphs quote with a blank line between them.
 - Choosing another From address swaps the signature and nothing else: the
   cursor stays where you were typing, and Undo still reaches what you
   wrote before.

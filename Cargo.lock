@@ -2065,6 +2065,7 @@ version = "0.1.7"
 dependencies = [
  "base64 0.23.1",
  "encoding_rs",
+ "html5ever",
  "keyring",
  "mailrs-domain",
  "rand",

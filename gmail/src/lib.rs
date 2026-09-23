@@ -6,6 +6,7 @@ pub mod calendar;
 mod client;
 pub mod convert;
 mod error;
+pub mod html;
 pub mod limiter;
 pub mod model;
 mod oauth;
@@ -19,8 +20,9 @@ pub use calendar::{
 pub use client::{
     Authorized, BATCH_LIMIT, GMAIL_API_BASE, GmailClient, authorize, cost, one_click_unsubscribe,
 };
-pub use convert::{HistoryChange, HistoryPage, html_to_text};
+pub use convert::{HistoryChange, HistoryPage};
 pub use error::GmailError;
+pub use html::html_to_text;
 pub use limiter::{AccountQuota, Priority, QuotaLimiter, QuotaPool, Waiting};
 pub use model::{
     Draft, LabelColor, MessagePage, MessageRef, Profile, RemoteLabel, SendAs, is_reserved_label_name,

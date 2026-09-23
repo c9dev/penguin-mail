@@ -15,7 +15,6 @@ use mail_builder::headers::raw::Raw;
 use mail_builder::mime::MimePart;
 use mailrs_domain::{AccountId, Address, EpochMillis, MessageBody, MessageMeta};
 use mailrs_gmail::address::parse_address_list_keeping_invalid;
-use mailrs_gmail::convert::unescape_snippet;
 use pulldown_cmark::{Event, Options, Parser, html};
 use serde::{Deserialize, Serialize};
 
@@ -264,15 +263,83 @@ impl Forwarded {
 /// Splits a saved draft's HTML at the forwarded message, if it holds one.
 /// Returns what the writer wrote and the forwarded block as it stands.
 fn split_forwarded_html(html: &str) -> (String, Option<String>) {
-    let mark = format!("class=\"{FORWARD_MARK}\"");
-    let Some(at) = html.find(&mark) else {
-        return (html.to_string(), None);
-    };
-    // Back up to the `<div` the attribute belongs to.
-    let Some(open) = html[..at].rfind('<') else {
-        return (html.to_string(), None);
-    };
-    (html[..open].to_string(), Some(html[open..].to_string()))
+    match forward_starts_at(html) {
+        Some(at) => (html[..at].to_string(), Some(html[at..].to_string())),
+        None => (html.to_string(), None),
+    }
+}
+
+/// Where the tag that opens the forwarded block starts: the first start
+/// tag whose class names [`FORWARD_MARK`].
+///
+/// The forwarded block has to come back byte for byte, so this needs the
+/// offset in `html`, which the tokenizer does not give. It reads the tags
+/// itself, stepping over quoted attribute values, comments and the text
+/// of scripts and styles, so a `<` or `>` inside any of them cannot move
+/// the cut, and the marker's name in the text is not taken for the tag.
+fn forward_starts_at(html: &str) -> Option<usize> {
+    let mut at = 0;
+    while let Some(offset) = html[at..].find('<') {
+        let start = at + offset;
+        let rest = &html[start..];
+        if let Some(comment) = rest.strip_prefix("<!--") {
+            at = start + 4 + comment.find("-->").map_or(comment.len(), |end| end + 3);
+            continue;
+        }
+        if !rest[1..].starts_with(|c: char| c.is_ascii_alphabetic()) {
+            at = start + 1;
+            continue;
+        }
+        let end = start + tag_length(rest);
+        let tag = &html[start..end];
+        let name: String = tag[1..]
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric())
+            .collect::<String>()
+            .to_ascii_lowercase();
+        if tag.contains(FORWARD_MARK) && has_class(tag, FORWARD_MARK) {
+            return Some(start);
+        }
+        at = end;
+        // A script's or a style's text is not markup.
+        if matches!(name.as_str(), "script" | "style") {
+            let close = format!("</{name}");
+            at = html[at..]
+                .to_ascii_lowercase()
+                .find(&close)
+                .map_or(html.len(), |found| at + found);
+        }
+    }
+    None
+}
+
+/// How long the tag at the start of `rest` is, up to and including the
+/// `>` that closes it outside any quotes.
+fn tag_length(rest: &str) -> usize {
+    let mut quote: Option<char> = None;
+    for (index, character) in rest.char_indices().skip(1) {
+        match (quote, character) {
+            (Some(open), c) if c == open => quote = None,
+            (Some(_), _) => {}
+            (None, '"' | '\'') => quote = Some(character),
+            (None, '>') => return index + 1,
+            (None, _) => {}
+        }
+    }
+    rest.len()
+}
+
+/// Whether the one tag in `tag` has `class` among its classes.
+fn has_class(tag: &str, class: &str) -> bool {
+    let mut found = false;
+    mailrs_gmail::html::walk(tag, |piece| {
+        if let mailrs_gmail::html::Piece::Tag(tag) = piece
+            && let Some(classes) = tag.attribute("class")
+        {
+            found |= classes.split_whitespace().any(|c| c == class);
+        }
+    });
+    found
 }
 
 /// The same for the text part, which marks the forward with the line
@@ -301,16 +368,28 @@ fn header_of(text: &str, name: &str) -> String {
         .to_string()
 }
 
-/// Whether `html` points at the inline image `cid`. The whole id has to
+/// Whether `html` points at the inline image `cid` from one of its tags,
+/// such as an image's `src` or a cell's `background`. The whole id has to
 /// match, because `cid:logo` and `cid:logo2` name two different images.
+/// Text that mentions the id, and a comment, point at nothing.
 pub fn refers_to_cid(html: &str, cid: &str) -> bool {
     let needle = format!("cid:{cid}");
-    html.match_indices(&needle).any(|(at, _)| {
-        html[at + needle.len()..]
-            .chars()
-            .next()
-            .is_none_or(|c| !c.is_ascii_alphanumeric() && !matches!(c, '-' | '_' | '.' | '@' | '+'))
-    })
+    let names = |value: &str| {
+        value.match_indices(&needle).any(|(at, _)| {
+            value[at + needle.len()..].chars().next().is_none_or(|c| {
+                !c.is_ascii_alphanumeric() && !matches!(c, '-' | '_' | '.' | '@' | '+')
+            })
+        })
+    };
+    let mut found = false;
+    mailrs_gmail::html::walk(html, |piece| {
+        if let mailrs_gmail::html::Piece::Tag(tag) = piece
+            && !found
+        {
+            found = tag.values().any(names);
+        }
+    });
+    found
 }
 
 /// A file of the message a forward carries, with the bytes fetched for it.
@@ -915,78 +994,9 @@ pub fn body_text(body: &MessageBody) -> String {
     }
 }
 
-/// Rough HTML to text: drops styles, scripts, and the head, turns block
-/// ends into line breaks, and strips the remaining tags.
-pub fn html_to_text(html: &str) -> String {
-    const BLOCKS: [&str; 13] = [
-        "p",
-        "div",
-        "tr",
-        "li",
-        "h1",
-        "h2",
-        "h3",
-        "h4",
-        "h5",
-        "h6",
-        "blockquote",
-        "table",
-        "ul",
-    ];
-    // ASCII lowercasing keeps byte offsets, so indexes into `lower` fit `html`.
-    let lower = html.to_ascii_lowercase();
-    let mut text = String::with_capacity(html.len() / 2);
-    let mut i = 0;
-    while i < html.len() {
-        let Some(offset) = html[i..].find('<') else {
-            text.push_str(&html[i..]);
-            break;
-        };
-        text.push_str(&html[i..i + offset]);
-        let start = i + offset;
-        let end = html[start..]
-            .find('>')
-            .map_or(html.len(), |e| start + e + 1);
-        let closing = lower[start..].starts_with("</");
-        let name: String = lower[start + 1..end]
-            .trim_start_matches('/')
-            .chars()
-            .take_while(char::is_ascii_alphanumeric)
-            .collect();
-        if !closing && matches!(name.as_str(), "style" | "script" | "head" | "title") {
-            let close = lower[end..]
-                .find(&format!("</{name}"))
-                .map_or(html.len(), |c| end + c);
-            i = html[close..]
-                .find('>')
-                .map_or(html.len(), |e| close + e + 1);
-            continue;
-        }
-        if name == "br" || (closing && BLOCKS.contains(&name.as_str())) {
-            text.push('\n');
-        }
-        i = end;
-    }
-    let decoded = unescape_snippet(&text);
-    let mut out = String::new();
-    let mut blank = 0;
-    for line in decoded
-        .lines()
-        .map(|l| l.split_whitespace().collect::<Vec<_>>().join(" "))
-    {
-        if line.is_empty() {
-            blank += 1;
-            if blank > 1 || out.is_empty() {
-                continue;
-            }
-        } else {
-            blank = 0;
-        }
-        out.push_str(&line);
-        out.push('\n');
-    }
-    out.trim_end().to_string()
-}
+/// HTML as the plain text a reader takes in. The gmail crate holds the
+/// one implementation, which the signatures and automatic replies use too.
+pub use mailrs_gmail::html_to_text;
 
 /// Markdown to email HTML. A single line break stays a line break, as it
 /// would in any other mail client, and styles are inline because many mail
@@ -1928,12 +1938,47 @@ mod tests {
     }
 
     #[test]
+    fn a_greater_than_sign_in_an_attribute_stays_out_of_the_quote() {
+        let text = html_to_text(r#"<p title="a > b">Hello</p><p>there</p>"#);
+        assert_eq!(text, "Hello\n\nthere");
+    }
+
+    #[test]
+    fn a_forward_is_found_by_its_tag_not_by_a_stray_angle_bracket() {
+        let mine = r#"<p title="x<y">Mine</p>"#;
+        let theirs = r#"<div title="a > b" class="mailrs-forwarded"><p>Theirs</p></div>"#;
+        let (written, forwarded) = split_forwarded_html(&format!("{mine}{theirs}"));
+        assert_eq!(written, mine);
+        assert_eq!(forwarded.as_deref(), Some(theirs));
+        // The marker's name said in the text, or in a comment, is no forward.
+        for html in [
+            r#"<p>class="mailrs-forwarded"</p>"#,
+            r#"<!-- <div class="mailrs-forwarded"> --><p>hi</p>"#,
+        ] {
+            assert_eq!(
+                split_forwarded_html(html),
+                (html.to_string(), None),
+                "{html}"
+            );
+        }
+    }
+
+    #[test]
+    fn only_a_tag_refers_to_an_inline_image() {
+        assert!(refers_to_cid(r#"<img alt="a > b" src="cid:logo">"#, "logo"));
+        assert!(!refers_to_cid(r#"<img src="cid:logo2">"#, "logo"));
+        // Words about the image, and markup nobody will render, are not it.
+        assert!(!refers_to_cid("<p>see cid:logo above</p>", "logo"));
+        assert!(!refers_to_cid(r#"<!-- <img src="cid:logo"> -->"#, "logo"));
+    }
+
+    #[test]
     fn html_bodies_become_readable_text() {
         let text = html_to_text(
             "<html><head><style>p{color:red}</style></head><body><p>Hello&nbsp;there</p><div>Line <b>two</b><br>three</div>\
              <script>x()</script><p></p><p>&amp; four</p></body></html>",
         );
-        assert_eq!(text, "Hello there\nLine two\nthree\n\n& four");
+        assert_eq!(text, "Hello there\n\nLine two\nthree\n\n& four");
     }
 
     #[test]
