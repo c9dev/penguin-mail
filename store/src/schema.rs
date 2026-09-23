@@ -351,13 +351,26 @@ CREATE INDEX IF NOT EXISTS bodies_by_account_access ON bodies(account_id, access
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,
-/// and applies pending migrations.
+/// applies pending migrations, and brings the planner's statistics up to
+/// date.
 pub fn open_connection(path: &Path) -> Result<Connection> {
     let mut conn = Connection::open(path)?;
     configure(&conn)?;
     conn.pragma_update_and_check(None, "journal_mode", "WAL", |row| row.get::<_, String>(0))?;
     migrate(&mut conn)?;
+    // 0x10000 looks at every table rather than the ones this connection
+    // has queried, which on opening is none; 0x02 analyzes the ones whose
+    // statistics are missing or stale. SQLite caps each analysis, so this
+    // costs milliseconds and does nothing once the statistics are current.
+    conn.execute_batch("PRAGMA optimize=0x10002")?;
     Ok(conn)
+}
+
+/// Refreshes the planner's statistics for the tables this connection has
+/// used, when their row counts have moved far enough to matter.
+pub(crate) fn optimize(conn: &Connection) -> Result<()> {
+    conn.execute_batch("PRAGMA optimize")?;
+    Ok(())
 }
 
 /// A migrated in-memory database, for tests.
@@ -372,11 +385,18 @@ pub fn schema_version(conn: &Connection) -> Result<i64> {
     Ok(conn.pragma_query_value(None, "user_version", |row| row.get(0))?)
 }
 
+/// The size in bytes the write-ahead log is cut back to after a checkpoint.
+const JOURNAL_SIZE_LIMIT: i64 = 16 << 20;
+
 pub(crate) fn configure(conn: &Connection) -> Result<()> {
     conn.busy_timeout(Duration::from_secs(5))?;
     conn.pragma_update(None, "foreign_keys", true)?;
     // 1 is NORMAL: with WAL, a crash can lose the last commit but never corrupts.
     conn.pragma_update(None, "synchronous", 1)?;
+    // A bootstrap can grow the write-ahead log by hundreds of megabytes,
+    // and SQLite keeps the file at its largest size unless told a limit
+    // to cut it back to after a checkpoint.
+    conn.pragma_update(None, "journal_size_limit", JOURNAL_SIZE_LIMIT)?;
     Ok(())
 }
 

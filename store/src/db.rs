@@ -7,10 +7,14 @@ use std::sync::{Arc, Condvar, Mutex, mpsc};
 
 use rusqlite::Connection;
 
-use crate::schema::{configure, open_connection};
+use crate::schema::{configure, open_connection, optimize};
 use crate::{Result, StoreError};
 
 type Job = Box<dyn FnOnce(&mut Connection) + Send>;
+
+/// Rows the writer changes between refreshes of the planner's statistics.
+/// A bootstrap passes it many times over; a day of history replay may not.
+const OPTIMIZE_AFTER: u64 = 10_000;
 
 /// Read connections open at once. A read that finds them all busy waits
 /// for one, on its blocking thread, rather than opening another: a burst
@@ -46,12 +50,21 @@ impl Db {
         std::thread::Builder::new()
             .name("mailrs-db-writer".into())
             .spawn(move || {
+                let mut analyzed_at = writer.total_changes();
                 for job in jobs {
                     job(&mut writer);
+                    // Statistics taken while a table was empty would steer
+                    // the planner long after a bootstrap filled it.
+                    if writer.total_changes() - analyzed_at >= OPTIMIZE_AFTER {
+                        analyzed_at = writer.total_changes();
+                        // A failed refresh keeps the old statistics, which
+                        // costs speed and nothing else.
+                        let _ = optimize(&writer);
+                    }
                 }
                 // Records table statistics for what this session queried, so
                 // the next run plans those queries from real row counts.
-                let _ = writer.execute_batch("PRAGMA optimize");
+                let _ = optimize(&writer);
             })
             .map_err(|_| StoreError::Closed)?;
         Ok(Db {

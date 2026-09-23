@@ -1,4 +1,7 @@
-use mailrs_store::{Db, StoreError, accounts};
+mod common;
+
+use common::{meta, store};
+use mailrs_store::{Db, StoreError, accounts, open_connection};
 
 fn open() -> (Db, tempfile::TempDir) {
     let dir = tempfile::tempdir().unwrap();
@@ -119,4 +122,76 @@ async fn a_panicking_read_leaves_the_pool_whole() {
         assert!(matches!(failed, Err(StoreError::Closed)));
     }
     assert!(db.read(accounts::list_accounts).await.unwrap().is_empty());
+}
+
+/// Which tables SQLite holds statistics for, so it plans from real row
+/// counts instead of guesses.
+fn analyzed(conn: &rusqlite::Connection) -> Vec<String> {
+    conn.prepare("SELECT DISTINCT tbl FROM sqlite_stat1 ORDER BY tbl")
+        .and_then(|mut stmt| {
+            stmt.query_map([], |row| row.get(0))?
+                .collect::<rusqlite::Result<Vec<String>>>()
+        })
+        .unwrap_or_default()
+}
+
+fn some_mail(conn: &rusqlite::Connection, account: i64, count: usize) {
+    let mail: Vec<_> = (0..count)
+        .map(|n| {
+            meta(
+                account,
+                &format!("m{n}"),
+                &format!("t{}", n / 2),
+                n as i64,
+                &["INBOX"],
+            )
+        })
+        .collect();
+    store(conn, &mail);
+}
+
+#[test]
+fn a_store_opened_again_has_statistics_to_plan_with() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_connection(&path).unwrap();
+    let id = accounts::insert_account(&conn, "me@example.com", 0).unwrap();
+    some_mail(&conn, id, 200);
+    drop(conn);
+    let conn = open_connection(&path).unwrap();
+    let tables = analyzed(&conn);
+    assert!(tables.contains(&"messages".to_string()), "{tables:?}");
+    assert!(tables.contains(&"thread_labels".to_string()), "{tables:?}");
+}
+
+#[test]
+fn the_write_ahead_log_shrinks_back_after_a_checkpoint() {
+    let dir = tempfile::tempdir().unwrap();
+    let conn = open_connection(&dir.path().join("mail.db")).unwrap();
+    let limit: i64 = conn
+        .pragma_query_value(None, "journal_size_limit", |row| row.get(0))
+        .unwrap();
+    assert!((1..=64 << 20).contains(&limit), "{limit}");
+}
+
+/// A bootstrap writes thousands of rows into a store that had none, and
+/// the plans made from the empty tables' statistics would be wrong.
+#[tokio::test]
+async fn a_large_write_leaves_statistics_behind() {
+    let (db, _dir) = open();
+    let id = db
+        .write(|c| accounts::insert_account(c, "me@example.com", 0))
+        .await
+        .unwrap();
+    db.write(move |c| {
+        some_mail(c, id, 3000);
+        Ok(())
+    })
+    .await
+    .unwrap();
+    // The writer takes jobs in order, so once this one returns it has
+    // finished whatever followed the last.
+    db.write(|_| Ok(())).await.unwrap();
+    let tables = db.read(|c| Ok(analyzed(c))).await.unwrap();
+    assert!(tables.contains(&"messages".to_string()), "{tables:?}");
 }
