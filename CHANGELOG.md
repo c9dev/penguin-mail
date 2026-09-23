@@ -48,9 +48,19 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Opening a signed conversation again shows its card at once, without
   fetching the message from Gmail or starting gpg, until your keyring
   changes.
+- The window keeps responding while Save to Downloads or Save All writes
+  a large file from an encrypted message or a preview.
 
 ### Fixed
 
+- Scrolling down a long mailbox while mail arrives or leaves shows each
+  conversation once. The next page could repeat a conversation or skip
+  one.
+- Penguin Mail and `penguin-mail-cli sync` take turns on your mail. The
+  one you start second stops and says why, where both used to sync the
+  same store at once.
+- Signing an account in again fetches the addresses it can send from. An
+  alias added in Gmail used to take up to a day to reach the From menu.
 - Installed from the tarball into a folder with a space in its path,
   Penguin Mail starts from the app grid and at login, where the launcher
   used to run nothing.

@@ -8,9 +8,9 @@ use adw::prelude::*;
 use gtk::glib;
 use mailrs_domain::{Account, AccountId};
 use mailrs_sync::Permitted;
+use mailrs_sync::hidden::HiddenAddress;
 
 use crate::app::App;
-use crate::hide_my_email::HiddenAddress;
 use crate::permission::Permission;
 use crate::ui::confirm::{Tone, confirm};
 use crate::ui::permission;

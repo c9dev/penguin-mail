@@ -3,7 +3,7 @@
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
-use mailrs_domain::MessageBody;
+use mailrs_domain::{MessageBody, MessageMeta};
 use mailrs_store::{accounts, bodies, messages};
 
 use super::AccountSync;
@@ -21,6 +21,16 @@ enum Written {
     },
     /// A history replay moved the cursor while Gmail answered.
     Overtaken,
+}
+
+/// Whether writing Gmail's `meta` over the `stored` copy changes what the
+/// store reads back. The store keeps each label once and in order, so a
+/// new order from Gmail is no change and the thread is not announced for it.
+fn differs(stored: &MessageMeta, meta: &MessageMeta) -> bool {
+    let mut written = meta.clone();
+    written.label_ids.sort();
+    written.label_ids.dedup();
+    *stored != written
 }
 
 impl<G: GmailApi> AccountSync<G> {
@@ -99,15 +109,17 @@ impl<G: GmailApi> AccountSync<G> {
                 let before = messages::thread_messages(c, account_id, &thread)?;
                 match found {
                     Some(metas) => {
+                        let mut changed = false;
                         for meta in &metas {
-                            if overtaken && before.iter().any(|m| m.id == meta.id) {
+                            let stored = before.iter().find(|m| m.id == meta.id);
+                            if overtaken && stored.is_some() {
                                 continue;
                             }
+                            changed |= stored.is_none_or(|stored| differs(stored, meta));
                             messages::upsert_message(c, meta, cursor.sync_gen)?;
                         }
                         messages::refresh_thread(c, account_id, &thread)?;
                         messages::mark_whole(c, account_id, &thread)?;
-                        let changed = messages::thread_messages(c, account_id, &thread)? != before;
                         Ok(Written::Stored { changed })
                     }
                     // History deletes what Gmail deleted before the cursor,

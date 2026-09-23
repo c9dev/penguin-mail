@@ -12,8 +12,8 @@ use mailrs_store::{Db, accounts};
 use super::{Connected, harness};
 use crate::fake::{FakeGmail, Usage, meta};
 use crate::{
-    AccountSync, History, MailAction, MailActions, Mailbox, Mailboxes, Scope, TriageAction, View,
-    now_millis,
+    AccountSync, History, Loaded, MailAction, MailActions, Mailbox, Mailboxes, Scope, TriageAction,
+    View, now_millis,
 };
 
 /// One connected account: its Gmail, its sync loop, and its id.
@@ -254,7 +254,7 @@ async fn opening_junk_pays_for_the_rows_it_shows() {
     };
 
     let listing = lists
-        .list(&folder, &scope(&all), &View::default(), 0)
+        .list(&folder, &scope(&all), &View::default(), Loaded::nothing())
         .await
         .unwrap();
 
@@ -281,14 +281,20 @@ async fn opening_junk_again_asks_gmail_nothing() {
         folder: Folder::Junk,
     };
     let (scope, view) = (scope(&all), View::default());
-    lists.list(&folder, &scope, &view, 0).await.unwrap();
+    lists
+        .list(&folder, &scope, &view, Loaded::nothing())
+        .await
+        .unwrap();
     let first = total(&all);
     report("open Junk, 100 messages, 6 accounts", &first);
     assert_eq!(first.units, 6 * (5 + 25 * 5));
     reset(&all);
 
     // The reload every change event used to trigger.
-    lists.list(&folder, &scope, &view, 0).await.unwrap();
+    lists
+        .list(&folder, &scope, &view, Loaded::nothing())
+        .await
+        .unwrap();
 
     let again = total(&all);
     report("open Junk again within the minute", &again);
@@ -307,10 +313,24 @@ async fn scrolling_junk_pays_only_for_the_next_rows() {
         folder: Folder::Junk,
     };
     let (scope, view) = (scope(&all), View::default());
-    lists.list(&folder, &scope, &view, 0).await.unwrap();
+    lists
+        .list(&folder, &scope, &view, Loaded::nothing())
+        .await
+        .unwrap();
     reset(&all);
 
-    let more = lists.list(&folder, &scope, &view, 25).await.unwrap();
+    let more = lists
+        .list(
+            &folder,
+            &scope,
+            &view,
+            Loaded {
+                count: 25,
+                last: None,
+            },
+        )
+        .await
+        .unwrap();
 
     assert_eq!(
         more.rows.len(),
@@ -469,7 +489,7 @@ async fn deleting_two_hundred_conversations_forever_takes_one_call() {
     };
     // The reader has the Trash open, which listed every row.
     lists_over(&all, &h.db)
-        .list(&trash, &scope(&all), &view, 0)
+        .list(&trash, &scope(&all), &view, Loaded::nothing())
         .await
         .unwrap();
     reset(&all);

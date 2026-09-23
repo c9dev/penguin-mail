@@ -119,6 +119,12 @@ pub enum Change {
         /// When Gmail answered, in milliseconds since the epoch.
         at: i64,
     },
+    /// An account the app already had signed in to Google again. Its
+    /// send-as addresses are asked for at once rather than at the next
+    /// daily check, and the old list stays until Gmail answers.
+    SignedInAgain {
+        account: String,
+    },
     /// The send-as address an account just sent from.
     LastSender {
         account: String,
@@ -321,6 +327,9 @@ impl Change {
                 let key = account.to_lowercase();
                 settings.send_as_checked.insert(key.clone(), at);
                 settings.send_as.insert(key, addresses);
+            }
+            Change::SignedInAgain { account } => {
+                settings.send_as_checked.remove(&account.to_lowercase());
             }
             Change::LastSender { account, email } => {
                 settings.last_sender.insert(account.to_lowercase(), email);

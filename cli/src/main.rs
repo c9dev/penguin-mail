@@ -2,7 +2,7 @@
 //! and inspect the local store.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command as Process, Stdio};
 use std::sync::Arc;
 use std::time::Duration;
@@ -20,6 +20,7 @@ use mailrs_sync::{
 };
 
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs, secure_dirs};
+use mailrs_sync::lock::{LockError, SyncLock};
 use mailrs_sync::sign_in::{account_client, signed_in};
 
 /// How long `account add` waits for the browser.
@@ -106,7 +107,7 @@ async fn main() -> Result<()> {
         Command::Account(AccountCommand::Add) => add_account(&db).await,
         Command::Account(AccountCommand::List) => list_accounts(&db).await,
         Command::Account(AccountCommand::Remove { email }) => remove_account(&db, &email).await,
-        Command::Sync => run_sync(&db, &load_config()?).await,
+        Command::Sync => run_sync(&db, &dir, &load_config()?).await,
         Command::Threads {
             account,
             label,
@@ -228,7 +229,18 @@ async fn remove_account(db: &Db, email: &str) -> Result<()> {
     Ok(())
 }
 
-async fn run_sync(db: &Db, config: &Config) -> Result<()> {
+async fn run_sync(db: &Db, dir: &Path, config: &Config) -> Result<()> {
+    // Held until the command ends, so the app cannot sync the same store
+    // underneath this one.
+    let _lock = match SyncLock::take(dir) {
+        Ok(lock) => lock,
+        Err(LockError::Held) => bail!(
+            "Penguin Mail is already syncing the mail in {}; quit the app or the other \
+             `penguin-mail-cli sync` first",
+            dir.display()
+        ),
+        Err(err) => return Err(err.into()),
+    };
     let all = db.read(accounts::list_accounts).await?;
     if all.is_empty() {
         bail!("no accounts; run `penguin-mail-cli account add` first");

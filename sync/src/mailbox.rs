@@ -4,6 +4,7 @@
 //! from a Gmail search, that categories narrow an inbox, and how Follow Up,
 //! Remind Me, Send Later, and the Outbox build their rows.
 
+use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -338,6 +339,34 @@ pub struct Listing {
     pub notices: Vec<String>,
 }
 
+/// The rows of a mailbox a caller already holds, so that a listing answers
+/// with the page after them.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Loaded {
+    /// How many rows. A Gmail search and the short lists of Send Later,
+    /// the Outbox, Remind Me and Follow Up skip this many.
+    pub count: usize,
+    /// The last row. A stored mailbox starts its page after this row
+    /// rather than after `count` rows, so mail that arrives or leaves
+    /// while the reader scrolls neither shows a row twice nor skips one.
+    pub last: Option<ThreadSummary>,
+}
+
+impl Loaded {
+    /// No rows yet: the listing answers with the first page.
+    pub fn nothing() -> Loaded {
+        Loaded::default()
+    }
+
+    /// The rows a list shows, in the order the mailbox gave them.
+    pub fn rows<R: Borrow<ThreadSummary>>(rows: &[R]) -> Loaded {
+        Loaded {
+            count: rows.len(),
+            last: rows.last().map(|row| row.borrow().clone()),
+        }
+    }
+}
+
 /// The rows a change event touched, ready to splice into a list.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Changed {
@@ -427,15 +456,15 @@ impl<A: Accounts> Mailboxes<A> {
         *self.remote.lock().expect("remote listing poisoned") = None;
     }
 
-    /// One page of `mailbox`, skipping the `from` rows the caller holds.
-    /// Mailboxes that come from a Gmail search answer the first page only.
+    /// The page of `mailbox` that follows the rows the caller holds.
     pub async fn list(
         &self,
         mailbox: &Mailbox,
         scope: &Scope,
         view: &View,
-        from: usize,
+        held: Loaded,
     ) -> Result<Listing, SyncError> {
+        let from = held.count;
         let base = Listing {
             title: mailbox.title(),
             empty: mailbox.empty(),
@@ -480,7 +509,7 @@ impl<A: Accounts> Mailboxes<A> {
             Mailbox::Outbox => self.outbox(view, base, from).await,
             Mailbox::Reminders => self.reminders(view, base, from).await,
             Mailbox::FollowUp => self.follow_ups(view, base, from).await,
-            _ => self.stored(mailbox, view, base, from).await,
+            _ => self.stored(mailbox, view, base, held.last).await,
         }
     }
 
@@ -639,32 +668,35 @@ impl<A: Accounts> Mailboxes<A> {
         }
     }
 
+    /// A mailbox the store holds, from the row after `last`, or from the
+    /// top when there is none. The page is read from where `last` sits in
+    /// the order, so a deep page costs what the first one does.
     async fn stored(
         &self,
         mailbox: &Mailbox,
         view: &View,
         base: Listing,
-        from: usize,
+        last: Option<ThreadSummary>,
     ) -> Result<Listing, SyncError> {
         let Some(filter) = self.filter_of(mailbox, view) else {
             return Ok(base);
         };
         let limit = view.limit.unwrap_or(PAGE);
-        let (threading, offset) = (view.threading, from as i64);
+        let (threading, first) = (view.threading, last.is_none());
         // One row past the page says whether another page follows.
         let asked = limit as i64 + 1;
         let (mut rows, unread) = self
             .db
             .read(move |c| {
                 let rows = if threading {
-                    threads::list_threads(c, &filter, offset, asked)?
+                    threads::list_threads_after(c, &filter, last.as_ref(), asked)?
                 } else {
-                    threads::list_messages(c, &filter, offset, asked)?
+                    threads::list_messages_after(c, &filter, last.as_ref(), asked)?
                 };
-                let unread = match (offset, threading) {
-                    (0, true) => threads::unread_threads(c, &filter)?,
-                    (0, false) => threads::unread_messages(c, &filter)?,
-                    _ => 0,
+                let unread = match (first, threading) {
+                    (true, true) => threads::unread_threads(c, &filter)?,
+                    (true, false) => threads::unread_messages(c, &filter)?,
+                    (false, _) => 0,
                 };
                 Ok((rows, unread))
             })
@@ -674,7 +706,7 @@ impl<A: Accounts> Mailboxes<A> {
         Ok(Listing {
             rows,
             unread,
-            subtitle: if from == 0 {
+            subtitle: if first {
                 unread_subtitle(unread)
             } else {
                 String::new()

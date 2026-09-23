@@ -13,6 +13,7 @@ mod error;
 pub mod export;
 pub mod hidden;
 pub mod invitations;
+pub mod lock;
 pub mod mailbox;
 pub mod newsletters;
 pub mod outbox;
@@ -54,8 +55,8 @@ pub use error::SyncError;
 pub use hidden::HiddenAddress;
 pub use invitations::{Change, Invitations, Opened, Sent, Told};
 pub use mailbox::{
-    Changed, Counts, Empty, Listing, Mailbox, Mailboxes, PAGE, Scope, View, outbox_id, outbox_row,
-    summarize_search, waiting_line,
+    Changed, Counts, Empty, Listing, Loaded, Mailbox, Mailboxes, PAGE, Scope, View, outbox_id,
+    outbox_row, summarize_search, waiting_line,
 };
 pub use newsletters::Newsletters;
 pub use outbox::{Cancelled, Drained, Outbox, Posted};

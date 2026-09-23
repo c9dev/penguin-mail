@@ -12,7 +12,6 @@ mod diff;
 mod exe;
 mod format;
 mod goa;
-mod hide_my_email;
 mod images;
 mod language;
 mod logging;

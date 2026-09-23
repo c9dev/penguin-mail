@@ -66,7 +66,7 @@ pub struct Settings {
     /// `claude-code/pdf`. A skill with no entry is off.
     pub assistant_skills: BTreeMap<String, SkillSettings>,
     /// Plus addresses made with Hide My Email, oldest first.
-    pub hidden_addresses: Vec<crate::hide_my_email::HiddenAddress>,
+    pub hidden_addresses: Vec<mailrs_sync::hidden::HiddenAddress>,
     /// Split inboxes into Primary, Updates, Promotions, and Social, from
     /// Gmail's category labels.
     pub inbox_categories: bool,
@@ -1065,6 +1065,34 @@ mod tests {
     }
 
     #[test]
+    fn signing_in_again_asks_for_send_as_at_once_and_keeps_the_old_list_meanwhile() {
+        let mut settings = Settings::default();
+        let now = 100 * DAY_MILLIS;
+        Change::SendAsAddresses {
+            account: "me@example.com".into(),
+            addresses: vec![crate::compose::SendAsAddress {
+                email: "me@example.com".into(),
+                name: Some("Dana Reis".into()),
+                default: true,
+                ..Default::default()
+            }],
+            at: now - 60_000,
+        }
+        .apply_to(&mut settings);
+        assert!(!settings.send_as_due("me@example.com", now));
+        Change::SignedInAgain {
+            account: "Me@Example.com".into(),
+        }
+        .apply_to(&mut settings);
+        assert!(settings.send_as_due("me@example.com", now));
+        // Composers open on the old addresses until Gmail answers.
+        assert_eq!(
+            settings.display_name("me@example.com").as_deref(),
+            Some("Dana Reis")
+        );
+    }
+
+    #[test]
     fn a_broken_file_is_ignored() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("settings.toml");
@@ -1135,7 +1163,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("settings.toml");
         let settings = Settings {
-            hidden_addresses: vec![crate::hide_my_email::HiddenAddress {
+            hidden_addresses: vec![mailrs_sync::hidden::HiddenAddress {
                 account: "dana@gmail.com".into(),
                 address: "dana+kite.fern482@gmail.com".into(),
                 note: "Bike shop".into(),

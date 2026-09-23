@@ -19,6 +19,7 @@ use mailrs_pgp::{Pgp, PgpError};
 use mailrs_smime::{Smime, SmimeError};
 use mailrs_store::{Db, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
+use mailrs_sync::lock::{LockError, SyncLock};
 use mailrs_sync::sign_in::{account_client, signed_in};
 use mailrs_sync::{
     AccountSettings, AccountSync, Accounts, AnyGmail, ContactBook, Failure, History, Invitations,
@@ -109,6 +110,11 @@ pub struct Core {
     events_tx: async_channel::Sender<ChangeEvent>,
     pub events: async_channel::Receiver<ChangeEvent>,
     in_flight: Arc<AtomicUsize>,
+    /// Keeps `penguin-mail-cli sync` off this store while the app runs.
+    /// Changing the sync settings restarts the engine in this process, so
+    /// the lock stays with the core rather than with one engine.
+    /// The demo takes none.
+    _sync_lock: Option<SyncLock>,
 }
 
 /// Counts a user operation until its task finishes, even if nobody awaits it.
@@ -145,6 +151,16 @@ impl Core {
         };
         std::fs::create_dir_all(&dir)
             .with_context(|| format!("could not create {}", dir.display()))?;
+        // The demo's store is its own and new each run, so nothing else
+        // could be syncing it.
+        let sync_lock = match (!demo).then(|| SyncLock::take(&dir)).transpose() {
+            Ok(lock) => lock,
+            Err(LockError::Held) => bail!(gettext(
+                "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your \
+                 mail. Stop it, then open Penguin Mail again."
+            )),
+            Err(err) => return Err(err.into()),
+        };
         let db_path: PathBuf = dir.join("mailrs.db");
         if demo {
             let _ = std::fs::remove_file(&db_path);
@@ -202,6 +218,7 @@ impl Core {
             events_tx,
             events,
             in_flight: Arc::new(AtomicUsize::new(0)),
+            _sync_lock: sync_lock,
         });
         core.start_engine();
         Ok(core)
