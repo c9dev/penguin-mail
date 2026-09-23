@@ -63,6 +63,14 @@ impl About {
         version.add_css_class("dim-label");
         version.set_margin_top(6);
         content.append(&version);
+        // A copy that dnf or a store updates has no update button, so it
+        // says who updates it.
+        if let Some(updater) = crate::packaging::BUILT_FOR.updated_by() {
+            let updates = gtk::Label::new(Some(&updater.line()));
+            updates.add_css_class("dim-label");
+            updates.add_css_class("caption");
+            content.append(&updates);
+        }
 
         let comments = gtk::Label::builder()
             .label(gettext(

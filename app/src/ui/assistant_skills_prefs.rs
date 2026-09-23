@@ -22,6 +22,10 @@ pub fn group(app: &Rc<App>) -> adw::PreferencesGroup {
              home folder, and the assistant asks before each command.",
         ))
         .build();
+    if let Some(sandbox) = crate::packaging::BUILT_FOR.sandbox_name() {
+        group.add(&off_row(sandbox));
+        return group;
+    }
     let open = gtk::Button::builder()
         .label(gettext("Open Folder"))
         .valign(gtk::Align::Center)
@@ -56,6 +60,24 @@ pub fn group(app: &Rc<App>) -> adw::PreferencesGroup {
         group.add(&skill_row(app, &skill));
     }
     group
+}
+
+/// Says why a Flatpak or a snap has no skills. `sandbox` is the product
+/// the app runs inside.
+fn off_row(sandbox: &str) -> adw::ActionRow {
+    let row = adw::ActionRow::builder()
+        .title(gettext("Skills Are Off in This Version"))
+        .subtitle(glib::markup_escape_text(&fill(
+            &gettext(
+                "Skill scripts run in a sandbox of their own, which cannot start inside the \
+                 {sandbox} sandbox Penguin Mail runs in. The .deb and the rpm have skills.",
+            ),
+            &[("sandbox", sandbox)],
+        )))
+        .subtitle_lines(4)
+        .build();
+    row.add_prefix(&gtk::Image::from_icon_name("dialog-information-symbolic"));
+    row
 }
 
 /// Where the skill came from, then what it does.

@@ -433,6 +433,10 @@ fn use_skill(skill: &Skill) -> Result<Value, String> {
 /// The skills the settings turn on, and the shell when one of them has
 /// scripts and the sandbox works on this computer.
 pub fn sources(settings: &Settings) -> Vec<Arc<dyn Source>> {
+    // A Flatpak or a snap turns skills off; see `Packaging::runs_skills`.
+    if !crate::packaging::BUILT_FOR.runs_skills() {
+        return Vec::new();
+    }
     let enabled: Vec<Skill> = discover(&roots())
         .into_iter()
         .filter(|skill| settings.skill(&skill.id).enabled)

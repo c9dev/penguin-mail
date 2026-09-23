@@ -1,7 +1,8 @@
 # Every file holding words a person reads. scripts/update-po.sh rebuilds
 # the template from the crate roots and warns when this list has drifted
 # from what it found.
-app/data/dev.penguinmail.PenguinMail.desktop
+app/data/io.github.c9dev.PenguinMail.desktop
+app/data/io.github.c9dev.PenguinMail.metainfo.xml
 app/src/app/sending.rs
 app/src/app/updates.rs
 app/src/assistant/mod.rs
@@ -19,12 +20,14 @@ app/src/assistant/sources/skills/sandbox.rs
 app/src/assistant/sources/skills/shell.rs
 app/src/assistant/sources/web.rs
 app/src/assistant/turn.rs
+app/src/autostart.rs
 app/src/compose.rs
 app/src/core.rs
 app/src/format.rs
 app/src/main.rs
 app/src/notify.rs
 app/src/open_thread/run/translation.rs
+app/src/packaging.rs
 app/src/permission.rs
 app/src/pgp.rs
 app/src/protection.rs

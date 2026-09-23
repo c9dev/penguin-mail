@@ -169,7 +169,7 @@ def app_node():
     desktop = Atspi.get_desktop(0)
     for index in range(desktop.get_child_count()):
         child = desktop.get_child_at_index(index)
-        if child is not None and (child.get_name() or "").startswith("dev.penguinmail"):
+        if child is not None and (child.get_name() or "").startswith("io.github.c9dev"):
             return child
     return None
 

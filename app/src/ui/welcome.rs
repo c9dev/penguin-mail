@@ -73,7 +73,7 @@ pub fn setup_page(on_save: impl Fn(String, String) + 'static) -> gtk::Widget {
     column.append(&save);
     column.append(&help);
     let page = adw::StatusPage::builder()
-        .icon_name("dev.penguinmail.PenguinMail")
+        .icon_name("io.github.c9dev.PenguinMail")
         .title(gettext("Welcome to Penguin Mail"))
         .description(gettext(
             "Penguin Mail reads Gmail through your own Google Cloud OAuth client, so \
@@ -100,7 +100,7 @@ pub fn first_account_page(on_add: impl Fn() + 'static) -> (gtk::Widget, gtk::But
         .build();
     add.connect_clicked(move |_| on_add());
     let page = adw::StatusPage::builder()
-        .icon_name("dev.penguinmail.PenguinMail")
+        .icon_name("io.github.c9dev.PenguinMail")
         .title(gettext("Add Your First Account"))
         .description(gettext(
             "Your browser opens Google's sign-in page. Google warns that it hasn't \

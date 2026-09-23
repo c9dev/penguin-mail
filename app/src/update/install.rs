@@ -6,12 +6,18 @@ use std::process::Stdio;
 use sha2::{Digest, Sha256};
 
 use super::version::{Method, Version};
+use crate::packaging::Packaging;
 
-/// A binary under `/usr` came from the .deb. One inside a cargo `target`
-/// directory is a build tree, which never updates. Anything else was
-/// installed from a tarball or `scripts/install.sh`, into the prefix two
-/// levels above it.
-pub fn method_for(exe: &Path) -> Option<Method> {
+/// How this copy updates itself, or None when it does not. The rpm, a
+/// Flatpak and a snap leave it to dnf or their store. Otherwise the
+/// binary's path decides: under `/usr` it came from the .deb, inside a
+/// cargo `target` directory it is a build tree, which never updates, and
+/// anywhere else it came from a tarball or `scripts/install.sh`, into the
+/// prefix two levels above it.
+pub fn method_for(packaging: Packaging, exe: &Path) -> Option<Method> {
+    if packaging.updated_by().is_some() {
+        return None;
+    }
     if exe.starts_with("/usr") {
         return Some(Method::Deb);
     }
@@ -132,18 +138,34 @@ mod tests {
 
     #[test]
     fn the_binary_path_says_how_this_copy_was_installed() {
+        let native = |exe: &str| method_for(Packaging::Native, Path::new(exe));
+        assert_eq!(native("/usr/bin/penguin-mail"), Some(Method::Deb));
         assert_eq!(
-            method_for(Path::new("/usr/bin/penguin-mail")),
-            Some(Method::Deb)
-        );
-        assert_eq!(
-            method_for(Path::new("/home/ann/.local/bin/penguin-mail")),
+            native("/home/ann/.local/bin/penguin-mail"),
             Some(Method::Local {
                 prefix: "/home/ann/.local".into()
             })
         );
+        assert_eq!(native("/home/ann/mail/target/release/penguin-mail"), None);
+    }
+
+    #[test]
+    fn a_package_something_else_updates_has_no_method() {
+        // The rpm installs under /usr as the .deb does, and dnf, not apt,
+        // brings its new versions.
         assert_eq!(
-            method_for(Path::new("/home/ann/mail/target/release/penguin-mail")),
+            method_for(Packaging::Rpm, Path::new("/usr/bin/penguin-mail")),
+            None
+        );
+        assert_eq!(
+            method_for(Packaging::Flatpak, Path::new("/app/bin/penguin-mail")),
+            None
+        );
+        assert_eq!(
+            method_for(
+                Packaging::Snap,
+                Path::new("/snap/penguin-mail/12/usr/bin/penguin-mail")
+            ),
             None
         );
     }

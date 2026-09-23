@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 The Penguin Mail authors -->
+<component type="desktop-application">
+  <id>io.github.c9dev.PenguinMail</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <name>Penguin Mail</name>
+  <summary>Read and write Gmail from all your accounts</summary>
+  <developer id="io.github.c9dev">
+    <name translate="no">Pivotd</name>
+  </developer>
+
+  <description>
+    <p>
+      Penguin Mail keeps several Gmail accounts in sync from the system tray,
+      shows them in one inbox or one at a time, and keeps your mail on your own
+      computer. It talks to Google through an OAuth client you own, so no other
+      server sees your mail.
+    </p>
+    <ul>
+      <li>One inbox for every account, with Gmail's categories, labels and search</li>
+      <li>A composer that shows formatting as you write, with Undo Send and Send Later</li>
+      <li>Flags in seven colors, VIPs, smart mailboxes and reminders</li>
+      <li>Gmail's rules, automatic replies and plus addresses, changed from the app</li>
+      <li>OpenPGP and S/MIME signing and encryption through your own GnuPG</li>
+      <li>Remote images blocked until you ask for them</li>
+      <li>An assistant that runs on a local model or on Claude, off until you pick one</li>
+    </ul>
+    <p>
+      You need an OAuth client from a Google Cloud project of your own. Creating
+      one takes about ten minutes, and the first screen explains how.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.c9dev.PenguinMail.desktop</launchable>
+  <provides>
+    <binary>penguin-mail</binary>
+  </provides>
+  <translation type="gettext">penguin-mail</translation>
+
+  <categories>
+    <category>Network</category>
+    <category>Email</category>
+  </categories>
+  <keywords>
+    <keyword>gmail</keyword>
+    <keyword>email</keyword>
+    <keyword>mail</keyword>
+    <keyword>inbox</keyword>
+  </keywords>
+
+  <url type="homepage">https://github.com/c9dev/penguin-mail</url>
+  <url type="bugtracker">https://github.com/c9dev/penguin-mail/issues</url>
+  <url type="help">https://github.com/c9dev/penguin-mail/blob/main/docs/setup.md</url>
+  <url type="vcs-browser">https://github.com/c9dev/penguin-mail</url>
+  <url type="donation">https://github.com/sponsors/g0shed</url>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#d5c4a1</color>
+    <color type="primary" scheme_preference="dark">#504945</color>
+  </branding>
+
+  <content_rating type="oars-1.1">
+    <content_attribute id="social-chat">intense</content_attribute>
+  </content_rating>
+
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+    <control>touch</control>
+  </supports>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>The inbox, with a conversation open</caption>
+      <image>https://raw.githubusercontent.com/c9dev/penguin-mail/main/docs/screenshots/inbox.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>An HTML message in dark mode</caption>
+      <image>https://raw.githubusercontent.com/c9dev/penguin-mail/main/docs/screenshots/dark.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Replying in the composer</caption>
+      <image>https://raw.githubusercontent.com/c9dev/penguin-mail/main/docs/screenshots/composer.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Three conversations selected, with the actions for all of them</caption>
+      <image>https://raw.githubusercontent.com/c9dev/penguin-mail/main/docs/screenshots/selection.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The assistant listing mail that waits on a reply</caption>
+      <image>https://raw.githubusercontent.com/c9dev/penguin-mail/main/docs/screenshots/assistant.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The layout on a narrow screen</caption>
+      <image>https://raw.githubusercontent.com/c9dev/penguin-mail/main/docs/screenshots/phone.png</image>
+    </screenshot>
+  </screenshots>
+
+  <!-- scripts/metainfo.sh writes this list from CHANGELOG.md. -->
+  <releases>
+    <release version="0.1.6" date="2026-09-22">
+      <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v0.1.6</url>
+      <description translate="no">
+        <p>Fixed</p>
+        <ul>
+          <li>A message the assistant writes puts your signature under the words, not above them, with a blank line before it.</li>
+          <li>A message that sets no colours of its own is drawn in the window's colours instead of on a white sheet, which in a dark window meant a bright slab. Mail that picks its own colours, such as a newsletter, keeps its white page.</li>
+        </ul>
+        <p>Improved</p>
+        <ul>
+          <li>The composer's header has room for its title again: Sign and Encrypt sit behind one button that says what the message goes out as.</li>
+          <li>A message in a conversation slides open and shut instead of appearing all at once, and mailbox rows, conversation rows and attachments fade under the pointer. Turning off animations in the desktop settings turns all of it off.</li>
+        </ul>
+        <p>New</p>
+        <ul>
+          <li>Unsubscribe fills in and sends a newsletter's own unsubscribe page, after you confirm what it will press. A page it cannot read still opens in your browser, and a newsletter that hides its way out in a link at the foot of the message now has an Unsubscribe button too.</li>
+          <li>Right-click a message inside an open conversation for a menu that acts on that message alone: reply to it, archive it, trash it, mark it, flag it in a colour, label it, export it, or copy its sender's address. Archiving one message of five leaves the other four in the inbox, and Ctrl+Z takes it back. The Menu key and Shift+F10 open the same menu for the message you are on.</li>
+          <li>Ask the assistant to unsubscribe you from several newsletters at once. It lists the ones you get first, and asks about all of them together.</li>
+          <li>The assistant can send a message waiting in Send Later or the Outbox now, cancel it, give it a new time, or delete it from the Outbox.</li>
+          <li>The assistant lists your reminders and can move or cancel one.</li>
+          <li>The assistant can unmute mail, read your muted mail and smart mailboxes, and undo your last change, as Ctrl+Z does.</li>
+          <li>The assistant can rename, recolour and delete labels, change and delete smart mailboxes, and save and delete templates. Before deleting a label it tells you how many conversations carry it.</li>
+          <li>The assistant can add people to your Google contacts and change the ones there, after asking.</li>
+          <li>The assistant can let a sender's remote images load, or stop them, and tell you whose images load now.</li>
+          <li>The assistant can export conversations as an mbox file, or one message as an .eml file, to your Downloads folder or a place you name. It never replaces a file without saying so first.</li>
+          <li>The assistant can forward a message, add a Bcc, attach files from your mail or from this computer, and sign or encrypt what it sends. It asks before it reads a file from this computer, and names the path.</li>
+          <li>The assistant lists your drafts, and changes or deletes one when you ask, encrypted drafts included.</li>
+        </ul>
+        <p>Fixed</p>
+        <ul>
+          <li>Cancel Send keeps a message you scheduled while offline. It goes to Drafts, or, while Gmail is still out of reach, opens in a composer for you to save.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.1.5" date="2026-09-22">
+      <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v0.1.5</url>
+      <description translate="no">
+        <p>New</p>
+        <ul>
+          <li>Penguin Mail has an apt repository. Add it once, or install the .deb, and <code>sudo apt upgrade</code> brings each new version.</li>
+          <li>An Archive mailbox lists the mail you took out of the inbox, across all accounts and under each one. Drag mail onto it to archive it.</li>
+          <li>You can label mail from several accounts at once by picking a label name.</li>
+          <li>An invitation to one meeting of a repeating series now says how the series runs, such as "Every Wednesday, 6 left", read from your Google Calendar.</li>
+          <li>An encrypted message can carry a Bcc when it goes out with OpenPGP. The people in To and Cc cannot tell who got the blind copy. S/MIME cannot hide one, so the Encrypt button says why it stays off there.</li>
+          <li>A message waiting in the Outbox or in Send Later opens in the reading pane, with why it has not gone or when it goes, and buttons to edit, send or delete it.</li>
+        </ul>
+        <p>Improved</p>
+        <ul>
+          <li>With several accounts open in the sidebar, each account's heading has space above it, so you can tell where one account ends.</li>
+          <li>Menu or Shift+F10 opens the menu of the conversation in focus, so Export and the Outbox's Edit, Send Now and Delete work from the keyboard.</li>
+          <li>The Outbox stays in the sidebar, so you can check it before a message gets stuck there.</li>
+          <li>A new account finishes its first sync sooner: Penguin Mail fetches each conversation in one request instead of one request per message.</li>
+          <li>A conversation with several results in a search, the Trash or Junk opens without waiting on Gmail again.</li>
+          <li>Labelling mail by name asks before it creates the label in an account that lacks it. Say no, and only mail in accounts with the label gets it.</li>
+          <li>A short message in another language, such as "Ok, obrigado!", now gets the offer to translate it, and so does a short reply from someone who wrote to you in that language earlier in the conversation.</li>
+          <li>The composer's formatting bar is one Tab stop: the arrow keys move between its buttons, and a screen reader hears it as a toolbar.</li>
+          <li>Ctrl+Shift+P inserts an image in the composer, and the Keyboard Shortcuts window lists it.</li>
+          <li>You can reach any recipient in an address field from the keyboard: Left from the start of the field steps onto the addresses, and Delete removes the one you are on.</li>
+        </ul>
+        <p>Fixed</p>
+        <ul>
+          <li>Dates name the weekday and month in the language the app speaks, so a Portuguese window says "sex 11 set" instead of "Fri 11 Sep".</li>
+          <li>The offer to translate a message no longer names the wrong language when it could be Portuguese or Spanish, or German or Dutch. When the words leave it close, it says the message is in another language.</li>
+          <li>A conversation opened right after a sync shows its older replies too, not only the recent messages kept on this computer.</li>
+          <li>Declining a rule the assistant proposed no longer leaves its new label behind in Gmail.</li>
+          <li>Mail archived in Gmail no longer stays in Penguin Mail's inbox when the app missed the change. It now checks its inbox against Gmail's when it starts and every hour after.</li>
+          <li>An action Gmail refuses part way, such as archiving a long conversation when the connection drops, leaves the messages Gmail did change as Gmail has them, and no longer undoes changes made in the browser meanwhile.</li>
+          <li>In demo mode, a message you send now shows up in Sent and in its conversation.</li>
+          <li>The inbox category switcher fits a narrow list without scrolling sideways: when the chosen category's name has no room, it shows icons alone.</li>
+          <li>The assistant no longer loses its right edge in a window about 1000 pixels wide, or in a narrow window with the app in Portuguese. In a window narrower than 1100 pixels it opens over the mail.</li>
+          <li>An encrypted message you send without signing it stays readable in your Sent folder.</li>
+          <li>A draft of an encrypted message no longer waits in Gmail as readable text. Penguin Mail saves it encrypted to your own key, and Edit opens it with its Bcc, its files and Encrypt on again.</li>
+          <li>An encrypted message you undo the send of, or that comes back from the Outbox, reopens with Encrypt on. If a recipient's key has gone missing, Send asks before the message goes out readable.</li>
+          <li>Edit on a draft brings back its Bcc, its files and the message it replies to, and so does a draft the assistant schedules with Send Later.</li>
+          <li>Cancel Send no longer tells you to look in Drafts for a message you scheduled while offline. Gmail never had that one, and the toast now says it is gone.</li>
+          <li>A message waiting in Send Later shows the day it goes, such as "Tomorrow at 08:00", instead of "Today" for any day to come.</li>
+          <li>A waiting message opened in a window of its own has working Edit, Send Now, Delete and Cancel Send buttons, and they act on that message rather than on the row selected in the main window.</li>
+          <li>A template's <code>{{date}}</code> comes out in the language the app speaks, so a Portuguese window writes "22 de setembro de 2026".</li>
+          <li>A Send Later message due tomorrow or later in the week says so in the list, not only the hour it goes out.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.1.4" date="2026-09-22">
+      <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v0.1.4</url>
+      <description translate="no">
+        <p>Improved</p>
+        <ul>
+          <li>Penguin Mail masks email addresses in its log, so the system journal no longer holds the addresses of your accounts or the people you write to.</li>
+          <li>Cancel Reminder and dragging the open conversation onto a mailbox open the next conversation, as Archive does.</li>
+        </ul>
+        <p>Fixed</p>
+        <ul>
+          <li>A conversation whose first messages you deleted shows in the inbox again when a reply arrives, as it does in Gmail.</li>
+          <li>A conversation you clicked just before switching mailboxes or inbox categories no longer opens in the new one and gets marked read there.</li>
+          <li>Marking a conversation read or unread shows in its own window, whether you did it there or in the main window.</li>
+          <li>Delete Forever no longer closes a conversation you opened while Gmail was still deleting.</li>
+          <li>The Keyboard Shortcuts window lists Ctrl+J, which shows or hides the assistant.</li>
+          <li>A conversation in its own window decides whether Archive, Delete or Mute close it by the mailbox you opened it from, not the one the main window has moved on to.</li>
+          <li>Ctrl+Z after dismissing a follow-up brings it back, rather than undoing what you did before, and it also takes back a dismissal the assistant made.</li>
+          <li>"Always load images from" a sender works again, and so does removing a sender from that list in Preferences.</li>
+          <li>New Message from the dock or the app menu starts from your default account and adds your signature.</li>
+          <li>Conversations open in their own windows follow changes to the text size, VIPs and contact photos.</li>
+          <li>An encrypted message shows its invitation and offers translation once it is decrypted.</li>
+          <li>Allowing images, an invitation card and the unsubscribed note stay on the conversation they belong to when you open another one while they load. Clicking two conversations quickly no longer shows the first one.</li>
+          <li>Opening another conversation while one is still loading no longer adds the first one's newest messages to it.</li>
+          <li>Trash in a conversation open in its own window moves it to the Trash or deletes it forever depending on where that conversation was opened from, not on the mailbox the main window shows now.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.1.3" date="2026-09-21">
+      <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v0.1.3</url>
+      <description translate="no">
+        <p>New</p>
+        <ul>
+          <li>Preferences has a Contacts &amp; Calendar page. Google contacts turn on and off for each account, and it shows which accounts GNOME Calendar can see, with a button to add the others.</li>
+          <li>Translation can use a model of its own, such as a small local one while the assistant runs on Claude. Preferences calls the page AI now.</li>
+          <li>The assistant shows what the model thought and each tool it ran, as rows under your question that open to show the details, with a line underneath saying what it is doing now: waiting, thinking, running a tool, waiting for your answer, or writing.</li>
+          <li>The assistant can search the web and read pages. Claude uses Anthropic's own search; a local model can search with Brave Search or your own SearXNG server, chosen under Web Search on the AI page.</li>
+          <li>The assistant can use your Google calendar: it lists what is on, finds free time, adds, moves and deletes events, and answers invitations, asking you before each change.</li>
+          <li>The assistant can mute conversations, delete mail forever, send mail later, write from your templates, unsubscribe you from lists, read text, web page and PDF attachments, and look people up in your contacts.</li>
+          <li>The assistant can use tools from MCP servers you add on the AI page, by a command or a URL. It asks before each call, and Always Allow stops the asking for a tool you trust.</li>
+          <li>The assistant can follow skills: folders of instructions for one kind of task, from Penguin Mail's own skills folder or Claude Code's. Turn each one on under Skills on the AI page. A skill's scripts run in a sandbox with no access to your mail or home folder, after you allow each command, and reach the internet only if you allow it for that skill.</li>
+        </ul>
+        <p>Improved</p>
+        <ul>
+          <li>The thinking and tool rows under an answer use smaller, dimmer text and a smaller arrow, so they sit quietly beside the reply.</li>
+          <li>Your mail, settings and cache folders can only be opened by your own user account, not by other people who use the same computer.</li>
+        </ul>
+        <p>Fixed</p>
+        <ul>
+          <li>Asking the assistant something scrolls the chat down to your question when the chat is already full. The chat glides down with the answer only while you are at the end, so reading an earlier answer keeps your place.</li>
+          <li>Updates download even while GitHub's download links are failing, and a brief server error no longer stops an update.</li>
+          <li>Rules open for an account that has none yet, instead of showing an error.</li>
+          <li>Contacts load for every account, not only the first one.</li>
+          <li>When the Google Cloud project has the People or Calendar API switched off, Penguin Mail says which one and opens the page that turns it on, instead of doing nothing. An invitation answer still reaches the organizer by email.</li>
+          <li>The focus ring in a new message is a single thin line around the whole row, with room around the text.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.1.2" date="2026-09-21">
+      <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v0.1.2</url>
+      <description translate="no">
+        <p>New</p>
+        <ul>
+          <li>The About window has a Check for Updates button that shows its progress and installs the new version when one is out.</li>
+          <li>The main menu has an entry for updates: check, install, or restart into the new version.</li>
+        </ul>
+        <p>Fixed</p>
+        <ul>
+          <li>The Install, Restart and Show Log buttons on the update banner work.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.1.1" date="2026-09-21">
+      <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v0.1.1</url>
+      <description translate="no">
+        <p>The first public release.</p>
+        <p>New</p>
+        <ul>
+          <li>Penguin Mail keeps itself up to date. Once a day it checks for a new version, and one click installs it.</li>
+          <li>Install it from a <code>.deb</code>, or from a tarball or zip without admin rights.</li>
+          <li><code>penguin-mail --version</code> shows which version you have.</li>
+        </ul>
+        <p>Fixed</p>
+        <ul>
+          <li>The tray icon no longer disappears after the app has sat in the background for a while.</li>
+          <li>After you install a new version, the app switches to it on its own instead of running the old one until you quit it.</li>
+        </ul>
+        <p>Already in Penguin Mail</p>
+        <ul>
+          <li>Every Gmail account in one inbox, kept in sync from the tray.</li>
+          <li>Encrypted and signed mail with OpenPGP and S/MIME.</li>
+          <li>Undo Send, Send Later, and an outbox that tries again when you are back online.</li>
+          <li>Flags in seven colors, VIPs, smart mailboxes, reminders and follow-ups.</li>
+          <li>Gmail rules, automatic replies and Hide My Email addresses.</li>
+          <li>An optional assistant that runs on a model on your own computer, or on Claude.</li>
+          <li>English and European Portuguese.</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+</component>

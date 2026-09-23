@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Penguin Mail apt repository</title>
+<title>Penguin Mail packages</title>
 <style>
   :root { color-scheme: light dark; --fg: #1d1d1d; --bg: #fafafa; --code: #ececec; }
   @media (prefers-color-scheme: dark) { :root { --fg: #e8e8e8; --bg: #1e1e1e; --code: #2d2d2d; } }
@@ -16,11 +16,12 @@
 </style>
 </head>
 <body>
-<h1>Penguin Mail apt repository</h1>
-<p>Penguin Mail is a Gmail client for GNOME. This repository holds its
-Ubuntu packages for amd64, signed with the key below.</p>
+<h1>Penguin Mail packages</h1>
+<p>Penguin Mail is a Gmail client for GNOME. This site holds its apt
+repository for Ubuntu and its dnf repository for Fedora, both for x86_64
+and signed with the key below.</p>
 
-<h2>Add it</h2>
+<h2>Ubuntu, with apt</h2>
 <pre><code>sudo curl -fsSLo /usr/share/keyrings/penguin-mail-archive-keyring.gpg \
   https://c9dev.github.io/penguin-mail/penguin-mail-archive-keyring.gpg
 sudo curl -fsSLo /etc/apt/sources.list.d/penguin-mail.sources \
@@ -31,8 +32,18 @@ sudo apt update &amp;&amp; sudo apt install penguin-mail</code></pre>
 adds these two files for you, so <code>sudo apt upgrade</code> brings each
 new version after that.</p>
 
+<h2>Fedora, with dnf</h2>
+<pre><code>sudo curl -fsSLo /etc/yum.repos.d/penguin-mail.repo \
+  https://c9dev.github.io/penguin-mail/rpm/penguin-mail.repo
+sudo dnf install penguin-mail</code></pre>
+<p>dnf asks you to accept the key the first time. The <code>.rpm</code> on
+the releases page adds the repository too, so <code>sudo dnf upgrade</code>
+brings each new version.</p>
+
 <h2>The signing key</h2>
 <p><a href="penguin-mail-archive-keyring.asc">penguin-mail-archive-keyring.asc</a>,
-fingerprint <code>FE3C 3B6E 699A F939 DC46 70DC F3A8 5303 5C3E 2B8E</code>.</p>
+fingerprint <code>FE3C 3B6E 699A F939 DC46 70DC F3A8 5303 5C3E 2B8E</code>.
+The dnf repository serves the same key as
+<a href="rpm/RPM-GPG-KEY-penguin-mail">RPM-GPG-KEY-penguin-mail</a>.</p>
 </body>
 </html>

@@ -28,7 +28,7 @@ impl App {
     /// Starts the daily check, and listens for the Install button on the
     /// notification that announces a release.
     pub(super) fn start_update_checks(self: &Rc<Self>) {
-        if self.updater.is_none() {
+        if !self.can_update() {
             return;
         }
         self.install_update_actions();
@@ -254,7 +254,7 @@ impl App {
                 });
             }
             Restart::Now => {
-                let Ok(exe) = crate::exe::path() else {
+                let Ok(exe) = crate::exe::launcher() else {
                     return;
                 };
                 // exec keeps the process, so the new copy takes over the
@@ -284,7 +284,8 @@ impl App {
         }
     }
 
-    /// Whether this copy updates itself: not the demo, not a cargo build.
+    /// Whether this copy updates itself: not the demo, not a cargo build,
+    /// and not the rpm, a Flatpak or a snap, which dnf or a store updates.
     pub fn can_update(&self) -> bool {
         self.updater.is_some()
     }

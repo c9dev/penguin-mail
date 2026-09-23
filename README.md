@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="app/data/icons/scalable/apps/dev.penguinmail.PenguinMail.svg" width="128" height="128" alt="">
+<img src="app/data/icons/scalable/apps/io.github.c9dev.PenguinMail.svg" width="128" height="128" alt="">
 
 # Penguin Mail
 
@@ -183,11 +183,26 @@ uses a tool from outside the app, and it is off until you pick a model.
 
 ## Install
 
-Penguin Mail runs on Ubuntu 26.04, or any distribution with GTK 4.20,
-libadwaita 1.8 and WebKitGTK 6.0. The tray icon needs a StatusNotifier host,
-which Ubuntu's AppIndicator extension provides.
+Penguin Mail runs on Linux, x86_64. The .deb and the rpm need GTK 4.20,
+libadwaita 1.8 and WebKitGTK 6.0 from your distribution, as Ubuntu 26.04
+and Fedora 43 have; the Flatpak and the snap bring their own. The tray icon needs a StatusNotifier host, which Ubuntu's
+AppIndicator extension provides.
 
-### With apt (recommended)
+| | .deb | rpm | Flatpak | Snap |
+|---|---|---|---|---|
+| Updates | Install in the app, or `apt upgrade` | `dnf upgrade` | Flathub | Snap Store |
+| GnuPG | the system's | the system's | the runtime's, on your `~/.gnupg` | the snap's, on your `~/.gnupg` |
+| Assistant skills | yes | yes | no | no |
+| Claude Code, and MCP servers you run as a command | yes | yes | no | no |
+| Tray icon | yes | yes | yes | yes |
+
+Skills are off in the Flatpak and the snap because a skill's scripts run
+in a sandbox of their own, which cannot start inside the one the app runs
+in. That sandbox also keeps the app from starting programs installed on
+your system, such as Claude Code. [docs/setup.md](docs/setup.md#which-package) has the
+details.
+
+### With apt (recommended on Ubuntu)
 
 Penguin Mail has its own apt repository. Add its key and entry, then
 install:
@@ -231,6 +246,51 @@ It starts in the tray at login unless you run it as
 `NO_AUTOSTART=1 ./install-files.sh .`. Check a download against the
 release's `SHA256SUMS` with `sha256sum -c --ignore-missing SHA256SUMS`.
 
+### With dnf, on Fedora
+
+Penguin Mail has a dnf repository beside the apt one, signed with the same
+key:
+
+```sh
+sudo curl -fsSLo /etc/yum.repos.d/penguin-mail.repo \
+  https://c9dev.github.io/penguin-mail/rpm/penguin-mail.repo
+sudo dnf install penguin-mail
+```
+
+dnf asks you to accept the key the first time. `sudo dnf upgrade` brings
+each new version, and the `.rpm` on the releases page adds the repository
+too.
+
+### From Flathub
+
+```sh
+flatpak install flathub io.github.c9dev.PenguinMail
+```
+
+Penguin Mail is waiting for Flathub's review. Until it is listed, build
+the same Flatpak from this repository:
+
+```sh
+flatpak-builder --user --install --force-clean build-dir \
+  packaging/flatpak/io.github.c9dev.PenguinMail.yml
+```
+
+The Flatpak reads and writes `~/.gnupg` and reaches your gpg-agent, so
+signing and encryption use your own keys. Everything else stays inside the
+sandbox. Its mail and settings live under
+`~/.var/app/io.github.c9dev.PenguinMail`, apart from a .deb install's.
+
+### From the Snap Store
+
+```sh
+sudo snap install penguin-mail --edge
+```
+
+The snap is on its way to the Snap Store, and new versions reach its edge
+channel first. It is strictly confined and reaches `~/.gnupg` through a
+`personal-files` plug, which the store approves by hand, so signing and
+encryption use your own keys.
+
 ### From source
 
 You need Rust 1.98 and the development packages:
@@ -252,9 +312,10 @@ that, **Sign In with Google** adds each account.
 
 ### Updates
 
-An installed Penguin Mail checks GitHub for a new release once a day. When
-one is out, it says so in a notification, a banner across the window, and the
-tray menu, and **Install** does the rest:
+A Penguin Mail installed from the .deb, the tarball or source checks GitHub
+for a new release once a day. When one is out, it says so in a
+notification, a banner across the window, and the tray menu, and
+**Install** does the rest:
 
 - **From the .deb or the apt repository**, it downloads the new `.deb` and
   installs it with apt. GNOME asks for your password, because apt changes
@@ -271,6 +332,10 @@ only when you save it.
 **Check for Updates** in the tray menu checks at once. To stop the daily
 check, turn off **Check for Updates** under Preferences, Startup. A copy run
 with `cargo run` or as the demo never checks.
+
+The rpm leaves updates to dnf, and the Flatpak and the snap to Flathub and
+the Snap Store. Those copies never check GitHub and offer no Install of
+their own; Preferences and the About window say who brings updates.
 
 To update by hand, download the new release and install it the same way as
 the first time. For a copy built from source, pull and run
@@ -320,13 +385,13 @@ penguin-mail --version
 To make Penguin Mail open `mailto:` links:
 
 ```sh
-xdg-mime default dev.penguinmail.PenguinMail.desktop x-scheme-handler/mailto
+xdg-mime default io.github.c9dev.PenguinMail.desktop x-scheme-handler/mailto
 ```
 
 The running app answers D-Bus actions, for custom shortcuts:
 
 ```sh
-gdbus call --session --dest dev.penguinmail.PenguinMail --object-path /dev/penguinmail/PenguinMail \
+gdbus call --session --dest io.github.c9dev.PenguinMail --object-path /io/github/c9dev/PenguinMail \
     --method org.gtk.Actions.Activate show-window [] {}
 ```
 
@@ -390,19 +455,32 @@ Debug builds keep them whole, and `PENGUIN_MAIL_LOG_DETAILS=1` does the
 same for an installed copy while you look into a problem.
 
 CI runs those four checks on every push, in an Ubuntu 26.04 container set up
-by `scripts/ci-deps.sh`. The OpenPGP and S/MIME tests build a throwaway
+by `scripts/ci-deps.sh`, validates the AppStream metainfo and the desktop
+entry, and builds and starts the Flatpak. The OpenPGP and S/MIME tests build a throwaway
 GnuPG keyring and skip when `gpg` or `gpgsm` is missing.
 `PENGUIN_MAIL_REQUIRE_CRYPTO=1`, which CI sets, turns that skip into a
 failure. [AGENTS.md](AGENTS.md) has the conventions and the testing traps.
 
 To publish a version, `scripts/release.sh` bumps the version, opens the
-changelog draft in your editor, runs the checks, then commits, tags and
+changelog draft in your editor, writes the store listings' release notes
+with `scripts/metainfo.sh`, runs the checks, then commits, tags and
 pushes. The tag starts the release workflow, which builds the `.deb`,
-tarball and zip and publishes them with the changelog. When it finishes, the
-apt workflow rebuilds the repository on GitHub Pages from the five newest
-releases with `scripts/apt-repo.sh`, signed with the key in the
-`APT_SIGNING_KEY` secret. Run it from the Actions tab to publish again
+tarball and zip on Ubuntu 26.04 and the rpm on Fedora 43, starts the rpm
+on a hidden display, and publishes them with the
+changelog. It also builds the snap and sends it to the Snap Store's edge
+channel once the `SNAPCRAFT_STORE_CREDENTIALS` secret exists. When it
+finishes, the Package repositories workflow rebuilds the apt and dnf
+repositories on GitHub Pages from the five newest releases with
+`scripts/apt-repo.sh` and `scripts/rpm-repo.sh`, signed with the key in
+the `APT_SIGNING_KEY` secret. Run it from the Actions tab to publish again
 without a release.
+
+Flathub builds the Flatpak from its own repository,
+flathub/io.github.c9dev.PenguinMail, and nothing updates it on its own.
+After each release, run `scripts/flatpak-sources.sh --flathub vX.Y.Z
+<dir>`, copy the manifest, `cargo-sources.json` and `flathub.json` it
+writes into a checkout of that repository, and open a pull request there.
+`release.sh` prints the same reminder when it finishes.
 
 ## Contributing
 

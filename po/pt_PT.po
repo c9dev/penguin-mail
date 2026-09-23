@@ -15,13 +15,112 @@ msgstr ""
 "X-Language-Name: Português (Portugal)\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: app/data/dev.penguinmail.PenguinMail.desktop:5
+#: app/data/io.github.c9dev.PenguinMail.desktop:5
 msgid "Read and write Gmail from all your accounts"
 msgstr "Leia e escreva no Gmail a partir de todas as suas contas"
 
-#: app/data/dev.penguinmail.PenguinMail.desktop:10
+#: app/data/io.github.c9dev.PenguinMail.desktop:10
 msgid "mail;email;gmail;inbox;"
 msgstr "correio;email;e-mail;gmail;caixa de entrada;"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:15
+msgid ""
+"Penguin Mail keeps several Gmail accounts in sync from the system tray, "
+"shows them in one inbox or one at a time, and keeps your mail on your own "
+"computer. It talks to Google through an OAuth client you own, so no other "
+"server sees your mail."
+msgstr ""
+"O Penguin Mail mantém várias contas do Gmail sincronizadas a partir da área "
+"de notificação, mostra-as numa só caixa de entrada ou uma de cada vez, e "
+"guarda o seu correio no seu próprio computador. Fala com a Google através de "
+"um cliente OAuth que é seu, por isso nenhum outro servidor vê o seu correio."
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:22
+msgid "One inbox for every account, with Gmail's categories, labels and search"
+msgstr ""
+"Uma caixa de entrada para todas as contas, com as categorias, etiquetas e "
+"pesquisa do Gmail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:23
+msgid ""
+"A composer that shows formatting as you write, with Undo Send and Send Later"
+msgstr ""
+"Uma janela de escrita que mostra a formatação enquanto escreve, com Anular o "
+"envio e Enviar mais tarde"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:24
+msgid "Flags in seven colors, VIPs, smart mailboxes and reminders"
+msgstr "Marcas em sete cores, VIP, caixas inteligentes e lembretes"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:25
+msgid ""
+"Gmail's rules, automatic replies and plus addresses, changed from the app"
+msgstr ""
+"As regras, respostas automáticas e endereços com + do Gmail, alterados a "
+"partir da aplicação"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:26
+msgid "OpenPGP and S/MIME signing and encryption through your own GnuPG"
+msgstr "Assinatura e cifra OpenPGP e S/MIME através do seu próprio GnuPG"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:27
+msgid "Remote images blocked until you ask for them"
+msgstr "Imagens remotas bloqueadas até as pedir"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:28
+msgid ""
+"An assistant that runs on a local model or on Claude, off until you pick one"
+msgstr ""
+"Um assistente que corre num modelo local ou no Claude, desligado até "
+"escolher um"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:30
+msgid ""
+"You need an OAuth client from a Google Cloud project of your own. Creating "
+"one takes about ten minutes, and the first screen explains how."
+msgstr ""
+"Precisa de um cliente OAuth de um projeto Google Cloud seu. Criá-lo demora "
+"cerca de dez minutos, e o primeiro ecrã explica como."
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:47
+msgid "gmail"
+msgstr "gmail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:48
+msgid "email"
+msgstr "e-mail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:49
+msgid "mail"
+msgstr "correio"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:50
+msgid "inbox"
+msgstr "caixa de entrada"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:79
+msgid "The inbox, with a conversation open"
+msgstr "A caixa de entrada, com uma conversa aberta"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:83
+msgid "An HTML message in dark mode"
+msgstr "Uma mensagem HTML no modo escuro"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:87
+msgid "Replying in the composer"
+msgstr "A responder na janela de escrita"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:91
+msgid "Three conversations selected, with the actions for all of them"
+msgstr "Três conversas selecionadas, com as ações para todas"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:95
+msgid "The assistant listing mail that waits on a reply"
+msgstr "O assistente a listar o correio que aguarda resposta"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:99
+msgid "The layout on a narrow screen"
+msgstr "A disposição num ecrã estreito"
 
 #: app/src/app/sending.rs:30
 msgid "That account is not connected. Check its status in the sidebar."
@@ -903,6 +1002,10 @@ msgstr "A ler um ficheiro de uma competência"
 msgid "Running a command in the sandbox"
 msgstr "A correr um comando na área isolada"
 
+#: app/src/autostart.rs:50
+msgid "Penguin Mail keeps syncing with no window open"
+msgstr "O Penguin Mail continua a sincronizar sem nenhuma janela aberta"
+
 #: app/src/compose.rs:443
 msgid "Add at least one recipient."
 msgstr "Adicione pelo menos um destinatário."
@@ -1093,7 +1196,7 @@ msgstr "Roxo"
 msgid "Slate"
 msgstr "Ardósia"
 
-#: app/src/main.rs:53
+#: app/src/main.rs:55
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]]\n"
 "\n"
@@ -1113,11 +1216,11 @@ msgstr ""
 "  --compose      abre uma mensagem nova, para ENDEREÇO quando indicado\n"
 "  mailto:...     o mesmo que --compose mailto:..."
 
-#: app/src/main.rs:113
+#: app/src/main.rs:115
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: opção desconhecida {option}"
 
-#: app/src/main.rs:225
+#: app/src/main.rs:230
 msgid "Penguin Mail Could Not Start"
 msgstr "O Penguin Mail não conseguiu arrancar"
 
@@ -1170,6 +1273,18 @@ msgstr "O modelo não devolveu nada para pôr na mensagem."
 #: app/src/open_thread/run/translation.rs:125
 msgid "The model could not translate this: {reason}"
 msgstr "O modelo não conseguiu traduzir isto: {reason}"
+
+#: app/src/packaging.rs:89
+msgid "Updates come from dnf"
+msgstr "As atualizações chegam pelo dnf"
+
+#: app/src/packaging.rs:90
+msgid "Updates come from Flathub"
+msgstr "As atualizações chegam pelo Flathub"
+
+#: app/src/packaging.rs:91
+msgid "Updates come from the Snap Store"
+msgstr "As atualizações chegam pela Snap Store"
 
 #: app/src/permission.rs:97
 msgid "Allow Changes to Gmail Settings"
@@ -2029,7 +2144,7 @@ msgstr "Nova mensagem"
 msgid "Check for Mail"
 msgstr "Procurar correio"
 
-#: app/src/tray.rs:140 app/src/update/mod.rs:96
+#: app/src/tray.rs:140 app/src/update/mod.rs:97
 msgid "Install Update {version}"
 msgstr "Instalar a atualização {version}"
 
@@ -2037,9 +2152,9 @@ msgstr "Instalar a atualização {version}"
 msgid "What's New in {version}"
 msgstr "Novidades da versão {version}"
 
-#: app/src/tray.rs:147 app/src/ui/about.rs:79 app/src/ui/about.rs:186
-#: app/src/ui/about.rs:194 app/src/ui/about.rs:201
-#: app/src/ui/preferences.rs:663 app/src/update/mod.rs:106
+#: app/src/tray.rs:147 app/src/ui/about.rs:87 app/src/ui/about.rs:194
+#: app/src/ui/about.rs:202 app/src/ui/about.rs:209
+#: app/src/ui/preferences.rs:662 app/src/update/mod.rs:107
 msgid "Check for Updates"
 msgstr "Procurar atualizações"
 
@@ -2052,7 +2167,7 @@ msgstr "Sair"
 msgid "Version {version}"
 msgstr "Versão {version}"
 
-#: app/src/ui/about.rs:69
+#: app/src/ui/about.rs:77
 msgid ""
 "A fast, private Gmail client for the GNOME desktop. Mail stays on your "
 "computer and your own Google Cloud project."
@@ -2060,68 +2175,68 @@ msgstr ""
 "Um cliente de Gmail rápido e privado para o ambiente de trabalho GNOME. O "
 "correio fica no seu computador e no seu próprio projeto do Google Cloud."
 
-#: app/src/ui/about.rs:134
+#: app/src/ui/about.rs:142
 msgid "What's New"
 msgstr "Novidades"
 
-#: app/src/ui/about.rs:138
+#: app/src/ui/about.rs:146
 msgid "Website"
 msgstr "Página web"
 
-#: app/src/ui/about.rs:140
+#: app/src/ui/about.rs:148
 msgid "Report a Problem"
 msgstr "Comunicar um problema"
 
-#: app/src/ui/about.rs:145
+#: app/src/ui/about.rs:153
 msgid "License"
 msgstr "Licença"
 
-#: app/src/ui/about.rs:162 app/src/ui/window.rs:2200
+#: app/src/ui/about.rs:170 app/src/ui/window.rs:2200
 msgid "About Penguin Mail"
 msgstr "Acerca do Penguin Mail"
 
-#: app/src/ui/about.rs:192
+#: app/src/ui/about.rs:200
 msgid "Checking…"
 msgstr "A procurar…"
 
-#: app/src/ui/about.rs:198
+#: app/src/ui/about.rs:206
 msgid "Penguin Mail is up to date"
 msgstr "O Penguin Mail está atualizado"
 
-#: app/src/ui/about.rs:206
+#: app/src/ui/about.rs:214
 msgid "Could not reach GitHub. Check your connection and try again."
 msgstr ""
 "Não foi possível contactar o GitHub. Verifique a ligação e tente de novo."
 
-#: app/src/ui/about.rs:211
+#: app/src/ui/about.rs:219
 msgid "Install {version}"
 msgstr "Instalar a {version}"
 
-#: app/src/ui/about.rs:218
+#: app/src/ui/about.rs:226
 msgid "Version {version} is available"
 msgstr "A versão {version} está disponível"
 
-#: app/src/ui/about.rs:223
+#: app/src/ui/about.rs:231
 msgid "Installing…"
 msgstr "A instalar…"
 
-#: app/src/ui/about.rs:228
+#: app/src/ui/about.rs:236
 msgid "Installing version {version}"
 msgstr "A instalar a versão {version}"
 
-#: app/src/ui/about.rs:233 app/src/update/mod.rs:102
+#: app/src/ui/about.rs:241 app/src/update/mod.rs:103
 msgid "Restart to Update"
 msgstr "Reiniciar para atualizar"
 
-#: app/src/ui/about.rs:238
+#: app/src/ui/about.rs:246
 msgid "Version {version} is installed"
 msgstr "A versão {version} está instalada"
 
-#: app/src/ui/about.rs:243 app/src/update/mod.rs:135
+#: app/src/ui/about.rs:251 app/src/update/mod.rs:136
 msgid "Show Log"
 msgstr "Mostrar registo"
 
-#: app/src/ui/about.rs:248 app/src/update/mod.rs:132
+#: app/src/ui/about.rs:256 app/src/update/mod.rs:133
 msgid "The update to {version} failed"
 msgstr "A atualização para a versão {version} falhou"
 
@@ -2594,39 +2709,52 @@ msgstr ""
 "isolada sem acesso ao seu correio, às suas chaves nem à sua pasta pessoal, e "
 "o assistente pergunta antes de cada comando."
 
-#: app/src/ui/assistant_skills_prefs.rs:26
+#: app/src/ui/assistant_skills_prefs.rs:30
 msgid "Open Folder"
 msgstr "Abrir Pasta"
 
-#: app/src/ui/assistant_skills_prefs.rs:28
+#: app/src/ui/assistant_skills_prefs.rs:32
 msgid "Open Penguin Mail's skills folder"
 msgstr "Abrir a pasta de competências do Penguin Mail"
 
-#: app/src/ui/assistant_skills_prefs.rs:38
+#: app/src/ui/assistant_skills_prefs.rs:42
 msgid "Scripts Cannot Run"
 msgstr "Os Scripts Não Podem Ser Executados"
 
-#: app/src/ui/assistant_skills_prefs.rs:47
+#: app/src/ui/assistant_skills_prefs.rs:51
 msgid "No Skills Found"
 msgstr "Nenhuma Competência Encontrada"
 
-#: app/src/ui/assistant_skills_prefs.rs:49
+#: app/src/ui/assistant_skills_prefs.rs:53
 msgid "Put a folder holding a SKILL.md file in {folder}."
 msgstr "Coloque em {folder} uma pasta com um ficheiro SKILL.md."
 
-#: app/src/ui/assistant_skills_prefs.rs:64
+#: app/src/ui/assistant_skills_prefs.rs:69
+msgid "Skills Are Off in This Version"
+msgstr "As competências estão desligadas nesta versão"
+
+#: app/src/ui/assistant_skills_prefs.rs:72
+msgid ""
+"Skill scripts run in a sandbox of their own, which cannot start inside the "
+"{sandbox} sandbox Penguin Mail runs in. The .deb and the rpm have skills."
+msgstr ""
+"Os scripts das competências correm numa área isolada própria, que não "
+"consegue arrancar dentro da área isolada {sandbox} onde o Penguin Mail "
+"corre. O .deb e o rpm têm competências."
+
+#: app/src/ui/assistant_skills_prefs.rs:86
 msgid "{origin}: {description}"
 msgstr "{origin}: {description}"
 
-#: app/src/ui/assistant_skills_prefs.rs:106
+#: app/src/ui/assistant_skills_prefs.rs:128
 msgid "Use the skill {skill}"
 msgstr "Usar a competência {skill}"
 
-#: app/src/ui/assistant_skills_prefs.rs:119
+#: app/src/ui/assistant_skills_prefs.rs:141
 msgid "Allow Network"
 msgstr "Permitir Rede"
 
-#: app/src/ui/assistant_skills_prefs.rs:121
+#: app/src/ui/assistant_skills_prefs.rs:143
 msgid ""
 "Let this skill's scripts reach the internet. Without it they can only use "
 "what is on this computer."
@@ -4077,61 +4205,61 @@ msgstr "Arranque"
 msgid "Start in the Tray at Login"
 msgstr "Arrancar na área de notificação ao iniciar sessão"
 
-#: app/src/ui/preferences.rs:642
-msgid "Penguin Mail keeps syncing with no window open"
-msgstr "O Penguin Mail continua a sincronizar sem nenhuma janela aberta"
-
-#: app/src/ui/preferences.rs:656
+#: app/src/ui/preferences.rs:655
 msgid "Not available in demo mode"
 msgstr "Indisponível no modo de demonstração"
 
-#: app/src/ui/preferences.rs:664
+#: app/src/ui/preferences.rs:663
 msgid "Look for a new release once a day"
 msgstr "Procurar uma versão nova uma vez por dia"
 
-#: app/src/ui/preferences.rs:678
+#: app/src/ui/preferences.rs:670
+msgid "Updates"
+msgstr "Atualizações"
+
+#: app/src/ui/preferences.rs:684
 msgid "Senders Who May Load Images"
 msgstr "Remetentes que podem carregar imagens"
 
-#: app/src/ui/preferences.rs:679 app/src/ui/preferences.rs:687
+#: app/src/ui/preferences.rs:685 app/src/ui/preferences.rs:693
 msgid "Nobody yet"
 msgstr "Ainda ninguém"
 
-#: app/src/ui/preferences.rs:689
+#: app/src/ui/preferences.rs:695
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} remetente"
 msgstr[1] "{count} remetentes"
 
-#: app/src/ui/preferences.rs:699
+#: app/src/ui/preferences.rs:705
 msgid "Anyone at this domain"
 msgstr "Qualquer pessoa deste domínio"
 
-#: app/src/ui/preferences.rs:701
+#: app/src/ui/preferences.rs:707
 msgid "This address"
 msgstr "Este endereço"
 
-#: app/src/ui/preferences.rs:706
+#: app/src/ui/preferences.rs:712
 msgid "Stop Loading Images from This Sender"
 msgstr "Deixar de carregar imagens deste remetente"
 
-#: app/src/ui/preferences.rs:713
+#: app/src/ui/preferences.rs:719
 msgid "Stop loading images from {sender}"
 msgstr "Deixar de carregar imagens de {sender}"
 
-#: app/src/ui/preferences.rs:788
+#: app/src/ui/preferences.rs:794
 msgid "Follow System"
 msgstr "Seguir o sistema"
 
-#: app/src/ui/preferences.rs:792
+#: app/src/ui/preferences.rs:798
 msgid "Language"
 msgstr "Idioma"
 
-#: app/src/ui/preferences.rs:793
+#: app/src/ui/preferences.rs:799
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "O Penguin Mail mostra o novo idioma depois de reiniciar"
 
-#: app/src/ui/preferences.rs:865
+#: app/src/ui/preferences.rs:871
 msgid "No signature"
 msgstr "Sem assinatura"
 
@@ -5126,7 +5254,7 @@ msgstr "Abra primeiro uma mensagem dessa pessoa"
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "O Penguin Mail mostra o novo idioma depois de reiniciar"
 
-#: app/src/ui/window.rs:2568 app/src/update/mod.rs:128
+#: app/src/ui/window.rs:2568 app/src/update/mod.rs:129
 msgid "Restart"
 msgstr "Reiniciar"
 
@@ -5737,35 +5865,35 @@ msgstr "Fechar a janela"
 msgid "Checking for mail"
 msgstr "A procurar correio"
 
-#: app/src/update/mod.rs:101
+#: app/src/update/mod.rs:102
 msgid "Installing Update…"
 msgstr "A instalar a atualização…"
 
-#: app/src/update/mod.rs:103
+#: app/src/update/mod.rs:104
 msgid "Show Update Log"
 msgstr "Mostrar o registo da atualização"
 
-#: app/src/update/mod.rs:104
+#: app/src/update/mod.rs:105
 msgid "Checking for Updates…"
 msgstr "A procurar atualizações…"
 
-#: app/src/update/mod.rs:114 app/src/update/mod.rs:203
+#: app/src/update/mod.rs:115 app/src/update/mod.rs:205
 msgid "Penguin Mail {version} is available"
 msgstr "O Penguin Mail {version} está disponível"
 
-#: app/src/update/mod.rs:117 app/src/update/mod.rs:209
+#: app/src/update/mod.rs:118 app/src/update/mod.rs:211
 msgid "Install"
 msgstr "Instalar"
 
-#: app/src/update/mod.rs:121
+#: app/src/update/mod.rs:122
 msgid "Installing Penguin Mail {version}"
 msgstr "A instalar o Penguin Mail {version}"
 
-#: app/src/update/mod.rs:127
+#: app/src/update/mod.rs:128
 msgid "Restart to finish updating"
 msgstr "Reinicie para terminar a atualização"
 
-#: app/src/update/mod.rs:206
+#: app/src/update/mod.rs:208
 msgid "Install it now, or later from the tray."
 msgstr "Instale-a agora, ou mais tarde a partir da área de notificação."
 
@@ -5776,10 +5904,6 @@ msgstr "Tudo"
 #: domain/src/category.rs:59
 msgid "Primary"
 msgstr "Principal"
-
-#: domain/src/category.rs:60
-msgid "Updates"
-msgstr "Atualizações"
 
 #: domain/src/category.rs:61
 msgid "Promotions"

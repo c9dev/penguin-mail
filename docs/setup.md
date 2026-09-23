@@ -131,6 +131,46 @@ state `ok`. An account that reports `needs_reauth` without you revoking
 it means the project is probably still in Testing: check the publishing status
 under Audience, publish, and add the account again.
 
+## Which package
+
+Every package is the same app, built with a cargo feature that says what
+kind it is (`packaging-rpm`, `packaging-flatpak`, `packaging-snap`, or
+none for the .deb and the tarball). The feature decides where
+updates come from and whether skills run.
+
+| | .deb | rpm | Flatpak | Snap |
+|---|---|---|---|---|
+| Updates | Install in the app, or the apt repository | the dnf repository | Flathub | Snap Store |
+| GnuPG | system | system | runtime's `gpg`, on `~/.gnupg` | snap's `gpg`, on `~/.gnupg` |
+| Assistant skills | yes | yes | no | no |
+| Claude Code, MCP servers run as a command | yes | yes | no | no |
+| Tray icon | yes | yes | yes | yes |
+| Start at login | autostart file | autostart file | Background portal | snapd autostart |
+
+- **Updates.** The .deb checks GitHub once a day and offers Install,
+  which downloads the new .deb and installs it through apt; `apt upgrade`
+  brings the same version from the apt repository. The tarball updates
+  itself the same way, into its own folder. The rpm leaves updates to
+  dnf, and the Flatpak and the snap to their store; Preferences and the
+  About window say which.
+- **GnuPG.** The Flatpak reaches two places for signing and encryption:
+  `~/.gnupg`, read and written, and the gpg-agent socket folder under
+  `$XDG_RUNTIME_DIR/gnupg`, read-only, so your own agent and pinentry
+  handle passphrases. It also talks to the Secret Service, the tray and
+  the notification daemon, and writes to Downloads; the manifest says why
+  for each. The snap reaches `~/.gnupg` through a `personal-files` plug.
+- **Skills.** A skill's scripts run under bubblewrap, which cannot start
+  inside Flatpak's or a strict snap's sandbox. Running them without one
+  would hand a skill your mail and keys, so both packages turn skills off
+  and say so under Preferences, AI, Skills.
+- **Programs on your system.** Claude Code, and an MCP server you add as a
+  command, run as programs on your computer. The Flatpak and the snap
+  cannot see those programs. A local model, the Anthropic API and MCP
+  servers you reach by address work in every package.
+- **No AppImage.** WebKit draws HTML mail in helper processes it
+  sandboxes with bubblewrap, and that sandbox mounts your system's `/usr`,
+  where helpers bundled in an AppImage find none of their libraries.
+
 ## Where things live
 
 | What | Where | Override |
@@ -141,6 +181,14 @@ under Audience, publish, and add the account again.
 
 The keyring service keeps the app's old name, mailrs, so accounts added
 before the rename stay signed in.
+
+The Flatpak keeps its config and mail under
+`~/.var/app/io.github.c9dev.PenguinMail/`, in `config/penguin-mail` and
+`data/penguin-mail`, and the snap under `~/snap/penguin-mail/current/`, in
+`.config/penguin-mail` and `.local/share/penguin-mail`. Moving from the
+.deb to one of them starts with an empty store; copy `config.toml` across
+to skip the welcome screen, then add each account again, since the list
+of accounts lives in the store.
 
 `penguin-mail-cli account remove you@gmail.com` deletes an account's local mail and
 its keyring entry. To revoke access on Google's side as well, use

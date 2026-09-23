@@ -3,12 +3,20 @@
 use std::io;
 use std::path::PathBuf;
 
-/// The path to start Penguin Mail from. Installing a new build replaces
+/// Where the running binary lies, for finding what was installed beside
+/// it; a relaunch uses [`launcher`] instead. Installing a new build replaces
 /// the file under a running copy, and Linux then reports that copy's
 /// executable as `<path> (deleted)`. Starting that path fails, so this
 /// answers with the new file that took its place.
 pub fn path() -> io::Result<PathBuf> {
     std::env::current_exe().map(replaced)
+}
+
+/// The command that starts Penguin Mail again: what a restart runs and
+/// what the login item names. Every relaunch goes through here, so a
+/// package that starts the app some other way changes this one function.
+pub fn launcher() -> io::Result<PathBuf> {
+    path()
 }
 
 fn replaced(exe: PathBuf) -> PathBuf {

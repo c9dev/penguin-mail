@@ -645,8 +645,7 @@ fn sync_page(app: &Rc<App>, pending: &Rc<RefCell<SyncConfig>>) -> adw::Preferenc
         Some(path) if !app.core.demo => {
             login.set_active(autostart::is_enabled(&path));
             login.connect_active_notify(move |row| {
-                let exe = crate::exe::path().unwrap_or_else(|_| "penguin-mail".into());
-                if let Err(err) = autostart::set_enabled(&path, &exe, row.is_active()) {
+                if let Err(err) = autostart::apply(&path, row.is_active()) {
                     tracing::warn!(error = %err, "could not change the login item");
                 }
             });
@@ -665,6 +664,13 @@ fn sync_page(app: &Rc<App>, pending: &Rc<RefCell<SyncConfig>>) -> adw::Preferenc
             app.settings().check_for_updates,
             Change::CheckForUpdates,
         ));
+    } else if let Some(updater) = crate::packaging::BUILT_FOR.updated_by() {
+        startup.add(
+            &adw::ActionRow::builder()
+                .title(gettext("Updates"))
+                .subtitle(updater.line())
+                .build(),
+        );
     }
     page.add(&startup);
     page

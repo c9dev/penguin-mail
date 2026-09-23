@@ -5,6 +5,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### New
+
+- Penguin Mail comes as an rpm for Fedora, with a dnf repository of its
+  own, so `sudo dnf upgrade` brings each new version.
+
 ### Improved
 
 - A big inbox lists faster. Opening the inbox or one of its categories

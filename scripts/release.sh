@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Publishes a new version of Penguin Mail. Bumps the version, writes its
-# changelog section, brings the translation template up to the new version,
-# runs the gate, commits "Release X.Y.Z", tags vX.Y.Z,
+# changelog section and the store listings' release notes, brings the
+# translation template up to the new version, runs the gate, commits "Release X.Y.Z", tags vX.Y.Z,
 # and pushes. The pushed tag starts .github/workflows/release.yml, which
 # builds the .deb, the tarball and the zip and publishes the release.
 #
@@ -43,7 +43,8 @@ esac
 git rev-parse -q --verify "refs/tags/v$version" >/dev/null && fail "v$version is already tagged"
 
 # Whatever stops the script from here on puts these files back.
-restore() { git checkout -q -- Cargo.toml Cargo.lock CHANGELOG.md po; }
+metainfo=app/data/io.github.c9dev.PenguinMail.metainfo.xml
+restore() { git checkout -q -- Cargo.toml Cargo.lock CHANGELOG.md po "$metainfo"; }
 trap restore EXIT
 
 sed -i "/^\[workspace.package\]/,/^\[/s/^version = \".*\"/version = \"$version\"/" Cargo.toml
@@ -85,6 +86,8 @@ awk -v s="$section" '
     END { if (!placed) { print ""; print "## Unreleased"; print ""; print s } }
 ' CHANGELOG.md > CHANGELOG.md.new
 mv CHANGELOG.md.new CHANGELOG.md
+# The stores read their release notes from the metainfo, not the changelog.
+scripts/metainfo.sh >/dev/null
 
 echo "Running the gate for $version."
 cargo test --workspace >/dev/null || fail "cargo test failed"
@@ -99,10 +102,15 @@ if [ -n "$dry" ]; then
     exit 0
 fi
 
-git add Cargo.toml Cargo.lock CHANGELOG.md po
+git add Cargo.toml Cargo.lock CHANGELOG.md po "$metainfo"
 git commit -q -m "Release $version"
 trap - EXIT
 git tag -a "v$version" -F <(scripts/changelog.sh section "$version")
 git push -q origin main "v$version"
 echo "Pushed v$version. GitHub builds and publishes it:"
 echo "  https://github.com/c9dev/penguin-mail/actions/workflows/release.yml"
+echo
+echo "Flathub builds from its own repository, so update it by hand:"
+echo "  scripts/flatpak-sources.sh --flathub v$version <dir>"
+echo "then copy the three files into a checkout of"
+echo "https://github.com/flathub/io.github.c9dev.PenguinMail and open a pull request."

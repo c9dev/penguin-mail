@@ -17,7 +17,9 @@ mod images;
 mod language;
 mod logging;
 mod notify;
+mod old_id;
 mod open_thread;
+mod packaging;
 mod permission;
 mod pgp;
 mod protection;
@@ -46,7 +48,7 @@ use mailrs_domain::translate::{fill, gettext};
 
 use settings::Settings;
 
-pub const APP_ID: &str = "dev.penguinmail.PenguinMail";
+pub const APP_ID: &str = "io.github.c9dev.PenguinMail";
 
 fn usage() -> String {
     gettext(
@@ -123,11 +125,14 @@ fn main() -> glib::ExitCode {
         .or_else(|| args.iter().any(|a| a == "--compose").then(String::new));
     let demo = args.iter().any(|a| a == "--demo");
     let background = args.iter().any(|a| a == "--background");
+    if !demo {
+        old_id::carry_over_on_start();
+    }
 
     // Wayland and X11 name the window after the program; matching the
     // desktop entry lets the dock show the right icon.
     glib::set_prgname(Some(if demo {
-        "dev.penguinmail.PenguinMail.Demo"
+        "io.github.c9dev.PenguinMail.Demo"
     } else {
         APP_ID
     }));
@@ -135,7 +140,7 @@ fn main() -> glib::ExitCode {
     // so a process running in the tray never loads the graphics stack.
     let gio_app = gio::Application::builder()
         .application_id(if demo {
-            "dev.penguinmail.PenguinMail.Demo"
+            "io.github.c9dev.PenguinMail.Demo"
         } else {
             APP_ID
         })
@@ -204,9 +209,9 @@ pub fn ensure_gtk() {
     adw::init().expect("libadwaita starts");
     if let Some(display) = gdk::Display::default() {
         gtk::IconTheme::for_display(&display)
-            .add_resource_path("/dev/penguinmail/PenguinMail/icons");
+            .add_resource_path("/io/github/c9dev/PenguinMail/icons");
         let css = gtk::CssProvider::new();
-        css.load_from_resource("/dev/penguinmail/PenguinMail/style.css");
+        css.load_from_resource("/io/github/c9dev/PenguinMail/style.css");
         gtk::style_context_add_provider_for_display(
             &display,
             &css,

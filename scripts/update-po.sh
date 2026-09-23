@@ -39,11 +39,15 @@ while read -r file; do
     number=$((number + 1))
     xtr "${keywords[@]}" -o "$(printf '%s/1-%03d.pot' "$work" "$number")" "$file"
 done <<< "$listed"
-# The desktop entry is not Rust at all.
+# The desktop entry and the AppStream metainfo are not Rust at all. xgettext
+# reads the metainfo through the ITS rules AppStream installs, which leave
+# out the release notes marked translate="no".
 xgettext --from-code=UTF-8 -L Desktop \
-    -o "$work/2-desktop.pot" app/data/dev.penguinmail.PenguinMail.desktop
+    -o "$work/2-desktop.pot" app/data/io.github.c9dev.PenguinMail.desktop
+xgettext --from-code=UTF-8 \
+    -o "$work/3-metainfo.pot" app/data/io.github.c9dev.PenguinMail.metainfo.xml
 
-msgcat --use-first --sort-by-file -o "$work/joined.pot" "$work"/[12]-*.pot
+msgcat --use-first --sort-by-file -o "$work/joined.pot" "$work"/[123]-*.pot
 # msgcat needs a header on its inputs; ours replaces it, so drop theirs.
 sed '1,/^$/d' "$work/joined.pot" > "$work/merged.pot"
 cat > "$work/header.pot" <<HEADER
