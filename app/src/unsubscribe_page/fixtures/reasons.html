@@ -1,0 +1,33 @@
+<!doctype html>
+<!--
+  The page that asks why before it lets go, as the owner met it: four
+  optional boxes of reasons, two of them reports, and one button. The
+  boxes are a survey rather than a choice of topics, so the rules tick
+  the plain reason and never a report. The matching reasons.json is what
+  extract.js reads off this page.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Are you sure to unsubscribe?</title>
+  </head>
+  <body>
+    <h1>Are you sure to unsubscribe?</h1>
+    <form method="post" action="/unsubscribe">
+      <input type="hidden" name="token" value="4be" />
+      <div>
+        <label><input type="checkbox" name="reason" value="1" /> I do not want to receive such emails anymore</label>
+      </div>
+      <div>
+        <label><input type="checkbox" name="reason" value="2" /> This is not what I subscribed to</label>
+      </div>
+      <div>
+        <label><input type="checkbox" name="reason" value="3" /> This is a spam email</label>
+      </div>
+      <div>
+        <label><input type="checkbox" name="reason" value="4" /> This is a fraudulent email, and I want to report it</label>
+      </div>
+      <button type="submit">submit</button>
+    </form>
+  </body>
+</html>

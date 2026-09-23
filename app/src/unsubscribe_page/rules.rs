@@ -43,17 +43,22 @@ pub fn pick(page: &PageForm, address: &str) -> Pick {
         .map(|field| (field.id, address.to_string()))
         .collect();
     let choices: Vec<&Field> = form.fields.iter().filter(|field| chooses(field)).collect();
-    let tick: Vec<usize> = choices
-        .iter()
-        .filter(|field| words::means_all(&field.label))
-        .map(|field| field.id)
-        .collect();
-    // A list of topics with no box meaning all of them is the one case
-    // the rules give up on by design. Choosing between a sender's topics
-    // is the person's to do, not the app's.
-    if !choices.is_empty() && tick.is_empty() {
-        return Pick::Unsure(Unsure::Ambiguous);
-    }
+    let tick: Vec<usize> = if asks_why(&choices) {
+        one_reason(&choices).into_iter().collect()
+    } else {
+        let tick: Vec<usize> = choices
+            .iter()
+            .filter(|field| words::means_all(&field.label))
+            .map(|field| field.id)
+            .collect();
+        // A list of topics with no box meaning all of them is the one
+        // case the rules give up on by design. Choosing between a
+        // sender's topics is the person's to do, not the app's.
+        if !choices.is_empty() && tick.is_empty() {
+            return Pick::Unsure(Unsure::Ambiguous);
+        }
+        tick
+    };
     let mut presses = form
         .buttons
         .iter()
@@ -115,6 +120,28 @@ fn the_form(page: &PageForm) -> Option<&Form> {
         (Some(form), None) => Some(form),
         _ => None,
     }
+}
+
+/// Whether the boxes on a form ask why the person is leaving rather
+/// than which topics they want: every one of them gives a reason or
+/// reports the sender.
+fn asks_why(choices: &[&Field]) -> bool {
+    !choices.is_empty()
+        && choices
+            .iter()
+            .all(|field| words::gives_a_reason(&field.label))
+}
+
+/// The one reason a form asking why gets: the person no longer wants the
+/// mail, else the first reason that names something. A report is never
+/// ticked, since filing one is the person's call, and a form offering
+/// nothing else gets no box at all.
+fn one_reason(choices: &[&Field]) -> Option<usize> {
+    let reasons = || choices.iter().filter(|field| !words::reports(&field.label));
+    reasons()
+        .find(|field| words::unwanted(&field.label))
+        .or_else(|| reasons().find(|field| !words::other(&field.label)))
+        .map(|field| field.id)
 }
 
 fn fields(page: &PageForm) -> impl Iterator<Item = &Field> {

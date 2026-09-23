@@ -20,6 +20,18 @@ pub struct Words {
     pub all: &'static [&'static str],
     /// Text that reads as the address being off the list already.
     pub done: &'static [&'static str],
+    /// A checkbox or radio that gives a reason for leaving, on a form
+    /// that asks why before it lets go.
+    pub reason: &'static [&'static str],
+    /// The plainest of those reasons: the person no longer wants the
+    /// mail. It is the one box such a form gets ticked.
+    pub unwanted: &'static [&'static str],
+    /// A reason with nothing specific in it, which often opens a box
+    /// asking what the reason is.
+    pub other: &'static [&'static str],
+    /// A box that reports the sender for spam or fraud rather than
+    /// giving a reason. The app never files a report on its own.
+    pub report: &'static [&'static str],
     /// A field label that asks for an email address.
     pub email_label: &'static [&'static str],
 }
@@ -69,6 +81,26 @@ pub const EN: Words = Words {
         "your subscription has been cancelled",
         "your subscription has been canceled",
     ],
+    reason: &[
+        "do not want to receive",
+        "don't want to receive",
+        "no longer want",
+        "no longer interested",
+        "too many emails",
+        "too often",
+        "not what i subscribed to",
+        "never signed up",
+        "not relevant",
+        "other",
+    ],
+    unwanted: &[
+        "do not want to receive",
+        "don't want to receive",
+        "no longer want",
+        "no longer interested",
+    ],
+    other: &["other", "other reason"],
+    report: &["spam", "fraud", "fraudulent", "phishing", "abuse"],
     email_label: &["email", "e mail"],
 };
 
@@ -100,6 +132,19 @@ pub const PT: Words = Words {
         "já não vai receber",
         "não vai receber",
     ],
+    reason: &[
+        "não quero receber",
+        "já não tenho interesse",
+        "demasiados emails",
+        "não me inscrevi",
+        "não é relevante",
+        "outro",
+        "outra razão",
+        "outro motivo",
+    ],
+    unwanted: &["não quero receber", "já não tenho interesse"],
+    other: &["outro", "outra razão", "outro motivo"],
+    report: &["spam", "fraude", "fraudulento", "fraudulenta", "denunciar"],
     email_label: &[
         "endereço de email",
         "endereço de correio",
@@ -157,6 +202,28 @@ pub fn presses(text: &str) -> bool {
 /// A checkbox or radio that reads as every list at once.
 pub fn means_all(text: &str) -> bool {
     LANGUAGES.iter().any(|words| reads_as(text, words.all))
+}
+
+/// A box that gives a reason for leaving, or reports the sender.
+pub fn gives_a_reason(text: &str) -> bool {
+    LANGUAGES
+        .iter()
+        .any(|words| reads_as(text, words.reason) || reads_as(text, words.report))
+}
+
+/// A reason that says the person no longer wants the mail.
+pub fn unwanted(text: &str) -> bool {
+    LANGUAGES.iter().any(|words| reads_as(text, words.unwanted))
+}
+
+/// A reason that names nothing, "Other".
+pub fn other(text: &str) -> bool {
+    LANGUAGES.iter().any(|words| reads_as(text, words.other))
+}
+
+/// A box that reports the sender for spam or fraud.
+pub fn reports(text: &str) -> bool {
+    LANGUAGES.iter().any(|words| reads_as(text, words.report))
 }
 
 /// Text that reads as the address being off the list already.

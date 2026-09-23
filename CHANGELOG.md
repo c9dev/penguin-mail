@@ -33,6 +33,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - A screen reader reads out the items of every menu, such as Reply or
   Archive in a conversation's right-click menu. It used to announce each
   one as a menu item with no name.
+- Unsubscribe finishes pages that ask why you are leaving. Penguin Mail
+  ticks the box saying you no longer want the mail, and never one that
+  reports the sender for spam or fraud.
 
 ## 0.2.0 (2026-09-23)
 

@@ -1,0 +1,20 @@
+{
+  "url": "https://mail.shop.example/unsubscribe?u=4be",
+  "title": "Are you sure to unsubscribe?",
+  "text": "Are you sure to unsubscribe?\nI do not want to receive such emails anymore\nThis is not what I subscribed to\nThis is a spam email\nThis is a fraudulent email, and I want to report it\nsubmit",
+  "forms": [
+    {
+      "id": 0,
+      "fields": [
+        { "id": 1, "kind": "hidden", "value": "4be" },
+        { "id": 2, "kind": "checkbox", "label": "I do not want to receive such emails anymore" },
+        { "id": 3, "kind": "checkbox", "label": "This is not what I subscribed to" },
+        { "id": 4, "kind": "checkbox", "label": "This is a spam email" },
+        { "id": 5, "kind": "checkbox", "label": "This is a fraudulent email, and I want to report it" }
+      ],
+      "buttons": [{ "id": 6, "label": "submit" }]
+    }
+  ],
+  "captcha": false,
+  "password": false
+}

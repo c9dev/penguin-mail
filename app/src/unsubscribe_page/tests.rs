@@ -23,6 +23,7 @@ const LOGIN: &str = include_str!("fixtures/login.json");
 const ALREADY_OFF: &str = include_str!("fixtures/already_off.json");
 const PORTUGUESE: &str = include_str!("fixtures/portuguese.json");
 const TWO_FORMS: &str = include_str!("fixtures/two_forms.json");
+const REASONS: &str = include_str!("fixtures/reasons.json");
 
 fn page(fixture: &str) -> PageForm {
     serde_json::from_str(fixture).expect("the fixture is a PageForm")
@@ -67,6 +68,55 @@ fn the_box_that_means_every_list_gets_ticked() {
     assert_eq!(plan.tick, [4], "only the box that means all of them");
     assert_eq!(plan.fill, [(1, ME.to_string())]);
     assert_eq!(plan.press, 5);
+}
+
+#[test]
+fn a_form_asking_why_gets_the_plain_reason_and_its_one_button() {
+    assert_eq!(
+        plan(REASONS),
+        Plan {
+            form: 0,
+            fill: Vec::new(),
+            tick: vec![2],
+            press: 6,
+        }
+    );
+}
+
+#[test]
+fn a_report_box_is_never_ticked_even_when_it_comes_first() {
+    let mut page = page(REASONS);
+    page.forms[0].fields.swap(1, 4);
+    assert_eq!(plan_of(&page).tick, [2]);
+}
+
+#[test]
+fn a_form_whose_only_reasons_are_reports_ticks_nothing() {
+    let mut page = page(REASONS);
+    page.forms[0].fields.retain(|field| field.id != 2 && field.id != 3);
+    assert_eq!(plan_of(&page).tick, Vec::<usize>::new());
+    assert_eq!(plan_of(&page).press, 6);
+}
+
+#[test]
+fn a_required_group_of_reasons_picks_the_plain_one() {
+    let reason = |id: usize, label: &str| Field {
+        id,
+        kind: FieldKind::Radio {
+            group: "why".to_string(),
+        },
+        label: label.to_string(),
+        required: true,
+        ..Field::default()
+    };
+    let mut page = page(REASONS);
+    page.forms[0].fields = vec![
+        reason(2, "Too many emails"),
+        reason(3, "Já não tenho interesse"),
+        reason(4, "Isto é spam"),
+        reason(5, "Outro"),
+    ];
+    assert_eq!(plan_of(&page).tick, [3]);
 }
 
 #[test]
@@ -230,6 +280,7 @@ fn the_rules_own_plans_pass_their_own_check() {
         PREFERENCES,
         PORTUGUESE,
         TWO_FORMS,
+        REASONS,
     ] {
         let page = page(fixture);
         assert!(valid(&page, &plan_of(&page), ME), "{}", page.url);

@@ -606,6 +606,10 @@ mod tests {
                 "preferences",
                 include_str!("../../unsubscribe_page/fixtures/preferences.json"),
             ),
+            (
+                "reasons",
+                include_str!("../../unsubscribe_page/fixtures/reasons.json"),
+            ),
         ];
         let browser = WebkitBrowser::new();
         for (name, written) in pages {
