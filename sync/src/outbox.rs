@@ -17,12 +17,11 @@
 use std::sync::Arc;
 
 use mailrs_domain::{AccountId, EpochMillis, Target};
-use mailrs_gmail::GmailError;
 use mailrs_store::Db;
 use mailrs_store::outbox::{self, Queued};
 
 use crate::backoff::{MOST_TRIES, retry_delay};
-use crate::{Accounts, SavedDraft, SyncError, now_millis, outbox_id};
+use crate::{Accounts, BackendError, SavedDraft, SyncError, now_millis, outbox_id};
 
 /// How long a claim on a waiting message holds. A send that takes longer
 /// than this belongs to a run that died, and the message is free again.
@@ -363,7 +362,7 @@ impl<A: Accounts> Outbox<A> {
                 .send_draft(draft_id)
                 .await?
                 .unwrap_or_else(|| draft_id.clone())),
-            (None, None) => Err(GmailError::NotFound.into()),
+            (None, None) => Err(BackendError::NotFound.into()),
         }
     }
 

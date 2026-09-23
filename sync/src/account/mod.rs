@@ -6,7 +6,6 @@ mod history;
 mod labels;
 mod listed;
 mod outbox;
-pub use outbox::SendAsAddress;
 mod threads;
 mod window;
 mod writes;
@@ -19,16 +18,16 @@ use std::time::{Duration, Instant};
 use mailrs_domain::{AccountId, AccountState, ChangeEvent, EpochMillis, MessageMeta};
 use mailrs_store::{Db, accounts};
 
-use crate::{GmailApi, SyncError};
+use crate::{AccountServices, MailBackend, SyncError};
 
 /// Metadata requests in flight per account.
 pub const FETCH_CONCURRENCY: usize = 10;
 pub const DEFAULT_WINDOW_DAYS: i64 = 30;
 pub const DEFAULT_BODY_CACHE_BYTES: i64 = 1 << 30;
 
-pub struct AccountSync<G> {
+pub struct AccountSync {
     account_id: AccountId,
-    api: Arc<G>,
+    services: AccountServices,
     db: Db,
     events: async_channel::Sender<ChangeEvent>,
     window_days: i64,
@@ -56,16 +55,16 @@ pub struct AccountSync<G> {
 /// engine replays every 30 seconds, so this still covers one missed tick.
 pub const FRESH_FOR: Duration = Duration::from_secs(75);
 
-impl<G: GmailApi> AccountSync<G> {
+impl AccountSync {
     pub fn new(
         account_id: AccountId,
-        api: Arc<G>,
+        services: AccountServices,
         db: Db,
         events: async_channel::Sender<ChangeEvent>,
     ) -> Self {
         AccountSync {
             account_id,
-            api,
+            services,
             db,
             events,
             window_days: DEFAULT_WINDOW_DAYS,
@@ -108,18 +107,15 @@ impl<G: GmailApi> AccountSync<G> {
         self.account_id
     }
 
-    /// Whether a user action is waiting on this account's Gmail budget.
-    /// The engine reads it between backfill pages and gives way.
-    pub(crate) fn foreground_waiting(&self) -> bool {
-        self.api
-            .quota()
-            .is_some_and(|quota| quota.foreground_waiting())
+    /// The services this account is served by.
+    pub fn services(&self) -> &AccountServices {
+        &self.services
     }
 
-    /// Counts the caller as a user action waiting on Gmail until the guard
-    /// drops, so backfill stands aside for the whole wait.
-    pub(crate) fn waiting(&self) -> Option<mailrs_gmail::Waiting<'_>> {
-        self.api.quota().map(|quota| quota.waiting())
+    /// Whether a user action is waiting on this account's server. The
+    /// engine reads it between backfill pages and gives way.
+    pub(crate) fn foreground_waiting(&self) -> bool {
+        self.services.mail.person_waiting()
     }
 
     pub async fn set_state(&self, state: AccountState) -> Result<(), SyncError> {

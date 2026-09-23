@@ -190,7 +190,7 @@ async fn a_rate_limit_that_outlasts_the_ceiling_reports_plainly() {
 
     assert!(matches!(
         err,
-        crate::SyncError::Gmail(GmailError::RateLimited { .. })
+        crate::SyncError::Backend(crate::BackendError::RateLimited(_))
     ));
     let told: Vec<String> = h
         .drain()

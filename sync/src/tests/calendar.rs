@@ -197,7 +197,7 @@ async fn a_missing_permission_is_an_answer_and_a_switched_off_api_an_error() {
         .await
         .unwrap_err();
     assert!(
-        matches!(err, crate::SyncError::Gmail(GmailError::ApiDisabled { .. })),
+        matches!(err, crate::SyncError::Backend(crate::BackendError::Gmail(GmailError::ApiDisabled { .. }))),
         "{err}"
     );
     assert!(h.fake.with(|s| s.events.is_empty()));

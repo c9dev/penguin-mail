@@ -172,7 +172,7 @@ async fn three_lists_leave_in_one_call_once_the_dialog_says_yes() {
         ]
     );
     assert_eq!(
-        h.gmail.with(|s| s.unsubscribed.clone()),
+        h.one_click.posted(),
         ["https://trail.example/u/1"],
         "the one-click list hears from Gmail"
     );
@@ -230,7 +230,7 @@ async fn a_refused_dialog_leaves_every_list_alone() {
     let said: Vec<String> = outcomes(&answer).into_iter().map(|(_, o)| o).collect();
     assert_eq!(said, ["declined", "declined", "declined"]);
     assert!(h.submissions().is_empty(), "the page was read, not pressed");
-    assert!(h.gmail.with(|s| s.unsubscribed.is_empty()));
+    assert!(h.one_click.posted().is_empty());
     assert!(h.asked().requests.is_empty(), "no request went out");
     assert_eq!(
         h.asked().lists_asked.len(),

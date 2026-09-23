@@ -8,9 +8,11 @@
 //! sync against this mailbox would leave, for callers that want mail on
 //! screen before the engine starts.
 
+mod one_click;
 mod query;
 mod sent;
 
+pub use one_click::FakeOneClick;
 pub use sent::read_sent;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
@@ -115,8 +117,6 @@ pub struct FakeState {
     /// Filters made so far. Gmail never hands a deleted filter's id to a
     /// new one, so ids count up from this rather than from the list.
     pub filters_made: usize,
-    /// The one-click unsubscribe URLs posted to, oldest first.
-    pub unsubscribed: Vec<String>,
     /// The account's contacts, in the order the People API would list
     /// them. A fake with none answers an empty address book.
     pub contacts: Vec<Person>,
@@ -264,7 +264,6 @@ impl FakeGmail {
                 vacation: Vacation::default(),
                 filters: Vec::new(),
                 filters_made: 0,
-                unsubscribed: Vec::new(),
                 contacts: Vec::new(),
                 photos: HashMap::new(),
                 calendar: HashMap::new(),
@@ -892,18 +891,12 @@ impl GmailApi for FakeGmail {
                 display_name: s.display_name.clone().unwrap_or_default(),
                 is_default: true,
                 is_primary: true,
-                signature: s.signature.clone().unwrap_or_default(),
+                signature: s.signature.as_deref().map(signature_html).unwrap_or_default(),
                 verification_status: None,
             }];
             all.extend(s.send_as.iter().cloned());
             all
         }))
-    }
-
-    async fn display_name(&self) -> Result<Option<String>, GmailError> {
-        self.call("users.settings.sendAs.list", cost::SEND_AS)
-            .await?;
-        Ok(self.with(|s| s.display_name.clone()))
     }
 
     async fn attachment(
@@ -919,12 +912,6 @@ impl GmailApi for FakeGmail {
                 .cloned()
                 .ok_or(GmailError::NotFound)
         })
-    }
-
-    async fn signature(&self) -> Result<Option<String>, GmailError> {
-        self.call("users.settings.sendAs.list", cost::SEND_AS)
-            .await?;
-        Ok(self.with(|s| s.signature.clone()))
     }
 
     async fn vacation(&self) -> Result<Vacation, GmailError> {
@@ -1126,18 +1113,6 @@ impl GmailApi for FakeGmail {
         }))
     }
 
-    async fn one_click_unsubscribe(&self, url: &str) -> Result<(), GmailError> {
-        // The list's server is not Gmail, so nothing counts against the
-        // quota, but a test can still make the post fail.
-        self.with(|s| match s.failures.pop_front() {
-            Some(err) => Err(err),
-            None => {
-                s.unsubscribed.push(url.to_string());
-                Ok(())
-            }
-        })
-    }
-
     async fn delete_filter(&self, id: &str) -> Result<(), GmailError> {
         self.call("users.settings.filters.delete", cost::SETTINGS)
             .await?;
@@ -1324,13 +1299,26 @@ fn fill_person(person: &mut Person, fields: &ContactFields) {
     }
 }
 
+/// The HTML Gmail would hold for a signature the fake keeps as text: one
+/// line of it per line of text.
+fn signature_html(text: &str) -> String {
+    text.lines()
+        .map(|line| {
+            line.replace('&', "&amp;")
+                .replace('<', "&lt;")
+                .replace('>', "&gt;")
+        })
+        .collect::<Vec<_>>()
+        .join("<br>")
+}
+
 /// Leaves `sync`'s store as a new account's first sync against this
 /// mailbox would: the labels, the history cursor, and every message in the
 /// window, stored by sync's own bootstrap and backfill. The engine runs the
 /// same steps a tick at a time; this runs them back to back, so the demo
 /// and the assistant's tests start on a full store that cannot disagree
 /// with what sync would have written.
-pub async fn fill_store(sync: &AccountSync<FakeGmail>) -> Result<(), SyncError> {
+pub async fn fill_store(sync: &AccountSync) -> Result<(), SyncError> {
     sync.bootstrap().await?;
     while sync.backfill_step().await? {}
     Ok(())

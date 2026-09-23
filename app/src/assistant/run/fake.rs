@@ -18,10 +18,10 @@ use mailrs_domain::{
 };
 use mailrs_gmail::RemoteLabel;
 use mailrs_store::{Db, accounts, messages};
-use mailrs_sync::fake::{FakeGmail, fill_store};
+use mailrs_sync::fake::{FakeGmail, FakeOneClick, fill_store};
 use mailrs_sync::{
-    AccountSettings, AccountSync, Accounts, Calendar, ContactBook, Invitations, MailAction,
-    MailActions, Mailboxes, Outcome, View,
+    AccountServices, AccountSettings, AccountSync, Accounts, Calendar, ContactBook, Invitations,
+    MailAction, MailActions, Mailboxes, OneClick, Outcome, View,
 };
 use serde_json::Value;
 
@@ -48,12 +48,10 @@ pub const YOU: &str = "sam@example.com";
 pub const NOW: EpochMillis = 1_767_355_200_000;
 
 /// The accounts a test connects, by id.
-pub struct Connected(HashMap<AccountId, Arc<AccountSync<FakeGmail>>>);
+pub struct Connected(HashMap<AccountId, Arc<AccountSync>>);
 
 impl Accounts for Connected {
-    type Api = FakeGmail;
-
-    fn account(&self, account_id: AccountId) -> Option<Arc<AccountSync<FakeGmail>>> {
+    fn account(&self, account_id: AccountId) -> Option<Arc<AccountSync>> {
         self.0.get(&account_id).cloned()
     }
 }
@@ -438,6 +436,7 @@ impl Background for Runtime {
 pub struct Harness {
     pub tools: Tools<Connected>,
     pub gmail: Arc<FakeGmail>,
+    pub one_click: Arc<FakeOneClick>,
     pub db: Db,
     pub desk: Rc<FakeDesk>,
     pub effects: Rc<FakeEffects>,
@@ -533,7 +532,7 @@ impl Harness {
         let (events, heard) = async_channel::unbounded();
         let sync = Arc::new(AccountSync::new(
             account_id,
-            Arc::clone(&gmail),
+            AccountServices::fake(Arc::clone(&gmail)),
             db.clone(),
             events.clone(),
         ));
@@ -565,7 +564,7 @@ impl Harness {
             }
             let sync = Arc::new(AccountSync::new(
                 id,
-                Arc::clone(&gmail),
+                AccountServices::fake(Arc::clone(&gmail)),
                 db.clone(),
                 events.clone(),
             ));
@@ -580,7 +579,12 @@ impl Harness {
             other = Some((id, gmail));
         }
         let connected = Arc::new(Connected(syncing));
-        let mail = Arc::new(MailActions::new(Arc::clone(&connected), db.clone()));
+        let one_click = Arc::new(FakeOneClick::default());
+        let mail = Arc::new(MailActions::new(
+            Arc::clone(&connected),
+            db.clone(),
+            OneClick::Fake(Arc::clone(&one_click)),
+        ));
         let settings = Arc::new(AccountSettings::new(Arc::clone(&connected), db.clone()));
         let modules = Modules {
             mail: Arc::clone(&mail),
@@ -633,6 +637,7 @@ impl Harness {
         Harness {
             tools,
             gmail,
+            one_click,
             db,
             desk,
             effects,

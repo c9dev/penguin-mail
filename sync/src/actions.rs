@@ -8,11 +8,13 @@ use std::sync::{Arc, Mutex};
 
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{AccountId, EpochMillis, FlagColor, Folder, Target, system_label};
-use mailrs_gmail::GmailError;
 use mailrs_store::reminders::{self, Reminder};
 use mailrs_store::{Db, flags, follow_ups, labels, messages, threads};
 
-use crate::{AccountSync, GmailApi, Permitted, Relabelled, SyncEngine, SyncError, TriageAction};
+use crate::{
+    AccountServices, AccountSync, BackendError, OneClick, Permitted, Relabelled, SyncEngine,
+    SyncError, TriageAction,
+};
 
 mod categorize;
 mod labelling;
@@ -29,16 +31,19 @@ const PLACES: [Folder; 3] = [Folder::Junk, Folder::Trash, Folder::AllMail];
 
 /// Finds the sync handle of a connected account.
 pub trait Accounts: Send + Sync + 'static {
-    type Api: GmailApi;
-
     /// `None` when the account is not syncing.
-    fn account(&self, account_id: AccountId) -> Option<Arc<AccountSync<Self::Api>>>;
+    fn account(&self, account_id: AccountId) -> Option<Arc<AccountSync>>;
+
+    /// The services the account is served by, `None` when it is not
+    /// syncing. A module that needs a calendar, contacts or rules takes
+    /// its own from here rather than asking `AccountSync`, which syncs mail.
+    fn services(&self, account_id: AccountId) -> Option<AccountServices> {
+        self.account(account_id).map(|sync| sync.services().clone())
+    }
 }
 
-impl<G: GmailApi> Accounts for SyncEngine<G> {
-    type Api = G;
-
-    fn account(&self, account_id: AccountId) -> Option<Arc<AccountSync<G>>> {
+impl Accounts for SyncEngine {
+    fn account(&self, account_id: AccountId) -> Option<Arc<AccountSync>> {
         SyncEngine::account(self, account_id).ok()
     }
 }
@@ -218,15 +223,18 @@ pub struct Undone {
 pub struct MailActions<A: Accounts> {
     pub(crate) accounts: Arc<A>,
     pub(crate) db: Db,
+    /// Where a one-click unsubscribe goes.
+    pub(crate) one_click: OneClick,
     /// The recorded actions, oldest first. Undo takes from the end.
     stack: Mutex<VecDeque<Undo>>,
 }
 
 impl<A: Accounts> MailActions<A> {
-    pub fn new(accounts: Arc<A>, db: Db) -> Self {
+    pub fn new(accounts: Arc<A>, db: Db, one_click: OneClick) -> Self {
         MailActions {
             accounts,
             db,
+            one_click,
             stack: Mutex::new(VecDeque::new()),
         }
     }
@@ -334,7 +342,7 @@ impl<A: Accounts> MailActions<A> {
             let nothing_yet = results.iter().flatten().all(|r| r.is_err());
             let refused = erased
                 .iter()
-                .all(|r| matches!(r, Err(SyncError::Gmail(GmailError::MissingScope))));
+                .all(|r| matches!(r, Err(SyncError::Backend(BackendError::NeedsPermission))));
             if nothing_yet && refused {
                 return Ok(Permitted::NeedsPermission);
             }
@@ -861,7 +869,7 @@ impl<A: Accounts> MailActions<A> {
             .await?)
     }
 
-    fn sync(&self, account_id: AccountId) -> Result<Arc<AccountSync<A::Api>>, SyncError> {
+    fn sync(&self, account_id: AccountId) -> Result<Arc<AccountSync>, SyncError> {
         self.accounts
             .account(account_id)
             .ok_or(SyncError::UnknownAccount(account_id))

@@ -12,11 +12,14 @@ use mailrs_store::{Db, accounts};
 use tokio::time::Instant;
 
 use crate::fake::{FakeGmail, Usage, meta};
-use crate::{EngineConfig, History, MailAction, MailActions, SyncEngine, TriageAction, now_millis};
+use crate::{
+    AccountServices, EngineConfig, History, MailAction, MailActions, SyncEngine, TriageAction,
+    now_millis,
+};
 
 /// Accounts syncing from nothing, each with a mailbox to backfill.
 struct Backfilling {
-    engine: Arc<SyncEngine<FakeGmail>>,
+    engine: Arc<SyncEngine>,
     fakes: Vec<Arc<FakeGmail>>,
     ids: Vec<AccountId>,
     db: Db,
@@ -52,7 +55,7 @@ async fn backfilling(count: usize, messages: usize) -> Backfilling {
                 )
             });
         }
-        engine.start_account(id, Arc::clone(&fake));
+        engine.start_account(id, AccountServices::fake(Arc::clone(&fake)));
         fakes.push(fake);
         ids.push(id);
     }
@@ -102,8 +105,12 @@ impl Backfilling {
         targets
     }
 
-    fn actions(&self) -> MailActions<SyncEngine<FakeGmail>> {
-        MailActions::new(Arc::clone(&self.engine), self.db.clone())
+    fn actions(&self) -> MailActions<SyncEngine> {
+        MailActions::new(
+            Arc::clone(&self.engine),
+            self.db.clone(),
+            crate::OneClick::Fake(Arc::default()),
+        )
     }
 
     fn usage(&self) -> Usage {

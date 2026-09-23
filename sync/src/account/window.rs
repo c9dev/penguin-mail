@@ -10,14 +10,14 @@ use mailrs_store::{accounts, labels, messages, window};
 use super::AccountSync;
 use super::fetch::{Want, store_fetched};
 use super::labels::domain_labels;
-use crate::{GmailApi, ID_PAGE_SIZE, LIST_PAGE_SIZE, SyncError};
+use crate::{BackendError, ID_PAGE_SIZE, LIST_PAGE_SIZE, MailBackend, SyncError};
 
 const DAY_MILLIS: i64 = 24 * 60 * 60 * 1000;
 
 /// Gmail search for every message in the inbox, whatever its age.
 const INBOX_QUERY: &str = "in:inbox";
 
-impl<G: GmailApi> AccountSync<G> {
+impl AccountSync {
     /// Gmail search for the window: recent mail plus everything in INBOX.
     pub fn window_query(&self) -> String {
         format!("{{newer_than:{}d in:inbox}}", self.window_days)
@@ -28,8 +28,8 @@ impl<G: GmailApi> AccountSync<G> {
     /// page. `backfill_step` loads the rest.
     pub async fn bootstrap(&self) -> Result<(), SyncError> {
         self.set_state(AccountState::Bootstrapping).await?;
-        let profile = self.api.profile().await?;
-        let remote_labels = self.api.labels().await?;
+        let profile = self.services.mail.profile().await?;
+        let remote_labels = self.services.mail.labels().await?;
         let account_id = self.account_id;
         let history_id = profile.history_id;
         let labels = domain_labels(account_id, &remote_labels);
@@ -70,8 +70,8 @@ impl<G: GmailApi> AccountSync<G> {
             return self.bootstrap().await;
         }
         self.set_state(AccountState::Bootstrapping).await?;
-        let profile = self.api.profile().await?;
-        let remote_labels = self.api.labels().await?;
+        let profile = self.services.mail.profile().await?;
+        let remote_labels = self.services.mail.labels().await?;
         let labels = domain_labels(account_id, &remote_labels);
         let label_ids: Vec<String> = labels.iter().map(|l| l.id.clone()).collect();
         let history_id = profile.history_id;
@@ -161,11 +161,11 @@ impl<G: GmailApi> AccountSync<G> {
             let token = page_token.as_deref();
             let page = match label {
                 Some(label) => {
-                    self.api
+                    self.services.mail
                         .list_labelled(label, query, token, ID_PAGE_SIZE)
                         .await?
                 }
-                None => self.api.list_messages(query, token, ID_PAGE_SIZE).await?,
+                None => self.services.mail.list_messages(query, token, ID_PAGE_SIZE).await?,
             };
             found.extend(page.messages);
             match page.next_page_token {
@@ -190,7 +190,7 @@ impl<G: GmailApi> AccountSync<G> {
             .await
         {
             Ok(next) => Ok(next.is_some()),
-            Err(SyncError::Gmail(GmailError::Http { status: 400, .. }))
+            Err(SyncError::Backend(BackendError::Gmail(GmailError::Http { status: 400, .. })))
                 if cursor.backfill_cursor.is_some() =>
             {
                 tracing::warn!(
@@ -291,7 +291,8 @@ impl<G: GmailApi> AccountSync<G> {
         generation: i64,
     ) -> Result<Option<String>, SyncError> {
         let page = self
-            .api
+            .services
+            .mail
             .list_messages(&self.window_query(), page_token.as_deref(), LIST_PAGE_SIZE)
             .await?;
         // A listed message deleted since is left out; the sweep and

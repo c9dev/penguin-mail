@@ -21,7 +21,7 @@ use mailrs_store::Db;
 use mailrs_store::address_book::{self, Contact};
 
 use crate::settings::Permitted;
-use crate::{AccountSync, Accounts, SyncError, now_millis};
+use crate::{Accounts, AnyContacts, BackendError, ContactsService, SyncError, now_millis};
 
 /// How long a stored address book counts as current. Contacts change far
 /// more slowly than mail, and a refresh with a sync token costs one call,
@@ -79,13 +79,13 @@ impl<A: Accounts> ContactBook<A> {
     /// reads the whole address book; later ones hand back the sync token
     /// and read only what changed.
     pub async fn refresh(&self, account_id: AccountId) -> Result<Permitted<Refreshed>, SyncError> {
-        let sync = self.sync(account_id)?;
+        let contacts = self.contacts(account_id)?;
         let stored = self
             .db
             .read(move |c| address_book::book(c, account_id))
             .await?;
         let mut refreshed = match self
-            .read_pages(&sync, account_id, stored.and_then(|(t, _)| t))
+            .read_pages(&contacts, account_id, stored.and_then(|(t, _)| t))
             .await?
         {
             Permitted::Done(refreshed) => refreshed,
@@ -93,7 +93,7 @@ impl<A: Accounts> ContactBook<A> {
             // address book again, which is what an empty token does.
             Permitted::NeedsPermission => return Ok(Permitted::NeedsPermission),
         };
-        refreshed.photos = self.fetch_photos(&sync, account_id).await?;
+        refreshed.photos = self.fetch_photos(&contacts, account_id).await?;
         Ok(Permitted::Done(refreshed))
     }
 
@@ -160,7 +160,7 @@ impl<A: Accounts> ContactBook<A> {
         fields: &ContactFields,
         keep: bool,
     ) -> Result<Permitted<Contact>, SyncError> {
-        let made = self.sync(account_id)?.create_contact(fields).await;
+        let made = self.contacts(account_id)?.create_contact(fields).await;
         self.stored(account_id, made, keep).await
     }
 
@@ -175,7 +175,7 @@ impl<A: Accounts> ContactBook<A> {
         keep: bool,
     ) -> Result<Permitted<Contact>, SyncError> {
         let changed = self
-            .sync(account_id)?
+            .contacts(account_id)?
             .update_contact(resource, fields)
             .await;
         self.stored(account_id, changed, keep).await
@@ -186,15 +186,15 @@ impl<A: Accounts> ContactBook<A> {
     async fn stored(
         &self,
         account_id: AccountId,
-        person: Result<Person, SyncError>,
+        person: Result<Person, BackendError>,
         keep: bool,
     ) -> Result<Permitted<Contact>, SyncError> {
         let person = match person {
             Ok(person) => person,
-            Err(SyncError::Gmail(GmailError::MissingScope)) => {
+            Err(BackendError::NeedsPermission) => {
                 return Ok(Permitted::NeedsPermission);
             }
-            Err(err) => return Err(err),
+            Err(err) => return Err(err.into()),
         };
         let contact = Contact {
             account_id,
@@ -235,7 +235,7 @@ impl<A: Accounts> ContactBook<A> {
     /// replaces what is stored; one with a token brings only the changes.
     async fn read_pages(
         &self,
-        sync: &AccountSync<A::Api>,
+        contacts: &AnyContacts,
         account_id: AccountId,
         sync_token: Option<String>,
     ) -> Result<Permitted<Refreshed>, SyncError> {
@@ -247,23 +247,23 @@ impl<A: Accounts> ContactBook<A> {
             let mut read: Vec<Contact> = Vec::new();
             let mut deleted: Vec<String> = Vec::new();
             for _ in 0..PAGE_LIMIT {
-                let page = match sync
+                let page = match contacts
                     .connections(page_token.as_deref(), token.as_deref())
                     .await
                 {
                     Ok(page) => page,
-                    Err(SyncError::Gmail(GmailError::MissingScope)) => {
+                    Err(BackendError::NeedsPermission) => {
                         return Ok(Permitted::NeedsPermission);
                     }
                     // Google stopped answering from this token. Read the
                     // whole address book again, which then replaces what
                     // is stored.
-                    Err(SyncError::Gmail(GmailError::ExpiredSyncToken)) if !retried => {
+                    Err(BackendError::Gmail(GmailError::ExpiredSyncToken)) if !retried => {
                         retried = true;
                         token = None;
                         continue 'whole;
                     }
-                    Err(err) => return Err(err),
+                    Err(err) => return Err(err.into()),
                 };
                 read.extend(page.people.iter().map(|person| Contact {
                     account_id,
@@ -334,7 +334,7 @@ impl<A: Accounts> ContactBook<A> {
     /// one: the contact still has a name to show.
     async fn fetch_photos(
         &self,
-        sync: &AccountSync<A::Api>,
+        contacts: &AnyContacts,
         account_id: AccountId,
     ) -> Result<usize, SyncError> {
         let wanted = self
@@ -350,7 +350,7 @@ impl<A: Accounts> ContactBook<A> {
         }
         let mut fetched = 0;
         for (resource, url) in wanted {
-            let bytes = match sync.contact_photo(&url).await {
+            let bytes = match contacts.contact_photo(&url).await {
                 Ok(bytes) if !bytes.is_empty() => bytes,
                 Ok(_) => continue,
                 Err(err) => {
@@ -372,10 +372,12 @@ impl<A: Accounts> ContactBook<A> {
         Ok(fetched)
     }
 
-    fn sync(&self, account_id: AccountId) -> Result<Arc<AccountSync<A::Api>>, SyncError> {
+    fn contacts(&self, account_id: AccountId) -> Result<AnyContacts, SyncError> {
         self.accounts
-            .account(account_id)
-            .ok_or(SyncError::UnknownAccount(account_id))
+            .services(account_id)
+            .ok_or(SyncError::UnknownAccount(account_id))?
+            .contacts
+            .ok_or(SyncError::Backend(BackendError::Unsupported))
     }
 }
 

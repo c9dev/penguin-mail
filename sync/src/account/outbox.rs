@@ -1,29 +1,14 @@
-//! Sending, drafts, search, attachments, and identity: calls the UI makes on
-//! demand rather than as part of the sync loop.
+//! Sending, drafts, search, attachments and exports: mail calls the UI makes
+//! on demand rather than as part of the sync loop.
 
 use std::collections::BTreeSet;
 
-use mailrs_domain::{EpochMillis, Filter, Vacation};
-use mailrs_gmail::{GmailError, SendAs, html_to_text};
 use mailrs_store::{drafts, messages};
 
 use super::AccountSync;
-use crate::{GmailApi, SavedDraft, SyncError};
+use crate::{BackendError, MailBackend, SavedDraft, SyncError};
 
-/// One address an account may send mail as: its own, or an alias whose owner
-/// has confirmed it. Gmail keeps a display name and a signature per address,
-/// so all three travel together.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SendAsAddress {
-    pub email: String,
-    pub name: Option<String>,
-    /// The signature Gmail holds for this address, as plain text.
-    pub signature: String,
-    /// The address Gmail sends from when the writer picks none.
-    pub default: bool,
-}
-
-impl<G: GmailApi> AccountSync<G> {
+impl AccountSync {
     /// Sends raw RFC 822 bytes, then deletes `draft_id` if the message came
     /// from a draft. A draft that is already gone does not fail the send.
     /// Returns the sent message's id.
@@ -33,10 +18,10 @@ impl<G: GmailApi> AccountSync<G> {
         thread_id: Option<String>,
         draft_id: Option<String>,
     ) -> Result<String, SyncError> {
-        let message_id = self.api.send(&raw, thread_id.as_deref()).await?;
+        let message_id = self.services.mail.send(&raw, thread_id.as_deref()).await?;
         if let Some(draft_id) = draft_id {
-            if let Err(err) = self.api.delete_draft(&draft_id).await
-                && !matches!(err, GmailError::NotFound)
+            if let Err(err) = self.services.mail.delete_draft(&draft_id).await
+                && !matches!(err, BackendError::NotFound)
             {
                 tracing::warn!(account = self.account_id, error = %err, "sent, but could not delete the draft");
             }
@@ -57,7 +42,7 @@ impl<G: GmailApi> AccountSync<G> {
             return Ok(None);
         };
         let query = format!("in:sent rfc822msgid:{id}");
-        let page = self.api.list_messages(&query, None, 1).await?;
+        let page = self.services.mail.list_messages(&query, None, 1).await?;
         Ok(page.messages.into_iter().next().map(|m| m.id))
     }
 
@@ -71,12 +56,13 @@ impl<G: GmailApi> AccountSync<G> {
     ) -> Result<SavedDraft, SyncError> {
         let thread_id = thread_id.as_deref();
         let saved = match self
-            .api
+            .services
+            .mail
             .save_draft(draft_id.as_deref(), &raw, thread_id)
             .await
         {
-            Err(GmailError::NotFound) if draft_id.is_some() => {
-                self.api.save_draft(None, &raw, thread_id).await?
+            Err(BackendError::NotFound) if draft_id.is_some() => {
+                self.services.mail.save_draft(None, &raw, thread_id).await?
             }
             other => other?,
         };
@@ -92,9 +78,9 @@ impl<G: GmailApi> AccountSync<G> {
     /// Sends a draft as Gmail holds it, as a scheduled send does. Returns
     /// `None` when the draft is gone, sent or deleted elsewhere.
     pub async fn send_draft(&self, draft_id: &str) -> Result<Option<String>, SyncError> {
-        let sent = match self.api.send_draft(draft_id).await {
+        let sent = match self.services.mail.send_draft(draft_id).await {
             Ok(id) => Some(id),
-            Err(GmailError::NotFound) => None,
+            Err(BackendError::NotFound) => None,
             Err(err) => return Err(err.into()),
         };
         self.forget_draft(draft_id).await;
@@ -102,8 +88,8 @@ impl<G: GmailApi> AccountSync<G> {
     }
 
     pub async fn delete_draft(&self, draft_id: &str) -> Result<(), SyncError> {
-        match self.api.delete_draft(draft_id).await {
-            Ok(()) | Err(GmailError::NotFound) => {}
+        match self.services.mail.delete_draft(draft_id).await {
+            Ok(()) | Err(BackendError::NotFound) => {}
             Err(err) => return Err(err.into()),
         }
         self.forget_draft(draft_id).await;
@@ -149,7 +135,7 @@ impl<G: GmailApi> AccountSync<G> {
         {
             return Ok(Some(draft_id));
         }
-        let listed = self.api.list_drafts().await?;
+        let listed = self.services.mail.list_drafts().await?;
         let found = listed
             .iter()
             .find(|d| d.message_id == message_id)
@@ -203,43 +189,13 @@ impl<G: GmailApi> AccountSync<G> {
         message_id: &str,
         attachment_id: &str,
     ) -> Result<Vec<u8>, SyncError> {
-        Ok(self.api.attachment(message_id, attachment_id).await?)
-    }
-
-    /// The name Gmail puts on this account's outgoing mail, if one is set.
-    pub async fn display_name(&self) -> Result<Option<String>, SyncError> {
-        Ok(self.api.display_name().await?)
-    }
-
-    /// Every address this account may send mail from, its own included,
-    /// with the display name and signature Gmail keeps for each. Aliases
-    /// still waiting on their owner to confirm them are left out, because
-    /// Gmail would refuse to send from one.
-    pub async fn send_as(&self) -> Result<Vec<SendAsAddress>, SyncError> {
-        Ok(self
-            .api
-            .send_as()
-            .await?
-            .into_iter()
-            .filter(SendAs::is_verified)
-            .map(|identity| SendAsAddress {
-                name: Some(identity.display_name).filter(|n| !n.trim().is_empty()),
-                email: identity.send_as_email,
-                signature: html_to_text(&identity.signature),
-                default: identity.is_default,
-            })
-            .collect())
-    }
-
-    /// The signature set in Gmail for the default identity, as plain text.
-    pub async fn gmail_signature(&self) -> Result<Option<String>, SyncError> {
-        Ok(self.api.signature().await?)
+        Ok(self.services.mail.attachment(message_id, attachment_id).await?)
     }
 
     /// The message as it arrived, for View Source and for saving one
     /// message as an `.eml` file.
     pub async fn raw_message(&self, id: &str) -> Result<Vec<u8>, SyncError> {
-        Ok(self.api.raw_message(id).await?)
+        Ok(self.services.mail.raw_message(id).await?)
     }
 
     /// A conversation as an mbox file, oldest message first, or the one
@@ -255,7 +211,8 @@ impl<G: GmailApi> AccountSync<G> {
         let ids: Vec<String> = match message_id {
             Some(id) => vec![id.to_string()],
             None => self
-                .api
+                .services
+                .mail
                 .thread_metadata(thread_id)
                 .await?
                 .into_iter()
@@ -264,133 +221,11 @@ impl<G: GmailApi> AccountSync<G> {
         };
         let mut mbox = Vec::new();
         for id in ids {
-            crate::export::append(&mut mbox, &self.api.raw_message(&id).await?);
+            crate::export::append(&mut mbox, &self.services.mail.raw_message(&id).await?);
         }
         Ok(mbox)
     }
 
-    pub async fn filters(&self) -> Result<Vec<Filter>, SyncError> {
-        Ok(self.api.filters().await?)
-    }
-
-    pub async fn create_filter(&self, filter: Filter) -> Result<Filter, SyncError> {
-        Ok(self.api.create_filter(&filter).await?)
-    }
-
-    pub async fn delete_filter(&self, id: &str) -> Result<(), SyncError> {
-        match self.api.delete_filter(id).await {
-            Ok(()) | Err(GmailError::NotFound) => Ok(()),
-            Err(err) => Err(err.into()),
-        }
-    }
-
-    /// Posts RFC 8058's one-click request to a mailing list's `url`.
-    pub async fn one_click_unsubscribe(&self, url: &str) -> Result<(), SyncError> {
-        Ok(self.api.one_click_unsubscribe(url).await?)
-    }
-
-    pub async fn vacation(&self) -> Result<Vacation, SyncError> {
-        Ok(self.api.vacation().await?)
-    }
-
-    pub async fn set_vacation(&self, vacation: Vacation) -> Result<(), SyncError> {
-        Ok(self.api.set_vacation(&vacation).await?)
-    }
-
-    /// One page of the account's Google contacts. See `ContactBook`.
-    pub async fn connections(
-        &self,
-        page_token: Option<&str>,
-        sync_token: Option<&str>,
-    ) -> Result<mailrs_gmail::ConnectionsPage, SyncError> {
-        Ok(self.api.connections(page_token, sync_token).await?)
-    }
-
-    /// The bytes of one contact photo.
-    pub async fn contact_photo(&self, url: &str) -> Result<Vec<u8>, SyncError> {
-        Ok(self.api.contact_photo(url).await?)
-    }
-
-    /// Adds a contact to the account's Google contacts.
-    pub async fn create_contact(
-        &self,
-        fields: &mailrs_gmail::ContactFields,
-    ) -> Result<mailrs_gmail::Person, SyncError> {
-        Ok(self.api.create_contact(fields).await?)
-    }
-
-    /// Changes the fields `fields` names on the contact `resource`.
-    pub async fn update_contact(
-        &self,
-        resource: &str,
-        fields: &mailrs_gmail::ContactFields,
-    ) -> Result<mailrs_gmail::Person, SyncError> {
-        Ok(self.api.update_contact(resource, fields).await?)
-    }
-
-    /// Answers an invitation through Google Calendar as `me`.
-    /// `occurrence` names one occurrence of a repeating event; `None`
-    /// answers the series.
-    pub async fn answer_invitation(
-        &self,
-        ical_uid: &str,
-        me: &str,
-        answer: mailrs_domain::invitation::Answer,
-        occurrence: Option<EpochMillis>,
-    ) -> Result<mailrs_gmail::Answered, SyncError> {
-        Ok(self
-            .api
-            .answer_invitation(ical_uid, me, answer, occurrence)
-            .await?)
-    }
-
-    /// What the account's calendar already holds between `from` and `to`.
-    pub async fn busy_between(
-        &self,
-        from: EpochMillis,
-        to: EpochMillis,
-    ) -> Result<Vec<mailrs_gmail::Busy>, SyncError> {
-        Ok(self.api.busy_between(from, to).await?)
-    }
-
-    /// How the repeating event `ical_uid` names repeats, as the calendar
-    /// holds it, with what is left of it from `from`.
-    pub async fn series(
-        &self,
-        ical_uid: &str,
-        from: EpochMillis,
-    ) -> Result<Option<mailrs_gmail::Series>, SyncError> {
-        Ok(self.api.series(ical_uid, from).await?)
-    }
-
-    /// Every event on the account's primary calendar between `from` and
-    /// `to`.
-    pub async fn events_between(
-        &self,
-        from: EpochMillis,
-        to: EpochMillis,
-    ) -> Result<Vec<mailrs_gmail::Event>, SyncError> {
-        Ok(self.api.events_between(from, to).await?)
-    }
-
-    pub async fn create_event(
-        &self,
-        fields: &mailrs_gmail::EventFields,
-    ) -> Result<mailrs_gmail::Event, SyncError> {
-        Ok(self.api.create_event(fields).await?)
-    }
-
-    pub async fn update_event(
-        &self,
-        id: &str,
-        fields: &mailrs_gmail::EventFields,
-    ) -> Result<mailrs_gmail::Event, SyncError> {
-        Ok(self.api.update_event(id, fields).await?)
-    }
-
-    pub async fn delete_event(&self, id: &str) -> Result<(), SyncError> {
-        Ok(self.api.delete_event(id).await?)
-    }
 }
 
 /// The `Message-ID` header of RFC 822 bytes, without its angle brackets.

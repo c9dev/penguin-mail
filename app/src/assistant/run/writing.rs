@@ -497,7 +497,7 @@ impl<A: Accounts> Tools<A> {
     /// from sending on.
     async fn readable_body(
         &self,
-        sync: &Arc<AccountSync<A::Api>>,
+        sync: &Arc<AccountSync>,
         message_id: &str,
     ) -> Result<MessageBody, String> {
         let (s, id) = (Arc::clone(sync), message_id.to_string());
@@ -511,7 +511,7 @@ impl<A: Accounts> Tools<A> {
     /// The bytes of one attachment, from Gmail.
     async fn fetched(
         &self,
-        sync: &Arc<AccountSync<A::Api>>,
+        sync: &Arc<AccountSync>,
         message_id: &str,
         found: &Attachment,
     ) -> Result<Vec<u8>, String> {

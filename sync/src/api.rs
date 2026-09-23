@@ -1,4 +1,5 @@
-//! What the sync engine needs from Gmail. A trait, so tests can use a fake.
+//! Gmail's REST API as the Google adapter uses it. A trait, so tests and the
+//! demo can hand the adapter a fake.
 
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::{AccountId, EpochMillis, Filter, MessageBody, MessageMeta, Vacation};
@@ -7,7 +8,6 @@ use mailrs_gmail::convert::message_meta;
 use mailrs_gmail::{
     AccountQuota, Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, GmailClient,
     GmailError, HistoryPage, LabelColor, MessagePage, Person, Profile, RemoteLabel, SendAs, Series,
-    html_to_text,
 };
 
 /// Page size for window listings, whose every id costs a metadata fetch
@@ -132,9 +132,6 @@ pub trait GmailApi: Send + Sync + 'static {
     /// rather than asking again for the next draft.
     fn list_drafts(&self) -> impl Future<Output = Result<Vec<DraftRef>, GmailError>> + Send;
 
-    /// The display name of the account's default send-as identity.
-    fn display_name(&self) -> impl Future<Output = Result<Option<String>, GmailError>> + Send;
-
     /// Every address the account may send from, as Gmail lists them.
     fn send_as(&self) -> impl Future<Output = Result<Vec<SendAs>, GmailError>> + Send;
 
@@ -155,15 +152,6 @@ pub trait GmailApi: Send + Sync + 'static {
     ) -> impl Future<Output = Result<Filter, GmailError>> + Send;
 
     fn delete_filter(&self, id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
-
-    /// Asks a mailing list to take the account off it, with the RFC 8058
-    /// one-click POST to `url`. The request goes to the list's own server
-    /// rather than to Gmail. It sits here so a fake can stand in for it,
-    /// and so the demo never posts to an address in its sample mail.
-    fn one_click_unsubscribe(
-        &self,
-        url: &str,
-    ) -> impl Future<Output = Result<(), GmailError>> + Send;
 
     fn create_label(
         &self,
@@ -187,9 +175,6 @@ pub trait GmailApi: Send + Sync + 'static {
     /// How many conversations carry the label in the whole mailbox, not
     /// only in the part this computer keeps.
     fn label_threads(&self, id: &str) -> impl Future<Output = Result<u64, GmailError>> + Send;
-
-    /// The signature of the default send-as identity, as plain text.
-    fn signature(&self) -> impl Future<Output = Result<Option<String>, GmailError>> + Send;
 
     fn vacation(&self) -> impl Future<Output = Result<Vacation, GmailError>> + Send;
 
@@ -287,242 +272,6 @@ pub trait GmailApi: Send + Sync + 'static {
 
     /// Takes event `id` off the primary calendar and tells its guests.
     fn delete_event(&self, id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
-}
-
-/// Gmail for one account: the real client, or the in-memory fake behind
-/// `--demo`. The trait's methods return `impl Future`, so no `dyn` object
-/// can hold both and a caller that picks at run time forwards by hand.
-#[cfg(any(test, feature = "fake"))]
-pub enum AnyGmail {
-    Real(Box<AccountClient>),
-    Fake(std::sync::Arc<crate::fake::FakeGmail>),
-}
-
-#[cfg(any(test, feature = "fake"))]
-macro_rules! forward {
-    ($self:ident, $method:ident($($arg:expr),*)) => {
-        match $self {
-            AnyGmail::Real(api) => api.$method($($arg),*).await,
-            AnyGmail::Fake(api) => api.$method($($arg),*).await,
-        }
-    };
-}
-
-#[cfg(any(test, feature = "fake"))]
-impl GmailApi for AnyGmail {
-    fn quota(&self) -> Option<&AccountQuota> {
-        match self {
-            AnyGmail::Real(api) => api.quota(),
-            AnyGmail::Fake(api) => api.quota(),
-        }
-    }
-    async fn profile(&self) -> Result<Profile, GmailError> {
-        forward!(self, profile())
-    }
-    async fn labels(&self) -> Result<Vec<RemoteLabel>, GmailError> {
-        forward!(self, labels())
-    }
-    async fn list_messages(
-        &self,
-        query: &str,
-        page_token: Option<&str>,
-        page_size: u32,
-    ) -> Result<MessagePage, GmailError> {
-        forward!(self, list_messages(query, page_token, page_size))
-    }
-    async fn list_labelled(
-        &self,
-        label_id: &str,
-        query: &str,
-        page_token: Option<&str>,
-        page_size: u32,
-    ) -> Result<MessagePage, GmailError> {
-        forward!(self, list_labelled(label_id, query, page_token, page_size))
-    }
-    async fn message_metadata(&self, id: &str) -> Result<MessageMeta, GmailError> {
-        forward!(self, message_metadata(id))
-    }
-    async fn thread_metadata(&self, thread_id: &str) -> Result<Vec<MessageMeta>, GmailError> {
-        forward!(self, thread_metadata(thread_id))
-    }
-    async fn message_body(&self, id: &str) -> Result<MessageBody, GmailError> {
-        forward!(self, message_body(id))
-    }
-    async fn history(
-        &self,
-        start: u64,
-        page_token: Option<&str>,
-    ) -> Result<HistoryPage, GmailError> {
-        forward!(self, history(start, page_token))
-    }
-    async fn modify_labels(
-        &self,
-        id: &str,
-        add: &[String],
-        remove: &[String],
-    ) -> Result<(), GmailError> {
-        forward!(self, modify_labels(id, add, remove))
-    }
-    async fn batch_modify(
-        &self,
-        ids: &[String],
-        add: &[String],
-        remove: &[String],
-    ) -> Result<(), GmailError> {
-        forward!(self, batch_modify(ids, add, remove))
-    }
-    async fn trash(&self, id: &str) -> Result<(), GmailError> {
-        forward!(self, trash(id))
-    }
-    async fn untrash(&self, id: &str) -> Result<(), GmailError> {
-        forward!(self, untrash(id))
-    }
-    async fn delete_messages(&self, ids: &[String]) -> Result<(), GmailError> {
-        forward!(self, delete_messages(ids))
-    }
-    async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, GmailError> {
-        forward!(self, send(raw, thread_id))
-    }
-    async fn save_draft(
-        &self,
-        draft_id: Option<&str>,
-        raw: &[u8],
-        thread_id: Option<&str>,
-    ) -> Result<SavedDraft, GmailError> {
-        forward!(self, save_draft(draft_id, raw, thread_id))
-    }
-    async fn send_draft(&self, draft_id: &str) -> Result<String, GmailError> {
-        forward!(self, send_draft(draft_id))
-    }
-    async fn delete_draft(&self, draft_id: &str) -> Result<(), GmailError> {
-        forward!(self, delete_draft(draft_id))
-    }
-    async fn list_drafts(&self) -> Result<Vec<DraftRef>, GmailError> {
-        forward!(self, list_drafts())
-    }
-    async fn send_as(&self) -> Result<Vec<SendAs>, GmailError> {
-        forward!(self, send_as())
-    }
-
-    async fn display_name(&self) -> Result<Option<String>, GmailError> {
-        forward!(self, display_name())
-    }
-    async fn attachment(
-        &self,
-        message_id: &str,
-        attachment_id: &str,
-    ) -> Result<Vec<u8>, GmailError> {
-        forward!(self, attachment(message_id, attachment_id))
-    }
-    async fn raw_message(&self, id: &str) -> Result<Vec<u8>, GmailError> {
-        forward!(self, raw_message(id))
-    }
-    async fn filters(&self) -> Result<Vec<Filter>, GmailError> {
-        forward!(self, filters())
-    }
-    async fn create_filter(&self, filter: &Filter) -> Result<Filter, GmailError> {
-        forward!(self, create_filter(filter))
-    }
-    async fn delete_filter(&self, id: &str) -> Result<(), GmailError> {
-        forward!(self, delete_filter(id))
-    }
-    async fn one_click_unsubscribe(&self, url: &str) -> Result<(), GmailError> {
-        forward!(self, one_click_unsubscribe(url))
-    }
-    async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {
-        forward!(self, create_label(name))
-    }
-    async fn rename_label(&self, id: &str, name: &str) -> Result<RemoteLabel, GmailError> {
-        forward!(self, rename_label(id, name))
-    }
-    async fn delete_label(&self, id: &str) -> Result<(), GmailError> {
-        forward!(self, delete_label(id))
-    }
-    async fn set_label_color(
-        &self,
-        id: &str,
-        color: &LabelColor,
-    ) -> Result<RemoteLabel, GmailError> {
-        forward!(self, set_label_color(id, color))
-    }
-    async fn signature(&self) -> Result<Option<String>, GmailError> {
-        forward!(self, signature())
-    }
-    async fn vacation(&self) -> Result<Vacation, GmailError> {
-        forward!(self, vacation())
-    }
-    async fn set_vacation(&self, vacation: &Vacation) -> Result<(), GmailError> {
-        forward!(self, set_vacation(vacation))
-    }
-    async fn connections(
-        &self,
-        page_token: Option<&str>,
-        sync_token: Option<&str>,
-    ) -> Result<ConnectionsPage, GmailError> {
-        forward!(self, connections(page_token, sync_token))
-    }
-    async fn contact_photo(&self, url: &str) -> Result<Vec<u8>, GmailError> {
-        forward!(self, contact_photo(url))
-    }
-    async fn label_threads(&self, id: &str) -> Result<u64, GmailError> {
-        forward!(self, label_threads(id))
-    }
-    async fn create_contact(&self, fields: &ContactFields) -> Result<Person, GmailError> {
-        forward!(self, create_contact(fields))
-    }
-    async fn update_contact(
-        &self,
-        resource: &str,
-        fields: &ContactFields,
-    ) -> Result<Person, GmailError> {
-        forward!(self, update_contact(resource, fields))
-    }
-
-    async fn answer_invitation(
-        &self,
-        ical_uid: &str,
-        me: &str,
-        answer: Answer,
-        occurrence: Option<EpochMillis>,
-    ) -> Result<Answered, GmailError> {
-        forward!(self, answer_invitation(ical_uid, me, answer, occurrence))
-    }
-
-    async fn busy_between(
-        &self,
-        from: EpochMillis,
-        to: EpochMillis,
-    ) -> Result<Vec<Busy>, GmailError> {
-        forward!(self, busy_between(from, to))
-    }
-
-    async fn series(
-        &self,
-        ical_uid: &str,
-        from: EpochMillis,
-    ) -> Result<Option<Series>, GmailError> {
-        forward!(self, series(ical_uid, from))
-    }
-
-    async fn events_between(
-        &self,
-        from: EpochMillis,
-        to: EpochMillis,
-    ) -> Result<Vec<Event>, GmailError> {
-        forward!(self, events_between(from, to))
-    }
-
-    async fn create_event(&self, fields: &EventFields) -> Result<Event, GmailError> {
-        forward!(self, create_event(fields))
-    }
-
-    async fn update_event(&self, id: &str, fields: &EventFields) -> Result<Event, GmailError> {
-        forward!(self, update_event(id, fields))
-    }
-
-    async fn delete_event(&self, id: &str) -> Result<(), GmailError> {
-        forward!(self, delete_event(id))
-    }
 }
 
 /// An instant as the Calendar API writes one. `None` for a time no
@@ -706,30 +455,12 @@ impl GmailApi for AccountClient {
         self.client.send_as().await
     }
 
-    async fn display_name(&self) -> Result<Option<String>, GmailError> {
-        let identities = self.client.send_as().await?;
-        Ok(identities
-            .into_iter()
-            .find(|s| s.is_default)
-            .map(|s| s.display_name)
-            .filter(|name| !name.trim().is_empty()))
-    }
-
     async fn attachment(
         &self,
         message_id: &str,
         attachment_id: &str,
     ) -> Result<Vec<u8>, GmailError> {
         self.client.attachment(message_id, attachment_id).await
-    }
-
-    async fn signature(&self) -> Result<Option<String>, GmailError> {
-        let identities = self.client.send_as().await?;
-        Ok(identities
-            .into_iter()
-            .find(|s| s.is_default)
-            .map(|s| html_to_text(&s.signature))
-            .filter(|text| !text.is_empty()))
     }
 
     async fn vacation(&self) -> Result<Vacation, GmailError> {
@@ -823,10 +554,6 @@ impl GmailApi for AccountClient {
 
     async fn delete_filter(&self, id: &str) -> Result<(), GmailError> {
         self.client.delete_filter(id).await
-    }
-
-    async fn one_click_unsubscribe(&self, url: &str) -> Result<(), GmailError> {
-        mailrs_gmail::one_click_unsubscribe(url).await
     }
 
     async fn raw_message(&self, id: &str) -> Result<Vec<u8>, GmailError> {

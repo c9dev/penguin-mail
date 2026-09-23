@@ -16,7 +16,7 @@ use mailrs_store::{accounts, messages};
 
 use super::AccountSync;
 use super::fetch::Want;
-use crate::{GmailApi, SyncError};
+use crate::{MailBackend, SyncError};
 
 /// How long a fetched thread is kept for opening. Only memory depends on
 /// it: whether a kept thread may still be stored is the history cursor's
@@ -38,7 +38,7 @@ pub(super) struct Hits {
     ids: BTreeSet<String>,
 }
 
-impl<G: GmailApi> AccountSync<G> {
+impl AccountSync {
     /// The messages a Gmail search returns, by id and thread, newest
     /// first, at most `limit` of them. One call of 5 quota units, whatever
     /// the count, so a caller takes the ids first and pays for metadata
@@ -53,7 +53,7 @@ impl<G: GmailApi> AccountSync<G> {
         let size = u32::try_from(limit)
             .unwrap_or(u32::MAX)
             .min(crate::ID_PAGE_SIZE);
-        let page = self.api.list_messages(query, None, size).await?;
+        let page = self.services.mail.list_messages(query, None, size).await?;
         let found: Vec<MessageRef> = page.messages.into_iter().take(limit).collect();
         let mut by_thread: BTreeMap<&str, BTreeSet<String>> = BTreeMap::new();
         for hit in &found {

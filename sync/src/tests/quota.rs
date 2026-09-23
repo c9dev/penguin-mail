@@ -12,15 +12,15 @@ use mailrs_store::{Db, accounts};
 use super::{Connected, harness};
 use crate::fake::{FakeGmail, Usage, meta};
 use crate::{
-    AccountSync, History, Loaded, MailAction, MailActions, Mailbox, Mailboxes, Scope, TriageAction,
-    View, now_millis,
+    AccountServices, AccountSync, History, Loaded, MailAction, MailActions, Mailbox, Mailboxes,
+    Scope, TriageAction, View, now_millis,
 };
 
 /// One connected account: its Gmail, its sync loop, and its id.
 struct Synced {
     id: AccountId,
     fake: Arc<FakeGmail>,
-    sync: Arc<AccountSync<FakeGmail>>,
+    sync: Arc<AccountSync>,
 }
 
 /// `count` accounts, each holding `threads` conversations of `messages`
@@ -47,7 +47,7 @@ async fn synced(db: &Db, count: usize, threads: usize, messages: usize) -> Vec<S
         }
         let (sender, _events) = async_channel::unbounded();
         let sync = Arc::new(
-            AccountSync::new(id, Arc::clone(&fake), db.clone(), sender)
+            AccountSync::new(id, AccountServices::fake(Arc::clone(&fake)), db.clone(), sender)
                 .with_retry_max(Duration::from_millis(10)),
         );
         all.push(Synced { id, fake, sync });
@@ -88,7 +88,11 @@ fn actions(all: &[Synced], db: &Db) -> MailActions<Connected> {
         .iter()
         .map(|m| (m.id, Arc::clone(&m.sync)))
         .collect::<std::collections::HashMap<_, _>>();
-    MailActions::new(Arc::new(Connected(connected)), db.clone())
+    MailActions::new(
+        Arc::new(Connected(connected)),
+        db.clone(),
+        crate::OneClick::Fake(Arc::default()),
+    )
 }
 
 /// Every conversation in every account, in the order the list shows them.
@@ -415,7 +419,12 @@ async fn realistic(db: &Db) -> Synced {
         }
     }
     let (sender, _events) = async_channel::unbounded();
-    let sync = Arc::new(AccountSync::new(id, Arc::clone(&fake), db.clone(), sender));
+    let sync = Arc::new(AccountSync::new(
+        id,
+        AccountServices::fake(Arc::clone(&fake)),
+        db.clone(),
+        sender,
+    ));
     Synced { id, fake, sync }
 }
 

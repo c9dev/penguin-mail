@@ -1,10 +1,10 @@
-//! The Gmail settings of one account: the automatic reply, the filters
-//! behind Rules and Block Sender, the labels, and the Hide My Email
-//! addresses. The
-//! dialogs and the assistant both change settings through this module, so
-//! only it knows that Gmail's automatic reply stops before the end it
-//! stores, which labels and filters a hidden address needs, and what Gmail
-//! answers when the account has not granted the settings permission.
+//! The account settings of one account: the automatic reply, the filters
+//! behind Rules and Block Sender, the labels, the Hide My Email
+//! addresses, and the addresses it sends as. The dialogs and the assistant
+//! both change settings through this module, so only it knows that
+//! Gmail's automatic reply stops before the end it stores, which labels
+//! and filters a hidden address needs, and what Gmail answers when the
+//! account has not granted the settings permission.
 
 use std::sync::Arc;
 
@@ -12,12 +12,15 @@ use chrono::{Local, TimeZone};
 use mailrs_domain::{
     AccountId, EpochMillis, Filter, FilterAction, FilterCriteria, Label, Vacation, system_label,
 };
-use mailrs_gmail::{GmailError, LabelColor};
+use mailrs_gmail::LabelColor;
 use mailrs_store::Db;
 
 use crate::actions::label_id;
 use crate::hidden::{self, HiddenAddress};
-use crate::{AccountSync, Accounts, SyncError, now_millis};
+use crate::{
+    AccountServices, AccountSync, Accounts, AnyAutoReply, AnyRules, AutoReplyService, BackendError,
+    IdentityService, RulesService, SendAsAddress, SyncError, now_millis,
+};
 
 /// The user label that mail to a hidden address gets.
 pub const HIDE_MY_EMAIL_LABEL: &str = "Hide My Email";
@@ -114,12 +117,12 @@ impl<A: Accounts> AccountSettings<A> {
         AccountSettings { accounts, db }
     }
 
-    /// The automatic reply Gmail holds, in whole days.
+    /// The automatic reply the server holds, in whole days.
     pub async fn automatic_reply(
         &self,
         account_id: AccountId,
     ) -> Result<Permitted<AutomaticReply>, SyncError> {
-        let vacation = done!(self.sync(account_id)?.vacation().await);
+        let vacation = done!(self.auto_reply_service(account_id)?.vacation().await);
         Ok(Permitted::Done(AutomaticReply::from_gmail(&vacation)))
     }
 
@@ -130,31 +133,32 @@ impl<A: Accounts> AccountSettings<A> {
         account_id: AccountId,
         reply: &AutomaticReply,
     ) -> Result<Permitted<()>, SyncError> {
-        let sync = self.sync(account_id)?;
-        permitted(sync.set_vacation(reply.to_gmail()).await)
+        let service = self.auto_reply_service(account_id)?;
+        permitted(service.set_vacation(&reply.to_gmail()).await)
     }
 
-    /// The account's Gmail filters, newest last, as Gmail returns them.
+    /// The account's filters, newest last, as the server returns them.
     pub async fn rules(&self, account_id: AccountId) -> Result<Permitted<Vec<Filter>>, SyncError> {
-        permitted(self.sync(account_id)?.filters().await)
+        permitted(self.rules_service(account_id)?.filters().await)
     }
 
-    /// Adds a filter. Gmail gives the stored one an id.
+    /// Adds a filter. The server gives the stored one an id.
     pub async fn add_rule(
         &self,
         account_id: AccountId,
         rule: Filter,
     ) -> Result<Permitted<Filter>, SyncError> {
-        permitted(self.sync(account_id)?.create_filter(rule).await)
+        permitted(self.rules_service(account_id)?.create_filter(&rule).await)
     }
 
-    /// Deletes a filter. A filter Gmail no longer has counts as deleted.
+    /// Deletes a filter. A filter the server no longer has counts as
+    /// deleted.
     pub async fn delete_rule(
         &self,
         account_id: AccountId,
         id: &str,
     ) -> Result<Permitted<()>, SyncError> {
-        permitted(self.sync(account_id)?.delete_filter(id).await)
+        permitted(delete_filter(&self.rules_service(account_id)?, id).await)
     }
 
     /// Sends mail from `email` straight to the Trash from now on.
@@ -227,7 +231,7 @@ impl<A: Accounts> AccountSettings<A> {
     ) -> Result<Permitted<HiddenAddress>, SyncError> {
         let address = hidden::fresh(account_email, taken)
             .map_err(|_| SyncError::NotAnAddress(account_email.to_string()))?;
-        let sync = self.sync(account_id)?;
+        let rules = self.rules_service(account_id)?;
         let label = done!(
             label_id(
                 self.accounts.as_ref(),
@@ -238,7 +242,7 @@ impl<A: Accounts> AccountSettings<A> {
             )
             .await
         );
-        let created = done!(sync.create_filter(labels(&address, &label)).await);
+        let created = done!(rules.create_filter(&labels(&address, &label)).await);
         Ok(Permitted::Done(HiddenAddress {
             account: account_email.to_string(),
             address,
@@ -259,13 +263,13 @@ impl<A: Accounts> AccountSettings<A> {
         hidden: &HiddenAddress,
         active: bool,
     ) -> Result<Permitted<HiddenAddress>, SyncError> {
-        let sync = self.sync(account_id)?;
+        let rules = self.rules_service(account_id)?;
         let trash_filter = match (active, hidden.trash_filter.clone()) {
             (true, Some(id)) => {
-                done!(sync.delete_filter(&id).await);
+                done!(delete_filter(&rules, &id).await);
                 None
             }
-            (false, None) => done!(sync.create_filter(trashes(&hidden.address)).await).id,
+            (false, None) => done!(rules.create_filter(&trashes(&hidden.address)).await).id,
             (_, current) => current,
         };
         Ok(Permitted::Done(HiddenAddress {
@@ -282,28 +286,81 @@ impl<A: Accounts> AccountSettings<A> {
         account_id: AccountId,
         hidden: &HiddenAddress,
     ) -> Result<Permitted<()>, SyncError> {
-        let sync = self.sync(account_id)?;
+        let rules = self.rules_service(account_id)?;
         for id in [&hidden.label_filter, &hidden.trash_filter]
             .into_iter()
             .flatten()
         {
-            done!(sync.delete_filter(id).await);
+            done!(delete_filter(&rules, id).await);
         }
         Ok(Permitted::Done(()))
     }
 
-    fn sync(&self, account_id: AccountId) -> Result<Arc<AccountSync<A::Api>>, SyncError> {
+    /// Every address the account may send mail from, its own included,
+    /// with the display name and signature the server keeps for each.
+    pub async fn send_as(&self, account_id: AccountId) -> Result<Vec<SendAsAddress>, SyncError> {
+        Ok(self.services(account_id)?.identities.identities().await?)
+    }
+
+    /// The name the account's server puts on its outgoing mail, if one is
+    /// set.
+    pub async fn display_name(&self, account_id: AccountId) -> Result<Option<String>, SyncError> {
+        let addresses = self.send_as(account_id).await?;
+        Ok(addresses
+            .into_iter()
+            .find(|address| address.default)
+            .and_then(|address| address.name))
+    }
+
+    /// The signature of the default address, as plain text.
+    pub async fn signature(&self, account_id: AccountId) -> Result<Option<String>, SyncError> {
+        let addresses = self.send_as(account_id).await?;
+        Ok(addresses
+            .into_iter()
+            .find(|address| address.default)
+            .map(|address| address.signature)
+            .filter(|text| !text.is_empty()))
+    }
+
+    fn sync(&self, account_id: AccountId) -> Result<Arc<AccountSync>, SyncError> {
         self.accounts
             .account(account_id)
             .ok_or(SyncError::UnknownAccount(account_id))
     }
+
+    fn services(&self, account_id: AccountId) -> Result<AccountServices, SyncError> {
+        self.accounts
+            .services(account_id)
+            .ok_or(SyncError::UnknownAccount(account_id))
+    }
+
+    fn rules_service(&self, account_id: AccountId) -> Result<AnyRules, SyncError> {
+        Ok(self.services(account_id)?.rules)
+    }
+
+    fn auto_reply_service(&self, account_id: AccountId) -> Result<AnyAutoReply, SyncError> {
+        self.services(account_id)?
+            .auto_reply
+            .ok_or(SyncError::Backend(BackendError::Unsupported))
+    }
 }
 
-/// Gmail's refusal for a missing permission, as a value.
-fn permitted<T>(result: Result<T, SyncError>) -> Result<Permitted<T>, SyncError> {
-    match result {
+/// A refusal for a missing permission, as a value. Service calls answer a
+/// `BackendError` and the label calls a `SyncError`; both come here.
+fn permitted<T>(result: Result<T, impl Into<SyncError>>) -> Result<Permitted<T>, SyncError> {
+    match result.map_err(Into::<SyncError>::into) {
         Ok(value) => Ok(Permitted::Done(value)),
-        Err(SyncError::Gmail(GmailError::MissingScope)) => Ok(Permitted::NeedsPermission),
+        Err(SyncError::Backend(BackendError::NeedsPermission)) => Ok(Permitted::NeedsPermission),
+        Err(err) => Err(err),
+    }
+}
+
+/// Deletes filter `id`. A filter the server no longer has counts as
+/// deleted, so a hidden address whose filter went elsewhere still turns
+/// off and on.
+async fn delete_filter(rules: &AnyRules, id: &str) -> Result<(), BackendError> {
+    match rules.delete_filter(id).await {
+        Ok(()) | Err(BackendError::NotFound) => Ok(()),
         Err(err) => Err(err),
     }
 }

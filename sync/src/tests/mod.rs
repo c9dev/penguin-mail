@@ -12,6 +12,7 @@ mod labels;
 mod mailbox;
 mod newsletters;
 mod outbox;
+mod parity;
 mod priority;
 mod quota;
 mod search;
@@ -29,23 +30,22 @@ use mailrs_domain::{AccountId, ChangeEvent, ThreadSummary};
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{Db, accounts, messages};
 
-use crate::fake::FakeGmail;
-use crate::{AccountSync, Accounts};
+use crate::fake::{FakeGmail, FakeOneClick};
+use crate::{AccountServices, AccountSync, Accounts};
 
 /// The accounts a test connects, by id.
-pub(crate) struct Connected(pub HashMap<AccountId, Arc<AccountSync<FakeGmail>>>);
+pub(crate) struct Connected(pub HashMap<AccountId, Arc<AccountSync>>);
 
 impl Accounts for Connected {
-    type Api = FakeGmail;
-
-    fn account(&self, account_id: AccountId) -> Option<Arc<AccountSync<FakeGmail>>> {
+    fn account(&self, account_id: AccountId) -> Option<Arc<AccountSync>> {
         self.0.get(&account_id).cloned()
     }
 }
 
 pub(crate) struct Harness {
     pub fake: Arc<FakeGmail>,
-    pub sync: Arc<AccountSync<FakeGmail>>,
+    pub one_click: Arc<FakeOneClick>,
+    pub sync: Arc<AccountSync>,
     pub db: Db,
     pub events: async_channel::Receiver<ChangeEvent>,
     pub account_id: AccountId,
@@ -65,11 +65,17 @@ pub(crate) async fn harness() -> Harness {
     let fake = Arc::new(FakeGmail::new());
     let (sender, events) = async_channel::unbounded();
     let sync = Arc::new(
-        AccountSync::new(account_id, Arc::clone(&fake), db.clone(), sender.clone())
-            .with_retry_max(Duration::from_millis(10)),
+        AccountSync::new(
+            account_id,
+            AccountServices::fake(Arc::clone(&fake)),
+            db.clone(),
+            sender.clone(),
+        )
+        .with_retry_max(Duration::from_millis(10)),
     );
     Harness {
         fake,
+        one_click: Arc::new(FakeOneClick::default()),
         sync,
         db,
         events,
@@ -82,10 +88,10 @@ pub(crate) async fn harness() -> Harness {
 impl Harness {
     /// Another sync over the same account and the same Gmail, which gives
     /// up on a busy Gmail after `ceiling` rather than after a minute.
-    pub fn sync_with(&self, ceiling: Duration) -> AccountSync<FakeGmail> {
+    pub fn sync_with(&self, ceiling: Duration) -> AccountSync {
         AccountSync::new(
             self.account_id,
-            Arc::clone(&self.fake),
+            AccountServices::fake(Arc::clone(&self.fake)),
             self.db.clone(),
             self.sender.clone(),
         )

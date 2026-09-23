@@ -16,7 +16,7 @@ use mailrs_gmail::{
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{Db, accounts, messages};
 use mailrs_sync::{
-    AccountClient, AccountSync, SyncEngine, TriageAction, connect_account, export, now_millis,
+    AccountServices, AccountSync, SyncEngine, TriageAction, connect_account, export, now_millis,
 };
 
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs, secure_dirs};
@@ -245,7 +245,7 @@ async fn run_sync(db: &Db, dir: &Path, config: &Config) -> Result<()> {
     if all.is_empty() {
         bail!("no accounts; run `penguin-mail-cli account add` first");
     }
-    let (engine, events) = SyncEngine::<AccountClient>::new(db.clone(), config.engine_config());
+    let (engine, events) = SyncEngine::new(db.clone(), config.engine_config());
     let tokens = token_store();
     for account in &all {
         let oauth = match oauth_for(db, config, account).await {
@@ -256,7 +256,7 @@ async fn run_sync(db: &Db, dir: &Path, config: &Config) -> Result<()> {
             }
         };
         match connect_account(oauth, Arc::clone(&tokens), account).await {
-            Ok(client) => engine.start_account(account.id, Arc::new(client)),
+            Ok(client) => engine.start_account(account.id, AccountServices::google(client)),
             Err(err) => eprintln!("{}: {err}", account.email),
         }
     }
@@ -541,14 +541,14 @@ async fn triage(
 }
 
 /// A one-off sync handle for commands that do not run the engine.
-async fn account_sync(db: &Db, config: &Config, email: &str) -> Result<AccountSync<AccountClient>> {
+async fn account_sync(db: &Db, config: &Config, email: &str) -> Result<AccountSync> {
     let account = find_account(db, email).await?;
     let oauth = oauth_for(db, config, &account).await?;
     let client = connect_account(oauth, token_store(), &account).await?;
     let (events, _) = async_channel::unbounded();
     let engine = config.engine_config();
     Ok(
-        AccountSync::new(account.id, Arc::new(client), db.clone(), events)
+        AccountSync::new(account.id, AccountServices::google(client), db.clone(), events)
             .with_limits(engine.window_days, engine.body_cache_bytes),
     )
 }

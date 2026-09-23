@@ -10,7 +10,7 @@ use mailrs_gmail::{BATCH_LIMIT, GmailError};
 use mailrs_store::{messages, reminders, threads};
 
 use super::{AccountSync, FETCH_CONCURRENCY};
-use crate::{GmailApi, SyncError, TriageAction, backoff_delay, with_jitter};
+use crate::{BackendError, MailBackend, SyncError, TriageAction, backoff_delay, with_jitter};
 
 /// Attempts per write before a triage gives up.
 const WRITE_ATTEMPTS: u32 = 3;
@@ -20,7 +20,7 @@ const WRITE_ATTEMPTS: u32 = 3;
 /// the batch starts paying.
 const BATCH_FROM: usize = 10;
 
-impl<G: GmailApi> AccountSync<G> {
+impl AccountSync {
     /// Applies `action` to every message of a thread. The store changes first
     /// so the UI updates at once; Gmail follows. If Gmail refuses, the store
     /// goes back to its earlier labels and a `WriteFailed` event says so.
@@ -56,18 +56,18 @@ impl<G: GmailApi> AccountSync<G> {
         let mut all: Vec<String> = ids.iter().flatten().cloned().collect();
         all.sort();
         all.dedup();
-        let mut refused: BTreeMap<String, GmailError> = BTreeMap::new();
+        let mut refused: BTreeMap<String, BackendError> = BTreeMap::new();
         for chunk in all.chunks(BATCH_LIMIT) {
-            if let Err(err) = self.api.delete_messages(chunk).await {
+            if let Err(err) = self.services.mail.delete_messages(chunk).await {
                 // Gmail refuses a missing permission before it erases
                 // anything, so no later batch would fare better.
-                let stop = matches!(err, GmailError::MissingScope);
+                let stop = matches!(err, BackendError::NeedsPermission);
                 refused.extend(chunk.iter().map(|id| (id.clone(), err.clone())));
                 if stop {
                     for id in &all {
                         refused
                             .entry(id.clone())
-                            .or_insert(GmailError::MissingScope);
+                            .or_insert(BackendError::NeedsPermission);
                     }
                     break;
                 }
@@ -113,8 +113,8 @@ impl<G: GmailApi> AccountSync<G> {
         Ok(ids
             .iter()
             .map(|ids| match ids.iter().find_map(|id| refused.get(id)) {
-                _ if ids.is_empty() => Err(SyncError::Gmail(GmailError::NotFound)),
-                Some(err) => Err(SyncError::Gmail(err.clone())),
+                _ if ids.is_empty() => Err(BackendError::NotFound.into()),
+                Some(err) => Err(err.clone().into()),
                 None => Ok(()),
             })
             .collect())
@@ -323,7 +323,7 @@ impl<G: GmailApi> AccountSync<G> {
         add: &[String],
         remove: &[String],
         taken: &mut BTreeSet<String>,
-    ) -> Result<(), GmailError> {
+    ) -> Result<(), BackendError> {
         if ids.len() < BATCH_FROM {
             for id in ids {
                 self.write_one(budget, id, writing, add, remove).await?;
@@ -358,9 +358,9 @@ impl<G: GmailApi> AccountSync<G> {
         writing: &Writing<'_>,
         add: &[String],
         remove: &[String],
-    ) -> Result<(), GmailError> {
+    ) -> Result<(), BackendError> {
         loop {
-            match self.api.batch_modify(ids, add, remove).await {
+            match self.services.mail.batch_modify(ids, add, remove).await {
                 Err(err) => match budget.wait(&err) {
                     Some(delay) => self.hold_on(budget, delay, writing).await,
                     None => return Err(err),
@@ -377,13 +377,13 @@ impl<G: GmailApi> AccountSync<G> {
         writing: &Writing<'_>,
         add: &[String],
         remove: &[String],
-    ) -> Result<(), GmailError> {
+    ) -> Result<(), BackendError> {
         loop {
             // The same labels a batch sends, rather than `messages.trash`
             // and `untrash`: untrash takes the trash label off and puts
             // nothing back, which would leave a few messages out of the
             // inbox that a batch of many would have returned to it.
-            let done = self.api.modify_labels(message_id, add, remove).await;
+            let done = self.services.mail.modify_labels(message_id, add, remove).await;
             match done {
                 Err(err) => match budget.wait(&err) {
                     Some(delay) => self.hold_on(budget, delay, writing).await,
@@ -405,8 +405,7 @@ impl<G: GmailApi> AccountSync<G> {
                 message: still_waiting(writing),
             });
         }
-        let _waiting = self.waiting();
-        tokio::time::sleep(delay).await;
+        self.services.mail.stand_by(delay).await;
     }
 }
 
@@ -489,11 +488,11 @@ impl Budget {
     /// How long to wait before trying again, or `None` when `err` is not
     /// worth retrying, the action has used up its attempts, or waiting
     /// again would take it past the ceiling.
-    fn wait(&mut self, err: &GmailError) -> Option<Duration> {
+    fn wait(&mut self, err: &BackendError) -> Option<Duration> {
         if !err.is_transient() {
             return None;
         }
-        let limited = matches!(err, GmailError::RateLimited { .. });
+        let limited = matches!(err, BackendError::RateLimited(_));
         if !limited && self.retries == 0 {
             return None;
         }
@@ -533,21 +532,21 @@ fn messages_wanted(targets: &[Target]) -> BTreeMap<String, Option<BTreeSet<Strin
 /// wins where it sent one. Either way the wait moves by up to a fifth, so
 /// six accounts told to come back in two seconds do not all come back on
 /// the same tick and get limited again.
-fn retry_delay(err: &GmailError, attempt: u32, max: Duration) -> Duration {
+fn retry_delay(err: &BackendError, attempt: u32, max: Duration) -> Duration {
     match err {
-        GmailError::RateLimited {
-            retry_after: Some(after),
-        } => with_jitter(*after, rand::random_range(-1.0..=1.0)),
+        BackendError::RateLimited(Some(after)) => {
+            with_jitter(*after, rand::random_range(-1.0..=1.0))
+        }
         _ => backoff_delay(attempt, max, rand::random_range(-1.0..=1.0)),
     }
 }
 
 /// Whether Gmail turned the batch down for the batch's own sake, which a
 /// call per message may still get through.
-fn refuses_batch(err: &GmailError) -> bool {
+fn refuses_batch(err: &BackendError) -> bool {
     matches!(
         err,
-        GmailError::NotFound | GmailError::Http { status: 400, .. }
+        BackendError::NotFound | BackendError::Gmail(GmailError::Http { status: 400, .. })
     )
 }
 
@@ -562,19 +561,19 @@ fn still_waiting(writing: &Writing<'_>) -> String {
 /// What the toast says when a write did not land. A rate limit that
 /// outlasted the waiting names how long the action held on and how much
 /// of it did not go through, so nobody has to guess what to redo.
-fn write_failure(writing: &Writing<'_>, err: &GmailError, waited: Duration) -> String {
+fn write_failure(writing: &Writing<'_>, err: &BackendError, waited: Duration) -> String {
     let what = writing.action.describe().to_lowercase();
     let many = conversations(writing.conversations);
     let values = [("action", what.as_str()), ("conversations", many.as_str())];
     match err {
-        GmailError::RateLimited { .. } if waited.is_zero() => fill(
+        BackendError::RateLimited(_) if waited.is_zero() => fill(
             &gettext(
                 "Gmail is busy, so {action} did not go through for {conversations}. \
                  Try again in a moment.",
             ),
             &values,
         ),
-        GmailError::RateLimited { .. } => {
+        BackendError::RateLimited(_) => {
             let waited = roughly(waited);
             fill(
                 &gettext(

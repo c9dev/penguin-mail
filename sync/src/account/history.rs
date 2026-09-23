@@ -3,15 +3,15 @@
 use std::collections::{BTreeSet, HashMap};
 
 use mailrs_domain::{ChangeEvent, MessageMeta, system_label};
-use mailrs_gmail::{GmailError, HistoryChange};
+use mailrs_gmail::HistoryChange;
 use mailrs_store::{accounts, labels, messages};
 
 use super::AccountSync;
 use super::fetch::Want;
 use super::labels::is_user_label;
-use crate::{GmailApi, SyncError};
+use crate::{BackendError, MailBackend, SyncError};
 
-impl<G: GmailApi> AccountSync<G> {
+impl AccountSync {
     /// Replays history since the stored cursor in one transaction, then moves
     /// the cursor. Bootstraps instead when there is no cursor yet or when
     /// Gmail no longer keeps history that old.
@@ -29,9 +29,9 @@ impl<G: GmailApi> AccountSync<G> {
         let mut latest;
         let mut page_token: Option<String> = None;
         loop {
-            let page = match self.api.history(start, page_token.as_deref()).await {
+            let page = match self.services.mail.history(start, page_token.as_deref()).await {
                 Ok(page) => page,
-                Err(GmailError::NotFound) => {
+                Err(BackendError::StateLost) => {
                     tracing::info!(
                         account = account_id,
                         "history cursor expired; listing the mail again"

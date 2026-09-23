@@ -303,7 +303,7 @@ impl Pictures {
             Box::pin(async move {
                 let made = core
                     .call(async move {
-                        let bytes = mailrs_gmail::limiter::background(async move {
+                        let bytes = mailrs_sync::background(async move {
                             sync.attachment(&picture.message_id, &picture.attachment_id)
                                 .await
                         })
