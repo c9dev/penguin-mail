@@ -2340,13 +2340,7 @@ impl MainWindow {
                     let key = thread_id.clone();
                     let found = finder
                         .core
-                        .read(move |c| {
-                            Ok(rusqlite::OptionalExtension::optional(c.query_row(
-                                "SELECT account_id FROM threads WHERE id = ?1",
-                                [&key],
-                                |r| r.get::<_, i64>(0),
-                            ))?)
-                        })
+                        .read(move |c| mailrs_store::threads::account_of(c, &key))
                         .await;
                     if let Ok(Some(account_id)) = found {
                         finder.list.select(account_id, &thread_id, None);
