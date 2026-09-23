@@ -12,6 +12,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
+use mailrs_domain::mailbox::keyword;
 use mailrs_domain::{
     EpochMillis, Filter, MailboxKind, MessageBody, RemoteMailbox, Role, Vacation, gmail,
 };
@@ -77,6 +78,9 @@ impl<G: GmailApi> MailBackend for Google<G> {
             files_sent_mail: true,
             categories: true,
             delete_forever: true,
+            // Gmail keeps these three as its UNREAD, STARRED and MUTE labels.
+            keywords: &[keyword::SEEN, keyword::FLAGGED, keyword::MUTED],
+            native_search: true,
             batch_limit: mailrs_gmail::BATCH_LIMIT,
         }
     }
@@ -482,6 +486,8 @@ mod tests {
                 files_sent_mail: true,
                 categories: true,
                 delete_forever: true,
+                keywords: &["$seen", "$flagged", "$muted"],
+                native_search: true,
                 batch_limit: 1000,
             }
         );

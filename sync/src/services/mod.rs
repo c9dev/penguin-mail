@@ -61,6 +61,12 @@ pub struct MailCapabilities {
     pub delete_forever: bool,
     /// The most messages one write may name.
     pub batch_limit: usize,
+    /// The keywords the server stores. Any other a message carries stays
+    /// on this computer, marked local, and never syncs.
+    pub keywords: &'static [&'static str],
+    /// The server reads a search in its own syntax, as the person typed
+    /// it, so `SearchQuery::Native` reaches it untouched.
+    pub native_search: bool,
 }
 
 /// How far a write got before the server refused the rest: the first
@@ -548,6 +554,8 @@ mod tests {
                 files_sent_mail: true,
                 categories: true,
                 delete_forever: true,
+                keywords: &["$seen", "$flagged", "$muted"],
+                native_search: true,
                 batch_limit: 1000,
             }
         );
