@@ -138,23 +138,6 @@ impl App {
         Some(composer)
     }
 
-    /// Sends a request the person never wrote, such as the mail that
-    /// leaves a mailing list: no signature, and no Undo delay, since
-    /// nothing in it is theirs to take back.
-    pub fn send_request(
-        self: &Rc<Self>,
-        account_id: AccountId,
-        to: &str,
-        subject: String,
-        body: String,
-    ) {
-        let mut draft = self.blank_draft(account_id);
-        draft.to = crate::compose::parse_recipients(to);
-        draft.subject = subject;
-        draft.markdown = body;
-        self.send_immediately(draft);
-    }
-
     /// `draft`, with the signature when `signature` asks for it.
     pub(super) fn signed_when(&self, draft: Draft, signature: Signature) -> Draft {
         match signature {

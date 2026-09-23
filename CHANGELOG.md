@@ -47,6 +47,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   names the list's server, where it used to blame Gmail.
 - The reason an unsubscribe page failed now appears in your language, not
   in English inside a Portuguese message.
+- A list you leave by email hears from the address it writes to, not
+  always the account's main one, and Penguin Mail says "Unsubscribed"
+  only once the request has left. A request stuck in the Outbox says so.
 
 ## 0.2.0 (2026-09-23)
 

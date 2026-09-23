@@ -33,6 +33,7 @@ use crate::compose::{self, Draft};
 use crate::protection::{self, Held, Standard};
 use crate::settings::{Change, Settings};
 use crate::ui::unsubscribe::{ListLine, Way, line_text};
+use crate::unsubscribe::RequestSent;
 use crate::unsubscribe_page::fake::FakeBrowser;
 use crate::unsubscribe_page::{Adviser, Browser, PageForm, Plan};
 
@@ -121,9 +122,11 @@ pub struct Asked {
     pub api_off: Vec<(String, String)>,
     /// Messages handed to Send Later, with their times.
     pub scheduled: Vec<(Draft, EpochMillis)>,
-    /// Request mail sent to leave a list: the account, the address, the
-    /// subject and the body.
-    pub requests: Vec<(AccountId, String, String, String)>,
+    /// Request mail sent to leave a list: the account, the address it
+    /// goes from, the address it goes to, the subject and the body.
+    pub requests: Vec<(AccountId, String, String, String, String)>,
+    /// What the outbox answers a request with. Nothing set is sent.
+    pub request_answer: Option<Result<RequestSent, String>>,
     /// Unsubscribe pages opened in the person's browser.
     pub pages_opened: Vec<String>,
     /// How often the rows were redrawn after mail moved between
@@ -201,15 +204,18 @@ impl Effects for FakeEffects {
     fn send_request(
         &self,
         account_id: AccountId,
+        from: String,
         to: String,
         subject: String,
         body: String,
-    ) -> Result<(), String> {
-        self.asked
-            .borrow_mut()
-            .requests
-            .push((account_id, to, subject, body));
-        Ok(())
+    ) -> Answer<'_, Result<RequestSent, String>> {
+        let mut asked = self.asked.borrow_mut();
+        asked.requests.push((account_id, from, to, subject, body));
+        let answer = asked
+            .request_answer
+            .clone()
+            .unwrap_or(Ok(RequestSent::Sent));
+        Box::pin(async move { answer })
     }
 
     fn open_page(&self, url: &str) {

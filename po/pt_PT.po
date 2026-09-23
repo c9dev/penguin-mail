@@ -127,51 +127,51 @@ msgstr ""
 "Não foi possível ler as suas preferências, por isso o Penguin Mail começou "
 "com as predefinições. O ficheiro antigo ficou guardado como {file}."
 
-#: app/src/app/sending.rs:29
+#: app/src/app/sending.rs:31
 msgid "That account is not connected. Check its status in the sidebar."
 msgstr "Essa conta não está ligada. Veja o estado dela na barra lateral."
 
-#: app/src/app/sending.rs:106
+#: app/src/app/sending.rs:156
 msgid "Could not build the message: {reason}"
 msgstr "Não foi possível montar a mensagem: {reason}"
 
-#: app/src/app/sending.rs:121 app/src/app/sending.rs:173
+#: app/src/app/sending.rs:171 app/src/app/sending.rs:223
 msgid "Not encrypted, so not sent: {reason}"
 msgstr "Não foi encriptada, por isso não foi enviada: {reason}"
 
-#: app/src/app/sending.rs:174
+#: app/src/app/sending.rs:224
 msgid "Not signed, so not sent: {reason}"
 msgstr "Não foi assinada, por isso não foi enviada: {reason}"
 
-#: app/src/app/sending.rs:210
+#: app/src/app/sending.rs:258
 msgid "Waiting in the Outbox. It goes out as soon as it can."
 msgstr "À espera na caixa de saída. Sai assim que for possível."
 
-#: app/src/app/sending.rs:215 app/src/app/sending.rs:220
+#: app/src/app/sending.rs:263 app/src/app/sending.rs:268
 msgid "Not sent: {reason}"
 msgstr "Não enviada: {reason}"
 
-#: app/src/app/sending.rs:250 app/src/app/sending.rs:263
+#: app/src/app/sending.rs:298 app/src/app/sending.rs:311
 msgid "Not scheduled: {reason}"
 msgstr "Não agendada: {reason}"
 
-#: app/src/app/sending.rs:256
+#: app/src/app/sending.rs:304
 msgid "Will send {when}"
 msgstr "Envia {when}"
 
-#: app/src/app/sending.rs:312
+#: app/src/app/sending.rs:360
 msgid "Sent {message}"
 msgstr "{message} enviada"
 
-#: app/src/app/sending.rs:318
+#: app/src/app/sending.rs:366
 msgid "Still in the Outbox: {message}"
 msgstr "Continua na caixa de saída: {message}"
 
-#: app/src/app/sending.rs:427
+#: app/src/app/sending.rs:475
 msgid "your message"
 msgstr "a sua mensagem"
 
-#: app/src/app/sending.rs:429
+#: app/src/app/sending.rs:477
 msgid "“{subject}”"
 msgstr "“{subject}”"
 
@@ -210,40 +210,40 @@ msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr ""
 "O Claude Code não está instalado. Instale-o, inicie sessão e tente de novo."
 
-#: app/src/assistant/run.rs:904
+#: app/src/assistant/run.rs:908
 msgid "Move {count} conversation to the Trash?"
 msgid_plural "Move {count} conversations to the Trash?"
 msgstr[0] "Mover {count} conversa para o lixo?"
 msgstr[1] "Mover {count} conversas para o lixo?"
 
-#: app/src/assistant/run.rs:995
+#: app/src/assistant/run.rs:999
 msgid ""
 "Don't Allow labels only the mail in accounts that have the label already."
 msgstr ""
 "Com «Não permitir», só o correio das contas que já têm a etiqueta a recebe."
 
-#: app/src/assistant/run.rs:1027
+#: app/src/assistant/run.rs:1031
 msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr "Bloquear {address}? O correio futuro vai direto para o lixo."
 
-#: app/src/assistant/run.rs:1103 app/src/assistant/run/calendar.rs:178
+#: app/src/assistant/run.rs:1107 app/src/assistant/run/calendar.rs:178
 #: app/src/assistant/run/calendar.rs:525
 msgid "%a %-d %b"
 msgstr "%a %-d %b"
 
-#: app/src/assistant/run.rs:1109
+#: app/src/assistant/run.rs:1113
 msgid " from {first} to {last}"
 msgstr ", de {first} a {last}"
 
-#: app/src/assistant/run.rs:1112
+#: app/src/assistant/run.rs:1116
 msgid " until {last}"
 msgstr ", até {last}"
 
-#: app/src/assistant/run.rs:1113
+#: app/src/assistant/run.rs:1117
 msgid " from {first}"
 msgstr ", a partir de {first}"
 
-#: app/src/assistant/run.rs:1119
+#: app/src/assistant/run.rs:1123
 msgid ""
 "Turn on the automatic reply for {account}{dates}?\n"
 "\n"
@@ -255,19 +255,19 @@ msgstr ""
 "“{subject}”\n"
 "{body}"
 
-#: app/src/assistant/run.rs:1130
+#: app/src/assistant/run.rs:1134
 msgid "Turn off the automatic reply for {account}?"
 msgstr "Desligar a resposta automática de {account}?"
 
-#: app/src/assistant/run.rs:1212
+#: app/src/assistant/run.rs:1216
 msgid "Create a Gmail rule for {account}: {when} → {then}?"
 msgstr "Criar uma regra do Gmail para {account}: {when} → {then}?"
 
-#: app/src/assistant/run.rs:1252
+#: app/src/assistant/run.rs:1256
 msgid "Delete a Gmail rule from {account}?"
 msgstr "Eliminar uma regra do Gmail de {account}?"
 
-#: app/src/assistant/run.rs:1374
+#: app/src/assistant/run.rs:1378
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a Gmail rule for "
 "their future mail?"
@@ -5385,7 +5385,7 @@ msgstr "Abra primeiro uma conversa"
 #: app/src/ui/window/detached.rs:130 app/src/ui/window/export.rs:75
 #: app/src/ui/window/export.rs:138 app/src/ui/window/organize.rs:69
 #: app/src/ui/window/organize.rs:117 app/src/ui/window/organize.rs:146
-#: app/src/ui/window/organize.rs:174 app/src/ui/window/senders.rs:227
+#: app/src/ui/window/organize.rs:174 app/src/ui/window/senders.rs:247
 msgid "That account is not connected"
 msgstr "Essa conta não está ligada"
 
@@ -5803,33 +5803,41 @@ msgstr ""
 "Não vão ser enviadas. Algumas estão nos rascunhos, e as que o Gmail não "
 "aceitou ficaram abertas para as guardar."
 
-#: app/src/ui/window/senders.rs:52
+#: app/src/ui/window/senders.rs:60
 msgid "This message has no unsubscribe link"
 msgstr "Esta mensagem não tem ligação para cancelar a subscrição"
 
-#: app/src/ui/window/senders.rs:56
+#: app/src/ui/window/senders.rs:64
 msgid "This message's unsubscribe link is not one Penguin Mail can use"
 msgstr ""
 "A ligação de cancelamento desta mensagem não é uma que o Penguin Mail possa "
 "usar"
 
-#: app/src/ui/window/senders.rs:151
+#: app/src/ui/window/senders.rs:137
+msgid ""
+"The request to leave {sender} waits in the Outbox. It goes out as soon as it "
+"can."
+msgstr ""
+"O pedido para sair de {sender} está à espera na caixa de saída. Sai assim "
+"que for possível."
+
+#: app/src/ui/window/senders.rs:171
 msgid "Open Page"
 msgstr "Abrir Página"
 
-#: app/src/ui/window/senders.rs:190
+#: app/src/ui/window/senders.rs:208
 msgid "The app is closing."
 msgstr "A aplicação está a fechar."
 
-#: app/src/ui/window/senders.rs:206
+#: app/src/ui/window/senders.rs:226
 msgid "Open a message from the sender to block"
 msgstr "Abra uma mensagem do remetente a bloquear"
 
-#: app/src/ui/window/senders.rs:210
+#: app/src/ui/window/senders.rs:230
 msgid "Block {sender}?"
 msgstr "Bloquear {sender}?"
 
-#: app/src/ui/window/senders.rs:213
+#: app/src/ui/window/senders.rs:233
 msgid ""
 "New mail from {email} goes straight to the Trash. This conversation moves "
 "there now. Remove the rule under Rules to unblock."
@@ -5837,15 +5845,15 @@ msgstr ""
 "O correio novo de {email} vai direto para o lixo. Esta conversa muda para lá "
 "agora. Remova a regra em Regras para desbloquear."
 
-#: app/src/ui/window/senders.rs:218
+#: app/src/ui/window/senders.rs:238
 msgid "Block"
 msgstr "Bloquear"
 
-#: app/src/ui/window/senders.rs:245
+#: app/src/ui/window/senders.rs:265
 msgid "Blocked {sender}"
 msgstr "{sender} bloqueado"
 
-#: app/src/ui/window/senders.rs:251
+#: app/src/ui/window/senders.rs:271
 msgid "Could not block the sender: {reason}"
 msgstr "Não foi possível bloquear o remetente: {reason}"
 

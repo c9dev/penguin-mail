@@ -24,6 +24,7 @@ use crate::permission::Occasion;
 use crate::protection::{self, Held, Standard};
 use crate::settings::{Change, Settings};
 use crate::ui::unsubscribe::{self, ListLine, Way};
+use crate::unsubscribe::RequestSent;
 use crate::unsubscribe_page::{Adviser, Browser, WebkitBrowser, model_adviser};
 
 impl MainWindow {
@@ -120,13 +121,16 @@ impl Effects for Ports {
     fn send_request(
         &self,
         account_id: AccountId,
+        from: String,
         to: String,
         subject: String,
         body: String,
-    ) -> Result<(), String> {
-        let app = self.0.app.upgrade().ok_or_else(closing)?;
-        app.send_request(account_id, &to, subject, body);
-        Ok(())
+    ) -> Answer<'_, Result<RequestSent, String>> {
+        Box::pin(async move {
+            let app = self.0.app.upgrade().ok_or_else(closing)?;
+            app.send_request(account_id, &from, &to, subject, body)
+                .await
+        })
     }
 
     fn open_page(&self, url: &str) {

@@ -11,6 +11,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use gtk::glib;
+use mailrs_domain::AccountId;
 use mailrs_store::outbox::Queued;
 use mailrs_sync::{Posted, now_millis};
 
@@ -19,6 +20,7 @@ use crate::compose::{Built, Draft, SendWhen, build, build_protected, new_message
 use crate::format::future_date;
 use crate::protection::{self, Addressees, Standard};
 use crate::ui::window::Notice;
+use crate::unsubscribe::RequestSent;
 use mailrs_domain::translate::{fill, gettext};
 
 /// How often the scheduler looks for messages that are due.
@@ -77,20 +79,68 @@ impl App {
                                 .set(app.pending_sends.get().saturating_sub(1));
                             let taken = held.borrow_mut().take();
                             if let Some((draft, built)) = taken {
-                                app.send_now(draft, built, true);
+                                app.send_now(draft, built);
                             }
                         });
                     }
-                    _ => self.send_now(draft, built, true),
+                    _ => self.send_now(draft, built),
                 }
             }
         }
     }
 
-    /// Sends without the Undo delay, for messages the user never wrote,
-    /// such as an unsubscribe request.
-    pub(super) fn send_immediately(self: &Rc<Self>, draft: Draft) {
-        self.send_now(draft, None, false);
+    /// Sends a request the person never wrote, the mail that leaves a
+    /// mailing list, from `from` when it is one of the account's
+    /// addresses. It has no signature and no Undo delay, since nothing in
+    /// it is theirs to take back.
+    ///
+    /// The answer waits for the outbox, so "Unsubscribed" is said only
+    /// once the mail has left. A request that fails reopens no composer:
+    /// the person never wrote it, and the caller says why it failed.
+    pub async fn send_request(
+        self: &Rc<Self>,
+        account_id: AccountId,
+        from: &str,
+        to: &str,
+        subject: String,
+        body: String,
+    ) -> Result<RequestSent, String> {
+        if self.core.account(account_id).is_none() {
+            return Err(not_connected());
+        }
+        let mut draft = self.blank_draft(account_id);
+        // The list knows the person by the address it writes to, and a
+        // request from another of their addresses may not match anyone
+        // on it.
+        let alias = self.identities().into_iter().find(|identity| {
+            identity.account_id == account_id && identity.address.email.eq_ignore_ascii_case(from)
+        });
+        if let Some(identity) = alias {
+            draft.from = identity.address;
+        }
+        draft.to = crate::compose::parse_recipients(to);
+        draft.subject = subject;
+        draft.markdown = body;
+        let raw = self.raw_for(&draft, None).await?;
+        let outbox = self.core.outbox();
+        let message = queued(&draft, raw, now_millis());
+        let posted = self
+            .core
+            .call(async move { outbox.post(message).await })
+            .await;
+        match posted {
+            Ok(Posted::Sent(_)) => {
+                self.core.poke(account_id);
+                self.scheduled_changed();
+                Ok(RequestSent::Sent)
+            }
+            Ok(Posted::Waiting(_)) => {
+                self.scheduled_changed();
+                Ok(RequestSent::Waiting)
+            }
+            Ok(Posted::Refused(problem)) => Err(problem),
+            Err(err) => Err(err.to_string()),
+        }
     }
 
     /// The bytes to send: the message as it was written, or what the
@@ -177,9 +227,9 @@ impl App {
         build_protected(draft, date, &message_id, entity).map_err(|err| failed(&err))
     }
 
-    /// Sends at once, or puts the message in the outbox when it cannot go.
-    /// With `announce`, says so in the window.
-    fn send_now(self: &Rc<Self>, draft: Draft, built: Option<Built>, announce: bool) {
+    /// Sends at once, or puts the message in the outbox when it cannot go,
+    /// and says so in the window.
+    fn send_now(self: &Rc<Self>, draft: Draft, built: Option<Built>) {
         if self.core.account(draft.account_id).is_none() {
             return self.reopen(draft, &not_connected());
         }
@@ -200,9 +250,7 @@ impl App {
                     this.contacts_stale.set(true);
                     this.core.poke(draft.account_id);
                     this.scheduled_changed();
-                    if announce {
-                        this.tell_window(Notice::Sent);
-                    }
+                    this.tell_window(Notice::Sent);
                 }
                 Ok(Posted::Waiting(_)) => {
                     this.scheduled_changed();

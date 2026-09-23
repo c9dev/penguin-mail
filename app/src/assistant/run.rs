@@ -38,6 +38,7 @@ use crate::settings::{
     Change, Choice, ColorScheme, MarkRead, RemoteImages, Setting, Settings, TextSize, UndoSend,
 };
 use crate::ui::unsubscribe::{ListLine, Way};
+use crate::unsubscribe::RequestSent;
 use crate::unsubscribe_page::{Adviser, Browser};
 use mailrs_domain::translate::{date_locale, fill, fill_plural, gettext};
 
@@ -120,15 +121,18 @@ pub trait Effects {
     /// draft with no `draft_id` is new and gets its signature first; one
     /// that has an id already went through a composer that signed it.
     fn send_later(&self, draft: Draft, at: EpochMillis) -> Result<(), String>;
-    /// Sends the request mail a list asks for to be let go, from the
-    /// account, as it stands: no signature, no composer.
+    /// Sends the request mail a list asks for to be let go, as it
+    /// stands: no signature, no composer. It goes from `from` when that
+    /// is one of the account's addresses, and answers once the outbox
+    /// has sent it or kept it.
     fn send_request(
         &self,
         account_id: AccountId,
+        from: String,
         to: String,
         subject: String,
         body: String,
-    ) -> Result<(), String>;
+    ) -> Answer<'_, Result<RequestSent, String>>;
     /// Opens a list's unsubscribe page in the person's browser, for them
     /// to finish.
     fn open_page(&self, url: &str);

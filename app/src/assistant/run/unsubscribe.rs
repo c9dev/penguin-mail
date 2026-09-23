@@ -21,7 +21,7 @@ use mailrs_sync::{Leave, Newsletters};
 
 use super::*;
 use crate::ui::unsubscribe::{ListLine, Way, sent_to};
-use crate::unsubscribe::{Unsubscribe, choose_with_body};
+use crate::unsubscribe::{RequestSent, Unsubscribe, choose_with_body};
 use crate::unsubscribe_page::{Browser, Outcome as PageOutcome, Prepared, finish, prepare};
 
 /// The most lists one call may leave. Twenty pages already take minutes,
@@ -172,7 +172,7 @@ impl<A: Accounts> Tools<A> {
             let way = match how {
                 Unsubscribe::OneClick(_) => Way::OneClick,
                 Unsubscribe::Email { .. } => Way::Mail {
-                    from: list.account.email.clone(),
+                    from: address.clone(),
                 },
                 Unsubscribe::Page(url) | Unsubscribe::BodyLink(url) => {
                     pages.push((lines.len(), url.clone(), address.clone()));
@@ -369,9 +369,11 @@ impl<A: Accounts> Tools<A> {
     }
 
     /// Leaves a list the way that needs no page: the one-click request,
-    /// or the mail the window sends from the account.
+    /// or the mail the window sends from the address the list writes to.
+    /// A mail counts as done once it has left, not once it was handed
+    /// over.
     async fn leave(&self, list: &Leaving) -> Ended {
-        let State::Ready { how, .. } = &list.state else {
+        let State::Ready { how, address } = &list.state else {
             return ("failed", Some("That list has no way out.".into()));
         };
         let (mail, account_id, how) =
@@ -379,19 +381,29 @@ impl<A: Accounts> Tools<A> {
         let leave = self
             .call(async move { mail.unsubscribe(account_id, how).await })
             .await;
-        let left = match leave {
-            Ok(Leave::Done) => Ok(()),
+        match leave {
+            Ok(Leave::Done) => ("done", None),
             Ok(Leave::Send { to, subject, body }) => {
-                self.effects.send_request(account_id, to, subject, body)
+                let sent = self
+                    .effects
+                    .send_request(account_id, address.clone(), to, subject, body)
+                    .await;
+                match sent {
+                    Ok(RequestSent::Sent) => ("done", None),
+                    Ok(RequestSent::Waiting) => (
+                        "waiting",
+                        Some(
+                            "The request waits in the Outbox and goes out once Gmail takes it."
+                                .into(),
+                        ),
+                    ),
+                    Err(why) => ("failed", Some(why)),
+                }
             }
             Ok(Leave::Open(url)) => {
                 self.effects.open_page(&url);
-                Ok(())
+                ("done", None)
             }
-            Err(why) => Err(why),
-        };
-        match left {
-            Ok(()) => ("done", None),
             Err(why) => ("failed", Some(why)),
         }
     }

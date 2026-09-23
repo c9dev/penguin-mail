@@ -10,9 +10,17 @@ use crate::permission::{Occasion, Permission};
 use crate::ui::confirm::{Tone, confirm};
 use crate::ui::conversation::ConversationView;
 use crate::ui::unsubscribe::{self, ListLine, Way, summary};
-use crate::unsubscribe::{Unsubscribe, choose_with_body};
+use crate::unsubscribe::{RequestSent, Unsubscribe, choose_with_body};
 use crate::unsubscribe_page::{Adviser, Outcome, WebkitBrowser, finish, model_adviser, prepare};
 use mailrs_domain::translate::{fill, gettext};
+
+/// How leaving a list without a page ended in the window.
+enum Left {
+    Ended(Outcome),
+    /// The request mail waits in the Outbox, so the list has not heard
+    /// yet.
+    Waiting,
+}
 
 impl MainWindow {
     /// Unsubscribes from the mailing list of the thread `view` shows,
@@ -60,11 +68,16 @@ impl MainWindow {
             .account(asked_on.account_id)
             .map(|account| account.email)
             .unwrap_or_default();
+        // The address the newsletter came to, which a page is typed and a
+        // request mail goes from.
+        let senders = self.settings_with(|s| s.senders(&account));
+        let mine: Vec<String> = senders.into_iter().map(|a| a.email).collect();
+        let address = unsubscribe::sent_to(&sent_to, &mine, &account);
         let (way, page) = match &method {
             Unsubscribe::OneClick(_) => (Way::OneClick, None),
             Unsubscribe::Email { .. } => (
                 Way::Mail {
-                    from: account.clone(),
+                    from: address.clone(),
                 },
                 None,
             ),
@@ -83,11 +96,9 @@ impl MainWindow {
         let (tell, hear) = async_channel::bounded(1);
         match (page, browser.clone()) {
             (Some(url), Some(browser)) => {
-                let senders = self.settings_with(|s| s.senders(&account));
-                let mine: Vec<String> = senders.into_iter().map(|a| a.email).collect();
-                let address = unsubscribe::sent_to(&sent_to, &mine, &account);
                 let ai = self.settings_with(|s| s.ai.clone());
                 let adviser = model_adviser(&ai, self.core.runtime());
+                let address = address.clone();
                 glib::spawn_future_local(async move {
                     let adviser = adviser.as_ref().map(|a| a as &dyn Adviser);
                     let prepared = prepare(&*browser, adviser, &url, &address).await;
@@ -116,9 +127,18 @@ impl MainWindow {
                 // nothing unread reaches here.
                 Way::Reading => return,
                 Way::OneClick | Way::Mail { .. } => {
-                    match this.leave_list(asked_on.account_id, method).await {
-                        Ok(()) => Outcome::Done,
-                        Err(err) => Outcome::Failed(err),
+                    match this.leave_list(asked_on.account_id, method, &address).await {
+                        Left::Ended(outcome) => outcome,
+                        // The list hears nothing until the mail leaves,
+                        // so this is not "Unsubscribed" yet.
+                        Left::Waiting => {
+                            return this.toast(&fill(
+                                &gettext(
+                                    "The request to leave {sender} waits in the Outbox. It goes out as soon as it can.",
+                                ),
+                                &[("sender", &sender)],
+                            ));
+                        }
                     }
                 }
             };
@@ -166,35 +186,35 @@ impl MainWindow {
         gtk::UriLauncher::new(url).launch(Some(&self.window), gio::Cancellable::NONE, |_| {});
     }
 
-    /// Leaves a mailing list the way `how` says, from the account, and
-    /// does what `mailrs_sync` leaves to the app: sending the request or
-    /// opening the page. The Unsubscribe button and the assistant both end
-    /// here.
-    pub(super) async fn leave_list(
+    /// Leaves a mailing list the way `how` says and does what
+    /// `mailrs_sync` leaves to the app: sending the request from `from`,
+    /// the address the list writes to, and waiting for the outbox to send
+    /// it. A page comes back for the caller to open.
+    async fn leave_list(
         self: &Rc<Self>,
         account_id: mailrs_domain::AccountId,
         how: Unsubscribe,
-    ) -> Result<(), String> {
+        from: &str,
+    ) -> Left {
         let actions = self.core.actions();
         let leave = self
             .core
             .call(async move { actions.unsubscribe(account_id, how).await })
-            .await
-            .map_err(|e| e.to_string())?;
+            .await;
         match leave {
-            Leave::Done => Ok(()),
-            Leave::Send { to, subject, body } => {
-                let app = self
-                    .app
-                    .upgrade()
-                    .ok_or_else(|| gettext("The app is closing."))?;
-                app.send_request(account_id, &to, subject, body);
-                Ok(())
+            Ok(Leave::Done) => Left::Ended(Outcome::Done),
+            Ok(Leave::Send { to, subject, body }) => {
+                let Some(app) = self.app.upgrade() else {
+                    return Left::Ended(Outcome::Failed(gettext("The app is closing.")));
+                };
+                match app.send_request(account_id, from, &to, subject, body).await {
+                    Ok(RequestSent::Sent) => Left::Ended(Outcome::Done),
+                    Ok(RequestSent::Waiting) => Left::Waiting,
+                    Err(why) => Left::Ended(Outcome::Failed(why)),
+                }
             }
-            Leave::Open(url) => {
-                self.open_page(&url);
-                Ok(())
-            }
+            Ok(Leave::Open(url)) => Left::Ended(Outcome::OpenInBrowser(url)),
+            Err(err) => Left::Ended(Outcome::Failed(err.to_string())),
         }
     }
 

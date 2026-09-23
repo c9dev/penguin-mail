@@ -950,7 +950,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "unsubscribe",
             label: || gettext("Unsubscribing"),
-            description: "Leaves the mailing lists 1 to 20 conversations came from, as list_newsletters gives them: a one-click request, an email to the list, or the sender's own unsubscribe page, which Penguin Mail loads out of sight, fills in and submits. It opens one dialog naming every list and what will be pressed, and does nothing the user does not tick there. A page takes up to 45 seconds, so a long list can take minutes; wait for the answer rather than calling again. Each list comes back as done, unclear (submitted, page said nothing), failed with a reason, opened (the page needed the user and opened in their browser), or declined.",
+            description: "Leaves the mailing lists 1 to 20 conversations came from, as list_newsletters gives them: a one-click request, an email to the list, or the sender's own unsubscribe page, which Penguin Mail loads out of sight, fills in and submits. It opens one dialog naming every list and what will be pressed, and does nothing the user does not tick there. A page takes up to 45 seconds, so a long list can take minutes; wait for the answer rather than calling again. Each list comes back as done, unclear (submitted, page said nothing), waiting (the request mail sits in the Outbox until Gmail takes it), failed with a reason, opened (the page needed the user and opened in their browser), or declined.",
             input: || {
                 json!({
                     "conversations": {

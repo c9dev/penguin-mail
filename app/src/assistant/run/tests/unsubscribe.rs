@@ -6,6 +6,7 @@ use mailrs_domain::{Address, EpochMillis, MessageMeta, system_label};
 use serde_json::{Value, json};
 
 use super::super::fake::{Harness, ME, labelled, meta};
+use crate::unsubscribe::RequestSent;
 use crate::unsubscribe_page::PageForm;
 
 const DAY: i64 = 24 * 60 * 60 * 1000;
@@ -180,6 +181,7 @@ async fn three_lists_leave_in_one_call_once_the_dialog_says_yes() {
         h.asked().requests,
         [(
             h.account_id,
+            ME.to_string(),
             "leave@forum.example".to_string(),
             "bye".to_string(),
             "unsubscribe".to_string(),
@@ -290,4 +292,63 @@ async fn a_conversation_with_no_way_out_says_so_and_stops_nothing_else() {
         [["Trail Notes: ask the sender to take you off the list".to_string()]],
         "the dialog is asked only about the list there is a way out of"
     );
+}
+
+/// The forum writes to an alias of the account, which is the address
+/// its list knows the owner by.
+const ALIAS: &str = "dana@studio.example";
+
+#[tokio::test]
+async fn a_request_goes_from_the_alias_the_list_writes_to() {
+    let mut forum = newsletters().remove(2);
+    forum.to = vec![Address {
+        name: None,
+        email: ALIAS.into(),
+    }];
+    let h = Harness::with(vec![forum]).await;
+    h.desk.0.borrow_mut().settings.send_as.insert(
+        ME.to_string(),
+        vec![crate::compose::SendAsAddress {
+            email: ALIAS.to_string(),
+            ..Default::default()
+        }],
+    );
+
+    let answer = h
+        .ok("unsubscribe", json!({"conversations": [conversation("tn3")]}))
+        .await;
+
+    assert_eq!(outcomes(&answer)[0].1, "done");
+    let requests = h.asked().requests.clone();
+    assert_eq!(requests.len(), 1, "{requests:?}");
+    assert_eq!(requests[0].1, ALIAS, "the request goes from the alias");
+    assert_eq!(
+        h.asked().lists_asked,
+        [["Old Forum: send a request from d…@studio.example".to_string()]]
+    );
+}
+
+#[tokio::test]
+async fn a_request_waiting_in_the_outbox_is_not_reported_as_done() {
+    let h = with_three().await;
+    h.effects.asked.borrow_mut().request_answer = Some(Ok(RequestSent::Waiting));
+
+    let answer = h
+        .ok("unsubscribe", json!({"conversations": [conversation("tn3")]}))
+        .await;
+
+    assert_eq!(outcomes(&answer)[0].1, "waiting");
+}
+
+#[tokio::test]
+async fn a_request_that_would_not_go_out_fails() {
+    let h = with_three().await;
+    h.effects.asked.borrow_mut().request_answer = Some(Err("Gmail refused it".to_string()));
+
+    let answer = h
+        .ok("unsubscribe", json!({"conversations": [conversation("tn3")]}))
+        .await;
+
+    assert_eq!(outcomes(&answer)[0].1, "failed");
+    assert_eq!(answer["lists"][0]["reason"], "Gmail refused it");
 }
