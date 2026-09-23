@@ -22,6 +22,7 @@ use std::time::Duration;
 use futures::channel::oneshot;
 use futures::future::{Either, select};
 use gtk::glib;
+use mailrs_domain::translate::gettext;
 use webkit::prelude::*;
 
 use super::{Answer, Browser, PageError, PageForm, Plan};
@@ -296,7 +297,7 @@ impl WebkitBrowser {
         match select(hear, glib::timeout_future(limit)).await {
             Either::Left((Ok(Ok(())), _)) => Ok(()),
             Either::Left((Ok(Err(why)), _)) => Err(PageError::Load(why)),
-            Either::Left((Err(_), _)) => Err(PageError::Load("the view went away".to_string())),
+            Either::Left((Err(_), _)) => Err(PageError::Load(gettext("the view went away"))),
             Either::Right(_) => Err(PageError::Timeout),
         }
     }
@@ -388,9 +389,9 @@ impl Browser for WebkitBrowser {
 /// page, whoever wrote it.
 fn orders(plan: &Plan, address: &str) -> Result<String, PageError> {
     if plan.fill.iter().any(|(_, text)| text != address) {
-        return Err(PageError::Script(
-            "the plan would type something other than the address".to_string(),
-        ));
+        return Err(PageError::Script(gettext(
+            "the plan would type something other than the address",
+        )));
     }
     let plan = serde_json::to_string(plan)
         .map_err(|err| PageError::Script(format!("the plan would not write out: {err}")))?;
@@ -412,7 +413,5 @@ fn held(answer: &str) -> Result<(), PageError> {
     if done.missing.is_empty() {
         return Ok(());
     }
-    Err(PageError::Script(
-        "the page changed while it was waiting to be asked".to_string(),
-    ))
+    Err(PageError::Changed)
 }

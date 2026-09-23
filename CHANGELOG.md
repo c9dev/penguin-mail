@@ -45,6 +45,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   page the unsubscribe form led to, not the form you already sent.
 - When a mailing list turns down an unsubscribe request, the message
   names the list's server, where it used to blame Gmail.
+- The reason an unsubscribe page failed now appears in your language, not
+  in English inside a Portuguese message.
 
 ## 0.2.0 (2026-09-23)
 

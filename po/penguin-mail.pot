@@ -5704,6 +5704,30 @@ msgstr ""
 msgid "Checking for mail"
 msgstr ""
 
+#: app/src/unsubscribe_page.rs:171
+msgid "the page took longer than 20 seconds"
+msgstr ""
+
+#: app/src/unsubscribe_page.rs:173
+msgid "the page did not load: {reason}"
+msgstr ""
+
+#: app/src/unsubscribe_page.rs:177
+msgid "the page could not be read: {reason}"
+msgstr ""
+
+#: app/src/unsubscribe_page.rs:180
+msgid "the page changed while it was waiting to be asked"
+msgstr ""
+
+#: app/src/unsubscribe_page/webkit.rs:300
+msgid "the view went away"
+msgstr ""
+
+#: app/src/unsubscribe_page/webkit.rs:393
+msgid "the plan would type something other than the address"
+msgstr ""
+
 #: app/src/update/mod.rs:103
 msgid "Installing Update…"
 msgstr ""

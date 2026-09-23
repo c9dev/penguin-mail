@@ -17,11 +17,12 @@
 //! window and the assistant share: prepare reads the page and decides,
 //! the person confirms, finish submits and reads the page back.
 //!
-//! The words a person reads are the window's, not this module's. An
-//! [`Outcome`] says what happened in plain English for the log and for
-//! the assistant's answer, and whoever shows it writes it out through
-//! `translate`.
+//! The dialog and the toasts are the window's words, not this module's.
+//! The one exception is [`PageError`]: its text becomes the reason in an
+//! [`Outcome::Failed`], which the toast puts inside a translated sentence,
+//! so it goes through `translate` here.
 
+use mailrs_domain::translate::{fill, gettext};
 use serde::{Deserialize, Serialize};
 
 mod adviser;
@@ -157,15 +158,28 @@ pub enum PageError {
     Timeout,
     Load(String),
     Script(String),
+    /// The page dropped or rebuilt the controls a plan names between the
+    /// reading and the person's yes, so nothing was pressed.
+    Changed,
 }
 
+/// These words end up in "Could not unsubscribe from {sender}: {reason}",
+/// so they are translated like the sentence around them.
 impl std::fmt::Display for PageError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PageError::Timeout => write!(f, "the page took longer than 20 seconds"),
-            PageError::Load(why) => write!(f, "the page did not load: {why}"),
-            PageError::Script(why) => write!(f, "the page could not be read: {why}"),
-        }
+        let said = match self {
+            PageError::Timeout => gettext("the page took longer than 20 seconds"),
+            PageError::Load(why) => fill(
+                &gettext("the page did not load: {reason}"),
+                &[("reason", why)],
+            ),
+            PageError::Script(why) => fill(
+                &gettext("the page could not be read: {reason}"),
+                &[("reason", why)],
+            ),
+            PageError::Changed => gettext("the page changed while it was waiting to be asked"),
+        };
+        f.write_str(&said)
     }
 }
 

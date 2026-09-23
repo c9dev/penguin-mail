@@ -5961,6 +5961,30 @@ msgstr "Fechar a janela"
 msgid "Checking for mail"
 msgstr "A procurar correio"
 
+#: app/src/unsubscribe_page.rs:171
+msgid "the page took longer than 20 seconds"
+msgstr "a página demorou mais de 20 segundos"
+
+#: app/src/unsubscribe_page.rs:173
+msgid "the page did not load: {reason}"
+msgstr "a página não carregou: {reason}"
+
+#: app/src/unsubscribe_page.rs:177
+msgid "the page could not be read: {reason}"
+msgstr "não foi possível ler a página: {reason}"
+
+#: app/src/unsubscribe_page.rs:180
+msgid "the page changed while it was waiting to be asked"
+msgstr "a página mudou enquanto esperava pela sua resposta"
+
+#: app/src/unsubscribe_page/webkit.rs:300
+msgid "the view went away"
+msgstr "a vista fechou-se"
+
+#: app/src/unsubscribe_page/webkit.rs:393
+msgid "the plan would type something other than the address"
+msgstr "o plano escreveria algo que não o endereço"
+
 #: app/src/update/mod.rs:103
 msgid "Installing Update…"
 msgstr "A instalar a atualização…"

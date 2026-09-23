@@ -474,6 +474,30 @@ async fn a_submission_that_times_out_fails() {
     assert!(why.contains("20 seconds"), "{why}");
 }
 
+/// A failure lands in "Could not unsubscribe from {sender}: {reason}",
+/// so a reason left in English would sit inside a Portuguese sentence.
+#[test]
+fn every_reason_a_page_gives_is_translated() {
+    const PT: &str = include_str!("../../../po/pt_PT.po");
+    for english in [
+        "the page took longer than 20 seconds",
+        "the page did not load: {reason}",
+        "the page could not be read: {reason}",
+        "the page changed while it was waiting to be asked",
+        "the view went away",
+        "the plan would type something other than the address",
+    ] {
+        let entry = format!("msgid \"{english}\"\nmsgstr \"");
+        let at = PT
+            .find(&entry)
+            .unwrap_or_else(|| panic!("pt_PT.po lacks {english:?}"));
+        assert!(
+            !PT[at + entry.len()..].starts_with('"'),
+            "pt_PT.po leaves {english:?} untranslated"
+        );
+    }
+}
+
 #[test]
 fn a_word_matches_whole_and_not_in_the_middle_of_another() {
     assert!(words::leaves("Unsubscribe"));

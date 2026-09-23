@@ -162,9 +162,7 @@ async fn standing_on(
         && rules::valid(&page, plan, &prepared.address);
     match same {
         true => Ok(()),
-        false => Err(Outcome::Failed(
-            "the page changed while it was waiting to be asked".to_string(),
-        )),
+        false => Err(Outcome::Failed(PageError::Changed.to_string())),
     }
 }
 

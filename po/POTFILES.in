@@ -95,6 +95,8 @@ app/src/ui/window/reveal.rs
 app/src/ui/window/scheduled.rs
 app/src/ui/window/senders.rs
 app/src/ui/window/shortcuts.rs
+app/src/unsubscribe_page.rs
+app/src/unsubscribe_page/webkit.rs
 app/src/update/mod.rs
 app/src/update/signature.rs
 domain/src/category.rs
