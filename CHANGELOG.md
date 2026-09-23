@@ -10,6 +10,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Delete Forever on a Trash full of conversations goes out as one request
   per thousand messages. Erasing 200 conversations used to make 400
   requests and use up Gmail's allowance for about a minute.
+- Catching up after the computer was off for a week or more fetches only
+  the mail that changed meanwhile, instead of every message again, so the
+  account is ready sooner and leaves Gmail's allowance to you.
 
 ### Fixed
 

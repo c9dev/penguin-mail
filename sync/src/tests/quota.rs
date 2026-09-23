@@ -582,3 +582,78 @@ async fn history_fetches_new_replies_a_conversation_at_a_time() {
         .unwrap();
     assert_eq!(stored, 40, "every reply is stored, and nothing else");
 }
+
+/// Messages stored for the account.
+async fn stored_count(db: &Db) -> i64 {
+    db.read(|c| Ok(c.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get::<_, i64>(0))?))
+        .await
+        .unwrap()
+}
+
+/// History that has aged out makes the account list its mail again. What
+/// the store already holds with the same labels costs nothing to fetch.
+#[tokio::test]
+async fn listing_again_after_history_expires_fetches_nothing_that_stayed() {
+    let h = harness().await;
+    let all = vec![realistic(&h.db).await];
+    first_sync(&all).await;
+    all[0].fake.expire_history();
+    all[0].fake.with(|s| s.page_size = 500);
+    reset(&all);
+
+    all[0].sync.incremental().await.unwrap();
+
+    let usage = total(&all);
+    report(
+        "listing again after history expired, nothing changed",
+        &usage,
+    );
+    // Listing and fetching the window again cost 929 units.
+    assert_eq!(usage.calls_to("users.messages.get"), 0);
+    assert_eq!(usage.calls_to("users.threads.get"), 0);
+    // History 2, profile 1, labels 1, the window at 500 a page, and one
+    // listing per label for the fake's four.
+    assert_eq!(usage.units, 2 + 1 + 1 + 5 + 4 * 5);
+    assert_eq!(stored_count(&h.db).await, 300);
+    assert!(
+        all[0].sync.incremental().await.is_ok(),
+        "the new cursor works"
+    );
+}
+
+/// What did change while history was out of reach comes in, and only
+/// that: a message read on the phone, one that arrived, one deleted.
+#[tokio::test]
+async fn listing_again_fetches_what_moved_arrived_or_went() {
+    let h = harness().await;
+    let all = vec![realistic(&h.db).await];
+    first_sync(&all).await;
+    let fake = &all[0].fake;
+    fake.remote_relabel("t0m0", &["UNREAD"], &[]);
+    fake.seed(MessageMeta {
+        account_id: all[0].id,
+        ..meta("new", "tnew", now_millis(), &["INBOX"])
+    });
+    fake.remote_delete_silently("t1m0");
+    fake.expire_history();
+    fake.with(|s| s.page_size = 500);
+    reset(&all);
+
+    all[0].sync.incremental().await.unwrap();
+
+    let usage = total(&all);
+    report("listing again after history expired, three changes", &usage);
+    assert_eq!(usage.calls_to("users.messages.get"), 2);
+    assert_eq!(usage.calls_to("users.threads.get"), 0);
+    assert_eq!(stored_count(&h.db).await, 300);
+    let (account_id, ids) = (all[0].id, vec!["t0m0".to_string(), "new".to_string()]);
+    let labels: Vec<Vec<String>> =
+        h.db.read(move |c| {
+            ids.iter()
+                .map(|id| mailrs_store::messages::labels_of(c, account_id, id))
+                .collect()
+        })
+        .await
+        .unwrap();
+    assert_eq!(labels, [vec!["INBOX", "UNREAD"], vec!["INBOX"]]);
+}

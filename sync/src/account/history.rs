@@ -34,9 +34,9 @@ impl<G: GmailApi> AccountSync<G> {
                 Err(GmailError::NotFound) => {
                     tracing::info!(
                         account = account_id,
-                        "history cursor expired; bootstrapping again"
+                        "history cursor expired; listing the mail again"
                     );
-                    return self.bootstrap().await;
+                    return self.rebootstrap().await;
                 }
                 Err(err) => return Err(err.into()),
             };

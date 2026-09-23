@@ -152,11 +152,38 @@ impl GmailClient {
         page_token: Option<&str>,
         max_results: u32,
     ) -> Result<MessagePage, GmailError> {
+        self.list(query, None, page_token, max_results).await
+    }
+
+    /// One page of the messages `query` matches that carry `label_id`,
+    /// named by id as `labelIds` takes it, so a label whose name a search
+    /// could not spell is still listed.
+    pub async fn list_labelled(
+        &self,
+        label_id: &str,
+        query: &str,
+        page_token: Option<&str>,
+        max_results: u32,
+    ) -> Result<MessagePage, GmailError> {
+        self.list(query, Some(label_id), page_token, max_results)
+            .await
+    }
+
+    async fn list(
+        &self,
+        query: &str,
+        label_id: Option<&str>,
+        page_token: Option<&str>,
+        max_results: u32,
+    ) -> Result<MessagePage, GmailError> {
         self.call(cost::LIST, || {
             let mut request = self
                 .http()
                 .get(self.url("messages"))
                 .query(&[("q", query), ("maxResults", &max_results.to_string())]);
+            if let Some(label_id) = label_id {
+                request = request.query(&[("labelIds", label_id)]);
+            }
             if let Some(token) = page_token {
                 request = request.query(&[("pageToken", token)]);
             }

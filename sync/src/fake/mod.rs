@@ -471,6 +471,44 @@ impl FakeGmail {
         })
     }
 
+    /// One page of a search, narrowed to a label by id when one is named,
+    /// as `messages.list` with `labelIds` is.
+    async fn listing(
+        &self,
+        label_id: Option<&str>,
+        query: &str,
+        page_token: Option<&str>,
+        page_size: u32,
+    ) -> Result<MessagePage, GmailError> {
+        self.call("users.messages.list", cost::LIST).await?;
+        let start = match page_token {
+            None => 0,
+            Some(token) => token.parse::<usize>().map_err(|_| GmailError::Http {
+                status: 400,
+                body: "Invalid pageToken".into(),
+            })?,
+        };
+        Ok(self.with(|s| {
+            let mut found = s.search(query);
+            if let Some(label_id) = label_id {
+                found.retain(|id| s.messages[id].has_label(label_id));
+            }
+            let size = s.page_size.min(page_size.max(1) as usize);
+            let end = (start + size).min(found.len());
+            let messages = found[start.min(end)..end]
+                .iter()
+                .map(|id| MessageRef {
+                    id: id.clone(),
+                    thread_id: s.messages[id].thread_id.clone(),
+                })
+                .collect();
+            MessagePage {
+                messages,
+                next_page_token: (end < found.len()).then(|| end.to_string()),
+            }
+        }))
+    }
+
     /// Calls and units since the last reset.
     pub fn usage(&self) -> Usage {
         self.with(|s| s.usage.clone())
@@ -572,30 +610,18 @@ impl GmailApi for FakeGmail {
         page_token: Option<&str>,
         page_size: u32,
     ) -> Result<MessagePage, GmailError> {
-        self.call("users.messages.list", cost::LIST).await?;
-        let start = match page_token {
-            None => 0,
-            Some(token) => token.parse::<usize>().map_err(|_| GmailError::Http {
-                status: 400,
-                body: "Invalid pageToken".into(),
-            })?,
-        };
-        Ok(self.with(|s| {
-            let found = s.search(query);
-            let size = s.page_size.min(page_size.max(1) as usize);
-            let end = (start + size).min(found.len());
-            let messages = found[start.min(end)..end]
-                .iter()
-                .map(|id| MessageRef {
-                    id: id.clone(),
-                    thread_id: s.messages[id].thread_id.clone(),
-                })
-                .collect();
-            MessagePage {
-                messages,
-                next_page_token: (end < found.len()).then(|| end.to_string()),
-            }
-        }))
+        self.listing(None, query, page_token, page_size).await
+    }
+
+    async fn list_labelled(
+        &self,
+        label_id: &str,
+        query: &str,
+        page_token: Option<&str>,
+        page_size: u32,
+    ) -> Result<MessagePage, GmailError> {
+        self.listing(Some(label_id), query, page_token, page_size)
+            .await
     }
 
     async fn message_metadata(&self, id: &str) -> Result<MessageMeta, GmailError> {

@@ -42,6 +42,17 @@ pub trait GmailApi: Send + Sync + 'static {
         page_size: u32,
     ) -> impl Future<Output = Result<MessagePage, GmailError>> + Send;
 
+    /// One page of the messages `query` matches that carry `label_id`,
+    /// the label named by id. Compares label membership with the store
+    /// without fetching metadata, at 5 units a page.
+    fn list_labelled(
+        &self,
+        label_id: &str,
+        query: &str,
+        page_token: Option<&str>,
+        page_size: u32,
+    ) -> impl Future<Output = Result<MessagePage, GmailError>> + Send;
+
     fn message_metadata(
         &self,
         id: &str,
@@ -319,6 +330,15 @@ impl GmailApi for AnyGmail {
     ) -> Result<MessagePage, GmailError> {
         forward!(self, list_messages(query, page_token, page_size))
     }
+    async fn list_labelled(
+        &self,
+        label_id: &str,
+        query: &str,
+        page_token: Option<&str>,
+        page_size: u32,
+    ) -> Result<MessagePage, GmailError> {
+        forward!(self, list_labelled(label_id, query, page_token, page_size))
+    }
     async fn message_metadata(&self, id: &str) -> Result<MessageMeta, GmailError> {
         forward!(self, message_metadata(id))
     }
@@ -555,6 +575,23 @@ impl GmailApi for AccountClient {
     ) -> Result<MessagePage, GmailError> {
         self.client
             .list_messages(query, page_token, page_size.clamp(1, ID_PAGE_SIZE))
+            .await
+    }
+
+    async fn list_labelled(
+        &self,
+        label_id: &str,
+        query: &str,
+        page_token: Option<&str>,
+        page_size: u32,
+    ) -> Result<MessagePage, GmailError> {
+        self.client
+            .list_labelled(
+                label_id,
+                query,
+                page_token,
+                page_size.clamp(1, ID_PAGE_SIZE),
+            )
             .await
     }
 

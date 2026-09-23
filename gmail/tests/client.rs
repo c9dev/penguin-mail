@@ -153,6 +153,28 @@ async fn list_messages_sends_the_query_page_size_and_token() {
 }
 
 #[tokio::test]
+async fn a_labelled_listing_names_the_label_by_id() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    Mock::given(method("GET"))
+        .and(path(format!("{API}/messages")))
+        .and(query_param("q", "newer_than:30d"))
+        .and(query_param("labelIds", "Label_7"))
+        .and(query_param("maxResults", "500"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "messages": [{"id": "a", "threadId": "t"}]
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let page = client(&server)
+        .list_labelled("Label_7", "newer_than:30d", None, 500)
+        .await
+        .unwrap();
+    assert_eq!(page.messages.len(), 1);
+}
+
+#[tokio::test]
 async fn message_and_thread_fetches_request_the_right_formats() {
     let server = MockServer::start().await;
     mount_token(&server, 1).await;
