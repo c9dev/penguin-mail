@@ -10,7 +10,7 @@ use mailrs_store::{accounts, labels, messages, window};
 use super::AccountSync;
 use super::fetch::{Want, store_fetched};
 use super::labels::domain_labels;
-use crate::{GmailApi, ID_PAGE_SIZE, LIST_PAGE_SIZE, SyncError};
+use crate::{BackendError, GmailApi, ID_PAGE_SIZE, LIST_PAGE_SIZE, SyncError};
 
 const DAY_MILLIS: i64 = 24 * 60 * 60 * 1000;
 
@@ -190,7 +190,7 @@ impl<G: GmailApi> AccountSync<G> {
             .await
         {
             Ok(next) => Ok(next.is_some()),
-            Err(SyncError::Gmail(GmailError::Http { status: 400, .. }))
+            Err(SyncError::Backend(BackendError::Gmail(GmailError::Http { status: 400, .. })))
                 if cursor.backfill_cursor.is_some() =>
             {
                 tracing::warn!(

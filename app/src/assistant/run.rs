@@ -25,7 +25,7 @@ use mailrs_domain::{
 use mailrs_gmail::GmailError;
 use mailrs_store::{Db, messages};
 use mailrs_sync::{
-    AccountSettings, AccountSync, Accounts, AutomaticReply, Calendar, Categorized, Failure,
+    AccountSettings, AccountSync, Accounts, AutomaticReply, BackendError, Calendar, Categorized, Failure,
     History, Invitations, Loaded, MailAction, MailActions, Mailbox, Mailboxes, NewLabels, Outcome,
     Permitted, Scope, SyncError, TriageAction, View,
 };
@@ -591,10 +591,10 @@ impl<A: Accounts> Tools<A> {
                 self.effects.ask_permission(account.id, permission);
                 Err(asked_for(permission, account))
             }
-            Err(SyncError::Gmail(GmailError::ApiDisabled {
+            Err(SyncError::Backend(BackendError::Gmail(GmailError::ApiDisabled {
                 service,
                 enable_url,
-            })) => {
+            }))) => {
                 self.effects.explain_api_off(&service, &enable_url);
                 Err(format!(
                     "The {service} is switched off in the Google Cloud project Penguin Mail signs in with, so Google refuses the call. The user was shown where to turn it on ({enable_url}); try again once they have."

@@ -21,7 +21,7 @@ use mailrs_store::Db;
 use mailrs_store::address_book::{self, Contact};
 
 use crate::settings::Permitted;
-use crate::{AccountSync, Accounts, SyncError, now_millis};
+use crate::{AccountSync, Accounts, BackendError, SyncError, now_millis};
 
 /// How long a stored address book counts as current. Contacts change far
 /// more slowly than mail, and a refresh with a sync token costs one call,
@@ -191,7 +191,7 @@ impl<A: Accounts> ContactBook<A> {
     ) -> Result<Permitted<Contact>, SyncError> {
         let person = match person {
             Ok(person) => person,
-            Err(SyncError::Gmail(GmailError::MissingScope)) => {
+            Err(SyncError::Backend(BackendError::NeedsPermission)) => {
                 return Ok(Permitted::NeedsPermission);
             }
             Err(err) => return Err(err),
@@ -252,13 +252,13 @@ impl<A: Accounts> ContactBook<A> {
                     .await
                 {
                     Ok(page) => page,
-                    Err(SyncError::Gmail(GmailError::MissingScope)) => {
+                    Err(SyncError::Backend(BackendError::NeedsPermission)) => {
                         return Ok(Permitted::NeedsPermission);
                     }
                     // Google stopped answering from this token. Read the
                     // whole address book again, which then replaces what
                     // is stored.
-                    Err(SyncError::Gmail(GmailError::ExpiredSyncToken)) if !retried => {
+                    Err(SyncError::Backend(BackendError::Gmail(GmailError::ExpiredSyncToken))) if !retried => {
                         retried = true;
                         token = None;
                         continue 'whole;

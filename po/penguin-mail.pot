@@ -5999,19 +5999,19 @@ msgstr[1] ""
 msgid "a minute"
 msgstr ""
 
-#: sync/src/actions.rs:109
+#: sync/src/actions.rs:108
 msgid "Change labels"
 msgstr ""
 
-#: sync/src/actions.rs:305
+#: sync/src/actions.rs:304
 msgid "Delete Forever failed: {reason}"
 msgstr ""
 
-#: sync/src/actions.rs:475
+#: sync/src/actions.rs:474
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr ""
 
-#: sync/src/actions.rs:536 sync/src/actions.rs:588
+#: sync/src/actions.rs:535 sync/src/actions.rs:587
 msgid "Could not undo: {reason}"
 msgstr ""
 
@@ -6027,7 +6027,7 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] ""
 msgstr[1] ""
 
-#: sync/src/error.rs:28
+#: sync/src/error.rs:100
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr ""
 

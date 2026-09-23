@@ -299,7 +299,7 @@ async fn attachments_and_identity_come_from_gmail() {
     assert_eq!(h.sync.attachment("m1", "a1").await.unwrap(), vec![1, 2, 3]);
     assert!(matches!(
         h.sync.attachment("m1", "zz").await,
-        Err(crate::SyncError::Gmail(GmailError::NotFound))
+        Err(crate::SyncError::Backend(crate::BackendError::NotFound))
     ));
     assert_eq!(h.sync.display_name().await.unwrap().as_deref(), Some("Me"));
 }
@@ -326,7 +326,7 @@ async fn the_automatic_reply_and_signature_pass_through() {
         .with(|s| s.failures.push_back(GmailError::MissingScope));
     assert!(matches!(
         h.sync.vacation().await,
-        Err(crate::SyncError::Gmail(GmailError::MissingScope))
+        Err(crate::SyncError::Backend(crate::BackendError::NeedsPermission))
     ));
 }
 

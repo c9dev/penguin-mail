@@ -51,7 +51,7 @@ pub use calendar::Calendar;
 pub use connect::connect_account;
 pub use contacts::{Card, ContactBook, Refreshed};
 pub use engine::{EngineConfig, SyncEngine};
-pub use error::SyncError;
+pub use error::{BackendError, SyncError};
 pub use hidden::HiddenAddress;
 pub use invitations::{Change, Invitations, Opened, Sent, Told};
 pub use mailbox::{

@@ -25,7 +25,7 @@ use mailrs_domain::{AccountId, Address, EpochMillis};
 use mailrs_gmail::{Answered, GmailError, limiter};
 use mailrs_store::{Db, invitations as store};
 
-use crate::{AccountSync, Accounts, SyncError};
+use crate::{AccountSync, Accounts, BackendError, SyncError};
 
 /// What a message does to an event the user already has. `None` alongside
 /// it means the message is the first word on this event, or an older
@@ -153,7 +153,7 @@ impl<A: Accounts> Invitations<A> {
             // Without the permission there is nothing to say, and the user
             // is answering an invitation rather than asking about their
             // calendar. The empty answer is remembered like any other.
-            Err(SyncError::Gmail(GmailError::MissingScope)) => Vec::new(),
+            Err(SyncError::Backend(BackendError::NeedsPermission)) => Vec::new(),
             Err(err) => return Err(err),
         };
         let busy: Vec<String> = busy
@@ -188,7 +188,7 @@ impl<A: Accounts> Invitations<A> {
         let sync = self.sync(account_id)?;
         let series = match limiter::background(sync.series(&invitation.uid, now)).await {
             Ok(series) => series,
-            Err(SyncError::Gmail(GmailError::MissingScope | GmailError::ApiDisabled { .. })) => {
+            Err(SyncError::Backend(BackendError::NeedsPermission | BackendError::Gmail(GmailError::ApiDisabled { .. }))) => {
                 None
             }
             Err(err) => return Err(err),
@@ -296,11 +296,11 @@ impl<A: Accounts> Invitations<A> {
                 // The answer still has to reach the organizer, so it goes
                 // by mail and the caller offers to ask for the permission,
                 // which keeps the user's own calendar in step from here on.
-                Err(SyncError::Gmail(GmailError::MissingScope)) => sent.needs_permission = true,
-                Err(SyncError::Gmail(GmailError::ApiDisabled {
+                Err(SyncError::Backend(BackendError::NeedsPermission)) => sent.needs_permission = true,
+                Err(SyncError::Backend(BackendError::Gmail(GmailError::ApiDisabled {
                     service,
                     enable_url,
-                })) => {
+                }))) => {
                     sent.api_off = Some(ApiOff {
                         service,
                         enable_url,

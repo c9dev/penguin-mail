@@ -113,8 +113,8 @@ impl<G: GmailApi> AccountSync<G> {
         Ok(ids
             .iter()
             .map(|ids| match ids.iter().find_map(|id| refused.get(id)) {
-                _ if ids.is_empty() => Err(SyncError::Gmail(GmailError::NotFound)),
-                Some(err) => Err(SyncError::Gmail(err.clone())),
+                _ if ids.is_empty() => Err(GmailError::NotFound.into()),
+                Some(err) => Err(err.clone().into()),
                 None => Ok(()),
             })
             .collect())

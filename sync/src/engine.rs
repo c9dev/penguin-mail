@@ -5,7 +5,6 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
 use mailrs_domain::{AccountId, AccountState, ChangeEvent};
-use mailrs_gmail::GmailError;
 use mailrs_store::Db;
 use tokio::sync::Notify;
 use tokio::task::JoinHandle;
@@ -13,7 +12,7 @@ use tokio::time::Instant;
 
 use crate::account::{DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS};
 use crate::{
-    AccountSync, GmailApi, SyncError, backoff_delay, now_millis, poll_offset, with_jitter,
+    AccountSync, BackendError, GmailApi, SyncError, backoff_delay, now_millis, poll_offset, with_jitter,
 };
 
 /// How often an account prunes, checks its inbox against Gmail's, and lists
@@ -155,12 +154,12 @@ enum Failure {
 
 fn classify(err: &SyncError) -> Failure {
     match err {
-        SyncError::Gmail(GmailError::NeedsReauth) => Failure::Reauth,
-        SyncError::Gmail(GmailError::Network(_)) => Failure::Retry {
+        SyncError::Backend(BackendError::NeedsReauth) => Failure::Reauth,
+        SyncError::Backend(BackendError::Offline(_)) => Failure::Retry {
             state: AccountState::Offline,
             retry_after: None,
         },
-        SyncError::Gmail(GmailError::RateLimited { retry_after }) => Failure::Retry {
+        SyncError::Backend(BackendError::RateLimited(retry_after)) => Failure::Retry {
             state: AccountState::BackingOff,
             retry_after: *retry_after,
         },

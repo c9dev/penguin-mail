@@ -6,16 +6,16 @@
 //! Without it each one answers `Permitted::NeedsPermission`, as the
 //! settings calls do, and the caller asks the user for it. A Google Cloud
 //! project with the Calendar API switched off answers
-//! `GmailError::ApiDisabled` inside `SyncError::Gmail` instead, since no
+//! `GmailError::ApiDisabled` inside `SyncError::Backend` instead, since no
 //! permission would help there.
 
 use std::sync::Arc;
 
 use chrono::{DateTime, NaiveDate};
 use mailrs_domain::{AccountId, EpochMillis};
-use mailrs_gmail::{Event, EventFields, EventTime, GmailError};
+use mailrs_gmail::{Event, EventFields, EventTime};
 
-use crate::{AccountSync, Accounts, Permitted, SyncError};
+use crate::{AccountSync, Accounts, BackendError, Permitted, SyncError};
 
 pub struct Calendar<A: Accounts> {
     accounts: Arc<A>,
@@ -109,7 +109,7 @@ impl<A: Accounts> Calendar<A> {
 fn permitted<T>(answer: Result<T, SyncError>) -> Result<Permitted<T>, SyncError> {
     match answer {
         Ok(value) => Ok(Permitted::Done(value)),
-        Err(SyncError::Gmail(GmailError::MissingScope)) => Ok(Permitted::NeedsPermission),
+        Err(SyncError::Backend(BackendError::NeedsPermission)) => Ok(Permitted::NeedsPermission),
         Err(err) => Err(err),
     }
 }

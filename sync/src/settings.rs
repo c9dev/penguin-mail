@@ -12,12 +12,12 @@ use chrono::{Local, TimeZone};
 use mailrs_domain::{
     AccountId, EpochMillis, Filter, FilterAction, FilterCriteria, Label, Vacation, system_label,
 };
-use mailrs_gmail::{GmailError, LabelColor};
+use mailrs_gmail::LabelColor;
 use mailrs_store::Db;
 
 use crate::actions::label_id;
 use crate::hidden::{self, HiddenAddress};
-use crate::{AccountSync, Accounts, SyncError, now_millis};
+use crate::{AccountSync, Accounts, BackendError, SyncError, now_millis};
 
 /// The user label that mail to a hidden address gets.
 pub const HIDE_MY_EMAIL_LABEL: &str = "Hide My Email";
@@ -303,7 +303,7 @@ impl<A: Accounts> AccountSettings<A> {
 fn permitted<T>(result: Result<T, SyncError>) -> Result<Permitted<T>, SyncError> {
     match result {
         Ok(value) => Ok(Permitted::Done(value)),
-        Err(SyncError::Gmail(GmailError::MissingScope)) => Ok(Permitted::NeedsPermission),
+        Err(SyncError::Backend(BackendError::NeedsPermission)) => Ok(Permitted::NeedsPermission),
         Err(err) => Err(err),
     }
 }

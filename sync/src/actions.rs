@@ -8,11 +8,10 @@ use std::sync::{Arc, Mutex};
 
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{AccountId, EpochMillis, FlagColor, Folder, Target, system_label};
-use mailrs_gmail::GmailError;
 use mailrs_store::reminders::{self, Reminder};
 use mailrs_store::{Db, flags, follow_ups, labels, messages, threads};
 
-use crate::{AccountSync, GmailApi, Permitted, Relabelled, SyncEngine, SyncError, TriageAction};
+use crate::{AccountSync, BackendError, GmailApi, Permitted, Relabelled, SyncEngine, SyncError, TriageAction};
 
 mod categorize;
 mod labelling;
@@ -334,7 +333,7 @@ impl<A: Accounts> MailActions<A> {
             let nothing_yet = results.iter().flatten().all(|r| r.is_err());
             let refused = erased
                 .iter()
-                .all(|r| matches!(r, Err(SyncError::Gmail(GmailError::MissingScope))));
+                .all(|r| matches!(r, Err(SyncError::Backend(BackendError::NeedsPermission))));
             if nothing_yet && refused {
                 return Ok(Permitted::NeedsPermission);
             }

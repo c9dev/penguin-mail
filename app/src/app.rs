@@ -1186,8 +1186,9 @@ impl App {
 /// project has that API switched off.
 fn api_off(err: &anyhow::Error) -> Option<(String, String)> {
     use mailrs_gmail::GmailError;
-    let gmail = match err.downcast_ref::<mailrs_sync::SyncError>() {
-        Some(mailrs_sync::SyncError::Gmail(gmail)) => gmail,
+    use mailrs_sync::{BackendError, SyncError};
+    let gmail = match err.downcast_ref::<SyncError>() {
+        Some(SyncError::Backend(BackendError::Gmail(gmail))) => gmail,
         _ => err.downcast_ref::<GmailError>()?,
     };
     match gmail {
