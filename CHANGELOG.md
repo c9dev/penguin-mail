@@ -66,6 +66,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Accented letters in mail an older version stored show correctly again:
+  "devolução", not "devoluÃ§Ã£o".
 - An OpenPGP signature from a key only partly trusted people vouched for
   no longer shows in green. The card says the key is not fully checked.
 - Unsubscribing works on pages that ask "Are you sure?" after you press

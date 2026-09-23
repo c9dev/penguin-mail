@@ -333,7 +333,6 @@ fn copies_go_once_they_are_a_week_old() {
 
 #[test]
 fn migration_26_is_the_one_these_tests_run() {
-    assert_eq!(MIGRATIONS.len(), 26);
     assert_eq!(MIGRATIONS[25], TO_MAILBOXES);
 }
 
@@ -398,5 +397,49 @@ fn a_body_read_as_two_text_attachments_is_fetched_again() {
 
     let conn = open_with(&path, MIGRATIONS).unwrap();
     assert!(bodies::get_body(&conn, 1, "li", 2).unwrap().is_none());
+    assert!(bodies::get_body(&conn, 1, "ok", 2).unwrap().is_some());
+}
+
+/// Bodies decoded under the charset they claimed rather than the one their
+/// bytes showed hold "Ã§" where the sender wrote "ç". Migration 27 drops
+/// them so the next open decodes them again; a body with its accents
+/// intact stays.
+#[test]
+fn a_body_decoded_in_the_wrong_charset_is_fetched_again() {
+    use mailrs_domain::MessageBody;
+
+    use crate::bodies;
+
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..26]).unwrap();
+    conn.execute_batch(
+        "INSERT INTO accounts (id, email, added_at) VALUES (1, 'me@example.com', 0);
+         INSERT INTO messages (account_id, id, thread_id, to_addrs, cc_addrs, subject, date, snippet, size, has_attachments, sync_gen) VALUES
+             (1, 'html', 't1', '[]', '[]', 'Pedido', 1, '', 1, 0, 1),
+             (1, 'text', 't2', '[]', '[]', 'Aviso', 2, '', 1, 0, 1),
+             (1, 'ok', 't3', '[]', '[]', 'Direção', 3, '', 1, 0, 1);",
+    )
+    .unwrap();
+    let garbled_html = MessageBody {
+        html: Some("<p>agradecemos devoluÃ§Ã£o e aviso</p>".into()),
+        ..MessageBody::default()
+    };
+    let garbled_text = MessageBody {
+        text: Some("agradecemos o seu contacto â€“ Tel.".into()),
+        ..MessageBody::default()
+    };
+    let fine = MessageBody {
+        text: Some("Direção de Recuperação de Crédito, «café» às três".into()),
+        ..MessageBody::default()
+    };
+    bodies::put_body(&conn, 1, "html", &garbled_html, 1).unwrap();
+    bodies::put_body(&conn, 1, "text", &garbled_text, 1).unwrap();
+    bodies::put_body(&conn, 1, "ok", &fine, 1).unwrap();
+    drop(conn);
+
+    let conn = open_with(&path, MIGRATIONS).unwrap();
+    assert!(bodies::get_body(&conn, 1, "html", 2).unwrap().is_none());
+    assert!(bodies::get_body(&conn, 1, "text", 2).unwrap().is_none());
     assert!(bodies::get_body(&conn, 1, "ok", 2).unwrap().is_some());
 }

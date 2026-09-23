@@ -374,6 +374,26 @@ UPDATE accounts SET oauth_client = 'own';
     // Labels become server mailboxes with integer keys, keywords and
     // categories; history_id moves into sync_state. See the file.
     include_str!("schema/26-mailboxes.sql"),
+    // Bodies decoded before the bytes won over the declared charset. A
+    // mailer that sends UTF-8 under a windows-1252 label came out as
+    // "DireÃ§Ã£o", and the cache kept that text for good. The patterns
+    // are UTF-8 sequences read as windows-1252: a lead byte for two, three
+    // or four bytes, then that many continuation bytes less one. Dropping
+    // those bodies makes the next open fetch them again. A body that only
+    // looks like this is fetched once more and loses nothing.
+    r#"
+DELETE FROM bodies WHERE EXISTS (
+    SELECT 1 FROM (
+        SELECT '[' || char(128) || '-¿€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ]' AS c
+    )
+    WHERE bodies.html GLOB '*[Â-ß]' || c || '*'
+       OR bodies.html GLOB '*[à-ï]' || c || c || '*'
+       OR bodies.html GLOB '*[ð-ô]' || c || c || c || '*'
+       OR bodies.text GLOB '*[Â-ß]' || c || '*'
+       OR bodies.text GLOB '*[à-ï]' || c || c || '*'
+       OR bodies.text GLOB '*[ð-ô]' || c || c || c || '*'
+);
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has
