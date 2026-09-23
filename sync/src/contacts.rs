@@ -229,7 +229,10 @@ impl<A: Accounts> ContactBook<A> {
         }))
     }
 
-    /// Walks the pages Google sends, storing each one as it arrives.
+    /// Walks the pages Google sends and stores them together once the last
+    /// one is in, so a read that fails part way leaves the book as it was.
+    /// A read without a sync token is the whole address book, and it
+    /// replaces what is stored; one with a token brings only the changes.
     async fn read_pages(
         &self,
         sync: &AccountSync<A::Api>,
@@ -239,8 +242,10 @@ impl<A: Accounts> ContactBook<A> {
         let mut token = sync_token;
         let mut retried = false;
         'whole: loop {
+            let whole = token.is_none();
             let mut page_token: Option<String> = None;
-            let mut stored = 0;
+            let mut read: Vec<Contact> = Vec::new();
+            let mut deleted: Vec<String> = Vec::new();
             for _ in 0..PAGE_LIMIT {
                 let page = match sync
                     .connections(page_token.as_deref(), token.as_deref())
@@ -250,48 +255,50 @@ impl<A: Accounts> ContactBook<A> {
                     Err(SyncError::Gmail(GmailError::MissingScope)) => {
                         return Ok(Permitted::NeedsPermission);
                     }
-                    // Google stopped answering from this token. Drop what
-                    // is stored and read the whole address book again.
+                    // Google stopped answering from this token. Read the
+                    // whole address book again, which then replaces what
+                    // is stored.
                     Err(SyncError::Gmail(GmailError::ExpiredSyncToken)) if !retried => {
                         retried = true;
                         token = None;
-                        self.db
-                            .write(move |c| address_book::clear(c, account_id))
-                            .await?;
                         continue 'whole;
                     }
                     Err(err) => return Err(err),
                 };
-                let contacts: Vec<Contact> = page
-                    .people
-                    .iter()
-                    .map(|person| Contact {
-                        account_id,
-                        resource: person.resource.clone(),
-                        name: person.name.clone(),
-                        emails: person.emails.clone(),
-                        organization: person.organization.clone(),
-                        phone: person.phone.clone(),
-                        photo_url: person.photo_url.clone(),
-                        photo_file: None,
-                    })
-                    .collect();
-                stored += contacts.len();
-                let deleted = page.deleted.clone();
-                self.db
-                    .write(move |c| {
-                        address_book::save(c, &contacts)?;
-                        address_book::forget(c, account_id, &deleted)
-                    })
-                    .await?;
+                read.extend(page.people.iter().map(|person| Contact {
+                    account_id,
+                    resource: person.resource.clone(),
+                    name: person.name.clone(),
+                    emails: person.emails.clone(),
+                    organization: person.organization.clone(),
+                    phone: person.phone.clone(),
+                    photo_url: person.photo_url.clone(),
+                    photo_file: None,
+                }));
+                deleted.extend(page.deleted);
                 match page.next_page_token {
                     Some(next) => page_token = Some(next),
                     None => {
-                        let token = page.next_sync_token;
+                        let stored = read.len();
+                        let book = page.next_sync_token;
                         let at = now_millis();
                         self.db
                             .write(move |c| {
-                                address_book::set_book(c, account_id, token.as_deref(), at)
+                                if whole {
+                                    // Whoever the new read left out has gone.
+                                    let stale: Vec<String> = address_book::list(c)?
+                                        .into_iter()
+                                        .filter(|held| held.account_id == account_id)
+                                        .filter(|held| {
+                                            read.iter().all(|r| r.resource != held.resource)
+                                        })
+                                        .map(|held| held.resource)
+                                        .collect();
+                                    address_book::forget(c, account_id, &stale)?;
+                                }
+                                address_book::save(c, &read)?;
+                                address_book::forget(c, account_id, &deleted)?;
+                                address_book::set_book(c, account_id, book.as_deref(), at)
                             })
                             .await?;
                         return Ok(Permitted::Done(Refreshed {
@@ -301,10 +308,20 @@ impl<A: Accounts> ContactBook<A> {
                     }
                 }
             }
+            // An address book past the page limit keeps what was read, but
+            // replaces nothing and keeps no token, so the next refresh
+            // walks it again.
             tracing::warn!(
                 account = account_id,
                 "gave up walking contacts after {PAGE_LIMIT} pages"
             );
+            let stored = read.len();
+            self.db
+                .write(move |c| {
+                    address_book::save(c, &read)?;
+                    address_book::forget(c, account_id, &deleted)
+                })
+                .await?;
             return Ok(Permitted::Done(Refreshed {
                 contacts: stored,
                 ..Refreshed::default()

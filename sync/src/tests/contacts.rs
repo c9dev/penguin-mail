@@ -174,6 +174,48 @@ async fn an_expired_sync_token_reads_the_whole_address_book_again() {
     assert!(b.book.card("theo@example.org").await.unwrap().is_some());
 }
 
+/// Reading the whole address book again after the token expired can fail
+/// part way. The book keeps what it held rather than the pages that made
+/// it through.
+#[tokio::test]
+async fn a_read_again_that_fails_part_way_keeps_the_address_book() {
+    let h = harness().await;
+    let b = book(&h);
+    let three = vec![
+        person("people/c1", "Mara Okafor", &["mara@example.org"], None),
+        person("people/c2", "Theo Lang", &["theo@example.org"], None),
+        person("people/c3", "Priya Raman", &["priya@example.org"], None),
+    ];
+    h.fake.with(|s| s.contacts = three);
+    b.book.refresh(h.account_id).await.unwrap();
+
+    // The stored token has expired; the first page of the new read comes
+    // back and the second fails.
+    h.fake.fail_next(GmailError::ExpiredSyncToken);
+    let mut expired = h.fake.hold("people.connections.list");
+    let refreshing = b.book.refresh(h.account_id);
+    let failing = async {
+        expired.entered().await;
+        let mut first = h.fake.hold("people.connections.list");
+        expired.release();
+        first.entered().await;
+        let mut second = h.fake.hold("people.connections.list");
+        first.release();
+        second.entered().await;
+        h.fake.fail_next(GmailError::Network("down".into()));
+        second.release();
+    };
+    let (refreshed, ()) = tokio::join!(refreshing, failing);
+
+    assert!(refreshed.is_err(), "{refreshed:?}");
+    for email in ["mara@example.org", "theo@example.org", "priya@example.org"] {
+        assert!(
+            b.book.card(email).await.unwrap().is_some(),
+            "{email} is still in the book"
+        );
+    }
+}
+
 #[tokio::test]
 async fn a_fresh_address_book_is_left_alone() {
     let h = harness().await;
