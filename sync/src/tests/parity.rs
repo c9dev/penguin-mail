@@ -170,7 +170,12 @@ async fn a_search_reaches_gmail_as_typed() {
 #[tokio::test]
 async fn every_label_changed_on_the_web_reaches_the_store() {
     let h = harness().await;
-    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX", "UNREAD", "CATEGORY_UPDATES"]));
+    h.fake.seed(meta(
+        "a",
+        "t1",
+        now_millis(),
+        &["INBOX", "UNREAD", "CATEGORY_UPDATES"],
+    ));
     h.bootstrap_all().await;
 
     h.fake.remote_relabel(
@@ -188,7 +193,8 @@ async fn every_label_changed_on_the_web_reaches_the_store() {
     assert_eq!(h.threads("MUTE").await, ["t1"]);
     assert!(h.threads("INBOX").await.is_empty());
 
-    h.fake.remote_relabel("a", &["UNREAD", "INBOX"], &["STARRED", "MUTE", "IMPORTANT"]);
+    h.fake
+        .remote_relabel("a", &["UNREAD", "INBOX"], &["STARRED", "MUTE", "IMPORTANT"]);
     h.sync.incremental().await.unwrap();
     assert_eq!(
         h.labels_of("a").await,
@@ -205,7 +211,8 @@ async fn every_label_changed_on_the_web_reaches_the_store() {
 #[tokio::test]
 async fn relisting_after_lost_history_catches_a_star_and_a_read() {
     let h = harness().await;
-    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX", "UNREAD"]));
+    h.fake
+        .seed(meta("a", "t1", now_millis(), &["INBOX", "UNREAD"]));
     h.bootstrap_all().await;
     h.fake.with(|s| {
         let a = s.messages.get_mut("a").expect("seeded");

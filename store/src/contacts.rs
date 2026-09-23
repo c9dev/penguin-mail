@@ -258,16 +258,19 @@ mod tests {
         let id = accounts::insert_account(&conn, "dana@example.com", 0).unwrap();
         // Ten messages from Theo, none from Mara, who is a contact.
         for n in 0..10 {
-            messages::upsert_message(
+            messages::apply(
                 &conn,
-                &message(
-                    id,
-                    &format!("m{n}"),
-                    ("Theo Lang", "theo@example.org"),
-                    &[("Dana", "dana@example.com")],
-                    system_label::INBOX,
-                ),
-                1,
+                id,
+                &[messages::Change::Upsert {
+                    meta: Box::new(message(
+                        id,
+                        &format!("m{n}"),
+                        ("Theo Lang", "theo@example.org"),
+                        &[("Dana", "dana@example.com")],
+                        system_label::INBOX,
+                    )),
+                    generation: 1,
+                }],
             )
             .unwrap();
         }
@@ -299,28 +302,34 @@ mod tests {
     fn mail_orders_the_contacts_and_google_names_them() {
         let conn = open_in_memory().unwrap();
         let id = accounts::insert_account(&conn, "dana@example.com", 0).unwrap();
-        messages::upsert_message(
+        messages::apply(
             &conn,
-            &message(
-                id,
-                "m1",
-                ("Dana", "dana@example.com"),
-                &[("t", "theo@example.org")],
-                system_label::SENT,
-            ),
-            1,
+            id,
+            &[messages::Change::Upsert {
+                meta: Box::new(message(
+                    id,
+                    "m1",
+                    ("Dana", "dana@example.com"),
+                    &[("t", "theo@example.org")],
+                    system_label::SENT,
+                )),
+                generation: 1,
+            }],
         )
         .unwrap();
-        messages::upsert_message(
+        messages::apply(
             &conn,
-            &message(
-                id,
-                "m2",
-                ("M. O.", "mara@example.org"),
-                &[("Dana", "dana@example.com")],
-                system_label::INBOX,
-            ),
-            1,
+            id,
+            &[messages::Change::Upsert {
+                meta: Box::new(message(
+                    id,
+                    "m2",
+                    ("M. O.", "mara@example.org"),
+                    &[("Dana", "dana@example.com")],
+                    system_label::INBOX,
+                )),
+                generation: 1,
+            }],
         )
         .unwrap();
         let contact = |resource: &str, name: &str, email: &str| address_book::Contact {

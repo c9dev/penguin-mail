@@ -206,7 +206,8 @@ async fn a_bulk_undo_groups_the_same_reversal_into_one_batch() {
 async fn undoing_mark_unread_leaves_the_unread_messages_unread() {
     let h = harness().await;
     let now = now_millis();
-    h.fake.seed(meta("a", "t1", now - 1000, &["INBOX", "UNREAD"]));
+    h.fake
+        .seed(meta("a", "t1", now - 1000, &["INBOX", "UNREAD"]));
     h.fake.seed(meta("b", "t1", now, &["INBOX"]));
     h.bootstrap_all().await;
 

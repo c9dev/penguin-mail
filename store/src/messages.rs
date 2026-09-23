@@ -1,16 +1,242 @@
-//! Message rows, their labels, and the derived thread rows.
+//! Message rows, what they are in and carry, and the derived thread rows.
 //!
-//! Callers change messages, then call `refresh_thread` for each touched
-//! thread inside the same transaction.
+//! Every write goes through [`apply`], which refreshes each thread it
+//! touched inside the caller's transaction, so no caller has to remember
+//! to.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
-use mailrs_domain::{AccountId, Address, MessageMeta, system_label};
+use mailrs_domain::gmail;
+use mailrs_domain::{AccountId, Address, Applied, Membership, MessageMeta, system_label};
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::{Result, StoreError};
 
-pub fn upsert_message(conn: &Connection, m: &MessageMeta, sync_gen: i64) -> Result<()> {
+/// One change to stored mail. [`apply`] takes a list of them.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Change {
+    /// Stores a message as the server described it, replacing whatever
+    /// the store held of it, under sync generation `generation`.
+    Upsert {
+        meta: Box<MessageMeta>,
+        generation: i64,
+    },
+    /// Keeps a stored message as it is under a new sync generation, so the
+    /// sweep that ends a relisting keeps it.
+    Keep {
+        message_id: String,
+        generation: i64,
+    },
+    AddToMailbox {
+        message_id: String,
+        mailbox: String,
+    },
+    RemoveFromMailbox {
+        message_id: String,
+        mailbox: String,
+    },
+    SetKeyword {
+        message_id: String,
+        keyword: String,
+        on: bool,
+    },
+    SetCategory {
+        message_id: String,
+        category: String,
+        on: bool,
+    },
+    Delete {
+        message_id: String,
+    },
+    DeleteThread {
+        thread_id: String,
+    },
+    /// Notes that the store now holds every message of the thread.
+    MarkWhole {
+        thread_id: String,
+    },
+}
+
+impl Change {
+    /// The change that gives message `message_id` the `membership`, or
+    /// with `on` false takes it away.
+    pub fn of(message_id: &str, membership: Membership, on: bool) -> Change {
+        let message_id = message_id.to_string();
+        match membership {
+            Membership::Mailbox(mailbox) if on => Change::AddToMailbox {
+                message_id,
+                mailbox,
+            },
+            Membership::Mailbox(mailbox) => Change::RemoveFromMailbox {
+                message_id,
+                mailbox,
+            },
+            Membership::Keyword(keyword) => Change::SetKeyword {
+                message_id,
+                keyword,
+                on,
+            },
+            Membership::Category(category) => Change::SetCategory {
+                message_id,
+                category,
+                on,
+            },
+        }
+    }
+
+    /// The change that puts Gmail's `label` on the message (`carried`) or
+    /// takes it off. Gmail's `UNREAD` going on takes `$seen` away.
+    pub fn label(message_id: &str, label: &str, carried: bool) -> Change {
+        let (membership, held) = gmail::membership_of(label);
+        Change::of(message_id, membership, carried == held)
+    }
+
+    /// The message, membership and direction of a membership change.
+    fn membership(&self) -> Option<(&str, Membership, bool)> {
+        match self {
+            Change::AddToMailbox {
+                message_id,
+                mailbox,
+            } => Some((message_id, Membership::Mailbox(mailbox.clone()), true)),
+            Change::RemoveFromMailbox {
+                message_id,
+                mailbox,
+            } => Some((message_id, Membership::Mailbox(mailbox.clone()), false)),
+            Change::SetKeyword {
+                message_id,
+                keyword,
+                on,
+            } => Some((message_id, Membership::Keyword(keyword.clone()), *on)),
+            Change::SetCategory {
+                message_id,
+                category,
+                on,
+            } => Some((message_id, Membership::Category(category.clone()), *on)),
+            _ => None,
+        }
+    }
+}
+
+/// What [`apply`] did: the threads whose rows it wrote, which the caller
+/// announces once the transaction commits, and what each membership
+/// change did to each message, in the order the changes came.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Touched {
+    pub threads: BTreeSet<String>,
+    pub applied: Vec<Applied>,
+}
+
+/// Writes `changes`, all of them for `account_id`, in order, then
+/// refreshes the row of every thread they touched, and marks threads
+/// whole last so a thread the batch created has a row to mark. A
+/// membership change on a message the store lacks changes nothing and
+/// touches no thread.
+pub fn apply(conn: &Connection, account_id: AccountId, changes: &[Change]) -> Result<Touched> {
+    let mut touched = Touched::default();
+    let mut applied: BTreeMap<String, Applied> = BTreeMap::new();
+    let mut order: Vec<String> = Vec::new();
+    let mut whole: Vec<&str> = Vec::new();
+    for change in changes {
+        match change {
+            Change::Upsert { meta, generation } => {
+                upsert_message(conn, meta, *generation)?;
+                touched.threads.insert(meta.thread_id.clone());
+            }
+            Change::Keep {
+                message_id,
+                generation,
+            } => {
+                conn.prepare_cached(
+                    "UPDATE messages SET sync_gen = ?3 WHERE account_id = ?1 AND id = ?2",
+                )?
+                .execute(params![account_id, message_id, generation])?;
+            }
+            Change::Delete { message_id } => {
+                touched
+                    .threads
+                    .extend(delete_message(conn, account_id, message_id)?);
+            }
+            Change::DeleteThread { thread_id } => {
+                delete_thread(conn, account_id, thread_id)?;
+                touched.threads.insert(thread_id.clone());
+            }
+            Change::MarkWhole { thread_id } => whole.push(thread_id),
+            other => {
+                let Some((message_id, membership, on)) = other.membership() else {
+                    continue;
+                };
+                let Some((thread_id, changed)) =
+                    set_membership(conn, account_id, message_id, &membership, on)?
+                else {
+                    continue;
+                };
+                touched.threads.insert(thread_id.clone());
+                if !changed {
+                    continue;
+                }
+                let entry = applied.entry(message_id.to_string()).or_insert_with(|| {
+                    order.push(message_id.to_string());
+                    Applied {
+                        thread_id,
+                        message_id: message_id.to_string(),
+                        gained: Vec::new(),
+                        lost: Vec::new(),
+                    }
+                });
+                match on {
+                    true => entry.gained.push(membership),
+                    false => entry.lost.push(membership),
+                }
+            }
+        }
+    }
+    for thread_id in &touched.threads {
+        refresh_thread(conn, account_id, thread_id)?;
+    }
+    for thread_id in whole {
+        mark_whole(conn, account_id, thread_id)?;
+    }
+    touched.applied = order
+        .into_iter()
+        .filter_map(|id| applied.remove(&id))
+        .collect();
+    Ok(touched)
+}
+
+/// Gives a stored message `membership`, or takes it away. Returns the
+/// message's thread and whether anything changed, or `None` when the
+/// message is not stored.
+fn set_membership(
+    conn: &Connection,
+    account_id: AccountId,
+    message_id: &str,
+    membership: &Membership,
+    on: bool,
+) -> Result<Option<(String, bool)>> {
+    let Some(thread_id) = thread_id_of(conn, account_id, message_id)? else {
+        return Ok(None);
+    };
+    // Today's tables hold Gmail label ids; a keyword Gmail has no label
+    // for has nowhere to go and changes nothing.
+    let Some((label, carried)) = gmail::label_of(membership, on) else {
+        return Ok(Some((thread_id, false)));
+    };
+    let sql = match carried {
+        true => {
+            "INSERT OR IGNORE INTO message_labels (account_id, message_id, label_id) VALUES (?1, ?2, ?3)"
+        }
+        false => {
+            "DELETE FROM message_labels WHERE account_id = ?1 AND message_id = ?2 AND label_id = ?3"
+        }
+    };
+    let changed = conn
+        .prepare_cached(sql)?
+        .execute(params![account_id, message_id, label])?
+        > 0;
+    Ok(Some((thread_id, changed)))
+}
+
+fn upsert_message(conn: &Connection, m: &MessageMeta, sync_gen: i64) -> Result<()> {
     let to = serde_json::to_string(&m.to).unwrap_or_else(|_| "[]".into());
     let cc = serde_json::to_string(&m.cc).unwrap_or_else(|_| "[]".into());
     conn.execute(
@@ -66,7 +292,7 @@ pub fn set_unsubscribe(
 }
 
 /// Replaces a stored message's labels.
-pub fn set_labels(
+fn set_labels(
     conn: &Connection,
     account_id: AccountId,
     message_id: &str,
@@ -99,49 +325,9 @@ pub fn thread_id_of(
         .optional()?)
 }
 
-/// Adds labels to a stored message. Returns its thread, or `None` when the
-/// message is not stored.
-pub fn add_labels(
-    conn: &Connection,
-    account_id: AccountId,
-    message_id: &str,
-    labels: &[String],
-) -> Result<Option<String>> {
-    let Some(thread_id) = thread_id_of(conn, account_id, message_id)? else {
-        return Ok(None);
-    };
-    let mut insert = conn.prepare_cached(
-        "INSERT OR IGNORE INTO message_labels (account_id, message_id, label_id) VALUES (?1, ?2, ?3)",
-    )?;
-    for label in labels {
-        insert.execute(params![account_id, message_id, label])?;
-    }
-    Ok(Some(thread_id))
-}
-
-/// Removes labels from a stored message. Returns its thread, or `None` when
-/// the message is not stored.
-pub fn remove_labels(
-    conn: &Connection,
-    account_id: AccountId,
-    message_id: &str,
-    labels: &[String],
-) -> Result<Option<String>> {
-    let Some(thread_id) = thread_id_of(conn, account_id, message_id)? else {
-        return Ok(None);
-    };
-    let mut delete = conn.prepare_cached(
-        "DELETE FROM message_labels WHERE account_id = ?1 AND message_id = ?2 AND label_id = ?3",
-    )?;
-    for label in labels {
-        delete.execute(params![account_id, message_id, label])?;
-    }
-    Ok(Some(thread_id))
-}
-
 /// Deletes a message with its labels and body. Returns its thread, or `None`
 /// when the message was not stored.
-pub fn delete_message(
+fn delete_message(
     conn: &Connection,
     account_id: AccountId,
     message_id: &str,
@@ -156,7 +342,11 @@ pub fn delete_message(
     Ok(thread_id)
 }
 
-pub fn delete_thread(conn: &Connection, account_id: AccountId, thread_id: &str) -> Result<()> {
+pub(crate) fn delete_thread(
+    conn: &Connection,
+    account_id: AccountId,
+    thread_id: &str,
+) -> Result<()> {
     conn.execute(
         "DELETE FROM messages WHERE account_id = ?1 AND thread_id = ?2",
         params![account_id, thread_id],
@@ -361,7 +551,7 @@ pub(crate) const NEWEST_FLAG_COLOR: &str = "SELECT f.color FROM messages m \
 /// Notes that the store holds every message Gmail has in the thread, as a
 /// fetch of the whole thread leaves it. History keeps it that way: it
 /// stores each message added later and drops each one deleted.
-pub fn mark_whole(conn: &Connection, account_id: AccountId, thread_id: &str) -> Result<()> {
+fn mark_whole(conn: &Connection, account_id: AccountId, thread_id: &str) -> Result<()> {
     conn.prepare_cached("UPDATE threads SET whole = 1 WHERE account_id = ?1 AND id = ?2")?
         .execute(params![account_id, thread_id])?;
     Ok(())
@@ -383,7 +573,11 @@ pub fn is_whole(conn: &Connection, account_id: AccountId, thread_id: &str) -> Re
 /// Each query starts from the thread's few messages. The `CROSS JOIN`s keep
 /// SQLite from starting at a label instead, which walked every message in
 /// the account carrying it.
-pub fn refresh_thread(conn: &Connection, account_id: AccountId, thread_id: &str) -> Result<()> {
+pub(crate) fn refresh_thread(
+    conn: &Connection,
+    account_id: AccountId,
+    thread_id: &str,
+) -> Result<()> {
     let (count, last, has_attachments): (i64, Option<i64>, Option<bool>) = conn
         .prepare_cached(
             "SELECT COUNT(*), MAX(date), MAX(has_attachments) FROM messages \

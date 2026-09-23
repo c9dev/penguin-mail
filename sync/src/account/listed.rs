@@ -12,6 +12,7 @@ use std::time::{Duration, Instant};
 
 use mailrs_domain::MessageMeta;
 use mailrs_gmail::MessageRef;
+use mailrs_store::messages::Change;
 use mailrs_store::{accounts, messages};
 
 use super::AccountSync;
@@ -173,11 +174,18 @@ impl AccountSync {
                     {
                         return Ok(false);
                     }
-                    for meta in &listed.metas {
-                        messages::upsert_message(c, meta, cursor.sync_gen)?;
-                    }
-                    messages::refresh_thread(c, account_id, &thread)?;
-                    messages::mark_whole(c, account_id, &thread)?;
+                    let mut changes: Vec<Change> = listed
+                        .metas
+                        .iter()
+                        .map(|meta| Change::Upsert {
+                            meta: Box::new(meta.clone()),
+                            generation: cursor.sync_gen,
+                        })
+                        .collect();
+                    changes.push(Change::MarkWhole {
+                        thread_id: thread.clone(),
+                    });
+                    messages::apply(c, account_id, &changes)?;
                     Ok(true)
                 })
                 .await?;

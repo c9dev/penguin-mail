@@ -3,7 +3,8 @@ mod common;
 use std::collections::HashSet;
 
 use common::{db, meta, store};
-use mailrs_domain::{Label, LabelKind};
+use mailrs_domain::{Applied, Label, LabelKind, Membership};
+use mailrs_store::messages::Change;
 use mailrs_store::{labels, messages, threads};
 
 #[test]
@@ -92,27 +93,22 @@ fn thread_summary_aggregates_its_messages() {
 fn label_changes_report_the_thread_and_skip_unknown_messages() {
     let (conn, id) = db();
     store(&conn, &[meta(id, "a", "t1", 100, &["INBOX", "UNREAD"])]);
-    assert_eq!(
-        messages::remove_labels(&conn, id, "a", &["UNREAD".into()])
-            .unwrap()
-            .as_deref(),
-        Some("t1")
-    );
-    assert_eq!(
-        messages::add_labels(&conn, id, "a", &["STARRED".into()])
-            .unwrap()
-            .as_deref(),
-        Some("t1")
-    );
+    let touched = messages::apply(
+        &conn,
+        id,
+        &[
+            Change::label("a", "UNREAD", false),
+            Change::label("a", "STARRED", true),
+        ],
+    )
+    .unwrap();
+    assert_eq!(touched.threads.into_iter().collect::<Vec<_>>(), ["t1"]);
     assert_eq!(
         messages::labels_of(&conn, id, "a").unwrap(),
         ["INBOX", "STARRED"]
     );
-    assert_eq!(
-        messages::add_labels(&conn, id, "zzz", &["INBOX".into()]).unwrap(),
-        None
-    );
-    messages::refresh_thread(&conn, id, "t1").unwrap();
+    let unknown = messages::apply(&conn, id, &[Change::label("zzz", "INBOX", true)]).unwrap();
+    assert!(unknown.threads.is_empty());
     assert!(
         !threads::get_thread(&conn, id, "t1")
             .unwrap()
@@ -122,10 +118,10 @@ fn label_changes_report_the_thread_and_skip_unknown_messages() {
 }
 
 #[test]
-fn set_labels_replaces_the_whole_set() {
+fn an_upsert_replaces_the_whole_label_set() {
     let (conn, id) = db();
     store(&conn, &[meta(id, "a", "t1", 100, &["INBOX", "UNREAD"])]);
-    messages::set_labels(&conn, id, "a", &["SENT".into()]).unwrap();
+    store(&conn, &[meta(id, "a", "t1", 100, &["SENT"])]);
     assert_eq!(messages::labels_of(&conn, id, "a").unwrap(), ["SENT"]);
 }
 
@@ -133,12 +129,17 @@ fn set_labels_replaces_the_whole_set() {
 fn deleting_the_last_message_removes_the_thread() {
     let (conn, id) = db();
     store(&conn, &[meta(id, "a", "t1", 100, &["INBOX"])]);
-    assert_eq!(
-        messages::delete_message(&conn, id, "a").unwrap().as_deref(),
-        Some("t1")
+    let delete = [Change::Delete {
+        message_id: "a".into(),
+    }];
+    let touched = messages::apply(&conn, id, &delete).unwrap();
+    assert_eq!(touched.threads.into_iter().collect::<Vec<_>>(), ["t1"]);
+    assert!(
+        messages::apply(&conn, id, &delete)
+            .unwrap()
+            .threads
+            .is_empty()
     );
-    assert_eq!(messages::delete_message(&conn, id, "a").unwrap(), None);
-    messages::refresh_thread(&conn, id, "t1").unwrap();
     assert!(threads::get_thread(&conn, id, "t1").unwrap().is_none());
 }
 
@@ -152,7 +153,10 @@ fn delete_thread_removes_messages_and_summary() {
             meta(id, "b", "t1", 200, &["INBOX"]),
         ],
     );
-    messages::delete_thread(&conn, id, "t1").unwrap();
+    let delete = Change::DeleteThread {
+        thread_id: "t1".into(),
+    };
+    messages::apply(&conn, id, &[delete]).unwrap();
     assert!(
         messages::thread_messages(&conn, id, "t1")
             .unwrap()
@@ -221,4 +225,86 @@ fn each_message_of_a_thread_carries_its_own_labels() {
     );
     let ids: Vec<String> = ["c", "a", "b", "z"].iter().map(|s| s.to_string()).collect();
     assert_eq!(labels(messages::by_ids(&conn, id, &ids).unwrap()), expected);
+}
+
+/// One call writes a batch of changes, refreshes every thread they
+/// touched, and says what each membership change did to each message,
+/// leaving out what a message already had.
+#[test]
+fn a_change_set_refreshes_what_it_touched_and_reports_what_it_did() {
+    let (conn, id) = db();
+    let touched = messages::apply(
+        &conn,
+        id,
+        &[
+            Change::Upsert {
+                meta: Box::new(meta(id, "a", "t1", 100, &["INBOX", "UNREAD"])),
+                generation: 1,
+            },
+            Change::Upsert {
+                meta: Box::new(meta(id, "b", "t2", 200, &["INBOX"])),
+                generation: 1,
+            },
+        ],
+    )
+    .unwrap();
+    assert_eq!(
+        touched.threads.into_iter().collect::<Vec<_>>(),
+        ["t1", "t2"]
+    );
+    assert!(
+        touched.applied.is_empty(),
+        "an upsert is not a membership change"
+    );
+
+    let touched = messages::apply(
+        &conn,
+        id,
+        &[
+            Change::label("a", "UNREAD", false),
+            Change::label("a", "STARRED", true),
+            Change::label("b", "INBOX", true),
+            Change::label("zzz", "INBOX", true),
+        ],
+    )
+    .unwrap();
+    assert_eq!(
+        touched.threads.into_iter().collect::<Vec<_>>(),
+        ["t1", "t2"]
+    );
+    assert_eq!(
+        touched.applied,
+        [Applied {
+            thread_id: "t1".into(),
+            message_id: "a".into(),
+            gained: vec![
+                Membership::Keyword("$seen".into()),
+                Membership::Keyword("$flagged".into()),
+            ],
+            lost: vec![],
+        }],
+        "b was in the inbox already, and zzz is not stored"
+    );
+    assert_eq!(
+        messages::labels_of(&conn, id, "a").unwrap(),
+        ["INBOX", "STARRED"]
+    );
+    let t1 = threads::get_thread(&conn, id, "t1").unwrap().unwrap();
+    assert!(!t1.unread && t1.starred);
+
+    messages::apply(
+        &conn,
+        id,
+        &[
+            Change::Delete {
+                message_id: "a".into(),
+            },
+            Change::MarkWhole {
+                thread_id: "t2".into(),
+            },
+        ],
+    )
+    .unwrap();
+    assert!(threads::get_thread(&conn, id, "t1").unwrap().is_none());
+    assert!(messages::is_whole(&conn, id, "t2").unwrap());
 }

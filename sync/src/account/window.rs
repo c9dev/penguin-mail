@@ -5,6 +5,7 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 
 use mailrs_domain::{AccountState, ChangeEvent, EpochMillis, MessageMeta, system_label};
 use mailrs_gmail::{GmailError, MessageRef};
+use mailrs_store::messages::Change;
 use mailrs_store::{accounts, labels, messages, window};
 
 use super::AccountSync;
@@ -136,9 +137,14 @@ impl AccountSync {
             .db
             .write(move |c| {
                 let mut touched = store_fetched(c, account_id, generation, &metas, &[])?;
-                for held in &unchanged {
-                    messages::upsert_message(c, held, generation)?;
-                }
+                let kept: Vec<Change> = unchanged
+                    .iter()
+                    .map(|held| Change::Keep {
+                        message_id: held.id.clone(),
+                        generation,
+                    })
+                    .collect();
+                messages::apply(c, account_id, &kept)?;
                 accounts::set_backfill(c, account_id, None, true)?;
                 touched.extend(window::sweep_stale(c, account_id, generation)?);
                 Ok(touched)

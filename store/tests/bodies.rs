@@ -2,6 +2,7 @@ mod common;
 
 use common::{db, meta, store};
 use mailrs_domain::{Attachment, MessageBody, Protection, Provenance};
+use mailrs_store::messages::Change;
 use mailrs_store::{bodies, messages};
 
 fn body(text: &str) -> MessageBody {
@@ -85,7 +86,10 @@ fn deleting_a_message_deletes_its_body() {
     let (conn, id) = db();
     store(&conn, &[meta(id, "a", "t1", 100, &["INBOX"])]);
     bodies::put_body(&conn, id, "a", &body("hi"), 1).unwrap();
-    messages::delete_message(&conn, id, "a").unwrap();
+    let delete = Change::Delete {
+        message_id: "a".into(),
+    };
+    messages::apply(&conn, id, &[delete]).unwrap();
     assert!(bodies::get_body(&conn, id, "a", 2).unwrap().is_none());
     let attachments: i64 = conn
         .query_row("SELECT COUNT(*) FROM attachments", [], |r| r.get(0))

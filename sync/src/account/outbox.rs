@@ -1,8 +1,7 @@
 //! Sending, drafts, search, attachments and exports: mail calls the UI makes
 //! on demand rather than as part of the sync loop.
 
-use std::collections::BTreeSet;
-
+use mailrs_store::messages::Change;
 use mailrs_store::{drafts, messages};
 
 use super::AccountSync;
@@ -106,17 +105,14 @@ impl AccountSync {
         };
         self.delete_draft(&draft_id).await?;
         let (account_id, id) = (self.account_id, message_id.to_string());
-        let thread = self
+        let threads = self
             .db
             .write(move |c| {
-                let thread = messages::delete_message(c, account_id, &id)?;
-                if let Some(thread) = &thread {
-                    messages::refresh_thread(c, account_id, thread)?;
-                }
-                Ok(thread)
+                let delete = Change::Delete { message_id: id };
+                Ok(messages::apply(c, account_id, &[delete])?.threads)
             })
             .await?;
-        self.emit_threads(thread.into_iter().collect::<BTreeSet<_>>());
+        self.emit_threads(threads);
         Ok(true)
     }
 

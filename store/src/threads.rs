@@ -1,4 +1,4 @@
-//! Thread queries. `messages::refresh_thread` maintains the rows.
+//! Thread queries. `messages::apply` keeps the rows they read.
 
 use std::collections::{HashMap, HashSet};
 
@@ -1114,11 +1114,16 @@ mod walk_tests {
                 ));
             }
         }
-        for m in &all {
-            messages::upsert_message(&conn, m, 1).unwrap();
-        }
-        for m in &all {
-            messages::refresh_thread(&conn, m.account_id, &m.thread_id).unwrap();
+        for account in [a, b] {
+            let changes: Vec<messages::Change> = all
+                .iter()
+                .filter(|m| m.account_id == account)
+                .map(|m| messages::Change::Upsert {
+                    meta: Box::new(m.clone()),
+                    generation: 1,
+                })
+                .collect();
+            messages::apply(&conn, account, &changes).unwrap();
         }
         (conn, a, b)
     }

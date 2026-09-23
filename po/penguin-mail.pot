@@ -5965,37 +5965,37 @@ msgstr ""
 msgid "Is flagged"
 msgstr ""
 
-#: sync/src/account/writes.rs:556
+#: sync/src/account/writes.rs:555
 msgid "Gmail is busy. Still working on {conversations}."
 msgstr ""
 
-#: sync/src/account/writes.rs:571
+#: sync/src/account/writes.rs:570
 msgid ""
 "Gmail is busy, so {action} did not go through for {conversations}. Try again "
 "in a moment."
 msgstr ""
 
-#: sync/src/account/writes.rs:580
+#: sync/src/account/writes.rs:579
 msgid ""
 "Gmail stayed busy for {waited}, so {action} did not go through for "
 "{conversations}."
 msgstr ""
 
-#: sync/src/account/writes.rs:587
+#: sync/src/account/writes.rs:586
 msgid "{action} failed: {reason}"
 msgstr ""
 
-#: sync/src/account/writes.rs:608
+#: sync/src/account/writes.rs:607
 msgid "a moment"
 msgstr ""
 
-#: sync/src/account/writes.rs:610
+#: sync/src/account/writes.rs:609
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] ""
 msgstr[1] ""
 
-#: sync/src/account/writes.rs:615
+#: sync/src/account/writes.rs:614
 msgid "a minute"
 msgstr ""
 

@@ -4,6 +4,7 @@ use std::collections::{BTreeSet, HashMap};
 
 use mailrs_domain::{ChangeEvent, MessageMeta, system_label};
 use mailrs_gmail::HistoryChange;
+use mailrs_store::messages::Change;
 use mailrs_store::{accounts, labels, messages};
 
 use super::AccountSync;
@@ -53,7 +54,7 @@ impl AccountSync {
         }
 
         let fetched = self.fetch_for_history(&changes).await?;
-        let named: BTreeSet<String> = changes
+        let named_labels: BTreeSet<String> = changes
             .iter()
             .filter_map(|change| match change {
                 HistoryChange::LabelsAdded { label_ids, .. } => Some(label_ids.clone()),
@@ -67,50 +68,64 @@ impl AccountSync {
         let (touched, new_mail, unknown_label) = self
             .db
             .write(move |c| {
-                let mut touched = BTreeSet::new();
+                // Whether each message the history names was stored before
+                // this replay, read once, since the change set applies the
+                // whole batch in one call.
+                let named: Vec<String> = changes
+                    .iter()
+                    .filter_map(|change| match change {
+                        HistoryChange::MessageAdded { id, .. }
+                        | HistoryChange::LabelsAdded { id, .. } => Some(id.clone()),
+                        _ => None,
+                    })
+                    .collect();
+                let stored = messages::existing_ids(c, account_id, &named)?;
+                let mut batch = Vec::new();
                 let mut new_mail = Vec::new();
                 for change in &changes {
                     match change {
                         HistoryChange::MessageAdded { id, .. } => {
                             if let Some(meta) = fetched.get(id) {
-                                let existed = messages::thread_id_of(c, account_id, id)?.is_some();
-                                messages::upsert_message(c, meta, generation)?;
-                                touched.insert(meta.thread_id.clone());
-                                if !existed && is_new_inbox_mail(meta) {
+                                if !stored.contains(id)
+                                    && is_new_inbox_mail(meta)
+                                    && !new_mail.contains(id)
+                                {
                                     new_mail.push(id.clone());
                                 }
+                                batch.push(Change::Upsert {
+                                    meta: Box::new(meta.clone()),
+                                    generation,
+                                });
                             }
                         }
                         HistoryChange::MessageDeleted { id, .. } => {
-                            touched.extend(messages::delete_message(c, account_id, id)?);
+                            batch.push(Change::Delete {
+                                message_id: id.clone(),
+                            });
                         }
-                        HistoryChange::LabelsAdded { id, label_ids, .. } => {
-                            match messages::add_labels(c, account_id, id, label_ids)? {
-                                Some(thread_id) => {
-                                    touched.insert(thread_id);
-                                }
-                                None => {
-                                    if let Some(meta) = fetched.get(id) {
-                                        messages::upsert_message(c, meta, generation)?;
-                                        touched.insert(meta.thread_id.clone());
-                                    }
-                                }
+                        HistoryChange::LabelsAdded { id, label_ids, .. } if stored.contains(id) => {
+                            batch.extend(label_ids.iter().map(|l| Change::label(id, l, true)));
+                        }
+                        HistoryChange::LabelsAdded { id, .. } => {
+                            if let Some(meta) = fetched.get(id) {
+                                batch.push(Change::Upsert {
+                                    meta: Box::new(meta.clone()),
+                                    generation,
+                                });
                             }
                         }
                         HistoryChange::LabelsRemoved { id, label_ids, .. } => {
-                            touched.extend(messages::remove_labels(c, account_id, id, label_ids)?);
+                            batch.extend(label_ids.iter().map(|l| Change::label(id, l, false)));
                         }
                     }
                 }
-                for thread_id in &touched {
-                    messages::refresh_thread(c, account_id, thread_id)?;
-                }
+                let touched = messages::apply(c, account_id, &batch)?.threads;
                 accounts::set_history_id(c, account_id, latest)?;
                 let known: BTreeSet<String> = labels::list_labels(c, account_id)?
                     .into_iter()
                     .map(|l| l.id)
                     .collect();
-                let unknown = named.iter().any(|id| !known.contains(id));
+                let unknown = named_labels.iter().any(|id| !known.contains(id));
                 Ok((touched, new_mail, unknown))
             })
             .await?;

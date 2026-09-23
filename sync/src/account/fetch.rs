@@ -16,6 +16,7 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use futures::StreamExt;
 use mailrs_domain::{AccountId, MessageMeta};
 use mailrs_gmail::{MessageRef, cost};
+use mailrs_store::messages::Change;
 use mailrs_store::{accounts, messages};
 use rusqlite::Connection;
 
@@ -216,18 +217,17 @@ pub(super) fn store_fetched(
     metas: &[MessageMeta],
     gone: &[String],
 ) -> mailrs_store::Result<BTreeSet<String>> {
-    let mut touched = BTreeSet::new();
-    for meta in metas {
-        messages::upsert_message(c, meta, generation)?;
-        touched.insert(meta.thread_id.clone());
-    }
-    for id in gone {
-        touched.extend(messages::delete_message(c, account_id, id)?);
-    }
-    for thread_id in &touched {
-        messages::refresh_thread(c, account_id, thread_id)?;
-    }
-    Ok(touched)
+    let changes: Vec<Change> = metas
+        .iter()
+        .map(|meta| Change::Upsert {
+            meta: Box::new(meta.clone()),
+            generation,
+        })
+        .chain(gone.iter().map(|id| Change::Delete {
+            message_id: id.clone(),
+        }))
+        .collect();
+    Ok(messages::apply(c, account_id, &changes)?.threads)
 }
 
 #[cfg(test)]

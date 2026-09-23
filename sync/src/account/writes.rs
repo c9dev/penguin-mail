@@ -7,6 +7,7 @@ use futures::StreamExt;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{ChangeEvent, Target};
 use mailrs_gmail::{BATCH_LIMIT, GmailError};
+use mailrs_store::messages::Change;
 use mailrs_store::{messages, reminders, threads};
 
 use super::{AccountSync, FETCH_CONCURRENCY};
@@ -89,11 +90,14 @@ impl AccountSync {
             let stored = self
                 .db
                 .write(move |c| {
-                    for id in &erased {
-                        messages::delete_message(c, account_id, id)?;
-                    }
+                    let deletions: Vec<Change> = erased
+                        .iter()
+                        .map(|id| Change::Delete {
+                            message_id: id.clone(),
+                        })
+                        .collect();
+                    messages::apply(c, account_id, &deletions)?;
                     for thread in &threads {
-                        messages::refresh_thread(c, account_id, thread)?;
                         // Nothing is left to remind anybody about.
                         if threads::get_thread(c, account_id, thread)?.is_none() {
                             reminders::remove(c, account_id, thread)?;
@@ -229,13 +233,11 @@ impl AccountSync {
                             }
                         }
                     }
-                    for (_, id, _) in &before {
-                        messages::add_labels(c, account_id, id, &add)?;
-                        messages::remove_labels(c, account_id, id, &remove)?;
-                    }
-                    for thread in wanted.keys() {
-                        messages::refresh_thread(c, account_id, thread)?;
-                    }
+                    let changes: Vec<Change> = before
+                        .iter()
+                        .flat_map(|(_, id, _)| relabel(id, &add, &remove))
+                        .collect();
+                    messages::apply(c, account_id, &changes)?;
                     Ok(before)
                 })
                 .await?
@@ -253,20 +255,17 @@ impl AccountSync {
             .write_labels(&mut budget, &ids, &writing, &add, &remove, &mut taken)
             .await
         {
-            let rolled_back = threads.clone();
             self.db
                 .write(move |c| {
+                    let mut back = Vec::new();
                     for (thread, id, before) in &snapshot {
                         if taken.contains(id) {
                             continue;
                         }
                         let change = Relabelled::from_labels(thread, id, before, &add, &remove);
-                        messages::remove_labels(c, account_id, id, &change.added)?;
-                        messages::add_labels(c, account_id, id, &change.removed)?;
+                        back.extend(relabel(id, &change.removed, &change.added));
                     }
-                    for thread in &rolled_back {
-                        messages::refresh_thread(c, account_id, thread)?;
-                    }
+                    messages::apply(c, account_id, &back)?;
                     Ok(())
                 })
                 .await?;
@@ -614,4 +613,13 @@ fn roughly(waited: Duration) -> String {
         ),
         _ => gettext("a minute"),
     }
+}
+
+/// The store changes that put Gmail's `add` labels on message `id` and
+/// take its `remove` labels off.
+fn relabel(id: &str, add: &[String], remove: &[String]) -> Vec<Change> {
+    add.iter()
+        .map(|l| Change::label(id, l, true))
+        .chain(remove.iter().map(|l| Change::label(id, l, false)))
+        .collect()
 }

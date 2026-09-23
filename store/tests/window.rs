@@ -1,7 +1,16 @@
 mod common;
 
 use common::{db, meta, store};
+use mailrs_domain::MessageMeta;
+use mailrs_store::messages::Change;
 use mailrs_store::{messages, threads, window};
+
+fn upsert(meta: MessageMeta, generation: i64) -> Change {
+    Change::Upsert {
+        meta: Box::new(meta),
+        generation,
+    }
+}
 
 #[test]
 fn pruning_drops_old_threads_outside_the_inbox() {
@@ -52,12 +61,16 @@ fn a_thread_with_a_recent_message_survives_pruning() {
 #[test]
 fn sweeping_removes_messages_from_older_generations() {
     let (conn, id) = db();
-    messages::upsert_message(&conn, &meta(id, "stale", "t1", 100, &["INBOX"]), 1).unwrap();
-    messages::upsert_message(&conn, &meta(id, "fresh", "t1", 200, &["INBOX"]), 2).unwrap();
-    messages::upsert_message(&conn, &meta(id, "gone", "t2", 300, &["INBOX"]), 1).unwrap();
-    for thread in ["t1", "t2"] {
-        messages::refresh_thread(&conn, id, thread).unwrap();
-    }
+    messages::apply(
+        &conn,
+        id,
+        &[
+            upsert(meta(id, "stale", "t1", 100, &["INBOX"]), 1),
+            upsert(meta(id, "fresh", "t1", 200, &["INBOX"]), 2),
+            upsert(meta(id, "gone", "t2", 300, &["INBOX"]), 1),
+        ],
+    )
+    .unwrap();
     assert_eq!(window::sweep_stale(&conn, id, 2).unwrap(), ["t1", "t2"]);
     assert_eq!(
         threads::get_thread(&conn, id, "t1")
@@ -72,13 +85,26 @@ fn sweeping_removes_messages_from_older_generations() {
 #[test]
 fn a_thread_the_sweep_trimmed_is_no_longer_whole() {
     let (conn, id) = db();
-    messages::upsert_message(&conn, &meta(id, "old", "t1", 100, &[]), 1).unwrap();
-    messages::upsert_message(&conn, &meta(id, "new", "t1", 200, &["INBOX"]), 2).unwrap();
-    messages::refresh_thread(&conn, id, "t1").unwrap();
-    messages::mark_whole(&conn, id, "t1").unwrap();
+    messages::apply(
+        &conn,
+        id,
+        &[
+            upsert(meta(id, "old", "t1", 100, &[]), 1),
+            upsert(meta(id, "new", "t1", 200, &["INBOX"]), 2),
+            Change::MarkWhole {
+                thread_id: "t1".into(),
+            },
+        ],
+    )
+    .unwrap();
     assert!(messages::is_whole(&conn, id, "t1").unwrap());
-    // Refreshing the summary row keeps the mark.
-    messages::refresh_thread(&conn, id, "t1").unwrap();
+    // Writing the thread again refreshes its row and keeps the mark.
+    messages::apply(
+        &conn,
+        id,
+        &[upsert(meta(id, "new", "t1", 200, &["INBOX"]), 2)],
+    )
+    .unwrap();
     assert!(messages::is_whole(&conn, id, "t1").unwrap());
 
     window::sweep_stale(&conn, id, 2).unwrap();

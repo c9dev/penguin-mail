@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 
 use mailrs_domain::{AccountId, Address, MessageMeta};
-use mailrs_store::{accounts, messages};
+use mailrs_store::accounts;
+use mailrs_store::messages::{self, Change};
 use rusqlite::Connection;
 
 pub fn db() -> (Connection, AccountId) {
@@ -42,13 +43,15 @@ pub fn meta(
     }
 }
 
-/// Upserts at generation 1 and refreshes the touched threads.
+/// Upserts at generation 1; the change set refreshes the threads. One
+/// call per message, since a change set belongs to one account.
 pub fn store(conn: &Connection, metas: &[MessageMeta]) {
-    for m in metas {
-        messages::upsert_message(conn, m, 1).unwrap();
-    }
-    for m in metas {
-        messages::refresh_thread(conn, m.account_id, &m.thread_id).unwrap();
+    for meta in metas {
+        let upsert = Change::Upsert {
+            meta: Box::new(meta.clone()),
+            generation: 1,
+        };
+        messages::apply(conn, meta.account_id, &[upsert]).unwrap();
     }
 }
 
