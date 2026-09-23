@@ -3,7 +3,9 @@
 
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
-use crate::{BackendError, SyncError};
+use mailrs_gmail::OneClickError;
+
+use crate::SyncError;
 
 #[derive(Default)]
 pub struct FakeOneClick {
@@ -31,7 +33,7 @@ impl FakeOneClick {
         let mut posts = self.lock();
         if posts.refusals > 0 {
             posts.refusals -= 1;
-            return Err(BackendError::Refused(format!("{url} answered 500")).into());
+            return Err(SyncError::OneClick(OneClickError::refused(url, 500)));
         }
         posts.posted.push(url.to_string());
         Ok(())

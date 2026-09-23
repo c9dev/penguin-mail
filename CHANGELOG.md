@@ -43,6 +43,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   counts as done, where Penguin Mail said it could not tell.
 - Open Page, after "Sent, but the page did not say it worked", opens the
   page the unsubscribe form led to, not the form you already sent.
+- When a mailing list turns down an unsubscribe request, the message
+  names the list's server, where it used to blame Gmail.
 
 ## 0.2.0 (2026-09-23)
 

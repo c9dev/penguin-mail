@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use mailrs_domain::AccountId;
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_gmail::GmailError;
+use mailrs_gmail::{GmailError, OneClickError};
 use mailrs_store::StoreError;
 
 /// What went wrong on the server's side, as a kind every provider shares.
@@ -86,6 +86,10 @@ pub enum SyncError {
     /// answer "Invalid label name", which does not say why.
     #[error("{}", reserved_label(.0))]
     ReservedLabel(String),
+    /// A mailing list's own server turned down a one-click request, or
+    /// never answered it. Gmail takes no part in that request.
+    #[error("{}", one_click(.0))]
+    OneClick(OneClickError),
 }
 
 /// Lets `?` take a Gmail error where a sync error is due.
@@ -100,6 +104,18 @@ fn reserved_label(name: &str) -> String {
         &gettext("Gmail keeps “{name}” for its own label. Choose another name."),
         &[("name", name)],
     )
+}
+
+fn one_click(err: &OneClickError) -> String {
+    match err {
+        OneClickError::Refused { host, status } => fill(
+            &gettext("{host} refused the request to unsubscribe (HTTP {status})"),
+            &[("host", host), ("status", &status.to_string())],
+        ),
+        OneClickError::Unreachable { host, .. } => {
+            fill(&gettext("could not reach {host}"), &[("host", host)])
+        }
+    }
 }
 
 impl SyncError {
@@ -124,6 +140,8 @@ impl SyncError {
             // would fail the same way on every try.
             SyncError::Mime(_) => false,
             SyncError::NotAnAddress(_) => false,
+            // The outbox sends nothing to a list's server.
+            SyncError::OneClick(_) => false,
         }
     }
 }

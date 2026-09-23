@@ -540,6 +540,25 @@ async fn one_click_unsubscribe_posts_the_form() {
 }
 
 #[tokio::test]
+async fn a_one_click_refusal_names_the_lists_server_and_its_answer() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .respond_with(ResponseTemplate::new(404))
+        .mount(&server)
+        .await;
+    let err = mailrs_gmail::one_click_unsubscribe(&format!("{}/u/1", server.uri()))
+        .await
+        .unwrap_err();
+    assert_eq!(
+        err,
+        mailrs_gmail::OneClickError::Refused {
+            host: "127.0.0.1".to_string(),
+            status: 404,
+        }
+    );
+}
+
+#[tokio::test]
 async fn the_raw_message_is_decoded() {
     let server = MockServer::start().await;
     mount_token(&server, 1).await;

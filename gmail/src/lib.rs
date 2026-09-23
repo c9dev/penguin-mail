@@ -21,7 +21,7 @@ pub use client::{
     Authorized, BATCH_LIMIT, GMAIL_API_BASE, GmailClient, authorize, cost, one_click_unsubscribe,
 };
 pub use convert::{HistoryChange, HistoryPage};
-pub use error::GmailError;
+pub use error::{GmailError, OneClickError};
 pub use html::html_to_text;
 pub use limiter::{AccountQuota, Priority, QuotaLimiter, QuotaPool, Waiting};
 pub use model::{

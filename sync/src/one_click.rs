@@ -5,7 +5,7 @@
 
 #[cfg(any(test, feature = "fake"))]
 use crate::fake::FakeOneClick;
-use crate::{BackendError, SyncError};
+use crate::SyncError;
 
 /// Where a one-click request goes.
 pub enum OneClick {
@@ -20,9 +20,9 @@ impl OneClick {
     /// Posts the one-click request to `url`.
     pub async fn post(&self, url: &str) -> Result<(), SyncError> {
         match self {
-            OneClick::Web => Ok(mailrs_gmail::one_click_unsubscribe(url)
+            OneClick::Web => mailrs_gmail::one_click_unsubscribe(url)
                 .await
-                .map_err(BackendError::from)?),
+                .map_err(SyncError::OneClick),
             #[cfg(any(test, feature = "fake"))]
             OneClick::Fake(fake) => fake.post(url),
         }

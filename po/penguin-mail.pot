@@ -5150,7 +5150,7 @@ msgstr ""
 #: app/src/ui/window/detached.rs:130 app/src/ui/window/export.rs:75
 #: app/src/ui/window/export.rs:138 app/src/ui/window/organize.rs:69
 #: app/src/ui/window/organize.rs:117 app/src/ui/window/organize.rs:146
-#: app/src/ui/window/organize.rs:174 app/src/ui/window/senders.rs:230
+#: app/src/ui/window/organize.rs:174 app/src/ui/window/senders.rs:227
 msgid "That account is not connected"
 msgstr ""
 
@@ -5558,37 +5558,37 @@ msgstr ""
 msgid "This message's unsubscribe link is not one Penguin Mail can use"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:154
+#: app/src/ui/window/senders.rs:151
 msgid "Open Page"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:193
+#: app/src/ui/window/senders.rs:190
 msgid "The app is closing."
 msgstr ""
 
-#: app/src/ui/window/senders.rs:209
+#: app/src/ui/window/senders.rs:206
 msgid "Open a message from the sender to block"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:213
+#: app/src/ui/window/senders.rs:210
 msgid "Block {sender}?"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:216
+#: app/src/ui/window/senders.rs:213
 msgid ""
 "New mail from {email} goes straight to the Trash. This conversation moves "
 "there now. Remove the rule under Rules to unblock."
 msgstr ""
 
-#: app/src/ui/window/senders.rs:221
+#: app/src/ui/window/senders.rs:218
 msgid "Block"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:248
+#: app/src/ui/window/senders.rs:245
 msgid "Blocked {sender}"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:254
+#: app/src/ui/window/senders.rs:251
 msgid "Could not block the sender: {reason}"
 msgstr ""
 
@@ -6044,8 +6044,16 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] ""
 msgstr[1] ""
 
-#: sync/src/error.rs:100
+#: sync/src/error.rs:104
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
+msgstr ""
+
+#: sync/src/error.rs:112
+msgid "{host} refused the request to unsubscribe (HTTP {status})"
+msgstr ""
+
+#: sync/src/error.rs:116
+msgid "could not reach {host}"
 msgstr ""
 
 #: sync/src/mailbox.rs:90

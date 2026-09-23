@@ -33,7 +33,10 @@ async fn a_one_click_list_that_refuses_says_so() {
     let how = Unsubscribe::OneClick("https://news.example/u/1".into());
 
     let err = actions(&h).unsubscribe(h.account_id, how.clone()).await;
-    assert!(err.is_err());
+    let said = err.expect_err("the list refused").to_string();
+    // The list's own server answered, so the message names it and not
+    // Gmail, which took no part.
+    assert_eq!(said, "news.example refused the request to unsubscribe (HTTP 500)");
     assert!(h.one_click.posted().is_empty());
     let nobody = actions(&h).unsubscribe(99, how).await;
     assert!(matches!(nobody, Err(SyncError::UnknownAccount(99))));

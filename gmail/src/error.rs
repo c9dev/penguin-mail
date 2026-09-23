@@ -35,6 +35,44 @@ pub enum GmailError {
     Keyring(String),
 }
 
+/// Why a one-click unsubscribe request failed. The request goes to the
+/// list's own server rather than to Google, so this names that server
+/// and never Gmail. The words here are for the log; `mailrs_sync` writes
+/// out the ones a person reads.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum OneClickError {
+    #[error("{host} answered HTTP {status}")]
+    Refused { host: String, status: u16 },
+    #[error("{host} could not be reached: {detail}")]
+    Unreachable { host: String, detail: String },
+}
+
+impl OneClickError {
+    /// The list at `url` answered `status`.
+    pub fn refused(url: &str, status: u16) -> OneClickError {
+        OneClickError::Refused {
+            host: host_of(url),
+            status,
+        }
+    }
+
+    /// The list at `url` never answered.
+    pub fn unreachable(url: &str, detail: impl ToString) -> OneClickError {
+        OneClickError::Unreachable {
+            host: host_of(url),
+            detail: detail.to_string(),
+        }
+    }
+}
+
+/// The host a link points at, or the link itself when it has none.
+fn host_of(url: &str) -> String {
+    url::Url::parse(url)
+        .ok()
+        .and_then(|parsed| parsed.host_str().map(str::to_string))
+        .unwrap_or_else(|| url.to_string())
+}
+
 /// Google's own words for a refusal, when the body is its JSON error.
 /// Anything else, such as a proxy's HTML page, is left out: a person
 /// cannot read it and the log keeps it.

@@ -5385,7 +5385,7 @@ msgstr "Abra primeiro uma conversa"
 #: app/src/ui/window/detached.rs:130 app/src/ui/window/export.rs:75
 #: app/src/ui/window/export.rs:138 app/src/ui/window/organize.rs:69
 #: app/src/ui/window/organize.rs:117 app/src/ui/window/organize.rs:146
-#: app/src/ui/window/organize.rs:174 app/src/ui/window/senders.rs:230
+#: app/src/ui/window/organize.rs:174 app/src/ui/window/senders.rs:227
 msgid "That account is not connected"
 msgstr "Essa conta não está ligada"
 
@@ -5813,23 +5813,23 @@ msgstr ""
 "A ligação de cancelamento desta mensagem não é uma que o Penguin Mail possa "
 "usar"
 
-#: app/src/ui/window/senders.rs:154
+#: app/src/ui/window/senders.rs:151
 msgid "Open Page"
 msgstr "Abrir Página"
 
-#: app/src/ui/window/senders.rs:193
+#: app/src/ui/window/senders.rs:190
 msgid "The app is closing."
 msgstr "A aplicação está a fechar."
 
-#: app/src/ui/window/senders.rs:209
+#: app/src/ui/window/senders.rs:206
 msgid "Open a message from the sender to block"
 msgstr "Abra uma mensagem do remetente a bloquear"
 
-#: app/src/ui/window/senders.rs:213
+#: app/src/ui/window/senders.rs:210
 msgid "Block {sender}?"
 msgstr "Bloquear {sender}?"
 
-#: app/src/ui/window/senders.rs:216
+#: app/src/ui/window/senders.rs:213
 msgid ""
 "New mail from {email} goes straight to the Trash. This conversation moves "
 "there now. Remove the rule under Rules to unblock."
@@ -5837,15 +5837,15 @@ msgstr ""
 "O correio novo de {email} vai direto para o lixo. Esta conversa muda para lá "
 "agora. Remova a regra em Regras para desbloquear."
 
-#: app/src/ui/window/senders.rs:221
+#: app/src/ui/window/senders.rs:218
 msgid "Block"
 msgstr "Bloquear"
 
-#: app/src/ui/window/senders.rs:248
+#: app/src/ui/window/senders.rs:245
 msgid "Blocked {sender}"
 msgstr "{sender} bloqueado"
 
-#: app/src/ui/window/senders.rs:254
+#: app/src/ui/window/senders.rs:251
 msgid "Could not block the sender: {reason}"
 msgstr "Não foi possível bloquear o remetente: {reason}"
 
@@ -6311,9 +6311,17 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] "Etiqueta nova em: {accounts}."
 msgstr[1] "Etiquetas novas em: {accounts}."
 
-#: sync/src/error.rs:100
+#: sync/src/error.rs:104
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr "O Gmail reserva “{name}” para uma etiqueta sua. Escolha outro nome."
+
+#: sync/src/error.rs:112
+msgid "{host} refused the request to unsubscribe (HTTP {status})"
+msgstr "{host} recusou o pedido para cancelar a subscrição (HTTP {status})"
+
+#: sync/src/error.rs:116
+msgid "could not reach {host}"
+msgstr "não foi possível contactar {host}"
 
 #: sync/src/mailbox.rs:90
 msgid "{color} Flag"

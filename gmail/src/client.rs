@@ -11,7 +11,7 @@ use serde::de::DeserializeOwned;
 use serde_json::json;
 use tokio::sync::Mutex;
 
-use crate::GmailError;
+use crate::{GmailError, OneClickError};
 use crate::convert::text_to_html;
 use crate::convert::{HistoryPage, history_page};
 use crate::html::html_to_text;
@@ -875,25 +875,24 @@ fn api_disabled(body: &str) -> Option<GmailError> {
 }
 
 /// Leaves a mailing list the RFC 8058 way: one POST to the list's https
-/// unsubscribe link. It is not a Gmail call, so it carries no token.
-pub async fn one_click_unsubscribe(url: &str) -> Result<(), GmailError> {
+/// unsubscribe link. It is not a Gmail call, so it carries no token, and
+/// a failure names the list's server rather than Gmail.
+pub async fn one_click_unsubscribe(url: &str) -> Result<(), OneClickError> {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(20))
         .build()
-        .map_err(|e| GmailError::Network(e.to_string()))?;
+        .map_err(|e| OneClickError::unreachable(url, e))?;
     let response = client
         .post(url)
         .header("Content-Type", "application/x-www-form-urlencoded")
         .body("List-Unsubscribe=One-Click")
         .send()
-        .await?;
+        .await
+        .map_err(|e| OneClickError::unreachable(url, e))?;
     if response.status().is_success() {
         Ok(())
     } else {
-        Err(GmailError::Http {
-            status: response.status().as_u16(),
-            body: String::new(),
-        })
+        Err(OneClickError::refused(url, response.status().as_u16()))
     }
 }
 
