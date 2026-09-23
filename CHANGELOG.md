@@ -66,8 +66,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- An OpenPGP signature from a key only partly trusted people vouched for
+  no longer shows in green. The card says the key is not fully checked.
 - Unsubscribing works on pages that ask "Are you sure?" after you press
-  their button, such as Reallusion's, and a page that says you were
+  their button, and a page that says you were
   "successfully removed" now counts as done instead of opening in your
   browser.
 

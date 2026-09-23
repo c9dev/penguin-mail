@@ -551,7 +551,10 @@ fn signed_mark(standard: Standard, signed: &Signed, from: Option<&str>) -> Mark 
             };
             let tone = match (vouched, sender) {
                 (Vouched::Never, _) => Tone::Bad,
-                (Vouched::Own | Vouched::Yes | Vouched::Partly, Some(_)) => Tone::Good,
+                // Marginal validity is GnuPG's "not fully valid": people the
+                // person only partly trusts vouched for the key. The card
+                // says so in the neutral tone rather than calling it good.
+                (Vouched::Own | Vouched::Yes, Some(_)) => Tone::Good,
                 _ => Tone::Unchecked,
             };
             let detail = match (sender, from) {
@@ -767,7 +770,9 @@ fn vouching(standard: Standard, vouched: Vouched) -> String {
         (_, Vouched::Never) => gettext("You marked this key as one not to trust."),
         (Standard::Pgp, Vouched::Own) => gettext("This is one of your own keys."),
         (Standard::Pgp, Vouched::Yes) => gettext("You have vouched for this key."),
-        (Standard::Pgp, Vouched::Partly) => gettext("People you trust have vouched for this key."),
+        (Standard::Pgp, Vouched::Partly) => gettext(
+            "Only people you partly trust have vouched for this key, so it is not fully checked.",
+        ),
         (Standard::Pgp, Vouched::Nobody | Vouched::Unsaid) => {
             gettext("Nobody has vouched for this key, so it names no one.")
         }
@@ -1414,6 +1419,25 @@ mod tests {
             assert_eq!(mark.tone, Tone::Good, "{standard:?} {mark:?}");
             assert_eq!(mark.title, "Signed by Ada Lovelace <ada@example.test>");
         }
+    }
+
+    #[test]
+    fn a_key_only_partly_vouched_for_is_not_the_good_tone_and_says_so() {
+        let mark = good_from(
+            Standard::Pgp,
+            &[("ada@example.test", Vouched::Partly)],
+            Vouched::Partly,
+            "ada@example.test",
+        );
+        assert_eq!(mark.tone, Tone::Unchecked, "{mark:?}");
+        assert_eq!(mark.title, "Signed by Ada Lovelace <ada@example.test>");
+        assert_eq!(
+            mark.detail.as_deref(),
+            Some(
+                "Only people you partly trust have vouched for this key, so it is not fully \
+                 checked."
+            )
+        );
     }
 
     #[test]
