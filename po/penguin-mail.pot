@@ -969,21 +969,27 @@ msgstr ""
 msgid "On {date}, {sender} wrote:"
 msgstr ""
 
-#: app/src/core.rs:536
+#: app/src/core.rs:159
+msgid ""
+"Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your "
+"mail. Stop it, then open Penguin Mail again."
+msgstr ""
+
+#: app/src/core.rs:553
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 
-#: app/src/core.rs:540
+#: app/src/core.rs:557
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
 msgstr ""
 
-#: app/src/core.rs:558
+#: app/src/core.rs:575
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 
-#: app/src/core.rs:566
+#: app/src/core.rs:583
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 

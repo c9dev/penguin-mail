@@ -13,6 +13,7 @@ mod error;
 pub mod export;
 pub mod hidden;
 pub mod invitations;
+pub mod lock;
 pub mod mailbox;
 pub mod newsletters;
 pub mod outbox;
