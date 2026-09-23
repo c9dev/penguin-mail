@@ -5,6 +5,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+## 0.1.7 (2026-09-23)
+
 ### New
 
 - Penguin Mail comes as an rpm for Fedora, with a dnf repository of its

@@ -103,6 +103,31 @@
 
   <!-- scripts/metainfo.sh writes this list from CHANGELOG.md. -->
   <releases>
+    <release version="0.1.7" date="2026-09-23">
+      <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v0.1.7</url>
+      <description translate="no">
+        <p>New</p>
+        <ul>
+          <li>Penguin Mail comes as an rpm for Fedora, with a dnf repository of its own, so <code>sudo dnf upgrade</code> brings each new version.</li>
+        </ul>
+        <p>Improved</p>
+        <ul>
+          <li>A big inbox lists faster. Opening the inbox or one of its categories reads about a page of mail instead of sorting all of it first, which on an inbox of 15,000 conversations took the wait from 25 to 45 ms down to 1 to 13 ms.</li>
+          <li>Switching between All, Primary, Updates, Promotions and Social answers at once: the switcher takes its new shape on the next frame and only the category's name fades in, where it used to slide for a fifth of a second while every icon drifted sideways.</li>
+          <li>Right-clicking a conversation in the list offers everything the conversation's More Actions menu does: reply, archive, trash, flag, labels, mute, remind, print and the sender's options.</li>
+        </ul>
+        <p>Fixed</p>
+        <ul>
+          <li>LinkedIn's mail, and any other mail that labels its text the same way, shows its message again instead of an empty box and two attachments called text-text-body.txt and text-html-body.html.</li>
+          <li>Naming a label Important, Starred, Inbox or another name Gmail keeps for itself now says why it cannot be used, instead of failing with Gmail's "Invalid label name".</li>
+          <li>When Gmail refuses something, the message shows Gmail's own words, not the whole reply it sent.</li>
+          <li>Unsubscribing no longer sits on "Reading the page…" for ever when the page needs the AI model and the model is Claude Code.</li>
+          <li>Right-clicking a conversation that was not selected yet opens its menu. Before, the menu closed as the conversation opened.</li>
+          <li>The icons in the category switcher above the inbox sit in the middle of their highlight instead of leaving a gap on the right.</li>
+          <li>Shift+F10 and the Menu key open a message's own menu. Before, they opened an empty Cut and Paste menu in the window's top corner.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.6" date="2026-09-22">
       <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v0.1.6</url>
       <description translate="no">
