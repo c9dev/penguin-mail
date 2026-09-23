@@ -70,16 +70,16 @@ fn cursors_start_empty_and_track_progress() {
     assert_eq!(
         accounts::sync_cursor(&conn, id).unwrap(),
         SyncCursor {
-            history_id: None,
+            state: None,
             backfill_cursor: None,
             backfill_done: false,
             sync_gen: 1
         }
     );
-    accounts::set_history_id(&conn, id, 55).unwrap();
+    accounts::set_sync_state(&conn, id, "{\"history_id\":55}").unwrap();
     accounts::set_backfill(&conn, id, Some("p2"), false).unwrap();
     let cursor = accounts::sync_cursor(&conn, id).unwrap();
-    assert_eq!(cursor.history_id, Some(55));
+    assert_eq!(cursor.state.as_deref(), Some("{\"history_id\":55}"));
     assert_eq!(cursor.backfill_cursor.as_deref(), Some("p2"));
 }
 
@@ -88,11 +88,11 @@ fn a_new_generation_resets_backfill() {
     let conn = open_in_memory().unwrap();
     let id = accounts::insert_account(&conn, "me@example.com", 0).unwrap();
     accounts::set_backfill(&conn, id, Some("p9"), true).unwrap();
-    assert_eq!(accounts::start_generation(&conn, id, 99).unwrap(), 2);
+    assert_eq!(accounts::start_generation(&conn, id, "s99").unwrap(), 2);
     assert_eq!(
         accounts::sync_cursor(&conn, id).unwrap(),
         SyncCursor {
-            history_id: Some(99),
+            state: Some("s99".into()),
             backfill_cursor: None,
             backfill_done: false,
             sync_gen: 2

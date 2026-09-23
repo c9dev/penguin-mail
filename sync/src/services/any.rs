@@ -7,15 +7,15 @@
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
-use mailrs_domain::{EpochMillis, Filter, MessageBody, MessageMeta, Role, Vacation};
+use mailrs_domain::{EpochMillis, Filter, MessageBody, MessageMeta, RemoteMailbox, Role, Vacation};
 use mailrs_gmail::{
-    Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, HistoryPage, LabelColor,
-    MessagePage, Person, Profile, RemoteLabel, Series,
+    Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, MessagePage,
+    Person, Series,
 };
 
 use super::{
-    AutoReplyService, CalendarService, ContactsService, Google, IdentityService, MailBackend,
-    MailCapabilities, RulesService, SendAsAddress, Unapplied,
+    AutoReplyService, CalendarService, Changes, ContactsService, Google, IdentityService,
+    MailBackend, MailCapabilities, RulesService, SendAsAddress, SyncState, Unapplied,
 };
 use crate::api::{AccountClient, DraftRef, SavedDraft};
 #[cfg(any(test, feature = "fake"))]
@@ -114,14 +114,6 @@ impl MailBackend for AnyMail {
         forward!(AnyMail, self, stand_by(wait))
     }
 
-    async fn profile(&self) -> Result<Profile, BackendError> {
-        forward!(AnyMail, self, profile())
-    }
-
-    async fn labels(&self) -> Result<Vec<RemoteLabel>, BackendError> {
-        forward!(AnyMail, self, labels())
-    }
-
     async fn list_messages(
         &self,
         query: &str,
@@ -155,14 +147,6 @@ impl MailBackend for AnyMail {
 
     async fn message_body(&self, id: &str) -> Result<MessageBody, BackendError> {
         forward!(AnyMail, self, message_body(id))
-    }
-
-    async fn history(
-        &self,
-        start_history_id: u64,
-        page_token: Option<&str>,
-    ) -> Result<HistoryPage, BackendError> {
-        forward!(AnyMail, self, history(start_history_id, page_token))
     }
 
     async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, BackendError> {
@@ -202,28 +186,44 @@ impl MailBackend for AnyMail {
         forward!(AnyMail, self, raw_message(id))
     }
 
-    async fn create_label(&self, name: &str) -> Result<RemoteLabel, BackendError> {
-        forward!(AnyMail, self, create_label(name))
+    fn made_by_person(&self, id: &str) -> bool {
+        match self {
+            AnyMail::Google(adapter) => adapter.made_by_person(id),
+            #[cfg(any(test, feature = "fake"))]
+            AnyMail::Fake(adapter) => adapter.made_by_person(id),
+        }
     }
 
-    async fn rename_label(&self, id: &str, name: &str) -> Result<RemoteLabel, BackendError> {
-        forward!(AnyMail, self, rename_label(id, name))
+    async fn mailboxes(&self) -> Result<Vec<RemoteMailbox>, BackendError> {
+        forward!(AnyMail, self, mailboxes())
     }
 
-    async fn delete_label(&self, id: &str) -> Result<(), BackendError> {
-        forward!(AnyMail, self, delete_label(id))
+    async fn changes(&self, since: Option<&SyncState>) -> Result<Changes, BackendError> {
+        forward!(AnyMail, self, changes(since))
     }
 
-    async fn set_label_color(
+    async fn create_mailbox(&self, name: &str) -> Result<RemoteMailbox, BackendError> {
+        forward!(AnyMail, self, create_mailbox(name))
+    }
+
+    async fn rename_mailbox(&self, id: &str, name: &str) -> Result<RemoteMailbox, BackendError> {
+        forward!(AnyMail, self, rename_mailbox(id, name))
+    }
+
+    async fn delete_mailbox(&self, id: &str) -> Result<(), BackendError> {
+        forward!(AnyMail, self, delete_mailbox(id))
+    }
+
+    async fn set_mailbox_color(
         &self,
         id: &str,
         color: &LabelColor,
-    ) -> Result<RemoteLabel, BackendError> {
-        forward!(AnyMail, self, set_label_color(id, color))
+    ) -> Result<RemoteMailbox, BackendError> {
+        forward!(AnyMail, self, set_mailbox_color(id, color))
     }
 
-    async fn label_threads(&self, id: &str) -> Result<u64, BackendError> {
-        forward!(AnyMail, self, label_threads(id))
+    async fn mailbox_threads(&self, id: &str) -> Result<u64, BackendError> {
+        forward!(AnyMail, self, mailbox_threads(id))
     }
 }
 

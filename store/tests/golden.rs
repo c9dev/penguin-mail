@@ -13,10 +13,10 @@ use std::fmt::Write as _;
 use std::path::Path;
 
 use common::{meta, store};
-use mailrs_domain::{AccountId, Category, FlagColor, Label, LabelKind, MessageMeta};
+use mailrs_domain::{AccountId, Category, FlagColor, MailboxKind, MessageMeta, RemoteMailbox};
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{
-    accounts, contacts, drafts, flags, follow_ups, labels, messages, newsletters, window,
+    accounts, contacts, drafts, flags, follow_ups, labels, mailboxes, messages, newsletters, window,
 };
 use rusqlite::Connection;
 
@@ -49,19 +49,14 @@ const LABELS: [&str; 19] = [
     "nobody",
 ];
 
-fn label(
-    account_id: AccountId,
-    id: &str,
-    name: &str,
-    kind: LabelKind,
-    color: Option<&str>,
-) -> Label {
-    Label {
-        account_id,
+fn listed(id: &str, name: &str, kind: MailboxKind, color: Option<&str>) -> RemoteMailbox {
+    RemoteMailbox {
         id: id.into(),
         name: name.into(),
         kind,
+        role: mailrs_domain::gmail::role_of(id),
         color: color.map(str::to_string),
+        hidden: false,
     }
 }
 
@@ -82,8 +77,8 @@ fn mailbox() -> (Connection, AccountId, AccountId) {
     let conn = mailrs_store::open_in_memory().unwrap();
     let a = accounts::insert_account(&conn, "a@example.com", 0).unwrap();
     let b = accounts::insert_account(&conn, "b@example.com", 0).unwrap();
-    let system = |account, id: &str| label(account, id, id, LabelKind::System, None);
-    let mut a_labels: Vec<Label> = [
+    let system = |id: &str| listed(id, id, MailboxKind::System, None);
+    let mut a_labels: Vec<RemoteMailbox> = [
         "INBOX",
         "SENT",
         "DRAFT",
@@ -99,24 +94,23 @@ fn mailbox() -> (Connection, AccountId, AccountId) {
         "CATEGORY_FORUMS",
     ]
     .into_iter()
-    .map(|id| system(a, id))
+    .map(system)
     .collect();
-    a_labels.push(label(
-        a,
+    a_labels.push(listed(
         "Label_1",
         "Work",
-        LabelKind::User,
+        MailboxKind::Label,
         Some("#16a766"),
     ));
-    a_labels.push(label(a, "Label_2", "Work/Clients", LabelKind::User, None));
-    labels::replace_labels(&conn, a, &a_labels).unwrap();
+    a_labels.push(listed("Label_2", "Work/Clients", MailboxKind::Label, None));
+    mailboxes::replace_listed(&conn, a, &a_labels).unwrap();
     let b_labels = vec![
-        system(b, "INBOX"),
-        system(b, "UNREAD"),
-        system(b, "STARRED"),
-        label(b, "Label_1", "Home", LabelKind::User, Some("#fb4c2f")),
+        system("INBOX"),
+        system("UNREAD"),
+        system("STARRED"),
+        listed("Label_1", "Home", MailboxKind::Label, Some("#fb4c2f")),
     ];
-    labels::replace_labels(&conn, b, &b_labels).unwrap();
+    mailboxes::replace_listed(&conn, b, &b_labels).unwrap();
     store(
         &conn,
         &[

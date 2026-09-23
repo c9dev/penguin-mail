@@ -3,27 +3,31 @@ mod common;
 use std::collections::HashSet;
 
 use common::{db, meta, store};
-use mailrs_domain::{Applied, Label, LabelKind, Membership};
+use mailrs_domain::{Applied, MailboxKind, Membership, RemoteMailbox};
 use mailrs_store::messages::Change;
-use mailrs_store::{labels, messages, threads};
+use mailrs_store::{labels, mailboxes, messages, threads};
+
+fn listed(id: &str, name: &str, kind: MailboxKind, color: Option<&str>) -> RemoteMailbox {
+    RemoteMailbox {
+        id: id.into(),
+        name: name.into(),
+        kind,
+        role: mailrs_domain::gmail::role_of(id),
+        color: color.map(str::to_string),
+        hidden: false,
+    }
+}
 
 #[test]
 fn labels_are_replaced_wholesale_and_listed_system_first() {
     let (conn, id) = db();
-    let label = |lid: &str, name: &str, kind: LabelKind| Label {
-        account_id: id,
-        id: lid.into(),
-        name: name.into(),
-        kind,
-        color: None,
-    };
-    labels::replace_labels(
+    mailboxes::replace_listed(
         &conn,
         id,
         &[
-            label("Label_2", "Zeta", LabelKind::User),
-            label("INBOX", "INBOX", LabelKind::System),
-            label("Label_1", "Alpha", LabelKind::User),
+            listed("Label_2", "Zeta", MailboxKind::Label, None),
+            listed("INBOX", "INBOX", MailboxKind::System, None),
+            listed("Label_1", "Alpha", MailboxKind::Label, None),
         ],
     )
     .unwrap();
@@ -33,7 +37,8 @@ fn labels_are_replaced_wholesale_and_listed_system_first() {
         .map(|l| l.name)
         .collect();
     assert_eq!(names, ["INBOX", "Alpha", "Zeta"]);
-    labels::replace_labels(&conn, id, &[label("INBOX", "INBOX", LabelKind::System)]).unwrap();
+    let inbox = listed("INBOX", "INBOX", MailboxKind::System, None);
+    mailboxes::replace_listed(&conn, id, &[inbox]).unwrap();
     assert_eq!(labels::list_labels(&conn, id).unwrap().len(), 1);
 }
 

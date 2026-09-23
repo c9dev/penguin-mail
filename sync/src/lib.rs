@@ -65,7 +65,8 @@ pub use outbox::{Cancelled, Drained, Outbox, Posted};
 pub use services::{
     AccountServices, AnyAutoReply, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules,
     AutoReplyService, CalendarService, ContactsService, Google, IdentityService, MailBackend,
-    MailCapabilities, Priority, RulesService, SendAsAddress, Unapplied, background,
+    MailCapabilities, Priority, RemoteChange, RulesService, SendAsAddress, SyncState, Unapplied,
+    Changes, background,
 };
 pub use settings::{AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, Permitted};
 pub use triage::TriageAction;

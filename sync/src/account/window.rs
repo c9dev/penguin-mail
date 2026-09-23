@@ -6,11 +6,10 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use mailrs_domain::{AccountState, ChangeEvent, EpochMillis, MessageMeta, system_label};
 use mailrs_gmail::{GmailError, MessageRef};
 use mailrs_store::messages::Change;
-use mailrs_store::{accounts, labels, messages, window};
+use mailrs_store::{accounts, mailboxes, messages, window};
 
 use super::AccountSync;
 use super::fetch::{Want, store_fetched};
-use super::labels::domain_labels;
 use crate::{BackendError, ID_PAGE_SIZE, LIST_PAGE_SIZE, MailBackend, SyncError};
 
 const DAY_MILLIS: i64 = 24 * 60 * 60 * 1000;
@@ -29,16 +28,14 @@ impl AccountSync {
     /// page. `backfill_step` loads the rest.
     pub async fn bootstrap(&self) -> Result<(), SyncError> {
         self.set_state(AccountState::Bootstrapping).await?;
-        let profile = self.services.mail.profile().await?;
-        let remote_labels = self.services.mail.labels().await?;
+        let start = self.services.mail.changes(None).await?.state;
+        let listed = self.services.mail.mailboxes().await?;
         let account_id = self.account_id;
-        let history_id = profile.history_id;
-        let labels = domain_labels(account_id, &remote_labels);
         let generation = self
             .db
             .write(move |c| {
-                labels::replace_labels(c, account_id, &labels)?;
-                accounts::start_generation(c, account_id, history_id)
+                mailboxes::replace_listed(c, account_id, &listed)?;
+                accounts::start_generation(c, account_id, start.as_str())
             })
             .await?;
         self.emit(ChangeEvent::LabelsChanged { account_id });
@@ -46,8 +43,7 @@ impl AccountSync {
         self.set_state(AccountState::Ok).await
     }
 
-    /// Lists the window again once Gmail no longer keeps history as old as
-    /// the cursor, and fetches only what changed in the gap. A full
+    /// Lists the window again once the server has lost its place, and fetches only what changed in the gap. A full
     /// bootstrap would fetch every message again: 300 messages cost over
     /// 900 units that way, even with nothing changed.
     ///
@@ -71,16 +67,14 @@ impl AccountSync {
             return self.bootstrap().await;
         }
         self.set_state(AccountState::Bootstrapping).await?;
-        let profile = self.services.mail.profile().await?;
-        let remote_labels = self.services.mail.labels().await?;
-        let labels = domain_labels(account_id, &remote_labels);
-        let label_ids: Vec<String> = labels.iter().map(|l| l.id.clone()).collect();
-        let history_id = profile.history_id;
+        let start = self.services.mail.changes(None).await?.state;
+        let listed = self.services.mail.mailboxes().await?;
+        let label_ids: Vec<String> = listed.iter().map(|m| m.id.clone()).collect();
         let generation = self
             .db
             .write(move |c| {
-                labels::replace_labels(c, account_id, &labels)?;
-                accounts::start_generation(c, account_id, history_id)
+                mailboxes::replace_listed(c, account_id, &listed)?;
+                accounts::start_generation(c, account_id, start.as_str())
             })
             .await?;
         self.emit(ChangeEvent::LabelsChanged { account_id });
@@ -188,7 +182,7 @@ impl AccountSync {
             .db
             .read(move |c| accounts::sync_cursor(c, account_id))
             .await?;
-        if cursor.backfill_done || cursor.history_id.is_none() {
+        if cursor.backfill_done || cursor.state.is_none() {
             return Ok(false);
         }
         match self
@@ -245,7 +239,7 @@ impl AccountSync {
             .db
             .read(move |c| accounts::sync_cursor(c, account_id))
             .await?;
-        if !cursor.backfill_done || cursor.history_id.is_none() {
+        if !cursor.backfill_done || cursor.state.is_none() {
             return Ok(());
         }
         let remote: HashSet<String> = self

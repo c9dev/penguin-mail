@@ -8,8 +8,9 @@ use crate::{Result, StoreError};
 /// Where sync left off for one account.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SyncCursor {
-    /// Gmail history id to replay from. `None` until the first bootstrap.
-    pub history_id: Option<u64>,
+    /// Where the account's mail backend left its feed of changes, in the
+    /// backend's own words. `None` until the first bootstrap.
+    pub state: Option<String>,
     /// Page token for the next window page.
     pub backfill_cursor: Option<String>,
     pub backfill_done: bool,
@@ -111,12 +112,11 @@ pub fn set_checked_at(conn: &Connection, id: AccountId, at: EpochMillis) -> Resu
 
 pub fn sync_cursor(conn: &Connection, id: AccountId) -> Result<SyncCursor> {
     Ok(conn.query_row(
-        "SELECT json_extract(sync_state, '$.history_id'), backfill_cursor, backfill_done, sync_gen \
-         FROM accounts WHERE id = ?1",
+        "SELECT sync_state, backfill_cursor, backfill_done, sync_gen FROM accounts WHERE id = ?1",
         params![id],
         |row| {
             Ok(SyncCursor {
-                history_id: row.get::<_, Option<i64>>(0)?.map(|h| h as u64),
+                state: row.get(0)?,
                 backfill_cursor: row.get(1)?,
                 backfill_done: row.get(2)?,
                 sync_gen: row.get(3)?,
@@ -125,10 +125,10 @@ pub fn sync_cursor(conn: &Connection, id: AccountId) -> Result<SyncCursor> {
     )?)
 }
 
-pub fn set_history_id(conn: &Connection, id: AccountId, history_id: u64) -> Result<()> {
+pub fn set_sync_state(conn: &Connection, id: AccountId, state: &str) -> Result<()> {
     conn.execute(
-        "UPDATE accounts SET sync_state = json_object('history_id', ?2) WHERE id = ?1",
-        params![id, history_id as i64],
+        "UPDATE accounts SET sync_state = ?2 WHERE id = ?1",
+        params![id, state],
     )?;
     Ok(())
 }
@@ -146,13 +146,13 @@ pub fn set_backfill(
     Ok(())
 }
 
-/// Starts a new sync generation from `history_id`, clears the backfill
-/// cursor, and returns the new generation number.
-pub fn start_generation(conn: &Connection, id: AccountId, history_id: u64) -> Result<i64> {
+/// Starts a new sync generation from the sync state `state`, clears the
+/// backfill cursor, and returns the new generation number.
+pub fn start_generation(conn: &Connection, id: AccountId, state: &str) -> Result<i64> {
     Ok(conn.query_row(
-        "UPDATE accounts SET sync_state = json_object('history_id', ?2), backfill_cursor = NULL, \
-         backfill_done = 0, sync_gen = sync_gen + 1 WHERE id = ?1 RETURNING sync_gen",
-        params![id, history_id as i64],
+        "UPDATE accounts SET sync_state = ?2, backfill_cursor = NULL, backfill_done = 0, \
+         sync_gen = sync_gen + 1 WHERE id = ?1 RETURNING sync_gen",
+        params![id, state],
         |row| row.get(0),
     )?)
 }

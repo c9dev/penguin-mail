@@ -64,10 +64,10 @@ pub(super) struct Fetched {
     pub whole: Vec<Vec<MessageMeta>>,
     /// Threads asked for whole that Gmail no longer has.
     pub gone_threads: Vec<String>,
-    /// The history cursor before Gmail was asked. A replay that has moved
-    /// it since may have stored changes newer than this answer; see
+    /// The sync state before the server was asked. A replay that has
+    /// moved it since may have stored changes newer than this answer; see
     /// [`overtaken`].
-    pub asked_at: Option<u64>,
+    pub asked_at: Option<String>,
 }
 
 /// One call to Gmail.
@@ -102,7 +102,7 @@ impl AccountSync {
         let account_id = self.account_id;
         let asked_at = self
             .db
-            .read(move |c| Ok(accounts::sync_cursor(c, account_id)?.history_id))
+            .read(move |c| Ok(accounts::sync_cursor(c, account_id)?.state))
             .await?;
         let answers: Vec<(Call, Result<Vec<MessageMeta>, BackendError>)> =
             futures::stream::iter(calls)
@@ -194,7 +194,7 @@ fn plan(wants: Vec<Want>) -> Vec<Call> {
     calls
 }
 
-/// Whether a history replay moved the cursor since `fetched` asked Gmail.
+/// Whether a replay moved the sync state since `fetched` asked the server.
 /// The answer may then be older than what the replay stored, and the
 /// replay has moved past the change, so no later history would put it
 /// right: the caller fetches again, or keeps only what the store lacks.
@@ -203,7 +203,7 @@ pub(super) fn overtaken(
     account_id: AccountId,
     fetched: &Fetched,
 ) -> mailrs_store::Result<bool> {
-    Ok(accounts::sync_cursor(c, account_id)?.history_id != fetched.asked_at)
+    Ok(accounts::sync_cursor(c, account_id)?.state != fetched.asked_at)
 }
 
 /// Writes fetched metadata inside the caller's transaction: each meta

@@ -27,9 +27,9 @@ const KEPT_FOR: Duration = Duration::from_secs(10 * 60);
 /// A whole thread a search fetched.
 pub(super) struct Listed {
     at: Instant,
-    /// The history cursor before Gmail was asked. While the cursor stays
+    /// The sync state before the server was asked. While the state stays
     /// there, no replay has passed over a change the thread missed.
-    history_id: Option<u64>,
+    state: Option<String>,
     metas: Vec<MessageMeta>,
 }
 
@@ -136,7 +136,7 @@ impl AccountSync {
                     first.thread_id.clone(),
                     Listed {
                         at: Instant::now(),
-                        history_id: fetched.asked_at,
+                        state: fetched.asked_at.clone(),
                         metas: whole,
                     },
                 );
@@ -168,8 +168,8 @@ impl AccountSync {
                 .db
                 .write(move |c| {
                     let cursor = accounts::sync_cursor(c, account_id)?;
-                    if cursor.history_id.is_none()
-                        || cursor.history_id != listed.history_id
+                    if cursor.state.is_none()
+                        || cursor.state != listed.state
                         || !messages::thread_messages(c, account_id, &thread)?.is_empty()
                     {
                         return Ok(false);

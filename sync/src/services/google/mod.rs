@@ -4,21 +4,25 @@
 //! errors here, and Gmail's quota and pacing show nowhere else in the
 //! services.
 
+mod changes;
 mod writes;
 
 use std::sync::Arc;
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
-use mailrs_domain::{EpochMillis, Filter, MessageBody, MessageMeta, Role, Vacation, gmail};
+use mailrs_domain::{
+    EpochMillis, Filter, MailboxKind, MessageBody, MessageMeta, RemoteMailbox, Role, Vacation,
+    gmail,
+};
 use mailrs_gmail::{
-    Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, GmailError, HistoryPage,
-    LabelColor, MessagePage, Person, Profile, RemoteLabel, SendAs, Series, html_to_text, limiter,
+    Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, MessagePage,
+    Person, RemoteLabel, SendAs, Series, html_to_text, limiter,
 };
 
 use super::{
-    AutoReplyService, CalendarService, ContactsService, IdentityService, MailBackend,
-    MailCapabilities, Priority, RulesService, SendAsAddress, Unapplied, priority,
+    AutoReplyService, CalendarService, Changes, ContactsService, IdentityService, MailBackend,
+    MailCapabilities, Priority, RulesService, SendAsAddress, SyncState, Unapplied, priority,
 };
 use crate::api::{DraftRef, GmailApi, SavedDraft};
 use crate::{BackendError, MailOp};
@@ -89,14 +93,6 @@ impl<G: GmailApi> MailBackend for Google<G> {
         tokio::time::sleep(wait).await;
     }
 
-    async fn profile(&self) -> Result<Profile, BackendError> {
-        Ok(paced(self.gmail.profile()).await?)
-    }
-
-    async fn labels(&self) -> Result<Vec<RemoteLabel>, BackendError> {
-        Ok(paced(self.gmail.labels()).await?)
-    }
-
     async fn list_messages(
         &self,
         query: &str,
@@ -130,21 +126,6 @@ impl<G: GmailApi> MailBackend for Google<G> {
 
     async fn message_body(&self, id: &str) -> Result<MessageBody, BackendError> {
         Ok(paced(self.gmail.message_body(id)).await?)
-    }
-
-    async fn history(
-        &self,
-        start_history_id: u64,
-        page_token: Option<&str>,
-    ) -> Result<HistoryPage, BackendError> {
-        match paced(self.gmail.history(start_history_id, page_token)).await {
-            Ok(page) => Ok(page),
-            // `history.list` answers 404 for a start older than the
-            // history Gmail keeps; it has nothing else to miss. Anywhere
-            // else a 404 is a message or a label that is gone.
-            Err(GmailError::NotFound) => Err(BackendError::StateLost),
-            Err(err) => Err(err.into()),
-        }
     }
 
     async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, BackendError> {
@@ -184,28 +165,67 @@ impl<G: GmailApi> MailBackend for Google<G> {
         Ok(paced(self.gmail.raw_message(id)).await?)
     }
 
-    async fn create_label(&self, name: &str) -> Result<RemoteLabel, BackendError> {
-        Ok(paced(self.gmail.create_label(name)).await?)
+    fn made_by_person(&self, id: &str) -> bool {
+        gmail::kind_of(id) == MailboxKind::Label
     }
 
-    async fn rename_label(&self, id: &str, name: &str) -> Result<RemoteLabel, BackendError> {
-        Ok(paced(self.gmail.rename_label(id, name)).await?)
+    async fn mailboxes(&self) -> Result<Vec<RemoteMailbox>, BackendError> {
+        Ok(paced(self.gmail.labels())
+            .await?
+            .into_iter()
+            .map(remote_mailbox)
+            .collect())
     }
 
-    async fn delete_label(&self, id: &str) -> Result<(), BackendError> {
+    async fn changes(&self, since: Option<&SyncState>) -> Result<Changes, BackendError> {
+        self.history_changes(since).await
+    }
+
+    async fn create_mailbox(&self, name: &str) -> Result<RemoteMailbox, BackendError> {
+        Ok(remote_mailbox(paced(self.gmail.create_label(name)).await?))
+    }
+
+    async fn rename_mailbox(&self, id: &str, name: &str) -> Result<RemoteMailbox, BackendError> {
+        Ok(remote_mailbox(
+            paced(self.gmail.rename_label(id, name)).await?,
+        ))
+    }
+
+    async fn delete_mailbox(&self, id: &str) -> Result<(), BackendError> {
         Ok(paced(self.gmail.delete_label(id)).await?)
     }
 
-    async fn set_label_color(
+    async fn set_mailbox_color(
         &self,
         id: &str,
         color: &LabelColor,
-    ) -> Result<RemoteLabel, BackendError> {
-        Ok(paced(self.gmail.set_label_color(id, color)).await?)
+    ) -> Result<RemoteMailbox, BackendError> {
+        Ok(remote_mailbox(
+            paced(self.gmail.set_label_color(id, color)).await?,
+        ))
     }
 
-    async fn label_threads(&self, id: &str) -> Result<u64, BackendError> {
+    async fn mailbox_threads(&self, id: &str) -> Result<u64, BackendError> {
         Ok(paced(self.gmail.label_threads(id)).await?)
+    }
+}
+
+/// A Gmail label as a server mailbox. Gmail lists its keyword and category
+/// labels too (`STARRED`, `UNREAD`, `CATEGORY_SOCIAL`); they arrive as
+/// system mailboxes without a role, which the store keeps for the label
+/// list and never files mail under. Gmail's choice to hide a label from
+/// its own list is not read yet, so `hidden` is false.
+fn remote_mailbox(label: RemoteLabel) -> RemoteMailbox {
+    RemoteMailbox {
+        role: gmail::role_of(&label.id),
+        kind: match label.kind.as_deref() {
+            Some("system") => MailboxKind::System,
+            _ => MailboxKind::Label,
+        },
+        color: label.color.map(|c| c.background_color),
+        hidden: false,
+        id: label.id,
+        name: label.name,
     }
 }
 
@@ -347,17 +367,6 @@ mod tests {
     fn google() -> (Arc<FakeGmail>, Google<FakeGmail>) {
         let gmail = Arc::new(FakeGmail::new());
         (Arc::clone(&gmail), Google::new(gmail))
-    }
-
-    #[tokio::test]
-    async fn a_history_cursor_gmail_no_longer_keeps_is_a_lost_place() {
-        let (gmail, google) = google();
-        let start = gmail.with(|s| s.history_id);
-        gmail.expire_history();
-        assert!(matches!(
-            google.history(start, None).await,
-            Err(BackendError::StateLost)
-        ));
     }
 
     #[tokio::test]

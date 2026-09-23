@@ -3,10 +3,10 @@
 //! calendar over CalDAV. Each kind is a trait here. A provider's adapter
 //! implements the kinds it offers; [`Google`] is the only adapter so far.
 //!
-//! The mail trait still speaks Gmail's shapes (label ids, history pages,
-//! drafts by Gmail's draft id), because mailboxes and keywords only exist
-//! once the store holds them. Its errors and its pacing are neutral
-//! already.
+//! The mail trait still speaks some of Gmail's shapes: listings take a
+//! Gmail search, and drafts go by Gmail's draft id. Its feed of changes,
+//! its server mailboxes, its operations, its errors and its pacing are
+//! neutral.
 
 mod any;
 mod google;
@@ -20,10 +20,12 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
-use mailrs_domain::{EpochMillis, Filter, MessageBody, MessageMeta, Role, Vacation};
+use mailrs_domain::{
+    EpochMillis, Filter, Membership, MessageBody, MessageMeta, RemoteMailbox, Role, Vacation,
+};
 use mailrs_gmail::{
-    Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, HistoryPage, LabelColor,
-    MessagePage, Person, Profile, RemoteLabel, Series,
+    Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, MessagePage,
+    Person, Series,
 };
 
 use crate::api::{AccountClient, DraftRef, SavedDraft};
@@ -68,6 +70,53 @@ pub struct MailCapabilities {
 pub struct Unapplied {
     pub taken: usize,
     pub error: BackendError,
+}
+
+/// Where a mail backend's feed of changes stands, in that backend's own
+/// words: a Gmail history id, later an IMAP mailbox state or a Graph delta
+/// link. The store keeps it as text in `accounts.sync_state`; only the
+/// adapter that wrote it reads it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SyncState(String);
+
+impl SyncState {
+    pub fn new(text: impl Into<String>) -> SyncState {
+        SyncState(text.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+/// What changed on the server since a sync state, and the state after.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Changes {
+    pub changes: Vec<RemoteChange>,
+    pub state: SyncState,
+}
+
+/// One change the server reports. A new message comes without its
+/// metadata: which messages need fetching depends on what the store
+/// already holds, which the adapter does not read.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RemoteChange {
+    Added {
+        id: String,
+        thread_id: String,
+    },
+    Deleted {
+        id: String,
+    },
+    Gained {
+        id: String,
+        thread_id: String,
+        memberships: Vec<Membership>,
+    },
+    Lost {
+        id: String,
+        memberships: Vec<Membership>,
+    },
 }
 
 /// The services one account is served by. A provider that lacks one leaves
@@ -131,9 +180,47 @@ pub trait MailBackend: Send + Sync + 'static {
     /// for the whole wait.
     fn stand_by(&self, wait: Duration) -> impl Future<Output = ()> + Send;
 
-    fn profile(&self) -> impl Future<Output = Result<Profile, BackendError>> + Send;
+    /// Whether a person made the mailbox `id` rather than the server. A
+    /// change naming such a mailbox the store has not listed means the
+    /// mailbox list changed.
+    fn made_by_person(&self, id: &str) -> bool;
 
-    fn labels(&self) -> impl Future<Output = Result<Vec<RemoteLabel>, BackendError>> + Send;
+    /// Every mailbox the server lists.
+    fn mailboxes(&self) -> impl Future<Output = Result<Vec<RemoteMailbox>, BackendError>> + Send;
+
+    /// With no state, where the feed stands now and no changes. With one,
+    /// every change since it, and where the feed stands after. Answers
+    /// `BackendError::StateLost` when the server no longer keeps changes
+    /// that old or cannot read the state, and the caller lists the mail
+    /// again.
+    fn changes(
+        &self,
+        since: Option<&SyncState>,
+    ) -> impl Future<Output = Result<Changes, BackendError>> + Send;
+
+    /// Makes a mailbox a person names. Slashes nest it under another.
+    fn create_mailbox(
+        &self,
+        name: &str,
+    ) -> impl Future<Output = Result<RemoteMailbox, BackendError>> + Send;
+
+    fn rename_mailbox(
+        &self,
+        id: &str,
+        name: &str,
+    ) -> impl Future<Output = Result<RemoteMailbox, BackendError>> + Send;
+
+    fn delete_mailbox(&self, id: &str) -> impl Future<Output = Result<(), BackendError>> + Send;
+
+    fn set_mailbox_color(
+        &self,
+        id: &str,
+        color: &LabelColor,
+    ) -> impl Future<Output = Result<RemoteMailbox, BackendError>> + Send;
+
+    /// How many conversations the mailbox holds on the server, not only in
+    /// the part this computer keeps.
+    fn mailbox_threads(&self, id: &str) -> impl Future<Output = Result<u64, BackendError>> + Send;
 
     /// One page of a search, at most `page_size` ids long.
     fn list_messages(
@@ -168,15 +255,6 @@ pub trait MailBackend: Send + Sync + 'static {
         &self,
         id: &str,
     ) -> impl Future<Output = Result<MessageBody, BackendError>> + Send;
-
-    /// One page of the changes since `start_history_id`. Answers
-    /// `BackendError::StateLost` once the server no longer keeps changes
-    /// that old, and the caller lists the mail again.
-    fn history(
-        &self,
-        start_history_id: u64,
-        page_token: Option<&str>,
-    ) -> impl Future<Output = Result<HistoryPage, BackendError>> + Send;
 
     /// The server's id for its mailbox with `role`, where it has one.
     fn mailbox_for(&self, role: Role) -> Option<String>;
@@ -226,29 +304,6 @@ pub trait MailBackend: Send + Sync + 'static {
 
     /// The message as it arrived, in RFC 822 form.
     fn raw_message(&self, id: &str) -> impl Future<Output = Result<Vec<u8>, BackendError>> + Send;
-
-    fn create_label(
-        &self,
-        name: &str,
-    ) -> impl Future<Output = Result<RemoteLabel, BackendError>> + Send;
-
-    fn rename_label(
-        &self,
-        id: &str,
-        name: &str,
-    ) -> impl Future<Output = Result<RemoteLabel, BackendError>> + Send;
-
-    fn delete_label(&self, id: &str) -> impl Future<Output = Result<(), BackendError>> + Send;
-
-    fn set_label_color(
-        &self,
-        id: &str,
-        color: &LabelColor,
-    ) -> impl Future<Output = Result<RemoteLabel, BackendError>> + Send;
-
-    /// How many conversations carry the label in the whole mailbox, not
-    /// only in the part this computer keeps.
-    fn label_threads(&self, id: &str) -> impl Future<Output = Result<u64, BackendError>> + Send;
 }
 
 /// The account's calendar. Every call answers
@@ -407,8 +462,12 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(gmail.with(|s| s.filters.len()), 1);
-        let labels = services.mail.labels().await.unwrap();
-        assert!(labels.iter().any(|l| l.id == "INBOX"));
+        let mailboxes = services.mail.mailboxes().await.unwrap();
+        assert!(
+            mailboxes
+                .iter()
+                .any(|m| m.id == "INBOX" && m.role == Some(mailrs_domain::Role::Inbox))
+        );
         let identities = services.identities.identities().await.unwrap();
         assert_eq!(identities[0].email, "me@example.com");
         let calendar = services.calendar.as_ref().expect("Gmail has a calendar");
