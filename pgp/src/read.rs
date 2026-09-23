@@ -39,7 +39,8 @@ impl Pgp {
         let run = self.run(signed_part, |command| {
             command.arg("--verify").arg(file.path()).arg("-");
         })?;
-        status::signature(&run.status).ok_or_else(|| run.failure())
+        let found = status::signature(&run.status).ok_or_else(|| run.failure())?;
+        Ok(self.named(found))
     }
 
     /// Opens the ciphertext of an RFC 3156 `multipart/encrypted` message:
@@ -56,7 +57,7 @@ impl Pgp {
         }
         Ok(Decrypted {
             part: run.out,
-            signature: status::signature(&run.status),
+            signature: status::signature(&run.status).map(|found| self.named(found)),
         })
     }
 }

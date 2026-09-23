@@ -17,7 +17,7 @@ mod write;
 pub use error::PgpError;
 pub use gpg::Pgp;
 pub use inline::{Armor, Opened};
-pub use keys::{Key, Recipient};
+pub use keys::{Key, Recipient, UserId};
 pub use read::Decrypted;
 pub use status::{Signature, Trust, Verdict};
 pub use write::Readers;

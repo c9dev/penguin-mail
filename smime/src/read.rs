@@ -94,16 +94,17 @@ impl Smime {
         Ok(run.out)
     }
 
-    /// The signature with the signer's address filled in. gpgsm names a
-    /// signer by the subject of their certificate, and the address sits
-    /// inside the certificate, so this reads it out of the one the
-    /// fingerprint names.
+    /// The signature with the signer's addresses filled in. gpgsm names a
+    /// signer by the subject of their certificate, and the addresses sit
+    /// inside the certificate, so this reads them out of the one the
+    /// fingerprint names. The status lines carry none, so this is a second
+    /// run of gpgsm.
     fn named(&self, signature: Signature) -> Signature {
         let Some(fingerprint) = signature.fingerprint.as_deref() else {
             return signature;
         };
         Signature {
-            email: self.address_of(fingerprint),
+            emails: self.addresses_of(fingerprint),
             ..signature
         }
     }

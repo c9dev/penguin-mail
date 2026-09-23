@@ -291,7 +291,10 @@ fn a_signature_over_the_part_verifies_and_names_its_signer() {
     assert_eq!(found.verdict, Verdict::Good);
     assert!(found.is_good());
     assert_eq!(found.subject.as_deref(), Some("/CN=Ada Lovelace"));
-    assert_eq!(found.email.as_deref(), Some("ada@example.test"));
+    assert_eq!(
+        found.emails.first().map(String::as_str),
+        Some("ada@example.test")
+    );
     assert_eq!(found.chain, Chain::Trusted);
     assert_eq!(
         found.fingerprint.as_deref(),
@@ -329,7 +332,7 @@ fn a_signature_from_a_certificate_we_do_not_hold_says_so() {
 
     assert_eq!(found.verdict, Verdict::NoCertificate);
     assert!(!found.is_good());
-    assert_eq!(found.email, None);
+    assert!(found.emails.is_empty());
 }
 
 #[test]
@@ -350,7 +353,10 @@ fn a_chain_that_reaches_no_root_we_trust_says_so_beside_a_good_signature() {
 
     assert_eq!(found.verdict, Verdict::Good);
     assert_eq!(found.chain, Chain::Untrusted);
-    assert_eq!(found.email.as_deref(), Some("hopper@example.test"));
+    assert_eq!(
+        found.emails.first().map(String::as_str),
+        Some("hopper@example.test")
+    );
 }
 
 #[test]
@@ -365,7 +371,10 @@ fn a_certificate_that_has_run_out_still_names_its_signer() {
 
     assert_eq!(found.verdict, Verdict::ExpiredCertificate);
     assert!(!found.is_good());
-    assert_eq!(found.email.as_deref(), Some("grace@example.test"));
+    assert_eq!(
+        found.emails.first().map(String::as_str),
+        Some("grace@example.test")
+    );
 }
 
 #[test]
@@ -381,7 +390,10 @@ fn an_opaque_signature_gives_back_the_message_inside_it() {
     assert_eq!(opened.part, part);
     let signature = opened.signature;
     assert!(signature.is_good());
-    assert_eq!(signature.email.as_deref(), Some("ada@example.test"));
+    assert_eq!(
+        signature.emails.first().map(String::as_str),
+        Some("ada@example.test")
+    );
 }
 
 #[test]

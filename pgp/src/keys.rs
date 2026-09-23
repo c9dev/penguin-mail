@@ -5,7 +5,7 @@
 
 use crate::error::PgpError;
 use crate::gpg::{Pgp, user_id};
-use crate::status::Trust;
+use crate::status::{Signature, Trust};
 
 /// One address a message is going to, and what gpg holds for it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -29,7 +29,34 @@ pub struct Key {
     pub trust: Trust,
 }
 
+/// One name on a key, and how far the person's trust database vouches
+/// for it. gpg weighs each user id on its own: a key somebody vouched for
+/// under one name can carry another that its owner added and nobody
+/// vouched for.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UserId {
+    /// As `Ada Lovelace <ada@example.com>`.
+    pub user_id: String,
+    pub trust: Trust,
+}
+
 impl Pgp {
+    /// The signature with every name on its key filled in, from the local
+    /// keyring. A signature gpg could not tie to a key keeps none.
+    pub(crate) fn named(&self, mut signature: Signature) -> Signature {
+        let Some(fingerprint) = signature.fingerprint.clone() else {
+            return signature;
+        };
+        if let Ok(run) = self.run(&[], |command| {
+            command
+                .args(["--with-colons", "--list-keys", "--"])
+                .arg(fingerprint);
+        }) {
+            signature.user_ids = user_ids(&String::from_utf8_lossy(&run.out));
+        }
+        signature
+    }
+
     /// What gpg holds for each of `addresses`, in the order they were given.
     /// A caller offers encryption when every recipient has a key, and this
     /// says which one is missing when they do not.
@@ -111,6 +138,54 @@ pub fn usable(listing: &str, address: &str) -> Option<Key> {
         }
     }
     found.filter(|key| !key.fingerprint.is_empty())
+}
+
+/// The names on the first key of a `--with-colons` listing, each with the
+/// validity gpg gives it. A revoked or expired name names nobody.
+pub fn user_ids(listing: &str) -> Vec<UserId> {
+    let mut found = Vec::new();
+    let mut keys = 0;
+    for record in listing.lines() {
+        let fields: Vec<&str> = record.split(':').collect();
+        let field = |index: usize| fields.get(index).copied().unwrap_or_default();
+        match fields.first() {
+            Some(&"pub") => {
+                keys += 1;
+                if keys > 1 {
+                    break;
+                }
+            }
+            Some(&"uid") if trusted(field(1)) => found.push(UserId {
+                user_id: unescape(field(9)),
+                trust: trust(field(1)),
+            }),
+            _ => {}
+        }
+    }
+    found
+}
+
+/// A user id as gpg writes it in a colon listing, where a colon and a few
+/// other bytes come as `\x3a` and the like.
+fn unescape(field: &str) -> String {
+    let mut out = Vec::with_capacity(field.len());
+    let bytes = field.as_bytes();
+    let mut at = 0;
+    while at < bytes.len() {
+        if bytes[at] == b'\\'
+            && bytes.get(at + 1) == Some(&b'x')
+            && let Some(byte) = field
+                .get(at + 2..at + 4)
+                .and_then(|hex| u8::from_str_radix(hex, 16).ok())
+        {
+            out.push(byte);
+            at += 4;
+            continue;
+        }
+        out.push(bytes[at]);
+        at += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
 }
 
 /// Whether a key in this state can be used at all. Expired, revoked,

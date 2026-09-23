@@ -1357,23 +1357,23 @@ msgstr ""
 "alterar eventos no calendário de {account}, a reunião fica também marcada no "
 "seu calendário. A Google pede-lhe confirmação no navegador."
 
-#: app/src/pgp.rs:102
+#: app/src/pgp.rs:109
 msgid "Add a recipient whose key gpg holds."
 msgstr "Adicione um destinatário de quem o gpg tenha a chave."
 
-#: app/src/pgp.rs:111
+#: app/src/pgp.rs:118
 msgid "gpg holds no key for {addresses}."
 msgstr "O gpg não tem chave para {addresses}."
 
-#: app/src/pgp.rs:128
+#: app/src/pgp.rs:135
 msgid "gpg holds no key for any of the addresses you send from."
 msgstr "O gpg não tem chave para nenhum dos endereços de onde envia."
 
-#: app/src/pgp.rs:130
+#: app/src/pgp.rs:137
 msgid "gpg holds a key for {addresses}."
 msgstr "O gpg tem chave para {addresses}."
 
-#: app/src/pgp.rs:134
+#: app/src/pgp.rs:141
 msgid "gpg holds a key for {addresses}, and none for {without}."
 msgstr "O gpg tem chave para {addresses} e nenhuma para {without}."
 
@@ -1410,78 +1410,92 @@ msgstr ""
 msgid "A message goes out under one standard or the other. {pgp} {smime}"
 msgstr "Uma mensagem sai por uma norma ou pela outra. {pgp} {smime}"
 
-#: app/src/protection.rs:494
+#: app/src/protection.rs:532
+msgid ""
+"This key does not name {sender}, the address the message says it is from."
+msgstr ""
+"Esta chave não identifica {sender}, o endereço de onde a mensagem diz que vem."
+
+#: app/src/protection.rs:536
+msgid ""
+"This certificate does not name {sender}, the address the message says it is "
+"from."
+msgstr ""
+"Este certificado não identifica {sender}, o endereço de onde a mensagem diz "
+"que vem."
+
+#: app/src/protection.rs:545
 msgid "Signed by {signer}"
 msgstr "Assinada por {signer}"
 
-#: app/src/protection.rs:509
+#: app/src/protection.rs:551
 msgid "This message changed after it was signed"
 msgstr "Esta mensagem mudou depois de ter sido assinada"
 
-#: app/src/protection.rs:511
+#: app/src/protection.rs:553
 msgid "The signature of {signer} does not match what arrived."
 msgstr "A assinatura de {signer} não corresponde ao que chegou."
 
-#: app/src/protection.rs:518
+#: app/src/protection.rs:560
 msgid "Signed by {signer}, whose key has expired"
 msgstr "Assinada por {signer}, cuja chave expirou"
 
-#: app/src/protection.rs:522
+#: app/src/protection.rs:564
 msgid "The text is as it was written, and the key behind it ran out."
 msgstr "O texto está como foi escrito e a chave por trás dele expirou."
 
-#: app/src/protection.rs:528
+#: app/src/protection.rs:570
 msgid "Signed by {signer}, whose certificate has run out"
 msgstr "Assinada por {signer}, cujo certificado expirou"
 
-#: app/src/protection.rs:532
+#: app/src/protection.rs:574
 msgid ""
 "The text is as it was written, and the certificate behind it has expired."
 msgstr "O texto está como foi escrito e o certificado por trás dele expirou."
 
-#: app/src/protection.rs:538
+#: app/src/protection.rs:580
 msgid "Signed by {signer}, who took this key back"
 msgstr "Assinada por {signer}, que revogou esta chave"
 
-#: app/src/protection.rs:542
+#: app/src/protection.rs:584
 msgid "The owner revoked it, so it says nothing about who wrote this."
 msgstr "O dono revogou-a, por isso não diz nada sobre quem escreveu isto."
 
-#: app/src/protection.rs:548
+#: app/src/protection.rs:590
 msgid "Signed by {signer}, whose certificate was taken back"
 msgstr "Assinada por {signer}, cujo certificado foi revogado"
 
-#: app/src/protection.rs:552
+#: app/src/protection.rs:594
 msgid "Whoever issued it revoked it, so it says nothing about who wrote this."
 msgstr ""
 "Quem o emitiu revogou-o, por isso não diz nada sobre quem escreveu isto."
 
-#: app/src/protection.rs:558
+#: app/src/protection.rs:600
 msgid "Signed by {signer}, and the signature has run out"
 msgstr "Assinada por {signer}, e a assinatura expirou"
 
-#: app/src/protection.rs:562
+#: app/src/protection.rs:604
 msgid "It carried a date to stop being good on, and that date has passed."
 msgstr ""
 "Levava uma data a partir da qual deixava de valer, e essa data já passou."
 
-#: app/src/protection.rs:567
+#: app/src/protection.rs:609
 msgid "Signed by a key this computer does not hold"
 msgstr "Assinada por uma chave que este computador não tem"
 
-#: app/src/protection.rs:569
+#: app/src/protection.rs:611
 msgid "Nothing here can check it. Ask gpg for key {key}."
 msgstr "Nada aqui a consegue verificar. Peça ao gpg a chave {key}."
 
-#: app/src/protection.rs:576
+#: app/src/protection.rs:618
 msgid "it names"
 msgstr "que indica"
 
-#: app/src/protection.rs:582
+#: app/src/protection.rs:624
 msgid "Signed by a certificate this computer does not hold"
 msgstr "Assinada por um certificado que este computador não tem"
 
-#: app/src/protection.rs:584
+#: app/src/protection.rs:626
 msgid ""
 "The message carried none either, so there is nothing here to check it "
 "against."
@@ -1489,133 +1503,133 @@ msgstr ""
 "A mensagem também não o trazia, por isso não há aqui nada com que a "
 "verificar."
 
-#: app/src/protection.rs:590
+#: app/src/protection.rs:632
 msgid "gpg could not check this signature"
 msgstr "O gpg não conseguiu verificar esta assinatura"
 
-#: app/src/protection.rs:595
+#: app/src/protection.rs:637
 msgid "gpgsm could not check this signature"
 msgstr "O gpgsm não conseguiu verificar esta assinatura"
 
-#: app/src/protection.rs:613
+#: app/src/protection.rs:660
 msgid "Encrypted, and signed by {signer}"
 msgstr "Encriptada e assinada por {signer}"
 
-#: app/src/protection.rs:619
+#: app/src/protection.rs:669
 msgid "Encrypted. {what}"
 msgstr "Encriptada. {what}"
 
-#: app/src/protection.rs:625
+#: app/src/protection.rs:675
 msgid "This message arrived encrypted"
 msgstr "Esta mensagem chegou encriptada"
 
-#: app/src/protection.rs:627
+#: app/src/protection.rs:677
 msgid "Nobody signed it, so it says nothing about who sent it."
 msgstr "Ninguém a assinou, por isso não diz nada sobre quem a enviou."
 
-#: app/src/protection.rs:635
+#: app/src/protection.rs:685
 msgid "{detail} {files}"
 msgstr "{detail} {files}"
 
-#: app/src/protection.rs:649
+#: app/src/protection.rs:699
 msgid "This message is encrypted to a key you do not hold"
 msgstr "Esta mensagem está encriptada para uma chave que não tem"
 
-#: app/src/protection.rs:651
+#: app/src/protection.rs:701
 msgid "Whoever sent it used a key gpg has no secret half of."
 msgstr "Quem a enviou usou uma chave de que o gpg não tem a metade secreta."
 
-#: app/src/protection.rs:656
+#: app/src/protection.rs:706
 msgid "This message is encrypted to a certificate you do not hold"
 msgstr "Esta mensagem está encriptada para um certificado que não tem"
 
-#: app/src/protection.rs:658
+#: app/src/protection.rs:708
 msgid "Whoever sent it used a certificate gpgsm has no secret key for."
 msgstr ""
 "Quem a enviou usou um certificado de que o gpgsm não tem a chave secreta."
 
-#: app/src/protection.rs:664
+#: app/src/protection.rs:714
 msgid "This message says it is OpenPGP and is not"
 msgstr "Esta mensagem diz ser OpenPGP e não é"
 
-#: app/src/protection.rs:665
+#: app/src/protection.rs:715
 msgid "This message says it is S/MIME and is not"
 msgstr "Esta mensagem diz ser S/MIME e não é"
 
-#: app/src/protection.rs:668
+#: app/src/protection.rs:718
 msgid "Its parts are not where a signed or encrypted message keeps them."
 msgstr ""
 "As partes dela não estão onde uma mensagem assinada ou encriptada as guarda."
 
-#: app/src/protection.rs:674
+#: app/src/protection.rs:724
 msgid "gpg could not open this message"
 msgstr "O gpg não conseguiu abrir esta mensagem"
 
-#: app/src/protection.rs:675
+#: app/src/protection.rs:725
 msgid "gpgsm could not open this message"
 msgstr "O gpgsm não conseguiu abrir esta mensagem"
 
-#: app/src/protection.rs:688
+#: app/src/protection.rs:738
 msgid "You marked this key as one not to trust."
 msgstr "Marcou esta chave como não fiável."
 
-#: app/src/protection.rs:689
+#: app/src/protection.rs:739
 msgid "This is one of your own keys."
 msgstr "Esta é uma das suas chaves."
 
-#: app/src/protection.rs:690
+#: app/src/protection.rs:740
 msgid "You have vouched for this key."
 msgstr "Confirmou esta chave."
 
-#: app/src/protection.rs:691
+#: app/src/protection.rs:741
 msgid "People you trust have vouched for this key."
 msgstr "Pessoas em quem confia confirmaram esta chave."
 
-#: app/src/protection.rs:693
+#: app/src/protection.rs:743
 msgid "Nobody has vouched for this key, so it names no one."
 msgstr "Ninguém confirmou esta chave, por isso não identifica ninguém."
 
-#: app/src/protection.rs:696
+#: app/src/protection.rs:746
 msgid "Its certificate leads back to an authority you trust."
 msgstr "O certificado dela remete para uma autoridade em que confia."
 
-#: app/src/protection.rs:699
+#: app/src/protection.rs:749
 msgid "Its certificate leads back to nobody you trust, so it names no one."
 msgstr ""
 "O certificado dela não remete para ninguém em quem confie, por isso não "
 "identifica ninguém."
 
-#: app/src/protection.rs:702
+#: app/src/protection.rs:752
 msgid "Nothing here says who that certificate belongs to."
 msgstr "Nada aqui diz a quem pertence esse certificado."
 
-#: app/src/protection.rs:715
+#: app/src/protection.rs:788
 msgid "key {key}"
 msgstr "chave {key}"
 
-#: app/src/protection.rs:718
+#: app/src/protection.rs:791
 msgid "a key gpg would not name"
 msgstr "uma chave que o gpg não identificou"
 
-#: app/src/protection.rs:719
+#: app/src/protection.rs:792
 msgid "a certificate gpgsm would not name"
 msgstr "um certificado que o gpgsm não identificou"
 
-#: app/src/protection.rs:730
+#: app/src/protection.rs:803
 msgid "It carries a file, kept in this window only."
 msgstr "Leva um ficheiro, guardado apenas nesta janela."
 
-#: app/src/protection.rs:732
+#: app/src/protection.rs:805
 msgid "It carries {count} file, kept in this window only."
 msgid_plural "It carries {count} files, kept in this window only."
 msgstr[0] "Leva {count} ficheiro, guardado apenas nesta janela."
 msgstr[1] "Leva {count} ficheiros, guardados apenas nesta janela."
 
-#: app/src/protection.rs:818
+#: app/src/protection.rs:891
 msgid "{names} or {last}"
 msgstr "{names} ou {last}"
 
-#: app/src/protection.rs:830
+#: app/src/protection.rs:903
 msgid "{names} and {last}"
 msgstr "{names} e {last}"
 
@@ -2024,12 +2038,12 @@ msgstr "1 GB"
 msgid "4 GB"
 msgstr "4 GB"
 
-#: app/src/smime.rs:86
+#: app/src/smime.rs:93
 msgid "Add a recipient whose certificate gpgsm trusts."
 msgstr ""
 "Adicione um destinatário cujo certificado o gpgsm considere de confiança."
 
-#: app/src/smime.rs:96
+#: app/src/smime.rs:103
 msgid ""
 "gpgsm holds no trusted certificate for {addresses}. A certificate that only "
 "arrived in mail does not count."
@@ -2037,15 +2051,15 @@ msgstr ""
 "O gpgsm não tem certificado de confiança para {addresses}. Um certificado "
 "que só chegou por correio não conta."
 
-#: app/src/smime.rs:116
+#: app/src/smime.rs:123
 msgid "gpgsm holds no certificate for any of the addresses you send from."
 msgstr "O gpgsm não tem certificado para nenhum dos endereços de onde envia."
 
-#: app/src/smime.rs:118
+#: app/src/smime.rs:125
 msgid "gpgsm holds a certificate for {addresses}."
 msgstr "O gpgsm tem certificado para {addresses}."
 
-#: app/src/smime.rs:122
+#: app/src/smime.rs:129
 msgid "gpgsm holds a certificate for {addresses}, and none for {without}."
 msgstr "O gpgsm tem certificado para {addresses} e nenhum para {without}."
 

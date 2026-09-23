@@ -15,7 +15,9 @@ use mailrs_domain::{MessageBody, Protection};
 use mailrs_gmail::body::decode_charset;
 use mailrs_pgp::{Pgp, PgpError, Recipient, Signature, Trust, Verdict, inline};
 
-use crate::protection::{self, Found, Part, Read, Refusal, Signed, Signer, Standard, Vouched};
+use crate::protection::{
+    self, Found, Named, Part, Read, Refusal, Signed, Signer, Standard, Vouched,
+};
 
 /// Which call of the engine one message needs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -47,7 +49,12 @@ pub fn opening(body: &MessageBody) -> Option<Opening> {
 /// copy whose bytes a signature still covers. Every branch has an answer,
 /// including the ones where gpg refused, so the card never goes blank.
 pub fn read(pgp: &Pgp, opening: Opening, raw: &[u8], body: &MessageBody) -> Read {
-    protection::read(Standard::Pgp, open(pgp, opening, raw, body), body)
+    protection::read(
+        Standard::Pgp,
+        open(pgp, opening, raw, body),
+        body,
+        protection::from_address(raw).as_deref(),
+    )
 }
 
 /// What gpg found in the message, before anything is worded.
@@ -153,47 +160,70 @@ fn signed(signature: &Signature) -> Signed {
             Verdict::Unchecked => protection::Verdict::Unchecked,
         },
         signer: signer(signature),
-        vouched: match signature.trust {
-            Trust::Ultimate => Vouched::Own,
-            Trust::Full => Vouched::Yes,
-            Trust::Marginal => Vouched::Partly,
-            Trust::Unknown => Vouched::Nobody,
-            Trust::Never => Vouched::Never,
-        },
+        vouched: vouched(signature.trust),
     }
 }
 
-/// The name and address out of the user id gpg reports, which reads
-/// `Ada Lovelace <ada@example.com>`, a bare address, or a bare name.
+/// Who signed: the name out of the user id gpg reported, and every address
+/// on the key, each with the validity gpg gives that user id. A key gpg
+/// listed no names for falls back to the one user id in the status line,
+/// vouched for as far as the key is.
 fn signer(signature: &Signature) -> Signer {
     let key = signature.key_id.clone();
-    let Some(uid) = signature.signer.as_deref().map(str::trim) else {
-        return Signer {
-            key,
-            ..Signer::default()
-        };
-    };
+    let reported = signature.signer.as_deref().map(split_user_id);
+    let mut addresses: Vec<Named> = signature
+        .user_ids
+        .iter()
+        .filter_map(|named| {
+            let (_, address) = split_user_id(&named.user_id);
+            Some(Named {
+                address: address?,
+                vouched: vouched(named.trust),
+            })
+        })
+        .collect();
+    if addresses.is_empty()
+        && let Some((_, Some(address))) = &reported
+    {
+        addresses.push(Named {
+            address: address.clone(),
+            vouched: vouched(signature.trust),
+        });
+    }
+    Signer {
+        name: reported.and_then(|(name, _)| name),
+        addresses,
+        key,
+    }
+}
+
+/// The name and the address out of a user id, which reads
+/// `Ada Lovelace <ada@example.com>`, a bare address, or a bare name.
+fn split_user_id(uid: &str) -> (Option<String>, Option<String>) {
+    let uid = uid.trim();
     if let Some((name, rest)) = uid.rsplit_once('<')
         && let Some(address) = rest.strip_suffix('>')
     {
         let name = name.trim();
-        return Signer {
-            name: (!name.is_empty()).then(|| name.to_string()),
-            addresses: vec![address.trim().to_string()],
-            key,
-        };
+        return (
+            (!name.is_empty()).then(|| name.to_string()),
+            Some(address.trim().to_string()),
+        );
     }
     match uid.contains('@') {
-        true => Signer {
-            addresses: vec![uid.to_string()],
-            key,
-            ..Signer::default()
-        },
-        false => Signer {
-            name: Some(uid.to_string()),
-            key,
-            ..Signer::default()
-        },
+        true => (None, Some(uid.to_string())),
+        false => ((!uid.is_empty()).then(|| uid.to_string()), None),
+    }
+}
+
+/// How far gpg's trust database vouches, in the words both standards share.
+fn vouched(trust: Trust) -> Vouched {
+    match trust {
+        Trust::Ultimate => Vouched::Own,
+        Trust::Full => Vouched::Yes,
+        Trust::Marginal => Vouched::Partly,
+        Trust::Unknown => Vouched::Nobody,
+        Trust::Never => Vouched::Never,
     }
 }
 
@@ -342,6 +372,7 @@ mod tests {
             fingerprint: Some("F".repeat(40)),
             key_id: Some("1234567890ABCDEF".into()),
             trust,
+            user_ids: Vec::new(),
         }
     }
 
@@ -395,6 +426,7 @@ mod tests {
                 part: Part::Text("Meet at six.".into()),
             }),
             &MessageBody::default(),
+            Some("ada@example.test"),
         )
         .mark
     }
@@ -410,6 +442,7 @@ mod tests {
                 part: Part::Text("Meet at six.".into()),
             }),
             &MessageBody::default(),
+            Some("ada@example.test"),
         )
         .mark
     }
@@ -422,7 +455,9 @@ mod tests {
             mark.detail.as_deref(),
             Some("Nobody has vouched for this key, so it names no one.")
         );
-        assert_eq!(mark.tone, Tone::Good);
+        // The good tone says who wrote this, and a key nobody vouched for
+        // names nobody.
+        assert_eq!(mark.tone, Tone::Unchecked);
 
         let vouched = self::mark(&signature(Verdict::Good, Trust::Full));
         assert_eq!(
@@ -481,13 +516,13 @@ mod tests {
     fn a_user_id_gives_the_signer_a_name_and_an_address() {
         let named = signer(&signature(Verdict::Good, Trust::Full));
         assert_eq!(named.name.as_deref(), Some("Ada Lovelace"));
-        assert_eq!(named.addresses, ["ada@example.test"]);
+        assert_eq!(named.addresses[0].address, "ada@example.test");
         let bare = signer(&Signature {
             signer: Some("ada@example.test".into()),
             ..signature(Verdict::Good, Trust::Full)
         });
         assert_eq!(bare.name, None);
-        assert_eq!(bare.addresses, ["ada@example.test"]);
+        assert_eq!(bare.addresses[0].address, "ada@example.test");
     }
 
     #[test]
@@ -496,6 +531,7 @@ mod tests {
             Standard::Pgp,
             Err(refusal(PgpError::NotForYou)),
             &MessageBody::default(),
+            None,
         )
         .mark;
         assert_eq!(
@@ -812,9 +848,9 @@ mod tests {
         let arrived = body(&format!("Sent from my telephone\n{block}"));
         assert_eq!(opening(&arrived), Some(Opening::Inline));
 
-        // Inline PGP is read out of the text, so nothing here needs the raw
-        // message.
-        let read = read(&home.pgp, Opening::Inline, &[], &arrived);
+        // Inline PGP is read out of the text; the raw message lends only
+        // its From line.
+        let read = read(&home.pgp, Opening::Inline, &home.message(b"\r\n"), &arrived);
 
         assert_eq!(read.mark.tone, Tone::Good);
         let inside = read.body.expect("the text that was inside");

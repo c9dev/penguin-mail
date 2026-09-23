@@ -14,7 +14,9 @@ use mailrs_domain::MessageBody;
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_smime::{Chain, Recipient, Signature, Smime, SmimeError, Verdict};
 
-use crate::protection::{self, Found, Part, Read, Refusal, Signed, Signer, Standard, Vouched};
+use crate::protection::{
+    self, Found, Named, Part, Read, Refusal, Signed, Signer, Standard, Vouched,
+};
 
 /// Which call of the engine one message needs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -34,7 +36,12 @@ pub enum Opening {
 /// copy whose bytes a signature still covers. Every branch has an answer,
 /// including the ones where gpgsm refused, so the card never goes blank.
 pub fn read(smime: &Smime, opening: Opening, raw: &[u8], body: &MessageBody) -> Read {
-    protection::read(Standard::Smime, open(smime, opening, raw), body)
+    protection::read(
+        Standard::Smime,
+        open(smime, opening, raw),
+        body,
+        protection::from_address(raw).as_deref(),
+    )
 }
 
 /// What gpgsm found in the message, before anything is worded.
@@ -200,16 +207,31 @@ fn signed(signature: &Signature) -> Signed {
                 .subject
                 .as_deref()
                 .map(|subject| name(subject).to_string()),
-            addresses: signature.email.iter().cloned().collect(),
+            // The chain vouches for the whole certificate, so for every
+            // address on it alike.
+            addresses: signature
+                .emails
+                .iter()
+                .map(|address| Named {
+                    address: address.clone(),
+                    vouched: chain(signature.chain),
+                })
+                .collect(),
             // A certificate is named by its subject; a fingerprint on the
             // card would tell a reader nothing.
             key: None,
         },
-        vouched: match signature.chain {
-            Chain::Trusted => Vouched::Yes,
-            Chain::Untrusted => Vouched::Nobody,
-            Chain::Unknown => Vouched::Unsaid,
-        },
+        vouched: chain(signature.chain),
+    }
+}
+
+/// How far the chain vouches for a certificate, in the words both
+/// standards share.
+fn chain(chain: Chain) -> Vouched {
+    match chain {
+        Chain::Trusted => Vouched::Yes,
+        Chain::Untrusted => Vouched::Nobody,
+        Chain::Unknown => Vouched::Unsaid,
     }
 }
 
@@ -253,6 +275,7 @@ mod tests {
                 part: Part::Text("Meet at six.".into()),
             }),
             &MessageBody::default(),
+            Some("ada@example.test"),
         )
         .mark
     }
@@ -268,6 +291,7 @@ mod tests {
                 part: Part::Text("Meet at six.".into()),
             }),
             &MessageBody::default(),
+            Some("ada@example.test"),
         )
         .mark
     }
@@ -416,7 +440,7 @@ mod tests {
         Signature {
             verdict,
             subject: Some("/CN=Ada Lovelace/O=Example".into()),
-            email: Some("ada@example.test".into()),
+            emails: vec!["ada@example.test".into()],
             fingerprint: Some("F".repeat(40)),
             chain,
         }
@@ -478,7 +502,7 @@ mod tests {
     fn a_certificate_we_do_not_hold_is_its_own_answer() {
         let unknown = Signature {
             subject: None,
-            email: None,
+            emails: Vec::new(),
             fingerprint: None,
             ..signature(Verdict::NoCertificate, Chain::Unknown)
         };
@@ -517,6 +541,7 @@ mod tests {
             Standard::Smime,
             Err(refusal(SmimeError::NotForYou)),
             &MessageBody::default(),
+            None,
         )
         .mark;
         assert_eq!(

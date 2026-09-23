@@ -69,3 +69,27 @@ fn the_trust_comes_from_the_user_id_that_matches_the_address() {
     assert_eq!(key.trust, Trust::Marginal);
     assert_eq!(key.user_id, "Ada Lovelace <ada@example.test>");
 }
+
+#[test]
+fn every_user_id_on_a_key_comes_back_with_its_own_validity() {
+    let listing = "pub:f:255:22:01E8A2DA011C4521:1789905014:::f:::scESC:::::ed25519:::0:\n\
+         fpr:::::::::B40AA3E6E125733C83091B5201E8A2DA011C4521:\n\
+         uid:f::::1789905014::8E2B::Mallory <mallory@example.test>::::::::::0:\n\
+         uid:-::::1789905014::9F3C::The Boss <ceo@example.test>::::::::::0:\n\
+         uid:r::::1789905014::AB12::Old <old@example.test>::::::::::0:\n";
+    let found = mailrs_pgp::keys::user_ids(listing);
+    assert_eq!(
+        found,
+        [
+            mailrs_pgp::UserId {
+                user_id: "Mallory <mallory@example.test>".into(),
+                trust: Trust::Full,
+            },
+            mailrs_pgp::UserId {
+                user_id: "The Boss <ceo@example.test>".into(),
+                trust: Trust::Unknown,
+            },
+        ],
+        "a revoked user id names nobody"
+    );
+}

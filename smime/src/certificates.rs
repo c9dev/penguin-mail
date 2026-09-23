@@ -81,15 +81,19 @@ impl Smime {
             .collect())
     }
 
-    /// The address on the certificate with this fingerprint, for a
+    /// The addresses on the certificate with this fingerprint, for a
     /// signature that names one.
-    pub(crate) fn address_of(&self, fingerprint: &str) -> Option<String> {
-        let run = self
-            .read_only(&[], |command| {
-                command.args(["--with-colons", "--list-keys", "--", fingerprint]);
-            })
-            .ok()?;
-        first_email(&String::from_utf8_lossy(&run.out))
+    pub(crate) fn addresses_of(&self, fingerprint: &str) -> Vec<String> {
+        let Ok(run) = self.read_only(&[], |command| {
+            command.args(["--with-colons", "--list-keys", "--", fingerprint]);
+        }) else {
+            return Vec::new();
+        };
+        certificates(&String::from_utf8_lossy(&run.out))
+            .into_iter()
+            .next()
+            .map(|certificate| certificate.emails)
+            .unwrap_or_default()
     }
 
     /// One listing for everything in `wanted`. For encryption gpgsm checks
@@ -196,14 +200,6 @@ pub fn usable(listing: &str, address: &str, job: Job) -> Option<Certificate> {
                 email,
             })
         })
-}
-
-/// The first address in a listing, for a certificate looked up by its
-/// fingerprint rather than by an address.
-fn first_email(listing: &str) -> Option<String> {
-    certificates(listing)
-        .into_iter()
-        .find_map(|certificate| certificate.emails.into_iter().next())
 }
 
 /// The address inside angle brackets, for a user id that is one.

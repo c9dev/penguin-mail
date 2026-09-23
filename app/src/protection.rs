@@ -395,9 +395,18 @@ pub struct Signer {
     /// The name without the address, as "Ada Lovelace".
     pub name: Option<String>,
     /// The addresses the key or certificate names, in its own order.
-    pub addresses: Vec<String>,
+    pub addresses: Vec<Named>,
     /// The key id, for a signer the engine has no name for.
     pub key: Option<String>,
+}
+
+/// One address a key or certificate names, and how far the person's trust
+/// reaches it. OpenPGP vouches for each user id on its own, so a key
+/// somebody vouched for under one name can carry another nobody did.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Named {
+    pub address: String,
+    pub vouched: Vouched,
 }
 
 /// How far the person's own trust reaches the signer: their trust database
@@ -433,8 +442,15 @@ pub enum Refusal {
 /// What the window shows for a protected message, from what its engine
 /// found: the card, and a body cut from the bytes the engine checked or
 /// opened, whatever kind of message it was. `arrived` is the body Gmail
-/// read, which lends the new one only what came from the headers.
-pub fn read(standard: Standard, found: Result<Found, Refusal>, arrived: &MessageBody) -> Read {
+/// read, which lends the new one only what came from the headers. `from`
+/// is the address the message says it is from, which a signature has to
+/// name before the card calls it good.
+pub fn read(
+    standard: Standard,
+    found: Result<Found, Refusal>,
+    arrived: &MessageBody,
+    from: Option<&str>,
+) -> Read {
     let found = match found {
         Ok(found) => found,
         Err(refusal) => {
@@ -462,8 +478,8 @@ pub fn read(standard: Standard, found: Result<Found, Refusal>, arrived: &Message
     body.provenance = arrived.provenance.clone();
     body.protection = arrived.protection;
     let mark = match (&found.signature, found.encrypted) {
-        (Some(signed), false) => signed_mark(standard, signed),
-        (signature, true) => encrypted_mark(standard, signature.as_ref(), files.len()),
+        (Some(signed), false) => signed_mark(standard, signed, from),
+        (signature, true) => encrypted_mark(standard, signature.as_ref(), from, files.len()),
         // An engine that neither opened nor checked anything has nothing
         // to vouch for, which is what an unchecked signature says.
         (None, false) => signed_mark(
@@ -473,6 +489,7 @@ pub fn read(standard: Standard, found: Result<Found, Refusal>, arrived: &Message
                 signer: Signer::default(),
                 vouched: Vouched::Unsaid,
             },
+            from,
         ),
     };
     Read {
@@ -485,26 +502,51 @@ pub fn read(standard: Standard, found: Result<Found, Refusal>, arrived: &Message
 /// What the card says about a signature over a message that arrived in
 /// the clear. The verdict and the vouching answer different questions, so
 /// the title carries the one and the line under it the other.
-fn signed_mark(standard: Standard, signed: &Signed) -> Mark {
-    let who = signer_name(standard, &signed.signer);
+///
+/// A good signature earns the good tone only when the key or certificate
+/// names the address the message is from and the person's trust reaches
+/// that address. Anyone can make a key that says "Ada Lovelace", sign with
+/// it, and put Ada's address in From; the verdict alone would call that
+/// good, because the text is the text that key signed.
+fn signed_mark(standard: Standard, signed: &Signed, from: Option<&str>) -> Mark {
+    let sender = sender(&signed.signer, from);
+    let who = signer_name(standard, &signed.signer, sender);
     let signer = [("signer", who.as_str())];
     let pgp = standard == Standard::Pgp;
     match signed.verdict {
-        Verdict::Good => Mark {
-            title: fill(&gettext("Signed by {signer}"), &signer),
-            detail: Some(vouching(standard, signed.vouched)),
-            tone: match signed.vouched {
-                Vouched::Own | Vouched::Yes | Vouched::Partly => Tone::Good,
-                Vouched::Never => Tone::Bad,
-                Vouched::Nobody | Vouched::Unsaid => match standard {
-                    // Under OpenPGP the key is the name, so a key nobody
-                    // has vouched for still signs. Under S/MIME the chain
-                    // is the only thing that says who signed.
-                    Standard::Pgp => Tone::Good,
-                    Standard::Smime => Tone::Unchecked,
-                },
-            },
-        },
+        Verdict::Good => {
+            let vouched = match (signed.vouched, sender) {
+                (Vouched::Never, _) => Vouched::Never,
+                (_, Some(named)) => named.vouched,
+                (vouched, None) => vouched,
+            };
+            let tone = match (vouched, sender) {
+                (Vouched::Never, _) => Tone::Bad,
+                (Vouched::Own | Vouched::Yes | Vouched::Partly, Some(_)) => Tone::Good,
+                _ => Tone::Unchecked,
+            };
+            let detail = match (sender, from) {
+                (None, Some(from)) if vouched != Vouched::Never => fill(
+                    &match standard {
+                        Standard::Pgp => gettext(
+                            "This key does not name {sender}, the address the message says it \
+                             is from.",
+                        ),
+                        Standard::Smime => gettext(
+                            "This certificate does not name {sender}, the address the message \
+                             says it is from.",
+                        ),
+                    },
+                    &[("sender", from)],
+                ),
+                _ => vouching(standard, vouched),
+            };
+            Mark {
+                title: fill(&gettext("Signed by {signer}"), &signer),
+                detail: Some(detail),
+                tone,
+            }
+        }
         Verdict::Bad => Mark {
             title: gettext("This message changed after it was signed"),
             detail: Some(fill(
@@ -601,17 +643,25 @@ fn signed_mark(standard: Standard, signed: &Signed) -> Mark {
 
 /// What the card says about a message that arrived encrypted, with the
 /// signature that travelled inside it when it carried one.
-fn encrypted_mark(standard: Standard, signed: Option<&Signed>, files: usize) -> Mark {
+fn encrypted_mark(
+    standard: Standard,
+    signed: Option<&Signed>,
+    from: Option<&str>,
+    files: usize,
+) -> Mark {
     let mut mark = match signed {
         Some(signed) => {
-            let inside = signed_mark(standard, signed);
+            let inside = signed_mark(standard, signed, from);
             match signed.verdict {
                 // The one case the card says in a single sentence rather
                 // than in two.
                 Verdict::Good => Mark {
                     title: fill(
                         &gettext("Encrypted, and signed by {signer}"),
-                        &[("signer", &signer_name(standard, &signed.signer))],
+                        &[(
+                            "signer",
+                            &signer_name(standard, &signed.signer, sender(&signed.signer, from)),
+                        )],
                     ),
                     ..inside
                 },
@@ -704,10 +754,33 @@ fn vouching(standard: Standard, vouched: Vouched) -> String {
     }
 }
 
+/// The address the signer names that the message says it is from.
+fn sender<'a>(signer: &'a Signer, from: Option<&str>) -> Option<&'a Named> {
+    let from = from?;
+    signer
+        .addresses
+        .iter()
+        .find(|named| same(&named.address, from))
+}
+
+/// The address the message says it is from, out of its own headers.
+/// This is the From line the window shows above the message, so it is the
+/// one a signature has to name.
+pub fn from_address(raw: &[u8]) -> Option<String> {
+    let parsed = MessageParser::default().parse_headers(raw)?;
+    let address = parsed.from()?.first()?.address()?.trim().to_string();
+    (!address.is_empty()).then_some(address)
+}
+
 /// Who signed, as "Ada Lovelace <ada@example.test>" when the key or
-/// certificate gives both, and as whatever it gives otherwise.
-fn signer_name(standard: Standard, signer: &Signer) -> String {
-    match (&signer.name, signer.addresses.first(), &signer.key) {
+/// certificate gives both, and as whatever it gives otherwise. The address
+/// is `sender` when the signer names the one the message is from, and the
+/// first it names otherwise.
+fn signer_name(standard: Standard, signer: &Signer, sender: Option<&Named>) -> String {
+    let address = sender
+        .or(signer.addresses.first())
+        .map(|named| &named.address);
+    match (&signer.name, address, &signer.key) {
         (Some(name), Some(address), _) => format!("{name} <{address}>"),
         (Some(name), None, _) => name.clone(),
         (None, Some(address), _) => address.clone(),
@@ -1213,6 +1286,95 @@ mod tests {
         // window finds them when somebody asks to save or open one.
         assert_eq!(files.len(), 1);
         assert_eq!(files[0], vec![0x89, 0x50, 0x4e, 0x47, 1, 2, 3, 4]);
+    }
+
+    /// A good signature from a key or certificate that names `addresses`,
+    /// each vouched for as far as it says, on a message from `from`.
+    fn good_from(
+        standard: Standard,
+        addresses: &[(&str, Vouched)],
+        vouched: Vouched,
+        from: &str,
+    ) -> Mark {
+        let found = Found {
+            encrypted: false,
+            signature: Some(Signed {
+                verdict: Verdict::Good,
+                signer: Signer {
+                    name: Some("Ada Lovelace".into()),
+                    addresses: addresses
+                        .iter()
+                        .map(|(address, vouched)| Named {
+                            address: address.to_string(),
+                            vouched: *vouched,
+                        })
+                        .collect(),
+                    key: None,
+                },
+                vouched,
+            }),
+            part: Part::Text("Meet at six.".into()),
+        };
+        read(standard, Ok(found), &MessageBody::default(), Some(from)).mark
+    }
+
+    #[test]
+    fn a_vouched_signer_who_sent_the_message_gets_the_good_tone() {
+        for standard in [Standard::Pgp, Standard::Smime] {
+            let mark = good_from(
+                standard,
+                &[("ada@example.test", Vouched::Yes)],
+                Vouched::Yes,
+                "Ada@Example.test",
+            );
+            assert_eq!(mark.tone, Tone::Good, "{standard:?} {mark:?}");
+            assert_eq!(mark.title, "Signed by Ada Lovelace <ada@example.test>");
+        }
+    }
+
+    #[test]
+    fn a_key_nobody_vouched_for_is_not_good_under_either_standard() {
+        for standard in [Standard::Pgp, Standard::Smime] {
+            let mark = good_from(
+                standard,
+                &[("ada@example.test", Vouched::Nobody)],
+                Vouched::Nobody,
+                "ada@example.test",
+            );
+            assert_eq!(mark.tone, Tone::Unchecked, "{standard:?} {mark:?}");
+        }
+    }
+
+    #[test]
+    fn a_signer_who_is_not_the_sender_is_not_good_and_the_card_says_why() {
+        for standard in [Standard::Pgp, Standard::Smime] {
+            let mark = good_from(
+                standard,
+                &[("ada@example.test", Vouched::Yes)],
+                Vouched::Yes,
+                "bank@example.test",
+            );
+            assert_eq!(mark.tone, Tone::Unchecked, "{standard:?} {mark:?}");
+            let detail = mark.detail.unwrap_or_default();
+            assert!(detail.contains("bank@example.test"), "{detail}");
+        }
+    }
+
+    #[test]
+    fn the_address_the_message_came_from_is_the_one_whose_vouching_counts() {
+        // Somebody vouched for the key under one name, and its owner added
+        // another name to it, which nobody vouched for.
+        let mark = good_from(
+            Standard::Pgp,
+            &[
+                ("mallory@example.test", Vouched::Yes),
+                ("ceo@example.test", Vouched::Nobody),
+            ],
+            Vouched::Yes,
+            "ceo@example.test",
+        );
+        assert_eq!(mark.tone, Tone::Unchecked, "{mark:?}");
+        assert_eq!(mark.title, "Signed by Ada Lovelace <ceo@example.test>");
     }
 
     #[test]

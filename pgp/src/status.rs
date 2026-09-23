@@ -18,6 +18,10 @@ pub struct Signature {
     /// How far the owner of the signing key is trusted, which is a separate
     /// question from whether the signature matches.
     pub trust: Trust,
+    /// Every name on the signing key, each with its own validity. The
+    /// status lines give only one, so [`crate::Pgp::verify`] and the other
+    /// reads fill these from the keyring once gpg names the key.
+    pub user_ids: Vec<crate::UserId>,
 }
 
 impl Signature {
@@ -108,6 +112,7 @@ pub fn signature<S: AsRef<str>>(status: &[S]) -> Option<Signature> {
             fingerprint: None,
             key_id: (!key_id.is_empty()).then(|| key_id.to_string()),
             trust: Trust::Unknown,
+            user_ids: Vec::new(),
         });
     }
     found

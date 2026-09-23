@@ -16,10 +16,10 @@ pub struct Signature {
     /// distinguished name: `/CN=Ada Lovelace/O=Example`. Absent when gpgsm
     /// has no certificate to name.
     pub subject: Option<String>,
-    /// The address on that certificate. It sits in the certificate rather
-    /// than in the status lines, so [`crate::Smime::verify`] looks it up
-    /// and fills it in.
-    pub email: Option<String>,
+    /// The addresses on that certificate, in its own order. They sit in
+    /// the certificate rather than in the status lines, so
+    /// [`crate::Smime::verify`] looks them up and fills them in.
+    pub emails: Vec<String>,
     /// The signing certificate's fingerprint, which gpgsm reports for a
     /// signature it could check.
     pub fingerprint: Option<String>,
@@ -120,7 +120,7 @@ pub fn signature<S: AsRef<str>>(status: &[S]) -> Option<Signature> {
         found = Some(Signature {
             verdict,
             subject,
-            email: None,
+            emails: Vec::new(),
             fingerprint,
             chain: Chain::Unknown,
         });

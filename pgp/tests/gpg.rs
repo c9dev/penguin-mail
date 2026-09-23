@@ -227,6 +227,15 @@ fn a_signature_over_the_part_verifies_and_names_its_signer() {
     );
     assert_eq!(found.trust, mailrs_pgp::Trust::Ultimate);
     assert!(found.fingerprint.is_some());
+    // Every name on the key, so a reader can tell whether it names the
+    // address the message came from.
+    assert_eq!(
+        found.user_ids,
+        [mailrs_pgp::UserId {
+            user_id: "Ada Lovelace <ada@example.test>".into(),
+            trust: mailrs_pgp::Trust::Ultimate,
+        }]
+    );
 }
 
 #[test]

@@ -13,6 +13,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - An S/MIME message encrypts only to certificates you trust. Opening a
   stranger's signed message used to store their certificate, and the next
   message to the address it named could go to them.
+- "Signed by" turns green only when you trust the key and it belongs to
+  the address the message is from. A key nobody vouched for, or one that
+  names somebody else, now says so on the card.
 
 ## 0.1.7 (2026-09-23)
 

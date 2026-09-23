@@ -69,7 +69,7 @@ impl Pgp {
         let run = self.run(block.as_bytes(), |command| {
             command.arg("--decrypt");
         })?;
-        let signature = status::signature(&run.status);
+        let signature = status::signature(&run.status).map(|found| self.named(found));
         if !run.ok && signature.is_none() && !run.says("DECRYPTION_OKAY") {
             return Err(run.failure());
         }
