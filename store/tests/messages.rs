@@ -208,11 +208,17 @@ fn each_message_of_a_thread_carries_its_own_labels() {
         metas.into_iter().map(|m| (m.id, m.label_ids)).collect()
     };
     let expected = vec![
-        ("a".to_string(), vec!["INBOX".to_string(), "UNREAD".to_string()]),
+        (
+            "a".to_string(),
+            vec!["INBOX".to_string(), "UNREAD".to_string()],
+        ),
         ("b".to_string(), vec!["SENT".to_string()]),
         ("c".to_string(), vec![]),
     ];
-    assert_eq!(labels(messages::thread_messages(&conn, id, "t1").unwrap()), expected);
+    assert_eq!(
+        labels(messages::thread_messages(&conn, id, "t1").unwrap()),
+        expected
+    );
     let ids: Vec<String> = ["c", "a", "b", "z"].iter().map(|s| s.to_string()).collect();
     assert_eq!(labels(messages::by_ids(&conn, id, &ids).unwrap()), expected);
 }

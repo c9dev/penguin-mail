@@ -756,7 +756,10 @@ pub fn label_counts(conn: &Connection) -> Result<LabelCounts> {
     )?;
     let mut rows = every.query([])?;
     while let Some(row) = rows.next()? {
-        counts.entry((row.get(0)?, row.get(1)?)).or_default().threads = row.get(2)?;
+        counts
+            .entry((row.get(0)?, row.get(1)?))
+            .or_default()
+            .threads = row.get(2)?;
     }
     let mut unread = conn.prepare_cached(&format!(
         "SELECT d.account_id, d.label_id, COUNT(*) FROM thread_labels u \

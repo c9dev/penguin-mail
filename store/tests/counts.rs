@@ -71,7 +71,9 @@ fn label_counts_follow_the_messages_of_a_partly_trashed_thread() {
     );
     let counts = threads::label_counts(&conn).unwrap();
     for account in [a, b] {
-        for label in ["INBOX", "SENT", "UNREAD", "TRASH", "SPAM", "Label_x", "Label_y"] {
+        for label in [
+            "INBOX", "SENT", "UNREAD", "TRASH", "SPAM", "Label_x", "Label_y",
+        ] {
             let filter = ThreadFilter::account(account, label);
             assert_eq!(
                 counts.account(account, label),
@@ -83,12 +85,36 @@ fn label_counts_follow_the_messages_of_a_partly_trashed_thread() {
             );
         }
     }
-    assert_eq!(counts.account(a, "INBOX"), Count { threads: 5, unread: 3 });
-    assert_eq!(counts.account(a, "Label_x"), Count { threads: 1, unread: 0 });
-    assert_eq!(counts.account(a, "SENT"), Count { threads: 1, unread: 0 });
+    assert_eq!(
+        counts.account(a, "INBOX"),
+        Count {
+            threads: 5,
+            unread: 3
+        }
+    );
+    assert_eq!(
+        counts.account(a, "Label_x"),
+        Count {
+            threads: 1,
+            unread: 0
+        }
+    );
+    assert_eq!(
+        counts.account(a, "SENT"),
+        Count {
+            threads: 1,
+            unread: 0
+        }
+    );
     assert_eq!(counts.account(b, "Label_y"), Count::default());
     // Its reply in the Trash is not spam, so the thread shows there.
-    assert_eq!(counts.account(b, "TRASH"), Count { threads: 1, unread: 1 });
+    assert_eq!(
+        counts.account(b, "TRASH"),
+        Count {
+            threads: 1,
+            unread: 1
+        }
+    );
 }
 
 #[test]
