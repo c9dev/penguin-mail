@@ -10,6 +10,9 @@ name: penguin-mail
 title: Penguin Mail
 base: core26
 adopt-info: penguin-mail
+# Named here because the store could not find the icon the desktop file
+# names by theme lookup, and refused the upload for it.
+icon: app/data/icons/scalable/apps/io.github.c9dev.PenguinMail.svg
 license: GPL-3.0-or-later
 grade: stable
 confinement: strict
