@@ -9,6 +9,7 @@ pub use outbox::SendAsAddress;
 mod threads;
 mod window;
 mod writes;
+pub use writes::Relabelled;
 
 use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex};

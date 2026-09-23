@@ -32,21 +32,7 @@ impl<G: GmailApi> AccountSync<G> {
     ) -> Result<(), SyncError> {
         self.triage_all(&[Target::thread(self.account_id, thread_id)], action)
             .await
-    }
-
-    /// Applies `action` to one message of a thread, as the list does when
-    /// conversation grouping is off.
-    pub async fn triage_message(
-        &self,
-        thread_id: &str,
-        message_id: &str,
-        action: &TriageAction,
-    ) -> Result<(), SyncError> {
-        let target = Target {
-            message_id: Some(message_id.to_string()),
-            ..Target::thread(self.account_id, thread_id)
-        };
-        self.triage_all(&[target], action).await
+            .map(drop)
     }
 
     /// Erases a thread, or one message of it, from Gmail and then from the
@@ -115,17 +101,21 @@ impl<G: GmailApi> AccountSync<G> {
     /// On a refusal the messages Gmail did not take lose this action's
     /// change again, a `WriteFailed` event says so, and the caller reports
     /// the failure against each target it handed in. Messages Gmail took
-    /// keep it, since Gmail has them that way. The undo reverses only this
-    /// action's labels rather than restoring a copy taken before it: a
+    /// keep it, since Gmail has them that way. The rollback reverses only
+    /// this action's labels rather than restoring a copy taken before it: a
     /// replay during the retries may have stored newer changes, such as an
     /// archive made in the browser, and history will not send them again.
+    ///
+    /// On success it returns what the action changed on each message, which
+    /// is what Undo reverses: a message that already had a label the action
+    /// adds, or lacked one it removes, changed less than the action names.
     pub async fn triage_all(
         &self,
         targets: &[Target],
         action: &TriageAction,
-    ) -> Result<(), SyncError> {
+    ) -> Result<Vec<Relabelled>, SyncError> {
         if targets.is_empty() {
-            return Ok(());
+            return Ok(Vec::new());
         }
         let account_id = self.account_id;
         let wanted = messages_wanted(targets);
@@ -136,19 +126,19 @@ impl<G: GmailApi> AccountSync<G> {
         self.ensure_threads(&threads).await?;
 
         let (add, remove) = action.label_delta();
-        let snapshot: Vec<(String, Vec<String>)> = {
+        let snapshot: Vec<(String, String, Vec<String>)> = {
             let (wanted, add, remove) = (wanted.clone(), add.clone(), remove.clone());
             self.db
                 .write(move |c| {
-                    let mut before: Vec<(String, Vec<String>)> = Vec::new();
+                    let mut before: Vec<(String, String, Vec<String>)> = Vec::new();
                     for (thread, only) in &wanted {
                         for message in messages::thread_messages(c, account_id, thread)? {
                             if only.as_ref().is_none_or(|ids| ids.contains(&message.id)) {
-                                before.push((message.id, message.label_ids));
+                                before.push((thread.clone(), message.id, message.label_ids));
                             }
                         }
                     }
-                    for (id, _) in &before {
+                    for (_, id, _) in &before {
                         messages::add_labels(c, account_id, id, &add)?;
                         messages::remove_labels(c, account_id, id, &remove)?;
                     }
@@ -161,7 +151,7 @@ impl<G: GmailApi> AccountSync<G> {
         };
         self.emit_threads(threads.clone());
 
-        let ids: Vec<String> = snapshot.iter().map(|(id, _)| id.clone()).collect();
+        let ids: Vec<String> = snapshot.iter().map(|(_, id, _)| id.clone()).collect();
         let writing = Writing {
             action,
             conversations: threads.len(),
@@ -175,19 +165,13 @@ impl<G: GmailApi> AccountSync<G> {
             let rolled_back = threads.clone();
             self.db
                 .write(move |c| {
-                    for (id, before) in snapshot.iter().filter(|(id, _)| !taken.contains(id)) {
-                        let added: Vec<String> = add
-                            .iter()
-                            .filter(|l| !before.contains(l))
-                            .cloned()
-                            .collect();
-                        let removed: Vec<String> = remove
-                            .iter()
-                            .filter(|l| before.contains(l))
-                            .cloned()
-                            .collect();
-                        messages::remove_labels(c, account_id, id, &added)?;
-                        messages::add_labels(c, account_id, id, &removed)?;
+                    for (thread, id, before) in &snapshot {
+                        if taken.contains(id) {
+                            continue;
+                        }
+                        let change = Relabelled::from_labels(thread, id, before, &add, &remove);
+                        messages::remove_labels(c, account_id, id, &change.added)?;
+                        messages::add_labels(c, account_id, id, &change.removed)?;
                     }
                     for thread in &rolled_back {
                         messages::refresh_thread(c, account_id, thread)?;
@@ -202,7 +186,10 @@ impl<G: GmailApi> AccountSync<G> {
             });
             return Err(err.into());
         }
-        Ok(())
+        Ok(snapshot
+            .iter()
+            .map(|(thread, id, before)| Relabelled::from_labels(thread, id, before, &add, &remove))
+            .collect())
     }
 
     /// Fetches the threads the store does not hold yet, several at a time.
@@ -329,6 +316,50 @@ impl<G: GmailApi> AccountSync<G> {
         }
         let _waiting = self.waiting();
         tokio::time::sleep(delay).await;
+    }
+}
+
+/// What a label change did to one message: the labels it put on that the
+/// message lacked, and the ones it took off that the message had. Undo
+/// reverses exactly this, so a message that was already read stays read
+/// when marking its thread read is undone.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Relabelled {
+    pub thread_id: String,
+    pub message_id: String,
+    pub added: Vec<String>,
+    pub removed: Vec<String>,
+}
+
+impl Relabelled {
+    /// The change `add` and `remove` make to a message that carried
+    /// `before`.
+    fn from_labels(
+        thread_id: &str,
+        message_id: &str,
+        before: &[String],
+        add: &[String],
+        remove: &[String],
+    ) -> Relabelled {
+        Relabelled {
+            thread_id: thread_id.to_string(),
+            message_id: message_id.to_string(),
+            added: add
+                .iter()
+                .filter(|l| !before.contains(l))
+                .cloned()
+                .collect(),
+            removed: remove
+                .iter()
+                .filter(|l| before.contains(l))
+                .cloned()
+                .collect(),
+        }
+    }
+
+    /// Whether the message came out as it went in.
+    pub fn is_empty(&self) -> bool {
+        self.added.is_empty() && self.removed.is_empty()
     }
 }
 

@@ -5,6 +5,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Fixed
+
+- Undo puts back only what the action changed. Undoing Trash on an archived
+  conversation leaves it archived instead of moving it to the inbox, and
+  undoing Mark as Read leaves the messages you had already read as read.
+
 ## 0.1.7 (2026-09-23)
 
 ### New

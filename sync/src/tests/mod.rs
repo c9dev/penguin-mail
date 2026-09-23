@@ -19,6 +19,7 @@ mod senders;
 mod settings;
 mod thread_open;
 mod triage;
+mod undo;
 
 use std::collections::HashMap;
 use std::sync::Arc;
