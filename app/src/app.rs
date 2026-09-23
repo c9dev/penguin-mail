@@ -545,6 +545,20 @@ impl App {
         }
     }
 
+    /// Asks Gmail at once for the send-as addresses of an account that
+    /// signed in again. Signing in again is how a person repairs an
+    /// account, and an alias they added meanwhile would otherwise wait for
+    /// the daily check. A new account is asked when it first loads.
+    pub fn signed_in(self: &Rc<Self>, account: &Account) {
+        if self.account(account.id).is_none() {
+            return;
+        }
+        self.change_settings(Change::SignedInAgain {
+            account: account.email.clone(),
+        });
+        self.refresh_send_as(std::slice::from_ref(account));
+    }
+
     /// Every account, in the order the store lists them.
     pub fn accounts(&self) -> Vec<Account> {
         self.accounts.borrow().clone()

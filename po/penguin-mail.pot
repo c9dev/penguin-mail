@@ -2124,7 +2124,7 @@ msgstr ""
 msgid "New Message"
 msgstr ""
 
-#: app/src/tray.rs:159 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2169
+#: app/src/tray.rs:159 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2172
 msgid "Check for Mail"
 msgstr ""
 
@@ -2142,7 +2142,7 @@ msgstr ""
 msgid "Check for Updates"
 msgstr ""
 
-#: app/src/tray.rs:175 app/src/ui/window.rs:2181
+#: app/src/tray.rs:175 app/src/ui/window.rs:2184
 #: app/src/ui/window/shortcuts.rs:508
 msgid "Quit"
 msgstr ""
@@ -2173,7 +2173,7 @@ msgstr ""
 msgid "License"
 msgstr ""
 
-#: app/src/ui/about.rs:170 app/src/ui/window.rs:2180
+#: app/src/ui/about.rs:170 app/src/ui/window.rs:2183
 msgid "About Penguin Mail"
 msgstr ""
 
@@ -2355,7 +2355,7 @@ msgid "Edit {server}"
 msgstr ""
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1411
-#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:2004
+#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:2007
 msgid "Remove"
 msgstr ""
 
@@ -3561,7 +3561,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2262
+#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2265
 msgid "Add an account first"
 msgstr ""
 
@@ -4361,7 +4361,7 @@ msgstr ""
 msgid "Rules…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2172
+#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2175
 msgid "Hide My Email…"
 msgstr ""
 
@@ -4719,7 +4719,7 @@ msgstr ""
 msgid "%a, %-d %b %Y"
 msgstr ""
 
-#: app/src/ui/welcome.rs:10 app/src/ui/window.rs:1946
+#: app/src/ui/welcome.rs:10 app/src/ui/window.rs:1949
 msgid "Sign In with Google"
 msgstr ""
 
@@ -4984,61 +4984,61 @@ msgstr ""
 msgid "Added {account}. Downloading mail…"
 msgstr ""
 
-#: app/src/ui/window.rs:1956
+#: app/src/ui/window.rs:1959
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr ""
 
-#: app/src/ui/window.rs:1958
+#: app/src/ui/window.rs:1961
 msgid "Get a Release"
 msgstr ""
 
-#: app/src/ui/window.rs:1997
+#: app/src/ui/window.rs:2000
 msgid "Remove {account}?"
 msgstr ""
 
-#: app/src/ui/window.rs:2001
+#: app/src/ui/window.rs:2004
 msgid ""
 "Its downloaded mail and saved sign-in are deleted from this computer. "
 "Nothing changes in Gmail."
 msgstr ""
 
-#: app/src/ui/window.rs:2017
+#: app/src/ui/window.rs:2020
 msgid "Removed {account}"
 msgstr ""
 
-#: app/src/ui/window.rs:2019
+#: app/src/ui/window.rs:2022
 msgid "Could not remove {account}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:2170
+#: app/src/ui/window.rs:2173
 msgid "Add Account…"
 msgstr ""
 
-#: app/src/ui/window.rs:2171
+#: app/src/ui/window.rs:2174
 msgid "New Smart Mailbox…"
 msgstr ""
 
-#: app/src/ui/window.rs:2178 app/src/ui/window/shortcuts.rs:485
+#: app/src/ui/window.rs:2181 app/src/ui/window/shortcuts.rs:485
 msgid "Preferences"
 msgstr ""
 
-#: app/src/ui/window.rs:2179
+#: app/src/ui/window.rs:2182
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: app/src/ui/window.rs:2187 app/src/ui/window.rs:2189
+#: app/src/ui/window.rs:2190 app/src/ui/window.rs:2192
 msgid "Main Menu"
 msgstr ""
 
-#: app/src/ui/window.rs:2442
+#: app/src/ui/window.rs:2445
 msgid "Open a message from the person first"
 msgstr ""
 
-#: app/src/ui/window.rs:2513
+#: app/src/ui/window.rs:2516
 msgid "Penguin Mail shows the new language after a restart"
 msgstr ""
 
-#: app/src/ui/window.rs:2515 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:2518 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr ""
 

@@ -1936,6 +1936,9 @@ impl MainWindow {
                         &gettext("Added {account}. Downloading mail…"),
                         &[("account", &account.email)],
                     ));
+                    if let Some(app) = this.app.upgrade() {
+                        app.signed_in(&account);
+                    }
                     this.refresh_accounts(Reload::Yes);
                 }
                 Err(err) => this.toast(&err.to_string()),

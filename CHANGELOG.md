@@ -53,6 +53,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Signing an account in again fetches the addresses it can send from. An
+  alias added in Gmail used to take up to a day to reach the From menu.
 - Installed from the tarball into a folder with a space in its path,
   Penguin Mail starts from the app grid and at login, where the launcher
   used to run nothing.
