@@ -1803,8 +1803,8 @@ msgstr[1] "{count} anexos"
 msgid "Quick Look"
 msgstr "Vista rápida"
 
-#: app/src/render.rs:374 app/src/ui/window/attachments.rs:318
-#: app/src/ui/window/attachments.rs:324
+#: app/src/render.rs:374 app/src/ui/window/attachments.rs:319
+#: app/src/ui/window/attachments.rs:325
 msgid "Save to Downloads"
 msgstr "Guardar nas transferências"
 
@@ -5190,11 +5190,11 @@ msgstr "Não foi possível incluir {file}: {reason}"
 msgid "Downloading {file}…"
 msgstr "A transferir {file}…"
 
-#: app/src/ui/window.rs:1879 app/src/ui/window/attachments.rs:228
+#: app/src/ui/window.rs:1879 app/src/ui/window/attachments.rs:229
 msgid "Saved {file} to Downloads"
 msgstr "{file} guardado nas transferências"
 
-#: app/src/ui/window.rs:1897 app/src/ui/window/attachments.rs:233
+#: app/src/ui/window.rs:1897 app/src/ui/window/attachments.rs:234
 msgid "Could not save {file}: {reason}"
 msgstr "Não foi possível guardar {file}: {reason}"
 
@@ -5315,15 +5315,15 @@ msgstr[1] "{count} anexos guardados em {folder}"
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr "{count} guardados em {folder}. Não foi possível guardar {files}"
 
-#: app/src/ui/window/attachments.rs:278
+#: app/src/ui/window/attachments.rs:279
 msgid "Could not open {file}"
 msgstr "Não foi possível abrir {file}"
 
-#: app/src/ui/window/attachments.rs:322 app/src/ui/window/attachments.rs:325
+#: app/src/ui/window/attachments.rs:323 app/src/ui/window/attachments.rs:326
 msgid "Open in Another Program"
 msgstr "Abrir noutro programa"
 
-#: app/src/ui/window/attachments.rs:329
+#: app/src/ui/window/attachments.rs:330
 msgid "{file}, preview"
 msgstr "{file}, pré-visualização"
 

@@ -215,9 +215,10 @@ impl MainWindow {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let wanted = name.clone();
-            let saved = gio::spawn_blocking(move || save_under_free_name(&downloads, &wanted, write))
-                .await
-                .unwrap_or_else(|panic| std::panic::resume_unwind(panic));
+            let saved =
+                gio::spawn_blocking(move || save_under_free_name(&downloads, &wanted, write))
+                    .await
+                    .unwrap_or_else(|panic| std::panic::resume_unwind(panic));
             match saved {
                 Ok(path) => {
                     let shown = path
@@ -391,9 +392,7 @@ impl MainWindow {
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_else(|| "attachment".into());
         let source = source.to_path_buf();
-        self.save_to_downloads(name, move |target| {
-            std::fs::copy(&source, target).map(drop)
-        });
+        self.save_to_downloads(name, move |target| std::fs::copy(&source, target).map(drop));
     }
 }
 
