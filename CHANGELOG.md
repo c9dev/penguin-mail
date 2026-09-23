@@ -7,6 +7,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Opening an attachment no longer leaves a copy behind for good. The copy
+  only you can read goes when its preview closes, or the next time Penguin
+  Mail starts, and a copy of a file from encrypted mail goes when the
+  window closes.
+- Opening a large photo no longer holds up the window while it loads.
 - Reply on a new-mail notification answers that mail, and no longer the
   conversation you opened while it was still loading.
 - The toast after moving mail to a label with an ampersand in its name,

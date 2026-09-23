@@ -51,6 +51,7 @@ mod notice;
 mod organize;
 mod outbox;
 mod pgp;
+mod previews;
 mod reach;
 mod reminders;
 mod reveal;
@@ -139,6 +140,8 @@ pub struct MainWindow {
     /// was opened from, so a flag colour or an undo reaches them too. An
     /// entry that no longer upgrades is a window somebody closed.
     detached: RefCell<Vec<(Weak<ConversationView>, Mailbox)>>,
+    /// The scratch copies of attachments this window opened.
+    previews: previews::Previews,
 }
 
 /// The heading on the Delete Forever dialog, which names how much goes.
@@ -535,6 +538,7 @@ impl MainWindow {
                 thumbnail_cache: RefCell::new(HashMap::new()),
                 image_senders: RefCell::new(Vec::new()),
                 detached: RefCell::new(Vec::new()),
+                previews: previews::Previews::default(),
             }
         });
         if window.core.demo {
@@ -625,6 +629,9 @@ impl MainWindow {
             .set_zoom(app.settings_with(|s| s.text_size.zoom()));
         window.refresh_accounts(Reload::Yes);
         window.reload_image_senders();
+        // Copies another program opened in an earlier run have had their
+        // chance; nothing else deletes them.
+        let _ = gio::spawn_blocking(|| previews::sweep(&previews::folder()));
         window
     }
 
@@ -2178,6 +2185,7 @@ impl MainWindow {
                 (weak.upgrade(), weak.upgrade().and_then(|w| w.app.upgrade()))
             {
                 win.conversation.stop_rendering();
+                win.previews.forget_decrypted();
                 app.forget_window(&win);
             }
             glib::Propagation::Proceed
