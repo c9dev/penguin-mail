@@ -63,11 +63,18 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Opening a long conversation no longer holds up the window while its mail
   is cleaned for display: forty newsletters took the window 50 ms, and that
   work now happens on another thread.
+- S/MIME signed mail opens quickly even offline. Penguin Mail waits at most
+  ten seconds for the certificate authority, and when it could not check
+  whether the certificate was revoked, the card says so instead of showing
+  green.
 
 ### Fixed
 
 - Accented letters in mail an older version stored show correctly again:
   "devolução", not "devoluÃ§Ã£o".
+- An S/MIME signature from a certificate its authority revoked shows in
+  red and says the certificate was taken back, where it used to read as a
+  certificate nobody vouched for.
 - An OpenPGP signature from a key only partly trusted people vouched for
   no longer shows in green. The card says the key is not fully checked.
 - Unsubscribing works on pages that ask "Are you sure?" after you press

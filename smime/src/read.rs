@@ -4,13 +4,14 @@
 //! base64 and all: CMS is bytes rather than armor, so mail carries it that
 //! way and gpgsm is told to expect it.
 
-use std::io::Write;
+use std::io::{ErrorKind, Write};
+use std::process::Command;
 
 use crate::error::SmimeError;
-use mailrs_pgp::gnupg::Pinentry;
+use mailrs_pgp::gnupg::{Pinentry, Run};
 
 use crate::gpgsm::{Smime, failure};
-use crate::status::{self, Signature};
+use crate::status::{self, Chain, Signature, Verdict};
 
 /// What an `application/pkcs7-mime` part held once gpgsm opened it.
 #[derive(Debug, Clone)]
@@ -46,14 +47,13 @@ impl Smime {
         // person's gpgsm.conf says `auto-issuer-key-retrieve`, and it has no
         // option to say otherwise here. gpg's equivalent is switched off on
         // every read in `mailrs_pgp`.
-        let run = self.run(signed_part, Pinentry::Never, |command| {
+        let (_, found) = self.checked(signed_part, |command| {
             command
                 .arg("--assume-base64")
                 .arg("--verify")
                 .arg(file.path())
                 .arg("-");
         })?;
-        let found = status::signature(&run.status).ok_or_else(|| failure(&run))?;
         Ok(self.named(found))
     }
 
@@ -66,16 +66,67 @@ impl Smime {
     /// back is the entity that was inside, with what gpgsm made of the
     /// signature over it.
     pub fn open_signed(&self, blob: &[u8]) -> Result<Opened, SmimeError> {
-        let run = self.run(blob, Pinentry::Never, |command| {
+        let (run, found) = self.checked(blob, |command| {
             command.args(["--assume-base64", "--output", "-", "--verify"]);
         })?;
-        let Some(found) = status::signature(&run.status) else {
-            return Err(failure(&run));
-        };
         Ok(Opened {
             part: run.out,
             signature: self.named(found),
         })
+    }
+
+    /// Checks a signature with `args`, revocation included, in a bounded
+    /// time.
+    ///
+    /// gpgsm asks dirmngr for the CRL of every certificate below the root,
+    /// and the answer is only as quick as the certificate authority's
+    /// server. The first run gets [`crate::gpgsm::REVOCATION_WAIT`]. When
+    /// it runs out, or when the chain comes back failed for a reason other
+    /// than a revocation, a second run with `--disable-crl-checks` says
+    /// whether the chain holds apart from revocation. If it does, what
+    /// failed was the revocation check alone: the server refused, had no
+    /// CRL, dirmngr could not start, or nothing answered in time. gpgsm
+    /// reports each of those with its own error code on a
+    /// `TRUST_UNDEFINED` line (see `tests/revocation.rs`), and asking again
+    /// covers them all without a list of codes to keep up to date.
+    fn checked(
+        &self,
+        input: &[u8],
+        args: impl Fn(&mut Command),
+    ) -> Result<(Run, Signature), SmimeError> {
+        let first = match self.run_limited(input, &args) {
+            Ok(run) => {
+                let found = status::signature(&run.status).ok_or_else(|| failure(&run))?;
+                // A trusted chain, a revoked certificate, and a signature
+                // with no chain to speak of are gpgsm's final word.
+                if found.chain != Chain::Untrusted || found.verdict == Verdict::RevokedCertificate
+                {
+                    return Ok((run, found));
+                }
+                Some((run, found))
+            }
+            Err(err) if err.kind() == ErrorKind::TimedOut => None,
+            Err(err) => return Err(self.cannot_run(&err)),
+        };
+        // The option goes before the command and its files, where gpgsm
+        // still reads options.
+        let again = self
+            .run_limited(input, |command| {
+                command.arg("--disable-crl-checks");
+                args(command);
+            })
+            .map_err(|err| self.cannot_run(&err))?;
+        let unrevoked = status::signature(&again.status).ok_or_else(|| failure(&again))?;
+        let holds = unrevoked.chain == Chain::Trusted;
+        let (run, found) = first.unwrap_or((again, unrevoked));
+        let found = match holds {
+            true => Signature {
+                chain: Chain::RevocationUnknown,
+                ..found
+            },
+            false => found,
+        };
+        Ok((run, found))
     }
 
     /// Opens an `application/pkcs7-mime` part with

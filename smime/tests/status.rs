@@ -99,6 +99,51 @@ fn every_trust_line_says_how_far_the_chain_got() {
     }
 }
 
+/// What gpgsm 2.4.8 wrote for a certificate its authority's CRL lists as
+/// revoked. It says so on the trust line alone, with error code 94
+/// (`GPG_ERR_CERT_REVOKED`), and still writes `GOODSIG`, because the text
+/// is the text that certificate signed.
+#[test]
+fn a_certificate_the_crl_lists_reads_as_revoked() {
+    let found = signature(&[
+        "NEWSIG",
+        "GOODSIG 7D04A7F3425811638828046060ACDA55BD23C6C6 /CN=Ada Lovelace",
+        "VALIDSIG 7D04A7F3425811638828046060ACDA55BD23C6C6 2026-09-23 20260923T095715 \
+         20370101T000000 0 0 1 8 00",
+        "TRUST_NEVER 94",
+    ])
+    .expect("a signature");
+    assert_eq!(found.verdict, Verdict::RevokedCertificate);
+    assert!(!found.is_good());
+    assert_eq!(found.chain, Chain::Untrusted);
+    assert_eq!(found.subject.as_deref(), Some("/CN=Ada Lovelace"));
+}
+
+/// What gpgsm 2.4.8 wrote when it could not learn whether a certificate
+/// was revoked: the CRL's server refused the connection (32793,
+/// `ECONNREFUSED`), dirmngr could not start (92), dirmngr had HTTP turned
+/// off (60), or the server had no CRL to give (95, `GPG_ERR_NO_CRL_KNOWN`).
+/// On their own these lines look like any chain that failed, so
+/// `Smime::verify` asks gpgsm again with CRL checks off to tell the two
+/// apart.
+#[test]
+fn a_crl_that_could_not_be_fetched_reads_as_a_chain_that_failed() {
+    for code in ["32793", "92", "60", "95"] {
+        let trust = format!("TRUST_UNDEFINED {code}");
+        let found = signature(&[
+            "NEWSIG",
+            "PROGRESS starting_dirmngr ? 0 0",
+            "GOODSIG EC940142CFFC5B9852D26BC3143EEDE9072732B2 /CN=Ada Lovelace",
+            "VALIDSIG EC940142CFFC5B9852D26BC3143EEDE9072732B2 2026-09-23 20260923T095512 \
+             20370101T000000 0 0 1 8 00",
+            &trust,
+        ])
+        .expect("a signature");
+        assert_eq!(found.verdict, Verdict::Good, "{code}");
+        assert_eq!(found.chain, Chain::Untrusted, "{code}");
+    }
+}
+
 #[test]
 fn lines_about_anything_else_describe_no_signature() {
     assert!(signature(&["NODATA 1", "DECRYPTION_FAILED"]).is_none());

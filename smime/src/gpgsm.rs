@@ -3,6 +3,7 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::Duration;
 
 use mailrs_pgp::gnupg::{Pinentry, Program, Run, named};
 
@@ -14,7 +15,16 @@ use crate::error::SmimeError;
 #[derive(Debug, Clone)]
 pub struct Smime {
     program: Program,
+    /// How long checking a signature may wait on dirmngr's revocation
+    /// check before it goes ahead without one.
+    revocation_wait: Duration,
 }
+
+/// How long a signature check waits on the certificate authority. A CRL
+/// server that answers at all answers well inside this; one that holds the
+/// connection open without a word would otherwise hold the message closed
+/// for as long as it likes.
+pub const REVOCATION_WAIT: Duration = Duration::from_secs(10);
 
 impl Smime {
     /// Looks for `gpgsm` on PATH. It ships with GnuPG, so a computer with
@@ -28,7 +38,10 @@ impl Smime {
     /// environment's. Tests use this to see what an empty PATH does.
     pub fn find_on(path: &str) -> Result<Smime, SmimeError> {
         let program = Program::find_on(path, &["gpgsm"]).ok_or(SmimeError::NoGpgsm)?;
-        Ok(Smime { program })
+        Ok(Smime {
+            program,
+            revocation_wait: REVOCATION_WAIT,
+        })
     }
 
     /// The binary the calls run.
@@ -41,6 +54,16 @@ impl Smime {
     pub fn with_home(self, home: impl Into<PathBuf>) -> Self {
         Smime {
             program: self.program.with_home(home),
+            ..self
+        }
+    }
+
+    /// Waits `wait` rather than [`REVOCATION_WAIT`] on a revocation check.
+    /// Tests use this to see the limit work without waiting ten seconds.
+    pub fn with_revocation_wait(self, wait: Duration) -> Self {
+        Smime {
+            revocation_wait: wait,
+            ..self
         }
     }
 
@@ -68,10 +91,27 @@ impl Smime {
     ) -> Result<Run, SmimeError> {
         self.program
             .run(input, pinentry, args)
-            .map_err(|err| SmimeError::CannotRun {
-                program: self.program.path().display().to_string(),
-                reason: err.to_string(),
-            })
+            .map_err(|err| self.cannot_run(&err))
+    }
+
+    /// Like [`Smime::run`] for a read, giving gpgsm the revocation wait to
+    /// answer in. An error of kind [`std::io::ErrorKind::TimedOut`] means
+    /// it did not, and nothing of that run is left behind; see
+    /// [`mailrs_pgp::gnupg::Program::run_within`].
+    pub(crate) fn run_limited(
+        &self,
+        input: &[u8],
+        args: impl FnOnce(&mut Command),
+    ) -> std::io::Result<Run> {
+        self.program
+            .run_within(self.revocation_wait, input, Pinentry::Never, args)
+    }
+
+    pub(crate) fn cannot_run(&self, err: &std::io::Error) -> SmimeError {
+        SmimeError::CannotRun {
+            program: self.program.path().display().to_string(),
+            reason: err.to_string(),
+        }
     }
 }
 

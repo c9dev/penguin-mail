@@ -429,6 +429,10 @@ pub enum Vouched {
     Yes,
     /// People the person trusts vouched for it.
     Partly,
+    /// Its chain reaches a root the person trusts, and nothing could say
+    /// whether a certificate on it was revoked. Only S/MIME answers this:
+    /// gpgsm asks the certificate authority, which may be out of reach.
+    RevocationUnknown,
     /// Nobody has vouched for it, or its chain reaches no trusted root.
     Nobody,
     /// The engine said nothing about it.
@@ -554,6 +558,8 @@ fn signed_mark(standard: Standard, signed: &Signed, from: Option<&str>) -> Mark 
                 // Marginal validity is GnuPG's "not fully valid": people the
                 // person only partly trusts vouched for the key. The card
                 // says so in the neutral tone rather than calling it good.
+                // A certificate whose revocation nobody could check gets
+                // the same tone, since it may have been taken back.
                 (Vouched::Own | Vouched::Yes, Some(_)) => Tone::Good,
                 _ => Tone::Unchecked,
             };
@@ -776,6 +782,10 @@ fn vouching(standard: Standard, vouched: Vouched) -> String {
         (Standard::Pgp, Vouched::Nobody | Vouched::Unsaid) => {
             gettext("Nobody has vouched for this key, so it names no one.")
         }
+        (_, Vouched::RevocationUnknown) => gettext(
+            "Its certificate leads back to an authority you trust, but this computer could not \
+             check whether it was revoked.",
+        ),
         (Standard::Smime, Vouched::Own | Vouched::Yes | Vouched::Partly) => {
             gettext("Its certificate leads back to an authority you trust.")
         }

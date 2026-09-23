@@ -68,6 +68,115 @@ fn a_program_that_writes_a_lot_does_not_hold_up_its_input() {
     assert!(run.ok);
 }
 
+/// Whether the process `pid` still runs. One that has exited and not been
+/// reaped yet is a zombie, which runs nothing, so it counts as gone here;
+/// the tests that care about zombies look for the entry itself.
+#[cfg(target_os = "linux")]
+fn running(pid: &str) -> bool {
+    std::fs::read_to_string(format!("/proc/{pid}/stat"))
+        .ok()
+        .and_then(|stat| {
+            let after_name = stat.rsplit_once(')')?.1.trim_start().to_string();
+            after_name.chars().next()
+        })
+        .is_some_and(|state| state != 'Z')
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn a_run_with_a_limit_stops_a_program_that_never_answers() {
+    let dir = tempfile::tempdir().expect("a temp directory");
+    let pid = dir.path().join("pid");
+    let child = dir.path().join("child");
+    // The stand-in starts a child of its own, the way gpgsm starts
+    // dirmngr, and that child holds stdout open. Killing the stand-in
+    // alone would leave the child running and the pipe with a writer.
+    let (_stand_in, program) = stand_in(&format!(
+        "echo $$ > {pid}\nsleep 30 &\necho $! > {child}\nwait",
+        pid = pid.display(),
+        child = child.display(),
+    ));
+    let started = std::time::Instant::now();
+
+    let err = match program.run_within(
+        std::time::Duration::from_millis(500),
+        b"",
+        Pinentry::Never,
+        |_| {},
+    ) {
+        Ok(_) => panic!("a program that sleeps for 30 seconds answered in half of one"),
+        Err(err) => err,
+    };
+
+    let waited = started.elapsed();
+    assert_eq!(err.kind(), std::io::ErrorKind::TimedOut, "{err}");
+    assert!(
+        waited < std::time::Duration::from_secs(3),
+        "gave up after {waited:?}"
+    );
+    let pid = std::fs::read_to_string(&pid).expect("the stand-in wrote its pid");
+    let pid = pid.trim();
+    // Reaped rather than left a zombie: its entry is gone altogether.
+    assert!(
+        !Path::new(&format!("/proc/{pid}")).exists(),
+        "the stand-in {pid} was left behind"
+    );
+    let child = std::fs::read_to_string(&child).expect("the stand-in wrote its child's pid");
+    let child = child.trim();
+    // The child's new parent reaps it, which takes a moment.
+    let gone = (0..100).any(|_| {
+        if running(child) {
+            std::thread::sleep(std::time::Duration::from_millis(20));
+            false
+        } else {
+            true
+        }
+    });
+    assert!(gone, "the stand-in's child {child} still runs");
+}
+
+#[test]
+fn a_run_that_finishes_inside_its_limit_answers_as_any_run_does() {
+    let (_dir, program) = stand_in(
+        "echo '[GNUPG:] GOODSIG 1234 Ada <ada@example.test>' >&3\n\
+         cat",
+    );
+
+    let run = program
+        .run_within(
+            std::time::Duration::from_secs(10),
+            b"Meet at six.",
+            Pinentry::Never,
+            |_| {},
+        )
+        .expect("the stand-in answers in time");
+
+    assert_eq!(run.status, ["GOODSIG 1234 Ada <ada@example.test>"]);
+    assert_eq!(run.out, b"Meet at six.");
+    assert!(run.ok);
+}
+
+/// gpg decrypting a large message, or waiting on the person's pinentry,
+/// takes as long as it takes, so a run without a limit waits for it.
+#[test]
+fn a_run_without_a_limit_waits_for_a_slow_program() {
+    let (_dir, program) = stand_in(
+        "sleep 1\n\
+         echo '[GNUPG:] GOODSIG 1234 Ada <ada@example.test>' >&3\n\
+         echo done",
+    );
+    let started = std::time::Instant::now();
+
+    let run = program
+        .run(b"", Pinentry::Never, |_| {})
+        .expect("the stand-in runs");
+
+    assert!(started.elapsed() >= std::time::Duration::from_secs(1));
+    assert_eq!(run.status, ["GOODSIG 1234 Ada <ada@example.test>"]);
+    assert_eq!(run.out, b"done\n");
+    assert!(run.ok);
+}
+
 #[test]
 fn every_signature_the_lines_describe_comes_back() {
     let found = seen(&[
