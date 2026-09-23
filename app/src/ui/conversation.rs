@@ -2,13 +2,22 @@
 //!
 //! Page JavaScript is off (`enable-javascript-markup` is false), so email
 //! cannot run scripts. The app still runs a few tiny scripts of its own
-//! through the WebKit API: collapsing a message, scrolling to one, and
+//! through the WebKit API: collapsing a message, scrolling to one,
 //! [`MENU_SCRIPT`], which asks for the menu of the message under the
-//! pointer. Finding text is WebKit's own, through [`FindBar`].
+//! pointer, [`READY_SCRIPT`], which says the page is parsed, and
+//! [`PATCH_SCRIPT`], which replaces the articles a change touched. Finding
+//! text is WebKit's own, through [`FindBar`].
+//!
+//! The open thread decides what the page needs, in `OpenThread::page`:
+//! the whole document, or new HTML for some of its articles. A whole
+//! document goes to `load_html`. A patch waits until the latest document
+//! is parsed, since a script run before then reaches the page that was
+//! there before it, and then replaces the articles in place, which keeps
+//! the reader where they were.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 
 use adw::prelude::*;
 use gtk::{gdk, gio, glib};
@@ -24,7 +33,7 @@ use super::translation::TranslationCard;
 use super::{name, name_with_shortcut};
 use crate::compose::ReplyKind;
 use crate::open_thread::run::Fetched;
-use crate::open_thread::{OpenThread, Unsent};
+use crate::open_thread::{Article, OpenThread, Page, Unsent};
 use crate::protection::run::{Claimed, Installed};
 use crate::protection::{self};
 use crate::render::Theme;
@@ -115,6 +124,44 @@ const MENU_SCRIPT: &str = r#"(function () {
   };
 })()"#;
 
+/// Tells the view the page is parsed, with the number of the load it came
+/// from, so a patch meant for it is not run against the page before. It
+/// runs when the document is parsed, before its pictures arrive.
+const READY_SCRIPT: &str = "window.webkit.messageHandlers.mailrsReady.postMessage(\
+     document.documentElement.getAttribute('data-load') || '')";
+
+/// Replaces articles, each by the `id` of its message, with new HTML that
+/// holds its body in a declarative shadow root. Only `setHTMLUnsafe` reads
+/// those roots out of a string, so a WebKit without it answers `whole` and
+/// the view loads the page instead. The first article still on screen
+/// keeps its place, since WebKit does no scroll anchoring of its own and
+/// an article above the reader that grew would push them down.
+const PATCH_SCRIPT: [&str; 2] = [
+    r#"(function (patches) {
+  var holder = document.createElement('template');
+  if (typeof holder.setHTMLUnsafe !== 'function') return 'whole';
+  var anchor = null;
+  var messages = document.querySelectorAll('article.message');
+  for (var i = 0; i < messages.length; i++) {
+    if (messages[i].getBoundingClientRect().bottom > 0) { anchor = messages[i].id; break; }
+  }
+  var before = anchor ? document.getElementById(anchor).getBoundingClientRect().top : 0;
+  var missed = 0;
+  patches.forEach(function (patch) {
+    var old = document.getElementById('m-' + patch[0]);
+    holder.setHTMLUnsafe(patch[1]);
+    var fresh = holder.content.firstElementChild;
+    if (old && fresh) old.replaceWith(fresh); else missed++;
+  });
+  if (anchor) {
+    var now = document.getElementById(anchor);
+    if (now) window.scrollBy(0, now.getBoundingClientRect().top - before);
+  }
+  return missed ? 'whole' : 'done';
+})("#,
+    ")",
+];
+
 /// Asks the page for the menu of the message holding the focus, as the Menu
 /// key or Shift+F10 does. The app sends the keys here instead of letting the
 /// page see them: WebKit keeps an empty text field inside the view, and GTK
@@ -196,21 +243,36 @@ pub struct ConversationView {
     /// later click can tell it lost.
     loading: Cell<u64>,
     scroll_to: RefCell<Option<String>>,
+    /// The message the page scrolled to once parsed. Pictures arriving
+    /// later can push it down, so it is scrolled to again when the load
+    /// finishes, unless the reader has moved.
+    scrolled: RefCell<Option<String>>,
+    /// The number of the latest whole page given to WebKit.
+    loads: Cell<u64>,
+    /// The number of the latest page WebKit has parsed.
+    ready: Cell<u64>,
+    /// Articles waiting for the latest page to be parsed.
+    waiting: RefCell<Vec<Article>>,
     compact: Cell<bool>,
     detached: Cell<bool>,
+    /// This view, for the answers WebKit gives later.
+    this: Weak<ConversationView>,
 }
 
 impl ConversationView {
     pub fn new(on_action: impl Fn(Action) + 'static) -> Rc<ConversationView> {
         let on_action: Rc<dyn Fn(Action)> = Rc::new(on_action);
         let content = webkit::UserContentManager::new();
-        content.add_script(&webkit::UserScript::new(
-            MENU_SCRIPT,
-            webkit::UserContentInjectedFrames::TopFrame,
-            webkit::UserScriptInjectionTime::End,
-            &[],
-            &[],
-        ));
+        for script in [MENU_SCRIPT, READY_SCRIPT] {
+            content.add_script(&webkit::UserScript::new(
+                script,
+                webkit::UserContentInjectedFrames::TopFrame,
+                webkit::UserScriptInjectionTime::End,
+                &[],
+                &[],
+            ));
+        }
+        content.register_script_message_handler("mailrsReady", None);
         let settings = webkit::Settings::new();
         settings.set_enable_javascript(true);
         settings.set_enable_javascript_markup(false);
@@ -515,7 +577,7 @@ impl ConversationView {
             list_banner.connect_button_clicked(move |_| on_action(Action::Unsubscribe));
         }
 
-        let view = Rc::new(ConversationView {
+        let view = Rc::new_cyclic(|this| ConversationView {
             page,
             label_button,
             many,
@@ -548,8 +610,13 @@ impl ConversationView {
             open: RefCell::new(None),
             loading: Cell::new(0),
             scroll_to: RefCell::new(None),
+            scrolled: RefCell::new(None),
+            loads: Cell::new(0),
+            ready: Cell::new(0),
+            waiting: RefCell::new(Vec::new()),
             compact: Cell::new(false),
             detached: Cell::new(false),
+            this: this.clone(),
         });
 
         view.set_buttons_shown(false);
@@ -592,20 +659,38 @@ impl ConversationView {
                 true
             });
         let weak = Rc::downgrade(&view);
+        view.content
+            .connect_script_message_received(Some("mailrsReady"), move |_, value| {
+                if let (Some(view), Ok(load)) = (weak.upgrade(), value.to_str().parse()) {
+                    view.page_ready(load);
+                }
+            });
+        let weak = Rc::downgrade(&view);
         view.webview.connect_load_changed(move |webview, event| {
             if event != webkit::LoadEvent::Finished {
                 return;
             }
             let Some(view) = weak.upgrade() else { return };
-            if let Some(id) = view.scroll_to.take() {
+            // The pictures above the message have come in by now and may
+            // have pushed it down. A reader who scrolled meanwhile stays.
+            if let Some(id) = view.scrolled.take() {
                 run_script(
                     webview,
                     &format!(
-                        "document.getElementById('m-{id}')?.scrollIntoView({{block:'start'}})"
+                        "(function(){{var m=document.getElementById('m-{id}');\
+                         if(m&&window.mailrsAt===window.scrollY){{m.scrollIntoView({{block:'start'}});\
+                         window.mailrsAt=window.scrollY;}}}})()"
                     ),
                 );
             }
-            view.find.refresh();
+        });
+        let weak = Rc::downgrade(&view);
+        view.webview.connect_web_process_terminated(move |_, _| {
+            // Whatever the page held went with the process, so the next
+            // change draws the whole page rather than patching nothing.
+            if let Some(view) = weak.upgrade() {
+                view.change(OpenThread::page_lost);
+            }
         });
         view.webview.connect_context_menu(|_, menu, _| {
             use webkit::ContextMenuAction as Item;
@@ -1061,17 +1146,13 @@ impl ConversationView {
     /// unread opens, since the reader has not seen it. Gives back the ids
     /// whose bodies are still missing. With some missing nothing is
     /// redrawn: those bodies are what the caller fetches next, and they
-    /// bring a redraw with them. With none missing the page is drawn again
-    /// only when a message it shows changed.
+    /// bring a redraw with them. With none missing the page takes whatever
+    /// changed, which is often nothing at all.
     pub fn messages_arrived(&self, fresh: &[MessageMeta]) -> Vec<String> {
-        let Some((missing, changed)) = self.change(|open| {
-            let before = open.messages.clone();
-            let missing = open.take_messages(fresh);
-            (missing, open.messages != before)
-        }) else {
+        let Some(missing) = self.change(|open| open.take_messages(fresh)) else {
             return Vec::new();
         };
-        if missing.is_empty() && changed {
+        if missing.is_empty() {
             self.render(false);
         }
         missing
@@ -1198,7 +1279,9 @@ impl ConversationView {
         self.render(scroll);
     }
 
-    /// Redraws the open thread, for example after its bodies arrive.
+    /// Brings the page up to date with the open thread, for example after
+    /// its bodies arrive: a whole load when the open thread asks for one,
+    /// and otherwise the articles that changed, in place.
     pub fn render(&self, scroll: bool) {
         let mut open = self.open.borrow_mut();
         let Some(open) = open.as_mut() else { return };
@@ -1214,21 +1297,36 @@ impl ConversationView {
             dark: style.is_dark(),
             accent: style.accent_color_rgba().to_str().to_string(),
         };
-        let html = open.page(&theme);
+        let page = open.page(&theme);
         let background = if theme.dark {
             gdk::RGBA::new(0.133, 0.133, 0.149, 1.0)
         } else {
             gdk::RGBA::WHITE
         };
         self.webview.set_background_color(&background);
-        if scroll && open.messages.len() > 2 {
-            *self.scroll_to.borrow_mut() = open
-                .messages
-                .iter()
-                .find(|m| open.expanded.contains(&m.id))
-                .map(|m| script_safe(&m.id));
+        match page {
+            Page::Whole(document) => {
+                if scroll && open.messages.len() > 2 {
+                    *self.scroll_to.borrow_mut() = open
+                        .messages
+                        .iter()
+                        .find(|m| open.expanded.contains(&m.id))
+                        .map(|m| script_safe(&m.id));
+                }
+                // The new page holds everything a waiting patch would put
+                // in it.
+                self.waiting.borrow_mut().clear();
+                let load = self.loads.get() + 1;
+                self.loads.set(load);
+                let html = document.html(&format!(" data-load=\"{load}\""));
+                self.webview.load_html(&html, None);
+            }
+            Page::Patch(patch) if patch.is_empty() => {}
+            Page::Patch(patch) => match self.ready.get() == self.loads.get() {
+                true => self.patch(patch),
+                false => self.waiting.borrow_mut().extend(patch),
+            },
         }
-        self.webview.load_html(&html, None);
         match open.card() {
             Some(mark) => self.seal.show(mark),
             None => self.seal.hide(),
@@ -1236,6 +1334,67 @@ impl ConversationView {
         self.banner
             .set_revealed(!open.images_allowed && open.has_remote_images());
         self.update_buttons(open);
+    }
+
+    /// The page from load number `load` is parsed. What waited for it goes
+    /// in now, then the view scrolls to the message it was asked to and
+    /// finds again what the find bar holds. A page an older load parsed is
+    /// on its way out, so nothing waits on it.
+    fn page_ready(&self, load: u64) {
+        if load != self.loads.get() {
+            return;
+        }
+        self.ready.set(load);
+        let waiting = self.waiting.take();
+        if !waiting.is_empty() {
+            self.patch(waiting);
+        }
+        if let Some(id) = self.scroll_to.take() {
+            run_script(
+                &self.webview,
+                &format!(
+                    "(function(){{var m=document.getElementById('m-{id}');\
+                     if(m){{m.scrollIntoView({{block:'start'}});window.mailrsAt=window.scrollY;}}}})()"
+                ),
+            );
+            *self.scrolled.borrow_mut() = Some(id);
+        }
+        self.find.refresh();
+    }
+
+    /// Puts each article in place of the one with the same message id, on
+    /// the page that is parsed now. A page that cannot take it, or that
+    /// lacks one of them, is loaded whole instead.
+    fn patch(&self, patch: Vec<Article>) {
+        let pairs: Vec<(&str, &str)> = patch
+            .iter()
+            .map(|article| (article.message_id.as_str(), article.html.as_str()))
+            .collect();
+        let Ok(json) = serde_json::to_string(&pairs) else {
+            return;
+        };
+        let script = [PATCH_SCRIPT[0], &json, PATCH_SCRIPT[1]].concat();
+        let load = self.loads.get();
+        let this = self.this.clone();
+        self.webview
+            .evaluate_javascript(&script, None, None, gio::Cancellable::NONE, move |done| {
+                let Some(view) = this.upgrade() else { return };
+                let whole = match done {
+                    Ok(value) => value.to_str() == "whole",
+                    Err(err) => {
+                        tracing::warn!(error = %err, "could not patch the conversation");
+                        true
+                    }
+                };
+                // A later load already holds everything this carried.
+                if whole && load == view.loads.get() {
+                    view.change(OpenThread::page_lost);
+                    view.render(false);
+                }
+            });
+        // The find bar's highlights in the other articles stay. The count
+        // may have changed with the words.
+        self.find.recount();
     }
 
     /// Updates the header buttons after label changes, without redrawing.
@@ -1396,13 +1555,7 @@ impl ConversationView {
     }
 
     fn toggle(&self, id: &str) {
-        let expanded = self.change(|open| {
-            if !open.expanded.remove(id) {
-                open.expanded.insert(id.to_string());
-            }
-            open.expanded.contains(id)
-        });
-        if let Some(expanded) = expanded {
+        if let Some(expanded) = self.change(|open| open.toggle(id)) {
             self.show_message(id, expanded);
         }
     }
@@ -1412,16 +1565,7 @@ impl ConversationView {
     /// a closed message's body, and WebKit finds nothing in it.
     fn open_every_message(&self) -> Vec<String> {
         let closed = self
-            .change(|open| {
-                let closed: Vec<String> = open
-                    .messages
-                    .iter()
-                    .map(|m| m.id.clone())
-                    .filter(|id| !open.expanded.contains(id))
-                    .collect();
-                open.expanded.extend(closed.iter().cloned());
-                closed
-            })
+            .change(OpenThread::open_every_message)
             .unwrap_or_default();
         for id in &closed {
             self.show_message(id, true);
@@ -1431,11 +1575,7 @@ impl ConversationView {
 
     /// Closes the messages the find bar opened.
     fn close_messages(&self, ids: &[String]) {
-        self.change(|open| {
-            for id in ids {
-                open.expanded.remove(id);
-            }
-        });
+        self.change(|open| open.close_messages(ids));
         for id in ids {
             self.show_message(id, false);
         }
@@ -1538,3 +1678,4 @@ fn network_session() -> webkit::NetworkSession {
     }
     SESSION.with(|s| s.clone())
 }
+

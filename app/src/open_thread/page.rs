@@ -1,19 +1,26 @@
 //! The page an open thread draws, and the words a translation reads off it.
 //!
-//! Three decisions live here rather than in the view: which body each
+//! Four decisions live here rather than in the view: which body each
 //! message shows (its translation, the body that arrived, a line saying it
-//! is loading, or why it failed), the cleaned HTML kept for each body, and
-//! which message counts as the one being read. The conversation view and
-//! the thread run's fake both draw through [`OpenThread::page`], so a test
-//! reads the HTML the window would load.
+//! is loading, or why it failed), the cleaned HTML kept for each body,
+//! which message counts as the one being read, and whether a change needs
+//! the whole page loaded again or only some of its articles replaced. The
+//! conversation view and the thread run's fake both draw through
+//! [`OpenThread::page`], so a test reads the HTML the window would load.
+//!
+//! Loading the page again costs WebKit most of a second on a long thread
+//! and puts the reader back at the top, so a change that leaves the head
+//! and the list of messages alone replaces only the `<article>` elements
+//! whose HTML changed. [`Drawn`] remembers what the page on screen holds,
+//! one hash per article, to tell which.
 
 use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
 
-use mailrs_domain::MessageBody;
+use mailrs_domain::{MessageBody, MessageMeta};
 
 use super::{InlineImages, OpenThread};
-use crate::render::{BodyState, Conversation, MessageView, Sanitized, Theme, render};
+use crate::render::{self, BodyState, Head, MessageView, Sanitized, TAIL, Theme};
 use crate::sanitize::sanitize_html;
 use crate::translation::{Body, Prose};
 
@@ -133,53 +140,135 @@ impl OpenThread {
         Some(body_mark(html_of(body)?, &self.images_of(id)))
     }
 
-    /// The whole document for the thread as it stands, in `theme`.
-    /// Cleaning a long body costs milliseconds, so each cleaned copy is
-    /// kept until its body or its pictures change.
-    pub fn page(&mut self, theme: &Theme) -> String {
+    /// What the page on screen needs for the thread as it stands, in
+    /// `theme`: the whole document, when the head or the list of messages
+    /// changed or nothing was drawn yet, and otherwise the articles whose
+    /// HTML changed, which may be none. The answer assumes the caller puts
+    /// it on screen. Cleaning a long body costs milliseconds, so each
+    /// cleaned copy is kept until its body or its pictures change.
+    pub fn page(&mut self, theme: &Theme) -> Page {
         self.clean_bodies();
-        let views: Vec<MessageView> = self
-            .messages
-            .iter()
-            .map(|meta| {
-                // A message showing its translation draws the translated
-                // body and the translated HTML. What arrived stays where
-                // it was, for the way back.
-                let showing = self
-                    .translations
-                    .get(&meta.id)
-                    .filter(|translation| translation.shown);
-                MessageView {
-                    meta,
-                    body: match (showing, self.bodies.get(&meta.id)) {
-                        (Some(translation), _) => BodyState::Loaded(&translation.body),
-                        (None, None) => BodyState::Loading,
-                        (None, Some(Ok(body))) => BodyState::Loaded(body),
-                        (None, Some(Err(reason))) => BodyState::Failed(reason),
-                    },
-                    expanded: self.expanded.contains(&meta.id),
-                    thumbnails: &self.thumbnails,
-                    sanitized: match showing {
-                        Some(translation) => translation.clean.as_ref(),
-                        None => self.cleaned.get(&meta.id),
-                    }
-                    .map(|cleaned| Sanitized {
-                        html: &cleaned.html,
-                        paints: cleaned.paints,
-                    }),
-                }
-            })
-            .collect();
-        render(
-            &Conversation {
+        let head = render::head(
+            &Head {
                 subject: &self.subject,
-                messages: views,
-                me: &self.me,
-                photos: &self.photos,
+                count: self.messages.len(),
                 allow_remote: self.images_allowed,
             },
             theme,
-        )
+        );
+        let articles: Vec<Article> = self.messages.iter().map(|meta| self.article(meta)).collect();
+        let now = Drawn {
+            head: hash(&head),
+            articles: articles
+                .iter()
+                .map(|article| (article.message_id.clone(), hash(&article.html)))
+                .collect(),
+        };
+        let page = match self.drawn.take() {
+            Some(before) if before.head == now.head && before.same_messages(&now) => Page::Patch(
+                articles
+                    .into_iter()
+                    .zip(now.articles.iter().zip(&before.articles))
+                    .filter(|(_, ((_, fresh), (_, drawn)))| fresh != drawn)
+                    .map(|(article, _)| article)
+                    .collect(),
+            ),
+            _ => Page::Whole(Document { head, articles }),
+        };
+        self.drawn = Some(now);
+        page
+    }
+
+    /// Forgets what the page on screen holds, so the next [`Self::page`]
+    /// is the whole document: WebKit's process went away, or a patch could
+    /// not be applied.
+    pub fn page_lost(&mut self) {
+        self.drawn = None;
+    }
+
+    /// Opens or closes one message, which the view does in the page itself
+    /// rather than drawing it again: that keeps the reader's place and the
+    /// find highlight. The record of what is drawn follows, so the next
+    /// page does not replace the article for it. Answers whether the
+    /// message is now open.
+    pub fn toggle(&mut self, message_id: &str) -> bool {
+        let open = !self.expanded.contains(message_id);
+        self.set_open(message_id, open);
+        open
+    }
+
+    /// Opens every message and answers the ones that were closed.
+    pub fn open_every_message(&mut self) -> Vec<String> {
+        let closed: Vec<String> = self
+            .messages
+            .iter()
+            .map(|m| m.id.clone())
+            .filter(|id| !self.expanded.contains(id))
+            .collect();
+        for id in &closed {
+            self.set_open(id, true);
+        }
+        closed
+    }
+
+    /// Closes these messages.
+    pub fn close_messages(&mut self, ids: &[String]) {
+        for id in ids {
+            self.set_open(id, false);
+        }
+    }
+
+    fn set_open(&mut self, message_id: &str, open: bool) {
+        match open {
+            true => self.expanded.insert(message_id.to_string()),
+            false => self.expanded.remove(message_id),
+        };
+        let Some(meta) = self.messages.iter().find(|m| m.id == message_id) else {
+            return;
+        };
+        let now = hash(&self.article(meta).html);
+        if let Some(drawn) = self.drawn.as_mut()
+            && let Some((_, seen)) = drawn.articles.iter_mut().find(|(id, _)| id == message_id)
+        {
+            *seen = now;
+        }
+    }
+
+    /// One message's article as the page draws it now.
+    fn article(&self, meta: &MessageMeta) -> Article {
+        Article {
+            message_id: meta.id.clone(),
+            html: render::article(&self.view(meta), &self.me, &self.photos),
+        }
+    }
+
+    /// What the page draws for one message. A message showing its
+    /// translation draws the translated body and the translated HTML.
+    /// What arrived stays where it was, for the way back.
+    fn view<'a>(&'a self, meta: &'a MessageMeta) -> MessageView<'a> {
+        let showing = self
+            .translations
+            .get(&meta.id)
+            .filter(|translation| translation.shown);
+        MessageView {
+            meta,
+            body: match (showing, self.bodies.get(&meta.id)) {
+                (Some(translation), _) => BodyState::Loaded(&translation.body),
+                (None, None) => BodyState::Loading,
+                (None, Some(Ok(body))) => BodyState::Loaded(body),
+                (None, Some(Err(reason))) => BodyState::Failed(reason),
+            },
+            expanded: self.expanded.contains(&meta.id),
+            thumbnails: &self.thumbnails,
+            sanitized: match showing {
+                Some(translation) => translation.clean.as_ref(),
+                None => self.cleaned.get(&meta.id),
+            }
+            .map(|cleaned| Sanitized {
+                html: &cleaned.html,
+                paints: cleaned.paints,
+            }),
+        }
     }
 
     /// The message a translation applies to, with the prose the page
@@ -226,6 +315,92 @@ impl OpenThread {
     }
 }
 
+/// What the page on screen needs.
+#[derive(Debug, Clone)]
+pub enum Page {
+    /// Load this document in place of whatever is there.
+    Whole(Document),
+    /// Put each of these in place of the article with the same message
+    /// id, in this order. None means the page is up to date.
+    Patch(Vec<Article>),
+}
+
+/// A whole page: the head, then one article per message, oldest first.
+#[derive(Debug, Clone)]
+pub struct Document {
+    head: String,
+    articles: Vec<Article>,
+}
+
+impl Document {
+    /// The HTML to load, with `mark` put on the root element as it is,
+    /// such as ` data-load="3"`, which tells one load from the next.
+    pub fn html(&self, mark: &str) -> String {
+        let size = self.articles.iter().map(|a| a.html.len()).sum::<usize>();
+        let mut html = String::with_capacity(self.head.len() + size + mark.len() + TAIL.len());
+        let root = "<!doctype html><html";
+        match self.head.strip_prefix(root) {
+            Some(rest) => {
+                html.push_str(root);
+                html.push_str(mark);
+                html.push_str(rest);
+            }
+            None => html.push_str(&self.head),
+        }
+        for article in &self.articles {
+            html.push_str(&article.html);
+        }
+        html.push_str(TAIL);
+        html
+    }
+
+    /// Puts each of `patch` in place of the article with its message id,
+    /// as the page on screen does with a patch.
+    #[cfg(test)]
+    pub fn patch(&mut self, patch: &[Article]) {
+        for fresh in patch {
+            if let Some(old) = self
+                .articles
+                .iter_mut()
+                .find(|old| old.message_id == fresh.message_id)
+            {
+                *old = fresh.clone();
+            }
+        }
+    }
+}
+
+/// One message's `<article id="m-...">` element, whole.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Article {
+    pub message_id: String,
+    pub html: String,
+}
+
+/// What the page on screen was last given: a hash of its head, and of each
+/// message's article in order.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct Drawn {
+    head: u64,
+    articles: Vec<(String, u64)>,
+}
+
+impl Drawn {
+    /// Whether both list the same messages in the same order.
+    fn same_messages(&self, other: &Drawn) -> bool {
+        self.articles
+            .iter()
+            .map(|(id, _)| id)
+            .eq(other.articles.iter().map(|(id, _)| id))
+    }
+}
+
+fn hash(html: &str) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    html.hash(&mut hasher);
+    hasher.finish()
+}
+
 /// The HTML part of a body, when it has one worth drawing.
 fn html_of(body: &MessageBody) -> Option<&str> {
     body.html.as_deref().filter(|h| !h.trim().is_empty())
@@ -255,7 +430,7 @@ fn body_mark(html: &str, images: &HashMap<String, String>) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use super::{Cleaned, body_mark, clean};
+    use super::{Article, Cleaned, Page, body_mark, clean};
     use crate::open_thread::OpenThread;
     use crate::render::Theme;
     use mailrs_domain::{MessageBody, MessageMeta, Target};
@@ -266,6 +441,111 @@ mod tests {
             dark: false,
             accent: "#3584e4".to_string(),
         }
+    }
+
+    /// The document of a page that has to be loaded whole.
+    fn whole(page: Page) -> String {
+        match page {
+            Page::Whole(document) => document.html(""),
+            Page::Patch(patch) => panic!("a patch where a whole page was due: {patch:?}"),
+        }
+    }
+
+    /// The messages a patch replaces.
+    fn patched(page: Page) -> Vec<String> {
+        match page {
+            Page::Patch(patch) => patch.into_iter().map(|a| a.message_id).collect(),
+            Page::Whole(_) => panic!("a whole page where a patch was due"),
+        }
+    }
+
+    #[test]
+    fn the_first_page_is_whole_and_an_unchanged_one_patches_nothing() {
+        let mut open = thread("<p>Kites</p>");
+        assert!(whole(open.page(&theme())).contains("<p>Kites</p>"));
+        assert!(patched(open.page(&theme())).is_empty());
+    }
+
+    #[test]
+    fn a_new_theme_loads_the_whole_page() {
+        let mut open = thread("<p>Kites</p>");
+        open.page(&theme());
+        let dark = Theme {
+            dark: true,
+            ..theme()
+        };
+        assert!(whole(open.page(&dark)).contains("color-scheme:dark"));
+    }
+
+    /// Letting remote pictures in changes the policy in the head, which no
+    /// patch can reach.
+    #[test]
+    fn allowing_remote_images_loads_the_whole_page() {
+        let mut open = thread("<p>Kites</p>");
+        open.page(&theme());
+        open.images_allowed = true;
+        assert!(whole(open.page(&theme())).contains("img-src data: https: http:"));
+    }
+
+    #[test]
+    fn a_changed_body_patches_its_article_alone() {
+        let mut open = thread("<p>Kites</p>");
+        let mut second = open.messages[0].clone();
+        second.id = "m2".to_string();
+        open.messages.push(second);
+        open.page(&theme());
+        open.bodies.insert(
+            "m2".to_string(),
+            Ok(MessageBody {
+                text: Some("Tomorrow, then".to_string()),
+                ..MessageBody::default()
+            }),
+        );
+        let page = open.page(&theme());
+        let Page::Patch(patch) = page else {
+            panic!("a whole page for one body");
+        };
+        assert_eq!(patch.len(), 1);
+        assert_eq!(patch[0].message_id, "m2");
+        assert!(patch[0].html.starts_with("<article class=\"message"));
+        assert!(patch[0].html.contains("id=\"m-m2\"") && patch[0].html.contains("Tomorrow, then"));
+        assert!(patch[0].html.ends_with("</article>"));
+    }
+
+    /// The page opens and closes a message by itself, so the next draw
+    /// has nothing to replace for it.
+    #[test]
+    fn a_message_opened_in_the_page_is_not_replaced_after() {
+        let mut open = thread("<p>Kites</p>");
+        open.page(&theme());
+        assert!(!open.toggle("m1"));
+        assert!(patched(open.page(&theme())).is_empty());
+        assert_eq!(open.open_every_message(), ["m1"]);
+        assert!(patched(open.page(&theme())).is_empty());
+    }
+
+    #[test]
+    fn a_page_that_was_lost_is_drawn_whole() {
+        let mut open = thread("<p>Kites</p>");
+        open.page(&theme());
+        open.page_lost();
+        assert!(whole(open.page(&theme())).contains("<p>Kites</p>"));
+    }
+
+    #[test]
+    fn a_document_takes_a_patch_where_the_page_does() {
+        let mut open = thread("<p>Kites</p>");
+        let Page::Whole(mut document) = open.page(&theme()) else {
+            panic!("the first page is whole");
+        };
+        let fresh = Article {
+            message_id: "m1".to_string(),
+            html: "<article id=\"m-m1\">Kites, again</article>".to_string(),
+        };
+        document.patch(std::slice::from_ref(&fresh));
+        let html = document.html(" data-load=\"2\"");
+        assert!(html.starts_with("<!doctype html><html data-load=\"2\""), "{html}");
+        assert!(html.contains("Kites, again") && !html.contains("<p>Kites</p>"));
     }
 
     /// A thread of one open message whose body is this HTML.
@@ -308,7 +588,7 @@ mod tests {
         let mut made = clean("<p>Kites</p>", &Default::default());
         made.html = "<p>Cleaned elsewhere</p>".to_string();
         open.take_cleaned(HashMap::from([("m1".to_string(), made)]));
-        assert!(open.page(&theme()).contains("<p>Cleaned elsewhere</p>"));
+        assert!(whole(open.page(&theme())).contains("<p>Cleaned elsewhere</p>"));
     }
 
     /// Opening an encrypted message puts a new body under the same id; a
@@ -321,7 +601,7 @@ mod tests {
             ..clean("<p>Ciphertext</p>", &Default::default())
         };
         open.take_cleaned(HashMap::from([("m1".to_string(), stale)]));
-        let page = open.page(&theme());
+        let page = whole(open.page(&theme()));
         assert!(page.contains("<p>Kites</p>") && !page.contains("Ciphertext"));
     }
 
@@ -334,7 +614,7 @@ mod tests {
         assert!(!made.paints && !made.remote);
         made.paints = true;
         open.take_cleaned(HashMap::from([("m1".to_string(), made)]));
-        let page = open.page(&theme());
+        let page = whole(open.page(&theme()));
         assert!(page.contains("body html\""), "{page}");
     }
 

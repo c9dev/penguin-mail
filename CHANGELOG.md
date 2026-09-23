@@ -9,6 +9,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - A conversation you read before opens with one page load instead of two,
   so it is ready in about half the time.
+- A message still loading when a conversation opens, the pictures on
+  attachment rows, a decrypted message and a translation now appear in
+  place, so you keep your place in a long conversation instead of landing
+  back at the top.
 - Opening a long conversation no longer holds up the window while its mail
   is cleaned for display: forty newsletters took the window 50 ms, and that
   work now happens on another thread.

@@ -542,19 +542,111 @@ async fn a_queued_message_that_went_out_while_on_screen_leaves_it() {
     assert!(window.open(|_| ()).is_none());
 }
 
-/// The page the window loaded last.
+/// The page on screen, with every patch applied.
 fn page(window: &FakeWindow) -> String {
-    window.0.borrow().pages.last().cloned().unwrap_or_default()
+    window.page()
+}
+
+/// How many times the page was loaded whole.
+fn loads(window: &FakeWindow) -> usize {
+    window.0.borrow().loads.len()
+}
+
+fn patches(window: &FakeWindow) -> Vec<Vec<String>> {
+    window.0.borrow().patches.clone()
 }
 
 #[tokio::test]
 async fn the_stored_copy_says_a_body_is_loading_until_gmail_sends_it() {
     let window = FakeWindow::new();
     window.run().open(row(THREAD)).await;
-    let pages = window.0.borrow().pages.clone();
-    assert!(pages.first().is_some_and(|p| p.contains("Loading…")));
+    let first = window.0.borrow().loads.first().cloned().unwrap_or_default();
+    assert!(first.contains("Loading…"));
     assert!(page(&window).contains("Hello"));
     assert!(!page(&window).contains("Loading…"));
+}
+
+/// The body replaces the article that said it was loading; the page is
+/// not loaded a second time, so the reader keeps their place.
+#[tokio::test]
+async fn bodies_from_gmail_patch_the_articles_that_waited_for_them() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        let messages = vec![meta("m1", false), meta("m2", true)];
+        screen.messages = messages.clone();
+        if let Some(stored) = screen.stored.get_mut(THREAD) {
+            stored.messages = messages;
+            stored.bodies.insert("m1".to_string(), body("Kites at ten"));
+        }
+        screen
+            .gmail
+            .insert("m2".to_string(), body("Tomorrow, then"));
+    });
+    window.run().open(row(THREAD)).await;
+    assert_eq!(loads(&window), 1);
+    assert_eq!(patches(&window), [["m2"]]);
+    let drawn = page(&window);
+    assert!(drawn.contains("Kites at ten") && drawn.contains("Tomorrow, then"));
+}
+
+#[tokio::test]
+async fn pictures_on_the_attachment_rows_patch_their_article() {
+    let window = FakeWindow::with_body(with_picture());
+    window.run().open(row(THREAD)).await;
+    assert_eq!(loads(&window), 1);
+    assert_eq!(patches(&window).last().cloned(), Some(vec!["m1".to_string()]));
+    assert!(page(&window).contains("<img class=\"thumb\""), "{}", page(&window));
+}
+
+#[tokio::test]
+async fn an_engine_answer_patches_its_message_alone() {
+    let window = FakeWindow::new();
+    window.with(|screen| {
+        let messages = vec![meta("m1", false), meta("m2", false)];
+        screen.messages = messages.clone();
+        if let Some(stored) = screen.stored.get_mut(THREAD) {
+            stored.messages = messages;
+        }
+        screen.gmail.insert("m2".to_string(), body("-----BEGIN PGP"));
+    });
+    window.run().open(row(THREAD)).await;
+    let before = patches(&window).len();
+    window
+        .run()
+        .engine_answered(target(None), "m2".to_string(), opened(body("The key is under the mat.")))
+        .await;
+    assert_eq!(loads(&window), 1);
+    assert_eq!(patches(&window)[before..], [["m2"]]);
+    assert!(page(&window).contains("The key is under the mat."));
+}
+
+#[tokio::test]
+async fn a_translation_patches_its_message_and_so_does_turning_it() {
+    let window = FakeWindow::with_body(portuguese());
+    window.run().open(row(THREAD)).await;
+    let before = patches(&window).len();
+    window.run().translate().await;
+    window.run().translate().await;
+    assert_eq!(loads(&window), 1);
+    assert_eq!(patches(&window)[before..], [["m1"], ["m1"]]);
+}
+
+/// A new message changes the count in the head and the list of articles,
+/// which only a whole page can show.
+#[tokio::test]
+async fn a_message_new_to_the_thread_loads_the_page_again() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    assert_eq!(loads(&window), 1);
+    window.with(|screen| {
+        screen.messages.push(meta("m2", true));
+        screen
+            .gmail
+            .insert("m2".to_string(), body("Tomorrow, then"));
+    });
+    window.run().refresh().await;
+    assert_eq!(loads(&window), 2);
+    assert!(page(&window).contains("2 messages"));
 }
 
 #[tokio::test]

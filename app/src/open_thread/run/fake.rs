@@ -21,7 +21,7 @@ use mailrs_store::outbox::Queued;
 use mailrs_sync::Opened;
 
 use super::{Answer, Card, Desk, Effects, Fetched, Stored, ThreadRun};
-use crate::open_thread::{InlineImages, OpenThread, ToClean, Unsent};
+use crate::open_thread::{Document, InlineImages, OpenThread, Page, ToClean, Unsent};
 use crate::protection::Read;
 use crate::render::Theme;
 use crate::translation::{self, Language, Prose, Translation};
@@ -114,8 +114,12 @@ pub struct Screen {
     pub invitations: Vec<Option<String>>,
     pub marked: Vec<Target>,
     pub toasts: Vec<String>,
-    /// Every page the window loaded, oldest first.
-    pub pages: Vec<String>,
+    /// Every whole page the window loaded, oldest first.
+    pub loads: Vec<String>,
+    /// The messages each patch replaced, oldest first.
+    pub patches: Vec<Vec<String>>,
+    /// The page on screen, with every patch applied.
+    pub document: Option<Document>,
 }
 
 pub struct FakeWindow(pub RefCell<Screen>);
@@ -301,7 +305,9 @@ impl FakeWindow {
             invitations: Vec::new(),
             marked: Vec::new(),
             toasts: Vec::new(),
-            pages: Vec::new(),
+            loads: Vec::new(),
+            patches: Vec::new(),
+            document: None,
         })))
     }
 
@@ -363,17 +369,39 @@ impl FakeWindow {
     }
 
     /// Draws the thread on screen, as the view does after a change it
-    /// redraws for.
+    /// redraws for: a whole page loads, and a patch replaces articles in
+    /// the one loaded before.
     fn draw(&self) {
         let theme = Theme {
             dark: false,
             accent: "#3584e4".to_string(),
         };
-        self.with(|screen| {
-            if let Some(page) = screen.open.as_mut().map(|open| open.page(&theme)) {
-                screen.pages.push(page);
+        self.with(|screen| match screen.open.as_mut().map(|open| open.page(&theme)) {
+            Some(Page::Whole(document)) => {
+                screen.loads.push(document.html(""));
+                screen.document = Some(document);
             }
+            Some(Page::Patch(patch)) if !patch.is_empty() => {
+                screen
+                    .patches
+                    .push(patch.iter().map(|a| a.message_id.clone()).collect());
+                if let Some(document) = screen.document.as_mut() {
+                    document.patch(&patch);
+                }
+            }
+            _ => {}
         });
+    }
+
+    /// The page on screen now, as HTML.
+    pub fn page(&self) -> String {
+        self.with(|screen| {
+            screen
+                .document
+                .as_ref()
+                .map(|document| document.html(""))
+                .unwrap_or_default()
+        })
     }
 }
 
@@ -610,12 +638,8 @@ impl Effects for FakeWindow {
     fn sender_vip(&self, _vip: bool) {}
 
     fn messages_arrived(&self, fresh: Vec<MessageMeta>) -> Vec<String> {
-        let (missing, changed) = self.change(Step::MessagesArrived, |open| {
-            let before = open.messages.clone();
-            let missing = open.take_messages(&fresh);
-            (missing, open.messages != before)
-        });
-        if missing.is_empty() && changed {
+        let missing = self.change(Step::MessagesArrived, |open| open.take_messages(&fresh));
+        if missing.is_empty() {
             self.draw();
         }
         missing

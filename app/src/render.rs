@@ -48,6 +48,17 @@ pub struct Sanitized<'a> {
     pub paints: bool,
 }
 
+/// What the top of the page says about the thread as a whole.
+pub struct Head<'a> {
+    pub subject: &'a str,
+    /// How many messages the thread has.
+    pub count: usize,
+    /// Whether remote images and styles may load.
+    pub allow_remote: bool,
+}
+
+/// A whole thread, for the tests that read one page at once.
+#[cfg(test)]
 pub struct Conversation<'a> {
     pub subject: &'a str,
     pub messages: Vec<MessageView<'a>>,
@@ -60,7 +71,31 @@ pub struct Conversation<'a> {
     pub allow_remote: bool,
 }
 
+/// The whole page: the head, one article per message, and the end.
+#[cfg(test)]
 pub fn render(conversation: &Conversation, theme: &Theme) -> String {
+    let mut html = head(
+        &Head {
+            subject: conversation.subject,
+            count: conversation.messages.len(),
+            allow_remote: conversation.allow_remote,
+        },
+        theme,
+    );
+    for view in &conversation.messages {
+        html.push_str(&article(view, conversation.me, conversation.photos));
+    }
+    html.push_str(TAIL);
+    html
+}
+
+/// What closes the page after the last article.
+pub const TAIL: &str = "</body></html>";
+
+/// Everything before the first message: the document's head with its
+/// policy and stylesheet, and the thread's subject and count. A page is
+/// patched one article at a time only while this stays the same.
+pub fn head(conversation: &Head, theme: &Theme) -> String {
     let mut html = String::with_capacity(16 * 1024);
     html.push_str("<!doctype html><html");
     // Without this a screen reader reads the page in whatever voice it
@@ -86,7 +121,7 @@ pub fn render(conversation: &Conversation, theme: &Theme) -> String {
     } else {
         conversation.subject.to_string()
     };
-    let count = conversation.messages.len();
+    let count = conversation.count;
     let many = fill_plural(
         "{count} message",
         "{count} messages",
@@ -99,10 +134,14 @@ pub fn render(conversation: &Conversation, theme: &Theme) -> String {
         escape(&subject),
         escape(&many),
     );
-    for view in &conversation.messages {
-        render_message(&mut html, view, conversation.me, conversation.photos);
-    }
-    html.push_str("</body></html>");
+    html
+}
+
+/// One message's `<article>`, whole, as a patch puts it in place of the
+/// one before.
+pub fn article(view: &MessageView, me: &[String], photos: &HashMap<String, String>) -> String {
+    let mut html = String::new();
+    render_message(&mut html, view, me, photos);
     html
 }
 

@@ -286,6 +286,17 @@ impl FindBar {
         }
     }
 
+    /// Counts the matches again after some of the page was replaced under
+    /// a running search. Searching again would move the highlight to the
+    /// first match and the page with it; counting leaves both alone.
+    pub fn recount(&self) {
+        let query = self.entry.text().to_string();
+        if self.is_open() && !query.is_empty() {
+            self.find
+                .count_matches(&query, options(&query).bits(), MATCH_LIMIT);
+        }
+    }
+
     fn search(&self) {
         let query = self.entry.text().to_string();
         self.place.borrow_mut().start(&query);

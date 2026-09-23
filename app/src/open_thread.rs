@@ -19,7 +19,9 @@ mod page;
 pub mod queued;
 pub mod run;
 
-pub use page::{Cleaned, ToClean};
+#[cfg(test)]
+pub use page::Document;
+pub use page::{Article, Cleaned, Page, ToClean};
 pub use queued::Unsent;
 
 /// One message's inline images: `Content-ID` to `data:` URI. Shared rather
@@ -92,6 +94,8 @@ pub struct OpenThread {
     pub queued: Option<Unsent>,
     /// The cleaned HTML of each body the page draws, by message id.
     cleaned: HashMap<String, page::Cleaned>,
+    /// What the page on screen holds, or `None` before the first draw.
+    drawn: Option<page::Drawn>,
 }
 
 impl OpenThread {
@@ -138,6 +142,7 @@ impl OpenThread {
             translations: HashMap::new(),
             queued: None,
             cleaned: HashMap::new(),
+            drawn: None,
         }
     }
 
@@ -561,6 +566,7 @@ mod tests {
             translations: HashMap::new(),
             queued: None,
             cleaned: HashMap::new(),
+            drawn: None,
         }
     }
 
