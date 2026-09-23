@@ -179,7 +179,9 @@ uses a tool from outside the app, and it is off until you pick a model.
 |---|---|
 | ![Hide My Email, with one address and its switch](docs/screenshots/hide-my-email.png) | ![Preferences](docs/screenshots/preferences.png) |
 
-`scripts/screenshots.sh` retakes all of them from the demo.
+`scripts/screenshots.sh` retakes all of them from the demo, and
+`scripts/demo-video.sh` records the demo video: a tour of the demo accounts in
+a headless GNOME Shell, with captions.
 
 ## Install
 

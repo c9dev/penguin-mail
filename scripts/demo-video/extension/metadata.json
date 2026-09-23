@@ -1,0 +1,6 @@
+{
+  "uuid": "tour@penguinmail.dev",
+  "name": "Penguin Mail tour",
+  "description": "Places windows and drives input for recording the Penguin Mail demo video.",
+  "shell-version": ["50"]
+}

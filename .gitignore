@@ -16,3 +16,4 @@ docs/remaining-work.md
 
 # The owner's build values for the Google and Microsoft clients.
 packaging/secrets.env
+__pycache__/
