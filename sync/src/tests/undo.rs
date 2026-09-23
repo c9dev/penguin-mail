@@ -15,7 +15,11 @@ use crate::{History, MailAction, MailActions, TriageAction, now_millis};
 
 fn actions(h: &Harness) -> MailActions<Connected> {
     let connected = HashMap::from([(h.account_id, Arc::clone(&h.sync))]);
-    MailActions::new(Arc::new(Connected(connected)), h.db.clone())
+    MailActions::new(
+        Arc::new(Connected(connected)),
+        h.db.clone(),
+        crate::OneClick::Fake(Arc::default()),
+    )
 }
 
 /// What the fake Gmail holds on a message, sorted.

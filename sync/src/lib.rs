@@ -9,6 +9,7 @@ pub mod config;
 mod connect;
 pub mod contacts;
 mod engine;
+mod one_click;
 mod error;
 pub mod export;
 pub mod hidden;
@@ -59,6 +60,7 @@ pub use mailbox::{
     outbox_row, summarize_search, waiting_line,
 };
 pub use newsletters::Newsletters;
+pub use one_click::OneClick;
 pub use outbox::{Cancelled, Drained, Outbox, Posted};
 pub use settings::{AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, Permitted};
 pub use triage::TriageAction;

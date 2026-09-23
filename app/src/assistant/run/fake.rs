@@ -18,10 +18,10 @@ use mailrs_domain::{
 };
 use mailrs_gmail::RemoteLabel;
 use mailrs_store::{Db, accounts, messages};
-use mailrs_sync::fake::{FakeGmail, fill_store};
+use mailrs_sync::fake::{FakeGmail, FakeOneClick, fill_store};
 use mailrs_sync::{
     AccountSettings, AccountSync, Accounts, Calendar, ContactBook, Invitations, MailAction,
-    MailActions, Mailboxes, Outcome, View,
+    MailActions, Mailboxes, OneClick, Outcome, View,
 };
 use serde_json::Value;
 
@@ -438,6 +438,7 @@ impl Background for Runtime {
 pub struct Harness {
     pub tools: Tools<Connected>,
     pub gmail: Arc<FakeGmail>,
+    pub one_click: Arc<FakeOneClick>,
     pub db: Db,
     pub desk: Rc<FakeDesk>,
     pub effects: Rc<FakeEffects>,
@@ -580,7 +581,12 @@ impl Harness {
             other = Some((id, gmail));
         }
         let connected = Arc::new(Connected(syncing));
-        let mail = Arc::new(MailActions::new(Arc::clone(&connected), db.clone()));
+        let one_click = Arc::new(FakeOneClick::default());
+        let mail = Arc::new(MailActions::new(
+            Arc::clone(&connected),
+            db.clone(),
+            OneClick::Fake(Arc::clone(&one_click)),
+        ));
         let settings = Arc::new(AccountSettings::new(Arc::clone(&connected), db.clone()));
         let modules = Modules {
             mail: Arc::clone(&mail),
@@ -633,6 +639,7 @@ impl Harness {
         Harness {
             tools,
             gmail,
+            one_click,
             db,
             desk,
             effects,

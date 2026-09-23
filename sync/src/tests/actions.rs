@@ -25,7 +25,11 @@ fn actions_over(
     for sync in more {
         connected.insert(sync.account_id(), sync);
     }
-    MailActions::new(Arc::new(Connected(connected)), h.db.clone())
+    MailActions::new(
+        Arc::new(Connected(connected)),
+        h.db.clone(),
+        crate::OneClick::Fake(Arc::default()),
+    )
 }
 
 async fn colors(h: &Harness, thread_id: &str) -> Vec<(String, Option<FlagColor>)> {

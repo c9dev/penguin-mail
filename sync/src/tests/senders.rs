@@ -7,12 +7,11 @@ use std::sync::Arc;
 use mailrs_domain::{
     Address, Category, Filter, FilterAction, FilterCriteria, MessageMeta, system_label,
 };
-use mailrs_gmail::GmailError;
 
 use super::{Connected, Harness, harness};
 use crate::fake::meta;
 use crate::unsubscribe::choose;
-use crate::{Leave, MailActions, Permitted, SyncError, Unsubscribe, now_millis};
+use crate::{Leave, MailActions, OneClick, Permitted, SyncError, Unsubscribe, now_millis};
 
 #[tokio::test]
 async fn a_one_click_list_hears_from_the_app_at_once() {
@@ -22,21 +21,18 @@ async fn a_one_click_list_hears_from_the_app_at_once() {
 
     let left = actions(&h).unsubscribe(h.account_id, how).await.unwrap();
     assert_eq!(left, Leave::Done);
-    assert_eq!(h.fake.with(|s| s.unsubscribed.clone()), [url]);
+    assert_eq!(h.one_click.posted(), [url]);
 }
 
 #[tokio::test]
 async fn a_one_click_list_that_refuses_says_so() {
     let h = harness().await;
-    h.fake.fail_next(GmailError::Http {
-        status: 500,
-        body: String::new(),
-    });
+    h.one_click.refuse_next();
     let how = Unsubscribe::OneClick("https://news.example/u/1".into());
 
     let err = actions(&h).unsubscribe(h.account_id, how.clone()).await;
     assert!(err.is_err());
-    assert!(h.fake.with(|s| s.unsubscribed.is_empty()));
+    assert!(h.one_click.posted().is_empty());
     let nobody = actions(&h).unsubscribe(99, how).await;
     assert!(matches!(nobody, Err(SyncError::UnknownAccount(99))));
 }
@@ -61,12 +57,16 @@ async fn a_request_by_mail_or_a_page_is_left_to_the_app() {
     let page = choose("<http://news.example/u>", true).unwrap();
     let left = actions(&h).unsubscribe(h.account_id, page).await.unwrap();
     assert_eq!(left, Leave::Open("http://news.example/u".into()));
-    assert!(h.fake.with(|s| s.unsubscribed.is_empty()), "nothing posted");
+    assert!(h.one_click.posted().is_empty(), "nothing posted");
 }
 
 fn actions(h: &Harness) -> MailActions<Connected> {
     let connected = HashMap::from([(h.account_id, Arc::clone(&h.sync))]);
-    MailActions::new(Arc::new(Connected(connected)), h.db.clone())
+    MailActions::new(
+        Arc::new(Connected(connected)),
+        h.db.clone(),
+        OneClick::Fake(Arc::clone(&h.one_click)),
+    )
 }
 
 /// A message from `email`, in the inbox under `category`.

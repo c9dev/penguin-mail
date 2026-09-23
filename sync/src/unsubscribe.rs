@@ -220,11 +220,12 @@ impl<A: Accounts> MailActions<A> {
     ) -> Result<Leave, SyncError> {
         match how {
             Unsubscribe::OneClick(url) => {
-                let sync = self
-                    .accounts
+                // The list's server takes the request, but only on behalf
+                // of an account that is connected.
+                self.accounts
                     .account(account_id)
                     .ok_or(SyncError::UnknownAccount(account_id))?;
-                sync.one_click_unsubscribe(&url).await?;
+                self.one_click.post(&url).await?;
                 Ok(Leave::Done)
             }
             Unsubscribe::Email { to, subject, body } => Ok(Leave::Send { to, subject, body }),

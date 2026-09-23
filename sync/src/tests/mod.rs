@@ -30,7 +30,7 @@ use mailrs_domain::{AccountId, ChangeEvent, ThreadSummary};
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{Db, accounts, messages};
 
-use crate::fake::FakeGmail;
+use crate::fake::{FakeGmail, FakeOneClick};
 use crate::{AccountSync, Accounts};
 
 /// The accounts a test connects, by id.
@@ -46,6 +46,7 @@ impl Accounts for Connected {
 
 pub(crate) struct Harness {
     pub fake: Arc<FakeGmail>,
+    pub one_click: Arc<FakeOneClick>,
     pub sync: Arc<AccountSync<FakeGmail>>,
     pub db: Db,
     pub events: async_channel::Receiver<ChangeEvent>,
@@ -71,6 +72,7 @@ pub(crate) async fn harness() -> Harness {
     );
     Harness {
         fake,
+        one_click: Arc::new(FakeOneClick::default()),
         sync,
         db,
         events,

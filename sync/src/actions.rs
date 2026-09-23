@@ -11,7 +11,10 @@ use mailrs_domain::{AccountId, EpochMillis, FlagColor, Folder, Target, system_la
 use mailrs_store::reminders::{self, Reminder};
 use mailrs_store::{Db, flags, follow_ups, labels, messages, threads};
 
-use crate::{AccountSync, BackendError, GmailApi, Permitted, Relabelled, SyncEngine, SyncError, TriageAction};
+use crate::{
+    AccountSync, BackendError, GmailApi, OneClick, Permitted, Relabelled, SyncEngine, SyncError,
+    TriageAction,
+};
 
 mod categorize;
 mod labelling;
@@ -217,15 +220,18 @@ pub struct Undone {
 pub struct MailActions<A: Accounts> {
     pub(crate) accounts: Arc<A>,
     pub(crate) db: Db,
+    /// Where a one-click unsubscribe goes.
+    pub(crate) one_click: OneClick,
     /// The recorded actions, oldest first. Undo takes from the end.
     stack: Mutex<VecDeque<Undo>>,
 }
 
 impl<A: Accounts> MailActions<A> {
-    pub fn new(accounts: Arc<A>, db: Db) -> Self {
+    pub fn new(accounts: Arc<A>, db: Db, one_click: OneClick) -> Self {
         MailActions {
             accounts,
             db,
+            one_click,
             stack: Mutex::new(VecDeque::new()),
         }
     }

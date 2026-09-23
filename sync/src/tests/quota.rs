@@ -88,7 +88,11 @@ fn actions(all: &[Synced], db: &Db) -> MailActions<Connected> {
         .iter()
         .map(|m| (m.id, Arc::clone(&m.sync)))
         .collect::<std::collections::HashMap<_, _>>();
-    MailActions::new(Arc::new(Connected(connected)), db.clone())
+    MailActions::new(
+        Arc::new(Connected(connected)),
+        db.clone(),
+        crate::OneClick::Fake(Arc::default()),
+    )
 }
 
 /// Every conversation in every account, in the order the list shows them.

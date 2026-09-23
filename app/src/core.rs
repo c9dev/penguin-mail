@@ -23,8 +23,8 @@ use mailrs_sync::lock::{LockError, SyncLock};
 use mailrs_sync::sign_in::{account_client, signed_in};
 use mailrs_sync::{
     AccountSettings, AccountSync, Accounts, AnyGmail, ContactBook, Failure, History, Invitations,
-    MailAction, MailActions, Mailboxes, Outbox, Outcome, SyncEngine, Undone, connect_account,
-    now_millis,
+    MailAction, MailActions, Mailboxes, OneClick, Outbox, Outcome, SyncEngine, Undone,
+    connect_account, now_millis,
 };
 
 use crate::assistant::run::{Background, Modules};
@@ -185,7 +185,13 @@ impl Core {
         };
         let (events_tx, events) = async_channel::unbounded();
         let engine = Arc::new(RunningEngine::default());
-        let actions = Arc::new(MailActions::new(Arc::clone(&engine), db.clone()));
+        // The demo's newsletters point at addresses nobody owns, so its
+        // one-click requests go to a fake.
+        let one_click = match demo {
+            true => OneClick::Fake(Arc::default()),
+            false => OneClick::Web,
+        };
+        let actions = Arc::new(MailActions::new(Arc::clone(&engine), db.clone(), one_click));
         let lists = Arc::new(Mailboxes::new(Arc::clone(&engine), db.clone()));
         let gmail_settings = Arc::new(AccountSettings::new(Arc::clone(&engine), db.clone()));
         let photo_dir = contact_photo_dir(demo, &dir);

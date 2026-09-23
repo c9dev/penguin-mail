@@ -103,7 +103,11 @@ impl Backfilling {
     }
 
     fn actions(&self) -> MailActions<SyncEngine<FakeGmail>> {
-        MailActions::new(Arc::clone(&self.engine), self.db.clone())
+        MailActions::new(
+            Arc::clone(&self.engine),
+            self.db.clone(),
+            crate::OneClick::Fake(Arc::default()),
+        )
     }
 
     fn usage(&self) -> Usage {

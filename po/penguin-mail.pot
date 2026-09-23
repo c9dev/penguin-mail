@@ -975,21 +975,21 @@ msgid ""
 "mail. Stop it, then open Penguin Mail again."
 msgstr ""
 
-#: app/src/core.rs:553
+#: app/src/core.rs:559
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 
-#: app/src/core.rs:557
+#: app/src/core.rs:563
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
 msgstr ""
 
-#: app/src/core.rs:575
+#: app/src/core.rs:581
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 
-#: app/src/core.rs:583
+#: app/src/core.rs:589
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 
@@ -5999,19 +5999,19 @@ msgstr[1] ""
 msgid "a minute"
 msgstr ""
 
-#: sync/src/actions.rs:108
+#: sync/src/actions.rs:111
 msgid "Change labels"
 msgstr ""
 
-#: sync/src/actions.rs:304
+#: sync/src/actions.rs:310
 msgid "Delete Forever failed: {reason}"
 msgstr ""
 
-#: sync/src/actions.rs:474
+#: sync/src/actions.rs:480
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr ""
 
-#: sync/src/actions.rs:535 sync/src/actions.rs:587
+#: sync/src/actions.rs:541 sync/src/actions.rs:593
 msgid "Could not undo: {reason}"
 msgstr ""
 
