@@ -243,8 +243,15 @@ cd penguin-mail-X.Y.Z-x86_64
 ```
 
 It starts in the tray at login unless you run it as
-`NO_AUTOSTART=1 ./install-files.sh .`. Check a download against the
-release's `SHA256SUMS` with `sha256sum -c --ignore-missing SHA256SUMS`.
+`NO_AUTOSTART=1 ./install-files.sh .`.
+
+To check a download, fetch the release's `SHA256SUMS` and
+`SHA256SUMS.asc` and the apt repository's key from above, then:
+
+```sh
+gpgv --keyring ./penguin-mail-archive-keyring.gpg SHA256SUMS.asc SHA256SUMS
+sha256sum -c --ignore-missing SHA256SUMS
+```
 
 ### With dnf, on Fedora
 
@@ -324,8 +331,12 @@ notification, a banner across the window, and the tray menu, and
 - **From the tarball or from source**, it downloads the new tarball and
   installs it into the same folder as before, with no password.
 
-Every download is checked against the release's `SHA256SUMS` first. Once
-the new version is in, Penguin Mail restarts into it. With a message open in
+Before it installs anything, Penguin Mail checks that the release's
+`SHA256SUMS` carries a good signature from the apt repository's key,
+which is built into the app, and then checks the download against those
+sums. It refuses a release whose signature is missing or made by any
+other key, and the update log says so. Once the new version is in,
+Penguin Mail restarts into it. With a message open in
 the composer, it waits and shows **Restart** instead, since a draft saves
 only when you save it.
 
@@ -464,12 +475,15 @@ failure. [AGENTS.md](AGENTS.md) has the conventions and the testing traps.
 To publish a version, `scripts/release.sh` bumps the version, opens the
 changelog draft in your editor, writes the store listings' release notes
 with `scripts/metainfo.sh`, runs the checks, then commits, tags and
-pushes. The tag starts the release workflow, which builds the `.deb`,
-tarball and zip on Ubuntu 26.04 and the rpm on Fedora 43, starts the rpm
-on a hidden display, and publishes them with the
-changelog. It also builds the snap and sends it to the Snap Store's edge
-channel once the `SNAPCRAFT_STORE_CREDENTIALS` secret exists. When it
-finishes, the Package repositories workflow rebuilds the apt and dnf
+pushes. If the push fails, it takes the tag back off and keeps the
+release commit, and running it again pushes that commit. The tag starts
+the release workflow, which builds the `.deb`, tarball and zip on Ubuntu
+26.04 and the rpm on Fedora 43, starts the rpm on a hidden display, and
+publishes them with the changelog once CI has passed on the tagged
+commit. The release's `SHA256SUMS` goes out signed as `SHA256SUMS.asc`,
+with the same `APT_SIGNING_KEY` as the repositories. The workflow also
+builds the snap and sends it to the Snap Store's edge channel once the
+`SNAPCRAFT_STORE_CREDENTIALS` secret exists. When it finishes, the Package repositories workflow rebuilds the apt and dnf
 repositories on GitHub Pages from the five newest releases with
 `scripts/apt-repo.sh` and `scripts/rpm-repo.sh`, signed with the key in
 the `APT_SIGNING_KEY` secret. Run it from the Actions tab to publish again

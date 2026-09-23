@@ -5,6 +5,7 @@
 
 pub mod github;
 pub mod install;
+pub mod signature;
 pub mod version;
 
 use std::cell::RefCell;

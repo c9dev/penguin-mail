@@ -13,7 +13,7 @@ use mailrs_domain::translate::{fill, gettext};
 use super::App;
 use crate::settings::Change;
 use crate::ui::window::Notice;
-use crate::update::{self, Blockers, Restart, State, github, install, version};
+use crate::update::{self, Blockers, Restart, State, github, install, signature, version};
 
 /// The first timed check waits for the app to settle after it starts.
 const FIRST_CHECK: u32 = 5 * 60;
@@ -157,10 +157,11 @@ impl App {
             return;
         };
         let version = release.version;
-        let (package_name, package_asset, sums_asset) = (
+        let (package_name, package_asset, sums_asset, signature_asset) = (
             files.package.name.clone(),
             files.package.clone(),
             files.sums.clone(),
+            files.signature.cloned(),
         );
         let work = glib::user_cache_dir()
             .join(mailrs_sync::config::DIR_NAME)
@@ -183,18 +184,36 @@ impl App {
                         log: log.clone(),
                     };
                     let package = work.join(&package_name);
-                    let fetched = async {
-                        github::download(&client, &package_asset, &package).await?;
-                        github::text(&client, &sums_asset).await
+                    // The sums count only once the project's key has
+                    // signed them, and the package counts only once it
+                    // matches them, so both checks come before apt or
+                    // install-files.sh sees anything.
+                    let result = async {
+                        let fetch_failed = |err: anyhow::Error| failed(err.to_string());
+                        let sums = github::text(&client, &sums_asset)
+                            .await
+                            .map_err(fetch_failed)?;
+                        let signature = match &signature_asset {
+                            Some(asset) => {
+                                Some(github::text(&client, asset).await.map_err(fetch_failed)?)
+                            }
+                            None => None,
+                        };
+                        let sums = signature::signed_sums(
+                            &work,
+                            &sums,
+                            signature.as_deref(),
+                            signature::RELEASE_KEY,
+                        )
+                        .await
+                        .map_err(failed)?;
+                        github::download(&client, &package_asset, &package)
+                            .await
+                            .map_err(fetch_failed)?;
+                        install::verify(&package, &sums, &package_name).map_err(failed)?;
+                        install::run(&method, version, &package, &work).await
                     }
                     .await;
-                    let result = match fetched {
-                        Err(err) => Err(failed(err.to_string())),
-                        Ok(sums) => match install::verify(&package, &sums, &package_name) {
-                            Err(reason) => Err(failed(reason)),
-                            Ok(()) => install::run(&method, version, &package, &work).await,
-                        },
-                    };
                     if let Err(failed) = &result {
                         // The log says why even when the installer never ran.
                         let _ = tokio::fs::write(&failed.log, format!("{}\n", failed.reason)).await;

@@ -20,7 +20,8 @@ trap 'rm -rf "$work"' EXIT
 
 # The .deb. dpkg-shlibdeps reads the binaries' library needs and names the
 # Ubuntu packages that hold them, so Depends follows whatever the build
-# linked. It insists on a debian/control, so give it a minimal one.
+# linked. It insists on a debian/control, so give it a minimal one. gpgv,
+# which apt needs anyway, checks the signature on an update's checksums.
 root="$work/deb"
 mkdir -p "$root/usr" "$root/DEBIAN"
 cp -r "$tree/." "$root/usr/"
@@ -73,7 +74,7 @@ Version: $version
 Architecture: amd64
 Maintainer: Pivotd <penguin@pivotd.com>
 Installed-Size: $size
-Depends: $depends
+Depends: $depends, gpgv
 Recommends: gnupg, gpgsm, gnome-shell-extension-appindicator
 Section: mail
 Priority: optional

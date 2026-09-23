@@ -217,19 +217,43 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Only the public key, to check the signature below against the key
+      # the app has compiled in.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: packaging/apt
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: penguin-mail-${{ needs.version.outputs.version }}*
           merge-multiple: true
           path: dist
       # Each package comes from its own job, so the sums are written once
-      # every file is in one place. The updater checks its download here.
-      - name: Write the checksums
+      # every file is in one place. The updater checks its download against
+      # them, and trusts them only with a good signature from the apt
+      # repository's key, which it has compiled in; it refuses a release
+      # without one. The private key lives in a keyring of its own for this
+      # step only, as in the rpm job.
+      - name: Write and sign the checksums
+        env:
+          APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
         run: |
+          if [ -z "$APT_SIGNING_KEY" ]; then
+            echo "::error::APT_SIGNING_KEY is not set, and the updater refuses unsigned checksums"
+            exit 1
+          fi
           cd dist
-          rm -f SHA256SUMS
-          sha256sum *.deb *.rpm *.tar.gz *.zip > SHA256SUMS
+          rm -f SHA256SUMS SHA256SUMS.asc
+          sha256sum -- *.deb *.rpm *.tar.gz *.zip > SHA256SUMS
           cat SHA256SUMS
+          signing=$(mktemp -d)
+          trap 'gpgconf --homedir "$signing" --kill all; rm -rf "$signing"' EXIT
+          printf '%s\n' "$APT_SIGNING_KEY" | GNUPGHOME=$signing gpg --batch --import
+          GNUPGHOME=$signing gpg --batch --yes --pinentry-mode loopback --passphrase '' \
+              --local-user FE3C3B6E699AF939DC4670DCF3A853035C3E2B8E \
+              --armor --detach-sign --output SHA256SUMS.asc SHA256SUMS
+          gpgv --homedir "$signing" \
+              --keyring "$GITHUB_WORKSPACE/packaging/apt/penguin-mail-archive-keyring.gpg" \
+              SHA256SUMS.asc SHA256SUMS
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           name: Penguin Mail ${{ needs.version.outputs.version }}
@@ -242,6 +266,7 @@ jobs:
             dist/*.tar.gz
             dist/*.zip
             dist/SHA256SUMS
+            dist/SHA256SUMS.asc
 
   # Every release goes to the snap's edge channel once the GitHub release
   # is out, so edge never carries a version whose other packages failed.

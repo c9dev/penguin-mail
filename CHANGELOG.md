@@ -5,6 +5,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Improved
+
+- Before installing an update, Penguin Mail checks that the release is
+  signed with its own key, and refuses one that is unsigned or signed by
+  anyone else.
+
 ### Fixed
 
 - Installed from the tarball into a folder with a space in its path,

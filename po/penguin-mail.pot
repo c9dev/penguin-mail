@@ -2046,7 +2046,7 @@ msgstr ""
 msgid "Check for Mail"
 msgstr ""
 
-#: app/src/tray.rs:140 app/src/update/mod.rs:97
+#: app/src/tray.rs:140 app/src/update/mod.rs:98
 msgid "Install Update {version}"
 msgstr ""
 
@@ -2056,7 +2056,7 @@ msgstr ""
 
 #: app/src/tray.rs:147 app/src/ui/about.rs:87 app/src/ui/about.rs:194
 #: app/src/ui/about.rs:202 app/src/ui/about.rs:209
-#: app/src/ui/preferences.rs:662 app/src/update/mod.rs:107
+#: app/src/ui/preferences.rs:662 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr ""
 
@@ -2123,7 +2123,7 @@ msgstr ""
 msgid "Installing version {version}"
 msgstr ""
 
-#: app/src/ui/about.rs:241 app/src/update/mod.rs:103
+#: app/src/ui/about.rs:241 app/src/update/mod.rs:104
 msgid "Restart to Update"
 msgstr ""
 
@@ -2131,11 +2131,11 @@ msgstr ""
 msgid "Version {version} is installed"
 msgstr ""
 
-#: app/src/ui/about.rs:251 app/src/update/mod.rs:136
+#: app/src/ui/about.rs:251 app/src/update/mod.rs:137
 msgid "Show Log"
 msgstr ""
 
-#: app/src/ui/about.rs:256 app/src/update/mod.rs:133
+#: app/src/ui/about.rs:256 app/src/update/mod.rs:134
 msgid "The update to {version} failed"
 msgstr ""
 
@@ -5039,7 +5039,7 @@ msgstr ""
 msgid "Penguin Mail shows the new language after a restart"
 msgstr ""
 
-#: app/src/ui/window.rs:2568 app/src/update/mod.rs:129
+#: app/src/ui/window.rs:2568 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr ""
 
@@ -5626,36 +5626,55 @@ msgstr ""
 msgid "Checking for mail"
 msgstr ""
 
-#: app/src/update/mod.rs:102
+#: app/src/update/mod.rs:103
 msgid "Installing Update…"
 msgstr ""
 
-#: app/src/update/mod.rs:104
+#: app/src/update/mod.rs:105
 msgid "Show Update Log"
 msgstr ""
 
-#: app/src/update/mod.rs:105
+#: app/src/update/mod.rs:106
 msgid "Checking for Updates…"
 msgstr ""
 
-#: app/src/update/mod.rs:115 app/src/update/mod.rs:205
+#: app/src/update/mod.rs:116 app/src/update/mod.rs:206
 msgid "Penguin Mail {version} is available"
 msgstr ""
 
-#: app/src/update/mod.rs:118 app/src/update/mod.rs:211
+#: app/src/update/mod.rs:119 app/src/update/mod.rs:212
 msgid "Install"
 msgstr ""
 
-#: app/src/update/mod.rs:122
+#: app/src/update/mod.rs:123
 msgid "Installing Penguin Mail {version}"
 msgstr ""
 
-#: app/src/update/mod.rs:128
+#: app/src/update/mod.rs:129
 msgid "Restart to finish updating"
 msgstr ""
 
-#: app/src/update/mod.rs:208
+#: app/src/update/mod.rs:209
 msgid "Install it now, or later from the tray."
+msgstr ""
+
+#: app/src/update/signature.rs:31
+msgid "This release has no signature, so Penguin Mail will not install it."
+msgstr ""
+
+#: app/src/update/signature.rs:99
+msgid "Penguin Mail could not check the release's signature: {reason}"
+msgstr ""
+
+#: app/src/update/signature.rs:147
+msgid ""
+"This release is not signed with Penguin Mail's key, so Penguin Mail will not "
+"install it."
+msgstr ""
+
+#: app/src/update/signature.rs:151
+msgid ""
+"Checking the release's signature needs gpgv or gpg, and neither is installed."
 msgstr ""
 
 #: domain/src/category.rs:58

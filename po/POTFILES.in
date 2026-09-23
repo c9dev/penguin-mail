@@ -92,6 +92,7 @@ app/src/ui/window/scheduled.rs
 app/src/ui/window/senders.rs
 app/src/ui/window/shortcuts.rs
 app/src/update/mod.rs
+app/src/update/signature.rs
 domain/src/category.rs
 domain/src/invitation.rs
 domain/src/invitation/recurrence.rs
