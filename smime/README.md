@@ -131,11 +131,14 @@ person who gets the message sees a warning rather than a message.
 - `encrypt` signs first and envelopes the signed entity, which is what RFC
   8551 describes and what gpgsm allows: it signs or encrypts in one run,
   never both.
-- `encrypt` runs gpgsm with `--always-trust`. gpgsm otherwise refuses to
-  encrypt to a certificate whose chain reaches no root this computer
-  trusts, and a batch run cannot ask. `certificates_for` reports what is
-  held so the caller can put it in front of the person; refusing to send is
-  the wrong place to raise it.
+- Only a certificate whose chain reaches a root in the person's trust
+  list takes a message. gpgsm stores every certificate a signature carries
+  when it checks that signature, so a stranger who signs one message with a
+  certificate naming `bob@company.test` would otherwise get the next
+  message meant for Bob. `certificates_for` lists with `--with-validation`
+  and counts only `u` and `f`, and `encrypt` names each recipient by the
+  fingerprint of that certificate and runs without `--always-trust`, so
+  gpgsm checks the chain again, revocation included.
 - `encrypt` adds nobody on its own. Signing as the sender does not make
   the sender a recipient; the caller puts them in `to`.
 - The `micalg` parameter names the digest gpgsm reported signing with,

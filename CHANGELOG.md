@@ -43,6 +43,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - A message with big attachments leaves the composer sooner: it is built
   once rather than twice, and Undo Send no longer copies every file it
   carries.
+- Opening a signed conversation again shows its card at once, without
+  fetching the message from Gmail or starting gpg, until your keyring
+  changes.
 
 ### Fixed
 
@@ -105,6 +108,24 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   wrote before.
 - Clear Formatting takes the bullets and numbers off a list along with its
   styles, where it used to leave "•" and "1." behind as typed text.
+- A signed message shows only what its signature covers. A part somebody
+  added beside the signed one, or text written around a signed block, no
+  longer appears under "Signed by".
+- An S/MIME message encrypts only to certificates you trust. Opening a
+  stranger's signed message used to store their certificate, and the next
+  message to the address it named could go to them.
+- "Signed by" turns green only when you trust the key and it belongs to
+  the address the message is from. A key nobody vouched for, or one that
+  names somebody else, now says so on the card.
+- Replying to or forwarding a message that arrived encrypted starts with
+  Encrypt on, and asks before the quoted words go out readable.
+- Opening a signed OpenPGP message never fetches the signer's key from the
+  network, even when gpg.conf asks for that, so the sender cannot learn
+  when you read it.
+- Every signed or encrypted message in a conversation opens, not only the
+  newest, so an older encrypted reply no longer stays unreadable.
+- What gpg and gpgsm say when they fail now shows in the language the
+  window is in, on the card and in the composer.
 
 ## 0.1.7 (2026-09-23)
 

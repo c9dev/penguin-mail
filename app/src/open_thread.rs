@@ -19,6 +19,21 @@ pub mod run;
 
 pub use queued::Unsent;
 
+/// What a reply or a forward starts from, read off the open thread.
+pub struct Answering {
+    pub account_id: AccountId,
+    pub target: MessageMeta,
+    /// The words to quote.
+    pub text: String,
+    pub html: Option<String>,
+    pub thread: Vec<MessageMeta>,
+    pub attachments: Vec<mailrs_domain::Attachment>,
+    /// Whether the message arrived encrypted, which makes the new message
+    /// start with Encrypt on. The composer then asks before it sends the
+    /// quote in the clear to somebody it cannot encrypt to.
+    pub secret: bool,
+}
+
 /// Everything shown for one open thread.
 pub struct OpenThread {
     pub account_id: AccountId,
@@ -37,25 +52,28 @@ pub struct OpenThread {
     /// Pictures for the attachment rows: Gmail's attachment id to a small
     /// `data:` URI. Shared across the thread, since an id is unique.
     pub thumbnails: HashMap<String, String>,
-    /// Files that came out of an encrypted message, by message id, in the
-    /// order that message's attachment list gives them. Gmail holds the
-    /// ciphertext, so these bytes are the only copy and they live no
-    /// longer than this window.
+    /// Files the engine cut out of a signed or encrypted message, by
+    /// message id, in the order that message's attachment list gives them.
+    /// For an encrypted message Gmail holds only the ciphertext, so these
+    /// bytes are the only copy, and they live no longer than this window.
     pub opened_files: HashMap<String, Vec<Vec<u8>>>,
+    /// The messages that arrived encrypted and were opened here. A reply
+    /// to one starts encrypted.
+    pub sealed: HashSet<String>,
     /// Contact photos by lower-case sender address, as `data:` URIs. A
     /// sender with none keeps the initials avatar.
     pub photos: HashMap<String, String>,
     /// Set once the user unsubscribed from this thread's list.
     pub unsubscribed: bool,
-    /// What the engine made of the protected message in this thread, once
-    /// it has run. It stays here so redrawing the thread never asks again,
-    /// and so the card survives the body being replaced by the one that
-    /// was inside the encryption.
-    pub pgp: Option<Mark>,
-    /// Set as soon as an engine is asked about this thread. Either one may
+    /// What the engine made of each protected message in this thread, by
+    /// message id, once it has run. It stays here so redrawing the thread
+    /// never asks again, and so the card survives the body being replaced
+    /// by the one that was inside the encryption.
+    pub marks: HashMap<String, Mark>,
+    /// The protected messages an engine run has claimed. Either engine may
     /// hold a pinentry in front of the person for as long as they take,
-    /// and asking twice would put up two of them.
-    pub pgp_asked: bool,
+    /// and asking about one message twice would put up two of them.
+    pub asked: HashSet<String>,
     /// The flag colour chosen here, when the thread is flagged.
     pub flag_color: Option<FlagColor>,
     /// Messages translated in this window, by message id. They go no
@@ -102,10 +120,11 @@ impl OpenThread {
             inline_images: HashMap::new(),
             thumbnails: HashMap::new(),
             opened_files: HashMap::new(),
+            sealed: HashSet::new(),
             photos: HashMap::new(),
             unsubscribed: false,
-            pgp: None,
-            pgp_asked: false,
+            marks: HashMap::new(),
+            asked: HashSet::new(),
             flag_color: None,
             translations: HashMap::new(),
             queued: None,
@@ -155,6 +174,37 @@ impl OpenThread {
             .find(|m| !m.has_label(system_label::DRAFT))
     }
 
+    /// What a reply to or a forward of one message starts from: `only`, or
+    /// the message a reply answers when it names none. `None` when there
+    /// is no such message.
+    pub fn answering(&self, only: Option<&str>, forward: bool) -> Option<Answering> {
+        let target = match only {
+            Some(id) => self.messages.iter().find(|m| m.id == id)?.clone(),
+            None => self.reply_target()?.clone(),
+        };
+        let body = self
+            .bodies
+            .get(&target.id)
+            .and_then(|body| body.as_ref().ok());
+        Some(Answering {
+            account_id: self.account_id,
+            text: match body {
+                Some(body) => crate::compose::body_text(body),
+                None => target.snippet.clone(),
+            },
+            // A forward keeps the original's HTML and its files, so what
+            // goes out is the message that arrived.
+            html: body.filter(|_| forward).and_then(|body| body.html.clone()),
+            attachments: body
+                .filter(|_| forward)
+                .map(|body| body.attachments.clone())
+                .unwrap_or_default(),
+            secret: self.sealed.contains(&target.id),
+            thread: self.messages.clone(),
+            target,
+        })
+    }
+
     /// The newest message that carries an invitation, with the
     /// `text/calendar` part it arrived in.
     pub fn invitation(&self) -> Option<(&MessageMeta, &str)> {
@@ -164,41 +214,60 @@ impl OpenThread {
         })
     }
 
-    /// The newest message that arrived signed or encrypted, with the
-    /// engine call it needs. A thread holds one such message far more
-    /// often than two, and the newest is the one being read.
-    pub fn protected(&self) -> Option<(&MessageMeta, Engine)> {
-        self.messages.iter().rev().find_map(|meta| {
-            let body = self.bodies.get(&meta.id)?.as_ref().ok()?;
-            Some((meta, protection::engine(body)?))
-        })
+    /// Every message that arrived signed or encrypted and has no engine
+    /// run yet, newest first, with the engine call each needs. The newest
+    /// is the one being read, so it goes first.
+    pub fn protected(&self) -> Vec<(&MessageMeta, Engine)> {
+        self.messages
+            .iter()
+            .rev()
+            .filter(|meta| !self.asked.contains(&meta.id))
+            .filter_map(|meta| {
+                let body = self.bodies.get(&meta.id)?.as_ref().ok()?;
+                Some((meta, protection::engine(body)?))
+            })
+            .collect()
     }
 
-    /// That message, claimed for one engine run, with what the engine
-    /// needs to read it. `installed` says which engines this computer has,
-    /// so a message whose engine is missing is left unclaimed for the day
-    /// it turns up. Once per thread: a second call gives nothing back,
-    /// because either engine may hold a pinentry in front of the person
-    /// for as long as they take and asking twice would put up two of them.
-    pub fn take_protected(&mut self, installed: Installed) -> Option<Claimed> {
-        if self.pgp_asked {
-            return None;
+    /// Those messages, claimed for one engine run, with what the engine
+    /// needs to read each. `installed` says which engines this computer
+    /// has, so a message whose engine is missing is left unclaimed for the
+    /// day it turns up. Once per message: a second call leaves out what
+    /// the first took, because either engine may hold a pinentry in front
+    /// of the person for as long as they take and asking twice would put
+    /// up two of them.
+    pub fn take_protected(&mut self, installed: Installed) -> Vec<Claimed> {
+        let wanted: Vec<(String, Engine)> = self
+            .protected()
+            .into_iter()
+            .filter(|(_, opening)| installed.runs(*opening))
+            .map(|(meta, opening)| (meta.id.clone(), opening))
+            .collect();
+        let target = self.target();
+        let mut claimed = Vec::new();
+        for (message_id, opening) in wanted {
+            let Some(Ok(body)) = self.bodies.get(&message_id) else {
+                continue;
+            };
+            let body = body.clone();
+            self.asked.insert(message_id.clone());
+            claimed.push(Claimed {
+                target: target.clone(),
+                message_id,
+                opening,
+                body,
+            });
         }
-        let (message_id, opening) = {
-            let (meta, opening) = self.protected()?;
-            (meta.id.clone(), opening)
-        };
-        if !installed.runs(opening) {
-            return None;
-        }
-        let body = self.bodies.get(&message_id)?.as_ref().ok()?.clone();
-        self.pgp_asked = true;
-        Some(Claimed {
-            target: self.target(),
-            message_id,
-            opening,
-            body,
-        })
+        claimed
+    }
+
+    /// What the protection card says: the mark of the newest message an
+    /// engine answered about, which is the one being read.
+    pub fn card(&self) -> Option<&Mark> {
+        self.messages
+            .iter()
+            .rev()
+            .find_map(|meta| self.marks.get(&meta.id))
     }
 
     /// Whether this is the thread one of `targets` names. A target for
@@ -316,17 +385,25 @@ impl OpenThread {
     }
 
     /// What the engine made of the protected message: the mark for the
-    /// card, and, when it opened one, the body and the files that were
-    /// inside. Answers whether it opened a body.
+    /// card, and the body and the files cut from what it checked or opened.
+    /// Answers whether it gave a body. The pictures Gmail fetched for the
+    /// message as it arrived go, since one could come from a part the
+    /// signature does not cover; the ones the new body shows come out of
+    /// its own files.
     pub fn take_engine_answer(&mut self, message_id: String, read: protection::Read) -> bool {
-        self.pgp = Some(read.mark);
+        self.marks.insert(message_id.clone(), read.mark);
         let Some(body) = read.body else {
             return false;
         };
-        if !read.files.is_empty() {
-            self.opened_files.insert(message_id.clone(), read.files);
+        if read.sealed {
+            self.sealed.insert(message_id.clone());
         }
-        self.bodies.insert(message_id, Ok(body));
+        self.bodies.insert(message_id.clone(), Ok(body));
+        let pictures = queued::pictures(self, &message_id, &read.files);
+        self.inline_images.insert(message_id.clone(), pictures);
+        if !read.files.is_empty() {
+            self.opened_files.insert(message_id, read.files);
+        }
         true
     }
 
@@ -476,14 +553,109 @@ mod tests {
             inline_images: HashMap::new(),
             thumbnails: HashMap::new(),
             opened_files: HashMap::new(),
+            sealed: HashSet::new(),
             photos: HashMap::new(),
             unsubscribed: false,
-            pgp: None,
-            pgp_asked: false,
+            marks: HashMap::new(),
+            asked: HashSet::new(),
             flag_color: None,
             translations: HashMap::new(),
             queued: None,
         }
+    }
+
+    #[test]
+    fn a_body_the_engine_opened_brings_its_own_pictures_and_no_others() {
+        use crate::protection::{Mark, Read, Tone};
+        use mailrs_domain::{Attachment, MessageBody};
+
+        let mut open = thread(vec![message("m1", false)]);
+        open.bodies
+            .insert("m1".to_string(), Ok(MessageBody::default()));
+        // What Gmail fetched for the message as it arrived, including a
+        // picture from a part nobody signed.
+        open.inline_images.insert(
+            "m1".to_string(),
+            HashMap::from([(
+                "stranger".to_string(),
+                "data:image/png;base64,AA".to_string(),
+            )]),
+        );
+        let signed = MessageBody {
+            html: Some("<img src=\"cid:logo\">".to_string()),
+            attachments: vec![Attachment {
+                part_id: "0".to_string(),
+                filename: "logo.png".to_string(),
+                mime_type: "image/png".to_string(),
+                size: 1,
+                attachment_id: None,
+                content_id: Some("logo".to_string()),
+            }],
+            ..MessageBody::default()
+        };
+        open.take_engine_answer(
+            "m1".to_string(),
+            Read {
+                mark: Mark {
+                    title: "Signed by Ann".to_string(),
+                    detail: None,
+                    tone: Tone::Good,
+                },
+                body: Some(signed),
+                files: vec![vec![1]],
+                sealed: false,
+            },
+        );
+        let pictures = &open.inline_images["m1"];
+        assert_eq!(pictures.len(), 1, "{pictures:?}");
+        assert_eq!(pictures["logo"], "data:image/png;base64,AQ==");
+    }
+
+    /// What an engine gives back for a message it opened out of its
+    /// encryption, or checked in the clear.
+    fn engine_read(text: &str, sealed: bool) -> crate::protection::Read {
+        crate::protection::Read {
+            mark: crate::protection::Mark {
+                title: "Encrypted".to_string(),
+                detail: None,
+                tone: crate::protection::Tone::Unchecked,
+            },
+            body: Some(mailrs_domain::MessageBody {
+                text: Some(text.to_string()),
+                ..mailrs_domain::MessageBody::default()
+            }),
+            files: Vec::new(),
+            sealed,
+        }
+    }
+
+    /// The oracle this pins: a stranger puts somebody else's ciphertext in
+    /// a message, the window opens it without asking, and a reply quotes
+    /// the plaintext back to the stranger in the clear.
+    #[test]
+    fn a_reply_to_a_message_that_arrived_encrypted_starts_encrypted() {
+        let mut open = thread(vec![message("m1", false)]);
+        open.take_engine_answer(
+            "m1".to_string(),
+            engine_read("The key is under the mat.", true),
+        );
+
+        let answering = open.answering(None, false).expect("something to answer");
+        assert!(answering.secret);
+        assert_eq!(answering.text, "The key is under the mat.");
+        assert!(
+            open.answering(Some("m1"), true)
+                .is_some_and(|forward| forward.secret)
+        );
+    }
+
+    #[test]
+    fn a_reply_to_a_message_in_the_clear_starts_as_the_writer_left_it() {
+        let mut open = thread(vec![message("m1", false)]);
+        open.take_engine_answer("m1".to_string(), engine_read("Meet at six.", false));
+
+        let answering = open.answering(None, false).expect("something to answer");
+        assert!(!answering.secret);
     }
 
     #[test]

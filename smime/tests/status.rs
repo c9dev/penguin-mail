@@ -22,7 +22,7 @@ fn reads_the_subject_the_fingerprint_and_the_chain() {
     );
     assert_eq!(found.chain, Chain::Trusted);
     // The address lives in the certificate rather than in these lines.
-    assert_eq!(found.email, None);
+    assert!(found.emails.is_empty());
 }
 
 #[test]

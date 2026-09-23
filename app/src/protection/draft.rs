@@ -220,6 +220,7 @@ async fn opened(
                     smime,
                     crate::smime::Opening::Decrypt,
                     &ciphertext,
+                    &MessageBody::default(),
                 ))
             })
             .await

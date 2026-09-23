@@ -387,6 +387,7 @@ impl Effects for FakeEffects {
                         },
                         body: Some(body),
                         files,
+                        sealed: true,
                     };
                     protection::draft::reopen(&raw, standard, read, &mut draft)?;
                 }

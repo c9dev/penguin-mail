@@ -14,6 +14,7 @@ use mailrs_domain::{AccountId, MessageBody, MessageMeta, Protection, Target};
 
 use super::{Answer, Claimed, Desk, Effects, Engines, Installed};
 use crate::open_thread::OpenThread;
+use crate::protection::remembered::Verdicts;
 use crate::protection::{Engine, Mark, Read, Tone};
 use crate::wanted::Screen as OnScreen;
 
@@ -39,8 +40,7 @@ pub struct Screen {
     pub open: Option<OpenThread>,
     /// What Gmail hands back for the raw message.
     pub raw: Result<Vec<u8>, String>,
-    /// What the engine makes of it. Taken rather than copied, so asking
-    /// twice is visible.
+    /// What the engine makes of each message it is asked about.
     pub read: Result<Read, String>,
     /// The step the reader opens another thread during, which is how a
     /// test makes an answer arrive for a thread nobody is looking at.
@@ -52,6 +52,10 @@ pub struct Screen {
     pub steps: Vec<Step>,
     /// What the window was told the engine said.
     pub answers: Vec<(String, Read)>,
+    /// When the keyring last changed.
+    pub keyring: Option<std::time::SystemTime>,
+    /// The answers the window keeps between runs.
+    pub verdicts: Verdicts,
 }
 
 pub struct FakeWindow(pub RefCell<Screen>);
@@ -111,17 +115,19 @@ pub fn with_bodies(messages: Vec<(&str, Result<MessageBody, String>)>) -> OpenTh
         inline_images: HashMap::new(),
         thumbnails: HashMap::new(),
         opened_files: HashMap::new(),
+        sealed: HashSet::new(),
         photos: HashMap::new(),
         unsubscribed: false,
-        pgp: None,
-        pgp_asked: false,
+        marks: HashMap::new(),
+        asked: HashSet::new(),
         flag_color: None,
         translations: HashMap::new(),
         queued: None,
     }
 }
 
-/// What a good signature looks like coming back from an engine.
+/// What a good signature looks like coming back from an engine: the mark,
+/// and the body cut from the part it covers.
 pub fn signed() -> Read {
     Read {
         mark: Mark {
@@ -129,8 +135,9 @@ pub fn signed() -> Read {
             detail: None,
             tone: Tone::Good,
         },
-        body: None,
+        body: Some(body(None)),
         files: Vec::new(),
+        sealed: false,
     }
 }
 
@@ -138,7 +145,7 @@ pub fn signed() -> Read {
 /// inside the ciphertext.
 pub fn opened() -> Read {
     Read {
-        body: Some(body(None)),
+        sealed: true,
         ..signed()
     }
 }
@@ -159,6 +166,8 @@ impl FakeWindow {
             holds: None,
             steps: Vec::new(),
             answers: Vec::new(),
+            keyring: Some(std::time::SystemTime::UNIX_EPOCH),
+            verdicts: Verdicts::default(),
         })))
     }
 
@@ -198,9 +207,15 @@ impl Desk for FakeWindow {
         self.with(|screen| screen.installed)
     }
 
-    fn claim(&self, installed: Installed) -> Option<Claimed> {
+    fn claim(&self, installed: Installed) -> Vec<Claimed> {
         self.reached(Step::Claim);
-        self.with(|screen| screen.open.as_mut()?.take_protected(installed))
+        self.with(|screen| {
+            screen
+                .open
+                .as_mut()
+                .map(|open| open.take_protected(installed))
+                .unwrap_or_default()
+        })
     }
 }
 
@@ -233,13 +248,7 @@ impl Effects for FakeWindow {
         _body: MessageBody,
     ) -> Answer<'_, Result<Read, String>> {
         self.reached(Step::Ask);
-        let (held, read) = self.with(|screen| {
-            let read = std::mem::replace(
-                &mut screen.read,
-                Err("the engine was asked twice".to_string()),
-            );
-            (screen.holds.take(), read)
-        });
+        let (held, read) = self.with(|screen| (screen.holds.take(), screen.read.clone()));
         Box::pin(async move {
             if let Some(held) = held {
                 let _ = held.await;
@@ -251,5 +260,16 @@ impl Effects for FakeWindow {
     fn answered(&self, _target: Target, message_id: String, read: Read) {
         self.reached(Step::Answered);
         self.with(|screen| screen.answers.push((message_id, read)));
+    }
+
+    fn remembered(&self, _opening: Engine, message_id: &str) -> Option<Read> {
+        self.with(|screen| screen.verdicts.get(message_id, screen.keyring))
+    }
+
+    fn remember(&self, _opening: Engine, message_id: String, read: &Read) {
+        self.with(|screen| {
+            let keyring = screen.keyring;
+            screen.verdicts.keep(message_id, keyring, read);
+        });
     }
 }

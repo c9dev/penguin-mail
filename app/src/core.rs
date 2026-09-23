@@ -97,6 +97,9 @@ pub struct Core {
     /// Their gpgsm, found the same way, for the S/MIME half of the same
     /// controls.
     smime: Option<Smime>,
+    /// What the engines said about signed messages this run, so reopening
+    /// one does not start gpg again. Memory only.
+    pub verdicts: RefCell<crate::protection::remembered::Verdicts>,
     tokens: Arc<dyn TokenStore>,
     events_tx: async_channel::Sender<ChangeEvent>,
     pub events: async_channel::Receiver<ChangeEvent>,
@@ -187,6 +190,7 @@ impl Core {
             config: RefCell::new(config),
             pgp: Pgp::find().ok(),
             smime: Smime::find().ok(),
+            verdicts: RefCell::default(),
             tokens: Arc::new(KeyringTokenStore::new()),
             events_tx,
             events,
@@ -323,12 +327,26 @@ impl Core {
         let pgp = self
             .pgp
             .clone()
-            .ok_or_else(|| anyhow!("this computer has no gpg"))?;
+            .ok_or_else(|| anyhow!(crate::pgp::explain(&PgpError::NoGpg)))?;
         self.call(async move {
             let answered = tokio::task::spawn_blocking(move || run(&pgp)).await?;
-            Ok::<_, anyhow::Error>(answered?)
+            // The engine's own words are for a log. Whatever reaches a
+            // person from here, a toast or a line on the card, is theirs.
+            answered.map_err(|err| anyhow!(crate::pgp::explain(&err)))
         })
         .await
+    }
+
+    /// When the keyring the engine for `opening` reads against last
+    /// changed, which is how long a remembered answer holds.
+    pub fn keyring_stamp(
+        &self,
+        opening: crate::protection::Engine,
+    ) -> Option<std::time::SystemTime> {
+        match opening {
+            crate::protection::Engine::Pgp(_) => self.pgp.as_ref()?.keyring_stamp(),
+            crate::protection::Engine::Smime(_) => self.smime.as_ref()?.keyring_stamp(),
+        }
     }
 
     /// Whether this computer has a gpgsm to run. Without one the window
@@ -347,10 +365,10 @@ impl Core {
         let smime = self
             .smime
             .clone()
-            .ok_or_else(|| anyhow!("this computer has no gpgsm"))?;
+            .ok_or_else(|| anyhow!(crate::smime::explain(&SmimeError::NoGpgsm)))?;
         self.call(async move {
             let answered = tokio::task::spawn_blocking(move || run(&smime)).await?;
-            Ok::<_, anyhow::Error>(answered?)
+            answered.map_err(|err| anyhow!(crate::smime::explain(&err)))
         })
         .await
     }

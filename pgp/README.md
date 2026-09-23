@@ -33,13 +33,16 @@ Then:
 let found = pgp.verify(&signed_part, &signature)?;
 ```
 
-`found.verdict` says what happened and `found.trust` says how far the signing
+`found` holds every signature the part carries, usually one. Each one's
+`verdict` says what happened and its `trust` says how far the signing
 key's owner is vouched for. They are separate questions and a window that
 runs them together misleads people: `Verdict::NoKey` means nothing could be
 checked, which is not `Verdict::Bad`, and `Verdict::Good` with
 `Trust::Unknown` means the text is as the signer wrote it and nobody has said
-who the signer is. `found.is_good()` is the only case that means the message
-came from that key's owner unchanged. Draw the first part as the message.
+who the signer is. `is_good()` is the only case that means the message
+came from that key's owner unchanged, and `user_ids` lists every name on the
+key with its own validity, so a caller can check that the key names the
+address in From. Draw the first part as the message, and nothing beside it.
 
 **`multipart/encrypted`, protocol `application/pgp-encrypted`.** The first
 part carries `Version: 1` and nothing worth reading. Pass the second part's
@@ -50,7 +53,7 @@ let opened = pgp.decrypt(&ciphertext)?;
 ```
 
 `opened.part` is a MIME entity in its own right: parse it and draw it as the
-message. `opened.signature` is the signature that travelled inside the
+message. `opened.signatures` are the signatures that travelled inside the
 encryption, which is the only kind worth showing on an encrypted message,
 since anyone can wrap somebody else's ciphertext in a signature of their own.
 
@@ -66,7 +69,12 @@ if inline::armor(&body).is_some() {
 `opened.text` is the bytes that were inside, in whatever character set the
 sender used, so decode them the way any other body is decoded. It covers both
 an encrypted message and text left readable with a signature under it;
-`opened.signature` comes back for either.
+`opened.signatures` come back for either.
+
+Every read passes `--no-auto-key-retrieve` and `--no-auto-key-import`. A
+gpg.conf that asks for either would otherwise make opening a message fetch
+the signer's key from a key server or the sender's own domain, which tells
+the sender the message was read.
 
 `PgpError::NotForYou` means the message was encrypted to nobody this computer
 holds a key for. Say so where the message would have been, rather than

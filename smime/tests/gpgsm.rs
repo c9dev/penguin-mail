@@ -291,7 +291,10 @@ fn a_signature_over_the_part_verifies_and_names_its_signer() {
     assert_eq!(found.verdict, Verdict::Good);
     assert!(found.is_good());
     assert_eq!(found.subject.as_deref(), Some("/CN=Ada Lovelace"));
-    assert_eq!(found.email.as_deref(), Some("ada@example.test"));
+    assert_eq!(
+        found.emails.first().map(String::as_str),
+        Some("ada@example.test")
+    );
     assert_eq!(found.chain, Chain::Trusted);
     assert_eq!(
         found.fingerprint.as_deref(),
@@ -329,7 +332,7 @@ fn a_signature_from_a_certificate_we_do_not_hold_says_so() {
 
     assert_eq!(found.verdict, Verdict::NoCertificate);
     assert!(!found.is_good());
-    assert_eq!(found.email, None);
+    assert!(found.emails.is_empty());
 }
 
 #[test]
@@ -350,7 +353,10 @@ fn a_chain_that_reaches_no_root_we_trust_says_so_beside_a_good_signature() {
 
     assert_eq!(found.verdict, Verdict::Good);
     assert_eq!(found.chain, Chain::Untrusted);
-    assert_eq!(found.email.as_deref(), Some("hopper@example.test"));
+    assert_eq!(
+        found.emails.first().map(String::as_str),
+        Some("hopper@example.test")
+    );
 }
 
 #[test]
@@ -365,7 +371,10 @@ fn a_certificate_that_has_run_out_still_names_its_signer() {
 
     assert_eq!(found.verdict, Verdict::ExpiredCertificate);
     assert!(!found.is_good());
-    assert_eq!(found.email.as_deref(), Some("grace@example.test"));
+    assert_eq!(
+        found.emails.first().map(String::as_str),
+        Some("grace@example.test")
+    );
 }
 
 #[test]
@@ -381,7 +390,10 @@ fn an_opaque_signature_gives_back_the_message_inside_it() {
     assert_eq!(opened.part, part);
     let signature = opened.signature;
     assert!(signature.is_good());
-    assert_eq!(signature.email.as_deref(), Some("ada@example.test"));
+    assert_eq!(
+        signature.emails.first().map(String::as_str),
+        Some("ada@example.test")
+    );
 }
 
 #[test]
@@ -694,4 +706,92 @@ fn restart_agent(home: &Home) {
         .arg(home.dir.path())
         .args(["--kill", "gpg-agent"])
         .status();
+}
+
+/// Adds a certificate to the home's trust list beside what is there, the
+/// way a person marks a correspondent's own certificate as one to believe.
+fn trust_also(home: &Home, fingerprint: &str) {
+    let spaced: Vec<String> = fingerprint
+        .as_bytes()
+        .chunks(2)
+        .map(|pair| String::from_utf8_lossy(pair).into_owned())
+        .collect();
+    let list = home.dir.path().join("trustlist.txt");
+    let mut held = std::fs::read_to_string(&list).unwrap_or_default();
+    held.push_str(&format!("{} S relax\n", spaced.join(":")));
+    std::fs::write(list, held).expect("write");
+}
+
+/// A detached signature that carries the signer's own certificate, which
+/// is what a stranger who wants their certificate in the reader's keybox
+/// sends. gpgsm leaves a root out of a signature unless told otherwise.
+fn detached_with_certificate(home: &Home, data: &[u8]) -> Vec<u8> {
+    signed_by(home, data, &["--include-certs", "-1", "--detach-sign"])
+}
+
+/// The bug this pins: gpgsm imports the certificates a signature carries
+/// when it verifies one, and encryption took whatever the keybox held for
+/// an address. One message from an impostor was enough for the next
+/// message to Bob to be encrypted to the impostor.
+#[test]
+fn a_certificate_seen_in_mail_is_never_one_to_encrypt_to() {
+    let Some(impostor) = Home::new("Bob Impostor", "bob@company.test") else {
+        return;
+    };
+    let Some(bob) = Home::new("Bob Real", "bob@company.test") else {
+        return;
+    };
+    let Some(mine) = Home::new("Ada Lovelace", "ada@example.test") else {
+        return;
+    };
+    mine.import(&bob.certificate());
+    trust_also(&mine, &bob.fingerprint());
+    let part = b"Content-Type: text/plain\r\n\r\nIt is me, Bob.\r\n";
+    let signature = detached_with_certificate(&impostor, part);
+
+    // Opening the impostor's message puts their certificate in the keybox.
+    let found = mine.smime.verify(part, &signature).expect("a verdict");
+    assert_eq!(found.chain, Chain::Untrusted);
+
+    let held = mine
+        .smime
+        .certificates_for(&["bob@company.test".to_string()])
+        .expect("an answer");
+    let certificate = held[0].certificate.as_ref().expect("Bob's certificate");
+    assert_eq!(certificate.fingerprint, bob.fingerprint());
+
+    let enveloped = mine
+        .smime
+        .encrypt(
+            b"Content-Type: text/plain\r\n\r\nFor Bob.\r\n",
+            &["bob@company.test".to_string()],
+            None,
+        )
+        .expect("an enveloped body");
+    assert!(bob.smime.decrypt(&body_of(&enveloped)).is_ok());
+    assert!(impostor.smime.decrypt(&body_of(&enveloped)).is_err());
+}
+
+#[test]
+fn a_certificate_nobody_here_trusts_is_not_offered_for_encryption() {
+    let Some(stranger) = Home::new("Grace Hopper", "hopper@example.test") else {
+        return;
+    };
+    let Some(mine) = Home::new("Ada Lovelace", "ada@example.test") else {
+        return;
+    };
+    mine.import(&stranger.certificate());
+    let asked = [stranger.address.clone()];
+
+    let held = mine.smime.certificates_for(&asked).expect("an answer");
+    assert!(held[0].certificate.is_none(), "{held:?}");
+
+    let err = mine
+        .smime
+        .encrypt(b"Content-Type: text/plain\r\n\r\nHi.\r\n", &asked, None)
+        .expect_err("gpgsm has no certificate it trusts for Grace");
+    assert!(
+        matches!(err, mailrs_smime::SmimeError::NoCertificateFor(ref who) if who.contains("hopper")),
+        "expected NoCertificateFor, got {err}"
+    );
 }

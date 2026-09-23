@@ -38,6 +38,7 @@ gtk = { package = "gtk4", version = "0.11.4", features = ["v4_20"] }
 html5ever = "0.40.1"
 icalendar = "0.17.13"
 keyring = "4.2.0"
+libc = "0.2.189"
 ksni = "0.3.6"
 mail-builder = "1.0.0"
 mail-parser = "0.11.9"

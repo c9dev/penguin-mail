@@ -7,7 +7,9 @@
 use std::io::Write;
 
 use crate::error::SmimeError;
-use crate::gpgsm::Smime;
+use mailrs_pgp::gnupg::Pinentry;
+
+use crate::gpgsm::{Smime, failure};
 use crate::status::{self, Signature};
 
 /// What an `application/pkcs7-mime` part held once gpgsm opened it.
@@ -40,14 +42,18 @@ impl Smime {
         let mut file = tempfile::NamedTempFile::new().map_err(temp)?;
         file.write_all(signature).map_err(temp)?;
         file.flush().map_err(temp)?;
-        let run = self.read_only(signed_part, |command| {
+        // gpgsm fetches no certificate over the network unless the
+        // person's gpgsm.conf says `auto-issuer-key-retrieve`, and it has no
+        // option to say otherwise here. gpg's equivalent is switched off on
+        // every read in `mailrs_pgp`.
+        let run = self.run(signed_part, Pinentry::Never, |command| {
             command
                 .arg("--assume-base64")
                 .arg("--verify")
                 .arg(file.path())
                 .arg("-");
         })?;
-        let found = status::signature(&run.status).ok_or_else(|| run.failure())?;
+        let found = status::signature(&run.status).ok_or_else(|| failure(&run))?;
         Ok(self.named(found))
     }
 
@@ -60,11 +66,11 @@ impl Smime {
     /// back is the entity that was inside, with what gpgsm made of the
     /// signature over it.
     pub fn open_signed(&self, blob: &[u8]) -> Result<Opened, SmimeError> {
-        let run = self.read_only(blob, |command| {
+        let run = self.run(blob, Pinentry::Never, |command| {
             command.args(["--assume-base64", "--output", "-", "--verify"]);
         })?;
         let Some(found) = status::signature(&run.status) else {
-            return Err(run.failure());
+            return Err(failure(&run));
         };
         Ok(Opened {
             part: run.out,
@@ -85,25 +91,26 @@ impl Smime {
         // the envelope needs their own secret key and gpg-agent asks for
         // the passphrase that unlocks it. That window they expect; the one
         // about trusting a stranger's root they do not.
-        let run = self.run(enveloped, |command| {
+        let run = self.run(enveloped, Pinentry::MayAsk, |command| {
             command.args(["--assume-base64", "--output", "-", "--decrypt"]);
         })?;
         if !run.ok && !run.says("DECRYPTION_OKAY") {
-            return Err(run.failure());
+            return Err(failure(&run));
         }
         Ok(run.out)
     }
 
-    /// The signature with the signer's address filled in. gpgsm names a
-    /// signer by the subject of their certificate, and the address sits
-    /// inside the certificate, so this reads it out of the one the
-    /// fingerprint names.
+    /// The signature with the signer's addresses filled in. gpgsm names a
+    /// signer by the subject of their certificate, and the addresses sit
+    /// inside the certificate, so this reads them out of the one the
+    /// fingerprint names. The status lines carry none, so this is a second
+    /// run of gpgsm.
     fn named(&self, signature: Signature) -> Signature {
         let Some(fingerprint) = signature.fingerprint.as_deref() else {
             return signature;
         };
         Signature {
-            email: self.address_of(fingerprint),
+            emails: self.addresses_of(fingerprint),
             ..signature
         }
     }

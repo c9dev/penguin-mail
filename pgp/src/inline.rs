@@ -6,7 +6,8 @@
 //! shows people a screen of base64.
 
 use crate::error::PgpError;
-use crate::gpg::Pgp;
+use crate::gnupg::Pinentry;
+use crate::gpg::{Pgp, failure, reading};
 use crate::status::{self, Signature};
 
 const MESSAGE: &str = "-----BEGIN PGP MESSAGE-----";
@@ -29,8 +30,8 @@ pub struct Opened {
     /// What was inside the armor. The sender chose its character set, so the
     /// caller decodes these bytes the way it decodes any other body.
     pub text: Vec<u8>,
-    /// The signature the block carried, for either kind of armor.
-    pub signature: Option<Signature>,
+    /// The signatures the block carried, for either kind of armor.
+    pub signatures: Vec<Signature>,
 }
 
 /// Which kind of armor `body` carries, if any. A caller asks this before it
@@ -66,16 +67,21 @@ impl Pgp {
     /// the text still comes back with the verdict beside it.
     pub fn open_inline(&self, body: &str) -> Result<Opened, PgpError> {
         let (_, block) = block(body).ok_or(PgpError::NotPgp)?;
-        let run = self.run(block.as_bytes(), |command| {
+        // Armor may be encrypted, which needs the person's secret key.
+        let run = self.run(block.as_bytes(), Pinentry::MayAsk, |command| {
+            reading(command);
             command.arg("--decrypt");
         })?;
-        let signature = status::signature(&run.status);
-        if !run.ok && signature.is_none() && !run.says("DECRYPTION_OKAY") {
-            return Err(run.failure());
+        let signatures: Vec<Signature> = status::signatures(&run.status)
+            .into_iter()
+            .map(|found| self.named(found))
+            .collect();
+        if !run.ok && signatures.is_empty() && !run.says("DECRYPTION_OKAY") {
+            return Err(failure(&run));
         }
         Ok(Opened {
             text: run.out,
-            signature,
+            signatures,
         })
     }
 }

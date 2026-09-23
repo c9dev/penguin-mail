@@ -217,7 +217,11 @@ fn a_signature_over_the_part_verifies_and_names_its_signer() {
     let part = b"Content-Type: text/plain\r\n\r\nMeet at six.\r\n";
     let signature = detached(&home, part);
 
-    let found = home.pgp.verify(part, &signature).expect("a verdict");
+    let found = home
+        .pgp
+        .verify(part, &signature)
+        .expect("a verdict")
+        .remove(0);
 
     assert_eq!(found.verdict, Verdict::Good);
     assert!(found.is_good());
@@ -227,6 +231,15 @@ fn a_signature_over_the_part_verifies_and_names_its_signer() {
     );
     assert_eq!(found.trust, mailrs_pgp::Trust::Ultimate);
     assert!(found.fingerprint.is_some());
+    // Every name on the key, so a reader can tell whether it names the
+    // address the message came from.
+    assert_eq!(
+        found.user_ids,
+        [mailrs_pgp::UserId {
+            user_id: "Ada Lovelace <ada@example.test>".into(),
+            trust: mailrs_pgp::Trust::Ultimate,
+        }]
+    );
 }
 
 #[test]
@@ -238,7 +251,11 @@ fn a_body_changed_after_signing_fails_to_verify() {
     let signature = detached(&home, part);
     let tampered = b"Content-Type: text/plain\r\n\r\nMeet at nine.\r\n";
 
-    let found = home.pgp.verify(tampered, &signature).expect("a verdict");
+    let found = home
+        .pgp
+        .verify(tampered, &signature)
+        .expect("a verdict")
+        .remove(0);
 
     assert_eq!(found.verdict, Verdict::Bad);
     assert!(!found.is_good());
@@ -255,7 +272,11 @@ fn a_signature_from_a_key_we_do_not_hold_says_so() {
     let part = b"Content-Type: text/plain\r\n\r\nFrom someone else.\r\n";
     let signature = detached(&stranger, part);
 
-    let found = mine.pgp.verify(part, &signature).expect("a verdict");
+    let found = mine
+        .pgp
+        .verify(part, &signature)
+        .expect("a verdict")
+        .remove(0);
 
     assert_eq!(found.verdict, Verdict::NoKey);
     assert!(!found.is_good());
@@ -273,7 +294,7 @@ fn decrypting_gives_back_the_part_that_was_inside() {
     let opened = home.pgp.decrypt(&ciphertext).expect("the part inside");
 
     assert_eq!(opened.part, part);
-    assert!(opened.signature.is_none());
+    assert!(opened.signatures.is_empty());
 }
 
 #[test]
@@ -287,7 +308,7 @@ fn a_signature_inside_the_encryption_comes_back_with_it() {
     let opened = home.pgp.decrypt(&ciphertext).expect("the part inside");
 
     assert_eq!(opened.part, part);
-    let signature = opened.signature.expect("a signature");
+    let signature = opened.signatures.into_iter().next().expect("a signature");
     assert!(signature.is_good());
     assert_eq!(
         signature.signer.as_deref(),
@@ -336,7 +357,8 @@ fn a_part_signed_here_verifies_here() {
     let found = home
         .pgp
         .verify(&parts[0], &body_of(&parts[1]))
-        .expect("a verdict");
+        .expect("a verdict")
+        .remove(0);
     assert!(found.is_good(), "{found:?}");
     assert_eq!(
         found.signer.as_deref(),
@@ -359,7 +381,8 @@ fn a_part_written_with_unix_line_endings_verifies_once_it_is_mail() {
     let found = home
         .pgp
         .verify(&parts[0], &body_of(&parts[1]))
-        .expect("a verdict");
+        .expect("a verdict")
+        .remove(0);
     assert!(found.is_good(), "{found:?}");
 }
 
@@ -379,7 +402,8 @@ fn a_body_whose_lines_end_in_whitespace_survives_a_server_stripping_it() {
     let found = home
         .pgp
         .verify(&strip_trailing_whitespace(signed), &body_of(&parts[1]))
-        .expect("a verdict");
+        .expect("a verdict")
+        .remove(0);
     assert!(found.is_good(), "{found:?}");
 }
 
@@ -425,7 +449,14 @@ fn a_part_encrypted_here_opens_here_with_its_signature() {
         .decrypt(&body_of(&parts[1]))
         .expect("the part inside");
     assert_eq!(opened.part, part);
-    assert!(opened.signature.expect("a signature").is_good());
+    assert!(
+        opened
+            .signatures
+            .into_iter()
+            .next()
+            .expect("a signature")
+            .is_good()
+    );
 }
 
 #[test]
@@ -444,7 +475,7 @@ fn encrypting_without_a_sender_key_leaves_the_message_unsigned() {
         .decrypt(&body_of(&parts(&body)[1]))
         .expect("the part inside");
     assert_eq!(opened.part, part);
-    assert!(opened.signature.is_none());
+    assert!(opened.signatures.is_empty());
 }
 
 #[test]
@@ -502,7 +533,14 @@ fn a_clearsigned_body_opens_with_its_signature() {
     let opened = home.pgp.open_inline(&body).expect("the text inside");
 
     assert_eq!(String::from_utf8_lossy(&opened.text), "Meet at six.\n");
-    assert!(opened.signature.expect("a signature").is_good());
+    assert!(
+        opened
+            .signatures
+            .into_iter()
+            .next()
+            .expect("a signature")
+            .is_good()
+    );
 }
 
 #[test]
@@ -515,7 +553,7 @@ fn a_clearsigned_body_changed_on_the_way_still_shows_its_text() {
     let opened = home.pgp.open_inline(&body).expect("the text inside");
 
     assert_eq!(String::from_utf8_lossy(&opened.text), "Meet at nine.\n");
-    let signature = opened.signature.expect("a signature");
+    let signature = opened.signatures.into_iter().next().expect("a signature");
     assert!(!signature.is_good(), "{signature:?}");
     assert_eq!(signature.verdict, Verdict::Bad);
 }
@@ -536,7 +574,14 @@ fn an_encrypted_body_opens_even_with_a_mail_client_writing_around_it() {
         String::from_utf8_lossy(&opened.text),
         "The key is under the mat.\n"
     );
-    assert!(opened.signature.expect("a signature").is_good());
+    assert!(
+        opened
+            .signatures
+            .into_iter()
+            .next()
+            .expect("a signature")
+            .is_good()
+    );
 }
 
 #[test]
@@ -687,4 +732,53 @@ fn require_crypto() {
              so these tests would have proved nothing"
         );
     }
+}
+
+#[test]
+fn a_part_two_keys_signed_reports_both_signatures() {
+    let Some(home) = Home::new("Ada Lovelace", "ada@example.test") else {
+        return;
+    };
+    let made = Command::new(home.pgp.program())
+        .args(["--batch", "--no-tty", "--homedir"])
+        .arg(home.dir.path())
+        .args(["--passphrase", "", "--quick-generate-key"])
+        .args([
+            "Bo Peep <bo@example.test>",
+            "future-default",
+            "default",
+            "0",
+        ])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .expect("gpg runs");
+    assert!(made.success(), "gpg could not generate the second key");
+    let part = b"Content-Type: text/plain\r\n\r\nWe both say so.\r\n";
+    let file = home.dir.path().join("signed");
+    std::fs::write(&file, part).expect("write");
+    let out = Command::new(home.pgp.program())
+        .args(["--batch", "--no-tty", "--homedir"])
+        .arg(home.dir.path())
+        .args(["--armor", "--output", "-", "--detach-sign"])
+        .args([
+            "--local-user",
+            "ada@example.test",
+            "--local-user",
+            "bo@example.test",
+        ])
+        .arg(&file)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .output()
+        .expect("gpg runs");
+    assert!(out.status.success(), "gpg could not sign");
+
+    let found = home.pgp.verify(part, &out.stdout).expect("verdicts");
+
+    assert_eq!(found.len(), 2, "{found:?}");
+    assert!(
+        found.iter().all(|signature| signature.is_good()),
+        "{found:?}"
+    );
 }

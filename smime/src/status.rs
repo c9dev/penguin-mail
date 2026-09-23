@@ -8,6 +8,8 @@
 //! fingerprint and its subject, and the trust line is about the chain
 //! rather than about a web of signatures.
 
+use mailrs_pgp::{Trust, Verdict as PgpVerdict};
+
 /// What gpgsm made of a signature.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Signature {
@@ -16,10 +18,10 @@ pub struct Signature {
     /// distinguished name: `/CN=Ada Lovelace/O=Example`. Absent when gpgsm
     /// has no certificate to name.
     pub subject: Option<String>,
-    /// The address on that certificate. It sits in the certificate rather
-    /// than in the status lines, so [`crate::Smime::verify`] looks it up
-    /// and fills it in.
-    pub email: Option<String>,
+    /// The addresses on that certificate, in its own order. They sit in
+    /// the certificate rather than in the status lines, so
+    /// [`crate::Smime::verify`] looks them up and fills them in.
+    pub emails: Vec<String>,
     /// The signing certificate's fingerprint, which gpgsm reports for a
     /// signature it could check.
     pub fingerprint: Option<String>,
@@ -73,79 +75,50 @@ pub enum Chain {
     Unknown,
 }
 
-/// The signature the status lines describe, or `None` when they describe
-/// none.
+/// The first signature the status lines describe, or `None` when they
+/// describe none.
 pub fn signature<S: AsRef<str>>(status: &[S]) -> Option<Signature> {
-    let mut found: Option<Signature> = None;
-    for line in status {
-        let (keyword, rest) = split(line.as_ref());
-        let verdict = match keyword {
-            "GOODSIG" => Verdict::Good,
-            "BADSIG" => Verdict::Bad,
-            "EXPKEYSIG" => Verdict::ExpiredCertificate,
-            "REVKEYSIG" => Verdict::RevokedCertificate,
-            "EXPSIG" => Verdict::Expired,
-            "ERRSIG" => Verdict::Unchecked,
-            // gpgsm reports a certificate it could not find against the
-            // step that went looking, rather than as an `ERRSIG` with a
-            // reason code the way gpg does.
-            "ERROR" if rest.starts_with("verify.findkey") => Verdict::NoCertificate,
-            "NO_PUBKEY" => Verdict::NoCertificate,
-            "VALIDSIG" => {
-                if let Some(found) = &mut found {
-                    found.fingerprint = rest.split_whitespace().next().map(str::to_string);
-                }
-                continue;
-            }
-            "TRUST_UNDEFINED" | "TRUST_NEVER" | "TRUST_MARGINAL" | "TRUST_FULLY"
-            | "TRUST_ULTIMATE" => {
-                if let Some(found) = &mut found {
-                    found.chain = chain(keyword);
-                }
-                continue;
-            }
-            _ => continue,
-        };
-        // `GOODSIG <fingerprint> <subject>`, and the same shape for the
-        // verdicts beside it. The line that names no certificate is an
-        // error report rather than one of these, so the fingerprint is
-        // what says whether there is anything here to read.
-        let (fingerprint, subject) = match rest.split_once(' ') {
-            Some((fingerprint, subject)) if hexadecimal(fingerprint) => (
-                Some(fingerprint.to_string()),
-                Some(subject.trim().to_string()),
-            ),
-            _ => (None, None),
-        };
-        found = Some(Signature {
-            verdict,
-            subject,
-            email: None,
-            fingerprint,
-            chain: Chain::Unknown,
-        });
-    }
-    found
+    signatures(status).into_iter().next()
 }
 
-/// Whether the trust line says the chain reached a root. gpgsm answers with
-/// the same keywords gpg uses for its web of trust, but only a full or
-/// ultimate answer means the chain validated; the rest are the ways it
-/// failed to.
+/// Every signature the status lines describe, in order, read through the
+/// parser gpg's lines go through too.
+pub fn signatures<S: AsRef<str>>(status: &[S]) -> Vec<Signature> {
+    mailrs_pgp::gnupg::seen(status)
+        .into_iter()
+        .map(|seen| {
+            // `GOODSIG <fingerprint> <subject>`, and the same shape for the
+            // verdicts beside it. The line that names no certificate is an
+            // error report rather than one of these, so the fingerprint is
+            // what says whether there is anything here to read.
+            let named = seen.id.as_deref().is_some_and(hexadecimal);
+            Signature {
+                verdict: match seen.verdict {
+                    PgpVerdict::Good => Verdict::Good,
+                    PgpVerdict::Bad => Verdict::Bad,
+                    PgpVerdict::ExpiredKey => Verdict::ExpiredCertificate,
+                    PgpVerdict::RevokedKey => Verdict::RevokedCertificate,
+                    PgpVerdict::Expired => Verdict::Expired,
+                    PgpVerdict::NoKey => Verdict::NoCertificate,
+                    PgpVerdict::Unchecked => Verdict::Unchecked,
+                },
+                subject: seen.name.filter(|_| named),
+                emails: Vec::new(),
+                fingerprint: seen.fingerprint.or(seen.id.filter(|_| named)),
+                chain: match seen.trust {
+                    // gpgsm answers with the keywords gpg uses for its web
+                    // of trust, but only a full or ultimate answer means
+                    // the chain validated; the rest are the ways it failed
+                    // to.
+                    Some(Trust::Full | Trust::Ultimate) => Chain::Trusted,
+                    Some(_) => Chain::Untrusted,
+                    None => Chain::Unknown,
+                },
+            }
+        })
+        .collect()
+}
+
 fn hexadecimal(word: &str) -> bool {
     !word.is_empty() && word.chars().all(|c| c.is_ascii_hexdigit())
-}
-
-fn chain(keyword: &str) -> Chain {
-    match keyword {
-        "TRUST_FULLY" | "TRUST_ULTIMATE" => Chain::Trusted,
-        _ => Chain::Untrusted,
-    }
-}
-
-fn split(line: &str) -> (&str, &str) {
-    match line.split_once(' ') {
-        Some((keyword, rest)) => (keyword, rest.trim_start()),
-        None => (line, ""),
-    }
 }

@@ -972,15 +972,15 @@ msgstr ""
 msgid "On {date}, {sender} wrote:"
 msgstr ""
 
-#: app/src/core.rs:508
+#: app/src/core.rs:526
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 
-#: app/src/core.rs:525
+#: app/src/core.rs:543
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 
-#: app/src/core.rs:533
+#: app/src/core.rs:551
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 
@@ -1205,7 +1205,7 @@ msgstr ""
 msgid "From {senders}"
 msgstr ""
 
-#: app/src/notify.rs:195 app/src/ui/window.rs:1901
+#: app/src/notify.rs:195 app/src/ui/window.rs:1885
 msgid "Open"
 msgstr ""
 
@@ -1286,191 +1286,297 @@ msgid ""
 "too. Google asks you to confirm in your browser."
 msgstr ""
 
-#: app/src/pgp.rs:120
+#: app/src/pgp.rs:110
 msgid "Add a recipient whose key gpg holds."
 msgstr ""
 
-#: app/src/pgp.rs:129
+#: app/src/pgp.rs:119
 msgid "gpg holds no key for {addresses}."
 msgstr ""
 
-#: app/src/pgp.rs:146
+#: app/src/pgp.rs:136
 msgid "gpg holds no key for any of the addresses you send from."
 msgstr ""
 
-#: app/src/pgp.rs:148
+#: app/src/pgp.rs:138
 msgid "gpg holds a key for {addresses}."
 msgstr ""
 
-#: app/src/pgp.rs:152
+#: app/src/pgp.rs:142
 msgid "gpg holds a key for {addresses}, and none for {without}."
 msgstr ""
 
-#: app/src/pgp.rs:169 app/src/smime.rs:199
-msgid "Signed by {signer}"
+#: app/src/pgp.rs:245
+msgid "This computer has no gpg. Install GnuPG to read or send OpenPGP mail."
 msgstr ""
 
-#: app/src/pgp.rs:178 app/src/smime.rs:207
-msgid "This message changed after it was signed"
+#: app/src/pgp.rs:248 app/src/smime.rs:256
+msgid "Could not run {program}: {reason}"
 msgstr ""
 
-#: app/src/pgp.rs:180 app/src/smime.rs:209
-msgid "The signature of {signer} does not match what arrived."
+#: app/src/pgp.rs:252 app/src/smime.rs:260
+msgid "Could not write a temporary file: {reason}"
 msgstr ""
 
-#: app/src/pgp.rs:187
-msgid "Signed by {signer}, whose key has expired"
+#: app/src/pgp.rs:256
+msgid "This message is encrypted to a key this computer does not hold."
 msgstr ""
 
-#: app/src/pgp.rs:191
-msgid "The text is as it was written, and the key behind it ran out."
+#: app/src/pgp.rs:259
+msgid "gpg holds no secret key to sign as {address}."
 msgstr ""
 
-#: app/src/pgp.rs:197
-msgid "Signed by {signer}, who took this key back"
+#: app/src/pgp.rs:263
+msgid "gpg holds no key it can encrypt to for {address}."
 msgstr ""
 
-#: app/src/pgp.rs:201
-msgid "The owner revoked it, so it says nothing about who wrote this."
+#: app/src/pgp.rs:266
+msgid "This text holds no OpenPGP block."
 msgstr ""
 
-#: app/src/pgp.rs:207 app/src/smime.rs:236
-msgid "Signed by {signer}, and the signature has run out"
+#: app/src/pgp.rs:267
+msgid "gpg failed: {reason}"
 msgstr ""
 
-#: app/src/pgp.rs:211 app/src/smime.rs:240
-msgid "It carried a date to stop being good on, and that date has passed."
-msgstr ""
-
-#: app/src/pgp.rs:216
-msgid "Signed by a key this computer does not hold"
-msgstr ""
-
-#: app/src/pgp.rs:218
-msgid "Nothing here can check it. Ask gpg for key {key}."
-msgstr ""
-
-#: app/src/pgp.rs:224
-msgid "it names"
-msgstr ""
-
-#: app/src/pgp.rs:230
-msgid "gpg could not check this signature"
-msgstr ""
-
-#: app/src/pgp.rs:253
-msgid "This message is encrypted to a key you do not hold"
-msgstr ""
-
-#: app/src/pgp.rs:255
-msgid "Whoever sent it used a key gpg has no secret half of."
-msgstr ""
-
-#: app/src/pgp.rs:261
-msgid "gpg could not open this message"
-msgstr ""
-
-#: app/src/pgp.rs:272
-msgid "This message says it is OpenPGP and is not"
-msgstr ""
-
-#: app/src/pgp.rs:274 app/src/smime.rs:297
-msgid "Its parts are not where a signed or encrypted message keeps them."
-msgstr ""
-
-#: app/src/pgp.rs:285
-msgid "This is one of your own keys."
-msgstr ""
-
-#: app/src/pgp.rs:286
-msgid "You have vouched for this key."
-msgstr ""
-
-#: app/src/pgp.rs:287
-msgid "People you trust have vouched for this key."
-msgstr ""
-
-#: app/src/pgp.rs:288
-msgid "Nobody has vouched for this key, so it names no one."
-msgstr ""
-
-#: app/src/pgp.rs:289
-msgid "You marked this key as one not to trust."
-msgstr ""
-
-#: app/src/pgp.rs:298
-msgid "key {key}"
-msgstr ""
-
-#: app/src/pgp.rs:299
-msgid "a key gpg would not name"
-msgstr ""
-
-#: app/src/protection.rs:107
+#: app/src/protection.rs:118
 msgid "{smime} {pgp}"
 msgstr ""
 
-#: app/src/protection.rs:120
+#: app/src/protection.rs:131
 msgid "This computer has nothing to encrypt with."
 msgstr ""
 
-#: app/src/protection.rs:127
+#: app/src/protection.rs:138
 msgid ""
 "S/MIME names every recipient inside an encrypted message, so a blind copy "
 "would not stay blind."
 msgstr ""
 
-#: app/src/protection.rs:274
+#: app/src/protection.rs:285
 msgid "Encrypt this message to the recipients' keys"
 msgstr ""
 
-#: app/src/protection.rs:275
+#: app/src/protection.rs:286
 msgid "Encrypt this message to the recipients' certificates"
 msgstr ""
 
-#: app/src/protection.rs:301
-msgid "gpg holds no key and gpgsm no certificate for {addresses}."
+#: app/src/protection.rs:312
+msgid "gpg holds no key and gpgsm no trusted certificate for {addresses}."
 msgstr ""
 
-#: app/src/protection.rs:309
+#: app/src/protection.rs:320
 msgid "A message goes out under one standard or the other. {pgp} {smime}"
 msgstr ""
 
-#: app/src/protection.rs:357
+#: app/src/protection.rs:561
+msgid ""
+"This key does not name {sender}, the address the message says it is from."
+msgstr ""
+
+#: app/src/protection.rs:565
+msgid ""
+"This certificate does not name {sender}, the address the message says it is "
+"from."
+msgstr ""
+
+#: app/src/protection.rs:574
+msgid "Signed by {signer}"
+msgstr ""
+
+#: app/src/protection.rs:580
+msgid "This message changed after it was signed"
+msgstr ""
+
+#: app/src/protection.rs:582
+msgid "The signature of {signer} does not match what arrived."
+msgstr ""
+
+#: app/src/protection.rs:589
+msgid "Signed by {signer}, whose key has expired"
+msgstr ""
+
+#: app/src/protection.rs:593
+msgid "The text is as it was written, and the key behind it ran out."
+msgstr ""
+
+#: app/src/protection.rs:599
+msgid "Signed by {signer}, whose certificate has run out"
+msgstr ""
+
+#: app/src/protection.rs:603
+msgid ""
+"The text is as it was written, and the certificate behind it has expired."
+msgstr ""
+
+#: app/src/protection.rs:609
+msgid "Signed by {signer}, who took this key back"
+msgstr ""
+
+#: app/src/protection.rs:613
+msgid "The owner revoked it, so it says nothing about who wrote this."
+msgstr ""
+
+#: app/src/protection.rs:619
+msgid "Signed by {signer}, whose certificate was taken back"
+msgstr ""
+
+#: app/src/protection.rs:623
+msgid "Whoever issued it revoked it, so it says nothing about who wrote this."
+msgstr ""
+
+#: app/src/protection.rs:629
+msgid "Signed by {signer}, and the signature has run out"
+msgstr ""
+
+#: app/src/protection.rs:633
+msgid "It carried a date to stop being good on, and that date has passed."
+msgstr ""
+
+#: app/src/protection.rs:638
+msgid "Signed by a key this computer does not hold"
+msgstr ""
+
+#: app/src/protection.rs:640
+msgid "Nothing here can check it. Ask gpg for key {key}."
+msgstr ""
+
+#: app/src/protection.rs:647
+msgid "it names"
+msgstr ""
+
+#: app/src/protection.rs:653
+msgid "Signed by a certificate this computer does not hold"
+msgstr ""
+
+#: app/src/protection.rs:655
+msgid ""
+"The message carried none either, so there is nothing here to check it "
+"against."
+msgstr ""
+
+#: app/src/protection.rs:661
+msgid "gpg could not check this signature"
+msgstr ""
+
+#: app/src/protection.rs:666
+msgid "gpgsm could not check this signature"
+msgstr ""
+
+#: app/src/protection.rs:689
 msgid "Encrypted, and signed by {signer}"
 msgstr ""
 
-#: app/src/protection.rs:363
+#: app/src/protection.rs:698
 msgid "Encrypted. {what}"
 msgstr ""
 
-#: app/src/protection.rs:367
+#: app/src/protection.rs:704
 msgid "This message arrived encrypted"
 msgstr ""
 
-#: app/src/protection.rs:369
+#: app/src/protection.rs:706
 msgid "Nobody signed it, so it says nothing about who sent it."
 msgstr ""
 
-#: app/src/protection.rs:377
+#: app/src/protection.rs:714
 msgid "{detail} {files}"
 msgstr ""
 
-#: app/src/protection.rs:392
+#: app/src/protection.rs:728
+msgid "This message is encrypted to a key you do not hold"
+msgstr ""
+
+#: app/src/protection.rs:730
+msgid "Whoever sent it used a key gpg has no secret half of."
+msgstr ""
+
+#: app/src/protection.rs:735
+msgid "This message is encrypted to a certificate you do not hold"
+msgstr ""
+
+#: app/src/protection.rs:737
+msgid "Whoever sent it used a certificate gpgsm has no secret key for."
+msgstr ""
+
+#: app/src/protection.rs:743
+msgid "This message says it is OpenPGP and is not"
+msgstr ""
+
+#: app/src/protection.rs:744
+msgid "This message says it is S/MIME and is not"
+msgstr ""
+
+#: app/src/protection.rs:747
+msgid "Its parts are not where a signed or encrypted message keeps them."
+msgstr ""
+
+#: app/src/protection.rs:753
+msgid "gpg could not open this message"
+msgstr ""
+
+#: app/src/protection.rs:754
+msgid "gpgsm could not open this message"
+msgstr ""
+
+#: app/src/protection.rs:767
+msgid "You marked this key as one not to trust."
+msgstr ""
+
+#: app/src/protection.rs:768
+msgid "This is one of your own keys."
+msgstr ""
+
+#: app/src/protection.rs:769
+msgid "You have vouched for this key."
+msgstr ""
+
+#: app/src/protection.rs:770
+msgid "People you trust have vouched for this key."
+msgstr ""
+
+#: app/src/protection.rs:772
+msgid "Nobody has vouched for this key, so it names no one."
+msgstr ""
+
+#: app/src/protection.rs:775
+msgid "Its certificate leads back to an authority you trust."
+msgstr ""
+
+#: app/src/protection.rs:778
+msgid "Its certificate leads back to nobody you trust, so it names no one."
+msgstr ""
+
+#: app/src/protection.rs:781
+msgid "Nothing here says who that certificate belongs to."
+msgstr ""
+
+#: app/src/protection.rs:817
+msgid "key {key}"
+msgstr ""
+
+#: app/src/protection.rs:820
+msgid "a key gpg would not name"
+msgstr ""
+
+#: app/src/protection.rs:821
+msgid "a certificate gpgsm would not name"
+msgstr ""
+
+#: app/src/protection.rs:832
 msgid "It carries a file, kept in this window only."
 msgstr ""
 
-#: app/src/protection.rs:394
+#: app/src/protection.rs:834
 msgid "It carries {count} file, kept in this window only."
 msgid_plural "It carries {count} files, kept in this window only."
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/protection.rs:463
+#: app/src/protection.rs:920
 msgid "{names} or {last}"
 msgstr ""
 
-#: app/src/protection.rs:475
+#: app/src/protection.rs:932
 msgid "{names} and {last}"
 msgstr ""
 
@@ -1492,7 +1598,7 @@ msgstr ""
 msgid "Could not save: {reason}"
 msgstr ""
 
-#: app/src/protection/draft.rs:200 app/src/ui/window.rs:1819
+#: app/src/protection/draft.rs:200 app/src/ui/window.rs:1803
 msgid "Could not open the draft: {reason}"
 msgstr ""
 
@@ -1875,86 +1981,49 @@ msgid "4 GB"
 msgstr ""
 
 #: app/src/smime.rs:93
-msgid "Add a recipient whose certificate gpgsm holds."
+msgid "Add a recipient whose certificate gpgsm trusts."
 msgstr ""
 
-#: app/src/smime.rs:102
-msgid "gpgsm holds no certificate for {addresses}."
+#: app/src/smime.rs:103
+msgid ""
+"gpgsm holds no trusted certificate for {addresses}. A certificate that only "
+"arrived in mail does not count."
 msgstr ""
 
-#: app/src/smime.rs:120
+#: app/src/smime.rs:123
 msgid "gpgsm holds no certificate for any of the addresses you send from."
 msgstr ""
 
-#: app/src/smime.rs:122
+#: app/src/smime.rs:125
 msgid "gpgsm holds a certificate for {addresses}."
 msgstr ""
 
-#: app/src/smime.rs:126
+#: app/src/smime.rs:129
 msgid "gpgsm holds a certificate for {addresses}, and none for {without}."
 msgstr ""
 
-#: app/src/smime.rs:216
-msgid "Signed by {signer}, whose certificate has run out"
-msgstr ""
-
-#: app/src/smime.rs:220
-msgid ""
-"The text is as it was written, and the certificate behind it has expired."
-msgstr ""
-
-#: app/src/smime.rs:226
-msgid "Signed by {signer}, whose certificate was taken back"
-msgstr ""
-
-#: app/src/smime.rs:230
-msgid "Whoever issued it revoked it, so it says nothing about who wrote this."
-msgstr ""
-
-#: app/src/smime.rs:245
-msgid "Signed by a certificate this computer does not hold"
-msgstr ""
-
-#: app/src/smime.rs:247
-msgid ""
-"The message carried none either, so there is nothing here to check it "
-"against."
-msgstr ""
-
 #: app/src/smime.rs:253
-msgid "gpgsm could not check this signature"
+msgid "This computer has no gpgsm. Install GnuPG to read or send S/MIME mail."
+msgstr ""
+
+#: app/src/smime.rs:264
+msgid "This message is encrypted to a certificate this computer does not hold."
+msgstr ""
+
+#: app/src/smime.rs:267
+msgid "gpgsm holds no secret key to sign as {address}."
+msgstr ""
+
+#: app/src/smime.rs:271
+msgid "gpgsm holds no trusted certificate it can encrypt to for {address}."
+msgstr ""
+
+#: app/src/smime.rs:274
+msgid "This part holds no S/MIME data."
 msgstr ""
 
 #: app/src/smime.rs:276
-msgid "This message is encrypted to a certificate you do not hold"
-msgstr ""
-
-#: app/src/smime.rs:278
-msgid "Whoever sent it used a certificate gpgsm has no secret key for."
-msgstr ""
-
-#: app/src/smime.rs:284
-msgid "gpgsm could not open this message"
-msgstr ""
-
-#: app/src/smime.rs:295
-msgid "This message says it is S/MIME and is not"
-msgstr ""
-
-#: app/src/smime.rs:309
-msgid "Its certificate leads back to an authority you trust."
-msgstr ""
-
-#: app/src/smime.rs:311
-msgid "Its certificate leads back to nobody you trust, so it names no one."
-msgstr ""
-
-#: app/src/smime.rs:313
-msgid "Nothing here says who that certificate belongs to."
-msgstr ""
-
-#: app/src/smime.rs:324
-msgid "a certificate gpgsm would not name"
+msgid "gpgsm failed: {reason}"
 msgstr ""
 
 #: app/src/translation.rs:76
@@ -2052,7 +2121,7 @@ msgstr ""
 msgid "New Message"
 msgstr ""
 
-#: app/src/tray.rs:159 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2179
+#: app/src/tray.rs:159 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2163
 msgid "Check for Mail"
 msgstr ""
 
@@ -2070,7 +2139,7 @@ msgstr ""
 msgid "Check for Updates"
 msgstr ""
 
-#: app/src/tray.rs:175 app/src/ui/window.rs:2191
+#: app/src/tray.rs:175 app/src/ui/window.rs:2175
 #: app/src/ui/window/shortcuts.rs:508
 msgid "Quit"
 msgstr ""
@@ -2101,7 +2170,7 @@ msgstr ""
 msgid "License"
 msgstr ""
 
-#: app/src/ui/about.rs:170 app/src/ui/window.rs:2190
+#: app/src/ui/about.rs:170 app/src/ui/window.rs:2174
 msgid "About Penguin Mail"
 msgstr ""
 
@@ -2283,7 +2352,7 @@ msgid "Edit {server}"
 msgstr ""
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1411
-#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:2014
+#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:1998
 msgid "Remove"
 msgstr ""
 
@@ -2681,7 +2750,7 @@ msgstr ""
 msgid "Brave Search API Key"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:204 app/src/ui/conversation.rs:1339
+#: app/src/ui/composer/mod.rs:204 app/src/ui/conversation.rs:1340
 msgid "Choose a Time…"
 msgstr ""
 
@@ -3203,7 +3272,7 @@ msgid "Mark as Unread (Ctrl+Shift+U)"
 msgstr ""
 
 #: app/src/ui/conversation.rs:361 app/src/ui/conversation.rs:365
-#: app/src/ui/conversation.rs:1382
+#: app/src/ui/conversation.rs:1383
 msgid "Flag (Ctrl+Shift+L)"
 msgstr ""
 
@@ -3351,23 +3420,23 @@ msgid_plural "{count} Messages Selected"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/conversation.rs:1381
+#: app/src/ui/conversation.rs:1382
 msgid "Unflag (Ctrl+Shift+L)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1394
+#: app/src/ui/conversation.rs:1395
 msgid "Mark as Read (U)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1395
+#: app/src/ui/conversation.rs:1396
 msgid "Mark as Unread (U)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1553
+#: app/src/ui/conversation.rs:1554
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1570 app/src/ui/window/message_menu.rs:239
+#: app/src/ui/conversation.rs:1571 app/src/ui/window/message_menu.rs:239
 msgid "Clear Flag"
 msgstr ""
 
@@ -3489,7 +3558,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2272
+#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2256
 msgid "Add an account first"
 msgstr ""
 
@@ -4289,7 +4358,7 @@ msgstr ""
 msgid "Rules…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2182
+#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2166
 msgid "Hide My Email…"
 msgstr ""
 
@@ -4694,7 +4763,7 @@ msgid ""
 "nobody else can reach your mail. Paste the client's ID and secret to begin."
 msgstr ""
 
-#: app/src/ui/welcome.rs:97 app/src/ui/window.rs:1973
+#: app/src/ui/welcome.rs:97 app/src/ui/window.rs:1957
 msgid "Sign In with Google"
 msgstr ""
 
@@ -4931,87 +5000,87 @@ msgstr ""
 msgid "This account has no labels yet."
 msgstr ""
 
-#: app/src/ui/window.rs:1766
+#: app/src/ui/window.rs:1750
 msgid "Could not include {file}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:1877
+#: app/src/ui/window.rs:1861
 msgid "Downloading {file}…"
 msgstr ""
 
-#: app/src/ui/window.rs:1898 app/src/ui/window/attachments.rs:204
+#: app/src/ui/window.rs:1882 app/src/ui/window/attachments.rs:204
 #: app/src/ui/window/attachments.rs:378
 msgid "Saved {file} to Downloads"
 msgstr ""
 
-#: app/src/ui/window.rs:1916 app/src/ui/window/attachments.rs:209
+#: app/src/ui/window.rs:1900 app/src/ui/window/attachments.rs:209
 #: app/src/ui/window/attachments.rs:383
 msgid "Could not save {file}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:1932
+#: app/src/ui/window.rs:1916
 msgid "Could not save the settings: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:1955
+#: app/src/ui/window.rs:1939
 msgid "Waiting for Your Browser…"
 msgstr ""
 
-#: app/src/ui/window.rs:1957
+#: app/src/ui/window.rs:1941
 msgid "Continue in your browser"
 msgstr ""
 
-#: app/src/ui/window.rs:1963
+#: app/src/ui/window.rs:1947
 msgid "Added {account}. Downloading mail…"
 msgstr ""
 
-#: app/src/ui/window.rs:2007
+#: app/src/ui/window.rs:1991
 msgid "Remove {account}?"
 msgstr ""
 
-#: app/src/ui/window.rs:2011
+#: app/src/ui/window.rs:1995
 msgid ""
 "Its downloaded mail and saved sign-in are deleted from this computer. "
 "Nothing changes in Gmail."
 msgstr ""
 
-#: app/src/ui/window.rs:2027
+#: app/src/ui/window.rs:2011
 msgid "Removed {account}"
 msgstr ""
 
-#: app/src/ui/window.rs:2029
+#: app/src/ui/window.rs:2013
 msgid "Could not remove {account}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:2180
+#: app/src/ui/window.rs:2164
 msgid "Add Account…"
 msgstr ""
 
-#: app/src/ui/window.rs:2181
+#: app/src/ui/window.rs:2165
 msgid "New Smart Mailbox…"
 msgstr ""
 
-#: app/src/ui/window.rs:2188 app/src/ui/window/shortcuts.rs:485
+#: app/src/ui/window.rs:2172 app/src/ui/window/shortcuts.rs:485
 msgid "Preferences"
 msgstr ""
 
-#: app/src/ui/window.rs:2189
+#: app/src/ui/window.rs:2173
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: app/src/ui/window.rs:2197 app/src/ui/window.rs:2199
+#: app/src/ui/window.rs:2181 app/src/ui/window.rs:2183
 msgid "Main Menu"
 msgstr ""
 
-#: app/src/ui/window.rs:2452
+#: app/src/ui/window.rs:2436
 msgid "Open a message from the person first"
 msgstr ""
 
-#: app/src/ui/window.rs:2523
+#: app/src/ui/window.rs:2507
 msgid "Penguin Mail shows the new language after a restart"
 msgstr ""
 
-#: app/src/ui/window.rs:2525 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:2509 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr ""
 
