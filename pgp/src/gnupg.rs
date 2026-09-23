@@ -10,6 +10,8 @@
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::mpsc;
+use std::time::{Duration, Instant};
 
 use crate::status::{Trust, Verdict};
 
@@ -97,21 +99,7 @@ impl Program {
         pinentry: Pinentry,
         args: impl FnOnce(&mut Command),
     ) -> std::io::Result<Run> {
-        let (mut status_reader, status_writer) = std::io::pipe()?;
-        let mut command = Command::new(&self.path);
-        command.args(["--batch", "--no-tty"]);
-        status_fd(&mut command, &status_writer)?;
-        if let Some(home) = &self.home {
-            command.arg("--homedir").arg(home);
-        }
-        if pinentry == Pinentry::Never {
-            command.args(["--pinentry-mode", "error"]);
-        }
-        args(&mut command);
-        command
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null());
+        let (mut command, mut status_reader, status_writer) = self.command(pinentry, args)?;
         let spawned = command.spawn();
         // The child holds its own copy now. Keeping this one open would
         // leave the status pipe without an end, and the read below would
@@ -145,13 +133,175 @@ impl Program {
         let output = output?;
         Ok(Run {
             out: output.stdout,
-            status: String::from_utf8_lossy(&status)
-                .lines()
-                .filter_map(|line| line.strip_prefix(STATUS).map(str::to_string))
-                .collect(),
+            status: status_lines(&status),
             ok: output.status.success(),
         })
     }
+
+    /// Like [`Program::run`], for a run that must not take longer than
+    /// `limit`. gpgsm checking a signature asks dirmngr whether a
+    /// certificate was revoked, and dirmngr waits on the certificate
+    /// authority's server for as long as that server keeps the connection
+    /// open, which can be for ever.
+    ///
+    /// When the limit passes, the program and everything it started in its
+    /// process group are killed, the program is reaped so no zombie stays
+    /// behind, and the answer is an error of kind
+    /// [`std::io::ErrorKind::TimedOut`]. The agent and dirmngr leave the
+    /// group as they start, so they keep running for the next call.
+    pub fn run_within(
+        &self,
+        limit: Duration,
+        input: &[u8],
+        pinentry: Pinentry,
+        args: impl FnOnce(&mut Command),
+    ) -> std::io::Result<Run> {
+        let deadline = Instant::now() + limit;
+        let (mut command, status_reader, status_writer) = self.command(pinentry, args)?;
+        own_group(&mut command);
+        let spawned = command.spawn();
+        drop(status_writer);
+        drop(command);
+        let mut child = spawned?;
+        let group = child.id();
+        let (Some(mut stdin), Some(stdout)) = (child.stdin.take(), child.stdout.take()) else {
+            kill_group(group, &mut child);
+            let _ = child.wait();
+            return Err(std::io::Error::other("no pipes to talk to the program"));
+        };
+        // These threads are not scoped, unlike the ones in `run`: a
+        // process that outlives the program could hold a pipe open after
+        // the limit, and the answer must not wait for it. So they own what
+        // they touch, and the input goes over as a copy.
+        let input = input.to_vec();
+        std::thread::spawn(move || {
+            let _ = stdin.write_all(&input);
+        });
+        let (sent, received) = mpsc::channel();
+        let read = |mut pipe: Box<dyn std::io::Read + Send>, which: Pipe| {
+            let sent = sent.clone();
+            std::thread::spawn(move || {
+                let mut bytes = Vec::new();
+                let _ = pipe.read_to_end(&mut bytes);
+                let _ = sent.send((which, bytes));
+            });
+        };
+        read(Box::new(stdout), Pipe::Out);
+        read(Box::new(status_reader), Pipe::Status);
+        drop(sent);
+        let exit = loop {
+            if let Some(exit) = child.try_wait()? {
+                break exit;
+            }
+            if Instant::now() >= deadline {
+                kill_group(group, &mut child);
+                let _ = child.wait();
+                return Err(timed_out(limit));
+            }
+            std::thread::sleep(POLL);
+        };
+        let (mut out, mut status) = (Vec::new(), Vec::new());
+        for _ in 0..2 {
+            let left = deadline.saturating_duration_since(Instant::now());
+            match received.recv_timeout(left) {
+                Ok((Pipe::Out, bytes)) => out = bytes,
+                Ok((Pipe::Status, bytes)) => status = bytes,
+                // The program has exited, so what still holds a pipe is
+                // something it started. The group outlives its leader
+                // while any member runs, so its id is still theirs.
+                Err(_) => {
+                    kill_group(group, &mut child);
+                    return Err(timed_out(limit));
+                }
+            }
+        }
+        Ok(Run {
+            out,
+            status: status_lines(&status),
+            ok: exit.success(),
+        })
+    }
+
+    /// The command every run starts from, with the status pipe it reports
+    /// on. `args` adds what the one call needs.
+    fn command(
+        &self,
+        pinentry: Pinentry,
+        args: impl FnOnce(&mut Command),
+    ) -> std::io::Result<(Command, std::io::PipeReader, std::io::PipeWriter)> {
+        let (status_reader, status_writer) = std::io::pipe()?;
+        let mut command = Command::new(&self.path);
+        command.args(["--batch", "--no-tty"]);
+        status_fd(&mut command, &status_writer)?;
+        if let Some(home) = &self.home {
+            command.arg("--homedir").arg(home);
+        }
+        if pinentry == Pinentry::Never {
+            command.args(["--pinentry-mode", "error"]);
+        }
+        args(&mut command);
+        command
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null());
+        Ok((command, status_reader, status_writer))
+    }
+}
+
+/// How often a run with a limit looks at whether the program has exited.
+/// A gpgsm verify takes about a tenth of a second, so this adds little.
+const POLL: Duration = Duration::from_millis(5);
+
+/// Which pipe a reader thread emptied.
+enum Pipe {
+    Out,
+    Status,
+}
+
+fn timed_out(limit: Duration) -> std::io::Error {
+    std::io::Error::new(
+        std::io::ErrorKind::TimedOut,
+        format!("no answer within {} seconds", limit.as_secs_f32()),
+    )
+}
+
+/// The status lines in what the program wrote to the status pipe, without
+/// the prefix. Anything else on that pipe is not a status line.
+fn status_lines(bytes: &[u8]) -> Vec<String> {
+    String::from_utf8_lossy(bytes)
+        .lines()
+        .filter_map(|line| line.strip_prefix(STATUS).map(str::to_string))
+        .collect()
+}
+
+/// Starts the program as the leader of a process group of its own, so a
+/// run that goes over its limit can stop whatever the program started as
+/// well.
+#[cfg(unix)]
+fn own_group(command: &mut Command) {
+    use std::os::unix::process::CommandExt;
+    command.process_group(0);
+}
+
+#[cfg(not(unix))]
+fn own_group(_command: &mut Command) {}
+
+/// Kills every process in the group the program leads. `group` is the
+/// program's own pid, which [`own_group`] made the group's id.
+#[cfg(unix)]
+fn kill_group(group: u32, _child: &mut std::process::Child) {
+    if let Ok(group) = i32::try_from(group) {
+        // SAFETY: kill takes plain integers and touches no memory. A
+        // negative pid names a process group, and this one is ours.
+        unsafe {
+            libc::kill(-group, libc::SIGKILL);
+        }
+    }
+}
+
+#[cfg(not(unix))]
+fn kill_group(_group: u32, child: &mut std::process::Child) {
+    let _ = child.kill();
 }
 
 /// Hands the write end of the status pipe to the child as its fd 3 and
