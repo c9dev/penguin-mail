@@ -140,13 +140,18 @@ jobs:
       # Builds in an LXD container, from snap/snapcraft.yaml.
       - uses: snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79 # v1.3.0
         id: snapcraft
+      # snap run puts the app in a systemd scope so snapd can track it.
+      # The runner user has no systemd user instance, so as that user snap
+      # run stops with "cannot track application process". As root, snapd
+      # falls back to the system's systemd, and the confined app starts the
+      # same way.
       - name: Install and start it
         env:
           SNAP_FILE: ${{ steps.snapcraft.outputs.snap }}
         run: |
           sudo snap install core26 mesa-2604
           sudo snap install --dangerous "$SNAP_FILE"
-          scripts/smoke-start.sh snap run penguin-mail
+          sudo scripts/smoke-start.sh snap run penguin-mail
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: snap-${{ needs.build.outputs.version }}
