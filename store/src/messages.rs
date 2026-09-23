@@ -3,7 +3,7 @@
 //! Callers change messages, then call `refresh_thread` for each touched
 //! thread inside the same transaction.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use mailrs_domain::{AccountId, Address, MessageMeta, system_label};
 use rusqlite::{Connection, OptionalExtension, params};
@@ -190,19 +190,25 @@ pub fn labelled(conn: &Connection, account_id: AccountId, label: &str) -> Result
     Ok(rows.collect::<rusqlite::Result<HashSet<String>>>()?)
 }
 
-/// The subset of `ids` that is stored.
+/// The subset of `ids` that is stored, from one statement however many
+/// ids there are.
 pub fn existing_ids(
     conn: &Connection,
     account_id: AccountId,
     ids: &[String],
 ) -> Result<HashSet<String>> {
-    let mut found = HashSet::new();
-    for id in ids {
-        if thread_id_of(conn, account_id, id)?.is_some() {
-            found.insert(id.clone());
-        }
-    }
-    Ok(found)
+    let mut stmt = conn.prepare_cached(
+        "SELECT id FROM messages WHERE account_id = ?1 AND id IN (SELECT value FROM json_each(?2))",
+    )?;
+    let rows = stmt.query_map(params![account_id, json_list(ids)], |row| row.get(0))?;
+    Ok(rows.collect::<rusqlite::Result<HashSet<String>>>()?)
+}
+
+/// `ids` as a JSON array, which `json_each` turns back into rows. One
+/// bound value holds any number of ids, where a list of placeholders
+/// would run into SQLite's limit on them.
+fn json_list(ids: &[String]) -> String {
+    serde_json::to_string(ids).unwrap_or_else(|_| "[]".into())
 }
 
 struct MessageRow {
@@ -222,7 +228,8 @@ struct MessageRow {
     one_click: bool,
 }
 
-/// A thread's stored messages, oldest first.
+/// A thread's stored messages, oldest first, with their labels from one
+/// more query rather than one per message.
 pub fn thread_messages(
     conn: &Connection,
     account_id: AccountId,
@@ -236,9 +243,32 @@ pub fn thread_messages(
     let rows = stmt
         .query_map(params![account_id, thread_id], message_row)?
         .collect::<rusqlite::Result<Vec<_>>>()?;
+    let mut labels = conn.prepare_cached(
+        "SELECT l.message_id, l.label_id FROM messages m \
+         CROSS JOIN message_labels l ON l.account_id = m.account_id AND l.message_id = m.id \
+         WHERE m.account_id = ?1 AND m.thread_id = ?2 ORDER BY l.label_id",
+    )?;
+    let labels = labels_by_message(labels.query_map(params![account_id, thread_id], label_row)?)?;
     rows.into_iter()
-        .map(|r| message_meta(conn, account_id, r))
+        .map(|r| message_meta(account_id, r, &labels))
         .collect()
+}
+
+fn label_row(row: &rusqlite::Row) -> rusqlite::Result<(String, String)> {
+    Ok((row.get(0)?, row.get(1)?))
+}
+
+/// Each message's labels, sorted, from `(message id, label)` rows that
+/// arrive in label order.
+fn labels_by_message(
+    rows: impl Iterator<Item = rusqlite::Result<(String, String)>>,
+) -> Result<HashMap<String, Vec<String>>> {
+    let mut labels: HashMap<String, Vec<String>> = HashMap::new();
+    for row in rows {
+        let (message_id, label) = row?;
+        labels.entry(message_id).or_default().push(label);
+    }
+    Ok(labels)
 }
 
 fn message_row(row: &rusqlite::Row) -> rusqlite::Result<MessageRow> {
@@ -260,7 +290,11 @@ fn message_row(row: &rusqlite::Row) -> rusqlite::Result<MessageRow> {
     })
 }
 
-fn message_meta(conn: &Connection, account_id: AccountId, r: MessageRow) -> Result<MessageMeta> {
+fn message_meta(
+    account_id: AccountId,
+    r: MessageRow,
+    labels: &HashMap<String, Vec<String>>,
+) -> Result<MessageMeta> {
     Ok(MessageMeta {
         account_id,
         to: parse_addresses("messages.to_addrs", &r.to)?,
@@ -269,7 +303,7 @@ fn message_meta(conn: &Connection, account_id: AccountId, r: MessageRow) -> Resu
             name: r.from_name,
             email,
         }),
-        label_ids: labels_of(conn, account_id, &r.id)?,
+        label_ids: labels.get(&r.id).cloned().unwrap_or_default(),
         id: r.id,
         thread_id: r.thread_id,
         rfc822_msgid: r.rfc822_msgid,
@@ -290,27 +324,25 @@ pub fn by_ids(
     account_id: AccountId,
     ids: &[String],
 ) -> Result<Vec<MessageMeta>> {
-    let mut found = Vec::new();
-    // SQLite takes 999 parameters by default and one goes to the account.
-    for chunk in ids.chunks(500) {
-        let holes: Vec<String> = (2..chunk.len() + 2).map(|n| format!("?{n}")).collect();
-        let sql = format!(
-            "SELECT id, thread_id, rfc822_msgid, from_name, from_addr, to_addrs, cc_addrs, \
-             subject, date, snippet, size, has_attachments, list_unsubscribe, one_click \
-             FROM messages WHERE account_id = ?1 AND id IN ({}) ORDER BY date ASC, id",
-            holes.join(",")
-        );
-        let mut params: Vec<&dyn rusqlite::ToSql> = vec![&account_id];
-        params.extend(chunk.iter().map(|id| id as &dyn rusqlite::ToSql));
-        let mut stmt = conn.prepare(&sql)?;
-        let rows = stmt
-            .query_map(params.as_slice(), message_row)?
-            .collect::<rusqlite::Result<Vec<_>>>()?;
-        for row in rows {
-            found.push(message_meta(conn, account_id, row)?);
-        }
-    }
-    Ok(found)
+    let ids = json_list(ids);
+    let mut stmt = conn.prepare_cached(
+        "SELECT id, thread_id, rfc822_msgid, from_name, from_addr, to_addrs, cc_addrs, \
+         subject, date, snippet, size, has_attachments, list_unsubscribe, one_click \
+         FROM messages WHERE account_id = ?1 AND id IN (SELECT value FROM json_each(?2)) \
+         ORDER BY date ASC, id",
+    )?;
+    let rows = stmt
+        .query_map(params![account_id, ids], message_row)?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    let mut labels = conn.prepare_cached(
+        "SELECT message_id, label_id FROM message_labels \
+         WHERE account_id = ?1 AND message_id IN (SELECT value FROM json_each(?2)) \
+         ORDER BY label_id",
+    )?;
+    let labels = labels_by_message(labels.query_map(params![account_id, ids], label_row)?)?;
+    rows.into_iter()
+        .map(|r| message_meta(account_id, r, &labels))
+        .collect()
 }
 
 fn parse_addresses(column: &'static str, json: &str) -> Result<Vec<Address>> {
