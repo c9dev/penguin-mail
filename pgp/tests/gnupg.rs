@@ -98,14 +98,24 @@ fn a_run_with_a_limit_stops_a_program_that_never_answers() {
     ));
     let started = std::time::Instant::now();
 
-    let err = match program.run_within(
-        std::time::Duration::from_millis(500),
-        b"",
-        Pinentry::Never,
-        |_| {},
-    ) {
-        Ok(_) => panic!("a program that sleeps for 30 seconds answered in half of one"),
-        Err(err) => err,
+    // Another test forking while this one's script is still open for
+    // writing makes Linux refuse to run it ("Text file busy") until that
+    // child execs, so the refusal gets a few tries before it counts.
+    let mut tries = 0;
+    let err = loop {
+        match program.run_within(
+            std::time::Duration::from_millis(500),
+            b"",
+            Pinentry::Never,
+            |_| {},
+        ) {
+            Ok(_) => panic!("a program that sleeps for 30 seconds answered in half of one"),
+            Err(err) if err.kind() == std::io::ErrorKind::ExecutableFileBusy && tries < 5 => {
+                tries += 1;
+                std::thread::sleep(std::time::Duration::from_millis(50));
+            }
+            Err(err) => break err,
+        }
     };
 
     let waited = started.elapsed();
