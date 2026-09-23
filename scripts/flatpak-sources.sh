@@ -8,7 +8,9 @@
 #   scripts/flatpak-sources.sh --flathub vX.Y.Z <dir>
 #       also write the files for the flathub/io.github.c9dev.PenguinMail
 #       repository into <dir>: the manifest building that tag, and the
-#       two files beside it
+#       two files beside it. The manifest gets the Google client from
+#       PENGUIN_MAIL_GOOGLE_CLIENT_ID and _SECRET, read from the
+#       environment or from the gitignored packaging/secrets.env.
 #
 # flatpak-cargo-generator comes from flatpak-builder-tools at a fixed
 # commit, and runs in a Python environment under ~/.cache made on first
@@ -49,6 +51,24 @@ case $mode in
     tag=${2:?usage: scripts/flatpak-sources.sh --flathub vX.Y.Z <dir>}
     out=${3:?usage: scripts/flatpak-sources.sh --flathub vX.Y.Z <dir>}
     commit=$(git rev-parse "$tag^{commit}")
+    # Flathub builds on its own servers, where GitHub's secrets do not
+    # reach, so its manifest carries the Google client in the open. Google
+    # treats a desktop app's client secret as public, and the .deb holds
+    # both values already. The manifest in this repository stays empty.
+    if { [ -z "${PENGUIN_MAIL_GOOGLE_CLIENT_ID:-}" ] || [ -z "${PENGUIN_MAIL_GOOGLE_CLIENT_SECRET:-}" ]; } &&
+        [ -f packaging/secrets.env ]; then
+        set -a
+        # shellcheck source=/dev/null
+        . packaging/secrets.env
+        set +a
+    fi
+    if [ -z "${PENGUIN_MAIL_GOOGLE_CLIENT_ID:-}" ] || [ -z "${PENGUIN_MAIL_GOOGLE_CLIENT_SECRET:-}" ]; then
+        echo "The Flathub manifest needs PENGUIN_MAIL_GOOGLE_CLIENT_ID and" >&2
+        echo "PENGUIN_MAIL_GOOGLE_CLIENT_SECRET, in the environment or in" >&2
+        echo "packaging/secrets.env; without them Flathub's build cannot sign in to Google." >&2
+        exit 1
+    fi
+    export PENGUIN_MAIL_GOOGLE_CLIENT_ID PENGUIN_MAIL_GOOGLE_CLIENT_SECRET
     # Cargo.lock at the tag is what Flathub builds, so its crates are the
     # ones to list.
     git show "$tag:Cargo.lock" > "$work/Cargo.lock"
@@ -61,10 +81,18 @@ case $mode in
     # then fail to build. Each release runs this script and opens the pull
     # request by hand instead.
     python3 - "$manifest" "$out/io.github.c9dev.PenguinMail.yml" "$tag" "$commit" <<'PY'
+import json
+import os
 import sys
 
 source, target, tag, commit = sys.argv[1:]
 text = open(source, encoding="utf-8").read()
+for name in ("PENGUIN_MAIL_GOOGLE_CLIENT_ID", "PENGUIN_MAIL_GOOGLE_CLIENT_SECRET"):
+    empty = f'{name}: ""'
+    if text.count(empty) != 1:
+        sys.exit(f"{source} has no single empty {name}")
+    # A JSON string is a YAML double-quoted string too.
+    text = text.replace(empty, f"{name}: {json.dumps(os.environ[name])}")
 start = text.index("      - type: dir\n")
 git = (
     "      - type: git\n"

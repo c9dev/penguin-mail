@@ -503,6 +503,8 @@ flathub/io.github.c9dev.PenguinMail, and nothing updates it on its own.
 After each release, run `scripts/flatpak-sources.sh --flathub vX.Y.Z
 <dir>`, copy the manifest, `cargo-sources.json` and `flathub.json` it
 writes into a checkout of that repository, and open a pull request there.
+The script writes the Google client into that manifest from
+`packaging/secrets.env`, and stops if the file is missing.
 `release.sh` prints the same reminder when it finishes.
 
 ## Contributing
