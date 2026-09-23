@@ -3,7 +3,7 @@
 
 use std::collections::BTreeSet;
 
-use mailrs_domain::{EpochMillis, Filter, MessageMeta, Vacation};
+use mailrs_domain::{EpochMillis, Filter, Vacation};
 use mailrs_gmail::{GmailError, SendAs, html_to_text};
 use mailrs_store::{drafts, messages};
 
@@ -196,13 +196,6 @@ impl<G: GmailApi> AccountSync<G> {
         if let Err(err) = outcome {
             tracing::warn!(account = self.account_id, error = %err, "could not store which draft holds which message");
         }
-    }
-
-    /// Runs a Gmail search and returns up to `limit` messages, newest first.
-    /// Results are not stored; opening one stores its thread.
-    pub async fn search(&self, query: &str, limit: usize) -> Result<Vec<MessageMeta>, SyncError> {
-        let found = self.search_ids(query, limit).await?;
-        self.metadata_of(&found).await
     }
 
     pub async fn attachment(

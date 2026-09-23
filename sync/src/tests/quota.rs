@@ -332,7 +332,8 @@ async fn a_search_reuses_the_metadata_the_store_holds() {
     reset(&all);
 
     // Every hit is inbox mail the first sync already stored.
-    let found = all[0].sync.search("in:inbox", 25).await.unwrap();
+    let ids = all[0].sync.search_ids("in:inbox", 25).await.unwrap();
+    let found = all[0].sync.metadata_of(&ids).await.unwrap();
 
     assert_eq!(found.len(), 25);
     let usage = total(&all);
