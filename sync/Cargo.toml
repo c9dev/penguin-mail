@@ -21,6 +21,7 @@ dirs.workspace = true
 futures.workspace = true
 mail-builder.workspace = true
 rand.workspace = true
+rusqlite.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 tokio.workspace = true

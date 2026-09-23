@@ -2126,6 +2126,7 @@ dependencies = [
  "mailrs-gmail",
  "mailrs-store",
  "rand",
+ "rusqlite",
  "serde",
  "tempfile",
  "thiserror",

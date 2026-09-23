@@ -1,6 +1,7 @@
 //! Sync for one account: window loading, history replay, thread and body
 //! fetches, and triage. Each file adds methods to `AccountSync`.
 
+mod fetch;
 mod history;
 mod labels;
 mod listed;
@@ -15,9 +16,7 @@ use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use futures::StreamExt;
 use mailrs_domain::{AccountId, AccountState, ChangeEvent, EpochMillis, MessageMeta};
-use mailrs_gmail::GmailError;
 use mailrs_store::{Db, accounts};
 
 use crate::{GmailApi, SyncError};
@@ -142,25 +141,11 @@ impl<G: GmailApi> AccountSync<G> {
         }
     }
 
-    /// Metadata for `ids`, with bounded concurrency. Messages deleted since
-    /// they were listed are skipped.
+    /// Metadata for `ids`, whose threads the caller does not know, a
+    /// `messages.get` each. Messages deleted since they were listed are
+    /// skipped.
     pub async fn fetch_metadata(&self, ids: &[String]) -> Result<Vec<MessageMeta>, SyncError> {
-        let results: Vec<Result<MessageMeta, GmailError>> = futures::stream::iter(ids.to_vec())
-            .map(|id| {
-                let api = Arc::clone(&self.api);
-                async move { api.message_metadata(&id).await }
-            })
-            .buffer_unordered(FETCH_CONCURRENCY)
-            .collect()
-            .await;
-        let mut metas = Vec::with_capacity(results.len());
-        for result in results {
-            match result {
-                Ok(meta) => metas.push(meta),
-                Err(GmailError::NotFound) => {}
-                Err(err) => return Err(err.into()),
-            }
-        }
-        Ok(metas)
+        let wants = ids.iter().map(fetch::Want::message).collect();
+        Ok(self.fetch(wants).await?.metas)
     }
 }
