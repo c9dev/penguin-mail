@@ -14,7 +14,7 @@ use mailrs_domain::{
     Account, AccountId, AccountState, ChangeEvent, Label, MessageBody, Target, ThreadSummary,
     system_label,
 };
-use mailrs_sync::{History, Listing, MailAction, Permitted, Scope, TriageAction, View};
+use mailrs_sync::{History, Listing, Loaded, MailAction, Permitted, Scope, TriageAction, View};
 
 use super::confirm::{Tone, confirm};
 use super::contact_card;
@@ -942,7 +942,7 @@ impl MainWindow {
             let lists = this.core.lists();
             let loaded = this
                 .core
-                .call(async move { lists.list(&mailbox, &scope, &view, 0).await })
+                .call(async move { lists.list(&mailbox, &scope, &view, Loaded::nothing()).await })
                 .await;
             let landed = this.screen.borrow_mut().feed().first_page(ticket, &loaded);
             let Some(landed) = landed else {
@@ -977,13 +977,16 @@ impl MainWindow {
             return;
         };
         let mailbox = self.shown().clone();
-        let (scope, view, from) = (self.scope(), self.view(), self.list.loaded());
+        // The page starts after the last row on screen rather than after
+        // as many rows as the list holds, so mail that arrived or left since
+        // the list loaded neither repeats a row nor skips one.
+        let (scope, view, held) = (self.scope(), self.view(), self.list.loaded());
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let lists = this.core.lists();
             let loaded = this
                 .core
-                .call(async move { lists.list(&mailbox, &scope, &view, from).await })
+                .call(async move { lists.list(&mailbox, &scope, &view, held).await })
                 .await;
             let current = this.screen.borrow_mut().feed().next_page(ticket, &loaded);
             if !current {

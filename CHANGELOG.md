@@ -53,6 +53,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Scrolling down a long mailbox while mail arrives or leaves shows each
+  conversation once. The next page could repeat a conversation or skip
+  one.
 - Penguin Mail and `penguin-mail-cli sync` take turns on your mail. The
   one you start second stops and says why, where both used to sync the
   same store at once.

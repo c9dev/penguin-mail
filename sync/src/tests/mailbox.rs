@@ -14,7 +14,7 @@ use mailrs_store::{flags, reminders};
 
 use super::{Connected, Harness, harness};
 use crate::fake::meta;
-use crate::mailbox::{Listing, Mailbox, Mailboxes, Scope, View};
+use crate::mailbox::{Listing, Loaded, Mailbox, Mailboxes, Scope, View};
 use crate::now_millis;
 
 const DAY: i64 = 24 * 60 * 60 * 1000;
@@ -46,7 +46,15 @@ fn ids(listing: &Listing) -> Vec<String> {
 
 async fn list(h: &Harness, mailbox: &Mailbox, view: &View) -> Listing {
     lists(h)
-        .list(mailbox, &scope(h), view, 0)
+        .list(mailbox, &scope(h), view, Loaded::nothing())
+        .await
+        .expect("the mailbox lists")
+}
+
+/// The page of `mailbox` that follows the rows of `before`.
+async fn next(h: &Harness, mailbox: &Mailbox, view: &View, before: &Listing) -> Listing {
+    lists(h)
+        .list(mailbox, &scope(h), view, Loaded::rows(&before.rows))
         .await
         .expect("the mailbox lists")
 }
@@ -414,14 +422,70 @@ async fn a_page_says_when_more_rows_follow() {
         ..view()
     };
 
-    let first = lists(&h).list(&inbox, &scope(&h), &paged, 0).await.unwrap();
+    let first = list(&h, &inbox, &paged).await;
     assert_eq!(ids(&first), ["t3", "t2"]);
     assert!(first.more);
 
-    let second = lists(&h).list(&inbox, &scope(&h), &paged, 2).await.unwrap();
+    let second = next(&h, &inbox, &paged, &first).await;
     assert_eq!(ids(&second), ["t1"]);
     assert!(!second.more);
     assert_eq!(second.unread, 0, "only the first page counts the mailbox");
+}
+
+#[tokio::test]
+async fn a_stored_page_starts_after_the_last_row_held_whatever_the_count() {
+    let h = seeded().await;
+    let inbox = Mailbox::Unified(system_label::INBOX);
+    let first = list(&h, &inbox, &view()).await;
+    let t3 = first.rows.iter().find(|r| r.id == "t3").unwrap().clone();
+    let held = Loaded {
+        count: 99,
+        last: Some(t3),
+    };
+    let after = lists(&h)
+        .list(&inbox, &scope(&h), &view(), held)
+        .await
+        .unwrap();
+    assert_eq!(ids(&after), ["t2", "t1"]);
+
+    // With messages instead of conversations, the page starts after the
+    // message row, as the window holds it.
+    let messages = View {
+        threading: false,
+        limit: Some(1),
+        ..view()
+    };
+    let first = list(&h, &inbox, &messages).await;
+    assert_eq!(first.rows[0].message_id.as_deref(), Some("c"));
+    let second = next(&h, &inbox, &messages, &first).await;
+    assert_eq!(second.rows[0].message_id.as_deref(), Some("b"));
+}
+
+#[tokio::test]
+async fn mail_that_arrives_or_leaves_between_pages_neither_repeats_nor_skips_a_row() {
+    let inbox = Mailbox::Unified(system_label::INBOX);
+    let paged = View {
+        limit: Some(2),
+        ..view()
+    };
+
+    // New mail lands on top after the first page. Counting rows would
+    // show t2 again.
+    let h = seeded().await;
+    let first = list(&h, &inbox, &paged).await;
+    assert_eq!(ids(&first), ["t3", "t2"]);
+    h.fake.deliver(meta("n", "t9", now_millis(), &["INBOX"]));
+    h.sync.incremental().await.unwrap();
+    let second = next(&h, &inbox, &paged, &first).await;
+    assert_eq!(ids(&second), ["t1"]);
+
+    // A thread on the first page is archived. Counting rows would skip t1.
+    let h = seeded().await;
+    let first = list(&h, &inbox, &paged).await;
+    h.fake.remote_relabel("c", &[], &["INBOX"]);
+    h.sync.incremental().await.unwrap();
+    let second = next(&h, &inbox, &paged, &first).await;
+    assert_eq!(ids(&second), ["t1"]);
 }
 
 #[tokio::test]

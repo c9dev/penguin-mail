@@ -1214,7 +1214,7 @@ msgstr ""
 msgid "From {senders}"
 msgstr ""
 
-#: app/src/notify.rs:195 app/src/ui/window.rs:1879
+#: app/src/notify.rs:195 app/src/ui/window.rs:1882
 msgid "Open"
 msgstr ""
 
@@ -1607,7 +1607,7 @@ msgstr ""
 msgid "Could not save: {reason}"
 msgstr ""
 
-#: app/src/protection/draft.rs:200 app/src/ui/window.rs:1797
+#: app/src/protection/draft.rs:200 app/src/ui/window.rs:1800
 msgid "Could not open the draft: {reason}"
 msgstr ""
 
@@ -2130,7 +2130,7 @@ msgstr ""
 msgid "New Message"
 msgstr ""
 
-#: app/src/tray.rs:159 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2172
+#: app/src/tray.rs:159 app/src/ui/sidebar.rs:733 app/src/ui/window.rs:2175
 msgid "Check for Mail"
 msgstr ""
 
@@ -2148,7 +2148,7 @@ msgstr ""
 msgid "Check for Updates"
 msgstr ""
 
-#: app/src/tray.rs:175 app/src/ui/window.rs:2184
+#: app/src/tray.rs:175 app/src/ui/window.rs:2187
 #: app/src/ui/window/shortcuts.rs:508
 msgid "Quit"
 msgstr ""
@@ -2179,7 +2179,7 @@ msgstr ""
 msgid "License"
 msgstr ""
 
-#: app/src/ui/about.rs:170 app/src/ui/window.rs:2183
+#: app/src/ui/about.rs:170 app/src/ui/window.rs:2186
 msgid "About Penguin Mail"
 msgstr ""
 
@@ -2361,7 +2361,7 @@ msgid "Edit {server}"
 msgstr ""
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1411
-#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:2007
+#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:2010
 msgid "Remove"
 msgstr ""
 
@@ -3567,7 +3567,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2265
+#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2268
 msgid "Add an account first"
 msgstr ""
 
@@ -4367,11 +4367,11 @@ msgstr ""
 msgid "Rules…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2175
+#: app/src/ui/sidebar.rs:739 app/src/ui/window.rs:2178
 msgid "Hide My Email…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:742 app/src/ui/window.rs:1558
+#: app/src/ui/sidebar.rs:742 app/src/ui/window.rs:1561
 msgid "New Label…"
 msgstr ""
 
@@ -4725,7 +4725,7 @@ msgstr ""
 msgid "%a, %-d %b %Y"
 msgstr ""
 
-#: app/src/ui/welcome.rs:10 app/src/ui/window.rs:1949
+#: app/src/ui/welcome.rs:10 app/src/ui/window.rs:1952
 msgid "Sign In with Google"
 msgstr ""
 
@@ -4918,133 +4918,133 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-#: app/src/ui/window.rs:1307
+#: app/src/ui/window.rs:1310
 msgid "Could not delete the mail: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:1367
+#: app/src/ui/window.rs:1370
 msgid "Turn On the {service}"
 msgstr ""
 
-#: app/src/ui/window.rs:1370
+#: app/src/ui/window.rs:1373
 msgid ""
 "The Google Cloud project Penguin Mail signs in with has the {service} "
 "switched off, so Google refuses before it can ask for your permission. Turn "
 "it on, wait a minute, and try again."
 msgstr ""
 
-#: app/src/ui/window.rs:1376
+#: app/src/ui/window.rs:1379
 msgid "Open Google Cloud"
 msgstr ""
 
-#: app/src/ui/window.rs:1457 app/src/ui/window/scheduled.rs:21
+#: app/src/ui/window.rs:1460 app/src/ui/window/scheduled.rs:21
 #: app/src/ui/window/shortcuts.rs:422
 msgid "Undo"
 msgstr ""
 
-#: app/src/ui/window.rs:1478
+#: app/src/ui/window.rs:1481
 msgid "Nothing to undo"
 msgstr ""
 
-#: app/src/ui/window.rs:1484
+#: app/src/ui/window.rs:1487
 msgid "{action} undone"
 msgstr ""
 
-#: app/src/ui/window.rs:1534
+#: app/src/ui/window.rs:1537
 msgid "Open or select mail to label it."
 msgstr ""
 
-#: app/src/ui/window.rs:1543
+#: app/src/ui/window.rs:1546
 msgid "Select mail from one account to label it."
 msgstr ""
 
-#: app/src/ui/window.rs:1586
+#: app/src/ui/window.rs:1589
 msgid "This account has no labels yet."
 msgstr ""
 
-#: app/src/ui/window.rs:1744
+#: app/src/ui/window.rs:1747
 msgid "Could not include {file}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:1855
+#: app/src/ui/window.rs:1858
 msgid "Downloading {file}…"
 msgstr ""
 
-#: app/src/ui/window.rs:1876 app/src/ui/window/attachments.rs:228
+#: app/src/ui/window.rs:1879 app/src/ui/window/attachments.rs:228
 msgid "Saved {file} to Downloads"
 msgstr ""
 
-#: app/src/ui/window.rs:1894 app/src/ui/window/attachments.rs:233
+#: app/src/ui/window.rs:1897 app/src/ui/window/attachments.rs:233
 msgid "Could not save {file}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:1928
+#: app/src/ui/window.rs:1931
 msgid "Waiting for Your Browser…"
 msgstr ""
 
-#: app/src/ui/window.rs:1930
+#: app/src/ui/window.rs:1933
 msgid "Continue in your browser"
 msgstr ""
 
-#: app/src/ui/window.rs:1936
+#: app/src/ui/window.rs:1939
 msgid "Added {account}. Downloading mail…"
 msgstr ""
 
-#: app/src/ui/window.rs:1959
+#: app/src/ui/window.rs:1962
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr ""
 
-#: app/src/ui/window.rs:1961
+#: app/src/ui/window.rs:1964
 msgid "Get a Release"
 msgstr ""
 
-#: app/src/ui/window.rs:2000
+#: app/src/ui/window.rs:2003
 msgid "Remove {account}?"
 msgstr ""
 
-#: app/src/ui/window.rs:2004
+#: app/src/ui/window.rs:2007
 msgid ""
 "Its downloaded mail and saved sign-in are deleted from this computer. "
 "Nothing changes in Gmail."
 msgstr ""
 
-#: app/src/ui/window.rs:2020
+#: app/src/ui/window.rs:2023
 msgid "Removed {account}"
 msgstr ""
 
-#: app/src/ui/window.rs:2022
+#: app/src/ui/window.rs:2025
 msgid "Could not remove {account}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:2173
+#: app/src/ui/window.rs:2176
 msgid "Add Account…"
 msgstr ""
 
-#: app/src/ui/window.rs:2174
+#: app/src/ui/window.rs:2177
 msgid "New Smart Mailbox…"
 msgstr ""
 
-#: app/src/ui/window.rs:2181 app/src/ui/window/shortcuts.rs:485
+#: app/src/ui/window.rs:2184 app/src/ui/window/shortcuts.rs:485
 msgid "Preferences"
 msgstr ""
 
-#: app/src/ui/window.rs:2182
+#: app/src/ui/window.rs:2185
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: app/src/ui/window.rs:2190 app/src/ui/window.rs:2192
+#: app/src/ui/window.rs:2193 app/src/ui/window.rs:2195
 msgid "Main Menu"
 msgstr ""
 
-#: app/src/ui/window.rs:2445
+#: app/src/ui/window.rs:2448
 msgid "Open a message from the person first"
 msgstr ""
 
-#: app/src/ui/window.rs:2516
+#: app/src/ui/window.rs:2519
 msgid "Penguin Mail shows the new language after a restart"
 msgstr ""
 
-#: app/src/ui/window.rs:2518 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:2521 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr ""
 
@@ -6031,136 +6031,136 @@ msgstr[1] ""
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr ""
 
-#: sync/src/mailbox.rs:90
+#: sync/src/mailbox.rs:91
 msgid "{color} Flag"
 msgstr ""
 
-#: sync/src/mailbox.rs:151
+#: sync/src/mailbox.rs:152
 msgid "No Results"
 msgstr ""
 
-#: sync/src/mailbox.rs:154
+#: sync/src/mailbox.rs:155
 msgid "Nothing Scheduled"
 msgstr ""
 
-#: sync/src/mailbox.rs:157
+#: sync/src/mailbox.rs:158
 msgid "Outbox Is Empty"
 msgstr ""
 
-#: sync/src/mailbox.rs:159
+#: sync/src/mailbox.rs:160
 msgid "No Reminders"
 msgstr ""
 
-#: sync/src/mailbox.rs:161
+#: sync/src/mailbox.rs:162
 msgid "No Follow-Ups"
 msgstr ""
 
-#: sync/src/mailbox.rs:164
+#: sync/src/mailbox.rs:165
 msgid "No Flagged Mail"
 msgstr ""
 
-#: sync/src/mailbox.rs:166
+#: sync/src/mailbox.rs:167
 msgid "No Mail from VIPs"
 msgstr ""
 
-#: sync/src/mailbox.rs:168
+#: sync/src/mailbox.rs:169
 msgid "No Matching Mail"
 msgstr ""
 
-#: sync/src/mailbox.rs:173
+#: sync/src/mailbox.rs:174
 msgid "No Archived Mail"
 msgstr ""
 
-#: sync/src/mailbox.rs:174
+#: sync/src/mailbox.rs:175
 msgid "No Junk"
 msgstr ""
 
-#: sync/src/mailbox.rs:175
+#: sync/src/mailbox.rs:176
 msgid "Trash Is Empty"
 msgstr ""
 
-#: sync/src/mailbox.rs:181
+#: sync/src/mailbox.rs:182
 msgid "Inbox Zero"
 msgstr ""
 
-#: sync/src/mailbox.rs:182
+#: sync/src/mailbox.rs:183
 msgid "No Starred Mail"
 msgstr ""
 
-#: sync/src/mailbox.rs:183
+#: sync/src/mailbox.rs:184
 msgid "No Sent Mail"
 msgstr ""
 
-#: sync/src/mailbox.rs:184
+#: sync/src/mailbox.rs:185
 msgid "No Drafts"
 msgstr ""
 
-#: sync/src/mailbox.rs:185
+#: sync/src/mailbox.rs:186
 msgid "No Muted Mail"
 msgstr ""
 
-#: sync/src/mailbox.rs:229
+#: sync/src/mailbox.rs:230
 msgctxt "mailbox"
 msgid "Archive"
 msgstr ""
 
-#: sync/src/mailbox.rs:231
+#: sync/src/mailbox.rs:232
 msgid "Trash"
 msgstr ""
 
-#: sync/src/mailbox.rs:232
+#: sync/src/mailbox.rs:233
 msgid "All Mail"
 msgstr ""
 
-#: sync/src/mailbox.rs:472
+#: sync/src/mailbox.rs:501
 msgid "This smart mailbox has no conditions"
 msgstr ""
 
-#: sync/src/mailbox.rs:790
+#: sync/src/mailbox.rs:822
 msgid "Could not load mail for {account}: {reason}"
 msgstr ""
 
-#: sync/src/mailbox.rs:908
+#: sync/src/mailbox.rs:940
 msgid "Returns {when}"
 msgstr ""
 
-#: sync/src/mailbox.rs:951 sync/src/mailbox.rs:1022
+#: sync/src/mailbox.rs:983 sync/src/mailbox.rs:1054
 msgid "No recipients"
 msgstr ""
 
-#: sync/src/mailbox.rs:954 sync/src/mailbox.rs:1025
+#: sync/src/mailbox.rs:986 sync/src/mailbox.rs:1057
 msgid "To {recipients}"
 msgstr ""
 
-#: sync/src/mailbox.rs:987
+#: sync/src/mailbox.rs:1019
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] ""
 msgstr[1] ""
 
-#: sync/src/mailbox.rs:997
+#: sync/src/mailbox.rs:1029
 msgid "Sent yesterday, no reply yet"
 msgstr ""
 
-#: sync/src/mailbox.rs:999
+#: sync/src/mailbox.rs:1031
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] ""
 msgstr[1] ""
 
-#: sync/src/mailbox.rs:1037
+#: sync/src/mailbox.rs:1069
 msgid "Sends {when}"
 msgstr ""
 
-#: sync/src/mailbox.rs:1041
+#: sync/src/mailbox.rs:1073
 msgid "Not sent"
 msgstr ""
 
-#: sync/src/mailbox.rs:1048
+#: sync/src/mailbox.rs:1080
 msgid "{problem}. Trying again {when}"
 msgstr ""
 
-#: sync/src/mailbox.rs:1055
+#: sync/src/mailbox.rs:1087
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr ""
 

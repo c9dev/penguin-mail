@@ -353,9 +353,10 @@ impl ThreadList {
         }
     }
 
-    /// How many rows are loaded. The mailbox may hold more.
-    pub fn loaded(&self) -> usize {
-        self.rows.borrow().len()
+    /// The rows loaded so far, for asking the mailbox for the page after
+    /// them. The mailbox may hold more.
+    pub fn loaded(&self) -> mailrs_sync::Loaded {
+        mailrs_sync::Loaded::rows(&self.rows.borrow())
     }
 
     /// Runs `more` when the view scrolls within a screenful of the end.

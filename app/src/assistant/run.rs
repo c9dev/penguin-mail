@@ -26,7 +26,7 @@ use mailrs_gmail::GmailError;
 use mailrs_store::{Db, messages};
 use mailrs_sync::{
     AccountSettings, AccountSync, Accounts, AutomaticReply, Calendar, Categorized, Failure,
-    History, Invitations, MailAction, MailActions, Mailbox, Mailboxes, NewLabels, Outcome,
+    History, Invitations, Loaded, MailAction, MailActions, Mailbox, Mailboxes, NewLabels, Outcome,
     Permitted, Scope, SyncError, TriageAction, View,
 };
 use serde_json::{Value, json};
@@ -676,7 +676,7 @@ impl<A: Accounts> Tools<A> {
         let lists = Arc::clone(&self.modules.lists);
         let scope = self.scope();
         let listed = self
-            .call(async move { lists.list(&mailbox, &scope, &view, 0).await })
+            .call(async move { lists.list(&mailbox, &scope, &view, Loaded::nothing()).await })
             .await?;
         match listed.notices.first() {
             Some(problem) => Err(problem.clone()),
