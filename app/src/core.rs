@@ -88,6 +88,7 @@ pub struct Core {
     gmail_settings: Arc<GmailSettings>,
     contacts: Arc<Contacts>,
     invitations: Arc<Events>,
+    calendar: Arc<mailrs_sync::Calendar<RunningEngine>>,
     outbox: Arc<Waiting>,
     config: RefCell<Option<Config>>,
     /// The person's own gpg, found once at startup. With none, every
@@ -169,6 +170,7 @@ impl Core {
         let contacts = Arc::new(ContactBook::new(Arc::clone(&engine), db.clone(), photo_dir));
         let invitations = Arc::new(Invitations::new(Arc::clone(&engine), db.clone()));
         let outbox = Arc::new(Outbox::new(Arc::clone(&engine), db.clone()));
+        let calendar = Arc::new(mailrs_sync::Calendar::new(Arc::clone(&engine)));
         let core = Rc::new(Core {
             runtime,
             db,
@@ -180,6 +182,7 @@ impl Core {
             gmail_settings,
             contacts,
             invitations,
+            calendar,
             outbox,
             config: RefCell::new(config),
             pgp: Pgp::find().ok(),
@@ -430,7 +433,7 @@ impl Core {
             mail: Arc::clone(&self.actions),
             lists: Arc::clone(&self.lists),
             gmail: Arc::clone(&self.gmail_settings),
-            calendar: Arc::new(mailrs_sync::Calendar::new(Arc::clone(&self.engine))),
+            calendar: Arc::clone(&self.calendar),
             invitations: Arc::clone(&self.invitations),
             contacts: Arc::clone(&self.contacts),
             accounts: Arc::clone(&self.engine),
@@ -617,4 +620,20 @@ async fn connect(
     Ok(Api::Real(Box::new(
         connect_account(oauth, tokens, account).await?,
     )))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use super::Core;
+
+    #[test]
+    fn every_tool_run_shares_one_calendar() {
+        let core = Core::open(true).expect("the demo core opens");
+        assert!(Arc::ptr_eq(
+            &core.modules().calendar,
+            &core.modules().calendar
+        ));
+    }
 }
