@@ -532,6 +532,19 @@ mod tests {
         assert_eq!(mark.tone, Tone::Unchecked);
     }
 
+    /// gpgsm reports a certificate its authority's CRL lists as a good
+    /// signature beside `TRUST_NEVER 94`, so the chain says untrusted as
+    /// well. The revocation is what the card names.
+    #[test]
+    fn a_revoked_certificate_is_bad_whatever_the_chain_says() {
+        let mark = mark(&signature(Verdict::RevokedCertificate, Chain::Untrusted));
+        assert!(
+            mark.title.ends_with("whose certificate was taken back"),
+            "{mark:?}"
+        );
+        assert_eq!(mark.tone, Tone::Bad);
+    }
+
     #[test]
     fn a_certificate_we_do_not_hold_is_its_own_answer() {
         let unknown = Signature {

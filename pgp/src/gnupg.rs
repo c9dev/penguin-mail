@@ -387,6 +387,10 @@ pub struct Seen {
     pub fingerprint: Option<String>,
     /// From the `TRUST_` line, or `None` when there was none.
     pub trust: Option<Trust>,
+    /// The number after the trust keyword. gpg writes 0 there; gpgsm
+    /// writes the GnuPG error code that kept the chain from validating,
+    /// such as 94 (`GPG_ERR_CERT_REVOKED`) for a revoked certificate.
+    pub trust_code: Option<u32>,
 }
 
 /// Every signature in `status`, in order. Each `NEWSIG` starts the next
@@ -410,6 +414,7 @@ fn one(lines: &[&str]) -> Option<Seen> {
     let mut found: Option<Seen> = None;
     let mut fingerprint = None;
     let mut trust = None;
+    let mut trust_code = None;
     for line in lines {
         let (keyword, rest) = split(line);
         let verdict = match keyword {
@@ -436,6 +441,7 @@ fn one(lines: &[&str]) -> Option<Seen> {
                     name: None,
                     fingerprint: None,
                     trust: None,
+                    trust_code: None,
                 });
                 continue;
             }
@@ -446,6 +452,7 @@ fn one(lines: &[&str]) -> Option<Seen> {
             "TRUST_UNDEFINED" | "TRUST_NEVER" | "TRUST_MARGINAL" | "TRUST_FULLY"
             | "TRUST_ULTIMATE" => {
                 trust = Some(trust_of(keyword));
+                trust_code = rest.split_whitespace().next().and_then(|code| code.parse().ok());
                 continue;
             }
             _ => continue,
@@ -474,11 +481,13 @@ fn one(lines: &[&str]) -> Option<Seen> {
             name: name.filter(|_| !unnamed),
             fingerprint: None,
             trust: None,
+            trust_code: None,
         });
     }
     found.map(|seen| Seen {
         fingerprint,
         trust,
+        trust_code,
         ..seen
     })
 }

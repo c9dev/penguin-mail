@@ -66,6 +66,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- An S/MIME signature from a certificate its authority revoked shows in
+  red and says the certificate was taken back, where it used to read as a
+  certificate nobody vouched for.
 - An OpenPGP signature from a key only partly trusted people vouched for
   no longer shows in green. The card says the key is not fully checked.
 - Unsubscribing works on pages that ask "Are you sure?" after you press

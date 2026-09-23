@@ -92,8 +92,15 @@ pub fn signatures<S: AsRef<str>>(status: &[S]) -> Vec<Signature> {
             // error report rather than one of these, so the fingerprint is
             // what says whether there is anything here to read.
             let named = seen.id.as_deref().is_some_and(hexadecimal);
+            // gpgsm writes no `REVKEYSIG` for a certificate its authority's
+            // CRL lists. It writes `GOODSIG`, since the text is the text
+            // that certificate signed, and says what is wrong on the trust
+            // line: `TRUST_NEVER 94`, where 94 is `GPG_ERR_CERT_REVOKED`.
+            let revoked =
+                seen.trust == Some(Trust::Never) && seen.trust_code == Some(CERT_REVOKED);
             Signature {
                 verdict: match seen.verdict {
+                    PgpVerdict::Good if revoked => Verdict::RevokedCertificate,
                     PgpVerdict::Good => Verdict::Good,
                     PgpVerdict::Bad => Verdict::Bad,
                     PgpVerdict::ExpiredKey => Verdict::ExpiredCertificate,
@@ -118,6 +125,9 @@ pub fn signatures<S: AsRef<str>>(status: &[S]) -> Vec<Signature> {
         })
         .collect()
 }
+
+/// GnuPG's error code for a revoked certificate, `GPG_ERR_CERT_REVOKED`.
+const CERT_REVOKED: u32 = 94;
 
 fn hexadecimal(word: &str) -> bool {
     !word.is_empty() && word.chars().all(|c| c.is_ascii_hexdigit())
