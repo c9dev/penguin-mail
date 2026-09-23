@@ -51,6 +51,72 @@ fn label_counts_match_the_query_per_mailbox() {
     assert_eq!(counts.account(a, "Label_nobody_has"), Count::default());
 }
 
+/// A label keeps a thread while one of its messages carrying the label is
+/// outside the Trash and Spam, whatever the rest of the thread carries.
+#[test]
+fn label_counts_follow_the_messages_of_a_partly_trashed_thread() {
+    let (conn, a, b) = mixed_mail();
+    store(
+        &conn,
+        &[
+            meta(a, "a6", "ta6", 610, &["INBOX", "UNREAD", "TRASH"]),
+            meta(a, "a6r", "ta6", 620, &["INBOX", "UNREAD"]),
+            meta(a, "a7", "ta7", 710, &["Label_x", "TRASH"]),
+            meta(a, "a7r", "ta7", 720, &["TRASH", "UNREAD"]),
+            meta(a, "a8", "ta8", 810, &["SENT", "TRASH"]),
+            meta(a, "a8r", "ta8", 820, &["INBOX", "Label_x"]),
+            meta(b, "b9", "tb9", 910, &["Label_y", "SPAM", "UNREAD"]),
+            meta(b, "b9r", "tb9", 920, &["Label_y", "TRASH"]),
+        ],
+    );
+    let counts = threads::label_counts(&conn).unwrap();
+    for account in [a, b] {
+        for label in [
+            "INBOX", "SENT", "UNREAD", "TRASH", "SPAM", "Label_x", "Label_y",
+        ] {
+            let filter = ThreadFilter::account(account, label);
+            assert_eq!(
+                counts.account(account, label),
+                Count {
+                    threads: threads::count_threads(&conn, &filter).unwrap(),
+                    unread: threads::unread_threads(&conn, &filter).unwrap(),
+                },
+                "{account} {label}"
+            );
+        }
+    }
+    assert_eq!(
+        counts.account(a, "INBOX"),
+        Count {
+            threads: 5,
+            unread: 3
+        }
+    );
+    assert_eq!(
+        counts.account(a, "Label_x"),
+        Count {
+            threads: 1,
+            unread: 0
+        }
+    );
+    assert_eq!(
+        counts.account(a, "SENT"),
+        Count {
+            threads: 1,
+            unread: 0
+        }
+    );
+    assert_eq!(counts.account(b, "Label_y"), Count::default());
+    // Its reply in the Trash is not spam, so the thread shows there.
+    assert_eq!(
+        counts.account(b, "TRASH"),
+        Count {
+            threads: 1,
+            unread: 1
+        }
+    );
+}
+
 #[test]
 fn flag_mailbox_counts_match_the_query_per_colour() {
     let (conn, _, b) = mixed_mail();
@@ -67,6 +133,25 @@ fn flag_mailbox_counts_match_the_query_per_colour() {
     // tb3 is in Spam, so only tb2 counts, and it is blue now.
     assert_eq!(counts.get(&FlagColor::Blue), Some(&1));
     assert_eq!(counts.get(&FlagColor::Red), None);
+}
+
+/// Trashing one message of a starred thread leaves the thread in the Flag
+/// mailbox while a message outside the Trash remains, and its count agrees.
+#[test]
+fn a_flag_count_keeps_a_thread_whose_other_message_is_trashed() {
+    let (conn, a, _) = mixed_mail();
+    store(
+        &conn,
+        &[
+            meta(a, "s1", "ts", 910, &["INBOX", "STARRED"]),
+            meta(a, "s2", "ts", 920, &["INBOX", "TRASH"]),
+            meta(a, "g1", "tg", 930, &["STARRED", "TRASH"]),
+        ],
+    );
+    let counts = flags::mailbox_counts(&conn).unwrap();
+    let filter = ThreadFilter::unified("").with_flag(FlagColor::Red);
+    assert_eq!(threads::count_threads(&conn, &filter).unwrap(), 2);
+    assert_eq!(counts.get(&FlagColor::Red), Some(&2));
 }
 
 #[test]

@@ -63,6 +63,17 @@ fn account_views_only_show_their_account() {
 }
 
 #[test]
+fn a_unified_filter_narrows_to_one_account() {
+    let (conn, a, _) = two_accounts();
+    let narrowed = ThreadFilter::unified("INBOX").in_account(a);
+    assert_eq!(narrowed, ThreadFilter::account(a, "INBOX"));
+    assert_eq!(
+        ids(threads::list_threads(&conn, &narrowed, 0, 10).unwrap()),
+        ["ta2", "ta1"]
+    );
+}
+
+#[test]
 fn paging_walks_the_list_without_gaps() {
     let (conn, _, _) = two_accounts();
     let inbox = ThreadFilter::unified("INBOX");
@@ -76,6 +87,42 @@ fn paging_walks_the_list_without_gaps() {
             .unwrap()
             .is_empty()
     );
+}
+
+#[test]
+fn paging_past_the_last_row_walks_the_list_without_gaps() {
+    let (conn, _, _) = two_accounts();
+    let inbox = ThreadFilter::unified("INBOX");
+    let mut seen = Vec::new();
+    let mut last = None;
+    for _ in 0..3 {
+        let page = threads::list_threads_after(&conn, &inbox, last.as_ref(), 1).unwrap();
+        last = page.last().cloned();
+        seen.extend(ids(page));
+    }
+    assert_eq!(seen, ["tb1", "ta2", "ta1"]);
+    assert!(
+        threads::list_threads_after(&conn, &inbox, last.as_ref(), 1)
+            .unwrap()
+            .is_empty()
+    );
+    let mut messages = Vec::new();
+    let mut last = None;
+    loop {
+        let page = threads::list_messages_after(&conn, &inbox, last.as_ref(), 2).unwrap();
+        last = page.last().cloned();
+        let done = page.len() < 2;
+        messages.extend(page.into_iter().map(|row| row.message_id.unwrap()));
+        if done {
+            break;
+        }
+    }
+    let by_offset: Vec<String> = threads::list_messages(&conn, &inbox, 0, 100)
+        .unwrap()
+        .into_iter()
+        .map(|row| row.message_id.unwrap())
+        .collect();
+    assert_eq!(messages, by_offset);
 }
 
 #[test]

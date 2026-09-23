@@ -10,12 +10,18 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Before installing an update, Penguin Mail checks that the release is
   signed with its own key, and refuses one that is unsigned or signed by
   anyone else.
+- The Social and Forums category lists in 1 ms instead of 10 on an inbox of
+  15,000 conversations, and unread counts for the inbox, its categories and
+  VIPs take under a millisecond where they took 6 to 29.
+- The sidebar works out every mailbox's count in 6 ms instead of 55.
 
 ### Fixed
 
 - Installed from the tarball into a folder with a space in its path,
   Penguin Mail starts from the app grid and at login, where the launcher
   used to run nothing.
+- A Flag mailbox's count includes a starred conversation with one of its
+  messages in the Trash, as the mailbox's list already did.
 
 ## 0.1.7 (2026-09-23)
 

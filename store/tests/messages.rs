@@ -168,3 +168,57 @@ fn existing_ids_reports_only_stored_messages() {
     let found = messages::existing_ids(&conn, id, &["a".into(), "b".into()]).unwrap();
     assert_eq!(found, HashSet::from(["a".to_string()]));
 }
+
+#[test]
+fn existing_ids_answers_for_more_ids_than_one_statement_takes() {
+    let (conn, id) = db();
+    let other = mailrs_store::accounts::insert_account(&conn, "other@example.com", 0).unwrap();
+    store(
+        &conn,
+        &[
+            meta(id, "m0", "t1", 100, &["INBOX"]),
+            meta(id, "m999", "t2", 200, &["INBOX"]),
+            meta(id, "m1499", "t3", 300, &["INBOX"]),
+            meta(other, "m5", "t4", 400, &["INBOX"]),
+        ],
+    );
+    let asked: Vec<String> = (0..1500).map(|n| format!("m{n}")).collect();
+    let found = messages::existing_ids(&conn, id, &asked).unwrap();
+    assert_eq!(
+        found,
+        HashSet::from(["m0".to_string(), "m999".to_string(), "m1499".to_string()])
+    );
+    assert!(messages::existing_ids(&conn, id, &[]).unwrap().is_empty());
+}
+
+#[test]
+fn each_message_of_a_thread_carries_its_own_labels() {
+    let (conn, id) = db();
+    let other = mailrs_store::accounts::insert_account(&conn, "other@example.com", 0).unwrap();
+    store(
+        &conn,
+        &[
+            meta(id, "a", "t1", 100, &["UNREAD", "INBOX"]),
+            meta(id, "b", "t1", 200, &["SENT"]),
+            meta(id, "c", "t1", 300, &[]),
+            meta(other, "a", "t1", 100, &["TRASH"]),
+        ],
+    );
+    let labels = |metas: Vec<mailrs_domain::MessageMeta>| -> Vec<(String, Vec<String>)> {
+        metas.into_iter().map(|m| (m.id, m.label_ids)).collect()
+    };
+    let expected = vec![
+        (
+            "a".to_string(),
+            vec!["INBOX".to_string(), "UNREAD".to_string()],
+        ),
+        ("b".to_string(), vec!["SENT".to_string()]),
+        ("c".to_string(), vec![]),
+    ];
+    assert_eq!(
+        labels(messages::thread_messages(&conn, id, "t1").unwrap()),
+        expected
+    );
+    let ids: Vec<String> = ["c", "a", "b", "z"].iter().map(|s| s.to_string()).collect();
+    assert_eq!(labels(messages::by_ids(&conn, id, &ids).unwrap()), expected);
+}

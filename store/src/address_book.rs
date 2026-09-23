@@ -151,15 +151,16 @@ pub fn search(conn: &Connection, query: &str) -> Result<Vec<Contact>> {
         .collect())
 }
 
+/// The contacts that hold the address `?1`. It names them from
+/// `contact_addresses_by_email`, where a correlated `EXISTS` would read
+/// every contact and probe its addresses.
+const HOLDS_EMAIL: &str = "(c.account_id, c.resource) IN \
+     (SELECT account_id, resource FROM contact_addresses WHERE email = ?1)";
+
 /// The contact holding `email`, whichever account wrote it down.
 pub fn find(conn: &Connection, email: &str) -> Result<Option<Contact>> {
     let key = email.trim().to_lowercase();
-    let found = read(
-        conn,
-        "EXISTS (SELECT 1 FROM contact_addresses a WHERE a.account_id = c.account_id \
-         AND a.resource = c.resource AND a.email = ?1)",
-        [key],
-    )?;
+    let found = read(conn, HOLDS_EMAIL, [key])?;
     Ok(found.into_iter().next())
 }
 
@@ -217,13 +218,18 @@ pub fn set_book(
     Ok(())
 }
 
-fn read<P: rusqlite::Params>(conn: &Connection, filter: &str, params: P) -> Result<Vec<Contact>> {
-    let mut stmt = conn.prepare(&format!(
+/// The contacts `filter` keeps, each with its addresses, by name.
+fn query(filter: &str) -> String {
+    format!(
         "SELECT c.account_id, c.resource, c.name, c.organization, c.phone, c.photo_url, c.photo_file, \
          (SELECT group_concat(a.email, char(10)) FROM (SELECT email FROM contact_addresses \
           WHERE account_id = c.account_id AND resource = c.resource ORDER BY rank) a) \
          FROM contacts c WHERE {filter} ORDER BY c.name IS NULL, c.name COLLATE NOCASE, c.resource"
-    ))?;
+    )
+}
+
+fn read<P: rusqlite::Params>(conn: &Connection, filter: &str, params: P) -> Result<Vec<Contact>> {
+    let mut stmt = conn.prepare(&query(filter))?;
     let rows = stmt.query_map(params, |row| {
         let emails: Option<String> = row.get(7)?;
         Ok(Contact {
@@ -258,6 +264,24 @@ mod tests {
             emails: emails.iter().map(|e| e.to_string()).collect(),
             ..Contact::default()
         }
+    }
+
+    #[test]
+    fn finding_by_address_starts_from_the_address_index() {
+        let conn = open_in_memory().unwrap();
+        let plan: Vec<String> = conn
+            .prepare(&format!("EXPLAIN QUERY PLAN {}", query(HOLDS_EMAIL)))
+            .unwrap()
+            .query_map(["mara@example.org"], |row| row.get::<_, String>(3))
+            .unwrap()
+            .map(|row| row.unwrap())
+            .collect();
+        assert!(
+            plan.iter()
+                .any(|p| p.contains("contact_addresses_by_email")),
+            "{plan:?}"
+        );
+        assert!(!plan.iter().any(|p| p.starts_with("SCAN c")), "{plan:?}");
     }
 
     #[test]

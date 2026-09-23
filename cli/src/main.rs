@@ -289,10 +289,9 @@ async fn list_threads(db: &Db, account: Option<&str>, label: String, limit: i64)
         Some(email) => Some(find_account(db, email).await?.id),
         None => None,
     };
-    let filter = ThreadFilter {
-        account_id,
-        label_id: label,
-        ..ThreadFilter::default()
+    let filter = match account_id {
+        Some(account_id) => ThreadFilter::account(account_id, label),
+        None => ThreadFilter::unified(label),
     };
     let rows = db
         .read(move |c| threads::list_threads(c, &filter, 0, limit))
