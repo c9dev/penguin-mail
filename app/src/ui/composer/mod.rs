@@ -261,6 +261,8 @@ impl Composer {
             let tip = button.tooltip_text().unwrap_or_default();
             name_with_shortcut(button, &tip);
         }
+        super::name_menu_items_of(&send);
+        super::name_menu_items_of(&template_button);
         // Sign and Encrypt used to stand in the header as two labelled
         // toggles, which took more of the bar than the rest of the
         // buttons together and pushed the title off centre. They live in
@@ -1574,6 +1576,7 @@ impl Composer {
             .css_classes(["flat"])
             .build();
         name(&more, &gettext("More Formatting"));
+        super::name_menu_items_of(&more);
         extras.append(&more);
         members.borrow_mut().push(more.upcast());
         roving::toolbar(bar, members.take());

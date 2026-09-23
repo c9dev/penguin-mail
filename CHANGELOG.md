@@ -24,6 +24,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - With the network gone, your accounts show Offline and wait for it,
   where they used to keep trying Gmail and failing. They check for mail as
   soon as the network returns.
+- A screen reader reads out the items of every menu, such as Reply or
+  Archive in a conversation's right-click menu. It used to announce each
+  one as a menu item with no name.
 
 ## 0.2.0 (2026-09-23)
 

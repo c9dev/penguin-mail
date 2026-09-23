@@ -37,7 +37,11 @@ pub mod welcome;
 pub mod when;
 pub mod window;
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use gtk::prelude::*;
+use gtk::{gio, glib};
 use mailrs_domain::translate::gettext;
 use mailrs_domain::{Folder, system_label};
 pub use mailrs_sync::Mailbox;
@@ -95,6 +99,123 @@ pub fn labelled_by(widget: &impl IsA<gtk::Widget>, label: &impl IsA<gtk::Widget>
         .update_relation(&[gtk::accessible::Relation::LabelledBy(&[label
             .as_ref()
             .upcast_ref()])]);
+}
+
+/// Names every item of `menu` after the words it shows, each time the
+/// menu opens and again whenever its model changes while it is open.
+///
+/// GTK builds the items of a menu model itself and ties each one to its
+/// words through a labelled-by relation whose target never reaches the
+/// accessible tree, so a screen reader hears a menu item with no name.
+/// GTK builds an item again when the model changes, as when Mute turns
+/// into Unmute, and the new item comes without a name.
+pub fn name_menu_items(menu: &gtk::PopoverMenu) {
+    let watched = Rc::new(RefCell::new(Vec::new()));
+    menu.connect_map(move |menu| {
+        name_model_buttons(menu.upcast_ref());
+        if let Some(model) = menu.menu_model() {
+            watch_menu_model(menu, &model, &watched);
+        }
+    });
+}
+
+/// Names the items of `menu` again after `model`, or a section or
+/// submenu inside it, changes while the menu is open. Each model is
+/// watched once, however often the menu opens.
+fn watch_menu_model(
+    menu: &gtk::PopoverMenu,
+    model: &gio::MenuModel,
+    watched: &Rc<RefCell<Vec<glib::WeakRef<gio::MenuModel>>>>,
+) {
+    let known = {
+        let mut list = watched.borrow_mut();
+        list.retain(|seen| seen.upgrade().is_some());
+        let known = list
+            .iter()
+            .any(|seen| seen.upgrade().as_ref() == Some(model));
+        if !known {
+            list.push(model.downgrade());
+        }
+        known
+    };
+    if !known {
+        let (weak, watched) = (menu.downgrade(), Rc::clone(watched));
+        model.connect_items_changed(move |model, _, _, _| {
+            let Some(menu) = weak.upgrade().filter(|menu| menu.is_mapped()) else {
+                return;
+            };
+            // GTK rebuilds the changed items in a handler of its own, so
+            // the naming waits until that has run.
+            let (model, watched) = (model.clone(), Rc::clone(&watched));
+            glib::idle_add_local_once(move || {
+                name_model_buttons(menu.upcast_ref());
+                watch_menu_model(&menu, &model, &watched);
+            });
+        });
+    }
+    for index in 0..model.n_items() {
+        for link in [gio::MENU_LINK_SECTION, gio::MENU_LINK_SUBMENU] {
+            if let Some(inner) = model.item_link(index, link) {
+                watch_menu_model(menu, &inner, watched);
+            }
+        }
+    }
+}
+
+/// Names the items of the menu a menu button or split button opens,
+/// including a menu the button is given later through `set_menu_model`,
+/// which builds a new popover each time.
+pub fn name_menu_items_of(button: &impl IsA<gtk::Widget>) {
+    fn hook(button: &gtk::Widget) {
+        let popover = button.property::<Option<gtk::Popover>>("popover");
+        if let Some(menu) = popover.and_downcast::<gtk::PopoverMenu>() {
+            name_menu_items(&menu);
+        }
+    }
+    let button = button.as_ref();
+    hook(button);
+    button.connect_notify_local(Some("popover"), |button, _| hook(button));
+}
+
+/// Names the items of a menu open under `widget` that another library
+/// built, such as the one WebKit shows on a right click in a page.
+pub fn name_menu_items_under(widget: &impl IsA<gtk::Widget>) {
+    name_model_buttons(widget.as_ref());
+}
+
+/// Names every menu item GTK built from a model under `widget`, the
+/// pages of submenus included. `GtkModelButton` is private to GTK, so it
+/// is found by its type name and read through its `text` property.
+fn name_model_buttons(widget: &gtk::Widget) {
+    let mut child = widget.first_child();
+    while let Some(item) = child {
+        if item.type_().name() == "GtkModelButton" {
+            let text = item.property::<Option<String>>("text").unwrap_or_default();
+            let spoken = without_mnemonic(&text);
+            if !spoken.is_empty() {
+                // A labelled-by relation outranks a name, so the broken
+                // one GTK set has to go before the name is heard.
+                item.reset_relation(gtk::AccessibleRelation::LabelledBy);
+                name(&item, &spoken);
+            }
+        }
+        name_model_buttons(&item);
+        child = item.next_sibling();
+    }
+}
+
+/// A menu item's words as shown: an underscore marks the key after it
+/// and a doubled one stands for itself.
+fn without_mnemonic(text: &str) -> String {
+    let mut shown = String::with_capacity(text.len());
+    let mut chars = text.chars();
+    while let Some(c) = chars.next() {
+        match c {
+            '_' => shown.extend(chars.next()),
+            c => shown.push(c),
+        }
+    }
+    shown
 }
 
 /// How the sidebar and window show a `Folder`.
@@ -174,7 +295,17 @@ pub fn mailbox_icon(label: &str) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::split_shortcut;
+    use super::{split_shortcut, without_mnemonic};
+
+    #[test]
+    fn a_menu_item_is_named_without_its_mnemonic_marks() {
+        assert_eq!(without_mnemonic("_Reply"), "Reply");
+        assert_eq!(without_mnemonic("Move to _Trash"), "Move to Trash");
+        assert_eq!(without_mnemonic("work__notes"), "work_notes");
+        assert_eq!(without_mnemonic("Export…"), "Export…");
+        assert_eq!(without_mnemonic("trailing_"), "trailing");
+        assert_eq!(without_mnemonic(""), "");
+    }
 
     #[test]
     fn a_tooltip_gives_up_the_keys_at_the_end_of_it() {

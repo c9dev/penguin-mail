@@ -17,6 +17,16 @@ them:
 - `describe` adds the line read after the name.
 - `labelled_by` ties a field to the word standing beside it.
 
+A menu built from a `gio::Menu` needs one more step. GTK makes each item
+itself and ties it to its words through a relation whose target never
+reaches the accessible tree, so a reader heard "menu item" and nothing
+else. `name_menu_items` names the items of a `PopoverMenu` each time it
+opens and again when its model changes while it is open;
+`name_menu_items_of` does the same for the menu of a `MenuButton` or an
+`adw::SplitButton`. Every menu built from a model goes through one of
+them, and WebKit's own right-click menu in a message is named with
+`name_menu_items_under` once it appears.
+
 Every name is a translated string like any other word a person reads, and
 the wording a count or a state decides is built by a function of its own
 so a test can read it without a window.
@@ -94,9 +104,14 @@ scripts/a11y-names.sh
 
 opens the demo on a hidden display, walks the accessible tree over
 AT-SPI, and names every control that would be announced as nothing. It
-exits 1 while anything is unnamed. `--here` reads the copy already on
-your screen instead, which is how to check a dialog or the composer:
-open it, then run the script.
+exits 1 while anything is unnamed. A menu is in the tree only while it
+is open, so on the hidden display the script also right-clicks every
+row it can scroll to and presses every button that opens a menu, then
+opens each submenu, and reads the items of each menu it sees. It
+reaches the menus of the main window this way, but not the message
+menu, which the page opens, nor the composer's menus. `--here` reads
+the copy already on your screen instead, which is how to check a dialog
+or the composer: open it, then run the script.
 
 ## What the keyboard cannot reach
 

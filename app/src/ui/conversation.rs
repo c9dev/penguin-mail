@@ -443,6 +443,7 @@ impl ConversationView {
                     .visible(false)
                     .build();
                 name(&more, &gettext("More Actions"));
+                super::name_menu_items_of(&more);
                 more
             },
         };
@@ -545,6 +546,7 @@ impl ConversationView {
             header.pack_end(widget);
         }
         let menu_popover = gtk::PopoverMenu::from_model(None::<&gio::Menu>);
+        super::name_menu_items(&menu_popover);
         menu_popover.set_has_arrow(false);
         menu_popover.set_halign(gtk::Align::Start);
         menu_popover.set_parent(&webview);
@@ -708,7 +710,7 @@ impl ConversationView {
                 view.change(OpenThread::page_lost);
             }
         });
-        view.webview.connect_context_menu(|_, menu, _| {
+        view.webview.connect_context_menu(|webview, menu, _| {
             use webkit::ContextMenuAction as Item;
             for item in menu.items() {
                 if !matches!(
@@ -721,7 +723,14 @@ impl ConversationView {
                     menu.remove(&item);
                 }
             }
-            menu.items().is_empty()
+            if menu.items().is_empty() {
+                return true;
+            }
+            // WebKit builds this menu as a popover of the web view once
+            // the signal returns, and its items carry no names.
+            let webview = webview.clone();
+            glib::idle_add_local_once(move || super::name_menu_items_under(&webview));
+            false
         });
         let weak = Rc::downgrade(&view);
         adw::StyleManager::default().connect_dark_notify(move |_| {

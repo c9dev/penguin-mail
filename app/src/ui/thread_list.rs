@@ -76,6 +76,7 @@ impl ThreadList {
         let show_accounts = Rc::new(Cell::new(true));
         let rows: Rc<RefCell<Vec<Row>>> = Rc::new(RefCell::new(Vec::new()));
         let row_popover = gtk::PopoverMenu::from_model(None::<&gio::MenuModel>);
+        super::name_menu_items(&row_popover);
         row_popover.set_has_arrow(false);
         row_popover.set_halign(gtk::Align::Start);
         let dragged: Rc<RefCell<Vec<ThreadSummary>>> = Rc::new(RefCell::new(Vec::new()));

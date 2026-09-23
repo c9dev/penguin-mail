@@ -641,6 +641,7 @@ fn label_menu(row: &gtk::ListBoxRow, account_id: AccountId, label_id: &str) {
 /// Opens `menu` at the pointer on a right click or long press of `row`.
 fn context_menu(row: &gtk::ListBoxRow, menu: &gio::Menu) {
     let popover = gtk::PopoverMenu::from_model(Some(menu));
+    super::name_menu_items(&popover);
     popover.set_has_arrow(false);
     popover.set_halign(gtk::Align::Start);
     popover.set_parent(row);
@@ -783,6 +784,7 @@ fn heading(account: &Account, name: Option<&String>) -> (gtk::ListBoxRow, gtk::I
             &[("account", name.unwrap_or(&account.email))],
         ),
     );
+    super::name_menu_items_of(&options);
     content.append(&options);
     let row = gtk::ListBoxRow::builder()
         .child(&content)

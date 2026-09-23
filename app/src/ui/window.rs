@@ -2203,6 +2203,7 @@ impl MainWindow {
             .tooltip_text(gettext("Main Menu"))
             .build();
         crate::ui::name(&button, &gettext("Main Menu"));
+        crate::ui::name_menu_items_of(&button);
         self.sidebar.header.pack_end(&button);
     }
 
