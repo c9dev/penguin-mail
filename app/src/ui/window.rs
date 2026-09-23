@@ -412,7 +412,17 @@ impl MainWindow {
                 .min_sidebar_width(320.0)
                 .max_sidebar_width(460.0)
                 .sidebar_width_fraction(0.3)
+                .pin_sidebar(true)
                 .build();
+            // Unpinned, libadwaita shows the sidebar again whenever the
+            // window grows past a breakpoint, so the assistant would open
+            // by itself after the window had been narrow. Pinned, it stays
+            // as the person left it; narrowing the window still closes it.
+            assistant_split.connect_collapsed_notify(|split| {
+                if split.is_collapsed() {
+                    split.set_show_sidebar(false);
+                }
+            });
             assistant_split
                 .bind_property("show-sidebar", &list.assistant_button, "active")
                 .bidirectional()
