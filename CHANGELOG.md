@@ -5,6 +5,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+## 0.2.0 (2026-09-23)
+
 ### Improved
 
 - Adding a Gmail account opens Google's sign-in straight away. You no

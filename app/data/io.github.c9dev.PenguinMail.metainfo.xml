@@ -102,6 +102,75 @@
 
   <!-- scripts/metainfo.sh writes this list from CHANGELOG.md. -->
   <releases>
+    <release version="0.2.0" date="2026-09-23">
+      <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v0.2.0</url>
+      <description translate="no">
+        <p>Improved</p>
+        <ul>
+          <li>Adding a Gmail account opens Google's sign-in straight away. You no longer create a Google Cloud project first.</li>
+          <li>Before installing an update, Penguin Mail checks that the release is signed with its own key, and refuses one that is unsigned or signed by anyone else.</li>
+          <li>The Social and Forums category lists in 1 ms instead of 10 on an inbox of 15,000 conversations, and unread counts for the inbox, its categories and VIPs take under a millisecond where they took 6 to 29.</li>
+          <li>The sidebar works out every mailbox's count in 6 ms instead of 55.</li>
+          <li>A conversation with many pictures opens faster and never stalls the window: pictures arrive several at a time, and the small pictures on attachment rows are made away from the window, where ten large photos used to hold it up for about a second and a half.</li>
+          <li>A list with thousands of conversations selected keeps up: new mail, Escape and moving on after an action no longer look at every row against every selected one, which with 14,800 selected took 167 ms.</li>
+          <li>A change to an account or a label counts unread mail once rather than twice, and a burst of changes rereads only the open conversations it touched.</li>
+          <li>Penguin Mail keeps at most 48 MB of pictures from mail it has shown, where it could hold 430 MB before.</li>
+          <li>The assistant on the Anthropic API costs less per question. Each request used to send its tools and instructions, about 12,000 tokens, at full price; now the API reads them and the chat so far from its cache.</li>
+          <li>Delete Forever on a Trash full of conversations goes out as one request per thousand messages. Erasing 200 conversations used to make 400 requests and use up Gmail's allowance for about a minute.</li>
+          <li>Catching up after the computer was off for a week or more fetches only the mail that changed meanwhile, instead of every message again, so the account is ready sooner and leaves Gmail's allowance to you.</li>
+          <li>Typing in a long quoted reply keeps up: each key used to restyle the whole message, several milliseconds on a reply of 5,000 lines, and now touches only the line you are on. The spell check that runs when you pause looks at the lines you changed rather than all of them, and saving or sending that reply reads it in about 13 ms instead of 280.</li>
+          <li>A message with big attachments leaves the composer sooner: it is built once rather than twice, and Undo Send no longer copies every file it carries.</li>
+          <li>Opening a signed conversation again shows its card at once, without fetching the message from Gmail or starting gpg, until your keyring changes.</li>
+          <li>The window keeps responding while Save to Downloads or Save All writes a large file from an encrypted message or a preview.</li>
+          <li>A conversation you read before opens in about 0.2 seconds where a thread of forty newsletters took 1.4: the page loads once instead of twice, and the messages you have not opened are no longer laid out.</li>
+          <li>A message still loading when a conversation opens, the pictures on attachment rows, a decrypted message and a translation now appear in place, so you keep your place in a long conversation instead of landing back at the top.</li>
+          <li>A conversation shows its text before the pictures inside its messages, which fill in as they arrive. Eight large pictures used to make a 3 MB conversation a 12 MB page for WebKit to read.</li>
+          <li>Opening a long conversation no longer holds up the window while its mail is cleaned for display: forty newsletters took the window 50 ms, and that work now happens on another thread.</li>
+          <li>S/MIME signed mail opens quickly even offline. Penguin Mail waits at most ten seconds for the certificate authority, and when it could not check whether the certificate was revoked, the card says so instead of showing green.</li>
+        </ul>
+        <p>Fixed</p>
+        <ul>
+          <li>Accented letters in mail an older version stored show correctly again: "devolução", not "devoluÃ§Ã£o".</li>
+          <li>An S/MIME signature from a certificate its authority revoked shows in red and says the certificate was taken back, where it used to read as a certificate nobody vouched for.</li>
+          <li>An OpenPGP signature from a key only partly trusted people vouched for no longer shows in green. The card says the key is not fully checked.</li>
+          <li>Unsubscribing works on pages that ask "Are you sure?" after you press their button, and a page that says you were "successfully removed" now counts as done instead of opening in your browser.</li>
+          <li>Scrolling down a long mailbox while mail arrives or leaves shows each conversation once. The next page could repeat a conversation or skip one.</li>
+          <li>Penguin Mail and <code>penguin-mail-cli sync</code> take turns on your mail. The one you start second stops and says why, where both used to sync the same store at once.</li>
+          <li>Signing an account in again fetches the addresses it can send from. An alias added in Gmail used to take up to a day to reach the From menu.</li>
+          <li>Installed from the tarball into a folder with a space in its path, Penguin Mail starts from the app grid and at login, where the launcher used to run nothing.</li>
+          <li>A Flag mailbox's count includes a starred conversation with one of its messages in the Trash, as the mailbox's list already did.</li>
+          <li>In Send Later, the Outbox and Remind Me, the Delete button and its menu item say what they do there, Cancel Send, Delete from Outbox and Cancel Reminder, where they said Move to Trash.</li>
+          <li>Dragging mail from Sent or Flagged onto a label keeps it open, since it stays in that list. Moving mail out of the label on screen, by dragging it to another label or to All Mail, opens the next conversation.</li>
+          <li>Starting a search drops the rows selected before it, so the buttons act on the results, and the Outbox's own buttons switch off.</li>
+          <li>A new account colour reaches every row in the list. The list could redraw before the colour had been read.</li>
+          <li>Opening an attachment no longer leaves a copy behind for good. The copy only you can read goes when its preview closes, or the next time Penguin Mail starts, and a copy of a file from encrypted mail goes when the window closes.</li>
+          <li>Opening a large photo no longer holds up the window while it loads.</li>
+          <li>Reply on a new-mail notification answers that mail, and no longer the conversation you opened while it was still loading.</li>
+          <li>The toast after moving mail to a label with an ampersand in its name, such as R&amp;D, names the label again instead of showing nothing.</li>
+          <li>Your preferences survive a damaged settings file. Penguin Mail used to start from the defaults and save over the file; it now keeps the old file beside the new one and tells you its name. A save also replaces the file in one step, so a crash in the middle cannot empty it.</li>
+          <li>MCP servers the assistant started stop when Penguin Mail restarts itself to free memory or to install an update, where they used to keep running with nothing talking to them.</li>
+          <li>The assistant reports sorting a sender into a category once their mail has moved, where it used to say so before anything happened, and it says when the rule for their future mail still needs a permission.</li>
+          <li>A chat with the assistant keeps working after you press Stop, and after it reads one very long conversation. Either could leave every later question failing until you started a new chat.</li>
+          <li>Undo puts back only what the action changed. Undoing Trash on an archived conversation leaves it archived instead of moving it to the inbox, and undoing Mark as Read leaves the messages you had already read as read.</li>
+          <li>A message in the Outbox goes out once, even when you press Send Now while the outbox is already sending it, or the connection drops just after Gmail took it.</li>
+          <li>Labels made, renamed, recoloured or deleted in Gmail on the web reach the sidebar within the hour, and at once when mail arrives carrying a new one. Before, the sidebar only learned of them when the account was added.</li>
+          <li>Your contacts stay in the address book when Google stops part way through sending them again, instead of leaving it empty or half full.</li>
+          <li>Moving a few conversations out of the Trash puts them back in the inbox at Gmail too, as moving ten or more already did.</li>
+          <li>Quoting, forwarding or reopening HTML mail with a "&gt;" inside a tag's attribute, such as a link's title, no longer spills the rest of that tag into the text, and paragraphs quote with a blank line between them.</li>
+          <li>Choosing another From address swaps the signature and nothing else: the cursor stays where you were typing, and Undo still reaches what you wrote before.</li>
+          <li>Clear Formatting takes the bullets and numbers off a list along with its styles, where it used to leave "•" and "1." behind as typed text.</li>
+          <li>A signed message shows only what its signature covers. A part somebody added beside the signed one, or text written around a signed block, no longer appears under "Signed by".</li>
+          <li>An S/MIME message encrypts only to certificates you trust. Opening a stranger's signed message used to store their certificate, and the next message to the address it named could go to them.</li>
+          <li>"Signed by" turns green only when you trust the key and it belongs to the address the message is from. A key nobody vouched for, or one that names somebody else, now says so on the card.</li>
+          <li>Replying to or forwarding a message that arrived encrypted starts with Encrypt on, and asks before the quoted words go out readable.</li>
+          <li>Opening a signed OpenPGP message never fetches the signer's key from the network, even when gpg.conf asks for that, so the sender cannot learn when you read it.</li>
+          <li>Every signed or encrypted message in a conversation opens, not only the newest, so an older encrypted reply no longer stays unreadable.</li>
+          <li>What gpg and gpgsm say when they fail now shows in the language the window is in, on the card and in the composer.</li>
+          <li>Pictures inside a message show when you open a conversation you read before. They used to appear only the first time.</li>
+          <li>The Load Images bar no longer offers to load a picture the sender hid in a comment, which the message never shows.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.7" date="2026-09-23">
       <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v0.1.7</url>
       <description translate="no">
