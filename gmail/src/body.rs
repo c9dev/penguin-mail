@@ -20,7 +20,19 @@ pub fn extract_body(payload: &MessagePart) -> MessageBody {
         provenance: crate::provenance::provenance(payload),
         ..MessageBody::default()
     };
-    walk(payload, &mut body);
+    match body.protection {
+        // A `multipart/signed` holds the part that was signed, then the
+        // signature. Anything after those two is a part nobody signed, and
+        // reading it here would draw it under the signer's name once the
+        // engine answers. The signature itself is for the engine, not for
+        // the attachment list.
+        Some(Protection::Signed | Protection::SmimeSigned) => {
+            if let Some(signed) = payload.parts.first() {
+                walk(signed, &mut body);
+            }
+        }
+        _ => walk(payload, &mut body),
+    }
     body
 }
 

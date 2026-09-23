@@ -1276,191 +1276,254 @@ msgid ""
 "too. Google asks you to confirm in your browser."
 msgstr ""
 
-#: app/src/pgp.rs:120
+#: app/src/pgp.rs:102
 msgid "Add a recipient whose key gpg holds."
 msgstr ""
 
-#: app/src/pgp.rs:129
+#: app/src/pgp.rs:111
 msgid "gpg holds no key for {addresses}."
 msgstr ""
 
-#: app/src/pgp.rs:146
+#: app/src/pgp.rs:128
 msgid "gpg holds no key for any of the addresses you send from."
 msgstr ""
 
-#: app/src/pgp.rs:148
+#: app/src/pgp.rs:130
 msgid "gpg holds a key for {addresses}."
 msgstr ""
 
-#: app/src/pgp.rs:152
+#: app/src/pgp.rs:134
 msgid "gpg holds a key for {addresses}, and none for {without}."
 msgstr ""
 
-#: app/src/pgp.rs:169 app/src/smime.rs:199
-msgid "Signed by {signer}"
-msgstr ""
-
-#: app/src/pgp.rs:178 app/src/smime.rs:207
-msgid "This message changed after it was signed"
-msgstr ""
-
-#: app/src/pgp.rs:180 app/src/smime.rs:209
-msgid "The signature of {signer} does not match what arrived."
-msgstr ""
-
-#: app/src/pgp.rs:187
-msgid "Signed by {signer}, whose key has expired"
-msgstr ""
-
-#: app/src/pgp.rs:191
-msgid "The text is as it was written, and the key behind it ran out."
-msgstr ""
-
-#: app/src/pgp.rs:197
-msgid "Signed by {signer}, who took this key back"
-msgstr ""
-
-#: app/src/pgp.rs:201
-msgid "The owner revoked it, so it says nothing about who wrote this."
-msgstr ""
-
-#: app/src/pgp.rs:207 app/src/smime.rs:236
-msgid "Signed by {signer}, and the signature has run out"
-msgstr ""
-
-#: app/src/pgp.rs:211 app/src/smime.rs:240
-msgid "It carried a date to stop being good on, and that date has passed."
-msgstr ""
-
-#: app/src/pgp.rs:216
-msgid "Signed by a key this computer does not hold"
-msgstr ""
-
-#: app/src/pgp.rs:218
-msgid "Nothing here can check it. Ask gpg for key {key}."
-msgstr ""
-
-#: app/src/pgp.rs:224
-msgid "it names"
-msgstr ""
-
-#: app/src/pgp.rs:230
-msgid "gpg could not check this signature"
-msgstr ""
-
-#: app/src/pgp.rs:253
-msgid "This message is encrypted to a key you do not hold"
-msgstr ""
-
-#: app/src/pgp.rs:255
-msgid "Whoever sent it used a key gpg has no secret half of."
-msgstr ""
-
-#: app/src/pgp.rs:261
-msgid "gpg could not open this message"
-msgstr ""
-
-#: app/src/pgp.rs:272
-msgid "This message says it is OpenPGP and is not"
-msgstr ""
-
-#: app/src/pgp.rs:274 app/src/smime.rs:297
-msgid "Its parts are not where a signed or encrypted message keeps them."
-msgstr ""
-
-#: app/src/pgp.rs:285
-msgid "This is one of your own keys."
-msgstr ""
-
-#: app/src/pgp.rs:286
-msgid "You have vouched for this key."
-msgstr ""
-
-#: app/src/pgp.rs:287
-msgid "People you trust have vouched for this key."
-msgstr ""
-
-#: app/src/pgp.rs:288
-msgid "Nobody has vouched for this key, so it names no one."
-msgstr ""
-
-#: app/src/pgp.rs:289
-msgid "You marked this key as one not to trust."
-msgstr ""
-
-#: app/src/pgp.rs:298
-msgid "key {key}"
-msgstr ""
-
-#: app/src/pgp.rs:299
-msgid "a key gpg would not name"
-msgstr ""
-
-#: app/src/protection.rs:107
+#: app/src/protection.rs:110
 msgid "{smime} {pgp}"
 msgstr ""
 
-#: app/src/protection.rs:120
+#: app/src/protection.rs:123
 msgid "This computer has nothing to encrypt with."
 msgstr ""
 
-#: app/src/protection.rs:127
+#: app/src/protection.rs:130
 msgid ""
 "S/MIME names every recipient inside an encrypted message, so a blind copy "
 "would not stay blind."
 msgstr ""
 
-#: app/src/protection.rs:274
+#: app/src/protection.rs:277
 msgid "Encrypt this message to the recipients' keys"
 msgstr ""
 
-#: app/src/protection.rs:275
+#: app/src/protection.rs:278
 msgid "Encrypt this message to the recipients' certificates"
 msgstr ""
 
-#: app/src/protection.rs:301
+#: app/src/protection.rs:304
 msgid "gpg holds no key and gpgsm no certificate for {addresses}."
 msgstr ""
 
-#: app/src/protection.rs:309
+#: app/src/protection.rs:312
 msgid "A message goes out under one standard or the other. {pgp} {smime}"
 msgstr ""
 
-#: app/src/protection.rs:357
+#: app/src/protection.rs:494
+msgid "Signed by {signer}"
+msgstr ""
+
+#: app/src/protection.rs:509
+msgid "This message changed after it was signed"
+msgstr ""
+
+#: app/src/protection.rs:511
+msgid "The signature of {signer} does not match what arrived."
+msgstr ""
+
+#: app/src/protection.rs:518
+msgid "Signed by {signer}, whose key has expired"
+msgstr ""
+
+#: app/src/protection.rs:522
+msgid "The text is as it was written, and the key behind it ran out."
+msgstr ""
+
+#: app/src/protection.rs:528
+msgid "Signed by {signer}, whose certificate has run out"
+msgstr ""
+
+#: app/src/protection.rs:532
+msgid ""
+"The text is as it was written, and the certificate behind it has expired."
+msgstr ""
+
+#: app/src/protection.rs:538
+msgid "Signed by {signer}, who took this key back"
+msgstr ""
+
+#: app/src/protection.rs:542
+msgid "The owner revoked it, so it says nothing about who wrote this."
+msgstr ""
+
+#: app/src/protection.rs:548
+msgid "Signed by {signer}, whose certificate was taken back"
+msgstr ""
+
+#: app/src/protection.rs:552
+msgid "Whoever issued it revoked it, so it says nothing about who wrote this."
+msgstr ""
+
+#: app/src/protection.rs:558
+msgid "Signed by {signer}, and the signature has run out"
+msgstr ""
+
+#: app/src/protection.rs:562
+msgid "It carried a date to stop being good on, and that date has passed."
+msgstr ""
+
+#: app/src/protection.rs:567
+msgid "Signed by a key this computer does not hold"
+msgstr ""
+
+#: app/src/protection.rs:569
+msgid "Nothing here can check it. Ask gpg for key {key}."
+msgstr ""
+
+#: app/src/protection.rs:576
+msgid "it names"
+msgstr ""
+
+#: app/src/protection.rs:582
+msgid "Signed by a certificate this computer does not hold"
+msgstr ""
+
+#: app/src/protection.rs:584
+msgid ""
+"The message carried none either, so there is nothing here to check it "
+"against."
+msgstr ""
+
+#: app/src/protection.rs:590
+msgid "gpg could not check this signature"
+msgstr ""
+
+#: app/src/protection.rs:595
+msgid "gpgsm could not check this signature"
+msgstr ""
+
+#: app/src/protection.rs:613
 msgid "Encrypted, and signed by {signer}"
 msgstr ""
 
-#: app/src/protection.rs:363
+#: app/src/protection.rs:619
 msgid "Encrypted. {what}"
 msgstr ""
 
-#: app/src/protection.rs:367
+#: app/src/protection.rs:625
 msgid "This message arrived encrypted"
 msgstr ""
 
-#: app/src/protection.rs:369
+#: app/src/protection.rs:627
 msgid "Nobody signed it, so it says nothing about who sent it."
 msgstr ""
 
-#: app/src/protection.rs:377
+#: app/src/protection.rs:635
 msgid "{detail} {files}"
 msgstr ""
 
-#: app/src/protection.rs:392
+#: app/src/protection.rs:649
+msgid "This message is encrypted to a key you do not hold"
+msgstr ""
+
+#: app/src/protection.rs:651
+msgid "Whoever sent it used a key gpg has no secret half of."
+msgstr ""
+
+#: app/src/protection.rs:656
+msgid "This message is encrypted to a certificate you do not hold"
+msgstr ""
+
+#: app/src/protection.rs:658
+msgid "Whoever sent it used a certificate gpgsm has no secret key for."
+msgstr ""
+
+#: app/src/protection.rs:664
+msgid "This message says it is OpenPGP and is not"
+msgstr ""
+
+#: app/src/protection.rs:665
+msgid "This message says it is S/MIME and is not"
+msgstr ""
+
+#: app/src/protection.rs:668
+msgid "Its parts are not where a signed or encrypted message keeps them."
+msgstr ""
+
+#: app/src/protection.rs:674
+msgid "gpg could not open this message"
+msgstr ""
+
+#: app/src/protection.rs:675
+msgid "gpgsm could not open this message"
+msgstr ""
+
+#: app/src/protection.rs:688
+msgid "You marked this key as one not to trust."
+msgstr ""
+
+#: app/src/protection.rs:689
+msgid "This is one of your own keys."
+msgstr ""
+
+#: app/src/protection.rs:690
+msgid "You have vouched for this key."
+msgstr ""
+
+#: app/src/protection.rs:691
+msgid "People you trust have vouched for this key."
+msgstr ""
+
+#: app/src/protection.rs:693
+msgid "Nobody has vouched for this key, so it names no one."
+msgstr ""
+
+#: app/src/protection.rs:696
+msgid "Its certificate leads back to an authority you trust."
+msgstr ""
+
+#: app/src/protection.rs:699
+msgid "Its certificate leads back to nobody you trust, so it names no one."
+msgstr ""
+
+#: app/src/protection.rs:702
+msgid "Nothing here says who that certificate belongs to."
+msgstr ""
+
+#: app/src/protection.rs:715
+msgid "key {key}"
+msgstr ""
+
+#: app/src/protection.rs:718
+msgid "a key gpg would not name"
+msgstr ""
+
+#: app/src/protection.rs:719
+msgid "a certificate gpgsm would not name"
+msgstr ""
+
+#: app/src/protection.rs:730
 msgid "It carries a file, kept in this window only."
 msgstr ""
 
-#: app/src/protection.rs:394
+#: app/src/protection.rs:732
 msgid "It carries {count} file, kept in this window only."
 msgid_plural "It carries {count} files, kept in this window only."
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/protection.rs:463
+#: app/src/protection.rs:818
 msgid "{names} or {last}"
 msgstr ""
 
-#: app/src/protection.rs:475
+#: app/src/protection.rs:830
 msgid "{names} and {last}"
 msgstr ""
 
@@ -1864,87 +1927,24 @@ msgstr ""
 msgid "4 GB"
 msgstr ""
 
-#: app/src/smime.rs:93
+#: app/src/smime.rs:83
 msgid "Add a recipient whose certificate gpgsm holds."
 msgstr ""
 
-#: app/src/smime.rs:102
+#: app/src/smime.rs:92
 msgid "gpgsm holds no certificate for {addresses}."
 msgstr ""
 
-#: app/src/smime.rs:120
+#: app/src/smime.rs:110
 msgid "gpgsm holds no certificate for any of the addresses you send from."
 msgstr ""
 
-#: app/src/smime.rs:122
+#: app/src/smime.rs:112
 msgid "gpgsm holds a certificate for {addresses}."
 msgstr ""
 
-#: app/src/smime.rs:126
+#: app/src/smime.rs:116
 msgid "gpgsm holds a certificate for {addresses}, and none for {without}."
-msgstr ""
-
-#: app/src/smime.rs:216
-msgid "Signed by {signer}, whose certificate has run out"
-msgstr ""
-
-#: app/src/smime.rs:220
-msgid ""
-"The text is as it was written, and the certificate behind it has expired."
-msgstr ""
-
-#: app/src/smime.rs:226
-msgid "Signed by {signer}, whose certificate was taken back"
-msgstr ""
-
-#: app/src/smime.rs:230
-msgid "Whoever issued it revoked it, so it says nothing about who wrote this."
-msgstr ""
-
-#: app/src/smime.rs:245
-msgid "Signed by a certificate this computer does not hold"
-msgstr ""
-
-#: app/src/smime.rs:247
-msgid ""
-"The message carried none either, so there is nothing here to check it "
-"against."
-msgstr ""
-
-#: app/src/smime.rs:253
-msgid "gpgsm could not check this signature"
-msgstr ""
-
-#: app/src/smime.rs:276
-msgid "This message is encrypted to a certificate you do not hold"
-msgstr ""
-
-#: app/src/smime.rs:278
-msgid "Whoever sent it used a certificate gpgsm has no secret key for."
-msgstr ""
-
-#: app/src/smime.rs:284
-msgid "gpgsm could not open this message"
-msgstr ""
-
-#: app/src/smime.rs:295
-msgid "This message says it is S/MIME and is not"
-msgstr ""
-
-#: app/src/smime.rs:309
-msgid "Its certificate leads back to an authority you trust."
-msgstr ""
-
-#: app/src/smime.rs:311
-msgid "Its certificate leads back to nobody you trust, so it names no one."
-msgstr ""
-
-#: app/src/smime.rs:313
-msgid "Nothing here says who that certificate belongs to."
-msgstr ""
-
-#: app/src/smime.rs:324
-msgid "a certificate gpgsm would not name"
 msgstr ""
 
 #: app/src/translation.rs:76

@@ -372,3 +372,29 @@ fn a_named_text_file_with_a_content_id_stays_an_attachment() {
     assert_eq!(body.text.as_deref(), Some("Notes attached"));
     assert_eq!(body.attachments.len(), 1);
 }
+
+/// RFC 3156 puts two parts in a `multipart/signed`: the one that was
+/// signed and the signature over it. A third part is something nobody
+/// signed, and drawing it under the signature card would lend it the
+/// signer's name.
+#[test]
+fn only_the_signed_part_of_a_signed_message_is_read() {
+    let payload = part(json!({
+        "mimeType": "multipart/signed",
+        "headers": [{"name": "Content-Type", "value":
+            "multipart/signed; micalg=pgp-sha256; protocol=\"application/pgp-signature\"; boundary=b"}],
+        "parts": [
+            {"partId": "0", "mimeType": "text/plain", "body": {"data": b64(b"Meet at six.")}},
+            {"partId": "1", "mimeType": "application/pgp-signature", "filename": "signature.asc",
+             "body": {"attachmentId": "att-1", "size": 480}},
+            {"partId": "2", "mimeType": "text/html", "body": {"data": b64(b"<p>Pay Mallory.</p>")}},
+            {"partId": "3", "mimeType": "application/pdf", "filename": "invoice.pdf",
+             "body": {"attachmentId": "att-2", "size": 900}}
+        ]
+    }));
+    let body = extract_body(&payload);
+    assert_eq!(body.protection, Some(Protection::Signed));
+    assert_eq!(body.text.as_deref(), Some("Meet at six."));
+    assert_eq!(body.html, None, "the unsigned HTML stays out");
+    assert!(body.attachments.is_empty(), "{:?}", body.attachments);
+}

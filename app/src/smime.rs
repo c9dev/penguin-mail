@@ -1,24 +1,20 @@
 //! S/MIME in the app: which call a message needs, and what comes back when
 //! gpgsm has run.
 //!
-//! It is `pgp`'s peer over `protection`, and borrows the same vocabulary: a
-//! [`Mark`] from here fills the same card, in the same three tones, so a
-//! reader never has to know which standard a message arrived under. Every
+//! It is `pgp`'s peer over `protection`: it turns what gpgsm said into a
+//! [`Found`] in the words both standards share, and `protection::read`
+//! alone turns that into the card and the body, so a reader never has to
+//! know which standard a message arrived under. Every
 //! call below blocks, so the window hands them to `Core::gpgsm` rather than
 //! running them itself.
 
 use std::process::Command;
 
+use mailrs_domain::MessageBody;
+use mailrs_domain::translate::{fill, gettext};
 use mailrs_smime::{Chain, Recipient, Signature, Smime, SmimeError, Verdict};
 
-use crate::protection::{self, Mark, Read, Tone};
-use mailrs_domain::translate::{fill, gettext};
-
-/// What a good signature whose chain reaches no root this computer trusts
-/// is worth. The chain is the only thing that says who signed under
-/// S/MIME, so without one there is nobody to name. `pgp` answers the same
-/// question with `Tone::Good`, because there the key is the name.
-const UNVOUCHED: Tone = Tone::Unchecked;
+use crate::protection::{self, Found, Part, Read, Refusal, Signed, Signer, Standard, Vouched};
 
 /// Which call of the engine one message needs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -37,41 +33,35 @@ pub enum Opening {
 /// `raw` is the message as it arrived, from `format=raw`, which is the one
 /// copy whose bytes a signature still covers. Every branch has an answer,
 /// including the ones where gpgsm refused, so the card never goes blank.
-pub fn read(smime: &Smime, opening: Opening, raw: &[u8]) -> Read {
+pub fn read(smime: &Smime, opening: Opening, raw: &[u8], body: &MessageBody) -> Read {
+    protection::read(Standard::Smime, open(smime, opening, raw), body)
+}
+
+/// What gpgsm found in the message, before anything is worded.
+pub fn open(smime: &Smime, opening: Opening, raw: &[u8]) -> Result<Found, Refusal> {
     match opening {
         Opening::Verify => {
-            let Some((part, signature)) = protection::wrapper_parts(raw) else {
-                return protection::mark_only(unreadable());
-            };
-            match smime.verify(part, signature) {
-                Ok(found) => protection::mark_only(signed(&found)),
-                Err(err) => protection::mark_only(refused(&err)),
-            }
+            let (part, signature) = protection::wrapper_parts(raw).ok_or(Refusal::Unreadable)?;
+            let found = smime.verify(part, signature).map_err(refusal)?;
+            Ok(Found {
+                encrypted: false,
+                signature: Some(signed(&found)),
+                part: Part::Entity(part.to_vec()),
+            })
         }
         Opening::Opaque => {
-            let Some(blob) = blob(raw) else {
-                return protection::mark_only(unreadable());
-            };
-            match smime.open_signed(blob) {
-                Ok(opened) => {
-                    let (inside, files) = protection::opened_body(&opened.part);
-                    Read {
-                        mark: signed(&opened.signature),
-                        body: Some(inside),
-                        files,
-                    }
-                }
-                Err(err) => protection::mark_only(refused(&err)),
-            }
+            let blob = blob(raw).ok_or(Refusal::Unreadable)?;
+            let opened = smime.open_signed(blob).map_err(refusal)?;
+            Ok(Found {
+                encrypted: false,
+                signature: Some(signed(&opened.signature)),
+                part: Part::Entity(opened.part),
+            })
         }
         Opening::Decrypt => {
-            let Some(blob) = blob(raw) else {
-                return protection::mark_only(unreadable());
-            };
-            match smime.decrypt(blob) {
-                Ok(part) => opened(smime, &part),
-                Err(err) => protection::mark_only(refused(&err)),
-            }
+            let blob = blob(raw).ok_or(Refusal::Unreadable)?;
+            let part = smime.decrypt(blob).map_err(refusal)?;
+            Ok(opened(smime, &part))
         }
     }
 }
@@ -139,7 +129,7 @@ pub fn own_certificates(held: &[Recipient]) -> String {
 /// it was enveloped arrives here as a signed entity, and the signature
 /// that matters is the one inside. An outer signature means nothing,
 /// since anyone can wrap somebody else's ciphertext in one of their own.
-fn opened(smime: &Smime, part: &[u8]) -> Read {
+fn opened(smime: &Smime, part: &[u8]) -> Found {
     let inside = match inner(part) {
         Some(Opening::Verify) => protection::wrapper_parts(part)
             .map(|(signed, signature)| (signed.to_vec(), smime.verify(signed, signature))),
@@ -157,11 +147,10 @@ fn opened(smime: &Smime, part: &[u8]) -> Read {
         Some((part, Err(_))) => (part, None),
         None => (part.to_vec(), None),
     };
-    let (body, files) = protection::opened_body(&part);
-    Read {
-        mark: enveloped(signature.as_ref(), body.attachments.len()),
-        body: Some(body),
-        files,
+    Found {
+        encrypted: true,
+        signature: signature.as_ref().map(signed),
+        part: Part::Entity(part),
     }
 }
 
@@ -188,140 +177,42 @@ fn blob(raw: &[u8]) -> Option<&[u8]> {
     Some(&raw[protection::find(raw, b"\r\n\r\n")? + 4..])
 }
 
-/// What the card says about a signature. The verdict and the chain answer
-/// different questions, so the title carries the one and the line under it
-/// the other.
-fn signed(signature: &Signature) -> Mark {
-    let who = signer(signature);
-    let signer_values = [("signer", who.as_str())];
-    match signature.verdict {
-        Verdict::Good => Mark {
-            title: fill(&gettext("Signed by {signer}"), &signer_values),
-            detail: Some(vouching(signature.chain)),
-            tone: match signature.chain {
-                Chain::Trusted => Tone::Good,
-                _ => UNVOUCHED,
-            },
+/// gpgsm's answer about a signature, in the words both standards share.
+fn signed(signature: &Signature) -> Signed {
+    Signed {
+        verdict: match signature.verdict {
+            Verdict::Good => protection::Verdict::Good,
+            Verdict::Bad => protection::Verdict::Bad,
+            Verdict::ExpiredCertificate => protection::Verdict::KeyExpired,
+            Verdict::RevokedCertificate => protection::Verdict::KeyRevoked,
+            Verdict::Expired => protection::Verdict::SignatureExpired,
+            Verdict::NoCertificate => protection::Verdict::NoKey,
+            Verdict::Unchecked => protection::Verdict::Unchecked,
         },
-        Verdict::Bad => Mark {
-            title: gettext("This message changed after it was signed"),
-            detail: Some(fill(
-                &gettext("The signature of {signer} does not match what arrived."),
-                &signer_values,
-            )),
-            tone: Tone::Bad,
+        signer: Signer {
+            name: signature
+                .subject
+                .as_deref()
+                .map(|subject| name(subject).to_string()),
+            addresses: signature.email.iter().cloned().collect(),
+            // A certificate is named by its subject; a fingerprint on the
+            // card would tell a reader nothing.
+            key: None,
         },
-        Verdict::ExpiredCertificate => Mark {
-            title: fill(
-                &gettext("Signed by {signer}, whose certificate has run out"),
-                &signer_values,
-            ),
-            detail: Some(gettext(
-                "The text is as it was written, and the certificate behind it has expired.",
-            )),
-            tone: Tone::Unchecked,
-        },
-        Verdict::RevokedCertificate => Mark {
-            title: fill(
-                &gettext("Signed by {signer}, whose certificate was taken back"),
-                &signer_values,
-            ),
-            detail: Some(gettext(
-                "Whoever issued it revoked it, so it says nothing about who wrote this.",
-            )),
-            tone: Tone::Bad,
-        },
-        Verdict::Expired => Mark {
-            title: fill(
-                &gettext("Signed by {signer}, and the signature has run out"),
-                &signer_values,
-            ),
-            detail: Some(gettext(
-                "It carried a date to stop being good on, and that date has passed.",
-            )),
-            tone: Tone::Unchecked,
-        },
-        Verdict::NoCertificate => Mark {
-            title: gettext("Signed by a certificate this computer does not hold"),
-            detail: Some(gettext(
-                "The message carried none either, so there is nothing here to check it \
-                 against.",
-            )),
-            tone: Tone::Unchecked,
-        },
-        Verdict::Unchecked => Mark {
-            title: gettext("gpgsm could not check this signature"),
-            detail: None,
-            tone: Tone::Unchecked,
+        vouched: match signature.chain {
+            Chain::Trusted => Vouched::Yes,
+            Chain::Untrusted => Vouched::Nobody,
+            Chain::Unknown => Vouched::Unsaid,
         },
     }
 }
 
-/// What the card says about a message that arrived enveloped, with the
-/// signature that travelled inside it when it carried one.
-fn enveloped(signature: Option<&Signature>, files: usize) -> Mark {
-    protection::encrypted(
-        signature.map(|signature| protection::Inside {
-            good_signer: (signature.verdict == Verdict::Good).then(|| signer(signature)),
-            mark: signed(signature),
-        }),
-        files,
-    )
-}
-
-/// What the card says when gpgsm would not open a message.
-fn refused(err: &SmimeError) -> Mark {
+/// Why gpgsm would not answer, in the words both standards share.
+fn refusal(err: SmimeError) -> Refusal {
     match err {
-        SmimeError::NotForYou => Mark {
-            title: gettext("This message is encrypted to a certificate you do not hold"),
-            detail: Some(gettext(
-                "Whoever sent it used a certificate gpgsm has no secret key for.",
-            )),
-            tone: Tone::Unchecked,
-        },
-        SmimeError::NotSmime => unreadable(),
-        other => Mark {
-            title: gettext("gpgsm could not open this message"),
-            detail: Some(other.to_string()),
-            tone: Tone::Unchecked,
-        },
-    }
-}
-
-/// What the card says about a message whose parts are not where S/MIME
-/// keeps them.
-fn unreadable() -> Mark {
-    Mark {
-        title: gettext("This message says it is S/MIME and is not"),
-        detail: Some(gettext(
-            "Its parts are not where a signed or encrypted message keeps them.",
-        )),
-        tone: Tone::Unchecked,
-    }
-}
-
-/// How far the chain behind the certificate reaches, said plainly. A
-/// certificate whose chain reaches no root this computer trusts still
-/// signs; the two are separate answers and running them together tells
-/// people the wrong thing.
-fn vouching(chain: Chain) -> String {
-    match chain {
-        Chain::Trusted => gettext("Its certificate leads back to an authority you trust."),
-        Chain::Untrusted => {
-            gettext("Its certificate leads back to nobody you trust, so it names no one.")
-        }
-        Chain::Unknown => gettext("Nothing here says who that certificate belongs to."),
-    }
-}
-
-/// Who gpgsm says signed: the address on the certificate, and the subject
-/// behind it when there is one to give.
-fn signer(signature: &Signature) -> String {
-    match (&signature.email, &signature.subject) {
-        (Some(email), Some(subject)) => format!("{} <{email}>", name(subject)),
-        (Some(email), None) => email.clone(),
-        (None, Some(subject)) => name(subject).to_string(),
-        (None, None) => gettext("a certificate gpgsm would not name"),
+        SmimeError::NotForYou => Refusal::NotForYou,
+        SmimeError::NotSmime => Refusal::Unreadable,
+        other => Refusal::Failed(other.to_string()),
     }
 }
 
@@ -343,6 +234,37 @@ mod tests {
     use mailrs_smime::Certificate;
 
     use super::*;
+    use crate::protection::{Mark, Tone};
+
+    /// The card for a message that arrived in the clear with `signature`
+    /// over it, through the one function both standards answer through.
+    fn mark(signature: &Signature) -> Mark {
+        protection::read(
+            Standard::Smime,
+            Ok(Found {
+                encrypted: false,
+                signature: Some(signed(signature)),
+                part: Part::Text("Meet at six.".into()),
+            }),
+            &MessageBody::default(),
+        )
+        .mark
+    }
+
+    /// The card for a message that arrived enveloped, with `signature`
+    /// inside it when it carried one.
+    fn enveloped(signature: Option<&Signature>) -> Mark {
+        protection::read(
+            Standard::Smime,
+            Ok(Found {
+                encrypted: true,
+                signature: signature.map(signed),
+                part: Part::Text("Meet at six.".into()),
+            }),
+            &MessageBody::default(),
+        )
+        .mark
+    }
 
     /// A GnuPG home under a temp directory, with one certificate in it. It
     /// touches no keybox of whoever runs the tests, and the round trips
@@ -507,7 +429,7 @@ mod tests {
 
     #[test]
     fn a_good_signature_names_the_signer_and_how_far_the_chain_reached() {
-        let mark = signed(&signature(Verdict::Good, Chain::Trusted));
+        let mark = mark(&signature(Verdict::Good, Chain::Trusted));
         assert_eq!(mark.title, "Signed by Ada Lovelace <ada@example.test>");
         assert_eq!(
             mark.detail.as_deref(),
@@ -518,7 +440,7 @@ mod tests {
 
     #[test]
     fn a_chain_that_reached_nobody_we_trust_leaves_the_card_unchecked() {
-        let mark = signed(&signature(Verdict::Good, Chain::Untrusted));
+        let mark = mark(&signature(Verdict::Good, Chain::Untrusted));
         assert_eq!(mark.title, "Signed by Ada Lovelace <ada@example.test>");
         assert_eq!(mark.tone, Tone::Unchecked);
         assert!(
@@ -531,14 +453,14 @@ mod tests {
 
     #[test]
     fn a_bad_signature_says_so_plainly() {
-        let mark = signed(&signature(Verdict::Bad, Chain::Trusted));
+        let mark = mark(&signature(Verdict::Bad, Chain::Trusted));
         assert_eq!(mark.title, "This message changed after it was signed");
         assert_eq!(mark.tone, Tone::Bad);
     }
 
     #[test]
     fn a_certificate_that_ran_out_is_not_a_bad_signature() {
-        let mark = signed(&signature(Verdict::ExpiredCertificate, Chain::Trusted));
+        let mark = mark(&signature(Verdict::ExpiredCertificate, Chain::Trusted));
         assert!(
             mark.title.ends_with("whose certificate has run out"),
             "{mark:?}"
@@ -554,7 +476,7 @@ mod tests {
             fingerprint: None,
             ..signature(Verdict::NoCertificate, Chain::Unknown)
         };
-        let mark = signed(&unknown);
+        let mark = mark(&unknown);
         assert_eq!(
             mark.title,
             "Signed by a certificate this computer does not hold"
@@ -564,18 +486,18 @@ mod tests {
 
     #[test]
     fn an_enveloped_message_says_it_arrived_that_way() {
-        let alone = enveloped(None, 0);
+        let alone = enveloped(None);
         assert_eq!(alone.title, "This message arrived encrypted");
         assert_eq!(alone.tone, Tone::Unchecked);
 
-        let inside = enveloped(Some(&signature(Verdict::Good, Chain::Trusted)), 0);
+        let inside = enveloped(Some(&signature(Verdict::Good, Chain::Trusted)));
         assert_eq!(
             inside.title,
             "Encrypted, and signed by Ada Lovelace <ada@example.test>"
         );
         assert_eq!(inside.tone, Tone::Good);
 
-        let broken = enveloped(Some(&signature(Verdict::Bad, Chain::Trusted)), 0);
+        let broken = enveloped(Some(&signature(Verdict::Bad, Chain::Trusted)));
         assert_eq!(
             broken.title,
             "Encrypted. This message changed after it was signed"
@@ -585,7 +507,12 @@ mod tests {
 
     #[test]
     fn a_message_for_somebody_else_says_so_where_the_message_would_be() {
-        let mark = refused(&SmimeError::NotForYou);
+        let mark = protection::read(
+            Standard::Smime,
+            Err(refusal(SmimeError::NotForYou)),
+            &MessageBody::default(),
+        )
+        .mark;
         assert_eq!(
             mark.title,
             "This message is encrypted to a certificate you do not hold"
@@ -622,11 +549,30 @@ mod tests {
         let entity = home.smime.sign(part, &home.address).expect("a signed body");
         let raw = home.message(&entity);
 
-        let read = read(&home.smime, Opening::Verify, &raw);
+        let read = read(&home.smime, Opening::Verify, &raw, &MessageBody::default());
 
         assert_eq!(read.mark.title, "Signed by Ada Lovelace <ada@example.test>");
         assert_eq!(read.mark.tone, Tone::Good, "{:?}", read.mark);
-        assert!(read.body.is_none());
+        let shown = read.body.expect("the body is cut from what was signed");
+        assert_eq!(shown.text.as_deref(), Some("Meet at six."));
+    }
+
+    #[test]
+    fn a_part_nobody_signed_is_not_drawn_under_the_card() {
+        use crate::protection::tampered::{as_gmail_read_it, with_unsigned_part};
+
+        let Some(home) = Home::new() else { return };
+        let part = b"Content-Type: text/plain; charset=utf-8\r\n\r\nMeet at six.\r\n";
+        let entity = home.smime.sign(part, &home.address).expect("a signed body");
+        let raw = home.message(&with_unsigned_part(&entity));
+
+        let read = read(&home.smime, Opening::Verify, &raw, &as_gmail_read_it());
+
+        assert_eq!(read.mark.title, "Signed by Ada Lovelace <ada@example.test>");
+        let shown = read.body.expect("the body is cut from what was signed");
+        assert_eq!(shown.html, None, "{shown:?}");
+        assert!(shown.attachments.is_empty(), "{shown:?}");
+        assert_eq!(shown.text.as_deref(), Some("Meet at six."));
     }
 
     #[test]
@@ -643,7 +589,7 @@ mod tests {
             .expect("an enveloped body");
         let raw = home.message(&entity);
 
-        let read = read(&home.smime, Opening::Decrypt, &raw);
+        let read = read(&home.smime, Opening::Decrypt, &raw, &MessageBody::default());
 
         assert_eq!(
             read.mark.title,
@@ -677,7 +623,7 @@ mod tests {
         entity.extend_from_slice(&mailrs_smime::mime::base64(&out.stdout));
         let raw = home.message(&entity);
 
-        let read = read(&home.smime, Opening::Opaque, &raw);
+        let read = read(&home.smime, Opening::Opaque, &raw, &MessageBody::default());
 
         assert_eq!(read.mark.title, "Signed by Ada Lovelace <ada@example.test>");
         assert_eq!(read.mark.tone, Tone::Good, "{:?}", read.mark);
@@ -705,7 +651,7 @@ mod tests {
             crate::compose::build_protected(&draft, 1_757_000_000, "<id@example.test>", entity)
                 .expect("a message");
 
-        let read = read(&home.smime, Opening::Verify, &raw);
+        let read = read(&home.smime, Opening::Verify, &raw, &MessageBody::default());
 
         assert_eq!(read.mark.title, "Signed by Ada Lovelace <ada@example.test>");
         assert_eq!(read.mark.tone, Tone::Good, "{:?}", read.mark);
@@ -735,7 +681,7 @@ mod tests {
         assert!(!String::from_utf8_lossy(&raw).contains("Meet at six"));
         assert_eq!(draft::standard_of(&raw), Some(Standard::Smime));
 
-        let read = read(&home.smime, Opening::Decrypt, &raw);
+        let read = read(&home.smime, Opening::Decrypt, &raw, &MessageBody::default());
         let mut reopened = crate::compose::Draft::new(1, written.from.clone());
         draft::reopen(&raw, Standard::Smime, read, &mut reopened).expect("it opens");
 
@@ -751,7 +697,7 @@ mod tests {
         let Some(home) = Home::new() else { return };
         let raw = home.message(b"Content-Type: multipart/signed\r\n\r\nMeet at six.\r\n");
 
-        let read = read(&home.smime, Opening::Verify, &raw);
+        let read = read(&home.smime, Opening::Verify, &raw, &MessageBody::default());
 
         assert_eq!(read.mark.title, "This message says it is S/MIME and is not");
         assert_eq!(read.mark.tone, Tone::Unchecked);

@@ -37,10 +37,10 @@ pub struct OpenThread {
     /// Pictures for the attachment rows: Gmail's attachment id to a small
     /// `data:` URI. Shared across the thread, since an id is unique.
     pub thumbnails: HashMap<String, String>,
-    /// Files that came out of an encrypted message, by message id, in the
-    /// order that message's attachment list gives them. Gmail holds the
-    /// ciphertext, so these bytes are the only copy and they live no
-    /// longer than this window.
+    /// Files the engine cut out of a signed or encrypted message, by
+    /// message id, in the order that message's attachment list gives them.
+    /// For an encrypted message Gmail holds only the ciphertext, so these
+    /// bytes are the only copy, and they live no longer than this window.
     pub opened_files: HashMap<String, Vec<Vec<u8>>>,
     /// Contact photos by lower-case sender address, as `data:` URIs. A
     /// sender with none keeps the initials avatar.
@@ -316,17 +316,22 @@ impl OpenThread {
     }
 
     /// What the engine made of the protected message: the mark for the
-    /// card, and, when it opened one, the body and the files that were
-    /// inside. Answers whether it opened a body.
+    /// card, and the body and the files cut from what it checked or opened.
+    /// Answers whether it gave a body. The pictures Gmail fetched for the
+    /// message as it arrived go, since one could come from a part the
+    /// signature does not cover; the ones the new body shows come out of
+    /// its own files.
     pub fn take_engine_answer(&mut self, message_id: String, read: protection::Read) -> bool {
         self.pgp = Some(read.mark);
         let Some(body) = read.body else {
             return false;
         };
+        self.bodies.insert(message_id.clone(), Ok(body));
+        let pictures = queued::pictures(self, &message_id, &read.files);
+        self.inline_images.insert(message_id.clone(), pictures);
         if !read.files.is_empty() {
-            self.opened_files.insert(message_id.clone(), read.files);
+            self.opened_files.insert(message_id, read.files);
         }
-        self.bodies.insert(message_id, Ok(body));
         true
     }
 
@@ -484,6 +489,52 @@ mod tests {
             translations: HashMap::new(),
             queued: None,
         }
+    }
+
+    #[test]
+    fn a_body_the_engine_opened_brings_its_own_pictures_and_no_others() {
+        use crate::protection::{Mark, Read, Tone};
+        use mailrs_domain::{Attachment, MessageBody};
+
+        let mut open = thread(vec![message("m1", false)]);
+        open.bodies
+            .insert("m1".to_string(), Ok(MessageBody::default()));
+        // What Gmail fetched for the message as it arrived, including a
+        // picture from a part nobody signed.
+        open.inline_images.insert(
+            "m1".to_string(),
+            HashMap::from([(
+                "stranger".to_string(),
+                "data:image/png;base64,AA".to_string(),
+            )]),
+        );
+        let signed = MessageBody {
+            html: Some("<img src=\"cid:logo\">".to_string()),
+            attachments: vec![Attachment {
+                part_id: "0".to_string(),
+                filename: "logo.png".to_string(),
+                mime_type: "image/png".to_string(),
+                size: 1,
+                attachment_id: None,
+                content_id: Some("logo".to_string()),
+            }],
+            ..MessageBody::default()
+        };
+        open.take_engine_answer(
+            "m1".to_string(),
+            Read {
+                mark: Mark {
+                    title: "Signed by Ann".to_string(),
+                    detail: None,
+                    tone: Tone::Good,
+                },
+                body: Some(signed),
+                files: vec![vec![1]],
+            },
+        );
+        let pictures = &open.inline_images["m1"];
+        assert_eq!(pictures.len(), 1, "{pictures:?}");
+        assert_eq!(pictures["logo"], "data:image/png;base64,AQ==");
     }
 
     #[test]

@@ -5,6 +5,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Fixed
+
+- A signed message shows only what its signature covers. A part somebody
+  added beside the signed one, or text written around a signed block, no
+  longer appears under "Signed by".
+
 ## 0.1.7 (2026-09-23)
 
 ### New

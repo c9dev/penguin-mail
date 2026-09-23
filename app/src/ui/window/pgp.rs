@@ -78,7 +78,7 @@ impl Effects for Ports {
                 }
                 Engine::Smime(opening) => {
                     self.core
-                        .gpgsm(move |smime| Ok(smime::read(smime, opening, &raw)))
+                        .gpgsm(move |smime| Ok(smime::read(smime, opening, &raw, &body)))
                         .await
                 }
             }

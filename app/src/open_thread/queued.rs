@@ -130,7 +130,11 @@ fn written_at(queued: &Queued) -> Option<mailrs_domain::EpochMillis> {
 
 /// The pictures the text shows by `cid:`, as `data:` URIs, from the
 /// files the message carries.
-fn pictures(thread: &OpenThread, id: &str, files: &[Vec<u8>]) -> HashMap<String, String> {
+pub(super) fn pictures(
+    thread: &OpenThread,
+    id: &str,
+    files: &[Vec<u8>],
+) -> HashMap<String, String> {
     use base64::Engine;
     let Some(Ok(body)) = thread.bodies.get(id) else {
         return HashMap::new();
