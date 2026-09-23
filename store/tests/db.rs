@@ -77,3 +77,46 @@ async fn data_survives_reopening() {
     let db = Db::open(&path).unwrap();
     assert_eq!(db.read(accounts::list_accounts).await.unwrap().len(), 1);
 }
+
+/// A burst of reads shares a few connections rather than opening one each.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_burst_of_reads_opens_no_more_than_the_pool() {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    let (db, _dir) = open();
+    let (open_now, most) = (Arc::new(AtomicUsize::new(0)), Arc::new(AtomicUsize::new(0)));
+    let mut tasks = Vec::new();
+    for _ in 0..24 {
+        let (db, open_now, most) = (db.clone(), Arc::clone(&open_now), Arc::clone(&most));
+        tasks.push(tokio::spawn(async move {
+            db.read(move |c| {
+                let now = open_now.fetch_add(1, Ordering::SeqCst) + 1;
+                most.fetch_max(now, Ordering::SeqCst);
+                std::thread::sleep(std::time::Duration::from_millis(20));
+                open_now.fetch_sub(1, Ordering::SeqCst);
+                accounts::list_accounts(c)
+            })
+            .await
+            .unwrap();
+        }));
+    }
+    for task in tasks {
+        task.await.unwrap();
+    }
+    let most = most.load(Ordering::SeqCst);
+    assert!((1..=4).contains(&most), "{most} reads ran at once");
+}
+
+/// A read that panics gives its connection back, so later reads still run.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_panicking_read_leaves_the_pool_whole() {
+    let (db, _dir) = open();
+    for _ in 0..8 {
+        let failed = db
+            .read(|_| -> Result<(), StoreError> { panic!("a read went wrong") })
+            .await;
+        assert!(matches!(failed, Err(StoreError::Closed)));
+    }
+    assert!(db.read(accounts::list_accounts).await.unwrap().is_empty());
+}
