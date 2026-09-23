@@ -8,20 +8,7 @@ use mailrs_gmail::{GmailError, SendAs, html_to_text};
 use mailrs_store::{drafts, messages};
 
 use super::AccountSync;
-use crate::{GmailApi, SavedDraft, SyncError};
-
-/// One address an account may send mail as: its own, or an alias whose owner
-/// has confirmed it. Gmail keeps a display name and a signature per address,
-/// so all three travel together.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SendAsAddress {
-    pub email: String,
-    pub name: Option<String>,
-    /// The signature Gmail holds for this address, as plain text.
-    pub signature: String,
-    /// The address Gmail sends from when the writer picks none.
-    pub default: bool,
-}
+use crate::{GmailApi, SavedDraft, SendAsAddress, SyncError};
 
 impl<G: GmailApi> AccountSync<G> {
     /// Sends raw RFC 822 bytes, then deletes `draft_id` if the message came

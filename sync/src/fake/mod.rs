@@ -891,7 +891,7 @@ impl GmailApi for FakeGmail {
                 display_name: s.display_name.clone().unwrap_or_default(),
                 is_default: true,
                 is_primary: true,
-                signature: s.signature.clone().unwrap_or_default(),
+                signature: s.signature.as_deref().map(signature_html).unwrap_or_default(),
                 verification_status: None,
             }];
             all.extend(s.send_as.iter().cloned());
@@ -1309,6 +1309,19 @@ fn fill_person(person: &mut Person, fields: &ContactFields) {
     if let Some(organization) = &fields.organization {
         person.organization = Some(organization.clone()).filter(|o| !o.is_empty());
     }
+}
+
+/// The HTML Gmail would hold for a signature the fake keeps as text: one
+/// line of it per line of text.
+fn signature_html(text: &str) -> String {
+    text.lines()
+        .map(|line| {
+            line.replace('&', "&amp;")
+                .replace('<', "&lt;")
+                .replace('>', "&gt;")
+        })
+        .collect::<Vec<_>>()
+        .join("<br>")
 }
 
 /// Leaves `sync`'s store as a new account's first sync against this
