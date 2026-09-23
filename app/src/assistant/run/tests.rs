@@ -3,7 +3,7 @@
 //! to do.
 
 use mailrs_domain::{FlagColor, MessageBody, MessageMeta, Vacation, system_label};
-use mailrs_sync::{MailAction, Outcome, Permitted, TriageAction};
+use mailrs_sync::{MailAction, Outcome, TriageAction};
 use serde_json::{Value, json};
 
 use super::catalog::{Run, catalog};
@@ -758,7 +758,7 @@ async fn categorize_sender_asks_then_moves_their_mail_and_sorts_the_rest() {
         .await;
     assert_eq!(
         done,
-        json!({"sender": "shop@example.com", "category": "social"})
+        json!({"sender": "shop@example.com", "category": "social", "moved": 1})
     );
     assert_eq!(
         h.asked().questions,
@@ -766,13 +766,8 @@ async fn categorize_sender_asks_then_moves_their_mail_and_sorts_the_rest() {
             "Move mail from The Kite Shop to Social in {ME}, and add a Gmail rule for their future mail?"
         )]
     );
-    let categorized = h.categorized().await;
-    assert_eq!(categorized.len(), 1);
-    assert_eq!(
-        categorized[0].sorted.as_ref().ok(),
-        Some(&Permitted::Done(()))
-    );
-
+    // The answer comes once the work is done, so the mail has moved and
+    // the rule is there by the time the model reads it.
     let labels = h.labels_of("m2").await;
     assert!(labels.iter().any(|l| l == system_label::CATEGORY_SOCIAL));
     assert!(
@@ -787,6 +782,29 @@ async fn categorize_sender_asks_then_moves_their_mail_and_sorts_the_rest() {
         rules[0].action.add_label_ids,
         [system_label::CATEGORY_SOCIAL]
     );
+    assert_eq!(h.asked().categories_moved, 1);
+}
+
+#[tokio::test]
+async fn categorize_sender_without_the_settings_permission_moves_the_mail_and_says_so() {
+    let h = harness().await;
+    h.gmail.withhold(mailrs_gmail::SETTINGS_SCOPE);
+    let answer = h
+        .run(
+            "categorize_sender",
+            json!({"account": ME, "email": "shop@example.com", "category": "social"}),
+        )
+        .await
+        .expect_err("the rule needs the permission");
+    assert!(answer.contains("Moved 1 conversation"), "{answer}");
+    assert!(answer.contains("needs permission"), "{answer}");
+    assert_eq!(
+        h.asked().permission_asked,
+        [(h.account_id, Permission::Settings)]
+    );
+    let labels = h.labels_of("m2").await;
+    assert!(labels.iter().any(|l| l == system_label::CATEGORY_SOCIAL));
+    assert!(h.gmail.with(|s| s.filters.is_empty()));
 }
 
 #[tokio::test]
@@ -801,7 +819,7 @@ async fn a_declined_categorize_changes_nothing() {
         .await,
         Err("The user declined.".into())
     );
-    assert!(h.categorized().await.is_empty());
+    assert_eq!(h.asked().categories_moved, 0);
     assert!(
         h.labels_of("m2")
             .await
@@ -877,6 +895,10 @@ async fn hide_my_email_makes_an_address_and_copies_it() {
     let address = made["address"].as_str().expect("an address").to_string();
     assert!(hidden::is_alias(&address), "{address}");
     assert_eq!(h.asked().copied, [address.as_str()]);
+    assert!(
+        matches!(&h.asked().changes[..], [Change::SaveHiddenAddress(kept)] if kept.address == address),
+        "the new address is kept in the settings"
+    );
     let filters = h.gmail.with(|s| s.filters.clone());
     assert_eq!(filters.len(), 1, "one filter labels the alias's mail");
     assert!(
@@ -1141,9 +1163,10 @@ async fn a_declined_question_changes_nothing() {
         let asked = h.asked();
         assert!(!asked.questions.is_empty(), "the samples include questions");
         assert!(asked.sent.is_empty() && asked.scheduled.is_empty());
-        assert!(asked.changes.is_empty() && asked.left.is_empty());
+        assert!(asked.changes.is_empty() && asked.requests.is_empty());
+        assert!(asked.pages_opened.is_empty());
+        assert_eq!(asked.categories_moved, 0);
     }
-    assert!(h.categorized().await.is_empty());
     assert_eq!(h.ok("list_rules", json!({"account": ME})).await, rules);
     assert_eq!(
         h.ok("get_automatic_reply", json!({"account": ME})).await,

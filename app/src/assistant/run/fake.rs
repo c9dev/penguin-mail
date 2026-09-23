@@ -13,29 +13,26 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use mailrs_domain::{
-    Account, AccountId, AccountState, Address, Category, ChangeEvent, EpochMillis, Label,
-    LabelKind, MessageMeta, ThreadSummary,
+    Account, AccountId, AccountState, Address, ChangeEvent, EpochMillis, Label, LabelKind,
+    MessageMeta, ThreadSummary,
 };
 use mailrs_gmail::RemoteLabel;
 use mailrs_store::{Db, accounts, messages};
 use mailrs_sync::fake::{FakeGmail, fill_store};
 use mailrs_sync::{
-    AccountSettings, AccountSync, Accounts, Calendar, Categorized, ContactBook, Invitations, Leave,
-    MailAction, MailActions, Mailboxes, Outcome, Permitted, View, hidden,
+    AccountSettings, AccountSync, Accounts, Calendar, ContactBook, Invitations, MailAction,
+    MailActions, Mailboxes, Outcome, View,
 };
 use serde_json::Value;
-use tokio::task::JoinHandle;
 
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD;
 
 use super::{Answer, Background, Desk, Effects, Modules, OnScreen, Permission, Tools};
 use crate::compose::{self, Draft};
-use crate::hide_my_email::HiddenAddress;
 use crate::protection::{self, Held, Standard};
 use crate::settings::{Change, Settings};
 use crate::ui::unsubscribe::{ListLine, Way, line_text};
-use crate::unsubscribe::Unsubscribe;
 use crate::unsubscribe_page::fake::FakeBrowser;
 use crate::unsubscribe_page::{Adviser, Browser, PageForm, Plan};
 
@@ -126,9 +123,14 @@ pub struct Asked {
     pub api_off: Vec<(String, String)>,
     /// Messages handed to Send Later, with their times.
     pub scheduled: Vec<(Draft, EpochMillis)>,
-    /// What leaving a list left for the window: a request to send from the
-    /// account, or a page to open in the browser.
-    pub left: Vec<(AccountId, Leave)>,
+    /// Request mail sent to leave a list: the account, the address, the
+    /// subject and the body.
+    pub requests: Vec<(AccountId, String, String, String)>,
+    /// Unsubscribe pages opened in the person's browser.
+    pub pages_opened: Vec<String>,
+    /// How often the rows were redrawn after mail moved between
+    /// categories.
+    pub categories_moved: usize,
     /// What each unsubscribe dialog was asked about: one string per
     /// line, the list's name and the words under it once its page had
     /// settled.
@@ -152,14 +154,11 @@ pub struct Asked {
     pub keys: Option<Vec<String>>,
     /// Drafts saved back into Gmail, as the window's Save Draft saves them.
     pub saved_drafts: Vec<Draft>,
-    /// Categorize Sender runs in the background, as the window runs it.
-    /// `Harness::categorized` waits for these.
-    sorting: Vec<JoinHandle<Categorized>>,
 }
 
-/// The window's effects. The ones the window hands to sync go to the same
-/// modules the tools use, and settings changes land on the fake desk, as
-/// the app's settings reach the window.
+/// The window's effects, recorded. The tools do their own mail and Gmail
+/// work through the modules, so nothing here stands in for sync; settings
+/// changes land on the fake desk, as the app's settings reach the window.
 pub struct FakeEffects {
     pub asked: RefCell<Asked>,
     /// The pages the hidden view serves, and the page a submission lands
@@ -169,22 +168,9 @@ pub struct FakeEffects {
     pub after: RefCell<PageForm>,
     pub browser: RefCell<Option<Rc<FakeBrowser>>>,
     desk: Rc<FakeDesk>,
-    mail: Arc<MailActions<Connected>>,
-    gmail: Arc<AccountSettings<Connected>>,
+    /// Where `save_draft` puts a draft, as the composer's Save Draft
+    /// reaches Gmail through the core.
     connected: Arc<Connected>,
-}
-
-impl FakeEffects {
-    /// The connected account with this address, as the app finds the
-    /// owner of a Hide My Email address.
-    fn account_of(&self, email: &str) -> Result<AccountId, String> {
-        self.desk
-            .accounts()
-            .iter()
-            .find(|a| a.email.eq_ignore_ascii_case(email))
-            .map(|a| a.id)
-            .ok_or_else(|| format!("{email} is not connected"))
-    }
 }
 
 impl Effects for FakeEffects {
@@ -214,22 +200,22 @@ impl Effects for FakeEffects {
         Ok(())
     }
 
-    fn unsubscribe(
+    fn send_request(
         &self,
         account_id: AccountId,
-        how: Unsubscribe,
-    ) -> Answer<'_, Result<(), String>> {
-        Box::pin(async move {
-            let leave = self
-                .mail
-                .unsubscribe(account_id, how)
-                .await
-                .map_err(|e| e.to_string())?;
-            if leave != Leave::Done {
-                self.asked.borrow_mut().left.push((account_id, leave));
-            }
-            Ok(())
-        })
+        to: String,
+        subject: String,
+        body: String,
+    ) -> Result<(), String> {
+        self.asked
+            .borrow_mut()
+            .requests
+            .push((account_id, to, subject, body));
+        Ok(())
+    }
+
+    fn open_page(&self, url: &str) {
+        self.asked.borrow_mut().pages_opened.push(url.to_string());
     }
 
     fn page_adviser(&self) -> Option<Box<dyn Adviser>> {
@@ -329,68 +315,8 @@ impl Effects for FakeEffects {
         self.asked.borrow_mut().relisted += 1;
     }
 
-    fn categorize_sender(
-        &self,
-        account_id: AccountId,
-        email: String,
-        _who: String,
-        category: Category,
-    ) {
-        let mail = Arc::clone(&self.mail);
-        let sorting = tokio::spawn(async move {
-            mail.categorize_sender(account_id, &email, None, category)
-                .await
-        });
-        self.asked.borrow_mut().sorting.push(sorting);
-    }
-
-    fn hide_address(
-        &self,
-        account_id: AccountId,
-        note: String,
-    ) -> Answer<'_, Result<Permitted<HiddenAddress>, String>> {
-        Box::pin(async move {
-            let account = self
-                .desk
-                .accounts()
-                .into_iter()
-                .find(|a| a.id == account_id)
-                .ok_or("that account is not connected")?;
-            let taken = self.desk.settings().hidden_addresses;
-            let made = self
-                .gmail
-                .create_hidden_address(account_id, &account.email, &note, &taken)
-                .await
-                .map_err(|e| e.to_string())?;
-            if let Permitted::Done(hidden) = &made {
-                self.change_settings(Change::SaveHiddenAddress(hidden.clone()))?;
-            }
-            Ok(made)
-        })
-    }
-
-    fn set_address_active(
-        &self,
-        address: String,
-        active: bool,
-    ) -> Answer<'_, Result<Permitted<()>, String>> {
-        Box::pin(async move {
-            let kept = self.desk.settings().hidden_addresses;
-            let hidden = hidden::find(&kept, &address)
-                .cloned()
-                .ok_or_else(|| format!("{address} is not a Hide My Email address"))?;
-            let account_id = self.account_of(&hidden.account)?;
-            let changed = self
-                .gmail
-                .set_hidden_address_active(account_id, &hidden, active)
-                .await
-                .map_err(|e| e.to_string())?;
-            let Permitted::Done(changed) = changed else {
-                return Ok(Permitted::NeedsPermission);
-            };
-            self.change_settings(Change::SaveHiddenAddress(changed))?;
-            Ok(Permitted::Done(()))
-        })
+    fn categories_moved(&self) {
+        self.asked.borrow_mut().categories_moved += 1;
     }
 
     fn reopen_unsent(&self, draft: Draft) -> Result<(), String> {
@@ -694,8 +620,6 @@ impl Harness {
             }),
             browser: RefCell::new(None),
             desk: Rc::clone(&desk),
-            mail,
-            gmail: settings,
             connected: Arc::clone(&modules.accounts),
         });
         let tools = Tools::new(
@@ -734,17 +658,6 @@ impl Harness {
 
     pub fn asked(&self) -> std::cell::Ref<'_, Asked> {
         self.effects.asked.borrow()
-    }
-
-    /// Waits for every Categorize Sender the tools started, and gives back
-    /// what each did.
-    pub async fn categorized(&self) -> Vec<Categorized> {
-        let sorting = std::mem::take(&mut self.effects.asked.borrow_mut().sorting);
-        let mut done = Vec::new();
-        for task in sorting {
-            done.push(task.await.expect("Categorize Sender finishes"));
-        }
-        done
     }
 
     // ---- The hidden view the unsubscribe tool loads pages in -----------

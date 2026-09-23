@@ -20,6 +20,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - MCP servers the assistant started stop when Penguin Mail restarts
   itself to free memory or to install an update, where they used to keep
   running with nothing talking to them.
+- The assistant reports sorting a sender into a category once their mail
+  has moved, where it used to say so before anything happened, and it
+  says when the rule for their future mail still needs a permission.
 - A chat with the assistant keeps working after you press Stop, and after
   it reads one very long conversation. Either could leave every later
   question failing until you started a new chat.

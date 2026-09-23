@@ -165,7 +165,7 @@ impl MainWindow {
     }
 
     /// Opens `url` in the person's own browser.
-    fn open_page(&self, url: &str) {
+    pub(super) fn open_page(&self, url: &str) {
         gtk::UriLauncher::new(url).launch(Some(&self.window), gio::Cancellable::NONE, |_| {});
     }
 

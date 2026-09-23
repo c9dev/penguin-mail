@@ -25,21 +25,19 @@ use mailrs_domain::{
 use mailrs_gmail::GmailError;
 use mailrs_store::{Db, messages};
 use mailrs_sync::{
-    AccountSettings, AccountSync, Accounts, AutomaticReply, Calendar, Failure, History,
-    Invitations, MailAction, MailActions, Mailbox, Mailboxes, NewLabels, Outcome, Permitted, Scope,
-    SyncError, TriageAction, View,
+    AccountSettings, AccountSync, Accounts, AutomaticReply, Calendar, Categorized, Failure,
+    History, Invitations, MailAction, MailActions, Mailbox, Mailboxes, NewLabels, Outcome,
+    Permitted, Scope, SyncError, TriageAction, View,
 };
 use serde_json::{Value, json};
 
 use crate::compose::{self, Draft};
-use crate::hide_my_email::HiddenAddress;
 use crate::protection::{Held, Standard};
 use crate::rules::{RuleForm, describe_action, describe_criteria};
 use crate::settings::{
     Change, Choice, ColorScheme, MarkRead, RemoteImages, Setting, Settings, TextSize, UndoSend,
 };
 use crate::ui::unsubscribe::{ListLine, Way};
-use crate::unsubscribe::Unsubscribe;
 use crate::unsubscribe_page::{Adviser, Browser};
 use mailrs_domain::translate::{date_locale, fill, fill_plural, gettext};
 
@@ -122,12 +120,18 @@ pub trait Effects {
     /// draft with no `draft_id` is new and gets its signature first; one
     /// that has an id already went through a composer that signed it.
     fn send_later(&self, draft: Draft, at: EpochMillis) -> Result<(), String>;
-    /// Leaves a mailing list the way `how` says, from the account.
-    fn unsubscribe(
+    /// Sends the request mail a list asks for to be let go, from the
+    /// account, as it stands: no signature, no composer.
+    fn send_request(
         &self,
         account_id: AccountId,
-        how: Unsubscribe,
-    ) -> Answer<'_, Result<(), String>>;
+        to: String,
+        subject: String,
+        body: String,
+    ) -> Result<(), String>;
+    /// Opens a list's unsubscribe page in the person's browser, for them
+    /// to finish.
+    fn open_page(&self, url: &str);
 
     // ---- Leaving lists that only a page will take ------------------------
     // Leaving several lists at once needs two things of the window: the
@@ -164,27 +168,9 @@ pub trait Effects {
     fn mail_changed(&self, action: &MailAction, outcome: &Outcome);
     /// Counts and rows again, after a change no mail action covers.
     fn relist(&self);
-    /// Moves a sender's mail into a category and rules their future mail
-    /// there.
-    fn categorize_sender(
-        &self,
-        account_id: AccountId,
-        email: String,
-        who: String,
-        category: Category,
-    );
-    /// Makes a Hide My Email address for the account and saves it.
-    fn hide_address(
-        &self,
-        account_id: AccountId,
-        note: String,
-    ) -> Answer<'_, Result<Permitted<HiddenAddress>, String>>;
-    /// Turns a Hide My Email address on or off.
-    fn set_address_active(
-        &self,
-        address: String,
-        active: bool,
-    ) -> Answer<'_, Result<Permitted<()>, String>>;
+    /// Rows again after mail moved between categories, which can add
+    /// rows to a Gmail folder that only a fresh search shows.
+    fn categories_moved(&self);
 
     // ---- What waits: Send Later, the Outbox, and Undo --------------------
 
@@ -1395,9 +1381,38 @@ impl<A: Accounts> Tools<A> {
             ],
         );
         Ok(Plan::ask(question, async move {
-            self.effects
-                .categorize_sender(account.id, email.clone(), who, category);
-            Ok(json!({"sender": email, "category": key}))
+            let mail = Arc::clone(&self.modules.mail);
+            let (account_id, asked) = (account.id, email.clone());
+            let Categorized { moved, sorted } = self
+                .away(async move {
+                    mail.categorize_sender(account_id, &asked, None, category)
+                        .await
+                })
+                .await?;
+            self.effects.categories_moved();
+            let count = moved.done.len();
+            // The model reads this, so it stays in English like every
+            // other tool result.
+            let said = format!(
+                "Moved {count} conversation{} from {email} to {key}",
+                if count == 1 { "" } else { "s" }
+            );
+            match sorted {
+                Ok(Permitted::Done(())) => {
+                    let mut done = json!({"sender": email, "category": key, "moved": count});
+                    if let Some(error) = moved.first_error() {
+                        done["failed"] = json!(error);
+                    }
+                    Ok(done)
+                }
+                Ok(Permitted::NeedsPermission) => Err(format!(
+                    "{said}, but the rule for their future mail {}",
+                    self.needs_permission(&account)
+                )),
+                Err(err) => Err(format!(
+                    "{said}, but could not add the rule for their future mail: {err}"
+                )),
+            }
         }))
     }
 
@@ -1424,38 +1439,49 @@ impl<A: Accounts> Tools<A> {
     }
 
     async fn hidden_create(&self, input: &Value) -> ToolResult {
-        let account = self.account_named(&required(input, "account")?)?;
+        let (account, settings) = self.settings_for(&required(input, "account")?)?;
         let note = text(input, "note").unwrap_or_default();
-        match self.effects.hide_address(account.id, note).await {
-            Ok(Permitted::Done(hidden)) => {
-                self.effects.copy(&hidden.address);
-                Ok(json!({"address": hidden.address, "copied": true}))
-            }
-            Ok(Permitted::NeedsPermission) => Err(self.needs_permission(&account)),
-            Err(err) => Err(err),
-        }
+        let taken = self.desk.settings().hidden_addresses;
+        let (account_id, email) = (account.id, account.email.clone());
+        let made = self
+            .call(async move {
+                settings
+                    .create_hidden_address(account_id, &email, &note, &taken)
+                    .await
+            })
+            .await?;
+        let Permitted::Done(hidden) = made else {
+            return Err(self.needs_permission(&account));
+        };
+        let address = hidden.address.clone();
+        self.effects
+            .change_settings(Change::SaveHiddenAddress(hidden))?;
+        self.effects.copy(&address);
+        Ok(json!({"address": address, "copied": true}))
     }
 
     async fn hidden_set(&self, input: &Value) -> ToolResult {
         let address = required(input, "address")?;
         let active = flag(input, "active").ok_or("`active` is missing")?;
-        let hidden = self
-            .desk
-            .settings()
-            .hidden_addresses
-            .into_iter()
-            .find(|h| h.address.eq_ignore_ascii_case(&address))
+        let kept = self.desk.settings().hidden_addresses;
+        let hidden = mailrs_sync::hidden::find(&kept, &address)
+            .cloned()
             .ok_or_else(|| format!("{address} is not a Hide My Email address."))?;
-        let account = self.account_named(&hidden.account)?;
-        match self
-            .effects
-            .set_address_active(address.clone(), active)
-            .await
-        {
-            Ok(Permitted::Done(())) => Ok(json!({"address": address, "active": active})),
-            Ok(Permitted::NeedsPermission) => Err(self.needs_permission(&account)),
-            Err(err) => Err(err),
-        }
+        let (account, settings) = self.settings_for(&hidden.account)?;
+        let account_id = account.id;
+        let changed = self
+            .call(async move {
+                settings
+                    .set_hidden_address_active(account_id, &hidden, active)
+                    .await
+            })
+            .await?;
+        let Permitted::Done(changed) = changed else {
+            return Err(self.needs_permission(&account));
+        };
+        self.effects
+            .change_settings(Change::SaveHiddenAddress(changed))?;
+        Ok(json!({"address": address, "active": active}))
     }
 }
 

@@ -8,8 +8,8 @@ use std::rc::Rc;
 
 use mailrs_ai::ToolOutcome;
 use mailrs_domain::translate::gettext;
-use mailrs_domain::{Account, AccountId, Category, EpochMillis, Label, ThreadSummary};
-use mailrs_sync::{MailAction, Outcome, Permitted, View};
+use mailrs_domain::{Account, AccountId, EpochMillis, Label, ThreadSummary};
+use mailrs_sync::{MailAction, Outcome, View};
 use serde_json::Value;
 
 use super::MainWindow;
@@ -20,12 +20,10 @@ use crate::assistant::run::{
 };
 use crate::compose::{Draft, SendWhen};
 use crate::core::RunningEngine;
-use crate::hide_my_email::HiddenAddress;
 use crate::permission::Occasion;
 use crate::protection::{self, Held, Standard};
 use crate::settings::{Change, Settings};
 use crate::ui::unsubscribe::{self, ListLine, Way};
-use crate::unsubscribe::Unsubscribe;
 use crate::unsubscribe_page::{Adviser, Browser, WebkitBrowser, model_adviser};
 
 impl MainWindow {
@@ -119,12 +117,20 @@ impl Effects for Ports {
         Ok(())
     }
 
-    fn unsubscribe(
+    fn send_request(
         &self,
         account_id: AccountId,
-        how: Unsubscribe,
-    ) -> Answer<'_, Result<(), String>> {
-        Box::pin(async move { self.0.leave_list(account_id, how).await })
+        to: String,
+        subject: String,
+        body: String,
+    ) -> Result<(), String> {
+        let app = self.0.app.upgrade().ok_or_else(closing)?;
+        app.send_request(account_id, &to, subject, body);
+        Ok(())
+    }
+
+    fn open_page(&self, url: &str) {
+        self.0.open_page(url);
     }
 
     fn page_browser(&self) -> Rc<dyn Browser> {
@@ -184,41 +190,10 @@ impl Effects for Ports {
         self.0.reload_list();
     }
 
-    fn categorize_sender(
-        &self,
-        account_id: AccountId,
-        email: String,
-        who: String,
-        category: Category,
-    ) {
-        self.0
-            .categorize_sender(account_id, email, who, None, category);
-    }
-
-    fn hide_address(
-        &self,
-        account_id: AccountId,
-        note: String,
-    ) -> Answer<'_, Result<Permitted<HiddenAddress>, String>> {
-        Box::pin(async move {
-            let app = self.0.app.upgrade().ok_or_else(closing)?;
-            app.create_hidden_address(account_id, &note)
-                .await
-                .map_err(|e| e.to_string())
-        })
-    }
-
-    fn set_address_active(
-        &self,
-        address: String,
-        active: bool,
-    ) -> Answer<'_, Result<Permitted<()>, String>> {
-        Box::pin(async move {
-            let app = self.0.app.upgrade().ok_or_else(closing)?;
-            app.set_hidden_address_active(&address, active)
-                .await
-                .map_err(|e| e.to_string())
-        })
+    fn categories_moved(&self) {
+        self.0.core.forget_remote();
+        self.0.reload_folder();
+        self.0.refresh_counts();
     }
 
     fn reopen_unsent(&self, draft: Draft) -> Result<(), String> {
