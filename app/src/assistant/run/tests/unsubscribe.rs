@@ -294,6 +294,24 @@ async fn a_conversation_with_no_way_out_says_so_and_stops_nothing_else() {
     );
 }
 
+#[tokio::test]
+async fn a_list_left_takes_its_banner_down_and_one_refused_keeps_it() {
+    let h = with_three().await;
+    h.effects.asked.borrow_mut().request_answer = Some(Err("Gmail refused it".to_string()));
+
+    h.ok(
+        "unsubscribe",
+        json!({"conversations": [conversation("tn1"), conversation("tn3")]}),
+    )
+    .await;
+
+    assert_eq!(
+        h.asked().lists_left,
+        [(h.account_id, "tn1".to_string())],
+        "only the list that let go loses its Unsubscribe banner"
+    );
+}
+
 /// The forum writes to an alias of the account, which is the address
 /// its list knows the owner by.
 const ALIAS: &str = "dana@studio.example";

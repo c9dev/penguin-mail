@@ -147,10 +147,8 @@ impl MainWindow {
             if let Outcome::OpenInBrowser(url) = &outcome {
                 return this.open_page(url);
             }
-            // The request can take a while; mark only the thread it came
-            // from, if that is still the one on screen.
-            if outcome == Outcome::Done && view.is_showing(&asked_on) {
-                view.mark_unsubscribed();
+            if outcome == Outcome::Done {
+                this.left_list(asked_on.account_id, &asked_on.thread_id);
             }
             let said = summary(&[(sender, outcome.clone())]);
             match outcome {
@@ -161,6 +159,22 @@ impl MainWindow {
                 _ => this.toast(&said),
             }
         });
+    }
+
+    /// Takes the Unsubscribe banner off every view still showing the
+    /// thread whose list let go. The request can take a while, and the
+    /// reader may have moved on or opened the thread in a window of its
+    /// own, so each view is checked now rather than when it was asked.
+    /// The Unsubscribe button and the assistant both end here.
+    pub(super) fn left_list(&self, account_id: mailrs_domain::AccountId, thread_id: &str) {
+        for view in self.views() {
+            let showing = view
+                .read(|open| open.account_id == account_id && open.thread_id == thread_id)
+                .unwrap_or(false);
+            if showing {
+                view.mark_unsubscribed();
+            }
+        }
     }
 
     /// Toasts `said` with a button that opens `url` in the person's own

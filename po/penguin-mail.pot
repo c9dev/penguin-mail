@@ -186,39 +186,39 @@ msgstr ""
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr ""
 
-#: app/src/assistant/run.rs:908
+#: app/src/assistant/run.rs:911
 msgid "Move {count} conversation to the Trash?"
 msgid_plural "Move {count} conversations to the Trash?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/assistant/run.rs:999
+#: app/src/assistant/run.rs:1002
 msgid ""
 "Don't Allow labels only the mail in accounts that have the label already."
 msgstr ""
 
-#: app/src/assistant/run.rs:1031
+#: app/src/assistant/run.rs:1034
 msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr ""
 
-#: app/src/assistant/run.rs:1107 app/src/assistant/run/calendar.rs:178
+#: app/src/assistant/run.rs:1110 app/src/assistant/run/calendar.rs:178
 #: app/src/assistant/run/calendar.rs:525
 msgid "%a %-d %b"
 msgstr ""
 
-#: app/src/assistant/run.rs:1113
+#: app/src/assistant/run.rs:1116
 msgid " from {first} to {last}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1116
+#: app/src/assistant/run.rs:1119
 msgid " until {last}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1117
+#: app/src/assistant/run.rs:1120
 msgid " from {first}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1123
+#: app/src/assistant/run.rs:1126
 msgid ""
 "Turn on the automatic reply for {account}{dates}?\n"
 "\n"
@@ -226,19 +226,19 @@ msgid ""
 "{body}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1134
+#: app/src/assistant/run.rs:1137
 msgid "Turn off the automatic reply for {account}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1216
+#: app/src/assistant/run.rs:1219
 msgid "Create a Gmail rule for {account}: {when} → {then}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1256
+#: app/src/assistant/run.rs:1259
 msgid "Delete a Gmail rule from {account}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1378
+#: app/src/assistant/run.rs:1381
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a Gmail rule for "
 "their future mail?"
@@ -755,7 +755,7 @@ msgstr[1] ""
 msgid "Undo “{action}”?"
 msgstr ""
 
-#: app/src/assistant/run/unsubscribe.rs:334
+#: app/src/assistant/run/unsubscribe.rs:337
 msgid "this list"
 msgstr ""
 
@@ -5150,7 +5150,7 @@ msgstr ""
 #: app/src/ui/window/detached.rs:130 app/src/ui/window/export.rs:75
 #: app/src/ui/window/export.rs:138 app/src/ui/window/organize.rs:69
 #: app/src/ui/window/organize.rs:117 app/src/ui/window/organize.rs:146
-#: app/src/ui/window/organize.rs:174 app/src/ui/window/senders.rs:247
+#: app/src/ui/window/organize.rs:174 app/src/ui/window/senders.rs:261
 msgid "That account is not connected"
 msgstr ""
 
@@ -5564,37 +5564,37 @@ msgid ""
 "can."
 msgstr ""
 
-#: app/src/ui/window/senders.rs:171
+#: app/src/ui/window/senders.rs:185
 msgid "Open Page"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:208
+#: app/src/ui/window/senders.rs:222
 msgid "The app is closing."
 msgstr ""
 
-#: app/src/ui/window/senders.rs:226
+#: app/src/ui/window/senders.rs:240
 msgid "Open a message from the sender to block"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:230
+#: app/src/ui/window/senders.rs:244
 msgid "Block {sender}?"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:233
+#: app/src/ui/window/senders.rs:247
 msgid ""
 "New mail from {email} goes straight to the Trash. This conversation moves "
 "there now. Remove the rule under Rules to unblock."
 msgstr ""
 
-#: app/src/ui/window/senders.rs:238
+#: app/src/ui/window/senders.rs:252
 msgid "Block"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:265
+#: app/src/ui/window/senders.rs:279
 msgid "Blocked {sender}"
 msgstr ""
 
-#: app/src/ui/window/senders.rs:271
+#: app/src/ui/window/senders.rs:285
 msgid "Could not block the sender: {reason}"
 msgstr ""
 

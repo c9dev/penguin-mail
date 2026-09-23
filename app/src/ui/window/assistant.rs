@@ -137,6 +137,10 @@ impl Effects for Ports {
         self.0.open_page(url);
     }
 
+    fn left_list(&self, account_id: AccountId, thread_id: &str) {
+        self.0.left_list(account_id, thread_id);
+    }
+
     fn page_browser(&self) -> Rc<dyn Browser> {
         Rc::new(WebkitBrowser::new())
     }

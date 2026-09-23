@@ -136,6 +136,9 @@ pub trait Effects {
     /// Opens a list's unsubscribe page in the person's browser, for them
     /// to finish.
     fn open_page(&self, url: &str);
+    /// Takes the Unsubscribe banner off the conversation, wherever it is
+    /// on screen, once its list has let go.
+    fn left_list(&self, account_id: AccountId, thread_id: &str);
 
     // ---- Leaving lists that only a page will take ------------------------
     // Leaving several lists at once needs two things of the window: the

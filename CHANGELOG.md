@@ -50,6 +50,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - A list you leave by email hears from the address it writes to, not
   always the account's main one, and Penguin Mail says "Unsubscribed"
   only once the request has left. A request stuck in the Outbox says so.
+- After the assistant unsubscribes you from a list, the open conversation
+  stops offering Unsubscribe, as it does when you press the button
+  yourself.
 
 ## 0.2.0 (2026-09-23)
 

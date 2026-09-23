@@ -129,6 +129,8 @@ pub struct Asked {
     pub request_answer: Option<Result<RequestSent, String>>,
     /// Unsubscribe pages opened in the person's browser.
     pub pages_opened: Vec<String>,
+    /// The conversations whose lists were left, by account and thread.
+    pub lists_left: Vec<(AccountId, String)>,
     /// How often the rows were redrawn after mail moved between
     /// categories.
     pub categories_moved: usize,
@@ -220,6 +222,13 @@ impl Effects for FakeEffects {
 
     fn open_page(&self, url: &str) {
         self.asked.borrow_mut().pages_opened.push(url.to_string());
+    }
+
+    fn left_list(&self, account_id: AccountId, thread_id: &str) {
+        self.asked
+            .borrow_mut()
+            .lists_left
+            .push((account_id, thread_id.to_string()));
     }
 
     fn page_adviser(&self) -> Option<Box<dyn Adviser>> {

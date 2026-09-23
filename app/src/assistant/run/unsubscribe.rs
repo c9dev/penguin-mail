@@ -246,6 +246,9 @@ impl<A: Accounts> Tools<A> {
                     None => continue,
                 },
             };
+            if outcome.0 == "done" {
+                self.effects.left_list(list.account.id, &list.thread_id);
+            }
             ended.insert(at, outcome);
         }
         for at in belongs {
