@@ -124,20 +124,22 @@ pub fn list_correspondents(conn: &Connection) -> Result<Vec<Correspondent>> {
         .prepare("SELECT lower(email) FROM accounts")?
         .query_map([], |row| row.get(0))?
         .collect::<rusqlite::Result<_>>()?;
+    // Only sent mail needs its recipients, so only sent mail hands over
+    // the JSON that holds them.
     let mut stmt = conn.prepare(
-        "SELECT m.from_name, m.from_addr, m.to_addrs, m.cc_addrs, m.date, \
-         EXISTS (SELECT 1 FROM message_labels l WHERE l.account_id = m.account_id \
-                 AND l.message_id = m.id AND l.label_id = 'SENT') \
-         FROM messages m",
+        "SELECT m.from_name, m.from_addr, \
+         CASE WHEN s.message_id IS NULL THEN NULL ELSE m.to_addrs END, \
+         CASE WHEN s.message_id IS NULL THEN NULL ELSE m.cc_addrs END, m.date \
+         FROM messages m LEFT JOIN message_labels s \
+         ON s.account_id = m.account_id AND s.message_id = m.id AND s.label_id = 'SENT'",
     )?;
     let rows = stmt.query_map([], |row| {
         Ok((
             row.get::<_, Option<String>>(0)?,
             row.get::<_, Option<String>>(1)?,
-            row.get::<_, String>(2)?,
-            row.get::<_, String>(3)?,
+            row.get::<_, Option<String>>(2)?,
+            row.get::<_, Option<String>>(3)?,
             row.get::<_, EpochMillis>(4)?,
-            row.get::<_, bool>(5)?,
         ))
     })?;
     let mut found: HashMap<String, Correspondent> = HashMap::new();
@@ -162,8 +164,8 @@ pub fn list_correspondents(conn: &Connection) -> Result<Vec<Correspondent>> {
         }
     };
     for row in rows {
-        let (from_name, from_addr, to, cc, date, sent) = row?;
-        if sent {
+        let (from_name, from_addr, to, cc, date) = row?;
+        if let (Some(to), Some(cc)) = (to, cc) {
             let to: Vec<Address> = serde_json::from_str(&to).unwrap_or_default();
             let cc: Vec<Address> = serde_json::from_str(&cc).unwrap_or_default();
             for address in to.into_iter().chain(cc) {
