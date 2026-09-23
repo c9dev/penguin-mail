@@ -10,6 +10,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - The Social and Forums category lists in 1 ms instead of 10 on an inbox of
   15,000 conversations, and unread counts for the inbox, its categories and
   VIPs take under a millisecond where they took 6 to 29.
+- The sidebar works out every mailbox's count in 6 ms instead of 55.
 
 ## 0.1.7 (2026-09-23)
 

@@ -741,36 +741,57 @@ impl LabelCounts {
     }
 }
 
-/// Every label's thread and unread counts, for the sidebar, in one query
-/// instead of two per mailbox. A label leaves out the same trashed and spam
-/// mail `ThreadFilter` does, so a count and its list agree.
+/// Every label's thread and unread counts, for the sidebar, in three
+/// queries instead of two per mailbox. A label leaves out the same trashed
+/// and spam mail `ThreadFilter` does, so a count and its list agree.
+///
+/// Checking that rule on every row of every label read each thread's
+/// messages. Only a thread with a hidden label can fail it, so the counts
+/// come straight from the label index, and the rows of the few trashed and
+/// spam threads that fail the rule come off afterwards.
 pub fn label_counts(conn: &Connection) -> Result<LabelCounts> {
-    let mut stmt = conn.prepare_cached(&format!(
-        "SELECT d.account_id, d.label_id, COUNT(*), SUM(t.unread) FROM thread_labels d \
+    let mut counts: HashMap<(AccountId, String), Count> = HashMap::new();
+    let mut every = conn.prepare_cached(
+        "SELECT account_id, label_id, COUNT(*) FROM thread_labels GROUP BY label_id, account_id",
+    )?;
+    let mut rows = every.query([])?;
+    while let Some(row) = rows.next()? {
+        counts.entry((row.get(0)?, row.get(1)?)).or_default().threads = row.get(2)?;
+    }
+    let mut unread = conn.prepare_cached(&format!(
+        "SELECT d.account_id, d.label_id, COUNT(*) FROM thread_labels u \
+         CROSS JOIN thread_labels d ON d.account_id = u.account_id AND d.thread_id = u.thread_id \
+         WHERE u.label_id = '{UNREAD}' GROUP BY d.label_id, d.account_id"
+    ))?;
+    let mut rows = unread.query([])?;
+    while let Some(row) = rows.next()? {
+        counts.entry((row.get(0)?, row.get(1)?)).or_default().unread = row.get(2)?;
+    }
+    let mut hidden = conn.prepare_cached(&format!(
+        "SELECT d.account_id, d.label_id, COUNT(*), SUM(t.unread) \
+         FROM (SELECT DISTINCT account_id, thread_id FROM thread_labels \
+               WHERE label_id IN ('{TRASH}', '{SPAM}')) g \
+         CROSS JOIN thread_labels d ON d.account_id = g.account_id AND d.thread_id = g.thread_id \
          CROSS JOIN threads t ON t.account_id = d.account_id AND t.id = d.thread_id \
-         WHERE (NOT EXISTS (SELECT 1 FROM thread_labels h WHERE h.account_id = d.account_id \
+         WHERE EXISTS (SELECT 1 FROM thread_labels h WHERE h.account_id = d.account_id \
              AND h.thread_id = d.thread_id AND h.label_id IN ('{TRASH}', '{SPAM}') \
              AND h.label_id <> d.label_id) \
-           OR EXISTS (SELECT 1 FROM messages x JOIN message_labels k \
+           AND NOT EXISTS (SELECT 1 FROM messages x JOIN message_labels k \
              ON k.account_id = x.account_id AND k.message_id = x.id AND k.label_id = d.label_id \
              WHERE x.account_id = d.account_id AND x.thread_id = d.thread_id \
              AND NOT EXISTS (SELECT 1 FROM message_labels h WHERE h.account_id = x.account_id \
                AND h.message_id = x.id AND h.label_id IN ('{TRASH}', '{SPAM}') \
-               AND h.label_id <> d.label_id))) \
+               AND h.label_id <> d.label_id)) \
          GROUP BY d.label_id, d.account_id"
     ))?;
-    let rows = stmt.query_map([], |row| {
-        Ok((
-            (row.get::<_, AccountId>(0)?, row.get::<_, String>(1)?),
-            Count {
-                threads: row.get(2)?,
-                unread: row.get(3)?,
-            },
-        ))
-    })?;
-    Ok(LabelCounts {
-        counts: rows.collect::<rusqlite::Result<_>>()?,
-    })
+    let mut rows = hidden.query([])?;
+    while let Some(row) = rows.next()? {
+        let count = counts.entry((row.get(0)?, row.get(1)?)).or_default();
+        count.threads -= row.get::<_, i64>(2)?;
+        count.unread -= row.get::<_, i64>(3)?;
+    }
+    counts.retain(|_, count| count.threads > 0);
+    Ok(LabelCounts { counts })
 }
 
 /// Which unread threads have mail from which senders, for the VIP counts.
