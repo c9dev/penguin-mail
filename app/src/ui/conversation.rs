@@ -1188,9 +1188,8 @@ impl ConversationView {
             .unwrap_or(false)
     }
 
-    /// Bodies and the inline images that go in them, as they come back
-    /// from Gmail with their HTML cleaned, and the redraw that puts them on
-    /// screen.
+    /// Bodies as they come back from Gmail with their HTML cleaned, and the
+    /// redraw that puts them on screen. The pictures they name come later.
     pub fn bodies_arrived(&self, fetched: Fetched) {
         self.change(|open| open.take_bodies(fetched.bodies, fetched.cleaned));
         self.render(false);
