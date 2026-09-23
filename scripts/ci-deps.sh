@@ -16,7 +16,7 @@ if command -v apt-get >/dev/null; then
         libgtk-4-dev libadwaita-1-dev libwebkitgtk-6.0-dev libglib2.0-dev-bin \
         gettext dpkg-dev file zip appstream desktop-file-utils \
         gnupg gpgsm openssl \
-        xvfb dbus-daemon at-spi2-core python3-gi gir1.2-atspi-2.0
+        xvfb dbus-daemon at-spi2-core python3-gi gir1.2-atspi-2.0 libxtst6
 elif command -v dnf >/dev/null; then
     dnf install -y \
         gcc curl git pkgconf-pkg-config \
