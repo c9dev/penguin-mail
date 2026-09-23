@@ -39,8 +39,7 @@ pub struct Screen {
     pub open: Option<OpenThread>,
     /// What Gmail hands back for the raw message.
     pub raw: Result<Vec<u8>, String>,
-    /// What the engine makes of it. Taken rather than copied, so asking
-    /// twice is visible.
+    /// What the engine makes of each message it is asked about.
     pub read: Result<Read, String>,
     /// The step the reader opens another thread during, which is how a
     /// test makes an answer arrive for a thread nobody is looking at.
@@ -114,8 +113,8 @@ pub fn with_bodies(messages: Vec<(&str, Result<MessageBody, String>)>) -> OpenTh
         sealed: HashSet::new(),
         photos: HashMap::new(),
         unsubscribed: false,
-        pgp: None,
-        pgp_asked: false,
+        marks: HashMap::new(),
+        asked: HashSet::new(),
         flag_color: None,
         translations: HashMap::new(),
         queued: None,
@@ -201,9 +200,15 @@ impl Desk for FakeWindow {
         self.with(|screen| screen.installed)
     }
 
-    fn claim(&self, installed: Installed) -> Option<Claimed> {
+    fn claim(&self, installed: Installed) -> Vec<Claimed> {
         self.reached(Step::Claim);
-        self.with(|screen| screen.open.as_mut()?.take_protected(installed))
+        self.with(|screen| {
+            screen
+                .open
+                .as_mut()
+                .map(|open| open.take_protected(installed))
+                .unwrap_or_default()
+        })
     }
 }
 
@@ -236,13 +241,7 @@ impl Effects for FakeWindow {
         _body: MessageBody,
     ) -> Answer<'_, Result<Read, String>> {
         self.reached(Step::Ask);
-        let (held, read) = self.with(|screen| {
-            let read = std::mem::replace(
-                &mut screen.read,
-                Err("the engine was asked twice".to_string()),
-            );
-            (screen.holds.take(), read)
-        });
+        let (held, read) = self.with(|screen| (screen.holds.take(), screen.read.clone()));
         Box::pin(async move {
             if let Some(held) = held {
                 let _ = held.await;

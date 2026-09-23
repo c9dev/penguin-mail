@@ -40,7 +40,7 @@ impl Desk for Ports {
         }
     }
 
-    fn claim(&self, installed: Installed) -> Option<Claimed> {
+    fn claim(&self, installed: Installed) -> Vec<Claimed> {
         self.view.take_protected(installed)
     }
 }

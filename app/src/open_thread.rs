@@ -65,15 +65,15 @@ pub struct OpenThread {
     pub photos: HashMap<String, String>,
     /// Set once the user unsubscribed from this thread's list.
     pub unsubscribed: bool,
-    /// What the engine made of the protected message in this thread, once
-    /// it has run. It stays here so redrawing the thread never asks again,
-    /// and so the card survives the body being replaced by the one that
-    /// was inside the encryption.
-    pub pgp: Option<Mark>,
-    /// Set as soon as an engine is asked about this thread. Either one may
+    /// What the engine made of each protected message in this thread, by
+    /// message id, once it has run. It stays here so redrawing the thread
+    /// never asks again, and so the card survives the body being replaced
+    /// by the one that was inside the encryption.
+    pub marks: HashMap<String, Mark>,
+    /// The protected messages an engine run has claimed. Either engine may
     /// hold a pinentry in front of the person for as long as they take,
-    /// and asking twice would put up two of them.
-    pub pgp_asked: bool,
+    /// and asking about one message twice would put up two of them.
+    pub asked: HashSet<String>,
     /// The flag colour chosen here, when the thread is flagged.
     pub flag_color: Option<FlagColor>,
     /// Messages translated in this window, by message id. They go no
@@ -123,8 +123,8 @@ impl OpenThread {
             sealed: HashSet::new(),
             photos: HashMap::new(),
             unsubscribed: false,
-            pgp: None,
-            pgp_asked: false,
+            marks: HashMap::new(),
+            asked: HashSet::new(),
             flag_color: None,
             translations: HashMap::new(),
             queued: None,
@@ -214,41 +214,60 @@ impl OpenThread {
         })
     }
 
-    /// The newest message that arrived signed or encrypted, with the
-    /// engine call it needs. A thread holds one such message far more
-    /// often than two, and the newest is the one being read.
-    pub fn protected(&self) -> Option<(&MessageMeta, Engine)> {
-        self.messages.iter().rev().find_map(|meta| {
-            let body = self.bodies.get(&meta.id)?.as_ref().ok()?;
-            Some((meta, protection::engine(body)?))
-        })
+    /// Every message that arrived signed or encrypted and has no engine
+    /// run yet, newest first, with the engine call each needs. The newest
+    /// is the one being read, so it goes first.
+    pub fn protected(&self) -> Vec<(&MessageMeta, Engine)> {
+        self.messages
+            .iter()
+            .rev()
+            .filter(|meta| !self.asked.contains(&meta.id))
+            .filter_map(|meta| {
+                let body = self.bodies.get(&meta.id)?.as_ref().ok()?;
+                Some((meta, protection::engine(body)?))
+            })
+            .collect()
     }
 
-    /// That message, claimed for one engine run, with what the engine
-    /// needs to read it. `installed` says which engines this computer has,
-    /// so a message whose engine is missing is left unclaimed for the day
-    /// it turns up. Once per thread: a second call gives nothing back,
-    /// because either engine may hold a pinentry in front of the person
-    /// for as long as they take and asking twice would put up two of them.
-    pub fn take_protected(&mut self, installed: Installed) -> Option<Claimed> {
-        if self.pgp_asked {
-            return None;
+    /// Those messages, claimed for one engine run, with what the engine
+    /// needs to read each. `installed` says which engines this computer
+    /// has, so a message whose engine is missing is left unclaimed for the
+    /// day it turns up. Once per message: a second call leaves out what
+    /// the first took, because either engine may hold a pinentry in front
+    /// of the person for as long as they take and asking twice would put
+    /// up two of them.
+    pub fn take_protected(&mut self, installed: Installed) -> Vec<Claimed> {
+        let wanted: Vec<(String, Engine)> = self
+            .protected()
+            .into_iter()
+            .filter(|(_, opening)| installed.runs(*opening))
+            .map(|(meta, opening)| (meta.id.clone(), opening))
+            .collect();
+        let target = self.target();
+        let mut claimed = Vec::new();
+        for (message_id, opening) in wanted {
+            let Some(Ok(body)) = self.bodies.get(&message_id) else {
+                continue;
+            };
+            let body = body.clone();
+            self.asked.insert(message_id.clone());
+            claimed.push(Claimed {
+                target: target.clone(),
+                message_id,
+                opening,
+                body,
+            });
         }
-        let (message_id, opening) = {
-            let (meta, opening) = self.protected()?;
-            (meta.id.clone(), opening)
-        };
-        if !installed.runs(opening) {
-            return None;
-        }
-        let body = self.bodies.get(&message_id)?.as_ref().ok()?.clone();
-        self.pgp_asked = true;
-        Some(Claimed {
-            target: self.target(),
-            message_id,
-            opening,
-            body,
-        })
+        claimed
+    }
+
+    /// What the protection card says: the mark of the newest message an
+    /// engine answered about, which is the one being read.
+    pub fn card(&self) -> Option<&Mark> {
+        self.messages
+            .iter()
+            .rev()
+            .find_map(|meta| self.marks.get(&meta.id))
     }
 
     /// Whether this is the thread one of `targets` names. A target for
@@ -372,7 +391,7 @@ impl OpenThread {
     /// signature does not cover; the ones the new body shows come out of
     /// its own files.
     pub fn take_engine_answer(&mut self, message_id: String, read: protection::Read) -> bool {
-        self.pgp = Some(read.mark);
+        self.marks.insert(message_id.clone(), read.mark);
         let Some(body) = read.body else {
             return false;
         };
@@ -537,8 +556,8 @@ mod tests {
             sealed: HashSet::new(),
             photos: HashMap::new(),
             unsubscribed: false,
-            pgp: None,
-            pgp_asked: false,
+            marks: HashMap::new(),
+            asked: HashSet::new(),
             flag_color: None,
             translations: HashMap::new(),
             queued: None,

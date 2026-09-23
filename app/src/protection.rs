@@ -24,6 +24,7 @@ use crate::{pgp, smime};
 /// What the engine made of one message: the mark to put above it, and the
 /// body to draw in place of the one that arrived, cut from what the engine
 /// checked or opened. A refusal leaves the body as it arrived.
+#[derive(Debug, Clone)]
 pub struct Read {
     pub mark: Mark,
     pub body: Option<MessageBody>,

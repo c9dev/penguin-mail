@@ -21,6 +21,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Opening a signed OpenPGP message never fetches the signer's key from the
   network, even when gpg.conf asks for that, so the sender cannot learn
   when you read it.
+- Every signed or encrypted message in a conversation opens, not only the
+  newest, so an older encrypted reply no longer stays unreadable.
 
 ## 0.1.7 (2026-09-23)
 

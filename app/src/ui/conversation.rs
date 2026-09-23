@@ -1125,10 +1125,11 @@ impl ConversationView {
         self.render_buttons();
     }
 
-    /// The thread's protected message, claimed for one engine run. See
-    /// [`OpenThread::take_protected`] for the once-per-thread rule.
-    pub fn take_protected(&self, installed: Installed) -> Option<Claimed> {
-        self.change(|open| open.take_protected(installed)).flatten()
+    /// The thread's protected messages, claimed for one engine run. See
+    /// [`OpenThread::take_protected`] for the once-per-message rule.
+    pub fn take_protected(&self, installed: Installed) -> Vec<Claimed> {
+        self.change(|open| open.take_protected(installed))
+            .unwrap_or_default()
     }
 
     /// What the engine made of that message: the mark for the card, and,
@@ -1276,7 +1277,7 @@ impl ConversationView {
                 .map(|m| script_safe(&m.id));
         }
         self.webview.load_html(&html, None);
-        match &open.pgp {
+        match open.card() {
             Some(mark) => self.seal.show(mark),
             None => self.seal.hide(),
         }

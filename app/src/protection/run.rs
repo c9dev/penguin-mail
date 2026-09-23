@@ -51,9 +51,9 @@ impl Installed {
     }
 }
 
-/// The protected message of the thread on screen, claimed for one engine
-/// run. Whoever holds one has already set that thread's "ask each engine
-/// once" flag, so nothing else can put a second pinentry up.
+/// One protected message of the thread on screen, claimed for one engine
+/// run. Whoever holds one has already marked that message as asked about,
+/// so nothing else can put a second pinentry up for it.
 pub struct Claimed {
     /// The conversation on screen when the claim was made.
     pub target: Target,
@@ -67,10 +67,11 @@ pub struct Claimed {
 /// [`Screen`] it also says whether the claimed thread is still on screen.
 pub trait Desk: Screen {
     fn installed(&self) -> Installed;
-    /// The protected message of the thread on screen, claimed for this
-    /// run, leaving a message whose engine `installed` lacks unclaimed.
-    /// Once per thread: a second call gives nothing back.
-    fn claim(&self, installed: Installed) -> Option<Claimed>;
+    /// The protected messages of the thread on screen, newest first,
+    /// claimed for this run, leaving a message whose engine `installed`
+    /// lacks unclaimed. Once per message: a second call leaves out what
+    /// the first took.
+    fn claim(&self, installed: Installed) -> Vec<Claimed>;
 }
 
 /// What the run asks the window to do. A test answers with what it likes
@@ -107,13 +108,30 @@ impl Engines {
         Engines { desk, effects }
     }
 
-    /// Checks or opens the protected message of the thread on screen and
-    /// puts what the engine said above it. A thread that has been through
-    /// this keeps the answer, so redrawing never asks again.
+    /// Checks or opens every protected message of the thread on screen,
+    /// newest first and one at a time, and puts what the engine said above
+    /// each. One engine call at a time keeps to one pinentry at a time. A
+    /// thread that has been through this keeps the answers, so redrawing
+    /// never asks again.
     pub async fn run(&self) {
-        let Some(claimed) = self.desk.claim(self.desk.installed()) else {
+        let claimed = self.desk.claim(self.desk.installed());
+        let Some(target) = claimed.first().map(|claimed| claimed.target.clone()) else {
             return;
         };
+        let wanted = Wanted::new(&*self.desk as &dyn Screen, &*self.effects, target);
+        for claimed in claimed {
+            // The reader opened something else while an earlier message
+            // held the engine; what is left belongs to a thread nobody is
+            // looking at.
+            if !wanted.is_wanted() {
+                return;
+            }
+            self.one(&wanted, claimed).await;
+        }
+    }
+
+    /// Checks or opens one claimed message.
+    async fn one(&self, wanted: &Wanted<'_, dyn Effects>, claimed: Claimed) {
         let Claimed {
             target,
             message_id,
@@ -121,7 +139,6 @@ impl Engines {
             body,
         } = claimed;
         let account_id = target.account_id;
-        let wanted = Wanted::new(&*self.desk as &dyn Screen, &*self.effects, target);
         let fetching = message_id.clone();
         let Some(raw) = wanted
             .ask(

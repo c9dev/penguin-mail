@@ -1296,245 +1296,245 @@ msgstr ""
 msgid "gpg holds a key for {addresses}, and none for {without}."
 msgstr ""
 
-#: app/src/protection.rs:116
+#: app/src/protection.rs:117
 msgid "{smime} {pgp}"
 msgstr ""
 
-#: app/src/protection.rs:129
+#: app/src/protection.rs:130
 msgid "This computer has nothing to encrypt with."
 msgstr ""
 
-#: app/src/protection.rs:136
+#: app/src/protection.rs:137
 msgid ""
 "S/MIME names every recipient inside an encrypted message, so a blind copy "
 "would not stay blind."
 msgstr ""
 
-#: app/src/protection.rs:283
+#: app/src/protection.rs:284
 msgid "Encrypt this message to the recipients' keys"
 msgstr ""
 
-#: app/src/protection.rs:284
+#: app/src/protection.rs:285
 msgid "Encrypt this message to the recipients' certificates"
 msgstr ""
 
-#: app/src/protection.rs:310
+#: app/src/protection.rs:311
 msgid "gpg holds no key and gpgsm no trusted certificate for {addresses}."
 msgstr ""
 
-#: app/src/protection.rs:318
+#: app/src/protection.rs:319
 msgid "A message goes out under one standard or the other. {pgp} {smime}"
 msgstr ""
 
-#: app/src/protection.rs:559
+#: app/src/protection.rs:560
 msgid ""
 "This key does not name {sender}, the address the message says it is from."
 msgstr ""
 
-#: app/src/protection.rs:563
+#: app/src/protection.rs:564
 msgid ""
 "This certificate does not name {sender}, the address the message says it is "
 "from."
 msgstr ""
 
-#: app/src/protection.rs:572
+#: app/src/protection.rs:573
 msgid "Signed by {signer}"
 msgstr ""
 
-#: app/src/protection.rs:578
+#: app/src/protection.rs:579
 msgid "This message changed after it was signed"
 msgstr ""
 
-#: app/src/protection.rs:580
+#: app/src/protection.rs:581
 msgid "The signature of {signer} does not match what arrived."
 msgstr ""
 
-#: app/src/protection.rs:587
+#: app/src/protection.rs:588
 msgid "Signed by {signer}, whose key has expired"
 msgstr ""
 
-#: app/src/protection.rs:591
+#: app/src/protection.rs:592
 msgid "The text is as it was written, and the key behind it ran out."
 msgstr ""
 
-#: app/src/protection.rs:597
+#: app/src/protection.rs:598
 msgid "Signed by {signer}, whose certificate has run out"
 msgstr ""
 
-#: app/src/protection.rs:601
+#: app/src/protection.rs:602
 msgid ""
 "The text is as it was written, and the certificate behind it has expired."
 msgstr ""
 
-#: app/src/protection.rs:607
+#: app/src/protection.rs:608
 msgid "Signed by {signer}, who took this key back"
 msgstr ""
 
-#: app/src/protection.rs:611
+#: app/src/protection.rs:612
 msgid "The owner revoked it, so it says nothing about who wrote this."
 msgstr ""
 
-#: app/src/protection.rs:617
+#: app/src/protection.rs:618
 msgid "Signed by {signer}, whose certificate was taken back"
 msgstr ""
 
-#: app/src/protection.rs:621
+#: app/src/protection.rs:622
 msgid "Whoever issued it revoked it, so it says nothing about who wrote this."
 msgstr ""
 
-#: app/src/protection.rs:627
+#: app/src/protection.rs:628
 msgid "Signed by {signer}, and the signature has run out"
 msgstr ""
 
-#: app/src/protection.rs:631
+#: app/src/protection.rs:632
 msgid "It carried a date to stop being good on, and that date has passed."
 msgstr ""
 
-#: app/src/protection.rs:636
+#: app/src/protection.rs:637
 msgid "Signed by a key this computer does not hold"
 msgstr ""
 
-#: app/src/protection.rs:638
+#: app/src/protection.rs:639
 msgid "Nothing here can check it. Ask gpg for key {key}."
 msgstr ""
 
-#: app/src/protection.rs:645
+#: app/src/protection.rs:646
 msgid "it names"
 msgstr ""
 
-#: app/src/protection.rs:651
+#: app/src/protection.rs:652
 msgid "Signed by a certificate this computer does not hold"
 msgstr ""
 
-#: app/src/protection.rs:653
+#: app/src/protection.rs:654
 msgid ""
 "The message carried none either, so there is nothing here to check it "
 "against."
 msgstr ""
 
-#: app/src/protection.rs:659
+#: app/src/protection.rs:660
 msgid "gpg could not check this signature"
 msgstr ""
 
-#: app/src/protection.rs:664
+#: app/src/protection.rs:665
 msgid "gpgsm could not check this signature"
 msgstr ""
 
-#: app/src/protection.rs:687
+#: app/src/protection.rs:688
 msgid "Encrypted, and signed by {signer}"
 msgstr ""
 
-#: app/src/protection.rs:696
+#: app/src/protection.rs:697
 msgid "Encrypted. {what}"
 msgstr ""
 
-#: app/src/protection.rs:702
+#: app/src/protection.rs:703
 msgid "This message arrived encrypted"
 msgstr ""
 
-#: app/src/protection.rs:704
+#: app/src/protection.rs:705
 msgid "Nobody signed it, so it says nothing about who sent it."
 msgstr ""
 
-#: app/src/protection.rs:712
+#: app/src/protection.rs:713
 msgid "{detail} {files}"
 msgstr ""
 
-#: app/src/protection.rs:726
+#: app/src/protection.rs:727
 msgid "This message is encrypted to a key you do not hold"
 msgstr ""
 
-#: app/src/protection.rs:728
+#: app/src/protection.rs:729
 msgid "Whoever sent it used a key gpg has no secret half of."
 msgstr ""
 
-#: app/src/protection.rs:733
+#: app/src/protection.rs:734
 msgid "This message is encrypted to a certificate you do not hold"
 msgstr ""
 
-#: app/src/protection.rs:735
+#: app/src/protection.rs:736
 msgid "Whoever sent it used a certificate gpgsm has no secret key for."
 msgstr ""
 
-#: app/src/protection.rs:741
+#: app/src/protection.rs:742
 msgid "This message says it is OpenPGP and is not"
 msgstr ""
 
-#: app/src/protection.rs:742
+#: app/src/protection.rs:743
 msgid "This message says it is S/MIME and is not"
 msgstr ""
 
-#: app/src/protection.rs:745
+#: app/src/protection.rs:746
 msgid "Its parts are not where a signed or encrypted message keeps them."
 msgstr ""
 
-#: app/src/protection.rs:751
+#: app/src/protection.rs:752
 msgid "gpg could not open this message"
 msgstr ""
 
-#: app/src/protection.rs:752
+#: app/src/protection.rs:753
 msgid "gpgsm could not open this message"
 msgstr ""
 
-#: app/src/protection.rs:765
+#: app/src/protection.rs:766
 msgid "You marked this key as one not to trust."
 msgstr ""
 
-#: app/src/protection.rs:766
+#: app/src/protection.rs:767
 msgid "This is one of your own keys."
 msgstr ""
 
-#: app/src/protection.rs:767
+#: app/src/protection.rs:768
 msgid "You have vouched for this key."
 msgstr ""
 
-#: app/src/protection.rs:768
+#: app/src/protection.rs:769
 msgid "People you trust have vouched for this key."
 msgstr ""
 
-#: app/src/protection.rs:770
+#: app/src/protection.rs:771
 msgid "Nobody has vouched for this key, so it names no one."
 msgstr ""
 
-#: app/src/protection.rs:773
+#: app/src/protection.rs:774
 msgid "Its certificate leads back to an authority you trust."
 msgstr ""
 
-#: app/src/protection.rs:776
+#: app/src/protection.rs:777
 msgid "Its certificate leads back to nobody you trust, so it names no one."
 msgstr ""
 
-#: app/src/protection.rs:779
+#: app/src/protection.rs:780
 msgid "Nothing here says who that certificate belongs to."
 msgstr ""
 
-#: app/src/protection.rs:815
+#: app/src/protection.rs:816
 msgid "key {key}"
 msgstr ""
 
-#: app/src/protection.rs:818
+#: app/src/protection.rs:819
 msgid "a key gpg would not name"
 msgstr ""
 
-#: app/src/protection.rs:819
+#: app/src/protection.rs:820
 msgid "a certificate gpgsm would not name"
 msgstr ""
 
-#: app/src/protection.rs:830
+#: app/src/protection.rs:831
 msgid "It carries a file, kept in this window only."
 msgstr ""
 
-#: app/src/protection.rs:832
+#: app/src/protection.rs:833
 msgid "It carries {count} file, kept in this window only."
 msgid_plural "It carries {count} files, kept in this window only."
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/protection.rs:918
+#: app/src/protection.rs:919
 msgid "{names} or {last}"
 msgstr ""
 
-#: app/src/protection.rs:930
+#: app/src/protection.rs:931
 msgid "{names} and {last}"
 msgstr ""
 
@@ -2684,7 +2684,7 @@ msgstr ""
 msgid "Brave Search API Key"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:207 app/src/ui/conversation.rs:1306
+#: app/src/ui/composer/mod.rs:207 app/src/ui/conversation.rs:1307
 msgid "Choose a Time…"
 msgstr ""
 
@@ -3210,7 +3210,7 @@ msgid "Mark as Unread (Ctrl+Shift+U)"
 msgstr ""
 
 #: app/src/ui/conversation.rs:361 app/src/ui/conversation.rs:365
-#: app/src/ui/conversation.rs:1349
+#: app/src/ui/conversation.rs:1350
 msgid "Flag (Ctrl+Shift+L)"
 msgstr ""
 
@@ -3358,23 +3358,23 @@ msgid_plural "{count} Messages Selected"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/conversation.rs:1348
+#: app/src/ui/conversation.rs:1349
 msgid "Unflag (Ctrl+Shift+L)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1361
+#: app/src/ui/conversation.rs:1362
 msgid "Mark as Read (U)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1362
+#: app/src/ui/conversation.rs:1363
 msgid "Mark as Unread (U)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1520
+#: app/src/ui/conversation.rs:1521
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1537 app/src/ui/window/message_menu.rs:238
+#: app/src/ui/conversation.rs:1538 app/src/ui/window/message_menu.rs:238
 msgid "Clear Flag"
 msgstr ""
 

@@ -4,7 +4,7 @@
 use mailrs_domain::Protection;
 
 use super::Installed;
-use super::fake::{ELSEWHERE, FakeWindow, Step, opened, thread, with_bodies};
+use super::fake::{ELSEWHERE, FakeWindow, Step, body, opened, thread, with_bodies};
 
 #[tokio::test]
 async fn a_signed_message_gets_what_the_engine_said() {
@@ -28,6 +28,33 @@ async fn an_opened_message_brings_back_the_body_that_was_inside() {
     let screen = window.0.borrow();
     let (_, read) = screen.answers.first().expect("the engine answered");
     assert!(read.body.is_some(), "the opened message goes to the window");
+}
+
+/// The bug this pins: only the newest protected message was opened, so an
+/// older encrypted message in the same thread stayed ciphertext.
+#[tokio::test]
+async fn every_protected_message_in_the_thread_is_opened_newest_first() {
+    let window = FakeWindow::showing(with_bodies(vec![
+        ("m1", Ok(body(Some(Protection::Encrypted)))),
+        ("m2", Ok(body(None))),
+        ("m3", Ok(body(Some(Protection::Signed)))),
+    ]));
+    window.engines().run().await;
+    assert_eq!(
+        window.steps(),
+        [
+            Step::Claim,
+            Step::Fetch,
+            Step::Ask,
+            Step::Answered,
+            Step::Fetch,
+            Step::Ask,
+            Step::Answered
+        ]
+    );
+    let screen = window.0.borrow();
+    let answered: Vec<&str> = screen.answers.iter().map(|(id, _)| id.as_str()).collect();
+    assert_eq!(answered, ["m3", "m1"]);
 }
 
 #[tokio::test]

@@ -250,7 +250,7 @@ async fn a_decrypted_body_reads_the_invitation_and_the_language_again() {
     assert!(steps.contains(&Step::OpenInvitation));
     // The claim is made; asking the engine again would do nothing.
     assert!(!steps.contains(&Step::Engines));
-    assert!(window.open(|open| open.pgp.is_some()).unwrap_or(false));
+    assert!(window.open(|open| open.card().is_some()).unwrap_or(false));
 }
 
 #[tokio::test]
