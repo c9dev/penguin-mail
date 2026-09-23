@@ -410,6 +410,29 @@ fn a_word_matches_whole_and_not_in_the_middle_of_another() {
 }
 
 #[test]
+fn a_page_saying_it_removed_the_address_reads_as_done_however_it_words_it() {
+    for said in [
+        "You have been successfully removed from this subscriber list.",
+        "You have been successfully unsubscribed.",
+        "Your email address has now been removed.",
+        "You are now unsubscribed from our newsletter.",
+        "We have removed you from this mailing list.",
+    ] {
+        assert!(words::already_off(said), "{said}");
+    }
+}
+
+#[test]
+fn a_page_that_only_mentions_removal_does_not_read_as_done() {
+    for said in [
+        "Click below and you will be instantly removed.",
+        "Choose the emails you want to be unsubscribed from.",
+    ] {
+        assert!(!words::already_off(said), "{said}");
+    }
+}
+
+#[test]
 fn accents_and_punctuation_make_no_difference() {
     assert!(words::leaves("Cancelar subscricao"));
     assert!(words::leaves("OPT-OUT"));

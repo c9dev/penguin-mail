@@ -59,6 +59,9 @@ struct State {
     /// off belongs to it, which covers a form posting to its provider's
     /// own domain and the redirect that often follows.
     pressing: Cell<bool>,
+    /// What the page's alerts said during the press. Some pages announce
+    /// the result in an alert rather than on the page itself.
+    alerts: RefCell<Vec<String>>,
     /// Whoever is waiting for the page to start loading.
     starting: RefCell<Option<oneshot::Sender<()>>>,
     /// Whoever is waiting for the page to finish loading.
@@ -93,6 +96,7 @@ impl WebkitBrowser {
         let state = Rc::new(State {
             settled: Cell::new(false),
             pressing: Cell::new(false),
+            alerts: RefCell::new(Vec::new()),
             starting: RefCell::new(None),
             waiting: RefCell::new(None),
         });
@@ -199,7 +203,28 @@ impl WebkitBrowser {
         });
         // Nobody is watching this view, so a dialog it raised would wait
         // for an answer that never comes.
-        view.connect_script_dialog(|_, _| true);
+        // A page may ask "Are you sure?" with confirm() once its button is
+        // pressed. The person already said yes in the app's own dialog, so
+        // during a press the page's question gets OK; answered Cancel, as
+        // WebKit does when nobody answers, the page never acts. Outside a
+        // press nothing is agreed to. An alert is kept, since some pages
+        // say the result there, and a prompt gets no answer.
+        let asked = Rc::clone(&state);
+        view.connect_script_dialog(move |_, dialog| {
+            use webkit::ScriptDialogType;
+            match dialog.dialog_type() {
+                ScriptDialogType::Confirm | ScriptDialogType::BeforeUnloadConfirm => {
+                    dialog.confirm_set_confirmed(asked.pressing.get());
+                }
+                ScriptDialogType::Alert => {
+                    if let Some(message) = dialog.message() {
+                        asked.alerts.borrow_mut().push(message.to_string());
+                    }
+                }
+                _ => {}
+            }
+            true
+        });
         view.connect_show_notification(|_, _| true);
         view.connect_print(|_, _| true);
         view.connect_context_menu(|_, _, _| true);
@@ -308,7 +333,13 @@ impl WebkitBrowser {
             self.arrive(landed, LIMIT).await?;
         }
         glib::timeout_future(SETTLE).await;
-        self.read().await
+        let mut page = self.read().await?;
+        let alerts = self.state.alerts.take();
+        if !alerts.is_empty() {
+            page.text.push('\n');
+            page.text.push_str(&alerts.join("\n"));
+        }
+        Ok(page)
     }
 }
 
@@ -342,6 +373,7 @@ impl Browser for WebkitBrowser {
             let before = self.length().await.unwrap_or_default();
             let started = self.watch_start();
             let landed = self.watch();
+            self.state.alerts.borrow_mut().clear();
             self.state.pressing.set(true);
             let answer = self.run(&script).await;
             let page = self.pressed(answer, started, landed, before).await;

@@ -58,6 +58,10 @@ pub const EN: Words = Words {
         "you were removed",
         "removed from the list",
         "removed from our list",
+        "removed you from",
+        "email address has been removed",
+        "your email has been removed",
+        "your address has been removed",
         "no longer subscribed",
         "you will no longer receive",
         "you will not receive",
@@ -105,14 +109,36 @@ pub const PT: Words = Words {
 
 const LANGUAGES: [&Words; 2] = [&EN, &PT];
 
-/// Whether `text` holds one of `list` as a whole word or phrase. Both
-/// sides are folded first, so "Opt-Out" matches "opt out" and
-/// "Cancelar Subscrição" matches "cancelar subscricao", while
-/// "unsubscribed" does not match "unsubscribe".
+/// Words a page adds to a sentence without changing what it says, as in
+/// "You have been successfully removed" or "You are now unsubscribed".
+/// The page's text is also read with them left out, so one phrase covers
+/// every such way of saying it. The phrases themselves keep them: "successfully
+/// unsubscribed" without its first word would be "unsubscribed", which a
+/// page asking what to unsubscribe from says too.
+const FILLER: [&str; 2] = ["successfully", "now"];
+
+/// Whether `text` holds one of `list` as a whole word or phrase, either as
+/// the page wrote it or with the filler words left out. Both sides are
+/// folded first, so "Opt-Out" matches "opt out" and "Cancelar Subscrição"
+/// matches "cancelar subscricao", while "unsubscribed" does not match
+/// "unsubscribe".
 pub fn reads_as(text: &str, list: &[&str]) -> bool {
-    let haystack = format!(" {} ", fold(text));
-    list.iter()
-        .any(|entry| haystack.contains(&format!(" {} ", fold(entry))))
+    let folded = fold(text);
+    let as_written = format!(" {folded} ");
+    let without_filler = format!(" {} ", without(&folded));
+    list.iter().any(|entry| {
+        let entry = format!(" {} ", fold(entry).trim());
+        as_written.contains(&entry) || without_filler.contains(&entry)
+    })
+}
+
+/// Folded `text` with the filler words left out.
+fn without(folded: &str) -> String {
+    folded
+        .split_whitespace()
+        .filter(|word| !FILLER.contains(word))
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 /// A button or link that reads as leaving a list.

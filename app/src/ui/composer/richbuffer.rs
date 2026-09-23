@@ -643,6 +643,20 @@ mod tests {
         assert!(says_done(&after), "{}", after.text);
         assert!(after.text.contains(ME), "{}", after.text);
         assert!(after.text.contains("all: yes"), "{}", after.text);
+
+        // A page that asks "Are you sure?" before it acts. The person said
+        // yes in the app's own dialog, so the run answers the page's
+        // question with OK, and the page's answer reads as done.
+        let read = glib::MainContext::default()
+            .block_on(browser.load(&format!("file://{DIR}asks_first.html")))
+            .expect("asks_first loads");
+        let Pick::Submit(plan) = pick(&read, ME) else {
+            panic!("the rules gave up on asks_first: {read:?}");
+        };
+        let after = glib::MainContext::default()
+            .block_on(browser.submit(&plan, ME))
+            .expect("asks_first takes the plan");
+        assert!(says_done(&after), "{}", after.text);
     }
 
     fn buffer() -> (gtk::TextView, gtk::TextBuffer, Anchors) {

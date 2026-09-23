@@ -1,0 +1,33 @@
+<!doctype html>
+<!--
+  A page whose one button asks "Are you sure?" with confirm() before it
+  does anything, as Reallusion's does. The person already said yes in the
+  app's own dialog, so the run has to answer the page's question with OK;
+  answered Cancel, the page stays as it was. Its answer is worded the way
+  that page words it, with "successfully" between the words.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Unsubscribe from this list</title>
+  </head>
+  <body>
+    <h1>Unsubscribe from this list</h1>
+    <p>To unsubscribe david@example.com from this list, please click the
+      confirmation button below and you will be instantly removed.</p>
+    <form id="leave" method="post" action="/leave">
+      <button type="submit">Please unsubscribe me</button>
+    </form>
+    <p id="said"></p>
+    <script>
+      document.getElementById("leave").addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (!confirm("Are you sure?")) {
+          return;
+        }
+        document.getElementById("said").textContent =
+          "You have been successfully removed from this subscriber list.";
+      });
+    </script>
+  </body>
+</html>
