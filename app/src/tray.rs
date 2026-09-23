@@ -3,6 +3,29 @@
 use crate::APP_ID;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
+/// How long the tray waits after a change before it counts again. Sync
+/// reports each batch of changed threads on its own, and a new account's
+/// first sync sends hundreds; one count covers everything in the window.
+pub const RECOUNT_AFTER: std::time::Duration = std::time::Duration::from_millis(500);
+
+/// Lets a burst of requests through as one. The first request in a quiet
+/// spell claims the next run, and the rest ride along with it until it
+/// starts.
+#[derive(Default)]
+pub struct Burst(std::cell::Cell<bool>);
+
+impl Burst {
+    /// Whether this request should schedule the run.
+    pub fn claim(&self) -> bool {
+        !self.0.replace(true)
+    }
+
+    /// The run is starting, so a request from here on needs one of its own.
+    pub fn start(&self) {
+        self.0.set(false);
+    }
+}
+
 pub enum TrayCommand {
     Toggle,
     Open,
@@ -156,7 +179,19 @@ impl ksni::Tray for MailTray {
 
 #[cfg(test)]
 mod tests {
-    use super::{account_line, summary};
+    use super::{Burst, account_line, summary};
+
+    #[test]
+    fn a_burst_of_changes_counts_once() {
+        let burst = Burst::default();
+        assert!(burst.claim());
+        assert!((0..300).all(|_| !burst.claim()));
+        burst.start();
+        assert!(
+            burst.claim(),
+            "a change after the count starts counts again"
+        );
+    }
 
     #[test]
     fn the_tray_counts_unread_mail_in_a_sentence() {

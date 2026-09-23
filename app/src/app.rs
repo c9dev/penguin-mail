@@ -34,6 +34,7 @@ const BLOCK_REMOTE_RULES: &str = r#"[
 
 mod composing;
 mod hidden;
+mod photos;
 mod sending;
 
 pub use composing::Signature;
@@ -63,6 +64,8 @@ pub struct App {
     /// A message requested on the command line, opened on first activation.
     pending_compose: RefCell<Option<String>>,
     tray_started: Cell<bool>,
+    /// Holds the tray's recount while a burst of changes goes by.
+    tray_recount: crate::tray::Burst,
     settings: RefCell<Settings>,
     /// Writes each saved change off the main thread.
     settings_saver: crate::settings::Saver,
@@ -77,6 +80,8 @@ pub struct App {
     /// Contact photos on disk, by lower-case address. Rows and the open
     /// conversation read it; it is filled whenever the suggestions load.
     photos: RefCell<HashMap<String, PathBuf>>,
+    /// The photos open conversations asked for, read into `data:` URIs.
+    photo_data: RefCell<photos::PhotoCache>,
     /// Messages waiting out the Undo Send delay.
     pending_sends: Cell<usize>,
     /// Hunspell dictionaries already read, by the languages they cover.
@@ -126,6 +131,7 @@ impl App {
             shed_generation: Cell::new(0),
             pending_compose: RefCell::new(compose),
             tray_started: Cell::new(false),
+            tray_recount: crate::tray::Burst::default(),
             settings: RefCell::new(Settings {
                 // The demo's contacts are already in its throwaway store,
                 // so the switch shows what the mail on screen is using.
@@ -137,6 +143,7 @@ impl App {
             contacts: Rc::new(RefCell::new(Rc::new(Vec::new()))),
             contacts_stale: Cell::new(true),
             photos: RefCell::new(HashMap::new()),
+            photo_data: RefCell::new(photos::PhotoCache::default()),
             pending_sends: Cell::new(0),
             dictionaries: RefCell::new(HashMap::new()),
             installed_dictionaries: RefCell::new(None),
@@ -643,13 +650,15 @@ impl App {
                 Err(err) => return tracing::warn!(error = %err, "could not load contacts"),
             };
             let dir = this.core.contacts().photo_dir().to_path_buf();
-            *this.photos.borrow_mut() = found
+            let files: Vec<(String, String)> = found
                 .iter()
-                .filter_map(|person| {
-                    let file = dir.join(person.photo_file.as_ref()?);
-                    file.exists().then(|| (person.email.to_lowercase(), file))
-                })
+                .filter_map(|p| Some((p.email.clone(), p.photo_file.clone()?)))
                 .collect();
+            let on_disk = gio::spawn_blocking(move || photos::on_disk(dir, files))
+                .await
+                .unwrap_or_default();
+            *this.photos.borrow_mut() = on_disk;
+            this.photo_data.borrow_mut().clear();
             *this.contacts.borrow_mut() = Rc::new(found);
             this.tell_window(Notice::ContactsLoaded);
         });
@@ -670,28 +679,31 @@ impl App {
 
     /// The contact photos of `addresses`, as `data:` URIs by lower-case
     /// address. The conversation page loads nothing from disk or the
-    /// network, so a photo travels inline or not at all.
+    /// network, so a photo travels inline or not at all. A photo not read
+    /// yet is read off the main thread, and the open conversations are
+    /// drawn again once it arrives.
     pub fn sender_photos(
-        &self,
+        self: &Rc<Self>,
         addresses: impl Iterator<Item = String>,
     ) -> HashMap<String, String> {
-        use base64::Engine;
-        let mut found = HashMap::new();
-        for address in addresses {
-            let key = address.trim().to_lowercase();
-            if key.is_empty() || found.contains_key(&key) {
-                continue;
-            }
-            let Some(path) = self.photo(&key) else {
-                continue;
-            };
-            let Ok(bytes) = std::fs::read(&path) else {
-                continue;
-            };
-            let data = base64::engine::general_purpose::STANDARD.encode(&bytes);
-            found.insert(key, format!("data:image/jpeg;base64,{data}"));
+        let lookup = self
+            .photo_data
+            .borrow_mut()
+            .lookup(addresses, |key| self.photo(key));
+        if !lookup.to_read.is_empty() {
+            let (this, files) = (Rc::clone(self), lookup.to_read);
+            glib::spawn_future_local(async move {
+                let Ok(read) = gio::spawn_blocking(move || photos::read(files)).await else {
+                    return;
+                };
+                let any = read.iter().any(|(_, data)| data.is_some());
+                this.photo_data.borrow_mut().store(read);
+                if any {
+                    this.tell_window(Notice::ContactsLoaded);
+                }
+            });
         }
-        found
+        lookup.found
     }
 
     /// Deletes one account's contacts and photos from this computer and
@@ -717,6 +729,7 @@ impl App {
                 tracing::warn!(error = %err, "could not delete the stored contacts");
             }
             this.photos.borrow_mut().clear();
+            this.photo_data.borrow_mut().clear();
             this.contacts_stale.set(true);
             this.reload_contacts();
         });
@@ -1085,7 +1098,21 @@ impl App {
         });
     }
 
+    /// Counts each account's unread mail for the tray, once per burst of
+    /// changes rather than once per change.
     fn update_tray(self: &Rc<Self>) {
+        let shown = self.tray.lock().expect("tray slot poisoned").is_some();
+        if !shown || !self.tray_recount.claim() {
+            return;
+        }
+        let this = Rc::clone(self);
+        glib::timeout_add_local_once(crate::tray::RECOUNT_AFTER, move || {
+            this.tray_recount.start();
+            this.count_for_tray();
+        });
+    }
+
+    fn count_for_tray(self: &Rc<Self>) {
         let Some(handle) = self.tray.lock().expect("tray slot poisoned").clone() else {
             return;
         };
