@@ -74,7 +74,7 @@ fn eviction_keeps_the_most_recently_read_bodies() {
     bodies::put_body(&conn, id, "b", &body("bbbb"), 2).unwrap();
     bodies::put_body(&conn, id, "c", &body("cccc"), 3).unwrap();
     bodies::get_body(&conn, id, "a", 4).unwrap();
-    assert_eq!(bodies::evict_bodies(&conn, id, 30).unwrap(), 1);
+    assert_eq!(bodies::evict_bodies(&conn, 30).unwrap(), 1);
     assert!(bodies::get_body(&conn, id, "b", 5).unwrap().is_none());
     assert!(bodies::get_body(&conn, id, "a", 5).unwrap().is_some());
     assert!(bodies::get_body(&conn, id, "c", 5).unwrap().is_some());
@@ -116,8 +116,8 @@ fn a_cache_under_the_cap_keeps_every_body() {
     );
     bodies::put_body(&conn, id, "a", &body("aaaa"), 1).unwrap();
     bodies::put_body(&conn, id, "b", &body("bbbb"), 2).unwrap();
-    assert_eq!(bodies::evict_bodies(&conn, id, 30).unwrap(), 0);
-    assert_eq!(bodies::evict_bodies(&conn, id, 29).unwrap(), 1);
+    assert_eq!(bodies::evict_bodies(&conn, 30).unwrap(), 0);
+    assert_eq!(bodies::evict_bodies(&conn, 29).unwrap(), 1);
     assert!(bodies::peek_body(&conn, id, "a").unwrap().is_none());
     let attachments: i64 = conn
         .query_row("SELECT COUNT(*) FROM attachments", [], |r| r.get(0))
@@ -141,37 +141,9 @@ fn recorded_reads_only_move_access_times_forward() {
     )
     .unwrap();
     // "a" was read last, so the older "b" goes first.
-    assert_eq!(bodies::evict_bodies(&conn, id, 15).unwrap(), 1);
+    assert_eq!(bodies::evict_bodies(&conn, 15).unwrap(), 1);
     assert!(bodies::peek_body(&conn, id, "a").unwrap().is_some());
     assert!(bodies::peek_body(&conn, id, "b").unwrap().is_none());
-}
-
-/// Each account's sync holds its own cap, so reading mail in one account
-/// evicts only that account's bodies, and only once they pass the cap.
-#[test]
-fn eviction_holds_each_account_to_the_cap_alone() {
-    let (conn, a) = db();
-    let b = mailrs_store::accounts::insert_account(&conn, "b@example.com", 0).unwrap();
-    store(
-        &conn,
-        &[
-            meta(a, "a1", "t1", 100, &[]),
-            meta(a, "a2", "t2", 100, &[]),
-            meta(b, "b1", "t3", 100, &[]),
-            meta(b, "b2", "t4", 100, &[]),
-        ],
-    );
-    bodies::put_body(&conn, b, "b1", &body("bbbb"), 1).unwrap();
-    bodies::put_body(&conn, b, "b2", &body("bbbb"), 2).unwrap();
-    bodies::put_body(&conn, a, "a1", &body("aaaa"), 3).unwrap();
-    bodies::put_body(&conn, a, "a2", &body("aaaa"), 4).unwrap();
-    // Each account holds 30 bytes and the store 60.
-    assert_eq!(bodies::evict_bodies(&conn, a, 30).unwrap(), 0);
-    assert_eq!(bodies::evict_bodies(&conn, a, 15).unwrap(), 1);
-    assert!(bodies::peek_body(&conn, a, "a1").unwrap().is_none());
-    assert!(bodies::peek_body(&conn, a, "a2").unwrap().is_some());
-    assert!(bodies::peek_body(&conn, b, "b1").unwrap().is_some());
-    assert!(bodies::peek_body(&conn, b, "b2").unwrap().is_some());
 }
 
 fn part(id: &str, mime: &str, content_id: &str) -> Attachment {

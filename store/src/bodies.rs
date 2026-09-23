@@ -175,31 +175,28 @@ pub fn touch_bodies(
     Ok(())
 }
 
-/// An account's bodies that do not fit in `?2` bytes once its most
-/// recently read ones are kept. `?1` is the account.
-/// `bodies_by_account_access` covers every column this reads.
+/// Bodies that do not fit in `?1` bytes once the most recently read ones
+/// are kept. `bodies_by_access` covers every column this reads.
 const OVER_CAP: &str = "SELECT account_id, message_id FROM (SELECT account_id, message_id, \
-     SUM(size) OVER (ORDER BY accessed_at DESC, message_id ROWS UNBOUNDED PRECEDING) \
-     AS kept FROM bodies WHERE account_id = ?1) WHERE kept > ?2";
+     SUM(size) OVER (ORDER BY accessed_at DESC, account_id, message_id ROWS UNBOUNDED PRECEDING) \
+     AS kept FROM bodies) WHERE kept > ?1";
 
-/// Deletes an account's least recently read bodies until the rest fit in
-/// `max_bytes`, and returns how many it deleted. The cap is each account's
-/// own, as each account's sync holds it, so reading mail in one account
-/// never evicts another's. Does nothing past a sum over the index while
-/// the account's cache fits.
-pub fn evict_bodies(conn: &Connection, account_id: AccountId, max_bytes: i64) -> Result<usize> {
+/// Deletes the least recently read bodies until the rest fit in `max_bytes`.
+/// Returns how many it deleted. Does nothing past a sum over the index while
+/// the cache fits.
+pub fn evict_bodies(conn: &Connection, max_bytes: i64) -> Result<usize> {
     let total: i64 = conn
-        .prepare_cached("SELECT TOTAL(size) FROM bodies WHERE account_id = ?1")?
-        .query_row([account_id], |row| row.get::<_, f64>(0))? as i64;
+        .prepare_cached("SELECT TOTAL(size) FROM bodies")?
+        .query_row([], |row| row.get::<_, f64>(0))? as i64;
     if total <= max_bytes {
         return Ok(0);
     }
     conn.execute(
         &format!("DELETE FROM attachments WHERE (account_id, message_id) IN ({OVER_CAP})"),
-        params![account_id, max_bytes],
+        [max_bytes],
     )?;
     Ok(conn.execute(
         &format!("DELETE FROM bodies WHERE (account_id, message_id) IN ({OVER_CAP})"),
-        params![account_id, max_bytes],
+        [max_bytes],
     )?)
 }
