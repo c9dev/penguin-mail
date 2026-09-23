@@ -338,6 +338,12 @@ DROP INDEX IF EXISTS threads_by_recency;
 CREATE INDEX IF NOT EXISTS threads_by_order ON threads(last_message_at DESC, account_id, id);
 CREATE INDEX IF NOT EXISTS messages_by_order ON messages(date DESC, account_id, id);
 "#,
+    // Mail from given people, for the VIP mailboxes and their counts,
+    // found without reading every message. The thread id makes the index
+    // enough to say which threads they wrote in.
+    r#"
+CREATE INDEX IF NOT EXISTS messages_by_sender ON messages(lower(from_addr), account_id, thread_id);
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,
