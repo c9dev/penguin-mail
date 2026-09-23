@@ -12,6 +12,7 @@ mod labels;
 mod mailbox;
 mod newsletters;
 mod outbox;
+mod parity;
 mod priority;
 mod quota;
 mod search;
