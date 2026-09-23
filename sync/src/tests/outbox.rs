@@ -36,6 +36,25 @@ async fn stored_pair(h: &Harness, message_id: &str) -> Option<String> {
         .unwrap()
 }
 
+/// The demo's list shows a saved draft by its text, as Gmail's does,
+/// rather than by a stand-in.
+#[tokio::test]
+async fn a_saved_draft_shows_its_own_words_in_the_fake() {
+    let h = harness().await;
+    h.fake.keep_sent_copies(h.account_id);
+    let saved = h
+        .sync
+        .save_draft(
+            b"Subject: Trail maps\r\nContent-Type: text/plain\r\n\r\nHere are the maps.".to_vec(),
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+    let snippet = h.fake.with(|s| s.messages[&saved.message_id].snippet.clone());
+    assert_eq!(snippet, "Here are the maps.");
+}
+
 #[tokio::test]
 async fn sending_a_saved_draft_deletes_the_draft() {
     let h = harness().await;

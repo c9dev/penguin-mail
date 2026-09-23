@@ -809,6 +809,11 @@ impl GmailApi for FakeGmail {
                 email: s.email.clone(),
             });
             draft.subject = header(raw, "Subject").unwrap_or_default();
+            // Gmail lists a draft by its opening words. With a reader for
+            // sent mail, the fake can do the same.
+            if let Some(copy) = s.sent_copy.as_ref().and_then(|read| read(raw)) {
+                draft.snippet = copy.meta.snippet;
+            }
             s.messages.insert(message_id.clone(), draft);
             s.record(HistoryChange::MessageAdded {
                 id: message_id.clone(),
