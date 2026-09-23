@@ -734,7 +734,13 @@ mod walk_tests {
     use super::*;
     use crate::{accounts, messages, open_in_memory};
 
-    fn message(account_id: AccountId, id: &str, thread: &str, date: i64, labels: &[&str]) -> MessageMeta {
+    fn message(
+        account_id: AccountId,
+        id: &str,
+        thread: &str,
+        date: i64,
+        labels: &[&str],
+    ) -> MessageMeta {
         MessageMeta {
             account_id,
             id: id.into(),
@@ -795,7 +801,13 @@ mod walk_tests {
             }
             all.push(message(account, &format!("m{i}"), &thread, date, &labels));
             if i % 6 == 0 {
-                all.push(message(account, &format!("r{i}"), &thread, date + 1, &["INBOX", "TRASH"]));
+                all.push(message(
+                    account,
+                    &format!("r{i}"),
+                    &thread,
+                    date + 1,
+                    &["INBOX", "TRASH"],
+                ));
             }
         }
         for m in &all {
@@ -823,7 +835,9 @@ mod walk_tests {
     }
 
     fn keys(rows: Vec<ThreadSummary>) -> Vec<(AccountId, String, Option<String>)> {
-        rows.into_iter().map(|r| (r.account_id, r.id, r.message_id)).collect()
+        rows.into_iter()
+            .map(|r| (r.account_id, r.id, r.message_id))
+            .collect()
     }
 
     #[test]
@@ -833,10 +847,19 @@ mod walk_tests {
             for (offset, limit) in [(0, 7), (7, 7), (0, 100)] {
                 let by_label = threads_walking(&conn, &filter, offset, limit, Walk::Label).unwrap();
                 let by_date = threads_walking(&conn, &filter, offset, limit, Walk::Date).unwrap();
-                assert_eq!(keys(by_label), keys(by_date), "threads, {filter:?} {offset}+{limit}");
-                let by_label = messages_walking(&conn, &filter, offset, limit, Walk::Label).unwrap();
+                assert_eq!(
+                    keys(by_label),
+                    keys(by_date),
+                    "threads, {filter:?} {offset}+{limit}"
+                );
+                let by_label =
+                    messages_walking(&conn, &filter, offset, limit, Walk::Label).unwrap();
                 let by_date = messages_walking(&conn, &filter, offset, limit, Walk::Date).unwrap();
-                assert_eq!(keys(by_label), keys(by_date), "messages, {filter:?} {offset}+{limit}");
+                assert_eq!(
+                    keys(by_label),
+                    keys(by_date),
+                    "messages, {filter:?} {offset}+{limit}"
+                );
             }
         }
     }

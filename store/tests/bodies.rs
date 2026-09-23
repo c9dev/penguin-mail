@@ -166,7 +166,13 @@ fn a_body_read_as_two_text_attachments_is_fetched_again() {
     let path = dir.path().join("mail.db");
     let conn = mailrs_store::open_connection(&path).unwrap();
     let id = mailrs_store::accounts::insert_account(&conn, "me@example.com", 0).unwrap();
-    store(&conn, &[meta(id, "li", "t1", 1, &["INBOX"]), meta(id, "ok", "t2", 2, &["INBOX"])]);
+    store(
+        &conn,
+        &[
+            meta(id, "li", "t1", 1, &["INBOX"]),
+            meta(id, "ok", "t2", 2, &["INBOX"]),
+        ],
+    );
     let empty = MessageBody {
         attachments: vec![
             part("0", "text/plain", "text-body"),

@@ -338,6 +338,12 @@ DROP INDEX IF EXISTS threads_by_recency;
 CREATE INDEX IF NOT EXISTS threads_by_order ON threads(last_message_at DESC, account_id, id);
 CREATE INDEX IF NOT EXISTS messages_by_order ON messages(date DESC, account_id, id);
 "#,
+    // When the sync engine last pruned the account and checked its inbox
+    // against Gmail's. The app restarts itself to give memory back after
+    // its window closes, and without this each restart ran both again.
+    r#"
+ALTER TABLE accounts ADD COLUMN checked_at INTEGER;
+"#,
 ];
 
 /// Opens the database at `path`, creating it if needed, switches it to WAL,
