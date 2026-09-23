@@ -16,6 +16,10 @@ use crate::{
     AccountSync, GmailApi, SyncError, backoff_delay, now_millis, poll_offset, with_jitter,
 };
 
+/// How often an account prunes, checks its inbox against Gmail's, and lists
+/// its labels again. History says nothing about a label made, renamed or
+/// recoloured elsewhere, so this is how the sidebar hears of one; a label
+/// history does name is picked up by the replay at once.
 const PRUNE_INTERVAL: Duration = Duration::from_secs(60 * 60);
 
 #[derive(Debug, Clone)]
@@ -255,8 +259,8 @@ async fn run_account<G: GmailApi>(
     }
 }
 
-/// One pass: poll history when due, prune and check the inbox against
-/// Gmail's when due, then load one backfill page. Returns true when more
+/// One pass: poll history when due, prune, check the inbox against
+/// Gmail's and list the labels when due, then load one backfill page. Returns true when more
 /// backfill pages remain.
 async fn tick<G: GmailApi>(
     sync: &AccountSync<G>,
@@ -272,6 +276,7 @@ async fn tick<G: GmailApi>(
     if Instant::now() >= *next_prune {
         sync.prune(now_millis()).await?;
         sync.reconcile_inbox().await?;
+        sync.refresh_labels().await?;
         *next_prune = Instant::now() + PRUNE_INTERVAL;
     }
     sync.backfill_step().await

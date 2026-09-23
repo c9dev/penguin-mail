@@ -4,9 +4,10 @@ use std::collections::{BTreeSet, HashMap};
 
 use mailrs_domain::{ChangeEvent, MessageMeta, system_label};
 use mailrs_gmail::{GmailError, HistoryChange};
-use mailrs_store::{accounts, messages};
+use mailrs_store::{accounts, labels, messages};
 
 use super::AccountSync;
+use super::labels::is_user_label;
 use crate::{GmailApi, SyncError};
 
 impl<G: GmailApi> AccountSync<G> {
@@ -51,8 +52,18 @@ impl<G: GmailApi> AccountSync<G> {
         }
 
         let fetched = self.fetch_for_history(&changes).await?;
+        let named: BTreeSet<String> = changes
+            .iter()
+            .filter_map(|change| match change {
+                HistoryChange::LabelsAdded { label_ids, .. } => Some(label_ids.clone()),
+                _ => None,
+            })
+            .flatten()
+            .chain(fetched.values().flat_map(|m| m.label_ids.clone()))
+            .filter(|id| is_user_label(id))
+            .collect();
         let generation = cursor.sync_gen;
-        let (touched, new_mail) = self
+        let (touched, new_mail, unknown_label) = self
             .db
             .write(move |c| {
                 let mut touched = BTreeSet::new();
@@ -94,9 +105,19 @@ impl<G: GmailApi> AccountSync<G> {
                     messages::refresh_thread(c, account_id, thread_id)?;
                 }
                 accounts::set_history_id(c, account_id, latest)?;
-                Ok((touched, new_mail))
+                let known: BTreeSet<String> = labels::list_labels(c, account_id)?
+                    .into_iter()
+                    .map(|l| l.id)
+                    .collect();
+                let unknown = named.iter().any(|id| !known.contains(id));
+                Ok((touched, new_mail, unknown))
             })
             .await?;
+        // A label the store has never seen was made elsewhere since the
+        // labels were last listed, so the sidebar lacks it.
+        if unknown_label {
+            self.refresh_labels().await?;
+        }
         self.mark_caught_up();
         self.emit_threads(touched);
         if !new_mail.is_empty() {

@@ -2,7 +2,7 @@
 
 use std::collections::BTreeSet;
 
-use mailrs_domain::{ChangeEvent, Label, LabelKind};
+use mailrs_domain::{AccountId, ChangeEvent, Label, LabelKind};
 use mailrs_gmail::{LabelColor, RemoteLabel};
 use mailrs_store::labels;
 
@@ -12,6 +12,41 @@ use mailrs_gmail::is_reserved_label_name;
 use crate::{GmailApi, SyncError};
 
 impl<G: GmailApi> AccountSync<G> {
+    /// Lists Gmail's labels and brings the stored ones in line: a label
+    /// made, renamed or recoloured elsewhere is stored, and one deleted
+    /// elsewhere leaves the store and the mail that carried it. One call,
+    /// 1 quota unit. Says whether anything changed, and only then tells
+    /// the window, since the sidebar redraws on `LabelsChanged`.
+    pub async fn refresh_labels(&self) -> Result<bool, SyncError> {
+        let account_id = self.account_id;
+        let remote = domain_labels(account_id, &self.api.labels().await?);
+        let (changed, threads) = self
+            .db
+            .write(move |c| {
+                let stored = labels::list_labels(c, account_id)?;
+                let mut threads = Vec::new();
+                let mut changed = false;
+                for gone in stored
+                    .iter()
+                    .filter(|s| remote.iter().all(|r| r.id != s.id))
+                {
+                    threads.extend(labels::delete_label(c, account_id, &gone.id)?);
+                    changed = true;
+                }
+                for label in remote.iter().filter(|r| !stored.contains(r)) {
+                    labels::upsert_label(c, label)?;
+                    changed = true;
+                }
+                Ok((changed, threads))
+            })
+            .await?;
+        if changed {
+            self.emit(ChangeEvent::LabelsChanged { account_id });
+            self.emit_threads(threads.into_iter().collect());
+        }
+        Ok(changed)
+    }
+
     /// Creates a label in Gmail and stores it. Slashes nest it under
     /// another label, as in Gmail: "Work/Clients".
     pub async fn create_label(&self, name: &str) -> Result<Label, SyncError> {
@@ -104,4 +139,30 @@ impl<G: GmailApi> AccountSync<G> {
             color: remote.color.as_ref().map(|c| c.background_color.clone()),
         }
     }
+}
+
+/// Gmail's labels as the store keeps them.
+pub(super) fn domain_labels(account_id: AccountId, remote: &[RemoteLabel]) -> Vec<Label> {
+    remote
+        .iter()
+        .map(|l| Label {
+            account_id,
+            id: l.id.clone(),
+            name: l.name.clone(),
+            kind: if l.kind.as_deref() == Some("system") {
+                LabelKind::System
+            } else {
+                LabelKind::User
+            },
+            color: l.color.as_ref().map(|c| c.background_color.clone()),
+        })
+        .collect()
+}
+
+/// Whether `id` names a label a person made. Gmail numbers those
+/// `Label_1`, `Label_2` and so on; its own labels have fixed names, some
+/// of which `labels.list` never returns, so only a person's label that
+/// the store lacks says the list has changed.
+pub(super) fn is_user_label(id: &str) -> bool {
+    id.starts_with("Label_")
 }

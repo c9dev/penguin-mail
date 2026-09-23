@@ -13,6 +13,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - A message in the Outbox goes out once, even when you press Send Now while
   the outbox is already sending it, or the connection drops just after
   Gmail took it.
+- Labels made, renamed, recoloured or deleted in Gmail on the web reach the
+  sidebar within the hour, and at once when mail arrives carrying a new
+  one. Before, the sidebar only learned of them when the account was
+  added.
 
 ## 0.1.7 (2026-09-23)
 

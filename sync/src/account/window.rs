@@ -5,12 +5,11 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::Arc;
 
 use futures::StreamExt;
-use mailrs_domain::{
-    AccountId, AccountState, ChangeEvent, EpochMillis, Label, LabelKind, MessageMeta, system_label,
-};
-use mailrs_gmail::{GmailError, MessageRef, RemoteLabel, cost};
+use mailrs_domain::{AccountState, ChangeEvent, EpochMillis, MessageMeta, system_label};
+use mailrs_gmail::{GmailError, MessageRef, cost};
 use mailrs_store::{accounts, labels, messages, window};
 
+use super::labels::domain_labels;
 use super::{AccountSync, FETCH_CONCURRENCY};
 use crate::{GmailApi, SyncError};
 
@@ -293,21 +292,4 @@ fn plan_fetches(listed: Vec<MessageRef>) -> Vec<Fetch> {
         }
     }
     fetches
-}
-
-fn domain_labels(account_id: AccountId, remote: &[RemoteLabel]) -> Vec<Label> {
-    remote
-        .iter()
-        .map(|l| Label {
-            account_id,
-            id: l.id.clone(),
-            name: l.name.clone(),
-            kind: if l.kind.as_deref() == Some("system") {
-                LabelKind::System
-            } else {
-                LabelKind::User
-            },
-            color: l.color.as_ref().map(|c| c.background_color.clone()),
-        })
-        .collect()
 }
