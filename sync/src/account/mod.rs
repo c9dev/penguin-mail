@@ -37,6 +37,9 @@ pub struct AccountSync<G> {
     wait_ceiling: Duration,
     /// Cached bodies read since the last write of their access times.
     touched: Arc<Mutex<Vec<(String, EpochMillis)>>>,
+    /// Body bytes stored since the last eviction pass, `None` before the
+    /// first one.
+    unswept: Mutex<Option<i64>>,
     /// When the last history replay left the store up to date. Opening a
     /// thread within [`FRESH_FOR`] of it trusts the store and asks Gmail
     /// nothing.
@@ -70,6 +73,7 @@ impl<G: GmailApi> AccountSync<G> {
             retry_max: Duration::from_secs(8),
             wait_ceiling: crate::WAIT_CEILING,
             touched: Arc::default(),
+            unswept: Mutex::default(),
             caught_up: Arc::default(),
             listed: Mutex::default(),
             hits: Mutex::default(),

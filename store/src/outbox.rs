@@ -141,6 +141,17 @@ pub fn stuck(conn: &Connection) -> Result<Vec<Queued>> {
         .collect())
 }
 
+/// How many messages wait for their hour and how many are stuck, counted
+/// without reading their bytes, for the sidebar.
+pub fn counts(conn: &Connection) -> Result<(i64, i64)> {
+    Ok(conn.query_row(
+        "SELECT COUNT(*) FILTER (WHERE problem IS NULL), \
+         COUNT(*) FILTER (WHERE problem IS NOT NULL) FROM outbox",
+        [],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )?)
+}
+
 /// What should have gone out by `now`.
 pub fn due(conn: &Connection, now: EpochMillis) -> Result<Vec<Queued>> {
     Ok(list(conn)?

@@ -143,17 +143,39 @@ impl<G: GmailApi> AccountSync<G> {
             return Ok(body);
         }
         let body = self.api.message_body(message_id).await?;
+        let size =
+            body.html.as_ref().map_or(0, String::len) + body.text.as_ref().map_or(0, String::len);
+        let sweep = self.due_for_eviction(size as i64);
         let (key, stored, cap) = (message_id.to_string(), body.clone(), self.body_cache_bytes);
         self.db
             .write(move |c| {
                 if messages::thread_id_of(c, account_id, &key)?.is_some() {
                     bodies::put_body(c, account_id, &key, &stored, now)?;
-                    bodies::evict_bodies(c, cap)?;
+                    if sweep {
+                        bodies::evict_bodies(c, cap)?;
+                    }
                 }
                 Ok(())
             })
             .await?;
         Ok(body)
+    }
+
+    /// Whether storing `size` more bytes of body calls for an eviction
+    /// pass. Each pass sums every stored body, so it runs on the first
+    /// body stored and then once every sixty-fourth of the cache written
+    /// since, which lets the cache run over its cap by that much per
+    /// account at most.
+    fn due_for_eviction(&self, size: i64) -> bool {
+        let mut unswept = self.unswept.lock().expect("unswept bytes poisoned");
+        let written = unswept.map_or(i64::MAX, |bytes| bytes.saturating_add(size));
+        if written >= (self.body_cache_bytes / 64).max(1) {
+            *unswept = Some(0);
+            true
+        } else {
+            *unswept = Some(written);
+            false
+        }
     }
 
     /// Records a cache hit. Hits that arrive before the writer gets to the

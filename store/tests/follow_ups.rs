@@ -36,6 +36,7 @@ fn only_unanswered_mail_from_three_to_thirty_days_ago_waits() {
         ],
     );
     assert_eq!(threads(&conn, NOW), ["asked", "drafting"]);
+    assert_eq!(follow_ups::waiting_count(&conn, NOW).unwrap(), 2);
     let first = &follow_ups::waiting(&conn, NOW).unwrap()[0];
     assert_eq!((first.message_id.as_str(), first.sent_at), ("a2", ago(5)));
     assert_eq!(first.to[0].email, "me@example.com");

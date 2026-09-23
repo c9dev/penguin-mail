@@ -253,3 +253,12 @@ fn a_message_can_be_claimed_once_until_the_claim_lapses_or_goes() {
     );
     assert!(outbox::claim(&conn, 999, 7_000, 0).unwrap().is_none());
 }
+
+#[test]
+fn the_sidebar_counts_waiting_and_stuck_messages_without_reading_them() {
+    let (conn, id) = db();
+    outbox::put(&conn, &scheduled(id, "a", 100)).unwrap();
+    outbox::put(&conn, &scheduled(id, "b", 200)).unwrap();
+    outbox::put(&conn, &held(id, "Stuck", 300)).unwrap();
+    assert_eq!(outbox::counts(&conn).unwrap(), (2, 1));
+}

@@ -29,4 +29,5 @@ fn reminders_come_due_and_can_move_or_go() {
     );
     reminders::remove(&conn, id, "t2").unwrap();
     assert_eq!(reminders::list(&conn).unwrap().len(), 1);
+    assert_eq!(reminders::count(&conn).unwrap(), 1);
 }

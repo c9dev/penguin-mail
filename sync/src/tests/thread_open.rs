@@ -244,3 +244,39 @@ async fn a_search_copy_that_history_moved_past_is_fetched_again() {
     assert_eq!(h.fake.usage().calls_to("users.threads.get"), 1);
     assert_eq!(h.labels_of("first").await, ["STARRED"]);
 }
+
+/// The body cache keeps to its cap, though it no longer sums every stored
+/// body each time one arrives.
+#[tokio::test]
+async fn the_body_cache_keeps_to_its_cap() {
+    let h = harness().await;
+    let now = now_millis();
+    for id in ["a", "b", "c"] {
+        h.fake.seed(meta(id, &format!("t{id}"), now, &["INBOX"]));
+        h.fake.with(|s| {
+            s.bodies.insert(
+                id.into(),
+                mailrs_domain::MessageBody {
+                    text: Some("x".repeat(600)),
+                    ..Default::default()
+                },
+            )
+        });
+    }
+    h.bootstrap_all().await;
+    let sync = h
+        .sync_with(std::time::Duration::from_secs(1))
+        .with_limits(30, 1000);
+
+    for id in ["a", "b", "c"] {
+        sync.body(id).await.unwrap();
+    }
+
+    let kept: i64 =
+        h.db.read(|c| {
+            Ok(c.query_row("SELECT TOTAL(size) FROM bodies", [], |r| r.get::<_, f64>(0))? as i64)
+        })
+        .await
+        .unwrap();
+    assert!(kept <= 1000, "{kept} bytes kept");
+}
