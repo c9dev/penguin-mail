@@ -67,15 +67,25 @@ HEADER
 cat "$work/header.pot" "$work/merged.pot" > "$work/penguin-mail.pot"
 
 if [ "${1:-}" = --check ]; then
-    if diff -q "$pot" "$work/penguin-mail.pot" >/dev/null; then
-        echo "$pot is up to date."
-        exit 0
+    if ! diff -q "$pot" "$work/penguin-mail.pot" >/dev/null; then
+        echo "$pot is stale; run scripts/update-po.sh" >&2
+        exit 1
     fi
-    echo "$pot is stale; run scripts/update-po.sh" >&2
-    exit 1
+    # British English is written from the template, so it goes stale with
+    # it: a string added since the last run has no British spelling yet.
+    python3 scripts/en-gb.py "$pot" "$work/en_GB.po"
+    if ! diff -q po/en_GB.po "$work/en_GB.po" >/dev/null 2>&1; then
+        echo "po/en_GB.po is stale; run scripts/update-po.sh" >&2
+        exit 1
+    fi
+    echo "$pot and po/en_GB.po are up to date."
+    exit 0
 fi
 
 mv "$work/penguin-mail.pot" "$pot"
+# British English comes from the template and the spelling rules in
+# scripts/en-gb.py, never by hand, so every string has it.
+python3 scripts/en-gb.py "$pot" po/en_GB.po
 
 # POTFILES.in is what the extraction reads, so a file left out of it is a
 # file whose words nobody can translate. Say so loudly.
@@ -100,7 +110,10 @@ mkdir -p target/locale
 for po in po/*.po; do
     [ -e "$po" ] || continue
     lang=$(basename "$po" .po)
-    msgmerge --quiet --update --backup=none --previous "$po" "$pot"
+    # en_GB was written from this template a moment ago.
+    if [ "$lang" != en_GB ]; then
+        msgmerge --quiet --update --backup=none --previous "$po" "$pot"
+    fi
     install -Dm644 /dev/null "target/locale/$lang/LC_MESSAGES/penguin-mail.mo"
     msgfmt --check --statistics -o "target/locale/$lang/LC_MESSAGES/penguin-mail.mo" "$po"
 done

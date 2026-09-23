@@ -78,7 +78,7 @@ async fn recolor_label_gives_it_a_colour_from_gmails_palette() {
     .await;
     assert_eq!(
         h.asked().questions,
-        [format!("Colour the label “Kites” in {ME} blue?")]
+        [format!("Color the label “Kites” in {ME} blue?")]
     );
     let color = h
         .gmail
@@ -270,7 +270,7 @@ async fn create_contact_writes_to_google_and_the_address_book() {
         [format!(
             "Add Priya Shah to the Google contacts of {ME}?\n\n\
              Name: Priya Shah\nAddresses: priya@fernwood.example\n\
-             Phones: +351 21 000 0000\nOrganisation: Fernwood"
+             Phones: +351 21 000 0000\nOrganization: Fernwood"
         )]
     );
     let google = h.gmail.with(|s| s.contacts.clone());

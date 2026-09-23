@@ -139,7 +139,7 @@ fn contact_lines(fields: &ContactFields) -> String {
     }
     if let Some(organization) = &fields.organization {
         lines.push(fill(
-            &gettext("Organisation: {organisation}"),
+            &gettext("Organization: {organisation}"),
             &[("organisation", organization)],
         ));
     }
@@ -257,7 +257,7 @@ impl<A: Accounts> Tools<A> {
             .ok_or_else(|| format!("Gmail has no label colour called {key}."))?;
         let (background, text) = LABEL_COLORS[index];
         let question = fill(
-            &gettext("Colour the label “{label}” in {account} {color}?"),
+            &gettext("Color the label “{label}” in {account} {color}?"),
             &[
                 ("label", &label.name),
                 ("account", &account.email),

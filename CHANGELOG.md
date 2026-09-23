@@ -5,6 +5,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### New
+
+- Penguin Mail speaks British English as well as American. Pick English
+  (United Kingdom) under Language in Preferences, or leave it following a
+  desktop set to British English.
+
 ### Fixed
 
 - The assistant stays closed when a narrowed window grows wide again,

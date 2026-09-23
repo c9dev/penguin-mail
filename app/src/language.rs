@@ -90,14 +90,15 @@ fn messages_locale_is_bare() -> bool {
     name.is_none_or(|name| name == b"C" || name == b"POSIX")
 }
 
-/// The languages the person may pick, English first, then every
-/// translation whose catalogue is installed. A language is left out until
+/// The languages the person may pick, American English first, since the
+/// source strings are written in it, then every translation whose
+/// catalogue is installed, British English among them. A language is left out until
 /// its `.mo` is there, so the list never offers one that would do nothing.
 pub fn choices() -> Vec<Language> {
     let dir = locale_dir();
     let mut languages = vec![Language {
         code: "en".into(),
-        name: "English".into(),
+        name: "English (United States)".into(),
     }];
     for (code, name) in TRANSLATED {
         let catalogue = dir
@@ -131,5 +132,18 @@ pub fn code_at(languages: &[Language], index: u32) -> String {
             .get(at as usize)
             .map_or_else(String::new, |language| language.code.clone()),
         None => String::new(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The source strings are American English, and British English is a
+    /// catalogue beside them, so the list says which English each is.
+    #[test]
+    fn the_source_language_says_it_is_american_english() {
+        let first = &choices()[0];
+        assert_eq!((first.code.as_str(), first.name.as_str()), ("en", "English (United States)"));
     }
 }

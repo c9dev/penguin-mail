@@ -3,6 +3,16 @@
 `penguin-mail.pot` holds every word a person reads, pulled out of the
 source. Each `<locale>.po` beside it is one language.
 
+## English
+
+The strings in the source are American English. British English is
+`en_GB.po`, which `scripts/en-gb.py` writes from the template on every run
+of `scripts/update-po.sh`, changing the spellings that differ (colour,
+favourite, organise, cancelled, grey, licence). Do not edit it by hand. A
+word it gets wrong goes into the script's `KEEP` set, and a spelling it
+misses into `STEMS` or `WORDS`; `update-po.sh --check` fails while the file
+is behind the template.
+
 ## Adding a language
 
 1. Start the file from the template, naming the locale you are

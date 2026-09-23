@@ -184,7 +184,7 @@ impl MainWindow {
                 .call(async move { sync.set_label_color(&label_id, color).await })
                 .await
             {
-                this.failed(&gettext("Could not change the colour: {reason}"), &err);
+                this.failed(&gettext("Could not change the color: {reason}"), &err);
             }
         });
     }

@@ -495,7 +495,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         },
         MailTool {
             name: "recolor_label",
-            label: || gettext("Colouring a label"),
+            label: || gettext("Coloring a label"),
             description: "Gives a Gmail label one of the colours of Gmail's palette. The user approves it first.",
             input: || {
                 json!({
@@ -839,7 +839,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         },
         MailTool {
             name: "cancel_send",
-            label: || gettext("Cancelling a scheduled message"),
+            label: || gettext("Canceling a scheduled message"),
             description: "Stops messages in Send Later from going out. Each goes back to Gmail's Drafts; one Gmail cannot take right now opens in a composer for the user to save. The user approves it first.",
             input: || json!({"targets": targets()}),
             required: &["targets"],
@@ -876,7 +876,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         },
         MailTool {
             name: "cancel_reminder",
-            label: || gettext("Cancelling a reminder"),
+            label: || gettext("Canceling a reminder"),
             description: "Drops the reminders on conversations and puts them back in the inbox now. The user approves it first.",
             input: || json!({"targets": targets()}),
             required: &["targets"],

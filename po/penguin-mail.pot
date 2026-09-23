@@ -386,7 +386,7 @@ msgid "Renaming a label"
 msgstr ""
 
 #: app/src/assistant/run/catalog.rs:498
-msgid "Colouring a label"
+msgid "Coloring a label"
 msgstr ""
 
 #: app/src/assistant/run/catalog.rs:512
@@ -498,7 +498,7 @@ msgid "Sending a waiting message"
 msgstr ""
 
 #: app/src/assistant/run/catalog.rs:842
-msgid "Cancelling a scheduled message"
+msgid "Canceling a scheduled message"
 msgstr ""
 
 #: app/src/assistant/run/catalog.rs:850
@@ -514,7 +514,7 @@ msgid "Reading reminders"
 msgstr ""
 
 #: app/src/assistant/run/catalog.rs:879
-msgid "Cancelling a reminder"
+msgid "Canceling a reminder"
 msgstr ""
 
 #: app/src/assistant/run/catalog.rs:887
@@ -605,7 +605,7 @@ msgid "Phones: {phones}"
 msgstr ""
 
 #: app/src/assistant/run/manage.rs:142
-msgid "Organisation: {organisation}"
+msgid "Organization: {organisation}"
 msgstr ""
 
 #: app/src/assistant/run/manage.rs:231
@@ -615,7 +615,7 @@ msgid ""
 msgstr ""
 
 #: app/src/assistant/run/manage.rs:260
-msgid "Colour the label “{label}” in {account} {color}?"
+msgid "Color the label “{label}” in {account} {color}?"
 msgstr ""
 
 #: app/src/assistant/run/manage.rs:294
@@ -5394,7 +5394,7 @@ msgid "Could not delete the label: {reason}"
 msgstr ""
 
 #: app/src/ui/window/organize.rs:187
-msgid "Could not change the colour: {reason}"
+msgid "Could not change the color: {reason}"
 msgstr ""
 
 #: app/src/ui/window/organize.rs:279
