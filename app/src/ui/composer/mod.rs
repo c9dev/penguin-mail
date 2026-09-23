@@ -26,7 +26,7 @@ use super::autocomplete::Contacts;
 use super::{labelled_by, name, name_with_shortcut, roving};
 use crate::attachcheck::Promise;
 use crate::compose::{
-    Asking, Draft, Gate, OutgoingAttachment, SendWhen, build_mime, format_recipients, gate,
+    Asking, Built, Draft, Gate, OutgoingAttachment, SendWhen, build, format_recipients, gate,
     is_address, new_message_id, opening_identity,
 };
 use crate::core::Core;
@@ -163,21 +163,22 @@ pub struct Composer {
     asked: Cell<bool>,
     dirty: Cell<bool>,
     closing: Cell<bool>,
-    on_send: Box<dyn Fn(Draft, SendWhen)>,
+    on_send: Box<dyn Fn(Draft, Built, SendWhen)>,
 }
 
 impl Composer {
     /// Opens a composer for `draft`. `writing` carries every address the
     /// accounts send as; the From row starts on the one the draft names.
     /// `format` is what a message starts as. `on_send` receives the
-    /// finished message; the composer closes itself.
+    /// finished message and what the composer built of it; the composer
+    /// closes itself.
     pub fn open(
         core: Rc<Core>,
         writing: Writing,
         contacts: Contacts,
         draft: Draft,
         format: ComposeFormat,
-        on_send: impl Fn(Draft, SendWhen) + 'static,
+        on_send: impl Fn(Draft, Built, SendWhen) + 'static,
     ) -> Rc<Composer> {
         let Writing {
             identities,
@@ -433,7 +434,10 @@ impl Composer {
             .content(&toasts)
             .build();
 
-        let attachments = draft.attachments.clone();
+        // The composer keeps the files in a list of its own, so the draft
+        // it started from holds none for every save to copy.
+        let mut draft = draft;
+        let attachments = std::mem::take(&mut draft.attachments);
         let composer = Rc::new(Composer {
             core,
             window,
@@ -521,14 +525,17 @@ impl Composer {
         self.window.clone()
     }
 
-    /// Puts the draft's body in the buffer, styled or as Markdown.
+    /// Puts the draft's body in the buffer, styled or as Markdown. The
+    /// editor holds the body from here on, so the draft the composer
+    /// started from lets go of its copy rather than carry it into every
+    /// save.
     fn fill_body(&self) {
-        let base = self.base.borrow();
-        self.editor.fill(
-            &base.markdown,
-            base.rich.as_ref(),
-            &self.attachments.borrow(),
-        );
+        let (markdown, rich) = {
+            let mut base = self.base.borrow_mut();
+            (std::mem::take(&mut base.markdown), base.rich.take())
+        };
+        self.editor
+            .fill(&markdown, rich.as_ref(), &self.attachments.borrow());
     }
 
     fn wire(self: &Rc<Self>, attach: &gtk::Button, preview_toggle: &gtk::ToggleButton) {
@@ -1174,12 +1181,16 @@ impl Composer {
         }
     }
 
-    /// Builds the message and passes it on, then closes.
+    /// Builds the message and passes it on, then closes. The bytes go
+    /// with it, so the app does not build the same message again.
     fn send_off(self: &Rc<Self>, draft: Draft, when: SendWhen) {
-        if let Err(err) = build_mime(&draft, now_secs(), &new_message_id(&draft.from.email)) {
-            self.failed(&gettext("Could not build the message: {reason}"), &err);
-            return;
-        }
+        let built = match build(&draft, now_secs(), &new_message_id(&draft.from.email)) {
+            Ok(built) => built,
+            Err(err) => {
+                self.failed(&gettext("Could not build the message: {reason}"), &err);
+                return;
+            }
+        };
         if let Some(identity) = self.identity() {
             (self.remember)(Remembered::SentFrom {
                 account: identity.account_email.clone(),
@@ -1188,7 +1199,7 @@ impl Composer {
         }
         self.closing.set(true);
         self.window.close();
-        (self.on_send)(draft, when);
+        (self.on_send)(draft, built, when);
     }
 
     /// Asks before a message that promises a file goes without one. True

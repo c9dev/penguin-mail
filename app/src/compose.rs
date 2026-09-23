@@ -1057,6 +1057,26 @@ fn bare_id(id: &str) -> String {
         .to_string()
 }
 
+/// A message the composer built on its way out. The app sends these
+/// bytes rather than building the message a second time.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Built {
+    /// The whole message, for one that is neither signed nor encrypted.
+    Message(Vec<u8>),
+    /// The body an engine signs or encrypts, for one that is. The engine
+    /// may ask for a passphrase, so its work waits for the app.
+    Body(Vec<u8>),
+}
+
+/// Builds as much of `draft` as can be built before it leaves the
+/// composer: all of it, or the body an engine will sign or encrypt.
+pub fn build(draft: &Draft, date_secs: i64, message_id: &str) -> Result<Built, String> {
+    match draft.sign || draft.encrypt {
+        true => build_body_part(draft).map(Built::Body),
+        false => build_mime(draft, date_secs, message_id).map(Built::Message),
+    }
+}
+
 /// The RFC 822 bytes for `draft`.
 pub fn build_mime(draft: &Draft, date_secs: i64, message_id: &str) -> Result<Vec<u8>, String> {
     let (text, html) = written(draft);
@@ -2289,5 +2309,27 @@ mod tests {
             gate(&draft, SendWhen::Now, NOW, asking(false, true)),
             Gate::ConfirmNoFile(_)
         ));
+    }
+
+    #[test]
+    fn a_plain_message_is_built_whole_and_a_protected_one_up_to_its_body() {
+        let mut draft = Draft::new(1, me());
+        draft.to = vec![addr(None, "ann@example.com")];
+        draft.subject = "Lunch".into();
+        draft.markdown = "Meet at six.".into();
+        let Ok(Built::Message(raw)) = build(&draft, 1_757_000_000, "id@example.com") else {
+            panic!("a plain message goes out whole");
+        };
+        let raw = String::from_utf8(raw).unwrap();
+        assert!(raw.contains("Subject: Lunch\r\n"), "{raw}");
+        assert!(raw.contains("Meet at six."), "{raw}");
+
+        draft.sign = true;
+        let Ok(Built::Body(part)) = build(&draft, 1_757_000_000, "id@example.com") else {
+            panic!("a signed message leaves its body for the engine");
+        };
+        let part = String::from_utf8(part).unwrap();
+        assert!(!part.contains("Subject:"), "{part}");
+        assert!(part.contains("Meet at six."), "{part}");
     }
 }

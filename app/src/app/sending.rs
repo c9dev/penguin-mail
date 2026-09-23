@@ -7,6 +7,7 @@
 //! owns the sending and decides what is worth another try; this module
 //! builds the message, hands it over, and says what happened.
 
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use gtk::glib;
@@ -14,9 +15,7 @@ use mailrs_store::outbox::Queued;
 use mailrs_sync::{Posted, now_millis};
 
 use super::{App, Signature};
-use crate::compose::{
-    Draft, SendWhen, build_body_part, build_mime, build_protected, new_message_id,
-};
+use crate::compose::{Built, Draft, SendWhen, build, build_protected, new_message_id};
 use crate::format::future_date;
 use crate::protection::{self, Addressees, Standard};
 use crate::ui::window::Notice;
@@ -34,22 +33,36 @@ impl App {
     /// Sends `draft`: now, after the Undo delay, or at a scheduled time.
     pub fn send(self: &Rc<Self>, draft: Draft, when: SendWhen, signature: Signature) {
         let draft = self.signed_when(draft, signature);
+        self.dispatch(draft, None, when);
+    }
+
+    /// Sends a message a composer finished and built, as it was written.
+    pub fn send_built(self: &Rc<Self>, draft: Draft, built: Built, when: SendWhen) {
+        self.dispatch(draft, Some(built), when);
+    }
+
+    fn dispatch(self: &Rc<Self>, draft: Draft, built: Option<Built>, when: SendWhen) {
         match when {
-            SendWhen::At(at) => self.schedule(draft, at),
+            SendWhen::At(at) => self.schedule(draft, built, at),
             SendWhen::Now => {
                 let delay = self.settings().undo_send.seconds();
                 match self.window() {
                     Some(window) if delay > 0 => {
                         self.pending_sends.set(self.pending_sends.get() + 1);
-                        let cancelled = Rc::new(std::cell::Cell::new(false));
-                        let (flag, app, undone) =
-                            (Rc::clone(&cancelled), Rc::clone(self), draft.clone());
+                        // Undo and the timer share the one message, and
+                        // whichever runs first takes it. Cloning it for
+                        // Undo cost a copy of every attachment on every
+                        // send.
+                        let held = Rc::new(RefCell::new(Some((draft, built))));
+                        let (undone, app) = (Rc::clone(&held), Rc::clone(self));
                         window.notice(Notice::UndoSend {
                             seconds: delay,
                             undo: Box::new(move || {
-                                flag.set(true);
+                                let Some((draft, _)) = undone.borrow_mut().take() else {
+                                    return;
+                                };
                                 if let Some(composer) =
-                                    app.open_composer(undone.clone(), Signature::AsWritten)
+                                    app.open_composer(draft, Signature::AsWritten)
                                 {
                                     composer.mark_unsaved();
                                 }
@@ -62,12 +75,13 @@ impl App {
                         glib::timeout_add_seconds_local_once(delay, move || {
                             app.pending_sends
                                 .set(app.pending_sends.get().saturating_sub(1));
-                            if !cancelled.get() {
-                                app.send_now(draft, true);
+                            let taken = held.borrow_mut().take();
+                            if let Some((draft, built)) = taken {
+                                app.send_now(draft, built, true);
                             }
                         });
                     }
-                    _ => self.send_now(draft, true),
+                    _ => self.send_now(draft, built, true),
                 }
             }
         }
@@ -76,7 +90,7 @@ impl App {
     /// Sends without the Undo delay, for messages the user never wrote,
     /// such as an unsubscribe request.
     pub(super) fn send_immediately(self: &Rc<Self>, draft: Draft) {
-        self.send_now(draft, false);
+        self.send_now(draft, None, false);
     }
 
     /// The bytes to send: the message as it was written, or what the
@@ -84,19 +98,19 @@ impl App {
     /// encrypt. Either engine may put a pinentry in front of them and
     /// wait, so this runs off the GTK thread and holds nothing up but this
     /// message.
-    async fn raw_for(&self, draft: &Draft) -> Result<Vec<u8>, String> {
+    async fn raw_for(&self, draft: &Draft, built: Option<Built>) -> Result<Vec<u8>, String> {
         let message_id = new_message_id(&draft.from.email);
         let date = now_millis() / 1000;
-        let built = |what: &str| {
+        let failed = |what: &str| {
             fill(
                 &gettext("Could not build the message: {reason}"),
                 &[("reason", what)],
             )
         };
-        if !draft.sign && !draft.encrypt {
-            return build_mime(draft, date, &message_id).map_err(|err| built(&err));
-        }
-        let part = build_body_part(draft).map_err(|err| built(&err))?;
+        let part = match prepared(draft, built, date, &message_id).map_err(|err| failed(&err))? {
+            Built::Message(raw) => return Ok(raw),
+            Built::Body(part) => part,
+        };
         let from = draft.from.email.clone();
         let addressees = Addressees::of(draft);
         let (sign, encrypt) = (draft.sign, draft.encrypt);
@@ -160,18 +174,18 @@ impl App {
                 false => fill(&gettext("Not signed, so not sent: {reason}"), &values),
             }
         })?;
-        build_protected(draft, date, &message_id, entity).map_err(|err| built(&err))
+        build_protected(draft, date, &message_id, entity).map_err(|err| failed(&err))
     }
 
     /// Sends at once, or puts the message in the outbox when it cannot go.
     /// With `announce`, says so in the window.
-    fn send_now(self: &Rc<Self>, draft: Draft, announce: bool) {
+    fn send_now(self: &Rc<Self>, draft: Draft, built: Option<Built>, announce: bool) {
         if self.core.account(draft.account_id).is_none() {
             return self.reopen(draft, &not_connected());
         }
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let raw = match this.raw_for(&draft).await {
+            let raw = match this.raw_for(&draft, built).await {
                 Ok(raw) => raw,
                 Err(problem) => return this.reopen(draft, &problem),
             };
@@ -212,7 +226,7 @@ impl App {
     }
 
     /// Saves `draft` to Gmail and records when to send it.
-    fn schedule(self: &Rc<Self>, draft: Draft, at: i64) {
+    fn schedule(self: &Rc<Self>, draft: Draft, built: Option<Built>, at: i64) {
         if self.core.account(draft.account_id).is_none() {
             return self.reopen(draft, &not_connected());
         }
@@ -220,7 +234,7 @@ impl App {
         glib::spawn_future_local(async move {
             // A scheduled message is signed now rather than at its hour,
             // since the person is here to answer the pinentry now.
-            let raw = match this.raw_for(&draft).await {
+            let raw = match this.raw_for(&draft, built).await {
                 Ok(raw) => raw,
                 Err(problem) => return this.reopen(draft, &problem),
             };
@@ -370,6 +384,20 @@ impl App {
     }
 }
 
+/// What the composer built of `draft`, or the same built here for a
+/// message that came from somewhere else, such as the assistant.
+fn prepared(
+    draft: &Draft,
+    built: Option<Built>,
+    date_secs: i64,
+    message_id: &str,
+) -> Result<Built, String> {
+    match built {
+        Some(built) => Ok(built),
+        None => build(draft, date_secs, message_id),
+    }
+}
+
 /// A message for the outbox: the bytes that go out, and the draft the
 /// composer reopens if the person wants to change it before it does.
 fn queued(draft: &Draft, raw: Vec<u8>, send_at: i64) -> Queued {
@@ -399,4 +427,46 @@ fn named(subject: &str) -> String {
         return gettext("your message");
     }
     fill(&gettext("“{subject}”"), &[("subject", subject)])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mailrs_domain::Address;
+
+    fn draft() -> Draft {
+        let mut draft = Draft::new(
+            1,
+            Address {
+                name: None,
+                email: "dana@example.com".into(),
+            },
+        );
+        draft.to = vec![Address {
+            name: None,
+            email: "ann@example.com".into(),
+        }];
+        draft
+    }
+
+    #[test]
+    fn bytes_the_composer_built_go_out_as_they_are() {
+        let handed = Built::Message(b"the composer's own bytes".to_vec());
+        assert_eq!(
+            prepared(&draft(), Some(handed.clone()), 0, "id@example.com"),
+            Ok(handed)
+        );
+    }
+
+    #[test]
+    fn a_message_nobody_built_is_built_here() {
+        let Ok(Built::Message(raw)) = prepared(&draft(), None, 0, "id@example.com") else {
+            panic!("a plain draft builds whole");
+        };
+        assert!(
+            String::from_utf8(raw)
+                .unwrap()
+                .contains("To: <ann@example.com>")
+        );
+    }
 }

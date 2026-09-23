@@ -5,6 +5,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Improved
+
+- A message with big attachments leaves the composer sooner: it is built
+  once rather than twice, and Undo Send no longer copies every file it
+  carries.
+
 ### Fixed
 
 - Choosing another From address swaps the signature and nothing else: the
