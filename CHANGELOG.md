@@ -18,6 +18,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - An account whose syncing crashes starts again after half a minute. If it
   crashes a second time, the sidebar marks the account instead of leaving
   it silent with no new mail.
+- Invitations sent from Google Calendar show their card with Yes, No and
+  Maybe again. Penguin Mail missed the invitation inside them and showed
+  Google's own buttons, which open the browser.
 - With the network gone, your accounts show Offline and wait for it,
   where they used to keep trying Gmail and failing. They check for mail as
   soon as the network returns.

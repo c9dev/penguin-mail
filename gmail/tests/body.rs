@@ -398,3 +398,52 @@ fn only_the_signed_part_of_a_signed_message_is_read() {
     assert_eq!(body.html, None, "the unsigned HTML stays out");
     assert!(body.attachments.is_empty(), "{:?}", body.attachments);
 }
+
+/// Google Calendar's invitation as the Gmail API hands it over: the
+/// calendar part sits beside the text and HTML with a file name and no
+/// inline data, and the same file comes again as `application/ics`.
+#[test]
+fn a_google_invitation_lists_its_ics_file_once() {
+    let payload = part(json!({
+        "mimeType": "multipart/mixed",
+        "parts": [
+            {"partId": "0", "mimeType": "multipart/alternative", "parts": [
+                {"partId": "0.0", "mimeType": "text/plain", "body": {"data": b64(b"Invitation")}},
+                {"partId": "0.1", "mimeType": "text/html", "body": {"data": b64(b"<p>Invitation</p>")}},
+                {"partId": "0.2", "mimeType": "text/calendar", "filename": "invite.ics",
+                 "headers": [{"name": "Content-Type", "value": "text/calendar; charset=\"UTF-8\"; method=REQUEST"}],
+                 "body": {"attachmentId": "inline-ics", "size": 1962}}
+            ]},
+            {"partId": "1", "mimeType": "application/ics", "filename": "invite.ics",
+             "body": {"attachmentId": "file-ics", "size": 1962}}
+        ]
+    }));
+    let body = extract_body(&payload);
+    assert_eq!(body.html.as_deref(), Some("<p>Invitation</p>"));
+    let names: Vec<(&str, &str)> = body
+        .attachments
+        .iter()
+        .map(|a| (a.filename.as_str(), a.mime_type.as_str()))
+        .collect();
+    assert_eq!(names, vec![("invite.ics", "application/ics")]);
+}
+
+/// The calendar part the parser could not read, for the caller to fetch
+/// by its attachment id.
+#[test]
+fn a_calendar_part_without_inline_data_is_named_for_fetching() {
+    let payload = part(json!({
+        "mimeType": "multipart/alternative",
+        "parts": [
+            {"partId": "0", "mimeType": "text/plain", "body": {"data": b64(b"Invitation")}},
+            {"partId": "1", "mimeType": "text/calendar", "filename": "invite.ics",
+             "body": {"attachmentId": "inline-ics", "size": 1962}}
+        ]
+    }));
+    let body = extract_body(&payload);
+    assert_eq!(body.calendar, None);
+    assert_eq!(
+        mailrs_gmail::body::calendar_to_fetch(&body),
+        Some("inline-ics")
+    );
+}

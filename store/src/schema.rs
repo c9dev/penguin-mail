@@ -394,6 +394,20 @@ DELETE FROM bodies WHERE EXISTS (
        OR bodies.text GLOB '*[ð-ô]' || c || c || c || '*'
 );
 "#,
+    // Gmail's API sends Google Calendar's invitation part by attachment
+    // id, and bodies read before the sync layer fetched it hold no
+    // calendar, so the invitation card never showed. Dropping the bodies
+    // that carry a calendar file but no calendar makes the next open fetch
+    // the part.
+    r#"
+DELETE FROM bodies WHERE calendar IS NULL AND EXISTS (
+    SELECT 1 FROM attachments a
+    WHERE a.account_id = bodies.account_id AND a.message_id = bodies.message_id
+      AND (lower(a.mime_type) LIKE 'text/calendar%'
+           OR lower(a.mime_type) = 'application/ics'
+           OR lower(a.filename) LIKE '%.ics')
+);
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

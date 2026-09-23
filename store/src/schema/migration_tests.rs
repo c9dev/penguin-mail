@@ -443,3 +443,56 @@ fn a_body_decoded_in_the_wrong_charset_is_fetched_again() {
     assert!(bodies::get_body(&conn, 1, "text", 2).unwrap().is_none());
     assert!(bodies::get_body(&conn, 1, "ok", 2).unwrap().is_some());
 }
+
+/// Google Calendar's invitation part came by attachment id, so bodies read
+/// before the sync layer fetched it hold no calendar and the card never
+/// showed. Migration 28 drops them so the next open fetches the part; a
+/// body whose invitation was read, and one with no calendar file, stay.
+#[test]
+fn an_invitation_read_without_its_calendar_is_fetched_again() {
+    use mailrs_domain::{Attachment, MessageBody};
+
+    use crate::bodies;
+
+    let ics = |mime: &str| Attachment {
+        part_id: "1".into(),
+        filename: "invite.ics".into(),
+        mime_type: mime.into(),
+        size: 1962,
+        attachment_id: Some("att".into()),
+        content_id: None,
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..27]).unwrap();
+    conn.execute_batch(
+        "INSERT INTO accounts (id, email, added_at) VALUES (1, 'me@example.com', 0);
+         INSERT INTO messages (account_id, id, thread_id, to_addrs, cc_addrs, subject, date, snippet, size, has_attachments, sync_gen) VALUES
+             (1, 'missed', 't1', '[]', '[]', 'Invitation', 1, '', 1, 1, 1),
+             (1, 'read', 't2', '[]', '[]', 'Invitation', 2, '', 1, 1, 1),
+             (1, 'plain', 't3', '[]', '[]', 'Hello', 3, '', 1, 0, 1);",
+    )
+    .unwrap();
+    let missed = MessageBody {
+        html: Some("<p>Invitation</p>".into()),
+        attachments: vec![ics("application/ics")],
+        ..MessageBody::default()
+    };
+    let read = MessageBody {
+        calendar: Some("BEGIN:VCALENDAR".into()),
+        ..missed.clone()
+    };
+    let plain = MessageBody {
+        text: Some("hello".into()),
+        ..MessageBody::default()
+    };
+    bodies::put_body(&conn, 1, "missed", &missed, 1).unwrap();
+    bodies::put_body(&conn, 1, "read", &read, 1).unwrap();
+    bodies::put_body(&conn, 1, "plain", &plain, 1).unwrap();
+    drop(conn);
+
+    let conn = open_with(&path, MIGRATIONS).unwrap();
+    assert!(bodies::get_body(&conn, 1, "missed", 2).unwrap().is_none());
+    assert!(bodies::get_body(&conn, 1, "read", 2).unwrap().is_some());
+    assert!(bodies::get_body(&conn, 1, "plain", 2).unwrap().is_some());
+}

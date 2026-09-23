@@ -33,14 +33,16 @@ pub fn extract_body(payload: &MessagePart) -> MessageBody {
         }
         _ => walk(payload, &mut body),
     }
+    drop_calendar_twin(&mut body);
     body
 }
 
 fn walk(part: &MessagePart, body: &mut MessageBody) {
     // An invitation arrives as a `text/calendar` part beside the text and
-    // the HTML, and again as an `.ics` file. The part beside the text
-    // carries its content inline, so it is the one worth reading; the file
-    // still shows up in the attachment list below.
+    // the HTML, and again as an `.ics` file. When the part carries its
+    // content inline it is read here. Google Calendar's does not: the API
+    // sends it by attachment id, and `calendar_to_fetch` names it for the
+    // caller to fetch.
     if body.calendar.is_none() && is_calendar(part) {
         body.calendar = decode_text(part).filter(|ics| ics.contains("BEGIN:VCALENDAR"));
     }
@@ -149,13 +151,14 @@ fn attachment_name(part: &MessagePart, content_id: Option<&str>) -> String {
 /// `text/calendar`; Outlook sends the file as `application/ics` and
 /// sometimes as `application/octet-stream` with an `.ics` name.
 fn is_calendar(part: &MessagePart) -> bool {
-    part.mime_type.eq_ignore_ascii_case("text/calendar")
-        || part.mime_type.eq_ignore_ascii_case("application/ics")
-        || part
-            .mime_type
-            .to_ascii_lowercase()
-            .starts_with("text/calendar;")
-        || part.filename.to_ascii_lowercase().ends_with(".ics")
+    calendar_type(&part.mime_type, &part.filename)
+}
+
+fn calendar_type(mime_type: &str, filename: &str) -> bool {
+    mime_type.eq_ignore_ascii_case("text/calendar")
+        || mime_type.eq_ignore_ascii_case("application/ics")
+        || mime_type.to_ascii_lowercase().starts_with("text/calendar;")
+        || filename.to_ascii_lowercase().ends_with(".ics")
 }
 
 /// Which wrapper the message arrived in and which standard wrote it, read
@@ -273,4 +276,38 @@ fn param<'a>(value: &'a str, name: &str) -> Option<&'a str> {
             .eq_ignore_ascii_case(name)
             .then(|| value.trim().trim_matches('"'))
     })
+}
+
+/// The attachment id of the calendar part to fetch, when the message
+/// carries an invitation the parser could not read inline. Gmail's API
+/// hands Google Calendar's invitation part over this way: it has a file
+/// name, so the API sends an `attachmentId` in place of the text.
+pub fn calendar_to_fetch(body: &MessageBody) -> Option<&str> {
+    if body.calendar.is_some() {
+        return None;
+    }
+    body.attachments
+        .iter()
+        .find(|a| calendar_type(&a.mime_type, &a.filename))
+        .and_then(|a| a.attachment_id.as_deref())
+}
+
+/// Drops the calendar part that sits beside the text when the same file
+/// comes again as an attachment of its own, as Google Calendar sends it.
+/// The list would otherwise show `invite.ics` twice.
+fn drop_calendar_twin(body: &mut MessageBody) {
+    let twin = |i: usize| {
+        let a = &body.attachments[i];
+        a.mime_type.to_ascii_lowercase().starts_with("text/calendar")
+            && body.attachments.iter().enumerate().any(|(j, other)| {
+                j != i
+                    && other.filename == a.filename
+                    && !other.mime_type.to_ascii_lowercase().starts_with("text/calendar")
+                    && calendar_type(&other.mime_type, &other.filename)
+            })
+    };
+    let drop: Vec<usize> = (0..body.attachments.len()).filter(|&i| twin(i)).collect();
+    for i in drop.into_iter().rev() {
+        body.attachments.remove(i);
+    }
 }

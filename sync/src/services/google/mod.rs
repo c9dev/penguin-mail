@@ -189,8 +189,23 @@ impl<G: GmailApi> MailBackend for Google<G> {
         Err(BackendError::Unsupported)
     }
 
+    /// The body, and the invitation in it when Gmail sent that part by
+    /// attachment id rather than inline, as it does for every Google
+    /// Calendar invitation. Without the second call the invitation card
+    /// never shows on a real account. A failed fetch of the part leaves the
+    /// message readable without its card.
     async fn message_body(&self, id: &str) -> Result<MessageBody, BackendError> {
-        Ok(paced(self.gmail.message_body(id)).await?)
+        let mut body = paced(self.gmail.message_body(id)).await?;
+        if let Some(part) = mailrs_gmail::body::calendar_to_fetch(&body).map(str::to_string) {
+            match paced(self.gmail.attachment(id, &part)).await {
+                Ok(bytes) => {
+                    let ics = mailrs_gmail::body::decode_charset(&bytes, None);
+                    body.calendar = ics.contains("BEGIN:VCALENDAR").then_some(ics);
+                }
+                Err(err) => tracing::warn!(message = id, %err, "could not fetch an invitation's calendar part"),
+            }
+        }
+        Ok(body)
     }
 
     async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, BackendError> {

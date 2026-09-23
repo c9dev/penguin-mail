@@ -766,3 +766,34 @@ async fn an_invitation_to_a_whole_event_asks_the_calendar_nothing() {
     );
     assert_eq!(h.fake.with(|s| s.usage.calls_to("calendar.events.list")), 0);
 }
+
+/// Gmail's API sends Google Calendar's invitation part by attachment id,
+/// with no text inline, so the card had nothing to read on a real
+/// account. Fetching a body fetches that part too.
+#[tokio::test]
+async fn a_calendar_part_sent_by_attachment_id_is_fetched_with_the_body() {
+    use crate::MailBackend;
+    let h = harness().await;
+    let ics = invite(0, "20260310T090000Z");
+    h.fake.with(|s| {
+        s.bodies.insert(
+            "m1".into(),
+            mailrs_domain::MessageBody {
+                html: Some("<p>Invitation</p>".into()),
+                attachments: vec![mailrs_domain::Attachment {
+                    part_id: "1".into(),
+                    filename: "invite.ics".into(),
+                    mime_type: "application/ics".into(),
+                    size: ics.len() as i64,
+                    attachment_id: Some("file-ics".into()),
+                    content_id: None,
+                }],
+                ..Default::default()
+            },
+        );
+        s.attachments
+            .insert(("m1".into(), "file-ics".into()), ics.clone().into_bytes());
+    });
+    let body = h.sync.services().mail.message_body("m1").await.unwrap();
+    assert_eq!(body.calendar.as_deref(), Some(ics.as_str()));
+}
