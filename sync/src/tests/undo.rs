@@ -199,3 +199,26 @@ async fn a_bulk_undo_groups_the_same_reversal_into_one_batch() {
     assert_eq!(in_gmail(&h, "m1"), Vec::<String>::new());
     assert_eq!(in_gmail(&h, "m0"), ["INBOX"]);
 }
+
+/// Unread is the absence of a mark rather than a mark, so undoing Mark
+/// Unread must read again only what the action made unread.
+#[tokio::test]
+async fn undoing_mark_unread_leaves_the_unread_messages_unread() {
+    let h = harness().await;
+    let now = now_millis();
+    h.fake.seed(meta("a", "t1", now - 1000, &["INBOX", "UNREAD"]));
+    h.fake.seed(meta("b", "t1", now, &["INBOX"]));
+    h.bootstrap_all().await;
+
+    run_and_undo(
+        &h,
+        &[Target::thread(h.account_id, "t1")],
+        MailAction::Triage(TriageAction::MarkUnread),
+    )
+    .await;
+
+    assert_eq!(h.labels_of("a").await, ["INBOX", "UNREAD"]);
+    assert_eq!(h.labels_of("b").await, ["INBOX"]);
+    assert_eq!(in_gmail(&h, "a"), ["INBOX", "UNREAD"]);
+    assert_eq!(in_gmail(&h, "b"), ["INBOX"]);
+}
