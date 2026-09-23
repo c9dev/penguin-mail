@@ -962,15 +962,15 @@ msgstr ""
 msgid "On {date}, {sender} wrote:"
 msgstr ""
 
-#: app/src/core.rs:521
+#: app/src/core.rs:523
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 
-#: app/src/core.rs:538
+#: app/src/core.rs:540
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 
-#: app/src/core.rs:546
+#: app/src/core.rs:548
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 
@@ -1276,24 +1276,56 @@ msgid ""
 "too. Google asks you to confirm in your browser."
 msgstr ""
 
-#: app/src/pgp.rs:109
+#: app/src/pgp.rs:110
 msgid "Add a recipient whose key gpg holds."
 msgstr ""
 
-#: app/src/pgp.rs:118
+#: app/src/pgp.rs:119
 msgid "gpg holds no key for {addresses}."
 msgstr ""
 
-#: app/src/pgp.rs:135
+#: app/src/pgp.rs:136
 msgid "gpg holds no key for any of the addresses you send from."
 msgstr ""
 
-#: app/src/pgp.rs:137
+#: app/src/pgp.rs:138
 msgid "gpg holds a key for {addresses}."
 msgstr ""
 
-#: app/src/pgp.rs:141
+#: app/src/pgp.rs:142
 msgid "gpg holds a key for {addresses}, and none for {without}."
+msgstr ""
+
+#: app/src/pgp.rs:245
+msgid "This computer has no gpg. Install GnuPG to read or send OpenPGP mail."
+msgstr ""
+
+#: app/src/pgp.rs:248 app/src/smime.rs:256
+msgid "Could not run {program}: {reason}"
+msgstr ""
+
+#: app/src/pgp.rs:252 app/src/smime.rs:260
+msgid "Could not write a temporary file: {reason}"
+msgstr ""
+
+#: app/src/pgp.rs:256
+msgid "This message is encrypted to a key this computer does not hold."
+msgstr ""
+
+#: app/src/pgp.rs:259
+msgid "gpg holds no secret key to sign as {address}."
+msgstr ""
+
+#: app/src/pgp.rs:263
+msgid "gpg holds no key it can encrypt to for {address}."
+msgstr ""
+
+#: app/src/pgp.rs:266
+msgid "This text holds no OpenPGP block."
+msgstr ""
+
+#: app/src/pgp.rs:267
+msgid "gpg failed: {reason}"
 msgstr ""
 
 #: app/src/protection.rs:118
@@ -1958,6 +1990,30 @@ msgstr ""
 
 #: app/src/smime.rs:129
 msgid "gpgsm holds a certificate for {addresses}, and none for {without}."
+msgstr ""
+
+#: app/src/smime.rs:253
+msgid "This computer has no gpgsm. Install GnuPG to read or send S/MIME mail."
+msgstr ""
+
+#: app/src/smime.rs:264
+msgid "This message is encrypted to a certificate this computer does not hold."
+msgstr ""
+
+#: app/src/smime.rs:267
+msgid "gpgsm holds no secret key to sign as {address}."
+msgstr ""
+
+#: app/src/smime.rs:271
+msgid "gpgsm holds no trusted certificate it can encrypt to for {address}."
+msgstr ""
+
+#: app/src/smime.rs:274
+msgid "This part holds no S/MIME data."
+msgstr ""
+
+#: app/src/smime.rs:276
+msgid "gpgsm failed: {reason}"
 msgstr ""
 
 #: app/src/translation.rs:76

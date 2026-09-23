@@ -324,10 +324,12 @@ impl Core {
         let pgp = self
             .pgp
             .clone()
-            .ok_or_else(|| anyhow!("this computer has no gpg"))?;
+            .ok_or_else(|| anyhow!(crate::pgp::explain(&PgpError::NoGpg)))?;
         self.call(async move {
             let answered = tokio::task::spawn_blocking(move || run(&pgp)).await?;
-            Ok::<_, anyhow::Error>(answered?)
+            // The engine's own words are for a log. Whatever reaches a
+            // person from here, a toast or a line on the card, is theirs.
+            answered.map_err(|err| anyhow!(crate::pgp::explain(&err)))
         })
         .await
     }
@@ -360,10 +362,10 @@ impl Core {
         let smime = self
             .smime
             .clone()
-            .ok_or_else(|| anyhow!("this computer has no gpgsm"))?;
+            .ok_or_else(|| anyhow!(crate::smime::explain(&SmimeError::NoGpgsm)))?;
         self.call(async move {
             let answered = tokio::task::spawn_blocking(move || run(&smime)).await?;
-            Ok::<_, anyhow::Error>(answered?)
+            answered.map_err(|err| anyhow!(crate::smime::explain(&err)))
         })
         .await
     }

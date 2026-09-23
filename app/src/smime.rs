@@ -4,9 +4,9 @@
 //! It is `pgp`'s peer over `protection`: it turns what gpgsm said into a
 //! [`Found`] in the words both standards share, and `protection::read`
 //! alone turns that into the card and the body, so a reader never has to
-//! know which standard a message arrived under. Every
-//! call below blocks, so the window hands them to `Core::gpgsm` rather than
-//! running them itself.
+//! know which standard a message arrived under. Every call below blocks,
+//! so the window hands them to `Core::gpgsm` rather than running them
+//! itself.
 
 use std::process::Command;
 
@@ -240,7 +240,41 @@ fn refusal(err: SmimeError) -> Refusal {
     match err {
         SmimeError::NotForYou => Refusal::NotForYou,
         SmimeError::NotSmime => Refusal::Unreadable,
-        other => Refusal::Failed(other.to_string()),
+        other => Refusal::Failed(explain(&other)),
+    }
+}
+
+/// What went wrong with gpgsm, in the reader's language. `mailrs_smime`
+/// words its errors for a log; anything the window shows goes through
+/// here.
+pub fn explain(err: &SmimeError) -> String {
+    match err {
+        SmimeError::NoGpgsm => {
+            gettext("This computer has no gpgsm. Install GnuPG to read or send S/MIME mail.")
+        }
+        SmimeError::CannotRun { program, reason } => fill(
+            &gettext("Could not run {program}: {reason}"),
+            &[("program", program), ("reason", reason)],
+        ),
+        SmimeError::Temp(reason) => fill(
+            &gettext("Could not write a temporary file: {reason}"),
+            &[("reason", reason)],
+        ),
+        SmimeError::NotForYou => {
+            gettext("This message is encrypted to a certificate this computer does not hold.")
+        }
+        SmimeError::CannotSign(address) => fill(
+            &gettext("gpgsm holds no secret key to sign as {address}."),
+            &[("address", address)],
+        ),
+        SmimeError::NoCertificateFor(address) => fill(
+            &gettext("gpgsm holds no trusted certificate it can encrypt to for {address}."),
+            &[("address", address)],
+        ),
+        SmimeError::NotSmime => gettext("This part holds no S/MIME data."),
+        SmimeError::Gpgsm(reason) => {
+            fill(&gettext("gpgsm failed: {reason}"), &[("reason", reason)])
+        }
     }
 }
 
@@ -533,6 +567,36 @@ mod tests {
             "Encrypted. This message changed after it was signed"
         );
         assert_eq!(broken.tone, Tone::Bad);
+    }
+
+    #[test]
+    fn every_engine_error_has_words_a_person_reads() {
+        let cases = [
+            (SmimeError::NoGpgsm, "GnuPG"),
+            (
+                SmimeError::CannotRun {
+                    program: "/usr/bin/gpgsm".into(),
+                    reason: "busy".into(),
+                },
+                "busy",
+            ),
+            (SmimeError::Temp("full".into()), "full"),
+            (SmimeError::NotForYou, "certificate"),
+            (
+                SmimeError::CannotSign("ada@example.test".into()),
+                "ada@example.test",
+            ),
+            (
+                SmimeError::NoCertificateFor("bo@example.test".into()),
+                "bo@example.test",
+            ),
+            (SmimeError::NotSmime, "S/MIME"),
+            (SmimeError::Gpgsm("bad blob".into()), "bad blob"),
+        ];
+        for (err, names) in cases {
+            let said = explain(&err);
+            assert!(said.contains(names), "{said}");
+        }
     }
 
     #[test]

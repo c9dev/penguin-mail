@@ -1018,15 +1018,15 @@ msgstr "“{address}” não é um endereço de e-mail."
 msgid "On {date}, {sender} wrote:"
 msgstr "A {date}, {sender} escreveu:"
 
-#: app/src/core.rs:521
+#: app/src/core.rs:523
 msgid "Demo mode cannot add real accounts."
 msgstr "O modo de demonstração não adiciona contas reais."
 
-#: app/src/core.rs:538
+#: app/src/core.rs:540
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Desistiu de esperar pelo navegador ao fim de cinco minutos."
 
-#: app/src/core.rs:546
+#: app/src/core.rs:548
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 "Iniciou sessão como {account}. Escolha {wanted} para voltar a ligar essa "
@@ -1357,25 +1357,57 @@ msgstr ""
 "alterar eventos no calendário de {account}, a reunião fica também marcada no "
 "seu calendário. A Google pede-lhe confirmação no navegador."
 
-#: app/src/pgp.rs:109
+#: app/src/pgp.rs:110
 msgid "Add a recipient whose key gpg holds."
 msgstr "Adicione um destinatário de quem o gpg tenha a chave."
 
-#: app/src/pgp.rs:118
+#: app/src/pgp.rs:119
 msgid "gpg holds no key for {addresses}."
 msgstr "O gpg não tem chave para {addresses}."
 
-#: app/src/pgp.rs:135
+#: app/src/pgp.rs:136
 msgid "gpg holds no key for any of the addresses you send from."
 msgstr "O gpg não tem chave para nenhum dos endereços de onde envia."
 
-#: app/src/pgp.rs:137
+#: app/src/pgp.rs:138
 msgid "gpg holds a key for {addresses}."
 msgstr "O gpg tem chave para {addresses}."
 
-#: app/src/pgp.rs:141
+#: app/src/pgp.rs:142
 msgid "gpg holds a key for {addresses}, and none for {without}."
 msgstr "O gpg tem chave para {addresses} e nenhuma para {without}."
+
+#: app/src/pgp.rs:245
+msgid "This computer has no gpg. Install GnuPG to read or send OpenPGP mail."
+msgstr "Este computador não tem gpg. Instale o GnuPG para ler ou enviar correio OpenPGP."
+
+#: app/src/pgp.rs:248 app/src/smime.rs:256
+msgid "Could not run {program}: {reason}"
+msgstr "Não foi possível executar {program}: {reason}"
+
+#: app/src/pgp.rs:252 app/src/smime.rs:260
+msgid "Could not write a temporary file: {reason}"
+msgstr "Não foi possível escrever um ficheiro temporário: {reason}"
+
+#: app/src/pgp.rs:256
+msgid "This message is encrypted to a key this computer does not hold."
+msgstr "Esta mensagem está encriptada para uma chave que este computador não tem."
+
+#: app/src/pgp.rs:259
+msgid "gpg holds no secret key to sign as {address}."
+msgstr "O gpg não tem chave secreta para assinar como {address}."
+
+#: app/src/pgp.rs:263
+msgid "gpg holds no key it can encrypt to for {address}."
+msgstr "O gpg não tem chave para encriptar para {address}."
+
+#: app/src/pgp.rs:266
+msgid "This text holds no OpenPGP block."
+msgstr "Este texto não contém nenhum bloco OpenPGP."
+
+#: app/src/pgp.rs:267
+msgid "gpg failed: {reason}"
+msgstr "O gpg falhou: {reason}"
 
 #: app/src/protection.rs:118
 msgid "{smime} {pgp}"
@@ -2063,6 +2095,30 @@ msgstr "O gpgsm tem certificado para {addresses}."
 #: app/src/smime.rs:129
 msgid "gpgsm holds a certificate for {addresses}, and none for {without}."
 msgstr "O gpgsm tem certificado para {addresses} e nenhum para {without}."
+
+#: app/src/smime.rs:253
+msgid "This computer has no gpgsm. Install GnuPG to read or send S/MIME mail."
+msgstr "Este computador não tem gpgsm. Instale o GnuPG para ler ou enviar correio S/MIME."
+
+#: app/src/smime.rs:264
+msgid "This message is encrypted to a certificate this computer does not hold."
+msgstr "Esta mensagem está encriptada para um certificado que este computador não tem."
+
+#: app/src/smime.rs:267
+msgid "gpgsm holds no secret key to sign as {address}."
+msgstr "O gpgsm não tem chave secreta para assinar como {address}."
+
+#: app/src/smime.rs:271
+msgid "gpgsm holds no trusted certificate it can encrypt to for {address}."
+msgstr "O gpgsm não tem certificado de confiança para encriptar para {address}."
+
+#: app/src/smime.rs:274
+msgid "This part holds no S/MIME data."
+msgstr "Esta parte não contém dados S/MIME."
+
+#: app/src/smime.rs:276
+msgid "gpgsm failed: {reason}"
+msgstr "O gpgsm falhou: {reason}"
 
 #: app/src/translation.rs:76
 msgid "Portuguese"

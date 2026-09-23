@@ -5,8 +5,9 @@
 //! other. It turns what gpg said into a [`Found`] in the words both
 //! standards share, and `protection::read` alone turns that into the card
 //! and the body, so a reader never has to know which standard a message
-//! arrived under. `mailrs_pgp` runs gpg and `ui::pgp` draws the answer. Every call below blocks, so the
-//! window hands them to `Core::gpg` rather than running them itself.
+//! arrived under. `mailrs_pgp` runs gpg and `ui::pgp` draws the answer.
+//! Every call below blocks, so the window hands them to `Core::gpg` rather
+//! than running them itself.
 
 use std::process::Command;
 
@@ -232,7 +233,38 @@ fn refusal(err: PgpError) -> Refusal {
     match err {
         PgpError::NotForYou => Refusal::NotForYou,
         PgpError::NotPgp => Refusal::Unreadable,
-        other => Refusal::Failed(other.to_string()),
+        other => Refusal::Failed(explain(&other)),
+    }
+}
+
+/// What went wrong with gpg, in the reader's language. `mailrs_pgp` words
+/// its errors for a log; anything the window shows goes through here.
+pub fn explain(err: &PgpError) -> String {
+    match err {
+        PgpError::NoGpg => {
+            gettext("This computer has no gpg. Install GnuPG to read or send OpenPGP mail.")
+        }
+        PgpError::CannotRun { program, reason } => fill(
+            &gettext("Could not run {program}: {reason}"),
+            &[("program", program), ("reason", reason)],
+        ),
+        PgpError::Temp(reason) => fill(
+            &gettext("Could not write a temporary file: {reason}"),
+            &[("reason", reason)],
+        ),
+        PgpError::NotForYou => {
+            gettext("This message is encrypted to a key this computer does not hold.")
+        }
+        PgpError::CannotSign(address) => fill(
+            &gettext("gpg holds no secret key to sign as {address}."),
+            &[("address", address)],
+        ),
+        PgpError::NoKeyFor(address) => fill(
+            &gettext("gpg holds no key it can encrypt to for {address}."),
+            &[("address", address)],
+        ),
+        PgpError::NotPgp => gettext("This text holds no OpenPGP block."),
+        PgpError::Gpg(reason) => fill(&gettext("gpg failed: {reason}"), &[("reason", reason)]),
     }
 }
 
@@ -523,6 +555,48 @@ mod tests {
         });
         assert_eq!(bare.name, None);
         assert_eq!(bare.addresses[0].address, "ada@example.test");
+    }
+
+    #[test]
+    fn every_engine_error_has_words_a_person_reads() {
+        let cases = [
+            (PgpError::NoGpg, "GnuPG"),
+            (
+                PgpError::CannotRun {
+                    program: "/usr/bin/gpg".into(),
+                    reason: "busy".into(),
+                },
+                "busy",
+            ),
+            (PgpError::Temp("full".into()), "full"),
+            (PgpError::NotForYou, "key"),
+            (
+                PgpError::CannotSign("ada@example.test".into()),
+                "ada@example.test",
+            ),
+            (
+                PgpError::NoKeyFor("bo@example.test".into()),
+                "bo@example.test",
+            ),
+            (PgpError::NotPgp, "OpenPGP"),
+            (PgpError::Gpg("bad armor".into()), "bad armor"),
+        ];
+        for (err, names) in cases {
+            let said = explain(&err);
+            assert!(said.contains(names), "{said}");
+        }
+        // The card says the same words.
+        let mark = protection::read(
+            Standard::Pgp,
+            Err(refusal(PgpError::Gpg("bad armor".into()))),
+            &MessageBody::default(),
+            None,
+        )
+        .mark;
+        assert_eq!(
+            mark.detail,
+            Some(explain(&PgpError::Gpg("bad armor".into())))
+        );
     }
 
     #[test]
