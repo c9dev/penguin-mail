@@ -91,6 +91,33 @@ fn every_signature_the_lines_describe_comes_back() {
     assert_eq!(found[1].trust, None, "the trust line was about the first");
 }
 
+/// The composer asks this each time a recipient changes, so a draft to ten
+/// people should start gpg once, not ten times.
+#[test]
+fn every_address_is_looked_up_in_one_run() {
+    let dir = tempfile::tempdir().expect("a temp directory");
+    let asked = dir.path().join("asked");
+    let path = dir.path().join("gpg");
+    std::fs::write(
+        &path,
+        format!("#!/bin/sh\necho \"$@\" >> {}\n", asked.to_string_lossy()),
+    )
+    .expect("write");
+    permit_run(&path);
+    let pgp = mailrs_pgp::Pgp::find_on(&dir.path().to_string_lossy()).expect("found");
+    let addresses: Vec<String> = ["ada", "bo", "cy"]
+        .iter()
+        .map(|name| format!("{name}@example.test"))
+        .collect();
+
+    let held = pgp.keys_for(&addresses).expect("an answer");
+
+    assert_eq!(held.len(), 3);
+    let asked = std::fs::read_to_string(asked).expect("gpg ran");
+    assert_eq!(asked.lines().count(), 1, "{asked}");
+    assert!(asked.contains("<cy@example.test>"), "{asked}");
+}
+
 /// The person's gpg.conf can say `auto-key-retrieve`, and then checking a
 /// signature from a key gpg lacks asks a key server or the sender's own
 /// domain for it: a read receipt, sent the moment the message opens. A key
