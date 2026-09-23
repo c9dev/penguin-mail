@@ -228,44 +228,17 @@ fn page_text(prepared: &Prepared) -> String {
     }
 }
 
-/// The toast after the ticked lists have run. One list is named, since
-/// the person just read its name on the dialog; several are counted,
-/// with whatever still wants them counted apart.
-pub fn summary(outcomes: &[(String, Outcome)]) -> String {
-    if let [(name, only)] = outcomes {
-        return match only {
-            Outcome::Done => fill(&gettext("Unsubscribed from {sender}"), &[("sender", name)]),
-            Outcome::Unclear(_) => gettext("Sent, but the page did not say it worked"),
-            Outcome::OpenInBrowser(_) => gettext("The page needs you to finish it"),
-            Outcome::Failed(why) => fill(
-                &gettext("Could not unsubscribe from {sender}: {reason}"),
-                &[("sender", name), ("reason", why)],
-            ),
-        };
-    }
-    let done = outcomes
-        .iter()
-        .filter(|(_, outcome)| *outcome == Outcome::Done)
-        .count();
-    let left = outcomes.len() - done;
-    match (done, left) {
-        (_, 0) => fill_plural(
-            "Unsubscribed from {count} list",
-            "Unsubscribed from {count} lists",
-            done,
-            &[("count", &done.to_string())],
-        ),
-        (0, _) => fill_plural(
-            "{count} list needs you",
-            "{count} lists need you",
-            left,
-            &[("count", &left.to_string())],
-        ),
-        _ => fill_plural(
-            "Unsubscribed from {done}. {count} needs you",
-            "Unsubscribed from {done}. {count} need you",
-            left,
-            &[("done", &done.to_string()), ("count", &left.to_string())],
+/// The toast after the window's Unsubscribe has run, naming the list the
+/// person just read on the dialog. The assistant answers in its own
+/// words, so only one list ever reaches a toast.
+pub fn summary(name: &str, outcome: &Outcome) -> String {
+    match outcome {
+        Outcome::Done => fill(&gettext("Unsubscribed from {sender}"), &[("sender", name)]),
+        Outcome::Unclear(_) => gettext("Sent, but the page did not say it worked"),
+        Outcome::OpenInBrowser(_) => gettext("The page needs you to finish it"),
+        Outcome::Failed(why) => fill(
+            &gettext("Could not unsubscribe from {sender}: {reason}"),
+            &[("sender", name), ("reason", why)],
         ),
     }
 }
@@ -411,54 +384,24 @@ mod tests {
     }
 
     #[test]
-    fn one_list_is_named_and_several_are_counted() {
-        let done = |name: &str| (name.to_string(), Outcome::Done);
+    fn a_list_left_is_named() {
         assert_eq!(
-            summary(&[done("Trail Notes")]),
+            summary("Trail Notes", &Outcome::Done),
             "Unsubscribed from Trail Notes"
-        );
-        assert_eq!(
-            summary(&[done("Trail Notes"), done("Shop News")]),
-            "Unsubscribed from 2 lists"
-        );
-    }
-
-    #[test]
-    fn whatever_still_wants_the_person_is_counted_apart() {
-        let done = ("Trail Notes".to_string(), Outcome::Done);
-        let left = (
-            "Shop News".to_string(),
-            Outcome::OpenInBrowser("https://shop.example/u".to_string()),
-        );
-        assert_eq!(
-            summary(&[
-                done.clone(),
-                ("Old Forum".to_string(), Outcome::Done),
-                left.clone()
-            ]),
-            "Unsubscribed from 2. 1 needs you"
-        );
-        assert_eq!(
-            summary(&[
-                left.clone(),
-                ("Old Forum".to_string(), Outcome::Unclear(String::new()))
-            ]),
-            "2 lists need you"
         );
     }
 
     #[test]
     fn one_list_that_did_not_work_says_which_and_why() {
-        let name = "Trail Notes".to_string();
         assert_eq!(
-            summary(&[(
-                name.clone(),
-                Outcome::Failed("the page took longer than 20 seconds".into())
-            )]),
+            summary(
+                "Trail Notes",
+                &Outcome::Failed("the page took longer than 20 seconds".into())
+            ),
             "Could not unsubscribe from Trail Notes: the page took longer than 20 seconds"
         );
         assert_eq!(
-            summary(&[(name, Outcome::Unclear(String::new()))]),
+            summary("Trail Notes", &Outcome::Unclear(String::new())),
             "Sent, but the page did not say it worked"
         );
     }

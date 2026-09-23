@@ -51,25 +51,17 @@ impl MainWindow {
                 .chain(meta.cc.iter())
                 .map(|a| a.email.clone())
                 .collect::<Vec<String>>();
-            Some((
-                open.target(),
-                sender,
-                email,
-                choose_with_body(
-                    body.list_unsubscribe.as_deref(),
-                    body.one_click_unsubscribe,
-                    body.html.as_deref(),
-                ),
-                sent_to,
-            ))
+            // `list_unsubscribe` answers only a message this finds a way
+            // out of, so a link Penguin Mail cannot use never gets here.
+            let method = choose_with_body(
+                body.list_unsubscribe.as_deref(),
+                body.one_click_unsubscribe,
+                body.html.as_deref(),
+            )?;
+            Some((open.target(), sender, email, method, sent_to))
         });
         let Some((asked_on, sender, email, method, sent_to)) = found else {
             return self.toast(&gettext("This message has no unsubscribe link"));
-        };
-        let Some(method) = method else {
-            return self.toast(&gettext(
-                "This message's unsubscribe link is not one Penguin Mail can use",
-            ));
         };
         let account = self
             .account(asked_on.account_id)
@@ -163,7 +155,7 @@ impl MainWindow {
                 this.left_list(asked_on.account_id, &asked_on.thread_id);
                 this.keep_left(asked_on.account_id, email, how).await;
             }
-            let said = summary(&[(sender, outcome.clone())]);
+            let said = summary(&sender, &outcome);
             match outcome {
                 // The form went in and the page said nothing either way.
                 // Whoever wants to know can look at what it did say,
