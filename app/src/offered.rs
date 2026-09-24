@@ -130,6 +130,50 @@ impl Filing {
         }
     }
 
+    pub fn rename_heading(self) -> String {
+        match self {
+            Filing::Labels => gettext("Rename Label"),
+            Filing::Folders => gettext("Rename Folder"),
+        }
+    }
+
+    pub fn rename_body(self) -> String {
+        match self {
+            Filing::Labels => gettext("Labels nested under it move along."),
+            Filing::Folders => gettext("Folders nested under it move along."),
+        }
+    }
+
+    /// What renaming says when the server refuses, with `{reason}` still
+    /// to fill.
+    pub fn rename_failed(self) -> String {
+        match self {
+            Filing::Labels => gettext("Could not rename the label: {reason}"),
+            Filing::Folders => gettext("Could not rename the folder: {reason}"),
+        }
+    }
+
+    /// What deleting one does to its mail. A label comes off the mail and
+    /// the mail stays; a folder holds the only copy, and its mail goes
+    /// with it.
+    pub fn delete_body(self) -> String {
+        match self {
+            Filing::Labels => {
+                gettext("Its mail stays in Gmail, without the label. Nested labels stay too.")
+            }
+            Filing::Folders => gettext("The mail in the folder is deleted with it."),
+        }
+    }
+
+    /// What deleting says when the server refuses, with `{reason}` still
+    /// to fill.
+    pub fn delete_failed(self) -> String {
+        match self {
+            Filing::Labels => gettext("Could not delete the label: {reason}"),
+            Filing::Folders => gettext("Could not delete the folder: {reason}"),
+        }
+    }
+
     /// What the picker says when the account has nothing to file in yet.
     pub fn none_yet(self) -> String {
         match self {
@@ -324,6 +368,48 @@ mod tests {
         assert_eq!(
             Filing::Folders.one_account_only(),
             "Select mail from one account to move it."
+        );
+    }
+
+    #[test]
+    fn renaming_and_deleting_keep_the_gmail_words_for_labels() {
+        assert_eq!(Filing::Labels.rename_heading(), "Rename Label");
+        assert_eq!(
+            Filing::Labels.rename_body(),
+            "Labels nested under it move along."
+        );
+        assert_eq!(
+            Filing::Labels.rename_failed(),
+            "Could not rename the label: {reason}"
+        );
+        assert_eq!(
+            Filing::Labels.delete_body(),
+            "Its mail stays in Gmail, without the label. Nested labels stay too."
+        );
+        assert_eq!(
+            Filing::Labels.delete_failed(),
+            "Could not delete the label: {reason}"
+        );
+    }
+
+    #[test]
+    fn deleting_a_folder_says_its_mail_goes_with_it() {
+        assert_eq!(Filing::Folders.rename_heading(), "Rename Folder");
+        assert_eq!(
+            Filing::Folders.rename_body(),
+            "Folders nested under it move along."
+        );
+        assert_eq!(
+            Filing::Folders.rename_failed(),
+            "Could not rename the folder: {reason}"
+        );
+        assert_eq!(
+            Filing::Folders.delete_body(),
+            "The mail in the folder is deleted with it."
+        );
+        assert_eq!(
+            Filing::Folders.delete_failed(),
+            "Could not delete the folder: {reason}"
         );
     }
 

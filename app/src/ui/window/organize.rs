@@ -90,14 +90,15 @@ impl MainWindow {
         let Some(current) = self.label_name(account_id, &label_id) else {
             return;
         };
+        let filing = Filing::of([self.offers(account_id)]);
         let entry = gtk::Entry::builder()
             .text(&current)
             .activates_default(true)
             .build();
         focus_when_shown(&entry);
         let dialog = adw::AlertDialog::builder()
-            .heading(gettext("Rename Label"))
-            .body(gettext("Labels nested under it move along."))
+            .heading(filing.rename_heading())
+            .body(filing.rename_body())
             .extra_child(&entry)
             .build();
         dialog.add_responses(&[
@@ -125,7 +126,7 @@ impl MainWindow {
                 .call(async move { sync.rename_label(&label_id, &wanted).await })
                 .await
             {
-                this.failed(&gettext("Could not rename the label: {reason}"), &err);
+                this.failed(&filing.rename_failed(), &err);
             }
         });
     }
@@ -134,9 +135,10 @@ impl MainWindow {
         let Some(name) = self.label_name(account_id, &label_id) else {
             return;
         };
+        let filing = Filing::of([self.offers(account_id)]);
         let question = confirm(
             &fill(&gettext("Delete “{name}”?"), &[("name", &name)]),
-            &gettext("Its mail stays in Gmail, without the label. Nested labels stay too."),
+            &filing.delete_body(),
             &gettext("Delete"),
             Tone::Destructive,
         );
@@ -158,7 +160,7 @@ impl MainWindow {
                     this.change_screen(|screen| screen.label_deleted(account_id, &label_id));
                     this.toast(&fill(&gettext("Deleted “{name}”"), &[("name", &name)]));
                 }
-                Err(err) => this.failed(&gettext("Could not delete the label: {reason}"), &err),
+                Err(err) => this.failed(&filing.delete_failed(), &err),
             }
         });
     }

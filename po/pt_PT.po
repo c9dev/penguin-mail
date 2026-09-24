@@ -1275,7 +1275,7 @@ msgstr "Marcar como lida"
 #: app/src/notify.rs:51 app/src/ui/conversation.rs:461
 #: app/src/ui/hide_my_email.rs:279 app/src/ui/queued.rs:58
 #: app/src/ui/templates.rs:149 app/src/ui/window/arrange.rs:92
-#: app/src/ui/window/organize.rs:140
+#: app/src/ui/window/organize.rs:142
 msgid "Delete"
 msgstr "Eliminar"
 
@@ -1358,40 +1358,82 @@ msgstr "Selecione correio de uma só conta para o etiquetar."
 msgid "Select mail from one account to move it."
 msgstr "Selecione correio de uma só conta para o mover."
 
+#: app/src/offered.rs:135
+msgid "Rename Label"
+msgstr "Mudar o nome da etiqueta"
+
 #: app/src/offered.rs:136
+msgid "Rename Folder"
+msgstr "Mudar o nome da pasta"
+
+#: app/src/offered.rs:142
+msgid "Labels nested under it move along."
+msgstr "As etiquetas aninhadas nela acompanham-na."
+
+#: app/src/offered.rs:143
+msgid "Folders nested under it move along."
+msgstr "As pastas aninhadas nela acompanham-na."
+
+#: app/src/offered.rs:151
+msgid "Could not rename the label: {reason}"
+msgstr "Não foi possível mudar o nome da etiqueta: {reason}"
+
+#: app/src/offered.rs:152
+msgid "Could not rename the folder: {reason}"
+msgstr "Não foi possível mudar o nome da pasta: {reason}"
+
+#: app/src/offered.rs:162
+msgid "Its mail stays in Gmail, without the label. Nested labels stay too."
+msgstr ""
+"O correio dela fica no Gmail, sem a etiqueta. As etiquetas aninhadas também "
+"ficam."
+
+#: app/src/offered.rs:164
+msgid "The mail in the folder is deleted with it."
+msgstr "O correio da pasta é eliminado com ela."
+
+#: app/src/offered.rs:172
+msgid "Could not delete the label: {reason}"
+msgstr "Não foi possível eliminar a etiqueta: {reason}"
+
+#: app/src/offered.rs:173
+msgid "Could not delete the folder: {reason}"
+msgstr "Não foi possível eliminar a pasta: {reason}"
+
+#: app/src/offered.rs:180
 msgid "This account has no labels yet."
 msgstr "Esta conta ainda não tem etiquetas."
 
-#: app/src/offered.rs:137
+#: app/src/offered.rs:181
 msgid "This account has no folders yet."
 msgstr "Esta conta ainda não tem pastas."
 
-#: app/src/offered.rs:145
+#: app/src/offered.rs:189
 msgid "{provider} has no calendar that other apps can reach."
 msgstr ""
 "{provider} não tem um calendário a que outras aplicações possam aceder."
 
-#: app/src/offered.rs:146
+#: app/src/offered.rs:190
 msgid "{provider} keeps no contacts that other apps can reach."
 msgstr "{provider} não guarda contactos a que outras aplicações possam aceder."
 
-#: app/src/offered.rs:147
+#: app/src/offered.rs:191
 msgid "{provider} has no rules that other apps can change."
 msgstr "{provider} não tem regras que outras aplicações possam alterar."
 
-#: app/src/offered.rs:149
+#: app/src/offered.rs:193
 msgid "{provider} has no automatic reply that other apps can change."
 msgstr ""
 "{provider} não tem uma resposta automática que outras aplicações possam "
 "alterar."
 
-#: app/src/offered.rs:152
+#: app/src/offered.rs:196
 msgid "{provider} cannot delete mail for good. Delete moves it to the Trash."
 msgstr ""
 "{provider} não consegue eliminar mensagens definitivamente. Eliminar move-as "
 "para o Lixo."
 
-#: app/src/offered.rs:154
+#: app/src/offered.rs:198
 msgid "{provider} does not sort the inbox into categories."
 msgstr "{provider} não organiza a caixa de entrada em categorias."
 
@@ -2693,7 +2735,7 @@ msgstr "Adicionar"
 #: app/src/ui/smart_editor.rs:150 app/src/ui/templates.rs:239
 #: app/src/ui/unsubscribe.rs:95 app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
 #: app/src/ui/window/arrange.rs:132 app/src/ui/window/images.rs:101
-#: app/src/ui/window/organize.rs:56 app/src/ui/window/organize.rs:104
+#: app/src/ui/window/organize.rs:56 app/src/ui/window/organize.rs:105
 msgid "Cancel"
 msgstr "Cancelar"
 
@@ -3875,7 +3917,7 @@ msgstr "Onde o usou?"
 
 #: app/src/ui/hide_my_email.rs:348 app/src/ui/rules.rs:307
 #: app/src/ui/smart_editor.rs:146 app/src/ui/templates.rs:235
-#: app/src/ui/window/organize.rs:57 app/src/ui/window/organize.rs:280
+#: app/src/ui/window/organize.rs:57 app/src/ui/window/organize.rs:282
 msgid "Create"
 msgstr "Criar"
 
@@ -5336,7 +5378,7 @@ msgstr "O Penguin Mail mostra o novo idioma depois de reiniciar"
 msgid "Restart"
 msgstr "Reiniciar"
 
-#: app/src/ui/window/arrange.rs:90 app/src/ui/window/organize.rs:138
+#: app/src/ui/window/arrange.rs:90 app/src/ui/window/organize.rs:140
 msgid "Delete “{name}”?"
 msgstr "Eliminar “{name}”?"
 
@@ -5425,8 +5467,8 @@ msgstr "Abra primeiro uma conversa"
 
 #: app/src/ui/window/detached.rs:147 app/src/ui/window/export.rs:75
 #: app/src/ui/window/export.rs:138 app/src/ui/window/organize.rs:72
-#: app/src/ui/window/organize.rs:120 app/src/ui/window/organize.rs:149
-#: app/src/ui/window/organize.rs:177 app/src/ui/window/senders.rs:283
+#: app/src/ui/window/organize.rs:121 app/src/ui/window/organize.rs:151
+#: app/src/ui/window/organize.rs:179 app/src/ui/window/senders.rs:283
 msgid "That account is not connected"
 msgstr "Essa conta não está ligada"
 
@@ -5636,41 +5678,19 @@ msgstr "Nome, ou Pai/Nome para a aninhar"
 msgid "Created “{name}”"
 msgstr "“{name}” criada"
 
-#: app/src/ui/window/organize.rs:99
-msgid "Rename Label"
-msgstr "Mudar o nome da etiqueta"
-
-#: app/src/ui/window/organize.rs:100
-msgid "Labels nested under it move along."
-msgstr "As etiquetas aninhadas nela acompanham-na."
-
-#: app/src/ui/window/organize.rs:105
+#: app/src/ui/window/organize.rs:106
 msgid "Rename"
 msgstr "Mudar o nome"
 
-#: app/src/ui/window/organize.rs:128
-msgid "Could not rename the label: {reason}"
-msgstr "Não foi possível mudar o nome da etiqueta: {reason}"
-
-#: app/src/ui/window/organize.rs:139
-msgid "Its mail stays in Gmail, without the label. Nested labels stay too."
-msgstr ""
-"O correio dela fica no Gmail, sem a etiqueta. As etiquetas aninhadas também "
-"ficam."
-
-#: app/src/ui/window/organize.rs:159
+#: app/src/ui/window/organize.rs:161
 msgid "Deleted “{name}”"
 msgstr "“{name}” eliminada"
 
-#: app/src/ui/window/organize.rs:161
-msgid "Could not delete the label: {reason}"
-msgstr "Não foi possível eliminar a etiqueta: {reason}"
-
-#: app/src/ui/window/organize.rs:190
+#: app/src/ui/window/organize.rs:192
 msgid "Could not change the color: {reason}"
 msgstr "Não foi possível alterar a cor: {reason}"
 
-#: app/src/ui/window/organize.rs:282
+#: app/src/ui/window/organize.rs:284
 msgid "Only Where It Exists"
 msgstr "Só onde já existe"
 
