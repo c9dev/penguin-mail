@@ -1,7 +1,8 @@
-//! Smart mailboxes: saved conditions that become a Gmail search.
+//! Smart mailboxes: saved conditions that become a query tree.
 
 use serde::{Deserialize, Serialize};
 
+use crate::query::{self, MEGABYTE, Query, Term};
 use crate::translate::gettext;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -85,58 +86,50 @@ impl Field {
 }
 
 impl Condition {
-    /// The Gmail search term, or `None` when the value is missing or unusable.
-    fn term(&self) -> Option<String> {
+    /// The condition as a query term, or `None` when the value is missing
+    /// or unusable. Text keeps what the person typed, trimmed.
+    fn term(&self) -> Option<Term> {
         let value = self.value.trim();
-        let quoted = || {
-            let clean: String = value
+        // Quotes and parentheses alone name nothing to search for.
+        let text = || (!query::plain(value).is_empty()).then(|| value.to_string());
+        // A label name keeps its inner spaces, which Gmail spells as
+        // dashes, so only a name of quotes and parentheses alone is empty.
+        let label = || {
+            value
                 .chars()
-                .filter(|c| !matches!(c, '"' | '(' | ')'))
-                .collect();
-            (!clean.trim().is_empty()).then(|| {
-                if clean.contains(char::is_whitespace) {
-                    format!("\"{}\"", clean.trim())
-                } else {
-                    clean.trim().to_string()
-                }
-            })
+                .any(|c| !matches!(c, '"' | '(' | ')'))
+                .then(|| value.to_string())
         };
         let number = || value.parse::<u32>().ok().filter(|n| *n > 0);
         Some(match self.field {
-            Field::From => format!("from:{}", quoted()?),
-            Field::To => format!("to:{}", quoted()?),
-            Field::Subject => format!("subject:{}", quoted()?),
-            Field::Words => quoted()?,
-            // Gmail writes spaces and slashes in label names as dashes.
-            Field::Label => format!(
-                "label:{}",
-                value
-                    .trim()
-                    .to_lowercase()
-                    .replace(|c: char| c.is_whitespace() || c == '/', "-")
-            )
-            .chars()
-            .filter(|c| !matches!(c, '"' | '(' | ')'))
-            .collect::<String>(),
-            Field::NewerThanDays => format!("newer_than:{}d", number()?),
-            Field::LargerThanMb => format!("larger:{}M", number()?),
-            Field::HasAttachment => "has:attachment".into(),
-            Field::Unread => "is:unread".into(),
-            Field::Flagged => "is:starred".into(),
+            Field::From => Term::From(text()?),
+            Field::To => Term::To(text()?),
+            Field::Subject => Term::Subject(text()?),
+            Field::Words => Term::Words(text()?),
+            Field::Label => Term::MailboxNamed(label()?),
+            Field::NewerThanDays => Term::NewerThan(number()?),
+            Field::LargerThanMb => Term::Larger(i64::from(number()?) * MEGABYTE),
+            Field::HasAttachment => Term::HasAttachment,
+            Field::Unread => Term::Unread,
+            Field::Flagged => Term::Flagged,
         })
-        .filter(|term| term != "label:")
     }
 }
 
 impl SmartMailbox {
-    /// The Gmail search for this mailbox, or `None` with no usable condition.
-    pub fn query(&self) -> Option<String> {
-        let terms: Vec<String> = self.conditions.iter().filter_map(Condition::term).collect();
+    /// The query for this mailbox, or `None` with no usable condition.
+    pub fn query(&self) -> Option<Query> {
+        let mut terms: Vec<Query> = self
+            .conditions
+            .iter()
+            .filter_map(Condition::term)
+            .map(Query::Term)
+            .collect();
         match terms.len() {
             0 => None,
-            1 => terms.into_iter().next(),
-            _ if self.match_all => Some(terms.join(" ")),
-            _ => Some(format!("{{{}}}", terms.join(" "))),
+            1 => terms.pop(),
+            _ if self.match_all => Some(Query::And(terms)),
+            _ => Some(Query::Or(terms)),
         }
     }
 }
@@ -163,21 +156,30 @@ mod tests {
     }
 
     #[test]
-    fn all_conditions_join_and_any_uses_braces() {
+    fn all_conditions_make_an_and_and_any_makes_an_or() {
         let conditions = vec![
             cond(Field::From, "ann@example.com"),
-            cond(Field::Subject, "quarterly report"),
             cond(Field::Unread, "ignored"),
             cond(Field::NewerThanDays, "7"),
         ];
+        let terms = vec![
+            Query::Term(Term::From("ann@example.com".into())),
+            Query::Term(Term::Unread),
+            Query::Term(Term::NewerThan(7)),
+        ];
         assert_eq!(
-            mailbox(true, conditions.clone()).query().as_deref(),
-            Some("from:ann@example.com subject:\"quarterly report\" is:unread newer_than:7d")
+            mailbox(true, conditions.clone()).query(),
+            Some(Query::And(terms.clone()))
         );
-        assert_eq!(
-            mailbox(false, conditions).query().as_deref(),
-            Some("{from:ann@example.com subject:\"quarterly report\" is:unread newer_than:7d}")
-        );
+        assert_eq!(mailbox(false, conditions).query(), Some(Query::Or(terms)));
+    }
+
+    #[test]
+    fn one_usable_condition_stands_alone() {
+        let one = vec![cond(Field::Subject, "  quarterly report ")];
+        let subject = Some(Query::Term(Term::Subject("quarterly report".into())));
+        assert_eq!(mailbox(true, one.clone()).query(), subject);
+        assert_eq!(mailbox(false, one).query(), subject);
     }
 
     #[test]
@@ -185,15 +187,24 @@ mod tests {
         let conditions = vec![
             cond(Field::From, "  "),
             cond(Field::LargerThanMb, "lots"),
+            cond(Field::NewerThanDays, "0"),
             cond(Field::Label, "Work/Clients"),
         ];
         assert_eq!(
-            mailbox(true, conditions).query().as_deref(),
-            Some("label:work-clients")
+            mailbox(true, conditions).query(),
+            Some(Query::Term(Term::MailboxNamed("Work/Clients".into())))
         );
+        assert_eq!(mailbox(true, vec![cond(Field::Words, "\"()")]).query(), None);
+        assert_eq!(mailbox(true, vec![cond(Field::Label, "()")]).query(), None);
+        assert_eq!(mailbox(true, vec![]).query(), None);
+    }
+
+    #[test]
+    fn a_size_counts_in_megabytes_and_fits_the_largest_value() {
+        let largest = vec![cond(Field::LargerThanMb, "4294967295")];
         assert_eq!(
-            mailbox(true, vec![cond(Field::Words, "\"()")]).query(),
-            None
+            mailbox(true, largest).query(),
+            Some(Query::Term(Term::Larger(4_294_967_295 * MEGABYTE)))
         );
     }
 }

@@ -217,10 +217,15 @@ impl<G: GmailApi> MailBackend for Google<G> {
         query: &SearchQuery,
         limit: usize,
     ) -> Result<Vec<RemoteRef>, BackendError> {
-        let SearchQuery::Native(text) = query;
+        // A tree prints as the text the folders and smart mailboxes sent
+        // before they became trees, so Gmail answers the same search.
+        let text = match query {
+            SearchQuery::Native(text) => text.clone(),
+            SearchQuery::Tree(tree) => mailrs_gmail::query::print(tree),
+        };
         // One call of 5 units whatever the count, up to Gmail's page of 500.
         let size = u32::try_from(limit).unwrap_or(u32::MAX).min(ID_PAGE_SIZE);
-        let page = paced(self.gmail.list_messages(text, None, size)).await?;
+        let page = paced(self.gmail.list_messages(&text, None, size)).await?;
         Ok(page
             .messages
             .into_iter()

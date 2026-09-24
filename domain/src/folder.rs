@@ -1,8 +1,10 @@
 //! Gmail's archived mail, Spam, Trash, and All Mail, which the local window
 //! does not hold.
-//! The app lists them with a Gmail search instead.
+//! The app lists them with a query tree instead, which the Gmail adapter
+//! prints as a Gmail search.
 
-use crate::{MessageMeta, Role};
+use crate::query::Query;
+use crate::{MailSet, MessageMeta, Role};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Folder {
@@ -24,13 +26,28 @@ impl Folder {
         Folder::AllMail,
     ];
 
-    /// The Gmail search that lists this folder.
-    pub fn query(self) -> &'static str {
+    /// The query that lists this folder. Archive and All Mail leave out
+    /// the same mail [`Folder::holds`] does.
+    pub fn query(self) -> Query {
+        let outside = |roles: &[Role]| {
+            Query::And(
+                roles
+                    .iter()
+                    .map(|role| Query::not_in(MailSet::Role(*role)))
+                    .collect(),
+            )
+        };
         match self {
-            Folder::Archive => "-in:inbox -in:sent -in:drafts -in:spam -in:trash",
-            Folder::Junk => "in:spam",
-            Folder::Trash => "in:trash",
-            Folder::AllMail => "-in:spam -in:trash",
+            Folder::Archive => outside(&[
+                Role::Inbox,
+                Role::Sent,
+                Role::Drafts,
+                Role::Junk,
+                Role::Trash,
+            ]),
+            Folder::Junk => Query::is_in(MailSet::Role(Role::Junk)),
+            Folder::Trash => Query::is_in(MailSet::Role(Role::Trash)),
+            Folder::AllMail => outside(&[Role::Junk, Role::Trash]),
         }
     }
 
@@ -51,7 +68,8 @@ impl Folder {
 mod tests {
     use super::Folder;
     use crate::mailbox::keyword::SEEN;
-    use crate::{MessageMeta, Role};
+    use crate::query::Query;
+    use crate::{MailSet, MessageMeta, Role};
 
     /// A read message in `mailboxes`, which have `roles`.
     fn message(mailboxes: &[&str], roles: &[Role]) -> MessageMeta {
@@ -88,5 +106,26 @@ mod tests {
         for (place, role) in placed {
             assert!(!Folder::Archive.holds(&message(&[place], &[role])), "{place}");
         }
+    }
+
+    #[test]
+    fn each_folder_names_the_roles_it_holds_or_leaves_out() {
+        let not = |role| Query::not_in(MailSet::Role(role));
+        assert_eq!(Folder::Junk.query(), Query::is_in(MailSet::Role(Role::Junk)));
+        assert_eq!(Folder::Trash.query(), Query::is_in(MailSet::Role(Role::Trash)));
+        assert_eq!(
+            Folder::AllMail.query(),
+            Query::And(vec![not(Role::Junk), not(Role::Trash)])
+        );
+        assert_eq!(
+            Folder::Archive.query(),
+            Query::And(vec![
+                not(Role::Inbox),
+                not(Role::Sent),
+                not(Role::Drafts),
+                not(Role::Junk),
+                not(Role::Trash),
+            ])
+        );
     }
 }

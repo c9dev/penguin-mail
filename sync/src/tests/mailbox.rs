@@ -373,6 +373,49 @@ async fn a_smart_mailbox_asks_gmail_and_says_when_it_has_no_conditions() {
     assert!(bare.rows.is_empty());
 }
 
+/// Folders and smart mailboxes list through query trees, and Gmail must
+/// receive the search text it received before they did.
+#[tokio::test]
+async fn folders_and_smart_mailboxes_send_gmail_the_text_they_sent_before() {
+    let h = seeded().await;
+    h.fake.with(|s| s.searched.clear());
+    for folder in Folder::ALL {
+        let mailbox = Mailbox::Folder {
+            account_id: None,
+            folder,
+        };
+        list(&h, &mailbox, &view()).await;
+    }
+    let smart = Mailbox::Smart(SmartMailbox {
+        id: "s1".into(),
+        name: "Ann, unread".into(),
+        account: None,
+        match_all: false,
+        conditions: vec![
+            Condition {
+                field: Field::From,
+                value: "Ann Smith".into(),
+            },
+            Condition {
+                field: Field::Unread,
+                value: String::new(),
+            },
+        ],
+    });
+    list(&h, &smart, &view()).await;
+
+    assert_eq!(
+        h.fake.with(|s| s.searched.clone()),
+        [
+            "-in:inbox -in:sent -in:drafts -in:spam -in:trash",
+            "in:spam",
+            "in:trash",
+            "-in:spam -in:trash",
+            "{from:\"Ann Smith\" is:unread}",
+        ]
+    );
+}
+
 #[tokio::test]
 async fn a_gmail_folder_and_a_search_come_from_gmail_not_the_store() {
     let h = seeded().await;

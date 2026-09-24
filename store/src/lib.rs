@@ -17,6 +17,7 @@ pub mod mailboxes;
 pub mod messages;
 pub mod newsletters;
 pub mod outbox;
+pub mod query;
 pub mod reminders;
 mod schema;
 pub mod templates;

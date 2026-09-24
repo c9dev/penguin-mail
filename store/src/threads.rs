@@ -155,18 +155,18 @@ pub struct ThreadFilter {
 
 /// SQL text with anonymous `?` placeholders, and their values in order.
 #[derive(Default)]
-struct Sql {
-    text: String,
-    params: Vec<Value>,
+pub(crate) struct Sql {
+    pub(crate) text: String,
+    pub(crate) params: Vec<Value>,
 }
 
 impl Sql {
-    fn push(&mut self, text: &str) -> &mut Self {
+    pub(crate) fn push(&mut self, text: &str) -> &mut Self {
         self.text.push_str(text);
         self
     }
 
-    fn bind(&mut self, value: impl Into<Value>) -> &mut Self {
+    pub(crate) fn bind(&mut self, value: impl Into<Value>) -> &mut Self {
         self.text.push('?');
         self.params.push(value.into());
         self
@@ -185,7 +185,7 @@ impl Sql {
 
     /// `?, ?, …` for each key. An empty list leaves `IN ()`, which SQLite
     /// reads as false.
-    fn bind_keys(&mut self, keys: &[i64]) -> &mut Self {
+    pub(crate) fn bind_keys(&mut self, keys: &[i64]) -> &mut Self {
         for (i, key) in keys.iter().enumerate() {
             if i > 0 {
                 self.text.push_str(", ");

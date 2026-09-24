@@ -173,6 +173,9 @@ pub struct FakeState {
     /// The time `newer_than` and `older_than` count back from. `None`
     /// reads the clock; a test whose mail sits at fixed dates pins it.
     pub clock: Option<EpochMillis>,
+    /// The search text of each `users.messages.list` call, oldest first,
+    /// so a test can hold the app to the searches it sent before.
+    pub searched: Vec<String>,
 }
 
 /// Reads a sent message's bytes, or answers `None` to keep no copy.
@@ -338,6 +341,7 @@ impl FakeGmail {
                 withheld: BTreeSet::new(),
                 calendar_off: None,
                 clock: None,
+                searched: Vec::new(),
             }),
         }
     }
@@ -594,6 +598,7 @@ impl FakeGmail {
             })?,
         };
         Ok(self.with(|s| {
+            s.searched.push(query.to_string());
             let mut found = s.search(query);
             if let Some(label_id) = label_id {
                 found.retain(|id| has_label(&s.messages[id], label_id));

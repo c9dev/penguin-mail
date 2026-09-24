@@ -1574,12 +1574,13 @@ mod tests {
     async fn the_folders_come_from_the_demo_gmail() {
         let demo = demo().await;
         let account = demo.account(0).await;
-        assert_eq!(demo.found(account, Folder::Junk.query()).await, ["prize-1"]);
+        let text = |folder: Folder| mailrs_gmail::query::print(&folder.query());
+        assert_eq!(demo.found(account, &text(Folder::Junk)).await, ["prize-1"]);
         assert_eq!(
-            demo.found(account, Folder::Trash.query()).await,
+            demo.found(account, &text(Folder::Trash)).await,
             ["webinar-1"]
         );
-        let all = demo.found(account, Folder::AllMail.query()).await;
+        let all = demo.found(account, &text(Folder::AllMail)).await;
         assert!(!all.contains(&"prize-1".to_string()));
         assert!(!all.contains(&"webinar-1".to_string()));
         assert!(all.contains(&"hike-1".to_string()));
