@@ -83,6 +83,71 @@ async fn every_history_page_is_applied() {
     assert_eq!(h.history_id().await, Some(105));
 }
 
+/// History comes two changes a page here, so what happens to one message
+/// spreads over three pages. A message starred and archived on the first
+/// page and put back on the second ends in the inbox, still starred. One
+/// delivered on the second and deleted on the third is neither stored nor
+/// announced.
+#[tokio::test]
+async fn history_pages_apply_in_the_order_gmail_sent_them() {
+    let h = harness().await;
+    let now = now_millis();
+    h.fake.seed(meta("a", "ta", now - DAY, &["INBOX"]));
+    h.bootstrap_all().await;
+    h.drain();
+    h.fake.remote_relabel("a", &["STARRED"], &[]);
+    h.fake.remote_relabel("a", &[], &["INBOX"]);
+    h.fake.remote_relabel("a", &["INBOX"], &[]);
+    h.fake
+        .deliver(meta("brief", "tbrief", now, &["INBOX", "UNREAD"]));
+    h.fake.remote_delete("brief");
+    h.fake.reset_usage();
+
+    h.sync.incremental().await.unwrap();
+
+    assert_eq!(h.fake.usage().calls_to("users.history.list"), 3);
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["ta"]);
+    assert_eq!(h.labels_of("a").await, ["INBOX", "STARRED"]);
+    assert!(h.thread("tbrief").await.is_none());
+    assert!(
+        !h.drain()
+            .iter()
+            .any(|e| matches!(e, ChangeEvent::NewMail { .. }))
+    );
+    assert_eq!(h.history_id().await, Some(105));
+}
+
+/// Gmail answers the first history page and garbles the second. Nothing
+/// from the first page is stored and the cursor stays put, so the next
+/// check replays both pages.
+#[tokio::test]
+async fn a_garbled_later_history_page_applies_nothing() {
+    let h = harness().await;
+    h.bootstrap_all().await;
+    let now = now_millis();
+    for i in 0..3 {
+        h.fake.deliver(meta(
+            &format!("m{i}"),
+            &format!("t{i}"),
+            now - i,
+            &["INBOX"],
+        ));
+    }
+    h.fake.fail_call(
+        "users.history.list",
+        1,
+        GmailError::Decode("expected value at line 1 column 1".into()),
+    );
+
+    assert!(h.sync.incremental().await.is_err());
+    assert!(h.threads(MailSet::Role(Role::Inbox)).await.is_empty());
+    assert_eq!(h.history_id().await, Some(100));
+
+    h.sync.incremental().await.unwrap();
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await.len(), 3);
+    assert_eq!(h.history_id().await, Some(103));
+}
+
 #[tokio::test]
 async fn expired_history_bootstraps_again_and_sweeps_stale_mail() {
     let h = harness().await;

@@ -90,6 +90,9 @@ pub struct FakeState {
     pub page_size: usize,
     /// Errors returned by the next calls, one per call.
     pub failures: VecDeque<GmailError>,
+    /// Errors returned by a later call to one method, after the calls to
+    /// it that come first have answered.
+    planned: Vec<Planned>,
     /// How many of the next calls panic, as a bug in the code reading
     /// Gmail's answer would.
     pub panics: usize,
@@ -185,6 +188,13 @@ pub struct SentCopy {
     pub references: Vec<String>,
     /// Each attachment's bytes, by the attachment id `body` names.
     pub files: Vec<(String, Vec<u8>)>,
+}
+
+/// An error a test plans for one method's call, after `skip` calls to it.
+struct Planned {
+    method: &'static str,
+    skip: usize,
+    err: GmailError,
 }
 
 /// Calls made and quota units spent, priced from Gmail's usage-limits
@@ -295,6 +305,7 @@ impl FakeGmail {
                 bodies: HashMap::new(),
                 page_size: 2,
                 failures: VecDeque::new(),
+                planned: Vec::new(),
                 panics: 0,
                 lost: VecDeque::new(),
                 held: HashMap::new(),
@@ -445,6 +456,12 @@ impl FakeGmail {
         self.with(|s| s.failures.push_back(err));
     }
 
+    /// Fails a later call to `method`, such as `"users.history.list"`,
+    /// with `err`: the first `skip` calls to it answer as usual.
+    pub fn fail_call(&self, method: &'static str, skip: usize, err: GmailError) {
+        self.with(|s| s.planned.push(Planned { method, skip, err }));
+    }
+
     /// Makes the next `count` calls panic.
     pub fn panic_next(&self, count: usize) {
         self.with(|s| s.panics += count);
@@ -548,6 +565,12 @@ impl FakeGmail {
                 return Err(GmailError::RateLimited {
                     retry_after: Some(std::time::Duration::from_secs(1)),
                 });
+            }
+            if let Some(at) = s.planned.iter().position(|p| p.method == method) {
+                match s.planned[at].skip {
+                    0 => return Err(s.planned.remove(at).err),
+                    _ => s.planned[at].skip -= 1,
+                }
             }
             s.failures.pop_front().map_or(Ok(()), Err)
         })

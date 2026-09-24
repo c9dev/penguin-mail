@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use mailrs_domain::{AccountState, ChangeEvent, MailSet, Role};
 use mailrs_store::{accounts, labels, messages};
 
@@ -62,6 +64,47 @@ async fn backfill_finishes_the_window_then_stops() {
     assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["ta", "tb", "tc"]);
     assert!(h.cursor().await.backfill_done);
     assert!(!h.sync.backfill_step().await.unwrap());
+}
+
+/// Quitting partway through the first load and starting again carries on
+/// from the saved page: the pages already stored are not listed again, and
+/// the sync generation stays the one the first run started.
+#[tokio::test]
+async fn backfill_carries_on_from_the_saved_page_after_a_restart() {
+    let h = harness().await;
+    let now = now_millis();
+    for (i, id) in ["a", "b", "c", "d", "e"].into_iter().enumerate() {
+        h.fake.seed(meta(
+            id,
+            &format!("t{id}"),
+            now - i as i64 * 1000,
+            &["INBOX"],
+        ));
+    }
+    h.sync.bootstrap().await.unwrap();
+    assert!(h.sync.backfill_step().await.unwrap());
+    let before = h.cursor().await;
+    assert_eq!(before.backfill_cursor.as_deref(), Some("4"));
+    h.fake.reset_usage();
+
+    // A new run starts as the engine's loop does: history first, then the
+    // next window page.
+    let restarted = h.sync_with(Duration::from_secs(60));
+    restarted.incremental().await.unwrap();
+    assert!(!restarted.backfill_step().await.unwrap());
+
+    assert_eq!(
+        h.threads(MailSet::Role(Role::Inbox)).await,
+        ["ta", "tb", "tc", "td", "te"]
+    );
+    let after = h.cursor().await;
+    assert!(after.backfill_done);
+    assert_eq!(after.sync_gen, before.sync_gen);
+    let usage = h.fake.usage();
+    assert_eq!(usage.calls_to("users.messages.list"), 1, "{usage:?}");
+    // Only e, the one message the first run had not reached, is fetched.
+    let fetches = usage.calls_to("users.messages.get") + usage.calls_to("users.threads.get");
+    assert_eq!(fetches, 1, "{usage:?}");
 }
 
 /// The demo and the assistant's tests start on this. It has to store

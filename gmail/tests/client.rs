@@ -253,6 +253,44 @@ async fn a_metadata_fetch_asks_for_the_unsubscribe_headers() {
     );
 }
 
+/// A 200 whose body is not what Gmail documents is a decode error, which
+/// sync retries, never an empty page. An answer without `historyId` read
+/// as an empty page would move the sync cursor back to 0.
+#[tokio::test]
+async fn a_malformed_answer_is_a_decode_error() {
+    let server = MockServer::start().await;
+    mount_token(&server, 1).await;
+    for (start, body) in [
+        ("10", r#"{"history": [{"id": "11", "#),
+        ("20", ""),
+        ("30", r#"{"history": []}"#),
+        ("40", r#"{"historyId": "not a number"}"#),
+    ] {
+        Mock::given(method("GET"))
+            .and(path(format!("{API}/history")))
+            .and(query_param("startHistoryId", start))
+            .respond_with(ResponseTemplate::new(200).set_body_string(body))
+            .mount(&server)
+            .await;
+    }
+    Mock::given(method("GET"))
+        .and(path(format!("{API}/messages/x")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"id": "x"})))
+        .mount(&server)
+        .await;
+
+    let client = client(&server);
+    for start in [10, 20, 30, 40] {
+        let answer = client.history(start, None).await;
+        assert!(
+            matches!(answer, Err(GmailError::Decode(_))),
+            "start {start}: {answer:?}"
+        );
+    }
+    let answer = client.message_metadata("x").await;
+    assert!(matches!(answer, Err(GmailError::Decode(_))), "{answer:?}");
+}
+
 #[tokio::test]
 async fn history_is_converted_to_changes() {
     let server = MockServer::start().await;
