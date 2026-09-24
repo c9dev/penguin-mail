@@ -538,3 +538,30 @@ async fn a_path_the_cached_raw_message_lacks_is_fetched_by_itself() {
     assert!(h.sync.cached_raw("m1").is_some());
     assert_eq!(h.sync.attachment("m1", &path).await.unwrap(), vec![1, 2, 3]);
 }
+
+/// Gmail's size estimate can put a message under the raw limit while
+/// its bytes come to more. The raw message the body was read from still
+/// serves the file opened after it, rather than a second download.
+#[tokio::test]
+async fn a_message_read_raw_stays_cached_whatever_its_real_size() {
+    use base64::Engine;
+    let h = harness().await;
+    let pdf = base64::engine::general_purpose::STANDARD.encode(vec![7u8; crate::RAW_LIMIT as usize]);
+    let raw = format!(
+        "Subject: Plan\r\nContent-Type: multipart/mixed; boundary=b\r\n\r\n\
+         --b\r\nContent-Type: text/plain\r\n\r\nSee the plan\r\n\
+         --b\r\nContent-Type: application/pdf; name=\"plan.pdf\"\r\n\
+         Content-Transfer-Encoding: base64\r\n\r\n{pdf}\r\n--b--\r\n"
+    );
+    let mut m = meta("m1", "t1", 1, &["INBOX"]);
+    m.size = crate::RAW_LIMIT - 1;
+    h.fake.with(|s| {
+        s.messages.insert("m1".into(), m);
+        s.raws.insert("m1".into(), raw.into_bytes());
+    });
+    h.sync.ensure_thread("t1").await.unwrap();
+    let body = h.sync.body("m1").await.unwrap();
+    let file = h.sync.attachment("m1", &body.attachments[0].part_id).await.unwrap();
+    assert_eq!(file.len(), crate::RAW_LIMIT as usize);
+    assert_eq!(h.fake.with(|s| (s.structure_fetches, s.raw_fetches)), (0, 1));
+}

@@ -103,7 +103,8 @@ impl AccountSync {
     }
 
     /// The message as the server holds it, from the raw cache or from one
-    /// fetch, which fills the cache when the message is under the limit.
+    /// fetch, which fills the cache when the message is under the limit
+    /// by its bytes or by the size the store holds for it.
     pub(crate) async fn raw(&self, message_id: &str) -> Result<Arc<Vec<u8>>, SyncError> {
         if let Some(bytes) = self.cached_raw(message_id) {
             return Ok(bytes);
@@ -118,8 +119,12 @@ impl AccountSync {
             .ok_or(BackendError::NotFound)?;
         let bytes = Arc::new(fetched.bytes);
         // View Source and a signature check fetch a large message raw too;
-        // keeping it would push out the small ones the cache is for.
-        if (bytes.len() as i64) < RAW_LIMIT {
+        // keeping it would push out the small ones the cache is for. A
+        // message `small` sends down the raw path is kept whatever its
+        // real length: Gmail's size estimate can put it under the limit
+        // while its bytes come to more, and its files are read from these
+        // bytes next.
+        if (bytes.len() as i64) < RAW_LIMIT || self.small(message_id).await? {
             self.raw
                 .lock()
                 .unwrap_or_else(PoisonError::into_inner)

@@ -1,8 +1,9 @@
 //! The last small messages an account fetched whole. A raw message holds
 //! every file inside it, so saving a file, drawing a picture and checking
 //! a signature right after a small message opened read these bytes instead
-//! of fetching the whole message again. A message at or over `RAW_LIMIT`
-//! never enters: its files come one part at a time.
+//! of fetching the whole message again. A message the store reports at
+//! or over `RAW_LIMIT` enters only when its bytes come to less: its files
+//! come one part at a time.
 
 use std::collections::VecDeque;
 use std::sync::Arc;
