@@ -320,7 +320,7 @@ impl<A: Accounts> Tools<A> {
         let handle = file
             .attachment_id
             .clone()
-            .ok_or("Gmail gives no way to fetch that attachment.")?;
+            .ok_or("The server gives no way to fetch that attachment.")?;
         let bytes = self
             .call(async move { sync.attachment(&message_id, &handle).await })
             .await?;

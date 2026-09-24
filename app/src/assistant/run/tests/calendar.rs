@@ -323,6 +323,8 @@ async fn an_invitation_is_answered_after_asking() {
                 ..MessageBody::default()
             },
         );
+        i.messages
+            .insert("m8".into(), mailrs_sync::fake::meta("m8", "t8", NOW, &["INBOX"]));
         i.bodies.insert("m8".into(), MessageBody::default());
     });
 

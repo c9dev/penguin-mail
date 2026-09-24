@@ -432,6 +432,15 @@ pub fn thread_id_of(
         .optional()?)
 }
 
+/// The size the server reported for a stored message, in bytes. Gmail's
+/// is `sizeEstimate`; 0 means it gave none.
+pub fn size_of(conn: &Connection, account_id: AccountId, message_id: &str) -> Result<Option<i64>> {
+    Ok(conn
+        .prepare_cached("SELECT size FROM messages WHERE account_id = ?1 AND id = ?2")?
+        .query_row(params![account_id, message_id], |row| row.get(0))
+        .optional()?)
+}
+
 /// Deletes a message with its labels and body. Returns its thread, or `None`
 /// when the message was not stored.
 fn delete_message(

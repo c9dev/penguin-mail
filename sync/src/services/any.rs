@@ -7,7 +7,7 @@
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
-use mailrs_domain::{EpochMillis, Filter, MessageBody, RemoteMailbox, Role, Vacation};
+use mailrs_domain::{EpochMillis, Filter, RemoteMailbox, Role, Vacation};
 use mailrs_gmail::{
     Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, Person, Series,
 };
@@ -159,10 +159,6 @@ impl MailBackend for AnyMail {
         forward!(AnyMail, self, append(raw, mailbox))
     }
 
-    async fn message_body(&self, id: &str) -> Result<MessageBody, BackendError> {
-        forward!(AnyMail, self, message_body(id))
-    }
-
     async fn fetch_structure(&self, id: &str) -> Result<Parts, BackendError> {
         forward!(AnyMail, self, fetch_structure(id))
     }
@@ -194,14 +190,6 @@ impl MailBackend for AnyMail {
 
     async fn list_drafts(&self) -> Result<Vec<DraftRef>, BackendError> {
         forward!(AnyMail, self, list_drafts())
-    }
-
-    async fn attachment(
-        &self,
-        message_id: &str,
-        attachment_id: &str,
-    ) -> Result<Vec<u8>, BackendError> {
-        forward!(AnyMail, self, attachment(message_id, attachment_id))
     }
 
     fn made_by_person(&self, id: &str) -> bool {

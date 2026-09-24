@@ -21,9 +21,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
-use mailrs_domain::{
-    EpochMillis, Filter, Membership, MessageBody, MessageMeta, RemoteMailbox, Role, Vacation,
-};
+use mailrs_domain::{EpochMillis, Filter, Membership, MessageMeta, RemoteMailbox, Role, Vacation};
 use mailrs_gmail::{
     Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, Person, Series,
 };
@@ -183,6 +181,13 @@ pub struct Backfill {
     /// The cursor for the next page; `None` after the last.
     pub next: Option<String>,
 }
+
+/// A message under this many bytes is fetched raw and read whole; one at
+/// or over it, or of unknown size, is fetched as its structure and its
+/// text parts, and its files come one at a time when opened. A raw
+/// message carries every file inside it, so without the line a 20 MB
+/// attachment would download before the text showed.
+pub const RAW_LIMIT: i64 = 2 * 1024 * 1024;
 
 /// A message as it arrived, in RFC 822 form.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -362,11 +367,6 @@ pub trait MailBackend: Send + Sync + 'static {
         mailbox: &str,
     ) -> impl Future<Output = Result<String, BackendError>> + Send;
 
-    fn message_body(
-        &self,
-        id: &str,
-    ) -> impl Future<Output = Result<MessageBody, BackendError>> + Send;
-
     /// The message's parts with the bytes of the text parts its body
     /// needs, and without its files: for a message too large to fetch
     /// raw.
@@ -419,12 +419,6 @@ pub trait MailBackend: Send + Sync + 'static {
 
     /// Every draft in the account, each with the message inside it.
     fn list_drafts(&self) -> impl Future<Output = Result<Vec<DraftRef>, BackendError>> + Send;
-
-    fn attachment(
-        &self,
-        message_id: &str,
-        attachment_id: &str,
-    ) -> impl Future<Output = Result<Vec<u8>, BackendError>> + Send;
 }
 
 /// The account's calendar. Every call answers

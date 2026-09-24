@@ -11,13 +11,14 @@ mod window;
 mod writes;
 
 use std::collections::BTreeSet;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
 use mailrs_domain::{AccountId, AccountState, ChangeEvent, EpochMillis, MessageMeta};
-use mailrs_store::{Db, accounts};
+use mailrs_store::{Db, accounts, messages};
 
-use crate::{AccountServices, MailBackend, SyncError};
+use crate::raw_cache::{RAW_CACHE_BYTES, RawCache};
+use crate::{AccountServices, BackendError, MailBackend, RAW_LIMIT, SyncError};
 
 /// Metadata requests in flight per account.
 pub const FETCH_CONCURRENCY: usize = 10;
@@ -48,6 +49,9 @@ pub struct AccountSync {
     /// The messages each thread had among a search's hits, kept so Delete
     /// Forever on a row the store lacks knows what to erase.
     hits: Mutex<std::collections::HashMap<String, listed::Hits>>,
+    /// The last small messages fetched whole, so a file opened right
+    /// after its message costs no second fetch.
+    raw: Arc<Mutex<RawCache>>,
 }
 
 /// How long a finished history replay speaks for the whole mailbox. The
@@ -75,6 +79,7 @@ impl AccountSync {
             caught_up: Arc::default(),
             listed: Mutex::default(),
             hits: Mutex::default(),
+            raw: Arc::new(Mutex::new(RawCache::new(RAW_CACHE_BYTES))),
         }
     }
 
@@ -95,6 +100,52 @@ impl AccountSync {
     pub fn with_wait_ceiling(mut self, ceiling: Duration) -> Self {
         self.wait_ceiling = ceiling;
         self
+    }
+
+    /// The message as the server holds it, from the raw cache or from one
+    /// fetch, which fills the cache when the message is under the limit.
+    pub(crate) async fn raw(&self, message_id: &str) -> Result<Arc<Vec<u8>>, SyncError> {
+        if let Some(bytes) = self.cached_raw(message_id) {
+            return Ok(bytes);
+        }
+        let fetched = self
+            .services
+            .mail
+            .fetch_raw(&[message_id.to_string()])
+            .await?
+            .into_iter()
+            .next()
+            .ok_or(BackendError::NotFound)?;
+        let bytes = Arc::new(fetched.bytes);
+        // View Source and a signature check fetch a large message raw too;
+        // keeping it would push out the small ones the cache is for.
+        if (bytes.len() as i64) < RAW_LIMIT {
+            self.raw
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .put(message_id.to_string(), Arc::clone(&bytes));
+        }
+        Ok(bytes)
+    }
+
+    /// The message's raw bytes when the raw cache holds them.
+    pub(crate) fn cached_raw(&self, message_id: &str) -> Option<Arc<Vec<u8>>> {
+        self.raw
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .get(message_id)
+    }
+
+    /// Whether `message_id` goes by the raw path: a stored message whose
+    /// reported size is known and under the limit. Anything else goes by
+    /// its structure, so an unknown size never downloads a large file.
+    pub(crate) async fn small(&self, message_id: &str) -> Result<bool, SyncError> {
+        let (account_id, key) = (self.account_id, message_id.to_string());
+        let size = self
+            .db
+            .read(move |c| messages::size_of(c, account_id, &key))
+            .await?;
+        Ok(size.is_some_and(|s| s > 0 && s < RAW_LIMIT))
     }
 
     /// Records that history replay left the store up to date.

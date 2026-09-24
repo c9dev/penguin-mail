@@ -491,7 +491,9 @@ fn an_invitation_read_without_its_calendar_is_fetched_again() {
     bodies::put_body(&conn, 1, "plain", &plain, 1).unwrap();
     drop(conn);
 
-    let conn = open_with(&path, MIGRATIONS).unwrap();
+    // Up to migration 28 alone: a later one drops every body with a file,
+    // the invitation that was read among them.
+    let conn = open_with(&path, &MIGRATIONS[..28]).unwrap();
     assert!(bodies::get_body(&conn, 1, "missed", 2).unwrap().is_none());
     assert!(bodies::get_body(&conn, 1, "read", 2).unwrap().is_some());
     assert!(bodies::get_body(&conn, 1, "plain", 2).unwrap().is_some());
@@ -527,4 +529,40 @@ fn a_message_from_before_local_threading_stays_untouched() {
         .query_row("SELECT COUNT(*) FROM message_links", [], |row| row.get(0))
         .unwrap();
     assert_eq!(links, 0);
+}
+
+/// Files read before are named by Gmail attachment handles, which
+/// neither path answers, so their bodies go and come back named by part
+/// path. A body without files stays.
+#[test]
+fn bodies_with_files_named_by_gmail_handles_are_fetched_again() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..30]).unwrap();
+    conn.execute_batch(
+        "INSERT INTO accounts (id, email, added_at) VALUES (1, 'me@example.com', 0);
+         INSERT INTO messages (account_id, id, thread_id, to_addrs, cc_addrs, subject, date,
+             snippet, size, has_attachments, sync_gen)
+             VALUES (1, 'a', 't', '[]', '[]', '', 0, '', 0, 1, 1),
+                    (1, 'b', 't', '[]', '[]', '', 0, '', 0, 0, 1);
+         INSERT INTO bodies (account_id, message_id, text, size, fetched_at, accessed_at)
+             VALUES (1, 'a', 'with a file', 11, 0, 0), (1, 'b', 'plain', 5, 0, 0);
+         INSERT INTO attachments (account_id, message_id, part_id, filename, mime_type, size,
+             attachment_id) VALUES (1, 'a', '1', 'plan.pdf', 'application/pdf', 3, 'ANGjdJ8');",
+    )
+    .unwrap();
+    drop(conn);
+    let conn = open_with(&path, MIGRATIONS).unwrap();
+    let bodies: Vec<String> = conn
+        .prepare("SELECT message_id FROM bodies ORDER BY message_id")
+        .unwrap()
+        .query_map([], |row| row.get(0))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
+    assert_eq!(bodies, ["b"]);
+    let files: i64 = conn
+        .query_row("SELECT COUNT(*) FROM attachments", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(files, 0);
 }

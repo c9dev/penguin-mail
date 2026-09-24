@@ -5,6 +5,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Improved
+
+- Pictures and files in a message under 2 MB open without a second
+  download, since the message arrived with them inside.
+
 ## 0.2.2 (2026-09-24)
 
 ### New

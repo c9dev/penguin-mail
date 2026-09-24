@@ -22,6 +22,7 @@ use std::time::Duration;
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use mail_builder::MessageBuilder;
+use mail_builder::headers::content_type::ContentType;
 use mail_builder::headers::raw::Raw;
 use mail_builder::mime::MimePart;
 use mailrs_domain::invitation::Answer;
@@ -1374,6 +1375,21 @@ fn built_raw(state: &FakeState, id: &str) -> Result<Vec<u8>, GmailError> {
     if body.one_click_unsubscribe {
         message = message.header("List-Unsubscribe-Post", Raw::new("List-Unsubscribe=One-Click"));
     }
+    // The headers the details panel reads its three lines from, so a
+    // fixture's provenance survives the trip through the raw message.
+    let provenance = &body.provenance;
+    if let Some(domain) = &provenance.mailed_by {
+        message = message.header("Return-Path", Raw::new(format!("<bounces@{domain}>")));
+    }
+    if let Some(domain) = &provenance.signed_by {
+        let signature = format!("v=1; a=rsa-sha256; d={domain}; s=fake");
+        message = message.header("DKIM-Signature", Raw::new(signature));
+    }
+    if let Some(encrypted) = provenance.encrypted {
+        let with = if encrypted { "ESMTPS" } else { "SMTP" };
+        let received = format!("from mail.example by mx.example with {with} id fake");
+        message = message.header("Received", Raw::new(received));
+    }
     let mut readable = Vec::new();
     if let Some(text) = &body.text {
         readable.push(MimePart::new("text/plain", text.as_str()));
@@ -1397,10 +1413,18 @@ fn built_raw(state: &FakeState, id: &str) -> Result<Vec<u8>, GmailError> {
             .and_then(|handle| state.attachments.get(&(id.to_string(), handle.clone())))
             .cloned()
             .unwrap_or_default();
-        let part = MimePart::new(file.mime_type.clone(), bytes);
         parts.push(match &file.content_id {
-            Some(cid) => part.inline().cid(cid.as_str()),
-            None => part.attachment(file.filename.clone()),
+            // An inline picture keeps its name, as a mail program sends it.
+            Some(cid) => MimePart::new(
+                ContentType::new(file.mime_type.clone()).attribute("name", file.filename.clone()),
+                bytes,
+            )
+            .header(
+                "Content-Disposition",
+                ContentType::new("inline").attribute("filename", file.filename.clone()),
+            )
+            .cid(cid.as_str()),
+            None => MimePart::new(file.mime_type.clone(), bytes).attachment(file.filename.clone()),
         });
     }
     let content = MimePart::new("multipart/mixed", parts);

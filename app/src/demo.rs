@@ -937,13 +937,18 @@ impl SampleAccount {
 
 /// What the demo hands back for an attachment, since the samples name files
 /// that do not exist.
-fn stand_in(attachment_id: &str, mime_type: &str) -> Vec<u8> {
+fn stand_in(attachment_id: &str, mime_type: &str, size: i64) -> Vec<u8> {
     if mime_type.starts_with("image/")
         && let Some(png) = stand_in_picture(attachment_id)
     {
         return png;
     }
-    format!("This is {attachment_id}, a stand-in file from Penguin Mail demo mode.\n").into_bytes()
+    // The body reads each file's size off its bytes, so the file runs to
+    // the size the sample gives it and the attachment row shows that.
+    let mut file =
+        format!("This is {attachment_id}, a stand-in file from Penguin Mail demo mode.\n").into_bytes();
+    file.resize(file.len().max(size as usize), b'\n');
+    file
 }
 
 /// A picture for a demo photo, so the attachment row has something to show
@@ -990,10 +995,12 @@ impl Sample {
         fake.with(|state| {
             for attachment in &body.attachments {
                 let id = attachment.attachment_id.clone().unwrap_or_default();
-                state.attachments.insert(
-                    (meta.id.clone(), id.clone()),
-                    stand_in(&id, &attachment.mime_type),
-                );
+                // An invitation's file holds the same event as its card.
+                let bytes = match (&body.calendar, attachment.mime_type.as_str()) {
+                    (Some(ics), "text/calendar") => ics.clone().into_bytes(),
+                    _ => stand_in(&id, &attachment.mime_type, attachment.size),
+                };
+                state.attachments.insert((meta.id.clone(), id.clone()), bytes);
             }
             if let Some(draft_id) = self.draft {
                 state
@@ -1077,7 +1084,12 @@ impl Sample {
                 .chars()
                 .take(140)
                 .collect(),
-            size: self.text.len() as i64,
+            // Gmail's estimate counts each file in its base64 form, a
+            // third larger than the file. That puts the roadmap's PDF and
+            // the lake photos over the raw limit, and the smaller files
+            // under it, so the demo opens mail by both paths.
+            size: self.text.len() as i64
+                + self.attachments.iter().map(|a| a.2 * 4 / 3).sum::<i64>(),
             has_attachments: !self.attachments.is_empty(),
             label_ids: self.labels.iter().map(|l| l.to_string()).collect(),
             list_unsubscribe: self.header(),
@@ -1275,7 +1287,7 @@ mod tests {
     use mailrs_domain::{Folder, system_label};
     use mailrs_store::bodies;
     use mailrs_store::threads::{self, ThreadFilter};
-    use mailrs_sync::{AccountServices, GmailApi, IdentityService, now_millis};
+    use mailrs_sync::{AccountServices, GmailApi, IdentityService, MailBackend, now_millis};
 
     use super::*;
 
@@ -1564,8 +1576,9 @@ mod tests {
         assert_eq!(listed.len(), 1);
         assert_eq!(listed[0].draft_id, DRAFT_ID);
         assert_eq!(listed[0].message_id, "draft-1");
-        let file = api
-            .attachment("roadmap-1", "roadmap-1-att-0")
+        let file = AccountServices::fake(Arc::clone(&api))
+            .mail
+            .fetch_part("roadmap-1", &mailrs_sync::fake::attachment_path(0))
             .await
             .unwrap();
         assert!(String::from_utf8(file).unwrap().contains("stand-in file"));

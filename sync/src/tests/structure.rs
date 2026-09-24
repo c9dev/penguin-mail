@@ -279,3 +279,93 @@ async fn a_seeded_protection_reads_back_on_the_raw_message() {
         assert_eq!(mailrs_mime::read(&raw).protection, Some(protection), "{protection:?}");
     }
 }
+
+/// A message of `size` bytes, as Gmail's listing reports it, with a
+/// three-byte PDF: only the reported size decides the path.
+fn seed(h: &super::Harness, id: &str, size: i64) {
+    let mut m = meta(id, &format!("t-{id}"), 1, &["INBOX"]);
+    m.size = size;
+    h.fake.with(|s| {
+        s.messages.insert(id.into(), m);
+        s.bodies.insert(id.into(), with_a_pdf());
+        s.attachments.insert((id.into(), "h1".into()), vec![1, 2, 3]);
+    });
+}
+
+#[tokio::test]
+async fn a_large_message_shows_its_text_without_fetching_its_file() {
+    let h = harness().await;
+    seed(&h, "m1", 25 * 1024 * 1024);
+    h.sync.ensure_thread("t-m1").await.unwrap();
+    let body = h.sync.body("m1").await.unwrap();
+    assert_eq!(body.text.as_deref(), Some("See the plan"));
+    assert_eq!(body.attachments[0].filename, "plan.pdf");
+    h.fake.with(|s| {
+        assert_eq!(s.usage.calls_to("users.threads.get") as usize + s.metadata_fetches, 1, "one metadata fetch");
+        assert_eq!(s.structure_fetches, 1);
+        assert_eq!(s.raw_fetches, 0);
+        assert_eq!(s.usage.calls_to("users.messages.attachments.get"), 0);
+    });
+}
+
+#[tokio::test]
+async fn opening_a_large_messages_file_fetches_that_part_alone() {
+    let h = harness().await;
+    seed(&h, "m1", 25 * 1024 * 1024);
+    h.sync.ensure_thread("t-m1").await.unwrap();
+    let body = h.sync.body("m1").await.unwrap();
+    let path = body.attachments[0].attachment_id.clone().unwrap();
+    assert_eq!(h.sync.attachment("m1", &path).await.unwrap(), vec![1, 2, 3]);
+    h.fake.with(|s| {
+        assert_eq!(s.usage.calls_to("users.messages.attachments.get"), 1);
+        assert_eq!((s.structure_fetches, s.raw_fetches), (1, 0));
+    });
+}
+
+#[tokio::test]
+async fn a_message_of_unknown_size_takes_the_structure_path() {
+    let h = harness().await;
+    seed(&h, "m1", 0);
+    h.sync.ensure_thread("t-m1").await.unwrap();
+    h.sync.body("m1").await.unwrap();
+    assert_eq!(h.fake.with(|s| (s.structure_fetches, s.raw_fetches)), (1, 0));
+}
+
+#[tokio::test]
+async fn the_limit_decides_the_path() {
+    let h = harness().await;
+    seed(&h, "under", crate::RAW_LIMIT - 1);
+    seed(&h, "at", crate::RAW_LIMIT);
+    for id in ["under", "at"] {
+        h.sync.ensure_thread(&format!("t-{id}")).await.unwrap();
+    }
+    h.sync.body("under").await.unwrap();
+    assert_eq!(h.fake.with(|s| (s.structure_fetches, s.raw_fetches)), (0, 1));
+    h.sync.body("at").await.unwrap();
+    assert_eq!(h.fake.with(|s| (s.structure_fetches, s.raw_fetches)), (1, 1));
+}
+
+/// The fake writes a fixture's provenance into the raw message's headers,
+/// so the details panel shows the same three lines on either path.
+#[tokio::test]
+async fn a_seeded_provenance_reads_back_on_the_raw_message() {
+    let h = harness().await;
+    let provenance = mailrs_domain::Provenance {
+        mailed_by: Some("fernwood.example".into()),
+        signed_by: Some("fernwood.example".into()),
+        encrypted: Some(false),
+    };
+    h.fake.with(|s| {
+        s.messages.insert("m1".into(), meta("m1", "t1", 1, &["INBOX"]));
+        s.bodies.insert(
+            "m1".into(),
+            MessageBody {
+                text: Some("Meet at six.".into()),
+                provenance: provenance.clone(),
+                ..MessageBody::default()
+            },
+        );
+    });
+    let raw = h.fake.raw_message("m1").await.unwrap();
+    assert_eq!(mailrs_mime::read(&raw).provenance, provenance);
+}

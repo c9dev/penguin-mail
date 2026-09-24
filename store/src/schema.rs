@@ -442,6 +442,17 @@ CREATE INDEX messages_local_by_msgid ON messages(account_id, rfc822_msgid)
 CREATE INDEX messages_local_by_subject ON messages(account_id, base_subject, date)
     WHERE base_subject IS NOT NULL;
 "#,
+    // Both body paths now name each file by its MIME part path. Files
+    // read before were named by Gmail attachment handles, which neither
+    // path answers, so the bodies that carry files go with their file rows
+    // and come back on the next open. Bodies without files stay.
+    r#"
+DELETE FROM bodies WHERE EXISTS (
+    SELECT 1 FROM attachments a
+    WHERE a.account_id = bodies.account_id AND a.message_id = bodies.message_id
+);
+DELETE FROM attachments;
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

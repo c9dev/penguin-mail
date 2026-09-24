@@ -10,6 +10,7 @@ use mailrs_domain::invitation::{Answer, Invitation, Scope, When};
 use mailrs_gmail::GmailError;
 
 use super::{Connected, Harness, harness};
+use crate::fake::meta;
 use crate::invitations::{Change, Invitations, Told};
 
 const UID: &str = "demo-event@google.com";
@@ -260,6 +261,9 @@ async fn a_message_is_answered_from_the_invitation_it_carries() {
     let invitations = invitations(&h);
     h.fake.with(|s| {
         s.calendar.insert(UID.into(), None);
+        for id in ["m1", "m2", "m3"] {
+            s.messages.insert(id.into(), meta(id, id, 1, &["INBOX"]));
+        }
         s.bodies.insert(
             "m1".into(),
             mailrs_domain::MessageBody {
@@ -767,35 +771,44 @@ async fn an_invitation_to_a_whole_event_asks_the_calendar_nothing() {
     assert_eq!(h.fake.with(|s| s.usage.calls_to("calendar.events.list")), 0);
 }
 
-/// Gmail's API sends Google Calendar's invitation part by attachment id,
-/// with no text inline, so the card had nothing to read on a real
-/// account. Fetching a body fetches that part too.
+/// Google Calendar sends its invitation with the calendar inline in the
+/// alternative and the same file again as an attachment. Read from the
+/// raw message, the card has the calendar and the list shows one file.
 #[tokio::test]
-async fn a_calendar_part_sent_by_attachment_id_is_fetched_with_the_body() {
-    use crate::MailBackend;
+async fn a_google_calendar_invitation_shows_its_card_from_the_raw_message() {
     let h = harness().await;
     let ics = invite(0, "20260310T090000Z");
     h.fake.with(|s| {
-        s.bodies.insert(
-            "m1".into(),
-            mailrs_domain::MessageBody {
-                html: Some("<p>Invitation</p>".into()),
-                attachments: vec![mailrs_domain::Attachment {
-                    part_id: "1".into(),
-                    filename: "invite.ics".into(),
-                    mime_type: "application/ics".into(),
-                    size: ics.len() as i64,
-                    attachment_id: Some("file-ics".into()),
-                    content_id: None,
-                }],
-                ..Default::default()
-            },
-        );
-        s.attachments
-            .insert(("m1".into(), "file-ics".into()), ics.clone().into_bytes());
+        s.messages.insert("m1".into(), meta("m1", "t1", 1, &["INBOX"]));
+        s.raws.insert("m1".into(), google_invitation(&ics));
     });
-    let body = h.sync.services().mail.message_body("m1").await.unwrap();
+    h.sync.ensure_thread("t1").await.unwrap();
+    let body = h.sync.body("m1").await.unwrap();
     assert_eq!(body.calendar.as_deref(), Some(ics.as_str()));
+    let files: Vec<&str> = body.attachments.iter().map(|a| a.filename.as_str()).collect();
+    assert_eq!(files, ["invite.ics"]);
+    assert_eq!(h.fake.with(|s| s.usage.calls_to("users.messages.attachments.get")), 0);
+}
+
+/// Over the limit the same invitation arrives as Gmail's part tree, whose
+/// calendar part comes by reference; the card shows all the same, and
+/// the list still shows one `invite.ics`.
+#[tokio::test]
+async fn an_invitation_over_the_limit_still_shows_its_card() {
+    let h = harness().await;
+    let ics = invite(0, "20260310T090000Z");
+    let mut big = meta("m1", "t1", 1, &["INBOX"]);
+    big.size = 3 * 1024 * 1024;
+    h.fake.with(|s| {
+        s.messages.insert("m1".into(), big);
+        s.raws.insert("m1".into(), google_invitation(&ics));
+    });
+    h.sync.ensure_thread("t1").await.unwrap();
+    let body = h.sync.body("m1").await.unwrap();
+    assert_eq!(body.calendar.as_deref(), Some(ics.as_str()));
+    let files: Vec<&str> = body.attachments.iter().map(|a| a.filename.as_str()).collect();
+    assert_eq!(files, ["invite.ics"]);
+    assert_eq!(h.fake.with(|s| (s.structure_fetches, s.raw_fetches)), (1, 0));
 }
 
 /// Google Calendar's invitation as Gmail's `format=raw` sends it: the

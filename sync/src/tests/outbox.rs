@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use mailrs_domain::{Target, system_label};
+use mailrs_domain::{Attachment, MessageBody, Target, system_label};
 use mailrs_gmail::GmailError;
 use mailrs_store::messages::Change;
 use mailrs_store::outbox::{self, Queued};
 use mailrs_store::{drafts, messages};
 
 use super::{Connected, Harness, harness};
-use crate::fake::meta;
+use crate::fake::{attachment_path, meta};
 use crate::{
     AccountServices, AutoReplyService, BackendError, Cancelled, Outbox, Permitted, Posted,
     now_millis, outbox_row,
@@ -318,12 +318,27 @@ async fn search_returns_newest_first_without_storing() {
 async fn attachments_and_identity_come_from_gmail() {
     let h = harness().await;
     h.fake.with(|s| {
+        s.messages.insert("m1".into(), meta("m1", "t1", 1, &["INBOX"]));
+        s.bodies.insert(
+            "m1".into(),
+            MessageBody {
+                attachments: vec![Attachment {
+                    part_id: "x".into(),
+                    filename: "plan.pdf".into(),
+                    mime_type: "application/pdf".into(),
+                    size: 3,
+                    attachment_id: Some("a1".into()),
+                    content_id: None,
+                }],
+                ..MessageBody::default()
+            },
+        );
         s.attachments
             .insert(("m1".into(), "a1".into()), vec![1, 2, 3]);
     });
-    assert_eq!(h.sync.attachment("m1", "a1").await.unwrap(), vec![1, 2, 3]);
+    assert_eq!(h.sync.attachment("m1", &attachment_path(0)).await.unwrap(), vec![1, 2, 3]);
     assert!(matches!(
-        h.sync.attachment("m1", "zz").await,
+        h.sync.attachment("m1", "9").await,
         Err(crate::SyncError::Backend(crate::BackendError::NotFound))
     ));
     assert_eq!(

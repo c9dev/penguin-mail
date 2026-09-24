@@ -14,9 +14,7 @@ use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::mailbox::keyword;
-use mailrs_domain::{
-    EpochMillis, Filter, MailboxKind, MessageBody, RemoteMailbox, Role, Vacation, gmail,
-};
+use mailrs_domain::{EpochMillis, Filter, MailboxKind, RemoteMailbox, Role, Vacation, gmail};
 use mailrs_gmail::{
     Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, GmailError, LabelColor,
     Person, RemoteLabel, SendAs, Series, limiter, structure,
@@ -245,25 +243,6 @@ impl<G: GmailApi> MailBackend for Google<G> {
         Err(BackendError::Unsupported)
     }
 
-    /// The body, and the invitation in it when Gmail sent that part by
-    /// attachment id rather than inline, as it does for every Google
-    /// Calendar invitation. Without the second call the invitation card
-    /// never shows on a real account. A failed fetch of the part leaves the
-    /// message readable without its card.
-    async fn message_body(&self, id: &str) -> Result<MessageBody, BackendError> {
-        let mut body = paced(self.gmail.message_body(id)).await?;
-        if let Some(part) = mailrs_gmail::body::calendar_to_fetch(&body).map(str::to_string) {
-            match paced(self.gmail.attachment(id, &part)).await {
-                Ok(bytes) => {
-                    let ics = mailrs_mime::charset::decode_charset(&bytes, None);
-                    body.calendar = ics.contains("BEGIN:VCALENDAR").then_some(ics);
-                }
-                Err(err) => tracing::warn!(message = id, %err, "could not fetch an invitation's calendar part"),
-            }
-        }
-        Ok(body)
-    }
-
     /// Gmail sends a text part by reference when it carries a file name,
     /// which every Google Calendar invitation does, or when it is large.
     /// Each such part the body needs costs one more call. A failed fetch
@@ -335,14 +314,6 @@ impl<G: GmailApi> MailBackend for Google<G> {
 
     async fn list_drafts(&self) -> Result<Vec<DraftRef>, BackendError> {
         Ok(paced(self.gmail.list_drafts()).await?)
-    }
-
-    async fn attachment(
-        &self,
-        message_id: &str,
-        attachment_id: &str,
-    ) -> Result<Vec<u8>, BackendError> {
-        Ok(paced(self.gmail.attachment(message_id, attachment_id)).await?)
     }
 
     fn made_by_person(&self, id: &str) -> bool {

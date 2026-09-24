@@ -178,23 +178,26 @@ impl AccountSync {
         }
     }
 
-    pub async fn attachment(
-        &self,
-        message_id: &str,
-        attachment_id: &str,
-    ) -> Result<Vec<u8>, SyncError> {
-        Ok(self.services.mail.attachment(message_id, attachment_id).await?)
+    /// One file of a message, by its part path: from the raw message when
+    /// the cache holds it or the message is small, and otherwise that part
+    /// alone.
+    pub async fn attachment(&self, message_id: &str, part_path: &str) -> Result<Vec<u8>, SyncError> {
+        let raw = match self.cached_raw(message_id) {
+            Some(raw) => Some(raw),
+            None if self.small(message_id).await? => Some(self.raw(message_id).await?),
+            None => None,
+        };
+        match raw {
+            Some(raw) => Ok(mailrs_mime::part(&raw, part_path).ok_or(BackendError::NotFound)?),
+            None => Ok(self.services.mail.fetch_part(message_id, part_path).await?),
+        }
     }
 
-    /// The message as it arrived, for View Source and for saving one
-    /// message as an `.eml` file.
+    /// The message as it arrived, for View Source, a signature check and
+    /// saving one message as an `.eml` file. A large message comes whole
+    /// here too, since each of these needs every byte.
     pub async fn raw_message(&self, id: &str) -> Result<Vec<u8>, SyncError> {
-        let raw = self.services.mail.fetch_raw(&[id.to_string()]).await?;
-        Ok(raw
-            .into_iter()
-            .next()
-            .map(|r| r.bytes)
-            .ok_or(BackendError::NotFound)?)
+        Ok(self.raw(id).await?.as_ref().clone())
     }
 
     /// A conversation as an mbox file, oldest message first, or the one

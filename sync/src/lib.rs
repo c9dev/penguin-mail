@@ -19,6 +19,7 @@ pub mod newsletters;
 mod one_click;
 mod ops;
 pub mod outbox;
+pub mod raw_cache;
 pub mod sign_in;
 pub mod services;
 mod settings;
@@ -67,7 +68,7 @@ pub use services::{
     RemoteRef, SearchQuery, Want, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules,
     AutoReplyService, CalendarService, ContactsService, Google, IdentityService, MailBackend,
     MailCapabilities, Priority, RemoteChange, RulesService, SendAsAddress, SyncState, Unapplied,
-    Changes, background,
+    Changes, RAW_LIMIT, background,
 };
 pub use settings::{AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, Permitted};
 pub use triage::TriageAction;
