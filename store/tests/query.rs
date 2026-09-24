@@ -259,3 +259,66 @@ fn another_accounts_mail_stays_out_and_the_limit_keeps_the_newest() {
         .collect();
     assert_eq!(two, ["a3", "a2"]);
 }
+
+#[test]
+fn recipient_and_word_searches_read_addresses_not_the_json_around_them() {
+    let (conn, a) = db();
+    let mut nameless = meta(a, "nameless", "t1", NOW - HOUR, &["INBOX"]);
+    nameless.to = vec![Address {
+        name: None,
+        email: "bo@example.org".into(),
+    }];
+    let mut named = meta(a, "named", "t2", NOW - 2 * HOUR, &["INBOX"]);
+    named.cc = vec![Address {
+        name: Some("Carla Nunes".into()),
+        email: "carla@example.pt".into(),
+    }];
+    store(&conn, &[nameless, named]);
+    let words = |text: &str| found(&conn, a, &Query::term(Term::Words(text.into())));
+    let to = |text: &str| found(&conn, a, &Query::term(Term::To(text.into())));
+    assert!(words("email").is_empty());
+    assert!(words("null").is_empty());
+    assert!(to("name").is_empty());
+    assert_eq!(to("BO@example"), ["nameless"]);
+    assert_eq!(words("carla nunes"), ["named"]);
+    assert_eq!(words("carla@example.pt"), ["named"]);
+}
+
+/// Stores a mailbox named `name` under `id`.
+fn mailbox(conn: &Connection, account_id: i64, id: &str, name: &str) {
+    mailboxes::upsert(
+        conn,
+        account_id,
+        &RemoteMailbox {
+            id: id.into(),
+            name: name.into(),
+            kind: MailboxKind::Label,
+            role: None,
+            color: None,
+            hidden: false,
+        },
+    )
+    .unwrap();
+}
+
+#[test]
+fn a_mailbox_name_matches_by_gmails_label_spelling() {
+    let (conn, a) = db();
+    mailbox(&conn, a, "Label_8", "Receipts (2025)");
+    mailbox(&conn, a, "Label_9", "Work/Clients");
+    store(
+        &conn,
+        &[
+            meta(a, "receipt", "t1", NOW - HOUR, &["Label_8"]),
+            meta(a, "client", "t2", NOW - 2 * HOUR, &["Label_9"]),
+            meta(a, "other", "t3", NOW - 3 * HOUR, &["INBOX"]),
+        ],
+    );
+    let named = |name: &str| found(&conn, a, &Query::term(Term::MailboxNamed(name.into())));
+    assert_eq!(named("Receipts (2025)"), ["receipt"]);
+    assert_eq!(named("receipts-2025"), ["receipt"]);
+    assert_eq!(named("Work Clients"), ["client"]);
+    assert!(named("nowhere").is_empty());
+    let not_named = Query::Not(Box::new(Query::term(Term::MailboxNamed("nowhere".into()))));
+    assert_eq!(found(&conn, a, &not_named), ["receipt", "client", "other"]);
+}

@@ -185,7 +185,7 @@ impl Sql {
 
     /// `?, ?, …` for each key. An empty list leaves `IN ()`, which SQLite
     /// reads as false.
-    fn bind_keys(&mut self, keys: &[i64]) -> &mut Self {
+    pub(crate) fn bind_keys(&mut self, keys: &[i64]) -> &mut Self {
         for (i, key) in keys.iter().enumerate() {
             if i > 0 {
                 self.text.push_str(", ");
