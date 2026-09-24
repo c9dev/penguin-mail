@@ -19,6 +19,11 @@ enum Place {
 
 /// The Gmail search text for `query`. A term Gmail has no operator for
 /// prints as nothing, and the operators around it leave it out.
+///
+/// This recurses once per level of the tree. Folders and smart mailboxes
+/// build trees a few levels deep, and typed search caps its depth at
+/// [`mailrs_domain::query::MAX_DEPTH`], so the stack holds for any tree
+/// the product builds.
 pub fn print(query: &Query) -> String {
     printed(query, Place::Top)
 }

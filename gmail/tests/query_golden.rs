@@ -4,8 +4,8 @@
 //! mailboxes became query trees. The printed trees must match it byte for
 //! byte: Gmail answers the same searches it answered before.
 //!
-//! `PENGUIN_MAIL_BLESS=1` records the text again. Only a tree whose text
-//! is known good may do that.
+//! `PENGUIN_MAIL_BLESS=1` records the text again. Set it only after a
+//! person has read the new text and judged it right.
 
 use std::fmt::Write as _;
 use std::path::Path;

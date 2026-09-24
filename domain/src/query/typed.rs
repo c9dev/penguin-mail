@@ -18,6 +18,12 @@ use crate::{MailSet, Role};
 const MONTH: u32 = 30;
 const YEAR: u32 = 365;
 
+/// How many brackets and dashes deep a typed search may nest. Past this,
+/// a bracket or a dash reads as nothing and the words after it are still
+/// searched, so no text can build a tree deep enough to exhaust a 2 MB
+/// thread's stack in the reader or in anything that walks the tree.
+pub const MAX_DEPTH: usize = 32;
+
 /// The operators this reader knows. Any other `name:value` is words.
 const OPERATORS: &[&str] = &[
     "from",
@@ -44,11 +50,13 @@ const OPERATORS: &[&str] = &[
 /// and binds tighter than a space, as in Gmail. A dash right before a
 /// word, a phrase or a group negates it, and parentheses group. An
 /// operator this reader does not know, or a value it cannot read, is
-/// searched for as words. Nothing typed matches every message.
+/// searched for as words. An empty search matches every message.
+/// Brackets and dashes nest at most [`MAX_DEPTH`] deep.
 pub fn parse(text: &str) -> Query {
     let mut reader = Reader {
         tokens: tokens(text),
         at: 0,
+        depth: 0,
     };
     all(reader.sequence(None))
 }
@@ -57,6 +65,11 @@ pub fn parse(text: &str) -> Query {
 /// mailbox in `names` that Gmail's search spells the same way, so
 /// `label:work-clients` finds the mailbox `Work/Clients`. A name no
 /// mailbox spells stays as typed.
+///
+/// This recurses once per level of the tree. A tree from [`parse`] is at
+/// most about twice [`MAX_DEPTH`] deep, and one from a folder or a smart
+/// mailbox a few levels deep, so the stack holds for any tree the
+/// product builds.
 pub fn resolve_names(query: Query, names: &[String]) -> Query {
     match query {
         Query::Term(Term::MailboxNamed(typed)) => {
@@ -161,6 +174,8 @@ fn word(chars: &mut Peekable<Chars<'_>>) -> String {
 struct Reader {
     tokens: Vec<Token>,
     at: usize,
+    /// The brackets and dashes open around the token at `at`.
+    depth: usize,
 }
 
 impl Reader {
@@ -207,7 +222,16 @@ impl Reader {
     }
 
     fn unary(&mut self) -> Option<Query> {
-        match self.next()? {
+        let mut token = self.next()?;
+        // Each dash and each bracket costs a level of recursion here and
+        // one in the tree. Past the cap they read as nothing.
+        if self.depth >= MAX_DEPTH {
+            while matches!(token, Token::Minus | Token::Open | Token::OpenAny) {
+                token = self.next()?;
+            }
+        }
+        self.depth += 1;
+        let item = match token {
             Token::Minus => self.unary().map(not),
             Token::Open => {
                 let items = self.sequence(Some(Token::Close));
@@ -224,7 +248,9 @@ impl Reader {
             Token::Phrase(text) => words(&text),
             Token::Word(word) => term(&word),
             Token::Or | Token::Close | Token::CloseAny => None,
-        }
+        };
+        self.depth -= 1;
+        item
     }
 }
 
@@ -368,7 +394,7 @@ fn size(value: &str) -> Option<i64> {
 mod tests {
     use chrono::NaiveDate;
 
-    use super::{parse, resolve_names};
+    use super::{MAX_DEPTH, parse, resolve_names};
     use crate::query::{MEGABYTE, Query, Term};
     use crate::{MailSet, Role};
 
@@ -398,7 +424,7 @@ mod tests {
     }
 
     #[test]
-    fn nothing_typed_matches_every_message() {
+    fn an_empty_search_matches_every_message() {
         assert_eq!(parse(""), Query::And(vec![]));
         assert_eq!(parse("  \"\" () in:anywhere "), Query::And(vec![]));
     }
@@ -505,6 +531,59 @@ mod tests {
             Query::And(vec![from("ann"), words("moss")])
         );
         assert_eq!(parse("OR kites OR"), words("kites"));
+    }
+
+    /// Levels in `query`, a lone term counting one.
+    fn depth(query: &Query) -> usize {
+        match query {
+            Query::Term(_) => 1,
+            Query::Not(inner) => 1 + depth(inner),
+            Query::And(items) | Query::Or(items) => 1 + items.iter().map(depth).max().unwrap_or(0),
+        }
+    }
+
+    /// `parse(text)` on a thread with the 2 MB stack a tokio worker has.
+    fn parse_on_a_small_stack(text: String) -> Query {
+        std::thread::Builder::new()
+            .stack_size(2 * 1024 * 1024)
+            .spawn(move || parse(&text))
+            .unwrap()
+            .join()
+            .unwrap()
+    }
+
+    #[test]
+    fn deep_nesting_reads_as_a_bounded_tree_on_a_small_stack() {
+        let texts = [
+            "(".repeat(10_000),
+            "-a -".repeat(10_000),
+            format!("{}a", "-".repeat(10_000)),
+            format!("{}a", "-(".repeat(10_000)),
+            format!("{}a", "{".repeat(10_000)),
+        ];
+        for text in texts {
+            let tree = parse_on_a_small_stack(text.clone());
+            assert!(depth(&tree) <= 2 * MAX_DEPTH + 2, "{}", &text[..8]);
+        }
+    }
+
+    #[test]
+    fn words_past_the_depth_cap_are_still_searched() {
+        let text = format!("{}kites", "(".repeat(100));
+        assert_eq!(parse_on_a_small_stack(text), words("kites"));
+    }
+
+    #[test]
+    fn an_unclosed_quote_and_text_in_any_script_read_as_words() {
+        assert_eq!(parse("\"lunch"), words("lunch"));
+        assert_eq!(
+            parse("café -é"),
+            Query::And(vec![words("café"), not(words("é"))])
+        );
+        assert_eq!(
+            parse("日本語 from:東京"),
+            Query::And(vec![words("日本語"), from("東京")])
+        );
     }
 
     #[test]

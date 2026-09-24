@@ -8,7 +8,7 @@ use crate::MailSet;
 
 mod typed;
 
-pub use typed::{parse, resolve_names};
+pub use typed::{MAX_DEPTH, parse, resolve_names};
 
 /// Bytes in the megabyte a smart mailbox's size condition counts in.
 pub const MEGABYTE: i64 = 1024 * 1024;
@@ -35,7 +35,7 @@ pub enum Term {
     Since(NaiveDate),
     /// Before this day, in the local zone.
     Before(NaiveDate),
-    /// Received in the last this many days, counted back from now.
+    /// Received within this many days of now.
     NewerThan(u32),
     HasAttachment,
     Unread,
