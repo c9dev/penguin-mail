@@ -400,6 +400,12 @@ python3 $walk --menus
 status=\$?
 kill \$window 2>/dev/null
 wait \$window 2>/dev/null
+# A failed run says why the app did what it did: a crash or a warning in
+# its log is often the whole answer, and CI keeps nothing else.
+if [ \$status -ne 0 ]; then
+    echo '--- the end of the app log ---' >&2
+    tail -n 60 $sandbox/app.log >&2
+fi
 exit \$status
 "
 xvfb-run -a --server-args="-screen 0 1400x900x24" \
