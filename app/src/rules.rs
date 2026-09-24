@@ -118,7 +118,7 @@ pub fn describe_action(
         parts.push(gettext("Skip the Inbox"));
     }
     for set in &action.add {
-        if let MailSet::Mailbox(id) = set {
+        if let MailSet::Mailbox(id) | MailSet::Category(id) = set {
             parts.push(fill(
                 &gettext("Apply {label}"),
                 &[("label", &label_name(id).unwrap_or_else(|| id.clone()))],
@@ -216,5 +216,14 @@ mod tests {
             describe_action(&Filter::block("x@y.com").action, |_| None),
             "Delete it"
         );
+    }
+
+    #[test]
+    fn a_category_rule_names_the_category() {
+        let action = FilterAction {
+            add: vec![MailSet::Category("CATEGORY_SOCIAL".into())],
+            ..FilterAction::default()
+        };
+        assert_eq!(describe_action(&action, |_| None), "Apply CATEGORY_SOCIAL");
     }
 }
