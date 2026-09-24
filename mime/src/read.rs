@@ -15,7 +15,9 @@ use crate::parts::{Part, Parts, body};
 
 const BASE64: GeneralPurpose = GeneralPurpose::new(
     &alphabet::STANDARD,
-    GeneralPurposeConfig::new().with_decode_padding_mode(DecodePaddingMode::Indifferent),
+    GeneralPurposeConfig::new()
+        .with_decode_padding_mode(DecodePaddingMode::Indifferent)
+        .with_decode_allow_trailing_bits(true),
 );
 
 /// The parts of `raw`, every one with its bytes. `None` for bytes
@@ -67,24 +69,20 @@ pub fn files(raw: &[u8]) -> Vec<Vec<u8>> {
         .collect()
 }
 
-/// Part `id` and the parts under it. A nested `message/rfc822` is one
-/// part, a file, as a server's structure lists it.
+/// Part `id` and the parts under it.
 fn convert(message: &Message, raw: &[u8], id: u32, path: String) -> Part {
     let Some(part) = message.part(id) else {
         return Part::default();
     };
+    if let Some(nested) = part.message() {
+        return nested_message(part, nested, raw, path);
+    }
     let children = part
         .sub_parts()
         .unwrap_or_default()
         .iter()
         .enumerate()
-        .map(|(i, child)| {
-            let child_path = match path.as_str() {
-                "" => (i + 1).to_string(),
-                parent => format!("{parent}.{}", i + 1),
-            };
-            convert(message, raw, *child, child_path)
-        })
+        .map(|(i, child)| convert(message, raw, *child, numbered(&path, i)))
         .collect();
     let data = (!part.is_multipart())
         .then(|| transfer_decoded(raw, part))
@@ -111,6 +109,41 @@ fn convert(message: &Message, raw: &[u8], id: u32, path: String) -> Part {
     }
 }
 
+/// IMAP's number for child `i` (zero-based) under `parent`: bare under an
+/// unnumbered multipart root, dotted under anything else.
+fn numbered(parent: &str, i: usize) -> String {
+    match parent {
+        "" => (i + 1).to_string(),
+        parent => format!("{parent}.{}", i + 1),
+    }
+}
+
+/// A `message/rfc822` part, walked into for its own files rather than
+/// listed as one, the way Gmail expands a forwarded message. IMAP
+/// addresses what is inside it starting one level under this part's own
+/// number: "4.1" for a single-part encapsulated message, "4.1", "4.2"
+/// for a multipart one; "4" itself stays the whole encapsulated message,
+/// which nothing here lists as a file.
+fn nested_message(part: &MessagePart, nested: &Message, raw: &[u8], path: String) -> Part {
+    let root = nested.root_part();
+    let children = if root.is_multipart() {
+        root.sub_parts()
+            .unwrap_or_default()
+            .iter()
+            .enumerate()
+            .map(|(i, child)| convert(nested, raw, *child, numbered(&path, i)))
+            .collect()
+    } else {
+        vec![convert(nested, raw, 0, format!("{path}.1"))]
+    };
+    Part {
+        path,
+        mime_type: mime_type(part),
+        children,
+        ..Part::default()
+    }
+}
+
 /// A header's value with its folds undone.
 fn unfold(value: &str) -> String {
     value.replace("\r\n", "").replace('\n', "").trim().to_string()
@@ -129,7 +162,8 @@ fn mime_type(part: &MessagePart) -> String {
 
 /// A part's body with the transfer encoding undone, read from the raw
 /// bytes. mail-parser's end offset stops before the line break that
-/// belongs to the next boundary. `None` for base64 that does not decode.
+/// belongs to the next boundary. `None` for base64 that does not decode
+/// at all.
 ///
 /// The header, not `part.encoding`, says which transfer encoding to
 /// undo: mail-parser rewrites `encoding` to `None` on base64 it could
@@ -141,13 +175,69 @@ fn transfer_decoded(raw: &[u8], part: &MessagePart) -> Option<Vec<u8>> {
     let end = (part.raw_end_offset() as usize).min(raw.len());
     let bytes = raw.get(start..end)?;
     match part.content_transfer_encoding() {
-        Some(cte) if cte.eq_ignore_ascii_case("base64") => {
-            let clean: Vec<u8> = bytes.iter().copied().filter(|b| !b.is_ascii_whitespace()).collect();
-            BASE64.decode(clean).ok()
-        }
-        Some(cte) if cte.eq_ignore_ascii_case("quoted-printable") => {
-            Some(quoted_printable_decode(bytes).unwrap_or_else(|| bytes.to_vec()))
-        }
+        Some(cte) if cte.eq_ignore_ascii_case("base64") => base64_decoded(bytes),
+        Some(cte) if cte.eq_ignore_ascii_case("quoted-printable") => Some(
+            quoted_printable_decode(bytes).unwrap_or_else(|| quoted_printable_lenient(bytes)),
+        ),
         _ => Some(bytes.to_vec()),
     }
+}
+
+/// Base64, undone one line at a time. A sender that pads every wrapped
+/// line, not only the last, leaves a `=` in the middle of the stream
+/// that a single whole-body decode refuses; each line still stands on
+/// its own. Decoding stops at the first line that is not base64, rather
+/// than losing the lines that came before it, the way a mailing list's
+/// footer or a trailer after the encoded body would. `None` only when
+/// nothing at all decoded, so genuinely corrupt data still gives no text.
+fn base64_decoded(bytes: &[u8]) -> Option<Vec<u8>> {
+    let mut decoded = Vec::with_capacity(bytes.len());
+    for line in bytes.split(|&b| b == b'\n') {
+        let clean: Vec<u8> = line.iter().copied().filter(|b| !b.is_ascii_whitespace()).collect();
+        if clean.is_empty() {
+            continue;
+        }
+        match BASE64.decode(clean) {
+            Ok(bytes) => decoded.extend(bytes),
+            Err(_) => break,
+        }
+    }
+    (!decoded.is_empty()).then_some(decoded)
+}
+
+/// A lenient fallback for quoted-printable content mail-parser's own
+/// strict decoder refuses outright over one bad escape. Everything else
+/// still decodes; the bad escape (`=` not followed by two hex digits, or
+/// by a line break) shows through exactly as written, since there is no
+/// way to know what the sender meant by it.
+fn quoted_printable_lenient(bytes: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'=' {
+            if bytes[i + 1..].starts_with(b"\r\n") {
+                i += 3;
+                continue;
+            }
+            if bytes.get(i + 1) == Some(&b'\n') {
+                i += 2;
+                continue;
+            }
+            if let Some(byte) = bytes.get(i + 1..i + 3).and_then(hex_byte) {
+                out.push(byte);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    out
+}
+
+/// The byte two hex digits spell, or `None` when they are not both hex.
+fn hex_byte(pair: &[u8]) -> Option<u8> {
+    let hi = (pair[0] as char).to_digit(16)?;
+    let lo = (pair[1] as char).to_digit(16)?;
+    Some(((hi as u8) << 4) | lo as u8)
 }

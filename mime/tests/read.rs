@@ -104,6 +104,7 @@ iVBORw0KGgo=\r\n--b--\r\n";
     assert_eq!(a.part_id, "2");
     assert_eq!(a.filename, "logo.png");
     assert_eq!(a.mime_type, "image/png");
+    assert_eq!(a.size, 8, "the decoded length, not the base64 text's");
     assert_eq!(a.attachment_id.as_deref(), Some("2"));
     assert_eq!(a.content_id.as_deref(), Some("logo@example.com"));
 }
@@ -173,7 +174,12 @@ fn an_encrypted_message_says_which_wrapper_it_arrived_in() {
 --b\r\nContent-Type: application/pgp-encrypted\r\n\r\nVersion: 1\r\n\
 --b\r\nContent-Type: application/octet-stream\r\nContent-Disposition: attachment; filename=\"encrypted.asc\"\r\n\r\n\
 data\r\n--b--\r\n";
-    assert_eq!(read(raw).protection, Some(Protection::Encrypted));
+    let body = read(raw);
+    assert_eq!(body.protection, Some(Protection::Encrypted));
+    // The control part that carries the version string is structural,
+    // not a file: only the ciphertext is something to save.
+    let names: Vec<&str> = body.attachments.iter().map(|a| a.filename.as_str()).collect();
+    assert_eq!(names, ["encrypted.asc"]);
 }
 
 #[test]
@@ -309,6 +315,8 @@ fn a_calendar_part_arrives_inline_in_a_raw_message() {
 BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n--b--\r\n";
     let body = read(raw);
     assert!(body.calendar.as_deref().is_some_and(|c| c.contains("BEGIN:VCALENDAR")));
+    let names: Vec<&str> = body.attachments.iter().map(|a| a.filename.as_str()).collect();
+    assert_eq!(names, ["invite.ics"]);
 }
 
 #[test]
@@ -415,4 +423,66 @@ fn a_file_without_its_bytes_is_still_listed() {
     assert_eq!(body.attachments.len(), 1);
     assert_eq!(body.attachments[0].part_id, "2");
     assert_eq!(body.attachments[0].size, 25 << 20);
+}
+
+/// Gmail's own structural parts, and a bounce's, never show up as files:
+/// the PGP control part that names the version, and the delivery-status
+/// part a bounce carries, are not something to save. The returned
+/// message the bounce quotes arrives as `message/rfc822`, walked into
+/// for its own file rather than listed whole, the way Gmail expands a
+/// forwarded message.
+#[test]
+fn a_bounce_lists_only_the_file_inside_the_returned_message() {
+    let raw = b"Content-Type: multipart/report; report-type=delivery-status; boundary=r\r\n\r\n\
+--r\r\nContent-Type: text/plain\r\n\r\nYour message could not be delivered.\r\n\
+--r\r\nContent-Type: message/delivery-status\r\n\r\nReporting-MTA: dns; mail.example.com\r\nAction: failed\r\n\
+--r\r\nContent-Type: message/rfc822\r\n\r\n\
+Content-Type: application/pdf\r\nContent-Disposition: attachment; filename=\"report.pdf\"\r\nContent-Transfer-Encoding: base64\r\n\r\nJVBER\r\n\
+--r--\r\n";
+    let body = read(raw);
+    let names: Vec<(&str, &str)> = body
+        .attachments
+        .iter()
+        .map(|a| (a.filename.as_str(), a.part_id.as_str()))
+        .collect();
+    assert_eq!(names, [("report.pdf", "3.1")]);
+}
+
+/// mailers wrap base64 at some fixed width, and a broken one pads every
+/// wrapped line instead of only the last. Each line still decodes on its
+/// own; concatenating them is what a real reader gets right.
+#[test]
+fn base64_padded_line_by_line_still_decodes() {
+    let raw = b"Content-Type: text/plain\r\nContent-Transfer-Encoding: base64\r\n\r\nSGk=\r\nSGk=\r\n";
+    assert_eq!(read(raw).text.as_deref(), Some("HiHi"));
+}
+
+/// The last sextet of a padded group can carry bits beyond what two
+/// bytes need; RFC 4648 calls them undefined, and some encoders leave
+/// them non-zero. A strict decoder throws the whole part away over it.
+#[test]
+fn base64_with_non_zero_trailing_bits_still_decodes() {
+    let raw = b"Content-Type: text/plain\r\nContent-Transfer-Encoding: base64\r\n\r\nSGl=\r\n";
+    assert_eq!(read(raw).text.as_deref(), Some("Hi"));
+}
+
+/// A mailing list appends an unsubscribe line after the base64 body
+/// without re-encoding it. The body up to that line is still good.
+#[test]
+fn a_footer_after_base64_does_not_lose_the_body() {
+    let raw = b"Content-Type: text/plain\r\nContent-Transfer-Encoding: base64\r\n\r\n\
+SGVsbG8=\r\nUnsubscribe: http://example.com/off\r\n";
+    assert_eq!(read(raw).text.as_deref(), Some("Hello"));
+}
+
+/// A stray `=` not followed by two hex digits used to fail the whole
+/// part, showing the raw quoted-printable text instead of the message.
+/// The bad escape shows through as written; everything around it still
+/// decodes.
+#[test]
+fn quoted_printable_with_a_bad_escape_decodes_the_rest() {
+    let raw = b"Content-Type: text/plain\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n\
+Caf=E9 today =ZZ nice";
+    let decoded = part(raw, "1").unwrap();
+    assert_eq!(decoded, [b"Caf".as_slice(), &[0xE9], b" today =ZZ nice"].concat());
 }

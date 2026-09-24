@@ -105,7 +105,9 @@ pub fn body(parts: &Parts) -> MessageBody {
 }
 
 fn walk(part: &Part, body: &mut MessageBody) {
-    if part.mime_type.starts_with("multipart/") {
+    // A nested message walks into its own parts, the way Gmail expands a
+    // forwarded message rather than attaching it whole.
+    if part.mime_type.starts_with("multipart/") || part.mime_type == "message/rfc822" {
         for child in &part.children {
             walk(child, body);
         }
@@ -144,15 +146,32 @@ fn is_readable(mime: &str) -> bool {
     mime == "text/plain" || mime == "text/html"
 }
 
+/// A part that carries a protocol's own plumbing, not something anybody
+/// sent: the version string in front of PGP/MIME's ciphertext, a
+/// signature by itself, a bounce's machine-readable status, or the
+/// headers of a message a mail server refused. Nameless and without a
+/// disposition, these would otherwise fall out of `is_attachment`'s
+/// catch-all for anything that is not text.
+const STRUCTURAL: &[&str] = &[
+    "application/pgp-encrypted",
+    "application/pgp-signature",
+    "application/pkcs7-signature",
+    "application/x-pkcs7-signature",
+    "message/delivery-status",
+    "message/disposition-notification",
+    "text/rfc822-headers",
+];
+
 /// Whether a part is a file rather than text to show. A name, a
 /// Content-ID on anything but readable text, or an attachment disposition
-/// make it one. So does any part that is not text: Gmail sent those by
-/// reference, which is how the app listed them before it read raw mail.
+/// make it one. So does any part that is not text and not structural:
+/// Gmail sent those by reference, which is how the app listed them
+/// before it read raw mail.
 fn is_attachment(part: &Part) -> bool {
     part.filename.as_deref().is_some_and(|n| !n.is_empty())
         || (part.content_id.is_some() && !is_readable(&part.mime_type))
         || part.attachment
-        || !part.mime_type.starts_with("text/")
+        || (!part.mime_type.starts_with("text/") && !STRUCTURAL.contains(&part.mime_type.as_str()))
 }
 
 /// What to call a part that arrived without a name. The extension follows
