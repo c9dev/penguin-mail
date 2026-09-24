@@ -14,8 +14,6 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
-use base64::Engine;
-use base64::engine::general_purpose::STANDARD as BASE64;
 use lettre::address::{Address, Envelope};
 use lettre::transport::smtp::authentication::{Credentials, Mechanism};
 use lettre::transport::smtp::client::{AsyncSmtpConnection, AsyncTokioStream};
@@ -32,9 +30,11 @@ use crate::{ImapError, Login};
 /// Connecting, TLS, EHLO and AUTH together.
 const OPEN_LIMIT: Duration = Duration::from_secs(60);
 
-/// One message and QUIT. A message of tens of megabytes on a slow line
-/// takes minutes.
-const SEND_LIMIT: Duration = Duration::from_secs(10 * 60);
+/// The longest the server may go without taking or sending a byte once
+/// the client is signed in, as lettre's own transport allows. A send has
+/// no limit on its whole length, so a large message on a slow link
+/// finishes, and a server that stalls fails it in two minutes.
+const IDLE_LIMIT: Duration = Duration::from_secs(120);
 
 /// How much of the message lettre copies at a time to double its leading
 /// dots. Handing it the whole message would copy all of it at once.
@@ -115,7 +115,7 @@ where
     pub async fn submit(&self, from: &str, to: &[String], raw: &[u8]) -> Result<(), ImapError> {
         let envelope = envelope(from, to)?;
         let mut conn = within(OPEN_LIMIT, self.open()).await?;
-        within(SEND_LIMIT, send(&mut conn, &envelope, raw, &self.login)).await
+        send(&mut conn, &envelope, raw, &self.login).await
     }
 
     /// Connects, starts TLS, signs in and says goodbye.
@@ -130,10 +130,7 @@ where
 
     async fn open(&self) -> Result<AsyncSmtpConnection, ImapError> {
         let (stream, greeted) = self.dial.dial().await?;
-        let wire = Wire {
-            stand_in: if greeted { STAND_IN } else { b"" },
-            stream,
-        };
+        let wire = Wire::new(stream, if greeted { STAND_IN } else { b"" });
         let lettre = |err| smtp_error(&err, &self.login);
         let mut conn = AsyncSmtpConnection::connect_with_transport(Box::new(wire), &HELLO)
             .await
@@ -149,7 +146,8 @@ where
 
 /// MAIL, RCPT for each recipient, DATA, the message and QUIT. lettre's own
 /// `send` copies the whole message before it writes; this hands it the
-/// message a chunk at a time.
+/// message a chunk at a time. Each read and write must make progress
+/// within [`IDLE_LIMIT`], which [`Wire`] keeps.
 async fn send(
     conn: &mut AsyncSmtpConnection,
     envelope: &Envelope,
@@ -186,15 +184,62 @@ async fn send(
             .map_err(lettre)?;
     }
     conn.command(Data).await.map_err(lettre)?;
-    // lettre ends the data with CRLF, a dot and CRLF, so a message that
-    // ends with its own CRLF would gain an empty line.
-    let body = raw.strip_suffix(b"\r\n").unwrap_or(raw);
-    conn.message_iter(body.chunks(CHUNK))
+    conn.message_iter(crlf_chunks(raw, CHUNK))
         .await
         .map_err(lettre)?;
     // The server took the message; a failed goodbye changes nothing.
     let _ = conn.quit().await;
     Ok(())
+}
+
+/// `raw` in chunks of `size` bytes, each bare CR and bare LF made CRLF,
+/// and without its last line ending, since lettre ends the data with
+/// CRLF, a dot and CRLF itself.
+///
+/// lettre doubles a dot only after CRLF. A lone dot after a bare LF would
+/// go out undoubled, and a server that ends DATA at "\n.\r\n" would read
+/// the rest of the message as commands (SMTP smuggling).
+fn crlf_chunks(raw: &[u8], size: usize) -> Crlf<'_> {
+    let body = raw
+        .strip_suffix(b"\r\n")
+        .or_else(|| raw.strip_suffix(b"\n"))
+        .or_else(|| raw.strip_suffix(b"\r"))
+        .unwrap_or(raw);
+    Crlf {
+        chunks: body.chunks(size.max(1)),
+        after_cr: false,
+    }
+}
+
+struct Crlf<'a> {
+    chunks: std::slice::Chunks<'a, u8>,
+    /// The last byte handed out was a CR whose LF has not come yet.
+    after_cr: bool,
+}
+
+impl Iterator for Crlf<'_> {
+    type Item = Vec<u8>;
+
+    fn next(&mut self) -> Option<Vec<u8>> {
+        let Some(chunk) = self.chunks.next() else {
+            // A CR at the very end still needs its LF.
+            return std::mem::take(&mut self.after_cr).then(|| b"\n".to_vec());
+        };
+        let mut out = Vec::with_capacity(chunk.len() + chunk.len() / 16 + 1);
+        for &byte in chunk {
+            match byte {
+                b'\n' if self.after_cr => out.push(b'\n'),
+                b'\n' => out.extend_from_slice(b"\r\n"),
+                _ if self.after_cr => {
+                    out.push(b'\n');
+                    out.push(byte);
+                }
+                _ => out.push(byte),
+            }
+            self.after_cr = byte == b'\r';
+        }
+        Some(out)
+    }
 }
 
 async fn within<T>(
@@ -316,10 +361,11 @@ async fn reply<R: AsyncBufRead + Unpin>(reader: &mut R) -> Result<Reply, ImapErr
     loop {
         let line = tls::line(reader).await?;
         let bytes = line.as_bytes();
-        let code = line
+        let code = bytes
             .get(..3)
-            .and_then(|code| code.parse::<u16>().ok())
-            .filter(|_| matches!(bytes.get(3), None | Some(b' ' | b'-')));
+            .filter(|code| code.iter().all(u8::is_ascii_digit))
+            .filter(|_| matches!(bytes.get(3), None | Some(b' ' | b'-')))
+            .and_then(|_| line[..3].parse::<u16>().ok());
         let Some(code) = code else {
             return Err(ImapError::Protocol(format!(
                 "not an SMTP reply: {}",
@@ -343,11 +389,44 @@ async fn reply<R: AsyncBufRead + Unpin>(reader: &mut R) -> Result<Reply, ImapErr
 const STAND_IN: &[u8] = b"220 TLS started\r\n";
 
 /// The stream lettre works on: the connection, after a stand-in greeting
-/// when the real one came before TLS.
+/// when the real one came before TLS. A read or write that makes no
+/// progress for [`IDLE_LIMIT`] fails; lettre sets no limit of its own on
+/// a stream it is handed.
 #[derive(Debug)]
 struct Wire<S> {
     stand_in: &'static [u8],
     stream: S,
+    idle: Pin<Box<tokio::time::Sleep>>,
+}
+
+impl<S> Wire<S> {
+    fn new(stream: S, stand_in: &'static [u8]) -> Self {
+        Wire {
+            stand_in,
+            stream,
+            idle: Box::pin(tokio::time::sleep(IDLE_LIMIT)),
+        }
+    }
+
+    /// Starts the idle limit again after progress, or fails a call that
+    /// has waited out the limit.
+    fn watch<T>(&mut self, cx: &mut Context<'_>, poll: Poll<io::Result<T>>) -> Poll<io::Result<T>> {
+        if poll.is_ready() {
+            let deadline = tokio::time::Instant::now() + IDLE_LIMIT;
+            self.idle.as_mut().reset(deadline);
+            return poll;
+        }
+        match self.idle.as_mut().poll(cx) {
+            Poll::Ready(()) => Poll::Ready(Err(io::Error::new(
+                io::ErrorKind::TimedOut,
+                format!(
+                    "the server took or sent nothing for {} seconds",
+                    IDLE_LIMIT.as_secs()
+                ),
+            ))),
+            Poll::Pending => Poll::Pending,
+        }
+    }
 }
 
 impl<S: AsyncRead + Unpin> AsyncRead for Wire<S> {
@@ -358,7 +437,8 @@ impl<S: AsyncRead + Unpin> AsyncRead for Wire<S> {
     ) -> Poll<io::Result<()>> {
         let this = self.get_mut();
         if this.stand_in.is_empty() {
-            return Pin::new(&mut this.stream).poll_read(cx, buf);
+            let poll = Pin::new(&mut this.stream).poll_read(cx, buf);
+            return this.watch(cx, poll);
         }
         let n = this.stand_in.len().min(buf.remaining());
         buf.put_slice(&this.stand_in[..n]);
@@ -373,11 +453,15 @@ impl<S: AsyncWrite + Unpin> AsyncWrite for Wire<S> {
         cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
-        Pin::new(&mut self.get_mut().stream).poll_write(cx, buf)
+        let this = self.get_mut();
+        let poll = Pin::new(&mut this.stream).poll_write(cx, buf);
+        this.watch(cx, poll)
     }
 
     fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Pin::new(&mut self.get_mut().stream).poll_flush(cx)
+        let this = self.get_mut();
+        let poll = Pin::new(&mut this.stream).poll_flush(cx);
+        this.watch(cx, poll)
     }
 
     fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
@@ -401,7 +485,7 @@ where
 
 fn smtp_error(err: &lettre::transport::smtp::Error, login: &Login) -> ImapError {
     let code = err.status().map(|c| c.to_string());
-    let text = hide(err.to_string(), login);
+    let text = login.hide(&err.to_string());
     classify(Smtp {
         code: code.as_deref(),
         transient: err.is_transient(),
@@ -409,22 +493,6 @@ fn smtp_error(err: &lettre::transport::smtp::Error, login: &Login) -> ImapError 
         client: err.is_client(),
         text: &text,
     })
-}
-
-/// `text` with the password, and the base64 forms AUTH PLAIN and LOGIN
-/// send it in, taken out. A server may repeat what it was sent in its
-/// refusal, and error text goes to the log.
-fn hide(mut text: String, login: &Login) -> String {
-    let plain = BASE64.encode(format!("\0{}\0{}", login.user, login.password));
-    let alone = BASE64.encode(&login.password);
-    // The base64 forms go first: taking the password out first could
-    // break a base64 form that happens to contain it.
-    for secret in [plain, alone, login.password.clone()] {
-        if !secret.is_empty() && text.contains(&secret) {
-            text = text.replace(&secret, "<hidden>");
-        }
-    }
-    text
 }
 
 /// What lettre says about a failure, taken apart so a test can build one.
@@ -464,10 +532,12 @@ mod tests {
     use base64::engine::general_purpose::STANDARD as BASE64;
     use tokio::io::DuplexStream;
 
-    use super::{Smtp, SmtpClient, classify, envelope, hide, starttls};
+    use std::time::Duration;
+
+    use super::{Smtp, SmtpClient, classify, crlf_chunks, envelope, reply, starttls};
     use crate::client::Dial;
     use crate::refusal::MAX_ERROR_TEXT as MAX_SERVER_TEXT;
-    use crate::testing::{HeapMark, SmtpSeen, smtp_pipe, smtp_server};
+    use crate::testing::{HeapMark, SmtpSeen, smtp_pipe, smtp_pipe_paced, smtp_server};
     use crate::{ImapError, Login};
 
     fn failure<'a>(code: Option<&'a str>, text: &'a str) -> Smtp<'a> {
@@ -544,19 +614,103 @@ mod tests {
         assert_eq!(kept.chars().count(), MAX_SERVER_TEXT);
     }
 
-    /// A server that echoes what it was sent would otherwise put the
-    /// password in the error, and error text goes to the log.
+    /// lettre doubles a dot only after CRLF. A lone dot after a bare LF
+    /// would pass undoubled, and a server that ends DATA at "\n.\r\n" would
+    /// take what follows as new commands.
     #[test]
-    fn the_password_and_its_base64_forms_never_reach_an_error() {
-        let login = Login::new("ann@example.com", "pässword 1");
-        let plain = BASE64.encode("\0ann@example.com\0pässword 1");
-        let alone = BASE64.encode("pässword 1");
-        let text = format!("535 no: pässword 1 {plain} {alone}");
-        let hidden = hide(text, &login);
-        assert!(!hidden.contains("pässword"), "{hidden}");
-        assert!(!hidden.contains(&plain), "{hidden}");
-        assert!(!hidden.contains(&alone), "{hidden}");
-        assert!(hidden.starts_with("535 no: "), "{hidden}");
+    fn bare_cr_and_lf_become_crlf_wherever_a_chunk_ends() {
+        let raw = b"a\n.\r\nb\r\n.\nc\rd\r\r\n";
+        let want = b"a\r\n.\r\nb\r\n.\r\nc\r\nd\r\n";
+        for size in 1..=raw.len() {
+            let sent: Vec<u8> = crlf_chunks(raw, size).flatten().collect();
+            assert_eq!(sent, want, "chunks of {size}");
+        }
+    }
+
+    #[test]
+    fn the_last_line_ending_goes_whatever_its_form() {
+        for raw in [&b"x\r\n"[..], b"x\n", b"x\r", b"x"] {
+            let sent: Vec<u8> = crlf_chunks(raw, 64).flatten().collect();
+            assert_eq!(sent, b"x", "{raw:?}");
+        }
+    }
+
+    #[tokio::test]
+    async fn a_lone_dot_after_a_bare_line_ending_is_doubled() {
+        let seen = SmtpSeen::default();
+        let stream = smtp_pipe("220 ready", seen.clone(), smtp_server);
+        let raw = b"a\n.\r\nMAIL FROM:<x@example.net>\r\nb\r\n.\nc\r\n";
+        client(stream, false, "pw")
+            .submit("ann@example.com", &["bob@example.com".into()], raw)
+            .await
+            .unwrap();
+        assert_eq!(
+            seen.messages(),
+            [b"a\r\n..\r\nMAIL FROM:<x@example.net>\r\nb\r\n..\r\nc\r\n".to_vec()]
+        );
+        let mails = seen
+            .commands()
+            .iter()
+            .filter(|c| c.starts_with("MAIL"))
+            .count();
+        assert_eq!(mails, 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_server_that_stops_answering_fails_the_send_after_two_idle_minutes() {
+        fn silent_after_the_message(command: &str) -> Vec<String> {
+            match command {
+                "." => Vec::new(),
+                other => smtp_server(other),
+            }
+        }
+        let stream = smtp_pipe("220 ready", SmtpSeen::default(), silent_after_the_message);
+        let started = tokio::time::Instant::now();
+        let err = client(stream, false, "pw")
+            .submit("ann@example.com", &["bob@example.com".into()], b"x\r\n")
+            .await
+            .unwrap_err();
+        let waited = started.elapsed();
+        assert!(matches!(err, ImapError::Network(_)), "{err:?}");
+        assert!(
+            waited >= Duration::from_secs(120) && waited < Duration::from_secs(125),
+            "{waited:?}"
+        );
+    }
+
+    /// 1 MiB to a server that reads 1 KiB a second: 17 minutes in all,
+    /// and never two quiet minutes, even while the server drains the
+    /// 72 KiB its buffers hold after the client's last write.
+    #[tokio::test(start_paused = true)]
+    async fn a_large_send_on_a_slow_link_outlasts_the_idle_limit() {
+        let seen = SmtpSeen::default();
+        let stream = smtp_pipe_paced(
+            "220 ready",
+            seen.clone(),
+            Duration::from_secs(1),
+            smtp_server,
+        );
+        let mut line = vec![b'a'; 1022];
+        line.extend_from_slice(b"\r\n");
+        let raw = line.repeat(1024);
+        let started = tokio::time::Instant::now();
+        client(stream, false, "pw")
+            .submit("ann@example.com", &["bob@example.com".into()], &raw)
+            .await
+            .unwrap();
+        assert!(started.elapsed() > Duration::from_secs(1000));
+        assert_eq!(seen.messages()[0].len(), raw.len());
+    }
+
+    #[tokio::test]
+    async fn a_reply_code_is_three_ascii_digits() {
+        for line in ["+22 hi\r\n", "2 2 hi\r\n", "22\r\n"] {
+            let err = reply(&mut line.as_bytes()).await.err();
+            assert!(
+                matches!(err, Some(ImapError::Protocol(_))),
+                "{line:?}: {err:?}"
+            );
+        }
     }
 
     /// A plain SMTP server that greets and answers through `answer`.

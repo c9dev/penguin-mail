@@ -46,6 +46,28 @@ impl ImapError {
         )
     }
 
+    /// The error with the password of `login` taken out of every text in
+    /// it, for a failure that came while `login` went to the server.
+    pub(crate) fn hidden(self, login: &crate::Login) -> ImapError {
+        let hide = |text: String| login.hide(&text);
+        match self {
+            ImapError::Auth { text } => ImapError::Auth { text: hide(text) },
+            ImapError::ImapDisabled { text } => ImapError::ImapDisabled { text: hide(text) },
+            ImapError::Tls { host, detail } => ImapError::Tls {
+                host,
+                detail: hide(detail),
+            },
+            ImapError::TooManyConnections { text } => {
+                ImapError::TooManyConnections { text: hide(text) }
+            }
+            ImapError::Network(text) => ImapError::Network(hide(text)),
+            ImapError::Protocol(text) => ImapError::Protocol(hide(text)),
+            ImapError::NoMailbox(name) => ImapError::NoMailbox(hide(name)),
+            ImapError::Unsupported(what) => ImapError::Unsupported(what),
+            ImapError::Refused(text) => ImapError::Refused(hide(text)),
+        }
+    }
+
     /// Failures after which the connection is in no state to carry the
     /// next command.
     pub(crate) fn drops_connection(&self) -> bool {

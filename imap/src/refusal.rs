@@ -90,12 +90,22 @@ pub(crate) fn refusal(doing: Doing<'_>, how: Refusal, try_create: bool, text: &s
 /// An error from async-imap, which only the login and IDLE paths call.
 pub(crate) fn from_async_imap(err: async_imap::error::Error, doing: Doing<'_>) -> ImapError {
     use async_imap::error::Error;
-    match err {
+    let error = match err {
         Error::Io(err) => from_io(err),
         Error::ConnectionLost => ImapError::Network("the server closed the connection".into()),
         Error::No(detail) => refusal(doing, Refusal::No, false, &server_words(&detail)),
         Error::Bad(detail) => refusal(doing, Refusal::Bad, false, &server_words(&detail)),
         other => ImapError::Protocol(clipped(other.to_string())),
+    };
+    match (doing, error) {
+        // An answer to LOGIN or AUTHENTICATE that async-imap cannot parse
+        // comes with the buffer it read, escaped twice and as a list of
+        // byte values. A server that repeats the command puts the password
+        // there in forms no search can find, so none of that text is kept.
+        (Doing::Login, ImapError::Protocol(_)) => {
+            ImapError::Protocol("the server's answer to the sign-in could not be read".into())
+        }
+        (_, error) => error,
     }
 }
 

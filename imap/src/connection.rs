@@ -69,6 +69,14 @@ impl<S: Stream> Conn<S> {
         greeted: bool,
         login: &Login,
     ) -> Result<Conn<S>, ImapError> {
+        // A server can repeat the LOGIN or AUTHENTICATE line it was sent in
+        // its refusal, and the error goes to the log and the dialog.
+        Self::sign_in(stream, greeted, login)
+            .await
+            .map_err(|err| err.hidden(login))
+    }
+
+    async fn sign_in(stream: S, greeted: bool, login: &Login) -> Result<Conn<S>, ImapError> {
         let mut client = Client::new(Guarded::new(stream));
         let mut before = CapabilityReader::default();
         if !greeted {

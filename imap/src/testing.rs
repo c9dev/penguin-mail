@@ -326,8 +326,19 @@ pub(crate) fn smtp_pipe(
     seen: SmtpSeen,
     answer: impl FnMut(&str) -> Vec<String> + Send + 'static,
 ) -> DuplexStream {
+    smtp_pipe_paced(greeting, seen, std::time::Duration::ZERO, answer)
+}
+
+/// [`smtp_pipe`] with a server that waits `pace` after each line of a
+/// message it reads, as a slow link does.
+pub(crate) fn smtp_pipe_paced(
+    greeting: &str,
+    seen: SmtpSeen,
+    pace: std::time::Duration,
+    answer: impl FnMut(&str) -> Vec<String> + Send + 'static,
+) -> DuplexStream {
     let (client, server) = tokio::io::duplex(64 << 10);
-    tokio::spawn(serve_smtp(server, greeting.to_string(), seen, answer));
+    tokio::spawn(serve_smtp(server, greeting.to_string(), seen, pace, answer));
     client
 }
 
@@ -358,6 +369,7 @@ async fn serve_smtp(
     server: DuplexStream,
     greeting: String,
     seen: SmtpSeen,
+    pace: std::time::Duration,
     mut answer: impl FnMut(&str) -> Vec<String>,
 ) {
     let (read, mut write) = tokio::io::split(server);
@@ -392,6 +404,9 @@ async fn serve_smtp(
                 message.truncate(start);
                 break;
             }
+            if !pace.is_zero() {
+                tokio::time::sleep(pace).await;
+            }
         }
         seen.messages
             .lock()
@@ -403,4 +418,18 @@ async fn serve_smtp(
             }
         }
     }
+}
+
+/// Every form a server could repeat the password in: as typed, as LOGIN
+/// quotes it, as Debug escapes it, and in AUTH's base64.
+pub(crate) fn forms(user: &str, password: &str) -> Vec<String> {
+    use base64::Engine;
+    use base64::engine::general_purpose::STANDARD as BASE64;
+    vec![
+        password.to_string(),
+        password.replace('\\', "\\\\").replace('"', "\\\""),
+        format!("{password:?}").trim_matches('"').to_string(),
+        BASE64.encode(format!("\0{user}\0{password}")),
+        BASE64.encode(password),
+    ]
 }

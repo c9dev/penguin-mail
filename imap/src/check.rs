@@ -66,7 +66,7 @@ where
     let (imap_user, capabilities) = sign_in_imap(imap, address, password)
         .await
         .map_err(CheckError::Imap)?;
-    let smtp_user = sign_in_smtp(smtp, address, password)
+    let smtp_user = sign_in_smtp(smtp, &imap_user, address, password)
         .await
         .map_err(CheckError::Smtp)?;
     Ok(Checked {
@@ -83,12 +83,13 @@ async fn sign_in_imap<D: Dial + Clone>(
 ) -> Result<(String, Capabilities), ImapError> {
     let mut refused = None;
     for user in user_names(rule, address) {
-        match ImapClient::with_dial(dial.clone(), Login::new(user.as_str(), password))
+        let login = Login::new(user.as_str(), password);
+        match ImapClient::with_dial(dial.clone(), login.clone())
             .capabilities()
             .await
         {
             Ok(capabilities) => return Ok((user, capabilities)),
-            Err(err) => refused = Some(refusal_or_stop(err)?),
+            Err(err) => refused = Some(refusal_or_stop(err.hidden(&login))?),
         }
     }
     Err(refused.unwrap_or(ImapError::Auth {
@@ -96,8 +97,12 @@ async fn sign_in_imap<D: Dial + Clone>(
     }))
 }
 
+/// Signs in to SMTP, trying `imap_user` first when the rule allows it:
+/// a provider that counts failed sign-ins should not see one for a name
+/// its IMAP server has just taken.
 async fn sign_in_smtp<D>(
     (dial, rule): (&D, UserName),
+    imap_user: &str,
     address: &str,
     password: &str,
 ) -> Result<String, ImapError>
@@ -105,14 +110,19 @@ where
     D: Dial + Clone,
     D::Stream: Sync,
 {
+    let mut names = user_names(rule, address);
+    if let Some(at) = names.iter().position(|name| name == imap_user) {
+        names[..=at].rotate_right(1);
+    }
     let mut refused = None;
-    for user in user_names(rule, address) {
-        match SmtpClient::with_dial(dial.clone(), Login::new(user.as_str(), password))
+    for user in names {
+        let login = Login::new(user.as_str(), password);
+        match SmtpClient::with_dial(dial.clone(), login.clone())
             .check()
             .await
         {
             Ok(()) => return Ok(user),
-            Err(err) => refused = Some(refusal_or_stop(err)?),
+            Err(err) => refused = Some(refusal_or_stop(err.hidden(&login))?),
         }
     }
     Err(refused.unwrap_or(ImapError::Auth {
@@ -147,10 +157,16 @@ mod tests {
     use mailrs_discover::{Security, Server, UserName};
     use tokio::io::DuplexStream;
 
-    use super::{CheckError, check_with, refusal_or_stop, user_names};
+    use std::pin::Pin;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::task::{Context, Poll};
+
+    use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
+
+    use super::{CheckError, check_with, refusal_or_stop, sign_in_imap, user_names};
     use crate::ImapError;
     use crate::client::Dial;
-    use crate::testing::{SmtpSeen, pipe, server, smtp_pipe, smtp_server};
+    use crate::testing::{SmtpSeen, forms, pipe, server, smtp_pipe, smtp_server};
 
     #[test]
     fn local_part_first_tries_the_local_part_then_the_address() {
@@ -312,5 +328,152 @@ mod tests {
             "{err:?}"
         );
         assert_eq!(smtp.dials(), 1);
+    }
+
+    /// Passwords with a quote and a backslash, so each escaped form
+    /// differs from the typed one. imap-proto cannot parse a refusal that
+    /// repeats the second one, whose letter is outside ASCII.
+    const ECHOED: [&str; 2] = ["p\"ss\\word 1", "pä\"ss\\word 1"];
+
+    /// An IMAP server that refuses every sign-in and repeats the command
+    /// it was sent, password included.
+    fn imap_echoing(greeting: &'static str) -> DuplexStream {
+        let mut rest = server("IDLE", Arc::default(), |_| vec!["{tag} OK".into()]);
+        pipe(greeting, move |command| {
+            if command.starts_with("LOGIN ") || command.starts_with("AUTHENTICATE PLAIN ") {
+                return vec![format!(
+                    "{{tag}} NO [AUTHENTICATIONFAILED] you sent {command}"
+                )];
+            }
+            rest(command)
+        })
+    }
+
+    #[tokio::test]
+    async fn an_imap_server_that_echoes_the_password_never_gets_it_into_the_error() {
+        for password in ECHOED {
+            let by_login = Servers::new(|| imap_echoing("* OK [CAPABILITY IMAP4rev1] ready"));
+            let by_plain =
+                Servers::new(|| imap_echoing("* OK [CAPABILITY IMAP4rev1 AUTH=PLAIN] ready"));
+            for imap in [by_login, by_plain] {
+                let smtp = Servers::new(|| smtp_taking("ann@me.com"));
+                let err = check_with(
+                    (&imap, UserName::LocalPartFirst),
+                    (&smtp, UserName::Address),
+                    "ann@me.com",
+                    password,
+                )
+                .await
+                .unwrap_err();
+                let printed = format!("{err} {err:?}");
+                assert!(matches!(err, CheckError::Imap(_)), "{printed}");
+                if password.is_ascii() {
+                    assert!(printed.contains("<hidden>"), "{printed}");
+                }
+                for user in ["ann", "ann@me.com"] {
+                    for form in forms(user, password) {
+                        assert!(!printed.contains(&form), "{form}: {printed}");
+                    }
+                }
+                assert!(!printed.contains("ss\\"), "{printed}");
+            }
+        }
+    }
+
+    /// A provider that counts failed sign-ins should not see one for a
+    /// name the IMAP server has just taken.
+    #[tokio::test]
+    async fn smtp_tries_the_name_imap_took_first() {
+        let imap = Servers::new(|| imap_taking("ann@me.com"));
+        let smtp = Servers::new(|| smtp_taking("ann@me.com"));
+        let checked = check_with(
+            (&imap, UserName::Address),
+            (&smtp, UserName::LocalPartFirst),
+            "ann@me.com",
+            "pw",
+        )
+        .await
+        .unwrap();
+        assert_eq!(checked.smtp_user, "ann@me.com");
+        assert_eq!(smtp.dials(), 1);
+    }
+
+    /// A stream that counts itself while it lives.
+    #[derive(Debug)]
+    struct Tracked {
+        stream: DuplexStream,
+        live: Arc<AtomicUsize>,
+    }
+
+    impl Drop for Tracked {
+        fn drop(&mut self) {
+            self.live.fetch_sub(1, Ordering::SeqCst);
+        }
+    }
+
+    impl AsyncRead for Tracked {
+        fn poll_read(
+            self: Pin<&mut Self>,
+            cx: &mut Context<'_>,
+            buf: &mut ReadBuf<'_>,
+        ) -> Poll<std::io::Result<()>> {
+            Pin::new(&mut self.get_mut().stream).poll_read(cx, buf)
+        }
+    }
+
+    impl AsyncWrite for Tracked {
+        fn poll_write(
+            self: Pin<&mut Self>,
+            cx: &mut Context<'_>,
+            buf: &[u8],
+        ) -> Poll<std::io::Result<usize>> {
+            Pin::new(&mut self.get_mut().stream).poll_write(cx, buf)
+        }
+
+        fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+            Pin::new(&mut self.get_mut().stream).poll_flush(cx)
+        }
+
+        fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+            Pin::new(&mut self.get_mut().stream).poll_shutdown(cx)
+        }
+    }
+
+    /// Dials servers that take only the full address, and counts the
+    /// connections made and those still alive.
+    #[derive(Clone, Default)]
+    struct Counted {
+        made: Arc<AtomicUsize>,
+        live: Arc<AtomicUsize>,
+    }
+
+    impl Dial for Counted {
+        type Stream = Tracked;
+
+        async fn dial(&self) -> Result<(Tracked, bool), ImapError> {
+            self.made.fetch_add(1, Ordering::SeqCst);
+            self.live.fetch_add(1, Ordering::SeqCst);
+            let stream = imap_taking("ann@me.com");
+            Ok((
+                Tracked {
+                    stream,
+                    live: self.live.clone(),
+                },
+                false,
+            ))
+        }
+    }
+
+    /// The client that signed in keeps its connection in its pool, and no
+    /// task of its own holds one, so dropping it closes every connection.
+    #[tokio::test]
+    async fn the_imap_sign_in_leaves_no_connection_open() {
+        let dial = Counted::default();
+        let (user, _) = sign_in_imap((&dial, UserName::LocalPartFirst), "ann@me.com", "pw")
+            .await
+            .unwrap();
+        assert_eq!(user, "ann@me.com");
+        assert_eq!(dial.made.load(Ordering::SeqCst), 2);
+        assert_eq!(dial.live.load(Ordering::SeqCst), 0);
     }
 }
