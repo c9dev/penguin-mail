@@ -6,6 +6,10 @@ use chrono::NaiveDate;
 
 use crate::MailSet;
 
+mod typed;
+
+pub use typed::{parse, resolve_names};
+
 /// Bytes in the megabyte a smart mailbox's size condition counts in.
 pub const MEGABYTE: i64 = 1024 * 1024;
 
@@ -79,6 +83,19 @@ pub fn plain(text: &str) -> String {
         .collect::<String>()
         .trim()
         .to_string()
+}
+
+/// Gmail's spelling of a label name in its search: lower case, with each
+/// space and slash as a dash, without double quotes or parentheses. The
+/// search box suggests `label:` in this spelling, so a typed label is
+/// matched to a mailbox by it.
+pub fn label_spelling(name: &str) -> String {
+    name.trim()
+        .to_lowercase()
+        .replace(|c: char| c.is_whitespace() || c == '/', "-")
+        .chars()
+        .filter(|c| !matches!(c, '"' | '(' | ')'))
+        .collect()
 }
 
 #[cfg(test)]

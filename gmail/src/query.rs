@@ -3,7 +3,7 @@
 
 use mailrs_domain::category;
 use mailrs_domain::mailbox::keyword;
-use mailrs_domain::query::{MEGABYTE, Query, Term};
+use mailrs_domain::query::{MEGABYTE, Query, Term, label_spelling};
 use mailrs_domain::{MailSet, Role};
 
 /// Where a subtree sits, which decides whether it needs brackets.
@@ -108,13 +108,7 @@ fn quoted(text: &str) -> Option<String> {
 /// Gmail's search spells a label name in lower case, with spaces and
 /// slashes as dashes.
 fn label(name: &str) -> String {
-    let spelled: String = name
-        .trim()
-        .to_lowercase()
-        .replace(|c: char| c.is_whitespace() || c == '/', "-")
-        .chars()
-        .filter(|c| !matches!(c, '"' | '(' | ')'))
-        .collect();
+    let spelled = label_spelling(name);
     if spelled.is_empty() {
         String::new()
     } else {
@@ -294,5 +288,40 @@ mod tests {
             "label:work-clients"
         );
         assert_eq!(print(&Query::term(Term::MailboxNamed("()".into()))), "");
+    }
+
+    /// What a person types reads as a tree that Gmail's printer turns back
+    /// into text Gmail reads the same way, for every operator both know,
+    /// and that text reads back as the same tree.
+    #[test]
+    fn typed_text_prints_back_as_text_gmail_reads_the_same_way() {
+        use mailrs_domain::query::parse;
+
+        let cases = [
+            ("from:ann@example.com subject:kites", "from:ann@example.com subject:kites"),
+            ("from:\"Ann Smith\" is:unread", "from:\"Ann Smith\" is:unread"),
+            ("is:starred has:attachment", "is:starred has:attachment"),
+            ("is:flagged", "is:starred"),
+            ("is:read", "-is:unread"),
+            ("newer_than:7d", "newer_than:7d"),
+            ("older_than:30d", "-newer_than:30d"),
+            ("after:2026/02/01 before:2026/03/01", "after:2026/02/01 before:2026/03/01"),
+            ("larger:5M", "larger:5M"),
+            ("larger:1500", "larger:1500"),
+            ("label:work-clients", "label:work-clients"),
+            ("in:inbox is:unread", "in:inbox is:unread"),
+            ("in:spam", "in:spam"),
+            ("category:social", "category:social"),
+            ("from:ann OR from:bo kites", "{from:ann from:bo} kites"),
+            ("{from:ann from:bo}", "{from:ann from:bo}"),
+            ("-from:bo@example.org", "-from:bo@example.org"),
+            ("-(from:ann is:starred)", "-(from:ann is:starred)"),
+            ("\"lunch on thursday\" moss", "\"lunch on thursday\" moss"),
+        ];
+        for (typed, printed) in cases {
+            let tree = parse(typed);
+            assert_eq!(print(&tree), printed, "{typed}");
+            assert_eq!(parse(printed), tree, "{printed} reads back as {typed} did");
+        }
     }
 }
