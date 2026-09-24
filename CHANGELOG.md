@@ -5,6 +5,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+## 0.2.1 (2026-09-24)
+
 ### New
 
 - Penguin Mail speaks British English as well as American. Pick English
