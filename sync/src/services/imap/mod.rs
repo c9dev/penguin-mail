@@ -6,7 +6,12 @@
 //! remote ref. This adapter never opens the store.
 
 mod api;
+mod feed;
+mod keywords;
 mod mailboxes;
+mod state;
+mod syntax;
+mod window;
 
 pub use api::{ImapApi, Submit};
 
@@ -16,7 +21,7 @@ use std::time::Duration;
 use mailrs_domain::mailbox::keyword;
 use mailrs_domain::{MailSet, RemoteMailbox, Role};
 use mailrs_gmail::LabelColor;
-use mailrs_imap::ImapError;
+use mailrs_imap::{ImapError, Selected, Since};
 use mailrs_mime::Parts;
 
 use super::{
@@ -101,6 +106,19 @@ impl<I, S> Imap<I, S> {
     }
 }
 
+impl<I: ImapApi, S: Submit> Imap<I, S> {
+    /// Selects `mailbox`, with QRESYNC's parameters when `since` gives
+    /// them, and notes which keywords the Inbox's PERMANENTFLAGS let the
+    /// server store.
+    async fn select(&self, mailbox: &str, since: Option<Since>) -> Result<Selected, BackendError> {
+        let selected = self.api.select(mailbox, since).await?;
+        if mailbox.eq_ignore_ascii_case("INBOX") {
+            self.known().keywords = Some(keywords::stored_keywords(&selected.permanent_flags));
+        }
+        Ok(selected)
+    }
+}
+
 /// IMAP's errors as kinds, so the retry rules and the account states read
 /// them as they read Gmail's. A refused sign-in and IMAP switched off both
 /// need the person; a full connection limit is waited out like a rate
@@ -166,8 +184,11 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         self.list_mailboxes().await
     }
 
-    async fn changes(&self, _since: Option<&SyncState>) -> Result<Changes, BackendError> {
-        Err(BackendError::Unsupported)
+    async fn changes(&self, since: Option<&SyncState>) -> Result<Changes, BackendError> {
+        match since {
+            None => self.feed_start().await,
+            Some(_) => Err(BackendError::Unsupported),
+        }
     }
 
     async fn create_mailbox(&self, name: &str) -> Result<RemoteMailbox, BackendError> {
@@ -205,20 +226,20 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         Ok(u64::from(self.api.select(id, None).await?.exists))
     }
 
-    async fn backfill(&self, _days: i64, _cursor: Option<&str>) -> Result<Backfill, BackendError> {
-        Err(BackendError::Unsupported)
+    async fn backfill(&self, days: i64, cursor: Option<&str>) -> Result<Backfill, BackendError> {
+        self.backfill_page(days, cursor).await
     }
 
     async fn window_ids(
         &self,
-        _days: i64,
-        _mailbox: Option<&str>,
+        days: i64,
+        mailbox: Option<&str>,
     ) -> Result<Vec<RemoteRef>, BackendError> {
-        Err(BackendError::Unsupported)
+        self.window_refs(days, mailbox).await
     }
 
     async fn inbox_ids(&self) -> Result<Vec<RemoteRef>, BackendError> {
-        Err(BackendError::Unsupported)
+        self.inbox_refs().await
     }
 
     async fn search(
@@ -233,12 +254,12 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         Err(BackendError::Unsupported)
     }
 
-    async fn fetch(&self, _wants: Vec<Want>) -> Result<Found, BackendError> {
-        Err(BackendError::Unsupported)
+    async fn fetch(&self, wants: Vec<Want>) -> Result<Found, BackendError> {
+        self.fetch_metas(wants).await
     }
 
-    async fn fetch_whole(&self, _threads: Vec<String>) -> Result<Found, BackendError> {
-        Err(BackendError::Unsupported)
+    async fn fetch_whole(&self, threads: Vec<String>) -> Result<Found, BackendError> {
+        self.fetch_lone(threads).await
     }
 
     async fn fetch_raw(&self, _ids: &[String]) -> Result<Vec<RawMessage>, BackendError> {

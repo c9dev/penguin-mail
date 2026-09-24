@@ -238,6 +238,45 @@ impl FakeImap {
         uid
     }
 
+    /// Mail arriving in `mailbox` carrying `flags`, received at `date`.
+    /// Returns its UID. A flag the mailbox's PERMANENTFLAGS refuse, such as
+    /// `\Recent`, is dropped, as `deliver` would. Wakes an IDLE.
+    pub fn deliver_flagged(
+        &self,
+        mailbox: &str,
+        raw: &[u8],
+        flags: &[&str],
+        date: EpochMillis,
+    ) -> u32 {
+        let flags = flags.iter().map(|f| f.to_string()).collect();
+        let uid = self.with(|s| s.mailbox_mut(mailbox).add(raw.to_vec(), flags, date));
+        self.changed.notify_waiters();
+        uid
+    }
+
+    /// Another client sets a message's flags to exactly `flags`, each
+    /// change with its own MODSEQ. Wakes an IDLE.
+    pub fn set_flags(&self, mailbox: &str, uid: u32, flags: &[&str]) {
+        self.with(|s| {
+            let m = s.mailbox_mut(mailbox);
+            let had: Vec<String> = m
+                .messages
+                .get(&uid)
+                .map(|message| message.flags.iter().cloned().collect())
+                .unwrap_or_default();
+            for flag in had
+                .iter()
+                .filter(|f| !flags.iter().any(|w| w.eq_ignore_ascii_case(f)))
+            {
+                m.flag(uid, flag, false);
+            }
+            for flag in flags {
+                m.flag(uid, flag, true);
+            }
+        });
+        self.changed.notify_waiters();
+    }
+
     /// Another client adds or takes away `flag` on a message.
     pub fn remote_flag(&self, mailbox: &str, uid: u32, flag: &str, add: bool) {
         self.with(|s| s.mailbox_mut(mailbox).flag(uid, flag, add));
@@ -1977,5 +2016,27 @@ mod tests {
             fake.idle("Gone", Duration::from_secs(1)).await,
             Err(ImapError::NoMailbox("Gone".into()))
         );
+    }
+
+    #[tokio::test]
+    async fn mail_can_arrive_flagged_and_have_its_flags_replaced() {
+        let fake = FakeImap::new();
+        let uid = fake.deliver_flagged(
+            "INBOX",
+            &raw_message("f", "Flagged", MARCH, None),
+            &["\\Seen", "\\Flagged", "\\Recent"],
+            MARCH,
+        );
+        let kept = |fake: &FakeImap| {
+            fake.message("INBOX", uid)
+                .unwrap()
+                .flags
+                .into_iter()
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(kept(&fake), ["\\Flagged", "\\Seen"]);
+        fake.set_flags("INBOX", uid, &["\\Answered"]);
+        assert_eq!(kept(&fake), ["\\Answered"]);
+        assert_eq!(fake.search("INBOX", "UNSEEN").await.unwrap(), [uid]);
     }
 }

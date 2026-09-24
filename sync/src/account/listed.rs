@@ -15,6 +15,7 @@ use mailrs_store::messages::Change;
 use mailrs_store::{accounts, messages};
 
 use super::AccountSync;
+use super::fetch::Placing;
 use crate::{MailBackend, RemoteRef, SearchQuery, SyncError, Want};
 
 /// How long a fetched thread is kept for opening. Only memory depends on
@@ -29,6 +30,8 @@ pub(super) struct Listed {
     /// there, no replay has passed over a change the thread missed.
     state: Option<String>,
     metas: Vec<MessageMeta>,
+    /// How the thread goes into the store when it opens.
+    placing: Placing,
 }
 
 /// The messages one thread had among a search's hits.
@@ -131,6 +134,7 @@ impl AccountSync {
                     Listed {
                         at: Instant::now(),
                         state: fetched.asked_at.clone(),
+                        placing: fetched.placing.clone(),
                         metas: whole,
                     },
                 );
@@ -171,15 +175,13 @@ impl AccountSync {
                     let mut changes: Vec<Change> = listed
                         .metas
                         .iter()
-                        .map(|meta| Change::Upsert {
-                            meta: Box::new(meta.clone()),
-                            generation: cursor.sync_gen,
-                        })
+                        .map(|meta| listed.placing.upsert(account_id, meta, cursor.sync_gen))
                         .collect();
                     changes.push(Change::MarkWhole {
                         thread_id: thread.clone(),
                     });
                     messages::apply(c, account_id, &changes)?;
+                    listed.placing.write_refs(c, account_id)?;
                     Ok(true)
                 })
                 .await?;

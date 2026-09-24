@@ -28,9 +28,11 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use mailrs_domain::{AccountId, ChangeEvent, MailSet, MailboxKind, RemoteMailbox, ThreadSummary};
+use mailrs_domain::{
+    AccountId, ChangeEvent, MailSet, MailboxKind, MessageMeta, RemoteMailbox, ThreadSummary,
+};
 use mailrs_store::threads::{self, ThreadFilter};
-use mailrs_store::{Db, accounts, mailboxes, messages};
+use mailrs_store::{Db, accounts, mailboxes, messages, remote_refs};
 
 use crate::fake::{FakeGmail, FakeImap, FakeOneClick, FakeSmtp};
 use crate::{AccountServices, AccountSync, Accounts, ImapSettings};
@@ -282,5 +284,59 @@ impl ImapHarness {
             events.push(event);
         }
         events
+    }
+
+    /// Loads the whole window, as a new account does, and drops the events
+    /// that made.
+    pub async fn bootstrap(&self) {
+        self.sync.bootstrap().await.unwrap();
+        while self.sync.backfill_step().await.unwrap() {}
+        self.drain();
+    }
+
+    /// Every stored message id, sorted.
+    pub async fn ids(&self) -> Vec<String> {
+        let account_id = self.account_id;
+        self.db
+            .read(move |c| {
+                let mut stmt =
+                    c.prepare("SELECT id FROM messages WHERE account_id = ?1 ORDER BY id")?;
+                let ids = stmt
+                    .query_map([account_id], |row| row.get(0))?
+                    .collect::<rusqlite::Result<Vec<String>>>()?;
+                Ok(ids)
+            })
+            .await
+            .unwrap()
+    }
+
+    /// The stored copy of message `id`.
+    pub async fn stored(&self, id: &str) -> Option<MessageMeta> {
+        let (account_id, id) = (self.account_id, id.to_string());
+        self.db
+            .read(move |c| messages::by_ids(c, account_id, &[id]))
+            .await
+            .unwrap()
+            .pop()
+    }
+
+    /// The thread the store keeps message `id` in.
+    pub async fn thread_of(&self, id: &str) -> Option<String> {
+        let (account_id, id) = (self.account_id, id.to_string());
+        self.db
+            .read(move |c| messages::thread_id_of(c, account_id, &id))
+            .await
+            .unwrap()
+    }
+
+    /// Where the store says message `id` sits on the server now.
+    pub async fn location(&self, id: &str) -> Option<String> {
+        let (account_id, id) = (self.account_id, id.to_string());
+        self.db
+            .read(move |c| remote_refs::remotes_of(c, account_id, &[id]))
+            .await
+            .unwrap()
+            .into_values()
+            .next()
     }
 }
