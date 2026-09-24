@@ -5,6 +5,7 @@ use mailrs_domain::invitation::Answer;
 use mailrs_domain::{AccountId, EpochMillis, Filter, MessageBody, MessageMeta, Vacation};
 use mailrs_gmail::body::extract_body;
 use mailrs_gmail::convert::message_meta;
+use mailrs_gmail::model::Message;
 use mailrs_gmail::{
     AccountQuota, Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, GmailClient,
     GmailError, HistoryPage, LabelColor, MessagePage, Person, Profile, RemoteLabel, SendAs, Series,
@@ -59,6 +60,13 @@ pub trait GmailApi: Send + Sync + 'static {
         &self,
         id: &str,
     ) -> impl Future<Output = Result<MessageBody, GmailError>> + Send;
+
+    /// The message's part tree, `format=full`: inline bytes for small
+    /// parts and an attachment handle for the rest.
+    fn message_structure(
+        &self,
+        id: &str,
+    ) -> impl Future<Output = Result<Message, GmailError>> + Send;
 
     fn history(
         &self,
@@ -356,6 +364,10 @@ impl GmailApi for AccountClient {
             .as_ref()
             .map(extract_body)
             .unwrap_or_default())
+    }
+
+    async fn message_structure(&self, id: &str) -> Result<Message, GmailError> {
+        self.client.message_full(id).await
     }
 
     async fn history(

@@ -19,10 +19,16 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::sync::Mutex;
 use std::time::Duration;
 
+use base64::Engine;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use mail_builder::MessageBuilder;
+use mail_builder::headers::raw::Raw;
+use mail_builder::mime::MimePart;
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::{
-    Address, EpochMillis, Filter, MessageBody, MessageMeta, Vacation, system_label,
+    Address, EpochMillis, Filter, MessageBody, MessageMeta, Protection, Vacation, system_label,
 };
+use mailrs_gmail::model::{Header, Message, MessagePart, PartBody};
 use mailrs_gmail::{
     AccountQuota, Answered, BATCH_LIMIT, Busy, CALENDAR_SCOPE, CONTACTS_SCOPE,
     CONTACTS_WRITE_SCOPE, ConnectionsPage, ContactFields, DELETE_SCOPE, Event, EventFields,
@@ -93,7 +99,15 @@ pub struct FakeState {
     held: HashMap<&'static str, Hold>,
     /// What the calls so far would have cost against the real API.
     pub usage: Usage,
+    /// Fetches of a message's body, of every kind: `message_body`,
+    /// `raw_message` and `message_structure` alike.
     pub body_fetches: usize,
+    /// Fetches of a message's raw RFC 822 bytes.
+    pub raw_fetches: usize,
+    /// Fetches of a message's `format=full` part tree.
+    pub structure_fetches: usize,
+    /// Fetches of a message's metadata alone.
+    pub metadata_fetches: usize,
     pub remote_writes: Vec<String>,
     /// Raw messages sent, with their thread ids.
     pub sent: Vec<(Vec<u8>, Option<String>)>,
@@ -217,6 +231,13 @@ pub fn meta(id: &str, thread: &str, date: EpochMillis, labels: &[&str]) -> Messa
     }
 }
 
+/// The part path of a fixture body's `index`th file in the message
+/// `raw_message` builds: the readable text is part 1 of a
+/// `multipart/mixed`, and the files follow it.
+pub fn attachment_path(index: usize) -> String {
+    (index + 2).to_string()
+}
+
 impl Default for FakeGmail {
     fn default() -> Self {
         FakeGmail::new()
@@ -255,6 +276,9 @@ impl FakeGmail {
                 held: HashMap::new(),
                 usage: Usage::default(),
                 body_fetches: 0,
+                raw_fetches: 0,
+                structure_fetches: 0,
+                metadata_fetches: 0,
                 remote_writes: Vec::new(),
                 sent: Vec::new(),
                 sent_copy: None,
@@ -670,7 +694,10 @@ impl GmailApi for FakeGmail {
 
     async fn message_metadata(&self, id: &str) -> Result<MessageMeta, GmailError> {
         self.call("users.messages.get", cost::GET).await?;
-        self.with(|s| s.messages.get(id).cloned().ok_or(GmailError::NotFound))
+        self.with(|s| {
+            s.metadata_fetches += 1;
+            s.messages.get(id).cloned().ok_or(GmailError::NotFound)
+        })
     }
 
     async fn thread_metadata(&self, thread_id: &str) -> Result<Vec<MessageMeta>, GmailError> {
@@ -1139,40 +1166,37 @@ impl GmailApi for FakeGmail {
     async fn raw_message(&self, id: &str) -> Result<Vec<u8>, GmailError> {
         self.call("users.messages.get", cost::GET).await?;
         self.with(|s| {
-            let meta = s.messages.get(id).ok_or(GmailError::NotFound)?;
-            if let Some(raw) = s.raws.get(id) {
-                return Ok(raw.clone());
+            s.raw_fetches += 1;
+            s.body_fetches += 1;
+            match s.raws.get(id) {
+                Some(raw) => Ok(raw.clone()),
+                None => built_raw(s, id),
             }
-            let text = s
-                .bodies
-                .get(id)
-                .and_then(|b| b.text.clone())
-                .unwrap_or_else(|| meta.snippet.clone());
-            let from = meta.from.as_ref().map(|a| a.email.as_str()).unwrap_or("");
-            let date = chrono::DateTime::from_timestamp_millis(meta.date)
-                .unwrap_or_default()
-                .to_rfc2822();
-            // A draft reopens from these bytes, so they carry the people.
-            let mut people = String::new();
-            for (header, list) in [("To", &meta.to), ("Cc", &meta.cc)] {
-                if !list.is_empty() {
-                    let named: Vec<String> = list
-                        .iter()
-                        .map(|a| match &a.name {
-                            Some(name) => format!("\"{name}\" <{}>", a.email),
-                            None => a.email.clone(),
-                        })
-                        .collect();
-                    people.push_str(&format!("{header}: {}\r\n", named.join(", ")));
-                }
-            }
-            Ok(format!(
-                "From: {from}\r\n{people}Date: {date}\r\nSubject: {}\r\nMessage-ID: {}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n{}\r\n",
-                meta.subject,
-                meta.rfc822_msgid.clone().unwrap_or_default(),
-                text.replace('\n', "\r\n")
-            )
-            .into_bytes())
+        })
+    }
+
+    /// The message's `format=full` part tree: the same message
+    /// `raw_message` would send, read back as Gmail's own part shape.
+    async fn message_structure(&self, id: &str) -> Result<Message, GmailError> {
+        self.call("users.messages.get", cost::GET).await?;
+        self.with(|s| {
+            s.structure_fetches += 1;
+            s.body_fetches += 1;
+            let meta = s.messages.get(id).cloned().ok_or(GmailError::NotFound)?;
+            let raw = match s.raws.get(id) {
+                Some(raw) => raw.clone(),
+                None => built_raw(s, id)?,
+            };
+            let payload = gmail_payload(s, id, &raw);
+            Ok(Message {
+                id: id.to_string(),
+                thread_id: meta.thread_id,
+                label_ids: meta.label_ids,
+                snippet: meta.snippet,
+                internal_date: Some(meta.date),
+                size_estimate: raw.len() as i64,
+                payload: Some(payload),
+            })
         })
     }
 
@@ -1315,6 +1339,189 @@ fn signature_html(text: &str) -> String {
         })
         .collect::<Vec<_>>()
         .join("<br>")
+}
+
+/// The message Gmail's `format=raw` would send for a fixture: the
+/// metadata's headers, the body's text and HTML as an alternative, its
+/// calendar inline, and each file with the bytes seeded under its handle
+/// in `attachments`.
+fn built_raw(state: &FakeState, id: &str) -> Result<Vec<u8>, GmailError> {
+    let meta = state.messages.get(id).ok_or(GmailError::NotFound)?;
+    let body = state.bodies.get(id).cloned().unwrap_or_else(|| MessageBody {
+        text: Some(meta.snippet.clone()),
+        ..MessageBody::default()
+    });
+    let address = |a: &Address| (a.name.clone().unwrap_or_default(), a.email.clone());
+    let mut message = MessageBuilder::new()
+        .subject(meta.subject.as_str())
+        .date(meta.date / 1000);
+    // A message with nobody in To or Cc carries no such header.
+    if !meta.to.is_empty() {
+        message = message.to(meta.to.iter().map(address).collect::<Vec<_>>());
+    }
+    if !meta.cc.is_empty() {
+        message = message.cc(meta.cc.iter().map(address).collect::<Vec<_>>());
+    }
+    if let Some(from) = &meta.from {
+        message = message.from(address(from));
+    }
+    if let Some(msgid) = &meta.rfc822_msgid {
+        message = message.message_id(msgid.trim_matches(['<', '>']));
+    }
+    if let Some(header) = &body.list_unsubscribe {
+        message = message.header("List-Unsubscribe", Raw::new(header.as_str()));
+    }
+    if body.one_click_unsubscribe {
+        message = message.header("List-Unsubscribe-Post", Raw::new("List-Unsubscribe=One-Click"));
+    }
+    let mut readable = Vec::new();
+    if let Some(text) = &body.text {
+        readable.push(MimePart::new("text/plain", text.as_str()));
+    }
+    if let Some(html) = &body.html {
+        readable.push(MimePart::new("text/html", html.as_str()));
+    }
+    if let Some(ics) = &body.calendar {
+        readable.push(MimePart::new("text/calendar; method=REQUEST", ics.as_str()));
+    }
+    let text = match readable.len() {
+        0 => MimePart::new("text/plain", ""),
+        1 => readable.remove(0),
+        _ => MimePart::new("multipart/alternative", readable),
+    };
+    let mut parts = vec![text];
+    for file in &body.attachments {
+        let bytes = file
+            .attachment_id
+            .as_ref()
+            .and_then(|handle| state.attachments.get(&(id.to_string(), handle.clone())))
+            .cloned()
+            .unwrap_or_default();
+        let part = MimePart::new(file.mime_type.clone(), bytes);
+        parts.push(match &file.content_id {
+            Some(cid) => part.inline().cid(cid.as_str()),
+            None => part.attachment(file.filename.clone()),
+        });
+    }
+    let content = MimePart::new("multipart/mixed", parts);
+    let content = match body.protection {
+        Some(protection) => protect(protection, content),
+        None => content,
+    };
+    message
+        .body(content)
+        .write_to_vec()
+        .map_err(|err| GmailError::Http {
+            status: 500,
+            body: err.to_string(),
+        })
+}
+
+/// Wraps `content` the way `protection` would arrive on the wire, so a
+/// fixture body that sets [`MessageBody::protection`] still reads back
+/// as one. S/MIME's opaque shapes replace `content` outright: the real
+/// message sits inside the signature or the envelope, not beside it,
+/// and nothing here has a real one to put there.
+fn protect<'x>(protection: Protection, content: MimePart<'x>) -> MimePart<'x> {
+    const PGP_SIGNATURE: &str = "-----BEGIN PGP SIGNATURE-----\r\n-----END PGP SIGNATURE-----\r\n";
+    match protection {
+        Protection::Signed => MimePart::new(
+            "multipart/signed; protocol=\"application/pgp-signature\"",
+            vec![
+                content,
+                MimePart::new("application/pgp-signature", PGP_SIGNATURE).attachment("signature.asc"),
+            ],
+        ),
+        Protection::SmimeSigned => MimePart::new(
+            "multipart/signed; protocol=\"application/pkcs7-signature\"",
+            vec![
+                content,
+                MimePart::new("application/pkcs7-signature", "sig").attachment("smime.p7s"),
+            ],
+        ),
+        Protection::Encrypted => MimePart::new(
+            "multipart/encrypted; protocol=\"application/pgp-encrypted\"",
+            vec![
+                MimePart::new("application/pgp-encrypted", "Version: 1"),
+                MimePart::new("application/octet-stream", "data").attachment("encrypted.asc"),
+            ],
+        ),
+        Protection::SmimeOpaque => {
+            MimePart::new("application/pkcs7-mime; smime-type=signed-data; name=\"smime.p7m\"", "data")
+                .attachment("smime.p7m")
+        }
+        Protection::SmimeEnveloped => MimePart::new(
+            "application/pkcs7-mime; smime-type=enveloped-data; name=\"smime.p7m\"",
+            "data",
+        )
+        .attachment("smime.p7m"),
+    }
+}
+
+/// Gmail's `format=full` part tree for `raw`: Gmail's `partId`s, the
+/// headers each part carries, and the bytes inline for a part without a
+/// file name. A named part, the calendar text of an invitation among
+/// them, comes by a handle `attachment` answers, as Gmail sends it.
+fn gmail_payload(state: &mut FakeState, message_id: &str, raw: &[u8]) -> MessagePart {
+    fn convert(state: &mut FakeState, message_id: &str, part: &mailrs_mime::Part, part_id: String) -> MessagePart {
+        let mut content_type = part.mime_type.clone();
+        if let Some(charset) = &part.charset {
+            content_type.push_str(&format!("; charset=\"{charset}\""));
+        }
+        if let Some(protocol) = &part.protocol {
+            content_type.push_str(&format!("; protocol=\"{protocol}\""));
+        }
+        if let Some(smime_type) = &part.smime_type {
+            content_type.push_str(&format!("; smime-type={smime_type}"));
+        }
+        let mut headers = vec![Header {
+            name: "Content-Type".into(),
+            value: content_type,
+        }];
+        if part.attachment {
+            headers.push(Header {
+                name: "Content-Disposition".into(),
+                value: "attachment".into(),
+            });
+        }
+        if let Some(cid) = &part.content_id {
+            headers.push(Header { name: "Content-ID".into(), value: format!("<{cid}>") });
+        }
+        let named = part.filename.is_some();
+        let mut body = PartBody { size: part.size, ..PartBody::default() };
+        match (&part.data, named) {
+            (Some(bytes), false) => body.data = Some(URL_SAFE_NO_PAD.encode(bytes)),
+            (Some(bytes), true) => {
+                let handle = format!("ref-{message_id}-{part_id}");
+                state.attachments.insert((message_id.into(), handle.clone()), bytes.clone());
+                body.attachment_id = Some(handle);
+            }
+            (None, _) => {}
+        }
+        MessagePart {
+            parts: part
+                .children
+                .iter()
+                .enumerate()
+                .map(|(i, c)| {
+                    let id = match part_id.as_str() {
+                        "" => i.to_string(),
+                        parent => format!("{parent}.{i}"),
+                    };
+                    convert(state, message_id, c, id)
+                })
+                .collect(),
+            part_id,
+            mime_type: part.mime_type.clone(),
+            filename: part.filename.clone().unwrap_or_default(),
+            headers,
+            body,
+        }
+    }
+    let parts = mailrs_mime::parts(raw).unwrap_or_default();
+    let mut payload = convert(state, message_id, &parts.root, String::new());
+    payload.headers.extend(parts.headers.iter().map(|(n, v)| Header { name: n.clone(), value: v.clone() }));
+    payload
 }
 
 /// Leaves `sync`'s store as a new account's first sync against this

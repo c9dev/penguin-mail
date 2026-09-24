@@ -11,6 +11,7 @@ use mailrs_domain::{EpochMillis, Filter, MessageBody, RemoteMailbox, Role, Vacat
 use mailrs_gmail::{
     Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, Person, Series,
 };
+use mailrs_mime::Parts;
 
 use super::{
     AutoReplyService, Backfill, CalendarService, Changes, ContactsService, Found, Google,
@@ -160,6 +161,14 @@ impl MailBackend for AnyMail {
 
     async fn message_body(&self, id: &str) -> Result<MessageBody, BackendError> {
         forward!(AnyMail, self, message_body(id))
+    }
+
+    async fn fetch_structure(&self, id: &str) -> Result<Parts, BackendError> {
+        forward!(AnyMail, self, fetch_structure(id))
+    }
+
+    async fn fetch_part(&self, id: &str, path: &str) -> Result<Vec<u8>, BackendError> {
+        forward!(AnyMail, self, fetch_part(id, path))
     }
 
     async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, BackendError> {

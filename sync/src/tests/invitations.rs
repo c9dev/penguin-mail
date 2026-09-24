@@ -53,7 +53,7 @@ fn invitations(h: &Harness) -> Invitations<Connected> {
 }
 
 /// An invitation to one event, at `start` in UTC, numbered `sequence`.
-fn invite(sequence: i64, start: &str) -> String {
+pub(super) fn invite(sequence: i64, start: &str) -> String {
     [
         "BEGIN:VCALENDAR",
         "METHOD:REQUEST",
@@ -796,4 +796,45 @@ async fn a_calendar_part_sent_by_attachment_id_is_fetched_with_the_body() {
     });
     let body = h.sync.services().mail.message_body("m1").await.unwrap();
     assert_eq!(body.calendar.as_deref(), Some(ics.as_str()));
+}
+
+/// Google Calendar's invitation as Gmail's `format=full` sends it: every
+/// named part by reference, the calendar text among them. Twin of
+/// `mime::tests::read::google_invitation`, which builds the same
+/// message for the raw-message tests; keep the two in step.
+pub(super) fn google_invitation(ics: &str) -> Vec<u8> {
+    format!(
+        "From: Ann <ann@example.com>\r\n\
+         To: me@example.com\r\n\
+         Subject: Invitation: Design crit\r\n\
+         MIME-Version: 1.0\r\n\
+         Content-Type: multipart/mixed; boundary=\"outer\"\r\n\
+         \r\n\
+         --outer\r\n\
+         Content-Type: multipart/alternative; boundary=\"inner\"\r\n\
+         \r\n\
+         --inner\r\n\
+         Content-Type: text/plain; charset=\"UTF-8\"\r\n\
+         \r\n\
+         You have been invited\r\n\
+         --inner\r\n\
+         Content-Type: text/html; charset=\"UTF-8\"\r\n\
+         \r\n\
+         <p>You have been invited</p>\r\n\
+         --inner\r\n\
+         Content-Type: text/calendar; charset=\"UTF-8\"; method=REQUEST\r\n\
+         Content-Disposition: inline; filename=\"invite.ics\"\r\n\
+         \r\n\
+         {ics}\r\n\
+         --inner--\r\n\
+         --outer\r\n\
+         Content-Type: application/ics; name=\"invite.ics\"\r\n\
+         Content-Disposition: attachment; filename=\"invite.ics\"\r\n\
+         Content-Transfer-Encoding: base64\r\n\
+         \r\n\
+         {b64}\r\n\
+         --outer--\r\n",
+        b64 = base64::engine::general_purpose::STANDARD.encode(ics),
+    )
+    .into_bytes()
 }

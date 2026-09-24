@@ -27,6 +27,7 @@ use mailrs_domain::{
 use mailrs_gmail::{
     Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, Person, Series,
 };
+use mailrs_mime::Parts;
 
 use crate::api::{AccountClient, DraftRef, SavedDraft};
 #[cfg(any(test, feature = "fake"))]
@@ -365,6 +366,19 @@ pub trait MailBackend: Send + Sync + 'static {
         &self,
         id: &str,
     ) -> impl Future<Output = Result<MessageBody, BackendError>> + Send;
+
+    /// The message's parts with the bytes of the text parts its body
+    /// needs, and without its files: for a message too large to fetch
+    /// raw.
+    fn fetch_structure(&self, id: &str)
+    -> impl Future<Output = Result<Parts, BackendError>> + Send;
+
+    /// One part of a message, by part path, without the rest of it.
+    fn fetch_part(
+        &self,
+        id: &str,
+        path: &str,
+    ) -> impl Future<Output = Result<Vec<u8>, BackendError>> + Send;
 
     /// The server's id for its mailbox with `role`, where it has one.
     fn mailbox_for(&self, role: Role) -> Option<String>;

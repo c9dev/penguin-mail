@@ -8,7 +8,8 @@ mod changes;
 mod fetch;
 mod writes;
 
-use std::sync::Arc;
+use std::collections::VecDeque;
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
@@ -18,8 +19,9 @@ use mailrs_domain::{
 };
 use mailrs_gmail::{
     Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, GmailError, LabelColor,
-    Person, RemoteLabel, SendAs, Series, limiter,
+    Person, RemoteLabel, SendAs, Series, limiter, structure,
 };
+use mailrs_mime::Parts;
 use mailrs_mime::html::html_to_text;
 
 use super::{
@@ -43,11 +45,32 @@ pub const ID_PAGE_SIZE: u32 = 500;
 /// one quota bucket for all of them.
 pub struct Google<G> {
     gmail: Arc<G>,
+    /// The attachment handles of the last structures fetched, so a file
+    /// opened right after its message costs one call.
+    handles: Arc<Mutex<Handles>>,
 }
 
 impl<G> Google<G> {
     pub fn new(gmail: Arc<G>) -> Self {
-        Google { gmail }
+        Google {
+            gmail,
+            handles: Arc::new(Mutex::new(Handles::default())),
+        }
+    }
+
+    /// The handle `fetch_structure` last saw at `path` of message `id`.
+    fn remembered(&self, id: &str, path: &str) -> Option<String> {
+        self.handles
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .get(id, path)
+    }
+
+    fn remember(&self, id: &str, handles: Vec<(String, String)>) {
+        self.handles
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .remember(id, handles);
     }
 }
 
@@ -57,7 +80,39 @@ impl<G> Clone for Google<G> {
     fn clone(&self) -> Self {
         Google {
             gmail: Arc::clone(&self.gmail),
+            handles: Arc::clone(&self.handles),
         }
+    }
+}
+
+/// The attachment handles of the last structures fetched, so a file
+/// opened right after its message costs one call. Gmail's handle for a
+/// part changes from fetch to fetch, and any recent one works.
+#[derive(Default)]
+struct Handles {
+    /// Message id and its handles by path, oldest first.
+    recent: VecDeque<(String, Vec<(String, String)>)>,
+}
+
+impl Handles {
+    const KEPT: usize = 64;
+
+    fn remember(&mut self, id: &str, handles: Vec<(String, String)>) {
+        self.recent.retain(|(m, _)| m != id);
+        if self.recent.len() == Self::KEPT {
+            self.recent.pop_front();
+        }
+        self.recent.push_back((id.to_string(), handles));
+    }
+
+    fn get(&self, id: &str, path: &str) -> Option<String> {
+        self.recent
+            .iter()
+            .find(|(m, _)| m == id)?
+            .1
+            .iter()
+            .find(|(p, _)| p == path)
+            .map(|(_, h)| h.clone())
     }
 }
 
@@ -207,6 +262,49 @@ impl<G: GmailApi> MailBackend for Google<G> {
             }
         }
         Ok(body)
+    }
+
+    /// Gmail sends a text part by reference when it carries a file name,
+    /// which every Google Calendar invitation does, or when it is large.
+    /// Each such part the body needs costs one more call. A failed fetch
+    /// leaves the message readable without that part.
+    async fn fetch_structure(&self, id: &str) -> Result<Parts, BackendError> {
+        let message = paced(self.gmail.message_structure(id)).await?;
+        let payload = message.payload.ok_or(BackendError::NotFound)?;
+        let mut parts = structure::parts_of(&payload);
+        for (path, handle) in structure::text_by_reference(&payload) {
+            match paced(self.gmail.attachment(id, &handle)).await {
+                Ok(bytes) => parts.set_data(&path, bytes),
+                Err(err) => tracing::warn!(message = id, %err, "could not fetch a text part sent by reference"),
+            }
+        }
+        self.remember(id, structure::handles(&payload));
+        Ok(parts)
+    }
+
+    /// Gmail's attachment ids can change between fetches: a remembered
+    /// handle Gmail refuses is retried once through a fresh structure
+    /// fetch, rather than failing the whole read over a stale id.
+    async fn fetch_part(&self, id: &str, path: &str) -> Result<Vec<u8>, BackendError> {
+        let handle = match self.remembered(id, path) {
+            Some(handle) => handle,
+            None => {
+                let parts = self.fetch_structure(id).await?;
+                // A part Gmail sent inline came with the structure.
+                if let Some(data) = parts.find(path).and_then(|p| p.data.clone()) {
+                    return Ok(data);
+                }
+                self.remembered(id, path).ok_or(BackendError::NotFound)?
+            }
+        };
+        match paced(self.gmail.attachment(id, &handle)).await {
+            Err(GmailError::NotFound | GmailError::Http { status: 400, .. }) => {
+                self.fetch_structure(id).await?;
+                let retried = self.remembered(id, path).ok_or(BackendError::NotFound)?;
+                Ok(paced(self.gmail.attachment(id, &retried)).await?)
+            }
+            other => Ok(other?),
+        }
     }
 
     async fn send(&self, raw: &[u8], thread_id: Option<&str>) -> Result<String, BackendError> {

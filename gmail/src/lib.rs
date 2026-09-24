@@ -9,6 +9,7 @@ pub mod limiter;
 pub mod model;
 mod oauth;
 pub mod people;
+pub mod structure;
 mod token_store;
 
 pub use calendar::{

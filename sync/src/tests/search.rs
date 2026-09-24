@@ -112,6 +112,6 @@ async fn a_message_reads_back_as_the_mail_it_stands_for() {
     let stored: MessageMeta = fake.message_metadata("inbox").await.unwrap();
     assert_eq!(stored.thread_id, "t1");
     let raw = String::from_utf8(fake.raw_message("inbox").await.unwrap()).unwrap();
-    assert!(raw.contains("From: ann@example.com"), "{raw}");
+    assert!(raw.contains("From: \"Ann\" <ann@example.com>"), "{raw}");
     assert!(raw.contains("Subject: Subject inbox"), "{raw}");
 }

@@ -18,6 +18,7 @@ mod quota;
 mod search;
 mod senders;
 mod settings;
+mod structure;
 mod thread_open;
 mod triage;
 mod undo;

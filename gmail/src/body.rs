@@ -8,6 +8,7 @@ use mailrs_mime::charset::{charset_param, decode_charset};
 
 use crate::convert::find_header;
 use crate::model::MessagePart;
+use crate::structure::param;
 
 /// Takes the first `text/html` and first `text/plain` part found in document
 /// order. Any part the reader has to fetch separately counts as an
@@ -241,16 +242,6 @@ fn decode_text(part: &MessagePart) -> Option<String> {
     let bytes = URL_SAFE_NO_PAD_INDIFFERENT.decode(data.trim()).ok()?;
     let charset = find_header(part, "Content-Type").and_then(charset_param);
     Some(decode_charset(&bytes, charset))
-}
-
-/// One parameter of a header value, without its quotes.
-fn param<'a>(value: &'a str, name: &str) -> Option<&'a str> {
-    value.split(';').skip(1).find_map(|parameter| {
-        let (key, value) = parameter.split_once('=')?;
-        key.trim()
-            .eq_ignore_ascii_case(name)
-            .then(|| value.trim().trim_matches('"'))
-    })
 }
 
 /// The attachment id of the calendar part to fetch, when the message
