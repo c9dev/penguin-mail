@@ -721,14 +721,6 @@ impl GmailApi for FakeGmail {
         answer
     }
 
-    async fn message_body(&self, id: &str) -> Result<MessageBody, GmailError> {
-        self.call("users.messages.get", cost::GET).await?;
-        self.with(|s| {
-            s.body_fetches += 1;
-            s.bodies.get(id).cloned().ok_or(GmailError::NotFound)
-        })
-    }
-
     async fn history(
         &self,
         start: u64,

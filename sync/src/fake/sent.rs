@@ -2,15 +2,20 @@
 //! message's bytes. The demo and the assistant's tests both send through
 //! the fake, and both want to find what they sent afterwards.
 
-use mailrs_domain::{AccountId, Address, Attachment, MessageBody, MessageMeta};
+use mail_parser::MessageParser;
+use mailrs_domain::{AccountId, Address, MessageMeta};
 
 use super::SentCopy;
 
 /// Reads a sent message into the copy Gmail files under Sent, so it turns
-/// up in Sent and in its conversation after the next sync.
+/// up in Sent and in its conversation after the next sync. The envelope
+/// still comes from mail-parser's headers; the body is the same
+/// `mailrs_mime::read` every other reader uses, so a sent copy's text,
+/// HTML and attachments match what the window would show for the same
+/// bytes fetched back from Gmail. Each attachment's handle is its part
+/// path, which is how a caller fetches it now.
 pub fn read_sent(raw: &[u8], account_id: AccountId) -> Option<SentCopy> {
-    use mail_parser::{MessageParser, MimeHeaders};
-    let parsed = MessageParser::default().parse(raw)?;
+    let parsed = MessageParser::default().parse_headers(raw)?;
     let addresses = |list: Option<&mail_parser::Address>| -> Vec<Address> {
         list.map(|list| {
             list.iter()
@@ -24,45 +29,21 @@ pub fn read_sent(raw: &[u8], account_id: AccountId) -> Option<SentCopy> {
         })
         .unwrap_or_default()
     };
-    let text = parsed.body_text(0).map(|t| t.into_owned());
-    // A plain-text message has no HTML part of its own, and mail-parser
-    // would otherwise convert its text into one.
-    let html = parsed
-        .html_body
-        .first()
-        .filter(|part| !parsed.text_body.contains(part))
-        .and_then(|_| parsed.body_html(0))
-        .map(|h| h.into_owned());
-    let mut files = Vec::new();
-    let attachments = parsed
-        .attachments()
-        .enumerate()
-        .map(|(i, part)| {
-            let attachment_id = format!("sent-att-{i}");
-            files.push((attachment_id.clone(), part.contents().to_vec()));
-            Attachment {
-                part_id: (i + 1).to_string(),
-                filename: part.attachment_name().unwrap_or_default().into(),
-                mime_type: part
-                    .content_type()
-                    .map(|t| match t.subtype() {
-                        Some(sub) => format!("{}/{sub}", t.ctype()),
-                        None => t.ctype().to_string(),
-                    })
-                    .unwrap_or_else(|| "application/octet-stream".into()),
-                size: part.contents().len() as i64,
-                attachment_id: Some(attachment_id),
-                content_id: None,
-            }
-        })
-        .collect::<Vec<_>>();
+    let body = mailrs_mime::read(raw);
+    let files: Vec<(String, Vec<u8>)> = body
+        .attachments
+        .iter()
+        .zip(mailrs_mime::files(raw))
+        .map(|(attachment, bytes)| (attachment.part_id.clone(), bytes))
+        .collect();
     let references = [parsed.in_reply_to(), parsed.references()]
         .into_iter()
         .filter_map(|header| header.as_text_list())
         .flatten()
         .map(|id| id.to_string())
         .collect();
-    let snippet = text
+    let snippet = body
+        .text
         .as_deref()
         .unwrap_or_default()
         .split_whitespace()
@@ -71,6 +52,7 @@ pub fn read_sent(raw: &[u8], account_id: AccountId) -> Option<SentCopy> {
         .chars()
         .take(140)
         .collect();
+    let has_attachments = !body.attachments.is_empty();
     let meta = MessageMeta {
         account_id,
         id: String::new(),
@@ -86,17 +68,11 @@ pub fn read_sent(raw: &[u8], account_id: AccountId) -> Option<SentCopy> {
             .unwrap_or_else(crate::now_millis),
         snippet,
         size: raw.len() as i64,
-        has_attachments: !attachments.is_empty(),
+        has_attachments,
         label_ids: Vec::new(),
         // A message the demo sent itself belongs to no mailing list.
         list_unsubscribe: None,
         one_click: false,
-    };
-    let body = MessageBody {
-        text,
-        html,
-        attachments,
-        ..MessageBody::default()
     };
     Some(SentCopy {
         meta,

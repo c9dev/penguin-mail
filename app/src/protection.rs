@@ -13,7 +13,7 @@ pub mod draft;
 pub mod remembered;
 pub mod run;
 
-use mail_parser::{MessageParser, MimeHeaders};
+use mail_parser::MessageParser;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{MessageBody, Protection};
 use serde::{Deserialize, Serialize};
@@ -869,75 +869,20 @@ pub(crate) fn files_line(files: usize) -> Option<String> {
     }
 }
 
-/// What was inside the encryption: the message to draw, and the bytes of
-/// each file it carries, in the same order.
+/// The message inside an encrypted or opaque-signed one, as the window
+/// shows it, with the bytes of each file. Its files live in these bytes
+/// and nowhere on the server, so none carries a part path to fetch.
 pub(crate) fn opened_body(part: &[u8]) -> (MessageBody, Vec<Vec<u8>>) {
-    let Some(parsed) = MessageParser::default().parse(part) else {
-        return (
-            MessageBody {
-                text: Some(String::from_utf8_lossy(part).into_owned()),
-                ..MessageBody::default()
-            },
-            Vec::new(),
-        );
-    };
-    let mut attachments = Vec::new();
-    let mut files = Vec::new();
-    for (index, found) in parsed.attachments().enumerate() {
-        let mime_type = found
-            .content_type()
-            .map(|content| match content.subtype() {
-                Some(subtype) => format!("{}/{subtype}", content.ctype()),
-                None => content.ctype().to_string(),
-            })
-            .unwrap_or_else(|| "application/octet-stream".to_string())
-            .to_ascii_lowercase();
-        attachments.push(mailrs_domain::Attachment {
-            // No part id and no attachment id: Gmail never saw this part,
-            // so the window reads it out of `Read::files` by this index.
-            part_id: index.to_string(),
-            filename: found.attachment_name().unwrap_or("attachment").to_string(),
-            mime_type,
-            size: found.len() as i64,
-            attachment_id: None,
-            content_id: found.content_id().map(str::to_string),
-        });
-        files.push(found.contents().to_vec());
+    let mut body = mailrs_mime::read(part);
+    if body.html.is_none() && body.text.is_none() && body.attachments.is_empty() {
+        body.text = Some(String::from_utf8_lossy(part).into_owned());
+        return (body, Vec::new());
     }
-    // An invitation that arrived signed or encrypted carries its event in
-    // here, and the card reads it from the body the way it does for mail
-    // in the clear.
-    let calendar = parsed
-        .parts
-        .iter()
-        .find(|part| {
-            part.content_type().is_some_and(|content| {
-                content.ctype().eq_ignore_ascii_case("text")
-                    && content
-                        .subtype()
-                        .is_some_and(|subtype| subtype.eq_ignore_ascii_case("calendar"))
-            })
-        })
-        .and_then(|part| part.text_contents())
-        .filter(|ics| ics.contains("BEGIN:VCALENDAR"))
-        .map(str::to_string);
-    (
-        MessageBody {
-            // mail_parser makes HTML out of a plain text part when there is
-            // no HTML one, and the window would draw that in place of the
-            // text, so only a part that arrived as HTML counts.
-            html: parsed
-                .html_part(0)
-                .filter(|part| part.is_text_html())
-                .and_then(|_| parsed.body_html(0))
-                .map(|html| html.into_owned()),
-            text: parsed.body_text(0).map(|text| text.into_owned()),
-            attachments,
-            calendar,
-            ..MessageBody::default()
-        },
-        files,
-    )
+    let files = mailrs_mime::files(part);
+    for file in &mut body.attachments {
+        file.attachment_id = None;
+    }
+    (body, files)
 }
 
 /// "ann@example.com", "ann@example.com or bo@example.com", and with more

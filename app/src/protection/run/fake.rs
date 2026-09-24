@@ -81,9 +81,9 @@ pub fn meta(id: &str) -> MessageMeta {
     }
 }
 
-/// A body as `extract_body` reports one: the wrapper the message arrived
-/// in, and none of the parts, since a signature covers the bytes as they
-/// were sent.
+/// A body as the raw reader reports one for a signed message: the wrapper
+/// it arrived in, and none of the parts, since a signature covers the
+/// bytes as they were sent.
 pub fn body(protection: Option<Protection>) -> MessageBody {
     MessageBody {
         text: Some("Hello".to_string()),

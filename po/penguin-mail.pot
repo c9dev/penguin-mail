@@ -1598,11 +1598,11 @@ msgid_plural "It carries {count} files, kept in this window only."
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/protection.rs:950
+#: app/src/protection.rs:895
 msgid "{names} or {last}"
 msgstr ""
 
-#: app/src/protection.rs:962
+#: app/src/protection.rs:907
 msgid "{names} and {last}"
 msgstr ""
 
