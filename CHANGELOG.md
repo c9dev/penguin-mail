@@ -5,6 +5,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Improved
+
+- With Claude Opus 5 or newer, translating a message and reading an unsubscribe
+  page take less time, because those quick jobs no longer think at length.
+
 ## 0.3.0 (2026-09-24)
 
 ### New

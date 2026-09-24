@@ -444,7 +444,7 @@ fn each_model_family_asks_for_thinking_its_own_way() {
 }
 
 #[tokio::test]
-async fn a_chat_that_does_not_ask_sends_no_thinking_field() {
+async fn a_chat_that_does_not_ask_for_thinking_asks_for_low_effort() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path("/v1/messages"))
@@ -460,8 +460,81 @@ async fn a_chat_that_does_not_ask_sends_no_thinking_field() {
     let requests = server.received_requests().await.unwrap();
     let body: Value = requests[0].body_json().unwrap();
     assert!(body.get("thinking").is_none());
+    // Claude Opus 5 thinks when the field is missing, so a quick job turns
+    // the effort down instead.
+    assert_eq!(body["output_config"], json!({"effort": "low"}));
     // Web search is off unless asked for, so only the host's tools go out.
     assert_eq!(body["tools"].as_array().map(Vec::len), Some(2));
+}
+
+#[tokio::test]
+async fn a_chat_with_a_format_asks_for_it_beside_the_effort() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/messages"))
+        .respond_with(text_reply("{\"ok\":true}"))
+        .mount(&server)
+        .await;
+    let schema = json!({
+        "type": "object",
+        "properties": {"ok": {"type": "boolean"}},
+        "required": ["ok"],
+        "additionalProperties": false
+    });
+    let mut chat = chat(&server);
+    chat.think = false;
+    chat.format = Some(schema.clone());
+    let (tx, _rx) = async_channel::unbounded();
+    chat.send("Hi".into(), Arc::new(FakeHost::default()), &tx)
+        .await
+        .unwrap();
+    let requests = server.received_requests().await.unwrap();
+    let body: Value = requests[0].body_json().unwrap();
+    assert_eq!(
+        body["output_config"],
+        json!({"effort": "low", "format": {"type": "json_schema", "schema": schema}})
+    );
+}
+
+#[test]
+fn only_models_that_take_a_format_are_sent_one() {
+    use crate::providers::takes_format;
+    for model in [
+        "claude-opus-5",
+        "claude-opus-5-5",
+        "claude-opus-4-8",
+        "claude-sonnet-5",
+        "claude-haiku-4-5",
+        "claude-fable-5-1",
+    ] {
+        assert!(takes_format(model), "{model}");
+    }
+    for model in ["claude-sonnet-4-6", "claude-opus-4-7", "claude-3-7-sonnet-20250219", "gemma-3"] {
+        assert!(!takes_format(model), "{model}");
+    }
+}
+
+#[test]
+fn only_models_that_think_unasked_are_told_to_think_less() {
+    use crate::providers::thinks_unasked;
+    for model in [
+        "claude-opus-5",
+        "claude-opus-5-5",
+        "claude-sonnet-5",
+        "claude-fable-5-1",
+        "claude-mythos-5-1",
+    ] {
+        assert!(thinks_unasked(model), "{model}");
+    }
+    for model in [
+        "claude-opus-4-8",
+        "claude-sonnet-4-6",
+        "claude-haiku-4-5",
+        "claude-3-7-sonnet-20250219",
+        "gemma-3",
+    ] {
+        assert!(!thinks_unasked(model), "{model}");
+    }
 }
 
 /// A reply that asks for `read_thread` once.

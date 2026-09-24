@@ -744,8 +744,8 @@ fn read_text(text: &str) -> Vec<Part> {
 
 /// What the model is told before the pieces. It never reaches a reader, so
 /// it stays in English whatever the interface speaks.
-const SYSTEM: &str = "You translate email. You answer with the translation and nothing else: \
-no notes, no apologies, no summary.";
+const SYSTEM: &str = "You translate email for a program that reads your answer line by line, \
+so the answer holds the numbered translations and nothing else.";
 
 /// The request for one message: the pieces, numbered, and how to send
 /// them back. The numbering is what puts each piece back where it came

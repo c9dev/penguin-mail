@@ -57,6 +57,8 @@ pub(crate) struct AnthropicChat {
     pub(crate) think: bool,
     /// Offer Anthropic's web search and page fetch.
     pub(crate) web: bool,
+    /// A JSON schema the reply must follow, where the model takes one.
+    pub(crate) format: Option<Value>,
 }
 
 /// A content block being assembled from stream events.
@@ -89,6 +91,7 @@ impl AnthropicChat {
             client: http_client(),
             think: false,
             web: false,
+            format: None,
         }
     }
 
@@ -160,6 +163,24 @@ impl AnthropicChat {
             && let Some(thinking) = thinking_request(&self.model)
         {
             body["thinking"] = thinking;
+        }
+        let mut output = serde_json::Map::new();
+        if !self.think && thinks_unasked(&self.model) {
+            // These models think whether or not the request asks, so a chat
+            // that wants a quick answer, such as a translation, asks for the
+            // least effort instead.
+            output.insert("effort".into(), json!("low"));
+        }
+        if let Some(schema) = &self.format
+            && takes_format(&self.model)
+        {
+            output.insert(
+                "format".into(),
+                json!({"type": "json_schema", "schema": schema}),
+            );
+        }
+        if !output.is_empty() {
+            body["output_config"] = Value::Object(output);
         }
         let mut tools: Vec<Value> = specs
             .iter()
@@ -383,6 +404,50 @@ pub(crate) fn thinking_request(model: &str) -> Option<Value> {
         v if v < (4, 6) => Some(json!({"type": "enabled", "budget_tokens": THINKING_BUDGET})),
         (4, 6) => Some(adaptive(false)),
         _ => Some(adaptive(true)),
+    }
+}
+
+/// Whether a model thinks when the request leaves `thinking` out. Up to
+/// Opus 4.8 and Sonnet 4.6, leaving it out meant no thinking; Fable,
+/// Mythos, and Opus and Sonnet from 5 on think anyway.
+pub(crate) fn thinks_unasked(model: &str) -> bool {
+    let model = model.trim().to_lowercase();
+    let Some(rest) = model.strip_prefix("claude-") else {
+        return false;
+    };
+    let mut parts = rest.split('-');
+    match parts.next() {
+        Some("fable" | "mythos") => true,
+        Some("opus" | "sonnet") => parts
+            .next()
+            .and_then(|major| major.parse::<u32>().ok())
+            .is_some_and(|major| major >= 5),
+        _ => false,
+    }
+}
+
+/// Whether a model answers in a JSON schema the request gives: Fable,
+/// Mythos, Haiku 4.5, Opus from 4.8 and Sonnet from 5. Anthropic's list
+/// leaves out Opus 4.6 and 4.7 and Sonnet 4.6, and a request that sends
+/// one a schema could fail, so they keep answering from the prompt alone.
+pub(crate) fn takes_format(model: &str) -> bool {
+    let model = model.trim().to_lowercase();
+    let Some(rest) = model.strip_prefix("claude-") else {
+        return false;
+    };
+    let parts: Vec<&str> = rest.split('-').collect();
+    let number = |at: usize| {
+        parts
+            .get(at)
+            .filter(|p| p.len() <= 2)
+            .and_then(|p| p.parse::<u32>().ok())
+    };
+    match parts.first().copied() {
+        Some("fable" | "mythos") => true,
+        Some("opus") => number(1).is_some_and(|major| (major, number(2).unwrap_or(0)) >= (4, 8)),
+        Some("sonnet") => number(1).is_some_and(|major| major >= 5),
+        Some("haiku") => number(1).is_some_and(|major| (major, number(2).unwrap_or(0)) >= (4, 5)),
+        _ => false,
     }
 }
 

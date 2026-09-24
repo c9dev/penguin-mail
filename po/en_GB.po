@@ -860,15 +860,15 @@ msgstr "Skill scripts need bubblewrap, which is not installed. Install the bubbl
 msgid "Skill scripts cannot run: bubblewrap failed to start a sandbox ({reason})."
 msgstr "Skill scripts cannot run: bubblewrap failed to start a sandbox ({reason})."
 
-#: app/src/assistant/sources/skills/shell.rs:179
+#: app/src/assistant/sources/skills/shell.rs:181
 msgid "It can reach the internet."
 msgstr "It can reach the internet."
 
-#: app/src/assistant/sources/skills/shell.rs:181
+#: app/src/assistant/sources/skills/shell.rs:183
 msgid "It cannot reach the internet."
 msgstr "It cannot reach the internet."
 
-#: app/src/assistant/sources/skills/shell.rs:185
+#: app/src/assistant/sources/skills/shell.rs:187
 msgid ""
 "Run this command for the skill {skill}?\n"
 "\n"

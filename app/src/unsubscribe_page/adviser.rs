@@ -25,8 +25,38 @@ use crate::settings::{AiSettings, Feature};
 /// What the model is told, once per page. It is not translated: it goes
 /// to a model, not to a person.
 const INSTRUCTION: &str = "You pick what to press on a newsletter's unsubscribe page. \
-     Answer only JSON: {\"form\":n,\"fill\":[[field,\"<address>\"]],\"tick\":[ids],\"press\":id} \
+     Answer only JSON: {\"unsure\":false,\"form\":n,\"fill\":[{\"field\":id,\"value\":\"<address>\"}],\"tick\":[ids],\"press\":id} \
      or {\"unsure\":true}. Fill only the address given. Never choose between topics.";
+
+/// The answer's shape, for a model that takes a schema. It says the same
+/// as `INSTRUCTION`, which a model without one answers from. `unsure` is
+/// always there, since a schema cannot leave the plan's fields out only
+/// when it is true.
+fn plan_schema() -> serde_json::Value {
+    serde_json::json!({
+        "type": "object",
+        "properties": {
+            "unsure": {"type": "boolean"},
+            "form": {"type": "integer"},
+            "fill": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "field": {"type": "integer"},
+                        "value": {"type": "string"}
+                    },
+                    "required": ["field", "value"],
+                    "additionalProperties": false
+                }
+            },
+            "tick": {"type": "array", "items": {"type": "integer"}},
+            "press": {"type": "integer"}
+        },
+        "required": ["unsure", "form", "fill", "tick", "press"],
+        "additionalProperties": false
+    })
+}
 
 /// The Unsubscribing feature's model, asked one page at a time.
 pub struct ModelAdviser {
@@ -81,7 +111,7 @@ fn question(form: &PageForm, address: &str) -> String {
 const PATIENCE: Duration = Duration::from_secs(60);
 
 async fn ask(config: ProviderConfig, question: String) -> Option<Plan> {
-    let mut chat = Conversation::new(config, INSTRUCTION.to_string());
+    let mut chat = Conversation::new(config, INSTRUCTION.to_string()).with_format(plan_schema());
     // Nobody watches this go by, and the agent loop carries on past a
     // channel with no reader.
     let (events, watching) = async_channel::unbounded::<AgentEvent>();
@@ -104,13 +134,28 @@ async fn ask(config: ProviderConfig, question: String) -> Option<Plan> {
 /// button; `fill` and `tick` may be left out, because a page often wants
 /// neither. Everything else is no answer.
 fn read_plan(reply: &str) -> Option<Plan> {
-    let said: serde_json::Value = serde_json::from_str(reply.trim()).ok()?;
-    let object = said.as_object()?;
-    if object.contains_key("unsure")
+    let mut said: serde_json::Value = serde_json::from_str(reply.trim()).ok()?;
+    let object = said.as_object_mut()?;
+    // A model without a schema writes `{"unsure": true}` alone; one with a
+    // schema always writes the key, false when it has a plan.
+    if object.get("unsure").is_some_and(|unsure| unsure != false)
         || !object.contains_key("form")
         || !object.contains_key("press")
     {
         return None;
+    }
+    object.remove("unsure");
+    // The schema names each field to fill as an object; `Plan` keeps the
+    // pair a model without one writes.
+    if let Some(fill) = object.get_mut("fill").and_then(|f| f.as_array_mut()) {
+        for entry in fill.iter_mut() {
+            if let Some(pair) = entry
+                .as_object()
+                .and_then(|o| Some(serde_json::json!([o.get("field")?, o.get("value")?])))
+            {
+                *entry = pair;
+            }
+        }
     }
     serde_json::from_value(said).ok()
 }
@@ -181,6 +226,28 @@ mod tests {
         );
         let plan = futures::executor::block_on(adviser.advise(&topics(), ME));
         assert_eq!(plan.map(|p| p.press), Some(4));
+    }
+
+    /// The shape a model with a schema answers in: `unsure` always
+    /// present, and each field to fill as an object.
+    #[test]
+    fn a_plan_in_the_schema_shape_reads_as_a_plan() {
+        let plan = read_plan(
+            r#"{"unsure":false,"form":0,"fill":[{"field":2,"value":"david@example.com"}],"tick":[1],"press":4}"#,
+        );
+        assert_eq!(
+            plan,
+            Some(Plan {
+                form: 0,
+                fill: vec![(2, "david@example.com".into())],
+                tick: vec![1],
+                press: 4,
+            })
+        );
+        assert_eq!(
+            read_plan(r#"{"unsure":true,"form":0,"fill":[],"tick":[],"press":0}"#),
+            None
+        );
     }
 
     #[tokio::test]

@@ -925,15 +925,15 @@ msgstr ""
 "Os scripts das competências não podem ser executados: o bubblewrap não "
 "conseguiu criar uma área isolada ({reason})."
 
-#: app/src/assistant/sources/skills/shell.rs:179
+#: app/src/assistant/sources/skills/shell.rs:181
 msgid "It can reach the internet."
 msgstr "Pode aceder à Internet."
 
-#: app/src/assistant/sources/skills/shell.rs:181
+#: app/src/assistant/sources/skills/shell.rs:183
 msgid "It cannot reach the internet."
 msgstr "Não pode aceder à Internet."
 
-#: app/src/assistant/sources/skills/shell.rs:185
+#: app/src/assistant/sources/skills/shell.rs:187
 msgid ""
 "Run this command for the skill {skill}?\n"
 "\n"

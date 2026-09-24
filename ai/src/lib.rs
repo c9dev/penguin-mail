@@ -144,6 +144,14 @@ impl Conversation {
         self
     }
 
+    /// Asks for a reply that follows the JSON schema `schema`, where the
+    /// provider and model take one. The prompt must still describe the
+    /// shape, since a provider that takes no schema answers from it.
+    pub fn with_format(mut self, schema: serde_json::Value) -> Conversation {
+        self.inner.set_format(schema);
+        self
+    }
+
     /// Lets Claude search the web and read pages with Anthropic's own tools,
     /// through the API or Claude Code, from the next message on. A local
     /// model ignores this: its web tools come from the tool host.

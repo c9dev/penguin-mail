@@ -16,7 +16,7 @@ pub(crate) use anthropic::AnthropicChat;
 #[cfg(test)]
 pub(crate) use anthropic::list_models as anthropic_models;
 #[cfg(test)]
-pub(crate) use anthropic::thinking_request;
+pub(crate) use anthropic::{takes_format, thinking_request, thinks_unasked};
 #[cfg(test)]
 pub(crate) use claude_code::catalog_models;
 pub(crate) use claude_code::{ClaudeCodeChat, claude_aliases};
@@ -62,6 +62,14 @@ impl State {
     pub(crate) fn ask_for_thinking(&mut self) {
         if let State::Anthropic(chat) = self {
             chat.think = true;
+        }
+    }
+
+    /// Only Anthropic's API takes a schema for the reply. The other
+    /// providers answer from the prompt, which says the shape in words.
+    pub(crate) fn set_format(&mut self, schema: Value) {
+        if let State::Anthropic(chat) = self {
+            chat.format = Some(schema);
         }
     }
 
