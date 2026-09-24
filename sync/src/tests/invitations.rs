@@ -798,8 +798,10 @@ async fn a_calendar_part_sent_by_attachment_id_is_fetched_with_the_body() {
     assert_eq!(body.calendar.as_deref(), Some(ics.as_str()));
 }
 
-/// Google Calendar's invitation as Gmail's `format=full` sends it: every
-/// named part by reference, the calendar text among them. Twin of
+/// Google Calendar's invitation as Gmail's `format=raw` sends it: the
+/// calendar text inline in the alternative, and the same file again
+/// beside it. The fake turns this into Gmail's `format=full` shape
+/// itself, named parts by reference, the way Gmail does. Twin of
 /// `mime::tests::read::google_invitation`, which builds the same
 /// message for the raw-message tests; keep the two in step.
 pub(super) fn google_invitation(ics: &str) -> Vec<u8> {

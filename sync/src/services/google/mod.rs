@@ -299,7 +299,12 @@ impl<G: GmailApi> MailBackend for Google<G> {
         };
         match paced(self.gmail.attachment(id, &handle)).await {
             Err(GmailError::NotFound | GmailError::Http { status: 400, .. }) => {
-                self.fetch_structure(id).await?;
+                let parts = self.fetch_structure(id).await?;
+                // The retry's structure may answer the part inline, as the
+                // cold path's does.
+                if let Some(data) = parts.find(path).and_then(|p| p.data.clone()) {
+                    return Ok(data);
+                }
                 let retried = self.remembered(id, path).ok_or(BackendError::NotFound)?;
                 Ok(paced(self.gmail.attachment(id, &retried)).await?)
             }

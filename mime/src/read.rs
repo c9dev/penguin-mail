@@ -75,7 +75,7 @@ fn convert(message: &Message, raw: &[u8], id: u32, path: String) -> Part {
         return Part::default();
     };
     if let Some(nested) = part.message() {
-        return nested_message(part, nested, path);
+        return nested_message(part, nested, raw, path);
     }
     let children = part
         .sub_parts()
@@ -126,15 +126,23 @@ fn numbered(parent: &str, i: usize) -> String {
 /// which nothing here lists as a file.
 ///
 /// RFC 2045 forbids a transfer encoding on `message/rfc822`, but a
-/// sender out there sets one anyway. mail-parser then decodes the outer
-/// part's body before parsing `nested` from it, so `nested`'s own parts
-/// carry offsets into that decoded buffer, not into the outer message.
-/// `nested.raw_message()` is that buffer: the outer message's own bytes
-/// when there was nothing to decode, the decoded ones otherwise. Reading
-/// child offsets from the outer `raw` instead would return the wrong
-/// slice, or one out of range.
-fn nested_message(part: &MessagePart, nested: &Message, path: String) -> Part {
-    let raw = nested.raw_message();
+/// sender out there sets one anyway. When `part` carries one mail-parser
+/// decodes its body first and parses `nested` from that decoded copy,
+/// so `nested`'s own parts carry offsets into it rather than into the
+/// outer message; `nested.raw_message()` is that copy. Without one,
+/// mail-parser parses `nested` by continuing the same scan over the
+/// outer bytes, so its offsets stay relative to them, and
+/// `nested.raw_message()` is a different thing here: a copy of the
+/// nested message's own bytes built separately, indexed from zero,
+/// that the child offsets do not match. Reading from the wrong one of
+/// the two returns the wrong slice, or one out of range.
+fn nested_message(part: &MessagePart, nested: &Message, raw: &[u8], path: String) -> Part {
+    let raw = match part.content_transfer_encoding() {
+        Some(cte) if cte.eq_ignore_ascii_case("base64") || cte.eq_ignore_ascii_case("quoted-printable") => {
+            nested.raw_message()
+        }
+        _ => raw,
+    };
     let root = nested.root_part();
     let children = if root.is_multipart() {
         root.sub_parts()

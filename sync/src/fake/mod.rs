@@ -1520,7 +1520,11 @@ fn gmail_payload(state: &mut FakeState, message_id: &str, raw: &[u8]) -> Message
     }
     let parts = mailrs_mime::parts(raw).unwrap_or_default();
     let mut payload = convert(state, message_id, &parts.root, String::new());
-    payload.headers.extend(parts.headers.iter().map(|(n, v)| Header { name: n.clone(), value: v.clone() }));
+    // The root carries the message's own headers, as Gmail sends them,
+    // in place of `convert`'s made-up Content-Type: the real one is
+    // among them, with its own params `convert` cannot know (Content-
+    // Type's `boundary`, and every other header besides).
+    payload.headers = parts.headers.iter().map(|(n, v)| Header { name: n.clone(), value: v.clone() }).collect();
     payload
 }
 

@@ -211,8 +211,10 @@ fn attachment_name(name: &str, mime: &str, content_id: Option<&str>) -> String {
 
 /// Whether a part holds iCalendar text. Gmail labels the inline part
 /// `text/calendar`; Outlook sends the file as `application/ics` and
-/// sometimes as `application/octet-stream` with an `.ics` name.
-fn is_calendar(mime: &str, filename: &str) -> bool {
+/// sometimes as `application/octet-stream` with an `.ics` name. Shared
+/// with the structure path (`mailrs_gmail::structure::text_by_reference`),
+/// which needs the same rule to know which by-reference part to fetch.
+pub fn is_calendar(mime: &str, filename: &str) -> bool {
     mime == "text/calendar" || mime == "application/ics" || filename.to_ascii_lowercase().ends_with(".ics")
 }
 

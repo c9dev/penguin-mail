@@ -10,5 +10,5 @@ mod read;
 pub mod provenance;
 pub mod snippet;
 
-pub use parts::{Part, Parts, body};
+pub use parts::{Part, Parts, body, is_calendar};
 pub use read::{files, part, parts, read};

@@ -51,8 +51,19 @@ pub fn parts_of(payload: &MessagePart) -> Parts {
 /// calendar, which Google Calendar always names `invite.ics`, and a plain
 /// or HTML body too large to send inline. A text file someone attached
 /// stays a file and is fetched when opened.
+///
+/// Google Calendar's own invitation always carries a `text/calendar`
+/// part, but Outlook sends the calendar object as `application/ics` or
+/// under any name ending `.ics`, with no `text/calendar` part at all
+/// ([`mailrs_mime::is_calendar`], the rule the raw reader picks a
+/// calendar part by). Only the exact `text/calendar` case is fetched
+/// when one exists; the wider rule applies as a fallback, so a message
+/// that carries both is not fetched twice for the same object.
 pub fn text_by_reference(payload: &MessagePart) -> Vec<(String, String)> {
     let multipart = is_multipart(payload);
+    let has_text_calendar = any_leaf(payload, &|part| {
+        part.mime_type.eq_ignore_ascii_case("text/calendar")
+    });
     let mut found = Vec::new();
     every(payload, &mut |part| {
         let mime = part.mime_type.to_ascii_lowercase();
@@ -60,6 +71,7 @@ pub fn text_by_reference(payload: &MessagePart) -> Vec<(String, String)> {
             || find_header(part, "Content-Disposition")
                 .is_some_and(|d| d.trim_start().to_ascii_lowercase().starts_with("attachment"));
         let wanted = mime == "text/calendar"
+            || (!has_text_calendar && mailrs_mime::is_calendar(&mime, &part.filename))
             || ((mime == "text/plain" || mime == "text/html") && !is_file);
         if let (true, None, Some(handle)) = (wanted, &part.body.data, &part.body.attachment_id) {
             found.push((path_of(&part.part_id, multipart), handle.clone()));
@@ -84,15 +96,33 @@ fn is_multipart(part: &MessagePart) -> bool {
     part.mime_type.to_ascii_lowercase().starts_with("multipart/")
 }
 
-/// Calls `visit` on every part that is not a multipart, in order. A
-/// nested message is one part, as the raw reader counts it.
+/// Whether Gmail sends this part's own children rather than the part
+/// itself: every multipart, and `message/rfc822`, which Gmail expands
+/// with the forwarded message's own parts instead of attaching it
+/// whole, the way the raw reader's `nested_message` does too.
+fn has_children(part: &MessagePart) -> bool {
+    is_multipart(part) || part.mime_type.eq_ignore_ascii_case("message/rfc822")
+}
+
+/// Calls `visit` on every leaf part, in order: everything but a
+/// multipart or a `message/rfc822`, both of which are walked into for
+/// their own parts rather than visited themselves.
 fn every(part: &MessagePart, visit: &mut impl FnMut(&MessagePart)) {
-    if is_multipart(part) {
+    if has_children(part) {
         for child in &part.parts {
             every(child, visit);
         }
     } else {
         visit(part);
+    }
+}
+
+/// Whether any leaf part under `part` matches `pred`.
+fn any_leaf(part: &MessagePart, pred: &impl Fn(&MessagePart) -> bool) -> bool {
+    if has_children(part) {
+        part.parts.iter().any(|child| any_leaf(child, pred))
+    } else {
+        pred(part)
     }
 }
 
@@ -116,7 +146,7 @@ fn convert(part: &MessagePart, root_multipart: bool) -> Part {
             .is_some_and(|d| d.trim_start().to_ascii_lowercase().starts_with("attachment")),
         size: data.as_ref().map_or(part.body.size, |d| d.len() as i64),
         data,
-        children: match is_multipart(part) {
+        children: match has_children(part) {
             true => part.parts.iter().map(|c| convert(c, root_multipart)).collect(),
             false => Vec::new(),
         },
