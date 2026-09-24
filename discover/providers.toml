@@ -1,0 +1,524 @@
+# Penguin Mail's built-in provider table. Discovery reads it first, by the
+# exact domain of the address, and then matches the domain's MX hosts
+# against the `mx` patterns, so neither step sends anything to anyone.
+#
+# Checked on 2026-09-24 against each provider's own help pages, its own
+# autoconfig file, and its DNS. A domain appears here when the provider's
+# own page or file names it, or when its MX record pointed at the
+# provider's mail exchangers on that day. Nothing here is copied from
+# Mozilla's ISPDB.
+#
+# Fields:
+# - kind: "imap" (servers below), "no_imap" (the provider serves no IMAP),
+#   "not_yet" (the app cannot reach it yet), "google" (the Google sign-in
+#   serves it), "microsoft" (a later version serves it).
+# - mx: a host name, or "*.suffix" for any host under that suffix. An exact
+#   host wins over every pattern, and a longer suffix over a shorter one.
+# - imap, smtp: security "tls" is TLS from the first byte, "start_tls" a
+#   plain connection upgraded by command. user_name "address" is the whole
+#   address, "local_part_first" the part before @ and then the whole
+#   address. smtp lists the servers in the order to try them.
+# - custom_domain_imap, custom_domain_smtp: servers for a custom domain
+#   found by MX, where they differ from those for the provider's own
+#   domains.
+# - password: "app_password" always, "account_password", or
+#   "app_password_with_two_step" (the account password until two-step
+#   sign-in is on).
+# - files_sent_mail: whether the server files a copy of what SMTP sends in
+#   Sent by itself. True only where a source says so, cited on the entry.
+#   Where no source says, the entry says false and the app files the copy:
+#   a duplicate in Sent costs less than a sent message missing from it.
+
+[[provider]]
+id = "fastmail"
+name = "Fastmail"
+kind = "imap"
+# Fastmail's own list: fastmail.help article 6239365719055.
+domains = [
+  "fastmail.com", "fastmail.fm", "fastmail.ca", "fastmail.cn",
+  "fastmail.co.uk", "fastmail.de", "fastmail.es", "fastmail.fr",
+  "fastmail.in", "fastmail.jp", "fastmail.mx", "fastmail.net", "fastmail.nl",
+  "fastmail.org", "fastmail.se", "fastmail.to", "fastmail.us", "123mail.org",
+  "150mail.com", "150ml.com", "16mail.com", "2-mail.com", "4email.net",
+  "50mail.com", "airpost.net", "aliencamel.com", "allmail.net",
+  "bestmail.us", "cluemail.com", "elitemail.org", "emailcorner.net",
+  "emailengine.net", "emailengine.org", "emailgroups.net", "emailplus.org",
+  "emailuser.net", "eml.cc", "f-m.fm", "fast-email.com", "fast-mail.org",
+  "fastem.com", "fastemail.us", "fastemailer.com", "fastest.cc",
+  "fastimap.com", "fastmailbox.net", "fastmessaging.com", "fmail.co.uk",
+  "fmailbox.com", "fmgirl.com", "fmguy.com", "foobox.com", "foobox.net",
+  "ftml.net", "h-mail.us", "hailmail.net", "imap-mail.com", "imap.cc",
+  "imapmail.org", "immerbox.com", "immermail.com", "inoutbox.com",
+  "internet-e-mail.com", "internet-mail.org", "internetemails.net",
+  "internetmailing.net", "jetemail.net", "justemail.net", "letterboxes.org",
+  "lifetimeaddress.com", "mail-central.com", "mail-page.com", "mailas.com",
+  "mailbolt.com", "mailc.net", "mailcan.com", "mailforce.net",
+  "mailhaven.com", "mailingaddress.org", "mailite.com", "mailmight.com",
+  "mailnew.com", "mailsent.net", "mailup.net", "mailworks.org",
+  "mailzone.com", "ml1.net", "myfastmail.com", "mymacmail.com",
+  "nospammail.net", "onepost.net", "ownmail.net", "penguinmail.com",
+  "permanentmail.com", "petml.com", "pobox.com", "postinbox.com",
+  "postpro.net", "proinbox.com", "promessage.com", "realemail.net",
+  "reallyfast.biz", "reallyfast.info", "rushpost.com", "sent.at", "sent.com",
+  "siemprebox.com", "siempremail.com", "speedpost.net", "speedymail.org",
+  "ssl-mail.com", "swift-mail.com", "the-fastest.net", "the-quickest.com",
+  "theinternetemail.com", "veribox.net", "veryfast.biz", "veryspeedy.net",
+  "warpmail.net", "xsmail.com", "yepmail.net", "your-mail.com",
+]
+mx = ["*.messagingengine.com"]
+imap = { host = "imap.fastmail.com", port = 993, security = "tls", user_name = "address" }
+smtp = [
+  { host = "smtp.fastmail.com", port = 465, security = "tls", user_name = "address" },
+  { host = "smtp.fastmail.com", port = 587, security = "start_tls", user_name = "address" },
+]
+password = "app_password"
+app_password_url = "https://www.fastmail.help/hc/en-us/articles/360058752854"
+documentation_url = "https://www.fastmail.help/hc/en-us/articles/1500000278342"
+# Fastmail files a copy only when the person ticks "Sent Items on SMTP" on
+# the identity, which is off until then: fastmail.com/blog/using-the-bcc-
+# and-smtp-copy-features/. Its server settings page (article 1500000278342)
+# says nothing.
+files_sent_mail = false
+
+[[provider]]
+id = "icloud"
+name = "iCloud Mail"
+kind = "imap"
+domains = ["icloud.com", "me.com", "mac.com"]
+mx = ["mx01.mail.icloud.com", "mx02.mail.icloud.com"]
+# Apple's page: the IMAP user name is the part before @, or the whole
+# address if that fails. Port 465 does not answer.
+imap = { host = "imap.mail.me.com", port = 993, security = "tls", user_name = "local_part_first" }
+smtp = [
+  { host = "smtp.mail.me.com", port = 587, security = "start_tls", user_name = "address" },
+]
+password = "app_password"
+app_password_url = "https://support.apple.com/en-us/102654"
+documentation_url = "https://support.apple.com/en-us/102525"
+# Apple's server settings page (support.apple.com/en-us/102525) does not
+# say whether smtp.mail.me.com files a copy in Sent.
+files_sent_mail = false
+
+[[provider]]
+id = "yahoo"
+name = "Yahoo Mail"
+kind = "imap"
+domains = [
+  "yahoo.com", "yahoo.ca", "yahoo.de", "yahoo.it", "yahoo.fr", "yahoo.es",
+  "yahoo.se", "yahoo.co.in", "yahoo.co.uk", "yahoo.co.nz", "yahoo.com.au",
+  "yahoo.com.ar", "yahoo.com.br", "yahoo.com.mx", "ymail.com", "myyahoo.com",
+  "rocketmail.com",
+]
+# yahoo.co.in's MX sits under gm0 too, so both suffixes are Yahoo's. AOL's
+# exact host below wins over them.
+mx = ["*.am0.yahoodns.net", "*.gm0.yahoodns.net"]
+imap = { host = "imap.mail.yahoo.com", port = 993, security = "tls", user_name = "address" }
+smtp = [
+  { host = "smtp.mail.yahoo.com", port = 465, security = "tls", user_name = "address" },
+  { host = "smtp.mail.yahoo.com", port = 587, security = "start_tls", user_name = "address" },
+]
+password = "app_password"
+app_password_url = "https://help.yahoo.com/kb/SLN15241.html"
+documentation_url = "https://help.yahoo.com/kb/SLN4075.html"
+# Yahoo's SMTP files a copy in Sent itself. Yahoo's own page (SLN4075)
+# does not say; Thunderbird's support forum does, telling Yahoo users to
+# untick Thunderbird's own copy (support.mozilla.org/en-US/questions/1259700
+# and 1272065).
+files_sent_mail = true
+
+[[provider]]
+id = "aol"
+name = "AOL Mail"
+kind = "imap"
+domains = [
+  "aol.com", "aim.com", "netscape.net", "netscape.com", "compuserve.com",
+  "cs.com", "wmconnect.com", "aol.de", "aol.it", "aol.fr", "aol.es",
+  "aol.se", "aol.co.uk", "aol.co.nz", "aol.com.au", "aol.com.ar",
+  "aol.com.br", "aol.com.mx",
+]
+mx = ["mx-aol.mail.gm0.yahoodns.net"]
+imap = { host = "imap.aol.com", port = 993, security = "tls", user_name = "address" }
+smtp = [
+  { host = "smtp.aol.com", port = 465, security = "tls", user_name = "address" },
+  { host = "smtp.aol.com", port = 587, security = "start_tls", user_name = "address" },
+]
+password = "app_password"
+app_password_url = "https://help.aol.com/articles/create-and-manage-app-password"
+documentation_url = "https://help.aol.com/articles/how-do-i-use-other-email-applications-to-send-and-receive-my-aol-mail"
+# AOL runs on Yahoo's servers and files a copy in Sent itself, as
+# Thunderbird's support forum says for both (support.mozilla.org/en-US/
+# questions/1259700). AOL's own page does not say.
+files_sent_mail = true
+
+# Zoho runs one set of servers per data centre. Its own addresses use the
+# plain hosts; an organization's custom domain uses the "pro" hosts.
+[[provider]]
+id = "zoho-com"
+name = "Zoho Mail"
+kind = "imap"
+domains = ["zoho.com", "zohomail.com"]
+mx = ["*.zoho.com"]
+imap = { host = "imap.zoho.com", port = 993, security = "tls", user_name = "address" }
+smtp = [
+  { host = "smtp.zoho.com", port = 465, security = "tls", user_name = "address" },
+  { host = "smtp.zoho.com", port = 587, security = "start_tls", user_name = "address" },
+]
+custom_domain_imap = { host = "imappro.zoho.com", port = 993, security = "tls", user_name = "address" }
+custom_domain_smtp = [
+  { host = "smtppro.zoho.com", port = 465, security = "tls", user_name = "address" },
+  { host = "smtppro.zoho.com", port = 587, security = "start_tls", user_name = "address" },
+]
+password = "app_password_with_two_step"
+enable_imap_url = "https://www.zoho.com/mail/help/imap-access.html"
+documentation_url = "https://www.zoho.com/mail/help/imap-access.html"
+# "When you send an email from other email clients ... using smtp.zoho.com,
+# those emails are automatically saved in your Sent folder", unless the
+# person unticks "Save copy of sent emails": zoho.com/mail/help/zoho-smtp.html.
+files_sent_mail = true
+
+[[provider]]
+id = "zoho-eu"
+name = "Zoho Mail"
+kind = "imap"
+domains = ["zoho.eu", "zohomail.eu"]
+mx = ["*.zoho.eu"]
+imap = { host = "imap.zoho.eu", port = 993, security = "tls", user_name = "address" }
+smtp = [
+  { host = "smtp.zoho.eu", port = 465, security = "tls", user_name = "address" },
+  { host = "smtp.zoho.eu", port = 587, security = "start_tls", user_name = "address" },
+]
+custom_domain_imap = { host = "imappro.zoho.eu", port = 993, security = "tls", user_name = "address" }
+custom_domain_smtp = [
+  { host = "smtppro.zoho.eu", port = 465, security = "tls", user_name = "address" },
+  { host = "smtppro.zoho.eu", port = 587, security = "start_tls", user_name = "address" },
+]
+password = "app_password_with_two_step"
+enable_imap_url = "https://www.zoho.com/mail/help/imap-access.html"
+documentation_url = "https://www.zoho.com/mail/help/imap-access.html"
+# Zoho's SMTP files the copy in Sent, as for zoho-com above.
+files_sent_mail = true
+
+[[provider]]
+id = "zoho-in"
+name = "Zoho Mail"
+kind = "imap"
+domains = ["zoho.in", "zohomail.in"]
+mx = ["*.zoho.in"]
+imap = { host = "imap.zoho.in", port = 993, security = "tls", user_name = "address" }
+smtp = [
+  { host = "smtp.zoho.in", port = 465, security = "tls", user_name = "address" },
+  { host = "smtp.zoho.in", port = 587, security = "start_tls", user_name = "address" },
+]
+custom_domain_imap = { host = "imappro.zoho.in", port = 993, security = "tls", user_name = "address" }
+custom_domain_smtp = [
+  { host = "smtppro.zoho.in", port = 465, security = "tls", user_name = "address" },
+  { host = "smtppro.zoho.in", port = 587, security = "start_tls", user_name = "address" },
+]
+password = "app_password_with_two_step"
+enable_imap_url = "https://www.zoho.com/mail/help/imap-access.html"
+documentation_url = "https://www.zoho.com/mail/help/imap-access.html"
+# Zoho's SMTP files the copy in Sent, as for zoho-com above.
+files_sent_mail = true
+
+[[provider]]
+id = "zoho-com-au"
+name = "Zoho Mail"
+kind = "imap"
+domains = ["zoho.com.au", "zohomail.com.au"]
+mx = ["*.zoho.com.au"]
+imap = { host = "imap.zoho.com.au", port = 993, security = "tls", user_name = "address" }
+smtp = [
+  { host = "smtp.zoho.com.au", port = 465, security = "tls", user_name = "address" },
+  { host = "smtp.zoho.com.au", port = 587, security = "start_tls", user_name = "address" },
+]
+custom_domain_imap = { host = "imappro.zoho.com.au", port = 993, security = "tls", user_name = "address" }
+custom_domain_smtp = [
+  { host = "smtppro.zoho.com.au", port = 465, security = "tls", user_name = "address" },
+  { host = "smtppro.zoho.com.au", port = 587, security = "start_tls", user_name = "address" },
+]
+password = "app_password_with_two_step"
+enable_imap_url = "https://www.zoho.com/mail/help/imap-access.html"
+documentation_url = "https://www.zoho.com/mail/help/imap-access.html"
+# Zoho's SMTP files the copy in Sent, as for zoho-com above.
+files_sent_mail = true
+
+[[provider]]
+id = "zoho-jp"
+name = "Zoho Mail"
+kind = "imap"
+domains = ["zoho.jp", "zohomail.jp"]
+mx = ["*.zoho.jp"]
+imap = { host = "imap.zoho.jp", port = 993, security = "tls", user_name = "address" }
+smtp = [
+  { host = "smtp.zoho.jp", port = 465, security = "tls", user_name = "address" },
+  { host = "smtp.zoho.jp", port = 587, security = "start_tls", user_name = "address" },
+]
+custom_domain_imap = { host = "imappro.zoho.jp", port = 993, security = "tls", user_name = "address" }
+custom_domain_smtp = [
+  { host = "smtppro.zoho.jp", port = 465, security = "tls", user_name = "address" },
+  { host = "smtppro.zoho.jp", port = 587, security = "start_tls", user_name = "address" },
+]
+password = "app_password_with_two_step"
+enable_imap_url = "https://www.zoho.com/mail/help/imap-access.html"
+documentation_url = "https://www.zoho.com/mail/help/imap-access.html"
+# Zoho's SMTP files the copy in Sent, as for zoho-com above.
+files_sent_mail = true
+
+[[provider]]
+id = "zohocloud-ca"
+name = "Zoho Mail"
+kind = "imap"
+domains = ["zohocloud.ca", "zohomailcloud.ca"]
+mx = ["*.zohocloud.ca"]
+imap = { host = "imap.zohocloud.ca", port = 993, security = "tls", user_name = "address" }
+smtp = [
+  { host = "smtp.zohocloud.ca", port = 465, security = "tls", user_name = "address" },
+  { host = "smtp.zohocloud.ca", port = 587, security = "start_tls", user_name = "address" },
+]
+custom_domain_imap = { host = "imappro.zohocloud.ca", port = 993, security = "tls", user_name = "address" }
+custom_domain_smtp = [
+  { host = "smtppro.zohocloud.ca", port = 465, security = "tls", user_name = "address" },
+  { host = "smtppro.zohocloud.ca", port = 587, security = "start_tls", user_name = "address" },
+]
+password = "app_password_with_two_step"
+enable_imap_url = "https://www.zoho.com/mail/help/imap-access.html"
+documentation_url = "https://www.zoho.com/mail/help/imap-access.html"
+# Zoho's SMTP files the copy in Sent, as for zoho-com above.
+files_sent_mail = true
+
+# The two GMX families share mail servers behind different names. Each
+# family uses its own.
+[[provider]]
+id = "gmx-net"
+name = "GMX"
+kind = "imap"
+domains = [
+  "gmx.net", "gmx.de", "gmx.at", "gmx.ch", "gmx.eu", "gmx.biz", "gmx.org",
+  "gmx.info", "mein.gmx", "mail.gmx", "email.gmx",
+]
+mx = ["mx00.emig.gmx.net", "mx01.emig.gmx.net"]
+imap = { host = "imap.gmx.net", port = 993, security = "tls", user_name = "address" }
+smtp = [
+  { host = "mail.gmx.net", port = 465, security = "tls", user_name = "address" },
+  { host = "mail.gmx.net", port = 587, security = "start_tls", user_name = "address" },
+]
+password = "app_password_with_two_step"
+app_password_url = "https://hilfe.gmx.net/sicherheit/2fa/anwendungsspezifisches-passwort.html"
+enable_imap_url = "https://hilfe.gmx.net/pop-imap/einschalten.html"
+documentation_url = "https://hilfe.gmx.net/pop-imap/imap/imap-serverdaten.html"
+# The documentation_url page does not say whether SMTP files a copy in
+# Sent.
+files_sent_mail = false
+
+[[provider]]
+id = "gmx-com"
+name = "GMX"
+kind = "imap"
+domains = [
+  "gmx.com", "gmx.tm", "gmx.us", "gmx.co.uk", "gmx.es", "gmx.fr", "gmx.ca",
+  "gmx.cn", "gmx.co.in", "gmx.com.br", "gmx.com.my", "gmx.hk", "gmx.ie",
+  "gmx.ph", "gmx.pt", "gmx.ru", "gmx.se", "gmx.sg", "gmx.tw", "gmx.com.tr",
+  "gmx.it", "gmx.li",
+]
+mx = ["mx00.gmx.net", "mx01.gmx.net"]
+imap = { host = "imap.gmx.com", port = 993, security = "tls", user_name = "address" }
+smtp = [
+  { host = "mail.gmx.com", port = 587, security = "start_tls", user_name = "address" },
+  { host = "mail.gmx.com", port = 465, security = "tls", user_name = "address" },
+]
+password = "app_password_with_two_step"
+enable_imap_url = "https://support.gmx.com/pop-imap/toggle.html"
+documentation_url = "https://support.gmx.com/pop-imap/imap/server.html"
+# The documentation_url page does not say whether SMTP files a copy in
+# Sent.
+files_sent_mail = false
+
+[[provider]]
+id = "webde"
+name = "WEB.DE"
+kind = "imap"
+domains = ["web.de"]
+mx = ["*.web.de"]
+imap = { host = "imap.web.de", port = 993, security = "tls", user_name = "address" }
+smtp = [
+  { host = "smtp.web.de", port = 465, security = "tls", user_name = "address" },
+  { host = "smtp.web.de", port = 587, security = "start_tls", user_name = "address" },
+]
+password = "app_password_with_two_step"
+enable_imap_url = "https://hilfe.web.de/pop-imap/einschalten.html"
+documentation_url = "https://hilfe.web.de/pop-imap/imap/imap-serverdaten.html"
+# The documentation_url page does not say whether SMTP files a copy in
+# Sent.
+files_sent_mail = false
+
+# mail.com offers IMAP to Premium accounts only. It has hundreds more
+# address domains than these; the MX pattern catches them.
+[[provider]]
+id = "mailcom"
+name = "mail.com"
+kind = "imap"
+domains = [
+  "mail.com", "mail.org", "email.com", "post.com", "usa.com",
+  "accountant.com", "consultant.com", "dr.com", "engineer.com",
+  "cheerful.com", "techie.com", "linuxmail.org", "europe.com", "uymail.com",
+  "myself.com", "iname.com", "writeme.com",
+]
+mx = ["mx00.mail.com", "mx01.mail.com"]
+imap = { host = "imap.mail.com", port = 993, security = "tls", user_name = "address" }
+smtp = [
+  { host = "smtp.mail.com", port = 587, security = "start_tls", user_name = "address" },
+  { host = "smtp.mail.com", port = 465, security = "tls", user_name = "address" },
+]
+password = "app_password_with_two_step"
+enable_imap_url = "https://support.mail.com/pop-imap/setting-up-pop-imap.html"
+documentation_url = "https://support.mail.com/premium/imap/server.html"
+# The documentation_url page does not say whether SMTP files a copy in
+# Sent.
+files_sent_mail = false
+
+[[provider]]
+id = "yandex"
+name = "Yandex Mail"
+kind = "imap"
+domains = [
+  "yandex.ru", "yandex.com", "ya.ru", "narod.ru", "yandex.com.tr",
+  "yandex.net", "yandex.by", "yandex.kz",
+]
+mx = ["*.yandex.ru", "*.yandex.net"]
+imap = { host = "imap.yandex.com", port = 993, security = "tls", user_name = "address" }
+smtp = [
+  { host = "smtp.yandex.com", port = 465, security = "tls", user_name = "address" },
+  { host = "smtp.yandex.com", port = 587, security = "start_tls", user_name = "address" },
+]
+password = "app_password"
+app_password_url = "https://id.yandex.com/security/app-passwords"
+enable_imap_url = "https://yandex.com/support/yandex-360/customers/mail/en/mail-clients/others"
+documentation_url = "https://yandex.com/support/yandex-360/customers/mail/en/mail-clients/others"
+# The documentation_url page does not say whether SMTP files a copy in
+# Sent.
+files_sent_mail = false
+
+[[provider]]
+id = "mailbox-org"
+name = "mailbox.org"
+kind = "imap"
+domains = ["mailbox.org"]
+mx = ["*.mailbox.org"]
+imap = { host = "imap.mailbox.org", port = 993, security = "tls", user_name = "address" }
+smtp = [
+  { host = "smtp.mailbox.org", port = 465, security = "tls", user_name = "address" },
+  { host = "smtp.mailbox.org", port = 587, security = "start_tls", user_name = "address" },
+]
+password = "app_password_with_two_step"
+documentation_url = "https://kb.mailbox.org/en/private/e-mail/e-mail-configuration/"
+# The documentation_url page does not say whether SMTP files a copy in
+# Sent.
+files_sent_mail = false
+
+# Posteo's own autoconfig names these domains. Its setup page asks for an
+# app password, though its app password page calls them optional.
+[[provider]]
+id = "posteo"
+name = "Posteo"
+kind = "imap"
+domains = [
+  "posteo.de", "posteo.at", "posteo.be", "posteo.ca", "posteo.ch",
+  "posteo.cl", "posteo.co", "posteo.co.uk", "posteo.com", "posteo.com.br",
+  "posteo.cr", "posteo.cz", "posteo.dk", "posteo.ec", "posteo.ee",
+  "posteo.es", "posteo.eu", "posteo.fi", "posteo.gl", "posteo.gr",
+  "posteo.hn", "posteo.hr", "posteo.hu", "posteo.ie", "posteo.in",
+  "posteo.is", "posteo.it", "posteo.jp", "posteo.kr", "posteo.la",
+  "posteo.li", "posteo.lt", "posteo.lu", "posteo.lv", "posteo.me",
+  "posteo.mk", "posteo.mx", "posteo.my", "posteo.net", "posteo.nl",
+  "posteo.no", "posteo.nz", "posteo.org", "posteo.pe", "posteo.pl",
+  "posteo.pm", "posteo.pt", "posteo.ro", "posteo.ru", "posteo.se",
+  "posteo.sg", "posteo.si", "posteo.sk", "posteo.tn", "posteo.ug",
+  "posteo.uk", "posteo.us", "posteo.ae", "posteo.af", "posteo.au",
+  "posteo.bg", "posteo.biz", "biomail.at", "biomail.de", "biomail.me",
+  "bytepost.net", "echtzeitmail.de", "internetpost.net", "postspeicher.de",
+  "schoenemail.de", "sloob.de",
+]
+mx = ["*.posteo.de"]
+imap = { host = "posteo.de", port = 993, security = "tls", user_name = "address" }
+smtp = [
+  { host = "posteo.de", port = 465, security = "tls", user_name = "address" },
+  { host = "posteo.de", port = 587, security = "start_tls", user_name = "address" },
+]
+password = "app_password"
+app_password_url = "https://posteo.de/en/help/app-passwords"
+documentation_url = "https://posteo.de/en/help/how-do-i-set-up-posteo-in-an-email-client-pop3-imap-and-smtp"
+# The documentation_url page does not say whether SMTP files a copy in
+# Sent.
+files_sent_mail = false
+
+# Proton Mail needs Proton Mail Bridge, which the app does not support yet.
+[[provider]]
+id = "proton"
+name = "Proton Mail"
+kind = "not_yet"
+domains = ["proton.me", "protonmail.com", "protonmail.ch", "pm.me"]
+mx = ["mail.protonmail.ch", "mailsec.protonmail.ch"]
+
+[[provider]]
+id = "tuta"
+name = "Tuta"
+kind = "no_imap"
+domains = [
+  "tuta.com", "tutanota.com", "tutanota.de", "tutamail.com", "tuta.io",
+  "keemail.me",
+]
+mx = ["mail.tutanota.de"]
+
+[[provider]]
+id = "hey"
+name = "HEY"
+kind = "no_imap"
+domains = ["hey.com"]
+# hey.com uses home-mx, HEY for Domains work-mx.
+mx = ["*.app.hey.com"]
+
+[[provider]]
+id = "google"
+name = "Google"
+kind = "google"
+domains = ["gmail.com", "googlemail.com"]
+# smtp.google.com is Google Workspace's MX since 2023; the others are the
+# older names domains still carry.
+mx = [
+  "smtp.google.com", "aspmx.l.google.com", "*.aspmx.l.google.com",
+  "gmail-smtp-in.l.google.com", "*.gmail-smtp-in.l.google.com",
+  "*.googlemail.com",
+]
+
+[[provider]]
+id = "microsoft"
+name = "Microsoft"
+kind = "microsoft"
+domains = [
+  "hotmail.com", "live.com", "msn.com", "outlook.com", "windowslive.com",
+  "outlook.at", "outlook.be", "outlook.cl", "outlook.cz", "outlook.de",
+  "outlook.dk", "outlook.es", "outlook.fr", "outlook.hu", "outlook.ie",
+  "outlook.in", "outlook.it", "outlook.jp", "outlook.kr", "outlook.lv",
+  "outlook.my", "outlook.ph", "outlook.pt", "outlook.sa", "outlook.sg",
+  "outlook.sk", "outlook.co.id", "outlook.co.il", "outlook.co.th",
+  "outlook.com.ar", "outlook.com.au", "outlook.com.br", "outlook.com.gr",
+  "outlook.com.tr", "outlook.com.vn", "hotmail.be", "hotmail.ca",
+  "hotmail.cl", "hotmail.cz", "hotmail.de", "hotmail.dk", "hotmail.es",
+  "hotmail.fi", "hotmail.fr", "hotmail.gr", "hotmail.hu", "hotmail.it",
+  "hotmail.lt", "hotmail.lv", "hotmail.my", "hotmail.nl", "hotmail.no",
+  "hotmail.ph", "hotmail.rs", "hotmail.se", "hotmail.sg", "hotmail.sk",
+  "hotmail.co.id", "hotmail.co.il", "hotmail.co.in", "hotmail.co.jp",
+  "hotmail.co.kr", "hotmail.co.th", "hotmail.co.uk", "hotmail.co.za",
+  "hotmail.com.ar", "hotmail.com.au", "hotmail.com.br", "hotmail.com.hk",
+  "hotmail.com.tr", "hotmail.com.tw", "hotmail.com.vn", "live.at", "live.be",
+  "live.ca", "live.cl", "live.cn", "live.de", "live.dk", "live.fi",
+  "live.fr", "live.hk", "live.ie", "live.in", "live.it", "live.jp",
+  "live.nl", "live.no", "live.ru", "live.se", "live.co.kr", "live.co.uk",
+  "live.co.za", "live.com.ar", "live.com.au", "live.com.mx", "live.com.my",
+  "live.com.ph", "live.com.pt", "live.com.sg", "livemail.tw",
+]
+# Outlook.com, Microsoft 365, and domains Microsoft added from July 2026.
+mx = [
+  "*.olc.protection.outlook.com", "*.mail.protection.outlook.com",
+  "*.mx.microsoft",
+]

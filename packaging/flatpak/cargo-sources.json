@@ -3278,6 +3278,32 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/psl/psl-2.1.237.crate",
+        "sha256": "97a8699e51bcfad706abba8e8b9d674ace2093b55d3af48f8bcfa6e425e00e5c",
+        "dest": "cargo/vendor/psl-2.1.237"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"97a8699e51bcfad706abba8e8b9d674ace2093b55d3af48f8bcfa6e425e00e5c\", \"files\": {}}",
+        "dest": "cargo/vendor/psl-2.1.237",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/psl-types/psl-types-2.0.11.crate",
+        "sha256": "33cb294fe86a74cbcf50d4445b37da762029549ebeea341421c7c70370f86cac",
+        "dest": "cargo/vendor/psl-types-2.0.11"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"33cb294fe86a74cbcf50d4445b37da762029549ebeea341421c7c70370f86cac\", \"files\": {}}",
+        "dest": "cargo/vendor/psl-types-2.0.11",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/pulldown-cmark/pulldown-cmark-0.13.4.crate",
         "sha256": "e9f068eba8e7071c5f9511831b44f32c740d5adf574e990f946ddb53db2f314e",
         "dest": "cargo/vendor/pulldown-cmark-0.13.4"
