@@ -8,7 +8,6 @@ use std::sync::Arc;
 
 use mailrs_domain::{
     AccountId, Category, Filter, FilterAction, FilterCriteria, MailSet, Target, category,
-    system_label,
 };
 use mailrs_store::threads::{self, ThreadFilter};
 
@@ -87,14 +86,14 @@ impl<A: Accounts> MailActions<A> {
     }
 
     /// Replaces any rule that puts `email`'s mail in a category with one
-    /// that adds `label`. Account settings keep no state of their own, so
-    /// this borrows the same accounts and store rather than holding a
+    /// that adds `category`. Account settings keep no state of their own,
+    /// so this borrows the same accounts and store rather than holding a
     /// second handle.
     async fn sort_future_mail(
         &self,
         account_id: AccountId,
         email: &str,
-        label: &str,
+        category: &str,
     ) -> Result<Permitted<()>, SyncError> {
         let settings = AccountSettings::new(Arc::clone(&self.accounts), self.db.clone());
         let Permitted::Done(rules) = settings.rules(account_id).await? else {
@@ -106,12 +105,12 @@ impl<A: Accounts> MailActions<A> {
                 .from
                 .as_deref()
                 .is_some_and(|f| f.eq_ignore_ascii_case(email))
-                && !old.action.add_label_ids.is_empty()
+                && !old.action.add.is_empty()
                 && old
                     .action
-                    .add_label_ids
+                    .add
                     .iter()
-                    .all(|l| system_label::is_category(l));
+                    .all(|s| matches!(s, MailSet::Category(_)));
             if let (true, Some(id)) = (sorts_sender, old.id.as_deref())
                 && settings.delete_rule(account_id, id).await? == Permitted::NeedsPermission
             {
@@ -125,7 +124,7 @@ impl<A: Accounts> MailActions<A> {
                 ..FilterCriteria::default()
             },
             action: FilterAction {
-                add_label_ids: vec![label.into()],
+                add: vec![MailSet::Category(category.into())],
                 ..FilterAction::default()
             },
         };

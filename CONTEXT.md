@@ -58,7 +58,7 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Automatic reply**: what Gmail sends back while the account owner is away, with the days it runs between. `mailrs_sync::AutomaticReply` names the first and last day; Gmail stores an end it stops before, and only `AccountSettings` converts between the two. _Avoid_: vacation, out of office, auto-responder.
 
-**Rule**: one Gmail filter: which mail it matches, and what Gmail does to it as it arrives. `mailrs_domain::Filter` holds one. The Rules dialog, Block Sender, Categorize Sender, and Hide My Email all make rules. _Avoid_: filter (in wording the user reads).
+**Rule**: one server rule: which mail it matches, and the mail sets it adds that mail to or takes it out of as it arrives (out of the inbox role skips the inbox, out of unread marks it read, into the trash role deletes). `mailrs_domain::Filter`; for Gmail each is a Gmail filter, and `mailrs_gmail::model::GmailFilter` holds Gmail's label ids on the wire. The Rules dialog, Block Sender, Categorize Sender, and Hide My Email all make rules. _Avoid_: filter (except for Gmail's own), automation.
 
 **Hidden address**: one plus address from Hide My Email, such as `dana+kite.fern482@gmail.com`, with the rules behind it. One rule gives its mail the Hide My Email label; a second trashes that mail while the address is off. `mailrs_sync::HiddenAddress` holds the address, its note and the two rule ids; `AccountSettings` makes one and changes it, and the app keeps the list in its settings file. _Avoid_: masked address, burner.
 

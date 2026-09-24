@@ -1,5 +1,6 @@
 //! Gmail REST wire types. Google sends int64 fields as JSON strings.
 
+use mailrs_domain::{Filter, FilterAction, FilterCriteria, MailSet, gmail};
 use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Deserialize)]
@@ -205,6 +206,61 @@ impl SendAs {
                 Some(status) => status.eq_ignore_ascii_case("accepted"),
                 None => true,
             }
+    }
+}
+
+/// A filter as Gmail's settings API spells it: labels by id.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GmailFilter {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(default)]
+    pub criteria: FilterCriteria,
+    #[serde(default)]
+    pub action: GmailFilterAction,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GmailFilterAction {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub add_label_ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub remove_label_ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub forward: Option<String>,
+}
+
+impl From<&Filter> for GmailFilter {
+    /// A set Gmail has no label for (the archive role) is left out; no
+    /// rule in the app makes one.
+    fn from(filter: &Filter) -> GmailFilter {
+        let labels = |sets: &[MailSet]| sets.iter().filter_map(gmail::label_of_set).collect();
+        GmailFilter {
+            id: filter.id.clone(),
+            criteria: filter.criteria.clone(),
+            action: GmailFilterAction {
+                add_label_ids: labels(&filter.action.add),
+                remove_label_ids: labels(&filter.action.remove),
+                forward: filter.action.forward.clone(),
+            },
+        }
+    }
+}
+
+impl GmailFilter {
+    /// The filter in mail sets, as the rest of the app reads it.
+    pub fn into_filter(self) -> Filter {
+        let sets = |labels: Vec<String>| labels.iter().map(|l| gmail::set_of(l)).collect();
+        Filter {
+            id: self.id,
+            criteria: self.criteria,
+            action: FilterAction {
+                add: sets(self.action.add_label_ids),
+                remove: sets(self.action.remove_label_ids),
+                forward: self.action.forward,
+            },
+        }
     }
 }
 

@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use mailrs_domain::{
-    Address, Category, Filter, FilterAction, FilterCriteria, MessageMeta, system_label,
+    Address, Category, Filter, FilterAction, FilterCriteria, MailSet, MessageMeta, system_label,
 };
 use mailrs_store::unsubscribes::{self, How};
 
@@ -103,7 +103,7 @@ fn from(email: &str, id: &str, thread: &str, category: &str) -> MessageMeta {
     }
 }
 
-/// A rule that puts mail from `email` under `label`.
+/// A rule that sorts mail from `email` into the category `label`.
 fn sorts(email: &str, label: &str) -> Filter {
     Filter {
         id: None,
@@ -112,7 +112,7 @@ fn sorts(email: &str, label: &str) -> Filter {
             ..FilterCriteria::default()
         },
         action: FilterAction {
-            add_label_ids: vec![label.into()],
+            add: vec![MailSet::Category(label.into())],
             ..FilterAction::default()
         },
     }
@@ -163,7 +163,7 @@ async fn categorizing_a_sender_moves_their_mail_and_replaces_their_rule() {
     );
     let new = rules.iter().find(|r| r.id != blocked.id).unwrap();
     assert_eq!(new.criteria.from.as_deref(), Some(shop));
-    assert_eq!(new.action.add_label_ids, ["CATEGORY_PROMOTIONS"]);
+    assert_eq!(new.action.add, [MailSet::Category("CATEGORY_PROMOTIONS".into())]);
 }
 
 #[tokio::test]

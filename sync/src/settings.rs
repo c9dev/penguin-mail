@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use chrono::{Local, TimeZone};
 use mailrs_domain::{
-    AccountId, EpochMillis, Filter, FilterAction, FilterCriteria, Label, Vacation, system_label,
+    AccountId, EpochMillis, Filter, FilterAction, FilterCriteria, Label, MailSet, Role, Vacation,
 };
 use mailrs_gmail::LabelColor;
 use mailrs_store::Db;
@@ -365,13 +365,13 @@ async fn delete_filter(rules: &AnyRules, id: &str) -> Result<(), BackendError> {
     }
 }
 
-/// The filter that gives mail to `address` the label `label_id`.
+/// The filter that files mail to `address` in the server mailbox `label_id`.
 fn labels(address: &str, label_id: &str) -> Filter {
     Filter {
         id: None,
         criteria: to(address),
         action: FilterAction {
-            add_label_ids: vec![label_id.to_string()],
+            add: vec![MailSet::Mailbox(label_id.to_string())],
             ..FilterAction::default()
         },
     }
@@ -383,8 +383,8 @@ fn trashes(address: &str) -> Filter {
         id: None,
         criteria: to(address),
         action: FilterAction {
-            add_label_ids: vec![system_label::TRASH.into()],
-            remove_label_ids: vec![system_label::INBOX.into()],
+            add: vec![MailSet::Role(Role::Trash)],
+            remove: vec![MailSet::Role(Role::Inbox)],
             forward: None,
         },
     }

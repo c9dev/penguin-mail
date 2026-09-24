@@ -462,8 +462,8 @@ impl FromStr for Protection {
     }
 }
 
-/// A Gmail filter: mail matching `criteria` gets `action`. Field names
-/// follow Gmail's JSON so the type goes over the wire as is.
+/// A server rule: mail matching `criteria` gets `action`. `mailrs_gmail`
+/// carries this to and from Gmail's own shape.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Filter {
@@ -494,13 +494,16 @@ pub struct FilterCriteria {
     pub has_attachment: bool,
 }
 
+/// What a rule does to the mail it matches, in mail sets: the sets it
+/// adds the mail to and the ones it takes the mail out of. Taking mail
+/// out of the inbox role skips the inbox; out of `MailSet::Unseen` marks
+/// it read; out of the junk role keeps it out of Spam.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct FilterAction {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub add_label_ids: Vec<String>,
+    pub add: Vec<MailSet>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub remove_label_ids: Vec<String>,
+    pub remove: Vec<MailSet>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub forward: Option<String>,
 }
@@ -515,8 +518,8 @@ impl Filter {
                 ..FilterCriteria::default()
             },
             action: FilterAction {
-                add_label_ids: vec![system_label::TRASH.into()],
-                remove_label_ids: vec![system_label::INBOX.into()],
+                add: vec![MailSet::Role(Role::Trash)],
+                remove: vec![MailSet::Role(Role::Inbox)],
                 forward: None,
             },
         }

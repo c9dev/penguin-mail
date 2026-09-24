@@ -1255,9 +1255,9 @@ impl<A: Accounts> Tools<A> {
                     .call(async move { mail.label_id(account_id, &wanted, true).await })
                     .await
                     .map_err(|e| format!("Could not create the label {name}: {e}"))?;
-                for label in &mut filter.action.add_label_ids {
-                    if label == NEW_LABEL {
-                        *label = id.clone();
+                for set in &mut filter.action.add {
+                    if *set == MailSet::Mailbox(NEW_LABEL.into()) {
+                        *set = MailSet::Mailbox(id.clone());
                     }
                 }
             }

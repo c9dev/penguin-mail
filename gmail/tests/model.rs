@@ -1,4 +1,6 @@
-use mailrs_gmail::model::{HistoryList, LabelList, Message, MessagePage, Profile, Thread};
+use mailrs_gmail::model::{
+    GmailFilter, HistoryList, LabelList, Message, MessagePage, Profile, Thread,
+};
 
 #[test]
 fn profile_parses_string_encoded_history_id() {
@@ -52,6 +54,38 @@ fn history_list_parses_every_change_kind() {
         h.history[1].labels_removed[0].label_ids,
         vec!["UNREAD".to_string()]
     );
+}
+
+#[test]
+fn a_gmail_filter_survives_the_trip_through_mail_sets() {
+    use mailrs_domain::{MailSet, Role};
+    let wire = serde_json::json!({
+        "id": "f1",
+        "criteria": {"from": "ann@example.com"},
+        "action": {
+            "addLabelIds": ["TRASH", "Label_3", "CATEGORY_SOCIAL", "STARRED", "IMPORTANT"],
+            "removeLabelIds": ["INBOX", "UNREAD", "SPAM"],
+            "forward": "bob@example.com"
+        }
+    });
+    let filter = serde_json::from_value::<GmailFilter>(wire.clone())
+        .unwrap()
+        .into_filter();
+    assert_eq!(
+        filter.action.add,
+        [
+            MailSet::Role(Role::Trash),
+            MailSet::Mailbox("Label_3".into()),
+            MailSet::Category("CATEGORY_SOCIAL".into()),
+            MailSet::flagged(),
+            MailSet::Role(Role::Important),
+        ]
+    );
+    assert_eq!(
+        filter.action.remove,
+        [MailSet::Role(Role::Inbox), MailSet::Unseen, MailSet::Role(Role::Junk)]
+    );
+    assert_eq!(serde_json::to_value(GmailFilter::from(&filter)).unwrap(), wire);
 }
 
 #[test]

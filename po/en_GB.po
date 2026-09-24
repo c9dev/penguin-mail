@@ -1716,71 +1716,71 @@ msgstr[1] "{named}, and {count} others"
 msgid "me"
 msgstr "me"
 
-#: app/src/rules.rs:73
+#: app/src/rules.rs:72
 msgid "From {address}"
 msgstr "From {address}"
 
-#: app/src/rules.rs:76
+#: app/src/rules.rs:75
 msgid "To {address}"
 msgstr "To {address}"
 
-#: app/src/rules.rs:80
+#: app/src/rules.rs:79
 msgid "Subject has “{words}”"
 msgstr "Subject has “{words}”"
 
-#: app/src/rules.rs:85
+#: app/src/rules.rs:84
 msgid "Has “{words}”"
 msgstr "Has “{words}”"
 
-#: app/src/rules.rs:89
+#: app/src/rules.rs:88
 msgid "Doesn't have “{words}”"
 msgstr "Doesn't have “{words}”"
 
-#: app/src/rules.rs:94
+#: app/src/rules.rs:93
 msgid "Has an attachment"
 msgstr "Has an attachment"
 
-#: app/src/rules.rs:97
+#: app/src/rules.rs:96
 msgid "All mail"
 msgstr "All mail"
 
-#: app/src/rules.rs:117
+#: app/src/rules.rs:116
 msgid "Delete it"
 msgstr "Delete it"
 
-#: app/src/rules.rs:119 app/src/ui/rules.rs:280
+#: app/src/rules.rs:118 app/src/ui/rules.rs:280
 msgid "Skip the Inbox"
 msgstr "Skip the Inbox"
 
-#: app/src/rules.rs:130
+#: app/src/rules.rs:123
 msgid "Apply {label}"
 msgstr "Apply {label}"
 
-#: app/src/rules.rs:139
+#: app/src/rules.rs:129
 msgid "Star it"
 msgstr "Star it"
 
-#: app/src/rules.rs:142
+#: app/src/rules.rs:132
 msgid "Mark as read"
 msgstr "Mark as read"
 
-#: app/src/rules.rs:145
+#: app/src/rules.rs:135
 msgid "Mark as important"
 msgstr "Mark as important"
 
-#: app/src/rules.rs:148
+#: app/src/rules.rs:138
 msgid "Never mark as important"
 msgstr "Never mark as important"
 
-#: app/src/rules.rs:151
+#: app/src/rules.rs:141
 msgid "Never send to Spam"
 msgstr "Never send to Spam"
 
-#: app/src/rules.rs:154
+#: app/src/rules.rs:144
 msgid "Forward to {address}"
 msgstr "Forward to {address}"
 
-#: app/src/rules.rs:157
+#: app/src/rules.rs:147
 msgid "Nothing"
 msgstr "Nothing"
 

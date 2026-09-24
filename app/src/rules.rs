@@ -1,7 +1,7 @@
-//! Gmail filters in plain words, and building one from the rule form.
+//! Rules in plain words, and building one from the rule form.
 
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{Filter, FilterAction, FilterCriteria, system_label};
+use mailrs_domain::{Filter, FilterAction, FilterCriteria, MailSet, Role};
 
 /// What the rule form collects.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -36,24 +36,23 @@ impl RuleForm {
             return Err("Say which mail the rule is for");
         }
         let mut action = FilterAction::default();
-        let mut add = |label: &str| action.add_label_ids.push(label.into());
         if self.star {
-            add(system_label::STARRED);
+            action.add.push(MailSet::flagged());
         }
         if let Some(label) = &self.label {
-            add(label);
+            action.add.push(MailSet::Mailbox(label.clone()));
         }
         if self.trash {
-            add(system_label::TRASH);
+            action.add.push(MailSet::Role(Role::Trash));
         }
         if self.skip_inbox || self.trash {
-            action.remove_label_ids.push(system_label::INBOX.into());
+            action.remove.push(MailSet::Role(Role::Inbox));
         }
         if self.mark_read {
-            action.remove_label_ids.push(system_label::UNREAD.into());
+            action.remove.push(MailSet::Unseen);
         }
         if self.never_spam {
-            action.remove_label_ids.push(system_label::SPAM.into());
+            action.remove.push(MailSet::Role(Role::Junk));
         }
         if action == FilterAction::default() {
             return Err("Choose what the rule does");
@@ -110,44 +109,35 @@ pub fn describe_action(
     action: &FilterAction,
     label_name: impl Fn(&str) -> Option<String>,
 ) -> String {
-    let adds = |id: &str| action.add_label_ids.iter().any(|l| l == id);
-    let removes = |id: &str| action.remove_label_ids.iter().any(|l| l == id);
+    let adds = |set: &MailSet| action.add.contains(set);
+    let removes = |set: &MailSet| action.remove.contains(set);
     let mut parts: Vec<String> = Vec::new();
-    if adds(system_label::TRASH) {
+    if adds(&MailSet::Role(Role::Trash)) {
         parts.push(gettext("Delete it"));
-    } else if removes(system_label::INBOX) {
+    } else if removes(&MailSet::Role(Role::Inbox)) {
         parts.push(gettext("Skip the Inbox"));
     }
-    for id in &action.add_label_ids {
-        match id.as_str() {
-            system_label::TRASH
-            | system_label::STARRED
-            | system_label::UNREAD
-            | system_label::IMPORTANT
-            | system_label::SPAM
-            | system_label::INBOX => {}
-            other => parts.push(fill(
+    for set in &action.add {
+        if let MailSet::Mailbox(id) = set {
+            parts.push(fill(
                 &gettext("Apply {label}"),
-                &[(
-                    "label",
-                    &label_name(other).unwrap_or_else(|| other.to_string()),
-                )],
-            )),
+                &[("label", &label_name(id).unwrap_or_else(|| id.clone()))],
+            ));
         }
     }
-    if adds(system_label::STARRED) {
+    if adds(&MailSet::flagged()) {
         parts.push(gettext("Star it"));
     }
-    if removes(system_label::UNREAD) {
+    if removes(&MailSet::Unseen) {
         parts.push(gettext("Mark as read"));
     }
-    if adds(system_label::IMPORTANT) {
+    if adds(&MailSet::Role(Role::Important)) {
         parts.push(gettext("Mark as important"));
     }
-    if removes(system_label::IMPORTANT) {
+    if removes(&MailSet::Role(Role::Important)) {
         parts.push(gettext("Never mark as important"));
     }
-    if removes(system_label::SPAM) {
+    if removes(&MailSet::Role(Role::Junk)) {
         parts.push(gettext("Never send to Spam"));
     }
     if let Some(to) = &action.forward {
@@ -188,8 +178,11 @@ mod tests {
         };
         let filter = form.filter().unwrap();
         assert_eq!(filter.criteria.from.as_deref(), Some("news@example.com"));
-        assert_eq!(filter.action.add_label_ids, ["Label_7"]);
-        assert_eq!(filter.action.remove_label_ids, ["INBOX", "UNREAD"]);
+        assert_eq!(filter.action.add, [MailSet::Mailbox("Label_7".into())]);
+        assert_eq!(
+            filter.action.remove,
+            [MailSet::Role(Role::Inbox), MailSet::Unseen]
+        );
         assert!(RuleForm::default().filter().is_err());
         let no_action = RuleForm {
             subject: "x".into(),

@@ -2,7 +2,7 @@
 //! does and checks the JSON that goes back, plus what the ports were asked
 //! to do.
 
-use mailrs_domain::{FlagColor, MessageBody, MessageMeta, Vacation, system_label};
+use mailrs_domain::{FlagColor, MailSet, MessageBody, MessageMeta, Vacation, system_label};
 use mailrs_sync::{MailAction, Outcome, TriageAction};
 use serde_json::{Value, json};
 
@@ -838,8 +838,8 @@ async fn categorize_sender_asks_then_moves_their_mail_and_sorts_the_rest() {
     assert_eq!(rules.len(), 1);
     assert_eq!(rules[0].criteria.from.as_deref(), Some("shop@example.com"));
     assert_eq!(
-        rules[0].action.add_label_ids,
-        [system_label::CATEGORY_SOCIAL]
+        rules[0].action.add,
+        [MailSet::Category(system_label::CATEGORY_SOCIAL.into())]
     );
     assert_eq!(h.asked().categories_moved, 1);
 }

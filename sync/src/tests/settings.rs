@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use chrono::{Local, NaiveDate, TimeZone};
-use mailrs_domain::EpochMillis;
+use mailrs_domain::{EpochMillis, MailSet, Role};
 use mailrs_gmail::GmailError;
 
 use super::{Connected, Harness, harness};
@@ -135,8 +135,8 @@ async fn rules_are_created_and_deleted() {
     let rules = settings.rules(h.account_id).await.unwrap().done().unwrap();
     assert_eq!(rules, [created]);
     assert_eq!(rules[0].criteria.from.as_deref(), Some("ads@example.com"));
-    assert_eq!(rules[0].action.add_label_ids, ["TRASH"]);
-    assert_eq!(rules[0].action.remove_label_ids, ["INBOX"]);
+    assert_eq!(rules[0].action.add, [MailSet::Role(Role::Trash)]);
+    assert_eq!(rules[0].action.remove, [MailSet::Role(Role::Inbox)]);
 
     settings.delete_rule(h.account_id, &id).await.unwrap();
     assert_eq!(
@@ -176,7 +176,7 @@ async fn a_hidden_address_gets_the_label_and_its_filter() {
     assert_eq!(rules.len(), 1);
     assert_eq!(rules[0].id, made.label_filter);
     assert_eq!(rules[0].criteria.to.as_deref(), Some(made.address.as_str()));
-    assert_eq!(rules[0].action.add_label_ids, [label.id]);
+    assert_eq!(rules[0].action.add, [MailSet::Mailbox(label.id)]);
     assert_eq!(made.trash_filter, None);
 
     let second = settings
@@ -232,8 +232,8 @@ async fn turning_a_hidden_address_off_and_on_moves_its_mail() {
     let trashing = rules.iter().find(|r| r.id.as_deref() == Some(&trash));
     let trashing = trashing.expect("the trash rule");
     assert_eq!(trashing.criteria.to.as_deref(), Some(made.address.as_str()));
-    assert_eq!(trashing.action.add_label_ids, ["TRASH"]);
-    assert_eq!(trashing.action.remove_label_ids, ["INBOX"]);
+    assert_eq!(trashing.action.add, [MailSet::Role(Role::Trash)]);
+    assert_eq!(trashing.action.remove, [MailSet::Role(Role::Inbox)]);
 
     let on = settings
         .set_hidden_address_active(h.account_id, &off, true)

@@ -17,8 +17,8 @@ use crate::convert::text_to_html;
 use crate::convert::{HistoryPage, history_page};
 use crate::limiter::{self, AccountQuota};
 use crate::model::{
-    AttachmentBody, Draft, DraftList, HistoryList, LabelColor, LabelList, Message, MessagePage,
-    Profile, RemoteLabel, SendAs, SendAsList, Thread, VacationSettings,
+    AttachmentBody, Draft, DraftList, GmailFilter, HistoryList, LabelColor, LabelList, Message,
+    MessagePage, Profile, RemoteLabel, SendAs, SendAsList, Thread, VacationSettings,
 };
 use crate::oauth::{AccessToken, LoopbackListener, OAuthClient, Pkce, random_token};
 use crate::people::{self, ConnectionsPage, ContactFields, Person};
@@ -406,25 +406,26 @@ impl GmailClient {
         #[derive(serde::Deserialize)]
         struct FilterList {
             #[serde(default)]
-            filter: Vec<Filter>,
+            filter: Vec<GmailFilter>,
         }
         let list: FilterList = self
             .call(cost::SETTINGS, || {
                 self.http().get(self.url("settings/filters"))
             })
             .await?;
-        Ok(list.filter)
+        Ok(list.filter.into_iter().map(GmailFilter::into_filter).collect())
     }
 
     pub async fn create_filter(&self, filter: &Filter) -> Result<Filter, GmailError> {
-        let body = Filter {
+        let body = GmailFilter {
             id: None,
-            ..filter.clone()
+            ..GmailFilter::from(filter)
         };
         self.call(cost::SETTINGS, || {
             self.http().post(self.url("settings/filters")).json(&body)
         })
         .await
+        .map(GmailFilter::into_filter)
     }
 
     pub async fn delete_filter(&self, id: &str) -> Result<(), GmailError> {
