@@ -7,7 +7,8 @@
 use std::sync::Arc;
 
 use mailrs_domain::{
-    AccountId, Category, Filter, FilterAction, FilterCriteria, Target, system_label,
+    AccountId, Category, Filter, FilterAction, FilterCriteria, MailSet, Target, category,
+    system_label,
 };
 use mailrs_store::threads::{self, ThreadFilter};
 
@@ -71,11 +72,11 @@ impl<A: Accounts> MailActions<A> {
             .collect();
         let label = category.id();
         let relabel = TriageAction::Relabel {
-            add: vec![label.into()],
-            remove: system_label::CATEGORIES
+            add: vec![MailSet::Category(label.into())],
+            remove: category::IDS
                 .iter()
-                .filter(|l| **l != label)
-                .map(|l| l.to_string())
+                .filter(|c| **c != label)
+                .map(|c| MailSet::Category(c.to_string()))
                 .collect(),
         };
         let moved = self

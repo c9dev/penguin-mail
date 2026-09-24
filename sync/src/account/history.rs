@@ -205,7 +205,7 @@ impl AccountSync {
     }
 }
 
-/// Unread mail that someone else sent to INBOX.
+/// Unread mail that someone else sent to the inbox.
 fn is_new_inbox_mail(meta: &MessageMeta) -> bool {
     meta.in_role(Role::Inbox)
         && meta.is_unread()

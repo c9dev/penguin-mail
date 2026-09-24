@@ -7,7 +7,7 @@
 use std::collections::BTreeMap;
 
 use mailrs_domain::mailbox::keyword::{FLAGGED, MUTED, SEEN};
-use mailrs_domain::{Applied, Membership, Memberships, Role, gmail};
+use mailrs_domain::{Applied, MailSet, Membership, Memberships, Role};
 use mailrs_store::messages::Change;
 
 use crate::{BackendError, MailCapabilities, TriageAction};
@@ -76,22 +76,30 @@ pub fn ops_for(
             vec![MailOp::MoveToRole(Role::Inbox), keyword(MUTED, false)]
         }
         TriageAction::Unmute => vec![add(Role::Inbox)?, keyword(MUTED, false)],
-        TriageAction::AddLabel(label) => vec![op_for_label(label, true)],
-        TriageAction::RemoveLabel(label) => vec![op_for_label(label, false)],
+        TriageAction::AddLabel(id) => vec![MailOp::AddToMailbox(id.clone())],
+        TriageAction::RemoveLabel(id) => vec![MailOp::RemoveFromMailbox(id.clone())],
         TriageAction::Relabel { add, remove } => add
             .iter()
-            .map(|label| op_for_label(label, true))
-            .chain(remove.iter().map(|label| op_for_label(label, false)))
-            .collect(),
+            .map(|set| set_op(set, true, roles))
+            .chain(remove.iter().map(|set| set_op(set, false, roles)))
+            .collect::<Result<_, _>>()?,
     })
 }
 
-/// The operation that puts Gmail's `label` on (`carried`) or takes it off.
-/// Actions name labels by Gmail id until the words move to roles and
-/// keywords.
-fn op_for_label(label: &str, carried: bool) -> MailOp {
-    let (membership, held) = gmail::membership_of(label);
-    op(membership, carried == held)
+/// The operation that puts messages in `set` (`on`) or takes them out.
+/// Being in `MailSet::Unseen` is lacking `$seen`, so adding it clears the
+/// keyword.
+fn set_op(set: &MailSet, on: bool, roles: &Roles) -> Result<MailOp, BackendError> {
+    Ok(match set {
+        MailSet::Role(role) => {
+            let id = roles.get(role).cloned().ok_or(BackendError::Unsupported)?;
+            op(Membership::Mailbox(id), on)
+        }
+        MailSet::Mailbox(id) => op(Membership::Mailbox(id.clone()), on),
+        MailSet::Keyword(k) => MailOp::SetKeyword { keyword: k.clone(), on },
+        MailSet::Unseen => MailOp::SetKeyword { keyword: SEEN.into(), on: !on },
+        MailSet::Category(c) => MailOp::SetCategory { category: c.clone(), on },
+    })
 }
 
 /// The operation that gives `membership` or takes it away.
@@ -170,8 +178,8 @@ pub fn reverse_changes(applied: &Applied) -> Vec<Change> {
 mod tests {
     use std::sync::Arc;
 
-    use mailrs_domain::mailbox::keyword::{MUTED, SEEN};
-    use mailrs_domain::{Applied, Membership, Memberships, Role, gmail};
+    use mailrs_domain::mailbox::keyword::{FLAGGED, MUTED, SEEN};
+    use mailrs_domain::{Applied, MailSet, Membership, Memberships, Role, gmail};
     use mailrs_store::messages::Change;
 
     use super::*;
@@ -240,8 +248,11 @@ mod tests {
         );
         assert_eq!(
             ops(TriageAction::Relabel {
-                add: vec!["CATEGORY_SOCIAL".into(), "UNREAD".into()],
-                remove: vec!["CATEGORY_UPDATES".into()],
+                add: vec![
+                    MailSet::Category("CATEGORY_SOCIAL".into()),
+                    MailSet::Unseen
+                ],
+                remove: vec![MailSet::Category("CATEGORY_UPDATES".into())],
             }),
             [
                 MailOp::SetCategory {
@@ -255,6 +266,51 @@ mod tests {
                 },
             ]
         );
+    }
+
+    #[test]
+    fn a_reminder_coming_due_files_in_the_inbox_and_marks_unread() {
+        let roles = gmail_roles();
+        let back = TriageAction::Relabel {
+            add: vec![MailSet::Role(Role::Inbox), MailSet::Unseen],
+            remove: vec![],
+        };
+        assert_eq!(
+            ops_for(&back, &label_account(), &roles).unwrap(),
+            vec![
+                MailOp::AddToMailbox("INBOX".into()),
+                MailOp::SetKeyword { keyword: SEEN.into(), on: false },
+            ]
+        );
+    }
+
+    #[test]
+    fn a_relabel_by_category_and_keyword_needs_no_label_ids() {
+        let roles = gmail_roles();
+        let sort = TriageAction::Relabel {
+            add: vec![MailSet::Category("CATEGORY_SOCIAL".into()), MailSet::flagged()],
+            remove: vec![MailSet::Category("CATEGORY_UPDATES".into())],
+        };
+        assert_eq!(
+            ops_for(&sort, &label_account(), &roles).unwrap(),
+            vec![
+                MailOp::SetCategory { category: "CATEGORY_SOCIAL".into(), on: true },
+                MailOp::SetKeyword { keyword: FLAGGED.into(), on: true },
+                MailOp::SetCategory { category: "CATEGORY_UPDATES".into(), on: false },
+            ]
+        );
+    }
+
+    #[test]
+    fn a_role_the_account_lacks_is_unsupported() {
+        let relabel = TriageAction::Relabel {
+            add: vec![MailSet::Role(Role::Archive)],
+            remove: vec![],
+        };
+        assert!(matches!(
+            ops_for(&relabel, &label_account(), &gmail_roles()),
+            Err(BackendError::Unsupported)
+        ));
     }
 
     #[test]

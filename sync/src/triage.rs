@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use mailrs_domain::MailSet;
 use mailrs_domain::translate::{fill, gettext};
 
 /// A label change the user asked for on a whole thread. Ordered, so a bulk
@@ -25,11 +26,11 @@ pub enum TriageAction {
     Mute,
     /// Takes the mute label off and puts the thread back in the inbox.
     Unmute,
-    /// Any label change, such as putting a conversation back in the inbox
-    /// when its reminder comes due.
+    /// Any change of mail sets, such as putting a conversation back in the
+    /// inbox, unread, when its reminder comes due.
     Relabel {
-        add: Vec<String>,
-        remove: Vec<String>,
+        add: Vec<MailSet>,
+        remove: Vec<MailSet>,
     },
 }
 

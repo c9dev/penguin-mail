@@ -2,7 +2,7 @@
 //! records the hour; this part puts it back in the inbox when that hour
 //! comes, so the Gmail change and the store change happen in one place.
 
-use mailrs_domain::{EpochMillis, MessageMeta, Target, system_label};
+use mailrs_domain::{EpochMillis, MailSet, MessageMeta, Role, Target};
 use mailrs_store::{messages, reminders};
 
 use super::MailActions;
@@ -25,7 +25,7 @@ impl<A: Accounts> MailActions<A> {
     pub async fn return_due(&self, now: EpochMillis) -> Result<Vec<Returned>, SyncError> {
         let due = self.db.read(move |c| reminders::due(c, now)).await?;
         let back = TriageAction::Relabel {
-            add: vec![system_label::INBOX.into(), system_label::UNREAD.into()],
+            add: vec![MailSet::Role(Role::Inbox), MailSet::Unseen],
             remove: vec![],
         };
         let mut returned = Vec::new();

@@ -7,7 +7,9 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::sync::{Arc, Mutex};
 
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{AccountId, Applied, EpochMillis, FlagColor, Folder, Target, system_label};
+use mailrs_domain::{
+    AccountId, Applied, EpochMillis, FlagColor, Folder, MailSet, Role, Target, gmail,
+};
 use mailrs_store::reminders::{self, Reminder};
 use mailrs_store::{Db, flags, follow_ups, labels, messages, threads};
 
@@ -747,7 +749,7 @@ impl<A: Accounts> MailActions<A> {
             MailAction::Mute { muted: false } => return every(TriageAction::Unmute),
             MailAction::CancelReminder => {
                 return every(TriageAction::Relabel {
-                    add: vec![system_label::INBOX.into()],
+                    add: vec![MailSet::Role(Role::Inbox)],
                     remove: vec![],
                 });
             }
@@ -802,8 +804,8 @@ impl<A: Accounts> MailActions<A> {
             return Err(format!("This account has no label called {name}."));
         }
         Ok(TriageAction::Relabel {
-            add: ids.0,
-            remove: ids.1,
+            add: ids.0.iter().map(|id| gmail::set_of(id)).collect(),
+            remove: ids.1.iter().map(|id| gmail::set_of(id)).collect(),
         })
     }
 

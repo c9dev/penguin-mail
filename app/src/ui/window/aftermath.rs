@@ -10,7 +10,7 @@
 
 use std::rc::Rc;
 
-use mailrs_domain::{FlagColor, Folder, Target, ThreadSummary, system_label};
+use mailrs_domain::{FlagColor, Folder, MailSet, Target, ThreadSummary, gmail, system_label};
 use mailrs_sync::{History, MailAction, Outcome, TriageAction};
 
 use super::MainWindow;
@@ -157,12 +157,21 @@ fn leaves_list(mailbox: &Mailbox, action: &TriageAction) -> bool {
             || (label == system_label::SPAM && folder != Some(Folder::Junk))
     };
     let removes = |label: &str| listed == Some(label);
+    // Until Task A4 rewrites this on `MailSet` directly, a Relabel value
+    // still names Gmail labels, so a set is judged by the label it stands
+    // for.
+    let adds_set = |set: &MailSet| {
+        (folder == Some(Folder::Archive) && *set == gmail::set_of(system_label::INBOX))
+            || (*set == gmail::set_of(system_label::TRASH) && folder != Some(Folder::Trash))
+            || (*set == gmail::set_of(system_label::SPAM) && folder != Some(Folder::Junk))
+    };
+    let removes_set = |set: &MailSet| listed.is_some_and(|l| gmail::set_of(l) == *set);
     match action {
         TriageAction::AddLabel(label) => adds(label),
         TriageAction::RemoveLabel(label) => removes(label),
         TriageAction::Relabel { add, remove } => {
-            add.iter().any(|l| adds(l))
-                || remove.iter().any(|l| removes(l) && !add.contains(l))
+            add.iter().any(adds_set)
+                || remove.iter().any(|s| removes_set(s) && !add.contains(s))
         }
         TriageAction::Unstar => removes(system_label::STARRED),
         TriageAction::Archive => !matches!(folder, Some(Folder::AllMail | Folder::Archive)),
@@ -453,8 +462,8 @@ mod tests {
         };
         let relabel = |add: &[&str], remove: &[&str]| {
             triage(TriageAction::Relabel {
-                add: add.iter().map(|l| l.to_string()).collect(),
-                remove: remove.iter().map(|l| l.to_string()).collect(),
+                add: add.iter().map(|l| gmail::set_of(l)).collect(),
+                remove: remove.iter().map(|l| gmail::set_of(l)).collect(),
             })
         };
         // Filed from Work into Travel: gone from Work.

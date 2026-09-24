@@ -4,7 +4,7 @@
 use mailrs_sync::TriageAction;
 
 use mailrs_domain::translate::gettext;
-use mailrs_domain::{Folder, system_label};
+use mailrs_domain::{Folder, gmail, system_label};
 
 use super::Mailbox;
 
@@ -36,7 +36,10 @@ fn dest_label(mailbox: &Mailbox) -> Option<&str> {
 pub fn move_action(from: &Mailbox, to: &Mailbox) -> Result<TriageAction, String> {
     let already = || gettext("The mail is already there");
     let from_folder = from.folder();
-    let relabel = |add: Vec<String>, remove: Vec<String>| TriageAction::Relabel { add, remove };
+    let relabel = |add: Vec<String>, remove: Vec<String>| TriageAction::Relabel {
+        add: add.iter().map(|l| gmail::set_of(l)).collect(),
+        remove: remove.iter().map(|l| gmail::set_of(l)).collect(),
+    };
     if dest_label(to) == Some(system_label::STARRED) {
         return Ok(TriageAction::Star);
     }
@@ -123,8 +126,8 @@ mod tests {
 
     fn relabel(add: &[&str], remove: &[&str]) -> TriageAction {
         TriageAction::Relabel {
-            add: add.iter().map(|l| l.to_string()).collect(),
-            remove: remove.iter().map(|l| l.to_string()).collect(),
+            add: add.iter().map(|l| gmail::set_of(l)).collect(),
+            remove: remove.iter().map(|l| gmail::set_of(l)).collect(),
         }
     }
 

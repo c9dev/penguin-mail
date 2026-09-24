@@ -3800,15 +3800,15 @@ msgstr ""
 msgid "The mail is already there"
 msgstr ""
 
-#: app/src/ui/moving.rs:52
+#: app/src/ui/moving.rs:55
 msgid "Move it from the Trash to the Inbox first"
 msgstr ""
 
-#: app/src/ui/moving.rs:92
+#: app/src/ui/moving.rs:95
 msgid "The mail is already in All Mail"
 msgstr ""
 
-#: app/src/ui/moving.rs:97
+#: app/src/ui/moving.rs:100
 msgid "Mail cannot go there"
 msgstr ""
 
@@ -6024,19 +6024,19 @@ msgstr[1] ""
 msgid "a minute"
 msgstr ""
 
-#: sync/src/actions.rs:115 sync/src/actions.rs:591
+#: sync/src/actions.rs:117 sync/src/actions.rs:593
 msgid "Change labels"
 msgstr ""
 
-#: sync/src/actions.rs:314
+#: sync/src/actions.rs:316
 msgid "Delete Forever failed: {reason}"
 msgstr ""
 
-#: sync/src/actions.rs:484
+#: sync/src/actions.rs:486
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr ""
 
-#: sync/src/actions.rs:545 sync/src/actions.rs:598
+#: sync/src/actions.rs:547 sync/src/actions.rs:600
 msgid "Could not undo: {reason}"
 msgstr ""
 
@@ -6197,38 +6197,38 @@ msgstr ""
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr ""
 
-#: sync/src/triage.rs:41
+#: sync/src/triage.rs:42
 msgid "Mark read"
 msgstr ""
 
-#: sync/src/triage.rs:42
+#: sync/src/triage.rs:43
 msgid "Mark unread"
 msgstr ""
 
-#: sync/src/triage.rs:43
+#: sync/src/triage.rs:44
 msgid "Star"
 msgstr ""
 
-#: sync/src/triage.rs:44
+#: sync/src/triage.rs:45
 msgid "Unstar"
 msgstr ""
 
-#: sync/src/triage.rs:46
+#: sync/src/triage.rs:47
 msgid "Add label {label}"
 msgstr ""
 
-#: sync/src/triage.rs:49
+#: sync/src/triage.rs:50
 msgid "Remove label {label}"
 msgstr ""
 
-#: sync/src/triage.rs:52
+#: sync/src/triage.rs:53
 msgid "Move out of trash"
 msgstr ""
 
-#: sync/src/triage.rs:53
+#: sync/src/triage.rs:54
 msgid "Mark as junk"
 msgstr ""
 
-#: sync/src/triage.rs:54
+#: sync/src/triage.rs:55
 msgid "Mark as not junk"
 msgstr ""
