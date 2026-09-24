@@ -11,5 +11,12 @@ mailrs-domain.workspace = true
 mailrs-mime.workspace = true
 async-imap.workspace = true
 base64.workspace = true
+chrono.workspace = true
 mail-parser.workspace = true
 thiserror.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+# `start_paused` lets a test wait out an IDLE or a stale connection
+# without waiting itself.
+tokio = { workspace = true, features = ["test-util"] }

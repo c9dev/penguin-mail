@@ -45,6 +45,15 @@ impl ImapError {
             ImapError::Network(_) | ImapError::TooManyConnections { .. }
         )
     }
+
+    /// Failures after which the connection is in no state to carry the
+    /// next command.
+    pub(crate) fn drops_connection(&self) -> bool {
+        matches!(
+            self,
+            ImapError::Network(_) | ImapError::Protocol(_) | ImapError::Tls { .. }
+        )
+    }
 }
 
 #[cfg(test)]
@@ -67,5 +76,20 @@ mod tests {
             .is_transient()
         );
         assert!(!ImapError::NoMailbox("x".into()).is_transient());
+    }
+
+    #[test]
+    fn only_network_protocol_and_tls_failures_end_the_connection() {
+        assert!(ImapError::Network("reset".into()).drops_connection());
+        assert!(ImapError::Protocol("garbled".into()).drops_connection());
+        assert!(
+            ImapError::Tls {
+                host: "imap.example.com".into(),
+                detail: String::new()
+            }
+            .drops_connection()
+        );
+        assert!(!ImapError::NoMailbox("x".into()).drops_connection());
+        assert!(!ImapError::Unsupported("MOVE").drops_connection());
     }
 }

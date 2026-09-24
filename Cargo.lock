@@ -2334,10 +2334,12 @@ version = "0.3.0"
 dependencies = [
  "async-imap",
  "base64 0.23.1",
+ "chrono",
  "mail-parser",
  "mailrs-domain",
  "mailrs-mime",
  "thiserror 2.0.20",
+ "tokio",
 ]
 
 [[package]]

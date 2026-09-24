@@ -2,9 +2,34 @@
 //! SMTP submission client, and the values both hand back. Sync reaches
 //! them through its `ImapApi` and `Submit` traits.
 
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "ImapClient runs its commands on these connections"
+    )
+)]
+mod connection;
 mod error;
 mod login;
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "the connections read through this cap")
+)]
+mod nesting;
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "the connections read their answers through these")
+)]
+mod parse;
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "the connections classify refusals through these")
+)]
+mod refusal;
 mod structure;
+#[cfg(test)]
+mod testing;
 mod types;
 mod uid_set;
 pub mod utf7;
