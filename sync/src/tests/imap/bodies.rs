@@ -56,3 +56,24 @@ async fn a_large_message_is_read_by_its_structure_and_its_file_comes_alone() {
         "the whole message never came down"
     );
 }
+
+/// Local threading made the conversation, so the store says which
+/// messages it holds; each comes from the server by where it sits now.
+#[tokio::test]
+async fn a_conversation_exports_every_message_it_holds() {
+    let h = imap_harness().await;
+    h.imap.deliver_flagged("INBOX", &message("a", "Kites", ""), &[], days_ago(2));
+    h.imap.deliver_flagged(
+        "INBOX",
+        &message("b", "Re: Kites", "In-Reply-To: <a@example.com>\r\n"),
+        &[],
+        days_ago(1),
+    );
+    h.bootstrap().await;
+    let thread = h.thread_of("INBOX/1001/1").await.expect("threaded");
+
+    let mbox = String::from_utf8(h.sync.export_mbox(&thread, None).await.unwrap()).unwrap();
+
+    assert!(mbox.contains("Subject: Kites\r\n"), "{mbox}");
+    assert!(mbox.contains("Subject: Re: Kites\r\n"), "{mbox}");
+}

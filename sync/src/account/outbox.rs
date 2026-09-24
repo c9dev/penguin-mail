@@ -207,9 +207,9 @@ impl AccountSync {
 
     /// A conversation as an mbox file, oldest message first, or the one
     /// message `message_id` names when the list shows messages rather than
-    /// conversations. Each message costs a `messages.get`, so a long
-    /// conversation is a handful of calls; the caller runs this off the
-    /// user's thread.
+    /// conversations. Each message costs a fetch from the server, so a
+    /// long conversation is a handful of calls; the caller runs this off
+    /// the user's thread.
     pub async fn export_mbox(
         &self,
         thread_id: &str,
@@ -217,22 +217,7 @@ impl AccountSync {
     ) -> Result<Vec<u8>, SyncError> {
         let ids: Vec<String> = match message_id {
             Some(id) => vec![id.to_string()],
-            None => {
-                let found = self
-                    .services
-                    .mail
-                    .fetch_whole(vec![thread_id.to_string()])
-                    .await?;
-                if !found.gone_threads.is_empty() {
-                    return Err(BackendError::NotFound.into());
-                }
-                found
-                    .whole
-                    .into_iter()
-                    .flatten()
-                    .map(|meta| meta.id)
-                    .collect()
-            }
+            None => self.thread_ids(thread_id).await?,
         };
         let names = self.remotes(&ids).await?;
         let mut mbox = Vec::new();
@@ -240,6 +225,42 @@ impl AccountSync {
             crate::export::append(&mut mbox, &raw.bytes);
         }
         Ok(mbox)
+    }
+
+    /// The messages of a conversation, oldest first. A server that keeps
+    /// no threads cannot name what local threading put together, so the
+    /// store says; a thread the store lacks is one a search listed by its
+    /// one message's location, which the server can name.
+    async fn thread_ids(&self, thread_id: &str) -> Result<Vec<String>, SyncError> {
+        if self.local_threads() {
+            let (account_id, thread) = (self.account_id, thread_id.to_string());
+            let stored: Vec<String> = self
+                .db
+                .read(move |c| {
+                    Ok(messages::thread_messages(c, account_id, &thread)?
+                        .into_iter()
+                        .map(|m| m.id)
+                        .collect())
+                })
+                .await?;
+            if !stored.is_empty() {
+                return Ok(stored);
+            }
+        }
+        let found = self
+            .services
+            .mail
+            .fetch_whole(vec![thread_id.to_string()])
+            .await?;
+        if !found.gone_threads.is_empty() {
+            return Err(BackendError::NotFound.into());
+        }
+        Ok(found
+            .whole
+            .into_iter()
+            .flatten()
+            .map(|meta| meta.id)
+            .collect())
     }
 
 }
