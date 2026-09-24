@@ -14,6 +14,8 @@ use std::pin::Pin;
 use std::task::{Context, Poll, ready};
 
 use mailrs_mime::MAX_DEPTH;
+
+pub(crate) use crate::parse::MAX_SEARCH_UIDS;
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
 /// The deepest nesting a response may reach. A structure this crate keeps
@@ -35,23 +37,30 @@ pub(crate) const MAX_LITERAL: u64 = 128 << 20;
 pub(crate) const MAX_LINE: usize = 1 << 20;
 
 /// What one command may bring back in all, literals included: every
-/// command but a body fetch and IDLE, from signing in to a window of
-/// headers, flags or a mailbox list.
+/// command but a body fetch and IDLE, such as signing in or fetching a
+/// window of headers.
 pub(crate) const COMMAND_BYTES: u64 = 32 << 20;
 
 /// What a command fetching one body section may bring back: the section
 /// and the line around it.
 pub(crate) const BODY_BYTES: u64 = MAX_LITERAL + MAX_LINE as u64;
 
-/// What the server may send during one IDLE, until its tagged answer:
-/// news of new mail, expunges and flag changes, a few dozen bytes each.
-pub(crate) const IDLE_BYTES: u64 = 1 << 20;
+/// What the server may send during one IDLE, until its tagged answer,
+/// what `done()` drains included: news of new mail, expunges and flag
+/// changes, a few dozen bytes each, so about 100,000 of them. Past it the
+/// read fails, and the pool drops the connection, opens another and syncs
+/// the mailbox, which recovers whatever the IDLE missed.
+pub(crate) const IDLE_BYTES: u64 = 4 << 20;
 
 /// The words that open an answer listing UIDs on one line, which may run
 /// past [`MAX_LINE`]: a mailbox of 200,000 messages lists in about
 /// 1.3 MB. The command's byte budget bounds it instead; 32 MiB holds about
 /// four million UIDs.
 const SEARCH: [&[u8]; 2] = [b"SEARCH", b"ESEARCH"];
+
+/// Words besides UIDs an ESEARCH answer may carry: its tag, UID, MIN,
+/// MAX, COUNT and ALL.
+const SEARCH_WORDS: usize = 16;
 
 /// The words that open a status response, whose text imap-proto reads to
 /// the line end, braces and all.
@@ -139,6 +148,10 @@ struct Scan {
     brace: Brace,
     /// Bytes of a literal still to come.
     literal: u64,
+    /// Spaces so far in a SEARCH or ESEARCH answer, one before each UID.
+    /// imap-proto collects every UID of the line in one list, so the
+    /// guard stops the line at [`MAX_SEARCH_UIDS`] before it is parsed.
+    words: usize,
     refused: Option<&'static str>,
 }
 
@@ -154,6 +167,7 @@ impl Scan {
             escaped: false,
             brace: Brace::None,
             literal: 0,
+            words: 0,
             refused: None,
         }
     }
@@ -197,6 +211,13 @@ impl Scan {
             return;
         }
         self.classify(byte);
+        if matches!(self.head, Head::Search) && byte == b' ' && !self.quoted {
+            self.words += 1;
+            if self.words > MAX_SEARCH_UIDS + SEARCH_WORDS {
+                self.refused = Some("the server named more UIDs than a search may bring");
+                return;
+            }
+        }
         if self.quoted {
             match (self.escaped, byte) {
                 (true, _) => self.escaped = false,
@@ -287,6 +308,7 @@ impl Scan {
             }
             _ => {
                 self.depth = 0;
+                self.words = 0;
                 self.head = Head::Start;
             }
         }
@@ -476,6 +498,19 @@ mod tests {
             "9".repeat(MAX_LINE)
         );
         assert_eq!(scan(esearch.as_bytes()), Ok(0));
+    }
+
+    /// imap-proto collects a SEARCH line's UIDs in one list before any
+    /// reader sees them, so the guard counts them as they arrive.
+    #[test]
+    fn a_search_answer_past_the_uid_cap_is_refused() {
+        let at_cap = format!("* SEARCH{}\r\n", " 1".repeat(MAX_SEARCH_UIDS));
+        assert_eq!(scan(at_cap.as_bytes()), Ok(0));
+        let past = format!(
+            "* SEARCH{}\r\n",
+            " 1".repeat(MAX_SEARCH_UIDS + SEARCH_WORDS + 1)
+        );
+        assert_eq!(scan(past.as_bytes()), Err(()));
     }
 
     #[test]

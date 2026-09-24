@@ -245,7 +245,7 @@ impl<S: Stream> Conn<S> {
         let mut reader = SearchReader::default();
         self.exec_with_literals(&head, &literals, Doing::Mailbox(mailbox), &mut reader)
             .await?;
-        Ok(reader.uids)
+        Ok(reader.finish())
     }
 
     pub(crate) async fn headers(

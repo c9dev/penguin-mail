@@ -34,12 +34,12 @@ pub(crate) fn answers_for(uids: &UidSet) -> usize {
 }
 
 /// The most flags one message may carry in an answer. A message rarely
-/// carries more than a dozen; every flag kept costs about 40 bytes, so a
-/// window of 1,000 messages holds at most 2.5 MB of them.
+/// carries more than a dozen; every flag kept costs about 60 bytes, so a
+/// window of 1,000 messages holds at most about 4 MB of them.
 pub(crate) const MAX_FLAGS: usize = 64;
 
 /// The most flags one command may keep across all its messages: about
-/// 40 MB at worst. [`MAX_FLAGS`] alone lets an open-ended fetch keep
+/// 65 MB at worst. [`MAX_FLAGS`] alone lets an open-ended fetch keep
 /// 100,000 messages of 64 flags each.
 pub(crate) const MAX_FLAGS_KEPT: usize = 1_000_000;
 
@@ -170,11 +170,20 @@ pub(crate) struct SelectReader {
     /// The last change reported for each UID.
     changed: BTreeMap<u32, FlagsOf>,
     flag_budget: FlagBudget,
-    /// VANISHED's ranges, built into one set at the end: a server may name
-    /// 100,000 of them.
-    vanished: Vec<RangeInclusive<u32>>,
+    /// What VANISHED named, merged: a server may name 100,000 ranges.
+    vanished: UidSet,
+    /// VANISHED ranges not yet merged into `vanished`, which fold in once
+    /// there are more than [`FOLD_AFTER`] plus twice as many as the set
+    /// holds, so a server repeating a range costs no more than naming it
+    /// once.
+    pending: Vec<RangeInclusive<u32>>,
     error: Option<ImapError>,
 }
+
+/// VANISHED ranges a SELECT holds unmerged, beyond twice the merged set.
+/// Merging sorts, so folding only past a margin keeps the work linear
+/// over many answers.
+const FOLD_AFTER: usize = 65_536;
 
 impl Reads for SelectReader {
     fn read(&mut self, response: &Response<'_>) {
@@ -193,7 +202,12 @@ impl Reads for SelectReader {
                 _ => {}
             },
             Response::MailboxData(MailboxDatum::Exists(n)) => self.selected.exists = *n,
-            Response::Vanished { uids, .. } => self.vanished.extend(uids.iter().cloned()),
+            Response::Vanished { uids, .. } => {
+                self.pending.extend(uids.iter().cloned());
+                if self.pending.len() > FOLD_AFTER + 2 * self.vanished.ranges().len() {
+                    self.fold();
+                }
+            }
             Response::Fetch(_, attributes) => match flags_of(attributes) {
                 Some(Ok(flags)) if self.known.as_ref().is_none_or(|k| k.contains(flags.uid)) => {
                     if let Err(err) = keep_flags(&mut self.changed, flags, &mut self.flag_budget) {
@@ -220,6 +234,12 @@ impl SelectReader {
         }
     }
 
+    /// Merges the pending VANISHED ranges into the set.
+    fn fold(&mut self) {
+        let pending = std::mem::take(&mut self.pending);
+        self.vanished = UidSet::from_ranges(self.vanished.ranges().iter().cloned().chain(pending));
+    }
+
     pub(crate) fn finish(self) -> Result<Selected, ImapError> {
         let uidvalidity = self
             .uidvalidity
@@ -227,7 +247,9 @@ impl SelectReader {
         Ok(Selected {
             uidvalidity,
             changed: self.changed.into_values().collect(),
-            vanished: UidSet::from_ranges(self.vanished),
+            vanished: UidSet::from_ranges(
+                self.vanished.ranges().iter().cloned().chain(self.pending),
+            ),
             ..self.selected
         })
     }
@@ -544,19 +566,54 @@ impl Reads for ListReader {
     }
 }
 
-/// SEARCH's answer, lowest UID first.
-#[derive(Default)]
+/// The most UIDs one SEARCH may bring: every message of a mailbox of four
+/// million, 16 MB kept.
+pub(crate) const MAX_SEARCH_UIDS: usize = 4_000_000;
+
+/// SEARCH's answer, lowest UID first once finished. Answers are sorted
+/// once at the end, since a server may split one into many.
 pub(crate) struct SearchReader {
-    pub(crate) uids: Vec<u32>,
+    uids: Vec<u32>,
+    most_uids: usize,
+    error: Option<ImapError>,
+}
+
+impl Default for SearchReader {
+    fn default() -> Self {
+        SearchReader {
+            uids: Vec::new(),
+            most_uids: MAX_SEARCH_UIDS,
+            error: None,
+        }
+    }
+}
+
+impl SearchReader {
+    pub(crate) fn finish(mut self) -> Vec<u32> {
+        self.uids.sort_unstable();
+        self.uids.dedup();
+        self.uids.shrink_to_fit();
+        self.uids
+    }
 }
 
 impl Reads for SearchReader {
     fn read(&mut self, response: &Response<'_>) {
-        if let Response::MailboxData(MailboxDatum::Search(uids)) = response {
-            self.uids.extend(uids);
-            self.uids.sort_unstable();
-            self.uids.dedup();
+        let Response::MailboxData(MailboxDatum::Search(uids)) = response else {
+            return;
+        };
+        if self.uids.len() + uids.len() > self.most_uids {
+            self.error = Some(ImapError::Protocol(format!(
+                "the server named more than {} UIDs in one SEARCH",
+                self.most_uids
+            )));
+            return;
         }
+        self.uids.extend(uids);
+    }
+
+    fn check(&self) -> Result<(), ImapError> {
+        self.error.clone().map_or(Ok(()), Err)
     }
 }
 
@@ -784,10 +841,10 @@ pub(crate) mod tests {
     fn search_gives_sorted_uids_and_none_for_an_empty_answer() {
         let mut reader = SearchReader::default();
         feed(&mut reader, &["* SEARCH 882 2 84\r\n"]);
-        assert_eq!(reader.uids, [2, 84, 882]);
+        assert_eq!(reader.finish(), [2, 84, 882]);
         let mut empty = SearchReader::default();
         feed(&mut empty, &["* SEARCH\r\n"]);
-        assert!(empty.uids.is_empty());
+        assert!(empty.finish().is_empty());
     }
 
     #[test]
@@ -1028,5 +1085,62 @@ pub(crate) mod tests {
         headers.flag_budget = FlagBudget::new(3);
         feed(&mut headers, &[&header(1), &header(2)]);
         assert!(matches!(headers.check(), Err(ImapError::Protocol(_))));
+    }
+
+    /// Repeated VANISHED ranges fold into the set as they come, so what a
+    /// SELECT holds tracks the ranges that differ, not the ones sent.
+    #[test]
+    fn repeated_vanished_ranges_fold_into_the_set_as_they_come() {
+        let line = format!("* VANISHED (EARLIER) {}\r\n", vec!["1"; 100_000].join(","));
+        let mut reader = SelectReader::default();
+        feed(&mut reader, &["* OK [UIDVALIDITY 3] ok\r\n"]);
+        for _ in 0..10 {
+            feed(&mut reader, &[&line]);
+            // At most the fold threshold plus one line's ranges wait.
+            assert!(
+                reader.pending.len() <= FOLD_AFTER + 2 + 100_000,
+                "{}",
+                reader.pending.len()
+            );
+        }
+        assert!(reader.pending.len() < 1_000_000);
+        let selected = reader.finish().unwrap();
+        assert_eq!(selected.vanished.to_string(), "1");
+    }
+
+    #[test]
+    fn a_search_past_the_uid_cap_is_a_protocol_error() {
+        let mut reader = SearchReader {
+            most_uids: 5,
+            ..SearchReader::default()
+        };
+        feed(&mut reader, &["* SEARCH 1 2 3\r\n"]);
+        assert_eq!(reader.check(), Ok(()));
+        feed(&mut reader, &["* SEARCH 4 5 6\r\n"]);
+        assert!(matches!(reader.check(), Err(ImapError::Protocol(_))));
+        assert_eq!(SearchReader::default().most_uids, MAX_SEARCH_UIDS);
+    }
+
+    /// Sorting once at the end keeps 100,000 small answers linear.
+    #[test]
+    fn many_small_search_answers_read_in_linear_time() {
+        let lines: Vec<String> = (0..100_000u32)
+            .rev()
+            .map(|uid| format!("* SEARCH {} {}\r\n", uid + 1, uid + 1))
+            .collect();
+        let started = std::time::Instant::now();
+        let mut reader = SearchReader::default();
+        for line in &lines {
+            feed(&mut reader, &[line]);
+        }
+        let uids = reader.finish();
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(2),
+            "{:?}",
+            started.elapsed()
+        );
+        assert_eq!(uids.len(), 100_000);
+        assert_eq!(uids.first(), Some(&1));
+        assert_eq!(uids.capacity(), uids.len());
     }
 }
