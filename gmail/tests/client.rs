@@ -464,7 +464,7 @@ async fn the_default_identity_signature_comes_from_send_as() {
     let identities = client(&server).send_as().await.unwrap();
     let default = identities.iter().find(|s| s.is_default).unwrap();
     assert_eq!(
-        mailrs_gmail::html_to_text(&default.signature),
+        mailrs_mime::html::html_to_text(&default.signature),
         "Ann Lee\nMaple & Finch"
     );
 }

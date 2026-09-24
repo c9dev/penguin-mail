@@ -52,6 +52,7 @@ settings under `~/.var/app/io.github.c9dev.PenguinMail`.
 
 ```
 domain/   shared types, Gmail's label names, categories
+mime/     reading mail: charsets, address lists, HTML to text
 gmail/    Gmail REST client, OAuth, quota limiter
 store/    SQLite schema and queries
 sync/     one sync loop per account: bootstrap, history replay, backfill,

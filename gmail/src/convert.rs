@@ -1,8 +1,9 @@
 //! Conversions from Gmail wire types to the types the rest of Penguin Mail uses.
 
 use mailrs_domain::{AccountId, MessageMeta};
+use mailrs_mime::address::parse_address_list;
+use mailrs_mime::snippet::unescape_snippet;
 
-use crate::address::parse_address_list;
 use crate::model::{HistoryList, Message, MessagePart};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -110,52 +111,6 @@ pub(crate) fn find_header<'a>(part: &'a MessagePart, name: &str) -> Option<&'a s
         .iter()
         .find(|h| h.name.eq_ignore_ascii_case(name))
         .map(|h| h.value.as_str())
-}
-
-/// Gmail snippets arrive HTML-escaped. Decodes named and numeric entities and
-/// leaves anything unrecognised as written.
-pub fn unescape_snippet(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    let mut rest = s;
-    while let Some(amp) = rest.find('&') {
-        out.push_str(&rest[..amp]);
-        let tail = &rest[amp..];
-        let decoded = tail
-            .find(';')
-            .filter(|&end| end <= 10)
-            .and_then(|end| decode_entity(&tail[1..end]).map(|c| (c, end)));
-        match decoded {
-            Some((c, end)) => {
-                out.push(c);
-                rest = &tail[end + 1..];
-            }
-            None => {
-                out.push('&');
-                rest = &tail[1..];
-            }
-        }
-    }
-    out.push_str(rest);
-    out
-}
-
-fn decode_entity(entity: &str) -> Option<char> {
-    match entity {
-        "amp" => Some('&'),
-        "lt" => Some('<'),
-        "gt" => Some('>'),
-        "quot" => Some('"'),
-        "apos" => Some('\''),
-        "nbsp" => Some('\u{a0}'),
-        _ => {
-            let number = entity.strip_prefix('#')?;
-            let code = match number.strip_prefix(['x', 'X']) {
-                Some(hex) => u32::from_str_radix(hex, 16).ok()?,
-                None => number.parse().ok()?,
-            };
-            char::from_u32(code)
-        }
-    }
 }
 
 /// Escaped HTML with a `<br>` for each line break.

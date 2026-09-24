@@ -13,7 +13,7 @@ use std::process::Command;
 
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{MessageBody, Protection};
-use mailrs_gmail::body::decode_charset;
+use mailrs_mime::charset::decode_charset;
 use mailrs_pgp::{Pgp, PgpError, Recipient, Signature, Trust, Verdict, inline};
 
 use crate::protection::{

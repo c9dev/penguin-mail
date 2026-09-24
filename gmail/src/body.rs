@@ -4,6 +4,7 @@
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD_INDIFFERENT;
 use mailrs_domain::{Attachment, MessageBody, Protection};
+use mailrs_mime::charset::{charset_param, decode_charset};
 
 use crate::convert::find_header;
 use crate::model::MessagePart;
@@ -17,7 +18,9 @@ pub fn extract_body(payload: &MessagePart) -> MessageBody {
         one_click_unsubscribe: find_header(payload, "List-Unsubscribe-Post")
             .is_some_and(|v| v.contains("One-Click")),
         protection: protection(payload),
-        provenance: crate::provenance::provenance(payload),
+        provenance: mailrs_mime::provenance::provenance(|name| {
+            find_header(payload, name).map(str::to_string)
+        }),
         ..MessageBody::default()
     };
     match body.protection {
@@ -238,34 +241,6 @@ fn decode_text(part: &MessagePart) -> Option<String> {
     let bytes = URL_SAFE_NO_PAD_INDIFFERENT.decode(data.trim()).ok()?;
     let charset = find_header(part, "Content-Type").and_then(charset_param);
     Some(decode_charset(&bytes, charset))
-}
-
-/// Text from `bytes`, read in the charset the part declares. The bytes win
-/// over the label when they are valid UTF-8 and hold a character above
-/// ASCII: plenty of mailers send UTF-8 under `iso-8859-1` or `us-ascii`,
-/// and obeying the label is what turns "Direção" into "DireÃ§Ã£o". A part
-/// that says UTF-8 but is not falls the other way, to windows-1252, rather
-/// than showing a row of replacement characters.
-pub fn decode_charset(bytes: &[u8], charset: Option<&str>) -> String {
-    let declared = charset
-        .and_then(|label| encoding_rs::Encoding::for_label(label.as_bytes()))
-        .unwrap_or(encoding_rs::UTF_8);
-    if declared != encoding_rs::UTF_8
-        && let Ok(text) = std::str::from_utf8(bytes)
-        && !text.is_ascii()
-    {
-        return text.to_string();
-    }
-    let (text, _, replaced) = declared.decode(bytes);
-    if replaced && declared == encoding_rs::UTF_8 {
-        return encoding_rs::WINDOWS_1252.decode(bytes).0.into_owned();
-    }
-    text.into_owned()
-}
-
-/// The `charset` parameter of a `Content-Type` value, without quotes.
-pub fn charset_param(content_type: &str) -> Option<&str> {
-    param(content_type, "charset")
 }
 
 /// One parameter of a header value, without its quotes.

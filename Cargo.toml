@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["domain", "gmail", "store", "sync", "pgp", "smime", "ai", "cli", "app"]
+members = ["domain", "mime", "gmail", "store", "sync", "pgp", "smime", "ai", "cli", "app"]
 
 [workspace.package]
 version = "0.2.2"
@@ -11,6 +11,7 @@ repository = "https://github.com/c9dev/penguin-mail"
 
 [workspace.dependencies]
 mailrs-domain = { path = "domain" }
+mailrs-mime = { path = "mime" }
 mailrs-gmail = { path = "gmail" }
 mailrs-store = { path = "store" }
 mailrs-sync = { path = "sync" }

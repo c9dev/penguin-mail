@@ -14,7 +14,7 @@ use mail_builder::headers::content_type::ContentType;
 use mail_builder::headers::raw::Raw;
 use mail_builder::mime::MimePart;
 use mailrs_domain::{AccountId, Address, EpochMillis, MessageBody, MessageMeta};
-use mailrs_gmail::address::parse_address_list_keeping_invalid;
+use mailrs_mime::address::parse_address_list_keeping_invalid;
 use pulldown_cmark::{Event, Options, Parser, html};
 use serde::{Deserialize, Serialize};
 
@@ -332,8 +332,8 @@ fn tag_length(rest: &str) -> usize {
 /// Whether the one tag in `tag` has `class` among its classes.
 fn has_class(tag: &str, class: &str) -> bool {
     let mut found = false;
-    mailrs_gmail::html::walk(tag, |piece| {
-        if let mailrs_gmail::html::Piece::Tag(tag) = piece
+    mailrs_mime::html::walk(tag, |piece| {
+        if let mailrs_mime::html::Piece::Tag(tag) = piece
             && let Some(classes) = tag.attribute("class")
         {
             found |= classes.split_whitespace().any(|c| c == class);
@@ -382,8 +382,8 @@ pub fn refers_to_cid(html: &str, cid: &str) -> bool {
         })
     };
     let mut found = false;
-    mailrs_gmail::html::walk(html, |piece| {
-        if let mailrs_gmail::html::Piece::Tag(tag) = piece
+    mailrs_mime::html::walk(html, |piece| {
+        if let mailrs_mime::html::Piece::Tag(tag) = piece
             && !found
         {
             found = tag.values().any(names);
@@ -994,9 +994,9 @@ pub fn body_text(body: &MessageBody) -> String {
     }
 }
 
-/// HTML as the plain text a reader takes in. The gmail crate holds the
-/// one implementation, which the signatures and automatic replies use too.
-pub use mailrs_gmail::html_to_text;
+/// HTML as the plain text a reader takes in. `mailrs_mime` holds the one
+/// implementation, which the signatures and automatic replies use too.
+pub use mailrs_mime::html::html_to_text;
 
 /// Markdown to email HTML. A single line break stays a line break, as it
 /// would in any other mail client, and styles are inline because many mail

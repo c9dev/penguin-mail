@@ -1,7 +1,7 @@
 use base64::Engine;
 use base64::engine::general_purpose::{URL_SAFE, URL_SAFE_NO_PAD};
 use mailrs_domain::Protection;
-use mailrs_gmail::body::{charset_param, extract_body};
+use mailrs_gmail::body::extract_body;
 use mailrs_gmail::model::MessagePart;
 use serde_json::json;
 
@@ -99,19 +99,6 @@ fn accepts_padded_base64() {
 fn corrupt_data_is_skipped_rather_than_panicking() {
     let payload = part(json!({"mimeType": "text/plain", "body": {"data": "!!!not base64!!!"}}));
     assert_eq!(extract_body(&payload).text, None);
-}
-
-#[test]
-fn charset_parameter_parsing() {
-    assert_eq!(
-        charset_param(r#"text/plain; format=flowed; charset="utf-8""#),
-        Some("utf-8")
-    );
-    assert_eq!(
-        charset_param("text/plain; CHARSET=windows-1252"),
-        Some("windows-1252")
-    );
-    assert_eq!(charset_param("text/plain"), None);
 }
 
 #[test]

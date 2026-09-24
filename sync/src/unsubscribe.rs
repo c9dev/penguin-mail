@@ -5,7 +5,7 @@
 //! this hands back what the caller has left to do.
 
 use mailrs_domain::AccountId;
-use mailrs_gmail::html_to_text;
+use mailrs_mime::html::html_to_text;
 use mailrs_store::unsubscribes::{self, How};
 
 use crate::{Accounts, MailActions, SyncError};

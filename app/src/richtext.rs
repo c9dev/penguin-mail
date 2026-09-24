@@ -8,7 +8,7 @@
 //! beside it, and the Markdown a writer can switch to all come from one
 //! place and are covered by unit tests.
 
-use mailrs_gmail::html::{self, Piece, Tag as HtmlTag};
+use mailrs_mime::html::{self, Piece, Tag as HtmlTag};
 use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use serde::{Deserialize, Serialize};
 

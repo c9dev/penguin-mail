@@ -1,17 +1,14 @@
 //! Gmail REST client: OAuth, quota limiting, and conversion to Penguin Mail domain types.
 
-pub mod address;
 pub mod body;
 pub mod calendar;
 mod client;
 pub mod convert;
 mod error;
-pub mod html;
 pub mod limiter;
 pub mod model;
 mod oauth;
 pub mod people;
-pub mod provenance;
 mod token_store;
 
 pub use calendar::{
@@ -22,7 +19,6 @@ pub use client::{
 };
 pub use convert::{HistoryChange, HistoryPage};
 pub use error::{GmailError, OneClickError};
-pub use html::html_to_text;
 pub use limiter::{AccountQuota, Priority, QuotaLimiter, QuotaPool, Waiting};
 pub use model::{
     Draft, LabelColor, MessagePage, MessageRef, Profile, RemoteLabel, SendAs, is_reserved_label_name,

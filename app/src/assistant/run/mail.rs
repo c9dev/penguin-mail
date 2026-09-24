@@ -331,7 +331,7 @@ impl<A: Accounts> Tools<A> {
         });
         let text = match kind_of(&file.mime_type, &file.filename) {
             Kind::Text => Some(String::from_utf8_lossy(&bytes).into_owned()),
-            Kind::Html => Some(mailrs_gmail::html_to_text(&String::from_utf8_lossy(&bytes))),
+            Kind::Html => Some(mailrs_mime::html::html_to_text(&String::from_utf8_lossy(&bytes))),
             Kind::Pdf => match self.away(pdf_text(bytes)).await?? {
                 Some(text) => Some(text),
                 None => {

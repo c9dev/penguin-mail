@@ -5,6 +5,7 @@ use std::time::Duration;
 use base64::Engine;
 use base64::engine::general_purpose::{URL_SAFE_NO_PAD, URL_SAFE_NO_PAD_INDIFFERENT};
 use mailrs_domain::{Filter, Vacation};
+use mailrs_mime::html::html_to_text;
 use reqwest::header::RETRY_AFTER;
 use reqwest::{RequestBuilder, Response, StatusCode};
 use serde::de::DeserializeOwned;
@@ -14,7 +15,6 @@ use tokio::sync::Mutex;
 use crate::{GmailError, OneClickError};
 use crate::convert::text_to_html;
 use crate::convert::{HistoryPage, history_page};
-use crate::html::html_to_text;
 use crate::limiter::{self, AccountQuota};
 use crate::model::{
     AttachmentBody, Draft, DraftList, HistoryList, LabelColor, LabelList, Message, MessagePage,

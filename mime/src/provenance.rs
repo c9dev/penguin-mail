@@ -9,17 +9,16 @@
 
 use mailrs_domain::Provenance;
 
-use crate::convert::find_header;
-use crate::model::MessagePart;
-
-/// Reads the three lines the details panel shows. Every one of them is
-/// absent for plenty of real mail, and absent is an answer.
-pub fn provenance(payload: &MessagePart) -> Provenance {
-    let authentication = find_header(payload, "Authentication-Results").unwrap_or_default();
+/// Reads the three lines the details panel shows from a message's
+/// headers. `header` answers a header's first value, unfolded, or `None`.
+/// Every one of the three is absent for plenty of real mail, and absent is
+/// an answer.
+pub fn provenance(header: impl Fn(&str) -> Option<String>) -> Provenance {
+    let authentication = header("Authentication-Results").unwrap_or_default();
     Provenance {
-        mailed_by: mailed_by(find_header(payload, "Return-Path"), authentication),
-        signed_by: signed_by(find_header(payload, "DKIM-Signature"), authentication),
-        encrypted: encrypted(find_header(payload, "Received")),
+        mailed_by: mailed_by(header("Return-Path").as_deref(), &authentication),
+        signed_by: signed_by(header("DKIM-Signature").as_deref(), &authentication),
+        encrypted: encrypted(header("Received").as_deref()),
     }
 }
 

@@ -1992,6 +1992,7 @@ dependencies = [
  "mailrs-ai",
  "mailrs-domain",
  "mailrs-gmail",
+ "mailrs-mime",
  "mailrs-pgp",
  "mailrs-smime",
  "mailrs-store",
@@ -2065,10 +2066,9 @@ name = "mailrs-gmail"
 version = "0.2.2"
 dependencies = [
  "base64 0.23.1",
- "encoding_rs",
- "html5ever",
  "keyring",
  "mailrs-domain",
+ "mailrs-mime",
  "rand",
  "reqwest",
  "serde",
@@ -2079,6 +2079,17 @@ dependencies = [
  "tracing",
  "url",
  "wiremock",
+]
+
+[[package]]
+name = "mailrs-mime"
+version = "0.2.2"
+dependencies = [
+ "base64 0.23.1",
+ "encoding_rs",
+ "html5ever",
+ "mail-parser",
+ "mailrs-domain",
 ]
 
 [[package]]
@@ -2128,6 +2139,7 @@ dependencies = [
  "mail-parser",
  "mailrs-domain",
  "mailrs-gmail",
+ "mailrs-mime",
  "mailrs-store",
  "rand",
  "rusqlite",

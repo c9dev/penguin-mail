@@ -18,8 +18,9 @@ use mailrs_domain::{
 };
 use mailrs_gmail::{
     Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, GmailError, LabelColor,
-    Person, RemoteLabel, SendAs, Series, html_to_text, limiter,
+    Person, RemoteLabel, SendAs, Series, limiter,
 };
+use mailrs_mime::html::html_to_text;
 
 use super::{
     AutoReplyService, Backfill, CalendarService, Changes, ContactsService, Found, IdentityService,
@@ -199,7 +200,7 @@ impl<G: GmailApi> MailBackend for Google<G> {
         if let Some(part) = mailrs_gmail::body::calendar_to_fetch(&body).map(str::to_string) {
             match paced(self.gmail.attachment(id, &part)).await {
                 Ok(bytes) => {
-                    let ics = mailrs_gmail::body::decode_charset(&bytes, None);
+                    let ics = mailrs_mime::charset::decode_charset(&bytes, None);
                     body.calendar = ics.contains("BEGIN:VCALENDAR").then_some(ics);
                 }
                 Err(err) => tracing::warn!(message = id, %err, "could not fetch an invitation's calendar part"),

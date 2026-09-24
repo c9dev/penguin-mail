@@ -8,9 +8,8 @@ rust-version.workspace = true
 
 [dependencies]
 mailrs-domain.workspace = true
+mailrs-mime.workspace = true
 base64.workspace = true
-encoding_rs.workspace = true
-html5ever.workspace = true
 keyring.workspace = true
 rand.workspace = true
 reqwest.workspace = true

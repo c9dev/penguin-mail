@@ -9,7 +9,7 @@
 //! and only the lines mbox itself adds end in a bare newline.
 
 use mailrs_domain::{EpochMillis, Target};
-use mailrs_gmail::address::parse_address_list;
+use mailrs_mime::address::parse_address_list;
 
 use crate::{Accounts, MailActions, SyncError};
 

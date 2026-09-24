@@ -328,7 +328,7 @@ pub struct Attachment {
 }
 
 /// What a message's headers say about where it came from, beyond the From
-/// line the sender wrote. `mailrs_gmail::provenance` reads it; the details
+/// line the sender wrote. `mailrs_mime::provenance` reads it; the details
 /// panel under a message shows it.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Provenance {
