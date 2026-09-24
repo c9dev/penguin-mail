@@ -75,7 +75,7 @@ fn convert(message: &Message, raw: &[u8], id: u32, path: String) -> Part {
         return Part::default();
     };
     if let Some(nested) = part.message() {
-        return nested_message(part, nested, raw, path);
+        return nested_message(part, nested, path);
     }
     let children = part
         .sub_parts()
@@ -124,7 +124,17 @@ fn numbered(parent: &str, i: usize) -> String {
 /// number: "4.1" for a single-part encapsulated message, "4.1", "4.2"
 /// for a multipart one; "4" itself stays the whole encapsulated message,
 /// which nothing here lists as a file.
-fn nested_message(part: &MessagePart, nested: &Message, raw: &[u8], path: String) -> Part {
+///
+/// RFC 2045 forbids a transfer encoding on `message/rfc822`, but a
+/// sender out there sets one anyway. mail-parser then decodes the outer
+/// part's body before parsing `nested` from it, so `nested`'s own parts
+/// carry offsets into that decoded buffer, not into the outer message.
+/// `nested.raw_message()` is that buffer: the outer message's own bytes
+/// when there was nothing to decode, the decoded ones otherwise. Reading
+/// child offsets from the outer `raw` instead would return the wrong
+/// slice, or one out of range.
+fn nested_message(part: &MessagePart, nested: &Message, path: String) -> Part {
+    let raw = nested.raw_message();
     let root = nested.root_part();
     let children = if root.is_multipart() {
         root.sub_parts()

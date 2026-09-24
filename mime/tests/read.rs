@@ -448,6 +448,34 @@ Content-Type: application/pdf\r\nContent-Disposition: attachment; filename=\"rep
     assert_eq!(names, [("report.pdf", "3.1")]);
 }
 
+/// RFC 2045 forbids a transfer encoding on `message/rfc822`, but a sender
+/// out there sets one anyway. mail-parser then decodes the part's body
+/// before parsing the nested message, so that nested message's own part
+/// offsets point into the decoded bytes, not into the outer raw message.
+/// Reading them from the outer bytes would return the wrong slice, or an
+/// out-of-range one.
+#[test]
+fn a_message_rfc822_part_with_a_transfer_encoding_still_reads_its_file() {
+    let nested = b"Content-Type: application/pdf\r\nContent-Disposition: attachment; filename=\"report.pdf\"\r\nContent-Transfer-Encoding: base64\r\n\r\nUERGLUJZVEVT\r\n";
+    let raw = format!(
+        "Content-Type: multipart/mixed; boundary=r\r\n\r\n\
+         --r\r\nContent-Type: text/plain\r\n\r\nSee the attached report.\r\n\
+         --r\r\nContent-Type: message/rfc822\r\nContent-Transfer-Encoding: base64\r\n\r\n\
+         {b64}\r\n--r--\r\n",
+        b64 = base64::engine::general_purpose::STANDARD.encode(nested),
+    )
+    .into_bytes();
+    let body = read(&raw);
+    assert_eq!(body.text.as_deref(), Some("See the attached report."));
+    let names: Vec<(&str, &str)> = body
+        .attachments
+        .iter()
+        .map(|a| (a.filename.as_str(), a.part_id.as_str()))
+        .collect();
+    assert_eq!(names, [("report.pdf", "2.1")]);
+    assert_eq!(part(&raw, "2.1").as_deref(), Some(b"PDF-BYTES".as_slice()));
+}
+
 /// mailers wrap base64 at some fixed width, and a broken one pads every
 /// wrapped line instead of only the last. Each line still decodes on its
 /// own; concatenating them is what a real reader gets right.
