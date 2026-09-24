@@ -5,5 +5,10 @@
 pub mod address;
 pub mod charset;
 pub mod html;
+mod parts;
+mod read;
 pub mod provenance;
 pub mod snippet;
+
+pub use parts::{Part, Parts, body};
+pub use read::{files, part, parts, read};
