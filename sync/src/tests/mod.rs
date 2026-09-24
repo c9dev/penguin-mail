@@ -108,9 +108,10 @@ impl Harness {
         events
     }
 
-    /// Thread ids in `set`, newest first.
-    pub async fn threads(&self, set: MailSet) -> Vec<String> {
-        let filter = ThreadFilter::account(self.account_id, set);
+    /// Thread ids `filter` lists, newest first. Trash and Spam are left
+    /// out, as they are for every mail set `ThreadFilter::everything`
+    /// starts from.
+    async fn thread_ids(&self, filter: ThreadFilter) -> Vec<String> {
         self.db
             .read(move |c| threads::list_threads(c, &filter, 0, 1000))
             .await
@@ -120,16 +121,16 @@ impl Harness {
             .collect()
     }
 
+    /// Thread ids in `set`, newest first.
+    pub async fn threads(&self, set: MailSet) -> Vec<String> {
+        self.thread_ids(ThreadFilter::account(self.account_id, set))
+            .await
+    }
+
     /// Every thread in the account, inbox or archived, newest first.
     pub async fn all_threads(&self) -> Vec<String> {
-        let filter = ThreadFilter::everything().in_account(self.account_id);
-        self.db
-            .read(move |c| threads::list_threads(c, &filter, 0, 1000))
+        self.thread_ids(ThreadFilter::everything().in_account(self.account_id))
             .await
-            .unwrap()
-            .into_iter()
-            .map(|t| t.id)
-            .collect()
     }
 
     pub async fn thread(&self, thread_id: &str) -> Option<ThreadSummary> {

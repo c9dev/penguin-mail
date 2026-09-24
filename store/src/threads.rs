@@ -74,13 +74,13 @@ fn hidden_keys(conn: &Connection, account: Option<AccountId>) -> Result<Vec<i64>
     Ok(hidden)
 }
 
-/// A filter's labels, resolved.
+/// A filter's mail set, resolved.
 struct Resolved {
     label: Option<Named>,
     any: Vec<Named>,
     none: Vec<Named>,
     /// The Trash and Spam keys a list leaves out: all of them, less the
-    /// label's own, since listing the Trash keeps trashed mail.
+    /// set's own, since listing the Trash keeps trashed mail.
     hidden: Vec<i64>,
 }
 
@@ -336,17 +336,17 @@ impl Rows {
         sql.push(")");
     }
 
-    /// Appends ` AND …` conditions that a list of the filter's label shows
-    /// the row: it holds the label, and the Trash and Spam do not hide it.
-    /// A message is hidden when it sits in one of `resolved.hidden`. A
-    /// thread is hidden only when every message of it holding the label
-    /// (any message, with no label) is: Gmail keeps a conversation in the
+    /// Appends ` AND …` conditions that a list of the filter's mail set
+    /// shows the row: it holds the set, and the Trash and Spam do not hide
+    /// it. A message is hidden when it sits in one of `resolved.hidden`. A
+    /// thread is hidden only when every message of it holding the set
+    /// (any message, with no set) is: Gmail keeps a conversation in the
     /// inbox while one of its messages outside the Trash is there, so
     /// trashing the start of a thread leaves the reply. For a mailbox or a
     /// category the derived `listed` column already says this; for a
     /// keyword it is worked out from the thread's messages. `holds` false
     /// leaves out a message's first half, for a walk that started from
-    /// the label's own rows.
+    /// the set's own rows.
     fn shown(self, sql: &mut Sql, resolved: &Resolved, holds: bool) {
         match (self, &resolved.label) {
             (Rows::Threads, None) => {
@@ -546,7 +546,7 @@ impl ThreadFilter {
         })
     }
 
-    /// The walk that starts from the label's own rows. A mailbox no
+    /// The walk that starts from the mail set's own rows. A mailbox no
     /// account in question has is no start: it names no rows,
     /// and SQLite finds no plan that reads the listed index over an empty
     /// set of keys. The other walks find nothing for it instead.
@@ -812,8 +812,8 @@ impl ThreadFilter {
 
     /// The sets of rows an index can hand over, each of which holds every
     /// row the filter keeps, and so each a place a walk can start. The
-    /// label comes last because it is the one most likely to hold most of
-    /// the mail, as the inbox does.
+    /// filter's own mail set comes last because it is the one most likely
+    /// to hold most of the mail, as the inbox does.
     fn starts(&self, resolved: &Resolved, unread: bool) -> Vec<Walk> {
         let mut starts = Vec::new();
         if unread {

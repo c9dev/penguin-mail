@@ -2,9 +2,9 @@ mod common;
 
 use common::{meta, mixed_mail, store};
 use mailrs_domain::gmail::set_of as set;
-use mailrs_domain::{Category, FlagColor};
-use mailrs_store::flags;
+use mailrs_domain::{Category, FlagColor, MailSet, Role};
 use mailrs_store::threads::{self, Count, ThreadFilter};
+use mailrs_store::{flags, messages};
 
 #[test]
 fn mail_counts_match_the_query_per_mailbox() {
@@ -118,6 +118,24 @@ fn mail_counts_follow_the_messages_of_a_partly_trashed_thread() {
             threads: 1,
             unread: 1
         }
+    );
+}
+
+/// A role mailbox is Gmail's own id today and will be a server's own
+/// inbox path once other tasks stop naming mail by Gmail label, so a
+/// caller that asks by role and one that still asks by id must agree
+/// for as long as both spellings are in use.
+#[test]
+fn a_role_mailbox_counts_and_holds_the_same_under_its_id_and_its_role() {
+    let (conn, a, _) = mixed_mail();
+    let by_id = MailSet::Mailbox("INBOX".into());
+    let by_role = MailSet::Role(Role::Inbox);
+    let counts = threads::mail_counts(&conn).unwrap();
+    assert_eq!(counts.account(a, &by_id), counts.account(a, &by_role));
+    assert_ne!(counts.account(a, &by_id), Count::default());
+    assert_eq!(
+        messages::held_by(&conn, a, &by_id).unwrap(),
+        messages::held_by(&conn, a, &by_role).unwrap()
     );
 }
 
