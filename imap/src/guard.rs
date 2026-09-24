@@ -35,10 +35,13 @@ pub(crate) const MAX_LITERAL: u64 = 128 << 20;
 /// literals, which a line does not count, so the longest real line is a
 /// BODYSTRUCTURE: 500 attachments with long quoted file names make about
 /// 150 KB. async-imap parses a line again on each 4 KiB read until it
-/// ends, so a line costs the square of its length, and 32 MiB of lines
-/// at this cap cost a few seconds where 1 MiB lines cost 40 s. An
-/// untagged SEARCH or ESEARCH answer may run longer while a SEARCH runs;
-/// [`SEARCH_BYTES`] bounds it.
+/// ends, so a line costs the square of its length. The costliest lines
+/// measured are VANISHED lines of one UID repeated, since imap-proto
+/// builds a range for each UID on every parse: 127 of them just under
+/// this cap, as many as a 32 MiB command holds, cost about 12 s in a
+/// release build during a flags fetch. Status lines of the same length
+/// cost 0.7 s. An untagged SEARCH or ESEARCH answer may run longer while
+/// a SEARCH runs; [`SEARCH_BYTES`] bounds it.
 pub(crate) const MAX_LINE: usize = 256 << 10;
 
 /// What one command may bring back in all, literals included: every
@@ -70,9 +73,15 @@ pub(crate) const BODY_BYTES: u64 = MAX_LITERAL + MAX_LINE as u64;
 /// What the server may send during one IDLE, until its tagged answer,
 /// what `done()` drains included: news of new mail, expunges and flag
 /// changes, a few dozen bytes each, so about 100,000 of them. Past it the
-/// read fails, and the pool drops the connection, opens another and syncs
-/// the mailbox, which recovers whatever the IDLE missed.
+/// read fails, and the client drops the connection and answers that the
+/// mailbox changed; the sync that follows recovers whatever the IDLE
+/// missed, and the next IDLE opens a new connection.
 pub(crate) const IDLE_BYTES: u64 = 4 << 20;
+
+/// Why the guard fails a read once a command's answer passes its budget.
+/// The client compares an IDLE's failure with it: past the budget, the
+/// server had news, not a fault.
+pub(crate) const PAST_BUDGET: &str = "a command's answer grew past its limit";
 
 /// The words that open an answer listing UIDs on one line, which may run
 /// past [`MAX_LINE`]: a mailbox of 200,000 messages lists in about
@@ -143,9 +152,9 @@ enum Head {
     Word(Option<([u8; 7], usize)>, bool),
     /// A status response or a continuation: text to the line end.
     Status,
-    /// An untagged SEARCH or ESEARCH, which lists UIDs on one line; it
-    /// is spared the line cap only while a SEARCH command runs, or a
-    /// server could open any line so during any command.
+    /// An untagged SEARCH or ESEARCH, which lists UIDs on one line. It
+    /// is spared the line cap only while a SEARCH command runs, since a
+    /// server can open any line with `* SEARCH`.
     Search,
     Other,
 }
@@ -211,7 +220,7 @@ impl Scan {
         let mut rest = bytes;
         while !rest.is_empty() && self.refused.is_none() {
             let Some(budget) = self.budget.checked_sub(1) else {
-                self.refused = Some("a command's answer grew past its limit");
+                self.refused = Some(PAST_BUDGET);
                 break;
             };
             if self.literal > 0 {

@@ -99,6 +99,11 @@ impl HeapMark {
     pub(crate) fn peak(&self) -> usize {
         HEAP.with(|heap| heap.get().peak.saturating_sub(self.base))
     }
+
+    /// The bytes the thread holds now above the mark's start.
+    pub(crate) fn held(&self) -> usize {
+        HEAP.with(|heap| heap.get().live.saturating_sub(self.base))
+    }
 }
 
 /// The client's end of a pipe to a server that sends `greeting` (none when
@@ -197,13 +202,31 @@ async fn serve(
             if send(&mut write, "+ idling").await.is_none() {
                 return;
             }
-            for line in answer("IDLE") {
-                if line == "<close>" || send(&mut write, &line).await.is_none() {
-                    return;
+            // The client ends IDLE with DONE, which may come while the
+            // server still has lines to send.
+            let lines = answer("IDLE");
+            let feed = async {
+                for line in lines {
+                    if line == "<pause>" {
+                        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                        continue;
+                    }
+                    if line == "<close>" || send(&mut write, &line).await.is_none() {
+                        return false;
+                    }
                 }
-            }
-            // The client ends IDLE with DONE.
-            if read_line(&mut read).await.is_none() {
+                true
+            };
+            let done = read_line(&mut read);
+            tokio::pin!(feed, done);
+            let ended = tokio::select! {
+                fed = &mut feed => match fed {
+                    true => done.await,
+                    false => None,
+                },
+                line = &mut done => line,
+            };
+            if ended.is_none() {
                 return;
             }
             vec!["{tag} OK IDLE done".to_string()]

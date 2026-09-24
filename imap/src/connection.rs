@@ -194,7 +194,7 @@ impl<S: Stream> Conn<S> {
         reader.finish()
     }
 
-    async fn ensure_selected(&mut self, mailbox: &str) -> Result<(), ImapError> {
+    pub(crate) async fn ensure_selected(&mut self, mailbox: &str) -> Result<(), ImapError> {
         if self.selected.as_deref() != Some(mailbox) {
             self.select(mailbox, None).await?;
         }
@@ -470,24 +470,27 @@ impl<S: Stream> Conn<S> {
             // the server closes the connection. Held here, it never drops
             // early, so `ManualInterrupt` can only mean a closed connection.
             let (wait, _stop) = handle.wait_with_timeout(limit);
-            match wait
-                .await
-                .map_err(|err| from_async_imap(err, Doing::Other))?
-            {
-                IdleResponse::NewData(data) => match data.parsed() {
-                    Response::Data {
-                        status: Status::Bye,
-                        information,
-                        ..
-                    } => {
-                        return Err(ImapError::Network(
-                            information.as_deref().unwrap_or_default().to_string(),
-                        ));
-                    }
-                    _ => Woke::Changed,
+            // async-imap starts its timeout again on every response, and
+            // Dovecot says `* OK Still here` every two minutes, so the
+            // limit holds only from out here.
+            match tokio::time::timeout(limit, wait).await {
+                Err(_) => Woke::TimedOut,
+                Ok(answer) => match answer.map_err(|err| from_async_imap(err, Doing::Other))? {
+                    IdleResponse::NewData(data) => match data.parsed() {
+                        Response::Data {
+                            status: Status::Bye,
+                            information,
+                            ..
+                        } => {
+                            return Err(ImapError::Network(
+                                information.as_deref().unwrap_or_default().to_string(),
+                            ));
+                        }
+                        _ => Woke::Changed,
+                    },
+                    IdleResponse::Timeout => Woke::TimedOut,
+                    IdleResponse::ManualInterrupt => return Err(closed()),
                 },
-                IdleResponse::Timeout => Woke::TimedOut,
-                IdleResponse::ManualInterrupt => return Err(closed()),
             }
         };
         let session = handle
@@ -517,7 +520,9 @@ impl<S: Stream> Conn<S> {
         reader: &mut impl Reads,
     ) -> Result<(), ImapError> {
         self.last_used = Instant::now();
-        self.session.get_mut().expect(reader.bytes(), reader.searches());
+        self.session
+            .get_mut()
+            .expect(reader.bytes(), reader.searches());
         let tag = self
             .session
             .run_command(command)
@@ -539,7 +544,9 @@ impl<S: Stream> Conn<S> {
             return self.exec(head, doing, reader).await;
         };
         self.last_used = Instant::now();
-        self.session.get_mut().expect(reader.bytes(), reader.searches());
+        self.session
+            .get_mut()
+            .expect(reader.bytes(), reader.searches());
         let tag = self
             .session
             .run_command(format!("{head}{{{}}}", first.len()))
@@ -1159,6 +1166,38 @@ mod tests {
         assert_eq!(woke, Woke::TimedOut);
     }
 
+    #[tokio::test(start_paused = true)]
+    async fn keepalives_do_not_stretch_idle_past_its_limit() {
+        // Dovecot sends `* OK Still here` every two minutes, and async-imap
+        // restarts its wait on each, so its own timeout never fires.
+        let mut keepalives = Vec::new();
+        for _ in 0..30 {
+            keepalives.push("* OK Still here".to_string());
+            keepalives.push("<pause>".into());
+        }
+        let stream = pipe(
+            GREETING,
+            server(ALL, log(), move |command| match command {
+                c if c.starts_with("SELECT") => selected(),
+                "IDLE" => keepalives.clone(),
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let conn = Conn::login(stream, false, &ann()).await.unwrap();
+        let started = tokio::time::Instant::now();
+        let (mut conn, woke) = conn
+            .idle("INBOX", Duration::from_millis(250))
+            .await
+            .unwrap();
+        assert_eq!(woke, Woke::TimedOut);
+        assert!(
+            started.elapsed() < Duration::from_secs(1),
+            "{:?}",
+            started.elapsed()
+        );
+        conn.noop().await.unwrap();
+    }
+
     #[tokio::test]
     async fn idle_on_a_closed_connection_is_a_network_error() {
         let stream = pipe(
@@ -1769,7 +1808,12 @@ mod tests {
     /// a flags fetch would take it.
     #[tokio::test]
     async fn select_and_search_refuse_a_literal_past_their_own_budgets() {
-        let announce = || vec!["* 1 FETCH (UID 1 BODY[] {5242880}".to_string(), "abc".into()];
+        let announce = || {
+            vec![
+                "* 1 FETCH (UID 1 BODY[] {5242880}".to_string(),
+                "abc".into(),
+            ]
+        };
         let in_select = pipe(
             GREETING,
             server(ALL, log(), move |command| match command {
@@ -1792,7 +1836,8 @@ mod tests {
             }),
         );
         let mut conn = Conn::login(in_search, false, &ann()).await.unwrap();
-        let answer = tokio::time::timeout(Duration::from_secs(5), conn.search("INBOX", "ALL")).await;
+        let answer =
+            tokio::time::timeout(Duration::from_secs(5), conn.search("INBOX", "ALL")).await;
         assert!(
             matches!(answer, Ok(Err(ImapError::Protocol(_)))),
             "{answer:?}"

@@ -16,10 +16,11 @@ use std::time::{Duration, Instant};
 
 use tokio::io::DuplexStream;
 
+use crate::client::{Dial, ImapClient};
 use crate::connection::Conn;
 use crate::guard::{COMMAND_BYTES, IDLE_BYTES, MAX_LINE, MAX_LITERAL, SEARCH_BYTES, SELECT_BYTES};
 use crate::testing::{HeapMark, pipe, selected, server};
-use crate::{Login, Since, UidSet};
+use crate::{ImapError, Login, Since, UidSet};
 
 const GREETING: &str = "* OK [CAPABILITY IMAP4rev1 AUTH=PLAIN] ready";
 const ALL: &str = "IDLE QRESYNC CONDSTORE MOVE UIDPLUS SPECIAL-USE ENABLE";
@@ -144,11 +145,17 @@ async fn measure_other_commands() {
     assert_eq!(flags.len(), 100_000);
     drop(flags);
 
-    // The costliest lines a server can send: status lines just under the
-    // line cap, which async-imap parses again on each 4 KiB read until
-    // the line ends, as many as the command's budget holds.
-    let junk = format!("* OK {}", "x".repeat(MAX_LINE - 8));
+    // The costliest lines measured: VANISHED lines of one UID repeated,
+    // just under the line cap, as many as the command's budget holds.
+    // async-imap parses a line again on each 4 KiB read until it ends,
+    // and imap-proto builds a range for every UID each time: about 12 s
+    // in release, where status lines of the same length cost 0.7 s.
+    let mut junk = String::from("* VANISHED 1");
+    while junk.len() + 2 <= MAX_LINE - 2 {
+        junk.push_str(",1");
+    }
     let count = usize::try_from(COMMAND_BYTES).unwrap() / (junk.len() + 2) - 1;
+    let line_bytes = junk.len();
     let lines: Vec<String> = std::iter::repeat_n(junk, count)
         .chain(["{tag} OK".to_string()])
         .collect();
@@ -162,8 +169,7 @@ async fn measure_other_commands() {
         .unwrap();
     report(
         &format!(
-            "flags, hostile: {count} status lines of {} bytes, just under the budget",
-            MAX_LINE - 2
+            "flags, hostile: {count} VANISHED lines of {line_bytes} bytes repeating one UID, just under the budget"
         ),
         &mark,
         started,
@@ -218,15 +224,19 @@ async fn measure_other_commands() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 #[ignore = "a measurement, run by hand in a release build"]
 async fn measure_idle() {
-    let line = "* 1 EXISTS";
+    // Keepalives, which async-imap reads and passes over while it waits,
+    // so the client reads the whole budget before the one piece of news.
+    let line = "* OK Still here";
     let count = usize::try_from(IDLE_BYTES).unwrap() / (line.len() + 2) - 100;
-    let hostile: Vec<String> = std::iter::repeat_n(line.to_string(), count).collect();
+    let hostile: Vec<String> = std::iter::repeat_n(line.to_string(), count)
+        .chain(["* 1 EXISTS".to_string()])
+        .collect();
     let conn = connect(once("IDLE", hostile)).await;
     let mark = HeapMark::start();
     let started = Instant::now();
     let (conn, woke) = conn.idle("INBOX", Duration::from_secs(60)).await.unwrap();
     report(
-        &format!("idle, hostile: {count} news lines, just under the budget"),
+        &format!("idle, hostile: {count} keepalives, just under the budget, then news"),
         &mark,
         started,
     );
@@ -414,4 +424,71 @@ async fn measure_search() {
     let (mark, started, kept) = search(line).await;
     report("search, real: a window of 50,000 UIDs", &mark, started);
     assert_eq!(kept, 50_000);
+}
+
+/// Hands out one scripted server per dial, in order.
+struct Servers(std::sync::Mutex<std::collections::VecDeque<Answer>>);
+
+type Answer = Box<dyn FnMut(&str) -> Vec<String> + Send>;
+
+impl Dial for std::sync::Arc<Servers> {
+    type Stream = DuplexStream;
+
+    async fn dial(&self) -> Result<(DuplexStream, bool), ImapError> {
+        let next = self
+            .0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .pop_front();
+        let answer = next.ok_or_else(|| ImapError::Network("no more servers".into()))?;
+        Ok((pipe(GREETING, answer), false))
+    }
+}
+
+/// A server that lists one mailbox after a pause, so calls overlap, and
+/// wakes an IDLE at once.
+fn lister() -> Answer {
+    let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    Box::new(server(ALL, seen, |command| match command {
+        c if c.starts_with("LIST") => vec![
+            "<pause>".into(),
+            "* LIST () \"/\" INBOX".into(),
+            "{tag} OK".into(),
+        ],
+        c if c.starts_with("SELECT") => selected(),
+        "IDLE" => vec!["* 5 EXISTS".into()],
+        _ => vec!["{tag} OK".into()],
+    }))
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+#[ignore = "a measurement, run by hand in a release build"]
+async fn measure_pool() {
+    let servers = std::sync::Arc::new(Servers(std::sync::Mutex::new(
+        (0..3).map(|_| lister()).collect(),
+    )));
+    let mark = HeapMark::start();
+    let started = Instant::now();
+    let client = ImapClient::with_dial(servers, Login::new("ann@example.com", "pw"));
+    let (first, second, third, woke) = tokio::join!(
+        client.list(),
+        client.list(),
+        client.list(),
+        client.idle("INBOX", Duration::from_secs(60)),
+    );
+    let held = mark.held();
+    report(
+        "pool: three calls and an IDLE at once, three connections",
+        &mark,
+        started,
+    );
+    eprintln!(
+        "pool: held at rest with three connections open: {:.2} KiB ({held} bytes)",
+        held as f64 / 1024.0
+    );
+    assert!(first.is_ok() && second.is_ok() && third.is_ok());
+    assert_eq!(woke, Ok(crate::Woke::Changed));
+    drop((first, second, third));
+    drop(client);
+    eprintln!("pool: held after the client drops: {} bytes", mark.held());
 }

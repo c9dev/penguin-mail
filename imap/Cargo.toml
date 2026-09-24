@@ -7,14 +7,18 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+mailrs-discover.workspace = true
 mailrs-domain.workspace = true
 mailrs-mime.workspace = true
 async-imap.workspace = true
 base64.workspace = true
 chrono.workspace = true
 mail-parser.workspace = true
+rustls.workspace = true
+rustls-platform-verifier.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
+tokio-rustls.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 
