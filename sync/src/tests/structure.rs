@@ -519,3 +519,22 @@ async fn a_body_missing_a_part_that_failed_to_arrive_is_not_kept() {
     let second = h.sync.body("m1").await.unwrap();
     assert_eq!(second.calendar.as_deref(), Some(ics.as_str()));
 }
+
+/// A raw message in the cache that has no part at the path asked for,
+/// as when the path came from the structure and the two number a part
+/// differently, does not fail the file: the part comes by itself.
+#[tokio::test]
+async fn a_path_the_cached_raw_message_lacks_is_fetched_by_itself() {
+    let h = harness().await;
+    seed(&h, "m1", 25 * 1024 * 1024);
+    h.sync.ensure_thread("t-m1").await.unwrap();
+    let body = h.sync.body("m1").await.unwrap();
+    let path = body.attachments[0].part_id.clone();
+    // View Source caches a raw message whose parts do not include `path`.
+    h.fake.with(|s| {
+        s.raws.insert("m1".into(), b"Subject: Plan\r\n\r\nSee the plan".to_vec());
+    });
+    h.sync.raw_message("m1").await.unwrap();
+    assert!(h.sync.cached_raw("m1").is_some());
+    assert_eq!(h.sync.attachment("m1", &path).await.unwrap(), vec![1, 2, 3]);
+}
