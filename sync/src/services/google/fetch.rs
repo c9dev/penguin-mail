@@ -252,6 +252,15 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn a_tree_search_reaches_gmail_printed_in_its_syntax() {
+        let gmail = Arc::new(FakeGmail::new());
+        let google = Google::new(Arc::clone(&gmail));
+        let junk = SearchQuery::Tree(mailrs_domain::Folder::Junk.query());
+        google.search(&junk, 10).await.unwrap();
+        assert_eq!(gmail.with(|s| s.searched.clone()), ["in:spam"]);
+    }
+
+    #[tokio::test]
     async fn gmail_files_its_own_sent_mail_and_appends_nothing() {
         let google = Google::new(Arc::new(FakeGmail::new()));
         assert!(matches!(

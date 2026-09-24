@@ -44,12 +44,12 @@ impl AccountSync {
     /// only as it shows rows. The hits are kept per thread for
     /// [`KEPT_FOR`], so Delete Forever on a listed row knows its messages
     /// without asking Gmail.
-    pub async fn search_ids(&self, query: &str, limit: usize) -> Result<Vec<RemoteRef>, SyncError> {
-        let found = self
-            .services
-            .mail
-            .search(&SearchQuery::Native(query.to_string()), limit)
-            .await?;
+    pub async fn search_ids(
+        &self,
+        query: &SearchQuery,
+        limit: usize,
+    ) -> Result<Vec<RemoteRef>, SyncError> {
+        let found = self.services.mail.search(query, limit).await?;
         let mut by_thread: BTreeMap<&str, BTreeSet<String>> = BTreeMap::new();
         for hit in &found {
             by_thread

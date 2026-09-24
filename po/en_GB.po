@@ -238,7 +238,7 @@ msgstr "Create a Gmail rule for {account}: {when} → {then}?"
 msgid "Delete a Gmail rule from {account}?"
 msgstr "Delete a Gmail rule from {account}?"
 
-#: app/src/assistant/run.rs:1558
+#: app/src/assistant/run.rs:1559
 msgid "Move mail from {sender} to {category} in {account}, and add a Gmail rule for their future mail?"
 msgstr "Move mail from {sender} to {category} in {account}, and add a Gmail rule for their future mail?"
 
@@ -5889,39 +5889,39 @@ msgstr "the {day}nd"
 msgid "the {day}rd"
 msgstr "the {day}rd"
 
-#: domain/src/smart.rs:68
+#: domain/src/smart.rs:69
 msgid "From contains"
 msgstr "From contains"
 
-#: domain/src/smart.rs:69
+#: domain/src/smart.rs:70
 msgid "To contains"
 msgstr "To contains"
 
-#: domain/src/smart.rs:70
+#: domain/src/smart.rs:71
 msgid "Subject contains"
 msgstr "Subject contains"
 
-#: domain/src/smart.rs:71
+#: domain/src/smart.rs:72
 msgid "Message contains"
 msgstr "Message contains"
 
-#: domain/src/smart.rs:72
+#: domain/src/smart.rs:73
 msgid "Has label"
 msgstr "Has label"
 
-#: domain/src/smart.rs:73
+#: domain/src/smart.rs:74
 msgid "Received in the last (days)"
 msgstr "Received in the last (days)"
 
-#: domain/src/smart.rs:74
+#: domain/src/smart.rs:75
 msgid "Larger than (MB)"
 msgstr "Larger than (MB)"
 
-#: domain/src/smart.rs:76
+#: domain/src/smart.rs:77
 msgid "Is unread"
 msgstr "Is unread"
 
-#: domain/src/smart.rs:77
+#: domain/src/smart.rs:78
 msgid "Is flagged"
 msgstr "Is flagged"
 
@@ -6092,55 +6092,55 @@ msgstr "Trash"
 msgid "All Mail"
 msgstr "All Mail"
 
-#: sync/src/mailbox.rs:601
+#: sync/src/mailbox.rs:602
 msgid "This smart mailbox has no conditions"
 msgstr "This smart mailbox has no conditions"
 
-#: sync/src/mailbox.rs:931
+#: sync/src/mailbox.rs:933
 msgid "Could not load mail for {account}: {reason}"
 msgstr "Could not load mail for {account}: {reason}"
 
-#: sync/src/mailbox.rs:1049
+#: sync/src/mailbox.rs:1051
 msgid "Returns {when}"
 msgstr "Returns {when}"
 
-#: sync/src/mailbox.rs:1092 sync/src/mailbox.rs:1163
+#: sync/src/mailbox.rs:1094 sync/src/mailbox.rs:1165
 msgid "No recipients"
 msgstr "No recipients"
 
-#: sync/src/mailbox.rs:1095 sync/src/mailbox.rs:1166
+#: sync/src/mailbox.rs:1097 sync/src/mailbox.rs:1168
 msgid "To {recipients}"
 msgstr "To {recipients}"
 
-#: sync/src/mailbox.rs:1128
+#: sync/src/mailbox.rs:1130
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} unread"
 msgstr[1] "{count} unread"
 
-#: sync/src/mailbox.rs:1138
+#: sync/src/mailbox.rs:1140
 msgid "Sent yesterday, no reply yet"
 msgstr "Sent yesterday, no reply yet"
 
-#: sync/src/mailbox.rs:1140
+#: sync/src/mailbox.rs:1142
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Sent {days} day ago, no reply yet"
 msgstr[1] "Sent {days} days ago, no reply yet"
 
-#: sync/src/mailbox.rs:1178
+#: sync/src/mailbox.rs:1180
 msgid "Sends {when}"
 msgstr "Sends {when}"
 
-#: sync/src/mailbox.rs:1182
+#: sync/src/mailbox.rs:1184
 msgid "Not sent"
 msgstr "Not sent"
 
-#: sync/src/mailbox.rs:1189
+#: sync/src/mailbox.rs:1191
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Trying again {when}"
 
-#: sync/src/mailbox.rs:1196
+#: sync/src/mailbox.rs:1198
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Penguin Mail stopped trying"
 

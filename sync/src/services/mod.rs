@@ -21,6 +21,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
+use mailrs_domain::query::Query;
 use mailrs_domain::{
     EpochMillis, Filter, MailSet, Membership, MessageMeta, RemoteMailbox, Role, Vacation,
 };
@@ -198,13 +199,14 @@ pub struct RawMessage {
     pub bytes: Vec<u8>,
 }
 
-/// A search, as the person wrote it. A backend that speaks the syntax
-/// takes the text as typed, which is how every Gmail operator keeps
-/// working. A neutral query tree arrives with the first provider that
-/// lacks Gmail's syntax.
+/// A search. A backend that speaks the syntax takes what the person typed
+/// as they typed it, which is how every Gmail operator keeps working.
+/// Folders and smart mailboxes search with a tree, which each backend
+/// prints in its own syntax.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SearchQuery {
     Native(String),
+    Tree(Query),
 }
 
 /// The services one account is served by. A provider that lacks one leaves

@@ -197,7 +197,7 @@ fn smart_json(mailbox: &SmartMailbox) -> Value {
         "account": mailbox.account,
         "match_all": mailbox.match_all,
         "conditions": mailbox.conditions,
-        "gmail_query": mailbox.query(),
+        "gmail_query": mailbox.query().map(|query| mailrs_gmail::query::print(&query)),
     })
 }
 

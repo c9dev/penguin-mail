@@ -60,7 +60,11 @@ async fn the_archive_search_finds_received_mail_outside_the_inbox() {
     let fake = mailbox().await;
     fake.seed(meta("mine", "t6", now_millis(), &["SENT"]));
     assert_eq!(
-        found(&fake, mailrs_domain::Folder::Archive.query()).await,
+        found(
+            &fake,
+            &mailrs_gmail::query::print(&mailrs_domain::Folder::Archive.query())
+        )
+        .await,
         ["archived", "ancient"]
     );
 }

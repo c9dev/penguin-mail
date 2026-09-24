@@ -12,15 +12,16 @@ use std::path::Path;
 
 use mailrs_domain::smart::{Condition, Field};
 use mailrs_domain::{Folder, SmartMailbox};
+use mailrs_gmail::query::print;
 
 /// The search text a folder lists with.
 fn folder_text(folder: Folder) -> Option<String> {
-    Some(folder.query().to_string())
+    Some(print(&folder.query()))
 }
 
 /// The search text a smart mailbox lists with.
 fn smart_text(smart: &SmartMailbox) -> Option<String> {
-    smart.query()
+    smart.query().map(|query| print(&query))
 }
 
 fn cond(field: Field, value: &str) -> Condition {

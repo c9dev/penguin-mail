@@ -1518,6 +1518,7 @@ impl<A: Accounts> Tools<A> {
         };
         let query = mailbox
             .query()
+            .map(|query| mailrs_gmail::query::print(&query))
             .ok_or("Give at least one condition with a value.")?;
         let name = mailbox.name.clone();
         self.effects

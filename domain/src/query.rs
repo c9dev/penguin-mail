@@ -60,6 +60,17 @@ impl Query {
     }
 }
 
+/// `text` without double quotes or parentheses and without the spaces at
+/// either end: what a text term means once the characters Gmail's syntax
+/// reserves are gone. Empty when nothing else was there.
+pub fn plain(text: &str) -> String {
+    text.chars()
+        .filter(|c| !matches!(c, '"' | '(' | ')'))
+        .collect::<String>()
+        .trim()
+        .to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -72,5 +83,12 @@ mod tests {
             Query::not_in(junk.clone()),
             Query::Not(Box::new(Query::Term(Term::In(junk))))
         );
+    }
+
+    #[test]
+    fn plain_text_loses_quotes_parentheses_and_outer_spaces() {
+        assert_eq!(plain("  \"Ann\" (work) "), "Ann work");
+        assert_eq!(plain("\"()"), "");
+        assert_eq!(plain("Zé Ninguém"), "Zé Ninguém");
     }
 }

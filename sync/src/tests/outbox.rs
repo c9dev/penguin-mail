@@ -308,7 +308,11 @@ async fn search_returns_newest_first_without_storing() {
     h.fake.seed(meta("old", "t1", now - 5000, &["INBOX"]));
     h.fake.seed(meta("new", "t2", now, &["INBOX"]));
     h.fake.seed(meta("mid", "t3", now - 1000, &[]));
-    let ids = h.sync.search_ids("snippet", 2).await.unwrap();
+    let ids = h
+        .sync
+        .search_ids(&crate::SearchQuery::Native("snippet".into()), 2)
+        .await
+        .unwrap();
     let found = h.sync.metadata_of(&ids).await.unwrap();
     let ids: Vec<&str> = found.iter().map(|m| m.id.as_str()).collect();
     assert_eq!(ids, ["new", "mid"]);

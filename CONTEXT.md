@@ -12,7 +12,7 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Category**: a slice of the inbox that Penguin Mail shows: All, Primary, Updates, Promotions, or Social. Each one is defined by the category labels a thread has or lacks. Primary is mail with no category label but Personal, and Social includes Forums. _Avoid_: tab, inbox type.
 
-**Folder**: Archive, Junk, Trash, or All Mail. Archive is the received mail outside the inbox, which Gmail has no label for. The local store does not keep this mail, so the app lists a folder with a Gmail search and checks a message's labels to see if it still belongs there. _Avoid_: mailbox, spam folder.
+**Folder**: Archive, Junk, Trash, or All Mail. Archive is the received mail outside the inbox, which Gmail has no label for. The local store does not keep this mail, so the app lists a folder with a query tree, which Gmail receives as a search, and checks a message's labels to see if it still belongs there. _Avoid_: mailbox, spam folder.
 
 **Target**: what a mail action applies to: a thread, or one message of it when the list shows messages instead of conversations. `mailrs_domain::Target`. _Avoid_: selection, item.
 
@@ -42,7 +42,7 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Mailbox on screen**: the mailbox the main window lists, the one a search goes back to when it closes, the inbox category, and the list feed that loads its rows. `ui::window::on_screen::OnScreen`. The sidebar, the search bar, a notification, a deleted label and a settings change each make one transition on it, and every transition answers with a `Redraw` naming what it left stale, such as the selection, the title, the buttons that hang on the mailbox, and a first page to list, which `MainWindow::redraw` carries out. A conversation in a window of its own keeps the mailbox it was opened from instead. _Avoid_: current mailbox, view state, navigation.
 
-**Smart mailbox**: conditions saved in Preferences that become a Gmail search, such as "from Ann" and "newer than 7 days". `mailrs_domain::SmartMailbox`. _Avoid_: saved search, filter.
+**Smart mailbox**: conditions saved in Preferences that become a query tree, such as "from Ann" and "newer than 7 days". Gmail receives the tree as a search. `mailrs_domain::SmartMailbox`. _Avoid_: saved search, filter.
 
 **Listing**: one page of a mailbox, with its rows, its unread count, the title and subtitle the header shows, and what an empty list should say. `mailrs_sync::Mailboxes` produces it for the window and the assistant alike, so only it knows which mailboxes the store answers and which Gmail does. _Avoid_: result, page, query.
 
@@ -272,7 +272,7 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Mail set**: which stored mail a list draws from: the mailbox with a role in each account (the inboxes), one server mailbox, the mail carrying a keyword (flagged, muted), unread mail, or one inbox category. `mailrs_domain::MailSet`. Thread lists, the sidebar's counts, triage and the rules name mail this way; only the Gmail adapter turns one into a label id. _Avoid_: label, filter, selector.
 
-**Query tree**: a search in words every provider shares: sender, recipient, subject, words, a day range, days back from now, size, an attachment, unread, flagged, a mail set, or a mailbox by the name a person typed, joined by And, Or and Not. `mailrs_domain::query::Query`. The Gmail adapter prints one as Gmail search text with `mailrs_gmail::query::print`. What a person types into the search box stays in the server's own syntax (`SearchQuery::Native`). _Avoid_: filter, search string.
+**Query tree**: a search in words every provider shares: sender, recipient, subject, words, a day range, days back from now, size, an attachment, unread, flagged, a mail set, or a mailbox by the name a person typed, joined by And, Or and Not. `mailrs_domain::query::Query`. Folders and smart mailboxes are query trees. The Gmail adapter prints one as Gmail search text with `mailrs_gmail::query::print`. What a person types into the search box stays in the server's own syntax (`SearchQuery::Native`). _Avoid_: filter, search string.
 
 **Change set**: the one way stored mail changes: a list of changes (store a message, keep it under a new sync generation, add it to or take it out of a server mailbox, set a keyword or a category, delete a message or a thread, mark a thread whole) applied in one call inside the caller's transaction. It refreshes every thread row the changes touched and reports what each membership change did to each message, which is what Undo reverses. `mailrs_store::messages::apply`, taking `Change`s and answering `Touched`. _Avoid_: update, patch (which is the conversation page's word), batch.
 

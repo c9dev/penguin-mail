@@ -18,7 +18,7 @@ use mailrs_domain::{
 use mailrs_store::threads::ThreadFilter;
 use mailrs_store::{Db, flags, follow_ups, outbox, reminders, threads};
 
-use crate::{Accounts, SyncError};
+use crate::{Accounts, SearchQuery, SyncError};
 
 /// Rows in one page of a stored mailbox.
 pub const PAGE: usize = 500;
@@ -491,7 +491,7 @@ pub struct Counts {
 /// but charges 5 units for each message's metadata, so the ids are kept
 /// and the metadata is fetched a screen at a time.
 struct RemoteListing {
-    query: String,
+    query: SearchQuery,
     accounts: Vec<AccountId>,
     at: Instant,
     /// Per account: the ids the search returned, newest first, and the
@@ -514,8 +514,8 @@ struct RemotePage {
 impl RemoteListing {
     /// Whether this is still the search the caller wants, and recent
     /// enough to answer from.
-    fn answers(&self, query: &str, accounts: &[AccountId]) -> bool {
-        self.query == query && self.accounts == accounts && self.at.elapsed() < REMOTE_FRESH
+    fn answers(&self, query: &SearchQuery, accounts: &[AccountId]) -> bool {
+        self.query == *query && self.accounts == accounts && self.at.elapsed() < REMOTE_FRESH
     }
 
     /// Whether every account has metadata for its first `wanted` ids, or
@@ -572,14 +572,15 @@ impl<A: Accounts> Mailboxes<A> {
         };
         match mailbox {
             Mailbox::Folder { account_id, folder } => {
-                self.remote(folder.query(), *account_id, scope, view, base, from)
+                let query = SearchQuery::Tree(folder.query());
+                self.remote(&query, *account_id, scope, view, base, from)
                     .await
             }
             Mailbox::Search { query, account_id } => {
                 let limit = view.limit.unwrap_or(SEARCH_LIMIT);
                 let found = self
                     .remote(
-                        query,
+                        &SearchQuery::Native(query.clone()),
                         *account_id,
                         scope,
                         &View {
@@ -603,6 +604,7 @@ impl<A: Accounts> Mailboxes<A> {
                     });
                 };
                 let only = smart.account.as_deref().and_then(|e| scope.id_of(e));
+                let query = SearchQuery::Tree(query);
                 self.remote(&query, only, scope, view, base, from).await
             }
             Mailbox::Scheduled => self.scheduled(view, base, from).await,
@@ -836,7 +838,7 @@ impl<A: Accounts> Mailboxes<A> {
     /// it again a moment later costs nothing.
     async fn remote(
         &self,
-        query: &str,
+        query: &SearchQuery,
         only: Option<AccountId>,
         scope: &Scope,
         view: &View,
@@ -855,7 +857,7 @@ impl<A: Accounts> Mailboxes<A> {
             }
         };
         let mut listing = kept.unwrap_or_else(|| RemoteListing {
-            query: query.to_string(),
+            query: query.clone(),
             accounts: ids,
             at: Instant::now(),
             pages: Vec::new(),

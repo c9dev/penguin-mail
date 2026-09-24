@@ -181,7 +181,10 @@ async fn smart_mailboxes_list_change_in_place_and_delete_after_asking() {
     assert_eq!(kept[0].name, "Ann, unread");
     assert_eq!(kept[0].account.as_deref(), Some(ME));
     assert_eq!(
-        kept[0].query().as_deref(),
+        kept[0]
+            .query()
+            .map(|query| mailrs_gmail::query::print(&query))
+            .as_deref(),
         Some("from:ann@example.com is:unread")
     );
     assert!(

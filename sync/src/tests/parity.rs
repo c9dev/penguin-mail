@@ -157,7 +157,10 @@ async fn a_search_reaches_gmail_as_typed() {
     });
     let found = h
         .sync
-        .search_ids("from:bo@example.org has:attachment older_than:90d", 10)
+        .search_ids(
+            &crate::SearchQuery::Native("from:bo@example.org has:attachment older_than:90d".into()),
+            10,
+        )
         .await
         .unwrap();
     let ids: Vec<&str> = found.iter().map(|m| m.id.as_str()).collect();
