@@ -11,12 +11,13 @@
 )]
 mod connection;
 mod error;
-mod login;
 #[cfg_attr(
     not(test),
-    expect(dead_code, reason = "the connections read through this cap")
+    expect(dead_code, reason = "the connections read through these limits")
 )]
-mod nesting;
+mod guard;
+mod logging;
+mod login;
 #[cfg_attr(
     not(test),
     expect(dead_code, reason = "the connections read their answers through these")
@@ -35,6 +36,7 @@ mod uid_set;
 pub mod utf7;
 
 pub use error::ImapError;
+pub use logging::quiet;
 pub use login::Login;
 pub use structure::BodyStructure;
 pub use types::{

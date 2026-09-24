@@ -8,12 +8,50 @@ use async_imap::imap_proto::{
 use chrono::DateTime;
 use mailrs_domain::EpochMillis;
 
+use crate::guard::{BODY_BYTES, COMMAND_BYTES};
 use crate::structure::BodyStructure;
-use crate::{AppendUid, CopyUid, Fetched, FlagsOf, ImapError, Listed, Selected, SpecialUse};
+use crate::{
+    AppendUid, CopyUid, Fetched, FlagsOf, ImapError, Listed, Selected, SpecialUse, UidSet,
+};
+
+/// The most untagged answers one command may bring. A server sends one
+/// per message or mailbox, so a command that asks about more than this
+/// has to ask in windows.
+pub(crate) const MAX_ANSWERS: usize = 100_000;
+
+/// Answers a command about `uids` may bring: three for each UID, for a
+/// server that reports a flag change or an expunge beside each answer,
+/// and a thousand for news about other messages, up to [`MAX_ANSWERS`].
+pub(crate) fn answers_for(uids: &UidSet) -> usize {
+    let most = uids.len().saturating_mul(3).saturating_add(1_000);
+    usize::try_from(most)
+        .unwrap_or(MAX_ANSWERS)
+        .min(MAX_ANSWERS)
+}
 
 /// Something that reads a command's responses, the tagged one included.
 pub(crate) trait Reads {
     fn read(&mut self, response: &Response<'_>);
+
+    /// How many untagged answers the command may bring before the
+    /// connection gives up on it.
+    fn most(&self) -> usize {
+        MAX_ANSWERS
+    }
+
+    /// How many bytes the command may bring back in all.
+    fn bytes(&self) -> u64 {
+        COMMAND_BYTES
+    }
+
+    /// A literal in `response` this reader keeps whole. The connection
+    /// then hands it over through [`Reads::keep`] in the buffer it arrived
+    /// in, instead of `read` copying it.
+    fn wants<'r>(&self, _response: &'r Response<'_>) -> Option<&'r [u8]> {
+        None
+    }
+
+    fn keep(&mut self, _bytes: Vec<u8>) {}
 }
 
 /// Reads nothing, for commands whose only answer is OK.
@@ -60,6 +98,9 @@ impl Reads for CapabilityReader {
 pub(crate) struct SelectReader {
     selected: Selected,
     uidvalidity: Option<u32>,
+    /// The UIDs the store holds, whose changes are all the caller reads;
+    /// it fetches new mail by UIDNEXT. `None` keeps every change.
+    known: Option<UidSet>,
 }
 
 impl Reads for SelectReader {
@@ -85,7 +126,9 @@ impl Reads for SelectReader {
                 }
             }
             Response::Fetch(_, attributes) => {
-                if let Some(flags) = flags_of(attributes) {
+                if let Some(flags) = flags_of(attributes)
+                    && self.known.as_ref().is_none_or(|k| k.contains(flags.uid))
+                {
                     self.selected.changed.push(flags);
                 }
             }
@@ -95,6 +138,13 @@ impl Reads for SelectReader {
 }
 
 impl SelectReader {
+    pub(crate) fn new(known: Option<&UidSet>) -> Self {
+        SelectReader {
+            known: known.cloned(),
+            ..SelectReader::default()
+        }
+    }
+
     pub(crate) fn finish(self) -> Result<Selected, ImapError> {
         let uidvalidity = self
             .uidvalidity
@@ -106,19 +156,35 @@ impl SelectReader {
     }
 }
 
-/// The flags of every message a FETCH answered for, in the order they came.
-#[derive(Default)]
+/// The flags of each message asked for, in the order they came. `n:*`
+/// names the last message even when its UID is below `n`, and a server
+/// reports changes to other messages unasked, so the rest go.
 pub(crate) struct FlagsReader {
+    wanted: UidSet,
     pub(crate) flags: Vec<FlagsOf>,
+}
+
+impl FlagsReader {
+    pub(crate) fn new(uids: &UidSet) -> Self {
+        FlagsReader {
+            wanted: uids.clone(),
+            flags: Vec::new(),
+        }
+    }
 }
 
 impl Reads for FlagsReader {
     fn read(&mut self, response: &Response<'_>) {
         if let Response::Fetch(_, attributes) = response
             && let Some(flags) = flags_of(attributes)
+            && self.wanted.contains(flags.uid)
         {
             self.flags.push(flags);
         }
+    }
+
+    fn most(&self) -> usize {
+        answers_for(&self.wanted)
     }
 }
 
@@ -146,13 +212,27 @@ fn flags_of(attributes: &[AttributeValue<'_>]) -> Option<FlagsOf> {
     })
 }
 
-/// The header fetch that lists messages: one [`Fetched`] per UID.
-#[derive(Default)]
+/// The header fetch that lists messages: one [`Fetched`] per UID asked
+/// for, the others dropped as [`FlagsReader`] drops them.
 pub(crate) struct HeadersReader {
+    wanted: UidSet,
     pub(crate) fetched: Vec<Fetched>,
 }
 
+impl HeadersReader {
+    pub(crate) fn new(uids: &UidSet) -> Self {
+        HeadersReader {
+            wanted: uids.clone(),
+            fetched: Vec::new(),
+        }
+    }
+}
+
 impl Reads for HeadersReader {
+    fn most(&self) -> usize {
+        answers_for(&self.wanted)
+    }
+
     fn read(&mut self, response: &Response<'_>) {
         let Response::Fetch(_, attributes) = response else {
             return;
@@ -163,6 +243,9 @@ impl Reads for HeadersReader {
         }) else {
             return;
         };
+        if !self.wanted.contains(uid) {
+            return;
+        }
         let header = attributes.iter().find_map(|a| match a {
             AttributeValue::BodySection {
                 data: Some(data), ..
@@ -212,20 +295,51 @@ impl SectionReader {
 
 impl Reads for SectionReader {
     fn read(&mut self, response: &Response<'_>) {
-        let Response::Fetch(_, attributes) = response else {
+        let Some(attributes) = fetched_for(response, self.uid) else {
             return;
         };
-        if !attributes
-            .iter()
-            .any(|a| matches!(a, AttributeValue::Uid(u) if *u == self.uid))
-        {
-            return;
-        }
         for attribute in attributes {
             if let AttributeValue::BodySection { data, .. } = attribute {
                 self.bytes = Some(data.as_deref().map(<[u8]>::to_vec).unwrap_or_default());
             }
         }
+    }
+
+    fn most(&self) -> usize {
+        answers_for(&UidSet::from_uids([self.uid]))
+    }
+
+    fn bytes(&self) -> u64 {
+        BODY_BYTES
+    }
+
+    fn wants<'r>(&self, response: &'r Response<'_>) -> Option<&'r [u8]> {
+        fetched_for(response, self.uid)?
+            .iter()
+            .find_map(|attribute| match attribute {
+                AttributeValue::BodySection {
+                    data: Some(data), ..
+                } => Some(data.as_ref()),
+                _ => None,
+            })
+    }
+
+    fn keep(&mut self, bytes: Vec<u8>) {
+        self.bytes = Some(bytes);
+    }
+}
+
+/// The attributes of a FETCH answer about `uid`.
+fn fetched_for<'r, 'a>(response: &'r Response<'a>, uid: u32) -> Option<&'r [AttributeValue<'a>]> {
+    match response {
+        Response::Fetch(_, attributes)
+            if attributes
+                .iter()
+                .any(|a| matches!(a, AttributeValue::Uid(u) if *u == uid)) =>
+        {
+            Some(attributes)
+        }
+        _ => None,
     }
 }
 
@@ -245,16 +359,14 @@ impl StructureReader {
 }
 
 impl Reads for StructureReader {
+    fn most(&self) -> usize {
+        answers_for(&UidSet::from_uids([self.uid]))
+    }
+
     fn read(&mut self, response: &Response<'_>) {
-        let Response::Fetch(_, attributes) = response else {
+        let Some(attributes) = fetched_for(response, self.uid) else {
             return;
         };
-        if !attributes
-            .iter()
-            .any(|a| matches!(a, AttributeValue::Uid(u) if *u == self.uid))
-        {
-            return;
-        }
         for attribute in attributes {
             if let AttributeValue::BodyStructure(wire) = attribute {
                 self.structure = Some(BodyStructure::from_wire(wire));
@@ -461,7 +573,7 @@ pub(crate) mod tests {
 
     #[test]
     fn the_header_fetch_fills_fetched() {
-        let mut reader = HeadersReader::default();
+        let mut reader = HeadersReader::new(&UidSet::from_uids([12, 13]));
         feed(
             &mut reader,
             &[
@@ -485,7 +597,7 @@ pub(crate) mod tests {
 
     #[test]
     fn flags_come_with_their_modseq_and_skip_fetches_without_a_uid() {
-        let mut reader = FlagsReader::default();
+        let mut reader = FlagsReader::new(&UidSet::from_uids([12]));
         feed(
             &mut reader,
             &[
@@ -618,5 +730,67 @@ pub(crate) mod tests {
             Some(1_771_318_800_000)
         );
         assert_eq!(internal_date("yesterday"), None);
+    }
+
+    #[test]
+    fn headers_and_flags_keep_only_the_uids_asked_for() {
+        let mut headers = HeadersReader::new(&UidSet::range(10, 11));
+        feed(
+            &mut headers,
+            &[
+                "* 1 FETCH (UID 9 BODY[HEADER.FIELDS (SUBJECT)] {12}\r\nSubject: x\r\n)\r\n",
+                "* 2 FETCH (UID 10 BODY[HEADER.FIELDS (SUBJECT)] {12}\r\nSubject: y\r\n)\r\n",
+            ],
+        );
+        assert_eq!(headers.fetched.len(), 1);
+        assert_eq!(headers.fetched[0].uid, 10);
+        let mut flags = FlagsReader::new(&UidSet::from_uids([4]));
+        feed(
+            &mut flags,
+            &[
+                "* 1 FETCH (UID 3 FLAGS (\\Seen))\r\n",
+                "* 2 FETCH (UID 4 FLAGS ())\r\n",
+            ],
+        );
+        assert_eq!(flags.flags.len(), 1);
+        assert_eq!(flags.flags[0].uid, 4);
+    }
+
+    #[test]
+    fn a_qresync_select_keeps_changes_to_known_uids_only() {
+        let mut reader = SelectReader::new(Some(&UidSet::from_uids([117])));
+        feed(
+            &mut reader,
+            &[
+                "* OK [UIDVALIDITY 3] ok\r\n",
+                "* 49 FETCH (UID 117 FLAGS (\\Seen) MODSEQ (9))\r\n",
+                "* 50 FETCH (UID 500 FLAGS (\\Seen) MODSEQ (9))\r\n",
+            ],
+        );
+        let selected = reader.finish().unwrap();
+        assert_eq!(selected.changed.len(), 1);
+        assert_eq!(selected.changed[0].uid, 117);
+    }
+
+    #[test]
+    fn a_command_may_bring_a_few_answers_for_each_uid_it_names() {
+        assert_eq!(answers_for(&UidSet::from_uids([1, 2])), 1_006);
+        assert_eq!(answers_for(&UidSet::from_uid(1)), MAX_ANSWERS);
+        assert_eq!(HeadersReader::new(&UidSet::from_uids([1])).most(), 1_003);
+        assert_eq!(ListReader::default().most(), MAX_ANSWERS);
+        assert_eq!(SearchReader::default().most(), MAX_ANSWERS);
+        assert_eq!(SectionReader::new(1).bytes(), crate::guard::BODY_BYTES);
+        assert_eq!(ListReader::default().bytes(), crate::guard::COMMAND_BYTES);
+    }
+
+    #[test]
+    fn a_section_reader_takes_the_bytes_of_its_uid_whole() {
+        let (_, response) =
+            Response::from_bytes(b"* 2 FETCH (UID 9 BODY[1] {5}\r\nhello)\r\n").unwrap();
+        let mut reader = SectionReader::new(9);
+        assert_eq!(reader.wants(&response), Some(&b"hello"[..]));
+        reader.keep(b"hello".to_vec());
+        assert_eq!(reader.bytes.as_deref(), Some(&b"hello"[..]));
+        assert_eq!(SectionReader::new(8).wants(&response), None);
     }
 }

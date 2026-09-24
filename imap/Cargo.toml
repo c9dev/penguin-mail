@@ -15,6 +15,8 @@ chrono.workspace = true
 mail-parser.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
 
 [dev-dependencies]
 # `start_paused` lets a test wait out an IDLE or a stale connection

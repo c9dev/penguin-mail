@@ -92,13 +92,18 @@ enum AccountCommand {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    tracing_subscriber::fmt()
-        .with_writer(std::io::stderr)
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn,mailrs_sync=info")),
-        )
-        .init();
+    // async-imap logs passwords and mail at trace level; `quiet` drops
+    // those lines whatever RUST_LOG says.
+    tracing_subscriber::util::SubscriberInitExt::init(mailrs_imap::quiet(
+        tracing_subscriber::fmt()
+            .with_writer(std::io::stderr)
+            .with_env_filter(
+                tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                    tracing_subscriber::EnvFilter::new("warn,mailrs_sync=info")
+                }),
+            )
+            .finish(),
+    ));
     let cli = Cli::parse();
     migrate_old_dirs();
     secure_dirs();

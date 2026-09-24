@@ -95,7 +95,7 @@ pub(crate) fn from_async_imap(err: async_imap::error::Error, doing: Doing<'_>) -
         Error::ConnectionLost => ImapError::Network("the server closed the connection".into()),
         Error::No(detail) => refusal(doing, Refusal::No, false, &server_words(&detail)),
         Error::Bad(detail) => refusal(doing, Refusal::Bad, false, &server_words(&detail)),
-        other => ImapError::Protocol(other.to_string()),
+        other => ImapError::Protocol(clipped(other.to_string())),
     }
 }
 
@@ -103,12 +103,23 @@ pub(crate) fn from_async_imap(err: async_imap::error::Error, doing: Doing<'_>) -
 /// an answer it cannot parse, or one too large to buffer, as an error of
 /// kind `Other`; the network's own failures come with their own kinds.
 pub(crate) fn from_io(err: std::io::Error) -> ImapError {
+    let text = clipped(err.to_string());
     match err.kind() {
-        std::io::ErrorKind::Other | std::io::ErrorKind::InvalidData => {
-            ImapError::Protocol(err.to_string())
-        }
-        _ => ImapError::Network(err.to_string()),
+        std::io::ErrorKind::Other | std::io::ErrorKind::InvalidData => ImapError::Protocol(text),
+        _ => ImapError::Network(text),
     }
+}
+
+/// The most of an error's text an [`ImapError`] keeps. async-imap puts
+/// the whole unparsed buffer in a parse error, mail included, and error
+/// text goes to the log.
+const MAX_ERROR_TEXT: usize = 200;
+
+fn clipped(mut text: String) -> String {
+    if let Some((end, _)) = text.char_indices().nth(MAX_ERROR_TEXT) {
+        text.truncate(end);
+    }
+    text
 }
 
 /// The server's own text inside async-imap's `No` and `Bad` errors, which
@@ -260,5 +271,16 @@ mod tests {
         );
         assert_eq!(server_words(&detail), "Say \"hi\" \\ bye");
         assert_eq!(server_words("plain words"), "plain words");
+    }
+
+    /// async-imap puts the whole unparsed buffer in its parse error, mail
+    /// included, and the error text goes to the log.
+    #[test]
+    fn an_io_error_keeps_only_the_start_of_its_text() {
+        let text = format!("Error(..) during parsing of \"{}\"", "é".repeat(10_000));
+        let ImapError::Protocol(kept) = from_io(std::io::Error::other(text)) else {
+            panic!("not a protocol error");
+        };
+        assert_eq!(kept.chars().count(), 200);
     }
 }

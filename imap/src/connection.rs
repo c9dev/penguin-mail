@@ -15,7 +15,7 @@ use async_imap::{Authenticator, Client, Session};
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use tokio::time::Instant;
 
-use crate::nesting::Nesting;
+use crate::guard::{COMMAND_BYTES, Guarded};
 use crate::parse::{
     AppendUidReader, CapabilityReader, CopyUidReader, FlagsReader, HeadersReader, ListReader,
     Reads, SearchReader, SectionReader, SelectReader, StructureReader,
@@ -39,7 +39,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin + fmt::Debug + Send + 'static> Stream for
 const RAW_TAG: &str = "PM0";
 
 pub(crate) struct Conn<S: Stream> {
-    session: Session<Nesting<S>>,
+    session: Session<Guarded<S>>,
     pub(crate) capabilities: Capabilities,
     /// The mailbox the server has selected on this connection.
     selected: Option<String>,
@@ -69,7 +69,7 @@ impl<S: Stream> Conn<S> {
         greeted: bool,
         login: &Login,
     ) -> Result<Conn<S>, ImapError> {
-        let mut client = Client::new(Nesting::new(stream));
+        let mut client = Client::new(Guarded::new(stream));
         let mut before = CapabilityReader::default();
         if !greeted {
             let greeting = client
@@ -187,7 +187,7 @@ impl<S: Stream> Conn<S> {
         };
         // A failed SELECT leaves no mailbox selected (RFC 3501 section 6.3.1).
         self.selected = None;
-        let mut reader = SelectReader::default();
+        let mut reader = SelectReader::new(since.and_then(|s| s.known.as_ref()));
         self.exec(&command, Doing::Mailbox(mailbox), &mut reader)
             .await?;
         self.selected = Some(mailbox.to_string());
@@ -221,18 +221,14 @@ impl<S: Stream> Conn<S> {
         let modifier = changed_since
             .map(|m| format!(" (CHANGEDSINCE {m})"))
             .unwrap_or_default();
-        let mut reader = FlagsReader::default();
+        let mut reader = FlagsReader::new(uids);
         self.exec(
             &format!("UID FETCH {uids} {items}{modifier}"),
             Doing::Mailbox(mailbox),
             &mut reader,
         )
         .await?;
-        Ok(reader
-            .flags
-            .into_iter()
-            .filter(|f| uids.contains(f.uid))
-            .collect())
+        Ok(reader.flags)
     }
 
     pub(crate) async fn search(
@@ -241,7 +237,7 @@ impl<S: Stream> Conn<S> {
         keys: &str,
     ) -> Result<Vec<u32>, ImapError> {
         self.ensure_selected(mailbox).await?;
-        let (head, literals) = search_command(keys);
+        let (head, literals) = search_command(keys)?;
         let literals: Vec<(&[u8], String)> = literals
             .iter()
             .map(|(bytes, after)| (bytes.as_slice(), after.clone()))
@@ -268,15 +264,10 @@ impl<S: Stream> Conn<S> {
         let command = format!(
             "UID FETCH {uids} (UID FLAGS INTERNALDATE RFC822.SIZE{modseq} BODY.PEEK[HEADER.FIELDS ({HEADER_FIELDS})])"
         );
-        let mut reader = HeadersReader::default();
+        let mut reader = HeadersReader::new(uids);
         self.exec(&command, Doing::Mailbox(mailbox), &mut reader)
             .await?;
-        // `n:*` names the last message even when its UID is below `n`.
-        Ok(reader
-            .fetched
-            .into_iter()
-            .filter(|f| uids.contains(f.uid))
-            .collect())
+        Ok(reader.fetched)
     }
 
     /// `BODY.PEEK[<section>]` of one message: `""` for the whole message,
@@ -461,6 +452,7 @@ impl<S: Stream> Conn<S> {
         limit: Duration,
     ) -> Result<(Conn<S>, Woke), ImapError> {
         self.ensure_selected(mailbox).await?;
+        self.session.get_mut().expect(COMMAND_BYTES);
         let Conn {
             session,
             capabilities,
@@ -525,6 +517,7 @@ impl<S: Stream> Conn<S> {
         reader: &mut impl Reads,
     ) -> Result<(), ImapError> {
         self.last_used = Instant::now();
+        self.session.get_mut().expect(reader.bytes());
         let tag = self
             .session
             .run_command(command)
@@ -546,13 +539,16 @@ impl<S: Stream> Conn<S> {
             return self.exec(head, doing, reader).await;
         };
         self.last_used = Instant::now();
+        self.session.get_mut().expect(reader.bytes());
         let tag = self
             .session
             .run_command(format!("{head}{{{}}}", first.len()))
             .await
             .map_err(|err| from_async_imap(err, doing))?;
+        let mut answers = 0;
         for (i, (literal, after)) in literals.iter().enumerate() {
-            self.wait_for_continuation(&tag, doing, reader).await?;
+            self.wait_for_continuation(&tag, doing, reader, &mut answers)
+                .await?;
             let next = literals
                 .get(i + 1)
                 .map(|(l, _)| format!("{{{}}}", l.len()))
@@ -564,7 +560,7 @@ impl<S: Stream> Conn<S> {
             stream.write_all(b"\r\n").await.map_err(from_io)?;
             stream.flush().await.map_err(from_io)?;
         }
-        self.finish(&tag, doing, reader).await
+        self.finish_counted(&tag, doing, reader, answers).await
     }
 
     async fn wait_for_continuation(
@@ -572,6 +568,7 @@ impl<S: Stream> Conn<S> {
         tag: &RequestId,
         doing: Doing<'_>,
         reader: &mut impl Reads,
+        answers: &mut usize,
     ) -> Result<(), ImapError> {
         loop {
             let response = self
@@ -589,6 +586,7 @@ impl<S: Stream> Conn<S> {
                             "the server ended the command early".into(),
                         )));
                     }
+                    count(answers, reader)?;
                     reader.read(parsed);
                 }
             }
@@ -601,6 +599,18 @@ impl<S: Stream> Conn<S> {
         doing: Doing<'_>,
         reader: &mut impl Reads,
     ) -> Result<(), ImapError> {
+        self.finish_counted(tag, doing, reader, 0).await
+    }
+
+    /// Reads the command's answers to its tagged one, `answers` of them
+    /// read already.
+    async fn finish_counted(
+        &mut self,
+        tag: &RequestId,
+        doing: Doing<'_>,
+        reader: &mut impl Reads,
+        mut answers: usize,
+    ) -> Result<(), ImapError> {
         loop {
             let response = self
                 .session
@@ -612,9 +622,25 @@ impl<S: Stream> Conn<S> {
             if matches!(parsed, Response::Done { tag: done, .. } if done == tag) {
                 reader.read(parsed);
             }
-            match ended(parsed, tag, doing) {
-                Some(result) => return result,
-                None => reader.read(parsed),
+            if let Some(result) = ended(parsed, tag, doing) {
+                return result;
+            }
+            count(&mut answers, reader)?;
+            let Some(wanted) = reader.wants(parsed) else {
+                reader.read(parsed);
+                continue;
+            };
+            // The literal sits in the buffer async-imap read the answer
+            // into, which the answer owns. Taking that buffer instead of
+            // copying the literal out keeps one copy of a large body.
+            match within(response.borrow_owner(), wanted) {
+                Some(span) => {
+                    let mut buffer = response.into_owner();
+                    drop(buffer.split_to(span.start));
+                    buffer.truncate(span.len());
+                    reader.keep(Vec::from(buffer));
+                }
+                None => reader.keep(wanted.to_vec()),
             }
         }
     }
@@ -631,6 +657,9 @@ fn ended(
         information.as_deref().unwrap_or_default().to_string()
     };
     match response {
+        Response::Done { tag: other, .. } if other != tag => Some(Err(ImapError::Protocol(
+            format!("the server answered {} while {} ran", other.0, tag.0),
+        ))),
         Response::Done {
             tag: done,
             status,
@@ -659,7 +688,7 @@ fn ended(
 /// none. async-imap has no way to ask before login, so the command goes
 /// straight onto the stream.
 async fn raw_capability<S: Stream>(
-    client: &mut Client<Nesting<S>>,
+    client: &mut Client<Guarded<S>>,
     reader: &mut CapabilityReader,
 ) -> Result<(), ImapError> {
     let stream = client.get_mut();
@@ -691,6 +720,25 @@ async fn raw_capability<S: Stream>(
             };
         }
     }
+}
+
+/// Counts one more untagged answer against what the command may bring.
+fn count(answers: &mut usize, reader: &impl Reads) -> Result<(), ImapError> {
+    *answers += 1;
+    match *answers > reader.most() {
+        true => Err(ImapError::Protocol(format!(
+            "the server sent more than {} answers to one command",
+            reader.most()
+        ))),
+        false => Ok(()),
+    }
+}
+
+/// Where `part` lies inside `whole`, when it is a slice of it.
+fn within(whole: &[u8], part: &[u8]) -> Option<std::ops::Range<usize>> {
+    let start = part.as_ptr().addr().checked_sub(whole.as_ptr().addr())?;
+    let end = start.checked_add(part.len())?;
+    (end <= whole.len()).then_some(start..end)
 }
 
 fn closed() -> ImapError {
@@ -725,11 +773,21 @@ fn flag_list(flags: &[String]) -> Result<String, ImapError> {
     Ok(flags.join(" "))
 }
 
+/// A command's text before its first literal, and each literal with the
+/// text after it.
+pub(crate) type SearchParts = (String, Vec<(Vec<u8>, String)>);
+
 /// `UID SEARCH keys`, split for sending: IMAP's quoted strings carry
-/// 7-bit text alone, so each quoted string holding more than ASCII goes
-/// as a literal, and the search names UTF-8 as its charset. Returns the
-/// text before the first literal and each literal with the text after it.
-pub(crate) fn search_command(keys: &str) -> (String, Vec<(Vec<u8>, String)>) {
+/// 7-bit text without line breaks, so each quoted string holding more
+/// than ASCII, or a CR or LF, goes as a literal, and the search names
+/// UTF-8 as its charset. A line break outside quotes would end the command
+/// and start another, and no IMAP string carries NUL, so either fails.
+/// Returns the text before the first literal and each literal with the
+/// text after it.
+pub(crate) fn search_command(keys: &str) -> Result<SearchParts, ImapError> {
+    if keys.contains('\0') {
+        return Err(ImapError::Protocol("a search holds a NUL".into()));
+    }
     let mut head = String::new();
     let mut literals: Vec<(Vec<u8>, String)> = Vec::new();
     let mut chars = keys.chars().peekable();
@@ -740,6 +798,11 @@ pub(crate) fn search_command(keys: &str) -> (String, Vec<(Vec<u8>, String)>) {
         None => head.push_str(text),
     };
     while let Some(c) = chars.next() {
+        if matches!(c, '\r' | '\n') {
+            return Err(ImapError::Protocol(
+                "a search holds a line break outside quotes".into(),
+            ));
+        }
         if c != '"' {
             push(c.encode_utf8(&mut [0; 4]), &mut head, &mut literals);
             continue;
@@ -760,7 +823,7 @@ pub(crate) fn search_command(keys: &str) -> (String, Vec<(Vec<u8>, String)>) {
                 c => value.push(c),
             }
         }
-        match value.is_ascii() {
+        match value.is_ascii() && !value.contains(['\r', '\n']) {
             true => push(&quoted, &mut head, &mut literals),
             false => literals.push((value.into_bytes(), String::new())),
         }
@@ -769,7 +832,7 @@ pub(crate) fn search_command(keys: &str) -> (String, Vec<(Vec<u8>, String)>) {
         true => "",
         false => "CHARSET UTF-8 ",
     };
-    (format!("UID SEARCH {charset}{head}"), literals)
+    Ok((format!("UID SEARCH {charset}{head}"), literals))
 }
 
 #[cfg(test)]
@@ -1295,7 +1358,8 @@ mod tests {
 
     #[test]
     fn a_search_in_ascii_goes_as_one_line() {
-        let (head, literals) = search_command("OR FROM \"ann\" SUBJECT \"say \\\"hi\\\"\"");
+        let (head, literals) =
+            search_command("OR FROM \"ann\" SUBJECT \"say \\\"hi\\\"\"").unwrap();
         assert_eq!(
             head,
             "UID SEARCH OR FROM \"ann\" SUBJECT \"say \\\"hi\\\"\""
@@ -1305,7 +1369,7 @@ mod tests {
 
     #[test]
     fn each_non_ascii_string_becomes_a_literal_with_the_text_after_it() {
-        let (head, literals) = search_command("FROM \"joão\" TEXT \"reunião\" UNSEEN");
+        let (head, literals) = search_command("FROM \"joão\" TEXT \"reunião\" UNSEEN").unwrap();
         assert_eq!(head, "UID SEARCH CHARSET UTF-8 FROM ");
         assert_eq!(
             literals,
@@ -1375,44 +1439,233 @@ mod tests {
         )
     }
 
-    /// imap-proto parses nested lists by recursion and async-imap parses
-    /// whatever arrives, so without the cap this answer overflows a 2 MB
-    /// stack, the size of a tokio worker's, before any depth check of
-    /// this crate runs.
-    #[test]
-    fn a_structure_nested_past_the_cap_fails_without_overflowing_the_stack() {
-        let run = std::thread::Builder::new()
+    /// Runs `test` on a 2 MB stack, the size of a tokio worker's, so an
+    /// answer that makes imap-proto recurse too deep crashes the test
+    /// binary instead of passing.
+    fn on_a_small_stack<F: std::future::Future<Output = ()>>(
+        test: impl FnOnce() -> F + Send + 'static,
+    ) {
+        std::thread::Builder::new()
             .stack_size(2 << 20)
             .spawn(|| {
-                let runtime = tokio::runtime::Builder::new_current_thread()
+                tokio::runtime::Builder::new_current_thread()
                     .enable_all()
                     .build()
-                    .unwrap();
-                runtime.block_on(async {
-                    let stream = pipe(
-                        GREETING,
-                        server(ALL, log(), |command| match command {
-                            c if c.starts_with("SELECT") => selected(),
-                            "UID FETCH 4 (UID BODYSTRUCTURE)" => vec![
-                                // One level for the FETCH list itself.
-                                nested_structure(crate::nesting::MAX_NESTING - 1)
-                                    .replace("UID 5", "UID 4"),
-                                "{tag} OK".into(),
-                            ],
-                            "UID FETCH 5 (UID BODYSTRUCTURE)" => {
-                                vec![nested_structure(10_000), "{tag} OK".into()]
-                            }
-                            _ => vec!["{tag} OK".into()],
-                        }),
-                    );
-                    let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
-                    let deepest = conn.structure("INBOX", 4).await.unwrap();
-                    assert!(deepest.is_some());
-                    let err = conn.structure("INBOX", 5).await.err();
-                    assert!(matches!(err, Some(ImapError::Protocol(_))), "{err:?}");
-                });
+                    .unwrap()
+                    .block_on(test())
             })
+            .unwrap()
+            .join()
             .unwrap();
-        run.join().unwrap();
+    }
+
+    /// A connection whose server answers `UID FETCH 5 (UID BODYSTRUCTURE)`
+    /// with `lines`, then OK.
+    async fn answering_structure(lines: Vec<String>) -> Conn<tokio::io::DuplexStream> {
+        let stream = pipe(
+            GREETING,
+            server(ALL, log(), move |command| match command {
+                c if c.starts_with("SELECT") => selected(),
+                "UID FETCH 5 (UID BODYSTRUCTURE)" => {
+                    let mut answer = lines.clone();
+                    answer.push("{tag} OK".into());
+                    answer
+                }
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        Conn::login(stream, false, &ann()).await.unwrap()
+    }
+
+    /// imap-proto parses nested lists by recursion and async-imap parses
+    /// whatever arrives, so without the cap this answer overflows the
+    /// stack before any depth check of this crate runs.
+    #[test]
+    fn a_structure_nested_past_the_cap_fails_without_overflowing_the_stack() {
+        on_a_small_stack(|| async {
+            // One level for the FETCH list itself.
+            let at_cap = nested_structure(crate::guard::MAX_NESTING - 1);
+            let mut conn = answering_structure(vec![at_cap]).await;
+            assert!(conn.structure("INBOX", 5).await.unwrap().is_some());
+            let mut conn = answering_structure(vec![nested_structure(10_000)]).await;
+            let err = conn.structure("INBOX", 5).await.err();
+            assert!(matches!(err, Some(ImapError::Protocol(_))), "{err:?}");
+        });
+    }
+
+    /// Each first line ends in what the cap could take for a literal and
+    /// imap-proto reads as text, so without the refusal the deep line
+    /// after it reaches the parser uncounted.
+    #[test]
+    fn a_deep_line_behind_a_status_line_literal_is_refused() {
+        on_a_small_stack(|| async {
+            let hiding = [
+                vec![format!("{} OK x{{200000}}", "A".repeat(30))],
+                vec!["* OK [BADCHARSET ({4}".into(), "AAAA)] x{200000}".into()],
+                vec!["+ [BADCHARSET ({4}".into(), "AAAA)] x{200000}".into()],
+            ];
+            for mut lines in hiding {
+                let first = lines[0].clone();
+                lines.push(nested_structure(10_000));
+                let mut conn = answering_structure(lines).await;
+                let err = conn.structure("INBOX", 5).await.err();
+                assert!(
+                    matches!(err, Some(ImapError::Protocol(_))),
+                    "{first}: {err:?}"
+                );
+            }
+        });
+    }
+
+    /// A structure as a mail client meets one: an alternative inside a
+    /// mixed, a PDF whose quoted name holds parentheses and quotes, and a
+    /// forwarded message whose subject is a literal full of parentheses.
+    #[test]
+    fn a_realistic_structure_passes_the_cap() {
+        on_a_small_stack(|| async {
+            let lines = vec![
+                concat!(
+                    "* 12 FETCH (UID 5 BODYSTRUCTURE (",
+                    "((\"text\" \"plain\" (\"charset\" \"utf-8\") NIL NIL \"quoted-printable\" 1204 31 NIL NIL NIL NIL)",
+                    "(\"text\" \"html\" (\"charset\" \"utf-8\") NIL NIL \"quoted-printable\" 5120 104 NIL NIL NIL NIL)",
+                    " \"alternative\" (\"boundary\" \"b2\") NIL NIL NIL)",
+                    "(\"application\" \"pdf\" (\"name\" \"Invoice (final) \\\"v2\\\".pdf\") NIL NIL \"base64\" 88422 NIL",
+                    " (\"attachment\" (\"filename\" \"Invoice (final) \\\"v2\\\".pdf\" \"size\" \"64620\")) NIL NIL)",
+                    "(\"message\" \"rfc822\" NIL NIL NIL \"7bit\" 3000 (\"Mon, 7 Feb 2026 10:00:00 +0000\" {12}",
+                )
+                .to_string(),
+                concat!(
+                    "Subj ((((( ) ((\"Ann (work)\" NIL \"ann\" \"example.com\")) ((\"Ann\" NIL \"ann\" \"example.com\"))",
+                    " ((\"Ann\" NIL \"ann\" \"example.com\")) ((NIL NIL \"bob\" \"example.com\")) NIL NIL NIL \"<x@y>\")",
+                    " (\"text\" \"plain\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 10 1 NIL NIL NIL NIL) 40 NIL",
+                    " (\"attachment\" (\"filename\" \"fwd (1).eml\")) NIL NIL)",
+                    " \"mixed\" (\"boundary\" \"b1\") NIL (\"en\") NIL))",
+                )
+                .to_string(),
+            ];
+            let mut conn = answering_structure(lines).await;
+            let structure = conn.structure("INBOX", 5).await.unwrap().unwrap();
+            assert_eq!(structure.root.mime_type, "multipart/mixed");
+            assert_eq!(structure.root.children.len(), 3);
+        });
+    }
+
+    #[tokio::test]
+    async fn an_answer_tagged_for_another_command_is_a_protocol_error() {
+        let stream = pipe(
+            GREETING,
+            server(ALL, log(), |command| match command {
+                "NOOP" => vec!["A9999 OK not yours".into()],
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        // Read as news, the stray answer would leave the client waiting for
+        // its own tag forever.
+        let answer = tokio::time::timeout(Duration::from_secs(5), conn.noop()).await;
+        assert!(
+            matches!(answer, Ok(Err(ImapError::Protocol(_)))),
+            "{answer:?}"
+        );
+    }
+
+    #[test]
+    fn a_line_break_in_a_search_string_goes_inside_a_literal() {
+        let (head, literals) = search_command("FROM \"x\r\nA9 DELETE INBOX\r\n\"").unwrap();
+        assert_eq!(head, "UID SEARCH CHARSET UTF-8 FROM ");
+        assert_eq!(
+            literals,
+            [(b"x\r\nA9 DELETE INBOX\r\n".to_vec(), String::new())]
+        );
+    }
+
+    #[test]
+    fn a_line_break_outside_quotes_or_a_nul_anywhere_is_refused() {
+        for keys in ["ALL\r\nA9 DELETE INBOX", "ALL\nX", "FROM \"a\0b\"", "ALL\0"] {
+            assert!(
+                matches!(search_command(keys), Err(ImapError::Protocol(_))),
+                "{keys:?}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn an_injected_search_sends_one_command() {
+        let log = log();
+        let stream = pipe(
+            GREETING,
+            server(ALL, log.clone(), |command| match command {
+                c if c.starts_with("SELECT") => selected(),
+                c if c.starts_with("UID SEARCH") => vec!["* SEARCH".into(), "{tag} OK".into()],
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        conn.search("INBOX", "FROM \"x\r\nA9 DELETE INBOX\r\n\"")
+            .await
+            .unwrap();
+        let commands = seen(&log);
+        assert!(
+            !commands.iter().any(|c| c.starts_with("DELETE")),
+            "{commands:?}"
+        );
+        assert!(
+            commands.contains(
+                &"UID SEARCH CHARSET UTF-8 FROM {20}x\r\nA9 DELETE INBOX\r\n".to_string()
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn a_command_that_brings_too_many_answers_is_refused() {
+        let stream = pipe(
+            GREETING,
+            server(ALL, log(), |command| match command {
+                c if c.starts_with("SELECT") => selected(),
+                c if c.starts_with("UID FETCH") => {
+                    let mut lines: Vec<String> = (0..1_100)
+                        .map(|_| "* 1 FETCH (UID 9 FLAGS (\\Seen))".to_string())
+                        .collect();
+                    lines.push("{tag} OK".into());
+                    lines
+                }
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        let err = conn.flags("INBOX", &UidSet::from_uid(1), None).await.err();
+        // An open-ended set may bring answers up to the cap for any command.
+        assert_eq!(err, None);
+        let err = conn
+            .flags("INBOX", &UidSet::from_uids([1]), None)
+            .await
+            .err();
+        assert!(matches!(err, Some(ImapError::Protocol(_))), "{err:?}");
+    }
+
+    #[tokio::test]
+    async fn a_large_body_comes_back_whole() {
+        let body: String = (0..200_000u32)
+            .map(|i| char::from(b'a' + (i % 26) as u8))
+            .collect();
+        let answer = body.clone();
+        let stream = pipe(
+            GREETING,
+            server(ALL, log(), move |command| match command {
+                c if c.starts_with("SELECT") => selected(),
+                c if c.starts_with("UID FETCH 5") => vec![
+                    format!("* 2 FETCH (UID 5 BODY[] {{{}}}", answer.len()),
+                    format!("{answer})"),
+                    // News about another message in the same read.
+                    "* 3 EXISTS".into(),
+                    "{tag} OK".into(),
+                ],
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        let fetched = conn.body("INBOX", 5, "").await.unwrap().unwrap();
+        assert_eq!(fetched, body.as_bytes());
+        conn.noop().await.unwrap();
     }
 }

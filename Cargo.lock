@@ -2218,6 +2218,7 @@ dependencies = [
  "mailrs-ai",
  "mailrs-domain",
  "mailrs-gmail",
+ "mailrs-imap",
  "mailrs-mime",
  "mailrs-pgp",
  "mailrs-smime",
@@ -2270,6 +2271,7 @@ dependencies = [
  "clap",
  "mailrs-domain",
  "mailrs-gmail",
+ "mailrs-imap",
  "mailrs-store",
  "mailrs-sync",
  "tokio",
@@ -2340,6 +2342,8 @@ dependencies = [
  "mailrs-mime",
  "thiserror 2.0.20",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
