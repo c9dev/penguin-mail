@@ -44,6 +44,11 @@ pub struct ImapState {
     /// answers when the server sends more during an IDLE than the guard
     /// lets through and the connection is dropped.
     pub overflow_idle: bool,
+    /// SELECT leaves UIDNEXT out, as RFC 3501 lets a server do.
+    pub omit_uidnext: bool,
+    /// How many UIDs every SEARCH has answered, in total, so a test can
+    /// tell a paged listing from one that asks for everything each page.
+    pub answered: u64,
     /// The UIDVALIDITY the next new or reset mailbox gets.
     next_uidvalidity: u32,
 }
@@ -69,6 +74,9 @@ pub struct FakeMailbox {
     /// APPENDUID whose UIDVALIDITY is one higher than SELECT reports; later
     /// APPENDs agree with SELECT.
     pub unmade: bool,
+    /// The set the next QRESYNC SELECT names as vanished in place of what
+    /// the mailbox expunged, as a server may name any range, `1:*` too.
+    pub vanish_next: Option<UidSet>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -90,6 +98,23 @@ const MAX_SENT: usize = 100;
 /// the oldest one kept gets the whole mailbox, as from a server that no
 /// longer knows what went since that MODSEQ.
 const MAX_EXPUNGED: usize = 1_000;
+
+/// The most answers the real client keeps for one command
+/// (`mailrs_imap`'s `MAX_ANSWERS`). Past it the client drops the
+/// connection with `ImapError::Protocol`, and so does this fake, for a
+/// SEARCH or a flags FETCH.
+pub const MAX_ANSWERS: usize = 100_000;
+
+/// `answers` as the client hands them over, or the error it gives past
+/// [`MAX_ANSWERS`].
+fn within_answers<T>(answers: Vec<T>) -> Result<Vec<T>, ImapError> {
+    match answers.len() > MAX_ANSWERS {
+        true => Err(ImapError::Protocol(format!(
+            "the server sent more than {MAX_ANSWERS} answers to one command"
+        ))),
+        false => Ok(answers),
+    }
+}
 
 /// The flags a mailbox keeps unless a test says otherwise: the system
 /// flags and any keyword a client makes up.
@@ -115,6 +140,7 @@ impl FakeMailbox {
             expunged: VecDeque::new(),
             forgotten: 0,
             unmade: false,
+            vanish_next: None,
         }
     }
 
@@ -198,6 +224,8 @@ impl FakeImap {
                 calls: VecDeque::new(),
                 aimed: Vec::new(),
                 overflow_idle: false,
+                omit_uidnext: false,
+                answered: 0,
                 next_uidvalidity: 1000,
             }),
             changed: Notify::new(),
@@ -315,7 +343,9 @@ impl FakeImap {
     }
 
     /// The next call to `method`, a word of the call log such as
-    /// `"select"`, answers `err`. Calls to other methods pass.
+    /// `"select"`, answers `err`. Calls to other methods pass. `method`
+    /// can also be the start of a call's line, such as `"body INBOX 1 1"`,
+    /// to aim at one call of a method.
     pub fn fail_on(&self, method: &str, err: ImapError) {
         self.with(|s| s.aimed.push((method.to_string(), err)));
     }
@@ -357,8 +387,12 @@ impl FakeImap {
         f: impl FnOnce(&mut ImapState) -> Result<T, ImapError>,
     ) -> Result<T, ImapError> {
         self.with(|s| {
-            let method = line.split(' ').next().unwrap_or_default();
-            let aimed = s.aimed.iter().position(|(m, _)| m == method);
+            let aimed = s.aimed.iter().position(|(m, _)| {
+                line == *m
+                    || line
+                        .strip_prefix(m.as_str())
+                        .is_some_and(|r| r.starts_with(' '))
+            });
             s.calls.push_back(line);
             if s.calls.len() > MAX_CALLS {
                 s.calls.pop_front();
@@ -500,10 +534,11 @@ impl ImapApi for FakeImap {
         };
         self.call(line, |s| {
             let caps = s.capabilities;
+            let omit_uidnext = s.omit_uidnext;
             let m = s.selectable(mailbox)?;
             let mut selected = Selected {
                 uidvalidity: m.uidvalidity,
-                uidnext: Some(m.uidnext),
+                uidnext: (!omit_uidnext).then_some(m.uidnext),
                 highestmodseq: caps.condstore.then_some(m.highestmodseq),
                 exists: u32::try_from(m.messages.len()).unwrap_or(u32::MAX),
                 permanent_flags: m.permanent_flags.clone(),
@@ -513,6 +548,13 @@ impl ImapApi for FakeImap {
             // A server reports changes only against the UIDVALIDITY it has.
             if let Some(since) = since.filter(|since| since.uidvalidity == m.uidvalidity) {
                 let known = |uid: u32| since.known.as_ref().is_none_or(|k| k.contains(uid));
+                if let Some(named) = m.vanish_next.take() {
+                    selected.vanished = match &since.known {
+                        Some(known) => named.intersection(known),
+                        None => named,
+                    };
+                    return Ok(selected);
+                }
                 match since.modseq < m.forgotten {
                     // Some expunges since that MODSEQ are forgotten, so a
                     // list of the ones kept would be partial. Answer as a
@@ -568,13 +610,15 @@ impl ImapApi for FakeImap {
             .unwrap_or_default();
         self.call(format!("flags {mailbox} {uids}{since}"), |s| {
             let m = s.selectable(mailbox)?;
-            Ok(m.messages
-                .iter()
-                .filter(|(uid, message)| {
-                    uids.contains(**uid) && changed_since.is_none_or(|c| message.modseq > c)
-                })
-                .map(|(uid, message)| flags_of(*uid, message, condstore))
-                .collect())
+            within_answers(
+                m.messages
+                    .iter()
+                    .filter(|(uid, message)| {
+                        uids.contains(**uid) && changed_since.is_none_or(|c| message.modseq > c)
+                    })
+                    .map(|(uid, message)| flags_of(*uid, message, condstore))
+                    .collect(),
+            )
         })
     }
 
@@ -584,11 +628,16 @@ impl ImapApi for FakeImap {
         self.call(format!("search {mailbox} {keys}"), |s| {
             let m = s.selectable(mailbox)?;
             let query = search::parse(keys)?;
-            Ok(m.messages
+            // `*` in a UID set is the highest UID the mailbox holds.
+            let highest = m.messages.keys().next_back().copied().unwrap_or(0);
+            let found: Vec<u32> = m
+                .messages
                 .iter()
-                .filter(|(uid, message)| query.matches(**uid, message))
+                .filter(|(uid, message)| query.matches(**uid, highest, message))
                 .map(|(uid, _)| *uid)
-                .collect())
+                .collect();
+            s.answered += found.len() as u64;
+            within_answers(found)
         })
     }
 
@@ -1147,7 +1196,10 @@ mod search {
     }
 
     impl Key {
-        pub(super) fn matches(&self, uid: u32, message: &FakeMessage) -> bool {
+        /// Whether message `uid` matches, in a mailbox whose highest UID
+        /// is `highest`: a UID set that runs to `*` names that message
+        /// even when its UID is below the set's start (RFC 3501).
+        pub(super) fn matches(&self, uid: u32, highest: u32, message: &FakeMessage) -> bool {
             let has = |needle: &str, hay: &str| hay.to_lowercase().contains(&needle.to_lowercase());
             let day =
                 || DateTime::from_timestamp_millis(message.internal_date).map(|d| d.date_naive());
@@ -1189,10 +1241,16 @@ mod search {
                 Key::On(date) => day() == Some(*date),
                 Key::Larger(n) => message.raw.len() as u64 > *n,
                 Key::Smaller(n) => (message.raw.len() as u64) < *n,
-                Key::Uid(set) => set.contains(uid),
-                Key::Not(inner) => !inner.matches(uid, message),
-                Key::Or(left, right) => left.matches(uid, message) || right.matches(uid, message),
-                Key::And(all) => all.iter().all(|k| k.matches(uid, message)),
+                Key::Uid(set) => {
+                    set.contains(uid)
+                        || (uid == highest
+                            && set.ranges().last().is_some_and(|r| *r.end() == u32::MAX))
+                }
+                Key::Not(inner) => !inner.matches(uid, highest, message),
+                Key::Or(left, right) => {
+                    left.matches(uid, highest, message) || right.matches(uid, highest, message)
+                }
+                Key::And(all) => all.iter().all(|k| k.matches(uid, highest, message)),
             }
         }
     }

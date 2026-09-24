@@ -42,13 +42,13 @@ impl ImapState {
 }
 
 impl Kept {
-    /// Where `selected` leaves the mailbox. RFC 3501 lets a server leave
-    /// UIDNEXT out; the next look then asks for new mail from UID 1, and
-    /// the remote refs keep what the store holds from arriving twice.
-    pub fn of(selected: &Selected) -> Kept {
+    /// Where `selected` leaves the mailbox, whose highest UID is `top`.
+    /// RFC 3501 lets a server leave UIDNEXT out; the next look then asks
+    /// for new mail from above `top`.
+    pub fn of(selected: &Selected, top: u32) -> Kept {
         Kept {
             uidvalidity: selected.uidvalidity,
-            uidnext: selected.uidnext.unwrap_or(1),
+            uidnext: selected.uidnext.unwrap_or(top.saturating_add(1)),
             modseq: selected.highestmodseq,
         }
     }

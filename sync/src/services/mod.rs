@@ -31,7 +31,7 @@ use mailrs_domain::{
 use mailrs_gmail::{
     Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, Person, Series,
 };
-use mailrs_imap::{ImapClient, SmtpClient};
+use mailrs_imap::{ImapClient, SmtpClient, UidSet};
 use mailrs_mime::Parts;
 use mailrs_store::threading::Links;
 
@@ -130,12 +130,23 @@ pub enum RemoteChange {
         id: String,
         memberships: Vec<Membership>,
     },
-    /// Every message `mailbox` holds now, by the server's names, from a
-    /// server that names no message it expunged. A stored message located
-    /// in the mailbox that the list lacks has gone.
+    /// The messages `mailbox` expunged, by UID under `uidvalidity`. The
+    /// set is the server's and one range can name four billion UIDs, so
+    /// the engine tests each stored message's UID with
+    /// [`UidSet::contains`] and never walks the set.
+    Vanished {
+        mailbox: String,
+        uidvalidity: u32,
+        uids: UidSet,
+    },
+    /// Every message `mailbox` holds now, by UID under `uidvalidity`, from
+    /// a server that names no message it expunged. A stored message
+    /// located in the mailbox that the set lacks has gone, as has one
+    /// located under another UIDVALIDITY.
     Holds {
         mailbox: String,
-        ids: Vec<String>,
+        uidvalidity: u32,
+        uids: UidSet,
     },
 }
 

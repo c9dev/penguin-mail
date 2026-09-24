@@ -5,6 +5,7 @@ mod calendar;
 mod connect;
 mod contacts;
 mod engine;
+pub(crate) mod heap;
 mod export;
 mod imap;
 mod incremental;

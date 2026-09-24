@@ -7,12 +7,20 @@
 //! engine, which can read the store, compares them with what is stored
 //! rather than this adapter keeping a copy of its last look. New mail is
 //! every UID from the UIDNEXT seen last.
+//!
+//! Every search and flags fetch over a mailbox goes in UID ranges of at
+//! most [`WINDOW`](super::window::WINDOW), so a mailbox of any size stays inside what the client
+//! takes from one command, and a look holds one window's answer at a
+//! time.
+
+use std::ops::RangeInclusive;
 
 use mailrs_domain::Location;
 use mailrs_imap::{Capabilities, FlagsOf, ImapError, Selected, Since, UidSet};
 
 use super::keywords::flag_changes;
 use super::state::{ImapState, Kept};
+use super::window::{window_keys, windows};
 use super::{Imap, ImapApi, SYSTEM_KEYWORDS, Submit};
 use crate::BackendError;
 use crate::services::{Changes, RemoteChange, SyncState};
@@ -35,7 +43,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
                 }
                 // A mailbox the account starts keeping in step now: its new
                 // mail counts from here.
-                None => Kept::of(&self.select(&mailbox, None).await?),
+                None => self.kept_now(&mailbox).await?,
             };
             state.mailboxes.insert(mailbox, kept);
         }
@@ -50,13 +58,20 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     pub(super) async fn feed_start(&self) -> Result<Changes, BackendError> {
         let mut state = ImapState::default();
         for mailbox in self.synced().await? {
-            let selected = self.select(&mailbox, None).await?;
-            state.mailboxes.insert(mailbox, Kept::of(&selected));
+            let kept = self.kept_now(&mailbox).await?;
+            state.mailboxes.insert(mailbox, kept);
         }
         Ok(Changes {
             changes: Vec::new(),
             state: state.written(),
         })
+    }
+
+    /// Where `mailbox` stands now.
+    async fn kept_now(&self, mailbox: &str) -> Result<Kept, BackendError> {
+        let selected = self.select(mailbox, None).await?;
+        let top = self.top_uid(mailbox, &selected).await?;
+        Ok(Kept::of(&selected, top))
     }
 
     /// What changed in `mailbox` since `kept`, added to `changes`, and
@@ -73,8 +88,8 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             (true, Some(modseq)) if modseq > 0 => Some(Since {
                 uidvalidity: kept.uidvalidity,
                 modseq,
-                // The server reports every UID it expunged since `modseq`;
-                // one the store never held drops out as a stale name.
+                // The server reports every UID it expunged since `modseq`,
+                // as a set the engine tests stored UIDs against.
                 known: None,
             }),
             _ => None,
@@ -84,71 +99,124 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             // Every UID the store holds for the mailbox is void.
             return Err(BackendError::StateLost);
         }
-        let name = |uid: u32| {
-            Location {
-                mailbox: mailbox.to_string(),
-                uidvalidity: selected.uidvalidity,
-                uid,
-            }
-            .to_string()
+        let top = self.top_uid(mailbox, &selected).await?;
+        // The messages met before this look; the ones above arrive as new
+        // mail, flags and all.
+        let met = (1, top.min(kept.uidnext.saturating_sub(1)));
+        let look = Look {
+            mailbox,
+            uidvalidity: selected.uidvalidity,
+            uidnext: kept.uidnext,
+            stored: self.known().keywords.unwrap_or(SYSTEM_KEYWORDS),
         };
-        let is_new = |uid: u32| uid >= kept.uidnext;
-        // The server answers QRESYNC's report only when it actually
-        // applied QRESYNC to this SELECT; a plain SELECT, and a QRESYNC
-        // SELECT that fell back to one, both report `qresync: false` with
-        // empty `vanished` and `changed`, which say nothing and must not
-        // move the stored MODSEQ as if they did.
-        let quick = selected.qresync;
-        let flags: Vec<FlagsOf> = match (quick, capabilities.condstore, kept.modseq) {
+        // QRESYNC's report counts only when the server applied QRESYNC to
+        // this SELECT. A plain SELECT, and a QRESYNC SELECT that fell back
+        // to one, report `qresync: false`, and the look then compares by
+        // CONDSTORE or in full. Either way the look covers every change up
+        // to the HIGHESTMODSEQ this SELECT reports, so the state after
+        // takes that MODSEQ.
+        match (selected.qresync, capabilities.condstore, kept.modseq) {
             (true, _, _) => {
-                changes.extend(
-                    selected
-                        .vanished
-                        .iter()
-                        .filter(|uid| !is_new(*uid))
-                        .map(|uid| RemoteChange::Deleted { id: name(uid) }),
-                );
-                selected.changed.clone()
+                // The server's set goes to the engine whole, cut to the
+                // UIDs met before; the engine tests each stored UID
+                // against it.
+                let vanished = match met.1 >= met.0 {
+                    true => selected.vanished.intersection(&UidSet::range(met.0, met.1)),
+                    false => UidSet::new(),
+                };
+                if !vanished.is_empty() {
+                    changes.push(RemoteChange::Vanished {
+                        mailbox: mailbox.to_string(),
+                        uidvalidity: selected.uidvalidity,
+                        uids: vanished,
+                    });
+                }
+                look.flags(&selected.changed, changes);
             }
             (false, true, Some(modseq)) => {
-                changes.push(self.holds(mailbox, &name).await?);
-                self.api
-                    .flags(mailbox, &UidSet::from_uid(1), Some(modseq))
-                    .await?
+                changes.push(self.holds(mailbox, selected.uidvalidity, top).await?);
+                match self.changed_since(&look, met, modseq, changes).await {
+                    Ok(()) => {}
+                    // The client dropped a CHANGEDSINCE answer past its
+                    // budget, and the connection with it; this look reads
+                    // the window's flags instead, once.
+                    Err(ImapError::Protocol(_)) => self.window_flags(&look, met, changes).await?,
+                    Err(err) => return Err(err.into()),
+                }
             }
             _ => {
-                changes.push(self.holds(mailbox, &name).await?);
-                let (_, window) = self.window_uids(mailbox, self.settings.window_days).await?;
-                match window.is_empty() {
-                    true => Vec::new(),
-                    false => {
-                        self.api
-                            .flags(mailbox, &UidSet::from_uids(window.iter().copied()), None)
-                            .await?
-                    }
-                }
+                changes.push(self.holds(mailbox, selected.uidvalidity, top).await?);
+                self.window_flags(&look, met, changes).await?;
             }
-        };
-        let stored = self.known().keywords.unwrap_or(SYSTEM_KEYWORDS);
-        for changed in flags.iter().filter(|f| !is_new(f.uid)) {
-            changes.extend(flag_changes(&name(changed.uid), &changed.flags, stored));
         }
-        // A server that leaves UIDNEXT out gets asked every time.
-        if selected.uidnext.is_none_or(|next| next > kept.uidnext) {
-            let keys = format!("UID {}:* UNDELETED", kept.uidnext);
-            let mut fresh = self.api.search(mailbox, &keys).await?;
-            // `n:*` always names the last message, even one below `n`.
-            fresh.retain(|uid| is_new(*uid));
-            fresh.sort_unstable();
-            changes.extend(fresh.into_iter().map(|uid| {
-                let id = name(uid);
-                RemoteChange::Added {
-                    thread_id: id.clone(),
-                    id,
-                }
-            }));
+        let mut fresh = Vec::new();
+        self.search_windows(mailbox, (kept.uidnext, top), "UNDELETED", |found| {
+            fresh.extend(found)
+        })
+        .await?;
+        changes.extend(fresh.into_iter().map(|uid| {
+            let id = look.name(uid);
+            RemoteChange::Added {
+                thread_id: id.clone(),
+                id,
+            }
+        }));
+        let mut after = Kept::of(&selected, top);
+        // A server that leaves UIDNEXT out: new mail counts from above the
+        // highest UID met so far, even when the newest message has gone.
+        if selected.uidnext.is_none() {
+            after.uidnext = after.uidnext.max(kept.uidnext);
         }
-        Ok(Kept::of(&selected))
+        Ok(after)
+    }
+
+    /// The flags that changed since `modseq` among the messages in `met`,
+    /// a window at a time, added to `changes`.
+    async fn changed_since(
+        &self,
+        look: &Look<'_>,
+        met: (u32, u32),
+        modseq: u64,
+        changes: &mut Vec<RemoteChange>,
+    ) -> Result<(), ImapError> {
+        for window in windows(met.0, met.1) {
+            let uids = UidSet::range(*window.start(), *window.end());
+            let flags = self.api.flags(look.mailbox, &uids, Some(modseq)).await?;
+            look.flags(&flags, changes);
+        }
+        Ok(())
+    }
+
+    /// The flags of every message in the window among `met`, as they stand
+    /// now, a window of UIDs at a time, added to `changes`.
+    async fn window_flags(
+        &self,
+        look: &Look<'_>,
+        met: (u32, u32),
+        changes: &mut Vec<RemoteChange>,
+    ) -> Result<(), BackendError> {
+        let keys = window_keys(
+            look.mailbox,
+            self.settings.window_days,
+            chrono::Local::now().date_naive(),
+        );
+        for window in windows(met.0, met.1) {
+            let mut ranges = Vec::new();
+            self.search_windows(
+                look.mailbox,
+                (*window.start(), *window.end()),
+                &keys,
+                |found| push_runs(&mut ranges, &found),
+            )
+            .await?;
+            let uids = UidSet::from(ranges);
+            if uids.is_empty() {
+                continue;
+            }
+            let flags = self.api.flags(look.mailbox, &uids, None).await?;
+            look.flags(&flags, changes);
+        }
+        Ok(())
     }
 
     /// Selects `mailbox`, asking for QRESYNC's report when `since` gives
@@ -174,18 +242,72 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         self.select(mailbox, None).await
     }
 
-    /// Every message `mailbox` holds now, as one change. A server without
-    /// QRESYNC names no UID it expunged, so this is how an expunge made
-    /// elsewhere reaches the store.
+    /// Every message `mailbox` holds now, up to `top`, as one change. A
+    /// server without QRESYNC names no UID it expunged, so this is how an
+    /// expunge made elsewhere reaches the store. The UIDs arrive a window
+    /// at a time and go into the set as runs, so a mailbox with few gaps
+    /// costs a few ranges.
     async fn holds(
         &self,
         mailbox: &str,
-        name: &impl Fn(u32) -> String,
+        uidvalidity: u32,
+        top: u32,
     ) -> Result<RemoteChange, BackendError> {
-        let every = self.api.search(mailbox, "ALL").await?;
+        let mut ranges = Vec::new();
+        self.search_windows(mailbox, (1, top), "", |found| {
+            push_runs(&mut ranges, &found)
+        })
+        .await?;
         Ok(RemoteChange::Holds {
             mailbox: mailbox.to_string(),
-            ids: every.into_iter().map(name).collect(),
+            uidvalidity,
+            uids: UidSet::from(ranges),
         })
+    }
+}
+
+/// One mailbox's look: what names its messages and what their flags mean.
+struct Look<'a> {
+    mailbox: &'a str,
+    uidvalidity: u32,
+    /// The UIDNEXT the last look saw. A message at or above it arrives as
+    /// new mail, which brings its flags along.
+    uidnext: u32,
+    /// The keywords the server stores.
+    stored: &'static [&'static str],
+}
+
+impl Look<'_> {
+    fn name(&self, uid: u32) -> String {
+        Location {
+            mailbox: self.mailbox.to_string(),
+            uidvalidity: self.uidvalidity,
+            uid,
+        }
+        .to_string()
+    }
+
+    /// The changes that bring each message met before to the flags in
+    /// `flags`, added to `changes`.
+    fn flags(&self, flags: &[FlagsOf], changes: &mut Vec<RemoteChange>) {
+        for changed in flags.iter().filter(|f| f.uid < self.uidnext) {
+            changes.extend(flag_changes(
+                &self.name(changed.uid),
+                &changed.flags,
+                self.stored,
+            ));
+        }
+    }
+}
+
+/// Adds `uids` to `ranges` a run of consecutive UIDs at a time, so a
+/// mailbox with few gaps costs a few ranges rather than one per message.
+/// [`UidSet::from`] sorts and merges what comes out of any order.
+fn push_runs(ranges: &mut Vec<RangeInclusive<u32>>, uids: &[u32]) {
+    for &uid in uids {
+        match ranges.last_mut() {
+            Some(last) if last.end().checked_add(1) == Some(uid) => *last = *last.start()..=uid,
+            _ => ranges.push(uid..=uid),
+        }
     }
 }

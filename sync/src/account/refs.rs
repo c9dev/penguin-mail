@@ -162,7 +162,7 @@ fn named_in(change: &RemoteChange) -> Option<&str> {
         | RemoteChange::Deleted { id }
         | RemoteChange::Gained { id, .. }
         | RemoteChange::Lost { id, .. } => Some(id),
-        RemoteChange::Holds { .. } => None,
+        RemoteChange::Vanished { .. } | RemoteChange::Holds { .. } => None,
     }
 }
 
@@ -193,7 +193,9 @@ fn change_as_stored(
             id: stored_id(&id, resolved)?,
             memberships,
         },
-        holds @ RemoteChange::Holds { .. } => holds,
+        // These name UIDs, which the engine reads against the refs of the
+        // mailbox as they stand, so a message that moved away is not there.
+        set @ (RemoteChange::Vanished { .. } | RemoteChange::Holds { .. }) => set,
     })
 }
 
@@ -291,6 +293,7 @@ mod tests {
     use std::collections::HashMap;
 
     use mailrs_domain::{Location, Membership, Memberships};
+    use mailrs_imap::UidSet;
     use mailrs_store::remote_refs::Resolved;
 
     use super::{change_as_stored, renamed, still_to_apply};
@@ -362,7 +365,8 @@ mod tests {
         );
         let holds = RemoteChange::Holds {
             mailbox: "Archive".into(),
-            ids: vec!["Archive/3/10".into()],
+            uidvalidity: 3,
+            uids: UidSet::from_uids([10]),
         };
         assert_eq!(change_as_stored(holds.clone(), &resolved), Some(holds));
     }

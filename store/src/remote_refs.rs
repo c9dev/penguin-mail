@@ -108,20 +108,29 @@ pub fn remotes_of(
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
-/// The stored messages located in `mailbox`, each with its name there.
-pub fn in_mailbox(
+/// The stored messages located in `mailbox` that `gone` picks, given each
+/// one's UIDVALIDITY and UID there. The rows go through `gone` one at a
+/// time and only the picked ids are kept, so a look at a mailbox of any
+/// size holds what it deletes and nothing else.
+pub fn in_mailbox_where(
     conn: &Connection,
     account_id: AccountId,
     mailbox: &str,
-) -> Result<Vec<(String, String)>> {
+    mut gone: impl FnMut(u32, u32) -> bool,
+) -> Result<Vec<String>> {
     let mut stmt = conn.prepare_cached(
-        "SELECT message_id, remote FROM remote_refs \
-         WHERE account_id = ?1 AND mailbox = ?2 ORDER BY message_id",
+        "SELECT uidvalidity, uid, message_id FROM remote_refs \
+         WHERE account_id = ?1 AND mailbox = ?2 \
+         AND uidvalidity IS NOT NULL AND uid IS NOT NULL ORDER BY message_id",
     )?;
-    let rows = stmt.query_map(params![account_id, mailbox], |row| {
-        Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-    })?;
-    Ok(rows.collect::<rusqlite::Result<_>>()?)
+    let mut rows = stmt.query(params![account_id, mailbox])?;
+    let mut picked = Vec::new();
+    while let Some(row) = rows.next()? {
+        if gone(row.get(0)?, row.get(1)?) {
+            picked.push(row.get(2)?);
+        }
+    }
+    Ok(picked)
 }
 
 #[cfg(test)]
@@ -131,7 +140,7 @@ mod tests {
     use mailrs_domain::{AccountId, Location, Memberships, MessageMeta};
     use rusqlite::Connection;
 
-    use super::{Resolved, in_mailbox, locate, remotes_of, resolve};
+    use super::{Resolved, in_mailbox_where, locate, remotes_of, resolve};
     use crate::accounts;
     use crate::messages::{self, Change};
 
@@ -195,8 +204,8 @@ mod tests {
             )])
         );
         assert_eq!(
-            in_mailbox(&conn, account_id, "INBOX").unwrap(),
-            [("INBOX/7/42".to_string(), "INBOX/7/42".to_string())]
+            in_mailbox_where(&conn, account_id, "INBOX", |_, _| true).unwrap(),
+            ["INBOX/7/42"]
         );
     }
 
@@ -224,10 +233,29 @@ mod tests {
             remotes_of(&conn, account_id, &names(&["INBOX/7/42"])).unwrap(),
             HashMap::from([("INBOX/7/42".to_string(), "Archive/3/10".to_string())])
         );
-        assert!(in_mailbox(&conn, account_id, "INBOX").unwrap().is_empty());
+        assert!(
+            in_mailbox_where(&conn, account_id, "INBOX", |_, _| true)
+                .unwrap()
+                .is_empty()
+        );
         assert_eq!(
-            in_mailbox(&conn, account_id, "Archive").unwrap(),
-            [("INBOX/7/42".to_string(), "Archive/3/10".to_string())]
+            in_mailbox_where(&conn, account_id, "Archive", |_, _| true).unwrap(),
+            ["INBOX/7/42"]
+        );
+    }
+
+    #[test]
+    fn a_look_in_a_mailbox_picks_by_uidvalidity_and_uid() {
+        let (conn, account_id) = store(&["INBOX/7/1", "INBOX/7/2", "INBOX/6/3"]);
+        locate(&conn, account_id, "INBOX/7/1", &at("INBOX", 7, 1)).unwrap();
+        locate(&conn, account_id, "INBOX/7/2", &at("INBOX", 7, 2)).unwrap();
+        locate(&conn, account_id, "INBOX/6/3", &at("INBOX", 6, 3)).unwrap();
+        assert_eq!(
+            in_mailbox_where(&conn, account_id, "INBOX", |uidvalidity, uid| {
+                uidvalidity != 7 || uid == 2
+            })
+            .unwrap(),
+            ["INBOX/6/3", "INBOX/7/2"]
         );
     }
 

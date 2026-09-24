@@ -1,7 +1,7 @@
 //! Incremental sync: applies what the server changed since the stored sync
 //! state.
 
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 
 use mailrs_domain::{ChangeEvent, Membership, MessageMeta, Role};
 use mailrs_store::messages::Change;
@@ -112,15 +112,36 @@ impl AccountSync {
                                 memberships.iter().map(|m| Change::of(id, m.clone(), false)),
                             );
                         }
-                        RemoteChange::Holds { mailbox, ids } => {
-                            let present: HashSet<&str> = ids.iter().map(String::as_str).collect();
-                            for (message_id, remote) in
-                                remote_refs::in_mailbox(c, account_id, mailbox)?
-                            {
-                                if !present.contains(remote.as_str()) {
-                                    batch.push(Change::Delete { message_id });
-                                }
-                            }
+                        // The server's set is tested one stored UID at a
+                        // time, never walked: one range can name four
+                        // billion UIDs.
+                        RemoteChange::Vanished {
+                            mailbox,
+                            uidvalidity,
+                            uids,
+                        } => {
+                            let gone =
+                                remote_refs::in_mailbox_where(c, account_id, mailbox, |v, uid| {
+                                    v == *uidvalidity && uids.contains(uid)
+                                })?;
+                            batch.extend(
+                                gone.into_iter()
+                                    .map(|message_id| Change::Delete { message_id }),
+                            );
+                        }
+                        RemoteChange::Holds {
+                            mailbox,
+                            uidvalidity,
+                            uids,
+                        } => {
+                            let gone =
+                                remote_refs::in_mailbox_where(c, account_id, mailbox, |v, uid| {
+                                    v != *uidvalidity || !uids.contains(uid)
+                                })?;
+                            batch.extend(
+                                gone.into_iter()
+                                    .map(|message_id| Change::Delete { message_id }),
+                            );
                         }
                     }
                 }

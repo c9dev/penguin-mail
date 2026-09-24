@@ -4,10 +4,11 @@
 //! lists it; the engine keeps it under that id from then on.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
+use std::ops::RangeInclusive;
 
 use chrono::NaiveDate;
 use mailrs_domain::{Location, Memberships, MessageMeta, Role};
-use mailrs_imap::{Fetched, UidSet};
+use mailrs_imap::{Fetched, Selected, UidSet};
 use mailrs_store::threading::Links;
 use serde::{Deserialize, Serialize};
 
@@ -23,6 +24,26 @@ use crate::services::{Backfill, Found, LIST_PAGE_SIZE, MailBackend, RemoteRef, W
 struct Page {
     mailbox: String,
     below: Option<u32>,
+}
+
+/// The most UIDs one SEARCH or flags FETCH over a mailbox names. The
+/// client drops the connection past 100,000 answers to one command and
+/// past 4 MiB of SEARCH answer, and a range of 50,000 stays well inside
+/// both whatever the mailbox holds.
+pub(super) const WINDOW: u32 = 50_000;
+
+/// UID ranges of at most [`WINDOW`] UIDs that cover `from` to `to`,
+/// lowest first; none when `to` is below `from`.
+pub(super) fn windows(from: u32, to: u32) -> impl Iterator<Item = RangeInclusive<u32>> {
+    let from = from.max(1);
+    let count = match to >= from {
+        true => (to - from) / WINDOW + 1,
+        false => 0,
+    };
+    (0..count).map(move |i| {
+        let start = from + i * WINDOW;
+        start..=start.saturating_add(WINDOW - 1).min(to)
+    })
 }
 
 /// The SEARCH keys for the window in `mailbox` on `today`: all of the
@@ -132,6 +153,52 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             .and_then(|f| f.role)
     }
 
+    /// The highest UID `mailbox` holds, 0 when it holds none: one below
+    /// the UIDNEXT `selected` reports, or the server's answer for `UID *`
+    /// when it left UIDNEXT out, as RFC 3501 allows.
+    pub(super) async fn top_uid(
+        &self,
+        mailbox: &str,
+        selected: &Selected,
+    ) -> Result<u32, BackendError> {
+        match selected.uidnext {
+            Some(next) => Ok(next.saturating_sub(1)),
+            None => Ok(self
+                .api
+                .search(mailbox, "UID *")
+                .await?
+                .into_iter()
+                .max()
+                .unwrap_or(0)),
+        }
+    }
+
+    /// The UIDs in `from` to `to` that match `keys`, searched a
+    /// [`WINDOW`] at a time. Each window's answer goes to `take` sorted,
+    /// lowest first, before the next is asked for, so the caller holds
+    /// one window's answer at a time.
+    pub(super) async fn search_windows(
+        &self,
+        mailbox: &str,
+        (from, to): (u32, u32),
+        keys: &str,
+        mut take: impl FnMut(Vec<u32>) + Send,
+    ) -> Result<(), BackendError> {
+        for window in windows(from, to) {
+            let (start, end) = (*window.start(), *window.end());
+            let keys = match keys.is_empty() {
+                true => format!("UID {start}:{end}"),
+                false => format!("UID {start}:{end} {keys}"),
+            };
+            let mut uids = self.api.search(mailbox, &keys).await?;
+            uids.retain(|uid| window.contains(uid));
+            uids.sort_unstable();
+            uids.dedup();
+            take(uids);
+        }
+        Ok(())
+    }
+
     /// The window's UIDs in `mailbox`, newest first, with the UIDVALIDITY
     /// they belong to.
     pub(super) async fn window_uids(
@@ -140,10 +207,12 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         days: i64,
     ) -> Result<(u32, Vec<u32>), BackendError> {
         let selected = self.select(mailbox, None).await?;
+        let top = self.top_uid(mailbox, &selected).await?;
         let keys = window_keys(mailbox, days, chrono::Local::now().date_naive());
-        let mut uids = self.api.search(mailbox, &keys).await?;
-        uids.sort_unstable_by(|a, b| b.cmp(a));
-        uids.dedup();
+        let mut uids = Vec::new();
+        self.search_windows(mailbox, (1, top), &keys, |found| uids.extend(found))
+            .await?;
+        uids.reverse();
         Ok((selected.uidvalidity, uids))
     }
 
@@ -312,7 +381,25 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
 mod tests {
     use chrono::NaiveDate;
 
-    use super::window_keys;
+    use super::{window_keys, windows};
+
+    /// Each window's first and last UID.
+    fn bounds(from: u32, to: u32) -> Vec<(u32, u32)> {
+        windows(from, to).map(|w| (*w.start(), *w.end())).collect()
+    }
+
+    #[test]
+    fn windows_cover_the_span_in_ranges_of_fifty_thousand() {
+        assert_eq!(
+            bounds(1, 120_000),
+            [(1, 50_000), (50_001, 100_000), (100_001, 120_000)]
+        );
+        assert_eq!(bounds(7, 7), [(7, 7)]);
+        assert_eq!(bounds(0, 3), [(1, 3)]);
+        assert!(bounds(5, 4).is_empty());
+        assert!(bounds(1, 0).is_empty());
+        assert_eq!(bounds(u32::MAX - 1, u32::MAX), [(u32::MAX - 1, u32::MAX)]);
+    }
 
     #[test]
     fn the_window_is_the_whole_inbox_and_recent_mail_elsewhere() {

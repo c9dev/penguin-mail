@@ -5,10 +5,14 @@ mod feed;
 mod mailboxes;
 mod window;
 
+use std::sync::Arc;
+
 use mailrs_domain::EpochMillis;
 use mailrs_imap::Capabilities;
 
-use crate::fake::FakeImap;
+use crate::fake::{FakeImap, FakeSmtp};
+use crate::services::Imap;
+use crate::tests::fake_settings;
 
 /// A plain message from Ann with `extra` header lines, each ending in
 /// CRLF, above the blank line.
@@ -32,4 +36,20 @@ pub(super) fn offering(change: impl FnOnce(&mut Capabilities)) -> FakeImap {
     let imap = FakeImap::new();
     imap.with(|s| change(&mut s.capabilities));
     imap
+}
+
+/// The adapter alone on `imap`, with no engine or store around it, for a
+/// test that measures what one call costs.
+pub(super) fn adapter(imap: FakeImap) -> (Arc<FakeImap>, Imap<FakeImap, FakeSmtp>) {
+    let imap = Arc::new(imap);
+    let adapter = Imap::new(Arc::clone(&imap), Arc::new(FakeSmtp::default()), fake_settings());
+    (imap, adapter)
+}
+
+/// Fills `mailbox` with `count` small unread messages from yesterday.
+pub(super) fn fill(imap: &FakeImap, mailbox: &str, count: u32) {
+    let date = days_ago(1);
+    for _ in 0..count {
+        imap.deliver(mailbox, b"Subject: Note\r\n\r\nHi.\r\n".to_vec(), date);
+    }
 }
