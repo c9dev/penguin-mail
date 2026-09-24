@@ -18,20 +18,12 @@ use crate::{
     AppendUid, CopyUid, Fetched, FlagsOf, ImapError, Listed, Selected, SpecialUse, UidSet,
 };
 
-/// The most untagged answers one command may bring. A server sends one
-/// per message or mailbox, so a command that asks about more than this
-/// has to ask in windows.
+/// The most answers one command may keep: messages, mailboxes, or pairs
+/// of UIDs. A command that asks about more than this has to ask in
+/// windows. Answers a reader drops, such as a server's news about
+/// messages another client changed, do not count: the command's byte
+/// budget bounds what they cost.
 pub(crate) const MAX_ANSWERS: usize = 100_000;
-
-/// Answers a command about `uids` may bring: three for each UID, for a
-/// server that reports a flag change or an expunge beside each answer,
-/// and a thousand for news about other messages, up to [`MAX_ANSWERS`].
-pub(crate) fn answers_for(uids: &UidSet) -> usize {
-    let most = uids.len().saturating_mul(3).saturating_add(1_000);
-    usize::try_from(most)
-        .unwrap_or(MAX_ANSWERS)
-        .min(MAX_ANSWERS)
-}
 
 /// The most flags one message may carry in an answer. A message rarely
 /// carries more than a dozen; every flag kept costs about 60 bytes, so a
@@ -99,10 +91,10 @@ pub(crate) trait Reads {
         Ok(())
     }
 
-    /// How many untagged answers the command may bring before the
-    /// connection gives up on it.
-    fn most(&self) -> usize {
-        MAX_ANSWERS
+    /// How many answers the reader keeps so far. The connection gives up
+    /// on the command once it passes [`MAX_ANSWERS`].
+    fn kept(&self) -> usize {
+        0
     }
 
     /// How many bytes the command may bring back in all.
@@ -184,8 +176,21 @@ pub(crate) struct SelectReader {
     /// ranges, and a range the server repeats is kept once after each
     /// fold.
     pending: Vec<RangeInclusive<u32>>,
+    /// Whether the server sent PERMANENTFLAGS.
+    permanent_flags: bool,
     error: Option<ImapError>,
 }
+
+/// What a mailbox keeps when the server sends no PERMANENTFLAGS: every
+/// flag, as RFC 3501 section 6.3.1 says to assume.
+const EVERY_FLAG: [&str; 6] = [
+    "\\Answered",
+    "\\Flagged",
+    "\\Deleted",
+    "\\Seen",
+    "\\Draft",
+    "\\*",
+];
 
 /// VANISHED ranges a SELECT holds unmerged, beyond twice the merged set.
 /// A fold sorts the pending list with the set's ranges, n log n in their
@@ -206,6 +211,7 @@ impl Reads for SelectReader {
                 ResponseCode::HighestModSeq(m) => self.selected.highestmodseq = Some(*m),
                 ResponseCode::PermanentFlags(flags) => {
                     self.selected.permanent_flags = flags.iter().map(|f| f.to_string()).collect();
+                    self.permanent_flags = true;
                 }
                 _ => {}
             },
@@ -236,6 +242,10 @@ impl Reads for SelectReader {
     fn bytes(&self) -> u64 {
         SELECT_BYTES
     }
+
+    fn kept(&self) -> usize {
+        self.changed.len()
+    }
 }
 
 impl SelectReader {
@@ -264,10 +274,19 @@ impl SelectReader {
             .uidvalidity
             .ok_or_else(|| ImapError::Protocol("SELECT gave no UIDVALIDITY".into()))?;
         self.fold();
+        // A server may name any range, `1:4294967295` included. Cut to the
+        // store's UIDs, the answer is no larger than what the caller sent.
+        let vanished = match &self.known {
+            Some(known) => self.vanished.intersection(known),
+            None => self.vanished,
+        };
+        if !self.permanent_flags {
+            self.selected.permanent_flags = EVERY_FLAG.map(String::from).to_vec();
+        }
         Ok(Selected {
             uidvalidity,
             changed: self.changed.into_values().collect(),
-            vanished: self.vanished,
+            vanished,
             ..self.selected
         })
     }
@@ -319,8 +338,8 @@ impl Reads for FlagsReader {
         self.error.clone().map_or(Ok(()), Err)
     }
 
-    fn most(&self) -> usize {
-        answers_for(&self.wanted)
+    fn kept(&self) -> usize {
+        self.flags.len()
     }
 }
 
@@ -384,8 +403,8 @@ impl Reads for HeadersReader {
         self.error.clone().map_or(Ok(()), Err)
     }
 
-    fn most(&self) -> usize {
-        answers_for(&self.wanted)
+    fn kept(&self) -> usize {
+        self.fetched.len()
     }
 
     fn read(&mut self, response: &Response<'_>) {
@@ -469,10 +488,6 @@ impl Reads for SectionReader {
         }
     }
 
-    fn most(&self) -> usize {
-        answers_for(&UidSet::from_uids([self.uid]))
-    }
-
     fn bytes(&self) -> u64 {
         BODY_BYTES
     }
@@ -523,10 +538,6 @@ impl StructureReader {
 }
 
 impl Reads for StructureReader {
-    fn most(&self) -> usize {
-        answers_for(&UidSet::from_uids([self.uid]))
-    }
-
     fn read(&mut self, response: &Response<'_>) {
         let Some(attributes) = fetched_for(response, self.uid) else {
             return;
@@ -546,6 +557,10 @@ pub(crate) struct ListReader {
 }
 
 impl Reads for ListReader {
+    fn kept(&self) -> usize {
+        self.listed.len()
+    }
+
     fn read(&mut self, response: &Response<'_>) {
         let Response::MailboxData(MailboxDatum::List {
             name_attributes,
@@ -645,9 +660,26 @@ impl Reads for SearchReader {
 
 /// COPYUID, from the tagged OK of COPY or from the untagged OK that MOVE
 /// sends before its expunges (RFC 6851 section 4.3).
-#[derive(Default)]
+///
+/// A COPYUID of 50 bytes can name four billion UIDs, so the reader never
+/// walks more of it than the command asked about, and at most
+/// [`MAX_ANSWERS`] pairs. It keeps nothing when the server names more
+/// UIDs than that or two sets of different lengths: the caller then finds
+/// the copies as it would on a server without UIDPLUS. Of the pairs it
+/// walks, it keeps those whose source the command named.
 pub(crate) struct CopyUidReader {
+    /// The UIDs the command copied or moved.
+    wanted: UidSet,
     pub(crate) copy_uid: Option<CopyUid>,
+}
+
+impl CopyUidReader {
+    pub(crate) fn new(uids: &UidSet) -> Self {
+        CopyUidReader {
+            wanted: uids.clone(),
+            copy_uid: None,
+        }
+    }
 }
 
 impl Reads for CopyUidReader {
@@ -665,12 +697,22 @@ impl Reads for CopyUidReader {
             } => code,
             _ => return,
         };
-        if let Some(ResponseCode::CopyUid(uidvalidity, from, to)) = code {
-            self.copy_uid = Some(CopyUid {
-                uidvalidity: *uidvalidity,
-                pairs: uids(from).zip(uids(to)).collect(),
-            });
+        let Some(ResponseCode::CopyUid(uidvalidity, from, to)) = code else {
+            return;
+        };
+        let most = self.wanted.len().min(MAX_ANSWERS as u64);
+        let named = counted(from);
+        if named != counted(to) || named > most {
+            return;
         }
+        let pairs = uids(from)
+            .zip(uids(to))
+            .filter(|(source, _)| self.wanted.contains(*source))
+            .collect();
+        self.copy_uid = Some(CopyUid {
+            uidvalidity: *uidvalidity,
+            pairs,
+        });
     }
 }
 
@@ -697,12 +739,27 @@ impl Reads for AppendUidReader {
     }
 }
 
-/// The UIDs a COPYUID or APPENDUID set names, in the order it names them.
+/// The UIDs a COPYUID or APPENDUID set names, in the order it names them,
+/// each range lowest first. Walk it only as far as [`counted`] allows: one
+/// range can name four billion UIDs.
 fn uids(set: &[UidSetMember]) -> impl Iterator<Item = u32> + '_ {
     set.iter().flat_map(|member| match member {
         UidSetMember::Uid(uid) => *uid..=*uid,
-        UidSetMember::UidRange(range) => range.clone(),
+        UidSetMember::UidRange(range) => {
+            (*range.start()).min(*range.end())..=(*range.start()).max(*range.end())
+        }
     })
+}
+
+/// How many UIDs a COPYUID or APPENDUID set names, counted without
+/// walking it. RFC 3501 reads a range either way round.
+fn counted(set: &[UidSetMember]) -> u64 {
+    set.iter()
+        .map(|member| match member {
+            UidSetMember::Uid(_) => 1,
+            UidSetMember::UidRange(range) => u64::from(range.start().abs_diff(*range.end())) + 1,
+        })
+        .sum()
 }
 
 #[cfg(test)]
@@ -761,6 +818,28 @@ pub(crate) mod tests {
         let mut reader = SelectReader::default();
         feed(&mut reader, &["* 3 EXISTS\r\n"]);
         assert!(matches!(reader.finish(), Err(ImapError::Protocol(_))));
+    }
+
+    /// RFC 3501: without PERMANENTFLAGS, every flag is permanent. An empty
+    /// list, as on a read-only mailbox, keeps none.
+    #[test]
+    fn a_select_without_permanentflags_keeps_every_flag() {
+        let mut missing = SelectReader::default();
+        feed(&mut missing, &["* OK [UIDVALIDITY 7] ok\r\n"]);
+        let missing = missing.finish().unwrap();
+        assert!(missing.keeps("\\Deleted"));
+        assert!(missing.keeps("$Junk"));
+        let mut empty = SelectReader::default();
+        feed(
+            &mut empty,
+            &[
+                "* OK [UIDVALIDITY 7] ok\r\n",
+                "* OK [PERMANENTFLAGS ()] read-only\r\n",
+            ],
+        );
+        let empty = empty.finish().unwrap();
+        assert!(!empty.keeps("\\Seen"));
+        assert!(!empty.keeps("$Junk"));
     }
 
     #[test]
@@ -875,7 +954,7 @@ pub(crate) mod tests {
 
     #[test]
     fn copyuid_pairs_each_source_with_its_copy() {
-        let mut from_move = CopyUidReader::default();
+        let mut from_move = CopyUidReader::new(&UidSet::from_uids([304, 319, 320]));
         feed(
             &mut from_move,
             &["* OK [COPYUID 38505 304,319:320 3956:3958] Done\r\n"],
@@ -887,13 +966,75 @@ pub(crate) mod tests {
                 pairs: vec![(304, 3956), (319, 3957), (320, 3958)]
             })
         );
-        let mut from_copy = CopyUidReader::default();
+        let mut from_copy = CopyUidReader::new(&UidSet::from_uids([5]));
         feed(&mut from_copy, &["A4 OK [COPYUID 7 5 9] Copied\r\n"]);
         assert_eq!(
             from_copy.copy_uid,
             Some(CopyUid {
                 uidvalidity: 7,
                 pairs: vec![(5, 9)]
+            })
+        );
+    }
+
+    /// A COPYUID of 50 bytes can name four billion UIDs. The reader walks
+    /// no more of it than the command asked about, and keeps nothing when
+    /// the server names more than that or two sets of different lengths.
+    #[test]
+    fn a_copyuid_naming_more_than_was_asked_keeps_nothing_and_stays_small() {
+        let asked = UidSet::from_uids([1, 2, 3]);
+        for line in [
+            "* OK [COPYUID 7 1:1000000 1:1000000] moved\r\n",
+            "* OK [COPYUID 7 1:4294967295 1:4294967295] moved\r\n",
+            "* OK [COPYUID 7 1:3 10:11] moved\r\n",
+            "* OK [COPYUID 7 1:2 10:12] moved\r\n",
+        ] {
+            let mark = crate::testing::HeapMark::start();
+            let mut reader = CopyUidReader::new(&asked);
+            feed(&mut reader, &[line]);
+            let peak = mark.peak();
+            eprintln!("{}: peak {peak} bytes", line.trim_end());
+            assert_eq!(reader.copy_uid, None, "{line}");
+            assert!(peak < 4096, "{line}: peak {peak} bytes");
+        }
+    }
+
+    /// An open-ended MOVE (`n:*`) asks about every UID, so the pairs a
+    /// COPYUID may bring stop at [`MAX_ANSWERS`].
+    #[test]
+    fn a_copyuid_for_an_open_ended_set_stops_at_the_answer_cap() {
+        let mark = crate::testing::HeapMark::start();
+        let mut reader = CopyUidReader::new(&UidSet::from_uid(1));
+        feed(
+            &mut reader,
+            &["A1 OK [COPYUID 7 1:4294967295 1:4294967295] moved\r\n"],
+        );
+        let peak = mark.peak();
+        eprintln!("open-ended COPYUID: peak {peak} bytes");
+        assert_eq!(reader.copy_uid, None);
+        assert!(peak < 4096, "peak {peak} bytes");
+        let at_cap = u32::try_from(MAX_ANSWERS).unwrap();
+        let mut reader = CopyUidReader::new(&UidSet::from_uid(1));
+        feed(
+            &mut reader,
+            &[&format!(
+                "A1 OK [COPYUID 7 1:{at_cap} 1:{at_cap}] moved\r\n"
+            )],
+        );
+        assert_eq!(reader.copy_uid.map(|c| c.pairs.len()), Some(MAX_ANSWERS));
+    }
+
+    /// Pairs whose source the command did not name are dropped; the rest
+    /// keep their place in the server's order.
+    #[test]
+    fn a_copyuid_keeps_only_the_sources_asked_for() {
+        let mut reader = CopyUidReader::new(&UidSet::from_uids([4, 6, 7]));
+        feed(&mut reader, &["* OK [COPYUID 9 5:7 20:22] moved\r\n"]);
+        assert_eq!(
+            reader.copy_uid,
+            Some(CopyUid {
+                uidvalidity: 9,
+                pairs: vec![(6, 21), (7, 22)]
             })
         );
     }
@@ -982,13 +1123,55 @@ pub(crate) mod tests {
         assert_eq!(selected.changed[0].uid, 117);
     }
 
+    /// One VANISHED range can name four billion UIDs. With the store's
+    /// UIDs given, the answer names no UID outside them, and stays ranges.
     #[test]
-    fn a_command_may_bring_a_few_answers_for_each_uid_it_names() {
-        assert_eq!(answers_for(&UidSet::from_uids([1, 2])), 1_006);
-        assert_eq!(answers_for(&UidSet::from_uid(1)), MAX_ANSWERS);
-        assert_eq!(HeadersReader::new(&UidSet::from_uids([1])).most(), 1_003);
-        assert_eq!(ListReader::default().most(), MAX_ANSWERS);
-        assert_eq!(SearchReader::default().most(), MAX_ANSWERS);
+    fn a_vanished_range_past_the_known_uids_is_cut_to_them() {
+        let known = UidSet::from_ranges([5..=5, 9..=12]);
+        let mut reader = SelectReader::new(Some(&known));
+        feed(
+            &mut reader,
+            &[
+                "* OK [UIDVALIDITY 3] ok\r\n",
+                "* VANISHED (EARLIER) 1:4294967295\r\n",
+            ],
+        );
+        let selected = reader.finish().unwrap();
+        assert_eq!(selected.vanished, known);
+        let mut part = SelectReader::new(Some(&known));
+        feed(
+            &mut part,
+            &[
+                "* OK [UIDVALIDITY 3] ok\r\n",
+                "* VANISHED (EARLIER) 1:6,11,100:200\r\n",
+            ],
+        );
+        assert_eq!(part.finish().unwrap().vanished.to_string(), "5,11");
+    }
+
+    /// Readers count what they keep, not what the server sends: news
+    /// about a message the command did not name is dropped and free.
+    #[test]
+    fn readers_count_the_answers_they_keep() {
+        let mut flags = FlagsReader::new(&UidSet::from_uids([1, 2]));
+        feed(
+            &mut flags,
+            &[
+                "* 1 FETCH (UID 1 FLAGS ())\r\n",
+                "* 1 FETCH (UID 1 FLAGS (\\Seen))\r\n",
+                "* 9 FETCH (UID 9 FLAGS (\\Seen))\r\n",
+            ],
+        );
+        assert_eq!(flags.kept(), 1);
+        let mut list = ListReader::default();
+        feed(
+            &mut list,
+            &["* LIST () \"/\" a\r\n", "* LIST () \"/\" b\r\n"],
+        );
+        assert_eq!(list.kept(), 2);
+        let mut headers = HeadersReader::new(&UidSet::from_uids([1]));
+        feed(&mut headers, &["* 1 FETCH (UID 1 FLAGS ())\r\n"]);
+        assert_eq!(headers.kept(), 0);
         assert_eq!(SectionReader::new(1).bytes(), crate::guard::BODY_BYTES);
         assert_eq!(ListReader::default().bytes(), crate::guard::COMMAND_BYTES);
     }

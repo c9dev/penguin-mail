@@ -92,9 +92,37 @@ impl UidSet {
         &self.ranges
     }
 
-    /// Every UID in the set, lowest first. Walks an open end to
-    /// `u32::MAX`, so call it on sets built from UIDs a server or the
-    /// store named, never on one from [`UidSet::from_uid`].
+    /// The UIDs in both sets, found range by range in one pass over each,
+    /// so a range of four billion UIDs costs what a range of one does.
+    pub fn intersection(&self, other: &UidSet) -> UidSet {
+        let (mut mine, mut theirs) = (
+            self.ranges.iter().peekable(),
+            other.ranges.iter().peekable(),
+        );
+        let mut both = Vec::new();
+        while let (Some(a), Some(b)) = (mine.peek(), theirs.peek()) {
+            let start = (*a.start()).max(*b.start());
+            let end = (*a.end()).min(*b.end());
+            if start <= end {
+                both.push(start..=end);
+            }
+            // The range that ends first meets nothing further on.
+            match a.end() < b.end() {
+                true => mine.next(),
+                false => theirs.next(),
+            };
+        }
+        // The pieces come out sorted and apart, so this only trims the
+        // spare capacity.
+        UidSet::from(both)
+    }
+
+    /// Every UID in the set, lowest first. One range can hold four
+    /// billion UIDs, and a server can name such a range in a line of 20
+    /// bytes, so call it only on sets whose size the caller controls: the
+    /// store's own UIDs, or a server's answer cut to them with
+    /// [`UidSet::intersection`]. Test a server-named set with
+    /// [`UidSet::contains`] instead.
     pub fn iter(&self) -> impl Iterator<Item = u32> + '_ {
         self.ranges.iter().flat_map(|r| r.clone())
     }
@@ -210,6 +238,33 @@ mod tests {
         assert!(UidSet::new().is_empty());
         assert_eq!(UidSet::new().to_string(), "");
         assert_eq!(UidSet::from_uids([]).len(), 0);
+    }
+
+    #[test]
+    fn an_intersection_keeps_the_uids_in_both_as_ranges() {
+        let known = UidSet::from_ranges([3..=5, 9..=12, 40..=40]);
+        let everything = UidSet::range(1, u32::MAX);
+        assert_eq!(everything.intersection(&known), known);
+        assert_eq!(known.intersection(&everything), known);
+        let some = UidSet::from_ranges([1..=4, 10..=10, 12..=39]);
+        assert_eq!(some.intersection(&known).to_string(), "3:4,10,12");
+        assert!(known.intersection(&UidSet::new()).is_empty());
+    }
+
+    /// Two sets of 100,000 ranges each meet in one pass over both.
+    #[test]
+    fn an_intersection_of_large_sets_takes_one_pass() {
+        let odd = UidSet::from_ranges((0..100_000u32).map(|i| i * 4 + 1..=i * 4 + 2));
+        let even = UidSet::from_ranges((0..100_000u32).map(|i| i * 4 + 2..=i * 4 + 3));
+        let started = std::time::Instant::now();
+        let both = odd.intersection(&even);
+        assert_eq!(both.ranges().len(), 100_000);
+        assert_eq!(both.len(), 100_000);
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(1),
+            "{:?}",
+            started.elapsed()
+        );
     }
 
     #[test]

@@ -18,7 +18,7 @@ use tokio::time::Instant;
 use crate::guard::{Guarded, IDLE_BYTES};
 use crate::parse::{
     AppendUidReader, CapabilityReader, CopyUidReader, FlagsReader, HeadersReader, ListReader,
-    Reads, SearchReader, SectionReader, SelectReader, StructureReader,
+    MAX_ANSWERS, Reads, SearchReader, SectionReader, SelectReader, StructureReader,
 };
 use crate::refusal::{Doing, Refusal, from_async_imap, from_io, refusal};
 use crate::{
@@ -199,7 +199,10 @@ impl<S: Stream> Conn<S> {
         self.exec(&command, Doing::Mailbox(mailbox), &mut reader)
             .await?;
         self.selected = Some(mailbox.to_string());
-        reader.finish()
+        Ok(Selected {
+            qresync: since.is_some(),
+            ..reader.finish()?
+        })
     }
 
     pub(crate) async fn ensure_selected(&mut self, mailbox: &str) -> Result<(), ImapError> {
@@ -381,7 +384,7 @@ impl<S: Stream> Conn<S> {
         }
         let target = quoted(to)?;
         self.ensure_selected(mailbox).await?;
-        let mut reader = CopyUidReader::default();
+        let mut reader = CopyUidReader::new(uids);
         self.exec(
             &format!("UID {verb} {uids} {target}"),
             Doing::Into(to),
@@ -560,10 +563,8 @@ impl<S: Stream> Conn<S> {
             .run_command(format!("{head}{{{}}}", first.len()))
             .await
             .map_err(|err| from_async_imap(err, doing))?;
-        let mut answers = 0;
         for (i, (literal, after)) in literals.iter().enumerate() {
-            self.wait_for_continuation(&tag, doing, reader, &mut answers)
-                .await?;
+            self.wait_for_continuation(&tag, doing, reader).await?;
             let next = literals
                 .get(i + 1)
                 .map(|(l, _)| format!("{{{}}}", l.len()))
@@ -575,7 +576,7 @@ impl<S: Stream> Conn<S> {
             stream.write_all(b"\r\n").await.map_err(from_io)?;
             stream.flush().await.map_err(from_io)?;
         }
-        self.finish_counted(&tag, doing, reader, answers).await
+        self.finish(&tag, doing, reader).await
     }
 
     async fn wait_for_continuation(
@@ -583,7 +584,6 @@ impl<S: Stream> Conn<S> {
         tag: &RequestId,
         doing: Doing<'_>,
         reader: &mut impl Reads,
-        answers: &mut usize,
     ) -> Result<(), ImapError> {
         loop {
             let response = self
@@ -601,31 +601,20 @@ impl<S: Stream> Conn<S> {
                             "the server ended the command early".into(),
                         )));
                     }
-                    count(answers, reader)?;
                     reader.read(parsed);
                     reader.check()?;
+                    kept_within_cap(reader)?;
                 }
             }
         }
     }
 
+    /// Reads the command's answers to its tagged one.
     async fn finish(
         &mut self,
         tag: &RequestId,
         doing: Doing<'_>,
         reader: &mut impl Reads,
-    ) -> Result<(), ImapError> {
-        self.finish_counted(tag, doing, reader, 0).await
-    }
-
-    /// Reads the command's answers to its tagged one, `answers` of them
-    /// read already.
-    async fn finish_counted(
-        &mut self,
-        tag: &RequestId,
-        doing: Doing<'_>,
-        reader: &mut impl Reads,
-        mut answers: usize,
     ) -> Result<(), ImapError> {
         loop {
             let response = self
@@ -641,10 +630,10 @@ impl<S: Stream> Conn<S> {
             if let Some(result) = ended(parsed, tag, doing) {
                 return result;
             }
-            count(&mut answers, reader)?;
             let Some(wanted) = reader.wants(parsed) else {
                 reader.read(parsed);
                 reader.check()?;
+                kept_within_cap(reader)?;
                 continue;
             };
             // The literal sits in the buffer async-imap read the answer
@@ -739,13 +728,14 @@ async fn raw_capability<S: Stream>(
     }
 }
 
-/// Counts one more untagged answer against what the command may bring.
-fn count(answers: &mut usize, reader: &impl Reads) -> Result<(), ImapError> {
-    *answers += 1;
-    match *answers > reader.most() {
+/// Refuses a command whose reader keeps more answers than one command may.
+/// Answers the reader drops count for nothing here: a phone that marks
+/// thousands of messages read sends news about each to every connection,
+/// and the command's byte budget bounds what that costs.
+fn kept_within_cap(reader: &impl Reads) -> Result<(), ImapError> {
+    match reader.kept() > MAX_ANSWERS {
         true => Err(ImapError::Protocol(format!(
-            "the server sent more than {} answers to one command",
-            reader.most()
+            "the server sent more than {MAX_ANSWERS} answers to one command"
         ))),
         false => Ok(()),
     }
@@ -986,10 +976,41 @@ mod tests {
         };
         let state = conn.select("INBOX", Some(&since)).await.unwrap();
         assert!(seen(&log).contains(&"SELECT \"INBOX\" (QRESYNC (7 80 1:3))".to_string()));
+        assert!(state.qresync);
         assert_eq!(state.uidvalidity, 7);
         assert_eq!(state.highestmodseq, Some(90));
         assert_eq!(state.vanished, UidSet::from_uids([2]));
         assert_eq!(state.changed.len(), 1);
+    }
+
+    /// A connection whose ENABLE was refused selects without QRESYNC even
+    /// when given a `Since`, and says so, so the caller keeps its MODSEQ.
+    #[tokio::test]
+    async fn a_select_says_whether_it_asked_for_qresync() {
+        let since = Since {
+            uidvalidity: 7,
+            modseq: 80,
+            known: None,
+        };
+        let refused = pipe(GREETING, |command: &str| match command {
+            "CAPABILITY" => vec!["* CAPABILITY IMAP4rev1 QRESYNC".into(), "{tag} OK".into()],
+            "ENABLE QRESYNC" => vec!["{tag} NO not today".into()],
+            c if c.starts_with("SELECT") => selected(),
+            _ => vec!["{tag} OK".into()],
+        });
+        let mut conn = Conn::login(refused, false, &ann()).await.unwrap();
+        assert!(!conn.select("INBOX", Some(&since)).await.unwrap().qresync);
+        let stream = pipe(
+            GREETING,
+            server(ALL, log(), |command| match command {
+                c if c.starts_with("SELECT") => selected(),
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        assert!(!conn.select("INBOX", None).await.unwrap().qresync);
+        let zero = Since { modseq: 0, ..since };
+        assert!(!conn.select("INBOX", Some(&zero)).await.unwrap().qresync);
     }
 
     #[tokio::test]
@@ -1665,15 +1686,54 @@ mod tests {
         );
     }
 
+    /// A phone that marks 1,500 messages read sends a FETCH about each to
+    /// every connection with the mailbox open. The next command reads them
+    /// and keeps none, so they cost it nothing but bytes.
     #[tokio::test]
-    async fn a_command_that_brings_too_many_answers_is_refused() {
+    async fn news_about_other_messages_does_not_count_against_a_command() {
         let stream = pipe(
             GREETING,
             server(ALL, log(), |command| match command {
                 c if c.starts_with("SELECT") => selected(),
+                c if c.starts_with("UID FETCH 5") => {
+                    let mut lines: Vec<String> = (0..1_500)
+                        .map(|n| format!("* {} FETCH (UID {} FLAGS (\\Seen))", n + 1, n + 100))
+                        .collect();
+                    lines.push("* 1 FETCH (UID 5 BODY[] {5}".into());
+                    lines.push("hello)".into());
+                    lines.push("{tag} OK".into());
+                    lines
+                }
                 c if c.starts_with("UID FETCH") => {
-                    let mut lines: Vec<String> = (0..1_100)
-                        .map(|_| "* 1 FETCH (UID 9 FLAGS (\\Seen))".to_string())
+                    let mut lines: Vec<String> = (0..1_500)
+                        .map(|n| format!("* {} FETCH (UID {} FLAGS (\\Seen))", n + 1, n + 100))
+                        .collect();
+                    lines.push("{tag} OK".into());
+                    lines
+                }
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        let body = conn.body("INBOX", 5, "").await.unwrap();
+        assert_eq!(body.as_deref(), Some(&b"hello"[..]));
+        let flags = conn.flags("INBOX", &UidSet::from_uids([1]), None).await;
+        assert_eq!(flags, Ok(Vec::new()));
+        conn.noop().await.unwrap();
+    }
+
+    /// What a command keeps is capped: an open-ended fetch keeps at most
+    /// [`crate::parse::MAX_ANSWERS`] messages.
+    #[tokio::test]
+    async fn a_command_that_keeps_too_many_answers_is_refused() {
+        let most = crate::parse::MAX_ANSWERS;
+        let stream = pipe(
+            GREETING,
+            server(ALL, log(), move |command| match command {
+                c if c.starts_with("SELECT") => selected(),
+                c if c.starts_with("UID FETCH") => {
+                    let mut lines: Vec<String> = (1..=most + 1)
+                        .map(|uid| format!("* 1 FETCH (UID {uid} FLAGS ())"))
                         .collect();
                     lines.push("{tag} OK".into());
                     lines
@@ -1683,12 +1743,6 @@ mod tests {
         );
         let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
         let err = conn.flags("INBOX", &UidSet::from_uid(1), None).await.err();
-        // An open-ended set may bring answers up to the cap for any command.
-        assert_eq!(err, None);
-        let err = conn
-            .flags("INBOX", &UidSet::from_uids([1]), None)
-            .await
-            .err();
         assert!(matches!(err, Some(ImapError::Protocol(_))), "{err:?}");
     }
 

@@ -465,6 +465,7 @@ impl ImapApi for FakeImap {
                 highestmodseq: caps.condstore.then_some(m.highestmodseq),
                 exists: u32::try_from(m.messages.len()).unwrap_or(u32::MAX),
                 permanent_flags: m.permanent_flags.clone(),
+                qresync: since.is_some(),
                 ..Selected::default()
             };
             // A server reports changes only against the UIDVALIDITY it has.
@@ -1298,9 +1299,47 @@ mod tests {
         let again = fake.select("INBOX", Some(since.clone())).await.unwrap();
         assert_eq!(again.vanished, UidSet::from_uids([2]));
         assert_eq!(again.changed.iter().map(|f| f.uid).collect::<Vec<_>>(), [1]);
+        assert!(again.qresync && !first.qresync);
         fake.with(|s| s.capabilities.qresync = false);
         let plain = fake.select("INBOX", Some(since)).await.unwrap();
         assert!(plain.vanished.is_empty() && plain.changed.is_empty());
+        assert!(!plain.qresync);
+    }
+
+    /// The real client cuts VANISHED to the UIDs `Since` names, so the
+    /// fake names no other UID either.
+    #[tokio::test]
+    async fn vanished_names_only_the_known_uids() {
+        let (fake, since) = expunged_after_since(5, 3).await;
+        let known = Since {
+            known: Some(UidSet::range(2, 5)),
+            ..since
+        };
+        let selected = fake.select("INBOX", Some(known)).await.unwrap();
+        assert_eq!(selected.vanished, UidSet::range(2, 3));
+    }
+
+    /// The fake stores a flag exactly when the client's reading of the
+    /// same PERMANENTFLAGS says the server keeps it.
+    #[test]
+    fn the_fake_keeps_what_the_client_reads_as_kept() {
+        let lists = [
+            PERMANENT_FLAGS.to_vec(),
+            vec!["\\Seen", "\\*"],
+            vec!["\\Seen", "$Forwarded"],
+            vec![],
+        ];
+        for list in lists {
+            let mut mailbox = FakeMailbox::new(1, None);
+            mailbox.permanent_flags = flags(&list);
+            let selected = Selected {
+                permanent_flags: flags(&list),
+                ..Selected::default()
+            };
+            for flag in ["\\Seen", "\\seen", "\\Deleted", "$Junk", "$forwarded"] {
+                assert_eq!(mailbox.keeps(flag), selected.keeps(flag), "{list:?} {flag}");
+            }
+        }
     }
 
     #[tokio::test]

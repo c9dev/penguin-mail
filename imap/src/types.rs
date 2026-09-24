@@ -131,21 +131,34 @@ pub struct Selected {
     /// How many messages the mailbox holds.
     pub exists: u32,
     /// The flags and keywords the server keeps for good. `\*` means it
-    /// accepts any keyword a client makes up.
+    /// accepts any keyword a client makes up. A server that sends no
+    /// PERMANENTFLAGS keeps every flag (RFC 3501 section 6.3.1), and this
+    /// then lists the system flags and `\*`.
     pub permanent_flags: Vec<String>,
     /// Under QRESYNC, with a `Since` whose UIDVALIDITY still holds: the
-    /// UIDs expunged since its MODSEQ. Empty otherwise.
+    /// UIDs expunged since its MODSEQ. Empty otherwise. When `Since`
+    /// named the store's UIDs, only those. Without them the set is the
+    /// server's, and one range can name four billion UIDs: test your own
+    /// UIDs with [`UidSet::contains`] rather than walk it.
     pub vanished: UidSet,
     /// Under QRESYNC, as `vanished`: the messages whose flags changed.
     pub changed: Vec<FlagsOf>,
+    /// Whether the SELECT asked for QRESYNC's report: the connection has
+    /// QRESYNC on and `Since` had a MODSEQ of 1 or more. When false,
+    /// empty `vanished` and `changed` say nothing about what changed, so
+    /// the caller must not move its MODSEQ on from them. Each connection
+    /// turns QRESYNC on for itself, and on one the server may refuse.
+    pub qresync: bool,
 }
 
 impl Selected {
-    /// Whether the server keeps `keyword` on its messages.
-    pub fn keeps(&self, keyword: &str) -> bool {
+    /// Whether the server keeps `flag` on its messages. `\*` covers
+    /// keywords only: a system flag such as `\Deleted` is kept when the
+    /// server lists it.
+    pub fn keeps(&self, flag: &str) -> bool {
         self.permanent_flags
             .iter()
-            .any(|f| f == "\\*" || f.eq_ignore_ascii_case(keyword))
+            .any(|f| (f == "\\*" && !flag.starts_with('\\')) || f.eq_ignore_ascii_case(flag))
     }
 }
 
@@ -374,6 +387,19 @@ Content-Type: multipart/mixed; boundary=\"b\"\r\n\r\n";
         assert!(open.keeps("$muted"));
         assert!(closed.keeps("$forwarded"));
         assert!(!closed.keeps("$muted"));
+    }
+
+    /// RFC 3501: `\*` lets a client make up keywords. A system flag the
+    /// server does not list stays temporary.
+    #[test]
+    fn a_star_keeps_keywords_and_no_unlisted_system_flag() {
+        let open = Selected {
+            permanent_flags: vec!["\\Seen".into(), "\\*".into()],
+            ..Selected::default()
+        };
+        assert!(open.keeps("\\seen"));
+        assert!(open.keeps("$Junk"));
+        assert!(!open.keeps("\\Deleted"));
     }
 
     #[test]
