@@ -34,9 +34,9 @@ pub struct ImapState {
     pub mailboxes: BTreeMap<String, FakeMailbox>,
     /// Errors the next calls return, one per call, after the call is logged.
     pub failures: VecDeque<ImapError>,
-    /// Every call, oldest first, such as `select INBOX` or
-    /// `store INBOX 1:3 + \Seen`.
-    pub calls: Vec<String>,
+    /// The latest calls, at most [`MAX_CALLS`], oldest first, such as
+    /// `select INBOX` or `store INBOX 1:3 + \Seen`.
+    pub calls: VecDeque<String>,
     /// Errors aimed at one method, such as `select`: each answers the next
     /// call to that method and no other.
     pub aimed: Vec<(String, ImapError)>,
@@ -58,8 +58,12 @@ pub struct FakeMailbox {
     pub highestmodseq: u64,
     pub permanent_flags: Vec<String>,
     pub messages: BTreeMap<u32, FakeMessage>,
-    /// Each expunged UID with the MODSEQ it went at, for QRESYNC.
-    pub expunged: Vec<(u32, u64)>,
+    /// The latest expunged UIDs, at most [`MAX_EXPUNGED`], each with the
+    /// MODSEQ it went at, for QRESYNC.
+    pub expunged: VecDeque<(u32, u64)>,
+    /// The MODSEQ of the newest expunge dropped from `expunged`: a `Since`
+    /// below it may miss expunges, so SELECT answers the whole mailbox.
+    pub forgotten: u64,
     /// Listed but not yet made, as Dovecot 2.4 lists a special-use mailbox
     /// before its first message. The first APPEND makes it and answers an
     /// APPENDUID whose UIDVALIDITY is one higher than SELECT reports; later
@@ -74,6 +78,18 @@ pub struct FakeMessage {
     pub internal_date: EpochMillis,
     pub modseq: u64,
 }
+
+/// The most calls the log keeps. The demo runs on this fake for a whole
+/// session, so the log keeps the latest calls and drops older ones.
+const MAX_CALLS: usize = 1_000;
+
+/// The most messages `FakeSmtp` keeps, the latest ones.
+const MAX_SENT: usize = 100;
+
+/// The most expunges a mailbox remembers for QRESYNC. A `Since` older than
+/// the oldest one kept gets the whole mailbox, as from a server that no
+/// longer knows what went since that MODSEQ.
+const MAX_EXPUNGED: usize = 1_000;
 
 /// The flags a mailbox keeps unless a test says otherwise: the system
 /// flags and any keyword a client makes up.
@@ -96,7 +112,8 @@ impl FakeMailbox {
             highestmodseq: 1,
             permanent_flags: PERMANENT_FLAGS.map(String::from).to_vec(),
             messages: BTreeMap::new(),
-            expunged: Vec::new(),
+            expunged: VecDeque::new(),
+            forgotten: 0,
             unmade: false,
         }
     }
@@ -130,7 +147,12 @@ impl FakeMailbox {
     fn remove(&mut self, uid: u32) -> Option<FakeMessage> {
         let message = self.messages.remove(&uid)?;
         self.highestmodseq += 1;
-        self.expunged.push((uid, self.highestmodseq));
+        self.expunged.push_back((uid, self.highestmodseq));
+        if self.expunged.len() > MAX_EXPUNGED
+            && let Some((_, modseq)) = self.expunged.pop_front()
+        {
+            self.forgotten = modseq;
+        }
         Some(message)
     }
 
@@ -173,7 +195,7 @@ impl FakeImap {
                 delimiter: '/',
                 mailboxes: BTreeMap::new(),
                 failures: VecDeque::new(),
-                calls: Vec::new(),
+                calls: VecDeque::new(),
                 aimed: Vec::new(),
                 overflow_idle: false,
                 next_uidvalidity: 1000,
@@ -237,6 +259,7 @@ impl FakeImap {
             let messages = std::mem::take(&mut target.messages);
             target.uidvalidity = uidvalidity;
             target.expunged.clear();
+            target.forgotten = 0;
             target.highestmodseq += 1;
             for (i, (_, mut message)) in messages.into_iter().enumerate() {
                 message.modseq = target.highestmodseq;
@@ -264,9 +287,9 @@ impl FakeImap {
         self.with(|s| s.overflow_idle = true);
     }
 
-    /// Every call so far.
+    /// The latest calls, at most [`MAX_CALLS`], oldest first.
     pub fn calls(&self) -> Vec<String> {
-        self.with(|s| s.calls.clone())
+        self.with(|s| s.calls.iter().cloned().collect())
     }
 
     /// How many calls went to `method`, such as `"select"`.
@@ -297,7 +320,10 @@ impl FakeImap {
         self.with(|s| {
             let method = line.split(' ').next().unwrap_or_default();
             let aimed = s.aimed.iter().position(|(m, _)| m == method);
-            s.calls.push(line);
+            s.calls.push_back(line);
+            if s.calls.len() > MAX_CALLS {
+                s.calls.pop_front();
+            }
             if let Some(err) = s.failures.pop_front() {
                 return Err(err);
             }
@@ -444,18 +470,37 @@ impl ImapApi for FakeImap {
             // A server reports changes only against the UIDVALIDITY it has.
             if let Some(since) = since.filter(|since| since.uidvalidity == m.uidvalidity) {
                 let known = |uid: u32| since.known.as_ref().is_none_or(|k| k.contains(uid));
-                selected.vanished = m
-                    .expunged
-                    .iter()
-                    .filter(|(uid, modseq)| *modseq > since.modseq && known(*uid))
-                    .map(|(uid, _)| *uid)
-                    .collect();
-                selected.changed = m
-                    .messages
-                    .iter()
-                    .filter(|(_, message)| message.modseq > since.modseq)
-                    .map(|(uid, message)| flags_of(*uid, message, true))
-                    .collect();
+                match since.modseq < m.forgotten {
+                    // Some expunges since that MODSEQ are forgotten, so a
+                    // list of the ones kept would be partial. Answer as a
+                    // server that cannot tell what changed: every UID below
+                    // UIDNEXT that is not here vanished, and every message
+                    // changed.
+                    true => {
+                        selected.vanished = (1..m.uidnext)
+                            .filter(|uid| !m.messages.contains_key(uid) && known(*uid))
+                            .collect();
+                        selected.changed = m
+                            .messages
+                            .iter()
+                            .map(|(uid, message)| flags_of(*uid, message, true))
+                            .collect();
+                    }
+                    false => {
+                        selected.vanished = m
+                            .expunged
+                            .iter()
+                            .filter(|(uid, modseq)| *modseq > since.modseq && known(*uid))
+                            .map(|(uid, _)| *uid)
+                            .collect();
+                        selected.changed = m
+                            .messages
+                            .iter()
+                            .filter(|(_, message)| message.modseq > since.modseq)
+                            .map(|(uid, message)| flags_of(*uid, message, true))
+                            .collect();
+                    }
+                }
             }
             Ok(selected)
         })
@@ -1118,7 +1163,8 @@ pub struct FakeSmtp {
 
 #[derive(Default)]
 pub struct SmtpState {
-    pub sent: Vec<Submitted>,
+    /// The latest messages handed over, at most [`MAX_SENT`], oldest first.
+    pub sent: VecDeque<Submitted>,
     /// Errors the next submissions return, one each.
     pub failures: VecDeque<ImapError>,
 }
@@ -1144,9 +1190,9 @@ impl FakeSmtp {
         self.with(|s| s.failures.push_back(err));
     }
 
-    /// Everything handed over so far, oldest first.
+    /// The latest messages handed over, oldest first.
     pub fn sent(&self) -> Vec<Submitted> {
-        self.with(|s| s.sent.clone())
+        self.with(|s| s.sent.iter().cloned().collect())
     }
 }
 
@@ -1173,7 +1219,10 @@ impl Submit for FakeSmtp {
             if let Some(err) = s.failures.pop_front() {
                 return Err(err);
             }
-            s.sent.push(Submitted {
+            if s.sent.len() == MAX_SENT {
+                s.sent.pop_front();
+            }
+            s.sent.push_back(Submitted {
                 from: from.to_string(),
                 to: to.to_vec(),
                 raw: raw.to_vec(),
@@ -1574,6 +1623,133 @@ mod tests {
                 .await,
             Err(ImapError::Network("reset".into()))
         );
+    }
+
+    #[tokio::test]
+    async fn flags_since_without_condstore_is_unsupported_even_for_no_uids() {
+        let fake = inbox_with(1);
+        fake.with(|s| s.capabilities.condstore = false);
+        assert_eq!(
+            fake.flags("INBOX", &UidSet::new(), Some(1)).await,
+            Err(ImapError::Unsupported("CONDSTORE"))
+        );
+        assert!(fake.calls().is_empty());
+    }
+
+    #[tokio::test]
+    async fn move_without_the_extension_is_unsupported_even_for_no_uids() {
+        let fake = inbox_with(1);
+        fake.with(|s| s.capabilities.moves = false);
+        assert_eq!(
+            fake.move_to("INBOX", &UidSet::new(), "Archive").await,
+            Err(ImapError::Unsupported("MOVE"))
+        );
+        assert!(fake.calls().is_empty());
+    }
+
+    #[tokio::test]
+    async fn expunge_without_uidplus_is_unsupported_even_for_no_uids() {
+        let fake = inbox_with(1);
+        fake.with(|s| s.capabilities.uidplus = false);
+        assert_eq!(
+            fake.expunge("INBOX", &UidSet::new()).await,
+            Err(ImapError::Unsupported("UIDPLUS"))
+        );
+        assert!(fake.calls().is_empty());
+    }
+
+    #[tokio::test]
+    async fn the_call_log_keeps_only_the_latest_calls() {
+        let fake = FakeImap::new();
+        for _ in 0..MAX_CALLS {
+            fake.list().await.unwrap();
+        }
+        fake.capabilities().await.unwrap();
+        let calls = fake.calls();
+        assert_eq!(calls.len(), MAX_CALLS);
+        assert_eq!(calls.last().map(String::as_str), Some("capabilities"));
+        assert_eq!(fake.calls_to("list"), MAX_CALLS - 1);
+    }
+
+    #[tokio::test]
+    async fn smtp_keeps_only_the_latest_messages() {
+        let smtp = FakeSmtp::new();
+        for i in 0..=MAX_SENT {
+            smtp.submit(
+                "me@example.com",
+                &["ann@example.com".into()],
+                i.to_string().as_bytes(),
+            )
+            .await
+            .unwrap();
+        }
+        let sent = smtp.sent();
+        assert_eq!(sent.len(), MAX_SENT);
+        assert_eq!(sent[0].raw, b"1");
+    }
+
+    /// A mailbox of `count` messages, with the state a sync took after
+    /// they arrived, and the first `gone` of them expunged since.
+    async fn expunged_after_since(count: u32, gone: u32) -> (FakeImap, Since) {
+        let fake = FakeImap::new();
+        for i in 1..=count {
+            fake.deliver(
+                "INBOX",
+                raw_message(&format!("m{i}"), "x", MARCH, None),
+                MARCH,
+            );
+        }
+        let first = fake.select("INBOX", None).await.unwrap();
+        for uid in 1..=gone {
+            fake.remote_expunge("INBOX", uid);
+        }
+        let since = Since {
+            uidvalidity: first.uidvalidity,
+            modseq: first.highestmodseq.unwrap(),
+            known: None,
+        };
+        (fake, since)
+    }
+
+    #[tokio::test]
+    async fn a_mailbox_remembers_a_bounded_number_of_expunges() {
+        let gone = u32::try_from(MAX_EXPUNGED).unwrap() + 1;
+        let (fake, _) = expunged_after_since(gone + 1, gone).await;
+        assert_eq!(
+            fake.with(|s| s.mailboxes["INBOX"].expunged.len()),
+            MAX_EXPUNGED
+        );
+    }
+
+    #[tokio::test]
+    async fn a_since_within_the_expunges_kept_gets_only_what_changed() {
+        let gone = u32::try_from(MAX_EXPUNGED).unwrap();
+        let (fake, since) = expunged_after_since(gone + 2, gone).await;
+        fake.remote_flag("INBOX", gone + 2, "\\Seen", true);
+        let selected = fake.select("INBOX", Some(since)).await.unwrap();
+        assert_eq!(selected.vanished, UidSet::range(1, gone));
+        assert_eq!(
+            selected.changed.iter().map(|f| f.uid).collect::<Vec<_>>(),
+            [gone + 2]
+        );
+    }
+
+    #[tokio::test]
+    async fn a_since_older_than_the_expunges_kept_gets_the_whole_mailbox() {
+        let gone = u32::try_from(MAX_EXPUNGED).unwrap() + 1;
+        let (fake, since) = expunged_after_since(gone + 2, gone).await;
+        let selected = fake.select("INBOX", Some(since.clone())).await.unwrap();
+        assert_eq!(selected.vanished, UidSet::range(1, gone));
+        assert_eq!(
+            selected.changed.iter().map(|f| f.uid).collect::<Vec<_>>(),
+            [gone + 1, gone + 2]
+        );
+        let known = Since {
+            known: Some(UidSet::from_uids([1, gone + 1])),
+            ..since
+        };
+        let selected = fake.select("INBOX", Some(known)).await.unwrap();
+        assert_eq!(selected.vanished, UidSet::from_uids([1]));
     }
 
     #[tokio::test]
