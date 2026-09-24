@@ -3,7 +3,8 @@
 use std::pin::pin;
 use std::time::Duration;
 
-use futures::FutureExt;
+use futures::stream::FuturesOrdered;
+use futures::{FutureExt, StreamExt};
 
 use crate::name::{domain_of, is_above};
 use crate::table::Table;
@@ -21,11 +22,13 @@ const ISPDB: &str = "https://autoconfig.thunderbird.net/v1.1/";
 const STEPS: usize = 6;
 
 /// Finds the servers for `address`. The built-in table answers with no
-/// network at all. Otherwise the MX match, the domain's own autoconfig,
-/// the ISPDB, the MX host's autoconfig, SRV records and a probe all start
-/// at once, and the answer is the highest-priority step that found
-/// something; each step gets `STEP_LIMIT`. Only the address's domain goes
-/// out, and no name above it is ever built.
+/// network at all. Otherwise the MX lookup goes out first. When the table
+/// knows the domain's mail exchangers, that answer stands and nothing else
+/// leaves the computer. When it does not, the domain's own autoconfig, the
+/// ISPDB, the MX host's autoconfig, SRV records and a probe run side by
+/// side, and the answer is the highest-priority step that found something.
+/// Each step gets `STEP_LIMIT` from the start, the wait on MX included.
+/// Only the address's domain goes out, and no name above it is ever built.
 pub async fn find<N: Net>(net: &N, address: &str) -> Found {
     let Some(domain) = domain_of(address) else {
         return Found::nothing();
@@ -36,6 +39,16 @@ pub async fn find<N: Net>(net: &N, address: &str) -> Found {
     }
     let domain = domain.as_str();
     let mx = net.mx(domain).shared();
+    // The MX hosts, once no table entry claims them. A custom domain on a
+    // provider the table knows must not reach Mozilla, the domain's own web
+    // server or the probe, so every step below waits for this first.
+    let unclaimed = || {
+        let mx = mx.clone();
+        async move {
+            let hosts = mx.await;
+            table.by_mx(&hosts).is_none().then_some(hosts)
+        }
+    };
 
     let mut by_mx = pin!(limit(async {
         let hosts = mx.clone().await;
@@ -44,16 +57,24 @@ pub async fn find<N: Net>(net: &N, address: &str) -> Found {
             .map(|entry| entry.found(Source::Mx, true))
             .filter(|found| found.verdict != Verdict::NothingFound)
     }));
-    let mut own = pin!(limit(own_autoconfig(net, domain)));
-    let mut ispdb = pin!(limit(ispdb(net, domain, domain, Source::Ispdb)));
+    let mut own = pin!(limit(async {
+        unclaimed().await?;
+        own_autoconfig(net, domain).await
+    }));
+    let mut ispdb = pin!(limit(async {
+        unclaimed().await?;
+        config_at(net, &format!("{ISPDB}{domain}"), domain, Source::Ispdb).await
+    }));
     let mut mx_derived = pin!(limit(async {
-        let hosts = mx.clone().await;
+        let hosts = unclaimed().await?;
         mx_autoconfig(net, domain, &hosts).await
     }));
     let mut srv = pin!(limit(async {
+        unclaimed().await?;
         Found::servers(srv::lookup(net, domain).await)
     }));
     let mut probe = pin!(limit(async {
+        unclaimed().await?;
         Found::servers(probe::probe(net, domain).await)
     }));
     // One slot per step: `None` while it runs, then what it found.
@@ -95,26 +116,16 @@ async fn limit(step: impl Future<Output = Option<Found>>) -> Option<Found> {
 /// The domain's own autoconfig file, over HTTPS only and without the
 /// address: first at `autoconfig.<domain>`, then at its well-known path.
 async fn own_autoconfig<N: Net>(net: &N, domain: &str) -> Option<Found> {
-    for url in [
-        format!("https://autoconfig.{domain}/mail/config-v1.1.xml"),
-        format!("https://{domain}/.well-known/autoconfig/mail/config-v1.1.xml"),
-    ] {
-        if let Some(found) = config_at(net, &url, domain, Source::Autoconfig).await {
-            return Some(found);
-        }
-    }
-    None
-}
-
-/// The ISPDB's entry for `name`, read for an address at `domain`.
-async fn ispdb<N: Net>(net: &N, name: &str, domain: &str, source: Source) -> Option<Found> {
-    config_at(net, &format!("{ISPDB}{name}"), domain, source).await
-}
-
-async fn config_at<N: Net>(net: &N, url: &str, domain: &str, source: Source) -> Option<Found> {
-    let text = net.get(url).await?;
-    let config = autoconfig::parse(&text, domain)?;
-    Found::servers(config.candidates(source, domain))
+    first_in_order(
+        net,
+        [
+            format!("https://autoconfig.{domain}/mail/config-v1.1.xml"),
+            format!("https://{domain}/.well-known/autoconfig/mail/config-v1.1.xml"),
+        ],
+        domain,
+        Source::Autoconfig,
+    )
+    .await
 }
 
 /// The autoconfig and ISPDB entries of the first MX host's parent domain,
@@ -122,16 +133,44 @@ async fn config_at<N: Net>(net: &N, url: &str, domain: &str, source: Source) -> 
 /// exchanger often sits under the domain that publishes its settings. A
 /// name that is the address's own domain, or above it, is left out.
 async fn mx_autoconfig<N: Net>(net: &N, domain: &str, hosts: &[String]) -> Option<Found> {
-    for name in mx_names(domain, hosts) {
-        let url = format!("https://autoconfig.{name}/mail/config-v1.1.xml");
-        if let Some(found) = config_at(net, &url, domain, Source::MxAutoconfig).await {
-            return Some(found);
-        }
-        if let Some(found) = ispdb(net, &name, domain, Source::MxAutoconfig).await {
-            return Some(found);
+    let urls = mx_names(domain, hosts).into_iter().flat_map(|name| {
+        [
+            format!("https://autoconfig.{name}/mail/config-v1.1.xml"),
+            format!("{ISPDB}{name}"),
+        ]
+    });
+    first_in_order(net, urls, domain, Source::MxAutoconfig).await
+}
+
+/// Asks every URL at once and answers with the first one, in the order
+/// given, that serves a usable file. A URL that hangs would otherwise use
+/// up the step's time before discovery asks the next one.
+async fn first_in_order<N: Net>(
+    net: &N,
+    urls: impl IntoIterator<Item = String>,
+    domain: &str,
+    source: Source,
+) -> Option<Found> {
+    let urls: Vec<String> = urls.into_iter().collect();
+    // `FuturesOrdered` runs them side by side but hands the answers back
+    // in the order they went in, so a later URL counts only once every
+    // earlier one has failed.
+    let mut asked: FuturesOrdered<_> = urls
+        .iter()
+        .map(|url| config_at(net, url, domain, source))
+        .collect();
+    while let Some(answer) = asked.next().await {
+        if answer.is_some() {
+            return answer;
         }
     }
     None
+}
+
+async fn config_at<N: Net>(net: &N, url: &str, domain: &str, source: Source) -> Option<Found> {
+    let text = net.get(url).await?;
+    let config = autoconfig::parse(&text, domain)?;
+    Found::servers(config.candidates(source, domain))
 }
 
 /// The names the MX-derived step asks about, in order.
@@ -143,7 +182,7 @@ pub(crate) fn mx_names(domain: &str, hosts: &[String]) -> Vec<String> {
     let base = psl::domain_str(host).map(str::to_string);
     let mut names: Vec<String> = Vec::new();
     for name in [parent, base].into_iter().flatten() {
-        // A public suffix is nobody's settings; `psl` names none as a
+        // A public suffix publishes no settings. `psl` names none as a
         // registrable domain, and the parent of `mx.co.uk` is one.
         let registrable = psl::domain_str(&name).is_some();
         if registrable && name != domain && !is_above(&name, domain) && !names.contains(&name) {
@@ -342,6 +381,112 @@ mod tests {
         let found = find(&net, "ann@example.org").await;
         assert_eq!(found.candidates[0].source, Source::Mx);
         assert_eq!(started.elapsed(), Duration::from_secs(3));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_custom_domain_on_a_known_provider_asks_nothing_but_its_mx() {
+        let net = FakeNet::default()
+            .answer_mx("example.org", &["in1-smtp.messagingengine.com"])
+            .delay("example.org", Duration::from_millis(30));
+        let found = find(&net, "ann@example.org").await;
+        assert_eq!(found.verdict, Verdict::Servers);
+        assert_eq!(found.candidates[0].source, Source::Mx);
+        assert_eq!(net.requests(), [Request::Mx("example.org".into())]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_workspace_domain_asks_nothing_but_its_mx() {
+        let net = FakeNet::default()
+            .answer_mx("example.org", &["smtp.google.com"])
+            .delay("example.org", Duration::from_millis(30));
+        assert_eq!(find(&net, "ann@example.org").await.verdict, Verdict::Google);
+        assert_eq!(net.requests(), [Request::Mx("example.org".into())]);
+    }
+
+    #[tokio::test]
+    async fn servers_named_by_the_mx_hosts_domain_must_be_confirmed() {
+        let net = FakeNet::default()
+            .answer_mx("example.org", &["mx1.mail.hoster.net"])
+            .serve(
+                "https://autoconfig.thunderbird.net/v1.1/hoster.net",
+                MAILBOX,
+            );
+        let found = find(&net, "ann@example.org").await;
+        assert_eq!(found.candidates[0].source, Source::MxAutoconfig);
+        assert!(found.candidates.iter().all(|c| c.confirm));
+    }
+
+    #[tokio::test]
+    async fn servers_the_mx_hosts_domain_puts_inside_the_domain_need_no_confirmation() {
+        let net = FakeNet::default()
+            .answer_mx("example.org", &["mx1.mail.hoster.net"])
+            .serve("https://autoconfig.hoster.net/mail/config-v1.1.xml", HOSTER);
+        let found = find(&net, "ann@example.org").await;
+        assert_eq!(found.candidates[0].source, Source::MxAutoconfig);
+        assert_eq!(found.candidates[0].imap.host, "mail.example.org");
+        assert!(found.candidates.iter().all(|c| !c.confirm));
+    }
+
+    // A real request gives up after 8 seconds. Asked one after the other,
+    // the second URL would have 2 of the step's 10 seconds left.
+    #[tokio::test(start_paused = true)]
+    async fn a_slow_autoconfig_host_leaves_time_for_the_well_known_path() {
+        let net = FakeNet::default()
+            .delay(
+                "https://autoconfig.example.org/mail/config-v1.1.xml",
+                Duration::from_secs(8),
+            )
+            .serve(
+                "https://example.org/.well-known/autoconfig/mail/config-v1.1.xml",
+                HOSTER,
+            )
+            .delay(
+                "https://example.org/.well-known/autoconfig/mail/config-v1.1.xml",
+                Duration::from_secs(5),
+            );
+        let found = find(&net, "ann@example.org").await;
+        assert_eq!(found.candidates[0].source, Source::Autoconfig);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn slow_mx_host_names_leave_time_for_the_last_one() {
+        let slow = Duration::from_secs(4);
+        let net = FakeNet::default()
+            .answer_mx("example.org", &["mx1.mail.hoster.net"])
+            .delay(
+                "https://autoconfig.mail.hoster.net/mail/config-v1.1.xml",
+                slow,
+            )
+            .delay(
+                "https://autoconfig.thunderbird.net/v1.1/mail.hoster.net",
+                slow,
+            )
+            .delay("https://autoconfig.hoster.net/mail/config-v1.1.xml", slow)
+            .serve(
+                "https://autoconfig.thunderbird.net/v1.1/hoster.net",
+                MAILBOX,
+            );
+        let found = find(&net, "ann@example.org").await;
+        assert_eq!(found.candidates[0].source, Source::MxAutoconfig);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn within_a_step_the_first_url_wins_even_when_it_answers_last() {
+        let net = FakeNet::default()
+            .serve(
+                "https://autoconfig.example.org/mail/config-v1.1.xml",
+                HOSTER,
+            )
+            .delay(
+                "https://autoconfig.example.org/mail/config-v1.1.xml",
+                Duration::from_secs(2),
+            )
+            .serve(
+                "https://example.org/.well-known/autoconfig/mail/config-v1.1.xml",
+                MAILBOX,
+            );
+        let found = find(&net, "ann@example.org").await;
+        assert_eq!(found.candidates[0].imap.host, "mail.example.org");
     }
 
     #[tokio::test]

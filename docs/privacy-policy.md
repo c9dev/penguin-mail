@@ -49,7 +49,8 @@ that needs them, and never at sign-in:
   looks for its mail servers using the part of your address after the @,
   never the whole address. For a provider it knows, such as Fastmail or
   iCloud, it asks nobody. Otherwise it asks your DNS servers for the
-  domain's mail records, asks the domain's own web server and Mozilla's
+  domain's mail records, and stops there when they point at a provider it
+  knows. If they do not, it asks the domain's own web server and Mozilla's
   Thunderbird database (autoconfig.thunderbird.net) for its mail settings,
   asks the same of the company that receives the domain's mail, and tries
   to connect to the usual mail server names at the domain. It sends your

@@ -3,7 +3,7 @@
 
 use roxmltree::{Document, Node, ParsingOptions};
 
-use crate::name::host;
+use crate::name::{host, is_within};
 use crate::{Candidate, PasswordKind, ProviderInfo, Security, Server, Source, UserName, pairs};
 
 /// A config file is a few kilobytes. A bigger document is not one, and
@@ -65,7 +65,9 @@ pub(crate) fn parse(xml: &str, domain: &str) -> Option<Config> {
 
 impl Config {
     /// Every IMAP server with every SMTP server, in the file's order, which
-    /// is the provider's preference.
+    /// is the provider's preference. A file found through the MX hosts
+    /// rests on unsigned DNS, so a candidate from one that names a server
+    /// outside `domain` must be confirmed, as an SRV target outside it is.
     pub(crate) fn candidates(&self, source: Source, domain: &str) -> Vec<Candidate> {
         let provider = ProviderInfo {
             name: self.name.clone().unwrap_or_else(|| domain.to_string()),
@@ -75,7 +77,14 @@ impl Config {
             documentation_url: self.documentation_url.clone(),
             files_sent_mail: false,
         };
-        pairs(source, Some(&provider), &self.imap, &self.smtp, false)
+        let mut candidates = pairs(source, Some(&provider), &self.imap, &self.smtp, false);
+        if source == Source::MxAutoconfig {
+            for candidate in &mut candidates {
+                candidate.confirm = !is_within(&candidate.imap.host, domain)
+                    || !is_within(&candidate.smtp.host, domain);
+            }
+        }
+        candidates
     }
 }
 
