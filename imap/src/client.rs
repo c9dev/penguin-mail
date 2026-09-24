@@ -56,8 +56,15 @@ pub trait Dial: Send + Sync + 'static {
 }
 
 /// Dials the account's IMAP server over TLS or STARTTLS.
+#[derive(Clone)]
 pub struct TlsDial {
     server: Server,
+}
+
+impl TlsDial {
+    pub(crate) fn new(server: Server) -> Self {
+        TlsDial { server }
+    }
 }
 
 impl Dial for TlsDial {
@@ -142,7 +149,7 @@ impl ImapClient<TlsDial> {
     /// A client for `server` that signs in with `login`. Opens nothing
     /// until the first call.
     pub fn new(server: Server, login: Login) -> Self {
-        ImapClient::with_dial(TlsDial { server }, login)
+        ImapClient::with_dial(TlsDial::new(server), login)
     }
 }
 

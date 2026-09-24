@@ -1,14 +1,16 @@
-//! Keeps what async-imap and imap-proto log out of the log. async-imap
-//! logs every command and answer at trace level through the `log` crate:
-//! LOGIN's password, AUTHENTICATE PLAIN's base64, and every byte of mail.
-//! The binaries pass `log` records on to tracing, so `RUST_LOG=trace`
-//! would put all of that in the journal.
+//! Keeps what async-imap, imap-proto and lettre log out of the log.
+//! async-imap logs every command and answer at trace level through the
+//! `log` crate: LOGIN's password, AUTHENTICATE PLAIN's base64, and every
+//! byte of mail. The binaries pass `log` records on to tracing, so
+//! `RUST_LOG=trace` would put all of that in the journal. lettre logs each
+//! line it writes and reads at debug level, AUTH's base64 and the message
+//! included, once any crate in the build turns on its `tracing` feature.
 
 use tracing_subscriber::filter::filter_fn;
 use tracing_subscriber::layer::SubscriberExt;
 
 /// Crates whose log lines never leave the process.
-const SILENT: [&str; 2] = ["async_imap", "imap_proto"];
+const SILENT: [&str; 3] = ["async_imap", "imap_proto", "lettre"];
 
 /// `subscriber` with the lines of [`SILENT`]'s crates dropped before any
 /// other filter sees them, so no `RUST_LOG` directive, however specific,
@@ -57,11 +59,12 @@ mod tests {
     /// `log` records reach tracing under their module path as target, the
     /// way the binaries' LogTracer passes async-imap's on.
     #[test]
-    fn no_log_setting_shows_what_async_imap_and_imap_proto_log() {
+    fn no_log_setting_shows_what_async_imap_imap_proto_and_lettre_log() {
         for directives in [
             "trace",
-            "async_imap=trace,imap_proto=trace,mailrs_imap=trace",
-            "async_imap::imap_stream=trace,imap_proto::parser=trace,mailrs_imap=trace",
+            "async_imap=trace,imap_proto=trace,lettre=trace,mailrs_imap=trace",
+            "async_imap::imap_stream=trace,imap_proto::parser=trace,\
+             lettre::transport::smtp::client::async_connection=trace,mailrs_imap=trace",
         ] {
             let written = Written::default();
             let writer = written.clone();
@@ -74,12 +77,20 @@ mod tests {
             tracing::subscriber::with_default(subscriber, || {
                 tracing::trace!(target: "async_imap::imap_stream", "A0001 LOGIN ann pässword");
                 tracing::trace!(target: "imap_proto::parser", "mail body");
+                tracing::debug!(
+                    target: "lettre::transport::smtp::client::async_connection",
+                    "Wrote: AUTH PLAIN AGFubgBzbXRwLXNlY3JldA=="
+                );
                 tracing::trace!(target: "mailrs_imap", "still here");
             });
             let text = String::from_utf8(written.0.lock().unwrap().clone()).unwrap();
             assert!(text.contains("still here"), "{directives}: {text}");
             assert!(!text.contains("pässword"), "{directives}: {text}");
             assert!(!text.contains("mail body"), "{directives}: {text}");
+            assert!(
+                !text.contains("AGFubgBzbXRwLXNlY3JldA"),
+                "{directives}: {text}"
+            );
         }
     }
 }

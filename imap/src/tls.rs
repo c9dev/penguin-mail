@@ -15,7 +15,7 @@ use tokio_rustls::TlsConnector;
 use tokio_rustls::client::TlsStream;
 
 use crate::ImapError;
-use crate::refusal::{Doing, Refusal, refusal};
+use crate::refusal::{Doing, Refusal, clipped, refusal};
 
 /// A connection to a mail server once TLS runs.
 pub type Tls = TlsStream<TcpStream>;
@@ -27,22 +27,36 @@ const LINE_LIMIT: u64 = 8192;
 /// read already, as STARTTLS reads it on the plain connection.
 pub(crate) async fn dial(server: &Server) -> Result<(Tls, bool), ImapError> {
     let host = server.host.as_str();
-    let tcp = TcpStream::connect((host, server.port))
-        .await
-        .map_err(|err| ImapError::Network(format!("{host}:{}: {err}", server.port)))?;
+    let tcp = connect(server).await?;
     let (tcp, greeted) = match server.security {
         Security::Tls => (tcp, false),
         Security::StartTls => (starttls(tcp, host).await?, true),
     };
-    let name = ServerName::try_from(host.to_string()).map_err(|_| ImapError::Tls {
+    Ok((handshake(host, tcp).await?, greeted))
+}
+
+/// A plain TCP connection to `server`'s host and port.
+pub(crate) async fn connect(server: &Server) -> Result<TcpStream, ImapError> {
+    TcpStream::connect((server.host.as_str(), server.port))
+        .await
+        .map_err(|err| ImapError::Network(format!("{}:{}: {err}", server.host, server.port)))
+}
+
+/// `host` as rustls wants it, which also refuses anything that is not a
+/// host name or an IP address.
+pub(crate) fn server_name(host: &str) -> Result<ServerName<'static>, ImapError> {
+    ServerName::try_from(host.to_string()).map_err(|_| ImapError::Tls {
         host: host.to_string(),
         detail: "not a host name".into(),
-    })?;
-    let tls = TlsConnector::from(config(host)?)
-        .connect(name, tcp)
+    })
+}
+
+/// Runs the TLS handshake on `tcp` and checks the certificate for `host`.
+pub(crate) async fn handshake(host: &str, tcp: TcpStream) -> Result<Tls, ImapError> {
+    TlsConnector::from(config(host)?)
+        .connect(server_name(host)?, tcp)
         .await
-        .map_err(|err| handshake_error(host, err))?;
-    Ok((tls, greeted))
+        .map_err(|err| handshake_error(host, err))
 }
 
 /// TLS 1.2 and 1.3 with the platform's certificate verifier.
@@ -96,7 +110,8 @@ pub(crate) async fn starttls<S: AsyncRead + AsyncWrite + Unpin>(
     // PREAUTH on a plain connection would mean working without TLS.
     if !greeting.starts_with("* OK") {
         return Err(ImapError::Protocol(format!(
-            "the greeting is not one this client accepts: {greeting}"
+            "the greeting is not one this client accepts: {}",
+            clipped(greeting)
         )));
     }
     let stream = reader.get_mut();
@@ -113,7 +128,7 @@ pub(crate) async fn starttls<S: AsyncRead + AsyncWrite + Unpin>(
         if !status.to_ascii_uppercase().starts_with("OK") {
             return Err(ImapError::Tls {
                 host: host.to_string(),
-                detail: format!("the server refused STARTTLS: {status}"),
+                detail: format!("the server refused STARTTLS: {}", clipped(status.into())),
             });
         }
         break;
@@ -128,7 +143,7 @@ pub(crate) async fn starttls<S: AsyncRead + AsyncWrite + Unpin>(
     Ok(reader.into_inner())
 }
 
-async fn line<R: AsyncBufReadExt + Unpin>(reader: &mut R) -> Result<String, ImapError> {
+pub(crate) async fn line<R: AsyncBufReadExt + Unpin>(reader: &mut R) -> Result<String, ImapError> {
     let mut bytes = Vec::new();
     let read = (&mut *reader)
         .take(LINE_LIMIT)

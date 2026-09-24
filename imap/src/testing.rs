@@ -291,3 +291,116 @@ fn literal_length(line: &str) -> Option<usize> {
     let open = line.rfind('{')?;
     line.strip_suffix('}')?.get(open + 1..)?.parse().ok()
 }
+
+/// What a scripted SMTP server saw: each command line, and each message
+/// as it arrived after DATA, doubled dots included.
+#[derive(Clone, Default)]
+pub(crate) struct SmtpSeen {
+    pub(crate) commands: Arc<Mutex<Vec<String>>>,
+    pub(crate) messages: Arc<Mutex<Vec<Vec<u8>>>>,
+}
+
+impl SmtpSeen {
+    pub(crate) fn commands(&self) -> Vec<String> {
+        self.commands
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+
+    pub(crate) fn messages(&self) -> Vec<Vec<u8>> {
+        self.messages
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+}
+
+/// The client's end of a pipe to an SMTP server that sends `greeting`
+/// (none when empty) and answers each command line through `answer`. When
+/// its answer to DATA starts with 354, the server reads the message up to
+/// the line holding a single dot and answers with `answer(".")`. The pipe
+/// holds 64 KiB each way, so a measurement of the client sees little of it.
+pub(crate) fn smtp_pipe(
+    greeting: &str,
+    seen: SmtpSeen,
+    answer: impl FnMut(&str) -> Vec<String> + Send + 'static,
+) -> DuplexStream {
+    let (client, server) = tokio::io::duplex(64 << 10);
+    tokio::spawn(serve_smtp(server, greeting.to_string(), seen, answer));
+    client
+}
+
+/// Answers as a submission server offering AUTH PLAIN and LOGIN, 8BITMIME
+/// and SMTPUTF8 that takes any sign-in and any message.
+pub(crate) fn smtp_server(command: &str) -> Vec<String> {
+    let upper = command.to_ascii_uppercase();
+    let line = if upper.starts_with("EHLO") {
+        return vec![
+            "250-smtp.example.com".into(),
+            "250-8BITMIME".into(),
+            "250-SMTPUTF8".into(),
+            "250 AUTH PLAIN LOGIN".into(),
+        ];
+    } else if upper.starts_with("AUTH") {
+        "235 2.7.0 Accepted"
+    } else if upper == "DATA" {
+        "354 Go ahead"
+    } else if upper == "QUIT" {
+        "221 Bye"
+    } else {
+        "250 OK"
+    };
+    vec![line.into()]
+}
+
+async fn serve_smtp(
+    server: DuplexStream,
+    greeting: String,
+    seen: SmtpSeen,
+    mut answer: impl FnMut(&str) -> Vec<String>,
+) {
+    let (read, mut write) = tokio::io::split(server);
+    let mut read = BufReader::new(read);
+    if !greeting.is_empty() && send(&mut write, &greeting).await.is_none() {
+        return;
+    }
+    while let Some(command) = read_line(&mut read).await {
+        seen.commands
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .push(command.clone());
+        let replies = answer(&command);
+        let data = command.eq_ignore_ascii_case("DATA")
+            && replies.first().is_some_and(|line| line.starts_with("354"));
+        for line in replies {
+            if line == "<close>" || send(&mut write, &line).await.is_none() {
+                return;
+            }
+        }
+        if !data {
+            continue;
+        }
+        let mut message = Vec::new();
+        loop {
+            let start = message.len();
+            match read.read_until(b'\n', &mut message).await {
+                Ok(0) | Err(_) => return,
+                Ok(_) => {}
+            }
+            if &message[start..] == b".\r\n" {
+                message.truncate(start);
+                break;
+            }
+        }
+        seen.messages
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .push(message);
+        for line in answer(".") {
+            if line == "<close>" || send(&mut write, &line).await.is_none() {
+                return;
+            }
+        }
+    }
+}

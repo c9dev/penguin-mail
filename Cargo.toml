@@ -44,6 +44,9 @@ html5ever = "0.40.1"
 hickory-resolver = "0.26.3"
 icalendar = "0.17.13"
 keyring = "4.2.0"
+# SMTP submission. Only the protocol: this crate dials and runs TLS itself,
+# so lettre brings no TLS stack, and without `hostname` no host name.
+lettre = { version = "0.11.23", default-features = false, features = ["smtp-transport", "tokio1"] }
 libc = "0.2.189"
 ksni = "0.3.6"
 mail-builder = "1.0.0"

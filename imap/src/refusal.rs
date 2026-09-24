@@ -113,9 +113,9 @@ pub(crate) fn from_io(err: std::io::Error) -> ImapError {
 /// The most of an error's text an [`ImapError`] keeps. async-imap puts
 /// the whole unparsed buffer in a parse error, mail included, and error
 /// text goes to the log.
-const MAX_ERROR_TEXT: usize = 200;
+pub(crate) const MAX_ERROR_TEXT: usize = 200;
 
-fn clipped(mut text: String) -> String {
+pub(crate) fn clipped(mut text: String) -> String {
     if let Some((end, _)) = text.char_indices().nth(MAX_ERROR_TEXT) {
         text.truncate(end);
     }
