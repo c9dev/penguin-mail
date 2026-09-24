@@ -91,6 +91,7 @@ impl Standard {
         }
     }
 
+    /// The icon its sidebar row shows.
     pub fn icon(self) -> &'static str {
         match self {
             Standard::Inbox => "penguin-mail-inbox-symbolic",
@@ -101,7 +102,7 @@ impl Standard {
         }
     }
 
-    /// The word the CLI and the assistant use for it.
+    /// The word the CLI takes for it.
     pub fn key(self) -> &'static str {
         match self {
             Standard::Inbox => "inbox",
@@ -142,6 +143,14 @@ pub enum Mailbox {
         label_id: String,
         name: String,
     },
+    /// Mail in one set of one account that has no sidebar row of its own,
+    /// such as unread mail or one inbox category. The assistant reaches
+    /// these by the name the server gives them.
+    Set {
+        account_id: AccountId,
+        set: MailSet,
+        name: String,
+    },
     Search {
         query: String,
         account_id: Option<AccountId>,
@@ -173,7 +182,7 @@ impl Mailbox {
         match self {
             Mailbox::Unified(which) => which.unified_name(),
             Mailbox::Standard { which, .. } => which.name(),
-            Mailbox::Label { name, .. } => name.clone(),
+            Mailbox::Label { name, .. } | Mailbox::Set { name, .. } => name.clone(),
             Mailbox::Search { .. } => gettext("Search"),
             Mailbox::Folder { folder, .. } => folder_name(*folder),
             Mailbox::Scheduled => gettext("Send Later"),
@@ -197,9 +206,9 @@ impl Mailbox {
             | Mailbox::Flag(_)
             | Mailbox::Vips { .. }
             | Mailbox::Smart(_) => None,
-            Mailbox::Standard { account_id, .. } | Mailbox::Label { account_id, .. } => {
-                Some(*account_id)
-            }
+            Mailbox::Standard { account_id, .. }
+            | Mailbox::Label { account_id, .. }
+            | Mailbox::Set { account_id, .. } => Some(*account_id),
             Mailbox::Search { account_id, .. } | Mailbox::Folder { account_id, .. } => *account_id,
         }
     }
@@ -241,7 +250,10 @@ impl Mailbox {
     pub fn empty(&self) -> Empty {
         let empty = |title: String, icon| Empty { title, icon };
         match self {
-            Mailbox::Unified(_) | Mailbox::Standard { .. } | Mailbox::Label { .. } => {}
+            Mailbox::Unified(_)
+            | Mailbox::Standard { .. }
+            | Mailbox::Label { .. }
+            | Mailbox::Set { .. } => {}
             Mailbox::Search { .. } => {
                 return empty(gettext("No Results"), "system-search-symbolic");
             }
@@ -295,6 +307,9 @@ impl Mailbox {
                 label_id,
                 ..
             } => Some(ThreadFilter::account(*account_id, MailSet::Mailbox(label_id.clone()))),
+            Mailbox::Set {
+                account_id, set, ..
+            } => Some(ThreadFilter::account(*account_id, set.clone())),
             Mailbox::Flag(color) => Some(ThreadFilter::everything().with_flag(*color)),
             Mailbox::Vips { emails, .. } => {
                 Some(ThreadFilter::everything().from_senders(emails.clone()))

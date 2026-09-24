@@ -185,6 +185,7 @@ fn listed_set(mailbox: &Mailbox) -> Option<MailSet> {
     match mailbox {
         Mailbox::Unified(which) | Mailbox::Standard { which, .. } => Some(which.set()),
         Mailbox::Label { label_id, .. } => Some(MailSet::Mailbox(label_id.clone())),
+        Mailbox::Set { set, .. } => Some(set.clone()),
         Mailbox::Folder {
             folder: Folder::Trash,
             ..

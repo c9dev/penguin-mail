@@ -192,6 +192,65 @@ async fn list_mail_finds_a_label_by_name() {
     );
 }
 
+/// Gmail lists its own labels beside a person's, so the assistant can be
+/// asked for "STARRED" or "CATEGORY_PROMOTIONS" by name. Each lists the
+/// mail it stands for.
+#[tokio::test]
+async fn list_mail_finds_gmails_own_labels_by_name() {
+    let mut mail = mail();
+    mail.push(labelled(
+        meta("m5", "t5", "kai@example.com", "Flagged kite", NOW - 4 * DAY),
+        &[system_label::STARRED, system_label::IMPORTANT],
+    ));
+    mail.push(labelled(
+        meta("m6", "t6", "noisy@example.com", "Muted thread", NOW - 5 * DAY),
+        &[system_label::MUTE],
+    ));
+    let h = Harness::with(mail).await;
+    {
+        let mut screen = h.desk.0.borrow_mut();
+        let known = screen.labels.entry(h.account_id).or_default();
+        for id in [
+            system_label::STARRED,
+            system_label::MUTE,
+            system_label::UNREAD,
+            system_label::IMPORTANT,
+            system_label::CATEGORY_PROMOTIONS,
+        ] {
+            known.push(mailrs_domain::Label {
+                account_id: h.account_id,
+                id: id.into(),
+                name: id.into(),
+                kind: mailrs_domain::LabelKind::System,
+                color: None,
+            });
+        }
+    }
+    let listed = |label: &'static str| {
+        let h = &h;
+        async move {
+            let found = h
+                .ok("list_mail", json!({"mailbox": "label", "label": label}))
+                .await;
+            thread_ids(&found)
+        }
+    };
+    let mut found = Vec::new();
+    for label in ["STARRED", "MUTE", "UNREAD", "IMPORTANT", "CATEGORY_PROMOTIONS"] {
+        found.push((label, listed(label).await));
+    }
+    assert_eq!(
+        found,
+        [
+            ("STARRED", vec!["t5".to_string()]),
+            ("MUTE", vec!["t6".into()]),
+            ("UNREAD", vec!["t1".into()]),
+            ("IMPORTANT", vec!["t5".into()]),
+            ("CATEGORY_PROMOTIONS", vec!["t2".into()]),
+        ]
+    );
+}
+
 #[tokio::test]
 async fn search_mail_asks_gmail() {
     let h = harness().await;

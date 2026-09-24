@@ -594,7 +594,7 @@ fn hidden_until_used(mailbox: &Mailbox) -> bool {
 fn takes_mail(mailbox: &Mailbox) -> bool {
     match mailbox {
         Mailbox::Unified(which) | Mailbox::Standard { which, .. } => {
-            matches!(which, Standard::Inbox | Standard::Flagged)
+            matches!(which, Standard::Inbox | Standard::Flagged | Standard::Muted)
         }
         Mailbox::Label { .. } => true,
         Mailbox::Folder { .. } => true,
@@ -605,6 +605,7 @@ fn takes_mail(mailbox: &Mailbox) -> bool {
         | Mailbox::Reminders
         | Mailbox::FollowUp
         | Mailbox::Vips { .. }
+        | Mailbox::Set { .. }
         | Mailbox::Smart(_) => false,
     }
 }
@@ -797,7 +798,7 @@ fn heading(account: &Account, name: Option<&String>) -> (gtk::ListBoxRow, gtk::I
 
 #[cfg(test)]
 mod tests {
-    use super::{heading_row_name, mailbox_row_name};
+    use super::{Mailbox, Standard, heading_row_name, mailbox_row_name, takes_mail};
 
     #[test]
     fn a_mailbox_row_reads_its_badge_as_part_of_the_row() {
@@ -818,5 +819,17 @@ mod tests {
         assert_eq!(heading_row_name("ann@example.com", 0), "ann@example.com");
         assert_eq!(heading_row_name("Work", 1), "Work, 1 unread message");
         assert_eq!(heading_row_name("Work", 4), "Work, 4 unread messages");
+    }
+
+    #[test]
+    fn inbox_flagged_and_muted_take_dropped_mail() {
+        for which in [Standard::Inbox, Standard::Flagged, Standard::Muted] {
+            assert!(takes_mail(&Mailbox::Unified(which)), "{which:?}");
+            assert!(takes_mail(&Mailbox::Standard { account_id: 1, which }), "{which:?}");
+        }
+        for which in [Standard::Sent, Standard::Drafts] {
+            assert!(!takes_mail(&Mailbox::Unified(which)), "{which:?}");
+            assert!(!takes_mail(&Mailbox::Standard { account_id: 1, which }), "{which:?}");
+        }
     }
 }

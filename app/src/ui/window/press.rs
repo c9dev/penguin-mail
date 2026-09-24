@@ -593,6 +593,14 @@ mod tests {
             step(Press::Drop(other), inbox(), Scope::Carried { open: false }),
             Step::Refuse("Drop mail on its own account's mailboxes".into())
         );
+        let other_inbox = Mailbox::Standard {
+            account_id: 2,
+            which: Standard::Inbox,
+        };
+        assert_eq!(
+            step(Press::Drop(other_inbox), inbox(), Scope::Carried { open: false }),
+            Step::Refuse("Drop mail on its own account's mailboxes".into())
+        );
         assert!(matches!(
             step(Press::Drop(inbox()), inbox(), Scope::Carried { open: false }),
             Step::Refuse(_)

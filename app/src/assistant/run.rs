@@ -20,9 +20,10 @@ use mailrs_ai::ToolOutcome;
 use mailrs_domain::smart::{Condition, SmartMailbox};
 use mailrs_domain::{
     Account, AccountId, Category, EpochMillis, FlagColor, Folder, Label, LabelKind, MailSet, Role,
-    Target, ThreadSummary,
+    Target, ThreadSummary, gmail,
 };
 use mailrs_store::{Db, messages};
+use mailrs_sync::mailbox::Standard as MailboxKind;
 use mailrs_sync::{
     AccountSettings, AccountSync, Accounts, AutomaticReply, BackendError, Calendar, Categorized, Failure,
     History, Invitations, Loaded, MailAction, MailActions, Mailbox, Mailboxes, NewLabels, Outcome,
@@ -271,6 +272,31 @@ fn named_category(key: &str) -> Result<Category, String> {
     Category::from_key(key)
         .filter(|c| *c != Category::All)
         .ok_or_else(|| format!("Unknown category {key}."))
+}
+
+/// The mailbox that lists `label` of `account_id`. A person's label lists
+/// its own mail. Gmail's own labels stand for mail sets rather than
+/// mailboxes: the ones with a sidebar row open that row, and the rest,
+/// such as unread mail or a category, list their set.
+fn label_mailbox(account_id: AccountId, label: &Label) -> Mailbox {
+    if label.kind == LabelKind::System {
+        if let Some(which) = MailboxKind::from_key(&label.id) {
+            return Mailbox::Standard { account_id, which };
+        }
+        let set = gmail::set_of(&label.id);
+        if !matches!(set, MailSet::Mailbox(_)) {
+            return Mailbox::Set {
+                account_id,
+                set,
+                name: label.name.clone(),
+            };
+        }
+    }
+    Mailbox::Label {
+        account_id,
+        label_id: label.id.clone(),
+        name: label.name.clone(),
+    }
 }
 
 /// A mailbox `list_mail` names. Its keys make the schema's enum, so the
@@ -749,9 +775,7 @@ impl<A: Accounts> Tools<A> {
         input: &Value,
         scope: Option<&Account>,
     ) -> Result<Vec<Mailbox>, String> {
-        // The mailbox kind, not the signing standard imported above.
-        use mailrs_sync::mailbox::Standard;
-        let at = |which: Standard| match scope {
+        let at = |which: MailboxKind| match scope {
             Some(account) => Mailbox::Standard {
                 account_id: account.id,
                 which,
@@ -764,10 +788,10 @@ impl<A: Accounts> Tools<A> {
         };
         let named = MailboxName::named(name).ok_or_else(|| format!("Unknown mailbox {name}."))?;
         Ok(match named {
-            MailboxName::Inbox => vec![at(Standard::Inbox)],
-            MailboxName::Flagged => vec![at(Standard::Flagged)],
-            MailboxName::Sent => vec![at(Standard::Sent)],
-            MailboxName::Drafts => vec![at(Standard::Drafts)],
+            MailboxName::Inbox => vec![at(MailboxKind::Inbox)],
+            MailboxName::Flagged => vec![at(MailboxKind::Flagged)],
+            MailboxName::Sent => vec![at(MailboxKind::Sent)],
+            MailboxName::Drafts => vec![at(MailboxKind::Drafts)],
             MailboxName::FollowUp => vec![Mailbox::FollowUp],
             MailboxName::Archive => vec![folder(Folder::Archive)],
             MailboxName::Junk => vec![folder(Folder::Junk)],
@@ -780,7 +804,7 @@ impl<A: Accounts> Tools<A> {
             MailboxName::Outbox => vec![Mailbox::Outbox],
             MailboxName::SendLater => vec![Mailbox::Scheduled],
             MailboxName::Reminders => vec![Mailbox::Reminders],
-            MailboxName::Muted => vec![at(Standard::Muted)],
+            MailboxName::Muted => vec![at(MailboxKind::Muted)],
             MailboxName::Smart => {
                 vec![Mailbox::Smart(self.smart_named(&required(input, "name")?)?)]
             }
@@ -793,11 +817,7 @@ impl<A: Accounts> Tools<A> {
                     .flat_map(|(id, all)| {
                         all.iter()
                             .filter(|l| l.name.eq_ignore_ascii_case(&wanted))
-                            .map(|l| Mailbox::Label {
-                                account_id: *id,
-                                label_id: l.id.clone(),
-                                name: l.name.clone(),
-                            })
+                            .map(|l| label_mailbox(*id, l))
                             .collect::<Vec<_>>()
                     })
                     .collect();
