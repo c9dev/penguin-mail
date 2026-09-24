@@ -3,15 +3,36 @@
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 
-use mailrs_domain::{AccountState, ChangeEvent, EpochMillis, MailSet, MessageMeta, Role};
+use mailrs_domain::{
+    AccountState, ChangeEvent, EpochMillis, Location, MailSet, MessageMeta, Role,
+};
 use mailrs_store::messages::Change;
 use mailrs_store::{accounts, mailboxes, messages, window};
 
 use super::AccountSync;
 use super::fetch::store_fetched;
-use crate::{BackendError, MailBackend, SyncError, Want};
+use super::refs::stored_id;
+use crate::{BackendError, MailBackend, RemoteRef, SyncError, Want};
 
 const DAY_MILLIS: i64 = 24 * 60 * 60 * 1000;
+
+/// The mailboxes the messages in `listed` sit in, each with the names of
+/// its messages there. A folder server's name for a message says which
+/// mailbox holds it, so a relisting compares only these: every other
+/// mailbox holds none of the listed messages, and a parent that holds no
+/// mail, which refuses SELECT, is never asked.
+fn mailboxes_holding(listed: &[RemoteRef]) -> HashMap<String, HashSet<String>> {
+    let mut members: HashMap<String, HashSet<String>> = HashMap::new();
+    for message in listed {
+        if let Some(at) = Location::parse(&message.id) {
+            members
+                .entry(at.mailbox)
+                .or_default()
+                .insert(message.id.clone());
+        }
+    }
+    members
+}
 
 impl AccountSync {
     /// Starts a new sync generation. Records the history cursor before
@@ -61,12 +82,6 @@ impl AccountSync {
         let start = self.services.mail.changes(None).await?.state;
         let listed = self.services.mail.mailboxes().await?;
         let listed_ids: Vec<String> = listed.iter().map(|m| m.id.clone()).collect();
-        // What each listed mailbox stands for, so the stored copy of a
-        // message can be asked whether it is in it.
-        let sets: Vec<(String, MailSet)> = listed_ids
-            .iter()
-            .map(|id| (id.clone(), self.services.mail.set_of(id)))
-            .collect();
         let generation = self
             .db
             .write(move |c| {
@@ -81,15 +96,28 @@ impl AccountSync {
             .mail
             .window_ids(self.window_days, None)
             .await?;
-        let mut members: HashMap<String, HashSet<String>> = HashMap::new();
-        for label in &listed_ids {
-            let carrying = self
-                .services
-                .mail
-                .window_ids(self.window_days, Some(label))
-                .await?;
-            members.insert(label.clone(), carrying.into_iter().map(|m| m.id).collect());
-        }
+        let members = match self.renames() {
+            true => mailboxes_holding(&listed),
+            false => {
+                let mut members: HashMap<String, HashSet<String>> = HashMap::new();
+                for label in &listed_ids {
+                    let carrying = self
+                        .services
+                        .mail
+                        .window_ids(self.window_days, Some(label))
+                        .await?;
+                    members.insert(label.clone(), carrying.into_iter().map(|m| m.id).collect());
+                }
+                members
+            }
+        };
+        // What each compared mailbox stands for, so the stored copy of a
+        // message can be asked whether it is in it.
+        let sets: Vec<(String, MailSet)> = members
+            .keys()
+            .map(|id| (id.clone(), self.services.mail.set_of(id)))
+            .collect();
+        let (listed, members) = self.listing_as_stored(listed, members).await?;
         let ids: Vec<String> = listed.iter().map(|m| m.id.clone()).collect();
         let stored: HashMap<String, MessageMeta> = self
             .db
@@ -225,11 +253,11 @@ impl AccountSync {
         if !cursor.backfill_done || cursor.state.is_none() {
             return Ok(());
         }
+        let inbox = self.services.mail.inbox_ids().await?;
         let remote: HashSet<String> = self
-            .services
-            .mail
-            .inbox_ids()
+            .listing_as_stored(inbox, HashMap::new())
             .await?
+            .0
             .into_iter()
             .map(|m| m.id)
             .collect();
@@ -275,6 +303,44 @@ impl AccountSync {
             .await?;
         self.emit_threads(touched);
         Ok(())
+    }
+
+    /// `listed` and `members`, which name messages as the server does now,
+    /// under the store's ids. On a folder server a message the app moved,
+    /// or a relisting carried over, keeps its first id while the server
+    /// names it by where it sits; a name that is some stored message's
+    /// stale id drops out.
+    async fn listing_as_stored(
+        &self,
+        listed: Vec<RemoteRef>,
+        members: HashMap<String, HashSet<String>>,
+    ) -> Result<(Vec<RemoteRef>, HashMap<String, HashSet<String>>), SyncError> {
+        if !self.renames() {
+            return Ok((listed, members));
+        }
+        let resolved = self
+            .resolve(listed.iter().map(|m| m.id.clone()).collect())
+            .await?;
+        let listed = listed
+            .into_iter()
+            .filter_map(|m| {
+                Some(RemoteRef {
+                    id: stored_id(&m.id, &resolved)?,
+                    thread_id: m.thread_id,
+                })
+            })
+            .collect();
+        let members = members
+            .into_iter()
+            .map(|(mailbox, names)| {
+                let ids = names
+                    .iter()
+                    .filter_map(|name| stored_id(name, &resolved))
+                    .collect();
+                (mailbox, ids)
+            })
+            .collect();
+        Ok((listed, members))
     }
 
     /// Stores one page of the window listing and saves the next page token.

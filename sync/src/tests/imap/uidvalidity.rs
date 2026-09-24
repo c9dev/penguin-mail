@@ -1,11 +1,12 @@
-//! A mailbox the server renumbered, as a new UIDVALIDITY says: the engine
-//! lists that mailbox again and keeps what it already held.
+//! Listing mail again: a mailbox the server renumbered, as a new
+//! UIDVALIDITY says, and the whole account after the server lost its
+//! place. Either way the engine keeps what it already held.
 
 use mailrs_imap::ImapError;
-use mailrs_store::bodies;
+use mailrs_store::{accounts, bodies};
 
 use super::{days_ago, message};
-use crate::tests::imap_harness;
+use crate::tests::{ImapHarness, imap_harness};
 
 #[tokio::test]
 async fn a_new_uidvalidity_relists_the_mailbox_and_keeps_ids_and_bodies() {
@@ -71,4 +72,62 @@ async fn a_relisting_that_fails_runs_again_at_the_next_look() {
 
     assert_eq!(h.ids().await, ["INBOX/1001/1", "INBOX/1001/2"]);
     assert_eq!(h.location("INBOX/1001/2").await.as_deref(), Some("INBOX/1007/2"));
+}
+
+/// Makes the stored sync state one the adapter cannot read, so the next
+/// look lists the whole account again.
+async fn lose_the_place(h: &ImapHarness) {
+    let account_id = h.account_id;
+    h.db.write(move |c| accounts::set_sync_state(c, account_id, "{\"history_id\":1}"))
+        .await
+        .unwrap();
+}
+
+/// A parent that holds no mail refuses SELECT; listing the account again
+/// compares only the mailboxes the account keeps in step.
+#[tokio::test]
+async fn listing_the_account_again_passes_over_a_parent_that_holds_no_mail() {
+    let h = imap_harness().await;
+    h.imap.with(|s| s.mailbox_mut("Projects").no_select = true);
+    h.imap.deliver_flagged("INBOX", &message("a", "Kites", ""), &[], days_ago(1));
+    h.bootstrap().await;
+    lose_the_place(&h).await;
+
+    h.sync.incremental().await.unwrap();
+
+    assert_eq!(h.ids().await, ["INBOX/1001/1"]);
+}
+
+/// A message that took a new name, here through a relisting, is the same
+/// message when the account is listed again: nothing is fetched for it.
+#[tokio::test]
+async fn listing_the_account_again_reads_new_names_back_as_stored_ids() {
+    let h = imap_harness().await;
+    h.imap.deliver_flagged("INBOX", &message("a", "Kites", ""), &[], days_ago(1));
+    h.bootstrap().await;
+    h.imap.reset_uidvalidity("INBOX");
+    h.sync.incremental().await.unwrap();
+    lose_the_place(&h).await;
+    let before = h.imap.calls_to("headers");
+
+    h.sync.incremental().await.unwrap();
+
+    assert_eq!(h.ids().await, ["INBOX/1001/1"]);
+    assert_eq!(h.imap.calls_to("headers"), before, "{:?}", h.imap.calls());
+}
+
+/// The Inbox check compares the server's Inbox with the store's by store
+/// id, so a message that took a new name is not fetched on every check.
+#[tokio::test]
+async fn the_inbox_check_reads_new_names_back_as_stored_ids() {
+    let h = imap_harness().await;
+    h.imap.deliver_flagged("INBOX", &message("a", "Kites", ""), &[], days_ago(1));
+    h.bootstrap().await;
+    h.imap.reset_uidvalidity("INBOX");
+    h.sync.incremental().await.unwrap();
+    let before = h.imap.calls_to("headers");
+
+    h.sync.reconcile_inbox().await.unwrap();
+
+    assert_eq!(h.imap.calls_to("headers"), before, "{:?}", h.imap.calls());
 }
