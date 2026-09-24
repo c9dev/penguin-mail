@@ -669,6 +669,23 @@ fn context_menu(row: &gtk::ListBoxRow, menu: &gio::Menu) {
     row.connect_destroy(move |_| popover.unparent());
 }
 
+/// The settings section of an account's menu, as words and actions,
+/// holding only what the account's server `offers`. Hide My Email writes
+/// a rule for each address, so it goes where rules go.
+fn account_settings(offers: Offers) -> Vec<(String, &'static str)> {
+    let mut items = Vec::new();
+    if offers.auto_reply {
+        items.push((gettext("Automatic Reply…"), "win.account-vacation"));
+    }
+    items.push((gettext("Signature…"), "win.account-signature"));
+    if offers.rules {
+        items.push((gettext("Rules…"), "win.account-rules"));
+        items.push((gettext("Hide My Email…"), "win.account-hide-my-email"));
+    }
+    items.push((Filing::of([offers]).new_item(), "win.account-new-label"));
+    items
+}
+
 fn heading(
     account: &Account,
     name: Option<&String>,
@@ -749,17 +766,9 @@ fn heading(
     };
     menu.append_item(&item(&gettext("Check for Mail"), "win.account-check"));
     let settings = gio::Menu::new();
-    settings.append_item(&item(&gettext("Automatic Reply…"), "win.account-vacation"));
-    settings.append_item(&item(&gettext("Signature…"), "win.account-signature"));
-    settings.append_item(&item(&gettext("Rules…"), "win.account-rules"));
-    settings.append_item(&item(
-        &gettext("Hide My Email…"),
-        "win.account-hide-my-email",
-    ));
-    settings.append_item(&item(
-        &Filing::of([offers]).new_item(),
-        "win.account-new-label",
-    ));
+    for (label, action) in account_settings(offers) {
+        settings.append_item(&item(&label, action));
+    }
     menu.append_section(None, &settings);
     let look = gio::Menu::new();
     look.append_item(&item(&gettext("Rename…"), "win.account-rename"));
@@ -815,6 +824,39 @@ fn heading(
 #[cfg(test)]
 mod tests {
     use super::{Mailbox, Standard, heading_row_name, mailbox_row_name, takes_mail};
+
+    use super::{Offers, account_settings};
+
+    fn actions(offers: Offers) -> Vec<&'static str> {
+        account_settings(offers).into_iter().map(|(_, action)| action).collect()
+    }
+
+    #[test]
+    fn a_gmail_account_menu_keeps_every_setting() {
+        assert_eq!(
+            actions(Offers::EVERYTHING),
+            [
+                "win.account-vacation",
+                "win.account-signature",
+                "win.account-rules",
+                "win.account-hide-my-email",
+                "win.account-new-label",
+            ]
+        );
+    }
+
+    #[test]
+    fn an_account_menu_leaves_out_what_the_server_lacks() {
+        let bare = Offers {
+            rules: false,
+            auto_reply: false,
+            ..Offers::EVERYTHING
+        };
+        assert_eq!(
+            actions(bare),
+            ["win.account-signature", "win.account-new-label"]
+        );
+    }
 
     #[test]
     fn a_mailbox_row_reads_its_badge_as_part_of_the_row() {

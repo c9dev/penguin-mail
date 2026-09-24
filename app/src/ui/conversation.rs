@@ -912,7 +912,12 @@ impl ConversationView {
 
     /// Adjusts the trash and junk buttons to the folder on screen: in the
     /// Trash, trash erases the mail; in Junk, junk marks it as not junk.
-    pub fn set_folder(&self, folder: Option<Folder>) {
+    /// A Trash whose server cannot erase mail, as `erases` says, has no
+    /// trash button or item, since there is nowhere further to move it.
+    pub fn set_folder(&self, folder: Option<Folder>, erases: bool) {
+        let shown = erases || folder != Some(Folder::Trash);
+        self.buttons.trash.set_visible(shown);
+        self.many_trash.set_visible(shown);
         let (trash_icon, trash_tip) = match folder {
             Some(Folder::Trash) => ("edit-delete-symbolic", gettext("Delete Forever (Delete)")),
             _ => ("user-trash-symbolic", gettext("Move to Trash (Delete)")),
@@ -935,13 +940,20 @@ impl ConversationView {
             _ => gettext("Move to Trash"),
         };
         self.many_trash.set_label(&trash);
-        self.set_filing_word(1, &trash, "win.trash");
         let junk = match folder {
             Some(Folder::Junk) => gettext("Not Junk"),
             _ => gettext("Junk"),
         };
         self.many_junk.set_label(&junk);
-        self.set_filing_word(2, &junk, "win.junk");
+        // The section is built again rather than edited in place, because
+        // the trash item comes and goes and would move the junk item.
+        self.filing_menu.remove_all();
+        self.filing_menu
+            .append(Some(&gettext("Archive")), Some("win.archive"));
+        if shown {
+            self.filing_menu.append(Some(&trash), Some("win.trash"));
+        }
+        self.filing_menu.append(Some(&junk), Some("win.junk"));
     }
 
     /// Says what the trash button and its menu item do in a mailbox where

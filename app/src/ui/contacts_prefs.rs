@@ -6,11 +6,18 @@ use std::rc::Rc;
 use adw::prelude::*;
 use mailrs_domain::Account;
 use mailrs_domain::translate::gettext;
+use mailrs_sync::{Missing, Offers};
 
 use crate::app::App;
+use crate::offered::reason;
 use crate::settings::{Change, Settings};
 
-pub fn page(app: &Rc<App>, settings: &Settings, accounts: &[Account]) -> adw::PreferencesPage {
+/// The page for `accounts`, each with what its server offers.
+pub fn page(
+    app: &Rc<App>,
+    settings: &Settings,
+    accounts: &[(Account, Offers)],
+) -> adw::PreferencesPage {
     let page = adw::PreferencesPage::builder()
         .title(gettext("Contacts & Calendar"))
         .icon_name("x-office-address-book-symbolic")
@@ -23,8 +30,13 @@ pub fn page(app: &Rc<App>, settings: &Settings, accounts: &[Account]) -> adw::Pr
 
 /// One switch per account. Each asks Google for that account's permission
 /// the first time it is turned on, so an account the person never switched
-/// on is never asked about.
-fn contacts(app: &Rc<App>, settings: &Settings, accounts: &[Account]) -> adw::PreferencesGroup {
+/// on is never asked about. An account whose server keeps no contacts has
+/// its switch off and says why.
+fn contacts(
+    app: &Rc<App>,
+    settings: &Settings,
+    accounts: &[(Account, Offers)],
+) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::builder()
         .title(gettext("Google Contacts"))
         .description(gettext(
@@ -41,11 +53,13 @@ fn contacts(app: &Rc<App>, settings: &Settings, accounts: &[Account]) -> adw::Pr
                 .build(),
         );
     }
-    for account in accounts {
+    for (account, offers) in accounts {
+        let (subtitle, offered) = contacts_row(account, *offers);
         let row = adw::SwitchRow::builder()
             .title(&account.email)
-            .subtitle(gettext("Google asks your permission the first time"))
-            .active(settings.reads_contacts(&account.email))
+            .subtitle(subtitle)
+            .active(offered && settings.reads_contacts(&account.email))
+            .sensitive(offered)
             .build();
         let weak = Rc::downgrade(app);
         let email = account.email.clone();
@@ -64,8 +78,9 @@ fn contacts(app: &Rc<App>, settings: &Settings, accounts: &[Account]) -> adw::Pr
 
 /// Which accounts GNOME knows, since that is what puts their meetings in
 /// GNOME Calendar and the clock. Answering an invitation needs nothing here:
-/// Google asks for the calendar permission the first time.
-fn calendar(accounts: &[Account]) -> adw::PreferencesGroup {
+/// Google asks for the calendar permission the first time. An account
+/// whose server has no calendar gets a row that says why instead.
+fn calendar(accounts: &[(Account, Offers)]) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::builder()
         .title(gettext("Calendar"))
         .description(gettext(
@@ -74,11 +89,25 @@ fn calendar(accounts: &[Account]) -> adw::PreferencesGroup {
              in GNOME Calendar and the clock, add the account to GNOME Online Accounts.",
         ))
         .build();
-    for account in accounts {
+    let mut online_accounts = true;
+    for (account, offers) in accounts {
+        if let Some(lack) = calendar_lack(account, *offers) {
+            group.add(
+                &adw::ActionRow::builder()
+                    .title(&account.email)
+                    .subtitle(lack)
+                    .build(),
+            );
+            continue;
+        }
+        if !online_accounts {
+            continue;
+        }
         let Some(known) = crate::goa::known(&account.email) else {
             // No Online Accounts on this desktop: there is nothing to add
             // the account to, so the rows would only say so.
-            break;
+            online_accounts = false;
+            continue;
         };
         let row = adw::ActionRow::builder().title(&account.email).build();
         if known {
@@ -106,4 +135,63 @@ fn calendar(accounts: &[Account]) -> adw::PreferencesGroup {
         group.add(&row);
     }
     group
+}
+
+/// The subtitle of `account`'s contacts switch, and whether the switch
+/// works: it does not on a server that keeps no contacts, and then the
+/// subtitle says why.
+fn contacts_row(account: &Account, offers: Offers) -> (String, bool) {
+    match offers.contacts {
+        true => (gettext("Google asks your permission the first time"), true),
+        false => (reason(account.provider, Missing::Contacts), false),
+    }
+}
+
+/// Why `account` has no calendar, when its server has none.
+fn calendar_lack(account: &Account, offers: Offers) -> Option<String> {
+    (!offers.calendar).then(|| reason(account.provider, Missing::Calendar))
+}
+
+#[cfg(test)]
+mod tests {
+    use mailrs_domain::{Account, AccountState, Provider};
+    use mailrs_sync::{Missing, Offers};
+
+    use super::{calendar_lack, contacts_row};
+    use crate::offered::reason;
+
+    fn account() -> Account {
+        Account {
+            id: 1,
+            email: "me@gmail.com".into(),
+            state: AccountState::Ok,
+            provider: Provider::Gmail,
+        }
+    }
+
+    #[test]
+    fn a_gmail_account_switches_its_contacts_as_before() {
+        assert_eq!(
+            contacts_row(&account(), Offers::EVERYTHING),
+            ("Google asks your permission the first time".to_string(), true)
+        );
+        assert_eq!(calendar_lack(&account(), Offers::EVERYTHING), None);
+    }
+
+    #[test]
+    fn an_account_without_contacts_or_a_calendar_says_why() {
+        let bare = Offers {
+            contacts: false,
+            calendar: false,
+            ..Offers::EVERYTHING
+        };
+        assert_eq!(
+            contacts_row(&account(), bare),
+            (reason(Provider::Gmail, Missing::Contacts), false)
+        );
+        assert_eq!(
+            calendar_lack(&account(), bare),
+            Some(reason(Provider::Gmail, Missing::Calendar))
+        );
+    }
 }

@@ -6,10 +6,11 @@ use std::rc::{Rc, Weak};
 
 use adw::prelude::*;
 use gtk::{gio, glib};
-use mailrs_domain::ThreadSummary;
-use mailrs_sync::Mailbox;
+use mailrs_domain::{AccountId, ThreadSummary};
+use mailrs_sync::{Mailbox, Offers};
 
 use super::MainWindow;
+use super::triage::deletes;
 use crate::ui::conversation::ConversationView;
 use mailrs_domain::translate::gettext;
 
@@ -43,11 +44,11 @@ impl MainWindow {
         // The window keeps the mailbox it was opened from, so its buttons
         // and what they do stay put when the main window moves on.
         let mailbox = self.shown();
-        self.word_buttons(&view, &mailbox);
+        self.word_buttons(&view, &mailbox, [summary.account_id]);
         self.word_filing(&view, [summary.account_id]);
         self.detached
             .borrow_mut()
-            .push((Rc::downgrade(&view), mailbox));
+            .push((Rc::downgrade(&view), mailbox.clone()));
         if let Some(filter) = self.app.upgrade().and_then(|app| app.filter()) {
             view.set_filter(filter);
         }
@@ -62,7 +63,7 @@ impl MainWindow {
             .default_height(760)
             .content(&view.page)
             .build();
-        self.install_window_actions(&window, &view);
+        self.install_window_actions(&window, &view, &mailbox, summary.account_id);
         // The view lives as long as its window.
         let keep = Rc::clone(&view);
         window.connect_destroy(move |_| {
@@ -106,11 +107,23 @@ impl MainWindow {
     }
 
     /// The `win.*` actions a separate window's menus and keys use, and
-    /// its keys.
-    fn install_window_actions(self: &Rc<Self>, window: &adw::Window, view: &Rc<ConversationView>) {
+    /// its keys. The window shows one conversation from `account_id` for
+    /// good, so what that account lacks is turned off once, here.
+    fn install_window_actions(
+        self: &Rc<Self>,
+        window: &adw::Window,
+        view: &Rc<ConversationView>,
+        mailbox: &Mailbox,
+        account_id: AccountId,
+    ) {
         let group = gio::SimpleActionGroup::new();
         self.install_view_actions(&group, view);
         self.install_outbox_actions(&group, view);
+        for (name, enabled) in gates(mailbox, self.offers(account_id)) {
+            if let Some(action) = group.lookup_action(name).and_downcast::<gio::SimpleAction>() {
+                action.set_enabled(enabled);
+            }
+        }
         window.insert_action_group("win", Some(&group));
         window.add_controller(super::shortcuts::conversation_chords());
     }
@@ -142,6 +155,16 @@ impl MainWindow {
             }
         });
     }
+}
+
+/// The actions of a separate window that depend on what its account
+/// `offers`, and whether each is on for a conversation opened from
+/// `mailbox`.
+fn gates(mailbox: &Mailbox, offers: Offers) -> [(&'static str, bool); 2] {
+    [
+        ("categorize-sender", offers.categories),
+        ("trash", deletes(mailbox, offers.delete_forever)),
+    ]
 }
 
 fn show_source(parent: &adw::Window, subject: &str, raw: Vec<u8>) {
@@ -216,4 +239,52 @@ fn show_source(parent: &adw::Window, subject: &str, raw: Vec<u8>) {
     ));
     window.add_controller(keys);
     window.present();
+}
+
+#[cfg(test)]
+mod tests {
+    use mailrs_domain::Folder;
+    use mailrs_sync::Offers;
+    use mailrs_sync::mailbox::Standard;
+
+    use super::{Mailbox, gates};
+
+    fn trash() -> Mailbox {
+        Mailbox::Folder {
+            account_id: Some(1),
+            folder: Folder::Trash,
+        }
+    }
+
+    #[test]
+    fn a_gmail_conversation_window_keeps_every_action() {
+        let inbox = Mailbox::Standard {
+            account_id: 1,
+            which: Standard::Inbox,
+        };
+        for mailbox in [inbox, trash()] {
+            assert_eq!(
+                gates(&mailbox, Offers::EVERYTHING),
+                [("categorize-sender", true), ("trash", true)]
+            );
+        }
+    }
+
+    #[test]
+    fn a_conversation_window_turns_off_what_its_account_lacks() {
+        let bare = Offers {
+            categories: false,
+            delete_forever: false,
+            ..Offers::EVERYTHING
+        };
+        assert_eq!(
+            gates(&trash(), bare),
+            [("categorize-sender", false), ("trash", false)]
+        );
+        let inbox = Mailbox::Unified(Standard::Inbox);
+        assert_eq!(
+            gates(&inbox, bare),
+            [("categorize-sender", false), ("trash", true)]
+        );
+    }
 }

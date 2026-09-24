@@ -1180,13 +1180,13 @@ msgid "Report a Problem"
 msgstr "Report a Problem"
 
 #: app/src/notify.rs:49 app/src/ui/conversation.rs:337
-#: app/src/ui/conversation.rs:472 app/src/ui/window/message_menu.rs:123
-#: app/src/ui/window/shortcuts.rs:356
+#: app/src/ui/conversation.rs:472 app/src/ui/conversation.rs:952
+#: app/src/ui/window/message_menu.rs:123 app/src/ui/window/shortcuts.rs:356
 msgid "Archive"
 msgstr "Archive"
 
 #: app/src/notify.rs:50 app/src/ui/conversation.rs:338
-#: app/src/ui/conversation.rs:984 app/src/ui/preferences.rs:108
+#: app/src/ui/conversation.rs:996 app/src/ui/preferences.rs:123
 #: app/src/ui/rules.rs:281 app/src/ui/window/message_menu.rs:126
 msgid "Mark as Read"
 msgstr "Mark as Read"
@@ -1217,7 +1217,7 @@ msgstr "New message"
 msgid "From {senders}"
 msgstr "From {senders}"
 
-#: app/src/notify.rs:195 app/src/ui/window.rs:1924
+#: app/src/notify.rs:195 app/src/ui/window.rs:1975
 msgid "Open"
 msgstr "Open"
 
@@ -1269,27 +1269,27 @@ msgstr "This account has no labels yet."
 msgid "This account has no folders yet."
 msgstr "This account has no folders yet."
 
-#: app/src/offered.rs:109
+#: app/src/offered.rs:105
 msgid "{provider} has no calendar that other apps can reach."
 msgstr "{provider} has no calendar that other apps can reach."
 
-#: app/src/offered.rs:110
+#: app/src/offered.rs:106
 msgid "{provider} keeps no contacts that other apps can reach."
 msgstr "{provider} keeps no contacts that other apps can reach."
 
-#: app/src/offered.rs:111
+#: app/src/offered.rs:107
 msgid "{provider} has no rules that other apps can change."
 msgstr "{provider} has no rules that other apps can change."
 
-#: app/src/offered.rs:113
+#: app/src/offered.rs:109
 msgid "{provider} has no automatic reply that other apps can change."
 msgstr "{provider} has no automatic reply that other apps can change."
 
-#: app/src/offered.rs:116
+#: app/src/offered.rs:112
 msgid "{provider} cannot delete mail for good. Delete moves it to the Trash."
 msgstr "{provider} cannot delete mail for good. Delete moves it to the Trash."
 
-#: app/src/offered.rs:118
+#: app/src/offered.rs:114
 msgid "{provider} does not sort the inbox into categories."
 msgstr "{provider} does not sort the inbox into categories."
 
@@ -1663,7 +1663,7 @@ msgstr "That account is not connected."
 msgid "Could not save: {reason}"
 msgstr "Could not save: {reason}"
 
-#: app/src/protection/draft.rs:200 app/src/ui/window.rs:1842
+#: app/src/protection/draft.rs:200 app/src/ui/window.rs:1893
 msgid "Could not open the draft: {reason}"
 msgstr "Could not open the draft: {reason}"
 
@@ -2183,7 +2183,7 @@ msgstr "Open Penguin Mail"
 msgid "New Message"
 msgstr "New Message"
 
-#: app/src/tray.rs:159 app/src/ui/sidebar.rs:750 app/src/ui/window.rs:2223
+#: app/src/tray.rs:159 app/src/ui/sidebar.rs:767 app/src/ui/window.rs:2274
 msgid "Check for Mail"
 msgstr "Check for Mail"
 
@@ -2197,11 +2197,11 @@ msgstr "What's New in {version}"
 
 #: app/src/tray.rs:170 app/src/ui/about.rs:87 app/src/ui/about.rs:194
 #: app/src/ui/about.rs:202 app/src/ui/about.rs:209
-#: app/src/ui/preferences.rs:663 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:692 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Check for Updates"
 
-#: app/src/tray.rs:175 app/src/ui/window.rs:2235
+#: app/src/tray.rs:175 app/src/ui/window.rs:2286
 #: app/src/ui/window/shortcuts.rs:508
 msgid "Quit"
 msgstr "Quit"
@@ -2226,7 +2226,7 @@ msgstr "Website"
 msgid "License"
 msgstr "Licence"
 
-#: app/src/ui/about.rs:170 app/src/ui/window.rs:2234
+#: app/src/ui/about.rs:170 app/src/ui/window.rs:2285
 msgid "About Penguin Mail"
 msgstr "About Penguin Mail"
 
@@ -2402,7 +2402,7 @@ msgid "Edit {server}"
 msgstr "Edit {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1413
-#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:2058
+#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:2109
 msgid "Remove"
 msgstr "Remove"
 
@@ -2587,7 +2587,7 @@ msgid "Approve each message the assistant sends and each change to Gmail setting
 msgstr "Approve each message the assistant sends and each change to Gmail settings, such as automatic replies and rules"
 
 #: app/src/ui/assistant_prefs.rs:177 app/src/ui/conversation.rs:561
-#: app/src/ui/window/detached.rs:57
+#: app/src/ui/window/detached.rs:58
 msgid "Conversation"
 msgstr "Conversation"
 
@@ -2777,7 +2777,7 @@ msgstr "Brave Search API Key (Saved)"
 msgid "Brave Search API Key"
 msgstr "Brave Search API Key"
 
-#: app/src/ui/composer/mod.rs:204 app/src/ui/conversation.rs:1522
+#: app/src/ui/composer/mod.rs:204 app/src/ui/conversation.rs:1534
 msgid "Choose a Time…"
 msgstr "Choose a Time…"
 
@@ -3181,49 +3181,49 @@ msgstr "Add to VIPs"
 msgid "All Their Mail"
 msgstr "All Their Mail"
 
-#: app/src/ui/contacts_prefs.rs:15
+#: app/src/ui/contacts_prefs.rs:22
 msgid "Contacts & Calendar"
 msgstr "Contacts & Calendar"
 
-#: app/src/ui/contacts_prefs.rs:29
+#: app/src/ui/contacts_prefs.rs:41
 msgid "Google Contacts"
 msgstr "Google Contacts"
 
-#: app/src/ui/contacts_prefs.rs:31
+#: app/src/ui/contacts_prefs.rs:43
 msgid "Penguin Mail can read an account's contacts: names, email addresses, photos, organizations, and phone numbers. It uses them to suggest recipients, to show faces beside mail, and to fill the card behind a sender's name. What it reads stays on this computer, and turning an account off deletes its contacts."
 msgstr "Penguin Mail can read an account's contacts: names, email addresses, photos, organisations, and phone numbers. It uses them to suggest recipients, to show faces beside mail, and to fill the card behind a sender's name. What it reads stays on this computer, and turning an account off deletes its contacts."
 
-#: app/src/ui/contacts_prefs.rs:40
+#: app/src/ui/contacts_prefs.rs:52
 msgid "No accounts yet"
 msgstr "No accounts yet"
 
-#: app/src/ui/contacts_prefs.rs:47
-msgid "Google asks your permission the first time"
-msgstr "Google asks your permission the first time"
-
-#: app/src/ui/contacts_prefs.rs:70
+#: app/src/ui/contacts_prefs.rs:85
 msgid "Calendar"
 msgstr "Calendar"
 
-#: app/src/ui/contacts_prefs.rs:72
+#: app/src/ui/contacts_prefs.rs:87
 msgid "Answering a meeting invitation records your answer in that account's Google Calendar, and Google asks your permission the first time. To see the meetings in GNOME Calendar and the clock, add the account to GNOME Online Accounts."
 msgstr "Answering a meeting invitation records your answer in that account's Google Calendar, and Google asks your permission the first time. To see the meetings in GNOME Calendar and the clock, add the account to GNOME Online Accounts."
 
-#: app/src/ui/contacts_prefs.rs:85
+#: app/src/ui/contacts_prefs.rs:114
 msgid "In GNOME Online Accounts"
 msgstr "In GNOME Online Accounts"
 
-#: app/src/ui/contacts_prefs.rs:87
+#: app/src/ui/contacts_prefs.rs:116
 msgid "Not in GNOME Online Accounts"
 msgstr "Not in GNOME Online Accounts"
 
-#: app/src/ui/contacts_prefs.rs:89
+#: app/src/ui/contacts_prefs.rs:118
 msgid "Add…"
 msgstr "Add…"
 
-#: app/src/ui/contacts_prefs.rs:95
+#: app/src/ui/contacts_prefs.rs:124
 msgid "Add {account} to GNOME Online Accounts"
 msgstr "Add {account} to GNOME Online Accounts"
+
+#: app/src/ui/contacts_prefs.rs:145
+msgid "Google asks your permission the first time"
+msgstr "Google asks your permission the first time"
 
 #: app/src/ui/conversation.rs:316
 msgid "No Conversation Selected"
@@ -3245,23 +3245,23 @@ msgstr "This message is from a mailing list"
 msgid "Unsubscribe"
 msgstr "Unsubscribe"
 
-#: app/src/ui/conversation.rs:339 app/src/ui/conversation.rs:991
+#: app/src/ui/conversation.rs:339 app/src/ui/conversation.rs:1003
 #: app/src/ui/window/message_menu.rs:128
 msgid "Flag"
 msgstr "Flag"
 
 #: app/src/ui/conversation.rs:340 app/src/ui/conversation.rs:482
-#: app/src/ui/conversation.rs:809 app/src/ui/conversation.rs:996
+#: app/src/ui/conversation.rs:809 app/src/ui/conversation.rs:1008
 msgid "Mute"
 msgstr "Mute"
 
 #: app/src/ui/conversation.rs:341 app/src/ui/conversation.rs:474
-#: app/src/ui/conversation.rs:941 app/src/ui/window/shortcuts.rs:375
+#: app/src/ui/conversation.rs:945 app/src/ui/window/shortcuts.rs:375
 msgid "Junk"
 msgstr "Junk"
 
 #: app/src/ui/conversation.rs:342 app/src/ui/conversation.rs:473
-#: app/src/ui/conversation.rs:935 app/src/ui/window/message_menu.rs:124
+#: app/src/ui/conversation.rs:940 app/src/ui/window/message_menu.rs:124
 msgid "Move to Trash"
 msgstr "Move to Trash"
 
@@ -3277,11 +3277,11 @@ msgstr "Actions and shortcuts apply to all of them. Esc clears the selection."
 msgid "Archive (E or Ctrl+Alt+A)"
 msgstr "Archive (E or Ctrl+Alt+A)"
 
-#: app/src/ui/conversation.rs:413 app/src/ui/conversation.rs:918
+#: app/src/ui/conversation.rs:413 app/src/ui/conversation.rs:923
 msgid "Move to Trash (Delete)"
 msgstr "Move to Trash (Delete)"
 
-#: app/src/ui/conversation.rs:414 app/src/ui/conversation.rs:928
+#: app/src/ui/conversation.rs:414 app/src/ui/conversation.rs:933
 msgid "Junk (Ctrl+Shift+J)"
 msgstr "Junk (Ctrl+Shift+J)"
 
@@ -3290,7 +3290,7 @@ msgid "Mark as Unread (Ctrl+Shift+U)"
 msgstr "Mark as Unread (Ctrl+Shift+U)"
 
 #: app/src/ui/conversation.rs:422 app/src/ui/conversation.rs:426
-#: app/src/ui/conversation.rs:1565
+#: app/src/ui/conversation.rs:1577
 msgid "Flag (Ctrl+Shift+L)"
 msgstr "Flag (Ctrl+Shift+L)"
 
@@ -3389,64 +3389,64 @@ msgstr "Categorise Sender"
 msgid "Remove Sender from VIPs"
 msgstr "Remove Sender from VIPs"
 
-#: app/src/ui/conversation.rs:807 app/src/ui/conversation.rs:994
+#: app/src/ui/conversation.rs:807 app/src/ui/conversation.rs:1006
 msgid "Unmute"
 msgstr "Unmute"
 
-#: app/src/ui/conversation.rs:917
+#: app/src/ui/conversation.rs:922
 msgid "Delete Forever (Delete)"
 msgstr "Delete Forever (Delete)"
 
-#: app/src/ui/conversation.rs:926
+#: app/src/ui/conversation.rs:931
 msgid "Not Junk (Ctrl+Shift+J)"
 msgstr "Not Junk (Ctrl+Shift+J)"
 
-#: app/src/ui/conversation.rs:934 app/src/ui/window/message_menu.rs:125
-#: app/src/ui/window/press.rs:302
+#: app/src/ui/conversation.rs:939 app/src/ui/window/message_menu.rs:125
+#: app/src/ui/window/press.rs:306
 msgid "Delete Forever"
 msgstr "Delete Forever"
 
-#: app/src/ui/conversation.rs:940
+#: app/src/ui/conversation.rs:944
 msgid "Not Junk"
 msgstr "Not Junk"
 
-#: app/src/ui/conversation.rs:986 app/src/ui/window/message_menu.rs:127
+#: app/src/ui/conversation.rs:998 app/src/ui/window/message_menu.rs:127
 msgid "Mark as Unread"
 msgstr "Mark as Unread"
 
-#: app/src/ui/conversation.rs:989 app/src/ui/window/message_menu.rs:129
+#: app/src/ui/conversation.rs:1001 app/src/ui/window/message_menu.rs:129
 msgid "Unflag"
 msgstr "Unflag"
 
-#: app/src/ui/conversation.rs:1005
+#: app/src/ui/conversation.rs:1017
 msgid "{count} Conversation Selected"
 msgid_plural "{count} Conversations Selected"
 msgstr[0] "{count} Conversation Selected"
 msgstr[1] "{count} Conversations Selected"
 
-#: app/src/ui/conversation.rs:1011
+#: app/src/ui/conversation.rs:1023
 msgid "{count} Message Selected"
 msgid_plural "{count} Messages Selected"
 msgstr[0] "{count} Message Selected"
 msgstr[1] "{count} Messages Selected"
 
-#: app/src/ui/conversation.rs:1564
+#: app/src/ui/conversation.rs:1576
 msgid "Unflag (Ctrl+Shift+L)"
 msgstr "Unflag (Ctrl+Shift+L)"
 
-#: app/src/ui/conversation.rs:1577
+#: app/src/ui/conversation.rs:1589
 msgid "Mark as Read (U)"
 msgstr "Mark as Read (U)"
 
-#: app/src/ui/conversation.rs:1578
+#: app/src/ui/conversation.rs:1590
 msgid "Mark as Unread (U)"
 msgstr "Mark as Unread (U)"
 
-#: app/src/ui/conversation.rs:1736
+#: app/src/ui/conversation.rs:1748
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr "{color} (Ctrl+Alt+{number})"
 
-#: app/src/ui/conversation.rs:1753 app/src/ui/window/message_menu.rs:249
+#: app/src/ui/conversation.rs:1765 app/src/ui/window/message_menu.rs:250
 msgid "Clear Flag"
 msgstr "Clear Flag"
 
@@ -3562,7 +3562,7 @@ msgstr "Could not delete the address: {reason}"
 msgid "Allow Hide My Email"
 msgstr "Allow Hide My Email"
 
-#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2317
+#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2368
 msgid "Add an account first"
 msgstr "Add an account first"
 
@@ -3780,349 +3780,353 @@ msgstr "Warning"
 msgid "Not checked"
 msgstr "Not checked"
 
-#: app/src/ui/preferences.rs:65 app/src/ui/window/shortcuts.rs:214
+#: app/src/ui/preferences.rs:80 app/src/ui/window/shortcuts.rs:214
 msgid "General"
 msgstr "General"
 
-#: app/src/ui/preferences.rs:70 app/src/ui/window/shortcuts.rs:211
+#: app/src/ui/preferences.rs:85 app/src/ui/window/shortcuts.rs:211
 msgid "Reading"
 msgstr "Reading"
 
-#: app/src/ui/preferences.rs:74
+#: app/src/ui/preferences.rs:89
 msgid "Group Messages into Conversations"
 msgstr "Group Messages into Conversations"
 
-#: app/src/ui/preferences.rs:76
+#: app/src/ui/preferences.rs:91
 msgid "Show a thread's replies together instead of one row per message"
 msgstr "Show a thread's replies together instead of one row per message"
 
-#: app/src/ui/preferences.rs:83
+#: app/src/ui/preferences.rs:98
 msgid "Group Inbox into Categories"
 msgstr "Group Inbox into Categories"
 
-#: app/src/ui/preferences.rs:85
+#: app/src/ui/preferences.rs:100
 msgid "Sort the inbox into Primary, Updates, Promotions, and Social, as Gmail does"
 msgstr "Sort the inbox into Primary, Updates, Promotions, and Social, as Gmail does"
 
-#: app/src/ui/preferences.rs:92
+#: app/src/ui/preferences.rs:107
 msgid "Open the Inbox On"
 msgstr "Open the Inbox On"
 
-#: app/src/ui/preferences.rs:93
+#: app/src/ui/preferences.rs:108
 msgid "Which category the window starts on"
 msgstr "Which category the window starts on"
 
-#: app/src/ui/preferences.rs:99
+#: app/src/ui/preferences.rs:114
 msgid "Suggest Follow-Ups"
 msgstr "Suggest Follow-Ups"
 
-#: app/src/ui/preferences.rs:101
+#: app/src/ui/preferences.rs:116
 msgid "List mail you sent that has had no reply for three days"
 msgstr "List mail you sent that has had no reply for three days"
 
-#: app/src/ui/preferences.rs:115
+#: app/src/ui/preferences.rs:130
 msgid "Remote Images"
 msgstr "Remote Images"
 
-#: app/src/ui/preferences.rs:117
+#: app/src/ui/preferences.rs:132
 msgid "Loading them can tell senders when you read their mail"
 msgstr "Loading them can tell senders when you read their mail"
 
-#: app/src/ui/preferences.rs:125
+#: app/src/ui/preferences.rs:140
 msgid "Text Size"
 msgstr "Text Size"
 
-#: app/src/ui/preferences.rs:133
+#: app/src/ui/preferences.rs:148
 msgid "Appearance"
 msgstr "Appearance"
 
-#: app/src/ui/preferences.rs:137
+#: app/src/ui/preferences.rs:152
 msgid "Style"
 msgstr "Style"
 
-#: app/src/ui/preferences.rs:146
+#: app/src/ui/preferences.rs:161
 msgid "Notifications"
 msgstr "Notifications"
 
-#: app/src/ui/preferences.rs:150
+#: app/src/ui/preferences.rs:165
 msgid "Notify About New Mail"
 msgstr "Notify About New Mail"
 
-#: app/src/ui/preferences.rs:157
+#: app/src/ui/preferences.rs:172
 msgid "Show Sender and Subject"
 msgstr "Show Sender and Subject"
 
-#: app/src/ui/preferences.rs:158
+#: app/src/ui/preferences.rs:173
 msgid "Turn off to see only how much mail arrived"
 msgstr "Turn off to see only how much mail arrived"
 
-#: app/src/ui/preferences.rs:168
+#: app/src/ui/preferences.rs:183
 msgid "Only for VIPs"
 msgstr "Only for VIPs"
 
-#: app/src/ui/preferences.rs:169
+#: app/src/ui/preferences.rs:184
 msgid "Stay quiet about mail from everyone else"
 msgstr "Stay quiet about mail from everyone else"
 
-#: app/src/ui/preferences.rs:178
+#: app/src/ui/preferences.rs:193
 msgid "Buttons"
 msgstr "Buttons"
 
-#: app/src/ui/preferences.rs:180
+#: app/src/ui/preferences.rs:195
 msgid "What a notification offers besides opening the conversation"
 msgstr "What a notification offers besides opening the conversation"
 
-#: app/src/ui/preferences.rs:212 app/src/ui/window/shortcuts.rs:213
+#: app/src/ui/preferences.rs:218
+msgid "Not Available"
+msgstr "Not Available"
+
+#: app/src/ui/preferences.rs:241 app/src/ui/window/shortcuts.rs:213
 msgid "Writing"
 msgstr "Writing"
 
-#: app/src/ui/preferences.rs:217
+#: app/src/ui/preferences.rs:246
 msgid "No Accounts Yet"
 msgstr "No Accounts Yet"
 
-#: app/src/ui/preferences.rs:219
+#: app/src/ui/preferences.rs:248
 msgid "Add an account to choose a sender and write signatures."
 msgstr "Add an account to choose a sender and write signatures."
 
-#: app/src/ui/preferences.rs:228
+#: app/src/ui/preferences.rs:257
 msgid "New Messages"
 msgstr "New Messages"
 
-#: app/src/ui/preferences.rs:238
+#: app/src/ui/preferences.rs:267
 msgid "Send New Messages From"
 msgstr "Send New Messages From"
 
-#: app/src/ui/preferences.rs:240
+#: app/src/ui/preferences.rs:269
 msgid "Replies always come from the account that received the message"
 msgstr "Replies always come from the account that received the message"
 
-#: app/src/ui/preferences.rs:257
+#: app/src/ui/preferences.rs:286
 msgid "New Messages Start As"
 msgstr "New Messages Start As"
 
-#: app/src/ui/preferences.rs:259
+#: app/src/ui/preferences.rs:288
 msgid "Rich text styles the words themselves; Markdown shows its marks"
 msgstr "Rich text styles the words themselves; Markdown shows its marks"
 
-#: app/src/ui/preferences.rs:266
+#: app/src/ui/preferences.rs:295
 msgid "Undo Send"
 msgstr "Undo Send"
 
-#: app/src/ui/preferences.rs:268
+#: app/src/ui/preferences.rs:297
 msgid "How long you can take a message back after sending it"
 msgstr "How long you can take a message back after sending it"
 
-#: app/src/ui/preferences.rs:275
+#: app/src/ui/preferences.rs:304
 msgid "Check for Missing Attachments"
 msgstr "Check for Missing Attachments"
 
-#: app/src/ui/preferences.rs:277
+#: app/src/ui/preferences.rs:306
 msgid "Ask before sending a message that promises a file and carries none"
 msgstr "Ask before sending a message that promises a file and carries none"
 
-#: app/src/ui/preferences.rs:285
+#: app/src/ui/preferences.rs:314
 msgid "Signatures"
 msgstr "Signatures"
 
-#: app/src/ui/preferences.rs:287
+#: app/src/ui/preferences.rs:316
 msgid "Added below new messages and above quoted text in replies. Markdown works."
 msgstr "Added below new messages and above quoted text in replies. Markdown works."
 
-#: app/src/ui/preferences.rs:309
+#: app/src/ui/preferences.rs:338
 msgid "Signature for {account}"
 msgstr "Signature for {account}"
 
-#: app/src/ui/preferences.rs:322
+#: app/src/ui/preferences.rs:351
 msgid "Import from Gmail"
 msgstr "Import from Gmail"
 
-#: app/src/ui/preferences.rs:339
+#: app/src/ui/preferences.rs:368
 msgid "This account is not syncing yet"
 msgstr "This account is not syncing yet"
 
-#: app/src/ui/preferences.rs:354
+#: app/src/ui/preferences.rs:383
 msgid "Imported the signature from Gmail"
 msgstr "Imported the signature from Gmail"
 
-#: app/src/ui/preferences.rs:358
+#: app/src/ui/preferences.rs:387
 msgid "Gmail has no signature for this account"
 msgstr "Gmail has no signature for this account"
 
-#: app/src/ui/preferences.rs:361
+#: app/src/ui/preferences.rs:390
 msgid "Could not import: {reason}"
 msgstr "Could not import: {reason}"
 
-#: app/src/ui/preferences.rs:407
+#: app/src/ui/preferences.rs:436
 msgid "Signing and Encryption"
 msgstr "Signing and Encryption"
 
-#: app/src/ui/preferences.rs:409
+#: app/src/ui/preferences.rs:438
 msgid "Penguin Mail signs and encrypts through GnuPG, which holds your keys and asks for your passphrase itself."
 msgstr "Penguin Mail signs and encrypts through GnuPG, which holds your keys and asks for your passphrase itself."
 
-#: app/src/ui/preferences.rs:414
+#: app/src/ui/preferences.rs:443
 msgid "Your OpenPGP Keys"
 msgstr "Your OpenPGP Keys"
 
-#: app/src/ui/preferences.rs:415
+#: app/src/ui/preferences.rs:444
 msgid "Asking gpg…"
 msgstr "Asking gpg…"
 
-#: app/src/ui/preferences.rs:419
+#: app/src/ui/preferences.rs:448
 msgid "Your S/MIME Certificates"
 msgstr "Your S/MIME Certificates"
 
-#: app/src/ui/preferences.rs:420
+#: app/src/ui/preferences.rs:449
 msgid "Asking gpgsm…"
 msgstr "Asking gpgsm…"
 
-#: app/src/ui/preferences.rs:427
+#: app/src/ui/preferences.rs:456
 msgid "Sign My Messages by Default"
 msgstr "Sign My Messages by Default"
 
-#: app/src/ui/preferences.rs:428
+#: app/src/ui/preferences.rs:457
 msgid "New messages open with Sign turned on"
 msgstr "New messages open with Sign turned on"
 
-#: app/src/ui/preferences.rs:434
+#: app/src/ui/preferences.rs:463
 msgid "Encrypt When I Can"
 msgstr "Encrypt When I Can"
 
-#: app/src/ui/preferences.rs:436
+#: app/src/ui/preferences.rs:465
 msgid "Turn Encrypt on as soon as every recipient has a key or a certificate"
 msgstr "Turn Encrypt on as soon as every recipient has a key or a certificate"
 
-#: app/src/ui/preferences.rs:459
+#: app/src/ui/preferences.rs:488
 msgid "gpg could not be asked: {reason}"
 msgstr "gpg could not be asked: {reason}"
 
-#: app/src/ui/preferences.rs:478
+#: app/src/ui/preferences.rs:507
 msgid "gpgsm could not be asked: {reason}"
 msgstr "gpgsm could not be asked: {reason}"
 
-#: app/src/ui/preferences.rs:487
+#: app/src/ui/preferences.rs:516
 msgid "Penguin Mail signs and encrypts through {programs}, which holds your keys and asks for your passphrase itself."
 msgstr "Penguin Mail signs and encrypts through {programs}, which holds your keys and asks for your passphrase itself."
 
-#: app/src/ui/preferences.rs:518
+#: app/src/ui/preferences.rs:547
 msgid "Spelling"
 msgstr "Spelling"
 
-#: app/src/ui/preferences.rs:521
+#: app/src/ui/preferences.rs:550
 msgid "No dictionaries are installed, so Penguin Mail is not checking spelling. Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and reopen the composer."
 msgstr "No dictionaries are installed, so Penguin Mail is not checking spelling. Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and reopen the composer."
 
-#: app/src/ui/preferences.rs:527
+#: app/src/ui/preferences.rs:556
 msgid "Dictionaries found: {languages}."
 msgstr "Dictionaries found: {languages}."
 
-#: app/src/ui/preferences.rs:540
+#: app/src/ui/preferences.rs:569
 msgid "Follow the System Language ({language})"
 msgstr "Follow the System Language ({language})"
 
-#: app/src/ui/preferences.rs:567
+#: app/src/ui/preferences.rs:596
 msgid "Check Spelling In"
 msgstr "Check Spelling In"
 
-#: app/src/ui/preferences.rs:591
+#: app/src/ui/preferences.rs:620
 msgid "Sync"
 msgstr "Sync"
 
-#: app/src/ui/preferences.rs:597
+#: app/src/ui/preferences.rs:626
 msgid "Checking"
 msgstr "Checking"
 
-#: app/src/ui/preferences.rs:603
+#: app/src/ui/preferences.rs:632
 msgid "Check for New Mail"
 msgstr "Check for New Mail"
 
-#: app/src/ui/preferences.rs:612
+#: app/src/ui/preferences.rs:641
 msgid "Storage"
 msgstr "Storage"
 
-#: app/src/ui/preferences.rs:617
+#: app/src/ui/preferences.rs:646
 msgid "Keep Mail on This Computer For"
 msgstr "Keep Mail on This Computer For"
 
-#: app/src/ui/preferences.rs:619
+#: app/src/ui/preferences.rs:648
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr "Everything in your inbox stays too, and older mail remains searchable"
 
-#: app/src/ui/preferences.rs:628
+#: app/src/ui/preferences.rs:657
 msgid "Message Cache"
 msgstr "Message Cache"
 
-#: app/src/ui/preferences.rs:630
+#: app/src/ui/preferences.rs:659
 msgid "Bodies of mail you have read, kept for opening offline"
 msgstr "Bodies of mail you have read, kept for opening offline"
 
-#: app/src/ui/preferences.rs:639
+#: app/src/ui/preferences.rs:668
 msgid "Startup"
 msgstr "Startup"
 
-#: app/src/ui/preferences.rs:642
+#: app/src/ui/preferences.rs:671
 msgid "Start in the Tray at Login"
 msgstr "Start in the Tray at Login"
 
-#: app/src/ui/preferences.rs:656
+#: app/src/ui/preferences.rs:685
 msgid "Not available in demo mode"
 msgstr "Not available in demo mode"
 
-#: app/src/ui/preferences.rs:664
+#: app/src/ui/preferences.rs:693
 msgid "Look for a new release once a day"
 msgstr "Look for a new release once a day"
 
-#: app/src/ui/preferences.rs:671
+#: app/src/ui/preferences.rs:700
 msgid "Updates"
 msgstr "Updates"
 
-#: app/src/ui/preferences.rs:685
+#: app/src/ui/preferences.rs:714
 msgid "Senders Who May Load Images"
 msgstr "Senders Who May Load Images"
 
-#: app/src/ui/preferences.rs:686 app/src/ui/preferences.rs:694
+#: app/src/ui/preferences.rs:715 app/src/ui/preferences.rs:723
 msgid "Nobody yet"
 msgstr "Nobody yet"
 
-#: app/src/ui/preferences.rs:696
+#: app/src/ui/preferences.rs:725
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} sender"
 msgstr[1] "{count} senders"
 
-#: app/src/ui/preferences.rs:706
+#: app/src/ui/preferences.rs:735
 msgid "Anyone at this domain"
 msgstr "Anyone at this domain"
 
-#: app/src/ui/preferences.rs:708
+#: app/src/ui/preferences.rs:737
 msgid "This address"
 msgstr "This address"
 
-#: app/src/ui/preferences.rs:713
+#: app/src/ui/preferences.rs:742
 msgid "Stop Loading Images from This Sender"
 msgstr "Stop Loading Images from This Sender"
 
-#: app/src/ui/preferences.rs:720
+#: app/src/ui/preferences.rs:749
 msgid "Stop loading images from {sender}"
 msgstr "Stop loading images from {sender}"
 
-#: app/src/ui/preferences.rs:795
+#: app/src/ui/preferences.rs:824
 msgid "Follow System"
 msgstr "Follow System"
 
-#: app/src/ui/preferences.rs:799
+#: app/src/ui/preferences.rs:828
 msgid "Language"
 msgstr "Language"
 
-#: app/src/ui/preferences.rs:800
+#: app/src/ui/preferences.rs:829
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail shows a new language after a restart"
 
-#: app/src/ui/preferences.rs:872
+#: app/src/ui/preferences.rs:901
 msgid "No signature"
 msgstr "No signature"
 
-#: app/src/ui/queued.rs:65 app/src/ui/window/press.rs:316
+#: app/src/ui/queued.rs:65 app/src/ui/window/press.rs:320
 msgid "Cancel Send"
 msgstr "Cancel Send"
 
@@ -4258,7 +4262,7 @@ msgstr "Smart Mailboxes"
 msgid "Accounts"
 msgstr "Accounts"
 
-#: app/src/ui/sidebar.rs:485 app/src/ui/sidebar.rs:810
+#: app/src/ui/sidebar.rs:485 app/src/ui/sidebar.rs:819
 msgid "Show or hide this account's mailboxes"
 msgstr "Show or hide this account's mailboxes"
 
@@ -4274,11 +4278,11 @@ msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}, {count} message"
 msgstr[1] "{mailbox}, {count} messages"
 
-#: app/src/ui/sidebar.rs:579 app/src/ui/sidebar.rs:776
+#: app/src/ui/sidebar.rs:579 app/src/ui/sidebar.rs:785
 msgid "Move Up"
 msgstr "Move Up"
 
-#: app/src/ui/sidebar.rs:580 app/src/ui/sidebar.rs:777
+#: app/src/ui/sidebar.rs:580 app/src/ui/sidebar.rs:786
 msgid "Move Down"
 msgstr "Move Down"
 
@@ -4286,63 +4290,63 @@ msgstr "Move Down"
 msgid "Delete…"
 msgstr "Delete…"
 
-#: app/src/ui/sidebar.rs:631 app/src/ui/sidebar.rs:765
+#: app/src/ui/sidebar.rs:631 app/src/ui/sidebar.rs:774
 msgid "Rename…"
 msgstr "Rename…"
 
-#: app/src/ui/sidebar.rs:641 app/src/ui/sidebar.rs:775
+#: app/src/ui/sidebar.rs:641 app/src/ui/sidebar.rs:784
 msgid "Color"
 msgstr "Colour"
 
-#: app/src/ui/sidebar.rs:707
-msgid "Sign in again to keep syncing"
-msgstr "Sign in again to keep syncing"
-
-#: app/src/ui/sidebar.rs:709
-msgid "Offline"
-msgstr "Offline"
-
-#: app/src/ui/sidebar.rs:712
-msgid "Gmail is not responding; retrying"
-msgstr "Gmail is not responding; retrying"
-
-#: app/src/ui/sidebar.rs:715
-msgid "Downloading mail"
-msgstr "Downloading mail"
-
-#: app/src/ui/sidebar.rs:719
-msgid "Syncing stopped after an error; restart Penguin Mail to try again"
-msgstr "Syncing stopped after an error; restart Penguin Mail to try again"
-
-#: app/src/ui/sidebar.rs:752
+#: app/src/ui/sidebar.rs:678
 msgid "Automatic Reply…"
 msgstr "Automatic Reply…"
 
-#: app/src/ui/sidebar.rs:753
+#: app/src/ui/sidebar.rs:680
 msgid "Signature…"
 msgstr "Signature…"
 
-#: app/src/ui/sidebar.rs:754
+#: app/src/ui/sidebar.rs:682
 msgid "Rules…"
 msgstr "Rules…"
 
-#: app/src/ui/sidebar.rs:756 app/src/ui/window.rs:2226
+#: app/src/ui/sidebar.rs:683 app/src/ui/window.rs:2277
 msgid "Hide My Email…"
 msgstr "Hide My Email…"
 
-#: app/src/ui/sidebar.rs:780
+#: app/src/ui/sidebar.rs:724
+msgid "Sign in again to keep syncing"
+msgstr "Sign in again to keep syncing"
+
+#: app/src/ui/sidebar.rs:726
+msgid "Offline"
+msgstr "Offline"
+
+#: app/src/ui/sidebar.rs:729
+msgid "Gmail is not responding; retrying"
+msgstr "Gmail is not responding; retrying"
+
+#: app/src/ui/sidebar.rs:732
+msgid "Downloading mail"
+msgstr "Downloading mail"
+
+#: app/src/ui/sidebar.rs:736
+msgid "Syncing stopped after an error; restart Penguin Mail to try again"
+msgstr "Syncing stopped after an error; restart Penguin Mail to try again"
+
+#: app/src/ui/sidebar.rs:789
 msgid "Sign In Again…"
 msgstr "Sign In Again…"
 
-#: app/src/ui/sidebar.rs:783
+#: app/src/ui/sidebar.rs:792
 msgid "Remove Account…"
 msgstr "Remove Account…"
 
-#: app/src/ui/sidebar.rs:790
+#: app/src/ui/sidebar.rs:799
 msgid "Account options"
 msgstr "Account options"
 
-#: app/src/ui/sidebar.rs:795
+#: app/src/ui/sidebar.rs:804
 msgid "Options for {account}"
 msgstr "Options for {account}"
 
@@ -4664,7 +4668,7 @@ msgstr "Only Reply to My Contacts"
 msgid "%a, %-d %b %Y"
 msgstr "%a, %-d %b %Y"
 
-#: app/src/ui/welcome.rs:10 app/src/ui/window.rs:1994
+#: app/src/ui/welcome.rs:10 app/src/ui/window.rs:2045
 msgid "Sign In with Google"
 msgstr "Sign In with Google"
 
@@ -4846,132 +4850,132 @@ msgstr "Penguin Mail (Demo)"
 msgid "Could not read accounts: {reason}"
 msgstr "Could not read accounts: {reason}"
 
-#: app/src/ui/window.rs:802
+#: app/src/ui/window.rs:811
 msgid "Sign in again to keep {account} syncing"
 msgstr "Sign in again to keep {account} syncing"
 
-#: app/src/ui/window.rs:805
+#: app/src/ui/window.rs:814
 msgid "Sign In"
 msgstr "Sign In"
 
-#: app/src/ui/window.rs:1345
+#: app/src/ui/window.rs:1396
 msgid "Could not delete the mail: {reason}"
 msgstr "Could not delete the mail: {reason}"
 
-#: app/src/ui/window.rs:1405
+#: app/src/ui/window.rs:1456
 msgid "Turn On the {service}"
 msgstr "Turn On the {service}"
 
-#: app/src/ui/window.rs:1408
+#: app/src/ui/window.rs:1459
 msgid "The Google Cloud project Penguin Mail signs in with has the {service} switched off, so Google refuses before it can ask for your permission. Turn it on, wait a minute, and try again."
 msgstr "The Google Cloud project Penguin Mail signs in with has the {service} switched off, so Google refuses before it can ask for your permission. Turn it on, wait a minute, and try again."
 
-#: app/src/ui/window.rs:1414
+#: app/src/ui/window.rs:1465
 msgid "Open Google Cloud"
 msgstr "Open Google Cloud"
 
-#: app/src/ui/window.rs:1495 app/src/ui/window/scheduled.rs:21
+#: app/src/ui/window.rs:1546 app/src/ui/window/scheduled.rs:21
 #: app/src/ui/window/shortcuts.rs:422
 msgid "Undo"
 msgstr "Undo"
 
-#: app/src/ui/window.rs:1516
+#: app/src/ui/window.rs:1567
 msgid "Nothing to undo"
 msgstr "Nothing to undo"
 
-#: app/src/ui/window.rs:1522
+#: app/src/ui/window.rs:1573
 msgid "{action} undone"
 msgstr "{action} undone"
 
-#: app/src/ui/window.rs:1572
+#: app/src/ui/window.rs:1623
 msgid "Open or select mail to label it."
 msgstr "Open or select mail to label it."
 
-#: app/src/ui/window.rs:1581
+#: app/src/ui/window.rs:1632
 msgid "Select mail from one account to label it."
 msgstr "Select mail from one account to label it."
 
-#: app/src/ui/window.rs:1789
+#: app/src/ui/window.rs:1840
 msgid "Could not include {file}: {reason}"
 msgstr "Could not include {file}: {reason}"
 
-#: app/src/ui/window.rs:1900
+#: app/src/ui/window.rs:1951
 msgid "Downloading {file}…"
 msgstr "Downloading {file}…"
 
-#: app/src/ui/window.rs:1921 app/src/ui/window/attachments.rs:229
+#: app/src/ui/window.rs:1972 app/src/ui/window/attachments.rs:229
 msgid "Saved {file} to Downloads"
 msgstr "Saved {file} to Downloads"
 
-#: app/src/ui/window.rs:1939 app/src/ui/window/attachments.rs:234
+#: app/src/ui/window.rs:1990 app/src/ui/window/attachments.rs:234
 msgid "Could not save {file}: {reason}"
 msgstr "Could not save {file}: {reason}"
 
-#: app/src/ui/window.rs:1973
+#: app/src/ui/window.rs:2024
 msgid "Waiting for Your Browser…"
 msgstr "Waiting for Your Browser…"
 
-#: app/src/ui/window.rs:1975
+#: app/src/ui/window.rs:2026
 msgid "Continue in your browser"
 msgstr "Continue in your browser"
 
-#: app/src/ui/window.rs:1981
+#: app/src/ui/window.rs:2032
 msgid "Added {account}. Downloading mail…"
 msgstr "Added {account}. Downloading mail…"
 
-#: app/src/ui/window.rs:2004
+#: app/src/ui/window.rs:2055
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "This copy of Penguin Mail was built without Google sign-in."
 
-#: app/src/ui/window.rs:2006
+#: app/src/ui/window.rs:2057
 msgid "Get a Release"
 msgstr "Get a Release"
 
-#: app/src/ui/window.rs:2051
+#: app/src/ui/window.rs:2102
 msgid "Remove {account}?"
 msgstr "Remove {account}?"
 
-#: app/src/ui/window.rs:2055
+#: app/src/ui/window.rs:2106
 msgid "Its downloaded mail and saved sign-in are deleted from this computer. Nothing changes in Gmail."
 msgstr "Its downloaded mail and saved sign-in are deleted from this computer. Nothing changes in Gmail."
 
-#: app/src/ui/window.rs:2071
+#: app/src/ui/window.rs:2122
 msgid "Removed {account}"
 msgstr "Removed {account}"
 
-#: app/src/ui/window.rs:2073
+#: app/src/ui/window.rs:2124
 msgid "Could not remove {account}: {reason}"
 msgstr "Could not remove {account}: {reason}"
 
-#: app/src/ui/window.rs:2224
+#: app/src/ui/window.rs:2275
 msgid "Add Account…"
 msgstr "Add Account…"
 
-#: app/src/ui/window.rs:2225
+#: app/src/ui/window.rs:2276
 msgid "New Smart Mailbox…"
 msgstr "New Smart Mailbox…"
 
-#: app/src/ui/window.rs:2232 app/src/ui/window/shortcuts.rs:485
+#: app/src/ui/window.rs:2283 app/src/ui/window/shortcuts.rs:485
 msgid "Preferences"
 msgstr "Preferences"
 
-#: app/src/ui/window.rs:2233
+#: app/src/ui/window.rs:2284
 msgid "Keyboard Shortcuts"
 msgstr "Keyboard Shortcuts"
 
-#: app/src/ui/window.rs:2241 app/src/ui/window.rs:2243
+#: app/src/ui/window.rs:2292 app/src/ui/window.rs:2294
 msgid "Main Menu"
 msgstr "Main Menu"
 
-#: app/src/ui/window.rs:2497
+#: app/src/ui/window.rs:2560
 msgid "Open a message from the person first"
 msgstr "Open a message from the person first"
 
-#: app/src/ui/window.rs:2568
+#: app/src/ui/window.rs:2631
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail shows the new language after a restart"
 
-#: app/src/ui/window.rs:2570 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:2633 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Restart"
 
@@ -5049,36 +5053,36 @@ msgstr "Moved mail from {sender} to {category}"
 msgid "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 
-#: app/src/ui/window/detached.rs:28 app/src/ui/window/export.rs:72
+#: app/src/ui/window/detached.rs:29 app/src/ui/window/export.rs:72
 #: app/src/ui/window/export.rs:123
 msgid "Open a conversation first"
 msgstr "Open a conversation first"
 
-#: app/src/ui/window/detached.rs:131 app/src/ui/window/export.rs:75
+#: app/src/ui/window/detached.rs:144 app/src/ui/window/export.rs:75
 #: app/src/ui/window/export.rs:138 app/src/ui/window/organize.rs:72
 #: app/src/ui/window/organize.rs:120 app/src/ui/window/organize.rs:149
 #: app/src/ui/window/organize.rs:177 app/src/ui/window/senders.rs:283
 msgid "That account is not connected"
 msgstr "That account is not connected"
 
-#: app/src/ui/window/detached.rs:141
+#: app/src/ui/window/detached.rs:154
 msgid "Could not load the source: {reason}"
 msgstr "Could not load the source: {reason}"
 
-#: app/src/ui/window/detached.rs:159 app/src/ui/window/detached.rs:165
-#: app/src/ui/window/detached.rs:177
+#: app/src/ui/window/detached.rs:182 app/src/ui/window/detached.rs:188
+#: app/src/ui/window/detached.rs:200
 msgid "Message Source"
 msgstr "Message Source"
 
-#: app/src/ui/window/detached.rs:161
+#: app/src/ui/window/detached.rs:184
 msgid "Save As…"
 msgstr "Save As…"
 
-#: app/src/ui/window/detached.rs:162
+#: app/src/ui/window/detached.rs:185
 msgid "Save as an .eml file"
 msgstr "Save as an .eml file"
 
-#: app/src/ui/window/detached.rs:199
+#: app/src/ui/window/detached.rs:222
 msgid "Save Message"
 msgstr "Save Message"
 
@@ -5236,15 +5240,15 @@ msgstr "Replied by email to {organizer}"
 msgid "Replied by email"
 msgstr "Replied by email"
 
-#: app/src/ui/window/message_menu.rs:210
+#: app/src/ui/window/message_menu.rs:211
 msgid "Message from {sender}"
 msgstr "Message from {sender}"
 
-#: app/src/ui/window/message_menu.rs:211
+#: app/src/ui/window/message_menu.rs:212
 msgid "This Message"
 msgstr "This Message"
 
-#: app/src/ui/window/message_menu.rs:360
+#: app/src/ui/window/message_menu.rs:361
 msgid "Copied {address}"
 msgstr "Copied {address}"
 
@@ -5328,75 +5332,75 @@ msgstr "Deleted. It will not be sent."
 msgid "Deleted. They will not be sent."
 msgstr "Deleted. They will not be sent."
 
-#: app/src/ui/window/press.rs:208
+#: app/src/ui/window/press.rs:212
 msgid "Back in the Inbox"
 msgstr "Back in the Inbox"
 
-#: app/src/ui/window/press.rs:227
+#: app/src/ui/window/press.rs:231
 msgid "Will remind you {when}"
 msgstr "Will remind you {when}"
 
-#: app/src/ui/window/press.rs:252
+#: app/src/ui/window/press.rs:256
 msgid "Drop mail on its own account's mailboxes"
 msgstr "Drop mail on its own account's mailboxes"
 
-#: app/src/ui/window/press.rs:271
+#: app/src/ui/window/press.rs:275
 msgid "Moved to {mailbox}"
 msgstr "Moved to {mailbox}"
 
-#: app/src/ui/window/press.rs:281
+#: app/src/ui/window/press.rs:285
 msgid "Delete This Conversation Forever?"
 msgstr "Delete This Conversation Forever?"
 
-#: app/src/ui/window/press.rs:283
+#: app/src/ui/window/press.rs:287
 msgid "Delete {count} Conversation Forever?"
 msgid_plural "Delete {count} Conversations Forever?"
 msgstr[0] "Delete {count} Conversation Forever?"
 msgstr[1] "Delete {count} Conversations Forever?"
 
-#: app/src/ui/window/press.rs:288
+#: app/src/ui/window/press.rs:292
 msgid "Delete This Message Forever?"
 msgstr "Delete This Message Forever?"
 
-#: app/src/ui/window/press.rs:290
+#: app/src/ui/window/press.rs:294
 msgid "Delete {count} Message Forever?"
 msgid_plural "Delete {count} Messages Forever?"
 msgstr[0] "Delete {count} Message Forever?"
 msgstr[1] "Delete {count} Messages Forever?"
 
-#: app/src/ui/window/press.rs:299
+#: app/src/ui/window/press.rs:303
 msgid "Gmail deletes it from every device and cannot bring it back."
 msgstr "Gmail deletes it from every device and cannot bring it back."
 
-#: app/src/ui/window/press.rs:300
+#: app/src/ui/window/press.rs:304
 msgid "Gmail deletes them from every device and cannot bring them back."
 msgstr "Gmail deletes them from every device and cannot bring them back."
 
-#: app/src/ui/window/press.rs:316
+#: app/src/ui/window/press.rs:320
 msgid "Cancel Send (Delete)"
 msgstr "Cancel Send (Delete)"
 
-#: app/src/ui/window/press.rs:318
+#: app/src/ui/window/press.rs:322
 msgid "Delete from Outbox"
 msgstr "Delete from Outbox"
 
-#: app/src/ui/window/press.rs:319
+#: app/src/ui/window/press.rs:323
 msgid "Delete from Outbox (Delete)"
 msgstr "Delete from Outbox (Delete)"
 
-#: app/src/ui/window/press.rs:322
+#: app/src/ui/window/press.rs:326
 msgid "Cancel Reminder"
 msgstr "Cancel Reminder"
 
-#: app/src/ui/window/press.rs:323
+#: app/src/ui/window/press.rs:327
 msgid "Cancel Reminder (Delete)"
 msgstr "Cancel Reminder (Delete)"
 
-#: app/src/ui/window/press.rs:326
+#: app/src/ui/window/press.rs:330
 msgid "Dismiss Follow-Up"
 msgstr "Dismiss Follow-Up"
 
-#: app/src/ui/window/press.rs:327
+#: app/src/ui/window/press.rs:331
 msgid "Dismiss Follow-Up (Delete)"
 msgstr "Dismiss Follow-Up (Delete)"
 

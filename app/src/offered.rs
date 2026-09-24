@@ -2,7 +2,7 @@
 //! the account's services, and the words for what an account lacks.
 
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{AccountId, Provider};
+use mailrs_domain::{Account, AccountId, Provider};
 use mailrs_sync::{AccountServices, Mailbox, Missing, Offers};
 
 /// What an account offers. An account that is not running yet has no
@@ -100,10 +100,6 @@ impl Filing {
 }
 
 /// One line saying why an account on `provider` lacks `missing`.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "Preferences reads this once it shows why a service is missing")
-)]
 pub fn reason(provider: Provider, missing: Missing) -> String {
     let template = match missing {
         Missing::Calendar => gettext("{provider} has no calendar that other apps can reach."),
@@ -118,6 +114,25 @@ pub fn reason(provider: Provider, missing: Missing) -> String {
         Missing::Categories => gettext("{provider} does not sort the inbox into categories."),
     };
     fill(&template, &[("provider", provider.name())])
+}
+
+/// The lines Preferences shows for what accounts lack that no other row
+/// covers: rules, the automatic reply and deleting for good, each as the
+/// account's address and the reason. The contacts and calendar rows carry
+/// their own reason, and the category bar needs none: it is not there.
+pub fn missing_lines(accounts: &[(Account, Offers)]) -> Vec<(String, String)> {
+    accounts
+        .iter()
+        .flat_map(|(account, offers)| {
+            offers
+                .missing()
+                .into_iter()
+                .filter(|m| {
+                    matches!(m, Missing::Rules | Missing::AutoReply | Missing::DeleteForever)
+                })
+                .map(|m| (account.email.clone(), reason(account.provider, m)))
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -211,6 +226,38 @@ mod tests {
         assert_eq!(
             Filing::Folders.create_failed(),
             "Could not create the folder: {reason}"
+        );
+    }
+
+    use mailrs_domain::{Account, AccountState};
+
+    use super::missing_lines;
+
+    #[test]
+    fn preferences_names_what_each_account_lacks_and_nothing_for_gmail() {
+        let gmail = Account {
+            id: 1,
+            email: "me@gmail.com".into(),
+            state: AccountState::Ok,
+            provider: Provider::Gmail,
+        };
+        let bare = Account {
+            id: 2,
+            email: "me@example.com".into(),
+            ..gmail.clone()
+        };
+        let lacking = Offers {
+            rules: false,
+            auto_reply: false,
+            ..Offers::EVERYTHING
+        };
+        let lines = missing_lines(&[(gmail, Offers::EVERYTHING), (bare, lacking)]);
+        assert_eq!(
+            lines,
+            [
+                ("me@example.com".to_string(), reason(Provider::Gmail, Missing::Rules)),
+                ("me@example.com".to_string(), reason(Provider::Gmail, Missing::AutoReply)),
+            ]
         );
     }
 

@@ -107,6 +107,9 @@ pub(super) struct Pressed {
     pub flag_color: FlagColor,
     /// The list shows conversations, not messages, which the words count.
     pub threaded: bool,
+    /// The server of every account the targets belong to can delete mail
+    /// for good.
+    pub erases: bool,
 }
 
 /// The question before a step nothing brings back.
@@ -164,6 +167,7 @@ pub(super) fn plan(pressed: Pressed) -> Plan {
         scope,
         flag_color,
         threaded,
+        erases,
     } = pressed;
     let targets = reach.targets;
     if targets.is_empty() {
@@ -188,7 +192,7 @@ pub(super) fn plan(pressed: Pressed) -> Plan {
         }
     };
     let step = match press {
-        Press::Button(button) => match decide(&button.action(), mailbox, reach.marks) {
+        Press::Button(button) => match decide(&button.action(), mailbox, reach.marks, erases) {
             None => Step::Nothing,
             Some(Decision::Triage(triage)) => {
                 act(MailAction::Triage(triage), History::Record, None)
@@ -308,7 +312,7 @@ fn erase_question(count: usize, threaded: bool) -> Question {
 /// where the folder's own words hold: Move to Trash, or Delete Forever in
 /// the Trash.
 pub(super) fn trash_words(mailbox: &Mailbox) -> Option<(String, String)> {
-    let cancel = match decide(&Action::Trash, mailbox, Default::default())? {
+    let cancel = match decide(&Action::Trash, mailbox, Default::default(), true)? {
         Decision::Cancel(cancel) => cancel,
         _ => return None,
     };
@@ -417,6 +421,7 @@ mod tests {
             scope,
             flag_color: FlagColor::Orange,
             threaded: true,
+            erases: true,
         }
     }
 
@@ -494,6 +499,15 @@ mod tests {
         };
         assert_eq!(question.heading, "Delete 2 Conversations Forever?");
         assert_eq!(question.verb, "Delete Forever");
+    }
+
+    #[test]
+    fn delete_in_a_trash_that_cannot_erase_asks_nothing_and_does_nothing() {
+        let pressed = Pressed {
+            erases: false,
+            ..pressed(Press::Button(Button::Trash), folder(Folder::Trash), Scope::Shown)
+        };
+        assert_eq!(plan(pressed).step, Step::Nothing);
     }
 
     #[test]

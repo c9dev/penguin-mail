@@ -789,6 +789,15 @@ impl MainWindow {
             self.sidebar
                 .rebuild(&data, &extras, &mailbox, |id| self.offers(id));
         }
+        // Each hidden address comes with its own rules, so the window's
+        // Hide My Email works only while some account can hold them.
+        if let Some(action) = self
+            .actions
+            .lookup_action("hide-my-email")
+            .and_downcast::<gio::SimpleAction>()
+        {
+            action.set_enabled(data.iter().any(|(a, _)| self.offers(a.id).rules));
+        }
         self.list
             .set_show_accounts(mailbox.account().is_none() && data.len() > 1);
         let reauth: Vec<&str> = data
@@ -927,7 +936,8 @@ impl MainWindow {
             let mailbox = self.shown();
             self.list
                 .set_show_accounts(mailbox.account().is_none() && self.accounts().len() > 1);
-            self.word_buttons(&self.conversation, &mailbox);
+            let accounts = self.accounts_of(&mailbox);
+            self.word_buttons(&self.conversation, &mailbox, accounts);
             self.follow_outbox();
             self.follow_categories();
             self.follow_follow_ups();
@@ -1097,6 +1107,12 @@ impl MainWindow {
             Picked::Many(rows) => rows.iter().map(|r| r.account_id).collect(),
             Picked::None => Vec::new(),
         };
+        let shown = self.shown();
+        let reached = match accounts.is_empty() {
+            true => self.accounts_of(&shown),
+            false => accounts.clone(),
+        };
+        self.word_buttons(&self.conversation, &shown, reached);
         self.word_filing(&self.conversation, accounts);
         match picked {
             // A queued message has no Gmail thread; the thread run shows
@@ -1265,12 +1281,14 @@ impl MainWindow {
         scope: press::Scope,
         press: Press,
     ) -> bool {
+        let erases = self.erases(reach.targets.iter().map(|t| t.account_id));
         let plan = press::plan(Pressed {
             press,
             reach,
             scope,
             flag_color: self.settings_with(|s| s.flag_color),
             threaded: self.settings_with(|s| s.threading),
+            erases,
         });
         let taken = plan.taken();
         let pressing = Pressing {
@@ -1317,12 +1335,45 @@ impl MainWindow {
     }
 
     /// Words the trash button of `view` for `mailbox`: the folder's own
-    /// words, or what Delete calls off in a mailbox of queued mail.
-    pub(super) fn word_buttons(&self, view: &ConversationView, mailbox: &Mailbox) {
-        view.set_folder(mailbox.folder());
+    /// words, or what Delete calls off in a mailbox of queued mail. In a
+    /// Trash the button shows only while every account in `accounts`, the
+    /// ones an action on `view` reaches, can delete mail for good.
+    pub(super) fn word_buttons(
+        &self,
+        view: &ConversationView,
+        mailbox: &Mailbox,
+        accounts: impl IntoIterator<Item = AccountId>,
+    ) {
+        let erases = self.erases(accounts);
+        view.set_folder(mailbox.folder(), erases);
         if let Some((word, tip)) = press::trash_words(mailbox) {
             view.set_trash_words(&word, &tip);
         }
+        if !view.detached()
+            && let Some(action) = self
+                .actions
+                .lookup_action("trash")
+                .and_downcast::<gio::SimpleAction>()
+        {
+            action.set_enabled(triage::deletes(mailbox, erases));
+        }
+    }
+
+    /// The accounts whose mail `mailbox` lists: its own, or every account
+    /// for a mailbox that spans them.
+    fn accounts_of(&self, mailbox: &Mailbox) -> Vec<AccountId> {
+        match mailbox.account() {
+            Some(id) => vec![id],
+            None => self.accounts().iter().map(|a| a.id).collect(),
+        }
+    }
+
+    /// Whether the server of every account in `accounts` can delete mail
+    /// for good.
+    fn erases(&self, accounts: impl IntoIterator<Item = AccountId>) -> bool {
+        accounts
+            .into_iter()
+            .all(|id| self.offers(id).delete_forever)
     }
 
     /// Erases the targets. Nothing reverses this, so the toast offers no
@@ -2448,7 +2499,13 @@ impl MainWindow {
             return;
         };
         let accounts = app.accounts();
-        super::preferences::present(&app, &accounts, &self.window, signature_of.as_deref());
+        super::preferences::present(
+            &app,
+            &accounts,
+            |id| self.offers(id),
+            &self.window,
+            signature_of.as_deref(),
+        );
     }
 
     fn show_rules(self: &Rc<Self>, account: Account) {
@@ -2467,7 +2524,13 @@ impl MainWindow {
             return;
         };
         let accounts = app.accounts();
-        super::preferences::present_page(&app, &accounts, &self.window, page);
+        super::preferences::present_page(
+            &app,
+            &accounts,
+            |id| self.offers(id),
+            &self.window,
+            page,
+        );
     }
 
     fn show_vacation(self: &Rc<Self>, account: Account) {

@@ -6,33 +6,41 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::glib;
-use mailrs_domain::Account;
+use mailrs_domain::{Account, AccountId};
+use mailrs_sync::Offers;
 use mailrs_sync::config::SyncConfig;
 
 use crate::app::App;
 use crate::autostart;
 use crate::language;
+use crate::offered::missing_lines;
 use crate::settings::{
     Change, Choice, Settings, cache_choices, nearest, poll_choices, window_choices,
 };
 use crate::ui::window::Notice;
 use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 
-/// Shows Preferences. With `signature_of`, opens on that account's signature.
+/// Shows Preferences for `accounts`, each with what its server `offers`.
+/// With `signature_of`, opens on that account's signature.
 pub fn present(
     app: &Rc<App>,
     accounts: &[Account],
+    offers: impl Fn(AccountId) -> Offers,
     parent: &impl IsA<gtk::Widget>,
     signature_of: Option<&str>,
 ) -> adw::PreferencesDialog {
     let settings = app.settings();
+    let offered: Vec<(Account, Offers)> = accounts
+        .iter()
+        .map(|account| (account.clone(), offers(account.id)))
+        .collect();
     let dialog = adw::PreferencesDialog::builder()
         .search_enabled(true)
         .build();
-    dialog.add(&general_page(app, &settings));
+    dialog.add(&general_page(app, &settings, &missing_lines(&offered)));
     let writing = writing_page(app, &settings, accounts, signature_of, &dialog);
     dialog.add(&writing);
-    dialog.add(&super::contacts_prefs::page(app, &settings, accounts));
+    dialog.add(&super::contacts_prefs::page(app, &settings, &offered));
     if signature_of.is_some() {
         dialog.set_visible_page(&writing);
     }
@@ -54,13 +62,20 @@ pub fn present(
 pub fn present_page(
     app: &Rc<App>,
     accounts: &[Account],
+    offers: impl Fn(AccountId) -> Offers,
     parent: &impl IsA<gtk::Widget>,
     page: &str,
 ) {
-    present(app, accounts, parent, None).set_visible_page_name(page);
+    present(app, accounts, offers, parent, None).set_visible_page_name(page);
 }
 
-fn general_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
+/// The General page. `missing` holds an address and a reason for each
+/// service an account's server lacks, which a group at the end lists.
+fn general_page(
+    app: &Rc<App>,
+    settings: &Settings,
+    missing: &[(String, String)],
+) -> adw::PreferencesPage {
     let page = adw::PreferencesPage::builder()
         .title(gettext("General"))
         .icon_name("emblem-system-symbolic")
@@ -198,6 +213,20 @@ fn general_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
     notifications.add(&previews);
     notifications.add(&actions);
     page.add(&notifications);
+    if !missing.is_empty() {
+        let unavailable = adw::PreferencesGroup::builder()
+            .title(gettext("Not Available"))
+            .build();
+        for (address, reason) in missing {
+            unavailable.add(
+                &adw::ActionRow::builder()
+                    .title(address)
+                    .subtitle(reason)
+                    .build(),
+            );
+        }
+        page.add(&unavailable);
+    }
     page
 }
 

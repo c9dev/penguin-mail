@@ -165,7 +165,7 @@ pub(super) fn groups(message: &Message, mailbox: &Mailbox, offers: Offers) -> Ve
         groups.push(vec![Item::Reply, Item::ReplyAll, Item::Forward]);
     }
     let mut filing = vec![Item::Archive];
-    filing.extend(delete_item(mailbox));
+    filing.extend(delete_item(mailbox, offers.delete_forever));
     filing.push(match message.unread {
         true => Item::MarkRead,
         false => Item::MarkUnread,
@@ -191,13 +191,14 @@ pub(super) fn groups(message: &Message, mailbox: &Mailbox, offers: Offers) -> Ve
 }
 
 /// What Delete comes to on one message. In the Trash there is nowhere
-/// further to move it, so it is erased. A mailbox that lists something
-/// other than mail has Delete call that off for the whole conversation,
-/// which is no change to one message, so the item stays out.
-fn delete_item(mailbox: &Mailbox) -> Option<Item> {
+/// further to move it, so it is erased, on a server that `erases`; on one
+/// that cannot, the item stays out. A mailbox that lists something other
+/// than mail has Delete call that off for the whole conversation, which is
+/// no change to one message, so the item stays out there too.
+fn delete_item(mailbox: &Mailbox, erases: bool) -> Option<Item> {
     match mailbox {
         Mailbox::Scheduled | Mailbox::Outbox | Mailbox::Reminders | Mailbox::FollowUp => None,
-        _ if mailbox.folder() == Some(Folder::Trash) => Some(Item::DeleteForever),
+        _ if mailbox.folder() == Some(Folder::Trash) => erases.then_some(Item::DeleteForever),
         _ => Some(Item::Trash),
     }
 }
@@ -534,6 +535,16 @@ mod tests {
         assert!(!items.contains(&Item::Label));
         let gmail: Vec<Item> = groups(&message(), &inbox(), Offers::EVERYTHING).concat();
         assert!(gmail.contains(&Item::Label));
+    }
+
+    #[test]
+    fn a_trash_that_cannot_erase_offers_no_delete() {
+        let trash = Mailbox::Folder {
+            account_id: Some(1),
+            folder: Folder::Trash,
+        };
+        assert_eq!(delete_item(&trash, true), Some(Item::DeleteForever));
+        assert_eq!(delete_item(&trash, false), None);
     }
 
     #[test]

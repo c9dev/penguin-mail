@@ -64,16 +64,25 @@ impl Marks {
 }
 
 /// What `action` does to mail carrying `marks` in `mailbox`. `None` for
-/// an action that changes no mail.
-pub(super) fn decide(action: &Action, mailbox: &Mailbox, marks: Marks) -> Option<Decision> {
+/// an action that changes no mail. `erases` says whether the server of
+/// every account the mail belongs to can delete it for good; where one
+/// cannot, Delete in the Trash has nothing left to do.
+pub(super) fn decide(
+    action: &Action,
+    mailbox: &Mailbox,
+    marks: Marks,
+    erases: bool,
+) -> Option<Decision> {
     match action {
         Action::Archive => Some(Decision::Triage(TriageAction::Archive)),
+        Action::Trash if mailbox.folder() == Some(Folder::Trash) => {
+            erases.then_some(Decision::DeleteForever)
+        }
         Action::Trash => Some(match mailbox {
             Mailbox::Scheduled => Decision::Cancel(Cancel::Scheduled),
             Mailbox::Outbox => Decision::Cancel(Cancel::Queued),
             Mailbox::Reminders => Decision::Cancel(Cancel::Reminder),
             Mailbox::FollowUp => Decision::Cancel(Cancel::FollowUp),
-            _ if mailbox.folder() == Some(Folder::Trash) => Decision::DeleteForever,
             _ => Decision::Triage(TriageAction::Trash),
         }),
         Action::Junk => Some(Decision::Triage(match mailbox.folder() {
@@ -88,6 +97,13 @@ pub(super) fn decide(action: &Action, mailbox: &Mailbox, marks: Marks) -> Option
         })),
         _ => None,
     }
+}
+
+/// Whether Delete does anything in `mailbox`, for mail on a server that
+/// `erases` or does not. The Trash of one that cannot erase is the one
+/// place where it does nothing.
+pub(super) fn deletes(mailbox: &Mailbox, erases: bool) -> bool {
+    decide(&Action::Trash, mailbox, Marks::default(), erases).is_some()
 }
 
 #[cfg(test)]
@@ -107,7 +123,7 @@ mod tests {
     }
 
     fn decide_in(action: Action, mailbox: Mailbox) -> Option<Decision> {
-        decide(&action, &mailbox, Marks::default())
+        decide(&action, &mailbox, Marks::default(), true)
     }
 
     #[test]
@@ -143,6 +159,19 @@ mod tests {
     }
 
     #[test]
+    fn delete_in_a_trash_that_cannot_erase_does_nothing() {
+        let trash = Mailbox::Folder {
+            account_id: Some(1),
+            folder: Folder::Trash,
+        };
+        assert_eq!(
+            decide(&Action::Trash, &trash, Marks::default(), true),
+            Some(Decision::DeleteForever)
+        );
+        assert_eq!(decide(&Action::Trash, &trash, Marks::default(), false), None);
+    }
+
+    #[test]
     fn junk_sends_mail_back_out_of_the_junk_folder() {
         assert_eq!(
             decide_in(Action::Junk, inbox()),
@@ -171,10 +200,10 @@ mod tests {
     #[test]
     fn the_star_and_read_buttons_read_the_marks() {
         let marks = |unread, flagged| Marks { unread, flagged };
-        let star = |marks| decide(&Action::ToggleStar, &inbox(), marks);
+        let star = |marks| decide(&Action::ToggleStar, &inbox(), marks, true);
         assert_eq!(star(marks(false, false)), Some(Decision::Flag(true)));
         assert_eq!(star(marks(false, true)), Some(Decision::Flag(false)));
-        let read = |marks| decide(&Action::ToggleRead, &inbox(), marks);
+        let read = |marks| decide(&Action::ToggleRead, &inbox(), marks, true);
         assert_eq!(
             read(marks(true, false)),
             Some(Decision::Triage(TriageAction::MarkRead))
