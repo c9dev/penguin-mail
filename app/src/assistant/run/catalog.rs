@@ -268,7 +268,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "search_mail",
             label: || gettext("Searching mail"),
-            description: "Searches Gmail with its query syntax across all accounts or one. Reaches all mail, not only recent mail.",
+            description: "Searches mail across all accounts or one, and reaches all mail, not only recent mail. The query takes Gmail's search syntax: from:, to:, subject:, has:attachment, is:unread, newer_than:7d, older_than:1y, label:, in:anywhere, and plain words.",
             input: || {
                 json!({
                     "query": {"type": "string"},

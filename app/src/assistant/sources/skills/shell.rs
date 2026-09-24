@@ -144,12 +144,7 @@ impl Source for Shell {
     fn prompt(&self) -> Option<String> {
         let names: Vec<&str> = self.skills.iter().map(|r| r.skill.name.as_str()).collect();
         Some(format!(
-            "run_command runs a shell command for a skill with scripts ({}). It runs in a \
-             sandbox: the skill's folder is at /skill, read-only, and /work is a scratch \
-             folder that lasts for this conversation and is the working directory. The \
-             sandbox cannot reach the user's mail, files or keys, and reaches the network \
-             only if the user allowed it for that skill. The user approves every command, \
-             so run only what the skill needs.",
+            "These skills have scripts that run_command can run: {}.",
             names.join(", ")
         ))
     }
@@ -157,7 +152,14 @@ impl Source for Shell {
     fn specs(&self) -> Vec<ToolSpec> {
         vec![ToolSpec {
             name: "run_command".into(),
-            description: "Run a bash command in a sandbox for one skill, such as one of its scripts. Returns the exit code and what the command printed.".into(),
+            description: "Runs a bash command for one skill, such as one of its scripts, in a \
+                sandbox. The skill's folder is at /skill, read-only, and /work is a scratch \
+                folder that lasts for this conversation and is the working directory. The \
+                sandbox cannot reach the user's mail, files or keys, and reaches the network \
+                only if the user allowed it for that skill. The user approves every command, \
+                so run only what the skill needs. Returns the exit code and what the command \
+                printed."
+                .into(),
             input_schema: json!({
                 "type": "object",
                 "properties": {
