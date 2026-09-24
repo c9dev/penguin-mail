@@ -513,7 +513,7 @@ fn a_message_from_before_local_threading_stays_untouched() {
     .unwrap();
     drop(conn);
 
-    let conn = open_with(&path, MIGRATIONS).unwrap();
+    let conn = open_with(&path, &MIGRATIONS[..30]).unwrap();
     assert_eq!(schema_version(&conn).unwrap(), 30);
     let base_subject: Option<String> = conn
         .query_row(

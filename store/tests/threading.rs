@@ -67,6 +67,14 @@ fn a_reply_joins_by_subject_inside_thirty_days() {
 }
 
 #[test]
+fn a_reply_joins_by_subject_at_exactly_thirty_days() {
+    let (conn, a) = db();
+    let first = thread_local(&conn, a, message(a, "a", "Lunch", 0), Links::default());
+    let reply = thread_local(&conn, a, message(a, "b", "Re: Lunch", 30 * DAY), Links::default());
+    assert_eq!(reply, first, "thirty days is still inside the window, not past it");
+}
+
+#[test]
 fn two_unrelated_messages_with_one_subject_forty_days_apart_stay_apart() {
     let (conn, a) = db();
     let first = thread_local(&conn, a, message(a, "a", "Lunch", 0), Links::default());
@@ -109,10 +117,7 @@ fn a_message_stored_again_keeps_its_thread() {
     assert_eq!(again, first);
 }
 
-// Ruling 12 (progress.md): extended so the test fails without UpsertLocal's
-// threading. As first written it exercised only Change::Upsert, which
-// never touches local threading, so it passed before this task's code
-// existed.
+// Guards against joining a server-supplied thread by subject alone.
 #[test]
 fn a_message_with_a_server_thread_keeps_it() {
     let (conn, a) = db();
@@ -129,4 +134,32 @@ fn a_message_with_a_server_thread_keeps_it() {
     // threaded it here.
     let local = thread_local(&conn, a, message(a, "b", "Re: Lunch", 2 * DAY), Links::default());
     assert_eq!(local, first);
+}
+
+#[test]
+fn two_messages_with_no_message_id_never_join_each_other() {
+    let (conn, a) = db();
+    let mut first = message(a, "a", "One", 0);
+    first.rfc822_msgid = Some("<>".into());
+    let first_thread = thread_local(&conn, a, first, Links::default());
+    let mut second = message(a, "b", "Two", DAY);
+    second.rfc822_msgid = Some("<>".into());
+    let second_thread = thread_local(&conn, a, second, Links::default());
+    assert_eq!(first_thread, "a");
+    assert_ne!(second_thread, first_thread);
+}
+
+#[test]
+fn empty_references_and_in_reply_to_link_nothing() {
+    let (conn, a) = db();
+    let mut blank_id = message(a, "z", "Something else", 0);
+    blank_id.rfc822_msgid = Some("<>".into());
+    let unrelated = thread_local(&conn, a, blank_id, Links::default());
+    let blank_links = Links {
+        in_reply_to: Some("<>".into()),
+        references: vec!["".into(), "   ".into()],
+    };
+    let reply = thread_local(&conn, a, message(a, "b", "Two", DAY), blank_links);
+    assert_ne!(reply, unrelated, "a blank header must never stand in for a real Message-ID");
+    assert_eq!(reply, "b");
 }

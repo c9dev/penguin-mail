@@ -433,7 +433,9 @@ CREATE TABLE message_links (
     PRIMARY KEY (account_id, message_id, msgid),
     FOREIGN KEY (account_id, message_id) REFERENCES messages(account_id, id) ON DELETE CASCADE
 );
-CREATE INDEX message_links_by_msgid ON message_links(account_id, msgid);
+-- Covers the join back to messages, so a lookup by msgid never returns
+-- to the table for the message_id it already has.
+CREATE INDEX message_links_by_msgid ON message_links(account_id, msgid, message_id);
 ALTER TABLE messages ADD COLUMN base_subject TEXT;
 CREATE INDEX messages_local_by_msgid ON messages(account_id, rfc822_msgid)
     WHERE base_subject IS NOT NULL;
