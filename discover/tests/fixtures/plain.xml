@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A file that offers only unencrypted servers. Written for the tests. -->
+<clientConfig version="1.1">
+  <emailProvider id="plain.example">
+    <domain>example.org</domain>
+    <incomingServer type="imap">
+      <hostname>imap.example.org</hostname>
+      <port>143</port>
+      <socketType>plain</socketType>
+      <username>%EMAILADDRESS%</username>
+      <authentication>password-cleartext</authentication>
+    </incomingServer>
+    <outgoingServer type="smtp">
+      <hostname>smtp.example.org</hostname>
+      <port>25</port>
+      <socketType>plain</socketType>
+      <username>%EMAILADDRESS%</username>
+      <authentication>password-cleartext</authentication>
+    </outgoingServer>
+  </emailProvider>
+</clientConfig>

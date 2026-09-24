@@ -3,6 +3,7 @@
 //! files, SRV records and a probe, and sends nothing but the address's
 //! domain to anyone. It knows nothing of the store or the window.
 
+mod autoconfig;
 mod find;
 mod name;
 mod net;

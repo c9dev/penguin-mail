@@ -51,6 +51,9 @@ psl = "2.1.237"
 pulldown-cmark = "0.13.4"
 rand = "0.10.2"
 reqwest = { version = "0.13.5", features = ["json", "form", "query"] }
+# Reads autoconfig files. It refuses a document type declaration, so a file
+# cannot expand entities.
+roxmltree = "0.21.1"
 rusqlite = { version = "0.40.2", features = ["bundled"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"

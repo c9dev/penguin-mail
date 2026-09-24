@@ -45,6 +45,14 @@ pub(crate) fn host(name: &str) -> Option<String> {
     (labels.len() >= 2 && well_formed && last_is_name).then_some(name)
 }
 
+/// Whether `name` sits above `domain`: `example.com` above
+/// `dept.example.com`. Discovery never asks about such a name.
+pub(crate) fn is_above(name: &str, domain: &str) -> bool {
+    domain
+        .strip_suffix(name)
+        .is_some_and(|rest| rest.ends_with('.'))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -111,5 +119,14 @@ mod tests {
         ] {
             assert_eq!(host(name), None, "{name}");
         }
+    }
+
+    #[test]
+    fn above_means_a_parent_of_the_domain_and_nothing_else() {
+        assert!(is_above("example.com", "dept.example.com"));
+        assert!(is_above("com", "example.com"));
+        assert!(!is_above("example.com", "example.com"));
+        assert!(!is_above("ample.com", "example.com"));
+        assert!(!is_above("dept.example.com", "example.com"));
     }
 }
