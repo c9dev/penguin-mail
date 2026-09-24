@@ -11,7 +11,7 @@ use mail_parser::decoders::quoted_printable::quoted_printable_decode;
 use mail_parser::{Message, MessageParser, MessagePart, MimeHeaders, PartType};
 use mailrs_domain::MessageBody;
 
-use crate::parts::{Part, Parts, body};
+use crate::parts::{MAX_DEPTH, Part, Parts, body, content_id, numbered};
 
 const BASE64: GeneralPurpose = GeneralPurpose::new(
     &alphabet::STANDARD,
@@ -88,14 +88,6 @@ pub fn files(raw: &[u8]) -> Vec<Vec<u8>> {
         .collect()
 }
 
-/// How many levels of parts the reader descends. mail-parser accepts
-/// multiparts nested to any depth, and every walk over the tree built
-/// here, dropping it included, recurses once per level: ten thousand
-/// levels fit in a few hundred kilobytes of mail and overflow a worker
-/// thread's stack, which aborts the whole app. A part at this depth
-/// keeps its own bytes and loses its children.
-const MAX_DEPTH: usize = 64;
-
 /// Part `id` and the parts under it, `depth` levels below the root.
 fn convert(message: &Message, raw: &[u8], id: u32, path: String, depth: usize) -> Part {
     let Some(part) = message.part(id) else {
@@ -128,21 +120,12 @@ fn convert(message: &Message, raw: &[u8], id: u32, path: String, depth: usize) -
         protocol: attribute("protocol"),
         smime_type: attribute("smime-type"),
         filename: part.attachment_name().map(str::to_string),
-        content_id: content_id(part),
+        content_id: part.content_id().map(content_id),
         subject: None,
         attachment: part.content_disposition().is_some_and(|d| d.is_attachment()),
         size: data.as_ref().map_or(0, |d| d.len() as i64),
         data,
         children,
-    }
-}
-
-/// IMAP's number for child `i` (zero-based) under `parent`: bare under an
-/// unnumbered multipart root, dotted under anything else.
-fn numbered(parent: &str, i: usize) -> String {
-    match parent {
-        "" => (i + 1).to_string(),
-        parent => format!("{parent}.{}", i + 1),
     }
 }
 
@@ -195,19 +178,13 @@ fn nested_message(
         path,
         mime_type: mime_type(part),
         filename: part.attachment_name().map(str::to_string),
-        content_id: content_id(part),
+        content_id: part.content_id().map(content_id),
         subject: nested.subject().map(str::to_string),
         size: data.as_ref().map_or(0, |d| d.len() as i64),
         data,
         children,
         ..Part::default()
     }
-}
-
-/// The part's Content-ID without its angle brackets.
-fn content_id(part: &MessagePart) -> Option<String> {
-    part.content_id()
-        .map(|v| v.trim().trim_start_matches('<').trim_end_matches('>').to_string())
 }
 
 /// A header's value with its folds undone.

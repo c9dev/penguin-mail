@@ -10,5 +10,5 @@ mod read;
 pub mod provenance;
 pub mod snippet;
 
-pub use parts::{Part, Parts, body, is_calendar};
+pub use parts::{MAX_DEPTH, Part, Parts, body, content_id, is_calendar, numbered};
 pub use read::{files, part, parts, read, undo_transfer_encoding};

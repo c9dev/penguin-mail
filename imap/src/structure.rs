@@ -9,12 +9,7 @@ use async_imap::imap_proto::{
 };
 use mail_parser::MessageParser;
 use mailrs_mime::charset::decode_charset;
-use mailrs_mime::{Part, Parts};
-
-/// How many levels of parts the conversion descends, as the raw reader
-/// does: every walk over the tree recurses once per level, and a part at
-/// this depth keeps no children.
-const MAX_DEPTH: usize = 64;
+use mailrs_mime::{MAX_DEPTH, Part, Parts, content_id, numbered};
 
 /// A message's parts as the server described them, with no bytes yet.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -149,12 +144,7 @@ fn leaf(
         filename: disposition
             .and_then(|d| parameter(&d.params, "filename"))
             .or_else(|| parameter(&common.ty.params, "name")),
-        content_id: other.id.as_deref().map(|id| {
-            id.trim()
-                .trim_start_matches('<')
-                .trim_end_matches('>')
-                .to_string()
-        }),
+        content_id: other.id.as_deref().map(content_id),
         subject: None,
         attachment: disposition.is_some_and(|d| d.ty.eq_ignore_ascii_case("attachment")),
         size,
@@ -165,14 +155,6 @@ fn leaf(
 
 fn mime_type(common: &BodyContentCommon<'_>) -> String {
     format!("{}/{}", common.ty.ty, common.ty.subtype).to_ascii_lowercase()
-}
-
-/// IMAP's number for child `i` (zero-based) under `parent`.
-fn numbered(parent: &str, i: usize) -> String {
-    match parent {
-        "" => (i + 1).to_string(),
-        parent => format!("{parent}.{}", i + 1),
-    }
 }
 
 /// Parameter `name`, read in whichever form the sender wrote it: RFC
