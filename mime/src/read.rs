@@ -36,7 +36,7 @@ pub fn parts(raw: &[u8]) -> Option<Parts> {
     };
     Some(Parts {
         headers,
-        root: convert(&message, raw, 0, root_path),
+        root: convert(&message, raw, 0, root_path, 0),
     })
 }
 
@@ -69,21 +69,31 @@ pub fn files(raw: &[u8]) -> Vec<Vec<u8>> {
         .collect()
 }
 
-/// Part `id` and the parts under it.
-fn convert(message: &Message, raw: &[u8], id: u32, path: String) -> Part {
+/// How many levels of parts the reader descends. mail-parser accepts
+/// multiparts nested to any depth, and every walk over the tree built
+/// here, dropping it included, recurses once per level: ten thousand
+/// levels fit in a few hundred kilobytes of mail and overflow a worker
+/// thread's stack, which aborts the whole app. A part at this depth
+/// keeps its own bytes and loses its children.
+const MAX_DEPTH: usize = 64;
+
+/// Part `id` and the parts under it, `depth` levels below the root.
+fn convert(message: &Message, raw: &[u8], id: u32, path: String, depth: usize) -> Part {
     let Some(part) = message.part(id) else {
         return Part::default();
     };
-    if let Some(nested) = part.message() {
-        return nested_message(part, nested, raw, path);
+    let below = depth < MAX_DEPTH;
+    if let (Some(nested), true) = (part.message(), below) {
+        return nested_message(part, nested, raw, path, depth);
     }
-    let children = part
-        .sub_parts()
-        .unwrap_or_default()
-        .iter()
-        .enumerate()
-        .map(|(i, child)| convert(message, raw, *child, numbered(&path, i)))
-        .collect();
+    let children = match below {
+        true => part.sub_parts().unwrap_or_default(),
+        false => &[],
+    }
+    .iter()
+    .enumerate()
+    .map(|(i, child)| convert(message, raw, *child, numbered(&path, i), depth + 1))
+    .collect();
     let data = (!part.is_multipart())
         .then(|| transfer_decoded(raw, part))
         .flatten();
@@ -136,7 +146,13 @@ fn numbered(parent: &str, i: usize) -> String {
 /// nested message's own bytes built separately, indexed from zero,
 /// that the child offsets do not match. Reading from the wrong one of
 /// the two returns the wrong slice, or one out of range.
-fn nested_message(part: &MessagePart, nested: &Message, raw: &[u8], path: String) -> Part {
+fn nested_message(
+    part: &MessagePart,
+    nested: &Message,
+    raw: &[u8],
+    path: String,
+    depth: usize,
+) -> Part {
     let raw = match part.content_transfer_encoding() {
         Some(cte) if cte.eq_ignore_ascii_case("base64") || cte.eq_ignore_ascii_case("quoted-printable") => {
             nested.raw_message()
@@ -149,10 +165,10 @@ fn nested_message(part: &MessagePart, nested: &Message, raw: &[u8], path: String
             .unwrap_or_default()
             .iter()
             .enumerate()
-            .map(|(i, child)| convert(nested, raw, *child, numbered(&path, i)))
+            .map(|(i, child)| convert(nested, raw, *child, numbered(&path, i), depth + 1))
             .collect()
     } else {
-        vec![convert(nested, raw, 0, format!("{path}.1"))]
+        vec![convert(nested, raw, 0, format!("{path}.1"), depth + 1)]
     };
     Part {
         path,

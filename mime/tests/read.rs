@@ -514,3 +514,29 @@ Caf=E9 today =ZZ nice";
     let decoded = part(raw, "1").unwrap();
     assert_eq!(decoded, [b"Caf".as_slice(), &[0xE9], b" today =ZZ nice"].concat());
 }
+
+/// mail-parser accepts multiparts nested to any depth. A message nested
+/// ten thousand levels deep must still read on a worker thread's 2 MiB
+/// stack rather than overflow it and abort the app.
+#[test]
+fn a_deeply_nested_message_reads_on_a_small_stack() {
+    let depth = 10_000;
+    let mut raw = String::from("Subject: Deep\r\nContent-Type: multipart/mixed; boundary=\"b0\"\r\n\r\n");
+    for level in 1..depth {
+        raw.push_str(&format!("--b{}\r\nContent-Type: multipart/mixed; boundary=\"b{level}\"\r\n\r\n", level - 1));
+    }
+    raw.push_str(&format!("--b{}\r\nContent-Type: text/plain\r\n\r\nBottom\r\n", depth - 1));
+    for level in (0..depth).rev() {
+        raw.push_str(&format!("--b{level}--\r\n"));
+    }
+    let reader = std::thread::Builder::new()
+        .stack_size(2 << 20)
+        .spawn(move || {
+            let body = read(raw.as_bytes());
+            let parts = mailrs_mime::parts(raw.as_bytes()).unwrap();
+            drop(parts);
+            body
+        })
+        .unwrap();
+    assert!(reader.join().is_ok(), "reading the message overflowed the stack");
+}
