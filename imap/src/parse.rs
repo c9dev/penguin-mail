@@ -7,6 +7,7 @@ use async_imap::imap_proto::{
 };
 use std::borrow::Cow;
 use std::collections::BTreeMap;
+use std::ops::RangeInclusive;
 
 use chrono::DateTime;
 use mailrs_domain::EpochMillis;
@@ -36,6 +37,56 @@ pub(crate) fn answers_for(uids: &UidSet) -> usize {
 /// carries more than a dozen; every flag kept costs about 40 bytes, so a
 /// window of 1,000 messages holds at most 2.5 MB of them.
 pub(crate) const MAX_FLAGS: usize = 64;
+
+/// The most flags one command may keep across all its messages: about
+/// 40 MB at worst. [`MAX_FLAGS`] alone lets an open-ended fetch keep
+/// 100,000 messages of 64 flags each.
+pub(crate) const MAX_FLAGS_KEPT: usize = 1_000_000;
+
+/// The flags a command may still keep.
+#[derive(Debug)]
+pub(crate) struct FlagBudget {
+    left: usize,
+}
+
+impl Default for FlagBudget {
+    fn default() -> Self {
+        FlagBudget::new(MAX_FLAGS_KEPT)
+    }
+}
+
+impl FlagBudget {
+    pub(crate) fn new(left: usize) -> Self {
+        FlagBudget { left }
+    }
+
+    /// Gives back `before` flags a message kept and takes `after` for its
+    /// new answer, or refuses when that runs past the total.
+    fn swap(&mut self, before: usize, after: usize) -> Result<(), ImapError> {
+        match (self.left + before).checked_sub(after) {
+            Some(left) => {
+                self.left = left;
+                Ok(())
+            }
+            None => Err(ImapError::Protocol(format!(
+                "the server sent more than {MAX_FLAGS_KEPT} flags to one command"
+            ))),
+        }
+    }
+}
+
+/// Keeps `flags` as the answer for its UID, replacing an earlier one,
+/// within `budget`.
+fn keep_flags(
+    kept: &mut BTreeMap<u32, FlagsOf>,
+    flags: FlagsOf,
+    budget: &mut FlagBudget,
+) -> Result<(), ImapError> {
+    let before = kept.get(&flags.uid).map_or(0, |f| f.flags.len());
+    budget.swap(before, flags.flags.len())?;
+    kept.insert(flags.uid, flags);
+    Ok(())
+}
 
 /// Something that reads a command's responses, the tagged one included.
 pub(crate) trait Reads {
@@ -118,6 +169,10 @@ pub(crate) struct SelectReader {
     known: Option<UidSet>,
     /// The last change reported for each UID.
     changed: BTreeMap<u32, FlagsOf>,
+    flag_budget: FlagBudget,
+    /// VANISHED's ranges, built into one set at the end: a server may name
+    /// 100,000 of them.
+    vanished: Vec<RangeInclusive<u32>>,
     error: Option<ImapError>,
 }
 
@@ -138,14 +193,12 @@ impl Reads for SelectReader {
                 _ => {}
             },
             Response::MailboxData(MailboxDatum::Exists(n)) => self.selected.exists = *n,
-            Response::Vanished { uids, .. } => {
-                for range in uids {
-                    self.selected.vanished.insert(*range.start(), *range.end());
-                }
-            }
+            Response::Vanished { uids, .. } => self.vanished.extend(uids.iter().cloned()),
             Response::Fetch(_, attributes) => match flags_of(attributes) {
                 Some(Ok(flags)) if self.known.as_ref().is_none_or(|k| k.contains(flags.uid)) => {
-                    self.changed.insert(flags.uid, flags);
+                    if let Err(err) = keep_flags(&mut self.changed, flags, &mut self.flag_budget) {
+                        self.error = Some(err);
+                    }
                 }
                 Some(Err(err)) => self.error = Some(err),
                 _ => {}
@@ -174,6 +227,7 @@ impl SelectReader {
         Ok(Selected {
             uidvalidity,
             changed: self.changed.into_values().collect(),
+            vanished: UidSet::from_ranges(self.vanished),
             ..self.selected
         })
     }
@@ -186,6 +240,7 @@ impl SelectReader {
 pub(crate) struct FlagsReader {
     wanted: UidSet,
     flags: BTreeMap<u32, FlagsOf>,
+    flag_budget: FlagBudget,
     error: Option<ImapError>,
 }
 
@@ -194,6 +249,7 @@ impl FlagsReader {
         FlagsReader {
             wanted: uids.clone(),
             flags: BTreeMap::new(),
+            flag_budget: FlagBudget::default(),
             error: None,
         }
     }
@@ -210,7 +266,9 @@ impl Reads for FlagsReader {
         };
         match flags_of(attributes) {
             Some(Ok(flags)) if self.wanted.contains(flags.uid) => {
-                self.flags.insert(flags.uid, flags);
+                if let Err(err) = keep_flags(&mut self.flags, flags, &mut self.flag_budget) {
+                    self.error = Some(err);
+                }
             }
             Some(Err(err)) => self.error = Some(err),
             _ => {}
@@ -262,6 +320,7 @@ fn flag_strings(list: &[Cow<'_, str>]) -> Result<Vec<String>, ImapError> {
 pub(crate) struct HeadersReader {
     wanted: UidSet,
     fetched: BTreeMap<u32, Fetched>,
+    flag_budget: FlagBudget,
     error: Option<ImapError>,
 }
 
@@ -270,6 +329,7 @@ impl HeadersReader {
         HeadersReader {
             wanted: uids.clone(),
             fetched: BTreeMap::new(),
+            flag_budget: FlagBudget::default(),
             error: None,
         }
     }
@@ -327,6 +387,11 @@ impl Reads for HeadersReader {
                 AttributeValue::ModSeq(m) => fetched.modseq = Some(*m),
                 _ => {}
             }
+        }
+        let before = self.fetched.get(&uid).map_or(0, |f| f.flags.len());
+        if let Err(err) = self.flag_budget.swap(before, fetched.flags.len()) {
+            self.error = Some(err);
+            return;
         }
         self.fetched.insert(uid, fetched);
     }
@@ -909,5 +974,59 @@ pub(crate) mod tests {
         let mut select = SelectReader::default();
         feed(&mut select, &[&many(MAX_FLAGS + 1)]);
         assert!(matches!(select.check(), Err(ImapError::Protocol(_))));
+    }
+
+    /// A QRESYNC SELECT may name 100,000 expunged ranges in one line.
+    #[test]
+    fn a_vanished_of_a_hundred_thousand_ranges_reads_fast() {
+        let ranges: Vec<String> = (0..100_000).map(|i| (i * 2 + 1).to_string()).collect();
+        let line = format!("* VANISHED (EARLIER) {}\r\n", ranges.join(","));
+        let started = std::time::Instant::now();
+        let mut reader = SelectReader::default();
+        feed(&mut reader, &["* OK [UIDVALIDITY 3] ok\r\n", &line]);
+        let selected = reader.finish().unwrap();
+        assert_eq!(selected.vanished.len(), 100_000);
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(1),
+            "{:?}",
+            started.elapsed()
+        );
+    }
+
+    #[test]
+    fn a_flag_budget_refuses_past_its_total_and_takes_back_what_is_replaced() {
+        let mut budget = FlagBudget::new(5);
+        assert_eq!(budget.swap(0, 3), Ok(()));
+        assert_eq!(budget.swap(3, 5), Ok(()));
+        assert!(matches!(budget.swap(0, 1), Err(ImapError::Protocol(_))));
+        assert_eq!(FlagBudget::default().left, MAX_FLAGS_KEPT);
+    }
+
+    #[test]
+    fn readers_stop_keeping_flags_past_the_commands_total() {
+        let two = "* 1 FETCH (UID 1 FLAGS (a b))\r\n";
+        let other = "* 2 FETCH (UID 2 FLAGS (a b))\r\n";
+        let mut flags = FlagsReader::new(&UidSet::range(1, 2));
+        flags.flag_budget = FlagBudget::new(3);
+        // The same message again replaces its flags, which keeps the count.
+        feed(&mut flags, &[two, two]);
+        assert_eq!(flags.check(), Ok(()));
+        feed(&mut flags, &[other]);
+        assert!(matches!(flags.check(), Err(ImapError::Protocol(_))));
+        let mut select = SelectReader {
+            flag_budget: FlagBudget::new(3),
+            ..SelectReader::default()
+        };
+        feed(&mut select, &[two, other]);
+        assert!(matches!(select.check(), Err(ImapError::Protocol(_))));
+        let header = |uid: u32| {
+            format!(
+                "* {uid} FETCH (UID {uid} FLAGS (a b) BODY[HEADER.FIELDS (SUBJECT)] {{12}}\r\nSubject: x\r\n)\r\n"
+            )
+        };
+        let mut headers = HeadersReader::new(&UidSet::range(1, 2));
+        headers.flag_budget = FlagBudget::new(3);
+        feed(&mut headers, &[&header(1), &header(2)]);
+        assert!(matches!(headers.check(), Err(ImapError::Protocol(_))));
     }
 }

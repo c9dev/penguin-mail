@@ -20,12 +20,21 @@ impl UidSet {
     /// The set of `uids`, in any order, repeats allowed. UID 0 does not
     /// exist in IMAP and is left out.
     pub fn from_uids(uids: impl IntoIterator<Item = u32>) -> Self {
-        let mut all: Vec<u32> = uids.into_iter().filter(|&u| u > 0).collect();
-        all.sort_unstable();
-        all.dedup();
+        UidSet::from_ranges(uids.into_iter().map(|uid| uid..=uid))
+    }
+
+    /// The set of `ranges`, in any order, overlapping or not, each read
+    /// either way round. It sorts once and merges once, so a server's
+    /// VANISHED of 100,000 ranges builds in a blink.
+    pub fn from_ranges(ranges: impl IntoIterator<Item = RangeInclusive<u32>>) -> Self {
+        let mut all: Vec<RangeInclusive<u32>> = ranges
+            .into_iter()
+            .filter_map(|range| normal(*range.start(), *range.end()))
+            .collect();
+        all.sort_unstable_by_key(|range| *range.start());
         let mut set = UidSet::new();
-        for uid in all {
-            set.push(uid..=uid);
+        for range in all {
+            set.push(range);
         }
         set
     }
@@ -45,18 +54,29 @@ impl UidSet {
         UidSet::range(first, u32::MAX)
     }
 
-    /// Adds `from` to `to`, both included.
+    /// Adds `from` to `to`, both included, merging it with the ranges it
+    /// touches, found by binary search.
     pub fn insert(&mut self, from: u32, to: u32) {
-        let (from, to) = (from.min(to).max(1), from.max(to));
-        if to == 0 {
+        let Some(range) = normal(from, to) else {
             return;
-        }
-        let mut ranges = std::mem::take(&mut self.ranges);
-        ranges.push(from..=to);
-        ranges.sort_unstable_by_key(|r| *r.start());
-        for range in ranges {
-            self.push(range);
-        }
+        };
+        let (from, to) = (*range.start(), *range.end());
+        // The first range that ends at or after the UID before `from`, and
+        // the first that starts after the UID after `to`: everything
+        // between touches the new range.
+        let first = self
+            .ranges
+            .partition_point(|r| r.end().saturating_add(1) < from);
+        let last = self
+            .ranges
+            .partition_point(|r| *r.start() <= to.saturating_add(1));
+        let merged = match self.ranges.get(first..last) {
+            Some([head, .., tail]) | Some([head @ tail]) => {
+                (*head.start()).min(from)..=(*tail.end()).max(to)
+            }
+            _ => from..=to,
+        };
+        self.ranges.splice(first..last, [merged]);
     }
 
     /// Appends `range`, which starts at or after the last range's start,
@@ -77,7 +97,8 @@ impl UidSet {
     }
 
     pub fn contains(&self, uid: u32) -> bool {
-        self.ranges.iter().any(|r| r.contains(&uid))
+        let at = self.ranges.partition_point(|r| *r.end() < uid);
+        self.ranges.get(at).is_some_and(|r| *r.start() <= uid)
     }
 
     /// How many UIDs the set names, counting an open end up to `u32::MAX`.
@@ -99,6 +120,13 @@ impl UidSet {
     pub fn iter(&self) -> impl Iterator<Item = u32> + '_ {
         self.ranges.iter().flat_map(|r| r.clone())
     }
+}
+
+/// `from` to `to` the right way round, without UID 0, which IMAP does not
+/// have; `None` when nothing is left.
+fn normal(from: u32, to: u32) -> Option<RangeInclusive<u32>> {
+    let (from, to) = (from.min(to).max(1), from.max(to));
+    (to > 0).then_some(from..=to)
 }
 
 impl fmt::Display for UidSet {
@@ -176,5 +204,60 @@ mod tests {
     fn iter_walks_every_uid_in_order() {
         let set = UidSet::from_uids([7, 3, 4]);
         assert_eq!(set.iter().collect::<Vec<_>>(), vec![3, 4, 7]);
+    }
+
+    /// Inserting in any order gives the set a plain list of UIDs gives.
+    #[test]
+    fn inserts_in_any_order_match_the_uids_they_name() {
+        let mut seed = 0x9e37_79b9_7f4a_7c15u64;
+        let mut next = |n: u32| {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            (seed % u64::from(n)) as u32
+        };
+        for _ in 0..200 {
+            let mut set = UidSet::new();
+            let mut uids = std::collections::BTreeSet::new();
+            for _ in 0..next(20) {
+                let from = next(60);
+                let to = from + next(6);
+                set.insert(from, to);
+                uids.extend((from..=to).filter(|&u| u > 0));
+            }
+            assert_eq!(set, UidSet::from_uids(uids.iter().copied()));
+            for uid in 0..70 {
+                assert_eq!(set.contains(uid), uids.contains(&uid), "{set} {uid}");
+            }
+        }
+    }
+
+    #[test]
+    fn ranges_in_any_order_build_one_merged_set() {
+        // A server may name a range either way round.
+        let backwards = std::ops::RangeInclusive::new(30, 25);
+        let set = UidSet::from_ranges([9..=12, 1..=3, 4..=4, 11..=20, 0..=0, backwards]);
+        assert_eq!(set.to_string(), "1:4,9:20,25:30");
+    }
+
+    /// A set of 100,000 ranges builds and answers in well under a second
+    /// in a debug build; a sort per insert took minutes. Inserting in
+    /// rising order, as a sync adds new mail, appends at the end.
+    #[test]
+    fn a_hundred_thousand_ranges_build_and_answer_fast() {
+        let started = std::time::Instant::now();
+        let set = UidSet::from_ranges((0..100_000u32).rev().map(|i| i * 3 + 1..=i * 3 + 1));
+        let mut inserted = UidSet::new();
+        for i in 0..100_000u32 {
+            inserted.insert(i * 3 + 1, i * 3 + 1);
+        }
+        assert_eq!(set, inserted);
+        assert_eq!(set.ranges().len(), 100_000);
+        assert_eq!((0..300_000).filter(|&u| set.contains(u)).count(), 100_000);
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(1),
+            "{:?}",
+            started.elapsed()
+        );
     }
 }
