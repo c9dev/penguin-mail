@@ -11,6 +11,7 @@
 
 mod any;
 mod google;
+pub mod imap;
 mod pacing;
 
 pub use any::{AnyAutoReply, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules};

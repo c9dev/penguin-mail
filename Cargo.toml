@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["domain", "mime", "gmail", "discover", "store", "sync", "pgp", "smime", "ai", "cli", "app"]
+members = ["domain", "mime", "gmail", "discover", "imap", "store", "sync", "pgp", "smime", "ai", "cli", "app"]
 
 [workspace.package]
 version = "0.3.0"
@@ -14,6 +14,7 @@ mailrs-domain = { path = "domain" }
 mailrs-mime = { path = "mime" }
 mailrs-gmail = { path = "gmail" }
 mailrs-discover = { path = "discover" }
+mailrs-imap = { path = "imap" }
 mailrs-store = { path = "store" }
 mailrs-sync = { path = "sync" }
 mailrs-pgp = { path = "pgp" }
@@ -24,6 +25,7 @@ adw = { package = "libadwaita", version = "0.9.2", features = ["v1_8"] }
 ammonia = "4.2.0"
 anyhow = "1.0.104"
 async-channel = "2.5.0"
+async-imap = { version = "0.11.3", default-features = false, features = ["runtime-tokio"] }
 base64 = "0.23.1"
 chrono = { version = "0.4.45", default-features = false, features = ["clock", "std", "unstable-locales"] }
 chrono-tz = { version = "0.10.4", default-features = false, features = ["std"] }
@@ -42,6 +44,9 @@ html5ever = "0.40.1"
 hickory-resolver = "0.26.3"
 icalendar = "0.17.13"
 keyring = "4.2.0"
+# SMTP submission. Only the protocol: this crate dials and runs TLS itself,
+# so lettre brings no TLS stack, and without `hostname` no host name.
+lettre = { version = "0.11.23", default-features = false, features = ["smtp-transport", "tokio1"] }
 libc = "0.2.189"
 ksni = "0.3.6"
 mail-builder = "1.0.0"

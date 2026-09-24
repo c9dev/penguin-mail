@@ -63,16 +63,20 @@ fn usage() -> String {
 }
 
 fn main() -> glib::ExitCode {
-    tracing_subscriber::fmt()
-        .with_writer(logging::Writer {
-            details: logging::details(),
-        })
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                tracing_subscriber::EnvFilter::new("warn,penguin_mail=info,mailrs_sync=info")
-            }),
-        )
-        .init();
+    // async-imap logs passwords and mail at trace level; `quiet` drops
+    // those lines whatever RUST_LOG says.
+    tracing_subscriber::util::SubscriberInitExt::init(mailrs_imap::quiet(
+        tracing_subscriber::fmt()
+            .with_writer(logging::Writer {
+                details: logging::details(),
+            })
+            .with_env_filter(
+                tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                    tracing_subscriber::EnvFilter::new("warn,penguin_mail=info,mailrs_sync=info")
+                }),
+            )
+            .finish(),
+    ));
     let args: Vec<String> = std::env::args().collect();
     // Claude Code starts this binary as the assistant's MCP server. It only
     // relays tool calls to the running window, so it needs no GTK.

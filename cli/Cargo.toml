@@ -13,6 +13,7 @@ path = "src/main.rs"
 [dependencies]
 mailrs-domain.workspace = true
 mailrs-gmail.workspace = true
+mailrs-imap.workspace = true
 mailrs-store.workspace = true
 mailrs-sync.workspace = true
 anyhow.workspace = true

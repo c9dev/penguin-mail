@@ -1167,15 +1167,15 @@ msgstr ""
 "  --compose      open a new message, addressed to ADDRESS when given\n"
 "  mailto:...     the same as --compose mailto:..."
 
-#: app/src/main.rs:117
+#: app/src/main.rs:121
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: unknown option {option}"
 
-#: app/src/main.rs:240
+#: app/src/main.rs:244
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail Could Not Start"
 
-#: app/src/main.rs:245 app/src/ui/about.rs:148
+#: app/src/main.rs:249 app/src/ui/about.rs:148
 msgid "Report a Problem"
 msgstr "Report a Problem"
 

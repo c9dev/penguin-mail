@@ -51,6 +51,31 @@ pub struct Part {
     pub children: Vec<Part>,
 }
 
+/// How many levels of parts a conversion descends: the raw reader
+/// walking a message's own tree, and a server's BODYSTRUCTURE walking
+/// what it reported. A message can nest without limit, and every walk
+/// over the tree, including the drop the compiler writes for a parsed
+/// one, recurses once per level, which overflows a worker thread's
+/// stack past a few thousand levels. A part at this depth keeps no
+/// children.
+pub const MAX_DEPTH: usize = 64;
+
+/// IMAP's number for child `i` (zero-based) under `parent`: bare under
+/// an unnumbered multipart root, dotted under anything else. Both the
+/// raw reader and a server's BODYSTRUCTURE number parts this way.
+pub fn numbered(parent: &str, i: usize) -> String {
+    match parent {
+        "" => (i + 1).to_string(),
+        parent => format!("{parent}.{}", i + 1),
+    }
+}
+
+/// A Content-ID with its angle brackets trimmed off, the way both the
+/// raw reader and a server's BODYSTRUCTURE store one.
+pub fn content_id(id: &str) -> String {
+    id.trim().trim_start_matches('<').trim_end_matches('>').to_string()
+}
+
 impl Parts {
     /// The first value of the header `name`, compared without case.
     pub fn header(&self, name: &str) -> Option<&str> {
