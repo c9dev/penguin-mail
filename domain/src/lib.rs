@@ -13,6 +13,7 @@ pub mod gmail;
 pub mod mailbox;
 pub mod invitation;
 pub mod smart;
+pub mod subject;
 pub mod system_label;
 mod target;
 pub mod translate;
