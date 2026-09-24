@@ -13,7 +13,9 @@ use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 use mailrs_domain::{
     Account, AccountId, AccountState, ChangeEvent, Label, MessageBody, Role, Target, ThreadSummary,
 };
-use mailrs_sync::{History, Listing, Loaded, MailAction, Permitted, Scope, TriageAction, View};
+use mailrs_sync::{
+    History, Listing, Loaded, MailAction, Offers, Permitted, Scope, TriageAction, View,
+};
 
 use super::confirm::{Tone, confirm};
 use super::contact_card;
@@ -841,11 +843,12 @@ impl MainWindow {
 
     /// The settings that change what a mailbox lists.
     fn view(&self) -> View {
+        let category = self
+            .shows_categories(&self.shown())
+            .then(|| self.screen.borrow().category());
         self.settings_with(|settings| View {
             threading: settings.threading,
-            category: settings
-                .inbox_categories
-                .then(|| self.screen.borrow().category()),
+            category,
             follow_ups: settings.suggest_follow_ups,
             now: chrono::Utc::now().timestamp_millis(),
             limit: None,
@@ -1054,6 +1057,7 @@ impl MainWindow {
         if self.conversation.is_showing_row(&summary) {
             return;
         }
+        self.follow_categorize_sender(summary.account_id);
         self.load_into(Rc::clone(&self.conversation), summary);
     }
 
@@ -1977,6 +1981,12 @@ impl MainWindow {
 
     fn account(&self, account_id: AccountId) -> Option<Account> {
         self.app.upgrade()?.account(account_id)
+    }
+
+    /// What `account_id` offers, or everything while it has not started.
+    pub(super) fn offers(&self, account_id: AccountId) -> Offers {
+        let running = self.core.account(account_id);
+        crate::offered::offers_for(running.as_ref().map(|sync| sync.services()))
     }
 
     fn labels(&self) -> HashMap<AccountId, Vec<Label>> {

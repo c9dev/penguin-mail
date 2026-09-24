@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use adw::prelude::*;
-use gtk::glib;
+use gtk::{gio, glib};
 use mailrs_domain::{AccountId, Category};
 use mailrs_sync::{Categorized, Permitted};
 
@@ -182,9 +182,29 @@ impl MainWindow {
             });
     }
 
-    /// Whether `mailbox` splits into categories on screen.
-    fn shows_categories(&self, mailbox: &Mailbox) -> bool {
-        self.settings_with(|s| s.inbox_categories) && mailbox.takes_categories()
+    /// Whether `mailbox` splits into categories on screen: the person has
+    /// categories on, and an account the mailbox lists sorts its inbox
+    /// that way.
+    pub(super) fn shows_categories(&self, mailbox: &Mailbox) -> bool {
+        let ids: Vec<AccountId> = self.accounts().iter().map(|a| a.id).collect();
+        crate::offered::shows_categories(
+            self.settings_with(|s| s.inbox_categories),
+            mailbox,
+            &ids,
+            |id| self.offers(id),
+        )
+    }
+
+    /// Enables Categorize Sender only while `account_id` sorts its inbox
+    /// into categories, so the menu offers nothing the account cannot do.
+    pub(super) fn follow_categorize_sender(&self, account_id: AccountId) {
+        if let Some(action) = self
+            .actions
+            .lookup_action("categorize-sender")
+            .and_downcast::<gio::SimpleAction>()
+        {
+            action.set_enabled(self.offers(account_id).categories);
+        }
     }
 
     /// Shows the switcher when the list holds an inbox, and hides it elsewhere.

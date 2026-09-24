@@ -16,10 +16,6 @@ mod images;
 mod language;
 mod logging;
 mod notify;
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the window reads it once it hides what an account lacks")
-)]
 mod offered;
 mod old_id;
 mod open_thread;
