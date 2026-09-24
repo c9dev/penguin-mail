@@ -5,6 +5,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+## 0.3.0 (2026-09-24)
+
 ### New
 
 - A message forwarded as an attachment is listed as an .eml file named

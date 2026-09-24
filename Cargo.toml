@@ -3,7 +3,7 @@ resolver = "3"
 members = ["domain", "mime", "gmail", "store", "sync", "pgp", "smime", "ai", "cli", "app"]
 
 [workspace.package]
-version = "0.2.2"
+version = "0.3.0"
 edition = "2024"
 rust-version = "1.98"
 license = "GPL-3.0-or-later"
