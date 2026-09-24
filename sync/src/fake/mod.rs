@@ -1,8 +1,9 @@
-//! An in-memory Gmail. Sync's tests and `penguin-mail --demo` both run on
-//! it: seed its mailbox, hand it to an `AccountSync`, and every read and
+//! In-memory servers for sync's tests and `penguin-mail --demo`: a Gmail
+//! here, and an IMAP server and SMTP sink in [`FakeImap`] and [`FakeSmtp`].
+//! Seed a mailbox, hand the fake to an `AccountSync`, and every read and
 //! write the app makes goes through the same code the real client does.
 //!
-//! Callers change the mailbox directly through [`FakeGmail::with`]. The
+//! Callers change the Gmail mailbox directly through [`FakeGmail::with`]. The
 //! changes Gmail would record in history are recorded here too, so a sync
 //! replays them. [`fill_store`] gives a new account the store its first
 //! sync against this mailbox would leave, for callers that want mail on

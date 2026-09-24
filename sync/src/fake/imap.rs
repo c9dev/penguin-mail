@@ -3,7 +3,7 @@
 //! flags and MODSEQs; a test turns the server's extensions on and off and
 //! changes mail behind the app's back. Both answer through `ImapApi` and
 //! `Submit`, keeping the promises the real clients make there, and log
-//! every call.
+//! every call that would reach a server.
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::sync::{Mutex, PoisonError};
@@ -423,8 +423,11 @@ fn check_search(keys: &str) -> Result<(), ImapError> {
 }
 
 impl ImapApi for FakeImap {
+    /// The real client answers from what the server said at sign-in, so
+    /// this is no server call: it is not logged and uses up no planned
+    /// failure.
     async fn capabilities(&self) -> Result<Capabilities, ImapError> {
-        self.call("capabilities".into(), |s| Ok(s.capabilities))
+        Ok(self.with(|s| s.capabilities))
     }
 
     async fn list(&self) -> Result<Vec<Listed>, ImapError> {
@@ -1162,12 +1165,28 @@ pub struct FakeSmtp {
     state: Mutex<SmtpState>,
 }
 
-#[derive(Default)]
 pub struct SmtpState {
     /// The latest messages handed over, at most [`MAX_SENT`], oldest first.
     pub sent: VecDeque<Submitted>,
     /// Errors the next submissions return, one each.
     pub failures: VecDeque<ImapError>,
+    /// The server offers 8BITMIME (RFC 6152), which a message with bytes
+    /// above 127 needs. On by default, as on most servers.
+    pub eight_bit_mime: bool,
+    /// The server offers SMTPUTF8 (RFC 6531), which an address outside
+    /// ASCII needs. On by default.
+    pub smtp_utf8: bool,
+}
+
+impl Default for SmtpState {
+    fn default() -> Self {
+        SmtpState {
+            sent: VecDeque::new(),
+            failures: VecDeque::new(),
+            eight_bit_mime: true,
+            smtp_utf8: true,
+        }
+    }
 }
 
 /// One message handed to the fake.
@@ -1219,6 +1238,20 @@ impl Submit for FakeSmtp {
         self.with(|s| {
             if let Some(err) = s.failures.pop_front() {
                 return Err(err);
+            }
+            // The real client reads what the server offers once connected,
+            // and refuses before MAIL.
+            if !s.smtp_utf8
+                && !to
+                    .iter()
+                    .map(String::as_str)
+                    .chain([from])
+                    .all(str::is_ascii)
+            {
+                return Err(ImapError::Unsupported("SMTPUTF8"));
+            }
+            if !s.eight_bit_mime && !raw.is_ascii() {
+                return Err(ImapError::Unsupported("8BITMIME"));
             }
             if s.sent.len() == MAX_SENT {
                 s.sent.pop_front();
@@ -1644,6 +1677,45 @@ mod tests {
         );
     }
 
+    /// A server without 8BITMIME or SMTPUTF8 gets no message that needs
+    /// it, as the real client refuses after connecting and before MAIL.
+    #[tokio::test]
+    async fn smtp_without_8bitmime_or_smtputf8_refuses_what_needs_them() {
+        let smtp = FakeSmtp::new();
+        let to = ["ann@example.com".to_string()];
+        smtp.submit("me@example.com", &to, "Olá".as_bytes())
+            .await
+            .unwrap();
+        smtp.submit("joão@example.pt", &to, b"raw").await.unwrap();
+        smtp.with(|s| {
+            s.eight_bit_mime = false;
+            s.smtp_utf8 = false;
+        });
+        assert_eq!(
+            smtp.submit("me@example.com", &to, "Olá".as_bytes()).await,
+            Err(ImapError::Unsupported("8BITMIME"))
+        );
+        assert_eq!(
+            smtp.submit("me@example.com", &["joão@example.pt".into()], b"raw")
+                .await,
+            Err(ImapError::Unsupported("SMTPUTF8"))
+        );
+        smtp.submit("me@example.com", &to, b"raw").await.unwrap();
+        assert_eq!(smtp.sent().len(), 3);
+    }
+
+    /// The real client reads its capabilities at sign-in and answers from
+    /// them, so the fake's answer is no server call and uses up no
+    /// planned failure.
+    #[tokio::test]
+    async fn capabilities_come_without_a_call() {
+        let fake = FakeImap::new();
+        fake.fail_next(ImapError::Network("reset".into()));
+        assert_eq!(fake.capabilities().await, Ok(Capabilities::all()));
+        assert!(fake.calls().is_empty());
+        assert!(fake.list().await.is_err());
+    }
+
     #[tokio::test]
     async fn smtp_refuses_a_bad_envelope_before_a_planned_failure() {
         let smtp = FakeSmtp::new();
@@ -1703,10 +1775,10 @@ mod tests {
         for _ in 0..MAX_CALLS {
             fake.list().await.unwrap();
         }
-        fake.capabilities().await.unwrap();
+        fake.select("INBOX", None).await.unwrap();
         let calls = fake.calls();
         assert_eq!(calls.len(), MAX_CALLS);
-        assert_eq!(calls.last().map(String::as_str), Some("capabilities"));
+        assert_eq!(calls.last().map(String::as_str), Some("select INBOX"));
         assert_eq!(fake.calls_to("list"), MAX_CALLS - 1);
     }
 
