@@ -496,3 +496,35 @@ fn an_invitation_read_without_its_calendar_is_fetched_again() {
     assert!(bodies::get_body(&conn, 1, "read", 2).unwrap().is_some());
     assert!(bodies::get_body(&conn, 1, "plain", 2).unwrap().is_some());
 }
+
+/// Migration 30 adds local threading's table and column without touching a
+/// message stored before it: nothing threaded that message locally, so it
+/// stays untouched rather than joining a thread on the migration's say-so.
+#[test]
+fn a_message_from_before_local_threading_stays_untouched() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..29]).unwrap();
+    conn.execute_batch(
+        "INSERT INTO accounts (id, email, added_at) VALUES (1, 'me@example.com', 0);
+         INSERT INTO messages (account_id, id, thread_id, to_addrs, cc_addrs, subject, date, snippet, size, has_attachments, sync_gen) \
+         VALUES (1, 'a', 't1', '[]', '[]', 'Lunch', 1, '', 1, 0, 1);",
+    )
+    .unwrap();
+    drop(conn);
+
+    let conn = open_with(&path, MIGRATIONS).unwrap();
+    assert_eq!(schema_version(&conn).unwrap(), 30);
+    let base_subject: Option<String> = conn
+        .query_row(
+            "SELECT base_subject FROM messages WHERE account_id = 1 AND id = 'a'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(base_subject, None);
+    let links: i64 = conn
+        .query_row("SELECT COUNT(*) FROM message_links", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(links, 0);
+}

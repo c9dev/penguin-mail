@@ -11,6 +11,7 @@ use mailrs_domain::mailbox::keyword;
 use mailrs_domain::{AccountId, Address, Applied, Membership, Memberships, MessageMeta, Role};
 use rusqlite::{Connection, OptionalExtension, params};
 
+use crate::threading::{self, Links};
 use crate::{Result, StoreError};
 
 /// One change to stored mail. [`apply`] takes a list of them.
@@ -21,6 +22,14 @@ pub enum Change {
     Upsert {
         meta: Box<MessageMeta>,
         generation: i64,
+    },
+    /// Stores a message from a server that keeps no threads, in the thread
+    /// local threading finds for it. A message already stored keeps its
+    /// thread, so a second fetch never moves it.
+    UpsertLocal {
+        meta: Box<MessageMeta>,
+        generation: i64,
+        links: Links,
     },
     /// Keeps a stored message as it is under a new sync generation, so the
     /// sweep that ends a relisting keeps it.
@@ -142,6 +151,20 @@ pub fn apply(conn: &Connection, account_id: AccountId, changes: &[Change]) -> Re
             Change::Upsert { meta, generation } => {
                 upsert_message(conn, meta, *generation)?;
                 touched.threads.insert(meta.thread_id.clone());
+            }
+            Change::UpsertLocal {
+                meta,
+                generation,
+                links,
+            } => {
+                let mut meta = (**meta).clone();
+                meta.thread_id = match thread_id_of(conn, account_id, &meta.id)? {
+                    Some(kept) => kept,
+                    None => threading::thread_for(conn, account_id, &meta, links)?,
+                };
+                upsert_message(conn, &meta, *generation)?;
+                threading::remember(conn, account_id, &meta, links)?;
+                touched.threads.insert(meta.thread_id);
             }
             Change::Keep {
                 message_id,

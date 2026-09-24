@@ -421,6 +421,25 @@ CREATE TABLE unsubscribes (
     PRIMARY KEY (account_id, sender)
 );
 "#,
+    // Local threading, for a server that keeps no threads. Each message
+    // threaded here records the Message-IDs it names in References and
+    // In-Reply-To, and its subject's base. The indexes cover only those
+    // messages, so a Gmail store pays nothing for them.
+    r#"
+CREATE TABLE message_links (
+    account_id INTEGER NOT NULL,
+    message_id TEXT NOT NULL,
+    msgid      TEXT NOT NULL,
+    PRIMARY KEY (account_id, message_id, msgid),
+    FOREIGN KEY (account_id, message_id) REFERENCES messages(account_id, id) ON DELETE CASCADE
+);
+CREATE INDEX message_links_by_msgid ON message_links(account_id, msgid);
+ALTER TABLE messages ADD COLUMN base_subject TEXT;
+CREATE INDEX messages_local_by_msgid ON messages(account_id, rfc822_msgid)
+    WHERE base_subject IS NOT NULL;
+CREATE INDEX messages_local_by_subject ON messages(account_id, base_subject, date)
+    WHERE base_subject IS NOT NULL;
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

@@ -20,6 +20,7 @@ pub mod outbox;
 pub mod reminders;
 mod schema;
 pub mod templates;
+pub mod threading;
 pub mod threads;
 pub mod unsubscribes;
 pub mod window;
