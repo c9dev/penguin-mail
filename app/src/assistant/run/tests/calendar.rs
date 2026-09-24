@@ -359,3 +359,15 @@ async fn an_invitation_is_answered_after_asking() {
         Err("Unknown answer perhaps; use yes, no or maybe.".into())
     );
 }
+
+#[tokio::test]
+async fn a_calendar_tool_on_an_account_without_a_calendar_says_why() {
+    let h = Harness::with_services(|_, services| services.calendar = None).await;
+    let answer = h
+        .run("list_events", json!({"from": "2026-03-10", "to": "2026-03-11"}))
+        .await;
+    assert_eq!(
+        answer,
+        Ok(json!({"unavailable": "Gmail has no calendar that other apps can reach."}))
+    );
+}

@@ -252,6 +252,43 @@ async fn list_mail_finds_gmails_own_labels_by_name() {
     );
 }
 
+/// A system label such as UNREAD stands for a mail set that only the
+/// account's own services can read; an account the window lists but has
+/// not started syncing has none to ask. Without this, the label read as
+/// a literal mailbox and listed as empty, with no reason given.
+#[tokio::test]
+async fn list_mail_says_why_a_system_label_is_empty_on_an_unsynced_account() {
+    let h = harness().await;
+    let cold_id = 99;
+    {
+        let mut screen = h.desk.0.borrow_mut();
+        screen.accounts.push(mailrs_domain::Account {
+            id: cold_id,
+            email: "cold@example.com".into(),
+            state: mailrs_domain::AccountState::Ok,
+            provider: mailrs_domain::Provider::Gmail,
+        });
+        screen.labels.insert(
+            cold_id,
+            vec![mailrs_domain::Label {
+                account_id: cold_id,
+                id: gmail::UNREAD.into(),
+                name: "UNREAD".into(),
+                kind: mailrs_domain::LabelKind::System,
+                color: None,
+            }],
+        );
+    }
+    assert_eq!(
+        h.run(
+            "list_mail",
+            json!({"mailbox": "label", "label": "UNREAD", "account": "cold@example.com"})
+        )
+        .await,
+        Ok(json!({"unavailable": "cold@example.com is not syncing yet."}))
+    );
+}
+
 #[tokio::test]
 async fn search_mail_asks_gmail() {
     let h = harness().await;
@@ -683,6 +720,15 @@ async fn gmail_settings_ask_for_the_permission_instead_of_failing() {
 }
 
 #[tokio::test]
+async fn the_automatic_reply_tool_on_an_account_without_one_says_why() {
+    let h = Harness::with_services(|_, services| services.auto_reply = None).await;
+    assert_eq!(
+        h.run("get_automatic_reply", json!({"account": ME})).await,
+        Ok(json!({"unavailable": "Gmail has no automatic reply that other apps can change."}))
+    );
+}
+
+#[tokio::test]
 async fn rules_are_made_listed_and_deleted() {
     let h = harness().await;
     assert_eq!(
@@ -715,6 +761,15 @@ async fn rules_are_made_listed_and_deleted() {
     assert_eq!(
         h.ok("list_rules", json!({"account": ME})).await,
         json!({"rules": []})
+    );
+}
+
+#[tokio::test]
+async fn the_rule_tools_on_an_account_without_rules_say_why() {
+    let h = Harness::with_services(|_, services| services.rules = None).await;
+    assert_eq!(
+        h.run("list_rules", json!({"account": ME})).await,
+        Ok(json!({"unavailable": "Gmail has no rules that other apps can change."}))
     );
 }
 

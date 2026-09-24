@@ -504,16 +504,31 @@ impl Harness {
     /// A Gmail holding `mail`, and a store filled from it by a first sync,
     /// with one account connected.
     pub async fn with(mail: Vec<MessageMeta>) -> Harness {
-        Harness::connect(mail, None).await
+        Harness::connect(mail, None, |_, _| {}).await
     }
 
     /// As [`Harness::with`], plus a second account, [`YOU`], whose Gmail
     /// holds `second` and no labels of its own.
     pub async fn with_second(mail: Vec<MessageMeta>, second: Vec<MessageMeta>) -> Harness {
-        Harness::connect(mail, Some(second)).await
+        Harness::connect(mail, Some(second), |_, _| {}).await
     }
 
-    async fn connect(mail: Vec<MessageMeta>, second: Option<Vec<MessageMeta>>) -> Harness {
+    /// One account with no mail, whose services `edit` changes before it
+    /// connects, for a tool test against a server that offers less than
+    /// Gmail's fake. `edit` takes the `FakeGmail` the services wrap, so it
+    /// can build `AccountServices::fake_with_capabilities` over the same
+    /// one, and the `AccountServices` `AccountSync::new` is about to take.
+    pub async fn with_services(
+        edit: impl FnOnce(&Arc<FakeGmail>, &mut AccountServices),
+    ) -> Harness {
+        Harness::connect(Vec::new(), None, edit).await
+    }
+
+    async fn connect(
+        mail: Vec<MessageMeta>,
+        second: Option<Vec<MessageMeta>>,
+        edit: impl FnOnce(&Arc<FakeGmail>, &mut AccountServices),
+    ) -> Harness {
         let dir = tempfile::tempdir().expect("a temp dir");
         let db = Db::open(&dir.path().join("mail.db")).expect("an empty store");
         let account_id = db
@@ -549,9 +564,11 @@ impl Harness {
         }
         gmail.keep_sent_copies(account_id);
         let (events, heard) = async_channel::unbounded();
+        let mut services = AccountServices::fake(Arc::clone(&gmail));
+        edit(&gmail, &mut services);
         let sync = Arc::new(AccountSync::new(
             account_id,
-            AccountServices::fake(Arc::clone(&gmail)),
+            services,
             db.clone(),
             events.clone(),
         ));

@@ -186,39 +186,39 @@ msgstr ""
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr ""
 
-#: app/src/assistant/run.rs:972
+#: app/src/assistant/run.rs:1006
 msgid "Move {count} conversation to the Trash?"
 msgid_plural "Move {count} conversations to the Trash?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/assistant/run.rs:1063
+#: app/src/assistant/run.rs:1097
 msgid ""
 "Don't Allow labels only the mail in accounts that have the label already."
 msgstr ""
 
-#: app/src/assistant/run.rs:1095
+#: app/src/assistant/run.rs:1132
 msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr ""
 
-#: app/src/assistant/run.rs:1171 app/src/assistant/run/calendar.rs:178
-#: app/src/assistant/run/calendar.rs:525
+#: app/src/assistant/run.rs:1214 app/src/assistant/run/calendar.rs:178
+#: app/src/assistant/run/calendar.rs:540
 msgid "%a %-d %b"
 msgstr ""
 
-#: app/src/assistant/run.rs:1177
+#: app/src/assistant/run.rs:1220
 msgid " from {first} to {last}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1180
+#: app/src/assistant/run.rs:1223
 msgid " until {last}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1181
+#: app/src/assistant/run.rs:1224
 msgid " from {first}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1187
+#: app/src/assistant/run.rs:1230
 msgid ""
 "Turn on the automatic reply for {account}{dates}?\n"
 "\n"
@@ -226,25 +226,25 @@ msgid ""
 "{body}"
 msgstr ""
 
-#: app/src/assistant/run.rs:1198
+#: app/src/assistant/run.rs:1241
 msgid "Turn off the automatic reply for {account}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1290
+#: app/src/assistant/run.rs:1339
 msgid "Create a Gmail rule for {account}: {when} → {then}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1330
+#: app/src/assistant/run.rs:1382
 msgid "Delete a Gmail rule from {account}?"
 msgstr ""
 
-#: app/src/assistant/run.rs:1452
+#: app/src/assistant/run.rs:1507
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a Gmail rule for "
 "their future mail?"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:184 app/src/assistant/run/calendar.rs:529
+#: app/src/assistant/run/calendar.rs:184 app/src/assistant/run/calendar.rs:544
 msgid "%a %-d %b %H:%M"
 msgstr ""
 
@@ -253,55 +253,55 @@ msgstr ""
 msgid "{first} to {last}"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:318
+#: app/src/assistant/run/calendar.rs:327
 msgid "Add “{title}” to the calendar for {account}, {when}?"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:328
+#: app/src/assistant/run/calendar.rs:337
 msgid "Google sends an invitation to {guests}."
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:375
+#: app/src/assistant/run/calendar.rs:387
 msgid "Title: {value}"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:378
+#: app/src/assistant/run/calendar.rs:390
 msgid "Starts: {value}"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:381
+#: app/src/assistant/run/calendar.rs:393
 msgid "Ends: {value}"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:384
+#: app/src/assistant/run/calendar.rs:396
 msgid "Where: {value}"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:387
+#: app/src/assistant/run/calendar.rs:399
 msgid "Guests: {value}"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:391
+#: app/src/assistant/run/calendar.rs:403
 msgid "Description: {value}"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:396
+#: app/src/assistant/run/calendar.rs:408
 msgid "Change “{title}” on the calendar for {account}? Its guests are told."
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:400
+#: app/src/assistant/run/calendar.rs:412
 msgid "Change an event on the calendar for {account}? Its guests are told."
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:422
+#: app/src/assistant/run/calendar.rs:437
 msgid "Delete “{title}” from the calendar for {account}? Its guests are told."
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:426
+#: app/src/assistant/run/calendar.rs:441
 msgid "Delete an event from the calendar for {account}? Its guests are told."
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:462
+#: app/src/assistant/run/calendar.rs:477
 msgid "Answer {answer} to “{title}”?"
 msgstr ""
 
@@ -581,14 +581,14 @@ msgstr ""
 msgid "Working"
 msgstr ""
 
-#: app/src/assistant/run/mail.rs:176
+#: app/src/assistant/run/mail.rs:179
 msgid "Delete {count} conversation forever? Gmail cannot bring it back."
 msgid_plural ""
 "Delete {count} conversations forever? Gmail cannot bring them back."
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/assistant/run/mail.rs:220
+#: app/src/assistant/run/mail.rs:223
 msgid "Send “{subject}” to {recipients} {when}?"
 msgstr ""
 
@@ -644,45 +644,45 @@ msgstr ""
 msgid "Delete the template “{name}”?"
 msgstr ""
 
-#: app/src/assistant/run/manage.rs:477
+#: app/src/assistant/run/manage.rs:480
 msgid "Add {contact} to the Google contacts of {account}?"
 msgstr ""
 
-#: app/src/assistant/run/manage.rs:528
+#: app/src/assistant/run/manage.rs:534
 msgid "Change {contact} in the Google contacts of {account}?"
 msgstr ""
 
-#: app/src/assistant/run/manage.rs:575
+#: app/src/assistant/run/manage.rs:581
 msgid "Always load images from anyone at {domain}?"
 msgstr ""
 
-#: app/src/assistant/run/manage.rs:579
+#: app/src/assistant/run/manage.rs:585
 msgid "Always load images from {sender}?"
 msgstr ""
 
-#: app/src/assistant/run/manage.rs:585
+#: app/src/assistant/run/manage.rs:591
 msgid "Loading a remote image tells the sender when you opened their mail."
 msgstr ""
 
-#: app/src/assistant/run/manage.rs:610
+#: app/src/assistant/run/manage.rs:616
 msgid "Stop loading images from {sender}?"
 msgstr ""
 
-#: app/src/assistant/run/manage.rs:645
+#: app/src/assistant/run/manage.rs:651
 msgid "Export {what} to {file}?"
 msgstr ""
 
-#: app/src/assistant/run/manage.rs:651
+#: app/src/assistant/run/manage.rs:657
 msgid "A file with that name is there already, and exporting replaces it."
 msgstr ""
 
-#: app/src/assistant/run/manage.rs:698
+#: app/src/assistant/run/manage.rs:704
 msgid "{count} conversation"
 msgid_plural "{count} conversations"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/assistant/run/manage.rs:730
+#: app/src/assistant/run/manage.rs:736
 msgid "the message “{subject}”"
 msgstr ""
 

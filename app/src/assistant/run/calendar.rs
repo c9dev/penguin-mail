@@ -212,6 +212,9 @@ fn when_text(start: Moment, end: Moment) -> String {
 impl<A: Accounts> Tools<A> {
     pub(super) async fn list_events(&self, input: &Value) -> ToolResult {
         let account = self.account_or_default(input)?;
+        if let Some(answer) = self.unavailable(&account, Missing::Calendar) {
+            return Ok(answer);
+        }
         let (from, to) = window(input)?;
         let calendar = Arc::clone(&self.modules.calendar);
         let account_id = account.id;
@@ -229,6 +232,9 @@ impl<A: Accounts> Tools<A> {
 
     pub(super) async fn find_free_time(&self, input: &Value) -> ToolResult {
         let account = self.account_or_default(input)?;
+        if let Some(answer) = self.unavailable(&account, Missing::Calendar) {
+            return Ok(answer);
+        }
         let (from, to) = window(input)?;
         let from = from.max(Local::now().timestamp_millis());
         let minutes = input
@@ -290,6 +296,9 @@ impl<A: Accounts> Tools<A> {
 
     pub(super) async fn create_event<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let account = self.account_or_default(input)?;
+        if let Some(answer) = self.unavailable(&account, Missing::Calendar) {
+            return Ok(Plan::without_asking(async move { Ok(answer) }));
+        }
         let title = required(input, "title")?;
         let start = moment(&required(input, "start")?)?;
         let end = moment(&required(input, "end")?)?;
@@ -343,6 +352,9 @@ impl<A: Accounts> Tools<A> {
 
     pub(super) async fn update_event<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let account = self.account_or_default(input)?;
+        if let Some(answer) = self.unavailable(&account, Missing::Calendar) {
+            return Ok(Plan::without_asking(async move { Ok(answer) }));
+        }
         let id = required(input, "id")?;
         let moment_of = |key: &str| -> Result<Option<Moment>, String> {
             text(input, key).map(|t| moment(&t)).transpose()
@@ -416,6 +428,9 @@ impl<A: Accounts> Tools<A> {
 
     pub(super) async fn delete_event<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let account = self.account_or_default(input)?;
+        if let Some(answer) = self.unavailable(&account, Missing::Calendar) {
+            return Ok(Plan::without_asking(async move { Ok(answer) }));
+        }
         let id = required(input, "id")?;
         let question = match text(input, "title") {
             Some(title) => fill(

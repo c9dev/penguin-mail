@@ -171,6 +171,9 @@ impl<A: Accounts> Tools<A> {
             .into_iter()
             .find(|a| a.id == first)
             .ok_or("That account is gone.")?;
+        if let Some(answer) = self.unavailable(&account, Missing::DeleteForever) {
+            return Ok(Plan::without_asking(async move { Ok(answer) }));
+        }
         let count = targets.len();
         let question = fill_plural(
             "Delete {count} conversation forever? Gmail cannot bring it back.",

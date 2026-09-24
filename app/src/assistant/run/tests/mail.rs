@@ -1,10 +1,12 @@
 //! The mail tools that came after the first set, and finding a contact.
 
+use std::sync::Arc;
+
 use chrono::{Duration, Local};
 use mailrs_domain::{Attachment, MessageBody};
 use mailrs_gmail::labels as gmail;
 use mailrs_store::{address_book, templates};
-use mailrs_sync::MailAction;
+use mailrs_sync::{AccountServices, MailAction, MailCapabilities};
 use serde_json::json;
 
 use super::super::Permission;
@@ -144,6 +146,26 @@ async fn delete_forever_asks_for_the_permission_it_lacks() {
         !h.gmail
             .with(|s| s.remote_writes.iter().any(|w| w.starts_with("delete")))
     );
+}
+
+#[tokio::test]
+async fn delete_forever_on_a_server_that_cannot_says_why_and_asks_nothing() {
+    let h = Harness::with_services(|gmail, services| {
+        let caps = MailCapabilities {
+            delete_forever: false,
+            ..services.capabilities()
+        };
+        *services = AccountServices::fake_with_capabilities(Arc::clone(gmail), caps);
+    })
+    .await;
+    let answer = h.run("delete_forever", json!({"targets": [target("t1")]})).await;
+    assert_eq!(
+        answer,
+        Ok(json!({
+            "unavailable": "Gmail cannot delete mail for good. Delete moves it to the Trash."
+        }))
+    );
+    assert!(h.asked().questions.is_empty());
 }
 
 #[tokio::test]

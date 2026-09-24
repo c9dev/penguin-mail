@@ -356,6 +356,16 @@ async fn writing_a_contact_asks_for_the_permission_it_lacks() {
     assert!(h.gmail.with(|s| s.contacts.is_empty()));
 }
 
+#[tokio::test]
+async fn create_contact_on_an_account_without_contacts_says_why() {
+    let h = Harness::with_services(|_, services| services.contacts = None).await;
+    let answer = h.run("create_contact", json!({"name": "Priya Shah"})).await;
+    assert_eq!(
+        answer,
+        Ok(json!({"unavailable": "Gmail keeps no contacts that other apps can reach."}))
+    );
+}
+
 async fn allowed(h: &Harness) -> Vec<(String, bool)> {
     h.db.read(image_senders::list)
         .await

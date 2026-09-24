@@ -26,7 +26,7 @@ use mailrs_store::{Db, messages};
 use mailrs_sync::mailbox::Standard;
 use mailrs_sync::{
     AccountSettings, AccountSync, Accounts, AutomaticReply, BackendError, Calendar, Categorized, Failure,
-    History, Invitations, Loaded, MailAction, MailActions, MailBackend, Mailbox, Mailboxes,
+    History, Invitations, Loaded, MailAction, MailActions, MailBackend, Mailbox, Mailboxes, Missing,
     NewLabels, Outcome, Permitted, Scope, SyncError, TriageAction, View,
 };
 use serde_json::{Value, json};
@@ -329,6 +329,14 @@ fn label_mailbox(account_id: AccountId, label: &Label, set: MailSet) -> Mailbox 
     }
 }
 
+/// What `named_mailboxes` found for a tool's mailbox name: mailboxes to
+/// list, or the model's answer when a system label needs a running
+/// account's services to say what it stands for.
+enum Named {
+    Found(Vec<Mailbox>),
+    Unavailable(Value),
+}
+
 /// A mailbox `list_mail` names. Its keys make the schema's enum, so the
 /// model is offered the names this parser takes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -582,6 +590,17 @@ impl<A: Accounts> Tools<A> {
         Ok((account, Arc::clone(&self.modules.gmail)))
     }
 
+    /// The answer for a tool the account cannot serve: why, in the words
+    /// Preferences uses, as a result the model reads rather than an error.
+    fn unavailable(&self, account: &Account, missing: Missing) -> Option<Value> {
+        let services = self.modules.accounts.services(account.id);
+        let offers = crate::offered::offers_for(services.as_ref());
+        offers
+            .missing()
+            .contains(&missing)
+            .then(|| json!({"unavailable": crate::offered::reason(account.provider, missing)}))
+    }
+
     fn email_of(&self, account_id: AccountId) -> String {
         self.desk
             .accounts()
@@ -762,7 +781,10 @@ impl<A: Accounts> Tools<A> {
             Some(key) => Some(named_category(&key)?),
             None => None,
         };
-        let mailboxes = self.named_mailboxes(&name, input, scope.as_ref())?;
+        let mailboxes = match self.named_mailboxes(&name, input, scope.as_ref())? {
+            Named::Found(mailboxes) => mailboxes,
+            Named::Unavailable(answer) => return Ok(answer),
+        };
         let waits = MailboxName::named(&name).is_some_and(MailboxName::waits);
         // Unread mail is picked out of the rows, so ask for extra.
         let view = View {
@@ -804,7 +826,7 @@ impl<A: Accounts> Tools<A> {
         name: &str,
         input: &Value,
         scope: Option<&Account>,
-    ) -> Result<Vec<Mailbox>, String> {
+    ) -> Result<Named, String> {
         let at = |which: Standard| match scope {
             Some(account) => Mailbox::Standard {
                 account_id: account.id,
@@ -817,7 +839,7 @@ impl<A: Accounts> Tools<A> {
             folder,
         };
         let named = MailboxName::named(name).ok_or_else(|| format!("Unknown mailbox {name}."))?;
-        Ok(match named {
+        Ok(Named::Found(match named {
             MailboxName::Inbox => vec![at(Standard::Inbox)],
             MailboxName::Flagged => vec![at(Standard::Flagged)],
             MailboxName::Sent => vec![at(Standard::Sent)],
@@ -841,21 +863,33 @@ impl<A: Accounts> Tools<A> {
             MailboxName::Label => {
                 let wanted = text(input, "label").ok_or("`label` is missing")?;
                 let labels = self.desk.labels();
-                let found: Vec<Mailbox> = labels
-                    .iter()
-                    .filter(|(id, _)| scope.is_none_or(|a| a.id == **id))
-                    .flat_map(|(id, all)| {
-                        all.iter()
-                            .filter(|l| l.name.eq_ignore_ascii_case(&wanted))
-                            .map(|l| label_mailbox(*id, l, self.set_of(*id, &l.id)))
-                            .collect::<Vec<_>>()
-                    })
-                    .collect();
+                let mut found = Vec::new();
+                for (id, all) in labels.iter().filter(|(id, _)| scope.is_none_or(|a| a.id == **id)) {
+                    for label in all.iter().filter(|l| l.name.eq_ignore_ascii_case(&wanted)) {
+                        if let Some(answer) = self.label_unavailable(*id, label) {
+                            return Ok(Named::Unavailable(answer));
+                        }
+                        found.push(label_mailbox(*id, label, self.set_of(*id, &label.id)));
+                    }
+                }
                 if found.is_empty() {
                     return Err(format!("There is no label called {wanted}."));
                 }
                 found
             }
+        }))
+    }
+
+    /// The answer when `label` of `account_id` is a system label that
+    /// stands for a mail set, such as unread mail or a category, and the
+    /// account has no services running to say which set. Without this
+    /// check, `set_of` falls back to reading the label literally, which
+    /// lists nothing instead of saying why.
+    fn label_unavailable(&self, account_id: AccountId, label: &Label) -> Option<Value> {
+        let stands_for_a_set =
+            label.kind == LabelKind::System && Standard::from_key(&label.id).is_none();
+        (stands_for_a_set && self.modules.accounts.services(account_id).is_none()).then(|| {
+            json!({"unavailable": format!("{} is not syncing yet.", self.email_of(account_id))})
         })
     }
 
@@ -1090,6 +1124,9 @@ impl<A: Accounts> Tools<A> {
 
     async fn block<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let (account, settings) = self.settings_for(&required(input, "account")?)?;
+        if let Some(answer) = self.unavailable(&account, Missing::Rules) {
+            return Ok(Plan::without_asking(async move { Ok(answer) }));
+        }
         let email = required(input, "email")?;
         let question = fill(
             &gettext("Block {address}? Their future mail goes straight to the Trash."),
@@ -1111,6 +1148,9 @@ impl<A: Accounts> Tools<A> {
 
     async fn get_vacation(&self, input: &Value) -> ToolResult {
         let (account, settings) = self.settings_for(&required(input, "account")?)?;
+        if let Some(answer) = self.unavailable(&account, Missing::AutoReply) {
+            return Ok(answer);
+        }
         let account_id = account.id;
         let loaded = self
             .call(async move { settings.automatic_reply(account_id).await })
@@ -1126,6 +1166,9 @@ impl<A: Accounts> Tools<A> {
     /// as it will stand once the call's fields are laid over it.
     async fn set_vacation<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let (account, settings) = self.settings_for(&required(input, "account")?)?;
+        if let Some(answer) = self.unavailable(&account, Missing::AutoReply) {
+            return Ok(Plan::without_asking(async move { Ok(answer) }));
+        }
         let account_id = account.id;
         let loaded = {
             let settings = Arc::clone(&settings);
@@ -1214,6 +1257,9 @@ impl<A: Accounts> Tools<A> {
 
     async fn list_rules(&self, input: &Value) -> ToolResult {
         let (account, settings) = self.settings_for(&required(input, "account")?)?;
+        if let Some(answer) = self.unavailable(&account, Missing::Rules) {
+            return Ok(answer);
+        }
         let labels = self.labels_of(account.id);
         let account_id = account.id;
         let listed = self
@@ -1254,6 +1300,9 @@ impl<A: Accounts> Tools<A> {
 
     async fn create_rule<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let (account, settings) = self.settings_for(&required(input, "account")?)?;
+        if let Some(answer) = self.unavailable(&account, Missing::Rules) {
+            return Ok(Plan::without_asking(async move { Ok(answer) }));
+        }
         let labels = self.labels_of(account.id);
         // A label the account lacks is made only once the user says yes, so
         // a declined rule leaves nothing behind. Until then the rule names
@@ -1325,6 +1374,9 @@ impl<A: Accounts> Tools<A> {
 
     async fn delete_rule<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let (account, settings) = self.settings_for(&required(input, "account")?)?;
+        if let Some(answer) = self.unavailable(&account, Missing::Rules) {
+            return Ok(Plan::without_asking(async move { Ok(answer) }));
+        }
         let id = required(input, "id")?;
         let question = fill(
             &gettext("Delete a Gmail rule from {account}?"),
@@ -1443,6 +1495,9 @@ impl<A: Accounts> Tools<A> {
 
     async fn categorize<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let account = self.account_named(&required(input, "account")?)?;
+        if let Some(answer) = self.unavailable(&account, Missing::Categories) {
+            return Ok(Plan::without_asking(async move { Ok(answer) }));
+        }
         let email = required(input, "email")?;
         let key = required(input, "category")?;
         let category = named_category(&key)?;
@@ -1505,6 +1560,10 @@ impl<A: Accounts> Tools<A> {
         Ok(json!({"dismissed": thread_id}))
     }
 
+    /// Every hidden address already made, across every account. The tool
+    /// names no account and needs no `unavailable` gate: a hidden address
+    /// exists only where `create_hidden_address` made one, which already
+    /// refuses an account without rules.
     fn hidden_list(&self) -> Value {
         json!({
             "addresses": self.desk.settings().hidden_addresses.iter().map(|h| json!({
@@ -1518,6 +1577,9 @@ impl<A: Accounts> Tools<A> {
 
     async fn hidden_create(&self, input: &Value) -> ToolResult {
         let (account, settings) = self.settings_for(&required(input, "account")?)?;
+        if let Some(answer) = self.unavailable(&account, Missing::Rules) {
+            return Ok(answer);
+        }
         let note = text(input, "note").unwrap_or_default();
         let taken = self.desk.settings().hidden_addresses;
         let (account_id, email) = (account.id, account.email.clone());
@@ -1546,6 +1608,9 @@ impl<A: Accounts> Tools<A> {
             .cloned()
             .ok_or_else(|| format!("{address} is not a Hide My Email address."))?;
         let (account, settings) = self.settings_for(&hidden.account)?;
+        if let Some(answer) = self.unavailable(&account, Missing::Rules) {
+            return Ok(answer);
+        }
         let account_id = account.id;
         let changed = self
             .call(async move {

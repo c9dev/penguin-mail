@@ -460,6 +460,9 @@ impl<A: Accounts> Tools<A> {
 
     pub(super) async fn create_contact<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let account = self.account_or_default(input)?;
+        if let Some(answer) = self.unavailable(&account, Missing::Contacts) {
+            return Ok(Plan::without_asking(async move { Ok(answer) }));
+        }
         let fields = contact_fields(input);
         let named = fields.name.as_deref().is_some_and(|n| !n.is_empty());
         let addressed = fields.emails.as_ref().is_some_and(|e| !e.is_empty());
@@ -496,6 +499,9 @@ impl<A: Accounts> Tools<A> {
     /// addresses, then changes the fields the call gives.
     pub(super) async fn update_contact<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let account = self.account_or_default(input)?;
+        if let Some(answer) = self.unavailable(&account, Missing::Contacts) {
+            return Ok(Plan::without_asking(async move { Ok(answer) }));
+        }
         let wanted = required(input, "contact")?;
         let fields = contact_fields(input);
         if fields.is_empty() {
