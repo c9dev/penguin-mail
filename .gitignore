@@ -5,6 +5,8 @@
 .claude/worktrees/
 # Design-tool settings, which belong to whoever runs the tool.
 .impeccable/
+# graphify's knowledge graph of the repository, rebuilt on demand.
+graphify-out/
 
 # The owner's own working notes and agent setup stay on their machine.
 .agents/
