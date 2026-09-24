@@ -29,6 +29,17 @@ pub fn shows_categories(
         }
 }
 
+/// Whether the sender's own actions are on for an account that `offers`
+/// what it offers. Blocking a sender and sorting its mail into a category
+/// both leave a rule on the server for the mail still to come, so both
+/// need rules.
+pub fn sender_actions(offers: Offers) -> [(&'static str, bool); 2] {
+    [
+        ("block-sender", offers.rules),
+        ("categorize-sender", offers.categories && offers.rules),
+    ]
+}
+
 /// How the accounts on screen file mail: with labels, several at once, or
 /// in folders, one at a time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -226,6 +237,32 @@ mod tests {
         assert_eq!(
             Filing::Folders.create_failed(),
             "Could not create the folder: {reason}"
+        );
+    }
+
+    use super::sender_actions;
+
+    #[test]
+    fn blocking_a_sender_needs_rules() {
+        let no_rules = Offers {
+            rules: false,
+            ..Offers::EVERYTHING
+        };
+        assert_eq!(
+            sender_actions(Offers::EVERYTHING),
+            [("block-sender", true), ("categorize-sender", true)]
+        );
+        assert_eq!(
+            sender_actions(no_rules),
+            [("block-sender", false), ("categorize-sender", false)]
+        );
+    }
+
+    #[test]
+    fn categorizing_a_sender_needs_categories_and_rules() {
+        assert_eq!(
+            sender_actions(without_categories()),
+            [("block-sender", true), ("categorize-sender", false)]
         );
     }
 

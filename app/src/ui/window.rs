@@ -1093,7 +1093,7 @@ impl MainWindow {
         if self.conversation.is_showing_row(&summary) {
             return;
         }
-        self.follow_categorize_sender(summary.account_id);
+        self.follow_sender_actions(summary.account_id);
         self.load_into(Rc::clone(&self.conversation), summary);
     }
 

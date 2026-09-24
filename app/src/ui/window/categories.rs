@@ -195,15 +195,20 @@ impl MainWindow {
         )
     }
 
-    /// Enables Categorize Sender only while `account_id` sorts its inbox
-    /// into categories, so the menu offers nothing the account cannot do.
-    pub(super) fn follow_categorize_sender(&self, account_id: AccountId) {
-        if let Some(action) = self
-            .actions
-            .lookup_action("categorize-sender")
-            .and_downcast::<gio::SimpleAction>()
-        {
-            action.set_enabled(self.offers(account_id).categories);
+    /// Enables Block Sender and Categorize Sender only while `account_id`
+    /// can do them, so the menu offers nothing the account cannot do.
+    pub(super) fn follow_sender_actions(&self, account_id: AccountId) {
+        for (name, enabled) in crate::offered::sender_actions(self.offers(account_id)) {
+            if let Some(action) = self
+                .actions
+                .lookup_action(name)
+                .and_downcast::<gio::SimpleAction>()
+            {
+                action.set_enabled(enabled);
+            }
+            if name == "categorize-sender" {
+                self.conversation.offer_categorize_sender(enabled);
+            }
         }
     }
 

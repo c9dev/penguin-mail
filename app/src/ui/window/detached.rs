@@ -123,6 +123,9 @@ impl MainWindow {
             if let Some(action) = group.lookup_action(name).and_downcast::<gio::SimpleAction>() {
                 action.set_enabled(enabled);
             }
+            if name == "categorize-sender" {
+                view.offer_categorize_sender(enabled);
+            }
         }
         window.insert_action_group("win", Some(&group));
         window.add_controller(super::shortcuts::conversation_chords());
@@ -160,11 +163,9 @@ impl MainWindow {
 /// The actions of a separate window that depend on what its account
 /// `offers`, and whether each is on for a conversation opened from
 /// `mailbox`.
-fn gates(mailbox: &Mailbox, offers: Offers) -> [(&'static str, bool); 2] {
-    [
-        ("categorize-sender", offers.categories),
-        ("trash", deletes(mailbox, offers.delete_forever)),
-    ]
+fn gates(mailbox: &Mailbox, offers: Offers) -> [(&'static str, bool); 3] {
+    let [block, categorize] = crate::offered::sender_actions(offers);
+    [block, categorize, ("trash", deletes(mailbox, offers.delete_forever))]
 }
 
 fn show_source(parent: &adw::Window, subject: &str, raw: Vec<u8>) {
@@ -265,7 +266,7 @@ mod tests {
         for mailbox in [inbox, trash()] {
             assert_eq!(
                 gates(&mailbox, Offers::EVERYTHING),
-                [("categorize-sender", true), ("trash", true)]
+                [("block-sender", true), ("categorize-sender", true), ("trash", true)]
             );
         }
     }
@@ -275,16 +276,17 @@ mod tests {
         let bare = Offers {
             categories: false,
             delete_forever: false,
+            rules: false,
             ..Offers::EVERYTHING
         };
         assert_eq!(
             gates(&trash(), bare),
-            [("categorize-sender", false), ("trash", false)]
+            [("block-sender", false), ("categorize-sender", false), ("trash", false)]
         );
         let inbox = Mailbox::Unified(Standard::Inbox);
         assert_eq!(
             gates(&inbox, bare),
-            [("categorize-sender", false), ("trash", true)]
+            [("block-sender", false), ("categorize-sender", false), ("trash", true)]
         );
     }
 }

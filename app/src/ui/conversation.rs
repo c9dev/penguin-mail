@@ -225,6 +225,9 @@ pub struct ConversationView {
     list_banner: adw::Banner,
     /// The menu section whose first item adds or removes the sender as a VIP.
     sender_menu: gio::Menu,
+    /// The Categorize Sender submenu, last in the sender section while
+    /// the account can sort a sender's mail.
+    categorize_menu: gio::Menu,
     /// The menu section holding Mute, whose wording follows the thread.
     mark_menu: gio::Menu,
     /// The menu section holding Archive, Trash and Junk, whose wording
@@ -501,7 +504,11 @@ impl ConversationView {
             Some(&gettext("Always Load Images…")),
             Some("win.always-load-images"),
         );
-        sender.append(Some(&gettext("Block Sender…")), Some("win.block-sender"));
+        // Both sender items leave a rule on the server, so an account
+        // without rules turns them off, and the menu leaves them out.
+        let block = gio::MenuItem::new(Some(&gettext("Block Sender…")), Some("win.block-sender"));
+        block.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
+        sender.append_item(&block);
         let categories = gio::Menu::new();
         // The key is Gmail's own name for the category and stays as it is.
         for category in Category::ALL.iter().filter(|c| **c != Category::All) {
@@ -516,6 +523,7 @@ impl ConversationView {
         more.append_section(None, &sender);
         buttons.more.set_menu_model(Some(&more));
         let sender_menu = sender.clone();
+        let categorize_menu = categories.clone();
         let mark_menu = marks.clone();
         let filing_menu = filing.clone();
         let thread_menu = more.clone();
@@ -611,6 +619,7 @@ impl ConversationView {
             find_closed: RefCell::new(Vec::new()),
             list_banner,
             sender_menu,
+            categorize_menu,
             mark_menu,
             filing_menu,
             thread_menu,
@@ -795,6 +804,24 @@ impl ConversationView {
             }),
             Some("win.toggle-vip"),
         );
+    }
+
+    /// Keeps Categorize Sender in the menu only while `offered`. GTK shows
+    /// a submenu whose items are all off, where it leaves out a single
+    /// item that is off, so the submenu comes and goes from the end of
+    /// the sender section.
+    pub fn offer_categorize_sender(&self, offered: bool) {
+        let last = self.sender_menu.n_items() - 1;
+        let shown = self
+            .sender_menu
+            .item_link(last, gio::MENU_LINK_SUBMENU)
+            .is_some();
+        if shown && !offered {
+            self.sender_menu.remove(last);
+        } else if offered && !shown {
+            self.sender_menu
+                .append_submenu(Some(&gettext("Categorize Sender")), &self.categorize_menu);
+        }
     }
 
     /// Words the Mute menu item for whether the thread is muted already.

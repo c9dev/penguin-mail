@@ -923,6 +923,20 @@ async fn categorize_sender_without_the_settings_permission_moves_the_mail_and_sa
 }
 
 #[tokio::test]
+async fn categorize_sender_on_an_account_without_rules_says_why_and_asks_nothing() {
+    let h = Harness::with_services(|_, services| services.rules = None).await;
+    assert_eq!(
+        h.run(
+            "categorize_sender",
+            json!({"account": ME, "email": "shop@example.com", "category": "social"})
+        )
+        .await,
+        Ok(json!({"unavailable": "Gmail has no rules that other apps can change."}))
+    );
+    assert!(h.asked().questions.is_empty());
+}
+
+#[tokio::test]
 async fn a_declined_categorize_changes_nothing() {
     let h = harness().await;
     h.effects.asked.borrow_mut().approves = false;

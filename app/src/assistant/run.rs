@@ -1495,7 +1495,12 @@ impl<A: Accounts> Tools<A> {
 
     async fn categorize<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let account = self.account_named(&required(input, "account")?)?;
-        if let Some(answer) = self.unavailable(&account, Missing::Categories) {
+        // The move comes with a rule for the sender's future mail, so the
+        // account needs both.
+        let lacking = self
+            .unavailable(&account, Missing::Categories)
+            .or_else(|| self.unavailable(&account, Missing::Rules));
+        if let Some(answer) = lacking {
             return Ok(Plan::without_asking(async move { Ok(answer) }));
         }
         let email = required(input, "email")?;
