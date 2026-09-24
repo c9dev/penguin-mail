@@ -1,0 +1,13 @@
+[package]
+name = "mailrs-imap"
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+mailrs-domain.workspace = true
+base64.workspace = true
+mail-parser.workspace = true
+thiserror.workspace = true

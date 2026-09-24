@@ -2226,6 +2226,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "mailrs-imap"
+version = "0.3.0"
+dependencies = [
+ "base64 0.23.1",
+ "mail-parser",
+ "mailrs-domain",
+ "thiserror",
+]
+
+[[package]]
 name = "mailrs-mime"
 version = "0.3.0"
 dependencies = [
