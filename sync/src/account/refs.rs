@@ -111,11 +111,11 @@ impl AccountSync {
     }
 
     /// Drops the memberships a `Gained` or `Lost` change names that the
-    /// store already reflects, so a look at a server without CONDSTORE,
-    /// which reports every window message's flags on every look rather
-    /// than a diff, writes nothing and touches no thread when nothing
-    /// changed. Reads each named message's keywords once from the store,
-    /// rather than keep a copy of the server's last answer in memory.
+    /// store already reflects. A flag report carries a message's whole
+    /// flag set, and a change this app made itself comes back in the next
+    /// one, so without this a look would write what the store holds and
+    /// redraw threads that did not change. Reads each named message's
+    /// keywords once from the store.
     async fn drop_changes_already_held(
         &self,
         changes: Vec<RemoteChange>,
@@ -164,7 +164,8 @@ fn named_in(change: &RemoteChange) -> Option<&str> {
         | RemoteChange::Lost { id, .. } => Some(id),
         RemoteChange::Vanished { .. }
         | RemoteChange::Holds { .. }
-        | RemoteChange::StateLost { .. } => None,
+        | RemoteChange::StateLost { .. }
+        | RemoteChange::CompareKeywords { .. } => None,
     }
 }
 
@@ -200,7 +201,8 @@ fn change_as_stored(
         // moved away is not there.
         whole @ (RemoteChange::Vanished { .. }
         | RemoteChange::Holds { .. }
-        | RemoteChange::StateLost { .. }) => whole,
+        | RemoteChange::StateLost { .. }
+        | RemoteChange::CompareKeywords { .. }) => whole,
     })
 }
 

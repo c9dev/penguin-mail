@@ -10,6 +10,7 @@ mod writes;
 
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex, PoisonError};
+use std::ops::RangeInclusive;
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
@@ -25,8 +26,8 @@ use mailrs_mime::html::html_to_text;
 
 use super::{
     AutoReplyService, Backfill, CalendarService, Changes, ContactsService, Found, IdentityService,
-    MailBackend, MailCapabilities, Priority, RawMessage, RemoteRef, RulesService, SearchQuery,
-    SendAsAddress, SyncState, Unapplied, Want, priority,
+    KeywordsPage, MailBackend, MailCapabilities, Priority, RawMessage, RemoteRef, RulesService,
+    SearchQuery, SendAsAddress, SyncState, Unapplied, Want, priority,
 };
 use crate::api::{DraftRef, GmailApi, SavedDraft};
 use crate::{BackendError, MailOp};
@@ -398,6 +399,16 @@ impl<G: GmailApi> MailBackend for Google<G> {
 
     async fn mailbox_threads(&self, id: &str) -> Result<u64, BackendError> {
         Ok(paced(self.gmail.label_threads(id)).await?)
+    }
+
+    /// Gmail's history names every flag change, so nobody asks.
+    async fn keywords_in(
+        &self,
+        _mailbox: &str,
+        _uidvalidity: u32,
+        _uids: RangeInclusive<u32>,
+    ) -> Result<KeywordsPage, BackendError> {
+        Err(BackendError::Unsupported)
     }
 
     /// Gmail names a message by its own id, which no label renumbers.

@@ -2,6 +2,7 @@
 //! state.
 
 use std::collections::{BTreeSet, HashMap};
+use std::ops::RangeInclusive;
 
 use mailrs_domain::{ChangeEvent, EpochMillis, Membership, MessageMeta, Role};
 use mailrs_store::messages::Change;
@@ -53,7 +54,27 @@ impl AccountSync {
                 self.relist_mailbox(mailbox, *uidvalidity).await?;
             }
         }
-        changes.retain(|change| !matches!(change, RemoteChange::StateLost { .. }));
+        let mut compared = Vec::new();
+        for change in &changes {
+            if let RemoteChange::CompareKeywords {
+                mailbox,
+                uidvalidity,
+                uids,
+            } = change
+            {
+                compared.extend(
+                    self.keywords_that_differ(mailbox, *uidvalidity, uids.clone())
+                        .await?,
+                );
+            }
+        }
+        changes.retain(|change| {
+            !matches!(
+                change,
+                RemoteChange::StateLost { .. } | RemoteChange::CompareKeywords { .. }
+            )
+        });
+        changes.extend(compared);
         let (fetched, placing) = self.fetch_for_history(&changes).await?;
         let mail = &self.services.mail;
         let named_mailboxes: BTreeSet<String> = changes
@@ -156,8 +177,8 @@ impl AccountSync {
                                     .map(|message_id| Change::Delete { message_id }),
                             );
                         }
-                        // Relisted above.
-                        RemoteChange::StateLost { .. } => {}
+                        // Relisted and compared above.
+                        RemoteChange::StateLost { .. } | RemoteChange::CompareKeywords { .. } => {}
                     }
                 }
                 let touched = messages::apply(c, account_id, &batch)?.threads;
@@ -186,6 +207,67 @@ impl AccountSync {
             });
         }
         Ok(())
+    }
+
+    /// The keyword changes that bring the stored messages located in
+    /// `mailbox` under `uidvalidity`, with a UID in `uids`, to what the
+    /// server says they carry. The server's answer comes a window at a
+    /// time and each window is compared with the store's rows as they are
+    /// read, so this holds one window's keywords and the changes found.
+    /// Only a keyword the server stores can be lost; one kept on this
+    /// computer alone stays.
+    async fn keywords_that_differ(
+        &self,
+        mailbox: &str,
+        uidvalidity: u32,
+        uids: RangeInclusive<u32>,
+    ) -> Result<Vec<RemoteChange>, SyncError> {
+        let account_id = self.account_id;
+        let (mut from, to) = (*uids.start(), *uids.end());
+        let mut changes = Vec::new();
+        while from <= to {
+            let page = self
+                .services
+                .mail
+                .keywords_in(mailbox, uidvalidity, from..=to)
+                .await?;
+            let Some(covered) = page.covered else {
+                break;
+            };
+            let next = covered.end().checked_add(1);
+            let storable = self.services.mail.capabilities().keywords;
+            let (name, found) = (mailbox.to_string(), page.found);
+            changes.extend(
+                self.db
+                    .read(move |c| {
+                        let mut changes = Vec::new();
+                        remote_refs::keywords_in(
+                            c,
+                            account_id,
+                            &name,
+                            uidvalidity,
+                            covered,
+                            |uid, id, held| {
+                                if let Ok(at) = found.binary_search_by_key(&uid, |k| k.uid) {
+                                    changes.extend(keyword_changes(
+                                        id,
+                                        &found[at].keywords,
+                                        held,
+                                        storable,
+                                    ));
+                                }
+                            },
+                        )?;
+                        Ok(changes)
+                    })
+                    .await?,
+            );
+            match next {
+                Some(next) => from = next,
+                None => break,
+            }
+        }
+        Ok(changes)
     }
 
     /// Lists `mailbox` again after the server renumbered it, its UIDs now
@@ -345,6 +427,43 @@ impl AccountSync {
             .collect();
         Ok((metas, fetched.placing))
     }
+}
+
+/// The changes that bring stored message `id`, which carries `held`, to
+/// the `carried` keywords the server gives it: a gain of each it lacks,
+/// and a loss of each it holds that the server stores (`storable`) and no
+/// longer gives.
+fn keyword_changes(
+    id: &str,
+    carried: &[String],
+    held: &[String],
+    storable: &[&str],
+) -> Vec<RemoteChange> {
+    let gained: Vec<Membership> = carried
+        .iter()
+        .filter(|k| !held.contains(k))
+        .map(|k| Membership::Keyword(k.clone()))
+        .collect();
+    let lost: Vec<Membership> = held
+        .iter()
+        .filter(|k| storable.contains(&k.as_str()) && !carried.contains(k))
+        .map(|k| Membership::Keyword(k.clone()))
+        .collect();
+    let mut changes = Vec::new();
+    if !gained.is_empty() {
+        changes.push(RemoteChange::Gained {
+            id: id.to_string(),
+            thread_id: id.to_string(),
+            memberships: gained,
+        });
+    }
+    if !lost.is_empty() {
+        changes.push(RemoteChange::Lost {
+            id: id.to_string(),
+            memberships: lost,
+        });
+    }
+    changes
 }
 
 /// The most messages one step of a relisting fetches and matches.

@@ -3,10 +3,11 @@
 //! server allows. QRESYNC answers changed flags and expunged UIDs in the
 //! SELECT itself (RFC 7162). CONDSTORE alone answers changed flags for a
 //! FETCH with CHANGEDSINCE, and a UID SEARCH says which messages remain.
-//! A server with neither sends the window's flags as they stand now; the
-//! engine, which can read the store, compares them with what is stored
-//! rather than this adapter keeping a copy of its last look. New mail is
-//! every UID from the UIDNEXT seen last.
+//! A server with neither names no flag change, so the look hands the
+//! engine the UIDs to compare, and the engine, which can read the store,
+//! asks for their keywords a window at a time and compares them with
+//! what is stored, rather than this adapter keeping a copy of its last
+//! look. New mail is every UID from the UIDNEXT seen last.
 //!
 //! Every search and flags fetch over a mailbox goes in UID ranges of at
 //! most [`WINDOW`](super::window::WINDOW), so a mailbox of any size stays inside what the client
@@ -18,12 +19,12 @@ use std::ops::RangeInclusive;
 use mailrs_domain::Location;
 use mailrs_imap::{Capabilities, FlagsOf, ImapError, Selected, Since, UidSet};
 
-use super::keywords::flag_changes;
+use super::keywords::{flag_changes, is_deleted, keywords_of};
 use super::state::{ImapState, Kept};
 use super::window::{window_keys, windows};
 use super::{Imap, ImapApi, SYSTEM_KEYWORDS, Submit};
 use crate::BackendError;
-use crate::services::{Changes, RemoteChange, SyncState};
+use crate::services::{Changes, KeywordsOf, KeywordsPage, RemoteChange, SyncState};
 
 impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// With no state, where every synced mailbox stands now. With one,
@@ -141,18 +142,15 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             }
             (false, true, Some(modseq)) => {
                 changes.push(self.holds(mailbox, selected.uidvalidity, top).await?);
-                match self.changed_since(&look, met, modseq, changes).await {
-                    Ok(()) => {}
-                    // The client dropped a CHANGEDSINCE answer past its
-                    // budget, and the connection with it; this look reads
-                    // the window's flags instead, once.
-                    Err(ImapError::Protocol(_)) => self.window_flags(&look, met, changes).await?,
-                    Err(err) => return Err(err.into()),
+                if let Some(rest) = self.changed_since(&look, met, modseq, changes).await? {
+                    changes.push(look.compare(rest));
                 }
             }
             _ => {
                 changes.push(self.holds(mailbox, selected.uidvalidity, top).await?);
-                self.window_flags(&look, met, changes).await?;
+                if met.1 >= met.0 {
+                    changes.push(look.compare(met.0..=met.1));
+                }
             }
         }
         let mut fresh = Vec::new();
@@ -177,52 +175,75 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     }
 
     /// The flags that changed since `modseq` among the messages in `met`,
-    /// a window at a time, added to `changes`.
+    /// a window at a time, added to `changes`. When the client drops a
+    /// window's answer past its budget, and the connection with it, the
+    /// UIDs from that window up come back for the engine to compare with
+    /// the store's, so the windows already read are not read twice.
     async fn changed_since(
         &self,
         look: &Look<'_>,
         met: (u32, u32),
         modseq: u64,
         changes: &mut Vec<RemoteChange>,
-    ) -> Result<(), ImapError> {
+    ) -> Result<Option<RangeInclusive<u32>>, BackendError> {
         for window in windows(met.0, met.1) {
             let uids = UidSet::range(*window.start(), *window.end());
-            let flags = self.api.flags(look.mailbox, &uids, Some(modseq)).await?;
-            look.flags(&flags, changes);
+            match self.api.flags(look.mailbox, &uids, Some(modseq)).await {
+                Ok(flags) => look.flags(&flags, changes),
+                Err(ImapError::Protocol(_)) => return Ok(Some(*window.start()..=met.1)),
+                Err(err) => return Err(err.into()),
+            }
         }
-        Ok(())
+        Ok(None)
     }
 
-    /// The flags of every message in the window among `met`, as they stand
-    /// now, a window of UIDs at a time, added to `changes`.
-    async fn window_flags(
+    /// The keywords of the window's messages in `mailbox` in the lowest
+    /// [`WINDOW`](super::window::WINDOW) UIDs of `uids`, as they stand now,
+    /// for the engine to compare with the store's. A mailbox whose UIDs no
+    /// longer belong to `uidvalidity` answers nothing; the next look
+    /// reports it renumbered.
+    pub(super) async fn window_keywords(
         &self,
-        look: &Look<'_>,
-        met: (u32, u32),
-        changes: &mut Vec<RemoteChange>,
-    ) -> Result<(), BackendError> {
+        mailbox: &str,
+        uidvalidity: u32,
+        uids: RangeInclusive<u32>,
+    ) -> Result<KeywordsPage, BackendError> {
+        let Some(window) = windows(*uids.start(), *uids.end()).next() else {
+            return Ok(KeywordsPage::default());
+        };
+        if self.select(mailbox, None).await?.uidvalidity != uidvalidity {
+            return Ok(KeywordsPage::default());
+        }
         let keys = window_keys(
-            look.mailbox,
+            mailbox,
             self.settings.window_days,
             chrono::Local::now().date_naive(),
         );
-        for window in windows(met.0, met.1) {
-            let mut ranges = Vec::new();
-            self.search_windows(
-                look.mailbox,
-                (*window.start(), *window.end()),
-                &keys,
-                |found| push_runs(&mut ranges, &found),
-            )
-            .await?;
-            let uids = UidSet::from(ranges);
-            if uids.is_empty() {
-                continue;
-            }
-            let flags = self.api.flags(look.mailbox, &uids, None).await?;
-            look.flags(&flags, changes);
-        }
-        Ok(())
+        let mut ranges = Vec::new();
+        self.search_windows(mailbox, (*window.start(), *window.end()), &keys, |found| {
+            push_runs(&mut ranges, &found)
+        })
+        .await?;
+        let in_window = UidSet::from(ranges);
+        let mut found: Vec<KeywordsOf> = match in_window.is_empty() {
+            true => Vec::new(),
+            false => self
+                .api
+                .flags(mailbox, &in_window, None)
+                .await?
+                .into_iter()
+                .filter(|f| window.contains(&f.uid) && !is_deleted(&f.flags))
+                .map(|f| KeywordsOf {
+                    uid: f.uid,
+                    keywords: keywords_of(&f.flags),
+                })
+                .collect(),
+        };
+        found.sort_unstable_by_key(|k| k.uid);
+        Ok(KeywordsPage {
+            found,
+            covered: Some(window),
+        })
     }
 
     /// Selects `mailbox`, asking for QRESYNC's report when `since` gives
@@ -291,6 +312,16 @@ impl Look<'_> {
             uid,
         }
         .to_string()
+    }
+
+    /// The engine's comparison of the keywords of the messages in `uids`
+    /// with the store's.
+    fn compare(&self, uids: RangeInclusive<u32>) -> RemoteChange {
+        RemoteChange::CompareKeywords {
+            mailbox: self.mailbox.to_string(),
+            uidvalidity: self.uidvalidity,
+            uids,
+        }
     }
 
     /// The changes that bring each message met before to the flags in

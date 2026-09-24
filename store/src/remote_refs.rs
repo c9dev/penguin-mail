@@ -5,6 +5,7 @@
 //! read the server's answers back into store ids.
 
 use std::collections::HashMap;
+use std::ops::RangeInclusive;
 
 use mailrs_domain::{AccountId, EpochMillis, Location};
 use rusqlite::{Connection, params};
@@ -133,6 +134,56 @@ pub fn in_mailbox_where(
     Ok(picked)
 }
 
+/// Hands `each` every stored message located in `mailbox` under
+/// `uidvalidity` with a UID in `uids`, lowest UID first, as its UID, its
+/// id and the keywords it carries, sorted. The rows are read one message
+/// at a time, so a caller comparing a window of the server's flags holds
+/// that window and nothing the store adds.
+pub fn keywords_in(
+    conn: &Connection,
+    account_id: AccountId,
+    mailbox: &str,
+    uidvalidity: u32,
+    uids: RangeInclusive<u32>,
+    mut each: impl FnMut(u32, &str, &[String]),
+) -> Result<()> {
+    let mut stmt = conn.prepare_cached(
+        "SELECT r.uid, r.message_id, k.keyword FROM remote_refs r \
+         LEFT JOIN message_keywords k \
+         ON k.account_id = r.account_id AND k.message_id = r.message_id \
+         WHERE r.account_id = ?1 AND r.mailbox = ?2 AND r.uidvalidity = ?3 \
+         AND r.uid BETWEEN ?4 AND ?5 ORDER BY r.uid, r.message_id, k.keyword",
+    )?;
+    let mut rows = stmt.query(params![
+        account_id,
+        mailbox,
+        uidvalidity,
+        uids.start(),
+        uids.end()
+    ])?;
+    let mut current: Option<(u32, String)> = None;
+    let mut keywords: Vec<String> = Vec::new();
+    while let Some(row) = rows.next()? {
+        let (uid, id): (u32, String) = (row.get(0)?, row.get(1)?);
+        if current.as_ref().is_some_and(|(_, at)| *at != id) {
+            if let Some((uid, id)) = current.take() {
+                each(uid, &id, &keywords);
+            }
+            keywords.clear();
+        }
+        if let Some(keyword) = row.get::<_, Option<String>>(2)? {
+            keywords.push(keyword);
+        }
+        if current.is_none() {
+            current = Some((uid, id));
+        }
+    }
+    if let Some((uid, id)) = current {
+        each(uid, &id, &keywords);
+    }
+    Ok(())
+}
+
 /// Renames the mailbox `from` to `to` in every ref located in it, each
 /// ref's text with it. A server that renames a mailbox keeps its UIDs, so
 /// each message keeps its UIDVALIDITY and UID. A mailbox nested under
@@ -188,8 +239,8 @@ mod tests {
     use rusqlite::Connection;
 
     use super::{
-        Resolved, in_mailbox_where, locate, remotes_of, rename_mailbox, renumbered_by_message_id,
-        resolve,
+        Resolved, in_mailbox_where, keywords_in, locate, remotes_of, rename_mailbox,
+        renumbered_by_message_id, resolve,
     };
     use crate::accounts;
     use crate::messages::{self, Change};
@@ -385,6 +436,54 @@ mod tests {
         assert_eq!(
             in_mailbox_where(&conn, account_id, "Work", |_, _| true).unwrap(),
             ["INBOX/7/1", "Projects/3/1"]
+        );
+    }
+
+    #[test]
+    fn the_keywords_of_a_range_of_uids_come_a_message_at_a_time_in_uid_order() {
+        let (conn, account_id) = store(&[]);
+        let carrying = |id: &str, keywords: &[&str]| {
+            let mut meta = meta(account_id, id);
+            meta.held.keywords = keywords.iter().map(|k| k.to_string()).collect();
+            Change::Upsert {
+                meta: Box::new(meta),
+                generation: 1,
+            }
+        };
+        messages::apply(
+            &conn,
+            account_id,
+            &[
+                carrying("INBOX/7/1", &["$seen", "$flagged"]),
+                carrying("INBOX/7/2", &[]),
+                carrying("INBOX/7/9", &["$seen"]),
+                carrying("INBOX/6/2", &["$seen"]),
+                carrying("Sent/7/1", &["$seen"]),
+            ],
+        )
+        .unwrap();
+        locate(&conn, account_id, "INBOX/7/1", &at("INBOX", 7, 1)).unwrap();
+        locate(&conn, account_id, "INBOX/7/2", &at("INBOX", 7, 2)).unwrap();
+        locate(&conn, account_id, "INBOX/7/9", &at("INBOX", 7, 60_000)).unwrap();
+        locate(&conn, account_id, "INBOX/6/2", &at("INBOX", 6, 2)).unwrap();
+        locate(&conn, account_id, "Sent/7/1", &at("Sent", 7, 1)).unwrap();
+
+        let mut seen = Vec::new();
+        keywords_in(&conn, account_id, "INBOX", 7, 1..=50_000, |uid, id, keywords| {
+            seen.push((uid, id.to_string(), keywords.to_vec()));
+        })
+        .unwrap();
+
+        assert_eq!(
+            seen,
+            [
+                (
+                    1,
+                    "INBOX/7/1".to_string(),
+                    vec!["$flagged".to_string(), "$seen".to_string()]
+                ),
+                (2, "INBOX/7/2".to_string(), vec![]),
+            ]
         );
     }
 

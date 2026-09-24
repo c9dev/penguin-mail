@@ -18,6 +18,7 @@ pub use api::{ImapApi, Submit};
 
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::ops::RangeInclusive;
 use std::time::Duration;
 
 use mailrs_domain::mailbox::keyword;
@@ -27,8 +28,8 @@ use mailrs_imap::{Capabilities, ImapError, Selected, Since};
 use mailrs_mime::Parts;
 
 use super::{
-    Backfill, Changes, Found, IdentityService, MailBackend, MailCapabilities, RawMessage,
-    RemoteRef, SearchQuery, SendAsAddress, SyncState, Unapplied, Want,
+    Backfill, Changes, Found, IdentityService, KeywordsPage, MailBackend, MailCapabilities,
+    RawMessage, RemoteRef, SearchQuery, SendAsAddress, SyncState, Unapplied, Want,
 };
 use crate::api::{DraftRef, SavedDraft};
 use crate::{BackendError, MailOp};
@@ -271,6 +272,15 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
             return Ok(0);
         }
         Ok(u64::from(self.select(id, None).await?.exists))
+    }
+
+    async fn keywords_in(
+        &self,
+        mailbox: &str,
+        uidvalidity: u32,
+        uids: RangeInclusive<u32>,
+    ) -> Result<KeywordsPage, BackendError> {
+        self.window_keywords(mailbox, uidvalidity, uids).await
     }
 
     async fn uidvalidity(&self, mailbox: &str) -> Result<Option<u32>, BackendError> {

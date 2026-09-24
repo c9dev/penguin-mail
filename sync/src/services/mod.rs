@@ -20,6 +20,7 @@ pub use imap::{Imap, ImapApi, ImapSettings, Submit};
 pub use pacing::{Priority, background, priority};
 
 use std::collections::HashMap;
+use std::ops::RangeInclusive;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -157,6 +158,34 @@ pub enum RemoteChange {
         mailbox: String,
         uidvalidity: u32,
     },
+    /// The messages of the window in `mailbox` with a UID in `uids`, under
+    /// `uidvalidity`, whose flag changes the server cannot name, as one
+    /// without CONDSTORE cannot. The engine reads their keywords from the
+    /// server a window at a time through [`MailBackend::keywords_in`] and
+    /// compares them with the store's, so a look holds one window's flags
+    /// and hands on only what differs.
+    CompareKeywords {
+        mailbox: String,
+        uidvalidity: u32,
+        uids: RangeInclusive<u32>,
+    },
+}
+
+/// The keywords one message carries on the server, by its UID.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KeywordsOf {
+    pub uid: u32,
+    pub keywords: Vec<String>,
+}
+
+/// One window of [`MailBackend::keywords_in`]'s answer: the messages it
+/// covered, lowest UID first, and the UID the next window starts at.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct KeywordsPage {
+    pub found: Vec<KeywordsOf>,
+    /// The UIDs this page covered, which the caller compares; the next
+    /// page starts above them.
+    pub covered: Option<RangeInclusive<u32>>,
 }
 
 /// What the server calls one message, with its thread, as a listing or a
@@ -472,6 +501,20 @@ pub trait MailBackend: Send + Sync + 'static {
     /// How many conversations the mailbox holds on the server, not only in
     /// the part this computer keeps.
     fn mailbox_threads(&self, id: &str) -> impl Future<Output = Result<u64, BackendError>> + Send;
+
+    /// The keywords of the window's messages in `mailbox` with a UID in
+    /// `uids`, as they stand on the server now, for a
+    /// [`RemoteChange::CompareKeywords`]. It answers the lowest part of
+    /// `uids` the server takes in one go; the caller asks again above
+    /// [`KeywordsPage::covered`]. An empty page with nothing covered means
+    /// the mailbox's UIDs no longer belong to `uidvalidity`, or `uids`
+    /// was empty. A server that names its flag changes never asks for it.
+    fn keywords_in(
+        &self,
+        mailbox: &str,
+        uidvalidity: u32,
+        uids: RangeInclusive<u32>,
+    ) -> impl Future<Output = Result<KeywordsPage, BackendError>> + Send;
 
     /// The UIDVALIDITY the UIDs of `mailbox` belong to now, on a server
     /// that names a message by mailbox and UID; `None` on one that names

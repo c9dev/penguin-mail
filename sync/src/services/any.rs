@@ -5,6 +5,7 @@
 //! over `FakeGmail`, for tests and the demo. `Imap` and `FakeImap` do the
 //! same for an IMAP account's mail and identity.
 
+use std::ops::RangeInclusive;
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
@@ -17,8 +18,8 @@ use mailrs_mime::Parts;
 
 use super::{
     AutoReplyService, Backfill, CalendarService, Changes, ContactsService, Found, Google,
-    IdentityService, Imap, MailBackend, MailCapabilities, RawMessage, RemoteRef, RulesService,
-    SearchQuery, SendAsAddress, SyncState, Unapplied, Want,
+    IdentityService, Imap, KeywordsPage, MailBackend, MailCapabilities, RawMessage, RemoteRef,
+    RulesService, SearchQuery, SendAsAddress, SyncState, Unapplied, Want,
 };
 use crate::api::{AccountClient, DraftRef, SavedDraft};
 #[cfg(any(test, feature = "fake"))]
@@ -258,6 +259,15 @@ impl MailBackend for AnyMail {
 
     async fn uidvalidity(&self, mailbox: &str) -> Result<Option<u32>, BackendError> {
         forward_all!(AnyMail, self, uidvalidity(mailbox))
+    }
+
+    async fn keywords_in(
+        &self,
+        mailbox: &str,
+        uidvalidity: u32,
+        uids: RangeInclusive<u32>,
+    ) -> Result<KeywordsPage, BackendError> {
+        forward_all!(AnyMail, self, keywords_in(mailbox, uidvalidity, uids))
     }
 }
 
