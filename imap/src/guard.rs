@@ -39,6 +39,12 @@ pub(crate) const COMMAND_BYTES: u64 = 32 << 20;
 /// and the line around it.
 pub(crate) const BODY_BYTES: u64 = MAX_LITERAL + MAX_LINE as u64;
 
+/// The words that open an answer listing UIDs on one line, which may run
+/// past [`MAX_LINE`]: a mailbox of 200,000 messages lists in about
+/// 1.3 MB. The command's byte budget bounds it instead; 32 MiB holds about
+/// four million UIDs.
+const SEARCH: [&[u8]; 2] = [b"SEARCH", b"ESEARCH"];
+
 /// The words that open a status response, whose text imap-proto reads to
 /// the line end, braces and all.
 const STATUS: [&[u8]; 5] = [b"OK", b"NO", b"BAD", b"BYE", b"PREAUTH"];
@@ -86,11 +92,16 @@ impl Default for Limits {
 enum Head {
     #[default]
     Start,
+    /// `*`, which opens an untagged response.
+    Star,
     Tag,
-    /// The second word so far; longer than any status word once `None`.
-    Word(Option<([u8; 7], usize)>),
+    /// The second word so far, `None` once longer than any word it could
+    /// be, and whether the response is untagged.
+    Word(Option<([u8; 7], usize)>, bool),
     /// A status response or a continuation: text to the line end.
     Status,
+    /// An untagged SEARCH or ESEARCH, which lists UIDs on one line.
+    Search,
     Other,
 }
 
@@ -173,7 +184,7 @@ impl Scan {
             return;
         }
         self.line += 1;
-        if self.line > self.limits.line {
+        if self.line > self.limits.line && !matches!(self.head, Head::Search) {
             self.refused = Some("the server sent a line past the limit");
             return;
         }
@@ -216,22 +227,28 @@ impl Scan {
     fn classify(&mut self, byte: u8) {
         self.head = match (std::mem::take(&mut self.head), byte) {
             (Head::Start, b'+') => Head::Status,
-            (Head::Start | Head::Tag, b' ') => Head::Word(Some(([0; 7], 0))),
-            (Head::Start | Head::Tag, _) => Head::Tag,
-            (Head::Word(word), b' ' | b'\r') => {
-                let status = word.is_some_and(|(bytes, len)| {
-                    STATUS.iter().any(|s| s.eq_ignore_ascii_case(&bytes[..len]))
-                });
-                match status {
-                    true => Head::Status,
-                    false => Head::Other,
+            (Head::Start, b'*') => Head::Star,
+            (Head::Star, b' ') => Head::Word(Some(([0; 7], 0)), true),
+            (Head::Start | Head::Tag, b' ') => Head::Word(Some(([0; 7], 0)), false),
+            (Head::Start | Head::Star | Head::Tag, _) => Head::Tag,
+            (Head::Word(word, untagged), b' ' | b'\r') => {
+                let word = word.as_ref().map(|(bytes, len)| &bytes[..*len]);
+                let is = |words: &[&[u8]]| {
+                    word.is_some_and(|w| words.iter().any(|s| s.eq_ignore_ascii_case(w)))
+                };
+                if is(&STATUS) {
+                    Head::Status
+                } else if untagged && is(&SEARCH) {
+                    Head::Search
+                } else {
+                    Head::Other
                 }
             }
-            (Head::Word(Some((mut bytes, len))), _) if len < bytes.len() => {
+            (Head::Word(Some((mut bytes, len)), untagged), _) if len < bytes.len() => {
                 bytes[len] = byte;
-                Head::Word(Some((bytes, len + 1)))
+                Head::Word(Some((bytes, len + 1)), untagged)
             }
-            (Head::Word(_), _) => Head::Word(None),
+            (Head::Word(_, untagged), _) => Head::Word(None, untagged),
             (head, _) => head,
         };
     }
@@ -247,10 +264,10 @@ impl Scan {
         self.quoted = false;
         self.escaped = false;
         match (announced, &self.head) {
-            (Some(n), Head::Other) if n > MAX_LITERAL => {
+            (Some(n), Head::Other | Head::Search) if n > MAX_LITERAL => {
                 self.refused = Some("the server announced a literal past the limit");
             }
-            (Some(n), Head::Other) => self.literal = n,
+            (Some(n), Head::Other | Head::Search) => self.literal = n,
             // imap-proto reads a status response's `{n}` as text, unless
             // it sits in a response code that then parses whole; when the
             // code fails after the literal, imap-proto backtracks to text
@@ -420,9 +437,63 @@ mod tests {
             line: 16,
             ..Limits::default()
         };
-        assert_eq!(scan_with(limits, b"* SEARCH 1 2 3 4 5"), Err(()));
+        assert_eq!(scan_with(limits, b"* LIST () \"/\" abcdef"), Err(()));
         let literal = format!("* 1 FETCH ({{64}}\r\n{})\r\n", "x".repeat(64));
         assert_eq!(scan_with(limits, literal.as_bytes()), Ok(0));
+    }
+
+    fn search_line(uids: u32) -> String {
+        let mut line = String::from("* SEARCH");
+        for uid in 1..=uids {
+            line.push(' ');
+            line.push_str(&uid.to_string());
+        }
+        line + "\r\n"
+    }
+
+    /// A mailbox of 200,000 messages lists in one SEARCH line of about
+    /// 1.3 MB, past the line cap, which such an answer is spared.
+    #[test]
+    fn a_search_answer_may_run_past_the_line_cap() {
+        let line = search_line(200_000);
+        assert!(line.len() > MAX_LINE);
+        assert_eq!(scan(line.as_bytes()), Ok(0));
+        let esearch = format!(
+            "* ESEARCH (TAG \"A1\") UID ALL 1:{}\r\n",
+            "9".repeat(MAX_LINE)
+        );
+        assert_eq!(scan(esearch.as_bytes()), Ok(0));
+    }
+
+    #[test]
+    fn only_an_untagged_search_answer_is_spared_the_line_cap() {
+        let limits = Limits {
+            line: 16,
+            ..Limits::default()
+        };
+        for line in [
+            "A1 SEARCH 1 2 3 4 5 6 7 8\r\n",
+            "* SEARCHES 1 2 3 4 5 6\r\n",
+            "* 1 FETCH (SEARCH 1 2 3)\r\n",
+        ] {
+            assert_eq!(scan_with(limits, line.as_bytes()), Err(()), "{line:?}");
+        }
+        assert_eq!(scan_with(limits, b"* search 1 2 3 4 5 6 7 8 9\r\n"), Ok(0));
+    }
+
+    #[test]
+    fn a_search_answer_past_the_budget_is_a_protocol_error() {
+        let line = search_line(20_000);
+        let limits = Limits {
+            budget: line.len() as u64 - 1,
+            ..Limits::default()
+        };
+        let mut scan = Scan::new(limits);
+        let err = scan.feed(line.as_bytes()).unwrap_err();
+        assert!(matches!(
+            crate::refusal::from_io(err),
+            crate::ImapError::Protocol(_)
+        ));
     }
 
     #[test]
@@ -660,6 +731,14 @@ mod fuzz {
             self.raw(")\r\n");
         }
 
+        fn search(&mut self, rng: &mut Rng) {
+            self.raw(rng.pick(&["* SEARCH", "* search", "A1 SEARCH"]));
+            for _ in 0..rng.below(20) {
+                self.raw(&format!(" {}", 1 + rng.below(99_999)));
+            }
+            self.raw("\r\n");
+        }
+
         fn list(&mut self, rng: &mut Rng) {
             self.raw("* LIST (\\HasNoChildren) \"/\" ");
             match rng.one_in(2) {
@@ -673,9 +752,12 @@ mod fuzz {
     fn stream(rng: &mut Rng) -> Stream {
         let mut stream = Stream::default();
         for _ in 0..1 + rng.below(6) {
-            match rng.below(4) {
+            // Each response starts at depth 0 for imap-proto and the guard.
+            stream.depth = 0;
+            match rng.below(5) {
                 0 => stream.status(rng),
                 1 => stream.list(rng),
+                2 => stream.search(rng),
                 _ => stream.fetch(rng),
             }
         }

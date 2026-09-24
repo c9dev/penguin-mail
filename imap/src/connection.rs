@@ -1668,4 +1668,23 @@ mod tests {
         assert_eq!(fetched, body.as_bytes());
         conn.noop().await.unwrap();
     }
+
+    #[tokio::test]
+    async fn a_search_of_200_000_uids_comes_back_whole() {
+        let stream = pipe(
+            GREETING,
+            server(ALL, log(), |command| match command {
+                c if c.starts_with("SELECT") => selected(),
+                c if c.starts_with("UID SEARCH") => {
+                    let uids: Vec<String> = (1..=200_000).map(|u| u.to_string()).collect();
+                    vec![format!("* SEARCH {}", uids.join(" ")), "{tag} OK".into()]
+                }
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        let uids = conn.search("INBOX", "ALL").await.unwrap();
+        assert_eq!(uids.len(), 200_000);
+        assert_eq!(uids.last(), Some(&200_000));
+    }
 }
