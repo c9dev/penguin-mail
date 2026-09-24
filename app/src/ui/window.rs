@@ -1620,17 +1620,22 @@ impl MainWindow {
                 .build()
         };
         if targets.is_empty() {
-            popover.set_child(Some(&message(&gettext("Open or select mail to label it."))));
+            let shown = self.accounts_of(&self.shown());
+            let filing = Filing::of(shown.into_iter().map(|id| self.offers(id)));
+            popover.set_child(Some(&message(&filing.nothing_picked())));
             return popover;
         }
         let Some(&account_id) = accounts.iter().next().filter(|_| accounts.len() == 1) else {
             // Mail from several accounts takes labels by name, since each
             // account has its own label behind a name.
-            match self.labels_by_name(&accounts, &popover) {
+            let filing = Filing::across(accounts.iter().map(|id| self.offers(*id)));
+            let list = match filing {
+                Filing::Labels => self.labels_by_name(&accounts, &popover),
+                Filing::Folders => None,
+            };
+            match list {
                 Some(list) => popover.set_child(Some(&list)),
-                None => popover.set_child(Some(&message(&gettext(
-                    "Select mail from one account to label it.",
-                )))),
+                None => popover.set_child(Some(&message(&filing.one_account_only()))),
             }
             return popover;
         };

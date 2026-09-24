@@ -62,6 +62,18 @@ impl Filing {
         if any { Filing::Folders } else { Filing::Labels }
     }
 
+    /// How mail from several accounts can be filed at once: by label
+    /// name when every account files with labels. Adding a label on a
+    /// folder account copies the mail into the folder and leaves it where
+    /// it was, so one folder account makes it folders, and the picker asks
+    /// for mail from one account instead.
+    pub fn across(offers: impl IntoIterator<Item = Offers>) -> Filing {
+        match offers.into_iter().all(|offer| offer.labels) {
+            true => Filing::Labels,
+            false => Filing::Folders,
+        }
+    }
+
     pub fn menu_item(self) -> String {
         match self {
             Filing::Labels => gettext("Labels…"),
@@ -98,6 +110,23 @@ impl Filing {
         match self {
             Filing::Labels => gettext("Could not create the label: {reason}"),
             Filing::Folders => gettext("Could not create the folder: {reason}"),
+        }
+    }
+
+    /// What the picker says when no mail is open or selected.
+    pub fn nothing_picked(self) -> String {
+        match self {
+            Filing::Labels => gettext("Open or select mail to label it."),
+            Filing::Folders => gettext("Open or select mail to move it."),
+        }
+    }
+
+    /// What the picker says for mail from several accounts that it cannot
+    /// file in one go.
+    pub fn one_account_only(self) -> String {
+        match self {
+            Filing::Labels => gettext("Select mail from one account to label it."),
+            Filing::Folders => gettext("Select mail from one account to move it."),
         }
     }
 
@@ -263,6 +292,38 @@ mod tests {
         assert_eq!(
             sender_actions(without_categories()),
             [("block-sender", true), ("categorize-sender", false)]
+        );
+    }
+
+    #[test]
+    fn mail_from_several_accounts_takes_labels_only_when_every_one_has_them() {
+        assert_eq!(
+            Filing::across([Offers::EVERYTHING, Offers::EVERYTHING]),
+            Filing::Labels
+        );
+        assert_eq!(
+            Filing::across([Offers::EVERYTHING, folders()]),
+            Filing::Folders
+        );
+    }
+
+    #[test]
+    fn the_picker_asks_for_mail_in_the_words_of_the_filing() {
+        assert_eq!(
+            Filing::Labels.nothing_picked(),
+            "Open or select mail to label it."
+        );
+        assert_eq!(
+            Filing::Folders.nothing_picked(),
+            "Open or select mail to move it."
+        );
+        assert_eq!(
+            Filing::Labels.one_account_only(),
+            "Select mail from one account to label it."
+        );
+        assert_eq!(
+            Filing::Folders.one_account_only(),
+            "Select mail from one account to move it."
         );
     }
 
