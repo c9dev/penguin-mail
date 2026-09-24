@@ -35,6 +35,9 @@ impl<S> Nesting<S> {
     }
 }
 
+/// Enough of a response's start to hold a tag and a status word.
+const HEAD: usize = 24;
+
 /// Where the reader stands in the server's bytes: how deep the current
 /// line nests, and whether it is inside a quoted string or a literal,
 /// whose parentheses are text.
@@ -49,6 +52,10 @@ struct Scan {
     digits: Option<u64>,
     /// A `{n}` just closed, so a line end here starts an `n`-byte literal.
     announced: Option<u64>,
+    /// The first bytes of the response, to tell a status response or a
+    /// continuation, whose text runs to the line end with any `{n}` in it.
+    head: [u8; HEAD],
+    head_len: usize,
     refused: bool,
 }
 
@@ -78,11 +85,18 @@ impl Scan {
     }
 
     fn step(&mut self, byte: u8) {
+        if self.head_len < HEAD {
+            self.head[self.head_len] = byte;
+            self.head_len += 1;
+        }
         if byte == b'\n' {
             // A line ends a response unless a literal follows it.
             match self.announced.take() {
-                Some(length) => self.literal = length,
-                None => self.depth = 0,
+                Some(length) if !self.in_text() => self.literal = length,
+                _ => {
+                    self.depth = 0;
+                    self.head_len = 0;
+                }
             }
             self.quoted = false;
             self.escaped = false;
@@ -125,6 +139,27 @@ impl Scan {
             b')' => self.depth = self.depth.saturating_sub(1),
             _ => {}
         }
+    }
+}
+
+impl Scan {
+    /// Whether the response is a continuation or a status response (RFC
+    /// 3501's resp-text), which imap-proto reads as text to the line end.
+    fn in_text(&self) -> bool {
+        let head = &self.head[..self.head_len];
+        if head.first() == Some(&b'+') {
+            return true;
+        }
+        let Some(space) = head.iter().position(|&b| b == b' ') else {
+            return false;
+        };
+        let word = head[space + 1..]
+            .split(|&b| matches!(b, b' ' | b'\r' | b'\n' | b'['))
+            .next()
+            .unwrap_or_default();
+        ["OK", "NO", "BAD", "BYE", "PREAUTH"]
+            .iter()
+            .any(|status| word.eq_ignore_ascii_case(status.as_bytes()))
     }
 }
 
@@ -211,5 +246,29 @@ mod tests {
         assert!(scan.feed(b"(").is_err());
         // Once refused, the stream stays refused.
         assert!(scan.feed(b"\r\n").is_err());
+    }
+
+    /// imap-proto reads a status line's text to the line end, braces
+    /// included, so `{n}` there must not hide the next `n` bytes.
+    #[test]
+    fn braces_ending_a_status_line_start_no_literal() {
+        let deep = "(".repeat(MAX_NESTING + 1);
+        for line in [
+            "* OK x{99999}\r\n",
+            "* bye {99999}\r\n",
+            "A0001 NO [ALERT] {99999}\r\n",
+            "+ go {99999}\r\n",
+        ] {
+            assert_eq!(
+                scan(format!("{line}{deep}").as_bytes()),
+                Err(()),
+                "{line:?}"
+            );
+        }
+        assert_eq!(
+            scan(format!("* LIST () \"/\" {{{}}}\r\n{deep}", deep.len()).as_bytes()),
+            Ok(0),
+            "a literal outside a status line holds text"
+        );
     }
 }
