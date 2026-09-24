@@ -102,36 +102,6 @@
 
   <!-- scripts/metainfo.sh writes this list from CHANGELOG.md. -->
   <releases>
-    <release version="0.2.1" date="2026-09-24">
-      <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v0.2.1</url>
-      <description translate="no">
-        <p>New</p>
-        <ul>
-          <li>Penguin Mail speaks British English as well as American. Pick English (United Kingdom) under Language in Preferences, or leave it following a desktop set to British English.</li>
-          <li>Penguin Mail remembers the lists you unsubscribed from. Mail that still arrives from one no longer offers Unsubscribe, and you can ask the assistant whether and when you left a list.</li>
-        </ul>
-        <p>Fixed</p>
-        <ul>
-          <li>The assistant stays closed when a narrowed window grows wide again, where it used to open by itself.</li>
-          <li>Always Allow on a skill's command allows that one command. It used to let the skill run any command without asking, and Penguin Mail forgets any Always Allow saved that way.</li>
-          <li>An S/MIME message whose certificate could not be checked for revocation is checked again when you open it next, so the card no longer says "could not check" until you restart.</li>
-          <li>An account whose syncing crashes starts again after half a minute. If it crashes a second time, the sidebar marks the account instead of leaving it silent with no new mail.</li>
-          <li>Invitations sent from Google Calendar show their card with Yes, No and Maybe again. Penguin Mail missed the invitation inside them and showed Google's own buttons, which open the browser.</li>
-          <li>With the network gone, your accounts show Offline and wait for it, where they used to keep trying Gmail and failing. They check for mail as soon as the network returns.</li>
-          <li>A screen reader reads out the items of every menu, such as Reply or Archive in a conversation's right-click menu. It used to announce each one as a menu item with no name.</li>
-          <li>Unsubscribe finishes pages that ask why you are leaving. Penguin Mail ticks the box saying you no longer want the mail, and never one that reports the sender for spam or fraud.</li>
-          <li>Unsubscribe no longer ticks a box such as "Send me all emails" on a preferences page. It ticks an "all" box only when the box says to unsubscribe.</li>
-          <li>A page that answers Unsubscribe with the one word "Unsubscribed" now counts as done, where Penguin Mail said it could not tell.</li>
-          <li>Open Page, after "Sent, but the page did not say it worked", opens the page the unsubscribe form led to, not the form you already sent.</li>
-          <li>When a mailing list turns down an unsubscribe request, the message names the list's server, where it used to blame Gmail.</li>
-          <li>The reason an unsubscribe page failed now appears in your language, not in English inside a Portuguese message.</li>
-          <li>A list you leave by email hears from the address it writes to, not always the account's main one, and Penguin Mail says "Unsubscribed" only once the request has left. A request stuck in the Outbox says so.</li>
-          <li>After the assistant unsubscribes you from a list, the open conversation stops offering Unsubscribe, as it does when you press the button yourself.</li>
-          <li>Unsubscribe finds a button that shows only a picture, or a Submit button with no words on it, where it used to send you to the browser.</li>
-          <li>An unsubscribe page that answers a moment after the press, without leaving the page, now counts as done instead of "did not say it worked".</li>
-        </ul>
-      </description>
-    </release>
     <release version="0.2.0" date="2026-09-23">
       <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v0.2.0</url>
       <description translate="no">
