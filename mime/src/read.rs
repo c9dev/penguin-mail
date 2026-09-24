@@ -217,6 +217,19 @@ fn transfer_decoded(raw: &[u8], part: &MessagePart) -> Option<Vec<u8>> {
     }
 }
 
+/// Base64, undone over the whole body with the line breaks taken out.
+/// Only a body that does not decode that way is read one line at a
+/// time: decoding line by line first would turn a file wrapped at a
+/// width that is not a multiple of four into wrong bytes without an
+/// error.
+fn base64_decoded(bytes: &[u8]) -> Option<Vec<u8>> {
+    let clean: Vec<u8> = bytes.iter().copied().filter(|b| !b.is_ascii_whitespace()).collect();
+    match BASE64.decode(clean) {
+        Ok(decoded) => (!decoded.is_empty()).then_some(decoded),
+        Err(_) => base64_by_line(bytes),
+    }
+}
+
 /// Base64, undone one line at a time. A sender that pads every wrapped
 /// line, not only the last, leaves a `=` in the middle of the stream
 /// that a single whole-body decode refuses; each line still stands on
@@ -224,7 +237,7 @@ fn transfer_decoded(raw: &[u8], part: &MessagePart) -> Option<Vec<u8>> {
 /// than losing the lines that came before it, the way a mailing list's
 /// footer or a trailer after the encoded body would. `None` only when
 /// nothing at all decoded, so genuinely corrupt data still gives no text.
-fn base64_decoded(bytes: &[u8]) -> Option<Vec<u8>> {
+fn base64_by_line(bytes: &[u8]) -> Option<Vec<u8>> {
     let mut decoded = Vec::with_capacity(bytes.len());
     for line in bytes.split(|&b| b == b'\n') {
         let clean: Vec<u8> = line.iter().copied().filter(|b| !b.is_ascii_whitespace()).collect();

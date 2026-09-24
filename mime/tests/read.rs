@@ -540,3 +540,25 @@ fn a_deeply_nested_message_reads_on_a_small_stack() {
         .unwrap();
     assert!(reader.join().is_ok(), "reading the message overflowed the stack");
 }
+
+/// A sender may wrap base64 at a width that is not a multiple of four,
+/// so a line on its own does not decode to the bytes it carries. A file
+/// wrapped at 70 columns must still come back byte for byte.
+#[test]
+fn base64_wrapped_at_seventy_columns_round_trips() {
+    let pdf: Vec<u8> = (0..3000u32).map(|i| (i * 7 + i / 13) as u8).collect();
+    let encoded = base64::engine::general_purpose::STANDARD.encode(&pdf);
+    let wrapped: Vec<&str> = encoded
+        .as_bytes()
+        .chunks(70)
+        .map(|line| std::str::from_utf8(line).unwrap())
+        .collect();
+    let raw = format!(
+        "Content-Type: multipart/mixed; boundary=b\r\n\r\n\
+         --b\r\nContent-Type: text/plain\r\n\r\nThe plan.\r\n\
+         --b\r\nContent-Type: application/pdf; name=\"plan.pdf\"\r\n\
+         Content-Transfer-Encoding: base64\r\n\r\n{}\r\n--b--\r\n",
+        wrapped.join("\r\n"),
+    );
+    assert_eq!(part(raw.as_bytes(), "2"), Some(pdf));
+}
