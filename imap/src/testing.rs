@@ -156,6 +156,23 @@ pub(crate) fn selected() -> Vec<String> {
     .to_vec()
 }
 
+/// A FETCH line carrying the BODYSTRUCTURE of a multipart/mixed message
+/// of `count` PDF attachments, each with a long file name in its
+/// parameters and its disposition, as a server sends it.
+pub(crate) fn structure_of_attachments(count: usize) -> String {
+    let mut line = String::from("* 1 FETCH (UID 1 BODYSTRUCTURE (");
+    for i in 0..count {
+        let name = format!(
+            "Quarterly report {i} (final, reviewed by the whole team) with appendices A to F and the signed cover letter.pdf"
+        );
+        line.push_str(&format!(
+            "(\"application\" \"pdf\" (\"name\" \"{name}\") NIL NIL \"base64\" 123456 NIL (\"attachment\" (\"filename\" \"{name}\" \"size\" \"123456\")) NIL NIL)"
+        ));
+    }
+    line.push_str(" \"mixed\" (\"boundary\" \"b\") NIL NIL NIL))\r\n");
+    line
+}
+
 async fn serve(
     server: DuplexStream,
     greeting: String,

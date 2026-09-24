@@ -4,7 +4,7 @@
 //! of asserting a bound, and run by hand in a release build:
 //!
 //! ```sh
-//! cargo test -p mailrs-imap --release --lib -- --ignored --nocapture measure
+//! cargo test -p mailrs-imap --release --lib -- --ignored --nocapture --test-threads=1 measure
 //! ```
 //!
 //! The server task runs on a worker thread and the client on the test
@@ -17,7 +17,7 @@ use std::time::{Duration, Instant};
 use tokio::io::DuplexStream;
 
 use crate::connection::Conn;
-use crate::guard::{IDLE_BYTES, MAX_LITERAL, SEARCH_BYTES, SELECT_BYTES};
+use crate::guard::{COMMAND_BYTES, IDLE_BYTES, MAX_LINE, MAX_LITERAL, SEARCH_BYTES, SELECT_BYTES};
 use crate::testing::{HeapMark, pipe, selected, server};
 use crate::{Login, Since, UidSet};
 
@@ -144,6 +144,32 @@ async fn measure_other_commands() {
     assert_eq!(flags.len(), 100_000);
     drop(flags);
 
+    // The costliest lines a server can send: status lines just under the
+    // line cap, which async-imap parses again on each 4 KiB read until
+    // the line ends, as many as the command's budget holds.
+    let junk = format!("* OK {}", "x".repeat(MAX_LINE - 8));
+    let count = usize::try_from(COMMAND_BYTES).unwrap() / (junk.len() + 2) - 1;
+    let lines: Vec<String> = std::iter::repeat_n(junk, count)
+        .chain(["{tag} OK".to_string()])
+        .collect();
+    let mut conn = connect(once("UID FETCH", lines)).await;
+    conn.select("INBOX", None).await.unwrap();
+    let mark = HeapMark::start();
+    let started = Instant::now();
+    let flags = conn
+        .flags("INBOX", &UidSet::from_uid(1), None)
+        .await
+        .unwrap();
+    report(
+        &format!(
+            "flags, hostile: {count} status lines of {} bytes, just under the budget",
+            MAX_LINE - 2
+        ),
+        &mark,
+        started,
+    );
+    assert!(flags.is_empty());
+
     let real: Vec<String> = (1..=100_000u32)
         .map(|uid| fetch_line(uid, "FLAGS (\\Seen \\Answered) MODSEQ (9)"))
         .chain(["{tag} OK".to_string()])
@@ -255,18 +281,18 @@ async fn select_since(answer: Vec<String>, known: Option<UidSet>) -> (HeapMark, 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 #[ignore = "a measurement, run by hand in a release build"]
 async fn measure_select_with_vanished() {
-    // Four lines of a million bytes each stay under the 1 MiB line cap
-    // and, with SELECT's own answer, under the 4 MiB budget.
+    // Lines just under the line cap, as many as fit the 4 MiB budget
+    // beside SELECT's own answer.
     let budget = usize::try_from(SELECT_BYTES).unwrap();
-    let line_bytes = 1_000_000;
-    let lines = (budget - 100_000) / line_bytes;
+    let line_bytes = MAX_LINE - 16;
+    let lines = (budget - 4_096) / (line_bytes + 2);
     let repeated: Vec<String> = (0..lines)
         .map(|_| vanished_line(line_bytes, std::iter::repeat(1)))
         .chain(selected())
         .collect();
     let (mark, started, kept) = select_since(repeated, None).await;
     report(
-        &format!("select, hostile: {lines} VANISHED lines of 1 MB repeating one UID"),
+        &format!("select, hostile: {lines} VANISHED lines of {line_bytes} bytes repeating one UID"),
         &mark,
         started,
     );
@@ -280,7 +306,28 @@ async fn measure_select_with_vanished() {
     let (mark, started, kept) = select_since(distinct, None).await;
     report(
         &format!(
-            "select, hostile: {lines} VANISHED lines of 1 MB of distinct UIDs ({kept} ranges kept)"
+            "select, hostile: {lines} VANISHED lines of {line_bytes} bytes of distinct UIDs ({kept} ranges kept)"
+        ),
+        &mark,
+        started,
+    );
+
+    // FETCH lines of 64 flags each, the most a message may carry, as
+    // many as the budget holds: what a QRESYNC SELECT keeps at most.
+    let flags: Vec<String> = (0..crate::parse::MAX_FLAGS)
+        .map(|i| format!("k{i}"))
+        .collect();
+    let line = fetch_line(1, &format!("FLAGS ({}) MODSEQ (91)", flags.join(" ")));
+    // Later lines carry longer UIDs, so leave them room.
+    let count = (budget - 4_096) / (line.len() + 12);
+    let flagged: Vec<String> = (1..=count as u32)
+        .map(|uid| fetch_line(uid, &format!("FLAGS ({}) MODSEQ (91)", flags.join(" "))))
+        .chain(selected())
+        .collect();
+    let (mark, started, kept) = select_since(flagged, None).await;
+    report(
+        &format!(
+            "select, hostile: {count} changed messages of 64 flags each, just under the budget ({kept} kept)"
         ),
         &mark,
         started,

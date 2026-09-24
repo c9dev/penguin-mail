@@ -452,7 +452,7 @@ impl<S: Stream> Conn<S> {
         limit: Duration,
     ) -> Result<(Conn<S>, Woke), ImapError> {
         self.ensure_selected(mailbox).await?;
-        self.session.get_mut().expect(IDLE_BYTES);
+        self.session.get_mut().expect(IDLE_BYTES, false);
         let Conn {
             session,
             capabilities,
@@ -517,7 +517,7 @@ impl<S: Stream> Conn<S> {
         reader: &mut impl Reads,
     ) -> Result<(), ImapError> {
         self.last_used = Instant::now();
-        self.session.get_mut().expect(reader.bytes());
+        self.session.get_mut().expect(reader.bytes(), reader.searches());
         let tag = self
             .session
             .run_command(command)
@@ -539,7 +539,7 @@ impl<S: Stream> Conn<S> {
             return self.exec(head, doing, reader).await;
         };
         self.last_used = Instant::now();
-        self.session.get_mut().expect(reader.bytes());
+        self.session.get_mut().expect(reader.bytes(), reader.searches());
         let tag = self
             .session
             .run_command(format!("{head}{{{}}}", first.len()))
@@ -1714,6 +1714,54 @@ mod tests {
             matches!(answer, Ok(Err(ImapError::Protocol(_)))),
             "{answer:?}"
         );
+    }
+
+    /// Only a SEARCH command's answer may run past the line cap: a line
+    /// opened with `* SEARCH` during a flags fetch is refused at the cap
+    /// like any other, instead of costing the parser the square of its
+    /// length.
+    #[tokio::test]
+    async fn a_search_line_during_another_command_keeps_the_line_cap() {
+        let stream = pipe(
+            GREETING,
+            server(ALL, log(), |command| match command {
+                c if c.starts_with("SELECT") => selected(),
+                c if c.starts_with("UID FETCH") => vec![
+                    format!("* SEARCH{}", " 1".repeat(1 << 20)),
+                    "{tag} OK".into(),
+                ],
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        let err = conn
+            .flags("INBOX", &UidSet::from_uids([1]), None)
+            .await
+            .err();
+        assert!(matches!(err, Some(ImapError::Protocol(_))), "{err:?}");
+    }
+
+    /// A message of 500 attachments has a BODYSTRUCTURE of about 150 KB,
+    /// which the line cap lets through and the reader parses whole.
+    #[tokio::test]
+    async fn a_structure_of_five_hundred_attachments_comes_back_whole() {
+        let stream = pipe(
+            GREETING,
+            server(ALL, log(), |command| match command {
+                c if c.starts_with("SELECT") => selected(),
+                c if c.starts_with("UID FETCH") => vec![
+                    crate::testing::structure_of_attachments(500)
+                        .trim_end()
+                        .to_string(),
+                    "{tag} OK".into(),
+                ],
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        let structure = conn.structure("INBOX", 1).await.unwrap().unwrap();
+        assert_eq!(structure.root.mime_type, "multipart/mixed");
+        assert_eq!(structure.root.children.len(), 500);
     }
 
     /// A SELECT and a SEARCH run on 4 MiB each, so a literal of 5 MiB

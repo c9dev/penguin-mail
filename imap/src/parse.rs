@@ -110,6 +110,12 @@ pub(crate) trait Reads {
         COMMAND_BYTES
     }
 
+    /// Whether the command is a SEARCH, whose untagged answer lists UIDs
+    /// on one line the guard spares the line cap.
+    fn searches(&self) -> bool {
+        false
+    }
+
     /// A literal in `response` this reader keeps whole. The connection
     /// then hands it over through [`Reads::keep`] in the buffer it arrived
     /// in, instead of `read` copying it.
@@ -630,6 +636,10 @@ impl Reads for SearchReader {
 
     fn bytes(&self) -> u64 {
         SEARCH_BYTES
+    }
+
+    fn searches(&self) -> bool {
+        true
     }
 }
 

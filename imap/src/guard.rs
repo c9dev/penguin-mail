@@ -31,10 +31,15 @@ pub(crate) const MAX_NESTING: usize = MAX_DEPTH + 8;
 /// it reads the announcement.
 pub(crate) const MAX_LITERAL: u64 = 128 << 20;
 
-/// The longest line outside literals, which a FETCH of headers or flags
-/// and a LIST entry fit. An untagged SEARCH or ESEARCH answer may run
-/// longer; the command's budget bounds it.
-pub(crate) const MAX_LINE: usize = 1 << 20;
+/// The longest line outside literals. Headers and bodies arrive as
+/// literals, which a line does not count, so the longest real line is a
+/// BODYSTRUCTURE: 500 attachments with long quoted file names make about
+/// 150 KB. async-imap parses a line again on each 4 KiB read until it
+/// ends, so a line costs the square of its length, and 32 MiB of lines
+/// at this cap cost a few seconds where 1 MiB lines cost 40 s. An
+/// untagged SEARCH or ESEARCH answer may run longer while a SEARCH runs;
+/// [`SEARCH_BYTES`] bounds it.
+pub(crate) const MAX_LINE: usize = 256 << 10;
 
 /// What one command may bring back in all, literals included: every
 /// command but SELECT, SEARCH, a body fetch and IDLE, such as signing in
@@ -97,9 +102,10 @@ impl<S> Guarded<S> {
         }
     }
 
-    /// Starts a command that may bring back `bytes` in all.
-    pub(crate) fn expect(&mut self, bytes: u64) {
-        self.scan.expect(bytes);
+    /// Starts a command that may bring back `bytes` in all; `search` says
+    /// it is a SEARCH, whose untagged answer may run past the line cap.
+    pub(crate) fn expect(&mut self, bytes: u64, search: bool) {
+        self.scan.expect(bytes, search);
     }
 }
 
@@ -107,6 +113,9 @@ impl<S> Guarded<S> {
 struct Limits {
     line: usize,
     budget: u64,
+    /// Whether a SEARCH command runs, sparing its untagged answer the
+    /// line cap.
+    search: bool,
 }
 
 impl Default for Limits {
@@ -114,6 +123,7 @@ impl Default for Limits {
         Limits {
             line: MAX_LINE,
             budget: COMMAND_BYTES,
+            search: false,
         }
     }
 }
@@ -133,7 +143,9 @@ enum Head {
     Word(Option<([u8; 7], usize)>, bool),
     /// A status response or a continuation: text to the line end.
     Status,
-    /// An untagged SEARCH or ESEARCH, which lists UIDs on one line.
+    /// An untagged SEARCH or ESEARCH, which lists UIDs on one line; it
+    /// is spared the line cap only while a SEARCH command runs, or a
+    /// server could open any line so during any command.
     Search,
     Other,
 }
@@ -190,8 +202,9 @@ impl Scan {
         }
     }
 
-    fn expect(&mut self, bytes: u64) {
+    fn expect(&mut self, bytes: u64, search: bool) {
         self.budget = bytes;
+        self.limits.search = search;
     }
 
     fn feed(&mut self, bytes: &[u8]) -> io::Result<()> {
@@ -224,7 +237,8 @@ impl Scan {
             return;
         }
         self.line += 1;
-        if self.line > self.limits.line && !matches!(self.head, Head::Search) {
+        let spared = self.limits.search && matches!(self.head, Head::Search);
+        if self.line > self.limits.line && !spared {
             self.refused = Some("the server sent a line past the limit");
             return;
         }
@@ -378,6 +392,14 @@ mod tests {
         scan_with(Limits::default(), bytes)
     }
 
+    /// The limits while a SEARCH command runs.
+    fn searching() -> Limits {
+        Limits {
+            search: true,
+            ..Limits::default()
+        }
+    }
+
     fn deep() -> String {
         "(".repeat(MAX_NESTING + 1)
     }
@@ -505,17 +527,31 @@ mod tests {
     }
 
     /// A mailbox of 200,000 messages lists in one SEARCH line of about
-    /// 1.3 MB, past the line cap, which such an answer is spared.
+    /// 1.3 MB, past the line cap, which such an answer is spared while a
+    /// SEARCH runs.
     #[test]
     fn a_search_answer_may_run_past_the_line_cap() {
         let line = search_line(200_000);
         assert!(line.len() > MAX_LINE);
-        assert_eq!(scan(line.as_bytes()), Ok(0));
+        assert_eq!(scan_with(searching(), line.as_bytes()), Ok(0));
         let esearch = format!(
             "* ESEARCH (TAG \"A1\") UID ALL 1:{}\r\n",
             "9".repeat(MAX_LINE)
         );
-        assert_eq!(scan(esearch.as_bytes()), Ok(0));
+        assert_eq!(scan_with(searching(), esearch.as_bytes()), Ok(0));
+    }
+
+    /// A hostile server may open a line with `* SEARCH` during any
+    /// command; only a SEARCH command's answer is spared the line cap.
+    #[test]
+    fn a_search_line_during_another_command_keeps_the_line_cap() {
+        let line = search_line(200_000);
+        assert_eq!(scan(line.as_bytes()), Err(()));
+        let mut scan = Scan::new(Limits::default());
+        scan.expect(COMMAND_BYTES, true);
+        assert!(scan.feed(line.as_bytes()).is_ok());
+        scan.expect(COMMAND_BYTES, false);
+        assert!(scan.feed(line.as_bytes()).is_err());
     }
 
     /// imap-proto collects a SEARCH line's UIDs in one list before any
@@ -523,19 +559,19 @@ mod tests {
     #[test]
     fn a_search_answer_past_the_uid_cap_is_refused() {
         let at_cap = format!("* SEARCH{}\r\n", " 1".repeat(MAX_SEARCH_UIDS));
-        assert_eq!(scan(at_cap.as_bytes()), Ok(0));
+        assert_eq!(scan_with(searching(), at_cap.as_bytes()), Ok(0));
         let past = format!(
             "* SEARCH{}\r\n",
             " 1".repeat(MAX_SEARCH_UIDS + SEARCH_WORDS + 1)
         );
-        assert_eq!(scan(past.as_bytes()), Err(()));
+        assert_eq!(scan_with(searching(), past.as_bytes()), Err(()));
     }
 
     #[test]
     fn only_an_untagged_search_answer_is_spared_the_line_cap() {
         let limits = Limits {
             line: 16,
-            ..Limits::default()
+            ..searching()
         };
         for line in [
             "A1 SEARCH 1 2 3 4 5 6 7 8\r\n",
@@ -547,12 +583,28 @@ mod tests {
         assert_eq!(scan_with(limits, b"* search 1 2 3 4 5 6 7 8 9\r\n"), Ok(0));
     }
 
+    /// A BODYSTRUCTURE line of 500 attachments with long quoted file
+    /// names fits the line cap, which is what a real line can reach:
+    /// headers and bodies arrive as literals, which the cap does not
+    /// count.
+    #[test]
+    fn a_structure_of_five_hundred_attachments_fits_a_line() {
+        assert_eq!(MAX_LINE, 256 << 10);
+        let line = crate::testing::structure_of_attachments(500);
+        assert!(
+            line.len() > MAX_LINE / 2 && line.len() < MAX_LINE,
+            "{} bytes",
+            line.len()
+        );
+        assert_eq!(scan(line.as_bytes()), Ok(0));
+    }
+
     #[test]
     fn a_search_answer_past_the_budget_is_a_protocol_error() {
         let line = search_line(20_000);
         let limits = Limits {
             budget: line.len() as u64 - 1,
-            ..Limits::default()
+            ..searching()
         };
         let mut scan = Scan::new(limits);
         let err = scan.feed(line.as_bytes()).unwrap_err();
@@ -573,7 +625,7 @@ mod tests {
         assert!(scan.feed(b"x").is_err());
         let mut scan = Scan::new(limits);
         scan.feed(&[b'x'; 60]).unwrap();
-        scan.expect(64);
+        scan.expect(64, false);
         scan.feed(&[b'x'; 64]).unwrap();
     }
 
