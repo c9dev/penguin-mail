@@ -637,6 +637,33 @@ async fn unmuting_drops_the_label_and_brings_the_thread_back() {
     assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["t1"]);
 }
 
+/// Dragging out of the unified Muted mailbox into All Mail sends
+/// `RemoveLabel("MUTE")` (`app/src/ui/moving.rs`'s All Mail arm). Gmail
+/// keeps `$muted` on its own `MUTE` label, so this must clear the store's
+/// keyword too, not just try to leave a mailbox the message never held.
+#[tokio::test]
+async fn dragging_out_of_muted_onto_all_mail_clears_the_muted_keyword() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["MUTE"]));
+    h.bootstrap_all().await;
+    let actions = actions(&h);
+    let target = Target::thread(h.account_id, "t1");
+
+    let outcome = actions
+        .run(
+            std::slice::from_ref(&target),
+            MailAction::Triage(TriageAction::RemoveLabel("MUTE".into())),
+            History::Record,
+        )
+        .await;
+    assert!(outcome.failed.is_empty(), "{:?}", outcome.failed);
+    assert!(h.threads(MailSet::muted()).await.is_empty());
+
+    let undone = actions.undo().await.expect("an undo");
+    assert_eq!(undone.outcome.done, [target]);
+    assert_eq!(h.threads(MailSet::muted()).await, ["t1"]);
+}
+
 /// Gmail's own filters archive a reply to a muted thread, so the app never
 /// sees it in the inbox. The fake does the same.
 #[tokio::test]

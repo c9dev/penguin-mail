@@ -7,7 +7,7 @@
 use std::collections::BTreeMap;
 
 use mailrs_domain::mailbox::keyword::{FLAGGED, MUTED, SEEN};
-use mailrs_domain::{Applied, MailSet, Membership, Memberships, Role};
+use mailrs_domain::{Applied, MailSet, Membership, Memberships, Role, gmail};
 use mailrs_store::messages::Change;
 
 use crate::{BackendError, MailCapabilities, TriageAction};
@@ -76,8 +76,8 @@ pub fn ops_for(
             vec![MailOp::MoveToRole(Role::Inbox), keyword(MUTED, false)]
         }
         TriageAction::Unmute => vec![add(Role::Inbox)?, keyword(MUTED, false)],
-        TriageAction::AddLabel(id) => vec![MailOp::AddToMailbox(id.clone())],
-        TriageAction::RemoveLabel(id) => vec![MailOp::RemoveFromMailbox(id.clone())],
+        TriageAction::AddLabel(id) => vec![set_op(&gmail::set_of(id), true, roles)?],
+        TriageAction::RemoveLabel(id) => vec![set_op(&gmail::set_of(id), false, roles)?],
         TriageAction::Relabel { add, remove } => add
             .iter()
             .map(|set| set_op(set, true, roles))
@@ -311,6 +311,29 @@ mod tests {
             ops_for(&relabel, &label_account(), &gmail_roles()),
             Err(BackendError::Unsupported)
         ));
+    }
+
+    #[test]
+    fn a_label_or_unlabel_of_a_gmail_keyword_label_becomes_a_keyword_op() {
+        let roles = gmail_roles();
+        assert_eq!(
+            ops_for(
+                &TriageAction::RemoveLabel("UNREAD".into()),
+                &label_account(),
+                &roles
+            )
+            .unwrap(),
+            [keyword(SEEN, true)]
+        );
+        assert_eq!(
+            ops_for(
+                &TriageAction::AddLabel("STARRED".into()),
+                &label_account(),
+                &roles
+            )
+            .unwrap(),
+            [MailOp::SetKeyword { keyword: FLAGGED.into(), on: true }]
+        );
     }
 
     #[test]

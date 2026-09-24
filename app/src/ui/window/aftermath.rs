@@ -157,9 +157,8 @@ fn leaves_list(mailbox: &Mailbox, action: &TriageAction) -> bool {
             || (label == system_label::SPAM && folder != Some(Folder::Junk))
     };
     let removes = |label: &str| listed == Some(label);
-    // Until Task A4 rewrites this on `MailSet` directly, a Relabel value
-    // still names Gmail labels, so a set is judged by the label it stands
-    // for.
+    // Until the window reads MailSet directly, a Relabel value still
+    // names Gmail labels, so a set is judged by the label it stands for.
     let adds_set = |set: &MailSet| {
         (folder == Some(Folder::Archive) && *set == gmail::set_of(system_label::INBOX))
             || (*set == gmail::set_of(system_label::TRASH) && folder != Some(Folder::Trash))
