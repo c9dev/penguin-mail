@@ -27,7 +27,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use mailrs_domain::{AccountId, ChangeEvent, ThreadSummary};
+use mailrs_domain::{AccountId, ChangeEvent, MailSet, ThreadSummary};
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{Db, accounts, messages};
 
@@ -108,9 +108,21 @@ impl Harness {
         events
     }
 
-    /// Thread ids under `label`, newest first.
-    pub async fn threads(&self, label: &str) -> Vec<String> {
-        let filter = ThreadFilter::account(self.account_id, label);
+    /// Thread ids in `set`, newest first.
+    pub async fn threads(&self, set: MailSet) -> Vec<String> {
+        let filter = ThreadFilter::account(self.account_id, set);
+        self.db
+            .read(move |c| threads::list_threads(c, &filter, 0, 1000))
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|t| t.id)
+            .collect()
+    }
+
+    /// Every thread in the account, inbox or archived, newest first.
+    pub async fn all_threads(&self) -> Vec<String> {
+        let filter = ThreadFilter::everything().in_account(self.account_id);
         self.db
             .read(move |c| threads::list_threads(c, &filter, 0, 1000))
             .await

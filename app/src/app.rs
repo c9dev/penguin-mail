@@ -12,7 +12,7 @@ use adw::prelude::*;
 use gtk::{gio, glib};
 use ksni::TrayMethods;
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{Account, AccountId, Address, ChangeEvent, Label, system_label};
+use mailrs_domain::{Account, AccountId, Address, ChangeEvent, Label, MailSet, Role};
 use mailrs_store::{accounts, labels, messages, threads};
 use mailrs_sync::History;
 
@@ -1173,7 +1173,7 @@ impl App {
                     for account in accounts {
                         let unread = threads::unread_threads(
                             c,
-                            &threads::ThreadFilter::account(account.id, system_label::INBOX),
+                            &threads::ThreadFilter::account(account.id, MailSet::Role(Role::Inbox)),
                         )?;
                         counts.push((account.email, unread));
                     }

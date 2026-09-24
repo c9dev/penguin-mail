@@ -1,7 +1,7 @@
 mod common;
 
 use common::{db, meta, mixed_mail, store};
-use mailrs_domain::FlagColor;
+use mailrs_domain::{FlagColor, MailSet, Role};
 use mailrs_store::messages::Change;
 use mailrs_store::threads::{self, ThreadFilter, list_messages, list_threads};
 use mailrs_store::{flags, messages};
@@ -22,11 +22,12 @@ fn flag_colours_filter_and_default_to_red() {
         ],
     );
     flags::set_color(&conn, id, "t2", None, Some(FlagColor::Blue)).unwrap();
-    let blue = ThreadFilter::unified("").with_flag(FlagColor::Blue);
+    let blue = ThreadFilter::everything().with_flag(FlagColor::Blue);
     assert_eq!(ids(list_threads(&conn, &blue, 0, 10).unwrap()), ["t2"]);
-    let red = ThreadFilter::unified("").with_flag(FlagColor::Red);
+    let red = ThreadFilter::everything().with_flag(FlagColor::Red);
     assert_eq!(ids(list_threads(&conn, &red, 0, 10).unwrap()), ["t1"]);
-    let all = list_threads(&conn, &ThreadFilter::unified("INBOX"), 0, 10).unwrap();
+    let all = list_threads(&conn, &ThreadFilter::unified(MailSet::Role(Role::Inbox)), 0, 10)
+        .unwrap();
     assert_eq!(all[1].flag_color, Some(FlagColor::Blue));
     assert_eq!(all[0].flag_color, None);
     let counts = flags::counts(&conn).unwrap();
@@ -52,10 +53,10 @@ fn senders_and_any_label_leave_out_trash() {
             meta(id, "c", "t3", 300, &["TRASH"]),
         ],
     );
-    let any = ThreadFilter::unified("");
+    let any = ThreadFilter::everything();
     assert_eq!(ids(list_threads(&conn, &any, 0, 10).unwrap()), ["t2", "t1"]);
     // `meta` sends message "a" from a@example.com.
-    let vip = ThreadFilter::unified("").from_senders(vec!["A@Example.com".into()]);
+    let vip = ThreadFilter::everything().from_senders(vec!["A@Example.com".into()]);
     assert_eq!(ids(list_threads(&conn, &vip, 0, 10).unwrap()), ["t1"]);
     messages::apply(&conn, id, &[Change::label("a", "TRASH", true)]).unwrap();
     assert!(list_threads(&conn, &vip, 0, 10).unwrap().is_empty());
@@ -84,7 +85,7 @@ fn a_thread_row_carries_the_flag_colour_and_the_newest_sender() {
     let row = threads::get_thread(&conn, b, "tb2").unwrap().unwrap();
     assert_eq!(row.from_email, "b9@example.com");
     assert_eq!(
-        threads::list_threads(&conn, &ThreadFilter::account(b, "INBOX"), 0, 10)
+        threads::list_threads(&conn, &ThreadFilter::account(b, MailSet::Role(Role::Inbox)), 0, 10)
             .unwrap()
             .first()
             .map(|t| t.from_email.clone()),

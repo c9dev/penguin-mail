@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use mailrs_domain::{Attachment, MessageBody, Target, system_label};
+use mailrs_domain::{Attachment, MailSet, MessageBody, Role, Target, system_label};
 use mailrs_gmail::GmailError;
 use mailrs_store::messages::Change;
 use mailrs_store::outbox::{self, Queued};
@@ -311,7 +311,7 @@ async fn search_returns_newest_first_without_storing() {
     let found = h.sync.metadata_of(&ids).await.unwrap();
     let ids: Vec<&str> = found.iter().map(|m| m.id.as_str()).collect();
     assert_eq!(ids, ["new", "mid"]);
-    assert!(h.threads("INBOX").await.is_empty());
+    assert!(h.threads(MailSet::Role(Role::Inbox)).await.is_empty());
 }
 
 #[tokio::test]

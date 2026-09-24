@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use anyhow::{Context, Result, anyhow, bail};
 use clap::{Parser, Subcommand};
-use mailrs_domain::{Account, AccountId, ChangeEvent, EpochMillis, Provider, system_label};
+use mailrs_domain::{Account, AccountId, ChangeEvent, EpochMillis, MailSet, Provider, Role};
 use mailrs_gmail::{
     GMAIL_API_BASE, KeyringTokenStore, OAuthClient, TokenStore, authorize, built_in_client,
 };
@@ -49,7 +49,8 @@ enum Command {
         /// Only this account. Leave it out for the unified view.
         #[arg(long)]
         account: Option<String>,
-        #[arg(long, default_value = system_label::INBOX)]
+        /// inbox, flagged, sent, drafts, muted, or a server mailbox id.
+        #[arg(long, default_value = "inbox")]
         label: String,
         #[arg(long, default_value_t = 25)]
         limit: i64,
@@ -331,9 +332,17 @@ async fn list_threads(db: &Db, account: Option<&str>, label: String, limit: i64)
         Some(email) => Some(find_account(db, email).await?.id),
         None => None,
     };
+    let set = match label.to_ascii_lowercase().as_str() {
+        "inbox" => MailSet::Role(Role::Inbox),
+        "sent" => MailSet::Role(Role::Sent),
+        "drafts" | "draft" => MailSet::Role(Role::Drafts),
+        "flagged" | "starred" => MailSet::flagged(),
+        "muted" | "mute" => MailSet::muted(),
+        _ => MailSet::Mailbox(label.clone()),
+    };
     let filter = match account_id {
-        Some(account_id) => ThreadFilter::account(account_id, label),
-        None => ThreadFilter::unified(label),
+        Some(account_id) => ThreadFilter::account(account_id, set),
+        None => ThreadFilter::unified(set),
     };
     let rows = db
         .read(move |c| threads::list_threads(c, &filter, 0, limit))

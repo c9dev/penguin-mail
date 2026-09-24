@@ -8,7 +8,9 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use mailrs_domain::gmail;
 use mailrs_domain::mailbox::keyword;
-use mailrs_domain::{AccountId, Address, Applied, Membership, Memberships, MessageMeta, Role};
+use mailrs_domain::{
+    AccountId, Address, Applied, MailSet, Membership, Memberships, MessageMeta, Role,
+};
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::threading::{self, Links};
@@ -484,31 +486,38 @@ pub fn labels_of(
     Ok(held.get(message_id).map(gmail::labels).unwrap_or_default())
 }
 
-/// The ids of the stored messages that carry `label`.
-pub fn labelled(conn: &Connection, account_id: AccountId, label: &str) -> Result<HashSet<String>> {
-    match gmail::membership_of(label) {
-        (Membership::Keyword(_), false) => ids(
+/// The ids of the stored messages in `set`.
+pub fn held_by(conn: &Connection, account_id: AccountId, set: &MailSet) -> Result<HashSet<String>> {
+    match set {
+        MailSet::Unseen => ids(
             conn.prepare_cached("SELECT id FROM messages WHERE account_id = ?1 AND seen = 0")?,
             &[&account_id],
         ),
-        (Membership::Keyword(k), true) => ids(
+        MailSet::Keyword(k) => ids(
             conn.prepare_cached(
                 "SELECT message_id FROM message_keywords WHERE keyword = ?2 AND account_id = ?1",
             )?,
-            &[&account_id, &k],
+            &[&account_id, k],
         ),
-        (Membership::Category(c), _) => ids(
+        MailSet::Category(c) => ids(
             conn.prepare_cached(
                 "SELECT message_id FROM message_categories WHERE category = ?2 AND account_id = ?1",
             )?,
-            &[&account_id, &c],
+            &[&account_id, c],
         ),
-        (Membership::Mailbox(id), _) => ids(
+        MailSet::Role(role) => ids(
+            conn.prepare_cached(
+                "SELECT l.message_id FROM message_mailboxes l CROSS JOIN mailboxes b ON b.key = l.mailbox \
+                 WHERE b.account_id = ?1 AND b.role = ?2",
+            )?,
+            &[&account_id, &role.as_str()],
+        ),
+        MailSet::Mailbox(id) => ids(
             conn.prepare_cached(
                 "SELECT l.message_id FROM message_mailboxes l CROSS JOIN mailboxes b ON b.key = l.mailbox \
                  WHERE b.account_id = ?1 AND b.id = ?2",
             )?,
-            &[&account_id, &id],
+            &[&account_id, id],
         ),
     }
 }

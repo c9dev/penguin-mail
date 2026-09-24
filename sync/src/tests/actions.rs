@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use mailrs_domain::{FlagColor, Target};
+use mailrs_domain::{FlagColor, MailSet, Role, Target};
 use mailrs_gmail::GmailError;
 use mailrs_store::{accounts, flags, follow_ups, labels, reminders};
 
@@ -54,13 +54,13 @@ async fn archive_then_undo_puts_the_thread_back() {
         .run(std::slice::from_ref(&target), ARCHIVE, History::Record)
         .await;
     assert_eq!(outcome.done, std::slice::from_ref(&target));
-    assert!(h.threads("INBOX").await.is_empty());
+    assert!(h.threads(MailSet::Role(Role::Inbox)).await.is_empty());
     assert_eq!(actions.newest(), Some(ARCHIVE), "looking leaves it there");
     assert_eq!(actions.newest(), Some(ARCHIVE));
 
     let undone = actions.undo().await.expect("an undo");
     assert_eq!(undone.outcome.done, [target]);
-    assert_eq!(h.threads("INBOX").await, ["t1"]);
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["t1"]);
     assert_eq!(actions.newest(), None);
     assert!(actions.undo().await.is_none(), "undo works once");
 }
@@ -83,7 +83,7 @@ async fn three_actions_are_undone_newest_first() {
         let target = Target::thread(h.account_id, thread);
         actions.run(&[target], ARCHIVE, History::Record).await;
     }
-    assert!(h.threads("INBOX").await.is_empty());
+    assert!(h.threads(MailSet::Role(Role::Inbox)).await.is_empty());
 
     for thread in ["t3", "t2", "t1"] {
         let undone = actions.undo().await.expect("an undo");
@@ -93,7 +93,7 @@ async fn three_actions_are_undone_newest_first() {
             "the newest archive left goes back first"
         );
     }
-    assert_eq!(h.threads("INBOX").await, ["t3", "t2", "t1"]);
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["t3", "t2", "t1"]);
     assert!(actions.undo().await.is_none(), "and the stack is empty");
 }
 
@@ -122,7 +122,7 @@ async fn the_oldest_action_falls_off_a_full_stack() {
 
     assert!(actions.undo().await.is_none(), "the stack holds no more");
     assert_eq!(
-        h.threads("INBOX").await.len(),
+        h.threads(MailSet::Role(Role::Inbox)).await.len(),
         DEPTH,
         "the oldest archive stands"
     );
@@ -160,7 +160,7 @@ async fn undo_leaves_mail_that_moved_since_where_it_is() {
     let said = undone.outcome.first_error().unwrap();
     assert!(said.contains("has moved since"), "{said}");
     assert_eq!(h.labels_of("a").await, ["TRASH"]);
-    assert!(h.threads("INBOX").await.is_empty());
+    assert!(h.threads(MailSet::Role(Role::Inbox)).await.is_empty());
 }
 
 /// An action recorded with `History::Skip` never reaches the stack, so
@@ -181,7 +181,7 @@ async fn a_skipped_action_stays_off_the_stack() {
 
     let undone = actions.undo().await.expect("an undo");
     assert_eq!(undone.outcome.done, [Target::thread(h.account_id, "t1")]);
-    assert_eq!(h.threads("INBOX").await, ["t1"], "t2 stays archived");
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["t1"], "t2 stays archived");
     assert!(actions.undo().await.is_none());
 }
 
@@ -193,7 +193,7 @@ async fn undo_with_an_empty_stack_does_nothing() {
     h.bootstrap_all().await;
 
     assert!(actions(&h).undo().await.is_none());
-    assert_eq!(h.threads("INBOX").await, ["t1"]);
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["t1"]);
 }
 
 /// Signing an account out leaves nothing to reverse its actions through,
@@ -289,7 +289,7 @@ async fn archiving_one_message_leaves_the_rest_of_its_thread_in_the_inbox() {
     assert!(h.labels_of("b").await.is_empty());
     assert_eq!(h.labels_of("a").await, ["INBOX"]);
     assert_eq!(h.labels_of("c").await, ["INBOX"]);
-    assert_eq!(h.threads("INBOX").await, ["t1"], "the thread stays");
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["t1"], "the thread stays");
 
     let undone = actions.undo().await.expect("an undo");
     assert_eq!(undone.outcome.done, [target]);
@@ -338,7 +338,7 @@ async fn a_failing_account_does_not_stop_the_others() {
     let failed: Vec<Target> = outcome.failed.iter().map(|f| f.target.clone()).collect();
     assert_eq!(failed, [refused, unknown]);
     assert!(outcome.first_error().unwrap().starts_with("Archive failed"));
-    assert!(h.threads("INBOX").await.is_empty());
+    assert!(h.threads(MailSet::Role(Role::Inbox)).await.is_empty());
 }
 
 /// One account holding out does not swallow the rest of the selection,
@@ -402,7 +402,7 @@ async fn an_account_that_waits_out_its_ceiling_reports_what_it_left() {
         told,
         ["Gmail stayed busy for a moment, so move to trash did not go through for 1 conversation."]
     );
-    assert!(h.threads("INBOX").await.is_empty(), "t1 went to the trash");
+    assert!(h.threads(MailSet::Role(Role::Inbox)).await.is_empty(), "t1 went to the trash");
 }
 
 #[tokio::test]
@@ -469,11 +469,11 @@ async fn remind_stores_the_subject_archives_and_undo_cancels_it() {
         (stored.subject.as_str(), stored.remind_at),
         ("Subject a", at)
     );
-    assert!(h.threads("INBOX").await.is_empty());
+    assert!(h.threads(MailSet::Role(Role::Inbox)).await.is_empty());
 
     actions.undo().await.unwrap();
     assert_eq!(reminder().await, None);
-    assert_eq!(h.threads("INBOX").await, ["t1"]);
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["t1"]);
 }
 
 /// Dismissing a follow-up goes on the same stack as archiving, so Ctrl+Z
@@ -517,10 +517,10 @@ async fn a_dismissed_follow_up_comes_back_on_undo_in_turn() {
     assert_eq!(undone.action, MailAction::DismissFollowUp);
     assert_eq!(undone.outcome.done, [dismissed]);
     assert_eq!(waiting().await, ["t1"]);
-    assert!(h.threads("INBOX").await.is_empty(), "the archive stands");
+    assert!(h.threads(MailSet::Role(Role::Inbox)).await.is_empty(), "the archive stands");
 
     actions.undo().await.expect("the archive before it");
-    assert_eq!(h.threads("INBOX").await, ["t2"]);
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["t2"]);
 }
 
 #[tokio::test]
@@ -542,14 +542,14 @@ async fn a_reminder_that_comes_due_brings_its_conversation_back_unread() {
     };
     remind("t1", now - 1000).await;
     remind("t2", now + 86_400_000).await;
-    assert!(h.threads("INBOX").await.is_empty());
+    assert!(h.threads(MailSet::Role(Role::Inbox)).await.is_empty());
 
     let returned = actions.return_due(now).await.unwrap();
     assert_eq!(returned.len(), 1, "only the reminder that is due");
     assert_eq!(returned[0].target, Target::thread(h.account_id, "t1"));
     let newest = returned[0].newest.as_ref().expect("its newest message");
     assert_eq!(newest.id, "a");
-    assert_eq!(h.threads("INBOX").await, ["t1"]);
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["t1"]);
     assert!(h.labels_of("a").await.contains(&"UNREAD".to_string()));
     let account_id = h.account_id;
     let left = h.db.read(reminders::list).await.unwrap();
@@ -586,11 +586,11 @@ async fn a_reminder_gmail_refuses_waits_for_the_next_pass() {
         body: "no".into(),
     });
     assert!(actions.return_due(now).await.unwrap().is_empty());
-    assert!(h.threads("INBOX").await.is_empty(), "still archived");
+    assert!(h.threads(MailSet::Role(Role::Inbox)).await.is_empty(), "still archived");
 
     let returned = actions.return_due(now).await.unwrap();
     assert_eq!(returned.len(), 1, "the next pass brings it back");
-    assert_eq!(h.threads("INBOX").await, ["t1"]);
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["t1"]);
 }
 
 #[tokio::test]
@@ -610,8 +610,8 @@ async fn muting_labels_the_thread_and_takes_it_out_of_the_inbox() {
         .await;
     assert_eq!(outcome.done, std::slice::from_ref(&target));
     assert_eq!(h.labels_of("a").await, ["MUTE"]);
-    assert!(h.threads("INBOX").await.is_empty());
-    assert_eq!(h.threads("MUTE").await, ["t1"]);
+    assert!(h.threads(MailSet::Role(Role::Inbox)).await.is_empty());
+    assert_eq!(h.threads(MailSet::muted()).await, ["t1"]);
 
     let undone = actions.undo().await.expect("an undo");
     assert_eq!(undone.outcome.done, [target]);
@@ -634,7 +634,7 @@ async fn unmuting_drops_the_label_and_brings_the_thread_back() {
         .await;
     assert!(outcome.failed.is_empty(), "{:?}", outcome.failed);
     assert_eq!(h.labels_of("a").await, ["INBOX"]);
-    assert_eq!(h.threads("INBOX").await, ["t1"]);
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["t1"]);
 }
 
 /// Gmail's own filters archive a reply to a muted thread, so the app never
@@ -654,8 +654,8 @@ async fn a_reply_to_a_muted_thread_arrives_archived() {
     h.sync.incremental().await.unwrap();
 
     assert_eq!(h.labels_of("b").await, ["MUTE", "UNREAD"]);
-    assert!(h.threads("INBOX").await.is_empty());
-    assert_eq!(h.threads("MUTE").await, ["t1"]);
+    assert!(h.threads(MailSet::Role(Role::Inbox)).await.is_empty());
+    assert_eq!(h.threads(MailSet::muted()).await, ["t1"]);
 }
 
 #[tokio::test]
@@ -792,7 +792,7 @@ async fn deleting_forever_takes_the_mail_out_of_gmail_and_the_store() {
     assert!(!in_gmail(&h, "a"), "Gmail no longer holds the message");
     assert!(h.thread("t1").await.is_none(), "the store keeps no row");
     assert!(h.labels_of("a").await.is_empty(), "and no labels");
-    assert_eq!(h.threads("INBOX").await, ["t2"], "the rest is untouched");
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["t2"], "the rest is untouched");
     assert!(actions.undo().await.is_none(), "erasing records no undo");
 }
 
@@ -811,7 +811,7 @@ async fn deleting_forever_without_the_permission_changes_nothing() {
 
     assert_eq!(erased, Permitted::NeedsPermission);
     assert!(in_gmail(&h, "a"), "Gmail still holds the message");
-    assert_eq!(h.threads("INBOX").await, ["t1"]);
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["t1"]);
     assert_eq!(h.labels_of("a").await, ["INBOX"]);
 }
 
@@ -838,9 +838,9 @@ async fn erasing_one_message_leaves_the_rest_of_its_thread_consistent() {
     let thread = h.thread("t1").await.expect("the thread survives");
     assert_eq!(thread.message_count, 1);
     assert!(thread.unread);
-    assert_eq!(h.threads("INBOX").await, ["t1"]);
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["t1"]);
     assert!(
-        h.threads("SENT").await.is_empty(),
+        h.threads(MailSet::Role(Role::Sent)).await.is_empty(),
         "the thread lost the sent label with its only sent message"
     );
 }
@@ -913,5 +913,5 @@ async fn a_flag_or_reminder_on_many_conversations_writes_the_store_once() {
     actions.undo().await.unwrap();
     actions.undo().await.unwrap();
     assert_eq!(colors(&h, "t3").await, [("m3".into(), None)]);
-    assert_eq!(h.threads("INBOX").await.len(), 10);
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await.len(), 10);
 }

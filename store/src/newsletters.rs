@@ -9,7 +9,7 @@
 
 use std::collections::HashMap;
 
-use mailrs_domain::{AccountId, EpochMillis, system_label};
+use mailrs_domain::{AccountId, EpochMillis, category};
 use rusqlite::{Connection, params};
 
 use crate::Result;
@@ -55,9 +55,9 @@ pub fn list(conn: &Connection, account_id: AccountId, since: EpochMillis) -> Res
         params![
             account_id,
             since,
-            system_label::CATEGORY_PROMOTIONS,
-            system_label::CATEGORY_UPDATES,
-            system_label::CATEGORY_FORUMS,
+            category::PROMOTIONS,
+            category::UPDATES,
+            category::FORUMS,
         ],
         |row| {
             let name: Option<String> = row.get(0)?;

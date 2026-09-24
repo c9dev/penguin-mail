@@ -3,7 +3,7 @@
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 
-use mailrs_domain::{AccountState, ChangeEvent, EpochMillis, MessageMeta, Role};
+use mailrs_domain::{AccountState, ChangeEvent, EpochMillis, MailSet, MessageMeta, Role};
 use mailrs_store::messages::Change;
 use mailrs_store::{accounts, mailboxes, messages, window};
 
@@ -213,9 +213,6 @@ impl AccountSync {
         if !cursor.backfill_done || cursor.state.is_none() {
             return Ok(());
         }
-        let Some(inbox) = self.services.mail.mailbox_for(Role::Inbox) else {
-            return Ok(());
-        };
         let remote: HashSet<String> = self
             .services
             .mail
@@ -229,7 +226,7 @@ impl AccountSync {
         let mut differ: Vec<Want> = self
             .db
             .read(move |c| {
-                let local = messages::labelled(c, account_id, &inbox)?;
+                let local = messages::held_by(c, account_id, &MailSet::Role(Role::Inbox))?;
                 let only_remote: Vec<String> = remote.difference(&local).cloned().collect();
                 let stored = messages::existing_ids(c, account_id, &only_remote)?;
                 let mut differ = Vec::new();

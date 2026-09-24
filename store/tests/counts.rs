@@ -1,19 +1,20 @@
 mod common;
 
 use common::{meta, mixed_mail, store};
+use mailrs_domain::gmail::set_of as set;
 use mailrs_domain::{Category, FlagColor};
 use mailrs_store::flags;
 use mailrs_store::threads::{self, Count, ThreadFilter};
 
 #[test]
-fn label_counts_match_the_query_per_mailbox() {
+fn mail_counts_match_the_query_per_mailbox() {
     let (conn, a, b) = mixed_mail();
-    let counts = threads::label_counts(&conn).unwrap();
+    let counts = threads::mail_counts(&conn).unwrap();
     for account in [a, b] {
         for label in ["INBOX", "SENT", "UNREAD", "STARRED", "CATEGORY_UPDATES"] {
-            let filter = ThreadFilter::account(account, label);
+            let filter = ThreadFilter::account(account, set(label));
             assert_eq!(
-                counts.account(account, label),
+                counts.account(account, &set(label)),
                 Count {
                     threads: threads::count_threads(&conn, &filter).unwrap(),
                     unread: threads::unread_threads(&conn, &filter).unwrap(),
@@ -23,9 +24,9 @@ fn label_counts_match_the_query_per_mailbox() {
         }
     }
     for label in ["INBOX", "SENT", "CATEGORY_SOCIAL"] {
-        let filter = ThreadFilter::unified(label);
+        let filter = ThreadFilter::unified(set(label));
         assert_eq!(
-            counts.unified(label),
+            counts.unified(&set(label)),
             Count {
                 threads: threads::count_threads(&conn, &filter).unwrap(),
                 unread: threads::unread_threads(&conn, &filter).unwrap(),
@@ -35,26 +36,29 @@ fn label_counts_match_the_query_per_mailbox() {
     }
     // Seven inbox threads, less the trashed one and the one in Spam.
     assert_eq!(
-        counts.unified("INBOX"),
+        counts.unified(&set("INBOX")),
         Count {
             threads: 5,
             unread: 3
         }
     );
     assert_eq!(
-        counts.account(a, "SENT"),
+        counts.account(a, &set("SENT")),
         Count {
             threads: 1,
             unread: 0
         }
     );
-    assert_eq!(counts.account(a, "Label_nobody_has"), Count::default());
+    assert_eq!(
+        counts.account(a, &set("Label_nobody_has")),
+        Count::default()
+    );
 }
 
 /// A label keeps a thread while one of its messages carrying the label is
 /// outside the Trash and Spam, whatever the rest of the thread carries.
 #[test]
-fn label_counts_follow_the_messages_of_a_partly_trashed_thread() {
+fn mail_counts_follow_the_messages_of_a_partly_trashed_thread() {
     let (conn, a, b) = mixed_mail();
     store(
         &conn,
@@ -69,14 +73,14 @@ fn label_counts_follow_the_messages_of_a_partly_trashed_thread() {
             meta(b, "b9r", "tb9", 920, &["Label_y", "TRASH"]),
         ],
     );
-    let counts = threads::label_counts(&conn).unwrap();
+    let counts = threads::mail_counts(&conn).unwrap();
     for account in [a, b] {
         for label in [
             "INBOX", "SENT", "UNREAD", "TRASH", "SPAM", "Label_x", "Label_y",
         ] {
-            let filter = ThreadFilter::account(account, label);
+            let filter = ThreadFilter::account(account, set(label));
             assert_eq!(
-                counts.account(account, label),
+                counts.account(account, &set(label)),
                 Count {
                     threads: threads::count_threads(&conn, &filter).unwrap(),
                     unread: threads::unread_threads(&conn, &filter).unwrap(),
@@ -86,30 +90,30 @@ fn label_counts_follow_the_messages_of_a_partly_trashed_thread() {
         }
     }
     assert_eq!(
-        counts.account(a, "INBOX"),
+        counts.account(a, &set("INBOX")),
         Count {
             threads: 5,
             unread: 3
         }
     );
     assert_eq!(
-        counts.account(a, "Label_x"),
+        counts.account(a, &set("Label_x")),
         Count {
             threads: 1,
             unread: 0
         }
     );
     assert_eq!(
-        counts.account(a, "SENT"),
+        counts.account(a, &set("SENT")),
         Count {
             threads: 1,
             unread: 0
         }
     );
-    assert_eq!(counts.account(b, "Label_y"), Count::default());
+    assert_eq!(counts.account(b, &set("Label_y")), Count::default());
     // Its reply in the Trash is not spam, so the thread shows there.
     assert_eq!(
-        counts.account(b, "TRASH"),
+        counts.account(b, &set("TRASH")),
         Count {
             threads: 1,
             unread: 1
@@ -123,7 +127,7 @@ fn flag_mailbox_counts_match_the_query_per_colour() {
     flags::set_color(&conn, b, "tb2", None, Some(FlagColor::Blue)).unwrap();
     let counts = flags::mailbox_counts(&conn).unwrap();
     for color in FlagColor::ALL {
-        let filter = ThreadFilter::unified("").with_flag(color);
+        let filter = ThreadFilter::everything().with_flag(color);
         assert_eq!(
             counts.get(&color).copied().unwrap_or(0),
             threads::count_threads(&conn, &filter).unwrap(),
@@ -149,7 +153,7 @@ fn a_flag_count_keeps_a_thread_whose_other_message_is_trashed() {
         ],
     );
     let counts = flags::mailbox_counts(&conn).unwrap();
-    let filter = ThreadFilter::unified("").with_flag(FlagColor::Red);
+    let filter = ThreadFilter::everything().with_flag(FlagColor::Red);
     assert_eq!(threads::count_threads(&conn, &filter).unwrap(), 2);
     assert_eq!(counts.get(&FlagColor::Red), Some(&2));
 }
@@ -158,14 +162,14 @@ fn a_flag_count_keeps_a_thread_whose_other_message_is_trashed() {
 fn category_counts_match_the_query_per_category() {
     let (conn, a, _) = mixed_mail();
     for filter in [
-        ThreadFilter::unified("INBOX"),
-        ThreadFilter::account(a, "INBOX"),
+        ThreadFilter::unified(set("INBOX")),
+        ThreadFilter::account(a, set("INBOX")),
     ] {
         let threaded = threads::category_unread_threads(&conn, &filter).unwrap();
         let single = threads::category_unread_messages(&conn, &filter).unwrap();
         for category in Category::ALL {
             let (any, none) = category.categories();
-            let narrowed = filter.clone().with_labels(any, none);
+            let narrowed = filter.clone().with_categories(any, none);
             assert_eq!(
                 threaded[&category],
                 threads::unread_threads(&conn, &narrowed).unwrap(),
@@ -178,7 +182,8 @@ fn category_counts_match_the_query_per_category() {
             );
         }
     }
-    let unified = threads::category_unread_threads(&conn, &ThreadFilter::unified("INBOX")).unwrap();
+    let unified =
+        threads::category_unread_threads(&conn, &ThreadFilter::unified(set("INBOX"))).unwrap();
     assert_eq!(unified[&Category::All], 3);
     assert_eq!(unified[&Category::Updates], 1);
     assert_eq!(unified[&Category::Social], 2);
@@ -207,7 +212,7 @@ fn sender_counts_match_the_query_per_vip_row() {
     rows.push(everyone.clone());
     rows.push(vec![everyone[1].clone(), everyone[3].clone()]);
     for senders in rows {
-        let filter = ThreadFilter::unified("").from_senders(senders.clone());
+        let filter = ThreadFilter::everything().from_senders(senders.clone());
         assert_eq!(
             counts.unread(&senders),
             threads::unread_threads(&conn, &filter).unwrap(),

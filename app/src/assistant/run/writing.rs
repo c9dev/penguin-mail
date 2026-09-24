@@ -652,7 +652,7 @@ impl<A: Accounts> Tools<A> {
             let id = account.id;
             let drafts = self
                 .read(move |c| {
-                    let ids: Vec<String> = messages::labelled(c, id, system_label::DRAFT)?
+                    let ids: Vec<String> = messages::held_by(c, id, &MailSet::Role(Role::Drafts))?
                         .into_iter()
                         .collect();
                     messages::by_ids(c, id, &ids)

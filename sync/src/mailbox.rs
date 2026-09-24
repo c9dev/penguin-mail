@@ -13,7 +13,7 @@ use chrono::{DateTime, Local, TimeZone};
 use mailrs_domain::translate::{date_locale, fill, fill_plural, gettext, pgettext};
 use mailrs_domain::{
     Account, AccountId, Category, EpochMillis, FlagColor, Folder, MessageMeta, SmartMailbox,
-    ThreadSummary, system_label,
+    ThreadSummary, gmail, system_label,
 };
 use mailrs_store::threads::ThreadFilter;
 use mailrs_store::{Db, flags, follow_ups, outbox, reminders, threads};
@@ -191,15 +191,15 @@ impl Mailbox {
     /// `None` for the mailboxes the store cannot list.
     fn filter(&self) -> Option<ThreadFilter> {
         match self {
-            Mailbox::Unified(label) => Some(ThreadFilter::unified(*label)),
+            Mailbox::Unified(label) => Some(ThreadFilter::unified(gmail::set_of(label))),
             Mailbox::Label {
                 account_id,
                 label_id,
                 ..
-            } => Some(ThreadFilter::account(*account_id, label_id.clone())),
-            Mailbox::Flag(color) => Some(ThreadFilter::unified("").with_flag(*color)),
+            } => Some(ThreadFilter::account(*account_id, gmail::set_of(label_id))),
+            Mailbox::Flag(color) => Some(ThreadFilter::everything().with_flag(*color)),
             Mailbox::Vips { emails, .. } => {
-                Some(ThreadFilter::unified("").from_senders(emails.clone()))
+                Some(ThreadFilter::everything().from_senders(emails.clone()))
             }
             Mailbox::Search { .. }
             | Mailbox::Folder { .. }
@@ -532,7 +532,7 @@ impl<A: Accounts> Mailboxes<A> {
         Ok(self
             .db
             .read(move |c| {
-                let labels = threads::label_counts(c)?;
+                let labels = threads::mail_counts(c)?;
                 let flagged = flags::mailbox_counts(c)?;
                 let waiting = if follow_ups {
                     follow_ups::waiting_count(c, now)?
@@ -558,7 +558,7 @@ impl<A: Accounts> Mailboxes<A> {
                 for mailbox in sidebar {
                     let count = match &mailbox {
                         Mailbox::Unified(label) => {
-                            let count = labels.unified(label);
+                            let count = labels.unified(&gmail::set_of(label));
                             if mailbox.counts_unread() {
                                 count.unread
                             } else {
@@ -570,7 +570,7 @@ impl<A: Accounts> Mailboxes<A> {
                             label_id,
                             ..
                         } => {
-                            let count = labels.account(*account_id, label_id);
+                            let count = labels.account(*account_id, &gmail::set_of(label_id));
                             if mailbox.counts_unread() {
                                 count.unread
                             } else {
@@ -661,7 +661,7 @@ impl<A: Accounts> Mailboxes<A> {
         match view.category.filter(|_| mailbox.takes_categories()) {
             Some(category) => {
                 let (any, none) = category.categories();
-                Some(filter.with_labels(any, none))
+                Some(filter.with_categories(any, none))
             }
             None => Some(filter),
         }

@@ -1,4 +1,4 @@
-use mailrs_domain::{AccountState, ChangeEvent};
+use mailrs_domain::{AccountState, ChangeEvent, MailSet, Role};
 use mailrs_store::{accounts, labels, messages};
 
 use super::harness;
@@ -25,7 +25,7 @@ async fn bootstrap_records_the_cursor_labels_and_first_page() {
     assert_eq!(h.history_id().await, Some(100));
     assert_eq!(cursor.backfill_cursor.as_deref(), Some("2"));
     assert!(!cursor.backfill_done);
-    assert_eq!(h.threads("INBOX").await, ["ta", "tb"]);
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["ta", "tb"]);
     assert_eq!(
         h.db.read(|c| labels::list_labels(c, 1))
             .await
@@ -58,7 +58,7 @@ async fn backfill_finishes_the_window_then_stops() {
     }
     h.sync.bootstrap().await.unwrap();
     assert!(!h.sync.backfill_step().await.unwrap());
-    assert_eq!(h.threads("INBOX").await, ["ta", "tb", "tc"]);
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["ta", "tb", "tc"]);
     assert!(h.cursor().await.backfill_done);
     assert!(!h.sync.backfill_step().await.unwrap());
 }
@@ -81,7 +81,7 @@ async fn fill_store_leaves_a_finished_first_sync() {
     h.fake.seed(meta("old", "told", now - 40 * DAY, &[]));
     crate::fake::fill_store(&h.sync).await.unwrap();
 
-    assert_eq!(h.threads("INBOX").await, ["ta", "tb", "tc"]);
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["ta", "tb", "tc"]);
     assert!(
         h.thread("tspam").await.is_none(),
         "Gmail hides spam from the window"
@@ -139,7 +139,7 @@ async fn a_rejected_page_token_restarts_the_listing() {
     assert!(h.sync.backfill_step().await.unwrap());
     assert_eq!(h.cursor().await.backfill_cursor, None);
     while h.sync.backfill_step().await.unwrap() {}
-    assert_eq!(h.threads("INBOX").await.len(), 3);
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await.len(), 3);
 }
 
 #[tokio::test]

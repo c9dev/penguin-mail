@@ -1,4 +1,4 @@
-use mailrs_domain::ChangeEvent;
+use mailrs_domain::{ChangeEvent, MailSet, Role};
 use mailrs_gmail::GmailError;
 
 use super::harness;
@@ -18,7 +18,7 @@ async fn archiving_applies_locally_and_remotely() {
         .triage_thread("t1", &TriageAction::Archive)
         .await
         .unwrap();
-    assert!(h.threads("INBOX").await.is_empty());
+    assert!(h.threads(MailSet::Role(Role::Inbox)).await.is_empty());
     assert_eq!(h.labels_of("a").await, ["UNREAD"]);
     assert_eq!(
         h.fake.with(|s| s.remote_writes.clone()),
@@ -39,7 +39,7 @@ async fn a_refused_write_restores_the_thread() {
             .await
             .is_err()
     );
-    assert_eq!(h.threads("INBOX").await, ["t1"]);
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["t1"]);
     assert!(
         h.drain()
             .iter()
@@ -135,7 +135,7 @@ async fn a_rate_limited_write_waits_out_gmails_retry_after() {
         waited <= std::time::Duration::from_secs(24),
         "waited {waited:?}"
     );
-    assert_eq!(h.threads("INBOX").await, Vec::<String>::new());
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, Vec::<String>::new());
 }
 
 #[tokio::test]
@@ -155,7 +155,7 @@ async fn a_run_of_rate_limits_is_waited_out_rather_than_failed() {
         .await
         .unwrap();
 
-    assert!(h.threads("INBOX").await.is_empty());
+    assert!(h.threads(MailSet::Role(Role::Inbox)).await.is_empty());
     let told: Vec<String> = h
         .drain()
         .into_iter()
@@ -204,7 +204,7 @@ async fn a_rate_limit_that_outlasts_the_ceiling_reports_plainly() {
         told,
         ["Gmail stayed busy for a moment, so move to trash did not go through for 1 conversation."]
     );
-    assert_eq!(h.threads("INBOX").await, ["t1"], "the thread comes back");
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["t1"], "the thread comes back");
 }
 
 /// A few messages go to Gmail a call each and many in one batch. Either

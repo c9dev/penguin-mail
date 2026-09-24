@@ -1,6 +1,7 @@
 mod common;
 
 use common::{meta, mixed_mail, store};
+use mailrs_domain::gmail::set_of as set;
 use mailrs_domain::{AccountId, ThreadSummary};
 use mailrs_store::messages::Change;
 use mailrs_store::threads::{self, ThreadFilter};
@@ -37,7 +38,7 @@ fn ids(rows: Vec<ThreadSummary>) -> Vec<String> {
 #[test]
 fn the_unified_inbox_merges_accounts_newest_first() {
     let (conn, _, _) = two_accounts();
-    let inbox = ThreadFilter::unified("INBOX");
+    let inbox = ThreadFilter::unified(set("INBOX"));
     assert_eq!(
         ids(threads::list_threads(&conn, &inbox, 0, 10).unwrap()),
         ["tb1", "ta2", "ta1"]
@@ -50,15 +51,15 @@ fn the_unified_inbox_merges_accounts_newest_first() {
 fn account_views_only_show_their_account() {
     let (conn, a, b) = two_accounts();
     assert_eq!(
-        ids(threads::list_threads(&conn, &ThreadFilter::account(a, "INBOX"), 0, 10).unwrap()),
+        ids(threads::list_threads(&conn, &ThreadFilter::account(a, set("INBOX")), 0, 10).unwrap()),
         ["ta2", "ta1"]
     );
     assert_eq!(
-        ids(threads::list_threads(&conn, &ThreadFilter::account(b, "SENT"), 0, 10).unwrap()),
+        ids(threads::list_threads(&conn, &ThreadFilter::account(b, set("SENT")), 0, 10).unwrap()),
         ["tb2"]
     );
     assert_eq!(
-        threads::unread_threads(&conn, &ThreadFilter::account(a, "INBOX")).unwrap(),
+        threads::unread_threads(&conn, &ThreadFilter::account(a, set("INBOX"))).unwrap(),
         1
     );
 }
@@ -66,8 +67,8 @@ fn account_views_only_show_their_account() {
 #[test]
 fn a_unified_filter_narrows_to_one_account() {
     let (conn, a, _) = two_accounts();
-    let narrowed = ThreadFilter::unified("INBOX").in_account(a);
-    assert_eq!(narrowed, ThreadFilter::account(a, "INBOX"));
+    let narrowed = ThreadFilter::unified(set("INBOX")).in_account(a);
+    assert_eq!(narrowed, ThreadFilter::account(a, set("INBOX")));
     assert_eq!(
         ids(threads::list_threads(&conn, &narrowed, 0, 10).unwrap()),
         ["ta2", "ta1"]
@@ -77,7 +78,7 @@ fn a_unified_filter_narrows_to_one_account() {
 #[test]
 fn paging_walks_the_list_without_gaps() {
     let (conn, _, _) = two_accounts();
-    let inbox = ThreadFilter::unified("INBOX");
+    let inbox = ThreadFilter::unified(set("INBOX"));
     let mut seen = Vec::new();
     for offset in 0..3 {
         seen.extend(ids(threads::list_threads(&conn, &inbox, offset, 1).unwrap()));
@@ -93,7 +94,7 @@ fn paging_walks_the_list_without_gaps() {
 #[test]
 fn paging_past_the_last_row_walks_the_list_without_gaps() {
     let (conn, _, _) = two_accounts();
-    let inbox = ThreadFilter::unified("INBOX");
+    let inbox = ThreadFilter::unified(set("INBOX"));
     let mut seen = Vec::new();
     let mut last = None;
     for _ in 0..3 {
@@ -138,11 +139,11 @@ fn a_thread_carries_every_label_of_its_messages() {
         ],
     );
     assert_eq!(
-        ids(threads::list_threads(&conn, &ThreadFilter::account(id, "INBOX"), 0, 10).unwrap()),
+        ids(threads::list_threads(&conn, &ThreadFilter::account(id, set("INBOX")), 0, 10).unwrap()),
         ["t1"]
     );
     assert_eq!(
-        ids(threads::list_threads(&conn, &ThreadFilter::account(id, "SENT"), 0, 10).unwrap()),
+        ids(threads::list_threads(&conn, &ThreadFilter::account(id, set("SENT")), 0, 10).unwrap()),
         ["t1"]
     );
 }
@@ -154,7 +155,7 @@ fn ungrouped_lists_show_each_message() {
         &conn,
         &[meta(a, "a3", "ta1", 250, &["INBOX", "UNREAD", "STARRED"])],
     );
-    let inbox = ThreadFilter::account(a, "INBOX");
+    let inbox = ThreadFilter::account(a, set("INBOX"));
     let rows = threads::list_messages(&conn, &inbox, 0, 10).unwrap();
     let ids: Vec<(&str, Option<&str>)> = rows
         .iter()
@@ -190,24 +191,24 @@ fn a_label_view_of_one_account_leaves_the_others_out() {
             .collect()
     };
     // tb3 is in Spam and ta5 is in the Trash, so a label view drops them.
-    assert_eq!(ids(&ThreadFilter::account(b, "INBOX")), ["tb2", "tb1"]);
+    assert_eq!(ids(&ThreadFilter::account(b, set("INBOX"))), ["tb2", "tb1"]);
     assert_eq!(
-        ids(&ThreadFilter::unified("INBOX")),
+        ids(&ThreadFilter::unified(set("INBOX"))),
         ["tb2", "tb1", "ta3", "ta2", "ta1"]
     );
     // Any mail leaves out Trash and Spam, in both account and unified views.
     assert_eq!(
-        ids(&ThreadFilter::unified("")),
+        ids(&ThreadFilter::everything()),
         ["tb2", "tb1", "ta4", "ta3", "ta2", "ta1"]
     );
     assert_eq!(
-        ids(&ThreadFilter::account(a, "")),
+        ids(&ThreadFilter::everything().in_account(a)),
         ["ta4", "ta3", "ta2", "ta1"]
     );
     // A category narrows a label view without losing the account.
-    let social = ThreadFilter::account(b, "INBOX").with_labels(&["CATEGORY_FORUMS"], &[]);
+    let social = ThreadFilter::account(b, set("INBOX")).with_categories(&["CATEGORY_FORUMS"], &[]);
     assert_eq!(ids(&social), ["tb1"]);
-    let primary = ThreadFilter::unified("INBOX").with_labels(&[], &OTHERS);
+    let primary = ThreadFilter::unified(set("INBOX")).with_categories(&[], &OTHERS);
     assert_eq!(ids(&primary), ["tb2", "ta1"]);
 }
 
@@ -221,7 +222,7 @@ fn trashing_sent_mail_takes_it_out_of_the_sent_list_and_its_count() {
             meta(a, "s2", "ts2", 200, &["SENT"]),
         ],
     );
-    let sent = ThreadFilter::account(a, "SENT");
+    let sent = ThreadFilter::account(a, set("SENT"));
     assert_eq!(
         ids(threads::list_threads(&conn, &sent, 0, 10).unwrap()),
         ["ts2", "ts1"]
@@ -237,23 +238,23 @@ fn trashing_sent_mail_takes_it_out_of_the_sent_list_and_its_count() {
     );
     assert_eq!(threads::count_threads(&conn, &sent).unwrap(), 1);
     assert_eq!(
-        threads::label_counts(&conn)
+        threads::mail_counts(&conn)
             .unwrap()
-            .account(a, "SENT")
+            .account(a, &set("SENT"))
             .threads,
         1,
         "the sidebar count agrees with the list"
     );
     // The Trash list is a Gmail search, but the label itself still holds it.
-    let trash = ThreadFilter::account(a, "TRASH");
+    let trash = ThreadFilter::account(a, set("TRASH"));
     assert_eq!(
         ids(threads::list_threads(&conn, &trash, 0, 10).unwrap()),
         ["ts2"]
     );
     assert_eq!(
-        threads::label_counts(&conn)
+        threads::mail_counts(&conn)
             .unwrap()
-            .account(a, "TRASH")
+            .account(a, &set("TRASH"))
             .threads,
         1
     );
@@ -276,7 +277,7 @@ fn spam_leaves_a_label_list_and_a_flagged_list() {
         ],
     );
     for label in ["Label_1", "STARRED"] {
-        let filter = ThreadFilter::account(a, label);
+        let filter = ThreadFilter::account(a, set(label));
         assert_eq!(
             ids(threads::list_threads(&conn, &filter, 0, 10).unwrap()),
             ["tj1"],
@@ -288,7 +289,7 @@ fn spam_leaves_a_label_list_and_a_flagged_list() {
             "{label}"
         );
         assert_eq!(
-            threads::label_counts(&conn).unwrap().account(a, label),
+            threads::mail_counts(&conn).unwrap().account(a, &set(label)),
             threads::Count {
                 threads: 1,
                 unread: 1
@@ -296,7 +297,7 @@ fn spam_leaves_a_label_list_and_a_flagged_list() {
             "{label}"
         );
     }
-    let spam = ThreadFilter::account(a, "SPAM");
+    let spam = ThreadFilter::account(a, set("SPAM"));
     assert_eq!(
         ids(threads::list_threads(&conn, &spam, 0, 10).unwrap()),
         ["tj2"]
@@ -318,7 +319,7 @@ fn a_reply_in_the_inbox_shows_its_thread_when_earlier_messages_are_in_the_trash(
             meta(a, "g1", "tg", 150, &["INBOX", "TRASH"]),
         ],
     );
-    let inbox = ThreadFilter::account(a, "INBOX");
+    let inbox = ThreadFilter::account(a, set("INBOX"));
     assert_eq!(
         ids(threads::list_threads(&conn, &inbox, 0, 10).unwrap()),
         ["tr"],
@@ -326,14 +327,14 @@ fn a_reply_in_the_inbox_shows_its_thread_when_earlier_messages_are_in_the_trash(
     );
     assert_eq!(threads::count_threads(&conn, &inbox).unwrap(), 1);
     assert_eq!(
-        threads::label_counts(&conn)
+        threads::mail_counts(&conn)
             .unwrap()
-            .account(a, "INBOX")
+            .account(a, &set("INBOX"))
             .threads,
         1,
         "the sidebar count agrees with the list"
     );
-    let any = ThreadFilter::account(a, "");
+    let any = ThreadFilter::everything().in_account(a);
     assert_eq!(
         ids(threads::list_threads(&conn, &any, 0, 10).unwrap()),
         ["tr"],
@@ -353,7 +354,7 @@ fn a_muted_thread_says_so_in_its_row() {
     );
     let muted =
         |rows: Vec<ThreadSummary>| -> Vec<bool> { rows.into_iter().map(|t| t.muted).collect() };
-    let all = ThreadFilter::unified("");
+    let all = ThreadFilter::everything();
     assert_eq!(
         muted(threads::list_threads(&conn, &all, 0, 10).unwrap()),
         [false, true]
@@ -363,7 +364,7 @@ fn a_muted_thread_says_so_in_its_row() {
         [false, true]
     );
     assert_eq!(
-        ids(threads::list_threads(&conn, &ThreadFilter::unified("MUTE"), 0, 10).unwrap()),
+        ids(threads::list_threads(&conn, &ThreadFilter::unified(set("MUTE")), 0, 10).unwrap()),
         ["t1"]
     );
 }

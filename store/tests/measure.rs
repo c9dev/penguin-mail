@@ -7,7 +7,8 @@
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use mailrs_domain::Category;
+use mailrs_domain::gmail::set_of as set;
+use mailrs_domain::{Category, MailSet, Role};
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{accounts, flags, labels};
 
@@ -39,12 +40,13 @@ fn the_sidebar_and_the_lists_on_a_real_store() {
         "time open, with any pending migration: {:?}",
         started.elapsed()
     );
-    let inbox = ThreadFilter::unified("INBOX");
+    let inbox = ThreadFilter::unified(MailSet::Role(Role::Inbox));
     let (social, _) = Category::Social.categories();
-    let social_inbox = ThreadFilter::unified("INBOX").with_labels(social, &[]);
+    let social_inbox =
+        ThreadFilter::unified(MailSet::Role(Role::Inbox)).with_categories(social, &[]);
     time("sidebar counts", || {
         (
-            threads::label_counts(&conn).unwrap(),
+            threads::mail_counts(&conn).unwrap(),
             flags::mailbox_counts(&conn).unwrap(),
         )
     });
@@ -61,19 +63,19 @@ fn the_sidebar_and_the_lists_on_a_real_store() {
         threads::category_unread_threads(&conn, &inbox).unwrap()
     });
 
-    let counts = threads::label_counts(&conn).unwrap();
+    let counts = threads::mail_counts(&conn).unwrap();
     for account in accounts::list_accounts(&conn).unwrap() {
         for label in labels::list_labels(&conn, account.id).unwrap() {
             println!(
                 "answer count {} {}: {:?}",
                 account.id,
                 label.id,
-                counts.account(account.id, &label.id)
+                counts.account(account.id, &MailSet::Mailbox(label.id.clone()))
             );
         }
     }
     for label in ["INBOX", "STARRED", "SENT", "DRAFT", "MUTE", "UNREAD"] {
-        println!("answer unified {label}: {:?}", counts.unified(label));
+        println!("answer unified {label}: {:?}", counts.unified(&set(label)));
     }
     println!(
         "answer inbox unread: {}",

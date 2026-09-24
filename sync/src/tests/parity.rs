@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use mailrs_domain::Address;
+use mailrs_domain::{Address, MailSet, Role};
 use mailrs_gmail::{CONTACTS_WRITE_SCOPE, ContactFields, SendAs};
 use mailrs_store::address_book;
 
@@ -210,8 +210,8 @@ async fn every_label_changed_on_the_web_reaches_the_store() {
     );
     let thread = h.thread("t1").await.unwrap();
     assert!(!thread.unread && thread.starred && thread.muted);
-    assert_eq!(h.threads("MUTE").await, ["t1"]);
-    assert!(h.threads("INBOX").await.is_empty());
+    assert_eq!(h.threads(MailSet::muted()).await, ["t1"]);
+    assert!(h.threads(MailSet::Role(Role::Inbox)).await.is_empty());
 
     h.fake
         .remote_relabel("a", &["UNREAD", "INBOX"], &["STARRED", "MUTE", "IMPORTANT"]);
@@ -222,7 +222,7 @@ async fn every_label_changed_on_the_web_reaches_the_store() {
     );
     let thread = h.thread("t1").await.unwrap();
     assert!(thread.unread && !thread.starred && !thread.muted);
-    assert_eq!(h.threads("INBOX").await, ["t1"]);
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["t1"]);
 }
 
 /// A star and a read made while history was out of reach still arrive:

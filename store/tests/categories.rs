@@ -1,7 +1,7 @@
 mod common;
 
 use common::{db, meta, store};
-use mailrs_domain::{AccountId, ThreadSummary};
+use mailrs_domain::{AccountId, MailSet, Role, ThreadSummary};
 use mailrs_store::threads::{self, ThreadFilter};
 
 const OTHERS: [&str; 4] = [
@@ -47,7 +47,7 @@ fn inbox() -> (rusqlite::Connection, AccountId) {
 #[test]
 fn primary_leaves_out_every_other_category() {
     let (conn, _) = inbox();
-    let primary = ThreadFilter::unified("INBOX").with_labels(&[], &OTHERS);
+    let primary = ThreadFilter::unified(MailSet::Role(Role::Inbox)).with_categories(&[], &OTHERS);
     assert_eq!(
         ids(threads::list_threads(&conn, &primary, 0, 10).unwrap()),
         ["plain", "personal"]
@@ -58,8 +58,8 @@ fn primary_leaves_out_every_other_category() {
 #[test]
 fn social_takes_forums_too() {
     let (conn, _) = inbox();
-    let social =
-        ThreadFilter::unified("INBOX").with_labels(&["CATEGORY_SOCIAL", "CATEGORY_FORUMS"], &[]);
+    let social = ThreadFilter::unified(MailSet::Role(Role::Inbox))
+        .with_categories(&["CATEGORY_SOCIAL", "CATEGORY_FORUMS"], &[]);
     assert_eq!(
         ids(threads::list_threads(&conn, &social, 0, 10).unwrap()),
         ["forum", "party"]
@@ -70,7 +70,8 @@ fn social_takes_forums_too() {
 #[test]
 fn a_category_stays_inside_the_mailbox() {
     let (conn, id) = inbox();
-    let updates = ThreadFilter::account(id, "INBOX").with_labels(&["CATEGORY_UPDATES"], &[]);
+    let updates = ThreadFilter::account(id, MailSet::Role(Role::Inbox))
+        .with_categories(&["CATEGORY_UPDATES"], &[]);
     assert_eq!(
         ids(threads::list_threads(&conn, &updates, 0, 10).unwrap()),
         ["bank"]
@@ -88,10 +89,11 @@ fn message_listings_filter_by_category_per_message() {
             meta(id, "a2", "t", 200, &["INBOX", "UNREAD"]),
         ],
     );
-    let promotions = ThreadFilter::unified("INBOX").with_labels(&["CATEGORY_PROMOTIONS"], &[]);
+    let promotions = ThreadFilter::unified(MailSet::Role(Role::Inbox))
+        .with_categories(&["CATEGORY_PROMOTIONS"], &[]);
     let rows = threads::list_messages(&conn, &promotions, 0, 10).unwrap();
     let messages: Vec<Option<String>> = rows.into_iter().map(|r| r.message_id).collect();
     assert_eq!(messages, [Some("a1".to_string())]);
-    let primary = ThreadFilter::unified("INBOX").with_labels(&[], &OTHERS);
+    let primary = ThreadFilter::unified(MailSet::Role(Role::Inbox)).with_categories(&[], &OTHERS);
     assert_eq!(threads::unread_messages(&conn, &primary).unwrap(), 1);
 }

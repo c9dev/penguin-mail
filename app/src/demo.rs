@@ -1284,7 +1284,7 @@ fn next_weekday(
 
 #[cfg(test)]
 mod tests {
-    use mailrs_domain::{Folder, system_label};
+    use mailrs_domain::{Folder, MailSet, Role, system_label};
     use mailrs_store::bodies;
     use mailrs_store::threads::{self, ThreadFilter};
     use mailrs_sync::{AccountServices, GmailApi, IdentityService, MailBackend, now_millis};
@@ -1423,7 +1423,7 @@ mod tests {
             .unwrap();
         sync.incremental().await.unwrap();
 
-        let sent = demo.threads(ThreadFilter::unified("SENT")).await;
+        let sent = demo.threads(ThreadFilter::unified(MailSet::Role(Role::Sent))).await;
         assert!(sent.iter().any(|t| t.id == "t-roadmap"), "{sent:?}");
         let body = sync.body("sent1").await.unwrap();
         assert_eq!(body.text.as_deref(), Some("October works for me.\r\n"));
@@ -1475,14 +1475,14 @@ mod tests {
     #[tokio::test]
     async fn the_muted_mailbox_has_a_thread_the_inbox_never_sees() {
         let demo = demo().await;
-        let muted = demo
-            .threads(ThreadFilter::unified(system_label::MUTE))
-            .await;
+        let muted = demo.threads(ThreadFilter::unified(MailSet::muted())).await;
         assert_eq!(muted.len(), 1);
         assert_eq!(muted[0].id, "t-lab-move");
         assert!(muted[0].muted);
         assert_eq!(muted[0].message_count, 2);
-        let inbox = demo.threads(ThreadFilter::unified("INBOX")).await;
+        let inbox = demo
+            .threads(ThreadFilter::unified(MailSet::Role(Role::Inbox)))
+            .await;
         assert!(inbox.iter().all(|t| t.id != "t-lab-move"));
     }
 
@@ -1494,7 +1494,8 @@ mod tests {
             &["CATEGORY_PROMOTIONS"],
             &["CATEGORY_SOCIAL", "CATEGORY_FORUMS"],
         ] {
-            let filter = ThreadFilter::unified("INBOX").with_labels(labels, &[]);
+            let filter =
+                ThreadFilter::unified(MailSet::Role(Role::Inbox)).with_categories(labels, &[]);
             let count = demo
                 .db
                 .read(move |c| threads::count_threads(c, &filter))
@@ -1507,7 +1508,7 @@ mod tests {
     #[tokio::test]
     async fn the_demo_store_has_a_lively_unified_inbox() {
         let demo = demo().await;
-        let inbox = ThreadFilter::unified("INBOX");
+        let inbox = ThreadFilter::unified(MailSet::Role(Role::Inbox));
         let threads = demo.threads(inbox.clone()).await;
         assert!(threads.len() >= 10, "{}", threads.len());
         let unread = demo
@@ -1520,7 +1521,12 @@ mod tests {
         let accounts_seen: std::collections::HashSet<_> =
             threads.iter().map(|t| t.account_id).collect();
         assert_eq!(accounts_seen.len(), 3);
-        assert_eq!(demo.threads(ThreadFilter::unified("DRAFT")).await.len(), 1);
+        assert_eq!(
+            demo.threads(ThreadFilter::unified(MailSet::Role(Role::Drafts)))
+                .await
+                .len(),
+            1
+        );
     }
 
     /// Sync stores every sample but the ones in Junk and Trash, which Gmail

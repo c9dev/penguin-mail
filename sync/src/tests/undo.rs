@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use mailrs_domain::{FlagColor, Target};
+use mailrs_domain::{FlagColor, MailSet, Role, Target};
 
 use super::{Connected, Harness, harness};
 use crate::fake::meta;
@@ -57,7 +57,7 @@ async fn undoing_trash_on_an_archived_thread_leaves_it_archived() {
 
     assert!(h.labels_of("a").await.is_empty(), "archived, as it was");
     assert!(in_gmail(&h, "a").is_empty(), "Gmail agrees");
-    assert!(h.threads("INBOX").await.is_empty());
+    assert!(h.threads(MailSet::Role(Role::Inbox)).await.is_empty());
 }
 
 #[tokio::test]
@@ -177,7 +177,7 @@ async fn a_bulk_undo_groups_the_same_reversal_into_one_batch() {
     }
     h.bootstrap_all().await;
     // The window lists inbox mail and recent mail, so both halves are in.
-    assert_eq!(h.threads("").await.len(), 24);
+    assert_eq!(h.all_threads().await.len(), 24);
 
     let actions = actions(&h);
     actions
@@ -195,7 +195,7 @@ async fn a_bulk_undo_groups_the_same_reversal_into_one_batch() {
     let usage = h.fake.usage();
     assert_eq!(usage.calls_to("users.messages.batchModify"), 2);
     assert_eq!(usage.calls_to("users.messages.modify"), 0);
-    assert_eq!(h.threads("INBOX").await.len(), 12);
+    assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await.len(), 12);
     assert_eq!(in_gmail(&h, "m1"), Vec::<String>::new());
     assert_eq!(in_gmail(&h, "m0"), ["INBOX"]);
 }

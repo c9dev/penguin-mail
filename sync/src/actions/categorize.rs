@@ -47,7 +47,9 @@ impl<A: Accounts> MailActions<A> {
         let mut ids: Vec<String> = self
             .db
             .read(move |c| {
-                let theirs = ThreadFilter::account(account_id, "").from_senders(vec![key]);
+                let theirs = ThreadFilter::everything()
+                    .in_account(account_id)
+                    .from_senders(vec![key]);
                 Ok(threads::list_threads(c, &theirs, 0, MOST_MOVED)?
                     .into_iter()
                     .map(|t| t.id)

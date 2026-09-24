@@ -13,7 +13,9 @@ use std::fmt::Write as _;
 use std::path::Path;
 
 use common::{meta, store};
-use mailrs_domain::{AccountId, Category, FlagColor, MailboxKind, MessageMeta, RemoteMailbox};
+use mailrs_domain::{
+    AccountId, Category, FlagColor, MailSet, MailboxKind, MessageMeta, RemoteMailbox, Role,
+};
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{
     accounts, contacts, drafts, flags, follow_ups, labels, mailboxes, messages, newsletters, window,
@@ -57,6 +59,29 @@ fn listed(id: &str, name: &str, kind: MailboxKind, color: Option<&str>) -> Remot
         role: mailrs_domain::gmail::role_of(id),
         color: color.map(str::to_string),
         hidden: false,
+    }
+}
+
+/// The mail set each label in `LABELS` names, as Gmail's table gives it.
+/// The printed names stay the labels', so `golden/reads.txt` does not
+/// change when the reads start taking mail sets.
+///
+/// This is a frozen oracle: it must not share code with `gmail::set_of`,
+/// the function it checks. A bug shared between them would pass here and
+/// nowhere else.
+fn set(label: &str) -> MailSet {
+    match label {
+        "INBOX" => MailSet::Role(Role::Inbox),
+        "SENT" => MailSet::Role(Role::Sent),
+        "DRAFT" => MailSet::Role(Role::Drafts),
+        "TRASH" => MailSet::Role(Role::Trash),
+        "SPAM" => MailSet::Role(Role::Junk),
+        "IMPORTANT" => MailSet::Role(Role::Important),
+        "STARRED" => MailSet::flagged(),
+        "MUTE" => MailSet::muted(),
+        "UNREAD" => MailSet::Unseen,
+        c if c.starts_with("CATEGORY_") => MailSet::Category(c.into()),
+        id => MailSet::Mailbox(id.into()),
     }
 }
 
@@ -212,28 +237,37 @@ fn mailbox() -> (Connection, AccountId, AccountId) {
 
 fn filters(a: AccountId, b: AccountId) -> Vec<(String, ThreadFilter)> {
     let mut filters: Vec<(String, ThreadFilter)> = Vec::new();
-    for label in LABELS.iter().copied().chain([""]) {
-        filters.push((format!("unified {label:?}"), ThreadFilter::unified(label)));
+    for label in LABELS {
+        filters.push((format!("unified {label:?}"), ThreadFilter::unified(set(label))));
     }
-    for label in ["INBOX", "Label_1", "Label_2", "TRASH", "SPAM", ""] {
+    filters.push(("unified \"\"".into(), ThreadFilter::everything()));
+    for label in ["INBOX", "Label_1", "Label_2", "TRASH", "SPAM"] {
         filters.push((
             format!("account a {label:?}"),
-            ThreadFilter::account(a, label),
+            ThreadFilter::account(a, set(label)),
         ));
         filters.push((
             format!("account b {label:?}"),
-            ThreadFilter::account(b, label),
+            ThreadFilter::account(b, set(label)),
         ));
     }
+    filters.push((
+        "account a \"\"".into(),
+        ThreadFilter::everything().in_account(a),
+    ));
+    filters.push((
+        "account b \"\"".into(),
+        ThreadFilter::everything().in_account(b),
+    ));
     for category in Category::ALL {
         let (any, none) = category.categories();
         filters.push((
             format!("inbox {}", category.key()),
-            ThreadFilter::unified("INBOX").with_labels(any, none),
+            ThreadFilter::unified(set("INBOX")).with_categories(any, none),
         ));
         filters.push((
             format!("account a inbox {}", category.key()),
-            ThreadFilter::account(a, "INBOX").with_labels(any, none),
+            ThreadFilter::account(a, set("INBOX")).with_categories(any, none),
         ));
     }
     for color in [
@@ -244,29 +278,32 @@ fn filters(a: AccountId, b: AccountId) -> Vec<(String, ThreadFilter)> {
     ] {
         filters.push((
             format!("flag {color:?}"),
-            ThreadFilter::unified("").with_flag(color),
+            ThreadFilter::everything().with_flag(color),
         ));
     }
     filters.push((
         "inbox flag Red".into(),
-        ThreadFilter::unified("INBOX").with_flag(FlagColor::Red),
+        ThreadFilter::unified(set("INBOX")).with_flag(FlagColor::Red),
     ));
     let senders = || vec!["A3@example.com".to_string(), "b2@example.com".to_string()];
     filters.push((
         "senders".into(),
-        ThreadFilter::unified("").from_senders(senders()),
+        ThreadFilter::everything().from_senders(senders()),
     ));
     filters.push((
         "inbox senders".into(),
-        ThreadFilter::unified("INBOX").from_senders(senders()),
+        ThreadFilter::unified(set("INBOX")).from_senders(senders()),
     ));
     filters.push((
         "named threads".into(),
-        ThreadFilter::unified("INBOX").with_threads(vec!["t3".into(), "t6".into(), "u2".into()]),
+        ThreadFilter::unified(set("INBOX"))
+            .with_threads(vec!["t3".into(), "t6".into(), "u2".into()]),
     ));
     filters.push((
         "account a named threads".into(),
-        ThreadFilter::account(a, "").with_threads(vec!["t6".into(), "t13".into()]),
+        ThreadFilter::everything()
+            .in_account(a)
+            .with_threads(vec!["t6".into(), "t13".into()]),
     ));
     filters
 }
@@ -315,8 +352,8 @@ fn answers() -> String {
         );
     }
     for (name, filter) in [
-        ("unified inbox", ThreadFilter::unified("INBOX")),
-        ("account a inbox", ThreadFilter::account(a, "INBOX")),
+        ("unified inbox", ThreadFilter::unified(set("INBOX"))),
+        ("account a inbox", ThreadFilter::account(a, set("INBOX"))),
     ] {
         let by_thread = threads::category_unread_threads(&conn, &filter).unwrap();
         let by_message = threads::category_unread_messages(&conn, &filter).unwrap();
@@ -331,18 +368,18 @@ fn answers() -> String {
             );
         }
     }
-    let counts = threads::label_counts(&conn).unwrap();
+    let counts = threads::mail_counts(&conn).unwrap();
     for label in LABELS {
         say(
             format!("count unified {label}"),
-            format!("{:?}", counts.unified(label)),
+            format!("{:?}", counts.unified(&set(label))),
         );
         for account in [a, b] {
             say(
                 format!("count {account} {label}"),
-                format!("{:?}", counts.account(account, label)),
+                format!("{:?}", counts.account(account, &set(label))),
             );
-            let mut held: Vec<String> = messages::labelled(&conn, account, label)
+            let mut held: Vec<String> = messages::held_by(&conn, account, &set(label))
                 .unwrap()
                 .into_iter()
                 .collect();
@@ -472,7 +509,8 @@ fn answers() -> String {
         "after pruning".into(),
         format!(
             "{:?}",
-            threads::list_threads(&conn, &ThreadFilter::account(a, ""), 0, 100).unwrap()
+            threads::list_threads(&conn, &ThreadFilter::everything().in_account(a), 0, 100)
+                .unwrap()
         ),
     );
     out

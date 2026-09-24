@@ -5,7 +5,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use mailrs_domain::{AccountId, MessageMeta, Target};
+use mailrs_domain::{AccountId, MailSet, MessageMeta, Role, Target};
 use mailrs_gmail::AccountQuota;
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{Db, accounts};
@@ -82,7 +82,13 @@ impl Backfilling {
     async fn held(&self, id: AccountId, limit: i64) -> usize {
         self.db
             .read(move |c| {
-                Ok(threads::list_threads(c, &ThreadFilter::account(id, "INBOX"), 0, limit)?.len())
+                Ok(threads::list_threads(
+                    c,
+                    &ThreadFilter::account(id, MailSet::Role(Role::Inbox)),
+                    0,
+                    limit,
+                )?
+                .len())
             })
             .await
             .unwrap()
@@ -96,7 +102,12 @@ impl Backfilling {
             let held = self
                 .db
                 .read(move |c| {
-                    threads::list_threads(c, &ThreadFilter::account(id, "INBOX"), 0, count)
+                    threads::list_threads(
+                        c,
+                        &ThreadFilter::account(id, MailSet::Role(Role::Inbox)),
+                        0,
+                        count,
+                    )
                 })
                 .await
                 .unwrap();

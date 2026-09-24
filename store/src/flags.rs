@@ -82,7 +82,7 @@ pub fn counts(conn: &Connection) -> Result<HashMap<FlagColor, i64>> {
 }
 
 /// `threads::count_threads` for each Flag mailbox,
-/// `ThreadFilter::unified("").with_flag(color)`, in one query. A thread
+/// `ThreadFilter::everything().with_flag(color)`, in one query. A thread
 /// counts under every colour one of its starred messages has, so these can
 /// add up to more than `counts`. Like the list, it keeps a thread with
 /// trashed or spam mail while one of its messages is outside both, which

@@ -1,45 +1,48 @@
 //! Thread queries. `messages::apply` keeps the rows they read.
 //!
-//! Filters still name mail by Gmail label id, as they did before the store
-//! kept server mailboxes, keywords and categories. Each query resolves
-//! those ids through `mailrs_domain::gmail` to what they name in the
-//! tables, then chooses how to reach the rows.
+//! Filters name mail by mail set: a role, a server mailbox, a keyword,
+//! unread mail or a category. Each query resolves the set to what it
+//! names in the tables, then chooses how to reach the rows.
 
 use std::collections::{HashMap, HashSet};
 
-use mailrs_domain::gmail;
 use mailrs_domain::mailbox::keyword::{FLAGGED, MUTED};
-use mailrs_domain::system_label::{MUTE, STARRED, UNREAD};
-use mailrs_domain::{AccountId, Category, FlagColor, Membership, ThreadSummary};
+use mailrs_domain::{AccountId, Category, FlagColor, MailSet, Role, ThreadSummary};
 use rusqlite::types::Value;
 use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
 
 use crate::Result;
 
-/// What a label id names in the tables.
+/// What a mail set names in the tables.
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Named {
     /// Server mailboxes by key: one for each account in question that has
     /// a mailbox with that id.
     Mailboxes(Vec<i64>),
     Keyword(String),
-    /// Gmail's `UNREAD`: no `$seen`.
+    /// Unseen mail: no `$seen`.
     Unread,
     Category(String),
 }
 
 impl Named {
-    fn of(conn: &Connection, account: Option<AccountId>, label: &str) -> Result<Named> {
-        Ok(match gmail::membership_of(label) {
-            (Membership::Keyword(_), false) => Named::Unread,
-            (Membership::Keyword(k), true) => Named::Keyword(k),
-            (Membership::Category(c), _) => Named::Category(c),
-            (Membership::Mailbox(id), _) => Named::Mailboxes(keys(
+    fn of(conn: &Connection, account: Option<AccountId>, set: &MailSet) -> Result<Named> {
+        Ok(match set {
+            MailSet::Role(role) => Named::Mailboxes(keys(
+                conn,
+                account,
+                "SELECT key FROM mailboxes WHERE role = ?1",
+                role.as_str(),
+            )?),
+            MailSet::Mailbox(id) => Named::Mailboxes(keys(
                 conn,
                 account,
                 "SELECT key FROM mailboxes WHERE id = ?1",
-                &id,
+                id,
             )?),
+            MailSet::Keyword(k) => Named::Keyword(k.clone()),
+            MailSet::Unseen => Named::Unread,
+            MailSet::Category(c) => Named::Category(c.clone()),
         })
     }
 }
@@ -66,8 +69,8 @@ fn keys(conn: &Connection, account: Option<AccountId>, sql: &str, value: &str) -
 /// constants, which lets SQLite plan against them.
 fn hidden_keys(conn: &Connection, account: Option<AccountId>) -> Result<Vec<i64>> {
     let by_role = "SELECT key FROM mailboxes WHERE role = ?1";
-    let mut hidden = keys(conn, account, by_role, "trash")?;
-    hidden.extend(keys(conn, account, by_role, "junk")?);
+    let mut hidden = keys(conn, account, by_role, Role::Trash.as_str())?;
+    hidden.extend(keys(conn, account, by_role, Role::Junk.as_str())?);
     Ok(hidden)
 }
 
@@ -120,10 +123,10 @@ fn date_wins(start_rows: i64, all_rows: i64, wanted: i64) -> bool {
     wanted * all_rows < start_rows * start_rows
 }
 
-/// Which threads a list shows: one label, across all accounts or one,
+/// Which threads a list shows: one mail set, across all accounts or one,
 /// optionally narrowed to a flag colour or to some senders.
 ///
-/// Whichever label it names, the list leaves out mail in the Trash and
+/// Whichever set it names, the list leaves out mail in the Trash and
 /// Spam, as Gmail's own Sent and label views do.
 ///
 /// A filter starts from [`ThreadFilter::unified`] or
@@ -133,18 +136,19 @@ fn date_wins(start_rows: i64, all_rows: i64, wanted: i64) -> bool {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ThreadFilter {
     account_id: Option<AccountId>,
-    /// Empty means any mail with a label or without one.
-    label_id: String,
+    /// `None` means any mail.
+    set: Option<MailSet>,
     /// Only mail starred with this colour. Starred mail without a colour
     /// counts as red.
     flag: Option<FlagColor>,
     /// Only threads with a message from one of these addresses.
     senders: Vec<String>,
-    /// Only threads with at least one of these labels, such as Gmail's
-    /// `CATEGORY_SOCIAL` and `CATEGORY_FORUMS`. Empty means no condition.
-    any_labels: Vec<String>,
-    /// Only threads with none of these labels.
-    no_labels: Vec<String>,
+    /// Only threads with at least one of these categories, such as
+    /// Gmail's `CATEGORY_SOCIAL` and `CATEGORY_FORUMS`. Empty means no
+    /// condition.
+    any_categories: Vec<String>,
+    /// Only threads with none of these categories.
+    no_categories: Vec<String>,
     /// Only these threads, by id. Empty means every thread.
     thread_ids: Vec<String>,
 }
@@ -462,20 +466,25 @@ impl Rows {
 }
 
 impl ThreadFilter {
-    /// Every account. Use system labels such as `INBOX`; user label ids differ per account.
-    pub fn unified(label_id: impl Into<String>) -> Self {
+    /// The mail in `set` across every account.
+    pub fn unified(set: MailSet) -> Self {
         ThreadFilter {
-            label_id: label_id.into(),
+            set: Some(set),
             ..ThreadFilter::default()
         }
     }
 
-    pub fn account(account_id: AccountId, label_id: impl Into<String>) -> Self {
+    pub fn account(account_id: AccountId, set: MailSet) -> Self {
         ThreadFilter {
             account_id: Some(account_id),
-            label_id: label_id.into(),
+            set: Some(set),
             ..ThreadFilter::default()
         }
+    }
+
+    /// Every stored thread outside the Trash and Spam, in every account.
+    pub fn everything() -> Self {
+        ThreadFilter::default()
     }
 
     /// Narrows the list to one account's mail.
@@ -494,10 +503,11 @@ impl ThreadFilter {
         self
     }
 
-    /// Narrows the list to threads carrying one of `any` and none of `none`.
-    pub fn with_labels(mut self, any: &[&str], none: &[&str]) -> Self {
-        self.any_labels = any.iter().map(|l| l.to_string()).collect();
-        self.no_labels = none.iter().map(|l| l.to_string()).collect();
+    /// Narrows the list to threads in one of `any` categories and none of
+    /// `none`.
+    pub fn with_categories(mut self, any: &[&str], none: &[&str]) -> Self {
+        self.any_categories = any.iter().map(|c| c.to_string()).collect();
+        self.no_categories = none.iter().map(|c| c.to_string()).collect();
         self
     }
 
@@ -508,22 +518,30 @@ impl ThreadFilter {
         self
     }
 
-    /// The filter's labels resolved to what they name, in its account or
+    /// The filter's mail set resolved to what it names, in its account or
     /// in all.
     fn resolve(&self, conn: &Connection) -> Result<Resolved> {
-        let named = |label: &String| Named::of(conn, self.account_id, label);
-        let label = match self.label_id.is_empty() {
-            true => None,
-            false => Some(named(&self.label_id)?),
-        };
+        let label = self
+            .set
+            .as_ref()
+            .map(|s| Named::of(conn, self.account_id, s))
+            .transpose()?;
         let mut hidden = hidden_keys(conn, self.account_id)?;
         if let Some(Named::Mailboxes(own)) = &label {
             hidden.retain(|key| !own.contains(key));
         }
         Ok(Resolved {
             label,
-            any: self.any_labels.iter().map(named).collect::<Result<_>>()?,
-            none: self.no_labels.iter().map(named).collect::<Result<_>>()?,
+            any: self
+                .any_categories
+                .iter()
+                .map(|c| Named::Category(c.clone()))
+                .collect(),
+            none: self
+                .no_categories
+                .iter()
+                .map(|c| Named::Category(c.clone()))
+                .collect(),
             hidden,
         })
     }
@@ -542,7 +560,7 @@ impl ThreadFilter {
         })
     }
 
-    /// The walk that starts from the rows holding one of `any_labels`,
+    /// The walk that starts from the rows holding one of `any_categories`,
     /// when every one of them is a category.
     fn any_start(&self, resolved: &Resolved) -> Option<Walk> {
         let categories: Option<Vec<String>> = resolved
@@ -1133,33 +1151,34 @@ pub fn unread_threads(conn: &Connection, filter: &ThreadFilter) -> Result<i64> {
     count(conn, &sql)
 }
 
-/// How many threads carry a label, and how many of those are unread.
+/// How many threads are in a mail set, and how many of those are unread.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Count {
     pub threads: i64,
     pub unread: i64,
 }
 
-/// Thread counts for every label of every account, from one grouped query.
+/// Thread counts for every mail set the sidebar shows, from one grouped
+/// query per kind of set.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct LabelCounts {
-    counts: HashMap<(AccountId, String), Count>,
+pub struct MailCounts {
+    counts: HashMap<(AccountId, MailSet), Count>,
 }
 
-impl LabelCounts {
-    /// `count_threads` and `unread_threads` for `ThreadFilter::account(account_id, label_id)`.
-    pub fn account(&self, account_id: AccountId, label_id: &str) -> Count {
+impl MailCounts {
+    /// `count_threads` and `unread_threads` for `ThreadFilter::account(account_id, set)`.
+    pub fn account(&self, account_id: AccountId, set: &MailSet) -> Count {
         self.counts
-            .get(&(account_id, label_id.to_string()))
+            .get(&(account_id, set.clone()))
             .copied()
             .unwrap_or_default()
     }
 
-    /// `count_threads` and `unread_threads` for `ThreadFilter::unified(label_id)`.
-    pub fn unified(&self, label_id: &str) -> Count {
+    /// `count_threads` and `unread_threads` for `ThreadFilter::unified(set)`.
+    pub fn unified(&self, set: &MailSet) -> Count {
         self.counts
             .iter()
-            .filter(|((_, label), _)| label == label_id)
+            .filter(|((_, s), _)| s == set)
             .fold(Count::default(), |sum, (_, c)| Count {
                 threads: sum.threads + c.threads,
                 unread: sum.unread + c.unread,
@@ -1167,24 +1186,32 @@ impl LabelCounts {
     }
 }
 
-/// Every label's thread and unread counts, for the sidebar. A mailbox's
-/// and a category's come from their listed thread rows, grouped, which
-/// already leave out the Trash and Spam the way a list does. The three
-/// labels Gmail uses for keywords count through the query their list
-/// runs, grouped by account.
-pub fn label_counts(conn: &Connection) -> Result<LabelCounts> {
-    let mut counts: HashMap<(AccountId, String), Count> = HashMap::new();
-    let mut note = |account: AccountId, label: String, threads: i64, unread: i64| {
-        counts.insert((account, label), Count { threads, unread });
+/// Every mail set's thread and unread counts, for the sidebar. A
+/// mailbox's and a category's come from their listed thread rows,
+/// grouped, which already leave out the Trash and Spam the way a list
+/// does. A mailbox with a role counts under both its id and its role, so
+/// the unified inbox sums every inbox whatever each server calls it. The
+/// three keyword sets count through the query their list runs, grouped
+/// by account.
+pub fn mail_counts(conn: &Connection) -> Result<MailCounts> {
+    let mut counts: HashMap<(AccountId, MailSet), Count> = HashMap::new();
+    let mut note = |account: AccountId, set: MailSet, threads: i64, unread: i64| {
+        counts.insert((account, set), Count { threads, unread });
     };
     let mut mailboxes = conn.prepare_cached(
-        "SELECT g.account_id, b.id, g.n, g.u FROM (SELECT mailbox, account_id, COUNT(*) AS n, \
+        "SELECT g.account_id, b.id, b.role, g.n, g.u FROM (SELECT mailbox, account_id, COUNT(*) AS n, \
          SUM(unread) AS u FROM thread_mailboxes INDEXED BY thread_mailboxes_listed \
          WHERE listed = 1 GROUP BY mailbox, account_id) g CROSS JOIN mailboxes b ON b.key = g.mailbox",
     )?;
     let mut rows = mailboxes.query([])?;
     while let Some(row) = rows.next()? {
-        note(row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?);
+        let (account, id, role): (AccountId, String, Option<String>) =
+            (row.get(0)?, row.get(1)?, row.get(2)?);
+        let (threads, unread): (i64, i64) = (row.get(3)?, row.get(4)?);
+        if let Some(role) = role.as_deref().and_then(|r| r.parse::<Role>().ok()) {
+            note(account, MailSet::Role(role), threads, unread);
+        }
+        note(account, MailSet::Mailbox(id), threads, unread);
     }
     let mut categories = conn.prepare_cached(
         "SELECT account_id, category, COUNT(*), SUM(unread) FROM thread_categories \
@@ -1192,10 +1219,16 @@ pub fn label_counts(conn: &Connection) -> Result<LabelCounts> {
     )?;
     let mut rows = categories.query([])?;
     while let Some(row) = rows.next()? {
-        note(row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?);
+        let (account, category): (AccountId, String) = (row.get(0)?, row.get(1)?);
+        note(
+            account,
+            MailSet::Category(category),
+            row.get(2)?,
+            row.get(3)?,
+        );
     }
-    for label in [UNREAD, STARRED, MUTE] {
-        let mut sql = ThreadFilter::unified(label).counting(
+    for set in [MailSet::Unseen, MailSet::flagged(), MailSet::muted()] {
+        let mut sql = ThreadFilter::unified(set.clone()).counting(
             conn,
             Rows::Threads,
             "SELECT t.account_id, COUNT(*), SUM(t.unread)",
@@ -1205,11 +1238,11 @@ pub fn label_counts(conn: &Connection) -> Result<LabelCounts> {
         let mut stmt = conn.prepare_cached(&sql.text)?;
         let mut rows = stmt.query(params_from_iter(&sql.params))?;
         while let Some(row) = rows.next()? {
-            note(row.get(0)?, label.to_string(), row.get(1)?, row.get(2)?);
+            note(row.get(0)?, set.clone(), row.get(1)?, row.get(2)?);
         }
     }
     counts.retain(|_, count| count.threads > 0);
-    Ok(LabelCounts { counts })
+    Ok(MailCounts { counts })
 }
 
 /// Which unread threads have mail from which senders, for the VIP counts.
@@ -1221,7 +1254,7 @@ pub struct SenderCounts {
 }
 
 impl SenderCounts {
-    /// `unread_threads` for `ThreadFilter::unified("").from_senders(senders)`.
+    /// `unread_threads` for `ThreadFilter::everything().from_senders(senders)`.
     /// A thread with mail from two of `senders` counts once.
     pub fn unread(&self, senders: &[String]) -> i64 {
         let wanted: HashSet<String> = senders.iter().map(|s| s.to_lowercase()).collect();
@@ -1245,7 +1278,7 @@ pub fn sender_counts(conn: &Connection, senders: &[String]) -> Result<SenderCoun
     // The inner query is the one `unread_threads` runs for every sender at
     // once, so a thread counts here exactly when it counts there. The outer
     // one reads who wrote in each from `messages_by_sender` alone.
-    let inner = ThreadFilter::unified("")
+    let inner = ThreadFilter::everything()
         .from_senders(senders.clone())
         .counting(conn, Rows::Threads, "SELECT t.account_id, t.id", true)?;
     let mut sql = Sql::default();
@@ -1272,7 +1305,7 @@ pub fn sender_counts(conn: &Connection, senders: &[String]) -> Result<SenderCoun
 }
 
 /// `unread_threads` for `filter` narrowed to each category, in one query.
-/// Each category's labels replace the filter's own, as `with_labels` does.
+/// Each category's mail replaces the filter's own, as `with_categories` does.
 pub fn category_unread_threads(
     conn: &Connection,
     filter: &ThreadFilter,
@@ -1281,7 +1314,7 @@ pub fn category_unread_threads(
 }
 
 /// `unread_messages` for `filter` narrowed to each category, in one query.
-/// Each category's labels replace the filter's own, as `with_labels` does.
+/// Each category's mail replaces the filter's own, as `with_categories` does.
 pub fn category_unread_messages(
     conn: &Connection,
     filter: &ThreadFilter,
@@ -1294,11 +1327,11 @@ fn category_unread(
     filter: &ThreadFilter,
     rows: Rows,
 ) -> Result<HashMap<Category, i64>> {
-    let base = filter.clone().with_labels(&[], &[]);
-    let named = |labels: &[&str]| -> Result<Vec<Named>> {
-        labels
+    let base = filter.clone().with_categories(&[], &[]);
+    let named = |categories: &[&str]| -> Vec<Named> {
+        categories
             .iter()
-            .map(|label| Named::of(conn, base.account_id, label))
+            .map(|c| Named::Category(c.to_string()))
             .collect()
     };
     let mut sql = Sql::default();
@@ -1311,11 +1344,11 @@ fn category_unread(
         sql.push("COALESCE(SUM(1");
         if !any.is_empty() {
             sql.push(" AND ");
-            rows.holds_any(&mut sql, &named(any)?);
+            rows.holds_any(&mut sql, &named(any));
         }
         if !none.is_empty() {
             sql.push(" AND NOT ");
-            rows.holds_any(&mut sql, &named(none)?);
+            rows.holds_any(&mut sql, &named(none));
         }
         sql.push("), 0)");
     }
@@ -1339,7 +1372,7 @@ fn category_unread(
 
 #[cfg(test)]
 mod walk_tests {
-    use mailrs_domain::{Address, MessageMeta};
+    use mailrs_domain::{Address, MessageMeta, gmail};
 
     use super::*;
     use crate::{accounts, messages, open_in_memory};
@@ -1434,35 +1467,41 @@ mod walk_tests {
         (conn, a, b)
     }
 
+    /// The mail set the fixture's Gmail label names. The fixture keeps
+    /// Gmail labels; only the filters built from them take mail sets.
+    fn set(label: &str) -> MailSet {
+        gmail::set_of(label)
+    }
+
     fn filters(a: AccountId) -> Vec<ThreadFilter> {
         let (_, not_primary) = Category::Primary.categories();
         let (social, _) = Category::Social.categories();
         let sender = || vec!["Sender1@example.com".to_string()];
         vec![
-            ThreadFilter::unified("INBOX"),
-            ThreadFilter::account(a, "INBOX"),
-            ThreadFilter::unified("INBOX").with_labels(&[], not_primary),
-            ThreadFilter::unified("INBOX").with_labels(&["CATEGORY_SOCIAL"], &[]),
-            ThreadFilter::account(a, "INBOX").with_labels(social, &[]),
-            ThreadFilter::unified("Label_1"),
-            ThreadFilter::unified("TRASH"),
-            ThreadFilter::unified("INBOX").with_flag(FlagColor::Red),
-            ThreadFilter::unified("").with_flag(FlagColor::Red),
-            ThreadFilter::unified("INBOX").from_senders(sender()),
-            ThreadFilter::unified("").from_senders(sender()),
-            ThreadFilter::account(a, "").from_senders(sender()),
-            ThreadFilter::unified("INBOX").with_threads(vec![
+            ThreadFilter::unified(set("INBOX")),
+            ThreadFilter::account(a, set("INBOX")),
+            ThreadFilter::unified(set("INBOX")).with_categories(&[], not_primary),
+            ThreadFilter::unified(set("INBOX")).with_categories(&["CATEGORY_SOCIAL"], &[]),
+            ThreadFilter::account(a, set("INBOX")).with_categories(social, &[]),
+            ThreadFilter::unified(set("Label_1")),
+            ThreadFilter::unified(set("TRASH")),
+            ThreadFilter::unified(set("INBOX")).with_flag(FlagColor::Red),
+            ThreadFilter::everything().with_flag(FlagColor::Red),
+            ThreadFilter::unified(set("INBOX")).from_senders(sender()),
+            ThreadFilter::everything().from_senders(sender()),
+            ThreadFilter::everything().in_account(a).from_senders(sender()),
+            ThreadFilter::unified(set("INBOX")).with_threads(vec![
                 "t3".into(),
                 "t10".into(),
                 "t11".into(),
             ]),
-            ThreadFilter::account(a, "INBOX").with_threads(vec!["t0".into(), "t6".into()]),
-            ThreadFilter::unified(""),
-            ThreadFilter::unified("STARRED"),
-            ThreadFilter::unified("UNREAD"),
-            ThreadFilter::unified("CATEGORY_SOCIAL"),
-            ThreadFilter::account(a, "TRASH"),
-            ThreadFilter::unified("SPAM").with_flag(FlagColor::Red),
+            ThreadFilter::account(a, set("INBOX")).with_threads(vec!["t0".into(), "t6".into()]),
+            ThreadFilter::everything(),
+            ThreadFilter::unified(set("STARRED")),
+            ThreadFilter::unified(set("UNREAD")),
+            ThreadFilter::unified(set("CATEGORY_SOCIAL")),
+            ThreadFilter::account(a, set("TRASH")),
+            ThreadFilter::unified(set("SPAM")).with_flag(FlagColor::Red),
         ]
     }
 
@@ -1616,7 +1655,7 @@ mod walk_tests {
     fn a_small_category_of_a_big_inbox_is_walked_from_the_category() {
         let (conn, _, _) = mailbox();
         let (social, _) = Category::Social.categories();
-        let filter = ThreadFilter::unified("INBOX").with_labels(social, &[]);
+        let filter = ThreadFilter::unified(set("INBOX")).with_categories(social, &[]);
         assert_eq!(
             filter
                 .walk(&conn, &filter.resolve(&conn).unwrap(), Rows::Threads, 51)
@@ -1628,7 +1667,7 @@ mod walk_tests {
     #[test]
     fn unread_mail_is_counted_from_the_unread_index_when_that_is_smaller() {
         let (conn, _, _) = mailbox();
-        let filter = ThreadFilter::unified("INBOX");
+        let filter = ThreadFilter::unified(set("INBOX"));
         for rows in [Rows::Threads, Rows::Messages] {
             assert_eq!(
                 filter
@@ -1643,8 +1682,8 @@ mod walk_tests {
     fn named_threads_are_read_through_the_primary_key() {
         let (conn, a, _) = mailbox();
         for filter in [
-            ThreadFilter::account(a, "INBOX").with_threads(vec!["t0".into()]),
-            ThreadFilter::unified("INBOX").with_threads(vec!["t0".into()]),
+            ThreadFilter::account(a, set("INBOX")).with_threads(vec!["t0".into()]),
+            ThreadFilter::unified(set("INBOX")).with_threads(vec!["t0".into()]),
         ] {
             assert_eq!(
                 filter
@@ -1691,7 +1730,7 @@ mod walk_tests {
     #[test]
     fn the_date_walk_reads_the_order_index_and_sorts_nothing() {
         let (conn, _, _) = mailbox();
-        let filter = ThreadFilter::unified("INBOX");
+        let filter = ThreadFilter::unified(set("INBOX"));
         for (rows, select) in [
             (Rows::Threads, format!("SELECT {COLUMNS}")),
             (Rows::Messages, format!("SELECT {MESSAGE_COLUMNS}")),

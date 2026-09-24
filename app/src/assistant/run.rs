@@ -19,8 +19,8 @@ use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, TimeZone};
 use mailrs_ai::ToolOutcome;
 use mailrs_domain::smart::{Condition, SmartMailbox};
 use mailrs_domain::{
-    Account, AccountId, Category, EpochMillis, FlagColor, Folder, Label, LabelKind, Role, Target,
-    ThreadSummary, system_label,
+    Account, AccountId, Category, EpochMillis, FlagColor, Folder, Label, LabelKind, MailSet, Role,
+    Target, ThreadSummary, system_label,
 };
 use mailrs_store::{Db, messages};
 use mailrs_sync::{
