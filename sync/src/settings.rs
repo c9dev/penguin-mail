@@ -335,7 +335,9 @@ impl<A: Accounts> AccountSettings<A> {
     }
 
     fn rules_service(&self, account_id: AccountId) -> Result<AnyRules, SyncError> {
-        Ok(self.services(account_id)?.rules)
+        self.services(account_id)?
+            .rules
+            .ok_or(SyncError::Backend(BackendError::Unsupported))
     }
 
     fn auto_reply_service(&self, account_id: AccountId) -> Result<AnyAutoReply, SyncError> {

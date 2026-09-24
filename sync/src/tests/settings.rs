@@ -8,9 +8,19 @@ use mailrs_gmail::GmailError;
 use super::{Connected, Harness, harness};
 use crate::hidden;
 use crate::settings::{AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, Permitted};
+use crate::{AccountServices, AccountSync, BackendError, SyncError};
 
 fn settings(h: &Harness) -> AccountSettings<Connected> {
     let connected = HashMap::from([(h.account_id, Arc::clone(&h.sync))]);
+    AccountSettings::new(Arc::new(Connected(connected)), h.db.clone())
+}
+
+/// Settings over the harness's account served by `services` in place of
+/// the full fake.
+fn settings_over(h: &Harness, services: AccountServices) -> AccountSettings<Connected> {
+    let (sender, _events) = async_channel::unbounded();
+    let sync = Arc::new(AccountSync::new(h.account_id, services, h.db.clone(), sender));
+    let connected = HashMap::from([(h.account_id, sync)]);
     AccountSettings::new(Arc::new(Connected(connected)), h.db.clone())
 }
 
@@ -275,4 +285,17 @@ async fn a_hidden_address_waits_on_the_settings_permission() {
         Permitted::NeedsPermission
     );
     assert!(h.fake.with(|s| s.filters.is_empty()));
+}
+
+#[tokio::test]
+async fn an_account_without_rules_says_the_server_cannot() {
+    let h = harness().await;
+    let mut services = AccountServices::fake(Arc::clone(&h.fake));
+    services.rules = None;
+    let settings = settings_over(&h, services);
+    assert!(matches!(
+        settings.rules(h.account_id).await,
+        Err(SyncError::Backend(BackendError::Unsupported))
+    ));
+    assert_eq!(h.fake.with(|s| s.usage.calls_to("users.settings.filters.list")), 0);
 }

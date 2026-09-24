@@ -1228,7 +1228,7 @@ msgstr "Roxo"
 msgid "Slate"
 msgstr "Ardósia"
 
-#: app/src/main.rs:54
+#: app/src/main.rs:59
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]]\n"
 "\n"
@@ -1248,15 +1248,15 @@ msgstr ""
 "  --compose      abre uma mensagem nova, para ENDEREÇO quando indicado\n"
 "  mailto:...     o mesmo que --compose mailto:..."
 
-#: app/src/main.rs:116
+#: app/src/main.rs:121
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: opção desconhecida {option}"
 
-#: app/src/main.rs:239
+#: app/src/main.rs:244
 msgid "Penguin Mail Could Not Start"
 msgstr "O Penguin Mail não conseguiu arrancar"
 
-#: app/src/main.rs:244 app/src/ui/about.rs:148
+#: app/src/main.rs:249 app/src/ui/about.rs:148
 msgid "Report a Problem"
 msgstr "Comunicar um problema"
 
@@ -1301,6 +1301,30 @@ msgstr "De {senders}"
 #: app/src/notify.rs:195 app/src/ui/window.rs:1878
 msgid "Open"
 msgstr "Abrir"
+
+#: app/src/offered.rs:18
+msgid "{provider} has no calendar that other apps can reach."
+msgstr "{provider} não tem um calendário a que outras aplicações possam aceder."
+
+#: app/src/offered.rs:19
+msgid "{provider} keeps no contacts that other apps can reach."
+msgstr "{provider} não guarda contactos a que outras aplicações possam aceder."
+
+#: app/src/offered.rs:20
+msgid "{provider} has no rules that other apps can change."
+msgstr "{provider} não tem regras que outras aplicações possam alterar."
+
+#: app/src/offered.rs:22
+msgid "{provider} has no automatic reply that other apps can change."
+msgstr "{provider} não tem uma resposta automática que outras aplicações possam alterar."
+
+#: app/src/offered.rs:25
+msgid "{provider} cannot delete mail for good. Delete moves it to the Trash."
+msgstr "{provider} não consegue eliminar mensagens definitivamente. Eliminar move-as para o Lixo."
+
+#: app/src/offered.rs:27
+msgid "{provider} does not sort the inbox into categories."
+msgstr "{provider} não organiza a caixa de entrada em categorias."
 
 #: app/src/open_thread/run/translation.rs:121
 msgid "The model sent nothing back to put in the message."
@@ -6236,11 +6260,11 @@ msgstr "Está por ler"
 msgid "Is flagged"
 msgstr "Está marcada"
 
-#: sync/src/account/writes.rs:474
+#: sync/src/account/writes.rs:478
 msgid "Gmail is busy. Still working on {conversations}."
 msgstr "O Gmail está ocupado. Ainda a trabalhar em {conversations}."
 
-#: sync/src/account/writes.rs:489
+#: sync/src/account/writes.rs:493
 msgid ""
 "Gmail is busy, so {action} did not go through for {conversations}. Try again "
 "in a moment."
@@ -6248,7 +6272,7 @@ msgstr ""
 "O Gmail está ocupado, por isso {action} não chegou a acontecer em "
 "{conversations}. Tente de novo daqui a pouco."
 
-#: sync/src/account/writes.rs:498
+#: sync/src/account/writes.rs:502
 msgid ""
 "Gmail stayed busy for {waited}, so {action} did not go through for "
 "{conversations}."
@@ -6256,21 +6280,21 @@ msgstr ""
 "O Gmail esteve ocupado durante {waited}, por isso {action} não chegou a "
 "acontecer em {conversations}."
 
-#: sync/src/account/writes.rs:505
+#: sync/src/account/writes.rs:509
 msgid "{action} failed: {reason}"
 msgstr "{action} falhou: {reason}"
 
-#: sync/src/account/writes.rs:523
+#: sync/src/account/writes.rs:527
 msgid "a moment"
 msgstr "um momento"
 
-#: sync/src/account/writes.rs:525
+#: sync/src/account/writes.rs:529
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] "{count} segundo"
 msgstr[1] "{count} segundos"
 
-#: sync/src/account/writes.rs:530
+#: sync/src/account/writes.rs:534
 msgid "a minute"
 msgstr "um minuto"
 

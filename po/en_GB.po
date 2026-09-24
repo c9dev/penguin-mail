@@ -1149,7 +1149,7 @@ msgstr "Purple"
 msgid "Slate"
 msgstr "Slate"
 
-#: app/src/main.rs:54
+#: app/src/main.rs:59
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]]\n"
 "\n"
@@ -1167,15 +1167,15 @@ msgstr ""
 "  --compose      open a new message, addressed to ADDRESS when given\n"
 "  mailto:...     the same as --compose mailto:..."
 
-#: app/src/main.rs:116
+#: app/src/main.rs:121
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: unknown option {option}"
 
-#: app/src/main.rs:239
+#: app/src/main.rs:244
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail Could Not Start"
 
-#: app/src/main.rs:244 app/src/ui/about.rs:148
+#: app/src/main.rs:249 app/src/ui/about.rs:148
 msgid "Report a Problem"
 msgstr "Report a Problem"
 
@@ -1220,6 +1220,30 @@ msgstr "From {senders}"
 #: app/src/notify.rs:195 app/src/ui/window.rs:1878
 msgid "Open"
 msgstr "Open"
+
+#: app/src/offered.rs:18
+msgid "{provider} has no calendar that other apps can reach."
+msgstr "{provider} has no calendar that other apps can reach."
+
+#: app/src/offered.rs:19
+msgid "{provider} keeps no contacts that other apps can reach."
+msgstr "{provider} keeps no contacts that other apps can reach."
+
+#: app/src/offered.rs:20
+msgid "{provider} has no rules that other apps can change."
+msgstr "{provider} has no rules that other apps can change."
+
+#: app/src/offered.rs:22
+msgid "{provider} has no automatic reply that other apps can change."
+msgstr "{provider} has no automatic reply that other apps can change."
+
+#: app/src/offered.rs:25
+msgid "{provider} cannot delete mail for good. Delete moves it to the Trash."
+msgstr "{provider} cannot delete mail for good. Delete moves it to the Trash."
+
+#: app/src/offered.rs:27
+msgid "{provider} does not sort the inbox into categories."
+msgstr "{provider} does not sort the inbox into categories."
 
 #: app/src/open_thread/run/translation.rs:121
 msgid "The model sent nothing back to put in the message."
@@ -5843,33 +5867,33 @@ msgstr "Is unread"
 msgid "Is flagged"
 msgstr "Is flagged"
 
-#: sync/src/account/writes.rs:474
+#: sync/src/account/writes.rs:478
 msgid "Gmail is busy. Still working on {conversations}."
 msgstr "Gmail is busy. Still working on {conversations}."
 
-#: sync/src/account/writes.rs:489
+#: sync/src/account/writes.rs:493
 msgid "Gmail is busy, so {action} did not go through for {conversations}. Try again in a moment."
 msgstr "Gmail is busy, so {action} did not go through for {conversations}. Try again in a moment."
 
-#: sync/src/account/writes.rs:498
+#: sync/src/account/writes.rs:502
 msgid "Gmail stayed busy for {waited}, so {action} did not go through for {conversations}."
 msgstr "Gmail stayed busy for {waited}, so {action} did not go through for {conversations}."
 
-#: sync/src/account/writes.rs:505
+#: sync/src/account/writes.rs:509
 msgid "{action} failed: {reason}"
 msgstr "{action} failed: {reason}"
 
-#: sync/src/account/writes.rs:523
+#: sync/src/account/writes.rs:527
 msgid "a moment"
 msgstr "a moment"
 
-#: sync/src/account/writes.rs:525
+#: sync/src/account/writes.rs:529
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] "{count} second"
 msgstr[1] "{count} seconds"
 
-#: sync/src/account/writes.rs:530
+#: sync/src/account/writes.rs:534
 msgid "a minute"
 msgstr "a minute"
 

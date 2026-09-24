@@ -27,6 +27,7 @@ app/src/core.rs
 app/src/format.rs
 app/src/main.rs
 app/src/notify.rs
+app/src/offered.rs
 app/src/open_thread/run/translation.rs
 app/src/packaging.rs
 app/src/permission.rs

@@ -25,6 +25,14 @@ impl Provider {
             Provider::Gmail => "gmail",
         }
     }
+
+    /// The provider's name as people know it. A brand, so it is not
+    /// translated.
+    pub fn name(self) -> &'static str {
+        match self {
+            Provider::Gmail => "Gmail",
+        }
+    }
 }
 
 impl FromStr for Provider {

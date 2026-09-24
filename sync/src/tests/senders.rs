@@ -126,7 +126,7 @@ async fn categorizing_a_sender_moves_their_mail_and_replaces_their_rule() {
     h.fake
         .seed(from("ann@example.com", "c", "t3", "CATEGORY_UPDATES"));
     h.bootstrap_all().await;
-    let rules = h.sync.services().rules.clone();
+    let rules = h.sync.services().rules.clone().expect("Gmail has rules");
     rules
         .create_filter(&sorts("SHOP@example.com", "CATEGORY_SOCIAL"))
         .await

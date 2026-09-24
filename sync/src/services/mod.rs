@@ -215,7 +215,7 @@ pub struct AccountServices {
     pub mail: AnyMail,
     pub calendar: Option<AnyCalendar>,
     pub contacts: Option<AnyContacts>,
-    pub rules: AnyRules,
+    pub rules: Option<AnyRules>,
     pub auto_reply: Option<AnyAutoReply>,
     pub identities: AnyIdentities,
 }
@@ -229,7 +229,7 @@ impl AccountServices {
             mail: AnyMail::Google(google.clone()),
             calendar: Some(AnyCalendar::Google(google.clone())),
             contacts: Some(AnyContacts::Google(google.clone())),
-            rules: AnyRules::Google(google.clone()),
+            rules: Some(AnyRules::Google(google.clone())),
             auto_reply: Some(AnyAutoReply::Google(google.clone())),
             identities: AnyIdentities::Google(google),
         }
@@ -244,15 +244,95 @@ impl AccountServices {
             mail: AnyMail::Fake(google.clone()),
             calendar: Some(AnyCalendar::Fake(google.clone())),
             contacts: Some(AnyContacts::Fake(google.clone())),
-            rules: AnyRules::Fake(google.clone()),
+            rules: Some(AnyRules::Fake(google.clone())),
             auto_reply: Some(AnyAutoReply::Fake(google.clone())),
             identities: AnyIdentities::Fake(google),
         }
     }
 
+    /// The in-memory Gmail with other capabilities, for tests of an
+    /// account whose server does less than Gmail.
+    #[cfg(any(test, feature = "fake"))]
+    pub fn fake_with_capabilities(gmail: Arc<FakeGmail>, caps: MailCapabilities) -> Self {
+        let mut services = AccountServices::fake(Arc::clone(&gmail));
+        services.mail = AnyMail::Fake(Google::new(gmail).with_capabilities(caps));
+        services
+    }
+
     pub fn capabilities(&self) -> MailCapabilities {
         self.mail.capabilities()
     }
+
+    pub fn offers(&self) -> Offers {
+        let caps = self.capabilities();
+        Offers {
+            labels: caps.labels,
+            categories: caps.categories,
+            delete_forever: caps.delete_forever,
+            calendar: self.calendar.is_some(),
+            contacts: self.contacts.is_some(),
+            rules: self.rules.is_some(),
+            auto_reply: self.auto_reply.is_some(),
+        }
+    }
+}
+
+/// What one account can do, read once from its services: the mail
+/// capabilities the window shows or hides something for, and which of the
+/// optional services it has. The window and the assistant read this, not
+/// the services themselves.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Offers {
+    /// Mail can sit in several mailboxes; otherwise it moves between
+    /// folders.
+    pub labels: bool,
+    pub categories: bool,
+    pub delete_forever: bool,
+    pub calendar: bool,
+    pub contacts: bool,
+    pub rules: bool,
+    pub auto_reply: bool,
+}
+
+impl Offers {
+    /// Everything, as Gmail offers, and as the window assumes of an account
+    /// that has not started yet, so nothing disappears for a moment.
+    pub const EVERYTHING: Offers = Offers {
+        labels: true,
+        categories: true,
+        delete_forever: true,
+        calendar: true,
+        contacts: true,
+        rules: true,
+        auto_reply: true,
+    };
+
+    /// What the account lacks, in the order Preferences lists it.
+    pub fn missing(&self) -> Vec<Missing> {
+        [
+            (self.calendar, Missing::Calendar),
+            (self.contacts, Missing::Contacts),
+            (self.rules, Missing::Rules),
+            (self.auto_reply, Missing::AutoReply),
+            (self.delete_forever, Missing::DeleteForever),
+            (self.categories, Missing::Categories),
+        ]
+        .into_iter()
+        .filter(|(has, _)| !has)
+        .map(|(_, missing)| missing)
+        .collect()
+    }
+}
+
+/// One thing an account cannot do.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Missing {
+    Calendar,
+    Contacts,
+    Rules,
+    AutoReply,
+    DeleteForever,
+    Categories,
 }
 
 /// Listing, reading, changing and sending mail.
@@ -577,12 +657,27 @@ mod tests {
         );
     }
 
+    #[test]
+    fn gmail_offers_everything() {
+        let services = AccountServices::fake(Arc::new(FakeGmail::new()));
+        assert_eq!(services.offers(), Offers::EVERYTHING);
+        assert!(services.offers().missing().is_empty());
+    }
+
+    #[test]
+    fn an_account_says_what_it_lacks() {
+        let mut services = AccountServices::fake(Arc::new(FakeGmail::new()));
+        services.calendar = None;
+        services.rules = None;
+        assert_eq!(services.offers().missing(), [Missing::Calendar, Missing::Rules]);
+    }
+
     #[tokio::test]
     async fn every_service_reaches_the_one_mailbox() {
         let gmail = Arc::new(FakeGmail::new());
         let services = AccountServices::fake(Arc::clone(&gmail));
-        services
-            .rules
+        let rules = services.rules.as_ref().expect("Gmail has rules");
+        rules
             .create_filter(&Filter::block("pest@example.com"))
             .await
             .unwrap();

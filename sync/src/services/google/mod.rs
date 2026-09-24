@@ -47,14 +47,38 @@ pub struct Google<G> {
     /// The attachment handles of the last structures fetched, so a file
     /// opened right after its message costs one call.
     handles: Arc<Mutex<Handles>>,
+    /// Capabilities that replace Gmail's, set only on a fake account.
+    capabilities: Option<MailCapabilities>,
 }
+
+/// What Gmail's mail service can do.
+const GMAIL: MailCapabilities = MailCapabilities {
+    labels: true,
+    server_threads: true,
+    files_sent_mail: true,
+    categories: true,
+    delete_forever: true,
+    // Gmail keeps these three as its UNREAD, STARRED and MUTE labels.
+    keywords: &[keyword::SEEN, keyword::FLAGGED, keyword::MUTED],
+    native_search: true,
+    batch_limit: mailrs_gmail::BATCH_LIMIT,
+};
 
 impl<G> Google<G> {
     pub fn new(gmail: Arc<G>) -> Self {
         Google {
             gmail,
             handles: Arc::new(Mutex::new(Handles::default())),
+            capabilities: None,
         }
+    }
+
+    /// Answers `caps` instead of Gmail's, for a fake account whose server
+    /// does less.
+    #[cfg(any(test, feature = "fake"))]
+    pub fn with_capabilities(mut self, caps: MailCapabilities) -> Self {
+        self.capabilities = Some(caps);
+        self
     }
 
     /// The handle `fetch_structure` last saw at `path` of message `id`.
@@ -80,6 +104,7 @@ impl<G> Clone for Google<G> {
         Google {
             gmail: Arc::clone(&self.gmail),
             handles: Arc::clone(&self.handles),
+            capabilities: self.capabilities,
         }
     }
 }
@@ -127,17 +152,7 @@ async fn paced<T>(call: impl Future<Output = T>) -> T {
 
 impl<G: GmailApi> MailBackend for Google<G> {
     fn capabilities(&self) -> MailCapabilities {
-        MailCapabilities {
-            labels: true,
-            server_threads: true,
-            files_sent_mail: true,
-            categories: true,
-            delete_forever: true,
-            // Gmail keeps these three as its UNREAD, STARRED and MUTE labels.
-            keywords: &[keyword::SEEN, keyword::FLAGGED, keyword::MUTED],
-            native_search: true,
-            batch_limit: mailrs_gmail::BATCH_LIMIT,
-        }
+        self.capabilities.unwrap_or(GMAIL)
     }
 
     fn mailbox_for(&self, role: Role) -> Option<String> {

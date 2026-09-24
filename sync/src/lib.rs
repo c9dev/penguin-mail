@@ -67,8 +67,8 @@ pub use services::{
     AccountServices, AnyAutoReply, Backfill, Found, ID_PAGE_SIZE, LIST_PAGE_SIZE, RawMessage,
     RemoteRef, SearchQuery, Want, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules,
     AutoReplyService, CalendarService, ContactsService, Google, IdentityService, MailBackend,
-    MailCapabilities, Priority, RemoteChange, RulesService, SendAsAddress, SyncState, Unapplied,
-    Changes, RAW_LIMIT, background,
+    MailCapabilities, Missing, Offers, Priority, RemoteChange, RulesService, SendAsAddress,
+    SyncState, Unapplied, Changes, RAW_LIMIT, background,
 };
 pub use settings::{AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, Permitted};
 pub use triage::TriageAction;

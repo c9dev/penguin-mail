@@ -10,8 +10,8 @@ use super::{Connected, Harness, harness};
 use crate::actions::DEPTH;
 use crate::fake::{FakeGmail, meta};
 use crate::{
-    AccountServices, AccountSync, History, MailAction, MailActions, Outcome, Permitted,
-    TriageAction, now_millis,
+    AccountServices, AccountSync, BackendError, History, MailAction, MailActions,
+    MailCapabilities, Outcome, Permitted, SyncError, TriageAction, now_millis,
 };
 
 fn actions(h: &Harness) -> MailActions<Connected> {
@@ -969,4 +969,24 @@ async fn a_flag_or_reminder_on_many_conversations_writes_the_store_once() {
     actions.undo().await.unwrap();
     assert_eq!(colors(&h, "t3").await, [("m3".into(), None)]);
     assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await.len(), 10);
+}
+
+#[tokio::test]
+async fn deleting_forever_where_the_server_cannot_is_unsupported() {
+    let h = harness().await;
+    h.fake.seed(meta("m1", "t1", 1, &["TRASH"]));
+    let caps = MailCapabilities {
+        delete_forever: false,
+        ..h.sync.services().capabilities()
+    };
+    let sync = AccountSync::new(
+        h.account_id,
+        AccountServices::fake_with_capabilities(Arc::clone(&h.fake), caps),
+        h.db.clone(),
+        async_channel::unbounded().0,
+    );
+    sync.ensure_thread("t1").await.unwrap();
+    let erased = sync.erase_all(&[Target::thread(h.account_id, "t1")]).await;
+    assert!(matches!(erased, Err(SyncError::Backend(BackendError::Unsupported))));
+    assert_eq!(h.fake.with(|s| s.usage.calls_to("users.messages.batchDelete")), 0);
 }

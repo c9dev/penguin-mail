@@ -52,6 +52,10 @@ impl AccountSync {
         &self,
         targets: &[Target],
     ) -> Result<Vec<Result<(), SyncError>>, SyncError> {
+        // A server that cannot erase mail answers before anything is sent.
+        if !self.services.mail.capabilities().delete_forever {
+            return Err(BackendError::Unsupported.into());
+        }
         let ids = self.erasable(targets).await?;
         let mut all: Vec<String> = ids.iter().flatten().cloned().collect();
         all.sort();
