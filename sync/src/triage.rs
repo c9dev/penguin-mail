@@ -26,6 +26,9 @@ pub enum TriageAction {
     Mute,
     /// Takes the mute label off and puts the thread back in the inbox.
     Unmute,
+    /// Moves the messages into the server mailbox with this id, as Move to
+    /// Folder does on a folder account.
+    MoveTo(String),
     /// Any change of mail sets, such as putting a conversation back in the
     /// inbox, unread, when its reminder comes due.
     Relabel {
@@ -55,6 +58,9 @@ impl TriageAction {
             TriageAction::NotJunk => gettext("Mark as not junk"),
             TriageAction::Mute => gettext("Mute"),
             TriageAction::Unmute => gettext("Unmute"),
+            TriageAction::MoveTo(folder) => {
+                fill(&gettext("Move to {folder}"), &[("folder", folder)])
+            }
             TriageAction::Relabel { .. } => gettext("Change labels"),
         }
     }

@@ -19,11 +19,13 @@ use adw::prelude::*;
 use gtk::gio;
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{FlagColor, Folder, Role, Target};
+use mailrs_sync::Offers;
 
 use super::MainWindow;
 use super::press::{Button, Press, Scope};
 use super::reach::Reach;
 use super::triage::Marks;
+use crate::offered::Filing;
 use crate::open_thread::OpenThread;
 use crate::ui::Mailbox;
 use crate::ui::conversation::{Action, ConversationView};
@@ -102,6 +104,9 @@ pub(super) enum Item {
     /// Opens the seven colours the flag button offers, plus Clear Flag.
     FlagColor,
     Label,
+    /// Label's place on an account that files in folders: the same picker,
+    /// which there moves the message into one folder.
+    MoveToFolder,
     Export,
     CopyAddress,
 }
@@ -123,7 +128,8 @@ impl Item {
             Item::Flag => gettext("Flag"),
             Item::Unflag => gettext("Unflag"),
             Item::FlagColor => gettext("Flag Color"),
-            Item::Label => gettext("Labels…"),
+            Item::Label => Filing::Labels.menu_item(),
+            Item::MoveToFolder => Filing::Folders.menu_item(),
             Item::Export => gettext("Export…"),
             Item::CopyAddress => gettext("Copy Address"),
         }
@@ -143,16 +149,17 @@ impl Item {
             Item::MarkRead | Item::MarkUnread => "win.message-toggle-read",
             Item::Flag | Item::Unflag => "win.message-flag",
             Item::FlagColor => return None,
-            Item::Label => "win.message-label",
+            Item::Label | Item::MoveToFolder => "win.message-label",
             Item::Export => "win.message-export",
             Item::CopyAddress => "win.message-copy-address",
         })
     }
 }
 
-/// The menu for `message` in `mailbox`, in groups the menu draws apart.
-/// An item that would do nothing here is left out rather than greyed.
-pub(super) fn groups(message: &Message, mailbox: &Mailbox) -> Vec<Vec<Item>> {
+/// The menu for `message` in `mailbox`, on an account that `offers` what
+/// it does, in groups the menu draws apart. An item that would do nothing
+/// here is left out rather than greyed.
+pub(super) fn groups(message: &Message, mailbox: &Mailbox, offers: Offers) -> Vec<Vec<Item>> {
     let mut groups = Vec::new();
     if !message.draft {
         groups.push(vec![Item::Reply, Item::ReplyAll, Item::Forward]);
@@ -170,7 +177,10 @@ pub(super) fn groups(message: &Message, mailbox: &Mailbox) -> Vec<Vec<Item>> {
             false => Item::Flag,
         },
         Item::FlagColor,
-        Item::Label,
+        match offers.labels {
+            true => Item::Label,
+            false => Item::MoveToFolder,
+        },
     ]);
     let mut out = vec![Item::Export];
     if message.sender.is_some() {
@@ -259,7 +269,11 @@ impl MainWindow {
         let Some(message) = view.find(|open| message_of(open, message_id)) else {
             return;
         };
-        let model = menu_model(&message, &groups(&message, &self.mailbox_of(view)));
+        let Some(target) = self.message_target(view, message_id) else {
+            return;
+        };
+        let offers = self.offers(target.account_id);
+        let model = menu_model(&message, &groups(&message, &self.mailbox_of(view), offers));
         view.popup_message_menu(&model, x, y);
     }
 
@@ -425,7 +439,7 @@ mod tests {
     }
 
     fn items(message: &Message, mailbox: &Mailbox) -> Vec<Item> {
-        groups(message, mailbox).concat()
+        groups(message, mailbox, Offers::EVERYTHING).concat()
     }
 
     #[test]
@@ -510,6 +524,16 @@ mod tests {
         assert!(items(&message(), &folder(Folder::Trash)).contains(&Item::DeleteForever));
         assert!(!items(&message(), &folder(Folder::Trash)).contains(&Item::Trash));
         assert!(items(&message(), &folder(Folder::Junk)).contains(&Item::Trash));
+    }
+
+    #[test]
+    fn a_folder_account_moves_a_message_instead_of_labelling_it() {
+        let folders = Offers { labels: false, ..Offers::EVERYTHING };
+        let items: Vec<Item> = groups(&message(), &inbox(), folders).concat();
+        assert!(items.contains(&Item::MoveToFolder));
+        assert!(!items.contains(&Item::Label));
+        let gmail: Vec<Item> = groups(&message(), &inbox(), Offers::EVERYTHING).concat();
+        assert!(gmail.contains(&Item::Label));
     }
 
     #[test]

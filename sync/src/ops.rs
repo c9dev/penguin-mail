@@ -21,6 +21,9 @@ pub enum MailOp {
     /// Takes the messages out of every mailbox and into the one with this
     /// role, as a folder server files mail. A label server never gets it.
     MoveToRole(Role),
+    /// Takes the messages out of every mailbox and into this one, by the
+    /// server's id. A label server never gets it.
+    MoveToMailbox(String),
     SetKeyword {
         keyword: String,
         on: bool,
@@ -78,6 +81,10 @@ pub fn ops_for(
             vec![MailOp::MoveToRole(Role::Inbox), keyword(MUTED, false)]
         }
         TriageAction::Unmute => vec![add(Role::Inbox)?, keyword(MUTED, false)],
+        TriageAction::MoveTo(id) if moves => vec![MailOp::MoveToMailbox(id.clone())],
+        // On a label account a move files the mail and takes it out of
+        // the inbox, as Gmail's own Move to does.
+        TriageAction::MoveTo(id) => vec![MailOp::AddToMailbox(id.clone()), remove(Role::Inbox)?],
         TriageAction::AddLabel(id) => vec![set_op(&set_of(id), true, roles)?],
         TriageAction::RemoveLabel(id) => vec![set_op(&set_of(id), false, roles)?],
         TriageAction::Relabel { add, remove } => add
@@ -138,14 +145,21 @@ pub fn local_changes(id: &str, held: &Memberships, ops: &[MailOp], roles: &Roles
                 let Some(target) = roles.get(role) else {
                     continue;
                 };
-                for mailbox in held.mailboxes.iter().filter(|m| *m != target) {
-                    changes.push(Change::of(id, Membership::Mailbox(mailbox.clone()), false));
-                }
-                changes.push(Change::of(id, Membership::Mailbox(target.clone()), true));
+                move_to(&mut changes, id, held, target);
             }
+            MailOp::MoveToMailbox(target) => move_to(&mut changes, id, held, target),
         }
     }
     changes
+}
+
+/// The store changes that take message `id` out of every mailbox it
+/// holds and into `target`.
+fn move_to(changes: &mut Vec<Change>, id: &str, held: &Memberships, target: &str) {
+    for mailbox in held.mailboxes.iter().filter(|m| *m != target) {
+        changes.push(Change::of(id, Membership::Mailbox(mailbox.clone()), false));
+    }
+    changes.push(Change::of(id, Membership::Mailbox(target.into()), true));
 }
 
 /// The operations that reverse `applied`: what the message lost goes
@@ -401,6 +415,45 @@ mod tests {
                     message_id: "m1".into(),
                     mailbox: "Archive".into()
                 },
+            ]
+        );
+    }
+
+    #[test]
+    fn moving_to_a_folder_moves_on_a_folder_account_and_files_on_a_label_account() {
+        let roles = gmail_roles();
+        let action = TriageAction::MoveTo("Label_5".into());
+        assert_eq!(
+            ops_for(&action, &folder_account(), &roles, named).unwrap(),
+            vec![MailOp::MoveToMailbox("Label_5".into())]
+        );
+        assert_eq!(
+            ops_for(&action, &label_account(), &roles, named).unwrap(),
+            vec![
+                MailOp::AddToMailbox("Label_5".into()),
+                MailOp::RemoveFromMailbox("INBOX".into()),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_move_takes_the_message_out_of_every_other_mailbox_in_the_store() {
+        let held = Memberships {
+            mailboxes: vec!["INBOX".into(), "Label_1".into()],
+            ..Memberships::default()
+        };
+        let changes = local_changes(
+            "m1",
+            &held,
+            &[MailOp::MoveToMailbox("Label_5".into())],
+            &gmail_roles(),
+        );
+        assert_eq!(
+            changes,
+            vec![
+                Change::of("m1", Membership::Mailbox("INBOX".into()), false),
+                Change::of("m1", Membership::Mailbox("Label_1".into()), false),
+                Change::of("m1", Membership::Mailbox("Label_5".into()), true),
             ]
         );
     }

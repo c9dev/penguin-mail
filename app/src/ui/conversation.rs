@@ -38,6 +38,7 @@ use super::queued::QueuedCard;
 use super::translation::TranslationCard;
 use super::{name, name_with_shortcut};
 use crate::compose::ReplyKind;
+use crate::offered::Filing;
 use crate::open_thread::inline::{self, Address};
 use crate::open_thread::run::{Fetched, InlinePictures};
 use crate::open_thread::{Article, OpenThread, Page, Served, Unsent};
@@ -479,7 +480,8 @@ impl ConversationView {
             Some("win.toggle-read"),
         );
         marks.append(Some(&gettext("Mute")), Some("win.mute"));
-        marks.append(Some(&gettext("Labels…")), Some("win.label"));
+        // set_filing words this one for how the accounts file mail.
+        marks.append(Some(&Filing::Labels.menu_item()), Some("win.label"));
         let remind_menu = gio::Menu::new();
         marks.append_submenu(Some(&gettext("Remind Me")), &remind_menu);
         more.append_section(None, &marks);
@@ -523,9 +525,9 @@ impl ConversationView {
             .build();
         let label_button = gtk::MenuButton::builder()
             .icon_name("penguin-mail-tag-symbolic")
-            .tooltip_text(gettext("Labels (L)"))
+            .tooltip_text(Filing::Labels.tooltip())
             .build();
-        name_with_shortcut(&label_button, &gettext("Labels (L)"));
+        name_with_shortcut(&label_button, &Filing::Labels.tooltip());
         for widget in [
             buttons.archive.upcast_ref::<gtk::Widget>(),
             buttons.trash.upcast_ref(),
@@ -808,6 +810,17 @@ impl ConversationView {
             }),
             Some("win.mute"),
         );
+    }
+
+    /// Words the Labels button and its menu item for how the accounts in
+    /// reach file mail. The item sits fourth in the section, after Mute.
+    pub fn set_filing(&self, filing: Filing) {
+        let tip = filing.tooltip();
+        self.label_button.set_tooltip_text(Some(&tip));
+        name_with_shortcut(&self.label_button, &tip);
+        self.mark_menu.remove(3);
+        self.mark_menu
+            .insert(3, Some(&filing.menu_item()), Some("win.label"));
     }
 
     /// Opens `model` as the menu for one message, at the point the reader

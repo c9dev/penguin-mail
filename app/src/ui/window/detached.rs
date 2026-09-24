@@ -44,6 +44,7 @@ impl MainWindow {
         // and what they do stay put when the main window moves on.
         let mailbox = self.shown();
         self.word_buttons(&view, &mailbox);
+        self.word_filing(&view, [summary.account_id]);
         self.detached
             .borrow_mut()
             .push((Rc::downgrade(&view), mailbox));

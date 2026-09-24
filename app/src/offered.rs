@@ -29,6 +29,59 @@ pub fn shows_categories(
         }
 }
 
+/// How the accounts on screen file mail: with labels, several at once, or
+/// in folders, one at a time.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Filing {
+    Labels,
+    Folders,
+}
+
+impl Filing {
+    /// Folders when every account in question files in folders, labels
+    /// otherwise, including when there is no account in question.
+    pub fn of(offers: impl IntoIterator<Item = Offers>) -> Filing {
+        let mut any = false;
+        for offer in offers {
+            if offer.labels {
+                return Filing::Labels;
+            }
+            any = true;
+        }
+        if any { Filing::Folders } else { Filing::Labels }
+    }
+
+    pub fn menu_item(self) -> String {
+        match self {
+            Filing::Labels => gettext("Labels…"),
+            Filing::Folders => gettext("Move to Folder…"),
+        }
+    }
+
+    /// The header button's tooltip, with its key.
+    pub fn tooltip(self) -> String {
+        match self {
+            Filing::Labels => gettext("Labels (L)"),
+            Filing::Folders => gettext("Move to Folder (L)"),
+        }
+    }
+
+    pub fn new_item(self) -> String {
+        match self {
+            Filing::Labels => gettext("New Label…"),
+            Filing::Folders => gettext("New Folder…"),
+        }
+    }
+
+    /// What the picker says when the account has nothing to file in yet.
+    pub fn none_yet(self) -> String {
+        match self {
+            Filing::Labels => gettext("This account has no labels yet."),
+            Filing::Folders => gettext("This account has no folders yet."),
+        }
+    }
+}
+
 /// One line saying why an account on `provider` lacks `missing`.
 #[cfg_attr(
     not(test),
@@ -109,6 +162,25 @@ mod tests {
         let offers = |id| if id == 1 { Offers::EVERYTHING } else { without_categories() };
         assert!(shows_categories(true, &all, &[1, 2], offers));
         assert!(!shows_categories(true, &all, &[2], offers));
+    }
+
+    use super::Filing;
+
+    fn folders() -> Offers {
+        Offers {
+            labels: false,
+            ..Offers::EVERYTHING
+        }
+    }
+
+    #[test]
+    fn filing_reads_folders_only_when_every_account_files_in_folders() {
+        assert_eq!(Filing::of([Offers::EVERYTHING]), Filing::Labels);
+        assert_eq!(Filing::of([folders()]), Filing::Folders);
+        assert_eq!(Filing::of([folders(), Offers::EVERYTHING]), Filing::Labels);
+        assert_eq!(Filing::of([]), Filing::Labels);
+        assert_eq!(Filing::Labels.menu_item(), "Labels…");
+        assert_eq!(Filing::Folders.menu_item(), "Move to Folder…");
     }
 
     #[test]

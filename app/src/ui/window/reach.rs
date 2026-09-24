@@ -6,10 +6,11 @@
 //! mailbox it was opened from. [`Reach::new`] holds that rule with no
 //! widget in sight; [`MainWindow::reach`] feeds it what a view shows.
 
-use mailrs_domain::{Target, ThreadSummary};
+use mailrs_domain::{AccountId, Target, ThreadSummary};
 
 use super::MainWindow;
 use super::triage::Marks;
+use crate::offered::Filing;
 use crate::open_thread::OpenThread;
 use crate::ui::Mailbox;
 use crate::ui::conversation::ConversationView;
@@ -90,6 +91,16 @@ impl MainWindow {
             false => self.list.selected_rows(),
         };
         Reach::new(&selected, view.read(Open::of), self.mailbox_of(view))
+    }
+
+    /// Words the Labels button of `view` for how `accounts`, the ones an
+    /// action on it reaches, file mail: in labels or in folders.
+    pub(super) fn word_filing(
+        &self,
+        view: &ConversationView,
+        accounts: impl IntoIterator<Item = AccountId>,
+    ) {
+        view.set_filing(Filing::of(accounts.into_iter().map(|id| self.offers(id))));
     }
 }
 

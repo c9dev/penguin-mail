@@ -29,6 +29,7 @@ use crate::app::{App, Signature};
 use crate::assistant::ToolRequest;
 use crate::compose::{self, ReplyKind};
 use crate::core::Core;
+use crate::offered::Filing;
 use crate::open_thread::OpenThread;
 use crate::permission::{Occasion, Permission};
 use crate::settings::{Change, Effect, Settings};
@@ -172,6 +173,17 @@ fn label_row_name(label: &str, applied: bool) -> String {
     match applied {
         true => fill(&gettext("{label}, on this mail"), &[("label", &shown)]),
         false => shown,
+    }
+}
+
+/// What choosing a row of the label picker does. On an account that files
+/// in folders a message sits in one folder, so a row moves it there; with
+/// labels a row puts its label on, or takes it off when `applied`.
+fn filing_choice(filing: Filing, id: &str, applied: bool) -> TriageAction {
+    match filing {
+        Filing::Folders => TriageAction::MoveTo(id.to_string()),
+        Filing::Labels if applied => TriageAction::RemoveLabel(id.to_string()),
+        Filing::Labels => TriageAction::AddLabel(id.to_string()),
     }
 }
 
@@ -531,6 +543,9 @@ impl MainWindow {
             .label_button
             .set_create_popup_func(move |button| {
                 if let Some(win) = weak.upgrade() {
+                    let reach = win.reach(&win.conversation);
+                    let accounts = reach.targets.iter().map(|t| t.account_id);
+                    win.word_filing(&win.conversation, accounts);
                     button.set_popover(Some(&win.label_popover()));
                 }
             });
@@ -761,7 +776,8 @@ impl MainWindow {
         self.list.set_vips(settings.vips.keys().cloned().collect());
         let mailbox = self.shown();
         if !matches!(mailbox, Mailbox::Search { .. }) {
-            self.sidebar.rebuild(&data, &extras, &mailbox);
+            self.sidebar
+                .rebuild(&data, &extras, &mailbox, |id| self.offers(id));
         }
         self.list
             .set_show_accounts(mailbox.account().is_none() && data.len() > 1);
@@ -1064,6 +1080,14 @@ impl MainWindow {
     // ---- Actions on the selection or the open conversation -----------------
 
     fn picked(self: &Rc<Self>, picked: Picked) {
+        // The rows picked are what the Labels button reaches next, before
+        // the conversation they open has loaded.
+        let accounts: Vec<AccountId> = match &picked {
+            Picked::One(row) => vec![row.account_id],
+            Picked::Many(rows) => rows.iter().map(|r| r.account_id).collect(),
+            Picked::None => Vec::new(),
+        };
+        self.word_filing(&self.conversation, accounts);
         match picked {
             // A queued message has no Gmail thread; the thread run shows
             // it from what the outbox kept.
@@ -1554,11 +1578,17 @@ impl MainWindow {
             .filter(|l| l.kind == mailrs_domain::LabelKind::User)
             .collect();
         labels.sort_by_key(|l| l.name.to_lowercase());
+        let filing = Filing::of([self.offers(account_id)]);
+        // A message sits in one folder, so no folder shows as ticked.
+        let applied = match filing {
+            Filing::Labels => applied,
+            Filing::Folders => HashSet::new(),
+        };
         let create = gtk::Button::builder()
             .child(
                 &adw::ButtonContent::builder()
                     .icon_name("list-add-symbolic")
-                    .label(gettext("New Label…"))
+                    .label(filing.new_item())
                     .build(),
             )
             .css_classes(["flat"])
@@ -1576,7 +1606,7 @@ impl MainWindow {
                         Some(Box::new(move |win, label_id| {
                             win.press_label(
                                 targets.clone(),
-                                TriageAction::AddLabel(label_id),
+                                filing_choice(filing, &label_id, false),
                                 follow.as_ref(),
                             )
                         })),
@@ -1586,7 +1616,7 @@ impl MainWindow {
         }
         if labels.is_empty() {
             let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
-            content.append(&message(&gettext("This account has no labels yet.")));
+            content.append(&message(&filing.none_yet()));
             content.append(&create);
             popover.set_child(Some(&content));
             return popover;
@@ -1631,11 +1661,7 @@ impl MainWindow {
             pop.popdown();
             win.press_label(
                 targets.clone(),
-                if applied.contains(&label.id) {
-                    TriageAction::RemoveLabel(label.id.clone())
-                } else {
-                    TriageAction::AddLabel(label.id.clone())
-                },
+                filing_choice(filing, &label.id, applied.contains(&label.id)),
                 follow.as_ref(),
             );
         });
@@ -2774,5 +2800,21 @@ mod tests {
         assert_eq!(label_row_name("Receipts", false), "Receipts");
         assert_eq!(label_row_name("Receipts", true), "Receipts, on this mail");
         assert_eq!(label_row_name("Work/Tax", false), "Work › Tax");
+    }
+
+    #[test]
+    fn a_folder_row_moves_the_mail_and_a_label_row_toggles_the_label() {
+        assert_eq!(
+            filing_choice(Filing::Folders, "Label_5", false),
+            TriageAction::MoveTo("Label_5".into())
+        );
+        assert_eq!(
+            filing_choice(Filing::Labels, "Label_5", false),
+            TriageAction::AddLabel("Label_5".into())
+        );
+        assert_eq!(
+            filing_choice(Filing::Labels, "Label_5", true),
+            TriageAction::RemoveLabel("Label_5".into())
+        );
     }
 }

@@ -17,8 +17,8 @@ use crate::{BackendError, MailOp};
 const BATCH_FROM: usize = 10;
 
 /// The labels `ops` add and remove, each list in the order the operations
-/// name them. A move to a role, or a keyword Gmail has no label for, is
-/// not something Gmail can do.
+/// name them. A move, or a keyword Gmail has no label for, is not
+/// something Gmail can do.
 pub(super) fn labels_for(ops: &[MailOp]) -> Result<(Vec<String>, Vec<String>), BackendError> {
     let (mut add, mut remove) = (Vec::new(), Vec::new());
     for op in ops {
@@ -27,7 +27,9 @@ pub(super) fn labels_for(ops: &[MailOp]) -> Result<(Vec<String>, Vec<String>), B
             MailOp::RemoveFromMailbox(id) => (Membership::Mailbox(id.clone()), false),
             MailOp::SetKeyword { keyword, on } => (Membership::Keyword(keyword.clone()), *on),
             MailOp::SetCategory { category, on } => (Membership::Category(category.clone()), *on),
-            MailOp::MoveToRole(_) | MailOp::Destroy => return Err(BackendError::Unsupported),
+            MailOp::MoveToRole(_) | MailOp::MoveToMailbox(_) | MailOp::Destroy => {
+                return Err(BackendError::Unsupported);
+            }
         };
         match gmail::label_of(&membership, on) {
             Some((label, true)) => add.push(label),
@@ -177,6 +179,14 @@ mod tests {
     fn gmail_cannot_move_to_a_role() {
         assert!(matches!(
             labels_for(&[MailOp::MoveToRole(Role::Archive)]),
+            Err(BackendError::Unsupported)
+        ));
+    }
+
+    #[test]
+    fn gmail_cannot_move_to_a_mailbox() {
+        assert!(matches!(
+            labels_for(&[MailOp::MoveToMailbox("Label_5".into())]),
             Err(BackendError::Unsupported)
         ));
     }

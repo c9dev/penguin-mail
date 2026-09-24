@@ -165,6 +165,11 @@ fn leaves_list(mailbox: &Mailbox, action: &TriageAction) -> bool {
         TriageAction::Relabel { add, remove } => {
             add.iter().any(adds) || remove.iter().any(|s| removes(s) && !add.contains(s))
         }
+        // A move takes the mail out of every mailbox but the one it lands in.
+        TriageAction::MoveTo(id) => listed.as_ref().is_some_and(|set| {
+            matches!(set, MailSet::Role(_) | MailSet::Mailbox(_))
+                && *set != MailSet::Mailbox(id.clone())
+        }),
         TriageAction::Unstar => removes(&MailSet::flagged()),
         TriageAction::Archive => !matches!(folder, Some(Folder::AllMail | Folder::Archive)),
         TriageAction::Trash => folder != Some(Folder::Trash),
@@ -460,6 +465,11 @@ mod tests {
         // Out of Work into All Mail.
         assert!(leaves(&triage(TriageAction::RemoveLabel("Work".into())), &work));
         assert!(!leaves(&triage(TriageAction::RemoveLabel("Work".into())), &inbox()));
+        // Moved into the Work folder: gone from every list but Work's.
+        let move_to = |id: &str| triage(TriageAction::MoveTo(id.into()));
+        assert!(leaves(&move_to("Work"), &inbox()));
+        assert!(leaves(&move_to("Travel"), &work));
+        assert!(!leaves(&move_to("Work"), &work));
         // Sent and Starred keep mail that only gained a label.
         let sent = Mailbox::Unified(Standard::Sent);
         assert!(!leaves(&triage(TriageAction::AddLabel("Travel".into())), &sent));

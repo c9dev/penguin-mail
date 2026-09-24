@@ -10,9 +10,11 @@ use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{
     Account, AccountId, AccountState, FlagColor, Folder, Label, LabelKind,
 };
+use mailrs_sync::Offers;
 
 use super::{FolderLook, LABEL_COLORS, Mailbox, Standard, describe, label_color_name};
 use crate::format::{PALETTE, account_color_index, palette_name};
+use crate::offered::Filing;
 
 struct Row {
     row: gtk::ListBoxRow,
@@ -195,8 +197,15 @@ impl Sidebar {
     }
 
     /// Rebuilds every row. `selected` is kept selected when it still exists.
-    /// Rebuilds every row. `vips` lists VIPs by address and name.
-    pub fn rebuild(&self, accounts: &[(Account, Vec<Label>)], extras: &Extras, selected: &Mailbox) {
+    /// Rebuilds every row. `vips` lists VIPs by address and name. `offers`
+    /// says what each account offers, which words its menu.
+    pub fn rebuild(
+        &self,
+        accounts: &[(Account, Vec<Label>)],
+        extras: &Extras,
+        selected: &Mailbox,
+        offers: impl Fn(AccountId) -> Offers,
+    ) {
         let vips = &extras.vips;
         let mut label_rules = String::new();
         // Keep the scroll position; label changes rebuild every row.
@@ -297,7 +306,7 @@ impl Sidebar {
         }
         for (account, labels) in accounts {
             let shown = extras.names.get(&account.id);
-            let (row, chevron, count) = heading(account, shown);
+            let (row, chevron, count) = heading(account, shown, offers(account.id));
             self.list.append(&row);
             self.headings.borrow_mut().push(Heading {
                 row,
@@ -660,7 +669,11 @@ fn context_menu(row: &gtk::ListBoxRow, menu: &gio::Menu) {
     row.connect_destroy(move |_| popover.unparent());
 }
 
-fn heading(account: &Account, name: Option<&String>) -> (gtk::ListBoxRow, gtk::Image, gtk::Label) {
+fn heading(
+    account: &Account,
+    name: Option<&String>,
+    offers: Offers,
+) -> (gtk::ListBoxRow, gtk::Image, gtk::Label) {
     let content = gtk::Box::builder()
         .spacing(8)
         .css_classes(["sidebar-heading"])
@@ -743,7 +756,10 @@ fn heading(account: &Account, name: Option<&String>) -> (gtk::ListBoxRow, gtk::I
         &gettext("Hide My Email…"),
         "win.account-hide-my-email",
     ));
-    settings.append_item(&item(&gettext("New Label…"), "win.account-new-label"));
+    settings.append_item(&item(
+        &Filing::of([offers]).new_item(),
+        "win.account-new-label",
+    ));
     menu.append_section(None, &settings);
     let look = gio::Menu::new();
     look.append_item(&item(&gettext("Rename…"), "win.account-rename"));
