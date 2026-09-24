@@ -169,21 +169,31 @@ fn deleted_forever_message(count: usize, threaded: bool) -> String {
 /// What a row of the label popover says. The tick beside the name is the
 /// only sign that a label is already on the mail, so the name carries it.
 fn label_row_name(label: &str, applied: bool) -> String {
-    let shown = label.replace('/', " › ");
+    let shown = shown_name(label);
     match applied {
         true => fill(&gettext("{label}, on this mail"), &[("label", &shown)]),
         false => shown,
     }
 }
 
+/// A nested label's name as the picker shows it, `Work › Tax` for
+/// `Work/Tax`.
+fn shown_name(label: &str) -> String {
+    label.replace('/', " › ")
+}
+
 /// What choosing a row of the label picker does. On an account that files
-/// in folders a message sits in one folder, so a row moves it there; with
-/// labels a row puts its label on, or takes it off when `applied`.
-fn filing_choice(filing: Filing, id: &str, applied: bool) -> TriageAction {
+/// in folders a message sits in one folder, so a row moves it there and
+/// the toast names it as `name`; with labels a row puts its label on, or
+/// takes it off when `applied`.
+fn filing_choice(filing: Filing, id: &str, name: &str, applied: bool) -> Press {
     match filing {
-        Filing::Folders => TriageAction::MoveTo(id.to_string()),
-        Filing::Labels if applied => TriageAction::RemoveLabel(id.to_string()),
-        Filing::Labels => TriageAction::AddLabel(id.to_string()),
+        Filing::Folders => Press::Move {
+            folder: id.to_string(),
+            name: name.to_string(),
+        },
+        Filing::Labels if applied => Press::Label(TriageAction::RemoveLabel(id.to_string())),
+        Filing::Labels => Press::Label(TriageAction::AddLabel(id.to_string())),
     }
 }
 
@@ -1274,13 +1284,14 @@ impl MainWindow {
         taken
     }
 
-    /// Adds or removes a label from the label list. `follow` is the
-    /// conversation the list was opened over; a list opened over one
-    /// message passes none, and the reader stays where they are.
-    pub(super) fn press_label(
+    /// Adds or removes a label from the label list, or moves into a
+    /// folder from it. `follow` is the conversation the list was opened
+    /// over; a list opened over one message passes none, and the reader
+    /// stays where they are.
+    fn press_label(
         self: &Rc<Self>,
         targets: Vec<Target>,
-        action: TriageAction,
+        press: Press,
         follow: Option<&Rc<ConversationView>>,
     ) {
         let view = follow.map_or_else(|| Rc::clone(&self.conversation), Rc::clone);
@@ -1294,7 +1305,7 @@ impl MainWindow {
             Some(_) => press::Scope::Shown,
             None => press::Scope::Carried { open: false },
         };
-        self.press_on(&view, reach, scope, Press::Label(action));
+        self.press_on(&view, reach, scope, press);
     }
 
     /// Mutes the targets, or unmutes them when they are muted already.
@@ -1603,10 +1614,10 @@ impl MainWindow {
                     let (targets, follow) = (targets.clone(), follow.clone());
                     win.new_label(
                         account_id,
-                        Some(Box::new(move |win, label_id| {
+                        Some(Box::new(move |win, label| {
                             win.press_label(
                                 targets.clone(),
-                                filing_choice(filing, &label_id, false),
+                                filing_choice(filing, &label.id, &shown_name(&label.name), false),
                                 follow.as_ref(),
                             )
                         })),
@@ -1636,7 +1647,7 @@ impl MainWindow {
             row.append(&check);
             row.append(
                 &gtk::Label::builder()
-                    .label(label.name.replace('/', " › "))
+                    .label(shown_name(&label.name))
                     .xalign(0.0)
                     .build(),
             );
@@ -1661,7 +1672,12 @@ impl MainWindow {
             pop.popdown();
             win.press_label(
                 targets.clone(),
-                filing_choice(filing, &label.id, applied.contains(&label.id)),
+                filing_choice(
+                    filing,
+                    &label.id,
+                    &shown_name(&label.name),
+                    applied.contains(&label.id),
+                ),
                 follow.as_ref(),
             );
         });
@@ -2805,16 +2821,19 @@ mod tests {
     #[test]
     fn a_folder_row_moves_the_mail_and_a_label_row_toggles_the_label() {
         assert_eq!(
-            filing_choice(Filing::Folders, "Label_5", false),
-            TriageAction::MoveTo("Label_5".into())
+            filing_choice(Filing::Folders, "Label_5", "Receipts", false),
+            Press::Move {
+                folder: "Label_5".into(),
+                name: "Receipts".into(),
+            }
         );
         assert_eq!(
-            filing_choice(Filing::Labels, "Label_5", false),
-            TriageAction::AddLabel("Label_5".into())
+            filing_choice(Filing::Labels, "Label_5", "Receipts", false),
+            Press::Label(TriageAction::AddLabel("Label_5".into()))
         );
         assert_eq!(
-            filing_choice(Filing::Labels, "Label_5", true),
-            TriageAction::RemoveLabel("Label_5".into())
+            filing_choice(Filing::Labels, "Label_5", "Receipts", true),
+            Press::Label(TriageAction::RemoveLabel("Label_5".into()))
         );
     }
 }

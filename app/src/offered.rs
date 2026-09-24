@@ -73,6 +73,23 @@ impl Filing {
         }
     }
 
+    /// The heading of the dialog that asks for a new one's name.
+    pub fn new_heading(self) -> String {
+        match self {
+            Filing::Labels => gettext("New Label"),
+            Filing::Folders => gettext("New Folder"),
+        }
+    }
+
+    /// What that dialog says when the server refuses, with `{reason}`
+    /// still to fill.
+    pub fn create_failed(self) -> String {
+        match self {
+            Filing::Labels => gettext("Could not create the label: {reason}"),
+            Filing::Folders => gettext("Could not create the folder: {reason}"),
+        }
+    }
+
     /// What the picker says when the account has nothing to file in yet.
     pub fn none_yet(self) -> String {
         match self {
@@ -181,6 +198,20 @@ mod tests {
         assert_eq!(Filing::of([]), Filing::Labels);
         assert_eq!(Filing::Labels.menu_item(), "Labels…");
         assert_eq!(Filing::Folders.menu_item(), "Move to Folder…");
+    }
+
+    #[test]
+    fn the_new_folder_dialog_says_folder_where_the_new_label_one_says_label() {
+        assert_eq!(Filing::Labels.new_heading(), "New Label");
+        assert_eq!(Filing::Folders.new_heading(), "New Folder");
+        assert_eq!(
+            Filing::Labels.create_failed(),
+            "Could not create the label: {reason}"
+        );
+        assert_eq!(
+            Filing::Folders.create_failed(),
+            "Could not create the folder: {reason}"
+        );
     }
 
     #[test]

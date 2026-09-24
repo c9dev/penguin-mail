@@ -470,6 +470,13 @@ mod tests {
         assert!(leaves(&move_to("Work"), &inbox()));
         assert!(leaves(&move_to("Travel"), &work));
         assert!(!leaves(&move_to("Work"), &work));
+        // Flagged and a search list mail wherever it sits.
+        assert!(!leaves(&move_to("Work"), &Mailbox::Unified(Standard::Flagged)));
+        let search = Mailbox::Search {
+            query: "kites".into(),
+            account_id: None,
+        };
+        assert!(!leaves(&move_to("Work"), &search));
         // Sent and Starred keep mail that only gained a label.
         let sent = Mailbox::Unified(Standard::Sent);
         assert!(!leaves(&triage(TriageAction::AddLabel("Travel".into())), &sent));

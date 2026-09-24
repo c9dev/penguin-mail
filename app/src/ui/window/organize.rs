@@ -5,18 +5,19 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::glib;
-use mailrs_domain::{AccountId, LabelKind};
+use mailrs_domain::{AccountId, Label, LabelKind};
 use mailrs_sync::{History, MailAction, NewLabels};
 
 use super::{MainWindow, Target};
+use crate::offered::Filing;
 use crate::ui::Mailbox;
 use crate::ui::confirm::{Tone, confirm};
 use super::press::{Press, Scope};
 use super::reach::Reach;
 use mailrs_domain::translate::{fill, gettext};
 
-/// What to do with a label once it exists, given its id.
-pub(super) type AfterCreate = Box<dyn Fn(&Rc<MainWindow>, String)>;
+/// What to do with a label once it exists, given it.
+pub(super) type AfterCreate = Box<dyn Fn(&Rc<MainWindow>, Label)>;
 
 impl MainWindow {
     /// Moves the dragged rows into `mailbox`. True when the drop was taken.
@@ -37,16 +38,18 @@ impl MainWindow {
         self.press_on(&view, reach, Scope::Carried { open }, Press::Drop(mailbox))
     }
 
-    /// Asks for a name and creates a label in `account_id`. With `then`,
-    /// runs it on the new label's id, as the label menu does to apply it.
+    /// Asks for a name and creates a label in `account_id`, or a folder on
+    /// an account that files in folders. With `then`, runs it on the new
+    /// label, as the label menu does to apply it.
     pub(super) fn new_label(self: &Rc<Self>, account_id: AccountId, then: Option<AfterCreate>) {
+        let filing = Filing::of([self.offers(account_id)]);
         let entry = gtk::Entry::builder()
             .placeholder_text(gettext("Name, or Parent/Name to nest it"))
             .activates_default(true)
             .build();
         focus_when_shown(&entry);
         let dialog = adw::AlertDialog::builder()
-            .heading(gettext("New Label"))
+            .heading(filing.new_heading())
             .extra_child(&entry)
             .build();
         dialog.add_responses(&[
@@ -75,10 +78,10 @@ impl MainWindow {
                 .await
             {
                 Ok(label) => match then {
-                    Some(then) => then(&this, label.id),
+                    Some(then) => then(&this, label),
                     None => this.toast(&fill(&gettext("Created “{name}”"), &[("name", &name)])),
                 },
-                Err(err) => this.failed(&gettext("Could not create the label: {reason}"), &err),
+                Err(err) => this.failed(&filing.create_failed(), &err),
             }
         });
     }

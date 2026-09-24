@@ -68,6 +68,9 @@ pub(super) enum Press {
     Remind { at: i64, when: String },
     /// A label from the label list: `AddLabel` or `RemoveLabel`.
     Label(TriageAction),
+    /// A folder from the same list, on an account that files in folders:
+    /// its server id and the name the toast shows.
+    Move { folder: String, name: String },
     /// Rows dragged onto a mailbox in the sidebar.
     Drop(Mailbox),
     /// A flag in this colour, or no flag.
@@ -224,6 +227,11 @@ pub(super) fn plan(pressed: Pressed) -> Plan {
             Some(fill(&gettext("Will remind you {when}"), &[("when", &when)])),
         ),
         Press::Label(triage) => act(MailAction::Triage(triage), History::Record, None),
+        Press::Move { folder, name } => act(
+            MailAction::Triage(TriageAction::MoveTo(folder)),
+            History::Record,
+            Some(moved_to(&name)),
+        ),
         Press::Flag(color) => act(MailAction::Flag(color), History::Record, None),
         Press::DismissFollowUp => act(MailAction::DismissFollowUp, History::Record, None),
         Press::Drop(to) => dropped(&targets, mailbox, &to, act),
@@ -254,8 +262,13 @@ fn dropped(
         triage,
         TriageAction::AddLabel(_) | TriageAction::RemoveLabel(_) | TriageAction::Relabel { .. }
     )
-    .then(|| fill(&gettext("Moved to {mailbox}"), &[("mailbox", &to.title())]));
+    .then(|| moved_to(&to.title()));
     act(MailAction::Triage(triage), History::Record, words)
+}
+
+/// The toast after mail went into the mailbox named `name`.
+fn moved_to(name: &str) -> String {
+    fill(&gettext("Moved to {mailbox}"), &[("mailbox", name)])
 }
 
 /// The question before Delete Forever, which names how much goes. Every
@@ -413,6 +426,26 @@ mod tests {
 
     fn moves_on(step: &Step) -> bool {
         matches!(step, Step::Act { move_on: true, .. })
+    }
+
+    #[test]
+    fn a_move_into_a_folder_names_the_folder_in_its_toast() {
+        let press = Press::Move {
+            folder: "Label_5".into(),
+            name: "Receipts".into(),
+        };
+        let Step::Act {
+            action,
+            move_on,
+            words,
+            ..
+        } = step(press, inbox(), Scope::Shown)
+        else {
+            panic!("the move is taken");
+        };
+        assert_eq!(action, MailAction::Triage(TriageAction::MoveTo("Label_5".into())));
+        assert!(move_on, "the inbox no longer lists the mail");
+        assert_eq!(words.as_deref(), Some("Moved to Receipts"));
     }
 
     #[test]

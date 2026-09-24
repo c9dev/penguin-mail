@@ -1200,7 +1200,7 @@ msgstr ""
 #: app/src/notify.rs:51 app/src/ui/conversation.rs:458
 #: app/src/ui/hide_my_email.rs:279 app/src/ui/queued.rs:58
 #: app/src/ui/templates.rs:149 app/src/ui/window/arrange.rs:92
-#: app/src/ui/window/organize.rs:137
+#: app/src/ui/window/organize.rs:140
 msgid "Delete"
 msgstr ""
 
@@ -1223,7 +1223,7 @@ msgstr ""
 msgid "From {senders}"
 msgstr ""
 
-#: app/src/notify.rs:195 app/src/ui/window.rs:1908
+#: app/src/notify.rs:195 app/src/ui/window.rs:1924
 msgid "Open"
 msgstr ""
 
@@ -1252,34 +1252,50 @@ msgid "New Folder…"
 msgstr ""
 
 #: app/src/offered.rs:79
-msgid "This account has no labels yet."
+msgid "New Label"
 msgstr ""
 
 #: app/src/offered.rs:80
-msgid "This account has no folders yet."
+msgid "New Folder"
 msgstr ""
 
-#: app/src/offered.rs:92
-msgid "{provider} has no calendar that other apps can reach."
+#: app/src/offered.rs:88
+msgid "Could not create the label: {reason}"
 msgstr ""
 
-#: app/src/offered.rs:93
-msgid "{provider} keeps no contacts that other apps can reach."
-msgstr ""
-
-#: app/src/offered.rs:94
-msgid "{provider} has no rules that other apps can change."
+#: app/src/offered.rs:89
+msgid "Could not create the folder: {reason}"
 msgstr ""
 
 #: app/src/offered.rs:96
+msgid "This account has no labels yet."
+msgstr ""
+
+#: app/src/offered.rs:97
+msgid "This account has no folders yet."
+msgstr ""
+
+#: app/src/offered.rs:109
+msgid "{provider} has no calendar that other apps can reach."
+msgstr ""
+
+#: app/src/offered.rs:110
+msgid "{provider} keeps no contacts that other apps can reach."
+msgstr ""
+
+#: app/src/offered.rs:111
+msgid "{provider} has no rules that other apps can change."
+msgstr ""
+
+#: app/src/offered.rs:113
 msgid "{provider} has no automatic reply that other apps can change."
 msgstr ""
 
-#: app/src/offered.rs:99
+#: app/src/offered.rs:116
 msgid "{provider} cannot delete mail for good. Delete moves it to the Trash."
 msgstr ""
 
-#: app/src/offered.rs:101
+#: app/src/offered.rs:118
 msgid "{provider} does not sort the inbox into categories."
 msgstr ""
 
@@ -1680,7 +1696,7 @@ msgstr ""
 msgid "Could not save: {reason}"
 msgstr ""
 
-#: app/src/protection/draft.rs:200 app/src/ui/window.rs:1826
+#: app/src/protection/draft.rs:200 app/src/ui/window.rs:1842
 msgid "Could not open the draft: {reason}"
 msgstr ""
 
@@ -2203,7 +2219,7 @@ msgstr ""
 msgid "New Message"
 msgstr ""
 
-#: app/src/tray.rs:159 app/src/ui/sidebar.rs:750 app/src/ui/window.rs:2207
+#: app/src/tray.rs:159 app/src/ui/sidebar.rs:750 app/src/ui/window.rs:2223
 msgid "Check for Mail"
 msgstr ""
 
@@ -2221,7 +2237,7 @@ msgstr ""
 msgid "Check for Updates"
 msgstr ""
 
-#: app/src/tray.rs:175 app/src/ui/window.rs:2219
+#: app/src/tray.rs:175 app/src/ui/window.rs:2235
 #: app/src/ui/window/shortcuts.rs:508
 msgid "Quit"
 msgstr ""
@@ -2248,7 +2264,7 @@ msgstr ""
 msgid "License"
 msgstr ""
 
-#: app/src/ui/about.rs:170 app/src/ui/window.rs:2218
+#: app/src/ui/about.rs:170 app/src/ui/window.rs:2234
 msgid "About Penguin Mail"
 msgstr ""
 
@@ -2430,7 +2446,7 @@ msgid "Edit {server}"
 msgstr ""
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1413
-#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:2042
+#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:2058
 msgid "Remove"
 msgstr ""
 
@@ -2517,7 +2533,7 @@ msgstr ""
 #: app/src/ui/smart_editor.rs:150 app/src/ui/templates.rs:239
 #: app/src/ui/unsubscribe.rs:95 app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
 #: app/src/ui/window/arrange.rs:132 app/src/ui/window/images.rs:101
-#: app/src/ui/window/organize.rs:53 app/src/ui/window/organize.rs:101
+#: app/src/ui/window/organize.rs:56 app/src/ui/window/organize.rs:104
 msgid "Cancel"
 msgstr ""
 
@@ -3462,7 +3478,7 @@ msgid "Not Junk (Ctrl+Shift+J)"
 msgstr ""
 
 #: app/src/ui/conversation.rs:934 app/src/ui/window/message_menu.rs:125
-#: app/src/ui/window/press.rs:289
+#: app/src/ui/window/press.rs:302
 msgid "Delete Forever"
 msgstr ""
 
@@ -3628,7 +3644,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2301
+#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2317
 msgid "Add an account first"
 msgstr ""
 
@@ -3648,7 +3664,7 @@ msgstr ""
 
 #: app/src/ui/hide_my_email.rs:348 app/src/ui/rules.rs:307
 #: app/src/ui/smart_editor.rs:146 app/src/ui/templates.rs:235
-#: app/src/ui/window/organize.rs:54 app/src/ui/window/organize.rs:277
+#: app/src/ui/window/organize.rs:57 app/src/ui/window/organize.rs:280
 msgid "Create"
 msgstr ""
 
@@ -4203,7 +4219,7 @@ msgstr ""
 msgid "No signature"
 msgstr ""
 
-#: app/src/ui/queued.rs:65 app/src/ui/window/press.rs:303
+#: app/src/ui/queued.rs:65 app/src/ui/window/press.rs:316
 msgid "Cancel Send"
 msgstr ""
 
@@ -4408,7 +4424,7 @@ msgstr ""
 msgid "Rules…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:756 app/src/ui/window.rs:2210
+#: app/src/ui/sidebar.rs:756 app/src/ui/window.rs:2226
 msgid "Hide My Email…"
 msgstr ""
 
@@ -4576,7 +4592,7 @@ msgstr ""
 msgid "VIP"
 msgstr ""
 
-#: app/src/ui/thread_row.rs:82 app/src/ui/window.rs:236
+#: app/src/ui/thread_row.rs:82 app/src/ui/window.rs:246
 msgid "Muted"
 msgstr ""
 
@@ -4752,7 +4768,7 @@ msgstr ""
 msgid "%a, %-d %b %Y"
 msgstr ""
 
-#: app/src/ui/welcome.rs:10 app/src/ui/window.rs:1978
+#: app/src/ui/welcome.rs:10 app/src/ui/window.rs:1994
 msgid "Sign In with Google"
 msgstr ""
 
@@ -4787,291 +4803,291 @@ msgstr[1] ""
 msgid "{label}, on this mail"
 msgstr ""
 
-#: app/src/ui/window.rs:193
+#: app/src/ui/window.rs:203
 msgid "Added {person} to VIPs"
 msgstr ""
 
-#: app/src/ui/window.rs:194
+#: app/src/ui/window.rs:204
 msgid "Removed {person} from VIPs"
 msgstr ""
 
-#: app/src/ui/window.rs:200
+#: app/src/ui/window.rs:210
 msgid "Could not load mail: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:216
+#: app/src/ui/window.rs:226
 msgid "Flagged red"
 msgstr ""
 
-#: app/src/ui/window.rs:217
+#: app/src/ui/window.rs:227
 msgid "Flagged orange"
 msgstr ""
 
-#: app/src/ui/window.rs:218
+#: app/src/ui/window.rs:228
 msgid "Flagged yellow"
 msgstr ""
 
-#: app/src/ui/window.rs:219
+#: app/src/ui/window.rs:229
 msgid "Flagged green"
 msgstr ""
 
-#: app/src/ui/window.rs:220
+#: app/src/ui/window.rs:230
 msgid "Flagged blue"
 msgstr ""
 
-#: app/src/ui/window.rs:221
+#: app/src/ui/window.rs:231
 msgid "Flagged purple"
 msgstr ""
 
-#: app/src/ui/window.rs:222
+#: app/src/ui/window.rs:232
 msgid "Flagged gray"
 msgstr ""
 
-#: app/src/ui/window.rs:233 app/src/ui/window.rs:331
+#: app/src/ui/window.rs:243 app/src/ui/window.rs:341
 msgid "Labels changed"
 msgstr ""
 
-#: app/src/ui/window.rs:237
+#: app/src/ui/window.rs:247
 msgid "Unmuted"
 msgstr ""
 
-#: app/src/ui/window.rs:239
+#: app/src/ui/window.rs:249
 msgid "Muted {count} conversation"
 msgid_plural "Muted {count} conversations"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:245
+#: app/src/ui/window.rs:255
 msgid "Muted {count} message"
 msgid_plural "Muted {count} messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:251
+#: app/src/ui/window.rs:261
 msgid "Unmuted {count} conversation"
 msgid_plural "Unmuted {count} conversations"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:257
+#: app/src/ui/window.rs:267
 msgid "Unmuted {count} message"
 msgid_plural "Unmuted {count} messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:267
+#: app/src/ui/window.rs:277
 msgid "Dismissed {count} follow-up"
 msgid_plural "Dismissed {count} follow-ups"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:276
+#: app/src/ui/window.rs:286
 msgid "Archived"
 msgstr ""
 
-#: app/src/ui/window.rs:278
+#: app/src/ui/window.rs:288
 msgid "Archived {count} conversation"
 msgid_plural "Archived {count} conversations"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:284
+#: app/src/ui/window.rs:294
 msgid "Archived {count} message"
 msgid_plural "Archived {count} messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:289
+#: app/src/ui/window.rs:299
 msgid "Moved to Trash"
 msgstr ""
 
-#: app/src/ui/window.rs:291
+#: app/src/ui/window.rs:301
 msgid "Moved {count} conversation to Trash"
 msgid_plural "Moved {count} conversations to Trash"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:297
+#: app/src/ui/window.rs:307
 msgid "Moved {count} message to Trash"
 msgid_plural "Moved {count} messages to Trash"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:302
+#: app/src/ui/window.rs:312
 msgid "Marked as junk"
 msgstr ""
 
-#: app/src/ui/window.rs:304
+#: app/src/ui/window.rs:314
 msgid "Marked {count} conversation as junk"
 msgid_plural "Marked {count} conversations as junk"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:310
+#: app/src/ui/window.rs:320
 msgid "Marked {count} message as junk"
 msgid_plural "Marked {count} messages as junk"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:315
+#: app/src/ui/window.rs:325
 msgid "Moved to the Inbox"
 msgstr ""
 
-#: app/src/ui/window.rs:317
+#: app/src/ui/window.rs:327
 msgid "Moved {count} conversation to the Inbox"
 msgid_plural "Moved {count} conversations to the Inbox"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:323
+#: app/src/ui/window.rs:333
 msgid "Moved {count} message to the Inbox"
 msgid_plural "Moved {count} messages to the Inbox"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:460
+#: app/src/ui/window.rs:470
 msgid "Penguin Mail (Demo)"
 msgstr ""
 
-#: app/src/ui/window.rs:760
+#: app/src/ui/window.rs:770
 msgid "Could not read accounts: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:792
+#: app/src/ui/window.rs:802
 msgid "Sign in again to keep {account} syncing"
 msgstr ""
 
-#: app/src/ui/window.rs:795
+#: app/src/ui/window.rs:805
 msgid "Sign In"
 msgstr ""
 
-#: app/src/ui/window.rs:1334
+#: app/src/ui/window.rs:1345
 msgid "Could not delete the mail: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:1394
+#: app/src/ui/window.rs:1405
 msgid "Turn On the {service}"
 msgstr ""
 
-#: app/src/ui/window.rs:1397
+#: app/src/ui/window.rs:1408
 msgid ""
 "The Google Cloud project Penguin Mail signs in with has the {service} "
 "switched off, so Google refuses before it can ask for your permission. Turn "
 "it on, wait a minute, and try again."
 msgstr ""
 
-#: app/src/ui/window.rs:1403
+#: app/src/ui/window.rs:1414
 msgid "Open Google Cloud"
 msgstr ""
 
-#: app/src/ui/window.rs:1484 app/src/ui/window/scheduled.rs:21
+#: app/src/ui/window.rs:1495 app/src/ui/window/scheduled.rs:21
 #: app/src/ui/window/shortcuts.rs:422
 msgid "Undo"
 msgstr ""
 
-#: app/src/ui/window.rs:1505
+#: app/src/ui/window.rs:1516
 msgid "Nothing to undo"
 msgstr ""
 
-#: app/src/ui/window.rs:1511
+#: app/src/ui/window.rs:1522
 msgid "{action} undone"
 msgstr ""
 
-#: app/src/ui/window.rs:1561
+#: app/src/ui/window.rs:1572
 msgid "Open or select mail to label it."
 msgstr ""
 
-#: app/src/ui/window.rs:1570
+#: app/src/ui/window.rs:1581
 msgid "Select mail from one account to label it."
 msgstr ""
 
-#: app/src/ui/window.rs:1773
+#: app/src/ui/window.rs:1789
 msgid "Could not include {file}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:1884
+#: app/src/ui/window.rs:1900
 msgid "Downloading {file}…"
 msgstr ""
 
-#: app/src/ui/window.rs:1905 app/src/ui/window/attachments.rs:229
+#: app/src/ui/window.rs:1921 app/src/ui/window/attachments.rs:229
 msgid "Saved {file} to Downloads"
 msgstr ""
 
-#: app/src/ui/window.rs:1923 app/src/ui/window/attachments.rs:234
+#: app/src/ui/window.rs:1939 app/src/ui/window/attachments.rs:234
 msgid "Could not save {file}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:1957
+#: app/src/ui/window.rs:1973
 msgid "Waiting for Your Browser…"
 msgstr ""
 
-#: app/src/ui/window.rs:1959
+#: app/src/ui/window.rs:1975
 msgid "Continue in your browser"
 msgstr ""
 
-#: app/src/ui/window.rs:1965
+#: app/src/ui/window.rs:1981
 msgid "Added {account}. Downloading mail…"
 msgstr ""
 
-#: app/src/ui/window.rs:1988
+#: app/src/ui/window.rs:2004
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr ""
 
-#: app/src/ui/window.rs:1990
+#: app/src/ui/window.rs:2006
 msgid "Get a Release"
 msgstr ""
 
-#: app/src/ui/window.rs:2035
+#: app/src/ui/window.rs:2051
 msgid "Remove {account}?"
 msgstr ""
 
-#: app/src/ui/window.rs:2039
+#: app/src/ui/window.rs:2055
 msgid ""
 "Its downloaded mail and saved sign-in are deleted from this computer. "
 "Nothing changes in Gmail."
 msgstr ""
 
-#: app/src/ui/window.rs:2055
+#: app/src/ui/window.rs:2071
 msgid "Removed {account}"
 msgstr ""
 
-#: app/src/ui/window.rs:2057
+#: app/src/ui/window.rs:2073
 msgid "Could not remove {account}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:2208
+#: app/src/ui/window.rs:2224
 msgid "Add Account…"
 msgstr ""
 
-#: app/src/ui/window.rs:2209
+#: app/src/ui/window.rs:2225
 msgid "New Smart Mailbox…"
 msgstr ""
 
-#: app/src/ui/window.rs:2216 app/src/ui/window/shortcuts.rs:485
+#: app/src/ui/window.rs:2232 app/src/ui/window/shortcuts.rs:485
 msgid "Preferences"
 msgstr ""
 
-#: app/src/ui/window.rs:2217
+#: app/src/ui/window.rs:2233
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: app/src/ui/window.rs:2225 app/src/ui/window.rs:2227
+#: app/src/ui/window.rs:2241 app/src/ui/window.rs:2243
 msgid "Main Menu"
 msgstr ""
 
-#: app/src/ui/window.rs:2481
+#: app/src/ui/window.rs:2497
 msgid "Open a message from the person first"
 msgstr ""
 
-#: app/src/ui/window.rs:2552
+#: app/src/ui/window.rs:2568
 msgid "Penguin Mail shows the new language after a restart"
 msgstr ""
 
-#: app/src/ui/window.rs:2554 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:2570 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr ""
 
-#: app/src/ui/window/arrange.rs:90 app/src/ui/window/organize.rs:135
+#: app/src/ui/window/arrange.rs:90 app/src/ui/window/organize.rs:138
 msgid "Delete “{name}”?"
 msgstr ""
 
@@ -5154,9 +5170,9 @@ msgid "Open a conversation first"
 msgstr ""
 
 #: app/src/ui/window/detached.rs:131 app/src/ui/window/export.rs:75
-#: app/src/ui/window/export.rs:138 app/src/ui/window/organize.rs:69
-#: app/src/ui/window/organize.rs:117 app/src/ui/window/organize.rs:146
-#: app/src/ui/window/organize.rs:174 app/src/ui/window/senders.rs:283
+#: app/src/ui/window/export.rs:138 app/src/ui/window/organize.rs:72
+#: app/src/ui/window/organize.rs:120 app/src/ui/window/organize.rs:149
+#: app/src/ui/window/organize.rs:177 app/src/ui/window/senders.rs:283
 msgid "That account is not connected"
 msgstr ""
 
@@ -5355,55 +5371,47 @@ msgstr ""
 msgid "Search"
 msgstr ""
 
-#: app/src/ui/window/organize.rs:44
+#: app/src/ui/window/organize.rs:47
 msgid "Name, or Parent/Name to nest it"
 msgstr ""
 
-#: app/src/ui/window/organize.rs:49
-msgid "New Label"
-msgstr ""
-
-#: app/src/ui/window/organize.rs:79
+#: app/src/ui/window/organize.rs:82
 msgid "Created “{name}”"
 msgstr ""
 
-#: app/src/ui/window/organize.rs:81
-msgid "Could not create the label: {reason}"
-msgstr ""
-
-#: app/src/ui/window/organize.rs:96
+#: app/src/ui/window/organize.rs:99
 msgid "Rename Label"
 msgstr ""
 
-#: app/src/ui/window/organize.rs:97
+#: app/src/ui/window/organize.rs:100
 msgid "Labels nested under it move along."
 msgstr ""
 
-#: app/src/ui/window/organize.rs:102
+#: app/src/ui/window/organize.rs:105
 msgid "Rename"
 msgstr ""
 
-#: app/src/ui/window/organize.rs:125
+#: app/src/ui/window/organize.rs:128
 msgid "Could not rename the label: {reason}"
 msgstr ""
 
-#: app/src/ui/window/organize.rs:136
+#: app/src/ui/window/organize.rs:139
 msgid "Its mail stays in Gmail, without the label. Nested labels stay too."
 msgstr ""
 
-#: app/src/ui/window/organize.rs:156
+#: app/src/ui/window/organize.rs:159
 msgid "Deleted “{name}”"
 msgstr ""
 
-#: app/src/ui/window/organize.rs:158
+#: app/src/ui/window/organize.rs:161
 msgid "Could not delete the label: {reason}"
 msgstr ""
 
-#: app/src/ui/window/organize.rs:187
+#: app/src/ui/window/organize.rs:190
 msgid "Could not change the color: {reason}"
 msgstr ""
 
-#: app/src/ui/window/organize.rs:279
+#: app/src/ui/window/organize.rs:282
 msgid "Only Where It Exists"
 msgstr ""
 
@@ -5435,75 +5443,75 @@ msgstr ""
 msgid "Deleted. They will not be sent."
 msgstr ""
 
-#: app/src/ui/window/press.rs:205
+#: app/src/ui/window/press.rs:208
 msgid "Back in the Inbox"
 msgstr ""
 
-#: app/src/ui/window/press.rs:224
+#: app/src/ui/window/press.rs:227
 msgid "Will remind you {when}"
 msgstr ""
 
-#: app/src/ui/window/press.rs:244
+#: app/src/ui/window/press.rs:252
 msgid "Drop mail on its own account's mailboxes"
 msgstr ""
 
-#: app/src/ui/window/press.rs:257
+#: app/src/ui/window/press.rs:271
 msgid "Moved to {mailbox}"
 msgstr ""
 
-#: app/src/ui/window/press.rs:268
+#: app/src/ui/window/press.rs:281
 msgid "Delete This Conversation Forever?"
 msgstr ""
 
-#: app/src/ui/window/press.rs:270
+#: app/src/ui/window/press.rs:283
 msgid "Delete {count} Conversation Forever?"
 msgid_plural "Delete {count} Conversations Forever?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window/press.rs:275
+#: app/src/ui/window/press.rs:288
 msgid "Delete This Message Forever?"
 msgstr ""
 
-#: app/src/ui/window/press.rs:277
+#: app/src/ui/window/press.rs:290
 msgid "Delete {count} Message Forever?"
 msgid_plural "Delete {count} Messages Forever?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window/press.rs:286
+#: app/src/ui/window/press.rs:299
 msgid "Gmail deletes it from every device and cannot bring it back."
 msgstr ""
 
-#: app/src/ui/window/press.rs:287
+#: app/src/ui/window/press.rs:300
 msgid "Gmail deletes them from every device and cannot bring them back."
 msgstr ""
 
-#: app/src/ui/window/press.rs:303
+#: app/src/ui/window/press.rs:316
 msgid "Cancel Send (Delete)"
 msgstr ""
 
-#: app/src/ui/window/press.rs:305
+#: app/src/ui/window/press.rs:318
 msgid "Delete from Outbox"
 msgstr ""
 
-#: app/src/ui/window/press.rs:306
+#: app/src/ui/window/press.rs:319
 msgid "Delete from Outbox (Delete)"
 msgstr ""
 
-#: app/src/ui/window/press.rs:309
+#: app/src/ui/window/press.rs:322
 msgid "Cancel Reminder"
 msgstr ""
 
-#: app/src/ui/window/press.rs:310
+#: app/src/ui/window/press.rs:323
 msgid "Cancel Reminder (Delete)"
 msgstr ""
 
-#: app/src/ui/window/press.rs:313
+#: app/src/ui/window/press.rs:326
 msgid "Dismiss Follow-Up"
 msgstr ""
 
-#: app/src/ui/window/press.rs:314
+#: app/src/ui/window/press.rs:327
 msgid "Dismiss Follow-Up (Delete)"
 msgstr ""
 
