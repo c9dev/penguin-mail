@@ -6,7 +6,7 @@ use chrono::{Duration, Local};
 use mailrs_domain::{Attachment, MessageBody};
 use mailrs_gmail::labels as gmail;
 use mailrs_store::{address_book, templates};
-use mailrs_sync::{AccountServices, MailAction, MailCapabilities};
+use mailrs_sync::{AccountServices, MailAction, MailCapabilities, TriageAction};
 use serde_json::json;
 
 use super::super::Permission;
@@ -165,6 +165,50 @@ async fn delete_forever_on_a_server_that_cannot_says_why_and_asks_nothing() {
             "unavailable": "Gmail cannot delete mail for good. Delete moves it to the Trash."
         }))
     );
+    assert!(h.asked().questions.is_empty());
+}
+
+/// One account whose server files mail in folders, as IMAP does.
+async fn folder_account() -> Harness {
+    Harness::with_services(|gmail, services| {
+        let caps = MailCapabilities {
+            labels: false,
+            ..services.capabilities()
+        };
+        *services = AccountServices::fake_with_capabilities(Arc::clone(gmail), caps);
+    })
+    .await
+}
+
+#[tokio::test]
+async fn labelling_on_a_folder_account_moves_the_mail_into_the_folder() {
+    let h = folder_account().await;
+    // The store holds no thread t1, so the move fails; the action it
+    // tried is what counts.
+    let _ = h
+        .run("label", json!({"targets": [target("t1")], "add": ["kites"]}))
+        .await;
+    assert_eq!(
+        h.asked().mail_changed[0].0,
+        MailAction::Triage(TriageAction::MoveTo("Label_kites".into()))
+    );
+}
+
+#[tokio::test]
+async fn a_label_change_a_folder_account_cannot_make_says_why() {
+    let h = folder_account().await;
+    for input in [
+        json!({"targets": [target("t1")], "add": ["Kites", "Boats"]}),
+        json!({"targets": [target("t1")], "remove": ["Kites"]}),
+        json!({"targets": [target("t1")], "add": ["Boats"]}),
+    ] {
+        let answer = h.run("label", input.clone()).await;
+        assert!(
+            answer.as_ref().is_ok_and(|a| a["unavailable"].is_string()),
+            "{input}: {answer:?}"
+        );
+    }
+    assert!(h.asked().mail_changed.is_empty());
     assert!(h.asked().questions.is_empty());
 }
 

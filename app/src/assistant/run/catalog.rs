@@ -309,7 +309,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "label",
             label: || gettext("Changing labels"),
-            description: "Adds or removes Gmail labels on conversations, by label name. When add names a label an account lacks, the user decides whether to create it; if they decline, only mail in accounts that have the label gets it.",
+            description: "Adds or removes Gmail labels on conversations, by label name. When add names a label an account lacks, the user decides whether to create it; if they decline, only mail in accounts that have the label gets it. On an account that files mail in folders, one name in add and none in remove moves the mail into that folder.",
             input: || {
                 json!({
                     "targets": targets(),

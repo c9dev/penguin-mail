@@ -593,12 +593,15 @@ impl<A: Accounts> Tools<A> {
     /// The answer for a tool the account cannot serve: why, in the words
     /// Preferences uses, as a result the model reads rather than an error.
     fn unavailable(&self, account: &Account, missing: Missing) -> Option<Value> {
-        let services = self.modules.accounts.services(account.id);
-        let offers = crate::offered::offers_for(services.as_ref());
-        offers
+        self.offers(account.id)
             .missing()
             .contains(&missing)
             .then(|| json!({"unavailable": crate::offered::reason(account.provider, missing)}))
+    }
+
+    fn offers(&self, account_id: AccountId) -> mailrs_sync::Offers {
+        let services = self.modules.accounts.services(account_id);
+        crate::offered::offers_for(services.as_ref())
     }
 
     fn email_of(&self, account_id: AccountId) -> String {
@@ -1052,6 +1055,13 @@ impl<A: Accounts> Tools<A> {
                 .unwrap_or_default()
         };
         let (add, remove) = (names("add"), names("remove"));
+        let in_folders = targets
+            .iter()
+            .map(|t| t.account_id)
+            .find(|id| !self.offers(*id).labels);
+        if let Some(account_id) = in_folders {
+            return self.move_by_label(targets, account_id, &add, &remove).await;
+        }
         let plan = NewLabels::plan(&targets, &add, &remove, |account_id| {
             self.labels_of(account_id)
                 .into_iter()
@@ -1081,6 +1091,42 @@ impl<A: Accounts> Tools<A> {
             );
         }
         Ok(result)
+    }
+
+    /// Labelling on an account that files in folders, where `account_id`
+    /// is one. A message there sits in one folder, and adding a label
+    /// would copy it, so one name to add and none to remove moves the
+    /// mail into that folder. Anything else is out of reach, and the
+    /// answer says why. The answers are model-facing, in English.
+    async fn move_by_label(
+        &self,
+        targets: Vec<Target>,
+        account_id: AccountId,
+        add: &[String],
+        remove: &[String],
+    ) -> ToolResult {
+        let email = self.email_of(account_id);
+        let unavailable = |why: String| Ok(json!({"unavailable": why}));
+        if targets.iter().any(|t| t.account_id != account_id) {
+            return unavailable(format!(
+                "{email} files mail in folders. Label or move its mail in a call of its own."
+            ));
+        }
+        let ([name], []) = (add, remove) else {
+            return unavailable(format!(
+                "{email} files mail in folders, one folder per message. Name one folder in `add` \
+                 and none in `remove` to move the mail there."
+            ));
+        };
+        let folder = self
+            .labels_of(account_id)
+            .into_iter()
+            .find(|l| l.kind == LabelKind::User && l.name.eq_ignore_ascii_case(name));
+        let Some(folder) = folder else {
+            return unavailable(format!("{email} has no folder called {name}."));
+        };
+        let action = MailAction::Triage(TriageAction::MoveTo(folder.id));
+        report(&self.act(targets, action).await)
     }
 
     /// The question before labelling makes new labels. `partly` says a "no"
