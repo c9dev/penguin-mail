@@ -1,0 +1,31 @@
+<clientConfig version="1.1">
+  <emailProvider id="yandex.ru">
+    <domain>yandex.ru</domain>
+    <domain>ya.ru</domain>
+    <domain>yandex.com</domain>
+    <domain>narod.ru</domain>
+    <domain>yandex.com.tr</domain>
+    <displayName>Yandex Mail</displayName>
+    <displayShortName>Yandex</displayShortName>
+    <incomingServer type="imap">
+      <hostname>imap.yandex.com</hostname>
+      <port>993</port>
+      <socketType>SSL</socketType>
+      <authentication>OAuth2</authentication>
+      <authentication>password-cleartext</authentication>
+      <username>%EMAILADDRESS%</username>
+    </incomingServer>
+    <outgoingServer type="smtp">
+      <hostname>smtp.yandex.com</hostname>
+      <port>465</port>
+      <socketType>SSL</socketType>
+      <authentication>OAuth2</authentication>
+      <authentication>password-cleartext</authentication>
+      <username>%EMAILADDRESS%</username>
+    </outgoingServer>
+    <enable visiturl="https://mail.yandex.ru/neo2/#setup/client">
+	<instruction>Check IMAP setting on</instruction>
+	<instruction lang="ru">Включите настройку imap.yandex.com</instruction>
+    </enable>
+  </emailProvider>
+</clientConfig>

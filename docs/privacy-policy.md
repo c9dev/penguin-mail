@@ -1,6 +1,6 @@
 # Penguin Mail privacy policy
 
-Last updated: 21 September 2026
+Last updated: 24 September 2026
 
 Penguin Mail is a desktop email client for Gmail, published by Pivotd
 (https://pivotd.com). It runs on your own computer. This policy explains what
@@ -45,6 +45,16 @@ that needs them, and never at sign-in:
   those images from wherever the sender hosted them. When you click
   Unsubscribe, Penguin Mail contacts the address the mailing list gave for
   that purpose.
+- When you add an account from a provider other than Google, Penguin Mail
+  looks for its mail servers using the part of your address after the @,
+  never the whole address. For a provider it knows, such as Fastmail or
+  iCloud, it asks nobody. Otherwise it asks your DNS servers for the
+  domain's mail records, and stops there when they point at a provider it
+  knows. If they do not, it asks the domain's own web server and Mozilla's
+  Thunderbird database (autoconfig.thunderbird.net) for its mail settings,
+  asks the same of the company that receives the domain's mail, and tries
+  to connect to the usual mail server names at the domain. It sends your
+  password only to the servers you then sign in to.
 - Penguin Mail has two AI features, the assistant and translation. Each is
   off until you choose a model for it, and each sends what it reads to the
   model chosen for it, which may run on your own computer or at Anthropic.

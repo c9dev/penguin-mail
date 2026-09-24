@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["domain", "mime", "gmail", "store", "sync", "pgp", "smime", "ai", "cli", "app"]
+members = ["domain", "mime", "gmail", "discover", "store", "sync", "pgp", "smime", "ai", "cli", "app"]
 
 [workspace.package]
 version = "0.3.0"
@@ -13,6 +13,7 @@ repository = "https://github.com/c9dev/penguin-mail"
 mailrs-domain = { path = "domain" }
 mailrs-mime = { path = "mime" }
 mailrs-gmail = { path = "gmail" }
+mailrs-discover = { path = "discover" }
 mailrs-store = { path = "store" }
 mailrs-sync = { path = "sync" }
 mailrs-pgp = { path = "pgp" }
@@ -37,6 +38,8 @@ gtk = { package = "gtk4", version = "0.11.4", features = ["v4_20"] }
 # The tokenizer behind the sanitizer, which reads mail HTML without a
 # browser; ammonia already brings it.
 html5ever = "0.40.1"
+# The MX and SRV lookups discovery makes, through the system's DNS servers.
+hickory-resolver = "0.26.3"
 icalendar = "0.17.13"
 keyring = "4.2.0"
 libc = "0.2.189"
@@ -44,10 +47,20 @@ ksni = "0.3.6"
 mail-builder = "1.0.0"
 mail-parser = { version = "0.11.9", features = ["full_encoding"] }
 notify-rust = "4.18.0"
+# The Public Suffix List, compiled in, so discovery can tell a registrable
+# domain from a suffix such as `co.uk` without asking anyone.
+psl = "2.1.237"
 pulldown-cmark = "0.13.4"
 rand = "0.10.2"
 reqwest = { version = "0.13.5", features = ["json", "form", "query"] }
+# Reads autoconfig files. It refuses a document type declaration, so a file
+# cannot expand entities.
+roxmltree = "0.21.1"
 rusqlite = { version = "0.40.2", features = ["bundled"] }
+# reqwest already brings both; discovery's probe uses them directly, with
+# the platform's certificate store.
+rustls = "0.23.45"
+rustls-platform-verifier = "0.7.0"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 sha2 = "0.11.0"
@@ -55,6 +68,8 @@ spellbook = "0.4.2"
 tempfile = "3.27.0"
 thiserror = "2.0.20"
 tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "net", "time", "sync", "io-util", "signal", "process", "fs"] }
+# reqwest already brings it; discovery's probe runs TLS over tokio with it.
+tokio-rustls = "0.26.5"
 toml = "1.1.6"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }

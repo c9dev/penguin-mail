@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Written by hand from GMX's own help pages (hilfe.gmx.net), read on
+     2026-09-24, in the form Mozilla's autoconfig format takes. -->
+<clientConfig version="1.1">
+  <emailProvider id="gmx.net">
+    <domain>gmx.net</domain>
+    <displayName>GMX</displayName>
+    <incomingServer type="imap">
+      <hostname>imap.gmx.net</hostname>
+      <port>993</port>
+      <socketType>SSL</socketType>
+      <username>%EMAILADDRESS%</username>
+      <authentication>password-cleartext</authentication>
+    </incomingServer>
+    <outgoingServer type="smtp">
+      <hostname>mail.gmx.net</hostname>
+      <port>465</port>
+      <socketType>SSL</socketType>
+      <username>%EMAILADDRESS%</username>
+      <authentication>password-cleartext</authentication>
+    </outgoingServer>
+    <outgoingServer type="smtp">
+      <hostname>mail.gmx.net</hostname>
+      <port>587</port>
+      <socketType>STARTTLS</socketType>
+      <username>%EMAILADDRESS%</username>
+      <authentication>password-cleartext</authentication>
+    </outgoingServer>
+    <enable visiturl="https://hilfe.gmx.net/pop-imap/einschalten.html">
+      <instruction lang="de">POP3- und IMAP-Zugriff erlauben</instruction>
+    </enable>
+  </emailProvider>
+</clientConfig>
