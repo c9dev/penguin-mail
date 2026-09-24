@@ -155,18 +155,18 @@ pub struct ThreadFilter {
 
 /// SQL text with anonymous `?` placeholders, and their values in order.
 #[derive(Default)]
-struct Sql {
-    text: String,
-    params: Vec<Value>,
+pub(crate) struct Sql {
+    pub(crate) text: String,
+    pub(crate) params: Vec<Value>,
 }
 
 impl Sql {
-    fn push(&mut self, text: &str) -> &mut Self {
+    pub(crate) fn push(&mut self, text: &str) -> &mut Self {
         self.text.push_str(text);
         self
     }
 
-    fn bind(&mut self, value: impl Into<Value>) -> &mut Self {
+    pub(crate) fn bind(&mut self, value: impl Into<Value>) -> &mut Self {
         self.text.push('?');
         self.params.push(value.into());
         self

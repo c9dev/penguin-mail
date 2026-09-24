@@ -58,6 +58,16 @@ impl Query {
     pub fn not_in(set: MailSet) -> Query {
         Query::Not(Box::new(Query::is_in(set)))
     }
+
+    /// Whether the tree names `set` outside a `Not`, as a folder that
+    /// lists the Trash does.
+    pub fn asks_for(&self, set: &MailSet) -> bool {
+        match self {
+            Query::Term(Term::In(named)) => named == set,
+            Query::Term(_) | Query::Not(_) => false,
+            Query::And(items) | Query::Or(items) => items.iter().any(|q| q.asks_for(set)),
+        }
+    }
 }
 
 /// `text` without double quotes or parentheses and without the spaces at
@@ -90,5 +100,17 @@ mod tests {
         assert_eq!(plain("  \"Ann\" (work) "), "Ann work");
         assert_eq!(plain("\"()"), "");
         assert_eq!(plain("Zé Ninguém"), "Zé Ninguém");
+    }
+
+    #[test]
+    fn a_tree_asks_for_a_set_it_names_outside_a_not() {
+        let trash = MailSet::Role(Role::Trash);
+        assert!(Query::is_in(trash.clone()).asks_for(&trash));
+        assert!(
+            Query::Or(vec![Query::term(Term::Unread), Query::is_in(trash.clone())])
+                .asks_for(&trash)
+        );
+        assert!(!Query::not_in(trash.clone()).asks_for(&trash));
+        assert!(!Query::And(vec![]).asks_for(&trash));
     }
 }

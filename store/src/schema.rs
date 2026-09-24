@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
 use rusqlite::Connection;
+use rusqlite::functions::FunctionFlags;
 
 use crate::{Result, StoreError};
 
@@ -601,6 +602,14 @@ pub(crate) fn configure(conn: &Connection) -> Result<()> {
     // and SQLite keeps the file at its largest size unless told a limit
     // to cut it back to after a checkpoint.
     conn.pragma_update(None, "journal_size_limit", JOURNAL_SIZE_LIMIT)?;
+    // SQLite's `lower` folds ASCII letters alone, so a search for "élia"
+    // would miss "Élia". Query trees fold text through this instead.
+    conn.create_scalar_function(
+        crate::query::FOLD,
+        1,
+        FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DETERMINISTIC,
+        |ctx| Ok(ctx.get::<Option<String>>(0)?.unwrap_or_default().to_lowercase()),
+    )?;
     Ok(())
 }
 
