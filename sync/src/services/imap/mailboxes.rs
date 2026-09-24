@@ -173,9 +173,12 @@ pub(super) fn read_listing(listed: &[Listed]) -> (Vec<Folder>, Vec<RemoteMailbox
         .iter()
         .map(|l| Folder {
             id: l.name.clone(),
-            role: match l.name.eq_ignore_ascii_case("INBOX") {
-                true => Some(Role::Inbox),
-                false => marked_role(l.special_use),
+            // A mailbox that cannot be selected holds no mail, so a mark
+            // on it names no mailbox the account could keep in step.
+            role: match (l.name.eq_ignore_ascii_case("INBOX"), l.no_select) {
+                (true, _) => Some(Role::Inbox),
+                (false, true) => None,
+                (false, false) => marked_role(l.special_use),
             },
             parent_only: l.no_select,
             flagged: l.special_use == Some(SpecialUse::Flagged),
@@ -286,6 +289,23 @@ mod tests {
             .into_iter()
             .map(|f| (f.id, f.role))
             .collect()
+    }
+
+    #[test]
+    fn a_mailbox_that_cannot_be_selected_keeps_no_role_it_is_marked_with() {
+        let listing = [
+            listed("INBOX", '/', None),
+            Listed::new("Archive", Some('/'), Some(SpecialUse::Archive), true),
+            listed("Archive/2026", '/', None),
+        ];
+        assert_eq!(
+            roles(&listing),
+            [
+                ("INBOX".to_string(), Some(Role::Inbox)),
+                ("Archive".to_string(), None),
+                ("Archive/2026".to_string(), None),
+            ]
+        );
     }
 
     #[test]

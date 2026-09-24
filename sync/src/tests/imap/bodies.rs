@@ -1,4 +1,5 @@
 use base64::Engine;
+use mailrs_imap::ImapError;
 
 use super::{days_ago, message};
 use crate::RAW_LIMIT;
@@ -76,4 +77,23 @@ async fn a_conversation_exports_every_message_it_holds() {
 
     assert!(mbox.contains("Subject: Kites\r\n"), "{mbox}");
     assert!(mbox.contains("Subject: Re: Kites\r\n"), "{mbox}");
+}
+
+/// A text part the client's guard refuses (too deep, too long) costs the
+/// connection. The adapter remembers the message for the session, so
+/// opening it again shows what arrived without asking for that part.
+#[tokio::test]
+async fn a_text_part_the_guard_refused_is_not_asked_for_again() {
+    let h = imap_harness().await;
+    h.imap.deliver_flagged("INBOX", &with_file(RAW_LIMIT as usize), &[], days_ago(1));
+    h.bootstrap().await;
+    h.imap.fail_on("body INBOX 1 1", ImapError::Protocol("nested too deep".into()));
+
+    let first = h.sync.body("INBOX/1001/1").await.unwrap();
+    let second = h.sync.body("INBOX/1001/1").await.unwrap();
+
+    assert_eq!(first.text, None);
+    assert_eq!(second.attachments[0].filename, "plans.bin");
+    let asked = h.imap.calls().iter().filter(|c| *c == "body INBOX 1 1").count();
+    assert_eq!(asked, 1);
 }

@@ -98,3 +98,16 @@ async fn a_flagged_view_stands_for_the_flagged_keyword() {
     h.sync.refresh_labels().await.unwrap();
     assert_eq!(h.sync.services().mail.set_of("Starred"), MailSet::flagged());
 }
+
+/// Counting the Inbox's messages selects it, and that SELECT's
+/// PERMANENTFLAGS say which keywords the server stores, as any other
+/// SELECT of the Inbox does.
+#[tokio::test]
+async fn counting_the_inbox_learns_which_keywords_the_server_stores() {
+    let (_imap, adapter) = super::adapter(FakeImap::new());
+    assert!(!adapter.capabilities().keywords.contains(&"$muted"));
+
+    adapter.mailbox_threads("INBOX").await.unwrap();
+
+    assert!(adapter.capabilities().keywords.contains(&"$muted"));
+}

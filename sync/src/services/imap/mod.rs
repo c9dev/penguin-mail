@@ -16,6 +16,7 @@ mod window;
 
 pub use api::{ImapApi, Submit};
 
+use std::collections::VecDeque;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
@@ -81,7 +82,14 @@ struct Known {
     delimiter: Option<char>,
     /// The keywords the Inbox's PERMANENTFLAGS take, once it was selected.
     keywords: Option<&'static [&'static str]>,
+    /// Messages whose text the client's guard refused this session, the
+    /// latest [`UNREADABLE_KEPT`], so opening one again does not ask for
+    /// the part and lose the connection each time.
+    unreadable: VecDeque<String>,
 }
+
+/// The most messages [`Known::unreadable`] remembers.
+const UNREADABLE_KEPT: usize = 256;
 
 // By hand, since a derive would ask for `I: Clone` and `S: Clone` and the
 // clients are shared rather than copied.
@@ -108,6 +116,25 @@ impl<I, S> Imap<I, S> {
 
     fn known(&self) -> MutexGuard<'_, Known> {
         self.known.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// Whether the client's guard refused the text of message `name` this
+    /// session.
+    fn is_unreadable(&self, name: &str) -> bool {
+        self.known().unreadable.iter().any(|n| n == name)
+    }
+
+    /// Remembers that the client's guard refused the text of message
+    /// `name`, forgetting the oldest past [`UNREADABLE_KEPT`].
+    fn mark_unreadable(&self, name: &str) {
+        let mut known = self.known();
+        if known.unreadable.iter().any(|n| n == name) {
+            return;
+        }
+        if known.unreadable.len() == UNREADABLE_KEPT {
+            known.unreadable.pop_front();
+        }
+        known.unreadable.push_back(name.to_string());
     }
 }
 
@@ -243,7 +270,7 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         if parent_only {
             return Ok(0);
         }
-        Ok(u64::from(self.api.select(id, None).await?.exists))
+        Ok(u64::from(self.select(id, None).await?.exists))
     }
 
     async fn backfill(&self, days: i64, cursor: Option<&str>) -> Result<Backfill, BackendError> {

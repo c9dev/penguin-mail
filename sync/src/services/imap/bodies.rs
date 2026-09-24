@@ -5,6 +5,7 @@
 //! leaves the message unread on the server.
 
 use mailrs_domain::Location;
+use mailrs_imap::ImapError;
 use mailrs_mime::{Part, Parts};
 
 use super::{Imap, ImapApi, Submit};
@@ -65,6 +66,10 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             .await?
             .unwrap_or_default();
         let mut parts = structure.parts(&header);
+        if self.is_unreadable(name) {
+            parts.incomplete = true;
+            return Ok(parts);
+        }
         for path in text_paths(&parts) {
             match self.api.body(&at.mailbox, at.uid, &path).await {
                 Ok(Some(bytes)) => match structure.decode(&path, &bytes) {
@@ -72,6 +77,16 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
                     None => parts.incomplete = true,
                 },
                 Ok(None) => parts.incomplete = true,
+                // The guard refused the answer (nested too deep, a line
+                // too long, a literal past the budget) and the connection
+                // went with it. Asking again brings the same answer, so
+                // the message shows without its text for this session.
+                Err(err @ ImapError::Protocol(_)) => {
+                    tracing::warn!(message = name, %err, "the text of a message is unreadable");
+                    self.mark_unreadable(name);
+                    parts.incomplete = true;
+                    break;
+                }
                 Err(err) => {
                     tracing::warn!(message = name, %err, "could not fetch a text part");
                     parts.incomplete = true;
@@ -142,9 +157,34 @@ fn leaves_of<'a>(part: &'a Part, depth: usize, out: &mut Vec<&'a Part>) {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use mailrs_mime::{Part, Parts};
 
+    use super::super::{Imap, ImapSettings, UNREADABLE_KEPT};
     use super::text_paths;
+    use crate::fake::{FakeImap, FakeSmtp};
+
+    #[test]
+    fn the_unreadable_memo_keeps_the_latest_messages_only() {
+        let imap = Imap::new(
+            Arc::new(FakeImap::new()),
+            Arc::new(FakeSmtp::default()),
+            ImapSettings {
+                address: "me@example.com".into(),
+                provider_name: "Fastmail".into(),
+                files_sent_mail: false,
+                window_days: 30,
+            },
+        );
+        for n in 0..=UNREADABLE_KEPT {
+            imap.mark_unreadable(&format!("INBOX/1/{n}"));
+        }
+        imap.mark_unreadable("INBOX/1/1");
+        assert!(!imap.is_unreadable("INBOX/1/0"), "the oldest is forgotten");
+        assert!(imap.is_unreadable(&format!("INBOX/1/{UNREADABLE_KEPT}")));
+        assert_eq!(imap.known().unreadable.len(), UNREADABLE_KEPT);
+    }
 
     fn part(path: &str, mime: &str, filename: Option<&str>, children: Vec<Part>) -> Part {
         Part {

@@ -192,7 +192,9 @@ impl AccountSync {
         for meta in &mut fetched.metas {
             meta.thread_id = thread_id.to_string();
         }
-        fetched.whole = vec![fetched.metas.clone()];
+        // The caller reads the thread from `whole` alone, so the metas
+        // move there rather than being copied.
+        fetched.whole = vec![std::mem::take(&mut fetched.metas)];
         Ok(fetched)
     }
 
