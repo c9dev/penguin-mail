@@ -5,7 +5,7 @@
 //! store, for as long as its interface still names mail by label id, and
 //! so does migration 26, whose SQL spells out the same table.
 
-use crate::mailbox::{MailboxKind, Membership, Memberships, Role, keyword};
+use crate::mailbox::{MailSet, MailboxKind, Membership, Memberships, Role, keyword};
 use crate::system_label::{
     DRAFT, IMPORTANT, INBOX, MUTE, SENT, SPAM, STARRED, TRASH, UNREAD, is_category,
 };
@@ -97,6 +97,33 @@ pub fn memberships(labels: &[String]) -> Memberships {
         held.keywords.push(keyword::SEEN.into());
     }
     held
+}
+
+/// The mail set `label` names.
+pub fn set_of(label: &str) -> MailSet {
+    if let Some(role) = role_of(label) {
+        return MailSet::Role(role);
+    }
+    match membership_of(label) {
+        (Membership::Keyword(_), false) => MailSet::Unseen,
+        (Membership::Keyword(k), true) => MailSet::Keyword(k),
+        (Membership::Category(c), _) => MailSet::Category(c),
+        (Membership::Mailbox(id), _) => MailSet::Mailbox(id),
+    }
+}
+
+/// The label that stands for `set`. `None` for a role Gmail has no label
+/// for (Archive, All) and a keyword it does not keep.
+pub fn label_of_set(set: &MailSet) -> Option<String> {
+    match set {
+        MailSet::Role(role) => label_of_role(*role).map(str::to_string),
+        MailSet::Mailbox(id) | MailSet::Category(id) => Some(id.clone()),
+        MailSet::Unseen => Some(UNREAD.into()),
+        MailSet::Keyword(k) => KEYWORDS
+            .iter()
+            .find(|(_, kw)| kw == k)
+            .map(|(l, _)| l.to_string()),
+    }
 }
 
 /// The labels Gmail shows for `held`, sorted as the store lists them.
@@ -228,5 +255,29 @@ mod tests {
         assert_eq!(kind_of("Label_12"), MailboxKind::Label);
         assert_eq!(kind_of("INBOX"), MailboxKind::System);
         assert_eq!(kind_of("CHAT"), MailboxKind::System);
+    }
+
+    #[test]
+    fn every_label_names_one_mail_set_and_back() {
+        let sets = [
+            ("INBOX", MailSet::Role(Role::Inbox)),
+            ("SENT", MailSet::Role(Role::Sent)),
+            ("DRAFT", MailSet::Role(Role::Drafts)),
+            ("TRASH", MailSet::Role(Role::Trash)),
+            ("SPAM", MailSet::Role(Role::Junk)),
+            ("IMPORTANT", MailSet::Role(Role::Important)),
+            ("STARRED", MailSet::flagged()),
+            ("MUTE", MailSet::muted()),
+            ("UNREAD", MailSet::Unseen),
+            ("CATEGORY_SOCIAL", MailSet::Category("CATEGORY_SOCIAL".into())),
+            ("Label_4", MailSet::Mailbox("Label_4".into())),
+            ("CHAT", MailSet::Mailbox("CHAT".into())),
+        ];
+        for (label, set) in sets {
+            assert_eq!(set_of(label), set, "{label}");
+            assert_eq!(label_of_set(&set).as_deref(), Some(label), "{label}");
+        }
+        assert_eq!(label_of_set(&MailSet::Role(Role::Archive)), None);
+        assert_eq!(label_of_set(&MailSet::Keyword(keyword::ANSWERED.into())), None);
     }
 }

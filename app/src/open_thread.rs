@@ -6,9 +6,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use mailrs_domain::{
-    AccountId, Address, FlagColor, MessageBody, MessageMeta, Target, system_label,
-};
+use mailrs_domain::{AccountId, Address, FlagColor, MessageBody, MessageMeta, Role, Target};
 
 use crate::protection::run::{Claimed, Installed};
 use crate::protection::{self, Engine, Mark};
@@ -149,15 +147,11 @@ impl OpenThread {
     }
 
     pub fn is_draft(&self) -> bool {
-        self.messages
-            .last()
-            .is_some_and(|m| m.has_label(system_label::DRAFT))
+        self.messages.last().is_some_and(|m| m.in_role(Role::Drafts))
     }
 
     pub fn starred(&self) -> bool {
-        self.messages
-            .iter()
-            .any(|m| m.has_label(system_label::STARRED))
+        self.messages.iter().any(|m| m.is_flagged())
     }
 
     pub fn unread(&self) -> bool {
@@ -165,9 +159,7 @@ impl OpenThread {
     }
 
     pub fn muted(&self) -> bool {
-        self.messages
-            .iter()
-            .any(|m| m.has_label(system_label::MUTE))
+        self.messages.iter().any(|m| m.is_muted())
     }
 
     /// What a mail action on this conversation applies to.
@@ -185,10 +177,7 @@ impl OpenThread {
         if self.queued.is_some() {
             return None;
         }
-        self.messages
-            .iter()
-            .rev()
-            .find(|m| !m.has_label(system_label::DRAFT))
+        self.messages.iter().rev().find(|m| !m.in_role(Role::Drafts))
     }
 
     /// What a reply to or a forward of one message starts from: `only`, or

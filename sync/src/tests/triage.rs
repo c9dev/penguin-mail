@@ -24,7 +24,7 @@ async fn archiving_applies_locally_and_remotely() {
         h.fake.with(|s| s.remote_writes.clone()),
         ["modify a + -INBOX", "modify b + -INBOX"]
     );
-    assert!(!h.fake.with(|s| s.messages["a"].has_label("INBOX")));
+    assert!(!h.fake.with(|s| s.messages["a"].label_ids.iter().any(|l| l == "INBOX")));
 }
 
 #[tokio::test]
@@ -67,7 +67,7 @@ async fn a_write_that_fails_part_way_keeps_what_gmail_took() {
     };
     let (archived, ()) = tokio::join!(archiving, refusing);
     assert!(archived.is_err());
-    assert!(!h.fake.with(|s| s.messages["a"].has_label("INBOX")));
+    assert!(!h.fake.with(|s| s.messages["a"].label_ids.iter().any(|l| l == "INBOX")));
     assert_eq!(h.labels_of("a").await, Vec::<String>::new());
     assert_eq!(h.labels_of("b").await, ["INBOX"]);
 }

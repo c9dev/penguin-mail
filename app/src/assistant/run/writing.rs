@@ -431,7 +431,7 @@ impl<A: Accounts> Tools<A> {
             let parent = found
                 .iter()
                 .rev()
-                .find(|m| !m.has_label(system_label::DRAFT));
+                .find(|m| !m.in_role(Role::Drafts));
             draft.thread_id = Some(thread_id);
             draft.in_reply_to = parent.and_then(|m| m.rfc822_msgid.clone());
             draft.references = found
@@ -686,7 +686,7 @@ impl<A: Accounts> Tools<A> {
         self.read(move |c| messages::by_ids(c, account_id, &key))
             .await?
             .into_iter()
-            .find(|m| m.has_label(system_label::DRAFT))
+            .find(|m| m.in_role(Role::Drafts))
             .ok_or_else(|| "There is no draft with that message_id. list_drafts gives the drafts and their ids.".into())
     }
 

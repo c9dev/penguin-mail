@@ -73,7 +73,7 @@ impl Query {
             (system_label::TRASH, self.trash),
         ];
         for (label, asked) in hidden {
-            if !asked && !self.anywhere && meta.has_label(label) {
+            if !asked && !self.anywhere && meta.label_ids.iter().any(|l| l == label) {
                 return false;
             }
         }
@@ -120,7 +120,7 @@ impl Term {
         match self {
             Term::Label(wanted) => has_label(meta, labels, wanted),
             Term::Unread => meta.is_unread(),
-            Term::Starred => meta.has_label(system_label::STARRED),
+            Term::Starred => meta.label_ids.iter().any(|l| l == system_label::STARRED),
             Term::Attachment => meta.has_attachments,
             Term::Anywhere => true,
             Term::From(text) => meta

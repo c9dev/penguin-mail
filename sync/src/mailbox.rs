@@ -660,7 +660,7 @@ impl<A: Accounts> Mailboxes<A> {
         let filter = mailbox.filter()?;
         match view.category.filter(|_| mailbox.takes_categories()) {
             Some(category) => {
-                let (any, none) = category.labels();
+                let (any, none) = category.categories();
                 Some(filter.with_labels(any, none))
             }
             None => Some(filter),
@@ -1137,9 +1137,9 @@ pub fn summarize_search(mut hits: Vec<MessageMeta>, grouped: bool) -> Vec<Thread
         {
             row.message_count += 1;
             row.unread |= hit.is_unread();
-            row.starred |= hit.has_label(system_label::STARRED);
+            row.starred |= hit.is_flagged();
             row.has_attachments |= hit.has_attachments;
-            row.muted |= hit.has_label(system_label::MUTE);
+            row.muted |= hit.is_muted();
             if hit.date <= *oldest {
                 *oldest = hit.date;
                 row.subject = hit.subject.clone();
@@ -1169,9 +1169,9 @@ fn row_of(hit: &MessageMeta, alone: bool) -> ThreadSummary {
             .unwrap_or_default(),
         message_count: 1,
         unread: hit.is_unread(),
-        starred: hit.has_label(system_label::STARRED),
+        starred: hit.is_flagged(),
         has_attachments: hit.has_attachments,
-        muted: hit.has_label(system_label::MUTE),
+        muted: hit.is_muted(),
         flag_color: None,
         from_email: hit
             .from

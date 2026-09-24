@@ -244,7 +244,7 @@ impl<A: Accounts> Tools<A> {
         let message = found
             .iter()
             .rev()
-            .find(|m| m.has_label(system_label::DRAFT))
+            .find(|m| m.in_role(Role::Drafts))
             .cloned()
             .ok_or("That conversation holds no draft.")?;
         // Sending rebuilds the message from the draft as Gmail holds it,

@@ -164,7 +164,7 @@ fn category_counts_match_the_query_per_category() {
         let threaded = threads::category_unread_threads(&conn, &filter).unwrap();
         let single = threads::category_unread_messages(&conn, &filter).unwrap();
         for category in Category::ALL {
-            let (any, none) = category.labels();
+            let (any, none) = category.categories();
             let narrowed = filter.clone().with_labels(any, none);
             assert_eq!(
                 threaded[&category],

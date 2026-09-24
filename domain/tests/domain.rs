@@ -53,7 +53,7 @@ fn unread_follows_the_unread_label() {
         one_click: false,
     };
     assert!(!meta.is_unread());
-    assert!(meta.has_label("INBOX"));
+    assert!(meta.in_role(mailrs_domain::Role::Inbox));
     meta.label_ids.push("UNREAD".into());
     assert!(meta.is_unread());
 }

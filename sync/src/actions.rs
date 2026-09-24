@@ -684,7 +684,7 @@ impl<A: Accounts> MailActions<A> {
                     folders.push(
                         PLACES
                             .into_iter()
-                            .find(|f| mine.iter().any(|m| f.holds(&m.label_ids))),
+                            .find(|f| mine.iter().any(|m| f.holds(m))),
                     );
                 }
                 Ok(folders)
@@ -719,7 +719,7 @@ impl<A: Accounts> MailActions<A> {
                     let held = messages::thread_messages(c, target.account_id, &target.thread_id)?
                         .iter()
                         .filter(|m| target.message_id.as_ref().is_none_or(|id| &m.id == id))
-                        .any(|m| folder.holds(&m.label_ids));
+                        .any(|m| folder.holds(m));
                     if !held {
                         gone.push(target);
                     }

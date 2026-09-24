@@ -11,8 +11,7 @@ use adw::prelude::*;
 use gtk::{gio, glib};
 use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 use mailrs_domain::{
-    Account, AccountId, AccountState, ChangeEvent, Label, MessageBody, Target, ThreadSummary,
-    system_label,
+    Account, AccountId, AccountState, ChangeEvent, Label, MessageBody, Role, Target, ThreadSummary,
 };
 use mailrs_sync::{History, Listing, Loaded, MailAction, Permitted, Scope, TriageAction, View};
 
@@ -1774,7 +1773,7 @@ impl MainWindow {
                 .messages
                 .iter()
                 .rev()
-                .find(|m| m.has_label(system_label::DRAFT))?
+                .find(|m| m.in_role(Role::Drafts))?
                 .clone();
             Some((
                 open.account_id,

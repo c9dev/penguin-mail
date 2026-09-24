@@ -8,7 +8,7 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **User label**: a label the account owner made, with an id like `Label_12` that only that account knows. _Avoid_: custom label, tag.
 
-**Category label**: one of Gmail's `CATEGORY_*` system labels, which Gmail puts on inbox mail to sort it. _Avoid_: tab, category.
+**Category label**: one of Gmail's `CATEGORY_*` labels, which Gmail puts on inbox mail to sort it. The store keeps each as a category under the same name (`mailrs_domain::category::SOCIAL` and the rest), since Gmail is the only provider with categories. _Avoid_: tab, category.
 
 **Category**: a slice of the inbox that Penguin Mail shows: All, Primary, Updates, Promotions, or Social. Each one is defined by the category labels a thread has or lacks. Primary is mail with no category label but Personal, and Social includes Forums. _Avoid_: tab, inbox type.
 
@@ -261,6 +261,8 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 **Keyword**: a mark a message carries that is not a place: `$seen`, `$flagged`, `$answered`, `$draft`, `$muted`, or any keyword a server stores. `mailrs_domain::mailbox::keyword`, kept in `message_keywords`. Gmail's `STARRED` and `MUTE` labels stand for `$flagged` and `$muted`, and its `UNREAD` label for the absence of `$seen`, so unread is kept as a fact derived from the keywords rather than as a row. _Avoid_: flag (which is the flag colour), tag.
 
 **Membership**: one thing a message is in or carries: a server mailbox, a keyword or a category. `mailrs_domain::Membership`; everything one message holds is `Memberships`. `mailrs_domain::gmail` turns Gmail's labels into memberships and back. _Avoid_: label (outside Gmail), placement.
+
+**Mail set**: which stored mail a list draws from: the mailbox with a role in each account (the inboxes), one server mailbox, the mail carrying a keyword (flagged, muted), unread mail, or one inbox category. `mailrs_domain::MailSet`. Thread lists, the sidebar's counts, triage and the rules name mail this way; only the Gmail adapter turns one into a label id. _Avoid_: label, filter, selector.
 
 **Change set**: the one way stored mail changes: a list of changes (store a message, keep it under a new sync generation, add it to or take it out of a server mailbox, set a keyword or a category, delete a message or a thread, mark a thread whole) applied in one call inside the caller's transaction. It refreshes every thread row the changes touched and reports what each membership change did to each message, which is what Undo reverses. `mailrs_store::messages::apply`, taking `Change`s and answering `Touched`. _Avoid_: update, patch (which is the conversation page's word), batch.
 

@@ -226,7 +226,7 @@ fn filters(a: AccountId, b: AccountId) -> Vec<(String, ThreadFilter)> {
         ));
     }
     for category in Category::ALL {
-        let (any, none) = category.labels();
+        let (any, none) = category.categories();
         filters.push((
             format!("inbox {}", category.key()),
             ThreadFilter::unified("INBOX").with_labels(any, none),

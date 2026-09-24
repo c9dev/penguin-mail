@@ -40,7 +40,7 @@ fn the_sidebar_and_the_lists_on_a_real_store() {
         started.elapsed()
     );
     let inbox = ThreadFilter::unified("INBOX");
-    let (social, _) = Category::Social.labels();
+    let (social, _) = Category::Social.categories();
     let social_inbox = ThreadFilter::unified("INBOX").with_labels(social, &[]);
     time("sidebar counts", || {
         (

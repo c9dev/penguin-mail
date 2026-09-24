@@ -3,7 +3,7 @@
 
 use std::collections::{BTreeSet, HashMap};
 
-use mailrs_domain::{ChangeEvent, Membership, MessageMeta, Role, system_label};
+use mailrs_domain::{ChangeEvent, Membership, MessageMeta, Role};
 use mailrs_store::messages::Change;
 use mailrs_store::{accounts, labels, messages};
 
@@ -207,8 +207,8 @@ impl AccountSync {
 
 /// Unread mail that someone else sent to INBOX.
 fn is_new_inbox_mail(meta: &MessageMeta) -> bool {
-    meta.has_label(system_label::INBOX)
+    meta.in_role(Role::Inbox)
         && meta.is_unread()
-        && !meta.has_label(system_label::SENT)
-        && !meta.has_label(system_label::DRAFT)
+        && !meta.in_role(Role::Sent)
+        && !meta.in_role(Role::Drafts)
 }

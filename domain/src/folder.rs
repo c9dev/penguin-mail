@@ -2,7 +2,7 @@
 //! does not hold.
 //! The app lists them with a Gmail search instead.
 
-use crate::system_label::{DRAFT, INBOX, SENT, SPAM, TRASH};
+use crate::{MessageMeta, Role};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Folder {
@@ -34,14 +34,15 @@ impl Folder {
         }
     }
 
-    /// Whether a message with `labels` still belongs in this folder.
-    pub fn holds(self, labels: &[String]) -> bool {
-        let has = |l: &str| labels.iter().any(|x| x == l);
+    /// Whether `message` still belongs in this folder. Archive leaves out
+    /// what the account sent and its drafts, as the Gmail search does.
+    pub fn holds(self, message: &MessageMeta) -> bool {
+        let placed = [Role::Inbox, Role::Sent, Role::Drafts, Role::Junk, Role::Trash];
         match self {
-            Folder::Archive => ![INBOX, SENT, DRAFT, SPAM, TRASH].iter().any(|l| has(l)),
-            Folder::Junk => has(SPAM),
-            Folder::Trash => has(TRASH),
-            Folder::AllMail => !has(SPAM) && !has(TRASH),
+            Folder::Archive => !placed.iter().any(|r| message.in_role(*r)),
+            Folder::Junk => message.in_role(Role::Junk),
+            Folder::Trash => message.in_role(Role::Trash),
+            Folder::AllMail => !message.in_role(Role::Junk) && !message.in_role(Role::Trash),
         }
     }
 }
@@ -49,34 +50,35 @@ impl Folder {
 #[cfg(test)]
 mod tests {
     use super::Folder;
-    use crate::system_label::{INBOX, SENT, SPAM, TRASH};
+    use crate::MessageMeta;
 
-    fn labels(ids: &[&str]) -> Vec<String> {
-        ids.iter().map(|l| l.to_string()).collect()
+    /// A message carrying Gmail's `labels`, which the store still keeps.
+    fn message(labels: &[&str]) -> MessageMeta {
+        crate::tests::message("m1", labels)
     }
 
     #[test]
-    fn junk_and_trash_hold_their_own_label() {
-        assert!(Folder::Junk.holds(&labels(&[SPAM])));
-        assert!(!Folder::Junk.holds(&labels(&[INBOX])));
-        assert!(Folder::Trash.holds(&labels(&[TRASH])));
-        assert!(!Folder::Trash.holds(&labels(&[SPAM])));
+    fn junk_and_trash_hold_their_own_mailbox() {
+        assert!(Folder::Junk.holds(&message(&["SPAM"])));
+        assert!(!Folder::Junk.holds(&message(&["INBOX"])));
+        assert!(Folder::Trash.holds(&message(&["TRASH"])));
+        assert!(!Folder::Trash.holds(&message(&["SPAM"])));
     }
 
     #[test]
-    fn all_mail_holds_everything_outside_spam_and_trash() {
-        assert!(Folder::AllMail.holds(&labels(&[])));
-        assert!(Folder::AllMail.holds(&labels(&[INBOX, "Label_1"])));
-        assert!(!Folder::AllMail.holds(&labels(&[SPAM])));
-        assert!(!Folder::AllMail.holds(&labels(&[TRASH])));
+    fn all_mail_holds_everything_outside_junk_and_trash() {
+        assert!(Folder::AllMail.holds(&message(&[])));
+        assert!(Folder::AllMail.holds(&message(&["INBOX", "Label_1"])));
+        assert!(!Folder::AllMail.holds(&message(&["SPAM"])));
+        assert!(!Folder::AllMail.holds(&message(&["TRASH"])));
     }
 
     #[test]
-    fn archive_holds_received_mail_outside_the_inbox() {
-        assert!(Folder::Archive.holds(&labels(&["Label_1"])));
-        assert!(Folder::Archive.holds(&labels(&[])));
-        assert!(!Folder::Archive.holds(&labels(&[INBOX])));
-        assert!(!Folder::Archive.holds(&labels(&[SENT])));
-        assert!(!Folder::Archive.holds(&labels(&[TRASH])));
+    fn archive_holds_received_mail_outside_the_inbox_sent_and_drafts() {
+        assert!(Folder::Archive.holds(&message(&["Label_1"])));
+        assert!(Folder::Archive.holds(&message(&[])));
+        for place in ["INBOX", "SENT", "DRAFT", "SPAM", "TRASH"] {
+            assert!(!Folder::Archive.holds(&message(&[place])), "{place}");
+        }
     }
 }

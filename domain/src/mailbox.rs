@@ -179,6 +179,34 @@ impl Memberships {
     }
 }
 
+/// Which stored mail a list draws from, in words every provider shares:
+/// the mailbox with a role in each account in question, one server
+/// mailbox, the mail carrying a keyword, unread mail, or an inbox
+/// category. Thread lists, the sidebar's counts, triage and the rules all
+/// name mail this way.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum MailSet {
+    Role(Role),
+    /// One server mailbox, by the server's id for it. A person's labels
+    /// and folders have ids only their own account knows.
+    Mailbox(String),
+    Keyword(String),
+    /// Mail without `$seen`. Adding it to a message marks the message
+    /// unread; removing it marks the message read.
+    Unseen,
+    Category(String),
+}
+
+impl MailSet {
+    pub fn flagged() -> MailSet {
+        MailSet::Keyword(keyword::FLAGGED.into())
+    }
+
+    pub fn muted() -> MailSet {
+        MailSet::Keyword(keyword::MUTED.into())
+    }
+}
+
 /// What one change did to one message: the memberships it gained and the
 /// ones it lost, leaving out any the message already had or already
 /// lacked. Undo reverses exactly this, so a message that was read before
@@ -243,5 +271,11 @@ mod tests {
         assert!(held.has(&Membership::Keyword(keyword::FLAGGED.into())));
         assert!(held.has(&Membership::Category("CATEGORY_SOCIAL".into())));
         assert!(!held.has(&Membership::Mailbox("TRASH".into())));
+    }
+
+    #[test]
+    fn a_mail_set_names_flagged_and_muted_by_keyword() {
+        assert_eq!(MailSet::flagged(), MailSet::Keyword(keyword::FLAGGED.into()));
+        assert_eq!(MailSet::muted(), MailSet::Keyword(keyword::MUTED.into()));
     }
 }

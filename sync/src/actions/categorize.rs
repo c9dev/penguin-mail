@@ -67,7 +67,7 @@ impl<A: Accounts> MailActions<A> {
             .into_iter()
             .map(|id| Target::thread(account_id, id))
             .collect();
-        let label = category.gmail_label();
+        let label = category.id();
         let relabel = TriageAction::Relabel {
             add: vec![label.into()],
             remove: system_label::CATEGORIES

@@ -18,7 +18,7 @@ use std::rc::Rc;
 use adw::prelude::*;
 use gtk::gio;
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{FlagColor, Folder, Target, system_label};
+use mailrs_domain::{FlagColor, Folder, Role, Target};
 
 use super::MainWindow;
 use super::press::{Button, Press, Scope};
@@ -58,8 +58,8 @@ pub(super) fn message_of(open: &OpenThread, message_id: &str) -> Option<Message>
     Some(Message {
         id: meta.id.clone(),
         unread: meta.is_unread(),
-        flagged: meta.has_label(system_label::STARRED),
-        draft: meta.has_label(system_label::DRAFT),
+        flagged: meta.is_flagged(),
+        draft: meta.in_role(Role::Drafts),
         sender: meta
             .from
             .as_ref()

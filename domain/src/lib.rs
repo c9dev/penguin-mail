@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::translate::gettext;
 
-mod category;
+pub mod category;
 mod folder;
 pub mod gmail;
 pub mod mailbox;
@@ -21,7 +21,7 @@ pub mod translate;
 pub use category::Category;
 pub use folder::Folder;
 pub use mailbox::{
-    Applied, MailboxKind, Membership, Memberships, Provider, RemoteMailbox, Role,
+    Applied, MailSet, MailboxKind, Membership, Memberships, Provider, RemoteMailbox, Role,
 };
 pub use invitation::Invitation;
 pub use smart::SmartMailbox;
@@ -275,12 +275,33 @@ pub struct MessageMeta {
 }
 
 impl MessageMeta {
+    /// The message lacks `$seen`.
     pub fn is_unread(&self) -> bool {
-        self.has_label(system_label::UNREAD)
+        self.has(&MailSet::Unseen)
     }
 
-    pub fn has_label(&self, label_id: &str) -> bool {
-        self.label_ids.iter().any(|l| l == label_id)
+    pub fn is_flagged(&self) -> bool {
+        self.has(&MailSet::flagged())
+    }
+
+    pub fn is_muted(&self) -> bool {
+        self.has(&MailSet::muted())
+    }
+
+    /// The message sits in its account's mailbox with `role`.
+    pub fn in_role(&self, role: Role) -> bool {
+        self.has(&MailSet::Role(role))
+    }
+
+    /// The message sits in the server mailbox `id`.
+    pub fn in_mailbox(&self, id: &str) -> bool {
+        self.label_ids.iter().any(|l| l == id)
+    }
+
+    // The store still hands out Gmail's labels; this reads them until the
+    // message carries its memberships and roles itself.
+    fn has(&self, set: &MailSet) -> bool {
+        gmail::label_of_set(set).is_some_and(|label| self.label_ids.contains(&label))
     }
 }
 
@@ -515,6 +536,45 @@ pub struct Vacation {
     pub domain_only: bool,
     pub start: Option<EpochMillis>,
     pub end: Option<EpochMillis>,
+}
+
+#[cfg(test)]
+pub(crate) mod tests {
+    use crate::{MessageMeta, Role};
+
+    /// A message in account 1 carrying Gmail's `labels`.
+    pub(crate) fn message(id: &str, labels: &[&str]) -> MessageMeta {
+        MessageMeta {
+            account_id: 1,
+            id: id.into(),
+            thread_id: "t1".into(),
+            rfc822_msgid: None,
+            from: None,
+            to: vec![],
+            cc: vec![],
+            subject: String::new(),
+            date: 0,
+            snippet: String::new(),
+            size: 0,
+            has_attachments: false,
+            label_ids: labels.iter().map(|l| l.to_string()).collect(),
+            list_unsubscribe: None,
+            one_click: false,
+        }
+    }
+
+    #[test]
+    fn a_message_answers_for_its_roles_and_keywords() {
+        let m = message("m1", &["INBOX", "UNREAD", "STARRED", "MUTE", "Label_2"]);
+        assert!(m.is_unread() && m.is_flagged() && m.is_muted());
+        assert!(m.in_role(Role::Inbox));
+        assert!(!m.in_role(Role::Sent));
+        assert!(m.in_mailbox("Label_2"));
+        assert!(!m.in_mailbox("Label_3"));
+        let read = message("m2", &["SENT"]);
+        assert!(!read.is_unread() && !read.is_flagged() && !read.is_muted());
+        assert!(read.in_role(Role::Sent));
+    }
 }
 
 /// What the sync engine reports to the UI. Views re-query the store in response.

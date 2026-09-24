@@ -368,7 +368,7 @@ async fn organize_takes_mail_out_of_the_trash_with_move_to_inbox() {
     }));
     assert!(
         h.gmail
-            .with(|s| s.messages["m2"].has_label(system_label::INBOX))
+            .with(|s| s.messages["m2"].label_ids.iter().any(|l| l == system_label::INBOX))
     );
     let labels = h.labels_of("m2").await;
     assert!(labels.contains(&system_label::INBOX.to_string()));

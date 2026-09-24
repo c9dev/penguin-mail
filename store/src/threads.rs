@@ -1307,7 +1307,7 @@ fn category_unread(
         if i > 0 {
             sql.push(", ");
         }
-        let (any, none) = category.labels();
+        let (any, none) = category.categories();
         sql.push("COALESCE(SUM(1");
         if !any.is_empty() {
             sql.push(" AND ");
@@ -1435,8 +1435,8 @@ mod walk_tests {
     }
 
     fn filters(a: AccountId) -> Vec<ThreadFilter> {
-        let (_, not_primary) = Category::Primary.labels();
-        let (social, _) = Category::Social.labels();
+        let (_, not_primary) = Category::Primary.categories();
+        let (social, _) = Category::Social.categories();
         let sender = || vec!["Sender1@example.com".to_string()];
         vec![
             ThreadFilter::unified("INBOX"),
@@ -1615,7 +1615,7 @@ mod walk_tests {
     #[test]
     fn a_small_category_of_a_big_inbox_is_walked_from_the_category() {
         let (conn, _, _) = mailbox();
-        let (social, _) = Category::Social.labels();
+        let (social, _) = Category::Social.categories();
         let filter = ThreadFilter::unified("INBOX").with_labels(social, &[]);
         assert_eq!(
             filter

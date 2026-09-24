@@ -369,7 +369,7 @@ impl FakeGmail {
             };
             let thread_id = meta.thread_id.clone();
             for label in add {
-                if !meta.has_label(label) {
+                if !meta.label_ids.iter().any(|l| l == label) {
                     meta.label_ids.push(label.to_string());
                 }
             }
@@ -541,7 +541,7 @@ impl FakeGmail {
         Ok(self.with(|s| {
             let mut found = s.search(query);
             if let Some(label_id) = label_id {
-                found.retain(|id| s.messages[id].has_label(label_id));
+                found.retain(|id| s.messages[id].label_ids.iter().any(|l| l == label_id));
             }
             let size = s.page_size.min(page_size.max(1) as usize);
             let end = (start + size).min(found.len());
@@ -636,9 +636,9 @@ impl FakeState {
 
     /// Whether any message of the thread carries Gmail's mute label.
     fn thread_is_muted(&self, thread_id: &str) -> bool {
-        self.messages
-            .values()
-            .any(|m| m.thread_id == thread_id && m.has_label(system_label::MUTE))
+        self.messages.values().any(|m| {
+            m.thread_id == thread_id && m.label_ids.iter().any(|l| l == system_label::MUTE)
+        })
     }
 
     /// The ids a search returns, newest first.
