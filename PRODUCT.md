@@ -55,14 +55,13 @@ supported and checked.
 - Languages: American English source strings, British English generated from them, European Portuguese kept
   complete.
 - Terms are defined in `CONTEXT.md`; the code's rules are in `AGENTS.md`.
-- Undecided: whether the accent colour becomes an in-app setting or keeps following the desktop's accent (see
-  Brand Commitments).
 
 ## Brand Commitments
 
 - **The icon idiom.** The app icon sits on the Gruvbox Plus Dark squircle with its bevel: taupe behind a cream
   penguin with an orange beak. New icons follow that idiom.
-- **The accent is configurable and orange by default.** Mockups, screenshots and the demo video use the orange.
+- **The accent is the desktop's.** The app follows the accent colour set in GNOME's settings and has no accent
+  setting of its own. Mockups, screenshots and the demo video use orange, the owner's desktop accent.
 - **Plain-spoken voice.** Every string, comment, doc and commit follows the stop-slop and unslop rules: plain
   statements, no filler, no hype.
 - **GNOME HIG first.** libadwaita patterns and the GNOME Human Interface Guidelines win over custom interface.
