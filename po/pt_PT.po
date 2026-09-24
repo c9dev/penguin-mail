@@ -210,40 +210,40 @@ msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr ""
 "O Claude Code não está instalado. Instale-o, inicie sessão e tente de novo."
 
-#: app/src/assistant/run.rs:1006
+#: app/src/assistant/run.rs:1009
 msgid "Move {count} conversation to the Trash?"
 msgid_plural "Move {count} conversations to the Trash?"
 msgstr[0] "Mover {count} conversa para o lixo?"
 msgstr[1] "Mover {count} conversas para o lixo?"
 
-#: app/src/assistant/run.rs:1097
+#: app/src/assistant/run.rs:1143
 msgid ""
 "Don't Allow labels only the mail in accounts that have the label already."
 msgstr ""
 "Com «Não permitir», só o correio das contas que já têm a etiqueta a recebe."
 
-#: app/src/assistant/run.rs:1132
+#: app/src/assistant/run.rs:1178
 msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr "Bloquear {address}? O correio futuro vai direto para o lixo."
 
-#: app/src/assistant/run.rs:1214 app/src/assistant/run/calendar.rs:178
+#: app/src/assistant/run.rs:1260 app/src/assistant/run/calendar.rs:178
 #: app/src/assistant/run/calendar.rs:540
 msgid "%a %-d %b"
 msgstr "%a %-d %b"
 
-#: app/src/assistant/run.rs:1220
+#: app/src/assistant/run.rs:1266
 msgid " from {first} to {last}"
 msgstr ", de {first} a {last}"
 
-#: app/src/assistant/run.rs:1223
+#: app/src/assistant/run.rs:1269
 msgid " until {last}"
 msgstr ", até {last}"
 
-#: app/src/assistant/run.rs:1224
+#: app/src/assistant/run.rs:1270
 msgid " from {first}"
 msgstr ", a partir de {first}"
 
-#: app/src/assistant/run.rs:1230
+#: app/src/assistant/run.rs:1276
 msgid ""
 "Turn on the automatic reply for {account}{dates}?\n"
 "\n"
@@ -255,19 +255,19 @@ msgstr ""
 "“{subject}”\n"
 "{body}"
 
-#: app/src/assistant/run.rs:1241
+#: app/src/assistant/run.rs:1287
 msgid "Turn off the automatic reply for {account}?"
 msgstr "Desligar a resposta automática de {account}?"
 
-#: app/src/assistant/run.rs:1339
+#: app/src/assistant/run.rs:1385
 msgid "Create a Gmail rule for {account}: {when} → {then}?"
 msgstr "Criar uma regra do Gmail para {account}: {when} → {then}?"
 
-#: app/src/assistant/run.rs:1382
+#: app/src/assistant/run.rs:1428
 msgid "Delete a Gmail rule from {account}?"
 msgstr "Eliminar uma regra do Gmail de {account}?"
 
-#: app/src/assistant/run.rs:1512
+#: app/src/assistant/run.rs:1558
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a Gmail rule for "
 "their future mail?"
@@ -1273,7 +1273,7 @@ msgid "Mark as Read"
 msgstr "Marcar como lida"
 
 #: app/src/notify.rs:51 app/src/ui/conversation.rs:461
-#: app/src/ui/hide_my_email.rs:279 app/src/ui/queued.rs:58
+#: app/src/ui/hide_my_email.rs:288 app/src/ui/queued.rs:58
 #: app/src/ui/templates.rs:149 app/src/ui/window/arrange.rs:92
 #: app/src/ui/window/organize.rs:142
 msgid "Delete"
@@ -2606,7 +2606,7 @@ msgstr "Entrada"
 msgid "Running"
 msgstr "Em curso"
 
-#: app/src/ui/assistant.rs:921 app/src/ui/hide_my_email.rs:450
+#: app/src/ui/assistant.rs:921 app/src/ui/hide_my_email.rs:459
 msgid "Done"
 msgstr "Concluído"
 
@@ -3805,76 +3805,76 @@ msgstr ""
 "por isso quem retirar a etiqueta continua a alcançá-lo, e as suas respostas "
 "saem do endereço principal."
 
-#: app/src/ui/hide_my_email.rs:64 app/src/ui/hide_my_email.rs:66
-#: app/src/ui/hide_my_email.rs:358
+#: app/src/ui/hide_my_email.rs:73 app/src/ui/hide_my_email.rs:75
+#: app/src/ui/hide_my_email.rs:367
 msgid "Create Address"
 msgstr "Criar endereço"
 
-#: app/src/ui/hide_my_email.rs:73
+#: app/src/ui/hide_my_email.rs:82
 msgid "Hide My Email"
 msgstr "Ocultar o meu e-mail"
 
-#: app/src/ui/hide_my_email.rs:121
+#: app/src/ui/hide_my_email.rs:130
 msgid "Created {date}"
 msgstr "Criado em {date}"
 
-#: app/src/ui/hide_my_email.rs:155
+#: app/src/ui/hide_my_email.rs:164
 msgid "No addresses yet"
 msgstr "Ainda não há endereços"
 
-#: app/src/ui/hide_my_email.rs:156
+#: app/src/ui/hide_my_email.rs:165
 msgid "Create one with the + button."
 msgstr "Crie um com o botão +."
 
-#: app/src/ui/hide_my_email.rs:176
+#: app/src/ui/hide_my_email.rs:185
 msgid "Off: mail goes to the Trash"
 msgstr "Desligado: o correio vai para o lixo"
 
-#: app/src/ui/hide_my_email.rs:198 app/src/ui/window/message_menu.rs:134
+#: app/src/ui/hide_my_email.rs:207 app/src/ui/window/message_menu.rs:134
 msgid "Copy Address"
 msgstr "Copiar endereço"
 
-#: app/src/ui/hide_my_email.rs:199
+#: app/src/ui/hide_my_email.rs:208
 msgid "Copy {address}"
 msgstr "Copiar {address}"
 
-#: app/src/ui/hide_my_email.rs:206 app/src/ui/hide_my_email.rs:434
+#: app/src/ui/hide_my_email.rs:215 app/src/ui/hide_my_email.rs:443
 msgid "Address copied"
 msgstr "Endereço copiado"
 
-#: app/src/ui/hide_my_email.rs:214
+#: app/src/ui/hide_my_email.rs:223
 msgid "Receive Mail"
 msgstr "Receber correio"
 
-#: app/src/ui/hide_my_email.rs:219
+#: app/src/ui/hide_my_email.rs:228
 msgid "Receive mail at {address}"
 msgstr "Receber correio em {address}"
 
-#: app/src/ui/hide_my_email.rs:234
+#: app/src/ui/hide_my_email.rs:243
 msgid "Mail to this address reaches you again"
 msgstr "O correio para este endereço volta a chegar-lhe"
 
-#: app/src/ui/hide_my_email.rs:237
+#: app/src/ui/hide_my_email.rs:246
 msgid "Mail to this address now goes to the Trash"
 msgstr "O correio para este endereço passa a ir para o lixo"
 
-#: app/src/ui/hide_my_email.rs:241
+#: app/src/ui/hide_my_email.rs:250
 msgid "Could not change the address: {reason}"
 msgstr "Não foi possível alterar o endereço: {reason}"
 
-#: app/src/ui/hide_my_email.rs:252
+#: app/src/ui/hide_my_email.rs:261
 msgid "Delete Address"
 msgstr "Eliminar endereço"
 
-#: app/src/ui/hide_my_email.rs:254
+#: app/src/ui/hide_my_email.rs:263
 msgid "Delete {address}"
 msgstr "Eliminar {address}"
 
-#: app/src/ui/hide_my_email.rs:271
+#: app/src/ui/hide_my_email.rs:280
 msgid "Delete Address?"
 msgstr "Eliminar o endereço?"
 
-#: app/src/ui/hide_my_email.rs:274
+#: app/src/ui/hide_my_email.rs:283
 msgid ""
 "Mail sent to {address} arrives in your inbox again, without the Hide My "
 "Email label. To stop that mail, turn the address off instead."
@@ -3883,23 +3883,23 @@ msgstr ""
 "a etiqueta Ocultar o meu e-mail. Para travar esse correio, desligue antes o "
 "endereço."
 
-#: app/src/ui/hide_my_email.rs:288
+#: app/src/ui/hide_my_email.rs:297
 msgid "Address deleted"
 msgstr "Endereço eliminado"
 
-#: app/src/ui/hide_my_email.rs:290
+#: app/src/ui/hide_my_email.rs:299
 msgid "Could not delete the address: {reason}"
 msgstr "Não foi possível eliminar o endereço: {reason}"
 
-#: app/src/ui/hide_my_email.rs:300
+#: app/src/ui/hide_my_email.rs:309
 msgid "Allow Hide My Email"
 msgstr "Permitir Ocultar o meu e-mail"
 
-#: app/src/ui/hide_my_email.rs:320 app/src/ui/window.rs:2373
+#: app/src/ui/hide_my_email.rs:329 app/src/ui/window.rs:2373
 msgid "Add an account first"
 msgstr "Adicione primeiro uma conta"
 
-#: app/src/ui/hide_my_email.rs:324
+#: app/src/ui/hide_my_email.rs:333
 msgid ""
 "You get a new address that ends in your own, such as "
 "name+kite.fern482@gmail.com. Give it to one site only."
@@ -3907,33 +3907,33 @@ msgstr ""
 "Recebe um endereço novo terminado no seu, como nome+kite.fern482@gmail.com. "
 "Dê-o a um site apenas."
 
-#: app/src/ui/hide_my_email.rs:330
+#: app/src/ui/hide_my_email.rs:339
 msgid "Account"
 msgstr "Conta"
 
-#: app/src/ui/hide_my_email.rs:341
+#: app/src/ui/hide_my_email.rs:350
 msgid "Where Did You Use It?"
 msgstr "Onde o usou?"
 
-#: app/src/ui/hide_my_email.rs:348 app/src/ui/rules.rs:307
+#: app/src/ui/hide_my_email.rs:357 app/src/ui/rules.rs:307
 #: app/src/ui/smart_editor.rs:146 app/src/ui/templates.rs:235
 #: app/src/ui/window/organize.rs:57 app/src/ui/window/organize.rs:282
 msgid "Create"
 msgstr "Criar"
 
-#: app/src/ui/hide_my_email.rs:386
+#: app/src/ui/hide_my_email.rs:395
 msgid "Could not create the address: {reason}"
 msgstr "Não foi possível criar o endereço: {reason}"
 
-#: app/src/ui/hide_my_email.rs:411
+#: app/src/ui/hide_my_email.rs:420
 msgid "Your New Address"
 msgstr "O seu novo endereço"
 
-#: app/src/ui/hide_my_email.rs:426
+#: app/src/ui/hide_my_email.rs:435
 msgid "Copy"
 msgstr "Copiar"
 
-#: app/src/ui/hide_my_email.rs:441
+#: app/src/ui/hide_my_email.rs:450
 msgid ""
 "It is on your clipboard. Mail sent to it gets the Hide My Email label in "
 "Gmail."
@@ -3941,7 +3941,7 @@ msgstr ""
 "Está na área de transferência. O correio enviado para ele recebe a etiqueta "
 "Ocultar o meu e-mail no Gmail."
 
-#: app/src/ui/hide_my_email.rs:465
+#: app/src/ui/hide_my_email.rs:474
 msgid "Address Created"
 msgstr "Endereço criado"
 
