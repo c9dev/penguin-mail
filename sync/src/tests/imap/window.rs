@@ -139,3 +139,47 @@ async fn a_backfill_page_searches_only_below_where_the_last_one_stopped() {
     assert_eq!(listed.last().map(String::as_str), Some("INBOX/1001/1"));
     assert!(answered <= 5 * 3_000, "the searches answered {answered} UIDs");
 }
+
+/// What one poll and one backfill page hold on the test thread, for an
+/// Inbox of 120,000 messages from yesterday that changed nothing, under
+/// each kind of server. Run in release:
+/// `cargo test -p mailrs-sync --release --lib -- --ignored --nocapture measure`
+#[tokio::test]
+#[ignore = "a measurement, run by hand in release"]
+async fn measure_a_poll_and_a_backfill_page_of_a_large_inbox() {
+    use crate::tests::heap::HeapMark;
+
+    type Change = fn(&mut mailrs_imap::Capabilities);
+    let kinds: [(&str, Change); 3] = [
+        ("QRESYNC", |_| {}),
+        ("CONDSTORE", |c| c.qresync = false),
+        ("neither", |c| {
+            c.qresync = false;
+            c.condstore = false;
+        }),
+    ];
+    for (kind, change) in kinds {
+        let imap = super::offering(change);
+        fill(&imap, "INBOX", 120_000);
+        let (_imap, adapter) = adapter(imap);
+        let start = adapter.changes(None).await.unwrap().state;
+
+        let (mark, started) = (HeapMark::start(), std::time::Instant::now());
+        let look = adapter.changes(Some(&start)).await.unwrap();
+        let (peak, took) = (mark.peak(), started.elapsed());
+        eprintln!(
+            "{kind}: a poll held {peak} bytes at its peak, took {took:?}, and handed over {} changes",
+            look.changes.len()
+        );
+        drop(look);
+
+        let (mark, started) = (HeapMark::start(), std::time::Instant::now());
+        let first = adapter.backfill(30, None).await.unwrap();
+        let (peak, took) = (mark.peak(), started.elapsed());
+        eprintln!("{kind}: the first backfill page held {peak} bytes and took {took:?}");
+        let (mark, started) = (HeapMark::start(), std::time::Instant::now());
+        adapter.backfill(30, first.next.as_deref()).await.unwrap();
+        let (peak, took) = (mark.peak(), started.elapsed());
+        eprintln!("{kind}: the next backfill page held {peak} bytes and took {took:?}");
+    }
+}
