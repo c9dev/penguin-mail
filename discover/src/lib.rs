@@ -7,6 +7,7 @@ mod autoconfig;
 mod find;
 mod name;
 mod net;
+mod srv;
 mod table;
 
 /// Answers DNS, HTTPS and TCP from memory. Discovery's own tests always

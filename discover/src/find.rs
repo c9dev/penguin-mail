@@ -7,7 +7,7 @@ use futures::FutureExt;
 
 use crate::name::{domain_of, is_above};
 use crate::table::Table;
-use crate::{Found, Net, Source, Verdict, autoconfig};
+use crate::{Found, Net, Source, Verdict, autoconfig, srv};
 
 /// How long discovery waits on any one step before it drops it.
 pub const STEP_LIMIT: Duration = Duration::from_secs(10);
@@ -18,14 +18,14 @@ const ISPDB: &str = "https://autoconfig.thunderbird.net/v1.1/";
 
 /// The steps after the table, highest priority first. A step's answer
 /// counts once every step above it has finished without one.
-const STEPS: usize = 4;
+const STEPS: usize = 5;
 
 /// Finds the servers for `address`. The built-in table answers with no
 /// network at all. Otherwise the MX match, the domain's own autoconfig, the
-/// ISPDB and the MX host's autoconfig all start at once, and the answer is
-/// the highest-priority step that found something; each step gets
-/// `STEP_LIMIT`. Only the address's domain goes out, and no name above it
-/// is ever built.
+/// ISPDB, the MX host's autoconfig and SRV records all start at once, and
+/// the answer is the highest-priority step that found something; each step
+/// gets `STEP_LIMIT`. Only the address's domain goes out, and no name above
+/// it is ever built.
 pub async fn find<N: Net>(net: &N, address: &str) -> Found {
     let Some(domain) = domain_of(address) else {
         return Found::nothing();
@@ -50,6 +50,9 @@ pub async fn find<N: Net>(net: &N, address: &str) -> Found {
         let hosts = mx.clone().await;
         mx_autoconfig(net, domain, &hosts).await
     }));
+    let mut srv = pin!(limit(async {
+        Found::servers(srv::lookup(net, domain).await)
+    }));
     // One slot per step: `None` while it runs, then what it found.
     let mut answers: [Option<Option<Found>>; STEPS] = Default::default();
     loop {
@@ -58,6 +61,7 @@ pub async fn find<N: Net>(net: &N, address: &str) -> Found {
             found = &mut own, if answers[1].is_none() => answers[1] = Some(found),
             found = &mut ispdb, if answers[2].is_none() => answers[2] = Some(found),
             found = &mut mx_derived, if answers[3].is_none() => answers[3] = Some(found),
+            found = &mut srv, if answers[4].is_none() => answers[4] = Some(found),
         }
         if let Some(found) = decided(&answers) {
             return found;
@@ -148,11 +152,20 @@ pub(crate) fn mx_names(domain: &str, hosts: &[String]) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Unreachable;
     use crate::fake::{FakeNet, Request};
+    use crate::{SrvRecord, Unreachable};
 
     const HOSTER: &str = include_str!("../tests/fixtures/hoster.xml");
     const MAILBOX: &str = include_str!("../tests/fixtures/mailbox.org.xml");
+
+    fn srv(port: u16, target: &str) -> Vec<SrvRecord> {
+        vec![SrvRecord {
+            priority: 0,
+            weight: 1,
+            port,
+            target: target.into(),
+        }]
+    }
 
     #[tokio::test]
     async fn a_table_domain_needs_no_network() {
@@ -257,6 +270,19 @@ mod tests {
                 Request::Get("https://autoconfig.thunderbird.net/v1.1/hoster.net".into()),
             ]
         );
+    }
+
+    #[tokio::test]
+    async fn srv_records_name_the_servers_when_nothing_above_them_does() {
+        let net = FakeNet::default()
+            .answer_srv("_imaps._tcp.example.org", srv(993, "imap.example.org."))
+            .answer_srv(
+                "_submissions._tcp.example.org",
+                srv(465, "smtp.example.org."),
+            );
+        let found = find(&net, "ann@example.org").await;
+        assert_eq!(found.candidates[0].source, Source::Srv);
+        assert!(!found.candidates[0].confirm);
     }
 
     #[tokio::test]

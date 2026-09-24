@@ -53,6 +53,11 @@ pub(crate) fn is_above(name: &str, domain: &str) -> bool {
         .is_some_and(|rest| rest.ends_with('.'))
 }
 
+/// Whether `host` is `domain` or a name inside it.
+pub(crate) fn is_within(host: &str, domain: &str) -> bool {
+    host == domain || is_above(domain, host)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -128,5 +133,13 @@ mod tests {
         assert!(!is_above("example.com", "example.com"));
         assert!(!is_above("ample.com", "example.com"));
         assert!(!is_above("dept.example.com", "example.com"));
+    }
+
+    #[test]
+    fn within_means_the_domain_or_a_name_under_it() {
+        assert!(is_within("example.com", "example.com"));
+        assert!(is_within("imap.example.com", "example.com"));
+        assert!(!is_within("imap.example.net", "example.com"));
+        assert!(!is_within("badexample.com", "example.com"));
     }
 }
