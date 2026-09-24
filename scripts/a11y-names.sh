@@ -389,12 +389,24 @@ export GSETTINGS_BACKEND=memory
 export PENGUIN_MAIL_LOCALE_DIR="$PWD/target/locale"
 
 app=$PWD/target/debug/penguin-mail
+
+# WebKit runs its helpers, including the proxy that carries the
+# accessibility bus into a page, inside bubblewrap. An unprivileged
+# container, which is what CI runs in, cannot make the namespaces that
+# needs, and WebKit then aborts the app the moment the walk opens a
+# conversation. There, and only there, the demo runs without WebKit's
+# sandbox: it shows its own sample mail with remote images blocked.
+webkit=
+if ! bwrap --ro-bind / / true 2>/dev/null; then
+    echo "bubblewrap cannot start here, so the demo runs without WebKit's sandbox" >&2
+    webkit=WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
+fi
 inside="
 $launcher --launch-immediately &
 sleep 1
 $registry &
 sleep 1
-$app --demo >$sandbox/app.log 2>&1 &
+env $webkit $app --demo >$sandbox/app.log 2>&1 &
 window=\$!
 python3 $walk --menus
 status=\$?
