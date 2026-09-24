@@ -92,6 +92,13 @@ imap = { host = "imap.mail.me.com", port = 993, security = "tls", user_name = "l
 smtp = [
   { host = "smtp.mail.me.com", port = 587, security = "start_tls", user_name = "address" },
 ]
+# A custom domain found by MX signs in with the whole address alone. Its
+# local part at Apple could be a stranger's iCloud name, and the first
+# attempt would send the password there.
+custom_domain_imap = { host = "imap.mail.me.com", port = 993, security = "tls", user_name = "address" }
+custom_domain_smtp = [
+  { host = "smtp.mail.me.com", port = 587, security = "start_tls", user_name = "address" },
+]
 password = "app_password"
 app_password_url = "https://support.apple.com/en-us/102654"
 documentation_url = "https://support.apple.com/en-us/102525"
@@ -150,7 +157,7 @@ documentation_url = "https://help.aol.com/articles/how-do-i-use-other-email-appl
 # questions/1259700). AOL's own page does not say.
 files_sent_mail = true
 
-# Zoho runs one set of servers per data centre. Its own addresses use the
+# Zoho runs one set of servers per data center. Its own addresses use the
 # plain hosts; an organization's custom domain uses the "pro" hosts.
 [[provider]]
 id = "zoho-com"
@@ -279,6 +286,78 @@ custom_domain_imap = { host = "imappro.zohocloud.ca", port = 993, security = "tl
 custom_domain_smtp = [
   { host = "smtppro.zohocloud.ca", port = 465, security = "tls", user_name = "address" },
   { host = "smtppro.zohocloud.ca", port = 587, security = "start_tls", user_name = "address" },
+]
+password = "app_password_with_two_step"
+enable_imap_url = "https://www.zoho.com/mail/help/imap-access.html"
+documentation_url = "https://www.zoho.com/mail/help/imap-access.html"
+# Zoho's SMTP files the copy in Sent, as for zoho-com above.
+files_sent_mail = true
+
+[[provider]]
+id = "zoho-sa"
+name = "Zoho Mail"
+kind = "imap"
+# Saudi Arabia. zoho.sa and zohomail.sa had their MX at mx.zoho.sa on
+# 2026-09-24, and the imap, imappro, smtp and smtppro hosts resolved.
+domains = ["zoho.sa", "zohomail.sa"]
+mx = ["*.zoho.sa"]
+imap = { host = "imap.zoho.sa", port = 993, security = "tls", user_name = "address" }
+smtp = [
+  { host = "smtp.zoho.sa", port = 465, security = "tls", user_name = "address" },
+  { host = "smtp.zoho.sa", port = 587, security = "start_tls", user_name = "address" },
+]
+custom_domain_imap = { host = "imappro.zoho.sa", port = 993, security = "tls", user_name = "address" }
+custom_domain_smtp = [
+  { host = "smtppro.zoho.sa", port = 465, security = "tls", user_name = "address" },
+  { host = "smtppro.zoho.sa", port = 587, security = "start_tls", user_name = "address" },
+]
+password = "app_password_with_two_step"
+enable_imap_url = "https://www.zoho.com/mail/help/imap-access.html"
+documentation_url = "https://www.zoho.com/mail/help/imap-access.html"
+# Zoho's SMTP files the copy in Sent, as for zoho-com above.
+files_sent_mail = true
+
+[[provider]]
+id = "zoho-uk"
+name = "Zoho Mail"
+kind = "imap"
+# The UK. The hosts resolved on 2026-09-24, but zoho.uk's own MX pointed
+# at the EU center and zohomail.uk's at Yandex, so the entry has no
+# domains. A custom domain reaches it by MX.
+mx = ["*.zoho.uk"]
+imap = { host = "imap.zoho.uk", port = 993, security = "tls", user_name = "address" }
+smtp = [
+  { host = "smtp.zoho.uk", port = 465, security = "tls", user_name = "address" },
+  { host = "smtp.zoho.uk", port = 587, security = "start_tls", user_name = "address" },
+]
+custom_domain_imap = { host = "imappro.zoho.uk", port = 993, security = "tls", user_name = "address" }
+custom_domain_smtp = [
+  { host = "smtppro.zoho.uk", port = 465, security = "tls", user_name = "address" },
+  { host = "smtppro.zoho.uk", port = 587, security = "start_tls", user_name = "address" },
+]
+password = "app_password_with_two_step"
+enable_imap_url = "https://www.zoho.com/mail/help/imap-access.html"
+documentation_url = "https://www.zoho.com/mail/help/imap-access.html"
+# Zoho's SMTP files the copy in Sent, as for zoho-com above.
+files_sent_mail = true
+
+[[provider]]
+id = "zoho-com-cn"
+name = "Zoho Mail"
+kind = "imap"
+# China. zoho.com.cn and zohomail.com.cn had their MX at mx.zoho.com.cn on
+# 2026-09-24, and the imap, imappro, smtp and smtppro hosts resolved.
+domains = ["zoho.com.cn", "zohomail.com.cn"]
+mx = ["*.zoho.com.cn"]
+imap = { host = "imap.zoho.com.cn", port = 993, security = "tls", user_name = "address" }
+smtp = [
+  { host = "smtp.zoho.com.cn", port = 465, security = "tls", user_name = "address" },
+  { host = "smtp.zoho.com.cn", port = 587, security = "start_tls", user_name = "address" },
+]
+custom_domain_imap = { host = "imappro.zoho.com.cn", port = 993, security = "tls", user_name = "address" }
+custom_domain_smtp = [
+  { host = "smtppro.zoho.com.cn", port = 465, security = "tls", user_name = "address" },
+  { host = "smtppro.zoho.com.cn", port = 587, security = "start_tls", user_name = "address" },
 ]
 password = "app_password_with_two_step"
 enable_imap_url = "https://www.zoho.com/mail/help/imap-access.html"

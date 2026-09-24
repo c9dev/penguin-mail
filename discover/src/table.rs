@@ -73,7 +73,7 @@ impl Table {
     }
 
     /// The first IMAP entry whose display name is `name`. Zoho's data
-    /// centres and GMX's two families share a name; a test holds entries
+    /// centers and GMX's two families share a name; a test holds entries
     /// that share one to the same sent-copy rule and password, so the
     /// first answers for all.
     pub(crate) fn by_name(&self, name: &str) -> Option<&Entry> {
@@ -370,6 +370,19 @@ mod tests {
         assert_eq!(found.candidates[0].smtp.user_name, UserName::Address);
     }
 
+    // A bare local part at Apple could be someone else's iCloud name, so
+    // an address on a custom domain signs in as itself.
+    #[test]
+    fn a_custom_domain_on_icloud_signs_in_with_the_whole_address() {
+        let table = table();
+        let icloud = table.by_mx(&["mx01.mail.icloud.com".to_string()]).unwrap();
+        let found = icloud.found(Source::Mx, true);
+        assert_eq!(found.candidates[0].imap.host, "imap.mail.me.com");
+        assert_eq!(found.candidates[0].imap.user_name, UserName::Address);
+        assert_eq!(found.candidates[0].smtp.host, "smtp.mail.me.com");
+        assert_eq!(found.candidates[0].smtp.user_name, UserName::Address);
+    }
+
     fn by_mx(host: &str) -> Option<String> {
         table()
             .by_mx(&[host.to_string()])
@@ -427,13 +440,37 @@ mod tests {
     #[test]
     fn a_custom_domain_on_zoho_uses_the_pro_hosts() {
         let table = table();
-        let zoho = table.by_mx(&["mx.zoho.eu".to_string()]).unwrap();
-        let found = zoho.found(Source::Mx, true);
-        assert_eq!(found.candidates[0].imap.host, "imappro.zoho.eu");
-        assert_eq!(found.candidates[0].smtp.host, "smtppro.zoho.eu");
-        assert_eq!(found.candidates[0].source, Source::Mx);
-        let own = zoho.found(Source::Table, false);
-        assert_eq!(own.candidates[0].imap.host, "imap.zoho.eu");
+        for center in ["com", "eu", "in", "com.au", "jp", "sa", "uk", "com.cn"] {
+            let zoho = table
+                .by_mx(&[format!("mx.zoho.{center}")])
+                .unwrap_or_else(|| panic!("mx.zoho.{center} is Zoho's"));
+            let found = zoho.found(Source::Mx, true);
+            assert_eq!(
+                found.candidates[0].imap.host,
+                format!("imappro.zoho.{center}")
+            );
+            assert_eq!(
+                found.candidates[0].smtp.host,
+                format!("smtppro.zoho.{center}")
+            );
+            assert_eq!(found.candidates[0].source, Source::Mx);
+            let own = zoho.found(Source::Table, false);
+            assert_eq!(own.candidates[0].imap.host, format!("imap.zoho.{center}"));
+        }
+    }
+
+    #[test]
+    fn zohos_saudi_and_chinese_addresses_answer_by_domain() {
+        for (domain, host) in [
+            ("zohomail.sa", "imap.zoho.sa"),
+            ("zoho.com.cn", "imap.zoho.com.cn"),
+        ] {
+            let found = table()
+                .by_domain(domain)
+                .unwrap_or_else(|| panic!("{domain} is in the table"))
+                .found(Source::Table, false);
+            assert_eq!(found.candidates[0].imap.host, host, "{domain}");
+        }
     }
 
     #[test]
@@ -456,7 +493,7 @@ mod tests {
         }
     }
 
-    /// Zoho's data centres and GMX's two families share a name, and an
+    /// Zoho's data centers and GMX's two families share a name, and an
     /// account keeps only the name. Whichever entry answers must file sent
     /// mail the same way and take the same password. GMX's two families
     /// link to different help pages; the first family's pages answer for
