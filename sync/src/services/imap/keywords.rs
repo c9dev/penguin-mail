@@ -2,9 +2,11 @@
 //! keywords the app spells `$seen`, `$flagged`, `$answered` and `$draft`;
 //! any other keyword goes as it is. IMAP compares keywords without case.
 
+use mailrs_domain::Membership;
 use mailrs_domain::mailbox::keyword;
 
 use super::SYSTEM_KEYWORDS;
+use crate::services::RemoteChange;
 
 /// The keywords a mailbox stores when its PERMANENTFLAGS take `\*` or
 /// name `$muted`: the system flags and the app's own.
@@ -55,9 +57,42 @@ pub(super) fn stored_keywords(permanent: &[String]) -> &'static [&'static str] {
     }
 }
 
+/// The changes that bring message `id` to `flags`: a gain of every
+/// keyword it carries, and a loss of every keyword the server stores that
+/// it lacks. A keyword the server cannot store stays as the app left it
+/// on this computer.
+pub(super) fn flag_changes(id: &str, flags: &[String], stored: &[&str]) -> Vec<RemoteChange> {
+    let carried = keywords_of(flags);
+    let lost: Vec<Membership> = stored
+        .iter()
+        .copied()
+        .filter(|k| !carried.iter().any(|c| c.as_str() == *k))
+        .map(|k| Membership::Keyword(k.to_string()))
+        .collect();
+    let gained: Vec<Membership> = carried.into_iter().map(Membership::Keyword).collect();
+    let mut changes = Vec::new();
+    if !gained.is_empty() {
+        changes.push(RemoteChange::Gained {
+            id: id.to_string(),
+            thread_id: id.to_string(),
+            memberships: gained,
+        });
+    }
+    if !lost.is_empty() {
+        changes.push(RemoteChange::Lost {
+            id: id.to_string(),
+            memberships: lost,
+        });
+    }
+    changes
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{keywords_of, stored_keywords};
+    use mailrs_domain::Membership;
+
+    use super::{flag_changes, keywords_of, stored_keywords};
+    use crate::services::RemoteChange;
 
     fn owned(flags: &[&str]) -> Vec<String> {
         flags.iter().map(|f| f.to_string()).collect()
@@ -87,5 +122,28 @@ mod tests {
         assert!(stored_keywords(&open).contains(&"$muted"));
         let named = owned(&["\\Seen", "$Muted"]);
         assert!(stored_keywords(&named).contains(&"$muted"));
+    }
+
+    #[test]
+    fn flags_become_gains_and_losses_of_what_the_server_stores() {
+        let stored = ["$seen", "$flagged", "$answered", "$draft"];
+        assert_eq!(
+            flag_changes("INBOX/1/4", &owned(&["\\Seen"]), &stored),
+            [
+                RemoteChange::Gained {
+                    id: "INBOX/1/4".into(),
+                    thread_id: "INBOX/1/4".into(),
+                    memberships: vec![Membership::Keyword("$seen".into())],
+                },
+                RemoteChange::Lost {
+                    id: "INBOX/1/4".into(),
+                    memberships: vec![
+                        Membership::Keyword("$flagged".into()),
+                        Membership::Keyword("$answered".into()),
+                        Membership::Keyword("$draft".into()),
+                    ],
+                },
+            ]
+        );
     }
 }

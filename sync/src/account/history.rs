@@ -1,13 +1,14 @@
 //! Incremental sync: applies what the server changed since the stored sync
 //! state.
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 use mailrs_domain::{ChangeEvent, Membership, MessageMeta, Role};
 use mailrs_store::messages::Change;
-use mailrs_store::{accounts, labels, messages};
+use mailrs_store::{accounts, labels, messages, remote_refs};
 
 use super::AccountSync;
+use super::fetch::Placing;
 use crate::{BackendError, MailBackend, RemoteChange, SyncError, SyncState, Want};
 
 impl AccountSync {
@@ -39,10 +40,10 @@ impl AccountSync {
             return Ok(());
         }
 
-        let fetched = self.fetch_for_history(&found.changes).await?;
+        let changes = self.changes_as_stored(found.changes).await?;
+        let (fetched, placing) = self.fetch_for_history(&changes).await?;
         let mail = &self.services.mail;
-        let named_mailboxes: BTreeSet<String> = found
-            .changes
+        let named_mailboxes: BTreeSet<String> = changes
             .iter()
             .filter_map(|change| match change {
                 RemoteChange::Gained { memberships, .. } => Some(memberships),
@@ -57,7 +58,7 @@ impl AccountSync {
             .filter(|id| mail.made_by_person(id))
             .collect();
         let generation = cursor.sync_gen;
-        let (changes, state) = (found.changes, found.state);
+        let state = found.state;
         let (touched, new_mail, unknown_mailbox) = self
             .db
             .write(move |c| {
@@ -86,10 +87,7 @@ impl AccountSync {
                                 {
                                     new_mail.push(id.clone());
                                 }
-                                batch.push(Change::Upsert {
-                                    meta: Box::new(meta.clone()),
-                                    generation,
-                                });
+                                batch.push(placing.upsert(account_id, meta, generation));
                             }
                         }
                         RemoteChange::Deleted { id } => {
@@ -106,10 +104,7 @@ impl AccountSync {
                         }
                         RemoteChange::Gained { id, .. } => {
                             if let Some(meta) = fetched.get(id) {
-                                batch.push(Change::Upsert {
-                                    meta: Box::new(meta.clone()),
-                                    generation,
-                                });
+                                batch.push(placing.upsert(account_id, meta, generation));
                             }
                         }
                         RemoteChange::Lost { id, memberships } => {
@@ -117,9 +112,20 @@ impl AccountSync {
                                 memberships.iter().map(|m| Change::of(id, m.clone(), false)),
                             );
                         }
+                        RemoteChange::Holds { mailbox, ids } => {
+                            let present: HashSet<&str> = ids.iter().map(String::as_str).collect();
+                            for (message_id, remote) in
+                                remote_refs::in_mailbox(c, account_id, mailbox)?
+                            {
+                                if !present.contains(remote.as_str()) {
+                                    batch.push(Change::Delete { message_id });
+                                }
+                            }
+                        }
                     }
                 }
                 let touched = messages::apply(c, account_id, &batch)?.threads;
+                placing.write_refs(c, account_id)?;
                 accounts::set_sync_state(c, account_id, state.as_str())?;
                 let known: BTreeSet<String> = labels::list_labels(c, account_id)?
                     .into_iter()
@@ -147,11 +153,11 @@ impl AccountSync {
     }
 
     /// Metadata for the messages the changes add, plus messages that moved
-    /// into the inbox from outside the window.
+    /// into the inbox from outside the window, and how to store them.
     async fn fetch_for_history(
         &self,
         changes: &[RemoteChange],
-    ) -> Result<HashMap<String, MessageMeta>, SyncError> {
+    ) -> Result<(HashMap<String, MessageMeta>, Placing), SyncError> {
         let account_id = self.account_id;
         let inbox = self
             .services
@@ -195,13 +201,13 @@ impl AccountSync {
                 .await?;
             wanted.extend(into_inbox.into_iter().filter(|w| !known.contains(&w.id)));
         }
-        Ok(self
-            .fetch(wanted)
-            .await?
+        let fetched = self.fetch(wanted).await?;
+        let metas = fetched
             .metas
             .into_iter()
             .map(|m| (m.id.clone(), m))
-            .collect())
+            .collect();
+        Ok((metas, fetched.placing))
     }
 }
 

@@ -21,7 +21,7 @@ use std::time::Duration;
 use mailrs_domain::mailbox::keyword;
 use mailrs_domain::{MailSet, RemoteMailbox, Role};
 use mailrs_gmail::LabelColor;
-use mailrs_imap::{ImapError, Selected, Since};
+use mailrs_imap::{Capabilities, ImapError, Selected, Since};
 use mailrs_mime::Parts;
 
 use super::{
@@ -67,9 +67,13 @@ pub struct Imap<I, S> {
 }
 
 /// What the adapter has learned from the server since it started. None of
-/// it is kept: the next start asks again.
+/// it is kept: the next start asks again. Nothing here grows with a
+/// mailbox's message count; a look that needs to compare against what a
+/// message carried before reads the store instead of keeping a copy.
 #[derive(Default)]
 struct Known {
+    /// The server's capabilities, asked once.
+    capabilities: Option<Capabilities>,
     /// The last listing, which roles and names are read from.
     folders: Vec<Folder>,
     /// The server's hierarchy delimiter.
@@ -112,10 +116,28 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// server store.
     async fn select(&self, mailbox: &str, since: Option<Since>) -> Result<Selected, BackendError> {
         let selected = self.api.select(mailbox, since).await?;
+        self.note_keywords(mailbox, &selected);
+        Ok(selected)
+    }
+
+    /// Remembers which keywords the Inbox's PERMANENTFLAGS let the server
+    /// store, once it is selected.
+    fn note_keywords(&self, mailbox: &str, selected: &Selected) {
         if mailbox.eq_ignore_ascii_case("INBOX") {
             self.known().keywords = Some(keywords::stored_keywords(&selected.permanent_flags));
         }
-        Ok(selected)
+    }
+
+    /// The server's capabilities, asked once. The client asks after the
+    /// login, when CONDSTORE and QRESYNC often first show.
+    async fn capabilities_now(&self) -> Result<Capabilities, BackendError> {
+        let known = self.known().capabilities;
+        if let Some(capabilities) = known {
+            return Ok(capabilities);
+        }
+        let capabilities = self.api.capabilities().await?;
+        self.known().capabilities = Some(capabilities);
+        Ok(capabilities)
     }
 }
 
@@ -185,10 +207,7 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
     }
 
     async fn changes(&self, since: Option<&SyncState>) -> Result<Changes, BackendError> {
-        match since {
-            None => self.feed_start().await,
-            Some(_) => Err(BackendError::Unsupported),
-        }
+        self.feed(since).await
     }
 
     async fn create_mailbox(&self, name: &str) -> Result<RemoteMailbox, BackendError> {

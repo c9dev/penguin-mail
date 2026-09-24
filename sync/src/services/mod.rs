@@ -130,6 +130,13 @@ pub enum RemoteChange {
         id: String,
         memberships: Vec<Membership>,
     },
+    /// Every message `mailbox` holds now, by the server's names, from a
+    /// server that names no message it expunged. A stored message located
+    /// in the mailbox that the list lacks has gone.
+    Holds {
+        mailbox: String,
+        ids: Vec<String>,
+    },
 }
 
 /// What the server calls one message, with its thread, as a listing or a

@@ -7,6 +7,7 @@ use std::collections::BTreeMap;
 use mailrs_imap::Selected;
 use serde::{Deserialize, Serialize};
 
+use crate::BackendError;
 use crate::services::SyncState;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -26,6 +27,13 @@ pub(super) struct Kept {
 }
 
 impl ImapState {
+    /// A state this adapter cannot read, such as Gmail's history id, is one
+    /// it did not write, so the caller lists the mail again rather than
+    /// guess.
+    pub fn read(state: &SyncState) -> Result<ImapState, BackendError> {
+        serde_json::from_str(state.as_str()).map_err(|_| BackendError::StateLost)
+    }
+
     pub fn written(&self) -> SyncState {
         // Serializing a map of numbers cannot fail; an empty state would
         // read back as lost and list the mail again.
@@ -68,5 +76,29 @@ mod tests {
             state.written().as_str(),
             r#"{"mailboxes":{"INBOX":{"uidvalidity":7,"uidnext":43,"modseq":1200}}}"#
         );
+    }
+
+    #[test]
+    fn a_state_reads_back_what_it_wrote() {
+        let state = ImapState {
+            mailboxes: BTreeMap::from([(
+                "Sent".to_string(),
+                Kept {
+                    uidvalidity: 3,
+                    uidnext: 9,
+                    modseq: None,
+                },
+            )]),
+        };
+        assert_eq!(ImapState::read(&state.written()).unwrap(), state);
+    }
+
+    #[test]
+    fn a_state_another_adapter_wrote_is_a_lost_place() {
+        let gmail = crate::services::SyncState::new("{\"history_id\":100}");
+        assert!(matches!(
+            ImapState::read(&gmail),
+            Err(crate::BackendError::StateLost)
+        ));
     }
 }
