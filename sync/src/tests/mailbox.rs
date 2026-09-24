@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use mailrs_domain::smart::{Condition, Field};
 use mailrs_domain::{
-    Account, AccountState, Category, FlagColor, Folder, SmartMailbox, ThreadSummary, system_label,
+    Account, AccountState, Category, FlagColor, Folder, SmartMailbox, ThreadSummary,
 };
 use mailrs_store::outbox::{self, Queued};
 use mailrs_store::reminders::Reminder;
@@ -14,7 +14,7 @@ use mailrs_store::{flags, reminders};
 
 use super::{Connected, Harness, harness};
 use crate::fake::meta;
-use crate::mailbox::{Listing, Loaded, Mailbox, Mailboxes, Scope, View};
+use crate::mailbox::{Listing, Loaded, Mailbox, Mailboxes, Scope, Standard, View};
 use crate::now_millis;
 
 const DAY: i64 = 24 * 60 * 60 * 1000;
@@ -84,7 +84,7 @@ async fn seeded() -> Harness {
 async fn the_inbox_lists_its_threads_with_its_unread_count() {
     let h = seeded().await;
 
-    let listing = list(&h, &Mailbox::Unified(system_label::INBOX), &view()).await;
+    let listing = list(&h, &Mailbox::Unified(Standard::Inbox), &view()).await;
     assert_eq!(ids(&listing), ["t3", "t2", "t1"]);
     assert_eq!((listing.unread, listing.subtitle.as_str()), (1, "1 unread"));
     assert_eq!(listing.title, "All Inboxes");
@@ -114,13 +114,13 @@ async fn the_muted_mailbox_lists_muted_threads_and_the_inbox_leaves_them_out() {
         .await
         .unwrap();
 
-    let listing = list(&h, &Mailbox::Unified(system_label::MUTE), &view()).await;
+    let listing = list(&h, &Mailbox::Unified(Standard::Muted), &view()).await;
     assert_eq!(ids(&listing), ["t2"]);
     assert_eq!(listing.title, "Muted");
     assert_eq!(listing.empty.title, "No Muted Mail");
     assert!(listing.rows.iter().all(|r| r.muted));
 
-    let inbox = list(&h, &Mailbox::Unified(system_label::INBOX), &view()).await;
+    let inbox = list(&h, &Mailbox::Unified(Standard::Inbox), &view()).await;
     assert_eq!(ids(&inbox), ["t3", "t1"]);
     assert!(inbox.rows.iter().all(|r| !r.muted));
 }
@@ -133,7 +133,7 @@ async fn a_category_narrows_the_inbox_but_not_a_label() {
         ..view()
     };
 
-    let inbox = list(&h, &Mailbox::Unified(system_label::INBOX), &promotions).await;
+    let inbox = list(&h, &Mailbox::Unified(Standard::Inbox), &promotions).await;
     assert_eq!(ids(&inbox), ["t3"]);
 
     let label = Mailbox::Label {
@@ -410,14 +410,14 @@ async fn a_gmail_folder_and_a_search_come_from_gmail_not_the_store() {
         ("Search", "in:spam")
     );
 
-    let stored = list(&h, &Mailbox::Unified(system_label::INBOX), &view()).await;
+    let stored = list(&h, &Mailbox::Unified(Standard::Inbox), &view()).await;
     assert!(!ids(&stored).contains(&"t5".to_string()));
 }
 
 #[tokio::test]
 async fn a_page_says_when_more_rows_follow() {
     let h = seeded().await;
-    let inbox = Mailbox::Unified(system_label::INBOX);
+    let inbox = Mailbox::Unified(Standard::Inbox);
     let paged = View {
         limit: Some(2),
         ..view()
@@ -436,7 +436,7 @@ async fn a_page_says_when_more_rows_follow() {
 #[tokio::test]
 async fn a_stored_page_starts_after_the_last_row_held_whatever_the_count() {
     let h = seeded().await;
-    let inbox = Mailbox::Unified(system_label::INBOX);
+    let inbox = Mailbox::Unified(Standard::Inbox);
     let first = list(&h, &inbox, &view()).await;
     let t3 = first.rows.iter().find(|r| r.id == "t3").unwrap().clone();
     let held = Loaded {
@@ -464,7 +464,7 @@ async fn a_stored_page_starts_after_the_last_row_held_whatever_the_count() {
 
 #[tokio::test]
 async fn mail_that_arrives_or_leaves_between_pages_neither_repeats_nor_skips_a_row() {
-    let inbox = Mailbox::Unified(system_label::INBOX);
+    let inbox = Mailbox::Unified(Standard::Inbox);
     let paged = View {
         limit: Some(2),
         ..view()
@@ -492,7 +492,7 @@ async fn mail_that_arrives_or_leaves_between_pages_neither_repeats_nor_skips_a_r
 #[tokio::test]
 async fn changed_threads_come_back_only_while_they_belong() {
     let h = seeded().await;
-    let inbox = Mailbox::Unified(system_label::INBOX);
+    let inbox = Mailbox::Unified(Standard::Inbox);
     let named = vec![
         (h.account_id, "t1".to_string()),
         (h.account_id, "t2".into()),
@@ -552,7 +552,7 @@ async fn a_gmail_mailbox_has_no_row_by_row_refresh() {
     );
     assert!(
         lists(&h)
-            .changed(&Mailbox::Unified(system_label::INBOX), &[], &view())
+            .changed(&Mailbox::Unified(Standard::Inbox), &[], &view())
             .await
             .unwrap()
             .is_none(),
@@ -567,7 +567,7 @@ async fn counts_cover_the_sidebar_and_the_categories() {
     h.db.write(move |c| flags::set_color(c, account_id, "t2", None, Some(FlagColor::Green)))
         .await
         .unwrap();
-    let inbox = Mailbox::Unified(system_label::INBOX);
+    let inbox = Mailbox::Unified(Standard::Inbox);
     let label = Mailbox::Label {
         account_id,
         label_id: "Label_1".into(),
@@ -575,7 +575,7 @@ async fn counts_cover_the_sidebar_and_the_categories() {
     };
     let sidebar = vec![
         inbox.clone(),
-        Mailbox::Unified(system_label::SENT),
+        Mailbox::Unified(Standard::Sent),
         label.clone(),
         Mailbox::Flag(FlagColor::Green),
         Mailbox::Vips {
@@ -614,11 +614,38 @@ async fn without_threading_a_list_holds_one_row_per_message() {
         ..view()
     };
 
-    let listing = list(&h, &Mailbox::Unified(system_label::INBOX), &flat).await;
+    let listing = list(&h, &Mailbox::Unified(Standard::Inbox), &flat).await;
     let messages: Vec<Option<&str>> = listing
         .rows
         .iter()
         .map(|r: &ThreadSummary| r.message_id.as_deref())
         .collect();
     assert_eq!(messages, [Some("b"), Some("a")]);
+}
+
+#[test]
+fn each_standard_mailbox_draws_from_its_mail_set() {
+    use mailrs_domain::{MailSet, Role};
+    assert_eq!(Standard::Inbox.set(), MailSet::Role(Role::Inbox));
+    assert_eq!(Standard::Flagged.set(), MailSet::flagged());
+    assert_eq!(Standard::Sent.set(), MailSet::Role(Role::Sent));
+    assert_eq!(Standard::Drafts.set(), MailSet::Role(Role::Drafts));
+    assert_eq!(Standard::Muted.set(), MailSet::muted());
+    for which in Standard::ALL {
+        assert_eq!(Standard::from_key(which.key()), Some(which));
+    }
+    assert_eq!(Standard::from_key("INBOX"), Some(Standard::Inbox));
+    assert_eq!(Standard::from_key("Label_3"), None);
+}
+
+#[test]
+fn only_an_inbox_counts_unread_and_takes_categories() {
+    let unified = Mailbox::Unified(Standard::Inbox);
+    let mine = Mailbox::Standard { account_id: 1, which: Standard::Inbox };
+    let sent = Mailbox::Standard { account_id: 1, which: Standard::Sent };
+    assert!(unified.counts_unread() && unified.takes_categories());
+    assert!(mine.counts_unread() && mine.takes_categories());
+    assert!(!sent.counts_unread() && !sent.takes_categories());
+    assert_eq!(mine.account(), Some(1));
+    assert_eq!(unified.account(), None);
 }

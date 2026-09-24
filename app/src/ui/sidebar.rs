@@ -8,13 +8,10 @@ use adw::prelude::*;
 use gtk::{gdk, gio, glib, pango};
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{
-    Account, AccountId, AccountState, FlagColor, Folder, Label, LabelKind, system_label,
+    Account, AccountId, AccountState, FlagColor, Folder, Label, LabelKind,
 };
 
-use super::{
-    FolderLook, LABEL_COLORS, Mailbox, UNIFIED, account_label_name, describe, label_color_name,
-    mailbox_icon, unified_name,
-};
+use super::{FolderLook, LABEL_COLORS, Mailbox, Standard, describe, label_color_name};
 use crate::format::{PALETTE, account_color_index, palette_name};
 
 struct Row {
@@ -208,14 +205,14 @@ impl Sidebar {
         self.list.remove_all();
         self.rows.borrow_mut().clear();
         self.headings.borrow_mut().clear();
-        for label in UNIFIED {
+        for which in Standard::ALL {
             self.add_mailbox(
-                Mailbox::Unified(label),
-                &unified_name(label),
-                mailbox_icon(label),
+                Mailbox::Unified(which),
+                &which.unified_name(),
+                which.icon(),
                 0,
             );
-            if label == system_label::INBOX && !vips.is_empty() {
+            if which == Standard::Inbox && !vips.is_empty() {
                 let everyone = Mailbox::Vips {
                     emails: vips.iter().map(|(e, _)| e.clone()).collect(),
                     name: gettext("VIPs"),
@@ -237,7 +234,7 @@ impl Sidebar {
                     context_menu(&row, &menu);
                 }
             }
-            if label == system_label::STARRED {
+            if which == Standard::Flagged {
                 // One row per flag colour in use, as Apple Mail shows them.
                 for color in FlagColor::ALL {
                     let row = self.add_mailbox(
@@ -309,13 +306,12 @@ impl Sidebar {
                 chevron,
                 count,
             });
-            for label in UNIFIED {
-                let mailbox = Mailbox::Label {
+            for which in Standard::ALL {
+                let mailbox = Mailbox::Standard {
                     account_id: account.id,
-                    label_id: label.into(),
-                    name: account_label_name(label),
+                    which,
                 };
-                self.add_mailbox(mailbox, &account_label_name(label), mailbox_icon(label), 1);
+                self.add_mailbox(mailbox, &which.name(), which.icon(), 1);
             }
             for folder in Folder::ALL {
                 let mailbox = Mailbox::Folder {
@@ -441,15 +437,15 @@ impl Sidebar {
                 row.row
                     .set_visible(count > 0 || selected.as_ref() == Some(&row.row));
             }
-            let is_drafts = matches!(
-                &row.mailbox,
-                Mailbox::Unified(system_label::DRAFT)
-                    | Mailbox::Scheduled
-                    | Mailbox::Outbox
-                    | Mailbox::Reminders
-                    | Mailbox::FollowUp
-                    | Mailbox::Flag(_)
-            ) || matches!(&row.mailbox, Mailbox::Label { label_id, .. } if label_id == system_label::DRAFT);
+            let is_drafts = row.mailbox.standard() == Some(Standard::Drafts)
+                || matches!(
+                    &row.mailbox,
+                    Mailbox::Scheduled
+                        | Mailbox::Outbox
+                        | Mailbox::Reminders
+                        | Mailbox::FollowUp
+                        | Mailbox::Flag(_)
+                );
             let shown = count > 0 && (row.mailbox.counts_unread() || is_drafts);
             row.count.set_visible(shown);
             row.count.set_label(&count.to_string());
@@ -468,10 +464,9 @@ impl Sidebar {
             }
         }
         for heading in self.headings.borrow().iter() {
-            let inbox = Mailbox::Label {
+            let inbox = Mailbox::Standard {
                 account_id: heading.account_id,
-                label_id: system_label::INBOX.into(),
-                name: gettext("Inbox"),
+                which: Standard::Inbox,
             };
             let unread = counts.get(&inbox).copied().unwrap_or(0);
             heading.count.set_label(&unread.to_string());
@@ -598,10 +593,10 @@ fn hidden_until_used(mailbox: &Mailbox) -> bool {
 /// Mailboxes mail can be moved into.
 fn takes_mail(mailbox: &Mailbox) -> bool {
     match mailbox {
-        Mailbox::Unified(label) => matches!(*label, system_label::INBOX | system_label::STARRED),
-        Mailbox::Label { label_id, .. } => {
-            !matches!(label_id.as_str(), system_label::SENT | system_label::DRAFT)
+        Mailbox::Unified(which) | Mailbox::Standard { which, .. } => {
+            matches!(which, Standard::Inbox | Standard::Flagged)
         }
+        Mailbox::Label { .. } => true,
         Mailbox::Folder { .. } => true,
         Mailbox::Flag(_) => true,
         Mailbox::Search { .. }

@@ -10,11 +10,11 @@
 
 use std::rc::Rc;
 
-use mailrs_domain::{FlagColor, Folder, MailSet, Target, ThreadSummary, gmail, system_label};
+use mailrs_domain::{FlagColor, Folder, MailSet, Role, Target, ThreadSummary};
 use mailrs_sync::{History, MailAction, Outcome, TriageAction};
 
 use super::MainWindow;
-use crate::ui::Mailbox;
+use crate::ui::{Mailbox, Standard};
 use crate::ui::conversation::ConversationView;
 
 /// What changed the mail.
@@ -147,32 +147,25 @@ pub(super) fn leaves(action: &MailAction, mailbox: &Mailbox) -> bool {
 /// Whether `action` takes the targets out of `mailbox`'s list.
 fn leaves_list(mailbox: &Mailbox, action: &TriageAction) -> bool {
     let folder = mailbox.folder();
-    let listed = listed_label(mailbox);
-    // A label change leaves the list that shows the label it takes away,
-    // and the Archive once it puts the mail back in the inbox. Sent,
-    // Starred and a search keep listing mail that only gained a label.
-    let adds = |label: &str| {
-        (folder == Some(Folder::Archive) && label == system_label::INBOX)
-            || (label == system_label::TRASH && folder != Some(Folder::Trash))
-            || (label == system_label::SPAM && folder != Some(Folder::Junk))
+    let listed = listed_set(mailbox);
+    // A change of mail sets leaves the list that shows the set it takes
+    // away, and the Archive once it puts the mail back in the inbox. Sent,
+    // Flagged and a search keep listing mail that only gained a label.
+    let adds = |set: &MailSet| match set {
+        MailSet::Role(Role::Inbox) => folder == Some(Folder::Archive),
+        MailSet::Role(Role::Trash) => folder != Some(Folder::Trash),
+        MailSet::Role(Role::Junk) => folder != Some(Folder::Junk),
+        _ => false,
     };
-    let removes = |label: &str| listed == Some(label);
-    // Until the window reads MailSet directly, a Relabel value still
-    // names Gmail labels, so a set is judged by the label it stands for.
-    let adds_set = |set: &MailSet| {
-        (folder == Some(Folder::Archive) && *set == gmail::set_of(system_label::INBOX))
-            || (*set == gmail::set_of(system_label::TRASH) && folder != Some(Folder::Trash))
-            || (*set == gmail::set_of(system_label::SPAM) && folder != Some(Folder::Junk))
-    };
-    let removes_set = |set: &MailSet| listed.is_some_and(|l| gmail::set_of(l) == *set);
+    let removes = |set: &MailSet| listed.as_ref() == Some(set);
     match action {
-        TriageAction::AddLabel(label) => adds(label),
-        TriageAction::RemoveLabel(label) => removes(label),
+        // The window adds and removes a person's labels by their ids.
+        TriageAction::AddLabel(id) => adds(&MailSet::Mailbox(id.clone())),
+        TriageAction::RemoveLabel(id) => removes(&MailSet::Mailbox(id.clone())),
         TriageAction::Relabel { add, remove } => {
-            add.iter().any(adds_set)
-                || remove.iter().any(|s| removes_set(s) && !add.contains(s))
+            add.iter().any(adds) || remove.iter().any(|s| removes(s) && !add.contains(s))
         }
-        TriageAction::Unstar => removes(system_label::STARRED),
+        TriageAction::Unstar => removes(&MailSet::flagged()),
         TriageAction::Archive => !matches!(folder, Some(Folder::AllMail | Folder::Archive)),
         TriageAction::Trash => folder != Some(Folder::Trash),
         TriageAction::Junk => folder != Some(Folder::Junk),
@@ -186,31 +179,27 @@ fn leaves_list(mailbox: &Mailbox, action: &TriageAction) -> bool {
     }
 }
 
-/// The label a mailbox lists, when it lists one: the label itself, or
-/// what the Trash and Junk folders stand for.
-fn listed_label(mailbox: &Mailbox) -> Option<&str> {
+/// The mail set a mailbox lists, when it lists one: its own, or what the
+/// Trash and Junk folders stand for.
+fn listed_set(mailbox: &Mailbox) -> Option<MailSet> {
     match mailbox {
-        Mailbox::Unified(label) => Some(label),
-        Mailbox::Label { label_id, .. } => Some(label_id),
+        Mailbox::Unified(which) | Mailbox::Standard { which, .. } => Some(which.set()),
+        Mailbox::Label { label_id, .. } => Some(MailSet::Mailbox(label_id.clone())),
         Mailbox::Folder {
             folder: Folder::Trash,
             ..
-        } => Some(system_label::TRASH),
+        } => Some(MailSet::Role(Role::Trash)),
         Mailbox::Folder {
             folder: Folder::Junk,
             ..
-        } => Some(system_label::SPAM),
+        } => Some(MailSet::Role(Role::Junk)),
         _ => None,
     }
 }
 
 /// Whether `mailbox` is the Muted list, unified or for one account.
 fn lists_muted(mailbox: &Mailbox) -> bool {
-    match mailbox {
-        Mailbox::Unified(label) => *label == system_label::MUTE,
-        Mailbox::Label { label_id, .. } => label_id == system_label::MUTE,
-        _ => false,
-    }
+    mailbox.standard() == Some(Standard::Muted)
 }
 
 /// Whether `row` is mail `target` names: the thread, or its one message
@@ -317,7 +306,7 @@ mod tests {
     use mailrs_sync::Failure;
 
     fn inbox() -> Mailbox {
-        Mailbox::Unified(system_label::INBOX)
+        Mailbox::Unified(Standard::Inbox)
     }
 
     fn folder(folder: Folder) -> Mailbox {
@@ -416,12 +405,11 @@ mod tests {
     }
 
     #[test]
-    fn the_muted_list_is_the_one_named_by_the_mute_label() {
-        assert!(lists_muted(&Mailbox::Unified(system_label::MUTE)));
-        assert!(lists_muted(&Mailbox::Label {
+    fn the_muted_list_is_the_standard_muted_mailbox() {
+        assert!(lists_muted(&Mailbox::Unified(Standard::Muted)));
+        assert!(lists_muted(&Mailbox::Standard {
             account_id: 1,
-            label_id: system_label::MUTE.into(),
-            name: "Muted".into(),
+            which: Standard::Muted,
         }));
         assert!(!lists_muted(&inbox()));
         assert!(!lists_muted(&Mailbox::Reminders));
@@ -446,7 +434,7 @@ mod tests {
         assert!(!leaves(&MailAction::Mute { muted: true }, &all_mail));
         assert!(leaves(
             &MailAction::Mute { muted: false },
-            &Mailbox::Unified(system_label::MUTE)
+            &Mailbox::Unified(Standard::Muted)
         ));
         assert!(!leaves(&MailAction::Flag(None), &inbox()));
     }
@@ -459,31 +447,33 @@ mod tests {
             label_id: "Work".into(),
             name: "Work".into(),
         };
-        let relabel = |add: &[&str], remove: &[&str]| {
-            triage(TriageAction::Relabel {
-                add: add.iter().map(|l| gmail::set_of(l)).collect(),
-                remove: remove.iter().map(|l| gmail::set_of(l)).collect(),
-            })
+        let relabel = |add: Vec<MailSet>, remove: Vec<MailSet>| {
+            triage(TriageAction::Relabel { add, remove })
         };
+        let named = |id: &str| MailSet::Mailbox(id.into());
+        let in_inbox = || MailSet::Role(Role::Inbox);
         // Filed from Work into Travel: gone from Work.
-        assert!(leaves(&relabel(&["Travel"], &["Work"]), &work));
-        assert!(leaves(&relabel(&["Travel"], &["INBOX"]), &inbox()));
-        assert!(!leaves(&relabel(&["Travel"], &["Work"]), &inbox()));
+        assert!(leaves(&relabel(vec![named("Travel")], vec![named("Work")]), &work));
+        assert!(leaves(&relabel(vec![named("Travel")], vec![in_inbox()]), &inbox()));
+        assert!(!leaves(&relabel(vec![named("Travel")], vec![named("Work")]), &inbox()));
         // Out of Work into All Mail.
         assert!(leaves(&triage(TriageAction::RemoveLabel("Work".into())), &work));
         assert!(!leaves(&triage(TriageAction::RemoveLabel("Work".into())), &inbox()));
         // Sent and Starred keep mail that only gained a label.
-        let sent = Mailbox::Unified(system_label::SENT);
+        let sent = Mailbox::Unified(Standard::Sent);
         assert!(!leaves(&triage(TriageAction::AddLabel("Travel".into())), &sent));
-        assert!(!leaves(&triage(TriageAction::AddLabel("INBOX".into())), &sent));
+        assert!(!leaves(&relabel(vec![in_inbox()], vec![]), &sent));
         // Back into the inbox from the Archive, and out of Junk.
         let archive = folder(Folder::Archive);
-        assert!(leaves(&triage(TriageAction::AddLabel("INBOX".into())), &archive));
-        assert!(leaves(&relabel(&[], &["SPAM"]), &folder(Folder::Junk)));
+        assert!(leaves(&relabel(vec![in_inbox()], vec![]), &archive));
+        assert!(leaves(
+            &relabel(vec![], vec![MailSet::Role(Role::Junk)]),
+            &folder(Folder::Junk)
+        ));
         assert!(!leaves(&triage(TriageAction::Star), &inbox()));
         assert!(leaves(
             &triage(TriageAction::Unstar),
-            &Mailbox::Unified(system_label::STARRED)
+            &Mailbox::Unified(Standard::Flagged)
         ));
     }
 

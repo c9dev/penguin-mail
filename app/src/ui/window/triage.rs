@@ -93,7 +93,7 @@ pub(super) fn decide(action: &Action, mailbox: &Mailbox, marks: Marks) -> Option
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailrs_domain::system_label;
+    use crate::ui::Standard;
 
     fn folder(folder: Folder) -> Mailbox {
         Mailbox::Folder {
@@ -103,7 +103,7 @@ mod tests {
     }
 
     fn inbox() -> Mailbox {
-        Mailbox::Unified(system_label::INBOX)
+        Mailbox::Unified(Standard::Inbox)
     }
 
     fn decide_in(action: Action, mailbox: Mailbox) -> Option<Decision> {

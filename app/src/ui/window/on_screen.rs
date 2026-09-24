@@ -10,10 +10,10 @@
 //! what went stale, the way `Aftermath` does for a mail action, and
 //! `MainWindow::redraw` carries it out. Nothing here touches GTK.
 
-use mailrs_domain::{AccountId, Category, SmartMailbox, system_label};
+use mailrs_domain::{AccountId, Category, SmartMailbox};
 
 use super::Reveal;
-use crate::ui::Mailbox;
+use crate::ui::{Mailbox, Standard};
 use crate::ui::list_feed::{ListFeed, Ticket};
 
 /// A thread to select once its row is on screen, and what to do with it.
@@ -59,7 +59,7 @@ pub(super) struct OnScreen {
 }
 
 fn inbox() -> Mailbox {
-    Mailbox::Unified(system_label::INBOX)
+    Mailbox::Unified(Standard::Inbox)
 }
 
 impl OnScreen {

@@ -5,11 +5,11 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gio, glib};
-use mailrs_domain::{Account, AccountId, Label, system_label};
+use mailrs_domain::{Account, AccountId, Label};
 
 use super::MainWindow;
 use crate::settings::{Change, Settings};
-use crate::ui::Mailbox;
+use crate::ui::{Mailbox, Standard};
 use crate::ui::confirm::{Tone, confirm};
 use crate::ui::sidebar::Extras;
 use mailrs_domain::translate::{fill, gettext};
@@ -100,7 +100,7 @@ impl MainWindow {
             if let Some(app) = this.app.upgrade() {
                 app.change_settings(Change::DeleteSmartMailbox(id));
             }
-            let inbox = Mailbox::Unified(system_label::INBOX);
+            let inbox = Mailbox::Unified(Standard::Inbox);
             this.sidebar.select(&inbox);
             this.show_mailbox(inbox);
         });

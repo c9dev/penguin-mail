@@ -96,10 +96,10 @@ impl MainWindow {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailrs_domain::system_label;
+    use crate::ui::Standard;
 
     fn inbox() -> Mailbox {
-        Mailbox::Unified(system_label::INBOX)
+        Mailbox::Unified(Standard::Inbox)
     }
 
     fn row(id: &str, unread: bool, starred: bool, muted: bool) -> ThreadSummary {

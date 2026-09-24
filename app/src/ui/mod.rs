@@ -43,9 +43,9 @@ use std::rc::Rc;
 use gtk::prelude::*;
 use gtk::{gio, glib};
 use mailrs_domain::translate::gettext;
-use mailrs_domain::{Folder, system_label};
+use mailrs_domain::Folder;
 pub use mailrs_sync::Mailbox;
-pub use mailrs_sync::mailbox::unified_name;
+pub use mailrs_sync::mailbox::Standard;
 use mailrs_sync::mailbox::{folder_icon, folder_name};
 
 /// Gives `widget` the name a screen reader says for it.
@@ -260,36 +260,6 @@ pub fn label_color_name(index: usize) -> String {
         6 => gettext("Purple"),
         7 => gettext("Pink"),
         _ => gettext("Gray"),
-    }
-}
-
-pub const UNIFIED: [&str; 5] = [
-    system_label::INBOX,
-    system_label::STARRED,
-    system_label::SENT,
-    system_label::DRAFT,
-    system_label::MUTE,
-];
-
-pub fn account_label_name(label: &str) -> String {
-    match label {
-        system_label::INBOX => gettext("Inbox"),
-        system_label::STARRED => gettext("Flagged"),
-        system_label::SENT => gettext("Sent"),
-        system_label::DRAFT => gettext("Drafts"),
-        system_label::MUTE => gettext("Muted"),
-        _ => gettext("Mail"),
-    }
-}
-
-pub fn mailbox_icon(label: &str) -> &'static str {
-    match label {
-        system_label::INBOX => "penguin-mail-inbox-symbolic",
-        system_label::STARRED => "penguin-mail-flag-symbolic",
-        system_label::SENT => "mail-send-symbolic",
-        system_label::DRAFT => "document-edit-symbolic",
-        system_label::MUTE => "audio-volume-muted-symbolic",
-        _ => "penguin-mail-tag-symbolic",
     }
 }
 

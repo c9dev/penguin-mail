@@ -6,11 +6,10 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::gio;
-use mailrs_domain::system_label;
 
 use super::MainWindow;
 use super::press::Press;
-use crate::ui::Mailbox;
+use crate::ui::{Mailbox, Standard};
 use mailrs_domain::translate::{fill_plural, gettext};
 
 /// "2 sent messages have had no reply" with Review and close buttons.
@@ -112,7 +111,7 @@ impl MainWindow {
             &[("count", &count.to_string())],
         ));
         banner.revealer.set_reveal_child(
-            mailbox == Mailbox::Unified(system_label::INBOX)
+            mailbox == Mailbox::Unified(Standard::Inbox)
                 && count > 0
                 && !banner.closed.get()
                 && self.settings_with(|s| s.suggest_follow_ups),

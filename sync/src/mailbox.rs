@@ -12,8 +12,8 @@ use std::time::{Duration, Instant};
 use chrono::{DateTime, Local, TimeZone};
 use mailrs_domain::translate::{date_locale, fill, fill_plural, gettext, pgettext};
 use mailrs_domain::{
-    Account, AccountId, Category, EpochMillis, FlagColor, Folder, MessageMeta, SmartMailbox,
-    ThreadSummary, gmail, system_label,
+    Account, AccountId, Category, EpochMillis, FlagColor, Folder, MailSet, MessageMeta, Role,
+    SmartMailbox, ThreadSummary,
 };
 use mailrs_store::threads::ThreadFilter;
 use mailrs_store::{Db, flags, follow_ups, outbox, reminders, threads};
@@ -40,11 +40,103 @@ const REMOTE_FRESH: Duration = Duration::from_secs(60);
 
 const DAY: EpochMillis = 24 * 60 * 60 * 1000;
 
+/// Inbox, Flagged, Sent, Drafts or Muted: the five mailboxes the sidebar
+/// shows for all accounts together and for each one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Standard {
+    Inbox,
+    Flagged,
+    Sent,
+    Drafts,
+    Muted,
+}
+
+impl Standard {
+    /// In the order the sidebar lists them.
+    pub const ALL: [Standard; 5] = [
+        Standard::Inbox,
+        Standard::Flagged,
+        Standard::Sent,
+        Standard::Drafts,
+        Standard::Muted,
+    ];
+
+    /// The stored mail this mailbox lists.
+    pub fn set(self) -> MailSet {
+        match self {
+            Standard::Inbox => MailSet::Role(Role::Inbox),
+            Standard::Flagged => MailSet::flagged(),
+            Standard::Sent => MailSet::Role(Role::Sent),
+            Standard::Drafts => MailSet::Role(Role::Drafts),
+            Standard::Muted => MailSet::muted(),
+        }
+    }
+
+    /// The name under one account.
+    pub fn name(self) -> String {
+        match self {
+            Standard::Inbox => gettext("Inbox"),
+            Standard::Flagged => gettext("Flagged"),
+            Standard::Sent => gettext("Sent"),
+            Standard::Drafts => gettext("Drafts"),
+            Standard::Muted => gettext("Muted"),
+        }
+    }
+
+    /// The name for all accounts together.
+    pub fn unified_name(self) -> String {
+        match self {
+            Standard::Inbox => gettext("All Inboxes"),
+            other => other.name(),
+        }
+    }
+
+    pub fn icon(self) -> &'static str {
+        match self {
+            Standard::Inbox => "penguin-mail-inbox-symbolic",
+            Standard::Flagged => "penguin-mail-flag-symbolic",
+            Standard::Sent => "mail-send-symbolic",
+            Standard::Drafts => "document-edit-symbolic",
+            Standard::Muted => "audio-volume-muted-symbolic",
+        }
+    }
+
+    /// The word the CLI and the assistant use for it.
+    pub fn key(self) -> &'static str {
+        match self {
+            Standard::Inbox => "inbox",
+            Standard::Flagged => "flagged",
+            Standard::Sent => "sent",
+            Standard::Drafts => "drafts",
+            Standard::Muted => "muted",
+        }
+    }
+
+    /// The mailbox `key` names, ignoring case, with the words Gmail used
+    /// for the same mailboxes, so `INBOX` and `starred` still work.
+    pub fn from_key(key: &str) -> Option<Standard> {
+        match key.to_ascii_lowercase().as_str() {
+            "inbox" => Some(Standard::Inbox),
+            "flagged" | "starred" => Some(Standard::Flagged),
+            "sent" => Some(Standard::Sent),
+            "drafts" | "draft" => Some(Standard::Drafts),
+            "muted" | "mute" => Some(Standard::Muted),
+            _ => None,
+        }
+    }
+}
+
 /// What the thread list shows.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Mailbox {
-    /// One system label across every account.
-    Unified(&'static str),
+    /// One standard mailbox across every account.
+    Unified(Standard),
+    /// One standard mailbox of one account.
+    Standard {
+        account_id: AccountId,
+        which: Standard,
+    },
+    /// A person's own label or folder in one account.
     Label {
         account_id: AccountId,
         label_id: String,
@@ -79,7 +171,8 @@ pub enum Mailbox {
 impl Mailbox {
     pub fn title(&self) -> String {
         match self {
-            Mailbox::Unified(label) => unified_name(label),
+            Mailbox::Unified(which) => which.unified_name(),
+            Mailbox::Standard { which, .. } => which.name(),
             Mailbox::Label { name, .. } => name.clone(),
             Mailbox::Search { .. } => gettext("Search"),
             Mailbox::Folder { folder, .. } => folder_name(*folder),
@@ -104,7 +197,9 @@ impl Mailbox {
             | Mailbox::Flag(_)
             | Mailbox::Vips { .. }
             | Mailbox::Smart(_) => None,
-            Mailbox::Label { account_id, .. } => Some(*account_id),
+            Mailbox::Standard { account_id, .. } | Mailbox::Label { account_id, .. } => {
+                Some(*account_id)
+            }
             Mailbox::Search { account_id, .. } | Mailbox::Folder { account_id, .. } => *account_id,
         }
     }
@@ -116,21 +211,22 @@ impl Mailbox {
         }
     }
 
+    /// The standard mailbox this is, for all accounts or for one.
+    pub fn standard(&self) -> Option<Standard> {
+        match self {
+            Mailbox::Unified(which) | Mailbox::Standard { which, .. } => Some(*which),
+            _ => None,
+        }
+    }
+
     /// Unread counts matter for inboxes; drafts show how many there are.
     pub fn counts_unread(&self) -> bool {
-        matches!(
-            self,
-            Mailbox::Unified(system_label::INBOX) | Mailbox::Vips { .. }
-        ) || matches!(self, Mailbox::Label { label_id, .. } if label_id == system_label::INBOX)
+        self.standard() == Some(Standard::Inbox) || matches!(self, Mailbox::Vips { .. })
     }
 
     /// Whether this mailbox splits into inbox categories.
     pub fn takes_categories(&self) -> bool {
-        match self {
-            Mailbox::Unified(label) => *label == system_label::INBOX,
-            Mailbox::Label { label_id, .. } => label_id == system_label::INBOX,
-            _ => false,
-        }
+        self.standard() == Some(Standard::Inbox)
     }
 
     /// Whether the rows come from a Gmail search rather than the store.
@@ -144,9 +240,8 @@ impl Mailbox {
     /// What an empty list says: a title and an icon.
     pub fn empty(&self) -> Empty {
         let empty = |title: String, icon| Empty { title, icon };
-        let label = match self {
-            Mailbox::Unified(label) => *label,
-            Mailbox::Label { label_id, .. } => label_id.as_str(),
+        match self {
+            Mailbox::Unified(_) | Mailbox::Standard { .. } | Mailbox::Label { .. } => {}
             Mailbox::Search { .. } => {
                 return empty(gettext("No Results"), "system-search-symbolic");
             }
@@ -176,14 +271,14 @@ impl Mailbox {
                     Folder::AllMail => empty(gettext("No Mail"), icon),
                 };
             }
-        };
-        match label {
-            system_label::INBOX => empty(gettext("Inbox Zero"), "penguin-mail-inbox-symbolic"),
-            system_label::STARRED => empty(gettext("No Starred Mail"), "starred-symbolic"),
-            system_label::SENT => empty(gettext("No Sent Mail"), "mail-send-symbolic"),
-            system_label::DRAFT => empty(gettext("No Drafts"), "document-edit-symbolic"),
-            system_label::MUTE => empty(gettext("No Muted Mail"), "audio-volume-muted-symbolic"),
-            _ => empty(gettext("No Mail"), "penguin-mail-tag-symbolic"),
+        }
+        match self.standard() {
+            Some(Standard::Inbox) => empty(gettext("Inbox Zero"), "penguin-mail-inbox-symbolic"),
+            Some(Standard::Flagged) => empty(gettext("No Starred Mail"), "starred-symbolic"),
+            Some(Standard::Sent) => empty(gettext("No Sent Mail"), "mail-send-symbolic"),
+            Some(Standard::Drafts) => empty(gettext("No Drafts"), "document-edit-symbolic"),
+            Some(Standard::Muted) => empty(gettext("No Muted Mail"), "audio-volume-muted-symbolic"),
+            None => empty(gettext("No Mail"), "penguin-mail-tag-symbolic"),
         }
     }
 
@@ -191,12 +286,15 @@ impl Mailbox {
     /// `None` for the mailboxes the store cannot list.
     fn filter(&self) -> Option<ThreadFilter> {
         match self {
-            Mailbox::Unified(label) => Some(ThreadFilter::unified(gmail::set_of(label))),
+            Mailbox::Unified(which) => Some(ThreadFilter::unified(which.set())),
+            Mailbox::Standard { account_id, which } => {
+                Some(ThreadFilter::account(*account_id, which.set()))
+            }
             Mailbox::Label {
                 account_id,
                 label_id,
                 ..
-            } => Some(ThreadFilter::account(*account_id, gmail::set_of(label_id))),
+            } => Some(ThreadFilter::account(*account_id, MailSet::Mailbox(label_id.clone()))),
             Mailbox::Flag(color) => Some(ThreadFilter::everything().with_flag(*color)),
             Mailbox::Vips { emails, .. } => {
                 Some(ThreadFilter::everything().from_senders(emails.clone()))
@@ -209,18 +307,6 @@ impl Mailbox {
             | Mailbox::FollowUp
             | Mailbox::Smart(_) => None,
         }
-    }
-}
-
-/// Names the sidebar and the list header use for a unified mailbox.
-pub fn unified_name(label: &str) -> String {
-    match label {
-        system_label::INBOX => gettext("All Inboxes"),
-        system_label::STARRED => gettext("Flagged"),
-        system_label::SENT => gettext("Sent"),
-        system_label::DRAFT => gettext("Drafts"),
-        system_label::MUTE => gettext("Muted"),
-        _ => gettext("Mail"),
     }
 }
 
@@ -557,8 +643,16 @@ impl<A: Accounts> Mailboxes<A> {
                 mailboxes.insert(Mailbox::Reminders, reminders);
                 for mailbox in sidebar {
                     let count = match &mailbox {
-                        Mailbox::Unified(label) => {
-                            let count = labels.unified(&gmail::set_of(label));
+                        Mailbox::Unified(which) => {
+                            let count = labels.unified(&which.set());
+                            if mailbox.counts_unread() {
+                                count.unread
+                            } else {
+                                count.threads
+                            }
+                        }
+                        Mailbox::Standard { account_id, which } => {
+                            let count = labels.account(*account_id, &which.set());
                             if mailbox.counts_unread() {
                                 count.unread
                             } else {
@@ -570,7 +664,8 @@ impl<A: Accounts> Mailboxes<A> {
                             label_id,
                             ..
                         } => {
-                            let count = labels.account(*account_id, &gmail::set_of(label_id));
+                            let count = labels
+                                .account(*account_id, &MailSet::Mailbox(label_id.clone()));
                             if mailbox.counts_unread() {
                                 count.unread
                             } else {

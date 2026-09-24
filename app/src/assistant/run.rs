@@ -20,7 +20,7 @@ use mailrs_ai::ToolOutcome;
 use mailrs_domain::smart::{Condition, SmartMailbox};
 use mailrs_domain::{
     Account, AccountId, Category, EpochMillis, FlagColor, Folder, Label, LabelKind, MailSet, Role,
-    Target, ThreadSummary, system_label,
+    Target, ThreadSummary,
 };
 use mailrs_store::{Db, messages};
 use mailrs_sync::{
@@ -749,13 +749,14 @@ impl<A: Accounts> Tools<A> {
         input: &Value,
         scope: Option<&Account>,
     ) -> Result<Vec<Mailbox>, String> {
-        let at = |label: &'static str| match scope {
-            Some(account) => Mailbox::Label {
+        // The mailbox kind, not the signing standard imported above.
+        use mailrs_sync::mailbox::Standard;
+        let at = |which: Standard| match scope {
+            Some(account) => Mailbox::Standard {
                 account_id: account.id,
-                label_id: label.into(),
-                name: crate::ui::account_label_name(label),
+                which,
             },
-            None => Mailbox::Unified(label),
+            None => Mailbox::Unified(which),
         };
         let folder = |folder| Mailbox::Folder {
             account_id: scope.map(|a| a.id),
@@ -763,10 +764,10 @@ impl<A: Accounts> Tools<A> {
         };
         let named = MailboxName::named(name).ok_or_else(|| format!("Unknown mailbox {name}."))?;
         Ok(match named {
-            MailboxName::Inbox => vec![at(system_label::INBOX)],
-            MailboxName::Flagged => vec![at(system_label::STARRED)],
-            MailboxName::Sent => vec![at(system_label::SENT)],
-            MailboxName::Drafts => vec![at(system_label::DRAFT)],
+            MailboxName::Inbox => vec![at(Standard::Inbox)],
+            MailboxName::Flagged => vec![at(Standard::Flagged)],
+            MailboxName::Sent => vec![at(Standard::Sent)],
+            MailboxName::Drafts => vec![at(Standard::Drafts)],
             MailboxName::FollowUp => vec![Mailbox::FollowUp],
             MailboxName::Archive => vec![folder(Folder::Archive)],
             MailboxName::Junk => vec![folder(Folder::Junk)],
@@ -779,7 +780,7 @@ impl<A: Accounts> Tools<A> {
             MailboxName::Outbox => vec![Mailbox::Outbox],
             MailboxName::SendLater => vec![Mailbox::Scheduled],
             MailboxName::Reminders => vec![Mailbox::Reminders],
-            MailboxName::Muted => vec![at(system_label::MUTE)],
+            MailboxName::Muted => vec![at(Standard::Muted)],
             MailboxName::Smart => {
                 vec![Mailbox::Smart(self.smart_named(&required(input, "name")?)?)]
             }

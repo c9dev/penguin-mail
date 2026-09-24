@@ -999,18 +999,13 @@ impl App {
         let Some(message_id) = target.message_id.clone() else {
             return;
         };
-        let labels = self
+        let message = self
             .core
-            .read(move |c| {
-                if messages::thread_id_of(c, account_id, &message_id)?.is_none() {
-                    return Ok(None);
-                }
-                Ok(Some(messages::labels_of(c, account_id, &message_id)?))
-            })
+            .read(move |c| Ok(messages::by_ids(c, account_id, &[message_id])?.pop()))
             .await;
         // Mail the store no longer holds leaves nothing to act on.
-        let Ok(Some(labels)) = labels else { return };
-        if !notify::still_applies(button, &labels) {
+        let Ok(Some(message)) = message else { return };
+        if !notify::still_applies(button, &message) {
             return;
         }
         let Some(action) = button.action() else {

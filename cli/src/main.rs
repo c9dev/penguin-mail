@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use anyhow::{Context, Result, anyhow, bail};
 use clap::{Parser, Subcommand};
-use mailrs_domain::{Account, AccountId, ChangeEvent, EpochMillis, MailSet, Provider, Role};
+use mailrs_domain::{Account, AccountId, ChangeEvent, EpochMillis, MailSet, Provider};
 use mailrs_gmail::{
     GMAIL_API_BASE, KeyringTokenStore, OAuthClient, TokenStore, authorize, built_in_client,
 };
@@ -21,6 +21,7 @@ use mailrs_sync::{
 
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs, secure_dirs};
 use mailrs_sync::lock::{LockError, SyncLock};
+use mailrs_sync::mailbox::Standard;
 use mailrs_sync::sign_in::{account_client, signed_in};
 
 /// How long `account add` waits for the browser.
@@ -332,14 +333,9 @@ async fn list_threads(db: &Db, account: Option<&str>, label: String, limit: i64)
         Some(email) => Some(find_account(db, email).await?.id),
         None => None,
     };
-    let set = match label.to_ascii_lowercase().as_str() {
-        "inbox" => MailSet::Role(Role::Inbox),
-        "sent" => MailSet::Role(Role::Sent),
-        "drafts" | "draft" => MailSet::Role(Role::Drafts),
-        "flagged" | "starred" => MailSet::flagged(),
-        "muted" | "mute" => MailSet::muted(),
-        _ => MailSet::Mailbox(label.clone()),
-    };
+    let set = Standard::from_key(&label)
+        .map(Standard::set)
+        .unwrap_or_else(|| MailSet::Mailbox(label.clone()));
     let filter = match account_id {
         Some(account_id) => ThreadFilter::account(account_id, set),
         None => ThreadFilter::unified(set),

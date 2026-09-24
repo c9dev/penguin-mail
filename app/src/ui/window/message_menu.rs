@@ -358,6 +358,7 @@ impl MainWindow {
 mod tests {
     use super::*;
     use mailrs_domain::{Address, MessageMeta, system_label};
+    use crate::ui::Standard;
     use std::collections::HashMap;
 
     const ACCOUNT: mailrs_domain::AccountId = 1;
@@ -408,7 +409,7 @@ mod tests {
     }
 
     fn inbox() -> Mailbox {
-        Mailbox::Unified(system_label::INBOX)
+        Mailbox::Unified(Standard::Inbox)
     }
 
     fn folder(folder: Folder) -> Mailbox {

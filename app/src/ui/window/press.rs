@@ -238,7 +238,7 @@ fn dropped(
     to: &Mailbox,
     act: impl Fn(MailAction, History, Option<String>) -> Step,
 ) -> Step {
-    if let Mailbox::Label { account_id, .. } = to
+    if let Mailbox::Label { account_id, .. } | Mailbox::Standard { account_id, .. } = to
         && targets.iter().any(|t| t.account_id != *account_id)
     {
         return Step::Refuse(gettext("Drop mail on its own account's mailboxes"));
@@ -367,13 +367,14 @@ pub(super) async fn carry_out(plan: Plan, effects: &dyn PressEffects) {
 mod tests {
     use std::cell::RefCell;
 
-    use mailrs_domain::{Folder, system_label};
+    use mailrs_domain::{Folder, MailSet};
 
     use super::super::triage::Marks;
     use super::*;
+    use crate::ui::Standard;
 
     fn inbox() -> Mailbox {
-        Mailbox::Unified(system_label::INBOX)
+        Mailbox::Unified(Standard::Inbox)
     }
 
     fn label(id: &str) -> Mailbox {
@@ -536,7 +537,7 @@ mod tests {
 
     #[test]
     fn a_label_added_from_sent_leaves_the_reader_on_mail_still_listed() {
-        let sent = Mailbox::Unified(system_label::SENT);
+        let sent = Mailbox::Unified(Standard::Sent);
         let drop = step(
             Press::Drop(label("Travel")),
             sent,
@@ -553,7 +554,10 @@ mod tests {
         };
         assert_eq!(
             action,
-            MailAction::Triage(TriageAction::AddLabel("Travel".into()))
+            MailAction::Triage(TriageAction::Relabel {
+                add: vec![MailSet::Mailbox("Travel".into())],
+                remove: vec![],
+            })
         );
         assert!(!move_on, "Sent still lists the mail");
         assert_eq!(words.as_deref(), Some("Moved to Travel"));
@@ -571,7 +575,7 @@ mod tests {
         assert!(moves_on(&drop(true)));
         assert!(!moves_on(&drop(false)), "the reader is on other mail");
         let starred = step(
-            Press::Drop(Mailbox::Unified(system_label::STARRED)),
+            Press::Drop(Mailbox::Unified(Standard::Flagged)),
             inbox(),
             Scope::Carried { open: true },
         );

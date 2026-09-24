@@ -7,7 +7,7 @@
 
 use std::sync::OnceLock;
 
-use mailrs_domain::{MessageMeta, Target, system_label};
+use mailrs_domain::{MessageMeta, Role, Target};
 use mailrs_sync::{MailAction, TriageAction};
 use serde::{Deserialize, Serialize};
 
@@ -82,16 +82,16 @@ pub struct Request {
     pub choice: Choice,
 }
 
-/// Whether `button` still has work to do on a message carrying `labels`.
-/// A notification sits on screen long after its mail moved, so the app
-/// reads the store before it acts and drops the action if the mail beat
-/// the user to it.
-pub fn still_applies(button: Button, labels: &[String]) -> bool {
-    let has = |label: &str| labels.iter().any(|l| l == label);
+/// Whether `button` still has work to do on `message`: Archive while it
+/// sits in the inbox, Mark as Read while it is unread, Delete until it is
+/// in the Trash. A notification sits on screen long after its mail moved,
+/// so the app reads the store before it acts and drops the action if the
+/// mail beat the user to it.
+pub fn still_applies(button: Button, message: &MessageMeta) -> bool {
     match button {
-        Button::Archive => has(system_label::INBOX),
-        Button::MarkRead => has(system_label::UNREAD),
-        Button::Delete => !has(system_label::TRASH),
+        Button::Archive => message.in_role(Role::Inbox),
+        Button::MarkRead => message.is_unread(),
+        Button::Delete => !message.in_role(Role::Trash),
         Button::Reply => true,
     }
 }
@@ -287,19 +287,16 @@ mod tests {
     }
 
     #[test]
-    fn an_action_the_mail_no_longer_needs_is_dropped() {
-        let inbox = [system_label::INBOX.to_string(), system_label::UNREAD.into()];
-        assert!(Button::ALL.into_iter().all(|b| still_applies(b, &inbox)));
-
-        let read = [system_label::INBOX.to_string()];
-        assert!(!still_applies(Button::MarkRead, &read));
-        assert!(still_applies(Button::Archive, &read));
-
-        let archived = [system_label::UNREAD.to_string()];
-        assert!(!still_applies(Button::Archive, &archived));
-        assert!(still_applies(Button::MarkRead, &archived));
-
-        let trashed = [system_label::TRASH.to_string()];
+    fn a_button_stops_applying_once_its_work_is_done() {
+        use mailrs_sync::fake::meta;
+        let unread_in_inbox = meta("m1", "t1", 0, &["INBOX", "UNREAD"]);
+        let read_elsewhere = meta("m2", "t1", 0, &["Label_1"]);
+        let trashed = meta("m3", "t1", 0, &["TRASH"]);
+        assert!(still_applies(Button::Archive, &unread_in_inbox));
+        assert!(!still_applies(Button::Archive, &read_elsewhere));
+        assert!(still_applies(Button::MarkRead, &unread_in_inbox));
+        assert!(!still_applies(Button::MarkRead, &read_elsewhere));
+        assert!(still_applies(Button::Delete, &read_elsewhere));
         assert!(!still_applies(Button::Delete, &trashed));
         assert!(
             still_applies(Button::Reply, &trashed),
