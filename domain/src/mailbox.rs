@@ -1,7 +1,7 @@
 //! Where a message sits on its server and what it carries, in words every
 //! provider shares. A Gmail label and an IMAP folder are both server
 //! mailboxes; read and starred are keywords; Gmail's inbox categories are
-//! categories. `crate::gmail` maps Gmail's labels onto these.
+//! categories. The Gmail crate maps Gmail's labels onto these.
 
 use std::str::FromStr;
 
@@ -170,11 +170,28 @@ pub struct Memberships {
 }
 
 impl Memberships {
+    /// A read message in no mailbox: `$seen` and nothing else.
+    pub fn read() -> Memberships {
+        Memberships {
+            keywords: vec![keyword::SEEN.into()],
+            ..Memberships::default()
+        }
+    }
+
     pub fn has(&self, membership: &Membership) -> bool {
         match membership {
             Membership::Mailbox(id) => self.mailboxes.contains(id),
             Membership::Keyword(k) => self.keywords.contains(k),
             Membership::Category(c) => self.categories.contains(c),
+        }
+    }
+
+    /// Sorts each list and drops repeats, so two lists of the same
+    /// memberships compare equal whatever order they arrived in.
+    pub fn sort(&mut self) {
+        for list in [&mut self.mailboxes, &mut self.keywords, &mut self.categories] {
+            list.sort();
+            list.dedup();
         }
     }
 }
@@ -229,6 +246,30 @@ impl Applied {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sorted_memberships_compare_equal_whatever_their_order() {
+        let mut first = Memberships {
+            mailboxes: vec!["Label_2".into(), "INBOX".into(), "INBOX".into()],
+            keywords: vec![keyword::SEEN.into(), keyword::FLAGGED.into()],
+            categories: vec![],
+        };
+        let mut second = Memberships {
+            mailboxes: vec!["INBOX".into(), "Label_2".into()],
+            keywords: vec![keyword::FLAGGED.into(), keyword::SEEN.into()],
+            categories: vec![],
+        };
+        first.sort();
+        second.sort();
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    fn a_read_message_carries_seen_alone() {
+        let read = Memberships::read();
+        assert_eq!(read.keywords, [keyword::SEEN]);
+        assert!(read.mailboxes.is_empty() && read.categories.is_empty());
+    }
 
     #[test]
     fn stored_names_round_trip() {

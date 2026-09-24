@@ -88,7 +88,16 @@ const ACCOUNTS: [SampleAccount; 3] = [
 ];
 
 /// The system labels every demo account lists.
-const SYSTEM_LABELS: [&str; 6] = ["INBOX", "SENT", "DRAFT", "STARRED", "UNREAD", "IMPORTANT"];
+const SYSTEM_LABELS: [&str; 8] = [
+    "INBOX",
+    "SENT",
+    "DRAFT",
+    "TRASH",
+    "SPAM",
+    "STARRED",
+    "UNREAD",
+    "IMPORTANT",
+];
 
 struct Sample {
     /// Whose mailbox holds it: an index into [`ACCOUNTS`].
@@ -1066,7 +1075,7 @@ impl Sample {
                 }
             }
         };
-        MessageMeta {
+        let mut meta = MessageMeta {
             account_id,
             id: self.id.into(),
             thread_id: self.thread.into(),
@@ -1091,10 +1100,14 @@ impl Sample {
             size: self.text.len() as i64
                 + self.attachments.iter().map(|a| a.2 * 4 / 3).sum::<i64>(),
             has_attachments: !self.attachments.is_empty(),
-            label_ids: self.labels.iter().map(|l| l.to_string()).collect(),
+            held: Default::default(),
+            roles: vec![],
             list_unsubscribe: self.header(),
             one_click: self.one_click,
-        }
+        };
+        let labels: Vec<String> = self.labels.iter().map(|l| l.to_string()).collect();
+        mailrs_gmail::labels::set_label_ids(&mut meta, &labels);
+        meta
     }
 
     fn body(&self, now: EpochMillis) -> MessageBody {
@@ -1284,7 +1297,8 @@ fn next_weekday(
 
 #[cfg(test)]
 mod tests {
-    use mailrs_domain::{Folder, MailSet, Role, system_label};
+    use mailrs_domain::{Folder, MailSet, Role};
+    use mailrs_gmail::labels as gmail;
     use mailrs_store::bodies;
     use mailrs_store::threads::{self, ThreadFilter};
     use mailrs_sync::{AccountServices, GmailApi, IdentityService, MailBackend, now_millis};
@@ -1550,7 +1564,7 @@ mod tests {
             let hidden = sample
                 .labels
                 .iter()
-                .any(|l| [system_label::SPAM, system_label::TRASH].contains(l));
+                .any(|l| [gmail::SPAM, gmail::TRASH].contains(l));
             assert_eq!(thread.is_some(), !hidden, "{id}");
             assert_eq!(body.is_some(), !hidden, "{id}");
         }

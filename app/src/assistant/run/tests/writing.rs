@@ -4,7 +4,8 @@
 use std::path::{Path, PathBuf};
 
 use mail_parser::{MessageParser, MimeHeaders};
-use mailrs_domain::{Address, Attachment, MessageBody, Protection, system_label};
+use mailrs_domain::{Address, Attachment, MessageBody, Protection};
+use mailrs_gmail::labels as gmail;
 use serde_json::json;
 
 use super::super::fake::{Harness, ME, NOW, labelled, meta};
@@ -497,7 +498,7 @@ async fn with_draft(written: &Draft) -> Harness {
     let mut all = mail();
     all.push(labelled(
         meta("d1", "t7", ME, &written.subject, NOW),
-        &[system_label::DRAFT],
+        &[gmail::DRAFT],
     ));
     let h = Harness::with(all).await;
     let raw = compose::build_mime(written, NOW / 1000, "<d1@example.com>").expect("a draft");

@@ -132,7 +132,7 @@ async fn archived_behind_the_cursor() -> super::Harness {
     h.bootstrap_all().await;
     h.fake.with(|s| {
         let stale = s.messages.get_mut("stale").expect("seeded");
-        stale.label_ids.retain(|l| l != "INBOX");
+        crate::fake::edit_labels(stale, |ids| ids.retain(|l| l != "INBOX"));
     });
     h.sync.incremental().await.unwrap();
     h
@@ -167,7 +167,7 @@ async fn reconciling_the_inbox_brings_back_mail_it_missed() {
     h.bootstrap_all().await;
     h.fake.with(|s| {
         let filed = s.messages.get_mut("filed").expect("seeded");
-        filed.label_ids.push("INBOX".into());
+        crate::fake::edit_labels(filed, |ids| ids.push("INBOX".into()));
     });
     h.sync.reconcile_inbox().await.unwrap();
     assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["tkept", "tfiled"]);

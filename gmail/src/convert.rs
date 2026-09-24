@@ -4,6 +4,7 @@ use mailrs_domain::{AccountId, MessageMeta};
 use mailrs_mime::address::parse_address_list;
 use mailrs_mime::snippet::unescape_snippet;
 
+use crate::labels::set_label_ids;
 use crate::model::{HistoryList, Message, MessagePart};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -76,7 +77,7 @@ pub fn history_page(list: HistoryList) -> HistoryPage {
 
 /// Converts a `format=metadata` or `format=full` message.
 pub fn message_meta(msg: &Message, account_id: AccountId) -> MessageMeta {
-    MessageMeta {
+    let mut meta = MessageMeta {
         account_id,
         id: msg.id.clone(),
         thread_id: msg.thread_id.clone(),
@@ -96,10 +97,13 @@ pub fn message_meta(msg: &Message, account_id: AccountId) -> MessageMeta {
             .payload
             .as_ref()
             .is_some_and(|p| p.mime_type.eq_ignore_ascii_case("multipart/mixed")),
-        label_ids: msg.label_ids.clone(),
+        held: Default::default(),
+        roles: vec![],
         list_unsubscribe: header(msg, "List-Unsubscribe").map(|v| v.trim().to_string()),
         one_click: header(msg, "List-Unsubscribe-Post").is_some_and(|v| v.contains("One-Click")),
-    }
+    };
+    set_label_ids(&mut meta, &msg.label_ids);
+    meta
 }
 
 fn header<'a>(msg: &'a Message, name: &str) -> Option<&'a str> {

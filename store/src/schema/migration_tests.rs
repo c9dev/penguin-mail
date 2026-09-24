@@ -4,7 +4,8 @@
 use std::collections::BTreeMap;
 use std::time::{Duration, SystemTime};
 
-use mailrs_domain::{Memberships, gmail};
+use mailrs_domain::Memberships;
+use mailrs_gmail::labels as gmail;
 use rusqlite::Connection;
 
 use super::{MIGRATIONS, configure, forget_old_copies, migrate, open_with, schema_version};

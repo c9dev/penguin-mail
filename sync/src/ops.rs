@@ -7,7 +7,7 @@
 use std::collections::BTreeMap;
 
 use mailrs_domain::mailbox::keyword::{FLAGGED, MUTED, SEEN};
-use mailrs_domain::{Applied, MailSet, Membership, Memberships, Role, gmail};
+use mailrs_domain::{Applied, MailSet, Membership, Memberships, Role};
 use mailrs_store::messages::Change;
 
 use crate::{BackendError, MailCapabilities, TriageAction};
@@ -38,12 +38,14 @@ pub type Roles = BTreeMap<Role, String>;
 
 /// The operations `action` stands for on an account whose mail service can
 /// do `caps`. A label account files and unfiles; a folder account moves.
-/// `Unsupported` when a label account lacks the mailbox the action files
-/// mail in.
+/// `set_of` reads a mailbox id the action names as the mail set it stands
+/// for, as the account's mail service reads it. `Unsupported` when a label
+/// account lacks the mailbox the action files mail in.
 pub fn ops_for(
     action: &TriageAction,
     caps: &MailCapabilities,
     roles: &Roles,
+    set_of: impl Fn(&str) -> MailSet,
 ) -> Result<Vec<MailOp>, BackendError> {
     let id = |role: Role| roles.get(&role).cloned().ok_or(BackendError::Unsupported);
     let keyword = |k: &str, on: bool| MailOp::SetKeyword {
@@ -76,8 +78,8 @@ pub fn ops_for(
             vec![MailOp::MoveToRole(Role::Inbox), keyword(MUTED, false)]
         }
         TriageAction::Unmute => vec![add(Role::Inbox)?, keyword(MUTED, false)],
-        TriageAction::AddLabel(id) => vec![set_op(&gmail::set_of(id), true, roles)?],
-        TriageAction::RemoveLabel(id) => vec![set_op(&gmail::set_of(id), false, roles)?],
+        TriageAction::AddLabel(id) => vec![set_op(&set_of(id), true, roles)?],
+        TriageAction::RemoveLabel(id) => vec![set_op(&set_of(id), false, roles)?],
         TriageAction::Relabel { add, remove } => add
             .iter()
             .map(|set| set_op(set, true, roles))
@@ -179,7 +181,8 @@ mod tests {
     use std::sync::Arc;
 
     use mailrs_domain::mailbox::keyword::{FLAGGED, MUTED, SEEN};
-    use mailrs_domain::{Applied, MailSet, Membership, Memberships, Role, gmail};
+    use mailrs_domain::{Applied, MailSet, Membership, Memberships, Role};
+    use mailrs_gmail::labels as gmail;
     use mailrs_store::messages::Change;
 
     use super::*;
@@ -191,6 +194,11 @@ mod tests {
             .iter()
             .map(|(label, role)| (*role, label.to_string()))
             .collect()
+    }
+
+    /// Reads a mailbox id as the Google adapter reads it.
+    fn named(id: &str) -> MailSet {
+        Google::new(Arc::new(FakeGmail::new())).set_of(id)
     }
 
     fn label_account() -> MailCapabilities {
@@ -214,7 +222,9 @@ mod tests {
     #[test]
     fn a_label_account_adds_and_removes_mailboxes() {
         let roles = gmail_roles();
-        let ops = |action: TriageAction| ops_for(&action, &label_account(), &roles).unwrap();
+        let ops = |action: TriageAction| {
+            ops_for(&action, &label_account(), &roles, named).unwrap()
+        };
         assert_eq!(
             ops(TriageAction::Archive),
             [MailOp::RemoveFromMailbox("INBOX".into())]
@@ -276,7 +286,7 @@ mod tests {
             remove: vec![],
         };
         assert_eq!(
-            ops_for(&back, &label_account(), &roles).unwrap(),
+            ops_for(&back, &label_account(), &roles, named).unwrap(),
             vec![
                 MailOp::AddToMailbox("INBOX".into()),
                 MailOp::SetKeyword { keyword: SEEN.into(), on: false },
@@ -292,7 +302,7 @@ mod tests {
             remove: vec![MailSet::Category("CATEGORY_UPDATES".into())],
         };
         assert_eq!(
-            ops_for(&sort, &label_account(), &roles).unwrap(),
+            ops_for(&sort, &label_account(), &roles, named).unwrap(),
             vec![
                 MailOp::SetCategory { category: "CATEGORY_SOCIAL".into(), on: true },
                 MailOp::SetKeyword { keyword: FLAGGED.into(), on: true },
@@ -308,7 +318,7 @@ mod tests {
             remove: vec![],
         };
         assert!(matches!(
-            ops_for(&relabel, &label_account(), &gmail_roles()),
+            ops_for(&relabel, &label_account(), &gmail_roles(), named),
             Err(BackendError::Unsupported)
         ));
     }
@@ -320,7 +330,8 @@ mod tests {
             ops_for(
                 &TriageAction::RemoveLabel("UNREAD".into()),
                 &label_account(),
-                &roles
+                &roles,
+                named
             )
             .unwrap(),
             [keyword(SEEN, true)]
@@ -329,7 +340,8 @@ mod tests {
             ops_for(
                 &TriageAction::AddLabel("STARRED".into()),
                 &label_account(),
-                &roles
+                &roles,
+                named
             )
             .unwrap(),
             [MailOp::SetKeyword { keyword: FLAGGED.into(), on: true }]
@@ -339,7 +351,9 @@ mod tests {
     #[test]
     fn a_folder_account_moves_to_a_role() {
         let roles = gmail_roles();
-        let ops = |action: TriageAction| ops_for(&action, &folder_account(), &roles).unwrap();
+        let ops = |action: TriageAction| {
+            ops_for(&action, &folder_account(), &roles, named).unwrap()
+        };
         assert_eq!(
             ops(TriageAction::Archive),
             [MailOp::MoveToRole(Role::Archive)]
@@ -360,7 +374,7 @@ mod tests {
     #[test]
     fn a_label_account_without_the_mailbox_cannot_file_there() {
         assert!(matches!(
-            ops_for(&TriageAction::Trash, &label_account(), &Roles::new()),
+            ops_for(&TriageAction::Trash, &label_account(), &Roles::new(), named),
             Err(crate::BackendError::Unsupported)
         ));
     }

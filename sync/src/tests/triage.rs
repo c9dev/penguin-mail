@@ -24,7 +24,7 @@ async fn archiving_applies_locally_and_remotely() {
         h.fake.with(|s| s.remote_writes.clone()),
         ["modify a + -INBOX", "modify b + -INBOX"]
     );
-    assert!(!h.fake.with(|s| s.messages["a"].label_ids.iter().any(|l| l == "INBOX")));
+    assert!(!h.fake.with(|s| crate::fake::has_label(&s.messages["a"], "INBOX")));
 }
 
 #[tokio::test]
@@ -67,7 +67,7 @@ async fn a_write_that_fails_part_way_keeps_what_gmail_took() {
     };
     let (archived, ()) = tokio::join!(archiving, refusing);
     assert!(archived.is_err());
-    assert!(!h.fake.with(|s| s.messages["a"].label_ids.iter().any(|l| l == "INBOX")));
+    assert!(!h.fake.with(|s| crate::fake::has_label(&s.messages["a"], "INBOX")));
     assert_eq!(h.labels_of("a").await, Vec::<String>::new());
     assert_eq!(h.labels_of("b").await, ["INBOX"]);
 }
@@ -233,7 +233,7 @@ async fn a_few_messages_and_many_leave_the_trash_the_same_way() {
             let id = format!("m{i}");
             assert_eq!(h.labels_of(&id).await, ["INBOX"], "{count}: the store");
             assert_eq!(
-                h.fake.with(|s| s.messages[&id].label_ids.clone()),
+                h.fake.with(|s| mailrs_gmail::labels::label_ids(&s.messages[&id])),
                 ["INBOX"],
                 "{count}: Gmail"
             );

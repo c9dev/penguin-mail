@@ -60,7 +60,13 @@ impl AccountSync {
         self.set_state(AccountState::Bootstrapping).await?;
         let start = self.services.mail.changes(None).await?.state;
         let listed = self.services.mail.mailboxes().await?;
-        let label_ids: Vec<String> = listed.iter().map(|m| m.id.clone()).collect();
+        let listed_ids: Vec<String> = listed.iter().map(|m| m.id.clone()).collect();
+        // What each listed mailbox stands for, so the stored copy of a
+        // message can be asked whether it is in it.
+        let sets: Vec<(String, MailSet)> = listed_ids
+            .iter()
+            .map(|id| (id.clone(), self.services.mail.set_of(id)))
+            .collect();
         let generation = self
             .db
             .write(move |c| {
@@ -76,7 +82,7 @@ impl AccountSync {
             .window_ids(self.window_days, None)
             .await?;
         let mut members: HashMap<String, HashSet<String>> = HashMap::new();
-        for label in &label_ids {
+        for label in &listed_ids {
             let carrying = self
                 .services
                 .mail
@@ -99,13 +105,12 @@ impl AccountSync {
                 wants.push(Want::from(message));
                 continue;
             };
-            // Only the labels just listed can be compared; a label Gmail
+            // Only the mailboxes just listed can be compared; one the server
             // does not list stays as the store has it.
-            let before: BTreeSet<&str> = held
-                .label_ids
+            let before: BTreeSet<&str> = sets
                 .iter()
-                .map(String::as_str)
-                .filter(|l| members.contains_key(*l))
+                .filter(|(_, set)| held.in_set(set))
+                .map(|(id, _)| id.as_str())
                 .collect();
             let now: BTreeSet<&str> = members
                 .iter()

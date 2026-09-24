@@ -2120,6 +2120,7 @@ name = "mailrs-store"
 version = "0.2.2"
 dependencies = [
  "mailrs-domain",
+ "mailrs-gmail",
  "rusqlite",
  "serde_json",
  "tempfile",

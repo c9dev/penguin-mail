@@ -107,8 +107,8 @@ async fn opening_a_thread_announces_a_label_change_but_not_a_new_label_order() {
     // Gmail lists the same labels in another order: nothing changed.
     let relabel = |labels: &[&str]| {
         h.fake.with(|s| {
-            s.messages.get_mut("a").unwrap().label_ids =
-                labels.iter().map(ToString::to_string).collect();
+            let owned: Vec<String> = labels.iter().map(ToString::to_string).collect();
+            mailrs_gmail::labels::set_label_ids(s.messages.get_mut("a").unwrap(), &owned);
         });
     };
     relabel(&["INBOX", "UNREAD", "INBOX"]);

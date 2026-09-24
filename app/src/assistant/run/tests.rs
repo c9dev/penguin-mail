@@ -2,7 +2,8 @@
 //! does and checks the JSON that goes back, plus what the ports were asked
 //! to do.
 
-use mailrs_domain::{FlagColor, MailSet, MessageBody, MessageMeta, Vacation, system_label};
+use mailrs_domain::{FlagColor, MailSet, MessageBody, MessageMeta, Vacation};
+use mailrs_gmail::labels as gmail;
 use mailrs_sync::{MailAction, Outcome, TriageAction};
 use serde_json::{Value, json};
 
@@ -28,9 +29,9 @@ fn mail() -> Vec<MessageMeta> {
         labelled(
             meta("m1", "t1", "theo@example.com", "Kite plans", NOW - DAY),
             &[
-                system_label::INBOX,
-                system_label::UNREAD,
-                system_label::CATEGORY_PERSONAL,
+                gmail::INBOX,
+                gmail::UNREAD,
+                gmail::CATEGORY_PERSONAL,
             ],
         ),
         labelled(
@@ -41,7 +42,7 @@ fn mail() -> Vec<MessageMeta> {
                 "Half price kites",
                 NOW - 2 * DAY,
             ),
-            &[system_label::INBOX, system_label::CATEGORY_PROMOTIONS],
+            &[gmail::INBOX, gmail::CATEGORY_PROMOTIONS],
         ),
         labelled(
             meta(
@@ -51,7 +52,7 @@ fn mail() -> Vec<MessageMeta> {
                 "Fern cuttings",
                 NOW - 3 * DAY,
             ),
-            &[system_label::INBOX, system_label::CATEGORY_PERSONAL],
+            &[gmail::INBOX, gmail::CATEGORY_PERSONAL],
         ),
         labelled(
             meta(
@@ -61,7 +62,7 @@ fn mail() -> Vec<MessageMeta> {
                 "Re: Fern cuttings",
                 NOW - DAY - DAY / 2,
             ),
-            &[system_label::INBOX, system_label::CATEGORY_PERSONAL],
+            &[gmail::INBOX, gmail::CATEGORY_PERSONAL],
         ),
     ]
 }
@@ -200,22 +201,22 @@ async fn list_mail_finds_gmails_own_labels_by_name() {
     let mut mail = mail();
     mail.push(labelled(
         meta("m5", "t5", "kai@example.com", "Flagged kite", NOW - 4 * DAY),
-        &[system_label::STARRED, system_label::IMPORTANT],
+        &[gmail::STARRED, gmail::IMPORTANT],
     ));
     mail.push(labelled(
         meta("m6", "t6", "noisy@example.com", "Muted thread", NOW - 5 * DAY),
-        &[system_label::MUTE],
+        &[gmail::MUTE],
     ));
     let h = Harness::with(mail).await;
     {
         let mut screen = h.desk.0.borrow_mut();
         let known = screen.labels.entry(h.account_id).or_default();
         for id in [
-            system_label::STARRED,
-            system_label::MUTE,
-            system_label::UNREAD,
-            system_label::IMPORTANT,
-            system_label::CATEGORY_PROMOTIONS,
+            gmail::STARRED,
+            gmail::MUTE,
+            gmail::UNREAD,
+            gmail::IMPORTANT,
+            gmail::CATEGORY_PROMOTIONS,
         ] {
             known.push(mailrs_domain::Label {
                 account_id: h.account_id,
@@ -406,7 +407,7 @@ async fn label_adds_and_removes_by_name() {
 async fn two_accounts() -> Harness {
     let theirs = labelled(
         meta("s1", "u1", "kim@example.com", "Kite club", NOW - DAY),
-        &[system_label::INBOX],
+        &[gmail::INBOX],
     );
     Harness::with_second(mail(), vec![theirs]).await
 }
@@ -443,7 +444,7 @@ async fn labelling_across_accounts_asks_once_before_making_a_label() {
     let (second, _) = h.second.clone().expect("two accounts");
     let theirs = h.labels_in(second, "s1").await;
     assert!(
-        theirs.iter().any(|l| l != system_label::INBOX),
+        theirs.iter().any(|l| l != gmail::INBOX),
         "Sam's mail carries the new label: {theirs:?}"
     );
 }
@@ -460,7 +461,7 @@ async fn declining_a_new_label_labels_only_where_it_exists() {
     assert!(h.labels_of("m1").await.contains(&"Label_kites".to_string()));
     assert!(!second_has(&h, "Kites"), "Sam's account gets no new label");
     let (second, _) = h.second.clone().expect("two accounts");
-    assert_eq!(h.labels_in(second, "s1").await, [system_label::INBOX]);
+    assert_eq!(h.labels_in(second, "s1").await, [gmail::INBOX]);
 
     assert_eq!(
         h.run("label", json!({"targets": both(), "add": ["Boats"]}))
@@ -828,18 +829,18 @@ async fn categorize_sender_asks_then_moves_their_mail_and_sorts_the_rest() {
     // The answer comes once the work is done, so the mail has moved and
     // the rule is there by the time the model reads it.
     let labels = h.labels_of("m2").await;
-    assert!(labels.iter().any(|l| l == system_label::CATEGORY_SOCIAL));
+    assert!(labels.iter().any(|l| l == gmail::CATEGORY_SOCIAL));
     assert!(
         !labels
             .iter()
-            .any(|l| l == system_label::CATEGORY_PROMOTIONS)
+            .any(|l| l == gmail::CATEGORY_PROMOTIONS)
     );
     let rules = h.gmail.with(|s| s.filters.clone());
     assert_eq!(rules.len(), 1);
     assert_eq!(rules[0].criteria.from.as_deref(), Some("shop@example.com"));
     assert_eq!(
         rules[0].action.add,
-        [MailSet::Category(system_label::CATEGORY_SOCIAL.into())]
+        [MailSet::Category(gmail::CATEGORY_SOCIAL.into())]
     );
     assert_eq!(h.asked().categories_moved, 1);
 }
@@ -862,7 +863,7 @@ async fn categorize_sender_without_the_settings_permission_moves_the_mail_and_sa
         [(h.account_id, Permission::Settings)]
     );
     let labels = h.labels_of("m2").await;
-    assert!(labels.iter().any(|l| l == system_label::CATEGORY_SOCIAL));
+    assert!(labels.iter().any(|l| l == gmail::CATEGORY_SOCIAL));
     assert!(h.gmail.with(|s| s.filters.is_empty()));
 }
 
@@ -883,7 +884,7 @@ async fn a_declined_categorize_changes_nothing() {
         h.labels_of("m2")
             .await
             .iter()
-            .any(|l| l == system_label::CATEGORY_PROMOTIONS)
+            .any(|l| l == gmail::CATEGORY_PROMOTIONS)
     );
     assert!(h.gmail.with(|s| s.filters.is_empty()));
 }

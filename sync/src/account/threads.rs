@@ -24,13 +24,15 @@ enum Written {
     Overtaken,
 }
 
-/// Whether writing Gmail's `meta` over the `stored` copy changes what the
-/// store reads back. The store keeps each label once and in order, so a
-/// new order from Gmail is no change and the thread is not announced for it.
+/// Whether writing the server's `meta` over the `stored` copy changes what
+/// the store reads back. The store keeps each membership once and in
+/// order, so a new order from the server is no change and the thread is
+/// not announced for it. The roles come from the store's own mailboxes,
+/// whatever the fetch said.
 fn differs(stored: &MessageMeta, meta: &MessageMeta) -> bool {
     let mut written = meta.clone();
-    written.label_ids.sort();
-    written.label_ids.dedup();
+    written.held.sort();
+    written.roles = stored.roles.clone();
     *stored != written
 }
 

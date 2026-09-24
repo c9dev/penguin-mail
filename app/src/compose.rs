@@ -1300,7 +1300,8 @@ mod tests {
             snippet: String::new(),
             size: 0,
             has_attachments: false,
-            label_ids: vec![],
+            held: mailrs_domain::Memberships::read(),
+            roles: vec![],
             list_unsubscribe: None,
             one_click: false,
         }

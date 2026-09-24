@@ -4,6 +4,7 @@ pub mod calendar;
 mod client;
 pub mod convert;
 mod error;
+pub mod labels;
 pub mod limiter;
 pub mod model;
 mod oauth;
@@ -30,3 +31,30 @@ pub use oauth::{
 };
 pub use people::{CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE, ConnectionsPage, ContactFields, Person};
 pub use token_store::{KeyringTokenStore, MemoryTokenStore, TokenStore};
+
+#[cfg(test)]
+pub(crate) mod tests {
+    use mailrs_domain::MessageMeta;
+
+    /// A message in account 1 with nothing in it or on it.
+    pub(crate) fn blank_meta() -> MessageMeta {
+        MessageMeta {
+            account_id: 1,
+            id: "m1".into(),
+            thread_id: "t1".into(),
+            rfc822_msgid: None,
+            from: None,
+            to: vec![],
+            cc: vec![],
+            subject: String::new(),
+            date: 0,
+            snippet: String::new(),
+            size: 0,
+            has_attachments: false,
+            held: Default::default(),
+            roles: vec![],
+            list_unsubscribe: None,
+            one_click: false,
+        }
+    }
+}

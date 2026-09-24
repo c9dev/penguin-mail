@@ -7,8 +7,8 @@
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use mailrs_domain::gmail::set_of as set;
 use mailrs_domain::{Category, MailSet, Role};
+use mailrs_gmail::labels::set_of as set;
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{accounts, flags, labels};
 

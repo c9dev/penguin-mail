@@ -3,7 +3,7 @@
 //! the fake, and both want to find what they sent afterwards.
 
 use mail_parser::MessageParser;
-use mailrs_domain::{AccountId, Address, MessageMeta};
+use mailrs_domain::{AccountId, Address, Memberships, MessageMeta};
 
 use super::SentCopy;
 
@@ -69,7 +69,9 @@ pub fn read_sent(raw: &[u8], account_id: AccountId) -> Option<SentCopy> {
         snippet,
         size: raw.len() as i64,
         has_attachments,
-        label_ids: Vec::new(),
+        // Read and in no mailbox until the fake files it.
+        held: Memberships::read(),
+        roles: vec![],
         // A message the demo sent itself belongs to no mailing list.
         list_unsubscribe: None,
         one_click: false,

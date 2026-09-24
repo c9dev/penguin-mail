@@ -28,3 +28,27 @@ pub mod window;
 pub use db::Db;
 pub use error::{Result, StoreError};
 pub use schema::{open_connection, open_in_memory, schema_version};
+
+#[cfg(test)]
+pub(crate) mod testing {
+    use mailrs_domain::{AccountId, MailboxKind, RemoteMailbox};
+    use rusqlite::Connection;
+
+    use crate::mailboxes;
+
+    /// Lists Gmail's role mailboxes, as a bootstrap's first listing does,
+    /// so mail filed in them lists under their roles.
+    pub(crate) fn list_gmail_roles(conn: &Connection, account_id: AccountId) {
+        for (id, role) in mailrs_gmail::labels::ROLES {
+            let mailbox = RemoteMailbox {
+                id: id.into(),
+                name: id.into(),
+                kind: MailboxKind::System,
+                role: Some(role),
+                color: None,
+                hidden: false,
+            };
+            mailboxes::upsert(conn, account_id, &mailbox).unwrap();
+        }
+    }
+}

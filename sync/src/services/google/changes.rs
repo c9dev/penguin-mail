@@ -2,7 +2,7 @@
 //! says where it stands: `{"history_id":N}`, the same text migration 26
 //! wrote for every account.
 
-use mailrs_domain::gmail;
+use mailrs_gmail::labels as gmail;
 use mailrs_gmail::{GmailError, HistoryChange};
 use serde::{Deserialize, Serialize};
 

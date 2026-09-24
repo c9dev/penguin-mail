@@ -197,7 +197,8 @@ impl AccountSync {
         targets: &[Target],
         action: &TriageAction,
     ) -> Result<Vec<Applied>, SyncError> {
-        let ops = ops_for(action, &self.services.mail.capabilities(), &self.roles())?;
+        let mail = &self.services.mail;
+        let ops = ops_for(action, &mail.capabilities(), &self.roles(), |id| mail.set_of(id))?;
         self.change_all(targets, &ops, &action.describe()).await
     }
 

@@ -12,7 +12,7 @@ mod common;
 use std::fmt::Write as _;
 use std::path::Path;
 
-use common::{meta, store};
+use common::{labels_of, meta, store};
 use mailrs_domain::{
     AccountId, Category, FlagColor, MailSet, MailboxKind, MessageMeta, RemoteMailbox, Role,
 };
@@ -56,7 +56,7 @@ fn listed(id: &str, name: &str, kind: MailboxKind, color: Option<&str>) -> Remot
         id: id.into(),
         name: name.into(),
         kind,
-        role: mailrs_domain::gmail::role_of(id),
+        role: mailrs_gmail::labels::role_of(id),
         color: color.map(str::to_string),
         hidden: false,
     }
@@ -66,7 +66,8 @@ fn listed(id: &str, name: &str, kind: MailboxKind, color: Option<&str>) -> Remot
 /// The printed names stay the labels', so `golden/reads.txt` does not
 /// change when the reads start taking mail sets.
 ///
-/// This is a frozen oracle: it must not share code with `gmail::set_of`,
+/// This is a frozen oracle: it must not share code with
+/// `mailrs_gmail::labels::set_of`,
 /// the function it checks. A bug shared between them would pass here and
 /// nowhere else.
 fn set(label: &str) -> MailSet {
@@ -82,6 +83,60 @@ fn set(label: &str) -> MailSet {
         "UNREAD" => MailSet::Unseen,
         c if c.starts_with("CATEGORY_") => MailSet::Category(c.into()),
         id => MailSet::Mailbox(id.into()),
+    }
+}
+
+/// Messages as they printed when a message carried its Gmail labels, so
+/// `golden/reads.txt` reads the same now that it carries memberships.
+fn printed(metas: Vec<MessageMeta>) -> String {
+    let metas: Vec<old::MessageMeta> = metas.iter().map(old::MessageMeta::from).collect();
+    format!("{metas:?}")
+}
+
+mod old {
+    use mailrs_domain::{AccountId, Address};
+
+    /// A message's fields as they were, in their order, labels and all.
+    #[derive(Debug)]
+    #[expect(dead_code, reason = "only Debug reads the fields, which dead code analysis ignores")]
+    pub struct MessageMeta<'a> {
+        pub account_id: AccountId,
+        pub id: &'a str,
+        pub thread_id: &'a str,
+        pub rfc822_msgid: &'a Option<String>,
+        pub from: &'a Option<Address>,
+        pub to: &'a [Address],
+        pub cc: &'a [Address],
+        pub subject: &'a str,
+        pub date: i64,
+        pub snippet: &'a str,
+        pub size: i64,
+        pub has_attachments: bool,
+        pub label_ids: Vec<String>,
+        pub list_unsubscribe: &'a Option<String>,
+        pub one_click: bool,
+    }
+
+    impl<'a> From<&'a mailrs_domain::MessageMeta> for MessageMeta<'a> {
+        fn from(m: &'a mailrs_domain::MessageMeta) -> Self {
+            MessageMeta {
+                account_id: m.account_id,
+                id: &m.id,
+                thread_id: &m.thread_id,
+                rfc822_msgid: &m.rfc822_msgid,
+                from: &m.from,
+                to: &m.to,
+                cc: &m.cc,
+                subject: &m.subject,
+                date: m.date,
+                snippet: &m.snippet,
+                size: m.size,
+                has_attachments: m.has_attachments,
+                label_ids: mailrs_gmail::labels::label_ids(m),
+                list_unsubscribe: &m.list_unsubscribe,
+                one_click: m.one_click,
+            }
+        }
     }
 }
 
@@ -129,12 +184,17 @@ fn mailbox() -> (Connection, AccountId, AccountId) {
     ));
     a_labels.push(listed("Label_2", "Work/Clients", MailboxKind::Label, None));
     mailboxes::replace_listed(&conn, a, &a_labels).unwrap();
-    let b_labels = vec![
-        system("INBOX"),
+    // Account b lists Gmail's role mailboxes too, since a mailbox's role
+    // comes from the listing alone.
+    let mut b_labels: Vec<RemoteMailbox> = mailrs_gmail::labels::ROLES
+        .into_iter()
+        .map(|(id, _)| system(id))
+        .collect();
+    b_labels.extend([
         system("UNREAD"),
         system("STARRED"),
         listed("Label_1", "Home", MailboxKind::Label, Some("#fb4c2f")),
-    ];
+    ]);
     mailboxes::replace_listed(&conn, b, &b_labels).unwrap();
     store(
         &conn,
@@ -397,7 +457,7 @@ fn answers() -> String {
         );
         say(
             format!("messages of {thread}"),
-            format!("{:?}", messages::thread_messages(&conn, a, thread).unwrap()),
+            printed(messages::thread_messages(&conn, a, thread).unwrap()),
         );
     }
     for thread in ["u1", "u2", "u3", "u4"] {
@@ -407,22 +467,19 @@ fn answers() -> String {
         );
         say(
             format!("messages of {thread}"),
-            format!("{:?}", messages::thread_messages(&conn, b, thread).unwrap()),
+            printed(messages::thread_messages(&conn, b, thread).unwrap()),
         );
     }
     for n in 1..=16 {
         let id = format!("a{n}");
         say(
             format!("labels of message {id}"),
-            format!("{:?}", messages::labels_of(&conn, a, &id).unwrap()),
+            format!("{:?}", labels_of(&conn, a, &id)),
         );
     }
     say(
         "by ids".into(),
-        format!(
-            "{:?}",
-            messages::by_ids(&conn, a, &["a13".into(), "a3".into(), "zz".into()]).unwrap()
-        ),
+        printed(messages::by_ids(&conn, a, &["a13".into(), "a3".into(), "zz".into()]).unwrap()),
     );
     let mut existing: Vec<String> =
         messages::existing_ids(&conn, a, &["a1".into(), "b1".into(), "zz".into()])

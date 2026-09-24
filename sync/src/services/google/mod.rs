@@ -14,7 +14,8 @@ use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::mailbox::keyword;
-use mailrs_domain::{EpochMillis, Filter, MailboxKind, RemoteMailbox, Role, Vacation, gmail};
+use mailrs_domain::{EpochMillis, Filter, MailSet, MailboxKind, RemoteMailbox, Role, Vacation};
+use mailrs_gmail::labels as gmail;
 use mailrs_gmail::{
     Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, GmailError, LabelColor,
     Person, RemoteLabel, SendAs, Series, limiter, structure,
@@ -141,6 +142,10 @@ impl<G: GmailApi> MailBackend for Google<G> {
 
     fn mailbox_for(&self, role: Role) -> Option<String> {
         gmail::label_of_role(role).map(str::to_string)
+    }
+
+    fn set_of(&self, id: &str) -> MailSet {
+        gmail::set_of(id)
     }
 
     async fn apply(&self, messages: &[String], ops: &[MailOp]) -> Result<(), Unapplied> {

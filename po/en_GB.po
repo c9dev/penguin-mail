@@ -230,15 +230,15 @@ msgstr ""
 msgid "Turn off the automatic reply for {account}?"
 msgstr "Turn off the automatic reply for {account}?"
 
-#: app/src/assistant/run.rs:1280
+#: app/src/assistant/run.rs:1290
 msgid "Create a Gmail rule for {account}: {when} → {then}?"
 msgstr "Create a Gmail rule for {account}: {when} → {then}?"
 
-#: app/src/assistant/run.rs:1320
+#: app/src/assistant/run.rs:1330
 msgid "Delete a Gmail rule from {account}?"
 msgstr "Delete a Gmail rule from {account}?"
 
-#: app/src/assistant/run.rs:1442
+#: app/src/assistant/run.rs:1452
 msgid "Move mail from {sender} to {category} in {account}, and add a Gmail rule for their future mail?"
 msgstr "Move mail from {sender} to {category} in {account}, and add a Gmail rule for their future mail?"
 
@@ -945,7 +945,7 @@ msgstr "Running a command in the sandbox"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail keeps syncing with no window open"
 
-#: app/src/compose.rs:523 app/src/compose.rs:2282
+#: app/src/compose.rs:523 app/src/compose.rs:2283
 msgid "Add at least one recipient."
 msgstr "Add at least one recipient."
 
@@ -953,7 +953,7 @@ msgstr "Add at least one recipient."
 msgid "“{address}” is not an email address."
 msgstr "“{address}” is not an email address."
 
-#: app/src/compose.rs:641 app/src/compose.rs:2288
+#: app/src/compose.rs:641 app/src/compose.rs:2289
 msgid "Choose a time in the future"
 msgstr "Choose a time in the future"
 
@@ -5843,49 +5843,49 @@ msgstr "Is unread"
 msgid "Is flagged"
 msgstr "Is flagged"
 
-#: sync/src/account/writes.rs:473
+#: sync/src/account/writes.rs:474
 msgid "Gmail is busy. Still working on {conversations}."
 msgstr "Gmail is busy. Still working on {conversations}."
 
-#: sync/src/account/writes.rs:488
+#: sync/src/account/writes.rs:489
 msgid "Gmail is busy, so {action} did not go through for {conversations}. Try again in a moment."
 msgstr "Gmail is busy, so {action} did not go through for {conversations}. Try again in a moment."
 
-#: sync/src/account/writes.rs:497
+#: sync/src/account/writes.rs:498
 msgid "Gmail stayed busy for {waited}, so {action} did not go through for {conversations}."
 msgstr "Gmail stayed busy for {waited}, so {action} did not go through for {conversations}."
 
-#: sync/src/account/writes.rs:504
+#: sync/src/account/writes.rs:505
 msgid "{action} failed: {reason}"
 msgstr "{action} failed: {reason}"
 
-#: sync/src/account/writes.rs:522
+#: sync/src/account/writes.rs:523
 msgid "a moment"
 msgstr "a moment"
 
-#: sync/src/account/writes.rs:524
+#: sync/src/account/writes.rs:525
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] "{count} second"
 msgstr[1] "{count} seconds"
 
-#: sync/src/account/writes.rs:529
+#: sync/src/account/writes.rs:530
 msgid "a minute"
 msgstr "a minute"
 
-#: sync/src/actions.rs:117 sync/src/actions.rs:593
+#: sync/src/actions.rs:115 sync/src/actions.rs:591
 msgid "Change labels"
 msgstr "Change labels"
 
-#: sync/src/actions.rs:316
+#: sync/src/actions.rs:314
 msgid "Delete Forever failed: {reason}"
 msgstr "Delete Forever failed: {reason}"
 
-#: sync/src/actions.rs:486
+#: sync/src/actions.rs:484
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr "This mail has moved since, so Undo left it where it is."
 
-#: sync/src/actions.rs:547 sync/src/actions.rs:600
+#: sync/src/actions.rs:545 sync/src/actions.rs:598
 msgid "Could not undo: {reason}"
 msgstr "Could not undo: {reason}"
 

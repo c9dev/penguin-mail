@@ -738,7 +738,7 @@ mod tests {
     use super::*;
 
     fn meta(id: &str, name: &str, labels: &[&str]) -> MessageMeta {
-        MessageMeta {
+        let mut meta = MessageMeta {
             account_id: 1,
             id: id.into(),
             thread_id: "t1".into(),
@@ -763,10 +763,14 @@ mod tests {
             snippet: format!("snippet of {id}"),
             size: 10,
             has_attachments: false,
-            label_ids: labels.iter().map(|l| l.to_string()).collect(),
+            held: Default::default(),
+            roles: vec![],
             list_unsubscribe: None,
             one_click: false,
-        }
+        };
+        let labels: Vec<String> = labels.iter().map(|l| l.to_string()).collect();
+        mailrs_gmail::labels::set_label_ids(&mut meta, &labels);
+        meta
     }
 
     fn theme() -> Theme {

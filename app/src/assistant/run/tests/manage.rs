@@ -2,7 +2,7 @@
 //! whose images load, and exported mail.
 
 use mailrs_domain::smart::{Condition, Field, SmartMailbox};
-use mailrs_domain::system_label;
+use mailrs_gmail::labels as gmail;
 use mailrs_store::{address_book, image_senders, labels, templates};
 use serde_json::json;
 
@@ -15,13 +15,24 @@ async fn with_kites() -> Harness {
     let mut all = mail();
     all.push(labelled(
         meta("k1", "tk1", "theo@example.com", "Kite string", NOW - 5_000),
-        &[system_label::INBOX, "Label_kites"],
+        &[gmail::INBOX, "Label_kites"],
     ));
     all.push(labelled(
         meta("k2", "tk2", "ann@example.com", "Kite tails", NOW - 6_000),
         &["Label_kites"],
     ));
     Harness::with(all).await
+}
+
+/// The labels the person made in the fake Gmail, leaving out Gmail's own.
+fn persons_labels(h: &Harness) -> Vec<mailrs_gmail::RemoteLabel> {
+    h.gmail.with(|s| {
+        s.labels
+            .iter()
+            .filter(|l| l.kind.as_deref() == Some("user"))
+            .cloned()
+            .collect()
+    })
 }
 
 async fn stored_labels(h: &Harness) -> Vec<String> {
@@ -50,7 +61,7 @@ async fn rename_label_asks_then_renames_in_gmail_and_the_store() {
             "Rename the label “Kites” in {ME} to “Hobbies/Kites”? Labels nested under it move along."
         )]
     );
-    assert_eq!(h.gmail.with(|s| s.labels[0].name.clone()), "Hobbies/Kites");
+    assert_eq!(persons_labels(&h)[0].name, "Hobbies/Kites");
     assert!(stored_labels(&h).await.contains(&"Hobbies/Kites".into()));
 }
 
@@ -80,10 +91,7 @@ async fn recolor_label_gives_it_a_colour_from_gmails_palette() {
         h.asked().questions,
         [format!("Color the label “Kites” in {ME} blue?")]
     );
-    let color = h
-        .gmail
-        .with(|s| s.labels[0].color.clone())
-        .expect("a colour");
+    let color = persons_labels(&h)[0].color.clone().expect("a colour");
     assert_eq!(color.background_color, "#4a86e8");
     assert_eq!(color.text_color, "#ffffff");
 
@@ -113,20 +121,20 @@ async fn delete_label_says_how_many_conversations_carry_it() {
              The mail stays in Gmail, without the label."
         )]
     );
-    assert_eq!(h.gmail.with(|s| s.labels.len()), 1, "a no keeps the label");
+    assert_eq!(persons_labels(&h).len(), 1, "a no keeps the label");
 
     h.effects.asked.borrow_mut().approves = true;
     let done = h
         .ok("delete_label", json!({"account": ME, "label": "Kites"}))
         .await;
     assert_eq!(done, json!({"deleted": "Kites", "conversations": 2}));
-    assert!(h.gmail.with(|s| s.labels.is_empty()));
+    assert!(persons_labels(&h).is_empty());
     assert!(!stored_labels(&h).await.contains(&"Kites".into()));
     assert!(!h.labels_of("k1").await.contains(&"Label_kites".into()));
     assert!(
         h.labels_of("k1")
             .await
-            .contains(&system_label::INBOX.into())
+            .contains(&gmail::INBOX.into())
     );
 }
 

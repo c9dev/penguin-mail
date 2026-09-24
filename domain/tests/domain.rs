@@ -1,4 +1,5 @@
-use mailrs_domain::{AccountState, Address, LabelKind, MessageMeta};
+use mailrs_domain::mailbox::keyword;
+use mailrs_domain::{AccountState, Address, LabelKind, Memberships, MessageMeta, Role};
 
 #[test]
 fn account_state_round_trips_through_strings() {
@@ -48,12 +49,17 @@ fn unread_follows_the_unread_label() {
         snippet: String::new(),
         size: 0,
         has_attachments: false,
-        label_ids: vec!["INBOX".into()],
+        held: Memberships {
+            mailboxes: vec!["INBOX".into()],
+            keywords: vec![keyword::SEEN.into()],
+            categories: vec![],
+        },
+        roles: vec![Role::Inbox],
         list_unsubscribe: None,
         one_click: false,
     };
     assert!(!meta.is_unread());
-    assert!(meta.in_role(mailrs_domain::Role::Inbox));
-    meta.label_ids.push("UNREAD".into());
+    assert!(meta.in_role(Role::Inbox));
+    meta.held.keywords.retain(|k| k != keyword::SEEN);
     assert!(meta.is_unread());
 }

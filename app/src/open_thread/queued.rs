@@ -113,7 +113,8 @@ fn meta_of(
         snippet: String::new(),
         size: 0,
         has_attachments: !body.attachments.is_empty(),
-        label_ids: Vec::new(),
+        held: mailrs_domain::Memberships::read(),
+        roles: vec![],
         list_unsubscribe: None,
         one_click: false,
     }

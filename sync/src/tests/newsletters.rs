@@ -4,7 +4,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use mailrs_domain::{Address, MessageMeta, system_label};
+use mailrs_domain::{Address, MessageMeta};
+use mailrs_gmail::labels;
 use mailrs_store::messages;
 
 use super::{Connected, Harness, harness};
@@ -27,7 +28,7 @@ fn from(email: &str, id: &str, thread: &str, header: &str) -> MessageMeta {
             id,
             thread,
             now_millis(),
-            &[system_label::INBOX, system_label::CATEGORY_PROMOTIONS],
+            &[labels::INBOX, labels::CATEGORY_PROMOTIONS],
         )
     }
 }

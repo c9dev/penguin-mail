@@ -1,7 +1,8 @@
 //! The mail tools that came after the first set, and finding a contact.
 
 use chrono::{Duration, Local};
-use mailrs_domain::{Attachment, MessageBody, system_label};
+use mailrs_domain::{Attachment, MessageBody};
+use mailrs_gmail::labels as gmail;
 use mailrs_store::{address_book, templates};
 use mailrs_sync::MailAction;
 use serde_json::json;
@@ -23,8 +24,8 @@ async fn mute_takes_a_thread_out_of_the_inbox_and_back() {
     let done = h.ok("mute", json!({"targets": [target("t1")]})).await;
     assert_eq!(done["done"], 1);
     let labels = h.labels_of("m1").await;
-    assert!(labels.contains(&system_label::MUTE.to_string()));
-    assert!(!labels.contains(&system_label::INBOX.to_string()));
+    assert!(labels.contains(&gmail::MUTE.to_string()));
+    assert!(!labels.contains(&gmail::INBOX.to_string()));
     assert_eq!(
         h.asked().mail_changed[0].0,
         MailAction::Mute { muted: true }
@@ -35,7 +36,7 @@ async fn mute_takes_a_thread_out_of_the_inbox_and_back() {
     assert!(
         !h.labels_of("m1")
             .await
-            .contains(&system_label::MUTE.to_string())
+            .contains(&gmail::MUTE.to_string())
     );
 }
 
@@ -48,19 +49,19 @@ async fn reading_mail_names_its_labels_and_marks_not_gmail_ids() {
     mail.push(labelled(
         meta("m5", "t5", "kai@example.com", "Flagged kite", NOW),
         &[
-            system_label::INBOX,
-            system_label::UNREAD,
-            system_label::STARRED,
+            gmail::INBOX,
+            gmail::UNREAD,
+            gmail::STARRED,
             "Label_kites",
         ],
     ));
     mail.push(labelled(
         meta("m6", "t6", "kai@example.com", "Old kite plans", NOW),
-        &[system_label::TRASH],
+        &[gmail::TRASH],
     ));
     mail.push(labelled(
         meta("m7", "t7", ME, "Kite invite", NOW),
-        &[system_label::SENT, system_label::CATEGORY_SOCIAL],
+        &[gmail::SENT, gmail::CATEGORY_SOCIAL],
     ));
     let h = Harness::with(mail).await;
 
@@ -184,7 +185,7 @@ async fn send_later_schedules_a_new_message_once_the_user_agrees() {
 async fn send_later_takes_a_saved_draft_as_it_stands() {
     let draft = labelled(
         meta("d1", "t7", ME, "Fern swap", NOW),
-        &[system_label::DRAFT],
+        &[gmail::DRAFT],
     );
     let h = Harness::with(vec![draft]).await;
     h.gmail.with(|i| {
@@ -216,7 +217,7 @@ async fn send_later_takes_a_saved_draft_as_it_stands() {
 async fn send_later_keeps_a_saved_drafts_blind_copy_and_files() {
     let draft = labelled(
         meta("d1", "t7", ME, "Fern swap", NOW),
-        &[system_label::DRAFT],
+        &[gmail::DRAFT],
     );
     let h = Harness::with(vec![draft]).await;
     let mut written = crate::compose::Draft::new(
@@ -266,7 +267,7 @@ async fn send_later_keeps_a_saved_drafts_blind_copy_and_files() {
 async fn send_later_leaves_an_encrypted_draft_to_the_composer() {
     let draft = labelled(
         meta("d1", "t7", ME, "Fern swap", NOW),
-        &[system_label::DRAFT],
+        &[gmail::DRAFT],
     );
     let h = Harness::with(vec![draft]).await;
     h.gmail.with(|i| {

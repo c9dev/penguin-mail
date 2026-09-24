@@ -2,7 +2,8 @@
 //! takes a one-click request, one that only lets go through its page,
 //! and one that wants a mail.
 
-use mailrs_domain::{Address, EpochMillis, MessageMeta, system_label};
+use mailrs_domain::{Address, EpochMillis, MessageMeta};
+use mailrs_gmail::labels as gmail;
 use serde_json::{Value, json};
 
 use super::super::fake::{Harness, ME, labelled, meta};
@@ -32,7 +33,7 @@ fn from(id: &str, thread: &str, name: &str, email: &str, days: i64, category: &s
         }),
         ..labelled(
             meta(id, thread, email, "This week", days_ago(days)),
-            &[system_label::INBOX, category],
+            &[gmail::INBOX, category],
         )
     }
 }
@@ -49,7 +50,7 @@ fn newsletters() -> Vec<MessageMeta> {
                 "Trail Notes",
                 "news@trail.example",
                 1,
-                system_label::CATEGORY_UPDATES,
+                gmail::CATEGORY_UPDATES,
             )
         },
         MessageMeta {
@@ -60,7 +61,7 @@ fn newsletters() -> Vec<MessageMeta> {
                 "Shop News",
                 "hello@shop.example",
                 2,
-                system_label::CATEGORY_PROMOTIONS,
+                gmail::CATEGORY_PROMOTIONS,
             )
         },
         MessageMeta {
@@ -71,7 +72,7 @@ fn newsletters() -> Vec<MessageMeta> {
                 "Old Forum",
                 "digest@forum.example",
                 3,
-                system_label::CATEGORY_FORUMS,
+                gmail::CATEGORY_FORUMS,
             )
         },
     ]
@@ -269,7 +270,7 @@ async fn a_conversation_with_no_way_out_says_so_and_stops_nothing_else() {
     let h = with_three().await;
     let plain = labelled(
         meta("m9", "t9", "theo@example.com", "Kites", days_ago(1)),
-        &[system_label::INBOX],
+        &[gmail::INBOX],
     );
     h.gmail.seed(plain);
 

@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use mailrs_domain::{Attachment, MailSet, MessageBody, Role, Target, system_label};
+use mailrs_domain::{Attachment, MailSet, Membership, MessageBody, Role, Target};
+use mailrs_gmail::labels;
 use mailrs_gmail::GmailError;
 use mailrs_store::messages::Change;
 use mailrs_store::outbox::{self, Queued};
@@ -17,7 +18,7 @@ use crate::{
 /// Puts a draft's message in the store, as history replay does once the
 /// draft reaches this computer.
 async fn store_draft_message(h: &Harness, message_id: &str) {
-    let message = meta(message_id, "t1", 1, &[system_label::DRAFT]);
+    let message = meta(message_id, "t1", 1, &[labels::DRAFT]);
     let account_id = message.account_id;
     let upsert = Change::Upsert {
         meta: Box::new(message),
@@ -191,7 +192,7 @@ async fn a_draft_sent_elsewhere_stops_answering_for_its_message() {
     });
     let (account_id, message_id) = (h.account_id, saved.message_id.clone());
     h.db.write(move |c| {
-        let change = Change::label(&message_id, system_label::DRAFT, false);
+        let change = Change::of(&message_id, Membership::Mailbox(labels::DRAFT.into()), false);
         messages::apply(c, account_id, &[change]).map(drop)
     })
     .await
@@ -1067,7 +1068,7 @@ async fn drafts_reach_the_store_through_history() {
     let stored = |id: String| {
         let (db, account_id) = (h.db.clone(), h.account_id);
         async move {
-            db.read(move |c| messages::labels_of(c, account_id, &id))
+            db.read(move |c| super::labels_of(c, account_id, &id))
                 .await
                 .unwrap()
         }

@@ -7,16 +7,14 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::sync::{Arc, Mutex};
 
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{
-    AccountId, Applied, EpochMillis, FlagColor, Folder, MailSet, Role, Target, gmail,
-};
+use mailrs_domain::{AccountId, Applied, EpochMillis, FlagColor, Folder, MailSet, Role, Target};
 use mailrs_store::reminders::{self, Reminder};
 use mailrs_store::{Db, flags, follow_ups, labels, messages, threads};
 
 use crate::ops::undo_ops;
 use crate::{
-    AccountServices, AccountSync, BackendError, MailOp, OneClick, Permitted, SyncEngine, SyncError,
-    TriageAction,
+    AccountServices, AccountSync, BackendError, MailBackend, MailOp, OneClick, Permitted,
+    SyncEngine, SyncError, TriageAction,
 };
 
 mod categorize;
@@ -803,9 +801,16 @@ impl<A: Accounts> MailActions<A> {
         if let (Some(name), true, true) = (skipped, ids.0.is_empty(), ids.1.is_empty()) {
             return Err(format!("This account has no label called {name}."));
         }
+        // The account's mail service reads each id, since a server can keep
+        // a flag or a category among its labels.
+        let services = self.accounts.services(account_id);
+        let set_of = |id: &String| match &services {
+            Some(services) => services.mail.set_of(id),
+            None => MailSet::Mailbox(id.clone()),
+        };
         Ok(TriageAction::Relabel {
-            add: ids.0.iter().map(|id| gmail::set_of(id)).collect(),
-            remove: ids.1.iter().map(|id| gmail::set_of(id)).collect(),
+            add: ids.0.iter().map(set_of).collect(),
+            remove: ids.1.iter().map(set_of).collect(),
         })
     }
 

@@ -7,7 +7,7 @@
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
-use mailrs_domain::{EpochMillis, Filter, RemoteMailbox, Role, Vacation};
+use mailrs_domain::{EpochMillis, Filter, MailSet, RemoteMailbox, Role, Vacation};
 use mailrs_gmail::{
     Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, Person, Series,
 };
@@ -96,6 +96,14 @@ impl MailBackend for AnyMail {
             AnyMail::Google(adapter) => adapter.mailbox_for(role),
             #[cfg(any(test, feature = "fake"))]
             AnyMail::Fake(adapter) => adapter.mailbox_for(role),
+        }
+    }
+
+    fn set_of(&self, id: &str) -> MailSet {
+        match self {
+            AnyMail::Google(adapter) => adapter.set_of(id),
+            #[cfg(any(test, feature = "fake"))]
+            AnyMail::Fake(adapter) => adapter.set_of(id),
         }
     }
 

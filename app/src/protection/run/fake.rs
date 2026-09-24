@@ -75,7 +75,8 @@ pub fn meta(id: &str) -> MessageMeta {
         snippet: String::new(),
         size: 0,
         has_attachments: false,
-        label_ids: Vec::new(),
+        held: mailrs_domain::Memberships::read(),
+        roles: vec![],
         list_unsubscribe: None,
         one_click: false,
     }

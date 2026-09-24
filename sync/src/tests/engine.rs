@@ -4,7 +4,7 @@ use std::time::Duration;
 use async_channel::Receiver;
 use mailrs_domain::{AccountState, ChangeEvent};
 use mailrs_gmail::GmailError;
-use mailrs_store::{Db, accounts, messages};
+use mailrs_store::{Db, accounts};
 
 use crate::fake::{FakeGmail, fill_store, meta};
 use crate::{AccountServices, AccountSync, EngineConfig, SyncEngine, now_millis};
@@ -87,7 +87,7 @@ async fn the_engine_corrects_a_stale_inbox_when_it_starts() {
     fill_store(&earlier).await.unwrap();
     // Gmail archives it, and the store never hears.
     s.fake
-        .with(|f| f.messages.get_mut("stale").unwrap().label_ids.clear());
+        .with(|f| crate::fake::edit_labels(f.messages.get_mut("stale").unwrap(), Vec::clear));
     s.engine.start_account(1, AccountServices::fake(Arc::clone(&s.fake)));
     wait_for(
         &s.events,
@@ -95,7 +95,7 @@ async fn the_engine_corrects_a_stale_inbox_when_it_starts() {
     )
     .await;
     let labels =
-        s.db.read(|c| messages::labels_of(c, 1, "stale"))
+        s.db.read(|c| super::labels_of(c, 1, "stale"))
             .await
             .unwrap();
     assert!(labels.is_empty());

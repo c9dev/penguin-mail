@@ -27,8 +27,9 @@ use mail_builder::headers::raw::Raw;
 use mail_builder::mime::MimePart;
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::{
-    Address, EpochMillis, Filter, MessageBody, MessageMeta, Protection, Vacation, system_label,
+    Address, EpochMillis, Filter, MessageBody, MessageMeta, Protection, Vacation,
 };
+use mailrs_gmail::labels;
 use mailrs_gmail::model::{Header, Message, MessagePart, PartBody};
 use mailrs_gmail::{
     AccountQuota, Answered, BATCH_LIMIT, Busy, CALENDAR_SCOPE, CONTACTS_SCOPE,
@@ -210,7 +211,7 @@ impl Usage {
 
 /// A message for account 1.
 pub fn meta(id: &str, thread: &str, date: EpochMillis, labels: &[&str]) -> MessageMeta {
-    MessageMeta {
+    let mut m = MessageMeta {
         account_id: 1,
         id: id.into(),
         thread_id: thread.into(),
@@ -226,10 +227,27 @@ pub fn meta(id: &str, thread: &str, date: EpochMillis, labels: &[&str]) -> Messa
         snippet: format!("snippet {id}"),
         size: 100,
         has_attachments: false,
-        label_ids: labels.iter().map(|l| l.to_string()).collect(),
+        held: Default::default(),
+        roles: vec![],
         list_unsubscribe: None,
         one_click: false,
-    }
+    };
+    let owned: Vec<String> = labels.iter().map(|l| l.to_string()).collect();
+    labels::set_label_ids(&mut m, &owned);
+    m
+}
+
+/// Changes the Gmail labels `meta` carries through `edit`, as Gmail does
+/// when a label goes on or comes off.
+pub fn edit_labels(meta: &mut MessageMeta, edit: impl FnOnce(&mut Vec<String>)) {
+    let mut ids = labels::label_ids(meta);
+    edit(&mut ids);
+    labels::set_label_ids(meta, &ids);
+}
+
+/// Whether `meta` carries the Gmail label `label`.
+pub fn has_label(meta: &MessageMeta, label: &str) -> bool {
+    labels::label_ids(meta).iter().any(|l| l == label)
 }
 
 /// The part path of a fixture body's `index`th file in the message
@@ -261,12 +279,17 @@ impl FakeGmail {
                 email: "me@example.com".into(),
                 history_id: 100,
                 history_floor: 0,
-                labels: vec![
-                    label("INBOX", "system"),
-                    label("UNREAD", "system"),
-                    label("STARRED", "system"),
-                    label("Label_1", "user"),
-                ],
+                // Gmail lists its role labels, and a message's roles come
+                // from that listing.
+                labels: labels::ROLES
+                    .iter()
+                    .map(|(id, _)| label(id, "system"))
+                    .chain([
+                        label("UNREAD", "system"),
+                        label("STARRED", "system"),
+                        label("Label_1", "user"),
+                    ])
+                    .collect(),
                 messages: HashMap::new(),
                 history: Vec::new(),
                 bodies: HashMap::new(),
@@ -318,6 +341,11 @@ impl FakeGmail {
         self.with(|s| s.sent_copy = Some(Box::new(move |raw| read_sent(raw, account_id))));
     }
 
+    /// Leaves only the labels `ids` in Gmail's list.
+    pub fn keep_labels(&self, ids: &[&str]) {
+        self.with(|s| s.labels.retain(|l| ids.contains(&l.id.as_str())));
+    }
+
     /// A message that already exists. No history. Whether a listing returns
     /// it follows from its date and labels, as it does in Gmail.
     pub fn seed(&self, meta: MessageMeta) {
@@ -332,8 +360,10 @@ impl FakeGmail {
     pub fn deliver(&self, mut meta: MessageMeta) {
         self.with(|s| {
             if s.thread_is_muted(&meta.thread_id) {
-                meta.label_ids.retain(|l| l != system_label::INBOX);
-                meta.label_ids.push(system_label::MUTE.into());
+                edit_labels(&mut meta, |ids| {
+                    ids.retain(|l| l != labels::INBOX);
+                    ids.push(labels::MUTE.into());
+                });
             }
             let change = HistoryChange::MessageAdded {
                 id: meta.id.clone(),
@@ -368,12 +398,14 @@ impl FakeGmail {
                 return;
             };
             let thread_id = meta.thread_id.clone();
-            for label in add {
-                if !meta.label_ids.iter().any(|l| l == label) {
-                    meta.label_ids.push(label.to_string());
+            edit_labels(meta, |ids| {
+                for label in add {
+                    if !ids.iter().any(|l| l == label) {
+                        ids.push(label.to_string());
+                    }
                 }
-            }
-            meta.label_ids.retain(|l| !remove.contains(&l.as_str()));
+                ids.retain(|l| !remove.contains(&l.as_str()));
+            });
             if !add.is_empty() {
                 s.record(HistoryChange::LabelsAdded {
                     id: id.into(),
@@ -541,7 +573,7 @@ impl FakeGmail {
         Ok(self.with(|s| {
             let mut found = s.search(query);
             if let Some(label_id) = label_id {
-                found.retain(|id| s.messages[id].label_ids.iter().any(|l| l == label_id));
+                found.retain(|id| has_label(&s.messages[id], label_id));
             }
             let size = s.page_size.min(page_size.max(1) as usize);
             let end = (start + size).min(found.len());
@@ -605,7 +637,7 @@ impl FakeState {
             .or(answered)
             .unwrap_or_else(|| id.to_string());
         meta.id = id.to_string();
-        meta.label_ids = vec![system_label::SENT.into()];
+        labels::set_label_ids(&mut meta, &[labels::SENT.into()]);
         let change = HistoryChange::MessageAdded {
             id: meta.id.clone(),
             thread_id: meta.thread_id.clone(),
@@ -637,7 +669,7 @@ impl FakeState {
     /// Whether any message of the thread carries Gmail's mute label.
     fn thread_is_muted(&self, thread_id: &str) -> bool {
         self.messages.values().any(|m| {
-            m.thread_id == thread_id && m.label_ids.iter().any(|l| l == system_label::MUTE)
+            m.thread_id == thread_id && has_label(m, labels::MUTE)
         })
     }
 
@@ -840,7 +872,7 @@ impl GmailApi for FakeGmail {
             s.drop_draft_message(&id);
             let message_id = format!("{id}-m{}", s.history_id + 1);
             let thread_id = thread_id.map_or_else(|| format!("{id}-t"), str::to_string);
-            let mut draft = meta(&message_id, &thread_id, s.now(), &[system_label::DRAFT]);
+            let mut draft = meta(&message_id, &thread_id, s.now(), &[labels::DRAFT]);
             draft.from = Some(Address {
                 name: s.display_name.clone(),
                 email: s.email.clone(),
@@ -1110,7 +1142,7 @@ impl GmailApi for FakeGmail {
         self.with(|s| {
             s.labels.retain(|l| l.id != id);
             for message in s.messages.values_mut() {
-                message.label_ids.retain(|l| l != id);
+                edit_labels(message, |ids| ids.retain(|l| l != id));
             }
         });
         Ok(())
@@ -1181,10 +1213,11 @@ impl GmailApi for FakeGmail {
                 None => built_raw(s, id)?,
             };
             let payload = gmail_payload(s, id, &raw);
+            let label_ids = labels::label_ids(&meta);
             Ok(Message {
                 id: id.to_string(),
                 thread_id: meta.thread_id,
-                label_ids: meta.label_ids,
+                label_ids,
                 snippet: meta.snippet,
                 internal_date: Some(meta.date),
                 size_estimate: raw.len() as i64,
@@ -1263,7 +1296,7 @@ impl GmailApi for FakeGmail {
             let threads: BTreeSet<&str> = s
                 .messages
                 .values()
-                .filter(|m| m.label_ids.iter().any(|l| l == id))
+                .filter(|m| has_label(m, id))
                 .map(|m| m.thread_id.as_str())
                 .collect();
             Ok(threads.len() as u64)

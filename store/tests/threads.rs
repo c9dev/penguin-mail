@@ -1,8 +1,8 @@
 mod common;
 
-use common::{meta, mixed_mail, store};
-use mailrs_domain::gmail::set_of as set;
+use common::{LabelChange, list_gmail_roles, meta, mixed_mail, store};
 use mailrs_domain::{AccountId, ThreadSummary};
+use mailrs_gmail::labels::set_of as set;
 use mailrs_store::messages::Change;
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{accounts, messages, open_in_memory};
@@ -12,6 +12,8 @@ fn two_accounts() -> (Connection, AccountId, AccountId) {
     let conn = open_in_memory().unwrap();
     let a = accounts::insert_account(&conn, "a@example.com", 0).unwrap();
     let b = accounts::insert_account(&conn, "b@example.com", 0).unwrap();
+    list_gmail_roles(&conn, a);
+    list_gmail_roles(&conn, b);
     store(
         &conn,
         &[
@@ -131,6 +133,7 @@ fn paging_past_the_last_row_walks_the_list_without_gaps() {
 fn a_thread_carries_every_label_of_its_messages() {
     let conn = open_in_memory().unwrap();
     let id = accounts::insert_account(&conn, "me@example.com", 0).unwrap();
+    list_gmail_roles(&conn, id);
     store(
         &conn,
         &[

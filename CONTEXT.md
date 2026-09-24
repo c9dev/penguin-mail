@@ -4,7 +4,7 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 ## Glossary
 
-**System label**: a label Gmail defines, with the same id in every account, such as `INBOX`, `SPAM`, `UNREAD`, and the category labels. Code names them through `mailrs_domain::system_label`. The store keeps them as server mailboxes with roles, as keywords or as categories through `mailrs_domain::gmail`, and still answers by label id until the words move to roles and keywords. _Avoid_: built-in label, Gmail folder.
+**System label**: a label Gmail defines, with the same id in every account, such as `INBOX`, `SPAM`, `UNREAD`, and the category labels. `mailrs_gmail::labels` names them and maps each to a role, a keyword or a category; only the Google adapter and the Gmail fake read them. _Avoid_: system folder.
 
 **User label**: a label the account owner made, with an id like `Label_12` that only that account knows. _Avoid_: custom label, tag.
 
@@ -24,7 +24,7 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Mail action**: a change a person or the assistant makes to targets, such as archive, flag in a colour, remind at a time, or label by name. `mailrs_sync::MailActions` runs each one for the window and the assistant alike, carries on past a failed target, and reports each failure in its `Outcome`. _Avoid_: command, operation.
 
-**Muted**: a thread carrying Gmail's `MUTE` label. Gmail's own filters archive whatever arrives on such a thread, so a reply lands outside the inbox without the app doing anything; muting is therefore the label plus one archive, and unmuting drops the label and puts the thread back. `mailrs_sync::TriageAction::Mute`, behind `MailAction::Mute`. The Muted mailbox lists these threads and a row marks them. _Avoid_: ignore, silence, snooze.
+**Muted**: a thread carrying the `$muted` keyword, which Gmail keeps as its `MUTE` label. Gmail's own filters archive whatever arrives on such a thread, so a reply lands outside the inbox without the app doing anything; muting is therefore the label plus one archive, and unmuting drops the label and puts the thread back. `mailrs_sync::TriageAction::Mute`, behind `MailAction::Mute`. The Muted mailbox lists these threads and a row marks them. _Avoid_: ignore, silence, snooze.
 
 **Undo**: the stack of recorded mail actions that Ctrl+Z or a toast's Undo button reverses, newest first. Each press takes one off and reverses what that action changed on each message, taking off what each message gained and putting back what it lost, as the change set reported it, so a message it found already read or archived stays that way. It also puts back earlier flag colours, earlier reminders, and dismissed follow-ups, and the toast names what it took back. The stack holds twenty actions and lasts as long as the run: mail actions are already applied at Gmail, so one that outlived the process would offer to reverse what the server has long since moved on from. A target that has left the folder the action put it in is left there, which is why undoing an archive cannot pull a conversation back out of the trash; erased mail and a signed-out account take their entries with them. The window and the assistant share it. _Avoid_: history, revert.
 
@@ -262,7 +262,7 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Keyword**: a mark a message carries that is not a place: `$seen`, `$flagged`, `$answered`, `$draft`, `$muted`, or any keyword a server stores. `mailrs_domain::mailbox::keyword`, kept in `message_keywords`. Gmail's `STARRED` and `MUTE` labels stand for `$flagged` and `$muted`, and its `UNREAD` label for the absence of `$seen`, so unread is kept as a fact derived from the keywords rather than as a row. _Avoid_: flag (which is the flag colour), tag.
 
-**Membership**: one thing a message is in or carries: a server mailbox, a keyword or a category. `mailrs_domain::Membership`; everything one message holds is `Memberships`. `mailrs_domain::gmail` turns Gmail's labels into memberships and back. _Avoid_: label (outside Gmail), placement.
+**Membership**: one thing a message is in or carries: a server mailbox, a keyword or a category. `mailrs_domain::Membership`; everything one message holds is `Memberships`. A `MessageMeta` carries its memberships in `held` and the roles of its mailboxes in `roles`. `mailrs_gmail::labels` turns Gmail's labels into memberships and back. _Avoid_: label (outside Gmail), placement.
 
 **Mail set**: which stored mail a list draws from: the mailbox with a role in each account (the inboxes), one server mailbox, the mail carrying a keyword (flagged, muted), unread mail, or one inbox category. `mailrs_domain::MailSet`. Thread lists, the sidebar's counts, triage and the rules name mail this way; only the Gmail adapter turns one into a label id. _Avoid_: label, filter, selector.
 

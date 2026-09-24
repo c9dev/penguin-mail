@@ -1300,7 +1300,7 @@ mod tests {
     const DAY: i64 = 24 * 60 * 60 * 1000;
 
     fn hit(id: &str, thread: &str, date: i64, subject: &str, labels: &[&str]) -> MessageMeta {
-        MessageMeta {
+        let mut meta = MessageMeta {
             account_id: 1,
             id: id.into(),
             thread_id: thread.into(),
@@ -1316,10 +1316,14 @@ mod tests {
             snippet: format!("snippet {id}"),
             size: 0,
             has_attachments: false,
-            label_ids: labels.iter().map(|l| l.to_string()).collect(),
+            held: Default::default(),
+            roles: vec![],
             list_unsubscribe: None,
             one_click: false,
-        }
+        };
+        let labels: Vec<String> = labels.iter().map(|l| l.to_string()).collect();
+        mailrs_gmail::labels::set_label_ids(&mut meta, &labels);
+        meta
     }
 
     #[test]

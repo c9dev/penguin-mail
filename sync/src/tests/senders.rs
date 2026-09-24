@@ -4,9 +4,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use mailrs_domain::{
-    Address, Category, Filter, FilterAction, FilterCriteria, MailSet, MessageMeta, system_label,
-};
+use mailrs_domain::{Address, Category, Filter, FilterAction, FilterCriteria, MailSet, MessageMeta};
+use mailrs_gmail::labels;
 use mailrs_store::unsubscribes::{self, How};
 
 use super::{Connected, Harness, harness};
@@ -99,7 +98,7 @@ fn from(email: &str, id: &str, thread: &str, category: &str) -> MessageMeta {
             name: None,
             email: email.into(),
         }),
-        ..meta(id, thread, now_millis(), &[system_label::INBOX, category])
+        ..meta(id, thread, now_millis(), &[labels::INBOX, category])
     }
 }
 
@@ -146,7 +145,7 @@ async fn categorizing_a_sender_moves_their_mail_and_replaces_their_rule() {
             labels.contains(&"CATEGORY_PROMOTIONS".to_string()),
             "{labels:?}"
         );
-        let categories = labels.iter().filter(|l| system_label::is_category(l));
+        let categories = labels.iter().filter(|l| labels::is_category(l));
         assert_eq!(categories.count(), 1, "{labels:?}");
     }
     assert!(

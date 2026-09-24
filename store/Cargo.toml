@@ -14,4 +14,5 @@ thiserror.workspace = true
 tokio.workspace = true
 
 [dev-dependencies]
+mailrs-gmail.workspace = true
 tempfile.workspace = true

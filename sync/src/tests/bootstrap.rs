@@ -10,6 +10,7 @@ const DAY: i64 = 24 * 60 * 60 * 1000;
 #[tokio::test]
 async fn bootstrap_records_the_cursor_labels_and_first_page() {
     let h = harness().await;
+    h.fake.keep_labels(&["INBOX", "UNREAD", "STARRED", "Label_1"]);
     let now = now_millis();
     for (i, id) in ["a", "b", "c"].into_iter().enumerate() {
         h.fake.seed(meta(

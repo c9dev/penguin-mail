@@ -1,6 +1,6 @@
 mod common;
 
-use common::{db, meta, mixed_mail, store};
+use common::{LabelChange, db, meta, mixed_mail, store};
 use mailrs_domain::{FlagColor, MailSet, Role};
 use mailrs_store::messages::Change;
 use mailrs_store::threads::{self, ThreadFilter, list_messages, list_threads};

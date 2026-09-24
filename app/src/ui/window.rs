@@ -1510,7 +1510,7 @@ impl MainWindow {
                 .read(|o| {
                     o.messages
                         .iter()
-                        .flat_map(|m| m.label_ids.clone())
+                        .flat_map(|m| m.held.mailboxes.clone())
                         .collect()
                 })
                 .unwrap_or_default(),

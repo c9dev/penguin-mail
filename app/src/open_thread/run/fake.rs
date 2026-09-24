@@ -15,7 +15,7 @@ use std::rc::Rc;
 use futures::channel::oneshot;
 use mailrs_domain::invitation::Invitation;
 use mailrs_domain::{
-    AccountId, Address, FlagColor, MessageBody, MessageMeta, Target, ThreadSummary, system_label,
+    AccountId, Address, FlagColor, Memberships, MessageBody, MessageMeta, Target, ThreadSummary,
 };
 use mailrs_store::outbox::Queued;
 use mailrs_sync::Opened;
@@ -146,10 +146,11 @@ pub fn meta(id: &str, unread: bool) -> MessageMeta {
         snippet: String::new(),
         size: 0,
         has_attachments: false,
-        label_ids: match unread {
-            true => vec![system_label::UNREAD.to_string()],
-            false => Vec::new(),
+        held: match unread {
+            true => Memberships::default(),
+            false => Memberships::read(),
         },
+        roles: vec![],
         list_unsubscribe: None,
         one_click: false,
     }

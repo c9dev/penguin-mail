@@ -498,10 +498,10 @@ impl OpenThread {
 #[cfg(test)]
 mod tests {
     use super::OpenThread;
-    use mailrs_domain::{MessageMeta, system_label};
+    use mailrs_domain::{Memberships, MessageMeta};
     use std::collections::{HashMap, HashSet};
 
-    /// One message of a thread. `unread` puts Gmail's own label on it.
+    /// One message of a thread, read unless `unread`.
     fn message(id: &str, unread: bool) -> MessageMeta {
         MessageMeta {
             account_id: 1,
@@ -516,10 +516,11 @@ mod tests {
             snippet: String::new(),
             size: 0,
             has_attachments: false,
-            label_ids: match unread {
-                true => vec![system_label::UNREAD.to_string()],
-                false => Vec::new(),
+            held: match unread {
+                true => Memberships::default(),
+                false => Memberships::read(),
             },
+            roles: vec![],
             list_unsubscribe: None,
             one_click: false,
         }

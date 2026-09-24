@@ -21,7 +21,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
-use mailrs_domain::{EpochMillis, Filter, Membership, MessageMeta, RemoteMailbox, Role, Vacation};
+use mailrs_domain::{
+    EpochMillis, Filter, MailSet, Membership, MessageMeta, RemoteMailbox, Role, Vacation,
+};
 use mailrs_gmail::{
     Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, Person, Series,
 };
@@ -382,6 +384,12 @@ pub trait MailBackend: Send + Sync + 'static {
 
     /// The server's id for its mailbox with `role`, where it has one.
     fn mailbox_for(&self, role: Role) -> Option<String>;
+
+    /// The mail set the mailbox `id` stands for. A server that lists a
+    /// flag, unread mail or a category among its mailboxes, as Gmail lists
+    /// `STARRED`, `UNREAD` and `CATEGORY_SOCIAL`, says so here; any other
+    /// mailbox is itself, or the mailbox with its role.
+    fn set_of(&self, id: &str) -> MailSet;
 
     /// Applies `ops` to `messages`, in order. On a refusal it says how
     /// many messages from the front went through. `MailOp::Destroy`

@@ -2,7 +2,8 @@
 //! Outbox, reminders, unmuting and undo.
 
 use chrono::{Duration, Local};
-use mailrs_domain::{Address, EpochMillis, system_label};
+use mailrs_domain::{Address, EpochMillis};
+use mailrs_gmail::labels as gmail;
 use mailrs_gmail::GmailError;
 use mailrs_store::outbox::{self, Queued};
 use mailrs_store::reminders;
@@ -139,7 +140,7 @@ async fn send_now_asks_then_sends_a_scheduled_message() {
     let filed = h.gmail.with(|s| {
         s.messages
             .values()
-            .any(|m| m.subject == "Monday" && m.label_ids.iter().any(|l| l == "SENT"))
+            .any(|m| m.subject == "Monday" && gmail::label_ids(m).iter().any(|l| l == "SENT"))
     });
     assert!(filed, "the sent message is in Sent");
 }
@@ -323,7 +324,7 @@ async fn reminders_are_listed_moved_and_cancelled() {
     assert!(
         h.labels_of("m1")
             .await
-            .contains(&system_label::INBOX.to_string())
+            .contains(&gmail::INBOX.to_string())
     );
 
     assert!(
@@ -343,8 +344,8 @@ async fn unmute_brings_a_muted_thread_back_and_list_mail_finds_muted_mail() {
     let done = h.ok("unmute", json!({"targets": [target("t1")]})).await;
     assert_eq!(done["done"], 1);
     let labels = h.labels_of("m1").await;
-    assert!(labels.contains(&system_label::INBOX.to_string()));
-    assert!(!labels.contains(&system_label::MUTE.to_string()));
+    assert!(labels.contains(&gmail::INBOX.to_string()));
+    assert!(!labels.contains(&gmail::MUTE.to_string()));
     assert!(h.asked().questions.is_empty(), "unmuting is Ctrl+Z away");
 }
 
@@ -368,11 +369,11 @@ async fn organize_takes_mail_out_of_the_trash_with_move_to_inbox() {
     }));
     assert!(
         h.gmail
-            .with(|s| s.messages["m2"].label_ids.iter().any(|l| l == system_label::INBOX))
+            .with(|s| gmail::label_ids(&s.messages["m2"]).iter().any(|l| l == gmail::INBOX))
     );
     let labels = h.labels_of("m2").await;
-    assert!(labels.contains(&system_label::INBOX.to_string()));
-    assert!(!labels.contains(&system_label::TRASH.to_string()));
+    assert!(labels.contains(&gmail::INBOX.to_string()));
+    assert!(!labels.contains(&gmail::TRASH.to_string()));
 }
 
 #[tokio::test]
@@ -392,7 +393,7 @@ async fn undo_asks_then_takes_back_the_newest_change() {
     assert!(
         !h.labels_of("m1")
             .await
-            .contains(&system_label::INBOX.to_string())
+            .contains(&gmail::INBOX.to_string())
     );
     let done = h.ok("undo", json!({})).await;
     assert_eq!(done["undone"], "Archive");
@@ -406,7 +407,7 @@ async fn undo_asks_then_takes_back_the_newest_change() {
     assert!(
         h.labels_of("m1")
             .await
-            .contains(&system_label::INBOX.to_string())
+            .contains(&gmail::INBOX.to_string())
     );
 
     h.ok(
@@ -422,7 +423,7 @@ async fn undo_asks_then_takes_back_the_newest_change() {
     assert!(
         !h.labels_of("m2")
             .await
-            .contains(&system_label::INBOX.to_string()),
+            .contains(&gmail::INBOX.to_string()),
         "a declined undo leaves the archive done"
     );
 }

@@ -43,12 +43,14 @@ fn backoff_jitter_stays_within_twenty_percent() {
 fn triage_actions_parse_and_map_to_operations() {
     let archive: TriageAction = "archive".parse().unwrap();
     let gmail = crate::Google::new(std::sync::Arc::new(crate::fake::FakeGmail::new()));
-    let roles: crate::ops::Roles = mailrs_domain::gmail::ROLES
+    let roles: crate::ops::Roles = mailrs_gmail::labels::ROLES
         .iter()
         .map(|(label, role)| (*role, label.to_string()))
         .collect();
     let ops = |action: &TriageAction| {
-        crate::ops::ops_for(action, &crate::MailBackend::capabilities(&gmail), &roles).unwrap()
+        let caps = crate::MailBackend::capabilities(&gmail);
+        crate::ops::ops_for(action, &caps, &roles, |id| crate::MailBackend::set_of(&gmail, id))
+            .unwrap()
     };
     assert_eq!(
         ops(&archive),

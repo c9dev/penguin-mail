@@ -236,7 +236,7 @@ async fn relisting_after_lost_history_catches_a_star_and_a_read() {
     h.bootstrap_all().await;
     h.fake.with(|s| {
         let a = s.messages.get_mut("a").expect("seeded");
-        a.label_ids = vec!["INBOX".into(), "STARRED".into()];
+        mailrs_gmail::labels::set_label_ids(a, &["INBOX".into(), "STARRED".into()]);
     });
     h.fake.expire_history();
 

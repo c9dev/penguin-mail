@@ -6,7 +6,8 @@
 //! A term Gmail knows and this does not, such as `after:2026/01/01`, matches
 //! its value as a plain word rather than failing the search.
 
-use mailrs_domain::{EpochMillis, MessageMeta, system_label};
+use mailrs_domain::{EpochMillis, MessageMeta};
+use mailrs_gmail::labels;
 use mailrs_gmail::RemoteLabel;
 
 const DAY_MILLIS: i64 = 24 * 60 * 60 * 1000;
@@ -69,11 +70,11 @@ impl Query {
     /// Whether `meta` belongs in this search's results.
     pub fn matches(&self, meta: &MessageMeta, labels: &[RemoteLabel], now: EpochMillis) -> bool {
         let hidden = [
-            (system_label::SPAM, self.spam),
-            (system_label::TRASH, self.trash),
+            (labels::SPAM, self.spam),
+            (labels::TRASH, self.trash),
         ];
         for (label, asked) in hidden {
-            if !asked && !self.anywhere && meta.label_ids.iter().any(|l| l == label) {
+            if !asked && !self.anywhere && super::has_label(meta, label) {
                 return false;
             }
         }
@@ -95,8 +96,8 @@ impl Node {
         match self {
             Node::One { negated: true, .. } => {}
             Node::One { term, .. } => match term {
-                Term::Label(id) if id == system_label::SPAM => found.0 = true,
-                Term::Label(id) if id == system_label::TRASH => found.1 = true,
+                Term::Label(id) if id == labels::SPAM => found.0 = true,
+                Term::Label(id) if id == labels::TRASH => found.1 = true,
                 Term::Anywhere => found.2 = true,
                 _ => {}
             },
@@ -120,7 +121,7 @@ impl Term {
         match self {
             Term::Label(wanted) => has_label(meta, labels, wanted),
             Term::Unread => meta.is_unread(),
-            Term::Starred => meta.label_ids.iter().any(|l| l == system_label::STARRED),
+            Term::Starred => super::has_label(meta, labels::STARRED),
             Term::Attachment => meta.has_attachments,
             Term::Anywhere => true,
             Term::From(text) => meta
@@ -152,7 +153,7 @@ impl Term {
 /// Whether `meta` carries a label, named either by its id or the way Gmail
 /// writes it in a search.
 fn has_label(meta: &MessageMeta, labels: &[RemoteLabel], wanted: &str) -> bool {
-    meta.label_ids.iter().any(|id| {
+    labels::label_ids(meta).iter().any(|id| {
         id == wanted
             || labels
                 .iter()
@@ -244,7 +245,7 @@ fn term(text: &str) -> Option<(bool, Term)> {
             "unread" => Term::Unread,
             "read" => return Some((true, Term::Unread)),
             "starred" | "flagged" => Term::Starred,
-            "muted" => Term::Label(system_label::MUTE.into()),
+            "muted" => Term::Label(labels::MUTE.into()),
             _ => return None,
         },
         "has" if lower == "attachment" => Term::Attachment,
@@ -265,20 +266,20 @@ fn term(text: &str) -> Option<(bool, Term)> {
 
 fn folder(name: &str) -> Option<Term> {
     Some(match name {
-        "inbox" => Term::Label(system_label::INBOX.into()),
-        "sent" => Term::Label(system_label::SENT.into()),
-        "spam" | "junk" => Term::Label(system_label::SPAM.into()),
-        "trash" => Term::Label(system_label::TRASH.into()),
-        "draft" | "drafts" => Term::Label(system_label::DRAFT.into()),
-        "important" => Term::Label(system_label::IMPORTANT.into()),
+        "inbox" => Term::Label(labels::INBOX.into()),
+        "sent" => Term::Label(labels::SENT.into()),
+        "spam" | "junk" => Term::Label(labels::SPAM.into()),
+        "trash" => Term::Label(labels::TRASH.into()),
+        "draft" | "drafts" => Term::Label(labels::DRAFT.into()),
+        "important" => Term::Label(labels::IMPORTANT.into()),
         "starred" => Term::Starred,
         "unread" => Term::Unread,
         "anywhere" | "all" => Term::Anywhere,
-        "primary" => Term::Label(system_label::CATEGORY_PERSONAL.into()),
-        "updates" => Term::Label(system_label::CATEGORY_UPDATES.into()),
-        "promotions" => Term::Label(system_label::CATEGORY_PROMOTIONS.into()),
-        "social" => Term::Label(system_label::CATEGORY_SOCIAL.into()),
-        "forums" => Term::Label(system_label::CATEGORY_FORUMS.into()),
+        "primary" => Term::Label(labels::CATEGORY_PERSONAL.into()),
+        "updates" => Term::Label(labels::CATEGORY_UPDATES.into()),
+        "promotions" => Term::Label(labels::CATEGORY_PROMOTIONS.into()),
+        "social" => Term::Label(labels::CATEGORY_SOCIAL.into()),
+        "forums" => Term::Label(labels::CATEGORY_FORUMS.into()),
         other => Term::Label(other.into()),
     })
 }

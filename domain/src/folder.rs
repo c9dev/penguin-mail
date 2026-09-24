@@ -50,35 +50,43 @@ impl Folder {
 #[cfg(test)]
 mod tests {
     use super::Folder;
-    use crate::MessageMeta;
+    use crate::mailbox::keyword::SEEN;
+    use crate::{MessageMeta, Role};
 
-    /// A message carrying Gmail's `labels`, which the store still keeps.
-    fn message(labels: &[&str]) -> MessageMeta {
-        crate::tests::message("m1", labels)
+    /// A read message in `mailboxes`, which have `roles`.
+    fn message(mailboxes: &[&str], roles: &[Role]) -> MessageMeta {
+        crate::tests::message("m1", mailboxes, roles, &[SEEN])
     }
 
     #[test]
     fn junk_and_trash_hold_their_own_mailbox() {
-        assert!(Folder::Junk.holds(&message(&["SPAM"])));
-        assert!(!Folder::Junk.holds(&message(&["INBOX"])));
-        assert!(Folder::Trash.holds(&message(&["TRASH"])));
-        assert!(!Folder::Trash.holds(&message(&["SPAM"])));
+        assert!(Folder::Junk.holds(&message(&["SPAM"], &[Role::Junk])));
+        assert!(!Folder::Junk.holds(&message(&["INBOX"], &[Role::Inbox])));
+        assert!(Folder::Trash.holds(&message(&["TRASH"], &[Role::Trash])));
+        assert!(!Folder::Trash.holds(&message(&["SPAM"], &[Role::Junk])));
     }
 
     #[test]
     fn all_mail_holds_everything_outside_junk_and_trash() {
-        assert!(Folder::AllMail.holds(&message(&[])));
-        assert!(Folder::AllMail.holds(&message(&["INBOX", "Label_1"])));
-        assert!(!Folder::AllMail.holds(&message(&["SPAM"])));
-        assert!(!Folder::AllMail.holds(&message(&["TRASH"])));
+        assert!(Folder::AllMail.holds(&message(&[], &[])));
+        assert!(Folder::AllMail.holds(&message(&["INBOX", "Label_1"], &[Role::Inbox])));
+        assert!(!Folder::AllMail.holds(&message(&["SPAM"], &[Role::Junk])));
+        assert!(!Folder::AllMail.holds(&message(&["TRASH"], &[Role::Trash])));
     }
 
     #[test]
     fn archive_holds_received_mail_outside_the_inbox_sent_and_drafts() {
-        assert!(Folder::Archive.holds(&message(&["Label_1"])));
-        assert!(Folder::Archive.holds(&message(&[])));
-        for place in ["INBOX", "SENT", "DRAFT", "SPAM", "TRASH"] {
-            assert!(!Folder::Archive.holds(&message(&[place])), "{place}");
+        assert!(Folder::Archive.holds(&message(&["Label_1"], &[])));
+        assert!(Folder::Archive.holds(&message(&[], &[])));
+        let placed = [
+            ("INBOX", Role::Inbox),
+            ("SENT", Role::Sent),
+            ("DRAFT", Role::Drafts),
+            ("SPAM", Role::Junk),
+            ("TRASH", Role::Trash),
+        ];
+        for (place, role) in placed {
+            assert!(!Folder::Archive.holds(&message(&[place], &[role])), "{place}");
         }
     }
 }

@@ -399,6 +399,7 @@ async fn realistic(db: &Db) -> Synced {
         .unwrap();
     let fake = Arc::new(FakeGmail::new());
     fake.with(|s| s.page_size = 100);
+    fake.keep_labels(&["INBOX", "UNREAD", "STARRED", "Label_1"]);
     let now = now_millis();
     let mut thread = 0;
     for (count, size) in SIZES {
@@ -681,7 +682,7 @@ async fn listing_again_fetches_what_moved_arrived_or_went() {
     let labels: Vec<Vec<String>> =
         h.db.read(move |c| {
             ids.iter()
-                .map(|id| mailrs_store::messages::labels_of(c, account_id, id))
+                .map(|id| super::labels_of(c, account_id, id))
                 .collect()
         })
         .await

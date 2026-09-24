@@ -486,18 +486,18 @@ pub fn meta(id: &str, thread: &str, from: &str, subject: &str, at: EpochMillis) 
         snippet: format!("about {subject}"),
         size: 100,
         has_attachments: false,
-        label_ids: vec![],
+        held: mailrs_domain::Memberships::read(),
+        roles: vec![],
         list_unsubscribe: None,
         one_click: false,
     }
 }
 
 /// The message with those labels on it.
-pub fn labelled(message: MessageMeta, labels: &[&str]) -> MessageMeta {
-    MessageMeta {
-        label_ids: labels.iter().map(|l| l.to_string()).collect(),
-        ..message
-    }
+pub fn labelled(mut message: MessageMeta, labels: &[&str]) -> MessageMeta {
+    let labels: Vec<String> = labels.iter().map(|l| l.to_string()).collect();
+    mailrs_gmail::labels::set_label_ids(&mut message, &labels);
+    message
 }
 
 impl Harness {
@@ -535,12 +535,14 @@ impl Harness {
             s.clock = Some(NOW);
             // One page holds any search, as the assistant sees it.
             s.page_size = 1000;
-            s.labels = vec![RemoteLabel {
+            // Gmail's own labels, and the person's one label.
+            s.labels.retain(|l| l.kind.as_deref() == Some("system"));
+            s.labels.push(RemoteLabel {
                 id: "Label_kites".into(),
                 name: "Kites".into(),
                 kind: Some("user".into()),
                 color: None,
-            }];
+            });
         });
         for message in mail {
             gmail.seed(message);
@@ -726,9 +728,14 @@ impl Harness {
     /// The labels on a stored message of `account_id`.
     pub async fn labels_in(&self, account_id: AccountId, id: &str) -> Vec<String> {
         let id = id.to_string();
-        self.db
-            .read(move |c| messages::labels_of(c, account_id, &id))
+        let held = self
+            .db
+            .read(move |c| messages::memberships_of(c, account_id, std::slice::from_ref(&id)))
             .await
+            .expect("the store reads");
+        held.values()
+            .next()
+            .map(mailrs_gmail::labels::labels)
             .expect("the message is stored")
     }
 }

@@ -20,14 +20,14 @@ use mailrs_ai::ToolOutcome;
 use mailrs_domain::smart::{Condition, SmartMailbox};
 use mailrs_domain::{
     Account, AccountId, Category, EpochMillis, FlagColor, Folder, Label, LabelKind, MailSet,
-    MessageMeta, Role, Target, ThreadSummary, gmail,
+    MessageMeta, Role, Target, ThreadSummary,
 };
 use mailrs_store::{Db, messages};
 use mailrs_sync::mailbox::Standard as MailboxKind;
 use mailrs_sync::{
     AccountSettings, AccountSync, Accounts, AutomaticReply, BackendError, Calendar, Categorized, Failure,
-    History, Invitations, Loaded, MailAction, MailActions, Mailbox, Mailboxes, NewLabels, Outcome,
-    Permitted, Scope, SyncError, TriageAction, View,
+    History, Invitations, Loaded, MailAction, MailActions, MailBackend, Mailbox, Mailboxes,
+    NewLabels, Outcome, Permitted, Scope, SyncError, TriageAction, View,
 };
 use serde_json::{Value, json};
 
@@ -304,16 +304,16 @@ fn category_name(category: Category) -> &'static str {
     }
 }
 
-/// The mailbox that lists `label` of `account_id`. A person's label lists
-/// its own mail. Gmail's own labels stand for mail sets rather than
-/// mailboxes: the ones with a sidebar row open that row, and the rest,
-/// such as unread mail or a category, list their set.
-fn label_mailbox(account_id: AccountId, label: &Label) -> Mailbox {
+/// The mailbox that lists `label` of `account_id`, where `set` is the mail
+/// set the account's mail service reads the label as. A person's label
+/// lists its own mail. A server's own labels can stand for mail sets
+/// rather than mailboxes: the ones with a sidebar row open that row, and
+/// the rest, such as unread mail or a category, list their set.
+fn label_mailbox(account_id: AccountId, label: &Label, set: MailSet) -> Mailbox {
     if label.kind == LabelKind::System {
         if let Some(which) = MailboxKind::from_key(&label.id) {
             return Mailbox::Standard { account_id, which };
         }
-        let set = gmail::set_of(&label.id);
         if !matches!(set, MailSet::Mailbox(_)) {
             return Mailbox::Set {
                 account_id,
@@ -847,7 +847,7 @@ impl<A: Accounts> Tools<A> {
                     .flat_map(|(id, all)| {
                         all.iter()
                             .filter(|l| l.name.eq_ignore_ascii_case(&wanted))
-                            .map(|l| label_mailbox(*id, l))
+                            .map(|l| label_mailbox(*id, l, self.set_of(*id, &l.id)))
                             .collect::<Vec<_>>()
                     })
                     .collect();
@@ -1231,6 +1231,16 @@ impl<A: Accounts> Tools<A> {
             })),
             Ok(Permitted::NeedsPermission) => Err(self.needs_permission(&account)),
             Err(err) => Err(err),
+        }
+    }
+
+    /// The mail set the label `id` of `account_id` stands for, as the
+    /// account's mail service reads it. An account that is not syncing
+    /// has no service to ask, and its label is a mailbox.
+    fn set_of(&self, account_id: AccountId, id: &str) -> MailSet {
+        match self.modules.accounts.services(account_id) {
+            Some(services) => services.mail.set_of(id),
+            None => MailSet::Mailbox(id.to_string()),
         }
     }
 

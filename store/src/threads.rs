@@ -1372,9 +1372,11 @@ fn category_unread(
 
 #[cfg(test)]
 mod walk_tests {
-    use mailrs_domain::{Address, MessageMeta, gmail};
+    use mailrs_domain::{Address, MessageMeta};
+    use mailrs_gmail::labels::set_label_ids;
 
     use super::*;
+    use crate::testing::list_gmail_roles;
     use crate::{accounts, messages, open_in_memory};
 
     fn message(
@@ -1384,7 +1386,7 @@ mod walk_tests {
         date: i64,
         labels: &[&str],
     ) -> MessageMeta {
-        MessageMeta {
+        let mut meta = MessageMeta {
             account_id,
             id: id.into(),
             thread_id: thread.into(),
@@ -1400,10 +1402,14 @@ mod walk_tests {
             snippet: String::new(),
             size: 100,
             has_attachments: false,
-            label_ids: labels.iter().map(|l| l.to_string()).collect(),
+            held: Default::default(),
+            roles: vec![],
             list_unsubscribe: None,
             one_click: false,
-        }
+        };
+        let labels: Vec<String> = labels.iter().map(|l| l.to_string()).collect();
+        set_label_ids(&mut meta, &labels);
+        meta
     }
 
     /// Sixty threads over two accounts: most in the inbox, some trashed or
@@ -1414,6 +1420,8 @@ mod walk_tests {
         let conn = open_in_memory().unwrap();
         let a = accounts::insert_account(&conn, "a@example.com", 0).unwrap();
         let b = accounts::insert_account(&conn, "b@example.com", 0).unwrap();
+        list_gmail_roles(&conn, a);
+        list_gmail_roles(&conn, b);
         let mut all = Vec::new();
         for i in 0..60i64 {
             let account = if i % 2 == 0 { a } else { b };
@@ -1470,7 +1478,7 @@ mod walk_tests {
     /// The mail set the fixture's Gmail label names. The fixture keeps
     /// Gmail labels; only the filters built from them take mail sets.
     fn set(label: &str) -> MailSet {
-        gmail::set_of(label)
+        mailrs_gmail::labels::set_of(label)
     }
 
     fn filters(a: AccountId) -> Vec<ThreadFilter> {

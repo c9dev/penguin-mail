@@ -1,7 +1,7 @@
 mod common;
 
 use common::{meta, mixed_mail, store};
-use mailrs_domain::gmail::set_of as set;
+use mailrs_gmail::labels::set_of as set;
 use mailrs_domain::{Category, FlagColor, MailSet, Role};
 use mailrs_store::threads::{self, Count, ThreadFilter};
 use mailrs_store::{flags, messages};

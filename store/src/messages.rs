@@ -6,7 +6,6 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
-use mailrs_domain::gmail;
 use mailrs_domain::mailbox::keyword;
 use mailrs_domain::{
     AccountId, Address, Applied, MailSet, Membership, Memberships, MessageMeta, Role,
@@ -94,13 +93,6 @@ impl Change {
                 on,
             },
         }
-    }
-
-    /// The change that puts Gmail's `label` on the message (`carried`) or
-    /// takes it off. Gmail's `UNREAD` going on takes `$seen` away.
-    pub fn label(message_id: &str, label: &str, carried: bool) -> Change {
-        let (membership, held) = gmail::membership_of(label);
-        Change::of(message_id, membership, carried == held)
     }
 
     /// The message, membership and direction of a membership change.
@@ -288,8 +280,7 @@ fn set_membership(
 fn upsert_message(conn: &Connection, m: &MessageMeta, sync_gen: i64) -> Result<()> {
     let to = serde_json::to_string(&m.to).unwrap_or_else(|_| "[]".into());
     let cc = serde_json::to_string(&m.cc).unwrap_or_else(|_| "[]".into());
-    let held = gmail::memberships(&m.label_ids);
-    let seen = held.keywords.iter().any(|k| k == keyword::SEEN);
+    let seen = !m.is_unread();
     conn.execute(
         "INSERT INTO messages (account_id, id, thread_id, rfc822_msgid, from_name, from_addr, to_addrs, \
          cc_addrs, subject, date, snippet, size, has_attachments, list_unsubscribe, one_click, sync_gen, seen) \
@@ -321,7 +312,7 @@ fn upsert_message(conn: &Connection, m: &MessageMeta, sync_gen: i64) -> Result<(
             seen,
         ],
     )?;
-    replace_memberships(conn, m.account_id, &m.id, &held)?;
+    replace_memberships(conn, m.account_id, &m.id, &m.held)?;
     // For Gmail the server's id is the store's own.
     conn.prepare_cached(
         "INSERT OR IGNORE INTO remote_refs (account_id, message_id, remote) VALUES (?1, ?2, ?2)",
@@ -394,8 +385,8 @@ fn replace_memberships(
 
 /// The key of the account's mailbox `id`. A mailbox the store meets on a
 /// message before any listing named it is made unlisted, named after its
-/// id, with the role and kind Gmail's table gives it; the next listing
-/// names it properly.
+/// id. The server's listing names the mailbox's role and kind; until it
+/// does, the mailbox holds mail and lists under its id alone.
 pub(crate) fn mailbox_key(conn: &Connection, account_id: AccountId, id: &str) -> Result<i64> {
     let known: Option<i64> = conn
         .prepare_cached("SELECT key FROM mailboxes WHERE account_id = ?1 AND id = ?2")?
@@ -407,17 +398,9 @@ pub(crate) fn mailbox_key(conn: &Connection, account_id: AccountId, id: &str) ->
     Ok(conn
         .prepare_cached(
             "INSERT INTO mailboxes (account_id, id, name, role, kind, named) \
-             VALUES (?1, ?2, ?2, ?3, ?4, 0) RETURNING key",
+             VALUES (?1, ?2, ?2, NULL, 'label', 0) RETURNING key",
         )?
-        .query_row(
-            params![
-                account_id,
-                id,
-                gmail::role_of(id).map(Role::as_str),
-                gmail::kind_of(id).as_str()
-            ],
-            |row| row.get(0),
-        )?)
+        .query_row(params![account_id, id], |row| row.get(0))?)
 }
 
 pub fn thread_id_of(
@@ -474,16 +457,6 @@ pub(crate) fn delete_thread(
         params![account_id, thread_id],
     )?;
     Ok(())
-}
-
-/// A stored message's labels, sorted.
-pub fn labels_of(
-    conn: &Connection,
-    account_id: AccountId,
-    message_id: &str,
-) -> Result<Vec<String>> {
-    let held = memberships_of(conn, account_id, &[message_id.to_string()])?;
-    Ok(held.get(message_id).map(gmail::labels).unwrap_or_default())
 }
 
 /// The ids of the stored messages in `set`.
@@ -597,8 +570,9 @@ pub fn thread_messages(
         conn.prepare_cached(THREAD_MEMBERSHIPS)?
             .query_map(params![account_id, thread_id], membership_row)?,
     )?;
+    let roles = roles_by_id(conn, account_id)?;
     rows.into_iter()
-        .map(|r| message_meta(account_id, r, &held))
+        .map(|r| message_meta(account_id, r, &held, &roles))
         .collect()
 }
 
@@ -684,11 +658,43 @@ fn message_row(row: &rusqlite::Row) -> rusqlite::Result<MessageRow> {
     })
 }
 
+/// The role of each of the account's mailboxes that has one, by id.
+fn roles_by_id(conn: &Connection, account_id: AccountId) -> Result<HashMap<String, Role>> {
+    let mut stmt = conn.prepare_cached(
+        "SELECT id, role FROM mailboxes WHERE account_id = ?1 AND role IS NOT NULL",
+    )?;
+    let rows = stmt.query_map(params![account_id], |row| {
+        Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+    })?;
+    let mut roles = HashMap::new();
+    for row in rows {
+        let (id, role) = row?;
+        let role = role.parse::<Role>().map_err(|_| StoreError::Corrupt {
+            column: "mailboxes.role",
+            value: role.clone(),
+        })?;
+        roles.insert(id, role);
+    }
+    Ok(roles)
+}
+
+/// A message row with what it holds, sorted, and the roles of the
+/// mailboxes it sits in.
 fn message_meta(
     account_id: AccountId,
     r: MessageRow,
     held: &HashMap<String, Memberships>,
+    roles: &HashMap<String, Role>,
 ) -> Result<MessageMeta> {
+    let mut held = held.get(&r.id).cloned().unwrap_or_default();
+    held.sort();
+    let mut roles: Vec<Role> = held
+        .mailboxes
+        .iter()
+        .filter_map(|m| roles.get(m).copied())
+        .collect();
+    roles.sort();
+    roles.dedup();
     Ok(MessageMeta {
         account_id,
         to: parse_addresses("messages.to_addrs", &r.to)?,
@@ -697,7 +703,8 @@ fn message_meta(
             name: r.from_name,
             email,
         }),
-        label_ids: gmail::labels(held.get(&r.id).unwrap_or(&Memberships::default())),
+        held,
+        roles,
         id: r.id,
         thread_id: r.thread_id,
         rfc822_msgid: r.rfc822_msgid,
@@ -732,8 +739,9 @@ pub fn by_ids(
         conn.prepare_cached(LISTED_MEMBERSHIPS)?
             .query_map(params![account_id, ids], membership_row)?,
     )?;
+    let roles = roles_by_id(conn, account_id)?;
     rows.into_iter()
-        .map(|r| message_meta(account_id, r, &held))
+        .map(|r| message_meta(account_id, r, &held, &roles))
         .collect()
 }
 

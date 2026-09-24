@@ -1,14 +1,44 @@
-//! Gmail's labels as server mailboxes, keywords and categories. Gmail
-//! files everything as a label, so this one table says which labels are
-//! mailboxes and with which role, which stand for a keyword, and which
-//! are categories. The Google adapter reads it both ways. So does the
-//! store, for as long as its interface still names mail by label id, and
-//! so does migration 26, whose SQL spells out the same table.
+//! Gmail's labels, and what each stands for in words every provider
+//! shares: a server mailbox with a role, a keyword, unread mail or a
+//! category. Only the Google adapter, the Gmail fake and the fixtures
+//! that seed the fake read this.
+//!
+//! Gmail spells its own labels the same in every account, so code can
+//! name them directly. A person's labels have ids like `Label_12` that
+//! only the account knows. Migration 26 spells out the same table in SQL.
 
-use crate::mailbox::{MailSet, MailboxKind, Membership, Memberships, Role, keyword};
-use crate::system_label::{
-    DRAFT, IMPORTANT, INBOX, MUTE, SENT, SPAM, STARRED, TRASH, UNREAD, is_category,
-};
+use mailrs_domain::category;
+use mailrs_domain::mailbox::{MailboxKind, Membership, Memberships, Role, keyword};
+use mailrs_domain::{MailSet, MessageMeta};
+
+pub const INBOX: &str = "INBOX";
+pub const SENT: &str = "SENT";
+pub const DRAFT: &str = "DRAFT";
+pub const STARRED: &str = "STARRED";
+pub const UNREAD: &str = "UNREAD";
+pub const TRASH: &str = "TRASH";
+pub const SPAM: &str = "SPAM";
+pub const IMPORTANT: &str = "IMPORTANT";
+/// Marks a thread muted. Gmail's own filters archive whatever arrives on a
+/// thread that carries it, so the reply never reaches the inbox.
+pub const MUTE: &str = "MUTE";
+
+// The store keeps categories under Gmail's own names, so Gmail's category
+// labels are the store's category ids.
+pub const CATEGORY_PERSONAL: &str = category::PERSONAL;
+pub const CATEGORY_UPDATES: &str = category::UPDATES;
+pub const CATEGORY_PROMOTIONS: &str = category::PROMOTIONS;
+pub const CATEGORY_SOCIAL: &str = category::SOCIAL;
+pub const CATEGORY_FORUMS: &str = category::FORUMS;
+
+/// Every category label Gmail puts on inbox mail, Personal first.
+pub const CATEGORIES: [&str; 5] = category::IDS;
+
+/// Whether `label` names one of Gmail's inbox categories, including any
+/// Gmail adds later.
+pub fn is_category(label: &str) -> bool {
+    label.starts_with("CATEGORY_")
+}
 
 /// The labels that are mailboxes with a role.
 pub const ROLES: [(&str, Role); 6] = [
@@ -148,13 +178,48 @@ pub fn labels(held: &Memberships) -> Vec<String> {
     labels
 }
 
+/// A message's memberships as Gmail labels, sorted.
+pub fn label_ids(meta: &MessageMeta) -> Vec<String> {
+    labels(&meta.held)
+}
+
+/// Gives a message the memberships and roles Gmail's `labels` stand for.
+pub fn set_label_ids(meta: &mut MessageMeta, labels: &[String]) {
+    meta.held = memberships(labels);
+    meta.held.sort();
+    meta.roles = labels.iter().filter_map(|l| role_of(l)).collect();
+    meta.roles.sort();
+    meta.roles.dedup();
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mailbox::{MailboxKind, Membership, Role, keyword};
 
     fn owned(labels: &[&str]) -> Vec<String> {
         labels.iter().map(|l| l.to_string()).collect()
+    }
+
+    #[test]
+    fn every_category_label_counts_as_a_category() {
+        assert!(CATEGORIES.into_iter().all(is_category));
+        assert!(!is_category(INBOX));
+        assert!(!is_category("Label_12"));
+    }
+
+    #[test]
+    fn a_message_keeps_its_labels_through_memberships_and_roles() {
+        let mut meta = crate::tests::blank_meta();
+        set_label_ids(
+            &mut meta,
+            &owned(&["INBOX", "UNREAD", "CATEGORY_SOCIAL", "Label_3"]),
+        );
+        assert_eq!(meta.roles, [Role::Inbox]);
+        assert!(meta.is_unread());
+        assert_eq!(
+            label_ids(&meta),
+            owned(&["CATEGORY_SOCIAL", "INBOX", "Label_3", "UNREAD"])
+        );
     }
 
     #[test]
@@ -269,7 +334,10 @@ mod tests {
             ("STARRED", MailSet::flagged()),
             ("MUTE", MailSet::muted()),
             ("UNREAD", MailSet::Unseen),
-            ("CATEGORY_SOCIAL", MailSet::Category("CATEGORY_SOCIAL".into())),
+            (
+                "CATEGORY_SOCIAL",
+                MailSet::Category("CATEGORY_SOCIAL".into()),
+            ),
             ("Label_4", MailSet::Mailbox("Label_4".into())),
             ("CHAT", MailSet::Mailbox("CHAT".into())),
         ];
@@ -278,6 +346,9 @@ mod tests {
             assert_eq!(label_of_set(&set).as_deref(), Some(label), "{label}");
         }
         assert_eq!(label_of_set(&MailSet::Role(Role::Archive)), None);
-        assert_eq!(label_of_set(&MailSet::Keyword(keyword::ANSWERED.into())), None);
+        assert_eq!(
+            label_of_set(&MailSet::Keyword(keyword::ANSWERED.into())),
+            None
+        );
     }
 }

@@ -53,7 +53,7 @@ impl AccountSync {
                 Membership::Mailbox(id) => Some(id.clone()),
                 _ => None,
             })
-            .chain(fetched.values().flat_map(|m| m.label_ids.clone()))
+            .chain(fetched.values().flat_map(|m| m.held.mailboxes.clone()))
             .filter(|id| mail.made_by_person(id))
             .collect();
         let generation = cursor.sync_gen;

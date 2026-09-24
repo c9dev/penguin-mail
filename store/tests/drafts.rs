@@ -1,6 +1,6 @@
 mod common;
 
-use common::{db, meta, store};
+use common::{LabelChange, db, meta, store};
 use mailrs_store::messages::Change;
 use mailrs_store::{drafts, messages};
 

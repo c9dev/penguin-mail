@@ -213,9 +213,11 @@ fn is_automated(email: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use mailrs_domain::{MessageMeta, system_label};
+    use mailrs_domain::MessageMeta;
+    use mailrs_gmail::labels::{self as gmail, set_label_ids};
 
     use super::*;
+    use crate::testing::list_gmail_roles;
     use crate::{accounts, messages, open_in_memory};
 
     fn message(
@@ -225,7 +227,7 @@ mod tests {
         to: &[(&str, &str)],
         label: &str,
     ) -> MessageMeta {
-        MessageMeta {
+        let mut meta = MessageMeta {
             account_id,
             id: id.into(),
             thread_id: id.into(),
@@ -247,16 +249,20 @@ mod tests {
             snippet: String::new(),
             size: 10,
             has_attachments: false,
-            label_ids: vec![label.into()],
+            held: Default::default(),
+            roles: vec![],
             list_unsubscribe: None,
             one_click: false,
-        }
+        };
+        set_label_ids(&mut meta, &[label.into()]);
+        meta
     }
 
     #[test]
     fn contacts_come_before_addresses_seen_only_in_mail() {
         let conn = open_in_memory().unwrap();
         let id = accounts::insert_account(&conn, "dana@example.com", 0).unwrap();
+        list_gmail_roles(&conn, id);
         // Ten messages from Theo, none from Mara, who is a contact.
         for n in 0..10 {
             messages::apply(
@@ -268,7 +274,7 @@ mod tests {
                         &format!("m{n}"),
                         ("Theo Lang", "theo@example.org"),
                         &[("Dana", "dana@example.com")],
-                        system_label::INBOX,
+                        gmail::INBOX,
                     )),
                     generation: 1,
                 }],
@@ -303,6 +309,7 @@ mod tests {
     fn mail_orders_the_contacts_and_google_names_them() {
         let conn = open_in_memory().unwrap();
         let id = accounts::insert_account(&conn, "dana@example.com", 0).unwrap();
+        list_gmail_roles(&conn, id);
         messages::apply(
             &conn,
             id,
@@ -312,7 +319,7 @@ mod tests {
                     "m1",
                     ("Dana", "dana@example.com"),
                     &[("t", "theo@example.org")],
-                    system_label::SENT,
+                    gmail::SENT,
                 )),
                 generation: 1,
             }],
@@ -327,7 +334,7 @@ mod tests {
                     "m2",
                     ("M. O.", "mara@example.org"),
                     &[("Dana", "dana@example.com")],
-                    system_label::INBOX,
+                    gmail::INBOX,
                 )),
                 generation: 1,
             }],

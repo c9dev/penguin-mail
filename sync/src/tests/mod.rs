@@ -27,14 +27,27 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use mailrs_domain::{AccountId, ChangeEvent, MailSet, ThreadSummary};
+use mailrs_domain::{AccountId, ChangeEvent, MailSet, MailboxKind, RemoteMailbox, ThreadSummary};
 use mailrs_store::threads::{self, ThreadFilter};
-use mailrs_store::{Db, accounts, messages};
+use mailrs_store::{Db, accounts, mailboxes, messages};
 
 use crate::fake::{FakeGmail, FakeOneClick};
 use crate::{AccountServices, AccountSync, Accounts};
 
 /// The accounts a test connects, by id.
+/// A stored message's memberships as Gmail labels, sorted.
+pub(crate) fn labels_of(
+    conn: &rusqlite::Connection,
+    account_id: AccountId,
+    message_id: &str,
+) -> mailrs_store::Result<Vec<String>> {
+    let held = messages::memberships_of(conn, account_id, &[message_id.to_string()])?;
+    Ok(held
+        .get(message_id)
+        .map(mailrs_gmail::labels::labels)
+        .unwrap_or_default())
+}
+
 pub(crate) struct Connected(pub HashMap<AccountId, Arc<AccountSync>>);
 
 impl Accounts for Connected {
@@ -63,6 +76,24 @@ pub(crate) async fn harness() -> Harness {
         .await
         .unwrap();
     assert_eq!(account_id, 1, "fake messages belong to account 1");
+    // The first listing has named Gmail's role mailboxes, as it has on any
+    // account with mail in the store.
+    db.write(move |c| {
+        for (id, role) in mailrs_gmail::labels::ROLES {
+            let mailbox = RemoteMailbox {
+                id: id.into(),
+                name: id.into(),
+                kind: MailboxKind::System,
+                role: Some(role),
+                color: None,
+                hidden: false,
+            };
+            mailboxes::upsert(c, account_id, &mailbox)?;
+        }
+        Ok(())
+    })
+    .await
+    .unwrap();
     let fake = Arc::new(FakeGmail::new());
     let (sender, events) = async_channel::unbounded();
     let sync = Arc::new(
@@ -144,7 +175,7 @@ impl Harness {
     pub async fn labels_of(&self, message_id: &str) -> Vec<String> {
         let (account_id, message_id) = (self.account_id, message_id.to_string());
         self.db
-            .read(move |c| messages::labels_of(c, account_id, &message_id))
+            .read(move |c| labels_of(c, account_id, &message_id))
             .await
             .unwrap()
     }

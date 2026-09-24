@@ -259,15 +259,15 @@ msgstr ""
 msgid "Turn off the automatic reply for {account}?"
 msgstr "Desligar a resposta automática de {account}?"
 
-#: app/src/assistant/run.rs:1280
+#: app/src/assistant/run.rs:1290
 msgid "Create a Gmail rule for {account}: {when} → {then}?"
 msgstr "Criar uma regra do Gmail para {account}: {when} → {then}?"
 
-#: app/src/assistant/run.rs:1320
+#: app/src/assistant/run.rs:1330
 msgid "Delete a Gmail rule from {account}?"
 msgstr "Eliminar uma regra do Gmail de {account}?"
 
-#: app/src/assistant/run.rs:1442
+#: app/src/assistant/run.rs:1452
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a Gmail rule for "
 "their future mail?"
@@ -1012,7 +1012,7 @@ msgstr "A correr um comando na área isolada"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "O Penguin Mail continua a sincronizar sem nenhuma janela aberta"
 
-#: app/src/compose.rs:523 app/src/compose.rs:2282
+#: app/src/compose.rs:523 app/src/compose.rs:2283
 msgid "Add at least one recipient."
 msgstr "Adicione pelo menos um destinatário."
 
@@ -1020,7 +1020,7 @@ msgstr "Adicione pelo menos um destinatário."
 msgid "“{address}” is not an email address."
 msgstr "“{address}” não é um endereço de e-mail."
 
-#: app/src/compose.rs:641 app/src/compose.rs:2288
+#: app/src/compose.rs:641 app/src/compose.rs:2289
 msgid "Choose a time in the future"
 msgstr "Escolha uma hora no futuro"
 
@@ -6236,11 +6236,11 @@ msgstr "Está por ler"
 msgid "Is flagged"
 msgstr "Está marcada"
 
-#: sync/src/account/writes.rs:473
+#: sync/src/account/writes.rs:474
 msgid "Gmail is busy. Still working on {conversations}."
 msgstr "O Gmail está ocupado. Ainda a trabalhar em {conversations}."
 
-#: sync/src/account/writes.rs:488
+#: sync/src/account/writes.rs:489
 msgid ""
 "Gmail is busy, so {action} did not go through for {conversations}. Try again "
 "in a moment."
@@ -6248,7 +6248,7 @@ msgstr ""
 "O Gmail está ocupado, por isso {action} não chegou a acontecer em "
 "{conversations}. Tente de novo daqui a pouco."
 
-#: sync/src/account/writes.rs:497
+#: sync/src/account/writes.rs:498
 msgid ""
 "Gmail stayed busy for {waited}, so {action} did not go through for "
 "{conversations}."
@@ -6256,38 +6256,38 @@ msgstr ""
 "O Gmail esteve ocupado durante {waited}, por isso {action} não chegou a "
 "acontecer em {conversations}."
 
-#: sync/src/account/writes.rs:504
+#: sync/src/account/writes.rs:505
 msgid "{action} failed: {reason}"
 msgstr "{action} falhou: {reason}"
 
-#: sync/src/account/writes.rs:522
+#: sync/src/account/writes.rs:523
 msgid "a moment"
 msgstr "um momento"
 
-#: sync/src/account/writes.rs:524
+#: sync/src/account/writes.rs:525
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] "{count} segundo"
 msgstr[1] "{count} segundos"
 
-#: sync/src/account/writes.rs:529
+#: sync/src/account/writes.rs:530
 msgid "a minute"
 msgstr "um minuto"
 
-#: sync/src/actions.rs:117 sync/src/actions.rs:593
+#: sync/src/actions.rs:115 sync/src/actions.rs:591
 msgid "Change labels"
 msgstr "Alterar etiquetas"
 
-#: sync/src/actions.rs:316
+#: sync/src/actions.rs:314
 msgid "Delete Forever failed: {reason}"
 msgstr "Eliminar definitivamente falhou: {reason}"
 
-#: sync/src/actions.rs:486
+#: sync/src/actions.rs:484
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr ""
 "Esta mensagem mudou de sítio entretanto, por isso Anular deixou-a onde está."
 
-#: sync/src/actions.rs:547 sync/src/actions.rs:600
+#: sync/src/actions.rs:545 sync/src/actions.rs:598
 msgid "Could not undo: {reason}"
 msgstr "Não foi possível anular: {reason}"
 

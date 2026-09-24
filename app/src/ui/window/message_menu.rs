@@ -323,7 +323,7 @@ impl MainWindow {
                 open.messages
                     .iter()
                     .find(|m| m.id == message_id)
-                    .map(|m| m.label_ids.iter().cloned().collect())
+                    .map(|m| m.held.mailboxes.iter().cloned().collect())
             })
             .unwrap_or_default();
         // No conversation to move on from: the thread keeps its other
@@ -357,14 +357,15 @@ impl MainWindow {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailrs_domain::{Address, MessageMeta, system_label};
+    use mailrs_domain::{Address, MessageMeta};
+    use mailrs_gmail::labels as gmail;
     use crate::ui::Standard;
     use std::collections::HashMap;
 
     const ACCOUNT: mailrs_domain::AccountId = 1;
 
     fn meta(id: &str, labels: &[&str]) -> MessageMeta {
-        MessageMeta {
+        let mut meta = MessageMeta {
             account_id: ACCOUNT,
             id: id.to_string(),
             thread_id: "t1".to_string(),
@@ -380,10 +381,14 @@ mod tests {
             snippet: String::new(),
             size: 0,
             has_attachments: false,
-            label_ids: labels.iter().map(|l| l.to_string()).collect(),
+            held: Default::default(),
+            roles: vec![],
             list_unsubscribe: None,
             one_click: false,
-        }
+        };
+        let labels: Vec<String> = labels.iter().map(|l| l.to_string()).collect();
+        mailrs_gmail::labels::set_label_ids(&mut meta, &labels);
+        meta
     }
 
     fn open(messages: Vec<MessageMeta>) -> OpenThread {
@@ -426,9 +431,9 @@ mod tests {
     #[test]
     fn an_item_names_the_message_it_was_opened_on_and_not_its_neighbours() {
         let thread = open(vec![
-            meta("a", &[system_label::INBOX]),
-            meta("b", &[system_label::INBOX]),
-            meta("c", &[system_label::INBOX]),
+            meta("a", &[gmail::INBOX]),
+            meta("b", &[gmail::INBOX]),
+            meta("c", &[gmail::INBOX]),
         ]);
         assert_eq!(
             target_of(&thread, "b"),
@@ -444,7 +449,7 @@ mod tests {
     #[test]
     fn a_message_carries_its_own_marks_rather_than_the_threads() {
         let thread = open(vec![
-            meta("a", &[system_label::UNREAD, system_label::STARRED]),
+            meta("a", &[gmail::UNREAD, gmail::STARRED]),
             meta("b", &[]),
         ]);
         let unread = message_of(&thread, "a").expect("the first message");
@@ -456,7 +461,7 @@ mod tests {
 
     #[test]
     fn a_thread_of_one_message_says_that_message_is_alone() {
-        let thread = open(vec![meta("a", &[system_label::INBOX])]);
+        let thread = open(vec![meta("a", &[gmail::INBOX])]);
         assert!(message_of(&thread, "a").expect("the message").alone);
     }
 

@@ -2,9 +2,10 @@ mod common;
 
 use std::collections::HashSet;
 
-use common::{db, meta, store};
-use mailrs_domain::{Applied, MailboxKind, Membership, RemoteMailbox};
+use common::{LabelChange, db, labels_of, meta, store};
+use mailrs_domain::{Applied, MailSet, MailboxKind, Membership, RemoteMailbox, Role};
 use mailrs_store::messages::Change;
+use mailrs_store::threads::ThreadFilter;
 use mailrs_store::{labels, mailboxes, messages, threads};
 
 fn listed(id: &str, name: &str, kind: MailboxKind, color: Option<&str>) -> RemoteMailbox {
@@ -12,7 +13,7 @@ fn listed(id: &str, name: &str, kind: MailboxKind, color: Option<&str>) -> Remot
         id: id.into(),
         name: name.into(),
         kind,
-        role: mailrs_domain::gmail::role_of(id),
+        role: mailrs_gmail::labels::role_of(id),
         color: color.map(str::to_string),
         hidden: false,
     }
@@ -109,7 +110,7 @@ fn label_changes_report_the_thread_and_skip_unknown_messages() {
     .unwrap();
     assert_eq!(touched.threads.into_iter().collect::<Vec<_>>(), ["t1"]);
     assert_eq!(
-        messages::labels_of(&conn, id, "a").unwrap(),
+        labels_of(&conn, id, "a"),
         ["INBOX", "STARRED"]
     );
     let unknown = messages::apply(&conn, id, &[Change::label("zzz", "INBOX", true)]).unwrap();
@@ -127,7 +128,7 @@ fn an_upsert_replaces_the_whole_label_set() {
     let (conn, id) = db();
     store(&conn, &[meta(id, "a", "t1", 100, &["INBOX", "UNREAD"])]);
     store(&conn, &[meta(id, "a", "t1", 100, &["SENT"])]);
-    assert_eq!(messages::labels_of(&conn, id, "a").unwrap(), ["SENT"]);
+    assert_eq!(labels_of(&conn, id, "a"), ["SENT"]);
 }
 
 #[test]
@@ -214,7 +215,10 @@ fn each_message_of_a_thread_carries_its_own_labels() {
         ],
     );
     let labels = |metas: Vec<mailrs_domain::MessageMeta>| -> Vec<(String, Vec<String>)> {
-        metas.into_iter().map(|m| (m.id, m.label_ids)).collect()
+        metas
+            .into_iter()
+            .map(|m| (m.id.clone(), mailrs_gmail::labels::label_ids(&m)))
+            .collect()
     };
     let expected = vec![
         (
@@ -291,7 +295,7 @@ fn a_change_set_refreshes_what_it_touched_and_reports_what_it_did() {
         "b was in the inbox already, and zzz is not stored"
     );
     assert_eq!(
-        messages::labels_of(&conn, id, "a").unwrap(),
+        labels_of(&conn, id, "a"),
         ["INBOX", "STARRED"]
     );
     let t1 = threads::get_thread(&conn, id, "t1").unwrap().unwrap();
@@ -312,4 +316,40 @@ fn a_change_set_refreshes_what_it_touched_and_reports_what_it_did() {
     .unwrap();
     assert!(threads::get_thread(&conn, id, "t1").unwrap().is_none());
     assert!(messages::is_whole(&conn, id, "t2").unwrap());
+}
+
+/// A mailbox met on a message before any listing named it has no role
+/// yet; the listing gives it one, and the message then lists in it.
+#[test]
+fn a_mailbox_met_before_the_listing_takes_its_role_from_the_listing() {
+    let (conn, account) = common::bare_db();
+    let mut m = meta(account, "a", "t1", 100, &[]);
+    m.held.mailboxes = vec!["INBOX".into()];
+    store(&conn, &[m]);
+    let inbox = ThreadFilter::account(account, MailSet::Role(Role::Inbox));
+    assert_eq!(threads::count_threads(&conn, &inbox).unwrap(), 0);
+    mailboxes::upsert(
+        &conn,
+        account,
+        &RemoteMailbox {
+            id: "INBOX".into(),
+            name: "INBOX".into(),
+            kind: MailboxKind::System,
+            role: Some(Role::Inbox),
+            color: None,
+            hidden: false,
+        },
+    )
+    .unwrap();
+    assert_eq!(threads::count_threads(&conn, &inbox).unwrap(), 1);
+}
+
+#[test]
+fn a_stored_message_reads_back_with_its_roles() {
+    let (conn, account) = db();
+    store(&conn, &[meta(account, "a", "t1", 100, &["INBOX", "STARRED", "Label_1"])]);
+    let read = messages::by_ids(&conn, account, &["a".into()]).unwrap();
+    assert_eq!(read[0].roles, [Role::Inbox]);
+    assert!(read[0].is_flagged());
+    assert!(read[0].in_mailbox("Label_1"));
 }

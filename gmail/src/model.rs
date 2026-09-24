@@ -1,7 +1,9 @@
 //! Gmail REST wire types. Google sends int64 fields as JSON strings.
 
-use mailrs_domain::{Filter, FilterAction, FilterCriteria, MailSet, gmail};
+use mailrs_domain::{Filter, FilterAction, FilterCriteria, MailSet};
 use serde::{Deserialize, Deserializer, Serialize};
+
+use crate::labels;
 
 #[derive(Deserialize)]
 #[serde(untagged)]
@@ -235,7 +237,7 @@ impl From<&Filter> for GmailFilter {
     /// A set Gmail has no label for (the archive role) is left out; no
     /// rule in the app makes one.
     fn from(filter: &Filter) -> GmailFilter {
-        let labels = |sets: &[MailSet]| sets.iter().filter_map(gmail::label_of_set).collect();
+        let labels = |sets: &[MailSet]| sets.iter().filter_map(labels::label_of_set).collect();
         GmailFilter {
             id: filter.id.clone(),
             criteria: filter.criteria.clone(),
@@ -251,7 +253,7 @@ impl From<&Filter> for GmailFilter {
 impl GmailFilter {
     /// The filter in mail sets, as the rest of the app reads it.
     pub fn into_filter(self) -> Filter {
-        let sets = |labels: Vec<String>| labels.iter().map(|l| gmail::set_of(l)).collect();
+        let sets = |labels: Vec<String>| labels.iter().map(|l| labels::set_of(l)).collect();
         Filter {
             id: self.id,
             criteria: self.criteria,

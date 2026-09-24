@@ -5,16 +5,15 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
+use crate::mailbox::keyword;
 use crate::translate::gettext;
 
 pub mod category;
 mod folder;
-pub mod gmail;
 pub mod mailbox;
 pub mod invitation;
 pub mod smart;
 pub mod subject;
-pub mod system_label;
 mod target;
 pub mod translate;
 
@@ -262,7 +261,15 @@ pub struct MessageMeta {
     pub snippet: String,
     pub size: i64,
     pub has_attachments: bool,
-    pub label_ids: Vec<String>,
+    /// The server mailboxes the message sits in, its keywords and its
+    /// categories.
+    #[serde(default)]
+    pub held: Memberships,
+    /// The roles of the mailboxes in `held`, for the questions below. The
+    /// store fills them when it reads a message and ignores them when it
+    /// writes one; a mailbox's role comes from the server's listing.
+    #[serde(default)]
+    pub roles: Vec<Role>,
     /// The `List-Unsubscribe` header as it arrived, angle brackets and
     /// all. Every metadata fetch asks for it, so the newsletters list
     /// answers without fetching a single body.
@@ -277,25 +284,36 @@ pub struct MessageMeta {
 impl MessageMeta {
     /// The message lacks `$seen`.
     pub fn is_unread(&self) -> bool {
-        self.has(&MailSet::Unseen)
+        !self.has_keyword(keyword::SEEN)
     }
 
     pub fn is_flagged(&self) -> bool {
-        self.has(&MailSet::flagged())
+        self.has_keyword(keyword::FLAGGED)
     }
 
     pub fn is_muted(&self) -> bool {
-        self.has(&MailSet::muted())
+        self.has_keyword(keyword::MUTED)
     }
 
     /// The message sits in its account's mailbox with `role`.
     pub fn in_role(&self, role: Role) -> bool {
-        self.has(&MailSet::Role(role))
+        self.roles.contains(&role)
     }
 
     /// The message sits in the server mailbox `id`.
     pub fn in_mailbox(&self, id: &str) -> bool {
-        self.label_ids.iter().any(|l| l == id)
+        self.held.mailboxes.iter().any(|m| m == id)
+    }
+
+    /// The message is among the mail `set` names.
+    pub fn in_set(&self, set: &MailSet) -> bool {
+        match set {
+            MailSet::Role(role) => self.in_role(*role),
+            MailSet::Mailbox(id) => self.in_mailbox(id),
+            MailSet::Keyword(k) => self.has_keyword(k),
+            MailSet::Unseen => self.is_unread(),
+            MailSet::Category(c) => self.held.categories.iter().any(|h| h == c),
+        }
     }
 
     /// The inbox category the message is sorted into. `None` for Primary,
@@ -306,14 +324,12 @@ impl MessageMeta {
             .find(|category| {
                 let (any, _) = category.categories();
                 any.iter()
-                    .any(|id| self.has(&MailSet::Category((*id).into())))
+                    .any(|id| self.in_set(&MailSet::Category((*id).into())))
             })
     }
 
-    // The store still hands out Gmail's labels; this reads them until the
-    // message carries its memberships and roles itself.
-    fn has(&self, set: &MailSet) -> bool {
-        gmail::label_of_set(set).is_some_and(|label| self.label_ids.contains(&label))
+    fn has_keyword(&self, k: &str) -> bool {
+        self.held.keywords.iter().any(|h| h == k)
     }
 }
 
@@ -555,10 +571,17 @@ pub struct Vacation {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::{Category, MessageMeta, Role};
+    use crate::mailbox::keyword::{FLAGGED, MUTED, SEEN};
+    use crate::{Category, MailSet, Memberships, MessageMeta, Role, category};
 
-    /// A message in account 1 carrying Gmail's `labels`.
-    pub(crate) fn message(id: &str, labels: &[&str]) -> MessageMeta {
+    /// A message in account 1 in `mailboxes`, which have `roles`, and
+    /// carrying `keywords`.
+    pub(crate) fn message(
+        id: &str,
+        mailboxes: &[&str],
+        roles: &[Role],
+        keywords: &[&str],
+    ) -> MessageMeta {
         MessageMeta {
             account_id: 1,
             id: id.into(),
@@ -572,32 +595,67 @@ pub(crate) mod tests {
             snippet: String::new(),
             size: 0,
             has_attachments: false,
-            label_ids: labels.iter().map(|l| l.to_string()).collect(),
+            held: Memberships {
+                mailboxes: owned(mailboxes),
+                keywords: owned(keywords),
+                categories: vec![],
+            },
+            roles: roles.to_vec(),
             list_unsubscribe: None,
             one_click: false,
         }
     }
 
+    fn owned(items: &[&str]) -> Vec<String> {
+        items.iter().map(|i| i.to_string()).collect()
+    }
+
+    /// A read message in the inbox, sorted into `category`.
+    fn in_category(id: &str, category: &str) -> MessageMeta {
+        let mut m = message(id, &["INBOX"], &[Role::Inbox], &[SEEN]);
+        m.held.categories = vec![category.into()];
+        m
+    }
+
     #[test]
     fn a_message_answers_for_its_roles_and_keywords() {
-        let m = message("m1", &["INBOX", "UNREAD", "STARRED", "MUTE", "Label_2"]);
+        let m = message(
+            "m1",
+            &["INBOX", "Label_2"],
+            &[Role::Inbox],
+            &[FLAGGED, MUTED],
+        );
         assert!(m.is_unread() && m.is_flagged() && m.is_muted());
         assert!(m.in_role(Role::Inbox));
         assert!(!m.in_role(Role::Sent));
         assert!(m.in_mailbox("Label_2"));
         assert!(!m.in_mailbox("Label_3"));
-        let read = message("m2", &["SENT"]);
+        let read = message("m2", &["SENT"], &[Role::Sent], &[SEEN]);
         assert!(!read.is_unread() && !read.is_flagged() && !read.is_muted());
         assert!(read.in_role(Role::Sent));
     }
 
     #[test]
+    fn a_message_is_in_each_set_it_holds() {
+        let mut m = message("m1", &["INBOX", "Label_2"], &[Role::Inbox], &[FLAGGED]);
+        m.held.categories = vec![category::SOCIAL.into()];
+        assert!(m.in_set(&MailSet::Role(Role::Inbox)));
+        assert!(!m.in_set(&MailSet::Role(Role::Trash)));
+        assert!(m.in_set(&MailSet::Mailbox("Label_2".into())));
+        assert!(m.in_set(&MailSet::flagged()));
+        assert!(!m.in_set(&MailSet::muted()));
+        assert!(m.in_set(&MailSet::Unseen));
+        assert!(m.in_set(&MailSet::Category(category::SOCIAL.into())));
+        assert!(!m.in_set(&MailSet::Category(category::UPDATES.into())));
+    }
+
+    #[test]
     fn a_message_names_its_category() {
-        let primary = message("m1", &["INBOX", "CATEGORY_PERSONAL"]);
+        let primary = in_category("m1", category::PERSONAL);
         assert_eq!(primary.category(), None, "Primary carries no category worth naming");
-        let social = message("m2", &["INBOX", "CATEGORY_SOCIAL"]);
+        let social = in_category("m2", category::SOCIAL);
         assert_eq!(social.category(), Some(Category::Social));
-        let forums = message("m3", &["INBOX", "CATEGORY_FORUMS"]);
+        let forums = in_category("m3", category::FORUMS);
         assert_eq!(
             forums.category(),
             Some(Category::Social),

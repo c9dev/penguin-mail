@@ -2,7 +2,8 @@
 //! Gmail files everything as a label, so each operation adds or removes
 //! one, and `batchModify` takes one change over many messages.
 
-use mailrs_domain::{Membership, gmail};
+use mailrs_domain::Membership;
+use mailrs_gmail::labels as gmail;
 use mailrs_gmail::{BATCH_LIMIT, GmailError};
 
 use super::{Google, paced};
