@@ -19,8 +19,8 @@ use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, TimeZone};
 use mailrs_ai::ToolOutcome;
 use mailrs_domain::smart::{Condition, SmartMailbox};
 use mailrs_domain::{
-    Account, AccountId, Category, EpochMillis, FlagColor, Folder, Label, LabelKind, MailSet, Role,
-    Target, ThreadSummary, gmail,
+    Account, AccountId, Category, EpochMillis, FlagColor, Folder, Label, LabelKind, MailSet,
+    MessageMeta, Role, Target, ThreadSummary, gmail,
 };
 use mailrs_store::{Db, messages};
 use mailrs_sync::mailbox::Standard as MailboxKind;
@@ -272,6 +272,36 @@ fn named_category(key: &str) -> Result<Category, String> {
     Category::from_key(key)
         .filter(|c| *c != Category::All)
         .ok_or_else(|| format!("Unknown category {key}."))
+}
+
+/// The standard places `meta` sits in, plain English words the model
+/// reads. Archive and All Mail hold everything that is in none of the
+/// others, so they name nothing here.
+fn roles_of(meta: &MessageMeta) -> Vec<&'static str> {
+    const NAMED: [(Role, &str); 6] = [
+        (Role::Inbox, "Inbox"),
+        (Role::Sent, "Sent"),
+        (Role::Drafts, "Drafts"),
+        (Role::Trash, "Trash"),
+        (Role::Junk, "Spam"),
+        (Role::Important, "Important"),
+    ];
+    NAMED
+        .into_iter()
+        .filter(|(role, _)| meta.in_role(*role))
+        .map(|(_, name)| name)
+        .collect()
+}
+
+/// A category's plain English name. Model-facing, not translated: the
+/// model reads English whatever the user's locale is.
+fn category_name(category: Category) -> &'static str {
+    match category {
+        Category::Updates => "Updates",
+        Category::Promotions => "Promotions",
+        Category::Social => "Social",
+        Category::Primary | Category::All => "Primary",
+    }
 }
 
 /// The mailbox that lists `label` of `account_id`. A person's label lists
@@ -904,6 +934,8 @@ impl<A: Accounts> Tools<A> {
                 "unread": meta.is_unread(),
                 "flagged": meta.is_flagged(),
                 "muted": meta.is_muted(),
+                "in": roles_of(&meta),
+                "category": meta.category().map(category_name),
                 "text": body_text,
                 "invitation": body.as_ref().is_some_and(|b| b.calendar.is_some()),
                 "unsubscribe": body.as_ref().is_some_and(|b| {

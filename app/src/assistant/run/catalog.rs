@@ -282,7 +282,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "read_conversation",
             label: || gettext("Reading a conversation"),
-            description: "Reads every message in a conversation: senders, recipients, dates, text, and attachment names.",
+            description: "Reads every message in a conversation: senders, recipients, dates, text, attachment names, the person's own labels, whether it is unread, flagged or muted, which of Inbox, Sent, Drafts, Trash, Spam and Important it sits in, and its category, if it has one.",
             input: || {
                 json!({
                     "account": account("The conversation's account."),

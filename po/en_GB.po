@@ -183,38 +183,38 @@ msgstr "Add an Anthropic API key in Preferences."
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr "Claude Code is not installed. Install it and sign in, then try again."
 
-#: app/src/assistant/run.rs:940
+#: app/src/assistant/run.rs:972
 msgid "Move {count} conversation to the Trash?"
 msgid_plural "Move {count} conversations to the Trash?"
 msgstr[0] "Move {count} conversation to the Trash?"
 msgstr[1] "Move {count} conversations to the Trash?"
 
-#: app/src/assistant/run.rs:1031
+#: app/src/assistant/run.rs:1063
 msgid "Don't Allow labels only the mail in accounts that have the label already."
 msgstr "Don't Allow labels only the mail in accounts that have the label already."
 
-#: app/src/assistant/run.rs:1063
+#: app/src/assistant/run.rs:1095
 msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr "Block {address}? Their future mail goes straight to the Trash."
 
-#: app/src/assistant/run.rs:1139 app/src/assistant/run/calendar.rs:178
+#: app/src/assistant/run.rs:1171 app/src/assistant/run/calendar.rs:178
 #: app/src/assistant/run/calendar.rs:525
 msgid "%a %-d %b"
 msgstr "%a %-d %b"
 
-#: app/src/assistant/run.rs:1145
+#: app/src/assistant/run.rs:1177
 msgid " from {first} to {last}"
 msgstr " from {first} to {last}"
 
-#: app/src/assistant/run.rs:1148
+#: app/src/assistant/run.rs:1180
 msgid " until {last}"
 msgstr " until {last}"
 
-#: app/src/assistant/run.rs:1149
+#: app/src/assistant/run.rs:1181
 msgid " from {first}"
 msgstr " from {first}"
 
-#: app/src/assistant/run.rs:1155
+#: app/src/assistant/run.rs:1187
 msgid ""
 "Turn on the automatic reply for {account}{dates}?\n"
 "\n"
@@ -226,19 +226,19 @@ msgstr ""
 "“{subject}”\n"
 "{body}"
 
-#: app/src/assistant/run.rs:1166
+#: app/src/assistant/run.rs:1198
 msgid "Turn off the automatic reply for {account}?"
 msgstr "Turn off the automatic reply for {account}?"
 
-#: app/src/assistant/run.rs:1248
+#: app/src/assistant/run.rs:1280
 msgid "Create a Gmail rule for {account}: {when} → {then}?"
 msgstr "Create a Gmail rule for {account}: {when} → {then}?"
 
-#: app/src/assistant/run.rs:1288
+#: app/src/assistant/run.rs:1320
 msgid "Delete a Gmail rule from {account}?"
 msgstr "Delete a Gmail rule from {account}?"
 
-#: app/src/assistant/run.rs:1410
+#: app/src/assistant/run.rs:1442
 msgid "Move mail from {sender} to {category} in {account}, and add a Gmail rule for their future mail?"
 msgstr "Move mail from {sender} to {category} in {account}, and add a Gmail rule for their future mail?"
 

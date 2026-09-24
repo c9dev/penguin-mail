@@ -39,8 +39,9 @@ async fn mute_takes_a_thread_out_of_the_inbox_and_back() {
     );
 }
 
-/// A message filed under the person's own label, unread and flagged. The
-/// read tool names the label instead of the Gmail ids that hold it.
+/// A message filed under the person's own label, unread and flagged, one
+/// trashed and one sent under a category. The read tool names the label
+/// and the standard places instead of the Gmail ids that hold them.
 #[tokio::test]
 async fn reading_mail_names_its_labels_and_marks_not_gmail_ids() {
     let mut mail = mail();
@@ -52,6 +53,14 @@ async fn reading_mail_names_its_labels_and_marks_not_gmail_ids() {
             system_label::STARRED,
             "Label_kites",
         ],
+    ));
+    mail.push(labelled(
+        meta("m6", "t6", "kai@example.com", "Old kite plans", NOW),
+        &[system_label::TRASH],
+    ));
+    mail.push(labelled(
+        meta("m7", "t7", ME, "Kite invite", NOW),
+        &[system_label::SENT, system_label::CATEGORY_SOCIAL],
     ));
     let h = Harness::with(mail).await;
 
@@ -65,6 +74,25 @@ async fn reading_mail_names_its_labels_and_marks_not_gmail_ids() {
     assert_eq!(read["messages"][0]["unread"], json!(true));
     assert_eq!(read["messages"][0]["flagged"], json!(true));
     assert_eq!(read["messages"][0]["muted"], json!(false));
+    assert_eq!(read["messages"][0]["in"], json!(["Inbox"]));
+    assert_eq!(read["messages"][0]["category"], json!(null));
+
+    let trashed = h
+        .ok(
+            "read_conversation",
+            json!({"account": ME, "thread_id": "t6"}),
+        )
+        .await;
+    assert_eq!(trashed["messages"][0]["in"], json!(["Trash"]));
+
+    let sent = h
+        .ok(
+            "read_conversation",
+            json!({"account": ME, "thread_id": "t7"}),
+        )
+        .await;
+    assert_eq!(sent["messages"][0]["in"], json!(["Sent"]));
+    assert_eq!(sent["messages"][0]["category"], json!("Social"));
 }
 
 #[tokio::test]

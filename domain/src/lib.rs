@@ -298,6 +298,18 @@ impl MessageMeta {
         self.label_ids.iter().any(|l| l == id)
     }
 
+    /// The inbox category the message is sorted into. `None` for Primary,
+    /// the default a caller has no reason to name.
+    pub fn category(&self) -> Option<Category> {
+        [Category::Updates, Category::Promotions, Category::Social]
+            .into_iter()
+            .find(|category| {
+                let (any, _) = category.categories();
+                any.iter()
+                    .any(|id| self.has(&MailSet::Category((*id).into())))
+            })
+    }
+
     // The store still hands out Gmail's labels; this reads them until the
     // message carries its memberships and roles itself.
     fn has(&self, set: &MailSet) -> bool {
@@ -543,7 +555,7 @@ pub struct Vacation {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::{MessageMeta, Role};
+    use crate::{Category, MessageMeta, Role};
 
     /// A message in account 1 carrying Gmail's `labels`.
     pub(crate) fn message(id: &str, labels: &[&str]) -> MessageMeta {
@@ -577,6 +589,20 @@ pub(crate) mod tests {
         let read = message("m2", &["SENT"]);
         assert!(!read.is_unread() && !read.is_flagged() && !read.is_muted());
         assert!(read.in_role(Role::Sent));
+    }
+
+    #[test]
+    fn a_message_names_its_category() {
+        let primary = message("m1", &["INBOX", "CATEGORY_PERSONAL"]);
+        assert_eq!(primary.category(), None, "Primary carries no category worth naming");
+        let social = message("m2", &["INBOX", "CATEGORY_SOCIAL"]);
+        assert_eq!(social.category(), Some(Category::Social));
+        let forums = message("m3", &["INBOX", "CATEGORY_FORUMS"]);
+        assert_eq!(
+            forums.category(),
+            Some(Category::Social),
+            "Forums reads as Social"
+        );
     }
 }
 
