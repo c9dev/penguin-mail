@@ -8,7 +8,7 @@ use base64::Engine;
 use base64::alphabet;
 use base64::engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig};
 use mail_parser::decoders::quoted_printable::quoted_printable_decode;
-use mail_parser::{Message, MessageParser, MessagePart, MimeHeaders};
+use mail_parser::{Message, MessageParser, MessagePart, MimeHeaders, PartType};
 use mailrs_domain::MessageBody;
 
 use crate::parts::{Part, Parts, body};
@@ -34,11 +34,29 @@ pub fn parts(raw: &[u8]) -> Option<Parts> {
         true => String::new(),
         false => "1".to_string(),
     };
+    let root = convert(&message, raw, 0, root_path, 0);
+    dismantle(message);
     Some(Parts {
         headers,
-        root: convert(&message, raw, 0, root_path, 0),
+        root,
         incomplete: false,
     })
+}
+
+/// Drops a parsed message one level at a time. mail-parser parses a
+/// forwarded message inside a forwarded message without recursing, but
+/// holds each one inside the part above it, and the drop the compiler
+/// writes for that recurses once per level: ten thousand levels, a few
+/// hundred kilobytes of mail, overflow a worker thread's stack.
+fn dismantle(message: Message<'_>) {
+    let mut pending = vec![message];
+    while let Some(mut message) = pending.pop() {
+        for part in &mut message.parts {
+            if let PartType::Message(inner) = std::mem::replace(&mut part.body, PartType::Text("".into())) {
+                pending.push(inner);
+            }
+        }
+    }
 }
 
 /// The body of `raw`. Bytes mail-parser cannot read at all give an empty

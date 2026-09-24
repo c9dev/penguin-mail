@@ -674,3 +674,16 @@ fn an_unreadable_forwarded_message_is_still_an_eml_file() {
     assert_eq!(listed.last(), Some(&("message.eml", "2.1.1.1")));
     assert_eq!(part(&raw, "2.1.1.1").as_deref(), Some(b"Subject: Deepest\r\n\r\nHello".as_slice()));
 }
+
+/// Forwarded messages nested inside each other become one parsed message
+/// per level, and dropping them used to recurse once per level. Ten
+/// thousand levels must still read on a worker thread's 2 MiB stack.
+#[test]
+fn deeply_nested_forwarded_messages_read_on_a_small_stack() {
+    let raw = "Content-Type: message/rfc822\r\n\r\n".repeat(10_000);
+    let reader = std::thread::Builder::new()
+        .stack_size(2 << 20)
+        .spawn(move || read(raw.as_bytes()))
+        .unwrap();
+    assert!(reader.join().is_ok(), "reading the message overflowed the stack");
+}
