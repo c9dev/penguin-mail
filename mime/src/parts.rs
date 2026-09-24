@@ -33,6 +33,9 @@ pub struct Part {
     pub filename: Option<String>,
     /// Without angle brackets.
     pub content_id: Option<String>,
+    /// The subject of the message a `message/rfc822` part holds, which
+    /// names the part's file.
+    pub subject: Option<String>,
     /// `Content-Disposition: attachment`.
     pub attachment: bool,
     /// Decoded bytes, as the source counts them.
@@ -98,23 +101,41 @@ pub fn body(parts: &Parts) -> MessageBody {
         _ => Some(&parts.root),
     };
     if let Some(start) = start {
-        walk(start, &mut body);
+        walk(start, &mut body, false);
     }
     drop_calendar_twin(&mut body);
     body
 }
 
-fn walk(part: &Part, body: &mut MessageBody) {
-    // A nested message walks into its own parts, the way Gmail expands a
-    // forwarded message rather than attaching it whole.
-    if part.mime_type.starts_with("multipart/") || part.mime_type == "message/rfc822" {
+/// Reads `part` into `body`. Inside a forwarded message (`nested`) only
+/// files are collected: its text and HTML are not this message's body,
+/// and an invitation it carries was sent to somebody else, so it draws
+/// no card to answer.
+fn walk(part: &Part, body: &mut MessageBody, nested: bool) {
+    if part.mime_type.starts_with("multipart/") {
         for child in &part.children {
-            walk(child, body);
+            walk(child, body, nested);
+        }
+        return;
+    }
+    // A forwarded message is a file of its own, and its files are listed
+    // after it.
+    if part.mime_type == "message/rfc822" {
+        body.attachments.push(Attachment {
+            part_id: part.path.clone(),
+            filename: message_file_name(part),
+            mime_type: part.mime_type.clone(),
+            size: part.size,
+            attachment_id: Some(part.path.clone()),
+            content_id: part.content_id.clone(),
+        });
+        for child in &part.children {
+            walk(child, body, true);
         }
         return;
     }
     let name = part.filename.as_deref().unwrap_or_default();
-    if body.calendar.is_none() && is_calendar(&part.mime_type, name) {
+    if !nested && body.calendar.is_none() && is_calendar(&part.mime_type, name) {
         body.calendar = text(part).filter(|ics| ics.contains("BEGIN:VCALENDAR"));
     }
     if is_attachment(part) {
@@ -129,9 +150,33 @@ fn walk(part: &Part, body: &mut MessageBody) {
         return;
     }
     match part.mime_type.as_str() {
+        _ if nested => {}
         "text/html" if body.html.is_none() => body.html = text(part),
         "text/plain" if body.text.is_none() => body.text = text(part),
         _ => {}
+    }
+}
+
+/// The file name of a forwarded message: the name its sender gave it,
+/// or else its subject with what a file name cannot hold taken out, or
+/// "message.eml" when that leaves nothing.
+fn message_file_name(part: &Part) -> String {
+    if let Some(name) = part.filename.as_deref().filter(|n| !n.trim().is_empty()) {
+        return name.to_string();
+    }
+    let subject: String = part
+        .subject
+        .as_deref()
+        .unwrap_or_default()
+        .chars()
+        .filter(|c| !c.is_control() && !matches!(c, ':' | '*' | '?' | '"' | '<' | '>' | '|'))
+        .map(|c| if matches!(c, '/' | '\\') { '-' } else { c })
+        .collect();
+    let words: Vec<&str> = subject.split_whitespace().collect();
+    let stem: String = words.join(" ").trim_matches('.').chars().take(100).collect();
+    match stem.trim() {
+        "" => "message.eml".to_string(),
+        stem => format!("{stem}.eml"),
     }
 }
 

@@ -269,11 +269,22 @@ impl<G: GmailApi> MailBackend for Google<G> {
             Some(handle) => handle,
             None => {
                 let parts = self.fetch_structure(id).await?;
+                let part = parts.find(path);
                 // A part Gmail sent inline came with the structure.
-                if let Some(data) = parts.find(path).and_then(|p| p.data.clone()) {
+                if let Some(data) = part.and_then(|p| p.data.clone()) {
                     return Ok(data);
                 }
-                self.remembered(id, path).ok_or(BackendError::NotFound)?
+                match self.remembered(id, path) {
+                    Some(handle) => handle,
+                    // Gmail sends a forwarded message's parts but gives
+                    // the message itself no handle. Its bytes are only
+                    // in the raw message, which costs the whole message.
+                    None if part.is_some_and(|p| p.mime_type == "message/rfc822") => {
+                        let raw = paced(self.gmail.raw_message(id)).await?;
+                        return mailrs_mime::part(&raw, path).ok_or(BackendError::NotFound);
+                    }
+                    None => return Err(BackendError::NotFound),
+                }
             }
         };
         match paced(self.gmail.attachment(id, &handle)).await {

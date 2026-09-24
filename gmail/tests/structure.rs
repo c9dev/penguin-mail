@@ -86,3 +86,54 @@ fn a_body_text_sent_by_reference_is_fetched_but_a_named_text_file_is_not() {
     }));
     assert_eq!(text_by_reference(&payload), [("1".to_string(), "ref-html".to_string())]);
 }
+
+/// A note in plain text with a forwarded message under it, whose HTML
+/// Gmail sent by reference. The forwarded message's subject sits on the
+/// part that opens it, where Gmail puts the nested message's headers.
+fn forwarded() -> MessagePart {
+    part(json!({
+        "partId": "",
+        "mimeType": "multipart/mixed",
+        "headers": [{"name": "Subject", "value": "Fwd: Lunch"}],
+        "parts": [
+            {"partId": "0", "mimeType": "text/plain",
+             "body": {"size": 10, "data": b64(b"See below.")}},
+            {"partId": "1", "mimeType": "message/rfc822",
+             "headers": [{"name": "Content-Type", "value": "message/rfc822"}],
+             "body": {"size": 400},
+             "parts": [
+                {"partId": "1.0", "mimeType": "multipart/alternative",
+                 "headers": [{"name": "Subject", "value": "Lunch"}],
+                 "parts": [
+                    {"partId": "1.0.0", "mimeType": "text/plain",
+                     "body": {"size": 13, "data": b64(b"Lunch at one?")}},
+                    {"partId": "1.0.1", "mimeType": "text/html",
+                     "body": {"size": 20, "attachmentId": "html-ref"}},
+                 ]},
+             ]},
+        ],
+    }))
+}
+
+#[test]
+fn text_inside_a_forwarded_message_is_not_fetched() {
+    assert_eq!(text_by_reference(&forwarded()), Vec::<(String, String)>::new());
+}
+
+#[test]
+fn a_forwarded_message_takes_its_subject_from_the_part_inside_it() {
+    let body = mailrs_mime::body(&parts_of(&forwarded()));
+    let listed: Vec<(&str, &str)> = body
+        .attachments
+        .iter()
+        .map(|a| (a.filename.as_str(), a.part_id.as_str()))
+        .collect();
+    assert_eq!(listed, [("Lunch.eml", "2")]);
+}
+
+#[test]
+fn a_forwarded_message_sent_by_reference_keeps_its_handle() {
+    let mut message = forwarded();
+    message.parts[1].body.attachment_id = Some("eml-ref".into());
+    assert!(handles(&message).contains(&("2".to_string(), "eml-ref".to_string())));
+}

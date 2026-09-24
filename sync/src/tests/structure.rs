@@ -219,8 +219,131 @@ async fn a_file_inside_a_forwarded_message_reads_the_same_on_both_paths() {
         .iter()
         .map(|a| (a.filename.as_str(), a.part_id.as_str()))
         .collect();
-    assert_eq!(names, [("report.pdf", "3.1")]);
+    assert_eq!(names, [("Report.eml", "3"), ("report.pdf", "3.1")]);
     assert_eq!(mail.fetch_part("m1", "3.1").await.unwrap(), b"PDF-BYTES");
+}
+
+/// A note with a forwarded message under it: `format=raw` sends it all,
+/// `format=full` sends the forwarded message's parts but not the
+/// message itself as one file.
+fn note_with_a_forwarded_message(forwarded: &str) -> Vec<u8> {
+    format!(
+        "Subject: Fwd: Lunch\r\n\
+         MIME-Version: 1.0\r\n\
+         Content-Type: multipart/mixed; boundary=\"outer\"\r\n\
+         \r\n\
+         --outer\r\n\
+         Content-Type: text/plain\r\n\
+         \r\n\
+         See below.\r\n\
+         --outer\r\n\
+         Content-Type: message/rfc822\r\n\
+         \r\n\
+         {forwarded}\r\n\
+         --outer--\r\n"
+    )
+    .into_bytes()
+}
+
+const FORWARDED_LUNCH: &str = "Subject: Lunch\r\n\
+     Content-Type: multipart/alternative; boundary=\"inner\"\r\n\
+     \r\n\
+     --inner\r\n\
+     Content-Type: text/plain\r\n\
+     \r\n\
+     Lunch at one?\r\n\
+     --inner\r\n\
+     Content-Type: text/html\r\n\
+     \r\n\
+     <p>Lunch at one?</p>\r\n\
+     --inner--";
+
+#[tokio::test]
+async fn a_forwarded_message_reads_the_same_on_both_paths() {
+    let h = harness().await;
+    h.fake.with(|s| {
+        s.messages.insert("m1".into(), meta("m1", "t1", 1, &["INBOX"]));
+        s.raws.insert("m1".into(), note_with_a_forwarded_message(FORWARDED_LUNCH));
+    });
+    let mail = &h.sync.services().mail;
+    let from_structure = mailrs_mime::body(&mail.fetch_structure("m1").await.unwrap());
+    let raw = mail.fetch_raw(&["m1".into()]).await.unwrap().remove(0).bytes;
+    assert_eq!(from_structure, mailrs_mime::read(&raw));
+    assert_eq!(
+        (from_structure.text.as_deref(), from_structure.html.as_deref()),
+        (Some("See below."), None)
+    );
+    let names: Vec<(&str, &str)> = from_structure
+        .attachments
+        .iter()
+        .map(|a| (a.filename.as_str(), a.part_id.as_str()))
+        .collect();
+    assert_eq!(names, [("Lunch.eml", "2")]);
+}
+
+/// Gmail gives a forwarded message no handle of its own, so its bytes
+/// come cut out of the raw message.
+#[tokio::test]
+async fn a_forwarded_messages_file_is_cut_from_the_raw_message() {
+    let h = harness().await;
+    let raw = note_with_a_forwarded_message(FORWARDED_LUNCH);
+    h.fake.with(|s| {
+        s.messages.insert("m1".into(), meta("m1", "t1", 1, &["INBOX"]));
+        s.raws.insert("m1".into(), raw.clone());
+    });
+    let eml = h.sync.services().mail.fetch_part("m1", "2").await.unwrap();
+    assert_eq!(Some(eml), mailrs_mime::part(&raw, "2"));
+}
+
+/// An invitation somebody forwarded draws no card on either path, and
+/// the structure path spends no call fetching its calendar.
+#[tokio::test]
+async fn a_forwarded_invitation_draws_no_card_on_the_structure_path() {
+    let h = harness().await;
+    let ics = super::invitations::invite(0, "20260310T090000Z");
+    let invitation = String::from_utf8(super::invitations::google_invitation(&ics)).unwrap();
+    h.fake.with(|s| {
+        s.messages.insert("m1".into(), meta("m1", "t1", 1, &["INBOX"]));
+        s.raws.insert("m1".into(), note_with_a_forwarded_message(&invitation));
+    });
+    let body = mailrs_mime::body(&h.sync.services().mail.fetch_structure("m1").await.unwrap());
+    assert_eq!(body.calendar, None);
+    assert_eq!(h.fake.with(|s| s.usage.calls_to("users.messages.attachments.get")), 0);
+}
+
+/// A forwarded message mail-parser cannot read, the fourth of four
+/// base64-encoded ones inside each other, is still listed, and still
+/// fetches, on both paths.
+#[tokio::test]
+async fn an_unreadable_forwarded_message_is_an_eml_file_on_both_paths() {
+    use base64::Engine;
+    let h = harness().await;
+    let mut message = b"Subject: Deepest\r\n\r\nHello".to_vec();
+    for _ in 0..4 {
+        message = format!(
+            "Content-Type: message/rfc822\r\nContent-Transfer-Encoding: base64\r\n\r\n{}",
+            base64::engine::general_purpose::STANDARD.encode(&message),
+        )
+        .into_bytes();
+    }
+    let mut raw = b"Content-Type: multipart/mixed; boundary=b\r\n\r\n\
+--b\r\nContent-Type: text/plain\r\n\r\nSee below.\r\n--b\r\n"
+        .to_vec();
+    raw.extend_from_slice(&message);
+    raw.extend_from_slice(b"\r\n--b--\r\n");
+    h.fake.with(|s| {
+        s.messages.insert("m1".into(), meta("m1", "t1", 1, &["INBOX"]));
+        s.raws.insert("m1".into(), raw.clone());
+    });
+    let mail = &h.sync.services().mail;
+    let from_structure = mailrs_mime::body(&mail.fetch_structure("m1").await.unwrap());
+    assert_eq!(from_structure, mailrs_mime::read(&raw));
+    let leaf = from_structure.attachments.last().unwrap();
+    assert_eq!((leaf.filename.as_str(), leaf.part_id.as_str()), ("message.eml", "2.1.1.1"));
+    assert_eq!(
+        mail.fetch_part("m1", "2.1.1.1").await.unwrap(),
+        b"Subject: Deepest\r\n\r\nHello"
+    );
 }
 
 /// Outlook sends an invitation's calendar object as `application/ics`,

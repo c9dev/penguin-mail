@@ -1503,9 +1503,18 @@ fn gmail_payload(state: &mut FakeState, message_id: &str, raw: &[u8]) -> Message
         if let Some(cid) = &part.content_id {
             headers.push(Header { name: "Content-ID".into(), value: format!("<{cid}>") });
         }
+        if let Some(subject) = &part.subject {
+            headers.push(Header { name: "Subject".into(), value: subject.clone() });
+        }
         let named = part.filename.is_some();
         let mut body = PartBody { size: part.size, ..PartBody::default() };
-        match (&part.data, named) {
+        // Gmail sends a forwarded message's parts, not the message itself
+        // as one blob, and gives it no handle.
+        let data = match part.mime_type.as_str() {
+            "message/rfc822" if !named => &None,
+            _ => &part.data,
+        };
+        match (data, named) {
             (Some(bytes), false) => body.data = Some(URL_SAFE_NO_PAD.encode(bytes)),
             (Some(bytes), true) => {
                 let handle = format!("ref-{message_id}-{part_id}");

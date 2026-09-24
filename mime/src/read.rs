@@ -109,9 +109,8 @@ fn convert(message: &Message, raw: &[u8], id: u32, path: String, depth: usize) -
         protocol: attribute("protocol"),
         smime_type: attribute("smime-type"),
         filename: part.attachment_name().map(str::to_string),
-        content_id: part
-            .content_id()
-            .map(|v| v.trim().trim_start_matches('<').trim_end_matches('>').to_string()),
+        content_id: content_id(part),
+        subject: None,
         attachment: part.content_disposition().is_some_and(|d| d.is_attachment()),
         size: data.as_ref().map_or(0, |d| d.len() as i64),
         data,
@@ -128,12 +127,12 @@ fn numbered(parent: &str, i: usize) -> String {
     }
 }
 
-/// A `message/rfc822` part, walked into for its own files rather than
-/// listed as one, the way Gmail expands a forwarded message. IMAP
-/// addresses what is inside it starting one level under this part's own
-/// number: "4.1" for a single-part encapsulated message, "4.1", "4.2"
-/// for a multipart one; "4" itself stays the whole encapsulated message,
-/// which nothing here lists as a file.
+/// A `message/rfc822` part: a file of its own, whose bytes are the
+/// forwarded message, and the parts inside it, walked into for their
+/// own files. IMAP addresses what is inside it starting one level under
+/// this part's own number: "4.1" for a single-part encapsulated message,
+/// "4.1", "4.2" for a multipart one; "4" itself is the whole
+/// encapsulated message.
 ///
 /// RFC 2045 forbids a transfer encoding on `message/rfc822`, but a
 /// sender out there sets one anyway. When `part` carries one mail-parser
@@ -153,6 +152,9 @@ fn nested_message(
     path: String,
     depth: usize,
 ) -> Part {
+    // The part's own bytes, the forwarded message as a file, come from
+    // the outer message whatever its encoding says.
+    let data = transfer_decoded(raw, part);
     let raw = match part.content_transfer_encoding() {
         Some(cte) if cte.eq_ignore_ascii_case("base64") || cte.eq_ignore_ascii_case("quoted-printable") => {
             nested.raw_message()
@@ -173,9 +175,20 @@ fn nested_message(
     Part {
         path,
         mime_type: mime_type(part),
+        filename: part.attachment_name().map(str::to_string),
+        content_id: content_id(part),
+        subject: nested.subject().map(str::to_string),
+        size: data.as_ref().map_or(0, |d| d.len() as i64),
+        data,
         children,
         ..Part::default()
     }
+}
+
+/// The part's Content-ID without its angle brackets.
+fn content_id(part: &MessagePart) -> Option<String> {
+    part.content_id()
+        .map(|v| v.trim().trim_start_matches('<').trim_end_matches('>').to_string())
 }
 
 /// A header's value with its folds undone.

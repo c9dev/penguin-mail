@@ -394,6 +394,7 @@ fn a_file_without_its_bytes_is_still_listed() {
         smime_type: None,
         filename: None,
         content_id: None,
+        subject: None,
         attachment: false,
         size: 0,
         data: None,
@@ -428,11 +429,10 @@ fn a_file_without_its_bytes_is_still_listed() {
 /// Gmail's own structural parts, and a bounce's, never show up as files:
 /// the PGP control part that names the version, and the delivery-status
 /// part a bounce carries, are not something to save. The returned
-/// message the bounce quotes arrives as `message/rfc822`, walked into
-/// for its own file rather than listed whole, the way Gmail expands a
-/// forwarded message.
+/// message the bounce quotes arrives as `message/rfc822`: a file of its
+/// own, and walked into for the file inside it.
 #[test]
-fn a_bounce_lists_only_the_file_inside_the_returned_message() {
+fn a_bounce_lists_the_returned_message_and_the_file_inside_it() {
     let raw = b"Content-Type: multipart/report; report-type=delivery-status; boundary=r\r\n\r\n\
 --r\r\nContent-Type: text/plain\r\n\r\nYour message could not be delivered.\r\n\
 --r\r\nContent-Type: message/delivery-status\r\n\r\nReporting-MTA: dns; mail.example.com\r\nAction: failed\r\n\
@@ -445,7 +445,7 @@ Content-Type: application/pdf\r\nContent-Disposition: attachment; filename=\"rep
         .iter()
         .map(|a| (a.filename.as_str(), a.part_id.as_str()))
         .collect();
-    assert_eq!(names, [("report.pdf", "3.1")]);
+    assert_eq!(names, [("message.eml", "3"), ("report.pdf", "3.1")]);
 }
 
 /// RFC 2045 forbids a transfer encoding on `message/rfc822`, but a sender
@@ -472,8 +472,9 @@ fn a_message_rfc822_part_with_a_transfer_encoding_still_reads_its_file() {
         .iter()
         .map(|a| (a.filename.as_str(), a.part_id.as_str()))
         .collect();
-    assert_eq!(names, [("report.pdf", "2.1")]);
+    assert_eq!(names, [("message.eml", "2"), ("report.pdf", "2.1")]);
     assert_eq!(part(&raw, "2.1").as_deref(), Some(b"PDF-BYTES".as_slice()));
+    assert_eq!(part(&raw, "2").as_deref(), Some(nested.as_slice()));
 }
 
 /// mailers wrap base64 at some fixed width, and a broken one pads every
@@ -561,4 +562,114 @@ fn base64_wrapped_at_seventy_columns_round_trips() {
         wrapped.join("\r\n"),
     );
     assert_eq!(part(raw.as_bytes(), "2"), Some(pdf));
+}
+
+/// A short note with a forwarded message under it, the note in plain
+/// text alone and the forwarded message in plain text and HTML.
+fn note_with_a_forwarded_message(forwarded_subject: &str) -> Vec<u8> {
+    format!(
+        "Subject: Fwd: Lunch\r\n\
+         Content-Type: multipart/mixed; boundary=outer\r\n\r\n\
+         --outer\r\nContent-Type: text/plain\r\n\r\nSee below.\r\n\
+         --outer\r\nContent-Type: message/rfc822\r\n\r\n\
+         Subject: {forwarded_subject}\r\n\
+         Content-Type: multipart/alternative; boundary=inner\r\n\r\n\
+         --inner\r\nContent-Type: text/plain\r\n\r\nLunch at one?\r\n\
+         --inner\r\nContent-Type: text/html\r\n\r\n<p>Lunch at one?</p>\r\n\
+         --inner--\r\n\
+         --outer--\r\n"
+    )
+    .into_bytes()
+}
+
+/// The text of a forwarded message never becomes the body: the note the
+/// sender wrote above it does, and the forwarded HTML stays out.
+#[test]
+fn a_forwarded_messages_html_is_not_the_body() {
+    let body = read(&note_with_a_forwarded_message("Lunch"));
+    assert_eq!(
+        (body.text.as_deref(), body.html.as_deref()),
+        (Some("See below."), None)
+    );
+}
+
+/// A forwarded message is a file of its own, named after its subject,
+/// whose bytes are the message as it was forwarded.
+#[test]
+fn a_forwarded_message_is_listed_as_an_eml_file() {
+    let raw = note_with_a_forwarded_message("Lunch");
+    let body = read(&raw);
+    let listed: Vec<(&str, &str, &str)> = body
+        .attachments
+        .iter()
+        .map(|a| (a.filename.as_str(), a.part_id.as_str(), a.mime_type.as_str()))
+        .collect();
+    assert_eq!(listed, [("Lunch.eml", "2", "message/rfc822")]);
+    let eml = part(&raw, "2").unwrap();
+    assert!(eml.starts_with(b"Subject: Lunch\r\n"), "{}", String::from_utf8_lossy(&eml));
+    assert!(eml.ends_with(b"--inner--"), "{}", String::from_utf8_lossy(&eml));
+    assert_eq!(body.attachments[0].size, eml.len() as i64);
+}
+
+/// A subject can hold characters a file name cannot, and a forwarded
+/// message can have no subject at all.
+#[test]
+fn a_forwarded_messages_file_name_is_safe_to_save() {
+    let named = |subject: &str| read(&note_with_a_forwarded_message(subject)).attachments[0].filename.clone();
+    assert_eq!(named("Re: Q3/Q4 plan"), "Re Q3-Q4 plan.eml");
+    assert_eq!(named(""), "message.eml");
+}
+
+/// A forwarded invitation is somebody else's: it draws no card to answer.
+#[test]
+fn a_forwarded_invitation_gives_no_calendar() {
+    let invitation = google_invitation();
+    let mut raw = b"Subject: Fwd: Invitation\r\n\
+Content-Type: multipart/mixed; boundary=fwd\r\n\r\n\
+--fwd\r\nContent-Type: text/plain\r\n\r\nFYI\r\n\
+--fwd\r\nContent-Type: message/rfc822\r\n\r\n"
+        .to_vec();
+    raw.extend_from_slice(&invitation);
+    raw.extend_from_slice(b"\r\n--fwd--\r\n");
+    let body = read(&raw);
+    assert_eq!(body.calendar, None);
+    assert_eq!(body.text.as_deref(), Some("FYI"));
+}
+
+/// A message forwarded inside a forwarded message, and so on, `levels`
+/// deep, each one base64-encoded against RFC 2045.
+fn forwarded_encoded(levels: usize) -> Vec<u8> {
+    let mut message = b"Subject: Deepest\r\n\r\nHello".to_vec();
+    for _ in 0..levels {
+        message = format!(
+            "Content-Type: message/rfc822\r\nContent-Transfer-Encoding: base64\r\n\r\n{}",
+            base64::engine::general_purpose::STANDARD.encode(&message),
+        )
+        .into_bytes();
+    }
+    let mut raw = b"Content-Type: multipart/mixed; boundary=b\r\n\r\n\
+--b\r\nContent-Type: text/plain\r\n\r\nSee below.\r\n--b\r\n"
+        .to_vec();
+    raw.extend_from_slice(&message);
+    raw.extend_from_slice(b"\r\n--b--\r\n");
+    raw
+}
+
+/// mail-parser parses base64-encoded `message/rfc822` three levels deep
+/// and leaves the fourth a leaf, with its bytes and no message inside.
+/// That part is listed as a forwarded message all the same.
+#[test]
+fn an_unreadable_forwarded_message_is_still_an_eml_file() {
+    let raw = forwarded_encoded(4);
+    let parts = mailrs_mime::parts(&raw).unwrap();
+    let leaf = parts.find("2.1.1.1").unwrap();
+    assert_eq!((leaf.mime_type.as_str(), leaf.children.len()), ("message/rfc822", 0));
+    let body = read(&raw);
+    let listed: Vec<(&str, &str)> = body
+        .attachments
+        .iter()
+        .map(|a| (a.filename.as_str(), a.part_id.as_str()))
+        .collect();
+    assert_eq!(listed.last(), Some(&("message.eml", "2.1.1.1")));
+    assert_eq!(part(&raw, "2.1.1.1").as_deref(), Some(b"Subject: Deepest\r\n\r\nHello".as_slice()));
 }

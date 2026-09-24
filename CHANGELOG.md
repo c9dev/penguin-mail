@@ -5,6 +5,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### New
+
+- A message forwarded as an attachment is listed as an .eml file named
+  after its subject, which you can open or save, with its own files
+  listed after it.
+
 ### Improved
 
 - Pictures and files in a message under 2 MB open without a second
