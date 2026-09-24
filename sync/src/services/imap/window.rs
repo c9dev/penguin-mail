@@ -46,6 +46,11 @@ pub(super) fn windows(from: u32, to: u32) -> impl Iterator<Item = RangeInclusive
     })
 }
 
+/// The UIDs a backfill page searches first below its cursor: four pages'
+/// worth, so a mailbox without gaps fills a page with one search and each
+/// UID is answered about four times over the whole backfill.
+const FIRST_SPAN: u32 = 4 * LIST_PAGE_SIZE;
+
 /// The SEARCH keys for the window in `mailbox` on `today`: all of the
 /// Inbox, mail since `days` before today elsewhere, and never a message
 /// marked deleted, which another client or a move on a server without
@@ -218,9 +223,10 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
 
     /// One page of the window: each synced mailbox in turn, newest UID
     /// first, `LIST_PAGE_SIZE` at a time. The cursor names the mailbox and
-    /// the UID the last page reached, so mail that arrives or goes between
-    /// pages moves nothing else. A cursor naming a mailbox the account no
-    /// longer syncs is a lost place.
+    /// the UID the last page reached, and each page searches only below
+    /// it, so mail that arrives or goes between pages moves nothing else
+    /// and a long mailbox costs about one listing in all. A cursor naming
+    /// a mailbox the account no longer syncs is a lost place.
     pub(super) async fn backfill_page(
         &self,
         days: i64,
@@ -238,17 +244,21 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             .iter()
             .position(|m| *m == at.mailbox)
             .ok_or(BackendError::StateLost)?;
+        let today = chrono::Local::now().date_naive();
         loop {
-            let (uidvalidity, uids) = self.window_uids(&at.mailbox, days).await?;
-            let left: Vec<u32> = uids
-                .into_iter()
-                .filter(|uid| at.below.is_none_or(|below| *uid < below))
-                .collect();
-            let page: Vec<u32> = left.iter().take(LIST_PAGE_SIZE as usize).copied().collect();
-            let next = match (left.len() > page.len(), synced.get(index + 1)) {
+            let selected = self.select(&at.mailbox, None).await?;
+            let top = match at.below {
+                Some(below) => below.saturating_sub(1),
+                None => self.top_uid(&at.mailbox, &selected).await?,
+            };
+            let keys = window_keys(&at.mailbox, days, today);
+            let page = self.newest_below(&at.mailbox, &keys, top).await?;
+            let lowest = page.last().copied();
+            let full = page.len() == LIST_PAGE_SIZE as usize && lowest.is_some_and(|uid| uid > 1);
+            let next = match (full, synced.get(index + 1)) {
                 (true, _) => Some(Page {
                     mailbox: at.mailbox.clone(),
-                    below: page.last().copied(),
+                    below: lowest,
                 }),
                 (false, Some(mailbox)) => Some(Page {
                     mailbox: mailbox.clone(),
@@ -266,11 +276,40 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             return Ok(Backfill {
                 refs: page
                     .iter()
-                    .map(|uid| named(&at.mailbox, uidvalidity, *uid))
+                    .map(|uid| named(&at.mailbox, selected.uidvalidity, *uid))
                     .collect(),
                 next: next.and_then(|p| serde_json::to_string(&p).ok()),
             });
         }
+    }
+
+    /// Up to `LIST_PAGE_SIZE` UIDs at or below `top` that match `keys`,
+    /// newest first. The search starts with a span of [`FIRST_SPAN`] UIDs
+    /// under `top` and doubles it, up to a [`WINDOW`], while the page is
+    /// short, so a mailbox without gaps fills a page with one search and
+    /// one with few matches reaches its bottom in a few.
+    async fn newest_below(
+        &self,
+        mailbox: &str,
+        keys: &str,
+        top: u32,
+    ) -> Result<Vec<u32>, BackendError> {
+        let want = LIST_PAGE_SIZE as usize;
+        let mut page = Vec::with_capacity(want);
+        let (mut high, mut span) = (top, FIRST_SPAN);
+        while high >= 1 && page.len() < want {
+            let low = high.saturating_sub(span - 1).max(1);
+            let mut found = Vec::new();
+            self.search_windows(mailbox, (low, high), keys, |uids| found.extend(uids))
+                .await?;
+            page.extend(found.iter().rev().take(want - page.len()));
+            if low == 1 {
+                break;
+            }
+            high = low - 1;
+            span = span.saturating_mul(2).min(WINDOW);
+        }
+        Ok(page)
     }
 
     /// Every message in the window, or in the window of `mailbox`.

@@ -1,4 +1,6 @@
-use super::{days_ago, message};
+use super::{adapter, days_ago, fill, message};
+use crate::MailBackend;
+use crate::fake::FakeImap;
 use crate::tests::imap_harness;
 
 #[tokio::test]
@@ -108,4 +110,32 @@ async fn opening_a_thread_asks_the_server_for_each_of_its_messages_again() {
     assert_eq!(h.ids().await, ["INBOX/1001/2"]);
     assert!(h.stored("INBOX/1001/2").await.unwrap().is_flagged());
     assert_eq!(h.thread_of("INBOX/1001/2").await, Some(thread));
+}
+
+/// Each backfill page searches down from the UID the last page reached,
+/// in a range near the page's size, so loading a long Inbox costs about
+/// what listing it once does, not a whole-Inbox search per page.
+#[tokio::test]
+async fn a_backfill_page_searches_only_below_where_the_last_one_stopped() {
+    let imap = FakeImap::new();
+    fill(&imap, "INBOX", 3_000);
+    let (imap, adapter) = adapter(imap);
+
+    let mut listed = Vec::new();
+    let mut cursor = None;
+    loop {
+        let page = adapter.backfill(30, cursor.as_deref()).await.unwrap();
+        listed.extend(page.refs.into_iter().map(|r| r.id));
+        match page.next {
+            Some(next) => cursor = Some(next),
+            None => break,
+        }
+    }
+
+    let answered = imap.with(|s| s.answered);
+    eprintln!("a backfill of 3,000 messages answered {answered} UIDs");
+    assert_eq!(listed.len(), 3_000);
+    assert_eq!(listed.first().map(String::as_str), Some("INBOX/1001/3000"));
+    assert_eq!(listed.last().map(String::as_str), Some("INBOX/1001/1"));
+    assert!(answered <= 5 * 3_000, "the searches answered {answered} UIDs");
 }
