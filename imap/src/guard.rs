@@ -24,20 +24,28 @@ use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 pub(crate) const MAX_NESTING: usize = MAX_DEPTH + 8;
 
 /// The largest literal a server may send: the largest message part the
-/// app fetches whole.
+/// app fetches whole. A literal must also fit what the command's budget
+/// has left, since async-imap sizes its buffer to the literal as soon as
+/// it reads the announcement.
 pub(crate) const MAX_LITERAL: u64 = 128 << 20;
 
-/// The longest line outside literals. A FETCH of headers or flags, a
-/// LIST entry or a SEARCH of about 130,000 UIDs fits.
+/// The longest line outside literals, which a FETCH of headers or flags
+/// and a LIST entry fit. An untagged SEARCH or ESEARCH answer may run
+/// longer; the command's budget bounds it.
 pub(crate) const MAX_LINE: usize = 1 << 20;
 
-/// What one command may bring back in all, literals included, unless it
-/// asks for more: a window of headers or flags, a mailbox list.
+/// What one command may bring back in all, literals included: every
+/// command but a body fetch and IDLE, from signing in to a window of
+/// headers, flags or a mailbox list.
 pub(crate) const COMMAND_BYTES: u64 = 32 << 20;
 
 /// What a command fetching one body section may bring back: the section
 /// and the line around it.
 pub(crate) const BODY_BYTES: u64 = MAX_LITERAL + MAX_LINE as u64;
+
+/// What the server may send during one IDLE, until its tagged answer:
+/// news of new mail, expunges and flag changes, a few dozen bytes each.
+pub(crate) const IDLE_BYTES: u64 = 1 << 20;
 
 /// The words that open an answer listing UIDs on one line, which may run
 /// past [`MAX_LINE`]: a mailbox of 200,000 messages lists in about
@@ -264,7 +272,7 @@ impl Scan {
         self.quoted = false;
         self.escaped = false;
         match (announced, &self.head) {
-            (Some(n), Head::Other | Head::Search) if n > MAX_LITERAL => {
+            (Some(n), Head::Other | Head::Search) if n > MAX_LITERAL.min(self.budget) => {
                 self.refused = Some("the server announced a literal past the limit");
             }
             (Some(n), Head::Other | Head::Search) => self.literal = n,
@@ -425,10 +433,15 @@ mod tests {
 
     #[test]
     fn a_literal_over_the_cap_is_refused_when_announced() {
+        // A body fetch's budget holds the largest literal, and no more.
+        let body = Limits {
+            budget: BODY_BYTES,
+            ..Limits::default()
+        };
         let line = format!("* 1 FETCH (UID 1 BODY[] {{{}}}\r\n", MAX_LITERAL + 1);
-        assert_eq!(scan(line.as_bytes()), Err(()));
+        assert_eq!(scan_with(body, line.as_bytes()), Err(()));
         let line = format!("* 1 FETCH (UID 1 BODY[] {{{MAX_LITERAL}}}\r\n");
-        assert_eq!(scan(line.as_bytes()), Ok(1));
+        assert_eq!(scan_with(body, line.as_bytes()), Ok(1));
     }
 
     #[test]
@@ -509,6 +522,25 @@ mod tests {
         scan.feed(&[b'x'; 60]).unwrap();
         scan.expect(64);
         scan.feed(&[b'x'; 64]).unwrap();
+    }
+
+    /// async-imap sizes its buffer to a literal as soon as it reads the
+    /// announcement, so a literal the budget cannot hold is refused then,
+    /// before its bytes arrive.
+    #[test]
+    fn a_literal_past_what_the_budget_has_left_is_refused_when_announced() {
+        let limits = Limits {
+            budget: 1_000,
+            ..Limits::default()
+        };
+        assert_eq!(
+            scan_with(limits, b"* 1 FETCH (UID 1 BODY[] {2000}\r\n"),
+            Err(())
+        );
+        assert_eq!(
+            scan_with(limits, b"* 1 FETCH (UID 1 BODY[] {900}\r\n"),
+            Ok(1)
+        );
     }
 }
 

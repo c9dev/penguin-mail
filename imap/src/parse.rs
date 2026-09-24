@@ -5,6 +5,9 @@
 use async_imap::imap_proto::{
     AttributeValue, MailboxDatum, NameAttribute, Response, ResponseCode, Status, UidSetMember,
 };
+use std::borrow::Cow;
+use std::collections::BTreeMap;
+
 use chrono::DateTime;
 use mailrs_domain::EpochMillis;
 
@@ -29,9 +32,21 @@ pub(crate) fn answers_for(uids: &UidSet) -> usize {
         .min(MAX_ANSWERS)
 }
 
+/// The most flags one message may carry in an answer. A message rarely
+/// carries more than a dozen; every flag kept costs about 40 bytes, so a
+/// window of 1,000 messages holds at most 2.5 MB of them.
+pub(crate) const MAX_FLAGS: usize = 64;
+
 /// Something that reads a command's responses, the tagged one included.
 pub(crate) trait Reads {
     fn read(&mut self, response: &Response<'_>);
+
+    /// Whether what the reader has read so far is fit to keep; the
+    /// connection asks after each response and gives up on the command
+    /// at the first error.
+    fn check(&self) -> Result<(), ImapError> {
+        Ok(())
+    }
 
     /// How many untagged answers the command may bring before the
     /// connection gives up on it.
@@ -101,6 +116,9 @@ pub(crate) struct SelectReader {
     /// The UIDs the store holds, whose changes are all the caller reads;
     /// it fetches new mail by UIDNEXT. `None` keeps every change.
     known: Option<UidSet>,
+    /// The last change reported for each UID.
+    changed: BTreeMap<u32, FlagsOf>,
+    error: Option<ImapError>,
 }
 
 impl Reads for SelectReader {
@@ -125,15 +143,19 @@ impl Reads for SelectReader {
                     self.selected.vanished.insert(*range.start(), *range.end());
                 }
             }
-            Response::Fetch(_, attributes) => {
-                if let Some(flags) = flags_of(attributes)
-                    && self.known.as_ref().is_none_or(|k| k.contains(flags.uid))
-                {
-                    self.selected.changed.push(flags);
+            Response::Fetch(_, attributes) => match flags_of(attributes) {
+                Some(Ok(flags)) if self.known.as_ref().is_none_or(|k| k.contains(flags.uid)) => {
+                    self.changed.insert(flags.uid, flags);
                 }
-            }
+                Some(Err(err)) => self.error = Some(err),
+                _ => {}
+            },
             _ => {}
         }
+    }
+
+    fn check(&self) -> Result<(), ImapError> {
+        self.error.clone().map_or(Ok(()), Err)
     }
 }
 
@@ -151,36 +173,52 @@ impl SelectReader {
             .ok_or_else(|| ImapError::Protocol("SELECT gave no UIDVALIDITY".into()))?;
         Ok(Selected {
             uidvalidity,
+            changed: self.changed.into_values().collect(),
             ..self.selected
         })
     }
 }
 
-/// The flags of each message asked for, in the order they came. `n:*`
-/// names the last message even when its UID is below `n`, and a server
-/// reports changes to other messages unasked, so the rest go.
+/// The flags of each message asked for, lowest UID first, the last
+/// answer for a UID replacing any before it. `n:*` names the last message
+/// even when its UID is below `n`, and a server reports changes to other
+/// messages unasked, so the rest go.
 pub(crate) struct FlagsReader {
     wanted: UidSet,
-    pub(crate) flags: Vec<FlagsOf>,
+    flags: BTreeMap<u32, FlagsOf>,
+    error: Option<ImapError>,
 }
 
 impl FlagsReader {
     pub(crate) fn new(uids: &UidSet) -> Self {
         FlagsReader {
             wanted: uids.clone(),
-            flags: Vec::new(),
+            flags: BTreeMap::new(),
+            error: None,
         }
+    }
+
+    pub(crate) fn finish(self) -> Vec<FlagsOf> {
+        self.flags.into_values().collect()
     }
 }
 
 impl Reads for FlagsReader {
     fn read(&mut self, response: &Response<'_>) {
-        if let Response::Fetch(_, attributes) = response
-            && let Some(flags) = flags_of(attributes)
-            && self.wanted.contains(flags.uid)
-        {
-            self.flags.push(flags);
+        let Response::Fetch(_, attributes) = response else {
+            return;
+        };
+        match flags_of(attributes) {
+            Some(Ok(flags)) if self.wanted.contains(flags.uid) => {
+                self.flags.insert(flags.uid, flags);
+            }
+            Some(Err(err)) => self.error = Some(err),
+            _ => {}
         }
+    }
+
+    fn check(&self) -> Result<(), ImapError> {
+        self.error.clone().map_or(Ok(()), Err)
     }
 
     fn most(&self) -> usize {
@@ -188,47 +226,64 @@ impl Reads for FlagsReader {
     }
 }
 
-/// A FETCH answer's UID, flags and MODSEQ, or `None` for a FETCH without
+/// A FETCH answer's UID, flags and MODSEQ, `None` for a FETCH without
 /// both a UID and flags, such as a server's unasked report about a
-/// message another client changed.
-fn flags_of(attributes: &[AttributeValue<'_>]) -> Option<FlagsOf> {
+/// message another client changed, or an error past [`MAX_FLAGS`].
+fn flags_of(attributes: &[AttributeValue<'_>]) -> Option<Result<FlagsOf, ImapError>> {
     let mut uid = None;
     let mut flags = None;
     let mut modseq = None;
     for attribute in attributes {
         match attribute {
             AttributeValue::Uid(u) => uid = Some(*u),
-            AttributeValue::Flags(list) => {
-                flags = Some(list.iter().map(|f| f.to_string()).collect())
-            }
+            AttributeValue::Flags(list) => flags = Some(list),
             AttributeValue::ModSeq(m) => modseq = Some(*m),
             _ => {}
         }
     }
-    Some(FlagsOf {
-        uid: uid?,
-        flags: flags?,
-        modseq,
-    })
+    let (uid, flags) = (uid?, flags?);
+    Some(flag_strings(flags).map(|flags| FlagsOf { uid, flags, modseq }))
+}
+
+/// A message's flags as strings, refused past [`MAX_FLAGS`].
+fn flag_strings(list: &[Cow<'_, str>]) -> Result<Vec<String>, ImapError> {
+    match list.len() > MAX_FLAGS {
+        true => Err(ImapError::Protocol(format!(
+            "the server gave a message {} flags, more than {MAX_FLAGS}",
+            list.len()
+        ))),
+        false => Ok(list.iter().map(|f| f.to_string()).collect()),
+    }
 }
 
 /// The header fetch that lists messages: one [`Fetched`] per UID asked
-/// for, the others dropped as [`FlagsReader`] drops them.
+/// for, lowest first, the last answer for a UID replacing any before it,
+/// the others dropped as [`FlagsReader`] drops them.
 pub(crate) struct HeadersReader {
     wanted: UidSet,
-    pub(crate) fetched: Vec<Fetched>,
+    fetched: BTreeMap<u32, Fetched>,
+    error: Option<ImapError>,
 }
 
 impl HeadersReader {
     pub(crate) fn new(uids: &UidSet) -> Self {
         HeadersReader {
             wanted: uids.clone(),
-            fetched: Vec::new(),
+            fetched: BTreeMap::new(),
+            error: None,
         }
+    }
+
+    pub(crate) fn finish(self) -> Vec<Fetched> {
+        self.fetched.into_values().collect()
     }
 }
 
 impl Reads for HeadersReader {
+    fn check(&self) -> Result<(), ImapError> {
+        self.error.clone().map_or(Ok(()), Err)
+    }
+
     fn most(&self) -> usize {
         answers_for(&self.wanted)
     }
@@ -260,16 +315,20 @@ impl Reads for HeadersReader {
         let mut fetched = Fetched::from_header(uid, header);
         for attribute in attributes {
             match attribute {
-                AttributeValue::Flags(list) => {
-                    fetched.flags = list.iter().map(|f| f.to_string()).collect();
-                }
+                AttributeValue::Flags(list) => match flag_strings(list) {
+                    Ok(flags) => fetched.flags = flags,
+                    Err(err) => {
+                        self.error = Some(err);
+                        return;
+                    }
+                },
                 AttributeValue::InternalDate(date) => fetched.internal_date = internal_date(date),
                 AttributeValue::Rfc822Size(size) => fetched.size = Some(u64::from(*size)),
                 AttributeValue::ModSeq(m) => fetched.modseq = Some(*m),
                 _ => {}
             }
         }
-        self.fetched.push(fetched);
+        self.fetched.insert(uid, fetched);
     }
 }
 
@@ -581,8 +640,9 @@ pub(crate) mod tests {
                 "* 2 FETCH (UID 13 FLAGS (\\Flagged))\r\n",
             ],
         );
-        assert_eq!(reader.fetched.len(), 1);
-        let fetched = &reader.fetched[0];
+        let fetched = reader.finish();
+        assert_eq!(fetched.len(), 1);
+        let fetched = &fetched[0];
         assert_eq!(fetched.uid, 12);
         assert_eq!(fetched.flags, ["\\Seen"]);
         assert_eq!(fetched.internal_date, Some(1_770_454_800_000));
@@ -606,7 +666,7 @@ pub(crate) mod tests {
             ],
         );
         assert_eq!(
-            reader.flags,
+            reader.finish(),
             [FlagsOf {
                 uid: 12,
                 flags: vec!["\\Seen".into(), "$Muted".into()],
@@ -742,8 +802,9 @@ pub(crate) mod tests {
                 "* 2 FETCH (UID 10 BODY[HEADER.FIELDS (SUBJECT)] {12}\r\nSubject: y\r\n)\r\n",
             ],
         );
-        assert_eq!(headers.fetched.len(), 1);
-        assert_eq!(headers.fetched[0].uid, 10);
+        let fetched = headers.finish();
+        assert_eq!(fetched.len(), 1);
+        assert_eq!(fetched[0].uid, 10);
         let mut flags = FlagsReader::new(&UidSet::from_uids([4]));
         feed(
             &mut flags,
@@ -752,8 +813,9 @@ pub(crate) mod tests {
                 "* 2 FETCH (UID 4 FLAGS ())\r\n",
             ],
         );
-        assert_eq!(flags.flags.len(), 1);
-        assert_eq!(flags.flags[0].uid, 4);
+        let flags = flags.finish();
+        assert_eq!(flags.len(), 1);
+        assert_eq!(flags[0].uid, 4);
     }
 
     #[test]
@@ -792,5 +854,60 @@ pub(crate) mod tests {
         reader.keep(b"hello".to_vec());
         assert_eq!(reader.bytes.as_deref(), Some(&b"hello"[..]));
         assert_eq!(SectionReader::new(8).wants(&response), None);
+    }
+
+    #[test]
+    fn flags_keep_one_answer_per_uid_the_last() {
+        let mut reader = FlagsReader::new(&UidSet::from_uids([4, 5]));
+        feed(
+            &mut reader,
+            &[
+                "* 1 FETCH (UID 5 FLAGS (\\Seen))\r\n",
+                "* 2 FETCH (UID 4 FLAGS ())\r\n",
+                "* 1 FETCH (UID 5 FLAGS (\\Flagged))\r\n",
+            ],
+        );
+        let flags = reader.finish();
+        assert_eq!(flags.len(), 2);
+        assert_eq!(flags[1].uid, 5);
+        assert_eq!(flags[1].flags, ["\\Flagged"]);
+        let mut select = SelectReader::default();
+        feed(
+            &mut select,
+            &[
+                "* OK [UIDVALIDITY 3] ok\r\n",
+                "* 1 FETCH (UID 7 FLAGS (\\Seen) MODSEQ (4))\r\n",
+                "* 1 FETCH (UID 7 FLAGS () MODSEQ (5))\r\n",
+            ],
+        );
+        let selected = select.finish().unwrap();
+        assert_eq!(selected.changed.len(), 1);
+        assert_eq!(selected.changed[0].modseq, Some(5));
+    }
+
+    #[test]
+    fn a_message_with_more_flags_than_the_cap_is_a_protocol_error() {
+        let many = |n: usize| {
+            let flags: Vec<String> = (0..n).map(|i| format!("k{i}")).collect();
+            format!("* 1 FETCH (UID 4 FLAGS ({}))\r\n", flags.join(" "))
+        };
+        let mut at_cap = FlagsReader::new(&UidSet::from_uids([4]));
+        feed(&mut at_cap, &[&many(MAX_FLAGS)]);
+        assert_eq!(at_cap.check(), Ok(()));
+        let mut past = FlagsReader::new(&UidSet::from_uids([4]));
+        feed(&mut past, &[&many(MAX_FLAGS + 1)]);
+        assert!(matches!(past.check(), Err(ImapError::Protocol(_))));
+        let mut headers = HeadersReader::new(&UidSet::from_uids([4]));
+        feed(
+            &mut headers,
+            &[&many(MAX_FLAGS + 1).replace(
+                "))\r\n",
+                ") BODY[HEADER.FIELDS (SUBJECT)] {12}\r\nSubject: x\r\n)\r\n",
+            )],
+        );
+        assert!(matches!(headers.check(), Err(ImapError::Protocol(_))));
+        let mut select = SelectReader::default();
+        feed(&mut select, &[&many(MAX_FLAGS + 1)]);
+        assert!(matches!(select.check(), Err(ImapError::Protocol(_))));
     }
 }

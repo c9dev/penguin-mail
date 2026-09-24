@@ -15,7 +15,7 @@ use async_imap::{Authenticator, Client, Session};
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use tokio::time::Instant;
 
-use crate::guard::{COMMAND_BYTES, Guarded};
+use crate::guard::{Guarded, IDLE_BYTES};
 use crate::parse::{
     AppendUidReader, CapabilityReader, CopyUidReader, FlagsReader, HeadersReader, ListReader,
     Reads, SearchReader, SectionReader, SelectReader, StructureReader,
@@ -228,7 +228,7 @@ impl<S: Stream> Conn<S> {
             &mut reader,
         )
         .await?;
-        Ok(reader.flags)
+        Ok(reader.finish())
     }
 
     pub(crate) async fn search(
@@ -267,7 +267,7 @@ impl<S: Stream> Conn<S> {
         let mut reader = HeadersReader::new(uids);
         self.exec(&command, Doing::Mailbox(mailbox), &mut reader)
             .await?;
-        Ok(reader.fetched)
+        Ok(reader.finish())
     }
 
     /// `BODY.PEEK[<section>]` of one message: `""` for the whole message,
@@ -452,7 +452,7 @@ impl<S: Stream> Conn<S> {
         limit: Duration,
     ) -> Result<(Conn<S>, Woke), ImapError> {
         self.ensure_selected(mailbox).await?;
-        self.session.get_mut().expect(COMMAND_BYTES);
+        self.session.get_mut().expect(IDLE_BYTES);
         let Conn {
             session,
             capabilities,
@@ -588,6 +588,7 @@ impl<S: Stream> Conn<S> {
                     }
                     count(answers, reader)?;
                     reader.read(parsed);
+                    reader.check()?;
                 }
             }
         }
@@ -628,6 +629,7 @@ impl<S: Stream> Conn<S> {
             count(&mut answers, reader)?;
             let Some(wanted) = reader.wants(parsed) else {
                 reader.read(parsed);
+                reader.check()?;
                 continue;
             };
             // The literal sits in the buffer async-imap read the answer
@@ -1686,5 +1688,80 @@ mod tests {
         let uids = conn.search("INBOX", "ALL").await.unwrap();
         assert_eq!(uids.len(), 200_000);
         assert_eq!(uids.last(), Some(&200_000));
+    }
+
+    #[tokio::test]
+    async fn a_literal_larger_than_the_commands_budget_is_refused_before_it_arrives() {
+        let stream = pipe(
+            GREETING,
+            server(ALL, log(), |command| match command {
+                c if c.starts_with("SELECT") => selected(),
+                // 64 MiB announced during a command that may bring 32 MiB;
+                // three bytes follow, then nothing.
+                c if c.starts_with("UID FETCH") => {
+                    vec!["* 1 FETCH (UID 1 BODY[] {67108864}".into(), "abc".into()]
+                }
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        let answer = tokio::time::timeout(
+            Duration::from_secs(5),
+            conn.flags("INBOX", &UidSet::from_uids([1]), None),
+        )
+        .await;
+        assert!(
+            matches!(answer, Ok(Err(ImapError::Protocol(_)))),
+            "{answer:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn idle_refuses_a_literal_past_its_small_budget() {
+        let stream = pipe(
+            GREETING,
+            server(ALL, log(), |command| match command {
+                c if c.starts_with("SELECT") => selected(),
+                "IDLE" => vec!["* 1 FETCH (UID 1 BODY[] {8388608}".into(), "abc".into()],
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let conn = Conn::login(stream, false, &ann()).await.unwrap();
+        let answer = tokio::time::timeout(
+            Duration::from_secs(5),
+            conn.idle("INBOX", Duration::from_secs(60)),
+        )
+        .await
+        .map(|result| result.err());
+        assert!(
+            matches!(answer, Ok(Some(ImapError::Protocol(_)))),
+            "{answer:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_flags_answer_past_the_flag_cap_is_a_protocol_error() {
+        let stream = pipe(
+            GREETING,
+            server(ALL, log(), |command| match command {
+                c if c.starts_with("SELECT") => selected(),
+                c if c.starts_with("UID FETCH") => {
+                    let flags: Vec<String> = (0..=crate::parse::MAX_FLAGS)
+                        .map(|i| format!("k{i}"))
+                        .collect();
+                    vec![
+                        format!("* 1 FETCH (UID 1 FLAGS ({}))", flags.join(" ")),
+                        "{tag} OK".into(),
+                    ]
+                }
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        let err = conn
+            .flags("INBOX", &UidSet::from_uids([1]), None)
+            .await
+            .err();
+        assert!(matches!(err, Some(ImapError::Protocol(_))), "{err:?}");
     }
 }
