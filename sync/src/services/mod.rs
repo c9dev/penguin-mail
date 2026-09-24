@@ -473,6 +473,14 @@ pub trait MailBackend: Send + Sync + 'static {
     /// the part this computer keeps.
     fn mailbox_threads(&self, id: &str) -> impl Future<Output = Result<u64, BackendError>> + Send;
 
+    /// The UIDVALIDITY the UIDs of `mailbox` belong to now, on a server
+    /// that names a message by mailbox and UID; `None` on one that names
+    /// it by an id of its own, as Gmail does.
+    fn uidvalidity(
+        &self,
+        mailbox: &str,
+    ) -> impl Future<Output = Result<Option<u32>, BackendError>> + Send;
+
     /// One page of the sync window, newest first: the last `days` days of
     /// mail and everything in the inbox. `cursor` is the page before's
     /// `next`. Answers `BackendError::StateLost` when the server no longer

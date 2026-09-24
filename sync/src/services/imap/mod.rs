@@ -273,6 +273,10 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         Ok(u64::from(self.select(id, None).await?.exists))
     }
 
+    async fn uidvalidity(&self, mailbox: &str) -> Result<Option<u32>, BackendError> {
+        Ok(Some(self.select(mailbox, None).await?.uidvalidity))
+    }
+
     async fn backfill(&self, days: i64, cursor: Option<&str>) -> Result<Backfill, BackendError> {
         self.backfill_page(days, cursor).await
     }

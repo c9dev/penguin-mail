@@ -2,8 +2,9 @@
 //! UIDVALIDITY says, and the whole account after the server lost its
 //! place. Either way the engine keeps what it already held.
 
+use mailrs_domain::Location;
 use mailrs_imap::ImapError;
-use mailrs_store::{accounts, bodies};
+use mailrs_store::{accounts, bodies, remote_refs};
 
 use super::{days_ago, message};
 use crate::tests::{ImapHarness, imap_harness};
@@ -130,4 +131,94 @@ async fn the_inbox_check_reads_new_names_back_as_stored_ids() {
     h.sync.reconcile_inbox().await.unwrap();
 
     assert_eq!(h.imap.calls_to("headers"), before, "{:?}", h.imap.calls());
+}
+
+/// Puts the Inbox's message `a` in `Projects` as a move made by the app
+/// would: the copy sits in Projects, the Inbox's is expunged, and the
+/// stored message's ref names where it sits now. Returns the account.
+async fn moved_to_projects() -> ImapHarness {
+    let h = imap_harness().await;
+    let raw = message("a", "Kites", "");
+    let date = days_ago(1);
+    h.imap.deliver_flagged("INBOX", &raw, &[], date);
+    h.bootstrap().await;
+    let uid = h.imap.deliver_flagged("Projects", &raw, &[], date);
+    let uidvalidity = h.imap.with(|s| s.mailbox_mut("Projects").uidvalidity);
+    h.imap.remote_expunge("INBOX", 1);
+    let (account_id, at) = (
+        h.account_id,
+        Location {
+            mailbox: "Projects".into(),
+            uidvalidity,
+            uid,
+        },
+    );
+    h.db.write(move |c| remote_refs::locate(c, account_id, "INBOX/1001/1", &at))
+        .await
+        .unwrap();
+    h.sync.incremental().await.unwrap();
+    h.sync.refresh_labels().await.unwrap();
+    h
+}
+
+/// A mailbox renamed keeps its messages: their refs take the new name,
+/// so the next look at them finds them rather than reporting them gone.
+#[tokio::test]
+async fn a_renamed_mailbox_keeps_its_messages() {
+    let h = moved_to_projects().await;
+
+    h.sync.rename_label("Projects", "Work").await.unwrap();
+
+    assert_eq!(h.location("INBOX/1001/1").await.as_deref(), Some("Work/1007/1"));
+    let thread = h.thread_of("INBOX/1001/1").await.unwrap();
+    h.sync.ensure_thread(&thread).await.unwrap();
+    assert_eq!(h.ids().await, ["INBOX/1001/1"]);
+}
+
+/// A server may give a renamed mailbox a new UIDVALIDITY; the rename then
+/// lists it again, and its messages keep their ids.
+#[tokio::test]
+async fn a_mailbox_renamed_under_a_new_uidvalidity_is_listed_again() {
+    let h = moved_to_projects().await;
+    h.imap.reset_uidvalidity("Projects");
+
+    h.sync.rename_label("Projects", "Work").await.unwrap();
+
+    assert_eq!(h.location("INBOX/1001/1").await.as_deref(), Some("Work/1008/1"));
+    assert_eq!(h.ids().await, ["INBOX/1001/1"]);
+}
+
+/// An IMAP RENAME moves the mailboxes nested under the one renamed, so
+/// the rename asks for no second RENAME and the refs of mail in a nested
+/// mailbox follow it too.
+#[tokio::test]
+async fn renaming_a_mailbox_takes_the_ones_nested_under_it_along() {
+    let h = imap_harness().await;
+    let raw = message("a", "Kites", "");
+    let date = days_ago(1);
+    h.imap.deliver_flagged("INBOX", &raw, &[], date);
+    h.bootstrap().await;
+    h.imap.add_mailbox("Projects", None);
+    let uid = h.imap.deliver_flagged("Projects/2026", &raw, &[], date);
+    let uidvalidity = h.imap.with(|s| s.mailbox_mut("Projects/2026").uidvalidity);
+    h.imap.remote_expunge("INBOX", 1);
+    let (account_id, at) = (
+        h.account_id,
+        Location {
+            mailbox: "Projects/2026".into(),
+            uidvalidity,
+            uid,
+        },
+    );
+    h.db.write(move |c| remote_refs::locate(c, account_id, "INBOX/1001/1", &at))
+        .await
+        .unwrap();
+    h.sync.refresh_labels().await.unwrap();
+
+    h.sync.rename_label("Projects", "Work").await.unwrap();
+
+    assert_eq!(
+        h.location("INBOX/1001/1").await,
+        Some(format!("Work/2026/{uidvalidity}/{uid}"))
+    );
 }

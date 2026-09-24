@@ -197,7 +197,7 @@ impl AccountSync {
     /// messages at a time, so what it holds stays one batch's metadata
     /// whatever the mailbox's size; a batch matched and stored is not
     /// matched again if a later one fails and the look runs again.
-    async fn relist_mailbox(&self, mailbox: &str, uidvalidity: u32) -> Result<(), SyncError> {
+    pub(super) async fn relist_mailbox(&self, mailbox: &str, uidvalidity: u32) -> Result<(), SyncError> {
         let account_id = self.account_id;
         let listed = self
             .services

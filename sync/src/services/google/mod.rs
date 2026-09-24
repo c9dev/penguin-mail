@@ -399,6 +399,11 @@ impl<G: GmailApi> MailBackend for Google<G> {
     async fn mailbox_threads(&self, id: &str) -> Result<u64, BackendError> {
         Ok(paced(self.gmail.label_threads(id)).await?)
     }
+
+    /// Gmail names a message by its own id, which no label renumbers.
+    async fn uidvalidity(&self, _mailbox: &str) -> Result<Option<u32>, BackendError> {
+        Ok(None)
+    }
 }
 
 /// A Gmail label as a server mailbox. Gmail lists its keyword and category

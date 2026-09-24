@@ -255,6 +255,10 @@ impl MailBackend for AnyMail {
     async fn mailbox_threads(&self, id: &str) -> Result<u64, BackendError> {
         forward_all!(AnyMail, self, mailbox_threads(id))
     }
+
+    async fn uidvalidity(&self, mailbox: &str) -> Result<Option<u32>, BackendError> {
+        forward_all!(AnyMail, self, uidvalidity(mailbox))
+    }
 }
 
 impl CalendarService for AnyCalendar {

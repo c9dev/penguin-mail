@@ -133,6 +133,28 @@ pub fn in_mailbox_where(
     Ok(picked)
 }
 
+/// Renames the mailbox `from` to `to` in every ref located in it, each
+/// ref's text with it. A server that renames a mailbox keeps its UIDs, so
+/// each message keeps its UIDVALIDITY and UID. A mailbox nested under
+/// `from` keeps its own name here; the caller renames it on its own.
+pub fn rename_mailbox(
+    conn: &Connection,
+    account_id: AccountId,
+    from: &str,
+    to: &str,
+) -> Result<()> {
+    // The text is `mailrs_domain::Location`'s: mailbox, UIDVALIDITY and
+    // UID, joined by slashes.
+    conn.prepare_cached(
+        "UPDATE OR REPLACE remote_refs SET mailbox = ?3, \
+         remote = ?3 || '/' || uidvalidity || '/' || uid \
+         WHERE account_id = ?1 AND mailbox = ?2 \
+         AND uidvalidity IS NOT NULL AND uid IS NOT NULL",
+    )?
+    .execute(params![account_id, from, to])?;
+    Ok(())
+}
+
 /// The stored messages located in `mailbox` under a UIDVALIDITY other
 /// than `uidvalidity` whose Message-ID is one of `message_ids`, each as
 /// its Message-ID, date and id. After the server renumbers a mailbox, a
@@ -166,7 +188,8 @@ mod tests {
     use rusqlite::Connection;
 
     use super::{
-        Resolved, in_mailbox_where, locate, remotes_of, renumbered_by_message_id, resolve,
+        Resolved, in_mailbox_where, locate, remotes_of, rename_mailbox, renumbered_by_message_id,
+        resolve,
     };
     use crate::accounts;
     use crate::messages::{self, Change};
@@ -326,6 +349,43 @@ mod tests {
         held.sort();
 
         assert_eq!(held, [("<a@x>".to_string(), 10, "INBOX/7/1".to_string())]);
+    }
+
+    #[test]
+    fn renaming_a_mailbox_renames_the_refs_located_in_it() {
+        let (conn, account_id) = store(&["INBOX/7/1", "Projects/3/1", "Projects/2026/4/1"]);
+        locate(&conn, account_id, "INBOX/7/1", &at("Projects", 3, 2)).unwrap();
+        locate(&conn, account_id, "Projects/3/1", &at("Projects", 3, 1)).unwrap();
+        locate(
+            &conn,
+            account_id,
+            "Projects/2026/4/1",
+            &at("Projects/2026", 4, 1),
+        )
+        .unwrap();
+
+        rename_mailbox(&conn, account_id, "Projects", "Work").unwrap();
+
+        assert_eq!(
+            remotes_of(
+                &conn,
+                account_id,
+                &names(&["INBOX/7/1", "Projects/3/1", "Projects/2026/4/1"])
+            )
+            .unwrap(),
+            HashMap::from([
+                ("INBOX/7/1".to_string(), "Work/3/2".to_string()),
+                ("Projects/3/1".to_string(), "Work/3/1".to_string()),
+                (
+                    "Projects/2026/4/1".to_string(),
+                    "Projects/2026/4/1".to_string()
+                ),
+            ])
+        );
+        assert_eq!(
+            in_mailbox_where(&conn, account_id, "Work", |_, _| true).unwrap(),
+            ["INBOX/7/1", "Projects/3/1"]
+        );
     }
 
     #[test]
