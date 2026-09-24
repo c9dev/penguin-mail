@@ -2832,6 +2832,7 @@ mod tests {
             email: format!("{id}@example.com"),
             state: AccountState::Ok,
             provider: mailrs_domain::Provider::Gmail,
+            provider_name: None,
         };
         let label = |account_id| Label {
             account_id,

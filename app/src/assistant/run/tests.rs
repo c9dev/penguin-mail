@@ -267,6 +267,7 @@ async fn list_mail_says_why_a_system_label_is_empty_on_an_unsynced_account() {
             email: "cold@example.com".into(),
             state: mailrs_domain::AccountState::Ok,
             provider: mailrs_domain::Provider::Gmail,
+            provider_name: None,
         });
         screen.labels.insert(
             cold_id,

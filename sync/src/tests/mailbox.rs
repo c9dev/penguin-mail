@@ -30,6 +30,7 @@ fn scope(h: &Harness) -> Scope {
         email: "me@example.com".into(),
         state: AccountState::Ok,
         provider: mailrs_domain::Provider::Gmail,
+        provider_name: None,
     }])
 }
 

@@ -704,6 +704,9 @@ async fn connect(
                 connect_account(oauth, tokens, account).await?,
             ))
         }
+        Provider::Imap => {
+            bail!("{} is an IMAP account, which this copy cannot start", account.email)
+        }
     }
 }
 

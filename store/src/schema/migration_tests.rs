@@ -567,3 +567,28 @@ fn bodies_with_files_named_by_gmail_handles_are_fetched_again() {
         .unwrap();
     assert_eq!(files, 0);
 }
+
+/// Migration 32 adds IMAP's columns and table. A Gmail account from
+/// before it stays a Gmail account with no provider name, and the store
+/// is copied first, as before every migration of a store with mail.
+#[test]
+fn a_gmail_account_from_before_imap_stays_as_it_was() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..31]).unwrap();
+    conn.execute_batch("INSERT INTO accounts (id, email, added_at) VALUES (1, 'me@gmail.com', 0);")
+        .unwrap();
+    drop(conn);
+
+    let conn = open_with(&path, &MIGRATIONS[..32]).unwrap();
+    assert_eq!(schema_version(&conn).unwrap(), 32);
+    let (provider, name): (String, Option<String>) = conn
+        .query_row(
+            "SELECT provider, provider_name FROM accounts WHERE id = 1",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!((provider.as_str(), name), ("gmail", None));
+    assert!(dir.path().join("mail.db.before-32").exists());
+}

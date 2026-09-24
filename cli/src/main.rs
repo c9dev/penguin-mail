@@ -261,6 +261,10 @@ async fn run_sync(db: &Db, dir: &Path, config: &Config) -> Result<()> {
             Provider::Gmail => connect_account(oauth, Arc::clone(&tokens), account)
                 .await
                 .map(AccountServices::google),
+            Provider::Imap => {
+                eprintln!("{}: IMAP accounts cannot sync from here yet", account.email);
+                continue;
+            }
         };
         match connected {
             Ok(services) => engine.start_account(account.id, services),
@@ -564,6 +568,9 @@ async fn account_sync(db: &Db, config: &Config, email: &str) -> Result<AccountSy
     let services = match account.provider {
         Provider::Gmail => {
             AccountServices::google(connect_account(oauth, token_store(), &account).await?)
+        }
+        Provider::Imap => {
+            bail!("{} is an IMAP account, which this command cannot open yet", account.email)
         }
     };
     let (events, _) = async_channel::unbounded();

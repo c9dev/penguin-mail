@@ -492,6 +492,7 @@ mod tests {
             email: email.into(),
             state: AccountState::Ok,
             provider: Provider::Gmail,
+            provider_name: None,
         }
     }
 

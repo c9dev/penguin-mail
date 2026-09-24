@@ -166,6 +166,7 @@ mod tests {
             email: "me@gmail.com".into(),
             state: AccountState::Ok,
             provider: Provider::Gmail,
+            provider_name: None,
         }
     }
 

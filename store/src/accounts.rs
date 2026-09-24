@@ -31,27 +31,59 @@ pub fn insert_account(conn: &Connection, email: &str, now: EpochMillis) -> Resul
 }
 
 pub fn list_accounts(conn: &Connection) -> Result<Vec<Account>> {
-    let mut stmt = conn.prepare("SELECT id, email, state, provider FROM accounts ORDER BY id")?;
+    let mut stmt = conn.prepare(
+        "SELECT id, email, state, provider, provider_name FROM accounts ORDER BY id",
+    )?;
     let rows = stmt.query_map([], |row| {
-        Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+        Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?))
     })?;
     rows.map(|row| {
-        let (id, email, state, provider) = row?;
-        to_account(id, email, state, provider)
+        let (id, email, state, provider, provider_name) = row?;
+        to_account(id, email, state, provider, provider_name)
     })
     .collect()
 }
 
 pub fn account_by_email(conn: &Connection, email: &str) -> Result<Option<Account>> {
-    let row: Option<(AccountId, String, String, String)> = conn
+    let row: Option<(AccountId, String, String, String, Option<String>)> = conn
         .query_row(
-            "SELECT id, email, state, provider FROM accounts WHERE email = ?1",
+            "SELECT id, email, state, provider, provider_name FROM accounts WHERE email = ?1",
             params![email],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
         )
         .optional()?;
-    row.map(|(id, email, state, provider)| to_account(id, email, state, provider))
-        .transpose()
+    row.map(|(id, email, state, provider, provider_name)| {
+        to_account(id, email, state, provider, provider_name)
+    })
+    .transpose()
+}
+
+/// Adds an IMAP account that `provider_name` serves, or finds the IMAP
+/// account already here for `email` and records the name it signed in
+/// under this time. `None` when the address belongs to an account
+/// another provider serves: that account's mail and sign-in stay as
+/// they are.
+pub fn insert_imap_account(
+    conn: &Connection,
+    email: &str,
+    provider_name: &str,
+    now: EpochMillis,
+) -> Result<Option<AccountId>> {
+    if let Some(existing) = account_by_email(conn, email)? {
+        if existing.provider != Provider::Imap {
+            return Ok(None);
+        }
+        conn.execute(
+            "UPDATE accounts SET provider_name = ?2 WHERE id = ?1",
+            params![existing.id, provider_name],
+        )?;
+        return Ok(Some(existing.id));
+    }
+    conn.execute(
+        "INSERT INTO accounts (email, added_at, provider, provider_name) VALUES (?1, ?2, ?3, ?4)",
+        params![email, now, Provider::Imap.as_str(), provider_name],
+    )?;
+    Ok(Some(conn.last_insert_rowid()))
 }
 
 /// Deletes the account and, through foreign keys, all of its mail.
@@ -157,7 +189,13 @@ pub fn start_generation(conn: &Connection, id: AccountId, state: &str) -> Result
     )?)
 }
 
-fn to_account(id: AccountId, email: String, state: String, provider: String) -> Result<Account> {
+fn to_account(
+    id: AccountId,
+    email: String,
+    state: String,
+    provider: String,
+    provider_name: Option<String>,
+) -> Result<Account> {
     let state = state
         .parse::<AccountState>()
         .map_err(|_| StoreError::Corrupt {
@@ -175,5 +213,6 @@ fn to_account(id: AccountId, email: String, state: String, provider: String) -> 
         email,
         state,
         provider,
+        provider_name,
     })
 }

@@ -182,6 +182,7 @@ mod tests {
                 email: email.to_string(),
                 state: AccountState::Ok,
                 provider: mailrs_domain::Provider::Gmail,
+                provider_name: None,
             })
             .collect()
     }
