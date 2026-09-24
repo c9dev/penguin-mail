@@ -12,6 +12,7 @@ pub mod category;
 mod folder;
 pub mod mailbox;
 pub mod invitation;
+pub mod query;
 pub mod smart;
 pub mod subject;
 mod target;
