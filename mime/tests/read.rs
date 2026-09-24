@@ -1,6 +1,6 @@
 use base64::Engine;
 use mailrs_domain::Protection;
-use mailrs_mime::{Part, Parts, body, files, part, read};
+use mailrs_mime::{Part, Parts, body, files, part, read, undo_transfer_encoding};
 
 /// A Google Calendar invitation as Gmail's `format=raw` hands it over: the
 /// calendar inline in the alternative, and the same file again beside it.
@@ -686,4 +686,18 @@ fn deeply_nested_forwarded_messages_read_on_a_small_stack() {
         .spawn(move || read(raw.as_bytes()))
         .unwrap();
     assert!(reader.join().is_ok(), "reading the message overflowed the stack");
+}
+
+#[test]
+fn a_part_fetched_on_its_own_decodes_by_its_transfer_encoding() {
+    assert_eq!(
+        undo_transfer_encoding(Some("BASE64"), b"aGVs\r\nbG8=\r\n").as_deref(),
+        Some(&b"hello"[..])
+    );
+    assert_eq!(
+        undo_transfer_encoding(Some("quoted-printable"), b"caf=C3=A9 =\r\nbar").as_deref(),
+        Some("café bar".as_bytes())
+    );
+    assert_eq!(undo_transfer_encoding(None, b"as is").as_deref(), Some(&b"as is"[..]));
+    assert_eq!(undo_transfer_encoding(Some("base64"), b"!!!!"), None);
 }

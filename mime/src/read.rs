@@ -240,7 +240,14 @@ fn transfer_decoded(raw: &[u8], part: &MessagePart) -> Option<Vec<u8>> {
     let start = part.raw_body_offset() as usize;
     let end = (part.raw_end_offset() as usize).min(raw.len());
     let bytes = raw.get(start..end)?;
-    match part.content_transfer_encoding() {
+    undo_transfer_encoding(part.content_transfer_encoding(), bytes)
+}
+
+/// `bytes` with `encoding`, a part's Content-Transfer-Encoding, undone,
+/// and the charset left alone. `None` for base64 that does not decode at
+/// all. An IMAP server sends a part fetched on its own still encoded.
+pub fn undo_transfer_encoding(encoding: Option<&str>, bytes: &[u8]) -> Option<Vec<u8>> {
+    match encoding {
         Some(cte) if cte.eq_ignore_ascii_case("base64") => base64_decoded(bytes),
         Some(cte) if cte.eq_ignore_ascii_case("quoted-printable") => Some(
             quoted_printable_decode(bytes).unwrap_or_else(|| quoted_printable_lenient(bytes)),

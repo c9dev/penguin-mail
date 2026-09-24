@@ -4,12 +4,14 @@
 
 mod error;
 mod login;
+mod structure;
 mod types;
 mod uid_set;
 pub mod utf7;
 
 pub use error::ImapError;
 pub use login::Login;
+pub use structure::BodyStructure;
 pub use types::{
     AppendUid, Capabilities, CopyUid, Fetched, FlagsOf, HEADER_FIELDS, Listed, Selected, Since,
     SpecialUse, Woke,

@@ -8,6 +8,8 @@ rust-version.workspace = true
 
 [dependencies]
 mailrs-domain.workspace = true
+mailrs-mime.workspace = true
+async-imap.workspace = true
 base64.workspace = true
 mail-parser.workspace = true
 thiserror.workspace = true

@@ -11,4 +11,4 @@ pub mod provenance;
 pub mod snippet;
 
 pub use parts::{Part, Parts, body, is_calendar};
-pub use read::{files, part, parts, read};
+pub use read::{files, part, parts, read, undo_transfer_encoding};
