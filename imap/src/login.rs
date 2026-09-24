@@ -72,20 +72,22 @@ impl Login {
 }
 
 /// Takes off the end of a clipped `text` when it is the start of one of
-/// `secrets`, two characters or more.
+/// `secrets`, two characters or more. A text can end inside more than one
+/// form at once, so the longest such start goes.
 fn cut_partial(text: &mut String, secrets: &[String]) {
-    for secret in secrets {
-        let cut = secret
-            .char_indices()
-            .map(|(at, _)| at)
-            .skip(2)
-            .filter(|&at| text.ends_with(&secret[..at]))
-            .max();
-        if let Some(at) = cut {
-            text.truncate(text.len() - at);
-            text.push_str(HIDDEN);
-            return;
-        }
+    let cut = secrets
+        .iter()
+        .flat_map(|secret| {
+            secret
+                .char_indices()
+                .map(|(at, _)| at)
+                .skip(2)
+                .filter(|&at| text.ends_with(&secret[..at]))
+        })
+        .max();
+    if let Some(at) = cut {
+        text.truncate(text.len() - at);
+        text.push_str(HIDDEN);
     }
 }
 
@@ -120,6 +122,17 @@ mod tests {
         let hidden = login.hide(&format!("{head}hunter2"));
         assert!(!hidden.contains("hunter"), "{hidden}");
         assert!(hidden.ends_with("<hidden>"), "{hidden}");
+    }
+
+    /// A text can end inside a longer part of one form than of another:
+    /// here two characters of the Debug-escaped quoted form, and six of
+    /// the quoted one. The longest match goes.
+    #[test]
+    fn a_clipped_text_loses_the_longest_partial_form_it_ends_with() {
+        let login = Login::new("ann", "ab\"ab\"ab");
+        let head = "x".repeat(MAX_ERROR_TEXT - 6);
+        let hidden = login.hide(&format!("{head}ab\\\"ab"));
+        assert_eq!(hidden, format!("{head}<hidden>"));
     }
 
     #[test]

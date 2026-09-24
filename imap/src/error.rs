@@ -35,6 +35,11 @@ pub enum ImapError {
     /// large, a name already taken.
     #[error("the server refused: {0}")]
     Refused(String),
+    /// A value the client will not put in a command, so nothing went to
+    /// the server: a mailbox name that is not modified UTF-7, a flag that
+    /// is not an IMAP atom, a section or search text IMAP cannot carry.
+    #[error("the client cannot send this: {0}")]
+    Invalid(String),
 }
 
 impl ImapError {
@@ -65,6 +70,7 @@ impl ImapError {
             ImapError::NoMailbox(name) => ImapError::NoMailbox(hide(name)),
             ImapError::Unsupported(what) => ImapError::Unsupported(what),
             ImapError::Refused(text) => ImapError::Refused(hide(text)),
+            ImapError::Invalid(text) => ImapError::Invalid(hide(text)),
         }
     }
 
@@ -113,5 +119,14 @@ mod tests {
         );
         assert!(!ImapError::NoMailbox("x".into()).drops_connection());
         assert!(!ImapError::Unsupported("MOVE").drops_connection());
+    }
+
+    /// A value the client refused never reached the server, so the
+    /// connection is as good as before, and trying again changes nothing.
+    #[test]
+    fn a_local_refusal_keeps_the_connection_and_is_not_retried() {
+        let invalid = ImapError::Invalid("\"bad flag\" is not a flag".into());
+        assert!(!invalid.drops_connection());
+        assert!(!invalid.is_transient());
     }
 }

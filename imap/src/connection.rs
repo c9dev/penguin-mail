@@ -20,7 +20,7 @@ use crate::parse::{
     AppendUidReader, CapabilityReader, CopyUidReader, FlagsReader, HeadersReader, ListReader,
     MAX_ANSWERS, Reads, SearchReader, SectionReader, SelectReader, StructureReader,
 };
-use crate::refusal::{Doing, Refusal, from_async_imap, from_io, refusal};
+use crate::refusal::{Doing, Refusal, clipped, from_async_imap, from_io, refusal};
 use crate::{
     AppendUid, BodyStructure, Capabilities, CopyUid, Fetched, FlagsOf, HEADER_FIELDS, ImapError,
     Listed, Login, Selected, Since, UidSet, Woke,
@@ -102,9 +102,9 @@ impl<S: Stream> Conn<S> {
                     ));
                 }
                 other => {
-                    return Err(ImapError::Protocol(format!(
+                    return Err(ImapError::Protocol(clipped(format!(
                         "the greeting is not one this client accepts: {other:?}"
-                    )));
+                    ))));
                 }
             }
         }
@@ -294,7 +294,7 @@ impl<S: Stream> Conn<S> {
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || c == '.')
         {
-            return Err(ImapError::Protocol(format!(
+            return Err(ImapError::Invalid(format!(
                 "{section:?} is not a section this client fetches"
             )));
         }
@@ -493,9 +493,9 @@ impl<S: Stream> Conn<S> {
                             information,
                             ..
                         } => {
-                            return Err(ImapError::Network(
+                            return Err(ImapError::Network(clipped(
                                 information.as_deref().unwrap_or_default().to_string(),
-                            ));
+                            )));
                         }
                         _ => Woke::Changed,
                     },
@@ -663,9 +663,13 @@ fn ended(
         information.as_deref().unwrap_or_default().to_string()
     };
     match response {
-        Response::Done { tag: other, .. } if other != tag => Some(Err(ImapError::Protocol(
-            format!("the server answered {} while {} ran", other.0, tag.0),
-        ))),
+        // A tag has no length limit, so the text is clipped.
+        Response::Done { tag: other, .. } if other != tag => {
+            Some(Err(ImapError::Protocol(clipped(format!(
+                "the server answered {} while {} ran",
+                other.0, tag.0
+            )))))
+        }
         Response::Done {
             tag: done,
             status,
@@ -720,9 +724,9 @@ async fn raw_capability<S: Stream>(
         {
             return match status {
                 Status::Ok => Ok(()),
-                _ => Err(ImapError::Protocol(
+                _ => Err(ImapError::Protocol(clipped(
                     information.as_deref().unwrap_or_default().to_string(),
-                )),
+                ))),
             };
         }
     }
@@ -757,7 +761,7 @@ fn closed() -> ImapError {
 /// [`crate::utf7::encode`].
 fn quoted(name: &str) -> Result<String, ImapError> {
     if !name.is_ascii() || name.contains(['\r', '\n', '\0']) {
-        return Err(ImapError::Protocol(format!(
+        return Err(ImapError::Invalid(format!(
             "{name:?} is not a mailbox name in modified UTF-7"
         )));
     }
@@ -774,7 +778,7 @@ fn flag_list(flags: &[String]) -> Result<String, ImapError> {
         let atom = flag.strip_prefix('\\').unwrap_or(flag);
         let bad = |c: char| !c.is_ascii_graphic() || "(){%*\"\\]".contains(c);
         if atom.is_empty() || atom.chars().any(bad) {
-            return Err(ImapError::Protocol(format!("{flag:?} is not a flag")));
+            return Err(ImapError::Invalid(format!("{flag:?} is not a flag")));
         }
     }
     Ok(flags.join(" "))
@@ -793,7 +797,7 @@ pub(crate) type SearchParts = (String, Vec<(Vec<u8>, String)>);
 /// text after it.
 pub(crate) fn search_command(keys: &str) -> Result<SearchParts, ImapError> {
     if keys.contains('\0') {
-        return Err(ImapError::Protocol("a search holds a NUL".into()));
+        return Err(ImapError::Invalid("a search holds a NUL".into()));
     }
     let mut head = String::new();
     let mut literals: Vec<(Vec<u8>, String)> = Vec::new();
@@ -806,7 +810,7 @@ pub(crate) fn search_command(keys: &str) -> Result<SearchParts, ImapError> {
     };
     while let Some(c) = chars.next() {
         if matches!(c, '\r' | '\n') {
-            return Err(ImapError::Protocol(
+            return Err(ImapError::Invalid(
                 "a search holds a line break outside quotes".into(),
             ));
         }
@@ -928,6 +932,48 @@ mod tests {
             matches!(err, Some(ImapError::TooManyConnections { .. })),
             "{err:?}"
         );
+    }
+
+    /// Each path that puts a server's words in an error keeps the first
+    /// 200 characters: the log and the dialog read them.
+    #[tokio::test]
+    async fn server_text_in_an_error_is_clipped() {
+        let long = "x".repeat(10_000);
+        let short = |err: Option<ImapError>| {
+            let text = format!("{err:?}");
+            assert!(text.chars().count() < 400, "{} characters", text.len());
+        };
+        let bye = pipe(&format!("* BYE {long}"), |_: &str| vec![]);
+        short(Conn::login(bye, false, &ann()).await.err());
+        let odd = pipe(&format!("* NO {long}"), |_: &str| vec![]);
+        short(Conn::login(odd, false, &ann()).await.err());
+        let long_no = long.clone();
+        let no_caps = pipe("* OK ready", move |command: &str| match command {
+            "CAPABILITY" => vec![format!("{{tag}} NO {long_no}")],
+            _ => vec!["{tag} OK".into()],
+        });
+        short(Conn::login(no_caps, false, &ann()).await.err());
+        let tag = "A".repeat(10_000);
+        let foreign = pipe(
+            GREETING,
+            server(ALL, log(), move |command| match command {
+                c if c.starts_with("LIST") => vec![format!("{tag} OK done")],
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(foreign, false, &ann()).await.unwrap();
+        short(conn.list().await.err());
+        let long_bye = long.clone();
+        let idle_bye = pipe(
+            GREETING,
+            server(ALL, log(), move |command| match command {
+                c if c.starts_with("SELECT") => selected(),
+                "IDLE" => vec![format!("* BYE {long_bye}")],
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let conn = Conn::login(idle_bye, false, &ann()).await.unwrap();
+        short(conn.idle("INBOX", Duration::from_secs(5)).await.err());
     }
 
     #[tokio::test]
@@ -1161,7 +1207,7 @@ mod tests {
                 &["bad flag)".to_string()],
             )
             .await;
-        assert!(matches!(err, Err(ImapError::Protocol(_))));
+        assert!(matches!(err, Err(ImapError::Invalid(_))));
     }
 
     #[tokio::test]
@@ -1343,7 +1389,7 @@ mod tests {
         let stream = pipe(GREETING, server(ALL, log(), |_| vec!["{tag} OK".into()]));
         let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
         let err = conn.body("INBOX", 5, "HEADER.FIELDS (FROM)").await;
-        assert!(matches!(err, Err(ImapError::Protocol(_))));
+        assert!(matches!(err, Err(ImapError::Invalid(_))));
     }
 
     #[tokio::test]
@@ -1421,7 +1467,7 @@ mod tests {
         let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
         assert!(matches!(
             conn.create("Envoyés").await,
-            Err(ImapError::Protocol(_))
+            Err(ImapError::Invalid(_))
         ));
         conn.create(&crate::utf7::encode("Envoyés")).await.unwrap();
     }
@@ -1653,7 +1699,7 @@ mod tests {
     fn a_line_break_outside_quotes_or_a_nul_anywhere_is_refused() {
         for keys in ["ALL\r\nA9 DELETE INBOX", "ALL\nX", "FROM \"a\0b\"", "ALL\0"] {
             assert!(
-                matches!(search_command(keys), Err(ImapError::Protocol(_))),
+                matches!(search_command(keys), Err(ImapError::Invalid(_))),
                 "{keys:?}"
             );
         }

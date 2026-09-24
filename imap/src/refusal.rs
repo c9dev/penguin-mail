@@ -26,13 +26,26 @@ pub(crate) enum Refusal {
 }
 
 /// Words servers use when they refuse a connection over a per-user limit.
-/// `[LIMIT]` is RFC 5530's code; Dovecot says "Maximum number of
-/// connections from user+IP exceeded"; others say "Too many".
-const LIMIT_WORDS: [&str; 4] = [
+/// `[LIMIT]` is RFC 5530's code for any limit, so it counts only while
+/// greeting or signing in, when the only limit in play is on connections.
+/// Dovecot says "Maximum number of connections from user+IP exceeded";
+/// others say "Too many connections" or "Too many simultaneous ...".
+const LIMIT_WORDS: [&str; 5] = [
     "[limit]",
-    "too many",
+    "too many connections",
+    "simultaneous",
     "maximum number of connections",
     "connection limit",
+];
+
+/// Words servers use when they lock a sign-in out after failed attempts.
+/// That is a password problem: trying again only makes the lockout longer.
+const FAILED_LOGIN_WORDS: [&str; 5] = [
+    "failed login",
+    "login failures",
+    "failed attempts",
+    "authentication failures",
+    "too many failed",
 ];
 
 /// Words servers use when IMAP is off for the account rather than the
@@ -60,30 +73,30 @@ const MISSING_WORDS: [&str; 5] = [
 
 /// The class of a refusal. `try_create` is the `[TRYCREATE]` code, which
 /// imap-proto parses out of the text.
+/// The server's text is clipped to [`MAX_ERROR_TEXT`] characters.
 pub(crate) fn refusal(doing: Doing<'_>, how: Refusal, try_create: bool, text: &str) -> ImapError {
+    let text = clipped(text.to_string());
     let lower = text.to_ascii_lowercase();
     let says = |words: &[&str]| words.iter().any(|w| lower.contains(w));
-    if says(&LIMIT_WORDS) {
-        return ImapError::TooManyConnections {
-            text: text.to_string(),
-        };
+    let signing_in = matches!(doing, Doing::Greeting | Doing::Login);
+    if matches!(doing, Doing::Login) && how == Refusal::No && says(&FAILED_LOGIN_WORDS) {
+        return ImapError::Auth { text };
+    }
+    if signing_in && says(&LIMIT_WORDS) {
+        return ImapError::TooManyConnections { text };
     }
     match (how, doing) {
-        (Refusal::Bye, _) => ImapError::Network(text.to_string()),
-        (Refusal::Bad, _) => ImapError::Protocol(text.to_string()),
-        (Refusal::No, Doing::Login) if says(&IMAP_OFF_WORDS) => ImapError::ImapDisabled {
-            text: text.to_string(),
-        },
-        (Refusal::No, Doing::Login) => ImapError::Auth {
-            text: text.to_string(),
-        },
+        (Refusal::Bye, _) => ImapError::Network(text),
+        (Refusal::Bad, _) => ImapError::Protocol(text),
+        (Refusal::No, Doing::Login) if says(&IMAP_OFF_WORDS) => ImapError::ImapDisabled { text },
+        (Refusal::No, Doing::Login) => ImapError::Auth { text },
         (Refusal::No, Doing::Mailbox(name)) if says(&MISSING_WORDS) => {
             ImapError::NoMailbox(name.to_string())
         }
         (Refusal::No, Doing::Into(name)) if try_create || says(&MISSING_WORDS) => {
             ImapError::NoMailbox(name.to_string())
         }
-        (Refusal::No, _) => ImapError::Refused(text.to_string()),
+        (Refusal::No, _) => ImapError::Refused(text),
     }
 }
 
@@ -190,7 +203,7 @@ mod tests {
     }
 
     #[test]
-    fn a_connection_limit_reads_as_too_many_connections_wherever_it_comes() {
+    fn a_connection_limit_reads_as_too_many_connections_while_greeting_or_signing_in() {
         for (doing, how, text) in [
             (
                 Doing::Greeting,
@@ -202,7 +215,8 @@ mod tests {
                 Refusal::No,
                 "[LIMIT] Too many simultaneous connections",
             ),
-            (Doing::Other, Refusal::No, "Connection limit reached"),
+            (Doing::Greeting, Refusal::Bye, "Too many connections"),
+            (Doing::Login, Refusal::No, "Connection limit reached"),
         ] {
             assert!(
                 matches!(
@@ -211,6 +225,61 @@ mod tests {
                 ),
                 "{text}"
             );
+        }
+    }
+
+    /// RFC 5530's `[LIMIT]` names any limit, such as flags in a mailbox.
+    /// On a command after sign-in it is a refusal, not a reason to retry.
+    #[test]
+    fn a_limit_on_a_command_after_sign_in_is_a_refusal() {
+        for doing in [
+            Doing::Other,
+            Doing::Mailbox("INBOX"),
+            Doing::Into("Archive"),
+        ] {
+            assert_eq!(
+                refusal(doing, Refusal::No, false, "[LIMIT] Too many keywords"),
+                ImapError::Refused("[LIMIT] Too many keywords".into()),
+            );
+        }
+    }
+
+    /// Retrying a password the server locks out after failures only makes
+    /// the lockout longer.
+    #[test]
+    fn too_many_failed_sign_ins_is_an_auth_error() {
+        for text in [
+            "Too many failed login attempts, try again later",
+            "[LIMIT] Too many authentication failures",
+        ] {
+            assert!(
+                matches!(
+                    refusal(Doing::Login, Refusal::No, false, text),
+                    ImapError::Auth { .. }
+                ),
+                "{text}"
+            );
+        }
+        assert!(matches!(
+            refusal(Doing::Greeting, Refusal::Bye, false, "Too many requests"),
+            ImapError::Network(_)
+        ));
+    }
+
+    /// A server's text goes to the log and the dialog. Whatever the class,
+    /// an error keeps the first 200 characters of it.
+    #[test]
+    fn every_refusal_keeps_only_the_start_of_the_servers_text() {
+        let long = "é".repeat(10_000);
+        for (doing, how, try_create) in [
+            (Doing::Greeting, Refusal::Bye, false),
+            (Doing::Login, Refusal::No, false),
+            (Doing::Other, Refusal::Bad, false),
+            (Doing::Other, Refusal::No, false),
+            (Doing::Into("Archive"), Refusal::No, true),
+        ] {
+            let err = refusal(doing, how, try_create, &format!("[LIMIT] {long}"));
+            assert!(err.to_string().chars().count() < 300, "{doing:?} {how:?}");
         }
     }
 

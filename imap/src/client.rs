@@ -288,7 +288,8 @@ impl<D: Dial> ImapClient<D> {
     /// Waits in IDLE on `mailbox`, on the connection kept for it, until
     /// the server reports a change or `limit` passes; `limit` is cut to
     /// [`IDLE_LIMIT`]. One IDLE runs at a time; a second call waits for
-    /// the first to end.
+    /// the first to end. On a server without IDLE the answer is
+    /// [`ImapError::Unsupported`], and no connection stays open for it.
     ///
     /// A server that sends more during one IDLE than the guard lets
     /// through loses the connection, and the answer is
@@ -297,6 +298,14 @@ impl<D: Dial> ImapClient<D> {
     /// is an error, so a SELECT the guard refuses never reads as news.
     pub async fn idle(&self, mailbox: &str, limit: Duration) -> Result<Woke, ImapError> {
         let limit = limit.min(IDLE_LIMIT);
+        let known = *self
+            .inner
+            .capabilities
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        if known.is_some_and(|caps| !caps.idle) {
+            return Err(ImapError::Unsupported("IDLE"));
+        }
         let mut slot = self.inner.idle.lock().await;
         let kept = match slot.take() {
             Some(conn) => self.checked(conn).await,
@@ -306,8 +315,9 @@ impl<D: Dial> ImapClient<D> {
             Some(conn) => conn,
             None => within(OPEN_LIMIT, self.open()).await?,
         };
+        // A connection kept for an IDLE that never runs would hold one of
+        // the few connections a provider allows, so it goes.
         if !conn.capabilities.idle {
-            *slot = Some(conn);
             return Err(ImapError::Unsupported("IDLE"));
         }
         match within(COMMAND_LIMIT, conn.ensure_selected(mailbox)).await {
@@ -611,12 +621,51 @@ mod tests {
         assert_eq!(scripts.dials.load(Ordering::SeqCst), 2);
     }
 
+    /// A server without IDLE gets no connection kept for it: each one
+    /// holds a slot of the few a provider allows, Yahoo fewer than most.
     #[tokio::test]
-    async fn idle_on_a_server_without_it_is_unsupported() {
+    async fn idle_on_a_server_without_it_is_unsupported_and_keeps_no_connection() {
         let bare: Answer = Box::new(server("MOVE", log(), |_| vec!["{tag} OK".into()]));
-        let (client, _) = client(vec![(GREETING, bare)]);
+        let (client, scripts) = client(vec![(GREETING, bare)]);
         let err = client.idle("INBOX", Duration::from_secs(60)).await.err();
         assert_eq!(err, Some(ImapError::Unsupported("IDLE")));
+        assert!(
+            client.inner.idle.lock().await.is_none(),
+            "a connection stayed"
+        );
+        // The capabilities from that sign-in answer the next call.
+        let err = client.idle("INBOX", Duration::from_secs(60)).await.err();
+        assert_eq!(err, Some(ImapError::Unsupported("IDLE")));
+        assert_eq!(dials(&scripts), 1);
+    }
+
+    /// A value the client refuses to send never reached the server, so it
+    /// costs no connection: a label that is not an IMAP atom must not cost
+    /// a sign-in per STORE.
+    #[tokio::test]
+    async fn a_value_the_client_refuses_keeps_the_connection() {
+        let (client, scripts) = client(vec![(GREETING, lister(log(), false))]);
+        client.list().await.unwrap();
+        let one = UidSet::from_uids([1]);
+        let bad_flag = ["bad flag".to_string()];
+        assert!(matches!(
+            client.store("INBOX", &one, true, &bad_flag).await,
+            Err(ImapError::Invalid(_))
+        ));
+        assert!(matches!(
+            client.select("Envoyés", None).await,
+            Err(ImapError::Invalid(_))
+        ));
+        assert!(matches!(
+            client.search("INBOX", "ALL\r\nA9 LOGOUT").await,
+            Err(ImapError::Invalid(_))
+        ));
+        assert!(matches!(
+            client.body("INBOX", 1, "1]").await,
+            Err(ImapError::Invalid(_))
+        ));
+        client.list().await.unwrap();
+        assert_eq!(dials(&scripts), 1);
     }
 
     #[tokio::test]

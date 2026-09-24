@@ -377,7 +377,7 @@ impl ImapState {
 fn check_name(name: &str) -> Result<(), ImapError> {
     match name.is_ascii() && !name.contains(['\r', '\n', '\0']) {
         true => Ok(()),
-        false => Err(ImapError::Protocol(format!(
+        false => Err(ImapError::Invalid(format!(
             "{name:?} is not a mailbox name in modified UTF-7"
         ))),
     }
@@ -390,7 +390,7 @@ fn check_flags(flags: &[String]) -> Result<(), ImapError> {
         let atom = flag.strip_prefix('\\').unwrap_or(flag);
         let bad = |c: char| !c.is_ascii_graphic() || "(){%*\"\\]".contains(c);
         if atom.is_empty() || atom.chars().any(bad) {
-            return Err(ImapError::Protocol(format!("{flag:?} is not a flag")));
+            return Err(ImapError::Invalid(format!("{flag:?} is not a flag")));
         }
     }
     Ok(())
@@ -401,7 +401,7 @@ fn check_flags(flags: &[String]) -> Result<(), ImapError> {
 /// Inside quotes the client sends such text as a literal, so it passes.
 fn check_search(keys: &str) -> Result<(), ImapError> {
     if keys.contains('\0') {
-        return Err(ImapError::Protocol("a search holds a NUL".into()));
+        return Err(ImapError::Invalid("a search holds a NUL".into()));
     }
     let mut quoted = false;
     let mut chars = keys.chars();
@@ -412,7 +412,7 @@ fn check_search(keys: &str) -> Result<(), ImapError> {
                 chars.next();
             }
             '\r' | '\n' if !quoted => {
-                return Err(ImapError::Protocol(
+                return Err(ImapError::Invalid(
                     "a search holds a line break outside quotes".into(),
                 ));
             }
@@ -582,7 +582,7 @@ impl ImapApi for FakeImap {
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || c == '.')
         {
-            return Err(ImapError::Protocol(format!(
+            return Err(ImapError::Invalid(format!(
                 "{section:?} is not a section this client fetches"
             )));
         }
@@ -1554,7 +1554,7 @@ mod tests {
         let fake = FakeImap::new();
         assert!(matches!(
             fake.create("Envoyés").await,
-            Err(ImapError::Protocol(_))
+            Err(ImapError::Invalid(_))
         ));
         fake.create(&mailrs_imap::utf7::encode("Envoyés"))
             .await
@@ -1813,20 +1813,20 @@ mod tests {
         let fake = inbox_with(1);
         assert!(matches!(
             fake.search("INBOX", "FROM ann\r\nA1 DELETE INBOX").await,
-            Err(ImapError::Protocol(_))
+            Err(ImapError::Invalid(_))
         ));
         assert!(matches!(
             fake.store("INBOX", &UidSet::from_uid(1), true, &flags(&["bad flag"]))
                 .await,
-            Err(ImapError::Protocol(_))
+            Err(ImapError::Invalid(_))
         ));
         assert!(matches!(
             fake.body("INBOX", 1, "1]").await,
-            Err(ImapError::Protocol(_))
+            Err(ImapError::Invalid(_))
         ));
         assert!(matches!(
             fake.select("Envoyés", None).await,
-            Err(ImapError::Protocol(_))
+            Err(ImapError::Invalid(_))
         ));
         assert!(fake.calls().is_empty());
         assert_eq!(
