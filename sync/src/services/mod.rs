@@ -18,18 +18,20 @@ pub use any::{AnyAutoReply, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, An
 pub use google::{Google, ID_PAGE_SIZE, LIST_PAGE_SIZE};
 pub use pacing::{Priority, background, priority};
 
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::query::Query;
 use mailrs_domain::{
-    EpochMillis, Filter, MailSet, Membership, MessageMeta, RemoteMailbox, Role, Vacation,
+    EpochMillis, Filter, Location, MailSet, Membership, MessageMeta, RemoteMailbox, Role, Vacation,
 };
 use mailrs_gmail::{
     Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, Person, Series,
 };
 use mailrs_mime::Parts;
+use mailrs_store::threading::Links;
 
 use crate::api::{AccountClient, DraftRef, SavedDraft};
 #[cfg(any(test, feature = "fake"))]
@@ -176,6 +178,13 @@ pub struct Found {
     pub whole: Vec<Vec<MessageMeta>>,
     /// Threads asked for whole that the server no longer has.
     pub gone_threads: Vec<String>,
+    /// The messages each message's `In-Reply-To` and `References` name,
+    /// by message id, from a server that keeps no threads. The engine
+    /// threads the message from them.
+    pub links: HashMap<String, Links>,
+    /// Where each message sits on the server, by message id, from a
+    /// server whose name for a message changes when it moves.
+    pub located: HashMap<String, Location>,
 }
 
 /// One page of the sync window.

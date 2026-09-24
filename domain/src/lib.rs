@@ -12,6 +12,7 @@ pub mod category;
 mod folder;
 pub mod mailbox;
 pub mod invitation;
+mod location;
 pub mod query;
 pub mod smart;
 pub mod subject;
@@ -24,6 +25,7 @@ pub use mailbox::{
     Applied, MailSet, MailboxKind, Membership, Memberships, Provider, RemoteMailbox, Role,
 };
 pub use invitation::Invitation;
+pub use location::Location;
 pub use smart::SmartMailbox;
 pub use target::Target;
 

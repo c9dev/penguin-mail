@@ -129,11 +129,18 @@ impl AccountSync {
             kept = unchanged.len(),
             "listed the mail again after history expired"
         );
-        let metas = self.fetch(wants).await?.metas;
+        let fetched = self.fetch(wants).await?;
         let touched = self
             .db
             .write(move |c| {
-                let mut touched = store_fetched(c, account_id, generation, &metas, &[])?;
+                let mut touched = store_fetched(
+                    c,
+                    account_id,
+                    generation,
+                    &fetched.metas,
+                    &[],
+                    &fetched.placing,
+                )?;
                 let kept: Vec<Change> = unchanged
                     .iter()
                     .map(|held| Change::Keep {
@@ -255,7 +262,16 @@ impl AccountSync {
         let generation = cursor.sync_gen;
         let touched = self
             .db
-            .write(move |c| store_fetched(c, account_id, generation, &fetched.metas, &fetched.gone))
+            .write(move |c| {
+                store_fetched(
+                    c,
+                    account_id,
+                    generation,
+                    &fetched.metas,
+                    &fetched.gone,
+                    &fetched.placing,
+                )
+            })
             .await?;
         self.emit_threads(touched);
         Ok(())
@@ -276,14 +292,21 @@ impl AccountSync {
         // A listed message deleted since is left out; the sweep and
         // history take care of what the store had of it.
         let wants = page.refs.into_iter().map(Want::from).collect();
-        let metas = self.fetch(wants).await?.metas;
+        let fetched = self.fetch(wants).await?;
         let next = page.next;
         let account_id = self.account_id;
         let stored_next = next.clone();
         let touched = self
             .db
             .write(move |c| {
-                let mut touched = store_fetched(c, account_id, generation, &metas, &[])?;
+                let mut touched = store_fetched(
+                    c,
+                    account_id,
+                    generation,
+                    &fetched.metas,
+                    &[],
+                    &fetched.placing,
+                )?;
                 let done = stored_next.is_none();
                 accounts::set_backfill(c, account_id, stored_next.as_deref(), done)?;
                 if done {

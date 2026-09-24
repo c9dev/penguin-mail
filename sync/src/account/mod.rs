@@ -6,6 +6,7 @@ mod history;
 mod labels;
 mod listed;
 mod outbox;
+mod refs;
 mod threads;
 mod window;
 mod writes;
