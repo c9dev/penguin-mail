@@ -492,3 +492,30 @@ async fn a_seeded_provenance_reads_back_on_the_raw_message() {
     let raw = h.fake.raw_message("m1").await.unwrap();
     assert_eq!(mailrs_mime::read(&raw).provenance, provenance);
 }
+
+/// A 429 on the calendar of a large invitation leaves that one opening
+/// without its card, but the body is not kept: the next opening fetches
+/// it again and shows the card.
+#[tokio::test]
+async fn a_body_missing_a_part_that_failed_to_arrive_is_not_kept() {
+    let h = harness().await;
+    let ics = super::invitations::invite(0, "20260310T090000Z");
+    let mut m = meta("m1", "t1", 1, &["INBOX"]);
+    m.size = 25 * 1024 * 1024;
+    h.fake.with(|s| {
+        s.messages.insert("m1".into(), m);
+        s.raws.insert("m1".into(), super::invitations::google_invitation(&ics));
+    });
+    h.sync.ensure_thread("t1").await.unwrap();
+    let mut held = h.fake.hold("users.messages.attachments.get");
+    let fake = &h.fake;
+    let refuse = async move {
+        held.entered().await;
+        fake.fail_next(GmailError::RateLimited { retry_after: None });
+        held.release();
+    };
+    let (first, ()) = tokio::join!(h.sync.body("m1"), refuse);
+    assert_eq!(first.unwrap().calendar, None);
+    let second = h.sync.body("m1").await.unwrap();
+    assert_eq!(second.calendar.as_deref(), Some(ics.as_str()));
+}

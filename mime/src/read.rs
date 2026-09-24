@@ -37,6 +37,7 @@ pub fn parts(raw: &[u8]) -> Option<Parts> {
     Some(Parts {
         headers,
         root: convert(&message, raw, 0, root_path, 0),
+        incomplete: false,
     })
 }
 

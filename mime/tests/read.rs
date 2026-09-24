@@ -418,6 +418,7 @@ fn a_file_without_its_bytes_is_still_listed() {
             children: vec![text, pdf],
             ..leaf("", "multipart/mixed")
         },
+        incomplete: false,
     };
     let body = body(&parts);
     assert_eq!(body.text.as_deref(), Some("Hello"));

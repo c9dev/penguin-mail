@@ -149,7 +149,8 @@ impl AccountSync {
 
     /// A message body from the cache, or on a miss from the server: raw for
     /// a message under `RAW_LIMIT`, by its structure otherwise. Bodies of
-    /// messages that are not stored come back uncached.
+    /// messages that are not stored, and bodies missing a part that failed
+    /// to arrive, come back uncached.
     ///
     /// A cache hit reads on the reader pool, so it does not wait behind
     /// backfill writes. Its access time goes to the writer afterwards.
@@ -165,10 +166,19 @@ impl AccountSync {
             self.touch_body(message_id, now);
             return Ok(body);
         }
-        let body = match self.small(message_id).await? {
-            true => mailrs_mime::read(&self.raw(message_id).await?),
-            false => mailrs_mime::body(&self.services.mail.fetch_structure(message_id).await?),
+        let (body, complete) = match self.small(message_id).await? {
+            true => (mailrs_mime::read(&self.raw(message_id).await?), true),
+            false => {
+                let parts = self.services.mail.fetch_structure(message_id).await?;
+                (mailrs_mime::body(&parts), !parts.incomplete)
+            }
         };
+        // A body that lacks a part the server failed to send, such as an
+        // invitation's calendar refused by a rate limit, is shown but not
+        // kept, so the next opening asks for the part again.
+        if !complete {
+            return Ok(body);
+        }
         let size =
             body.html.as_ref().map_or(0, String::len) + body.text.as_ref().map_or(0, String::len);
         let sweep = self.due_for_eviction(size as i64);

@@ -14,6 +14,10 @@ pub struct Parts {
     /// Name and value, unfolded, in the order the message carries them.
     pub headers: Vec<(String, String)>,
     pub root: Part,
+    /// A text part the body needs was meant to arrive after the structure
+    /// and did not, so a body read from these parts lacks it and is not
+    /// worth keeping.
+    pub incomplete: bool,
 }
 
 /// One MIME part.

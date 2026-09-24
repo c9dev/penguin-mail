@@ -246,7 +246,8 @@ impl<G: GmailApi> MailBackend for Google<G> {
     /// Gmail sends a text part by reference when it carries a file name,
     /// which every Google Calendar invitation does, or when it is large.
     /// Each such part the body needs costs one more call. A failed fetch
-    /// leaves the message readable without that part.
+    /// leaves the message readable without that part, and marks the parts
+    /// incomplete so the body read from them is not kept.
     async fn fetch_structure(&self, id: &str) -> Result<Parts, BackendError> {
         let message = paced(self.gmail.message_structure(id)).await?;
         let payload = message.payload.ok_or(BackendError::NotFound)?;
@@ -254,7 +255,10 @@ impl<G: GmailApi> MailBackend for Google<G> {
         for (path, handle) in structure::text_by_reference(&payload) {
             match paced(self.gmail.attachment(id, &handle)).await {
                 Ok(bytes) => parts.set_data(&path, bytes),
-                Err(err) => tracing::warn!(message = id, %err, "could not fetch a text part sent by reference"),
+                Err(err) => {
+                    tracing::warn!(message = id, %err, "could not fetch a text part sent by reference");
+                    parts.incomplete = true;
+                }
             }
         }
         self.remember(id, structure::handles(&payload));

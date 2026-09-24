@@ -44,6 +44,7 @@ pub fn parts_of(payload: &MessagePart) -> Parts {
             .map(|h| (h.name.clone(), h.value.clone()))
             .collect(),
         root: convert(payload, multipart),
+        incomplete: false,
     }
 }
 
