@@ -6,6 +6,7 @@ mod connect;
 mod contacts;
 mod engine;
 mod export;
+mod imap;
 mod incremental;
 mod invitations;
 mod labels;
@@ -31,8 +32,8 @@ use mailrs_domain::{AccountId, ChangeEvent, MailSet, MailboxKind, RemoteMailbox,
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{Db, accounts, mailboxes, messages};
 
-use crate::fake::{FakeGmail, FakeOneClick};
-use crate::{AccountServices, AccountSync, Accounts};
+use crate::fake::{FakeGmail, FakeImap, FakeOneClick, FakeSmtp};
+use crate::{AccountServices, AccountSync, Accounts, ImapSettings};
 
 /// A stored message's memberships as Gmail labels, sorted.
 pub(crate) fn labels_of(
@@ -221,5 +222,65 @@ impl Harness {
         self.sync.bootstrap().await.unwrap();
         self.fake.with(|s| s.page_size = page_size);
         self.drain();
+    }
+}
+
+pub(crate) struct ImapHarness {
+    pub imap: Arc<FakeImap>,
+    pub sync: Arc<AccountSync>,
+    pub db: Db,
+    pub events: async_channel::Receiver<ChangeEvent>,
+    pub account_id: AccountId,
+    _dir: tempfile::TempDir,
+}
+
+/// Settings for a Fastmail account that files no copy of what it sends.
+pub(crate) fn fake_settings() -> ImapSettings {
+    ImapSettings {
+        address: "me@example.com".into(),
+        provider_name: "Fastmail".into(),
+        files_sent_mail: false,
+        window_days: crate::DEFAULT_WINDOW_DAYS,
+    }
+}
+
+/// An IMAP account on a fresh fake server.
+pub(crate) async fn imap_harness() -> ImapHarness {
+    imap_harness_on(FakeImap::new(), fake_settings()).await
+}
+
+/// An IMAP account on `imap`, with `settings`.
+pub(crate) async fn imap_harness_on(imap: FakeImap, settings: ImapSettings) -> ImapHarness {
+    let dir = tempfile::tempdir().unwrap();
+    let db = Db::open(&dir.path().join("mail.db")).unwrap();
+    let account_id = db
+        .write(|c| accounts::insert_account(c, "me@example.com", 0))
+        .await
+        .unwrap();
+    let imap = Arc::new(imap);
+    let services =
+        AccountServices::fake_imap_with(Arc::clone(&imap), Arc::new(FakeSmtp::default()), settings);
+    let (sender, events) = async_channel::unbounded();
+    let sync = Arc::new(
+        AccountSync::new(account_id, services, db.clone(), sender)
+            .with_retry_max(Duration::from_millis(10)),
+    );
+    ImapHarness {
+        imap,
+        sync,
+        db,
+        events,
+        account_id,
+        _dir: dir,
+    }
+}
+
+impl ImapHarness {
+    pub fn drain(&self) -> Vec<ChangeEvent> {
+        let mut events = Vec::new();
+        while let Ok(event) = self.events.try_recv() {
+            events.push(event);
+        }
+        events
     }
 }

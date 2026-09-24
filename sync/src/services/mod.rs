@@ -16,6 +16,7 @@ mod pacing;
 
 pub use any::{AnyAutoReply, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules};
 pub use google::{Google, ID_PAGE_SIZE, LIST_PAGE_SIZE};
+pub use imap::{Imap, ImapApi, ImapSettings, Submit};
 pub use pacing::{Priority, background, priority};
 
 use std::collections::HashMap;
@@ -30,12 +31,13 @@ use mailrs_domain::{
 use mailrs_gmail::{
     Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, Person, Series,
 };
+use mailrs_imap::{ImapClient, SmtpClient};
 use mailrs_mime::Parts;
 use mailrs_store::threading::Links;
 
 use crate::api::{AccountClient, DraftRef, SavedDraft};
 #[cfg(any(test, feature = "fake"))]
-use crate::fake::FakeGmail;
+use crate::fake::{FakeGmail, FakeImap, FakeSmtp};
 use crate::{BackendError, MailOp};
 
 /// One address an account may send mail as: its own, or an alias whose
@@ -247,6 +249,21 @@ impl AccountServices {
         }
     }
 
+    /// An account on an IMAP server: its mail and the address it sends
+    /// from. Calendars, contacts, rules and the automatic reply need
+    /// servers of their own, and the account has none of them yet.
+    pub fn imap(imap: ImapClient, smtp: SmtpClient, settings: ImapSettings) -> Self {
+        let adapter = Imap::new(Arc::new(imap), Arc::new(smtp), settings);
+        AccountServices {
+            mail: AnyMail::Imap(adapter.clone()),
+            calendar: None,
+            contacts: None,
+            rules: None,
+            auto_reply: None,
+            identities: AnyIdentities::Imap(adapter),
+        }
+    }
+
     /// The in-memory Gmail, for tests and the demo, through the same
     /// adapter a real account uses.
     #[cfg(any(test, feature = "fake"))]
@@ -269,6 +286,33 @@ impl AccountServices {
         let mut services = AccountServices::fake(Arc::clone(&gmail));
         services.mail = AnyMail::Fake(Google::new(gmail).with_capabilities(caps));
         services
+    }
+
+    /// The in-memory IMAP server, as a Fastmail account that files no copy
+    /// of what it sends, for tests and the demo.
+    #[cfg(any(test, feature = "fake"))]
+    pub fn fake_imap(imap: Arc<FakeImap>, smtp: Arc<FakeSmtp>) -> Self {
+        let settings = ImapSettings {
+            address: "me@example.com".into(),
+            provider_name: "Fastmail".into(),
+            files_sent_mail: false,
+            window_days: crate::DEFAULT_WINDOW_DAYS,
+        };
+        AccountServices::fake_imap_with(imap, smtp, settings)
+    }
+
+    /// The in-memory IMAP server with `settings`.
+    #[cfg(any(test, feature = "fake"))]
+    pub fn fake_imap_with(imap: Arc<FakeImap>, smtp: Arc<FakeSmtp>, settings: ImapSettings) -> Self {
+        let adapter = Imap::new(imap, smtp, settings);
+        AccountServices {
+            mail: AnyMail::FakeImap(adapter.clone()),
+            calendar: None,
+            contacts: None,
+            rules: None,
+            auto_reply: None,
+            identities: AnyIdentities::FakeImap(adapter),
+        }
     }
 
     pub fn capabilities(&self) -> MailCapabilities {
