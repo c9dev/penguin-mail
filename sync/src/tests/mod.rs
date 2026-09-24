@@ -34,7 +34,6 @@ use mailrs_store::{Db, accounts, mailboxes, messages};
 use crate::fake::{FakeGmail, FakeOneClick};
 use crate::{AccountServices, AccountSync, Accounts};
 
-/// The accounts a test connects, by id.
 /// A stored message's memberships as Gmail labels, sorted.
 pub(crate) fn labels_of(
     conn: &rusqlite::Connection,
@@ -48,6 +47,7 @@ pub(crate) fn labels_of(
         .unwrap_or_default())
 }
 
+/// The accounts a test connects, by id.
 pub(crate) struct Connected(pub HashMap<AccountId, Arc<AccountSync>>);
 
 impl Accounts for Connected {

@@ -104,18 +104,18 @@ async fn opening_a_thread_announces_a_label_change_but_not_a_new_label_order() {
     h.sync.ensure_thread("t1").await.unwrap();
     h.drain();
 
-    // Gmail lists the same labels in another order: nothing changed.
-    let relabel = |labels: &[&str]| {
-        h.fake.with(|s| {
-            let owned: Vec<String> = labels.iter().map(ToString::to_string).collect();
-            mailrs_gmail::labels::set_label_ids(s.messages.get_mut("a").unwrap(), &owned);
-        });
-    };
-    relabel(&["INBOX", "UNREAD", "INBOX"]);
+    // Gmail hands back the same memberships with the inbox named twice.
+    // The fake keeps them as given, so the store's own normalizing decides:
+    // it keeps each once, and nothing changed.
+    h.fake.with(|s| {
+        s.messages.get_mut("a").unwrap().held.mailboxes = vec!["INBOX".into(), "INBOX".into()];
+    });
     h.sync.ensure_thread("t1").await.unwrap();
     assert!(h.drain().is_empty());
 
-    relabel(&["INBOX"]);
+    h.fake.with(|s| {
+        mailrs_gmail::labels::set_label_ids(s.messages.get_mut("a").unwrap(), &["INBOX".into()]);
+    });
     h.sync.ensure_thread("t1").await.unwrap();
     assert_eq!(h.drain().len(), 1);
     assert_eq!(h.labels_of("a").await, ["INBOX"]);

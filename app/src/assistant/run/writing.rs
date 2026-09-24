@@ -229,8 +229,8 @@ fn subject_of(subject: &str) -> String {
 /// How a message goes out, for a question, when it is signed or encrypted.
 fn protected_line(draft: &Draft) -> Option<String> {
     let standard = match draft.standard {
-        Standard::Pgp => "OpenPGP",
-        Standard::Smime => "S/MIME",
+        protection::Standard::Pgp => "OpenPGP",
+        protection::Standard::Smime => "S/MIME",
     };
     let said = match (draft.sign, draft.encrypt) {
         (false, false) => return None,

@@ -328,14 +328,21 @@ fn who(emails: &HashMap<AccountId, String>, account_id: AccountId) -> &str {
         .unwrap_or("unknown account")
 }
 
+/// The mail set `--label` names: a standard mailbox by its key, or any
+/// other Gmail label as Gmail's table reads it, so `UNREAD` lists unread
+/// mail and `CATEGORY_SOCIAL` the category.
+fn set_named(label: &str) -> MailSet {
+    Standard::from_key(label)
+        .map(Standard::set)
+        .unwrap_or_else(|| mailrs_gmail::labels::set_of(label))
+}
+
 async fn list_threads(db: &Db, account: Option<&str>, label: String, limit: i64) -> Result<()> {
     let account_id = match account {
         Some(email) => Some(find_account(db, email).await?.id),
         None => None,
     };
-    let set = Standard::from_key(&label)
-        .map(Standard::set)
-        .unwrap_or_else(|| MailSet::Mailbox(label.clone()));
+    let set = set_named(&label);
     let filter = match account_id {
         Some(account_id) => ThreadFilter::account(account_id, set),
         None => ThreadFilter::unified(set),
@@ -591,4 +598,22 @@ fn format_date(millis: EpochMillis) -> String {
                 .to_string()
         })
         .unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use mailrs_domain::{MailSet, Role};
+
+    use super::set_named;
+
+    #[test]
+    fn a_label_names_the_mail_set_gmail_gives_it() {
+        assert_eq!(set_named("INBOX"), MailSet::Role(Role::Inbox));
+        assert_eq!(set_named("UNREAD"), MailSet::Unseen);
+        assert_eq!(
+            set_named("CATEGORY_SOCIAL"),
+            MailSet::Category("CATEGORY_SOCIAL".into())
+        );
+        assert_eq!(set_named("Label_1"), MailSet::Mailbox("Label_1".into()));
+    }
 }

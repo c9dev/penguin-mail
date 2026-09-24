@@ -23,7 +23,7 @@ use mailrs_domain::{
     MessageMeta, Role, Target, ThreadSummary,
 };
 use mailrs_store::{Db, messages};
-use mailrs_sync::mailbox::Standard as MailboxKind;
+use mailrs_sync::mailbox::Standard;
 use mailrs_sync::{
     AccountSettings, AccountSync, Accounts, AutomaticReply, BackendError, Calendar, Categorized, Failure,
     History, Invitations, Loaded, MailAction, MailActions, MailBackend, Mailbox, Mailboxes,
@@ -32,7 +32,7 @@ use mailrs_sync::{
 use serde_json::{Value, json};
 
 use crate::compose::{self, Draft};
-use crate::protection::{Held, Standard};
+use crate::protection::{self, Held};
 use crate::rules::{RuleForm, describe_action, describe_criteria};
 use crate::settings::{
     Change, Choice, ColorScheme, MarkRead, RemoteImages, Setting, Settings, TextSize, UndoSend,
@@ -202,7 +202,7 @@ pub trait Effects {
     /// lacks answers `None`.
     fn keys(&self, addresses: Vec<String>) -> Answer<'_, Held>;
     /// Which standard signs a message from `from`.
-    fn signing_standard(&self, from: String) -> Answer<'_, Standard>;
+    fn signing_standard(&self, from: String) -> Answer<'_, protection::Standard>;
     /// `draft` filled in from the Gmail draft `raw`, opened whichever way
     /// Gmail holds it. An encrypted one goes to its engine, which may ask
     /// for the passphrase.
@@ -311,7 +311,7 @@ fn category_name(category: Category) -> &'static str {
 /// the rest, such as unread mail or a category, list their set.
 fn label_mailbox(account_id: AccountId, label: &Label, set: MailSet) -> Mailbox {
     if label.kind == LabelKind::System {
-        if let Some(which) = MailboxKind::from_key(&label.id) {
+        if let Some(which) = Standard::from_key(&label.id) {
             return Mailbox::Standard { account_id, which };
         }
         if !matches!(set, MailSet::Mailbox(_)) {
@@ -805,7 +805,7 @@ impl<A: Accounts> Tools<A> {
         input: &Value,
         scope: Option<&Account>,
     ) -> Result<Vec<Mailbox>, String> {
-        let at = |which: MailboxKind| match scope {
+        let at = |which: Standard| match scope {
             Some(account) => Mailbox::Standard {
                 account_id: account.id,
                 which,
@@ -818,10 +818,10 @@ impl<A: Accounts> Tools<A> {
         };
         let named = MailboxName::named(name).ok_or_else(|| format!("Unknown mailbox {name}."))?;
         Ok(match named {
-            MailboxName::Inbox => vec![at(MailboxKind::Inbox)],
-            MailboxName::Flagged => vec![at(MailboxKind::Flagged)],
-            MailboxName::Sent => vec![at(MailboxKind::Sent)],
-            MailboxName::Drafts => vec![at(MailboxKind::Drafts)],
+            MailboxName::Inbox => vec![at(Standard::Inbox)],
+            MailboxName::Flagged => vec![at(Standard::Flagged)],
+            MailboxName::Sent => vec![at(Standard::Sent)],
+            MailboxName::Drafts => vec![at(Standard::Drafts)],
             MailboxName::FollowUp => vec![Mailbox::FollowUp],
             MailboxName::Archive => vec![folder(Folder::Archive)],
             MailboxName::Junk => vec![folder(Folder::Junk)],
@@ -834,7 +834,7 @@ impl<A: Accounts> Tools<A> {
             MailboxName::Outbox => vec![Mailbox::Outbox],
             MailboxName::SendLater => vec![Mailbox::Scheduled],
             MailboxName::Reminders => vec![Mailbox::Reminders],
-            MailboxName::Muted => vec![at(MailboxKind::Muted)],
+            MailboxName::Muted => vec![at(Standard::Muted)],
             MailboxName::Smart => {
                 vec![Mailbox::Smart(self.smart_named(&required(input, "name")?)?)]
             }

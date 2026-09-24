@@ -752,20 +752,7 @@ impl MainWindow {
         // A label deleted elsewhere, by the assistant or in the browser,
         // leaves the window on a mailbox that is no longer there, so the
         // inbox takes over as it does for a signed-out account.
-        let still_there = match self.shown() {
-            Mailbox::Label {
-                account_id,
-                label_id,
-                ..
-            } => data.iter().any(|(a, labels)| {
-                a.id == account_id && labels.iter().any(|l| l.id == label_id)
-            }),
-            Mailbox::Folder {
-                account_id: Some(account_id),
-                ..
-            } => data.iter().any(|(a, _)| a.id == account_id),
-            _ => true,
-        };
+        let still_there = still_there(&self.shown(), &data);
         let vanished = self.screen.borrow_mut().accounts_read(still_there);
         let settings = self.settings();
         let (data, extras) = self.arrange(data, &settings);
@@ -2696,9 +2683,66 @@ fn unique_path(dir: &std::path::Path, name: &str) -> PathBuf {
         .expect("some name is free")
 }
 
+/// Whether `mailbox` is still there once the accounts read as `data`. A
+/// mailbox of one account goes with that account, and a label goes when
+/// its account no longer lists it.
+fn still_there(mailbox: &Mailbox, data: &[(Account, Vec<Label>)]) -> bool {
+    match mailbox {
+        Mailbox::Label {
+            account_id,
+            label_id,
+            ..
+        } => data.iter().any(|(a, labels)| {
+            a.id == *account_id && labels.iter().any(|l| &l.id == label_id)
+        }),
+        _ => mailbox
+            .account()
+            .is_none_or(|id| data.iter().any(|(a, _)| a.id == id)),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_mailbox_of_a_removed_account_is_gone() {
+        let account = |id| Account {
+            id,
+            email: format!("{id}@example.com"),
+            state: AccountState::Ok,
+            provider: mailrs_domain::Provider::Gmail,
+        };
+        let label = |account_id| Label {
+            account_id,
+            id: "Label_1".into(),
+            name: "Work".into(),
+            kind: mailrs_domain::LabelKind::User,
+            color: None,
+        };
+        let both = vec![(account(1), vec![label(1)]), (account(2), vec![])];
+        let only_two = vec![(account(2), vec![])];
+        let inbox = Mailbox::Standard {
+            account_id: 1,
+            which: super::super::Standard::Inbox,
+        };
+        let unread = Mailbox::Set {
+            account_id: 1,
+            set: mailrs_domain::MailSet::Unseen,
+            name: "UNREAD".into(),
+        };
+        let work = Mailbox::Label {
+            account_id: 1,
+            label_id: "Label_1".into(),
+            name: "Work".into(),
+        };
+        for mailbox in [&inbox, &unread, &work] {
+            assert!(still_there(mailbox, &both), "{mailbox:?}");
+            assert!(!still_there(mailbox, &only_two), "{mailbox:?}");
+        }
+        let unlisted = vec![(account(1), vec![]), (account(2), vec![])];
+        assert!(!still_there(&work, &unlisted), "a label the account dropped");
+    }
 
     #[test]
     fn a_mute_toast_counts_the_conversations_it_covers() {
