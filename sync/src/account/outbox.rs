@@ -191,7 +191,10 @@ impl AccountSync {
         };
         match raw.and_then(|raw| mailrs_mime::part(&raw, part_path)) {
             Some(bytes) => Ok(bytes),
-            None => Ok(self.services.mail.fetch_part(message_id, part_path).await?),
+            None => {
+                let name = self.remote(message_id).await?;
+                Ok(self.services.mail.fetch_part(&name, part_path).await?)
+            }
         }
     }
 
@@ -231,8 +234,9 @@ impl AccountSync {
                     .collect()
             }
         };
+        let names = self.remotes(&ids).await?;
         let mut mbox = Vec::new();
-        for raw in self.services.mail.fetch_raw(&ids).await? {
+        for raw in self.services.mail.fetch_raw(&names).await? {
             crate::export::append(&mut mbox, &raw.bytes);
         }
         Ok(mbox)

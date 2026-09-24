@@ -37,6 +37,15 @@ impl AccountSync {
             .collect())
     }
 
+    /// The server's name for `id` now.
+    pub(super) async fn remote(&self, id: &str) -> Result<String, SyncError> {
+        Ok(self
+            .remotes(&[id.to_string()])
+            .await?
+            .pop()
+            .unwrap_or_else(|| id.to_string()))
+    }
+
     /// `wants` by the names the server knows the messages by now.
     pub(super) async fn wants_by_remote(&self, wants: Vec<Want>) -> Result<Vec<Want>, SyncError> {
         if !self.renames() {

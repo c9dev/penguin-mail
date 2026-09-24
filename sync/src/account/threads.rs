@@ -218,7 +218,8 @@ impl AccountSync {
         let (body, complete) = match self.small(message_id).await? {
             true => (mailrs_mime::read(&self.raw(message_id).await?), true),
             false => {
-                let parts = self.services.mail.fetch_structure(message_id).await?;
+                let name = self.remote(message_id).await?;
+                let parts = self.services.mail.fetch_structure(&name).await?;
                 (mailrs_mime::body(&parts), !parts.incomplete)
             }
         };

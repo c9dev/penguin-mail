@@ -6,6 +6,7 @@
 //! remote ref. This adapter never opens the store.
 
 mod api;
+mod bodies;
 mod feed;
 mod keywords;
 mod mailboxes;
@@ -281,20 +282,20 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         self.fetch_lone(threads).await
     }
 
-    async fn fetch_raw(&self, _ids: &[String]) -> Result<Vec<RawMessage>, BackendError> {
-        Err(BackendError::Unsupported)
+    async fn fetch_raw(&self, ids: &[String]) -> Result<Vec<RawMessage>, BackendError> {
+        self.raw_messages(ids).await
     }
 
     async fn append(&self, _raw: &[u8], _mailbox: &str) -> Result<String, BackendError> {
         Err(BackendError::Unsupported)
     }
 
-    async fn fetch_structure(&self, _id: &str) -> Result<Parts, BackendError> {
-        Err(BackendError::Unsupported)
+    async fn fetch_structure(&self, id: &str) -> Result<Parts, BackendError> {
+        self.structure_of(id).await
     }
 
-    async fn fetch_part(&self, _id: &str, _path: &str) -> Result<Vec<u8>, BackendError> {
-        Err(BackendError::Unsupported)
+    async fn fetch_part(&self, id: &str, path: &str) -> Result<Vec<u8>, BackendError> {
+        self.part_of(id, path).await
     }
 
     fn mailbox_for(&self, role: Role) -> Option<String> {
