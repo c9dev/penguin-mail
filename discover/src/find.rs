@@ -7,7 +7,7 @@ use futures::FutureExt;
 
 use crate::name::{domain_of, is_above};
 use crate::table::Table;
-use crate::{Found, Net, Source, Verdict, autoconfig, srv};
+use crate::{Found, Net, Source, Verdict, autoconfig, probe, srv};
 
 /// How long discovery waits on any one step before it drops it.
 pub const STEP_LIMIT: Duration = Duration::from_secs(10);
@@ -18,14 +18,14 @@ const ISPDB: &str = "https://autoconfig.thunderbird.net/v1.1/";
 
 /// The steps after the table, highest priority first. A step's answer
 /// counts once every step above it has finished without one.
-const STEPS: usize = 5;
+const STEPS: usize = 6;
 
 /// Finds the servers for `address`. The built-in table answers with no
-/// network at all. Otherwise the MX match, the domain's own autoconfig, the
-/// ISPDB, the MX host's autoconfig and SRV records all start at once, and
-/// the answer is the highest-priority step that found something; each step
-/// gets `STEP_LIMIT`. Only the address's domain goes out, and no name above
-/// it is ever built.
+/// network at all. Otherwise the MX match, the domain's own autoconfig,
+/// the ISPDB, the MX host's autoconfig, SRV records and a probe all start
+/// at once, and the answer is the highest-priority step that found
+/// something; each step gets `STEP_LIMIT`. Only the address's domain goes
+/// out, and no name above it is ever built.
 pub async fn find<N: Net>(net: &N, address: &str) -> Found {
     let Some(domain) = domain_of(address) else {
         return Found::nothing();
@@ -53,6 +53,9 @@ pub async fn find<N: Net>(net: &N, address: &str) -> Found {
     let mut srv = pin!(limit(async {
         Found::servers(srv::lookup(net, domain).await)
     }));
+    let mut probe = pin!(limit(async {
+        Found::servers(probe::probe(net, domain).await)
+    }));
     // One slot per step: `None` while it runs, then what it found.
     let mut answers: [Option<Option<Found>>; STEPS] = Default::default();
     loop {
@@ -62,6 +65,7 @@ pub async fn find<N: Net>(net: &N, address: &str) -> Found {
             found = &mut ispdb, if answers[2].is_none() => answers[2] = Some(found),
             found = &mut mx_derived, if answers[3].is_none() => answers[3] = Some(found),
             found = &mut srv, if answers[4].is_none() => answers[4] = Some(found),
+            found = &mut probe, if answers[5].is_none() => answers[5] = Some(found),
         }
         if let Some(found) = decided(&answers) {
             return found;
@@ -153,7 +157,7 @@ pub(crate) fn mx_names(domain: &str, hosts: &[String]) -> Vec<String> {
 mod tests {
     use super::*;
     use crate::fake::{FakeNet, Request};
-    use crate::{SrvRecord, Unreachable};
+    use crate::{Security, SrvRecord, Unreachable};
 
     const HOSTER: &str = include_str!("../tests/fixtures/hoster.xml");
     const MAILBOX: &str = include_str!("../tests/fixtures/mailbox.org.xml");
@@ -273,16 +277,28 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn srv_records_name_the_servers_when_nothing_above_them_does() {
+    async fn srv_answers_before_the_probe() {
         let net = FakeNet::default()
             .answer_srv("_imaps._tcp.example.org", srv(993, "imap.example.org."))
             .answer_srv(
                 "_submissions._tcp.example.org",
                 srv(465, "smtp.example.org."),
-            );
+            )
+            .accept("imap.example.org", 993, Security::Tls)
+            .accept("smtp.example.org", 465, Security::Tls);
         let found = find(&net, "ann@example.org").await;
         assert_eq!(found.candidates[0].source, Source::Srv);
         assert!(!found.candidates[0].confirm);
+    }
+
+    #[tokio::test]
+    async fn a_probed_server_must_be_confirmed() {
+        let net = FakeNet::default()
+            .accept("mail.example.org", 993, Security::Tls)
+            .accept("mail.example.org", 465, Security::Tls);
+        let found = find(&net, "ann@example.org").await;
+        assert_eq!(found.candidates[0].source, Source::Probe);
+        assert!(found.candidates[0].confirm);
     }
 
     #[tokio::test]
@@ -326,6 +342,49 @@ mod tests {
         let found = find(&net, "ann@example.org").await;
         assert_eq!(found.candidates[0].source, Source::Mx);
         assert_eq!(started.elapsed(), Duration::from_secs(3));
+    }
+
+    #[tokio::test]
+    async fn only_the_domain_leaves_the_computer() {
+        let net = FakeNet::default().answer_mx("example.org", &["mx1.mail.hoster.net"]);
+        find(&net, "private.person+tag@example.org").await;
+        let requests = net.requests();
+        assert!(!requests.is_empty());
+        for request in requests {
+            let name = request.name();
+            assert!(
+                !name.contains("private") && !name.contains("tag") && !name.contains('@'),
+                "{request:?}"
+            );
+        }
+    }
+
+    /// The domain a request names: the DNS name or host itself, or the
+    /// URL's host, or for the ISPDB the domain at the end of its path.
+    fn named(request: &Request) -> String {
+        let name = request.name();
+        let Some(rest) = name.strip_prefix("https://") else {
+            return name.to_string();
+        };
+        if let Some(domain) = rest.strip_prefix("autoconfig.thunderbird.net/v1.1/") {
+            return domain.to_string();
+        }
+        rest.split('/').next().unwrap_or(rest).to_string()
+    }
+
+    #[tokio::test]
+    async fn no_name_above_the_domain_is_ever_built() {
+        // The exchanger sits in the organization's parent domain, whose
+        // settings the MX step would otherwise read.
+        let net = FakeNet::default().answer_mx("dept.example.ac.uk", &["mx.example.ac.uk"]);
+        find(&net, "ann@dept.example.ac.uk").await;
+        let requests = net.requests();
+        assert!(!requests.is_empty());
+        for request in &requests {
+            let name = named(request);
+            assert!(!is_above(&name, "dept.example.ac.uk"), "{request:?}");
+            assert!(name.ends_with("dept.example.ac.uk"), "{request:?}");
+        }
     }
 
     #[test]

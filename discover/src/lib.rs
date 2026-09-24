@@ -7,6 +7,7 @@ mod autoconfig;
 mod find;
 mod name;
 mod net;
+mod probe;
 mod srv;
 mod table;
 
