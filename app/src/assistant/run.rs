@@ -887,6 +887,12 @@ impl<A: Accounts> Tools<A> {
                     .map(|a| a.display().to_string() + " <" + &a.email + ">")
                     .collect::<Vec<_>>()
             };
+            let labels = self.labels_of(meta.account_id);
+            let named: Vec<&str> = labels
+                .iter()
+                .filter(|l| l.kind == LabelKind::User && meta.in_mailbox(&l.id))
+                .map(|l| l.name.as_str())
+                .collect();
             out.push(json!({
                 "message_id": meta.id,
                 "from": meta.from.as_ref().map(|a| format!("{} <{}>", a.display(), a.email)),
@@ -894,7 +900,10 @@ impl<A: Accounts> Tools<A> {
                 "cc": people(&meta.cc),
                 "date": crate::format::local(meta.date).map(|d| d.format("%Y-%m-%d %H:%M").to_string()),
                 "subject": meta.subject,
-                "labels": meta.label_ids,
+                "labels": named,
+                "unread": meta.is_unread(),
+                "flagged": meta.is_flagged(),
+                "muted": meta.is_muted(),
                 "text": body_text,
                 "invitation": body.as_ref().is_some_and(|b| b.calendar.is_some()),
                 "unsubscribe": body.as_ref().is_some_and(|b| {

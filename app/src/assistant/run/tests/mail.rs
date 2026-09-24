@@ -39,6 +39,34 @@ async fn mute_takes_a_thread_out_of_the_inbox_and_back() {
     );
 }
 
+/// A message filed under the person's own label, unread and flagged. The
+/// read tool names the label instead of the Gmail ids that hold it.
+#[tokio::test]
+async fn reading_mail_names_its_labels_and_marks_not_gmail_ids() {
+    let mut mail = mail();
+    mail.push(labelled(
+        meta("m5", "t5", "kai@example.com", "Flagged kite", NOW),
+        &[
+            system_label::INBOX,
+            system_label::UNREAD,
+            system_label::STARRED,
+            "Label_kites",
+        ],
+    ));
+    let h = Harness::with(mail).await;
+
+    let read = h
+        .ok(
+            "read_conversation",
+            json!({"account": ME, "thread_id": "t5"}),
+        )
+        .await;
+    assert_eq!(read["messages"][0]["labels"], json!(["Kites"]));
+    assert_eq!(read["messages"][0]["unread"], json!(true));
+    assert_eq!(read["messages"][0]["flagged"], json!(true));
+    assert_eq!(read["messages"][0]["muted"], json!(false));
+}
+
 #[tokio::test]
 async fn delete_forever_asks_then_erases() {
     let h = harness().await;
