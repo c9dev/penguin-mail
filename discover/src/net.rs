@@ -26,7 +26,10 @@ pub trait Net: Send + Sync {
     fn srv(&self, name: &str) -> impl Future<Output = Vec<SrvRecord>> + Send;
     /// The body of an HTTPS page, or `None` for anything but a success.
     fn get(&self, url: &str) -> impl Future<Output = Option<String>> + Send;
-    /// Whether a TLS (or STARTTLS) connection to host:port succeeds with a valid certificate.
+    /// Whether a connection to host:port reaches TLS with a valid
+    /// certificate. `Security::Tls` starts TLS at once; `Security::StartTls`
+    /// speaks SMTP first, since discovery probes STARTTLS only on SMTP
+    /// submission, and asks for STARTTLS after EHLO.
     fn reaches(
         &self,
         host: &str,
@@ -112,9 +115,7 @@ impl RealNet {
 
 impl Net for RealNet {
     async fn mx(&self, domain: &str) -> Vec<String> {
-        // The root dot keeps the resolver from trying the system's search
-        // domains, which would ask about names the person never typed.
-        let Ok(lookup) = self.resolver.mx_lookup(format!("{domain}.")).await else {
+        let Ok(lookup) = self.resolver.mx_lookup(rooted(domain)).await else {
             return Vec::new();
         };
         by_preference(
@@ -130,7 +131,7 @@ impl Net for RealNet {
     }
 
     async fn srv(&self, name: &str) -> Vec<SrvRecord> {
-        let Ok(lookup) = self.resolver.srv_lookup(format!("{name}.")).await else {
+        let Ok(lookup) = self.resolver.srv_lookup(rooted(name)).await else {
             return Vec::new();
         };
         // A domain with wildcard DNS answers a name it has no SRV for with
@@ -172,7 +173,8 @@ impl Net for RealNet {
 
     async fn reaches(&self, host: &str, port: u16, security: Security) -> bool {
         let attempt = async {
-            let Ok(tcp) = TcpStream::connect((host, port)).await else {
+            // The TLS name below stays `host`, without the dot.
+            let Ok(tcp) = TcpStream::connect((rooted(host), port)).await else {
                 return false;
             };
             match security {
@@ -190,6 +192,12 @@ impl Net for RealNet {
             .await
             .unwrap_or(false)
     }
+}
+
+/// `host` with the root dot, so the resolver never tries the system's
+/// search domains and asks about a name the person never typed.
+pub(crate) fn rooted(host: &str) -> String {
+    format!("{}.", host.strip_suffix('.').unwrap_or(host))
 }
 
 /// MX hosts by numeric preference, lowest first, lower case and without
@@ -275,6 +283,12 @@ mod tests {
                 "in2-smtp.messagingengine.com"
             ]
         );
+    }
+
+    #[test]
+    fn a_probe_connects_to_the_name_from_the_root() {
+        assert_eq!(rooted("imap.example.org"), "imap.example.org.");
+        assert_eq!(rooted("imap.example.org."), "imap.example.org.");
     }
 
     #[test]

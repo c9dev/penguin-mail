@@ -59,7 +59,7 @@ pub enum Verdict {
     },
     /// A Google Workspace domain, found by MX: the Google sign-in serves it.
     Google,
-    /// A Microsoft 365 or Outlook domain: part 4 serves it.
+    /// A Microsoft 365 or Outlook domain: a later version serves it.
     Microsoft,
     NothingFound,
 }
@@ -112,7 +112,9 @@ pub enum Security {
 #[serde(rename_all = "snake_case")]
 pub enum UserName {
     Address,
-    /// The local part first, then the full address if that fails (RFC 6186 section 4).
+    /// The part before the @ first, then the full address if the server
+    /// refuses that: for a provider whose page or autoconfig file names
+    /// the local part as the user name.
     LocalPartFirst,
 }
 
