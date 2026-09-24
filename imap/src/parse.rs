@@ -12,7 +12,7 @@ use std::ops::RangeInclusive;
 use chrono::DateTime;
 use mailrs_domain::EpochMillis;
 
-use crate::guard::{BODY_BYTES, COMMAND_BYTES};
+use crate::guard::{BODY_BYTES, COMMAND_BYTES, SEARCH_BYTES, SELECT_BYTES};
 use crate::structure::BodyStructure;
 use crate::{
     AppendUid, CopyUid, Fetched, FlagsOf, ImapError, Listed, Selected, SpecialUse, UidSet,
@@ -172,17 +172,19 @@ pub(crate) struct SelectReader {
     flag_budget: FlagBudget,
     /// What VANISHED named, merged: a server may name 100,000 ranges.
     vanished: UidSet,
-    /// VANISHED ranges not yet merged into `vanished`, which fold in once
-    /// there are more than [`FOLD_AFTER`] plus twice as many as the set
-    /// holds, so a server repeating a range costs no more than naming it
-    /// once.
+    /// VANISHED ranges not yet merged into `vanished`. They fold into it
+    /// once there are more than [`FOLD_AFTER`] plus twice as many as the
+    /// set holds, so this list holds at most that many plus one answer's
+    /// ranges, and a range the server repeats is kept once after each
+    /// fold.
     pending: Vec<RangeInclusive<u32>>,
     error: Option<ImapError>,
 }
 
 /// VANISHED ranges a SELECT holds unmerged, beyond twice the merged set.
-/// Merging sorts, so folding only past a margin keeps the work linear
-/// over many answers.
+/// A fold sorts the pending list with the set's ranges, n log n in their
+/// count, and the margin keeps a fold from running after every small
+/// answer.
 const FOLD_AFTER: usize = 65_536;
 
 impl Reads for SelectReader {
@@ -224,6 +226,10 @@ impl Reads for SelectReader {
     fn check(&self) -> Result<(), ImapError> {
         self.error.clone().map_or(Ok(()), Err)
     }
+
+    fn bytes(&self) -> u64 {
+        SELECT_BYTES
+    }
 }
 
 impl SelectReader {
@@ -234,22 +240,28 @@ impl SelectReader {
         }
     }
 
-    /// Merges the pending VANISHED ranges into the set.
+    /// Merges the pending VANISHED ranges into the set. The set's ranges
+    /// join the pending list, which is sorted and merged in place, so the
+    /// most held at once is that list beside the old set, and the result
+    /// has no spare capacity.
     fn fold(&mut self) {
-        let pending = std::mem::take(&mut self.pending);
-        self.vanished = UidSet::from_ranges(self.vanished.ranges().iter().cloned().chain(pending));
+        let mut pending = std::mem::take(&mut self.pending);
+        let old = std::mem::take(&mut self.vanished);
+        pending.reserve_exact(old.ranges().len());
+        pending.extend_from_slice(old.ranges());
+        drop(old);
+        self.vanished = UidSet::from(pending);
     }
 
-    pub(crate) fn finish(self) -> Result<Selected, ImapError> {
+    pub(crate) fn finish(mut self) -> Result<Selected, ImapError> {
         let uidvalidity = self
             .uidvalidity
             .ok_or_else(|| ImapError::Protocol("SELECT gave no UIDVALIDITY".into()))?;
+        self.fold();
         Ok(Selected {
             uidvalidity,
             changed: self.changed.into_values().collect(),
-            vanished: UidSet::from_ranges(
-                self.vanished.ranges().iter().cloned().chain(self.pending),
-            ),
+            vanished: self.vanished,
             ..self.selected
         })
     }
@@ -566,9 +578,9 @@ impl Reads for ListReader {
     }
 }
 
-/// The most UIDs one SEARCH may bring: every message of a mailbox of four
-/// million, 16 MB kept.
-pub(crate) const MAX_SEARCH_UIDS: usize = 4_000_000;
+/// The most UIDs one SEARCH may bring: as many as fit its budget at a
+/// digit and a space each, about two million, 8 MB kept at most.
+pub(crate) const MAX_SEARCH_UIDS: usize = (SEARCH_BYTES / 2) as usize;
 
 /// SEARCH's answer, lowest UID first once finished. Answers are sorted
 /// once at the end, since a server may split one into many.
@@ -614,6 +626,10 @@ impl Reads for SearchReader {
 
     fn check(&self) -> Result<(), ImapError> {
         self.error.clone().map_or(Ok(()), Err)
+    }
+
+    fn bytes(&self) -> u64 {
+        SEARCH_BYTES
     }
 }
 
@@ -965,6 +981,51 @@ pub(crate) mod tests {
         assert_eq!(SearchReader::default().most(), MAX_ANSWERS);
         assert_eq!(SectionReader::new(1).bytes(), crate::guard::BODY_BYTES);
         assert_eq!(ListReader::default().bytes(), crate::guard::COMMAND_BYTES);
+    }
+
+    /// A SELECT and a SEARCH each run on a budget of their own, which
+    /// bounds the CPU a hostile answer costs: async-imap parses its whole
+    /// buffer again on each read. The SEARCH caps follow from it.
+    #[test]
+    fn select_and_search_run_on_their_own_budgets() {
+        use crate::guard::{SEARCH_BYTES, SELECT_BYTES};
+        assert_eq!(SELECT_BYTES, 4 << 20);
+        assert_eq!(SEARCH_BYTES, 4 << 20);
+        assert_eq!(SelectReader::default().bytes(), SELECT_BYTES);
+        assert_eq!(SearchReader::default().bytes(), SEARCH_BYTES);
+        // A UID takes at least a digit and a space.
+        assert_eq!(MAX_SEARCH_UIDS as u64, SEARCH_BYTES / 2);
+    }
+
+    /// Folding VANISHED ranges holds one range list beside the merged
+    /// set, never a copy of each: 32 lines of distinct UIDs, 3.2 million
+    /// ranges of 12 bytes, merge within three times the set they make.
+    #[test]
+    fn a_vanished_fold_holds_one_range_list_beside_the_set() {
+        let lines: Vec<String> = (0..32u32)
+            .map(|line| {
+                let uids: Vec<String> = (0..100_000u32)
+                    .map(|i| ((line * 100_000 + i) * 2 + 1).to_string())
+                    .collect();
+                format!("* VANISHED (EARLIER) {}\r\n", uids.join(","))
+            })
+            .collect();
+        let final_bytes = 32 * 100_000 * std::mem::size_of::<RangeInclusive<u32>>();
+        let mark = crate::testing::HeapMark::start();
+        let mut reader = SelectReader::default();
+        feed(&mut reader, &["* OK [UIDVALIDITY 3] ok\r\n"]);
+        for line in &lines {
+            feed(&mut reader, &[line]);
+        }
+        let selected = reader.finish().unwrap();
+        let peak = mark.peak();
+        eprintln!("vanished fold: peak {peak} bytes for a set of {final_bytes}");
+        assert_eq!(selected.vanished.ranges().len(), 3_200_000);
+        assert!(
+            peak < 3 * final_bytes,
+            "peak {peak} bytes for a set of {final_bytes}"
+        );
+        drop(selected);
     }
 
     #[test]

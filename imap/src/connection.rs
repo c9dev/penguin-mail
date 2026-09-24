@@ -1716,6 +1716,41 @@ mod tests {
         );
     }
 
+    /// A SELECT and a SEARCH run on 4 MiB each, so a literal of 5 MiB
+    /// announced in either answer is refused at its announcement, where
+    /// a flags fetch would take it.
+    #[tokio::test]
+    async fn select_and_search_refuse_a_literal_past_their_own_budgets() {
+        let announce = || vec!["* 1 FETCH (UID 1 BODY[] {5242880}".to_string(), "abc".into()];
+        let in_select = pipe(
+            GREETING,
+            server(ALL, log(), move |command| match command {
+                c if c.starts_with("SELECT") => announce(),
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(in_select, false, &ann()).await.unwrap();
+        let answer = tokio::time::timeout(Duration::from_secs(5), conn.select("INBOX", None)).await;
+        assert!(
+            matches!(answer, Ok(Err(ImapError::Protocol(_)))),
+            "{answer:?}"
+        );
+        let in_search = pipe(
+            GREETING,
+            server(ALL, log(), move |command| match command {
+                c if c.starts_with("SELECT") => selected(),
+                c if c.starts_with("UID SEARCH") => announce(),
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(in_search, false, &ann()).await.unwrap();
+        let answer = tokio::time::timeout(Duration::from_secs(5), conn.search("INBOX", "ALL")).await;
+        assert!(
+            matches!(answer, Ok(Err(ImapError::Protocol(_)))),
+            "{answer:?}"
+        );
+    }
+
     #[tokio::test]
     async fn idle_refuses_a_literal_past_its_small_budget() {
         let stream = pipe(

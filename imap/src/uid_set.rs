@@ -27,16 +27,7 @@ impl UidSet {
     /// either way round. It sorts once and merges once, so a server's
     /// VANISHED of 100,000 ranges builds in about 0.1 s in a debug build.
     pub fn from_ranges(ranges: impl IntoIterator<Item = RangeInclusive<u32>>) -> Self {
-        let mut all: Vec<RangeInclusive<u32>> = ranges
-            .into_iter()
-            .filter_map(|range| normal(*range.start(), *range.end()))
-            .collect();
-        all.sort_unstable_by_key(|range| *range.start());
-        let mut set = UidSet::new();
-        for range in all {
-            set.push(range);
-        }
-        set
+        UidSet::from(ranges.into_iter().collect::<Vec<_>>())
     }
 
     /// `from` to `to`, both included.
@@ -79,19 +70,6 @@ impl UidSet {
         self.ranges.splice(first..last, [merged]);
     }
 
-    /// Appends `range`, which starts at or after the last range's start,
-    /// merging it into the last range when they touch.
-    fn push(&mut self, range: RangeInclusive<u32>) {
-        if let Some(last) = self.ranges.last_mut()
-            && *range.start() <= last.end().saturating_add(1)
-        {
-            let end = (*last.end()).max(*range.end());
-            *last = *last.start()..=end;
-            return;
-        }
-        self.ranges.push(range);
-    }
-
     pub fn is_empty(&self) -> bool {
         self.ranges.is_empty()
     }
@@ -127,6 +105,40 @@ impl UidSet {
 fn normal(from: u32, to: u32) -> Option<RangeInclusive<u32>> {
     let (from, to) = (from.min(to).max(1), from.max(to));
     (to > 0).then_some(from..=to)
+}
+
+/// The set of an owned list of ranges, in any order, each read either way
+/// round. The list is sorted and merged in place and its spare capacity
+/// given back, so building a set of millions of ranges holds that one
+/// list and nothing beside it.
+impl From<Vec<RangeInclusive<u32>>> for UidSet {
+    fn from(mut ranges: Vec<RangeInclusive<u32>>) -> Self {
+        ranges.retain_mut(|range| match normal(*range.start(), *range.end()) {
+            Some(normal) => {
+                *range = normal;
+                true
+            }
+            None => false,
+        });
+        ranges.sort_unstable_by_key(|range| *range.start());
+        // Each range either extends the last one kept or becomes the next
+        // kept one; `kept` never passes the range being read.
+        let mut kept = 0;
+        for i in 0..ranges.len() {
+            let range = ranges[i].clone();
+            if kept > 0 && *range.start() <= ranges[kept - 1].end().saturating_add(1) {
+                let last = &mut ranges[kept - 1];
+                let end = (*last.end()).max(*range.end());
+                *last = *last.start()..=end;
+            } else {
+                ranges[kept] = range;
+                kept += 1;
+            }
+        }
+        ranges.truncate(kept);
+        ranges.shrink_to_fit();
+        UidSet { ranges }
+    }
 }
 
 impl fmt::Display for UidSet {
@@ -238,6 +250,20 @@ mod tests {
         let backwards = std::ops::RangeInclusive::new(30, 25);
         let set = UidSet::from_ranges([9..=12, 1..=3, 4..=4, 11..=20, 0..=0, backwards]);
         assert_eq!(set.to_string(), "1:4,9:20,25:30");
+    }
+
+    /// A set built from an owned list sorts and merges it in that list,
+    /// so the peak is the list itself, and gives the spare capacity back.
+    #[test]
+    fn a_range_list_becomes_a_set_in_place_with_no_spare_capacity() {
+        let backwards = std::ops::RangeInclusive::new(30, 25);
+        let mut ranges = Vec::with_capacity(1_000);
+        ranges.extend([9..=12, 1..=3, 4..=4, 11..=20, 0..=0, backwards]);
+        let set = UidSet::from(ranges);
+        assert_eq!(set.to_string(), "1:4,9:20,25:30");
+        assert_eq!(set.ranges.capacity(), 3);
+        let big = UidSet::from_ranges((0..100_000u32).map(|i| i * 3..=i * 3));
+        assert_eq!(big.ranges.capacity(), big.ranges.len());
     }
 
     /// A set of 100,000 ranges builds and answers in under a second

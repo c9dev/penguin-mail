@@ -18,6 +18,8 @@ mod error;
 mod guard;
 mod logging;
 mod login;
+#[cfg(test)]
+mod measure;
 #[cfg_attr(
     not(test),
     expect(dead_code, reason = "the connections read their answers through these")

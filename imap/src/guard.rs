@@ -14,9 +14,9 @@ use std::pin::Pin;
 use std::task::{Context, Poll, ready};
 
 use mailrs_mime::MAX_DEPTH;
-
-pub(crate) use crate::parse::MAX_SEARCH_UIDS;
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
+
+use crate::parse::MAX_SEARCH_UIDS;
 
 /// The deepest nesting a response may reach. A structure this crate keeps
 /// whole, [`MAX_DEPTH`] parts deep, nests one level per part, one for the
@@ -37,9 +37,26 @@ pub(crate) const MAX_LITERAL: u64 = 128 << 20;
 pub(crate) const MAX_LINE: usize = 1 << 20;
 
 /// What one command may bring back in all, literals included: every
-/// command but a body fetch and IDLE, such as signing in or fetching a
-/// window of headers.
+/// command but SELECT, SEARCH, a body fetch and IDLE, such as signing in
+/// or fetching a window of headers.
 pub(crate) const COMMAND_BYTES: u64 = 32 << 20;
+
+/// What a SELECT may bring back, QRESYNC's VANISHED and changed flags
+/// included. async-imap grows its buffer 4 KiB a read and parses all of
+/// it again after each, so a hostile answer costs CPU in the square of
+/// its size: 4 MiB of VANISHED lines cost 5 s in a release build, where
+/// 32 MiB cost 42 s. A mailbox whose changes since the last sync pass it
+/// (about 78,000 changed messages, or a tenth of 200,000 expunged and
+/// 75,000 changed) fails the SELECT with a protocol error, and the caller
+/// selects it again without QRESYNC.
+pub(crate) const SELECT_BYTES: u64 = 4 << 20;
+
+/// What a SEARCH may bring back, for the same reason as [`SELECT_BYTES`]:
+/// one 4 MiB line costs 10 s of parsing in a release build, where 32 MiB
+/// cost 222 s. The caller searches in UID ranges of at most 50,000, about
+/// 400 KB a line and 0.03 s, so a real answer fits; every UID of a
+/// 200,000-message mailbox is 1.3 MB and 0.5 s.
+pub(crate) const SEARCH_BYTES: u64 = 4 << 20;
 
 /// What a command fetching one body section may bring back: the section
 /// and the line around it.
@@ -54,8 +71,7 @@ pub(crate) const IDLE_BYTES: u64 = 4 << 20;
 
 /// The words that open an answer listing UIDs on one line, which may run
 /// past [`MAX_LINE`]: a mailbox of 200,000 messages lists in about
-/// 1.3 MB. The command's byte budget bounds it instead; 32 MiB holds about
-/// four million UIDs.
+/// 1.3 MB. The command's byte budget, [`SEARCH_BYTES`], bounds it instead.
 const SEARCH: [&[u8]; 2] = [b"SEARCH", b"ESEARCH"];
 
 /// Words besides UIDs an ESEARCH answer may carry: its tag, UID, MIN,
@@ -149,8 +165,10 @@ struct Scan {
     /// Bytes of a literal still to come.
     literal: u64,
     /// Spaces so far in a SEARCH or ESEARCH answer, one before each UID.
-    /// imap-proto collects every UID of the line in one list, so the
-    /// guard stops the line at [`MAX_SEARCH_UIDS`] before it is parsed.
+    /// imap-proto collects every UID of the line in one list, and
+    /// async-imap parses the line so far on every read, so the guard
+    /// fails the read that passes [`MAX_SEARCH_UIDS`] plus
+    /// [`SEARCH_WORDS`] spaces, and the list never grows past that.
     words: usize,
     refused: Option<&'static str>,
 }
