@@ -186,21 +186,44 @@ menus_seen = set()
 
 def record(opener):
     """Adds the items of every menu showing to `found`, once for each
-    distinct menu, and gives back the items that open a submenu."""
-    submenus = []
+    distinct menu, and gives back the items that open a submenu.
+
+    GTK rebuilds a menu's items when its model changes, so an item read a
+    moment ago can be gone from the bus. A read that meets one starts
+    again on the rebuilt menu, and nothing is recorded until a read gets
+    through whole: skipping the menu could hide an item with no name."""
+    for _ in range(3):
+        try:
+            read = read_menus()
+        except Exception:
+            time.sleep(0.3)
+            continue
+        submenus = []
+        for said, opens in read:
+            if said in menus_seen:
+                continue
+            menus_seen.add(said)
+            for index, (role, name) in enumerate(said):
+                found.append((role, name, "menu from %s > %s %d" % (opener, role, index + 1)))
+            submenus += opens
+        return submenus
+    print("A menu from %s kept changing while it was read." % opener, file=sys.stderr)
+    sys.exit(2)
+
+
+def read_menus():
+    """Every menu showing, as its items' roles and names and the names of
+    the items that open a submenu."""
+    read = []
     for menu in showing_menus():
         items = [n for n in nodes(menu) if n.get_role_name() in ACTS]
         said = tuple((n.get_role_name(), (n.get_name() or "").strip()) for n in items)
-        if said in menus_seen:
-            continue
-        menus_seen.add(said)
-        for index, (role, name) in enumerate(said):
-            found.append((role, name, "menu from %s > %s %d" % (opener, role, index + 1)))
-        submenus += [
+        opens = [
             name for n, (_, name) in zip(items, said)
             if name and n.get_state_set().contains(Atspi.StateType.HAS_POPUP)
         ]
-    return submenus
+        read.append((said, opens))
+    return read
 
 
 def close(keys):
