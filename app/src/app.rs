@@ -1198,15 +1198,19 @@ impl App {
 fn api_off(err: &anyhow::Error) -> Option<(String, String)> {
     use mailrs_gmail::GmailError;
     use mailrs_sync::{BackendError, SyncError};
-    let gmail = match err.downcast_ref::<SyncError>() {
-        Some(SyncError::Backend(BackendError::Gmail(gmail))) => gmail,
-        _ => err.downcast_ref::<GmailError>()?,
-    };
-    match gmail {
-        GmailError::ApiDisabled {
+    match err.downcast_ref::<SyncError>() {
+        Some(SyncError::Backend(BackendError::ApiDisabled {
             service,
             enable_url,
-        } => Some((service.clone(), enable_url.clone())),
-        _ => None,
+        })) => Some((service.clone(), enable_url.clone())),
+        // A call that went to Google without the sync crate in between,
+        // such as signing in, still answers in Gmail's own type.
+        _ => match err.downcast_ref::<GmailError>()? {
+            GmailError::ApiDisabled {
+                service,
+                enable_url,
+            } => Some((service.clone(), enable_url.clone())),
+            _ => None,
+        },
     }
 }

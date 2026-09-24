@@ -6,7 +6,7 @@
 //! Without it each one answers `Permitted::NeedsPermission`, as the
 //! settings calls do, and the caller asks the user for it. A Google Cloud
 //! project with the Calendar API switched off answers
-//! `GmailError::ApiDisabled` inside `SyncError::Backend` instead, since no
+//! `BackendError::ApiDisabled` inside `SyncError::Backend` instead, since no
 //! permission would help there. An account whose provider has no calendar
 //! answers `BackendError::Unsupported`.
 

@@ -183,38 +183,38 @@ msgstr "Add an Anthropic API key in Preferences."
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr "Claude Code is not installed. Install it and sign in, then try again."
 
-#: app/src/assistant/run.rs:911
+#: app/src/assistant/run.rs:910
 msgid "Move {count} conversation to the Trash?"
 msgid_plural "Move {count} conversations to the Trash?"
 msgstr[0] "Move {count} conversation to the Trash?"
 msgstr[1] "Move {count} conversations to the Trash?"
 
-#: app/src/assistant/run.rs:1002
+#: app/src/assistant/run.rs:1001
 msgid "Don't Allow labels only the mail in accounts that have the label already."
 msgstr "Don't Allow labels only the mail in accounts that have the label already."
 
-#: app/src/assistant/run.rs:1034
+#: app/src/assistant/run.rs:1033
 msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr "Block {address}? Their future mail goes straight to the Trash."
 
-#: app/src/assistant/run.rs:1110 app/src/assistant/run/calendar.rs:178
+#: app/src/assistant/run.rs:1109 app/src/assistant/run/calendar.rs:178
 #: app/src/assistant/run/calendar.rs:525
 msgid "%a %-d %b"
 msgstr "%a %-d %b"
 
-#: app/src/assistant/run.rs:1116
+#: app/src/assistant/run.rs:1115
 msgid " from {first} to {last}"
 msgstr " from {first} to {last}"
 
-#: app/src/assistant/run.rs:1119
+#: app/src/assistant/run.rs:1118
 msgid " until {last}"
 msgstr " until {last}"
 
-#: app/src/assistant/run.rs:1120
+#: app/src/assistant/run.rs:1119
 msgid " from {first}"
 msgstr " from {first}"
 
-#: app/src/assistant/run.rs:1126
+#: app/src/assistant/run.rs:1125
 msgid ""
 "Turn on the automatic reply for {account}{dates}?\n"
 "\n"
@@ -226,19 +226,19 @@ msgstr ""
 "“{subject}”\n"
 "{body}"
 
-#: app/src/assistant/run.rs:1137
+#: app/src/assistant/run.rs:1136
 msgid "Turn off the automatic reply for {account}?"
 msgstr "Turn off the automatic reply for {account}?"
 
-#: app/src/assistant/run.rs:1219
+#: app/src/assistant/run.rs:1218
 msgid "Create a Gmail rule for {account}: {when} → {then}?"
 msgstr "Create a Gmail rule for {account}: {when} → {then}?"
 
-#: app/src/assistant/run.rs:1259
+#: app/src/assistant/run.rs:1258
 msgid "Delete a Gmail rule from {account}?"
 msgstr "Delete a Gmail rule from {account}?"
 
-#: app/src/assistant/run.rs:1381
+#: app/src/assistant/run.rs:1380
 msgid "Move mail from {sender} to {category} in {account}, and add a Gmail rule for their future mail?"
 msgstr "Move mail from {sender} to {category} in {account}, and add a Gmail rule for their future mail?"
 
@@ -839,7 +839,7 @@ msgstr "Goes out signed"
 msgid "Goes out unsigned"
 msgstr "Goes out unsigned"
 
-#: app/src/assistant/sources/mcp/mod.rs:193
+#: app/src/assistant/sources/mcp/mod.rs:154
 msgid "Run {tool} on the MCP server {server}?"
 msgstr "Run {tool} on the MCP server {server}?"
 
@@ -1800,176 +1800,176 @@ msgstr "To {person}"
 msgid "In {label}"
 msgstr "In {label}"
 
-#: app/src/settings/mod.rs:164 app/src/settings/mod.rs:339
-#: app/src/settings/mod.rs:614 app/src/ui/assistant_mcp_prefs.rs:184
+#: app/src/settings/mod.rs:165 app/src/settings/mod.rs:340
+#: app/src/settings/mod.rs:615 app/src/ui/assistant_mcp_prefs.rs:184
 msgid "Off"
 msgstr "Off"
 
-#: app/src/settings/mod.rs:165
+#: app/src/settings/mod.rs:166
 msgid "Local server"
 msgstr "Local server"
 
-#: app/src/settings/mod.rs:166
+#: app/src/settings/mod.rs:167
 msgid "Anthropic API"
 msgstr "Anthropic API"
 
-#: app/src/settings/mod.rs:167
+#: app/src/settings/mod.rs:168
 msgid "Claude subscription"
 msgstr "Claude subscription"
 
-#: app/src/settings/mod.rs:192 app/src/ui/assistant.rs:99
+#: app/src/settings/mod.rs:193 app/src/ui/assistant.rs:99
 msgid "Assistant"
 msgstr "Assistant"
 
-#: app/src/settings/mod.rs:193
+#: app/src/settings/mod.rs:194
 msgid "Translation"
 msgstr "Translation"
 
 #. The assistant's running label says "Unsubscribing" too, an"
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:197
+#: app/src/settings/mod.rs:198
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr "Unsubscribing"
 
-#: app/src/settings/mod.rs:203
+#: app/src/settings/mod.rs:204
 msgid "Answers questions and acts on your mail"
 msgstr "Answers questions and acts on your mail"
 
-#: app/src/settings/mod.rs:204
+#: app/src/settings/mod.rs:205
 msgid "Translates a message when you ask"
 msgstr "Translates a message when you ask"
 
-#: app/src/settings/mod.rs:206
+#: app/src/settings/mod.rs:207
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr "Reads a newsletter's unsubscribe page when the rules cannot"
 
-#: app/src/settings/mod.rs:244
+#: app/src/settings/mod.rs:245
 msgid "Same as the Assistant"
 msgstr "Same as the Assistant"
 
-#: app/src/settings/mod.rs:340
+#: app/src/settings/mod.rs:341
 msgid "Claude's own only"
 msgstr "Claude's own only"
 
-#: app/src/settings/mod.rs:341
+#: app/src/settings/mod.rs:342
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:342
+#: app/src/settings/mod.rs:343
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:473
+#: app/src/settings/mod.rs:474
 msgid "Rich text"
 msgstr "Rich text"
 
-#: app/src/settings/mod.rs:474
+#: app/src/settings/mod.rs:475
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:521
+#: app/src/settings/mod.rs:522
 msgid "When opened"
 msgstr "When opened"
 
-#: app/src/settings/mod.rs:522
+#: app/src/settings/mod.rs:523
 msgid "After 2 seconds"
 msgstr "After 2 seconds"
 
-#: app/src/settings/mod.rs:523
+#: app/src/settings/mod.rs:524
 msgid "Only when I choose"
 msgstr "Only when I choose"
 
-#: app/src/settings/mod.rs:539
+#: app/src/settings/mod.rs:540
 msgid "Ask each time"
 msgstr "Ask each time"
 
-#: app/src/settings/mod.rs:540
+#: app/src/settings/mod.rs:541
 msgid "Always load"
 msgstr "Always load"
 
-#: app/src/settings/mod.rs:574
+#: app/src/settings/mod.rs:575
 msgid "Small"
 msgstr "Small"
 
-#: app/src/settings/mod.rs:575
+#: app/src/settings/mod.rs:576
 msgid "Default"
 msgstr "Default"
 
-#: app/src/settings/mod.rs:576
+#: app/src/settings/mod.rs:577
 msgid "Large"
 msgstr "Large"
 
-#: app/src/settings/mod.rs:577
+#: app/src/settings/mod.rs:578
 msgid "Larger"
 msgstr "Larger"
 
-#: app/src/settings/mod.rs:615
+#: app/src/settings/mod.rs:616
 msgid "5 seconds"
 msgstr "5 seconds"
 
-#: app/src/settings/mod.rs:616
+#: app/src/settings/mod.rs:617
 msgid "10 seconds"
 msgstr "10 seconds"
 
-#: app/src/settings/mod.rs:617
+#: app/src/settings/mod.rs:618
 msgid "20 seconds"
 msgstr "20 seconds"
 
-#: app/src/settings/mod.rs:618
+#: app/src/settings/mod.rs:619
 msgid "30 seconds"
 msgstr "30 seconds"
 
-#: app/src/settings/mod.rs:635
+#: app/src/settings/mod.rs:636
 msgid "Follow system"
 msgstr "Follow system"
 
-#: app/src/settings/mod.rs:636
+#: app/src/settings/mod.rs:637
 msgid "Light"
 msgstr "Light"
 
-#: app/src/settings/mod.rs:637
+#: app/src/settings/mod.rs:638
 msgid "Dark"
 msgstr "Dark"
 
-#: app/src/settings/mod.rs:647
+#: app/src/settings/mod.rs:648
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "Every second"
 msgstr[1] "Every {count} seconds"
 
-#: app/src/settings/mod.rs:655
+#: app/src/settings/mod.rs:656
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "Every minute"
 msgstr[1] "Every {count} minutes"
 
-#: app/src/settings/mod.rs:672
+#: app/src/settings/mod.rs:673
 msgid "2 weeks"
 msgstr "2 weeks"
 
-#: app/src/settings/mod.rs:673
+#: app/src/settings/mod.rs:674
 msgid "30 days"
 msgstr "30 days"
 
-#: app/src/settings/mod.rs:674
+#: app/src/settings/mod.rs:675
 msgid "90 days"
 msgstr "90 days"
 
-#: app/src/settings/mod.rs:675
+#: app/src/settings/mod.rs:676
 msgid "1 year"
 msgstr "1 year"
 
-#: app/src/settings/mod.rs:682
+#: app/src/settings/mod.rs:683
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:683
+#: app/src/settings/mod.rs:684
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:684
+#: app/src/settings/mod.rs:685
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -5917,15 +5917,15 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] "{accounts} will get a new label."
 msgstr[1] "{accounts} will get new labels."
 
-#: sync/src/error.rs:104
+#: sync/src/error.rs:116
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr "Gmail keeps “{name}” for its own label. Choose another name."
 
-#: sync/src/error.rs:112
+#: sync/src/error.rs:124
 msgid "{host} refused the request to unsubscribe (HTTP {status})"
 msgstr "{host} refused the request to unsubscribe (HTTP {status})"
 
-#: sync/src/error.rs:116
+#: sync/src/error.rs:128
 msgid "could not reach {host}"
 msgstr "could not reach {host}"
 

@@ -22,7 +22,7 @@ use std::sync::{Arc, Mutex};
 
 use mailrs_domain::invitation::{self, Answer, Invitation, Method, Scope, When};
 use mailrs_domain::{AccountId, Address, EpochMillis};
-use mailrs_gmail::{Answered, GmailError};
+use mailrs_gmail::Answered;
 use mailrs_store::{Db, invitations as store};
 
 use crate::{AccountSync, Accounts, BackendError, CalendarService, SyncError};
@@ -197,7 +197,7 @@ impl<A: Accounts> Invitations<A> {
             Ok(series) => series,
             Err(
                 BackendError::NeedsPermission
-                | BackendError::Gmail(GmailError::ApiDisabled { .. }),
+                | BackendError::ApiDisabled { .. },
             ) => None,
             Err(err) => return Err(err.into()),
         };
@@ -307,10 +307,10 @@ impl<A: Accounts> Invitations<A> {
                 // by mail and the caller offers to ask for the permission,
                 // which keeps the user's own calendar in step from here on.
                 Err(BackendError::NeedsPermission) => sent.needs_permission = true,
-                Err(BackendError::Gmail(GmailError::ApiDisabled {
+                Err(BackendError::ApiDisabled {
                     service,
                     enable_url,
-                })) => {
+                }) => {
                     sent.api_off = Some(ApiOff {
                         service,
                         enable_url,

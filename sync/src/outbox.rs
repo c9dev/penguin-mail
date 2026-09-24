@@ -17,6 +17,7 @@
 use std::sync::Arc;
 
 use mailrs_domain::{AccountId, EpochMillis, Target};
+use mailrs_gmail::GmailError;
 use mailrs_store::Db;
 use mailrs_store::outbox::{self, Queued};
 
@@ -95,7 +96,7 @@ impl<A: Accounts> Outbox<A> {
                 self.release(message.id).await?;
                 Ok(Posted::Waiting(message.id))
             }
-            Err(err) if err.worth_retrying() => {
+            Err(err) if worth_retrying(&err) => {
                 message.attempts += 1;
                 Ok(Posted::Waiting(self.keep(message, &err).await?.id))
             }
@@ -127,7 +128,7 @@ impl<A: Accounts> Outbox<A> {
             }
             // Nothing has failed yet: the message keeps its hour and goes
             // out from these bytes, so it stays in Send Later.
-            Err(err) if err.worth_retrying() => {
+            Err(err) if worth_retrying(&err) => {
                 tracing::info!(error = %err, "scheduled here; Gmail holds no draft for it yet");
             }
             Err(err) => return Ok(Posted::Refused(err.to_string())),
@@ -169,7 +170,7 @@ impl<A: Accounts> Outbox<A> {
                     drained.sent.push(message);
                 }
                 Err(err) => {
-                    message.attempts = if err.worth_retrying() {
+                    message.attempts = if worth_retrying(&err) {
                         message.attempts + 1
                     } else {
                         MOST_TRIES
@@ -416,4 +417,74 @@ fn names(target: &Target, item: &Queued) -> bool {
         && (outbox_id(&target.thread_id) == Some(item.id)
             || item.thread_id.as_deref() == Some(target.thread_id.as_str())
             || (item.message_id.is_some() && target.message_id == item.message_id))
+}
+
+/// Whether a message that would not go out is worth trying again. No
+/// network, a 5xx and a rate limit are; a refused recipient, a message
+/// over Gmail's size limit and a revoked token are not, because the
+/// same bytes fail the same way however long the outbox waits, and the
+/// person is the only one who can fix any of them.
+fn worth_retrying(err: &SyncError) -> bool {
+    match err {
+        // Gmail answers a request that took too long with 408 and
+        // nothing else; every other 4xx is about the message.
+        SyncError::Backend(BackendError::Gmail(GmailError::Http { status: 408, .. })) => true,
+        SyncError::Backend(err) => err.is_transient(),
+        // This computer's own trouble, not the message's, and it
+        // usually clears on its own.
+        SyncError::Store(_) => true,
+        // The account is still connecting.
+        SyncError::UnknownAccount(_) => true,
+        SyncError::NoLabel(_) | SyncError::ReservedLabel(_) => false,
+        // The bytes could not be written at all, so the same draft
+        // would fail the same way on every try.
+        SyncError::Mime(_) => false,
+        SyncError::NotAnAddress(_) => false,
+        // The outbox sends nothing to a list's server.
+        SyncError::OneClick(_) => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use super::*;
+
+    fn http(status: u16) -> SyncError {
+        SyncError::from(GmailError::Http {
+            status,
+            body: String::new(),
+        })
+    }
+
+    #[test]
+    fn a_message_waits_out_no_network_a_rate_limit_and_gmail_falling_over() {
+        for err in [
+            SyncError::from(GmailError::Network("connection refused".into())),
+            SyncError::from(GmailError::RateLimited {
+                retry_after: Some(Duration::from_secs(3)),
+            }),
+            http(500),
+            http(503),
+            http(408),
+            SyncError::UnknownAccount(1),
+        ] {
+            assert!(worth_retrying(&err), "{err} is worth another try");
+        }
+    }
+
+    #[test]
+    fn a_refused_recipient_an_oversized_message_and_a_revoked_token_go_to_the_person() {
+        for err in [
+            http(400),
+            http(413),
+            http(403),
+            SyncError::from(GmailError::NeedsReauth),
+            SyncError::from(GmailError::MissingScope),
+            SyncError::from(GmailError::NotFound),
+        ] {
+            assert!(!worth_retrying(&err), "{err} needs the person");
+        }
+    }
 }
