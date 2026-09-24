@@ -16,7 +16,8 @@ impl MainWindow {
             return;
         };
         let weak = Rc::downgrade(self);
-        crate::ui::hide_my_email::present(&app, &self.window, account_id, move |email| {
+        let offers = |id| self.offers(id);
+        crate::ui::hide_my_email::present(&app, &self.window, account_id, offers, move |email| {
             if let Some(win) = weak.upgrade() {
                 win.grant(email, Permission::Settings);
             }

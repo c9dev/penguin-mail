@@ -7,7 +7,7 @@ use std::rc::Rc;
 use adw::prelude::*;
 use gtk::glib;
 use mailrs_domain::{Account, AccountId};
-use mailrs_sync::Permitted;
+use mailrs_sync::{Offers, Permitted};
 use mailrs_sync::hidden::HiddenAddress;
 
 use crate::app::App;
@@ -26,6 +26,13 @@ fn about() -> String {
     )
 }
 
+/// The accounts that can take a hidden address. Each address lives in
+/// rules on the server, one that labels its mail and one that sends it to
+/// the Trash once it is turned off, so an account without rules gets none.
+fn with_rules(accounts: Vec<Account>, offers: impl Fn(AccountId) -> Offers) -> Vec<Account> {
+    accounts.into_iter().filter(|a| offers(a.id).rules).collect()
+}
+
 struct Dialog {
     app: Rc<App>,
     accounts: Vec<Account>,
@@ -42,12 +49,14 @@ struct Dialog {
     dialog: adw::Dialog,
 }
 
-/// Shows the Hide My Email addresses. `grant` runs with an account address
-/// when Gmail wants the settings permission first.
+/// Shows the Hide My Email addresses. New ones go to the accounts whose
+/// server `offers` rules. `grant` runs with an account address when Gmail
+/// wants the settings permission first.
 pub fn present(
     app: &Rc<App>,
     parent: &impl IsA<gtk::Widget>,
     preselect: Option<AccountId>,
+    offers: impl Fn(AccountId) -> Offers,
     grant: impl Fn(String) + 'static,
 ) {
     let stack = gtk::Stack::builder()
@@ -85,7 +94,7 @@ pub fn present(
         .build();
     let this = Rc::new(Dialog {
         app: Rc::clone(app),
-        accounts: app.accounts(),
+        accounts: with_rules(app.accounts(), offers),
         preselect,
         nav,
         home,
@@ -467,5 +476,39 @@ impl Dialog {
             .child(&toolbar)
             .build();
         self.nav.replace(&[self.home.clone(), page]);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use mailrs_domain::{Account, AccountState, Provider};
+    use mailrs_sync::Offers;
+
+    use super::with_rules;
+
+    fn account(id: i64, email: &str) -> Account {
+        Account {
+            id,
+            email: email.into(),
+            state: AccountState::Ok,
+            provider: Provider::Gmail,
+        }
+    }
+
+    #[test]
+    fn new_addresses_go_only_to_accounts_with_rules() {
+        let offers = |id| match id {
+            2 => Offers {
+                rules: false,
+                ..Offers::EVERYTHING
+            },
+            _ => Offers::EVERYTHING,
+        };
+        let accounts = vec![account(1, "a@gmail.com"), account(2, "b@example.com")];
+        let kept: Vec<String> = with_rules(accounts, offers)
+            .into_iter()
+            .map(|a| a.email)
+            .collect();
+        assert_eq!(kept, ["a@gmail.com"]);
     }
 }
