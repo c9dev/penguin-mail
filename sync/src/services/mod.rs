@@ -148,6 +148,15 @@ pub enum RemoteChange {
         uidvalidity: u32,
         uids: UidSet,
     },
+    /// The server renumbered `mailbox`, as a new UIDVALIDITY says, and
+    /// every name the store holds for its messages is void. The engine
+    /// lists that mailbox again, whose UIDs now belong to `uidvalidity`,
+    /// before the other changes apply; the rest of the account is as it
+    /// was.
+    StateLost {
+        mailbox: String,
+        uidvalidity: u32,
+    },
 }
 
 /// What the server calls one message, with its thread, as a listing or a

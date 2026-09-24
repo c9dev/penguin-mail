@@ -95,11 +95,17 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             _ => None,
         };
         let selected = self.select_for_feed(mailbox, since).await?;
-        if selected.uidvalidity != kept.uidvalidity {
-            // Every UID the store holds for the mailbox is void.
-            return Err(BackendError::StateLost);
-        }
         let top = self.top_uid(mailbox, &selected).await?;
+        if selected.uidvalidity != kept.uidvalidity {
+            // Every UID the store holds for this mailbox is void, and no
+            // other mailbox's. The engine lists this one again, and its
+            // state starts over from here.
+            changes.push(RemoteChange::StateLost {
+                mailbox: mailbox.to_string(),
+                uidvalidity: selected.uidvalidity,
+            });
+            return Ok(Kept::of(&selected, top));
+        }
         // The messages met before this look; the ones above arrive as new
         // mail, flags and all.
         let met = (1, top.min(kept.uidnext.saturating_sub(1)));

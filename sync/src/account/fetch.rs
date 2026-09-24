@@ -99,6 +99,17 @@ impl Placing {
         }
     }
 
+    /// Hands what the fetch found for `from` to the message the store keeps
+    /// as `to`, for a relisting that matched a message it already held.
+    pub(super) fn rename(&mut self, from: &str, to: &str) {
+        if let Some(links) = self.links.remove(from) {
+            self.links.insert(to.to_string(), links);
+        }
+        if let Some(at) = self.located.remove(from) {
+            self.located.insert(to.to_string(), at);
+        }
+    }
+
     /// Records where the server said each message sits. A message the
     /// store does not hold gets no ref.
     pub(super) fn write_refs(

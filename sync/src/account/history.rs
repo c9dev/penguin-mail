@@ -3,18 +3,19 @@
 
 use std::collections::{BTreeSet, HashMap};
 
-use mailrs_domain::{ChangeEvent, Membership, MessageMeta, Role};
+use mailrs_domain::{ChangeEvent, EpochMillis, Membership, MessageMeta, Role};
 use mailrs_store::messages::Change;
 use mailrs_store::{accounts, labels, messages, remote_refs};
 
 use super::AccountSync;
-use super::fetch::Placing;
+use super::fetch::{Placing, store_fetched};
 use crate::{BackendError, MailBackend, RemoteChange, SyncError, SyncState, Want};
 
 impl AccountSync {
     /// Applies every change since the stored sync state in one transaction,
     /// then stores the new state. Bootstraps instead when there is no state
-    /// yet, and lists the mail again when the server has lost its place.
+    /// yet, and lists the mail again when the server has lost its place. A
+    /// mailbox the server renumbered is listed again first, alone.
     pub async fn incremental(&self) -> Result<(), SyncError> {
         let account_id = self.account_id;
         let cursor = self
@@ -40,7 +41,19 @@ impl AccountSync {
             return Ok(());
         }
 
-        let changes = self.changes_as_stored(found.changes).await?;
+        let mut changes = self.changes_as_stored(found.changes).await?;
+        // The state is written only after the batch below, so a relisting
+        // that fails here runs again at the next look.
+        for change in &changes {
+            if let RemoteChange::StateLost {
+                mailbox,
+                uidvalidity,
+            } = change
+            {
+                self.relist_mailbox(mailbox, *uidvalidity).await?;
+            }
+        }
+        changes.retain(|change| !matches!(change, RemoteChange::StateLost { .. }));
         let (fetched, placing) = self.fetch_for_history(&changes).await?;
         let mail = &self.services.mail;
         let named_mailboxes: BTreeSet<String> = changes
@@ -143,6 +156,8 @@ impl AccountSync {
                                     .map(|message_id| Change::Delete { message_id }),
                             );
                         }
+                        // Relisted above.
+                        RemoteChange::StateLost { .. } => {}
                     }
                 }
                 let touched = messages::apply(c, account_id, &batch)?.threads;
@@ -170,6 +185,106 @@ impl AccountSync {
                 message_ids: new_mail,
             });
         }
+        Ok(())
+    }
+
+    /// Lists `mailbox` again after the server renumbered it, its UIDs now
+    /// under `uidvalidity`. A listed message the store already held,
+    /// matched by its `Message-ID` and its date, keeps its id, its thread
+    /// and its cached body and takes its new location. A stored message
+    /// the listing lacks is deleted, and the rest arrive as new mail does,
+    /// without a new-mail notice. The listing goes [`RELIST_BATCH`]
+    /// messages at a time, so what it holds stays one batch's metadata
+    /// whatever the mailbox's size; a batch matched and stored is not
+    /// matched again if a later one fails and the look runs again.
+    async fn relist_mailbox(&self, mailbox: &str, uidvalidity: u32) -> Result<(), SyncError> {
+        let account_id = self.account_id;
+        let listed = self
+            .services
+            .mail
+            .window_ids(self.window_days, Some(mailbox))
+            .await?;
+        let generation = self
+            .db
+            .read(move |c| Ok(accounts::sync_cursor(c, account_id)?.sync_gen))
+            .await?;
+        let (mut kept, mut touched) = (0, BTreeSet::new());
+        for batch in listed.chunks(RELIST_BATCH) {
+            let mut fetched = self
+                .fetch(batch.iter().cloned().map(Want::from).collect())
+                .await?;
+            let msgids: Vec<String> = fetched
+                .metas
+                .iter()
+                .filter_map(|m| m.rfc822_msgid.clone())
+                .collect();
+            let name = mailbox.to_string();
+            let held = self
+                .db
+                .read(move |c| {
+                    remote_refs::renumbered_by_message_id(c, account_id, &name, uidvalidity, &msgids)
+                })
+                .await?;
+            // Two stored messages can share a Message-ID and a date; each
+            // listed one takes one of them.
+            let mut by_key: HashMap<(String, EpochMillis), Vec<String>> = HashMap::new();
+            for (msgid, date, id) in held {
+                by_key.entry((msgid, date)).or_default().push(id);
+            }
+            for meta in &mut fetched.metas {
+                let Some(msgid) = meta.rfc822_msgid.clone() else {
+                    continue;
+                };
+                if let Some(old) = by_key.get_mut(&(msgid, meta.date)).and_then(Vec::pop) {
+                    fetched.placing.rename(&meta.id, &old);
+                    meta.id = old;
+                    kept += 1;
+                }
+            }
+            touched.extend(
+                self.db
+                    .write(move |c| {
+                        store_fetched(
+                            c,
+                            account_id,
+                            generation,
+                            &fetched.metas,
+                            &fetched.gone,
+                            &fetched.placing,
+                        )
+                    })
+                    .await?,
+            );
+        }
+        // What the listing matched now sits under `uidvalidity`; whatever
+        // still sits under another is gone.
+        let name = mailbox.to_string();
+        let gone = self
+            .db
+            .write(move |c| {
+                let gone = remote_refs::in_mailbox_where(c, account_id, &name, |v, _| {
+                    v != uidvalidity
+                })?;
+                let deletes: Vec<Change> = gone
+                    .iter()
+                    .map(|id| Change::Delete {
+                        message_id: id.clone(),
+                    })
+                    .collect();
+                let touched = messages::apply(c, account_id, &deletes)?.threads;
+                Ok((gone.len(), touched))
+            })
+            .await?;
+        touched.extend(gone.1);
+        tracing::info!(
+            account = account_id,
+            mailbox,
+            listed = listed.len(),
+            kept,
+            gone = gone.0,
+            "the server renumbered a mailbox; listed it again"
+        );
+        self.emit_threads(touched);
         Ok(())
     }
 
@@ -231,6 +346,9 @@ impl AccountSync {
         Ok((metas, fetched.placing))
     }
 }
+
+/// The most messages one step of a relisting fetches and matches.
+const RELIST_BATCH: usize = 500;
 
 /// Unread mail that someone else sent to the inbox.
 fn is_new_inbox_mail(meta: &MessageMeta) -> bool {

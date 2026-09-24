@@ -162,7 +162,9 @@ fn named_in(change: &RemoteChange) -> Option<&str> {
         | RemoteChange::Deleted { id }
         | RemoteChange::Gained { id, .. }
         | RemoteChange::Lost { id, .. } => Some(id),
-        RemoteChange::Vanished { .. } | RemoteChange::Holds { .. } => None,
+        RemoteChange::Vanished { .. }
+        | RemoteChange::Holds { .. }
+        | RemoteChange::StateLost { .. } => None,
     }
 }
 
@@ -193,9 +195,12 @@ fn change_as_stored(
             id: stored_id(&id, resolved)?,
             memberships,
         },
-        // These name UIDs, which the engine reads against the refs of the
-        // mailbox as they stand, so a message that moved away is not there.
-        set @ (RemoteChange::Vanished { .. } | RemoteChange::Holds { .. }) => set,
+        // These name UIDs or a whole mailbox, which the engine reads
+        // against the refs of the mailbox as they stand, so a message that
+        // moved away is not there.
+        whole @ (RemoteChange::Vanished { .. }
+        | RemoteChange::Holds { .. }
+        | RemoteChange::StateLost { .. }) => whole,
     })
 }
 

@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use mailrs_domain::{AccountId, Location};
+use mailrs_domain::{AccountId, EpochMillis, Location};
 use rusqlite::{Connection, params};
 
 use crate::Result;
@@ -133,6 +133,31 @@ pub fn in_mailbox_where(
     Ok(picked)
 }
 
+/// The stored messages located in `mailbox` under a UIDVALIDITY other
+/// than `uidvalidity` whose Message-ID is one of `message_ids`, each as
+/// its Message-ID, date and id. After the server renumbers a mailbox, a
+/// relisting matches what it lists against these; a message it matched
+/// already sits under `uidvalidity` and is left out.
+pub fn renumbered_by_message_id(
+    conn: &Connection,
+    account_id: AccountId,
+    mailbox: &str,
+    uidvalidity: u32,
+    message_ids: &[String],
+) -> Result<Vec<(String, EpochMillis, String)>> {
+    let mut stmt = conn.prepare_cached(
+        "SELECT m.rfc822_msgid, m.date, m.id FROM remote_refs r \
+         JOIN messages m ON m.account_id = r.account_id AND m.id = r.message_id \
+         WHERE r.account_id = ?1 AND r.mailbox = ?2 AND r.uidvalidity <> ?3 \
+         AND m.rfc822_msgid IN (SELECT value FROM json_each(?4))",
+    )?;
+    let rows = stmt.query_map(
+        params![account_id, mailbox, uidvalidity, json(message_ids)],
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+    )?;
+    Ok(rows.collect::<rusqlite::Result<_>>()?)
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -140,7 +165,9 @@ mod tests {
     use mailrs_domain::{AccountId, Location, Memberships, MessageMeta};
     use rusqlite::Connection;
 
-    use super::{Resolved, in_mailbox_where, locate, remotes_of, resolve};
+    use super::{
+        Resolved, in_mailbox_where, locate, remotes_of, renumbered_by_message_id, resolve,
+    };
     use crate::accounts;
     use crate::messages::{self, Change};
 
@@ -257,6 +284,48 @@ mod tests {
             .unwrap(),
             ["INBOX/6/3", "INBOX/7/2"]
         );
+    }
+
+    #[test]
+    fn a_renumbered_mailbox_offers_the_messages_located_under_its_old_uidvalidity() {
+        let (conn, account_id) = store(&[]);
+        let with_msgid = |id: &str, msgid: &str, date: i64| {
+            let mut meta = meta(account_id, id);
+            meta.rfc822_msgid = Some(msgid.into());
+            meta.date = date;
+            Change::Upsert {
+                meta: Box::new(meta),
+                generation: 1,
+            }
+        };
+        messages::apply(
+            &conn,
+            account_id,
+            &[
+                with_msgid("INBOX/7/1", "<a@x>", 10),
+                with_msgid("INBOX/7/2", "<b@x>", 20),
+                with_msgid("INBOX/7/3", "<a@x>", 30),
+                with_msgid("Sent/3/1", "<a@x>", 10),
+            ],
+        )
+        .unwrap();
+        locate(&conn, account_id, "INBOX/7/1", &at("INBOX", 7, 1)).unwrap();
+        locate(&conn, account_id, "INBOX/7/2", &at("INBOX", 7, 2)).unwrap();
+        // Already matched by an earlier relisting under UIDVALIDITY 8.
+        locate(&conn, account_id, "INBOX/7/3", &at("INBOX", 8, 2)).unwrap();
+        locate(&conn, account_id, "Sent/3/1", &at("Sent", 3, 1)).unwrap();
+
+        let mut held = renumbered_by_message_id(
+            &conn,
+            account_id,
+            "INBOX",
+            8,
+            &names(&["<a@x>", "<c@x>"]),
+        )
+        .unwrap();
+        held.sort();
+
+        assert_eq!(held, [("<a@x>".to_string(), 10, "INBOX/7/1".to_string())]);
     }
 
     #[test]

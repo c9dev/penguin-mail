@@ -3,6 +3,7 @@
 mod bodies;
 mod feed;
 mod mailboxes;
+mod uidvalidity;
 mod window;
 
 use std::sync::Arc;
