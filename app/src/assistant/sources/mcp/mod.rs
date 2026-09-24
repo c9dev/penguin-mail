@@ -10,15 +10,14 @@
 mod command;
 mod registry;
 
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use mailrs_ai::mcp::McpTool;
 use mailrs_ai::{BoxFuture, ToolOutcome, ToolSpec};
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 pub use command::{join_command_line, split_command_line};
+pub use crate::settings::mcp::{McpServer, McpTransport};
 pub use registry::{Status, registry};
 
 use super::Source;
@@ -29,51 +28,13 @@ const NAME_LIMIT: usize = 64;
 /// How much of a call's input the question shows.
 const SUMMARY_CHARS: usize = 240;
 
-/// One MCP server, as the settings file keeps it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct McpServer {
-    /// Unique among the servers. It prefixes every tool name the model
-    /// sees and names the server's token in the keyring.
-    pub name: String,
-    pub enabled: bool,
-    pub transport: McpTransport,
-}
-
-/// How the app reaches a server.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "kebab-case")]
-pub enum McpTransport {
-    /// A command the app starts and talks to over stdin and stdout.
-    Stdio {
-        command: String,
-        #[serde(default)]
-        args: Vec<String>,
-        /// Variables added to the app's own environment.
-        #[serde(default)]
-        env: BTreeMap<String, String>,
-    },
-    /// A URL, with a bearer token from the keyring when one is saved.
-    Http { url: String },
-}
-
-impl McpServer {
-    /// The keyring entry that holds this server's bearer token.
-    pub fn token_key(&self) -> String {
-        token_key(&self.name)
+/// One line saying how the app reaches `server`: its command line or its
+/// URL.
+pub fn summary(server: &McpServer) -> String {
+    match &server.transport {
+        McpTransport::Stdio { command, args, env } => join_command_line(env, command, args),
+        McpTransport::Http { url } => url.clone(),
     }
-
-    /// One line saying how the app reaches the server: its command line or
-    /// its URL.
-    pub fn summary(&self) -> String {
-        match &self.transport {
-            McpTransport::Stdio { command, args, env } => join_command_line(env, command, args),
-            McpTransport::Http { url } => url.clone(),
-        }
-    }
-}
-
-pub fn token_key(name: &str) -> String {
-    format!("mcp:{name}")
 }
 
 /// Whether a name can be a server's: letters, digits, `-` and `_`, since it

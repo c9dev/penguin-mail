@@ -183,7 +183,7 @@ impl List {
             } else {
                 gettext("Off")
             };
-            let subtitle = format!("{}\n{status}", server.summary());
+            let subtitle = format!("{}\n{status}", mcp::summary(server));
             row.set_subtitle(&glib::markup_escape_text(&subtitle));
         }
     }

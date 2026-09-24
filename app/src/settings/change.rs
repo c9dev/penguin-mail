@@ -11,7 +11,7 @@ use mailrs_sync::HiddenAddress;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
-use crate::assistant::sources::mcp::McpServer;
+use super::mcp::McpServer;
 
 use super::{
     Choice, ColorScheme, ComposeFormat, Feature, MarkRead, RemoteImages, Settings, TextSize,

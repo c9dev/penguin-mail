@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 
 mod change;
 mod file;
+pub mod mcp;
 
 pub use change::{AiChange, Change, Effect, Effects, Setting};
 pub use file::{Opened, Saver};
@@ -54,7 +55,7 @@ pub struct Settings {
     pub account_names: BTreeMap<String, String>,
     /// MCP servers whose tools the assistant may use, in the order the AI
     /// page lists them.
-    pub mcp_servers: Vec<crate::assistant::sources::mcp::McpServer>,
+    pub mcp_servers: Vec<mcp::McpServer>,
     pub ai: AiSettings,
     /// Open the assistant's thinking and tool rows as they appear, rather
     /// than folded to one line each.
