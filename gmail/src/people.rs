@@ -9,12 +9,17 @@ use serde_json::json;
 
 use crate::GmailError;
 
-/// Read the account's contacts, and nothing else. Google asks for this one
-/// on its own, the first time somebody turns contacts on.
+/// Read the account's contacts, and nothing else. Sign-in no longer asks
+/// for this one on its own: [`CONTACTS_WRITE_SCOPE`] covers it.
+/// [`crate::Granted::has`] still checks it, so an account that signed in
+/// before this change and kept only this narrower grant still reads
+/// contacts, though it cannot write them.
 pub const CONTACTS_SCOPE: &str = "https://www.googleapis.com/auth/contacts.readonly";
 
-/// Read and change the account's contacts. Google asks for this one on its
-/// own, the first time the assistant adds or changes a contact.
+/// Read and change the account's contacts. [`crate::SIGN_IN_SCOPES`] asks
+/// for this one rather than [`CONTACTS_SCOPE`]: it covers reading too,
+/// and asking the narrower scope first would mean a second consent the
+/// first time the assistant adds or changes a contact.
 pub const CONTACTS_WRITE_SCOPE: &str = "https://www.googleapis.com/auth/contacts";
 
 pub const PEOPLE_API_BASE: &str = "https://people.googleapis.com/v1";

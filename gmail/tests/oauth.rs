@@ -3,8 +3,9 @@ use std::collections::HashMap;
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use mailrs_gmail::{
-    CALENDAR_SCOPE, DELETE_SCOPE, GMAIL_SCOPE, GmailError, Granted, LoopbackListener, OAuthClient,
-    Pkce, SETTINGS_SCOPE, SIGN_IN_SCOPES, parse_redirect,
+    CALENDAR_LIST_SCOPE, CALENDAR_SCOPE, CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE, DELETE_SCOPE,
+    GMAIL_SCOPE, GmailError, Granted, LoopbackListener, OAuthClient, Pkce, SETTINGS_SCOPE,
+    SIGN_IN_SCOPES, parse_redirect,
 };
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -52,8 +53,7 @@ fn authorize_url_carries_pkce_and_offline_access() {
 }
 
 /// The owner decided every scope goes in one consent: sign-in no longer
-/// asks for `gmail.modify` and settings alone and leaves the rest for
-/// later, one at a time.
+/// asks for settings alone and leaves the rest for later, one at a time.
 #[test]
 fn sign_in_asks_for_every_scope_at_once() {
     let client = OAuthClient::new("cid", "secret");
@@ -67,8 +67,29 @@ fn sign_in_asks_for_every_scope_at_once() {
         .collect::<HashMap<String, String>>()["scope"]
         .clone();
     assert_eq!(scope, SIGN_IN_SCOPES.join(" "));
-    for asked in [GMAIL_SCOPE, SETTINGS_SCOPE, DELETE_SCOPE, CALENDAR_SCOPE] {
+    for asked in [DELETE_SCOPE, SETTINGS_SCOPE, CONTACTS_WRITE_SCOPE, CALENDAR_SCOPE] {
         assert!(scope.contains(asked), "{asked} missing from {scope}");
+    }
+}
+
+/// Google's verification team asks for least privilege: `mail.google.com`
+/// already covers `gmail.modify`, and `contacts` already covers
+/// `contacts.readonly`, so sign-in leaves both narrower scopes out.
+#[test]
+fn sign_in_asks_for_five_scopes_not_seven() {
+    assert_eq!(SIGN_IN_SCOPES.len(), 5);
+    let scope = SIGN_IN_SCOPES.join(" ");
+    for asked in [
+        DELETE_SCOPE,
+        SETTINGS_SCOPE,
+        CONTACTS_WRITE_SCOPE,
+        CALENDAR_SCOPE,
+        CALENDAR_LIST_SCOPE,
+    ] {
+        assert!(scope.contains(asked), "{asked} missing from {scope}");
+    }
+    for covered in [GMAIL_SCOPE, CONTACTS_SCOPE] {
+        assert!(!SIGN_IN_SCOPES.contains(&covered), "{covered} should no longer be asked");
     }
 }
 
