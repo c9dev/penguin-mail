@@ -261,7 +261,7 @@ impl MailBackend for AnyMail {
         forward_all!(AnyMail, self, mailbox_threads(id))
     }
 
-    fn follow(&self, mailbox: &str) {
+    fn follow(&self, mailbox: &str) -> bool {
         forward_all_now!(AnyMail, self, follow(mailbox))
     }
 

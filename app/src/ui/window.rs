@@ -149,6 +149,10 @@ pub struct MainWindow {
     detached: RefCell<Vec<detached::Detached>>,
     /// The scratch copies of attachments this window opened.
     previews: previews::Previews,
+    /// The server mailboxes this window has already asked each account to
+    /// follow, so a reload does not fetch a folder's window again: the
+    /// slow poll covers it from here. Cleared for an account that stops.
+    followed: RefCell<HashMap<AccountId, HashSet<String>>>,
 }
 
 /// The toast after erasing.
@@ -569,6 +573,7 @@ impl MainWindow {
                 image_senders: RefCell::new(Vec::new()),
                 detached: RefCell::new(Vec::new()),
                 previews: previews::Previews::default(),
+                followed: RefCell::new(HashMap::new()),
             }
         });
         if window.core.demo {
@@ -813,6 +818,8 @@ impl MainWindow {
             "mail"
         };
         self.stack.set_visible_child_name(page);
+        let live: HashSet<AccountId> = data.iter().map(|(a, _)| a.id).collect();
+        self.followed.borrow_mut().retain(|id, _| live.contains(id));
         // A label deleted elsewhere, by the assistant or in the browser,
         // leaves the window on a mailbox that is no longer there, so the
         // inbox takes over as it does for a signed-out account.
@@ -1014,6 +1021,7 @@ impl MainWindow {
         let mailbox = self.shown().clone();
         if let Some(account_id) = mailbox.account()
             && let Some((account_id, server_mailbox)) = follows(&mailbox, self.offers(account_id))
+            && newly_followed(&mut self.followed.borrow_mut(), account_id, server_mailbox.clone())
         {
             self.follow_mailbox(account_id, server_mailbox);
         }
@@ -2956,6 +2964,18 @@ fn follows(mailbox: &Mailbox, offers: Offers) -> Option<(AccountId, String)> {
     }
 }
 
+/// Whether asking to follow `server_mailbox` of `account_id` needs to
+/// reach the account at all: `false` once `followed` already holds the
+/// pair, so a reload of the folder on screen does not fetch its window
+/// again. The slow poll covers it from the first time.
+fn newly_followed(
+    followed: &mut HashMap<AccountId, HashSet<String>>,
+    account_id: AccountId,
+    server_mailbox: String,
+) -> bool {
+    followed.entry(account_id).or_default().insert(server_mailbox)
+}
+
 /// Whether `mailbox` is still there once the accounts read as `data`. A
 /// mailbox of one account goes with that account, and a label goes when
 /// its account no longer lists it.
@@ -3019,6 +3039,21 @@ mod tests {
         for mailbox in [&standard, &unified, &smart] {
             assert_eq!(follows(mailbox, offers), None, "{mailbox:?}");
         }
+    }
+
+    #[test]
+    fn a_mailbox_followed_once_is_not_followed_again() {
+        let mut followed = HashMap::new();
+        assert!(newly_followed(&mut followed, 1, "Work".to_string()));
+        assert!(!newly_followed(&mut followed, 1, "Work".to_string()));
+        assert!(
+            newly_followed(&mut followed, 1, "Travel".to_string()),
+            "a different mailbox of the same account still follows"
+        );
+        assert!(
+            newly_followed(&mut followed, 2, "Work".to_string()),
+            "the same mailbox name on a different account still follows"
+        );
     }
 
     #[test]

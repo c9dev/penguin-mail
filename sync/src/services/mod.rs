@@ -525,8 +525,10 @@ pub trait MailBackend: Send + Sync + 'static {
 
     /// Starts keeping `mailbox` in step, for a mailbox the account does
     /// not sync on its own. A server that keeps every mailbox in step
-    /// ignores it.
-    fn follow(&self, mailbox: &str);
+    /// ignores it and answers `false`. Answers whether this is the first
+    /// time anyone asked to follow `mailbox`, so a caller that already
+    /// asked once does no work a second time.
+    fn follow(&self, mailbox: &str) -> bool;
 
     /// Tells the backend whether the main window is open, which sets how
     /// often it looks at mail nobody is watching.
