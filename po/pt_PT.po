@@ -3970,7 +3970,7 @@ msgid "Not Junk (Ctrl+Shift+J)"
 msgstr "Não é spam (Ctrl+Shift+J)"
 
 #: app/src/ui/conversation.rs:966 app/src/ui/window/message_menu.rs:125
-#: app/src/ui/window/press.rs:306
+#: app/src/ui/window/press.rs:352
 msgid "Delete Forever"
 msgstr "Eliminar definitivamente"
 
@@ -4746,7 +4746,7 @@ msgstr "O Penguin Mail mostra o novo idioma depois de reiniciar"
 msgid "No signature"
 msgstr "Sem assinatura"
 
-#: app/src/ui/queued.rs:65 app/src/ui/window/press.rs:320
+#: app/src/ui/queued.rs:65 app/src/ui/window/press.rs:366
 msgid "Cancel Send"
 msgstr "Cancelar envio"
 
@@ -5971,78 +5971,78 @@ msgstr "Eliminada. Não será enviada."
 msgid "Deleted. They will not be sent."
 msgstr "Eliminadas. Não serão enviadas."
 
-#: app/src/ui/window/press.rs:212
+#: app/src/ui/window/press.rs:242
 msgid "Back in the Inbox"
 msgstr "De volta à caixa de entrada"
 
-#: app/src/ui/window/press.rs:231
+#: app/src/ui/window/press.rs:261
 msgid "Will remind you {when}"
 msgstr "Lembra-o {when}"
 
-#: app/src/ui/window/press.rs:256
+#: app/src/ui/window/press.rs:288
 msgid "Drop mail on its own account's mailboxes"
 msgstr "Largue o correio nas caixas da conta dele"
 
-#: app/src/ui/window/press.rs:275
+#: app/src/ui/window/press.rs:321
 msgid "Moved to {mailbox}"
 msgstr "Movida para {mailbox}"
 
-#: app/src/ui/window/press.rs:285
+#: app/src/ui/window/press.rs:331
 msgid "Delete This Conversation Forever?"
 msgstr "Eliminar esta conversa definitivamente?"
 
-#: app/src/ui/window/press.rs:287
+#: app/src/ui/window/press.rs:333
 msgid "Delete {count} Conversation Forever?"
 msgid_plural "Delete {count} Conversations Forever?"
 msgstr[0] "Eliminar {count} conversa definitivamente?"
 msgstr[1] "Eliminar {count} conversas definitivamente?"
 
-#: app/src/ui/window/press.rs:292
+#: app/src/ui/window/press.rs:338
 msgid "Delete This Message Forever?"
 msgstr "Eliminar esta mensagem definitivamente?"
 
-#: app/src/ui/window/press.rs:294
+#: app/src/ui/window/press.rs:340
 msgid "Delete {count} Message Forever?"
 msgid_plural "Delete {count} Messages Forever?"
 msgstr[0] "Eliminar {count} mensagem definitivamente?"
 msgstr[1] "Eliminar {count} mensagens definitivamente?"
 
-#: app/src/ui/window/press.rs:303
+#: app/src/ui/window/press.rs:349
 msgid "Gmail deletes it from every device and cannot bring it back."
 msgstr ""
 "O Gmail elimina-a de todos os dispositivos e não a consegue trazer de volta."
 
-#: app/src/ui/window/press.rs:304
+#: app/src/ui/window/press.rs:350
 msgid "Gmail deletes them from every device and cannot bring them back."
 msgstr ""
 "O Gmail elimina-as de todos os dispositivos e não as consegue trazer de "
 "volta."
 
-#: app/src/ui/window/press.rs:320
+#: app/src/ui/window/press.rs:366
 msgid "Cancel Send (Delete)"
 msgstr "Cancelar envio (Delete)"
 
-#: app/src/ui/window/press.rs:322
+#: app/src/ui/window/press.rs:368
 msgid "Delete from Outbox"
 msgstr "Eliminar da caixa de saída"
 
-#: app/src/ui/window/press.rs:323
+#: app/src/ui/window/press.rs:369
 msgid "Delete from Outbox (Delete)"
 msgstr "Eliminar da caixa de saída (Delete)"
 
-#: app/src/ui/window/press.rs:326
+#: app/src/ui/window/press.rs:372
 msgid "Cancel Reminder"
 msgstr "Cancelar lembrete"
 
-#: app/src/ui/window/press.rs:327
+#: app/src/ui/window/press.rs:373
 msgid "Cancel Reminder (Delete)"
 msgstr "Cancelar lembrete (Delete)"
 
-#: app/src/ui/window/press.rs:330
+#: app/src/ui/window/press.rs:376
 msgid "Dismiss Follow-Up"
 msgstr "Dispensar seguimento"
 
-#: app/src/ui/window/press.rs:331
+#: app/src/ui/window/press.rs:377
 msgid "Dismiss Follow-Up (Delete)"
 msgstr "Dispensar seguimento (Delete)"
 

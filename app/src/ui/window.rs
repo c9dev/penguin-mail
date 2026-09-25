@@ -1302,14 +1302,14 @@ impl MainWindow {
         scope: press::Scope,
         press: Press,
     ) -> bool {
-        let erases = self.erases(reach.targets.iter().map(|t| t.account_id));
+        let accounts = press::reached(&reach.targets, |id| self.offers(id));
         let plan = press::plan(Pressed {
             press,
             reach,
             scope,
             flag_color: self.settings_with(|s| s.flag_color),
             threaded: self.settings_with(|s| s.threading),
-            erases,
+            accounts,
         });
         let taken = plan.taken();
         let pressing = Pressing {

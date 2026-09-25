@@ -40,10 +40,13 @@ pub enum MailOp {
 pub type Roles = BTreeMap<Role, String>;
 
 /// The operations `action` stands for on an account whose mail service can
-/// do `caps`. A label account files and unfiles; a folder account moves.
-/// `set_of` reads a mailbox id the action names as the mail set it stands
-/// for, as the account's mail service reads it. `Unsupported` when a label
-/// account lacks the mailbox the action files mail in.
+/// do `caps`. A label account files and unfiles; a folder account moves,
+/// since a message there sits in one folder: the one place an action adds
+/// is where the mail goes, and mail that leaves a place with nowhere named
+/// goes to the Archive. `set_of` reads a mailbox id the action names as
+/// the mail set it stands for, as the account's mail service reads it.
+/// `Unsupported` when a label account lacks the mailbox the action files
+/// mail in, or when an action puts mail in two folders at once.
 pub fn ops_for(
     action: &TriageAction,
     caps: &MailCapabilities,
@@ -85,8 +88,11 @@ pub fn ops_for(
         // On a label account a move files the mail and takes it out of
         // the inbox, as Gmail's own Move to does.
         TriageAction::MoveTo(id) => vec![MailOp::AddToMailbox(id.clone()), remove(Role::Inbox)?],
+        TriageAction::AddLabel(id) if moves => moved(&[set_of(id)], &[], roles)?,
         TriageAction::AddLabel(id) => vec![set_op(&set_of(id), true, roles)?],
+        TriageAction::RemoveLabel(id) if moves => moved(&[], &[set_of(id)], roles)?,
         TriageAction::RemoveLabel(id) => vec![set_op(&set_of(id), false, roles)?],
+        TriageAction::Relabel { add, remove } if moves => moved(add, remove, roles)?,
         TriageAction::Relabel { add, remove } => add
             .iter()
             .map(|set| set_op(set, true, roles))
@@ -109,6 +115,42 @@ fn set_op(set: &MailSet, on: bool, roles: &Roles) -> Result<MailOp, BackendError
         MailSet::Unseen => MailOp::SetKeyword { keyword: SEEN.into(), on: !on },
         MailSet::Category(c) => MailOp::SetCategory { category: c.clone(), on },
     })
+}
+
+/// The operations that change mail sets on a folder account. Marks, such
+/// as a keyword, unread or a category, go on and come off as on a label
+/// account. The one place `add` names is where the mail moves, which
+/// takes it out of every other; with none named, mail that leaves a place
+/// goes to the Archive, since a folder server has nowhere else to keep
+/// it. Two places at once is `Unsupported`.
+fn moved(add: &[MailSet], remove: &[MailSet], roles: &Roles) -> Result<Vec<MailOp>, BackendError> {
+    let mut ops = Vec::new();
+    for (sets, on) in [(add, true), (remove, false)] {
+        for set in sets.iter().filter(|set| move_op(set).is_none()) {
+            ops.push(set_op(set, on, roles)?);
+        }
+    }
+    let mut into = add.iter().filter_map(move_op);
+    let destination = match (into.next(), into.next()) {
+        (Some(_), Some(_)) => return Err(BackendError::Unsupported),
+        (Some(op), None) => Some(op),
+        (None, _) if remove.iter().any(|set| move_op(set).is_some()) => {
+            Some(MailOp::MoveToRole(Role::Archive))
+        }
+        (None, _) => None,
+    };
+    ops.extend(destination);
+    Ok(ops)
+}
+
+/// The move into `set`, when `set` is a place mail sits in rather than a
+/// mark it carries.
+fn move_op(set: &MailSet) -> Option<MailOp> {
+    match set {
+        MailSet::Role(role) => Some(MailOp::MoveToRole(*role)),
+        MailSet::Mailbox(id) => Some(MailOp::MoveToMailbox(id.clone())),
+        MailSet::Keyword(_) | MailSet::Unseen | MailSet::Category(_) => None,
+    }
 }
 
 /// The operation that gives `membership` or takes it away.
@@ -400,6 +442,85 @@ mod tests {
             [keyword(MUTED, true), MailOp::MoveToRole(Role::Archive)]
         );
         assert_eq!(ops(TriageAction::MarkRead), [keyword(SEEN, true)]);
+    }
+
+    #[test]
+    fn a_folder_account_moves_where_a_label_account_adds_a_mailbox() {
+        let roles = gmail_roles();
+        let ops = |action: TriageAction| {
+            ops_for(&action, &folder_account(), &roles, named).unwrap()
+        };
+        // Dropped from Flagged or a search, nothing is taken away, and the
+        // mail still moves rather than gaining a copy.
+        assert_eq!(
+            ops(TriageAction::Relabel {
+                add: vec![MailSet::Mailbox("Label_5".into())],
+                remove: vec![],
+            }),
+            [MailOp::MoveToMailbox("Label_5".into())]
+        );
+        assert_eq!(
+            ops(TriageAction::Relabel {
+                add: vec![MailSet::Mailbox("Label_5".into())],
+                remove: vec![MailSet::Role(Role::Inbox)],
+            }),
+            [MailOp::MoveToMailbox("Label_5".into())]
+        );
+        assert_eq!(
+            ops(TriageAction::AddLabel("Label_5".into())),
+            [MailOp::MoveToMailbox("Label_5".into())]
+        );
+        // A reminder coming due puts the mail back in the inbox, unread.
+        assert_eq!(
+            ops(TriageAction::Relabel {
+                add: vec![MailSet::Role(Role::Inbox), MailSet::Unseen],
+                remove: vec![],
+            }),
+            [keyword(SEEN, false), MailOp::MoveToRole(Role::Inbox)]
+        );
+    }
+
+    #[test]
+    fn a_folder_account_archives_mail_that_leaves_a_folder_for_nowhere() {
+        let roles = gmail_roles();
+        let ops = |action: TriageAction| {
+            ops_for(&action, &folder_account(), &roles, named).unwrap()
+        };
+        assert_eq!(
+            ops(TriageAction::Relabel {
+                add: vec![],
+                remove: vec![MailSet::Mailbox("Work".into()), MailSet::Role(Role::Inbox)],
+            }),
+            [MailOp::MoveToRole(Role::Archive)]
+        );
+        assert_eq!(
+            ops(TriageAction::RemoveLabel("Work".into())),
+            [MailOp::MoveToRole(Role::Archive)]
+        );
+        assert_eq!(
+            ops(TriageAction::Relabel {
+                add: vec![MailSet::muted()],
+                remove: vec![MailSet::Role(Role::Inbox)],
+            }),
+            [keyword(MUTED, true), MailOp::MoveToRole(Role::Archive)]
+        );
+        assert_eq!(
+            ops(TriageAction::RemoveLabel("UNREAD".into())),
+            [keyword(SEEN, true)],
+            "a mark comes off without moving anything"
+        );
+    }
+
+    #[test]
+    fn a_folder_account_cannot_put_mail_in_two_folders() {
+        let two = TriageAction::Relabel {
+            add: vec![MailSet::Mailbox("Work".into()), MailSet::Mailbox("Travel".into())],
+            remove: vec![],
+        };
+        assert!(matches!(
+            ops_for(&two, &folder_account(), &gmail_roles(), named),
+            Err(BackendError::Unsupported)
+        ));
     }
 
     #[test]

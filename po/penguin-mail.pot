@@ -3774,7 +3774,7 @@ msgid "Not Junk (Ctrl+Shift+J)"
 msgstr ""
 
 #: app/src/ui/conversation.rs:966 app/src/ui/window/message_menu.rs:125
-#: app/src/ui/window/press.rs:306
+#: app/src/ui/window/press.rs:352
 msgid "Delete Forever"
 msgstr ""
 
@@ -4519,7 +4519,7 @@ msgstr ""
 msgid "No signature"
 msgstr ""
 
-#: app/src/ui/queued.rs:65 app/src/ui/window/press.rs:320
+#: app/src/ui/queued.rs:65 app/src/ui/window/press.rs:366
 msgid "Cancel Send"
 msgstr ""
 
@@ -5715,75 +5715,75 @@ msgstr ""
 msgid "Deleted. They will not be sent."
 msgstr ""
 
-#: app/src/ui/window/press.rs:212
+#: app/src/ui/window/press.rs:242
 msgid "Back in the Inbox"
 msgstr ""
 
-#: app/src/ui/window/press.rs:231
+#: app/src/ui/window/press.rs:261
 msgid "Will remind you {when}"
 msgstr ""
 
-#: app/src/ui/window/press.rs:256
+#: app/src/ui/window/press.rs:288
 msgid "Drop mail on its own account's mailboxes"
 msgstr ""
 
-#: app/src/ui/window/press.rs:275
+#: app/src/ui/window/press.rs:321
 msgid "Moved to {mailbox}"
 msgstr ""
 
-#: app/src/ui/window/press.rs:285
+#: app/src/ui/window/press.rs:331
 msgid "Delete This Conversation Forever?"
 msgstr ""
 
-#: app/src/ui/window/press.rs:287
+#: app/src/ui/window/press.rs:333
 msgid "Delete {count} Conversation Forever?"
 msgid_plural "Delete {count} Conversations Forever?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window/press.rs:292
+#: app/src/ui/window/press.rs:338
 msgid "Delete This Message Forever?"
 msgstr ""
 
-#: app/src/ui/window/press.rs:294
+#: app/src/ui/window/press.rs:340
 msgid "Delete {count} Message Forever?"
 msgid_plural "Delete {count} Messages Forever?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window/press.rs:303
+#: app/src/ui/window/press.rs:349
 msgid "Gmail deletes it from every device and cannot bring it back."
 msgstr ""
 
-#: app/src/ui/window/press.rs:304
+#: app/src/ui/window/press.rs:350
 msgid "Gmail deletes them from every device and cannot bring them back."
 msgstr ""
 
-#: app/src/ui/window/press.rs:320
+#: app/src/ui/window/press.rs:366
 msgid "Cancel Send (Delete)"
 msgstr ""
 
-#: app/src/ui/window/press.rs:322
+#: app/src/ui/window/press.rs:368
 msgid "Delete from Outbox"
 msgstr ""
 
-#: app/src/ui/window/press.rs:323
+#: app/src/ui/window/press.rs:369
 msgid "Delete from Outbox (Delete)"
 msgstr ""
 
-#: app/src/ui/window/press.rs:326
+#: app/src/ui/window/press.rs:372
 msgid "Cancel Reminder"
 msgstr ""
 
-#: app/src/ui/window/press.rs:327
+#: app/src/ui/window/press.rs:373
 msgid "Cancel Reminder (Delete)"
 msgstr ""
 
-#: app/src/ui/window/press.rs:330
+#: app/src/ui/window/press.rs:376
 msgid "Dismiss Follow-Up"
 msgstr ""
 
-#: app/src/ui/window/press.rs:331
+#: app/src/ui/window/press.rs:377
 msgid "Dismiss Follow-Up (Delete)"
 msgstr ""
 
