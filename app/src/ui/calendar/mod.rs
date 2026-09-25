@@ -107,7 +107,6 @@ pub struct CalendarView {
     pub sidebar: gtk::ScrolledWindow,
     /// Shows the sidebar when the window is too narrow to keep it open.
     pub sidebar_button: gtk::ToggleButton,
-    pub assistant_button: gtk::ToggleButton,
     core: Rc<Core>,
     settings: Box<dyn Fn() -> Settings>,
     hooks: Hooks,
@@ -253,11 +252,6 @@ impl CalendarView {
             .visible(false)
             .build();
         crate::ui::name(&sidebar_button, &gettext("Show Calendars"));
-        let assistant_button = gtk::ToggleButton::builder()
-            .icon_name("penguin-mail-sparkle-symbolic")
-            .tooltip_text(gettext("Assistant (Ctrl+J)"))
-            .build();
-        crate::ui::name_with_shortcut(&assistant_button, &gettext("Assistant (Ctrl+J)"));
 
         let header = adw::HeaderBar::builder()
             .title_widget(&gtk::Box::new(gtk::Orientation::Horizontal, 0))
@@ -267,7 +261,6 @@ impl CalendarView {
         header.pack_start(&title);
         header.pack_start(&today_button);
         header.pack_start(&arrows);
-        header.pack_end(&assistant_button);
         header.pack_end(&search_button);
         header.pack_end(&new_event);
         header.pack_end(&switch_slot);
@@ -390,7 +383,6 @@ impl CalendarView {
                 page,
                 sidebar,
                 sidebar_button,
-                assistant_button,
                 core,
                 settings: Box::new(settings),
                 hooks,
