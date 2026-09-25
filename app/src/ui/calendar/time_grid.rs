@@ -106,6 +106,19 @@ fn all_day_span(o: &Occurrence, days: &[NaiveDate]) -> Option<(usize, usize)> {
     Some((start_day, end_day))
 }
 
+/// Today's column among `days` and how many hours past its midnight
+/// `now` is, when today is one of them.
+fn now_column<Z: TimeZone>(now: EpochMillis, days: &[NaiveDate], zone: &Z) -> Option<(usize, f64)> {
+    // Today is the local date of now. The UTC date is a different day
+    // for part of every day anywhere east or west of UTC.
+    let today = chrono::DateTime::<chrono::Utc>::from_timestamp_millis(now)?
+        .with_timezone(zone)
+        .date_naive();
+    let column = days.iter().position(|&d| d == today)?;
+    let midnight = today.and_hms_opt(0, 0, 0)?;
+    Some((column, layout::wall_offset(now, midnight, zone)))
+}
+
 fn utc_date(at: EpochMillis) -> Option<NaiveDate> {
     chrono::DateTime::<chrono::Utc>::from_timestamp_millis(at).map(|d| d.date_naive())
 }
@@ -353,14 +366,7 @@ mod imp {
         /// Today's column and the now-line's y in pixels, when today is
         /// one of `days`.
         fn now_line(&self, days: &[NaiveDate]) -> Option<(usize, f32)> {
-            let today = super::utc_date(self.now.get())?
-                .and_hms_opt(0, 0, 0)?
-                .and_utc()
-                .with_timezone(&chrono::Local)
-                .date_naive();
-            let column = days.iter().position(|&d| d == today)?;
-            let midnight = today.and_hms_opt(0, 0, 0)?;
-            let hours = layout::wall_offset(self.now.get(), midnight, &chrono::Local);
+            let (column, hours) = super::now_column(self.now.get(), days, &chrono::Local)?;
             Some((column, hours as f32 * super::HOUR))
         }
     }
@@ -875,6 +881,30 @@ mod tests {
     fn an_hour_label_reads_the_clock() {
         mailrs_domain::translate::set_date_locale("en_US");
         assert_eq!(hour_text(9), "09:00");
+    }
+
+    fn at<Z: TimeZone>(zone: &Z, y: i32, m: u32, day: u32, h: u32, min: u32) -> EpochMillis {
+        zone.with_ymd_and_hms(y, m, day, h, min, 0)
+            .single()
+            .unwrap()
+            .timestamp_millis()
+    }
+
+    #[test]
+    fn the_now_line_stays_in_today_s_column_before_utc_reaches_today() {
+        // 08:00 in Tokyo is 23:00 the day before in UTC.
+        let tokyo = chrono_tz::Asia::Tokyo;
+        let days = [d(2026, 9, 24), d(2026, 9, 25), d(2026, 9, 26)];
+        let now = at(&tokyo, 2026, 9, 25, 8, 0);
+        assert_eq!(now_column(now, &days, &tokyo), Some((1, 8.0)));
+    }
+
+    #[test]
+    fn the_now_line_in_lisbon_just_after_midnight_is_near_the_top() {
+        let lisbon = chrono_tz::Europe::Lisbon;
+        let days = [d(2026, 9, 24), d(2026, 9, 25)];
+        let now = at(&lisbon, 2026, 9, 25, 0, 30);
+        assert_eq!(now_column(now, &days, &lisbon), Some((1, 0.5)));
     }
 
     #[test]
