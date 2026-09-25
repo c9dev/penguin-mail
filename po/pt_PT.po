@@ -6551,6 +6551,10 @@ msgstr "{problem}. Nova tentativa {when}"
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. O Penguin Mail deixou de tentar"
 
+#: sync/src/services/imap/outgoing.rs:85
+msgid "The message names nobody to send it to."
+msgstr "A mensagem não indica a quem a enviar."
+
 #: sync/src/triage.rs:45
 msgid "Mark read"
 msgstr "Marcar como lida"

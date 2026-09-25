@@ -11,6 +11,7 @@ use mailrs_store::messages;
 use mailrs_store::remote_refs::{self, Resolved};
 
 use super::AccountSync;
+use crate::api::DraftRef;
 use crate::{Found, MailBackend, RemoteChange, SyncError, Want};
 
 impl AccountSync {
@@ -108,6 +109,30 @@ impl AccountSync {
             .filter_map(|change| change_as_stored(change, &resolved))
             .collect();
         self.drop_changes_already_held(changes).await
+    }
+
+    /// `drafts` under store ids. A draft whose name is stale drops out.
+    pub(super) async fn drafts_as_stored(
+        &self,
+        drafts: Vec<DraftRef>,
+    ) -> Result<Vec<DraftRef>, SyncError> {
+        if !self.renames() {
+            return Ok(drafts);
+        }
+        let names = drafts
+            .iter()
+            .flat_map(|d| [d.draft_id.clone(), d.message_id.clone()])
+            .collect();
+        let resolved = self.resolve(names).await?;
+        Ok(drafts
+            .into_iter()
+            .filter_map(|d| {
+                Some(DraftRef {
+                    draft_id: stored_id(&d.draft_id, &resolved)?,
+                    message_id: stored_id(&d.message_id, &resolved)?,
+                })
+            })
+            .collect())
     }
 
     /// Drops the memberships a `Gained` or `Lost` change names that the

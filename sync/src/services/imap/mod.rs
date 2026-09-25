@@ -10,6 +10,7 @@ mod bodies;
 mod feed;
 mod keywords;
 mod mailboxes;
+mod outgoing;
 mod state;
 mod syntax;
 mod window;
@@ -325,8 +326,8 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         Err(BackendError::Unsupported)
     }
 
-    async fn find_sent(&self, _message_id: &str) -> Result<Option<String>, BackendError> {
-        Err(BackendError::Unsupported)
+    async fn find_sent(&self, message_id: &str) -> Result<Option<String>, BackendError> {
+        self.sent_with(message_id).await
     }
 
     async fn fetch(&self, wants: Vec<Want>) -> Result<Found, BackendError> {
@@ -341,8 +342,10 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         self.raw_messages(ids).await
     }
 
-    async fn append(&self, _raw: &[u8], _mailbox: &str) -> Result<String, BackendError> {
-        Err(BackendError::Unsupported)
+    /// Files a copy of what the account sent, read, as a mail program
+    /// would have filed it.
+    async fn append(&self, raw: &[u8], mailbox: &str) -> Result<String, BackendError> {
+        self.file(raw, mailbox, &["\\Seen".to_string()]).await
     }
 
     async fn fetch_structure(&self, id: &str) -> Result<Parts, BackendError> {
@@ -384,29 +387,31 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         self.write(messages, ops).await
     }
 
-    async fn send(&self, _raw: &[u8], _thread_id: Option<&str>) -> Result<String, BackendError> {
-        Err(BackendError::Unsupported)
+    /// Sends over SMTP. The server keeps no threads, so `thread_id` has
+    /// nothing to join, and the answer is the message's Message-ID.
+    async fn send(&self, raw: &[u8], _thread_id: Option<&str>) -> Result<String, BackendError> {
+        self.submit(raw).await
     }
 
     async fn save_draft(
         &self,
-        _draft_id: Option<&str>,
-        _raw: &[u8],
-        _thread_id: Option<&str>,
+        draft_id: Option<&str>,
+        raw: &[u8],
+        thread_id: Option<&str>,
     ) -> Result<SavedDraft, BackendError> {
-        Err(BackendError::Unsupported)
+        self.save(draft_id, raw, thread_id).await
     }
 
-    async fn send_draft(&self, _draft_id: &str) -> Result<String, BackendError> {
-        Err(BackendError::Unsupported)
+    async fn send_draft(&self, draft_id: &str) -> Result<String, BackendError> {
+        self.send_saved(draft_id).await
     }
 
-    async fn delete_draft(&self, _draft_id: &str) -> Result<(), BackendError> {
-        Err(BackendError::Unsupported)
+    async fn delete_draft(&self, draft_id: &str) -> Result<(), BackendError> {
+        self.erase(draft_id).await
     }
 
     async fn list_drafts(&self) -> Result<Vec<DraftRef>, BackendError> {
-        Err(BackendError::Unsupported)
+        self.drafts().await
     }
 }
 

@@ -1,15 +1,18 @@
 //! Sending, drafts, search, attachments and exports: mail calls the UI makes
 //! on demand rather than as part of the sync loop.
 
+use mailrs_domain::Role;
 use mailrs_store::messages::Change;
 use mailrs_store::{drafts, messages};
 
 use super::AccountSync;
+use super::refs::stored_id;
 use crate::{BackendError, MailBackend, SavedDraft, SyncError};
 
 impl AccountSync {
     /// Sends raw RFC 822 bytes, then deletes `draft_id` if the message came
     /// from a draft. A draft that is already gone does not fail the send.
+    /// A server that does not file what it sends gets a copy in Sent.
     /// Returns the sent message's id.
     pub async fn send(
         &self,
@@ -17,9 +20,19 @@ impl AccountSync {
         thread_id: Option<String>,
         draft_id: Option<String>,
     ) -> Result<String, SyncError> {
-        let message_id = self.services.mail.send(&raw, thread_id.as_deref()).await?;
+        let sent = self.services.mail.send(&raw, thread_id.as_deref()).await?;
+        let message_id = self.file_sent(&raw).await.unwrap_or(sent);
         if let Some(draft_id) = draft_id {
-            if let Err(err) = self.services.mail.delete_draft(&draft_id).await
+            // The message has gone out, so nothing after this may fail the
+            // send: the outbox would send it again.
+            let name = match self.remote(&draft_id).await {
+                Ok(name) => name,
+                Err(err) => {
+                    tracing::warn!(account = self.account_id, error = %err, "sent, but could not read where the draft sits");
+                    draft_id.clone()
+                }
+            };
+            if let Err(err) = self.services.mail.delete_draft(&name).await
                 && !matches!(err, BackendError::NotFound)
             {
                 tracing::warn!(account = self.account_id, error = %err, "sent, but could not delete the draft");
@@ -27,6 +40,28 @@ impl AccountSync {
             self.forget_draft(&draft_id).await;
         }
         Ok(message_id)
+    }
+
+    /// Files a copy of `raw` in Sent for a server that does not file what
+    /// it sends, and answers the copy's name. The message has gone out
+    /// whatever happens here, so a failure goes to the log and never to
+    /// the caller, which would send the message again.
+    async fn file_sent(&self, raw: &[u8]) -> Option<String> {
+        let mail = &self.services.mail;
+        if mail.capabilities().files_sent_mail {
+            return None;
+        }
+        let Some(sent) = mail.mailbox_for(Role::Sent) else {
+            tracing::warn!(account = self.account_id, "sent, but the server has no Sent mailbox for a copy");
+            return None;
+        };
+        match mail.append(raw, &sent).await {
+            Ok(name) => Some(name),
+            Err(err) => {
+                tracing::warn!(account = self.account_id, error = %err, "sent, but could not file a copy in Sent");
+                None
+            }
+        }
     }
 
     /// The id of the sent message carrying the same `Message-ID` header as
@@ -40,7 +75,11 @@ impl AccountSync {
         let Some(id) = message_id_header(raw) else {
             return Ok(None);
         };
-        Ok(self.services.mail.find_sent(&id).await?)
+        let Some(found) = self.services.mail.find_sent(&id).await? else {
+            return Ok(None);
+        };
+        let resolved = self.resolve(vec![found.clone()]).await?;
+        Ok(Some(stored_id(&found, &resolved).unwrap_or(found)))
     }
 
     /// Saves a draft in Gmail, replacing `draft_id` when given. If that
@@ -52,10 +91,14 @@ impl AccountSync {
         draft_id: Option<String>,
     ) -> Result<SavedDraft, SyncError> {
         let thread_id = thread_id.as_deref();
+        let old = match &draft_id {
+            Some(id) => Some(self.remote(id).await?),
+            None => None,
+        };
         let saved = match self
             .services
             .mail
-            .save_draft(draft_id.as_deref(), &raw, thread_id)
+            .save_draft(old.as_deref(), &raw, thread_id)
             .await
         {
             Err(BackendError::NotFound) if draft_id.is_some() => {
@@ -72,20 +115,36 @@ impl AccountSync {
         Ok(saved)
     }
 
-    /// Sends a draft as Gmail holds it, as a scheduled send does. Returns
-    /// `None` when the draft is gone, sent or deleted elsewhere.
+    /// Sends a draft as the server holds it, as a scheduled send does.
+    /// Returns `None` when the draft is gone, sent or deleted elsewhere. A
+    /// server that does not file what it sends gets a copy of the draft in
+    /// Sent, read before the draft goes.
     pub async fn send_draft(&self, draft_id: &str) -> Result<Option<String>, SyncError> {
-        let sent = match self.services.mail.send_draft(draft_id).await {
+        let name = self.remote(draft_id).await?;
+        let copy = match self.services.mail.capabilities().files_sent_mail {
+            true => None,
+            false => match self.raw(draft_id).await {
+                Ok(raw) => Some(raw),
+                Err(SyncError::Backend(BackendError::NotFound)) => None,
+                Err(err) => return Err(err),
+            },
+        };
+        let sent = match self.services.mail.send_draft(&name).await {
             Ok(id) => Some(id),
             Err(BackendError::NotFound) => None,
             Err(err) => return Err(err.into()),
+        };
+        let sent = match (sent, copy) {
+            (Some(id), Some(raw)) => Some(self.file_sent(&raw).await.unwrap_or(id)),
+            (sent, _) => sent,
         };
         self.forget_draft(draft_id).await;
         Ok(sent)
     }
 
     pub async fn delete_draft(&self, draft_id: &str) -> Result<(), SyncError> {
-        match self.services.mail.delete_draft(draft_id).await {
+        let name = self.remote(draft_id).await?;
+        match self.services.mail.delete_draft(&name).await {
             Ok(()) | Err(BackendError::NotFound) => {}
             Err(err) => return Err(err.into()),
         }
@@ -130,6 +189,7 @@ impl AccountSync {
             return Ok(Some(draft_id));
         }
         let listed = self.services.mail.list_drafts().await?;
+        let listed = self.drafts_as_stored(listed).await?;
         let found = listed
             .iter()
             .find(|d| d.message_id == message_id)

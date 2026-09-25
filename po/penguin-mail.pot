@@ -6279,6 +6279,10 @@ msgstr ""
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr ""
 
+#: sync/src/services/imap/outgoing.rs:85
+msgid "The message names nobody to send it to."
+msgstr ""
+
 #: sync/src/triage.rs:45
 msgid "Mark read"
 msgstr ""

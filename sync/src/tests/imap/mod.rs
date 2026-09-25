@@ -3,6 +3,7 @@
 mod bodies;
 mod feed;
 mod mailboxes;
+mod sending;
 mod uidvalidity;
 mod window;
 mod writes;

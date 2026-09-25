@@ -230,6 +230,7 @@ impl Harness {
 
 pub(crate) struct ImapHarness {
     pub imap: Arc<FakeImap>,
+    pub smtp: Arc<FakeSmtp>,
     pub sync: Arc<AccountSync>,
     pub db: Db,
     pub events: async_channel::Receiver<ChangeEvent>,
@@ -260,9 +261,9 @@ pub(crate) async fn imap_harness_on(imap: FakeImap, settings: ImapSettings) -> I
         .write(|c| accounts::insert_account(c, "me@example.com", 0))
         .await
         .unwrap();
-    let imap = Arc::new(imap);
+    let (imap, smtp) = (Arc::new(imap), Arc::new(FakeSmtp::default()));
     let services =
-        AccountServices::fake_imap_with(Arc::clone(&imap), Arc::new(FakeSmtp::default()), settings);
+        AccountServices::fake_imap_with(Arc::clone(&imap), Arc::clone(&smtp), settings);
     let (sender, events) = async_channel::unbounded();
     let sync = Arc::new(
         AccountSync::new(account_id, services, db.clone(), sender)
@@ -270,6 +271,7 @@ pub(crate) async fn imap_harness_on(imap: FakeImap, settings: ImapSettings) -> I
     );
     ImapHarness {
         imap,
+        smtp,
         sync,
         db,
         events,
