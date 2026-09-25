@@ -122,6 +122,12 @@ pub struct Core {
     /// said. A new engine, after a change to the sync settings, starts
     /// from this rather than from the engine's own guess.
     network: Cell<bool>,
+    /// Whether the main window is open, as `set_window_open` last said.
+    /// False until the first `show_window`, so a process that starts in
+    /// the tray with `--background` polls at the tray's own pace rather
+    /// than the window's; a new engine, after a change to the sync
+    /// settings, starts from this rather than reopening as the window.
+    window_open: Cell<bool>,
     /// Keeps `penguin-mail-cli sync` off this store while the app runs.
     /// Changing the sync settings restarts the engine in this process, so
     /// the lock stays with the core rather than with one engine.
@@ -253,6 +259,7 @@ impl Core {
             events,
             in_flight: Arc::new(AtomicUsize::new(0)),
             network: Cell::new(true),
+            window_open: Cell::new(false),
             _sync_lock: sync_lock,
         });
         core.start_engine();
@@ -297,6 +304,7 @@ impl Core {
         let (engine, engine_events) = SyncEngine::new(self.db.clone(), config.engine_config());
         let engine = Arc::new(engine);
         engine.set_network(self.network.get());
+        engine.set_window_open(self.window_open.get());
         self.engine.replace(Some(Arc::clone(&engine)));
         let forward = self.events_tx.clone();
         self.runtime.spawn(async move {
@@ -599,6 +607,7 @@ impl Core {
     /// Tells sync whether the main window is open, so an account looks at
     /// mailboxes other than its inbox less often while only the tray runs.
     pub fn set_window_open(&self, open: bool) {
+        self.window_open.set(open);
         if let Some(engine) = self.engine.current() {
             engine.set_window_open(open);
         }
@@ -823,16 +832,68 @@ impl Net for Offline {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
+    use std::sync::{Arc, Mutex, PoisonError};
 
     use super::Core;
 
+    /// `Core::open(true)` keeps the demo's store at a path keyed by this
+    /// process's id, since the app assumes only one demo runs at a time.
+    /// Two tests opening it at once race on the same file, so every test
+    /// here holds this for as long as its core lives.
+    static DEMO: Mutex<()> = Mutex::new(());
+
     #[test]
     fn every_tool_run_shares_one_calendar() {
+        let _demo = DEMO.lock().unwrap_or_else(PoisonError::into_inner);
         let core = Core::open(true).expect("the demo core opens");
         assert!(Arc::ptr_eq(
             &core.modules().calendar,
             &core.modules().calendar
         ));
+    }
+
+    /// A core built for the tray, as `--background` starts one, never
+    /// told the window is open. A settings change restarts the engine and
+    /// must not wake it back up.
+    #[test]
+    fn a_core_that_never_opened_a_window_starts_its_engine_closed() {
+        let _demo = DEMO.lock().unwrap_or_else(PoisonError::into_inner);
+        let core = Core::open(true).expect("the demo core opens");
+        assert!(
+            !core.engine.current().expect("an engine is running").window_open(),
+            "nobody has shown a window yet"
+        );
+
+        core.update_sync(mailrs_sync::config::SyncConfig {
+            poll_seconds: Some(60),
+            ..Default::default()
+        })
+        .expect("the demo keeps new settings in memory");
+
+        assert!(
+            !core.engine.current().expect("an engine is running").window_open(),
+            "restarting the engine for new settings must not open it"
+        );
+    }
+
+    /// Once a window has shown, the state survives a settings restart, so
+    /// the account does not fall back to the tray's slower pace while the
+    /// window is still on screen.
+    #[test]
+    fn window_open_survives_a_settings_restart() {
+        let _demo = DEMO.lock().unwrap_or_else(PoisonError::into_inner);
+        let core = Core::open(true).expect("the demo core opens");
+        core.set_window_open(true);
+
+        core.update_sync(mailrs_sync::config::SyncConfig {
+            poll_seconds: Some(60),
+            ..Default::default()
+        })
+        .expect("the demo keeps new settings in memory");
+
+        assert!(
+            core.engine.current().expect("an engine is running").window_open(),
+            "the new engine keeps the window open"
+        );
     }
 }
