@@ -2443,6 +2443,7 @@ dependencies = [
  "mailrs-imap",
  "mailrs-mime",
  "mailrs-store",
+ "mailrs-testmail",
  "rand",
  "rusqlite",
  "serde",
