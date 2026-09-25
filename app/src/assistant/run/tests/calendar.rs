@@ -475,6 +475,33 @@ async fn each_occurrence_of_a_series_is_listed_under_an_id_of_its_own() {
 }
 
 #[tokio::test]
+async fn a_declined_event_reads_as_free() {
+    let h = harness().await;
+    let day = monday();
+    let start = local_millis(day, 14);
+    let declined = mailrs_domain::calendar::Event {
+        calendar: "primary".into(),
+        id: "review".into(),
+        title: "Client review".into(),
+        zone: "UTC".into(),
+        start,
+        end: start + 60 * 60_000,
+        busy: true,
+        my_answer: Some(mailrs_domain::invitation::Answer::No),
+        ..mailrs_domain::calendar::Event::default()
+    };
+    copy_of(&h, vec![declined], start).await;
+
+    let listed = h
+        .ok(
+            "list_events",
+            json!({"from": day.format("%Y-%m-%d").to_string(), "to": day.format("%Y-%m-%d").to_string()}),
+        )
+        .await;
+    assert_eq!(listed["events"][0]["busy"], false);
+}
+
+#[tokio::test]
 async fn a_calendar_tool_on_an_account_without_a_calendar_says_why() {
     let h = Harness::with_services(|_, services| services.calendar = None).await;
     let answer = h

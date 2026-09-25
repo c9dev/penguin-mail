@@ -175,6 +175,19 @@ pub struct Event {
     pub pending: bool,
 }
 
+impl Event {
+    /// Whether the event takes the account's time, for free time and the
+    /// clash line. `busy` alone is what Google holds and what a change
+    /// sends back; a cancelled event, one the account declined and one
+    /// lasting all day leave the time open as well.
+    pub fn blocks_time(&self) -> bool {
+        self.busy
+            && !self.all_day
+            && self.status != Status::Cancelled
+            && self.my_answer != Some(invitation::Answer::No)
+    }
+}
+
 /// One showing of an event on the grid. `event` is shared rather than
 /// cloned, so a series with many occurrences in view costs one
 /// allocation of it however many times it repeats.
@@ -571,6 +584,17 @@ mod tests {
         assert_eq!(one.id(), "standup");
         assert_eq!(split_occurrence_id("standup"), None);
         assert_eq!(split_occurrence_id("team_lunch"), None);
+    }
+
+    #[test]
+    fn only_an_event_the_account_attends_in_hours_blocks_time() {
+        let meeting = standup(&[]);
+        assert!(meeting.blocks_time());
+        assert!(!Event { busy: false, ..meeting.clone() }.blocks_time(), "marked free");
+        assert!(!Event { all_day: true, ..meeting.clone() }.blocks_time(), "all day");
+        assert!(!Event { status: Status::Cancelled, ..meeting.clone() }.blocks_time(), "cancelled");
+        assert!(!Event { my_answer: Some(invitation::Answer::No), ..meeting.clone() }.blocks_time(), "declined");
+        assert!(Event { my_answer: Some(invitation::Answer::Maybe), ..meeting }.blocks_time(), "a maybe still counts");
     }
 
     #[test]

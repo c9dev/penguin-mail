@@ -185,9 +185,8 @@ impl<A: Accounts> Invitations<A> {
     /// What the local copy says is busy over `starts_at` to `ends_at`,
     /// once it has read the account's primary calendar; `None` when it
     /// has not, so the caller falls back to Google. `Event::busy` is
-    /// transparency only (ruling R4), so a cancelled, declined or
-    /// all-day event is filtered here rather than trusted to have
-    /// already cleared it.
+    /// Google's transparency alone, so `Event::blocks_time` also leaves
+    /// out a cancelled, declined or all-day event.
     async fn busy_from_copy(
         &self,
         account_id: AccountId,
@@ -211,8 +210,7 @@ impl<A: Accounts> Invitations<A> {
                 )?;
                 let busy: Vec<String> = found
                     .into_iter()
-                    .filter(|o| o.event.busy && !o.event.all_day)
-                    .filter(|o| o.event.my_answer != Some(Answer::No))
+                    .filter(|o| o.event.blocks_time())
                     .filter(|o| !o.event.uid.eq_ignore_ascii_case(&uid))
                     .map(|o| o.event.title.clone())
                     .collect();

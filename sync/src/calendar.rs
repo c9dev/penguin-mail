@@ -77,7 +77,7 @@ impl<A: Accounts> Calendar<A> {
             Permitted::NeedsPermission => return Ok(Permitted::NeedsPermission),
         };
         let busy: Vec<(EpochMillis, EpochMillis)> =
-            occurrences.iter().filter(|o| o.event.busy).map(|o| (o.start, o.end)).collect();
+            occurrences.iter().filter(|o| o.event.blocks_time()).map(|o| (o.start, o.end)).collect();
         Ok(Permitted::Done(free_slots(&busy, windows, length)))
     }
 
