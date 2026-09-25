@@ -441,3 +441,49 @@ async fn measure_an_engine_poll_of_a_large_inbox_without_condstore() {
         h.drain().len()
     );
 }
+
+/// An Archive another client made after this account first loaded arrives
+/// with the mail already in it, not only with mail filed there later.
+#[tokio::test]
+async fn a_role_mailbox_made_elsewhere_brings_the_mail_it_already_holds() {
+    let imap = FakeImap::new();
+    imap.with(|s| s.mailboxes.remove("Archive"));
+    let h = imap_harness_on(imap, fake_settings()).await;
+    h.bootstrap().await;
+    h.sync.incremental().await.unwrap();
+
+    h.imap
+        .add_mailbox("Archive", Some(mailrs_imap::SpecialUse::Archive));
+    let uid = h.imap.deliver_flagged(
+        "Archive",
+        &message("a", "Kites", ""),
+        &["\\Seen"],
+        days_ago(1),
+    );
+    let uidvalidity = h.imap.with(|s| s.mailbox_mut("Archive").uidvalidity);
+    h.sync.refresh_labels().await.unwrap();
+    h.sync.incremental().await.unwrap();
+
+    assert_eq!(h.ids().await, [format!("Archive/{uidvalidity}/{uid}")]);
+}
+
+/// A first look at a followed mailbox that fails keeps where the listing
+/// left it, so the next look still brings the mail that arrived since.
+#[tokio::test]
+async fn a_failed_first_look_at_a_followed_mailbox_keeps_its_starting_point() {
+    let h = imap_harness_on(FakeImap::new(), fake_settings()).await;
+    h.imap.add_mailbox("Work", None);
+    h.bootstrap().await;
+    h.sync.follow_mailbox("Work").await.unwrap();
+    let uid = h
+        .imap
+        .deliver_flagged("Work", &message("w", "Plans", ""), &[], days_ago(0));
+    let uidvalidity = h.imap.with(|s| s.mailbox_mut("Work").uidvalidity);
+
+    h.imap
+        .fail_on("select Work", ImapError::Network("reset".into()));
+    assert!(h.sync.incremental().await.is_err());
+    h.sync.incremental().await.unwrap();
+
+    assert_eq!(h.ids().await, [format!("Work/{uidvalidity}/{uid}")]);
+}
