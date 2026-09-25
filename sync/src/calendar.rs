@@ -109,12 +109,12 @@ impl<A: Accounts> Calendar<A> {
 
     /// Changes what `fields` sets on event `id` and tells its guests.
     /// When the copy holds a row for `id` the change goes into the
-    /// queue, the same way `create` does. A repeating event's own id is
-    /// shared by every occurrence the copy has not stored a change for
-    /// on its own, so an id the copy does not recognise as a stored row
-    /// goes straight to the provider instead (ruling R5): until stage 3
-    /// gives a single occurrence an id of its own in the copy, that is
-    /// the only way to change just one.
+    /// queue, the same way `create` does. An occurrence id
+    /// (`<series>_<start>`) names one occurrence of a series in the copy:
+    /// that change goes to the provider at once, for that occurrence
+    /// alone, since the queue holds whole events. Any other id, such as
+    /// one the live path gave before the copy's first read, goes straight
+    /// to the provider.
     pub async fn update(
         &self,
         account_id: AccountId,
@@ -134,6 +134,10 @@ impl<A: Accounts> Calendar<A> {
                 event.pending = true;
                 return Ok(Permitted::Done(event));
             }
+            if let Some(mut one) = self.occurrence(account_id, id).await? {
+                apply_fields(&mut one, fields);
+                return self.copy.put_occurrence(account_id, &one).await;
+            }
         }
         match calendar.update_event(id, fields).await {
             Ok(event) => Ok(Permitted::Done(live_event(&event))),
@@ -143,8 +147,9 @@ impl<A: Accounts> Calendar<A> {
     }
 
     /// Takes event `id` off the calendar and tells its guests, through
-    /// the queue when the copy holds it, straight to the provider
-    /// otherwise (see [`Self::update`] on why).
+    /// the queue when the copy holds it, straight to the provider for one
+    /// occurrence of a series or an id the copy does not know (see
+    /// [`Self::update`]).
     pub async fn delete(
         &self,
         account_id: AccountId,
@@ -160,6 +165,9 @@ impl<A: Accounts> Calendar<A> {
                 self.copy.remove(account_id, &event.calendar, id).await?;
                 self.send_soon(account_id);
                 return Ok(Permitted::Done(()));
+            }
+            if let Some(one) = self.occurrence(account_id, id).await? {
+                return self.copy.remove_occurrence(account_id, &one.calendar, id).await;
             }
         }
         permitted(calendar.delete_event(id).await)
@@ -186,6 +194,40 @@ impl<A: Accounts> Calendar<A> {
             Err(BackendError::NeedsPermission) => Ok(Permitted::NeedsPermission),
             Err(err) => Err(err.into()),
         }
+    }
+
+    /// The occurrence an occurrence id names (`<series>_<start>`, as
+    /// [`model::Occurrence::id`] writes it), as an event of its own on the
+    /// series' calendar: the series' details at that occurrence's time,
+    /// under the occurrence id, with no rules. `None` when `id` is not in
+    /// that form, names no series in the copy, or names a start the series
+    /// never reaches.
+    async fn occurrence(&self, account_id: AccountId, id: &str) -> Result<Option<model::Event>, SyncError> {
+        let Some((series_id, start)) = model::split_occurrence_id(id) else {
+            return Ok(None);
+        };
+        let series = {
+            let series_id = series_id.to_string();
+            self.db.read(move |c| store::find_event(c, account_id, &series_id)).await?
+        };
+        let Some(series) = series.filter(|s| !s.rules.is_empty()) else {
+            return Ok(None);
+        };
+        if !model::expand(&series, start, start + 1).iter().any(|&(at, _)| at == start) {
+            return Ok(None);
+        }
+        let length = series.end - series.start;
+        Ok(Some(model::Event {
+            id: id.to_string(),
+            etag: String::new(),
+            start,
+            end: start + length,
+            rules: Vec::new(),
+            series: Some(series.id.clone()),
+            original_start: Some(start),
+            pending: false,
+            ..series
+        }))
     }
 
     async fn synced(&self, account_id: AccountId) -> Result<bool, SyncError> {

@@ -186,6 +186,44 @@ pub struct Occurrence {
     pub end: EpochMillis,
 }
 
+impl Occurrence {
+    /// The id the assistant's tools name this occurrence by. A one-off event,
+    /// or an occurrence someone already changed, has a row and an id of
+    /// its own. An occurrence a series expands to takes Google's instance
+    /// form, the series id, an underscore and the original start in UTC
+    /// (`_20261022T090000Z`, or `_20261022` for a whole day), so a change
+    /// to it reaches that one occurrence and never the series.
+    pub fn id(&self) -> String {
+        if self.event.rules.is_empty() {
+            return self.event.id.clone();
+        }
+        let Some(start) = DateTime::<Utc>::from_timestamp_millis(self.start) else {
+            return self.event.id.clone();
+        };
+        let form = if self.event.all_day { "%Y%m%d" } else { "%Y%m%dT%H%M%SZ" };
+        format!("{}_{}", self.event.id, start.format(form))
+    }
+}
+
+/// Splits an occurrence id, as [`Occurrence::id`] writes one, into the
+/// series id and the occurrence's original start, or `None` for any other
+/// id.
+pub fn split_occurrence_id(id: &str) -> Option<(&str, EpochMillis)> {
+    let (series, stamp) = id.rsplit_once('_')?;
+    if series.is_empty() {
+        return None;
+    }
+    let digits = |text: &str| !text.is_empty() && text.bytes().all(|b| b.is_ascii_digit());
+    let at = match stamp.len() {
+        8 if digits(stamp) => chrono::NaiveDate::parse_from_str(stamp, "%Y%m%d").ok()?.and_hms_opt(0, 0, 0)?,
+        16 if stamp.ends_with('Z') && digits(&stamp[..8]) && digits(&stamp[9..15]) => {
+            chrono::NaiveDateTime::parse_from_str(&stamp[..15], "%Y%m%dT%H%M%S").ok()?
+        }
+        _ => return None,
+    };
+    Some((series, at.and_utc().timestamp_millis()))
+}
+
 /// One page of changes to one calendar, provider-neutral so a CalDAV
 /// adapter answers the same shape a Google one does.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -505,6 +543,34 @@ mod tests {
         // The range opens an hour into the first occurrence.
         let got = expand(&event, lisbon(2026, 10, 19, 10, 0), lisbon(2026, 10, 19, 11, 0));
         assert_eq!(got.len(), 1);
+    }
+
+    #[test]
+    fn an_occurrence_of_a_timed_series_is_named_by_its_utc_start() {
+        let event = Arc::new(standup(&["RRULE:FREQ=DAILY;COUNT=5"]));
+        let thursday = lisbon(2026, 10, 22, 9, 0);
+        let one = Occurrence { account_id: 1, event, start: thursday, end: thursday + 15 * 60_000 };
+        // 09:00 in Lisbon is 08:00 UTC in October's summer time.
+        assert_eq!(one.id(), "standup_20261022T080000Z");
+        assert_eq!(split_occurrence_id("standup_20261022T080000Z"), Some(("standup", thursday)));
+    }
+
+    #[test]
+    fn an_occurrence_of_an_all_day_series_is_named_by_its_date() {
+        let midnight = NaiveDate::from_ymd_opt(2026, 10, 26).unwrap().and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp_millis();
+        let event = Arc::new(Event { all_day: true, zone: "UTC".into(), ..standup(&["RRULE:FREQ=WEEKLY"]) });
+        let one = Occurrence { account_id: 1, event, start: midnight, end: midnight + 24 * 60 * 60_000 };
+        assert_eq!(one.id(), "standup_20261026");
+        assert_eq!(split_occurrence_id("standup_20261026"), Some(("standup", midnight)));
+    }
+
+    #[test]
+    fn an_event_that_does_not_repeat_keeps_its_own_id() {
+        let event = Arc::new(standup(&[]));
+        let one = Occurrence { account_id: 1, start: event.start, end: event.end, event };
+        assert_eq!(one.id(), "standup");
+        assert_eq!(split_occurrence_id("standup"), None);
+        assert_eq!(split_occurrence_id("team_lunch"), None);
     }
 
     #[test]

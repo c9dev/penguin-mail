@@ -1003,7 +1003,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "list_events",
             label: || gettext("Reading the calendar"),
-            description: "Lists the events on an account's calendar between two local times, with their ids, times, places, guests, and the user's own answer.",
+            description: "Lists the events on an account's calendar between two local times, with their ids, times, places, guests, and the user's own answer. Each occurrence of a repeating event (repeats: true) has an id of its own, and update_event or delete_event given that id changes that occurrence alone.",
             input: || {
                 json!({
                     "from": {"type": "string", "description": "Local time as YYYY-MM-DDTHH:MM, or a day as YYYY-MM-DD for its start."},

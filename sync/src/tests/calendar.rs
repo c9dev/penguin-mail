@@ -327,3 +327,80 @@ async fn the_fake_refuses_a_write_against_an_old_version() {
     let err = calendar.put_event(&stale, Some("\"0\""), false).await.unwrap_err();
     assert!(matches!(err, crate::BackendError::Changed), "{err}");
 }
+
+/// Monday 19 October 2026, 00:00 UTC.
+const MONDAY: i64 = 1_792_368_000_000;
+const DAY: i64 = 24 * HOUR;
+
+/// A daily stand-up at 09:00 UTC, Monday to Friday of that week, on
+/// Google and read into the copy.
+async fn synced_standup(h: &Harness) -> Calendar<Connected> {
+    h.fake.with(|s| s.calendars = vec![primary()]);
+    h.fake.put_calendar_event(Ev {
+        calendar: "primary".into(),
+        id: "standup".into(),
+        uid: "standup@google.com".into(),
+        title: "Stand-up".into(),
+        zone: "UTC".into(),
+        start: MONDAY + 9 * HOUR,
+        end: MONDAY + 9 * HOUR + 15 * MINUTE,
+        busy: true,
+        rules: vec!["RRULE:FREQ=DAILY;COUNT=5".into()],
+        ..Ev::default()
+    });
+    let (calendar, copy) = calendar_with_copy(h);
+    copy.refresh(h.account_id, MONDAY).await.unwrap();
+    calendar
+}
+
+async fn week_starts(calendar: &Calendar<Connected>, h: &Harness) -> Vec<i64> {
+    let week = calendar.events(h.account_id, MONDAY, MONDAY + 5 * DAY).await.unwrap().done().unwrap();
+    week.iter().map(|o| o.start).collect()
+}
+
+async fn thursday_id(calendar: &Calendar<Connected>, h: &Harness) -> String {
+    let week = calendar.events(h.account_id, MONDAY, MONDAY + 5 * DAY).await.unwrap().done().unwrap();
+    week.iter().find(|o| o.start == MONDAY + 3 * DAY + 9 * HOUR).expect("Thursday's stand-up").id()
+}
+
+/// Google's own copy of the series, which a change to one occurrence
+/// must leave as it was.
+fn series_on_google(h: &Harness) -> Ev {
+    h.fake.with(|s| s.calendar_events.iter().find(|e| e.id == "standup").cloned()).expect("the series")
+}
+
+#[tokio::test]
+async fn moving_one_occurrence_of_a_series_moves_only_that_one() {
+    let h = harness().await;
+    let calendar = synced_standup(&h).await;
+    let before = series_on_google(&h);
+    let thursday = thursday_id(&calendar, &h).await;
+    assert_eq!(thursday, "standup_20261022T090000Z");
+
+    let ten = MONDAY + 3 * DAY + 10 * HOUR;
+    calendar.update(h.account_id, &thursday, &event("Stand-up", ten, ten + 15 * MINUTE)).await.unwrap().done().unwrap();
+
+    assert_eq!(
+        week_starts(&calendar, &h).await,
+        vec![MONDAY + 9 * HOUR, MONDAY + DAY + 9 * HOUR, MONDAY + 2 * DAY + 9 * HOUR, ten, MONDAY + 4 * DAY + 9 * HOUR]
+    );
+    assert_eq!(series_on_google(&h), before, "the series itself is untouched");
+    let moved = h.fake.with(|s| s.calendar_events.iter().find(|e| e.id == thursday).cloned()).expect("an exception");
+    assert_eq!((moved.series.as_deref(), moved.start), (Some("standup"), ten));
+}
+
+#[tokio::test]
+async fn cancelling_one_occurrence_of_a_series_cancels_only_that_one() {
+    let h = harness().await;
+    let calendar = synced_standup(&h).await;
+    let before = series_on_google(&h);
+    let thursday = thursday_id(&calendar, &h).await;
+
+    calendar.delete(h.account_id, &thursday).await.unwrap().done().unwrap();
+
+    assert_eq!(
+        week_starts(&calendar, &h).await,
+        vec![MONDAY + 9 * HOUR, MONDAY + DAY + 9 * HOUR, MONDAY + 2 * DAY + 9 * HOUR, MONDAY + 4 * DAY + 9 * HOUR]
+    );
+    assert_eq!(series_on_google(&h), before, "the series itself is untouched");
+}

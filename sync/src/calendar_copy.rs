@@ -322,6 +322,42 @@ impl<A: Accounts> CalendarCopy<A> {
         Ok(())
     }
 
+    /// Changes one occurrence of a series on the provider, then reads its
+    /// calendar again so the copy shows the occurrence moved. `event`
+    /// carries the occurrence id. The queue holds whole events
+    /// only, so this goes to the provider at once and waits for it.
+    pub async fn put_occurrence(&self, account_id: AccountId, event: &Event) -> Result<Permitted<Event>, SyncError> {
+        let _run = self.running.lock().await;
+        let calendar = self.calendar(account_id)?.ok_or(SyncError::Backend(BackendError::Unsupported))?;
+        let sent = match calendar.put_event(event, None, false).await {
+            Ok(sent) => sent,
+            Err(BackendError::NeedsPermission) => return Ok(Permitted::NeedsPermission),
+            Err(err) => return Err(err.into()),
+        };
+        self.read_calendar(&calendar, account_id, &event.calendar, crate::now_millis()).await?;
+        Ok(Permitted::Done(sent))
+    }
+
+    /// Cancels one occurrence of a series on the provider, then reads its
+    /// calendar again so the occurrence leaves the copy. An occurrence the
+    /// provider no longer has is already gone, which is what was asked.
+    pub async fn remove_occurrence(
+        &self,
+        account_id: AccountId,
+        calendar_id: &str,
+        id: &str,
+    ) -> Result<Permitted<()>, SyncError> {
+        let _run = self.running.lock().await;
+        let calendar = self.calendar(account_id)?.ok_or(SyncError::Backend(BackendError::Unsupported))?;
+        match calendar.remove_event(calendar_id, id, None).await {
+            Ok(()) | Err(BackendError::NotFound) => {}
+            Err(BackendError::NeedsPermission) => return Ok(Permitted::NeedsPermission),
+            Err(err) => return Err(err.into()),
+        }
+        self.read_calendar(&calendar, account_id, calendar_id, crate::now_millis()).await?;
+        Ok(Permitted::Done(()))
+    }
+
     /// Sends the account's queue in order, waiting behind a refresh
     /// already under way (Task 5 item 8), since a person's own edit
     /// should still go out. A change the provider turns down leaves the

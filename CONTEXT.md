@@ -160,7 +160,7 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Calendar scope**: which of an account's calendars an `occurrences` query reads: every one the person has not hidden, every one regardless, or only the ones the account owns, which the clash line and free time use. `mailrs_store::calendar::CalendarScope`. Not to be confused with a mail action's Reach, which is what a button or key acts on. _Avoid_: reach, view.
 
-**Occurrence**: one showing of an event on the grid; a series has one per repeat, expanded for the range on screen. `mailrs_domain::calendar::Occurrence`. Not to be confused with `invitation::Occurrence`, the one occurrence an invitation names by the `RECURRENCE-ID` it carries. _Avoid_: instance, recurrence.
+**Occurrence**: one showing of an event on the grid; a series has one per repeat, expanded for the range on screen. `mailrs_domain::calendar::Occurrence`. Each has an id of its own, `Occurrence::id`, in Google's form: the series id, an underscore and the original start in UTC (`standup_20261022T090000Z`, or `standup_20261022` for a whole day). A change or a delete given that id reaches that occurrence alone, never the series. Not to be confused with `invitation::Occurrence`, the one occurrence an invitation names by the `RECURRENCE-ID` it carries. _Avoid_: instance, recurrence.
 
 **Change queue**: calendar edits made here that the provider has not taken yet, sent in order; a change the provider turns down leaves the queue and the provider's version stays. `mailrs_store::calendar::QueuedChange`. _Avoid_: outbox (that is mail's).
 
