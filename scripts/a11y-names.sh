@@ -259,14 +259,18 @@ def visit(opener, open_menu, keys):
     return True
 
 
-def in_view(node, x, y):
-    """Whether the point lies inside every scrolled view that holds
-    `node`, in window coordinates."""
+def in_view(node, row):
+    """Whether the whole of `row`, a box in window coordinates, lies inside
+    every scrolled view that holds `node`. Only its middle is clicked, but
+    the extents the accessibility bus reports sit some pixels off from where
+    the row is drawn, so a row cut off at the foot of its list can have its
+    middle in the list by the numbers and the click below it."""
     parent = node.get_parent()
     while parent is not None:
         if parent.get_role_name() == "scroll pane":
             box = parent.get_component_iface().get_extents(Atspi.CoordType.WINDOW)
-            if not (box.x <= x < box.x + box.width and box.y <= y < box.y + box.height):
+            if not (box.x <= row.x and row.x + row.width <= box.x + box.width
+                    and box.y <= row.y and row.y + row.height <= box.y + box.height):
                 return False
         parent = parent.get_parent()
     return True
@@ -293,7 +297,7 @@ def rows_in_view(bounds):
             # there lands on whatever covers it, and at the foot of the
             # sidebar that opens the window menu GTK draws when no window
             # manager is running, which is GTK's and not the app's.
-            if in_view(row, x, y):
+            if in_view(row, box):
                 yield name, x, y
 
 
