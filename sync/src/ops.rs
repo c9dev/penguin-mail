@@ -4,7 +4,7 @@
 //! what each message gained and lost, and hands them to the account's
 //! backend; undo builds the operations that reverse that report.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use mailrs_domain::mailbox::keyword::{FLAGGED, MUTED, SEEN};
 use mailrs_domain::{Applied, MailSet, Membership, Memberships, Role};
@@ -151,6 +151,76 @@ fn move_op(set: &MailSet) -> Option<MailOp> {
         MailSet::Mailbox(id) => Some(MailOp::MoveToMailbox(id.clone())),
         MailSet::Keyword(_) | MailSet::Unseen | MailSet::Category(_) => None,
     }
+}
+
+/// `ids` without those a whole-thread move should leave alone: a message
+/// that sits only in Sent, Drafts, Trash or Junk stays there unless `ops`
+/// moves mail into or out of that same place, since a folder server keeps
+/// only one copy and a thread-wide move must not pull a sent reply out of
+/// Sent or an old message out of Trash for a change aimed elsewhere.
+/// `whole_thread` names the ids a thread target picked up on its own; an
+/// id a person named by hand always moves.
+pub fn drop_protected(
+    ids: Vec<String>,
+    whole_thread: &BTreeSet<String>,
+    held: &HashMap<String, Memberships>,
+    ops: &[MailOp],
+    roles: &Roles,
+) -> Vec<String> {
+    if !ops.iter().any(is_move_op) {
+        return ids;
+    }
+    let none = Memberships::default();
+    ids.into_iter()
+        .filter(|id| {
+            if !whole_thread.contains(id) {
+                return true;
+            }
+            let mailboxes = &held.get(id).unwrap_or(&none).mailboxes;
+            match only_role(mailboxes, roles) {
+                Some(role) => !move_leaves_alone(role, ops, roles),
+                None => true,
+            }
+        })
+        .collect()
+}
+
+fn is_move_op(op: &MailOp) -> bool {
+    matches!(op, MailOp::MoveToRole(_) | MailOp::MoveToMailbox(_))
+}
+
+/// The role `mailboxes` names, when it is exactly one mailbox and that
+/// mailbox carries a role.
+fn only_role(mailboxes: &[String], roles: &Roles) -> Option<Role> {
+    let [only] = mailboxes else { return None };
+    roles.iter().find(|(_, id)| *id == only).map(|(role, _)| *role)
+}
+
+/// Whether a move `ops` describes should leave a message alone that sits
+/// only in `role`. Sent and Drafts never move on a thread-wide change;
+/// Trash and Junk stay put unless the move takes mail into the Inbox
+/// (Untrash, Not Junk, a reminder coming due), and Junk mail goes to
+/// Trash as any other message does.
+fn move_leaves_alone(role: Role, ops: &[MailOp], roles: &Roles) -> bool {
+    match role {
+        Role::Sent | Role::Drafts => true,
+        Role::Trash => !targets_role(ops, Role::Inbox, roles),
+        Role::Junk => {
+            !targets_role(ops, Role::Inbox, roles) && !targets_role(ops, Role::Trash, roles)
+        }
+        _ => false,
+    }
+}
+
+/// Whether one of `ops` moves mail into `role`, by role or by the
+/// mailbox `roles` names for it.
+fn targets_role(ops: &[MailOp], role: Role, roles: &Roles) -> bool {
+    let id = roles.get(&role);
+    ops.iter().any(|op| match op {
+        MailOp::MoveToRole(r) => *r == role,
+        MailOp::MoveToMailbox(m) => id.is_some_and(|rid| rid == m),
+        _ => false,
+    })
 }
 
 /// The operation that gives `membership` or takes it away.
@@ -606,6 +676,103 @@ mod tests {
         assert_eq!(
             split_keywords(&mute, &["$seen", "$flagged", "$muted"]),
             (mute.to_vec(), vec![])
+        );
+    }
+
+    #[test]
+    fn a_whole_thread_move_leaves_a_sent_copy_in_sent() {
+        let roles = Roles::from([
+            (Role::Archive, "Archive".to_string()),
+            (Role::Sent, "Sent".to_string()),
+        ]);
+        let held = HashMap::from([
+            (
+                "work".to_string(),
+                Memberships { mailboxes: vec!["Work".into()], ..Memberships::default() },
+            ),
+            (
+                "sent".to_string(),
+                Memberships { mailboxes: vec!["Sent".into()], ..Memberships::default() },
+            ),
+        ]);
+        let whole_thread = BTreeSet::from(["work".to_string(), "sent".to_string()]);
+        let ids = vec!["work".to_string(), "sent".to_string()];
+        let ops = [MailOp::MoveToRole(Role::Archive)];
+        assert_eq!(
+            drop_protected(ids, &whole_thread, &held, &ops, &roles),
+            ["work".to_string()]
+        );
+    }
+
+    #[test]
+    fn a_message_picked_by_hand_moves_even_from_sent() {
+        let roles = Roles::from([
+            (Role::Archive, "Archive".to_string()),
+            (Role::Sent, "Sent".to_string()),
+        ]);
+        let held = HashMap::from([(
+            "sent".to_string(),
+            Memberships { mailboxes: vec!["Sent".into()], ..Memberships::default() },
+        )]);
+        let ids = vec!["sent".to_string()];
+        let ops = [MailOp::MoveToRole(Role::Archive)];
+        assert_eq!(
+            drop_protected(ids, &BTreeSet::new(), &held, &ops, &roles),
+            ["sent".to_string()]
+        );
+    }
+
+    #[test]
+    fn untrash_brings_a_trashed_copy_back_to_the_inbox() {
+        let roles = Roles::from([
+            (Role::Inbox, "INBOX".to_string()),
+            (Role::Trash, "Trash".to_string()),
+        ]);
+        let held = HashMap::from([(
+            "t".to_string(),
+            Memberships { mailboxes: vec!["Trash".into()], ..Memberships::default() },
+        )]);
+        let whole_thread = BTreeSet::from(["t".to_string()]);
+        let ids = vec!["t".to_string()];
+        let ops = [MailOp::MoveToRole(Role::Inbox)];
+        assert_eq!(
+            drop_protected(ids, &whole_thread, &held, &ops, &roles),
+            ["t".to_string()]
+        );
+    }
+
+    #[test]
+    fn trashing_takes_junk_mail_too() {
+        let roles = Roles::from([
+            (Role::Trash, "Trash".to_string()),
+            (Role::Junk, "Junk".to_string()),
+        ]);
+        let held = HashMap::from([(
+            "j".to_string(),
+            Memberships { mailboxes: vec!["Junk".into()], ..Memberships::default() },
+        )]);
+        let whole_thread = BTreeSet::from(["j".to_string()]);
+        let ids = vec!["j".to_string()];
+        let ops = [MailOp::MoveToRole(Role::Trash)];
+        assert_eq!(
+            drop_protected(ids, &whole_thread, &held, &ops, &roles),
+            ["j".to_string()]
+        );
+    }
+
+    #[test]
+    fn a_mark_with_no_move_touches_every_message_of_the_thread() {
+        let roles = Roles::new();
+        let held = HashMap::from([(
+            "sent".to_string(),
+            Memberships { mailboxes: vec!["Sent".into()], ..Memberships::default() },
+        )]);
+        let whole_thread = BTreeSet::from(["sent".to_string()]);
+        let ids = vec!["sent".to_string()];
+        let ops = [keyword(SEEN, true)];
+        assert_eq!(
+            drop_protected(ids, &whole_thread, &held, &ops, &roles),
+            ["sent".to_string()]
         );
     }
 

@@ -11,7 +11,7 @@ use mailrs_store::messages::Change;
 use mailrs_store::{mailboxes, messages, reminders, remote_refs, threads};
 
 use super::{AccountSync, FETCH_CONCURRENCY};
-use crate::ops::{Roles, local_changes, ops_for, reverse_changes, split_keywords};
+use crate::ops::{Roles, drop_protected, local_changes, ops_for, reverse_changes, split_keywords};
 use crate::services::{Relocated, Unapplied};
 use crate::{
     BackendError, MailBackend, MailOp, SyncError, TriageAction, backoff_delay, with_jitter,
@@ -254,17 +254,22 @@ impl AccountSync {
             self.db
                 .write(move |c| {
                     let mut ids = Vec::new();
+                    let mut whole_thread = BTreeSet::new();
                     for (thread, only) in &wanted {
                         for message in messages::thread_messages(c, account_id, thread)? {
                             if only
                                 .as_ref()
                                 .is_none_or(|named| named.contains(&message.id))
                             {
+                                if only.is_none() {
+                                    whole_thread.insert(message.id.clone());
+                                }
                                 ids.push(message.id);
                             }
                         }
                     }
                     let held = messages::memberships_of(c, account_id, &ids)?;
+                    let ids = drop_protected(ids, &whole_thread, &held, &ops, &roles);
                     let none = Memberships::default();
                     let changes: Vec<Change> = ids
                         .iter()
