@@ -120,6 +120,9 @@ pub struct MainWindow {
     list: Rc<ThreadList>,
     conversation: Rc<ConversationView>,
     first_account: gtk::Button,
+    /// The welcome page's Use Another Provider, off while Google's
+    /// browser flow runs.
+    first_other: gtk::Button,
     /// The mailbox on screen, the one a search goes back to, the inbox
     /// category, and what the thread list loads next.
     screen: RefCell<OnScreen>,
@@ -405,7 +408,11 @@ impl MainWindow {
                 .build();
 
             let (w, o) = (weak.clone(), weak.clone());
-            let (first_page, first_account) = welcome::first_account_page(
+            let welcome::FirstAccount {
+                page: first_page,
+                google: first_account,
+                other: first_other,
+            } = welcome::first_account_page(
                 move || {
                     if let Some(win) = w.upgrade() {
                         win.authorize(None);
@@ -539,6 +546,7 @@ impl MainWindow {
                 list,
                 conversation,
                 first_account,
+                first_other,
                 screen: RefCell::new(OnScreen::new(app.settings_with(|s| s.default_category))),
                 counts: RefCell::new(on_screen::Counts::default()),
                 accounts_read: RefCell::new(None),
@@ -2095,6 +2103,7 @@ impl MainWindow {
         self.first_account.set_sensitive(false);
         self.first_account
             .set_label(&gettext("Waiting for Your Browser…"));
+        self.first_other.set_sensitive(false);
         self.sidebar.add_account.set_sensitive(false);
         self.toast(&gettext("Continue in your browser"));
         let this = Rc::clone(self);
@@ -2116,6 +2125,7 @@ impl MainWindow {
             this.first_account.set_sensitive(true);
             this.first_account
                 .set_label(&gettext("Sign In with Google"));
+            this.first_other.set_sensitive(true);
             this.sidebar.add_account.set_sensitive(true);
         });
     }

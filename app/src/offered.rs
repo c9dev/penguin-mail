@@ -233,6 +233,15 @@ pub fn missing_lines(accounts: &[(Account, Offers)]) -> Vec<(String, String)> {
     lines
 }
 
+/// What a screen reader calls a Not Available row. One account can have
+/// several rows under the same address, so the name carries the reason.
+pub fn missing_name(address: &str, reason: &str) -> String {
+    fill(
+        &gettext("{address}: {reason}"),
+        &[("address", address), ("reason", reason)],
+    )
+}
+
 /// Whether the app asks the server which addresses `account` sends as.
 /// Gmail keeps send-as addresses with their names. An IMAP server keeps
 /// neither, and asking it would replace the name the person typed when
@@ -521,6 +530,17 @@ mod tests {
                 "Fastmail's contacts come in a later version.",
                 "Rules and automatic replies need a server that runs them.",
             ]
+        );
+    }
+
+    #[test]
+    fn each_not_available_row_is_named_for_its_account_and_its_reason() {
+        assert_eq!(
+            super::missing_name(
+                "dana@fastmail.example",
+                "Fastmail's calendar comes in a later version."
+            ),
+            "dana@fastmail.example: Fastmail's calendar comes in a later version."
         );
     }
 

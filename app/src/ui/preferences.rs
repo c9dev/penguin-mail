@@ -218,12 +218,12 @@ fn general_page(
             .title(gettext("Not Available"))
             .build();
         for (address, reason) in missing {
-            unavailable.add(
-                &adw::ActionRow::builder()
-                    .title(address)
-                    .subtitle(reason)
-                    .build(),
-            );
+            let row = adw::ActionRow::builder()
+                .title(address)
+                .subtitle(reason)
+                .build();
+            crate::ui::name(&row, &crate::offered::missing_name(address, reason));
+            unavailable.add(&row);
         }
         page.add(&unavailable);
     }
