@@ -610,3 +610,31 @@ async fn an_edit_after_a_create_whose_answer_was_lost_still_goes_out() {
     let held = stored(&h, "primary", &id).await.unwrap();
     assert_eq!((held.title.as_str(), held.pending), ("Edited", false));
 }
+
+/// The person deletes a new event while its create is on the way to
+/// Google. The delete wins: Google takes the create, so the delete has to
+/// follow it there, and the answer must not put the event back.
+#[tokio::test]
+async fn a_delete_made_while_the_create_is_in_flight_wins() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let id = new_event_id();
+    copy.save(h.account_id, event("primary", &id)).await.unwrap();
+
+    let mut held = h.fake.hold("calendar.events.insert");
+    let account_id = h.account_id;
+    let send = copy.send(account_id);
+    let race = async {
+        held.entered().await;
+        copy.remove(account_id, "primary", &id).await.unwrap();
+        held.release();
+    };
+    let (result, ()) = tokio::join!(send, race);
+    assert!(result.unwrap().is_empty());
+
+    assert!(stored(&h, "primary", &id).await.is_none(), "the answer does not bring it back");
+    assert!(h.fake.with(|s| s.calendar_events.iter().all(|e| e.id != id)), "the delete reached Google");
+    assert!(queue(&h).await.is_empty());
+}

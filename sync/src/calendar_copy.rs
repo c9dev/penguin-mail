@@ -376,10 +376,11 @@ impl<A: Accounts> CalendarCopy<A> {
         let Some(calendar) = self.calendar(account_id)? else {
             return Ok(Vec::new());
         };
-        let queue = self.db.read(move |c| store::queued(c, account_id)).await?;
         let mut turned_down = Vec::new();
-        for change in queue {
+        let mut after = 0;
+        while let Some(change) = self.db.read(move |c| store::next_change(c, account_id, after)).await? {
             let seq = change.seq;
+            after = seq;
             let create = change.kind == store::ChangeKind::Create;
             let answer = match change.kind {
                 store::ChangeKind::Remove => calendar
@@ -412,12 +413,9 @@ impl<A: Accounts> CalendarCopy<A> {
                     let new_etag = sent.etag.clone();
                     self.db
                         .write(move |c| {
-                            // A newer edit that landed while this one was
-                            // in flight keeps the row queued, so its body
-                            // is not lost; only an untouched row's answer
-                            // is worth storing (reconcile.md Task 6 item
-                            // 4).
-                            if store::finish_change(c, seq, &attempted, &new_etag)? {
+                            // An edit or a delete made while this change
+                            // was in flight wins over the answer.
+                            if store::finish_change(c, account_id, seq, &attempted, &new_etag)? {
                                 store::save_events(c, account_id, &[sent], crate::now_millis())?;
                             }
                             Ok(())
