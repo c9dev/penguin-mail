@@ -186,6 +186,20 @@ pub struct Occurrence {
     pub end: EpochMillis,
 }
 
+/// One page of changes to one calendar, provider-neutral so a CalDAV
+/// adapter answers the same shape a Google one does.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct EventPage {
+    pub events: Vec<Event>,
+    /// Ids of events deleted or cancelled since the token. A cancelled
+    /// occurrence of a series is not here: it comes as an event with
+    /// `series` set, since it says which occurrence to leave out.
+    pub removed: Vec<String>,
+    pub next_page: Option<String>,
+    /// On the last page, the token for the next read.
+    pub next_sync: Option<String>,
+}
+
 /// The starts and ends of `event`'s occurrences that overlap `from` to
 /// `to`, earliest first. A one-off event gives itself or nothing. A rule
 /// the `rrule` crate cannot read gives the first occurrence, so the

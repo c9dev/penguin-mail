@@ -10,6 +10,7 @@ rust-version.workspace = true
 mailrs-domain.workspace = true
 mailrs-mime.workspace = true
 base64.workspace = true
+chrono.workspace = true
 keyring.workspace = true
 rand.workspace = true
 reqwest.workspace = true
@@ -22,6 +23,5 @@ tracing.workspace = true
 url.workspace = true
 
 [dev-dependencies]
-chrono.workspace = true
 tokio = { workspace = true, features = ["test-util"] }
 wiremock.workspace = true
