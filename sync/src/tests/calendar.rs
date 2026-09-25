@@ -404,3 +404,32 @@ async fn cancelling_one_occurrence_of_a_series_cancels_only_that_one() {
     );
     assert_eq!(series_on_google(&h), before, "the series itself is untouched");
 }
+
+/// Free time counts what the clash line counts: an event the account
+/// declined, one marked free and an all-day one leave the time open, as
+/// the live path did before the copy.
+#[tokio::test]
+async fn free_time_from_the_copy_leaves_declined_free_and_all_day_events_open() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![primary()]);
+    let at = |id: &str, from: i64, to: i64| Ev {
+        calendar: "primary".into(),
+        id: id.into(),
+        title: id.into(),
+        zone: "UTC".into(),
+        start: from,
+        end: to,
+        busy: true,
+        ..Ev::default()
+    };
+    h.fake.put_calendar_event(Ev { my_answer: Some(mailrs_domain::invitation::Answer::No), ..at("declined", NINE, NINE + HOUR) });
+    h.fake.put_calendar_event(Ev { busy: false, ..at("free", NINE + HOUR, NINE + 2 * HOUR) });
+    let midnight = NINE - 9 * HOUR;
+    h.fake.put_calendar_event(Ev { all_day: true, ..at("holiday", midnight, midnight + 24 * HOUR) });
+    let (calendar, copy) = calendar_with_copy(&h);
+    copy.refresh(h.account_id, NINE).await.unwrap();
+
+    let free = calendar.free(h.account_id, &[(NINE, NINE + 3 * HOUR)], HOUR).await.unwrap().done().unwrap();
+
+    assert_eq!(free, vec![(NINE, NINE + 3 * HOUR)]);
+}
