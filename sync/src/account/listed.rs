@@ -11,12 +11,14 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::time::{Duration, Instant};
 
 use mailrs_domain::MessageMeta;
+use mailrs_domain::query::{Query, parse, resolve_names};
 use mailrs_store::messages::Change;
-use mailrs_store::{accounts, messages};
+use mailrs_store::{accounts, labels, messages};
 
 use super::AccountSync;
 use super::fetch::Placing;
-use crate::{MailBackend, RemoteRef, SearchQuery, SyncError, Want};
+use super::refs::stored_id;
+use crate::{BackendError, MailBackend, RemoteRef, SearchQuery, SyncError, Want};
 
 /// How long a fetched thread is kept for opening. Only memory depends on
 /// it: whether a kept thread may still be stored is the history cursor's
@@ -40,6 +42,16 @@ pub(super) struct Hits {
     ids: BTreeSet<String>,
 }
 
+/// What a search past the window found on the server. `store_only` says
+/// the server could not say the whole query, so only the store's copy
+/// answers it, and a person should hear that the results may miss older
+/// mail.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Searched {
+    pub refs: Vec<RemoteRef>,
+    pub store_only: bool,
+}
+
 impl AccountSync {
     /// The messages a Gmail search returns, by id and thread, newest
     /// first, at most `limit` of them. One call of 5 quota units, whatever
@@ -53,8 +65,143 @@ impl AccountSync {
         limit: usize,
     ) -> Result<Vec<RemoteRef>, SyncError> {
         let found = self.services.mail.search(query, limit).await?;
+        self.keep_hits(&found);
+        Ok(found)
+    }
+
+    /// The messages `query` matches on the server, past the window the
+    /// store's own search covers, at most `limit`, under the store's ids
+    /// and threads where the store holds them. A server that cannot say
+    /// the query answers no hits and `store_only`, and the caller runs the
+    /// query over the store alone. The hits are kept as a Gmail search's
+    /// are.
+    pub async fn search_tree(&self, query: &Query, limit: usize) -> Result<Searched, SyncError> {
+        let found = match self
+            .services
+            .mail
+            .search(&SearchQuery::Tree(query.clone()), limit)
+            .await
+        {
+            Ok(found) => found,
+            Err(BackendError::Unsupported) => {
+                return Ok(Searched {
+                    refs: Vec::new(),
+                    store_only: true,
+                });
+            }
+            Err(err) => return Err(err.into()),
+        };
+        let resolved = self
+            .resolve(found.iter().map(|hit| hit.id.clone()).collect())
+            .await?;
+        let named: Vec<(RemoteRef, String)> = found
+            .into_iter()
+            .filter_map(|hit| {
+                let id = stored_id(&hit.id, &resolved)?;
+                Some((hit, id))
+            })
+            .collect();
+        let account_id = self.account_id;
+        let refs = self
+            .db
+            .read(move |c| {
+                let mut refs = Vec::with_capacity(named.len());
+                for (hit, id) in named {
+                    let thread_id =
+                        messages::thread_id_of(c, account_id, &id)?.unwrap_or(hit.thread_id);
+                    refs.push(RemoteRef { id, thread_id });
+                }
+                Ok(refs)
+            })
+            .await?;
+        self.keep_hits(&refs);
+        Ok(Searched {
+            refs,
+            store_only: false,
+        })
+    }
+
+    /// The messages a listing of `query` shows. Text typed in Gmail's
+    /// operators, on an account whose server reads no Gmail syntax, becomes
+    /// a query tree that the store answers for the mail it holds and the
+    /// server past it; `store_only` says the server did not search, so
+    /// older mail may be missing. Everything else goes to `search_ids`.
+    pub async fn search_listing(
+        &self,
+        query: &SearchQuery,
+        limit: usize,
+    ) -> Result<Searched, SyncError> {
+        match query {
+            SearchQuery::Native(text) if !self.services.capabilities().native_search => {
+                self.search_typed(text, limit).await
+            }
+            _ => Ok(Searched {
+                refs: self.search_ids(query, limit).await?,
+                store_only: false,
+            }),
+        }
+    }
+
+    /// Typed search text on a server that reads no Gmail syntax: the
+    /// store's matches, newest first, then what the server finds past
+    /// them, at most `limit` in all. A typed `label:` takes the name of the
+    /// mailbox Gmail would spell that way. A server search that fails
+    /// leaves the store's answer, marked `store_only` as one the server
+    /// cannot run is, so the person still sees what this computer holds.
+    async fn search_typed(&self, text: &str, limit: usize) -> Result<Searched, SyncError> {
+        let account_id = self.account_id;
+        let names: Vec<String> = self
+            .db
+            .read(move |c| labels::list_labels(c, account_id))
+            .await?
+            .into_iter()
+            .map(|label| label.name)
+            .collect();
+        let tree = resolve_names(parse(text), &names);
+        let mut refs = self.stored_matches(&tree, limit).await?;
+        let past = match self.search_tree(&tree, limit).await {
+            Ok(past) => past,
+            Err(err) => {
+                tracing::warn!(error = %err, "the server search failed; the store answers alone");
+                Searched {
+                    refs: Vec::new(),
+                    store_only: true,
+                }
+            }
+        };
+        let held: HashSet<String> = refs.iter().map(|hit| hit.id.clone()).collect();
+        refs.extend(past.refs.into_iter().filter(|hit| !held.contains(&hit.id)));
+        refs.truncate(limit);
+        self.keep_hits(&refs);
+        Ok(Searched {
+            refs,
+            store_only: past.store_only,
+        })
+    }
+
+    /// The stored messages `tree` matches, newest first, at most `limit`,
+    /// by store id and thread. Junk and Trash stay out unless the tree
+    /// names them, as in a Gmail search.
+    async fn stored_matches(&self, tree: &Query, limit: usize) -> Result<Vec<RemoteRef>, SyncError> {
+        let (account_id, tree) = (self.account_id, tree.clone());
+        let now = chrono::Local::now();
+        let matched = self
+            .db
+            .read(move |c| mailrs_store::query::matching(c, account_id, &tree, &now, limit))
+            .await?;
+        Ok(matched
+            .into_iter()
+            .map(|hit| RemoteRef {
+                id: hit.message_id,
+                thread_id: hit.thread_id,
+            })
+            .collect())
+    }
+
+    /// Keeps a search's hits per thread for [`KEPT_FOR`].
+    fn keep_hits(&self, found: &[RemoteRef]) {
         let mut by_thread: BTreeMap<&str, BTreeSet<String>> = BTreeMap::new();
-        for hit in &found {
+        for hit in found {
             by_thread
                 .entry(hit.thread_id.as_str())
                 .or_default()
@@ -71,7 +218,6 @@ impl AccountSync {
                 },
             );
         }
-        Ok(found)
     }
 
     /// The messages of `thread_id` a recent search saw, without asking

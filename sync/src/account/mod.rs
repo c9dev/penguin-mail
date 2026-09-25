@@ -11,6 +11,8 @@ mod threads;
 mod window;
 mod writes;
 
+pub use listed::Searched;
+
 use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};

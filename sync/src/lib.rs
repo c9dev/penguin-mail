@@ -40,7 +40,7 @@ mod tests;
 pub const WAIT_CEILING: std::time::Duration = std::time::Duration::from_secs(60);
 
 pub use account::{
-    AccountSync, DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS, FETCH_CONCURRENCY,
+    AccountSync, DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS, FETCH_CONCURRENCY, Searched,
 };
 pub use actions::{
     Accounts, Categorized, Failure, History, MailAction, MailActions, NewLabels, Outcome, Returned,

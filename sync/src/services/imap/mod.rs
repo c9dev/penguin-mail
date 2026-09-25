@@ -11,6 +11,7 @@ mod feed;
 mod keywords;
 mod mailboxes;
 mod outgoing;
+mod search;
 mod state;
 mod syntax;
 mod window;
@@ -320,10 +321,10 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
 
     async fn search(
         &self,
-        _query: &SearchQuery,
-        _limit: usize,
+        query: &SearchQuery,
+        limit: usize,
     ) -> Result<Vec<RemoteRef>, BackendError> {
-        Err(BackendError::Unsupported)
+        self.search_server(query, limit).await
     }
 
     async fn find_sent(&self, message_id: &str) -> Result<Option<String>, BackendError> {
