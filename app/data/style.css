@@ -411,3 +411,22 @@ checkbutton.calendar-check > check:checked {
   background: var(--cal-colour);
   color: white;
 }
+/* The month view: each of the 42 cells is a small card; a day outside
+   the month shown reads quieter. */
+.month-cell { padding: 4px; }
+.day-heading.dimmed { opacity: 0.4; }
+.month-more { font-size: 0.8em; padding: 2px 4px; min-height: 0; }
+/* The agenda: a coloured dot per row, tinted the way an event block's
+   bar is, and a heading row per date. */
+.agenda-row { padding: 0 4px; }
+.agenda-dot {
+  min-width: 8px;
+  min-height: 8px;
+  border-radius: 99px;
+  background: var(--cal-colour, var(--accent-bg-color));
+}
+.agenda-heading { font-weight: 800; opacity: 0.75; }
+/* The event popover: the same coloured bar an event block draws, and a
+   bold title at 1.2em over the smaller body text around it. */
+.popover-bar { min-width: 3px; border-radius: 2px; background: var(--cal-colour); }
+.popover-title { font-weight: 700; font-size: 1.2em; }

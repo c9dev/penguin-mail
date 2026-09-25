@@ -6,12 +6,15 @@ use std::sync::Arc;
 
 use base64::Engine;
 use mailrs_domain::Address;
+use mailrs_domain::calendar::{Event, Guest};
 use mailrs_domain::invitation::{Answer, Invitation, Scope, When};
 use mailrs_gmail::GmailError;
+use mailrs_store::calendar as calendar_store;
 
 use super::{Connected, Harness, harness};
 use crate::fake::meta;
 use crate::invitations::{Change, Invitations, Told};
+use crate::settings::Permitted;
 
 const UID: &str = "demo-event@google.com";
 
@@ -253,6 +256,99 @@ async fn an_answer_reaches_the_calendar_and_comes_back_on_reopening() {
         .unwrap()
         .unwrap();
     assert_eq!(reopened.answer, Some(Answer::Maybe));
+}
+
+#[tokio::test]
+async fn an_answer_from_the_calendar_marks_the_copy_and_the_card() {
+    let h = harness().await;
+    let invitations = invitations(&h);
+    h.fake.with(|s| s.calendar.insert(UID.into(), None));
+    // A card only shows the answer once the message has been opened, as
+    // it does in the app: opening writes the invitations row `answer`
+    // updates.
+    invitations
+        .open(h.account_id, "m1", &invite(0, "20260310T090000Z"), 1_000)
+        .await
+        .unwrap();
+
+    let event = std::sync::Arc::new(Event {
+        calendar: "primary".into(),
+        id: "series-1".into(),
+        uid: UID.into(),
+        start: 1_000,
+        end: 2_000,
+        guests: vec![
+            Guest { email: "me@example.com".into(), me: true, ..Guest::default() },
+            Guest { email: "priya@example.com".into(), organizer: true, ..Guest::default() },
+        ],
+        ..Event::default()
+    });
+    h.db
+        .write({
+            let event = (*event).clone();
+            let account_id = h.account_id;
+            move |c| {
+                let calendar = mailrs_domain::calendar::Calendar {
+                    id: "primary".into(),
+                    name: "primary".into(),
+                    color: "#3584e4".into(),
+                    access: mailrs_domain::calendar::Access::Owner,
+                    zone: "UTC".into(),
+                    primary: true,
+                    shown: true,
+                    reminders: Vec::new(),
+                };
+                calendar_store::save_calendars(c, account_id, std::slice::from_ref(&calendar))?;
+                calendar_store::save_events(c, account_id, std::slice::from_ref(&event), 1_000)
+            }
+        })
+        .await
+        .unwrap();
+    let occurrence = mailrs_domain::calendar::Occurrence {
+        account_id: h.account_id,
+        event: Arc::clone(&event),
+        start: event.start,
+        end: event.end,
+    };
+
+    let done = invitations
+        .answer_event(h.account_id, &occurrence, Answer::Yes)
+        .await
+        .unwrap();
+    assert_eq!(done, Permitted::Done(()));
+
+    assert_eq!(
+        h.fake.with(|s| s.calendar[UID]),
+        Some(Answer::Yes),
+        "Google Calendar holds the answer"
+    );
+    assert_eq!(
+        h.fake.with(|s| s.answered_occurrences.last().copied()),
+        Some(None),
+        "the whole series answers, never one occurrence (ruling R3)"
+    );
+
+    let stored = h
+        .db
+        .read({
+            let account_id = h.account_id;
+            move |c| calendar_store::event(c, account_id, "primary", "series-1")
+        })
+        .await
+        .unwrap()
+        .expect("the event is still in the copy");
+    assert_eq!(stored.my_answer, Some(Answer::Yes));
+    assert_eq!(
+        stored.guests.iter().find(|g| g.me).and_then(|g| g.answer),
+        Some(Answer::Yes)
+    );
+
+    let reopened = invitations
+        .open(h.account_id, "m1", &invite(0, "20260310T090000Z"), 2_000)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(reopened.answer, Some(Answer::Yes), "the invitation card shows it too");
 }
 
 #[tokio::test]

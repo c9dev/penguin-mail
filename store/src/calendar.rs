@@ -10,6 +10,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use mailrs_domain::calendar::{self as model, Access, Calendar, Event, Guest, Occurrence, Status};
+use mailrs_domain::invitation::Answer;
 use mailrs_domain::{AccountId, EpochMillis};
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
@@ -226,6 +227,30 @@ pub fn remove_events(conn: &Connection, account_id: AccountId, calendar: &str, i
             params![account_id, calendar, id],
         )?;
     }
+    Ok(())
+}
+
+/// Records the account's own answer to event `id`, for an answer given
+/// from the calendar view: `my_answer` on the event, and the answer of
+/// the guest row marked `me`. A series is stored once, so `id` is the
+/// series' own id whether the answer covers one occurrence or the whole
+/// series (reconcile.md Task 5 item 2, ruling R3).
+pub fn set_my_answer(
+    conn: &Connection,
+    account_id: AccountId,
+    calendar: &str,
+    id: &str,
+    answer: Answer,
+) -> Result<()> {
+    conn.execute(
+        "UPDATE events SET my_answer = ?4 WHERE account_id = ?1 AND calendar = ?2 AND id = ?3",
+        params![account_id, calendar, id, answer.as_str()],
+    )?;
+    conn.execute(
+        "UPDATE event_guests SET answer = ?4 \
+         WHERE account_id = ?1 AND calendar = ?2 AND event = ?3 AND me = 1",
+        params![account_id, calendar, id, answer.as_str()],
+    )?;
     Ok(())
 }
 
@@ -687,7 +712,6 @@ mod tests {
     use super::*;
     use crate::accounts;
     use mailrs_domain::calendar::{Access, Calendar, Event, Guest, Status};
-    use mailrs_domain::invitation::Answer;
 
     const HOUR: EpochMillis = 60 * 60 * 1000;
     const DAY: EpochMillis = 24 * HOUR;
@@ -731,6 +755,28 @@ mod tests {
 
     fn starts(found: &[Occurrence]) -> Vec<(String, EpochMillis)> {
         found.iter().map(|o| (o.event.id.clone(), o.start)).collect()
+    }
+
+    #[test]
+    fn set_my_answer_marks_the_event_and_the_guest_who_is_me() {
+        let (conn, id) = store();
+        let mut standup = event("primary", "standup", MONDAY + 9 * HOUR, 1);
+        standup.guests = vec![
+            Guest { email: "me@example.com".into(), me: true, ..Guest::default() },
+            Guest { email: "priya@example.com".into(), organizer: true, ..Guest::default() },
+        ];
+        save_events(&conn, id, &[standup], 0).unwrap();
+
+        set_my_answer(&conn, id, "primary", "standup", Answer::Yes).unwrap();
+
+        let found = super::event(&conn, id, "primary", "standup").unwrap().unwrap();
+        assert_eq!(found.my_answer, Some(Answer::Yes));
+        assert_eq!(found.guests.iter().find(|g| g.me).and_then(|g| g.answer), Some(Answer::Yes));
+        assert_eq!(
+            found.guests.iter().find(|g| g.organizer).and_then(|g| g.answer),
+            None,
+            "only the guest marked me changes"
+        );
     }
 
     #[test]

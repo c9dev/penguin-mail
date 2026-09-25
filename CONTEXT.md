@@ -168,6 +168,8 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Event block**: the button `TimeGrid` and `AllDayStrip` draw for one placed occurrence: a bar in the calendar's or the event's own colour, the title and the time, dashed while the account has not answered it and struck through once it has declined. `mailrs::ui::calendar::block::EventBlock`. Named apart from "Event card", which is the invitation card a message shows (`mailrs::ui::invitation::EventCard`), so the two never collide in a search or a stack trace. _Avoid_: event card, event cell.
 
+**Agenda**: the calendar page's flat list of upcoming occurrences, a heading per date then a row per occurrence, in place of a grid. `mailrs::ui::calendar::agenda::Agenda`, a `gtk::ListView` over a model that also answers `gtk::SectionModel` for the date headings, so a widget exists only for the rows on screen; loading earlier days grows the same list rather than opening a new one. The Calendar entry's "_Avoid_: agenda" is about naming a calendar, not this list. _Avoid_: timeline, list view (that is any widget of the kind).
+
 **Change queue**: calendar edits made here that the provider has not taken yet, sent in order; a change the provider turns down leaves the queue and the provider's version stays. `mailrs_store::calendar::QueuedChange`. _Avoid_: outbox (that is mail's).
 
 **Turned down**: a change made here that the provider refused when the queue tried to send it, such as an event changed elsewhere first or a calendar gone read-only; the local copy takes the provider's version in its place. `mailrs_sync::calendar_copy::TurnedDown`. _Avoid_: conflict, rejected change.

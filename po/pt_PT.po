@@ -3342,6 +3342,14 @@ msgstr "Chave de API do Brave Search (guardada)"
 msgid "Brave Search API Key"
 msgstr "Chave de API do Brave Search"
 
+#: app/src/ui/calendar/agenda.rs:246 app/src/ui/calendar/words.rs:52
+msgid "All day"
+msgstr "Todo o dia"
+
+#: app/src/ui/calendar/agenda.rs:264
+msgid "{title}, {when}, {calendar}"
+msgstr "{title}, {when}, {calendar}"
+
 #: app/src/ui/calendar/block.rs:87
 msgid "Waiting to be saved"
 msgstr "À espera de ser guardado"
@@ -3370,11 +3378,19 @@ msgstr "{title}, todo o dia, {calendar}"
 msgid "{title}, {start} to {end}, {calendar}"
 msgstr "{title}, {start} às {end}, {calendar}"
 
-#: app/src/ui/calendar/range.rs:91
+#: app/src/ui/calendar/popover.rs:119
+msgid "Open in Maps"
+msgstr "Abrir no mapa"
+
+#: app/src/ui/calendar/popover.rs:162 app/src/ui/invitation.rs:188
+msgid "Answer"
+msgstr "Resposta"
+
+#: app/src/ui/calendar/range.rs:91 app/src/ui/calendar/words.rs:74
 msgid "%A %-d"
 msgstr "%A %-d"
 
-#: app/src/ui/calendar/range.rs:94
+#: app/src/ui/calendar/range.rs:94 app/src/ui/calendar/sidebar.rs:263
 msgid "%B %Y"
 msgstr "%B %Y"
 
@@ -3382,7 +3398,7 @@ msgstr "%B %Y"
 msgid "%B"
 msgstr "%B"
 
-#: app/src/ui/calendar/range.rs:106
+#: app/src/ui/calendar/range.rs:106 app/src/ui/calendar/words.rs:80
 msgid "{first} – {last}"
 msgstr "{first} – {last}"
 
@@ -3398,11 +3414,87 @@ msgstr "%Y"
 msgid "W{week}"
 msgstr "S{week}"
 
+#: app/src/ui/calendar/sidebar.rs:89
+msgid "%a"
+msgstr "%a"
+
+#: app/src/ui/calendar/sidebar.rs:156
+msgid "Previous Month"
+msgstr "Mês anterior"
+
+#: app/src/ui/calendar/sidebar.rs:157
+msgid "Next Month"
+msgstr "Mês seguinte"
+
+#: app/src/ui/calendar/sidebar.rs:307
+msgid "Grant Access to show shared calendars"
+msgstr "Conceder acesso para mostrar os calendários partilhados"
+
+#: app/src/ui/calendar/sidebar.rs:313
+msgid "Penguin Mail cannot see this account's calendars"
+msgstr "O Penguin Mail não consegue ver os calendários desta conta"
+
+#: app/src/ui/calendar/sidebar.rs:317 app/src/ui/contacts_prefs.rs:228
+#: app/src/ui/permission.rs:41 app/src/ui/permission.rs:64
+#: app/src/ui/window.rs:951
+msgid "Grant Access"
+msgstr "Conceder acesso"
+
+#: app/src/ui/calendar/sidebar.rs:339
+msgid "You can only read this calendar"
+msgstr "Só pode ler este calendário"
+
+#: app/src/ui/calendar/sidebar.rs:378 app/src/ui/contacts_prefs.rs:234
+msgid "Grant Access for {account}"
+msgstr "Conceder acesso a {account}"
+
 #: app/src/ui/calendar/time_grid.rs:107
 msgid "{count} more event"
 msgid_plural "{count} more events"
 msgstr[0] "mais {count} evento"
 msgstr[1] "mais {count} eventos"
+
+#: app/src/ui/calendar/words.rs:16
+msgid "%A %-d %B"
+msgstr "%A %-d de %B"
+
+#: app/src/ui/calendar/words.rs:58
+msgid "{date} · {start}–{end}"
+msgstr "{date} · {start}–{end}"
+
+#: app/src/ui/calendar/words.rs:96
+msgid "{yes} of {count} said yes"
+msgid_plural "{yes} of {count} said yes"
+msgstr[0] "{yes} de {count} disse que sim"
+msgstr[1] "{yes} de {count} disseram que sim"
+
+#: app/src/ui/calendar/words.rs:105
+msgid "Organized by {name}"
+msgstr "Organizado por {name}"
+
+#: app/src/ui/calendar/words.rs:111
+msgid "and {count} more"
+msgid_plural "and {count} more"
+msgstr[0] "e mais {count}"
+msgstr[1] "e mais {count}"
+
+#: app/src/ui/calendar/words.rs:122
+msgid "Join with Google Meet"
+msgstr "Participar com o Google Meet"
+
+#: app/src/ui/calendar/words.rs:124
+msgid "Join Call"
+msgstr "Participar na chamada"
+
+#: app/src/ui/calendar/words.rs:145
+msgid "{count} more event on {date}"
+msgid_plural "{count} more events on {date}"
+msgstr[0] "mais {count} evento a {date}"
+msgstr[1] "mais {count} eventos a {date}"
+
+#: app/src/ui/calendar/words.rs:160
+msgid "{date}, has events"
+msgstr "{date}, tem eventos"
 
 #: app/src/ui/composer/mod.rs:204 app/src/ui/conversation.rs:1561
 msgid "Choose a Time…"
@@ -3872,15 +3964,6 @@ msgstr "Adicionar {account} às contas online do GNOME"
 msgid "Not allowed when you signed in"
 msgstr "Não autorizado no início de sessão"
 
-#: app/src/ui/contacts_prefs.rs:228 app/src/ui/permission.rs:41
-#: app/src/ui/permission.rs:64 app/src/ui/window.rs:951
-msgid "Grant Access"
-msgstr "Conceder acesso"
-
-#: app/src/ui/contacts_prefs.rs:234
-msgid "Grant Access for {account}"
-msgstr "Conceder acesso a {account}"
-
 #: app/src/ui/conversation.rs:319
 msgid "No Conversation Selected"
 msgstr "Nenhuma conversa selecionada"
@@ -4283,10 +4366,6 @@ msgstr ""
 #: app/src/ui/hide_my_email.rs:474
 msgid "Address Created"
 msgstr "Endereço criado"
-
-#: app/src/ui/invitation.rs:188
-msgid "Answer"
-msgstr "Resposta"
 
 #: app/src/ui/invitation.rs:201
 msgid "What the answer covers"
