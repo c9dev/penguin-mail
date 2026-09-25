@@ -28,8 +28,10 @@ for every permission Penguin Mail uses, in one visit:
   Penguin Mail can show more than the primary one.
 
 You may leave any of these unticked on Google's screen. Penguin Mail then
-turns off the feature that needs it and says why, and an account still
-missing one gets a banner offering to ask again.
+turns off the feature that needs it and says why where you would use that
+feature, with a Grant Access button that asks Google again. An account
+added before Penguin Mail asked for all of them at once gets a bar at the
+top of its mail list that names what it lacks and offers the same button.
 
 ## Where your data goes
 

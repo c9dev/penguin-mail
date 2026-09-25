@@ -171,6 +171,31 @@ pub fn withheld_permissions(withheld: Withheld) -> Vec<Permission> {
     .collect()
 }
 
+impl Permission {
+    /// What the permission lets Penguin Mail do, in words that finish
+    /// "has not allowed Penguin Mail to".
+    fn allows(self) -> String {
+        match self {
+            Permission::Settings => gettext("change Gmail settings"),
+            Permission::Delete => gettext("delete mail for good"),
+            Permission::Contacts => gettext("read contacts"),
+            Permission::ChangeContacts => gettext("add and change contacts"),
+            Permission::Calendar => gettext("use the calendar"),
+        }
+    }
+}
+
+/// What an account's Grant Access bar says: the account and each
+/// feature its consent left out.
+pub fn grant_bar_title(account: &str, missing: &[Permission]) -> String {
+    let allows: Vec<String> = missing.iter().map(|p| p.allows()).collect();
+    let allows: Vec<&str> = allows.iter().map(String::as_str).collect();
+    fill(
+        &gettext("{account} has not allowed Penguin Mail to {missing}"),
+        &[("account", account), ("missing", &crate::protection::joined(&allows))],
+    )
+}
+
 /// Whether the account's Grant Access banner shows: something is
 /// withheld, and `asked` (the account's `asked_scopes` row) does not
 /// already cover every [`SIGN_IN_SCOPES`] entry. An account asked for
@@ -192,6 +217,26 @@ mod tests {
     use super::*;
 
     const OCCASIONS: [Occasion; 2] = [Occasion::Needed, Occasion::Offer];
+
+    #[test]
+    fn the_grant_bar_names_each_missing_feature() {
+        assert_eq!(
+            grant_bar_title(
+                "d.reyes@uni.example",
+                &[Permission::Settings, Permission::Delete, Permission::Calendar]
+            ),
+            "d.reyes@uni.example has not allowed Penguin Mail to change Gmail settings, \
+             delete mail for good and use the calendar"
+        );
+    }
+
+    #[test]
+    fn the_grant_bar_names_one_missing_feature_alone() {
+        assert_eq!(
+            grant_bar_title("a@example.com", &[Permission::Contacts]),
+            "a@example.com has not allowed Penguin Mail to read contacts"
+        );
+    }
 
     #[test]
     fn every_permission_names_the_account() {

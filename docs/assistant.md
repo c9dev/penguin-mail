@@ -128,7 +128,7 @@ pending until it does.
 
 Signing in already asked for the calendar permission; a calendar tool
 that finds it withheld says so instead of failing silently, and the
-window's Grant Access banner offers to ask again. If the Google Cloud
+calendar sidebar's Grant Access button asks Google again. If the Google Cloud
 project Penguin Mail signs in with has the Calendar API switched off, a
 dialog says so and opens the page that turns it on.
 

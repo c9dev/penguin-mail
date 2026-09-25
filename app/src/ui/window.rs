@@ -109,9 +109,9 @@ pub struct MainWindow {
     toasts: adw::ToastOverlay,
     /// Says a release is available, installing, waiting to restart, or failed.
     update_banner: adw::Banner,
-    /// One banner per account whose own consent leaves something out; see
-    /// [`crate::permission::wants_banner`]. Rebuilt whenever the accounts
-    /// are read again.
+    /// One bar per account whose own consent leaves something out, at the
+    /// top of the mail list; see [`crate::permission::wants_banner`].
+    /// Rebuilt whenever the accounts are read again.
     grant_banners: gtk::Box,
     /// The banner `grant_banners` holds for each account that wants one,
     /// so a later rebuild changes only what changed rather than tearing
@@ -561,10 +561,9 @@ impl MainWindow {
             // An update's banner spans the whole window, above the panes,
             // since it is about the app and not the mail on screen.
             let update_banner = adw::Banner::builder().revealed(false).build();
-            let grant_banners = gtk::Box::new(gtk::Orientation::Vertical, 0);
+            let grant_banners = list.grant_bars.clone();
             let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
             content.append(&update_banner);
-            content.append(&grant_banners);
             content.append(&stack);
             stack.set_vexpand(true);
             let toasts = adw::ToastOverlay::new();
@@ -1016,19 +1015,20 @@ impl MainWindow {
             keep
         });
         for account in wanted {
-            if widgets.contains_key(&account.id) {
+            let missing = crate::permission::withheld_permissions(self.withheld(account.id));
+            if let Some(banner) = widgets.get(&account.id) {
+                // The same widget stays; only its words follow what is
+                // still missing.
+                banner.set_title(&crate::permission::grant_bar_title(&account.email, &missing));
                 continue;
             }
             tracing::info!(
                 account = %account.email,
-                missing = ?crate::permission::withheld_permissions(self.withheld(account.id)),
+                ?missing,
                 "showing the Grant Access banner"
             );
             let banner = adw::Banner::builder()
-                .title(fill(
-                    &gettext("{account} has not granted everything Penguin Mail uses"),
-                    &[("account", &account.email)],
-                ))
+                .title(crate::permission::grant_bar_title(&account.email, &missing))
                 .button_label(gettext("Grant Access"))
                 .revealed(true)
                 .build();

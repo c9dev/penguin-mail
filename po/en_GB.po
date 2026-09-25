@@ -1561,6 +1561,30 @@ msgstr "The assistant needs permission to read and change events on the calendar
 msgid "Your reply went to the organizer as mail. With permission to change events on the calendar for {account}, the meeting is marked on your own calendar too. Google asks you to confirm in your browser."
 msgstr "Your reply went to the organiser as mail. With permission to change events on the calendar for {account}, the meeting is marked on your own calendar too. Google asks you to confirm in your browser."
 
+#: app/src/permission.rs:179
+msgid "change Gmail settings"
+msgstr "change Gmail settings"
+
+#: app/src/permission.rs:180
+msgid "delete mail for good"
+msgstr "delete mail for good"
+
+#: app/src/permission.rs:181
+msgid "read contacts"
+msgstr "read contacts"
+
+#: app/src/permission.rs:182
+msgid "add and change contacts"
+msgstr "add and change contacts"
+
+#: app/src/permission.rs:183
+msgid "use the calendar"
+msgstr "use the calendar"
+
+#: app/src/permission.rs:194
+msgid "{account} has not allowed Penguin Mail to {missing}"
+msgstr "{account} has not allowed Penguin Mail to {missing}"
+
 #: app/src/pgp.rs:110
 msgid "Add a recipient whose key gpg holds."
 msgstr "Add a recipient whose key gpg holds."
@@ -2516,7 +2540,7 @@ msgid "Signing In…"
 msgstr "Signing In…"
 
 #: app/src/ui/add_account.rs:634 app/src/ui/add_account.rs:903
-#: app/src/ui/window.rs:964
+#: app/src/ui/window.rs:963
 msgid "Sign In"
 msgstr "Sign In"
 
@@ -3123,65 +3147,65 @@ msgstr "{title}, all day, {calendar}"
 msgid "{title}, {start} to {end}, {calendar}"
 msgstr "{title}, {start} to {end}, {calendar}"
 
-#: app/src/ui/calendar/mod.rs:232
+#: app/src/ui/calendar/mod.rs:236
 msgid "View"
 msgstr "View"
 
-#: app/src/ui/calendar/mod.rs:240
+#: app/src/ui/calendar/mod.rs:244
 msgid "New Event"
 msgstr "New Event"
 
-#: app/src/ui/calendar/mod.rs:243 app/src/ui/calendar/mod.rs:245
+#: app/src/ui/calendar/mod.rs:247 app/src/ui/calendar/mod.rs:249
 msgid "Search the Calendar (Ctrl+F)"
 msgstr "Search the Calendar (Ctrl+F)"
 
-#: app/src/ui/calendar/mod.rs:248 app/src/ui/calendar/mod.rs:251
+#: app/src/ui/calendar/mod.rs:252 app/src/ui/calendar/mod.rs:255
 msgid "Show Calendars"
 msgstr "Show Calendars"
 
-#: app/src/ui/calendar/mod.rs:254 app/src/ui/calendar/mod.rs:256
-#: app/src/ui/thread_list.rs:234
+#: app/src/ui/calendar/mod.rs:258 app/src/ui/calendar/mod.rs:260
+#: app/src/ui/thread_list.rs:238
 msgid "Assistant (Ctrl+J)"
 msgstr "Assistant (Ctrl+J)"
 
-#: app/src/ui/calendar/mod.rs:273 app/src/ui/calendar/mod.rs:275
+#: app/src/ui/calendar/mod.rs:277 app/src/ui/calendar/mod.rs:279
 msgid "Search the Calendar"
 msgstr "Search the Calendar"
 
-#: app/src/ui/calendar/mod.rs:666
+#: app/src/ui/calendar/mod.rs:683
 msgid "List"
 msgstr "List"
 
-#: app/src/ui/calendar/mod.rs:667
+#: app/src/ui/calendar/mod.rs:684
 msgid "Day"
 msgstr "Day"
 
-#: app/src/ui/calendar/mod.rs:668
+#: app/src/ui/calendar/mod.rs:685
 msgid "Week"
 msgstr "Week"
 
-#: app/src/ui/calendar/mod.rs:669
+#: app/src/ui/calendar/mod.rs:686
 msgid "Month"
 msgstr "Month"
 
-#: app/src/ui/calendar/mod.rs:813
+#: app/src/ui/calendar/mod.rs:873
 msgid "All-day"
 msgstr "All-day"
 
-#: app/src/ui/calendar/mod.rs:1064 app/src/ui/calendar/mod.rs:1517
+#: app/src/ui/calendar/mod.rs:1135 app/src/ui/calendar/mod.rs:1614
 #: app/src/ui/calendar/sidebar.rs:111
 msgid "%a"
 msgstr "%a"
 
-#: app/src/ui/calendar/mod.rs:1340
+#: app/src/ui/calendar/mod.rs:1414
 msgid "Could not send your answer: {reason}"
 msgstr "Could not send your answer: {reason}"
 
-#: app/src/ui/calendar/popover.rs:127
+#: app/src/ui/calendar/popover.rs:132
 msgid "Open in Maps"
 msgstr "Open in Maps"
 
-#: app/src/ui/calendar/popover.rs:149 app/src/ui/invitation.rs:188
+#: app/src/ui/calendar/popover.rs:154 app/src/ui/invitation.rs:188
 msgid "Answer"
 msgstr "Answer"
 
@@ -3259,7 +3283,7 @@ msgstr "You can only read this calendar"
 msgid "Grant Access for {account}"
 msgstr "Grant Access for {account}"
 
-#: app/src/ui/calendar/time_grid.rs:117
+#: app/src/ui/calendar/time_grid.rs:130
 msgid "{count} more event"
 msgid_plural "{count} more events"
 msgstr[0] "{count} more event"
@@ -4773,7 +4797,7 @@ msgstr "Could not add the rule: {reason}"
 msgid "Mailboxes"
 msgstr "Mailboxes"
 
-#: app/src/ui/sidebar.rs:87 app/src/ui/thread_list.rs:261
+#: app/src/ui/sidebar.rs:87 app/src/ui/thread_list.rs:267
 msgid "Mail"
 msgstr "Mail"
 
@@ -4989,34 +5013,34 @@ msgstr "Body"
 msgid "New Template"
 msgstr "New Template"
 
-#: app/src/ui/thread_list.rs:180
+#: app/src/ui/thread_list.rs:184
 msgid "No Mail"
 msgstr "No Mail"
 
 #. The two search terms are Gmail's own and stay in English.
-#: app/src/ui/thread_list.rs:198
+#: app/src/ui/thread_list.rs:202
 msgid "Search mail, e.g. from:ann has:attachment"
 msgstr "Search mail, e.g. from:ann has:attachment"
 
-#: app/src/ui/thread_list.rs:212
+#: app/src/ui/thread_list.rs:216
 msgid "All Inboxes"
 msgstr "All Inboxes"
 
-#: app/src/ui/thread_list.rs:215 app/src/ui/thread_list.rs:239
+#: app/src/ui/thread_list.rs:219 app/src/ui/thread_list.rs:243
 msgid "Show Mailboxes"
 msgstr "Show Mailboxes"
 
-#: app/src/ui/thread_list.rs:220
+#: app/src/ui/thread_list.rs:224
 msgid "New Message (C)"
 msgstr "New Message (C)"
 
-#: app/src/ui/thread_list.rs:225
+#: app/src/ui/thread_list.rs:229
 msgid "Search (/)"
 msgstr "Search (/)"
 
 #. The tooltips already say what these do; the spoken name takes
 #. the words and leaves the keys to a property of their own.
-#: app/src/ui/thread_list.rs:238
+#: app/src/ui/thread_list.rs:242
 msgid "Search mail"
 msgstr "Search mail"
 
@@ -5381,21 +5405,17 @@ msgid_plural "Moved {count} messages to the Inbox"
 msgstr[0] "Moved {count} message to the Inbox"
 msgstr[1] "Moved {count} messages to the Inbox"
 
-#: app/src/ui/window.rs:574
+#: app/src/ui/window.rs:573
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (Demo)"
 
-#: app/src/ui/window.rs:907
+#: app/src/ui/window.rs:906
 msgid "Could not read accounts: {reason}"
 msgstr "Could not read accounts: {reason}"
 
-#: app/src/ui/window.rs:961
+#: app/src/ui/window.rs:960
 msgid "Sign in again to keep {account} syncing"
 msgstr "Sign in again to keep {account} syncing"
-
-#: app/src/ui/window.rs:1029
-msgid "{account} has not granted everything Penguin Mail uses"
-msgstr "{account} has not granted everything Penguin Mail uses"
 
 #: app/src/ui/window.rs:1633
 msgid "Could not delete the mail: {reason}"
