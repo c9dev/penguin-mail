@@ -63,9 +63,12 @@ Installing for the owner: `NO_AUTOSTART=1 scripts/install.sh`.
 - **Docker tests** (`testmail/`, `imap/tests/dovecot*.rs`,
   `sync/tests/dovecot.rs`) start Dovecot and Mailpit and skip when Docker
   is missing or cannot start. `PENGUIN_MAIL_REQUIRE_IMAP=1` turns the skip
-  into a failure; CI's `imap` job sets it and the gate does not. Each file
-  holds one test, because it points `SSL_CERT_FILE` at a root made for
-  the run: add a step to that test rather than a second test. Containers
+  into a failure; CI's `imap` job sets it and the gate does not. The
+  files under `imap/tests/` and `sync/tests/` hold one test each, because
+  that test points `SSL_CERT_FILE` at a root made for the run: add a step
+  to it rather than a second test. The sync suite spawns its body on a
+  runtime built with `mailrs_sync::WORKER_STACK`, as the app does, so a
+  stack too small for a debug build fails there. Containers
   go by id when a test ends; one left by a killed run carries the label
   `io.github.c9dev.penguin-mail.test`. Remove it by its id.
 - **Migrations** live in one ordered array in `store/src/schema.rs`,

@@ -41,30 +41,21 @@ fn the_imap_adapter_syncs_and_writes_against_dovecot_in_every_profile() {
     // SAFETY: this is the binary's only test, and no runtime or client has
     // started a thread yet, so nothing else reads the environment.
     unsafe { mailrs_testmail::trust(&certs.root()) };
-    // AccountSync's own call chain (bootstrap, a window page, a history
-    // replay, and the rest) nests dozens of async functions deep without
-    // ever spawning a task, so `block_on` polls that whole chain on the
-    // stack of the thread that calls it. In an unoptimized debug build,
-    // where each async fn's state machine is large, that overflows the
-    // 8 MiB the test harness gives this thread. Running the runtime on a
-    // thread of its own, with a stack sized for a debug build, is the fix;
-    // it changes nothing the test asserts.
-    let handle = std::thread::Builder::new()
-        .stack_size(64 << 20)
-        .spawn(move || run(certs))
-        .expect("a thread for the runtime");
-    handle
-        .join()
-        .unwrap_or_else(|panic| std::panic::resume_unwind(panic));
+    run(certs);
 }
 
 fn run(certs: Certs) {
+    // The runtime the app and the CLI build, with the body spawned onto
+    // its workers as the engine spawns an account's sync. `block_on` would
+    // poll the body on this thread's stack instead, which is not what the
+    // app does; spawned, a worker stack too small for a debug build fails
+    // here first.
     let runtime = tokio::runtime::Builder::new_multi_thread()
+        .thread_stack_size(mailrs_sync::WORKER_STACK)
         .enable_all()
-        .thread_stack_size(16 * 1024 * 1024)
         .build()
         .expect("a runtime");
-    runtime.block_on(async {
+    let body = runtime.spawn(async move {
         let password = mailrs_testmail::password();
         let Some(sink) = Mailpit::start(&certs, Submission::Tls, ADDRESS, &password).await else {
             return;
@@ -80,6 +71,9 @@ fn run(certs: Certs) {
                 .await;
         }
     });
+    runtime
+        .block_on(body)
+        .unwrap_or_else(|panic| std::panic::resume_unwind(panic.into_panic()));
 }
 
 /// Where the store says a message sits on the server.

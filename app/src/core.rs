@@ -166,6 +166,7 @@ impl Core {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
             .thread_name("mailrs-sync")
+            .thread_stack_size(mailrs_sync::WORKER_STACK)
             .enable_all()
             .build()
             .context("could not start the async runtime")?;
