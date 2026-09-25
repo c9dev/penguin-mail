@@ -111,6 +111,12 @@ pub struct MainWindow {
     /// [`crate::permission::wants_banner`]. Rebuilt whenever the accounts
     /// are read again.
     grant_banners: gtk::Box,
+    /// The banner `grant_banners` holds for each account that wants one,
+    /// so a later rebuild changes only what changed rather than tearing
+    /// every banner down and putting it back: a screen reader can be
+    /// mid-walk when the accounts are read again, and a banner that
+    /// blinks out and back shifts every row below it for a moment.
+    grant_banner_widgets: RefCell<HashMap<AccountId, adw::Banner>>,
     /// The main menu's update entry: Check for Updates, or what to do with
     /// the one that is waiting.
     update_menu: gio::Menu,
@@ -558,6 +564,7 @@ impl MainWindow {
                 toasts,
                 update_banner,
                 grant_banners,
+                grant_banner_widgets: RefCell::new(HashMap::new()),
                 update_menu: gio::Menu::new(),
                 about: RefCell::new(None),
                 stack,
@@ -890,36 +897,50 @@ impl MainWindow {
             }
         }
         self.refresh_counts();
-        // Read last: it only fills banners above the mailboxes, so a slow
-        // read here must never hold up the gating and the sidebar rebuild
-        // above, which a screen reader can already be walking.
-        let consent = app.all_consent().await.unwrap_or_default();
+        // app.reload_accounts already read every account's consent in the
+        // same pass as the accounts themselves, so this costs no round
+        // trip of its own and settles with everything else above.
         let accounts: Vec<Account> = data.iter().map(|(a, _)| a.clone()).collect();
-        self.rebuild_grant_banners(&accounts, &consent);
+        self.rebuild_grant_banners(&accounts, &app.consent());
     }
 
-    /// Rebuilds the Grant Access banners from `accounts` and `consent`:
-    /// one per account whose own scopes leave something out and that has
-    /// never been asked for everything. The banner opens the browser
-    /// only when its button is pressed; nothing here does at start or
-    /// from the tray.
+    /// Brings the Grant Access banners in line with `accounts` and
+    /// `consent`: one per account whose own scopes leave something out
+    /// and that has never been asked for everything. Only accounts whose
+    /// answer changed gain or lose a banner; one that already has the
+    /// right banner keeps the same widget, so a later call from an
+    /// unrelated account starting or stopping never shifts what is
+    /// already on screen. The banner opens the browser only when its
+    /// button is pressed; nothing here does at start or from the tray.
     fn rebuild_grant_banners(
         self: &Rc<Self>,
         accounts: &[Account],
         consent: &HashMap<AccountId, mailrs_store::accounts::Consent>,
     ) {
-        while let Some(child) = self.grant_banners.first_child() {
-            self.grant_banners.remove(&child);
-        }
-        for account in accounts {
-            let withheld = self.withheld(account.id);
-            let asked = consent.get(&account.id).and_then(|c| c.asked.as_deref());
-            if !crate::permission::wants_banner(withheld, asked) {
+        let wanted: Vec<&Account> = accounts
+            .iter()
+            .filter(|account| {
+                let withheld = self.withheld(account.id);
+                let asked = consent.get(&account.id).and_then(|c| c.asked.as_deref());
+                crate::permission::wants_banner(withheld, asked)
+            })
+            .collect();
+        let wanted_ids: HashSet<AccountId> = wanted.iter().map(|a| a.id).collect();
+        let mut widgets = self.grant_banner_widgets.borrow_mut();
+        widgets.retain(|id, banner| {
+            let keep = wanted_ids.contains(id);
+            if !keep {
+                self.grant_banners.remove(banner);
+            }
+            keep
+        });
+        for account in wanted {
+            if widgets.contains_key(&account.id) {
                 continue;
             }
-            tracing::debug!(
+            tracing::info!(
                 account = %account.email,
-                missing = ?crate::permission::withheld_permissions(withheld),
+                missing = ?crate::permission::withheld_permissions(self.withheld(account.id)),
                 "showing the Grant Access banner"
             );
             let banner = adw::Banner::builder()
@@ -933,6 +954,7 @@ impl MainWindow {
             let (this, account_id) = (Rc::clone(self), account.id);
             banner.connect_button_clicked(move |_| this.grant_access(account_id));
             self.grant_banners.append(&banner);
+            widgets.insert(account.id, banner);
         }
     }
 
