@@ -689,3 +689,44 @@ async fn a_calendar_that_fails_to_read_leaves_the_rest_to_be_read() {
     let left = h.db.read(move |c| store::calendars(c, account)).await.unwrap();
     assert!(left.iter().all(|c| c.id != "archive"), "the list is read again at once");
 }
+
+/// What the code logs at warning level while `run` runs, on this thread.
+async fn warnings<F: std::future::Future>(run: F) -> String {
+    #[derive(Clone, Default)]
+    struct Log(Arc<std::sync::Mutex<Vec<u8>>>);
+    impl std::io::Write for Log {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            self.0.lock().unwrap().extend_from_slice(bytes);
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+    let log = Log::default();
+    let writer = log.clone();
+    let subscriber = tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::WARN)
+        .with_ansi(false)
+        .with_writer(move || writer.clone())
+        .finish();
+    let _guard = tracing::subscriber::set_default(subscriber);
+    run.await;
+    String::from_utf8(log.0.lock().unwrap().clone()).unwrap()
+}
+
+/// An account still starting, signed out or just removed has no engine
+/// to read with. The app ticks every 15 seconds, so it is skipped quietly
+/// rather than warned about twice a tick.
+#[tokio::test]
+async fn an_account_that_is_not_running_is_skipped_quietly() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    let copy = copy(&h);
+    let missing = h.account_id + 1;
+    let logged = warnings(async {
+        copy.refresh_due(&[missing, h.account_id], NOW, true).await.unwrap();
+    })
+    .await;
+    assert_eq!(logged, "");
+}

@@ -42,6 +42,8 @@ base64.workspace = true
 mail-parser.workspace = true
 mailrs-testmail.workspace = true
 tempfile.workspace = true
+# Lets a test read what the code logged.
+tracing-subscriber.workspace = true
 # `start_paused` lets a test watch a retry wait out Gmail's Retry-After
 # without waiting itself.
 tokio = { workspace = true, features = ["test-util"] }
