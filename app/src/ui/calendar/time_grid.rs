@@ -80,6 +80,16 @@ fn all_day_rect(
     (x, y, width, ALL_DAY_CARD)
 }
 
+/// How many lines of title fit in a block running from `top` to `bottom`
+/// hours: its height less the padding, the title's top margin and the
+/// time line, in lines of the 12.5 px title.
+fn title_lines(top: f64, bottom: f64) -> i32 {
+    const ABOVE_AND_BELOW: f32 = 6.0 + 3.0 + 15.0;
+    const TITLE_LINE: f32 = 16.0;
+    let height = (bottom - top) as f32 * HOUR - CARD_INSET;
+    (((height - ABOVE_AND_BELOW) / TITLE_LINE).floor() as i32).max(1)
+}
+
 /// The strip's height for `rows` lanes: one lane makes the mockup's
 /// 34-pixel row.
 fn all_day_height(rows: usize) -> f32 {
@@ -548,12 +558,14 @@ impl TimeGrid {
                 let o = &occurrences[occ_index];
                 let (colour, name) = calendar_of(o, calendars);
                 let compact = block::is_compact(start, end);
-                let card = EventBlock::new(o, colour, name, compact, zone).widget;
+                let top = layout::wall_offset(start, midnight, zone);
+                let bottom = layout::wall_offset(end, midnight, zone);
+                let event_block = EventBlock::new(o, colour, name, compact, zone);
+                event_block.set_title_lines(title_lines(top, bottom));
+                let card = event_block.widget;
                 connect_activated(self, &card, o.clone());
                 card.set_parent(self);
                 blocks.push((block::key_of(o), card.clone().upcast()));
-                let top = layout::wall_offset(start, midnight, zone);
-                let bottom = layout::wall_offset(end, midnight, zone);
                 in_day.push((
                     card.upcast(),
                     imp::Placement::Card {
@@ -974,6 +986,21 @@ mod tests {
         assert_eq!(removed, vec!["old"]);
         let names: Vec<&str> = children.iter().map(|(name, _)| *name).collect();
         assert_eq!(names, vec!["new", "08:00"]);
+    }
+
+    #[test]
+    fn an_hour_long_block_has_room_for_two_lines_of_title() {
+        assert_eq!(title_lines(10.0, 11.0), 2);
+    }
+
+    #[test]
+    fn a_ninety_minute_block_lets_sprint_planning_wrap() {
+        assert!(title_lines(10.0, 11.5) >= 2);
+    }
+
+    #[test]
+    fn a_short_block_keeps_its_title_on_one_line() {
+        assert_eq!(title_lines(9.0, 9.75), 1);
     }
 
     #[test]
