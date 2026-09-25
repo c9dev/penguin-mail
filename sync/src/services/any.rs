@@ -8,6 +8,7 @@
 use std::ops::RangeInclusive;
 use std::time::Duration;
 
+use mailrs_domain::calendar as model;
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::{EpochMillis, Filter, MailSet, RemoteMailbox, Role, Vacation};
 use mailrs_gmail::{
@@ -351,6 +352,28 @@ impl CalendarService for AnyCalendar {
 
     async fn delete_event(&self, id: &str) -> Result<(), BackendError> {
         forward!(AnyCalendar, self, delete_event(id))
+    }
+
+    async fn calendars(&self) -> Result<Vec<model::Calendar>, BackendError> {
+        forward!(AnyCalendar, self, calendars())
+    }
+
+    async fn event_changes(
+        &self,
+        calendar: &str,
+        token: Option<&str>,
+        page: Option<&str>,
+        from: EpochMillis,
+    ) -> Result<model::EventPage, BackendError> {
+        forward!(AnyCalendar, self, event_changes(calendar, token, page, from))
+    }
+
+    async fn put_event(&self, event: &model::Event, etag: Option<&str>, create: bool) -> Result<model::Event, BackendError> {
+        forward!(AnyCalendar, self, put_event(event, etag, create))
+    }
+
+    async fn remove_event(&self, calendar: &str, id: &str, etag: Option<&str>) -> Result<(), BackendError> {
+        forward!(AnyCalendar, self, remove_event(calendar, id, etag))
     }
 }
 

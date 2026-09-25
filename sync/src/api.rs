@@ -1,6 +1,7 @@
 //! Gmail's REST API as the Google adapter uses it. A trait, so tests and the
 //! demo can hand the adapter a fake.
 
+use mailrs_domain::calendar;
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::{AccountId, EpochMillis, Filter, MessageMeta, Vacation};
 use mailrs_gmail::convert::message_meta;
@@ -261,6 +262,38 @@ pub trait GmailApi: Send + Sync + 'static {
 
     /// Takes event `id` off the primary calendar and tells its guests.
     fn delete_event(&self, id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
+
+    /// Every calendar on the account. Answers `GmailError::MissingScope`
+    /// until the account grants the calendar list permission.
+    fn calendars(&self) -> impl Future<Output = Result<Vec<calendar::Calendar>, GmailError>> + Send;
+
+    /// One page of changes to `calendar` since `token`, or of the whole
+    /// calendar from `from` without one.
+    fn event_changes(
+        &self,
+        calendar: &str,
+        token: Option<&str>,
+        page: Option<&str>,
+        from: EpochMillis,
+    ) -> impl Future<Output = Result<calendar::EventPage, GmailError>> + Send;
+
+    /// Creates `event` under its own id when `create`, or changes it to
+    /// match, and tells its guests. `etag` makes the server refuse the
+    /// change with `GmailError::Changed` when the event moved on since.
+    fn put_event(
+        &self,
+        event: &calendar::Event,
+        etag: Option<&str>,
+        create: bool,
+    ) -> impl Future<Output = Result<calendar::Event, GmailError>> + Send;
+
+    /// Deletes an event and tells its guests.
+    fn remove_event(
+        &self,
+        calendar: &str,
+        id: &str,
+        etag: Option<&str>,
+    ) -> impl Future<Output = Result<(), GmailError>> + Send;
 }
 
 /// An instant as the Calendar API writes one. `None` for a time no
@@ -506,6 +539,38 @@ impl GmailApi for AccountClient {
 
     async fn delete_event(&self, id: &str) -> Result<(), GmailError> {
         self.client.delete_event(id).await
+    }
+
+    async fn calendars(&self) -> Result<Vec<calendar::Calendar>, GmailError> {
+        self.client.calendar_list().await
+    }
+
+    /// The Calendar API takes `time_min` as RFC 3339; an instant this
+    /// computer's clock could not read becomes the zero time rather than
+    /// missing the call, since `from` is required here, unlike
+    /// `busy_between`'s window.
+    async fn event_changes(
+        &self,
+        calendar: &str,
+        token: Option<&str>,
+        page: Option<&str>,
+        from: EpochMillis,
+    ) -> Result<calendar::EventPage, GmailError> {
+        let from = rfc3339(from).unwrap_or_default();
+        self.client.event_changes(calendar, token, page, &from).await
+    }
+
+    async fn put_event(
+        &self,
+        event: &calendar::Event,
+        etag: Option<&str>,
+        create: bool,
+    ) -> Result<calendar::Event, GmailError> {
+        self.client.put_event(event, etag, create).await
+    }
+
+    async fn remove_event(&self, calendar: &str, id: &str, etag: Option<&str>) -> Result<(), GmailError> {
+        self.client.remove_event(calendar, id, etag).await
     }
 
     async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {

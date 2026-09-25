@@ -6392,15 +6392,15 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] ""
 msgstr[1] ""
 
-#: sync/src/error.rs:119
+#: sync/src/error.rs:122
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr ""
 
-#: sync/src/error.rs:127
+#: sync/src/error.rs:130
 msgid "{host} refused the request to unsubscribe (HTTP {status})"
 msgstr ""
 
-#: sync/src/error.rs:131
+#: sync/src/error.rs:134
 msgid "could not reach {host}"
 msgstr ""
 

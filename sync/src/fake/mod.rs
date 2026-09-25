@@ -30,6 +30,7 @@ use mail_builder::MessageBuilder;
 use mail_builder::headers::content_type::ContentType;
 use mail_builder::headers::raw::Raw;
 use mail_builder::mime::MimePart;
+use mailrs_domain::calendar;
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::{
     Address, EpochMillis, Filter, MessageBody, MessageMeta, Protection, Vacation,
@@ -37,7 +38,7 @@ use mailrs_domain::{
 use mailrs_gmail::labels;
 use mailrs_gmail::model::{Header, Message, MessagePart, PartBody};
 use mailrs_gmail::{
-    AccountQuota, Answered, BATCH_LIMIT, Busy, CALENDAR_SCOPE, CONTACTS_SCOPE,
+    AccountQuota, Answered, BATCH_LIMIT, Busy, CALENDAR_LIST_SCOPE, CALENDAR_SCOPE, CONTACTS_SCOPE,
     CONTACTS_WRITE_SCOPE, ConnectionsPage, ContactFields, DELETE_SCOPE, Event, EventFields,
     GmailError, Guest, HistoryChange, HistoryPage, LabelColor, MessagePage, MessageRef, Person,
     Priority, Profile, QuotaLimiter, RemoteLabel, SETTINGS_SCOPE, SendAs, Series, cost, limiter,
@@ -167,6 +168,17 @@ pub struct FakeState {
     /// the calls an invitation makes.
     pub events: Vec<Event>,
     next_event: u32,
+    /// The calendars `calendars()` lists, for the local copy.
+    pub calendars: Vec<calendar::Calendar>,
+    /// Every event on those calendars, series and changed occurrences
+    /// alike, as the change feed hands them out.
+    pub calendar_events: Vec<calendar::Event>,
+    /// Each change in order: calendar, event id, and whether it went. A
+    /// sync token is a position in this log.
+    calendar_log: Vec<(String, String, bool)>,
+    /// Play Google forgetting every sync token: a read with one answers
+    /// `ExpiredSyncToken`.
+    pub expire_calendar_tokens: bool,
     /// The OAuth scopes the account has not granted. A call that needs one
     /// answers `MissingScope`, as Google does until the user says yes.
     /// Change it through [`FakeGmail::withhold`] and [`FakeGmail::grant`].
@@ -343,6 +355,10 @@ impl FakeGmail {
                 answered_occurrences: Vec::new(),
                 events: Vec::new(),
                 next_event: 0,
+                calendars: Vec::new(),
+                calendar_events: Vec::new(),
+                calendar_log: Vec::new(),
+                expire_calendar_tokens: false,
                 withheld: BTreeSet::new(),
                 calendar_off: None,
                 clock: None,
@@ -632,6 +648,32 @@ impl FakeGmail {
     /// Starts counting again from zero.
     pub fn reset_usage(&self) {
         self.with(|s| s.usage = Usage::default());
+    }
+
+    /// Puts an event on a calendar, or replaces it, as someone changing it
+    /// on their phone would. Its etag counts the versions.
+    pub fn put_calendar_event(&self, mut event: calendar::Event) {
+        self.with(|s| {
+            let version = s
+                .calendar_events
+                .iter()
+                .find(|e| e.calendar == event.calendar && e.id == event.id)
+                .and_then(|e| e.etag.trim_matches('"').parse::<u32>().ok())
+                .unwrap_or(0);
+            event.etag = format!("\"{}\"", version + 1);
+            s.calendar_events.retain(|e| !(e.calendar == event.calendar && e.id == event.id));
+            s.calendar_log.push((event.calendar.clone(), event.id.clone(), false));
+            s.calendar_events.push(event);
+        });
+    }
+
+    /// Removes an event from a calendar, as someone deleting it elsewhere
+    /// would, and records it in the change log a sync token reads from.
+    pub fn drop_calendar_event(&self, calendar: &str, id: &str) {
+        self.with(|s| {
+            s.calendar_events.retain(|e| !(e.calendar == calendar && e.id == id));
+            s.calendar_log.push((calendar.to_string(), id.to_string(), true));
+        });
     }
 }
 
@@ -1141,6 +1183,114 @@ impl GmailApi for FakeGmail {
                 Ok(())
             }
         })
+    }
+
+    async fn calendars(&self) -> Result<Vec<calendar::Calendar>, GmailError> {
+        self.call("calendar.calendarList.list", 0).await?;
+        self.calendar_open()?;
+        self.needs(CALENDAR_LIST_SCOPE)?;
+        Ok(self.with(|s| s.calendars.clone()))
+    }
+
+    /// The whole calendar without a token, one page of `page_size` events
+    /// at a time; with one, every event the log touched since.
+    async fn event_changes(
+        &self,
+        calendar: &str,
+        token: Option<&str>,
+        page: Option<&str>,
+        _from: EpochMillis,
+    ) -> Result<calendar::EventPage, GmailError> {
+        self.call("calendar.events.list", 0).await?;
+        self.calendar_open()?;
+        self.with(|s| {
+            let end = s.calendar_log.len().to_string();
+            match token {
+                Some(_) if s.expire_calendar_tokens => Err(GmailError::ExpiredSyncToken),
+                Some(token) => {
+                    let since: usize = token.parse().unwrap_or(0);
+                    let mut page = calendar::EventPage { next_sync: Some(end), ..calendar::EventPage::default() };
+                    let mut seen = std::collections::HashSet::new();
+                    for (cal, id, _) in s.calendar_log.iter().skip(since).rev() {
+                        if cal != calendar || !seen.insert(id.clone()) {
+                            continue;
+                        }
+                        match s.calendar_events.iter().find(|e| &e.calendar == cal && &e.id == id) {
+                            Some(event) => page.events.push(event.clone()),
+                            None => page.removed.push(id.clone()),
+                        }
+                    }
+                    Ok(page)
+                }
+                None => {
+                    let from: usize = page.and_then(|p| p.parse().ok()).unwrap_or(0);
+                    let all: Vec<calendar::Event> =
+                        s.calendar_events.iter().filter(|e| e.calendar == calendar).cloned().collect();
+                    let slice: Vec<calendar::Event> = all.iter().skip(from).take(s.page_size).cloned().collect();
+                    let next = from + slice.len();
+                    let more = next < all.len();
+                    Ok(calendar::EventPage {
+                        events: slice,
+                        removed: Vec::new(),
+                        next_page: more.then(|| next.to_string()),
+                        next_sync: (!more).then_some(end),
+                    })
+                }
+            }
+        })
+    }
+
+    /// A create answers 409 when the id is already on the calendar and a
+    /// change answers `NotFound` when it is not, as Google does
+    /// (reconcile.md Task 4 item 6).
+    async fn put_event(
+        &self,
+        event: &calendar::Event,
+        etag: Option<&str>,
+        create: bool,
+    ) -> Result<calendar::Event, GmailError> {
+        self.call(if create { "calendar.events.insert" } else { "calendar.events.patch" }, 0).await?;
+        self.calendar_open()?;
+        let held = self.with(|s| {
+            s.calendar_events.iter().find(|e| e.calendar == event.calendar && e.id == event.id).cloned()
+        });
+        match (&held, create) {
+            (Some(_), true) => return Err(GmailError::Http { status: 409, body: "duplicate".into() }),
+            (None, false) => return Err(GmailError::NotFound),
+            _ => {}
+        }
+        if let (Some(held), Some(etag)) = (&held, etag)
+            && held.etag != etag
+        {
+            return Err(GmailError::Changed);
+        }
+        let mut stored = event.clone();
+        stored.pending = false;
+        if stored.uid.is_empty() {
+            stored.uid = format!("{}@google.com", stored.id);
+        }
+        self.put_calendar_event(stored);
+        Ok(self.with(|s| {
+            s.calendar_events
+                .iter()
+                .find(|e| e.calendar == event.calendar && e.id == event.id)
+                .cloned()
+                .expect("just stored")
+        }))
+    }
+
+    async fn remove_event(&self, calendar: &str, id: &str, etag: Option<&str>) -> Result<(), GmailError> {
+        self.call("calendar.events.delete", 0).await?;
+        self.calendar_open()?;
+        let held = self.with(|s| s.calendar_events.iter().find(|e| e.calendar == calendar && e.id == id).cloned());
+        match (held, etag) {
+            (None, _) => Err(GmailError::NotFound),
+            (Some(held), Some(etag)) if held.etag != etag => Err(GmailError::Changed),
+            _ => {
+                self.drop_calendar_event(calendar, id);
+                Ok(())
+            }
+        }
     }
 
     async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {

@@ -3,9 +3,11 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use mailrs_domain::calendar::{Access, Calendar as Cal, Event as Ev};
 use mailrs_gmail::{EventFields, EventTime, GmailError};
 
 use super::{Connected, Harness, harness};
+use crate::CalendarService;
 use crate::Permitted;
 use crate::calendar::{Calendar, at, free_slots, instant};
 
@@ -201,4 +203,64 @@ async fn a_missing_permission_is_an_answer_and_a_switched_off_api_an_error() {
         "{err}"
     );
     assert!(h.fake.with(|s| s.events.is_empty()));
+}
+
+fn primary() -> Cal {
+    Cal {
+        id: "primary".into(),
+        name: "Personal".into(),
+        color: "#e8660c".into(),
+        access: Access::Owner,
+        zone: "UTC".into(),
+        primary: true,
+        shown: true,
+        reminders: Vec::new(),
+    }
+}
+
+#[tokio::test]
+async fn the_fake_hands_back_changes_since_a_token() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![primary()]);
+    h.fake.put_calendar_event(Ev {
+        calendar: "primary".into(),
+        id: "a".into(),
+        title: "One".into(),
+        zone: "UTC".into(),
+        ..Ev::default()
+    });
+    let calendar = h.sync.services().calendar.clone().unwrap();
+    let first = calendar.event_changes("primary", None, None, 0).await.unwrap();
+    assert_eq!(first.events.len(), 1);
+    let token = first.next_sync.unwrap();
+    h.fake.put_calendar_event(Ev {
+        calendar: "primary".into(),
+        id: "b".into(),
+        title: "Two".into(),
+        zone: "UTC".into(),
+        ..Ev::default()
+    });
+    h.fake.drop_calendar_event("primary", "a");
+    let next = calendar.event_changes("primary", Some(&token), None, 0).await.unwrap();
+    assert_eq!(next.events.iter().map(|e| e.id.as_str()).collect::<Vec<_>>(), vec!["b"]);
+    assert_eq!(next.removed, vec!["a".to_string()]);
+}
+
+#[tokio::test]
+async fn the_calendar_list_needs_the_list_permission() {
+    let h = harness().await;
+    h.fake.withhold(mailrs_gmail::CALENDAR_LIST_SCOPE);
+    let calendar = h.sync.services().calendar.clone().unwrap();
+    assert!(matches!(calendar.calendars().await, Err(crate::BackendError::NeedsPermission)));
+}
+
+#[tokio::test]
+async fn the_fake_refuses_a_write_against_an_old_version() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![primary()]);
+    h.fake.put_calendar_event(Ev { calendar: "primary".into(), id: "a".into(), zone: "UTC".into(), ..Ev::default() });
+    let calendar = h.sync.services().calendar.clone().unwrap();
+    let stale = Ev { calendar: "primary".into(), id: "a".into(), zone: "UTC".into(), ..Ev::default() };
+    let err = calendar.put_event(&stale, Some("\"0\""), false).await.unwrap_err();
+    assert!(matches!(err, crate::BackendError::Changed), "{err}");
 }
