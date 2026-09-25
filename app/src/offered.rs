@@ -284,7 +284,8 @@ pub fn reason(account: &Account, missing: Missing) -> String {
         }
         (_, Missing::Categories) => gettext("{provider} does not sort the inbox into categories."),
     };
-    fill(&template, &[("provider", account.provider_name())])
+    let provider = mailrs_discover::resolved_provider_name(account.provider_name());
+    fill(&template, &[("provider", &provider)])
 }
 
 /// The lines Preferences shows under Not Available: everything an

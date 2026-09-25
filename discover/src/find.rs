@@ -21,6 +21,18 @@ const ISPDB: &str = "https://autoconfig.thunderbird.net/v1.1/";
 /// counts once every step above it has finished without one.
 const STEPS: usize = 6;
 
+/// The built-in table's own answer for `domain`, with no network at all:
+/// the same answer `find`'s first step gives when the table already
+/// names the domain. A form that fills itself before a lookup has run,
+/// such as "Set up manually", uses this so a listed domain still gets
+/// its provider's servers, name and rules instead of a bare host guess.
+pub fn table_only(domain: &str) -> Found {
+    Table::built_in()
+        .by_domain(domain)
+        .map(|entry| entry.found(Source::Table, false))
+        .unwrap_or_else(Found::nothing)
+}
+
 /// Finds the servers for `address`. The built-in table answers with no
 /// network at all. Otherwise the MX lookup goes out first. When the table
 /// knows the domain's mail exchangers, that answer stands and nothing else
@@ -217,6 +229,22 @@ mod tests {
         assert_eq!(found.verdict, Verdict::Servers);
         assert_eq!(found.candidates[0].source, Source::Table);
         assert!(net.requests().is_empty());
+    }
+
+    #[test]
+    fn table_only_answers_a_listed_domain_with_no_lookup_to_wait_for() {
+        let found = table_only("fastmail.com");
+        assert_eq!(found.verdict, Verdict::Servers);
+        assert_eq!(found.candidates[0].source, Source::Table);
+        assert_eq!(
+            found.candidates[0].provider.as_ref().map(|p| p.name.as_str()),
+            Some("Fastmail")
+        );
+    }
+
+    #[test]
+    fn table_only_says_nothing_for_a_domain_the_table_does_not_list() {
+        assert_eq!(table_only("example.com"), Found::nothing());
     }
 
     #[tokio::test]

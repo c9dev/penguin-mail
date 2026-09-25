@@ -755,7 +755,8 @@ impl MainWindow {
             // sidebar.
             ChangeEvent::ArchiveMade { account_id, name } => {
                 if let Some(account) = self.account(*account_id) {
-                    self.toast(&archive_made_line(account.provider_name(), name));
+                    let provider = mailrs_discover::resolved_provider_name(account.provider_name());
+                    self.toast(&archive_made_line(&provider, name));
                 }
             }
         }

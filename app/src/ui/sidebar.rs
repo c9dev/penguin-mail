@@ -908,7 +908,7 @@ fn status_of(account: &Account) -> Option<(&'static str, String)> {
             "network-offline-symbolic",
             fill(
                 &gettext("{provider} is not responding; retrying"),
-                &[("provider", account.provider_name())],
+                &[("provider", &mailrs_discover::resolved_provider_name(account.provider_name()))],
             ),
         )),
         AccountState::Bootstrapping => {
@@ -964,9 +964,18 @@ mod tests {
             provider_name: Some("Fastmail".into()),
             ..gmail.clone()
         };
+        let by_domain = Account {
+            provider_name: Some("fastmail.com".into()),
+            ..fastmail.clone()
+        };
         let said = |account: &Account| status_of(account).map(|(_, said)| said);
         assert_eq!(said(&gmail).as_deref(), Some("Gmail is not responding; retrying"));
         assert_eq!(said(&fastmail).as_deref(), Some("Fastmail is not responding; retrying"));
+        assert_eq!(
+            said(&by_domain).as_deref(),
+            Some("Fastmail is not responding; retrying"),
+            "an account saved under its domain still shows its real provider"
+        );
     }
 
     #[test]

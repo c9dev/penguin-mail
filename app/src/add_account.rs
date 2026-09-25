@@ -269,9 +269,19 @@ fn proposal_from(candidate: Candidate, remaining: Vec<Candidate>, address: &Addr
     }
 }
 
-/// Server Settings' first guess for a domain nobody lists: the host names
-/// most servers use, on the ports with TLS from the first byte.
+/// Server Settings' first guess: the built-in table's own servers for a
+/// domain it lists, with no network at all; failing that, the host names
+/// most servers use, on the ports with TLS from the first byte. A person
+/// who presses "Set up manually" before a lookup finishes, or when one
+/// found nothing, still gets a listed provider's real servers this way.
 pub fn guess(address: &Address) -> Proposal {
+    if let Some(candidate) = mailrs_discover::table_only(&address.domain)
+        .candidates
+        .into_iter()
+        .next()
+    {
+        return proposal_from(candidate, Vec::new(), address);
+    }
     let server = |host: String, port| Server {
         host,
         port,
@@ -724,9 +734,10 @@ pub fn saved_proposal(account: &Account, saved: &Servers) -> Proposal {
     };
     let (imap, imap_user) = restore(&saved.imap);
     let (smtp, smtp_user) = restore(&saved.smtp);
+    let provider_name = mailrs_discover::resolved_provider_name(account.provider_name());
     Proposal {
-        provider_name: account.provider_name().to_string(),
-        info: mailrs_discover::provider_named(account.provider_name()),
+        info: mailrs_discover::provider_named(&provider_name),
+        provider_name,
         imap,
         smtp,
         imap_user,
@@ -960,6 +971,36 @@ mod tests {
         assert_eq!(
             after_discovery(verdict(Verdict::Microsoft), &dana()),
             Next::Closed("Microsoft accounts come in a later version of Penguin Mail.".into())
+        );
+    }
+
+    #[test]
+    fn set_up_manually_before_a_lookup_still_finds_a_listed_provider() {
+        let proposal = guess(&dana());
+        assert_eq!(proposal.provider_name, "Fastmail");
+        assert_eq!(proposal.imap, server("imap.fastmail.com", 993));
+        assert_eq!(proposal.smtp, server("smtp.fastmail.com", 465));
+        assert!(
+            proposal.info.is_some_and(|info| info.password == PasswordKind::AppPassword),
+            "Fastmail's own password rule, not the guess's default"
+        );
+    }
+
+    #[test]
+    fn guessing_an_unlisted_domain_still_falls_back_to_host_names() {
+        let address = Address::parse("me@example.org").unwrap();
+        assert_eq!(
+            guess(&address),
+            Proposal {
+                provider_name: "example.org".into(),
+                info: None,
+                imap: server("imap.example.org", 993),
+                smtp: server("smtp.example.org", 465),
+                imap_user: None,
+                smtp_user: None,
+                confirm: false,
+                remaining: Vec::new(),
+            }
         );
     }
 
@@ -1220,6 +1261,37 @@ mod tests {
         assert_eq!(proposal.smtp_user.as_deref(), Some("d.santos"));
         assert_eq!(proposal.imap.user_name, UserName::Address);
         assert_eq!(proposal.smtp.user_name, UserName::Address);
+    }
+
+    /// An account "Set up manually" saved before it consulted the table
+    /// keeps its address's domain as `provider_name`. Signing in again
+    /// must still show the real provider and its app-password link.
+    #[test]
+    fn an_account_saved_under_its_domain_shows_its_real_provider() {
+        let account = Account {
+            id: 8,
+            email: "dana@fastmail.com".into(),
+            state: AccountState::NeedsReauth,
+            provider: Provider::Imap,
+            provider_name: Some("fastmail.com".into()),
+        };
+        let saved = Servers {
+            imap: Saved {
+                host: "imap.fastmail.com".into(),
+                port: 993,
+                security: mailrs_store::servers::Security::Tls,
+                user_name: "dana@fastmail.com".into(),
+            },
+            smtp: Saved {
+                host: "smtp.fastmail.com".into(),
+                port: 465,
+                security: mailrs_store::servers::Security::Tls,
+                user_name: "dana@fastmail.com".into(),
+            },
+        };
+        let proposal = saved_proposal(&account, &saved);
+        assert_eq!(proposal.provider_name, "Fastmail");
+        assert!(proposal.info.is_some_and(|info| info.password == PasswordKind::AppPassword));
     }
 
     #[test]

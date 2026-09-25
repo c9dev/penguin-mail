@@ -27,6 +27,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   showed a code such as Label_5.
 - Archiving or moving a whole conversation on an IMAP account no longer
   pulls your own reply out of Sent, or an old message out of Trash.
+- An account set up manually under a listed provider, such as Fastmail,
+  shows that provider's name and rules instead of its bare domain.
 
 ## 0.3.0 (2026-09-24)
 

@@ -51,10 +51,14 @@ pub async fn connect_imap<P: PasswordStore + 'static>(
             .await?;
         return Err(BackendError::NeedsReauth.into());
     };
+    // A saved account's provider_name may be a domain "Set up manually"
+    // guessed before it consulted the table; resolve that back to the
+    // table's own name first, so a listed provider is still found.
+    let provider_name = mailrs_discover::resolved_provider_name(account.provider_name());
     // A custom server is not in the provider table, and Sent then gets a
     // copy of each message from the app, which is right for a server
     // nobody has checked.
-    let files_sent_mail = mailrs_discover::provider_named(account.provider_name())
+    let files_sent_mail = mailrs_discover::provider_named(&provider_name)
         .is_some_and(|provider| provider.files_sent_mail);
     let imap = ImapClient::new(
         server_of(&saved.imap),
@@ -73,7 +77,7 @@ pub async fn connect_imap<P: PasswordStore + 'static>(
         smtp,
         ImapSettings {
             address: account.email.clone(),
-            provider_name: account.provider_name().to_string(),
+            provider_name,
             files_sent_mail,
             window_days,
         },
