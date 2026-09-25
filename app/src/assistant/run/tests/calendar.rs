@@ -361,6 +361,147 @@ async fn an_invitation_is_answered_after_asking() {
 }
 
 #[tokio::test]
+async fn once_the_copy_has_read_the_account_listing_events_uses_it() {
+    use chrono::TimeZone;
+    let h = harness().await;
+    let day = monday();
+    let start = Local
+        .from_local_datetime(&day.and_hms_opt(10, 0, 0).expect("a time"))
+        .earliest()
+        .expect("a real local time")
+        .timestamp_millis();
+    h.gmail.with(|s| {
+        s.calendars = vec![mailrs_domain::calendar::Calendar {
+            id: "primary".into(),
+            name: "Personal".into(),
+            color: String::new(),
+            access: mailrs_domain::calendar::Access::Owner,
+            zone: "UTC".into(),
+            primary: true,
+            shown: true,
+            reminders: Vec::new(),
+        }];
+    });
+    h.gmail.put_calendar_event(mailrs_domain::calendar::Event {
+        calendar: "primary".into(),
+        id: "a".into(),
+        title: "Kite day".into(),
+        zone: "UTC".into(),
+        start,
+        end: start + 60 * 60_000,
+        busy: true,
+        ..mailrs_domain::calendar::Event::default()
+    });
+    let copy = mailrs_sync::calendar_copy::CalendarCopy::new(
+        std::sync::Arc::clone(&h.tools.modules.accounts),
+        h.db.clone(),
+    );
+    copy.refresh(h.account_id, start).await.unwrap();
+
+    let listed = h
+        .ok(
+            "list_events",
+            json!({"from": day.format("%Y-%m-%d").to_string(), "to": day.format("%Y-%m-%d").to_string()}),
+        )
+        .await;
+    assert_eq!(listed["count"], 1);
+    assert_eq!(listed["events"][0]["title"], "Kite day");
+    assert_eq!(listed["events"][0]["calendar"], "Personal");
+    assert_eq!(listed["events"][0]["pending"], false);
+}
+
+/// Reads `events` into a fresh copy of the harness account's primary
+/// calendar, so the tools answer from the copy.
+async fn copy_of(h: &Harness, events: Vec<mailrs_domain::calendar::Event>, now: i64) {
+    h.gmail.with(|s| {
+        s.calendars = vec![mailrs_domain::calendar::Calendar {
+            id: "primary".into(),
+            name: "Personal".into(),
+            access: mailrs_domain::calendar::Access::Owner,
+            zone: "UTC".into(),
+            primary: true,
+            shown: true,
+            ..mailrs_domain::calendar::Calendar::default()
+        }];
+    });
+    for event in events {
+        h.gmail.put_calendar_event(event);
+    }
+    let copy = mailrs_sync::calendar_copy::CalendarCopy::new(
+        std::sync::Arc::clone(&h.tools.modules.accounts),
+        h.db.clone(),
+    );
+    copy.refresh(h.account_id, now).await.unwrap();
+}
+
+fn local_millis(day: NaiveDate, hour: u32) -> i64 {
+    use chrono::TimeZone;
+    Local
+        .from_local_datetime(&day.and_hms_opt(hour, 0, 0).expect("a time"))
+        .earliest()
+        .expect("a real local time")
+        .timestamp_millis()
+}
+
+#[tokio::test]
+async fn each_occurrence_of_a_series_is_listed_under_an_id_of_its_own() {
+    let h = harness().await;
+    let day = monday();
+    let start = local_millis(day, 10);
+    let series = mailrs_domain::calendar::Event {
+        calendar: "primary".into(),
+        id: "standup".into(),
+        title: "Stand-up".into(),
+        zone: "UTC".into(),
+        start,
+        end: start + 15 * 60_000,
+        busy: true,
+        rules: vec!["RRULE:FREQ=DAILY;COUNT=5".into()],
+        ..mailrs_domain::calendar::Event::default()
+    };
+    copy_of(&h, vec![series], start).await;
+
+    let listed = h
+        .ok(
+            "list_events",
+            json!({"from": day.format("%Y-%m-%d").to_string(), "to": (day + Duration::days(4)).format("%Y-%m-%d").to_string()}),
+        )
+        .await;
+    assert_eq!(listed["count"], 5);
+    let thursday = start + 3 * 24 * 60 * 60_000;
+    let stamp = chrono::DateTime::from_timestamp_millis(thursday).unwrap().format("%Y%m%dT%H%M%SZ");
+    assert_eq!(listed["events"][3]["id"], format!("standup_{stamp}"));
+    assert_eq!(listed["events"][3]["repeats"], true);
+}
+
+#[tokio::test]
+async fn a_declined_event_reads_as_free() {
+    let h = harness().await;
+    let day = monday();
+    let start = local_millis(day, 14);
+    let declined = mailrs_domain::calendar::Event {
+        calendar: "primary".into(),
+        id: "review".into(),
+        title: "Client review".into(),
+        zone: "UTC".into(),
+        start,
+        end: start + 60 * 60_000,
+        busy: true,
+        my_answer: Some(mailrs_domain::invitation::Answer::No),
+        ..mailrs_domain::calendar::Event::default()
+    };
+    copy_of(&h, vec![declined], start).await;
+
+    let listed = h
+        .ok(
+            "list_events",
+            json!({"from": day.format("%Y-%m-%d").to_string(), "to": day.format("%Y-%m-%d").to_string()}),
+        )
+        .await;
+    assert_eq!(listed["events"][0]["busy"], false);
+}
+
+#[tokio::test]
 async fn a_calendar_tool_on_an_account_without_a_calendar_says_why() {
     let h = Harness::with_services(|_, services| services.calendar = None).await;
     let answer = h

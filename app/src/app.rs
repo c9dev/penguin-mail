@@ -173,11 +173,13 @@ impl App {
                 // interval to sit out; the network coming back is better
                 // news than any of it.
                 app.wake_outbox();
+                app.refresh_calendars();
             }
         });
         app.load_accounts();
         app.start_scheduler();
         app.watch_contacts();
+        app.watch_calendars();
         app.start_update_checks();
         if !app.core.demo {
             crate::assistant::preload_keys();
@@ -869,6 +871,59 @@ impl App {
             }
             None => glib::ControlFlow::Break,
         });
+    }
+
+    /// Keeps the calendar copy fresh. Runs on a short timer; the copy
+    /// reads an account only when its minute (window open) or five
+    /// minutes (tray only) are up, so most ticks cost nothing. Nothing
+    /// runs while the network is gone.
+    pub fn refresh_calendars(self: &Rc<Self>) {
+        if !self.core.network() {
+            return;
+        }
+        let accounts: Vec<AccountId> = self.accounts.borrow().iter().map(|a| a.id).collect();
+        if accounts.is_empty() {
+            return;
+        }
+        let window_open = self.core.window_open();
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let copy = this.core.calendar_copy();
+            let now = mailrs_sync::now_millis();
+            let read = this
+                .core
+                .call(async move { copy.refresh_due(&accounts, now, window_open).await })
+                .await;
+            match read {
+                Ok(refreshed) => {
+                    for turned_down in &refreshed.turned_down {
+                        tracing::info!(event = %turned_down.event, "a calendar change was turned down");
+                    }
+                    if !refreshed.needs_permission.is_empty() {
+                        tracing::info!(
+                            accounts = ?refreshed.needs_permission,
+                            "calendar permission missing"
+                        );
+                    }
+                }
+                Err(err) => tracing::warn!(%err, "could not read the calendars"),
+            }
+        });
+    }
+
+    /// Ticks the calendar copy every 15 seconds; `CalendarCopy` itself
+    /// decides which accounts are actually due, at the window-open or
+    /// tray-only cadence.
+    fn watch_calendars(self: &Rc<Self>) {
+        let weak = Rc::downgrade(self);
+        glib::timeout_add_seconds_local(15, move || match weak.upgrade() {
+            Some(app) => {
+                app.refresh_calendars();
+                glib::ControlFlow::Continue
+            }
+            None => glib::ControlFlow::Break,
+        });
+        self.refresh_calendars();
     }
 
     /// Application actions, also reachable over D-Bus, for example:

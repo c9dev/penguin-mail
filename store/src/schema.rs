@@ -477,6 +477,86 @@ CREATE TABLE account_servers (
 CREATE INDEX remote_refs_by_location ON remote_refs(account_id, mailbox, uidvalidity, uid)
     WHERE mailbox IS NOT NULL;
 "#,
+    // The calendar's local copy: each account's calendars, their events
+    // with guests, and the queue of changes made here that the provider
+    // has not taken yet. A series is one row with its rules; the window
+    // expands it for the range on screen. Reminders are JSON because
+    // nothing looks them up by value. `seen_at` marks the page a whole
+    // read last wrote a row on, so a stale row a later page did not
+    // repeat can be swept without touching one a change still owns.
+    r#"
+CREATE TABLE calendars (
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    id         TEXT NOT NULL,
+    name       TEXT NOT NULL,
+    color      TEXT NOT NULL,
+    access     TEXT NOT NULL,
+    zone       TEXT NOT NULL,
+    is_primary INTEGER NOT NULL,
+    shown      INTEGER NOT NULL DEFAULT 1,
+    reminders  TEXT NOT NULL DEFAULT '[]',
+    sync_token TEXT,
+    synced_at  INTEGER,
+    PRIMARY KEY (account_id, id)
+);
+
+CREATE TABLE events (
+    account_id     INTEGER NOT NULL,
+    calendar       TEXT NOT NULL,
+    id             TEXT NOT NULL,
+    uid            TEXT NOT NULL,
+    etag           TEXT NOT NULL,
+    starts_at      INTEGER NOT NULL,
+    ends_at        INTEGER NOT NULL,
+    zone           TEXT NOT NULL,
+    all_day        INTEGER NOT NULL,
+    title          TEXT NOT NULL,
+    place          TEXT NOT NULL,
+    description    TEXT NOT NULL,
+    color          TEXT,
+    busy           INTEGER NOT NULL,
+    status         TEXT NOT NULL,
+    private        INTEGER NOT NULL,
+    organizer      TEXT,
+    my_answer      TEXT,
+    reminders      TEXT,
+    conference     TEXT,
+    rules          TEXT NOT NULL DEFAULT '',
+    series_end     INTEGER,
+    series         TEXT,
+    original_start INTEGER,
+    pending        INTEGER NOT NULL DEFAULT 0,
+    seen_at        INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (account_id, calendar, id),
+    FOREIGN KEY (account_id, calendar) REFERENCES calendars(account_id, id) ON DELETE CASCADE
+);
+CREATE INDEX events_by_start ON events(account_id, calendar, starts_at);
+CREATE INDEX events_by_end ON events(account_id, calendar, ends_at);
+CREATE INDEX events_by_series ON events(account_id, calendar, series, original_start);
+
+CREATE TABLE event_guests (
+    account_id INTEGER NOT NULL,
+    calendar   TEXT NOT NULL,
+    event      TEXT NOT NULL,
+    email      TEXT NOT NULL,
+    name       TEXT,
+    answer     TEXT,
+    organizer  INTEGER NOT NULL,
+    me         INTEGER NOT NULL,
+    PRIMARY KEY (account_id, calendar, event, email),
+    FOREIGN KEY (account_id, calendar, event) REFERENCES events(account_id, calendar, id) ON DELETE CASCADE
+);
+
+CREATE TABLE calendar_changes (
+    seq        INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    calendar   TEXT NOT NULL,
+    event      TEXT NOT NULL,
+    kind       TEXT NOT NULL,
+    etag       TEXT,
+    body       TEXT
+);
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

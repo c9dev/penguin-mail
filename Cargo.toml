@@ -30,6 +30,7 @@ async-imap = { version = "0.11.3", default-features = false, features = ["runtim
 base64 = "0.23.1"
 chrono = { version = "0.4.45", default-features = false, features = ["clock", "std", "unstable-locales"] }
 chrono-tz = { version = "0.10.4", default-features = false, features = ["std"] }
+rrule = "0.14.0"
 clap = { version = "4.6.7", features = ["derive"] }
 dirs = "7.0.0"
 encoding_rs = "0.8.41"

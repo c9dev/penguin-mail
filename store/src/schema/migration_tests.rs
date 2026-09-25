@@ -656,3 +656,38 @@ fn the_location_index_leaves_gmail_rows_out_and_still_serves_a_listing() {
         "{plan:?}"
     );
 }
+
+/// Migration 33 adds the calendar's tables. A store from before it, Gmail
+/// account and IMAP account alike, opens with none of the three empty and
+/// the IMAP account still deletes cleanly through its foreign keys.
+#[test]
+fn a_store_from_before_the_calendar_opens_with_no_calendars() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..32]).unwrap();
+    conn.execute_batch(
+        "INSERT INTO accounts (id, email, added_at) VALUES (1, 'me@gmail.com', 0);
+         INSERT INTO accounts (id, email, added_at, provider_name) \
+             VALUES (2, 'me@fastmail.com', 0, 'Fastmail');
+         INSERT INTO account_servers (account_id, role, host, port, security, user_name) \
+             VALUES (2, 'imap', 'imap.fastmail.com', 993, 'tls', 'me@fastmail.com');",
+    )
+    .unwrap();
+    drop(conn);
+
+    let conn = open_with(&path, MIGRATIONS).unwrap();
+    assert_eq!(schema_version(&conn).unwrap(), 33);
+    for table in ["calendars", "events", "calendar_changes"] {
+        let count: i64 = conn
+            .query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(count, 0, "{table}");
+    }
+    conn.execute("DELETE FROM accounts WHERE id = 2", []).unwrap();
+    let servers: i64 = conn
+        .query_row("SELECT COUNT(*) FROM account_servers WHERE account_id = 2", [], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    assert_eq!(servers, 0);
+}

@@ -565,6 +565,48 @@ async fn an_hour_with_nothing_in_it_says_nothing() {
 }
 
 #[tokio::test]
+async fn the_copy_answers_a_clash_with_no_call_to_google() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![mailrs_domain::calendar::Calendar {
+        id: "primary".into(),
+        name: "Personal".into(),
+        color: String::new(),
+        access: mailrs_domain::calendar::Access::Owner,
+        zone: "UTC".into(),
+        primary: true,
+        shown: true,
+        reminders: Vec::new(),
+    }]);
+    h.fake.put_calendar_event(mailrs_domain::calendar::Event {
+        calendar: "primary".into(),
+        id: "clash".into(),
+        title: "Design crit".into(),
+        zone: "UTC".into(),
+        start: CLASH.0,
+        end: CLASH.1,
+        busy: true,
+        ..mailrs_domain::calendar::Event::default()
+    });
+    let copy = crate::calendar_copy::CalendarCopy::new(
+        Arc::new(Connected(HashMap::from([(h.account_id, Arc::clone(&h.sync))]))),
+        h.db.clone(),
+    );
+    copy.refresh(h.account_id, CLASH.0).await.unwrap();
+    let invitations = invitations(&h);
+    let before = h.fake.usage().calls_to("calendar.events.list");
+
+    assert_eq!(
+        invitations.busy(h.account_id, &read(&at_ten())).await.unwrap(),
+        vec!["Design crit".to_string()]
+    );
+    assert_eq!(
+        h.fake.usage().calls_to("calendar.events.list"),
+        before,
+        "the copy answered; Google heard nothing"
+    );
+}
+
+#[tokio::test]
 async fn a_calendar_nobody_may_read_says_nothing_about_clashes() {
     let h = harness().await;
     let invitations = invitations(&h);

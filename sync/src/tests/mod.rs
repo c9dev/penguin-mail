@@ -2,6 +2,7 @@ mod actions;
 mod basics;
 mod bootstrap;
 mod calendar;
+mod calendar_copy;
 mod connect;
 mod contacts;
 mod engine;

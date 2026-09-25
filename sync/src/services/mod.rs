@@ -24,6 +24,7 @@ use std::ops::RangeInclusive;
 use std::sync::Arc;
 use std::time::Duration;
 
+use mailrs_domain::calendar as model;
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::query::Query;
 use mailrs_domain::{
@@ -752,6 +753,37 @@ pub trait CalendarService: Send + Sync + 'static {
 
     /// Takes event `id` off the primary calendar and tells its guests.
     fn delete_event(&self, id: &str) -> impl Future<Output = Result<(), BackendError>> + Send;
+
+    /// Every calendar on the account, for the local copy.
+    fn calendars(&self) -> impl Future<Output = Result<Vec<model::Calendar>, BackendError>> + Send;
+
+    /// One page of changes to `calendar` since `token`, or of the whole
+    /// calendar from `from` without one.
+    fn event_changes(
+        &self,
+        calendar: &str,
+        token: Option<&str>,
+        page: Option<&str>,
+        from: EpochMillis,
+    ) -> impl Future<Output = Result<model::EventPage, BackendError>> + Send;
+
+    /// Creates `event` under its own id when `create`, or changes it to
+    /// match, and tells its guests. `etag` refuses the write with
+    /// `BackendError::Changed` when the event moved on since.
+    fn put_event(
+        &self,
+        event: &model::Event,
+        etag: Option<&str>,
+        create: bool,
+    ) -> impl Future<Output = Result<model::Event, BackendError>> + Send;
+
+    /// Deletes an event on `calendar` and tells its guests.
+    fn remove_event(
+        &self,
+        calendar: &str,
+        id: &str,
+        etag: Option<&str>,
+    ) -> impl Future<Output = Result<(), BackendError>> + Send;
 }
 
 /// The account's address book.

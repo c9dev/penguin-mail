@@ -12,7 +12,8 @@ use std::collections::HashSet;
 use mailrs_domain::AccountId;
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_gmail::{
-    CALENDAR_SCOPE, CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE, DELETE_SCOPE, SETTINGS_SCOPE,
+    CALENDAR_LIST_SCOPE, CALENDAR_SCOPE, CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE, DELETE_SCOPE,
+    SETTINGS_SCOPE,
 };
 
 /// A Google permission sign-in leaves out, or one a caller can find
@@ -71,7 +72,10 @@ impl Permission {
             Permission::Delete => &[DELETE_SCOPE],
             Permission::Contacts => &[CONTACTS_SCOPE],
             Permission::ChangeContacts => &[CONTACTS_WRITE_SCOPE],
-            Permission::Calendar => &[CALENDAR_SCOPE],
+            // The list scope lets the calendar view show shared and
+            // subscribed calendars; Google rates it sensitive, not
+            // restricted.
+            Permission::Calendar => &[CALENDAR_SCOPE, CALENDAR_LIST_SCOPE],
         }
     }
 
@@ -202,7 +206,10 @@ mod tests {
             }
         }
         assert_eq!(Permission::Delete.scopes(), &[DELETE_SCOPE]);
-        assert_eq!(Permission::Calendar.scopes(), &[CALENDAR_SCOPE]);
+        assert_eq!(
+            Permission::Calendar.scopes(),
+            &[CALENDAR_SCOPE, CALENDAR_LIST_SCOPE]
+        );
     }
 
     #[test]

@@ -128,13 +128,18 @@ impl<A: Accounts> Invitations<A> {
         }
     }
 
-    /// What else the user has on while this event runs, by title. One call
-    /// to Google, the answer kept for as long as the message stays open,
-    /// and nothing at all without the calendar permission: a clash is
-    /// worth saying, not worth a permission prompt of its own.
+    /// What else the user has on while this event runs, by title. Once the
+    /// local copy has read the account, this reads it straight, on
+    /// calendars the account owns only, and never remembers the answer: a
+    /// store read costs nothing, and remembering it would hide a refresh
+    /// that landed while the message stayed open. Before that, one call to
+    /// Google, the answer kept for as long as the message stays open, and
+    /// nothing at all without the calendar permission: a clash is worth
+    /// saying, not worth a permission prompt of its own.
     ///
-    /// The call goes out at background priority. It answers a question
-    /// nobody asked, so it waits behind whatever the user is doing.
+    /// The live call goes out at background priority. It answers a
+    /// question nobody asked, so it waits behind whatever the user is
+    /// doing.
     pub async fn busy(
         &self,
         account_id: AccountId,
@@ -143,15 +148,18 @@ impl<A: Accounts> Invitations<A> {
         let Some(When::At { starts_at, ends_at }) = invitation.when else {
             return Ok(Vec::new());
         };
-        if let Some(held) = self.remembered(account_id, &invitation.uid) {
-            return Ok(held);
-        }
         let sync = self.sync(account_id)?;
         // Without a calendar there is nothing to clash with.
         let Some(calendar) = sync.services().calendar.as_ref() else {
             return Ok(Vec::new());
         };
         let ends_at = ends_at.unwrap_or(starts_at + ASSUMED_LENGTH);
+        if let Some(busy) = self.busy_from_copy(account_id, &invitation.uid, starts_at, ends_at).await? {
+            return Ok(busy);
+        }
+        if let Some(held) = self.remembered(account_id, &invitation.uid) {
+            return Ok(held);
+        }
         let busy = match crate::background(calendar.busy_between(starts_at, ends_at)).await {
             Ok(busy) => busy,
             // Without the permission there is nothing to say, and the user
@@ -171,6 +179,43 @@ impl<A: Accounts> Invitations<A> {
             busy: busy.clone(),
         });
         Ok(busy)
+    }
+
+    /// What the local copy says is busy over `starts_at` to `ends_at`,
+    /// once it has read the account's primary calendar; `None` when it
+    /// has not, so the caller falls back to Google. `Event::busy` is
+    /// Google's transparency alone, so `Event::blocks_time` also leaves
+    /// out a cancelled, declined or all-day event.
+    async fn busy_from_copy(
+        &self,
+        account_id: AccountId,
+        uid: &str,
+        starts_at: EpochMillis,
+        ends_at: EpochMillis,
+    ) -> Result<Option<Vec<String>>, SyncError> {
+        let db = self.db.clone();
+        let uid = uid.to_string();
+        Ok(db
+            .read(move |c| {
+                if !mailrs_store::calendar::synced(c, account_id)? {
+                    return Ok(None);
+                }
+                let found = mailrs_store::calendar::occurrences(
+                    c,
+                    &[account_id],
+                    starts_at,
+                    ends_at,
+                    mailrs_store::calendar::CalendarScope::Owned,
+                )?;
+                let busy: Vec<String> = found
+                    .into_iter()
+                    .filter(|o| o.event.blocks_time())
+                    .filter(|o| !o.event.uid.eq_ignore_ascii_case(&uid))
+                    .map(|o| o.event.title.clone())
+                    .collect();
+                Ok(Some(busy))
+            })
+            .await?)
     }
 
     /// How the series behind an invitation to one of its occurrences runs,

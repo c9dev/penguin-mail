@@ -19,6 +19,10 @@ pub enum GmailError {
     /// changes it no longer holds; the caller reads everything again.
     #[error("the sync token expired; read it all again")]
     ExpiredSyncToken,
+    /// The provider holds a newer version of what this write changed, so
+    /// it refused the write (HTTP 412). The caller reads the newer one.
+    #[error("it changed elsewhere first")]
+    Changed,
     #[error("not found")]
     NotFound,
     /// Any other refusal. The body stays whole for the log, which prints

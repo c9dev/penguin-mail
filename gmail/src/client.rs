@@ -852,6 +852,10 @@ async fn error_from_response(response: Response) -> GmailError {
             GmailError::RateLimited { retry_after }
         }
         400 if body.contains("EXPIRED_SYNC_TOKEN") => GmailError::ExpiredSyncToken,
+        // The Calendar API answers a sync token it no longer holds with
+        // 410 rather than Gmail's 400.
+        410 => GmailError::ExpiredSyncToken,
+        412 => GmailError::Changed,
         _ => GmailError::Http { status, body },
     }
 }

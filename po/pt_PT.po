@@ -245,7 +245,7 @@ msgstr "Escreva o nome do servidor de saída."
 msgid "Penguin Mail needs the password for {address} again."
 msgstr "O Penguin Mail precisa de novo da palavra-passe de {address}."
 
-#: app/src/app.rs:301
+#: app/src/app.rs:303
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -352,8 +352,8 @@ msgstr ""
 msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr "Bloquear {address}? O correio futuro vai direto para o lixo."
 
-#: app/src/assistant/run.rs:1278 app/src/assistant/run/calendar.rs:178
-#: app/src/assistant/run/calendar.rs:540
+#: app/src/assistant/run.rs:1278 app/src/assistant/run/calendar.rs:201
+#: app/src/assistant/run/calendar.rs:579
 msgid "%a %-d %b"
 msgstr "%a %-d %b"
 
@@ -401,68 +401,68 @@ msgstr ""
 "Mover o correio de {sender} para {category} em {account} e criar uma regra "
 "do {provider} para o correio futuro?"
 
-#: app/src/assistant/run/calendar.rs:184 app/src/assistant/run/calendar.rs:544
+#: app/src/assistant/run/calendar.rs:207 app/src/assistant/run/calendar.rs:583
 msgid "%a %-d %b %H:%M"
 msgstr "%a %-d %b %H:%M"
 
-#: app/src/assistant/run/calendar.rs:197 app/src/assistant/run/calendar.rs:201
-#: app/src/assistant/run/calendar.rs:205
+#: app/src/assistant/run/calendar.rs:220 app/src/assistant/run/calendar.rs:224
+#: app/src/assistant/run/calendar.rs:228
 msgid "{first} to {last}"
 msgstr "{first} a {last}"
 
-#: app/src/assistant/run/calendar.rs:327
+#: app/src/assistant/run/calendar.rs:362
 msgid "Add “{title}” to the calendar for {account}, {when}?"
 msgstr "Adicionar “{title}” ao calendário de {account}, {when}?"
 
-#: app/src/assistant/run/calendar.rs:337
+#: app/src/assistant/run/calendar.rs:372
 msgid "Google sends an invitation to {guests}."
 msgstr "A Google envia um convite a {guests}."
 
-#: app/src/assistant/run/calendar.rs:387
+#: app/src/assistant/run/calendar.rs:424
 msgid "Title: {value}"
 msgstr "Título: {value}"
 
-#: app/src/assistant/run/calendar.rs:390
+#: app/src/assistant/run/calendar.rs:427
 msgid "Starts: {value}"
 msgstr "Começa: {value}"
 
-#: app/src/assistant/run/calendar.rs:393
+#: app/src/assistant/run/calendar.rs:430
 msgid "Ends: {value}"
 msgstr "Termina: {value}"
 
-#: app/src/assistant/run/calendar.rs:396
+#: app/src/assistant/run/calendar.rs:433
 msgid "Where: {value}"
 msgstr "Local: {value}"
 
-#: app/src/assistant/run/calendar.rs:399
+#: app/src/assistant/run/calendar.rs:436
 msgid "Guests: {value}"
 msgstr "Convidados: {value}"
 
-#: app/src/assistant/run/calendar.rs:403
+#: app/src/assistant/run/calendar.rs:440
 msgid "Description: {value}"
 msgstr "Descrição: {value}"
 
-#: app/src/assistant/run/calendar.rs:408
+#: app/src/assistant/run/calendar.rs:445
 msgid "Change “{title}” on the calendar for {account}? Its guests are told."
 msgstr ""
 "Alterar “{title}” no calendário de {account}? Os convidados são avisados."
 
-#: app/src/assistant/run/calendar.rs:412
+#: app/src/assistant/run/calendar.rs:449
 msgid "Change an event on the calendar for {account}? Its guests are told."
 msgstr ""
 "Alterar um evento no calendário de {account}? Os convidados são avisados."
 
-#: app/src/assistant/run/calendar.rs:437
+#: app/src/assistant/run/calendar.rs:476
 msgid "Delete “{title}” from the calendar for {account}? Its guests are told."
 msgstr ""
 "Eliminar “{title}” do calendário de {account}? Os convidados são avisados."
 
-#: app/src/assistant/run/calendar.rs:441
+#: app/src/assistant/run/calendar.rs:480
 msgid "Delete an event from the calendar for {account}? Its guests are told."
 msgstr ""
 "Eliminar um evento do calendário de {account}? Os convidados são avisados."
 
-#: app/src/assistant/run/calendar.rs:477
+#: app/src/assistant/run/calendar.rs:516
 msgid "Answer {answer} to “{title}”?"
 msgstr "Responder {answer} a “{title}”?"
 
@@ -1159,7 +1159,7 @@ msgstr "Escolha uma hora no futuro"
 msgid "On {date}, {sender} wrote:"
 msgstr "A {date}, {sender} escreveu:"
 
-#: app/src/core.rs:191
+#: app/src/core.rs:197
 msgid ""
 "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your "
 "mail. Stop it, then open Penguin Mail again."
@@ -1167,17 +1167,17 @@ msgstr ""
 "Outra cópia do Penguin Mail, ou o penguin-mail-cli sync, está a sincronizar "
 "o seu correio. Pare esse processo e volte a abrir o Penguin Mail."
 
-#: app/src/core.rs:203
+#: app/src/core.rs:209
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr ""
 "O Penguin Mail não conseguiu atualizar o arquivo de correio e manteve o "
 "anterior."
 
-#: app/src/core.rs:648 app/src/core.rs:717
+#: app/src/core.rs:677 app/src/core.rs:750
 msgid "Demo mode cannot add real accounts."
 msgstr "O modo de demonstração não adiciona contas reais."
 
-#: app/src/core.rs:652
+#: app/src/core.rs:681
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -1185,11 +1185,11 @@ msgstr ""
 "Esta cópia do Penguin Mail foi compilada sem início de sessão Google. "
 "Obtenha uma versão em github.com/c9dev/penguin-mail/releases."
 
-#: app/src/core.rs:670
+#: app/src/core.rs:700
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Desistiu de esperar pelo navegador ao fim de cinco minutos."
 
-#: app/src/core.rs:678
+#: app/src/core.rs:708
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 "Iniciou sessão como {account}. Escolha {wanted} para voltar a ligar essa "
@@ -1613,11 +1613,11 @@ msgstr "As atualizações chegam pelo Flathub"
 msgid "Updates come from the Snap Store"
 msgstr "As atualizações chegam pela Snap Store"
 
-#: app/src/permission.rs:97
+#: app/src/permission.rs:101
 msgid "Allow Changes to Gmail Settings"
 msgstr "Permitir alterações às definições do Gmail"
 
-#: app/src/permission.rs:99
+#: app/src/permission.rs:103
 msgid ""
 "Penguin Mail needs permission to change Gmail settings for {account}. Google "
 "asks you to confirm in your browser."
@@ -1625,11 +1625,11 @@ msgstr ""
 "O Penguin Mail precisa de permissão para alterar as definições do Gmail de "
 "{account}. A Google pede-lhe confirmação no navegador."
 
-#: app/src/permission.rs:104
+#: app/src/permission.rs:108
 msgid "Allow Penguin Mail to Delete Mail"
 msgstr "Permitir que o Penguin Mail elimine correio"
 
-#: app/src/permission.rs:106
+#: app/src/permission.rs:110
 msgid ""
 "Deleting mail for good needs one more permission for {account}. Google asks "
 "you to confirm in your browser."
@@ -1637,11 +1637,11 @@ msgstr ""
 "Eliminar correio de vez precisa de mais uma permissão para {account}. A "
 "Google pede-lhe confirmação no navegador."
 
-#: app/src/permission.rs:111
+#: app/src/permission.rs:115
 msgid "Allow Penguin Mail to Read Your Contacts"
 msgstr "Permitir que o Penguin Mail leia os seus contactos"
 
-#: app/src/permission.rs:113
+#: app/src/permission.rs:117
 msgid ""
 "Reading the contacts of {account} needs one more permission. Google asks you "
 "to confirm in your browser. Names and photos stay on this computer."
@@ -1650,11 +1650,11 @@ msgstr ""
 "lhe confirmação no navegador. Os nomes e as fotografias ficam neste "
 "computador."
 
-#: app/src/permission.rs:119
+#: app/src/permission.rs:123
 msgid "Allow Penguin Mail to Change Your Contacts"
 msgstr "Permitir que o Penguin Mail altere os seus contactos"
 
-#: app/src/permission.rs:121
+#: app/src/permission.rs:125
 msgid ""
 "The assistant needs permission to add and change the contacts of {account}. "
 "Google asks you to confirm in your browser."
@@ -1662,11 +1662,11 @@ msgstr ""
 "O assistente precisa de permissão para adicionar e alterar os contactos de "
 "{account}. A Google pede-lhe que confirme no navegador."
 
-#: app/src/permission.rs:126 app/src/permission.rs:133
+#: app/src/permission.rs:130 app/src/permission.rs:137
 msgid "Allow Penguin Mail to Use Your Calendar"
 msgstr "Permitir que o Penguin Mail use o seu calendário"
 
-#: app/src/permission.rs:128
+#: app/src/permission.rs:132
 msgid ""
 "The assistant needs permission to read and change events on the calendar for "
 "{account}. Google asks you to confirm in your browser."
@@ -1674,7 +1674,7 @@ msgstr ""
 "O assistente precisa de permissão para ler e alterar eventos no calendário "
 "de {account}. A Google pede-lhe confirmação no navegador."
 
-#: app/src/permission.rs:135
+#: app/src/permission.rs:139
 msgid ""
 "Your reply went to the organizer as mail. With permission to change events "
 "on the calendar for {account}, the meeting is marked on your own calendar "
@@ -6404,23 +6404,23 @@ msgstr "Promoções"
 msgid "Social"
 msgstr "Social"
 
-#: domain/src/invitation.rs:68
+#: domain/src/invitation.rs:69
 msgid "Yes"
 msgstr "Sim"
 
-#: domain/src/invitation.rs:69
+#: domain/src/invitation.rs:70
 msgid "No"
 msgstr "Não"
 
-#: domain/src/invitation.rs:70 domain/src/invitation.rs:79
+#: domain/src/invitation.rs:71 domain/src/invitation.rs:80
 msgid "Maybe"
 msgstr "Talvez"
 
-#: domain/src/invitation.rs:77
+#: domain/src/invitation.rs:78
 msgid "Going"
 msgstr "Vai"
 
-#: domain/src/invitation.rs:78
+#: domain/src/invitation.rs:79
 msgid "Not going"
 msgstr "Não vai"
 
@@ -6682,15 +6682,15 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] "Etiqueta nova em: {accounts}."
 msgstr[1] "Etiquetas novas em: {accounts}."
 
-#: sync/src/error.rs:119
+#: sync/src/error.rs:122
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr "O Gmail reserva “{name}” para uma etiqueta sua. Escolha outro nome."
 
-#: sync/src/error.rs:127
+#: sync/src/error.rs:130
 msgid "{host} refused the request to unsubscribe (HTTP {status})"
 msgstr "{host} recusou o pedido para cancelar a subscrição (HTTP {status})"
 
-#: sync/src/error.rs:131
+#: sync/src/error.rs:134
 msgid "could not reach {host}"
 msgstr "não foi possível contactar {host}"
 

@@ -34,6 +34,9 @@ pub enum BackendError {
     NeedsPermission,
     #[error("refused: {0}")]
     Refused(String),
+    /// The server holds another version of what this write changed.
+    #[error("it changed elsewhere first")]
+    Changed,
     /// The provider has no such service or cannot do this.
     #[error("the server cannot do that")]
     Unsupported,

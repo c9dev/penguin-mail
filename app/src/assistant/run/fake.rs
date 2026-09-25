@@ -626,11 +626,12 @@ impl Harness {
             OneClick::Fake(Arc::clone(&one_click)),
         ));
         let settings = Arc::new(AccountSettings::new(Arc::clone(&connected), db.clone()));
+        let calendar_copy = Arc::new(mailrs_sync::calendar_copy::CalendarCopy::new(Arc::clone(&connected), db.clone()));
         let modules = Modules {
             mail: Arc::clone(&mail),
             lists: Arc::new(Mailboxes::new(Arc::clone(&connected), db.clone())),
             gmail: Arc::clone(&settings),
-            calendar: Arc::new(Calendar::new(Arc::clone(&connected))),
+            calendar: Arc::new(Calendar::new(Arc::clone(&connected), db.clone(), calendar_copy)),
             invitations: Arc::new(Invitations::new(Arc::clone(&connected), db.clone())),
             contacts: Arc::new(ContactBook::new(
                 Arc::clone(&connected),

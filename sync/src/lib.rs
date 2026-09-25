@@ -5,6 +5,7 @@ mod actions;
 mod api;
 mod backoff;
 pub mod calendar;
+pub mod calendar_copy;
 pub mod config;
 mod connect;
 pub mod contacts;

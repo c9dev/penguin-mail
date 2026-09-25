@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::mailbox::keyword;
 use crate::translate::gettext;
 
+pub mod calendar;
 pub mod category;
 mod folder;
 pub mod mailbox;

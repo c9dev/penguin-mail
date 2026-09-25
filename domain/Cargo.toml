@@ -11,4 +11,6 @@ chrono.workspace = true
 chrono-tz.workspace = true
 gettext-rs.workspace = true
 icalendar.workspace = true
+rrule.workspace = true
 serde.workspace = true
+tracing.workspace = true
