@@ -730,3 +730,35 @@ async fn an_account_that_is_not_running_is_skipped_quietly() {
     .await;
     assert_eq!(logged, "");
 }
+
+/// A whole read writes each page to the store as it arrives and holds no
+/// more than that page, so a calendar of 10,000 events never sits in
+/// memory whole. A read cut off after three pages has already stored
+/// those three, and has kept no token, so the next read walks it again.
+/// The heap counter cannot pin this: the store frees each page on its own
+/// thread, so the counter for the test thread only ever sees pages added.
+#[tokio::test]
+async fn a_whole_read_holds_one_page_at_a_time() {
+    let h = harness().await;
+    h.fake.with(|s| {
+        s.calendars = vec![calendar("primary", true)];
+        s.page_size = 250;
+    });
+    for n in 0..10_000 {
+        h.fake.put_calendar_event(event("primary", &format!("e{n}")));
+    }
+    h.fake.fail_call("calendar.events.list", 3, mailrs_gmail::GmailError::Network("gone".into()));
+
+    assert!(copy(&h).refresh(h.account_id, NOW).await.is_err());
+
+    let account = h.account_id;
+    let held: i64 = h
+        .db
+        .read(move |c| {
+            Ok(c.query_row("SELECT COUNT(*) FROM events WHERE account_id = ?1", [account], |row| row.get(0))?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(held, 750, "each page went to the store before the next was asked for");
+    assert_eq!(h.db.read(move |c| store::token(c, account, "primary")).await.unwrap(), None);
+}
