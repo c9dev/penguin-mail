@@ -230,11 +230,18 @@ pub fn remove_events(conn: &Connection, account_id: AccountId, calendar: &str, i
     Ok(())
 }
 
+/// The rows `set_my_answer` changes: event `id`, and every other row of
+/// the account that shares its uid, such as a moved occurrence stored
+/// apart from its series. An empty uid matches nothing but the event.
+const SAME_EVENT: &str = "account_id = ?1 AND ((calendar = ?2 AND id = ?3) OR (uid <> '' AND uid = \
+     (SELECT uid FROM events WHERE account_id = ?1 AND calendar = ?2 AND id = ?3)))";
+
 /// Records the account's own answer to event `id`, for an answer given
 /// from the calendar view: `my_answer` on the event, and the answer of
-/// the guest row marked `me`. A series is stored once, so `id` is the
-/// series' own id whether the answer covers one occurrence or the whole
-/// series (reconcile.md Task 5 item 2, ruling R3).
+/// the guest row marked `me`. The provider answers a whole series by its
+/// uid, so every row of the account with that uid takes the answer too;
+/// a changed occurrence would otherwise keep its old answer, and its
+/// dashed outline, until the next read.
 pub fn set_my_answer(
     conn: &Connection,
     account_id: AccountId,
@@ -243,12 +250,12 @@ pub fn set_my_answer(
     answer: Answer,
 ) -> Result<()> {
     conn.execute(
-        "UPDATE events SET my_answer = ?4 WHERE account_id = ?1 AND calendar = ?2 AND id = ?3",
+        &format!("UPDATE event_guests SET answer = ?4 WHERE account_id = ?1 AND me = 1 AND (calendar, event) IN \
+             (SELECT calendar, id FROM events WHERE {SAME_EVENT})"),
         params![account_id, calendar, id, answer.as_str()],
     )?;
     conn.execute(
-        "UPDATE event_guests SET answer = ?4 \
-         WHERE account_id = ?1 AND calendar = ?2 AND event = ?3 AND me = 1",
+        &format!("UPDATE events SET my_answer = ?4 WHERE {SAME_EVENT}"),
         params![account_id, calendar, id, answer.as_str()],
     )?;
     Ok(())
@@ -777,6 +784,44 @@ mod tests {
             None,
             "only the guest marked me changes"
         );
+    }
+
+    #[test]
+    fn set_my_answer_marks_every_row_of_the_series() {
+        let (conn, id) = store();
+        let me = || vec![Guest { email: "me@example.com".into(), me: true, ..Guest::default() }];
+        let mut series = event("primary", "planning", MONDAY + 10 * HOUR, 1);
+        series.guests = me();
+        let mut moved = event("primary", "planning_moved", MONDAY + 11 * HOUR, 1);
+        moved.uid = series.uid.clone();
+        moved.series = Some("planning".into());
+        moved.guests = me();
+        let mut other = event("primary", "lunch", MONDAY + 12 * HOUR, 1);
+        other.guests = me();
+        save_events(&conn, id, &[series, moved, other], 0).unwrap();
+
+        set_my_answer(&conn, id, "primary", "planning", Answer::Maybe).unwrap();
+
+        let moved = super::event(&conn, id, "primary", "planning_moved").unwrap().unwrap();
+        assert_eq!(moved.my_answer, Some(Answer::Maybe));
+        assert_eq!(moved.guests[0].answer, Some(Answer::Maybe));
+        let other = super::event(&conn, id, "primary", "lunch").unwrap().unwrap();
+        assert_eq!(other.my_answer, None, "another event keeps its own answer");
+    }
+
+    #[test]
+    fn set_my_answer_leaves_events_with_no_uid_alone() {
+        let (conn, id) = store();
+        let mut first = event("primary", "first", MONDAY + 10 * HOUR, 1);
+        first.uid = String::new();
+        let mut second = event("primary", "second", MONDAY + 12 * HOUR, 1);
+        second.uid = String::new();
+        save_events(&conn, id, &[first, second], 0).unwrap();
+
+        set_my_answer(&conn, id, "primary", "first", Answer::Yes).unwrap();
+
+        let second = super::event(&conn, id, "primary", "second").unwrap().unwrap();
+        assert_eq!(second.my_answer, None);
     }
 
     #[test]
