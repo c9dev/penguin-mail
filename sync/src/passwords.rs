@@ -55,8 +55,8 @@ impl Default for KeyringPasswords {
     }
 }
 
-/// The keyring's user name for an account: its id, since an address can
-/// belong to a Google account and an IMAP one on two stores.
+/// The keyring's user name for an account: its id. Each account row owns
+/// one entry, and the entry stays with the row if its address changes.
 fn user(account_id: AccountId) -> String {
     account_id.to_string()
 }

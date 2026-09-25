@@ -202,6 +202,33 @@ async fn a_keyring_that_refuses_leaves_no_new_account_behind() {
 }
 
 #[tokio::test]
+async fn a_keyring_that_refuses_leaves_an_account_signing_in_again_as_it_was() {
+    let (db, _dir) = store().await;
+    let passwords = Arc::new(MemoryPasswords::default());
+    let first = imap_signed_in(&db, passwords, new_fastmail("old"), 7)
+        .await
+        .unwrap();
+    let id = first.id;
+    db.write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth))
+        .await
+        .unwrap();
+    let moved = NewImap {
+        provider_name: "iCloud Mail".into(),
+        servers: icloud(),
+        ..new_fastmail("new")
+    };
+    let refused = imap_signed_in(&db, Arc::new(Refusing), moved, 8).await;
+    assert!(matches!(refused, Err(ImapSignInError::Password(_))));
+    let kept = account(&db, "dana@fastmail.com").await;
+    assert_eq!(kept.state, AccountState::NeedsReauth);
+    assert_eq!(kept.provider_name(), "Fastmail");
+    assert_eq!(
+        db.read(move |c| servers::load(c, id)).await.unwrap(),
+        Some(fastmail())
+    );
+}
+
+#[tokio::test]
 async fn signing_in_again_keeps_the_account_and_ends_needs_sign_in() {
     let (db, _dir) = store().await;
     let passwords = Arc::new(MemoryPasswords::default());

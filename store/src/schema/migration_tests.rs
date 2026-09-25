@@ -624,3 +624,35 @@ fn migration_32_indexes_remote_refs_by_location() {
         "remote_refs has no index on (account_id, mailbox, uidvalidity, uid): {indexes:?}"
     );
 }
+
+/// A Gmail message has no mailbox in `remote_refs`, so the location index
+/// leaves its rows out: a Gmail account writes nothing to it. A lookup by
+/// mailbox still finds the index, since `mailbox = ?` rules out NULL.
+#[test]
+fn the_location_index_leaves_gmail_rows_out_and_still_serves_a_listing() {
+    let dir = tempfile::tempdir().unwrap();
+    let conn = open_with(&dir.path().join("mail.db"), &MIGRATIONS[..32]).unwrap();
+    let partial: bool = conn
+        .query_row(
+            "SELECT partial FROM pragma_index_list('remote_refs') \
+             WHERE name = 'remote_refs_by_location'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert!(partial, "the location index covers Gmail rows too");
+    let plan: Vec<String> = conn
+        .prepare(
+            "EXPLAIN QUERY PLAN SELECT message_id FROM remote_refs \
+             WHERE account_id = ?1 AND mailbox = ?2 AND uidvalidity = ?3",
+        )
+        .unwrap()
+        .query_map([1, 2, 3], |row| row.get(3))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
+    assert!(
+        plan.iter().any(|step| step.contains("remote_refs_by_location")),
+        "{plan:?}"
+    );
+}

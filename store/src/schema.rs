@@ -473,7 +473,9 @@ CREATE TABLE account_servers (
     PRIMARY KEY (account_id, role)
 );
 -- An IMAP folder's listing looks up its stored messages by location.
-CREATE INDEX remote_refs_by_location ON remote_refs(account_id, mailbox, uidvalidity, uid);
+-- Gmail rows carry no mailbox, so the index leaves them out.
+CREATE INDEX remote_refs_by_location ON remote_refs(account_id, mailbox, uidvalidity, uid)
+    WHERE mailbox IS NOT NULL;
 "#,
 ];
 
