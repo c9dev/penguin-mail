@@ -100,6 +100,114 @@ msgstr ""
 msgid "The layout on a narrow screen"
 msgstr ""
 
+#: app/src/add_account.rs:34
+msgid "Another Provider"
+msgstr ""
+
+#: app/src/add_account.rs:40
+msgid "Gmail and Google Workspace"
+msgstr ""
+
+#: app/src/add_account.rs:41
+msgid "Fastmail, iCloud, Yahoo and any server with IMAP"
+msgstr ""
+
+#: app/src/add_account.rs:84
+msgid "Type the whole address, such as dana@example.com."
+msgstr ""
+
+#: app/src/add_account.rs:138
+msgid "{provider} has no IMAP, so other mail apps cannot reach it."
+msgstr ""
+
+#: app/src/add_account.rs:145
+msgid "Penguin Mail cannot reach {provider} yet."
+msgstr ""
+
+#: app/src/add_account.rs:150
+msgid "Microsoft accounts come in a later version of Penguin Mail."
+msgstr ""
+
+#: app/src/add_account.rs:205
+msgid "Penguin Mail found no mail servers for {domain}. Enter them below."
+msgstr ""
+
+#: app/src/add_account.rs:230
+msgid "{provider} needs an app password."
+msgstr ""
+
+#: app/src/add_account.rs:232
+msgid "With two-step sign-in on, {provider} needs an app password."
+msgstr ""
+
+#: app/src/add_account.rs:238
+msgid "Make one in {provider}'s settings."
+msgstr ""
+
+#: app/src/add_account.rs:248
+msgid "App Password"
+msgstr ""
+
+#: app/src/add_account.rs:249
+msgid "Password"
+msgstr ""
+
+#: app/src/add_account.rs:262
+msgid "{host} on port {port}"
+msgstr ""
+
+#: app/src/add_account.rs:362
+msgid "Could not sign in: {reason}"
+msgstr ""
+
+#: app/src/add_account.rs:368
+msgid "The server refused the password."
+msgstr ""
+
+#: app/src/add_account.rs:371
+msgid "IMAP is off for this account."
+msgstr ""
+
+#: app/src/add_account.rs:376
+msgid "The server's certificate does not match {host}."
+msgstr ""
+
+#: app/src/add_account.rs:380
+msgid "Could not reach {host}: {reason}"
+msgstr ""
+
+#: app/src/add_account.rs:401
+msgid "The server said: {reason}"
+msgstr ""
+
+#: app/src/add_account.rs:411
+msgid "Turn on IMAP in {provider}'s settings."
+msgstr ""
+
+#: app/src/add_account.rs:422
+msgid "Make an app password in {provider}'s settings."
+msgstr ""
+
+#: app/src/add_account.rs:430
+msgid "{provider}'s help for mail apps"
+msgstr ""
+
+#: app/src/add_account.rs:522
+msgid "{host} is not a server name."
+msgstr ""
+
+#: app/src/add_account.rs:528
+msgid "Type the incoming server's name."
+msgstr ""
+
+#: app/src/add_account.rs:529
+msgid "Type the outgoing server's name."
+msgstr ""
+
+#: app/src/add_account.rs:597
+msgid "Penguin Mail needs the password for {address} again."
+msgstr ""
+
 #: app/src/app.rs:300
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
@@ -1162,7 +1270,7 @@ msgstr ""
 msgid "Slate"
 msgstr ""
 
-#: app/src/main.rs:55
+#: app/src/main.rs:58
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]]\n"
 "\n"
@@ -1173,15 +1281,15 @@ msgid ""
 "  mailto:...     the same as --compose mailto:..."
 msgstr ""
 
-#: app/src/main.rs:121
+#: app/src/main.rs:124
 msgid "penguin-mail: unknown option {option}"
 msgstr ""
 
-#: app/src/main.rs:244
+#: app/src/main.rs:247
 msgid "Penguin Mail Could Not Start"
 msgstr ""
 
-#: app/src/main.rs:249 app/src/ui/about.rs:148
+#: app/src/main.rs:252 app/src/ui/about.rs:148
 msgid "Report a Problem"
 msgstr ""
 

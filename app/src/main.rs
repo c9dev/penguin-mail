@@ -1,5 +1,8 @@
 //! Penguin Mail: a Gmail client for the GNOME desktop.
 
+// The Add Account dialog, which comes next, is what calls these.
+#[allow(dead_code)]
+mod add_account;
 mod app;
 mod assistant;
 mod attachcheck;

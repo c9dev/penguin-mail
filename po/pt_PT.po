@@ -119,6 +119,118 @@ msgstr "O assistente a listar o correio que aguarda resposta"
 msgid "The layout on a narrow screen"
 msgstr "A disposição num ecrã estreito"
 
+#: app/src/add_account.rs:34
+msgid "Another Provider"
+msgstr "Outro fornecedor"
+
+#: app/src/add_account.rs:40
+msgid "Gmail and Google Workspace"
+msgstr "Gmail e Google Workspace"
+
+#: app/src/add_account.rs:41
+msgid "Fastmail, iCloud, Yahoo and any server with IMAP"
+msgstr "Fastmail, iCloud, Yahoo e qualquer servidor com IMAP"
+
+#: app/src/add_account.rs:84
+msgid "Type the whole address, such as dana@example.com."
+msgstr "Escreva o endereço completo, como dana@example.com."
+
+#: app/src/add_account.rs:138
+msgid "{provider} has no IMAP, so other mail apps cannot reach it."
+msgstr "{provider} não tem IMAP, por isso outras aplicações de correio não lhe conseguem aceder."
+"{provider} não tem um calendário a que outras aplicações possam aceder."
+
+#: app/src/add_account.rs:145
+msgid "Penguin Mail cannot reach {provider} yet."
+msgstr "O Penguin Mail ainda não consegue aceder a {provider}."
+
+#: app/src/add_account.rs:150
+msgid "Microsoft accounts come in a later version of Penguin Mail."
+msgstr "As contas Microsoft chegam numa versão futura do Penguin Mail."
+
+#: app/src/add_account.rs:205
+msgid "Penguin Mail found no mail servers for {domain}. Enter them below."
+msgstr "O Penguin Mail não encontrou servidores de correio para {domain}. Introduza-os abaixo."
+"O Penguin Mail não conseguiu atualizar o arquivo de correio e manteve o "
+"anterior."
+
+#: app/src/add_account.rs:230
+msgid "{provider} needs an app password."
+msgstr "{provider} precisa de uma palavra-passe de aplicação."
+
+#: app/src/add_account.rs:232
+msgid "With two-step sign-in on, {provider} needs an app password."
+msgstr "Com a verificação em dois passos ativa, {provider} precisa de uma palavra-passe de aplicação."
+
+#: app/src/add_account.rs:238
+msgid "Make one in {provider}'s settings."
+msgstr "Crie uma nas definições de {provider}."
+
+#: app/src/add_account.rs:248
+msgid "App Password"
+msgstr "Palavra-passe de aplicação"
+
+#: app/src/add_account.rs:249
+msgid "Password"
+msgstr "Palavra-passe"
+
+#: app/src/add_account.rs:262
+msgid "{host} on port {port}"
+msgstr "{host} na porta {port}"
+
+#: app/src/add_account.rs:362
+msgid "Could not sign in: {reason}"
+msgstr "Não foi possível iniciar sessão: {reason}"
+
+#: app/src/add_account.rs:368
+msgid "The server refused the password."
+msgstr "O servidor recusou a palavra-passe."
+
+#: app/src/add_account.rs:371
+msgid "IMAP is off for this account."
+msgstr "O IMAP está desativado nesta conta."
+
+#: app/src/add_account.rs:376
+msgid "The server's certificate does not match {host}."
+msgstr "O certificado do servidor não corresponde a {host}."
+
+#: app/src/add_account.rs:380
+msgid "Could not reach {host}: {reason}"
+msgstr "Não foi possível contactar {host}: {reason}"
+
+#: app/src/add_account.rs:401
+msgid "The server said: {reason}"
+msgstr "O servidor respondeu: {reason}"
+
+#: app/src/add_account.rs:411
+msgid "Turn on IMAP in {provider}'s settings."
+msgstr "Ative o IMAP nas definições de {provider}."
+
+#: app/src/add_account.rs:422
+msgid "Make an app password in {provider}'s settings."
+msgstr "Crie uma palavra-passe de aplicação nas definições de {provider}."
+
+#: app/src/add_account.rs:430
+msgid "{provider}'s help for mail apps"
+msgstr "Ajuda de {provider} para aplicações de correio"
+
+#: app/src/add_account.rs:522
+msgid "{host} is not a server name."
+msgstr "{host} não é um nome de servidor."
+
+#: app/src/add_account.rs:528
+msgid "Type the incoming server's name."
+msgstr "Escreva o nome do servidor de entrada."
+
+#: app/src/add_account.rs:529
+msgid "Type the outgoing server's name."
+msgstr "Escreva o nome do servidor de saída."
+
+#: app/src/add_account.rs:597
+msgid "Penguin Mail needs the password for {address} again."
+msgstr "O Penguin Mail precisa de novo da palavra-passe de {address}."
+"O Penguin Mail precisa de permissão para alterar as definições do Gmail"
+
 #: app/src/app.rs:300
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
@@ -1228,7 +1340,7 @@ msgstr "Roxo"
 msgid "Slate"
 msgstr "Ardósia"
 
-#: app/src/main.rs:55
+#: app/src/main.rs:58
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]]\n"
 "\n"
@@ -1248,15 +1360,15 @@ msgstr ""
 "  --compose      abre uma mensagem nova, para ENDEREÇO quando indicado\n"
 "  mailto:...     o mesmo que --compose mailto:..."
 
-#: app/src/main.rs:121
+#: app/src/main.rs:124
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: opção desconhecida {option}"
 
-#: app/src/main.rs:244
+#: app/src/main.rs:247
 msgid "Penguin Mail Could Not Start"
 msgstr "O Penguin Mail não conseguiu arrancar"
 
-#: app/src/main.rs:249 app/src/ui/about.rs:148
+#: app/src/main.rs:252 app/src/ui/about.rs:148
 msgid "Report a Problem"
 msgstr "Comunicar um problema"
 
@@ -1418,7 +1530,8 @@ msgstr "Os contactos de {provider} chegam numa versão futura."
 
 #: app/src/offered.rs:199
 msgid "Rules and automatic replies need a server that runs them."
-msgstr "As regras e as respostas automáticas precisam de um servidor que as execute."
+msgstr ""
+"As regras e as respostas automáticas precisam de um servidor que as execute."
 
 #: app/src/offered.rs:201
 msgid "{provider} has no calendar that other apps can reach."
@@ -6778,9 +6891,6 @@ msgstr "Mover para {folder}"
 
 #~ msgid "Local or OpenAI-compatible server"
 #~ msgstr "Servidor local ou compatível com a OpenAI"
-
-#~ msgid "Provider"
-#~ msgstr "Fornecedor"
 
 #~ msgid "Contacts"
 #~ msgstr "Contactos"
