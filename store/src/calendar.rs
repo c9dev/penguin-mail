@@ -30,7 +30,7 @@ const MOST_EVENTS: usize = 500;
 
 /// Which of an account's calendars an [`occurrences`] query reads.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Reach {
+pub enum CalendarScope {
     /// Calendars the person has not hidden.
     Shown,
     /// Every calendar, hidden or not.
@@ -256,13 +256,13 @@ pub fn occurrences(
     accounts: &[AccountId],
     from: EpochMillis,
     to: EpochMillis,
-    reach: Reach,
+    reach: CalendarScope,
 ) -> Result<Vec<Occurrence>> {
     let to = if to - from > MAX_RANGE { from + MAX_RANGE } else { to };
     let calendar_filter = match reach {
-        Reach::Shown => "AND c.shown = 1",
-        Reach::All => "",
-        Reach::Owned => "AND c.access = 'owner'",
+        CalendarScope::Shown => "AND c.shown = 1",
+        CalendarScope::All => "",
+        CalendarScope::Owned => "AND c.access = 'owner'",
     };
     let mut found = Vec::new();
     for &account_id in accounts {
@@ -573,7 +573,7 @@ mod tests {
             0,
         )
         .unwrap();
-        let found = occurrences(&conn, &[id], MONDAY, MONDAY + DAY, Reach::Shown).unwrap();
+        let found = occurrences(&conn, &[id], MONDAY, MONDAY + DAY, CalendarScope::Shown).unwrap();
         assert_eq!(starts(&found), vec![("across".into(), MONDAY - HOUR), ("inside".into(), MONDAY + 9 * HOUR)]);
     }
 
@@ -583,7 +583,7 @@ mod tests {
         let mut standup = event("primary", "standup", MONDAY + 9 * HOUR, 1);
         standup.rules = vec!["RRULE:FREQ=DAILY;COUNT=5".into()];
         save_events(&conn, id, &[standup], 0).unwrap();
-        let found = occurrences(&conn, &[id], MONDAY + DAY, MONDAY + 3 * DAY, Reach::Shown).unwrap();
+        let found = occurrences(&conn, &[id], MONDAY + DAY, MONDAY + 3 * DAY, CalendarScope::Shown).unwrap();
         assert_eq!(found.len(), 2);
     }
 
@@ -596,7 +596,7 @@ mod tests {
         moved.series = Some("standup".into());
         moved.original_start = Some(MONDAY + DAY + 9 * HOUR);
         save_events(&conn, id, &[standup, moved], 0).unwrap();
-        let found = occurrences(&conn, &[id], MONDAY, MONDAY + 3 * DAY, Reach::Shown).unwrap();
+        let found = occurrences(&conn, &[id], MONDAY, MONDAY + 3 * DAY, CalendarScope::Shown).unwrap();
         assert_eq!(
             starts(&found),
             vec![
@@ -621,7 +621,7 @@ mod tests {
         moved.series = Some("standup".into());
         moved.original_start = Some(MONDAY + DAY + 9 * HOUR);
         save_events(&conn, id, &[standup, moved], 0).unwrap();
-        let found = occurrences(&conn, &[id], MONDAY, MONDAY + 2 * DAY, Reach::Shown).unwrap();
+        let found = occurrences(&conn, &[id], MONDAY, MONDAY + 2 * DAY, CalendarScope::Shown).unwrap();
         assert_eq!(starts(&found), vec![("standup".into(), MONDAY + 9 * HOUR)]);
     }
 
@@ -635,7 +635,7 @@ mod tests {
         cancelled.original_start = Some(MONDAY + DAY + 9 * HOUR);
         cancelled.status = Status::Cancelled;
         save_events(&conn, id, &[standup, cancelled], 0).unwrap();
-        let found = occurrences(&conn, &[id], MONDAY, MONDAY + 3 * DAY, Reach::Shown).unwrap();
+        let found = occurrences(&conn, &[id], MONDAY, MONDAY + 3 * DAY, CalendarScope::Shown).unwrap();
         assert_eq!(found.len(), 2);
     }
 
@@ -644,11 +644,11 @@ mod tests {
         let (conn, id) = store();
         save_events(&conn, id, &[event("team", "retro", MONDAY + 9 * HOUR, 1)], 0).unwrap();
         set_shown(&conn, id, "team", false).unwrap();
-        assert!(occurrences(&conn, &[id], MONDAY, MONDAY + DAY, Reach::Shown).unwrap().is_empty());
-        assert_eq!(occurrences(&conn, &[id], MONDAY, MONDAY + DAY, Reach::All).unwrap().len(), 1);
+        assert!(occurrences(&conn, &[id], MONDAY, MONDAY + DAY, CalendarScope::Shown).unwrap().is_empty());
+        assert_eq!(occurrences(&conn, &[id], MONDAY, MONDAY + DAY, CalendarScope::All).unwrap().len(), 1);
     }
 
-    /// reconcile.md Task 2 item 5: `Reach::Owned` is what the clash line
+    /// reconcile.md Task 2 item 5: `CalendarScope::Owned` is what the clash line
     /// and free time need (ruling R3), so a calendar the account can only
     /// read never counts toward either.
     #[test]
@@ -658,8 +658,8 @@ mod tests {
         team.access = Access::Reader;
         save_calendars(&conn, id, &[calendar("primary", true), team]).unwrap();
         save_events(&conn, id, &[event("team", "retro", MONDAY + 9 * HOUR, 1)], 0).unwrap();
-        assert!(occurrences(&conn, &[id], MONDAY, MONDAY + DAY, Reach::Owned).unwrap().is_empty());
-        assert_eq!(occurrences(&conn, &[id], MONDAY, MONDAY + DAY, Reach::All).unwrap().len(), 1);
+        assert!(occurrences(&conn, &[id], MONDAY, MONDAY + DAY, CalendarScope::Owned).unwrap().is_empty());
+        assert_eq!(occurrences(&conn, &[id], MONDAY, MONDAY + DAY, CalendarScope::All).unwrap().len(), 1);
     }
 
     /// Memory item 1: `occurrences` clones a whole event into every row it
@@ -679,7 +679,7 @@ mod tests {
             0,
         )
         .unwrap();
-        let found = occurrences(&conn, &[id], MONDAY, MONDAY + 400 * DAY, Reach::Shown).unwrap();
+        let found = occurrences(&conn, &[id], MONDAY, MONDAY + 400 * DAY, CalendarScope::Shown).unwrap();
         assert_eq!(starts(&found), vec![("within".into(), MONDAY + 300 * DAY)]);
     }
 
@@ -692,7 +692,7 @@ mod tests {
         let mut standup = event("primary", "standup", MONDAY, 1);
         standup.rules = vec!["RRULE:FREQ=HOURLY;COUNT=600".into()];
         save_events(&conn, id, &[standup], 0).unwrap();
-        let found = occurrences(&conn, &[id], MONDAY, MONDAY + 30 * DAY, Reach::Shown).unwrap();
+        let found = occurrences(&conn, &[id], MONDAY, MONDAY + 30 * DAY, CalendarScope::Shown).unwrap();
         assert_eq!(found.len(), 500);
     }
 
