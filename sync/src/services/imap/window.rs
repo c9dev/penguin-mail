@@ -13,6 +13,7 @@ use mailrs_store::threading::Links;
 use serde::{Deserialize, Serialize};
 
 use super::keywords::{is_deleted, keywords_of};
+use super::state::Kept;
 use super::syntax::imap_date;
 use super::{BATCH_LIMIT, Imap, ImapApi, Submit};
 use crate::BackendError;
@@ -135,7 +136,8 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     }
 
     /// The mailboxes the account keeps in step: the Inbox, and Sent,
-    /// Drafts and Archive where the server has them.
+    /// Drafts and Archive where the server has them, then every mailbox a
+    /// person opened.
     pub(super) async fn synced(&self) -> Result<Vec<String>, BackendError> {
         self.ensure_listed().await?;
         let mut synced = Vec::new();
@@ -143,6 +145,12 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             if let Some(id) = self.mailbox_for(role)
                 && !synced.contains(&id)
             {
+                synced.push(id);
+            }
+        }
+        let followed: Vec<String> = self.known().followed.iter().cloned().collect();
+        for id in followed {
+            if !synced.contains(&id) {
                 synced.push(id);
             }
         }
@@ -205,7 +213,9 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     }
 
     /// The window's UIDs in `mailbox`, newest first, with the UIDVALIDITY
-    /// they belong to.
+    /// they belong to. Notes where this leaves the mailbox, so a mailbox a
+    /// person follows right after this listing starts its feed from here
+    /// rather than from whatever the server holds at the next look.
     pub(super) async fn window_uids(
         &self,
         mailbox: &str,
@@ -213,6 +223,9 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     ) -> Result<(u32, Vec<u32>), BackendError> {
         let selected = self.select(mailbox, None).await?;
         let top = self.top_uid(mailbox, &selected).await?;
+        self.known()
+            .recent
+            .insert(mailbox.to_string(), Kept::of(&selected, top));
         let keys = window_keys(mailbox, days, chrono::Local::now().date_naive());
         let mut uids = Vec::new();
         self.search_windows(mailbox, (1, top), &keys, |found| uids.extend(found))

@@ -6,6 +6,7 @@ mod mailboxes;
 mod search;
 mod sending;
 mod uidvalidity;
+mod watch;
 mod window;
 mod writes;
 

@@ -36,7 +36,7 @@ use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{Db, accounts, mailboxes, messages, remote_refs};
 
 use crate::fake::{FakeGmail, FakeImap, FakeOneClick, FakeSmtp};
-use crate::{AccountServices, AccountSync, Accounts, ImapSettings};
+use crate::{AccountServices, AccountSync, Accounts, AnyMail, ImapSettings};
 
 /// A stored message's memberships as Gmail labels, sorted.
 pub(crate) fn labels_of(
@@ -253,7 +253,9 @@ pub(crate) async fn imap_harness() -> ImapHarness {
     imap_harness_on(FakeImap::new(), fake_settings()).await
 }
 
-/// An IMAP account on `imap`, with `settings`.
+/// An IMAP account on `imap`, with `settings`. Every look at the feed
+/// covers every synced mailbox, so a test sees a change in Sent or Archive
+/// at the next `incremental` rather than after the slow poll.
 pub(crate) async fn imap_harness_on(imap: FakeImap, settings: ImapSettings) -> ImapHarness {
     let dir = tempfile::tempdir().unwrap();
     let db = Db::open(&dir.path().join("mail.db")).unwrap();
@@ -264,6 +266,9 @@ pub(crate) async fn imap_harness_on(imap: FakeImap, settings: ImapSettings) -> I
     let (imap, smtp) = (Arc::new(imap), Arc::new(FakeSmtp::default()));
     let services =
         AccountServices::fake_imap_with(Arc::clone(&imap), Arc::clone(&smtp), settings);
+    if let AnyMail::FakeImap(adapter) = &services.mail {
+        adapter.look_at_every_mailbox();
+    }
     let (sender, events) = async_channel::unbounded();
     let sync = Arc::new(
         AccountSync::new(account_id, services, db.clone(), sender)
@@ -341,5 +346,13 @@ impl ImapHarness {
             .unwrap()
             .into_values()
             .next()
+    }
+
+    /// Whether the adapter still follows `mailbox`.
+    pub fn is_followed(&self, mailbox: &str) -> bool {
+        match &self.sync.services().mail {
+            AnyMail::FakeImap(adapter) => adapter.is_followed(mailbox),
+            _ => false,
+        }
     }
 }

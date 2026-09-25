@@ -406,6 +406,24 @@ impl<G: GmailApi> MailBackend for Google<G> {
         Ok(paced(self.gmail.label_threads(id)).await?)
     }
 
+    /// Gmail's history speaks for every label, so there is nothing more to
+    /// follow.
+    fn follow(&self, _mailbox: &str) {}
+
+    /// The engine's own interval paces Gmail whether the window is open or
+    /// not.
+    fn set_window_open(&self, _open: bool) {}
+
+    fn poll_interval(&self) -> Option<Duration> {
+        None
+    }
+
+    /// Gmail pushes nothing to a desktop client, so the engine's poll is
+    /// the only look.
+    async fn watch(&self) {
+        std::future::pending::<()>().await
+    }
+
     /// Gmail's history names every flag change, so nobody asks.
     async fn keywords_in(
         &self,

@@ -261,6 +261,22 @@ impl MailBackend for AnyMail {
         forward_all!(AnyMail, self, mailbox_threads(id))
     }
 
+    fn follow(&self, mailbox: &str) {
+        forward_all_now!(AnyMail, self, follow(mailbox))
+    }
+
+    fn set_window_open(&self, open: bool) {
+        forward_all_now!(AnyMail, self, set_window_open(open))
+    }
+
+    fn poll_interval(&self) -> Option<Duration> {
+        forward_all_now!(AnyMail, self, poll_interval())
+    }
+
+    async fn watch(&self) {
+        forward_all!(AnyMail, self, watch())
+    }
+
     async fn uidvalidity(&self, mailbox: &str) -> Result<Option<u32>, BackendError> {
         forward_all!(AnyMail, self, uidvalidity(mailbox))
     }

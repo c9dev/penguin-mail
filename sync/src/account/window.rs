@@ -229,6 +229,40 @@ impl AccountSync {
         Ok(())
     }
 
+    /// Starts keeping `mailbox` in step, as a person opening it asks: its
+    /// window is listed and stored now, and the slow poll looks at it from
+    /// then on. A label server keeps every label in step already and is
+    /// asked nothing.
+    pub async fn follow_mailbox(&self, mailbox: &str) -> Result<(), SyncError> {
+        if !self.renames() {
+            return Ok(());
+        }
+        self.services.mail.follow(mailbox);
+        let listed = self
+            .services
+            .mail
+            .window_ids(self.window_days, Some(mailbox))
+            .await?;
+        let fetched = self.fetch(listed.into_iter().map(Want::from).collect()).await?;
+        let account_id = self.account_id;
+        let touched = self
+            .db
+            .write(move |c| {
+                let generation = accounts::sync_cursor(c, account_id)?.sync_gen;
+                store_fetched(
+                    c,
+                    account_id,
+                    generation,
+                    &fetched.metas,
+                    &[],
+                    &fetched.placing,
+                )
+            })
+            .await?;
+        self.emit_threads(touched);
+        Ok(())
+    }
+
     /// Makes the stored inbox match Gmail's. History replay applies each
     /// change once, so a message whose labels were written from an older
     /// copy after the replay that carried a change stays wrong for good:

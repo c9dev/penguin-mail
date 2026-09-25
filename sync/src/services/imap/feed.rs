@@ -28,25 +28,60 @@ use crate::services::{Changes, KeywordsOf, KeywordsPage, RemoteChange, SyncState
 
 impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// With no state, where every synced mailbox stands now. With one,
-    /// every change since it in the synced mailboxes, and the state after.
+    /// every change since it in the mailboxes this look covers, and the
+    /// state after. A mailbox the state names is followed from then on,
+    /// so a folder opened before a restart stays in step after it.
     pub(super) async fn feed(&self, since: Option<&SyncState>) -> Result<Changes, BackendError> {
         let Some(since) = since else {
             return self.feed_start().await;
         };
         let mut state = ImapState::read(since)?;
+        self.known()
+            .followed
+            .extend(state.mailboxes.keys().cloned());
         let capabilities = self.capabilities_now().await?;
+        let (due, slow) = self.due().await?;
         let mut changes = Vec::new();
-        for mailbox in self.synced().await? {
-            let kept = match state.mailboxes.get(&mailbox) {
+        for mailbox in due {
+            // A window listing done for this mailbox already, such as a
+            // person following it, left where it stood right then, so
+            // mail that arrived since counts as a change here too; a
+            // mailbox neither the state nor a listing has met before
+            // starts fresh, with nothing to compare against yet.
+            let known = state
+                .mailboxes
+                .get(&mailbox)
+                .copied()
+                .or_else(|| self.known().recent.remove(&mailbox));
+            let kept = match known {
                 Some(kept) => {
-                    self.mailbox_changes(&mailbox, *kept, &capabilities, &mut changes)
-                        .await?
+                    self.mailbox_changes(&mailbox, kept, &capabilities, &mut changes)
+                        .await
                 }
-                // A mailbox the account starts keeping in step now: its new
-                // mail counts from here.
-                None => self.kept_now(&mailbox).await?,
+                None => self.kept_now(&mailbox).await,
             };
-            state.mailboxes.insert(mailbox, kept);
+            match kept {
+                Ok(kept) => {
+                    state.mailboxes.insert(mailbox, kept);
+                }
+                // A server refuses to select a mailbox deleted elsewhere,
+                // which `ImapError::NoMailbox` reports as `NotFound`. A
+                // role mailbox (Archive, Sent) answers the same way, so
+                // the listing is refreshed too, or `synced` keeps
+                // offering its stale id at every later look. Letting it
+                // go keeps the rest of the account in step; the next
+                // listing takes it out of the store.
+                Err(BackendError::NotFound) if !mailbox.eq_ignore_ascii_case("INBOX") => {
+                    tracing::warn!(%mailbox, "the server has no such synced mailbox; no longer following it");
+                    state.mailboxes.remove(&mailbox);
+                    self.known().followed.remove(&mailbox);
+                    self.list_mailboxes().await?;
+                }
+                Err(err) => return Err(err),
+            }
+        }
+        if slow {
+            self.slow_poll_done();
         }
         Ok(Changes {
             changes,

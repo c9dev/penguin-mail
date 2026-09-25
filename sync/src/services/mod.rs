@@ -515,6 +515,24 @@ pub trait MailBackend: Send + Sync + 'static {
     /// the part this computer keeps.
     fn mailbox_threads(&self, id: &str) -> impl Future<Output = Result<u64, BackendError>> + Send;
 
+    /// Starts keeping `mailbox` in step, for a mailbox the account does
+    /// not sync on its own. A server that keeps every mailbox in step
+    /// ignores it.
+    fn follow(&self, mailbox: &str);
+
+    /// Tells the backend whether the main window is open, which sets how
+    /// often it looks at mail nobody is watching.
+    fn set_window_open(&self, open: bool);
+
+    /// How long the engine waits between looks at the change feed. `None`
+    /// keeps the engine's own interval.
+    fn poll_interval(&self) -> Option<Duration>;
+
+    /// Resolves when the account should look at its Inbox: the server said
+    /// something changed there, or its watch failed and a minute passed.
+    /// A server that never says so never resolves this.
+    fn watch(&self) -> impl Future<Output = ()> + Send;
+
     /// The keywords of the window's messages in `mailbox` with a UID in
     /// `uids`, as they stand on the server now, for a
     /// [`RemoteChange::CompareKeywords`]. It answers the lowest part of

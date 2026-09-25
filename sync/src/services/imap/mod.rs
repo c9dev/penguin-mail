@@ -7,6 +7,7 @@
 
 mod api;
 mod bodies;
+mod cadence;
 mod feed;
 mod keywords;
 mod mailboxes;
@@ -19,7 +20,7 @@ mod writes;
 
 pub use api::{ImapApi, Submit};
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{BTreeSet, HashMap, VecDeque};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::ops::RangeInclusive;
 use std::time::Duration;
@@ -29,6 +30,7 @@ use mailrs_domain::{MailSet, RemoteMailbox, Role};
 use mailrs_gmail::LabelColor;
 use mailrs_imap::{Capabilities, ImapError, Selected, Since};
 use mailrs_mime::Parts;
+use tokio::time::Instant;
 
 use super::{
     Backfill, Changes, Found, IdentityService, KeywordsPage, MailBackend, MailCapabilities,
@@ -92,6 +94,27 @@ struct Known {
     /// latest [`UNREADABLE_KEPT`], so opening one again does not ask for
     /// the part and lose the connection each time.
     unreadable: VecDeque<String>,
+    /// Mailboxes a person opened, synced besides the four the account
+    /// always keeps in step. Bounded by how many mailboxes a person opens,
+    /// not by their size; a restart rebuilds it from the sync state.
+    followed: BTreeSet<String>,
+    /// Where a window listing last left a mailbox, for a mailbox the feed
+    /// has not kept state for yet: a mailbox just followed starts from
+    /// here rather than from whatever the server holds at the next look,
+    /// which would miss mail that arrived in between. Bounded by how many
+    /// mailboxes the account has, not their size.
+    recent: HashMap<String, state::Kept>,
+    /// Only the tray runs; the window is closed.
+    tray_only: bool,
+    /// When the slow poll last looked at every synced mailbox.
+    last_slow: Option<Instant>,
+    /// Every look covers every synced mailbox, for tests that should not
+    /// wait for the slow poll.
+    every_look: bool,
+    /// IDLE attempts on the Inbox that failed in a row, so a server that
+    /// keeps refusing or dropping it is watched less and less often. A
+    /// success, including one the guard ends early, resets it.
+    idle_failures: u32,
 }
 
 /// The most messages [`Known::unreadable`] remembers.
@@ -141,6 +164,20 @@ impl<I, S> Imap<I, S> {
             known.unreadable.pop_front();
         }
         known.unreadable.push_back(name.to_string());
+    }
+
+    /// Makes every look at the feed cover every synced mailbox, for tests
+    /// that check a mailbox other than the Inbox right after a change.
+    #[cfg(any(test, feature = "fake"))]
+    pub fn look_at_every_mailbox(&self) {
+        self.known().every_look = true;
+    }
+
+    /// Whether `mailbox` is followed as a person opened it, for a test
+    /// that checks a mailbox deleted elsewhere leaves the followed set.
+    #[cfg(any(test, feature = "fake"))]
+    pub fn is_followed(&self, mailbox: &str) -> bool {
+        self.known().followed.contains(mailbox)
     }
 }
 
@@ -288,6 +325,24 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
             return Ok(0);
         }
         Ok(u64::from(self.select(id, None).await?.exists))
+    }
+
+    fn follow(&self, mailbox: &str) {
+        self.known().followed.insert(mailbox.to_string());
+    }
+
+    fn set_window_open(&self, open: bool) {
+        self.known().tray_only = !open;
+    }
+
+    fn poll_interval(&self) -> Option<Duration> {
+        let known = self.known();
+        let idle = known.capabilities.as_ref().is_some_and(|c| c.idle);
+        Some(cadence::poll_every(idle, known.tray_only))
+    }
+
+    async fn watch(&self) {
+        self.watch_inbox().await
     }
 
     async fn keywords_in(
