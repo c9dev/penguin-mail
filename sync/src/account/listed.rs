@@ -121,21 +121,20 @@ impl AccountSync {
         })
     }
 
-    /// The messages a listing of `query` shows. On an account whose server
-    /// reads no Gmail syntax, a query tree, and text typed in Gmail's
-    /// operators read as one, is answered by the store for the mail it
-    /// holds and by the server past it; `store_only` says the server did
-    /// not search, so older mail may be missing. Everything else goes to
-    /// `search_ids`.
+    /// The messages a listing of `query` shows. Text typed in Gmail's
+    /// operators, on an account whose server reads no Gmail syntax, becomes
+    /// a query tree that the store answers for the mail it holds and the
+    /// server past it; `store_only` says the server did not search, so
+    /// older mail may be missing. Everything else goes to `search_ids`.
     pub async fn search_listing(
         &self,
         query: &SearchQuery,
         limit: usize,
     ) -> Result<Searched, SyncError> {
-        let native = self.services.capabilities().native_search;
         match query {
-            SearchQuery::Native(text) if !native => self.search_typed(text, limit).await,
-            SearchQuery::Tree(tree) if !native => self.search_stored_and_past(tree, limit).await,
+            SearchQuery::Native(text) if !self.services.capabilities().native_search => {
+                self.search_typed(text, limit).await
+            }
             _ => Ok(Searched {
                 refs: self.search_ids(query, limit).await?,
                 store_only: false,
@@ -143,10 +142,12 @@ impl AccountSync {
         }
     }
 
-    /// Typed search text on a server that reads no Gmail syntax, answered
-    /// as [`AccountSync::search_stored_and_past`] answers its tree. A
-    /// typed `label:` takes the name of the mailbox Gmail would spell that
-    /// way.
+    /// Typed search text on a server that reads no Gmail syntax: the
+    /// store's matches, newest first, then what the server finds past
+    /// them, at most `limit` in all. A typed `label:` takes the name of the
+    /// mailbox Gmail would spell that way. A server search that fails
+    /// leaves the store's answer, marked `store_only` as one the server
+    /// cannot run is, so the person still sees what this computer holds.
     async fn search_typed(&self, text: &str, limit: usize) -> Result<Searched, SyncError> {
         let account_id = self.account_id;
         let names: Vec<String> = self
@@ -157,20 +158,8 @@ impl AccountSync {
             .map(|label| label.name)
             .collect();
         let tree = resolve_names(parse(text), &names);
-        self.search_stored_and_past(&tree, limit).await
-    }
-
-    /// `tree` on a server that reads no Gmail syntax: the store's matches,
-    /// newest first, then what the server finds past them, at most `limit`
-    /// in all. A server search that fails, or one the server cannot say,
-    /// leaves the store's answer, marked `store_only`.
-    async fn search_stored_and_past(
-        &self,
-        tree: &Query,
-        limit: usize,
-    ) -> Result<Searched, SyncError> {
-        let mut refs = self.stored_matches(tree, limit).await?;
-        let past = match self.search_tree(tree, limit).await {
+        let mut refs = self.stored_matches(&tree, limit).await?;
+        let past = match self.search_tree(&tree, limit).await {
             Ok(past) => past,
             Err(err) => {
                 tracing::warn!(error = %err, "the server search failed; the store answers alone");
