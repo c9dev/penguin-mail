@@ -65,7 +65,7 @@ pub struct EventPopover {
     title: gtk::Label,
     when: gtk::Label,
     calendar_label: gtk::Label,
-    place_row: gtk::Box,
+    place_row: gtk::Button,
     place_label: gtk::Label,
     place_url: RefCell<String>,
     /// Who organized the event and how many said yes; the guests' names
@@ -119,7 +119,7 @@ impl EventPopover {
         head.append(&heading);
 
         let calendar_label = gtk::Label::builder().xalign(0.0).build();
-        let calendar_row = icon_row("x-office-calendar-symbolic", &calendar_label);
+        let calendar_row = icon_row("penguin-mail-calendar-symbolic", &calendar_label);
 
         let place_label = gtk::Label::builder()
             .xalign(0.0)
@@ -127,19 +127,19 @@ impl EventPopover {
             .ellipsize(pango::EllipsizeMode::End)
             .single_line_mode(true)
             .build();
-        let maps_link = gtk::Button::builder()
-            .css_classes(["flat", "link", "popover-maps"])
-            .label(gettext("Open in Maps"))
-            .valign(gtk::Align::Center)
+        // The whole place row opens the map, so the popover draws it as
+        // the mockup does, with no link beside it.
+        let place_row = gtk::Button::builder()
+            .child(&icon_row("folder-symbolic", &place_label))
+            .css_classes(["flat", "popover-place"])
+            .tooltip_text(gettext("Open in Maps"))
             .build();
-        let place_row = icon_row("folder-symbolic", &place_label);
-        place_row.append(&maps_link);
 
         let people_label = gtk::Label::builder()
             .xalign(0.0)
             .wrap(true)
             .build();
-        let people_row = icon_row("system-users-symbolic", &people_label);
+        let people_row = icon_row("penguin-mail-people-symbolic", &people_label);
 
         let join = gtk::Button::builder()
             .css_classes(["popover-join"])
@@ -237,7 +237,7 @@ impl EventPopover {
         });
 
         let weak = Rc::downgrade(&this);
-        maps_link.connect_clicked(move |button| {
+        this.place_row.connect_clicked(move |button| {
             let Some(this) = weak.upgrade() else { return };
             open(&this.place_url.borrow(), button);
         });
@@ -288,6 +288,7 @@ impl EventPopover {
         if place_visible {
             self.place_label.set_label(&event.place);
             self.place_url.replace(words::maps_url(&event.place));
+            crate::ui::name(&self.place_row, &words::open_place_words(&event.place));
         }
 
         let organizer = organizer_name(event);
@@ -320,13 +321,28 @@ impl EventPopover {
         let guest = is_guest(&event.guests);
         self.answer_box.set_visible(guest);
         // The current answer is filled; with none yet, Yes is, as the
-        // mockup draws an invitation still waiting.
+        // mockup draws an invitation still waiting. A screen reader hears
+        // which one is the answer, or that there is none yet.
         let filled = event.my_answer.unwrap_or(Answer::Yes);
+        let answered = event.my_answer.is_some();
+        let waiting = match answered {
+            true => String::new(),
+            false => gettext("Not answered yet"),
+        };
+        crate::ui::describe(&self.answer_box, &gettext("Answer"), &waiting);
+        let mut first = None;
         for (answer, button) in &self.answer_buttons {
             button.remove_css_class("suggested-action");
-            if guest && *answer == filled {
+            let current = guest && *answer == filled;
+            if current {
                 button.add_css_class("suggested-action");
+                first = Some(button.clone().upcast::<gtk::Widget>());
             }
+            let said = match current && answered {
+                true => gettext("Your answer"),
+                false => String::new(),
+            };
+            crate::ui::describe(button, &answer.label(), &said);
         }
 
         self.on_answer.replace(Some(Box::new(on_answer)));
@@ -342,6 +358,17 @@ impl EventPopover {
             self.popover.set_pointing_to(Some(&rect));
         }
         self.popover.popup();
+        // A guest opens the popover to answer, so the focus starts on the
+        // current answer; anyone else starts on the first row they can
+        // press.
+        let first = first.or_else(|| {
+            [self.place_row.clone().upcast::<gtk::Widget>(), self.join.clone().upcast()]
+                .into_iter()
+                .find(|w| w.is_visible())
+        });
+        if let Some(first) = first {
+            first.grab_focus();
+        }
     }
 
     /// Closes the popover, such as when the view's range changes under
