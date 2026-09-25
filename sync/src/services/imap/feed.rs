@@ -36,9 +36,11 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             return self.feed_start().await;
         };
         let mut state = ImapState::read(since)?;
-        self.known()
-            .followed
-            .extend(state.mailboxes.keys().cloned());
+        {
+            let mut known = self.known();
+            known.follow_renames(&mut state);
+            known.followed.extend(state.mailboxes.keys().cloned());
+        }
         let capabilities = self.capabilities_now().await?;
         let (due, slow) = self.due().await?;
         let mut changes = Vec::new();

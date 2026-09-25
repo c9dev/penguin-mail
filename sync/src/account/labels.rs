@@ -79,6 +79,9 @@ impl AccountSync {
         if is_reserved_label_name(&name) {
             return Err(SyncError::ReservedLabel(name));
         }
+        // A look during the rename would find the old name gone and let
+        // its mail go.
+        let _moves = self.hold_moves().await;
         let prefix = format!("{old}/");
         let mut renamed = vec![self.services.mail.rename_mailbox(id, &name).await?];
         let mut moved = vec![(id.to_string(), renamed[0].id.clone())];
@@ -110,15 +113,18 @@ impl AccountSync {
         }
         // On a folder server a mailbox's name is part of each message's
         // name, so the refs follow the rename.
+        // The mail filed under each old name stays filed under the new one,
+        // or the next listing takes the old row and the mail's place in it.
         let pairs = moved.clone();
         self.db
             .write(move |c| {
-                for mailbox in &renamed {
-                    mailboxes::upsert(c, account_id, mailbox)?;
-                }
-                if renames {
-                    for (from, to) in &pairs {
-                        remote_refs::rename_mailbox(c, account_id, from, to)?;
+                for ((from, to), mailbox) in pairs.iter().zip(&renamed) {
+                    match renames {
+                        true => {
+                            mailboxes::rename(c, account_id, from, mailbox)?;
+                            remote_refs::rename_mailbox(c, account_id, from, to)?;
+                        }
+                        false => mailboxes::upsert(c, account_id, mailbox)?,
                     }
                 }
                 Ok(())

@@ -249,6 +249,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     ) -> Result<RemoteMailbox, BackendError> {
         let renamed = server_name(name, self.known().delimiter);
         self.api.rename(id, &renamed).await?;
+        self.known().rename(id, &renamed);
         self.listed_as(&renamed).await
     }
 

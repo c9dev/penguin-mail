@@ -2,11 +2,12 @@
 //! UIDVALIDITY says, and the whole account after the server lost its
 //! place. Either way the engine keeps what it already held.
 
-use mailrs_domain::Location;
+use mailrs_domain::{Location, MailSet};
 use mailrs_imap::ImapError;
-use mailrs_store::{accounts, bodies, remote_refs};
+use mailrs_store::{accounts, bodies, mailboxes, remote_refs, threads};
 
 use super::{days_ago, message};
+use crate::TriageAction;
 use crate::tests::{ImapHarness, imap_harness};
 
 #[tokio::test]
@@ -175,6 +176,40 @@ async fn a_renamed_mailbox_keeps_its_messages() {
     assert_eq!(h.ids().await, ["INBOX/1001/1"]);
 }
 
+/// The store files a renamed mailbox's mail under its new name at once,
+/// so the next listing of mailboxes takes nothing away and the sidebar
+/// counts it without fetching anything again.
+#[tokio::test]
+async fn a_renamed_mailbox_keeps_its_memberships_and_counts() {
+    let h = imap_harness().await;
+    h.imap.deliver_flagged("INBOX", &message("a", "Kites", ""), &[], days_ago(1));
+    h.bootstrap().await;
+    h.imap.add_mailbox("Projects", None);
+    h.sync.refresh_labels().await.unwrap();
+    let thread = h.thread_of("INBOX/1001/1").await.unwrap();
+    h.sync
+        .triage_thread(&thread, &TriageAction::MoveTo("Projects".into()))
+        .await
+        .unwrap();
+
+    h.sync.rename_label("Projects", "Work").await.unwrap();
+    h.sync.refresh_labels().await.unwrap();
+
+    assert_eq!(h.stored("INBOX/1001/1").await.unwrap().held.mailboxes, ["Work"]);
+    let account_id = h.account_id;
+    let (counts, listed) = h
+        .db
+        .read(move |c| Ok((threads::mail_counts(c)?, mailboxes::listed(c, account_id)?)))
+        .await
+        .unwrap();
+    assert_eq!(counts.account(account_id, &MailSet::Mailbox("Work".into())).threads, 1);
+    assert!(listed.iter().all(|m| m.id != "Projects"));
+    let fetched = h.imap.calls_to("headers");
+    h.sync.incremental().await.unwrap();
+    assert_eq!(h.imap.calls_to("headers"), fetched, "nothing is fetched again");
+    assert_eq!(h.ids().await, ["INBOX/1001/1"]);
+}
+
 /// A server may give a renamed mailbox a new UIDVALIDITY; the rename then
 /// lists it again, and its messages keep their ids.
 #[tokio::test]
@@ -221,4 +256,24 @@ async fn renaming_a_mailbox_takes_the_ones_nested_under_it_along() {
         h.location("INBOX/1001/1").await,
         Some(format!("Work/2026/{uidvalidity}/{uid}"))
     );
+}
+
+/// A followed mailbox stays followed under its new name, from where the
+/// feed left it, so mail that arrives after the rename reaches the store.
+#[tokio::test]
+async fn a_renamed_followed_mailbox_keeps_its_place_in_the_feed() {
+    let h = imap_harness().await;
+    h.bootstrap().await;
+    h.imap.add_mailbox("Projects", None);
+    h.sync.refresh_labels().await.unwrap();
+    h.sync.follow_mailbox("Projects").await.unwrap();
+    h.sync.incremental().await.unwrap();
+
+    h.sync.rename_label("Projects", "Work").await.unwrap();
+    h.imap.deliver_flagged("Work", &message("a", "Kites", ""), &[], days_ago(1));
+    h.sync.incremental().await.unwrap();
+
+    assert!(h.is_followed("Work"));
+    let uidvalidity = h.imap.with(|s| s.mailbox_mut("Work").uidvalidity);
+    assert_eq!(h.ids().await, [format!("Work/{uidvalidity}/1")]);
 }
