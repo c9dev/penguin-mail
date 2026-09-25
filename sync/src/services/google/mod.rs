@@ -538,8 +538,7 @@ impl<G: GmailApi> CalendarService for Google<G> {
     ) -> Result<model::EventPage, BackendError> {
         match paced(self.gmail.event_changes(calendar, token, page, from)).await {
             // Only the call that reads changes can say the server lost
-            // its place; elsewhere a 404 means an event is gone (ruling
-            // R1, reconcile.md Task 4 item 2).
+            // its place; elsewhere a 404 means an event is gone.
             Err(GmailError::ExpiredSyncToken) => Err(BackendError::StateLost),
             other => Ok(other?),
         }
@@ -568,7 +567,8 @@ fn gone_is_not_found(err: GmailError) -> BackendError {
     }
 }
 
-/// Maps a calendar write's Gmail error to a neutral kind (ruling R1): a
+/// Maps a calendar write's Gmail error to a neutral kind, so the copy
+/// never names a Gmail error: a
 /// version conflict, Google's 412 or the 409 a duplicate create answers,
 /// becomes `Changed`; any other 4xx becomes `Refused` in Google's own
 /// words, since nothing else can say what a client-side refusal meant.

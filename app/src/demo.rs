@@ -697,7 +697,7 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
     let mut mail = HashMap::new();
     // Kept so a `CalendarCopy` can read each Gmail account's calendars
     // once every sample and event is in its fake, before the window
-    // ever opens (reconcile.md Task 9 item 13).
+    // ever opens.
     let mut syncing: HashMap<AccountId, Arc<AccountSync>> = HashMap::new();
     for (index, account) in ACCOUNTS.iter().enumerate() {
         let email = account.email;
@@ -757,7 +757,7 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
 /// calendars before `Core` has an engine of its own to build one over.
 /// `mailrs_sync::fake::Connected`-alike test harnesses live in `sync`'s
 /// own test module and are not reachable from here, so `seed` keeps this
-/// small one instead (reconcile.md Task 9 item 13).
+/// small one instead.
 struct Seeding(HashMap<AccountId, Arc<AccountSync>>);
 
 impl mailrs_sync::Accounts for Seeding {
@@ -768,7 +768,7 @@ impl mailrs_sync::Accounts for Seeding {
 
 /// The calendars demo account `index` keeps, its own primary always
 /// among them. Split across the three accounts so the merged view shows
-/// each event once (reconcile.md Task 9 item 15 / the plan's table).
+/// each event once.
 fn demo_calendars(index: usize) -> Vec<CalendarModel> {
     let personal = CalendarModel {
         id: "primary".into(),
@@ -902,7 +902,8 @@ fn account0_events(now: EpochMillis) -> Vec<CalendarEvent> {
 /// The second demo account's week: the Design team's own meetings, and,
 /// on its primary calendar, the two invitation-linked events under the
 /// same UIDs the sample mail carries, plus "Design crit" so the design
-/// review's card shows a clash (reconcile.md Task 9 item 15, ruling R8).
+/// review's card shows a clash. The invitations' events sit there alone,
+/// so the week holds no second "Sprint planning".
 fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
     let monday = week_monday(now);
 
@@ -1057,7 +1058,7 @@ fn until_stamp(at: EpochMillis) -> String {
 
 /// The week of calendar events demo account `index` keeps. Only the two
 /// Gmail accounts with a calendar get one; the third's primary stays
-/// empty (reconcile.md Task 9 item 15 / the plan's table).
+/// empty.
 fn demo_events(index: usize, now: EpochMillis) -> Vec<CalendarEvent> {
     match index {
         0 => account0_events(now),
@@ -2052,7 +2053,7 @@ mod tests {
         assert_eq!(
             events.iter().filter(|(title, _, series)| title == "Sprint planning" && series.is_none()).count(),
             1,
-            "no second Sprint planning (ruling R8): {events:?}"
+            "no second Sprint planning: {events:?}"
         );
     }
 

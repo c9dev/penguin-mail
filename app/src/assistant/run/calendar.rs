@@ -102,15 +102,15 @@ fn as_occurrence(account_id: AccountId, event: model::Event) -> model::Occurrenc
 }
 
 /// The UTC date an instant falls on, for an all-day event: a date means
-/// the same date wherever the reader is (reconcile.md Task 9 item 7), so
-/// this reads UTC rather than local time.
+/// the same date wherever the reader is, so this reads UTC rather than
+/// local time.
 fn utc_date(at: EpochMillis) -> Option<NaiveDate> {
     DateTime::<Utc>::from_timestamp_millis(at).map(|at| at.date_naive())
 }
 
 /// One occurrence, in the shape the calendar tools write. `calendar_name`
 /// is looked up once per call, from the account's own calendar list, and
-/// keyed by id (reconcile.md Task 9 item 6).
+/// keyed by id.
 fn event_json(occurrence: &model::Occurrence, calendar_name: &HashMap<String, String>) -> Value {
     const MAX_DESCRIPTION: usize = 1000;
     let event = &occurrence.event;
@@ -255,7 +255,7 @@ impl<A: Accounts> Tools<A> {
     }
 
     /// Each of the account's calendars, by id, for `event_json`'s
-    /// "calendar" key (reconcile.md Task 9 item 6). Empty before the
+    /// "calendar" key. Empty before the
     /// local copy has ever read the account's calendar list, which
     /// leaves `event_json` to fall back to the raw id.
     async fn calendar_names(&self, account_id: AccountId) -> Result<HashMap<String, String>, String> {
