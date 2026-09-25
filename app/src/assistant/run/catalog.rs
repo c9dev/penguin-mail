@@ -518,7 +518,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "list_smart_mailboxes",
             label: || gettext("Reading smart mailboxes"),
-            description: "Lists the smart mailboxes with their ids and conditions, and for Gmail accounts the Gmail search each one runs.",
+            description: "Lists the smart mailboxes with their ids and conditions, and the search each one runs: Gmail's syntax for a Gmail account, plain words for an account without one.",
             input: || json!({}),
             required: &[],
             run: Run::Now(|t, _| Box::pin(ready(Ok(t.list_smart_mailboxes())))),

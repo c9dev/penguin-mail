@@ -1012,6 +1012,11 @@ impl MainWindow {
     /// earlier requests for.
     fn list_first_page(self: &Rc<Self>, ticket: Ticket) {
         let mailbox = self.shown().clone();
+        if let Some(account_id) = mailbox.account()
+            && let Some((account_id, server_mailbox)) = follows(&mailbox, self.offers(account_id))
+        {
+            self.follow_mailbox(account_id, server_mailbox);
+        }
         if mailbox.is_remote() {
             self.list.show_loading();
         }
@@ -1033,6 +1038,26 @@ impl MainWindow {
             }
             if let Some((account_id, thread_id, then)) = landed.reveal {
                 this.select_revealed(account_id, thread_id, then);
+            }
+        });
+    }
+
+    /// Keeps `server_mailbox` of `account_id` in step from now on, as
+    /// [`follows`] decided when it landed on screen. This never touches
+    /// the window: a failure only logs, and the listing on screen, which
+    /// came from the store already, stays as it is.
+    fn follow_mailbox(&self, account_id: AccountId, server_mailbox: String) {
+        let Some(account) = self.core.account(account_id) else {
+            return;
+        };
+        self.core.spawn(async move {
+            if let Err(err) = account.follow_mailbox(&server_mailbox).await {
+                tracing::warn!(
+                    account = account_id,
+                    mailbox = %server_mailbox,
+                    error = %err,
+                    "could not follow the folder opened on screen"
+                );
             }
         });
     }
@@ -2914,6 +2939,23 @@ fn unique_path(dir: &std::path::Path, name: &str) -> PathBuf {
         .expect("some name is free")
 }
 
+/// The account and mailbox id to keep in step once `mailbox` lands on
+/// screen: a folder on an account whose mail sits in one mailbox at a
+/// time, since its window otherwise fills only as far as a listing has
+/// asked. A label account keeps every label in step already, and no
+/// other kind of mailbox names a server mailbox to follow, so both give
+/// `None`.
+fn follows(mailbox: &Mailbox, offers: Offers) -> Option<(AccountId, String)> {
+    match mailbox {
+        Mailbox::Label {
+            account_id,
+            label_id,
+            ..
+        } if !offers.labels => Some((*account_id, label_id.clone())),
+        _ => None,
+    }
+}
+
 /// Whether `mailbox` is still there once the accounts read as `data`. A
 /// mailbox of one account goes with that account, and a label goes when
 /// its account no longer lists it.
@@ -2935,6 +2977,49 @@ fn still_there(mailbox: &Mailbox, data: &[(Account, Vec<Label>)]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_folder_on_a_folder_account_is_followed_when_opened() {
+        let work = Mailbox::Label {
+            account_id: 7,
+            label_id: "Work".into(),
+            name: "Work".into(),
+        };
+        assert_eq!(
+            follows(&work, Offers { labels: false, ..Offers::EVERYTHING }),
+            Some((7, "Work".to_string()))
+        );
+    }
+
+    #[test]
+    fn a_label_on_a_gmail_account_is_not_followed() {
+        let work = Mailbox::Label {
+            account_id: 7,
+            label_id: "Label_1".into(),
+            name: "Work".into(),
+        };
+        assert_eq!(follows(&work, Offers::EVERYTHING), None);
+    }
+
+    #[test]
+    fn a_mailbox_that_names_no_server_mailbox_is_never_followed() {
+        let offers = Offers { labels: false, ..Offers::EVERYTHING };
+        let standard = Mailbox::Standard {
+            account_id: 1,
+            which: super::super::Standard::Inbox,
+        };
+        let unified = Mailbox::Unified(super::super::Standard::Inbox);
+        let smart = Mailbox::Smart(mailrs_domain::SmartMailbox {
+            id: "smart-1".into(),
+            name: "Big mail".into(),
+            account: None,
+            match_all: true,
+            conditions: Vec::new(),
+        });
+        for mailbox in [&standard, &unified, &smart] {
+            assert_eq!(follows(mailbox, offers), None, "{mailbox:?}");
+        }
+    }
 
     #[test]
     fn a_mailbox_of_a_removed_account_is_gone() {

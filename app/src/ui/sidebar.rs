@@ -306,7 +306,8 @@ impl Sidebar {
         }
         for (account, labels) in accounts {
             let shown = extras.names.get(&account.id);
-            let (row, chevron, count) = heading(account, shown, offers(account.id));
+            let account_offers = offers(account.id);
+            let (row, chevron, count) = heading(account, shown, account_offers);
             self.list.append(&row);
             self.headings.borrow_mut().push(Heading {
                 row,
@@ -344,7 +345,7 @@ impl Sidebar {
                     continue;
                 }
                 let row =
-                    self.add_mailbox(mailbox, entry.leaf, "penguin-mail-tag-symbolic", entry.depth);
+                    self.add_mailbox(mailbox, entry.leaf, label_icon(account_offers), entry.depth);
                 if let Some(color) = label.color.as_deref().and_then(css_hex)
                     && let Some(icon) = row.child().and_then(|c| c.first_child())
                 {
@@ -621,6 +622,18 @@ fn hidden_until_used(mailbox: &Mailbox) -> bool {
         mailbox,
         Mailbox::Scheduled | Mailbox::Reminders | Mailbox::FollowUp | Mailbox::Flag(_)
     )
+}
+
+/// The icon for a folder row a person can open: the tag Gmail's labels
+/// wear, since mail there can carry several at once, or the plain folder
+/// icon the sidebar gives a group once the account keeps mail in one
+/// place at a time.
+fn label_icon(offers: Offers) -> &'static str {
+    if offers.labels {
+        "penguin-mail-tag-symbolic"
+    } else {
+        "folder-symbolic"
+    }
 }
 
 /// Mailboxes mail can be moved into.
@@ -914,9 +927,28 @@ mod tests {
     use mailrs_domain::{Account, AccountState, Provider};
 
     use super::status_of;
-    use super::{Label, LabelKind, LabelRow, Mailbox, Standard, heading_row_name, label_rows, mailbox_row_name, takes_mail};
+    use super::{
+        Label, LabelKind, LabelRow, Mailbox, Standard, heading_row_name, label_icon, label_rows,
+        mailbox_row_name, takes_mail,
+    };
 
     use super::{Offers, account_settings};
+
+    #[test]
+    fn a_label_account_opens_a_folder_row_under_a_tag() {
+        assert_eq!(
+            label_icon(Offers { labels: true, ..Offers::EVERYTHING }),
+            "penguin-mail-tag-symbolic"
+        );
+    }
+
+    #[test]
+    fn a_folder_account_opens_a_folder_row_under_a_folder() {
+        assert_eq!(
+            label_icon(Offers { labels: false, ..Offers::EVERYTHING }),
+            "folder-symbolic"
+        );
+    }
 
     #[test]
     fn an_account_that_backs_off_names_who_is_not_answering() {

@@ -21,6 +21,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   message says so. Folders that only hold other folders show in the
   sidebar with their folders under them; you cannot open them or drop
   mail on them.
+- Opening a folder on an IMAP account lists its mail right away,
+  instead of waiting for the next sync.
 
 ### Fixed
 

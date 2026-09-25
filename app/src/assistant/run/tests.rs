@@ -1111,7 +1111,7 @@ async fn block_sender_asks_then_files_a_rule() {
 }
 
 #[tokio::test]
-async fn create_smart_mailbox_saves_its_gmail_query() {
+async fn create_smart_mailbox_saves_its_query() {
     let h = harness().await;
     let made = h
         .ok(
@@ -1123,7 +1123,7 @@ async fn create_smart_mailbox_saves_its_gmail_query() {
         )
         .await;
     assert_eq!(made["created"], "From Ann");
-    assert_eq!(made["gmail_query"], "from:ann@example.com");
+    assert_eq!(made["query"], "from:ann@example.com");
     assert!(matches!(h.asked().changes[0], Change::SaveSmartMailbox(_)));
 
     assert_eq!(

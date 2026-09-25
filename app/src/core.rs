@@ -596,6 +596,14 @@ impl Core {
         }
     }
 
+    /// Tells sync whether the main window is open, so an account looks at
+    /// mailboxes other than its inbox less often while only the tray runs.
+    pub fn set_window_open(&self, open: bool) {
+        if let Some(engine) = self.engine.current() {
+            engine.set_window_open(open);
+        }
+    }
+
     /// Drops the Gmail search the last folder or search listing kept, so
     /// the next listing asks Gmail again.
     pub fn forget_remote(&self) {

@@ -1,14 +1,69 @@
 //! Looking after labels, smart mailboxes, templates, contacts, the senders
 //! whose images load, and exported mail.
 
+use std::sync::Arc;
+
+use mailrs_domain::query::{Query, Term};
 use mailrs_domain::smart::{Condition, Field, SmartMailbox};
 use mailrs_gmail::labels as gmail;
 use mailrs_store::{address_book, image_senders, labels, templates};
+use mailrs_sync::{AccountServices, MailCapabilities};
 use serde_json::json;
 
 use super::super::Permission;
 use super::super::fake::{Harness, ME, NOW, labelled, meta};
+use super::super::manage::query_words;
 use super::{harness, mail, target};
+
+/// One account whose server takes no search syntax of its own, as an IMAP
+/// account without QRESYNC-style extensions does.
+async fn without_native_search() -> Harness {
+    Harness::with_services(|gmail, services| {
+        let caps = MailCapabilities {
+            native_search: false,
+            ..services.capabilities()
+        };
+        *services = AccountServices::fake_with_capabilities(Arc::clone(gmail), caps);
+    })
+    .await
+}
+
+#[test]
+fn query_words_prints_gmail_syntax_for_a_native_search() {
+    let query = Query::term(Term::From("ann@example.com".into()));
+    assert_eq!(query_words(&query, true), "from:ann@example.com");
+}
+
+#[test]
+fn query_words_describes_the_tree_in_plain_words_otherwise() {
+    let query = Query::And(vec![
+        Query::term(Term::From("ann@example.com".into())),
+        Query::term(Term::Unread),
+    ]);
+    assert_eq!(
+        query_words(&query, false),
+        "from ann@example.com, unread"
+    );
+}
+
+#[tokio::test]
+async fn create_smart_mailbox_on_an_account_without_native_search_reads_in_words() {
+    let h = without_native_search().await;
+    let made = h
+        .ok(
+            "create_smart_mailbox",
+            json!({
+                "name": "From Ann",
+                "account": ME,
+                "conditions": [
+                    {"field": "from", "value": "ann@example.com"},
+                    {"field": "unread"},
+                ],
+            }),
+        )
+        .await;
+    assert_eq!(made["query"], "from ann@example.com, unread");
+}
 
 /// The fixture mail, with the Kites label on two of its conversations.
 async fn with_kites() -> Harness {
@@ -161,7 +216,7 @@ async fn smart_mailboxes_list_change_in_place_and_delete_after_asking() {
     let listed = h.ok("list_smart_mailboxes", json!({})).await;
     assert_eq!(listed["smart_mailboxes"][0]["id"], "s1");
     assert_eq!(
-        listed["smart_mailboxes"][0]["gmail_query"],
+        listed["smart_mailboxes"][0]["query"],
         "from:ann@example.com"
     );
 

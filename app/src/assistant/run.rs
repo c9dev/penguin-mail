@@ -604,6 +604,23 @@ impl<A: Accounts> Tools<A> {
         crate::offered::offers_for(services.as_ref())
     }
 
+    /// Whether the account named `email` reads a search in its own
+    /// syntax, so Gmail's operators describe what it will fetch: true for
+    /// Gmail, false for a folder account whose server runs only IMAP
+    /// SEARCH. No account named, which spans every account, or one not
+    /// yet running counts as Gmail's, so a printed query does not
+    /// flicker between the two as accounts start.
+    fn native_search(&self, email: Option<&str>) -> bool {
+        let Some(email) = email else { return true };
+        let Ok(account) = self.account_named(email) else {
+            return true;
+        };
+        self.modules
+            .accounts
+            .services(account.id)
+            .is_none_or(|services| services.capabilities().native_search)
+    }
+
     fn email_of(&self, account_id: AccountId) -> String {
         self.desk
             .accounts()
@@ -1516,14 +1533,15 @@ impl<A: Accounts> Tools<A> {
             match_all: flag(input, "match_all").unwrap_or(true),
             conditions,
         };
+        let native_search = self.native_search(mailbox.account.as_deref());
         let query = mailbox
             .query()
-            .map(|query| mailrs_gmail::query::print(&query))
+            .map(|query| manage::query_words(&query, native_search))
             .ok_or("Give at least one condition with a value.")?;
         let name = mailbox.name.clone();
         self.effects
             .change_settings(Change::SaveSmartMailbox(Box::new(mailbox)))?;
-        Ok(json!({"created": name, "gmail_query": query}))
+        Ok(json!({"created": name, "query": query}))
     }
 
     fn open(&self, input: &Value) -> ToolResult {
