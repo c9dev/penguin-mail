@@ -1408,32 +1408,44 @@ msgstr "Esta conta ainda não tem etiquetas."
 msgid "This account has no folders yet."
 msgstr "Esta conta ainda não tem pastas."
 
-#: app/src/offered.rs:189
+#: app/src/offered.rs:193
+msgid "{provider}'s calendar comes in a later version."
+msgstr "O calendário de {provider} chega numa versão futura."
+
+#: app/src/offered.rs:196
+msgid "{provider}'s contacts come in a later version."
+msgstr "Os contactos de {provider} chegam numa versão futura."
+
+#: app/src/offered.rs:199
+msgid "Rules and automatic replies need a server that runs them."
+msgstr "As regras e as respostas automáticas precisam de um servidor que as execute."
+
+#: app/src/offered.rs:201
 msgid "{provider} has no calendar that other apps can reach."
 msgstr ""
 "{provider} não tem um calendário a que outras aplicações possam aceder."
 
-#: app/src/offered.rs:190
+#: app/src/offered.rs:203
 msgid "{provider} keeps no contacts that other apps can reach."
 msgstr "{provider} não guarda contactos a que outras aplicações possam aceder."
 
-#: app/src/offered.rs:191
+#: app/src/offered.rs:205
 msgid "{provider} has no rules that other apps can change."
 msgstr "{provider} não tem regras que outras aplicações possam alterar."
 
-#: app/src/offered.rs:193
+#: app/src/offered.rs:207
 msgid "{provider} has no automatic reply that other apps can change."
 msgstr ""
 "{provider} não tem uma resposta automática que outras aplicações possam "
 "alterar."
 
-#: app/src/offered.rs:196
+#: app/src/offered.rs:210
 msgid "{provider} cannot delete mail for good. Delete moves it to the Trash."
 msgstr ""
 "{provider} não consegue eliminar mensagens definitivamente. Eliminar move-as "
 "para o Lixo."
 
-#: app/src/offered.rs:198
+#: app/src/offered.rs:212
 msgid "{provider} does not sort the inbox into categories."
 msgstr "{provider} não organiza a caixa de entrada em categorias."
 
@@ -2408,7 +2420,7 @@ msgstr "Abrir o Penguin Mail"
 msgid "New Message"
 msgstr "Nova mensagem"
 
-#: app/src/tray.rs:159 app/src/ui/sidebar.rs:767 app/src/ui/window.rs:2281
+#: app/src/tray.rs:159 app/src/ui/sidebar.rs:749 app/src/ui/window.rs:2281
 msgid "Check for Mail"
 msgstr "Procurar correio"
 
@@ -4636,7 +4648,7 @@ msgstr "Caixas inteligentes"
 msgid "Accounts"
 msgstr "Contas"
 
-#: app/src/ui/sidebar.rs:485 app/src/ui/sidebar.rs:819
+#: app/src/ui/sidebar.rs:485 app/src/ui/sidebar.rs:801
 msgid "Show or hide this account's mailboxes"
 msgstr "Mostrar ou esconder as caixas desta conta"
 
@@ -4652,11 +4664,11 @@ msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}, {count} mensagem"
 msgstr[1] "{mailbox}, {count} mensagens"
 
-#: app/src/ui/sidebar.rs:579 app/src/ui/sidebar.rs:785
+#: app/src/ui/sidebar.rs:579 app/src/ui/sidebar.rs:767
 msgid "Move Up"
 msgstr "Mover para cima"
 
-#: app/src/ui/sidebar.rs:580 app/src/ui/sidebar.rs:786
+#: app/src/ui/sidebar.rs:580 app/src/ui/sidebar.rs:768
 msgid "Move Down"
 msgstr "Mover para baixo"
 
@@ -4664,11 +4676,11 @@ msgstr "Mover para baixo"
 msgid "Delete…"
 msgstr "Eliminar…"
 
-#: app/src/ui/sidebar.rs:631 app/src/ui/sidebar.rs:774
+#: app/src/ui/sidebar.rs:631 app/src/ui/sidebar.rs:756
 msgid "Rename…"
 msgstr "Mudar o nome…"
 
-#: app/src/ui/sidebar.rs:641 app/src/ui/sidebar.rs:784
+#: app/src/ui/sidebar.rs:641 app/src/ui/sidebar.rs:766
 msgid "Color"
 msgstr "Cor"
 
@@ -4688,43 +4700,43 @@ msgstr "Regras…"
 msgid "Hide My Email…"
 msgstr "Ocultar o meu e-mail…"
 
-#: app/src/ui/sidebar.rs:724
+#: app/src/ui/sidebar.rs:771
+msgid "Sign In Again…"
+msgstr "Iniciar sessão de novo…"
+
+#: app/src/ui/sidebar.rs:774
+msgid "Remove Account…"
+msgstr "Remover conta…"
+
+#: app/src/ui/sidebar.rs:781
+msgid "Account options"
+msgstr "Opções da conta"
+
+#: app/src/ui/sidebar.rs:786
+msgid "Options for {account}"
+msgstr "Opções de {account}"
+
+#: app/src/ui/sidebar.rs:812
 msgid "Sign in again to keep syncing"
 msgstr "Inicie sessão de novo para continuar a sincronizar"
 
-#: app/src/ui/sidebar.rs:726
+#: app/src/ui/sidebar.rs:814
 msgid "Offline"
 msgstr "Sem ligação"
 
-#: app/src/ui/sidebar.rs:729
-msgid "Gmail is not responding; retrying"
-msgstr "O Gmail não responde; a tentar de novo"
+#: app/src/ui/sidebar.rs:818
+msgid "{provider} is not responding; retrying"
+msgstr "{provider} não responde; a tentar de novo"
 
-#: app/src/ui/sidebar.rs:732
+#: app/src/ui/sidebar.rs:823
 msgid "Downloading mail"
 msgstr "A transferir correio"
 
-#: app/src/ui/sidebar.rs:736
+#: app/src/ui/sidebar.rs:827
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr ""
 "A sincronização parou depois de um erro; reinicie o Penguin Mail para tentar "
 "de novo"
-
-#: app/src/ui/sidebar.rs:789
-msgid "Sign In Again…"
-msgstr "Iniciar sessão de novo…"
-
-#: app/src/ui/sidebar.rs:792
-msgid "Remove Account…"
-msgstr "Remover conta…"
-
-#: app/src/ui/sidebar.rs:799
-msgid "Account options"
-msgstr "Opções da conta"
-
-#: app/src/ui/sidebar.rs:804
-msgid "Options for {account}"
-msgstr "Opções de {account}"
 
 #: app/src/ui/smart_editor.rs:39
 msgid "All Accounts"

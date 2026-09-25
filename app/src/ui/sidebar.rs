@@ -718,25 +718,7 @@ fn heading(
             .tooltip_text(&account.email)
             .build(),
     );
-    let status = match account.state {
-        AccountState::NeedsReauth => Some((
-            "dialog-warning-symbolic",
-            gettext("Sign in again to keep syncing"),
-        )),
-        AccountState::Offline => Some(("network-offline-symbolic", gettext("Offline"))),
-        AccountState::BackingOff => Some((
-            "network-offline-symbolic",
-            gettext("Gmail is not responding; retrying"),
-        )),
-        AccountState::Bootstrapping => {
-            Some(("mail-send-receive-symbolic", gettext("Downloading mail")))
-        }
-        AccountState::Stopped => Some((
-            "dialog-warning-symbolic",
-            gettext("Syncing stopped after an error; restart Penguin Mail to try again"),
-        )),
-        AccountState::Ok => None,
-    };
+    let status = status_of(account);
     let count = gtk::Label::builder()
         .css_classes(["count", "unread"])
         .visible(false)
@@ -821,11 +803,72 @@ fn heading(
     (row, chevron, count)
 }
 
+/// The icon and the words beside an account's name for its state, or
+/// nothing while it syncs as it should.
+fn status_of(account: &Account) -> Option<(&'static str, String)> {
+    match account.state {
+        AccountState::NeedsReauth => Some((
+            "dialog-warning-symbolic",
+            gettext("Sign in again to keep syncing"),
+        )),
+        AccountState::Offline => Some(("network-offline-symbolic", gettext("Offline"))),
+        AccountState::BackingOff => Some((
+            "network-offline-symbolic",
+            fill(
+                &gettext("{provider} is not responding; retrying"),
+                &[("provider", account.provider_name())],
+            ),
+        )),
+        AccountState::Bootstrapping => {
+            Some(("mail-send-receive-symbolic", gettext("Downloading mail")))
+        }
+        AccountState::Stopped => Some((
+            "dialog-warning-symbolic",
+            gettext("Syncing stopped after an error; restart Penguin Mail to try again"),
+        )),
+        AccountState::Ok => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use mailrs_domain::{Account, AccountState, Provider};
+
+    use super::status_of;
     use super::{Mailbox, Standard, heading_row_name, mailbox_row_name, takes_mail};
 
     use super::{Offers, account_settings};
+
+    #[test]
+    fn an_account_that_backs_off_names_who_is_not_answering() {
+        let gmail = Account {
+            id: 1,
+            email: "me@gmail.com".into(),
+            state: AccountState::BackingOff,
+            provider: Provider::Gmail,
+            provider_name: None,
+        };
+        let fastmail = Account {
+            provider: Provider::Imap,
+            provider_name: Some("Fastmail".into()),
+            ..gmail.clone()
+        };
+        let said = |account: &Account| status_of(account).map(|(_, said)| said);
+        assert_eq!(said(&gmail).as_deref(), Some("Gmail is not responding; retrying"));
+        assert_eq!(said(&fastmail).as_deref(), Some("Fastmail is not responding; retrying"));
+    }
+
+    #[test]
+    fn an_account_that_syncs_shows_no_state() {
+        let fine = Account {
+            id: 1,
+            email: "me@gmail.com".into(),
+            state: AccountState::Ok,
+            provider: Provider::Gmail,
+            provider_name: None,
+        };
+        assert_eq!(status_of(&fine), None);
+    }
 
     fn actions(offers: Offers) -> Vec<&'static str> {
         account_settings(offers).into_iter().map(|(_, action)| action).collect()

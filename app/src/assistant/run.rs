@@ -596,7 +596,7 @@ impl<A: Accounts> Tools<A> {
         self.offers(account.id)
             .missing()
             .contains(&missing)
-            .then(|| json!({"unavailable": crate::offered::reason(account.provider, missing)}))
+            .then(|| json!({"unavailable": crate::offered::reason(account, missing)}))
     }
 
     fn offers(&self, account_id: AccountId) -> mailrs_sync::Offers {

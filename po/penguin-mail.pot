@@ -1331,27 +1331,39 @@ msgstr ""
 msgid "This account has no folders yet."
 msgstr ""
 
-#: app/src/offered.rs:189
-msgid "{provider} has no calendar that other apps can reach."
-msgstr ""
-
-#: app/src/offered.rs:190
-msgid "{provider} keeps no contacts that other apps can reach."
-msgstr ""
-
-#: app/src/offered.rs:191
-msgid "{provider} has no rules that other apps can change."
-msgstr ""
-
 #: app/src/offered.rs:193
-msgid "{provider} has no automatic reply that other apps can change."
+msgid "{provider}'s calendar comes in a later version."
 msgstr ""
 
 #: app/src/offered.rs:196
+msgid "{provider}'s contacts come in a later version."
+msgstr ""
+
+#: app/src/offered.rs:199
+msgid "Rules and automatic replies need a server that runs them."
+msgstr ""
+
+#: app/src/offered.rs:201
+msgid "{provider} has no calendar that other apps can reach."
+msgstr ""
+
+#: app/src/offered.rs:203
+msgid "{provider} keeps no contacts that other apps can reach."
+msgstr ""
+
+#: app/src/offered.rs:205
+msgid "{provider} has no rules that other apps can change."
+msgstr ""
+
+#: app/src/offered.rs:207
+msgid "{provider} has no automatic reply that other apps can change."
+msgstr ""
+
+#: app/src/offered.rs:210
 msgid "{provider} cannot delete mail for good. Delete moves it to the Trash."
 msgstr ""
 
-#: app/src/offered.rs:198
+#: app/src/offered.rs:212
 msgid "{provider} does not sort the inbox into categories."
 msgstr ""
 
@@ -2275,7 +2287,7 @@ msgstr ""
 msgid "New Message"
 msgstr ""
 
-#: app/src/tray.rs:159 app/src/ui/sidebar.rs:767 app/src/ui/window.rs:2281
+#: app/src/tray.rs:159 app/src/ui/sidebar.rs:749 app/src/ui/window.rs:2281
 msgid "Check for Mail"
 msgstr ""
 
@@ -4418,7 +4430,7 @@ msgstr ""
 msgid "Accounts"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:485 app/src/ui/sidebar.rs:819
+#: app/src/ui/sidebar.rs:485 app/src/ui/sidebar.rs:801
 msgid "Show or hide this account's mailboxes"
 msgstr ""
 
@@ -4434,11 +4446,11 @@ msgid_plural "{mailbox}, {count} messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/sidebar.rs:579 app/src/ui/sidebar.rs:785
+#: app/src/ui/sidebar.rs:579 app/src/ui/sidebar.rs:767
 msgid "Move Up"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:580 app/src/ui/sidebar.rs:786
+#: app/src/ui/sidebar.rs:580 app/src/ui/sidebar.rs:768
 msgid "Move Down"
 msgstr ""
 
@@ -4446,11 +4458,11 @@ msgstr ""
 msgid "Delete…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:631 app/src/ui/sidebar.rs:774
+#: app/src/ui/sidebar.rs:631 app/src/ui/sidebar.rs:756
 msgid "Rename…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:641 app/src/ui/sidebar.rs:784
+#: app/src/ui/sidebar.rs:641 app/src/ui/sidebar.rs:766
 msgid "Color"
 msgstr ""
 
@@ -4470,40 +4482,40 @@ msgstr ""
 msgid "Hide My Email…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:724
-msgid "Sign in again to keep syncing"
-msgstr ""
-
-#: app/src/ui/sidebar.rs:726
-msgid "Offline"
-msgstr ""
-
-#: app/src/ui/sidebar.rs:729
-msgid "Gmail is not responding; retrying"
-msgstr ""
-
-#: app/src/ui/sidebar.rs:732
-msgid "Downloading mail"
-msgstr ""
-
-#: app/src/ui/sidebar.rs:736
-msgid "Syncing stopped after an error; restart Penguin Mail to try again"
-msgstr ""
-
-#: app/src/ui/sidebar.rs:789
+#: app/src/ui/sidebar.rs:771
 msgid "Sign In Again…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:792
+#: app/src/ui/sidebar.rs:774
 msgid "Remove Account…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:799
+#: app/src/ui/sidebar.rs:781
 msgid "Account options"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:804
+#: app/src/ui/sidebar.rs:786
 msgid "Options for {account}"
+msgstr ""
+
+#: app/src/ui/sidebar.rs:812
+msgid "Sign in again to keep syncing"
+msgstr ""
+
+#: app/src/ui/sidebar.rs:814
+msgid "Offline"
+msgstr ""
+
+#: app/src/ui/sidebar.rs:818
+msgid "{provider} is not responding; retrying"
+msgstr ""
+
+#: app/src/ui/sidebar.rs:823
+msgid "Downloading mail"
+msgstr ""
+
+#: app/src/ui/sidebar.rs:827
+msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr ""
 
 #: app/src/ui/smart_editor.rs:39

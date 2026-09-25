@@ -143,13 +143,13 @@ fn calendar(accounts: &[(Account, Offers)]) -> adw::PreferencesGroup {
 fn contacts_row(account: &Account, offers: Offers) -> (String, bool) {
     match offers.contacts {
         true => (gettext("Google asks your permission the first time"), true),
-        false => (reason(account.provider, Missing::Contacts), false),
+        false => (reason(account, Missing::Contacts), false),
     }
 }
 
 /// Why `account` has no calendar, when its server has none.
 fn calendar_lack(account: &Account, offers: Offers) -> Option<String> {
-    (!offers.calendar).then(|| reason(account.provider, Missing::Calendar))
+    (!offers.calendar).then(|| reason(account, Missing::Calendar))
 }
 
 #[cfg(test)]
@@ -188,11 +188,11 @@ mod tests {
         };
         assert_eq!(
             contacts_row(&account(), bare),
-            (reason(Provider::Gmail, Missing::Contacts), false)
+            (reason(&account(), Missing::Contacts), false)
         );
         assert_eq!(
             calendar_lack(&account(), bare),
-            Some(reason(Provider::Gmail, Missing::Calendar))
+            Some(reason(&account(), Missing::Calendar))
         );
     }
 }
