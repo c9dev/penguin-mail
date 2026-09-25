@@ -12,6 +12,7 @@ pub mod category;
 mod folder;
 pub mod mailbox;
 pub mod invitation;
+mod location;
 pub mod query;
 pub mod smart;
 pub mod subject;
@@ -24,6 +25,7 @@ pub use mailbox::{
     Applied, MailSet, MailboxKind, Membership, Memberships, Provider, RemoteMailbox, Role,
 };
 pub use invitation::Invitation;
+pub use location::Location;
 pub use smart::SmartMailbox;
 pub use target::Target;
 
@@ -695,5 +697,11 @@ pub enum ChangeEvent {
     WaitingOnGmail {
         account_id: AccountId,
         message: String,
+    },
+    /// The server had no Archive mailbox, so archiving made one, which the
+    /// server lists as `name`.
+    ArchiveMade {
+        account_id: AccountId,
+        name: String,
     },
 }

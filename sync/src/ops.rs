@@ -162,6 +162,23 @@ fn move_to(changes: &mut Vec<Change>, id: &str, held: &Memberships, target: &str
     changes.push(Change::of(id, Membership::Mailbox(target.into()), true));
 }
 
+/// `ops` without the keyword changes the server cannot store, and those
+/// keywords. A server stores the keywords its capabilities list; any
+/// other stays on this computer, marked local, and never syncs.
+pub fn split_keywords(ops: &[MailOp], stored: &[&str]) -> (Vec<MailOp>, Vec<String>) {
+    let mut to_server = Vec::new();
+    let mut kept_here = Vec::new();
+    for op in ops {
+        match op {
+            MailOp::SetKeyword { keyword, .. } if !stored.contains(&keyword.as_str()) => {
+                kept_here.push(keyword.clone());
+            }
+            other => to_server.push(other.clone()),
+        }
+    }
+    (to_server, kept_here)
+}
+
 /// The operations that reverse `applied`: what the message lost goes
 /// back, and what it gained comes off.
 pub fn undo_ops(applied: &Applied) -> Vec<MailOp> {
@@ -455,6 +472,19 @@ mod tests {
                 Change::of("m1", Membership::Mailbox("Label_1".into()), false),
                 Change::of("m1", Membership::Mailbox("Label_5".into()), true),
             ]
+        );
+    }
+
+    #[test]
+    fn a_keyword_the_server_cannot_store_stays_here() {
+        let mute = [keyword(MUTED, true), MailOp::MoveToRole(Role::Archive)];
+        assert_eq!(
+            split_keywords(&mute, &["$seen", "$flagged"]),
+            (vec![MailOp::MoveToRole(Role::Archive)], vec![MUTED.to_string()])
+        );
+        assert_eq!(
+            split_keywords(&mute, &["$seen", "$flagged", "$muted"]),
+            (mute.to_vec(), vec![])
         );
     }
 

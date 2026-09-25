@@ -15,8 +15,8 @@ use tokio::time::Instant;
 
 use crate::account::{DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS};
 use crate::{
-    AccountServices, AccountSync, BackendError, SyncError, backoff_delay, background, now_millis,
-    poll_offset, with_jitter,
+    AccountServices, AccountSync, BackendError, MailBackend, SyncError, backoff_delay, background,
+    now_millis, poll_offset, with_jitter,
 };
 
 /// How often an account prunes, checks its inbox against Gmail's, and lists
@@ -64,6 +64,9 @@ pub struct SyncEngine {
     /// Whether the computer has a network, as the app last heard it. Every
     /// account's loop reads the same flag.
     network: Arc<AtomicBool>,
+    /// Whether the main window is open, which sets how often an account
+    /// looks at mail nobody is watching.
+    window_open: AtomicBool,
 }
 
 struct Running {
@@ -82,6 +85,7 @@ impl SyncEngine {
                 events,
                 running: Mutex::new(HashMap::new()),
                 network: Arc::new(AtomicBool::new(true)),
+                window_open: AtomicBool::new(true),
             },
             receiver,
         )
@@ -90,6 +94,9 @@ impl SyncEngine {
     /// Starts the account's loop, replacing one that is already running.
     /// Call it from inside a tokio runtime.
     pub fn start_account(&self, account_id: AccountId, services: AccountServices) {
+        services
+            .mail
+            .set_window_open(self.window_open.load(Ordering::SeqCst));
         let sync = Arc::new(
             AccountSync::new(account_id, services, self.db.clone(), self.events.clone())
                 .with_limits(self.config.window_days, self.config.body_cache_bytes),
@@ -133,6 +140,16 @@ impl SyncEngine {
     pub fn set_network(&self, available: bool) {
         if self.network.swap(available, Ordering::SeqCst) != available {
             self.poke_all();
+        }
+    }
+
+    /// Tells every account whether the main window is open. With only the
+    /// tray running, an account looks at mailboxes other than its Inbox
+    /// less often.
+    pub fn set_window_open(&self, open: bool) {
+        self.window_open.store(open, Ordering::SeqCst);
+        for running in self.lock().values() {
+            running.sync.services().mail.set_window_open(open);
         }
     }
 
@@ -248,6 +265,11 @@ async fn run_account(
     // the same second afterwards, so each one takes its own place in the
     // cycle from its second poll on.
     let mut stagger = poll_offset(sync.account_id(), config.poll_interval);
+    // One watch runs across the loop's turns and starts again only when it
+    // ends. A watch made anew at each turn would drop a waiting IDLE at
+    // every poll and poke, and with it the connection. Gmail's never ends.
+    let mail = &sync.services().mail;
+    let mut watch = Box::pin(mail.watch());
     loop {
         if !network.load(Ordering::SeqCst) {
             if reported != Some(AccountState::Offline) {
@@ -297,6 +319,12 @@ async fn run_account(
                 tokio::select! {
                     _ = tokio::time::sleep_until(next_poll) => {}
                     _ = poke.notified() => next_poll = Instant::now(),
+                    // A server that says when the Inbox changes wakes the
+                    // loop at once. Gmail never does.
+                    () = &mut watch => {
+                        next_poll = Instant::now();
+                        watch.set(mail.watch());
+                    }
                 }
             }
             Err(err) => match classify(&err) {
@@ -334,8 +362,9 @@ async fn run_account(
 }
 
 /// One pass: poll history when due, prune, check the inbox against
-/// Gmail's and list the labels when due, then load one backfill page. Returns true when more
-/// backfill pages remain.
+/// Gmail's and list the labels when due, then load one backfill page. The
+/// account's mail service may set its own gap between polls, as an IMAP
+/// server with IDLE does. Returns true when more backfill pages remain.
 async fn tick(
     sync: &AccountSync,
     next_poll: &mut Instant,
@@ -345,7 +374,12 @@ async fn tick(
 ) -> Result<bool, SyncError> {
     if Instant::now() >= *next_poll {
         sync.incremental().await?;
-        *next_poll = Instant::now() + config.poll_interval + std::mem::take(stagger);
+        let every = sync
+            .services()
+            .mail
+            .poll_interval()
+            .unwrap_or(config.poll_interval);
+        *next_poll = Instant::now() + every + std::mem::take(stagger);
     }
     if Instant::now() >= *next_prune {
         sync.prune(now_millis()).await?;

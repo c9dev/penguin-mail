@@ -300,6 +300,11 @@ pub enum Woke {
     Changed,
     /// The time limit passed with no word from the server.
     TimedOut,
+    /// The server sent more during the IDLE than the guard lets through,
+    /// and the client dropped the connection. Whatever the server reported
+    /// went with it, so the caller syncs; a server that does this at every
+    /// IDLE is one to ask less often.
+    Dropped,
 }
 
 #[cfg(test)]

@@ -53,9 +53,14 @@ impl<G: GmailApi> Google<G> {
                 .map_err(|err| Unapplied {
                     taken: 0,
                     error: err.into(),
+                    relocated: Vec::new(),
                 });
         }
-        let (add, remove) = labels_for(ops).map_err(|error| Unapplied { taken: 0, error })?;
+        let (add, remove) = labels_for(ops).map_err(|error| Unapplied {
+            taken: 0,
+            error,
+            relocated: Vec::new(),
+        })?;
         let batch = messages.len() >= BATCH_FROM;
         let mut taken = 0;
         for chunk in messages.chunks(BATCH_LIMIT) {
@@ -66,6 +71,7 @@ impl<G: GmailApi> Google<G> {
             written.map_err(|refused| Unapplied {
                 taken: taken + refused.taken,
                 error: refused.error,
+                relocated: Vec::new(),
             })?;
             taken += chunk.len();
         }
@@ -89,6 +95,7 @@ impl<G: GmailApi> Google<G> {
             Err(err) => Err(Unapplied {
                 taken: 0,
                 error: err.into(),
+                relocated: Vec::new(),
             }),
         }
     }
@@ -109,6 +116,7 @@ impl<G: GmailApi> Google<G> {
                 .map_err(|err| Unapplied {
                     taken,
                     error: err.into(),
+                    relocated: Vec::new(),
                 })?;
         }
         Ok(())

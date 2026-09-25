@@ -6,7 +6,7 @@
 //! every call that would reach a server.
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
-use std::sync::{Mutex, PoisonError};
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use chrono::{DateTime, NaiveDate, Utc};
@@ -16,9 +16,41 @@ use mailrs_imap::{
     Listed, Selected, Since, SpecialUse, UidSet, Woke,
 };
 use mailrs_mime::Part;
-use tokio::sync::Notify;
+use tokio::sync::{Notify, Semaphore};
 
 use crate::services::imap::{ImapApi, Submit};
+
+/// A call the fake stops in until the test lets it go.
+pub struct Hold {
+    reached: Semaphore,
+    released: Semaphore,
+}
+
+impl Default for Hold {
+    fn default() -> Self {
+        Hold {
+            reached: Semaphore::new(0),
+            released: Semaphore::new(0),
+        }
+    }
+}
+
+impl Hold {
+    /// Waits until the held call has reached the hold.
+    pub async fn reached(&self) {
+        let _ = self.reached.acquire().await.map(|p| p.forget());
+    }
+
+    /// Lets the held call go on.
+    pub fn release(&self) {
+        self.released.add_permits(1);
+    }
+
+    async fn wait(&self) {
+        self.reached.add_permits(1);
+        let _ = self.released.acquire().await.map(|p| p.forget());
+    }
+}
 
 /// An IMAP server for one account.
 pub struct FakeImap {
@@ -40,10 +72,18 @@ pub struct ImapState {
     /// Errors aimed at one method, such as `select`: each answers the next
     /// call to that method and no other.
     pub aimed: Vec<(String, ImapError)>,
-    /// The next IDLE ends at once as `Woke::Changed`, as the real client
+    /// The next IDLE ends at once as `Woke::Dropped`, as the real client
     /// answers when the server sends more during an IDLE than the guard
     /// lets through and the connection is dropped.
     pub overflow_idle: bool,
+    /// The next MOVE waits here once it has moved the messages, so a test
+    /// can run something else between a move and what follows it.
+    pub hold_move: Option<Arc<Hold>>,
+    /// SELECT leaves UIDNEXT out, as RFC 3501 lets a server do.
+    pub omit_uidnext: bool,
+    /// How many UIDs every SEARCH has answered, in total, so a test can
+    /// tell a paged listing from one that asks for everything each page.
+    pub answered: u64,
     /// The UIDVALIDITY the next new or reset mailbox gets.
     next_uidvalidity: u32,
 }
@@ -69,6 +109,9 @@ pub struct FakeMailbox {
     /// APPENDUID whose UIDVALIDITY is one higher than SELECT reports; later
     /// APPENDs agree with SELECT.
     pub unmade: bool,
+    /// The set the next QRESYNC SELECT names as vanished in place of what
+    /// the mailbox expunged, as a server may name any range, `1:*` too.
+    pub vanish_next: Option<UidSet>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -90,6 +133,23 @@ const MAX_SENT: usize = 100;
 /// the oldest one kept gets the whole mailbox, as from a server that no
 /// longer knows what went since that MODSEQ.
 const MAX_EXPUNGED: usize = 1_000;
+
+/// The most answers the real client keeps for one command
+/// (`mailrs_imap`'s `MAX_ANSWERS`). Past it the client drops the
+/// connection with `ImapError::Protocol`, and so does this fake, for a
+/// SEARCH or a flags FETCH.
+pub const MAX_ANSWERS: usize = 100_000;
+
+/// `answers` as the client hands them over, or the error it gives past
+/// [`MAX_ANSWERS`].
+fn within_answers<T>(answers: Vec<T>) -> Result<Vec<T>, ImapError> {
+    match answers.len() > MAX_ANSWERS {
+        true => Err(ImapError::Protocol(format!(
+            "the server sent more than {MAX_ANSWERS} answers to one command"
+        ))),
+        false => Ok(answers),
+    }
+}
 
 /// The flags a mailbox keeps unless a test says otherwise: the system
 /// flags and any keyword a client makes up.
@@ -115,6 +175,7 @@ impl FakeMailbox {
             expunged: VecDeque::new(),
             forgotten: 0,
             unmade: false,
+            vanish_next: None,
         }
     }
 
@@ -198,6 +259,9 @@ impl FakeImap {
                 calls: VecDeque::new(),
                 aimed: Vec::new(),
                 overflow_idle: false,
+                hold_move: None,
+                omit_uidnext: false,
+                answered: 0,
                 next_uidvalidity: 1000,
             }),
             changed: Notify::new(),
@@ -238,6 +302,45 @@ impl FakeImap {
         uid
     }
 
+    /// Mail arriving in `mailbox` carrying `flags`, received at `date`.
+    /// Returns its UID. A flag the mailbox's PERMANENTFLAGS refuse, such as
+    /// `\Recent`, is dropped, as `deliver` would. Wakes an IDLE.
+    pub fn deliver_flagged(
+        &self,
+        mailbox: &str,
+        raw: &[u8],
+        flags: &[&str],
+        date: EpochMillis,
+    ) -> u32 {
+        let flags = flags.iter().map(|f| f.to_string()).collect();
+        let uid = self.with(|s| s.mailbox_mut(mailbox).add(raw.to_vec(), flags, date));
+        self.changed.notify_waiters();
+        uid
+    }
+
+    /// Another client sets a message's flags to exactly `flags`, each
+    /// change with its own MODSEQ. Wakes an IDLE.
+    pub fn set_flags(&self, mailbox: &str, uid: u32, flags: &[&str]) {
+        self.with(|s| {
+            let m = s.mailbox_mut(mailbox);
+            let had: Vec<String> = m
+                .messages
+                .get(&uid)
+                .map(|message| message.flags.iter().cloned().collect())
+                .unwrap_or_default();
+            for flag in had
+                .iter()
+                .filter(|f| !flags.iter().any(|w| w.eq_ignore_ascii_case(f)))
+            {
+                m.flag(uid, flag, false);
+            }
+            for flag in flags {
+                m.flag(uid, flag, true);
+            }
+        });
+        self.changed.notify_waiters();
+    }
+
     /// Another client adds or takes away `flag` on a message.
     pub fn remote_flag(&self, mailbox: &str, uid: u32, flag: &str, add: bool) {
         self.with(|s| s.mailbox_mut(mailbox).flag(uid, flag, add));
@@ -276,15 +379,25 @@ impl FakeImap {
     }
 
     /// The next call to `method`, a word of the call log such as
-    /// `"select"`, answers `err`. Calls to other methods pass.
+    /// `"select"`, answers `err`. Calls to other methods pass. `method`
+    /// can also be the start of a call's line, such as `"body INBOX 1 1"`,
+    /// to aim at one call of a method.
     pub fn fail_on(&self, method: &str, err: ImapError) {
         self.with(|s| s.aimed.push((method.to_string(), err)));
     }
 
-    /// The next IDLE ends at once as `Woke::Changed`, as when the guard
+    /// The next IDLE ends at once as `Woke::Dropped`, as when the guard
     /// stops an IDLE that brought more than its budget.
     pub fn overflow_next_idle(&self) {
         self.with(|s| s.overflow_idle = true);
+    }
+
+    /// Holds the next MOVE after it has moved the messages, until the
+    /// test calls [`Hold::release`].
+    pub fn hold_next_move(&self) -> Arc<Hold> {
+        let hold = Arc::new(Hold::default());
+        self.with(|s| s.hold_move = Some(Arc::clone(&hold)));
+        hold
     }
 
     /// The latest calls, at most [`MAX_CALLS`], oldest first.
@@ -318,8 +431,12 @@ impl FakeImap {
         f: impl FnOnce(&mut ImapState) -> Result<T, ImapError>,
     ) -> Result<T, ImapError> {
         self.with(|s| {
-            let method = line.split(' ').next().unwrap_or_default();
-            let aimed = s.aimed.iter().position(|(m, _)| m == method);
+            let aimed = s.aimed.iter().position(|(m, _)| {
+                line == *m
+                    || line
+                        .strip_prefix(m.as_str())
+                        .is_some_and(|r| r.starts_with(' '))
+            });
             s.calls.push_back(line);
             if s.calls.len() > MAX_CALLS {
                 s.calls.pop_front();
@@ -461,10 +578,11 @@ impl ImapApi for FakeImap {
         };
         self.call(line, |s| {
             let caps = s.capabilities;
+            let omit_uidnext = s.omit_uidnext;
             let m = s.selectable(mailbox)?;
             let mut selected = Selected {
                 uidvalidity: m.uidvalidity,
-                uidnext: Some(m.uidnext),
+                uidnext: (!omit_uidnext).then_some(m.uidnext),
                 highestmodseq: caps.condstore.then_some(m.highestmodseq),
                 exists: u32::try_from(m.messages.len()).unwrap_or(u32::MAX),
                 permanent_flags: m.permanent_flags.clone(),
@@ -474,6 +592,13 @@ impl ImapApi for FakeImap {
             // A server reports changes only against the UIDVALIDITY it has.
             if let Some(since) = since.filter(|since| since.uidvalidity == m.uidvalidity) {
                 let known = |uid: u32| since.known.as_ref().is_none_or(|k| k.contains(uid));
+                if let Some(named) = m.vanish_next.take() {
+                    selected.vanished = match &since.known {
+                        Some(known) => named.intersection(known),
+                        None => named,
+                    };
+                    return Ok(selected);
+                }
                 match since.modseq < m.forgotten {
                     // Some expunges since that MODSEQ are forgotten, so a
                     // list of the ones kept would be partial. Answer as a
@@ -529,13 +654,15 @@ impl ImapApi for FakeImap {
             .unwrap_or_default();
         self.call(format!("flags {mailbox} {uids}{since}"), |s| {
             let m = s.selectable(mailbox)?;
-            Ok(m.messages
-                .iter()
-                .filter(|(uid, message)| {
-                    uids.contains(**uid) && changed_since.is_none_or(|c| message.modseq > c)
-                })
-                .map(|(uid, message)| flags_of(*uid, message, condstore))
-                .collect())
+            within_answers(
+                m.messages
+                    .iter()
+                    .filter(|(uid, message)| {
+                        uids.contains(**uid) && changed_since.is_none_or(|c| message.modseq > c)
+                    })
+                    .map(|(uid, message)| flags_of(*uid, message, condstore))
+                    .collect(),
+            )
         })
     }
 
@@ -545,11 +672,16 @@ impl ImapApi for FakeImap {
         self.call(format!("search {mailbox} {keys}"), |s| {
             let m = s.selectable(mailbox)?;
             let query = search::parse(keys)?;
-            Ok(m.messages
+            // `*` in a UID set is the highest UID the mailbox holds.
+            let highest = m.messages.keys().next_back().copied().unwrap_or(0);
+            let found: Vec<u32> = m
+                .messages
                 .iter()
-                .filter(|(uid, message)| query.matches(**uid, message))
+                .filter(|(uid, message)| query.matches(**uid, highest, message))
                 .map(|(uid, _)| *uid)
-                .collect())
+                .collect();
+            s.answered += found.len() as u64;
+            within_answers(found)
         })
     }
 
@@ -674,9 +806,13 @@ impl ImapApi for FakeImap {
         }
         check_name(mailbox)?;
         check_name(to)?;
-        self.change(format!("move {mailbox} {uids} {to}"), |s| {
+        let moved = self.change(format!("move {mailbox} {uids} {to}"), |s| {
             s.transfer(mailbox, uids, to, true)
-        })
+        });
+        if let Some(hold) = self.with(|s| s.hold_move.take()) {
+            hold.wait().await;
+        }
+        moved
     }
 
     async fn copy_to(
@@ -816,7 +952,7 @@ impl ImapApi for FakeImap {
             Ok((!std::mem::take(&mut s.overflow_idle)).then_some(start))
         })?;
         let Some(start) = start else {
-            return Ok(Woke::Changed);
+            return Ok(Woke::Dropped);
         };
         let deadline = tokio::time::Instant::now() + limit;
         loop {
@@ -1108,7 +1244,10 @@ mod search {
     }
 
     impl Key {
-        pub(super) fn matches(&self, uid: u32, message: &FakeMessage) -> bool {
+        /// Whether message `uid` matches, in a mailbox whose highest UID
+        /// is `highest`: a UID set that runs to `*` names that message
+        /// even when its UID is below the set's start (RFC 3501).
+        pub(super) fn matches(&self, uid: u32, highest: u32, message: &FakeMessage) -> bool {
             let has = |needle: &str, hay: &str| hay.to_lowercase().contains(&needle.to_lowercase());
             let day =
                 || DateTime::from_timestamp_millis(message.internal_date).map(|d| d.date_naive());
@@ -1150,10 +1289,16 @@ mod search {
                 Key::On(date) => day() == Some(*date),
                 Key::Larger(n) => message.raw.len() as u64 > *n,
                 Key::Smaller(n) => (message.raw.len() as u64) < *n,
-                Key::Uid(set) => set.contains(uid),
-                Key::Not(inner) => !inner.matches(uid, message),
-                Key::Or(left, right) => left.matches(uid, message) || right.matches(uid, message),
-                Key::And(all) => all.iter().all(|k| k.matches(uid, message)),
+                Key::Uid(set) => {
+                    set.contains(uid)
+                        || (uid == highest
+                            && set.ranges().last().is_some_and(|r| *r.end() == u32::MAX))
+                }
+                Key::Not(inner) => !inner.matches(uid, highest, message),
+                Key::Or(left, right) => {
+                    left.matches(uid, highest, message) || right.matches(uid, highest, message)
+                }
+                Key::And(all) => all.iter().all(|k| k.matches(uid, highest, message)),
             }
         }
     }
@@ -1960,12 +2105,12 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn an_idle_past_its_budget_wakes_at_once_as_changed() {
+    async fn an_idle_past_its_budget_wakes_at_once_as_dropped() {
         let fake = FakeImap::new();
         fake.overflow_next_idle();
         assert_eq!(
             fake.idle("INBOX", Duration::from_secs(600)).await,
-            Ok(Woke::Changed)
+            Ok(Woke::Dropped)
         );
         assert_eq!(fake.calls_to("idle"), 1);
     }
@@ -1977,5 +2122,27 @@ mod tests {
             fake.idle("Gone", Duration::from_secs(1)).await,
             Err(ImapError::NoMailbox("Gone".into()))
         );
+    }
+
+    #[tokio::test]
+    async fn mail_can_arrive_flagged_and_have_its_flags_replaced() {
+        let fake = FakeImap::new();
+        let uid = fake.deliver_flagged(
+            "INBOX",
+            &raw_message("f", "Flagged", MARCH, None),
+            &["\\Seen", "\\Flagged", "\\Recent"],
+            MARCH,
+        );
+        let kept = |fake: &FakeImap| {
+            fake.message("INBOX", uid)
+                .unwrap()
+                .flags
+                .into_iter()
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(kept(&fake), ["\\Flagged", "\\Seen"]);
+        fake.set_flags("INBOX", uid, &["\\Answered"]);
+        assert_eq!(kept(&fake), ["\\Answered"]);
+        assert_eq!(fake.search("INBOX", "UNSEEN").await.unwrap(), [uid]);
     }
 }

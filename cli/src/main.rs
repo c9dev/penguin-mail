@@ -323,6 +323,12 @@ fn print_event(emails: &HashMap<AccountId, String>, event: &ChangeEvent) {
             account_id,
             message,
         } => println!("{}: {message}", who(emails, *account_id)),
+        ChangeEvent::ArchiveMade { account_id, name } => {
+            println!(
+                "{}: made the mailbox {name} to archive into",
+                who(emails, *account_id)
+            );
+        }
     }
 }
 

@@ -5,7 +5,9 @@ mod calendar;
 mod connect;
 mod contacts;
 mod engine;
+pub(crate) mod heap;
 mod export;
+mod imap;
 mod incremental;
 mod invitations;
 mod labels;
@@ -27,12 +29,14 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use mailrs_domain::{AccountId, ChangeEvent, MailSet, MailboxKind, RemoteMailbox, ThreadSummary};
+use mailrs_domain::{
+    AccountId, ChangeEvent, MailSet, MailboxKind, MessageMeta, RemoteMailbox, ThreadSummary,
+};
 use mailrs_store::threads::{self, ThreadFilter};
-use mailrs_store::{Db, accounts, mailboxes, messages};
+use mailrs_store::{Db, accounts, mailboxes, messages, remote_refs};
 
-use crate::fake::{FakeGmail, FakeOneClick};
-use crate::{AccountServices, AccountSync, Accounts};
+use crate::fake::{FakeGmail, FakeImap, FakeOneClick, FakeSmtp};
+use crate::{AccountServices, AccountSync, Accounts, AnyMail, ImapSettings};
 
 /// A stored message's memberships as Gmail labels, sorted.
 pub(crate) fn labels_of(
@@ -221,5 +225,154 @@ impl Harness {
         self.sync.bootstrap().await.unwrap();
         self.fake.with(|s| s.page_size = page_size);
         self.drain();
+    }
+}
+
+pub(crate) struct ImapHarness {
+    pub imap: Arc<FakeImap>,
+    pub smtp: Arc<FakeSmtp>,
+    pub sync: Arc<AccountSync>,
+    pub db: Db,
+    pub events: async_channel::Receiver<ChangeEvent>,
+    pub account_id: AccountId,
+    _dir: tempfile::TempDir,
+}
+
+/// Settings for a Fastmail account that files no copy of what it sends.
+pub(crate) fn fake_settings() -> ImapSettings {
+    ImapSettings {
+        address: "me@example.com".into(),
+        provider_name: "Fastmail".into(),
+        files_sent_mail: false,
+        window_days: crate::DEFAULT_WINDOW_DAYS,
+    }
+}
+
+/// An IMAP account on a fresh fake server.
+pub(crate) async fn imap_harness() -> ImapHarness {
+    imap_harness_on(FakeImap::new(), fake_settings()).await
+}
+
+/// An IMAP account on `imap`, with `settings`. Every look at the feed
+/// covers every synced mailbox, so a test sees a change in Sent or Archive
+/// at the next `incremental` rather than after the slow poll.
+pub(crate) async fn imap_harness_on(imap: FakeImap, settings: ImapSettings) -> ImapHarness {
+    let dir = tempfile::tempdir().unwrap();
+    let db = Db::open(&dir.path().join("mail.db")).unwrap();
+    let account_id = db
+        .write(|c| accounts::insert_account(c, "me@example.com", 0))
+        .await
+        .unwrap();
+    let (imap, smtp) = (Arc::new(imap), Arc::new(FakeSmtp::default()));
+    let services =
+        AccountServices::fake_imap_with(Arc::clone(&imap), Arc::clone(&smtp), settings);
+    if let AnyMail::FakeImap(adapter) = &services.mail {
+        adapter.look_at_every_mailbox();
+    }
+    let (sender, events) = async_channel::unbounded();
+    let sync = Arc::new(
+        AccountSync::new(account_id, services, db.clone(), sender)
+            .with_retry_max(Duration::from_millis(10)),
+    );
+    ImapHarness {
+        imap,
+        smtp,
+        sync,
+        db,
+        events,
+        account_id,
+        _dir: dir,
+    }
+}
+
+impl ImapHarness {
+    pub fn drain(&self) -> Vec<ChangeEvent> {
+        let mut events = Vec::new();
+        while let Ok(event) = self.events.try_recv() {
+            events.push(event);
+        }
+        events
+    }
+
+    /// Loads the whole window, as a new account does, and drops the events
+    /// that made.
+    pub async fn bootstrap(&self) {
+        self.sync.bootstrap().await.unwrap();
+        while self.sync.backfill_step().await.unwrap() {}
+        self.drain();
+    }
+
+    /// Every stored message id, sorted.
+    pub async fn ids(&self) -> Vec<String> {
+        let account_id = self.account_id;
+        self.db
+            .read(move |c| {
+                let mut stmt =
+                    c.prepare("SELECT id FROM messages WHERE account_id = ?1 ORDER BY id")?;
+                let ids = stmt
+                    .query_map([account_id], |row| row.get(0))?
+                    .collect::<rusqlite::Result<Vec<String>>>()?;
+                Ok(ids)
+            })
+            .await
+            .unwrap()
+    }
+
+    /// The stored copy of message `id`.
+    pub async fn stored(&self, id: &str) -> Option<MessageMeta> {
+        let (account_id, id) = (self.account_id, id.to_string());
+        self.db
+            .read(move |c| messages::by_ids(c, account_id, &[id]))
+            .await
+            .unwrap()
+            .pop()
+    }
+
+    /// The thread the store keeps message `id` in.
+    pub async fn thread_of(&self, id: &str) -> Option<String> {
+        let (account_id, id) = (self.account_id, id.to_string());
+        self.db
+            .read(move |c| messages::thread_id_of(c, account_id, &id))
+            .await
+            .unwrap()
+    }
+
+    /// Where the store says message `id` sits on the server now.
+    pub async fn location(&self, id: &str) -> Option<String> {
+        let (account_id, id) = (self.account_id, id.to_string());
+        self.db
+            .read(move |c| remote_refs::remotes_of(c, account_id, &[id]))
+            .await
+            .unwrap()
+            .into_values()
+            .next()
+    }
+
+    /// The account as the app finds it after a restart: the same store
+    /// and server, and an adapter that has asked the server nothing yet.
+    pub fn restarted(&self) -> AccountSync {
+        let services = AccountServices::fake_imap_with(
+            Arc::clone(&self.imap),
+            Arc::clone(&self.smtp),
+            fake_settings(),
+        );
+        if let AnyMail::FakeImap(adapter) = &services.mail {
+            adapter.look_at_every_mailbox();
+        }
+        AccountSync::new(
+            self.account_id,
+            services,
+            self.db.clone(),
+            async_channel::unbounded().0,
+        )
+        .with_retry_max(Duration::from_millis(10))
+    }
+
+    /// Whether the adapter still follows `mailbox`.
+    pub fn is_followed(&self, mailbox: &str) -> bool {
+        match &self.sync.services().mail {
+            AnyMail::FakeImap(adapter) => adapter.is_followed(mailbox),
+            _ => false,
+        }
     }
 }

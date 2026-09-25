@@ -10,6 +10,7 @@ mod writes;
 
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex, PoisonError};
+use std::ops::RangeInclusive;
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
@@ -25,8 +26,8 @@ use mailrs_mime::html::html_to_text;
 
 use super::{
     AutoReplyService, Backfill, CalendarService, Changes, ContactsService, Found, IdentityService,
-    MailBackend, MailCapabilities, Priority, RawMessage, RemoteRef, RulesService, SearchQuery,
-    SendAsAddress, SyncState, Unapplied, Want, priority,
+    KeywordsPage, MailBackend, MailCapabilities, Priority, RawMessage, Relocated, RemoteRef,
+    RulesService, SearchQuery, SendAsAddress, SyncState, Unapplied, Want, priority,
 };
 use crate::api::{DraftRef, GmailApi, SavedDraft};
 use crate::{BackendError, MailOp};
@@ -163,8 +164,13 @@ impl<G: GmailApi> MailBackend for Google<G> {
         gmail::set_of(id)
     }
 
-    async fn apply(&self, messages: &[String], ops: &[MailOp]) -> Result<(), Unapplied> {
-        self.write(messages, ops).await
+    /// Gmail never renames a message, so nothing is relocated.
+    async fn apply(
+        &self,
+        messages: &[String],
+        ops: &[MailOp],
+    ) -> Result<Vec<Relocated>, Unapplied> {
+        self.write(messages, ops).await.map(|()| Vec::new())
     }
 
     fn person_waiting(&self) -> bool {
@@ -398,6 +404,47 @@ impl<G: GmailApi> MailBackend for Google<G> {
 
     async fn mailbox_threads(&self, id: &str) -> Result<u64, BackendError> {
         Ok(paced(self.gmail.label_threads(id)).await?)
+    }
+
+    /// Gmail's history speaks for every label, so there is nothing more to
+    /// follow.
+    fn follow(&self, _mailbox: &str) {}
+
+    /// The engine's own interval paces Gmail whether the window is open or
+    /// not.
+    fn set_window_open(&self, _open: bool) {}
+
+    fn poll_interval(&self) -> Option<Duration> {
+        None
+    }
+
+    /// Gmail pushes nothing to a desktop client, so the engine's poll is
+    /// the only look.
+    async fn watch(&self) {
+        std::future::pending::<()>().await
+    }
+
+    /// Gmail's history names every flag change, so nobody asks.
+    async fn keywords_in(
+        &self,
+        _mailbox: &str,
+        _uidvalidity: u32,
+        _uids: RangeInclusive<u32>,
+    ) -> Result<KeywordsPage, BackendError> {
+        Err(BackendError::Unsupported)
+    }
+
+    /// Gmail names a message by its own id, which no label renumbers.
+    async fn uidvalidity(&self, _mailbox: &str) -> Result<Option<u32>, BackendError> {
+        Ok(None)
+    }
+
+    /// Gmail stores the same keywords whatever the label.
+    async fn keywords_stored(
+        &self,
+        _mailbox: &str,
+    ) -> Result<&'static [&'static str], BackendError> {
+        Ok(self.capabilities().keywords)
     }
 }
 

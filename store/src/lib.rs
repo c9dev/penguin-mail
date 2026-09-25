@@ -19,6 +19,7 @@ pub mod newsletters;
 pub mod outbox;
 pub mod query;
 pub mod reminders;
+pub mod remote_refs;
 mod schema;
 pub mod templates;
 pub mod threading;

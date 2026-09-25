@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 
 use mailrs_domain::{ChangeEvent, Label, LabelKind, RemoteMailbox};
 use mailrs_gmail::{LabelColor, is_reserved_label_name};
-use mailrs_store::{labels, mailboxes};
+use mailrs_store::{labels, mailboxes, remote_refs};
 
 use super::AccountSync;
 use crate::{MailBackend, SyncError};
@@ -79,27 +79,83 @@ impl AccountSync {
         if is_reserved_label_name(&name) {
             return Err(SyncError::ReservedLabel(name));
         }
+        // A look during the rename would find the old name gone and let
+        // its mail go.
+        let _moves = self.hold_moves().await;
         let prefix = format!("{old}/");
         let mut renamed = vec![self.services.mail.rename_mailbox(id, &name).await?];
-        for child in all.iter().filter(|l| l.name.starts_with(&prefix)) {
+        let mut moved = vec![(id.to_string(), renamed[0].id.clone())];
+        let children: Vec<&Label> = all.iter().filter(|l| l.name.starts_with(&prefix)).collect();
+        // An IMAP RENAME moves the mailboxes nested under the one renamed,
+        // so a folder server's listing already names them anew; Gmail
+        // renames each label on its own.
+        let renames = self.renames();
+        let listed = match renames && !children.is_empty() {
+            true => Some(self.services.mail.mailboxes().await?),
+            false => None,
+        };
+        for child in children {
             let child_name = format!("{name}/{}", &child.name[prefix.len()..]);
-            renamed.push(
-                self.services
-                    .mail
-                    .rename_mailbox(&child.id, &child_name)
-                    .await?,
-            );
+            let mailbox = match &listed {
+                Some(listed) => match listed.iter().find(|m| m.name == child_name) {
+                    Some(mailbox) => mailbox.clone(),
+                    None => continue,
+                },
+                None => {
+                    self.services
+                        .mail
+                        .rename_mailbox(&child.id, &child_name)
+                        .await?
+                }
+            };
+            moved.push((child.id.clone(), mailbox.id.clone()));
+            renamed.push(mailbox);
         }
+        // On a folder server a mailbox's name is part of each message's
+        // name, so the refs follow the rename.
+        // The mail filed under each old name stays filed under the new one,
+        // or the next listing takes the old row and the mail's place in it.
+        let pairs = moved.clone();
         self.db
             .write(move |c| {
-                for mailbox in &renamed {
-                    mailboxes::upsert(c, account_id, mailbox)?;
+                for ((from, to), mailbox) in pairs.iter().zip(&renamed) {
+                    match renames {
+                        true => {
+                            mailboxes::rename(c, account_id, from, mailbox)?;
+                            remote_refs::rename_mailbox(c, account_id, from, to)?;
+                        }
+                        false => mailboxes::upsert(c, account_id, mailbox)?,
+                    }
                 }
                 Ok(())
             })
             .await?;
         self.emit(ChangeEvent::LabelsChanged { account_id });
+        if renames {
+            for (_, to) in &moved {
+                self.relist_if_renumbered(to).await?;
+            }
+        }
         Ok(())
+    }
+
+    /// Lists `mailbox` again when the server gave it a new UIDVALIDITY, as
+    /// a server may when it renames one, so its messages keep their ids.
+    async fn relist_if_renumbered(&self, mailbox: &str) -> Result<(), SyncError> {
+        let Some(uidvalidity) = self.services.mail.uidvalidity(mailbox).await? else {
+            return Ok(());
+        };
+        let (account_id, name) = (self.account_id, mailbox.to_string());
+        let void = self
+            .db
+            .read(move |c| {
+                remote_refs::in_mailbox_where(c, account_id, &name, |v, _| v != uidvalidity)
+            })
+            .await?;
+        match void.is_empty() {
+            true => Ok(()),
+            false => self.relist_mailbox(mailbox, uidvalidity).await,
+        }
     }
 
     /// Gives a label one of Gmail's colours.

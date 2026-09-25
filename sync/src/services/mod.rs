@@ -16,24 +16,29 @@ mod pacing;
 
 pub use any::{AnyAutoReply, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules};
 pub use google::{Google, ID_PAGE_SIZE, LIST_PAGE_SIZE};
+pub use imap::{Imap, ImapApi, ImapSettings, Submit};
 pub use pacing::{Priority, background, priority};
 
+use std::collections::HashMap;
+use std::ops::RangeInclusive;
 use std::sync::Arc;
 use std::time::Duration;
 
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::query::Query;
 use mailrs_domain::{
-    EpochMillis, Filter, MailSet, Membership, MessageMeta, RemoteMailbox, Role, Vacation,
+    EpochMillis, Filter, Location, MailSet, Membership, MessageMeta, RemoteMailbox, Role, Vacation,
 };
 use mailrs_gmail::{
     Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, Person, Series,
 };
+use mailrs_imap::{ImapClient, SmtpClient, UidSet};
 use mailrs_mime::Parts;
+use mailrs_store::threading::Links;
 
 use crate::api::{AccountClient, DraftRef, SavedDraft};
 #[cfg(any(test, feature = "fake"))]
-use crate::fake::FakeGmail;
+use crate::fake::{FakeGmail, FakeImap, FakeSmtp};
 use crate::{BackendError, MailOp};
 
 /// One address an account may send mail as: its own, or an alias whose
@@ -79,6 +84,16 @@ pub struct MailCapabilities {
 pub struct Unapplied {
     pub taken: usize,
     pub error: BackendError,
+    /// Where the server moved the messages it took before the refusal.
+    pub relocated: Vec<Relocated>,
+}
+
+/// Where a write moved a message on a server that renames what it moves:
+/// `from` is the name the caller handed in, `to` the message's place now.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Relocated {
+    pub from: String,
+    pub to: Location,
 }
 
 /// Where a mail backend's feed of changes stands, in that backend's own
@@ -126,6 +141,64 @@ pub enum RemoteChange {
         id: String,
         memberships: Vec<Membership>,
     },
+    /// The messages `mailbox` expunged, by UID under `uidvalidity`. The
+    /// set is the server's and one range can name four billion UIDs, so
+    /// the engine tests each stored message's UID with
+    /// [`UidSet::contains`] and never walks the set.
+    Vanished {
+        mailbox: String,
+        uidvalidity: u32,
+        uids: UidSet,
+    },
+    /// Every message `mailbox` holds now, by UID under `uidvalidity`, from
+    /// a server that names no message it expunged. A stored message
+    /// located in the mailbox that the set lacks has gone, as has one
+    /// located under another UIDVALIDITY.
+    Holds {
+        mailbox: String,
+        uidvalidity: u32,
+        uids: UidSet,
+    },
+    /// The server renumbered `mailbox`, as a new UIDVALIDITY says, and
+    /// every name the store holds for its messages is void. The engine
+    /// lists that mailbox again, whose UIDs now belong to `uidvalidity`,
+    /// before the other changes apply; the rest of the account is as it
+    /// was.
+    StateLost {
+        mailbox: String,
+        uidvalidity: u32,
+    },
+    /// The messages of the window in `mailbox` with a UID in `uids`, under
+    /// `uidvalidity`, whose flag changes the server cannot name, as one
+    /// without CONDSTORE cannot. The engine reads their keywords from the
+    /// server a window at a time through [`MailBackend::keywords_in`] and
+    /// compares them with the store's, so a look holds one window's flags
+    /// and hands on only what differs.
+    CompareKeywords {
+        mailbox: String,
+        uidvalidity: u32,
+        uids: RangeInclusive<u32>,
+    },
+}
+
+/// The keywords one message carries on the server, by its UID.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KeywordsOf {
+    pub uid: u32,
+    pub keywords: Vec<String>,
+}
+
+/// One window of [`MailBackend::keywords_in`]'s answer: the messages it
+/// covered, lowest UID first, and the UID the next window starts at.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct KeywordsPage {
+    pub found: Vec<KeywordsOf>,
+    /// The UIDs this page covered, which the caller compares; the next
+    /// page starts above them.
+    pub covered: Option<RangeInclusive<u32>>,
+    /// The keywords this mailbox's own PERMANENTFLAGS store, read as it
+    /// was selected. Unset (empty) when nothing was covered.
+    pub storable: &'static [&'static str],
 }
 
 /// What the server calls one message, with its thread, as a listing or a
@@ -176,6 +249,13 @@ pub struct Found {
     pub whole: Vec<Vec<MessageMeta>>,
     /// Threads asked for whole that the server no longer has.
     pub gone_threads: Vec<String>,
+    /// The messages each message's `In-Reply-To` and `References` name,
+    /// by message id, from a server that keeps no threads. The engine
+    /// threads the message from them.
+    pub links: HashMap<String, Links>,
+    /// Where each message sits on the server, by message id, from a
+    /// server whose name for a message changes when it moves.
+    pub located: HashMap<String, Location>,
 }
 
 /// One page of the sync window.
@@ -238,6 +318,21 @@ impl AccountServices {
         }
     }
 
+    /// An account on an IMAP server: its mail and the address it sends
+    /// from. Calendars, contacts, rules and the automatic reply need
+    /// servers of their own, and the account has none of them yet.
+    pub fn imap(imap: ImapClient, smtp: SmtpClient, settings: ImapSettings) -> Self {
+        let adapter = Imap::new(Arc::new(imap), Arc::new(smtp), settings);
+        AccountServices {
+            mail: AnyMail::Imap(adapter.clone()),
+            calendar: None,
+            contacts: None,
+            rules: None,
+            auto_reply: None,
+            identities: AnyIdentities::Imap(adapter),
+        }
+    }
+
     /// The in-memory Gmail, for tests and the demo, through the same
     /// adapter a real account uses.
     #[cfg(any(test, feature = "fake"))]
@@ -260,6 +355,33 @@ impl AccountServices {
         let mut services = AccountServices::fake(Arc::clone(&gmail));
         services.mail = AnyMail::Fake(Google::new(gmail).with_capabilities(caps));
         services
+    }
+
+    /// The in-memory IMAP server, as a Fastmail account that files no copy
+    /// of what it sends, for tests and the demo.
+    #[cfg(any(test, feature = "fake"))]
+    pub fn fake_imap(imap: Arc<FakeImap>, smtp: Arc<FakeSmtp>) -> Self {
+        let settings = ImapSettings {
+            address: "me@example.com".into(),
+            provider_name: "Fastmail".into(),
+            files_sent_mail: false,
+            window_days: crate::DEFAULT_WINDOW_DAYS,
+        };
+        AccountServices::fake_imap_with(imap, smtp, settings)
+    }
+
+    /// The in-memory IMAP server with `settings`.
+    #[cfg(any(test, feature = "fake"))]
+    pub fn fake_imap_with(imap: Arc<FakeImap>, smtp: Arc<FakeSmtp>, settings: ImapSettings) -> Self {
+        let adapter = Imap::new(imap, smtp, settings);
+        AccountServices {
+            mail: AnyMail::FakeImap(adapter.clone()),
+            calendar: None,
+            contacts: None,
+            rules: None,
+            auto_reply: None,
+            identities: AnyIdentities::FakeImap(adapter),
+        }
     }
 
     pub fn capabilities(&self) -> MailCapabilities {
@@ -393,6 +515,55 @@ pub trait MailBackend: Send + Sync + 'static {
     /// the part this computer keeps.
     fn mailbox_threads(&self, id: &str) -> impl Future<Output = Result<u64, BackendError>> + Send;
 
+    /// Starts keeping `mailbox` in step, for a mailbox the account does
+    /// not sync on its own. A server that keeps every mailbox in step
+    /// ignores it.
+    fn follow(&self, mailbox: &str);
+
+    /// Tells the backend whether the main window is open, which sets how
+    /// often it looks at mail nobody is watching.
+    fn set_window_open(&self, open: bool);
+
+    /// How long the engine waits between looks at the change feed. `None`
+    /// keeps the engine's own interval.
+    fn poll_interval(&self) -> Option<Duration>;
+
+    /// Resolves when the account should look at its Inbox: the server said
+    /// something changed there, or its watch failed and a minute passed.
+    /// A server that never says so never resolves this.
+    fn watch(&self) -> impl Future<Output = ()> + Send;
+
+    /// The keywords of the window's messages in `mailbox` with a UID in
+    /// `uids`, as they stand on the server now, for a
+    /// [`RemoteChange::CompareKeywords`]. It answers the lowest part of
+    /// `uids` the server takes in one go; the caller asks again above
+    /// [`KeywordsPage::covered`]. An empty page with nothing covered means
+    /// the mailbox's UIDs no longer belong to `uidvalidity`, or `uids`
+    /// was empty. A server that names its flag changes never asks for it.
+    fn keywords_in(
+        &self,
+        mailbox: &str,
+        uidvalidity: u32,
+        uids: RangeInclusive<u32>,
+    ) -> impl Future<Output = Result<KeywordsPage, BackendError>> + Send;
+
+    /// The UIDVALIDITY the UIDs of `mailbox` belong to now, on a server
+    /// that names a message by mailbox and UID; `None` on one that names
+    /// it by an id of its own, as Gmail does.
+    fn uidvalidity(
+        &self,
+        mailbox: &str,
+    ) -> impl Future<Output = Result<Option<u32>, BackendError>> + Send;
+
+    /// The keywords the server stores on messages in `mailbox`. On IMAP
+    /// each mailbox's PERMANENTFLAGS decide, read with a SELECT the first
+    /// time this session asks; a server that stores the same everywhere
+    /// answers [`MailCapabilities::keywords`].
+    fn keywords_stored(
+        &self,
+        mailbox: &str,
+    ) -> impl Future<Output = Result<&'static [&'static str], BackendError>> + Send;
+
     /// One page of the sync window, newest first: the last `days` days of
     /// mail and everything in the inbox. `cursor` is the page before's
     /// `next`. Answers `BackendError::StateLost` when the server no longer
@@ -477,12 +648,13 @@ pub trait MailBackend: Send + Sync + 'static {
     /// Applies `ops` to `messages`, in order. On a refusal it says how
     /// many messages from the front went through. `MailOp::Destroy`
     /// comes alone and answers `BackendError::NeedsPermission` until the
-    /// account grants the delete permission.
+    /// account grants the delete permission. Answers where the server put
+    /// each message it moved, on a server that renames what it moves.
     fn apply(
         &self,
         messages: &[String],
         ops: &[MailOp],
-    ) -> impl Future<Output = Result<(), Unapplied>> + Send;
+    ) -> impl Future<Output = Result<Vec<Relocated>, Unapplied>> + Send;
 
     /// Sends raw RFC 822 bytes. Returns the new message id.
     fn send(

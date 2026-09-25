@@ -8,8 +8,8 @@ use mailrs_store::messages::Change;
 use mailrs_store::{accounts, bodies, messages};
 
 use super::AccountSync;
-use super::fetch::overtaken;
-use crate::{MailBackend, SyncError, now_millis};
+use super::fetch::{Fetched, overtaken};
+use crate::{MailBackend, SyncError, Want, now_millis};
 
 /// Fetches of one thread before an answer history keeps overtaking is
 /// written anyway, adding only what the store lacks.
@@ -99,7 +99,10 @@ impl AccountSync {
     /// not hold, and leaves the stored ones as history left them.
     async fn fetch_thread(&self, thread_id: &str, last: bool) -> Result<Written, SyncError> {
         let account_id = self.account_id;
-        let mut answer = self.fetch_whole(vec![thread_id.to_string()]).await?;
+        let mut answer = match self.local_threads() {
+            true => self.fetch_stored_thread(thread_id).await?,
+            false => self.fetch_whole(vec![thread_id.to_string()]).await?,
+        };
         let found = answer.whole.pop();
         let thread = thread_id.to_string();
         self.db
@@ -120,15 +123,24 @@ impl AccountSync {
                                 continue;
                             }
                             changed |= stored.is_none_or(|stored| differs(stored, meta));
-                            changes.push(Change::Upsert {
-                                meta: Box::new(meta.clone()),
-                                generation: cursor.sync_gen,
-                            });
+                            changes.push(answer.placing.upsert(account_id, meta, cursor.sync_gen));
+                        }
+                        // A message of a local thread that the server no
+                        // longer holds. An overtaken answer deletes nothing:
+                        // history speaks for what went before the cursor.
+                        if !overtaken {
+                            for id in &answer.gone {
+                                changed |= before.iter().any(|m| &m.id == id);
+                                changes.push(Change::Delete {
+                                    message_id: id.clone(),
+                                });
+                            }
                         }
                         changes.push(Change::MarkWhole {
                             thread_id: thread.clone(),
                         });
                         messages::apply(c, account_id, &changes)?;
+                        answer.placing.write_refs(c, account_id)?;
                         Ok(Written::Stored { changed })
                     }
                     // History deletes what Gmail deleted before the cursor,
@@ -147,6 +159,43 @@ impl AccountSync {
             })
             .await
             .map_err(Into::into)
+    }
+
+    /// A thread local threading made, fetched again message by message:
+    /// the server keeps no threads, so the store says which messages the
+    /// thread holds. A thread the store lacks is one a search listed by
+    /// its one message's location, and that message is fetched.
+    async fn fetch_stored_thread(&self, thread_id: &str) -> Result<Fetched, SyncError> {
+        let (account_id, thread) = (self.account_id, thread_id.to_string());
+        let ids: Vec<String> = self
+            .db
+            .read(move |c| {
+                Ok(messages::thread_messages(c, account_id, &thread)?
+                    .into_iter()
+                    .map(|m| m.id)
+                    .collect())
+            })
+            .await?;
+        if ids.is_empty() {
+            return self.fetch_whole(vec![thread_id.to_string()]).await;
+        }
+        let wants = ids
+            .into_iter()
+            .map(|id| Want {
+                id,
+                thread_id: Some(thread_id.to_string()),
+            })
+            .collect();
+        let mut fetched = self.fetch(wants).await?;
+        // The server names no thread; these messages are in this one, and
+        // the comparison with the stored copies reads it.
+        for meta in &mut fetched.metas {
+            meta.thread_id = thread_id.to_string();
+        }
+        // The caller reads the thread from `whole` alone, so the metas
+        // move there rather than being copied.
+        fetched.whole = vec![std::mem::take(&mut fetched.metas)];
+        Ok(fetched)
     }
 
     /// A message body from the cache, or on a miss from the server: raw for
@@ -171,7 +220,8 @@ impl AccountSync {
         let (body, complete) = match self.small(message_id).await? {
             true => (mailrs_mime::read(&self.raw(message_id).await?), true),
             false => {
-                let parts = self.services.mail.fetch_structure(message_id).await?;
+                let name = self.remote(message_id).await?;
+                let parts = self.services.mail.fetch_structure(&name).await?;
                 (mailrs_mime::body(&parts), !parts.incomplete)
             }
         };
