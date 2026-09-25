@@ -105,10 +105,8 @@ async fn a_refused_write_rolls_back_even_when_its_moves_cannot_be_recorded() {
     let ids = ["INBOX/1001/1", "Sent/1002/1"];
     let mut targets = Vec::new();
     for id in ids {
-        targets.push(Target::thread(
-            h.account_id,
-            &h.thread_of(id).await.unwrap(),
-        ));
+        let thread = h.thread_of(id).await.unwrap();
+        targets.push(Target::thread(h.account_id, thread));
     }
     // The first run moves; the second is refused, and the listing that
     // would record the new mailbox fails too.
