@@ -581,16 +581,16 @@ fn holds_the_queue(err: &BackendError) -> bool {
 
 /// The lone calendar an account keeps once `calendar.events` is granted
 /// but the list scope is not: Google answers the primary calendar under
-/// the account's own address, and that address needs no list permission
-/// (ruling R2). The zone is a placeholder until the list itself can say;
-/// a repeating event on this calendar keeps its own zone regardless.
+/// the account's own address, and that address needs no list permission.
+/// Only the list can say the calendar's zone, so it stays empty, and a new
+/// event on it names no zone and takes the calendar's own on Google.
 fn primary_fallback(address: &str) -> Calendar {
     Calendar {
         id: address.to_string(),
         name: address.to_string(),
         color: String::new(),
         access: Access::Owner,
-        zone: "UTC".into(),
+        zone: String::new(),
         primary: true,
         shown: true,
         reminders: Vec::new(),

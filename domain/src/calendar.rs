@@ -79,7 +79,8 @@ pub struct Calendar {
     /// `#rrggbb`.
     pub color: String,
     pub access: Access,
-    /// The IANA zone new events on this calendar are written in.
+    /// The IANA zone new events on this calendar are written in. Empty
+    /// when the provider has not said, and a new event then names none.
     pub zone: String,
     pub primary: bool,
     /// Whether the view shows it. Kept on this computer only.

@@ -264,7 +264,6 @@ impl<A: Accounts> Calendar<A> {
         let calendars = self.db.read(move |c| store::calendars(c, account_id)).await?;
         Ok(calendars.into_iter().find(|c| c.primary).unwrap_or_else(|| model::Calendar {
             id: "primary".to_string(),
-            zone: "UTC".to_string(),
             primary: true,
             ..model::Calendar::default()
         }))
