@@ -13,9 +13,9 @@ once per invitation shown.
 
 Mail already keeps a local copy for the same reason: the store holds
 messages and threads, filled from Gmail's history feed, so the window
-reads them without asking Gmail each time. Stage 1 gives calendars the
-same shape of answer, for Gmail accounts; CalDAV and Microsoft Graph
-join later stages behind the same seam.
+reads them without asking Gmail each time. This decision keeps a copy
+of calendars the same way, for Gmail accounts first; CalDAV and
+Microsoft Graph join later behind the same seam.
 
 ## Decision
 
@@ -31,8 +31,8 @@ as cheap to store as one that happened once.
 
 `mailrs_sync::calendar_copy::CalendarCopy` owns the read and the queue
 of edits made here that the provider has not taken yet
-(`mailrs_store::calendar::QueuedChange`), sent in order and, per ruling
-R7, right after the edit that queued them rather than on the next tick.
+(`mailrs_store::calendar::QueuedChange`), sent in order, right after
+the edit that queued them rather than on the next tick.
 A provider-neutral error (`BackendError::StateLost`, `Changed`,
 `Refused`) tells the copy what to do with a stale read or a refused
 write without it ever naming a provider's own error codes; only the
@@ -46,9 +46,8 @@ itself which account is actually due, at a one-minute cadence while the
 window is open and five minutes while only the tray runs, so most ticks
 of the app's timer cost nothing. The mail engine's loop gains no new
 state, no new per-tick work, and no new failure mode from the
-calendar; a calendar read can run, stall, or fall behind while an
-account's mail sync does whatever it is doing, and the two never wait
-on each other.
+calendar. A slow calendar read does not hold up the account's mail
+sync, and the two never wait on each other.
 
 ## Options turned down
 
@@ -58,7 +57,8 @@ scanning every event on every read, so this option builds the same
 index as the chosen one and adds a parse on top. Google's own fields,
 such as a guest's response status, an event's colour, its conference
 link and its etag, have no home in plain iCalendar, so they would need
-a side table regardless, at which point the "raw" format buys nothing.
+a side table regardless, and keeping the raw text as well would save
+nothing.
 
 **Evolution Data Server (EDS)**, letting GNOME's own calendar backend
 own the copy instead of Penguin Mail. EDS ties the app to GNOME Online
@@ -79,7 +79,7 @@ brings read an account's calendars with no network call once the copy
 has synced it, and the change queue lets an edit made offline reach the
 provider once the network returns. The store gains four tables and a
 row per pending edit; `CalendarCopy` gains a background timer of its
-own, with its own concurrency lock (Task 5's `running` mutex) so a slow
+own, with its own lock (`CalendarCopy`'s `running` mutex) so a slow
 read is never joined by a second one reading, or, once an edit is
 queued, sending the same change twice.
 
@@ -91,8 +91,9 @@ adapter's problem alone, mapped once at the edge.
 Running the calendar's poll from the app's own timer, separately from
 the mail engine's, means two poll loops run in the process instead of
 one. Neither depends on the other's health: a calendar read that stalls
-does not slow mail sync, and a mail account paused or signed out does
-not stop its calendar from refreshing. The cost is one more timer to
+does not slow mail sync. The copy reads through the account's running
+engine, though, so an account paused or signed out is not read until it
+runs again. The cost is one more timer to
 reason about, accepted because folding the calendar into the mail
 engine's loop would have threaded new state through `AccountSync` for
 every account, mail-only accounts included, to serve a poll only
