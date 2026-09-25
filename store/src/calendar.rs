@@ -127,6 +127,20 @@ pub fn set_token(
     Ok(())
 }
 
+/// When a calendar was last read whole or for its changes, `None` before
+/// its first read. `CalendarCopy` reads this for a hidden calendar, which
+/// it reads at the slow cadence rather than every tick.
+pub fn synced_at(conn: &Connection, account_id: AccountId, calendar: &str) -> Result<Option<EpochMillis>> {
+    Ok(conn
+        .query_row(
+            "SELECT synced_at FROM calendars WHERE account_id = ?1 AND id = ?2",
+            params![account_id, calendar],
+            |row| row.get(0),
+        )
+        .optional()?
+        .flatten())
+}
+
 /// Whether the copy is worth reading instead of asking the provider: the
 /// primary calendar has been read whole at least once.
 pub fn synced(conn: &Connection, account_id: AccountId) -> Result<bool> {
