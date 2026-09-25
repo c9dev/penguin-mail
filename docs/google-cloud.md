@@ -36,8 +36,8 @@ click through Google's "unverified app" notice once per account.
 
 | Field | Value |
 |---|---|
-| Scope | `https://www.googleapis.com/auth/gmail.modify` |
-| Justification | Only asked during verification. If you need one: "Penguin Mail is a desktop mail client. It reads messages to display them, changes labels to archive, star, and mark mail read, moves messages to trash, saves drafts, and sends mail the user writes. Mail is stored only on the user's computer." |
+| Scope | `https://mail.google.com/` |
+| Justification | Only asked during verification. If you need one: "Penguin Mail is a desktop mail client. It reads messages to display them, changes labels to archive, star, and mark mail read, moves messages to trash, saves drafts, sends mail the user writes, and erases mail for good when the user chooses Delete Forever. Mail is stored only on the user's computer." |
 
 ## Clients
 

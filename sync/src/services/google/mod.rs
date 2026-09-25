@@ -688,8 +688,9 @@ mod tests {
     use std::time::Duration;
 
     use mailrs_gmail::{
-        AccountQuota, CALENDAR_LIST_SCOPE, DELETE_SCOPE, GMAIL_SCOPE, GmailError, Granted,
-        SETTINGS_SCOPE, SIGN_IN_SCOPES, SendAs, limiter,
+        AccountQuota, CALENDAR_LIST_SCOPE, CALENDAR_SCOPE, CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE,
+        DELETE_SCOPE, GMAIL_SCOPE, GmailError, Granted, SETTINGS_SCOPE, SIGN_IN_SCOPES, SendAs,
+        limiter,
     };
 
     use super::{Google, paced, withheld};
@@ -814,5 +815,36 @@ mod tests {
             "mail.google.com covers gmail.modify and is delete's own scope"
         );
         assert!(withheld(Some(&delete_only)).settings, "settings is asked for on its own");
+    }
+
+    /// An account that signed in before the five-scope trim may still
+    /// carry `gmail.modify` and `contacts.readonly` on their own, never
+    /// re-asked. Reading mail and reading contacts stay withheld=false
+    /// for such a grant; writing contacts and deleting mail, which those
+    /// narrower scopes never covered, stay withheld=true.
+    #[test]
+    fn withheld_reads_an_old_grant_that_predates_the_five_scope_trim() {
+        let old = Granted::parse(&format!(
+            "{GMAIL_SCOPE} {SETTINGS_SCOPE} {CONTACTS_SCOPE} {CALENDAR_SCOPE} {CALENDAR_LIST_SCOPE}"
+        ));
+        assert!(old.reads_mail(), "gmail.modify alone still reads mail");
+        assert_eq!(
+            withheld(Some(&old)),
+            Withheld { delete: true, change_contacts: true, ..Withheld::NONE },
+            "contacts.readonly reads contacts but neither narrower scope writes or deletes"
+        );
+    }
+
+    /// A person who signs in after the trim and unticks one of the five
+    /// boxes withholds only the feature that scope serves.
+    #[test]
+    fn withheld_reads_a_scope_the_person_unticked_from_the_new_five() {
+        let unticked_calendar_list = Granted::parse(&format!(
+            "{DELETE_SCOPE} {SETTINGS_SCOPE} {CONTACTS_WRITE_SCOPE} {CALENDAR_SCOPE}"
+        ));
+        assert_eq!(
+            withheld(Some(&unticked_calendar_list)),
+            Withheld { calendar_list: true, ..Withheld::NONE }
+        );
     }
 }
