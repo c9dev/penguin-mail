@@ -834,6 +834,10 @@ impl MainWindow {
             self.sidebar
                 .rebuild(&data, &extras, &mailbox, |id| self.offers(id));
         }
+        // A search on screen skips the rebuild above, but an account's own
+        // heading row still needs its Rules, Hide My Email and Automatic
+        // Reply gated again when the account starts mid-search.
+        self.sidebar.regate(|id| self.offers(id));
         // Each hidden address comes with its own rules, so Hide My Email
         // works only while some account can hold them, and each account
         // action only while some account has what it opens.

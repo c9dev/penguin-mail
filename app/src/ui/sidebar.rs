@@ -32,6 +32,9 @@ struct Heading {
     name: String,
     chevron: gtk::Image,
     count: gtk::Label,
+    /// The row's own Rules, Hide My Email and Automatic Reply actions,
+    /// gated again by [`Sidebar::regate`] when the account starts.
+    actions: gio::SimpleActionGroup,
 }
 
 pub struct Sidebar {
@@ -196,6 +199,26 @@ impl Sidebar {
         }
     }
 
+    /// Sets each account heading's own Rules, Hide My Email and Automatic
+    /// Reply actions from what `offers` says now, without rebuilding
+    /// anything else. `read_accounts` calls this every time, even while a
+    /// search on screen skips the rest of a rebuild, so an account that
+    /// starts mid-search does not leave its menu gated at "everything".
+    pub fn regate(&self, offers: impl Fn(AccountId) -> Offers) {
+        for heading in self.headings.borrow().iter() {
+            for (name, enabled) in crate::offered::account_menu_actions(offers(heading.account_id))
+            {
+                if let Some(action) = heading
+                    .actions
+                    .lookup_action(name)
+                    .and_downcast::<gio::SimpleAction>()
+                {
+                    action.set_enabled(enabled);
+                }
+            }
+        }
+    }
+
     /// Rebuilds every row. `selected` is kept selected when it still exists.
     /// Rebuilds every row. `vips` lists VIPs by address and name. `offers`
     /// says what each account offers, which words its menu.
@@ -307,7 +330,7 @@ impl Sidebar {
         for (account, labels) in accounts {
             let shown = extras.names.get(&account.id);
             let account_offers = offers(account.id);
-            let (row, chevron, count) = heading(account, shown, account_offers);
+            let (row, chevron, count, actions) = heading(account, shown, account_offers);
             self.list.append(&row);
             self.headings.borrow_mut().push(Heading {
                 row,
@@ -315,6 +338,7 @@ impl Sidebar {
                 name: shown.unwrap_or(&account.email).clone(),
                 chevron,
                 count,
+                actions,
             });
             for which in Standard::ALL {
                 let mailbox = Mailbox::Standard {
@@ -754,7 +778,7 @@ fn heading(
     account: &Account,
     name: Option<&String>,
     offers: Offers,
-) -> (gtk::ListBoxRow, gtk::Image, gtk::Label) {
+) -> (gtk::ListBoxRow, gtk::Image, gtk::Label, gio::SimpleActionGroup) {
     let content = gtk::Box::builder()
         .spacing(8)
         .css_classes(["sidebar-heading"])
@@ -868,8 +892,9 @@ fn heading(
         .build();
     // One `win.` action serves every account's menu, so it cannot be off
     // for one account. The row holds this account's own Rules, Hide My
-    // Email and Automatic Reply, each off when the account lacks it; the
-    // sidebar is rebuilt when an account starts, which gates them again.
+    // Email and Automatic Reply, each off when the account lacks it;
+    // `Sidebar::regate` sets them again once the account's offers change,
+    // whether or not the row itself gets rebuilt.
     let own = gio::SimpleActionGroup::new();
     for (name, enabled) in crate::offered::account_menu_actions(offers) {
         let action = gio::SimpleAction::new(name, None);
@@ -892,7 +917,7 @@ fn heading(
         &heading_row_name(name.unwrap_or(&account.email), 0),
         &gettext("Show or hide this account's mailboxes"),
     );
-    (row, chevron, count)
+    (row, chevron, count, own)
 }
 
 /// The icon and the words beside an account's name for its state, or
