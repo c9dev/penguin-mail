@@ -24,6 +24,7 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 
 [dev-dependencies]
+mailrs-testmail.workspace = true
 # `start_paused` lets a test wait out an IDLE or a stale connection
 # without waiting itself.
 tokio = { workspace = true, features = ["test-util"] }

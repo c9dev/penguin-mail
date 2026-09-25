@@ -40,6 +40,13 @@ mod tests;
 /// them; past that the user deserves to hear rather than keep waiting.
 pub const WAIT_CEILING: std::time::Duration = std::time::Duration::from_secs(60);
 
+/// The stack each thread of a runtime that runs `SyncEngine` gets. An
+/// account's sync nests dozens of async functions without spawning, and a
+/// debug build polling it against a real IMAP server overflowed Tokio's
+/// 2 MiB default but ran in 4 MiB. The stack is reserved address space;
+/// only the pages a thread touches take memory.
+pub const WORKER_STACK: usize = 8 << 20;
+
 pub use account::{
     AccountSync, DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS, FETCH_CONCURRENCY, Searched,
 };

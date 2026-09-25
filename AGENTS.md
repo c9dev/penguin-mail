@@ -60,6 +60,17 @@ Installing for the owner: `NO_AUTOSTART=1 scripts/install.sh`.
 - **Sandbox tests** for skill scripts run real `bwrap` and skip when it
   is missing or cannot start, as in an unprivileged container.
   `PENGUIN_MAIL_REQUIRE_SANDBOX=1` turns the skip into a failure.
+- **Docker tests** (`testmail/`, `imap/tests/dovecot*.rs`,
+  `sync/tests/dovecot.rs`) start Dovecot and Mailpit and skip when Docker
+  is missing or cannot start. `PENGUIN_MAIL_REQUIRE_IMAP=1` turns the skip
+  into a failure; CI's `imap` job sets it and the gate does not. The
+  files under `imap/tests/` and `sync/tests/` hold one test each, because
+  that test points `SSL_CERT_FILE` at a root made for the run: add a step
+  to it rather than a second test. The sync suite spawns its body on a
+  runtime built with `mailrs_sync::WORKER_STACK`, as the app does, so a
+  stack too small for a debug build fails there. Containers
+  go by id when a test ends; one left by a killed run carries the label
+  `io.github.c9dev.penguin-mail.test`. Remove it by its id.
 - **Migrations** live in one ordered array in `store/src/schema.rs`,
   numbered by position and tracked with `PRAGMA user_version`. Append
   only. Two branches that each add one collide on the number: renumber

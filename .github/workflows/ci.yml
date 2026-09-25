@@ -59,6 +59,36 @@ jobs:
       - name: Every control has an accessible name
         run: scripts/a11y-names.sh
 
+  imap:
+    name: IMAP and SMTP against real servers
+    # The suite starts Dovecot and Mailpit in Docker. The gate's container
+    # has no Docker, so this job runs on the runner, which has it, and
+    # builds only the crates the suite tests. None of them needs GTK.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CARGO_TERM_COLOR: always
+      # A pass here must mean the servers ran, not that the suite skipped
+      # for want of Docker.
+      PENGUIN_MAIL_REQUIRE_IMAP: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Rust
+        run: scripts/ci-deps.sh --rust-only
+      - name: Put cargo on PATH
+        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: docker-suite
+      # docker create pulls the images the tests pin by digest.
+      - name: The test servers
+        run: cargo test -p mailrs-testmail
+      - name: The client against Dovecot and Mailpit
+        run: cargo test -p mailrs-imap --test dovecot --test dovecot_untrusted
+      # --nocapture keeps each profile's IDLE time in the log.
+      - name: The adapter against Dovecot
+        run: cargo test -p mailrs-sync --test dovecot -- --nocapture
+
   flatpak:
     name: Flatpak builds and starts
     runs-on: ubuntu-latest

@@ -2368,6 +2368,7 @@ dependencies = [
  "mailrs-discover",
  "mailrs-domain",
  "mailrs-mime",
+ "mailrs-testmail",
  "rustls",
  "rustls-platform-verifier",
  "thiserror 2.0.20",
@@ -2442,6 +2443,7 @@ dependencies = [
  "mailrs-imap",
  "mailrs-mime",
  "mailrs-store",
+ "mailrs-testmail",
  "rand",
  "rusqlite",
  "serde",
@@ -2451,6 +2453,17 @@ dependencies = [
  "tokio",
  "toml",
  "tracing",
+]
+
+[[package]]
+name = "mailrs-testmail"
+version = "0.3.0"
+dependencies = [
+ "rand",
+ "reqwest",
+ "serde_json",
+ "tempfile",
+ "tokio",
 ]
 
 [[package]]

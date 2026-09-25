@@ -4,11 +4,18 @@
 # in. Run as root. Rust comes from rustup at the version Cargo.toml asks
 # for. xtr, which scripts/update-po.sh needs, is left to the workflow: it
 # installs xtr after restoring the cargo cache, which usually holds it.
+#
+#   scripts/ci-deps.sh              the system packages, then Rust
+#   scripts/ci-deps.sh --rust-only  Rust alone, as any user, for a job that
+#                                   builds only crates needing no system
+#                                   libraries, such as the Docker suite
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-if command -v apt-get >/dev/null; then
+if [ "${1:-}" = --rust-only ]; then
+    :
+elif command -v apt-get >/dev/null; then
     export DEBIAN_FRONTEND=noninteractive
     apt-get update
     apt-get install -y --no-install-recommends \
