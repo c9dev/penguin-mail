@@ -275,7 +275,7 @@ fn rule_set(event: &Event) -> Option<RRuleSet> {
         rrule::Tz::Tz(tz) => tz.name().to_string(),
         rrule::Tz::Local(_) => "UTC".to_string(),
     };
-    let rules: Vec<String> = event.rules.iter().map(|rule| until_in_utc(rule)).collect();
+    let rules: Vec<String> = event.rules.iter().map(|rule| dates_in_utc(&until_in_utc(rule))).collect();
     let text = format!(
         "DTSTART;TZID={name}:{}\n{}",
         start.format("%Y%m%dT%H%M%S"),
@@ -310,6 +310,32 @@ fn until_in_utc(rule: &str) -> String {
     } else {
         rule.to_string()
     }
+}
+
+/// Google writes an all-day series' skipped and added days as bare dates
+/// (`EXDATE;VALUE=DATE:20260713`). `rrule` ignores `VALUE=DATE` and reads
+/// the bare value at midnight in the machine's own zone, so outside UTC it
+/// names no occurrence of a series this module starts at UTC midnight.
+/// Widening each bare date to UTC midnight, as [`until_in_utc`] does for
+/// `UNTIL`, gives the same day in every zone.
+fn dates_in_utc(line: &str) -> String {
+    let upper = line.to_ascii_uppercase();
+    if !upper.starts_with("EXDATE") && !upper.starts_with("RDATE") {
+        return line.to_string();
+    }
+    let Some((head, values)) = line.split_once(':') else {
+        return line.to_string();
+    };
+    let bare = |value: &str| value.len() == 8 && value.bytes().all(|b| b.is_ascii_digit());
+    if !values.split(',').any(bare) {
+        return line.to_string();
+    }
+    let params: Vec<&str> = head.split(';').filter(|p| !p.eq_ignore_ascii_case("VALUE=DATE")).collect();
+    let values: Vec<String> = values
+        .split(',')
+        .map(|value| if bare(value) { format!("{value}T000000Z") } else { value.to_string() })
+        .collect();
+    format!("{}:{}", params.join(";"), values.join(","))
 }
 
 #[cfg(test)]
@@ -426,6 +452,42 @@ mod tests {
         };
         let got = expand(&event, midnight(1), midnight(31));
         assert_eq!(got, vec![(midnight(19), midnight(20)), (midnight(26), midnight(27))]);
+    }
+
+    /// Google writes an all-day series' skipped days as bare dates. The
+    /// week skipped must stay skipped in any time zone the machine runs
+    /// in: run this under `TZ=Europe/Lisbon` as well as `TZ=UTC`.
+    #[test]
+    fn an_all_day_series_skips_a_bare_excluded_date() {
+        let midnight = |m, d| NaiveDate::from_ymd_opt(2026, m, d).unwrap().and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp_millis();
+        let event = Event {
+            start: midnight(7, 6),
+            end: midnight(7, 7),
+            zone: "UTC".into(),
+            all_day: true,
+            rules: vec!["RRULE:FREQ=WEEKLY;COUNT=3".into(), "EXDATE;VALUE=DATE:20260713".into()],
+            ..standup(&[])
+        };
+        let got = expand(&event, midnight(7, 1), midnight(8, 1));
+        assert_eq!(got, vec![(midnight(7, 6), midnight(7, 7)), (midnight(7, 20), midnight(7, 21))]);
+    }
+
+    #[test]
+    fn an_all_day_series_adds_a_bare_extra_date_on_its_own_day() {
+        let midnight = |m, d| NaiveDate::from_ymd_opt(2026, m, d).unwrap().and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp_millis();
+        let event = Event {
+            start: midnight(7, 6),
+            end: midnight(7, 7),
+            zone: "UTC".into(),
+            all_day: true,
+            rules: vec!["RRULE:FREQ=WEEKLY;COUNT=1".into(), "RDATE;VALUE=DATE:20260709,20260710".into()],
+            ..standup(&[])
+        };
+        let got = expand(&event, midnight(7, 1), midnight(8, 1));
+        assert_eq!(
+            got,
+            vec![(midnight(7, 6), midnight(7, 7)), (midnight(7, 9), midnight(7, 10)), (midnight(7, 10), midnight(7, 11))]
+        );
     }
 
     #[test]
