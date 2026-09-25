@@ -4,7 +4,7 @@
 
 use std::cell::{Cell, RefCell};
 use std::future::Future;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -133,6 +133,9 @@ pub struct Core {
     /// the lock stays with the core rather than with one engine.
     /// The demo takes none.
     _sync_lock: Option<SyncLock>,
+    /// The demo's own folder, holding its store and settings, removed
+    /// when the core closes. Last, so the store closes before it goes.
+    demo_folder: Option<crate::demo::folder::DemoFolder>,
 }
 
 /// Counts a user operation until its task finishes, even if nobody awaits it.
@@ -152,6 +155,12 @@ impl Drop for InFlight {
 }
 
 impl Core {
+    /// The demo's own folder, where its settings belong too. None outside
+    /// the demo.
+    pub fn demo_folder(&self) -> Option<&Path> {
+        self.demo_folder.as_ref().map(|folder| folder.path())
+    }
+
     /// Opens the store and starts syncing every account.
     pub fn open(demo: bool) -> Result<Rc<Core>> {
         let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -160,8 +169,12 @@ impl Core {
             .enable_all()
             .build()
             .context("could not start the async runtime")?;
-        let dir = if demo {
-            std::env::temp_dir().join(format!("penguin-mail-demo-{}", std::process::id()))
+        let demo_folder = demo
+            .then(crate::demo::folder::DemoFolder::make)
+            .transpose()
+            .context("could not make the demo's folder")?;
+        let dir = if let Some(folder) = &demo_folder {
+            folder.path().to_path_buf()
         } else {
             migrate_old_dirs();
             mailrs_sync::config::secure_dirs();
@@ -180,9 +193,6 @@ impl Core {
             Err(err) => return Err(err.into()),
         };
         let db_path: PathBuf = dir.join("mailrs.db");
-        if demo {
-            let _ = std::fs::remove_file(&db_path);
-        }
         let db = match Db::open(&db_path) {
             Ok(db) => db,
             Err(err @ StoreError::Migration { .. }) => {
@@ -261,6 +271,7 @@ impl Core {
             network: Cell::new(true),
             window_open: Cell::new(false),
             _sync_lock: sync_lock,
+            demo_folder,
         });
         core.start_engine();
         Ok(core)

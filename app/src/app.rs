@@ -106,11 +106,11 @@ impl App {
         let (chosen, picked) = async_channel::unbounded();
         let core_demo = core.demo;
         // Demo mode must not change the real preferences.
-        let settings_path = if core.demo && std::env::var_os("MAILRS_SETTINGS").is_none() {
-            std::env::temp_dir().join(format!(
-                "penguin-mail-demo-{}-settings.toml",
-                std::process::id()
-            ))
+        let demo_settings = core
+            .demo_folder()
+            .filter(|_| std::env::var_os("MAILRS_SETTINGS").is_none());
+        let settings_path = if let Some(folder) = demo_settings {
+            folder.join("settings.toml")
         } else {
             Settings::default_path()
         };

@@ -23,6 +23,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- `penguin-mail --demo` removes its sample store when it closes, and clears what earlier demo runs left in the temporary folder, which often lives in memory.
 - The message after Undo names the label, such as Receipts, where it
   showed a code such as Label_5.
 - Archiving or moving a whole conversation on an IMAP account no longer

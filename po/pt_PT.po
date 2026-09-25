@@ -1159,7 +1159,7 @@ msgstr "Escolha uma hora no futuro"
 msgid "On {date}, {sender} wrote:"
 msgstr "A {date}, {sender} escreveu:"
 
-#: app/src/core.rs:177
+#: app/src/core.rs:190
 msgid ""
 "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your "
 "mail. Stop it, then open Penguin Mail again."
@@ -1167,17 +1167,17 @@ msgstr ""
 "Outra cópia do Penguin Mail, ou o penguin-mail-cli sync, está a sincronizar "
 "o seu correio. Pare esse processo e volte a abrir o Penguin Mail."
 
-#: app/src/core.rs:192
+#: app/src/core.rs:202
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr ""
 "O Penguin Mail não conseguiu atualizar o arquivo de correio e manteve o "
 "anterior."
 
-#: app/src/core.rs:636 app/src/core.rs:705
+#: app/src/core.rs:647 app/src/core.rs:716
 msgid "Demo mode cannot add real accounts."
 msgstr "O modo de demonstração não adiciona contas reais."
 
-#: app/src/core.rs:640
+#: app/src/core.rs:651
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -1185,11 +1185,11 @@ msgstr ""
 "Esta cópia do Penguin Mail foi compilada sem início de sessão Google. "
 "Obtenha uma versão em github.com/c9dev/penguin-mail/releases."
 
-#: app/src/core.rs:658
+#: app/src/core.rs:669
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Desistiu de esperar pelo navegador ao fim de cinco minutos."
 
-#: app/src/core.rs:666
+#: app/src/core.rs:677
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 "Iniciou sessão como {account}. Escolha {wanted} para voltar a ligar essa "

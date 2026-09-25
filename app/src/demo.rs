@@ -20,6 +20,7 @@ use mailrs_sync::fake::{FakeGmail, FakeImap, FakeSmtp, fill_store};
 use mailrs_sync::{AccountServices, AccountSync, DEFAULT_WINDOW_DAYS, ImapSettings, SyncError};
 use rusqlite::Connection;
 
+pub mod folder;
 mod pages;
 
 /// The id of the draft behind the sample draft message, as Gmail would hold it.
