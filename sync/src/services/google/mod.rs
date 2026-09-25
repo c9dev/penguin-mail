@@ -518,11 +518,11 @@ impl<G: GmailApi> CalendarService for Google<G> {
     }
 
     async fn update_event(&self, id: &str, fields: &EventFields) -> Result<Event, BackendError> {
-        Ok(paced(self.gmail.update_event(id, fields)).await?)
+        paced(self.gmail.update_event(id, fields)).await.map_err(gone_is_not_found)
     }
 
     async fn delete_event(&self, id: &str) -> Result<(), BackendError> {
-        Ok(paced(self.gmail.delete_event(id)).await?)
+        paced(self.gmail.delete_event(id)).await.map_err(gone_is_not_found)
     }
 
     async fn calendars(&self) -> Result<Vec<model::Calendar>, BackendError> {
@@ -559,6 +559,15 @@ impl<G: GmailApi> CalendarService for Google<G> {
     }
 }
 
+/// A live write's error, with 410 Gone read as the event being gone
+/// rather than as the expired sync token the client takes it for.
+fn gone_is_not_found(err: GmailError) -> BackendError {
+    match err {
+        GmailError::ExpiredSyncToken => BackendError::NotFound,
+        other => other.into(),
+    }
+}
+
 /// Maps a calendar write's Gmail error to a neutral kind (ruling R1): a
 /// version conflict, Google's 412 or the 409 a duplicate create answers,
 /// becomes `Changed`; any other 4xx becomes `Refused` in Google's own
@@ -566,6 +575,10 @@ impl<G: GmailApi> CalendarService for Google<G> {
 fn calendar_write_error(err: GmailError) -> BackendError {
     match &err {
         GmailError::Changed => BackendError::Changed,
+        // The client reads every 410 as an expired sync token, which only
+        // the change feed can mean. A write gets 410 Gone for an event
+        // already deleted.
+        GmailError::ExpiredSyncToken => BackendError::NotFound,
         GmailError::Http { status: 409, .. } => BackendError::Changed,
         GmailError::Http { status, .. } if (400..500).contains(status) => {
             BackendError::Refused(err.to_string())

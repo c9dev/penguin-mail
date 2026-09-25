@@ -467,3 +467,119 @@ async fn an_edit_during_a_send_goes_out_against_the_new_version() {
     assert!(copy.send(h.account_id).await.unwrap().is_empty(), "the merged edit goes out with no conflict");
     assert_eq!(stored(&h, "primary", "a").await.unwrap().title, "Mine again");
 }
+
+async fn queue(h: &Harness) -> Vec<store::QueuedChange> {
+    let account = h.account_id;
+    h.db.read(move |c| store::queued(c, account)).await.unwrap()
+}
+
+/// Google answers a delete of an event it already deleted with 410 Gone,
+/// which the client reads the way it reads an expired sync token. The
+/// event is gone, which is what the delete asked for, so the change
+/// after it still goes out.
+#[tokio::test]
+async fn a_delete_google_answers_with_gone_completes_and_the_queue_moves_on() {
+    let h = harness().await;
+    h.fake.with(|s| {
+        s.calendars = vec![calendar("primary", true)];
+        s.deleted_answers_gone = true;
+    });
+    h.fake.put_calendar_event(event("primary", "a"));
+    h.fake.put_calendar_event(event("primary", "b"));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    copy.remove(h.account_id, "primary", "a").await.unwrap();
+    let mut second = stored(&h, "primary", "b").await.unwrap();
+    second.title = "Second".into();
+    copy.save(h.account_id, second).await.unwrap();
+    // The first delete reached Google, and the app quit before it heard.
+    h.fake.drop_calendar_event("primary", "a");
+
+    let turned_down = copy.send(h.account_id).await.unwrap();
+
+    assert!(turned_down.is_empty(), "{turned_down:?}");
+    assert!(queue(&h).await.is_empty());
+    let on_google = h.fake.with(|s| s.calendar_events.iter().find(|e| e.id == "b").cloned()).unwrap();
+    assert_eq!(on_google.title, "Second");
+}
+
+#[tokio::test]
+async fn an_edit_google_answers_with_gone_leaves_the_queue_and_the_copy() {
+    let h = harness().await;
+    h.fake.with(|s| {
+        s.calendars = vec![calendar("primary", true)];
+        s.deleted_answers_gone = true;
+    });
+    h.fake.put_calendar_event(event("primary", "a"));
+    h.fake.put_calendar_event(event("primary", "b"));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let mut mine = stored(&h, "primary", "a").await.unwrap();
+    mine.title = "Mine".into();
+    copy.save(h.account_id, mine).await.unwrap();
+    let mut second = stored(&h, "primary", "b").await.unwrap();
+    second.title = "Second".into();
+    copy.save(h.account_id, second).await.unwrap();
+    h.fake.drop_calendar_event("primary", "a");
+
+    copy.send(h.account_id).await.unwrap();
+
+    assert!(queue(&h).await.is_empty());
+    assert!(stored(&h, "primary", "a").await.is_none());
+    assert_eq!(stored(&h, "primary", "b").await.unwrap().title, "Second");
+}
+
+/// `calendar_changes` rows outlive a calendar that left the list, so a
+/// new event can wait for a calendar Google no longer has.
+#[tokio::test]
+async fn a_new_event_on_a_calendar_that_is_gone_leaves_the_queue() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true), calendar("team", false)]);
+    h.fake.put_calendar_event(event("primary", "b"));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let id = new_event_id();
+    copy.save(h.account_id, event("team", &id)).await.unwrap();
+    let mut second = stored(&h, "primary", "b").await.unwrap();
+    second.title = "Second".into();
+    copy.save(h.account_id, second).await.unwrap();
+    h.fake.with(|s| {
+        s.calendars.retain(|c| c.id != "team");
+        s.deleted_calendars.push("team".into());
+    });
+
+    let turned_down = copy.send(h.account_id).await.unwrap();
+
+    assert_eq!(turned_down.len(), 1);
+    assert!(queue(&h).await.is_empty());
+    assert!(stored(&h, "team", &id).await.is_none());
+    assert_eq!(stored(&h, "primary", "b").await.unwrap().title, "Second");
+}
+
+/// Only a failure that may pass, such as the network going, stops the
+/// send. Anything else turns the one change down, so no single change
+/// can hold the account's queue.
+#[tokio::test]
+async fn a_change_google_cannot_take_for_any_other_reason_leaves_the_queue() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(event("primary", "a"));
+    h.fake.put_calendar_event(event("primary", "b"));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let mut mine = stored(&h, "primary", "a").await.unwrap();
+    mine.title = "Mine".into();
+    copy.save(h.account_id, mine).await.unwrap();
+    let mut second = stored(&h, "primary", "b").await.unwrap();
+    second.title = "Second".into();
+    copy.save(h.account_id, second).await.unwrap();
+    h.fake.fail_next(mailrs_gmail::GmailError::Decode("not JSON".into()));
+
+    let turned_down = copy.send(h.account_id).await.unwrap();
+
+    assert_eq!(turned_down.len(), 1);
+    assert!(turned_down[0].reason.is_some());
+    assert!(queue(&h).await.is_empty());
+    assert_eq!(stored(&h, "primary", "a").await.unwrap().title, "a", "Google's version is back");
+    assert_eq!(stored(&h, "primary", "b").await.unwrap().title, "Second");
+}
