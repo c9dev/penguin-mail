@@ -6,7 +6,7 @@
 //! every call that would reach a server.
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
-use std::sync::{Mutex, PoisonError};
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use chrono::{DateTime, NaiveDate, Utc};
@@ -16,9 +16,41 @@ use mailrs_imap::{
     Listed, Selected, Since, SpecialUse, UidSet, Woke,
 };
 use mailrs_mime::Part;
-use tokio::sync::Notify;
+use tokio::sync::{Notify, Semaphore};
 
 use crate::services::imap::{ImapApi, Submit};
+
+/// A call the fake stops in until the test lets it go.
+pub struct Hold {
+    reached: Semaphore,
+    released: Semaphore,
+}
+
+impl Default for Hold {
+    fn default() -> Self {
+        Hold {
+            reached: Semaphore::new(0),
+            released: Semaphore::new(0),
+        }
+    }
+}
+
+impl Hold {
+    /// Waits until the held call has reached the hold.
+    pub async fn reached(&self) {
+        let _ = self.reached.acquire().await.map(|p| p.forget());
+    }
+
+    /// Lets the held call go on.
+    pub fn release(&self) {
+        self.released.add_permits(1);
+    }
+
+    async fn wait(&self) {
+        self.reached.add_permits(1);
+        let _ = self.released.acquire().await.map(|p| p.forget());
+    }
+}
 
 /// An IMAP server for one account.
 pub struct FakeImap {
@@ -44,6 +76,9 @@ pub struct ImapState {
     /// answers when the server sends more during an IDLE than the guard
     /// lets through and the connection is dropped.
     pub overflow_idle: bool,
+    /// The next MOVE waits here once it has moved the messages, so a test
+    /// can run something else between a move and what follows it.
+    pub hold_move: Option<Arc<Hold>>,
     /// SELECT leaves UIDNEXT out, as RFC 3501 lets a server do.
     pub omit_uidnext: bool,
     /// How many UIDs every SEARCH has answered, in total, so a test can
@@ -224,6 +259,7 @@ impl FakeImap {
                 calls: VecDeque::new(),
                 aimed: Vec::new(),
                 overflow_idle: false,
+                hold_move: None,
                 omit_uidnext: false,
                 answered: 0,
                 next_uidvalidity: 1000,
@@ -354,6 +390,14 @@ impl FakeImap {
     /// stops an IDLE that brought more than its budget.
     pub fn overflow_next_idle(&self) {
         self.with(|s| s.overflow_idle = true);
+    }
+
+    /// Holds the next MOVE after it has moved the messages, until the
+    /// test calls [`Hold::release`].
+    pub fn hold_next_move(&self) -> Arc<Hold> {
+        let hold = Arc::new(Hold::default());
+        self.with(|s| s.hold_move = Some(Arc::clone(&hold)));
+        hold
     }
 
     /// The latest calls, at most [`MAX_CALLS`], oldest first.
@@ -762,9 +806,13 @@ impl ImapApi for FakeImap {
         }
         check_name(mailbox)?;
         check_name(to)?;
-        self.change(format!("move {mailbox} {uids} {to}"), |s| {
+        let moved = self.change(format!("move {mailbox} {uids} {to}"), |s| {
             s.transfer(mailbox, uids, to, true)
-        })
+        });
+        if let Some(hold) = self.with(|s| s.hold_move.take()) {
+            hold.wait().await;
+        }
+        moved
     }
 
     async fn copy_to(

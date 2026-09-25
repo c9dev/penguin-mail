@@ -18,6 +18,7 @@ impl AccountSync {
     /// yet, and lists the mail again when the server has lost its place. A
     /// mailbox the server renumbered is listed again first, alone.
     pub async fn incremental(&self) -> Result<(), SyncError> {
+        let _moves = self.hold_moves().await;
         let account_id = self.account_id;
         let cursor = self
             .db

@@ -285,6 +285,7 @@ impl AccountSync {
             return Ok(applied);
         }
 
+        let moves = self.hold_moves().await;
         let names = self.remotes(&ids).await?;
         let writing = Writing {
             what: what.to_string(),
@@ -296,8 +297,10 @@ impl AccountSync {
             .write_ops(&mut budget, &ids, &names, &writing, &to_server, &mut progress)
             .await;
         // What the server moved before any refusal has moved, so its refs
-        // follow whatever else happened.
-        self.relocate(&ids, &names, progress.moved).await?;
+        // follow whatever else happened. A failure here still lets the
+        // rollback below run for the messages the server never took.
+        let relocated = self.relocate(&ids, &names, progress.moved).await;
+        drop(moves);
         if let Err(err) = written {
             let back: Vec<Change> = applied
                 .iter()
@@ -315,8 +318,12 @@ impl AccountSync {
                 account_id,
                 message: write_failure(&writing, &err, budget.waited),
             });
+            if let Err(lost) = relocated {
+                tracing::warn!(account = account_id, error = %lost, "could not record where the server moved mail");
+            }
             return Err(err.into());
         }
+        relocated?;
         Ok(applied)
     }
 

@@ -30,6 +30,14 @@ enum Destination {
     Mailbox(String),
 }
 
+/// A run the server moved to `to` whose copies a search has not found
+/// yet, with the Message-IDs read before the move.
+pub(super) struct Unfound {
+    run: Vec<Location>,
+    to: String,
+    message_ids: HashMap<u32, String>,
+}
+
 /// What one write asks of each message.
 #[derive(Debug, Default, PartialEq, Eq)]
 struct Plan {
@@ -158,6 +166,11 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         let Some(first) = run.first() else {
             return Ok(Vec::new());
         };
+        if let Some(to) = to
+            && let Some(message_ids) = self.take_unfound(run, to)
+        {
+            return self.find_moved_again(run, message_ids, to).await;
+        }
         let mailbox = first.mailbox.as_str();
         // After a UIDVALIDITY change the same UIDs name other messages.
         if self.select(mailbox, None).await?.uidvalidity != first.uidvalidity {
@@ -214,7 +227,42 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         };
         match copied {
             Some(copy) => Ok(relocations(run, &copy, to)),
-            None => self.find_moved(run, &message_ids, to).await,
+            None => self.find_moved_again(run, message_ids, to).await,
+        }
+    }
+
+    /// The Message-IDs recorded for `run` when an earlier try moved it to
+    /// `to` and could not find where it landed.
+    fn take_unfound(&self, run: &[Location], to: &str) -> Option<HashMap<u32, String>> {
+        let mut known = self.known();
+        match known.unfound.take() {
+            Some(unfound) if unfound.run == run && unfound.to == to => Some(unfound.message_ids),
+            other => {
+                known.unfound = other;
+                None
+            }
+        }
+    }
+
+    /// [`Imap::find_moved`] for a run that has moved. When the search
+    /// fails the run is recorded, so the write's retry searches again
+    /// and does not ask the server to move messages that have left.
+    async fn find_moved_again(
+        &self,
+        run: &[Location],
+        message_ids: HashMap<u32, String>,
+        to: &str,
+    ) -> Result<Vec<Relocated>, BackendError> {
+        match self.find_moved(run, &message_ids, to).await {
+            Ok(found) => Ok(found),
+            Err(error) => {
+                self.known().unfound = Some(Unfound {
+                    run: run.to_vec(),
+                    to: to.to_string(),
+                    message_ids,
+                });
+                Err(error)
+            }
         }
     }
 

@@ -111,6 +111,10 @@ struct Known {
     /// Every look covers every synced mailbox, for tests that should not
     /// wait for the slow poll.
     every_look: bool,
+    /// The last run a move took whose new places the Message-ID search
+    /// failed to find. The retry of that run searches again rather than
+    /// moving messages that have left. One run at most.
+    unfound: Option<writes::Unfound>,
     /// IDLE attempts on the Inbox that failed in a row, so a server that
     /// keeps refusing or dropping it is watched less and less often. A
     /// success, including one the guard ends early, resets it.

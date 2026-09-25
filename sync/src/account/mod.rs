@@ -55,6 +55,11 @@ pub struct AccountSync {
     /// The last small messages fetched whole, so a file opened right
     /// after its message costs no second fetch.
     raw: Arc<Mutex<RawCache>>,
+    /// Taken on a folder server by a write from its first server command
+    /// to the moment its moved messages' refs are recorded, and by every
+    /// look that can delete mail. A look in between would read a moved
+    /// message's old place as expunged and delete it.
+    moving: tokio::sync::Mutex<()>,
 }
 
 /// How long a finished history replay speaks for the whole mailbox. The
@@ -83,6 +88,7 @@ impl AccountSync {
             listed: Mutex::default(),
             hits: Mutex::default(),
             raw: Arc::new(Mutex::new(RawCache::new(RAW_CACHE_BYTES))),
+            moving: tokio::sync::Mutex::new(()),
         }
     }
 
@@ -156,6 +162,16 @@ impl AccountSync {
             .read(move |c| messages::size_of(c, account_id, &key))
             .await?;
         Ok(size.is_some_and(|s| s > 0 && s < RAW_LIMIT))
+    }
+
+    /// On a folder server, waits for any write still moving mail and keeps
+    /// others out until the guard drops. A label server names a message
+    /// the same wherever it sits, so nothing there waits.
+    pub(super) async fn hold_moves(&self) -> Option<tokio::sync::MutexGuard<'_, ()>> {
+        match self.renames() {
+            true => Some(self.moving.lock().await),
+            false => None,
+        }
     }
 
     /// Records that history replay left the store up to date.
