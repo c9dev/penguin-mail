@@ -394,7 +394,15 @@ impl<A: Accounts> CalendarCopy<A> {
                         self.db.write(move |c| store::dequeue(c, seq)).await?;
                         continue;
                     };
-                    calendar.put_event(&body, change.etag.as_deref(), create).await.map(Some)
+                    match calendar.put_event(&body, change.etag.as_deref(), create).await {
+                        // The id is one this computer made, so a 409 means an
+                        // earlier send of this create reached Google and its
+                        // answer was lost. An edit made since sits in the
+                        // body, so it goes out as a change.
+                        Err(BackendError::Changed) if create => calendar.put_event(&body, None, false).await,
+                        other => other,
+                    }
+                    .map(Some)
                 }
             };
             match (change.kind, answer) {
@@ -430,14 +438,6 @@ impl<A: Accounts> CalendarCopy<A> {
                     // A new event's id cannot be missing, so it is the
                     // calendar that went: its rows in the queue outlive it.
                     turned_down.push(self.drop_gone(&change, "the calendar is gone").await?);
-                }
-                (store::ChangeKind::Create, Err(BackendError::Changed)) => {
-                    // The create reached Google and its answer was lost,
-                    // so the id already exists. Nothing to report; read
-                    // the calendar again so the copy picks up Google's
-                    // version.
-                    self.db.write(move |c| store::dequeue(c, seq)).await?;
-                    self.read_calendar(&calendar, account_id, &change.calendar, crate::now_millis()).await?;
                 }
                 (_, Err(BackendError::Changed)) => {
                     turned_down.push(self.take_theirs(&calendar, &change, None).await?);
