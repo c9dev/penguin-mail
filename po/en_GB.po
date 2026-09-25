@@ -2209,43 +2209,43 @@ msgstr "Light"
 msgid "Dark"
 msgstr "Dark"
 
-#: app/src/settings/mod.rs:648
+#: app/src/settings/mod.rs:660
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "Every second"
 msgstr[1] "Every {count} seconds"
 
-#: app/src/settings/mod.rs:656
+#: app/src/settings/mod.rs:668
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "Every minute"
 msgstr[1] "Every {count} minutes"
 
-#: app/src/settings/mod.rs:673
+#: app/src/settings/mod.rs:685
 msgid "2 weeks"
 msgstr "2 weeks"
 
-#: app/src/settings/mod.rs:674
+#: app/src/settings/mod.rs:686
 msgid "30 days"
 msgstr "30 days"
 
-#: app/src/settings/mod.rs:675
+#: app/src/settings/mod.rs:687
 msgid "90 days"
 msgstr "90 days"
 
-#: app/src/settings/mod.rs:676
+#: app/src/settings/mod.rs:688
 msgid "1 year"
 msgstr "1 year"
 
-#: app/src/settings/mod.rs:683
+#: app/src/settings/mod.rs:695
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:684
+#: app/src/settings/mod.rs:696
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:685
+#: app/src/settings/mod.rs:697
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -3082,6 +3082,34 @@ msgstr "Brave Search API Key (Saved)"
 #: app/src/ui/assistant_web_prefs.rs:127
 msgid "Brave Search API Key"
 msgstr "Brave Search API Key"
+
+#: app/src/ui/calendar/range.rs:91
+msgid "%A %-d"
+msgstr "%A %-d"
+
+#: app/src/ui/calendar/range.rs:94
+msgid "%B %Y"
+msgstr "%B %Y"
+
+#: app/src/ui/calendar/range.rs:102 app/src/ui/calendar/range.rs:133
+msgid "%B"
+msgstr "%B"
+
+#: app/src/ui/calendar/range.rs:106
+msgid "{first} – {last}"
+msgstr "{first} – {last}"
+
+#: app/src/ui/calendar/range.rs:112 app/src/ui/calendar/range.rs:118
+msgid "%b"
+msgstr "%b"
+
+#: app/src/ui/calendar/range.rs:125 app/src/ui/calendar/range.rs:136
+msgid "%Y"
+msgstr "%Y"
+
+#: app/src/ui/calendar/range.rs:153
+msgid "W{week}"
+msgstr "W{week}"
 
 #: app/src/ui/composer/mod.rs:204 app/src/ui/conversation.rs:1561
 msgid "Choose a Time…"
@@ -4061,7 +4089,7 @@ msgstr "The organiser cancelled this meeting"
 msgid "This meeting is canceled"
 msgstr "This meeting is cancelled"
 
-#: app/src/ui/mod.rs:263
+#: app/src/ui/mod.rs:265
 msgid "Gray"
 msgstr "Grey"
 

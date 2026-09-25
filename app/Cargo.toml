@@ -57,6 +57,7 @@ url.workspace = true
 webkit.workspace = true
 
 [dev-dependencies]
+chrono-tz.workspace = true
 mail-parser.workspace = true
 tempfile.workspace = true
 wiremock.workspace = true

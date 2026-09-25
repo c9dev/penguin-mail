@@ -640,6 +640,18 @@ impl Choice for ColorScheme {
     }
 }
 
+/// Which grid the calendar page shows. Lives here, not in `ui`, because
+/// settings imports nothing from it; `ui::calendar::range` uses this type
+/// as its `ViewKind`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CalendarView {
+    Day,
+    #[default]
+    Week,
+    Month,
+}
+
 /// How often each account checks Gmail, in seconds. These say "every so
 /// often" the way an event's repeat rule does, and share its words.
 pub fn poll_choices() -> Vec<(i64, String)> {
