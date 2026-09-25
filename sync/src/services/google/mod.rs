@@ -440,7 +440,10 @@ impl<G: GmailApi> MailBackend for Google<G> {
     }
 
     /// Gmail stores the same keywords whatever the label.
-    async fn keywords_stored(&self, _mailbox: &str) -> Result<&'static [&'static str], BackendError> {
+    async fn keywords_stored(
+        &self,
+        _mailbox: &str,
+    ) -> Result<&'static [&'static str], BackendError> {
         Ok(self.capabilities().keywords)
     }
 }

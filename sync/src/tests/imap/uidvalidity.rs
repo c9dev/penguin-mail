@@ -182,7 +182,8 @@ async fn a_renamed_mailbox_keeps_its_messages() {
 #[tokio::test]
 async fn a_renamed_mailbox_keeps_its_memberships_and_counts() {
     let h = imap_harness().await;
-    h.imap.deliver_flagged("INBOX", &message("a", "Kites", ""), &[], days_ago(1));
+    h.imap
+        .deliver_flagged("INBOX", &message("a", "Kites", ""), &[], days_ago(1));
     h.bootstrap().await;
     h.imap.add_mailbox("Projects", None);
     h.sync.refresh_labels().await.unwrap();
@@ -195,18 +196,29 @@ async fn a_renamed_mailbox_keeps_its_memberships_and_counts() {
     h.sync.rename_label("Projects", "Work").await.unwrap();
     h.sync.refresh_labels().await.unwrap();
 
-    assert_eq!(h.stored("INBOX/1001/1").await.unwrap().held.mailboxes, ["Work"]);
+    assert_eq!(
+        h.stored("INBOX/1001/1").await.unwrap().held.mailboxes,
+        ["Work"]
+    );
     let account_id = h.account_id;
-    let (counts, listed) = h
-        .db
-        .read(move |c| Ok((threads::mail_counts(c)?, mailboxes::listed(c, account_id)?)))
-        .await
-        .unwrap();
-    assert_eq!(counts.account(account_id, &MailSet::Mailbox("Work".into())).threads, 1);
+    let (counts, listed) =
+        h.db.read(move |c| Ok((threads::mail_counts(c)?, mailboxes::listed(c, account_id)?)))
+            .await
+            .unwrap();
+    assert_eq!(
+        counts
+            .account(account_id, &MailSet::Mailbox("Work".into()))
+            .threads,
+        1
+    );
     assert!(listed.iter().all(|m| m.id != "Projects"));
     let fetched = h.imap.calls_to("headers");
     h.sync.incremental().await.unwrap();
-    assert_eq!(h.imap.calls_to("headers"), fetched, "nothing is fetched again");
+    assert_eq!(
+        h.imap.calls_to("headers"),
+        fetched,
+        "nothing is fetched again"
+    );
     assert_eq!(h.ids().await, ["INBOX/1001/1"]);
 }
 
@@ -270,7 +282,8 @@ async fn a_renamed_followed_mailbox_keeps_its_place_in_the_feed() {
     h.sync.incremental().await.unwrap();
 
     h.sync.rename_label("Projects", "Work").await.unwrap();
-    h.imap.deliver_flagged("Work", &message("a", "Kites", ""), &[], days_ago(1));
+    h.imap
+        .deliver_flagged("Work", &message("a", "Kites", ""), &[], days_ago(1));
     h.sync.incremental().await.unwrap();
 
     assert!(h.is_followed("Work"));

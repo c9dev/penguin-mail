@@ -1,6 +1,6 @@
+use mailrs_domain::Membership;
 use mailrs_domain::{ChangeEvent, MailSet, Role, Target};
 use mailrs_imap::{ImapError, UidSet};
-use mailrs_domain::Membership;
 use mailrs_store::messages::{self, Change};
 use mailrs_store::{bodies, mailboxes};
 
@@ -105,7 +105,10 @@ async fn a_refused_write_rolls_back_even_when_its_moves_cannot_be_recorded() {
     let ids = ["INBOX/1001/1", "Sent/1002/1"];
     let mut targets = Vec::new();
     for id in ids {
-        targets.push(Target::thread(h.account_id, &h.thread_of(id).await.unwrap()));
+        targets.push(Target::thread(
+            h.account_id,
+            &h.thread_of(id).await.unwrap(),
+        ));
     }
     // The first run moves; the second is refused, and the listing that
     // would record the new mailbox fails too.
@@ -116,7 +119,8 @@ async fn a_refused_write_rolls_back_even_when_its_moves_cannot_be_recorded() {
         sync.triage_all(&targets, &to).await
     });
     hold.reached().await;
-    h.imap.fail_on("move", ImapError::Refused("NO no room".into()));
+    h.imap
+        .fail_on("move", ImapError::Refused("NO no room".into()));
     h.imap.fail_on("list", ImapError::Network("reset".into()));
     hold.release();
     assert!(moving.await.unwrap().is_err());
@@ -313,12 +317,17 @@ async fn a_mute_right_after_a_restart_reaches_a_server_that_stores_it() {
     let (h, thread) = one_message_on(FakeImap::new()).await;
     let sync = h.restarted();
 
-    sync.triage_thread(&thread, &TriageAction::Mute).await.unwrap();
+    sync.triage_thread(&thread, &TriageAction::Mute)
+        .await
+        .unwrap();
     h.imap.remote_flag("Archive", 1, "\\Seen", true);
     sync.incremental().await.unwrap();
 
     let flags = h.imap.message("Archive", 1).unwrap().flags;
-    assert!(flags.iter().any(|f| f.eq_ignore_ascii_case("$muted")), "{flags:?}");
+    assert!(
+        flags.iter().any(|f| f.eq_ignore_ascii_case("$muted")),
+        "{flags:?}"
+    );
     assert!(h.stored("INBOX/1001/1").await.unwrap().is_muted());
 }
 
@@ -328,7 +337,11 @@ async fn a_flag_report_leaves_a_keyword_kept_on_this_computer() {
     let account_id = h.account_id;
     h.db.write(move |c| {
         let id = "INBOX/1001/1".to_string();
-        messages::apply(c, account_id, &[Change::of(&id, Membership::Keyword("$muted".into()), true)])?;
+        messages::apply(
+            c,
+            account_id,
+            &[Change::of(&id, Membership::Keyword("$muted".into()), true)],
+        )?;
         messages::mark_local(c, account_id, &[id], "$muted")
     })
     .await

@@ -366,7 +366,10 @@ impl AccountSync {
                 let mut ids = Vec::new();
                 for (thread, only) in &wanted {
                     for message in messages::thread_messages(c, account_id, thread)? {
-                        if only.as_ref().is_none_or(|named| named.contains(&message.id)) {
+                        if only
+                            .as_ref()
+                            .is_none_or(|named| named.contains(&message.id))
+                        {
                             ids.push(message.id);
                         }
                     }

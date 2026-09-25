@@ -426,7 +426,14 @@ mod tests {
 
     #[test]
     fn a_keyword_that_is_not_an_imap_atom_is_unsayable() {
-        for keyword in ["two words", "caf\u{e9}", "a\"quote", "(paren", "back\\slash", ""] {
+        for keyword in [
+            "two words",
+            "caf\u{e9}",
+            "a\"quote",
+            "(paren",
+            "back\\slash",
+            "",
+        ] {
             let query = term(Term::In(MailSet::Keyword(keyword.into())));
             assert_eq!(print(&query, today()), Err(Unsayable), "{keyword:?}");
         }

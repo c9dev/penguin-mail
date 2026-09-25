@@ -164,7 +164,11 @@ impl AccountSync {
     /// newest first, then what the server finds past them, at most `limit`
     /// in all. A server search that fails, or one the server cannot say,
     /// leaves the store's answer, marked `store_only`.
-    async fn search_stored_and_past(&self, tree: &Query, limit: usize) -> Result<Searched, SyncError> {
+    async fn search_stored_and_past(
+        &self,
+        tree: &Query,
+        limit: usize,
+    ) -> Result<Searched, SyncError> {
         let mut refs = self.stored_matches(tree, limit).await?;
         let past = match self.search_tree(tree, limit).await {
             Ok(past) => past,

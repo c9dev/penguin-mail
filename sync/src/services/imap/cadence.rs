@@ -120,7 +120,10 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
                     known.idle_failures = known.idle_failures.saturating_add(1);
                     let wait = watch_retry(known.idle_failures - 1);
                     known.idle_pause = Some(wait);
-                    tracing::warn!(?wait, "the server sent more during IDLE than the client takes; syncing, then waiting before the next IDLE");
+                    tracing::warn!(
+                        ?wait,
+                        "the server sent more during IDLE than the client takes; syncing, then waiting before the next IDLE"
+                    );
                     return;
                 }
                 Ok(woke) => {

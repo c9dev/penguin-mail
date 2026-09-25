@@ -423,7 +423,10 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         Ok(Some(self.select(mailbox, None).await?.uidvalidity))
     }
 
-    async fn keywords_stored(&self, mailbox: &str) -> Result<&'static [&'static str], BackendError> {
+    async fn keywords_stored(
+        &self,
+        mailbox: &str,
+    ) -> Result<&'static [&'static str], BackendError> {
         let known = self.known().keywords.get(mailbox).copied();
         if let Some(keywords) = known {
             return Ok(keywords);
