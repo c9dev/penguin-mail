@@ -5,8 +5,9 @@
 //! names the invitation card a message shows (`CONTEXT.md`).
 
 use chrono::{DateTime, TimeZone, Utc};
-use gtk::pango;
 use gtk::prelude::*;
+use gtk::subclass::prelude::*;
+use gtk::{gdk, glib, graphene, gsk, pango};
 use mailrs_domain::{AccountId, EpochMillis};
 use mailrs_domain::calendar::{Event, Occurrence};
 use mailrs_domain::invitation::Answer;
@@ -19,7 +20,14 @@ use crate::ui::calendar::tint;
 /// title's own line, right-aligned, rather than a line under it.
 const COMPACT_MS: EpochMillis = 45 * 60_000;
 
-/// The button GTK draws one occurrence of an event as.
+/// The dashed outline of an invitation not answered yet, as the mockup
+/// strokes it: 1.5 px, dashes of 5 and gaps of 4, on the block's own
+/// 8 px corners. CSS draws `dashed` borders with short dashes and 1 px
+/// gaps, so the block strokes the outline itself.
+const DASH_WIDTH: f32 = 1.5;
+const DASH: [f32; 2] = [5.0, 4.0];
+const CORNER: f32 = 8.0;
+
 /// Which event a block draws: its account, calendar and id. The view
 /// finds a block by it to point a popover at an event it opens by name.
 pub type EventKey = (AccountId, String, String);
@@ -31,6 +39,7 @@ pub fn key_of(o: &Occurrence) -> EventKey {
 
 pub struct EventBlock {
     pub widget: gtk::Button,
+    title: gtk::Label,
 }
 
 impl EventBlock {
@@ -48,11 +57,14 @@ impl EventBlock {
         let event = &o.event;
         let colour = event.color.as_deref().unwrap_or(calendar_colour);
 
-        let button = gtk::Button::builder()
-            .css_classes(["event-block", &tint::css_class(colour)])
-            .build();
+        let block: BlockButton = glib::Object::new();
+        let button = block.clone().upcast::<gtk::Button>();
+        button.set_css_classes(&["event-block", &tint::css_class(colour)]);
         match answer_state(event) {
-            AnswerState::Unanswered => button.add_css_class("unanswered"),
+            AnswerState::Unanswered => {
+                button.add_css_class("unanswered");
+                block.imp().dashed.set(Some(outline_colour(colour)));
+            }
             AnswerState::Declined => button.add_css_class("declined"),
             AnswerState::Answered => {}
         }
@@ -64,7 +76,9 @@ impl EventBlock {
             .css_classes(["title"])
             .xalign(0.0)
             .ellipsize(pango::EllipsizeMode::End)
-            .single_line_mode(true)
+            .wrap(true)
+            .wrap_mode(pango::WrapMode::Word)
+            .lines(1)
             .build();
 
         let text = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -88,17 +102,17 @@ impl EventBlock {
             }
         }
 
-        let content = gtk::Box::new(gtk::Orientation::Horizontal, 7);
+        // The bar sits 1 px in and the text 11 px in, as the mockup has
+        // them.
+        let content = gtk::Box::new(gtk::Orientation::Horizontal, 6);
         content.append(&bar);
         content.append(&text);
 
         if event.pending {
-            let waiting = gtk::Image::builder()
-                .icon_name("content-loading-symbolic")
-                .pixel_size(12)
-                .build();
-            waiting.set_tooltip_text(Some(&gettext("Waiting to be saved")));
-            content.append(&waiting);
+            // The clock the block draws in its top right corner; the
+            // title stops short of it.
+            block.imp().pending.set(true);
+            text.set_margin_end(14);
         }
 
         button.set_child(Some(&content));
@@ -107,8 +121,98 @@ impl EventBlock {
         ui::describe(&button, &name, &description(event));
         button.set_tooltip_text(Some(&name));
 
-        EventBlock { widget: button }
+        EventBlock { widget: button, title }
     }
+
+    /// Lets the title wrap onto up to `lines` lines, for a block tall
+    /// enough to hold them above its time.
+    pub fn set_title_lines(&self, lines: i32) {
+        self.title.set_lines(lines.max(1));
+    }
+}
+
+/// The colour an unanswered block's outline takes: its own, or the
+/// accent for a colour [`tint::parse_hex`] cannot read, as `.cal-accent`
+/// does in the stylesheet.
+fn outline_colour(colour: &str) -> gdk::RGBA {
+    match tint::parse_hex(colour) {
+        Some((r, g, b)) => gdk::RGBA::new(
+            f32::from(r) / 255.0,
+            f32::from(g) / 255.0,
+            f32::from(b) / 255.0,
+            1.0,
+        ),
+        None => adw::StyleManager::default().accent_color_rgba(),
+    }
+}
+
+mod imp {
+    use std::cell::Cell;
+
+    use super::*;
+
+    /// A button that strokes the outlines CSS cannot draw as the mockup
+    /// does.
+    #[derive(Default)]
+    pub struct BlockButton {
+        /// The colour of the dashed outline of an invitation not
+        /// answered yet.
+        pub dashed: Cell<Option<gdk::RGBA>>,
+        /// Whether a change to the event waits to be sent, which a clock
+        /// in the top right corner says.
+        pub pending: Cell<bool>,
+    }
+
+    #[glib::object_subclass]
+    impl ObjectSubclass for BlockButton {
+        const NAME: &'static str = "MailrsEventBlock";
+        type Type = super::BlockButton;
+        type ParentType = gtk::Button;
+    }
+
+    impl ObjectImpl for BlockButton {}
+
+    impl WidgetImpl for BlockButton {
+        fn snapshot(&self, snapshot: &gtk::Snapshot) {
+            self.parent_snapshot(snapshot);
+            let widget = self.obj();
+            let (width, height) = (widget.width() as f32, widget.height() as f32);
+            if let Some(colour) = self.dashed.get() {
+                // The mockup's stroke sits on the block's edge, half in
+                // and half out, as an SVG stroke does.
+                let bounds = graphene::Rect::new(0.0, 0.0, width, height);
+                let path = gsk::PathBuilder::new();
+                path.add_rounded_rect(&gsk::RoundedRect::from_rect(bounds, CORNER));
+                let stroke = gsk::Stroke::new(DASH_WIDTH);
+                stroke.set_dash(&DASH);
+                snapshot.append_stroke(&path.to_path(), &stroke, &colour);
+            }
+            if self.pending.get() {
+                // A clock of radius 5.5 and 1.4 px lines, 14 px in from
+                // the top right corner, in the dimmed text colour.
+                let mut dim = widget.color();
+                dim.set_alpha(dim.alpha() * 0.64);
+                let (x, y) = (width - 14.0, 14.0);
+                let path = gsk::PathBuilder::new();
+                path.add_circle(&graphene::Point::new(x, y), 5.5);
+                path.move_to(x, y);
+                path.line_to(x, y - 3.0);
+                path.move_to(x, y);
+                path.line_to(x + 2.5, y);
+                let stroke = gsk::Stroke::new(1.4);
+                stroke.set_line_cap(gsk::LineCap::Round);
+                snapshot.append_stroke(&path.to_path(), &stroke, &dim);
+            }
+        }
+    }
+
+    impl ButtonImpl for BlockButton {}
+}
+
+glib::wrapper! {
+    pub struct BlockButton(ObjectSubclass<imp::BlockButton>)
+        @extends gtk::Button, gtk::Widget,
+        @implements gtk::Accessible, gtk::Actionable, gtk::Buildable, gtk::ConstraintTarget;
 }
 
 /// Whether the occurrence's length puts its time beside the title rather
@@ -174,34 +278,47 @@ where
 }
 
 /// The card's own time line: "10:00–11:30", or just the start when
-/// `compact` puts it beside the title and the card has no room for both.
-fn time_label<Z: TimeZone>(o: &Occurrence, compact: bool, zone: &Z) -> gtk::Label
+/// `compact` puts it beside the title or the lane has no room for both.
+fn time_label<Z: TimeZone>(o: &Occurrence, compact: bool, zone: &Z) -> gtk::Widget
 where
     Z::Offset: std::fmt::Display,
 {
-    let text = if compact {
-        clock(o.start, zone)
-    } else {
-        fill(
-            &gettext("{start}–{end}"),
-            &[
-                ("start", &clock(o.start, zone)),
-                ("end", &clock(o.end, zone)),
-            ],
-        )
+    let start = clock(o.start, zone);
+    let label = |text: &str| {
+        gtk::Label::builder()
+            .label(text)
+            .css_classes(["time"])
+            .xalign(if compact { 1.0 } else { 0.0 })
+            .halign(if compact {
+                gtk::Align::End
+            } else {
+                gtk::Align::Start
+            })
+            .ellipsize(pango::EllipsizeMode::End)
+            .single_line_mode(true)
+            .build()
     };
-    gtk::Label::builder()
-        .label(&text)
-        .css_classes(["time"])
-        .xalign(if compact { 1.0 } else { 0.0 })
-        .halign(if compact {
-            gtk::Align::End
-        } else {
-            gtk::Align::Start
-        })
-        .ellipsize(pango::EllipsizeMode::End)
-        .single_line_mode(true)
-        .build()
+    if compact {
+        return label(&start).upcast();
+    }
+    let full = label(&fill(
+        &gettext("{start}–{end}"),
+        &[("start", &start), ("end", &clock(o.end, zone))],
+    ));
+    // A block in a lane too narrow for "10:00–11:30" shows "10:00", as
+    // a compact block does, rather than cutting the end time short. The
+    // overlay learns its width as it lays out, which is when it chooses.
+    let short = label(&start);
+    let time = gtk::Overlay::builder().child(&full).build();
+    time.add_overlay(&short);
+    let chosen = full.clone();
+    time.connect_get_child_position(move |time, short| {
+        let fits = chosen.measure(gtk::Orientation::Horizontal, -1).1 <= time.width();
+        chosen.set_child_visible(fits);
+        short.set_child_visible(!fits);
+        Some(gdk::Rectangle::new(0, 0, time.width(), time.height()))
+    });
+    time.upcast()
 }
 
 /// What a screen reader says for the block: the title, the time and the

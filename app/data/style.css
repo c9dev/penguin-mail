@@ -373,12 +373,15 @@ button.calendar-today {
    labels, the unchosen ones dimmed at weight 600. */
 toggle-group.view-switch > toggle,
 toggle-group.space-switch > toggle { font-size: 0.89em; font-weight: 600; }
-toggle-group.view-switch > toggle { min-width: 50px; }
+/* The mockup's switch is a 204 x 32 pill of three 64 px toggles. */
+toggle-group.view-switch > toggle { min-width: 64px; padding-left: 0; padding-right: 0; }
 toggle-group.space-switch > toggle { -gtk-icon-size: 14px; padding-left: 12px; padding-right: 12px; }
 toggle-group.view-switch > toggle:not(:checked),
 toggle-group.space-switch > toggle:not(:checked) { color: color-mix(in srgb, currentColor 64%, transparent); }
+/* The chosen toggle is the view colour on the pill, white in light and
+   the darker #1e1e21 in dark, where libadwaita would lighten it. */
 toggle-group.view-switch > toggle:checked,
-toggle-group.space-switch > toggle:checked { font-weight: 700; }
+toggle-group.space-switch > toggle:checked { font-weight: 700; background: var(--view-bg-color); }
 
 /* An event block is a button so a press answers at once; GTK's own
    button rules would otherwise add a background, a border and a shadow
@@ -386,7 +389,7 @@ toggle-group.space-switch > toggle:checked { font-weight: 700; }
    bottom; the title starts 11 px in. */
 button.event-block {
   border-radius: 8px;
-  padding: 3px 7px 3px 1px;
+  padding: 3px 2px 3px 1px;
   background-color: color-mix(in srgb, var(--accent-bg-color) 14%, var(--view-bg-color));
   box-shadow: none;
   min-height: 0;
@@ -411,14 +414,18 @@ button.event-block:active {
 }
 /* Under 45 minutes the block is too short for two lines, so the title
    and the time share one line, the time against the right edge. */
-button.event-block.compact { padding-top: 0; padding-bottom: 0; }
+button.event-block.compact { padding-top: 0; padding-bottom: 0; padding-right: 7px; }
 button.event-block.compact .bar { margin: 3px 0; }
 button.event-block.compact .title { font-size: 0.82em; margin-top: 0; }
-/* An invitation not answered yet: an outline in its colour, no tint and
-   no bar. */
-.event-block.unanswered {
-  background: var(--view-bg-color);
-  border: 1.5px dashed var(--cal-colour);
+/* An invitation not answered yet: no tint and no bar. The block strokes
+   its dashed outline itself (block.rs), since a CSS dashed border cannot
+   draw the mockup's 5 and 4 pattern. These rules outrank the tint rules
+   tint.rs writes, which would fill it. */
+button.event-block.unanswered,
+.calendar-dark button.event-block.unanswered { background: var(--view-bg-color); }
+button.event-block.unanswered:hover,
+.calendar-dark button.event-block.unanswered:hover {
+  background: color-mix(in srgb, var(--cal-colour) 8%, var(--view-bg-color));
 }
 .event-block.unanswered .bar { background: transparent; }
 .event-block.declined { opacity: 0.5; }
@@ -479,6 +486,7 @@ button.day-heading { min-height: 26px; padding: 0 14px; border-radius: 13px; }
 .mini-month button.today .dot,
 .mini-month button.outside .dot { opacity: 0; }
 .mini-month-header button { min-width: 24px; min-height: 24px; padding: 0; }
+.mini-month-header button label { font-size: 1.36em; font-weight: 400; }
 .calendar-row { min-height: 28px; }
 .calendar-lock { opacity: 0.4; }
 .mini-month { margin-top: -2px; }
@@ -532,10 +540,32 @@ popover.event-popover > contents { border-radius: 16px; padding: 0; }
 popover.event-popover label { font-size: 0.89em; }
 popover.event-popover .popover-title { font-size: 1.16em; }
 popover.event-popover .popover-when { font-size: 0.85em; }
+/* GTK adds a button's own padding to its min-height; the mockup's
+   buttons are 34 px in all. */
 button.popover-join, button.popover-answer {
   min-height: 34px;
+  padding-top: 0;
+  padding-bottom: 0;
   border-radius: 10px;
   font-weight: 700;
 }
-popover.event-popover button.popover-maps { min-height: 0; padding: 0 4px; }
+/* The mockup's popover is the view colour in light, #36363c in dark, and
+   its unchosen buttons the pill colour, #e3e3e7 and #3a3a40. */
+popover.event-popover > contents { background: var(--view-bg-color); }
+.calendar-dark popover.event-popover > contents { background: #36363c; }
+popover.event-popover button.popover-join,
+popover.event-popover button.popover-answer:not(.suggested-action) { background: #e3e3e7; }
+.calendar-dark popover.event-popover button.popover-join,
+.calendar-dark popover.event-popover button.popover-answer:not(.suggested-action) { background: #3a3a40; }
+/* The place row is a button only so it can open the map; it reads as
+   the rows around it. */
+popover.event-popover button.popover-place { min-height: 0; padding: 0; margin: 0 -4px; padding: 0 4px; font-weight: 400; }
 button.popover-answer.suggested-action { background: var(--accent-bg-color); color: var(--accent-fg-color); }
+popover.event-popover button.popover-join:hover,
+popover.event-popover button.popover-answer:not(.suggested-action):hover {
+  background: color-mix(in srgb, currentColor 8%, #e3e3e7);
+}
+.calendar-dark popover.event-popover button.popover-join:hover,
+.calendar-dark popover.event-popover button.popover-answer:not(.suggested-action):hover {
+  background: color-mix(in srgb, currentColor 8%, #3a3a40);
+}

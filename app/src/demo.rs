@@ -709,6 +709,7 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
     // once every sample and event is in its fake, before the window
     // ever opens.
     let mut syncing: HashMap<AccountId, Arc<AccountSync>> = HashMap::new();
+    let mut first_account = None;
     for (index, account) in ACCOUNTS.iter().enumerate() {
         let email = account.email;
         let account_id = db
@@ -750,6 +751,7 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
         }
         if index == 0 {
             queue_samples(db, account_id, now).await?;
+            first_account = Some(account_id);
         }
         syncing.insert(account_id, Arc::clone(&sync));
         mail.insert(account_id, DemoServer::Gmail(fake));
@@ -766,6 +768,25 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
     let copy = CalendarCopy::new(Arc::new(Seeding(syncing)), db.clone());
     for account_id in gmail_accounts {
         copy.refresh(account_id, now).await?;
+    }
+    // Parents' evening is a change made on this computer and not sent
+    // yet, as the mockup draws it. It goes straight into the copy with no
+    // queued change, so the demo never sends it and it stays waiting;
+    // the copy's sweep keeps a waiting row.
+    if let Some(account_id) = first_account {
+        let monday = week_monday(now);
+        let waiting = CalendarEvent {
+            pending: true,
+            ..timed_event(
+                FAMILY,
+                "parents-evening",
+                "Parents' evening",
+                at_week(monday, 3, 17, 0),
+                at_week(monday, 3, 18, 0),
+            )
+        };
+        db.write(move |c| mailrs_store::calendar::save_events(c, account_id, &[waiting], now))
+            .await?;
     }
 
     Ok(DemoMail(mail))
@@ -1019,6 +1040,7 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
             at_week(monday, 3, 11, 0),
             at_week(monday, 3, 13, 0),
         ),
+        timed_event(DESIGN_TEAM, "retro", "Retro", at_week(monday, 4, 16, 30), at_week(monday, 4, 17, 30)),
     ];
     let (offsite_start, offsite_end) = all_day_utc(monday.date_naive() + chrono::Duration::days(3), 2);
     events.push(CalendarEvent {
