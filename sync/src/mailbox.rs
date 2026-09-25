@@ -943,12 +943,18 @@ impl<A: Accounts> Mailboxes<A> {
                     }
                     listing.pages.push(page);
                 }
+                // The account is done for this listing: a page left
+                // unlisted would be asked again at once, and an account
+                // whose search keeps failing would keep the loop going.
                 Err(err) => {
                     listing.notices.push(fill(
                         &gettext("Could not load mail for {account}: {reason}"),
                         &[("account", &account.email), ("reason", &err.to_string())],
                     ));
-                    listing.pages.push(RemotePage::default());
+                    listing.pages.push(RemotePage {
+                        listed: true,
+                        ..RemotePage::default()
+                    });
                 }
             }
         }
