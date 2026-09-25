@@ -352,8 +352,8 @@ msgstr ""
 msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr "Bloquear {address}? O correio futuro vai direto para o lixo."
 
-#: app/src/assistant/run.rs:1278 app/src/assistant/run/calendar.rs:178
-#: app/src/assistant/run/calendar.rs:540
+#: app/src/assistant/run.rs:1278 app/src/assistant/run/calendar.rs:196
+#: app/src/assistant/run/calendar.rs:574
 msgid "%a %-d %b"
 msgstr "%a %-d %b"
 
@@ -401,68 +401,68 @@ msgstr ""
 "Mover o correio de {sender} para {category} em {account} e criar uma regra "
 "do {provider} para o correio futuro?"
 
-#: app/src/assistant/run/calendar.rs:184 app/src/assistant/run/calendar.rs:544
+#: app/src/assistant/run/calendar.rs:202 app/src/assistant/run/calendar.rs:578
 msgid "%a %-d %b %H:%M"
 msgstr "%a %-d %b %H:%M"
 
-#: app/src/assistant/run/calendar.rs:197 app/src/assistant/run/calendar.rs:201
-#: app/src/assistant/run/calendar.rs:205
+#: app/src/assistant/run/calendar.rs:215 app/src/assistant/run/calendar.rs:219
+#: app/src/assistant/run/calendar.rs:223
 msgid "{first} to {last}"
 msgstr "{first} a {last}"
 
-#: app/src/assistant/run/calendar.rs:327
+#: app/src/assistant/run/calendar.rs:357
 msgid "Add “{title}” to the calendar for {account}, {when}?"
 msgstr "Adicionar “{title}” ao calendário de {account}, {when}?"
 
-#: app/src/assistant/run/calendar.rs:337
+#: app/src/assistant/run/calendar.rs:367
 msgid "Google sends an invitation to {guests}."
 msgstr "A Google envia um convite a {guests}."
 
-#: app/src/assistant/run/calendar.rs:387
+#: app/src/assistant/run/calendar.rs:419
 msgid "Title: {value}"
 msgstr "Título: {value}"
 
-#: app/src/assistant/run/calendar.rs:390
+#: app/src/assistant/run/calendar.rs:422
 msgid "Starts: {value}"
 msgstr "Começa: {value}"
 
-#: app/src/assistant/run/calendar.rs:393
+#: app/src/assistant/run/calendar.rs:425
 msgid "Ends: {value}"
 msgstr "Termina: {value}"
 
-#: app/src/assistant/run/calendar.rs:396
+#: app/src/assistant/run/calendar.rs:428
 msgid "Where: {value}"
 msgstr "Local: {value}"
 
-#: app/src/assistant/run/calendar.rs:399
+#: app/src/assistant/run/calendar.rs:431
 msgid "Guests: {value}"
 msgstr "Convidados: {value}"
 
-#: app/src/assistant/run/calendar.rs:403
+#: app/src/assistant/run/calendar.rs:435
 msgid "Description: {value}"
 msgstr "Descrição: {value}"
 
-#: app/src/assistant/run/calendar.rs:408
+#: app/src/assistant/run/calendar.rs:440
 msgid "Change “{title}” on the calendar for {account}? Its guests are told."
 msgstr ""
 "Alterar “{title}” no calendário de {account}? Os convidados são avisados."
 
-#: app/src/assistant/run/calendar.rs:412
+#: app/src/assistant/run/calendar.rs:444
 msgid "Change an event on the calendar for {account}? Its guests are told."
 msgstr ""
 "Alterar um evento no calendário de {account}? Os convidados são avisados."
 
-#: app/src/assistant/run/calendar.rs:437
+#: app/src/assistant/run/calendar.rs:471
 msgid "Delete “{title}” from the calendar for {account}? Its guests are told."
 msgstr ""
 "Eliminar “{title}” do calendário de {account}? Os convidados são avisados."
 
-#: app/src/assistant/run/calendar.rs:441
+#: app/src/assistant/run/calendar.rs:475
 msgid "Delete an event from the calendar for {account}? Its guests are told."
 msgstr ""
 "Eliminar um evento do calendário de {account}? Os convidados são avisados."
 
-#: app/src/assistant/run/calendar.rs:477
+#: app/src/assistant/run/calendar.rs:511
 msgid "Answer {answer} to “{title}”?"
 msgstr "Responder {answer} a “{title}”?"
 
@@ -1173,11 +1173,11 @@ msgstr ""
 "O Penguin Mail não conseguiu atualizar o arquivo de correio e manteve o "
 "anterior."
 
-#: app/src/core.rs:673 app/src/core.rs:742
+#: app/src/core.rs:677 app/src/core.rs:746
 msgid "Demo mode cannot add real accounts."
 msgstr "O modo de demonstração não adiciona contas reais."
 
-#: app/src/core.rs:677
+#: app/src/core.rs:681
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -1185,11 +1185,11 @@ msgstr ""
 "Esta cópia do Penguin Mail foi compilada sem início de sessão Google. "
 "Obtenha uma versão em github.com/c9dev/penguin-mail/releases."
 
-#: app/src/core.rs:695
+#: app/src/core.rs:699
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Desistiu de esperar pelo navegador ao fim de cinco minutos."
 
-#: app/src/core.rs:703
+#: app/src/core.rs:707
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 "Iniciou sessão como {account}. Escolha {wanted} para voltar a ligar essa "

@@ -10,12 +10,17 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use mailrs_domain::calendar::{
+    Access, Calendar as CalendarModel, Event as CalendarEvent, Guest as CalendarGuest, Status as CalendarStatus,
+};
+use mailrs_domain::invitation::Answer;
 use mailrs_domain::{
     AccountId, Address, Attachment, EpochMillis, MessageBody, MessageMeta, Provenance,
 };
 use mailrs_gmail::{LabelColor, RemoteLabel, SendAs};
 use mailrs_store::servers::{self, Saved, Security, Servers};
 use mailrs_store::{Db, Result, StoreError, accounts, address_book, invitations};
+use mailrs_sync::calendar_copy::CalendarCopy;
 use mailrs_sync::fake::{FakeGmail, FakeImap, FakeSmtp, fill_store};
 use mailrs_sync::{AccountServices, AccountSync, DEFAULT_WINDOW_DAYS, ImapSettings, SyncError};
 use rusqlite::Connection;
@@ -32,6 +37,20 @@ const INVITE_UID: &str = "7f3k2q9demo1invite@google.com";
 /// The event the sample update moves. The demo remembers an older version
 /// of it, so opening the update says what changed.
 const MOVED_UID: &str = "2b8h5x0demo2moved@google.com";
+
+/// The zone every demo calendar and timed event is written in.
+const LISBON: &str = "Europe/Lisbon";
+
+/// The second demo account's shared calendar, beyond its own primary.
+const DESIGN_TEAM: &str = "design-team";
+
+/// The first demo account's subscribed, read-only calendar, beyond its
+/// own primary.
+const HOLIDAYS_PT: &str = "holidays-pt";
+
+/// Sprint planning's video call link, on both its series and its moved
+/// occurrence.
+const SPRINT_PLANNING_LINK: &str = "https://meet.google.com/fernwood-sprint";
 
 pub const DISPLAY_NAME: &str = "Dana Reyes";
 
@@ -676,6 +695,10 @@ impl DemoMail {
 pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, SyncError> {
     let samples = samples();
     let mut mail = HashMap::new();
+    // Kept so a `CalendarCopy` can read each Gmail account's calendars
+    // once every sample and event is in its fake, before the window
+    // ever opens (reconcile.md Task 9 item 13).
+    let mut syncing: HashMap<AccountId, Arc<AccountSync>> = HashMap::new();
     for (index, account) in ACCOUNTS.iter().enumerate() {
         let email = account.email;
         let account_id = db
@@ -687,14 +710,18 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
         for sample in &mine {
             sample.put_in(&fake, account_id, now);
         }
+        fake.with(|s| s.calendars = demo_calendars(index));
+        for event in demo_events(index, now) {
+            fake.put_calendar_event(event);
+        }
         // Nobody listens yet: the window reads the store once it opens.
         let (events, _) = async_channel::unbounded();
-        let sync = AccountSync::new(
+        let sync = Arc::new(AccountSync::new(
             account_id,
             AccountServices::fake(Arc::clone(&fake)),
             db.clone(),
             events,
-        );
+        ));
         fill_store(&sync).await?;
         for sample in &mine {
             sync.body(sample.id).await?;
@@ -706,11 +733,337 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
         if index == 0 {
             queue_samples(db, account_id, now).await?;
         }
+        syncing.insert(account_id, Arc::clone(&sync));
         mail.insert(account_id, DemoServer::Gmail(fake));
     }
     let (account_id, server) = seed_fastmail(db, now).await?;
     mail.insert(account_id, server);
+
+    // Reads each Gmail account's calendars into the store now, so the
+    // demo opens already synced: the assistant and the invitation
+    // card's clash line read the copy from the first screen, and the
+    // Fastmail account, which never joins `syncing`, stays unsynced with
+    // no calendars at all.
+    let gmail_accounts: Vec<AccountId> = syncing.keys().copied().collect();
+    let copy = CalendarCopy::new(Arc::new(Seeding(syncing)), db.clone());
+    for account_id in gmail_accounts {
+        copy.refresh(account_id, now).await?;
+    }
+
     Ok(DemoMail(mail))
+}
+
+/// The accounts `seed` builds, so a `CalendarCopy` can read their
+/// calendars before `Core` has an engine of its own to build one over.
+/// `mailrs_sync::fake::Connected`-alike test harnesses live in `sync`'s
+/// own test module and are not reachable from here, so `seed` keeps this
+/// small one instead (reconcile.md Task 9 item 13).
+struct Seeding(HashMap<AccountId, Arc<AccountSync>>);
+
+impl mailrs_sync::Accounts for Seeding {
+    fn account(&self, account_id: AccountId) -> Option<Arc<AccountSync>> {
+        self.0.get(&account_id).cloned()
+    }
+}
+
+/// The calendars demo account `index` keeps, its own primary always
+/// among them. Split across the three accounts so the merged view shows
+/// each event once (reconcile.md Task 9 item 15 / the plan's table).
+fn demo_calendars(index: usize) -> Vec<CalendarModel> {
+    let personal = CalendarModel {
+        id: "primary".into(),
+        name: "Personal".into(),
+        color: "#e8660c".into(),
+        access: Access::Owner,
+        zone: LISBON.into(),
+        primary: true,
+        shown: true,
+        reminders: Vec::new(),
+    };
+    match index {
+        0 => vec![
+            personal,
+            CalendarModel {
+                id: HOLIDAYS_PT.into(),
+                name: "Holidays in Portugal".into(),
+                color: "#e01b24".into(),
+                access: Access::Reader,
+                zone: LISBON.into(),
+                primary: false,
+                shown: true,
+                reminders: Vec::new(),
+            },
+        ],
+        1 => vec![
+            personal,
+            CalendarModel {
+                id: DESIGN_TEAM.into(),
+                name: "Design team".into(),
+                color: "#9141ac".into(),
+                access: Access::Writer,
+                zone: LISBON.into(),
+                primary: false,
+                shown: true,
+                reminders: Vec::new(),
+            },
+        ],
+        _ => vec![personal],
+    }
+}
+
+/// A one-off, busy, confirmed event, the shape most of the week's sample
+/// events take before a row overrides one field or two.
+fn timed_event(calendar: &str, id: &str, title: &str, start: EpochMillis, end: EpochMillis) -> CalendarEvent {
+    CalendarEvent {
+        calendar: calendar.into(),
+        id: id.into(),
+        uid: format!("{id}@local"),
+        start,
+        end,
+        zone: LISBON.into(),
+        title: title.into(),
+        busy: true,
+        status: CalendarStatus::Confirmed,
+        ..CalendarEvent::default()
+    }
+}
+
+/// The Monday, midnight local, of the week `now` falls in.
+fn week_monday(now: EpochMillis) -> chrono::DateTime<chrono::Local> {
+    use chrono::{Datelike, TimeZone};
+    let from = chrono::DateTime::from_timestamp_millis(now)
+        .unwrap_or_default()
+        .with_timezone(&chrono::Local);
+    let back = from.weekday().num_days_from_monday();
+    (from.date_naive() - chrono::Days::new(u64::from(back)))
+        .and_hms_opt(0, 0, 0)
+        .and_then(|at| chrono::Local.from_local_datetime(&at).earliest())
+        .unwrap_or(from)
+}
+
+/// `hour:minute` local, `day_offset` days after `monday`.
+fn at_week(monday: chrono::DateTime<chrono::Local>, day_offset: i64, hour: u32, minute: u32) -> EpochMillis {
+    use chrono::TimeZone;
+    let day = monday.date_naive() + chrono::Duration::days(day_offset);
+    day.and_hms_opt(hour, minute, 0)
+        .and_then(|at| chrono::Local.from_local_datetime(&at).earliest())
+        .map(|at| at.timestamp_millis())
+        .unwrap_or_else(|| monday.timestamp_millis())
+}
+
+/// The neutral span of an all-day event starting on `date` and running
+/// `days` of them: midnight UTC of `date` to midnight UTC `days` later.
+fn all_day_utc(date: chrono::NaiveDate, days: i64) -> (EpochMillis, EpochMillis) {
+    let start = date.and_hms_opt(0, 0, 0).unwrap_or_default().and_utc().timestamp_millis();
+    let end = (date + chrono::Duration::days(days))
+        .and_hms_opt(0, 0, 0)
+        .unwrap_or_default()
+        .and_utc()
+        .timestamp_millis();
+    (start, end)
+}
+
+/// The first demo account's week: Personal for its own doings, Holidays
+/// in Portugal for the one public holiday near `now`.
+fn account0_events(now: EpochMillis) -> Vec<CalendarEvent> {
+    use chrono::Datelike;
+    let monday = week_monday(now);
+    let mut events = vec![
+        timed_event("primary", "lunch-with-ana", "Lunch with Ana", at_week(monday, 1, 13, 0), at_week(monday, 1, 14, 0)),
+        timed_event("primary", "dentist", "Dentist", at_week(monday, 2, 11, 0), at_week(monday, 2, 12, 0)),
+        timed_event(
+            "primary",
+            "swimming-lessons",
+            "Swimming lessons",
+            at_week(monday, 5, 10, 0),
+            at_week(monday, 5, 12, 0),
+        ),
+    ];
+    let year = monday.year();
+    let republic_day = chrono::NaiveDate::from_ymd_opt(year, 10, 5).unwrap_or_else(|| monday.date_naive());
+    let (start, end) = all_day_utc(republic_day, 1);
+    events.push(CalendarEvent {
+        calendar: HOLIDAYS_PT.into(),
+        id: "implantacao-da-republica".into(),
+        uid: "implantacao-da-republica@local".into(),
+        start,
+        end,
+        zone: "UTC".into(),
+        all_day: true,
+        title: "Implantação da República".into(),
+        busy: false,
+        status: CalendarStatus::Confirmed,
+        rules: vec!["RRULE:FREQ=YEARLY".into()],
+        ..CalendarEvent::default()
+    });
+    events
+}
+
+/// The second demo account's week: the Design team's own meetings, and,
+/// on its primary calendar, the two invitation-linked events under the
+/// same UIDs the sample mail carries, plus "Design crit" so the design
+/// review's card shows a clash (reconcile.md Task 9 item 15, ruling R8).
+fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
+    let monday = week_monday(now);
+
+    let standup_start = at_week(monday, 0, 9, 30);
+    let mut events = vec![
+        CalendarEvent {
+            rules: vec!["RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR".into()],
+            ..timed_event(DESIGN_TEAM, "standup", "Stand-up", standup_start, at_week(monday, 0, 9, 45))
+        },
+        CalendarEvent {
+            series: Some("standup".into()),
+            original_start: Some(at_week(monday, 3, 9, 30)),
+            ..timed_event(DESIGN_TEAM, "standup-moved", "Stand-up", at_week(monday, 3, 10, 0), at_week(monday, 3, 10, 15))
+        },
+        timed_event(
+            DESIGN_TEAM,
+            "design-team-meeting",
+            "Design review",
+            at_week(monday, 0, 11, 0),
+            at_week(monday, 0, 12, 0),
+        ),
+        {
+            let mut workshop = timed_event(
+                DESIGN_TEAM,
+                "client-workshop",
+                "Client workshop",
+                at_week(monday, 3, 11, 0),
+                at_week(monday, 3, 13, 0),
+            );
+            workshop.my_answer = Some(Answer::No);
+            workshop.guests = vec![CalendarGuest {
+                email: ACCOUNTS[1].email.into(),
+                me: true,
+                answer: Some(Answer::No),
+                ..CalendarGuest::default()
+            }];
+            workshop
+        },
+    ];
+    let (offsite_start, offsite_end) = all_day_utc(monday.date_naive() + chrono::Duration::days(3), 2);
+    events.push(CalendarEvent {
+        calendar: DESIGN_TEAM.into(),
+        id: "lisbon-offsite".into(),
+        uid: "lisbon-offsite@local".into(),
+        start: offsite_start,
+        end: offsite_end,
+        zone: "UTC".into(),
+        all_day: true,
+        title: "Lisbon offsite".into(),
+        busy: true,
+        status: CalendarStatus::Confirmed,
+        ..CalendarEvent::default()
+    });
+
+    // The sprint planning series the sample mail's update moved, and its
+    // moved occurrence, on the primary calendar (item 15: not "Design
+    // team", so it agrees with the invitation reaching the guest's own
+    // calendar).
+    let (rule, starts) = planning_series(now);
+    let sprint_start = *starts.first().unwrap_or(&at_week(monday, 2, 15, 0));
+    events.push(CalendarEvent {
+        calendar: "primary".into(),
+        id: "sprint-planning".into(),
+        uid: MOVED_UID.into(),
+        start: sprint_start,
+        end: sprint_start + 60 * 60_000,
+        zone: LISBON.into(),
+        title: "Sprint planning".into(),
+        busy: true,
+        status: CalendarStatus::Confirmed,
+        rules: vec![format!("RRULE:{rule}")],
+        conference: Some(SPRINT_PLANNING_LINK.into()),
+        ..CalendarEvent::default()
+    });
+    let moved_start = planning_is(now).timestamp_millis();
+    events.push(CalendarEvent {
+        calendar: "primary".into(),
+        id: "sprint-planning-moved".into(),
+        uid: MOVED_UID.into(),
+        start: moved_start,
+        end: moved_start + 60 * 60_000,
+        zone: LISBON.into(),
+        title: "Sprint planning".into(),
+        busy: true,
+        status: CalendarStatus::Confirmed,
+        series: Some("sprint-planning".into()),
+        original_start: Some(planning_was(now).timestamp_millis()),
+        conference: Some(SPRINT_PLANNING_LINK.into()),
+        ..CalendarEvent::default()
+    });
+
+    // The design review invitation's own event, still unanswered, and
+    // "Design crit" overlapping it, so the card reads "You have Design
+    // crit then."
+    let sent = chrono::DateTime::from_timestamp_millis(now).unwrap_or_default();
+    let design_review_start = next_tuesday(sent.with_timezone(&chrono::Local)).timestamp_millis();
+    let until = design_review_start + 8 * 7 * 24 * 60 * 60_000;
+    events.push(CalendarEvent {
+        calendar: "primary".into(),
+        id: "design-review".into(),
+        uid: INVITE_UID.into(),
+        start: design_review_start,
+        end: design_review_start + 45 * 60_000,
+        zone: LISBON.into(),
+        title: "Offline editor design review".into(),
+        place: "Meeting Room 2, Fernwood HQ".into(),
+        description: "Agenda in the deck. Bring questions about conflict resolution.".into(),
+        busy: true,
+        status: CalendarStatus::Confirmed,
+        organizer: Some("priya@fernwood.example".into()),
+        guests: vec![
+            CalendarGuest {
+                email: ACCOUNTS[1].email.into(),
+                me: true,
+                answer: None,
+                ..CalendarGuest::default()
+            },
+            CalendarGuest {
+                email: "priya@fernwood.example".into(),
+                name: Some("Priya Raman".into()),
+                answer: Some(Answer::Yes),
+                organizer: true,
+                me: false,
+            },
+        ],
+        rules: vec![format!("RRULE:FREQ=WEEKLY;BYDAY=TU;UNTIL={}", until_stamp(until))],
+        ..CalendarEvent::default()
+    });
+    events.push(CalendarEvent {
+        calendar: "primary".into(),
+        id: "design-crit".into(),
+        uid: "design-crit@local".into(),
+        start: design_review_start + 15 * 60_000,
+        end: design_review_start + 75 * 60_000,
+        zone: LISBON.into(),
+        title: "Design crit".into(),
+        busy: true,
+        status: CalendarStatus::Confirmed,
+        ..CalendarEvent::default()
+    });
+
+    events
+}
+
+/// `at`, as an iCalendar `UNTIL` in UTC.
+fn until_stamp(at: EpochMillis) -> String {
+    chrono::DateTime::from_timestamp_millis(at)
+        .unwrap_or_default()
+        .format("%Y%m%dT%H%M%SZ")
+        .to_string()
+}
+
+/// The week of calendar events demo account `index` keeps. Only the two
+/// Gmail accounts with a calendar get one; the third's primary stays
+/// empty (reconcile.md Task 9 item 15 / the plan's table).
+fn demo_events(index: usize, now: EpochMillis) -> Vec<CalendarEvent> {
+    match index {
+        0 => account0_events(now),
+        1 => account1_events(now),
+        _ => Vec::new(),
+    }
 }
 
 /// The demo's fourth account, on an IMAP server rather than Gmail, so
@@ -1635,6 +1988,72 @@ mod tests {
         assert!(!offers.labels);
         assert!(!offers.categories);
         assert!(!offers.calendar && !offers.contacts && !offers.rules && !offers.auto_reply);
+    }
+
+    #[tokio::test]
+    async fn the_fastmail_account_has_no_calendar_and_stays_unsynced() {
+        let demo = demo().await;
+        let id = demo.fastmail().await;
+        let calendars = demo
+            .db
+            .read(move |c| mailrs_store::calendar::calendars(c, id))
+            .await
+            .unwrap();
+        assert!(calendars.is_empty(), "{calendars:?}");
+        assert!(!demo.db.read(move |c| mailrs_store::calendar::synced(c, id)).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn each_gmail_account_is_synced_with_its_calendars() {
+        let demo = demo().await;
+        for index in 0..ACCOUNTS.len() {
+            let id = demo.account(index).await;
+            assert!(
+                demo.db.read(move |c| mailrs_store::calendar::synced(c, id)).await.unwrap(),
+                "account {index} should be synced"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn the_demos_calendar_events_agree_with_its_invitations() {
+        let demo = demo().await;
+        let dana = demo.account(1).await;
+        // (title, calendar, series): `series` is set on the row that
+        // stands for one changed occurrence, so it does not count as a
+        // second whole event under the same title.
+        let events: Vec<(String, String, Option<String>)> = demo
+            .db
+            .read(move |c| {
+                let mut stmt = c.prepare(
+                    "SELECT title, calendar, series FROM events WHERE account_id = ?1 ORDER BY title",
+                )?;
+                let rows = stmt.query_map([dana], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?;
+                Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+            })
+            .await
+            .unwrap();
+        assert!(
+            events
+                .iter()
+                .any(|(title, calendar, series)| title == "Sprint planning" && calendar == "primary" && series.is_none()),
+            "{events:?}"
+        );
+        assert!(
+            events
+                .iter()
+                .any(|(title, calendar, _)| title == "Offline editor design review" && calendar == "primary"),
+            "{events:?}"
+        );
+        assert!(
+            events.iter().any(|(title, calendar, _)| title == "Design crit" && calendar == "primary"),
+            "{events:?}"
+        );
+        assert_eq!(
+            events.iter().filter(|(title, _, series)| title == "Sprint planning" && series.is_none()).count(),
+            1,
+            "no second Sprint planning (ruling R8): {events:?}"
+        );
     }
 
     #[tokio::test]

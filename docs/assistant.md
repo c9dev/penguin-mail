@@ -107,8 +107,8 @@ Trash.
 
 ## Your calendar
 
-The assistant reads and changes the primary Google calendar of each
-account:
+The assistant reads every calendar this computer keeps a copy of and
+makes events on the primary one:
 
 - "What's on my calendar next week?"
 - "Find me an hour with nobody booked on Thursday or Friday."
@@ -120,6 +120,11 @@ account:
 Times are your local time. Free time counts from 09:00 to 18:00 on
 weekdays unless you ask for other hours or the weekend. Google tells the
 guests about every event the assistant adds, changes or deletes.
+
+Once this computer has read an account's calendar, the tools answer from
+that copy rather than asking Google, and an event the assistant makes or
+changes waits in a short queue before it reaches Google, shown as
+pending until it does.
 
 The first time a calendar question comes up, Penguin Mail asks for
 permission to use the calendar, and Google confirms it in your browser.

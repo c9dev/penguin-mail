@@ -261,6 +261,29 @@ pub fn event(conn: &Connection, account_id: AccountId, calendar: &str, id: &str)
     }
 }
 
+/// Finds an event by its id alone, when which calendar holds it is not
+/// known: the primary calendar first, then a calendar the account owns,
+/// then any other. The same id can show on more than one calendar at
+/// once (an invitation's event sits on the guest's primary calendar and
+/// on the organizer's shared one under the same id), so the order picks
+/// the copy of it a write should land on.
+pub fn find_event(conn: &Connection, account_id: AccountId, id: &str) -> Result<Option<Event>> {
+    let found: Option<String> = conn
+        .query_row(
+            "SELECT e.calendar FROM events e \
+             JOIN calendars c ON c.account_id = e.account_id AND c.id = e.calendar \
+             WHERE e.account_id = ?1 AND e.id = ?2 \
+             ORDER BY c.is_primary DESC, c.access = 'owner' DESC LIMIT 1",
+            params![account_id, id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    match found {
+        Some(calendar) => event(conn, account_id, &calendar, id),
+        None => Ok(None),
+    }
+}
+
 /// Every occurrence on the accounts' calendars that overlaps `from` to
 /// `to`, earliest first, at most a year past `from` and at most
 /// [`MOST_EVENTS`] of them. Series are expanded; a changed or cancelled
@@ -604,6 +627,29 @@ mod tests {
         lunch.guests = vec![Guest { email: "ana@example.com".into(), answer: Some(Answer::Yes), ..Guest::default() }];
         save_events(&conn, id, &[lunch.clone()], 0).unwrap();
         assert_eq!(super::event(&conn, id, "primary", "lunch").unwrap(), Some(lunch));
+    }
+
+    #[test]
+    fn find_event_prefers_the_primary_calendar_then_an_owned_one_then_any() {
+        let (conn, id) = store();
+        let mut reader = calendar("shared", false);
+        reader.access = Access::Reader;
+        save_calendars(&conn, id, &[calendar("primary", true), calendar("team", false), reader]).unwrap();
+        save_events(&conn, id, &[event("shared", "x", MONDAY, 1)], 0).unwrap();
+        assert_eq!(find_event(&conn, id, "x").unwrap().map(|e| e.calendar), Some("shared".into()));
+        save_events(&conn, id, &[event("team", "x", MONDAY, 1)], 0).unwrap();
+        assert_eq!(
+            find_event(&conn, id, "x").unwrap().map(|e| e.calendar),
+            Some("team".into()),
+            "an owned calendar wins over one only read"
+        );
+        save_events(&conn, id, &[event("primary", "x", MONDAY, 1)], 0).unwrap();
+        assert_eq!(
+            find_event(&conn, id, "x").unwrap().map(|e| e.calendar),
+            Some("primary".into()),
+            "the primary calendar wins over any other"
+        );
+        assert_eq!(find_event(&conn, id, "missing").unwrap(), None);
     }
 
     #[test]

@@ -319,8 +319,8 @@ msgstr ""
 msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr ""
 
-#: app/src/assistant/run.rs:1278 app/src/assistant/run/calendar.rs:178
-#: app/src/assistant/run/calendar.rs:540
+#: app/src/assistant/run.rs:1278 app/src/assistant/run/calendar.rs:196
+#: app/src/assistant/run/calendar.rs:574
 msgid "%a %-d %b"
 msgstr ""
 
@@ -362,64 +362,64 @@ msgid ""
 "rule for their future mail?"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:184 app/src/assistant/run/calendar.rs:544
+#: app/src/assistant/run/calendar.rs:202 app/src/assistant/run/calendar.rs:578
 msgid "%a %-d %b %H:%M"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:197 app/src/assistant/run/calendar.rs:201
-#: app/src/assistant/run/calendar.rs:205
+#: app/src/assistant/run/calendar.rs:215 app/src/assistant/run/calendar.rs:219
+#: app/src/assistant/run/calendar.rs:223
 msgid "{first} to {last}"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:327
+#: app/src/assistant/run/calendar.rs:357
 msgid "Add “{title}” to the calendar for {account}, {when}?"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:337
+#: app/src/assistant/run/calendar.rs:367
 msgid "Google sends an invitation to {guests}."
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:387
+#: app/src/assistant/run/calendar.rs:419
 msgid "Title: {value}"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:390
+#: app/src/assistant/run/calendar.rs:422
 msgid "Starts: {value}"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:393
+#: app/src/assistant/run/calendar.rs:425
 msgid "Ends: {value}"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:396
+#: app/src/assistant/run/calendar.rs:428
 msgid "Where: {value}"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:399
+#: app/src/assistant/run/calendar.rs:431
 msgid "Guests: {value}"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:403
+#: app/src/assistant/run/calendar.rs:435
 msgid "Description: {value}"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:408
+#: app/src/assistant/run/calendar.rs:440
 msgid "Change “{title}” on the calendar for {account}? Its guests are told."
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:412
+#: app/src/assistant/run/calendar.rs:444
 msgid "Change an event on the calendar for {account}? Its guests are told."
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:437
+#: app/src/assistant/run/calendar.rs:471
 msgid "Delete “{title}” from the calendar for {account}? Its guests are told."
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:441
+#: app/src/assistant/run/calendar.rs:475
 msgid "Delete an event from the calendar for {account}? Its guests are told."
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:477
+#: app/src/assistant/run/calendar.rs:511
 msgid "Answer {answer} to “{title}”?"
 msgstr ""
 
@@ -1102,21 +1102,21 @@ msgstr ""
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr ""
 
-#: app/src/core.rs:673 app/src/core.rs:742
+#: app/src/core.rs:677 app/src/core.rs:746
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 
-#: app/src/core.rs:677
+#: app/src/core.rs:681
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
 msgstr ""
 
-#: app/src/core.rs:695
+#: app/src/core.rs:699
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 
-#: app/src/core.rs:703
+#: app/src/core.rs:707
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 

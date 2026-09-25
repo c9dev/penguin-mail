@@ -10,6 +10,7 @@ use super::{Connected, Harness, harness};
 use crate::CalendarService;
 use crate::Permitted;
 use crate::calendar::{Calendar, at, free_slots, instant};
+use crate::calendar_copy::CalendarCopy;
 
 const HOUR: i64 = 60 * 60 * 1000;
 const MINUTE: i64 = 60 * 1000;
@@ -17,9 +18,20 @@ const MINUTE: i64 = 60 * 1000;
 /// 2026-03-10 at 09:00 UTC.
 const NINE: i64 = 1_773_133_200_000;
 
+/// A `Calendar` and the `CalendarCopy` behind it, over the same
+/// `Connected` accounts and store, as `copy()` does for `CalendarCopy`'s
+/// own tests. A test that never calls `copy.refresh` stays on the live
+/// path; the copy is here so one that wants it can.
+fn calendar_with_copy(h: &Harness) -> (Calendar<Connected>, Arc<CalendarCopy<Connected>>) {
+    let connected = Arc::new(Connected(HashMap::from([(h.account_id, Arc::clone(&h.sync))])));
+    let copy = Arc::new(CalendarCopy::new(Arc::clone(&connected), h.db.clone()));
+    (Calendar::new(connected, h.db.clone(), Arc::clone(&copy)), copy)
+}
+
 fn calendar(h: &Harness) -> Calendar<Connected> {
-    let connected = HashMap::from([(h.account_id, Arc::clone(&h.sync))]);
-    Calendar::new(Arc::new(Connected(connected)))
+    let connected = Arc::new(Connected(HashMap::from([(h.account_id, Arc::clone(&h.sync))])));
+    let copy = Arc::new(CalendarCopy::new(Arc::clone(&connected), h.db.clone()));
+    Calendar::new(connected, h.db.clone(), copy)
 }
 
 fn event(summary: &str, from: i64, to: i64) -> EventFields {
@@ -84,7 +96,7 @@ async fn an_event_is_made_listed_moved_and_deleted() {
         .unwrap()
         .done()
         .expect("the permission is there");
-    assert_eq!(made.summary, "Kite day");
+    assert_eq!(made.title, "Kite day");
 
     let listed = calendar
         .events(h.account_id, NINE - HOUR, NINE + 2 * HOUR)
@@ -92,7 +104,8 @@ async fn an_event_is_made_listed_moved_and_deleted() {
         .unwrap()
         .done()
         .unwrap();
-    assert_eq!(listed, vec![made.clone()]);
+    assert_eq!(listed.len(), 1);
+    assert_eq!(*listed[0].event, made);
     let later = calendar
         .events(h.account_id, NINE + 2 * HOUR, NINE + 3 * HOUR)
         .await
@@ -117,10 +130,10 @@ async fn an_event_is_made_listed_moved_and_deleted() {
         .done()
         .unwrap();
     assert_eq!(
-        moved.summary, "Kite day",
+        moved.title, "Kite day",
         "what the change left alone stays"
     );
-    assert_eq!(moved.start, at(NINE + 2 * HOUR));
+    assert_eq!(moved.start, NINE + 2 * HOUR);
     assert_eq!(moved.guests[0].email, "ann@example.com");
 
     assert_eq!(
@@ -216,6 +229,56 @@ fn primary() -> Cal {
         shown: true,
         reminders: Vec::new(),
     }
+}
+
+#[tokio::test]
+async fn once_the_copy_is_read_listing_events_asks_google_nothing() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![primary()]);
+    h.fake.put_calendar_event(Ev {
+        calendar: "primary".into(),
+        id: "a".into(),
+        title: "Lunch".into(),
+        zone: "UTC".into(),
+        start: 1_790_000_000_000,
+        end: 1_790_003_600_000,
+        busy: true,
+        ..Ev::default()
+    });
+    let (calendar, copy) = calendar_with_copy(&h);
+    copy.refresh(h.account_id, 1_790_000_000_000).await.unwrap();
+    let before = h.fake.usage().calls_to("calendar.events.list");
+    let found = calendar
+        .events(h.account_id, 1_789_990_000_000, 1_790_010_000_000)
+        .await
+        .unwrap();
+    assert!(matches!(found, Permitted::Done(ref list) if list.len() == 1 && list[0].event.title == "Lunch"));
+    assert_eq!(h.fake.usage().calls_to("calendar.events.list"), before);
+}
+
+#[tokio::test]
+async fn an_event_the_assistant_makes_waits_in_the_queue() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![primary()]);
+    let (calendar, copy) = calendar_with_copy(&h);
+    copy.refresh(h.account_id, 1_790_000_000_000).await.unwrap();
+    let made = calendar
+        .create(
+            h.account_id,
+            &EventFields {
+                summary: Some("Dentist".into()),
+                start: crate::calendar::at(1_790_000_000_000),
+                end: crate::calendar::at(1_790_003_600_000),
+                ..EventFields::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert!(matches!(made, Permitted::Done(ref e) if e.pending));
+    assert!(
+        h.fake.with(|s| s.calendar_events.is_empty()),
+        "nothing reached Google before the send"
+    );
 }
 
 #[tokio::test]

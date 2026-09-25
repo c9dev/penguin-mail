@@ -249,8 +249,12 @@ impl Core {
         let contacts = Arc::new(ContactBook::new(Arc::clone(&engine), db.clone(), photo_dir));
         let invitations = Arc::new(Invitations::new(Arc::clone(&engine), db.clone()));
         let outbox = Arc::new(Outbox::new(Arc::clone(&engine), db.clone()));
-        let calendar = Arc::new(mailrs_sync::Calendar::new(Arc::clone(&engine)));
         let calendar_copy = Arc::new(CalendarCopy::new(Arc::clone(&engine), db.clone()));
+        let calendar = Arc::new(mailrs_sync::Calendar::new(
+            Arc::clone(&engine),
+            db.clone(),
+            Arc::clone(&calendar_copy),
+        ));
         let core = Rc::new(Core {
             runtime,
             db,
