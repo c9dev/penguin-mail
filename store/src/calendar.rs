@@ -497,18 +497,35 @@ pub fn queued(conn: &Connection, account_id: AccountId) -> Result<Vec<QueuedChan
     let mut stmt = conn.prepare(
         "SELECT seq, calendar, event, kind, etag, body FROM calendar_changes WHERE account_id = ?1 ORDER BY seq",
     )?;
-    let rows = stmt.query_map(params![account_id], |row| {
-        Ok(QueuedChange {
-            seq: row.get(0)?,
-            account_id,
-            calendar: row.get(1)?,
-            event: row.get(2)?,
-            kind: ChangeKind::parse(&row.get::<_, String>(3)?),
-            etag: row.get(4)?,
-            body: row.get::<_, Option<String>>(5)?.and_then(|b| serde_json::from_str(&b).ok()),
-        })
-    })?;
+    let rows = stmt.query_map(params![account_id], |row| read_change(row, account_id))?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
+}
+
+/// The account's first queued change after `after`, as it stands now. A
+/// send reads each change just before it goes out, so a change deleted
+/// or edited since the send began goes out as it is now or not at all,
+/// and one queued during the send still goes out in the same send.
+pub fn next_change(conn: &Connection, account_id: AccountId, after: i64) -> Result<Option<QueuedChange>> {
+    Ok(conn
+        .query_row(
+            "SELECT seq, calendar, event, kind, etag, body FROM calendar_changes \
+             WHERE account_id = ?1 AND seq > ?2 ORDER BY seq LIMIT 1",
+            params![account_id, after],
+            |row| read_change(row, account_id),
+        )
+        .optional()?)
+}
+
+fn read_change(row: &Row, account_id: AccountId) -> rusqlite::Result<QueuedChange> {
+    Ok(QueuedChange {
+        seq: row.get(0)?,
+        account_id,
+        calendar: row.get(1)?,
+        event: row.get(2)?,
+        kind: ChangeKind::parse(&row.get::<_, String>(3)?),
+        etag: row.get(4)?,
+        body: row.get::<_, Option<String>>(5)?.and_then(|b| serde_json::from_str(&b).ok()),
+    })
 }
 
 /// The ids of a calendar's events with an unsent change, without loading
@@ -525,25 +542,41 @@ pub fn dequeue(conn: &Connection, seq: i64) -> Result<()> {
     Ok(())
 }
 
-/// Settles a change that just went out. Usually its row is done and comes
-/// off the queue; but `enqueue` only ever touches an unsent row's body,
-/// never its `seq`, so an edit that lands while the provider is still
-/// answering collapses onto the very row `send` is about to remove.
-/// Deleting it by `seq` regardless would take that edit down with it. So
-/// this compares the row's current body with `attempted`, the body this
-/// call actually sent: unchanged, the row is done and comes off; changed,
-/// the row stays, its `etag` moved to `new_etag` and a `Create` demoted
-/// to `Save` (reconcile.md Task 6 item 4), so what is left targets the
-/// version this call just wrote rather than the one it started against.
-/// Answers whether the row was removed, so the caller knows whether to
-/// also store the provider's answer: one with a newer edit still queued
-/// keeps what that edit wrote instead.
-pub fn finish_change(conn: &Connection, seq: i64, attempted: &Event, new_etag: &str) -> Result<bool> {
+/// Settles a change that just went out, and answers whether the
+/// provider's answer belongs in the copy.
+///
+/// Usually the row is done and comes off. But the person can act on the
+/// event while the provider is still answering:
+/// - An edit collapses onto this very row, since `enqueue` changes an
+///   unsent row's body and never its `seq`. The row stays, with its etag
+///   moved to `new_etag` and a `Create` turned into a `Save`, so the edit
+///   goes out against the version this send just wrote. The copy keeps
+///   what the edit wrote.
+/// - A delete of a new event drops its unsent `Create` row, since the
+///   provider never heard of it. But the create is on its way, so the
+///   row is gone and the provider now holds the event: queue its
+///   removal against `new_etag`, and keep the answer out of the copy.
+pub fn finish_change(
+    conn: &Connection,
+    account_id: AccountId,
+    seq: i64,
+    attempted: &Event,
+    new_etag: &str,
+) -> Result<bool> {
     let current: Option<Option<String>> = conn
         .query_row("SELECT body FROM calendar_changes WHERE seq = ?1", params![seq], |row| row.get(0))
         .optional()?;
     match current {
-        None => Ok(true),
+        None => {
+            let gone = Event {
+                calendar: attempted.calendar.clone(),
+                id: attempted.id.clone(),
+                etag: new_etag.to_string(),
+                ..Event::default()
+            };
+            enqueue(conn, account_id, ChangeKind::Remove, &gone)?;
+            Ok(false)
+        }
         Some(body) if body.as_deref() == Some(json(attempted).as_str()) => {
             conn.execute("DELETE FROM calendar_changes WHERE seq = ?1", params![seq])?;
             Ok(true)
@@ -904,7 +937,7 @@ mod tests {
         let lunch = event("primary", "lunch", MONDAY, 1);
         enqueue(&conn, id, ChangeKind::Create, &lunch).unwrap();
         let seq = queued(&conn, id).unwrap()[0].seq;
-        assert!(finish_change(&conn, seq, &lunch, "\"2\"").unwrap());
+        assert!(finish_change(&conn, id, seq, &lunch, "\"2\"").unwrap());
         assert!(queued(&conn, id).unwrap().is_empty());
     }
 
@@ -923,11 +956,40 @@ mod tests {
         let mut renamed = lunch.clone();
         renamed.title = "Lunch with Ana".into();
         enqueue(&conn, id, ChangeKind::Save, &renamed).unwrap();
-        assert!(!finish_change(&conn, seq, &lunch, "\"2\"").unwrap());
+        assert!(!finish_change(&conn, id, seq, &lunch, "\"2\"").unwrap());
         let held = queued(&conn, id).unwrap();
         assert_eq!(held.len(), 1);
         assert_eq!(held[0].kind, ChangeKind::Save, "a create demotes to a save once the id exists");
         assert_eq!(held[0].etag.as_deref(), Some("\"2\""));
         assert_eq!(held[0].body.as_ref().map(|e| e.title.as_str()), Some("Lunch with Ana"));
+    }
+
+    /// A delete made while the event's create is in flight drops the
+    /// unsent row, but Google now holds the event. Finishing the create
+    /// must queue the delete instead of storing the event again.
+    #[test]
+    fn finishing_a_create_a_delete_dropped_queues_the_delete() {
+        let (conn, id) = store();
+        let lunch = event("primary", "lunch", MONDAY, 1);
+        enqueue(&conn, id, ChangeKind::Create, &lunch).unwrap();
+        let seq = queued(&conn, id).unwrap()[0].seq;
+        enqueue(&conn, id, ChangeKind::Remove, &lunch).unwrap();
+        assert!(!finish_change(&conn, id, seq, &lunch, "\"2\"").unwrap());
+        let held = queued(&conn, id).unwrap();
+        assert_eq!(held.len(), 1);
+        assert_eq!(held[0].kind, ChangeKind::Remove);
+        assert_eq!(held[0].etag.as_deref(), Some("\"2\""));
+    }
+
+    #[test]
+    fn the_next_change_is_the_first_queued_after_the_one_named() {
+        let (conn, id) = store();
+        enqueue(&conn, id, ChangeKind::Create, &event("primary", "one", MONDAY, 1)).unwrap();
+        enqueue(&conn, id, ChangeKind::Create, &event("primary", "two", MONDAY, 1)).unwrap();
+        let first = next_change(&conn, id, 0).unwrap().unwrap();
+        assert_eq!(first.event, "one");
+        let second = next_change(&conn, id, first.seq).unwrap().unwrap();
+        assert_eq!(second.event, "two");
+        assert!(next_change(&conn, id, second.seq).unwrap().is_none());
     }
 }
