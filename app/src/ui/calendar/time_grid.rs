@@ -560,7 +560,8 @@ impl TimeGrid {
                 let compact = block::is_compact(start, end);
                 let top = layout::wall_offset(start, midnight, zone);
                 let bottom = layout::wall_offset(end, midnight, zone);
-                let event_block = EventBlock::new(o, colour, name, compact, zone);
+                let named_day = (days.len() > 1).then_some(day);
+                let event_block = EventBlock::new(o, colour, name, compact, named_day, zone);
                 event_block.set_title_lines(title_lines(top, bottom));
                 let card = event_block.widget;
                 connect_activated(self, &card, o.clone());
@@ -775,7 +776,8 @@ impl AllDayStrip {
             let (occ_index, start, end) = spanning[p.index];
             let o = &occurrences[occ_index];
             let (colour, name) = calendar_of(o, calendars);
-            let card = EventBlock::new(o, colour, name, true, &chrono::Local).widget;
+            let named_day = (days.len() > 1).then(|| days[start]);
+            let card = EventBlock::new(o, colour, name, true, named_day, &chrono::Local).widget;
             connect_activated_strip(self, &card, o.clone());
             card.set_parent(self);
             blocks.push((block::key_of(o), card.clone().upcast()));

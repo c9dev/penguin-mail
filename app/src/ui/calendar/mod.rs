@@ -893,6 +893,7 @@ impl CalendarView {
             .margin_bottom(11)
             .build();
         let strip = AllDayStrip::new();
+        crate::ui::name(&strip, &gettext("All-day events"));
         let all_day = gtk::Label::builder()
             .label(gettext("All-day"))
             .css_classes(["all-day-label"])
@@ -1093,6 +1094,14 @@ impl CalendarView {
         let view = page.view.borrow();
         let block = match &*view {
             PageView::Grid(grid) => {
+                // The grid is a group, which a screen reader names by the
+                // range it holds.
+                let (bold, dim, week) = range.title();
+                let title: Vec<&str> = [bold.as_str(), dim.as_str(), week.as_str()]
+                    .into_iter()
+                    .filter(|part| !part.is_empty())
+                    .collect();
+                crate::ui::name(&grid.grid, &title.join(" "));
                 self.fill_headings(&grid.headings, &days);
                 grid.strip.show(&days, &found, &calendars);
                 let now = chrono::Local::now().timestamp_millis();
