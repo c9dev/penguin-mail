@@ -1,0 +1,17 @@
+[package]
+name = "mailrs-testmail"
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+# Mail servers in Docker for other crates' tests. A dev-dependency only; it
+# never reaches the app.
+publish = false
+
+[dependencies]
+rand.workspace = true
+reqwest.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+tokio.workspace = true
