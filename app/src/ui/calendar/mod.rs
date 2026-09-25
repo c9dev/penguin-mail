@@ -43,7 +43,7 @@ use block::{EventKey, key_of};
 use month::MonthGrid;
 use popover::EventPopover;
 use range::{Range, ViewKind};
-use shown::Showing;
+use shown::{Refocus, Showing};
 use sidebar::CalendarSidebar;
 use time_grid::{AllDayStrip, GUTTER, TimeGrid};
 
@@ -172,6 +172,10 @@ pub struct CalendarView {
     /// itself: the carousel reports a page change for those too, and
     /// only a swipe or an arrow's slide moves the day.
     arranging: Cell<bool>,
+    /// Set when the view took away the page that held the keyboard
+    /// focus, so the page that replaces it takes the focus once its
+    /// events arrive.
+    refocus_owed: Cell<bool>,
 }
 
 impl CalendarView {
@@ -346,7 +350,7 @@ impl CalendarView {
         page.add_bottom_bar(&bottom_slot);
         page.set_reveal_bottom_bars(false);
 
-        let popover = EventPopover::new(&card);
+        let popover = EventPopover::new(&card, &today_button);
         let more_list = Agenda::new();
         more_list.widget.set_propagate_natural_height(true);
         more_list.widget.set_min_content_width(280);
@@ -433,6 +437,7 @@ impl CalendarView {
                 pending_open: RefCell::new(None),
                 switching: Cell::new(false),
                 arranging: Cell::new(false),
+                refocus_owed: Cell::new(false),
             }
         });
 
@@ -494,6 +499,18 @@ impl CalendarView {
         };
         mark(&style);
         style.connect_dark_notify(mark);
+        let weak = Rc::downgrade(&view);
+        view.more.connect_closed(move |_| {
+            let Some(view) = weak.upgrade() else { return };
+            let anchor = view.more_anchor.borrow().clone();
+            let back = match shown::after_popover(anchor.as_ref().is_some_and(|a| a.is_mapped())) {
+                Refocus::Anchor => anchor.is_some_and(|a| a.grab_focus()),
+                _ => false,
+            };
+            if !back {
+                view.take_focus();
+            }
+        });
         view.connect_search();
         view.connect_lists();
 
@@ -717,6 +734,10 @@ impl CalendarView {
     fn rebuild_pages(self: &Rc<Self>) {
         self.popover.hide();
         self.more.popdown();
+        let had_focus = self.pages.borrow().iter().any(|p| self.holds_focus(p));
+        if had_focus {
+            self.refocus_owed.set(true);
+        }
         self.arranging.set(true);
         let old: Vec<Rc<Page>> = self.pages.replace(Vec::new());
         for page in &old {
@@ -739,6 +760,45 @@ impl CalendarView {
         self.pages.replace(pages);
         self.carousel.scroll_to(&self.pages.borrow()[1].holder, false);
         self.arranging.set(false);
+        self.mark_reachable();
+    }
+
+    /// Lets Tab and a screen reader into the middle page only: the pages
+    /// either side are off screen until a swipe brings one in.
+    fn mark_reachable(&self) {
+        for (position, page) in self.pages.borrow().iter().enumerate() {
+            let reachable = shown::reachable(position);
+            page.holder.set_can_focus(reachable);
+            page.holder
+                .upcast_ref::<gtk::Widget>()
+                .update_state(&[gtk::accessible::State::Hidden(!reachable)]);
+        }
+    }
+
+    /// Whether the keyboard focus is somewhere inside `page`.
+    fn holds_focus(&self, page: &Page) -> bool {
+        self.page
+            .root()
+            .and_then(|root| root.focus())
+            .is_some_and(|focus| focus.is_ancestor(&page.holder))
+    }
+
+    /// Puts the focus on `key`'s block in `page` when it has one, else
+    /// wherever [`shown::refocus`] sends focus the page took away.
+    fn refocus(&self, page: &Page, key: Option<EventKey>) {
+        let view = page.view.borrow();
+        if let Some(block) = key.and_then(|key| view.block_of(&key)) {
+            block.grab_focus();
+            return;
+        }
+        let first = view.first_block();
+        match (shown::refocus(true, first.is_some()), first) {
+            (Some(Refocus::FirstEvent), Some(first)) => {
+                first.grab_focus();
+            }
+            (Some(_), _) => self.take_focus(),
+            (None, _) => {}
+        }
     }
 
     /// Puts the carousel on its middle page, the range on screen.
@@ -897,6 +957,7 @@ impl CalendarView {
         };
         self.popover.hide();
         self.more.popdown();
+        let had_focus = self.holds_focus(&pages[1]);
         let arrived = &pages[if by < 0 { 0 } else { 2 }];
         self.day
             .set(shown::stepped(self.kind.get(), self.day.get(), by));
@@ -910,27 +971,29 @@ impl CalendarView {
             });
         }
         self.arranging.set(true);
-        let (recycled, reordered) = match by {
+        let order = shown::after_step(by);
+        let reordered: Vec<Rc<Page>> = order.iter().map(|&old| Rc::clone(&pages[old])).collect();
+        let recycled = Rc::clone(&reordered[if by < 0 { 0 } else { 2 }]);
+        match by {
             1 => {
-                let recycled = Rc::clone(&pages[0]);
                 self.carousel.reorder(&recycled.holder, -1);
-                let order = vec![Rc::clone(&pages[1]), Rc::clone(&pages[2]), Rc::clone(&recycled)];
                 recycled.range.set(range.next());
-                (recycled, order)
             }
             _ => {
-                let recycled = Rc::clone(&pages[2]);
                 self.carousel.reorder(&recycled.holder, 0);
-                let order = vec![Rc::clone(&recycled), Rc::clone(&pages[0]), Rc::clone(&pages[1])];
                 recycled.range.set(range.previous());
-                (recycled, order)
             }
-        };
+        }
         recycled.scrolled.set(false);
         self.pages.replace(reordered);
         self.carousel
             .scroll_to(&self.pages.borrow()[1].holder, false);
         self.arranging.set(false);
+        self.mark_reachable();
+        if had_focus {
+            let middle = Rc::clone(&self.pages.borrow()[1]);
+            self.refocus(&middle, None);
+        }
         self.fill(&recycled);
         self.show_range();
         self.read_sidebar(false);
@@ -995,6 +1058,10 @@ impl CalendarView {
             .collect();
         ensure_tints(found.iter().filter_map(|o| o.event.color.as_deref()));
         let range = page.range.get();
+        // A refill replaces every block; the one with the focus comes
+        // back by its event.
+        let had_focus = self.holds_focus(page);
+        let focused = page.view.borrow().focused_key();
         let calendars = self.calendars.borrow().clone();
         let days: Vec<NaiveDate> = (0..range.days)
             .map(|i| range.first + Days::new(u64::from(i)))
@@ -1026,6 +1093,10 @@ impl CalendarView {
             .borrow()
             .get(1)
             .is_some_and(|current| Rc::ptr_eq(current, page));
+        drop(view);
+        if is_current && (had_focus || self.refocus_owed.replace(false)) {
+            self.refocus(page, focused);
+        }
         if let (true, Some((anchor, o))) = (is_current, block) {
             self.pending_open.replace(None);
             // The block has no size until the grid lays it out, and a
@@ -1455,6 +1526,29 @@ impl CalendarView {
 }
 
 impl PageView {
+    fn block_of(&self, key: &EventKey) -> Option<gtk::Widget> {
+        match self {
+            PageView::Grid(grid) => grid.grid.block_of(key).or_else(|| grid.strip.block_of(key)),
+            PageView::Month(month) => month.block_of(key),
+        }
+    }
+
+    /// The first event Tab reaches: the all-day row comes before the
+    /// hours.
+    fn first_block(&self) -> Option<gtk::Widget> {
+        match self {
+            PageView::Grid(grid) => grid.strip.first_block().or_else(|| grid.grid.first_block()),
+            PageView::Month(month) => month.first_block(),
+        }
+    }
+
+    fn focused_key(&self) -> Option<EventKey> {
+        match self {
+            PageView::Grid(grid) => grid.grid.focused_key().or_else(|| grid.strip.focused_key()),
+            PageView::Month(month) => month.focused_key(),
+        }
+    }
+
     fn widget(&self) -> gtk::Widget {
         match self {
             PageView::Grid(grid) => grid.root.clone().upcast(),

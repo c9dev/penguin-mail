@@ -626,6 +626,21 @@ impl TimeGrid {
         find_block(&self.imp().blocks.borrow(), key)
     }
 
+    /// The first card Tab reaches, in day and start order.
+    pub fn first_block(&self) -> Option<gtk::Widget> {
+        self.imp()
+            .children
+            .borrow()
+            .iter()
+            .find(|(w, p)| matches!(p, imp::Placement::Card { .. }) && w.can_focus())
+            .map(|(w, _)| w.clone())
+    }
+
+    /// The event whose block has the keyboard focus.
+    pub fn focused_key(&self) -> Option<EventKey> {
+        focused_key(&self.imp().blocks.borrow())
+    }
+
     /// Hides the hour label the scrolled window's top edge would cut in
     /// half, and the hour line along that edge, `top` being how far the
     /// grid is scrolled: at 08:00 the line meets the all-day row's border
@@ -678,6 +693,14 @@ fn connect_more_clicked(grid: &TimeGrid, button: &gtk::Button, hidden: Vec<Occur
             f(&grid, &hidden, button.upcast_ref());
         }
     });
+}
+
+/// The event whose block among `blocks` has the keyboard focus.
+pub fn focused_key(blocks: &[(EventKey, gtk::Widget)]) -> Option<EventKey> {
+    blocks
+        .iter()
+        .find(|(_, widget)| widget.has_focus())
+        .map(|(key, _)| key.clone())
 }
 
 fn find_block(blocks: &[(EventKey, gtk::Widget)], key: &EventKey) -> Option<gtk::Widget> {
@@ -773,6 +796,16 @@ impl AllDayStrip {
     /// The block drawing `key`, when the strip shows it.
     pub fn block_of(&self, key: &EventKey) -> Option<gtk::Widget> {
         find_block(&self.imp().blocks.borrow(), key)
+    }
+
+    /// The first card Tab reaches.
+    pub fn first_block(&self) -> Option<gtk::Widget> {
+        self.imp().children.borrow().first().map(|(w, _)| w.clone())
+    }
+
+    /// The event whose block has the keyboard focus.
+    pub fn focused_key(&self) -> Option<EventKey> {
+        focused_key(&self.imp().blocks.borrow())
     }
 
     pub fn connect_event_activated(

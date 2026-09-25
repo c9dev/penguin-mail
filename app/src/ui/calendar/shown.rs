@@ -143,6 +143,57 @@ fn date_of<Z: TimeZone>(at: EpochMillis, all_day: bool, zone: &Z) -> Option<Naiv
     })
 }
 
+/// Whether Tab and a screen reader reach the carousel page at
+/// `position`. The pages either side hold the ranges a swipe would
+/// bring in; they sit off screen, so they are neither focusable nor
+/// read out.
+pub fn reachable(position: usize) -> bool {
+    position == 1
+}
+
+/// The carousel's pages after a step `by` one range, as the positions
+/// they held before: forward, the far left page goes round to the right
+/// end; back, the far right page goes round to the left.
+pub fn after_step(by: i32) -> [usize; 3] {
+    match by {
+        1 => [1, 2, 0],
+        _ => [2, 0, 1],
+    }
+}
+
+/// Where the keyboard focus goes once the calendar has taken away the
+/// widget that held it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Refocus {
+    /// The first event of the range now on screen.
+    FirstEvent,
+    /// The event the popover was opened from.
+    Anchor,
+    /// The Today button, which is always there.
+    Today,
+}
+
+/// Where the focus goes when a range's page replaces the one that held
+/// it: `had_focus` says the old page held it, `has_event` that the new
+/// one has an event to take it. Focus that was elsewhere stays there.
+pub fn refocus(had_focus: bool, has_event: bool) -> Option<Refocus> {
+    match (had_focus, has_event) {
+        (false, _) => None,
+        (true, true) => Some(Refocus::FirstEvent),
+        (true, false) => Some(Refocus::Today),
+    }
+}
+
+/// Where the focus goes when the event popover closes: back to the event
+/// it came from while that is still on screen, else to Today, so the
+/// calendar's keys still answer.
+pub fn after_popover(anchor_on_screen: bool) -> Refocus {
+    match anchor_on_screen {
+        true => Refocus::Anchor,
+        false => Refocus::Today,
+    }
+}
+
 /// What a read of the days before the narrow list leaves to add: the
 /// occurrences that end by `listed_from`, where the list's own reads
 /// begin. The store returns every occurrence that overlaps a read, so
@@ -197,6 +248,51 @@ mod tests {
         let listed_from = lisbon(2026, 9, 25, 0, 0);
         let late = occurrence(false, lisbon(2026, 9, 24, 23, 0), listed_from, None);
         assert_eq!(not_yet_listed(vec![late], listed_from).len(), 1);
+    }
+
+    #[test]
+    fn tab_reaches_only_the_middle_page() {
+        let reached: Vec<bool> = (0..3).map(reachable).collect();
+        assert_eq!(reached, vec![false, true, false]);
+    }
+
+    #[test]
+    fn a_step_forward_puts_the_right_page_in_the_middle() {
+        let order = after_step(1);
+        assert_eq!(order, [1, 2, 0]);
+        assert!(reachable(order.iter().position(|&old| old == 2).unwrap()));
+    }
+
+    #[test]
+    fn a_step_back_puts_the_left_page_in_the_middle() {
+        let order = after_step(-1);
+        assert_eq!(order, [2, 0, 1]);
+        assert!(reachable(order.iter().position(|&old| old == 0).unwrap()));
+    }
+
+    #[test]
+    fn a_new_page_takes_the_focus_it_replaced_on_its_first_event() {
+        assert_eq!(refocus(true, true), Some(Refocus::FirstEvent));
+    }
+
+    #[test]
+    fn a_new_page_with_no_events_gives_the_focus_to_today() {
+        assert_eq!(refocus(true, false), Some(Refocus::Today));
+    }
+
+    #[test]
+    fn a_new_page_leaves_the_focus_alone_when_it_was_elsewhere() {
+        assert_eq!(refocus(false, true), None);
+    }
+
+    #[test]
+    fn a_closed_popover_gives_the_focus_back_to_its_event() {
+        assert_eq!(after_popover(true), Refocus::Anchor);
+    }
+
+    #[test]
+    fn a_closed_popover_whose_event_went_gives_the_focus_to_today() {
+        assert_eq!(after_popover(false), Refocus::Today);
     }
 
     fn occurrence(all_day: bool, start: i64, end: i64, my_answer: Option<Answer>) -> Occurrence {

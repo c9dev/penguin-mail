@@ -15,6 +15,7 @@ use mailrs_domain::{AccountId, EpochMillis};
 use super::block::{EventBlock, EventKey, key_of};
 use super::layout;
 use super::range::{Range, ViewKind};
+use super::time_grid::focused_key;
 use super::words;
 
 /// Rows a cell keeps for events before folding the rest into "N more",
@@ -135,6 +136,17 @@ impl MonthGrid {
             .iter()
             .find(|(k, _)| k == key)
             .map(|(_, widget)| widget.clone())
+    }
+
+    /// The first event block in day order, and the event of the block
+    /// that has the keyboard focus, for the view to put the focus back
+    /// after it rebuilds the month.
+    pub fn first_block(&self) -> Option<gtk::Widget> {
+        self.blocks.borrow().first().map(|(_, widget)| widget.clone())
+    }
+
+    pub fn focused_key(&self) -> Option<EventKey> {
+        focused_key(&self.blocks.borrow())
     }
 
     fn rebuild(self: &Rc<Self>) {
